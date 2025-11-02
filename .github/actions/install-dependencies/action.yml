@@ -8,12 +8,9 @@ runs:
       uses: pnpm/action-setup@v4
 
     - name: Set up Node
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@v4
       with:
-        cache: 'pnpm'
-        # `lts/*` lags a few days to a week
-        # up to date LTS can be found here https://endoflife.date/nodejs
-        node-version: '24.12.0'
+        node-version: '24'
 
     - name: Install dependencies
       shell: bash

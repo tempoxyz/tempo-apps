@@ -7,6 +7,7 @@ import { Actions } from 'tempo.ts/wagmi'
 import { type Log, parseEventLogs, type TransactionReceipt } from 'viem'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
+
 import { config } from '../../wagmi.config'
 
 async function loader({ params }: { params: unknown }) {

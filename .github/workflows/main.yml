@@ -1,6 +1,5 @@
 name: Main
 on:
-  workflow_dispatch:
   push:
     branches: [main]
 
@@ -8,90 +7,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  NODE_ENV: production
-  WRANGLER_SEND_METRICS: false
-
 jobs:
   verify:
     name: Verify
     uses: ./.github/workflows/verify.yml
     secrets: inherit
 
-  deploy:
-    name: Deploy (${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      matrix:
-        include:
-          #### explorer
-          - app: explorer
-            env: testnet
-          - app: explorer
-            env: moderato
-          - app: explorer
-            env: devnet
-          - app: explorer
-            env: presto
-          #### fee-payer
-          - app: fee-payer
-            env: privy
-          - app: fee-payer
-            env: devnet
-          - app: fee-payer
-            env: testnet
-          - app: fee-payer
-            env: moderato
-          - app: fee-payer
-            env: mainnet
-          #### other (single-env-apps)
-          - app: og
-          - app: tokenlist
-          - app: contract-verification
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          submodules: "recursive"
-          fetch-depth: 0
-
-      # deploy workspace preview only if there are relevant changes
-      # deploy all apps if root lockfile is changed
-      - name: Check for relevant changes
-        id: changes
-        run: |
-          # if workflow_dispatch, always deploy all
-          #
-          if [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
-            echo "relevant=true" >> $GITHUB_OUTPUT
-          elif git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE "^(apps/${{ matrix.app }}/|pnpm-lock.yaml)"; then
-            echo "relevant=true" >> $GITHUB_OUTPUT
-          else
-            echo "relevant=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Install dependencies
-        if: steps.changes.outputs.relevant == 'true'
-        uses: ./.github/actions/install-dependencies
-
-      - name: Build
-        if: steps.changes.outputs.relevant == 'true'
-        working-directory: apps/${{ matrix.app }}
-        env:
-          NODE_ENV: production
-          CLOUDFLARE_ENV: ${{ matrix.env || '' }}
-        run: pnpm build
-
-      - name: Deploy Workers
-        if: steps.changes.outputs.relevant == 'true'
-        uses: cloudflare/wrangler-action@v3
-        env:
-          NODE_ENV: production
-          CLOUDFLARE_ENV: ${{ matrix.env || '' }}
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/${{ matrix.app }}
-          packageManager: pnpm
-          command: deploy ${{ matrix.env && format('--env {0}', matrix.env) || '' }}
+  # TODO: Add deploy job.
