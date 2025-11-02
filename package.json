@@ -1,33 +1,47 @@
 {
-	"name": "@tempo/apps",
+	"name": "@tempo/app",
 	"private": true,
 	"type": "module",
-	"workspaces": [
-		"apps/*"
-	],
 	"scripts": {
-		"build": "pnpm --recursive --parallel --stream --reporter='append-only' build",
-		"deploy": "pnpm --recursive --parallel --stream --reporter='append-only' deploy",
-		"dev:explorer": "pnpm --filter explorer dev",
-		"dev:sponsor": "pnpm --filter tempo-sponsor dev",
-		"check": "pnpm --recursive --parallel --stream --reporter='append-only' check:biome",
-		"postcheck": "pnpm check:types",
-		"check:biome": "biome check --write --unsafe",
-		"check:types": "pnpm --recursive --parallel --stream --reporter='append-only' check:types",
-		"gen:types": "pnpm --recursive --parallel --stream --reporter='append-only' gen:types",
-		"postinstall": "pnpm --recursive --parallel --stream --reporter='append-only' postinstall"
+		"build": "vite build",
+		"deploy": "npm run build && wrangler deploy",
+		"dev": "vite dev --port 3000",
+		"check": "biome check --write --unsafe",
+		"check:types": "tsc",
+		"gen:types": "wrangler types",
+		"postinstall": "pnpm gen:types && pnpm build",
+		"preview": "vite preview",
+		"test": "vitest run"
+	},
+	"dependencies": {
+		"@tailwindcss/vite": "^4.0.6",
+		"@tanstack/react-devtools": "^0.7.0",
+		"@tanstack/react-query": "^5.90.5",
+		"@tanstack/react-router": "^1.132.0",
+		"@tanstack/react-router-devtools": "^1.132.0",
+		"@tanstack/react-router-ssr-query": "^1.131.7",
+		"@tanstack/react-start": "^1.132.0",
+		"@tanstack/router-plugin": "^1.132.0",
+		"ox": "^0.9.14",
+		"react": "^19.2.0",
+		"react-dom": "^19.2.0",
+		"tailwindcss": "^4.1.16",
+		"tempo.ts": "https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@33",
+		"viem": "2.x",
+		"wagmi": "^2.19.2",
+		"zod": "^4.1.12"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "catalog:",
-		"@typescript/native-preview": "^7.0.0-dev.20260113.1",
-		"typescript": "^5.9.3"
-	},
-	"devEngines": {
-		"runtime": {
-			"name": "node",
-			"version": "24.12.0",
-			"onFail": "download"
-		}
-	},
-	"packageManager": "pnpm@10.28.0"
+		"@biomejs/biome": "2.3.2",
+		"@cloudflare/puppeteer": "^1.0.4",
+		"@cloudflare/vite-plugin": "^1.13.18",
+		"@types/node": "^22.10.2",
+		"@types/react": "^19.2.0",
+		"@types/react-dom": "^19.2.0",
+		"@vitejs/plugin-react": "^5.0.4",
+		"browser-worker": "^1.0.0",
+		"typescript": "^5.9.3",
+		"vite": "^7.1.7",
+		"wrangler": "^4.45.3"
+	}
 }

@@ -11,17 +11,3 @@ count.txt
 .output
 .vinxi
 worker-configuration.d.ts
-_
-
-logs
-
-_tempo_docs
-_scripts
-_docs
-*.backup
-*.bak
-_sourcify
-_artifacts
-_tmp
-_verify
-.pnpm-store

@@ -1,0 +1,25 @@
+{
+	"include": ["**/*.ts", "**/*.tsx", "src/routes/receipt/$hash/.pdf.tsx"],
+	"compilerOptions": {
+		"target": "ES2024",
+		"jsx": "react-jsx",
+		"module": "ESNext",
+		"lib": ["ES2024", "DOM", "DOM.Iterable"],
+		"types": ["vite/client"],
+
+		/* Bundler mode */
+		"moduleResolution": "bundler",
+		"allowImportingTsExtensions": true,
+		"verbatimModuleSyntax": false,
+		"noEmit": true,
+
+		/* Linting */
+		"skipLibCheck": true,
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedSideEffectImports": true,
+		"baseUrl": "."
+	}
+}
