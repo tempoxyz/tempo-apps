@@ -86,7 +86,7 @@ export const Route = createFileRoute('/receipt/$hash')({
 
 				if (type === 'text/plain') {
 					const data = await loader({ params })
-					const text = TextFormatter.format(data)
+					const text = TextRenderer.render(data)
 					return new Response(text, {
 						headers: {
 							'Content-Type': 'text/plain; charset=utf-8',
@@ -249,10 +249,10 @@ export namespace PriceFormatter {
 	})
 }
 
-export namespace TextFormatter {
+export namespace TextRenderer {
 	const width = 50
 
-	export function format(data: Awaited<ReturnType<typeof loader>>) {
+	export function render(data: Awaited<ReturnType<typeof loader>>) {
 		const { lineItems, receipt, timestampFormatted, transaction } = data
 
 		const lines: string[] = []
@@ -342,11 +342,14 @@ export namespace LineItems {
 	) {
 		const { from: sender, logs } = receipt
 
+		// Extract all of the event logs we can from the receipt.
 		const events = parseEventLogs({
 			abi,
 			logs,
 		})
 
+		// `TransferWithMemo` and `Transfer` events are paired with each other,
+		// we will need to take preference on `TransferWithMemo` for those instances.
 		const keys = new Set<string>()
 		for (const event of events) {
 			if (event.eventName === 'TransferWithMemo') {
@@ -355,7 +358,6 @@ export namespace LineItems {
 				keys.add(key)
 			}
 		}
-
 		const filteredEvents = events.filter((event) => {
 			if (event.eventName !== 'Transfer') return true
 			const [_, from, to] = event.topics
@@ -363,6 +365,7 @@ export namespace LineItems {
 			return !keys.has(key)
 		})
 
+		// Map log events to receipt line items.
 		const items = filteredEvents.map((event) => {
 			switch (event.eventName) {
 				case 'TokenCreated': {
@@ -462,6 +465,7 @@ export namespace LineItems {
 			else totals.set(currency, { amount, metadata })
 		}
 
+		// Add totals to line items
 		for (const [_, { amount, metadata }] of totals) {
 			if (!metadata) continue
 			const { decimals } = metadata
