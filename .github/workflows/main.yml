@@ -14,10 +14,17 @@ jobs:
     secrets: inherit
 
   deploy:
+    name: Deploy
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
       - name: Build & Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
