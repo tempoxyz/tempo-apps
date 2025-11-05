@@ -1,4 +1,4 @@
-import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { QueryClient } from '@tanstack/react-query'
 import { tempoDev } from 'tempo.ts/chains'
 import { createClient, type OneOf } from 'viem'
@@ -23,7 +23,7 @@ export const queryClient = new QueryClient({
 	},
 })
 
-export const persister = createSyncStoragePersister({
+export const persister = createAsyncStoragePersister({
 	serialize,
 	storage: browser ? window.localStorage : undefined,
 	deserialize,
