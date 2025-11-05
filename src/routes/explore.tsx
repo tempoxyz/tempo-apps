@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { SquareSquare } from 'lucide-react'
 import css from './explore/styles.css?url'
 
 export const Route = createFileRoute('/explore')({
@@ -17,8 +18,13 @@ export const Route = createFileRoute('/explore')({
 export function Layout() {
 	return (
 		<>
-			<header className="pl-16 pt-12 flex items-center gap-2">
+			<header className="px-16 pt-12 flex items-center gap-2 justify-between">
 				<img src="/icons/watermark.svg" alt="Tempo" className="w-26" />
+				<div className="flex items-center gap-1.5">
+					<SquareSquare className="size-4 text-[#4fa4f9]" />
+					<span className="text-base text-[#7B7B7B]">Block</span>
+					<span className="text-base text-primary">12352</span>
+				</div>
 			</header>
 			<Outlet />
 			<footer className="fixed bottom-0 left-0 right-0 bg-background-primary p-4 pb-10">

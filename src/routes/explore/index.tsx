@@ -15,7 +15,7 @@ export function Component() {
 	const state = useRouterState()
 
 	return (
-		<div className="font-mono text-[13px] flex flex-col min-h-screen items-center justify-center gap-4">
+		<main className="font-mono text-[13px] flex flex-col min-h-screen items-center justify-center gap-4">
 			<div className="flex flex-col gap-6 max-w-[420px] w-full text-center">
 				<h1 className="text-4xl font-bold italic">Tempo Explorer</h1>
 				<form
@@ -59,6 +59,6 @@ export function Component() {
 					</button>
 				</div>
 			</div>
-		</div>
+		</main>
 	)
 }

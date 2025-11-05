@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.scheme-light-dark *));
 
 @theme {
 	--background-color-inverse: light-dark(#222222, #fcfcfc);
@@ -20,4 +23,10 @@ body {
 	background-size: 70% 35%;
 	background-position: top;
 	background-repeat: no-repeat;
+}
+
+@layer base {
+	html {
+		color-scheme: light dark;
+	}
 }
