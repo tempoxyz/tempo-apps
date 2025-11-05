@@ -8,6 +8,20 @@
 	"css": {
 		"parser": {
 			"tailwindDirectives": true
+		},
+		"formatter": {
+			"enabled": true
+		}
+	},
+	"html": {
+		"formatter": {
+			"enabled": true
+		},
+		"assist": {
+			"enabled": true
+		},
+		"linter": {
+			"enabled": true
 		}
 	},
 	"files": {

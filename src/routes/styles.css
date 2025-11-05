@@ -14,3 +14,10 @@ html,
 	color: var(--text-color-primary);
 	color-scheme: light dark;
 }
+
+body {
+	background-image: url("/icons/vector.svg");
+	background-size: 70% 35%;
+	background-position: top;
+	background-repeat: no-repeat;
+}

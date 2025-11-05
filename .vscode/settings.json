@@ -32,5 +32,10 @@
 	},
 	"editor.codeActionsOnSave": {
 		"source.organizeImports.biome": "explicit"
+	},
+	"files.associations": {
+		"*.css": "tailwindcss",
+		"biome.json": "jsonc",
+		"*.svg": "html"
 	}
 }

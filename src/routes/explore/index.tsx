@@ -3,6 +3,7 @@ import {
 	useNavigate,
 	useRouterState,
 } from '@tanstack/react-router'
+import { ListCheck } from 'lucide-react'
 import { Hex } from 'ox'
 
 export const Route = createFileRoute('/explore/')({
@@ -12,6 +13,7 @@ export const Route = createFileRoute('/explore/')({
 export function Component() {
 	const navigate = useNavigate()
 	const state = useRouterState()
+
 	return (
 		<div className="font-mono text-[13px] flex flex-col min-h-screen items-center justify-center gap-4">
 			<div className="flex flex-col gap-6 max-w-[420px] w-full text-center">
@@ -46,6 +48,16 @@ export function Component() {
 						</button>
 					</div>
 				</form>
+				<div className="flex flex-col gap-2 items-center">
+					<button
+						type="button"
+						hidden
+						className="flex items-center bg-surface px-2 py-1 gap-2 hover:bg-surface/30 transition-colors"
+					>
+						<ListCheck className="size-4 text-[#4fa4f9]" />
+						<span>Valid transaction, found in block 12331</span>
+					</button>
+				</div>
 			</div>
 		</div>
 	)
