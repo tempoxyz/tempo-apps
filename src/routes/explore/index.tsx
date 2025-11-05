@@ -40,6 +40,10 @@ export function Component() {
 							name="value"
 							placeholder="Address or Tx Hash"
 							type="text"
+							spellCheck={false}
+							autoCapitalize="off"
+							autoComplete="off"
+							autoCorrect="off"
 						/>
 						<button
 							disabled={state.isLoading}
