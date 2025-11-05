@@ -12,3 +12,82 @@ jobs:
     name: Verify
     uses: ./.github/workflows/verify.yml
     secrets: inherit
+
+  deploy-preview:
+    name: Deploy Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v5
+        with:
+          submodules: "recursive"
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Save Preview Alias
+        run: |
+          echo "PREVIEW_ALIAS=$(git branch --show-current | tr '[:upper:]' '[:lower:]' | tr -cs '[:alnum:]' '-' | sed 's/^-//; s/-$//')" >> $GITHUB_ENV
+
+      - name: Deploy Preview
+        env:
+          PREVIEW_ALIAS: ${{ env.PREVIEW_ALIAS }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          touch /tmp/deployment.txt
+
+          bun run build
+          bun x wrangler@latest versions upload \
+            --preview-alias=${{ env.PREVIEW_ALIAS }} >> /tmp/deployment.txt
+
+      - name: Comment on PR
+        uses: actions/github-script@v8
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          script: |
+            const NodeFS = require('node:fs')
+
+            const deploymentLogs = NodeFS.readFileSync('/tmp/deployment.txt', 'utf8')
+            const lines = deploymentLogs.split('\n')
+            const start = lines.findIndex(line => line.includes('Uploaded tempo-app'))
+            const end = lines.findIndex(line => line.includes('To deploy this version'))
+            const [,versionId, previewUrlText, previewAliasText] = lines.slice(start, end).join('\n')
+            const [,previewUrl] = previewUrlText.split('URL: ')
+            const [,previewAlias] = previewAliasText.split('URL: ')
+
+            const commentMarker = '<!-- PREVIEW_DEPLOYMENT -->'
+            const commitSha = '${{ github.event.pull_request.head.sha }}'
+            const commitUrl = '${{ github.event.repository.html_url }}/commit/${{ github.event.pull_request.head.sha }}'
+
+            const commentBody = `
+              <h2>Preview Deployment 🌆</h2>
+              <a href="${previewUrl}" target="_blank" rel="noopener noreferrer">${previewUrl}</a>
+              <a href="${previewAlias}" target="_blank" rel="noopener noreferrer">${previewAlias}</a>
+              <p>${versionId}</p>
+            `
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            })
+            const existingComment = comments.find((comment) => comment.body.includes(commentMarker))
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: commentBody,
+              })
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: commentBody,
+              })
+            }

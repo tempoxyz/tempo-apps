@@ -1,4 +1,6 @@
 {
+	"typescript.tsdk": "node_modules/typescript/lib",
+	"typescript.enablePromptUseWorkspaceTsdk": true,
 	"editor.formatOnSave": true,
 	"files.watcherExclude": {
 		"**/routeTree.gen.ts": true
@@ -34,9 +36,10 @@
 		"source.organizeImports.biome": "explicit"
 	},
 	"files.associations": {
-		"*.css": "tailwindcss",
+		"*.svg": "html",
 		"biome.json": "jsonc",
-		"*.svg": "html"
+		"bun.lockb": "jsonc",
+		"*.css": "tailwindcss"
 	},
 	"files.exclude": {
 		".tanstack": true,
