@@ -1,10 +1,9 @@
-import { Link } from '@tanstack/react-router'
+import { ClientOnly, Link } from '@tanstack/react-router'
 import { SquareSquare } from 'lucide-react'
+import * as React from 'react'
 import { useBlockNumber } from 'wagmi'
 
 export function Header() {
-	const { data: blockNumber } = useBlockNumber({ watch: true })
-
 	return (
 		<header className="px-4 md:px-8 lg:px-16 flex items-center justify-between min-h-16 pt-6">
 			<Link to="/" className="flex items-center">
@@ -14,11 +13,24 @@ export function Header() {
 				<SquareSquare className="size-4 text-accent" />
 				<span className="text-sm text-secondary">Block</span>
 				<span className="text-sm text-primary font-medium tabular-nums">
-					{blockNumber}
+					<ClientOnly
+						fallback={
+							<span className="text-sm text-primary font-medium tabular-nums">
+								...
+							</span>
+						}
+					>
+						<BlockNumber />
+					</ClientOnly>
 				</span>
 			</div>
 		</header>
 	)
+}
+
+function BlockNumber() {
+	const { data: blockNumber } = useBlockNumber({ watch: true })
+	return <React.Fragment>{blockNumber}</React.Fragment>
 }
 
 type TempoWordmarkProps = {
