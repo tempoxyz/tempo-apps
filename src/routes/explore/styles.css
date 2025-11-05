@@ -8,6 +8,27 @@
 
 @custom-variant dark (&:is(.scheme-light-dark *));
 
+@media (prefers-color-scheme: dark) {
+	body {
+		background-image: url("/icons/vector-dark.svg");
+	}
+}
+
+.scheme-dark\! body {
+	background-image: url("/icons/vector-dark.svg");
+}
+
+.scheme-light\! body {
+	background-image: url("/icons/vector-light.svg");
+}
+
+body {
+	background-image: url("/icons/vector.svg");
+	background-size: 70% 35%;
+	background-position: top;
+	background-repeat: no-repeat;
+}
+
 @theme {
 	/* Background Colors */
 	--color-background-inverse: light-dark(#202020, #fcfcfc);
