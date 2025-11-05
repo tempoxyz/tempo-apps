@@ -1,0 +1,6 @@
+* text=auto
+.gitattributes !filter !diff
+
+.env.example linguist-language=Dotenv
+
+routeTree.gen.ts linguist-generated=true
