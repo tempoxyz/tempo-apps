@@ -142,10 +142,12 @@ function useDevTools() {
 		return () => window.removeEventListener('keydown', handleKeyPress)
 	}, [])
 
-	if (
-		import.meta.env.MODE === 'development' &&
-		import.meta.env.VITE_ENABLE_ERUDA === 'true'
-	) {
-		void import('eruda').then(({ default: eruda }) => eruda.init())
-	}
+	useEffect(() => {
+		if (
+			import.meta.env.MODE === 'development' &&
+			import.meta.env.VITE_ENABLE_ERUDA === 'true'
+		) {
+			void import('eruda').then(({ default: eruda }) => eruda.init())
+		}
+	}, [])
 }
