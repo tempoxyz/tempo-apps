@@ -37,5 +37,9 @@
 		"*.css": "tailwindcss",
 		"biome.json": "jsonc",
 		"*.svg": "html"
+	},
+	"files.exclude": {
+		".tanstack": true,
+		".wrangler": true
 	}
 }

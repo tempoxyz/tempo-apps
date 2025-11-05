@@ -26,6 +26,50 @@ export const Route = createRootRoute({
 				rel: 'stylesheet',
 				href: css,
 			},
+			{
+				rel: 'icon',
+				href: '/favicon.ico',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '16x16',
+				href: '/favicon/favicon-16x16.png',
+				media: '(prefers-color-scheme: light)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '16x16',
+				href: '/favicon/favicon-16x16-dark.png',
+				media: '(prefers-color-scheme: dark)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '32x32',
+				href: '/favicon/favicon-32x32.png',
+				media: '(prefers-color-scheme: light)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '32x32',
+				href: '/favicon/favicon-32x32-dark.png',
+				media: '(prefers-color-scheme: dark)',
+			},
+			{
+				rel: 'apple-touch-icon',
+				sizes: '192x192',
+				href: '/favicon/android-chrome-192x192.png',
+				media: '(prefers-color-scheme: light)',
+			},
+			{
+				rel: 'apple-touch-icon',
+				sizes: '192x192',
+				href: '/favicon/android-chrome-192x192-dark.png',
+				media: '(prefers-color-scheme: dark)',
+			},
 		],
 	}),
 	shellComponent: RootDocument,
@@ -35,7 +79,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	useShortcuts()
 
 	return (
-		<html lang="en">
+		<html lang="en" className="scheme-light-dark">
 			<head>
 				<HeadContent />
 			</head>
