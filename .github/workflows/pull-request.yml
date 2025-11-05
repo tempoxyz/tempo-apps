@@ -41,8 +41,15 @@ jobs:
           bun run build
           bun x wrangler@latest versions upload >> /tmp/deployment.txt
 
+      - name: Job Summary
+        run: |
+          echo "🌆 Deployed to Cloudflare Workers 🥕" >> $GITHUB_STEP_SUMMARY
+          cat /tmp/deployment.txt >> $GITHUB_STEP_SUMMARY
+
       - name: Comment on PR
         uses: actions/github-script@v8
+        # TODO: enable when workflow permissions is updated to `read` and `write` in https://github.com/tempoxyz/tempo-app/settings/actions
+        if: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
