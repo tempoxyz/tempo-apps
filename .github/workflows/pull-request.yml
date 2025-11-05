@@ -56,14 +56,15 @@ jobs:
 
             const deploymentLogs = NodeFS.readFileSync('/tmp/deployment.txt', 'utf8')
             const lines = deploymentLogs.split('\n')
-            const start = lines.findIndex(line => line.includes('Uploaded tempo-app'))
-            const deploymentLog = lines.slice(start).map(line => line.trim()).join('\n').trim()
+            const start = lines.findIndex(line => line.includes('Version Preview URL: '))
+            const deploymentUrl = lines.splice(start, lines.length).at(0)?.split(' ').at(-1)
 
             const commentMarker = '<!-- PREVIEW_DEPLOYMENT -->'
 
             const commentBody = `
+              ${commentMarker}
               <h2>Preview Deployment 🌆</h2>
-              ${deploymentLog}
+              ${deploymentUrl}
             `
 
             const { data: comments } = await github.rest.issues.listComments({
