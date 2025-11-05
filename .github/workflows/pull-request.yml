@@ -64,7 +64,8 @@ jobs:
             const commentBody = `
               ${commentMarker}
               <h2>Preview Deployment 🌆</h2>
-              ${deploymentUrl}
+              <br />
+              <a href="${deploymentUrl}" target="_blank" rel="noopener noreferrer">${deploymentUrl}</a>
             `
 
             const { data: comments } = await github.rest.issues.listComments({
