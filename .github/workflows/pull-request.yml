@@ -60,13 +60,10 @@ jobs:
             const deploymentLog = lines.slice(start).map(line => line.trim()).join('\n').trim()
 
             const commentMarker = '<!-- PREVIEW_DEPLOYMENT -->'
-            const commitSha = '${{ github.event.pull_request.head.sha }}'
-            const commitUrl = '${{ github.event.repository.html_url }}/commit/${{ github.event.pull_request.head.sha }}'
 
             const commentBody = `
               <h2>Preview Deployment 🌆</h2>
-              <a href="${previewUrl}" target="_blank" rel="noopener noreferrer">${previewUrl}</a>
-              <p>${versionId}</p>
+              ${deploymentLog}
             `
 
             const { data: comments } = await github.rest.issues.listComments({
