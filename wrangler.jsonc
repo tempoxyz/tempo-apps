@@ -1,12 +1,15 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "tempo-app",
-	"compatibility_date": "2025-11-01",
+	"compatibility_date": "2025-10-11",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "@tanstack/react-start/server-entry",
 	"browser": {
 		"binding": "BROWSER"
 	},
+	"workers_dev": true,
+	"preview_urls": true,
+	"keep_vars": true,
 	"observability": {
 		"enabled": true,
 		"logs": {
