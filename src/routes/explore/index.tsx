@@ -32,14 +32,14 @@ export function Component() {
 						<input
 							// biome-ignore lint/a11y/noAutofocus: _
 							autoFocus
-							className="bg-white border border-dashed p-1 w-full focus:outline-black focus:outline-solid focus:border-transparent box-content"
+							className="bg-surface border border-dashed p-1 w-full focus:outline-inverse focus:outline-solid focus:border-transparent box-content"
 							name="value"
 							placeholder="Address or Tx Hash"
 							type="text"
 						/>
 						<button
 							disabled={state.isLoading}
-							className="border border-dashed focus:outline-black focus:outline-solid focus:border-transparent box-content px-4 disabled:opacity-50"
+							className="border border-dashed focus:outline-inverse focus:outline-solid focus:border-transparent box-content px-4 disabled:opacity-50"
 							type="submit"
 						>
 							{state.isLoading ? '…' : 'Go'}
