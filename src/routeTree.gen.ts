@@ -10,12 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ReceiptRouteImport } from './routes/receipt'
+import { Route as ExplorerRouteImport } from './routes/explorer'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ExploreIndexRouteImport } from './routes/explore/index'
 import { Route as ReceiptHashRouteImport } from './routes/receipt/$hash'
+import { Route as ExploreValueRouteImport } from './routes/explore/$value'
+import { Route as ExploreAccountAddressRouteImport } from './routes/explore/account/$address'
 
 const ReceiptRoute = ReceiptRouteImport.update({
   id: '/receipt',
   path: '/receipt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExplorerRoute = ExplorerRouteImport.update({
+  id: '/explorer',
+  path: '/explorer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -23,39 +32,92 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ExploreIndexRoute = ExploreIndexRouteImport.update({
+  id: '/explore/',
+  path: '/explore/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReceiptHashRoute = ReceiptHashRouteImport.update({
   id: '/$hash',
   path: '/$hash',
   getParentRoute: () => ReceiptRoute,
 } as any)
+const ExploreValueRoute = ExploreValueRouteImport.update({
+  id: '/explore/$value',
+  path: '/explore/$value',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExploreAccountAddressRoute = ExploreAccountAddressRouteImport.update({
+  id: '/explore/account/$address',
+  path: '/explore/account/$address',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/explorer': typeof ExplorerRoute
   '/receipt': typeof ReceiptRouteWithChildren
+  '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
+  '/explore': typeof ExploreIndexRoute
+  '/explore/account/$address': typeof ExploreAccountAddressRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/explorer': typeof ExplorerRoute
   '/receipt': typeof ReceiptRouteWithChildren
+  '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
+  '/explore': typeof ExploreIndexRoute
+  '/explore/account/$address': typeof ExploreAccountAddressRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/explorer': typeof ExplorerRoute
   '/receipt': typeof ReceiptRouteWithChildren
+  '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
+  '/explore/': typeof ExploreIndexRoute
+  '/explore/account/$address': typeof ExploreAccountAddressRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/receipt' | '/receipt/$hash'
+  fullPaths:
+    | '/'
+    | '/explorer'
+    | '/receipt'
+    | '/explore/$value'
+    | '/receipt/$hash'
+    | '/explore'
+    | '/explore/account/$address'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/receipt' | '/receipt/$hash'
-  id: '__root__' | '/' | '/receipt' | '/receipt/$hash'
+  to:
+    | '/'
+    | '/explorer'
+    | '/receipt'
+    | '/explore/$value'
+    | '/receipt/$hash'
+    | '/explore'
+    | '/explore/account/$address'
+  id:
+    | '__root__'
+    | '/'
+    | '/explorer'
+    | '/receipt'
+    | '/explore/$value'
+    | '/receipt/$hash'
+    | '/explore/'
+    | '/explore/account/$address'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ExplorerRoute: typeof ExplorerRoute
   ReceiptRoute: typeof ReceiptRouteWithChildren
+  ExploreValueRoute: typeof ExploreValueRoute
+  ExploreIndexRoute: typeof ExploreIndexRoute
+  ExploreAccountAddressRoute: typeof ExploreAccountAddressRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -67,11 +129,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReceiptRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/explorer': {
+      id: '/explorer'
+      path: '/explorer'
+      fullPath: '/explorer'
+      preLoaderRoute: typeof ExplorerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explore/': {
+      id: '/explore/'
+      path: '/explore'
+      fullPath: '/explore'
+      preLoaderRoute: typeof ExploreIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/receipt/$hash': {
@@ -80,6 +156,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/receipt/$hash'
       preLoaderRoute: typeof ReceiptHashRouteImport
       parentRoute: typeof ReceiptRoute
+    }
+    '/explore/$value': {
+      id: '/explore/$value'
+      path: '/explore/$value'
+      fullPath: '/explore/$value'
+      preLoaderRoute: typeof ExploreValueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explore/account/$address': {
+      id: '/explore/account/$address'
+      path: '/explore/account/$address'
+      fullPath: '/explore/account/$address'
+      preLoaderRoute: typeof ExploreAccountAddressRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -97,7 +187,11 @@ const ReceiptRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ExplorerRoute: ExplorerRoute,
   ReceiptRoute: ReceiptRouteWithChildren,
+  ExploreValueRoute: ExploreValueRoute,
+  ExploreIndexRoute: ExploreIndexRoute,
+  ExploreAccountAddressRoute: ExploreAccountAddressRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

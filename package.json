@@ -15,8 +15,10 @@
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.0.6",
+		"@tanstack/query-sync-storage-persister": "^5.90.8",
 		"@tanstack/react-devtools": "^0.7.0",
 		"@tanstack/react-query": "^5.90.5",
+		"@tanstack/react-query-persist-client": "^5.90.8",
 		"@tanstack/react-router": "^1.132.0",
 		"@tanstack/react-router-devtools": "^1.132.0",
 		"@tanstack/react-router-ssr-query": "^1.131.7",

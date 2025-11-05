@@ -1,18 +1,49 @@
+import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
+import { QueryClient } from '@tanstack/react-query'
 import { tempoDev } from 'tempo.ts/chains'
 import { createClient, type OneOf } from 'viem'
-import { type Config, createConfig, http } from 'wagmi'
+import {
+	type Config,
+	createConfig,
+	deserialize,
+	http,
+	serialize,
+	webSocket,
+} from 'wagmi'
 import * as Actions from 'wagmi/actions'
+
+const browser = typeof window !== 'undefined'
+
+export const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			refetchOnWindowFocus: false,
+			gcTime: 1_000 * 60 * 60 * 24, // 24 hours
+		},
+	},
+})
+
+export const persister = createSyncStoragePersister({
+	serialize,
+	storage: browser ? window.localStorage : undefined,
+	deserialize,
+})
 
 export const config = createConfig({
 	chains: [tempoDev],
+	ssr: true,
 	transports: {
-		[tempoDev.id]: http('https://devnet.tempoxyz.dev', {
-			fetchOptions: {
-				headers: {
-					Authorization: `Basic ${btoa('eng:zealous-mayer')}`,
-				},
-			},
-		}),
+		[tempoDev.id]: !browser
+			? http('https://devnet.tempoxyz.dev', {
+					fetchOptions: {
+						headers: {
+							Authorization: `Basic ${btoa('eng:zealous-mayer')}`,
+						},
+					},
+				})
+			: webSocket(
+					'wss://devnet.tempoxyz.dev?supersecretargument=pleasedonotusemeinprod',
+				),
 	},
 })
 

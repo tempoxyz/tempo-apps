@@ -1,3 +1,13 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.scheme-dark *));
+@theme {
+	--background-color-primary: light-dark(#e8e8e8, #111111);
+	--background-color-surface: light-dark(#fcfcfc, #222222);
+	--text-color-primary: light-dark(#202020, #eeeeee);
+}
+
+html,
+:host {
+	background-color: var(--background-color-primary);
+	color: var(--text-color-primary);
+}

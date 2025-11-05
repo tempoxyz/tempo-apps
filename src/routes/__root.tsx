@@ -1,10 +1,10 @@
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 import { WagmiProvider } from 'wagmi'
-import { config } from '../wagmi.config'
+import { config, persister, queryClient } from '../wagmi.config'
 import css from './styles.css?url'
 
 export const Route = createRootRoute({
@@ -31,8 +31,6 @@ export const Route = createRootRoute({
 	shellComponent: RootDocument,
 })
 
-const queryClient = new QueryClient()
-
 function RootDocument({ children }: { children: React.ReactNode }) {
 	useShortcuts()
 
@@ -43,9 +41,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			</head>
 			<body>
 				<WagmiProvider config={config}>
-					<QueryClientProvider client={queryClient}>
+					<PersistQueryClientProvider
+						client={queryClient}
+						persistOptions={{ persister }}
+					>
 						{children}
-					</QueryClientProvider>
+					</PersistQueryClientProvider>
 				</WagmiProvider>
 				{import.meta.env.DEV && (
 					<TanStackDevtools

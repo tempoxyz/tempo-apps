@@ -6,9 +6,8 @@ Monoapp for Tempo, powered by Cloudflare + TanStack Start/Router.
 
 | App / Route | Description |
 | --------- | ----------- |
-| `/explorer/*` | Chain explorer for Tempo. |
+| `/explore/*` | Chain explorer. |
 | `/receipt/*` | Content-aware Tempo receipts. |
-| `/trade/*` | Tempo exchange. |
 
 ---
 
