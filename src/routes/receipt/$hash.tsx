@@ -2,15 +2,27 @@ import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
 import { createFileRoute } from '@tanstack/react-router'
 import { Address, Hex, Json, Value } from 'ox'
+import { TokenRole } from 'tempo.ts/ox'
 import { Abis } from 'tempo.ts/viem'
 import { Actions } from 'tempo.ts/wagmi'
-import { type Log, parseEventLogs, type TransactionReceipt } from 'viem'
-import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
+import {
+	type AbiEvent,
+	type Log,
+	parseEventLogs,
+	type TransactionReceipt,
+} from 'viem'
+import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import * as z from 'zod/mini'
+import { config, getClient } from '../../wagmi.config'
 
-import { config } from '../../wagmi.config'
-
-async function loader({ params }: { params: unknown }) {
+async function loader({
+	location,
+	params,
+}: {
+	location: { search: { r?: string | undefined } }
+	params: unknown
+}) {
+	const { r: rpcUrl } = location.search
 	const { hash } = z
 		.object({
 			hash: z
@@ -24,14 +36,15 @@ async function loader({ params }: { params: unknown }) {
 		})
 		.parse(params)
 
-	const receipt = await getTransactionReceipt(config, {
+	const client = getClient(config, { rpcUrl })
+	const receipt = await getTransactionReceipt(client, {
 		hash,
 	})
 	const [block, transaction, tokenMetadata] = await Promise.all([
-		getBlock(config, {
+		getBlock(client, {
 			blockHash: receipt.blockHash,
 		}),
-		getTransaction(config, {
+		getTransaction(client, {
 			hash: receipt.transactionHash,
 		}),
 		TokenMetadata.fromLogs(receipt.logs),
@@ -52,14 +65,20 @@ async function loader({ params }: { params: unknown }) {
 export const Route = createFileRoute('/receipt/$hash')({
 	component: Component,
 	headers: () => ({
-		'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+		...(import.meta.env.PROD
+			? {
+					'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+				}
+			: {}),
 	}),
+	// @ts-expect-error - TODO: fix
 	loader,
 	server: {
 		handlers: {
 			async GET({ params, request, next }) {
-				const accept = request.headers.get('accept')?.toLowerCase() || ''
+				const url = new URL(request.url)
 
+				const accept = request.headers.get('accept')?.toLowerCase() || ''
 				const userAgent = request.headers.get('user-agent')?.toLowerCase() || ''
 				const isTerminal =
 					userAgent.includes('curl') ||
@@ -68,38 +87,50 @@ export const Route = createFileRoute('/receipt/$hash')({
 
 				const type = (() => {
 					if (
-						request.url.endsWith('.pdf') ||
+						url.pathname.endsWith('.pdf') ||
 						accept.includes('application/pdf')
 					)
 						return 'application/pdf'
 					if (
-						request.url.endsWith('.json') ||
+						url.pathname.endsWith('.json') ||
 						accept.includes('application/json')
 					)
 						return 'application/json'
 					if (
-						request.url.endsWith('.txt') ||
+						url.pathname.endsWith('.txt') ||
 						isTerminal ||
 						accept.includes('text/plain')
 					)
 						return 'text/plain'
 				})()
 
+				const rpcUrl = url.searchParams.get('r') ?? undefined
+
 				if (type === 'text/plain') {
-					const data = await loader({ params })
+					const data = await loader({
+						location: { search: { r: rpcUrl } },
+						params,
+					})
 					const text = TextRenderer.render(data)
 					return new Response(text, {
 						headers: {
 							'Content-Type': 'text/plain; charset=utf-8',
 							'Content-Disposition': 'inline',
-							'Cache-Control':
-								'public, max-age=3600, stale-while-revalidate=86400',
+							...(import.meta.env.PROD
+								? {
+										'Cache-Control':
+											'public, max-age=3600, stale-while-revalidate=86400',
+									}
+								: {}),
 						},
 					})
 				}
 
 				if (type === 'application/json') {
-					const { lineItems, receipt } = await loader({ params })
+					const { lineItems, receipt } = await loader({
+						location: { search: { r: rpcUrl } },
+						params,
+					})
 					return Response.json(
 						JSON.parse(Json.stringify({ lineItems, receipt })),
 					)
@@ -110,7 +141,6 @@ export const Route = createFileRoute('/receipt/$hash')({
 					const page = await browser.newPage()
 
 					// Get the current URL without .pdf extension
-					const url = new URL(request.url)
 					const htmlUrl = url.href.replace(/\.pdf$/, '')
 
 					// Navigate to the HTML version of the receipt
@@ -126,8 +156,12 @@ export const Route = createFileRoute('/receipt/$hash')({
 
 					return new Response(Buffer.from(pdf), {
 						headers: {
-							'Cache-Control':
-								'public, max-age=3600, stale-while-revalidate=86400',
+							...(import.meta.env.PROD
+								? {
+										'Cache-Control':
+											'public, max-age=3600, stale-while-revalidate=86400',
+									}
+								: {}),
 							'Content-Type': 'application/pdf',
 							'Content-Disposition': 'inline; filename="receipt.pdf"',
 						},
@@ -138,6 +172,9 @@ export const Route = createFileRoute('/receipt/$hash')({
 			},
 		},
 	},
+	validateSearch: z.object({
+		r: z.optional(z.string()),
+	}).parse,
 })
 
 function Component() {
@@ -162,7 +199,7 @@ function Component() {
 				<div className="w-full border-t border-dashed border-(--text-color-primary)" />
 				<div className="h-4" />
 
-				{lineItems.main?.flatMap((item, i) => [
+				{lineItems?.main?.flatMap((item, i) => [
 					// `left` + `right` renderer
 					<div
 						className="flex items-center justify-between uppercase"
@@ -171,23 +208,28 @@ function Component() {
 						<div>{item.ui.left}</div>
 						<div>{item.ui.right}</div>
 					</div>,
+
 					// `bottom` Renderer
 					<div key={(i + 1).toString()}>
-						{(() => {
-							if (item.eventName === 'TransferWithMemo' && 'bottom' in item.ui)
-								return (
-									<div className="pl-4 uppercase">
-										Memo: {item.ui.bottom?.memo}
-									</div>
-								)
-							return null
-						})()}
+						{'bottom' in item.ui &&
+							item.ui.bottom?.map((bottom, j) => (
+								<div key={j.toString()}>
+									<div className="pl-4 uppercase">{bottom.left}</div>
+									{'right' in bottom ? <div>{bottom.right}</div> : undefined}
+								</div>
+							))}
 					</div>,
 				])}
 
 				<div className="h-4" />
 
-				{lineItems.end?.map((item, i) => (
+				{lineItems?.feeTotals?.map((item, i) => (
+					<div className="flex items-center justify-between" key={i.toString()}>
+						<div className="uppercase">{item.ui.left}</div>
+						<div>{item.ui.right}</div>
+					</div>
+				))}
+				{lineItems?.totals?.map((item, i) => (
 					<div className="flex items-center justify-between" key={i.toString()}>
 						<div className="uppercase">{item.ui.left}</div>
 						<div>{item.ui.right}</div>
@@ -252,6 +294,7 @@ export namespace PriceFormatter {
 
 export namespace TextRenderer {
 	const width = 50
+	const indent = '  '
 
 	export function render(data: Awaited<ReturnType<typeof loader>>) {
 		const { lineItems, receipt, timestampFormatted, transaction } = data
@@ -278,20 +321,26 @@ export namespace TextRenderer {
 				lines.push(leftRight(item.ui.left.toUpperCase(), item.ui.right))
 
 				// Render `bottom`
-				if (
-					item.eventName === 'TransferWithMemo' &&
-					'bottom' in item.ui &&
-					item.ui.bottom?.memo
-				) {
-					lines.push(`  MEMO: ${item.ui.bottom.memo.toString().toUpperCase()}`)
+				if ('bottom' in item.ui && item.ui.bottom) {
+					for (const bottom of item.ui.bottom) {
+						if (bottom.right)
+							lines.push(`${indent}${leftRight(bottom.left, bottom.right)}`)
+						else lines.push(`${indent}${bottom.left}`)
+					}
 				}
 			}
+
 			lines.push('')
 		}
 
-		// End line items (fees, totals)
-		if (lineItems.end)
-			for (const item of lineItems.end)
+		// Fee totals
+		if (lineItems.feeTotals)
+			for (const item of lineItems.feeTotals)
+				lines.push(leftRight(item.ui.left.toUpperCase(), item.ui.right))
+
+		// Totals
+		if (lineItems.totals)
+			for (const item of lineItems.totals)
 				lines.push(leftRight(item.ui.left.toUpperCase(), item.ui.right))
 
 		return lines.join('\n')
@@ -349,140 +398,359 @@ export namespace LineItems {
 			logs,
 		})
 
+		////////////////////////////////////////////////////////////
+
 		// `TransferWithMemo` and `Transfer` events are paired with each other,
 		// we will need to take preference on `TransferWithMemo` for those instances.
-		const keys = new Set<string>()
+		const transferWithMemoKeys = new Set<string>()
 		for (const event of events) {
 			if (event.eventName === 'TransferWithMemo') {
 				const [_, from, to] = event.topics
 				const key = `${from}${to}`
-				keys.add(key)
+				transferWithMemoKeys.add(key)
 			}
 		}
-		const filteredEvents = events.filter((event) => {
-			if (event.eventName !== 'Transfer') return true
-			const [_, from, to] = event.topics
-			const key = `${from}${to}`
-			return !keys.has(key)
+
+		// `Mint` and `Transfer` events are paired with each other,
+		// we will need to take preference on `Mint` for those instances.
+		const mintKeys = new Set<string>()
+		for (const event of events) {
+			if (event.eventName === 'Mint') {
+				const [_, to] = event.topics
+				const key = `${event.address}${event.data}${to}`
+				mintKeys.add(key)
+			}
+		}
+
+		// `Burn` and `Transfer` events are paired with each other,
+		// we will need to take preference on `Burn` for those instances.
+		const burnKeys = new Set<string>()
+		for (const event of events) {
+			if (event.eventName === 'Burn') {
+				const [_, from] = event.topics
+				const key = `${event.address}${event.data}${from}`
+				burnKeys.add(key)
+			}
+		}
+
+		const dedupedEvents = events.filter((event) => {
+			if (event.eventName === 'Transfer') {
+				{
+					// Check TransferWithMemo dedup
+					const [_, from, to] = event.topics
+					const transferKey = `${from}${to}`
+					if (transferWithMemoKeys.has(transferKey)) return false
+				}
+
+				{
+					// Check Mint dedup
+					const [_, __, to] = event.topics
+					const mintKey = `${event.address}${event.data}${to}`
+					if (mintKeys.has(mintKey)) return false
+				}
+
+				{
+					// Check Burn dedup
+					const [_, from] = event.topics
+					const burnKey = `${event.address}${event.data}${from}`
+					if (burnKeys.has(burnKey)) return false
+				}
+			}
+			return true
 		})
 
+		////////////////////////////////////////////////////////////
+
+		const items: Record<'main' | 'feeTotals' | 'totals', LineItem.LineItem[]> =
+			{
+				main: [],
+				feeTotals: [],
+				totals: [],
+			}
+
 		// Map log events to receipt line items.
-		const items = filteredEvents.map((event) => {
+		for (const event of dedupedEvents) {
 			switch (event.eventName) {
+				case 'Burn': {
+					if ('amount' in event.args) {
+						const { amount, from } = event.args
+
+						const metadata = tokenMetadata.get(event.address)
+						if (!metadata) {
+							items.main.push(LineItem.noop(event))
+							break
+						}
+
+						const { currency, decimals, symbol } = metadata
+
+						const isSelf = Address.isEqual(from, sender)
+
+						items.main.push(
+							LineItem.from({
+								event,
+								price: isSelf
+									? {
+											amount,
+											currency,
+											decimals,
+											symbol,
+											token: event.address,
+										}
+									: undefined,
+								ui: {
+									bottom: [
+										{
+											left: `From: ${HexFormatter.truncate(from)}`,
+										},
+									],
+									left: `Burn ${symbol}`,
+									right: decimals
+										? PriceFormatter.format(amount, decimals)
+										: '-',
+								},
+							}),
+						)
+						break
+					}
+
+					items.main.push(LineItem.noop(event))
+					break
+				}
+
+				case 'RoleMembershipUpdated': {
+					const { account, hasRole, role } = event.args
+
+					const roleName =
+						TokenRole.roles.find((r) => TokenRole.serialize(r) === role) ??
+						undefined
+
+					items.main.push(
+						LineItem.from({
+							event,
+							position: 'main',
+							ui: {
+								bottom: [
+									{
+										left: `To: ${HexFormatter.truncate(account)}`,
+									},
+									{
+										left: `Role: ${roleName}`,
+									},
+								],
+								left: `${roleName ? `${roleName} ` : ' '}Role ${hasRole ? 'Granted' : 'Revoked'}`,
+								right: '-',
+							},
+						}),
+					)
+					break
+				}
+
+				case 'Mint': {
+					if ('amount' in event.args) {
+						const metadata = tokenMetadata.get(event.address)
+						if (!metadata) {
+							items.main.push(LineItem.noop(event))
+							break
+						}
+
+						const { decimals } = metadata
+						const { amount, to } = event.args
+
+						items.main.push(
+							LineItem.from({
+								event,
+								ui: {
+									bottom: [
+										{
+											left: `To: ${HexFormatter.truncate(to)}`,
+										},
+									],
+									left: `Mint ${metadata?.symbol ? ` ${metadata.symbol}` : ''}`,
+									right: decimals
+										? `(${PriceFormatter.format(amount, decimals)})`
+										: '',
+								},
+							}),
+						)
+						break
+					}
+
+					items.main.push(LineItem.noop(event))
+					break
+				}
+
 				case 'TokenCreated': {
 					const { symbol } = event.args
-					return LineItem.from({
-						event,
-						eventName: event.eventName,
-						position: 'main',
-						ui: {
-							left: `Create Token (${symbol})`,
-							right: '-',
-						},
-					})
+					items.main.push(
+						LineItem.from({
+							event,
+							ui: {
+								left: `Create Token (${symbol})`,
+								right: '-',
+							},
+						}),
+					)
+					break
 				}
 
 				case 'TransferWithMemo':
 				case 'Transfer': {
 					const { amount, from, to } = event.args
+					const token = event.address
+
+					const metadata = tokenMetadata.get(token)
+					if (!metadata) {
+						items.main.push(LineItem.noop(event))
+						break
+					}
+
+					const isCredit = Address.isEqual(to, sender)
 					const memo =
 						'memo' in event.args
 							? Hex.toString(Hex.trimLeft(event.args.memo))
 							: undefined
 
-					const token = event.address
-					const metadata = tokenMetadata.get(token)
-					const decimals = metadata?.decimals
+					const { currency, decimals, symbol } = metadata
 
 					const isFee = to.toLowerCase().startsWith('0xfeec00000')
 					if (isFee) {
 						const feePayer = !Address.isEqual(from, sender) ? from : ''
-						return LineItem.from({
+						items.feeTotals.push(
+							LineItem.from({
+								event,
+								isFee,
+								price: {
+									amount,
+									currency,
+									decimals,
+									symbol,
+									token,
+								},
+								ui: {
+									left: `${symbol} ${feePayer ? `(PAID BY ${HexFormatter.truncate(feePayer)})` : ''}`,
+									right: decimals
+										? PriceFormatter.format(amount, decimals)
+										: '-',
+								},
+							}),
+						)
+						break
+					}
+
+					items.main.push(
+						LineItem.from({
 							event,
-							eventName: event.eventName,
-							position: 'end',
 							price: {
-								amount,
-								metadata,
+								amount: isCredit ? -amount : amount,
+								currency,
+								decimals,
+								symbol,
 								token,
 							},
 							ui: {
-								left: `Fee ${feePayer ? `(PAID BY ${HexFormatter.truncate(feePayer)})` : ''}`,
-								right: decimals ? PriceFormatter.format(amount, decimals) : '-',
+								bottom: [...(memo ? [{ left: `Memo: ${memo}` }] : [])],
+								left: `Send ${symbol} ${to ? `to ${HexFormatter.truncate(to)}` : ''}`,
+								right: decimals
+									? PriceFormatter.format(isCredit ? -amount : amount, decimals)
+									: '-',
 							},
-						})
-					}
-
-					return LineItem.from({
-						event,
-						eventName: event.eventName,
-						position: 'main',
-						price: {
-							amount,
-							metadata,
-							token,
-						},
-						ui: {
-							bottom: {
-								memo,
-							},
-							left: `Send${metadata?.symbol ? ` ${metadata.symbol}` : ''} ${to ? `to ${HexFormatter.truncate(to)}` : ''}`,
-							right: decimals ? PriceFormatter.format(amount, decimals) : '-',
-						},
-					})
+						}),
+					)
+					break
 				}
 
 				default: {
-					return LineItem.from({
-						event,
-						eventName: event.eventName,
-						position: 'main',
-						ui: {
-							left: event.eventName,
-							right: '-',
-						},
-					})
+					items.main.push(LineItem.noop(event))
 				}
 			}
-		})
+		}
+
+		////////////////////////////////////////////////////////////
+
+		// Calculate fee totals grouped by currency -> symbol
+		type Currency = string
+		type Symbol = string
+		const feeTotals = new Map<
+			Currency,
+			{
+				amount: bigint
+				decimals: number
+				tokens: Map<Symbol, LineItem.LineItem['price']>
+			}
+		>()
+		for (const item of items.feeTotals) {
+			if (!item.isFee) continue
+
+			const { price } = item
+			if (!price) continue
+
+			const { amount, currency, decimals, symbol, token } = price
+			if (!currency) continue
+			if (!decimals) continue
+			if (!symbol) continue
+
+			let currencyMap = feeTotals.get(currency)
+			currencyMap ??= {
+				amount: 0n,
+				decimals,
+				tokens: new Map(),
+			}
+
+			const existing = currencyMap.tokens.get(symbol)
+			if (existing) existing.amount += amount
+			else currencyMap.tokens.set(symbol, { amount, currency, decimals, token })
+
+			currencyMap.amount += amount
+
+			feeTotals.set(currency, currencyMap)
+		}
+
+		// Add fee totals to line items
+		for (const [currency, { amount, decimals }] of feeTotals)
+			items.feeTotals = [
+				LineItem.from({
+					position: 'end',
+					price: {
+						amount,
+						decimals,
+						currency,
+					},
+					ui: {
+						left: 'Fee',
+						right: decimals ? PriceFormatter.format(amount, decimals) : '-',
+					},
+				}),
+			]
 
 		// Calculate totals grouped by currency
-		const totals = new Map<
-			string,
-			{ amount: bigint; metadata?: TokenMetadata.Metadata }
-		>()
-		for (const item of items) {
+		const totals = new Map<string, LineItem.LineItem['price']>()
+		for (const item of [...items.main, ...items.feeTotals]) {
 			if (!('price' in item)) continue
 
 			const { price } = item
 			if (!price) continue
 
-			const { amount, metadata } = price
-			if (!metadata) continue
-
-			const { currency } = metadata
-			const existing = totals.get(currency)
-			if (existing) existing.amount += amount
-			else totals.set(currency, { amount, metadata })
+			const existing = totals.get(price.currency)
+			if (existing) existing.amount += price.amount
+			else totals.set(price.currency, price)
 		}
 
 		// Add totals to line items
-		for (const [_, { amount, metadata }] of totals) {
-			if (!metadata) continue
-			const { decimals } = metadata
+		for (const [_, price] of totals) {
+			if (!price) continue
+			const { amount, decimals } = price
 			const formatted = decimals ? PriceFormatter.format(amount, decimals) : '-'
-			items.push(
+			items.totals.push(
 				LineItem.from({
-					position: 'end',
 					ui: {
 						left: 'Total',
 						right: formatted,
 					},
-				}) as never,
+				}),
 			)
 		}
 
-		return Object.groupBy(items, (item) => item.position)
+		return items
 	}
 }
 
@@ -491,31 +759,40 @@ export namespace LineItem {
 		/**
 		 * Event log emitted.
 		 */
-		event?: Log | undefined
+		event?: Log<bigint, number, boolean, AbiEvent> | undefined
 		/**
-		 * Position of where the line item should be rendered.
-		 *
-		 * - `main`: Main line items.
-		 * - `end`: End line items.
+		 * Whether the line item is a fee item.
 		 */
-		position: 'main' | 'end'
+		isFee?: boolean | undefined
+		/**
+		 * Grouping key.
+		 */
+		key?: string | undefined
 		/**
 		 * Price of the line item.
 		 */
 		price?:
 			| {
 					/**
-					 * Amount in units of the TIP20 token.
+					 * Amount in units of the token.
 					 */
 					amount: bigint
 					/**
-					 * Metadata of the TIP20 token.
+					 * Currency of the token.
 					 */
-					metadata?: TokenMetadata.Metadata | undefined
+					currency: string
+					/**
+					 * Decimals of the token.
+					 */
+					decimals: number
+					/**
+					 * Symbol of the token.
+					 */
+					symbol?: string | undefined
 					/**
 					 * Address of the TIP20 token.
 					 */
-					token: Address.Address
+					token?: Address.Address | undefined
 			  }
 			| undefined
 		/**
@@ -525,7 +802,18 @@ export namespace LineItem {
 			/**
 			 * Bottom data of the line item.
 			 */
-			bottom?: unknown | undefined
+			bottom?:
+				| {
+						/**
+						 * Left text of the line item.
+						 */
+						left: string
+						/**
+						 * Right text of the line item.
+						 */
+						right?: string | undefined
+				  }[]
+				| undefined
 			/**
 			 * Left text of the line item.
 			 */
@@ -537,7 +825,27 @@ export namespace LineItem {
 		}
 	}
 
-	export function from<const item extends LineItem>(item: item): item {
-		return item
+	export function from<const item extends LineItem>(
+		item: item,
+	): item & {
+		eventName: item['event'] extends { eventName: infer eventName }
+			? eventName
+			: undefined
+	} {
+		return {
+			...item,
+			eventName: item.event?.eventName,
+		} as never
+	}
+
+	export function noop(event: Log<bigint, number, boolean, AbiEvent>) {
+		return LineItem.from({
+			event,
+			position: 'main',
+			ui: {
+				left: event.eventName,
+				right: '-',
+			},
+		})
 	}
 }
