@@ -1,32 +1,129 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@font-face {
+	font-family: "SF Pro Rounded";
+	src: url("/fonts/SF-Pro.woff2") format("woff2");
+}
+
 @custom-variant dark (&:is(.scheme-light-dark *));
 
 @theme {
-	--background-color-inverse: light-dark(#222222, #fcfcfc);
-	--background-color-primary: light-dark(#e8e8e8, #111111);
-	--background-color-surface: light-dark(#fcfcfc, #222222);
-	--outline-color-inverse: light-dark(#222222, #fcfcfc);
-	--text-color-primary: light-dark(#202020, #eeeeee);
+	/* Background Colors */
+	--color-background-inverse: light-dark(#202020, #fcfcfc);
+	--background-color-inverse: var(--color-background-inverse);
+	--color-background-primary: light-dark(#f8f8f8, #111111);
+	--background-color-primary: var(--color-background-primary);
+	--color-background-surface: light-dark(#ffffff, #1a1a1a);
+	--background-color-surface: var(--color-background-surface);
+	--color-background-alt: light-dark(#fcfcfc, #222222);
+	--background-alt: var(--color-background-alt);
+	--color-frame-background: light-dark(#ffffff, #1a1a1a);
+	--frame-background: var(--color-frame-background);
+	--color-system-background: light-dark(#f8f8f8, #111111);
+	--system-background: var(--color-system-background);
+	--color-inverse: var(--color-background-inverse);
+	--color-system: var(--color-system-background);
+	--color-surface: var(--color-background-surface);
+	--color-alt: var(--color-background-alt);
+	--color-frame: var(--color-frame-background);
+
+	/* Content/Text Colors */
+	--color-content-primary: light-dark(#0a0a0a, #f5f5f5);
+	--content-primary: var(--color-content-primary);
+	--color-content-secondary: light-dark(#737373, #a0a0a0);
+	--content-secondary: var(--color-content-secondary);
+	--color-content-tertiary: light-dark(#a8a8a8, #707070);
+	--content-tertiary: var(--color-content-tertiary);
+	--color-content-positive: light-dark(#16a34a, #22c55e);
+	--content-positive: var(--color-content-positive);
+	--color-content-negative: light-dark(#dc2626, #ef4444);
+	--content-negative: var(--color-content-negative);
+	--color-content-disabled: light-dark(#d4d4d4, #525252);
+	--content-disabled: var(--color-content-disabled);
+	--color-label-primary: light-dark(#000000, #ffffff);
+	--label-primary: var(--color-label-primary);
+	--color-content-inverse: light-dark(#f5f5f5, #0a0a0a);
+	--content-inverse: var(--color-content-inverse);
+	--color-primary: var(--color-content-primary);
+	--color-secondary: var(--color-content-secondary);
+	--color-tertiary: var(--color-content-tertiary);
+	--color-positive: var(--color-content-positive);
+	--color-negative: var(--color-content-negative);
+	--color-disabled: var(--color-content-disabled);
+
+	/* Accent & Interactive */
+	--color-accent: light-dark(#3b82f6, #60a5fa);
+	--accent: var(--color-accent);
+	--color-accent-hover: light-dark(#2563eb, #93c5fd);
+	--accent-hover: var(--color-accent-hover);
+
+	/* Border Colors */
+	--color-border-primary: light-dark(#f0f0f0, #262626);
+	--border-primary: var(--color-border-primary);
+	--color-border-secondary: light-dark(#f8f8f8, #1a1a1a);
+	--border-secondary: var(--color-border-secondary);
+	--color-border-tertiary: light-dark(#e5e5e5, #2e2e2e);
+	--border-tertiary: var(--color-border-tertiary);
+	--color-border-negative: light-dark(#dc2626, #ef4444);
+	--border-negative: var(--color-border-negative);
+
+	/* Outline Colors */
+	--color-outline-primary: light-dark(#f0f0f0, #262626);
+	--outline-primary: var(--color-outline-primary);
+	--color-outline-secondary: light-dark(#f8f8f8, #1a1a1a);
+	--outline-secondary: var(--color-outline-secondary);
+	--color-outline-negative: light-dark(#dc2626, #ef4444);
+	--outline-negative: var(--color-outline-negative);
+
+	/* Badge Colors */
+	--color-badge-content: light-dark(#737373, #a3a3a3);
+	--badge-content: var(--color-badge-content);
+	--color-badge-info-content: light-dark(#3b82f6, #60a5fa);
+	--badge-info-content: var(--color-badge-info-content);
+	--color-badge-positive-bg: light-dark(#dcfce7, #14532d);
+	--badge-positive-bg: var(--color-badge-positive-bg);
+	--color-badge-negative-bg: light-dark(#fee2e2, #450a0a);
+	--badge-negative-bg: var(--color-badge-negative-bg);
+
+	/* Field Colors */
+	--color-field-content-secondary: light-dark(#a3a3a3, #737373);
+	--field-content-secondary: var(--color-field-content-secondary);
+
+	/* Outline Colors */
+	--color-outline-inverse: light-dark(#171717, #fafafa);
+	--outline-color-inverse: var(--color-outline-inverse);
+
+	/* Solid Colors */
+	--color-solid-gray-3: light-dark(#f5f5f5, #262626);
+	--solid-gray-3: var(--color-solid-gray-3);
+
+	/* Tokenized Color Pairings */
+	--color-black-white: light-dark(#000000, #ffffff);
+	--color-white-black: light-dark(#ffffff, #000000);
 }
 
 html,
 :host {
-	background-color: var(--background-color-primary);
-	color: var(--text-color-primary);
+	background-color: var(--color-system);
+	color: var(--color-primary);
 	color-scheme: light dark;
-}
-
-body {
-	background-image: url("/icons/vector.svg");
-	background-size: 70% 35%;
-	background-position: top;
-	background-repeat: no-repeat;
 }
 
 @layer base {
 	html {
 		color-scheme: light dark;
 	}
+}
+
+body {
+	font-family:
+		SFRounded, ui-rounded, "SF Pro Rounded", -apple-system, "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+	@apply text-base;
+}
+
+pre {
+	font-family:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+		"Courier New", monospace;
 }

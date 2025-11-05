@@ -76,7 +76,7 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-	useShortcuts()
+	useDevTools()
 
 	return (
 		<html lang="en" className="scheme-light-dark">
@@ -113,7 +113,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 let theme: 'light' | 'dark' | undefined
 
-function useShortcuts() {
+function useDevTools() {
 	useEffect(() => {
 		const handleKeyPress = (e: KeyboardEvent) => {
 			// ⌘ + 1 = color scheme toggle
@@ -137,4 +137,11 @@ function useShortcuts() {
 		window.addEventListener('keydown', handleKeyPress)
 		return () => window.removeEventListener('keydown', handleKeyPress)
 	}, [])
+
+	if (
+		import.meta.env.MODE === 'development' &&
+		import.meta.env.VITE_ENABLE_ERUDA === 'true'
+	) {
+		void import('eruda').then(({ default: eruda }) => eruda.init())
+	}
 }

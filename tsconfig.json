@@ -5,7 +5,7 @@
 		"jsx": "react-jsx",
 		"module": "ESNext",
 		"lib": ["ES2024", "DOM", "DOM.Iterable"],
-		"types": ["vite/client"],
+		"types": ["vite/client", "typed-query-selector/strict"],
 
 		/* Bundler mode */
 		"moduleResolution": "bundler",
@@ -20,6 +20,12 @@
 		"noUnusedParameters": true,
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true,
-		"baseUrl": "."
-	}
+		"baseUrl": ".",
+		"resolveJsonModule": true,
+		"paths": {
+			"#*": ["./src/*"],
+			"#explore*": ["./src/routes/explore/*"]
+		}
+	},
+	"exclude": ["**/_/**", "node_modules"]
 }
