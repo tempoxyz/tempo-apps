@@ -1,11 +1,16 @@
 {
-	"include": ["**/*.ts", "**/*.tsx", "src/routes/receipt/$hash/.pdf.tsx"],
+	"include": [
+		"**/*.ts",
+		"**/*.tsx",
+		"src/routes/receipt/$hash/.pdf.tsx",
+		"./scripts"
+	],
 	"compilerOptions": {
 		"target": "ES2024",
 		"jsx": "react-jsx",
 		"module": "ESNext",
 		"lib": ["ES2024", "DOM", "DOM.Iterable"],
-		"types": ["vite/client"],
+		"types": ["bun", "node", "vite/client", "typed-query-selector/strict"],
 
 		/* Bundler mode */
 		"moduleResolution": "bundler",
@@ -20,6 +25,12 @@
 		"noUnusedParameters": true,
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true,
-		"baseUrl": "."
-	}
+		"baseUrl": ".",
+		"resolveJsonModule": true,
+		"paths": {
+			"#*": ["./src/*"],
+			"#explore*": ["./src/routes/explore/*"]
+		}
+	},
+	"exclude": ["**/_/**", "node_modules"]
 }

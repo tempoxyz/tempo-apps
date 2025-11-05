@@ -9,20 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ReceiptRouteImport } from './routes/receipt'
-import { Route as ExploreRouteImport } from './routes/explore'
+import { Route as ReceiptRouteRouteImport } from './routes/receipt/route'
+import { Route as ExploreRouteRouteImport } from './routes/explore/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ExploreIndexRouteImport } from './routes/explore/index'
 import { Route as ReceiptHashRouteImport } from './routes/receipt/$hash'
 import { Route as ExploreValueRouteImport } from './routes/explore/$value'
 import { Route as ExploreAccountAddressRouteImport } from './routes/explore/account/$address'
 
-const ReceiptRoute = ReceiptRouteImport.update({
+const ReceiptRouteRoute = ReceiptRouteRouteImport.update({
   id: '/receipt',
   path: '/receipt',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ExploreRoute = ExploreRouteImport.update({
+const ExploreRouteRoute = ExploreRouteRouteImport.update({
   id: '/explore',
   path: '/explore',
   getParentRoute: () => rootRouteImport,
@@ -35,28 +35,28 @@ const IndexRoute = IndexRouteImport.update({
 const ExploreIndexRoute = ExploreIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => ExploreRoute,
+  getParentRoute: () => ExploreRouteRoute,
 } as any)
 const ReceiptHashRoute = ReceiptHashRouteImport.update({
   id: '/$hash',
   path: '/$hash',
-  getParentRoute: () => ReceiptRoute,
+  getParentRoute: () => ReceiptRouteRoute,
 } as any)
 const ExploreValueRoute = ExploreValueRouteImport.update({
   id: '/$value',
   path: '/$value',
-  getParentRoute: () => ExploreRoute,
+  getParentRoute: () => ExploreRouteRoute,
 } as any)
 const ExploreAccountAddressRoute = ExploreAccountAddressRouteImport.update({
   id: '/account/$address',
   path: '/account/$address',
-  getParentRoute: () => ExploreRoute,
+  getParentRoute: () => ExploreRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/explore': typeof ExploreRouteWithChildren
-  '/receipt': typeof ReceiptRouteWithChildren
+  '/explore': typeof ExploreRouteRouteWithChildren
+  '/receipt': typeof ReceiptRouteRouteWithChildren
   '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
   '/explore/': typeof ExploreIndexRoute
@@ -64,7 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/receipt': typeof ReceiptRouteWithChildren
+  '/receipt': typeof ReceiptRouteRouteWithChildren
   '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
   '/explore': typeof ExploreIndexRoute
@@ -73,8 +73,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/explore': typeof ExploreRouteWithChildren
-  '/receipt': typeof ReceiptRouteWithChildren
+  '/explore': typeof ExploreRouteRouteWithChildren
+  '/receipt': typeof ReceiptRouteRouteWithChildren
   '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
   '/explore/': typeof ExploreIndexRoute
@@ -111,8 +111,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ExploreRoute: typeof ExploreRouteWithChildren
-  ReceiptRoute: typeof ReceiptRouteWithChildren
+  ExploreRouteRoute: typeof ExploreRouteRouteWithChildren
+  ReceiptRouteRoute: typeof ReceiptRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -121,14 +121,14 @@ declare module '@tanstack/react-router' {
       id: '/receipt'
       path: '/receipt'
       fullPath: '/receipt'
-      preLoaderRoute: typeof ReceiptRouteImport
+      preLoaderRoute: typeof ReceiptRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/explore': {
       id: '/explore'
       path: '/explore'
       fullPath: '/explore'
-      preLoaderRoute: typeof ExploreRouteImport
+      preLoaderRoute: typeof ExploreRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -143,62 +143,64 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/explore/'
       preLoaderRoute: typeof ExploreIndexRouteImport
-      parentRoute: typeof ExploreRoute
+      parentRoute: typeof ExploreRouteRoute
     }
     '/receipt/$hash': {
       id: '/receipt/$hash'
       path: '/$hash'
       fullPath: '/receipt/$hash'
       preLoaderRoute: typeof ReceiptHashRouteImport
-      parentRoute: typeof ReceiptRoute
+      parentRoute: typeof ReceiptRouteRoute
     }
     '/explore/$value': {
       id: '/explore/$value'
       path: '/$value'
       fullPath: '/explore/$value'
       preLoaderRoute: typeof ExploreValueRouteImport
-      parentRoute: typeof ExploreRoute
+      parentRoute: typeof ExploreRouteRoute
     }
     '/explore/account/$address': {
       id: '/explore/account/$address'
       path: '/account/$address'
       fullPath: '/explore/account/$address'
       preLoaderRoute: typeof ExploreAccountAddressRouteImport
-      parentRoute: typeof ExploreRoute
+      parentRoute: typeof ExploreRouteRoute
     }
   }
 }
 
-interface ExploreRouteChildren {
+interface ExploreRouteRouteChildren {
   ExploreValueRoute: typeof ExploreValueRoute
   ExploreIndexRoute: typeof ExploreIndexRoute
   ExploreAccountAddressRoute: typeof ExploreAccountAddressRoute
 }
 
-const ExploreRouteChildren: ExploreRouteChildren = {
+const ExploreRouteRouteChildren: ExploreRouteRouteChildren = {
   ExploreValueRoute: ExploreValueRoute,
   ExploreIndexRoute: ExploreIndexRoute,
   ExploreAccountAddressRoute: ExploreAccountAddressRoute,
 }
 
-const ExploreRouteWithChildren =
-  ExploreRoute._addFileChildren(ExploreRouteChildren)
+const ExploreRouteRouteWithChildren = ExploreRouteRoute._addFileChildren(
+  ExploreRouteRouteChildren,
+)
 
-interface ReceiptRouteChildren {
+interface ReceiptRouteRouteChildren {
   ReceiptHashRoute: typeof ReceiptHashRoute
 }
 
-const ReceiptRouteChildren: ReceiptRouteChildren = {
+const ReceiptRouteRouteChildren: ReceiptRouteRouteChildren = {
   ReceiptHashRoute: ReceiptHashRoute,
 }
 
-const ReceiptRouteWithChildren =
-  ReceiptRoute._addFileChildren(ReceiptRouteChildren)
+const ReceiptRouteRouteWithChildren = ReceiptRouteRoute._addFileChildren(
+  ReceiptRouteRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ExploreRoute: ExploreRouteWithChildren,
-  ReceiptRoute: ReceiptRouteWithChildren,
+  ExploreRouteRoute: ExploreRouteRouteWithChildren,
+  ReceiptRouteRoute: ReceiptRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

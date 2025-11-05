@@ -3,7 +3,7 @@
 	"name": "tempo-app",
 	"compatibility_date": "2025-10-11",
 	"compatibility_flags": ["nodejs_compat"],
-	"main": "@tanstack/react-start/server-entry",
+	"main": "./src/server.ts",
 	"browser": {
 		"binding": "BROWSER"
 	},

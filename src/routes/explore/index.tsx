@@ -15,9 +15,11 @@ export function Component() {
 	const state = useRouterState()
 
 	return (
-		<main className="font-mono text-[13px] flex flex-col min-h-screen items-center justify-center gap-4">
+		<div className="font-mono text-[13px] flex flex-col h-full items-center justify-center gap-4">
 			<div className="flex flex-col gap-6 max-w-[420px] w-full text-center">
-				<h1 className="text-4xl font-bold italic">Tempo Explorer</h1>
+				<h1 className="text-4xl font-bold italic text-primary">
+					Tempo Explorer
+				</h1>
 				<form
 					onSubmit={(e) => {
 						e.preventDefault()
@@ -34,14 +36,18 @@ export function Component() {
 						<input
 							// biome-ignore lint/a11y/noAutofocus: _
 							autoFocus
-							className="bg-surface border border-dashed p-1 w-full focus:outline-inverse focus:outline-solid focus:border-transparent box-content"
+							className="bg-surface border border-dashed h-7 px-4 py-2 w-full focus:outline-outline-inverse focus:outline-solid focus:border-transparent box-content placeholder:text-primary text-primary"
 							name="value"
 							placeholder="Address or Tx Hash"
 							type="text"
+							spellCheck={false}
+							autoCapitalize="off"
+							autoComplete="off"
+							autoCorrect="off"
 						/>
 						<button
 							disabled={state.isLoading}
-							className="border border-dashed focus:outline-inverse focus:outline-solid focus:border-transparent box-content px-4 disabled:opacity-50"
+							className="bg-surface border border-dashed focus:outline-outline-inverse focus:outline-solid focus:border-transparent box-content px-4 disabled:opacity-50 text-primary"
 							type="submit"
 						>
 							{state.isLoading ? '…' : 'Go'}
@@ -54,11 +60,11 @@ export function Component() {
 						hidden
 						className="flex items-center bg-surface px-2 py-1 gap-2 hover:bg-surface/30 transition-colors"
 					>
-						<ListCheck className="size-4 text-[#4fa4f9]" />
+						<ListCheck className="size-4 text-accent" />
 						<span>Valid transaction, found in block 12331</span>
 					</button>
 				</div>
 			</div>
-		</main>
+		</div>
 	)
 }

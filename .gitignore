@@ -12,4 +12,6 @@ count.txt
 .vinxi
 worker-configuration.d.ts
 _
-.cursor
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
