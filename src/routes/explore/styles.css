@@ -8,30 +8,32 @@
 
 @custom-variant dark (&:is(.scheme-light-dark *));
 
+:root {
+	--vector-background-image: url("/icons/vector-light.svg");
+}
+
 @media (prefers-color-scheme: dark) {
-	body {
-		background-image: url("/icons/vector-dark.svg");
+	:root {
+		--vector-background-image: url("/icons/vector-dark.svg");
 	}
 }
 
-.scheme-dark\! body {
-	background-image: url("/icons/vector-dark.svg");
+.scheme-dark\! {
+	--vector-background-image: url("/icons/vector-dark.svg");
 }
 
-.scheme-light\! body {
-	background-image: url("/icons/vector-light.svg");
+.scheme-light\! {
+	--vector-background-image: url("/icons/vector-light.svg");
 }
 
 body {
-	background-image: url("/icons/vector.svg");
+	background-image: var(--vector-background-image);
 	background-size: 70% 35%;
 	background-position: top;
 	background-repeat: no-repeat;
 }
 
 @theme {
-	--font-display:
-		"SF Pro", ui-rounded, "SF Pro Rounded", -apple-system, "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 	/* Background Colors */
 	--color-background-inverse: light-dark(#202020, #fcfcfc);
 	--background-color-inverse: var(--color-background-inverse);
