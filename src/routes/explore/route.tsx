@@ -16,7 +16,7 @@ export const Route = createFileRoute('/explore')({
 
 export function Layout() {
 	return (
-		<main className='bg-[url("/icons/vector.svg")] bg-position-[75%_30%] bg-top bg-no-repeat bg-system flex flex-col h-screen'>
+		<main className="h-screen flex flex-col">
 			<Header />
 			<div className="flex-1">
 				<Outlet />

@@ -36,7 +36,7 @@ export function Component() {
 						<input
 							// biome-ignore lint/a11y/noAutofocus: _
 							autoFocus
-							className="bg-surface border border-dashed h-7 px-4 py-2 w-full focus:outline-outline-inverse focus:outline-solid focus:border-transparent box-content placeholder:text-primary text-primary"
+							className="bg-surface border border-dashed h-7 px-4 py-2 w-full focus:outline-inverse focus:outline-solid focus:outline-[1.5px] focus:border-transparent box-content placeholder:text-primary text-primary"
 							name="value"
 							placeholder="Address or Tx Hash"
 							type="text"
@@ -47,7 +47,7 @@ export function Component() {
 						/>
 						<button
 							disabled={state.isLoading}
-							className="bg-surface border border-dashed focus:outline-outline-inverse focus:outline-solid focus:border-transparent box-content px-4 disabled:opacity-50 text-primary"
+							className="bg-surface border border-dashed focus:outline-outline-inverse focus:outline-solid focus:border-transparent box-content px-4 disabled:opacity-50 text-primary active:outline-primary"
 							type="submit"
 						>
 							{state.isLoading ? '…' : 'Go'}

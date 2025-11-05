@@ -4,7 +4,7 @@ import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 import { WagmiProvider } from 'wagmi'
-import { config, persister, queryClient } from '../wagmi.config'
+import { config, persister, queryClient } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
 export const Route = createRootRoute({
@@ -120,8 +120,12 @@ let theme: 'light' | 'dark' | undefined
 function useDevTools() {
 	useEffect(() => {
 		const handleKeyPress = (e: KeyboardEvent) => {
-			// ⌘ + 1 = color scheme toggle
-			if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+			if (
+				// ⌘ + 1 = color scheme toggle
+				((e.metaKey || e.ctrlKey) && e.key === '1') ||
+				// ⌥ + 1 = color scheme toggle  (Safari)
+				(e.altKey && e.code === 'Digit1')
+			) {
 				e.preventDefault()
 				theme ??= window.matchMedia('(prefers-color-scheme: dark)').matches
 					? 'dark'

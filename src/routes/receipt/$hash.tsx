@@ -13,7 +13,7 @@ import {
 } from 'viem'
 import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import * as z from 'zod/mini'
-import { config, getClient } from '../../wagmi.config'
+import { config, getClient } from '#wagmi.config.ts'
 
 async function loader({
 	location,
