@@ -32,11 +32,11 @@ export function Component() {
 						})
 					}}
 				>
-					<div className="flex gap-2 w-full">
+					<div className="flex gap-2 w-full px-2 sm:px-0">
 						<input
 							// biome-ignore lint/a11y/noAutofocus: _
 							autoFocus
-							className="bg-surface border border-dashed h-7 px-4 py-2 w-full focus:outline-inverse focus:outline-solid focus:outline-[1.5px] focus:border-transparent box-content placeholder:text-primary text-primary"
+							className="bg-surface border border-dashed h-7 px-3 py-2 w-full focus:outline-inverse focus:outline-solid focus:outline-[1.5px] focus:border-transparent box-content placeholder:text-primary text-primary"
 							name="value"
 							placeholder="Address or Tx Hash"
 							type="text"
