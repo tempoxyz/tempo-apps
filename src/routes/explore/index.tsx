@@ -15,8 +15,8 @@ export function Component() {
 	const state = useRouterState()
 
 	return (
-		<div className="font-mono text-[13px] flex flex-col h-full items-center justify-center gap-4">
-			<div className="flex flex-col gap-6 max-w-[420px] w-full text-center">
+		<div className="font-mono text-[13px] flex flex-col size-full items-center justify-center gap-4">
+			<div className="flex flex-col gap-6 max-w-[420px] w-full text-center size-full">
 				<h1 className="text-4xl font-bold italic text-primary">
 					Tempo Explorer
 				</h1>
