@@ -141,7 +141,7 @@ export const Route = createFileRoute('/receipt/$hash')({
 					const page = await browser.newPage()
 
 					// Get the current URL without .pdf extension
-					const htmlUrl = url.href.replace(/\.pdf$/, '')
+					const htmlUrl = `${url.href.replace(/\.pdf$/, '')}?plain`
 
 					// Navigate to the HTML version of the receipt
 					await page.goto(htmlUrl, { waitUntil: 'domcontentloaded' })
