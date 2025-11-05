@@ -400,63 +400,63 @@ export namespace LineItems {
 
 		////////////////////////////////////////////////////////////
 
-		// `TransferWithMemo` and `Transfer` events are paired with each other,
-		// we will need to take preference on `TransferWithMemo` for those instances.
-		const transferWithMemoKeys = new Set<string>()
+		const preferenceMap = new Map<string, string>()
+
 		for (const event of events) {
+			let key: string | undefined
+
+			// `TransferWithMemo` and `Transfer` events are paired with each other,
+			// we will need to take preference on `TransferWithMemo` for those instances.
 			if (event.eventName === 'TransferWithMemo') {
 				const [_, from, to] = event.topics
-				const key = `${from}${to}`
-				transferWithMemoKeys.add(key)
+				key = `${from}${to}`
 			}
-		}
 
-		// `Mint` and `Transfer` events are paired with each other,
-		// we will need to take preference on `Mint` for those instances.
-		const mintKeys = new Set<string>()
-		for (const event of events) {
+			// `Mint` and `Transfer` events are paired with each other,
+			// we will need to take preference on `Mint` for those instances.
 			if (event.eventName === 'Mint') {
 				const [_, to] = event.topics
-				const key = `${event.address}${event.data}${to}`
-				mintKeys.add(key)
+				key = `${event.address}${event.data}${to}`
 			}
-		}
 
-		// `Burn` and `Transfer` events are paired with each other,
-		// we will need to take preference on `Burn` for those instances.
-		const burnKeys = new Set<string>()
-		for (const event of events) {
+			// `Burn` and `Transfer` events are paired with each other,
+			// we will need to take preference on `Burn` for those instances.
 			if (event.eventName === 'Burn') {
 				const [_, from] = event.topics
-				const key = `${event.address}${event.data}${from}`
-				burnKeys.add(key)
+				key = `${event.address}${event.data}${from}`
 			}
+
+			if (key) preferenceMap.set(key, event.eventName)
 		}
 
 		const dedupedEvents = events.filter((event) => {
+			let include = true
+
 			if (event.eventName === 'Transfer') {
 				{
 					// Check TransferWithMemo dedup
 					const [_, from, to] = event.topics
-					const transferKey = `${from}${to}`
-					if (transferWithMemoKeys.has(transferKey)) return false
+					const key = `${from}${to}`
+					if (preferenceMap.get(key)?.includes('TransferWithMemo'))
+						include = false
 				}
 
 				{
 					// Check Mint dedup
 					const [_, __, to] = event.topics
-					const mintKey = `${event.address}${event.data}${to}`
-					if (mintKeys.has(mintKey)) return false
+					const key = `${event.address}${event.data}${to}`
+					if (preferenceMap.get(key)?.includes('Mint')) include = false
 				}
 
 				{
 					// Check Burn dedup
 					const [_, from] = event.topics
-					const burnKey = `${event.address}${event.data}${from}`
-					if (burnKeys.has(burnKey)) return false
+					const key = `${event.address}${event.data}${from}`
+					if (preferenceMap.get(key)?.includes('Burn')) include = false
 				}
 			}
-			return true
+
+			return include
 		})
 
 		////////////////////////////////////////////////////////////
