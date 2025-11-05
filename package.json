@@ -25,6 +25,7 @@
 		"@tanstack/react-start": "^1.134.12",
 		"@tanstack/router-plugin": "^1.134.12",
 		"abitype": "^1.1.1",
+		"lucide-react": "^0.552.0",
 		"ox": "^0.9.14",
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0",
