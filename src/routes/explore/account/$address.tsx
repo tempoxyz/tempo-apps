@@ -77,7 +77,7 @@ function RouteComponent() {
 	const [isCopied, copyToClipboard] = useCopyToClipboard()
 
 	return (
-		<div className="px-4 pb-16 pt-8 md:px-8 lg:px-16">
+		<div className="px-4">
 			<div className="mx-auto flex max-w-6xl flex-col gap-8">
 				<section className="flex flex-col gap-4">
 					<div className="flex flex-col items-center gap-2 text-center">

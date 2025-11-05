@@ -16,9 +16,9 @@ export const Route = createFileRoute('/explore')({
 
 export function Layout() {
 	return (
-		<main className="h-screen flex flex-col">
+		<main className="flex min-h-dvh flex-col">
 			<Header />
-			<div className="flex-1">
+			<div className="flex flex-1 size-full items-center justify-center">
 				<Outlet />
 			</div>
 			<footer className="bg-system py-6">
