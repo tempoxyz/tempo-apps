@@ -20,7 +20,7 @@
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
         "tailwindcss": "^4.1.16",
-        "tempo.ts": "https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@33",
+        "tempo.ts": "https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@1299a52",
         "viem": "2.x",
         "wagmi": "^2.19.2",
         "zod": "^4.1.12",
@@ -1436,7 +1436,7 @@
 
     "tar-stream": ["tar-stream@3.1.7", "", { "dependencies": { "b4a": "^1.6.4", "fast-fifo": "^1.2.0", "streamx": "^2.15.0" } }, "sha512-qJj60CXt7IU1Ffyc3NJMjh6EkuCFej46zUqJ4J7pqYlThyd9bO0XBTmcOIhSzZJVWfsLks0+nle/j538YAW9RQ=="],
 
-    "tempo.ts": ["tempo.ts@https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@33", { "dependencies": { "ox": "~0.9.9" }, "peerDependencies": { "@tanstack/query-core": ">=5.0.0", "@tanstack/react-query": ">=5.0.0", "@wagmi/core": ">=2.18", "prool": "^0", "viem": ">=2.38.4", "wagmi": ">=2.19" }, "optionalPeers": ["@tanstack/query-core", "@tanstack/react-query", "@wagmi/core", "prool", "viem", "wagmi"] }],
+    "tempo.ts": ["tempo.ts@https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@1299a52", { "dependencies": { "ox": "~0.9.9" }, "peerDependencies": { "@tanstack/query-core": ">=5.0.0", "@tanstack/react-query": ">=5.0.0", "@wagmi/core": ">=2.18", "prool": "^0", "viem": ">=2.38.4", "wagmi": ">=2.19" }, "optionalPeers": ["@tanstack/query-core", "@tanstack/react-query", "@wagmi/core", "prool", "viem", "wagmi"] }],
 
     "text-decoder": ["text-decoder@1.2.3", "", { "dependencies": { "b4a": "^1.6.4" } }, "sha512-3/o9z3X0X0fTupwsYvR03pJ/DjWuqqrfwBgTQzdWDiQSm9KitAyz/9WqsT2JQW7KV2m+bC2ol/zqpW37NHxLaA=="],
 
