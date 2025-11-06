@@ -1,13 +1,21 @@
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import type { QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
-import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
+import {
+	createRootRouteWithContext,
+	HeadContent,
+	Scripts,
+} from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 import { WagmiProvider } from 'wagmi'
+import { DefaultCatchBoundary } from '#components/default-catch-boundary'
 import { config, persister, queryClient } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<{
+	queryClient: QueryClient
+}>()({
 	head: () => ({
 		meta: [
 			{
@@ -76,6 +84,11 @@ export const Route = createRootRoute({
 			},
 		],
 	}),
+	errorComponent: (props) => (
+		<RootDocument>
+			<DefaultCatchBoundary {...props} />
+		</RootDocument>
+	),
 	shellComponent: RootDocument,
 })
 

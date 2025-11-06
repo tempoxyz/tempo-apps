@@ -1,5 +1,7 @@
+import { useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
+	Link,
 	useNavigate,
 	useRouterState,
 } from '@tanstack/react-router'
@@ -12,10 +14,12 @@ import {
 } from 'lucide-react'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
+import { Abis } from 'tempo.ts/viem'
+import { formatEther, parseEventLogs } from 'viem'
+import { useBlock, useTransactionReceipt } from 'wagmi'
 import { z } from 'zod/mini'
-
+import { useInfiniteTransactions } from '#explore/-lib/Hooks.tsx'
 import { useCopyToClipboard } from '#hooks/use-copy-to-clipboard.ts'
-import { useInfiniteAccountTransactions } from '#routes/explore/-lib/Hooks.tsx'
 
 export const Route = createFileRoute('/explore/account/$address')({
 	component: RouteComponent,
@@ -33,13 +37,14 @@ export const Route = createFileRoute('/explore/account/$address')({
 })
 
 function RouteComponent() {
-	const { address } = Route.useParams()
 	const navigate = useNavigate()
 	const routerState = useRouterState()
-	const { data: _transactions } = useInfiniteAccountTransactions({ address })
+	const { address } = Route.useParams()
+	const [isCopied, copyToClipboard] = useCopyToClipboard()
+
+	const { data: transactions } = useInfiniteTransactions()
 
 	const inputRef = React.useRef<HTMLInputElement | null>(null)
-	const [_hasCopied, _setHasCopied] = React.useState(false)
 
 	React.useEffect(() => {
 		const listener = (event: KeyboardEvent) => {
@@ -73,8 +78,6 @@ function RouteComponent() {
 			},
 			[navigate],
 		)
-
-	const [isCopied, copyToClipboard] = useCopyToClipboard()
 
 	return (
 		<div className="px-4">
@@ -177,42 +180,43 @@ function RouteComponent() {
 										</tr>
 									</thead>
 									<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
-										{MOCK_TRANSACTIONS.map((transaction) => (
+										{transactions?.pages.at(0)?.map((transaction) => (
 											<tr
-												key={transaction.id}
+												key={transaction.hash}
 												className="transition-colors hover:bg-alt"
 											>
 												<td className="px-5 py-3 text-primary">
-													<div className="text-xs">{transaction.date}</div>
+													<div className="text-xs">{transaction.chainId}</div>
 												</td>
 												<td className="px-5 py-3 text-primary">
-													<div className="text-[11px]">{transaction.time}</div>
+													<div className="text-[11px]">
+														<TransactionTimestamp
+															blockNumber={transaction.blockNumber}
+														/>
+													</div>
 												</td>
 												<td className="px-3 py-3">
-													<a
-														href={transaction.block.href}
+													<Link
+														to={'/explore/block/$id'}
+														params={{
+															id:
+																transaction.blockNumber?.toString() ??
+																transaction.blockHash ??
+																'',
+														}}
 														className="text-accent transition-colors hover:text-accent"
 													>
-														{transaction.block.label}
-													</a>
+														{transaction.blockNumber}
+													</Link>
 												</td>
 												<td className="px-3 py-3 font-mono text-[11px] text-primary">
 													{transaction.hash}
 												</td>
 												<td className="px-3 py-3 text-primary flex flex-row gap-2">
-													{transaction.actions.map((transaction) => (
-														<div
-															key={transaction}
-															className="bg-black-white/5 text-black-white/75 px-1 text-center py-0.5 w-min text-xs"
-														>
-															<span>{transaction}</span>
-														</div>
-													))}
+													<EventLogs hash={transaction.hash} />
 												</td>
-												<td
-													className={`px-5 py-3 text-right ${getTotalToneClass(transaction.total.tone)}`}
-												>
-													{transaction.total.label}
+												<td className="px-5 py-3 text-right">
+													{formatEther(transaction.gasPrice ?? 0n)}
 												</td>
 											</tr>
 										))}
@@ -303,96 +307,70 @@ function RouteComponent() {
 	)
 }
 
-type TransactionRow = {
-	id: string
-	date: string
-	time: string
-	block: { label: string; href: string }
-	hash: string
-	actions: string[]
-	total: { label: string; tone: 'positive' | 'muted' }
+function TransactionTimestamp({ blockNumber }: { blockNumber: bigint | null }) {
+	const { data: timestamp } = useBlock({
+		blockNumber: blockNumber ?? undefined,
+		query: { select: (block) => block.timestamp },
+	})
+	return <React.Fragment>{timestamp}</React.Fragment>
 }
 
-type AssetRow = {
+function EventLogs(props: { hash?: Hex.Hex | undefined }) {
+	const { data: receipt } = useTransactionReceipt({
+		hash: props.hash ?? undefined,
+		query: { enabled: Boolean(props.hash) },
+	})
+
+	const { data: events } = useQuery({
+		enabled: Boolean(props.hash) && receipt?.logs && receipt.logs.length > 0,
+		queryFn: async () => {
+			if (!props.hash) throw new Error('hash is required')
+			if (!receipt?.logs) throw new Error('receipt logs are required')
+
+			const events = parseEventLogs({
+				abi: [
+					...Abis.nonce,
+					...Abis.tip20,
+					...Abis.feeAmm,
+					...Abis.feeManager,
+					...Abis.tip20Factory,
+					...Abis.tip20Factory,
+					...Abis.tip403Registry,
+					...Abis.tip4217Registry,
+					...Abis.validatorConfig,
+					...Abis.stablecoinExchange,
+					...Abis.tipAccountRegistrar,
+					...Abis.tip20RewardsRegistry,
+				],
+				logs: receipt.logs,
+			})
+			console.info(events)
+
+			return events
+		},
+		queryKey: ['event-logs', props.hash],
+	})
+
+	if (!events) return null
+
+	return events.map((event) => (
+		<div
+			key={event.address}
+			className="bg-black-white/5 text-black-white/75 px-1 text-center py-0.5 w-min text-xs"
+		>
+			<span>{event.eventName}</span>
+		</div>
+	))
+}
+
+const MOCK_ASSETS: Array<{
 	name: string
 	ticker: string
 	currency: string
 	contract: { label: string; href: string }
 	amount: { main: string; sub?: string }
 	value: string
-}
-
-function getTotalToneClass(tone: TransactionRow['total']['tone']) {
-	return tone === 'positive' ? 'text-positive' : 'text-secondary'
-}
-
-const MOCK_TRANSACTIONS: TransactionRow[] = [
-	{
-		id: '0xf94aF88d...7aE2c39bD',
-		date: '11/23/2025',
-		time: '03:22:17',
-		block: { label: '#11765', href: '/explore/block/11765' },
-		hash: '0xf94aF88d...7aE2c39bD',
-		actions: ['Mint'],
-		total: { label: '$21.35', tone: 'positive' },
-	},
-	{
-		id: '0xB74Cd92a...4bD19fC8e',
-		date: '11/22/2025',
-		time: '18:53:21',
-		block: { label: '#11764', href: '/explore/block/11764' },
-		hash: '0xB74Cd92a...4bD19fC8e',
-		actions: ['Send', 'Swap'],
-		total: { label: '($12.76)', tone: 'muted' },
-	},
-	{
-		id: '0x22bB3e9D...8Ec3Af105',
-		date: '11/19/2025',
-		time: '09:17:53',
-		block: { label: '#11762', href: '/explore/block/11762' },
-		hash: '0x22bB3e9D...8Ec3Af105',
-		actions: ['Create Token'],
-		total: { label: '($0.91)', tone: 'muted' },
-	},
-	{
-		id: '0x0C5e4B2F...5De7aC91b',
-		date: '11/14/2025',
-		time: '23:01:08',
-		block: { label: '#11761', href: '/explore/block/11761' },
-		hash: '0x0C5e4B2F...5De7aC91b',
-		actions: ['Reward Stream'],
-		total: { label: '($0.01)', tone: 'muted' },
-	},
-	{
-		id: '0xa39b5d8F...2Cd14aE7d',
-		date: '11/01/2025',
-		time: '01:49:33',
-		block: { label: '#11759', href: '/explore/block/11759' },
-		hash: '0xa39b5d8F...2Cd14aE7d',
-		actions: ['Send'],
-		total: { label: '($15.02)', tone: 'muted' },
-	},
-	{
-		id: '0x914EF15A...9Bc23dD41',
-		date: '10/30/2025',
-		time: '14:28:47',
-		block: { label: '#11758', href: '/explore/block/11758' },
-		hash: '0x914EF15A...9Bc23dD41',
-		actions: ['Send'],
-		total: { label: '($9.23)', tone: 'muted' },
-	},
-	{
-		id: '0x5D7c3x9a...1Af58De26',
-		date: '10/14/2025',
-		time: '06:36:02',
-		block: { label: '#11752', href: '/explore/block/11752' },
-		hash: '0x5D7c3x9a...1Af58De26',
-		actions: ['Mint'],
-		total: { label: '$6.42', tone: 'positive' },
-	},
-]
-
-const MOCK_ASSETS: AssetRow[] = [
+}> = [
 	{
 		name: 'alphaUSD',
 		ticker: 'AUSD',

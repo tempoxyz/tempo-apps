@@ -15,6 +15,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ExploreIndexRouteImport } from './routes/explore/index'
 import { Route as ReceiptHashRouteImport } from './routes/receipt/$hash'
 import { Route as ExploreValueRouteImport } from './routes/explore/$value'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ExploreBlockIdRouteImport } from './routes/explore/block/$id'
 import { Route as ExploreAccountAddressRouteImport } from './routes/explore/account/$address'
 
 const ReceiptRouteRoute = ReceiptRouteRouteImport.update({
@@ -47,6 +49,16 @@ const ExploreValueRoute = ExploreValueRouteImport.update({
   path: '/$value',
   getParentRoute: () => ExploreRouteRoute,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExploreBlockIdRoute = ExploreBlockIdRouteImport.update({
+  id: '/block/$id',
+  path: '/block/$id',
+  getParentRoute: () => ExploreRouteRoute,
+} as any)
 const ExploreAccountAddressRoute = ExploreAccountAddressRouteImport.update({
   id: '/account/$address',
   path: '/account/$address',
@@ -57,28 +69,34 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/explore': typeof ExploreRouteRouteWithChildren
   '/receipt': typeof ReceiptRouteRouteWithChildren
+  '/api/health': typeof ApiHealthRoute
   '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
   '/explore/': typeof ExploreIndexRoute
   '/explore/account/$address': typeof ExploreAccountAddressRoute
+  '/explore/block/$id': typeof ExploreBlockIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/receipt': typeof ReceiptRouteRouteWithChildren
+  '/api/health': typeof ApiHealthRoute
   '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
   '/explore': typeof ExploreIndexRoute
   '/explore/account/$address': typeof ExploreAccountAddressRoute
+  '/explore/block/$id': typeof ExploreBlockIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/explore': typeof ExploreRouteRouteWithChildren
   '/receipt': typeof ReceiptRouteRouteWithChildren
+  '/api/health': typeof ApiHealthRoute
   '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
   '/explore/': typeof ExploreIndexRoute
   '/explore/account/$address': typeof ExploreAccountAddressRoute
+  '/explore/block/$id': typeof ExploreBlockIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -86,33 +104,40 @@ export interface FileRouteTypes {
     | '/'
     | '/explore'
     | '/receipt'
+    | '/api/health'
     | '/explore/$value'
     | '/receipt/$hash'
     | '/explore/'
     | '/explore/account/$address'
+    | '/explore/block/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/receipt'
+    | '/api/health'
     | '/explore/$value'
     | '/receipt/$hash'
     | '/explore'
     | '/explore/account/$address'
+    | '/explore/block/$id'
   id:
     | '__root__'
     | '/'
     | '/explore'
     | '/receipt'
+    | '/api/health'
     | '/explore/$value'
     | '/receipt/$hash'
     | '/explore/'
     | '/explore/account/$address'
+    | '/explore/block/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ExploreRouteRoute: typeof ExploreRouteRouteWithChildren
   ReceiptRouteRoute: typeof ReceiptRouteRouteWithChildren
+  ApiHealthRoute: typeof ApiHealthRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -159,6 +184,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreValueRouteImport
       parentRoute: typeof ExploreRouteRoute
     }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/explore/block/$id': {
+      id: '/explore/block/$id'
+      path: '/block/$id'
+      fullPath: '/explore/block/$id'
+      preLoaderRoute: typeof ExploreBlockIdRouteImport
+      parentRoute: typeof ExploreRouteRoute
+    }
     '/explore/account/$address': {
       id: '/explore/account/$address'
       path: '/account/$address'
@@ -173,12 +212,14 @@ interface ExploreRouteRouteChildren {
   ExploreValueRoute: typeof ExploreValueRoute
   ExploreIndexRoute: typeof ExploreIndexRoute
   ExploreAccountAddressRoute: typeof ExploreAccountAddressRoute
+  ExploreBlockIdRoute: typeof ExploreBlockIdRoute
 }
 
 const ExploreRouteRouteChildren: ExploreRouteRouteChildren = {
   ExploreValueRoute: ExploreValueRoute,
   ExploreIndexRoute: ExploreIndexRoute,
   ExploreAccountAddressRoute: ExploreAccountAddressRoute,
+  ExploreBlockIdRoute: ExploreBlockIdRoute,
 }
 
 const ExploreRouteRouteWithChildren = ExploreRouteRoute._addFileChildren(
@@ -201,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ExploreRouteRoute: ExploreRouteRouteWithChildren,
   ReceiptRouteRoute: ReceiptRouteRouteWithChildren,
+  ApiHealthRoute: ApiHealthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
