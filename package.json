@@ -30,7 +30,7 @@
 		"react": "^19.2.0",
 		"react-dom": "^19.2.0",
 		"tailwindcss": "^4.1.16",
-		"tempo.ts": "https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@33",
+		"tempo.ts": "https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@1299a52",
 		"viem": "2.x",
 		"wagmi": "^2.19.2",
 		"zod": "^4.1.12"

@@ -18,9 +18,7 @@ export function Layout() {
 	return (
 		<main className="flex min-h-dvh flex-col">
 			<Header />
-			<div className="flex flex-1 size-full items-center justify-center">
-				<Outlet />
-			</div>
+			<Outlet />
 			<footer className="bg-system py-6">
 				<ul className="flex items-center justify-center gap-6 text-sm text-secondary">
 					<li>
