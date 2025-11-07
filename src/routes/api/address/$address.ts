@@ -51,7 +51,6 @@ export const Route = createFileRoute('/api/address/$address')({
 				const nextOffset = offset + actualLimit
 				const hasMore = nextOffset < transactionCount
 
-				// First page gets short cache, others get long cache
 				const cacheControl =
 					offset === 0
 						? 'public, max-age=0, must-revalidate' // No cache for first page
