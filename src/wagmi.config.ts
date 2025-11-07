@@ -1,6 +1,6 @@
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { QueryClient } from '@tanstack/react-query'
-import { tempoDev } from 'tempo.ts/chains'
+import { tempoAndantino } from 'tempo.ts/chains'
 import { createClient, type OneOf } from 'viem'
 import {
 	type Config,
@@ -30,11 +30,11 @@ export const persister = createAsyncStoragePersister({
 })
 
 export const config = createConfig({
-	chains: [tempoDev],
+	chains: [tempoAndantino],
 	ssr: true,
 	transports: {
-		[tempoDev.id]: !browser
-			? http('https://devnet.tempoxyz.dev', {
+		[tempoAndantino.id]: !browser
+			? http('https://rpc.testnet.tempo.xyz', {
 					fetchOptions: {
 						headers: {
 							Authorization: `Basic ${btoa('eng:zealous-mayer')}`,
@@ -42,7 +42,7 @@ export const config = createConfig({
 					},
 				})
 			: webSocket(
-					'wss://devnet.tempoxyz.dev?supersecretargument=pleasedonotusemeinprod',
+					'wss://rpc.testnet.tempo.xyz?supersecretargument=pleasedonotusemeinprod',
 				),
 	},
 })
