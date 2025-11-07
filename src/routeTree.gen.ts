@@ -18,6 +18,7 @@ import { Route as ExploreValueRouteImport } from './routes/explore/$value'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ExploreBlockIdRouteImport } from './routes/explore/block/$id'
 import { Route as ExploreAccountAddressRouteImport } from './routes/explore/account/$address'
+import { Route as ApiAddressAddressRouteImport } from './routes/api/address/$address'
 
 const ReceiptRouteRoute = ReceiptRouteRouteImport.update({
   id: '/receipt',
@@ -64,6 +65,11 @@ const ExploreAccountAddressRoute = ExploreAccountAddressRouteImport.update({
   path: '/account/$address',
   getParentRoute: () => ExploreRouteRoute,
 } as any)
+const ApiAddressAddressRoute = ApiAddressAddressRouteImport.update({
+  id: '/api/address/$address',
+  path: '/api/address/$address',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
   '/explore/': typeof ExploreIndexRoute
+  '/api/address/$address': typeof ApiAddressAddressRoute
   '/explore/account/$address': typeof ExploreAccountAddressRoute
   '/explore/block/$id': typeof ExploreBlockIdRoute
 }
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
   '/explore': typeof ExploreIndexRoute
+  '/api/address/$address': typeof ApiAddressAddressRoute
   '/explore/account/$address': typeof ExploreAccountAddressRoute
   '/explore/block/$id': typeof ExploreBlockIdRoute
 }
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/explore/$value': typeof ExploreValueRoute
   '/receipt/$hash': typeof ReceiptHashRoute
   '/explore/': typeof ExploreIndexRoute
+  '/api/address/$address': typeof ApiAddressAddressRoute
   '/explore/account/$address': typeof ExploreAccountAddressRoute
   '/explore/block/$id': typeof ExploreBlockIdRoute
 }
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/explore/$value'
     | '/receipt/$hash'
     | '/explore/'
+    | '/api/address/$address'
     | '/explore/account/$address'
     | '/explore/block/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/explore/$value'
     | '/receipt/$hash'
     | '/explore'
+    | '/api/address/$address'
     | '/explore/account/$address'
     | '/explore/block/$id'
   id:
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/explore/$value'
     | '/receipt/$hash'
     | '/explore/'
+    | '/api/address/$address'
     | '/explore/account/$address'
     | '/explore/block/$id'
   fileRoutesById: FileRoutesById
@@ -138,6 +150,7 @@ export interface RootRouteChildren {
   ExploreRouteRoute: typeof ExploreRouteRouteWithChildren
   ReceiptRouteRoute: typeof ReceiptRouteRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
+  ApiAddressAddressRoute: typeof ApiAddressAddressRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreAccountAddressRouteImport
       parentRoute: typeof ExploreRouteRoute
     }
+    '/api/address/$address': {
+      id: '/api/address/$address'
+      path: '/api/address/$address'
+      fullPath: '/api/address/$address'
+      preLoaderRoute: typeof ApiAddressAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   ExploreRouteRoute: ExploreRouteRouteWithChildren,
   ReceiptRouteRoute: ReceiptRouteRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
+  ApiAddressAddressRoute: ApiAddressAddressRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

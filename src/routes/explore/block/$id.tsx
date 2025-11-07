@@ -35,5 +35,11 @@ function RouteComponent() {
 		blockNumber,
 	})
 
-	return <pre>{Json.stringify(block, null, 2)}</pre>
+	return (
+		<section className="size-full flex-1 flex justify-center items-center pt-8">
+			<pre className="w-full max-w-3xl overflow-x-scroll text-sm bg-surface p-3">
+				{Json.stringify(block, null, 2)}
+			</pre>
+		</section>
+	)
 }

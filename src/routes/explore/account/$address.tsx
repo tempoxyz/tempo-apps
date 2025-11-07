@@ -1,28 +1,66 @@
-import { useQuery } from '@tanstack/react-query'
 import {
+	useQuery,
+	useQueryClient,
+	useSuspenseQuery,
+} from '@tanstack/react-query'
+import {
+	ClientOnly,
 	createFileRoute,
 	Link,
 	useNavigate,
 	useRouterState,
 } from '@tanstack/react-router'
-import {
-	ArrowRight,
-	ChevronLeft,
-	ChevronRight,
-	Copy,
-	CopyCheck,
-} from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
+import type { Log, RpcTransaction as Transaction } from 'viem'
 import { formatEther, parseEventLogs } from 'viem'
-import { useBlock, useTransactionReceipt } from 'wagmi'
+import {
+	useBlock,
+	useClient,
+	useReadContracts,
+	useTransactionReceipt,
+} from 'wagmi'
+import { getClient } from 'wagmi/actions'
 import { z } from 'zod/mini'
-import { useInfiniteTransactions } from '#explore/-lib/Hooks.tsx'
-import { useCopyToClipboard } from '#hooks/use-copy-to-clipboard.ts'
+import { config } from '#wagmi.config'
+
+type TransactionsResponse = {
+	transactions: Transaction[]
+	total: number
+	offset: number // Next offset to use for pagination
+	limit: number
+	hasMore: boolean
+}
 
 export const Route = createFileRoute('/explore/account/$address')({
 	component: RouteComponent,
+	validateSearch: z.object({
+		page: z._default(z.number(), 1),
+		limit: z._default(z.number(), 7),
+	}),
+	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
+	loader: async ({ deps: { page, limit }, params: { address }, context }) => {
+		const client = getClient(config)
+		const offset = (page - 1) * limit
+
+		await context.queryClient.prefetchQuery({
+			queryKey: ['account-transactions', client.chain.id, address, page, limit],
+			queryFn: async (): Promise<TransactionsResponse> => {
+				const response = await fetch(
+					`/api/address/${address}?offset=${offset}&limit=${limit}`,
+				)
+				if (!response.ok) {
+					throw new Error(
+						`Failed to fetch transactions: ${response.statusText}`,
+					)
+				}
+				return response.json()
+			},
+			staleTime: page === 1 ? 0 : 60_000, // Match main query settings
+		})
+	},
 	params: {
 		parse: z.object({
 			address: z.pipe(
@@ -40,9 +78,87 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const routerState = useRouterState()
 	const { address } = Route.useParams()
-	const [isCopied, copyToClipboard] = useCopyToClipboard()
 
-	const { data: transactions } = useInfiniteTransactions()
+	const client = useClient()
+	const queryClient = useQueryClient()
+	const { page, limit } = Route.useSearch()
+	const offset = (page - 1) * limit
+
+	const { data } = useSuspenseQuery({
+		queryKey: ['account-transactions', client.chain.id, address, page, limit],
+		queryFn: async (): Promise<TransactionsResponse> => {
+			const response = await fetch(
+				`/api/address/${address}?offset=${offset}&limit=${limit}`,
+			)
+			if (!response.ok) {
+				throw new Error(`Failed to fetch transactions: ${response.statusText}`)
+			}
+			return response.json()
+		},
+		// Auto-refresh page 1 since new transactions appear there
+		refetchInterval: page === 1 ? 4_000 : false, // Refresh every 4s on page 1 only
+		refetchIntervalInBackground: page === 1, // Continue refreshing even when window not focused
+		refetchOnWindowFocus: page === 1,
+		// Page 1 should refetch often, but other pages can use cached data
+		staleTime: page === 1 ? 0 : 60_000, // Page 1: always fresh, others: 60s cache
+	})
+
+	const transactions = data.transactions
+	const totalTransactions = data.total
+	const totalPages = Math.ceil(totalTransactions / limit)
+
+	// Aggressive prefetching for instant navigation
+	React.useEffect(() => {
+		// Prefetch more pages when limit is small for better UX
+		const prefetchCount = limit < 20 ? 10 : 3
+		const pagesToPrefetch: number[] = []
+
+		// Prefetch next pages (prioritize forward navigation)
+		for (let i = 1; i <= prefetchCount; i++) {
+			const nextPage = page + i
+			if (nextPage <= totalPages) {
+				pagesToPrefetch.push(nextPage)
+			}
+		}
+
+		// Prefetch previous pages (less priority, fewer pages)
+		const prevPrefetchCount = Math.min(prefetchCount, 5)
+		for (let i = 1; i <= prevPrefetchCount; i++) {
+			const prevPage = page - i
+			if (prevPage >= 1) {
+				pagesToPrefetch.push(prevPage)
+			}
+		}
+
+		// Prefetch all pages in parallel
+		for (const targetPage of pagesToPrefetch) {
+			const targetOffset = (targetPage - 1) * limit
+			queryClient.prefetchQuery({
+				queryKey: [
+					'account-transactions',
+					client.chain.id,
+					address,
+					targetPage,
+					limit,
+				],
+				queryFn: async (): Promise<TransactionsResponse> => {
+					const response = await fetch(
+						`/api/address/${address}?offset=${targetOffset}&limit=${limit}`,
+					)
+					if (!response.ok) throw new Error(response.statusText)
+					return response.json()
+				},
+				staleTime: targetPage === 1 ? 0 : 60_000, // Page 1 always fresh, others cached
+			})
+		}
+	}, [page, totalPages, limit, queryClient, client.chain.id, address])
+
+	const goToPage = React.useCallback(
+		(newPage: number) => {
+			navigate({ to: '.', search: { page: newPage, limit } })
+		},
+		[navigate, limit],
+	)
 
 	const inputRef = React.useRef<HTMLInputElement | null>(null)
 
@@ -80,328 +196,554 @@ function RouteComponent() {
 		)
 
 	return (
-		<div className="px-4">
-			<div className="mx-auto flex max-w-6xl flex-col gap-8">
-				<section className="flex flex-col gap-4">
-					<div className="flex flex-col items-center gap-2 text-center">
-						<form onSubmit={handleSearch} className="w-full max-w-xl ">
-							<div className="relative ">
-								<input
-									ref={inputRef}
-									name="value"
-									type="text"
-									placeholder="Enter address, token, or transaction..."
-									spellCheck={false}
-									autoCapitalize="off"
-									autoComplete="off"
-									autoCorrect="off"
-									className="w-full rounded-lg border border-border-primary bg-surface px-4 py-2.5 pr-12 text-sm text-primary transition focus:outline-none focus:ring-0 shadow-[0px_4px_54px_0px_rgba(0,0,0,0.06)] outline-1 -outline-offset-1 outline-black-white/10"
-								/>
-								<button
-									type="submit"
-									disabled={routerState.isLoading}
-									className="my-auto bg-black-white/10 size-6 rounded-full absolute inset-y-0 right-2.5 flex items-center justify-center text-tertiary transition-colors hover:text-secondary disabled:opacity-50"
-									aria-label="Search"
-								>
-									<ArrowRight className="size-4" aria-hidden />
-								</button>
-							</div>
-						</form>
-						<p className="text-xs text-tertiary">
-							Press <span className="font-mono text-[11px]">⌘</span>
-							<span className="font-mono text-[11px]">Ctrl</span> +{' '}
-							<span className="font-mono text-[11px]">K</span> to focus
-						</p>
-					</div>
-				</section>
-
-				<div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_1fr] font-mono">
-					{/* Account Info */}
-					<aside className="h-fit rounded-xl border-2 border-border-primary bg-surface pb-3">
-						<h2 className="text-sm font-medium uppercase tracking-[0.15em] text-primary px-5 pt-5">
-							Account
-						</h2>
-						<div className="flex items-center justify-start gap-2 mt-2 px-5">
-							<span className="text-sm tracking-wider text-tertiary">
-								Address
-							</span>
-							<button
-								type="button"
-								onClick={() => copyToClipboard(address)}
-								className="inline-flex items-center text-tertiary transition-colors hover:text-primary"
-								aria-live="polite"
-							>
-								{isCopied ? (
-									<CopyCheck className="size-4" aria-hidden />
-								) : (
-									<Copy className="size-4" aria-hidden />
-								)}
-							</button>
-						</div>
-						<p className="break-all font-mono text-sm leading-relaxed text-primary px-5">
-							{address}
-						</p>
-						<div className="outline outline-primary outline-dashed outline-x-0 mt-3 opacity-20 w-[99.5%] mx-auto" />
-						<div className="flex flex-row w-full justify-between text-xs px-2.5 h-10">
-							<div className="flex flex-row justify-between w-1/2 my-auto">
-								<span className="text-tertiary">Active</span>
-								<span className="text-primary">12h ago</span>
-							</div>
-							<div className="my-0.5 outline outline-primary outline-dashed w-0 outline-x-0 mx-4 opacity-20" />
-							<div className="flex flex-row justify-between w-1/2 my-auto">
-								<span className="text-tertiary">Created</span>
-								<span className="text-primary">30d ago</span>
-							</div>
-						</div>
-						<div className="outline outline-primary outline-dashed outline-x-0 opacity-20 w-[99.5%] mx-auto" />
-						<div className="flex flex-row justify-between text-xs px-3 mt-2.5">
-							<span className="text-tertiary">Holdings</span>
-							<span className="text-primary">$1,234.56</span>
-						</div>
-					</aside>
-
-					<section className="flex flex-col gap-6">
-						{/* History */}
-						<div className="overflow-hidden rounded-xl border-2 border-border-primary bg-surface">
-							<div className="overflow-x-auto pt-3">
-								<table className="w-full border-collapse text-sm">
-									<thead>
-										<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
-											<th className="px-5 pb-3 font-semibold tracking-[0.15em] text-primary uppercase">
-												History
-											</th>
-											<th className="px-5 pb-3 font-normal">Time (GMT)</th>
-											<th className="px-3 pb-3 font-normal">Block</th>
-											<th className="px-3 pb-3 font-normal">Hash</th>
-											<th className="px-3 pb-3 font-normal">Action(s)</th>
-											<th className="px-5 pb-3 text-right font-normal">
-												Total
-											</th>
-										</tr>
-									</thead>
-									<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
-										{transactions?.pages.at(0)?.map((transaction) => (
-											<tr
-												key={transaction.hash}
-												className="transition-colors hover:bg-alt"
-											>
-												<td className="px-5 py-3 text-primary">
-													<div className="text-xs">{transaction.chainId}</div>
-												</td>
-												<td className="px-5 py-3 text-primary">
-													<div className="text-[11px]">
-														<TransactionTimestamp
-															blockNumber={transaction.blockNumber}
-														/>
-													</div>
-												</td>
-												<td className="px-3 py-3">
-													<Link
-														to={'/explore/block/$id'}
-														params={{
-															id:
-																transaction.blockNumber?.toString() ??
-																transaction.blockHash ??
-																'',
-														}}
-														className="text-accent transition-colors hover:text-accent"
-													>
-														{transaction.blockNumber}
-													</Link>
-												</td>
-												<td className="px-3 py-3 font-mono text-[11px] text-primary">
-													{transaction.hash}
-												</td>
-												<td className="px-3 py-3 text-primary flex flex-row gap-2">
-													<EventLogs hash={transaction.hash} />
-												</td>
-												<td className="px-5 py-3 text-right">
-													{formatEther(transaction.gasPrice ?? 0n)}
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
-
-							<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
-								<div className="flex flex-row items-center gap-2 text-tertiary">
-									<ChevronLeft className="size-4 text-tertiary" aria-hidden />
-									<span className="text-primary">1</span>
-									<span className="">2</span>
-									<span className="">3</span>
-									<span className="">4</span>
-									<span className="text-primary">...</span>
-									<span className="">12</span>
-									<ChevronRight className="size-4 text-accent" aria-hidden />
+		<React.Suspense fallback={<div>Loading...</div>}>
+			<div className="px-4">
+				<div className="mx-auto flex max-w-6xl flex-col gap-8">
+					<section className="flex flex-col gap-4">
+						<div className="flex flex-col items-center gap-2 text-center">
+							<form onSubmit={handleSearch} className="w-full max-w-xl ">
+								<div className="relative ">
+									<input
+										ref={inputRef}
+										name="value"
+										type="text"
+										placeholder="Enter address, token, or transaction..."
+										spellCheck={false}
+										autoCapitalize="off"
+										autoComplete="off"
+										autoCorrect="off"
+										className="w-full rounded-lg border border-border-primary bg-surface px-4 py-2.5 pr-12 text-sm text-primary transition focus:outline-none focus:ring-0 shadow-[0px_4px_54px_0px_rgba(0,0,0,0.06)] outline-1 -outline-offset-1 outline-black-white/10"
+									/>
+									<button
+										type="submit"
+										disabled={routerState.isLoading}
+										className="my-auto bg-black-white/10 size-6 rounded-full absolute inset-y-0 right-2.5 flex items-center justify-center text-tertiary transition-colors hover:text-secondary disabled:opacity-50"
+										aria-label="Search"
+									>
+										<ArrowRight className="size-4" aria-hidden />
+									</button>
 								</div>
-								<div className="space-x-2">
-									<span className="text-primary">3,021</span>
-									<span className="text-tertiary">entries</span>
-								</div>
-							</div>
-						</div>
-
-						{/* Assets */}
-						<div className="overflow-hidden rounded-xl border-2 border-border-primary bg-surface">
-							<div className="overflow-x-auto pt-4">
-								<table className="w-full border-collapse text-xs">
-									<thead>
-										<tr className="border-dashed border-b-2 border-black-white/10 text-left text-[10px] uppercase tracking-wider text-tertiary">
-											<th className="px-5 pb-3 font-semibold tracking-[0.15em] text-primary">
-												ASSETS
-											</th>
-											<th className="px-5 pb-3 font-normal">Ticker</th>
-											<th className="px-3 pb-3 font-normal">Currency</th>
-											<th className="px-3 pb-3 font-normal">Contract</th>
-											<th className="px-3 pb-3 text-left font-normal">
-												Amount
-											</th>
-											<th className="px-5 pb-3 text-right font-normal">
-												Value
-											</th>
-										</tr>
-									</thead>
-									<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
-										{MOCK_ASSETS.map((asset) => (
-											<tr
-												key={asset.name}
-												className="transition-colors hover:bg-alt"
-											>
-												<td className="px-5 py-3 text-primary">{asset.name}</td>
-												<td className="px-3 py-3 text-positive">
-													{asset.ticker}
-												</td>
-												<td className="px-3 py-3 text-primary">
-													{asset.currency.toUpperCase()}
-												</td>
-												<td className="px-3 py-3">
-													<a
-														href={asset.contract.href}
-														className="font-mono text-[11px] text-accent transition-colors hover:text-accent"
-													>
-														{asset.contract.label}
-													</a>
-												</td>
-												<td className="px-3 py-3 text-left text-primary">
-													{asset.amount.main}
-													{asset.amount.sub ? (
-														<span className="text-tertiary">
-															{asset.amount.sub}
-														</span>
-													) : null}
-												</td>
-												<td className="px-5 py-3 text-right text-primary">
-													{asset.value}
-												</td>
-											</tr>
-										))}
-									</tbody>
-								</table>
-							</div>
+							</form>
+							<p className="text-xs text-tertiary">
+								Press <span className="font-mono text-[11px]">⌘</span>
+								<span className="font-mono text-[11px]">Ctrl</span> +{' '}
+								<span className="font-mono text-[11px]">K</span> to focus
+							</p>
 						</div>
 					</section>
+
+					<div className="grid grid-cols-1 gap-6 font-mono">
+						<section className="flex flex-col gap-6 w-full">
+							{/* History */}
+							<div className="overflow-hidden rounded-xl border border-border-primary bg-primary">
+								<div className="px-5 h-10 flex items-center">
+									<h2 className="text-sm font-medium uppercase tracking-[0.15em] text-primary">
+										HISTORY
+									</h2>
+								</div>
+								<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
+									<table className="w-full border-collapse text-sm rounded-t-sm">
+										<thead>
+											<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+												<th className="px-5 pb-3 font-normal">Time</th>
+												<th className="px-5 pb-3 font-normal">Description</th>
+												<th className="px-3 pb-3 font-normal">Hash</th>
+												<th className="px-3 pb-3 font-normal">Block</th>
+												<th className="px-5 pb-3 text-right font-normal">
+													Total
+												</th>
+											</tr>
+										</thead>
+										{/** biome-ignore lint/complexity/noUselessFragments: _ */}
+										<ClientOnly fallback={<></>}>
+											<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
+												{transactions?.map((transaction) => (
+													<tr
+														key={transaction.hash}
+														className="transition-colors hover:bg-alt"
+													>
+														{/* Time */}
+														<td className="px-5 py-3 text-primary">
+															<div className="text-xs">
+																<TransactionTimestamp
+																	blockNumber={transaction.blockNumber}
+																/>
+															</div>
+														</td>
+
+														{/* Description */}
+														<td className="px-5 py-3 text-primary">
+															<div className="text-sm">
+																<TransactionDescription
+																	transaction={transaction}
+																/>
+															</div>
+														</td>
+
+														{/* Transaction Hash */}
+														<td className="px-3 py-3 font-mono text-[11px] text-primary">
+															<Link
+																to={'/receipt/$hash'}
+																params={{ hash: transaction.hash ?? '' }}
+																className="hover:text-accent transition-colors"
+															>
+																{transaction.hash?.slice(0, 8)}...
+																{transaction.hash?.slice(-6)}
+															</Link>
+														</td>
+
+														{/* Block Number */}
+														<td className="px-3 py-3">
+															{transaction.blockNumber ? (
+																<Link
+																	to={'/explore/block/$id'}
+																	params={{
+																		id: Hex.toNumber(
+																			transaction.blockNumber,
+																		).toString(),
+																	}}
+																	className="text-accent text-sm transition-colors hover:text-accent/80"
+																>
+																	{Hex.toNumber(
+																		transaction.blockNumber,
+																	).toString()}
+																</Link>
+															) : (
+																<span className="text-tertiary">--</span>
+															)}
+														</td>
+
+														{/* Total Value */}
+														<td className="px-5 py-3 text-right font-mono text-xs">
+															{(() => {
+																const value = transaction.value
+																	? Hex.toBigInt(transaction.value)
+																	: 0n
+																const ethAmount = parseFloat(formatEther(value))
+																// Mock conversion rate: 1 ETH = $2000
+																const dollarAmount = ethAmount * 2000
+
+																if (dollarAmount > 1) {
+																	return (
+																		<span className="text-positive">
+																			${dollarAmount.toFixed(2)}
+																		</span>
+																	)
+																}
+																return (
+																	<span className="text-tertiary">
+																		(${dollarAmount.toFixed(2)})
+																	</span>
+																)
+															})()}
+														</td>
+													</tr>
+												))}
+											</tbody>
+										</ClientOnly>
+									</table>
+								</div>
+
+								<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
+									<div className="flex flex-row items-center gap-2">
+										<button
+											type="button"
+											onClick={() => goToPage(page - 1)}
+											disabled={page <= 1}
+											className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+											aria-label="Previous page"
+										>
+											Previous
+										</button>
+
+										<div className="flex items-center gap-1.5 px-2">
+											{(() => {
+												// Show up to 5 consecutive pages centered around current page
+												const maxButtons = 5
+												let startPage = Math.max(
+													1,
+													page - Math.floor(maxButtons / 2),
+												)
+												const endPage = Math.min(
+													totalPages,
+													startPage + maxButtons - 1,
+												)
+
+												// Adjust start if we're near the end
+												startPage = Math.max(1, endPage - maxButtons + 1)
+
+												const pages: (number | 'ellipsis')[] = []
+
+												// Add first page + ellipsis if needed
+												if (startPage > 1) {
+													pages.push(1)
+													if (startPage > 2) {
+														pages.push('ellipsis')
+													}
+												}
+
+												// Add the range of pages
+												for (let i = startPage; i <= endPage; i++) {
+													pages.push(i)
+												}
+
+												// Add ellipsis + last page if needed
+												if (endPage < totalPages) {
+													if (endPage < totalPages - 1) {
+														pages.push('ellipsis')
+													}
+													pages.push(totalPages)
+												}
+
+												let ellipsisCount = 0
+												return pages.map((p) => {
+													if (p === 'ellipsis') {
+														ellipsisCount++
+														return (
+															<span
+																key={`ellipsis-${ellipsisCount}`}
+																className="text-tertiary px-1"
+															>
+																...
+															</span>
+														)
+													}
+													return (
+														<button
+															key={p}
+															type="button"
+															onClick={() => goToPage(p)}
+															className={`flex size-7 items-center justify-center rounded transition-colors ${
+																page === p
+																	? 'bg-accent text-white'
+																	: 'hover:bg-alt text-primary'
+															}`}
+														>
+															{p}
+														</button>
+													)
+												})
+											})()}
+										</div>
+
+										<button
+											type="button"
+											onClick={() => goToPage(page + 1)}
+											disabled={page >= totalPages}
+											className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+											aria-label="Next page"
+										>
+											Next
+										</button>
+									</div>
+
+									<div className="space-x-2">
+										<span className="text-tertiary">Page</span>
+										<span className="text-primary">{page}</span>
+										<span className="text-tertiary">of</span>
+										<span className="text-primary">{totalPages}</span>
+										<span className="text-tertiary">•</span>
+										<span className="text-primary">{totalTransactions}</span>
+										<span className="text-tertiary">
+											{totalTransactions === 1 ? 'transaction' : 'transactions'}
+										</span>
+									</div>
+								</div>
+							</div>
+						</section>
+					</div>
 				</div>
 			</div>
-		</div>
+		</React.Suspense>
 	)
 }
 
-function TransactionTimestamp({ blockNumber }: { blockNumber: bigint | null }) {
-	const { data: timestamp } = useBlock({
-		blockNumber: blockNumber ?? undefined,
-		query: { select: (block) => block.timestamp },
-	})
-	return <React.Fragment>{timestamp}</React.Fragment>
-}
-
-function EventLogs(props: { hash?: Hex.Hex | undefined }) {
-	const { data: receipt } = useTransactionReceipt({
-		hash: props.hash ?? undefined,
-		query: { enabled: Boolean(props.hash) },
-	})
-
-	const { data: events } = useQuery({
-		enabled: Boolean(props.hash) && receipt?.logs && receipt.logs.length > 0,
+function useParseEventLogs(props: {
+	hash: Hex.Hex | undefined
+	logs: Array<Log> | undefined
+}) {
+	return useQuery({
+		enabled: Boolean(props.hash) && Array.isArray(props.logs),
+		queryKey: ['parse-event-logs', props.hash],
 		queryFn: async () => {
-			if (!props.hash) throw new Error('hash is required')
-			if (!receipt?.logs) throw new Error('receipt logs are required')
-
-			const events = parseEventLogs({
+			const eventLogs = parseEventLogs({
 				abi: [
 					...Abis.nonce,
 					...Abis.tip20,
 					...Abis.feeAmm,
 					...Abis.feeManager,
 					...Abis.tip20Factory,
-					...Abis.tip20Factory,
 					...Abis.tip403Registry,
-					...Abis.tip4217Registry,
 					...Abis.validatorConfig,
 					...Abis.stablecoinExchange,
 					...Abis.tipAccountRegistrar,
 					...Abis.tip20RewardsRegistry,
 				],
-				logs: receipt.logs,
+				logs: props.logs ?? [],
 			})
-			console.info(events)
-
-			return events
+			return eventLogs
 		},
-		queryKey: ['event-logs', props.hash],
 	})
-
-	if (!events) return null
-
-	return events.map((event) => (
-		<div
-			key={event.address}
-			className="bg-black-white/5 text-black-white/75 px-1 text-center py-0.5 w-min text-xs"
-		>
-			<span>{event.eventName}</span>
-		</div>
-	))
 }
 
-const MOCK_ASSETS: Array<{
-	name: string
-	ticker: string
-	currency: string
-	contract: { label: string; href: string }
-	amount: { main: string; sub?: string }
-	value: string
-}> = [
-	{
-		name: 'alphaUSD',
-		ticker: 'AUSD',
-		currency: 'USD',
-		contract: {
-			label: '0x82Fe190c...3Ed47bAA9',
-			href: '/explore/token/0x82Fe190c3Ed47bAA9',
+function useTokenInfo(tokenAddress: Address.Address) {
+	const { data, status } = useReadContracts({
+		query: {
+			enabled: Boolean(tokenAddress),
 		},
-		amount: { main: '1,013.315', sub: '000' },
-		value: '$1,013.31',
-	},
-	{
-		name: 'betaUSD',
-		ticker: 'BUSD',
-		currency: 'USD',
-		contract: {
-			label: '0x4b1F6a7D...6Ee8CdA32',
-			href: '/explore/token/0x4b1F6a7D6Ee8CdA32',
+		contracts: [
+			{
+				address: tokenAddress,
+				abi: Abis.tip20,
+				functionName: 'symbol',
+			},
+			{
+				address: tokenAddress,
+				abi: Abis.tip20,
+				functionName: 'name',
+			},
+			{
+				address: tokenAddress,
+				abi: Abis.tip20,
+				functionName: 'decimals',
+			},
+		],
+	})
+
+	if (status !== 'success') {
+		return { status, symbol: undefined, name: undefined, decimals: undefined }
+	}
+
+	const [symbol, name, decimals] = data
+	return {
+		status,
+		symbol: symbol.result as string | undefined,
+		name: name.result as string | undefined,
+		decimals: decimals.result as number | undefined,
+	}
+}
+
+function TransferDescription({
+	amount,
+	to,
+	tokenAddress,
+	isSelf,
+}: {
+	amount: bigint
+	to: string
+	tokenAddress: Address.Address
+	isSelf: boolean
+}) {
+	const { symbol, decimals } = useTokenInfo(tokenAddress)
+
+	const formatAmount = (value: bigint, dec?: number) => {
+		const divisor = BigInt(10 ** (dec ?? 18))
+		const wholePart = value / divisor
+		const fracPart = value % divisor
+		const fracStr = fracPart.toString().padStart(dec ?? 18, '0')
+		// Remove trailing zeros
+		const trimmed = fracStr.replace(/0+$/, '')
+		return trimmed ? `${wholePart.toString()}.${trimmed}` : wholePart.toString()
+	}
+
+	return (
+		<span className="text-primary">
+			<span>Transfer</span>{' '}
+			<span className="font-semibold">{formatAmount(amount, decimals)}</span>{' '}
+			<span className="text-accent">{symbol || 'TOKEN'}</span> <span>to</span>{' '}
+			<span className="text-accent">
+				{to?.slice(0, 6)}...{to?.slice(-4)}
+			</span>
+			{isSelf && <span className="text-tertiary"> (self)</span>}
+		</span>
+	)
+}
+
+function TransactionDescription({ transaction }: { transaction: Transaction }) {
+	const { data: receipt } = useTransactionReceipt({
+		hash: transaction.hash,
+		query: {
+			enabled: Boolean(transaction.hash),
 		},
-		amount: { main: '234.35', sub: '0000' },
-		value: '$231.35',
-	},
-	{
-		name: 'charlieUSD',
-		ticker: 'CUSD',
-		currency: 'USD',
-		contract: {
-			label: '0x69cAd35B...0Da91Fe45',
-			href: '/explore/token/0x69cAd35B0Da91Fe45',
+	})
+	const { data: eventLogs } = useParseEventLogs({
+		hash: transaction.hash,
+		logs: receipt?.logs,
+	})
+
+	// Helper to format token amounts
+	// Assuming TEST tokens have 18 decimals like standard ERC20
+	const formatTokenAmount = (amount: bigint | string | number) => {
+		if (!amount) return '0'
+
+		let value: bigint
+		if (typeof amount === 'string') {
+			value = BigInt(amount)
+		} else if (typeof amount === 'number') {
+			value = BigInt(amount)
+		} else {
+			value = amount
+		}
+
+		// Format with proper decimals
+		const ether = formatEther(value)
+		const num = parseFloat(ether)
+
+		// If the number is very small, show more decimals
+		if (num < 0.01 && num > 0) {
+			return num.toFixed(10).replace(/\.?0+$/, '')
+		}
+
+		return num.toLocaleString('en-US', {
+			minimumFractionDigits: 0,
+			maximumFractionDigits: 5,
+		})
+	}
+
+	if (!eventLogs || eventLogs.length === 0) {
+		return <span className="text-tertiary">Processing...</span>
+	}
+
+	// biome-ignore lint/suspicious/noExplicitAny: Event types are dynamic
+	const event: any = eventLogs[0]
+	const eventName = event?.eventName
+	const args = event?.args || {}
+
+	// Format based on event type, showing actual data from the event
+	const formatEventDescription = () => {
+		// Handle Transfer events with the dedicated component
+		if (eventName === 'Transfer' && args.to && args.amount !== undefined) {
+			const to = args.to as string
+			const amount = args.amount as bigint
+			const from = args.from as string
+			const tokenAddress = event.address as Address.Address // Token contract address from event
+			const isSelf = from?.toLowerCase() === to?.toLowerCase()
+
+			return (
+				<TransferDescription
+					amount={amount}
+					to={to}
+					tokenAddress={tokenAddress}
+					isSelf={isSelf}
+				/>
+			)
+		}
+
+		// Handle Mint events
+		if (eventName === 'Mint' && args.to && args.amount !== undefined) {
+			const to = args.to as string
+			const amount = args.amount as bigint
+			const isSelf = to?.toLowerCase() === transaction.from?.toLowerCase()
+
+			return (
+				<>
+					<span>Mint</span>{' '}
+					<span className="font-semibold">{formatTokenAmount(amount)}</span>{' '}
+					<span className="text-accent">TEST</span> <span>to</span>{' '}
+					<span className="text-accent">
+						{to?.slice(0, 6)}...{to?.slice(-4)}
+					</span>
+					{isSelf && <span className="text-tertiary"> (self)</span>}
+				</>
+			)
+		}
+
+		// Handle swap events
+		if (eventName === 'Swap' && (args.amount0In || args.amount0Out)) {
+			const amount0 = args.amount0In || args.amount0Out
+			const amount1 = args.amount1In || args.amount1Out
+
+			return (
+				<>
+					<span>Swap</span>{' '}
+					<span className="font-semibold">{formatTokenAmount(amount0)}</span>{' '}
+					<span className="text-accent">TEST</span> <span>for</span>{' '}
+					<span className="font-semibold">{formatTokenAmount(amount1)}</span>{' '}
+					<span className="text-accent">TEST2</span>
+				</>
+			)
+		}
+
+		// Handle whitelist events
+		if (args.address || args.account) {
+			const address = args.address || args.account
+			const policyId = args.policyId || args.id
+
+			return (
+				<>
+					<span>Whitelist</span>{' '}
+					<span className="text-accent">
+						{address?.slice(0, 6)}...{address?.slice(-4)}
+					</span>{' '}
+					<span>on Policy</span>{' '}
+					<span className="text-accent">#{policyId?.toString()}</span>
+				</>
+			)
+		}
+
+		// Handle buy/limit orders
+		if ((eventName === 'LimitBuy' || eventName === 'Buy') && args.amount) {
+			const amount = args.amount
+			const tick = args.tick || args.price
+
+			return (
+				<>
+					<span>Limit Buy</span>{' '}
+					<span className="font-semibold">{formatTokenAmount(amount)}</span>{' '}
+					<span className="text-accent">TEST</span> <span>at tick</span>{' '}
+					<span className="text-accent">{tick?.toString()}</span>
+				</>
+			)
+		}
+
+		// Generic fallback - just show the event name
+		return <span>{eventName || 'Transaction'}</span>
+	}
+
+	return <span className="text-primary">{formatEventDescription()}</span>
+}
+
+function TransactionTimestamp({
+	blockNumber,
+}: {
+	blockNumber: Hex.Hex | null | undefined
+}) {
+	const { data: timestamp } = useBlock({
+		blockNumber: blockNumber ? Hex.toBigInt(blockNumber) : undefined,
+		query: {
+			enabled: Boolean(blockNumber),
+			select: (block) => block.timestamp,
 		},
-		amount: { main: '114.33', sub: '0000' },
-		value: '$110.51',
-	},
-]
+	})
+
+	const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
+
+	// Update every second to keep time live
+	React.useEffect(() => {
+		const interval = setInterval(forceUpdate, 1000)
+		return () => clearInterval(interval)
+	}, [])
+
+	if (!timestamp) return <span className="text-tertiary">--</span>
+
+	// Convert Unix timestamp to readable format
+	const date = new Date(Number(timestamp) * 1_000)
+	const now = new Date()
+	const diffMs = now.getTime() - date.getTime()
+	const diffSec = Math.floor(diffMs / 1000)
+	const diffMin = Math.floor(diffSec / 60)
+	const diffHour = Math.floor(diffMin / 60)
+	const diffDay = Math.floor(diffHour / 24)
+
+	let timeAgo: string
+	if (diffSec < 60) timeAgo = `${diffSec}s ago`
+	else if (diffMin < 60) timeAgo = `${diffMin}m ago`
+	else if (diffHour < 24) timeAgo = `${diffHour}h ago`
+	else timeAgo = `${diffDay}d ago`
+
+	return (
+		<span className="text-tertiary" title={date.toLocaleString()}>
+			{timeAgo}
+		</span>
+	)
+}

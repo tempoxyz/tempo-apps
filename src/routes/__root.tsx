@@ -1,5 +1,6 @@
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { QueryClient } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import {
 	createRootRouteWithContext,
@@ -84,6 +85,15 @@ export const Route = createRootRouteWithContext<{
 			},
 		],
 	}),
+	notFoundComponent: (props) => {
+		return (
+			<div>
+				<h1>404</h1>
+				<p>Page not found</p>
+				<pre>{JSON.stringify(props, null, 2)}</pre>
+			</div>
+		)
+	},
 	errorComponent: (props) => (
 		<RootDocument>
 			<DefaultCatchBoundary {...props} />
@@ -107,21 +117,25 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						persistOptions={{ persister }}
 					>
 						{children}
+						{import.meta.env.DEV && (
+							<TanStackDevtools
+								config={{
+									position: 'bottom-right',
+								}}
+								plugins={[
+									{
+										name: 'Tanstack Query',
+										render: <ReactQueryDevtools />,
+									},
+									{
+										name: 'Tanstack Router',
+										render: <TanStackRouterDevtoolsPanel />,
+									},
+								]}
+							/>
+						)}
 					</PersistQueryClientProvider>
 				</WagmiProvider>
-				{import.meta.env.DEV && (
-					<TanStackDevtools
-						config={{
-							position: 'bottom-right',
-						}}
-						plugins={[
-							{
-								name: 'Tanstack Router',
-								render: <TanStackRouterDevtoolsPanel />,
-							},
-						]}
-					/>
-				)}
 				<Scripts />
 			</body>
 		</html>
