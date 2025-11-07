@@ -1,9 +1,21 @@
+import { QueryClient } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { routeTree } from '#routeTree.gen.ts'
-import { queryClient } from '#wagmi.config.ts'
+// import { queryClient } from '#wagmi.config.ts'
 
 export const getRouter = () => {
+	const queryClient = new QueryClient({
+		defaultOptions: {
+			queries: {
+				staleTime: 60 * 1_000, // needed for SSR
+				// queryKeyHashFn: hashFn,
+				refetchOnWindowFocus: false,
+				gcTime: 1_000 * 60 * 60 * 24, // 24 hours
+			},
+		},
+	})
+
 	const router = createRouter({
 		routeTree,
 		scrollRestoration: true,

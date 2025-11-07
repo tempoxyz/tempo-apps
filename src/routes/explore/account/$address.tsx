@@ -23,7 +23,7 @@ import {
 	useTransactionReceipt,
 } from 'wagmi'
 import { getClient } from 'wagmi/actions'
-import { z } from 'zod/mini'
+import * as z from 'zod/mini'
 import { config } from '#wagmi.config'
 
 type TransactionsResponse = {
@@ -42,8 +42,9 @@ export const Route = createFileRoute('/explore/account/$address')({
 	}),
 	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
 	loader: async ({ deps: { page, limit }, params: { address }, context }) => {
-		const client = getClient(config)
 		const offset = (page - 1) * limit
+
+		const client = getClient(config)
 
 		await context.queryClient.prefetchQuery({
 			queryKey: ['account-transactions', client.chain.id, address, page, limit],
@@ -51,11 +52,8 @@ export const Route = createFileRoute('/explore/account/$address')({
 				const response = await fetch(
 					`/api/address/${address}?offset=${offset}&limit=${limit}`,
 				)
-				if (!response.ok) {
-					throw new Error(
-						`Failed to fetch transactions: ${response.statusText}`,
-					)
-				}
+				if (!response.ok) throw new Error(`gg: ${response.statusText}`)
+
 				return response.json()
 			},
 			staleTime: page === 1 ? 0 : 60_000, // Match main query settings
@@ -107,27 +105,23 @@ function RouteComponent() {
 	const totalTransactions = data.total
 	const totalPages = Math.ceil(totalTransactions / limit)
 
-	// Aggressive prefetching for instant navigation
+	// aggressive prefetching for instant navigation
 	React.useEffect(() => {
 		// Prefetch more pages when limit is small for better UX
-		const prefetchCount = limit < 20 ? 10 : 3
+		const prefetchCount = limit < 20 ? 10 : Math.ceil(limit / 2)
 		const pagesToPrefetch: number[] = []
 
 		// Prefetch next pages (prioritize forward navigation)
 		for (let i = 1; i <= prefetchCount; i++) {
 			const nextPage = page + i
-			if (nextPage <= totalPages) {
-				pagesToPrefetch.push(nextPage)
-			}
+			if (nextPage <= totalPages) pagesToPrefetch.push(nextPage)
 		}
 
 		// Prefetch previous pages (less priority, fewer pages)
 		const prevPrefetchCount = Math.min(prefetchCount, 5)
 		for (let i = 1; i <= prevPrefetchCount; i++) {
 			const prevPage = page - i
-			if (prevPage >= 1) {
-				pagesToPrefetch.push(prevPage)
-			}
+			if (prevPage >= 1) pagesToPrefetch.push(prevPage)
 		}
 
 		// Prefetch all pages in parallel
@@ -181,7 +175,6 @@ function RouteComponent() {
 				const value = formData.get('value')?.toString().trim()
 
 				if (!value) return
-
 				try {
 					Hex.assert(value)
 					navigate({
@@ -320,16 +313,15 @@ function RouteComponent() {
 																	? Hex.toBigInt(transaction.value)
 																	: 0n
 																const ethAmount = parseFloat(formatEther(value))
-																// Mock conversion rate: 1 ETH = $2000
 																const dollarAmount = ethAmount * 2000
 
-																if (dollarAmount > 1) {
+																if (dollarAmount > 1)
 																	return (
 																		<span className="text-positive">
 																			${dollarAmount.toFixed(2)}
 																		</span>
 																	)
-																}
+
 																return (
 																	<span className="text-tertiary">
 																		(${dollarAmount.toFixed(2)})
@@ -377,9 +369,7 @@ function RouteComponent() {
 												// Add first page + ellipsis if needed
 												if (startPage > 1) {
 													pages.push(1)
-													if (startPage > 2) {
-														pages.push('ellipsis')
-													}
+													if (startPage > 2) pages.push('ellipsis')
 												}
 
 												// Add the range of pages
@@ -443,9 +433,15 @@ function RouteComponent() {
 										<span className="text-tertiary">of</span>
 										<span className="text-primary">{totalPages}</span>
 										<span className="text-tertiary">•</span>
-										<span className="text-primary">{totalTransactions}</span>
+										<span className="text-primary">
+											{totalTransactions || '...'}
+										</span>
 										<span className="text-tertiary">
-											{totalTransactions === 1 ? 'transaction' : 'transactions'}
+											<ClientOnly fallback={<React.Fragment>¬</React.Fragment>}>
+												{totalTransactions === 1
+													? 'transaction'
+													: 'transactions'}
+											</ClientOnly>
 										</span>
 									</div>
 								</div>

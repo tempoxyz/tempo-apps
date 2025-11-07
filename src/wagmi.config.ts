@@ -11,14 +11,14 @@ import {
 	webSocket,
 } from 'wagmi'
 import * as Actions from 'wagmi/actions'
-import { hashFn } from 'wagmi/query'
 
 const browser = typeof window !== 'undefined'
 
 export const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
-			queryKeyHashFn: hashFn,
+			staleTime: 60 * 1_000, // needed for SSR
+			// queryKeyHashFn: hashFn,
 			refetchOnWindowFocus: false,
 			gcTime: 1_000 * 60 * 60 * 24, // 24 hours
 		},
