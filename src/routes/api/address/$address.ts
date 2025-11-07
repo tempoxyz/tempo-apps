@@ -8,7 +8,17 @@ import { config } from '#wagmi.config'
 // biome-ignore lint/suspicious/noExplicitAny: _
 type TODO = any
 
+const [MAX_LIMIT, _DEFAULT_LIMIT] = [1_000, 100]
+
 export const Route = createFileRoute('/api/address/$address')({
+	beforeLoad: async ({ search, params }) => {
+		const { address } = params
+		const { offset, limit } = search
+
+		if (limit > MAX_LIMIT) throw new Error('Limit is too high')
+
+		return { address, offset, limit }
+	},
 	server: {
 		handlers: {
 			GET: async ({ params, request }) => {
