@@ -5,6 +5,7 @@ import {
 	formatTimestampTime,
 	shortenHex,
 } from '#formatting.ts'
+import { useCopy } from '#react-utils.ts'
 import { ReceiptMark } from './ReceiptMark.tsx'
 
 export function Receipt(props: Receipt.Props) {
@@ -18,13 +19,14 @@ export function Receipt(props: Receipt.Props) {
 		total,
 	} = props
 	const [hashExpanded, setHashExpanded] = useState(false)
+	const { copy, notifying } = useCopy()
 	return (
 		<div className="flex flex-col w-[360px] bg-base-plane border border-border-base shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] text-base-content">
 			<div className="flex gap-[40px] px-[20px] pt-[24px] pb-[16px]">
 				<div className="flex-shrink-0">
 					<ReceiptMark />
 				</div>
-				<div className="flex flex-col gap-[9px] font-mono text-[13px] leading-4 flex-1">
+				<div className="flex flex-col gap-[9px] font-mono text-[13px] [line-height:16px] flex-1">
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Block</span>
 						<a
@@ -45,24 +47,22 @@ export function Receipt(props: Receipt.Props) {
 						</a>
 					</div>
 					<div
-						className={`flex justify-between ${hashExpanded ? 'items-start' : 'items-end'}`}
+						className={`flex justify-between relative ${hashExpanded ? 'items-start' : 'items-end'}`}
 					>
 						<span className="text-tertiary capitalize">Hash</span>
+						{notifying && (
+							<span className="absolute left-[40px] text-[13px] [line-height:16px] text-accent">
+								copied
+							</span>
+						)}
 						{hashExpanded ? (
-							<span
-								onClick={(e) => {
-									const el = e.currentTarget
-									const selection = window.getSelection()
-									if (!selection) return
-									selection.removeAllRanges()
-									const range = document.createRange()
-									range.selectNodeContents(el)
-									selection.addRange(range)
-								}}
+							<button
+								type="button"
+								onClick={() => copy(hash)}
 								className="text-right break-all max-w-[11ch] cursor-pointer active:translate-y-[0.5px]"
 							>
 								{hash}
-							</span>
+							</button>
 						) : (
 							<button
 								type="button"
