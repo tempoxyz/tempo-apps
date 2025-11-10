@@ -1,4 +1,4 @@
-import { queryOptions, useSuspenseQuery } from '@tanstack/react-query'
+import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import {
 	ClientOnly,
 	createFileRoute,
@@ -45,6 +45,7 @@ const transactionsQuery = (
 		refetchIntervalInBackground: page === 1,
 		refetchOnWindowFocus: page === 1,
 		staleTime: page === 1 ? 0 : 60_000, // page 1: always fresh, others: 60s cache
+		placeholderData: keepPreviousData,
 	})
 
 export const Route = createFileRoute('/explore/account/$address')({
@@ -206,16 +207,12 @@ function RouteComponent() {
 							</div>
 
 							{activeTab === 'history' && (
-								<React.Suspense
-									fallback={<HistoryLoadingSkeleton limit={limit} />}
-								>
-									<HistoryTabContent
-										address={address}
-										page={page}
-										limit={limit}
-										goToPage={goToPage}
-									/>
-								</React.Suspense>
+								<HistoryTabContent
+									address={address}
+									page={page}
+									limit={limit}
+									goToPage={goToPage}
+								/>
 							)}
 
 							{activeTab === 'assets' && (
@@ -260,7 +257,14 @@ function HistoryLoadingSkeleton({ limit }: { limit: number }) {
 	return (
 		<>
 			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
-				<table className="w-full border-collapse text-sm rounded-t-sm">
+				<table className="w-full border-collapse text-sm rounded-t-sm table-fixed">
+					<colgroup>
+						<col className="w-24" />
+						<col />
+						<col className="w-32" />
+						<col className="w-20" />
+						<col className="w-28" />
+					</colgroup>
 					<thead>
 						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
 							<th className="px-5 pb-3 font-normal">Time</th>
@@ -275,7 +279,7 @@ function HistoryLoadingSkeleton({ limit }: { limit: number }) {
 							{ length: limit },
 							(_, index) => `loading-row-${index}`,
 						).map((key) => (
-							<tr key={key} className="transition-colors">
+							<tr key={key} className="transition-colors h-14">
 								<td className="px-5 py-3">
 									<div className="h-4 w-16 bg-alt animate-pulse rounded" />
 								</td>
@@ -323,18 +327,35 @@ function HistoryTabContent({
 	const client = useClient()
 	const offset = (page - 1) * limit
 
-	const { data } = useSuspenseQuery(
+	const { data, isFetching } = useQuery(
 		transactionsQuery(address, page, limit, client?.chain.id ?? 0, offset),
 	)
 
-	const transactions = data.transactions
-	const totalTransactions = data.total
+	const transactions = data?.transactions ?? []
+	const totalTransactions = data?.total ?? 0
 	const totalPages = Math.ceil(totalTransactions / limit)
+
+	// Show skeleton only on first load (no data at all)
+	if (!data) {
+		return <HistoryLoadingSkeleton limit={limit} />
+	}
 
 	return (
 		<>
-			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
-				<table className="w-full border-collapse text-sm rounded-t-sm">
+			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
+				{isFetching && (
+					<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30">
+						<div className="h-full w-1/4 bg-accent animate-pulse" />
+					</div>
+				)}
+				<table className="w-full border-collapse text-sm rounded-t-sm table-fixed">
+					<colgroup>
+						<col className="w-24" />
+						<col />
+						<col className="w-32" />
+						<col className="w-20" />
+						<col className="w-28" />
+					</colgroup>
 					<thead>
 						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
 							<th className="px-5 pb-3 font-normal">Time</th>
@@ -346,11 +367,14 @@ function HistoryTabContent({
 					</thead>
 					{/** biome-ignore lint/complexity/noUselessFragments: _ */}
 					<ClientOnly fallback={<></>}>
-						<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
+						<tbody
+							className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10"
+							style={{ minHeight: `${limit * 56}px` }}
+						>
 							{transactions?.map((transaction) => (
 								<tr
 									key={transaction.hash}
-									className="transition-colors hover:bg-alt"
+									className="transition-colors hover:bg-alt h-14"
 								>
 									{/* Time */}
 									<td className="px-5 py-3 text-primary">
@@ -432,11 +456,18 @@ function HistoryTabContent({
 					<button
 						type="button"
 						onClick={() => goToPage(page - 1)}
-						disabled={page <= 1}
-						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled={page <= 1 || isFetching}
+						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed relative"
 						aria-label="Previous page"
 					>
-						Previous
+						{isFetching && page > 1 && (
+							<span className="absolute inset-0 flex items-center justify-center">
+								<span className="size-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+							</span>
+						)}
+						<span className={isFetching && page > 1 ? 'opacity-0' : ''}>
+							Previous
+						</span>
 					</button>
 
 					<div className="flex items-center gap-1.5 px-2">
@@ -488,13 +519,23 @@ function HistoryTabContent({
 										key={p}
 										type="button"
 										onClick={() => goToPage(p)}
-										className={`flex size-7 items-center justify-center rounded transition-colors ${
+										disabled={isFetching}
+										className={`flex size-7 items-center justify-center rounded transition-colors relative ${
 											page === p
 												? 'bg-accent text-white'
 												: 'hover:bg-alt text-primary'
-										}`}
+										} ${isFetching ? 'opacity-50 cursor-not-allowed' : ''}`}
 									>
-										{p}
+										{isFetching && page === p && (
+											<span className="absolute inset-0 flex items-center justify-center">
+												<span className="size-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+											</span>
+										)}
+										<span
+											className={isFetching && page === p ? 'opacity-0' : ''}
+										>
+											{p}
+										</span>
 									</button>
 								)
 							})
@@ -504,11 +545,20 @@ function HistoryTabContent({
 					<button
 						type="button"
 						onClick={() => goToPage(page + 1)}
-						disabled={page >= totalPages}
-						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled={page >= totalPages || isFetching}
+						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed relative"
 						aria-label="Next page"
 					>
-						Next
+						{isFetching && page < totalPages && (
+							<span className="absolute inset-0 flex items-center justify-center">
+								<span className="size-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+							</span>
+						)}
+						<span
+							className={isFetching && page < totalPages ? 'opacity-0' : ''}
+						>
+							Next
+						</span>
 					</button>
 				</div>
 
