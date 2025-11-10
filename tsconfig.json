@@ -29,7 +29,8 @@
 		"resolveJsonModule": true,
 		"paths": {
 			"#*": ["./src/*"],
-			"#explore*": ["./src/routes/explore/*"]
+			"#explore*": ["./src/routes/explore/*"],
+			"#components": ["./src/components/*"]
 		}
 	},
 	"exclude": ["**/_/**", "node_modules"]
