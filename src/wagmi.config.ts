@@ -1,22 +1,17 @@
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { QueryClient } from '@tanstack/react-query'
 import { tempoAndantino } from 'tempo.ts/chains'
-import { createClient, type OneOf } from 'viem'
-import {
-	type Config,
-	createConfig,
-	deserialize,
-	http,
-	serialize,
-	webSocket,
-} from 'wagmi'
-import * as Actions from 'wagmi/actions'
+import type { OneOf } from 'viem'
+import { createConfig, deserialize, http, serialize, webSocket } from 'wagmi'
+import { hashFn } from 'wagmi/query'
 
 const browser = typeof window !== 'undefined'
 
 export const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
+			staleTime: 60 * 1_000, // needed for SSR
+			queryKeyHashFn: hashFn,
 			refetchOnWindowFocus: false,
 			gcTime: 1_000 * 60 * 60 * 24, // 24 hours
 		},

@@ -1,13 +1,22 @@
 import { TanStackDevtools } from '@tanstack/react-devtools'
+import type { QueryClient } from '@tanstack/react-query'
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
-import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
+import {
+	createRootRouteWithContext,
+	HeadContent,
+	Scripts,
+} from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 import { WagmiProvider } from 'wagmi'
+import { DefaultCatchBoundary } from '#components/default-catch-boundary'
 import { config, persister, queryClient } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<{
+	queryClient: QueryClient
+}>()({
 	head: () => ({
 		meta: [
 			{
@@ -76,6 +85,20 @@ export const Route = createRootRoute({
 			},
 		],
 	}),
+	notFoundComponent: (props) => {
+		return (
+			<div>
+				<h1>404</h1>
+				<p>Page not found</p>
+				<pre>{JSON.stringify(props, null, 2)}</pre>
+			</div>
+		)
+	},
+	errorComponent: (props) => (
+		<RootDocument>
+			<DefaultCatchBoundary {...props} />
+		</RootDocument>
+	),
 	shellComponent: RootDocument,
 })
 
@@ -94,21 +117,25 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						persistOptions={{ persister }}
 					>
 						{children}
+						{import.meta.env.DEV && (
+							<TanStackDevtools
+								config={{
+									position: 'bottom-right',
+								}}
+								plugins={[
+									{
+										name: 'Tanstack Query',
+										render: <ReactQueryDevtools />,
+									},
+									{
+										name: 'Tanstack Router',
+										render: <TanStackRouterDevtoolsPanel />,
+									},
+								]}
+							/>
+						)}
 					</PersistQueryClientProvider>
 				</WagmiProvider>
-				{import.meta.env.DEV && (
-					<TanStackDevtools
-						config={{
-							position: 'bottom-right',
-						}}
-						plugins={[
-							{
-								name: 'Tanstack Router',
-								render: <TanStackRouterDevtoolsPanel />,
-							},
-						]}
-					/>
-				)}
 				<Scripts />
 			</body>
 		</html>

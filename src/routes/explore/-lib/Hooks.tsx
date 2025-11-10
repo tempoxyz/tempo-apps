@@ -28,13 +28,14 @@ export function useInfiniteAccountTransactions({
 		placeholderData: (previousData) => previousData,
 		queryKey: [
 			'account-transactions',
-			client.chain.id,
+			client?.chain.id,
 			{ address, limit },
 		] as const,
 		async queryFn({ pageParam, queryKey }) {
 			const [, , { address, limit }] = queryKey
 
 			if (!address) throw new Error('address is required')
+			if (!client) throw new Error('client is required')
 
 			const nonce =
 				pageParam > 0
@@ -92,7 +93,7 @@ export function useInfiniteTransactions({
 		placeholderData: (previousData) => previousData,
 		queryKey: [
 			'block-transactions',
-			client.chain.id,
+			client?.chain.id,
 			Json.stringify({ block, limit }),
 		] as const,
 		async queryFn({ pageParam, queryKey }) {
@@ -106,6 +107,7 @@ export function useInfiniteTransactions({
 
 			let count = 0
 			let transactions: Transaction[] = []
+			if (!client) throw new Error('client is required')
 			while (transactions.length < limit && count < 10 && blockNumber > 0n) {
 				const block_ = await getBlock(client, {
 					blockNumber,
