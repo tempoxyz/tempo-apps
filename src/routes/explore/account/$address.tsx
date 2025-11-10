@@ -52,6 +52,7 @@ export const Route = createFileRoute('/explore/account/$address')({
 	validateSearch: z.object({
 		page: z._default(z.number(), 1),
 		limit: z._default(z.number(), 7),
+		tab: z._default(z.enum(['history', 'assets']), 'history'),
 	}),
 	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
 	loader: async ({ deps: { page, limit }, params: { address }, context }) => {
@@ -87,28 +88,22 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const routerState = useRouterState()
 	const { address } = Route.useParams()
+	const { page, limit, tab } = Route.useSearch()
 
-	const client = useClient()
-	const { page, limit } = Route.useSearch()
-	const offset = (page - 1) * limit
-
-	const { data } = useSuspenseQuery(
-		transactionsQuery(address, page, limit, client?.chain.id ?? 0, offset),
-	)
-
-	const transactions = data.transactions
-	const totalTransactions = data.total
-	const totalPages = Math.ceil(totalTransactions / limit)
-
-	const [activeTab, setActiveTab] = React.useState<'history' | 'assets'>(
-		'history',
-	)
+	const activeTab = tab
 
 	const goToPage = React.useCallback(
 		(newPage: number) => {
-			navigate({ to: '.', search: { page: newPage, limit } })
+			navigate({ to: '.', search: { page: newPage, limit, tab } })
 		},
-		[navigate, limit],
+		[navigate, limit, tab],
+	)
+
+	const setActiveTab = React.useCallback(
+		(newTab: 'history' | 'assets') => {
+			navigate({ to: '.', search: { page, limit, tab: newTab } })
+		},
+		[navigate, page, limit],
 	)
 
 	const inputRef = React.useRef<HTMLInputElement | null>(null)
@@ -146,329 +141,347 @@ function RouteComponent() {
 		)
 
 	return (
-		<React.Suspense fallback={<div>Loading...</div>}>
-			<div className="px-4">
-				<div className="mx-auto flex max-w-6xl flex-col gap-8">
-					<section className="flex flex-col gap-4">
-						<div className="flex flex-col items-center gap-2 text-center">
-							<form onSubmit={handleSearch} className="w-full max-w-xl ">
-								<div className="relative ">
-									<input
-										ref={inputRef}
-										name="value"
-										type="text"
-										placeholder="Enter address, token, or transaction..."
-										spellCheck={false}
-										autoCapitalize="off"
-										autoComplete="off"
-										autoCorrect="off"
-										className="w-full rounded-lg border border-border-primary bg-surface px-4 py-2.5 pr-12 text-sm text-primary transition focus:outline-none focus:ring-0 shadow-[0px_4px_54px_0px_rgba(0,0,0,0.06)] outline-1 -outline-offset-1 outline-black-white/10"
+		<div className="px-4">
+			<div className="mx-auto flex max-w-6xl flex-col gap-8">
+				<section className="flex flex-col gap-4">
+					<div className="flex flex-col items-center gap-2 text-center">
+						<form onSubmit={handleSearch} className="w-full max-w-xl ">
+							<div className="relative ">
+								<input
+									ref={inputRef}
+									name="value"
+									type="text"
+									placeholder="Enter address, token, or transaction..."
+									spellCheck={false}
+									autoCapitalize="off"
+									autoComplete="off"
+									autoCorrect="off"
+									className="w-full rounded-lg border border-border-primary bg-surface px-4 py-2.5 pr-12 text-sm text-primary transition focus:outline-none focus:ring-0 shadow-[0px_4px_54px_0px_rgba(0,0,0,0.06)] outline-1 -outline-offset-1 outline-black-white/10"
+								/>
+								<button
+									type="submit"
+									disabled={routerState.isLoading}
+									className="my-auto bg-black-white/10 size-6 rounded-full absolute inset-y-0 right-2.5 flex items-center justify-center text-tertiary transition-colors hover:text-secondary disabled:opacity-50"
+									aria-label="Search"
+								>
+									<ArrowRight className="size-4" aria-hidden />
+								</button>
+							</div>
+						</form>
+						<p className="text-xs text-tertiary font-mono">
+							<span className="font-mono text-[11px]">⌘</span> or{' '}
+							<span className="font-mono text-[11px]">Ctrl</span> +{' '}
+							<span className="font-mono text-[11px]">k</span> to focus
+						</p>
+					</div>
+				</section>
+
+				<div className="grid grid-cols-1 gap-6 font-mono">
+					<section className="flex flex-col gap-6 w-full">
+						{/* Tabs */}
+						<div className="overflow-hidden rounded-xl border border-border-primary bg-primary">
+							<div className="px-5 h-10 flex items-center gap-6">
+								<button
+									type="button"
+									onClick={() => setActiveTab('history')}
+									className={`text-sm font-medium uppercase tracking-[0.15em] transition-colors ${
+										activeTab === 'history'
+											? 'text-primary'
+											: 'text-tertiary hover:text-secondary'
+									}`}
+								>
+									HISTORY
+								</button>
+								<button
+									type="button"
+									onClick={() => setActiveTab('assets')}
+									className={`text-sm font-medium uppercase tracking-[0.15em] transition-colors ${
+										activeTab === 'assets'
+											? 'text-primary'
+											: 'text-tertiary hover:text-secondary'
+									}`}
+								>
+									ASSETS
+								</button>
+							</div>
+
+							{activeTab === 'history' && (
+								<React.Suspense
+									fallback={
+										<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
+											<div className="flex items-center justify-center py-12">
+												<div className="text-sm text-tertiary">
+													Loading transactions...
+												</div>
+											</div>
+										</div>
+									}
+								>
+									<HistoryTabContent
+										address={address}
+										page={page}
+										limit={limit}
+										goToPage={goToPage}
 									/>
-									<button
-										type="submit"
-										disabled={routerState.isLoading}
-										className="my-auto bg-black-white/10 size-6 rounded-full absolute inset-y-0 right-2.5 flex items-center justify-center text-tertiary transition-colors hover:text-secondary disabled:opacity-50"
-										aria-label="Search"
-									>
-										<ArrowRight className="size-4" aria-hidden />
-									</button>
+								</React.Suspense>
+							)}
+
+							{activeTab === 'assets' && (
+								<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
+									<table className="w-full border-collapse text-sm rounded-t-sm">
+										<thead>
+											<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+												<th className="px-5 pb-3 font-normal">Name</th>
+												<th className="px-5 pb-3 font-normal">Ticker</th>
+												<th className="px-5 pb-3 font-normal">Currency</th>
+												<th className="px-5 pb-3 text-right font-normal">
+													Amount
+												</th>
+												<th className="px-5 pb-3 text-right font-normal">
+													Value
+												</th>
+											</tr>
+										</thead>
+										{/** biome-ignore lint/complexity/noUselessFragments: _ */}
+										<ClientOnly fallback={<></>}>
+											<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
+												{assets.map((assetAddress) => (
+													<AssetRow
+														key={assetAddress}
+														contractAddress={assetAddress}
+													/>
+												))}
+											</tbody>
+										</ClientOnly>
+									</table>
 								</div>
-							</form>
-							<p className="text-xs text-tertiary">
-								Press <span className="font-mono text-[11px]">⌘</span>
-								<span className="font-mono text-[11px]">Ctrl</span> +{' '}
-								<span className="font-mono text-[11px]">K</span> to focus
-							</p>
+							)}
 						</div>
 					</section>
-
-					<div className="grid grid-cols-1 gap-6 font-mono">
-						<section className="flex flex-col gap-6 w-full">
-							{/* Tabs */}
-							<div className="overflow-hidden rounded-xl border border-border-primary bg-primary">
-								<div className="px-5 h-10 flex items-center gap-6">
-									<button
-										type="button"
-										onClick={() => setActiveTab('history')}
-										className={`text-sm font-medium uppercase tracking-[0.15em] transition-colors ${
-											activeTab === 'history'
-												? 'text-primary'
-												: 'text-tertiary hover:text-secondary'
-										}`}
-									>
-										HISTORY
-									</button>
-									<button
-										type="button"
-										onClick={() => setActiveTab('assets')}
-										className={`text-sm font-medium uppercase tracking-[0.15em] transition-colors ${
-											activeTab === 'assets'
-												? 'text-primary'
-												: 'text-tertiary hover:text-secondary'
-										}`}
-									>
-										ASSETS
-									</button>
-								</div>
-
-								{activeTab === 'history' && (
-									<>
-										<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
-											<table className="w-full border-collapse text-sm rounded-t-sm">
-												<thead>
-													<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
-														<th className="px-5 pb-3 font-normal">Time</th>
-														<th className="px-5 pb-3 font-normal">
-															Description
-														</th>
-														<th className="px-3 pb-3 font-normal">Hash</th>
-														<th className="px-3 pb-3 font-normal">Block</th>
-														<th className="px-5 pb-3 text-right font-normal">
-															Total
-														</th>
-													</tr>
-												</thead>
-												{/** biome-ignore lint/complexity/noUselessFragments: _ */}
-												<ClientOnly fallback={<></>}>
-													<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
-														{transactions?.map((transaction) => (
-															<tr
-																key={transaction.hash}
-																className="transition-colors hover:bg-alt"
-															>
-																{/* Time */}
-																<td className="px-5 py-3 text-primary">
-																	<div className="text-xs">
-																		<TransactionTimestamp
-																			blockNumber={transaction.blockNumber}
-																		/>
-																	</div>
-																</td>
-
-																{/* Description */}
-																<td className="px-5 py-3 text-primary">
-																	<div className="text-sm">
-																		<TransactionDescription
-																			transaction={transaction}
-																		/>
-																	</div>
-																</td>
-
-																{/* Transaction Hash */}
-																<td className="px-3 py-3 font-mono text-[11px] text-primary">
-																	<Link
-																		to={'/receipt/$hash'}
-																		params={{ hash: transaction.hash ?? '' }}
-																		className="hover:text-accent transition-colors"
-																	>
-																		{transaction.hash?.slice(0, 8)}...
-																		{transaction.hash?.slice(-6)}
-																	</Link>
-																</td>
-
-																{/* Block Number */}
-																<td className="px-3 py-3">
-																	{transaction.blockNumber ? (
-																		<Link
-																			to={'/explore/block/$id'}
-																			params={{
-																				id: Hex.toNumber(
-																					transaction.blockNumber,
-																				).toString(),
-																			}}
-																			className="text-accent text-sm transition-colors hover:text-accent/80"
-																		>
-																			{Hex.toNumber(
-																				transaction.blockNumber,
-																			).toString()}
-																		</Link>
-																	) : (
-																		<span className="text-tertiary">--</span>
-																	)}
-																</td>
-
-																{/* Total Value */}
-																<td className="px-5 py-3 text-right font-mono text-xs">
-																	{(() => {
-																		const value = transaction.value
-																			? Hex.toBigInt(transaction.value)
-																			: 0n
-																		const ethAmount = parseFloat(
-																			formatEther(value),
-																		)
-																		const dollarAmount = ethAmount * 2000
-
-																		if (dollarAmount > 1)
-																			return (
-																				<span className="text-positive">
-																					${dollarAmount.toFixed(2)}
-																				</span>
-																			)
-
-																		return (
-																			<span className="text-tertiary">
-																				(${dollarAmount.toFixed(2)})
-																			</span>
-																		)
-																	})()}
-																</td>
-															</tr>
-														))}
-													</tbody>
-												</ClientOnly>
-											</table>
-										</div>
-
-										<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
-											<div className="flex flex-row items-center gap-2">
-												<button
-													type="button"
-													onClick={() => goToPage(page - 1)}
-													disabled={page <= 1}
-													className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
-													aria-label="Previous page"
-												>
-													Previous
-												</button>
-
-												<div className="flex items-center gap-1.5 px-2">
-													{(() => {
-														// Show up to 5 consecutive pages centered around current page
-														const maxButtons = 5
-														let startPage = Math.max(
-															1,
-															page - Math.floor(maxButtons / 2),
-														)
-														const endPage = Math.min(
-															totalPages,
-															startPage + maxButtons - 1,
-														)
-
-														// Adjust start if we're near the end
-														startPage = Math.max(1, endPage - maxButtons + 1)
-
-														const pages: (number | 'ellipsis')[] = []
-
-														// Add first page + ellipsis if needed
-														if (startPage > 1) {
-															pages.push(1)
-															if (startPage > 2) pages.push('ellipsis')
-														}
-
-														// Add the range of pages
-														for (let i = startPage; i <= endPage; i++) {
-															pages.push(i)
-														}
-
-														// Add ellipsis + last page if needed
-														if (endPage < totalPages) {
-															if (endPage < totalPages - 1) {
-																pages.push('ellipsis')
-															}
-															pages.push(totalPages)
-														}
-
-														let ellipsisCount = 0
-														return pages.map((p) => {
-															if (p === 'ellipsis') {
-																ellipsisCount++
-																return (
-																	<span
-																		key={`ellipsis-${ellipsisCount}`}
-																		className="text-tertiary px-1"
-																	>
-																		...
-																	</span>
-																)
-															}
-															return (
-																<button
-																	key={p}
-																	type="button"
-																	onClick={() => goToPage(p)}
-																	className={`flex size-7 items-center justify-center rounded transition-colors ${
-																		page === p
-																			? 'bg-accent text-white'
-																			: 'hover:bg-alt text-primary'
-																	}`}
-																>
-																	{p}
-																</button>
-															)
-														})
-													})()}
-												</div>
-
-												<button
-													type="button"
-													onClick={() => goToPage(page + 1)}
-													disabled={page >= totalPages}
-													className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
-													aria-label="Next page"
-												>
-													Next
-												</button>
-											</div>
-
-											<div className="space-x-2">
-												<span className="text-tertiary">Page</span>
-												<span className="text-primary">{page}</span>
-												<span className="text-tertiary">of</span>
-												<span className="text-primary">{totalPages}</span>
-												<span className="text-tertiary">•</span>
-												<span className="text-primary">
-													{totalTransactions || '...'}
-												</span>
-												<span className="text-tertiary">
-													<ClientOnly
-														fallback={<React.Fragment>¬</React.Fragment>}
-													>
-														{totalTransactions === 1
-															? 'transaction'
-															: 'transactions'}
-													</ClientOnly>
-												</span>
-											</div>
-										</div>
-									</>
-								)}
-
-								{activeTab === 'assets' && (
-									<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
-										<table className="w-full border-collapse text-sm rounded-t-sm">
-											<thead>
-												<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
-													<th className="px-5 pb-3 font-normal">Name</th>
-													<th className="px-5 pb-3 font-normal">Ticker</th>
-													<th className="px-5 pb-3 font-normal">Currency</th>
-													<th className="px-5 pb-3 text-right font-normal">
-														Amount
-													</th>
-													<th className="px-5 pb-3 text-right font-normal">
-														Value
-													</th>
-												</tr>
-											</thead>
-											{/** biome-ignore lint/complexity/noUselessFragments: _ */}
-											<ClientOnly fallback={<></>}>
-												<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
-													{assets.map((assetAddress) => (
-														<AssetRow
-															key={assetAddress}
-															contractAddress={assetAddress}
-														/>
-													))}
-												</tbody>
-											</ClientOnly>
-										</table>
-									</div>
-								)}
-							</div>
-						</section>
-					</div>
 				</div>
 			</div>
-		</React.Suspense>
+		</div>
+	)
+}
+
+function HistoryTabContent({
+	address,
+	page,
+	limit,
+	goToPage,
+}: {
+	address: Address.Address
+	page: number
+	limit: number
+	goToPage: (page: number) => void
+}) {
+	const client = useClient()
+	const offset = (page - 1) * limit
+
+	const { data } = useSuspenseQuery(
+		transactionsQuery(address, page, limit, client?.chain.id ?? 0, offset),
+	)
+
+	const transactions = data.transactions
+	const totalTransactions = data.total
+	const totalPages = Math.ceil(totalTransactions / limit)
+
+	return (
+		<>
+			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
+				<table className="w-full border-collapse text-sm rounded-t-sm">
+					<thead>
+						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+							<th className="px-5 pb-3 font-normal">Time</th>
+							<th className="px-5 pb-3 font-normal">Description</th>
+							<th className="px-3 pb-3 font-normal">Hash</th>
+							<th className="px-3 pb-3 font-normal">Block</th>
+							<th className="px-5 pb-3 text-right font-normal">Total</th>
+						</tr>
+					</thead>
+					{/** biome-ignore lint/complexity/noUselessFragments: _ */}
+					<ClientOnly fallback={<></>}>
+						<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
+							{transactions?.map((transaction) => (
+								<tr
+									key={transaction.hash}
+									className="transition-colors hover:bg-alt"
+								>
+									{/* Time */}
+									<td className="px-5 py-3 text-primary">
+										<div className="text-xs">
+											<TransactionTimestamp
+												blockNumber={transaction.blockNumber}
+											/>
+										</div>
+									</td>
+
+									{/* Description */}
+									<td className="px-5 py-3 text-primary">
+										<div className="text-sm">
+											<TransactionDescription transaction={transaction} />
+										</div>
+									</td>
+
+									{/* Transaction Hash */}
+									<td className="px-3 py-3 font-mono text-[11px] text-primary">
+										<Link
+											to={'/receipt/$hash'}
+											params={{ hash: transaction.hash ?? '' }}
+											className="hover:text-accent transition-colors"
+										>
+											{transaction.hash?.slice(0, 8)}...
+											{transaction.hash?.slice(-6)}
+										</Link>
+									</td>
+
+									{/* Block Number */}
+									<td className="px-3 py-3">
+										{transaction.blockNumber ? (
+											<Link
+												to={'/explore/block/$id'}
+												params={{
+													id: Hex.toNumber(transaction.blockNumber).toString(),
+												}}
+												className="text-accent text-sm transition-colors hover:text-accent/80"
+											>
+												{Hex.toNumber(transaction.blockNumber).toString()}
+											</Link>
+										) : (
+											<span className="text-tertiary">--</span>
+										)}
+									</td>
+
+									{/* Total Value */}
+									<td className="px-5 py-3 text-right font-mono text-xs">
+										{(() => {
+											const value = transaction.value
+												? Hex.toBigInt(transaction.value)
+												: 0n
+											const ethAmount = parseFloat(formatEther(value))
+											const dollarAmount = ethAmount * 2000
+
+											if (dollarAmount > 1)
+												return (
+													<span className="text-positive">
+														${dollarAmount.toFixed(2)}
+													</span>
+												)
+
+											return (
+												<span className="text-tertiary">
+													(${dollarAmount.toFixed(2)})
+												</span>
+											)
+										})()}
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</ClientOnly>
+				</table>
+			</div>
+
+			<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
+				<div className="flex flex-row items-center gap-2">
+					<button
+						type="button"
+						onClick={() => goToPage(page - 1)}
+						disabled={page <= 1}
+						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						aria-label="Previous page"
+					>
+						Previous
+					</button>
+
+					<div className="flex items-center gap-1.5 px-2">
+						{(() => {
+							// Show up to 5 consecutive pages centered around current page
+							const maxButtons = 5
+							let startPage = Math.max(1, page - Math.floor(maxButtons / 2))
+							const endPage = Math.min(totalPages, startPage + maxButtons - 1)
+
+							// Adjust start if we're near the end
+							startPage = Math.max(1, endPage - maxButtons + 1)
+
+							const pages: (number | 'ellipsis')[] = []
+
+							// Add first page + ellipsis if needed
+							if (startPage > 1) {
+								pages.push(1)
+								if (startPage > 2) pages.push('ellipsis')
+							}
+
+							// Add the range of pages
+							for (let i = startPage; i <= endPage; i++) {
+								pages.push(i)
+							}
+
+							// Add ellipsis + last page if needed
+							if (endPage < totalPages) {
+								if (endPage < totalPages - 1) {
+									pages.push('ellipsis')
+								}
+								pages.push(totalPages)
+							}
+
+							let ellipsisCount = 0
+							return pages.map((p) => {
+								if (p === 'ellipsis') {
+									ellipsisCount++
+									return (
+										<span
+											key={`ellipsis-${ellipsisCount}`}
+											className="text-tertiary px-1"
+										>
+											...
+										</span>
+									)
+								}
+								return (
+									<button
+										key={p}
+										type="button"
+										onClick={() => goToPage(p)}
+										className={`flex size-7 items-center justify-center rounded transition-colors ${
+											page === p
+												? 'bg-accent text-white'
+												: 'hover:bg-alt text-primary'
+										}`}
+									>
+										{p}
+									</button>
+								)
+							})
+						})()}
+					</div>
+
+					<button
+						type="button"
+						onClick={() => goToPage(page + 1)}
+						disabled={page >= totalPages}
+						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						aria-label="Next page"
+					>
+						Next
+					</button>
+				</div>
+
+				<div className="space-x-2">
+					<span className="text-tertiary">Page</span>
+					<span className="text-primary">{page}</span>
+					<span className="text-tertiary">of</span>
+					<span className="text-primary">{totalPages}</span>
+					<span className="text-tertiary">•</span>
+					<span className="text-primary">{totalTransactions || '...'}</span>
+					<span className="text-tertiary">
+						<ClientOnly fallback={<React.Fragment>¬</React.Fragment>}>
+							{totalTransactions === 1 ? 'transaction' : 'transactions'}
+						</ClientOnly>
+					</span>
+				</div>
+			</div>
+		</>
 	)
 }
 
