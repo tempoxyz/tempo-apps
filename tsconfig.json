@@ -30,8 +30,10 @@
 		"paths": {
 			"#*": ["./src/*"],
 			"#explore*": ["./src/routes/explore/*"],
-			"#components": ["./src/components/*"]
+			"#components": ["./src/components/*"],
+			"#cva": ["./cva.config.ts"]
 		}
 	},
+	"files": ["env.d.ts", "cva.config.ts"],
 	"exclude": ["**/_/**", "node_modules"]
 }
