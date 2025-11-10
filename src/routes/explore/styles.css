@@ -33,7 +33,7 @@
 	--content-primary: var(--color-content-primary);
 	--color-content-secondary: light-dark(#737373, #a0a0a0);
 	--content-secondary: var(--color-content-secondary);
-	--color-content-tertiary: light-dark(#a8a8a8, #707070);
+	--color-content-tertiary: light-dark(#8d8d8d, #6e6e6e);
 	--content-tertiary: var(--color-content-tertiary);
 	--color-content-positive: light-dark(#16a34a, #22c55e);
 	--content-positive: var(--color-content-positive);
@@ -57,6 +57,7 @@
 	--accent: var(--color-accent);
 	--color-accent-hover: light-dark(#2563eb, #93c5fd);
 	--accent-hover: var(--color-accent-hover);
+	--color-focus: var(--color-accent);
 
 	/* Border Colors */
 	--color-border-primary: light-dark(#f0f0f0, #262626);
@@ -101,6 +102,20 @@
 	/* Tokenized Color Pairings */
 	--color-black-white: light-dark(#000000, #ffffff);
 	--color-white-black: light-dark(#ffffff, #000000);
+
+	/* Other Colors */
+	--color-background-base-plane: light-dark(#fcfcfc, #222222);
+	--background-base-plane: var(--color-background-base-plane);
+	--color-base-plane: var(--color-background-base-plane);
+	--color-background-base-alt: light-dark(#e5e5e5, #2a2a2a);
+	--background-base-alt: var(--color-background-base-alt);
+	--color-base-alt: var(--color-background-base-alt);
+	--color-border-base: light-dark(#e0e0e0, #2a2a2a);
+	--border-base: var(--color-border-base);
+	--color-base-content: light-dark(#202020, #eeeeee);
+	--base-content: var(--color-base-content);
+	--color-base-content-positive: light-dark(#30a46c, #30a46c);
+	--base-content-positive: var(--color-base-content-positive);
 }
 
 html,
@@ -120,6 +135,13 @@ body {
 	font-family:
 		SFRounded, ui-rounded, "SF Pro Rounded", -apple-system, "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 	@apply text-base;
+}
+
+a:focus-visible,
+button:focus-visible {
+	outline: 2px solid var(--color-focus);
+	outline-offset: 2px;
+	border-radius: 2px;
 }
 
 pre {

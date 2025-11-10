@@ -14,6 +14,7 @@ import {
 import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { Receipt } from '#components/Receipt/Receipt.tsx'
 import { config, getConfig } from '#wagmi.config.ts'
 
 async function loader({
@@ -180,64 +181,27 @@ export const Route = createFileRoute('/receipt/$hash')({
 })
 
 function Component() {
-	const { lineItems, receipt, timestampFormatted, transaction } =
-		Route.useLoaderData()
+	const { block, receipt, transaction } = Route.useLoaderData()
 
 	return (
-		<div className="font-mono text-[13px] flex items-center justify-center min-h-screen">
-			<div className="relative bg-surface p-4 max-w-[360px] w-full before:content-[''] before:absolute before:left-0 before:right-0 before:h-3 before:-top-3 before:bg-[radial-gradient(circle_at_6px_0px,transparent_6px,var(--background-color-surface)_6px)] before:bg-size-[12px_12px] before:bg-repeat-x after:content-[''] after:absolute after:left-0 after:right-0 after:h-3 after:-bottom-3 after:bg-[radial-gradient(circle_at_6px_0px,transparent_6px,var(--background-color-surface)_6px)] after:bg-size-[12px_12px] after:bg-repeat-x after:rotate-180">
-				<div className="italic text-center text-[14px]">TEMPO RECEIPT</div>
-
-				<div className="h-4" />
-
-				<div className="truncate">
-					Tx Hash: {HexFormatter.truncate(receipt.transactionHash, 8)}
-				</div>
-				<div>Date: {timestampFormatted}</div>
-				<div>Block: {receipt.blockNumber.toString()}</div>
-				<div>Sender: {HexFormatter.truncate(transaction.from, 6)}</div>
-
-				<div className="h-4" />
-				<div className="w-full border-t border-dashed border-(--text-color-primary)" />
-				<div className="h-4" />
-
-				{lineItems?.main?.flatMap((item, i) => [
-					// `left` + `right` renderer
-					<div
-						className="flex items-center justify-between uppercase"
-						key={i.toString()}
-					>
-						<div>{item.ui.left}</div>
-						<div>{item.ui.right}</div>
-					</div>,
-
-					// `bottom` Renderer
-					<div key={(i + 1).toString()}>
-						{'bottom' in item.ui &&
-							item.ui.bottom?.map((bottom, j) => (
-								<div key={j.toString()}>
-									<div className="pl-4 uppercase">{bottom.left}</div>
-									{'right' in bottom ? <div>{bottom.right}</div> : undefined}
-								</div>
-							))}
-					</div>,
-				])}
-
-				<div className="h-4" />
-
-				{lineItems?.feeTotals?.map((item, i) => (
-					<div className="flex items-center justify-between" key={i.toString()}>
-						<div className="uppercase">{item.ui.left}</div>
-						<div>{item.ui.right}</div>
-					</div>
-				))}
-				{lineItems?.totals?.map((item, i) => (
-					<div className="flex items-center justify-between" key={i.toString()}>
-						<div className="uppercase">{item.ui.left}</div>
-						<div>{item.ui.right}</div>
-					</div>
-				))}
-			</div>
+		<div className="font-mono text-[13px] flex flex-col items-center justify-center min-h-screen gap-8">
+			<Receipt
+				blockNumber={receipt.blockNumber}
+				sender={transaction.from}
+				hash={receipt.transactionHash}
+				timestamp={block.timestamp}
+				displayEvents={[
+					{
+						amount: '($1.54)',
+						note: 'Thanks for the coffee.'.repeat(10),
+						receiver: '0x1234567890abcdef1234567890abcdef12345678',
+						token: 'aUSD',
+						type: 'send',
+					},
+				]}
+				fee="($0.01)"
+				total="($1.55)"
+			/>
 		</div>
 	)
 }
