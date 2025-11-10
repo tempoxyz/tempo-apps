@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
+import { queryOptions, useSuspenseQuery } from '@tanstack/react-query'
 import {
 	ClientOnly,
 	createFileRoute,
@@ -26,6 +26,21 @@ type TransactionsResponse = {
 	hasMore: boolean
 }
 
+const transactionsQuery = (
+	address: Address.Address,
+	page: number,
+	limit: number,
+	chainId: number,
+	offset: number,
+) =>
+	queryOptions({
+		queryKey: ['account-transactions', chainId, address, page, limit],
+		queryFn: (): Promise<TransactionsResponse> =>
+			fetch(`/api/address/${address}?offset=${offset}&limit=${limit}`).then(
+				(res) => res.json(),
+			),
+	})
+
 export const Route = createFileRoute('/explore/account/$address')({
 	component: RouteComponent,
 	validateSearch: z.object({
@@ -38,18 +53,9 @@ export const Route = createFileRoute('/explore/account/$address')({
 
 		const client = getClient(config)
 
-		await context.queryClient.prefetchQuery({
-			queryKey: ['account-transactions', client.chain.id, address, page, limit],
-			queryFn: async (): Promise<TransactionsResponse> => {
-				const response = await fetch(
-					`/api/address/${address}?offset=${offset}&limit=${limit}`,
-				)
-				if (!response.ok) throw new Error(`gg: ${response.statusText}`)
-
-				return response.json()
-			},
-			staleTime: page === 1 ? 0 : 60_000, // Match main query settings
-		})
+		context.queryClient.fetchQuery(
+			transactionsQuery(address, page, limit, client.chain.id, offset),
+		)
 	},
 	params: {
 		parse: z.object({
@@ -70,60 +76,16 @@ function RouteComponent() {
 	const { address } = Route.useParams()
 
 	const client = useClient()
-	const queryClient = useQueryClient()
 	const { page, limit } = Route.useSearch()
 	const offset = (page - 1) * limit
 
-	const { data } = useSuspenseQuery({
-		queryKey: ['account-transactions', client?.chain.id, address, page, limit],
-		queryFn: async (): Promise<TransactionsResponse> => {
-			const response = await fetch(
-				`/api/address/${address}?offset=${offset}&limit=${limit}`,
-			)
-			if (!response.ok) {
-				throw new Error(`Failed to fetch transactions: ${response.statusText}`)
-			}
-			return response.json()
-		},
-		// Auto-refresh page 1 since new transactions appear there
-		refetchInterval: page === 1 ? 4_000 : false, // Refresh every 4s on page 1 only
-		refetchIntervalInBackground: page === 1, // Continue refreshing even when window not focused
-		refetchOnWindowFocus: page === 1,
-		// Page 1 should refetch often, but other pages can use cached data
-		staleTime: page === 1 ? 0 : 60_000, // Page 1: always fresh, others: 60s cache
-	})
+	const { data } = useSuspenseQuery(
+		transactionsQuery(address, page, limit, client?.chain.id ?? 0, offset),
+	)
 
 	const transactions = data.transactions
 	const totalTransactions = data.total
 	const totalPages = Math.ceil(totalTransactions / limit)
-
-	// Simple prefetching: just next and previous pages
-	React.useEffect(() => {
-		const adjacentPages = [page - 1, page + 1].filter(
-			(p) => p >= 1 && p <= totalPages,
-		)
-
-		for (const targetPage of adjacentPages) {
-			const targetOffset = (targetPage - 1) * limit
-			queryClient.prefetchQuery({
-				queryKey: [
-					'account-transactions',
-					client?.chain.id,
-					address,
-					targetPage,
-					limit,
-				],
-				queryFn: async (): Promise<TransactionsResponse> => {
-					const response = await fetch(
-						`/api/address/${address}?offset=${targetOffset}&limit=${limit}`,
-					)
-					if (!response.ok) throw new Error(response.statusText)
-					return response.json()
-				},
-				staleTime: targetPage === 1 ? 0 : 60_000,
-			})
-		}
-	}, [page, totalPages, limit, queryClient, client?.chain.id, address])
 
 	const goToPage = React.useCallback(
 		(newPage: number) => {
