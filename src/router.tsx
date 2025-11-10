@@ -9,7 +9,6 @@ export const getRouter = () => {
 		defaultOptions: {
 			queries: {
 				staleTime: 60 * 1_000, // needed for SSR
-				// queryKeyHashFn: hashFn,
 				refetchOnWindowFocus: false,
 				gcTime: 1_000 * 60 * 60 * 24, // 24 hours
 			},

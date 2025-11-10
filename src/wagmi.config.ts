@@ -1,16 +1,8 @@
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { QueryClient } from '@tanstack/react-query'
 import { tempoAndantino } from 'tempo.ts/chains'
-import { createClient, type OneOf } from 'viem'
-import {
-	type Config,
-	createConfig,
-	deserialize,
-	http,
-	serialize,
-	webSocket,
-} from 'wagmi'
-import * as Actions from 'wagmi/actions'
+import type { OneOf } from 'viem'
+import { createConfig, deserialize, http, serialize, webSocket } from 'wagmi'
 
 const browser = typeof window !== 'undefined'
 

@@ -1,8 +1,4 @@
-import {
-	useQuery,
-	useQueryClient,
-	useSuspenseQuery,
-} from '@tanstack/react-query'
+import { useQueryClient, useSuspenseQuery } from '@tanstack/react-query'
 import {
 	ClientOnly,
 	createFileRoute,
@@ -14,14 +10,10 @@ import { ArrowRight } from 'lucide-react'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
+import { Hooks } from 'tempo.ts/wagmi'
 import type { Log, RpcTransaction as Transaction } from 'viem'
-import { formatEther, parseEventLogs } from 'viem'
-import {
-	useBlock,
-	useClient,
-	useReadContracts,
-	useTransactionReceipt,
-} from 'wagmi'
+import { formatEther, formatUnits, parseEventLogs } from 'viem'
+import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { config } from '#wagmi.config'
@@ -83,7 +75,7 @@ function RouteComponent() {
 	const offset = (page - 1) * limit
 
 	const { data } = useSuspenseQuery({
-		queryKey: ['account-transactions', client.chain.id, address, page, limit],
+		queryKey: ['account-transactions', client?.chain.id, address, page, limit],
 		queryFn: async (): Promise<TransactionsResponse> => {
 			const response = await fetch(
 				`/api/address/${address}?offset=${offset}&limit=${limit}`,
@@ -105,32 +97,18 @@ function RouteComponent() {
 	const totalTransactions = data.total
 	const totalPages = Math.ceil(totalTransactions / limit)
 
-	// aggressive prefetching for instant navigation
+	// Simple prefetching: just next and previous pages
 	React.useEffect(() => {
-		// Prefetch more pages when limit is small for better UX
-		const prefetchCount = limit < 20 ? 10 : Math.ceil(limit / 2)
-		const pagesToPrefetch: number[] = []
+		const adjacentPages = [page - 1, page + 1].filter(
+			(p) => p >= 1 && p <= totalPages,
+		)
 
-		// Prefetch next pages (prioritize forward navigation)
-		for (let i = 1; i <= prefetchCount; i++) {
-			const nextPage = page + i
-			if (nextPage <= totalPages) pagesToPrefetch.push(nextPage)
-		}
-
-		// Prefetch previous pages (less priority, fewer pages)
-		const prevPrefetchCount = Math.min(prefetchCount, 5)
-		for (let i = 1; i <= prevPrefetchCount; i++) {
-			const prevPage = page - i
-			if (prevPage >= 1) pagesToPrefetch.push(prevPage)
-		}
-
-		// Prefetch all pages in parallel
-		for (const targetPage of pagesToPrefetch) {
+		for (const targetPage of adjacentPages) {
 			const targetOffset = (targetPage - 1) * limit
 			queryClient.prefetchQuery({
 				queryKey: [
 					'account-transactions',
-					client.chain.id,
+					client?.chain.id,
 					address,
 					targetPage,
 					limit,
@@ -142,10 +120,10 @@ function RouteComponent() {
 					if (!response.ok) throw new Error(response.statusText)
 					return response.json()
 				},
-				staleTime: targetPage === 1 ? 0 : 60_000, // Page 1 always fresh, others cached
+				staleTime: targetPage === 1 ? 0 : 60_000,
 			})
 		}
-	}, [page, totalPages, limit, queryClient, client.chain.id, address])
+	}, [page, totalPages, limit, queryClient, client?.chain.id, address])
 
 	const goToPage = React.useCallback(
 		(newPage: number) => {
@@ -458,65 +436,25 @@ function useParseEventLogs(props: {
 	hash: Hex.Hex | undefined
 	logs: Array<Log> | undefined
 }) {
-	return useQuery({
-		enabled: Boolean(props.hash) && Array.isArray(props.logs),
-		queryKey: ['parse-event-logs', props.hash],
-		queryFn: async () => {
-			const eventLogs = parseEventLogs({
-				abi: [
-					...Abis.nonce,
-					...Abis.tip20,
-					...Abis.feeAmm,
-					...Abis.feeManager,
-					...Abis.tip20Factory,
-					...Abis.tip403Registry,
-					...Abis.validatorConfig,
-					...Abis.stablecoinExchange,
-					...Abis.tipAccountRegistrar,
-					...Abis.tip20RewardsRegistry,
-				],
-				logs: props.logs ?? [],
-			})
-			return eventLogs
-		},
-	})
-}
-
-function useTokenInfo(tokenAddress: Address.Address) {
-	const { data, status } = useReadContracts({
-		query: {
-			enabled: Boolean(tokenAddress),
-		},
-		contracts: [
-			{
-				address: tokenAddress,
-				abi: Abis.tip20,
-				functionName: 'symbol',
-			},
-			{
-				address: tokenAddress,
-				abi: Abis.tip20,
-				functionName: 'name',
-			},
-			{
-				address: tokenAddress,
-				abi: Abis.tip20,
-				functionName: 'decimals',
-			},
-		],
-	})
-
-	if (status !== 'success') {
-		return { status, symbol: undefined, name: undefined, decimals: undefined }
-	}
-
-	const [symbol, name, decimals] = data
-	return {
-		status,
-		symbol: symbol.result as string | undefined,
-		name: name.result as string | undefined,
-		decimals: decimals.result as number | undefined,
-	}
+	return React.useMemo(() => {
+		if (!props.logs) return []
+		if (!props.hash) return []
+		return parseEventLogs({
+			abi: [
+				...Abis.nonce,
+				...Abis.tip20,
+				...Abis.feeAmm,
+				...Abis.feeManager,
+				...Abis.tip20Factory,
+				...Abis.tip403Registry,
+				...Abis.validatorConfig,
+				...Abis.stablecoinExchange,
+				...Abis.tipAccountRegistrar,
+				...Abis.tip20RewardsRegistry,
+			],
+			logs: props.logs,
+		})
+	}, [props.logs, props.hash])
 }
 
 function TransferDescription({
@@ -530,23 +468,18 @@ function TransferDescription({
 	tokenAddress: Address.Address
 	isSelf: boolean
 }) {
-	const { symbol, decimals } = useTokenInfo(tokenAddress)
-
-	const formatAmount = (value: bigint, dec?: number) => {
-		const divisor = BigInt(10 ** (dec ?? 18))
-		const wholePart = value / divisor
-		const fracPart = value % divisor
-		const fracStr = fracPart.toString().padStart(dec ?? 18, '0')
-		// Remove trailing zeros
-		const trimmed = fracStr.replace(/0+$/, '')
-		return trimmed ? `${wholePart.toString()}.${trimmed}` : wholePart.toString()
-	}
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token: tokenAddress,
+	})
 
 	return (
 		<span className="text-primary">
 			<span>Transfer</span>{' '}
-			<span className="font-semibold">{formatAmount(amount, decimals)}</span>{' '}
-			<span className="text-accent">{symbol || 'TOKEN'}</span> <span>to</span>{' '}
+			<span className="font-semibold">
+				{formatUnits(amount, metadata?.decimals ?? 6)}
+			</span>{' '}
+			<span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>{' '}
+			<span>to</span>{' '}
 			<span className="text-accent">
 				{to?.slice(0, 6)}...{to?.slice(-4)}
 			</span>
@@ -562,7 +495,7 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 			enabled: Boolean(transaction.hash),
 		},
 	})
-	const { data: eventLogs } = useParseEventLogs({
+	const eventLogs = useParseEventLogs({
 		hash: transaction.hash,
 		logs: receipt?.logs,
 	})
@@ -673,21 +606,6 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 					</span>{' '}
 					<span>on Policy</span>{' '}
 					<span className="text-accent">#{policyId?.toString()}</span>
-				</>
-			)
-		}
-
-		// Handle buy/limit orders
-		if ((eventName === 'LimitBuy' || eventName === 'Buy') && args.amount) {
-			const amount = args.amount
-			const tick = args.tick || args.price
-
-			return (
-				<>
-					<span>Limit Buy</span>{' '}
-					<span className="font-semibold">{formatTokenAmount(amount)}</span>{' '}
-					<span className="text-accent">TEST</span> <span>at tick</span>{' '}
-					<span className="text-accent">{tick?.toString()}</span>
 				</>
 			)
 		}
