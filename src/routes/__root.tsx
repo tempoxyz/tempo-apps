@@ -146,6 +146,7 @@ let theme: 'light' | 'dark' | undefined
 
 function useDevTools() {
 	useEffect(() => {
+		if (import.meta.env.VITE_ENABLE_COLOR_SCHEME_TOGGLE !== 'true') return
 		const handleKeyPress = (e: KeyboardEvent) => {
 			if (
 				// ⌘ + 1 = color scheme toggle
