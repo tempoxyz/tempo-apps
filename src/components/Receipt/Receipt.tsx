@@ -46,15 +46,15 @@ export function Receipt(props: Receipt.Props) {
 							{shortenHex(sender)}
 						</a>
 					</div>
-					<div
-						className={`flex justify-between relative ${hashExpanded ? 'items-start' : 'items-end'}`}
-					>
-						<span className="text-tertiary capitalize">Hash</span>
-						{notifying && (
-							<span className="absolute left-[40px] text-[13px] [line-height:16px] text-accent">
-								copied
-							</span>
-						)}
+					<div className="flex justify-between items-start">
+						<div className="relative">
+							<span className="text-tertiary capitalize">Hash</span>
+							{notifying && (
+								<span className="absolute left-[calc(100%+8px)] text-[13px] [line-height:16px] text-accent">
+									copied
+								</span>
+							)}
+						</div>
 						{hashExpanded ? (
 							<button
 								type="button"
