@@ -11,14 +11,18 @@ export const Route = createFileRoute('/explore')({
 			},
 		],
 	}),
-	component: () => <Layout />,
+	component: () => (
+		<Layout>
+			<Outlet />
+		</Layout>
+	),
 })
 
-export function Layout() {
+export function Layout({ children }: { children: React.ReactNode }) {
 	return (
 		<main className="flex min-h-dvh flex-col">
 			<Header />
-			<Outlet />
+			{children}
 			<footer className="bg-system py-6">
 				<ul className="flex items-center justify-center gap-6 text-sm text-secondary">
 					<li>

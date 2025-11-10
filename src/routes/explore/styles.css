@@ -8,31 +8,6 @@
 
 @custom-variant dark (&:is(.scheme-light-dark *));
 
-:root {
-	--vector-background-image: url("/icons/vector-light.svg");
-}
-
-@media (prefers-color-scheme: dark) {
-	:root {
-		--vector-background-image: url("/icons/vector-dark.svg");
-	}
-}
-
-.scheme-dark\! {
-	--vector-background-image: url("/icons/vector-dark.svg");
-}
-
-.scheme-light\! {
-	--vector-background-image: url("/icons/vector-light.svg");
-}
-
-body {
-	background-image: var(--vector-background-image);
-	background-size: 70% 35%;
-	background-position: top;
-	background-repeat: no-repeat;
-}
-
 @theme {
 	/* Background Colors */
 	--color-background-inverse: light-dark(#202020, #fcfcfc);

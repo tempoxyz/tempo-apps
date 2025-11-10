@@ -22,5 +22,9 @@ export const Route = createFileRoute('/receipt')({
 function Component() {
 	const search = Route.useSearch()
 	if ('plain' in search) return <Outlet />
-	return <Layout />
+	return (
+		<Layout>
+			<Outlet />
+		</Layout>
+	)
 }

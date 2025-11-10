@@ -12,8 +12,9 @@ import {
 	type TransactionReceipt,
 } from 'viem'
 import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
+import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { config, getClient } from '#wagmi.config.ts'
+import { config, getConfig } from '#wagmi.config.ts'
 
 async function loader({
 	location,
@@ -36,7 +37,7 @@ async function loader({
 		})
 		.parse(params)
 
-	const client = getClient(config, { rpcUrl })
+	const client = getClient(getConfig({ rpcUrl }))
 	const receipt = await getTransactionReceipt(client, {
 		hash,
 	})
