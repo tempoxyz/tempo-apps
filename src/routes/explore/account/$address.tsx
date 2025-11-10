@@ -461,35 +461,9 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 		hash: transaction.hash,
 		logs: receipt?.logs,
 	})
-
-	// Helper to format token amounts
-	// Assuming TEST tokens have 18 decimals like standard ERC20
-	const formatTokenAmount = (amount: bigint | string | number) => {
-		if (!amount) return '0'
-
-		let value: bigint
-		if (typeof amount === 'string') {
-			value = BigInt(amount)
-		} else if (typeof amount === 'number') {
-			value = BigInt(amount)
-		} else {
-			value = amount
-		}
-
-		// Format with proper decimals
-		const ether = formatEther(value)
-		const num = parseFloat(ether)
-
-		// If the number is very small, show more decimals
-		if (num < 0.01 && num > 0) {
-			return num.toFixed(10).replace(/\.?0+$/, '')
-		}
-
-		return num.toLocaleString('en-US', {
-			minimumFractionDigits: 0,
-			maximumFractionDigits: 5,
-		})
-	}
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token: eventLogs[0].address,
+	})
 
 	if (!eventLogs || eventLogs.length === 0) {
 		return <span className="text-tertiary">Processing...</span>
@@ -529,8 +503,11 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 			return (
 				<>
 					<span>Mint</span>{' '}
-					<span className="font-semibold">{formatTokenAmount(amount)}</span>{' '}
-					<span className="text-accent">TEST</span> <span>to</span>{' '}
+					<span className="font-semibold">
+						{formatUnits(amount, metadata?.decimals ?? 6)}
+					</span>{' '}
+					<span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>{' '}
+					<span>to</span>{' '}
 					<span className="text-accent">
 						{to?.slice(0, 6)}...{to?.slice(-4)}
 					</span>
@@ -547,10 +524,15 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 			return (
 				<>
 					<span>Swap</span>{' '}
-					<span className="font-semibold">{formatTokenAmount(amount0)}</span>{' '}
-					<span className="text-accent">TEST</span> <span>for</span>{' '}
-					<span className="font-semibold">{formatTokenAmount(amount1)}</span>{' '}
-					<span className="text-accent">TEST2</span>
+					<span className="font-semibold">
+						{formatUnits(amount0, metadata?.decimals ?? 6)}
+					</span>{' '}
+					<span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>{' '}
+					<span>for</span>{' '}
+					<span className="font-semibold">
+						{formatUnits(amount1, metadata?.decimals ?? 6)}
+					</span>{' '}
+					<span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>
 				</>
 			)
 		}

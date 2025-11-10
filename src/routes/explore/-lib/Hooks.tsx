@@ -35,7 +35,7 @@ export function useInfiniteAccountTransactions({
 			const [, , { address, limit }] = queryKey
 
 			if (!address) throw new Error('address is required')
-      if (!client) throw new Error('client is required')
+			if (!client) throw new Error('client is required')
 
 			const nonce =
 				pageParam > 0
@@ -107,7 +107,7 @@ export function useInfiniteTransactions({
 
 			let count = 0
 			let transactions: Transaction[] = []
-      if (!client) throw new Error('client is required')
+			if (!client) throw new Error('client is required')
 			while (transactions.length < limit && count < 10 && blockNumber > 0n) {
 				const block_ = await getBlock(client, {
 					blockNumber,
