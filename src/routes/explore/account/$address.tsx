@@ -4,6 +4,7 @@ import {
 	createFileRoute,
 	Link,
 	useNavigate,
+	useParams,
 	useRouterState,
 } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
@@ -13,7 +14,7 @@ import { Abis } from 'tempo.ts/viem'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { Log, RpcTransaction as Transaction } from 'viem'
 import { formatEther, formatUnits, parseEventLogs } from 'viem'
-import { useAccount, useBlock, useClient, useTransactionReceipt } from 'wagmi'
+import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { config } from '#wagmi.config'
@@ -472,14 +473,14 @@ function RouteComponent() {
 }
 
 function AssetRow({ contractAddress }: { contractAddress: Address.Address }) {
-	const account = useAccount()
+	const { address } = useParams({ from: Route.id })
 	const { data: metadata } = Hooks.token.useGetMetadata({
 		token: contractAddress,
 	})
 
 	const { data: balance } = Hooks.token.useGetBalance({
 		token: contractAddress,
-		account: account.address,
+		account: address,
 	})
 
 	return (

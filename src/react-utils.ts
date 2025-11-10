@@ -8,8 +8,7 @@ export function useCopy(timeout = 800) {
 		async (value: string) => {
 			if (timer.current) clearTimeout(timer.current)
 			try {
-				if (!navigator.clipboard)
-					throw new Error('Clipboard API not supported')
+				if (!navigator.clipboard) throw new Error('Clipboard API not supported')
 				await navigator.clipboard.writeText(value)
 				setNotifying(true)
 				timer.current = setTimeout(() => setNotifying(false), timeout)
