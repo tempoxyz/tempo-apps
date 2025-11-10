@@ -29,48 +29,29 @@ export const persister = createAsyncStoragePersister({
 	deserialize,
 })
 
-export const config = createConfig({
-	chains: [tempoAndantino],
-	ssr: true,
-	transports: {
-		[tempoAndantino.id]: !browser
-			? http('https://rpc.testnet.tempo.xyz', {
-					fetchOptions: {
-						headers: {
-							Authorization: `Basic ${btoa('eng:zealous-mayer')}`,
-						},
-					},
-				})
-			: webSocket(
-					'wss://rpc.testnet.tempo.xyz?supersecretargument=pleasedonotusemeinprod',
-				),
-	},
-})
-
-export function getClient<
-	config extends Config,
-	chainId extends config['chains'][number]['id'] | number | undefined,
->(
-	config: config,
-	parameters: OneOf<
-		| Actions.GetClientParameters<config, chainId>
-		| { rpcUrl?: string | undefined }
-	> = {},
-): Actions.GetClientReturnType<config, chainId> {
+export function getConfig(
+	parameters: OneOf<{ rpcUrl?: string | undefined }> = {},
+) {
 	const { rpcUrl } = parameters
-	const client = Actions.getClient(config, parameters)
-	if (rpcUrl && client) {
-		return createClient({
-			...client,
-			chain: undefined,
-			transport: http(rpcUrl) as never,
-		}) as never
-	}
-	return client as never
+	return createConfig({
+		chains: [tempoAndantino],
+		ssr: true,
+		transports: {
+			[tempoAndantino.id]: !browser
+				? http(rpcUrl ?? 'https://rpc.testnet.tempo.xyz', {
+						fetchOptions: {
+							headers: {
+								Authorization: `Basic ${btoa('eng:zealous-mayer')}`,
+							},
+						},
+					})
+				: rpcUrl
+					? http(rpcUrl)
+					: webSocket(
+							'wss://rpc.testnet.tempo.xyz?supersecretargument=pleasedonotusemeinprod',
+						),
+		},
+	})
 }
 
-declare module 'wagmi' {
-	interface Register {
-		config: typeof config
-	}
-}
+export const config = getConfig()
