@@ -17,6 +17,7 @@ import { Route as ReceiptHashRouteImport } from './routes/receipt/$hash'
 import { Route as ExploreValueRouteImport } from './routes/explore/$value'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ExploreBlockIdRouteImport } from './routes/explore/block/$id'
+import { Route as ExploreAssetAddressRouteImport } from './routes/explore/asset/$address'
 import { Route as ExploreAccountAddressRouteImport } from './routes/explore/account/$address'
 import { Route as ApiAddressAddressRouteImport } from './routes/api/address/$address'
 
@@ -60,6 +61,11 @@ const ExploreBlockIdRoute = ExploreBlockIdRouteImport.update({
   path: '/block/$id',
   getParentRoute: () => ExploreRouteRoute,
 } as any)
+const ExploreAssetAddressRoute = ExploreAssetAddressRouteImport.update({
+  id: '/asset/$address',
+  path: '/asset/$address',
+  getParentRoute: () => ExploreRouteRoute,
+} as any)
 const ExploreAccountAddressRoute = ExploreAccountAddressRouteImport.update({
   id: '/account/$address',
   path: '/account/$address',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/explore/': typeof ExploreIndexRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/explore/account/$address': typeof ExploreAccountAddressRoute
+  '/explore/asset/$address': typeof ExploreAssetAddressRoute
   '/explore/block/$id': typeof ExploreBlockIdRoute
 }
 export interface FileRoutesByTo {
@@ -92,6 +99,7 @@ export interface FileRoutesByTo {
   '/explore': typeof ExploreIndexRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/explore/account/$address': typeof ExploreAccountAddressRoute
+  '/explore/asset/$address': typeof ExploreAssetAddressRoute
   '/explore/block/$id': typeof ExploreBlockIdRoute
 }
 export interface FileRoutesById {
@@ -105,6 +113,7 @@ export interface FileRoutesById {
   '/explore/': typeof ExploreIndexRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/explore/account/$address': typeof ExploreAccountAddressRoute
+  '/explore/asset/$address': typeof ExploreAssetAddressRoute
   '/explore/block/$id': typeof ExploreBlockIdRoute
 }
 export interface FileRouteTypes {
@@ -119,6 +128,7 @@ export interface FileRouteTypes {
     | '/explore/'
     | '/api/address/$address'
     | '/explore/account/$address'
+    | '/explore/asset/$address'
     | '/explore/block/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/explore'
     | '/api/address/$address'
     | '/explore/account/$address'
+    | '/explore/asset/$address'
     | '/explore/block/$id'
   id:
     | '__root__'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/explore/'
     | '/api/address/$address'
     | '/explore/account/$address'
+    | '/explore/asset/$address'
     | '/explore/block/$id'
   fileRoutesById: FileRoutesById
 }
@@ -211,6 +223,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExploreBlockIdRouteImport
       parentRoute: typeof ExploreRouteRoute
     }
+    '/explore/asset/$address': {
+      id: '/explore/asset/$address'
+      path: '/asset/$address'
+      fullPath: '/explore/asset/$address'
+      preLoaderRoute: typeof ExploreAssetAddressRouteImport
+      parentRoute: typeof ExploreRouteRoute
+    }
     '/explore/account/$address': {
       id: '/explore/account/$address'
       path: '/account/$address'
@@ -232,6 +251,7 @@ interface ExploreRouteRouteChildren {
   ExploreValueRoute: typeof ExploreValueRoute
   ExploreIndexRoute: typeof ExploreIndexRoute
   ExploreAccountAddressRoute: typeof ExploreAccountAddressRoute
+  ExploreAssetAddressRoute: typeof ExploreAssetAddressRoute
   ExploreBlockIdRoute: typeof ExploreBlockIdRoute
 }
 
@@ -239,6 +259,7 @@ const ExploreRouteRouteChildren: ExploreRouteRouteChildren = {
   ExploreValueRoute: ExploreValueRoute,
   ExploreIndexRoute: ExploreIndexRoute,
   ExploreAccountAddressRoute: ExploreAccountAddressRoute,
+  ExploreAssetAddressRoute: ExploreAssetAddressRoute,
   ExploreBlockIdRoute: ExploreBlockIdRoute,
 }
 

@@ -13,7 +13,7 @@ import { Abis } from 'tempo.ts/viem'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { Log, RpcTransaction as Transaction } from 'viem'
 import { formatEther, formatUnits, parseEventLogs } from 'viem'
-import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
+import { useAccount, useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { config } from '#wagmi.config'
@@ -75,6 +75,13 @@ export const Route = createFileRoute('/explore/account/$address')({
 	},
 })
 
+const assets = [
+	'0x20c0000000000000000000000000000000000000',
+	'0x20c0000000000000000000000000000000000001',
+	'0x20c0000000000000000000000000000000000002',
+	'0x20c0000000000000000000000000000000000003',
+] as const
+
 function RouteComponent() {
 	const navigate = useNavigate()
 	const routerState = useRouterState()
@@ -91,6 +98,10 @@ function RouteComponent() {
 	const transactions = data.transactions
 	const totalTransactions = data.total
 	const totalPages = Math.ceil(totalTransactions / limit)
+
+	const [activeTab, setActiveTab] = React.useState<'history' | 'assets'>(
+		'history',
+	)
 
 	const goToPage = React.useCallback(
 		(newPage: number) => {
@@ -172,230 +183,333 @@ function RouteComponent() {
 
 					<div className="grid grid-cols-1 gap-6 font-mono">
 						<section className="flex flex-col gap-6 w-full">
-							{/* History */}
+							{/* Tabs */}
 							<div className="overflow-hidden rounded-xl border border-border-primary bg-primary">
-								<div className="px-5 h-10 flex items-center">
-									<h2 className="text-sm font-medium uppercase tracking-[0.15em] text-primary">
+								<div className="px-5 h-10 flex items-center gap-6">
+									<button
+										type="button"
+										onClick={() => setActiveTab('history')}
+										className={`text-sm font-medium uppercase tracking-[0.15em] transition-colors ${
+											activeTab === 'history'
+												? 'text-primary'
+												: 'text-tertiary hover:text-secondary'
+										}`}
+									>
 										HISTORY
-									</h2>
+									</button>
+									<button
+										type="button"
+										onClick={() => setActiveTab('assets')}
+										className={`text-sm font-medium uppercase tracking-[0.15em] transition-colors ${
+											activeTab === 'assets'
+												? 'text-primary'
+												: 'text-tertiary hover:text-secondary'
+										}`}
+									>
+										ASSETS
+									</button>
 								</div>
-								<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
-									<table className="w-full border-collapse text-sm rounded-t-sm">
-										<thead>
-											<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
-												<th className="px-5 pb-3 font-normal">Time</th>
-												<th className="px-5 pb-3 font-normal">Description</th>
-												<th className="px-3 pb-3 font-normal">Hash</th>
-												<th className="px-3 pb-3 font-normal">Block</th>
-												<th className="px-5 pb-3 text-right font-normal">
-													Total
-												</th>
-											</tr>
-										</thead>
-										{/** biome-ignore lint/complexity/noUselessFragments: _ */}
-										<ClientOnly fallback={<></>}>
-											<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
-												{transactions?.map((transaction) => (
-													<tr
-														key={transaction.hash}
-														className="transition-colors hover:bg-alt"
-													>
-														{/* Time */}
-														<td className="px-5 py-3 text-primary">
-															<div className="text-xs">
-																<TransactionTimestamp
-																	blockNumber={transaction.blockNumber}
-																/>
-															</div>
-														</td>
 
-														{/* Description */}
-														<td className="px-5 py-3 text-primary">
-															<div className="text-sm">
-																<TransactionDescription
-																	transaction={transaction}
-																/>
-															</div>
-														</td>
-
-														{/* Transaction Hash */}
-														<td className="px-3 py-3 font-mono text-[11px] text-primary">
-															<Link
-																to={'/receipt/$hash'}
-																params={{ hash: transaction.hash ?? '' }}
-																className="hover:text-accent transition-colors"
-															>
-																{transaction.hash?.slice(0, 8)}...
-																{transaction.hash?.slice(-6)}
-															</Link>
-														</td>
-
-														{/* Block Number */}
-														<td className="px-3 py-3">
-															{transaction.blockNumber ? (
-																<Link
-																	to={'/explore/block/$id'}
-																	params={{
-																		id: Hex.toNumber(
-																			transaction.blockNumber,
-																		).toString(),
-																	}}
-																	className="text-accent text-sm transition-colors hover:text-accent/80"
-																>
-																	{Hex.toNumber(
-																		transaction.blockNumber,
-																	).toString()}
-																</Link>
-															) : (
-																<span className="text-tertiary">--</span>
-															)}
-														</td>
-
-														{/* Total Value */}
-														<td className="px-5 py-3 text-right font-mono text-xs">
-															{(() => {
-																const value = transaction.value
-																	? Hex.toBigInt(transaction.value)
-																	: 0n
-																const ethAmount = parseFloat(formatEther(value))
-																const dollarAmount = ethAmount * 2000
-
-																if (dollarAmount > 1)
-																	return (
-																		<span className="text-positive">
-																			${dollarAmount.toFixed(2)}
-																		</span>
-																	)
-
-																return (
-																	<span className="text-tertiary">
-																		(${dollarAmount.toFixed(2)})
-																	</span>
-																)
-															})()}
-														</td>
+								{activeTab === 'history' && (
+									<>
+										<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
+											<table className="w-full border-collapse text-sm rounded-t-sm">
+												<thead>
+													<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+														<th className="px-5 pb-3 font-normal">Time</th>
+														<th className="px-5 pb-3 font-normal">
+															Description
+														</th>
+														<th className="px-3 pb-3 font-normal">Hash</th>
+														<th className="px-3 pb-3 font-normal">Block</th>
+														<th className="px-5 pb-3 text-right font-normal">
+															Total
+														</th>
 													</tr>
-												))}
-											</tbody>
-										</ClientOnly>
-									</table>
-								</div>
-
-								<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
-									<div className="flex flex-row items-center gap-2">
-										<button
-											type="button"
-											onClick={() => goToPage(page - 1)}
-											disabled={page <= 1}
-											className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
-											aria-label="Previous page"
-										>
-											Previous
-										</button>
-
-										<div className="flex items-center gap-1.5 px-2">
-											{(() => {
-												// Show up to 5 consecutive pages centered around current page
-												const maxButtons = 5
-												let startPage = Math.max(
-													1,
-													page - Math.floor(maxButtons / 2),
-												)
-												const endPage = Math.min(
-													totalPages,
-													startPage + maxButtons - 1,
-												)
-
-												// Adjust start if we're near the end
-												startPage = Math.max(1, endPage - maxButtons + 1)
-
-												const pages: (number | 'ellipsis')[] = []
-
-												// Add first page + ellipsis if needed
-												if (startPage > 1) {
-													pages.push(1)
-													if (startPage > 2) pages.push('ellipsis')
-												}
-
-												// Add the range of pages
-												for (let i = startPage; i <= endPage; i++) {
-													pages.push(i)
-												}
-
-												// Add ellipsis + last page if needed
-												if (endPage < totalPages) {
-													if (endPage < totalPages - 1) {
-														pages.push('ellipsis')
-													}
-													pages.push(totalPages)
-												}
-
-												let ellipsisCount = 0
-												return pages.map((p) => {
-													if (p === 'ellipsis') {
-														ellipsisCount++
-														return (
-															<span
-																key={`ellipsis-${ellipsisCount}`}
-																className="text-tertiary px-1"
+												</thead>
+												{/** biome-ignore lint/complexity/noUselessFragments: _ */}
+												<ClientOnly fallback={<></>}>
+													<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
+														{transactions?.map((transaction) => (
+															<tr
+																key={transaction.hash}
+																className="transition-colors hover:bg-alt"
 															>
-																...
-															</span>
-														)
-													}
-													return (
-														<button
-															key={p}
-															type="button"
-															onClick={() => goToPage(p)}
-															className={`flex size-7 items-center justify-center rounded transition-colors ${
-																page === p
-																	? 'bg-accent text-white'
-																	: 'hover:bg-alt text-primary'
-															}`}
-														>
-															{p}
-														</button>
-													)
-												})
-											})()}
+																{/* Time */}
+																<td className="px-5 py-3 text-primary">
+																	<div className="text-xs">
+																		<TransactionTimestamp
+																			blockNumber={transaction.blockNumber}
+																		/>
+																	</div>
+																</td>
+
+																{/* Description */}
+																<td className="px-5 py-3 text-primary">
+																	<div className="text-sm">
+																		<TransactionDescription
+																			transaction={transaction}
+																		/>
+																	</div>
+																</td>
+
+																{/* Transaction Hash */}
+																<td className="px-3 py-3 font-mono text-[11px] text-primary">
+																	<Link
+																		to={'/receipt/$hash'}
+																		params={{ hash: transaction.hash ?? '' }}
+																		className="hover:text-accent transition-colors"
+																	>
+																		{transaction.hash?.slice(0, 8)}...
+																		{transaction.hash?.slice(-6)}
+																	</Link>
+																</td>
+
+																{/* Block Number */}
+																<td className="px-3 py-3">
+																	{transaction.blockNumber ? (
+																		<Link
+																			to={'/explore/block/$id'}
+																			params={{
+																				id: Hex.toNumber(
+																					transaction.blockNumber,
+																				).toString(),
+																			}}
+																			className="text-accent text-sm transition-colors hover:text-accent/80"
+																		>
+																			{Hex.toNumber(
+																				transaction.blockNumber,
+																			).toString()}
+																		</Link>
+																	) : (
+																		<span className="text-tertiary">--</span>
+																	)}
+																</td>
+
+																{/* Total Value */}
+																<td className="px-5 py-3 text-right font-mono text-xs">
+																	{(() => {
+																		const value = transaction.value
+																			? Hex.toBigInt(transaction.value)
+																			: 0n
+																		const ethAmount = parseFloat(
+																			formatEther(value),
+																		)
+																		const dollarAmount = ethAmount * 2000
+
+																		if (dollarAmount > 1)
+																			return (
+																				<span className="text-positive">
+																					${dollarAmount.toFixed(2)}
+																				</span>
+																			)
+
+																		return (
+																			<span className="text-tertiary">
+																				(${dollarAmount.toFixed(2)})
+																			</span>
+																		)
+																	})()}
+																</td>
+															</tr>
+														))}
+													</tbody>
+												</ClientOnly>
+											</table>
 										</div>
 
-										<button
-											type="button"
-											onClick={() => goToPage(page + 1)}
-											disabled={page >= totalPages}
-											className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
-											aria-label="Next page"
-										>
-											Next
-										</button>
-									</div>
+										<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
+											<div className="flex flex-row items-center gap-2">
+												<button
+													type="button"
+													onClick={() => goToPage(page - 1)}
+													disabled={page <= 1}
+													className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+													aria-label="Previous page"
+												>
+													Previous
+												</button>
 
-									<div className="space-x-2">
-										<span className="text-tertiary">Page</span>
-										<span className="text-primary">{page}</span>
-										<span className="text-tertiary">of</span>
-										<span className="text-primary">{totalPages}</span>
-										<span className="text-tertiary">•</span>
-										<span className="text-primary">
-											{totalTransactions || '...'}
-										</span>
-										<span className="text-tertiary">
-											<ClientOnly fallback={<React.Fragment>¬</React.Fragment>}>
-												{totalTransactions === 1
-													? 'transaction'
-													: 'transactions'}
+												<div className="flex items-center gap-1.5 px-2">
+													{(() => {
+														// Show up to 5 consecutive pages centered around current page
+														const maxButtons = 5
+														let startPage = Math.max(
+															1,
+															page - Math.floor(maxButtons / 2),
+														)
+														const endPage = Math.min(
+															totalPages,
+															startPage + maxButtons - 1,
+														)
+
+														// Adjust start if we're near the end
+														startPage = Math.max(1, endPage - maxButtons + 1)
+
+														const pages: (number | 'ellipsis')[] = []
+
+														// Add first page + ellipsis if needed
+														if (startPage > 1) {
+															pages.push(1)
+															if (startPage > 2) pages.push('ellipsis')
+														}
+
+														// Add the range of pages
+														for (let i = startPage; i <= endPage; i++) {
+															pages.push(i)
+														}
+
+														// Add ellipsis + last page if needed
+														if (endPage < totalPages) {
+															if (endPage < totalPages - 1) {
+																pages.push('ellipsis')
+															}
+															pages.push(totalPages)
+														}
+
+														let ellipsisCount = 0
+														return pages.map((p) => {
+															if (p === 'ellipsis') {
+																ellipsisCount++
+																return (
+																	<span
+																		key={`ellipsis-${ellipsisCount}`}
+																		className="text-tertiary px-1"
+																	>
+																		...
+																	</span>
+																)
+															}
+															return (
+																<button
+																	key={p}
+																	type="button"
+																	onClick={() => goToPage(p)}
+																	className={`flex size-7 items-center justify-center rounded transition-colors ${
+																		page === p
+																			? 'bg-accent text-white'
+																			: 'hover:bg-alt text-primary'
+																	}`}
+																>
+																	{p}
+																</button>
+															)
+														})
+													})()}
+												</div>
+
+												<button
+													type="button"
+													onClick={() => goToPage(page + 1)}
+													disabled={page >= totalPages}
+													className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+													aria-label="Next page"
+												>
+													Next
+												</button>
+											</div>
+
+											<div className="space-x-2">
+												<span className="text-tertiary">Page</span>
+												<span className="text-primary">{page}</span>
+												<span className="text-tertiary">of</span>
+												<span className="text-primary">{totalPages}</span>
+												<span className="text-tertiary">•</span>
+												<span className="text-primary">
+													{totalTransactions || '...'}
+												</span>
+												<span className="text-tertiary">
+													<ClientOnly
+														fallback={<React.Fragment>¬</React.Fragment>}
+													>
+														{totalTransactions === 1
+															? 'transaction'
+															: 'transactions'}
+													</ClientOnly>
+												</span>
+											</div>
+										</div>
+									</>
+								)}
+
+								{activeTab === 'assets' && (
+									<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
+										<table className="w-full border-collapse text-sm rounded-t-sm">
+											<thead>
+												<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+													<th className="px-5 pb-3 font-normal">Name</th>
+													<th className="px-5 pb-3 font-normal">Ticker</th>
+													<th className="px-5 pb-3 font-normal">Currency</th>
+													<th className="px-5 pb-3 text-right font-normal">
+														Amount
+													</th>
+													<th className="px-5 pb-3 text-right font-normal">
+														Value
+													</th>
+												</tr>
+											</thead>
+											{/** biome-ignore lint/complexity/noUselessFragments: _ */}
+											<ClientOnly fallback={<></>}>
+												<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
+													{assets.map((assetAddress) => (
+														<AssetRow
+															key={assetAddress}
+															contractAddress={assetAddress}
+														/>
+													))}
+												</tbody>
 											</ClientOnly>
-										</span>
+										</table>
 									</div>
-								</div>
+								)}
 							</div>
 						</section>
 					</div>
 				</div>
 			</div>
 		</React.Suspense>
+	)
+}
+
+function AssetRow({ contractAddress }: { contractAddress: Address.Address }) {
+	const account = useAccount()
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token: contractAddress,
+	})
+
+	const { data: balance } = Hooks.token.useGetBalance({
+		token: contractAddress,
+		account: account.address,
+	})
+
+	return (
+		<tr className="transition-colors hover:bg-alt">
+			<td className="px-5 py-3 text-primary">
+				<Link
+					to="/explore/asset/$address"
+					params={{ address: contractAddress }}
+					className="hover:text-accent transition-colors"
+				>
+					{metadata?.name || 'Unknown Token'}
+				</Link>
+			</td>
+			<td className="px-5 py-3">
+				<Link
+					to="/explore/asset/$address"
+					params={{ address: contractAddress }}
+					className="text-accent hover:text-accent/80 transition-colors"
+				>
+					{metadata?.symbol || '???'}
+				</Link>
+			</td>
+			<td className="px-5 py-3 text-primary">USD</td>
+			<td className="px-5 py-3 text-right font-mono text-xs text-primary">
+				{formatUnits(balance ?? 0n, metadata?.decimals ?? 6)}
+			</td>
+			<td className="px-5 py-3 text-right font-mono text-xs text-primary">
+				${(Number(balance ?? 0n) * 1.0).toFixed(2)}
+			</td>
+		</tr>
 	)
 }
 
@@ -424,37 +538,6 @@ function useParseEventLogs(props: {
 	}, [props.logs, props.hash])
 }
 
-function TransferDescription({
-	amount,
-	to,
-	tokenAddress,
-	isSelf,
-}: {
-	amount: bigint
-	to: string
-	tokenAddress: Address.Address
-	isSelf: boolean
-}) {
-	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: tokenAddress,
-	})
-
-	return (
-		<span className="text-primary">
-			<span>Transfer</span>{' '}
-			<span className="font-semibold">
-				{formatUnits(amount, metadata?.decimals ?? 6)}
-			</span>{' '}
-			<span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>{' '}
-			<span>to</span>{' '}
-			<span className="text-accent">
-				{to?.slice(0, 6)}...{to?.slice(-4)}
-			</span>
-			{isSelf && <span className="text-tertiary"> (self)</span>}
-		</span>
-	)
-}
-
 function TransactionDescription({ transaction }: { transaction: Transaction }) {
 	const { data: receipt } = useTransactionReceipt({
 		hash: transaction.hash,
@@ -481,6 +564,19 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 	const event: any = eventLogs[0]
 	const eventName = event?.eventName
 	const args = event?.args || {}
+	const tokenAddress = event?.address as Address.Address
+
+	const AssetLink = () => {
+		return (
+			<Link
+				to={'/explore/asset/$address'}
+				params={{ address: tokenAddress }}
+				className="text-accent hover:text-accent/80 transition-colors"
+			>
+				{metadata?.symbol || 'TOKEN'}
+			</Link>
+		)
+	}
 
 	// Format based on event type, showing actual data from the event
 	const formatEventDescription = () => {
@@ -489,16 +585,24 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 			const to = args.to as string
 			const amount = args.amount as bigint
 			const from = args.from as string
-			const tokenAddress = event.address as Address.Address // Token contract address from event
 			const isSelf = from?.toLowerCase() === to?.toLowerCase()
 
 			return (
-				<TransferDescription
-					amount={amount}
-					to={to}
-					tokenAddress={tokenAddress}
-					isSelf={isSelf}
-				/>
+				<>
+					<span>Transfer</span>{' '}
+					<span className="font-semibold">
+						{formatUnits(amount, metadata?.decimals ?? 6)}
+					</span>{' '}
+					<AssetLink /> <span>to</span>{' '}
+					<Link
+						to={'/explore/account/$address'}
+						params={{ address: to as Address.Address }}
+						className="text-accent hover:text-accent/80 transition-colors"
+					>
+						{to?.slice(0, 6)}...{to?.slice(-4)}
+					</Link>
+					{isSelf && <span className="text-tertiary"> (self)</span>}
+				</>
 			)
 		}
 
@@ -535,12 +639,11 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 					<span className="font-semibold">
 						{formatUnits(amount0, metadata?.decimals ?? 6)}
 					</span>{' '}
-					<span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>{' '}
-					<span>for</span>{' '}
+					<AssetLink /> <span>for</span>{' '}
 					<span className="font-semibold">
 						{formatUnits(amount1, metadata?.decimals ?? 6)}
 					</span>{' '}
-					<span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>
+					<AssetLink />
 				</>
 			)
 		}
@@ -558,6 +661,18 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 					</span>{' '}
 					<span>on Policy</span>{' '}
 					<span className="text-accent">#{policyId?.toString()}</span>
+				</>
+			)
+		}
+
+		if (eventName === 'Approval') {
+			return (
+				<>
+					<span>Approval</span>{' '}
+					<span className="font-semibold">
+						{formatUnits(args.amount, metadata?.decimals ?? 6)}
+					</span>{' '}
+					<AssetLink />
 				</>
 			)
 		}
