@@ -462,7 +462,10 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 		logs: receipt?.logs,
 	})
 	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: eventLogs[0].address,
+		token: eventLogs[0]?.address,
+		query: {
+			enabled: Boolean(eventLogs[0]?.address),
+		},
 	})
 
 	if (!eventLogs || eventLogs.length === 0) {
