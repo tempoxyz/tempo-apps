@@ -20,7 +20,7 @@ import * as z from 'zod/mini'
 import { config } from '#wagmi.config'
 
 type TransactionsResponse = {
-	transactions: Transaction[]
+	transactions: Array<Transaction>
 	total: number
 	offset: number // Next offset to use for pagination
 	limit: number
@@ -344,9 +344,12 @@ function HistoryTabContent({
 		<>
 			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
 				{isFetching && (
-					<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30">
-						<div className="h-full w-1/4 bg-accent animate-pulse" />
-					</div>
+					<>
+						<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30 z-10">
+							<div className="h-full w-1/4 bg-accent animate-pulse" />
+						</div>
+						<div className="absolute inset-0 bg-black-white/5 pointer-events-none z-5" />
+					</>
 				)}
 				<table className="w-full border-collapse text-sm rounded-t-sm table-fixed">
 					<colgroup>
@@ -457,17 +460,10 @@ function HistoryTabContent({
 						type="button"
 						onClick={() => goToPage(page - 1)}
 						disabled={page <= 1 || isFetching}
-						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed relative"
+						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Previous page"
 					>
-						{isFetching && page > 1 && (
-							<span className="absolute inset-0 flex items-center justify-center">
-								<span className="size-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-							</span>
-						)}
-						<span className={isFetching && page > 1 ? 'opacity-0' : ''}>
-							Previous
-						</span>
+						Previous
 					</button>
 
 					<div className="flex items-center gap-1.5 px-2">
@@ -520,22 +516,13 @@ function HistoryTabContent({
 										type="button"
 										onClick={() => goToPage(p)}
 										disabled={isFetching}
-										className={`flex size-7 items-center justify-center rounded transition-colors relative ${
+										className={`flex size-7 items-center justify-center rounded transition-colors ${
 											page === p
 												? 'bg-accent text-white'
 												: 'hover:bg-alt text-primary'
 										} ${isFetching ? 'opacity-50 cursor-not-allowed' : ''}`}
 									>
-										{isFetching && page === p && (
-											<span className="absolute inset-0 flex items-center justify-center">
-												<span className="size-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-											</span>
-										)}
-										<span
-											className={isFetching && page === p ? 'opacity-0' : ''}
-										>
-											{p}
-										</span>
+										{p}
 									</button>
 								)
 							})
@@ -546,19 +533,10 @@ function HistoryTabContent({
 						type="button"
 						onClick={() => goToPage(page + 1)}
 						disabled={page >= totalPages || isFetching}
-						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed relative"
+						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Next page"
 					>
-						{isFetching && page < totalPages && (
-							<span className="absolute inset-0 flex items-center justify-center">
-								<span className="size-3 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-							</span>
-						)}
-						<span
-							className={isFetching && page < totalPages ? 'opacity-0' : ''}
-						>
-							Next
-						</span>
+						Next
 					</button>
 				</div>
 
