@@ -39,6 +39,11 @@ const transactionsQuery = (
 			fetch(`/api/address/${address}?offset=${offset}&limit=${limit}`).then(
 				(res) => res.json(),
 			),
+		// auto-refresh page 1 since new transactions appear there
+		refetchInterval: page === 1 ? 4_000 : false,
+		refetchIntervalInBackground: page === 1,
+		refetchOnWindowFocus: page === 1,
+		staleTime: page === 1 ? 0 : 60_000, // page 1: always fresh, others: 60s cache
 	})
 
 export const Route = createFileRoute('/explore/account/$address')({
