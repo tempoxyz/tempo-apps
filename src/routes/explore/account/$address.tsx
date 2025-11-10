@@ -207,15 +207,7 @@ function RouteComponent() {
 
 							{activeTab === 'history' && (
 								<React.Suspense
-									fallback={
-										<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
-											<div className="flex items-center justify-center py-12">
-												<div className="text-sm text-tertiary">
-													Loading transactions...
-												</div>
-											</div>
-										</div>
-									}
+									fallback={<HistoryLoadingSkeleton limit={limit} />}
 								>
 									<HistoryTabContent
 										address={address}
@@ -261,6 +253,59 @@ function RouteComponent() {
 				</div>
 			</div>
 		</div>
+	)
+}
+
+function HistoryLoadingSkeleton({ limit }: { limit: number }) {
+	return (
+		<>
+			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
+				<table className="w-full border-collapse text-sm rounded-t-sm">
+					<thead>
+						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+							<th className="px-5 pb-3 font-normal">Time</th>
+							<th className="px-5 pb-3 font-normal">Description</th>
+							<th className="px-3 pb-3 font-normal">Hash</th>
+							<th className="px-3 pb-3 font-normal">Block</th>
+							<th className="px-5 pb-3 text-right font-normal">Total</th>
+						</tr>
+					</thead>
+					<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
+						{Array.from(
+							{ length: limit },
+							(_, index) => `loading-row-${index}`,
+						).map((key) => (
+							<tr key={key} className="transition-colors">
+								<td className="px-5 py-3">
+									<div className="h-4 w-16 bg-alt animate-pulse rounded" />
+								</td>
+								<td className="px-5 py-3">
+									<div className="h-4 w-48 bg-alt animate-pulse rounded" />
+								</td>
+								<td className="px-3 py-3">
+									<div className="h-4 w-24 bg-alt animate-pulse rounded" />
+								</td>
+								<td className="px-3 py-3">
+									<div className="h-4 w-16 bg-alt animate-pulse rounded" />
+								</td>
+								<td className="px-5 py-3 text-right">
+									<div className="h-4 w-20 bg-alt animate-pulse rounded ml-auto" />
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+
+			<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
+				<div className="flex flex-row items-center gap-2">
+					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
+					<div className="h-7 w-32 bg-alt animate-pulse rounded" />
+					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
+				</div>
+				<div className="h-4 w-48 bg-alt animate-pulse rounded" />
+			</div>
+		</>
 	)
 }
 
