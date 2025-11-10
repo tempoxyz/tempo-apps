@@ -50,8 +50,8 @@ export function Receipt(props: Receipt.Props) {
 						<span className="text-tertiary capitalize">Hash</span>
 						{hashExpanded ? (
 							<span
-								ref={(el) => {
-									if (!el) return
+								onClick={(e) => {
+									const el = e.currentTarget
 									const selection = window.getSelection()
 									if (!selection) return
 									selection.removeAllRanges()
@@ -59,7 +59,7 @@ export function Receipt(props: Receipt.Props) {
 									range.selectNodeContents(el)
 									selection.addRange(range)
 								}}
-								className="text-right break-all max-w-[11ch]"
+								className="text-right break-all max-w-[11ch] cursor-pointer active:translate-y-[0.5px]"
 							>
 								{hash}
 							</span>
