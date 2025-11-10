@@ -4,7 +4,7 @@ import type { Hex } from 'viem'
 export function shortenHex(hex: Hex, chars: number = 4) {
 	return hex.length < chars * 2 + 2
 		? hex
-		: hex.slice(0, chars + 2) + '…' + hex.slice(-chars)
+		: `${hex.slice(0, chars + 2)}…${hex.slice(-chars)}`
 }
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', {
@@ -36,9 +36,13 @@ export function formatTimestampTime(timestamp: bigint): {
 	const date = new Date(Number(timestamp) * 1000)
 
 	const parts = timezoneFormatter.formatToParts(date)
-	const timeZonePart = parts.find((p) => p.type === 'timeZoneName')?.value || 'GMT+0'
+	const timeZonePart =
+		parts.find((p) => p.type === 'timeZoneName')?.value || 'GMT+0'
 
-	const signIndex = Math.max(timeZonePart.indexOf('+'), timeZonePart.indexOf('-'))
+	const signIndex = Math.max(
+		timeZonePart.indexOf('+'),
+		timeZonePart.indexOf('-'),
+	)
 	const timezone = signIndex > 0 ? timeZonePart.slice(0, signIndex) : 'GMT'
 	const offset = signIndex > 0 ? timeZonePart.slice(signIndex) : '+0'
 

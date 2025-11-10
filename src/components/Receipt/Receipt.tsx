@@ -1,11 +1,11 @@
-import { useState } from 'react'
 import type { Address, Hex } from 'ox'
-import { ReceiptMark } from './ReceiptMark.tsx'
+import { useState } from 'react'
 import {
 	formatTimestampDate,
 	formatTimestampTime,
 	shortenHex,
 } from '#formatting.ts'
+import { ReceiptMark } from './ReceiptMark.tsx'
 
 export function Receipt(props: Receipt.Props) {
 	const {
@@ -95,7 +95,7 @@ export function Receipt(props: Receipt.Props) {
 				{displayEvents.map((event, index) => (
 					// only 'send' events for now
 					<div
-						key={index}
+						key={`event-${event.type}-${index}`}
 						className="flex flex-col gap-[8px] [counter-increment:event]"
 					>
 						<div className="flex flex-row justify-between items-center gap-[10px]">

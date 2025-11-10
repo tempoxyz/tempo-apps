@@ -14,8 +14,8 @@ import {
 import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { config, getConfig } from '#wagmi.config.ts'
 import { Receipt } from '#components/Receipt/Receipt.tsx'
+import { config, getConfig } from '#wagmi.config.ts'
 
 async function loader({
 	location,
@@ -181,8 +181,7 @@ export const Route = createFileRoute('/receipt/$hash')({
 })
 
 function Component() {
-	const { block, lineItems, receipt, timestampFormatted, transaction } =
-		Route.useLoaderData()
+	const { block, receipt, transaction } = Route.useLoaderData()
 
 	return (
 		<div className="font-mono text-[13px] flex flex-col items-center justify-center min-h-screen gap-8">
