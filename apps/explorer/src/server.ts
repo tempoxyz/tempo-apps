@@ -1,3 +1,4 @@
+import { env } from 'cloudflare:workers'
 import handler, { type ServerEntry } from '@tanstack/react-start/server-entry'
 
 export default {
@@ -37,8 +38,8 @@ function basicAuth(request: Request): Response | null {
 	const [username, password] = decoded.split(':')
 
 	if (
-		username !== import.meta.env.BASIC_AUTH_USERNAME ||
-		password !== import.meta.env.BASIC_AUTH_PASSWORD
+		username !== env.BASIC_AUTH_USERNAME ||
+		password !== env.BASIC_AUTH_PASSWORD
 	)
 		return new Response('Unauthorized', {
 			status: 401,
