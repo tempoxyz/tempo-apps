@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@font-face {
+	font-family: "SF Pro Rounded";
+	src: url("/fonts/SF-Pro.woff2") format("woff2");
+}
+
 @custom-variant dark (&:is(.scheme-light-dark *));
 
 @theme {
@@ -11,7 +16,7 @@
 	--background-color-primary: var(--color-background-primary);
 	--color-background-surface: light-dark(#ffffff, #1a1a1a);
 	--background-color-surface: var(--color-background-surface);
-	--color-background-alt: light-dark(#fcfcfc, #161616);
+	--color-background-alt: light-dark(#fcfcfc, #222222);
 	--background-alt: var(--color-background-alt);
 	--color-frame-background: light-dark(#ffffff, #1a1a1a);
 	--frame-background: var(--color-frame-background);
@@ -46,7 +51,6 @@
 	--color-positive: var(--color-content-positive);
 	--color-negative: var(--color-content-negative);
 	--color-disabled: var(--color-content-disabled);
-	--color-content-dimmed: light-dark(#bebebe, #4e4e4e);
 
 	/* Accent & Interactive */
 	--color-accent: light-dark(#3b82f6, #60a5fa);
@@ -73,6 +77,16 @@
 	--color-outline-negative: light-dark(#dc2626, #ef4444);
 	--outline-negative: var(--color-outline-negative);
 
+	/* Badge Colors */
+	--color-badge-content: light-dark(#737373, #a3a3a3);
+	--badge-content: var(--color-badge-content);
+	--color-badge-info-content: light-dark(#3b82f6, #60a5fa);
+	--badge-info-content: var(--color-badge-info-content);
+	--color-badge-positive-bg: light-dark(#dcfce7, #14532d);
+	--badge-positive-bg: var(--color-badge-positive-bg);
+	--color-badge-negative-bg: light-dark(#fee2e2, #450a0a);
+	--badge-negative-bg: var(--color-badge-negative-bg);
+
 	/* Field Colors */
 	--color-field-content-secondary: light-dark(#a3a3a3, #737373);
 	--field-content-secondary: var(--color-field-content-secondary);
@@ -89,33 +103,24 @@
 	--color-black-white: light-dark(#000000, #ffffff);
 	--color-white-black: light-dark(#ffffff, #000000);
 
-	/* Card */
-	--color-card: light-dark(#f9f9f9, #222222);
-	--color-card-header: light-dark(#f9f9f9, #191919);
-	--color-card-border: light-dark(#e0e0e0, #2a2a2a);
-
 	/* Other Colors */
-	--color-base-background: light-dark(#fcfcfc, #191919);
-	--color-base-plane: light-dark(#fcfcfc, #222222);
-	--color-base-plane-background: light-dark(#f9f9f9, #222222);
-	--color-base-plane-interactive: light-dark(#f8f8f8, #1c1c1c);
-	--color-base-alt: light-dark(#e5e5e5, #2a2a2a);
-	--color-base-border: light-dark(#e0e0e0, #2a2a2a);
+	--color-background-base-plane: light-dark(#fcfcfc, #222222);
+	--background-base-plane: var(--color-background-base-plane);
+	--color-base-plane: var(--color-background-base-plane);
+	--color-background-base-alt: light-dark(#e5e5e5, #2a2a2a);
+	--background-base-alt: var(--color-background-base-alt);
+	--color-base-alt: var(--color-background-base-alt);
+	--color-border-base: light-dark(#e0e0e0, #2a2a2a);
+	--border-base: var(--color-border-base);
 	--color-base-content: light-dark(#202020, #eeeeee);
-	--color-base-content-secondary: light-dark(#7b7b7b, #7b7b7b);
+	--base-content: var(--color-base-content);
 	--color-base-content-positive: light-dark(#30a46c, #30a46c);
-	--color-base-content-negative: light-dark(#e5484d, #e5484d);
-	--color-distinct: light-dark(#e8e8e8, #313131);
-	--color-warning: light-dark(#e2a336, #8f6424);
-	--color-warning-background: light-dark(#fdf5c2, #252018);
-
-	--font-display: system-ui, sans-serif;
-	--font-mono: ui-monospace, monospace;
+	--base-content-positive: var(--color-base-content-positive);
 }
 
 html,
 :host {
-	background-color: var(--color-base-background);
+	background-color: var(--color-system);
 	color: var(--color-primary);
 	color-scheme: light dark;
 }
@@ -131,13 +136,9 @@ html,
 }
 
 body {
-	font-family: var(--font-display);
+	font-family:
+		SFRounded, ui-rounded, "SF Pro Rounded", -apple-system, "system-ui", "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 	@apply text-base;
-	min-width: 400px;
-}
-
-pre {
-	font-family: var(--font-mono);
 }
 
 a:focus-visible,
@@ -145,6 +146,12 @@ button:focus-visible {
 	outline: 2px solid var(--color-focus);
 	outline-offset: 2px;
 	border-radius: 2px;
+}
+
+pre {
+	font-family:
+		ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+		"Courier New", monospace;
 }
 
 input[type="number"]::-webkit-inner-spin-button,
@@ -212,75 +219,4 @@ input[type="number"] {
 	&::-webkit-scrollbar {
 		display: none;
 	}
-}
-
-@utility press-down {
-	&:active:not([aria-disabled="true"]) {
-		transform: translateY(0.5px);
-	}
-}
-
-@utility press-down-inline {
-	&:active:not([aria-disabled="true"]) {
-		position: relative;
-		top: 0.5px;
-	}
-}
-
-@utility press-down-mini {
-	&:active:not([aria-disabled="true"]) {
-		transform: translateY(0.1px);
-	}
-}
-
-@utility scrollbar-gutter-stable {
-	scrollbar-gutter: stable;
-}
-
-@keyframes progressline {
-	0% {
-		width: 0%;
-	}
-	50% {
-		width: 70%;
-	}
-	100% {
-		width: 100%;
-		opacity: 0;
-	}
-}
-
-/* pre.shiki, div.shiki {
-	counter-reset: codeblock-line;
-
-	.line {
-		counter-increment: codeblock-line;
-		&::before {
-			content: counter(codeblock-line) " ";
-			@apply font-light text-tertiary/40 text-xs inline-block w-[20px] text-right ml-[-14px] mr-[12px];
-		}
-	}
-} */
-
-.shiki-block,
-.shiki-block.shiki {
-	@apply bg-card-header px-4!;
-	max-height: 320px;
-	overflow: auto;
-	margin: 0;
-	padding-inline: unset;
-	margin-bottom: 8px;
-	box-sizing: border-box;
-	font-size: 13.5px;
-	line-height: 20px;
-}
-
-.shiki-block code {
-	font-family: inherit;
-	@apply bg-card-header!;
-}
-
-pre .shiki,
-.shiki pre {
-	@apply bg-card-header!;
 }

@@ -6,6 +6,7 @@
 		"module": "ESNext",
 		"lib": ["ES2024", "DOM", "DOM.Iterable"],
 		"types": [
+			"bun",
 			"node",
 			"vite/client",
 			"typed-query-selector/strict",
@@ -17,21 +18,23 @@
 		"allowImportingTsExtensions": true,
 		"verbatimModuleSyntax": false,
 		"noEmit": true,
-		"allowJs": true,
+
 		/* Linting */
 		"skipLibCheck": true,
 		"strict": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
-		"allowArbitraryExtensions": true,
 		"noFallthroughCasesInSwitch": true,
-		"resolvePackageJsonImports": true,
 		"noUncheckedSideEffectImports": true,
+		"baseUrl": ".",
 		"resolveJsonModule": true,
 		"paths": {
-			"#*": ["./src/*"]
+			"#*": ["./src/*"],
+			"#explore*": ["./src/routes/explore/*"],
+			"#components": ["./src/components/*"],
+			"#cva": ["./cva.config.ts"]
 		}
 	},
-	"files": ["env.d.ts", "reset.d.ts", "worker-configuration.d.ts"],
-	"exclude": ["**/_/**", "node_modules", "**/*.test.ts", "**/*.test.tsx"]
+	"files": ["env.d.ts", "cva.config.ts"],
+	"exclude": ["**/_/**", "node_modules"]
 }

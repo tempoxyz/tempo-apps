@@ -1,69 +1,74 @@
-import { useQueryClient } from '@tanstack/react-query'
-import {
-	createFileRoute,
-	Link,
-	notFound,
-	rootRouteId,
-	stripSearchParams,
-	useNavigate,
-} from '@tanstack/react-router'
-import { type Hex, Json, type Address as OxAddress, Value } from 'ox'
+import { env } from 'cloudflare:workers'
+import puppeteer from '@cloudflare/puppeteer'
+import { createFileRoute } from '@tanstack/react-router'
+import { Address, Hex, Json, Value } from 'ox'
 import * as React from 'react'
-import { type Log, type TransactionReceipt, toEventSelector } from 'viem'
-import { useChains } from 'wagmi'
-import * as z from 'zod/mini'
-import { Address } from '#comps/Address'
-import { Breadcrumbs } from '#comps/Breadcrumbs'
-import { DataGrid } from '#comps/DataGrid'
-import { InfoRow } from '#comps/InfoRow'
-import { Midcut } from '#comps/Midcut'
-import { NotFound } from '#comps/NotFound'
-import { Sections } from '#comps/Sections'
-import { TokenIcon } from '#comps/TokenIcon'
-import { TxBalanceChanges } from '#comps/TxBalanceChanges'
-import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
-import { TxDecodedTopics } from '#comps/TxDecodedTopics'
-import { TxEventDescription } from '#comps/TxEventDescription'
-import { TxRawTransaction } from '#comps/TxRawTransaction'
-import { TxStateDiff } from '#comps/TxStateDiff'
-import { TxTraceTree } from '#comps/TxTraceTree'
-import { TxTransactionCard } from '#comps/TxTransactionCard'
-import { cx } from '#lib/css'
-import { apostrophe } from '#lib/chars'
-import type { KnownEvent } from '#lib/domain/known-events'
-import type { FeeBreakdownItem } from '#lib/domain/receipt'
-import { isTip20Address } from '#lib/domain/tip20'
-import { PriceFormatter } from '#lib/formatting'
-import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
-import { buildOgImageUrl, buildTxDescription } from '#lib/og'
+import { TokenRole } from 'tempo.ts/ox'
+import { Abis } from 'tempo.ts/viem'
+import { Actions } from 'tempo.ts/wagmi'
 import {
-	autoloadAbiQueryOptions,
-	LIMIT,
-	lookupSignatureQueryOptions,
-	type TxData,
-	txQueryOptions,
-} from '#lib/queries'
-import type { BalanceChangesData } from '#lib/queries/balance-changes'
-import { traceQueryOptions } from '#lib/queries/trace'
-import { withLoaderTiming } from '#lib/profiling'
-import { zHash } from '#lib/zod'
-import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
+	type AbiEvent,
+	type Log,
+	parseEventLogs,
+	type TransactionReceipt,
+} from 'viem'
+import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
+import { getClient } from 'wagmi/actions'
+import * as z from 'zod/mini'
+import { Receipt } from '#components/Receipt/Receipt.tsx'
+import { parseKnownEvents } from '#known-events.ts'
+import { config, getConfig } from '#wagmi.config.ts'
 
-const defaultSearchValues = {
-	tab: 'overview',
-	page: 1,
-} as const
+async function loader({
+	location,
+	params,
+}: {
+	location: { search: { r?: string | undefined } }
+	params: unknown
+}) {
+	const { r: rpcUrl } = location.search
+	const { hash } = z
+		.object({
+			hash: z
+				.pipe(
+					z.string(),
+					z.transform(
+						(val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex,
+					),
+				)
+				.check(z.regex(/^0x[a-fA-F0-9]{64}$/)),
+		})
+		.parse(params)
+
+	const client = getClient(getConfig({ rpcUrl }))
+	const receipt = await getTransactionReceipt(client, {
+		hash,
+	})
+	const [block, transaction, tokenMetadata] = await Promise.all([
+		getBlock(client, {
+			blockHash: receipt.blockHash,
+		}),
+		getTransaction(client, {
+			hash: receipt.transactionHash,
+		}),
+		TokenMetadata.fromLogs(receipt.logs),
+	])
+	const timestampFormatted = DateFormatter.format(block.timestamp)
+
+	const lineItems = LineItems.fromReceipt(receipt, { tokenMetadata })
+
+	return {
+		block,
+		lineItems,
+		receipt,
+		timestampFormatted,
+		tokenMetadata,
+		transaction,
+	}
+}
 
 export const Route = createFileRoute('/_layout/tx/$hash')({
-	component: RouteComponent,
-	notFoundComponent: ({ data }) => (
-		<NotFound
-			title="Transaction Not Found"
-			message={`The transaction doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
-			data={data as NotFound.NotFoundData}
-		/>
-	),
+	component: Component,
 	headers: () => ({
 		...(import.meta.env.PROD
 			? {
@@ -71,799 +76,742 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 				}
 			: {}),
 	}),
-	validateSearch: z.object({
-		r: z.optional(z.string()),
-		tab: z.prefault(
-			z.enum(['overview', 'calls', 'trace', 'events', 'balances', 'raw']),
-			defaultSearchValues.tab,
-		),
-		page: z.prefault(z.coerce.number(), defaultSearchValues.page),
-	}),
-	search: {
-		middlewares: [stripSearchParams(defaultSearchValues)],
-	},
-	loaderDeps: ({ search: { page } }) => ({ page }),
-	loader: ({ params, context, deps: { page } }) =>
-		withLoaderTiming('/_layout/tx/$hash', async () => {
-			const { hash } = params
+	// @ts-expect-error - TODO: fix
+	loader,
+	server: {
+		handlers: {
+			async GET({ params, request, next }) {
+				const url = new URL(request.url)
 
-			try {
-				const offset = (page - 1) * LIMIT
+				const accept = request.headers.get('accept')?.toLowerCase() || ''
+				const userAgent = request.headers.get('user-agent')?.toLowerCase() || ''
+				const isTerminal =
+					userAgent.includes('curl') ||
+					userAgent.includes('wget') ||
+					userAgent.includes('httpie')
 
-				const [txData, balanceChangesData, traceData] = await Promise.all([
-					context.queryClient.ensureQueryData(txQueryOptions({ hash })),
-					fetchBalanceChanges({ hash, limit: LIMIT, offset }).catch(() => ({
-						changes: [],
-						tokenMetadata: {},
-						total: 0,
-					})),
-					context.queryClient
-						.ensureQueryData(traceQueryOptions({ hash }))
-						.catch(() => ({ trace: null, prestate: null })),
-				])
+				const type = (() => {
+					if (
+						url.pathname.endsWith('.pdf') ||
+						accept.includes('application/pdf')
+					)
+						return 'application/pdf'
+					if (
+						url.pathname.endsWith('.json') ||
+						accept.includes('application/json')
+					)
+						return 'application/json'
+					if (
+						url.pathname.endsWith('.txt') ||
+						isTerminal ||
+						accept.includes('text/plain')
+					)
+						return 'text/plain'
+				})()
 
-				return { ...txData, balanceChangesData, traceData }
-			} catch (error) {
-				console.error(error)
-				throw notFound({
-					routeId: rootRouteId,
-					data: { type: 'hash', value: hash },
-				})
-			}
-		}),
-	params: z.object({
-		hash: zHash(),
-	}),
-	head: ({ params, loaderData }) => {
-		const title = `Transaction ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
-		const ogImageUrl = loaderData
-			? buildOgImageUrl(loaderData, params.hash)
-			: undefined
-		const description = loaderData
-			? buildTxDescription({
-					timestamp: Number(loaderData.block.timestamp) * 1000,
-					from: loaderData.receipt.from,
-					events: loaderData.knownEvents ?? [],
-				})
-			: 'View transaction details on Tempo Explorer.'
+				const rpcUrl = url.searchParams.get('r') ?? undefined
 
-		return {
-			title,
-			meta: [
-				{ title },
-				{ property: 'og:title', content: title },
-				{ property: 'og:description', content: description },
-				{ name: 'twitter:description', content: description },
-				...(ogImageUrl
-					? [
-							{ property: 'og:image', content: ogImageUrl },
-							{ property: 'og:image:type', content: 'image/webp' },
-							{ property: 'og:image:width', content: '1200' },
-							{ property: 'og:image:height', content: '630' },
-							{ name: 'twitter:card', content: 'summary_large_image' },
-							{ name: 'twitter:image', content: ogImageUrl },
-						]
-					: []),
-			],
-		}
-	},
-})
-
-function RouteComponent() {
-	const navigate = useNavigate()
-	const { tab, page } = Route.useSearch()
-	const {
-		balanceChangesData,
-		traceData,
-		block,
-		feeBreakdown,
-		knownEvents,
-		knownEventsByLog = [],
-		receipt,
-		transaction,
-	} = Route.useLoaderData()
-
-	const isMobile = useMediaQuery('(max-width: 799px)')
-	const mode = isMobile ? 'stacked' : 'tabs'
-
-	useKeyboardShortcut({
-		t: () =>
-			navigate({
-				to: '/receipt/$hash',
-				params: { hash: receipt.transactionHash },
-			}),
-	})
-
-	const calls = 'calls' in transaction ? transaction.calls : undefined
-	const hasCalls = Boolean(calls && calls.length > 0)
-
-	const setActiveSection = (newIndex: number) => {
-		navigate({
-			to: '.',
-			search: { tab: tabs[newIndex] ?? 'overview' },
-			resetScroll: false,
-		})
-	}
-
-	const tabs: string[] = []
-	const sections: Sections.Section[] = []
-
-	tabs.push('overview')
-	sections.push({
-		title: 'Overview',
-		itemsLabel: 'fields',
-		autoCollapse: false,
-		content: (
-			<OverviewSection
-				receipt={receipt}
-				transaction={transaction}
-				block={block}
-				knownEvents={knownEvents}
-				feeBreakdown={feeBreakdown}
-				balanceChangesData={balanceChangesData}
-			/>
-		),
-	})
-
-	tabs.push('balances')
-	sections.push({
-		title: 'Balances',
-		totalItems: balanceChangesData.total,
-		itemsLabel: 'balances',
-		content: <TxBalanceChanges data={balanceChangesData} page={page} />,
-	})
-
-	if (hasCalls && calls) {
-		tabs.push('calls')
-		sections.push({
-			title: 'Calls',
-			totalItems: calls.length,
-			itemsLabel: 'calls',
-			content: <CallsSection calls={calls} />,
-		})
-	}
-
-	tabs.push('events')
-	sections.push({
-		title: 'Events',
-		totalItems: receipt.logs.length,
-		itemsLabel: 'events',
-		content: (
-			<EventsSection logs={receipt.logs} knownEvents={knownEventsByLog} />
-		),
-	})
-
-	if (traceData.trace || traceData.prestate) {
-		tabs.push('trace')
-		sections.push({
-			title: 'Trace',
-			itemsLabel: 'views',
-			content: (
-				<div className="flex flex-col">
-					<TxTraceTree trace={traceData.trace} />
-					<TxStateDiff prestate={traceData.prestate} />
-				</div>
-			),
-		})
-	}
-
-	tabs.push('raw')
-	sections.push({
-		title: 'Raw',
-		totalItems: 0,
-		itemsLabel: 'data',
-		content: <RawSection transaction={transaction} receipt={receipt} />,
-	})
-
-	const tabIndex = tabs.indexOf(tab)
-	const activeSection = tabIndex !== -1 ? tabIndex : 0
-
-	return (
-		<div
-			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
-			)}
-		>
-			<Breadcrumbs className="col-span-full" />
-			<TxTransactionCard
-				hash={receipt.transactionHash}
-				status={receipt.status}
-				blockNumber={receipt.blockNumber}
-				timestamp={block.timestamp}
-				from={receipt.from}
-				to={receipt.to}
-				className="self-start"
-			/>
-			<Sections
-				mode={mode}
-				sections={sections}
-				activeSection={activeSection}
-				onSectionChange={setActiveSection}
-			/>
-		</div>
-	)
-}
-
-function OverviewSection(props: {
-	receipt: TransactionReceipt
-	transaction: TxData['transaction']
-	block: TxData['block']
-	knownEvents: KnownEvent[]
-	feeBreakdown: FeeBreakdownItem[]
-	balanceChangesData: BalanceChangesData
-}) {
-	const {
-		receipt,
-		transaction,
-		block,
-		knownEvents,
-		feeBreakdown,
-		balanceChangesData,
-	} = props
-
-	const [chain] = useChains()
-	const { decimals, symbol } = chain.nativeCurrency
-
-	const value = transaction.value ?? 0n
-	const gasUsed = receipt.gasUsed
-	const gasLimit = transaction.gas
-	const gasUsedPercentage =
-		gasLimit > 0n ? (Number(gasUsed) / Number(gasLimit)) * 100 : 0
-	const gasPrice = receipt.effectiveGasPrice
-	const baseFee = block.baseFeePerGas
-	const maxFee = transaction.maxFeePerGas
-	const maxPriorityFee = transaction.maxPriorityFeePerGas
-	const nonce = transaction.nonce
-	const positionInBlock = receipt.transactionIndex
-	const input = transaction.input
-
-	const memos = knownEvents
-		.map((event) => event.note)
-		.filter((note): note is string => typeof note === 'string' && !!note.trim())
-
-	// knownEvents already has decoded calls prepended (from the loader)
-
-	return (
-		<div className="flex flex-col">
-			{knownEvents.length > 0 && (
-				<InfoRow label="Description">
-					<div className="flex flex-col gap-[6px]">
-						<TxEventDescription.ExpandGroup
-							events={knownEvents}
-							limit={5}
-							limitFilter={(event) =>
-								event.type !== 'active key count changed' &&
-								event.type !== 'nonce incremented'
-							}
-						/>
-						{memos.length > 0 && (
-							<div className="flex flex-row items-center gap-[11px] overflow-hidden">
-								<div className="border-l border-base-border pl-[10px] w-full">
-									<span
-										className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
-										title={memos[0]}
-									>
-										{memos[0]}
-									</span>
-								</div>
-							</div>
-						)}
-					</div>
-				</InfoRow>
-			)}
-			{balanceChangesData.total > 0 && (
-				<BalanceChangesOverview data={balanceChangesData} />
-			)}
-			<InfoRow label="Value">
-				<span className="text-primary">
-					{Value.format(value, decimals)} {symbol}
-				</span>
-			</InfoRow>
-			<InfoRow label="Transaction Fee">
-				{feeBreakdown.length > 0 ? (
-					<div className="flex flex-col gap-[4px]">
-						{feeBreakdown.map((item, index) => {
-							return (
-								<span key={`${index}${item.token}`} className="text-primary">
-									{Value.format(item.amount, item.decimals)}{' '}
-									{item.token ? (
-										<Link
-											to="/token/$address"
-											params={{ address: item.token }}
-											className="text-base-content-positive press-down"
-										>
-											{item.symbol}
-										</Link>
-									) : (
-										<span className="text-base-content-positive">
-											{item.symbol}
-										</span>
-									)}
-								</span>
-							)
-						})}
-					</div>
-				) : (
-					<span className="text-primary">
-						{Value.format(
-							receipt.effectiveGasPrice * receipt.gasUsed,
-							decimals,
-						)}{' '}
-						{symbol}
-					</span>
-				)}
-			</InfoRow>
-			<InfoRow label="Gas Used">
-				<span className="text-primary">
-					{gasUsed.toLocaleString()} / {gasLimit.toLocaleString()}{' '}
-					<span className="text-tertiary">
-						({gasUsedPercentage.toFixed(2)}%)
-					</span>
-				</span>
-			</InfoRow>
-			<InfoRow label="Gas Price">
-				<span className="text-primary">{gasPrice}</span>
-			</InfoRow>
-			{baseFee !== undefined && baseFee !== null && (
-				<InfoRow label="Base Fee">
-					<span className="text-primary">{baseFee}</span>
-				</InfoRow>
-			)}
-			{maxFee !== undefined && (
-				<InfoRow label="Max Fee">
-					<span className="text-primary">{maxFee}</span>
-				</InfoRow>
-			)}
-			{maxPriorityFee !== undefined && (
-				<InfoRow label="Max Priority Fee">
-					<span className="text-primary">{maxPriorityFee}</span>
-				</InfoRow>
-			)}
-			<InfoRow label="Transaction Type">
-				<span className="text-primary">{receipt.type}</span>
-			</InfoRow>
-			<InfoRow label="Nonce">
-				<span className="text-primary">{nonce}</span>
-			</InfoRow>
-			<InfoRow label="Position in Block">
-				<span className="text-primary">{positionInBlock}</span>
-			</InfoRow>
-			{input && input !== '0x' && (
-				<InputDataRow input={input} to={transaction.to} />
-			)}
-		</div>
-	)
-}
-
-function InputDataRow(props: {
-	input: Hex.Hex
-	to?: OxAddress.Address | null
-}) {
-	const { input, to } = props
-
-	return (
-		<div className="flex flex-col px-[18px] py-[12px] border-b border-dashed border-card-border last:border-b-0">
-			<div className="flex items-start gap-[16px]">
-				<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
-					Input Data
-				</span>
-				<div className="flex-1">
-					<TxDecodedCalldata address={to} data={input} />
-				</div>
-			</div>
-		</div>
-	)
-}
-
-function BalanceChangesOverview(props: { data: BalanceChangesData }) {
-	const { data } = props
-
-	const groupedByAccount = React.useMemo(() => {
-		const grouped = new Map<
-			OxAddress.Address,
-			Array<(typeof data.changes)[number]>
-		>()
-		for (const change of data.changes) {
-			const existing = grouped.get(change.address)
-			if (existing) existing.push(change)
-			else grouped.set(change.address, [change])
-		}
-		return grouped
-	}, [data.changes])
-
-	return (
-		<div className="flex flex-col px-[18px] py-[12px] border-b border-dashed border-card-border">
-			<div className="flex items-start gap-[16px]">
-				<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
-					Balance Updates
-				</span>
-				<div className="flex flex-col gap-[4px] flex-1 min-w-0">
-					<div className="flex flex-col gap-[12px] max-h-[360px] overflow-y-auto pb-[8px] font-mono">
-						{Array.from(groupedByAccount.entries()).map(
-							([address, changes]) => (
-								<div
-									key={address}
-									className="flex flex-col gap-[4px] text-[13px]"
-								>
-									<Address address={address} />
-									<div className="flex flex-col gap-[2px] pl-[12px] border-l border-base-border">
-										{changes.map((change) => {
-											const metadata = data.tokenMetadata[change.token]
-											const isTip20 = isTip20Address(change.token)
-
-											let diff: bigint
-											try {
-												diff = BigInt(change.diff)
-											} catch {
-												return null
-											}
-
-											const isPositive = diff > 0n
-											const raw = metadata
-												? Value.format(diff, metadata.decimals)
-												: change.diff
-											const formatted = metadata
-												? PriceFormatter.formatAmount(raw)
-												: raw
-
-											return (
-												<div
-													key={change.token}
-													className="flex items-center gap-[8px]"
-												>
-													<span
-														className={cx(
-															'shrink-0 tabular-nums',
-															isPositive
-																? 'text-base-content-positive'
-																: 'text-secondary',
-														)}
-													>
-														{isPositive ? '+' : ''}
-														{formatted}
-													</span>
-													<Link
-														className="inline-flex items-center gap-[4px] text-base-content-positive press-down shrink-0"
-														params={{ address: change.token }}
-														to={
-															isTip20 ? '/token/$address' : '/address/$address'
-														}
-													>
-														<TokenIcon
-															address={change.token}
-															name={metadata?.symbol}
-															className="size-[16px]!"
-														/>
-														<span>{metadata?.symbol ?? '…'}</span>
-													</Link>
-												</div>
-											)
-										})}
-									</div>
-								</div>
-							),
-						)}
-					</div>
-					<Link
-						to="."
-						search={{ tab: 'balances' }}
-						className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down w-fit"
-					>
-						See all ({data.total})
-						<ChevronDownIcon className="size-[12px]" />
-					</Link>
-				</div>
-			</div>
-		</div>
-	)
-}
-
-function CallsSection(props: {
-	calls: ReadonlyArray<{
-		to?: OxAddress.Address | null
-		data?: Hex.Hex
-		value?: bigint
-	}>
-}) {
-	const { calls } = props
-	return (
-		<div className="flex flex-col divide-y divide-card-border">
-			{calls.map((call, i) => (
-				<CallItem key={`${call.to}-${i}`} call={call} index={i} />
-			))}
-		</div>
-	)
-}
-
-function CallItem(props: {
-	call: {
-		to?: OxAddress.Address | null
-		data?: Hex.Hex
-		value?: bigint
-	}
-	index: number
-}) {
-	const { call, index } = props
-	const data = call.data
-	return (
-		<div className="flex flex-col gap-[12px] px-[18px] py-[16px]">
-			<div className="flex items-center gap-[8px] text-[13px]">
-				<span className="text-primary">#{index}</span>
-				{call.to ? (
-					<Link
-						to="/address/$address"
-						params={{ address: call.to }}
-						className="text-accent hover:underline press-down"
-					>
-						<Midcut value={call.to} prefix="0x" />
-					</Link>
-				) : (
-					<span className="text-tertiary">Contract Creation</span>
-				)}
-				{data && data !== '0x' && (
-					<span className="text-tertiary">({data.length} bytes)</span>
-				)}
-			</div>
-			{data && data !== '0x' && (
-				<TxDecodedCalldata address={call.to} data={data} />
-			)}
-		</div>
-	)
-}
-
-type EventGroup = {
-	logs: Log[]
-	startIndex: number
-	knownEvent: KnownEvent | null
-}
-
-function groupRelatedEvents(
-	logs: Log[],
-	knownEvents: (KnownEvent | null)[],
-): EventGroup[] {
-	const groups: EventGroup[] = []
-	let i = 0
-
-	while (i < logs.length) {
-		const log = logs[i]
-		const event = knownEvents[i]
-		const eventName = getEventName(log)
-
-		// Transfer = possible group
-		if (eventName === 'Transfer') {
-			const secondLog = logs[i + 1]
-			const secondEventName = secondLog ? getEventName(secondLog) : null
-
-			// Transfer + Mint or Transfer + Burn (+ optional TransferWithMemo)
-			if (secondEventName === 'Mint' || secondEventName === 'Burn') {
-				const thirdLog = logs[i + 2]
-				const thirdEventName = thirdLog ? getEventName(thirdLog) : null
-
-				// check for mintWithMemo / burnWithMemo pattern (3 events)
-				if (thirdEventName === 'TransferWithMemo') {
-					groups.push({
-						logs: [log, secondLog, thirdLog],
-						startIndex: i,
-						knownEvent: knownEvents[i + 1], // use Mint / Burn as primary
+				if (type === 'text/plain') {
+					const data = await loader({
+						location: { search: { r: rpcUrl } },
+						params,
 					})
-					i += 3
-					continue
+					const text = TextRenderer.render(data)
+					return new Response(text, {
+						headers: {
+							'Content-Type': 'text/plain; charset=utf-8',
+							'Content-Disposition': 'inline',
+							...(import.meta.env.PROD
+								? {
+										'Cache-Control':
+											'public, max-age=3600, stale-while-revalidate=86400',
+									}
+								: {}),
+						},
+					})
 				}
 
-				// Transfer + Mint / Burn (2 events)
-				groups.push({
-					logs: [log, secondLog],
-					startIndex: i,
-					knownEvent: knownEvents[i + 1], // use Mint / Burn as primary
-				})
-				i += 2
-				continue
-			}
+				if (type === 'application/json') {
+					const { lineItems, receipt } = await loader({
+						location: { search: { r: rpcUrl } },
+						params,
+					})
+					return Response.json(
+						JSON.parse(Json.stringify({ lineItems, receipt })),
+					)
+				}
 
-			// Transfer + TransferWithMemo
-			if (secondEventName === 'TransferWithMemo') {
-				groups.push({
-					logs: [log, secondLog],
-					startIndex: i,
-					knownEvent: knownEvents[i + 1], // use TransferWithMemo as primary
-				})
-				i += 2
-				continue
-			}
-		}
+				if (type === 'application/pdf') {
+					// @ts-expect-error - TODO: shoudn't error
+					const browser = await puppeteer.launch(env.BROWSER)
+					const page = await browser.newPage()
 
-		// single event
-		groups.push({
-			logs: [log],
-			startIndex: i,
-			knownEvent: event,
-		})
-		i++
-	}
+					// Get the current URL without .pdf extension
+					const htmlUrl = `${url.href.replace(/\.pdf$/, '')}?plain`
 
-	return groups
-}
+					// Navigate to the HTML version of the receipt
+					await page.goto(htmlUrl, { waitUntil: 'domcontentloaded' })
 
-const eventSignatures = {
-	Transfer: toEventSelector(
-		'event Transfer(address indexed, address indexed, uint256)',
-	),
-	TransferWithMemo: toEventSelector(
-		'event TransferWithMemo(address indexed, address indexed, uint256, bytes32 indexed)',
-	),
-	Mint: toEventSelector('event Mint(address indexed, uint256)'),
-	Burn: toEventSelector('event Burn(address indexed, uint256)'),
-}
+					// Generate PDF
+					const pdf = await page.pdf({
+						printBackground: true,
+						format: 'A4',
+					})
 
-function getEventName(log: Log): string | null {
-	const topic0 = log.topics[0]?.toLowerCase()
-	if (topic0 === eventSignatures.Transfer.toLowerCase()) return 'Transfer'
-	if (topic0 === eventSignatures.TransferWithMemo.toLowerCase())
-		return 'TransferWithMemo'
-	if (topic0 === eventSignatures.Mint.toLowerCase()) return 'Mint'
-	if (topic0 === eventSignatures.Burn.toLowerCase()) return 'Burn'
-	return null
-}
+					await browser.close()
 
-function EventsSection(props: {
-	logs: Log[]
-	knownEvents: (KnownEvent | null)[]
-}) {
-	const { logs, knownEvents } = props
-	const queryClient = useQueryClient()
-	const [expandedGroups, setExpandedGroups] = React.useState<Set<number>>(
-		new Set(),
-	)
+					return new Response(Buffer.from(pdf), {
+						headers: {
+							...(import.meta.env.PROD
+								? {
+										'Cache-Control':
+											'public, max-age=3600, stale-while-revalidate=86400',
+									}
+								: {}),
+							'Content-Type': 'application/pdf',
+							'Content-Disposition': 'inline; filename="receipt.pdf"',
+						},
+					})
+				}
 
-	const groups = React.useMemo(
-		() => groupRelatedEvents(logs, knownEvents),
-		[logs, knownEvents],
-	)
+				return next()
+			},
+		},
+	},
+	validateSearch: z.object({
+		r: z.optional(z.string()),
+	}).parse,
+})
 
-	// Only prefetch once when component mounts, using current logs/queryClient
-	// biome-ignore lint/correctness/useExhaustiveDependencies: logs and queryClient are stable from SSR
-	React.useEffect(() => {
-		for (const log of logs) {
-			const [eventSelector] = log.topics
-			if (eventSelector) {
-				queryClient.prefetchQuery(
-					autoloadAbiQueryOptions({ address: log.address }),
-				)
-				queryClient.prefetchQuery(
-					lookupSignatureQueryOptions({ selector: eventSelector }),
-				)
-			}
-		}
-	}, [])
+function Component() {
+	const { block, lineItems, receipt, transaction } = Route.useLoaderData()
 
-	const toggleGroup = (groupIndex: number) => {
-		setExpandedGroups((expanded) => {
-			const newExpanded = new Set(expanded)
-			if (newExpanded.has(groupIndex)) newExpanded.delete(groupIndex)
-			else newExpanded.add(groupIndex)
-			return newExpanded
-		})
-	}
+	const fee = lineItems.feeTotals?.[0]?.ui?.right
+	const total = lineItems.totals?.[0]?.ui?.right
 
-	if (logs.length === 0)
-		return (
-			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
-				No events emitted in this transaction
-			</div>
-		)
-
-	const cols = [
-		{ label: '#', align: 'start', width: '0.5fr' },
-		{ label: 'Event', align: 'start', width: '4fr' },
-		{ label: 'Contract', align: 'end', width: '2fr' },
-	] satisfies DataGrid.Props['columns']['stacked']
+	const knownEvents = React.useMemo(() => parseKnownEvents(receipt), [receipt])
 
 	return (
-		<DataGrid
-			columns={{ stacked: cols, tabs: cols }}
-			items={() =>
-				groups.map((group, groupIndex) => {
-					const isExpanded = expandedGroups.has(groupIndex)
-					const endIndex = group.startIndex + group.logs.length - 1
-					const indexLabel =
-						group.logs.length === 1
-							? String(group.startIndex)
-							: `${group.startIndex}-${endIndex}`
+		<div className="font-mono text-[13px] flex flex-col items-center justify-center min-h-screen gap-8">
+			<Receipt
+				blockNumber={receipt.blockNumber}
+				sender={transaction.from}
+				hash={receipt.transactionHash}
+				timestamp={block.timestamp}
+				events={knownEvents}
+				fee={fee}
+				total={total}
+			/>
+		</div>
+	)
+}
 
-					return {
-						cells: [
-							<span key="index" className="text-tertiary">
-								{indexLabel}
-							</span>,
-							<EventGroupCell
-								key="event"
-								group={group}
-								expanded={isExpanded}
-								onToggle={() => toggleGroup(groupIndex)}
-							/>,
-							<Address
-								align="end"
-								key="contract"
-								address={group.logs[0].address}
-							/>,
-						],
-						expanded: isExpanded ? (
-							<div className="flex flex-col gap-4">
-								{group.logs.map((log, i) => (
-									<TxDecodedTopics key={log.logIndex ?? i} log={log} />
-								))}
-							</div>
-						) : (
-							false
-						),
+//////////////////////////////////////////////////////////////////
+// Utilities
+//
+// Note: Feel free to extract out into a separate file if you need
+// to reuse elsewhere!
+
+export namespace HexFormatter {
+	export function truncate(value: Hex.Hex, chars = 4) {
+		return value.length < chars * 2 + 2
+			? value
+			: `${value.slice(0, chars + 2)}…${value.slice(-chars)}`
+	}
+}
+
+export namespace DateFormatter {
+	/**
+	 * Formats a timestamp to a localized date-time string.
+	 *
+	 * @param timestamp - The timestamp in seconds.
+	 * @returns The formatted date-time string.
+	 */
+	export function format(timestamp: bigint) {
+		return new Date(Number(timestamp) * 1000).toLocaleString(undefined, {
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+		})
+	}
+}
+
+export namespace PriceFormatter {
+	/**
+	 * Formats a number or bigint to a currency-formatted string.
+	 *
+	 * @param value - The number or bigint to format.
+	 * @returns The formatted string.
+	 */
+	export function format(value: number | bigint, decimals: number) {
+		if (Number(value) > 0 && Number(value) < 0.01) return '<$0.01'
+		const value_ = Value.format(BigInt(value), decimals)
+		return numberIntl.format(Number(value_))
+	}
+
+	/** @internal */
+	const numberIntl = new Intl.NumberFormat('en-US', {
+		currency: 'USD',
+		style: 'currency',
+	})
+}
+
+export namespace TextRenderer {
+	const width = 50
+	const indent = '  '
+
+	export function render(data: Awaited<ReturnType<typeof loader>>) {
+		const { lineItems, receipt, timestampFormatted, transaction } = data
+
+		const lines: string[] = []
+
+		// Header
+		lines.push(center('TEMPO RECEIPT'))
+		lines.push('')
+
+		// Transaction details
+		lines.push(`Tx Hash: ${HexFormatter.truncate(receipt.transactionHash, 8)}`)
+		lines.push(`Date: ${timestampFormatted}`)
+		lines.push(`Block: ${receipt.blockNumber.toString()}`)
+		lines.push(`Sender: ${HexFormatter.truncate(transaction.from, 6)}`)
+		lines.push('')
+		lines.push('-'.repeat(width))
+		lines.push('')
+
+		// Main line items
+		if (lineItems.main) {
+			for (const item of lineItems.main) {
+				// Render `left` and `right`
+				lines.push(leftRight(item.ui.left.toUpperCase(), item.ui.right))
+
+				// Render `bottom`
+				if ('bottom' in item.ui && item.ui.bottom) {
+					for (const bottom of item.ui.bottom) {
+						if (bottom.right)
+							lines.push(`${indent}${leftRight(bottom.left, bottom.right)}`)
+						else lines.push(`${indent}${bottom.left}`)
 					}
-				})
+				}
 			}
-			totalItems={groups.length}
-			page={1}
-			itemsLabel="events"
-			itemsPerPage={groups.length}
-			emptyState="No events emitted."
-		/>
-	)
+
+			lines.push('')
+		}
+
+		// Fee totals
+		if (lineItems.feeTotals)
+			for (const item of lineItems.feeTotals)
+				lines.push(leftRight(item.ui.left.toUpperCase(), item.ui.right))
+
+		// Totals
+		if (lineItems.totals)
+			for (const item of lineItems.totals)
+				lines.push(leftRight(item.ui.left.toUpperCase(), item.ui.right))
+
+		return lines.join('\n')
+	}
+
+	function center(text: string): string {
+		const padding = Math.max(0, Math.floor((width - text.length) / 2))
+		return ' '.repeat(padding) + text
+	}
+
+	function leftRight(left: string, right: string): string {
+		const spacing = Math.max(1, width - left.length - right.length)
+		return left + ' '.repeat(spacing) + right
+	}
 }
 
-function EventGroupCell(props: {
-	group: EventGroup
-	expanded: boolean
-	onToggle: () => void
-}) {
-	const { group, expanded, onToggle } = props
-	const { knownEvent, logs } = group
-	const eventCount = logs.length
+const abi = Object.values(Abis).flat()
 
-	return (
-		<div className="flex flex-col gap-[4px] w-full">
-			{knownEvent ? (
-				<TxEventDescription
-					event={knownEvent}
-					className="flex flex-row items-center gap-[6px] leading-[18px]"
-				/>
-			) : (
-				<span className="text-primary">
-					{logs[0].topics[0] ? (
-						<Midcut value={logs[0].topics[0]} prefix="0x" />
-					) : (
-						'Unknown'
-					)}
-				</span>
-			)}
-			<div>
-				<button
-					type="button"
-					onClick={onToggle}
-					className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down cursor-pointer"
-				>
-					{expanded
-						? eventCount > 1
-							? `Hide details (${eventCount})`
-							: 'Hide details'
-						: eventCount > 1
-							? `Show details (${eventCount})`
-							: 'Show details'}
-				</button>
-			</div>
-		</div>
-	)
+export namespace TokenMetadata {
+	export type Metadata = Actions.token.getMetadata.ReturnValue
+	export type MetadataMap = Map<Address.Address, Metadata>
+
+	export async function fromLogs(logs: Log[]) {
+		const events = parseEventLogs({
+			abi,
+			logs,
+		})
+
+		const tip20Addresses = events
+			.filter((event) => event.address.toLowerCase().startsWith('0x20c000000'))
+			.map((event) => event.address)
+		const metadataResults = await Promise.all(
+			tip20Addresses.map((token) =>
+				Actions.token.getMetadata(config, { token }),
+			),
+		)
+		const tokenMetadata = new Map<Address.Address, Metadata>()
+		for (const [index, address] of tip20Addresses.entries())
+			tokenMetadata.set(address, metadataResults[index])
+
+		return tokenMetadata
+	}
 }
 
-function RawSection(props: {
-	transaction: TxData['transaction']
-	receipt: TransactionReceipt
-}) {
-	const { transaction, receipt } = props
+export namespace LineItems {
+	export function fromReceipt(
+		receipt: TransactionReceipt,
+		{ tokenMetadata }: { tokenMetadata: TokenMetadata.MetadataMap },
+	) {
+		const { from: sender, logs } = receipt
 
-	const rawData = Json.stringify({ tx: transaction, receipt }, null, 2)
+		// Extract all of the event logs we can from the receipt.
+		const events = parseEventLogs({
+			abi,
+			logs,
+		})
 
-	return (
-		<div className="px-[18px] py-[12px] text-[13px] break-all">
-			<TxRawTransaction data={rawData} />
-		</div>
-	)
+		////////////////////////////////////////////////////////////
+
+		const preferenceMap = new Map<string, string>()
+
+		for (const event of events) {
+			let key: string | undefined
+
+			// `TransferWithMemo` and `Transfer` events are paired with each other,
+			// we will need to take preference on `TransferWithMemo` for those instances.
+			if (event.eventName === 'TransferWithMemo') {
+				const [_, from, to] = event.topics
+				key = `${from}${to}`
+			}
+
+			// `Mint` and `Transfer` events are paired with each other,
+			// we will need to take preference on `Mint` for those instances.
+			if (event.eventName === 'Mint') {
+				const [_, to] = event.topics
+				key = `${event.address}${event.data}${to}`
+			}
+
+			// `Burn` and `Transfer` events are paired with each other,
+			// we will need to take preference on `Burn` for those instances.
+			if (event.eventName === 'Burn') {
+				const [_, from] = event.topics
+				key = `${event.address}${event.data}${from}`
+			}
+
+			if (key) preferenceMap.set(key, event.eventName)
+		}
+
+		const dedupedEvents = events.filter((event) => {
+			let include = true
+
+			if (event.eventName === 'Transfer') {
+				{
+					// Check TransferWithMemo dedup
+					const [_, from, to] = event.topics
+					const key = `${from}${to}`
+					if (preferenceMap.get(key)?.includes('TransferWithMemo'))
+						include = false
+				}
+
+				{
+					// Check Mint dedup
+					const [_, __, to] = event.topics
+					const key = `${event.address}${event.data}${to}`
+					if (preferenceMap.get(key)?.includes('Mint')) include = false
+				}
+
+				{
+					// Check Burn dedup
+					const [_, from] = event.topics
+					const key = `${event.address}${event.data}${from}`
+					if (preferenceMap.get(key)?.includes('Burn')) include = false
+				}
+			}
+
+			return include
+		})
+
+		////////////////////////////////////////////////////////////
+
+		const items: Record<'main' | 'feeTotals' | 'totals', LineItem.LineItem[]> =
+			{
+				main: [],
+				feeTotals: [],
+				totals: [],
+			}
+
+		// Map log events to receipt line items.
+		for (const event of dedupedEvents) {
+			switch (event.eventName) {
+				case 'Burn': {
+					if ('amount' in event.args) {
+						const { amount, from } = event.args
+
+						const metadata = tokenMetadata.get(event.address)
+						if (!metadata) {
+							items.main.push(LineItem.noop(event))
+							break
+						}
+
+						const { currency, decimals, symbol } = metadata
+
+						const isSelf = Address.isEqual(from, sender)
+
+						items.main.push(
+							LineItem.from({
+								event,
+								price: isSelf
+									? {
+											amount,
+											currency,
+											decimals,
+											symbol,
+											token: event.address,
+										}
+									: undefined,
+								ui: {
+									bottom: [
+										{
+											left: `From: ${HexFormatter.truncate(from)}`,
+										},
+									],
+									left: `Burn ${symbol}`,
+									right: decimals
+										? PriceFormatter.format(amount, decimals)
+										: '-',
+								},
+							}),
+						)
+						break
+					}
+
+					items.main.push(LineItem.noop(event))
+					break
+				}
+
+				case 'RoleMembershipUpdated': {
+					const { account, hasRole, role } = event.args
+
+					const roleName =
+						TokenRole.roles.find((r) => TokenRole.serialize(r) === role) ??
+						undefined
+
+					items.main.push(
+						LineItem.from({
+							event,
+							position: 'main',
+							ui: {
+								bottom: [
+									{
+										left: `To: ${HexFormatter.truncate(account)}`,
+									},
+									{
+										left: `Role: ${roleName}`,
+									},
+								],
+								left: `${roleName ? `${roleName} ` : ' '}Role ${hasRole ? 'Granted' : 'Revoked'}`,
+								right: '-',
+							},
+						}),
+					)
+					break
+				}
+
+				case 'Mint': {
+					if ('amount' in event.args) {
+						const metadata = tokenMetadata.get(event.address)
+						if (!metadata) {
+							items.main.push(LineItem.noop(event))
+							break
+						}
+
+						const { decimals } = metadata
+						const { amount, to } = event.args
+
+						items.main.push(
+							LineItem.from({
+								event,
+								ui: {
+									bottom: [
+										{
+											left: `To: ${HexFormatter.truncate(to)}`,
+										},
+									],
+									left: `Mint ${metadata?.symbol ? ` ${metadata.symbol}` : ''}`,
+									right: decimals
+										? `(${PriceFormatter.format(amount, decimals)})`
+										: '',
+								},
+							}),
+						)
+						break
+					}
+
+					items.main.push(LineItem.noop(event))
+					break
+				}
+
+				case 'TokenCreated': {
+					const { symbol } = event.args
+					items.main.push(
+						LineItem.from({
+							event,
+							ui: {
+								left: `Create Token (${symbol})`,
+								right: '-',
+							},
+						}),
+					)
+					break
+				}
+
+				case 'TransferWithMemo':
+				case 'Transfer': {
+					const { amount, from, to } = event.args
+					const token = event.address
+
+					const metadata = tokenMetadata.get(token)
+					if (!metadata) {
+						items.main.push(LineItem.noop(event))
+						break
+					}
+
+					const isCredit = Address.isEqual(to, sender)
+					const memo =
+						'memo' in event.args
+							? Hex.toString(Hex.trimLeft(event.args.memo))
+							: undefined
+
+					const { currency, decimals, symbol } = metadata
+
+					const isFee = to.toLowerCase().startsWith('0xfeec00000')
+					if (isFee) {
+						const feePayer = !Address.isEqual(from, sender) ? from : ''
+						items.feeTotals.push(
+							LineItem.from({
+								event,
+								isFee,
+								price: {
+									amount,
+									currency,
+									decimals,
+									symbol,
+									token,
+								},
+								ui: {
+									left: `${symbol} ${feePayer ? `(PAID BY ${HexFormatter.truncate(feePayer)})` : ''}`,
+									right: decimals
+										? PriceFormatter.format(amount, decimals)
+										: '-',
+								},
+							}),
+						)
+						break
+					}
+
+					items.main.push(
+						LineItem.from({
+							event,
+							price: {
+								amount: isCredit ? -amount : amount,
+								currency,
+								decimals,
+								symbol,
+								token,
+							},
+							ui: {
+								bottom: [...(memo ? [{ left: `Memo: ${memo}` }] : [])],
+								left: `Send ${symbol} ${to ? `to ${HexFormatter.truncate(to)}` : ''}`,
+								right: decimals
+									? PriceFormatter.format(isCredit ? -amount : amount, decimals)
+									: '-',
+							},
+						}),
+					)
+					break
+				}
+
+				default: {
+					items.main.push(LineItem.noop(event))
+				}
+			}
+		}
+
+		////////////////////////////////////////////////////////////
+
+		// Calculate fee totals grouped by currency -> symbol
+		type Currency = string
+		type Symbol = string
+		const feeTotals = new Map<
+			Currency,
+			{
+				amount: bigint
+				decimals: number
+				tokens: Map<Symbol, LineItem.LineItem['price']>
+			}
+		>()
+		for (const item of items.feeTotals) {
+			if (!item.isFee) continue
+
+			const { price } = item
+			if (!price) continue
+
+			const { amount, currency, decimals, symbol, token } = price
+			if (!currency) continue
+			if (!decimals) continue
+			if (!symbol) continue
+
+			let currencyMap = feeTotals.get(currency)
+			currencyMap ??= {
+				amount: 0n,
+				decimals,
+				tokens: new Map(),
+			}
+
+			const existing = currencyMap.tokens.get(symbol)
+			if (existing) existing.amount += amount
+			else currencyMap.tokens.set(symbol, { amount, currency, decimals, token })
+
+			currencyMap.amount += amount
+
+			feeTotals.set(currency, currencyMap)
+		}
+
+		// Add fee totals to line items
+		for (const [currency, { amount, decimals }] of feeTotals)
+			items.feeTotals = [
+				LineItem.from({
+					position: 'end',
+					price: {
+						amount,
+						decimals,
+						currency,
+					},
+					ui: {
+						left: 'Fee',
+						right: decimals ? PriceFormatter.format(amount, decimals) : '-',
+					},
+				}),
+			]
+
+		// Calculate totals grouped by currency
+		const totals = new Map<string, LineItem.LineItem['price']>()
+		for (const item of [...items.main, ...items.feeTotals]) {
+			if (!('price' in item)) continue
+
+			const { price } = item
+			if (!price) continue
+
+			const existing = totals.get(price.currency)
+			if (existing) existing.amount += price.amount
+			else totals.set(price.currency, price)
+		}
+
+		// Add totals to line items
+		for (const [_, price] of totals) {
+			if (!price) continue
+			const { amount, decimals } = price
+			const formatted = decimals ? PriceFormatter.format(amount, decimals) : '-'
+			items.totals.push(
+				LineItem.from({
+					ui: {
+						left: 'Total',
+						right: formatted,
+					},
+				}),
+			)
+		}
+
+		return items
+	}
+}
+
+export namespace LineItem {
+	export type LineItem = {
+		/**
+		 * Event log emitted.
+		 */
+		event?: Log<bigint, number, boolean, AbiEvent> | undefined
+		/**
+		 * Whether the line item is a fee item.
+		 */
+		isFee?: boolean | undefined
+		/**
+		 * Grouping key.
+		 */
+		key?: string | undefined
+		/**
+		 * Price of the line item.
+		 */
+		price?:
+			| {
+					/**
+					 * Amount in units of the token.
+					 */
+					amount: bigint
+					/**
+					 * Currency of the token.
+					 */
+					currency: string
+					/**
+					 * Decimals of the token.
+					 */
+					decimals: number
+					/**
+					 * Symbol of the token.
+					 */
+					symbol?: string | undefined
+					/**
+					 * Address of the TIP20 token.
+					 */
+					token?: Address.Address | undefined
+			  }
+			| undefined
+		/**
+		 * UI data of the line item.
+		 */
+		ui: {
+			/**
+			 * Bottom data of the line item.
+			 */
+			bottom?:
+				| {
+						/**
+						 * Left text of the line item.
+						 */
+						left: string
+						/**
+						 * Right text of the line item.
+						 */
+						right?: string | undefined
+				  }[]
+				| undefined
+			/**
+			 * Left text of the line item.
+			 */
+			left: string
+			/**
+			 * Right text of the line item.
+			 */
+			right: string
+		}
+	}
+
+	export function from<const item extends LineItem>(
+		item: item,
+	): item & {
+		eventName: item['event'] extends { eventName: infer eventName }
+			? eventName
+			: undefined
+	} {
+		return {
+			...item,
+			eventName: item.event?.eventName,
+		} as never
+	}
+
+	export function noop(event: Log<bigint, number, boolean, AbiEvent>) {
+		return LineItem.from({
+			event,
+			position: 'main',
+			ui: {
+				left: event.eventName,
+				right: '-',
+			},
+		})
+	}
 }

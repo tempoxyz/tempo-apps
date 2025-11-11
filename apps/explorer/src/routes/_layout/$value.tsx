@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import { z } from 'zod/mini'
 
-export const Route = createFileRoute('/explore/$value')({
+export const Route = createFileRoute('/_layout/$value')({
 	component: Component,
 	headers: () => ({
 		...(import.meta.env.PROD
@@ -17,12 +17,12 @@ export const Route = createFileRoute('/explore/$value')({
 
 		if (Address.validate(value))
 			throw redirect({
-				to: '/explore/account/$address',
+				to: '/address/$address',
 				params: { address: value },
 			})
 
 		if (Hex.size(value) === 32)
-			throw redirect({ to: '/receipt/$hash', params: { hash: value } })
+			throw redirect({ to: '/tx/$hash', params: { hash: value } })
 
 		return { type: 'unknown' } as const
 	},

@@ -1,152 +1,88 @@
-import { useQueries, useQuery } from '@tanstack/react-query'
+import {
+	keepPreviousData,
+	queryOptions,
+	useSuspenseQuery,
+} from '@tanstack/react-query'
 import {
 	ClientOnly,
 	createFileRoute,
 	Link,
-	notFound,
-	rootRouteId,
-	stripSearchParams,
-	useLocation,
 	useNavigate,
-	useRouter,
+	useParams,
+	useRouterState,
 } from '@tanstack/react-router'
+import { ArrowRight } from 'lucide-react'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
-import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
-import { Abis } from 'viem/tempo'
-import { useBlock, useChainId, usePublicClient } from 'wagmi'
-import {
-	type GetBlockReturnType,
-	getBlock,
-	getChainId,
-	multicall,
-} from 'wagmi/actions'
-import { Hooks } from 'wagmi/tempo'
+import { Abis } from 'tempo.ts/viem'
+import { Hooks } from 'tempo.ts/wagmi'
+import type { Log, RpcTransaction as Transaction } from 'viem'
+import { formatEther, formatUnits, parseEventLogs } from 'viem'
+import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
+import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { AccountCard } from '#comps/AccountCard'
-import { Breadcrumbs } from '#comps/Breadcrumbs'
-import { ContractTabContent, InteractTabContent } from '#comps/Contract'
-import { DataGrid } from '#comps/DataGrid'
-import { Midcut } from '#comps/Midcut'
-import { NotFound } from '#comps/NotFound'
-import { Sections } from '#comps/Sections'
-import {
-	TimeColumnHeader,
-	type TimeFormat,
-	useTimeFormat,
-} from '#comps/TimeFormat'
-import { TokenIcon } from '#comps/TokenIcon'
-import {
-	BatchTransactionDataContext,
-	type TransactionData,
-	TransactionDescription,
-	TransactionTimestamp,
-	TransactionTotal,
-	useTransactionDataFromBatch,
-} from '#comps/TxTransactionRow'
-import { cx } from '#lib/css'
-import { type AccountType, getAccountType } from '#lib/account'
-import {
-	type ContractSource,
-	contractSourceQueryOptions,
-	fetchContractSourceDirect,
-	useContractSourceQueryOptions,
-} from '#lib/domain/contract-source'
-import {
-	type ContractInfo,
-	extractContractAbi,
-	getContractBytecode,
-	getContractInfo,
-} from '#lib/domain/contracts'
-import { parseKnownEvents } from '#lib/domain/known-events'
-import * as Tip20 from '#lib/domain/tip20'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
-import { useIsMounted, useMediaQuery } from '#lib/hooks'
-import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
-import { withLoaderTiming } from '#lib/profiling'
-import {
-	type TransactionsData,
-	transactionsQueryOptions,
-} from '#lib/queries/account'
-import { getWagmiConfig } from '#wagmi.config.ts'
-import { getRequestURL } from '#lib/env.ts'
+import { config } from '#wagmi.config'
 
-async function fetchAddressTotalValue(address: Address.Address) {
-	const requestUrl = getRequestURL()
-	const response = await fetch(
-		`${requestUrl.origin}/api/address/total-value/${address}`,
-		{ headers: { 'Content-Type': 'application/json' } },
-	)
-	return response.json() as Promise<{ totalValue: number }>
+import { PriceFormatter } from '../tx/$hash'
+
+type TransactionsResponse = {
+	transactions: Array<Transaction>
+	total: number
+	offset: number // Next offset to use for pagination
+	limit: number
+	hasMore: boolean
 }
 
-async function fetchAddressTotalCount(address: Address.Address) {
-	const requestUrl = getRequestURL()
-	const response = await fetch(
-		`${requestUrl.origin}/api/address/txs-count/${address}`,
-		{ headers: { 'Content-Type': 'application/json' } },
-	)
-	if (!response.ok) throw new Error('Failed to fetch total transaction count')
-	const {
-		data: safeData,
-		success,
-		error,
-	} = z.safeParse(
-		z.object({ data: z.number(), error: z.nullable(z.string()) }),
-		await response.json(),
-	)
-	if (!success) throw new Error(z.prettifyError(error))
-	return safeData
-}
-
-function useBatchTransactionData(
-	transactions: Transaction[],
-	viewer: Address.Address,
-) {
-	const hashes = React.useMemo(
-		() => transactions.map((tx) => tx.hash).filter(isHash),
-		[transactions],
-	)
-
-	const chainId = useChainId()
-	const client = usePublicClient({ chainId })
-
-	const queries = useQueries({
-		queries: hashes.map((hash) => ({
-			queryKey: ['tx-data-batch', viewer, hash],
-			queryFn: async (): Promise<TransactionData | null> => {
-				const receipt = await client.getTransactionReceipt({ hash })
-				// TODO: investigate & consider batch/multicall
-				const [block, transaction, getTokenMetadata] = await Promise.all([
-					client.getBlock({ blockHash: receipt.blockHash }),
-					client.getTransaction({ hash: receipt.transactionHash }),
-					Tip20.metadataFromLogs(receipt.logs),
-				])
-				const knownEvents = parseKnownEvents(receipt, {
-					transaction,
-					getTokenMetadata,
-					viewer,
-				})
-				return { receipt, block: block as GetBlockReturnType, knownEvents }
-			},
-			staleTime: 60_000,
-			enabled: hashes.length > 0,
-		})),
+const transactionsQuery = (
+	address: Address.Address,
+	page: number,
+	limit: number,
+	chainId: number,
+	offset: number,
+) =>
+	queryOptions({
+		queryKey: ['account-transactions', chainId, address, page, limit],
+		queryFn: (): Promise<TransactionsResponse> =>
+			fetch(`/api/address/${address}?offset=${offset}&limit=${limit}`).then(
+				(res) => res.json(),
+			),
+		// auto-refresh page 1 since new transactions appear there
+		refetchInterval: page === 1 ? 4_000 : false,
+		refetchIntervalInBackground: page === 1,
+		refetchOnWindowFocus: page === 1,
+		staleTime: page === 1 ? 0 : 60_000, // page 1: always fresh, others: 60s cache
+		placeholderData: keepPreviousData,
 	})
 
-	const transactionDataMap = React.useMemo(() => {
-		const map = new Map<Hex.Hex, TransactionData>()
-		for (let index = 0; index < hashes.length; index++) {
-			const data = queries[index]?.data
-			if (data) map.set(hashes[index], data)
-		}
-		return map
-	}, [hashes, queries])
+export const Route = createFileRoute('/_layout/address/$address')({
+	component: RouteComponent,
+	validateSearch: z.object({
+		page: z._default(z.number(), 1),
+		limit: z._default(z.number(), 7),
+		tab: z._default(z.enum(['history', 'assets']), 'history'),
+	}),
+	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
+	loader: async ({ deps: { page, limit }, params: { address }, context }) => {
+		const offset = (page - 1) * limit
 
-	const isLoading = queries.some((q) => q.isLoading)
+		const client = getClient(config)
 
-	return { transactionDataMap, isLoading }
-}
+		context.queryClient.fetchQuery(
+			transactionsQuery(address, page, limit, client.chain.id, offset),
+		)
+	},
+	params: {
+		parse: z.object({
+			address: z.pipe(
+				z.string(),
+				z.transform((x) => {
+					Address.assert(x)
+					return x
+				}),
+			),
+		}).parse,
+	},
+})
 
 const assets = [
 	'0x20c0000000000000000000000000000000000000',
@@ -155,1002 +91,757 @@ const assets = [
 	'0x20c0000000000000000000000000000000000003',
 ] as const
 
-type AssetData = {
-	address: Address.Address
-	metadata: { name?: string; symbol?: string; decimals?: number } | undefined
-	balance: bigint | undefined
-}
-
-function useAssetsData(accountAddress: Address.Address): AssetData[] {
-	// Track hydration to avoid SSR/client mismatch with cached query data
-	const isMounted = useIsMounted()
-
-	const meta0 = Hooks.token.useGetMetadata({ token: assets[0] })
-	const meta1 = Hooks.token.useGetMetadata({ token: assets[1] })
-	const meta2 = Hooks.token.useGetMetadata({ token: assets[2] })
-	const meta3 = Hooks.token.useGetMetadata({ token: assets[3] })
-
-	const bal0 = Hooks.token.useGetBalance({
-		token: assets[0],
-		account: accountAddress,
-	})
-	const bal1 = Hooks.token.useGetBalance({
-		token: assets[1],
-		account: accountAddress,
-	})
-	const bal2 = Hooks.token.useGetBalance({
-		token: assets[2],
-		account: accountAddress,
-	})
-	const bal3 = Hooks.token.useGetBalance({
-		token: assets[3],
-		account: accountAddress,
-	})
-
-	return React.useMemo(
-		() => [
-			{
-				address: assets[0],
-				metadata: isMounted ? meta0.data : undefined,
-				balance: isMounted ? bal0.data : undefined,
-			},
-			{
-				address: assets[1],
-				metadata: isMounted ? meta1.data : undefined,
-				balance: isMounted ? bal1.data : undefined,
-			},
-			{
-				address: assets[2],
-				metadata: isMounted ? meta2.data : undefined,
-				balance: isMounted ? bal2.data : undefined,
-			},
-			{
-				address: assets[3],
-				metadata: isMounted ? meta3.data : undefined,
-				balance: isMounted ? bal3.data : undefined,
-			},
-		],
-		[
-			isMounted,
-			meta0.data,
-			meta1.data,
-			meta2.data,
-			meta3.data,
-			bal0.data,
-			bal1.data,
-			bal2.data,
-			bal3.data,
-		],
-	)
-}
-
-function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
-	const PRICE_PER_TOKEN = 1
-	let total: number | undefined
-	for (const asset of assetsData) {
-		const decimals = asset.metadata?.decimals
-		const balance = asset.balance
-		if (decimals === undefined || balance === undefined) continue
-		total =
-			(total ?? 0) + Number(formatUnits(balance, decimals)) * PRICE_PER_TOKEN
-	}
-	return total
-}
-
-const defaultSearchValues = {
-	page: 1,
-	limit: 10,
-	tab: 'history',
-} as const
-
-const TabSchema = z.prefault(
-	z.enum(['history', 'assets', 'contract', 'interact']),
-	defaultSearchValues.tab,
-)
-
-type TabValue = z.infer<typeof TabSchema>
-
-export const Route = createFileRoute('/_layout/address/$address')({
-	component: RouteComponent,
-	notFoundComponent: ({ data }) => (
-		<NotFound
-			title="Address Not Found"
-			message="The address is invalid or could not be found."
-			data={data as NotFound.NotFoundData}
-		/>
-	),
-	validateSearch: z.object({
-		page: z.prefault(z.number(), defaultSearchValues.page),
-		limit: z.prefault(
-			z.pipe(
-				z.number(),
-				z.transform((val) => Math.min(100, val)),
-			),
-			defaultSearchValues.limit,
-		),
-		tab: TabSchema,
-		live: z.prefault(z.boolean(), false),
-	}),
-	search: {
-		middlewares: [stripSearchParams(defaultSearchValues)],
-	},
-	loaderDeps: ({ search: { page, limit, live } }) => ({ page, limit, live }),
-	loader: ({ deps: { page, limit, live }, params, context }) =>
-		withLoaderTiming('/_layout/address/$address', async () => {
-			const { address } = params
-			// Only throw notFound for truly invalid addresses
-			if (!Address.validate(address))
-				throw notFound({
-					routeId: rootRouteId,
-					data: { error: 'Invalid address format' },
-				})
-
-			const offset = (page - 1) * limit
-			const config = getWagmiConfig()
-			const chainId = getChainId(config)
-
-			// Get bytecode to determine account type
-			const contractBytecode = await getContractBytecode(address).catch(
-				(error) => {
-					console.error('[loader] Failed to get bytecode:', error)
-					return undefined
-				},
-			)
-
-			const accountType = getAccountType(contractBytecode)
-
-			// check if it's a known contract from our registry
-			let contractInfo = getContractInfo(address)
-
-			// Only try to extract ABI/fetch source for actual contracts
-			let contractSource: ContractSource | undefined
-			if (accountType === 'contract') {
-				// if not in registry, try to extract ABI from bytecode using whatsabi
-				if (!contractInfo && contractBytecode) {
-					const contractAbi = await extractContractAbi(address).catch(
-						() => undefined,
-					)
-
-					if (contractAbi) {
-						contractInfo = {
-							name: 'Unknown Contract',
-							description: 'ABI extracted from bytecode',
-							code: contractBytecode,
-							abi: contractAbi,
-							category: 'utility',
-							address,
-						}
-					}
-				}
-
-				const queryOptions = contractSourceQueryOptions({
-					address,
-					chainId,
-				})
-				// Try to fetch verified contract source if there's bytecode on chain
-				// Fetch directly from upstream API (bypasses __BASE_URL__ issues during SSR)
-				// Then seed the query cache for client-side hydration
-				// Only seed if no data exists - avoid overwriting highlighted data from client refetch
-				const existingData = context.queryClient.getQueryData(
-					queryOptions.queryKey,
-				)
-				if (!existingData) {
-					contractSource = await fetchContractSourceDirect({
-						address,
-						chainId,
-					}).catch((error) => {
-						console.error('[loader] Failed to load contract source:', error)
-						return undefined
-					})
-					// Seed the query cache so client hydrates with data already available
-					if (contractSource)
-						context.queryClient.setQueryData(
-							queryOptions.queryKey,
-							contractSource,
-						)
-				} else contractSource = existingData
-			}
-
-			// Add timeout to prevent SSR from hanging on slow queries
-			const QUERY_TIMEOUT_MS = 3_000
-			const timeout = <T,>(
-				promise: Promise<T>,
-				ms: number,
-			): Promise<T | undefined> =>
-				Promise.race([
-					promise,
-					new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
-				])
-
-			const transactionsData = await timeout(
-				context.queryClient
-					.ensureQueryData(
-						transactionsQueryOptions({
-							address,
-							page,
-							limit,
-							offset,
-						}),
-					)
-					.catch((error) => {
-						console.error('Fetch transactions error:', error)
-						return undefined
-					}),
-				QUERY_TIMEOUT_MS,
-			)
-
-			// Fire off optional loaders without blocking page render
-			// These will populate the cache if successful but won't delay the page load
-			context.queryClient
-				.ensureQueryData({
-					queryKey: ['account-total-value', address],
-					queryFn: () => fetchAddressTotalValue(address),
-					staleTime: 60_000,
-				})
-				.catch((error) => {
-					console.error('Fetch total-value error (non-blocking):', error)
-				})
-
-			// For SSR, provide placeholder values - client will fetch real data
-			const txCountResponse = undefined
-			const totalValueResponse = undefined
-
-			return {
-				live,
-				address,
-				page,
-				limit,
-				offset,
-				accountType,
-				contractInfo,
-				contractSource,
-				transactionsData,
-				txCountResponse,
-				totalValueResponse,
-			}
-		}),
-	head: async ({ params, loaderData }) => {
-		const accountType = loaderData?.accountType ?? 'empty'
-		const label =
-			accountType === 'contract'
-				? 'Contract'
-				: accountType === 'account'
-					? 'Account'
-					: 'Address'
-		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
-
-		const txCount = 0
-
-		// Fetch data with a timeout to avoid blocking too long
-		let lastActive: string | undefined
-		let holdings = '—'
-
-		const TIMEOUT_MS = 500
-		const timeout = <T,>(promise: Promise<T>, ms: number): Promise<T | null> =>
-			Promise.race([
-				promise,
-				new Promise<null>((r) => setTimeout(() => r(null), ms)),
-			])
-
-		try {
-			// Fetch holdings by directly reading balances from known tokens
-			const accountAddress = params.address as Address.Address
-
-			const config = getWagmiConfig()
-
-			// Use multicall to batch all token balance + decimals calls into a single RPC request
-			const multicallResults = await timeout(
-				multicall(config, {
-					contracts: assets.flatMap((tokenAddress) => [
-						{
-							address: tokenAddress,
-							abi: Abis.tip20,
-							functionName: 'balanceOf',
-							args: [accountAddress],
-						},
-						{
-							address: tokenAddress,
-							abi: Abis.tip20,
-							functionName: 'decimals',
-						},
-					]),
-					allowFailure: true,
-				}),
-				TIMEOUT_MS,
-			)
-
-			// Parse multicall results: each token has 2 results (balance, decimals)
-			const tokenResults = multicallResults
-				? assets.map((_, i) => {
-						const balanceResult = multicallResults[i * 2]
-						const decimalsResult = multicallResults[i * 2 + 1]
-						if (
-							balanceResult?.status === 'success' &&
-							decimalsResult?.status === 'success'
-						) {
-							return {
-								balance: balanceResult.result as bigint,
-								decimals: decimalsResult.result as number,
-							}
-						}
-						return null
-					})
-				: null
-
-			if (tokenResults) {
-				const PRICE_PER_TOKEN = 1
-				let totalValue = 0
-				for (const result of tokenResults) {
-					if (result && result.balance > 0n) {
-						totalValue +=
-							Number(formatUnits(result.balance, result.decimals)) *
-							PRICE_PER_TOKEN
-					}
-				}
-				if (totalValue > 0) {
-					holdings = PriceFormatter.format(totalValue, { format: 'short' })
-				}
-			}
-		} catch {
-			// Ignore errors, holdings will be '—'
-		}
-
-		try {
-			const config = getWagmiConfig()
-			// Get the most recent transaction for lastActive (already in loaderData)
-			const recentTx = loaderData?.transactionsData?.transactions?.at(0)
-			if (recentTx?.blockNumber) {
-				const recentBlock = await timeout(
-					getBlock(config, { blockNumber: Hex.toBigInt(recentTx.blockNumber) }),
-					TIMEOUT_MS,
-				)
-				if (recentBlock) {
-					lastActive = DateFormatter.formatTimestampForOg(
-						recentBlock.timestamp,
-					).date
-				}
-			}
-		} catch {
-			// Ignore errors, lastActive will be undefined
-		}
-
-		const description = buildAddressDescription(
-			{ holdings, txCount },
-			params.address,
-		)
-
-		const ogImageUrl = buildAddressOgImageUrl({
-			address: params.address,
-			holdings,
-			txCount,
-			accountType,
-			lastActive,
-		})
-
-		return {
-			title,
-			meta: [
-				{ title },
-				{ property: 'og:title', content: title },
-				{ property: 'og:description', content: description },
-				{ name: 'twitter:description', content: description },
-				{ property: 'og:image', content: ogImageUrl },
-				{ property: 'og:image:type', content: 'image/webp' },
-				{ property: 'og:image:width', content: '1200' },
-				{ property: 'og:image:height', content: '630' },
-				{ name: 'twitter:card', content: 'summary_large_image' },
-				{ name: 'twitter:image', content: ogImageUrl },
-			],
-		}
-	},
-})
-
 function RouteComponent() {
 	const navigate = useNavigate()
-	const router = useRouter()
-	const location = useLocation()
+	const routerState = useRouterState()
 	const { address } = Route.useParams()
-	const { page, tab, live, limit } = Route.useSearch()
-	const { accountType, contractInfo, contractSource, transactionsData } =
-		Route.useLoaderData()
+	const { page, limit, tab } = Route.useSearch()
 
-	Address.assert(address)
+	const activeTab = tab
 
-	const hash = location.hash
+	const goToPage = React.useCallback(
+		(newPage: number) => {
+			navigate({ to: '.', search: { page: newPage, limit, tab } })
+		},
+		[navigate, limit, tab],
+	)
 
-	// Track which hash we've already redirected for (prevents re-redirect when
-	// user manually switches tabs, but allows redirect for new hash values)
-	const redirectedForHashRef = React.useRef<string | null>(null)
-
-	// When URL has a hash fragment (e.g., #functionName), switch to interact tab
-	const isContract = accountType === 'contract'
-
-	React.useEffect(() => {
-		// Only redirect if:
-		// 1. We have a hash
-		// 2. Address is a contract
-		// 3. Haven't already redirected for this specific hash
-		if (!hash || !isContract || redirectedForHashRef.current === hash) return
-
-		// Determine which tab the hash should navigate to
-		// TanStack Router's location.hash doesn't include the '#' prefix
-		const isSourceFileHash = hash.startsWith('source-file-')
-		const targetTab = isSourceFileHash ? 'contract' : 'interact'
-
-		// Only redirect if we're not already on the target tab
-		if (tab === targetTab) return
-
-		redirectedForHashRef.current = hash
-		navigate({
-			to: '.',
-			search: { page: 1, tab: targetTab, limit },
-			hash,
-			replace: true,
-			resetScroll: false,
-		})
-	}, [hash, isContract, tab, navigate, limit])
-
-	React.useEffect(() => {
-		// Only preload for history tab (transaction pagination)
-		if (tab !== 'history') return
-		// preload next page only to reduce initial load overhead
-		async function preload() {
-			try {
-				const nextPage = page + 1
-				router.preloadRoute({
-					to: '.',
-					search: { page: nextPage, tab, limit },
-				})
-			} catch (error) {
-				console.error('Preload error (non-blocking):', error)
-			}
-		}
-
-		preload()
-	}, [page, router, tab, limit])
-
-	const setActiveSection = React.useCallback(
-		(newIndex: number) => {
-			const tabs: TabValue[] = ['history', 'assets', 'contract', 'interact']
-
-			const newTab = tabs[newIndex] ?? 'history'
-			navigate({
-				to: '.',
-				search: { page, tab: newTab, limit },
-				resetScroll: false,
-			})
+	const setActiveTab = React.useCallback(
+		(newTab: 'history' | 'assets') => {
+			navigate({ to: '.', search: { page, limit, tab: newTab } })
 		},
 		[navigate, page, limit],
 	)
 
-	const activeSection =
-		tab === 'history'
-			? 0
-			: tab === 'assets'
-				? 1
-				: tab === 'contract'
-					? 2
-					: tab === 'interact'
-						? 3
-						: 0
+	const inputRef = React.useRef<HTMLInputElement | null>(null)
 
-	const assetsData = useAssetsData(address)
+	React.useEffect(() => {
+		const listener = (event: KeyboardEvent) => {
+			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+				event.preventDefault()
+				inputRef.current?.focus()
+			}
+		}
+		window.addEventListener('keydown', listener)
+		return () => window.removeEventListener('keydown', listener)
+	}, [])
+
+	const handleSearch: React.FormEventHandler<HTMLFormElement> =
+		React.useCallback(
+			(event) => {
+				event.preventDefault()
+				const formData = new FormData(event.currentTarget)
+				const value = formData.get('value')?.toString().trim()
+
+				if (!value) return
+				try {
+					Hex.assert(value)
+					navigate({
+						to: '/$value',
+						params: { value },
+					})
+				} catch (error) {
+					console.error('Invalid search value provided', error)
+				}
+			},
+			[navigate],
+		)
 
 	return (
-		<div
-			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-3.5 min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-7xl',
-			)}
-		>
-			<Breadcrumbs className="col-span-full" />
-			<AccountCardWithTimestamps
-				address={address}
-				assetsData={assetsData}
-				accountType={accountType}
-			/>
-			<SectionsWrapper
-				address={address}
-				page={page}
-				limit={limit}
-				activeSection={activeSection}
-				onSectionChange={setActiveSection}
-				contractInfo={contractInfo}
-				contractSource={contractSource}
-				initialData={transactionsData}
-				assetsData={assetsData}
-				live={live}
-				isContract={accountType === 'contract'}
-			/>
+		<div className="px-4">
+			<div className="mx-auto flex max-w-6xl flex-col gap-8">
+				<section className="flex flex-col gap-4">
+					<div className="flex flex-col items-center gap-2 text-center">
+						<form onSubmit={handleSearch} className="w-full max-w-xl ">
+							<div className="relative ">
+								<input
+									ref={inputRef}
+									name="value"
+									type="text"
+									placeholder="Enter address, token, or transaction..."
+									spellCheck={false}
+									autoCapitalize="off"
+									autoComplete="off"
+									autoCorrect="off"
+									className="w-full rounded-lg border border-border-primary bg-surface px-4 py-2.5 pr-12 text-sm text-primary transition focus:outline-none focus:ring-0 shadow-[0px_4px_54px_0px_rgba(0,0,0,0.06)] outline-1 -outline-offset-1 outline-black-white/10"
+								/>
+								<button
+									type="submit"
+									disabled={routerState.isLoading}
+									className="my-auto bg-black-white/10 size-6 rounded-full absolute inset-y-0 right-2.5 flex items-center justify-center text-tertiary transition-colors hover:text-secondary disabled:opacity-50"
+									aria-label="Search"
+								>
+									<ArrowRight className="size-4" aria-hidden />
+								</button>
+							</div>
+						</form>
+						<p className="text-xs text-tertiary font-mono">
+							<span className="font-mono text-[11px]">⌘</span> or{' '}
+							<span className="font-mono text-[11px]">Ctrl</span> +{' '}
+							<span className="font-mono text-[11px]">k</span> to focus
+						</p>
+					</div>
+				</section>
+
+				<div className="grid grid-cols-1 gap-6 font-mono">
+					<section className="flex flex-col gap-6 w-full">
+						{/* Tabs */}
+						<div className="overflow-hidden rounded-xl border border-border-primary bg-primary">
+							<div className="px-5 h-10 flex items-center gap-6">
+								<button
+									type="button"
+									onClick={() => setActiveTab('history')}
+									className={`text-sm font-medium uppercase tracking-[0.15em] transition-colors ${
+										activeTab === 'history'
+											? 'text-primary'
+											: 'text-tertiary hover:text-secondary'
+									}`}
+								>
+									HISTORY
+								</button>
+								<button
+									type="button"
+									onClick={() => setActiveTab('assets')}
+									className={`text-sm font-medium uppercase tracking-[0.15em] transition-colors ${
+										activeTab === 'assets'
+											? 'text-primary'
+											: 'text-tertiary hover:text-secondary'
+									}`}
+								>
+									ASSETS
+								</button>
+							</div>
+
+							{activeTab === 'history' && (
+								<React.Suspense
+									fallback={<HistoryLoadingSkeleton limit={limit} />}
+								>
+									<HistoryTabContent
+										key={address}
+										address={address}
+										page={page}
+										limit={limit}
+										goToPage={goToPage}
+									/>
+								</React.Suspense>
+							)}
+
+							{activeTab === 'assets' && (
+								<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
+									<table className="w-full border-collapse text-sm rounded-t-sm">
+										<thead>
+											<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+												<th className="px-5 pb-3 font-normal">Name</th>
+												<th className="px-5 pb-3 font-normal">Ticker</th>
+												<th className="px-5 pb-3 font-normal">Currency</th>
+												<th className="px-5 pb-3 text-right font-normal">
+													Amount
+												</th>
+												<th className="px-5 pb-3 text-right font-normal">
+													Value
+												</th>
+											</tr>
+										</thead>
+										{/** biome-ignore lint/complexity/noUselessFragments: _ */}
+										<ClientOnly fallback={<></>}>
+											<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
+												{assets.map((assetAddress) => (
+													<AssetRow
+														key={assetAddress}
+														contractAddress={assetAddress}
+													/>
+												))}
+											</tbody>
+										</ClientOnly>
+									</table>
+								</div>
+							)}
+						</div>
+					</section>
+				</div>
+			</div>
 		</div>
 	)
 }
 
-function AccountCardWithTimestamps(props: {
-	address: Address.Address
-	assetsData: AssetData[]
-	accountType?: AccountType
-}) {
-	const { address, assetsData, accountType } = props
-
-	// fetch the most recent transactions (pg.1)
-	const { data: recentData } = useQuery(
-		transactionsQueryOptions({
-			address,
-			page: 1,
-			limit: 1,
-			offset: 0,
-			_key: 'account-creation',
-		}),
-	)
-
-	// get the 1st (most recent) transaction's block timestamp for "last activity"
-	const recentTransaction = recentData?.transactions?.at(0)
-	const { data: lastActivityTimestamp } = useBlock({
-		blockNumber: Hex.toBigInt(recentTransaction?.blockNumber ?? '0x0'),
-		query: {
-			enabled: Boolean(recentTransaction?.blockNumber),
-			select: (block) => block.timestamp,
-		},
-	})
-
-	// Use the real transaction count (not the approximate total from pagination)
-	// Don't fetch exact count - use API hasMore flag for pagination
-	// This makes the page render instantly without waiting for count query
-	const totalTransactions = 0 // Unknown until user navigates
-	const lastPageOffset = 0 // Can't calculate without total
-
-	const { data: oldestData } = useQuery({
-		...transactionsQueryOptions({
-			address,
-			page: Math.ceil(totalTransactions / 1),
-			limit: 1,
-			offset: lastPageOffset,
-			_key: 'account-creation',
-		}),
-		enabled: totalTransactions > 0,
-	})
-
-	const [oldestTransaction] = oldestData?.transactions ?? []
-	const { data: createdTimestamp } = useBlock({
-		blockNumber: Hex.toBigInt(oldestTransaction?.blockNumber ?? '0x0'),
-		query: {
-			enabled: Boolean(oldestTransaction?.blockNumber),
-			select: (block) => block.timestamp,
-		},
-	})
-
-	const totalValue = calculateTotalHoldings(assetsData)
-
+function HistoryLoadingSkeleton({ limit }: { limit: number }) {
 	return (
-		<AccountCard
-			address={address}
-			className="self-start"
-			createdTimestamp={createdTimestamp}
-			lastActivityTimestamp={lastActivityTimestamp}
-			totalValue={totalValue}
-			accountType={accountType}
-		/>
+		<>
+			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
+				<table className="w-full border-collapse text-sm rounded-t-sm table-fixed">
+					<colgroup>
+						<col className="w-24" />
+						<col />
+						<col className="w-32" />
+						<col className="w-20" />
+						<col className="w-28" />
+					</colgroup>
+					<thead>
+						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+							<th className="px-5 pb-3 font-normal">Time</th>
+							<th className="px-5 pb-3 font-normal">Description</th>
+							<th className="px-3 pb-3 font-normal">Hash</th>
+							<th className="px-3 pb-3 font-normal">Block</th>
+							<th className="px-5 pb-3 text-right font-normal">Total</th>
+						</tr>
+					</thead>
+					<tbody
+						className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10"
+						style={{ minHeight: `${limit * 56}px` }}
+					>
+						{Array.from(
+							{ length: limit },
+							(_, index) => `loading-row-${index}`,
+						).map((key) => (
+							<tr key={key} className="transition-colors h-14">
+								<td className="px-5 py-3">
+									<div className="h-4 w-16 bg-alt animate-pulse rounded" />
+								</td>
+								<td className="px-5 py-3">
+									<div className="h-4 w-48 bg-alt animate-pulse rounded" />
+								</td>
+								<td className="px-3 py-3">
+									<div className="h-4 w-24 bg-alt animate-pulse rounded" />
+								</td>
+								<td className="px-3 py-3">
+									<div className="h-4 w-16 bg-alt animate-pulse rounded" />
+								</td>
+								<td className="px-5 py-3 text-right">
+									<div className="h-4 w-20 bg-alt animate-pulse rounded ml-auto" />
+								</td>
+							</tr>
+						))}
+					</tbody>
+				</table>
+			</div>
+
+			<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
+				<div className="flex flex-row items-center gap-2">
+					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
+					<div className="h-7 w-32 bg-alt animate-pulse rounded" />
+					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
+				</div>
+				<div className="h-4 w-48 bg-alt animate-pulse rounded" />
+			</div>
+		</>
 	)
 }
 
-function SectionsWrapper(props: {
+function HistoryTabContent({
+	address,
+	page,
+	limit,
+	goToPage,
+}: {
 	address: Address.Address
 	page: number
 	limit: number
-	activeSection: number
-	onSectionChange: (index: number) => void
-	contractInfo: ContractInfo | undefined
-	contractSource?: ContractSource | undefined
-	initialData: TransactionsData | undefined
-	assetsData: AssetData[]
-	live: boolean
-	isContract: boolean
+	goToPage: (page: number) => void
 }) {
-	const {
-		address,
-		page,
-		limit,
-		activeSection,
-		onSectionChange,
-		contractInfo,
-		contractSource,
-		initialData,
-		assetsData,
-		live,
-		isContract,
-	} = props
-	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
+	const client = useClient()
+	const offset = (page - 1) * limit
 
-	// Track hydration to avoid SSR/client mismatch with query data
-	const isMounted = useIsMounted()
-
-	// Contract source query - uses cache populated by SSR loader via ensureQueryData
-	// The query will immediately return cached data without flashing
-	// Only enabled for contracts to avoid unnecessary requests for EOAs
-	const contractSourceQuery = useQuery({
-		...useContractSourceQueryOptions({ address }),
-		initialData: contractSource,
-		enabled: isContract,
-	})
-	// Use SSR data until mounted to avoid hydration mismatch, then use query data
-	const resolvedContractSource = isMounted
-		? contractSourceQuery.data
-		: contractSource
-
-	const isHistoryTabActive = activeSection === 0
-	// Only auto-refresh on page 1 when history tab is active and live=true
-	const shouldAutoRefresh = page === 1 && isHistoryTabActive && live
-
-	const {
-		data: queryData,
-		isPlaceholderData,
-		error,
-	} = useQuery({
-		...transactionsQueryOptions({
-			address,
-			page,
-			limit,
-			offset: (page - 1) * limit,
-		}),
-		initialData: page === 1 ? initialData : undefined,
-		// Override refetch settings reactively based on tab state
-		refetchInterval: shouldAutoRefresh ? 4_000 : false,
-		refetchOnWindowFocus: shouldAutoRefresh,
-	})
-
-	/**
-	 * use initialData until mounted to avoid hydration mismatch
-	 * (tanstack query may have fresher cached data that differs from SSR)
-	 */
-	const data = isMounted ? queryData : page === 1 ? initialData : queryData
-	const { transactions = [], hasMore = false } = data ?? {}
-
-	// Fetch exact total count in the background (only when on history tab)
-	// Don't cache across tabs/pages - always show "..." until loaded each time
-	const totalCountQuery = useQuery({
-		queryKey: ['address-total-count', address],
-		queryFn: () => fetchAddressTotalCount(address),
-		staleTime: 0, // Don't cache - always refetch to show "..." while loading
-		refetchInterval: false,
-		refetchOnWindowFocus: false,
-		enabled: isHistoryTabActive,
-	})
-
-	const batchTransactionDataContextValue = useBatchTransactionData(
-		transactions,
-		address,
+	const { data, isFetching } = useSuspenseQuery(
+		transactionsQuery(address, page, limit, client?.chain.id ?? 0, offset),
 	)
 
-	// Exact count from dedicated API endpoint (for display only)
-	// txs-count counts "from OR to" while pagination API only serves a subset,
-	// so we can't use exactCount for page calculation - most pages would be empty
-	// Only use after mount to avoid SSR/client hydration mismatch
-	const exactCount = isMounted ? totalCountQuery.data?.data : undefined
+	const transactions = data.transactions
+	const totalTransactions = data.total
+	const totalPages = Math.ceil(totalTransactions / limit)
 
-	const isMobile = useMediaQuery('(max-width: 799px)')
-	const mode = isMobile ? 'stacked' : 'tabs'
+	// Track if we're changing pages (not just auto-refreshing)
+	const prevPageRef = React.useRef(page)
+	const [isChangingPage, setIsChangingPage] = React.useState(false)
 
-	// Show error state for API failures (instead of crashing the whole page)
-	const historyError = error ? (
-		<div className="rounded-[10px] bg-card-header p-4.5">
-			<p className="text-sm font-medium text-red-400">
-				Failed to load transaction history
-			</p>
-			<p className="text-xs text-tertiary mt-1">
-				{error instanceof Error ? error.message : 'Unknown error'}
-			</p>
-		</div>
-	) : null
+	React.useEffect(() => {
+		if (prevPageRef.current !== page) {
+			setIsChangingPage(true)
+			prevPageRef.current = page
+		}
+	}, [page])
 
-	const historyColumns: DataGrid.Column[] = [
-		{
-			label: (
-				<TimeColumnHeader
-					label="Time"
-					formatLabel={formatLabel}
-					onCycle={cycleTimeFormat}
-					className="text-secondary hover:text-accent cursor-pointer transition-colors"
-				/>
-			),
-			align: 'start',
-			width: '0.5fr',
+	React.useEffect(() => {
+		if (!isFetching && isChangingPage) setIsChangingPage(false)
+	}, [isFetching, isChangingPage])
+
+	const showLoading = isChangingPage && isFetching
+
+	return (
+		<>
+			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
+				<ClientOnly>
+					{showLoading && (
+						<>
+							<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30 z-10">
+								<div className="h-full w-1/4 bg-accent animate-pulse" />
+							</div>
+							<div className="absolute inset-0 bg-black-white/5 pointer-events-none z-5" />
+						</>
+					)}
+				</ClientOnly>
+				<table className="w-full border-collapse text-sm rounded-t-sm table-fixed">
+					<colgroup>
+						<col className="w-24" />
+						<col />
+						<col className="w-32" />
+						<col className="w-20" />
+						<col className="w-28" />
+					</colgroup>
+					<thead>
+						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+							<th className="px-5 pb-3 font-normal">Time</th>
+							<th className="px-5 pb-3 font-normal">Description</th>
+							<th className="px-3 pb-3 font-normal">Hash</th>
+							<th className="px-3 pb-3 font-normal">Block</th>
+							<th className="px-5 pb-3 text-right font-normal">Total</th>
+						</tr>
+					</thead>
+					{/** biome-ignore lint/complexity/noUselessFragments: _ */}
+					<ClientOnly fallback={<></>}>
+						<tbody
+							className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10"
+							style={{ minHeight: `${limit * 56}px` }}
+						>
+							{transactions?.map((transaction) => (
+								<tr
+									key={transaction.hash}
+									className="transition-colors hover:bg-alt h-14"
+								>
+									{/* Time */}
+									<td className="px-5 py-3 text-primary">
+										<div className="text-xs">
+											<TransactionTimestamp
+												blockNumber={transaction.blockNumber}
+											/>
+										</div>
+									</td>
+
+									{/* Description */}
+									<td className="px-5 py-3 text-primary">
+										<div className="text-sm">
+											<TransactionDescription transaction={transaction} />
+										</div>
+									</td>
+
+									{/* Transaction Hash */}
+									<td className="px-3 py-3 font-mono text-[11px] text-primary">
+										<Link
+											to={'/tx/$hash'}
+											params={{ hash: transaction.hash ?? '' }}
+											className="hover:text-accent transition-colors"
+										>
+											{transaction.hash?.slice(0, 8)}...
+											{transaction.hash?.slice(-6)}
+										</Link>
+									</td>
+
+									{/* Block Number */}
+									<td className="px-3 py-3">
+										{transaction.blockNumber ? (
+											<Link
+												to={'/block/$id'}
+												params={{
+													id: Hex.toNumber(transaction.blockNumber).toString(),
+												}}
+												className="text-accent text-sm transition-colors hover:text-accent/80"
+											>
+												{Hex.toNumber(transaction.blockNumber).toString()}
+											</Link>
+										) : (
+											<span className="text-tertiary">--</span>
+										)}
+									</td>
+
+									{/* Total Value */}
+									<td className="px-5 py-3 text-right font-mono text-xs">
+										{(() => {
+											const value = transaction.value
+												? Hex.toBigInt(transaction.value)
+												: 0n
+											const ethAmount = parseFloat(formatEther(value))
+											const dollarAmount = ethAmount * 2000
+
+											if (dollarAmount > 1)
+												return (
+													<span className="text-positive">
+														${dollarAmount.toFixed(2)}
+													</span>
+												)
+
+											return (
+												<span className="text-tertiary">
+													(${dollarAmount.toFixed(2)})
+												</span>
+											)
+										})()}
+									</td>
+								</tr>
+							))}
+						</tbody>
+					</ClientOnly>
+				</table>
+			</div>
+
+			<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
+				<div className="flex flex-row items-center gap-2">
+					<button
+						type="button"
+						onClick={() => goToPage(page - 1)}
+						disabled={page <= 1 || showLoading}
+						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						aria-label="Previous page"
+					>
+						Previous
+					</button>
+
+					<div className="flex items-center gap-1.5 px-2">
+						{(() => {
+							// Show up to 5 consecutive pages centered around current page
+							const maxButtons = 5
+							let startPage = Math.max(1, page - Math.floor(maxButtons / 2))
+							const endPage = Math.min(totalPages, startPage + maxButtons - 1)
+
+							// Adjust start if we're near the end
+							startPage = Math.max(1, endPage - maxButtons + 1)
+
+							const pages: (number | 'ellipsis')[] = []
+
+							// Add first page + ellipsis if needed
+							if (startPage > 1) {
+								pages.push(1)
+								if (startPage > 2) pages.push('ellipsis')
+							}
+
+							// Add the range of pages
+							for (let i = startPage; i <= endPage; i++) {
+								pages.push(i)
+							}
+
+							// Add ellipsis + last page if needed
+							if (endPage < totalPages) {
+								if (endPage < totalPages - 1) {
+									pages.push('ellipsis')
+								}
+								pages.push(totalPages)
+							}
+
+							let ellipsisCount = 0
+							return pages.map((p) => {
+								if (p === 'ellipsis') {
+									ellipsisCount++
+									return (
+										<span
+											key={`ellipsis-${ellipsisCount}`}
+											className="text-tertiary px-1"
+										>
+											...
+										</span>
+									)
+								}
+								return (
+									<button
+										key={p}
+										type="button"
+										onClick={() => goToPage(p)}
+										disabled={showLoading}
+										className={`flex size-7 items-center justify-center rounded transition-colors ${
+											page === p
+												? 'bg-accent text-white'
+												: 'hover:bg-alt text-primary'
+										} ${showLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+									>
+										{p}
+									</button>
+								)
+							})
+						})()}
+					</div>
+
+					<button
+						type="button"
+						onClick={() => goToPage(page + 1)}
+						disabled={page >= totalPages || showLoading}
+						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						aria-label="Next page"
+					>
+						Next
+					</button>
+				</div>
+
+				<div className="space-x-2">
+					<span className="text-tertiary">Page</span>
+					<span className="text-primary">{page}</span>
+					<span className="text-tertiary">of</span>
+					<span className="text-primary">{totalPages}</span>
+					<span className="text-tertiary">•</span>
+					<span className="text-primary">{totalTransactions || '...'}</span>
+					<span className="text-tertiary">
+						<ClientOnly fallback={<React.Fragment>¬</React.Fragment>}>
+							{totalTransactions === 1 ? 'transaction' : 'transactions'}
+						</ClientOnly>
+					</span>
+				</div>
+			</div>
+		</>
+	)
+}
+
+function AssetRow({ contractAddress }: { contractAddress: Address.Address }) {
+	const { address } = useParams({ from: Route.id })
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token: contractAddress,
+	})
+
+	const { data: balance } = Hooks.token.useGetBalance({
+		token: contractAddress,
+		account: address,
+	})
+
+	return (
+		<tr className="transition-colors hover:bg-alt">
+			<td className="px-5 py-3 text-primary">
+				<Link
+					to="/token/$address"
+					params={{ address: contractAddress }}
+					className="hover:text-accent transition-colors"
+				>
+					{metadata?.name || 'Unknown Token'}
+				</Link>
+			</td>
+			<td className="px-5 py-3">
+				<Link
+					to="/token/$address"
+					params={{ address: contractAddress }}
+					className="text-accent hover:text-accent/80 transition-colors"
+				>
+					{metadata?.symbol || '???'}
+				</Link>
+			</td>
+			<td className="px-5 py-3 text-primary">USD</td>
+			<td className="px-5 py-3 text-right font-mono text-xs text-primary">
+				{formatUnits(balance ?? 0n, metadata?.decimals ?? 6)}
+			</td>
+			<td className="px-5 py-3 text-right font-mono text-xs text-primary">
+				{typeof balance === 'bigint' && metadata?.decimals
+					? `${PriceFormatter.format(Number(balance), metadata.decimals)}`
+					: null}
+			</td>
+		</tr>
+	)
+}
+
+function useParseEventLogs(props: {
+	hash: Hex.Hex | undefined
+	logs: Array<Log> | undefined
+}) {
+	return React.useMemo(() => {
+		if (!props.logs) return []
+		if (!props.hash) return []
+		return parseEventLogs({
+			abi: [
+				...Abis.nonce,
+				...Abis.tip20,
+				...Abis.feeAmm,
+				...Abis.feeManager,
+				...Abis.tip20Factory,
+				...Abis.tip403Registry,
+				...Abis.validatorConfig,
+				...Abis.stablecoinExchange,
+				...Abis.tipAccountRegistrar,
+				...Abis.tip20RewardsRegistry,
+			],
+			logs: props.logs,
+		})
+	}, [props.logs, props.hash])
+}
+
+function TransactionDescription({ transaction }: { transaction: Transaction }) {
+	const { data: receipt } = useTransactionReceipt({
+		hash: transaction.hash,
+		query: {
+			enabled: Boolean(transaction.hash),
 		},
-		{ label: 'Description', align: 'start', width: '2fr' },
-		{ label: 'Hash', align: 'end', width: '1fr' },
-		{ label: 'Fee', align: 'end', width: '0.5fr' },
-		{ label: 'Total', align: 'end', width: '0.5fr' },
-	]
+	})
+	const eventLogs = useParseEventLogs({
+		hash: transaction.hash,
+		logs: receipt?.logs,
+	})
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token: eventLogs[0]?.address,
+		query: {
+			enabled: Boolean(eventLogs[0]?.address),
+		},
+	})
 
-	return (
-		<BatchTransactionDataContext.Provider
-			value={batchTransactionDataContextValue}
-		>
-			<Sections
-				mode={mode}
-				sections={[
-					{
-						title: 'History',
-						totalItems: data && exactCount,
-						itemsLabel: 'transactions',
-						content: historyError ?? (
-							<DataGrid
-								columns={{
-									stacked: historyColumns,
-									tabs: historyColumns,
-								}}
-								items={() =>
-									transactions.map((transaction) => ({
-										cells: [
-											<TransactionTimeCell
-												key="time"
-												hash={transaction.hash}
-												format={timeFormat}
-											/>,
-											<TransactionDescCell
-												key="desc"
-												transaction={transaction}
-												accountAddress={address}
-											/>,
-											<Midcut
-												key="hash"
-												value={transaction.hash}
-												prefix="0x"
-												align="end"
-											/>,
-											<TransactionFeeCell key="fee" hash={transaction.hash} />,
-											<TransactionTotal
-												key="total"
-												transaction={transaction}
-											/>,
-										],
-										link: {
-											href: `/receipt/${transaction.hash}`,
-											title: `View receipt ${transaction.hash}`,
-										},
-									}))
-								}
-								totalItems={exactCount ?? transactions.length}
-								pages={exactCount === undefined ? { hasMore } : undefined}
-								displayCount={exactCount}
-								page={page}
-								fetching={isPlaceholderData}
-								loading={!data}
-								countLoading={exactCount === undefined}
-								itemsLabel="transactions"
-								itemsPerPage={limit}
-								pagination="simple"
-								emptyState="No transactions found."
-							/>
-						),
-					},
-					{
-						title: 'Assets',
-						totalItems: assets.length,
-						itemsLabel: 'assets',
-						content: (
-							<DataGrid
-								columns={{
-									stacked: [
-										{ label: 'Name', align: 'start', width: '1fr' },
-										{ label: 'Contract', align: 'start', width: '1fr' },
-										{ label: 'Amount', align: 'end', width: '0.5fr' },
-									],
-									tabs: [
-										{ label: 'Name', align: 'start', width: '1fr' },
-										{ label: 'Ticker', align: 'start', width: '0.5fr' },
-										{ label: 'Currency', align: 'start', width: '0.5fr' },
-										{ label: 'Amount', align: 'end', width: '0.5fr' },
-										{ label: 'Value', align: 'end', width: '0.5fr' },
-									],
-								}}
-								items={(mode) =>
-									assetsData.map((asset) => ({
-										className: 'text-[13px]',
-										cells:
-											mode === 'stacked'
-												? [
-														<AssetName key="name" asset={asset} />,
-														<AssetContract key="contract" asset={asset} />,
-														<AssetAmount key="amount" asset={asset} />,
-													]
-												: [
-														<AssetName key="name" asset={asset} />,
-														<AssetSymbol key="symbol" asset={asset} />,
-														<span key="currency">USD</span>,
-														<AssetAmount key="amount" asset={asset} />,
-														<AssetValue key="value" asset={asset} />,
-													],
-										link: {
-											href: `/token/${asset.address}` as const,
-											search: { a: address },
-											title: `View token ${asset.address}`,
-										},
-									}))
-								}
-								totalItems={assets.length}
-								page={1}
-								itemsLabel="assets"
-								itemsPerPage={assets.length}
-								emptyState="No assets found."
-							/>
-						),
-					},
-					// Contract tab - ABI + Source Code (always shown, disabled when no data)
-					{
-						title: 'Contract',
-						totalItems: 0,
-						itemsLabel: 'items',
-						visible: Boolean(contractInfo || resolvedContractSource),
-						content: (
-							<ContractTabContent
-								address={address}
-								abi={resolvedContractSource?.abi ?? contractInfo?.abi}
-								docsUrl={contractInfo?.docsUrl}
-								source={resolvedContractSource}
-							/>
-						),
-					},
-					// Interact tab - Read + Write contract (always shown, disabled when no data)
-					{
-						title: 'Interact',
-						totalItems: 0,
-						itemsLabel: 'functions',
-						visible: Boolean(contractInfo || resolvedContractSource),
-						content: (
-							<InteractTabContent
-								address={address}
-								abi={resolvedContractSource?.abi ?? contractInfo?.abi}
-								docsUrl={contractInfo?.docsUrl}
-							/>
-						),
-					},
-				]}
-				activeSection={activeSection}
-				onSectionChange={onSectionChange}
-			/>
-		</BatchTransactionDataContext.Provider>
-	)
-}
+	if (!eventLogs || eventLogs.length === 0) {
+		return <span className="text-tertiary">Processing...</span>
+	}
 
-const placeholder = <span className="text-tertiary">—</span>
+	// biome-ignore lint/suspicious/noExplicitAny: Event types are dynamic
+	const event: any = eventLogs[0]
+	const eventName = event?.eventName
+	const args = event?.args || {}
+	const tokenAddress = event?.address as Address.Address
 
-function TransactionTimeCell(props: { hash: Hex.Hex; format: TimeFormat }) {
-	return (
-		<ClientOnly fallback={placeholder}>
-			<TransactionTimeCellInner {...props} />
-		</ClientOnly>
-	)
-}
-
-function TransactionTimeCellInner(props: {
-	hash: Hex.Hex
-	format: TimeFormat
-}) {
-	const { hash, format } = props
-	const batchData = useTransactionDataFromBatch(hash)
-	if (!batchData?.block) return placeholder
-	return (
-		<TransactionTimestamp
-			timestamp={batchData.block.timestamp}
-			link={`/receipt/${hash}`}
-			format={format}
-		/>
-	)
-}
-
-function TransactionDescCell(props: {
-	transaction: Transaction
-	accountAddress: Address.Address
-}) {
-	return (
-		<ClientOnly fallback={placeholder}>
-			<TransactionDescCellInner {...props} />
-		</ClientOnly>
-	)
-}
-
-function TransactionDescCellInner(props: {
-	transaction: Transaction
-	accountAddress: Address.Address
-}) {
-	const { transaction, accountAddress } = props
-	const batchData = useTransactionDataFromBatch(transaction.hash)
-	if (!batchData) return placeholder
-	if (!batchData.knownEvents.length) {
-		const count = batchData.receipt?.logs.length ?? 0
+	const AssetLink = () => {
 		return (
-			<span className="text-secondary">
-				{count === 0 ? 'No events' : `${count} events`}
-			</span>
+			<Link
+				to={'/token/$address'}
+				params={{ address: tokenAddress }}
+				className="text-accent hover:text-accent/80 transition-colors"
+			>
+				{metadata?.symbol || 'TOKEN'}
+			</Link>
 		)
 	}
-	return (
-		<TransactionDescription
-			transaction={transaction}
-			knownEvents={batchData.knownEvents}
-			transactionReceipt={batchData.receipt}
-			accountAddress={accountAddress}
-		/>
-	)
+
+	// Format based on event type, showing actual data from the event
+	const formatEventDescription = () => {
+		// Handle Transfer events with the dedicated component
+		if (eventName === 'Transfer' && args.to && args.amount !== undefined) {
+			const to = args.to as string
+			const amount = args.amount as bigint
+			const from = args.from as string
+			const isSelf = from?.toLowerCase() === to?.toLowerCase()
+
+			return (
+				<>
+					<span>Transfer</span>{' '}
+					<span className="font-semibold">
+						{formatUnits(amount, metadata?.decimals ?? 6)}
+					</span>{' '}
+					<AssetLink /> <span>to</span>{' '}
+					<Link
+						to={'/address/$address'}
+						params={{ address: to as Address.Address }}
+						className="text-accent hover:text-accent/80 transition-colors"
+					>
+						{to?.slice(0, 6)}...{to?.slice(-4)}
+					</Link>
+					{isSelf && <span className="text-tertiary"> (self)</span>}
+				</>
+			)
+		}
+
+		// Handle Mint events
+		if (eventName === 'Mint' && args.to && args.amount !== undefined) {
+			const to = args.to as string
+			const amount = args.amount as bigint
+			const isSelf = to?.toLowerCase() === transaction.from?.toLowerCase()
+
+			return (
+				<>
+					<span>Mint</span>{' '}
+					<span className="font-semibold">
+						{formatUnits(amount, metadata?.decimals ?? 6)}
+					</span>{' '}
+					<span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>{' '}
+					<span>to</span>{' '}
+					<span className="text-accent">
+						{to?.slice(0, 6)}...{to?.slice(-4)}
+					</span>
+					{isSelf && <span className="text-tertiary"> (self)</span>}
+				</>
+			)
+		}
+
+		// Handle swap events
+		if (eventName === 'Swap' && (args.amount0In || args.amount0Out)) {
+			const amount0 = args.amount0In || args.amount0Out
+			const amount1 = args.amount1In || args.amount1Out
+
+			return (
+				<>
+					<span>Swap</span>{' '}
+					<span className="font-semibold">
+						{formatUnits(amount0, metadata?.decimals ?? 6)}
+					</span>{' '}
+					<AssetLink /> <span>for</span>{' '}
+					<span className="font-semibold">
+						{formatUnits(amount1, metadata?.decimals ?? 6)}
+					</span>{' '}
+					<AssetLink />
+				</>
+			)
+		}
+
+		// Handle whitelist events
+		if (args.address || args.account) {
+			const address = args.address || args.account
+			const policyId = args.policyId || args.id
+
+			return (
+				<>
+					<span>Whitelist</span>{' '}
+					<span className="text-accent">
+						{address?.slice(0, 6)}...{address?.slice(-4)}
+					</span>{' '}
+					<span>on Policy</span>{' '}
+					<span className="text-accent">#{policyId?.toString()}</span>
+				</>
+			)
+		}
+
+		if (eventName === 'Approval') {
+			return (
+				<>
+					<span>Approval</span>{' '}
+					<span className="font-semibold">
+						{formatUnits(args.amount, metadata?.decimals ?? 6)}
+					</span>{' '}
+					<AssetLink />
+				</>
+			)
+		}
+
+		// Generic fallback - just show the event name
+		return <span>{eventName || 'Transaction'}</span>
+	}
+
+	return <span className="text-primary">{formatEventDescription()}</span>
 }
 
-function TransactionFeeCell(props: { hash: Hex.Hex }) {
-	return (
-		<ClientOnly fallback={placeholder}>
-			<TransactionFeeCellInner {...props} />
-		</ClientOnly>
-	)
-}
+function TransactionTimestamp({
+	blockNumber,
+}: {
+	blockNumber: Hex.Hex | null | undefined
+}) {
+	const { data: timestamp } = useBlock({
+		blockNumber: blockNumber ? Hex.toBigInt(blockNumber) : undefined,
+		query: {
+			enabled: Boolean(blockNumber),
+			select: (block) => block.timestamp,
+		},
+	})
 
-function TransactionFeeCellInner(props: { hash: Hex.Hex }) {
-	const batchData = useTransactionDataFromBatch(props.hash)
-	if (!batchData?.receipt) return placeholder
-	return (
-		<span className="text-tertiary">
-			{PriceFormatter.format(
-				batchData.receipt.effectiveGasPrice * batchData.receipt.gasUsed,
-				{ decimals: 18, format: 'short' },
-			)}
-		</span>
-	)
-}
+	const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
 
-function AssetName(props: { asset: AssetData }) {
-	const { asset } = props
-	if (!asset.metadata?.name) return <span className="text-tertiary">…</span>
-	return (
-		<span className="inline-flex items-center gap-2">
-			<TokenIcon
-				address={asset.address}
-				name={asset.metadata?.name}
-				className="size-5!"
-			/>
-			<span className="truncate">{asset.metadata.name}</span>
-		</span>
-	)
-}
+	// Update every second to keep time live
+	React.useEffect(() => {
+		const interval = setInterval(forceUpdate, 1000)
+		return () => clearInterval(interval)
+	}, [])
 
-function AssetSymbol(props: { asset: AssetData }) {
-	const { asset } = props
-	if (!asset.metadata?.symbol) return <span className="text-tertiary">…</span>
-	return (
-		<Link
-			to="/token/$address"
-			params={{ address: asset.address }}
-			className="text-accent hover:underline press-down"
-		>
-			{asset.metadata.symbol}
-		</Link>
-	)
-}
+	if (!timestamp) return <span className="text-tertiary">--</span>
 
-function AssetContract(props: { asset: AssetData }) {
-	return (
-		<span className="text-accent">
-			{HexFormatter.truncate(props.asset.address, 10)}
-		</span>
-	)
-}
+	// Convert Unix timestamp to readable format
+	const date = new Date(Number(timestamp) * 1_000)
+	const now = new Date()
+	const diffMs = now.getTime() - date.getTime()
+	const diffSec = Math.floor(diffMs / 1000)
+	const diffMin = Math.floor(diffSec / 60)
+	const diffHour = Math.floor(diffMin / 60)
+	const diffDay = Math.floor(diffHour / 24)
 
-function AssetAmount(props: { asset: AssetData }) {
-	const { asset } = props
-	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
-		return <span className="text-tertiary">…</span>
-	const formatted = formatUnits(asset.balance, asset.metadata.decimals)
-	return <span>{PriceFormatter.formatAmountShort(formatted)}</span>
-}
+	let timeAgo: string
+	if (diffSec < 60) timeAgo = `${diffSec}s ago`
+	else if (diffMin < 60) timeAgo = `${diffMin}m ago`
+	else if (diffHour < 24) timeAgo = `${diffHour}h ago`
+	else timeAgo = `${diffDay}d ago`
 
-function AssetValue(props: { asset: AssetData }) {
-	const { asset } = props
-	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
-		return <span className="text-tertiary">…</span>
 	return (
-		<span>
-			{PriceFormatter.format(asset.balance, {
-				decimals: asset.metadata.decimals,
-				format: 'short',
-			})}
+		<span className="text-tertiary" title={date.toLocaleString()}>
+			{timeAgo}
 		</span>
 	)
 }
