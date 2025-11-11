@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
 import { createFileRoute } from '@tanstack/react-router'
 import { Address, Hex, Json, Value } from 'ox'
+import * as React from 'react'
 import { TokenRole } from 'tempo.ts/ox'
 import { Abis } from 'tempo.ts/viem'
 import { Actions } from 'tempo.ts/wagmi'
@@ -15,6 +16,7 @@ import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { Receipt } from '#components/Receipt/Receipt.tsx'
+import { parseKnownEvents } from '#known-events.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 
 async function loader({
@@ -60,6 +62,7 @@ async function loader({
 		lineItems,
 		receipt,
 		timestampFormatted,
+		tokenMetadata,
 		transaction,
 	}
 }
@@ -181,7 +184,12 @@ export const Route = createFileRoute('/receipt/$hash')({
 })
 
 function Component() {
-	const { block, receipt, transaction } = Route.useLoaderData()
+	const { block, lineItems, receipt, transaction } = Route.useLoaderData()
+
+	const fee = lineItems.feeTotals?.[0]?.ui?.right
+	const total = lineItems.totals?.[0]?.ui?.right
+
+	const knownEvents = React.useMemo(() => parseKnownEvents(receipt), [receipt])
 
 	return (
 		<div className="font-mono text-[13px] flex flex-col items-center justify-center min-h-screen gap-8">
@@ -190,17 +198,9 @@ function Component() {
 				sender={transaction.from}
 				hash={receipt.transactionHash}
 				timestamp={block.timestamp}
-				displayEvents={[
-					{
-						amount: '($1.54)',
-						note: 'Thanks for the coffee.'.repeat(10),
-						receiver: '0x1234567890abcdef1234567890abcdef12345678',
-						token: 'aUSD',
-						type: 'send',
-					},
-				]}
-				fee="($0.01)"
-				total="($1.55)"
+				events={knownEvents}
+				fee={fee}
+				total={total}
 			/>
 		</div>
 	)
