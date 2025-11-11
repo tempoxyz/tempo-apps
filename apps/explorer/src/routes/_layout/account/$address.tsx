@@ -21,9 +21,10 @@ import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 
+import { EventDescription } from '#components/EventDescription'
 import { PriceFormatter } from '#lib/formatting'
-import { type KnownEventPart, parseKnownEvents } from '#lib/known-events'
-import { config } from '#wagmi.config.ts'
+import { parseKnownEvents } from '#lib/known-events'
+import { config } from '#wagmi.config'
 
 type TransactionsResponse = {
 	transactions: Array<Transaction>
@@ -33,6 +34,8 @@ type TransactionsResponse = {
 	hasMore: boolean
 }
 
+const rowsPerPage = 10
+
 const transactionsQuery = (
 	address: Address.Address,
 	page: number,
@@ -41,7 +44,7 @@ const transactionsQuery = (
 	offset: number,
 ) =>
 	queryOptions({
-		queryKey: ['account-transactions', chainId, address, page, limit],
+		queryKey: ['account-transactions', chainId, address, page],
 		queryFn: (): Promise<TransactionsResponse> =>
 			fetch(`/api/address/${address}?offset=${offset}&limit=${limit}`).then(
 				(response) => response.json(),
@@ -58,17 +61,16 @@ export const Route = createFileRoute('/_layout/account/$address')({
 	component: RouteComponent,
 	validateSearch: z.object({
 		page: z._default(z.number(), 1),
-		limit: z._default(z.number(), 7),
 		tab: z._default(z.enum(['history', 'assets']), 'history'),
 	}),
-	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
-	loader: async ({ deps: { page, limit }, params: { address }, context }) => {
-		const offset = (page - 1) * limit
+	loaderDeps: ({ search: { page } }) => ({ page }),
+	loader: async ({ deps: { page }, params: { address }, context }) => {
+		const offset = (page - 1) * rowsPerPage
 
 		const client = getClient(config)
 
-		context.queryClient.fetchQuery(
-			transactionsQuery(address, page, limit, client.chain.id, offset),
+		await context.queryClient.fetchQuery(
+			transactionsQuery(address, page, rowsPerPage, client.chain.id, offset),
 		)
 	},
 	params: {
@@ -95,22 +97,22 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const routerState = useRouterState()
 	const { address } = Route.useParams()
-	const { page, limit, tab } = Route.useSearch()
+	const { page, tab } = Route.useSearch()
 
 	const activeTab = tab
 
 	const goToPage = React.useCallback(
 		(newPage: number) => {
-			navigate({ to: '.', search: { page: newPage, limit, tab } })
+			navigate({ to: '.', search: { page: newPage, tab } })
 		},
-		[navigate, limit, tab],
+		[navigate, tab],
 	)
 
 	const setActiveTab = React.useCallback(
 		(newTab: 'history' | 'assets') => {
-			navigate({ to: '.', search: { page, limit, tab: newTab } })
+			navigate({ to: '.', search: { page, tab: newTab } })
 		},
-		[navigate, page, limit],
+		[navigate, page],
 	)
 
 	const inputRef = React.useRef<HTMLInputElement | null>(null)
@@ -187,41 +189,46 @@ function RouteComponent() {
 				<div className="grid grid-cols-1 gap-6 font-mono">
 					<section className="flex flex-col gap-6 w-full">
 						{/* Tabs */}
-						<div className="overflow-hidden rounded-xl border border-border-primary bg-primary">
-							<div className="px-5 h-10 flex items-center gap-6">
-								<button
-									type="button"
-									onClick={() => setActiveTab('history')}
-									className={`text-sm font-medium uppercase tracking-[0.15em] transition-colors ${
+						<div className="rounded-xl border border-border-primary bg-primary">
+							<div className="h-10 flex items-center">
+								<Link
+									to="."
+									search={{ page, tab: 'history' }}
+									onClick={(e) => {
+										e.preventDefault()
+										setActiveTab('history')
+									}}
+									className={`h-full pl-[20px] pr-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors active:translate-y-[0.5px] ${
 										activeTab === 'history'
 											? 'text-primary'
 											: 'text-tertiary hover:text-secondary'
 									}`}
 								>
 									HISTORY
-								</button>
-								<button
-									type="button"
-									onClick={() => setActiveTab('assets')}
-									className={`text-sm font-medium uppercase tracking-[0.15em] transition-colors ${
+								</Link>
+								<Link
+									to="."
+									search={{ page, tab: 'assets' }}
+									onClick={(e) => {
+										e.preventDefault()
+										setActiveTab('assets')
+									}}
+									className={`h-full px-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors active:translate-y-[0.5px] ${
 										activeTab === 'assets'
 											? 'text-primary'
 											: 'text-tertiary hover:text-secondary'
 									}`}
 								>
 									ASSETS
-								</button>
+								</Link>
 							</div>
 
 							{activeTab === 'history' && (
-								<React.Suspense
-									fallback={<HistoryLoadingSkeleton limit={limit} />}
-								>
+								<React.Suspense fallback={<HistoryLoadingSkeleton />}>
 									<HistoryTabContent
 										key={address}
 										address={address}
 										page={page}
-										limit={limit}
 										goToPage={goToPage}
 									/>
 								</React.Suspense>
@@ -231,7 +238,7 @@ function RouteComponent() {
 								<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
 									<table className="w-full border-collapse text-sm rounded-t-sm">
 										<thead>
-											<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+											<tr className="border-dashed border-b border-border-base text-left text-xs tracking-wider text-tertiary">
 												<th className="px-5 pb-3 font-normal">Name</th>
 												<th className="px-5 pb-3 font-normal">Ticker</th>
 												<th className="px-5 pb-3 font-normal">Currency</th>
@@ -245,7 +252,7 @@ function RouteComponent() {
 										</thead>
 										{/** biome-ignore lint/complexity/noUselessFragments: _ */}
 										<ClientOnly fallback={<></>}>
-											<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
+											<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
 												{assets.map((assetAddress) => (
 													<AssetRow
 														key={assetAddress}
@@ -265,7 +272,7 @@ function RouteComponent() {
 	)
 }
 
-function HistoryLoadingSkeleton({ limit }: { limit: number }) {
+function HistoryLoadingSkeleton() {
 	return (
 		<>
 			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
@@ -278,7 +285,7 @@ function HistoryLoadingSkeleton({ limit }: { limit: number }) {
 						<col className="w-28" />
 					</colgroup>
 					<thead>
-						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+						<tr className="border-dashed border-b border-border-base text-left text-xs tracking-wider text-tertiary">
 							<th className="px-5 pb-3 font-normal">Time</th>
 							<th className="px-5 pb-3 font-normal">Description</th>
 							<th className="px-3 pb-3 font-normal">Hash</th>
@@ -287,11 +294,11 @@ function HistoryLoadingSkeleton({ limit }: { limit: number }) {
 						</tr>
 					</thead>
 					<tbody
-						className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10"
-						style={{ minHeight: `${limit * 56}px` }}
+						className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base"
+						style={{ height: `${rowsPerPage * 56}px` }}
 					>
 						{Array.from(
-							{ length: limit },
+							{ length: rowsPerPage },
 							(_, index) => `loading-row-${index}`,
 						).map((key) => (
 							<tr key={key} className="transition-colors h-14">
@@ -316,7 +323,7 @@ function HistoryLoadingSkeleton({ limit }: { limit: number }) {
 				</table>
 			</div>
 
-			<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
+			<div className="font-mono flex flex-col gap-3 border-t border-dashed border-border-base px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
 				<div className="flex flex-row items-center gap-2">
 					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
 					<div className="h-7 w-32 bg-alt animate-pulse rounded" />
@@ -331,24 +338,22 @@ function HistoryLoadingSkeleton({ limit }: { limit: number }) {
 function HistoryTabContent({
 	address,
 	page,
-	limit,
 	goToPage,
 }: {
 	address: Address.Address
 	page: number
-	limit: number
 	goToPage: (page: number) => void
 }) {
 	const client = useClient()
-	const offset = (page - 1) * limit
+	const offset = (page - 1) * rowsPerPage
 
 	const { data, isFetching } = useSuspenseQuery(
-		transactionsQuery(address, page, limit, client?.chain.id ?? 0, offset),
+		transactionsQuery(address, page, rowsPerPage, client.chain.id, offset),
 	)
 
 	const transactions = data.transactions
 	const totalTransactions = data.total
-	const totalPages = Math.ceil(totalTransactions / limit)
+	const totalPages = Math.ceil(totalTransactions / rowsPerPage)
 
 	// Track if we're changing pages (not just auto-refreshing)
 	const prevPageRef = React.useRef(page)
@@ -389,7 +394,7 @@ function HistoryTabContent({
 						<col className="w-28" />
 					</colgroup>
 					<thead>
-						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+						<tr className="border-dashed border-b border-border-base text-left text-xs tracking-wider text-tertiary">
 							<th className="px-5 pb-3 font-normal">Time</th>
 							<th className="px-5 pb-3 font-normal">Description</th>
 							<th className="px-3 pb-3 font-normal">Hash</th>
@@ -397,17 +402,24 @@ function HistoryTabContent({
 							<th className="px-5 pb-3 text-right font-normal">Total</th>
 						</tr>
 					</thead>
-					{/** biome-ignore lint/complexity/noUselessFragments: _ */}
-					<ClientOnly fallback={<></>}>
-						<tbody
-							className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10"
-							style={{ minHeight: `${limit * 56}px` }}
-						>
-							{transactions?.map((transaction) => (
-								<tr
-									key={transaction.hash}
-									className="transition-colors hover:bg-alt h-14"
-								>
+					<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
+						{Array.from({ length: rowsPerPage }, (_, index) => {
+							const transaction = transactions?.[index]
+							const key = transaction?.hash ?? `empty-row-${index}`
+
+							if (!transaction)
+								return (
+									<tr key={key} className="h-14">
+										<td className="px-5 py-3"></td>
+										<td className="px-5 py-3"></td>
+										<td className="px-3 py-3"></td>
+										<td className="px-3 py-3"></td>
+										<td className="px-5 py-3"></td>
+									</tr>
+								)
+
+							return (
+								<tr key={key} className="transition-colors hover:bg-alt h-14">
 									{/* Time */}
 									<td className="px-5 py-3 text-primary">
 										<div className="text-xs">
@@ -449,7 +461,7 @@ function HistoryTabContent({
 												{Hex.toNumber(transaction.blockNumber).toString()}
 											</Link>
 										) : (
-											<span className="text-tertiary">--</span>
+											<span className="text-tertiary">…</span>
 										)}
 									</td>
 
@@ -477,13 +489,13 @@ function HistoryTabContent({
 										})()}
 									</td>
 								</tr>
-							))}
-						</tbody>
-					</ClientOnly>
+							)
+						})}
+					</tbody>
 				</table>
 			</div>
 
-			<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
+			<div className="font-mono flex flex-col gap-3 border-t border-dashed border-border-base px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
 				<div className="flex flex-row items-center gap-2">
 					<button
 						type="button"
@@ -632,6 +644,7 @@ function AssetRow({ contractAddress }: { contractAddress: Address.Address }) {
 }
 
 function TransactionDescription({ transaction }: { transaction: Transaction }) {
+	const [expanded, setExpanded] = React.useState(false)
 	const { data: receipt, isLoading } = useTransactionReceipt({
 		hash: transaction.hash,
 		query: {
@@ -644,127 +657,42 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 		return parseKnownEvents(receipt)
 	}, [receipt])
 
-	if (isLoading) return <span className="text-tertiary">Loading...</span>
+	if (isLoading) return null
 
-	if (!knownEvents || knownEvents.length === 0)
-		return <span className="text-tertiary">Processing...</span>
+	if (!knownEvents || knownEvents.length === 0) return null
 
-	const event = knownEvents[0]
+	const eventsToShow = expanded ? knownEvents : [knownEvents[0]]
+	const remainingCount = knownEvents.length - eventsToShow.length
 
 	return (
-		<div className="text-primary">
-			{event.parts.map((part, index) => (
-				<EventPart
-					key={`${part.type}-${index}`}
-					part={part}
-					isLast={index === event.parts.length - 1}
-				/>
-			))}
-			{event.note && (
-				<span className="text-tertiary"> (note: {event.note})</span>
-			)}
+		<div className="text-primary flex flex-col gap-2">
+			{eventsToShow.map((event, eventIndex) => {
+				const key = `${event.type}-${eventIndex}`
+				return (
+					<div
+						key={key}
+						className="flex flex-row flex-wrap items-center gap-[4px]"
+					>
+						<EventDescription event={event} />
+						{eventIndex === 0 && remainingCount > 0 && (
+							<button
+								type="button"
+								onClick={() => setExpanded(true)}
+								className="text-base-content-secondary cursor-pointer active:translate-y-[0.5px]"
+							>
+								and {remainingCount} more
+							</button>
+						)}
+						{event.note && (
+							<span className="text-tertiary w-full">
+								{' '}
+								(note: {event.note})
+							</span>
+						)}
+					</div>
+				)
+			})}
 		</div>
-	)
-}
-
-function EventPart({
-	part,
-	isLast,
-}: {
-	part: KnownEventPart
-	isLast: boolean
-}) {
-	// Call hooks unconditionally at the top level
-	const tokenAddress =
-		part.type === 'amount'
-			? part.value.token
-			: part.type === 'token'
-				? part.value.address
-				: undefined
-	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: tokenAddress,
-		query: {
-			enabled: Boolean(tokenAddress),
-		},
-	})
-
-	const renderPart = () => {
-		switch (part.type) {
-			case 'action':
-				return (
-					<span className="flex flex-row justify-center items-center px-[5px] py-[4px] bg-base-alt leading-[16px] w-auto">
-						{part.value}
-					</span>
-				)
-
-			case 'account':
-				return (
-					<Link
-						to={'/account/$address'}
-						params={{ address: part.value }}
-						className="text-accent hover:text-accent/80 transition-colors"
-					>
-						{part.value.slice(0, 6)}...{part.value.slice(-4)}
-					</Link>
-				)
-
-			case 'amount': {
-				const decimals = part.value.decimals ?? metadata?.decimals ?? 6
-				return (
-					<>
-						<span className="font-semibold">
-							{formatUnits(part.value.value, decimals)}
-						</span>{' '}
-						<Link
-							to={'/token/$address'}
-							params={{ address: part.value.token }}
-							className="text-accent hover:text-accent/80 transition-colors"
-						>
-							{metadata?.symbol || 'TOKEN'}
-						</Link>
-					</>
-				)
-			}
-
-			case 'token':
-				return (
-					<Link
-						to={'/token/$address'}
-						params={{ address: part.value.address }}
-						className="text-accent hover:text-accent/80 transition-colors"
-					>
-						{part.value.symbol ||
-							metadata?.symbol ||
-							part.value.address.slice(0, 8)}
-					</Link>
-				)
-
-			case 'hex':
-				return (
-					<span className="font-mono text-accent">
-						{part.value.slice(0, 10)}...
-					</span>
-				)
-
-			case 'primary':
-				return <span className="font-semibold">{part.value}</span>
-
-			case 'secondary':
-				return <span>{part.value}</span>
-
-			case 'tick':
-				return <span className="text-accent">{part.value}</span>
-
-			default:
-				return null
-		}
-	}
-
-	return (
-		<>
-			<div className="inline-block">{renderPart()}</div>
-			{!isLast && ' '}
-		</>
 	)
 }
 
@@ -789,7 +717,7 @@ function TransactionTimestamp({
 		return () => clearInterval(interval)
 	}, [])
 
-	if (!timestamp) return <span className="text-tertiary">--</span>
+	if (!timestamp) return <span className="text-tertiary">…</span>
 
 	// Convert Unix timestamp to readable format
 	const date = new Date(Number(timestamp) * 1_000)

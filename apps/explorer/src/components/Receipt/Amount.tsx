@@ -3,7 +3,7 @@ import type { Address } from 'ox'
 import { Value } from 'ox'
 import { Actions } from 'tempo.ts/wagmi'
 import { formatAmount } from '#lib/formatting'
-import { config } from '#wagmi.config.ts'
+import { config } from '#wagmi.config'
 
 export function Amount(props: Amount.Props) {
 	const { value, token, decimals: decimals_ } = props

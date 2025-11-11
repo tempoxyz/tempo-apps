@@ -54,7 +54,7 @@ const amountFormatter = new Intl.NumberFormat('en-US', {
 	maximumFractionDigits: 18,
 })
 
-export function formatAmount(value: string): string {
+export function formatAmount(value: string) {
 	const number = Number(value)
 	if (number > 0 && number < 0.01) return '<0.01'
 	return amountFormatter.format(number)
@@ -93,14 +93,48 @@ export namespace PriceFormatter {
 	 * @param value - The number or bigint to format.
 	 * @returns The formatted string.
 	 */
-	export function format(value: number | bigint, decimals: number) {
+	export function format(
+		value: number | bigint,
+		decimalsOrOptions?:
+			| number
+			| {
+					decimals?: number
+					format?: 'short' | 'full'
+			  },
+	) {
 		if (Number(value) > 0 && Number(value) < 0.01) return '<$0.01'
-		const value_ = Value.format(BigInt(value), decimals)
-		return numberIntl.format(Number(value_))
+
+		const options =
+			typeof decimalsOrOptions === 'number'
+				? { decimals: decimalsOrOptions }
+				: (decimalsOrOptions ?? {})
+
+		options.format ??= 'full'
+		options.decimals ??= 0
+
+		const formatter = options.format === 'short' ? numberIntlShort : numberIntl
+
+		return formatter.format(
+			typeof value === 'number'
+				? value // ignore decimals when value is a number
+				: Number(Value.format(BigInt(value), options.decimals)),
+		)
 	}
 
 	/** @internal */
+	const numberIntlShort = new Intl.NumberFormat('en-US', {
+		notation: 'compact',
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 2,
+		currency: 'USD',
+		style: 'currency',
+	})
+
+	/** @internal */
 	const numberIntl = new Intl.NumberFormat('en-US', {
+		notation: 'standard',
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 2,
 		currency: 'USD',
 		style: 'currency',
 	})
