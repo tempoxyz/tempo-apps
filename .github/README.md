@@ -4,9 +4,9 @@ Monoapp for Tempo, powered by Cloudflare + TanStack Start/Router.
 
 ## Apps 
 
-| App / Route | Description | URL |
+| Workspace | Description | URL |
 | --------- | ----------- | ----------- |
-| `/explore/*` | Chain explorer. | [`https://explore.tempo.xyz/*`](https://explore.tempo.xyz) |
+| [`apps/explore`](apps/explore) | Chain explorer. | [`https://explore.tempo.xyz/*`](https://explore.tempo.xyz) |
 
 ---
 
