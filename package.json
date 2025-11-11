@@ -34,7 +34,7 @@
 		"react-dom": "^19.2.0",
 		"tailwind-merge": "^3.4.0",
 		"tailwindcss": "^4.1.17",
-		"tempo.ts": "https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@74ed4a7",
+		"tempo.ts": "~0.4",
 		"viem": "2.x",
 		"wagmi": "^2.19.2",
 		"zod": "^4.1.12"
