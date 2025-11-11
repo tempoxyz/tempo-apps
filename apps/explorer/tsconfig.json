@@ -6,7 +6,6 @@
 		"module": "ESNext",
 		"lib": ["ES2024", "DOM", "DOM.Iterable"],
 		"types": [
-			"bun",
 			"node",
 			"vite/client",
 			"typed-query-selector/strict",

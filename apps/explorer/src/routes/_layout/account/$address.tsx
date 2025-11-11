@@ -351,6 +351,8 @@ function HistoryTabContent(props: {
 	const { address, page, goToPage, isPending } = props
 
 	const client = useClient()
+	if (!client) throw new Error('client not found')
+
 	const offset = (page - 1) * rowsPerPage
 
 	const { data } = useSuspenseQuery(
