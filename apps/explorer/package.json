@@ -1,5 +1,5 @@
 {
-	"name": "@tempo/app",
+	"name": "explorer",
 	"private": true,
 	"type": "module",
 	"scripts": {
