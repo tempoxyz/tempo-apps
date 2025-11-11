@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { type Address, Hex } from 'ox'
 import { useState } from 'react'
+import { formatUnits } from 'viem'
 import {
 	formatTimestampDate,
 	formatTimestampTime,
@@ -26,10 +27,10 @@ export function Receipt(props: Receipt.Props) {
 	return (
 		<div className="flex flex-col w-[360px] bg-base-plane border border-border-base shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] text-base-content">
 			<div className="flex gap-[40px] px-[20px] pt-[24px] pb-[16px]">
-				<div className="flex-shrink-0">
+				<div className="shrink-0">
 					<ReceiptMark />
 				</div>
-				<div className="flex flex-col gap-[8px] font-mono text-[13px] [line-height:16px] flex-1">
+				<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Block</span>
 						<Link
@@ -55,7 +56,7 @@ export function Receipt(props: Receipt.Props) {
 						<div className="relative">
 							<span className="text-tertiary capitalize">Hash</span>
 							{notifying && (
-								<span className="absolute left-[calc(100%+8px)] text-[13px] [line-height:16px] text-accent">
+								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px] text-accent">
 									copied
 								</span>
 							)}
@@ -97,114 +98,132 @@ export function Receipt(props: Receipt.Props) {
 			</div>
 			<div className="border-t border-dashed border-border-base" />
 			<div className="flex flex-col gap-3 px-[20px] py-[16px] font-mono text-[13px] leading-4 [counter-reset:event]">
-				{events.map((event, index) => (
-					<div
-						key={`${event.type}-${index}`}
-						className="flex flex-col gap-[8px] [counter-increment:event]"
-					>
-						<div className="flex flex-row justify-between items-start gap-[10px]">
-							<div className="flex flex-row items-start gap-[4px] flex-grow min-w-0 [line-height:24px]">
-								<div className="flex flex-row justify-center text-tertiary before:content-[counter(event)_'.'] flex-shrink-0 [line-height:24px]"></div>
-								<div className="flex flex-row flex-wrap items-center pl-[4px] gap-[4px] flex-grow">
-									{event.parts.map((part, partIndex) => {
-										const partKey = `${part.type}-${partIndex}`
-										switch (part.type) {
-											case 'action':
-												return (
-													<div
-														key={partKey}
-														className="flex flex-row justify-center items-center px-[5px] py-[4px] bg-base-alt [line-height:16px]"
-													>
-														<span className="capitalize items-end">
+				{events.map((event, index) => {
+					// Calculate total amount from event parts
+					// For swaps, only show the first amount (what's being swapped out)
+					const amounts = event.parts
+						.filter((part) => part.type === 'amount')
+						.map((part) => {
+							if (part.type === 'amount') {
+								const decimals = part.value.decimals ?? 6
+								return Number(formatUnits(part.value.value, decimals))
+							}
+							return 0
+						})
+					const totalAmount =
+						event.type === 'swap' && amounts.length > 0
+							? amounts[0]
+							: amounts.reduce((sum, amt) => sum + amt, 0)
+
+					return (
+						<div
+							key={`${event.type}-${index}`}
+							className="flex flex-col gap-[8px] [counter-increment:event]"
+						>
+							<div className="flex flex-row justify-between items-start gap-[10px]">
+								<div className="flex flex-row items-start gap-[4px] grow min-w-0 leading-[24px]">
+									<div className="flex flex-row justify-center text-tertiary before:content-[counter(event)_'.'] shrink-0 leading-[24px]"></div>
+									<div className="flex flex-row flex-wrap items-center pl-[4px] gap-[4px] grow">
+										{event.parts.map((part, partIndex) => {
+											const partKey = `${part.type}-${partIndex}`
+											switch (part.type) {
+												case 'action':
+													return (
+														<div
+															key={partKey}
+															className="flex flex-row justify-center items-center px-[5px] py-[4px] bg-base-alt leading-[16px]"
+														>
+															<span className="capitalize items-end">
+																{part.value}
+															</span>
+														</div>
+													)
+												case 'amount':
+													return (
+														<Amount
+															key={partKey}
+															value={part.value.value}
+															token={part.value.token}
+															decimals={part.value.decimals}
+														/>
+													)
+												case 'token':
+													return (
+														<span
+															key={partKey}
+															className="text-base-content-positive items-end"
+														>
+															{part.value.symbol ||
+																shortenHex(part.value.address)}
+														</span>
+													)
+												case 'account':
+													return (
+														<Link
+															key={partKey}
+															to={'/address/$address'}
+															params={{ address: part.value }}
+															className="text-accent items-end active:translate-y-[0.5px] whitespace-nowrap"
+															title={part.value}
+														>
+															{shortenHex(part.value)}
+														</Link>
+													)
+												case 'hex':
+													return (
+														<span
+															key={partKey}
+															className="items-end whitespace-nowrap"
+															title={part.value}
+														>
+															{shortenHex(part.value)}
+														</span>
+													)
+												case 'primary':
+													return (
+														<span key={partKey} className="items-end">
 															{part.value}
 														</span>
-													</div>
-												)
-											case 'amount':
-												return (
-													<Amount
-														key={partKey}
-														value={part.value.value}
-														token={part.value.token}
-														decimals={part.value.decimals}
-													/>
-												)
-											case 'token':
-												return (
-													<span
-														key={partKey}
-														className="text-base-content-positive items-end"
-													>
-														{part.value.symbol ||
-															shortenHex(part.value.address)}
-													</span>
-												)
-											case 'account':
-												return (
-													<Link
-														key={partKey}
-														to={'/address/$address'}
-														params={{ address: part.value }}
-														className="text-accent items-end active:translate-y-[0.5px] whitespace-nowrap"
-														title={part.value}
-													>
-														{shortenHex(part.value)}
-													</Link>
-												)
-											case 'hex':
-												return (
-													<span
-														key={partKey}
-														className="items-end whitespace-nowrap"
-														title={part.value}
-													>
-														{shortenHex(part.value)}
-													</span>
-												)
-											case 'primary':
-												return (
-													<span key={partKey} className="items-end">
-														{part.value}
-													</span>
-												)
-											case 'secondary':
-												return (
-													<span
-														key={partKey}
-														className="items-end text-secondary"
-													>
-														{part.value}
-													</span>
-												)
-											case 'tick':
-												return (
-													<span key={partKey} className="items-end">
-														{part.value}
-													</span>
-												)
-											default:
-												return null
-										}
-									})}
+													)
+												case 'secondary':
+													return (
+														<span
+															key={partKey}
+															className="items-end text-secondary"
+														>
+															{part.value}
+														</span>
+													)
+												case 'tick':
+													return (
+														<span key={partKey} className="items-end">
+															{part.value}
+														</span>
+													)
+												default:
+													return null
+											}
+										})}
+									</div>
+								</div>
+								<div className="flex text-right shrink-0 leading-[24px]">
+									{totalAmount > 0 && `($${totalAmount.toFixed(2)})`}
 								</div>
 							</div>
-							<div className="flex text-right flex-shrink-0 [line-height:24px]">
-								($0.1)
-							</div>
+							{event.note && (
+								<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
+									<div className="border-l border-border-base h-[20px] shrink-0" />
+									<span
+										className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
+										title={event.note}
+									>
+										{event.note}
+									</span>
+								</div>
+							)}
 						</div>
-						{event.note && (
-							<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
-								<div className="border-l border-border-base h-[20px] flex-shrink-0" />
-								<span
-									className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
-									title={event.note}
-								>
-									{event.note}
-								</span>
-							</div>
-						)}
-					</div>
-				))}
+					)
+				})}
 			</div>
 			<div className="border-t border-dashed border-border-base" />
 			<div className="flex flex-col gap-2 px-[20px] py-[16px] font-mono text-[13px] leading-4">
