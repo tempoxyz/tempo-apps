@@ -1,111 +1,75 @@
 import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
-import { queryOptions, useQuery } from '@tanstack/react-query'
+import { createFileRoute } from '@tanstack/react-router'
+import { Address, Hex, Json } from 'ox'
+import * as React from 'react'
+import { TokenRole } from 'tempo.ts/ox'
+import { Abis } from 'tempo.ts/viem'
+import { Actions } from 'tempo.ts/wagmi'
 import {
-	createFileRoute,
-	notFound,
-	rootRouteId,
-	useNavigate,
-} from '@tanstack/react-router'
-import { Hex, Json, Value } from 'ox'
-import { getPublicClient } from 'wagmi/actions'
+	type AbiEvent,
+	type Log,
+	parseEventLogs,
+	type TransactionReceipt,
+} from 'viem'
+import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
+import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { NotFound } from '#comps/NotFound'
-import { Receipt } from '#comps/Receipt'
-import { apostrophe } from '#lib/chars'
-import { decodeKnownCall, parseKnownEvents } from '#lib/domain/known-events'
-import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
-import * as Tip20 from '#lib/domain/tip20'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
-import { useKeyboardShortcut } from '#lib/hooks'
-import {
-	buildTxDescription,
-	formatEventForOgServer,
-	OG_BASE_URL,
-} from '#lib/og'
-import { withLoaderTiming } from '#lib/profiling'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { Receipt } from '#components/Receipt/Receipt.tsx'
+import { DateFormatter, HexFormatter, PriceFormatter } from '#formatting.ts'
+import { parseKnownEvents } from '#known-events.ts'
+import { config, getConfig } from '#wagmi.config.ts'
 
-function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
-	return queryOptions({
-		queryKey: ['receipt-detail', params.hash, params.rpcUrl],
-		queryFn: () => fetchReceiptData(params),
-		staleTime: 1000 * 60 * 5, // 5 minutes - receipt data is immutable
-	})
-}
+async function loader({
+	location,
+	params,
+}: {
+	location: { search: { r?: string | undefined } }
+	params: unknown
+}) {
+	const { r: rpcUrl } = location.search
+	const { hash } = z
+		.object({
+			hash: z
+				.pipe(
+					z.string(),
+					z.transform(
+						(val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex,
+					),
+				)
+				.check(z.regex(/^0x[a-fA-F0-9]{64}$/)),
+		})
+		.parse(params)
 
-async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
-	const config = getWagmiConfig()
-	const client = getPublicClient(config)
-	const receipt = await client.getTransactionReceipt({
-		hash: params.hash,
+	const client = getClient(getConfig({ rpcUrl }))
+	const receipt = await getTransactionReceipt(client, {
+		hash,
 	})
-	// TODO: investigate & consider batch/multicall
-	const [block, transaction, getTokenMetadata] = await Promise.all([
-		client.getBlock({ blockHash: receipt.blockHash }),
-		client.getTransaction({ hash: receipt.transactionHash }),
-		Tip20.metadataFromLogs(receipt.logs),
+	const [block, transaction, tokenMetadata] = await Promise.all([
+		getBlock(client, {
+			blockHash: receipt.blockHash,
+		}),
+		getTransaction(client, {
+			hash: receipt.transactionHash,
+		}),
+		TokenMetadata.fromLogs(receipt.logs),
 	])
 	const timestampFormatted = DateFormatter.format(block.timestamp)
 
-	const lineItems = LineItems.fromReceipt(receipt, { getTokenMetadata })
-	const parsedEvents = parseKnownEvents(receipt, {
-		transaction,
-		getTokenMetadata,
-	})
-	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
-
-	// Try to decode known contract calls (e.g., validator precompile)
-	// Prioritize decoded calls over fee-only events since they're more descriptive
-	const knownCall =
-		transaction.to && transaction.input && transaction.input !== '0x'
-			? decodeKnownCall(transaction.to, transaction.input)
-			: null
-
-	const knownEvents = knownCall
-		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
-		: parsedEvents
+	const lineItems = LineItems.fromReceipt(receipt, { tokenMetadata })
 
 	return {
 		block,
-		feeBreakdown,
-		knownEvents,
 		lineItems,
 		receipt,
 		timestampFormatted,
+		tokenMetadata,
 		transaction,
 	}
 }
 
-function parseHashFromParams(params: unknown): Hex.Hex | null {
-	const parseResult = z
-		.object({
-			hash: z.pipe(
-				z.string(),
-				z.transform(
-					(val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex,
-				),
-			),
-		})
-		.safeParse(params)
-
-	if (!parseResult.success) return null
-
-	const { hash } = parseResult.data
-	if (!Hex.validate(hash) || Hex.size(hash) !== 32) return null
-
-	return hash
-}
-
 export const Route = createFileRoute('/_layout/receipt/$hash')({
 	component: Component,
-	notFoundComponent: ({ data }) => (
-		<NotFound
-			title="Receipt Not Found"
-			message={`The receipt doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
-			data={data as NotFound.NotFoundData}
-		/>
-	),
 	headers: () => ({
 		...(import.meta.env.PROD
 			? {
@@ -114,27 +78,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			: {}),
 	}),
 	// @ts-expect-error - TODO: fix
-	loader: ({ params, context }) =>
-		withLoaderTiming('/_layout/receipt/$hash', async () => {
-			const hash = parseHashFromParams(params)
-			if (!hash)
-				throw notFound({
-					routeId: rootRouteId,
-					data: { type: 'hash', value: params.hash },
-				})
-
-			try {
-				return await context.queryClient.ensureQueryData(
-					receiptDetailQueryOptions({ hash }),
-				)
-			} catch (error) {
-				console.error(error)
-				throw notFound({
-					routeId: rootRouteId,
-					data: { type: 'hash', value: hash },
-				})
-			}
-		}),
+	loader,
 	server: {
 		handlers: {
 			async GET({ params, request, next }) {
@@ -167,11 +111,12 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				})()
 
 				const rpcUrl = url.searchParams.get('r') ?? undefined
-				const hash = parseHashFromParams(params)
 
 				if (type === 'text/plain') {
-					if (!hash) return new Response('Not found', { status: 404 })
-					const data = await fetchReceiptData({ hash, rpcUrl })
+					const data = await loader({
+						location: { search: { r: rpcUrl } },
+						params,
+					})
 					const text = TextRenderer.render(data)
 					return new Response(text, {
 						headers: {
@@ -188,11 +133,9 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				}
 
 				if (type === 'application/json') {
-					if (!hash)
-						return Response.json({ error: 'Not found' }, { status: 404 })
-					const { lineItems, receipt } = await fetchReceiptData({
-						hash,
-						rpcUrl,
+					const { lineItems, receipt } = await loader({
+						location: { search: { r: rpcUrl } },
+						params,
 					})
 					return Response.json(
 						JSON.parse(Json.stringify({ lineItems, receipt })),
@@ -200,23 +143,15 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				}
 
 				if (type === 'application/pdf') {
+					// @ts-expect-error - TODO: shoudn't error
 					const browser = await puppeteer.launch(env.BROWSER)
 					const page = await browser.newPage()
 
-					// Pass through authentication if present
-					const authHeader = request.headers.get('Authorization')
-					if (authHeader)
-						await page.setExtraHTTPHeaders({
-							Authorization: authHeader,
-						})
-
-					// Build the equivalent HTML URL, preserving existing query params
-					const htmlUrl = new URL(url.href)
-					htmlUrl.pathname = htmlUrl.pathname.replace(/\.pdf$/, '')
-					htmlUrl.searchParams.set('plain', '')
+					// Get the current URL without .pdf extension
+					const htmlUrl = `${url.href.replace(/\.pdf$/, '')}?plain`
 
 					// Navigate to the HTML version of the receipt
-					await page.goto(htmlUrl.toString(), { waitUntil: 'domcontentloaded' })
+					await page.goto(htmlUrl, { waitUntil: 'domcontentloaded' })
 
 					// Generate PDF
 					const pdf = await page.pdf({
@@ -244,137 +179,40 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			},
 		},
 	},
-	params: z.object({
-		hash: z.pipe(
-			z.string(),
-			z.transform((val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex),
-		),
-	}),
-	head: ({ params, loaderData }) => {
-		const title = `Receipt ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
-
-		const description = buildTxDescription(
-			loaderData
-				? {
-						timestamp: Number(loaderData.block.timestamp) * 1000,
-						from: loaderData.receipt.from,
-						events: loaderData.knownEvents ?? [],
-					}
-				: null,
-		)
-
-		const search = new URLSearchParams()
-		if (loaderData) {
-			search.set('block', loaderData.block.number.toString())
-			search.set('sender', loaderData.receipt.from)
-			const ogTimestamp = DateFormatter.formatTimestampForOg(
-				loaderData.block.timestamp,
-			)
-			search.set('date', ogTimestamp.date)
-			search.set('time', ogTimestamp.time)
-
-			// Include fee so the OG receipt can render the Fee row.
-			const gasUsed = loaderData.receipt.gasUsed ?? 0n
-			const gasPrice =
-				loaderData.receipt.effectiveGasPrice ??
-				loaderData.transaction.gasPrice ??
-				0n
-			const feeAmount = gasUsed * gasPrice
-			const fee = Number(Value.format(feeAmount, 18))
-			const feeDisplay = PriceFormatter.format(fee)
-			search.set('fee', feeDisplay)
-
-			loaderData.knownEvents?.slice(0, 6).forEach((event, index) => {
-				search.set(`ev${index + 1}`, formatEventForOgServer(event))
-			})
-		}
-
-		const ogImageUrl = `${OG_BASE_URL}/tx/${params.hash}?${search.toString()}`
-
-		return {
-			title,
-			meta: [
-				{ title },
-				{ property: 'og:title', content: title },
-				{ property: 'og:description', content: description },
-				{ name: 'twitter:description', content: description },
-				{ property: 'og:image', content: ogImageUrl },
-				{ property: 'og:image:type', content: 'image/webp' },
-				{ property: 'og:image:width', content: '1200' },
-				{ property: 'og:image:height', content: '630' },
-				{ name: 'twitter:card', content: 'summary_large_image' },
-				{ name: 'twitter:image', content: ogImageUrl },
-			],
-		}
-	},
+	validateSearch: z.object({
+		r: z.optional(z.string()),
+	}).parse,
 })
 
 function Component() {
-	const { hash } = Route.useParams()
-	const navigate = useNavigate()
-	const loaderData = Route.useLoaderData() as Awaited<
-		ReturnType<typeof fetchReceiptData>
-	>
+	const { block, lineItems, receipt, transaction } = Route.useLoaderData()
 
-	const { data } = useQuery({
-		...receiptDetailQueryOptions({ hash }),
-		initialData: loaderData,
-	})
+	const fee = lineItems.feeTotals?.[0]?.ui?.right
+	const total = lineItems.totals?.[0]?.ui?.right
 
-	useKeyboardShortcut({
-		t: () => navigate({ to: '/tx/$hash', params: { hash } }),
-	})
-
-	const { block, feeBreakdown, knownEvents, lineItems, receipt } = data
-
-	const feePrice = lineItems.feeTotals?.[0]?.price
-	const previousFee = feePrice
-		? Number(Value.format(feePrice.amount, feePrice.decimals))
-		: 0
-
-	const totalPrice = lineItems.totals?.[0]?.price
-	const previousTotal = totalPrice
-		? Number(Value.format(totalPrice.amount, totalPrice.decimals))
-		: undefined
-
-	const feeAmount = receipt.effectiveGasPrice * receipt.gasUsed
-	// Gas accounting is always in 18-decimal units (wei equivalent), even when the fee token itself
-	// has a different number of decimals. Convert using 18 decimals so we get the actual token amount.
-	const fee = Number(Value.format(feeAmount, 18))
-	const feeDisplay = PriceFormatter.format(fee)
-
-	const total =
-		previousTotal !== undefined ? previousTotal - previousFee + fee : fee
-	const totalDisplay =
-		previousTotal !== undefined
-			? PriceFormatter.format(previousTotal)
-			: undefined
+	const knownEvents = React.useMemo(() => parseKnownEvents(receipt), [receipt])
 
 	return (
-		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow print:pt-8 print:pb-0 print:grow-0">
+		<div className="font-mono text-[13px] flex flex-col items-center justify-center min-h-screen gap-8">
 			<Receipt
 				blockNumber={receipt.blockNumber}
+				sender={transaction.from}
+				hash={receipt.transactionHash}
+				timestamp={block.timestamp}
 				events={knownEvents}
 				fee={fee}
-				feeBreakdown={feeBreakdown}
-				feeDisplay={feeDisplay}
-				hash={receipt.transactionHash}
-				sender={receipt.from}
-				status={receipt.status}
-				timestamp={block.timestamp}
 				total={total}
-				totalDisplay={totalDisplay}
 			/>
 		</div>
 	)
 }
 
-namespace TextRenderer {
+export namespace TextRenderer {
 	const width = 50
 	const indent = '  '
 
-	export function render(data: Awaited<ReturnType<typeof fetchReceiptData>>) {
-		const { lineItems, receipt, timestampFormatted } = data
+	export function render(data: Awaited<ReturnType<typeof loader>>) {
+		const { lineItems, receipt, timestampFormatted, transaction } = data
 
 		const lines: string[] = []
 
@@ -386,7 +224,7 @@ namespace TextRenderer {
 		lines.push(`Tx Hash: ${HexFormatter.truncate(receipt.transactionHash, 8)}`)
 		lines.push(`Date: ${timestampFormatted}`)
 		lines.push(`Block: ${receipt.blockNumber.toString()}`)
-		lines.push(`Sender: ${HexFormatter.truncate(receipt.from, 6)}`)
+		lines.push(`Sender: ${HexFormatter.truncate(transaction.from, 6)}`)
 		lines.push('')
 		lines.push('-'.repeat(width))
 		lines.push('')
@@ -405,24 +243,6 @@ namespace TextRenderer {
 						else lines.push(`${indent}${bottom.left}`)
 					}
 				}
-			}
-
-			lines.push('')
-		}
-
-		// Fee breakdown
-		if (lineItems.feeBreakdown?.length) {
-			for (const item of lineItems.feeBreakdown) {
-				const label = item.symbol ? `Fee (${item.symbol})` : 'Fee'
-				const amount = PriceFormatter.format(item.amount, {
-					decimals: item.decimals,
-					format: 'short',
-				})
-				lines.push(leftRight(label.toUpperCase(), amount))
-				if (item.payer)
-					lines.push(
-						`${indent}Paid by: ${HexFormatter.truncate(item.payer, 6)}`,
-					)
 			}
 
 			lines.push('')
@@ -449,5 +269,498 @@ namespace TextRenderer {
 	function leftRight(left: string, right: string): string {
 		const spacing = Math.max(1, width - left.length - right.length)
 		return left + ' '.repeat(spacing) + right
+	}
+}
+
+const abi = Object.values(Abis).flat()
+
+export namespace TokenMetadata {
+	export type Metadata = Actions.token.getMetadata.ReturnValue
+	export type MetadataMap = Map<Address.Address, Metadata>
+
+	export async function fromLogs(logs: Log[]) {
+		const events = parseEventLogs({
+			abi,
+			logs,
+		})
+
+		const tip20Addresses = events
+			.filter((event) => event.address.toLowerCase().startsWith('0x20c000000'))
+			.map((event) => event.address)
+		const metadataResults = await Promise.all(
+			tip20Addresses.map((token) =>
+				Actions.token.getMetadata(config, { token }),
+			),
+		)
+		const tokenMetadata = new Map<Address.Address, Metadata>()
+		for (const [index, address] of tip20Addresses.entries())
+			tokenMetadata.set(address, metadataResults[index])
+
+		return tokenMetadata
+	}
+}
+
+export namespace LineItems {
+	export function fromReceipt(
+		receipt: TransactionReceipt,
+		{ tokenMetadata }: { tokenMetadata: TokenMetadata.MetadataMap },
+	) {
+		const { from: sender, logs } = receipt
+
+		// Extract all of the event logs we can from the receipt.
+		const events = parseEventLogs({
+			abi,
+			logs,
+		})
+
+		////////////////////////////////////////////////////////////
+
+		const preferenceMap = new Map<string, string>()
+
+		for (const event of events) {
+			let key: string | undefined
+
+			// `TransferWithMemo` and `Transfer` events are paired with each other,
+			// we will need to take preference on `TransferWithMemo` for those instances.
+			if (event.eventName === 'TransferWithMemo') {
+				const [_, from, to] = event.topics
+				key = `${from}${to}`
+			}
+
+			// `Mint` and `Transfer` events are paired with each other,
+			// we will need to take preference on `Mint` for those instances.
+			if (event.eventName === 'Mint') {
+				const [_, to] = event.topics
+				key = `${event.address}${event.data}${to}`
+			}
+
+			// `Burn` and `Transfer` events are paired with each other,
+			// we will need to take preference on `Burn` for those instances.
+			if (event.eventName === 'Burn') {
+				const [_, from] = event.topics
+				key = `${event.address}${event.data}${from}`
+			}
+
+			if (key) preferenceMap.set(key, event.eventName)
+		}
+
+		const dedupedEvents = events.filter((event) => {
+			let include = true
+
+			if (event.eventName === 'Transfer') {
+				{
+					// Check TransferWithMemo dedup
+					const [_, from, to] = event.topics
+					const key = `${from}${to}`
+					if (preferenceMap.get(key)?.includes('TransferWithMemo'))
+						include = false
+				}
+
+				{
+					// Check Mint dedup
+					const [_, __, to] = event.topics
+					const key = `${event.address}${event.data}${to}`
+					if (preferenceMap.get(key)?.includes('Mint')) include = false
+				}
+
+				{
+					// Check Burn dedup
+					const [_, from] = event.topics
+					const key = `${event.address}${event.data}${from}`
+					if (preferenceMap.get(key)?.includes('Burn')) include = false
+				}
+			}
+
+			return include
+		})
+
+		////////////////////////////////////////////////////////////
+
+		const items: Record<'main' | 'feeTotals' | 'totals', LineItem.LineItem[]> =
+			{
+				main: [],
+				feeTotals: [],
+				totals: [],
+			}
+
+		// Map log events to receipt line items.
+		for (const event of dedupedEvents) {
+			switch (event.eventName) {
+				case 'Burn': {
+					if ('amount' in event.args) {
+						const { amount, from } = event.args
+
+						const metadata = tokenMetadata.get(event.address)
+						if (!metadata) {
+							items.main.push(LineItem.noop(event))
+							break
+						}
+
+						const { currency, decimals, symbol } = metadata
+
+						const isSelf = Address.isEqual(from, sender)
+
+						items.main.push(
+							LineItem.from({
+								event,
+								price: isSelf
+									? {
+											amount,
+											currency,
+											decimals,
+											symbol,
+											token: event.address,
+										}
+									: undefined,
+								ui: {
+									bottom: [
+										{
+											left: `From: ${HexFormatter.truncate(from)}`,
+										},
+									],
+									left: 'Burn ${symbol}',
+									right: decimals
+										? PriceFormatter.format(amount, decimals)
+										: '-',
+								},
+							}),
+						)
+						break
+					}
+
+					items.main.push(LineItem.noop(event))
+					break
+				}
+
+				case 'RoleMembershipUpdated': {
+					const { account, hasRole, role } = event.args
+
+					const roleName =
+						TokenRole.roles.find((r) => TokenRole.serialize(r) === role) ??
+						undefined
+
+					items.main.push(
+						LineItem.from({
+							event,
+							position: 'main',
+							ui: {
+								bottom: [
+									{
+										left: `To: ${HexFormatter.truncate(account)}`,
+									},
+									{
+										left: 'Role: ${roleName}',
+									},
+								],
+								left: `${roleName ? `${roleName} ` : ' '}Role ${hasRole ? 'Granted' : 'Revoked'}`,
+								right: '-',
+							},
+						}),
+					)
+					break
+				}
+
+				case 'Mint': {
+					if ('amount' in event.args) {
+						const metadata = tokenMetadata.get(event.address)
+						if (!metadata) {
+							items.main.push(LineItem.noop(event))
+							break
+						}
+
+						const { decimals } = metadata
+						const { amount, to } = event.args
+
+						items.main.push(
+							LineItem.from({
+								event,
+								ui: {
+									bottom: [
+										{
+											left: `To: ${HexFormatter.truncate(to)}`,
+										},
+									],
+									left: `Mint ${metadata?.symbol ? ` ${metadata.symbol}` : ''}`,
+									right: decimals
+										? `(${PriceFormatter.format(amount, decimals)})`
+										: '',
+								},
+							}),
+						)
+						break
+					}
+
+					items.main.push(LineItem.noop(event))
+					break
+				}
+
+				case 'TokenCreated': {
+					const { symbol } = event.args
+					items.main.push(
+						LineItem.from({
+							event,
+							ui: {
+								left: `Create Token (${symbol})`,
+								right: '-',
+							},
+						}),
+					)
+					break
+				}
+
+				case 'TransferWithMemo':
+				case 'Transfer': {
+					const { amount, from, to } = event.args
+					const token = event.address
+
+					const metadata = tokenMetadata.get(token)
+					if (!metadata) {
+						items.main.push(LineItem.noop(event))
+						break
+					}
+
+					const isCredit = Address.isEqual(to, sender)
+					const memo =
+						'memo' in event.args
+							? Hex.toString(Hex.trimLeft(event.args.memo))
+							: undefined
+
+					const { currency, decimals, symbol } = metadata
+
+					const isFee = to.toLowerCase().startsWith('0xfeec00000')
+					if (isFee) {
+						const feePayer = !Address.isEqual(from, sender) ? from : ''
+						items.feeTotals.push(
+							LineItem.from({
+								event,
+								isFee,
+								price: {
+									amount,
+									currency,
+									decimals,
+									symbol,
+									token,
+								},
+								ui: {
+									left: `${symbol} ${feePayer ? `(PAID BY ${HexFormatter.truncate(feePayer)})` : ''}`,
+									right: decimals
+										? PriceFormatter.format(amount, decimals)
+										: '-',
+								},
+							}),
+						)
+						break
+					}
+
+					items.main.push(
+						LineItem.from({
+							event,
+							price: {
+								amount: isCredit ? -amount : amount,
+								currency,
+								decimals,
+								symbol,
+								token,
+							},
+							ui: {
+								bottom: [...(memo ? [{ left: `Memo: ${memo}` }] : [])],
+								left: `Send ${symbol} ${to ? `to ${HexFormatter.truncate(to)}` : ''}`,
+								right: decimals
+									? PriceFormatter.format(isCredit ? -amount : amount, decimals)
+									: '-',
+							},
+						}),
+					)
+					break
+				}
+
+				default: {
+					items.main.push(LineItem.noop(event))
+				}
+			}
+		}
+
+		////////////////////////////////////////////////////////////
+
+		// Calculate fee totals grouped by currency -> symbol
+		type Currency = string
+		type Symbol = string
+		const feeTotals = new Map<
+			Currency,
+			{
+				amount: bigint
+				decimals: number
+				tokens: Map<Symbol, LineItem.LineItem['price']>
+			}
+		>()
+		for (const item of items.feeTotals) {
+			if (!item.isFee) continue
+
+			const { price } = item
+			if (!price) continue
+
+			const { amount, currency, decimals, symbol, token } = price
+			if (!currency) continue
+			if (!decimals) continue
+			if (!symbol) continue
+
+			let currencyMap = feeTotals.get(currency)
+			currencyMap ??= {
+				amount: 0n,
+				decimals,
+				tokens: new Map(),
+			}
+
+			const existing = currencyMap.tokens.get(symbol)
+			if (existing) existing.amount += amount
+			else currencyMap.tokens.set(symbol, { amount, currency, decimals, token })
+
+			currencyMap.amount += amount
+
+			feeTotals.set(currency, currencyMap)
+		}
+
+		// Add fee totals to line items
+		for (const [currency, { amount, decimals }] of feeTotals)
+			items.feeTotals = [
+				LineItem.from({
+					position: 'end',
+					price: {
+						amount,
+						decimals,
+						currency,
+					},
+					ui: {
+						left: 'Fee',
+						right: decimals ? PriceFormatter.format(amount, decimals) : '-',
+					},
+				}),
+			]
+
+		// Calculate totals grouped by currency
+		const totals = new Map<string, LineItem.LineItem['price']>()
+		for (const item of [...items.main, ...items.feeTotals]) {
+			if (!('price' in item)) continue
+
+			const { price } = item
+			if (!price) continue
+
+			const existing = totals.get(price.currency)
+			if (existing) existing.amount += price.amount
+			else totals.set(price.currency, price)
+		}
+
+		// Add totals to line items
+		for (const [_, price] of totals) {
+			if (!price) continue
+			const { amount, decimals } = price
+			const formatted = decimals ? PriceFormatter.format(amount, decimals) : '-'
+			items.totals.push(
+				LineItem.from({
+					ui: {
+						left: 'Total',
+						right: formatted,
+					},
+				}),
+			)
+		}
+
+		return items
+	}
+}
+
+export namespace LineItem {
+	export type LineItem = {
+		/**
+		 * Event log emitted.
+		 */
+		event?: Log<bigint, number, boolean, AbiEvent> | undefined
+		/**
+		 * Whether the line item is a fee item.
+		 */
+		isFee?: boolean | undefined
+		/**
+		 * Grouping key.
+		 */
+		key?: string | undefined
+		/**
+		 * Price of the line item.
+		 */
+		price?:
+			| {
+					/**
+					 * Amount in units of the token.
+					 */
+					amount: bigint
+					/**
+					 * Currency of the token.
+					 */
+					currency: string
+					/**
+					 * Decimals of the token.
+					 */
+					decimals: number
+					/**
+					 * Symbol of the token.
+					 */
+					symbol?: string | undefined
+					/**
+					 * Address of the TIP20 token.
+					 */
+					token?: Address.Address | undefined
+			  }
+			| undefined
+		/**
+		 * UI data of the line item.
+		 */
+		ui: {
+			/**
+			 * Bottom data of the line item.
+			 */
+			bottom?:
+				| {
+						/**
+						 * Left text of the line item.
+						 */
+						left: string
+						/**
+						 * Right text of the line item.
+						 */
+						right?: string | undefined
+				  }[]
+				| undefined
+			/**
+			 * Left text of the line item.
+			 */
+			left: string
+			/**
+			 * Right text of the line item.
+			 */
+			right: string
+		}
+	}
+
+	export function from<const item extends LineItem>(
+		item: item,
+	): item & {
+		eventName: item['event'] extends { eventName: infer eventName }
+			? eventName
+			: undefined
+	} {
+		return {
+			...item,
+			eventName: item.event?.eventName,
+		} as never
+	}
+
+	export function noop(event: Log<bigint, number, boolean, AbiEvent>) {
+		return LineItem.from({
+			event,
+			position: 'main',
+			ui: {
+				left: event.eventName,
+				right: '-',
+			},
+		})
 	}
 }

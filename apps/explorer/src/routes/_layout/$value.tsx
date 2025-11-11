@@ -17,12 +17,12 @@ export const Route = createFileRoute('/_layout/$value')({
 
 		if (Address.validate(value))
 			throw redirect({
-				to: '/address/$address',
+				to: '/account/$address',
 				params: { address: value },
 			})
 
 		if (Hex.size(value) === 32)
-			throw redirect({ to: '/tx/$hash', params: { hash: value } })
+			throw redirect({ to: '/receipt/$hash', params: { hash: value } })
 
 		return { type: 'unknown' } as const
 	},

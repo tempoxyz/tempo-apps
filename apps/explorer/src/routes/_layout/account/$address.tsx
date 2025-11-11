@@ -54,7 +54,7 @@ const transactionsQuery = (
 		placeholderData: keepPreviousData,
 	})
 
-export const Route = createFileRoute('/_layout/address/$address')({
+export const Route = createFileRoute('/_layout/account/$address')({
 	component: RouteComponent,
 	validateSearch: z.object({
 		page: z._default(z.number(), 1),
@@ -427,7 +427,7 @@ function HistoryTabContent({
 									{/* Transaction Hash */}
 									<td className="px-3 py-3 font-mono text-[11px] text-primary">
 										<Link
-											to={'/tx/$hash'}
+											to={'/receipt/$hash'}
 											params={{ hash: transaction.hash ?? '' }}
 											className="hover:text-accent transition-colors"
 										>
@@ -532,7 +532,7 @@ function HistoryTabContent({
 									ellipsisCount++
 									return (
 										<span
-											key={`ellipsis-${ellipsisCount}`}
+											key={'ellipsis-${ellipsisCount}'}
 											className="text-tertiary px-1"
 										>
 											...
@@ -700,7 +700,7 @@ function EventPart({
 			case 'account':
 				return (
 					<Link
-						to={'/address/$address'}
+						to={'/account/$address'}
 						params={{ address: part.value }}
 						className="text-accent hover:text-accent/80 transition-colors"
 					>
