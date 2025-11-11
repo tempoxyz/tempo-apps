@@ -39,7 +39,6 @@
 	"files.associations": {
 		"*.svg": "html",
 		"biome.json": "jsonc",
-		"bun.lockb": "jsonc",
 		"*.css": "tailwindcss"
 	},
 	"files.exclude": {

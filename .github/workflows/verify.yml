@@ -18,8 +18,8 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: Check code
-        run: bun check
+        run: pnpm check
 
       - name: Check types
-        run: bun check:types
+        run: pnpm check:types
 

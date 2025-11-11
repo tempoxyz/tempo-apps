@@ -143,7 +143,6 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				}
 
 				if (type === 'application/pdf') {
-					// @ts-expect-error - TODO: shoudn't error
 					const browser = await puppeteer.launch(env.BROWSER)
 					const page = await browser.newPage()
 
