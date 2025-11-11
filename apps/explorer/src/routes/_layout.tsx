@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import * as z from 'zod/mini'
 
-import { Header } from '#components/Header'
+import { Header } from '#components/Header.tsx'
 import css from './styles.css?url'
 
 export const Route = createFileRoute('/_layout')({

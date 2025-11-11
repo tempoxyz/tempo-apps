@@ -1,7 +1,7 @@
 import { ClientOnly, Link } from '@tanstack/react-router'
-import { SquareSquare } from 'lucide-react'
 import * as React from 'react'
 import { useBlockNumber } from 'wagmi'
+import SquareSquare from '~icons/lucide/square-square'
 
 export function Header() {
 	return (
