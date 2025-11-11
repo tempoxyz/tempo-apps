@@ -3,4 +3,9 @@
 
 .env.example linguist-language=Dotenv
 
+bun.lock linguist-language=JSON-with-Comments
+biome.json linguist-language=JSON-with-Comments
+tsconfig.json linguist-language=JSON-with-Comments
+.vscode/*.json linguist-language=JSON-with-Comments
+
 routeTree.gen.ts linguist-generated=true

@@ -17,6 +17,10 @@ jobs:
   deploy-preview:
     name: Deploy Preview (${{ matrix.app }})
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
     strategy:
       matrix:
         app: [explorer]

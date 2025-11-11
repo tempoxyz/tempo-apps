@@ -14,16 +14,16 @@ import {
 import { ArrowRight } from 'lucide-react'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
-import { Abis } from 'tempo.ts/viem'
 import { Hooks } from 'tempo.ts/wagmi'
-import type { Log, RpcTransaction as Transaction } from 'viem'
-import { formatEther, formatUnits, parseEventLogs } from 'viem'
+import type { RpcTransaction as Transaction } from 'viem'
+import { formatEther, formatUnits } from 'viem'
 import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { config } from '#wagmi.config'
 
-import { PriceFormatter } from '../tx/$hash'
+import { PriceFormatter } from '#formatting.ts'
+import { type KnownEventPart, parseKnownEvents } from '#known-events.ts'
+import { config } from '#wagmi.config.ts'
 
 type TransactionsResponse = {
 	transactions: Array<Transaction>
@@ -44,7 +44,7 @@ const transactionsQuery = (
 		queryKey: ['account-transactions', chainId, address, page, limit],
 		queryFn: (): Promise<TransactionsResponse> =>
 			fetch(`/api/address/${address}?offset=${offset}&limit=${limit}`).then(
-				(res) => res.json(),
+				(response) => response.json(),
 			),
 		// auto-refresh page 1 since new transactions appear there
 		refetchInterval: page === 1 ? 4_000 : false,
@@ -164,6 +164,7 @@ function RouteComponent() {
 									autoComplete="off"
 									autoCorrect="off"
 									className="w-full rounded-lg border border-border-primary bg-surface px-4 py-2.5 pr-12 text-sm text-primary transition focus:outline-none focus:ring-0 shadow-[0px_4px_54px_0px_rgba(0,0,0,0.06)] outline-1 -outline-offset-1 outline-black-white/10"
+									data-1p-ignore
 								/>
 								<button
 									type="submit"
@@ -630,175 +631,141 @@ function AssetRow({ contractAddress }: { contractAddress: Address.Address }) {
 	)
 }
 
-function useParseEventLogs(props: {
-	hash: Hex.Hex | undefined
-	logs: Array<Log> | undefined
-}) {
-	return React.useMemo(() => {
-		if (!props.logs) return []
-		if (!props.hash) return []
-		return parseEventLogs({
-			abi: [
-				...Abis.nonce,
-				...Abis.tip20,
-				...Abis.feeAmm,
-				...Abis.feeManager,
-				...Abis.tip20Factory,
-				...Abis.tip403Registry,
-				...Abis.validatorConfig,
-				...Abis.stablecoinExchange,
-				...Abis.tipAccountRegistrar,
-				...Abis.tip20RewardsRegistry,
-			],
-			logs: props.logs,
-		})
-	}, [props.logs, props.hash])
-}
-
 function TransactionDescription({ transaction }: { transaction: Transaction }) {
-	const { data: receipt } = useTransactionReceipt({
+	const { data: receipt, isLoading } = useTransactionReceipt({
 		hash: transaction.hash,
 		query: {
 			enabled: Boolean(transaction.hash),
 		},
 	})
-	const eventLogs = useParseEventLogs({
-		hash: transaction.hash,
-		logs: receipt?.logs,
-	})
+
+	const knownEvents = React.useMemo(() => {
+		if (!receipt) return []
+		return parseKnownEvents(receipt)
+	}, [receipt])
+
+	if (isLoading) return <span className="text-tertiary">Loading...</span>
+
+	if (!knownEvents || knownEvents.length === 0)
+		return <span className="text-tertiary">Processing...</span>
+
+	const event = knownEvents[0]
+
+	return (
+		<div className="text-primary">
+			{event.parts.map((part, index) => (
+				<EventPart
+					key={`${part.type}-${index}`}
+					part={part}
+					isLast={index === event.parts.length - 1}
+				/>
+			))}
+			{event.note && (
+				<span className="text-tertiary"> (note: {event.note})</span>
+			)}
+		</div>
+	)
+}
+
+function EventPart({
+	part,
+	isLast,
+}: {
+	part: KnownEventPart
+	isLast: boolean
+}) {
+	// Call hooks unconditionally at the top level
+	const tokenAddress =
+		part.type === 'amount'
+			? part.value.token
+			: part.type === 'token'
+				? part.value.address
+				: undefined
 	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: eventLogs[0]?.address,
+		token: tokenAddress,
 		query: {
-			enabled: Boolean(eventLogs[0]?.address),
+			enabled: Boolean(tokenAddress),
 		},
 	})
 
-	if (!eventLogs || eventLogs.length === 0) {
-		return <span className="text-tertiary">Processing...</span>
-	}
+	const renderPart = () => {
+		switch (part.type) {
+			case 'action':
+				return (
+					<span className="flex flex-row justify-center items-center px-[5px] py-[4px] bg-base-alt leading-[16px] w-auto">
+						{part.value}
+					</span>
+				)
 
-	// biome-ignore lint/suspicious/noExplicitAny: Event types are dynamic
-	const event: any = eventLogs[0]
-	const eventName = event?.eventName
-	const args = event?.args || {}
-	const tokenAddress = event?.address as Address.Address
-
-	const AssetLink = () => {
-		return (
-			<Link
-				to={'/token/$address'}
-				params={{ address: tokenAddress }}
-				className="text-accent hover:text-accent/80 transition-colors"
-			>
-				{metadata?.symbol || 'TOKEN'}
-			</Link>
-		)
-	}
-
-	// Format based on event type, showing actual data from the event
-	const formatEventDescription = () => {
-		// Handle Transfer events with the dedicated component
-		if (eventName === 'Transfer' && args.to && args.amount !== undefined) {
-			const to = args.to as string
-			const amount = args.amount as bigint
-			const from = args.from as string
-			const isSelf = from?.toLowerCase() === to?.toLowerCase()
-
-			return (
-				<>
-					<span>Transfer</span>{' '}
-					<span className="font-semibold">
-						{formatUnits(amount, metadata?.decimals ?? 6)}
-					</span>{' '}
-					<AssetLink /> <span>to</span>{' '}
+			case 'account':
+				return (
 					<Link
 						to={'/address/$address'}
-						params={{ address: to as Address.Address }}
+						params={{ address: part.value }}
 						className="text-accent hover:text-accent/80 transition-colors"
 					>
-						{to?.slice(0, 6)}...{to?.slice(-4)}
+						{part.value.slice(0, 6)}...{part.value.slice(-4)}
 					</Link>
-					{isSelf && <span className="text-tertiary"> (self)</span>}
-				</>
-			)
-		}
+				)
 
-		// Handle Mint events
-		if (eventName === 'Mint' && args.to && args.amount !== undefined) {
-			const to = args.to as string
-			const amount = args.amount as bigint
-			const isSelf = to?.toLowerCase() === transaction.from?.toLowerCase()
+			case 'amount': {
+				const decimals = part.value.decimals ?? metadata?.decimals ?? 6
+				return (
+					<>
+						<span className="font-semibold">
+							{formatUnits(part.value.value, decimals)}
+						</span>{' '}
+						<Link
+							to={'/token/$address'}
+							params={{ address: part.value.token }}
+							className="text-accent hover:text-accent/80 transition-colors"
+						>
+							{metadata?.symbol || 'TOKEN'}
+						</Link>
+					</>
+				)
+			}
 
-			return (
-				<>
-					<span>Mint</span>{' '}
-					<span className="font-semibold">
-						{formatUnits(amount, metadata?.decimals ?? 6)}
-					</span>{' '}
-					<span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>{' '}
-					<span>to</span>{' '}
-					<span className="text-accent">
-						{to?.slice(0, 6)}...{to?.slice(-4)}
+			case 'token':
+				return (
+					<Link
+						to={'/token/$address'}
+						params={{ address: part.value.address }}
+						className="text-accent hover:text-accent/80 transition-colors"
+					>
+						{part.value.symbol ||
+							metadata?.symbol ||
+							part.value.address.slice(0, 8)}
+					</Link>
+				)
+
+			case 'hex':
+				return (
+					<span className="font-mono text-accent">
+						{part.value.slice(0, 10)}...
 					</span>
-					{isSelf && <span className="text-tertiary"> (self)</span>}
-				</>
-			)
+				)
+
+			case 'primary':
+				return <span className="font-semibold">{part.value}</span>
+
+			case 'secondary':
+				return <span>{part.value}</span>
+
+			case 'tick':
+				return <span className="text-accent">{part.value}</span>
+
+			default:
+				return null
 		}
-
-		// Handle swap events
-		if (eventName === 'Swap' && (args.amount0In || args.amount0Out)) {
-			const amount0 = args.amount0In || args.amount0Out
-			const amount1 = args.amount1In || args.amount1Out
-
-			return (
-				<>
-					<span>Swap</span>{' '}
-					<span className="font-semibold">
-						{formatUnits(amount0, metadata?.decimals ?? 6)}
-					</span>{' '}
-					<AssetLink /> <span>for</span>{' '}
-					<span className="font-semibold">
-						{formatUnits(amount1, metadata?.decimals ?? 6)}
-					</span>{' '}
-					<AssetLink />
-				</>
-			)
-		}
-
-		// Handle whitelist events
-		if (args.address || args.account) {
-			const address = args.address || args.account
-			const policyId = args.policyId || args.id
-
-			return (
-				<>
-					<span>Whitelist</span>{' '}
-					<span className="text-accent">
-						{address?.slice(0, 6)}...{address?.slice(-4)}
-					</span>{' '}
-					<span>on Policy</span>{' '}
-					<span className="text-accent">#{policyId?.toString()}</span>
-				</>
-			)
-		}
-
-		if (eventName === 'Approval') {
-			return (
-				<>
-					<span>Approval</span>{' '}
-					<span className="font-semibold">
-						{formatUnits(args.amount, metadata?.decimals ?? 6)}
-					</span>{' '}
-					<AssetLink />
-				</>
-			)
-		}
-
-		// Generic fallback - just show the event name
-		return <span>{eventName || 'Transaction'}</span>
 	}
 
-	return <span className="text-primary">{formatEventDescription()}</span>
+	return (
+		<>
+			<div className="inline-block">{renderPart()}</div>
+			{!isLast && ' '}
+		</>
+	)
 }
 
 function TransactionTimestamp({

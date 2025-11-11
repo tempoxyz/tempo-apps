@@ -2,7 +2,7 @@
 
 Monorepo for Tempo Apps
 
-## Apps 
+## Apps
 
 | Workspace | Description | URL |
 | --------- | ----------- | ----------- |

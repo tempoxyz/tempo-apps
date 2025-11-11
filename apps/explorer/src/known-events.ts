@@ -1,9 +1,42 @@
 import { type Address, Hex } from 'ox'
 import { Abis } from 'tempo.ts/viem'
-import type { TransactionReceipt } from 'viem'
-import { parseEventLogs } from 'viem'
+import {
+	type AbiEvent,
+	type Log,
+	parseEventLogs,
+	type TransactionReceipt,
+} from 'viem'
 
 const abi = Object.values(Abis).flat()
+
+// Helper type for Transfer event args
+type TransferEventArgs = {
+	from: Address.Address
+	to: Address.Address
+	amount: bigint
+}
+
+// Type guard for Transfer events
+function isTransferEvent(
+	event: Log<bigint, number, boolean, AbiEvent>,
+): event is Log<bigint, number, boolean, AbiEvent> & {
+	eventName: 'Transfer' | 'TransferWithMemo'
+	args: TransferEventArgs
+	address: Address.Address
+} {
+	return (
+		(event.eventName === 'Transfer' ||
+			event.eventName === 'TransferWithMemo') &&
+		'args' in event &&
+		typeof event.args === 'object' &&
+		event.args !== null &&
+		'from' in event.args &&
+		'to' in event.args &&
+		'amount' in event.args &&
+		typeof event.args.amount === 'bigint' &&
+		typeof event.address === 'string'
+	)
+}
 
 type Amount = {
 	decimals?: number
@@ -97,8 +130,68 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 
 	const knownEvents: KnownEvent[] = []
 
+	// Detect and group swap events (two transfers involving the stablecoin exchange)
+	const STABLECOIN_EXCHANGE = '0xdec0000000000000000000000000000000000000'
+	const swapIndices = new Set<number>()
+
+	// Find all transfers in the events
+	const transferEvents = dedupedEvents
+		.map((event, index) => ({ event, index }))
+		.filter(({ event }) => isTransferEvent(event))
+
+	// Look for swap pairs (transfer TO exchange + transfer FROM exchange)
+	for (let i = 0; i < transferEvents.length - 1; i++) {
+		const { event: event1, index: idx1 } = transferEvents[i]
+		// Type assertion is safe here because isTransferEvent has validated the structure
+		const args1 = event1.args as TransferEventArgs
+		const to1 = args1.to.toLowerCase()
+
+		// If this is a transfer TO the exchange, look for a matching transfer FROM the exchange
+		if (to1 === STABLECOIN_EXCHANGE) {
+			for (let j = i + 1; j < transferEvents.length; j++) {
+				const { event: event2, index: idx2 } = transferEvents[j]
+				const args2 = event2.args as TransferEventArgs
+				const from2 = args2.from.toLowerCase()
+
+				if (from2 === STABLECOIN_EXCHANGE) {
+					// This is a swap - create a single swap event
+					knownEvents.push({
+						type: 'swap',
+						parts: [
+							{ type: 'action', value: 'Swap' },
+							{
+								type: 'amount',
+								value: {
+									value: args1.amount,
+									token: event1.address,
+								},
+							},
+							{ type: 'secondary', value: 'for' },
+							{
+								type: 'amount',
+								value: {
+									value: args2.amount,
+									token: event2.address,
+								},
+							},
+						],
+					})
+
+					// Mark these events as processed
+					swapIndices.add(idx1)
+					swapIndices.add(idx2)
+					break // Found the matching pair, move to next transfer
+				}
+			}
+		}
+	}
+
 	// Map log events to known events.
-	for (const event of dedupedEvents) {
+	for (let i = 0; i < dedupedEvents.length; i++) {
+		// Skip events that are part of a swap
+		if (swapIndices.has(i)) continue
+
+		const event = dedupedEvents[i]
 		switch (event.eventName) {
 			case 'TransferWithMemo':
 			case 'Transfer': {
@@ -131,6 +224,7 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 			}
 
 			case 'Mint': {
+				// Handle token mint (TIP20)
 				if ('amount' in event.args) {
 					const { amount, to } = event.args
 
@@ -147,6 +241,42 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 							},
 							{ type: 'secondary', value: 'to' },
 							{ type: 'account', value: to },
+						],
+					})
+					break
+				}
+
+				// Handle liquidity pool mint (StablecoinExchange)
+				if (
+					'amountUserToken' in event.args &&
+					'amountValidatorToken' in event.args
+				) {
+					const {
+						amountUserToken,
+						amountValidatorToken,
+						userToken,
+						validatorToken,
+					} = event.args
+
+					knownEvents.push({
+						type: 'mint',
+						parts: [
+							{ type: 'action', value: 'Add Liquidity' },
+							{
+								type: 'amount',
+								value: {
+									value: amountUserToken,
+									token: userToken,
+								},
+							},
+							{ type: 'secondary', value: 'and' },
+							{
+								type: 'amount',
+								value: {
+									value: amountValidatorToken,
+									token: validatorToken,
+								},
+							},
 						],
 					})
 					break

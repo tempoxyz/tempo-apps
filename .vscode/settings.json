@@ -42,7 +42,7 @@
 		"*.css": "tailwindcss"
 	},
 	"files.exclude": {
-		".tanstack": true,
-		".wrangler": true
+		"**/.tanstack": true,
+		"**/*.wrangler": true
 	}
 }

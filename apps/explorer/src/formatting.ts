@@ -1,7 +1,7 @@
-import type { Hex } from 'viem'
+import { type Hex, Value } from 'ox'
 
 // shorten a hex to look like 0x1234…5678
-export function shortenHex(hex: Hex, chars: number = 4) {
+export function shortenHex(hex: Hex.Hex, chars: number = 4) {
 	return hex.length < chars * 2 + 2
 		? hex
 		: `${hex.slice(0, chars + 2)}…${hex.slice(-chars)}`
@@ -58,4 +58,50 @@ export function formatAmount(value: string): string {
 	const number = Number(value)
 	if (number > 0 && number < 0.01) return '<0.01'
 	return amountFormatter.format(number)
+}
+
+export namespace HexFormatter {
+	export function truncate(value: Hex.Hex, chars = 4) {
+		return value.length < chars * 2 + 2
+			? value
+			: `${value.slice(0, chars + 2)}…${value.slice(-chars)}`
+	}
+}
+
+export namespace DateFormatter {
+	/**
+	 * Formats a timestamp to a localized date-time string.
+	 *
+	 * @param timestamp - The timestamp in seconds.
+	 * @returns The formatted date-time string.
+	 */
+	export function format(timestamp: bigint) {
+		return new Date(Number(timestamp) * 1000).toLocaleString(undefined, {
+			year: 'numeric',
+			month: '2-digit',
+			day: '2-digit',
+			hour: '2-digit',
+			minute: '2-digit',
+		})
+	}
+}
+
+export namespace PriceFormatter {
+	/**
+	 * Formats a number or bigint to a currency-formatted string.
+	 *
+	 * @param value - The number or bigint to format.
+	 * @returns The formatted string.
+	 */
+	export function format(value: number | bigint, decimals: number) {
+		if (Number(value) > 0 && Number(value) < 0.01) return '<$0.01'
+		const value_ = Value.format(BigInt(value), decimals)
+		return numberIntl.format(Number(value_))
+	}
+
+	/** @internal */
+	const numberIntl = new Intl.NumberFormat('en-US', {
+		currency: 'USD',
+		style: 'currency',
+	})
 }
