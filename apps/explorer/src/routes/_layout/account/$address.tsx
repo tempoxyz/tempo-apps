@@ -15,7 +15,6 @@ import { formatEther, formatUnits } from 'viem'
 import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
-
 import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
 import { type KnownEventPart, parseKnownEvents } from '#lib/known-events.ts'
 import { config } from '#wagmi.config.ts'
@@ -267,7 +266,7 @@ function HistoryTabContent(props: {
 	const client = useClient()
 	const offset = (page - 1) * limit
 
-	const { data, isFetching, isLoading } = useQuery(
+	const { data, isFetching, isPending } = useQuery(
 		transactionsQuery(address, page, limit, client?.chain.id ?? 0, offset),
 	)
 
@@ -286,8 +285,8 @@ function HistoryTabContent(props: {
 		if (!isFetching && isChangingPage) setIsChangingPage(false)
 	}, [isFetching, isChangingPage])
 
-	// Show initial loading state
-	if (isLoading || !data) {
+	// Show initial loading state only on first load (not during page changes)
+	if (isPending && !data) {
 		return (
 			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
 				<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30 z-10">
@@ -299,6 +298,8 @@ function HistoryTabContent(props: {
 			</div>
 		)
 	}
+
+	if (!data) return null
 
 	const transactions = data.transactions
 	const totalTransactions = data.total
@@ -453,35 +454,92 @@ function TransactionRow(props: { transaction: Transaction }) {
 	const { transaction } = props
 
 	return (
-		<tr key={transaction.hash} className="transition-colors hover:bg-alt h-12">
-			<td className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap">
-				<TransactionTimestamp blockNumber={transaction.blockNumber} />
+		<tr
+			key={transaction.hash}
+			className="transition-colors hover:bg-alt"
+			style={{ height: '48px' }}
+		>
+			<td
+				className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap"
+				style={{ height: '48px' }}
+			>
+				<div className="h-[20px] flex items-center">
+					<TransactionTimestamp blockNumber={transaction.blockNumber} />
+				</div>
 			</td>
 
-			<td className="px-4 py-3 text-primary text-sm align-middle text-left whitespace-nowrap">
-				<TransactionDescription transaction={transaction} />
+			<td
+				className="px-4 py-3 text-primary text-sm align-middle text-left whitespace-nowrap"
+				style={{ height: '48px' }}
+			>
+				<div className="h-[20px] flex items-center">
+					<TransactionDescription transaction={transaction} />
+				</div>
 			</td>
 
-			<td className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap">
-				<Link
-					to={'/receipt/$hash'}
-					params={{ hash: transaction.hash ?? '' }}
-					className="hover:text-accent transition-colors"
-				>
-					{HexFormatter.truncate(transaction.hash, 6)}
-				</Link>
+			<td
+				className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap"
+				style={{ height: '48px' }}
+			>
+				<div className="h-[20px] flex items-center justify-end">
+					<Link
+						to={'/receipt/$hash'}
+						params={{ hash: transaction.hash ?? '' }}
+						className="hover:text-accent transition-colors"
+					>
+						{HexFormatter.truncate(transaction.hash, 6)}
+					</Link>
+				</div>
 			</td>
 
-			<td className="px-3 py-3 text-tertiary align-middle text-right whitespace-nowrap">
-				(
-				{PriceFormatter.format(Hex.toBigInt(transaction.gasPrice ?? '0x0'), 18)}
-				)
+			<td
+				className="px-3 py-3 text-tertiary align-middle text-right whitespace-nowrap"
+				style={{ height: '48px' }}
+			>
+				<div className="h-[20px] flex items-center justify-end">
+					<TransactionFee transaction={transaction} />
+				</div>
 			</td>
 
-			<td className="px-5 py-3 text-right font-mono text-xs align-middle whitespace-nowrap">
-				<TransactionTotal transaction={transaction} />
+			<td
+				className="px-5 py-3 text-right font-mono text-xs align-middle whitespace-nowrap"
+				style={{ height: '48px' }}
+			>
+				<div className="h-[20px] flex items-center justify-end">
+					<TransactionTotal transaction={transaction} />
+				</div>
 			</td>
 		</tr>
+	)
+}
+
+function TransactionFee(props: { transaction: Transaction }) {
+	const { transaction } = props
+
+	const { data: receipt } = useTransactionReceipt({
+		hash: transaction.hash,
+		query: {
+			enabled: Boolean(transaction.hash),
+		},
+	})
+
+	if (!receipt) {
+		return (
+			<span className="text-tertiary inline-block min-w-[60px] text-right">
+				···
+			</span>
+		)
+	}
+
+	const fee = PriceFormatter.format(
+		receipt.gasUsed * receipt.effectiveGasPrice, // TODO: double check
+		18,
+	)
+
+	return (
+		<span className="text-tertiary inline-block min-w-[60px] text-right">
+			{fee}
+		</span>
 	)
 }
 
@@ -509,11 +567,19 @@ function TransactionTotal(props: { transaction: Transaction }) {
 		// Fallback to native currency value
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
 		if (value === 0n) {
-			return <span className="text-tertiary">—</span>
+			return (
+				<span className="text-tertiary inline-block min-w-[70px] text-right">
+					—
+				</span>
+			)
 		}
 		const ethAmount = parseFloat(formatEther(value))
 		const dollarAmount = ethAmount * 2_000
-		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
+		return (
+			<span className="text-primary inline-block min-w-[70px] text-right">
+				${dollarAmount.toFixed(2)}
+			</span>
+		)
 	}
 
 	// Calculate dollar value from token amount
@@ -523,10 +589,18 @@ function TransactionTotal(props: { transaction: Transaction }) {
 	const dollarAmount = tokenAmount * 1
 
 	if (dollarAmount > 0.01) {
-		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
+		return (
+			<span className="text-primary inline-block min-w-[70px] text-right">
+				${dollarAmount.toFixed(2)}
+			</span>
+		)
 	}
 
-	return <span className="text-tertiary">${dollarAmount.toFixed(2)}</span>
+	return (
+		<span className="text-tertiary inline-block min-w-[70px] text-right">
+			${dollarAmount.toFixed(2)}
+		</span>
+	)
 }
 
 function AssetRow(props: { contractAddress: Address.Address }) {
@@ -537,11 +611,10 @@ function AssetRow(props: { contractAddress: Address.Address }) {
 		token: contractAddress,
 	})
 
-	const { data: balance, error } = Hooks.token.useGetBalance({
+	const { data: balance } = Hooks.token.useGetBalance({
 		token: contractAddress,
 		account: address,
 	})
-	console.info(balance, error)
 
 	return (
 		<tr className="transition-colors hover:bg-alt">
@@ -565,12 +638,12 @@ function AssetRow(props: { contractAddress: Address.Address }) {
 			</td>
 			<td className="px-5 py-3 text-primary">USD</td>
 			<td className="px-5 py-3 text-right font-mono text-xs text-primary">
-				{formatUnits(balance ?? 0n, metadata?.decimals ?? 6)}
+				{PriceFormatter.formatAmount(
+					formatUnits(balance ?? 0n, metadata?.decimals ?? 6),
+				)}
 			</td>
 			<td className="px-5 py-3 text-right font-mono text-xs text-primary">
-				{typeof balance === 'bigint' && metadata?.decimals
-					? `${PriceFormatter.format(Number(balance), metadata.decimals)}`
-					: null}
+				{`${PriceFormatter.format(Number(balance ?? 0n), metadata?.decimals ?? 6)}`}
 			</td>
 		</tr>
 	)
@@ -595,14 +668,14 @@ function TransactionDescription(props: { transaction: Transaction }) {
 
 	if (!event) {
 		return (
-			<div className="text-tertiary min-h-[20px] flex items-center whitespace-nowrap">
+			<div className="text-tertiary min-h-[20px] min-w-[200px] flex items-center whitespace-nowrap">
 				<span className="inline-block">···</span>
 			</div>
 		)
 	}
 
 	return (
-		<div className="text-primary min-h-[20px] flex items-center whitespace-nowrap">
+		<div className="text-primary min-h-[20px] min-w-[200px] flex items-center whitespace-nowrap">
 			{event.parts.map((part, index) => (
 				<EventPart
 					key={`${part.type}-${index}`}
@@ -696,7 +769,7 @@ function EventPart(props: { part: KnownEventPart; isLast: boolean }) {
 				return <span className="font-semibold">{part.value}</span>
 
 			case 'secondary':
-				return <span className="pl-2">{part.value}</span>
+				return <span className="px-2">{part.value}</span>
 
 			case 'tick':
 				return <span className="text-accent">{part.value}</span>
@@ -735,7 +808,8 @@ function TransactionTimestamp(props: {
 		return () => clearInterval(interval)
 	}, [])
 
-	if (!timestamp) return <span className="text-tertiary">--</span>
+	if (!timestamp)
+		return <span className="text-tertiary inline-block min-w-[50px]">--</span>
 
 	// Convert Unix timestamp to readable format
 	const date = new Date(Number(timestamp) * 1_000)
@@ -753,7 +827,10 @@ function TransactionTimestamp(props: {
 	else timeAgo = `${diffDay}d ago`
 
 	return (
-		<span className="text-tertiary" title={date.toLocaleString()}>
+		<span
+			className="text-tertiary inline-block min-w-[50px]"
+			title={date.toLocaleString()}
+		>
 			{timeAgo}
 		</span>
 	)
