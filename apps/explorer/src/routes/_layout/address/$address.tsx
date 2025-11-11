@@ -164,6 +164,7 @@ function RouteComponent() {
 									autoComplete="off"
 									autoCorrect="off"
 									className="w-full rounded-lg border border-border-primary bg-surface px-4 py-2.5 pr-12 text-sm text-primary transition focus:outline-none focus:ring-0 shadow-[0px_4px_54px_0px_rgba(0,0,0,0.06)] outline-1 -outline-offset-1 outline-black-white/10"
+									data-1p-ignore
 								/>
 								<button
 									type="submit"

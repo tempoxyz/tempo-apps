@@ -41,6 +41,7 @@ export function Component() {
 							autoCapitalize="off"
 							autoComplete="off"
 							autoCorrect="off"
+							data-1p-ignore
 						/>
 						<button
 							disabled={state.isLoading}
