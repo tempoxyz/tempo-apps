@@ -1,9 +1,12 @@
-import { Link } from '@tanstack/react-router'
+import type { Address as AddressType } from 'ox'
+import { isAddressEqual } from 'viem'
 import { HexFormatter } from '#lib/formatting'
 import type { KnownEvent } from '#lib/known-events'
+import { Address } from './Address'
 import { Amount } from './Receipt/Amount'
 
-export function EventDescription({ event }: { event: KnownEvent }) {
+export function EventDescription(props: EventDescription.Props) {
+	const { event, seenAs } = props
 	return (
 		<div className="flex flex-row flex-wrap items-center gap-[6px] leading-[18px]">
 			{event.parts.map((part, partIndex) => {
@@ -39,15 +42,12 @@ export function EventDescription({ event }: { event: KnownEvent }) {
 						)
 					case 'account':
 						return (
-							<Link
+							<Address
 								key={partKey}
-								to={'/account/$address'}
-								params={{ address: part.value }}
+								address={part.value}
 								className="text-accent items-end active:translate-y-[0.5px] whitespace-nowrap"
-								title={part.value}
-							>
-								{HexFormatter.shortenHex(part.value)}
-							</Link>
+								self={seenAs ? isAddressEqual(part.value, seenAs) : false}
+							/>
 						)
 					case 'hex':
 						return (
@@ -83,4 +83,11 @@ export function EventDescription({ event }: { event: KnownEvent }) {
 			})}
 		</div>
 	)
+}
+
+export namespace EventDescription {
+	export interface Props {
+		event: KnownEvent
+		seenAs?: AddressType.Address
+	}
 }
