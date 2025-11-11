@@ -1,4 +1,8 @@
-import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
+import {
+	keepPreviousData,
+	queryOptions,
+	useSuspenseQuery,
+} from '@tanstack/react-query'
 import {
 	ClientOnly,
 	createFileRoute,
@@ -208,12 +212,17 @@ function RouteComponent() {
 							</div>
 
 							{activeTab === 'history' && (
-								<HistoryTabContent
-									address={address}
-									page={page}
-									limit={limit}
-									goToPage={goToPage}
-								/>
+								<React.Suspense
+									fallback={<HistoryLoadingSkeleton limit={limit} />}
+								>
+									<HistoryTabContent
+										key={address}
+										address={address}
+										page={page}
+										limit={limit}
+										goToPage={goToPage}
+									/>
+								</React.Suspense>
 							)}
 
 							{activeTab === 'assets' && (
@@ -257,7 +266,7 @@ function RouteComponent() {
 function HistoryLoadingSkeleton({ limit }: { limit: number }) {
 	return (
 		<>
-			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
+			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
 				<table className="w-full border-collapse text-sm rounded-t-sm table-fixed">
 					<colgroup>
 						<col className="w-24" />
@@ -275,7 +284,10 @@ function HistoryLoadingSkeleton({ limit }: { limit: number }) {
 							<th className="px-5 pb-3 text-right font-normal">Total</th>
 						</tr>
 					</thead>
-					<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
+					<tbody
+						className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10"
+						style={{ minHeight: `${limit * 56}px` }}
+					>
 						{Array.from(
 							{ length: limit },
 							(_, index) => `loading-row-${index}`,
@@ -328,30 +340,44 @@ function HistoryTabContent({
 	const client = useClient()
 	const offset = (page - 1) * limit
 
-	const { data, isPlaceholderData } = useQuery(
+	const { data, isFetching } = useSuspenseQuery(
 		transactionsQuery(address, page, limit, client?.chain.id ?? 0, offset),
 	)
 
-	const transactions = data?.transactions ?? []
-	const totalTransactions = data?.total ?? 0
+	const transactions = data.transactions
+	const totalTransactions = data.total
 	const totalPages = Math.ceil(totalTransactions / limit)
 
-	// Show skeleton only on first load (no data at all)
-	if (!data) {
-		return <HistoryLoadingSkeleton limit={limit} />
-	}
+	// Track if we're changing pages (not just auto-refreshing)
+	const prevPageRef = React.useRef(page)
+	const [isChangingPage, setIsChangingPage] = React.useState(false)
+
+	React.useEffect(() => {
+		if (prevPageRef.current !== page) {
+			setIsChangingPage(true)
+			prevPageRef.current = page
+		}
+	}, [page])
+
+	React.useEffect(() => {
+		if (!isFetching && isChangingPage) setIsChangingPage(false)
+	}, [isFetching, isChangingPage])
+
+	const showLoading = isChangingPage && isFetching
 
 	return (
 		<>
 			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
-				{isPlaceholderData && (
-					<>
-						<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30 z-10">
-							<div className="h-full w-1/4 bg-accent animate-pulse" />
-						</div>
-						<div className="absolute inset-0 bg-black-white/5 pointer-events-none z-5" />
-					</>
-				)}
+				<ClientOnly>
+					{showLoading && (
+						<>
+							<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30 z-10">
+								<div className="h-full w-1/4 bg-accent animate-pulse" />
+							</div>
+							<div className="absolute inset-0 bg-black-white/5 pointer-events-none z-5" />
+						</>
+					)}
+				</ClientOnly>
 				<table className="w-full border-collapse text-sm rounded-t-sm table-fixed">
 					<colgroup>
 						<col className="w-24" />
@@ -460,7 +486,7 @@ function HistoryTabContent({
 					<button
 						type="button"
 						onClick={() => goToPage(page - 1)}
-						disabled={page <= 1 || isPlaceholderData}
+						disabled={page <= 1 || showLoading}
 						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Previous page"
 					>
@@ -516,12 +542,12 @@ function HistoryTabContent({
 										key={p}
 										type="button"
 										onClick={() => goToPage(p)}
-										disabled={isPlaceholderData}
+										disabled={showLoading}
 										className={`flex size-7 items-center justify-center rounded transition-colors ${
 											page === p
 												? 'bg-accent text-white'
 												: 'hover:bg-alt text-primary'
-										} ${isPlaceholderData ? 'opacity-50 cursor-not-allowed' : ''}`}
+										} ${showLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
 									>
 										{p}
 									</button>
@@ -533,7 +559,7 @@ function HistoryTabContent({
 					<button
 						type="button"
 						onClick={() => goToPage(page + 1)}
-						disabled={page >= totalPages || isPlaceholderData}
+						disabled={page >= totalPages || showLoading}
 						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Next page"
 					>
