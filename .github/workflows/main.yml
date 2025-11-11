@@ -13,30 +13,13 @@ jobs:
     uses: ./.github/workflows/verify.yml
     secrets: inherit
 
-  apps:
-    name: Get Apps
-    runs-on: ubuntu-latest
-    outputs:
-      apps: ${{ steps.apps.outputs.apps }}
-    steps:
-      - name: Clone repository
-        uses: actions/checkout@v5
-
-      - name: Get apps
-        id: apps
-        run: |
-          apps=$(ls -d apps/*/ | xargs -n 1 basename | jq -R -s -c 'split("\n")[:-1]')
-          echo "apps=$apps" >> $GITHUB_OUTPUT
-          echo "Discovered apps: $apps"
-
   deploy:
     name: Deploy (${{ matrix.app }})
-    needs: apps
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
       matrix:
-        app: ${{ fromJson(needs.apps.outputs.apps) }}
+        app: [explorer]
     steps:
       - uses: actions/checkout@v5
         with:
