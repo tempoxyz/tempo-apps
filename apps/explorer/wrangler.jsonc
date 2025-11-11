@@ -3,7 +3,7 @@
 	"name": "explorer",
 	"compatibility_date": "2025-10-11",
 	"compatibility_flags": ["nodejs_compat"],
-	"main": "./src/server.ts",
+	"main": "./src/index.server.ts",
 	"browser": {
 		"binding": "BROWSER"
 	},

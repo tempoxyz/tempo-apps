@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import { Value } from 'ox'
 import { Actions } from 'tempo.ts/wagmi'
-import { formatAmount } from '#formatting.ts'
+import { formatAmount } from '#lib/formatting'
 import { config } from '#wagmi.config.ts'
 
 export function Amount(props: Amount.Props) {

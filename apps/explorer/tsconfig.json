@@ -32,9 +32,9 @@
 			"#*": ["./src/*"],
 			"#explore*": ["./src/routes/explore/*"],
 			"#components": ["./src/components/*"],
-			"#cva": ["./cva.config.ts"]
+			"#cva": ["./src/cva.config.ts"]
 		}
 	},
-	"files": ["env.d.ts", "cva.config.ts"],
+	"files": ["env.d.ts", "src/cva.config.ts"],
 	"exclude": ["**/_/**", "node_modules"]
 }
