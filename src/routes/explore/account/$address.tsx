@@ -327,7 +327,7 @@ function HistoryTabContent({
 	const client = useClient()
 	const offset = (page - 1) * limit
 
-	const { data, isFetching } = useQuery(
+	const { data, isPlaceholderData } = useQuery(
 		transactionsQuery(address, page, limit, client?.chain.id ?? 0, offset),
 	)
 
@@ -343,7 +343,7 @@ function HistoryTabContent({
 	return (
 		<>
 			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
-				{isFetching && (
+				{isPlaceholderData && (
 					<>
 						<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30 z-10">
 							<div className="h-full w-1/4 bg-accent animate-pulse" />
@@ -459,7 +459,7 @@ function HistoryTabContent({
 					<button
 						type="button"
 						onClick={() => goToPage(page - 1)}
-						disabled={page <= 1 || isFetching}
+						disabled={page <= 1 || isPlaceholderData}
 						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Previous page"
 					>
@@ -515,12 +515,12 @@ function HistoryTabContent({
 										key={p}
 										type="button"
 										onClick={() => goToPage(p)}
-										disabled={isFetching}
+										disabled={isPlaceholderData}
 										className={`flex size-7 items-center justify-center rounded transition-colors ${
 											page === p
 												? 'bg-accent text-white'
 												: 'hover:bg-alt text-primary'
-										} ${isFetching ? 'opacity-50 cursor-not-allowed' : ''}`}
+										} ${isPlaceholderData ? 'opacity-50 cursor-not-allowed' : ''}`}
 									>
 										{p}
 									</button>
@@ -532,7 +532,7 @@ function HistoryTabContent({
 					<button
 						type="button"
 						onClick={() => goToPage(page + 1)}
-						disabled={page >= totalPages || isFetching}
+						disabled={page >= totalPages || isPlaceholderData}
 						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Next page"
 					>

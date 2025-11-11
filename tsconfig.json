@@ -10,7 +10,13 @@
 		"jsx": "react-jsx",
 		"module": "ESNext",
 		"lib": ["ES2024", "DOM", "DOM.Iterable"],
-		"types": ["bun", "node", "vite/client", "typed-query-selector/strict"],
+		"types": [
+			"bun",
+			"node",
+			"vite/client",
+			"typed-query-selector/strict",
+			"unplugin-icons/types/react"
+		],
 
 		/* Bundler mode */
 		"moduleResolution": "bundler",
