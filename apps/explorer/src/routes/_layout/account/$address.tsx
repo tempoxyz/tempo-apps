@@ -1,4 +1,8 @@
-import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
+import {
+	keepPreviousData,
+	queryOptions,
+	useSuspenseQuery,
+} from '@tanstack/react-query'
 import {
 	ClientOnly,
 	createFileRoute,
@@ -209,13 +213,15 @@ function RouteComponent() {
 							</div>
 
 							{activeTab === 'history' && (
-								<HistoryTabContent
-									key={address}
-									address={address}
-									page={page}
-									limit={limit}
-									goToPage={goToPage}
-								/>
+								<React.Suspense fallback={<HistoryTabSkeleton limit={limit} />}>
+									<HistoryTabContent
+										key={address}
+										address={address}
+										page={page}
+										limit={limit}
+										goToPage={goToPage}
+									/>
+								</React.Suspense>
 							)}
 
 							{activeTab === 'assets' && (
@@ -255,6 +261,74 @@ function RouteComponent() {
 	)
 }
 
+function HistoryTabSkeleton({ limit }: { limit: number }) {
+	return (
+		<>
+			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
+				<table className="border-collapse text-sm rounded-t-sm min-w-full">
+					<colgroup>
+						<col className="w-28" />
+						<col />
+						<col className="w-32" />
+						<col className="w-24" />
+						<col className="w-28" />
+					</colgroup>
+					<thead>
+						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
+							<th className="px-5 pb-3 font-normal text-left whitespace-nowrap">
+								Time
+							</th>
+							<th className="px-5 pb-3 font-normal text-left whitespace-nowrap">
+								Description
+							</th>
+							<th className="px-3 pb-3 font-normal text-right whitespace-nowrap">
+								Hash
+							</th>
+							<th className="px-3 pb-3 font-normal text-right whitespace-nowrap">
+								Fee
+							</th>
+							<th className="px-5 pb-3 font-normal text-right whitespace-nowrap">
+								Total
+							</th>
+						</tr>
+					</thead>
+					<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
+						{Array.from({ length: limit }, (_, i) => `skeleton-${i}`).map(
+							(key) => (
+								<tr key={key} style={{ height: '48px' }}>
+									<td style={{ height: '48px' }}>
+										<div className="h-[20px]" />
+									</td>
+									<td style={{ height: '48px' }}>
+										<div className="h-[20px]" />
+									</td>
+									<td style={{ height: '48px' }}>
+										<div className="h-[20px]" />
+									</td>
+									<td style={{ height: '48px' }}>
+										<div className="h-[20px]" />
+									</td>
+									<td style={{ height: '48px' }}>
+										<div className="h-[20px]" />
+									</td>
+								</tr>
+							),
+						)}
+					</tbody>
+				</table>
+			</div>
+			<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
+				<div className="flex flex-row items-center gap-2">
+					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
+					<div className="h-7 w-32 bg-alt animate-pulse rounded" />
+					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
+				</div>
+				<div className="h-4 w-48 bg-alt animate-pulse rounded" />
+			</div>
+		</>
+	)
+}
+
 function HistoryTabContent(props: {
 	address: Address.Address
 	page: number
@@ -266,60 +340,25 @@ function HistoryTabContent(props: {
 	const client = useClient()
 	const offset = (page - 1) * limit
 
-	const { data, isFetching, isPending } = useQuery(
+	const { data } = useSuspenseQuery(
 		transactionsQuery(address, page, limit, client?.chain.id ?? 0, offset),
 	)
-
-	// Track if we're changing pages (not just auto-refreshing)
-	const prevPageRef = React.useRef(page)
-	const [isChangingPage, setIsChangingPage] = React.useState(false)
-
-	React.useEffect(() => {
-		if (prevPageRef.current !== page) {
-			setIsChangingPage(true)
-			prevPageRef.current = page
-		}
-	}, [page])
-
-	React.useEffect(() => {
-		if (!isFetching && isChangingPage) setIsChangingPage(false)
-	}, [isFetching, isChangingPage])
-
-	// Show initial loading state only on first load (not during page changes)
-	if (isPending && !data) {
-		return (
-			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
-				<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30 z-10">
-					<div className="h-full w-1/4 bg-accent animate-pulse" />
-				</div>
-				<div className="flex items-center justify-center py-20 text-tertiary text-sm">
-					Loading transactions...
-				</div>
-			</div>
-		)
-	}
-
-	if (!data) return null
 
 	const transactions = data.transactions
 	const totalTransactions = data.total
 	const totalPages = Math.ceil(totalTransactions / limit)
-	const showLoading = isChangingPage && isFetching
 
 	return (
 		<>
 			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
-				<ClientOnly>
-					{showLoading && (
-						<>
-							<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30 z-10">
-								<div className="h-full w-1/4 bg-accent animate-pulse" />
-							</div>
-							<div className="absolute inset-0 bg-black-white/5 pointer-events-none z-5" />
-						</>
-					)}
-				</ClientOnly>
-				<table className="border-collapse text-sm rounded-t-sm table-auto min-w-full">
+				<table className="border-collapse text-sm rounded-t-sm min-w-full">
+					<colgroup>
+						<col className="w-28" />
+						<col />
+						<col className="w-32" />
+						<col className="w-24" />
+						<col className="w-28" />
+					</colgroup>
 					<thead>
 						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
 							<th className="px-5 pb-3 font-normal text-left whitespace-nowrap">
@@ -358,11 +397,11 @@ function HistoryTabContent(props: {
 					<button
 						type="button"
 						onClick={() => goToPage(page - 1)}
-						disabled={page <= 1 || showLoading}
+						disabled={page <= 1}
 						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Previous page"
 					>
-						{showLoading ? 'Loading...' : 'Previous'}
+						Previous
 					</button>
 
 					<div className="flex items-center gap-1.5 px-2">
@@ -407,12 +446,11 @@ function HistoryTabContent(props: {
 										key={p}
 										type="button"
 										onClick={() => goToPage(p)}
-										disabled={showLoading}
 										className={`flex size-7 items-center justify-center rounded transition-colors ${
 											page === p
 												? 'bg-accent text-white'
 												: 'hover:bg-alt text-primary'
-										} ${showLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+										}`}
 									>
 										{p}
 									</button>
@@ -424,11 +462,11 @@ function HistoryTabContent(props: {
 					<button
 						type="button"
 						onClick={() => goToPage(page + 1)}
-						disabled={page >= totalPages || showLoading}
+						disabled={page >= totalPages}
 						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Next page"
 					>
-						{showLoading ? 'Loading...' : 'Next'}
+						Next
 					</button>
 				</div>
 
