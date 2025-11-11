@@ -10,7 +10,7 @@ import { config } from '#wagmi.config'
  * id is block number or block hash
  */
 
-export const Route = createFileRoute('/explore/block/$id')({
+export const Route = createFileRoute('/_layout/block/$id')({
 	component: RouteComponent,
 	params: {
 		parse: z.object({

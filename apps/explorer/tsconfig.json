@@ -1,10 +1,5 @@
 {
-	"include": [
-		"**/*.ts",
-		"**/*.tsx",
-		"src/routes/receipt/$hash/.pdf.tsx",
-		"./scripts"
-	],
+	"include": ["**/*.ts", "**/*.tsx", "./scripts"],
 	"compilerOptions": {
 		"target": "ES2024",
 		"jsx": "react-jsx",

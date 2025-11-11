@@ -64,7 +64,7 @@ async function loader({
 	}
 }
 
-export const Route = createFileRoute('/receipt/$hash')({
+export const Route = createFileRoute('/_layout/tx/$hash')({
 	component: Component,
 	headers: () => ({
 		...(import.meta.env.PROD

@@ -10,7 +10,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 import { WagmiProvider } from 'wagmi'
-import { DefaultCatchBoundary } from '#components/default-catch-boundary'
+import { DefaultCatchBoundary } from '#components/ErrorBoundary'
 import { config, persister, queryClient } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
@@ -27,7 +27,7 @@ export const Route = createRootRouteWithContext<{
 				content: 'width=device-width, initial-scale=1',
 			},
 			{
-				title: 'Tempo',
+				title: 'Tempo Explorer',
 			},
 			{
 				name: 'viewport',

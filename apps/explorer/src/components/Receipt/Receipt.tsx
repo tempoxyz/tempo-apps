@@ -39,7 +39,7 @@ export function Receipt(props: Receipt.Props) {
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Sender</span>
 						<a
-							href={`/explore/account/${sender}`}
+							href={`/explore/address/${sender}`}
 							className="text-accent text-right active:translate-y-[0.5px]"
 							title={sender}
 						>
@@ -110,7 +110,7 @@ export function Receipt(props: Receipt.Props) {
 									</span>
 									<span className="items-end">to</span>
 									<a
-										href={`/explore/account/${event.receiver}`}
+										href={`/explore/address/${event.receiver}`}
 										className="text-accent items-end active:translate-y-[0.5px]"
 										title={event.receiver}
 									>

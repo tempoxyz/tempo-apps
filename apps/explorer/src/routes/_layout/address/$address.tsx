@@ -22,7 +22,8 @@ import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { config } from '#wagmi.config'
-import { PriceFormatter } from '../../receipt/$hash'
+
+import { PriceFormatter } from '../tx/$hash'
 
 type TransactionsResponse = {
 	transactions: Array<Transaction>
@@ -53,7 +54,7 @@ const transactionsQuery = (
 		placeholderData: keepPreviousData,
 	})
 
-export const Route = createFileRoute('/explore/account/$address')({
+export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
 	validateSearch: z.object({
 		page: z._default(z.number(), 1),
@@ -136,7 +137,7 @@ function RouteComponent() {
 				try {
 					Hex.assert(value)
 					navigate({
-						to: '/explore/$value',
+						to: '/$value',
 						params: { value },
 					})
 				} catch (error) {
@@ -425,7 +426,7 @@ function HistoryTabContent({
 									{/* Transaction Hash */}
 									<td className="px-3 py-3 font-mono text-[11px] text-primary">
 										<Link
-											to={'/receipt/$hash'}
+											to={'/tx/$hash'}
 											params={{ hash: transaction.hash ?? '' }}
 											className="hover:text-accent transition-colors"
 										>
@@ -438,7 +439,7 @@ function HistoryTabContent({
 									<td className="px-3 py-3">
 										{transaction.blockNumber ? (
 											<Link
-												to={'/explore/block/$id'}
+												to={'/block/$id'}
 												params={{
 													id: Hex.toNumber(transaction.blockNumber).toString(),
 												}}
@@ -600,7 +601,7 @@ function AssetRow({ contractAddress }: { contractAddress: Address.Address }) {
 		<tr className="transition-colors hover:bg-alt">
 			<td className="px-5 py-3 text-primary">
 				<Link
-					to="/explore/asset/$address"
+					to="/token/$address"
 					params={{ address: contractAddress }}
 					className="hover:text-accent transition-colors"
 				>
@@ -609,7 +610,7 @@ function AssetRow({ contractAddress }: { contractAddress: Address.Address }) {
 			</td>
 			<td className="px-5 py-3">
 				<Link
-					to="/explore/asset/$address"
+					to="/token/$address"
 					params={{ address: contractAddress }}
 					className="text-accent hover:text-accent/80 transition-colors"
 				>
@@ -685,7 +686,7 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 	const AssetLink = () => {
 		return (
 			<Link
-				to={'/explore/asset/$address'}
+				to={'/token/$address'}
 				params={{ address: tokenAddress }}
 				className="text-accent hover:text-accent/80 transition-colors"
 			>
@@ -711,7 +712,7 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 					</span>{' '}
 					<AssetLink /> <span>to</span>{' '}
 					<Link
-						to={'/explore/account/$address'}
+						to={'/address/$address'}
 						params={{ address: to as Address.Address }}
 						className="text-accent hover:text-accent/80 transition-colors"
 					>

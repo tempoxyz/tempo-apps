@@ -5,7 +5,7 @@ import {
 } from '@tanstack/react-router'
 import { Hex } from 'ox'
 
-export const Route = createFileRoute('/explore/')({
+export const Route = createFileRoute('/_layout/')({
 	component: Component,
 })
 
@@ -24,7 +24,7 @@ export function Component() {
 						const value = formData.get('value')
 						Hex.assert(value)
 						navigate({
-							to: '/explore/$value',
+							to: '/$value',
 							params: { value },
 						})
 					}}
