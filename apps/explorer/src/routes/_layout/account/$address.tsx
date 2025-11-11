@@ -21,8 +21,8 @@ import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 
-import { PriceFormatter } from '#formatting.ts'
-import { type KnownEventPart, parseKnownEvents } from '#known-events.ts'
+import { PriceFormatter } from '#lib/formatting'
+import { type KnownEventPart, parseKnownEvents } from '#lib/known-events'
 import { config } from '#wagmi.config.ts'
 
 type TransactionsResponse = {

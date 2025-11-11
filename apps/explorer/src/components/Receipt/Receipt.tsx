@@ -6,9 +6,9 @@ import {
 	formatTimestampDate,
 	formatTimestampTime,
 	shortenHex,
-} from '#formatting.ts'
-import type { KnownEvent } from '#known-events.ts'
-import { useCopy } from '#react-utils.ts'
+} from '#lib/formatting.ts'
+import type { KnownEvent } from '#lib/known-events.ts'
+import { useCopy } from '#lib/react-utils.ts'
 import { Amount } from './Amount.tsx'
 import { ReceiptMark } from './ReceiptMark.tsx'
 
