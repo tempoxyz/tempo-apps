@@ -35,7 +35,7 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: Build
-        run: bun run build
+        run: pnpm run build
         working-directory: apps/${{ matrix.app }}
 
       - name: Upload Worker Version
