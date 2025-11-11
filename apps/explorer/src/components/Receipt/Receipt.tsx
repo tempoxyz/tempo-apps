@@ -2,13 +2,10 @@ import { Link } from '@tanstack/react-router'
 import { type Address, Hex } from 'ox'
 import { useState } from 'react'
 import { formatUnits } from 'viem'
-import {
-	formatTimestampDate,
-	formatTimestampTime,
-	shortenHex,
-} from '#lib/formatting.ts'
+
+import { DateFormatter, HexFormatter } from '#lib/formatting.ts'
+import { useCopy } from '#lib/hooks.ts'
 import type { KnownEvent } from '#lib/known-events.ts'
-import { useCopy } from '#lib/react-utils.ts'
 import { Amount } from './Amount.tsx'
 import { ReceiptMark } from './ReceiptMark.tsx'
 
@@ -49,7 +46,7 @@ export function Receipt(props: Receipt.Props) {
 							className="text-accent text-right active:translate-y-[0.5px]"
 							title={sender}
 						>
-							{shortenHex(sender)}
+							{HexFormatter.shortenHex(sender)}
 						</Link>
 					</div>
 					<div className="flex justify-between items-start">
@@ -76,21 +73,23 @@ export function Receipt(props: Receipt.Props) {
 								className="text-right cursor-pointer active:translate-y-[0.5px]"
 								title={hash}
 							>
-								{shortenHex(hash)}
+								{HexFormatter.shortenHex(hash)}
 							</button>
 						)}
 					</div>
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Date</span>
-						<span className="text-right">{formatTimestampDate(timestamp)}</span>
+						<span className="text-right">
+							{DateFormatter.formatTimestampDate(timestamp)}
+						</span>
 					</div>
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Time</span>
 						<span className="text-right">
-							{formatTimestampTime(timestamp).time}{' '}
-							{formatTimestampTime(timestamp).timezone}
+							{DateFormatter.formatTimestampTime(timestamp).time}{' '}
+							{DateFormatter.formatTimestampTime(timestamp).timezone}
 							<span className="text-tertiary">
-								{formatTimestampTime(timestamp).offset}
+								{DateFormatter.formatTimestampTime(timestamp).offset}
 							</span>
 						</span>
 					</div>
@@ -154,7 +153,7 @@ export function Receipt(props: Receipt.Props) {
 															className="text-base-content-positive items-end"
 														>
 															{part.value.symbol ||
-																shortenHex(part.value.address)}
+																HexFormatter.shortenHex(part.value.address)}
 														</span>
 													)
 												case 'account':
@@ -166,7 +165,7 @@ export function Receipt(props: Receipt.Props) {
 															className="text-accent items-end active:translate-y-[0.5px] whitespace-nowrap"
 															title={part.value}
 														>
-															{shortenHex(part.value)}
+															{HexFormatter.shortenHex(part.value)}
 														</Link>
 													)
 												case 'hex':
@@ -176,7 +175,7 @@ export function Receipt(props: Receipt.Props) {
 															className="items-end whitespace-nowrap"
 															title={part.value}
 														>
-															{shortenHex(part.value)}
+															{HexFormatter.shortenHex(part.value)}
 														</span>
 													)
 												case 'primary':

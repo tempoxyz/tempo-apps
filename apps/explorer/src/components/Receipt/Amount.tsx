@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import { Value } from 'ox'
 import { Actions } from 'tempo.ts/wagmi'
-import { formatAmount } from '#lib/formatting'
+
+import { PriceFormatter } from '#lib/formatting.ts'
 import { config } from '#wagmi.config.ts'
 
 export function Amount(props: Amount.Props) {
@@ -16,7 +17,8 @@ export function Amount(props: Amount.Props) {
 	const decimals = decimals_ ?? metadata?.decimals
 	const rawFormatted =
 		decimals === undefined ? '…' : Value.format(value, decimals)
-	const formatted = rawFormatted === '…' ? '…' : formatAmount(rawFormatted)
+	const formatted =
+		rawFormatted === '…' ? '…' : PriceFormatter.formatAmount(rawFormatted)
 
 	return (
 		<span className="items-end whitespace-nowrap">
