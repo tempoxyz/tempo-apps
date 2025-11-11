@@ -92,19 +92,11 @@ export namespace DateFormatter {
 		const diffDay = Math.floor(diffHour / 24)
 
 		const fullDate = date.toLocaleString()
-		let text: string
-
-		if (diffSec < 60) {
-			text = relativeTimeFormatter.format(-diffSec, 'second')
-		} else if (diffMin < 60) {
-			text = relativeTimeFormatter.format(-diffMin, 'minute')
-		} else if (diffHour < 24) {
-			text = relativeTimeFormatter.format(-diffHour, 'hour')
-		} else {
-			text = relativeTimeFormatter.format(-diffDay, 'day')
-		}
-
-		return { text, fullDate }
+		const rtf = relativeTimeFormatter
+		if (diffSec < 60) return { fullDate, text: rtf.format(-diffSec, 'second') }
+		if (diffMin < 60) return { fullDate, text: rtf.format(-diffMin, 'minute') }
+		if (diffHour < 24) return { fullDate, text: rtf.format(-diffHour, 'hour') }
+		return { text: rtf.format(-diffDay, 'day'), fullDate }
 	}
 }
 
