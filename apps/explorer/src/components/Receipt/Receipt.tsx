@@ -44,7 +44,7 @@ export function Receipt(props: Receipt.Props) {
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Sender</span>
 						<Link
-							to={'/address/$address'}
+							to={'/account/$address'}
 							params={{ address: sender }}
 							className="text-accent text-right active:translate-y-[0.5px]"
 							title={sender}
@@ -161,7 +161,7 @@ export function Receipt(props: Receipt.Props) {
 													return (
 														<Link
 															key={partKey}
-															to={'/address/$address'}
+															to={'/account/$address'}
 															params={{ address: part.value }}
 															className="text-accent items-end active:translate-y-[0.5px] whitespace-nowrap"
 															title={part.value}
