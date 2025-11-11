@@ -20,9 +20,9 @@ export default defineConfig((config) => {
 			}),
 			tanstack({
 				srcDirectory: './src',
-				start: { entry: './src/start.ts' },
-				server: { entry: './src/server.ts' },
-				client: { entry: './src/client.tsx' },
+				start: { entry: './src/index.start.ts' },
+				server: { entry: './src/index.server.ts' },
+				client: { entry: './src/index.client.tsx' },
 			}),
 			react(),
 		],
