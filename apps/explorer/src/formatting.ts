@@ -48,3 +48,14 @@ export function formatTimestampTime(timestamp: bigint): {
 
 	return { time: timeFormatter.format(date), timezone, offset }
 }
+
+const amountFormatter = new Intl.NumberFormat('en-US', {
+	minimumFractionDigits: 0,
+	maximumFractionDigits: 18,
+})
+
+export function formatAmount(value: string): string {
+	const number = Number(value)
+	if (number > 0 && number < 0.01) return '<0.01'
+	return amountFormatter.format(number)
+}
