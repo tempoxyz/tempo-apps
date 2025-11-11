@@ -18,5 +18,9 @@
 			"invocation_logs": true,
 			"persist": true
 		}
+	},
+	"vars": {
+		"BASIC_AUTH_USERNAME": "",
+		"BASIC_AUTH_PASSWORD": ""
 	}
 }
