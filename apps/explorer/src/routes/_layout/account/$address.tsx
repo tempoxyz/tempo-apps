@@ -20,6 +20,7 @@ import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { EventDescription } from '#components/EventDescription'
+import { RelativeTime } from '#components/RelativeTime'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { parseKnownEvents } from '#lib/known-events'
 import { config } from '#wagmi.config'
@@ -162,7 +163,7 @@ function RouteComponent() {
 									ref={inputRef}
 									name="value"
 									type="text"
-									placeholder="Enter address, token, or transaction..."
+									placeholder="Enter address, token, or transaction…"
 									spellCheck={false}
 									autoCapitalize="off"
 									autoComplete="off"
@@ -431,7 +432,13 @@ function HistoryTabContent(props: {
 								)
 							}
 
-							return <TransactionRow key={key} transaction={transaction} />
+							return (
+								<TransactionRow
+									key={key}
+									transaction={transaction}
+									address={address}
+								/>
+							)
 						})}
 					</tbody>
 				</table>
@@ -446,7 +453,7 @@ function HistoryTabContent(props: {
 						className="border border-border-primary px-2 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Previous page"
 					>
-						{isPending ? 'Loading...' : 'Previous'}
+						{isPending ? 'Loading…' : 'Previous'}
 					</button>
 
 					<div className="flex items-center gap-1.5">
@@ -482,7 +489,7 @@ function HistoryTabContent(props: {
 											key={`ellipsis-${ellipsisCount}`}
 											className="text-tertiary px-1"
 										>
-											...
+											…
 										</span>
 									)
 								}
@@ -512,7 +519,7 @@ function HistoryTabContent(props: {
 						className="rounded-none border border-border-primary px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Next page"
 					>
-						{isPending ? 'Loading...' : 'Next'}
+						{isPending ? 'Loading…' : 'Next'}
 					</button>
 				</div>
 
@@ -522,7 +529,7 @@ function HistoryTabContent(props: {
 					<span className="text-tertiary">of</span>
 					<span className="text-primary">{totalPages}</span>
 					<span className="text-tertiary">•</span>
-					<span className="text-primary">{totalTransactions || '...'}</span>
+					<span className="text-primary">{totalTransactions || '…'}</span>
 					<span className="text-tertiary">
 						<ClientOnly fallback={<React.Fragment>¬</React.Fragment>}>
 							{totalTransactions === 1 ? 'transaction' : 'transactions'}
@@ -534,8 +541,11 @@ function HistoryTabContent(props: {
 	)
 }
 
-function TransactionRow(props: { transaction: Transaction }) {
-	const { transaction } = props
+function TransactionRow(props: {
+	transaction: Transaction
+	address: Address.Address
+}) {
+	const { transaction, address } = props
 
 	return (
 		<tr key={transaction.hash} className="transition-colors hover:bg-alt h-12">
@@ -547,7 +557,7 @@ function TransactionRow(props: { transaction: Transaction }) {
 
 			<td className="px-4 py-3 text-primary text-sm align-middle text-left whitespace-nowrap overflow-hidden h-12">
 				<div className="h-5 flex items-center overflow-hidden">
-					<TransactionDescription transaction={transaction} />
+					<TransactionDescription transaction={transaction} address={address} />
 				</div>
 			</td>
 
@@ -690,8 +700,11 @@ function AssetRow(props: { contractAddress: Address.Address }) {
 	)
 }
 
-function TransactionDescription(props: { transaction: Transaction }) {
-	const { transaction } = props
+function TransactionDescription(props: {
+	transaction: Transaction
+	address: Address.Address
+}) {
+	const { transaction, address } = props
 	const [expanded, setExpanded] = React.useState(false)
 
 	const { data: receipt } = useTransactionReceipt({
@@ -720,7 +733,7 @@ function TransactionDescription(props: { transaction: Transaction }) {
 						key={key}
 						className="flex flex-row flex-wrap items-center gap-[4px]"
 					>
-						<EventDescription event={event} />
+						<EventDescription event={event} seenAs={address} />
 						{eventIndex === 0 && remainingCount > 0 && (
 							<button
 								type="button"
@@ -756,34 +769,7 @@ function TransactionTimestamp(props: {
 		},
 	})
 
-	const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
-
-	// Update every second to keep time live
-	React.useEffect(() => {
-		const interval = setInterval(forceUpdate, 1000)
-		return () => clearInterval(interval)
-	}, [])
-
 	if (!timestamp) return <span className="text-tertiary">···</span>
 
-	// Convert Unix timestamp to readable format
-	const date = new Date(Number(timestamp) * 1_000)
-	const now = new Date()
-	const diffMs = now.getTime() - date.getTime()
-	const diffSec = Math.floor(diffMs / 1000)
-	const diffMin = Math.floor(diffSec / 60)
-	const diffHour = Math.floor(diffMin / 60)
-	const diffDay = Math.floor(diffHour / 24)
-
-	let timeAgo: string
-	if (diffSec < 60) timeAgo = `${diffSec}s ago`
-	else if (diffMin < 60) timeAgo = `${diffMin}m ago`
-	else if (diffHour < 24) timeAgo = `${diffHour}h ago`
-	else timeAgo = `${diffDay}d ago`
-
-	return (
-		<span className="text-tertiary" title={date.toLocaleString()}>
-			{timeAgo}
-		</span>
-	)
+	return <RelativeTime timestamp={timestamp} className="text-tertiary" />
 }

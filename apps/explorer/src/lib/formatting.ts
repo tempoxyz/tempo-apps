@@ -73,6 +73,31 @@ export namespace DateFormatter {
 
 		return { time: timeFormatter.format(date), timezone, offset }
 	}
+
+	const relativeTimeFormatter = new Intl.RelativeTimeFormat('en-US', {
+		numeric: 'auto',
+		style: 'narrow',
+	})
+
+	export function formatRelativeTime(timestamp: bigint): {
+		text: string
+		fullDate: string
+	} {
+		const date = new Date(Number(timestamp) * 1_000)
+		const now = new Date()
+		const diffMs = now.getTime() - date.getTime()
+		const diffSec = Math.floor(diffMs / 1000)
+		const diffMin = Math.floor(diffSec / 60)
+		const diffHour = Math.floor(diffMin / 60)
+		const diffDay = Math.floor(diffHour / 24)
+
+		const fullDate = date.toLocaleString()
+		const rtf = relativeTimeFormatter
+		if (diffSec < 60) return { fullDate, text: rtf.format(-diffSec, 'second') }
+		if (diffMin < 60) return { fullDate, text: rtf.format(-diffMin, 'minute') }
+		if (diffHour < 24) return { fullDate, text: rtf.format(-diffHour, 'hour') }
+		return { text: rtf.format(-diffDay, 'day'), fullDate }
+	}
 }
 
 export namespace PriceFormatter {
