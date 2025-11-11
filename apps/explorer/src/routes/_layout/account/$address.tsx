@@ -1,8 +1,4 @@
-import {
-	keepPreviousData,
-	queryOptions,
-	useSuspenseQuery,
-} from '@tanstack/react-query'
+import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import {
 	ClientOnly,
 	createFileRoute,
@@ -214,17 +210,13 @@ function RouteComponent() {
 							</div>
 
 							{activeTab === 'history' && (
-								<React.Suspense
-									fallback={<HistoryLoadingSkeleton limit={limit} />}
-								>
-									<HistoryTabContent
-										key={address}
-										address={address}
-										page={page}
-										limit={limit}
-										goToPage={goToPage}
-									/>
-								</React.Suspense>
+								<HistoryTabContent
+									key={address}
+									address={address}
+									page={page}
+									limit={limit}
+									goToPage={goToPage}
+								/>
 							)}
 
 							{activeTab === 'assets' && (
@@ -243,8 +235,7 @@ function RouteComponent() {
 												</th>
 											</tr>
 										</thead>
-										{/** biome-ignore lint/complexity/noUselessFragments: _ */}
-										<ClientOnly fallback={<></>}>
+										<ClientOnly fallback={<tbody />}>
 											<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
 												{assets.map((assetAddress) => (
 													<AssetRow
@@ -265,69 +256,6 @@ function RouteComponent() {
 	)
 }
 
-function HistoryLoadingSkeleton({ limit }: { limit: number }) {
-	return (
-		<>
-			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
-				<table className="w-full border-collapse text-sm rounded-t-sm table-fixed">
-					<colgroup>
-						<col className="w-24" />
-						<col />
-						<col className="w-35" />
-						<col className="w-20" />
-						<col className="w-28" />
-					</colgroup>
-					<thead>
-						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
-							<th className="px-5 pb-3 font-normal text-left">Time</th>
-							<th className="px-5 pb-3 font-normal text-left">Description</th>
-							<th className="px-3 pb-3 font-normal text-right">Hash</th>
-							<th className="px-3 pb-3 font-normal text-right">Fee</th>
-							<th className="px-5 pb-3 font-normal text-right">Total</th>
-						</tr>
-					</thead>
-					<tbody
-						className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10"
-						style={{ minHeight: `${limit * 56}px` }}
-					>
-						{Array.from(
-							{ length: limit },
-							(_, index) => `loading-row-${index}`,
-						).map((key) => (
-							<tr key={key} className="transition-colors h-14">
-								<td className="px-5 py-3">
-									<div className="h-4 w-16 bg-alt animate-pulse rounded" />
-								</td>
-								<td className="px-5 py-3">
-									<div className="h-4 w-48 bg-alt animate-pulse rounded" />
-								</td>
-								<td className="px-3 py-3">
-									<div className="h-4 w-24 bg-alt animate-pulse rounded" />
-								</td>
-								<td className="px-3 py-3">
-									<div className="h-4 w-16 bg-alt animate-pulse rounded" />
-								</td>
-								<td className="px-5 py-3 text-right">
-									<div className="h-4 w-20 bg-alt animate-pulse rounded ml-auto" />
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
-
-			<div className="font-mono flex flex-col gap-3 border-t-2 border-dashed border-black-white/10 px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
-				<div className="flex flex-row items-center gap-2">
-					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
-					<div className="h-7 w-32 bg-alt animate-pulse rounded" />
-					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
-				</div>
-				<div className="h-4 w-48 bg-alt animate-pulse rounded" />
-			</div>
-		</>
-	)
-}
-
 function HistoryTabContent(props: {
 	address: Address.Address
 	page: number
@@ -339,13 +267,9 @@ function HistoryTabContent(props: {
 	const client = useClient()
 	const offset = (page - 1) * limit
 
-	const { data, isFetching } = useSuspenseQuery(
+	const { data, isFetching, isLoading } = useQuery(
 		transactionsQuery(address, page, limit, client?.chain.id ?? 0, offset),
 	)
-
-	const transactions = data.transactions
-	const totalTransactions = data.total
-	const totalPages = Math.ceil(totalTransactions / limit)
 
 	// Track if we're changing pages (not just auto-refreshing)
 	const prevPageRef = React.useRef(page)
@@ -362,6 +286,23 @@ function HistoryTabContent(props: {
 		if (!isFetching && isChangingPage) setIsChangingPage(false)
 	}, [isFetching, isChangingPage])
 
+	// Show initial loading state
+	if (isLoading || !data) {
+		return (
+			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
+				<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30 z-10">
+					<div className="h-full w-1/4 bg-accent animate-pulse" />
+				</div>
+				<div className="flex items-center justify-center py-20 text-tertiary text-sm">
+					Loading transactions...
+				</div>
+			</div>
+		)
+	}
+
+	const transactions = data.transactions
+	const totalTransactions = data.total
+	const totalPages = Math.ceil(totalTransactions / limit)
 	const showLoading = isChangingPage && isFetching
 
 	return (
@@ -377,29 +318,29 @@ function HistoryTabContent(props: {
 						</>
 					)}
 				</ClientOnly>
-				<table className="w-full border-collapse text-sm rounded-t-sm table-fixed">
-					<colgroup>
-						<col className="w-24" />
-						<col />
-						<col className="w-35" />
-						<col className="w-20" />
-						<col className="w-28" />
-					</colgroup>
+				<table className="border-collapse text-sm rounded-t-sm table-auto min-w-full">
 					<thead>
 						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
-							<th className="px-5 pb-3 font-normal text-left">Time</th>
-							<th className="px-5 pb-3 font-normal text-left">Description</th>
-							<th className="px-3 pb-3 font-normal text-right">Hash</th>
-							<th className="px-3 pb-3 font-normal text-right">Fee</th>
-							<th className="px-5 pb-3 font-normal text-right">Total</th>
+							<th className="px-5 pb-3 font-normal text-left whitespace-nowrap">
+								Time
+							</th>
+							<th className="px-5 pb-3 font-normal text-left whitespace-nowrap">
+								Description
+							</th>
+							<th className="px-3 pb-3 font-normal text-right whitespace-nowrap">
+								Hash
+							</th>
+							<th className="px-3 pb-3 font-normal text-right whitespace-nowrap">
+								Fee
+							</th>
+							<th className="px-5 pb-3 font-normal text-right whitespace-nowrap">
+								Total
+							</th>
 						</tr>
 					</thead>
 
-					<ClientOnly fallback={<div />}>
-						<tbody
-							className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10"
-							style={{ minHeight: `${limit * 56}px` }}
-						>
+					<ClientOnly fallback={<tbody />}>
+						<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
 							{transactions?.map((transaction) => (
 								<TransactionRow
 									key={transaction.hash}
@@ -420,7 +361,7 @@ function HistoryTabContent(props: {
 						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Previous page"
 					>
-						Previous
+						{showLoading ? 'Loading...' : 'Previous'}
 					</button>
 
 					<div className="flex items-center gap-1.5 px-2">
@@ -486,7 +427,7 @@ function HistoryTabContent(props: {
 						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Next page"
 					>
-						Next
+						{showLoading ? 'Loading...' : 'Next'}
 					</button>
 				</div>
 
@@ -513,15 +454,15 @@ function TransactionRow(props: { transaction: Transaction }) {
 
 	return (
 		<tr key={transaction.hash} className="transition-colors hover:bg-alt h-12">
-			<td className="px-5 py-3 text-primary text-xs">
+			<td className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap">
 				<TransactionTimestamp blockNumber={transaction.blockNumber} />
 			</td>
 
-			<td className="px-5 py-3 text-primary text-sm">
+			<td className="px-4 py-3 text-primary text-sm align-middle text-left whitespace-nowrap">
 				<TransactionDescription transaction={transaction} />
 			</td>
 
-			<td className="px-3 py-3 font-mono text-[11px] text-tertiary">
+			<td className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap">
 				<Link
 					to={'/receipt/$hash'}
 					params={{ hash: transaction.hash ?? '' }}
@@ -531,31 +472,61 @@ function TransactionRow(props: { transaction: Transaction }) {
 				</Link>
 			</td>
 
-			<td className="px-3 py-3 text-tertiary">
+			<td className="px-3 py-3 text-tertiary align-middle text-right whitespace-nowrap">
 				(
 				{PriceFormatter.format(Hex.toBigInt(transaction.gasPrice ?? '0x0'), 18)}
 				)
 			</td>
 
-			{/* TODO: */}
-			<td className="px-5 py-3 text-right font-mono text-xs">
-				{(() => {
-					const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
-					const ethAmount = parseFloat(formatEther(value))
-					const dollarAmount = ethAmount * 2_000
-
-					if (dollarAmount > 1)
-						return (
-							<span className="text-positive">${dollarAmount.toFixed(2)}</span>
-						)
-
-					return (
-						<span className="text-primary">(${dollarAmount.toFixed(2)})</span>
-					)
-				})()}
+			<td className="px-5 py-3 text-right font-mono text-xs align-middle whitespace-nowrap">
+				<TransactionTotal transaction={transaction} />
 			</td>
 		</tr>
 	)
+}
+
+function TransactionTotal(props: { transaction: Transaction }) {
+	const { transaction } = props
+
+	const { data: receipt } = useTransactionReceipt({
+		hash: transaction.hash,
+		query: {
+			enabled: Boolean(transaction.hash),
+		},
+	})
+
+	const knownEvents = React.useMemo(() => {
+		if (!receipt) return []
+		return parseKnownEvents(receipt)
+	}, [receipt])
+
+	const [event] = knownEvents
+
+	// Find the first amount in the event parts
+	const amount = event?.parts.find((part) => part.type === 'amount')
+
+	if (!amount || amount.type !== 'amount') {
+		// Fallback to native currency value
+		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
+		if (value === 0n) {
+			return <span className="text-tertiary">—</span>
+		}
+		const ethAmount = parseFloat(formatEther(value))
+		const dollarAmount = ethAmount * 2_000
+		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
+	}
+
+	// Calculate dollar value from token amount
+	const decimals = amount.value.decimals ?? 6
+	const tokenAmount = parseFloat(formatUnits(amount.value.value, decimals))
+	// TODO: Get actual token price instead of assuming $1
+	const dollarAmount = tokenAmount * 1
+
+	if (dollarAmount > 0.01) {
+		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
+	}
+
+	return <span className="text-tertiary">${dollarAmount.toFixed(2)}</span>
 }
 
 function AssetRow(props: { contractAddress: Address.Address }) {
@@ -566,10 +537,11 @@ function AssetRow(props: { contractAddress: Address.Address }) {
 		token: contractAddress,
 	})
 
-	const { data: balance } = Hooks.token.useGetBalance({
+	const { data: balance, error } = Hooks.token.useGetBalance({
 		token: contractAddress,
 		account: address,
 	})
+	console.info(balance, error)
 
 	return (
 		<tr className="transition-colors hover:bg-alt">
@@ -588,7 +560,7 @@ function AssetRow(props: { contractAddress: Address.Address }) {
 					params={{ address: contractAddress }}
 					className="text-accent hover:text-accent/80 transition-colors"
 				>
-					{metadata?.symbol || '???'}
+					{metadata?.symbol || 'TOKEN'}
 				</Link>
 			</td>
 			<td className="px-5 py-3 text-primary">USD</td>
@@ -620,10 +592,17 @@ function TransactionDescription(props: { transaction: Transaction }) {
 	}, [receipt])
 
 	const [event] = knownEvents
-	if (!event) return null
+
+	if (!event) {
+		return (
+			<div className="text-tertiary min-h-[20px] flex items-center whitespace-nowrap">
+				<span className="inline-block">···</span>
+			</div>
+		)
+	}
 
 	return (
-		<div className="text-primary">
+		<div className="text-primary min-h-[20px] flex items-center whitespace-nowrap">
 			{event.parts.map((part, index) => (
 				<EventPart
 					key={`${part.type}-${index}`}
@@ -659,7 +638,7 @@ function EventPart(props: { part: KnownEventPart; isLast: boolean }) {
 		switch (part.type) {
 			case 'action':
 				return (
-					<span className="flex flex-row justify-center items-center px-[5px] py-[4px] bg-base-alt leading-[16px] w-auto">
+					<span className="flex flex-row justify-center items-center px-[5px] py-[4px] border border-base-alt leading-[16px] w-auto">
 						{part.value}
 					</span>
 				)
@@ -679,9 +658,9 @@ function EventPart(props: { part: KnownEventPart; isLast: boolean }) {
 				const decimals = part.value.decimals ?? metadata?.decimals ?? 6
 				return (
 					<>
-						<span className="tabular-nums font-normal">
+						<span className="tabular-nums font-normal px-2">
 							{formatUnits(part.value.value, decimals)}
-						</span>{' '}
+						</span>
 						<Link
 							to={'/token/$address'}
 							params={{ address: part.value.token }}
@@ -717,7 +696,7 @@ function EventPart(props: { part: KnownEventPart; isLast: boolean }) {
 				return <span className="font-semibold">{part.value}</span>
 
 			case 'secondary':
-				return <span>{part.value}</span>
+				return <span className="pl-2">{part.value}</span>
 
 			case 'tick':
 				return <span className="text-accent">{part.value}</span>
