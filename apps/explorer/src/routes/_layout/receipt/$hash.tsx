@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
 import { createFileRoute } from '@tanstack/react-router'
-import { Address, Hex, Json } from 'ox'
+import { Address, Hex, Json, Value } from 'ox'
 import * as React from 'react'
 import { TokenRole } from 'tempo.ts/ox'
 import { Abis } from 'tempo.ts/viem'
@@ -15,11 +15,10 @@ import {
 import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
-
-import { Receipt } from '#components/Receipt/Receipt.tsx'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
-import { parseKnownEvents } from '#lib/known-events.ts'
-import { config, getConfig } from '#wagmi.config.ts'
+import { Receipt } from '#components/Receipt/Receipt'
+import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import { parseKnownEvents } from '#lib/known-events'
+import { config, getConfig } from '#wagmi.config'
 
 async function loader({
 	location,
@@ -188,8 +187,15 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 function Component() {
 	const { block, lineItems, receipt, transaction } = Route.useLoaderData()
 
-	const fee = lineItems.feeTotals?.[0]?.ui?.right
-	const total = lineItems.totals?.[0]?.ui?.right
+	const feePrice = lineItems.feeTotals?.[0]?.price
+	const fee = feePrice
+		? Number(Value.format(feePrice.amount, feePrice.decimals))
+		: undefined
+
+	const totalPrice = lineItems.totals?.[0]?.price
+	const total = totalPrice
+		? Number(Value.format(totalPrice.amount, totalPrice.decimals))
+		: undefined
 
 	const knownEvents = React.useMemo(() => parseKnownEvents(receipt), [receipt])
 
@@ -633,7 +639,9 @@ export namespace LineItems {
 					},
 					ui: {
 						left: 'Fee',
-						right: decimals ? PriceFormatter.format(amount, decimals) : '-',
+						right: decimals
+							? PriceFormatter.format(amount, { decimals, format: 'short' })
+							: '-',
 					},
 				}),
 			]
@@ -655,9 +663,12 @@ export namespace LineItems {
 		for (const [_, price] of totals) {
 			if (!price) continue
 			const { amount, decimals } = price
-			const formatted = decimals ? PriceFormatter.format(amount, decimals) : '-'
+			const formatted = decimals
+				? PriceFormatter.format(amount, { decimals, format: 'short' })
+				: '-'
 			items.totals.push(
 				LineItem.from({
+					price,
 					ui: {
 						left: 'Total',
 						right: formatted,

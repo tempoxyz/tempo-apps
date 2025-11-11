@@ -24,6 +24,11 @@
 			"enabled": true
 		}
 	},
+	"json": {
+		"formatter": {
+			"enabled": true
+		}
+	},
 	"files": {
 		"ignoreUnknown": false,
 		"includes": ["**", "!**/routeTree.gen.ts", "!**/_"]
