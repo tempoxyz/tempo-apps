@@ -29,7 +29,7 @@ export function getConfig(
 ) {
 	const { rpcUrl } = parameters
 	return createConfig({
-		chains: [tempoAndantino],
+		chains: [tempoAndantino({ feeToken: 1n })],
 		ssr: true,
 		transports: {
 			[tempoAndantino.id]: !browser

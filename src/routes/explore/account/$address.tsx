@@ -18,6 +18,7 @@ import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { config } from '#wagmi.config'
+import { PriceFormatter } from '../../receipt/$hash'
 
 type TransactionsResponse = {
 	transactions: Array<Transaction>
@@ -594,7 +595,9 @@ function AssetRow({ contractAddress }: { contractAddress: Address.Address }) {
 				{formatUnits(balance ?? 0n, metadata?.decimals ?? 6)}
 			</td>
 			<td className="px-5 py-3 text-right font-mono text-xs text-primary">
-				${(Number(balance ?? 0n) * 1.0).toFixed(2)}
+				{typeof balance === 'bigint' && metadata?.decimals
+					? `${PriceFormatter.format(Number(balance), metadata.decimals)}`
+					: null}
 			</td>
 		</tr>
 	)
