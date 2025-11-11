@@ -9,14 +9,12 @@ import {
 
 const abi = Object.values(Abis).flat()
 
-// Helper type for Transfer event args
 type TransferEventArgs = {
 	from: Address.Address
 	to: Address.Address
 	amount: bigint
 }
 
-// Type guard for Transfer events
 function isTransferEvent(
 	event: Log<bigint, number, boolean, AbiEvent>,
 ): event is Log<bigint, number, boolean, AbiEvent> & {
@@ -140,16 +138,20 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 		.filter(({ event }) => isTransferEvent(event))
 
 	// Look for swap pairs (transfer TO exchange + transfer FROM exchange)
-	for (let i = 0; i < transferEvents.length - 1; i++) {
-		const { event: event1, index: idx1 } = transferEvents[i]
+	for (let index = 0; index < transferEvents.length - 1; index++) {
+		const { event: event1, index: idx1 } = transferEvents[index]
 		// Type assertion is safe here because isTransferEvent has validated the structure
 		const args1 = event1.args as TransferEventArgs
 		const to1 = args1.to.toLowerCase()
 
 		// If this is a transfer TO the exchange, look for a matching transfer FROM the exchange
 		if (to1 === STABLECOIN_EXCHANGE) {
-			for (let j = i + 1; j < transferEvents.length; j++) {
-				const { event: event2, index: idx2 } = transferEvents[j]
+			for (
+				let innerIndex = index + 1;
+				innerIndex < transferEvents.length;
+				innerIndex++
+			) {
+				const { event: event2, index: idx2 } = transferEvents[innerIndex]
 				const args2 = event2.args as TransferEventArgs
 				const from2 = args2.from.toLowerCase()
 
@@ -187,11 +189,11 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 	}
 
 	// Map log events to known events.
-	for (let i = 0; i < dedupedEvents.length; i++) {
+	for (let index = 0; index < dedupedEvents.length; index++) {
 		// Skip events that are part of a swap
-		if (swapIndices.has(i)) continue
+		if (swapIndices.has(index)) continue
 
-		const event = dedupedEvents[i]
+		const event = dedupedEvents[index]
 		switch (event.eventName) {
 			case 'TransferWithMemo':
 			case 'Transfer': {

@@ -11,7 +11,6 @@ import {
 	useParams,
 	useRouterState,
 } from '@tanstack/react-router'
-import { ArrowRight } from 'lucide-react'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
@@ -21,9 +20,10 @@ import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 
-import { PriceFormatter } from '#lib/formatting'
-import { type KnownEventPart, parseKnownEvents } from '#lib/known-events'
+import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { type KnownEventPart, parseKnownEvents } from '#lib/known-events.ts'
 import { config } from '#wagmi.config.ts'
+import ArrowRight from '~icons/lucide/arrow-right'
 
 type TransactionsResponse = {
 	transactions: Array<Transaction>
@@ -149,11 +149,11 @@ function RouteComponent() {
 
 	return (
 		<div className="px-4">
-			<div className="mx-auto flex max-w-6xl flex-col gap-8">
+			<div className="mx-auto flex max-w-5xl flex-col gap-8">
 				<section className="flex flex-col gap-4">
 					<div className="flex flex-col items-center gap-2 text-center">
 						<form onSubmit={handleSearch} className="w-full max-w-xl ">
-							<div className="relative ">
+							<div className="relative">
 								<input
 									ref={inputRef}
 									name="value"
@@ -273,17 +273,17 @@ function HistoryLoadingSkeleton({ limit }: { limit: number }) {
 					<colgroup>
 						<col className="w-24" />
 						<col />
-						<col className="w-32" />
+						<col className="w-35" />
 						<col className="w-20" />
 						<col className="w-28" />
 					</colgroup>
 					<thead>
 						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
-							<th className="px-5 pb-3 font-normal">Time</th>
-							<th className="px-5 pb-3 font-normal">Description</th>
-							<th className="px-3 pb-3 font-normal">Hash</th>
-							<th className="px-3 pb-3 font-normal">Block</th>
-							<th className="px-5 pb-3 text-right font-normal">Total</th>
+							<th className="px-5 pb-3 font-normal text-left">Time</th>
+							<th className="px-5 pb-3 font-normal text-left">Description</th>
+							<th className="px-3 pb-3 font-normal text-right">Hash</th>
+							<th className="px-3 pb-3 font-normal text-right">Fee</th>
+							<th className="px-5 pb-3 font-normal text-right">Total</th>
 						</tr>
 					</thead>
 					<tbody
@@ -328,17 +328,14 @@ function HistoryLoadingSkeleton({ limit }: { limit: number }) {
 	)
 }
 
-function HistoryTabContent({
-	address,
-	page,
-	limit,
-	goToPage,
-}: {
+function HistoryTabContent(props: {
 	address: Address.Address
 	page: number
 	limit: number
 	goToPage: (page: number) => void
 }) {
+	const { address, page, limit, goToPage } = props
+
 	const client = useClient()
 	const offset = (page - 1) * limit
 
@@ -384,99 +381,30 @@ function HistoryTabContent({
 					<colgroup>
 						<col className="w-24" />
 						<col />
-						<col className="w-32" />
+						<col className="w-35" />
 						<col className="w-20" />
 						<col className="w-28" />
 					</colgroup>
 					<thead>
 						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
-							<th className="px-5 pb-3 font-normal">Time</th>
-							<th className="px-5 pb-3 font-normal">Description</th>
-							<th className="px-3 pb-3 font-normal">Hash</th>
-							<th className="px-3 pb-3 font-normal">Block</th>
-							<th className="px-5 pb-3 text-right font-normal">Total</th>
+							<th className="px-5 pb-3 font-normal text-left">Time</th>
+							<th className="px-5 pb-3 font-normal text-left">Description</th>
+							<th className="px-3 pb-3 font-normal text-right">Hash</th>
+							<th className="px-3 pb-3 font-normal text-right">Fee</th>
+							<th className="px-5 pb-3 font-normal text-right">Total</th>
 						</tr>
 					</thead>
-					{/** biome-ignore lint/complexity/noUselessFragments: _ */}
-					<ClientOnly fallback={<></>}>
+
+					<ClientOnly fallback={<div />}>
 						<tbody
 							className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10"
 							style={{ minHeight: `${limit * 56}px` }}
 						>
 							{transactions?.map((transaction) => (
-								<tr
+								<TransactionRow
 									key={transaction.hash}
-									className="transition-colors hover:bg-alt h-14"
-								>
-									{/* Time */}
-									<td className="px-5 py-3 text-primary">
-										<div className="text-xs">
-											<TransactionTimestamp
-												blockNumber={transaction.blockNumber}
-											/>
-										</div>
-									</td>
-
-									{/* Description */}
-									<td className="px-5 py-3 text-primary">
-										<div className="text-sm">
-											<TransactionDescription transaction={transaction} />
-										</div>
-									</td>
-
-									{/* Transaction Hash */}
-									<td className="px-3 py-3 font-mono text-[11px] text-primary">
-										<Link
-											to={'/receipt/$hash'}
-											params={{ hash: transaction.hash ?? '' }}
-											className="hover:text-accent transition-colors"
-										>
-											{transaction.hash?.slice(0, 8)}...
-											{transaction.hash?.slice(-6)}
-										</Link>
-									</td>
-
-									{/* Block Number */}
-									<td className="px-3 py-3">
-										{transaction.blockNumber ? (
-											<Link
-												to={'/block/$id'}
-												params={{
-													id: Hex.toNumber(transaction.blockNumber).toString(),
-												}}
-												className="text-accent text-sm transition-colors hover:text-accent/80"
-											>
-												{Hex.toNumber(transaction.blockNumber).toString()}
-											</Link>
-										) : (
-											<span className="text-tertiary">--</span>
-										)}
-									</td>
-
-									{/* Total Value */}
-									<td className="px-5 py-3 text-right font-mono text-xs">
-										{(() => {
-											const value = transaction.value
-												? Hex.toBigInt(transaction.value)
-												: 0n
-											const ethAmount = parseFloat(formatEther(value))
-											const dollarAmount = ethAmount * 2000
-
-											if (dollarAmount > 1)
-												return (
-													<span className="text-positive">
-														${dollarAmount.toFixed(2)}
-													</span>
-												)
-
-											return (
-												<span className="text-tertiary">
-													(${dollarAmount.toFixed(2)})
-												</span>
-											)
-										})()}
-									</td>
-								</tr>
+									transaction={transaction}
+								/>
 							))}
 						</tbody>
 					</ClientOnly>
@@ -502,27 +430,20 @@ function HistoryTabContent({
 							let startPage = Math.max(1, page - Math.floor(maxButtons / 2))
 							const endPage = Math.min(totalPages, startPage + maxButtons - 1)
 
-							// Adjust start if we're near the end
 							startPage = Math.max(1, endPage - maxButtons + 1)
 
 							const pages: (number | 'ellipsis')[] = []
 
-							// Add first page + ellipsis if needed
 							if (startPage > 1) {
 								pages.push(1)
 								if (startPage > 2) pages.push('ellipsis')
 							}
 
-							// Add the range of pages
-							for (let i = startPage; i <= endPage; i++) {
-								pages.push(i)
-							}
+							for (let index = startPage; index <= endPage; index++)
+								pages.push(index)
 
-							// Add ellipsis + last page if needed
 							if (endPage < totalPages) {
-								if (endPage < totalPages - 1) {
-									pages.push('ellipsis')
-								}
+								if (endPage < totalPages - 1) pages.push('ellipsis')
 								pages.push(totalPages)
 							}
 
@@ -587,7 +508,59 @@ function HistoryTabContent({
 	)
 }
 
-function AssetRow({ contractAddress }: { contractAddress: Address.Address }) {
+function TransactionRow(props: { transaction: Transaction }) {
+	const { transaction } = props
+
+	return (
+		<tr key={transaction.hash} className="transition-colors hover:bg-alt h-12">
+			<td className="px-5 py-3 text-primary text-xs">
+				<TransactionTimestamp blockNumber={transaction.blockNumber} />
+			</td>
+
+			<td className="px-5 py-3 text-primary text-sm">
+				<TransactionDescription transaction={transaction} />
+			</td>
+
+			<td className="px-3 py-3 font-mono text-[11px] text-tertiary">
+				<Link
+					to={'/receipt/$hash'}
+					params={{ hash: transaction.hash ?? '' }}
+					className="hover:text-accent transition-colors"
+				>
+					{HexFormatter.truncate(transaction.hash, 6)}
+				</Link>
+			</td>
+
+			<td className="px-3 py-3 text-tertiary">
+				(
+				{PriceFormatter.format(Hex.toBigInt(transaction.gasPrice ?? '0x0'), 18)}
+				)
+			</td>
+
+			{/* TODO: */}
+			<td className="px-5 py-3 text-right font-mono text-xs">
+				{(() => {
+					const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
+					const ethAmount = parseFloat(formatEther(value))
+					const dollarAmount = ethAmount * 2_000
+
+					if (dollarAmount > 1)
+						return (
+							<span className="text-positive">${dollarAmount.toFixed(2)}</span>
+						)
+
+					return (
+						<span className="text-primary">(${dollarAmount.toFixed(2)})</span>
+					)
+				})()}
+			</td>
+		</tr>
+	)
+}
+
+function AssetRow(props: { contractAddress: Address.Address }) {
+	const { contractAddress } = props
+
 	const { address } = useParams({ from: Route.id })
 	const { data: metadata } = Hooks.token.useGetMetadata({
 		token: contractAddress,
@@ -631,8 +604,10 @@ function AssetRow({ contractAddress }: { contractAddress: Address.Address }) {
 	)
 }
 
-function TransactionDescription({ transaction }: { transaction: Transaction }) {
-	const { data: receipt, isLoading } = useTransactionReceipt({
+function TransactionDescription(props: { transaction: Transaction }) {
+	const { transaction } = props
+
+	const { data: receipt } = useTransactionReceipt({
 		hash: transaction.hash,
 		query: {
 			enabled: Boolean(transaction.hash),
@@ -644,12 +619,8 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 		return parseKnownEvents(receipt)
 	}, [receipt])
 
-	if (isLoading) return <span className="text-tertiary">Loading...</span>
-
-	if (!knownEvents || knownEvents.length === 0)
-		return <span className="text-tertiary">Processing...</span>
-
-	const event = knownEvents[0]
+	const [event] = knownEvents
+	if (!event) return null
 
 	return (
 		<div className="text-primary">
@@ -667,13 +638,9 @@ function TransactionDescription({ transaction }: { transaction: Transaction }) {
 	)
 }
 
-function EventPart({
-	part,
-	isLast,
-}: {
-	part: KnownEventPart
-	isLast: boolean
-}) {
+function EventPart(props: { part: KnownEventPart; isLast: boolean }) {
+	const { part, isLast } = props
+
 	// Call hooks unconditionally at the top level
 	const tokenAddress =
 		part.type === 'amount'
@@ -712,7 +679,7 @@ function EventPart({
 				const decimals = part.value.decimals ?? metadata?.decimals ?? 6
 				return (
 					<>
-						<span className="font-semibold">
+						<span className="tabular-nums font-normal">
 							{formatUnits(part.value.value, decimals)}
 						</span>{' '}
 						<Link
@@ -768,11 +735,11 @@ function EventPart({
 	)
 }
 
-function TransactionTimestamp({
-	blockNumber,
-}: {
+function TransactionTimestamp(props: {
 	blockNumber: Hex.Hex | null | undefined
 }) {
+	const { blockNumber } = props
+
 	const { data: timestamp } = useBlock({
 		blockNumber: blockNumber ? Hex.toBigInt(blockNumber) : undefined,
 		query: {

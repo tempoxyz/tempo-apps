@@ -1,6 +1,7 @@
 {
 	"typescript.tsdk": "node_modules/typescript/lib",
 	"typescript.enablePromptUseWorkspaceTsdk": true,
+	"typescript.preferences.importModuleSpecifierEnding": "js",
 	"editor.formatOnSave": true,
 	"files.watcherExclude": {
 		"**/routeTree.gen.ts": true

@@ -15,9 +15,10 @@ import {
 import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
+
 import { Receipt } from '#components/Receipt/Receipt.tsx'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
-import { parseKnownEvents } from '#lib/known-events'
+import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { parseKnownEvents } from '#lib/known-events.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 
 async function loader({
