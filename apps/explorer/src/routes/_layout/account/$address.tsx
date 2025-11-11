@@ -97,10 +97,13 @@ function RouteComponent() {
 	const { page, limit, tab } = Route.useSearch()
 
 	const activeTab = tab
+	const [isPending, startTransition] = React.useTransition()
 
 	const goToPage = React.useCallback(
 		(newPage: number) => {
-			navigate({ to: '.', search: { page: newPage, limit, tab } })
+			startTransition(() => {
+				navigate({ to: '.', search: { page: newPage, limit, tab } })
+			})
 		},
 		[navigate, limit, tab],
 	)
@@ -220,6 +223,7 @@ function RouteComponent() {
 										page={page}
 										limit={limit}
 										goToPage={goToPage}
+										isPending={isPending}
 									/>
 								</React.Suspense>
 							)}
@@ -265,13 +269,13 @@ function HistoryTabSkeleton({ limit }: { limit: number }) {
 	return (
 		<>
 			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
-				<table className="border-collapse text-sm rounded-t-sm min-w-full">
+				<table className="border-collapse text-sm rounded-t-sm min-w-full table-fixed">
 					<colgroup>
 						<col className="w-28" />
 						<col />
-						<col className="w-32" />
+						<col className="w-36" />
 						<col className="w-24" />
-						<col className="w-28" />
+						<col className="w-32" />
 					</colgroup>
 					<thead>
 						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
@@ -295,21 +299,21 @@ function HistoryTabSkeleton({ limit }: { limit: number }) {
 					<tbody className="divide-dashed divide-black-white/10 [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10">
 						{Array.from({ length: limit }, (_, i) => `skeleton-${i}`).map(
 							(key) => (
-								<tr key={key} style={{ height: '48px' }}>
-									<td style={{ height: '48px' }}>
-										<div className="h-[20px]" />
+								<tr key={key} className="h-12">
+									<td className="h-12">
+										<div className="h-5" />
 									</td>
-									<td style={{ height: '48px' }}>
-										<div className="h-[20px]" />
+									<td className="h-12">
+										<div className="h-5" />
 									</td>
-									<td style={{ height: '48px' }}>
-										<div className="h-[20px]" />
+									<td className="h-12">
+										<div className="h-5" />
 									</td>
-									<td style={{ height: '48px' }}>
-										<div className="h-[20px]" />
+									<td className="h-12">
+										<div className="h-5" />
 									</td>
-									<td style={{ height: '48px' }}>
-										<div className="h-[20px]" />
+									<td className="h-12">
+										<div className="h-5" />
 									</td>
 								</tr>
 							),
@@ -334,8 +338,9 @@ function HistoryTabContent(props: {
 	page: number
 	limit: number
 	goToPage: (page: number) => void
+	isPending: boolean
 }) {
-	const { address, page, limit, goToPage } = props
+	const { address, page, limit, goToPage, isPending } = props
 
 	const client = useClient()
 	const offset = (page - 1) * limit
@@ -351,13 +356,23 @@ function HistoryTabContent(props: {
 	return (
 		<>
 			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
-				<table className="border-collapse text-sm rounded-t-sm min-w-full">
+				<ClientOnly>
+					{isPending && (
+						<>
+							<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30 z-10">
+								<div className="h-full w-1/4 bg-accent animate-pulse" />
+							</div>
+							<div className="absolute inset-0 bg-black-white/5 pointer-events-none z-5" />
+						</>
+					)}
+				</ClientOnly>
+				<table className="border-collapse text-sm rounded-t-sm min-w-full table-fixed">
 					<colgroup>
 						<col className="w-28" />
 						<col />
-						<col className="w-32" />
+						<col className="w-36" />
 						<col className="w-24" />
-						<col className="w-28" />
+						<col className="w-32" />
 					</colgroup>
 					<thead>
 						<tr className="border-dashed border-b-2 border-black-white/10 text-left text-xs tracking-wider text-tertiary">
@@ -397,14 +412,14 @@ function HistoryTabContent(props: {
 					<button
 						type="button"
 						onClick={() => goToPage(page - 1)}
-						disabled={page <= 1}
-						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled={page <= 1 || isPending}
+						className="border border-border-primary px-2 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Previous page"
 					>
-						Previous
+						{isPending ? 'Loading...' : 'Previous'}
 					</button>
 
-					<div className="flex items-center gap-1.5 px-2">
+					<div className="flex items-center gap-1.5">
 						{(() => {
 							// Show up to 5 consecutive pages centered around current page
 							const maxButtons = 5
@@ -446,11 +461,12 @@ function HistoryTabContent(props: {
 										key={p}
 										type="button"
 										onClick={() => goToPage(p)}
-										className={`flex size-7 items-center justify-center rounded transition-colors ${
+										disabled={isPending}
+										className={`flex size-7 items-center justify-center transition-colors ${
 											page === p
-												? 'bg-accent text-white'
+												? 'border border-accent/50 text-primary'
 												: 'hover:bg-alt text-primary'
-										}`}
+										} ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
 									>
 										{p}
 									</button>
@@ -462,11 +478,11 @@ function HistoryTabContent(props: {
 					<button
 						type="button"
 						onClick={() => goToPage(page + 1)}
-						disabled={page >= totalPages}
-						className="rounded-lg border border-border-primary bg-surface px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						disabled={page >= totalPages || isPending}
+						className="rounded-none border border-border-primary px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Next page"
 					>
-						Next
+						{isPending ? 'Loading...' : 'Next'}
 					</button>
 				</div>
 
@@ -492,34 +508,21 @@ function TransactionRow(props: { transaction: Transaction }) {
 	const { transaction } = props
 
 	return (
-		<tr
-			key={transaction.hash}
-			className="transition-colors hover:bg-alt"
-			style={{ height: '48px' }}
-		>
-			<td
-				className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap"
-				style={{ height: '48px' }}
-			>
-				<div className="h-[20px] flex items-center">
+		<tr key={transaction.hash} className="transition-colors hover:bg-alt h-12">
+			<td className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap overflow-hidden h-12">
+				<div className="h-5 flex items-center overflow-hidden">
 					<TransactionTimestamp blockNumber={transaction.blockNumber} />
 				</div>
 			</td>
 
-			<td
-				className="px-4 py-3 text-primary text-sm align-middle text-left whitespace-nowrap"
-				style={{ height: '48px' }}
-			>
-				<div className="h-[20px] flex items-center">
+			<td className="px-4 py-3 text-primary text-sm align-middle text-left whitespace-nowrap overflow-hidden h-12">
+				<div className="h-5 flex items-center overflow-hidden">
 					<TransactionDescription transaction={transaction} />
 				</div>
 			</td>
 
-			<td
-				className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap"
-				style={{ height: '48px' }}
-			>
-				<div className="h-[20px] flex items-center justify-end">
+			<td className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap overflow-hidden h-12">
+				<div className="h-5 flex items-center justify-end overflow-hidden">
 					<Link
 						to={'/receipt/$hash'}
 						params={{ hash: transaction.hash ?? '' }}
@@ -530,20 +533,14 @@ function TransactionRow(props: { transaction: Transaction }) {
 				</div>
 			</td>
 
-			<td
-				className="px-3 py-3 text-tertiary align-middle text-right whitespace-nowrap"
-				style={{ height: '48px' }}
-			>
-				<div className="h-[20px] flex items-center justify-end">
+			<td className="px-3 py-3 text-tertiary align-middle text-right whitespace-nowrap overflow-hidden h-12">
+				<div className="h-5 flex items-center justify-end overflow-hidden">
 					<TransactionFee transaction={transaction} />
 				</div>
 			</td>
 
-			<td
-				className="px-5 py-3 text-right font-mono text-xs align-middle whitespace-nowrap"
-				style={{ height: '48px' }}
-			>
-				<div className="h-[20px] flex items-center justify-end">
+			<td className="px-5 py-3 text-right font-mono text-xs align-middle whitespace-nowrap overflow-hidden h-12">
+				<div className="h-5 flex items-center justify-end overflow-hidden">
 					<TransactionTotal transaction={transaction} />
 				</div>
 			</td>
@@ -562,11 +559,7 @@ function TransactionFee(props: { transaction: Transaction }) {
 	})
 
 	if (!receipt) {
-		return (
-			<span className="text-tertiary inline-block min-w-[60px] text-right">
-				···
-			</span>
-		)
+		return <span className="text-tertiary">···</span>
 	}
 
 	const fee = PriceFormatter.format(
@@ -574,11 +567,7 @@ function TransactionFee(props: { transaction: Transaction }) {
 		18,
 	)
 
-	return (
-		<span className="text-tertiary inline-block min-w-[60px] text-right">
-			{fee}
-		</span>
-	)
+	return <span className="text-tertiary">{fee}</span>
 }
 
 function TransactionTotal(props: { transaction: Transaction }) {
@@ -605,19 +594,11 @@ function TransactionTotal(props: { transaction: Transaction }) {
 		// Fallback to native currency value
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
 		if (value === 0n) {
-			return (
-				<span className="text-tertiary inline-block min-w-[70px] text-right">
-					—
-				</span>
-			)
+			return <span className="text-tertiary">—</span>
 		}
 		const ethAmount = parseFloat(formatEther(value))
 		const dollarAmount = ethAmount * 2_000
-		return (
-			<span className="text-primary inline-block min-w-[70px] text-right">
-				${dollarAmount.toFixed(2)}
-			</span>
-		)
+		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
 	}
 
 	// Calculate dollar value from token amount
@@ -627,18 +608,10 @@ function TransactionTotal(props: { transaction: Transaction }) {
 	const dollarAmount = tokenAmount * 1
 
 	if (dollarAmount > 0.01) {
-		return (
-			<span className="text-primary inline-block min-w-[70px] text-right">
-				${dollarAmount.toFixed(2)}
-			</span>
-		)
+		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
 	}
 
-	return (
-		<span className="text-tertiary inline-block min-w-[70px] text-right">
-			${dollarAmount.toFixed(2)}
-		</span>
-	)
+	return <span className="text-tertiary">${dollarAmount.toFixed(2)}</span>
 }
 
 function AssetRow(props: { contractAddress: Address.Address }) {
@@ -706,14 +679,14 @@ function TransactionDescription(props: { transaction: Transaction }) {
 
 	if (!event) {
 		return (
-			<div className="text-tertiary min-h-[20px] min-w-[200px] flex items-center whitespace-nowrap">
+			<div className="text-tertiary min-h-[20px] flex items-center whitespace-nowrap">
 				<span className="inline-block">···</span>
 			</div>
 		)
 	}
 
 	return (
-		<div className="text-primary min-h-[20px] min-w-[200px] flex items-center whitespace-nowrap">
+		<div className="text-primary min-h-[20px] flex items-center whitespace-nowrap">
 			{event.parts.map((part, index) => (
 				<EventPart
 					key={`${part.type}-${index}`}
@@ -846,8 +819,7 @@ function TransactionTimestamp(props: {
 		return () => clearInterval(interval)
 	}, [])
 
-	if (!timestamp)
-		return <span className="text-tertiary inline-block min-w-[50px]">--</span>
+	if (!timestamp) return <span className="text-tertiary">--</span>
 
 	// Convert Unix timestamp to readable format
 	const date = new Date(Number(timestamp) * 1_000)
@@ -865,10 +837,7 @@ function TransactionTimestamp(props: {
 	else timeAgo = `${diffDay}d ago`
 
 	return (
-		<span
-			className="text-tertiary inline-block min-w-[50px]"
-			title={date.toLocaleString()}
-		>
+		<span className="text-tertiary" title={date.toLocaleString()}>
 			{timeAgo}
 		</span>
 	)
