@@ -532,7 +532,7 @@ function HistoryTabContent({
 									ellipsisCount++
 									return (
 										<span
-											key={'ellipsis-${ellipsisCount}'}
+											key={`ellipsis-${ellipsisCount}`}
 											className="text-tertiary px-1"
 										>
 											...
