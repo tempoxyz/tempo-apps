@@ -1,16 +1,12 @@
 import { Link } from '@tanstack/react-router'
 import { type Address, Hex } from 'ox'
 import { useState } from 'react'
-import { EventDescription } from '#components/EventDescription'
-import {
-	formatTimestampDate,
-	formatTimestampTime,
-	PriceFormatter,
-	shortenHex,
-} from '#lib/formatting'
+
+import { PriceFormatter, DateFormatter, HexFormatter } from '#lib/formatting'
+import { useCopy } from '#lib/hooks'
 import type { KnownEvent } from '#lib/known-events'
-import { useCopy } from '#lib/react-utils'
 import { ReceiptMark } from './ReceiptMark'
+import { EventDescription } from '#components/EventDescription'
 
 export function Receipt(props: Receipt.Props) {
 	const {
@@ -24,7 +20,7 @@ export function Receipt(props: Receipt.Props) {
 	} = props
 	const [hashExpanded, setHashExpanded] = useState(false)
 	const { copy, notifying } = useCopy()
-	const formattedTime = formatTimestampTime(timestamp)
+	const formattedTime = DateFormatter.formatTimestampTime(timestamp)
 	return (
 		<div className="flex flex-col w-[360px] bg-base-plane border border-border-base shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] text-base-content">
 			<div className="flex gap-[40px] px-[20px] pt-[24px] pb-[16px]">
@@ -50,7 +46,7 @@ export function Receipt(props: Receipt.Props) {
 							className="text-accent text-right active:translate-y-[0.5px]"
 							title={sender}
 						>
-							{shortenHex(sender)}
+							{HexFormatter.shortenHex(sender)}
 						</Link>
 					</div>
 					<div className="flex justify-between items-start">
@@ -77,13 +73,15 @@ export function Receipt(props: Receipt.Props) {
 								className="text-right cursor-pointer active:translate-y-[0.5px]"
 								title={hash}
 							>
-								{shortenHex(hash)}
+								{HexFormatter.shortenHex(hash)}
 							</button>
 						)}
 					</div>
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Date</span>
-						<span className="text-right">{formatTimestampDate(timestamp)}</span>
+						<span className="text-right">
+							{DateFormatter.formatTimestampDate(timestamp)}
+						</span>
 					</div>
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Time</span>

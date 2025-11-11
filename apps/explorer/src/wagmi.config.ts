@@ -31,6 +31,7 @@ export function getConfig(
 	return createConfig({
 		chains: [tempoAndantino({ feeToken: 1n })],
 		ssr: true,
+		batch: { multicall: false },
 		transports: {
 			[tempoAndantino.id]: !browser
 				? http(rpcUrl ?? 'https://rpc.testnet.tempo.xyz', {

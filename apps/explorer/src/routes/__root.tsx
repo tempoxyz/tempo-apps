@@ -85,15 +85,6 @@ export const Route = createRootRouteWithContext<{
 			},
 		],
 	}),
-	notFoundComponent: (props) => {
-		return (
-			<div>
-				<h1>404</h1>
-				<p>Page not found</p>
-				<pre>{JSON.stringify(props, null, 2)}</pre>
-			</div>
-		)
-	},
 	errorComponent: (props) => (
 		<RootDocument>
 			<DefaultCatchBoundary {...props} />

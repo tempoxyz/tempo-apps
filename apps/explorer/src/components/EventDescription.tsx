@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { shortenHex } from '#lib/formatting'
+import { HexFormatter } from '#lib/formatting'
 import type { KnownEvent } from '#lib/known-events'
 import { Amount } from './Receipt/Amount'
 
@@ -33,7 +33,8 @@ export function EventDescription({ event }: { event: KnownEvent }) {
 								key={partKey}
 								className="text-base-content-positive items-end"
 							>
-								{part.value.symbol || shortenHex(part.value.address)}
+								{part.value.symbol ||
+									HexFormatter.shortenHex(part.value.address)}
 							</span>
 						)
 					case 'account':
@@ -45,7 +46,7 @@ export function EventDescription({ event }: { event: KnownEvent }) {
 								className="text-accent items-end active:translate-y-[0.5px] whitespace-nowrap"
 								title={part.value}
 							>
-								{shortenHex(part.value)}
+								{HexFormatter.shortenHex(part.value)}
 							</Link>
 						)
 					case 'hex':
@@ -55,7 +56,7 @@ export function EventDescription({ event }: { event: KnownEvent }) {
 								className="items-end whitespace-nowrap"
 								title={part.value}
 							>
-								{shortenHex(part.value)}
+								{HexFormatter.shortenHex(part.value)}
 							</span>
 						)
 					case 'primary':

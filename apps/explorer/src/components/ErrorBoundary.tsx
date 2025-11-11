@@ -1,6 +1,6 @@
-import type { ErrorComponentProps } from '@tanstack/react-router'
 import {
 	ErrorComponent,
+	type ErrorComponentProps,
 	Link,
 	rootRouteId,
 	useMatch,
