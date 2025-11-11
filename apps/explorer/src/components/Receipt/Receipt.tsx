@@ -1,6 +1,6 @@
-import type { Address, Hex } from 'ox'
+import { Link } from '@tanstack/react-router'
+import { type Address, Hex } from 'ox'
 import { useState } from 'react'
-
 import {
 	formatTimestampDate,
 	formatTimestampTime,
@@ -32,22 +32,24 @@ export function Receipt(props: Receipt.Props) {
 				<div className="flex flex-col gap-[8px] font-mono text-[13px] [line-height:16px] flex-1">
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Block</span>
-						<a
-							href={`/explore/block/${blockNumber}`}
+						<Link
+							to={'/block/$id'}
+							params={{ id: Hex.fromNumber(blockNumber) }}
 							className="text-accent text-right before:content-['#'] active:translate-y-[0.5px]"
 						>
 							{String(blockNumber)}
-						</a>
+						</Link>
 					</div>
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Sender</span>
-						<a
-							href={`/explore/account/${sender}`}
+						<Link
+							to={'/address/$address'}
+							params={{ address: sender }}
 							className="text-accent text-right active:translate-y-[0.5px]"
 							title={sender}
 						>
 							{shortenHex(sender)}
-						</a>
+						</Link>
 					</div>
 					<div className="flex justify-between items-start">
 						<div className="relative">
@@ -139,14 +141,15 @@ export function Receipt(props: Receipt.Props) {
 												)
 											case 'account':
 												return (
-													<a
+													<Link
 														key={partKey}
-														href={`/explore/account/${part.value}`}
+														to={'/address/$address'}
+														params={{ address: part.value }}
 														className="text-accent items-end active:translate-y-[0.5px] whitespace-nowrap"
 														title={part.value}
 													>
 														{shortenHex(part.value)}
-													</a>
+													</Link>
 												)
 											case 'hex':
 												return (
