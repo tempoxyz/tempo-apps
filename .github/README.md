@@ -1,6 +1,6 @@
-# Tempo App
+# Tempo Apps
 
-Monoapp for Tempo, powered by Cloudflare + TanStack Start/Router.
+Monorepo for Tempo Apps
 
 ## Apps 
 
