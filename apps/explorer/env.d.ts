@@ -1,3 +1,5 @@
+interface ImportMetaEnv extends Cloudflare.Env {}
+
 interface ImportMeta {
-	env: ImportMetaEnv & Cloudflare.Env
+	readonly env: ImportMetaEnv
 }
