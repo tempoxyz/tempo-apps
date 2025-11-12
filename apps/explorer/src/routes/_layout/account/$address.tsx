@@ -548,15 +548,15 @@ function TransactionRow(props: {
 	const { transaction, address } = props
 
 	return (
-		<tr key={transaction.hash} className="transition-colors hover:bg-alt h-12">
+		<tr key={transaction.hash} className="transition-colors hover:bg-alt min-h-12">
 			<td className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap overflow-hidden h-12">
 				<div className="h-5 flex items-center overflow-hidden">
 					<TransactionTimestamp blockNumber={transaction.blockNumber} />
 				</div>
 			</td>
 
-			<td className="px-4 py-3 text-primary text-sm align-middle text-left whitespace-nowrap overflow-hidden h-12">
-				<div className="h-5 flex items-center overflow-hidden">
+			<td className="px-4 py-3 text-primary text-sm align-middle text-left h-12">
+				<div className="flex items-center">
 					<TransactionDescription transaction={transaction} address={address} />
 				</div>
 			</td>
