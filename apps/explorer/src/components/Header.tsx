@@ -36,7 +36,6 @@ export function Header() {
 				{showInput && (
 					<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex">
 						<ExploreInput
-							defaultValue={hash || address}
 							disabled={state.isLoading}
 							onActivate={({ value, type }) => {
 								if (type === 'hash') {
