@@ -3,10 +3,9 @@ import {
 	useNavigate,
 	useRouterState,
 } from '@tanstack/react-router'
-import { Hex } from 'ox'
-import { Sphere } from '#components/Sphere'
-import { Intro } from '#components/Intro'
 import { ExploreInput } from '#components/ExploreInput'
+import { Intro } from '#components/Intro'
+import { Sphere } from '#components/Sphere'
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
@@ -27,7 +26,7 @@ export function Component() {
 					<ExploreInput
 						autoFocus
 						size="large"
-						onActivate={({ value, type }) => {
+						onActivate={() => {
 							// TODO: search screen?
 							// navigate({ to: '/search/$value', params: { value } })
 						}}

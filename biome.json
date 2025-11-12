@@ -48,6 +48,9 @@
 						"ignore": ["@custom-variant", "@theme"]
 					}
 				}
+			},
+			"a11y": {
+				"noAutofocus": "off"
 			}
 		}
 	},

@@ -424,7 +424,7 @@ export namespace LineItems {
 											left: `From: ${HexFormatter.truncate(from)}`,
 										},
 									],
-									left: 'Burn ${symbol}',
+									left: `Burn ${symbol}`,
 									right: decimals
 										? PriceFormatter.format(amount, decimals)
 										: '-',
@@ -455,7 +455,7 @@ export namespace LineItems {
 										left: `To: ${HexFormatter.truncate(account)}`,
 									},
 									{
-										left: 'Role: ${roleName}',
+										left: `Role: ${roleName}`,
 									},
 								],
 								left: `${roleName ? `${roleName} ` : ' '}Role ${hasRole ? 'Granted' : 'Revoked'}`,

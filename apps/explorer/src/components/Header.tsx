@@ -1,13 +1,13 @@
 import {
 	Link,
-	useNavigate,
 	useMatch,
+	useNavigate,
 	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useWatchBlockNumber, useChains } from 'wagmi'
-import SquareSquare from '~icons/lucide/square-square'
+import { useChains, useWatchBlockNumber } from 'wagmi'
 import Music4 from '~icons/lucide/music-4'
+import SquareSquare from '~icons/lucide/square-square'
 import { ExploreInput } from './ExploreInput'
 
 export function Header() {

@@ -1,7 +1,7 @@
 import { useRef } from 'react'
-import { isAddress, type Address, isHash, type Hash } from 'viem'
-import ArrowRight from '~icons/lucide/arrow-right'
+import { type Address, type Hash, isAddress, isHash } from 'viem'
 import { cx } from '#cva.config'
+import ArrowRight from '~icons/lucide/arrow-right'
 
 export function ExploreInput(props: ExploreInput.Props) {
 	const {
@@ -19,7 +19,6 @@ export function ExploreInput(props: ExploreInput.Props) {
 		<form
 			ref={formRef}
 			onSubmit={(event) => {
-				console.log('ExploreInput onSubmit', formRef.current)
 				event.preventDefault()
 				if (!formRef.current) return
 				const data = new FormData(formRef.current)
@@ -28,15 +27,12 @@ export function ExploreInput(props: ExploreInput.Props) {
 				value = value.trim()
 				if (isAddress(value)) {
 					onActivate?.({ type: 'address', value })
-					console.log('ExploreInput onActivate address')
 					return
 				}
 				if (isHash(value)) {
 					onActivate?.({ type: 'hash', value })
-					console.log('ExploreInput onActivate hash')
 					return
 				}
-				console.log('ExploreInput onActivate text')
 				onActivate?.({ type: 'text', value })
 			}}
 			className="relative w-full max-w-[448px]"

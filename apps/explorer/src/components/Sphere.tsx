@@ -1,7 +1,13 @@
 export function Sphere(props: Sphere.Props) {
 	const { color = '#303030' } = props
 	return (
-		<svg fill="none" width={720} height={620} viewBox="0 0 720 620">
+		<svg
+			fill="none"
+			width={720}
+			height={620}
+			viewBox="0 0 720 620"
+			aria-hidden="true"
+		>
 			<path
 				strokeLinecap="round"
 				strokeLinejoin="round"
@@ -17,4 +23,3 @@ export namespace Sphere {
 		color?: string
 	}
 }
-
