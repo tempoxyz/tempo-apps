@@ -1,6 +1,7 @@
 import {
 	keepPreviousData,
 	queryOptions,
+	useQuery,
 	useSuspenseQuery,
 } from '@tanstack/react-query'
 import {
@@ -20,11 +21,11 @@ import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
-import { EventDescription } from '#components/EventDescription'
+import { EventDescription } from '#components/EventDescription.tsx'
 import { RelativeTime } from '#components/RelativeTime'
-import { HexFormatter, PriceFormatter } from '#lib/formatting'
-import { parseKnownEvents } from '#lib/known-events'
-import { config } from '#wagmi.config'
+import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { parseKnownEvents } from '#lib/known-events.ts'
+import { config } from '#wagmi.config.ts'
 import ArrowRight from '~icons/lucide/arrow-right'
 
 type TransactionsResponse = {
@@ -35,33 +36,49 @@ type TransactionsResponse = {
 	hasMore: boolean
 }
 
-const rowsPerPage = 10
+const rowsPerPage = 7
 
-const transactionsQuery = (
-	address: Address.Address,
-	page: number,
-	limit: number,
-	chainId: number,
-	offset: number,
-) =>
-	queryOptions({
-		queryKey: ['account-transactions', chainId, address, page],
-		queryFn: (): Promise<TransactionsResponse> =>
-			fetch(`/api/address/${address}?offset=${offset}&limit=${limit}`).then(
-				(response) => response.json(),
-			),
+type TransactionQuery = {
+	address: Address.Address
+	page: number
+	limit: number
+	chainId: number
+	offset: number
+	_key?: string | undefined
+}
+
+function transactionsQueryOptions(params: TransactionQuery) {
+	return queryOptions({
+		queryKey: [
+			'account-transactions',
+			params.chainId,
+			params.address,
+			params.page,
+			params._key,
+		],
+		queryFn: async (): Promise<TransactionsResponse> => {
+			const searchParams = new URLSearchParams({
+				limit: params.limit.toString(),
+				offset: params.offset.toString(),
+			})
+			const url = `/api/address/${params.address}?${searchParams.toString()}`
+			const response = await fetch(url)
+			return await response.json()
+		},
 		// auto-refresh page 1 since new transactions appear there
-		refetchInterval: page === 1 ? 4_000 : false,
-		refetchIntervalInBackground: page === 1,
-		refetchOnWindowFocus: page === 1,
-		staleTime: page === 1 ? 0 : 60_000, // page 1: always fresh, others: 60s cache
+		refetchInterval: params.page === 1 ? 4_000 : false,
+		refetchIntervalInBackground: params.page === 1,
+		refetchOnWindowFocus: params.page === 1,
+		staleTime: params.page === 1 ? 0 : 60_000, // page 1: always fresh, others: 60s cache
 		placeholderData: keepPreviousData,
 	})
+}
 
 export const Route = createFileRoute('/_layout/account/$address')({
 	component: RouteComponent,
 	validateSearch: z.object({
 		page: z._default(z.number(), 1),
+		limit: z._default(z.number(), 7),
 		tab: z._default(z.enum(['history', 'assets']), 'history'),
 	}),
 	loaderDeps: ({ search: { page } }) => ({ page }),
@@ -71,7 +88,13 @@ export const Route = createFileRoute('/_layout/account/$address')({
 		const client = getClient(config)
 
 		await context.queryClient.fetchQuery(
-			transactionsQuery(address, page, rowsPerPage, client.chain.id, offset),
+			transactionsQueryOptions({
+				address,
+				page,
+				offset,
+				limit: rowsPerPage,
+				chainId: client.chain.id,
+			}),
 		)
 	},
 	params: {
@@ -93,6 +116,87 @@ const assets = [
 	'0x20c0000000000000000000000000000000000002',
 	'0x20c0000000000000000000000000000000000003',
 ] as const
+
+function AccountCardWithTimestamps(props: { address: Address.Address }) {
+	const { address } = props
+	const client = useClient()
+	if (!client) throw new Error('client not found')
+
+	// fetch the most recent transactions (pg.1)
+	const { data: recentData } = useQuery(
+		transactionsQueryOptions({
+			address,
+			page: 1,
+			limit: 1,
+			chainId: client.chain.id,
+			offset: 0,
+			_key: 'account-creation',
+		}),
+	)
+
+	// get the 1st (most recent) transaction's block timestamp for "last activity"
+	const recentTransaction = recentData?.transactions.at(0)
+	const { data: lastActivityTimestamp } = useBlock({
+		blockNumber: Hex.toBigInt(recentTransaction?.blockNumber ?? '0x0'),
+		query: {
+			enabled: Boolean(recentTransaction?.blockNumber),
+			select: (block) => block.timestamp,
+		},
+	})
+
+	// for "created" timestamp, we need to fetch the earliest transaction
+	// this would be the last page of transactions
+	const totalTransactions = recentData?.total ?? 0
+	const lastPageOffset = Math.max(0, totalTransactions - 1)
+
+	const { data: oldestData } = useQuery(
+		transactionsQueryOptions({
+			address,
+			page: Math.ceil(totalTransactions / 1),
+			limit: 1,
+			chainId: client.chain.id,
+			offset: lastPageOffset,
+			_key: 'account-creation',
+		}),
+	)
+
+	const [oldestTransaction] = oldestData?.transactions ?? []
+	const { data: createdTimestamp } = useBlock({
+		blockNumber: Hex.toBigInt(oldestTransaction?.blockNumber ?? '0x0'),
+		query: {
+			enabled: Boolean(oldestTransaction?.blockNumber),
+			select: (block) => block.timestamp,
+		},
+	})
+
+	// Calculate total holdings value
+	const totalValue = useAccountTotalValue(address)
+
+	return (
+		<AccountCard
+			address={address}
+			className="self-start w-full sm:max-w-[350px]"
+			createdTimestamp={createdTimestamp}
+			lastActivityTimestamp={lastActivityTimestamp}
+			totalValue={totalValue.data}
+		/>
+	)
+}
+
+function useAccountTotalValue(address: Address.Address) {
+	return useQuery({
+		queryKey: ['account-total-value', address],
+		queryFn: async () => {
+			const response = await fetch(`/api/address/${address}/total-value`)
+			if (!response.ok)
+				throw new Error('Failed to fetch total value', {
+					cause: response.statusText,
+				})
+			const data = await response.text()
+			return Number(data)
+		},
+	})
+}
 
 function RouteComponent() {
 	const navigate = useNavigate()
@@ -119,82 +223,25 @@ function RouteComponent() {
 		[navigate, page],
 	)
 
-	const inputRef = React.useRef<HTMLInputElement | null>(null)
-
-	React.useEffect(() => {
-		const listener = (event: KeyboardEvent) => {
-			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-				event.preventDefault()
-				inputRef.current?.focus()
-			}
-		}
-		window.addEventListener('keydown', listener)
-		return () => window.removeEventListener('keydown', listener)
-	}, [])
-
-	const handleSearch: React.FormEventHandler<HTMLFormElement> =
-		React.useCallback(
-			(event) => {
-				event.preventDefault()
-				const formData = new FormData(event.currentTarget)
-				const value = formData.get('value')?.toString().trim()
-
-				if (!value) return
-				try {
-					Hex.assert(value)
-					navigate({
-						to: '/$value',
-						params: { value },
-					})
-				} catch (error) {
-					console.error('Invalid search value provided', error)
-				}
-			},
-			[navigate],
-		)
-
 	return (
-		  <div className="px-4">
-			<div className="mx-auto flex max-w-5xl flex-col gap-8">
-				<section className="flex flex-col gap-4">
-					<div className="flex flex-col items-center gap-2 text-center">
-						<form onSubmit={handleSearch} className="w-full max-w-xl ">
-							<div className="relative">
-								<input
-									ref={inputRef}
-									name="value"
-									type="text"
-									placeholder="Enter address, token, or transaction..."
-									spellCheck={false}
-									autoCapitalize="off"
-									autoComplete="off"
-									autoCorrect="off"
-									className="w-full rounded-lg border border-border-primary bg-surface px-4 py-2.5 pr-12 text-sm text-primary transition focus:outline-none focus:ring-0 shadow-[0px_4px_54px_0px_rgba(0,0,0,0.06)] outline-1 -outline-offset-1 outline-black-white/10"
-									data-1p-ignore
-								/>
-								<button
-									type="submit"
-									disabled={routerState.isLoading}
-									className="my-auto bg-black-white/10 size-6 rounded-full absolute inset-y-0 right-2.5 flex items-center justify-center text-tertiary transition-colors hover:text-secondary disabled:opacity-50"
-									aria-label="Search"
-								>
-									<ArrowRight className="size-4" aria-hidden />
-								</button>
-							</div>
-						</form>
-						<p className="text-xs text-tertiary font-mono">
-							<span className="font-mono text-[11px]">⌘</span> or{' '}
-							<span className="font-mono text-[11px]">Ctrl</span> +{' '}
-							<span className="font-mono text-[11px]">k</span> to focus
-						</p>
-					</div>
-				</section>
-
-				<div className="grid grid-cols-1 gap-6 font-mono">
-					<section className="flex flex-col gap-6 w-full">
+		<main className="max-h-dvh overflow-y-auto overflow-x-auto">
+			<div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 min-w-0">
+				<SearchBar />
+				<div className="flex gap-4 font-mono flex-col min-[1200px]:flex-row min-w-0">
+					<React.Suspense
+						fallback={
+							<AccountCard
+								address={address}
+								className="self-start w-full min-[1200px]:min-w-[350px] min-[1200px]:w-auto"
+							/>
+						}
+					>
+						<AccountCardWithTimestamps address={address} />
+					</React.Suspense>
+					<section className="flex flex-col grow basis-0 gap-4 border border-primary/10 rounded-xl min-w-0">
 						{/* Tabs */}
-						<div className="rounded-xl border border-border-primary bg-primary">
-							<div className="h-10 flex items-center">
+						<div className="overflow-hidden rounded-xl border border-border-primary/10 bg-primary">
+							<div className="h-10 flex items-center gap-6">
 								<Link
 									to="."
 									search={{ page, tab: 'history' }}
@@ -202,7 +249,7 @@ function RouteComponent() {
 										e.preventDefault()
 										setActiveTab('history')
 									}}
-									className={`h-full pl-[20px] pr-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-[2px]! active:translate-y-[0.5px] ${
+									className={`h-full pl-[20px] pr-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-2! active:translate-y-[0.5px] ${
 										activeTab === 'history'
 											? 'text-primary'
 											: 'text-tertiary hover:text-secondary'
@@ -217,7 +264,7 @@ function RouteComponent() {
 										e.preventDefault()
 										setActiveTab('assets')
 									}}
-									className={`h-full px-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-[2px]! active:translate-y-[0.5px] ${
+									className={`h-full px-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-2! active:translate-y-[0.5px] ${
 										activeTab === 'assets'
 											? 'text-primary'
 											: 'text-tertiary hover:text-secondary'
@@ -241,7 +288,7 @@ function RouteComponent() {
 
 							{activeTab === 'assets' && (
 								<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
-									<table className="w-full border-collapse text-sm rounded-t-sm">
+									<table className="w-full border-collapse text-sm rounded-t-sm table-fixed">
 										<thead>
 											<tr className="border-dashed border-b border-border-base text-left text-xs tracking-wider text-tertiary">
 												<th className="px-5 pb-3 font-normal">Name</th>
@@ -323,7 +370,7 @@ function SearchBar() {
 							ref={inputRef}
 							name="value"
 							type="text"
-							placeholder="Enter address, token, or transaction..."
+							placeholder="Enter address, token, or transaction…"
 							spellCheck={false}
 							autoCapitalize="off"
 							autoComplete="off"
@@ -355,10 +402,10 @@ function HistoryTabSkeleton() {
 	return (
 		<>
 			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
-				<table className="border-collapse text-sm rounded-t-sm min-w-full table-fixed">
+				<table className="w-full border-collapse text-sm rounded-t-sm table-auto">
 					<colgroup>
 						<col className="w-28" />
-						<col />
+						<col className="min-w-[200px]" />
 						<col className="w-36" />
 						<col className="w-24" />
 						<col className="w-32" />
@@ -433,7 +480,13 @@ function HistoryTabContent(props: {
 	const offset = (page - 1) * rowsPerPage
 
 	const { data } = useSuspenseQuery(
-		transactionsQuery(address, page, rowsPerPage, client.chain.id, offset),
+		transactionsQueryOptions({
+			address,
+			page,
+			limit: rowsPerPage,
+			chainId: client.chain.id,
+			offset,
+		}),
 	)
 
 	const transactions = data.transactions
@@ -453,10 +506,10 @@ function HistoryTabContent(props: {
 						</>
 					)}
 				</ClientOnly>
-				<table className="border-collapse text-sm rounded-t-sm min-w-full table-fixed">
+				<table className="w-full border-collapse text-sm rounded-t-sm table-auto">
 					<colgroup>
 						<col className="w-28" />
-						<col />
+						<col className="min-w-[200px]" />
 						<col className="w-36" />
 						<col className="w-24" />
 						<col className="w-32" />
@@ -481,42 +534,38 @@ function HistoryTabContent(props: {
 						</tr>
 					</thead>
 
-					<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
-						{Array.from({ length: rowsPerPage }, (_, index) => {
-							const transaction = transactions?.[index]
-							const key = transaction?.hash ?? `empty-row-${index}`
+					<ClientOnly fallback={<tbody />}>
+						<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
+							{Array.from({ length: rowsPerPage }, (_, index) => {
+								const transaction = transactions?.[index]
+								const key = transaction?.hash ?? `empty-row-${index}`
 
-							if (!transaction) {
-								return (
-									<tr key={key} className="h-12">
-										<td className="h-12">
-											<div className="h-5" />
-										</td>
-										<td className="h-12">
-											<div className="h-5" />
-										</td>
-										<td className="h-12">
-											<div className="h-5" />
-										</td>
-										<td className="h-12">
-											<div className="h-5" />
-										</td>
-										<td className="h-12">
-											<div className="h-5" />
-										</td>
-									</tr>
-								)
-							}
+								if (!transaction) {
+									return (
+										<tr key={key} className="h-12">
+											<td className="h-12">
+												<div className="h-5" />
+											</td>
+											<td className="h-12">
+												<div className="h-5" />
+											</td>
+											<td className="h-12">
+												<div className="h-5" />
+											</td>
+											<td className="h-12">
+												<div className="h-5" />
+											</td>
+											<td className="h-12">
+												<div className="h-5" />
+											</td>
+										</tr>
+									)
+								}
 
-							return (
-								<TransactionRow
-									key={key}
-									transaction={transaction}
-									address={address}
-								/>
-							)
-						})}
-					</tbody>
+								return <TransactionRow key={key} transaction={transaction} />
+							})}
+						</tbody>
+					</ClientOnly>
 				</table>
 			</div>
 
@@ -617,28 +666,28 @@ function HistoryTabContent(props: {
 	)
 }
 
-function TransactionRow(props: {
-	transaction: Transaction
-	address: Address.Address
-}) {
-	const { transaction, address } = props
+function TransactionRow(props: { transaction: Transaction }) {
+	const { transaction } = props
 
 	return (
-		<tr key={transaction.hash} className="transition-colors hover:bg-alt min-h-12">
-			<td className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap overflow-hidden h-12">
-				<div className="h-5 flex items-center overflow-hidden">
+		<tr
+			key={transaction.hash}
+			className="transition-colors hover:bg-alt min-h-12"
+		>
+			<td className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap h-12">
+				<div className="h-5 flex items-center">
 					<TransactionTimestamp blockNumber={transaction.blockNumber} />
 				</div>
 			</td>
 
 			<td className="px-4 py-3 text-primary text-sm align-middle text-left h-12">
-				<div className="flex items-center">
-					<TransactionDescription transaction={transaction} address={address} />
+				<div className="h-5 flex items-center">
+					<TransactionDescription transaction={transaction} />
 				</div>
 			</td>
 
-			<td className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap overflow-hidden h-12">
-				<div className="h-5 flex items-center justify-end overflow-hidden">
+			<td className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap h-12">
+				<div className="h-5 flex items-center justify-end">
 					<Link
 						to={'/receipt/$hash'}
 						params={{ hash: transaction.hash ?? '' }}
@@ -649,14 +698,14 @@ function TransactionRow(props: {
 				</div>
 			</td>
 
-			<td className="px-3 py-3 text-tertiary align-middle text-right whitespace-nowrap overflow-hidden h-12">
-				<div className="h-5 flex items-center justify-end overflow-hidden">
+			<td className="px-3 py-3 text-tertiary align-middle text-right whitespace-nowrap h-12">
+				<div className="h-5 flex items-center justify-end">
 					<TransactionFee transaction={transaction} />
 				</div>
 			</td>
 
-			<td className="px-5 py-3 text-right font-mono text-xs align-middle whitespace-nowrap overflow-hidden h-12">
-				<div className="h-5 flex items-center justify-end overflow-hidden">
+			<td className="px-5 py-3 text-right font-mono text-xs align-middle whitespace-nowrap h-12">
+				<div className="h-5 flex items-center justify-end">
 					<TransactionTotal transaction={transaction} />
 				</div>
 			</td>
@@ -717,7 +766,7 @@ function TransactionTotal(props: { transaction: Transaction }) {
 		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
 	}
 
-	// Calculate dollar value from token amount
+	// calculate dollar value from token amount
 	const decimals = amount.value.decimals ?? 6
 	const tokenAmount = parseFloat(formatUnits(amount.value.value, decimals))
 	// TODO: Get actual token price instead of assuming $1
@@ -776,12 +825,8 @@ function AssetRow(props: { contractAddress: Address.Address }) {
 	)
 }
 
-function TransactionDescription(props: {
-	transaction: Transaction
-	address: Address.Address
-}) {
-	const { transaction, address } = props
-	const [expanded, setExpanded] = React.useState(false)
+function TransactionDescription(props: { transaction: Transaction }) {
+	const { transaction } = props
 
 	const { data: receipt } = useTransactionReceipt({
 		hash: transaction.hash,
@@ -790,44 +835,53 @@ function TransactionDescription(props: {
 		},
 	})
 
+	const [expanded, setExpanded] = React.useState(false)
+
 	const knownEvents = React.useMemo(() => {
 		if (!receipt) return []
 		return parseKnownEvents(receipt)
 	}, [receipt])
 
-	if (!knownEvents || knownEvents.length === 0) return null
+	if (!knownEvents || knownEvents.length === 0)
+		return (
+			<div className="text-tertiary h-5 flex items-center whitespace-nowrap">
+				<span className="inline-block">···</span>
+			</div>
+		)
 
 	const eventsToShow = expanded ? knownEvents : [knownEvents[0]]
 	const remainingCount = knownEvents.length - eventsToShow.length
 
+	const [_event] = knownEvents
+
 	return (
-		<div className="text-primary flex flex-col gap-2">
-			{eventsToShow.map((event, eventIndex) => {
-				const key = `${event.type}-${eventIndex}`
-				return (
-					<div
-						key={key}
-						className="flex flex-row flex-wrap items-center gap-[4px]"
-					>
-						<EventDescription event={event} seenAs={address} />
-						{eventIndex === 0 && remainingCount > 0 && (
-							<button
-								type="button"
-								onClick={() => setExpanded(true)}
-								className="text-base-content-secondary cursor-pointer active:translate-y-[0.5px]"
-							>
-								and {remainingCount} more
-							</button>
-						)}
-						{event.note && (
-							<span className="text-tertiary w-full">
-								{' '}
-								(note: {event.note})
-							</span>
-						)}
-					</div>
-				)
-			})}
+		<div className="text-primary h-5 flex items-center whitespace-nowrap">
+			{eventsToShow.map((event, index) => (
+				<div
+					key={`${event.type}-${index}`}
+					className="inline-flex items-center"
+				>
+					<EventDescription event={event} />
+					{index === 0 && remainingCount > 0 && (
+						<button
+							type="button"
+							onClick={() => setExpanded(true)}
+							className="ml-1 text-base-content-secondary cursor-pointer active:translate-y-[0.5px] shrink-0"
+						>
+							and {remainingCount} more
+						</button>
+					)}
+					{event.note && (
+						<span className="text-tertiary truncate">
+							{' '}
+							(note: {event.note})
+						</span>
+					)}
+				</div>
+			))}
+			{/* {event.note && (
+				<span className="text-tertiary"> (note: {event.note})</span>
+			)} */}
 		</div>
 	)
 }
@@ -845,7 +899,7 @@ function TransactionTimestamp(props: {
 		},
 	})
 
-	if (!timestamp) return <span className="text-tertiary">···</span>
+	if (!timestamp) return <span className="text-tertiary">…</span>
 
 	return <RelativeTime timestamp={timestamp} className="text-tertiary" />
 }

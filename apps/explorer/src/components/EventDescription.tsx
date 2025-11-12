@@ -8,7 +8,7 @@ import { Amount } from './Receipt/Amount'
 export function EventDescription(props: EventDescription.Props) {
 	const { event, seenAs } = props
 	return (
-		<div className="flex flex-row flex-wrap items-center gap-[6px] leading-[18px]">
+		<div className="flex flex-row items-center gap-[6px] leading-[18px] w-auto justify-center">
 			{event.parts.map((part, partIndex) => {
 				const partKey = `${part.type}-${partIndex}`
 				switch (part.type) {
