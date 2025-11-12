@@ -68,6 +68,10 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 	const events = parseEventLogs({ abi, logs })
 
 	const preferenceMap = new Map<string, string>()
+	let feeTransferEvent: {
+		amount: bigint
+		token: Address.Address
+	} | null = null
 
 	for (const event of events) {
 		let key: string | undefined
@@ -199,7 +203,14 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 			case 'Transfer': {
 				const { amount, to } = event.args
 				const isFee = to.toLowerCase().startsWith('0xfeec00000')
-				if (isFee) break
+				if (isFee) {
+					// Store fee transfer info for later use if no other events exist
+					feeTransferEvent = {
+						amount,
+						token: event.address,
+					}
+					break
+				}
 
 				const memo =
 					'memo' in event.args
@@ -338,6 +349,24 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 				break
 			}
 		}
+	}
+
+	// If no known events were parsed but there was a fee transfer,
+	// show it as a fee payment event
+	if (knownEvents.length === 0 && feeTransferEvent) {
+		knownEvents.push({
+			type: 'fee',
+			parts: [
+				{ type: 'action', value: 'Pay Fee' },
+				{
+					type: 'amount',
+					value: {
+						value: feeTransferEvent.amount,
+						token: feeTransferEvent.token,
+					},
+				},
+			],
+		})
 	}
 
 	return knownEvents
