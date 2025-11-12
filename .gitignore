@@ -10,7 +10,6 @@ count.txt
 .wrangler
 .output
 .vinxi
-worker-configuration.d.ts
 _
 package-lock.json
 pnpm-lock.yaml
