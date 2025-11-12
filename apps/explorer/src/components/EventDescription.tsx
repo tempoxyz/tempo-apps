@@ -1,14 +1,22 @@
 import type { Address as AddressType } from 'ox'
 import { isAddressEqual } from 'viem'
-import { HexFormatter } from '#lib/formatting'
-import type { KnownEvent } from '#lib/known-events'
-import { Address } from './Address'
-import { Amount } from './Receipt/Amount'
+
+import { cx } from '#cva.config.ts'
+import { HexFormatter } from '#lib/formatting.ts'
+import type { KnownEvent } from '#lib/known-events.ts'
+import { Address } from './Address.tsx'
+import { Amount } from './Receipt/Amount.tsx'
 
 export function EventDescription(props: EventDescription.Props) {
-	const { event, seenAs } = props
+	const { event, seenAs, className } = props
+
 	return (
-		<div className="flex flex-row flex-wrap items-center gap-[6px] leading-[18px]">
+		<div
+			className={cx(
+				'flex flex-row items-center gap-[6px] leading-[18px] flex-wrap',
+				className,
+			)}
+		>
 			{event.parts.map((part, partIndex) => {
 				const partKey = `${part.type}-${partIndex}`
 				switch (part.type) {
@@ -89,5 +97,6 @@ export namespace EventDescription {
 	export interface Props {
 		event: KnownEvent
 		seenAs?: AddressType.Address
+		className?: string | undefined
 	}
 }

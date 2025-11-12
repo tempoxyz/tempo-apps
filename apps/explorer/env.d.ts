@@ -1,3 +1,13 @@
+interface EnvironmentVariables {
+	readonly INDEXSUPPLY_API_KEY: string
+}
+
+interface ImportMetaEnv extends Cloudflare.Env {}
+
 interface ImportMeta {
-	env: ImportMetaEnv & Cloudflare.Env
+	readonly env: ImportMetaEnv
+}
+
+declare namespace NodeJS {
+	interface ProcessEnv extends EnvironmentVariables {}
 }

@@ -34,6 +34,6 @@
 			"#cva": ["./src/cva.config.ts"]
 		}
 	},
-	"files": ["env.d.ts", "src/cva.config.ts"],
+	"files": ["env.d.ts", "worker-configuration.d.ts"],
 	"exclude": ["**/_/**", "node_modules"]
 }
