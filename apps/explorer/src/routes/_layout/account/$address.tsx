@@ -24,7 +24,6 @@ import { RelativeTime } from '#components/RelativeTime'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { parseKnownEvents } from '#lib/known-events'
 import { config } from '#wagmi.config'
-import ArrowRight from '~icons/lucide/arrow-right'
 
 type TransactionsResponse = {
 	transactions: Array<Transaction>
@@ -118,77 +117,9 @@ function RouteComponent() {
 		[navigate, page],
 	)
 
-	const inputRef = React.useRef<HTMLInputElement | null>(null)
-
-	React.useEffect(() => {
-		const listener = (event: KeyboardEvent) => {
-			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-				event.preventDefault()
-				inputRef.current?.focus()
-			}
-		}
-		window.addEventListener('keydown', listener)
-		return () => window.removeEventListener('keydown', listener)
-	}, [])
-
-	const handleSearch: React.FormEventHandler<HTMLFormElement> =
-		React.useCallback(
-			(event) => {
-				event.preventDefault()
-				const formData = new FormData(event.currentTarget)
-				const value = formData.get('value')?.toString().trim()
-
-				if (!value) return
-				try {
-					Hex.assert(value)
-					navigate({
-						to: '/$value',
-						params: { value },
-					})
-				} catch (error) {
-					console.error('Invalid search value provided', error)
-				}
-			},
-			[navigate],
-		)
-
 	return (
 		<div className="px-4">
 			<div className="mx-auto flex max-w-5xl flex-col gap-8">
-				<section className="flex flex-col gap-4">
-					<div className="flex flex-col items-center gap-2 text-center">
-						<form onSubmit={handleSearch} className="w-full max-w-xl ">
-							<div className="relative">
-								<input
-									ref={inputRef}
-									name="value"
-									type="text"
-									placeholder="Enter address, token, or transaction…"
-									spellCheck={false}
-									autoCapitalize="off"
-									autoComplete="off"
-									autoCorrect="off"
-									className="w-full rounded-lg border border-border-primary bg-surface px-4 py-2.5 pr-12 text-sm text-primary transition focus:outline-none focus:ring-0 shadow-[0px_4px_54px_0px_rgba(0,0,0,0.06)] outline-1 -outline-offset-1 outline-black-white/10"
-									data-1p-ignore
-								/>
-								<button
-									type="submit"
-									disabled={routerState.isLoading}
-									className="my-auto bg-black-white/10 size-6 rounded-full absolute inset-y-0 right-2.5 flex items-center justify-center text-tertiary transition-colors hover:text-secondary disabled:opacity-50"
-									aria-label="Search"
-								>
-									<ArrowRight className="size-4" aria-hidden />
-								</button>
-							</div>
-						</form>
-						<p className="text-xs text-tertiary font-mono">
-							<span className="font-mono text-[11px]">⌘</span> or{' '}
-							<span className="font-mono text-[11px]">Ctrl</span> +{' '}
-							<span className="font-mono text-[11px]">k</span> to focus
-						</p>
-					</div>
-				</section>
-
 				<div className="grid grid-cols-1 gap-6 font-mono">
 					<section className="flex flex-col gap-6 w-full">
 						{/* Tabs */}
@@ -201,7 +132,7 @@ function RouteComponent() {
 										e.preventDefault()
 										setActiveTab('history')
 									}}
-									className={`h-full pl-[20px] pr-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-[2px]! active:translate-y-[0.5px] ${
+									className={`h-full pl-[20px] pr-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-[2px]! active:translate-y-[.5px] ${
 										activeTab === 'history'
 											? 'text-primary'
 											: 'text-tertiary hover:text-secondary'
@@ -216,7 +147,7 @@ function RouteComponent() {
 										e.preventDefault()
 										setActiveTab('assets')
 									}}
-									className={`h-full px-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-[2px]! active:translate-y-[0.5px] ${
+									className={`h-full px-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-[2px]! active:translate-y-[.5px] ${
 										activeTab === 'assets'
 											? 'text-primary'
 											: 'text-tertiary hover:text-secondary'
@@ -242,7 +173,7 @@ function RouteComponent() {
 								<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
 									<table className="w-full border-collapse text-sm rounded-t-sm">
 										<thead>
-											<tr className="border-dashed border-b border-border-base text-left text-xs tracking-wider text-tertiary">
+											<tr className="border-dashed border-b border-base-border text-left text-xs tracking-wider text-tertiary">
 												<th className="px-5 pb-3 font-normal">Name</th>
 												<th className="px-5 pb-3 font-normal">Ticker</th>
 												<th className="px-5 pb-3 font-normal">Currency</th>
@@ -255,7 +186,7 @@ function RouteComponent() {
 											</tr>
 										</thead>
 										<ClientOnly fallback={<tbody />}>
-											<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
+											<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-base-border">
 												{assets.map((assetAddress) => (
 													<AssetRow
 														key={assetAddress}
@@ -288,7 +219,7 @@ function HistoryTabSkeleton() {
 						<col className="w-32" />
 					</colgroup>
 					<thead>
-						<tr className="border-dashed border-b border-border-base text-left text-xs tracking-wider text-tertiary">
+						<tr className="border-dashed border-b border-base-border text-left text-xs tracking-wider text-tertiary">
 							<th className="px-5 pb-3 font-normal text-left whitespace-nowrap">
 								Time
 							</th>
@@ -306,7 +237,7 @@ function HistoryTabSkeleton() {
 							</th>
 						</tr>
 					</thead>
-					<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
+					<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-base-border">
 						{Array.from({ length: rowsPerPage }, (_, i) => `skeleton-${i}`).map(
 							(key) => (
 								<tr key={key} className="h-12">
@@ -331,7 +262,7 @@ function HistoryTabSkeleton() {
 					</tbody>
 				</table>
 			</div>
-			<div className="font-mono flex flex-col gap-3 border-t border-dashed border-border-base px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
+			<div className="font-mono flex flex-col gap-3 border-t border-dashed border-base-border px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
 				<div className="flex flex-row items-center gap-2">
 					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
 					<div className="h-7 w-32 bg-alt animate-pulse rounded" />
@@ -386,7 +317,7 @@ function HistoryTabContent(props: {
 						<col className="w-32" />
 					</colgroup>
 					<thead>
-						<tr className="border-dashed border-b border-border-base text-left text-xs tracking-wider text-tertiary">
+						<tr className="border-dashed border-b border-base-border text-left text-xs tracking-wider text-tertiary">
 							<th className="px-5 pb-3 font-normal text-left whitespace-nowrap">
 								Time
 							</th>
@@ -405,7 +336,7 @@ function HistoryTabContent(props: {
 						</tr>
 					</thead>
 
-					<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
+					<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-base-border">
 						{Array.from({ length: rowsPerPage }, (_, index) => {
 							const transaction = transactions?.[index]
 							const key = transaction?.hash ?? `empty-row-${index}`
@@ -444,7 +375,7 @@ function HistoryTabContent(props: {
 				</table>
 			</div>
 
-			<div className="font-mono flex flex-col gap-3 border-t border-dashed border-border-base px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
+			<div className="font-mono flex flex-col gap-3 border-t border-dashed border-base-border px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
 				<div className="flex flex-row items-center gap-2">
 					<button
 						type="button"
@@ -548,7 +479,10 @@ function TransactionRow(props: {
 	const { transaction, address } = props
 
 	return (
-		<tr key={transaction.hash} className="transition-colors hover:bg-alt min-h-12">
+		<tr
+			key={transaction.hash}
+			className="transition-colors hover:bg-alt min-h-12"
+		>
 			<td className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap overflow-hidden h-12">
 				<div className="h-5 flex items-center overflow-hidden">
 					<TransactionTimestamp blockNumber={transaction.blockNumber} />
@@ -564,7 +498,7 @@ function TransactionRow(props: {
 			<td className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap overflow-hidden h-12">
 				<div className="h-5 flex items-center justify-end overflow-hidden">
 					<Link
-						to={'/receipt/$hash'}
+						to={'/tx/$hash'}
 						params={{ hash: transaction.hash ?? '' }}
 						className="hover:text-accent transition-colors"
 					>
@@ -738,7 +672,7 @@ function TransactionDescription(props: {
 							<button
 								type="button"
 								onClick={() => setExpanded(true)}
-								className="text-base-content-secondary cursor-pointer active:translate-y-[0.5px]"
+								className="text-base-content-secondary cursor-pointer active:translate-y-[.5px]"
 							>
 								and {remainingCount} more
 							</button>
