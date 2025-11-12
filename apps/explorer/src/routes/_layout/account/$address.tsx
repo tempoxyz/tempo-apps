@@ -10,7 +10,6 @@ import {
 	Link,
 	useNavigate,
 	useParams,
-	useRouterState,
 } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
@@ -222,7 +221,7 @@ function RouteComponent() {
 
 	return (
 		<main className="max-h-dvh overflow-y-auto overflow-x-auto">
-			<div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 min-w-0">
+			<div className="mx-auto flex max-w-7xl flex-col pt-20 pb-16 px-4 min-w-0">
 				<div className="flex gap-4 font-mono flex-col min-[1200px]:flex-row min-w-0">
 					<React.Suspense
 						fallback={

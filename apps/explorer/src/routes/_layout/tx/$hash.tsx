@@ -199,7 +199,7 @@ function Component() {
 	const knownEvents = React.useMemo(() => parseKnownEvents(receipt), [receipt])
 
 	return (
-		<div className="font-mono text-[13px] flex flex-col items-center justify-center min-h-screen gap-8">
+		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow-1">
 			<Receipt
 				blockNumber={receipt.blockNumber}
 				sender={transaction.from}
