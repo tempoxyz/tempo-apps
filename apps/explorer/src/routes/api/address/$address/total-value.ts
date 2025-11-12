@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers'
 import { createFileRoute } from '@tanstack/react-router'
 import { Address } from 'ox'
 import { Abis } from 'tempo.ts/viem'
-import { getClient, readContract } from 'wagmi/actions'
+import { getChainId, readContract } from 'wagmi/actions'
 import { z } from 'zod'
 import { config, getConfig } from '#wagmi.config.ts'
 
@@ -12,10 +12,10 @@ export const Route = createFileRoute('/api/address/$address/total-value')({
 			GET: async ({ params }) => {
 				const { address } = params
 
-				const client = getClient(config)
+				const chainId = getChainId(config)
 
 				const searchParams = new URLSearchParams({
-					query: `SELECT address as token_address, SUM(CASE WHEN "to" = '${address}' THEN tokens ELSE 0 END) - SUM(CASE WHEN "from" = '${address}' THEN tokens ELSE 0 END) as balance FROM transfer WHERE chain = ${client.chain.id} AND ("to" = '${address}' OR "from" = '${address}') GROUP BY address`,
+					query: `SELECT address as token_address, SUM(CASE WHEN "to" = '${address}' THEN tokens ELSE 0 END) - SUM(CASE WHEN "from" = '${address}' THEN tokens ELSE 0 END) as balance FROM transfer WHERE chain = ${chainId} AND ("to" = '${address}' OR "from" = '${address}') GROUP BY address`,
 					signatures:
 						'Transfer(address indexed from, address indexed to, uint tokens)',
 					'api-key': env.INDEXSUPPLY_API_KEY,

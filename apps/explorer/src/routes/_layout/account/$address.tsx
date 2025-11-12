@@ -15,16 +15,16 @@ import {
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
-import type { RpcTransaction as Transaction } from 'viem'
+import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { formatEther, formatUnits } from 'viem'
-import { useBlock, useClient, useTransactionReceipt } from 'wagmi'
-import { getClient } from 'wagmi/actions'
+import { useBlock, useChainId, useTransactionReceipt } from 'wagmi'
+import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
 import { EventDescription } from '#components/EventDescription.tsx'
 import { RelativeTime } from '#components/RelativeTime'
 import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
-import { parseKnownEvents } from '#lib/known-events.ts'
+import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
 import { config } from '#wagmi.config.ts'
 import ArrowRight from '~icons/lucide/arrow-right'
 
@@ -85,7 +85,7 @@ export const Route = createFileRoute('/_layout/account/$address')({
 	loader: async ({ deps: { page }, params: { address }, context }) => {
 		const offset = (page - 1) * rowsPerPage
 
-		const client = getClient(config)
+		const chainId = getChainId(config)
 
 		await context.queryClient.fetchQuery(
 			transactionsQueryOptions({
@@ -93,7 +93,7 @@ export const Route = createFileRoute('/_layout/account/$address')({
 				page,
 				offset,
 				limit: rowsPerPage,
-				chainId: client.chain.id,
+				chainId,
 			}),
 		)
 	},
@@ -119,8 +119,7 @@ const assets = [
 
 function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const { address } = props
-	const client = useClient()
-	if (!client) throw new Error('client not found')
+	const chainId = useChainId()
 
 	// fetch the most recent transactions (pg.1)
 	const { data: recentData } = useQuery(
@@ -128,7 +127,7 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 			address,
 			page: 1,
 			limit: 1,
-			chainId: client.chain.id,
+			chainId,
 			offset: 0,
 			_key: 'account-creation',
 		}),
@@ -144,8 +143,7 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 		},
 	})
 
-	// for "created" timestamp, we need to fetch the earliest transaction
-	// this would be the last page of transactions
+	// for "created" timestamp, fetch the earliest transaction, this would be the last page of transactions
 	const totalTransactions = recentData?.total ?? 0
 	const lastPageOffset = Math.max(0, totalTransactions - 1)
 
@@ -154,7 +152,7 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 			address,
 			page: Math.ceil(totalTransactions / 1),
 			limit: 1,
-			chainId: client.chain.id,
+			chainId,
 			offset: lastPageOffset,
 			_key: 'account-creation',
 		}),
@@ -430,27 +428,28 @@ function HistoryTabSkeleton() {
 						</tr>
 					</thead>
 					<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
-						{Array.from({ length: rowsPerPage }, (_, i) => `skeleton-${i}`).map(
-							(key) => (
-								<tr key={key} className="h-12">
-									<td className="h-12">
-										<div className="h-5" />
-									</td>
-									<td className="h-12">
-										<div className="h-5" />
-									</td>
-									<td className="h-12">
-										<div className="h-5" />
-									</td>
-									<td className="h-12">
-										<div className="h-5" />
-									</td>
-									<td className="h-12">
-										<div className="h-5" />
-									</td>
-								</tr>
-							),
-						)}
+						{Array.from(
+							{ length: rowsPerPage },
+							(_, index) => `skeleton-${index}`,
+						).map((key) => (
+							<tr key={key} className="h-12">
+								<td className="h-12">
+									<div className="h-5" />
+								</td>
+								<td className="h-12">
+									<div className="h-5" />
+								</td>
+								<td className="h-12">
+									<div className="h-5" />
+								</td>
+								<td className="h-12">
+									<div className="h-5" />
+								</td>
+								<td className="h-12">
+									<div className="h-5" />
+								</td>
+							</tr>
+						))}
 					</tbody>
 				</table>
 			</div>
@@ -469,23 +468,22 @@ function HistoryTabSkeleton() {
 function HistoryTabContent(props: {
 	address: Address.Address
 	page: number
-	goToPage: (page: number) => void
 	isPending: boolean
+	goToPage: (page: number) => void
 }) {
 	const { address, page, goToPage, isPending } = props
 
-	const client = useClient()
-	if (!client) throw new Error('client not found')
+	const chainId = useChainId()
 
 	const offset = (page - 1) * rowsPerPage
 
 	const { data } = useSuspenseQuery(
 		transactionsQueryOptions({
-			address,
 			page,
-			limit: rowsPerPage,
-			chainId: client.chain.id,
 			offset,
+			address,
+			chainId,
+			limit: rowsPerPage,
 		}),
 	)
 
@@ -537,32 +535,31 @@ function HistoryTabContent(props: {
 					<ClientOnly fallback={<tbody />}>
 						<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
 							{Array.from({ length: rowsPerPage }, (_, index) => {
-								const transaction = transactions?.[index]
-								const key = transaction?.hash ?? `empty-row-${index}`
+								const transaction = transactions[index]
+								const key = transaction?.hash ?? `skeleton-${index}`
 
-								if (!transaction) {
-									return (
-										<tr key={key} className="h-12">
-											<td className="h-12">
-												<div className="h-5" />
-											</td>
-											<td className="h-12">
-												<div className="h-5" />
-											</td>
-											<td className="h-12">
-												<div className="h-5" />
-											</td>
-											<td className="h-12">
-												<div className="h-5" />
-											</td>
-											<td className="h-12">
-												<div className="h-5" />
-											</td>
-										</tr>
-									)
-								}
+								if (transaction)
+									return <TransactionRow key={key} transaction={transaction} />
 
-								return <TransactionRow key={key} transaction={transaction} />
+								return (
+									<tr key={key} className="h-12">
+										<td className="h-12">
+											<div className="h-5" />
+										</td>
+										<td className="h-12">
+											<div className="h-5" />
+										</td>
+										<td className="h-12">
+											<div className="h-5" />
+										</td>
+										<td className="h-12">
+											<div className="h-5" />
+										</td>
+										<td className="h-12">
+											<div className="h-5" />
+										</td>
+									</tr>
+								)
 							})}
 						</tbody>
 					</ClientOnly>
@@ -590,7 +587,7 @@ function HistoryTabContent(props: {
 
 							startPage = Math.max(1, endPage - maxButtons + 1)
 
-							const pages: (number | 'ellipsis')[] = []
+							const pages: Array<number | 'ellipsis'> = []
 
 							if (startPage > 1) {
 								pages.push(1)
@@ -656,7 +653,7 @@ function HistoryTabContent(props: {
 					<span className="text-tertiary">•</span>
 					<span className="text-primary">{totalTransactions || '…'}</span>
 					<span className="text-tertiary">
-						<ClientOnly fallback={<React.Fragment>¬</React.Fragment>}>
+						<ClientOnly fallback={<React.Fragment>…</React.Fragment>}>
 							{totalTransactions === 1 ? 'transaction' : 'transactions'}
 						</ClientOnly>
 					</span>
@@ -666,130 +663,24 @@ function HistoryTabContent(props: {
 	)
 }
 
-function TransactionRow(props: { transaction: Transaction }) {
-	const { transaction } = props
-
-	return (
-		<tr
-			key={transaction.hash}
-			className="transition-colors hover:bg-alt min-h-12"
-		>
-			<td className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap h-12">
-				<div className="h-5 flex items-center">
-					<TransactionTimestamp blockNumber={transaction.blockNumber} />
-				</div>
-			</td>
-
-			<td className="px-4 py-3 text-primary text-sm align-middle text-left h-12">
-				<div className="h-5 flex items-center">
-					<TransactionDescription transaction={transaction} />
-				</div>
-			</td>
-
-			<td className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap h-12">
-				<div className="h-5 flex items-center justify-end">
-					<Link
-						to={'/receipt/$hash'}
-						params={{ hash: transaction.hash ?? '' }}
-						className="hover:text-accent transition-colors"
-					>
-						{HexFormatter.truncate(transaction.hash, 6)}
-					</Link>
-				</div>
-			</td>
-
-			<td className="px-3 py-3 text-tertiary align-middle text-right whitespace-nowrap h-12">
-				<div className="h-5 flex items-center justify-end">
-					<TransactionFee transaction={transaction} />
-				</div>
-			</td>
-
-			<td className="px-5 py-3 text-right font-mono text-xs align-middle whitespace-nowrap h-12">
-				<div className="h-5 flex items-center justify-end">
-					<TransactionTotal transaction={transaction} />
-				</div>
-			</td>
-		</tr>
-	)
-}
-
-function TransactionFee(props: { transaction: Transaction }) {
-	const { transaction } = props
-
-	const { data: receipt } = useTransactionReceipt({
-		hash: transaction.hash,
-		query: {
-			enabled: Boolean(transaction.hash),
-		},
-	})
-
-	if (!receipt) {
-		return <span className="text-tertiary">···</span>
-	}
-
-	const fee = PriceFormatter.format(
-		receipt.gasUsed * receipt.effectiveGasPrice, // TODO: double check
-		18,
-	)
-
-	return <span className="text-tertiary">{fee}</span>
-}
-
-function TransactionTotal(props: { transaction: Transaction }) {
-	const { transaction } = props
-
-	const { data: receipt } = useTransactionReceipt({
-		hash: transaction.hash,
-		query: {
-			enabled: Boolean(transaction.hash),
-		},
-	})
-
-	const knownEvents = React.useMemo(() => {
-		if (!receipt) return []
-		return parseKnownEvents(receipt)
-	}, [receipt])
-
-	const [event] = knownEvents
-
-	// Find the first amount in the event parts
-	const amount = event?.parts.find((part) => part.type === 'amount')
-
-	if (!amount || amount.type !== 'amount') {
-		// Fallback to native currency value
-		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
-		if (value === 0n) {
-			return <span className="text-tertiary">—</span>
-		}
-		const ethAmount = parseFloat(formatEther(value))
-		const dollarAmount = ethAmount * 2_000
-		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
-	}
-
-	// calculate dollar value from token amount
-	const decimals = amount.value.decimals ?? 6
-	const tokenAmount = parseFloat(formatUnits(amount.value.value, decimals))
-	// TODO: Get actual token price instead of assuming $1
-	const dollarAmount = tokenAmount * 1
-
-	if (dollarAmount > 0.01) {
-		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
-	}
-
-	return <span className="text-tertiary">${dollarAmount.toFixed(2)}</span>
-}
-
 function AssetRow(props: { contractAddress: Address.Address }) {
 	const { contractAddress } = props
 
 	const { address } = useParams({ from: Route.id })
+
 	const { data: metadata } = Hooks.token.useGetMetadata({
 		token: contractAddress,
+		query: {
+			enabled: Boolean(contractAddress),
+		},
 	})
 
 	const { data: balance } = Hooks.token.useGetBalance({
 		token: contractAddress,
 		account: address,
+		query: {
+			enabled: Boolean(address && contractAddress),
+		},
 	})
 
 	return (
@@ -819,13 +710,79 @@ function AssetRow(props: { contractAddress: Address.Address }) {
 				)}
 			</td>
 			<td className="px-5 py-3 text-right font-mono text-xs text-primary">
-				{`${PriceFormatter.format(Number(balance ?? 0n), metadata?.decimals ?? 6)}`}
+				{`${PriceFormatter.format(balance ?? 0n, metadata?.decimals ?? 6)}`}
 			</td>
 		</tr>
 	)
 }
 
-function TransactionDescription(props: { transaction: Transaction }) {
+function TransactionRow(props: { transaction: Transaction }) {
+	const { transaction } = props
+
+	const { data: transactionReceipt } = useTransactionReceipt({
+		hash: transaction.hash,
+		query: {
+			enabled: Boolean(transaction.hash),
+		},
+	})
+
+	const knownEvents = React.useMemo(() => {
+		if (!transactionReceipt) return []
+		return parseKnownEvents(transactionReceipt)
+	}, [transactionReceipt])
+
+	return (
+		<tr
+			key={transaction.hash}
+			className="transition-colors hover:bg-alt min-h-12"
+		>
+			<td className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap h-12">
+				<div className="h-5 flex items-center">
+					<TransactionTimestamp blockNumber={transaction.blockNumber} />
+				</div>
+			</td>
+
+			<td className="px-4 py-3 text-primary text-sm align-middle text-left h-12">
+				<div className="h-5 flex items-center">
+					<TransactionDescription
+						transaction={transaction}
+						knownEvents={knownEvents}
+						transactionReceipt={transactionReceipt}
+					/>
+				</div>
+			</td>
+
+			<td className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap h-12">
+				<div className="h-5 flex items-center justify-end">
+					<Link
+						to={'/receipt/$hash'}
+						params={{ hash: transaction.hash ?? '' }}
+						className="hover:text-accent transition-colors"
+					>
+						{HexFormatter.truncate(transaction.hash, 6)}
+					</Link>
+				</div>
+			</td>
+
+			<td className="px-3 py-3 text-tertiary align-middle text-right whitespace-nowrap h-12">
+				<div className="h-5 flex items-center justify-end">
+					<TransactionFee transaction={transaction} />
+				</div>
+			</td>
+
+			<td className="px-5 py-3 text-right font-mono text-xs align-middle whitespace-nowrap h-12">
+				<div className="h-5 flex items-center justify-end">
+					<TransactionTotal
+						transaction={transaction}
+						knownEvents={knownEvents}
+					/>
+				</div>
+			</td>
+		</tr>
+	)
+}
+
+function TransactionFee(props: { transaction: Transaction }) {
 	const { transaction } = props
 
 	const { data: receipt } = useTransactionReceipt({
@@ -835,17 +792,29 @@ function TransactionDescription(props: { transaction: Transaction }) {
 		},
 	})
 
-	const [expanded, setExpanded] = React.useState(false)
+	if (!receipt) return <span className="text-tertiary">···</span>
 
-	const knownEvents = React.useMemo(() => {
-		if (!receipt) return []
-		return parseKnownEvents(receipt)
-	}, [receipt])
+	const fee = PriceFormatter.format(
+		receipt.gasUsed * receipt.effectiveGasPrice, // TODO: double check
+		18,
+	)
+
+	return <span className="text-tertiary">{fee}</span>
+}
+
+function TransactionDescription(props: {
+	transaction: Transaction
+	knownEvents: Array<KnownEvent>
+	transactionReceipt: TransactionReceipt | undefined
+}) {
+	const { knownEvents } = props
+
+	const [expanded, setExpanded] = React.useState(false)
 
 	if (!knownEvents || knownEvents.length === 0)
 		return (
 			<div className="text-tertiary h-5 flex items-center whitespace-nowrap">
-				<span className="inline-block">···</span>
+				<span className="inline-block">…</span>
 			</div>
 		)
 
@@ -861,7 +830,10 @@ function TransactionDescription(props: { transaction: Transaction }) {
 					key={`${event.type}-${index}`}
 					className="inline-flex items-center"
 				>
-					<EventDescription event={event} />
+					<EventDescription
+						event={event}
+						className="flex flex-row items-center gap-[6px] leading-[18px] w-auto justify-center flex-nowrap"
+					/>
 					{index === 0 && remainingCount > 0 && (
 						<button
 							type="button"
@@ -902,4 +874,34 @@ function TransactionTimestamp(props: {
 	if (!timestamp) return <span className="text-tertiary">…</span>
 
 	return <RelativeTime timestamp={timestamp} className="text-tertiary" />
+}
+
+function TransactionTotal(props: {
+	transaction: Transaction
+	knownEvents: Array<KnownEvent>
+}) {
+	const {
+		transaction,
+		knownEvents: [event],
+	} = props
+
+	const amount = event?.parts.find((part) => part.type === 'amount')
+
+	if (!amount || amount.type !== 'amount') {
+		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
+		if (value === 0n) return <span className="text-tertiary">—</span>
+
+		const ethAmount = parseFloat(formatEther(value))
+		const dollarAmount = ethAmount * 2_000
+		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
+	}
+
+	const decimals = amount.value.decimals ?? 6
+	const tokenAmount = parseFloat(formatUnits(amount.value.value, decimals))
+	const dollarAmount = tokenAmount * 1
+
+	if (dollarAmount > 0.01)
+		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
+
+	return <span className="text-tertiary">${dollarAmount.toFixed(2)}</span>
 }
