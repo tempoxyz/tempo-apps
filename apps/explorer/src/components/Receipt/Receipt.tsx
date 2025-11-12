@@ -21,7 +21,7 @@ export function Receipt(props: Receipt.Props) {
 	const { copy, notifying } = useCopy()
 	const formattedTime = DateFormatter.formatTimestampTime(timestamp)
 	return (
-		<div className="flex flex-col w-[360px] bg-base-plane border border-border-base shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] text-base-content">
+		<div className="flex flex-col w-[360px] bg-base-plane border border-base-border shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] text-base-content">
 			<div className="flex gap-[40px] px-[20px] pt-[24px] pb-[16px]">
 				<div className="shrink-0">
 					<ReceiptMark />
@@ -32,7 +32,7 @@ export function Receipt(props: Receipt.Props) {
 						<Link
 							to={'/block/$id'}
 							params={{ id: Hex.fromNumber(blockNumber) }}
-							className="text-accent text-right before:content-['#'] active:translate-y-[0.5px]"
+							className="text-accent text-right before:content-['#'] active:translate-y-[.5px]"
 						>
 							{String(blockNumber)}
 						</Link>
@@ -42,7 +42,7 @@ export function Receipt(props: Receipt.Props) {
 						<Link
 							to={'/account/$address'}
 							params={{ address: sender }}
-							className="text-accent text-right active:translate-y-[0.5px]"
+							className="text-accent text-right active:translate-y-[.5px]"
 							title={sender}
 						>
 							{HexFormatter.shortenHex(sender)}
@@ -61,7 +61,7 @@ export function Receipt(props: Receipt.Props) {
 							<button
 								type="button"
 								onClick={() => copy(hash)}
-								className="text-right break-all max-w-[11ch] cursor-pointer active:translate-y-[0.5px]"
+								className="text-right break-all max-w-[11ch] cursor-pointer active:translate-y-[.5px]"
 							>
 								{hash}
 							</button>
@@ -69,7 +69,7 @@ export function Receipt(props: Receipt.Props) {
 							<button
 								type="button"
 								onClick={() => setHashExpanded(true)}
-								className="text-right cursor-pointer active:translate-y-[0.5px]"
+								className="text-right cursor-pointer active:translate-y-[.5px]"
 								title={hash}
 							>
 								{HexFormatter.shortenHex(hash)}
@@ -93,7 +93,7 @@ export function Receipt(props: Receipt.Props) {
 			</div>
 			{events.length > 0 && (
 				<>
-					<div className="border-t border-dashed border-border-base" />
+					<div className="border-t border-dashed border-base-border" />
 					<div className="flex flex-col gap-3 px-[20px] py-[16px] font-mono text-[13px] leading-4 [counter-reset:event]">
 						{events.map((event, index) => {
 							// Calculate total amount from event parts
@@ -144,7 +144,7 @@ export function Receipt(props: Receipt.Props) {
 										</div>
 										{event.note && (
 											<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
-												<div className="border-l border-border-base h-[20px] shrink-0" />
+												<div className="border-l border-base-border h-[20px] shrink-0" />
 												<span
 													className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
 													title={event.note}
@@ -162,7 +162,7 @@ export function Receipt(props: Receipt.Props) {
 			)}
 			{(fee || total) && (
 				<>
-					<div className="border-t border-dashed border-border-base" />
+					<div className="border-t border-dashed border-base-border" />
 					<div className="flex flex-col gap-2 px-[20px] py-[16px] font-mono text-[13px] leading-4">
 						{fee && (
 							<div className="flex justify-between items-center">

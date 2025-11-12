@@ -1,36 +1,99 @@
-import { ClientOnly, Link } from '@tanstack/react-router'
+import {
+	Link,
+	useMatch,
+	useNavigate,
+	useRouterState,
+} from '@tanstack/react-router'
 import * as React from 'react'
-import { useBlockNumber } from 'wagmi'
+import { useChains, useWatchBlockNumber } from 'wagmi'
+import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
+import { ExploreInput } from './ExploreInput'
 
 export function Header() {
+	const navigate = useNavigate()
+	const txMatch = useMatch({ from: '/_layout/tx/$hash', shouldThrow: false })
+	const accountMatch = useMatch({
+		from: '/_layout/account/$address',
+		shouldThrow: false,
+	})
+	const hash = (txMatch?.params as { hash: string | undefined })?.hash
+	const address = (accountMatch?.params as { address: string | undefined })
+		?.address
+	const state = useRouterState()
+
+	const showInput = Boolean(hash || address)
+
 	return (
-		<header className="px-4 md:px-8 lg:px-16 flex items-center justify-between min-h-16 pt-6">
-			<Link to="/" className="flex items-center">
-				<TempoWordmark />
-			</Link>
-			<div className="flex items-center gap-2">
-				<SquareSquare className="size-4 text-accent" />
-				<span className="text-sm text-secondary">Block</span>
-				<span className="text-sm text-primary font-medium tabular-nums">
-					<ClientOnly
-						fallback={
-							<span className="text-sm text-primary font-medium tabular-nums">
-								...
-							</span>
-						}
-					>
-						<BlockNumber />
-					</ClientOnly>
-				</span>
+		<header className="@container">
+			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1">
+				<div className="flex items-center gap-[12px] relative z-1">
+					<Link to="/" className="flex items-center active:translate-y-[.5px]">
+						<TempoWordmark />
+					</Link>
+					<NetworkBadge />
+				</div>
+				{showInput && (
+					<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex">
+						<ExploreInput
+							disabled={state.isLoading}
+							onActivate={({ value, type }) => {
+								if (type === 'hash') {
+									navigate({
+										params: { hash: value },
+										to: '/tx/$hash',
+									})
+									return
+								}
+								if (type === 'address') {
+									navigate({
+										params: { address: value },
+										to: '/account/$address',
+									})
+									return
+								}
+							}}
+						/>
+					</div>
+				)}
+				<div className="relative z-1">
+					<BlockNumber />
+				</div>
 			</div>
 		</header>
 	)
 }
 
+function NetworkBadge() {
+	const [chain] = useChains()
+	const network = chain.name.match(/Tempo (.+)/)?.[1]
+	if (!network) return null
+	return (
+		<div className="flex items-center gap-[4px] px-[8px] h-[28px] border-[1px] border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium">
+			<Music4 width={14} height={14} className="text-accent" />
+			{network}
+		</div>
+	)
+}
+
 function BlockNumber() {
-	const { data: blockNumber } = useBlockNumber({ watch: true })
-	return <React.Fragment>{blockNumber}</React.Fragment>
+	const ref = React.useRef<HTMLSpanElement>(null)
+	useWatchBlockNumber({
+		onBlockNumber: (blockNumber) => {
+			if (ref.current) ref.current.textContent = String(blockNumber)
+		},
+	})
+	return (
+		<div className="flex items-center gap-[6px] text-[15px] font-medium text-secondary">
+			<SquareSquare className="size-[18px] text-accent" />
+			<div className="text-nowrap" title="Block number">
+				<span className="@min-[1240px]:inline hidden">Block </span>
+				<span className="text-primary font-medium tabular-nums min-w-[6ch] inline-block">
+					<span ref={ref}>…</span>
+				</span>
+			</div>
+		</div>
+	)
 }
 
 type TempoWordmarkProps = {
