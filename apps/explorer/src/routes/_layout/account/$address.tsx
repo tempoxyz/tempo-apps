@@ -10,7 +10,6 @@ import {
 	Link,
 	useNavigate,
 	useParams,
-	useRouterState,
 } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
@@ -26,7 +25,6 @@ import { RelativeTime } from '#components/RelativeTime'
 import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
 import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
 import { config } from '#wagmi.config.ts'
-import ArrowRight from '~icons/lucide/arrow-right'
 
 type TransactionsResponse = {
 	transactions: Array<Transaction>
@@ -223,8 +221,7 @@ function RouteComponent() {
 
 	return (
 		<main className="max-h-dvh overflow-y-auto overflow-x-auto">
-			<div className="mx-auto flex max-w-7xl flex-col gap-8 px-4 min-w-0">
-				<SearchBar />
+			<div className="mx-auto flex max-w-7xl flex-col pt-20 pb-16 px-4 min-w-0">
 				<div className="flex gap-4 font-mono flex-col min-[1200px]:flex-row min-w-0">
 					<React.Suspense
 						fallback={
@@ -247,7 +244,7 @@ function RouteComponent() {
 										e.preventDefault()
 										setActiveTab('history')
 									}}
-									className={`h-full pl-[20px] pr-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-2! active:translate-y-[0.5px] ${
+									className={`h-full pl-[20px] pr-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-2! active:translate-y-[.5px] ${
 										activeTab === 'history'
 											? 'text-primary'
 											: 'text-tertiary hover:text-secondary'
@@ -262,7 +259,7 @@ function RouteComponent() {
 										e.preventDefault()
 										setActiveTab('assets')
 									}}
-									className={`h-full px-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-2! active:translate-y-[0.5px] ${
+									className={`h-full px-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-2! active:translate-y-[.5px] ${
 										activeTab === 'assets'
 											? 'text-primary'
 											: 'text-tertiary hover:text-secondary'
@@ -318,81 +315,6 @@ function RouteComponent() {
 				</div>
 			</div>
 		</main>
-	)
-}
-
-function SearchBar() {
-	const navigate = useNavigate()
-	const routerState = useRouterState()
-
-	const inputRef = React.useRef<HTMLInputElement | null>(null)
-
-	const handleSearch: React.FormEventHandler<HTMLFormElement> =
-		React.useCallback(
-			(event) => {
-				event.preventDefault()
-				const formData = new FormData(event.currentTarget)
-				const value = formData.get('value')?.toString().trim()
-
-				if (!value) return
-				try {
-					Hex.assert(value)
-					navigate({
-						to: '/$value',
-						params: { value },
-					})
-				} catch (error) {
-					console.error('Invalid search value provided', error)
-				}
-			},
-			[navigate],
-		)
-
-	React.useEffect(() => {
-		const listener = (event: KeyboardEvent) => {
-			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-				event.preventDefault()
-				inputRef.current?.focus()
-			}
-		}
-		window.addEventListener('keydown', listener)
-		return () => window.removeEventListener('keydown', listener)
-	}, [])
-
-	return (
-		<section className="flex flex-col gap-4">
-			<div className="flex flex-col items-center gap-2 text-center">
-				<form onSubmit={handleSearch} className="w-full max-w-xl ">
-					<div className="relative">
-						<input
-							ref={inputRef}
-							name="value"
-							type="text"
-							placeholder="Enter address, token, or transaction…"
-							spellCheck={false}
-							autoCapitalize="off"
-							autoComplete="off"
-							autoCorrect="off"
-							className="w-full rounded-lg border border-border-primary bg-surface px-4 py-2.5 pr-12 text-sm text-primary transition focus:outline-none focus:ring-0 shadow-[0px_4px_54px_0px_rgba(0,0,0,0.06)] outline-1 -outline-offset-1 outline-black-white/10"
-							data-1p-ignore
-						/>
-						<button
-							type="submit"
-							disabled={routerState.isLoading}
-							className="my-auto bg-black-white/10 size-6 rounded-full absolute inset-y-0 right-2.5 flex items-center justify-center text-tertiary transition-colors hover:text-secondary disabled:opacity-50"
-							aria-label="Search"
-						>
-							<ArrowRight className="size-4" aria-hidden />
-						</button>
-					</div>
-				</form>
-				<p className="text-xs text-tertiary font-mono">
-					<span className="font-mono text-[11px]">⌘</span> or{' '}
-					<span className="font-mono text-[11px]">Ctrl</span> +{' '}
-					<span className="font-mono text-[11px]">k</span> to focus
-				</p>
-			</div>
-		</section>
 	)
 }
 
@@ -755,7 +677,7 @@ function TransactionRow(props: { transaction: Transaction }) {
 			<td className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap h-12">
 				<div className="h-5 flex items-center justify-end">
 					<Link
-						to={'/receipt/$hash'}
+						to={'/tx/$hash'}
 						params={{ hash: transaction.hash ?? '' }}
 						className="hover:text-accent transition-colors"
 					>
@@ -838,7 +760,7 @@ function TransactionDescription(props: {
 						<button
 							type="button"
 							onClick={() => setExpanded(true)}
-							className="ml-1 text-base-content-secondary cursor-pointer active:translate-y-[0.5px] shrink-0"
+							className="ml-1 text-base-content-secondary cursor-pointer active:translate-y-[.5px] shrink-0"
 						>
 							and {remainingCount} more
 						</button>

@@ -53,7 +53,7 @@ export function EventDescription(props: EventDescription.Props) {
 							<Address
 								key={partKey}
 								address={part.value}
-								className="text-accent items-end active:translate-y-[0.5px] whitespace-nowrap"
+								className="text-accent items-end active:translate-y-[.5px] whitespace-nowrap"
 								self={seenAs ? isAddressEqual(part.value, seenAs) : false}
 							/>
 						)
