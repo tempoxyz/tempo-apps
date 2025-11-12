@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
@@ -67,11 +67,21 @@
 	},
 	"overrides": [
 		{
-			"includes": ["**/env.d.ts"],
+			"includes": ["**/env.d.ts", "**/worker-configuration.d.ts"],
 			"linter": {
 				"rules": {
+					"style": {
+						"useExportType": "off"
+					},
 					"correctness": {
 						"noUnusedVariables": "off"
+					},
+					"complexity": {
+						"noBannedTypes": "off",
+						"noStaticOnlyClass": "off"
+					},
+					"suspicious": {
+						"noExplicitAny": "off"
 					}
 				}
 			}
