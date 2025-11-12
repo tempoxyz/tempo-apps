@@ -23,6 +23,10 @@ Monorepo for Tempo Apps
 | --------- | ----------- | ----------- |
 | [`apps/explorer`](apps/explorer) | Chain explorer. | [`https://explore.tempo.xyz/*`](https://explore.tempo.xyz) |
 
+## Contributing
+
+Our contributor guidelines can be found in [`CONTRIBUTING.md`](https://github.com/tempoxyz/tempo-apps?tab=contributing-ov-file).
+
 ## Security
 
 See [`SECURITY.md`](https://github.com/tempoxyz/tempo-apps?tab=security-ov-file).
