@@ -1,11 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Address } from 'ox'
 import { Abis } from 'tempo.ts/viem'
+import { formatUnits } from 'viem'
 import { getChainId, readContract } from 'wagmi/actions'
 import { z } from 'zod'
 import { config, getConfig } from '#wagmi.config.ts'
 
-export const Route = createFileRoute('/api/address/$address/total-value')({
+export const Route = createFileRoute('/api/account/$address/total-value')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
@@ -31,7 +32,7 @@ export const Route = createFileRoute('/api/address/$address/total-value')({
 
 				const responseData = await response.json()
 
-				const { success, data } = z
+				const result = z
 					.array(
 						z.object({
 							cursor: z.string(),
@@ -46,51 +47,44 @@ export const Route = createFileRoute('/api/address/$address/total-value')({
 					)
 					.safeParse(responseData)
 
-				if (!success)
-					return new Response(
-						JSON.stringify({ error: 'Failed to parse response' }),
-						{
-							status: response.status,
-						},
-					)
+				if (!result.success)
+					return new Response(z.prettifyError(result.error), {
+						status: response.status,
+					})
+
+				const rowsWithBalance =
+					result.data
+						.at(0)
+						?.rows.filter(([_, balance]) => BigInt(balance) > 0n) ?? []
 
 				const decimals =
 					(await Promise.all(
-						data
-							.at(0)
-							?.rows.filter(([_, balance]) => BigInt(balance) > 0n)
-							.map(([address]) =>
-								// TODO: use readContracts when multicall is not broken
-								readContract(getConfig(), {
-									address: address as Address.Address,
-									abi: Abis.tip20,
-									functionName: 'decimals',
-								}),
-							) ?? [],
+						rowsWithBalance.map(([address]) =>
+							// TODO: use readContracts when multicall is not broken
+							readContract(getConfig(), {
+								address: address as Address.Address,
+								abi: Abis.tip20,
+								functionName: 'decimals',
+							}),
+						),
 					)) ?? []
 
 				const decimalsMap = new Map<Address.Address, number>(
-					decimals.map((item, index) => [
-						data.at(0)?.rows.at(index)?.[0] as Address.Address,
-						item,
+					decimals.map((decimal, index) => [
+						rowsWithBalance[index][0] as Address.Address,
+						decimal,
 					]),
 				)
 
 				const PRICE_PER_TOKEN = 1 // TODO: fetch actual price per token
 
-				const totalValue =
-					data
-						.at(0)
-						?.rows.filter(([_, balance]) => BigInt(balance) > 0n)
-						.map(
-							([_, balance], index) =>
-								Number(balance) /
-								10 **
-									(decimalsMap.get(
-										data.at(0)?.rows.at(index)?.[0] as Address.Address,
-									) ?? 0),
-						)
-						.reduce((acc, balance) => acc + balance * PRICE_PER_TOKEN, 0) ?? 0
+				const totalValue = rowsWithBalance
+					.map(([address, balance]) => {
+						const tokenDecimals =
+							decimalsMap.get(address as Address.Address) ?? 0
+						return Number(formatUnits(BigInt(balance), tokenDecimals))
+					})
+					.reduce((acc, balance) => acc + balance * PRICE_PER_TOKEN, 0)
 
 				return Response.json(totalValue, { status: 200 })
 			},

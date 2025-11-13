@@ -12,7 +12,6 @@ import {
 	useNavigate,
 	useParams,
 } from '@tanstack/react-router'
-import { NotFound } from '#components/NotFound'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
@@ -23,6 +22,7 @@ import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
 import { EventDescription } from '#components/EventDescription.tsx'
+import { NotFound } from '#components/NotFound.tsx'
 import { RelativeTime } from '#components/RelativeTime'
 import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
 import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
@@ -61,7 +61,7 @@ function transactionsQueryOptions(params: TransactionQuery) {
 				limit: params.limit.toString(),
 				offset: params.offset.toString(),
 			})
-			const url = `/api/address/${params.address}?${searchParams.toString()}`
+			const url = `/api/account/${params.address}?${searchParams.toString()}`
 			const response = await fetch(url)
 			return await response.json()
 		},
@@ -78,9 +78,9 @@ export const Route = createFileRoute('/_layout/account/$address')({
 	component: RouteComponent,
 	notFoundComponent: NotFound,
 	validateSearch: z.object({
-		page: z._default(z.number(), 1),
-		limit: z._default(z.number(), 7),
-		tab: z._default(z.enum(['history', 'assets']), 'history'),
+		page: z.prefault(z.number(), 1),
+		limit: z.prefault(z.number(), 7),
+		tab: z.prefault(z.enum(['history', 'assets']), 'history'),
 	}),
 	loaderDeps: ({ search: { page } }) => ({ page }),
 	loader: async ({ deps: { page }, params, context }) => {
@@ -177,7 +177,7 @@ function useAccountTotalValue(address: Address.Address) {
 	return useQuery({
 		queryKey: ['account-total-value', address],
 		queryFn: async () => {
-			const response = await fetch(`/api/address/${address}/total-value`)
+			const response = await fetch(`/api/account/${address}/total-value`)
 			if (!response.ok)
 				throw new Error('Failed to fetch total value', {
 					cause: response.statusText,

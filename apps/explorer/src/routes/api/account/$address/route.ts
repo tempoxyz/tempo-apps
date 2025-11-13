@@ -10,7 +10,7 @@ type TODO = any
 
 const [MAX_LIMIT, _DEFAULT_LIMIT] = [1_000, 100]
 
-export const Route = createFileRoute('/api/address/$address')({
+export const Route = createFileRoute('/api/account/$address')({
 	beforeLoad: async ({ search, params }) => {
 		const { address } = params
 		const { offset, limit } = search
