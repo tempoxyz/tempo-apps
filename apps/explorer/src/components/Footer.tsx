@@ -1,6 +1,6 @@
 export function Footer() {
 	return (
-		<footer className="bg-system pt-[24px] pb-[48px]">
+		<footer className="pt-[24px] pb-[48px] relative z-1">
 			<ul className="flex items-center justify-center gap-[24px] text-[15px] text-base-content-secondary">
 				<Footer.Link href="https://tempo.xyz">About</Footer.Link>
 				<Footer.Link href="https://docs.tempo.xyz">Documentation</Footer.Link>

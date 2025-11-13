@@ -3,6 +3,8 @@ import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { hashFn } from 'wagmi/query'
 
+import { NotFound } from '#components/NotFound'
+import { Layout } from '#routes/_layout'
 import { routeTree } from '#routeTree.gen.ts'
 
 export const getRouter = () => {
@@ -23,14 +25,9 @@ export const getRouter = () => {
 		context: { queryClient },
 		defaultPreloadStaleTime: 0,
 		defaultNotFoundComponent: () => (
-			<section className="flex flex-1 size-full items-center justify-center flex-col gap-4">
-				<h1 className="text-8xl lg:text-9xl font-black italic text-primary">
-					404
-				</h1>
-				<p className="text-secondary text-lg font-mono leading-3 tracking-wider">
-					Page not found
-				</p>
-			</section>
+			<Layout>
+				<NotFound />
+			</Layout>
 		),
 	})
 

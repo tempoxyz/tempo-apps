@@ -22,13 +22,17 @@ export function Header() {
 		?.address
 	const state = useRouterState()
 
-	const showInput = Boolean(hash || address)
+	const isNotFound = state.matches.some((match) => match.status === 'notFound')
+	const showInput = Boolean(hash || address) && !isNotFound
 
 	return (
 		<header className="@container">
 			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1">
-				<div className="flex items-center gap-[12px] relative z-1">
-					<Link to="/" className="flex items-center active:translate-y-[.5px]">
+				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
+					<Link
+						to="/"
+						className="flex items-center active:translate-y-[.5px] py-[4px]"
+					>
 						<TempoWordmark />
 					</Link>
 					<NetworkBadge />
