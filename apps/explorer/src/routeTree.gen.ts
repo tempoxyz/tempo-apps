@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as LayoutValueRouteImport } from './routes/_layout/$value'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
@@ -33,11 +32,6 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
-} as any)
-const LayoutValueRoute = LayoutValueRouteImport.update({
-  id: '/$value',
-  path: '/$value',
-  getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutTxHashRoute = LayoutTxHashRouteImport.update({
   id: '/tx/$hash',
@@ -72,7 +66,6 @@ const ApiAddressAddressTotalValueRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/$value': typeof LayoutValueRoute
   '/api/health': typeof ApiHealthRoute
   '/': typeof LayoutIndexRoute
   '/api/address/$address': typeof ApiAddressAddressRouteRouteWithChildren
@@ -83,7 +76,6 @@ export interface FileRoutesByFullPath {
   '/api/address/$address/total-value': typeof ApiAddressAddressTotalValueRoute
 }
 export interface FileRoutesByTo {
-  '/$value': typeof LayoutValueRoute
   '/api/health': typeof ApiHealthRoute
   '/': typeof LayoutIndexRoute
   '/api/address/$address': typeof ApiAddressAddressRouteRouteWithChildren
@@ -96,7 +88,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
-  '/_layout/$value': typeof LayoutValueRoute
   '/api/health': typeof ApiHealthRoute
   '/_layout/': typeof LayoutIndexRoute
   '/api/address/$address': typeof ApiAddressAddressRouteRouteWithChildren
@@ -109,7 +100,6 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/$value'
     | '/api/health'
     | '/'
     | '/api/address/$address'
@@ -120,7 +110,6 @@ export interface FileRouteTypes {
     | '/api/address/$address/total-value'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/$value'
     | '/api/health'
     | '/'
     | '/api/address/$address'
@@ -132,7 +121,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_layout'
-    | '/_layout/$value'
     | '/api/health'
     | '/_layout/'
     | '/api/address/$address'
@@ -171,13 +159,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_layout/$value': {
-      id: '/_layout/$value'
-      path: '/$value'
-      fullPath: '/$value'
-      preLoaderRoute: typeof LayoutValueRouteImport
-      parentRoute: typeof LayoutRoute
     }
     '/_layout/tx/$hash': {
       id: '/_layout/tx/$hash'
@@ -225,7 +206,6 @@ declare module '@tanstack/react-router' {
 }
 
 interface LayoutRouteChildren {
-  LayoutValueRoute: typeof LayoutValueRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAccountAddressRoute: typeof LayoutAccountAddressRoute
   LayoutBlockIdRoute: typeof LayoutBlockIdRoute
@@ -234,7 +214,6 @@ interface LayoutRouteChildren {
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
-  LayoutValueRoute: LayoutValueRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAccountAddressRoute: LayoutAccountAddressRoute,
   LayoutBlockIdRoute: LayoutBlockIdRoute,

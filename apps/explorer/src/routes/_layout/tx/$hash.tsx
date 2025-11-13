@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Address, Hex, Json, Value } from 'ox'
 import * as React from 'react'
 import { TokenRole } from 'tempo.ts/ox'
@@ -28,18 +28,21 @@ async function loader({
 	params: unknown
 }) {
 	const { r: rpcUrl } = location.search
-	const { hash } = z
+	const parseResult = z
 		.object({
-			hash: z
-				.pipe(
-					z.string(),
-					z.transform(
-						(val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex,
-					),
-				)
-				.check(z.regex(/^0x[a-fA-F0-9]{64}$/)),
+			hash: z.pipe(
+				z.string(),
+				z.transform(
+					(val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex,
+				),
+			),
 		})
-		.parse(params)
+		.safeParse(params)
+
+	if (!parseResult.success) throw notFound()
+
+	const { hash } = parseResult.data
+	if (!Hex.validate(hash) || Hex.size(hash) !== 32) throw notFound()
 
 	const client = getClient(getConfig({ rpcUrl }))
 	const receipt = await getTransactionReceipt(client, {

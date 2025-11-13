@@ -8,6 +8,7 @@ import {
 	ClientOnly,
 	createFileRoute,
 	Link,
+	notFound,
 	useNavigate,
 	useParams,
 } from '@tanstack/react-router'
@@ -100,11 +101,18 @@ export const Route = createFileRoute('/_layout/account/$address')({
 			address: z.pipe(
 				z.string(),
 				z.transform((x) => {
-					Address.assert(x)
+					if (!Address.validate(x)) {
+						throw new Error('Invalid address')
+					}
 					return x
 				}),
 			),
 		}).parse,
+	},
+	beforeLoad({ params }) {
+		if (!Address.validate(params.address)) {
+			throw notFound()
+		}
 	},
 })
 
