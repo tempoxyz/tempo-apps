@@ -8,7 +8,7 @@ import { Address } from './Address.tsx'
 import { Amount } from './Receipt/Amount.tsx'
 
 export function EventDescription(props: EventDescription.Props) {
-	const { event, seenAs, className } = props
+	const { event, seenAs, className, framed = false } = props
 
 	return (
 		<div
@@ -55,6 +55,7 @@ export function EventDescription(props: EventDescription.Props) {
 								address={part.value}
 								className="text-accent items-end press-down whitespace-nowrap"
 								self={seenAs ? isAddressEqual(part.value, seenAs) : false}
+								framed={framed}
 							/>
 						)
 					case 'hex':
@@ -98,5 +99,6 @@ export namespace EventDescription {
 		event: KnownEvent
 		seenAs?: AddressType.Address
 		className?: string | undefined
+		framed?: boolean
 	}
 }
