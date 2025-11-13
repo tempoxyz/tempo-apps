@@ -192,6 +192,8 @@ function RouteComponent() {
 	const navigate = useNavigate()
 
 	const { address } = Route.useParams()
+	Address.assert(address)
+
 	const { page, tab } = Route.useSearch()
 
 	const activeTab = tab
@@ -583,6 +585,7 @@ function AssetRow(props: { contractAddress: Address.Address }) {
 	const { contractAddress } = props
 
 	const { address } = useParams({ from: Route.id })
+	Address.assert(address)
 
 	const { data: metadata } = Hooks.token.useGetMetadata({
 		token: contractAddress,
