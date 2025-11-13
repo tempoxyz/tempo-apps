@@ -1,8 +1,10 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import * as z from 'zod/mini'
-import { Footer } from '#components/Footer.tsx'
-import { Header } from '#components/Header.tsx'
+import { Footer } from '#components/Footer'
+import { Header } from '#components/Header'
 import css from './styles.css?url'
+import { Sphere } from '#components/Sphere'
+import { useMatchRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/_layout')({
 	head: () => ({
@@ -29,12 +31,23 @@ function Component() {
 	)
 }
 
-export function Layout({ children }: { children: React.ReactNode }) {
+export function Layout(props: Layout.Props) {
+	const { children } = props
+	const matchRoute = useMatchRoute()
 	return (
 		<main className="flex min-h-dvh flex-col">
 			<Header />
-			{children}
+			<main className="flex flex-1 size-full flex-col items-center relative z-1">
+				{children}
+			</main>
 			<Footer />
+			<Sphere animate={Boolean(matchRoute({ to: '/' }))} />
 		</main>
 	)
+}
+
+export namespace Layout {
+	export interface Props {
+		children: React.ReactNode
+	}
 }

@@ -24,7 +24,7 @@ export function EventDescription(props: EventDescription.Props) {
 						return (
 							<span
 								key={partKey}
-								className="inline-flex items-center h-[24px] px-[5px] bg-base-alt capitalize"
+								className="inline-flex items-center h-[24px] px-[5px] bg-base-background capitalize"
 							>
 								{part.value}
 							</span>
@@ -53,7 +53,7 @@ export function EventDescription(props: EventDescription.Props) {
 							<Address
 								key={partKey}
 								address={part.value}
-								className="text-accent items-end active:translate-y-[.5px] whitespace-nowrap"
+								className="text-accent items-end press-down whitespace-nowrap"
 								self={seenAs ? isAddressEqual(part.value, seenAs) : false}
 							/>
 						)

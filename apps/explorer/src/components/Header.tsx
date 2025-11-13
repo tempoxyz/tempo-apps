@@ -31,7 +31,7 @@ export function Header() {
 				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
 					<Link
 						to="/"
-						className="flex items-center active:translate-y-[.5px] py-[4px]"
+						className="flex items-center press-down py-[4px]"
 					>
 						<TempoWordmark />
 					</Link>
@@ -90,7 +90,7 @@ function BlockNumber() {
 	return (
 		<div className="flex items-center gap-[6px] text-[15px] font-medium text-secondary">
 			<SquareSquare className="size-[18px] text-accent" />
-			<div className="text-nowrap" title="Block number">
+			<div className="text-nowrap">
 				<span className="@min-[1240px]:inline hidden">Block </span>
 				<span className="text-primary font-medium tabular-nums min-w-[6ch] inline-block">
 					<span ref={ref}>…</span>
