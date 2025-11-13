@@ -22,7 +22,8 @@ export function Header() {
 		?.address
 	const state = useRouterState()
 
-	const showInput = Boolean(hash || address)
+	const isNotFound = state.matches.some((match) => match.status === 'notFound')
+	const showInput = Boolean(hash || address) && !isNotFound
 
 	return (
 		<header className="@container">

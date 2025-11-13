@@ -12,6 +12,7 @@ import {
 	useNavigate,
 	useParams,
 } from '@tanstack/react-router'
+import { NotFound } from '#components/NotFound'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
@@ -75,15 +76,18 @@ function transactionsQueryOptions(params: TransactionQuery) {
 
 export const Route = createFileRoute('/_layout/account/$address')({
 	component: RouteComponent,
+	notFoundComponent: NotFound,
 	validateSearch: z.object({
 		page: z._default(z.number(), 1),
 		limit: z._default(z.number(), 7),
 		tab: z._default(z.enum(['history', 'assets']), 'history'),
 	}),
 	loaderDeps: ({ search: { page } }) => ({ page }),
-	loader: async ({ deps: { page }, params: { address }, context }) => {
-		const offset = (page - 1) * rowsPerPage
+	loader: async ({ deps: { page }, params, context }) => {
+		const { address } = params
+		if (!Address.validate(address)) throw notFound()
 
+		const offset = (page - 1) * rowsPerPage
 		const chainId = getChainId(config)
 
 		await context.queryClient.fetchQuery(
@@ -95,24 +99,6 @@ export const Route = createFileRoute('/_layout/account/$address')({
 				chainId,
 			}),
 		)
-	},
-	params: {
-		parse: z.object({
-			address: z.pipe(
-				z.string(),
-				z.transform((x) => {
-					if (!Address.validate(x)) {
-						throw new Error('Invalid address')
-					}
-					return x
-				}),
-			),
-		}).parse,
-	},
-	beforeLoad({ params }) {
-		if (!Address.validate(params.address)) {
-			throw notFound()
-		}
 	},
 })
 

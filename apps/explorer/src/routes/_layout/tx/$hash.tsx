@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
 import { createFileRoute, notFound } from '@tanstack/react-router'
+import { NotFound } from '#components/NotFound'
 import { Address, Hex, Json, Value } from 'ox'
 import * as React from 'react'
 import { TokenRole } from 'tempo.ts/ox'
@@ -73,6 +74,7 @@ async function loader({
 
 export const Route = createFileRoute('/_layout/tx/$hash')({
 	component: Component,
+	notFoundComponent: NotFound,
 	headers: () => ({
 		...(import.meta.env.PROD
 			? {

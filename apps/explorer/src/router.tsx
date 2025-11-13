@@ -4,6 +4,7 @@ import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query
 import { hashFn } from 'wagmi/query'
 
 import { NotFound } from '#components/NotFound'
+import { Layout } from '#routes/_layout'
 import { routeTree } from '#routeTree.gen.ts'
 
 export const getRouter = () => {
@@ -23,7 +24,11 @@ export const getRouter = () => {
 		scrollRestoration: true,
 		context: { queryClient },
 		defaultPreloadStaleTime: 0,
-		defaultNotFoundComponent: NotFound,
+		defaultNotFoundComponent: () => (
+			<Layout>
+				<NotFound />
+			</Layout>
+		),
 	})
 
 	// @see https://tanstack.com/router/latest/docs/integrations/query
