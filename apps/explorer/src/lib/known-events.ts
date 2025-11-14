@@ -2,7 +2,6 @@ import { Address, Hex } from 'ox'
 import { Abis, Addresses } from 'tempo.ts/viem'
 import {
 	type AbiEvent,
-	type DecodeFunctionDataReturnType,
 	decodeFunctionData,
 	type Log,
 	parseEventLogs,
@@ -122,14 +121,14 @@ export function parseKnownEvents(
 				try {
 					const decoded = decodeFunctionData({
 						abi: Abis.feeAmm,
-						data: callInput as Hex.Hex,
-					}) as DecodeFunctionDataReturnType<typeof Abis.feeAmm>
+						data: callInput,
+					})
 
 					if (
 						decoded.functionName === 'mint' ||
 						decoded.functionName === 'mintWithValidatorToken'
 					)
-						return decoded as FeeManagerAddLiquidityCall
+						return decoded
 				} catch {
 					// fall through and continue searching other calls
 				}
@@ -221,16 +220,16 @@ export function parseKnownEvents(
 		} =
 			feeManagerCall.functionName === 'mint'
 				? {
-						userToken: feeManagerCall.args[0] as Address.Address,
-						validatorToken: feeManagerCall.args[1] as Address.Address,
-						amountUserToken: feeManagerCall.args[2] as bigint,
-						amountValidatorToken: feeManagerCall.args[3] as bigint,
+						userToken: feeManagerCall.args[0],
+						validatorToken: feeManagerCall.args[1],
+						amountUserToken: feeManagerCall.args[2],
+						amountValidatorToken: feeManagerCall.args[3],
 					}
 				: {
-						userToken: feeManagerCall.args[0] as Address.Address,
-						validatorToken: feeManagerCall.args[1] as Address.Address,
+						userToken: feeManagerCall.args[0],
+						validatorToken: feeManagerCall.args[1],
 						amountUserToken: 0n,
-						amountValidatorToken: feeManagerCall.args[2] as bigint,
+						amountValidatorToken: feeManagerCall.args[2],
 					}
 
 		const parts: KnownEventPart[] = [
@@ -239,7 +238,7 @@ export function parseKnownEvents(
 				type: 'amount',
 				value: {
 					value: amountUserToken,
-					token: userToken as Address.Address,
+					token: userToken,
 				},
 			},
 			{ type: 'secondary', value: 'and' },
@@ -247,7 +246,7 @@ export function parseKnownEvents(
 				type: 'amount',
 				value: {
 					value: amountValidatorToken,
-					token: validatorToken as Address.Address,
+					token: validatorToken,
 				},
 			},
 		]
@@ -277,7 +276,7 @@ export function parseKnownEvents(
 	for (let index = 0; index < transferEvents.length - 1; index++) {
 		const { event: event1, index: idx1 } = transferEvents[index]
 		// Type assertion is safe here because isTransferEvent has validated the structure
-		const args1 = event1.args as TransferEventArgs
+		const args1 = event1.args
 		const to1 = args1.to
 
 		// If this is a transfer TO the exchange, look for a matching transfer FROM the exchange
@@ -288,7 +287,7 @@ export function parseKnownEvents(
 				innerIndex++
 			) {
 				const { event: event2, index: idx2 } = transferEvents[innerIndex]
-				const args2 = event2.args as TransferEventArgs
+				const args2 = event2.args
 				const from2 = args2.from
 
 				if (Address.isEqual(from2, STABLECOIN_EXCHANGE)) {
