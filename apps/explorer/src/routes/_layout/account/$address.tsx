@@ -88,7 +88,6 @@ function transactionsQueryOptions(params: TransactionQuery) {
 		refetchInterval: params.page === 1 ? 4_000 : false,
 		refetchIntervalInBackground: params.page === 1,
 		refetchOnWindowFocus: params.page === 1,
-		staleTime: params.page === 1 ? 0 : 60_000, // page 1: always fresh, others: 60s cache
 		placeholderData: keepPreviousData,
 	})
 }
@@ -339,7 +338,7 @@ function SectionsWrapper(props: {
 
 	const state = useRouterState()
 
-	const { data, isPending } = useQuery(
+	const { data, isLoading } = useQuery(
 		transactionsQueryOptions({
 			address,
 			page,
@@ -352,7 +351,7 @@ function SectionsWrapper(props: {
 
 	const isLoadingPage =
 		(state.isLoading && state.location.pathname.includes('/account/')) ||
-		isPending
+		isLoading
 
 	const isMobile = useMediaQuery('(max-width: 1239px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
