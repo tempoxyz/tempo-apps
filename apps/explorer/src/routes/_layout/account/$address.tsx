@@ -217,7 +217,7 @@ function RouteComponent() {
 	)
 
 	return (
-		<div className="flex flex-col min-[1240px]:grid max-w-[1080px] w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 min-[1240px]:grid-cols-[auto_1fr]">
+		<div className="flex flex-col min-[1240px]:grid max-w-[1080px] w-full min-[1240px]:pt-20 pt-10 min-[1240px]:pb-16 pb-8 px-4 gap-[14px] min-w-0 min-[1240px]:grid-cols-[auto_1fr]">
 			<AccountCardWithTimestamps address={address} />
 			<SectionsWrapper
 				address={address}
