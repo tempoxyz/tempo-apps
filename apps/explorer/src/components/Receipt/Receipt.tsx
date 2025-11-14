@@ -1,11 +1,11 @@
 import { Link } from '@tanstack/react-router'
 import { type Address, Hex } from 'ox'
 import { useState } from 'react'
-import ExternalLink from '~icons/lucide/external-link'
 import { EventDescription } from '#components/EventDescription'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import type { KnownEvent } from '#lib/known-events'
+import ExternalLink from '~icons/lucide/external-link'
 import { ReceiptMark } from './ReceiptMark'
 
 export function Receipt(props: Receipt.Props) {
@@ -31,7 +31,6 @@ export function Receipt(props: Receipt.Props) {
 				<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Block</span>
-<<<<<<< HEAD
 						<Link
 							to={'/block/$id'}
 							params={{ id: Hex.fromNumber(blockNumber) }}
@@ -50,41 +49,6 @@ export function Receipt(props: Receipt.Props) {
 						>
 							{HexFormatter.shortenHex(sender)}
 						</Link>
-=======
-						{framed ? (
-							<span className="text-accent text-right before:content-['#']">
-								{String(blockNumber)}
-							</span>
-						) : (
-							<Link
-								to={'/block/$id'}
-								params={{ id: Hex.fromNumber(blockNumber) }}
-								className="text-accent text-right before:content-['#'] active:translate-y-[.5px]"
-							>
-								{String(blockNumber)}
-							</Link>
-						)}
-					</div>
-					<div className="flex justify-between items-end">
-						<span className="text-tertiary capitalize">Sender</span>
-						{framed ? (
-							<span
-								className="text-accent text-right"
-								title={sender}
-							>
-								{HexFormatter.shortenHex(sender)}
-							</span>
-						) : (
-							<Link
-								to={'/account/$address'}
-								params={{ address: sender }}
-								className="text-accent text-right active:translate-y-[.5px]"
-								title={sender}
-							>
-								{HexFormatter.shortenHex(sender)}
-							</Link>
-						)}
->>>>>>> dd47f8e (Add embeddable receipts)
 					</div>
 					<div className="flex justify-between items-start">
 						<div className="relative">
