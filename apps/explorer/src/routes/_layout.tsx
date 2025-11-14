@@ -1,10 +1,9 @@
-import { createFileRoute, Outlet } from '@tanstack/react-router'
+import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
 import * as z from 'zod/mini'
 import { Footer } from '#components/Footer'
 import { Header } from '#components/Header'
-import css from './styles.css?url'
 import { Sphere } from '#components/Sphere'
-import { useMatchRoute } from '@tanstack/react-router'
+import css from './styles.css?url'
 
 export const Route = createFileRoute('/_layout')({
 	head: () => ({

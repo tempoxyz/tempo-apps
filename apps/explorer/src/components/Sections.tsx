@@ -166,7 +166,7 @@ export namespace Sections {
 	}
 
 	export function SectionContent(props: SectionContent.Props) {
-		const { section, totalPages, itemsLabel, itemsPerPage, mode } = props
+		const { section, totalPages, itemsLabel, mode } = props
 		const { page, isPending, onPageChange, totalItems } = section
 
 		const columns =
@@ -193,7 +193,7 @@ export namespace Sections {
 									const align = column.align ?? 'start'
 									return (
 										<th
-											key={index}
+											key={`${index}${column.label}`}
 											className={`px-[10px] first-of-type:pl-[16px] last-of-type:pr-[16px] h-[40px] font-normal whitespace-nowrap ${
 												align === 'end' ? 'text-right' : 'text-left'
 											}`}

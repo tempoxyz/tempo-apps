@@ -29,10 +29,7 @@ export function Header() {
 		<header className="@container">
 			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1">
 				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
-					<Link
-						to="/"
-						className="flex items-center press-down py-[4px]"
-					>
+					<Link to="/" className="flex items-center press-down py-[4px]">
 						<TempoWordmark />
 					</Link>
 					<NetworkBadge />

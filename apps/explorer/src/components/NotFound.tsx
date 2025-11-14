@@ -12,10 +12,7 @@ export function NotFound() {
 					<br />
 					exist or has been moved.
 				</p>
-				<Link
-					to="/"
-					className="text-accent rounded-[8px] press-down"
-				>
+				<Link to="/" className="text-accent rounded-[8px] press-down">
 					Go back
 				</Link>
 			</div>
