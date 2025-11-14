@@ -281,6 +281,7 @@ function RouteComponent() {
 					to: '.',
 					search: { page: newPage, tab },
 					resetScroll: false,
+					reloadDocument: false,
 				})
 			})
 		},
