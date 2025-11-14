@@ -1,10 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Json } from 'ox'
+import { Hex, Json } from 'ox'
 import { isHex } from 'viem'
 import { useBlock } from 'wagmi'
-import { getBlockNumber } from 'wagmi/actions'
 import { z } from 'zod/mini'
-import { config } from '#wagmi.config'
 
 /**
  * id is block number or block hash
@@ -19,10 +17,7 @@ export const Route = createFileRoute('/_layout/block/$id')({
 	},
 	loader: async ({ params }) => {
 		const { id } = params
-		if (isHex(id)) {
-			const blockNumber = await getBlockNumber(config)
-			return { blockNumber }
-		}
+		if (isHex(id)) return { blockNumber: Hex.toBigInt(id) }
 		if (Number.isSafeInteger(Number(id))) return { blockNumber: BigInt(id) }
 		throw new Error('Invalid block id')
 	},
