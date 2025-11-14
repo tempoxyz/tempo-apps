@@ -7,7 +7,7 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { Address, Hex } from 'ox'
+import { Address, Hex, Value } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
@@ -25,7 +25,11 @@ import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
-import { type KnownEvent, parseKnownEvents } from '#lib/known-events'
+import {
+	type KnownEvent,
+	type KnownEventPart,
+	parseKnownEvents,
+} from '#lib/known-events'
 import { config } from '#wagmi.config'
 
 type TransactionsResponse = {
@@ -509,8 +513,8 @@ function TransactionRowDescription(props: {
 
 	const knownEvents = React.useMemo(() => {
 		if (!receipt) return []
-		return parseKnownEvents(receipt)
-	}, [receipt])
+		return parseKnownEvents(receipt, { transaction })
+	}, [receipt, transaction])
 
 	return (
 		<TransactionDescription
@@ -529,8 +533,8 @@ function TransactionRowTotal(props: {
 
 	const knownEvents = React.useMemo(() => {
 		if (!receipt) return []
-		return parseKnownEvents(receipt)
-	}, [receipt])
+		return parseKnownEvents(receipt, { transaction })
+	}, [receipt, transaction])
 
 	return (
 		<TransactionTotal transaction={transaction} knownEvents={knownEvents} />
@@ -661,12 +665,11 @@ function TransactionFee(props: { receipt: TransactionReceipt }) {
 
 	if (!receipt) return <span className="text-tertiary">…</span>
 
-	const fee = PriceFormatter.format(
-		receipt.gasUsed * receipt.effectiveGasPrice, // TODO: double check
-		18,
+	const fee = Number(
+		Value.format(receipt.effectiveGasPrice * receipt.gasUsed, 18),
 	)
 
-	return <span className="text-tertiary">{fee}</span>
+	return <span className="text-tertiary">{PriceFormatter.format(fee)}</span>
 }
 
 function TransactionDescription(props: {
@@ -755,14 +758,34 @@ function TransactionTotal(props: {
 	transaction: Transaction
 	knownEvents: KnownEvent[]
 }) {
-	const {
-		transaction,
-		knownEvents: [event],
-	} = props
+	const { transaction, knownEvents } = props
 
-	const amount = event?.parts.find((part) => part.type === 'amount')
+	const amountParts = React.useMemo(
+		() =>
+			knownEvents.flatMap((event) =>
+				event.parts.filter(
+					(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
+						part.type === 'amount',
+				),
+			),
+		[knownEvents],
+	)
 
-	if (!amount || amount.type !== 'amount') {
+	const amount =
+		amountParts.find((part) => part.value.value !== 0n) ?? amountParts.at(0)
+
+	const tokenAddress = amount?.value.token
+	const needsMetadata =
+		Boolean(tokenAddress) && amount?.value.decimals === undefined
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token: (tokenAddress ??
+			'0x0000000000000000000000000000000000000000') as Address.Address,
+		query: {
+			enabled: needsMetadata,
+		},
+	})
+
+	if (!amount) {
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
 		if (value === 0n) return <span className="text-tertiary">—</span>
 		return (
@@ -772,12 +795,15 @@ function TransactionTotal(props: {
 		)
 	}
 
+	const decimals = amount.value.decimals ?? metadata?.decimals
+	if (decimals === undefined) return <span className="text-tertiary">…</span>
+
 	return (
 		<span
 			className={amount.value.value > 0n ? 'text-primary' : 'text-tertiary'}
 		>
 			{PriceFormatter.format(amount.value.value, {
-				decimals: amount.value.decimals ?? 6, // TODO: check decimals
+				decimals,
 				format: 'short',
 			})}
 		</span>

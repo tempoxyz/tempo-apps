@@ -1,13 +1,19 @@
-import { type Address, Hex } from 'ox'
-import { Abis } from 'tempo.ts/viem'
+import { Address, Hex } from 'ox'
+import { Abis, Addresses } from 'tempo.ts/viem'
 import {
 	type AbiEvent,
+	type DecodeFunctionDataReturnType,
+	decodeFunctionData,
 	type Log,
 	parseEventLogs,
 	type TransactionReceipt,
+	zeroAddress,
 } from 'viem'
 
 const abi = Object.values(Abis).flat()
+const ZERO_ADDRESS = zeroAddress
+const FEE_MANAGER = Addresses.feeManager
+const STABLECOIN_EXCHANGE = Addresses.stablecoinExchange
 
 type TransferEventArgs = {
 	from: Address.Address
@@ -63,15 +69,76 @@ export interface KnownEvent {
 	note?: string
 }
 
-export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
+type TransactionLike = {
+	to?: Address.Address | null
+	input?: Hex.Hex | null | undefined
+	data?: Hex.Hex | null | undefined
+	calls?:
+		| readonly {
+				to?: Address.Address | null
+				input?: Hex.Hex | null | undefined
+				data?: Hex.Hex | null | undefined
+		  }[]
+		| null
+}
+
+type FeeManagerAddLiquidityCall =
+	| {
+			functionName: 'mint'
+			args: readonly [
+				Address.Address,
+				Address.Address,
+				bigint,
+				bigint,
+				Address.Address,
+			]
+	  }
+	| {
+			functionName: 'mintWithValidatorToken'
+			args: readonly [Address.Address, Address.Address, bigint, Address.Address]
+	  }
+
+export function parseKnownEvents(
+	receipt: TransactionReceipt,
+	options?: { transaction?: TransactionLike },
+): KnownEvent[] {
 	const { logs } = receipt
 	const events = parseEventLogs({ abi, logs })
 
+	const feeManagerCall: FeeManagerAddLiquidityCall | undefined = (() => {
+		const transaction = options?.transaction
+		if (!transaction) return
+
+		const callTarget = transaction.to ?? transaction.calls?.[0]?.to
+		const callInput =
+			transaction.input ??
+			transaction.data ??
+			transaction.calls?.[0]?.input ??
+			transaction.calls?.[0]?.data
+		if (!callTarget || !callInput) return
+		if (!Address.isEqual(callTarget, FEE_MANAGER)) return
+
+		try {
+			const decoded = decodeFunctionData({
+				abi: Abis.feeAmm,
+				data: callInput as Hex.Hex,
+			}) as DecodeFunctionDataReturnType<typeof Abis.feeAmm>
+
+			if (
+				decoded.functionName === 'mint' ||
+				decoded.functionName === 'mintWithValidatorToken'
+			)
+				return decoded as FeeManagerAddLiquidityCall
+		} catch {
+			return undefined
+		}
+	})()
+
 	const preferenceMap = new Map<string, string>()
-	let feeTransferEvent: {
+	const feeTransferEvents: Array<{
 		amount: bigint
 		token: Address.Address
-	} | null = null
+	}> = []
 
 	for (const event of events) {
 		let key: string | undefined
@@ -132,24 +199,85 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 
 	const knownEvents: KnownEvent[] = []
 
+	if (
+		feeManagerCall &&
+		(feeManagerCall.functionName === 'mint' ||
+			feeManagerCall.functionName === 'mintWithValidatorToken')
+	) {
+		const {
+			userToken,
+			validatorToken,
+			amountUserToken,
+			amountValidatorToken,
+		}: {
+			userToken: Address.Address
+			validatorToken: Address.Address
+			amountUserToken: bigint
+			amountValidatorToken: bigint
+		} =
+			feeManagerCall.functionName === 'mint'
+				? {
+						userToken: feeManagerCall.args[0] as Address.Address,
+						validatorToken: feeManagerCall.args[1] as Address.Address,
+						amountUserToken: feeManagerCall.args[2] as bigint,
+						amountValidatorToken: feeManagerCall.args[3] as bigint,
+					}
+				: {
+						userToken: feeManagerCall.args[0] as Address.Address,
+						validatorToken: feeManagerCall.args[1] as Address.Address,
+						amountUserToken: 0n,
+						amountValidatorToken: feeManagerCall.args[2] as bigint,
+					}
+
+		const parts: KnownEventPart[] = [
+			{ type: 'action', value: 'Add Liquidity' },
+			{
+				type: 'amount',
+				value: {
+					value: amountUserToken,
+					token: userToken as Address.Address,
+				},
+			},
+			{ type: 'secondary', value: 'and' },
+			{
+				type: 'amount',
+				value: {
+					value: amountValidatorToken,
+					token: validatorToken as Address.Address,
+				},
+			},
+		]
+
+		knownEvents.push({
+			type: 'mint',
+			parts,
+		})
+	}
+
 	// Detect and group swap events (two transfers involving the stablecoin exchange)
-	const STABLECOIN_EXCHANGE = '0xdec0000000000000000000000000000000000000'
 	const swapIndices = new Set<number>()
 
 	// Find all transfers in the events
 	const transferEvents = dedupedEvents
 		.map((event, index) => ({ event, index }))
 		.filter(({ event }) => isTransferEvent(event))
+		.map(({ event, index }) => ({
+			event: event as typeof event & {
+				eventName: 'Transfer' | 'TransferWithMemo'
+				args: TransferEventArgs
+			},
+			index,
+		}))
 
 	// Look for swap pairs (transfer TO exchange + transfer FROM exchange)
 	for (let index = 0; index < transferEvents.length - 1; index++) {
 		const { event: event1, index: idx1 } = transferEvents[index]
 		// Type assertion is safe here because isTransferEvent has validated the structure
 		const args1 = event1.args as TransferEventArgs
-		const to1 = args1.to.toLowerCase()
+		const to1 = args1.to
 
 		// If this is a transfer TO the exchange, look for a matching transfer FROM the exchange
-		if (to1 === STABLECOIN_EXCHANGE) {
+		if (Address.isEqual(to1, STABLECOIN_EXCHANGE)) {
 			for (
 				let innerIndex = index + 1;
 				innerIndex < transferEvents.length;
@@ -157,9 +285,9 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 			) {
 				const { event: event2, index: idx2 } = transferEvents[innerIndex]
 				const args2 = event2.args as TransferEventArgs
-				const from2 = args2.from.toLowerCase()
+				const from2 = args2.from
 
-				if (from2 === STABLECOIN_EXCHANGE) {
+				if (Address.isEqual(from2, STABLECOIN_EXCHANGE)) {
 					// This is a swap - create a single swap event
 					knownEvents.push({
 						type: 'swap',
@@ -201,14 +329,16 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 		switch (event.eventName) {
 			case 'TransferWithMemo':
 			case 'Transfer': {
-				const { amount, to } = event.args
-				const isFee = to.toLowerCase().startsWith('0xfeec00000')
+				const { amount, from, to } = event.args
+				const isFee =
+					Address.isEqual(to, FEE_MANAGER) &&
+					!Address.isEqual(from, ZERO_ADDRESS)
 				if (isFee) {
 					// Store fee transfer info for later use if no other events exist
-					feeTransferEvent = {
+					feeTransferEvents.push({
 						amount,
 						token: event.address,
-					}
+					})
 					break
 				}
 
@@ -238,6 +368,8 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 
 			case 'Mint': {
 				// Handle token mint (TIP20)
+				if (Address.isEqual(event.address, FEE_MANAGER)) break
+
 				if ('amount' in event.args) {
 					const { amount, to } = event.args
 
@@ -261,6 +393,7 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 
 				// Handle liquidity pool mint (StablecoinExchange)
 				if (
+					!Address.isEqual(event.address, FEE_MANAGER) &&
 					'amountUserToken' in event.args &&
 					'amountValidatorToken' in event.args
 				) {
@@ -271,28 +404,33 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 						validatorToken,
 					} = event.args
 
-					knownEvents.push({
-						type: 'mint',
-						parts: [
-							{ type: 'action', value: 'Add Liquidity' },
-							{
-								type: 'amount',
-								value: {
-									value: amountUserToken,
-									token: userToken,
+					const userContributionPositive = amountUserToken > 0n
+					const validatorContributionPositive = amountValidatorToken > 0n
+
+					if (userContributionPositive && validatorContributionPositive) {
+						knownEvents.push({
+							type: 'mint',
+							parts: [
+								{ type: 'action', value: 'Add Liquidity' },
+								{
+									type: 'amount',
+									value: {
+										value: amountUserToken,
+										token: userToken,
+									},
 								},
-							},
-							{ type: 'secondary', value: 'and' },
-							{
-								type: 'amount',
-								value: {
-									value: amountValidatorToken,
-									token: validatorToken,
+								{ type: 'secondary', value: 'and' },
+								{
+									type: 'amount',
+									value: {
+										value: amountValidatorToken,
+										token: validatorToken,
+									},
 								},
-							},
-						],
-					})
-					break
+							],
+						})
+						break
+					}
 				}
 
 				break
@@ -353,19 +491,23 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 
 	// If no known events were parsed but there was a fee transfer,
 	// show it as a fee payment event
-	if (knownEvents.length === 0 && feeTransferEvent) {
+	if (knownEvents.length === 0 && feeTransferEvents.length > 0) {
+		const parts: KnownEventPart[] = [{ type: 'action', value: 'Pay Fee' }]
+
+		for (const [index, fee] of feeTransferEvents.entries()) {
+			if (index > 0) parts.push({ type: 'secondary', value: 'and' })
+			parts.push({
+				type: 'amount',
+				value: {
+					value: fee.amount,
+					token: fee.token,
+				},
+			})
+		}
+
 		knownEvents.push({
 			type: 'fee',
-			parts: [
-				{ type: 'action', value: 'Pay Fee' },
-				{
-					type: 'amount',
-					value: {
-						value: feeTransferEvent.amount,
-						token: feeTransferEvent.token,
-					},
-				},
-			],
+			parts,
 		})
 	}
 
