@@ -109,28 +109,32 @@ export function parseKnownEvents(
 		const transaction = options?.transaction
 		if (!transaction) return
 
-		const callTarget = transaction.to ?? transaction.calls?.[0]?.to
-		const callInput =
-			transaction.input ??
-			transaction.data ??
-			transaction.calls?.[0]?.input ??
-			transaction.calls?.[0]?.data
-		if (!callTarget || !callInput) return
-		if (!Address.isEqual(callTarget, FEE_MANAGER)) return
+		const queue: TransactionLike[] = [transaction]
 
-		try {
-			const decoded = decodeFunctionData({
-				abi: Abis.feeAmm,
-				data: callInput as Hex.Hex,
-			}) as DecodeFunctionDataReturnType<typeof Abis.feeAmm>
+		while (queue.length > 0) {
+			const call = queue.shift()
+			if (!call) break
 
-			if (
-				decoded.functionName === 'mint' ||
-				decoded.functionName === 'mintWithValidatorToken'
-			)
-				return decoded as FeeManagerAddLiquidityCall
-		} catch {
-			return undefined
+			const callTarget = call.to
+			const callInput = call.input ?? call.data
+
+			if (callTarget && callInput && Address.isEqual(callTarget, FEE_MANAGER))
+				try {
+					const decoded = decodeFunctionData({
+						abi: Abis.feeAmm,
+						data: callInput as Hex.Hex,
+					}) as DecodeFunctionDataReturnType<typeof Abis.feeAmm>
+
+					if (
+						decoded.functionName === 'mint' ||
+						decoded.functionName === 'mintWithValidatorToken'
+					)
+						return decoded as FeeManagerAddLiquidityCall
+				} catch {
+					// fall through and continue searching other calls
+				}
+
+			if (call.calls) queue.push(...call.calls)
 		}
 	})()
 
