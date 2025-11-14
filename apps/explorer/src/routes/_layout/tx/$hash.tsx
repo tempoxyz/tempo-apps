@@ -193,16 +193,32 @@ function Component() {
 	const { block, lineItems, receipt, transaction } = Route.useLoaderData()
 
 	const feePrice = lineItems.feeTotals?.[0]?.price
-	const fee = feePrice
+	const previousFee = feePrice
 		? Number(Value.format(feePrice.amount, feePrice.decimals))
-		: undefined
+		: 0
 
 	const totalPrice = lineItems.totals?.[0]?.price
-	const total = totalPrice
+	const previousTotal = totalPrice
 		? Number(Value.format(totalPrice.amount, totalPrice.decimals))
 		: undefined
 
-	const knownEvents = React.useMemo(() => parseKnownEvents(receipt), [receipt])
+	const feeAmount = receipt.effectiveGasPrice * receipt.gasUsed
+	// Gas accounting is always in 18-decimal units (wei equivalent), even when the fee token itself
+	// has a different number of decimals. Convert using 18 decimals so we get the actual token amount.
+	const fee = Number(Value.format(feeAmount, 18))
+	const feeDisplay = PriceFormatter.format(fee)
+
+	const total =
+		previousTotal !== undefined ? previousTotal - previousFee + fee : fee
+	const totalDisplay =
+		previousTotal !== undefined
+			? PriceFormatter.format(previousTotal)
+			: undefined
+
+	const knownEvents = React.useMemo(
+		() => parseKnownEvents(receipt, { transaction }),
+		[receipt, transaction],
+	)
 
 	return (
 		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow">
@@ -213,7 +229,9 @@ function Component() {
 				timestamp={block.timestamp}
 				events={knownEvents}
 				fee={fee}
+				feeDisplay={feeDisplay}
 				total={total}
+				totalDisplay={totalDisplay}
 			/>
 		</div>
 	)

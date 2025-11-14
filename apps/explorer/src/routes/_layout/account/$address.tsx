@@ -7,7 +7,7 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { Address, Hex } from 'ox'
+import { Address, Hex, Value } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
@@ -513,8 +513,8 @@ function TransactionRowDescription(props: {
 
 	const knownEvents = React.useMemo(() => {
 		if (!receipt) return []
-		return parseKnownEvents(receipt)
-	}, [receipt])
+		return parseKnownEvents(receipt, { transaction })
+	}, [receipt, transaction])
 
 	return (
 		<TransactionDescription
@@ -533,8 +533,8 @@ function TransactionRowTotal(props: {
 
 	const knownEvents = React.useMemo(() => {
 		if (!receipt) return []
-		return parseKnownEvents(receipt)
-	}, [receipt])
+		return parseKnownEvents(receipt, { transaction })
+	}, [receipt, transaction])
 
 	return (
 		<TransactionTotal transaction={transaction} knownEvents={knownEvents} />
@@ -665,12 +665,11 @@ function TransactionFee(props: { receipt: TransactionReceipt }) {
 
 	if (!receipt) return <span className="text-tertiary">…</span>
 
-	const fee = PriceFormatter.format(
-		receipt.gasUsed * receipt.effectiveGasPrice, // TODO: double check
-		18,
+	const fee = Number(
+		Value.format(receipt.effectiveGasPrice * receipt.gasUsed, 18),
 	)
 
-	return <span className="text-tertiary">{fee}</span>
+	return <span className="text-tertiary">{PriceFormatter.format(fee)}</span>
 }
 
 function TransactionDescription(props: {

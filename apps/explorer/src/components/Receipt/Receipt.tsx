@@ -16,6 +16,8 @@ export function Receipt(props: Receipt.Props) {
 		events = [],
 		fee,
 		total,
+		feeDisplay,
+		totalDisplay,
 	} = props
 	const [hashExpanded, setHashExpanded] = useState(false)
 	const { copy, notifying } = useCopy()
@@ -167,19 +169,18 @@ export function Receipt(props: Receipt.Props) {
 						{fee && (
 							<div className="flex justify-between items-center">
 								<span className="text-tertiary">Fee</span>
-								<span className="text-right" title={PriceFormatter.format(fee)}>
-									{PriceFormatter.format(fee, { format: 'short' })}
+								<span className="text-right">
+									{feeDisplay ??
+										PriceFormatter.format(fee, { format: 'short' })}
 								</span>
 							</div>
 						)}
 						{total && (
 							<div className="flex justify-between items-center">
 								<span className="text-tertiary">Total</span>
-								<span
-									className="text-right"
-									title={PriceFormatter.format(total)}
-								>
-									{PriceFormatter.format(total, { format: 'short' })}
+								<span className="text-right">
+									{totalDisplay ??
+										PriceFormatter.format(total, { format: 'short' })}
 								</span>
 							</div>
 						)}
@@ -198,6 +199,8 @@ export namespace Receipt {
 		timestamp: bigint
 		events?: KnownEvent[]
 		fee?: number
+		feeDisplay?: string
 		total?: number
+		totalDisplay?: string
 	}
 }
