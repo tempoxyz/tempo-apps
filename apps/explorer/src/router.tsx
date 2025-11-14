@@ -11,7 +11,6 @@ export const getRouter = () => {
 	const queryClient = new QueryClient({
 		defaultOptions: {
 			queries: {
-				staleTime: 60 * 1_000, // needed for SSR
 				refetchOnWindowFocus: false,
 				queryKeyHashFn: hashFn,
 				gcTime: 1_000 * 60 * 60 * 24, // 24 hours

@@ -232,17 +232,15 @@ export namespace Sections {
 						</tbody>
 					</table>
 				</div>
-				{totalPages > 1 && (
-					<Sections.Pagination
-						page={page}
-						totalPages={totalPages}
-						totalItems={totalItems}
-						itemsLabel={itemsLabel}
-						isPending={isPending}
-						onPageChange={onPageChange}
-						compact={mode === 'stacked'}
-					/>
-				)}
+				<Sections.Pagination
+					page={page}
+					totalPages={totalPages}
+					totalItems={totalItems}
+					itemsLabel={itemsLabel}
+					isPending={isPending}
+					onPageChange={onPageChange}
+					compact={mode === 'stacked'}
+				/>
 			</>
 		)
 	}
@@ -275,10 +273,10 @@ export namespace Sections {
 						type="button"
 						onClick={() => onPageChange(page - 1)}
 						disabled={page <= 1 || isPending}
-						className="border border-border-primary px-[8px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						className="rounded-[4px] border border-border-primary px-[8px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt cursor-pointer press-down disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Previous page"
 					>
-						{isPending ? 'Loading…' : 'Previous'}
+						Previous
 					</button>
 
 					<span className="text-primary font-medium">
@@ -289,7 +287,7 @@ export namespace Sections {
 						type="button"
 						onClick={() => onPageChange(page + 1)}
 						disabled={page >= totalPages || isPending}
-						className="border border-border-primary px-[12px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						className="rounded-[4px] border border-border-primary px-[12px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt cursor-pointer press-down disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Next page"
 					>
 						{isPending ? 'Loading…' : 'Next'}
@@ -304,10 +302,10 @@ export namespace Sections {
 						type="button"
 						onClick={() => onPageChange(page - 1)}
 						disabled={page <= 1 || isPending}
-						className="border border-border-primary px-[8px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						className="rounded-[4px] border border-border-primary px-[8px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt cursor-pointer press-down disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Previous page"
 					>
-						{isPending ? 'Loading…' : 'Previous'}
+						Previous
 					</button>
 
 					<div className="flex items-center gap-[6px]">
@@ -351,12 +349,12 @@ export namespace Sections {
 										key={p}
 										type="button"
 										onClick={() => onPageChange(p)}
-										disabled={isPending}
-										className={`flex w-[28px] h-[28px] items-center justify-center ${
+										disabled={page === p || isPending}
+										className={`rounded-[4px] flex w-[28px] h-[28px] items-center justify-center ${
 											page === p
-												? 'border border-accent/50 text-primary'
-												: 'hover:bg-alt text-primary'
-										} ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+												? 'border border-accent/50 text-primary cursor-default'
+												: 'cursor-pointer press-down hover:bg-alt text-primary'
+										} ${isPending && page !== p ? 'opacity-50 cursor-not-allowed' : ''}`}
 									>
 										{p}
 									</button>
@@ -369,7 +367,7 @@ export namespace Sections {
 						type="button"
 						onClick={() => onPageChange(page + 1)}
 						disabled={page >= totalPages || isPending}
-						className="rounded-none border border-border-primary px-[12px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
+						className="rounded-[4px] border border-border-primary px-[12px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt cursor-pointer press-down disabled:opacity-50 disabled:cursor-not-allowed"
 						aria-label="Next page"
 					>
 						{isPending ? 'Loading…' : 'Next'}
@@ -404,18 +402,4 @@ export namespace Sections {
 			compact?: boolean
 		}
 	}
-
-	// export function ToggleButton(props: ToggleButton.Props) {
-	// 	const { status, onClick, collapsedLabel } = props
-	// 	return (
-	// 	)
-	// }
-
-	// export namespace ToggleButton {
-	// 	export interface Props {
-	// 		status: 'collapsed' | 'expanded'
-	// 		onClick: () => void
-	// 		collapsedLabel?: string
-	// 	}
-	// }
 }

@@ -1,32 +1,32 @@
-import {
-	keepPreviousData,
-	queryOptions,
-	useQuery,
-	useSuspenseQuery,
-} from '@tanstack/react-query'
+import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
 	notFound,
 	useNavigate,
+	useRouter,
+	useRouterState,
 } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { formatUnits } from 'viem'
-import { useBlock, useChainId, useTransactionReceipt } from 'wagmi'
-import { getChainId } from 'wagmi/actions'
+import { useBlock } from 'wagmi'
+import {
+	getBlockQueryOptions,
+	getTransactionReceiptQueryOptions,
+} from 'wagmi/query'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
-import { EventDescription } from '#components/EventDescription.tsx'
-import { NotFound } from '#components/NotFound.tsx'
+import { EventDescription } from '#components/EventDescription'
+import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
-import { Sections } from '#components/Sections.tsx'
-import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { Sections } from '#components/Sections'
+import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
-import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
-import { config } from '#wagmi.config.ts'
+import { type KnownEvent, parseKnownEvents } from '#lib/known-events'
+import { config } from '#wagmi.config'
 
 type TransactionsResponse = {
 	transactions: Array<Transaction>
@@ -42,7 +42,6 @@ type TransactionQuery = {
 	address: Address.Address
 	page: number
 	limit: number
-	chainId: number
 	offset: number
 	_key?: string | undefined
 }
@@ -51,19 +50,39 @@ function transactionsQueryOptions(params: TransactionQuery) {
 	return queryOptions({
 		queryKey: [
 			'account-transactions',
-			params.chainId,
 			params.address,
 			params.page,
 			params._key,
 		],
-		queryFn: async (): Promise<TransactionsResponse> => {
+		queryFn: async ({ client }) => {
 			const searchParams = new URLSearchParams({
 				limit: params.limit.toString(),
 				offset: params.offset.toString(),
 			})
 			const url = `/api/account/${params.address}?${searchParams.toString()}`
-			const response = await fetch(url)
-			return await response.json()
+			const data = await fetch(url).then(
+				(res) => res.json() as unknown as TransactionsResponse,
+			)
+			const transactions = await Promise.all(
+				data.transactions.map(async (transaction) => {
+					const [receipt, block] = await Promise.all([
+						client.fetchQuery(
+							getTransactionReceiptQueryOptions(config, {
+								// biome-ignore lint/style/noNonNullAssertion: _
+								hash: transaction.hash!,
+							}),
+						),
+						client.fetchQuery(
+							getBlockQueryOptions(config, {
+								// biome-ignore lint/style/noNonNullAssertion: _
+								blockNumber: Hex.toBigInt(transaction.blockNumber!),
+							}),
+						),
+					])
+					return { ...transaction, block, receipt }
+				}),
+			)
+			return { ...data, transactions }
 		},
 		// auto-refresh page 1 since new transactions appear there
 		refetchInterval: params.page === 1 ? 4_000 : false,
@@ -88,15 +107,13 @@ export const Route = createFileRoute('/_layout/account/$address')({
 		if (!Address.validate(address)) throw notFound()
 
 		const offset = (page - 1) * rowsPerPage
-		const chainId = getChainId(config)
 
-		await context.queryClient.fetchQuery(
+		return await context.queryClient.fetchQuery(
 			transactionsQueryOptions({
 				address,
 				page,
-				offset,
 				limit: rowsPerPage,
-				chainId,
+				offset,
 			}),
 		)
 	},
@@ -111,7 +128,6 @@ const assets = [
 
 function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const { address } = props
-	const chainId = useChainId()
 
 	// fetch the most recent transactions (pg.1)
 	const { data: recentData } = useQuery(
@@ -119,7 +135,6 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 			address,
 			page: 1,
 			limit: 1,
-			chainId,
 			offset: 0,
 			_key: 'account-creation',
 		}),
@@ -144,7 +159,6 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 			address,
 			page: Math.ceil(totalTransactions / 1),
 			limit: 1,
-			chainId,
 			offset: lastPageOffset,
 			_key: 'account-creation',
 		}),
@@ -173,6 +187,80 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	)
 }
 
+function SectionsSkeleton({ totalItems }: { totalItems: number }) {
+	const isMobile = useMediaQuery('(max-width: 1239px)')
+	return (
+		<Sections
+			mode={isMobile ? 'stacked' : 'tabs'}
+			sections={[
+				{
+					title: 'History',
+					columns: {
+						stacked: [
+							{ label: 'Time', align: 'start', minWidth: 100 },
+							{ label: 'Hash', align: 'start' },
+							{ label: 'Total', align: 'end' },
+						],
+						tabs: [
+							{ label: 'Time', align: 'start', minWidth: 100 },
+							{ label: 'Description', align: 'start' },
+							{ label: 'Hash', align: 'end' },
+							{ label: 'Fee', align: 'end' },
+							{ label: 'Total', align: 'end' },
+						],
+					},
+					items: (mode) =>
+						Array.from({ length: rowsPerPage }, (_, index) => {
+							const key = `skeleton-${index}`
+							return mode === 'stacked'
+								? [
+										<div key={`${key}-time`} className="h-5" />,
+										<div key={`${key}-hash`} className="h-5" />,
+										<div key={`${key}-total`} className="h-5" />,
+									]
+								: [
+										<div key={`${key}-time`} className="h-5" />,
+										<div key={`${key}-desc`} className="h-5" />,
+										<div key={`${key}-hash`} className="h-5" />,
+										<div key={`${key}-fee`} className="h-5" />,
+										<div key={`${key}-total`} className="h-5" />,
+									]
+						}),
+					totalItems,
+					page: 1,
+					isPending: false,
+					onPageChange: () => {},
+					itemsLabel: 'transactions',
+					itemsPerPage: rowsPerPage,
+				},
+				{
+					title: 'Assets',
+					columns: {
+						stacked: [
+							{ label: 'Name', align: 'start' },
+							{ label: 'Balance', align: 'end' },
+						],
+						tabs: [
+							{ label: 'Name', align: 'start' },
+							{ label: 'Ticker', align: 'start' },
+							{ label: 'Balance', align: 'end' },
+							{ label: 'Value', align: 'end' },
+						],
+					},
+					items: () => [],
+					totalItems: 0,
+					page: 1,
+					isPending: false,
+					onPageChange: () => {},
+					itemsLabel: 'assets',
+				},
+			]}
+			activeSection={0}
+			onSectionChange={() => {}}
+		/>
+	)
+}
+
 function useAccountTotalValue(address: Address.Address) {
 	return useQuery({
 		queryKey: ['account-total-value', address],
@@ -190,19 +278,30 @@ function useAccountTotalValue(address: Address.Address) {
 
 function RouteComponent() {
 	const navigate = useNavigate()
-
+	const route = useRouter()
 	const { address } = Route.useParams()
-	Address.assert(address)
-
 	const { page, tab } = Route.useSearch()
 
+	Address.assert(address)
+
 	const activeTab = tab
-	const [isPending, startTransition] = React.useTransition()
+
+	React.useEffect(() => {
+		// preload pages around the active page (3 before and 3 after)
+		for (let i = -3; i <= 3; i++) {
+			if (i === 0) continue // skip current page
+			const preloadPage = page + i
+			if (preloadPage < 1) continue // only preload valid page numbers
+			route.preloadRoute({ to: '.', search: { page: preloadPage, tab } })
+		}
+	}, [route, page, tab])
 
 	const goToPage = React.useCallback(
 		(newPage: number) => {
-			startTransition(() => {
-				navigate({ to: '.', search: { page: newPage, tab } })
+			navigate({
+				to: '.',
+				search: { page: newPage, tab },
+				resetScroll: false,
 			})
 		},
 		[navigate, tab],
@@ -211,7 +310,7 @@ function RouteComponent() {
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
 			const newTab = newIndex === 0 ? 'history' : 'assets'
-			navigate({ to: '.', search: { page, tab: newTab } })
+			navigate({ to: '.', search: { page, tab: newTab }, resetScroll: false })
 		},
 		[navigate, page],
 	)
@@ -222,7 +321,6 @@ function RouteComponent() {
 			<SectionsWrapper
 				address={address}
 				page={page}
-				isPending={isPending}
 				goToPage={goToPage}
 				activeSection={activeTab === 'history' ? 0 : 1}
 				onSectionChange={setActiveSection}
@@ -230,37 +328,36 @@ function RouteComponent() {
 		</div>
 	)
 }
-
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
-	isPending: boolean
 	goToPage: (page: number) => void
 	activeSection: number
 	onSectionChange: (index: number) => void
 }) {
-	const { address, page, isPending, goToPage, activeSection, onSectionChange } =
-		props
+	const { address, page, goToPage, activeSection, onSectionChange } = props
 
-	const chainId = useChainId()
-	const offset = (page - 1) * rowsPerPage
+	const state = useRouterState()
 
-	const { data } = useSuspenseQuery(
+	const { data, isPending } = useQuery(
 		transactionsQueryOptions({
-			page,
-			offset,
 			address,
-			chainId,
+			page,
 			limit: rowsPerPage,
+			offset: (page - 1) * rowsPerPage,
+			_key: 'account-transactions',
 		}),
 	)
+	const { transactions, total } = data ?? { transactions: [], total: 0 }
 
-	const transactions = data.transactions
-	const totalTransactions = data.total
+	const isLoadingPage =
+		(state.isLoading && state.location.pathname.includes('/account/')) ||
+		isPending
 
 	const isMobile = useMediaQuery('(max-width: 1239px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
+	if (transactions.length === 0) return <SectionsSkeleton totalItems={total} />
 	return (
 		<Sections
 			mode={mode}
@@ -283,46 +380,47 @@ function SectionsWrapper(props: {
 					},
 					items: (mode) => {
 						if (mode === 'stacked')
-							return transactions.map((transaction) => [
+							return transactions.map((transaction) => {
+								const receipt = transaction.receipt
+								return [
+									<TransactionTimestamp
+										key="time"
+										timestamp={transaction.block.timestamp}
+									/>,
+									<TransactionHashLink key="hash" hash={transaction.hash} />,
+									<TransactionRowTotal
+										key="total"
+										transaction={transaction}
+										receipt={receipt}
+									/>,
+								]
+							})
+
+						return transactions.map((transaction) => {
+							const receipt = transaction.receipt
+							return [
 								<TransactionTimestamp
 									key="time"
-									blockNumber={transaction.blockNumber}
+									timestamp={transaction.block.timestamp}
 								/>,
-								<Link
-									key="hash"
-									to={'/tx/$hash'}
-									params={{ hash: transaction.hash ?? '' }}
-									className="text-[13px] text-tertiary press-down inline-flex"
-								>
-									{HexFormatter.truncate(transaction.hash, 6)}
-								</Link>,
-								<TransactionRowTotal key="total" transaction={transaction} />,
-							])
-
-						return transactions.map((transaction) => [
-							<TransactionTimestamp
-								key="time"
-								blockNumber={transaction.blockNumber}
-							/>,
-							<TransactionRowDescription
-								key="desc"
-								transaction={transaction}
-							/>,
-							<Link
-								key="hash"
-								to={'/tx/$hash'}
-								params={{ hash: transaction.hash ?? '' }}
-								className="text-[13px] text-tertiary press-down inline-flex"
-							>
-								{HexFormatter.truncate(transaction.hash, 6)}
-							</Link>,
-							<TransactionFee key="fee" transaction={transaction} />,
-							<TransactionRowTotal key="total" transaction={transaction} />,
-						])
+								<TransactionRowDescription
+									key="desc"
+									transaction={transaction}
+									receipt={receipt}
+								/>,
+								<TransactionHashLink key="hash" hash={transaction.hash} />,
+								<TransactionFee key="fee" receipt={receipt} />,
+								<TransactionRowTotal
+									key="total"
+									transaction={transaction}
+									receipt={receipt}
+								/>,
+							]
+						})
 					},
-					totalItems: totalTransactions,
+					totalItems: total,
 					page,
-					isPending,
+					isPending: isLoadingPage,
 					onPageChange: goToPage,
 					itemsLabel: 'transactions',
 					itemsPerPage: rowsPerPage,
@@ -389,44 +487,36 @@ function SectionsWrapper(props: {
 	)
 }
 
-function TransactionRowDescription(props: { transaction: Transaction }) {
-	const { transaction } = props
-
-	const { data: transactionReceipt } = useTransactionReceipt({
-		hash: transaction.hash,
-		query: {
-			enabled: Boolean(transaction.hash),
-		},
-	})
+function TransactionRowDescription(props: {
+	transaction: Transaction
+	receipt?: TransactionReceipt
+}) {
+	const { transaction, receipt } = props
 
 	const knownEvents = React.useMemo(() => {
-		if (!transactionReceipt) return []
-		return parseKnownEvents(transactionReceipt)
-	}, [transactionReceipt])
+		if (!receipt) return []
+		return parseKnownEvents(receipt)
+	}, [receipt])
 
 	return (
 		<TransactionDescription
 			transaction={transaction}
 			knownEvents={knownEvents}
-			transactionReceipt={transactionReceipt}
+			transactionReceipt={receipt}
 		/>
 	)
 }
 
-function TransactionRowTotal(props: { transaction: Transaction }) {
-	const { transaction } = props
-
-	const { data: transactionReceipt } = useTransactionReceipt({
-		hash: transaction.hash,
-		query: {
-			enabled: Boolean(transaction.hash),
-		},
-	})
+function TransactionRowTotal(props: {
+	transaction: Transaction
+	receipt?: TransactionReceipt
+}) {
+	const { transaction, receipt } = props
 
 	const knownEvents = React.useMemo(() => {
-		if (!transactionReceipt) return []
-		return parseKnownEvents(transactionReceipt)
-	}, [transactionReceipt])
+		if (!receipt) return []
+		return parseKnownEvents(receipt)
+	}, [receipt])
 
 	return (
 		<TransactionTotal transaction={transaction} knownEvents={knownEvents} />
@@ -552,15 +642,8 @@ function AssetValue(props: {
 	)
 }
 
-function TransactionFee(props: { transaction: Transaction }) {
-	const { transaction } = props
-
-	const { data: receipt } = useTransactionReceipt({
-		hash: transaction.hash,
-		query: {
-			enabled: Boolean(transaction.hash),
-		},
-	})
+function TransactionFee(props: { receipt: TransactionReceipt }) {
+	const { receipt } = props
 
 	if (!receipt) return <span className="text-tertiary">…</span>
 
@@ -628,20 +711,27 @@ function TransactionDescription(props: {
 	)
 }
 
-function TransactionTimestamp(props: {
-	blockNumber: Hex.Hex | null | undefined
-}) {
-	const { blockNumber } = props
+function TransactionHashLink(props: { hash: Hex.Hex | null | undefined }) {
+	const { hash } = props
+	const state = useRouterState()
 
-	const { data: timestamp } = useBlock({
-		blockNumber: blockNumber ? Hex.toBigInt(blockNumber) : undefined,
-		query: {
-			enabled: Boolean(blockNumber),
-			select: (block) => block.timestamp,
-		},
-	})
+	const isNavigating =
+		state.isLoading && state.location.pathname === `/tx/${hash}`
 
-	if (!timestamp) return <span className="text-tertiary">…</span>
+	if (!hash) return null
+	return (
+		<Link
+			to={'/tx/$hash'}
+			params={{ hash }}
+			className="text-[13px] text-tertiary press-down inline-flex items-center gap-1"
+		>
+			{isNavigating ? '…' : HexFormatter.truncate(hash, 6)}
+		</Link>
+	)
+}
+
+function TransactionTimestamp(props: { timestamp: bigint }) {
+	const { timestamp } = props
 
 	return (
 		<div className="text-nowrap">
