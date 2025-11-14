@@ -1,13 +1,17 @@
-import { type Address, Hex } from 'ox'
-import { Abis } from 'tempo.ts/viem'
+import { Address, Hex } from 'ox'
+import { Abis, Addresses } from 'tempo.ts/viem'
 import {
 	type AbiEvent,
 	type Log,
 	parseEventLogs,
 	type TransactionReceipt,
+	zeroAddress,
 } from 'viem'
 
 const abi = Object.values(Abis).flat()
+const ZERO_ADDRESS = zeroAddress
+const FEE_MANAGER = Addresses.feeManager
+const STABLECOIN_EXCHANGE = Addresses.stablecoinExchange
 
 type TransferEventArgs = {
 	from: Address.Address
@@ -68,10 +72,10 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 	const events = parseEventLogs({ abi, logs })
 
 	const preferenceMap = new Map<string, string>()
-	let feeTransferEvent: {
+	const feeTransferEvents: Array<{
 		amount: bigint
 		token: Address.Address
-	} | null = null
+	}> = []
 
 	for (const event of events) {
 		let key: string | undefined
@@ -133,7 +137,6 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 	const knownEvents: KnownEvent[] = []
 
 	// Detect and group swap events (two transfers involving the stablecoin exchange)
-	const STABLECOIN_EXCHANGE = '0xdec0000000000000000000000000000000000000'
 	const swapIndices = new Set<number>()
 
 	// Find all transfers in the events
@@ -201,14 +204,16 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 		switch (event.eventName) {
 			case 'TransferWithMemo':
 			case 'Transfer': {
-				const { amount, to } = event.args
-				const isFee = to.toLowerCase().startsWith('0xfeec00000')
+				const { amount, from, to } = event.args
+				const isFee =
+					Address.isEqual(to, FEE_MANAGER) &&
+					!Address.isEqual(from, ZERO_ADDRESS)
 				if (isFee) {
 					// Store fee transfer info for later use if no other events exist
-					feeTransferEvent = {
+					feeTransferEvents.push({
 						amount,
 						token: event.address,
-					}
+					})
 					break
 				}
 
@@ -261,6 +266,7 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 
 				// Handle liquidity pool mint (StablecoinExchange)
 				if (
+					Address.isEqual(event.address, STABLECOIN_EXCHANGE) &&
 					'amountUserToken' in event.args &&
 					'amountValidatorToken' in event.args
 				) {
@@ -353,19 +359,23 @@ export function parseKnownEvents(receipt: TransactionReceipt): KnownEvent[] {
 
 	// If no known events were parsed but there was a fee transfer,
 	// show it as a fee payment event
-	if (knownEvents.length === 0 && feeTransferEvent) {
+	if (knownEvents.length === 0 && feeTransferEvents.length > 0) {
+		const parts: KnownEventPart[] = [{ type: 'action', value: 'Pay Fee' }]
+
+		for (const [index, fee] of feeTransferEvents.entries()) {
+			if (index > 0) parts.push({ type: 'secondary', value: 'and' })
+			parts.push({
+				type: 'amount',
+				value: {
+					value: fee.amount,
+					token: fee.token,
+				},
+			})
+		}
+
 		knownEvents.push({
 			type: 'fee',
-			parts: [
-				{ type: 'action', value: 'Pay Fee' },
-				{
-					type: 'amount',
-					value: {
-						value: feeTransferEvent.amount,
-						token: feeTransferEvent.token,
-					},
-				},
-			],
+			parts,
 		})
 	}
 
