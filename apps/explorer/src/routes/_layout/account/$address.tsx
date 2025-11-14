@@ -98,7 +98,13 @@ export const Route = createFileRoute('/_layout/account/$address')({
 	notFoundComponent: NotFound,
 	validateSearch: z.object({
 		page: z.prefault(z.number(), 1),
-		limit: z.prefault(z.number(), rowsPerPage),
+		limit: z.prefault(
+			z.pipe(
+				z.number(),
+				z.transform((val) => Math.min(100, val)),
+			),
+			rowsPerPage,
+		),
 		tab: z.prefault(z.enum(['history', 'assets']), 'history'),
 	}),
 	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
