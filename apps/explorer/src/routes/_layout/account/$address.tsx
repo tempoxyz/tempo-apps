@@ -2,6 +2,7 @@ import {
 	keepPreviousData,
 	queryOptions,
 	useQuery,
+	useSuspenseQueries,
 	useSuspenseQuery,
 } from '@tanstack/react-query'
 import {
@@ -16,17 +17,17 @@ import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { formatUnits } from 'viem'
 import { useBlock, useChainId, useTransactionReceipt } from 'wagmi'
-import { getChainId } from 'wagmi/actions'
+import { getChainId, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { AccountCard } from '#components/Account.tsx'
-import { EventDescription } from '#components/EventDescription.tsx'
-import { NotFound } from '#components/NotFound.tsx'
+import { AccountCard } from '#components/Account'
+import { EventDescription } from '#components/EventDescription'
+import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
-import { Sections } from '#components/Sections.tsx'
-import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { Sections } from '#components/Sections'
+import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
-import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
-import { config } from '#wagmi.config.ts'
+import { type KnownEvent, parseKnownEvents } from '#lib/known-events'
+import { config } from '#wagmi.config'
 
 type TransactionsResponse = {
 	transactions: Array<Transaction>
@@ -188,6 +189,79 @@ function useAccountTotalValue(address: Address.Address) {
 	})
 }
 
+function SectionsSkeleton({ totalItems }: { totalItems: number }) {
+	const isMobile = useMediaQuery('(max-width: 1239px)')
+	return (
+		<Sections
+			mode={isMobile ? 'stacked' : 'tabs'}
+			sections={[
+				{
+					title: 'History',
+					columns: {
+						stacked: [
+							{ label: 'Time', align: 'start', minWidth: 100 },
+							{ label: 'Hash', align: 'start' },
+							{ label: 'Total', align: 'end' },
+						],
+						tabs: [
+							{ label: 'Time', align: 'start', minWidth: 100 },
+							{ label: 'Description', align: 'start' },
+							{ label: 'Hash', align: 'end' },
+							{ label: 'Fee', align: 'end' },
+							{ label: 'Total', align: 'end' },
+						],
+					},
+					items: (mode) =>
+						Array.from({ length: rowsPerPage }, (_, index) =>
+							mode === 'stacked'
+								? [
+										<div key={`${index}-time`} className="h-5" />,
+										<div key={`${index}-hash`} className="h-5" />,
+										<div key={`${index}-total`} className="h-5" />,
+									]
+								: [
+										<div key={`${index}-time`} className="h-5" />,
+										<div key={`${index}-desc`} className="h-5" />,
+										<div key={`${index}-hash`} className="h-5" />,
+										<div key={`${index}-fee`} className="h-5" />,
+										<div key={`${index}-total`} className="h-5" />,
+									],
+						),
+					totalItems,
+					page: 1,
+					isPending: false,
+					onPageChange: () => {},
+					itemsLabel: 'transactions',
+					itemsPerPage: rowsPerPage,
+				},
+				{
+					title: 'Assets',
+					columns: {
+						stacked: [
+							{ label: 'Name', align: 'start' },
+							{ label: 'Balance', align: 'end' },
+						],
+						tabs: [
+							{ label: 'Name', align: 'start' },
+							{ label: 'Ticker', align: 'start' },
+							{ label: 'Balance', align: 'end' },
+							{ label: 'Value', align: 'end' },
+						],
+					},
+					items: () => [],
+					totalItems: 0,
+					page: 1,
+					isPending: false,
+					onPageChange: () => {},
+					itemsLabel: 'assets',
+				},
+			]}
+			activeSection={0}
+			onSectionChange={() => {}}
+		/>
+	)
+}
+
 function RouteComponent() {
 	const navigate = useNavigate()
 
@@ -202,7 +276,11 @@ function RouteComponent() {
 	const goToPage = React.useCallback(
 		(newPage: number) => {
 			startTransition(() => {
-				navigate({ to: '.', search: { page: newPage, tab } })
+				navigate({
+					to: '.',
+					search: { page: newPage, tab },
+					resetScroll: false,
+				})
 			})
 		},
 		[navigate, tab],
@@ -211,14 +289,16 @@ function RouteComponent() {
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
 			const newTab = newIndex === 0 ? 'history' : 'assets'
-			navigate({ to: '.', search: { page, tab: newTab } })
+			navigate({ to: '.', search: { page, tab: newTab }, resetScroll: false })
 		},
 		[navigate, page],
 	)
 
 	return (
 		<div className="flex flex-col min-[1240px]:grid max-w-[1080px] w-full min-[1240px]:pt-20 pt-10 min-[1240px]:pb-16 pb-8 px-4 gap-[14px] min-w-0 min-[1240px]:grid-cols-[auto_1fr]">
-			<AccountCardWithTimestamps address={address} />
+			<React.Suspense fallback={<AccountCard address={address} />}>
+				<AccountCardWithTimestamps address={address} />
+			</React.Suspense>
 			<SectionsWrapper
 				address={address}
 				page={page}
@@ -245,7 +325,7 @@ function SectionsWrapper(props: {
 	const chainId = useChainId()
 	const offset = (page - 1) * rowsPerPage
 
-	const { data } = useSuspenseQuery(
+	const transactionsQuery = useSuspenseQuery(
 		transactionsQueryOptions({
 			page,
 			offset,
@@ -255,178 +335,213 @@ function SectionsWrapper(props: {
 		}),
 	)
 
+	const deferredTransactionsQuery = React.useDeferredValue(transactionsQuery)
+
+	const { data } = deferredTransactionsQuery
+
 	const transactions = data.transactions
 	const totalTransactions = data.total
+
+	const receiptsQueries = useSuspenseQueries({
+		queries: transactions.map(({ hash }) => ({
+			queryKey: ['transactionReceipt', hash],
+			queryFn: () => getTransactionReceipt(config, { hash }),
+		})),
+	})
+
+	const deferredReceiptsQueries = React.useDeferredValue(receiptsQueries)
+
+	const receipts = React.useMemo(() => {
+		const map = new Map<string, TransactionReceipt>()
+		for (const [i, tx] of transactions.entries()) {
+			const receipt = deferredReceiptsQueries[i]?.data
+			if (receipt) map.set(tx.hash, receipt)
+		}
+		return map
+	}, [deferredReceiptsQueries, transactions])
 
 	const isMobile = useMediaQuery('(max-width: 1239px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
 	return (
-		<Sections
-			mode={mode}
-			sections={[
-				{
-					title: 'History',
-					columns: {
-						stacked: [
-							{ label: 'Time', align: 'start', minWidth: 100 },
-							{ label: 'Hash', align: 'start' },
-							{ label: 'Total', align: 'end' },
-						],
-						tabs: [
-							{ label: 'Time', align: 'start', minWidth: 100 },
-							{ label: 'Description', align: 'start' },
-							{ label: 'Hash', align: 'end' },
-							{ label: 'Fee', align: 'end' },
-							{ label: 'Total', align: 'end' },
-						],
-					},
-					items: (mode) => {
-						if (mode === 'stacked')
-							return transactions.map((transaction) => [
-								<TransactionTimestamp
-									key="time"
-									blockNumber={transaction.blockNumber}
-								/>,
-								<Link
-									key="hash"
-									to={'/tx/$hash'}
-									params={{ hash: transaction.hash ?? '' }}
-									className="text-[13px] text-tertiary press-down inline-flex"
-								>
-									{HexFormatter.truncate(transaction.hash, 6)}
-								</Link>,
-								<TransactionRowTotal key="total" transaction={transaction} />,
-							])
+		<React.Suspense
+			fallback={<SectionsSkeleton totalItems={totalTransactions} />}
+		>
+			<div>
+				<Sections
+					mode={mode}
+					sections={[
+						{
+							title: 'History',
+							columns: {
+								stacked: [
+									{ label: 'Time', align: 'start', minWidth: 100 },
+									{ label: 'Hash', align: 'start' },
+									{ label: 'Total', align: 'end' },
+								],
+								tabs: [
+									{ label: 'Time', align: 'start', minWidth: 100 },
+									{ label: 'Description', align: 'start' },
+									{ label: 'Hash', align: 'end' },
+									{ label: 'Fee', align: 'end' },
+									{ label: 'Total', align: 'end' },
+								],
+							},
+							items: (mode) => {
+								if (mode === 'stacked')
+									return transactions.map((transaction) => {
+										const receipt = receipts.get(transaction.hash)
+										return [
+											<TransactionTimestamp
+												key="time"
+												blockNumber={transaction.blockNumber}
+											/>,
+											<Link
+												key="hash"
+												to={'/tx/$hash'}
+												params={{ hash: transaction.hash ?? '' }}
+												className="text-[13px] text-tertiary press-down inline-flex"
+											>
+												{HexFormatter.truncate(transaction.hash, 6)}
+											</Link>,
+											<TransactionRowTotal
+												key="total"
+												transaction={transaction}
+												receipt={receipt}
+											/>,
+										]
+									})
 
-						return transactions.map((transaction) => [
-							<TransactionTimestamp
-								key="time"
-								blockNumber={transaction.blockNumber}
-							/>,
-							<TransactionRowDescription
-								key="desc"
-								transaction={transaction}
-							/>,
-							<Link
-								key="hash"
-								to={'/tx/$hash'}
-								params={{ hash: transaction.hash ?? '' }}
-								className="text-[13px] text-tertiary press-down inline-flex"
-							>
-								{HexFormatter.truncate(transaction.hash, 6)}
-							</Link>,
-							<TransactionFee key="fee" transaction={transaction} />,
-							<TransactionRowTotal key="total" transaction={transaction} />,
-						])
-					},
-					totalItems: totalTransactions,
-					page,
-					isPending,
-					onPageChange: goToPage,
-					itemsLabel: 'transactions',
-					itemsPerPage: rowsPerPage,
-				},
-				{
-					title: 'Assets',
-					columns: {
-						stacked: [
-							{ label: 'Name', align: 'start' },
-							{ label: 'Contract', align: 'start' },
-							{ label: 'Amount', align: 'end' },
-						],
-						tabs: [
-							{ label: 'Name', align: 'start' },
-							{ label: 'Ticker', align: 'start' },
-							{ label: 'Currency', align: 'start' },
-							{ label: 'Amount', align: 'end' },
-							{ label: 'Value', align: 'end' },
-						],
-					},
-					items: (mode) =>
-						assets.map((assetAddress) => {
-							if (mode === 'stacked')
-								return [
-									<TokenName key="name" contractAddress={assetAddress} />,
-									<AssetContract
-										key="contract"
-										contractAddress={assetAddress}
-									/>,
-									<AssetAmount
-										key="amount"
-										contractAddress={assetAddress}
-										accountAddress={address}
-									/>,
-								]
+								return transactions.map((transaction) => {
+									const receipt = receipts.get(transaction.hash)
+									return [
+										<TransactionTimestamp
+											key="time"
+											blockNumber={transaction.blockNumber}
+										/>,
+										<TransactionRowDescription
+											key="desc"
+											transaction={transaction}
+											receipt={receipt}
+										/>,
+										<Link
+											key="hash"
+											to={'/tx/$hash'}
+											params={{ hash: transaction.hash ?? '' }}
+											className="text-[13px] text-tertiary press-down inline-flex"
+										>
+											{HexFormatter.truncate(transaction.hash, 6)}
+										</Link>,
+										<TransactionFee key="fee" transaction={transaction} />,
+										<TransactionRowTotal
+											key="total"
+											transaction={transaction}
+											receipt={receipt}
+										/>,
+									]
+								})
+							},
+							totalItems: totalTransactions,
+							page,
+							isPending,
+							onPageChange: goToPage,
+							itemsLabel: 'transactions',
+							itemsPerPage: rowsPerPage,
+						},
+						{
+							title: 'Assets',
+							columns: {
+								stacked: [
+									{ label: 'Name', align: 'start' },
+									{ label: 'Contract', align: 'start' },
+									{ label: 'Amount', align: 'end' },
+								],
+								tabs: [
+									{ label: 'Name', align: 'start' },
+									{ label: 'Ticker', align: 'start' },
+									{ label: 'Currency', align: 'start' },
+									{ label: 'Amount', align: 'end' },
+									{ label: 'Value', align: 'end' },
+								],
+							},
+							items: (mode) =>
+								assets.map((assetAddress) => {
+									if (mode === 'stacked')
+										return [
+											<TokenName key="name" contractAddress={assetAddress} />,
+											<AssetContract
+												key="contract"
+												contractAddress={assetAddress}
+											/>,
+											<AssetAmount
+												key="amount"
+												contractAddress={assetAddress}
+												accountAddress={address}
+											/>,
+										]
 
-							return [
-								<TokenName key="name" contractAddress={assetAddress} />,
-								<TokenSymbol key="symbol" contractAddress={assetAddress} />,
-								<span key="currency">USD</span>,
-								<AssetAmount
-									key="amount"
-									contractAddress={assetAddress}
-									accountAddress={address}
-								/>,
-								<AssetValue
-									key="value"
-									contractAddress={assetAddress}
-									accountAddress={address}
-								/>,
-							]
-						}),
-					totalItems: assets.length,
-					page: 1, // TODO
-					isPending: false,
-					onPageChange: () => {},
-					itemsLabel: 'assets',
-					itemsPerPage: assets.length,
-				},
-			]}
-			activeSection={activeSection}
-			onSectionChange={onSectionChange}
-		/>
+									return [
+										<TokenName key="name" contractAddress={assetAddress} />,
+										<TokenSymbol key="symbol" contractAddress={assetAddress} />,
+										<span key="currency">USD</span>,
+										<AssetAmount
+											key="amount"
+											contractAddress={assetAddress}
+											accountAddress={address}
+										/>,
+										<AssetValue
+											key="value"
+											contractAddress={assetAddress}
+											accountAddress={address}
+										/>,
+									]
+								}),
+							totalItems: assets.length,
+							page: 1, // TODO
+							isPending: false,
+							onPageChange: () => {},
+							itemsLabel: 'assets',
+							itemsPerPage: assets.length,
+						},
+					]}
+					activeSection={activeSection}
+					onSectionChange={onSectionChange}
+				/>
+			</div>
+		</React.Suspense>
 	)
 }
 
-function TransactionRowDescription(props: { transaction: Transaction }) {
-	const { transaction } = props
-
-	const { data: transactionReceipt } = useTransactionReceipt({
-		hash: transaction.hash,
-		query: {
-			enabled: Boolean(transaction.hash),
-		},
-	})
+function TransactionRowDescription(props: {
+	transaction: Transaction
+	receipt?: TransactionReceipt
+}) {
+	const { transaction, receipt } = props
 
 	const knownEvents = React.useMemo(() => {
-		if (!transactionReceipt) return []
-		return parseKnownEvents(transactionReceipt)
-	}, [transactionReceipt])
+		if (!receipt) return []
+		return parseKnownEvents(receipt)
+	}, [receipt])
 
 	return (
 		<TransactionDescription
 			transaction={transaction}
 			knownEvents={knownEvents}
-			transactionReceipt={transactionReceipt}
+			transactionReceipt={receipt}
 		/>
 	)
 }
 
-function TransactionRowTotal(props: { transaction: Transaction }) {
-	const { transaction } = props
-
-	const { data: transactionReceipt } = useTransactionReceipt({
-		hash: transaction.hash,
-		query: {
-			enabled: Boolean(transaction.hash),
-		},
-	})
+function TransactionRowTotal(props: {
+	transaction: Transaction
+	receipt?: TransactionReceipt
+}) {
+	const { transaction, receipt } = props
 
 	const knownEvents = React.useMemo(() => {
-		if (!transactionReceipt) return []
-		return parseKnownEvents(transactionReceipt)
-	}, [transactionReceipt])
+		if (!receipt) return []
+		return parseKnownEvents(receipt)
+	}, [receipt])
 
 	return (
 		<TransactionTotal transaction={transaction} knownEvents={knownEvents} />
