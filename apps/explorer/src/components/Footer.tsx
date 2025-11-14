@@ -15,12 +15,13 @@ function DemoLinks() {
 			{Array.from({ length: 2 }, (_, index) => {
 				const hash = txes?.[index]
 				const label = `Receipt ${index + 1}`
+				const key = hash ?? String(index)
 				return hash ? (
-					<Footer.Link to="/tx/$hash" params={{ hash }} key={hash}>
+					<Footer.Link to="/tx/$hash" params={{ hash }} key={key}>
 						{label}
 					</Footer.Link>
 				) : (
-					<span className="select-none opacity-50" key={index}>
+					<span className="select-none opacity-50" key={key}>
 						{label}
 					</span>
 				)
