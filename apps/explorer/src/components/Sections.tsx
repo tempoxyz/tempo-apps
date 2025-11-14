@@ -215,9 +215,10 @@ export namespace Sections {
 								<tr key={`${index}${page}`} className="min-h-[48px]">
 									{item.map((cell, cellIndex) => {
 										const align = columns[cellIndex]?.align ?? 'start'
+										const key = `${index}${page}${cellIndex}`
 										return (
 											<td
-												key={cellIndex}
+												key={key}
 												className={`px-[10px] first-of-type:pl-[16px] last-of-type:pr-[16px] py-[12px] text-primary align-middle ${
 													align === 'end' ? 'text-right' : 'text-left'
 												}`}
