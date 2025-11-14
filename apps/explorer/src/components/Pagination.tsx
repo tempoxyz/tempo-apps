@@ -65,41 +65,20 @@ export function Pagination(props: Pagination.Props) {
 
 				<div className="flex items-center gap-[6px]">
 					{(() => {
-						const pages: Array<number | 'ellipsis'> = []
-
-						if (totalPages <= 7) {
-							for (let i = 1; i <= totalPages; i++) pages.push(i)
-						} else if (page <= 4) {
-							for (let i = 1; i <= 5; i++) pages.push(i)
-							pages.push('ellipsis')
-							pages.push(totalPages)
-						} else if (page >= totalPages - 3) {
-							pages.push(1)
-							pages.push('ellipsis')
-							for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i)
-						} else {
-							pages.push(1)
-							pages.push('ellipsis')
-							pages.push(page - 1)
-							pages.push(page)
-							pages.push(page + 1)
-							pages.push('ellipsis')
-							pages.push(totalPages)
-						}
-
+						const pages = Pagination.getPagination(page, totalPages)
 						let ellipsisCount = 0
+
 						return pages.map((p) => {
-							if (p === 'ellipsis') {
-								ellipsisCount++
+							if (p === Pagination.Ellipsis)
 								return (
 									<span
-										key={`ellipsis-${ellipsisCount}`}
+										key={`ellipsis-${ellipsisCount++}`}
 										className="text-tertiary flex w-[28px] h-[28px] items-center justify-center"
 									>
 										…
 									</span>
 								)
-							}
+
 							return (
 								<button
 									key={p}
@@ -158,5 +137,28 @@ export namespace Pagination {
 		isPending: boolean
 		onPageChange: (page: number) => void
 		compact?: boolean
+	}
+
+	export const Ellipsis = -1
+
+	export function getPagination(page: number, totalPages: number): number[] {
+		if (totalPages <= 7)
+			return Array.from({ length: totalPages }, (_, i) => i + 1)
+
+		if (page <= 4)
+			return [
+				...Array.from({ length: 5 }, (_, i) => i + 1),
+				Ellipsis,
+				totalPages,
+			]
+
+		if (page >= totalPages - 3)
+			return [
+				1,
+				Ellipsis,
+				...Array.from({ length: 5 }, (_, i) => totalPages - 4 + i),
+			]
+
+		return [1, Ellipsis, page - 1, page, page + 1, Ellipsis, totalPages]
 	}
 }
