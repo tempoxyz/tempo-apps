@@ -152,6 +152,13 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 					const browser = await puppeteer.launch(env.BROWSER)
 					const page = await browser.newPage()
 
+					// Pass through authentication if present
+					const authHeader = request.headers.get('Authorization')
+					if (authHeader)
+						await page.setExtraHTTPHeaders({
+							Authorization: authHeader,
+						})
+
 					// Get the current URL without .pdf extension
 					const htmlUrl = `${url.href.replace(/\.pdf$/, '')}?plain`
 
