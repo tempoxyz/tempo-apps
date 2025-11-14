@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import * as React from 'react'
 import { type Address, type Hash, isAddress, isHash } from 'viem'
 import { cx } from '#cva.config'
 import ArrowRight from '~icons/lucide/arrow-right'
@@ -13,8 +13,22 @@ export function ExploreInput(props: ExploreInput.Props) {
 		size = 'medium',
 		disabled,
 	} = props
-	const formRef = useRef<HTMLFormElement>(null)
+	const formRef = React.useRef<HTMLFormElement>(null)
 	const isLarge = size === 'large'
+
+	const inputRef = React.useRef<HTMLInputElement>(null)
+
+	React.useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+				event.preventDefault()
+				inputRef.current?.focus()
+			}
+		}
+		window.addEventListener('keydown', handleKeyDown)
+		return () => window.removeEventListener('keydown', handleKeyDown)
+	}, [])
+
 	return (
 		<form
 			ref={formRef}
@@ -38,6 +52,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 			className="relative w-full max-w-[448px]"
 		>
 			<input
+				ref={inputRef}
 				autoCapitalize="off"
 				autoComplete="off"
 				autoCorrect="off"
@@ -45,7 +60,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 				defaultValue={defaultValue}
 				disabled={disabled}
 				className={cx(
-					'bg-surface border-base-border border-[1px] pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50',
+					'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50',
 					isLarge ? 'h-[52px] text-[17px]' : 'h-[42px] text-[15px]',
 				)}
 				data-1p-ignore
