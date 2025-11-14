@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { type Address, Hex } from 'ox'
+import type { Address, Hex } from 'ox'
 import { useState } from 'react'
 import { EventDescription } from '#components/EventDescription'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
@@ -31,7 +31,7 @@ export function Receipt(props: Receipt.Props) {
 						<span className="text-tertiary capitalize">Block</span>
 						<Link
 							to={'/block/$id'}
-							params={{ id: Hex.fromNumber(blockNumber) }}
+							params={{ id: blockNumber.toString() }}
 							className="text-accent text-right before:content-['#'] press-down"
 						>
 							{String(blockNumber)}

@@ -727,10 +727,6 @@ function TransactionDescription(props: {
 
 function TransactionHashLink(props: { hash: Hex.Hex | null | undefined }) {
 	const { hash } = props
-	const state = useRouterState()
-
-	const isNavigating =
-		state.isLoading && state.location.pathname === `/tx/${hash}`
 
 	if (!hash) return null
 	return (
@@ -738,8 +734,9 @@ function TransactionHashLink(props: { hash: Hex.Hex | null | undefined }) {
 			to={'/tx/$hash'}
 			params={{ hash }}
 			className="text-[13px] text-tertiary press-down inline-flex items-center gap-1"
+			title={hash}
 		>
-			{isNavigating ? '…' : HexFormatter.truncate(hash, 6)}
+			{HexFormatter.truncate(hash, 6)}
 		</Link>
 	)
 }
