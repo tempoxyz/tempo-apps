@@ -32,7 +32,7 @@ export function Receipt(props: Receipt.Props) {
 						<Link
 							to={'/block/$id'}
 							params={{ id: Hex.fromNumber(blockNumber) }}
-							className="text-accent text-right before:content-['#'] active:translate-y-[.5px]"
+							className="text-accent text-right before:content-['#'] press-down"
 						>
 							{String(blockNumber)}
 						</Link>
@@ -42,7 +42,7 @@ export function Receipt(props: Receipt.Props) {
 						<Link
 							to={'/account/$address'}
 							params={{ address: sender }}
-							className="text-accent text-right active:translate-y-[.5px]"
+							className="text-accent text-right press-down"
 							title={sender}
 						>
 							{HexFormatter.shortenHex(sender)}
@@ -61,7 +61,7 @@ export function Receipt(props: Receipt.Props) {
 							<button
 								type="button"
 								onClick={() => copy(hash)}
-								className="text-right break-all max-w-[11ch] cursor-pointer active:translate-y-[.5px]"
+								className="text-right break-all max-w-[11ch] cursor-pointer press-down"
 							>
 								{hash}
 							</button>
@@ -69,7 +69,7 @@ export function Receipt(props: Receipt.Props) {
 							<button
 								type="button"
 								onClick={() => setHashExpanded(true)}
-								className="text-right cursor-pointer active:translate-y-[.5px]"
+								className="text-right cursor-pointer press-down"
 								title={hash}
 							>
 								{HexFormatter.shortenHex(hash)}

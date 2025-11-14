@@ -98,19 +98,29 @@
 	--color-black-white: light-dark(#000000, #ffffff);
 	--color-white-black: light-dark(#ffffff, #000000);
 
+	/* Card */
+	--color-card: light-dark(#f9f9f9, #222222);
+	--color-card-header: light-dark(#f9f9f9, #191919);
+	--color-card-border: light-dark(#e0e0e0, #2a2a2a);
+
 	/* Other Colors */
+	--color-base-background: light-dark(#fcfcfc, #191919);
 	--color-base-plane: light-dark(#fcfcfc, #222222);
+	--color-base-plane-background: light-dark(#f9f9f9, #222222);
 	--color-base-alt: light-dark(#e5e5e5, #2a2a2a);
 	--color-base-border: light-dark(#e0e0e0, #2a2a2a);
 	--color-base-content: light-dark(#202020, #eeeeee);
 	--color-base-content-secondary: light-dark(#7b7b7b, #7b7b7b);
 	--color-base-content-positive: light-dark(#30a46c, #30a46c);
 	--color-distinct: light-dark(#e8e8e8, #313131);
+
+	--font-display: system-ui, sans-serif;
+	--font-mono: ui-monospace, monospace;
 }
 
 html,
 :host {
-	background-color: var(--color-system);
+	background-color: var(--color-base-background);
 	color: var(--color-primary);
 	color-scheme: light dark;
 }
@@ -126,9 +136,13 @@ html,
 }
 
 body {
-	font-family: system-ui, sans-serif;
+	font-family: var(--font-display);
 	@apply text-base;
 	min-width: 400px;
+}
+
+pre {
+	font-family: var(--font-mono);
 }
 
 a:focus-visible,
@@ -136,10 +150,6 @@ button:focus-visible {
 	outline: 2px solid var(--color-focus);
 	outline-offset: 2px;
 	border-radius: 2px;
-}
-
-pre {
-	font-family: ui-monospace, monospace;
 }
 
 input[type="number"]::-webkit-inner-spin-button,
@@ -206,5 +216,11 @@ input[type="number"] {
 
 	&::-webkit-scrollbar {
 		display: none;
+	}
+}
+
+@utility press-down {
+	&:active {
+		transform: translateY(0.5px);
 	}
 }

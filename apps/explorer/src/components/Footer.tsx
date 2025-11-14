@@ -18,7 +18,7 @@ export namespace Footer {
 					href={href}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="hover:text-primary transition-[color] active:translate-y-[.5px]"
+					className="hover:text-primary transition-[color] press-down"
 				>
 					{children}
 				</a>
