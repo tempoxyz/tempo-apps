@@ -212,21 +212,22 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 						],
 					},
 					items: (mode) =>
-						Array.from({ length: rowsPerPage }, (_, index) =>
-							mode === 'stacked'
+						Array.from({ length: rowsPerPage }, (_, index) => {
+							const key = `skeleton-${index}`
+							return mode === 'stacked'
 								? [
-										<div key={`${index}-time`} className="h-5" />,
-										<div key={`${index}-hash`} className="h-5" />,
-										<div key={`${index}-total`} className="h-5" />,
+										<div key={`${key}-time`} className="h-5" />,
+										<div key={`${key}-hash`} className="h-5" />,
+										<div key={`${key}-total`} className="h-5" />,
 									]
 								: [
-										<div key={`${index}-time`} className="h-5" />,
-										<div key={`${index}-desc`} className="h-5" />,
-										<div key={`${index}-hash`} className="h-5" />,
-										<div key={`${index}-fee`} className="h-5" />,
-										<div key={`${index}-total`} className="h-5" />,
-									],
-						),
+										<div key={`${key}-time`} className="h-5" />,
+										<div key={`${key}-desc`} className="h-5" />,
+										<div key={`${key}-hash`} className="h-5" />,
+										<div key={`${key}-fee`} className="h-5" />,
+										<div key={`${key}-total`} className="h-5" />,
+									]
+						}),
 					totalItems,
 					page: 1,
 					isPending: false,
