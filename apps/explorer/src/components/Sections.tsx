@@ -1,6 +1,7 @@
 import { ClientOnly } from '@tanstack/react-router'
 import * as React from 'react'
 import { cx } from '#cva.config.ts'
+import { Pagination } from './Pagination'
 
 export function Sections(props: Sections.Props) {
 	const {
@@ -232,7 +233,7 @@ export namespace Sections {
 						</tbody>
 					</table>
 				</div>
-				<Sections.Pagination
+				<Pagination
 					page={page}
 					totalPages={totalPages}
 					totalItems={totalItems}
@@ -252,154 +253,6 @@ export namespace Sections {
 			itemsLabel: string
 			itemsPerPage: number
 			mode: 'stacked' | 'tabs'
-		}
-	}
-
-	export function Pagination(props: Pagination.Props) {
-		const {
-			page,
-			totalPages,
-			totalItems,
-			itemsLabel,
-			isPending,
-			onPageChange,
-			compact = false,
-		} = props
-
-		if (compact)
-			return (
-				<div className="flex items-center justify-center gap-[8px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary w-full">
-					<button
-						type="button"
-						onClick={() => onPageChange(page - 1)}
-						disabled={page <= 1 || isPending}
-						className="rounded-[4px] border border-border-primary px-[8px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt cursor-pointer press-down disabled:opacity-50 disabled:cursor-not-allowed"
-						aria-label="Previous page"
-					>
-						Previous
-					</button>
-
-					<span className="text-primary font-medium">
-						Page {page} of {totalPages}
-					</span>
-
-					<button
-						type="button"
-						onClick={() => onPageChange(page + 1)}
-						disabled={page >= totalPages || isPending}
-						className="rounded-[4px] border border-border-primary px-[12px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt cursor-pointer press-down disabled:opacity-50 disabled:cursor-not-allowed"
-						aria-label="Next page"
-					>
-						{isPending ? 'Loading…' : 'Next'}
-					</button>
-				</div>
-			)
-
-		return (
-			<div className="flex flex-col gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary md:flex-row md:items-center md:justify-between">
-				<div className="flex flex-row items-center gap-[8px]">
-					<button
-						type="button"
-						onClick={() => onPageChange(page - 1)}
-						disabled={page <= 1 || isPending}
-						className="rounded-[4px] border border-border-primary px-[8px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt cursor-pointer press-down disabled:opacity-50 disabled:cursor-not-allowed"
-						aria-label="Previous page"
-					>
-						Previous
-					</button>
-
-					<div className="flex items-center gap-[6px]">
-						{(() => {
-							const maxButtons = 5
-							let startPage = Math.max(1, page - Math.floor(maxButtons / 2))
-							const endPage = Math.min(totalPages, startPage + maxButtons - 1)
-
-							startPage = Math.max(1, endPage - maxButtons + 1)
-
-							const pages: Array<number | 'ellipsis'> = []
-
-							if (startPage > 1) {
-								pages.push(1)
-								if (startPage > 2) pages.push('ellipsis')
-							}
-
-							for (let index = startPage; index <= endPage; index++)
-								pages.push(index)
-
-							if (endPage < totalPages) {
-								if (endPage < totalPages - 1) pages.push('ellipsis')
-								pages.push(totalPages)
-							}
-
-							let ellipsisCount = 0
-							return pages.map((p) => {
-								if (p === 'ellipsis') {
-									ellipsisCount++
-									return (
-										<span
-											key={`ellipsis-${ellipsisCount}`}
-											className="text-tertiary px-[4px]"
-										>
-											…
-										</span>
-									)
-								}
-								return (
-									<button
-										key={p}
-										type="button"
-										onClick={() => onPageChange(p)}
-										disabled={page === p || isPending}
-										className={`rounded-[4px] flex w-[28px] h-[28px] items-center justify-center ${
-											page === p
-												? 'border border-accent/50 text-primary cursor-default'
-												: 'cursor-pointer press-down hover:bg-alt text-primary'
-										} ${isPending && page !== p ? 'opacity-50 cursor-not-allowed' : ''}`}
-									>
-										{p}
-									</button>
-								)
-							})
-						})()}
-					</div>
-
-					<button
-						type="button"
-						onClick={() => onPageChange(page + 1)}
-						disabled={page >= totalPages || isPending}
-						className="rounded-[4px] border border-border-primary px-[12px] py-[6px] text-[12px] font-medium text-primary hover:bg-alt cursor-pointer press-down disabled:opacity-50 disabled:cursor-not-allowed"
-						aria-label="Next page"
-					>
-						{isPending ? 'Loading…' : 'Next'}
-					</button>
-				</div>
-
-				<div className="space-x-[8px]">
-					<span className="text-tertiary">Page</span>
-					<span className="text-primary">{page}</span>
-					<span className="text-tertiary">of</span>
-					<span className="text-primary">{totalPages}</span>
-					<span className="text-tertiary">•</span>
-					<span className="text-primary">{totalItems || '…'}</span>
-					<span className="text-tertiary">
-						<ClientOnly fallback={<React.Fragment>…</React.Fragment>}>
-							{totalItems === 1 ? itemsLabel.replace(/s$/, '') : itemsLabel}
-						</ClientOnly>
-					</span>
-				</div>
-			</div>
-		)
-	}
-
-	export namespace Pagination {
-		export interface Props {
-			page: number
-			totalPages: number
-			totalItems: number
-			itemsLabel: string
-			isPending: boolean
-			onPageChange: (page: number) => void
-			compact?: boolean
 		}
 	}
 }
