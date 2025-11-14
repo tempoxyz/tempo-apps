@@ -65,12 +65,17 @@ export function ExploreInput(props: ExploreInput.Props) {
 					}
 				}}
 			/>
-			<div className="absolute right-[16px] top-[50%] -translate-y-[50%]">
+			<div
+				className={cx(
+					'absolute top-[50%] -translate-y-[50%]',
+					isLarge ? 'right-[16px]' : 'right-[12px]',
+				)}
+			>
 				<button
 					type="submit"
 					disabled={disabled}
 					className={cx(
-						'rounded-full! bg-accent flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50',
+						'rounded-full! bg-accent text-base-plane flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50',
 						isLarge ? 'size-[28px]' : 'size-[24px]',
 					)}
 				>

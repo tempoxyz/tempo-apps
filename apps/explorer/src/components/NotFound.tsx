@@ -1,5 +1,4 @@
 import { Link } from '@tanstack/react-router'
-import { Sphere } from './Sphere'
 
 export function NotFound() {
 	return (
@@ -13,17 +12,9 @@ export function NotFound() {
 					<br />
 					exist or has been moved.
 				</p>
-				<Link
-					to="/"
-					className="text-accent rounded-[8px] active:translate-y-[.5px]"
-				>
+				<Link to="/" className="text-accent rounded-[8px] press-down">
 					Go back
 				</Link>
-			</div>
-			<div className="fixed bottom-0 z-0 w-full pointer-events-none overflow-hidden h-[240px]">
-				<div className="absolute top-0 flex justify-center w-full">
-					<Sphere />
-				</div>
 			</div>
 		</section>
 	)

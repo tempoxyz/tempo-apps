@@ -2,6 +2,7 @@ import { ClientOnly, getRouteApi } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { RelativeTime } from '#components/RelativeTime'
 import { cx } from '#cva.config.ts'
+import { useCopy, useMediaQuery } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
 const Route = getRouteApi('/_layout/account/$address')
@@ -16,88 +17,99 @@ export function AccountCard(props: AccountCard.Props) {
 		totalValue,
 	} = props
 
+	const { copy, notifying } = useCopy()
+	const isMobile = useMediaQuery('(max-width: 1239px)')
+
 	return (
 		<article
 			className={cx(
-				'w-full sm:max-w-[400px] max-w-full',
-				'overflow-hidden rounded-xl border border-primary/10 bg-primary',
+				'font-mono',
+				isMobile ? 'w-full' : 'w-fit',
+				'rounded-[10px] border border-card-border bg-card-header overflow-hidden',
+				'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 				className,
 			)}
 		>
-			<div className={cx('px-4 h-10 flex items-center gap-6')}>
-				<h2 className="max-[480px]:text-xs font-medium uppercase tracking-[0.15em] text-tertiary">
-					Account
-				</h2>
-			</div>
+			<h1 className="text-[13px] uppercase text-tertiary px-[18px] pt-[10px] pb-[8px] select-none">
+				Account
+			</h1>
 
-			<div
-				className={cx(
-					'grid grid-cols-[repeat(2,1fr)] grid-rows-[auto_auto_auto] gap-x-0 gap-y-0 bg-surface rounded-t-lg',
-					'divide-dashed divide-black [&>*:not(:last-child)]:border-b-2 [&>*:not(:last-child)]:border-black-white/10',
-				)}
-			>
-				{/* Account / Address */}
-				<div
-					style={{ gridArea: '1 / 1 / 2 / 3' }}
-					className="border-b border-dashed border-black-white/10"
-				>
-					<div
-						className={cx(
-							'px-4 text-tertiary flex flex-row items-center gap-2 pt-2',
-						)}
+			<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px]">
+				<div className="px-[18px] py-[18px] border-b border-dashed border-card-border">
+					<button
+						type="button"
+						onClick={() => copy(address)}
+						className="w-full text-left cursor-pointer press-down text-tertiary"
+						title={address}
 					>
-						<p className="text-[12px] max-[480px]:text-[10px]">Address</p>
-						<CopyIcon className="size-4 max-[480px]:size-3" />
-					</div>
+						<div className="flex items-center gap-[8px] mb-[8px]">
+							<span className="text-[13px] font-normal capitalize">
+								Address
+							</span>
+							<div className="relative flex items-center">
+								<CopyIcon className="w-[12px] h-[12px]" />
+								{notifying && (
+									<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px]">
+										copied
+									</span>
+								)}
+							</div>
+						</div>
+						<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[22ch]">
+							{address}
+						</p>
+					</button>
+				</div>
 
-					<span className="font-mono text-sm max-[480px]:text-xs tracking-widest px-4 pt-2 pb-4 block break-all">
-						{address}
+				<div className="px-[18px] py-[12px] border-b border-dashed border-card-border flex items-center justify-between">
+					<span className="text-[13px] font-normal capitalize text-tertiary">
+						Active
 					</span>
-				</div>
-
-				{/* Created date */}
-				<div
-					style={{ gridArea: '2 / 2 / 3 / 3' }}
-					className=" flex flex-row items-center justify-between gap-2 py-4 px-2.5 border-l border-dashed border-black-white/10 border-r-transparent text-sm max-[480px]:text-xs"
-				>
-					<span className="text-tertiary">Created</span>
-					<ClientOnly fallback={<span className="text-tertiary">…</span>}>
-						{createdTimestamp ? (
-							<RelativeTime timestamp={createdTimestamp} />
-						) : (
-							<span className="text-tertiary">…</span>
-						)}
-					</ClientOnly>
-				</div>
-
-				{/* Active ago */}
-				<div
-					className="flex flex-row items-center justify-between gap-2 py-4 px-2.5 text-sm max-[480px]:text-xs"
-					style={{
-						gridArea: '2 / 1 / 3 / 2',
-					}}
-				>
-					<span className="text-tertiary">Active</span>
-					<ClientOnly fallback={<span className="text-tertiary">…</span>}>
+					<ClientOnly
+						fallback={<span className="text-tertiary text-[13px]">…</span>}
+					>
 						{lastActivityTimestamp ? (
-							<RelativeTime timestamp={lastActivityTimestamp} />
+							<RelativeTime
+								timestamp={lastActivityTimestamp}
+								className="text-[13px] text-primary"
+							/>
 						) : (
-							<span className="text-tertiary">…</span>
+							<span className="text-tertiary text-[13px]">…</span>
 						)}
 					</ClientOnly>
 				</div>
 
-				{/* Balance */}
-				<div
-					style={{ gridArea: '3 / 1 / 4 / 3' }}
-					className="border-t border-dashed border-black-white/10 flex flex-row items-center justify-between gap-2 py-4 px-2.5 text-sm max-[480px]:text-xs"
-				>
-					<span className="text-tertiary">Holdings</span>
-					<ClientOnly fallback={<span className="text-tertiary">…</span>}>
+				<div className="px-[18px] py-[12px] border-b border-dashed border-card-border flex items-center justify-between">
+					<span className="text-[13px] font-normal capitalize text-tertiary">
+						Holdings
+					</span>
+					<ClientOnly
+						fallback={<span className="text-tertiary text-[13px]">…</span>}
+					>
 						{totalValue !== undefined ? (
-							<span>${totalValue.toFixed(2)}</span>
+							<span className="text-[13px] text-primary">
+								${totalValue.toFixed(2)}
+							</span>
 						) : (
-							<span className="text-tertiary">…</span>
+							<span className="text-tertiary text-[13px]">…</span>
+						)}
+					</ClientOnly>
+				</div>
+
+				<div className="px-[18px] py-[12px] flex items-center justify-between">
+					<span className="text-[13px] font-normal capitalize text-tertiary">
+						Created
+					</span>
+					<ClientOnly
+						fallback={<span className="text-tertiary text-[13px]">…</span>}
+					>
+						{createdTimestamp ? (
+							<RelativeTime
+								timestamp={createdTimestamp}
+								className="text-[13px] text-primary"
+							/>
+						) : (
+							<span className="text-tertiary text-[13px]">…</span>
 						)}
 					</ClientOnly>
 				</div>

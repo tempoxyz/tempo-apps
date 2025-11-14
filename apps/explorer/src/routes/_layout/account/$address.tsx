@@ -5,18 +5,16 @@ import {
 	useSuspenseQuery,
 } from '@tanstack/react-query'
 import {
-	ClientOnly,
 	createFileRoute,
 	Link,
 	notFound,
 	useNavigate,
-	useParams,
 } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
-import { formatEther, formatUnits } from 'viem'
+import { formatUnits } from 'viem'
 import { useBlock, useChainId, useTransactionReceipt } from 'wagmi'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
@@ -24,7 +22,9 @@ import { AccountCard } from '#components/Account.tsx'
 import { EventDescription } from '#components/EventDescription.tsx'
 import { NotFound } from '#components/NotFound.tsx'
 import { RelativeTime } from '#components/RelativeTime'
+import { Sections } from '#components/Sections.tsx'
 import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { useMediaQuery } from '#lib/hooks'
 import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
 import { config } from '#wagmi.config.ts'
 
@@ -36,7 +36,7 @@ type TransactionsResponse = {
 	hasMore: boolean
 }
 
-const rowsPerPage = 7
+const rowsPerPage = 10
 
 type TransactionQuery = {
 	address: Address.Address
@@ -79,7 +79,7 @@ export const Route = createFileRoute('/_layout/account/$address')({
 	notFoundComponent: NotFound,
 	validateSearch: z.object({
 		page: z.prefault(z.number(), 1),
-		limit: z.prefault(z.number(), 7),
+		limit: z.prefault(z.number(), rowsPerPage),
 		tab: z.prefault(z.enum(['history', 'assets']), 'history'),
 	}),
 	loaderDeps: ({ search: { page } }) => ({ page }),
@@ -126,7 +126,7 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	)
 
 	// get the 1st (most recent) transaction's block timestamp for "last activity"
-	const recentTransaction = recentData?.transactions.at(0)
+	const recentTransaction = recentData?.transactions?.at(0)
 	const { data: lastActivityTimestamp } = useBlock({
 		blockNumber: Hex.toBigInt(recentTransaction?.blockNumber ?? '0x0'),
 		query: {
@@ -165,7 +165,7 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	return (
 		<AccountCard
 			address={address}
-			className="self-start w-full sm:max-w-[350px]"
+			className="self-start"
 			createdTimestamp={createdTimestamp}
 			lastActivityTimestamp={lastActivityTimestamp}
 			totalValue={totalValue.data}
@@ -208,191 +208,41 @@ function RouteComponent() {
 		[navigate, tab],
 	)
 
-	const setActiveTab = React.useCallback(
-		(newTab: 'history' | 'assets') => {
+	const setActiveSection = React.useCallback(
+		(newIndex: number) => {
+			const newTab = newIndex === 0 ? 'history' : 'assets'
 			navigate({ to: '.', search: { page, tab: newTab } })
 		},
 		[navigate, page],
 	)
 
 	return (
-		<main className="max-h-dvh overflow-y-auto overflow-x-auto">
-			<div className="mx-auto flex max-w-7xl flex-col pt-20 pb-16 px-4 min-w-0">
-				<div className="flex gap-4 font-mono flex-col min-[1200px]:flex-row min-w-0">
-					<React.Suspense
-						fallback={
-							<AccountCard
-								address={address}
-								className="self-start w-full min-[1200px]:min-w-[350px] min-[1200px]:w-auto"
-							/>
-						}
-					>
-						<AccountCardWithTimestamps address={address} />
-					</React.Suspense>
-					<section className="flex flex-col grow basis-0 gap-4 border border-primary/10 rounded-xl min-w-0">
-						{/* Tabs */}
-						<div className="overflow-hidden rounded-xl border border-border-primary/10 bg-primary">
-							<div className="h-10 flex items-center gap-6">
-								<Link
-									to="."
-									search={{ page, tab: 'history' }}
-									onClick={(e) => {
-										e.preventDefault()
-										setActiveTab('history')
-									}}
-									className={`h-full pl-[20px] pr-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-2! active:translate-y-[.5px] ${
-										activeTab === 'history'
-											? 'text-primary'
-											: 'text-tertiary hover:text-secondary'
-									}`}
-								>
-									HISTORY
-								</Link>
-								<Link
-									to="."
-									search={{ page, tab: 'assets' }}
-									onClick={(e) => {
-										e.preventDefault()
-										setActiveTab('assets')
-									}}
-									className={`h-full px-[8px] flex items-center text-sm font-medium uppercase tracking-[0.15em] transition-colors focus-visible:-outline-offset-2! active:translate-y-[.5px] ${
-										activeTab === 'assets'
-											? 'text-primary'
-											: 'text-tertiary hover:text-secondary'
-									}`}
-								>
-									ASSETS
-								</Link>
-							</div>
-
-							{activeTab === 'history' && (
-								<React.Suspense fallback={<HistoryTabSkeleton />}>
-									<HistoryTabContent
-										key={address}
-										address={address}
-										page={page}
-										goToPage={goToPage}
-										isPending={isPending}
-									/>
-								</React.Suspense>
-							)}
-
-							{activeTab === 'assets' && (
-								<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg">
-									<table className="w-full border-collapse text-sm rounded-t-sm table-fixed">
-										<thead>
-											<tr className="border-dashed border-b border-border-base text-left text-xs tracking-wider text-tertiary">
-												<th className="px-5 pb-3 font-normal">Name</th>
-												<th className="px-5 pb-3 font-normal">Ticker</th>
-												<th className="px-5 pb-3 font-normal">Currency</th>
-												<th className="px-5 pb-3 text-right font-normal">
-													Amount
-												</th>
-												<th className="px-5 pb-3 text-right font-normal">
-													Value
-												</th>
-											</tr>
-										</thead>
-										<ClientOnly fallback={<tbody />}>
-											<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
-												{assets.map((assetAddress) => (
-													<AssetRow
-														key={assetAddress}
-														contractAddress={assetAddress}
-													/>
-												))}
-											</tbody>
-										</ClientOnly>
-									</table>
-								</div>
-							)}
-						</div>
-					</section>
-				</div>
-			</div>
-		</main>
+		<div className="flex flex-col min-[1240px]:grid max-w-[1080px] w-full min-[1240px]:pt-20 pt-10 min-[1240px]:pb-16 pb-8 px-4 gap-[14px] min-w-0 min-[1240px]:grid-cols-[auto_1fr]">
+			<AccountCardWithTimestamps address={address} />
+			<SectionsWrapper
+				address={address}
+				page={page}
+				isPending={isPending}
+				goToPage={goToPage}
+				activeSection={activeTab === 'history' ? 0 : 1}
+				onSectionChange={setActiveSection}
+			/>
+		</div>
 	)
 }
 
-function HistoryTabSkeleton() {
-	return (
-		<>
-			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
-				<table className="w-full border-collapse text-sm rounded-t-sm table-auto">
-					<colgroup>
-						<col className="w-28" />
-						<col className="min-w-[200px]" />
-						<col className="w-36" />
-						<col className="w-24" />
-						<col className="w-32" />
-					</colgroup>
-					<thead>
-						<tr className="border-dashed border-b border-border-base text-left text-xs tracking-wider text-tertiary">
-							<th className="px-5 pb-3 font-normal text-left whitespace-nowrap">
-								Time
-							</th>
-							<th className="px-5 pb-3 font-normal text-left whitespace-nowrap">
-								Description
-							</th>
-							<th className="px-3 pb-3 font-normal text-right whitespace-nowrap">
-								Hash
-							</th>
-							<th className="px-3 pb-3 font-normal text-right whitespace-nowrap">
-								Fee
-							</th>
-							<th className="px-5 pb-3 font-normal text-right whitespace-nowrap">
-								Total
-							</th>
-						</tr>
-					</thead>
-					<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
-						{Array.from(
-							{ length: rowsPerPage },
-							(_, index) => `skeleton-${index}`,
-						).map((key) => (
-							<tr key={key} className="h-12">
-								<td className="h-12">
-									<div className="h-5" />
-								</td>
-								<td className="h-12">
-									<div className="h-5" />
-								</td>
-								<td className="h-12">
-									<div className="h-5" />
-								</td>
-								<td className="h-12">
-									<div className="h-5" />
-								</td>
-								<td className="h-12">
-									<div className="h-5" />
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
-			<div className="font-mono flex flex-col gap-3 border-t border-dashed border-border-base px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
-				<div className="flex flex-row items-center gap-2">
-					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
-					<div className="h-7 w-32 bg-alt animate-pulse rounded" />
-					<div className="h-7 w-20 bg-alt animate-pulse rounded-lg" />
-				</div>
-				<div className="h-4 w-48 bg-alt animate-pulse rounded" />
-			</div>
-		</>
-	)
-}
-
-function HistoryTabContent(props: {
+function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
 	isPending: boolean
 	goToPage: (page: number) => void
+	activeSection: number
+	onSectionChange: (index: number) => void
 }) {
-	const { address, page, goToPage, isPending } = props
+	const { address, page, isPending, goToPage, activeSection, onSectionChange } =
+		props
 
 	const chainId = useChainId()
-
 	const offset = (page - 1) * rowsPerPage
 
 	const { data } = useSuspenseQuery(
@@ -407,235 +257,139 @@ function HistoryTabContent(props: {
 
 	const transactions = data.transactions
 	const totalTransactions = data.total
-	const totalPages = Math.ceil(totalTransactions / rowsPerPage)
+
+	const isMobile = useMediaQuery('(max-width: 1239px)')
+	const mode = isMobile ? 'stacked' : 'tabs'
 
 	return (
-		<>
-			<div className="overflow-x-auto pt-3 bg-surface rounded-t-lg relative">
-				<ClientOnly>
-					{isPending && (
-						<>
-							<div className="absolute top-0 left-0 right-0 h-0.5 bg-accent/30 z-10">
-								<div className="h-full w-1/4 bg-accent animate-pulse" />
-							</div>
-							<div className="absolute inset-0 bg-black-white/5 pointer-events-none z-5" />
-						</>
-					)}
-				</ClientOnly>
-				<table className="w-full border-collapse text-sm rounded-t-sm table-auto">
-					<colgroup>
-						<col className="w-28" />
-						<col className="min-w-[200px]" />
-						<col className="w-36" />
-						<col className="w-24" />
-						<col className="w-32" />
-					</colgroup>
-					<thead>
-						<tr className="border-dashed border-b border-border-base text-left text-xs tracking-wider text-tertiary">
-							<th className="px-5 pb-3 font-normal text-left whitespace-nowrap">
-								Time
-							</th>
-							<th className="px-5 pb-3 font-normal text-left whitespace-nowrap">
-								Description
-							</th>
-							<th className="px-3 pb-3 font-normal text-right whitespace-nowrap">
-								Hash
-							</th>
-							<th className="px-3 pb-3 font-normal text-right whitespace-nowrap">
-								Fee
-							</th>
-							<th className="px-5 pb-3 font-normal text-right whitespace-nowrap">
-								Total
-							</th>
-						</tr>
-					</thead>
+		<Sections
+			mode={mode}
+			sections={[
+				{
+					title: 'History',
+					columns: {
+						stacked: [
+							{ label: 'Time', align: 'start', minWidth: 100 },
+							{ label: 'Hash', align: 'start' },
+							{ label: 'Total', align: 'end' },
+						],
+						tabs: [
+							{ label: 'Time', align: 'start', minWidth: 100 },
+							{ label: 'Description', align: 'start' },
+							{ label: 'Hash', align: 'end' },
+							{ label: 'Fee', align: 'end' },
+							{ label: 'Total', align: 'end' },
+						],
+					},
+					items: (mode) => {
+						if (mode === 'stacked')
+							return transactions.map((transaction) => [
+								<TransactionTimestamp
+									key="time"
+									blockNumber={transaction.blockNumber}
+								/>,
+								<Link
+									key="hash"
+									to={'/tx/$hash'}
+									params={{ hash: transaction.hash ?? '' }}
+									className="text-[13px] text-tertiary press-down inline-flex"
+								>
+									{HexFormatter.truncate(transaction.hash, 6)}
+								</Link>,
+								<TransactionRowTotal key="total" transaction={transaction} />,
+							])
 
-					<ClientOnly fallback={<tbody />}>
-						<tbody className="divide-dashed divide-border-base [&>*:not(:last-child)]:border-b [&>*:not(:last-child)]:border-border-base">
-							{Array.from({ length: rowsPerPage }, (_, index) => {
-								const transaction = transactions[index]
-								const key = transaction?.hash ?? `skeleton-${index}`
+						return transactions.map((transaction) => [
+							<TransactionTimestamp
+								key="time"
+								blockNumber={transaction.blockNumber}
+							/>,
+							<TransactionRowDescription
+								key="desc"
+								transaction={transaction}
+							/>,
+							<Link
+								key="hash"
+								to={'/tx/$hash'}
+								params={{ hash: transaction.hash ?? '' }}
+								className="text-[13px] text-tertiary press-down inline-flex"
+							>
+								{HexFormatter.truncate(transaction.hash, 6)}
+							</Link>,
+							<TransactionFee key="fee" transaction={transaction} />,
+							<TransactionRowTotal key="total" transaction={transaction} />,
+						])
+					},
+					totalItems: totalTransactions,
+					page,
+					isPending,
+					onPageChange: goToPage,
+					itemsLabel: 'transactions',
+					itemsPerPage: rowsPerPage,
+				},
+				{
+					title: 'Assets',
+					columns: {
+						stacked: [
+							{ label: 'Name', align: 'start' },
+							{ label: 'Contract', align: 'start' },
+							{ label: 'Amount', align: 'end' },
+						],
+						tabs: [
+							{ label: 'Name', align: 'start' },
+							{ label: 'Ticker', align: 'start' },
+							{ label: 'Currency', align: 'start' },
+							{ label: 'Amount', align: 'end' },
+							{ label: 'Value', align: 'end' },
+						],
+					},
+					items: (mode) =>
+						assets.map((assetAddress) => {
+							if (mode === 'stacked')
+								return [
+									<TokenName key="name" contractAddress={assetAddress} />,
+									<AssetContract
+										key="contract"
+										contractAddress={assetAddress}
+									/>,
+									<AssetAmount
+										key="amount"
+										contractAddress={assetAddress}
+										accountAddress={address}
+									/>,
+								]
 
-								if (transaction)
-									return <TransactionRow key={key} transaction={transaction} />
-
-								return (
-									<tr key={key} className="h-12">
-										<td className="h-12">
-											<div className="h-5" />
-										</td>
-										<td className="h-12">
-											<div className="h-5" />
-										</td>
-										<td className="h-12">
-											<div className="h-5" />
-										</td>
-										<td className="h-12">
-											<div className="h-5" />
-										</td>
-										<td className="h-12">
-											<div className="h-5" />
-										</td>
-									</tr>
-								)
-							})}
-						</tbody>
-					</ClientOnly>
-				</table>
-			</div>
-
-			<div className="font-mono flex flex-col gap-3 border-t border-dashed border-border-base px-4 py-3 text-xs text-tertiary md:flex-row md:items-center md:justify-between">
-				<div className="flex flex-row items-center gap-2">
-					<button
-						type="button"
-						onClick={() => goToPage(page - 1)}
-						disabled={page <= 1 || isPending}
-						className="border border-border-primary px-2 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
-						aria-label="Previous page"
-					>
-						{isPending ? 'Loading…' : 'Previous'}
-					</button>
-
-					<div className="flex items-center gap-1.5">
-						{(() => {
-							// Show up to 5 consecutive pages centered around current page
-							const maxButtons = 5
-							let startPage = Math.max(1, page - Math.floor(maxButtons / 2))
-							const endPage = Math.min(totalPages, startPage + maxButtons - 1)
-
-							startPage = Math.max(1, endPage - maxButtons + 1)
-
-							const pages: Array<number | 'ellipsis'> = []
-
-							if (startPage > 1) {
-								pages.push(1)
-								if (startPage > 2) pages.push('ellipsis')
-							}
-
-							for (let index = startPage; index <= endPage; index++)
-								pages.push(index)
-
-							if (endPage < totalPages) {
-								if (endPage < totalPages - 1) pages.push('ellipsis')
-								pages.push(totalPages)
-							}
-
-							let ellipsisCount = 0
-							return pages.map((p) => {
-								if (p === 'ellipsis') {
-									ellipsisCount++
-									return (
-										<span
-											key={`ellipsis-${ellipsisCount}`}
-											className="text-tertiary px-1"
-										>
-											…
-										</span>
-									)
-								}
-								return (
-									<button
-										key={p}
-										type="button"
-										onClick={() => goToPage(p)}
-										disabled={isPending}
-										className={`flex size-7 items-center justify-center transition-colors ${
-											page === p
-												? 'border border-accent/50 text-primary'
-												: 'hover:bg-alt text-primary'
-										} ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
-									>
-										{p}
-									</button>
-								)
-							})
-						})()}
-					</div>
-
-					<button
-						type="button"
-						onClick={() => goToPage(page + 1)}
-						disabled={page >= totalPages || isPending}
-						className="rounded-none border border-border-primary px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-alt disabled:opacity-50 disabled:cursor-not-allowed"
-						aria-label="Next page"
-					>
-						{isPending ? 'Loading…' : 'Next'}
-					</button>
-				</div>
-
-				<div className="space-x-2">
-					<span className="text-tertiary">Page</span>
-					<span className="text-primary">{page}</span>
-					<span className="text-tertiary">of</span>
-					<span className="text-primary">{totalPages}</span>
-					<span className="text-tertiary">•</span>
-					<span className="text-primary">{totalTransactions || '…'}</span>
-					<span className="text-tertiary">
-						<ClientOnly fallback={<React.Fragment>…</React.Fragment>}>
-							{totalTransactions === 1 ? 'transaction' : 'transactions'}
-						</ClientOnly>
-					</span>
-				</div>
-			</div>
-		</>
+							return [
+								<TokenName key="name" contractAddress={assetAddress} />,
+								<TokenSymbol key="symbol" contractAddress={assetAddress} />,
+								<span key="currency">USD</span>,
+								<AssetAmount
+									key="amount"
+									contractAddress={assetAddress}
+									accountAddress={address}
+								/>,
+								<AssetValue
+									key="value"
+									contractAddress={assetAddress}
+									accountAddress={address}
+								/>,
+							]
+						}),
+					totalItems: assets.length,
+					page: 1, // TODO
+					isPending: false,
+					onPageChange: () => {},
+					itemsLabel: 'assets',
+					itemsPerPage: assets.length,
+				},
+			]}
+			activeSection={activeSection}
+			onSectionChange={onSectionChange}
+		/>
 	)
 }
 
-function AssetRow(props: { contractAddress: Address.Address }) {
-	const { contractAddress } = props
-
-	const { address } = useParams({ from: Route.id })
-	Address.assert(address)
-
-	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: contractAddress,
-		query: {
-			enabled: Boolean(contractAddress),
-		},
-	})
-
-	const { data: balance } = Hooks.token.useGetBalance({
-		token: contractAddress,
-		account: address,
-		query: {
-			enabled: Boolean(address && contractAddress),
-		},
-	})
-
-	return (
-		<tr className="transition-colors hover:bg-alt">
-			<td className="px-5 py-3 text-primary">
-				<Link
-					to="/token/$address"
-					params={{ address: contractAddress }}
-					className="hover:text-accent transition-colors"
-				>
-					{metadata?.name || 'Unknown Token'}
-				</Link>
-			</td>
-			<td className="px-5 py-3">
-				<Link
-					to="/token/$address"
-					params={{ address: contractAddress }}
-					className="text-accent hover:text-accent/80 transition-colors"
-				>
-					{metadata?.symbol || 'TOKEN'}
-				</Link>
-			</td>
-			<td className="px-5 py-3 text-primary">USD</td>
-			<td className="px-5 py-3 text-right font-mono text-xs text-primary">
-				{PriceFormatter.formatAmount(
-					formatUnits(balance ?? 0n, metadata?.decimals ?? 6),
-				)}
-			</td>
-			<td className="px-5 py-3 text-right font-mono text-xs text-primary">
-				{`${PriceFormatter.format(balance ?? 0n, metadata?.decimals ?? 6)}`}
-			</td>
-		</tr>
-	)
-}
-
-function TransactionRow(props: { transaction: Transaction }) {
+function TransactionRowDescription(props: { transaction: Transaction }) {
 	const { transaction } = props
 
 	const { data: transactionReceipt } = useTransactionReceipt({
@@ -651,53 +405,150 @@ function TransactionRow(props: { transaction: Transaction }) {
 	}, [transactionReceipt])
 
 	return (
-		<tr
-			key={transaction.hash}
-			className="transition-colors hover:bg-alt min-h-12"
+		<TransactionDescription
+			transaction={transaction}
+			knownEvents={knownEvents}
+			transactionReceipt={transactionReceipt}
+		/>
+	)
+}
+
+function TransactionRowTotal(props: { transaction: Transaction }) {
+	const { transaction } = props
+
+	const { data: transactionReceipt } = useTransactionReceipt({
+		hash: transaction.hash,
+		query: {
+			enabled: Boolean(transaction.hash),
+		},
+	})
+
+	const knownEvents = React.useMemo(() => {
+		if (!transactionReceipt) return []
+		return parseKnownEvents(transactionReceipt)
+	}, [transactionReceipt])
+
+	return (
+		<TransactionTotal transaction={transaction} knownEvents={knownEvents} />
+	)
+}
+
+function TokenName(props: { contractAddress: Address.Address }) {
+	const { contractAddress } = props
+
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token: contractAddress,
+		query: {
+			enabled: Boolean(contractAddress),
+		},
+	})
+
+	return (
+		<Link
+			to="/token/$address"
+			params={{ address: contractAddress }}
+			className="hover:text-accent transition-colors"
 		>
-			<td className="px-5 py-3 text-primary text-xs align-middle whitespace-nowrap h-12">
-				<div className="h-5 flex items-center">
-					<TransactionTimestamp blockNumber={transaction.blockNumber} />
-				</div>
-			</td>
+			{metadata?.name || 'Unknown Token'}
+		</Link>
+	)
+}
 
-			<td className="px-4 py-3 text-primary text-sm align-middle text-left h-12">
-				<div className="h-5 flex items-center">
-					<TransactionDescription
-						transaction={transaction}
-						knownEvents={knownEvents}
-						transactionReceipt={transactionReceipt}
-					/>
-				</div>
-			</td>
+function TokenSymbol(props: { contractAddress: Address.Address }) {
+	const { contractAddress } = props
 
-			<td className="px-3 py-3 font-mono text-[11px] text-tertiary align-middle text-right whitespace-nowrap h-12">
-				<div className="h-5 flex items-center justify-end">
-					<Link
-						to={'/tx/$hash'}
-						params={{ hash: transaction.hash ?? '' }}
-						className="hover:text-accent transition-colors"
-					>
-						{HexFormatter.truncate(transaction.hash, 6)}
-					</Link>
-				</div>
-			</td>
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token: contractAddress,
+		query: {
+			enabled: Boolean(contractAddress),
+		},
+	})
 
-			<td className="px-3 py-3 text-tertiary align-middle text-right whitespace-nowrap h-12">
-				<div className="h-5 flex items-center justify-end">
-					<TransactionFee transaction={transaction} />
-				</div>
-			</td>
+	return (
+		<Link
+			to="/token/$address"
+			params={{ address: contractAddress }}
+			className="text-accent hover:text-accent/80 transition-colors"
+		>
+			{metadata?.symbol || 'TOKEN'}
+		</Link>
+	)
+}
 
-			<td className="px-5 py-3 text-right font-mono text-xs align-middle whitespace-nowrap h-12">
-				<div className="h-5 flex items-center justify-end">
-					<TransactionTotal
-						transaction={transaction}
-						knownEvents={knownEvents}
-					/>
-				</div>
-			</td>
-		</tr>
+function AssetContract(props: { contractAddress: Address.Address }) {
+	const { contractAddress } = props
+
+	return (
+		<Link
+			to="/token/$address"
+			params={{ address: contractAddress }}
+			className="text-accent hover:text-accent/80 transition-colors text-[13px]"
+		>
+			{HexFormatter.truncate(contractAddress, 10)}
+		</Link>
+	)
+}
+
+function AssetAmount(props: {
+	contractAddress: Address.Address
+	accountAddress: Address.Address
+}) {
+	const { contractAddress, accountAddress } = props
+
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token: contractAddress,
+		query: {
+			enabled: Boolean(contractAddress),
+		},
+	})
+
+	const { data: balance } = Hooks.token.useGetBalance({
+		token: contractAddress,
+		account: accountAddress,
+		query: {
+			enabled: Boolean(accountAddress && contractAddress),
+		},
+	})
+
+	return (
+		<span className="text-[12px]">
+			{metadata?.decimals !== undefined &&
+				PriceFormatter.formatAmount(
+					formatUnits(balance ?? 0n, metadata.decimals),
+				)}
+		</span>
+	)
+}
+
+function AssetValue(props: {
+	contractAddress: Address.Address
+	accountAddress: Address.Address
+}) {
+	const { contractAddress, accountAddress } = props
+
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token: contractAddress,
+		query: {
+			enabled: Boolean(contractAddress),
+		},
+	})
+
+	const { data: balance } = Hooks.token.useGetBalance({
+		token: contractAddress,
+		account: accountAddress,
+		query: {
+			enabled: Boolean(accountAddress && contractAddress),
+		},
+	})
+
+	return (
+		<span className="text-[12px]">
+			{metadata?.decimals !== undefined &&
+				PriceFormatter.format(balance ?? 0n, {
+					decimals: metadata.decimals,
+					format: 'short',
+				})}
+		</span>
 	)
 }
 
@@ -711,7 +562,7 @@ function TransactionFee(props: { transaction: Transaction }) {
 		},
 	})
 
-	if (!receipt) return <span className="text-tertiary">···</span>
+	if (!receipt) return <span className="text-tertiary">…</span>
 
 	const fee = PriceFormatter.format(
 		receipt.gasUsed * receipt.effectiveGasPrice, // TODO: double check
@@ -757,7 +608,7 @@ function TransactionDescription(props: {
 						<button
 							type="button"
 							onClick={() => setExpanded(true)}
-							className="ml-1 text-base-content-secondary cursor-pointer active:translate-y-[.5px] shrink-0"
+							className="ml-1 text-base-content-secondary cursor-pointer press-down shrink-0"
 						>
 							and {remainingCount} more
 						</button>
@@ -792,12 +643,16 @@ function TransactionTimestamp(props: {
 
 	if (!timestamp) return <span className="text-tertiary">…</span>
 
-	return <RelativeTime timestamp={timestamp} className="text-tertiary" />
+	return (
+		<div className="text-nowrap">
+			<RelativeTime timestamp={timestamp} className="text-tertiary" />
+		</div>
+	)
 }
 
 function TransactionTotal(props: {
 	transaction: Transaction
-	knownEvents: Array<KnownEvent>
+	knownEvents: KnownEvent[]
 }) {
 	const {
 		transaction,
@@ -809,18 +664,21 @@ function TransactionTotal(props: {
 	if (!amount || amount.type !== 'amount') {
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
 		if (value === 0n) return <span className="text-tertiary">—</span>
-
-		const ethAmount = parseFloat(formatEther(value))
-		const dollarAmount = ethAmount * 2_000
-		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
+		return (
+			<span className="text-primary">
+				{PriceFormatter.format(value, { decimals: 18, format: 'short' })}
+			</span>
+		)
 	}
 
-	const decimals = amount.value.decimals ?? 6
-	const tokenAmount = parseFloat(formatUnits(amount.value.value, decimals))
-	const dollarAmount = tokenAmount * 1
-
-	if (dollarAmount > 0.01)
-		return <span className="text-primary">${dollarAmount.toFixed(2)}</span>
-
-	return <span className="text-tertiary">${dollarAmount.toFixed(2)}</span>
+	return (
+		<span
+			className={amount.value.value > 0n ? 'text-primary' : 'text-tertiary'}
+		>
+			{PriceFormatter.format(amount.value.value, {
+				decimals: amount.value.decimals ?? 6, // TODO: check decimals
+				format: 'short',
+			})}
+		</span>
+	)
 }
