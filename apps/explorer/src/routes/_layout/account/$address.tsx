@@ -337,16 +337,17 @@ function SectionsWrapper(props: {
 	const { address, page, goToPage, activeSection, onSectionChange } = props
 
 	const state = useRouterState()
+	const initialData = Route.useLoaderData()
 
-	const { data, isLoading } = useQuery(
-		transactionsQueryOptions({
+	const { data, isLoading } = useQuery({
+		...transactionsQueryOptions({
 			address,
 			page,
 			limit: rowsPerPage,
 			offset: (page - 1) * rowsPerPage,
-			_key: 'account-transactions',
 		}),
-	)
+		initialData,
+	})
 	const { transactions, total } = data ?? { transactions: [], total: 0 }
 
 	const isLoadingPage =
