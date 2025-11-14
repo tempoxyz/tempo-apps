@@ -52,6 +52,7 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			'account-transactions',
 			params.address,
 			params.page,
+			params.limit,
 			params._key,
 		],
 		queryFn: async ({ client }) => {
@@ -68,14 +69,14 @@ function transactionsQueryOptions(params: TransactionQuery) {
 					const [receipt, block] = await Promise.all([
 						client.fetchQuery(
 							getTransactionReceiptQueryOptions(config, {
-								// biome-ignore lint/style/noNonNullAssertion: _
-								hash: transaction.hash!,
+								hash: transaction.hash,
 							}),
 						),
 						client.fetchQuery(
 							getBlockQueryOptions(config, {
-								// biome-ignore lint/style/noNonNullAssertion: _
-								blockNumber: Hex.toBigInt(transaction.blockNumber!),
+								blockNumber: transaction.blockNumber
+									? Hex.toBigInt(transaction.blockNumber)
+									: undefined,
 							}),
 						),
 					])
@@ -97,21 +98,27 @@ export const Route = createFileRoute('/_layout/account/$address')({
 	notFoundComponent: NotFound,
 	validateSearch: z.object({
 		page: z.prefault(z.number(), 1),
-		limit: z.prefault(z.number(), rowsPerPage),
+		limit: z.prefault(
+			z.pipe(
+				z.number(),
+				z.transform((val) => Math.min(100, val)),
+			),
+			rowsPerPage,
+		),
 		tab: z.prefault(z.enum(['history', 'assets']), 'history'),
 	}),
-	loaderDeps: ({ search: { page } }) => ({ page }),
-	loader: async ({ deps: { page }, params, context }) => {
+	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
+	loader: async ({ deps: { page, limit }, params, context }) => {
 		const { address } = params
 		if (!Address.validate(address)) throw notFound()
 
-		const offset = (page - 1) * rowsPerPage
+		const offset = (page - 1) * limit
 
 		return await context.queryClient.fetchQuery(
 			transactionsQueryOptions({
 				address,
 				page,
-				limit: rowsPerPage,
+				limit,
 				offset,
 			}),
 		)
@@ -279,7 +286,7 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const route = useRouter()
 	const { address } = Route.useParams()
-	const { page, tab } = Route.useSearch()
+	const { page, tab, limit } = Route.useSearch()
 
 	Address.assert(address)
 
@@ -291,27 +298,31 @@ function RouteComponent() {
 			if (i === 0) continue // skip current page
 			const preloadPage = page + i
 			if (preloadPage < 1) continue // only preload valid page numbers
-			route.preloadRoute({ to: '.', search: { page: preloadPage, tab } })
+			route.preloadRoute({ to: '.', search: { page: preloadPage, tab, limit } })
 		}
-	}, [route, page, tab])
+	}, [route, page, tab, limit])
 
 	const goToPage = React.useCallback(
 		(newPage: number) => {
 			navigate({
 				to: '.',
-				search: { page: newPage, tab },
+				search: { page: newPage, tab, limit },
 				resetScroll: false,
 			})
 		},
-		[navigate, tab],
+		[navigate, tab, limit],
 	)
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
 			const newTab = newIndex === 0 ? 'history' : 'assets'
-			navigate({ to: '.', search: { page, tab: newTab }, resetScroll: false })
+			navigate({
+				to: '.',
+				search: { page, tab: newTab, limit },
+				resetScroll: false,
+			})
 		},
-		[navigate, page],
+		[navigate, page, limit],
 	)
 
 	return (
@@ -320,6 +331,7 @@ function RouteComponent() {
 			<SectionsWrapper
 				address={address}
 				page={page}
+				limit={limit}
 				goToPage={goToPage}
 				activeSection={activeTab === 'history' ? 0 : 1}
 				onSectionChange={setActiveSection}
@@ -330,11 +342,13 @@ function RouteComponent() {
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
+	limit: number
 	goToPage: (page: number) => void
 	activeSection: number
 	onSectionChange: (index: number) => void
 }) {
-	const { address, page, goToPage, activeSection, onSectionChange } = props
+	const { address, page, limit, goToPage, activeSection, onSectionChange } =
+		props
 
 	const state = useRouterState()
 	const initialData = Route.useLoaderData()
@@ -343,8 +357,8 @@ function SectionsWrapper(props: {
 		...transactionsQueryOptions({
 			address,
 			page,
-			limit: rowsPerPage,
-			offset: (page - 1) * rowsPerPage,
+			limit,
+			offset: (page - 1) * limit,
 		}),
 		initialData,
 	})
@@ -423,7 +437,7 @@ function SectionsWrapper(props: {
 					isPending: isLoadingPage,
 					onPageChange: goToPage,
 					itemsLabel: 'transactions',
-					itemsPerPage: rowsPerPage,
+					itemsPerPage: limit,
 				},
 				{
 					title: 'Assets',
