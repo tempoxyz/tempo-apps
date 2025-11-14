@@ -31,24 +31,36 @@ export function Receipt(props: Receipt.Props) {
 				<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Block</span>
-						<Link
-							to={'/block/$id'}
-							params={{ id: Hex.fromNumber(blockNumber) }}
-							className="text-accent text-right before:content-['#'] press-down"
-						>
-							{String(blockNumber)}
-						</Link>
+						{framed ? (
+							<span className="text-accent text-right before:content-['#']">
+								{String(blockNumber)}
+							</span>
+						) : (
+							<Link
+								to={'/block/$id'}
+								params={{ id: Hex.fromNumber(blockNumber) }}
+								className="text-accent text-right before:content-['#'] press-down"
+							>
+								{String(blockNumber)}
+							</Link>
+						)}
 					</div>
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Sender</span>
-						<Link
-							to={'/account/$address'}
-							params={{ address: sender }}
-							className="text-accent text-right press-down"
-							title={sender}
-						>
-							{HexFormatter.shortenHex(sender)}
-						</Link>
+						{framed ? (
+							<span className="text-accent text-right" title={sender}>
+								{HexFormatter.shortenHex(sender)}
+							</span>
+						) : (
+							<Link
+								to={'/account/$address'}
+								params={{ address: sender }}
+								className="text-accent text-right press-down"
+								title={sender}
+							>
+								{HexFormatter.shortenHex(sender)}
+							</Link>
+						)}
 					</div>
 					<div className="flex justify-between items-start">
 						<div className="relative">
