@@ -14,6 +14,12 @@ export default {
 
 /** @deprecated TODO: remove once we go public */
 function basicAuth(request: Request): Response | null {
+	// Allow requests from Cloudflare Browser Worker (for PDF generation)
+	const signatureAgent = request.headers.get('signature-agent')
+	if (signatureAgent?.includes('cloudflare-browser-rendering')) {
+		return null
+	}
+
 	const authHeader = request.headers.get('Authorization')
 
 	if (!authHeader)
