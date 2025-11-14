@@ -4,13 +4,14 @@ import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Address, Hex, Json, Value } from 'ox'
 import * as React from 'react'
 import { TokenRole } from 'tempo.ts/ox'
-import { Abis } from 'tempo.ts/viem'
+import { Abis, Addresses } from 'tempo.ts/viem'
 import { Actions } from 'tempo.ts/wagmi'
 import {
 	type AbiEvent,
 	type Log,
 	parseEventLogs,
 	type TransactionReceipt,
+	zeroAddress,
 } from 'viem'
 import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import { getClient } from 'wagmi/actions'
@@ -192,19 +193,35 @@ function Component() {
 	const { block, lineItems, receipt, transaction } = Route.useLoaderData()
 
 	const feePrice = lineItems.feeTotals?.[0]?.price
-	const fee = feePrice
+	const previousFee = feePrice
 		? Number(Value.format(feePrice.amount, feePrice.decimals))
-		: undefined
+		: 0
 
 	const totalPrice = lineItems.totals?.[0]?.price
-	const total = totalPrice
+	const previousTotal = totalPrice
 		? Number(Value.format(totalPrice.amount, totalPrice.decimals))
 		: undefined
 
-	const knownEvents = React.useMemo(() => parseKnownEvents(receipt), [receipt])
+	const feeAmount = receipt.effectiveGasPrice * receipt.gasUsed
+	// Gas accounting is always in 18-decimal units (wei equivalent), even when the fee token itself
+	// has a different number of decimals. Convert using 18 decimals so we get the actual token amount.
+	const fee = Number(Value.format(feeAmount, 18))
+	const feeDisplay = PriceFormatter.format(fee)
+
+	const total =
+		previousTotal !== undefined ? previousTotal - previousFee + fee : fee
+	const totalDisplay =
+		previousTotal !== undefined
+			? PriceFormatter.format(previousTotal)
+			: undefined
+
+	const knownEvents = React.useMemo(
+		() => parseKnownEvents(receipt, { transaction }),
+		[receipt, transaction],
+	)
 
 	return (
-		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow-1">
+		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow">
 			<Receipt
 				blockNumber={receipt.blockNumber}
 				sender={transaction.from}
@@ -212,7 +229,9 @@ function Component() {
 				timestamp={block.timestamp}
 				events={knownEvents}
 				fee={fee}
+				feeDisplay={feeDisplay}
 				total={total}
+				totalDisplay={totalDisplay}
 			/>
 		</div>
 	)
@@ -284,6 +303,8 @@ export namespace TextRenderer {
 }
 
 const abi = Object.values(Abis).flat()
+const ZERO_ADDRESS = zeroAddress
+const FEE_MANAGER = Addresses.feeManager
 
 export namespace TokenMetadata {
 	export type Metadata = Actions.token.getMetadata.ReturnValue
@@ -317,6 +338,7 @@ export namespace LineItems {
 		{ tokenMetadata }: { tokenMetadata: TokenMetadata.MetadataMap },
 	) {
 		const { from: sender, logs } = receipt
+		const senderChecksum = Address.checksum(sender)
 
 		// Extract all of the event logs we can from the receipt.
 		const events = parseEventLogs({
@@ -538,9 +560,13 @@ export namespace LineItems {
 
 					const { currency, decimals, symbol } = metadata
 
-					const isFee = to.toLowerCase().startsWith('0xfeec00000')
+					const isFee =
+						Address.isEqual(to, FEE_MANAGER) &&
+						!Address.isEqual(from, ZERO_ADDRESS)
+
 					if (isFee) {
-						const feePayer = !Address.isEqual(from, sender) ? from : ''
+						const feePayer = !Address.isEqual(from, senderChecksum) ? from : ''
+
 						items.feeTotals.push(
 							LineItem.from({
 								event,
