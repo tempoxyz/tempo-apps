@@ -1,25 +1,24 @@
-import {
-	keepPreviousData,
-	queryOptions,
-	useQuery,
-	useSuspenseQueries,
-	useSuspenseQuery,
-} from '@tanstack/react-query'
+import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
 	notFound,
 	useNavigate,
+	useRouter,
+	useRouterState,
 } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { formatUnits } from 'viem'
-import { useBlock, useChainId, useTransactionReceipt } from 'wagmi'
-import { getChainId, getTransactionReceipt } from 'wagmi/actions'
+import { useBlock } from 'wagmi'
+import {
+	getBlockQueryOptions,
+	getTransactionReceiptQueryOptions,
+} from 'wagmi/query'
 import * as z from 'zod/mini'
-import { AccountCard } from '#components/Account'
+import { AccountCard } from '#components/Account.tsx'
 import { EventDescription } from '#components/EventDescription'
 import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
@@ -43,7 +42,6 @@ type TransactionQuery = {
 	address: Address.Address
 	page: number
 	limit: number
-	chainId: number
 	offset: number
 	_key?: string | undefined
 }
@@ -52,19 +50,39 @@ function transactionsQueryOptions(params: TransactionQuery) {
 	return queryOptions({
 		queryKey: [
 			'account-transactions',
-			params.chainId,
 			params.address,
 			params.page,
 			params._key,
 		],
-		queryFn: async (): Promise<TransactionsResponse> => {
+		queryFn: async ({ client }) => {
 			const searchParams = new URLSearchParams({
 				limit: params.limit.toString(),
 				offset: params.offset.toString(),
 			})
 			const url = `/api/account/${params.address}?${searchParams.toString()}`
-			const response = await fetch(url)
-			return await response.json()
+			const data = await fetch(url).then(
+				(res) => res.json() as unknown as TransactionsResponse,
+			)
+			const transactions = await Promise.all(
+				data.transactions.map(async (transaction) => {
+					const [receipt, block] = await Promise.all([
+						client.fetchQuery(
+							getTransactionReceiptQueryOptions(config, {
+								// biome-ignore lint/style/noNonNullAssertion: _
+								hash: transaction.hash!,
+							}),
+						),
+						client.fetchQuery(
+							getBlockQueryOptions(config, {
+								// biome-ignore lint/style/noNonNullAssertion: _
+								blockNumber: Hex.toBigInt(transaction.blockNumber!),
+							}),
+						),
+					])
+					return { ...transaction, block, receipt }
+				}),
+			)
+			return { ...data, transactions }
 		},
 		// auto-refresh page 1 since new transactions appear there
 		refetchInterval: params.page === 1 ? 4_000 : false,
@@ -89,15 +107,13 @@ export const Route = createFileRoute('/_layout/account/$address')({
 		if (!Address.validate(address)) throw notFound()
 
 		const offset = (page - 1) * rowsPerPage
-		const chainId = getChainId(config)
 
-		await context.queryClient.fetchQuery(
+		return await context.queryClient.fetchQuery(
 			transactionsQueryOptions({
 				address,
 				page,
-				offset,
 				limit: rowsPerPage,
-				chainId,
+				offset,
 			}),
 		)
 	},
@@ -112,7 +128,6 @@ const assets = [
 
 function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const { address } = props
-	const chainId = useChainId()
 
 	// fetch the most recent transactions (pg.1)
 	const { data: recentData } = useQuery(
@@ -120,7 +135,6 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 			address,
 			page: 1,
 			limit: 1,
-			chainId,
 			offset: 0,
 			_key: 'account-creation',
 		}),
@@ -145,7 +159,6 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 			address,
 			page: Math.ceil(totalTransactions / 1),
 			limit: 1,
-			chainId,
 			offset: lastPageOffset,
 			_key: 'account-creation',
 		}),
@@ -172,21 +185,6 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 			totalValue={totalValue.data}
 		/>
 	)
-}
-
-function useAccountTotalValue(address: Address.Address) {
-	return useQuery({
-		queryKey: ['account-total-value', address],
-		queryFn: async () => {
-			const response = await fetch(`/api/account/${address}/total-value`)
-			if (!response.ok)
-				throw new Error('Failed to fetch total value', {
-					cause: response.statusText,
-				})
-			const data = await response.text()
-			return Number(data)
-		},
-	})
 }
 
 function SectionsSkeleton({ totalItems }: { totalItems: number }) {
@@ -263,26 +261,47 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 	)
 }
 
+function useAccountTotalValue(address: Address.Address) {
+	return useQuery({
+		queryKey: ['account-total-value', address],
+		queryFn: async () => {
+			const response = await fetch(`/api/account/${address}/total-value`)
+			if (!response.ok)
+				throw new Error('Failed to fetch total value', {
+					cause: response.statusText,
+				})
+			const data = await response.text()
+			return Number(data)
+		},
+	})
+}
+
 function RouteComponent() {
 	const navigate = useNavigate()
-
+	const route = useRouter()
 	const { address } = Route.useParams()
-	Address.assert(address)
-
 	const { page, tab } = Route.useSearch()
 
+	Address.assert(address)
+
 	const activeTab = tab
-	const [isPending, startTransition] = React.useTransition()
+
+	React.useEffect(() => {
+		// preload pages around the active page (3 before and 3 after)
+		for (let i = -3; i <= 3; i++) {
+			if (i === 0) continue // skip current page
+			const preloadPage = page + i
+			if (preloadPage < 1) continue // only preload valid page numbers
+			route.preloadRoute({ to: '.', search: { page: preloadPage, tab } })
+		}
+	}, [route, page, tab])
 
 	const goToPage = React.useCallback(
 		(newPage: number) => {
-			startTransition(() => {
-				navigate({
-					to: '.',
-					search: { page: newPage, tab },
-					resetScroll: false,
-					reloadDocument: false,
-				})
+			navigate({
+				to: '.',
+				search: { page: newPage, tab },
+				resetScroll: false,
 			})
 		},
 		[navigate, tab],
@@ -298,13 +317,10 @@ function RouteComponent() {
 
 	return (
 		<div className="flex flex-col min-[1240px]:grid max-w-[1080px] w-full min-[1240px]:pt-20 pt-10 min-[1240px]:pb-16 pb-8 px-4 gap-[14px] min-w-0 min-[1240px]:grid-cols-[auto_1fr]">
-			<React.Suspense fallback={<AccountCard address={address} />}>
-				<AccountCardWithTimestamps address={address} />
-			</React.Suspense>
+			<AccountCardWithTimestamps address={address} />
 			<SectionsWrapper
 				address={address}
 				page={page}
-				isPending={isPending}
 				goToPage={goToPage}
 				activeSection={activeTab === 'history' ? 0 : 1}
 				onSectionChange={setActiveSection}
@@ -312,205 +328,162 @@ function RouteComponent() {
 		</div>
 	)
 }
-
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
-	isPending: boolean
 	goToPage: (page: number) => void
 	activeSection: number
 	onSectionChange: (index: number) => void
 }) {
-	const { address, page, isPending, goToPage, activeSection, onSectionChange } =
-		props
+	const { address, page, goToPage, activeSection, onSectionChange } = props
 
-	const chainId = useChainId()
-	const offset = (page - 1) * rowsPerPage
+	const state = useRouterState()
 
-	const transactionsQuery = useSuspenseQuery(
+	const { data, isPending } = useQuery(
 		transactionsQueryOptions({
-			page,
-			offset,
 			address,
-			chainId,
+			page,
 			limit: rowsPerPage,
+			offset: (page - 1) * rowsPerPage,
+			_key: 'account-transactions',
 		}),
 	)
+	const { transactions, total } = data ?? { transactions: [], total: 0 }
 
-	const deferredTransactionsQuery = React.useDeferredValue(transactionsQuery)
-
-	const { data } = deferredTransactionsQuery
-
-	const transactions = data.transactions
-	const totalTransactions = data.total
-
-	const receiptsQueries = useSuspenseQueries({
-		queries: transactions.map(({ hash }) => ({
-			queryKey: ['transactionReceipt', hash],
-			queryFn: () => getTransactionReceipt(config, { hash }),
-		})),
-	})
-
-	const deferredReceiptsQueries = React.useDeferredValue(receiptsQueries)
-
-	const receipts = React.useMemo(() => {
-		const map = new Map<string, TransactionReceipt>()
-		for (const [i, tx] of transactions.entries()) {
-			const receipt = deferredReceiptsQueries[i]?.data
-			if (receipt) map.set(tx.hash, receipt)
-		}
-		return map
-	}, [deferredReceiptsQueries, transactions])
+	const isLoadingPage =
+		(state.isLoading && state.location.pathname.includes('/account/')) ||
+		isPending
 
 	const isMobile = useMediaQuery('(max-width: 1239px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
+	if (transactions.length === 0) return <SectionsSkeleton totalItems={total} />
 	return (
-		<React.Suspense
-			fallback={<SectionsSkeleton totalItems={totalTransactions} />}
-		>
-			<div>
-				<Sections
-					mode={mode}
-					sections={[
-						{
-							title: 'History',
-							columns: {
-								stacked: [
-									{ label: 'Time', align: 'start', minWidth: 100 },
-									{ label: 'Hash', align: 'start' },
-									{ label: 'Total', align: 'end' },
-								],
-								tabs: [
-									{ label: 'Time', align: 'start', minWidth: 100 },
-									{ label: 'Description', align: 'start' },
-									{ label: 'Hash', align: 'end' },
-									{ label: 'Fee', align: 'end' },
-									{ label: 'Total', align: 'end' },
-								],
-							},
-							items: (mode) => {
-								if (mode === 'stacked')
-									return transactions.map((transaction) => {
-										const receipt = receipts.get(transaction.hash)
-										return [
-											<TransactionTimestamp
-												key="time"
-												blockNumber={transaction.blockNumber}
-											/>,
-											<Link
-												key="hash"
-												to={'/tx/$hash'}
-												params={{ hash: transaction.hash ?? '' }}
-												className="text-[13px] text-tertiary press-down inline-flex"
-											>
-												{HexFormatter.truncate(transaction.hash, 6)}
-											</Link>,
-											<TransactionRowTotal
-												key="total"
-												transaction={transaction}
-												receipt={receipt}
-											/>,
-										]
-									})
+		<Sections
+			mode={mode}
+			sections={[
+				{
+					title: 'History',
+					columns: {
+						stacked: [
+							{ label: 'Time', align: 'start', minWidth: 100 },
+							{ label: 'Hash', align: 'start' },
+							{ label: 'Total', align: 'end' },
+						],
+						tabs: [
+							{ label: 'Time', align: 'start', minWidth: 100 },
+							{ label: 'Description', align: 'start' },
+							{ label: 'Hash', align: 'end' },
+							{ label: 'Fee', align: 'end' },
+							{ label: 'Total', align: 'end' },
+						],
+					},
+					items: (mode) => {
+						if (mode === 'stacked')
+							return transactions.map((transaction) => {
+								const receipt = transaction.receipt
+								return [
+									<TransactionTimestamp
+										key="time"
+										timestamp={transaction.block.timestamp}
+									/>,
+									<TransactionHashLink key="hash" hash={transaction.hash} />,
+									<TransactionRowTotal
+										key="total"
+										transaction={transaction}
+										receipt={receipt}
+									/>,
+								]
+							})
 
-								return transactions.map((transaction) => {
-									const receipt = receipts.get(transaction.hash)
-									return [
-										<TransactionTimestamp
-											key="time"
-											blockNumber={transaction.blockNumber}
-										/>,
-										<TransactionRowDescription
-											key="desc"
-											transaction={transaction}
-											receipt={receipt}
-										/>,
-										<Link
-											key="hash"
-											to={'/tx/$hash'}
-											params={{ hash: transaction.hash ?? '' }}
-											className="text-[13px] text-tertiary press-down inline-flex"
-										>
-											{HexFormatter.truncate(transaction.hash, 6)}
-										</Link>,
-										<TransactionFee key="fee" transaction={transaction} />,
-										<TransactionRowTotal
-											key="total"
-											transaction={transaction}
-											receipt={receipt}
-										/>,
-									]
-								})
-							},
-							totalItems: totalTransactions,
-							page,
-							isPending,
-							onPageChange: goToPage,
-							itemsLabel: 'transactions',
-							itemsPerPage: rowsPerPage,
-						},
-						{
-							title: 'Assets',
-							columns: {
-								stacked: [
-									{ label: 'Name', align: 'start' },
-									{ label: 'Contract', align: 'start' },
-									{ label: 'Amount', align: 'end' },
-								],
-								tabs: [
-									{ label: 'Name', align: 'start' },
-									{ label: 'Ticker', align: 'start' },
-									{ label: 'Currency', align: 'start' },
-									{ label: 'Amount', align: 'end' },
-									{ label: 'Value', align: 'end' },
-								],
-							},
-							items: (mode) =>
-								assets.map((assetAddress) => {
-									if (mode === 'stacked')
-										return [
-											<TokenName key="name" contractAddress={assetAddress} />,
-											<AssetContract
-												key="contract"
-												contractAddress={assetAddress}
-											/>,
-											<AssetAmount
-												key="amount"
-												contractAddress={assetAddress}
-												accountAddress={address}
-											/>,
-										]
+						return transactions.map((transaction) => {
+							const receipt = transaction.receipt
+							return [
+								<TransactionTimestamp
+									key="time"
+									timestamp={transaction.block.timestamp}
+								/>,
+								<TransactionRowDescription
+									key="desc"
+									transaction={transaction}
+									receipt={receipt}
+								/>,
+								<TransactionHashLink key="hash" hash={transaction.hash} />,
+								<TransactionFee key="fee" receipt={receipt} />,
+								<TransactionRowTotal
+									key="total"
+									transaction={transaction}
+									receipt={receipt}
+								/>,
+							]
+						})
+					},
+					totalItems: total,
+					page,
+					isPending: isLoadingPage,
+					onPageChange: goToPage,
+					itemsLabel: 'transactions',
+					itemsPerPage: rowsPerPage,
+				},
+				{
+					title: 'Assets',
+					columns: {
+						stacked: [
+							{ label: 'Name', align: 'start' },
+							{ label: 'Contract', align: 'start' },
+							{ label: 'Amount', align: 'end' },
+						],
+						tabs: [
+							{ label: 'Name', align: 'start' },
+							{ label: 'Ticker', align: 'start' },
+							{ label: 'Currency', align: 'start' },
+							{ label: 'Amount', align: 'end' },
+							{ label: 'Value', align: 'end' },
+						],
+					},
+					items: (mode) =>
+						assets.map((assetAddress) => {
+							if (mode === 'stacked')
+								return [
+									<TokenName key="name" contractAddress={assetAddress} />,
+									<AssetContract
+										key="contract"
+										contractAddress={assetAddress}
+									/>,
+									<AssetAmount
+										key="amount"
+										contractAddress={assetAddress}
+										accountAddress={address}
+									/>,
+								]
 
-									return [
-										<TokenName key="name" contractAddress={assetAddress} />,
-										<TokenSymbol key="symbol" contractAddress={assetAddress} />,
-										<span key="currency">USD</span>,
-										<AssetAmount
-											key="amount"
-											contractAddress={assetAddress}
-											accountAddress={address}
-										/>,
-										<AssetValue
-											key="value"
-											contractAddress={assetAddress}
-											accountAddress={address}
-										/>,
-									]
-								}),
-							totalItems: assets.length,
-							page: 1, // TODO
-							isPending: false,
-							onPageChange: () => {},
-							itemsLabel: 'assets',
-							itemsPerPage: assets.length,
-						},
-					]}
-					activeSection={activeSection}
-					onSectionChange={onSectionChange}
-				/>
-			</div>
-		</React.Suspense>
+							return [
+								<TokenName key="name" contractAddress={assetAddress} />,
+								<TokenSymbol key="symbol" contractAddress={assetAddress} />,
+								<span key="currency">USD</span>,
+								<AssetAmount
+									key="amount"
+									contractAddress={assetAddress}
+									accountAddress={address}
+								/>,
+								<AssetValue
+									key="value"
+									contractAddress={assetAddress}
+									accountAddress={address}
+								/>,
+							]
+						}),
+					totalItems: assets.length,
+					page: 1, // TODO
+					isPending: false,
+					onPageChange: () => {},
+					itemsLabel: 'assets',
+					itemsPerPage: assets.length,
+				},
+			]}
+			activeSection={activeSection}
+			onSectionChange={onSectionChange}
+		/>
 	)
 }
 
@@ -669,15 +642,8 @@ function AssetValue(props: {
 	)
 }
 
-function TransactionFee(props: { transaction: Transaction }) {
-	const { transaction } = props
-
-	const { data: receipt } = useTransactionReceipt({
-		hash: transaction.hash,
-		query: {
-			enabled: Boolean(transaction.hash),
-		},
-	})
+function TransactionFee(props: { receipt: TransactionReceipt }) {
+	const { receipt } = props
 
 	if (!receipt) return <span className="text-tertiary">…</span>
 
@@ -745,20 +711,27 @@ function TransactionDescription(props: {
 	)
 }
 
-function TransactionTimestamp(props: {
-	blockNumber: Hex.Hex | null | undefined
-}) {
-	const { blockNumber } = props
+function TransactionHashLink(props: { hash: Hex.Hex | null | undefined }) {
+	const { hash } = props
+	const state = useRouterState()
 
-	const { data: timestamp } = useBlock({
-		blockNumber: blockNumber ? Hex.toBigInt(blockNumber) : undefined,
-		query: {
-			enabled: Boolean(blockNumber),
-			select: (block) => block.timestamp,
-		},
-	})
+	const isNavigating =
+		state.isLoading && state.location.pathname === `/tx/${hash}`
 
-	if (!timestamp) return <span className="text-tertiary">…</span>
+	if (!hash) return null
+	return (
+		<Link
+			to={'/tx/$hash'}
+			params={{ hash }}
+			className="text-[13px] text-tertiary press-down inline-flex items-center gap-1"
+		>
+			{isNavigating ? '…' : HexFormatter.truncate(hash, 6)}
+		</Link>
+	)
+}
+
+function TransactionTimestamp(props: { timestamp: bigint }) {
+	const { timestamp } = props
 
 	return (
 		<div className="text-nowrap">
