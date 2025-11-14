@@ -1,17 +1,16 @@
-import { useQuery } from '@tanstack/react-query'
-import type { Address } from 'ox'
-import { Value } from 'ox'
-import { Actions } from 'tempo.ts/wagmi'
-import { PriceFormatter } from '#lib/formatting'
-import { config } from '#wagmi.config'
+import { ClientOnly } from '@tanstack/react-router'
+import { type Address, Value } from 'ox'
+import { Hooks } from 'tempo.ts/wagmi'
+import { PriceFormatter } from '#lib/formatting.ts'
 
 export function Amount(props: Amount.Props) {
 	const { value, token, decimals: decimals_ } = props
 
-	const { data: metadata } = useQuery({
-		queryKey: ['token-metadata', token],
-		queryFn: () => Actions.token.getMetadata(config, { token }),
-		enabled: decimals_ === undefined,
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token,
+		query: {
+			enabled: decimals_ === undefined,
+		},
 	})
 	const decimals = decimals_ ?? metadata?.decimals
 	const rawFormatted =
@@ -20,10 +19,12 @@ export function Amount(props: Amount.Props) {
 		rawFormatted === '…' ? '…' : PriceFormatter.formatAmount(rawFormatted)
 
 	return (
-		<span className="items-end whitespace-nowrap">
-			{formatted}{' '}
-			<span className="text-base-content-positive">{metadata?.symbol}</span>
-		</span>
+		<ClientOnly fallback={<span>…</span>}>
+			<span className="items-end whitespace-nowrap">
+				{formatted}{' '}
+				<span className="text-base-content-positive">{metadata?.symbol}</span>
+			</span>
+		</ClientOnly>
 	)
 }
 
