@@ -69,7 +69,7 @@ export function Sections(props: Sections.Props) {
 							</button>
 
 							{!isCollapsed && (
-								<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px]">
+								<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex flex-col min-h-0">
 									<Sections.SectionContent
 										section={section}
 										totalPages={totalPages}
@@ -95,7 +95,7 @@ export function Sections(props: Sections.Props) {
 	return (
 		<section
 			className={cx(
-				'flex flex-col font-mono w-full overflow-hidden',
+				'flex flex-col font-mono w-full overflow-hidden h-full min-h-0',
 				'rounded-[10px] border border-card-border bg-card-header',
 				'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 				className,
@@ -123,7 +123,7 @@ export function Sections(props: Sections.Props) {
 				))}
 			</div>
 
-			<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px]">
+			<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex-1 flex flex-col min-h-0">
 				<Sections.SectionContent
 					section={currentSection}
 					totalPages={totalPages}
@@ -175,7 +175,7 @@ export namespace Sections {
 		const items = section.items(mode)
 
 		return (
-			<>
+			<div className="flex flex-col h-full min-h-0">
 				<div className="rounded-t-lg relative w-full">
 					<ClientOnly>
 						{isPending && (
@@ -233,16 +233,18 @@ export namespace Sections {
 						</tbody>
 					</table>
 				</div>
-				<Pagination
-					page={page}
-					totalPages={totalPages}
-					totalItems={totalItems}
-					itemsLabel={itemsLabel}
-					isPending={isPending}
-					onPageChange={onPageChange}
-					compact={mode === 'stacked'}
-				/>
-			</>
+				<div className="mt-auto">
+					<Pagination
+						page={page}
+						totalPages={totalPages}
+						totalItems={totalItems}
+						itemsLabel={itemsLabel}
+						isPending={isPending}
+						onPageChange={onPageChange}
+						compact={mode === 'stacked'}
+					/>
+				</div>
+			</div>
 		)
 	}
 
