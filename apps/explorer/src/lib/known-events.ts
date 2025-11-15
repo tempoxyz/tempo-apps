@@ -2,7 +2,6 @@ import { Address, Hex } from 'ox'
 import { Abis, Addresses } from 'tempo.ts/viem'
 import {
 	type AbiEvent,
-	type DecodeFunctionDataReturnType,
 	decodeFunctionData,
 	type Log,
 	parseEventLogs,
@@ -109,28 +108,39 @@ export function parseKnownEvents(
 		const transaction = options?.transaction
 		if (!transaction) return
 
-		const callTarget = transaction.to ?? transaction.calls?.[0]?.to
-		const callInput =
-			transaction.input ??
-			transaction.data ??
-			transaction.calls?.[0]?.input ??
-			transaction.calls?.[0]?.data
-		if (!callTarget || !callInput) return
-		if (!Address.isEqual(callTarget, FEE_MANAGER)) return
+		const queue: TransactionLike[] = [transaction]
 
-		try {
-			const decoded = decodeFunctionData({
-				abi: Abis.feeAmm,
-				data: callInput as Hex.Hex,
-			}) as DecodeFunctionDataReturnType<typeof Abis.feeAmm>
+		while (queue.length > 0) {
+			const call = queue.shift()
+			if (!call) break
 
-			if (
-				decoded.functionName === 'mint' ||
-				decoded.functionName === 'mintWithValidatorToken'
-			)
-				return decoded as FeeManagerAddLiquidityCall
-		} catch {
-			return undefined
+			const callTarget = call.to
+			const callInput = call.input ?? call.data
+
+			if (callTarget && callInput && Address.isEqual(callTarget, FEE_MANAGER))
+				try {
+					const decoded = decodeFunctionData({
+						abi: Abis.feeAmm,
+						data: callInput,
+					})
+
+					/**
+					 * @note
+					 * `Transfer` logs alone can't distinguish "Add Liquidity" from fee collection,
+					 * since both send tokens to the `FeeManager`. Decoding `calldata` is the only way
+					 * to catch explicit user mints. If the `FeeManager` starts emitting a dedicated event,
+					 * we can revisit this and simplify the logic.
+					 */
+					if (
+						decoded.functionName === 'mint' ||
+						decoded.functionName === 'mintWithValidatorToken'
+					)
+						return decoded
+				} catch {
+					// fall through and continue searching other calls
+				}
+
+			if (call.calls) queue.push(...call.calls)
 		}
 	})()
 
@@ -217,16 +227,16 @@ export function parseKnownEvents(
 		} =
 			feeManagerCall.functionName === 'mint'
 				? {
-						userToken: feeManagerCall.args[0] as Address.Address,
-						validatorToken: feeManagerCall.args[1] as Address.Address,
-						amountUserToken: feeManagerCall.args[2] as bigint,
-						amountValidatorToken: feeManagerCall.args[3] as bigint,
+						userToken: feeManagerCall.args[0],
+						validatorToken: feeManagerCall.args[1],
+						amountUserToken: feeManagerCall.args[2],
+						amountValidatorToken: feeManagerCall.args[3],
 					}
 				: {
-						userToken: feeManagerCall.args[0] as Address.Address,
-						validatorToken: feeManagerCall.args[1] as Address.Address,
+						userToken: feeManagerCall.args[0],
+						validatorToken: feeManagerCall.args[1],
 						amountUserToken: 0n,
-						amountValidatorToken: feeManagerCall.args[2] as bigint,
+						amountValidatorToken: feeManagerCall.args[2],
 					}
 
 		const parts: KnownEventPart[] = [
@@ -235,7 +245,7 @@ export function parseKnownEvents(
 				type: 'amount',
 				value: {
 					value: amountUserToken,
-					token: userToken as Address.Address,
+					token: userToken,
 				},
 			},
 			{ type: 'secondary', value: 'and' },
@@ -243,7 +253,7 @@ export function parseKnownEvents(
 				type: 'amount',
 				value: {
 					value: amountValidatorToken,
-					token: validatorToken as Address.Address,
+					token: validatorToken,
 				},
 			},
 		]
@@ -273,7 +283,7 @@ export function parseKnownEvents(
 	for (let index = 0; index < transferEvents.length - 1; index++) {
 		const { event: event1, index: idx1 } = transferEvents[index]
 		// Type assertion is safe here because isTransferEvent has validated the structure
-		const args1 = event1.args as TransferEventArgs
+		const args1 = event1.args
 		const to1 = args1.to
 
 		// If this is a transfer TO the exchange, look for a matching transfer FROM the exchange
@@ -284,7 +294,7 @@ export function parseKnownEvents(
 				innerIndex++
 			) {
 				const { event: event2, index: idx2 } = transferEvents[innerIndex]
-				const args2 = event2.args as TransferEventArgs
+				const args2 = event2.args
 				const from2 = args2.from
 
 				if (Address.isEqual(from2, STABLECOIN_EXCHANGE)) {

@@ -771,21 +771,12 @@ function TransactionTotal(props: {
 		[knownEvents],
 	)
 
-	const amount =
-		amountParts.find((part) => part.value.value !== 0n) ?? amountParts.at(0)
+	const totalValue = amountParts.reduce((sum, part) => {
+		const decimals = part.value.decimals ?? 6
+		return sum + Number(Value.format(part.value.value, decimals))
+	}, 0)
 
-	const tokenAddress = amount?.value.token
-	const needsMetadata =
-		Boolean(tokenAddress) && amount?.value.decimals === undefined
-	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: (tokenAddress ??
-			'0x0000000000000000000000000000000000000000') as Address.Address,
-		query: {
-			enabled: needsMetadata,
-		},
-	})
-
-	if (!amount) {
+	if (totalValue === 0) {
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
 		if (value === 0n) return <span className="text-tertiary">—</span>
 		return (
@@ -795,17 +786,7 @@ function TransactionTotal(props: {
 		)
 	}
 
-	const decimals = amount.value.decimals ?? metadata?.decimals
-	if (decimals === undefined) return <span className="text-tertiary">…</span>
-
 	return (
-		<span
-			className={amount.value.value > 0n ? 'text-primary' : 'text-tertiary'}
-		>
-			{PriceFormatter.format(amount.value.value, {
-				decimals,
-				format: 'short',
-			})}
-		</span>
+		<span className="text-primary">{PriceFormatter.format(totalValue)}</span>
 	)
 }
