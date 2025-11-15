@@ -22,6 +22,10 @@ export function Receipt(props: Receipt.Props) {
 	const [hashExpanded, setHashExpanded] = useState(false)
 	const { copy, notifying } = useCopy()
 	const formattedTime = DateFormatter.formatTimestampTime(timestamp)
+	const hasFee = feeDisplay !== undefined || (fee !== undefined && fee !== null)
+	const hasTotal =
+		totalDisplay !== undefined || (total !== undefined && total !== null)
+
 	return (
 		<div className="flex flex-col w-[360px] bg-base-plane border border-base-border shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] text-base-content">
 			<div className="flex gap-[40px] px-[20px] pt-[24px] pb-[16px]">
@@ -162,25 +166,25 @@ export function Receipt(props: Receipt.Props) {
 					</div>
 				</>
 			)}
-			{(fee || total) && (
+			{(hasFee || hasTotal) && (
 				<>
 					<div className="border-t border-dashed border-base-border" />
 					<div className="flex flex-col gap-2 px-[20px] py-[16px] font-mono text-[13px] leading-4">
-						{fee && (
+						{hasFee && (
 							<div className="flex justify-between items-center">
 								<span className="text-tertiary">Fee</span>
 								<span className="text-right">
 									{feeDisplay ??
-										PriceFormatter.format(fee, { format: 'short' })}
+										PriceFormatter.format(fee ?? 0, { format: 'short' })}
 								</span>
 							</div>
 						)}
-						{total && (
+						{hasTotal && (
 							<div className="flex justify-between items-center">
 								<span className="text-tertiary">Total</span>
 								<span className="text-right">
 									{totalDisplay ??
-										PriceFormatter.format(total, { format: 'short' })}
+										PriceFormatter.format(total ?? 0, { format: 'short' })}
 								</span>
 							</div>
 						)}
