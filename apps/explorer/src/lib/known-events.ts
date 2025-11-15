@@ -124,6 +124,13 @@ export function parseKnownEvents(
 						data: callInput,
 					})
 
+					/**
+					 * @note
+					 * `Transfer` logs alone can't distinguish "Add Liquidity" from fee collection,
+					 * since both send tokens to the `FeeManager`. Decoding `calldata` is the only way
+					 * to catch explicit user mints. If the `FeeManager` starts emitting a dedicated event,
+					 * we can revisit this and simplify the logic.
+					 */
 					if (
 						decoded.functionName === 'mint' ||
 						decoded.functionName === 'mintWithValidatorToken'
