@@ -375,7 +375,8 @@ function SectionsWrapper(props: {
 	const isMobile = useMediaQuery('(max-width: 1239px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
-	if (transactions.length === 0) return <SectionsSkeleton totalItems={total} />
+	if (transactions.length === 0 && isLoadingPage)
+		return <SectionsSkeleton totalItems={total} />
 	return (
 		<Sections
 			mode={mode}
