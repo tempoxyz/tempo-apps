@@ -1,0 +1,80 @@
+name: Bug Report
+description: Report bugs or issues.
+body:
+  - type: textarea
+    attributes:
+      label: Describe the bug
+      description: Clear and concise description of the bug.
+      placeholder: I am doing… What I expect is… What is actually happening…
+    validations:
+      required: true
+
+  - type: input
+    id: reproduction
+    attributes:
+      label: Where did this happen?
+      description: "Please provide a link to where this issue happened."
+      placeholder: https://explore.tempo.xyz/abc
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Steps To Reproduce
+      description: Steps or code snippets to reproduce the behavior.
+    validations:
+      required: false
+
+  - type: dropdown
+    attributes:
+      label: Operating System
+      options:
+        - 'iOS'
+        - 'iPadOS'
+        - 'macOS'
+        - 'Android'
+        - 'Linux'
+        - 'Windows'
+        - 'Other'
+    validations:
+      required: false
+
+  - type: input
+    id: os-version
+    attributes:
+      label: Operating System version
+      description: What version of the operating system mentioned are you using?
+      placeholder: x.y.z (do not write `latest`)
+    validations:
+      required: false
+
+  - type: dropdown
+    attributes:
+      label: Browser
+      options:
+        - 'Safari'
+        - 'Brave'
+        - 'Chrome'
+        - 'Firefox'
+        - 'Other'
+    validations:
+      required: false
+
+  - type: input
+    id: browser-version
+    attributes:
+      label: Browser version
+      description: What version of the borwser mentioned are you using?
+      placeholder: x.y.z (do not write `latest`)
+    validations:
+      required: false
+
+  - type: textarea
+    attributes:
+      label: Anything else?
+      description: Anything that will give us more context about the issue you are encountering.
+    validations:
+      required: false
+
+
+
