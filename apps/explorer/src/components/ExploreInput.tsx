@@ -9,7 +9,8 @@ export function ExploreInput(props: ExploreInput.Props) {
 		onAddress,
 		onHash,
 		autoFocus,
-		defaultValue,
+		value,
+		onChange,
 		size = 'medium',
 		disabled,
 	} = props
@@ -57,7 +58,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 				autoComplete="off"
 				autoCorrect="off"
 				autoFocus={autoFocus}
-				defaultValue={defaultValue}
+				value={value}
 				disabled={disabled}
 				className={cx(
 					'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50',
@@ -69,13 +70,15 @@ export function ExploreInput(props: ExploreInput.Props) {
 				spellCheck={false}
 				type="text"
 				onChange={(event) => {
-					const value = event.target.value.trim()
-					if (isHash(value)) {
-						onHash?.(value)
+					const val = event.target.value
+					onChange?.(val)
+					const val_ = val.trim()
+					if (isHash(val_)) {
+						onHash?.(val_)
 						return
 					}
-					if (isAddress(value)) {
-						onAddress?.(value)
+					if (isAddress(val_)) {
+						onAddress?.(val_)
 						return
 					}
 				}}
@@ -114,7 +117,8 @@ export namespace ExploreInput {
 		onAddress?: (address: Address) => void
 		onHash?: (hash: Hash) => void
 		autoFocus?: boolean
-		defaultValue?: string
+		value: string
+		onChange: (value: string) => void
 		size?: 'large' | 'medium'
 		disabled?: boolean
 	}

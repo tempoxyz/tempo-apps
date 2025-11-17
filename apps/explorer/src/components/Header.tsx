@@ -1,9 +1,4 @@
-import {
-	Link,
-	useMatch,
-	useNavigate,
-	useRouterState,
-} from '@tanstack/react-router'
+import { Link, useMatch, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import Music4 from '~icons/lucide/music-4'
@@ -13,6 +8,9 @@ import { ExploreInput } from './ExploreInput'
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
 	const navigate = useNavigate()
+	const [inputValue, setInputValue] = React.useState('')
+	const [isNavigating, setIsNavigating] = React.useState(false)
+
 	const txMatch = useMatch({ from: '/_layout/tx/$hash', shouldThrow: false })
 	const accountMatch = useMatch({
 		from: '/_layout/account/$address',
@@ -21,10 +19,15 @@ export function Header(props: Header.Props) {
 	const hash = (txMatch?.params as { hash: string | undefined })?.hash
 	const address = (accountMatch?.params as { address: string | undefined })
 		?.address
-	const state = useRouterState()
 
-	const isNotFound = state.matches.some((match) => match.status === 'notFound')
-	const showInput = Boolean(hash || address) && !isNotFound
+	const showInput = Boolean(hash || address)
+
+	React.useEffect(() => {
+		if (hash || address) {
+			setInputValue('')
+			setIsNavigating(false)
+		}
+	}, [hash, address])
 
 	return (
 		<header className="@container">
@@ -38,9 +41,12 @@ export function Header(props: Header.Props) {
 				{showInput && (
 					<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex">
 						<ExploreInput
-							disabled={state.isLoading}
+							value={inputValue}
+							onChange={setInputValue}
+							disabled={isNavigating}
 							onActivate={({ value, type }) => {
 								if (type === 'hash') {
+									if (hash !== value) setIsNavigating(true)
 									navigate({
 										params: { hash: value },
 										to: '/tx/$hash',
@@ -48,6 +54,7 @@ export function Header(props: Header.Props) {
 									return
 								}
 								if (type === 'address') {
+									if (address !== value) setIsNavigating(true)
 									navigate({
 										params: { address: value },
 										to: '/account/$address',
