@@ -53,7 +53,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		>
 			<input
 				ref={inputRef}
-				autoCapitalize="off"
+				autoCapitalize="none"
 				autoComplete="off"
 				autoCorrect="off"
 				autoFocus={autoFocus}
