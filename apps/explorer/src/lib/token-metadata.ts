@@ -1,4 +1,4 @@
-import { Address } from 'ox'
+import type { Address } from 'ox'
 import { Abis } from 'tempo.ts/viem'
 import { Actions } from 'tempo.ts/wagmi'
 import { type Log, parseEventLogs } from 'viem'

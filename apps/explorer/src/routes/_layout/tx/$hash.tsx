@@ -4,7 +4,6 @@ import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Address, Hex, Json, Value } from 'ox'
 import { TokenRole } from 'tempo.ts/ox'
 import { Abis, Addresses } from 'tempo.ts/viem'
-import { Actions } from 'tempo.ts/wagmi'
 import {
 	type AbiEvent,
 	type Log,
@@ -20,7 +19,7 @@ import { Receipt } from '#components/Receipt/Receipt'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { parseKnownEvents } from '#lib/known-events'
 import { TokenMetadata } from '#lib/token-metadata'
-import { config, getConfig } from '#wagmi.config'
+import { getConfig } from '#wagmi.config'
 
 async function loader({
 	location,

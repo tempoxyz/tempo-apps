@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
-import { getClient } from 'wagmi/actions'
 import { getBlock } from 'viem/actions'
+import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { Footer } from '#components/Footer'
 import { Header } from '#components/Header'
