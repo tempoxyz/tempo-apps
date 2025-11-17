@@ -1,8 +1,5 @@
-import {
-	createFileRoute,
-	useNavigate,
-	useRouterState,
-} from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
 import { ExploreInput } from '#components/ExploreInput'
 import { Intro } from '#components/Intro'
 
@@ -12,7 +9,8 @@ export const Route = createFileRoute('/_layout/')({
 
 export function Component() {
 	const navigate = useNavigate()
-	const state = useRouterState()
+	const [inputValue, setInputValue] = useState('')
+
 	return (
 		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
 			<div className="grid place-items-center relative grid-flow-row gap-[20px] select-none w-full pt-[60px] pb-[40px] z-1">
@@ -24,6 +22,8 @@ export function Component() {
 					<ExploreInput
 						autoFocus
 						size="large"
+						value={inputValue}
+						onChange={setInputValue}
 						onActivate={() => {
 							// TODO: search screen?
 							// navigate({ to: '/search/$value', params: { value } })
@@ -34,7 +34,6 @@ export function Component() {
 						onHash={(hash) => {
 							navigate({ to: '/tx/$hash', params: { hash } })
 						}}
-						disabled={state.isLoading}
 					/>
 				</div>
 			</div>
