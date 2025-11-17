@@ -43,6 +43,7 @@ function isTransferEvent(
 
 type Amount = {
 	decimals?: number
+	symbol?: string
 	token: Address.Address
 	value: bigint
 }
@@ -99,10 +100,24 @@ type FeeManagerAddLiquidityCall =
 
 export function parseKnownEvents(
 	receipt: TransactionReceipt,
-	options?: { transaction?: TransactionLike },
+	options?: {
+		transaction?: TransactionLike
+		tokenMetadata?: Map<Address.Address, { decimals: number; symbol: string }>
+	},
 ): KnownEvent[] {
 	const { logs } = receipt
 	const events = parseEventLogs({ abi, logs })
+	const tokenMetadata = options?.tokenMetadata
+
+	const createAmount = (value: bigint, token: Address.Address): Amount => {
+		const metadata = tokenMetadata?.get(token)
+		const amount: Amount = { token, value }
+		if (metadata) {
+			amount.decimals = metadata.decimals
+			amount.symbol = metadata.symbol
+		}
+		return amount
+	}
 
 	const feeManagerCall: FeeManagerAddLiquidityCall | undefined = (() => {
 		const transaction = options?.transaction
@@ -243,18 +258,12 @@ export function parseKnownEvents(
 			{ type: 'action', value: 'Add Liquidity' },
 			{
 				type: 'amount',
-				value: {
-					value: amountUserToken,
-					token: userToken,
-				},
+				value: createAmount(amountUserToken, userToken),
 			},
 			{ type: 'secondary', value: 'and' },
 			{
 				type: 'amount',
-				value: {
-					value: amountValidatorToken,
-					token: validatorToken,
-				},
+				value: createAmount(amountValidatorToken, validatorToken),
 			},
 		]
 
@@ -305,18 +314,12 @@ export function parseKnownEvents(
 							{ type: 'action', value: 'Swap' },
 							{
 								type: 'amount',
-								value: {
-									value: args1.amount,
-									token: event1.address,
-								},
+								value: createAmount(args1.amount, event1.address),
 							},
 							{ type: 'secondary', value: 'for' },
 							{
 								type: 'amount',
-								value: {
-									value: args2.amount,
-									token: event2.address,
-								},
+								value: createAmount(args2.amount, event2.address),
 							},
 						],
 					})
@@ -364,10 +367,7 @@ export function parseKnownEvents(
 						{ type: 'action', value: 'Send' },
 						{
 							type: 'amount',
-							value: {
-								value: amount,
-								token: event.address,
-							},
+							value: createAmount(amount, event.address),
 						},
 						{ type: 'secondary', value: 'to' },
 						{ type: 'account', value: to },
@@ -389,10 +389,7 @@ export function parseKnownEvents(
 							{ type: 'action', value: 'Mint' },
 							{
 								type: 'amount',
-								value: {
-									value: amount,
-									token: event.address,
-								},
+								value: createAmount(amount, event.address),
 							},
 							{ type: 'secondary', value: 'to' },
 							{ type: 'account', value: to },
@@ -424,18 +421,12 @@ export function parseKnownEvents(
 								{ type: 'action', value: 'Add Liquidity' },
 								{
 									type: 'amount',
-									value: {
-										value: amountUserToken,
-										token: userToken,
-									},
+									value: createAmount(amountUserToken, userToken),
 								},
 								{ type: 'secondary', value: 'and' },
 								{
 									type: 'amount',
-									value: {
-										value: amountValidatorToken,
-										token: validatorToken,
-									},
+									value: createAmount(amountValidatorToken, validatorToken),
 								},
 							],
 						})
@@ -456,10 +447,7 @@ export function parseKnownEvents(
 							{ type: 'action', value: 'Burn' },
 							{
 								type: 'amount',
-								value: {
-									value: amount,
-									token: event.address,
-								},
+								value: createAmount(amount, event.address),
 							},
 							{ type: 'secondary', value: 'from' },
 							{ type: 'account', value: from },
@@ -508,10 +496,7 @@ export function parseKnownEvents(
 			if (index > 0) parts.push({ type: 'secondary', value: 'and' })
 			parts.push({
 				type: 'amount',
-				value: {
-					value: fee.amount,
-					token: fee.token,
-				},
+				value: createAmount(fee.amount, fee.token),
 			})
 		}
 

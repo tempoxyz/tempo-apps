@@ -30,10 +30,12 @@ import {
 	type KnownEventPart,
 	parseKnownEvents,
 } from '#lib/known-events'
+import { TokenMetadata } from '#lib/token-metadata'
 import { config } from '#wagmi.config'
 
 type TransactionsResponse = {
 	transactions: Array<Transaction>
+	knownEvents: Record<Hex.Hex, KnownEvent[]>
 	total: number
 	offset: number // Next offset to use for pagination
 	limit: number
@@ -68,6 +70,7 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			const data = await fetch(url).then(
 				(res) => res.json() as unknown as TransactionsResponse,
 			)
+			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
 			const transactions = await Promise.all(
 				data.transactions.map(async (transaction) => {
 					const [receipt, block] = await Promise.all([
@@ -84,10 +87,15 @@ function transactionsQueryOptions(params: TransactionQuery) {
 							}),
 						),
 					])
+					const tokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
+					knownEvents[transaction.hash] = parseKnownEvents(receipt, {
+						transaction,
+						tokenMetadata,
+					})
 					return { ...transaction, block, receipt }
 				}),
 			)
-			return { ...data, transactions }
+			return { ...data, transactions, knownEvents }
 		},
 		// auto-refresh page 1 since new transactions appear there
 		refetchInterval: params.page === 1 ? 4_000 : false,
@@ -294,8 +302,6 @@ function RouteComponent() {
 
 	Address.assert(address)
 
-	const activeTab = tab
-
 	React.useEffect(() => {
 		// preload pages around the active page (3 before and 3 after)
 		for (let i = -3; i <= 3; i++) {
@@ -337,7 +343,7 @@ function RouteComponent() {
 				page={page}
 				limit={limit}
 				goToPage={goToPage}
-				activeSection={activeTab === 'history' ? 0 : 1}
+				activeSection={tab === 'history' ? 0 : 1}
 				onSectionChange={setActiveSection}
 			/>
 		</div>
@@ -366,7 +372,11 @@ function SectionsWrapper(props: {
 		}),
 		initialData,
 	})
-	const { transactions, total } = data ?? { transactions: [], total: 0 }
+	const { transactions, total, knownEvents } = data ?? {
+		transactions: [],
+		total: 0,
+		knownEvents: {},
+	}
 
 	const isLoadingPage =
 		(state.isLoading && state.location.pathname.includes('/account/')) ||
@@ -410,6 +420,7 @@ function SectionsWrapper(props: {
 									<TransactionRowTotal
 										key="total"
 										transaction={transaction}
+										knownEvents={knownEvents[transaction.hash] ?? []}
 										receipt={receipt}
 									/>,
 								]
@@ -425,6 +436,7 @@ function SectionsWrapper(props: {
 								<TransactionRowDescription
 									key="desc"
 									transaction={transaction}
+									knownEvents={knownEvents[transaction.hash] ?? []}
 									receipt={receipt}
 								/>,
 								<TransactionHashLink key="hash" hash={transaction.hash} />,
@@ -432,6 +444,7 @@ function SectionsWrapper(props: {
 								<TransactionRowTotal
 									key="total"
 									transaction={transaction}
+									knownEvents={knownEvents[transaction.hash] ?? []}
 									receipt={receipt}
 								/>,
 							]
@@ -508,14 +521,10 @@ function SectionsWrapper(props: {
 
 function TransactionRowDescription(props: {
 	transaction: Transaction
+	knownEvents: KnownEvent[]
 	receipt?: TransactionReceipt
 }) {
-	const { transaction, receipt } = props
-
-	const knownEvents = React.useMemo(() => {
-		if (!receipt) return []
-		return parseKnownEvents(receipt, { transaction })
-	}, [receipt, transaction])
+	const { transaction, knownEvents, receipt } = props
 
 	return (
 		<TransactionDescription
@@ -528,14 +537,10 @@ function TransactionRowDescription(props: {
 
 function TransactionRowTotal(props: {
 	transaction: Transaction
+	knownEvents: KnownEvent[]
 	receipt?: TransactionReceipt
 }) {
-	const { transaction, receipt } = props
-
-	const knownEvents = React.useMemo(() => {
-		if (!receipt) return []
-		return parseKnownEvents(receipt, { transaction })
-	}, [receipt, transaction])
+	const { transaction, knownEvents } = props
 
 	return (
 		<TransactionTotal transaction={transaction} knownEvents={knownEvents} />
