@@ -2,7 +2,6 @@ import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Address, Hex, Json, Value } from 'ox'
-import * as React from 'react'
 import { TokenRole } from 'tempo.ts/ox'
 import { Abis, Addresses } from 'tempo.ts/viem'
 import { Actions } from 'tempo.ts/wagmi'
@@ -20,6 +19,7 @@ import { NotFound } from '#components/NotFound'
 import { Receipt } from '#components/Receipt/Receipt'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { parseKnownEvents } from '#lib/known-events'
+import { TokenMetadata } from '#lib/token-metadata'
 import { config, getConfig } from '#wagmi.config'
 
 async function loader({
@@ -62,9 +62,11 @@ async function loader({
 	const timestampFormatted = DateFormatter.format(block.timestamp)
 
 	const lineItems = LineItems.fromReceipt(receipt, { tokenMetadata })
+	const knownEvents = parseKnownEvents(receipt, { transaction, tokenMetadata })
 
 	return {
 		block,
+		knownEvents,
 		lineItems,
 		receipt,
 		timestampFormatted,
@@ -197,7 +199,8 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 })
 
 function Component() {
-	const { block, lineItems, receipt, transaction } = Route.useLoaderData()
+	const { block, knownEvents, lineItems, receipt, transaction } =
+		Route.useLoaderData()
 
 	const feePrice = lineItems.feeTotals?.[0]?.price
 	const previousFee = feePrice
@@ -221,11 +224,6 @@ function Component() {
 		previousTotal !== undefined
 			? PriceFormatter.format(previousTotal)
 			: undefined
-
-	const knownEvents = React.useMemo(
-		() => parseKnownEvents(receipt, { transaction }),
-		[receipt, transaction],
-	)
 
 	return (
 		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow">
@@ -310,34 +308,6 @@ export namespace TextRenderer {
 }
 
 const abi = Object.values(Abis).flat()
-const ZERO_ADDRESS = zeroAddress
-const FEE_MANAGER = Addresses.feeManager
-
-export namespace TokenMetadata {
-	export type Metadata = Actions.token.getMetadata.ReturnValue
-	export type MetadataMap = Map<Address.Address, Metadata>
-
-	export async function fromLogs(logs: Log[]) {
-		const events = parseEventLogs({
-			abi,
-			logs,
-		})
-
-		const tip20Addresses = events
-			.filter((event) => event.address.toLowerCase().startsWith('0x20c000000'))
-			.map((event) => event.address)
-		const metadataResults = await Promise.all(
-			tip20Addresses.map((token) =>
-				Actions.token.getMetadata(config, { token }),
-			),
-		)
-		const tokenMetadata = new Map<Address.Address, Metadata>()
-		for (const [index, address] of tip20Addresses.entries())
-			tokenMetadata.set(address, metadataResults[index])
-
-		return tokenMetadata
-	}
-}
 
 export namespace LineItems {
 	export function fromReceipt(
@@ -568,8 +538,8 @@ export namespace LineItems {
 					const { currency, decimals, symbol } = metadata
 
 					const isFee =
-						Address.isEqual(to, FEE_MANAGER) &&
-						!Address.isEqual(from, ZERO_ADDRESS)
+						Address.isEqual(to, Addresses.feeManager) &&
+						!Address.isEqual(from, zeroAddress)
 
 					if (isFee) {
 						const feePayer = !Address.isEqual(from, senderChecksum) ? from : ''
