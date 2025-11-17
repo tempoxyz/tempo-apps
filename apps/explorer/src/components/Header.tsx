@@ -1,9 +1,4 @@
-import {
-	Link,
-	useMatch,
-	useNavigate,
-	useRouterState,
-} from '@tanstack/react-router'
+import { Link, useMatch, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import Music4 from '~icons/lucide/music-4'

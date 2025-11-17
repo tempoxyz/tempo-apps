@@ -1,8 +1,4 @@
-import {
-	createFileRoute,
-	useNavigate,
-	useRouterState,
-} from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ExploreInput } from '#components/ExploreInput'
 import { Intro } from '#components/Intro'
@@ -13,7 +9,6 @@ export const Route = createFileRoute('/_layout/')({
 
 export function Component() {
 	const navigate = useNavigate()
-	const state = useRouterState()
 	const [inputValue, setInputValue] = useState('')
 
 	return (
