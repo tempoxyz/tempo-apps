@@ -1,6 +1,6 @@
 import { type ErrorComponentProps, Link } from '@tanstack/react-router'
-import CopyIcon from '~icons/lucide/copy'
 import { useCopy } from '#lib/hooks'
+import CopyIcon from '~icons/lucide/copy'
 import { Footer } from './Footer'
 import { Header } from './Header'
 
