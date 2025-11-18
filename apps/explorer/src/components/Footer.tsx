@@ -1,7 +1,8 @@
 import { Link as RouterLink } from '@tanstack/react-router'
 import type { Hex } from 'ox'
 
-export function Footer({ recentTransactions }: Footer.Props) {
+export function Footer(props: Footer.Props) {
+	const { recentTransactions = [] } = props
 	return (
 		<footer className="pt-[24px] pb-[48px] relative z-1">
 			<ul className="flex items-center justify-center gap-[24px] text-[15px] text-base-content-secondary">
@@ -16,7 +17,7 @@ export function Footer({ recentTransactions }: Footer.Props) {
 
 export namespace Footer {
 	export interface Props {
-		recentTransactions: Hex.Hex[]
+		recentTransactions?: Hex.Hex[]
 	}
 
 	export function Link(props: Link.Props) {
