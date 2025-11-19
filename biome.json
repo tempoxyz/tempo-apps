@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.3.6/schema.json",
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
@@ -39,8 +39,18 @@
 	},
 	"linter": {
 		"enabled": true,
+		"domains": {
+			"react": "all",
+			"project": "all"
+		},
 		"rules": {
 			"recommended": true,
+			"correctness": {
+				"useImportExtensions": "off"
+			},
+			"style": {
+				"useComponentExportOnlyModules": "off"
+			},
 			"suspicious": {
 				"noUnknownAtRules": {
 					"level": "warn",
