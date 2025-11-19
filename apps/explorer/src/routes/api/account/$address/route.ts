@@ -125,11 +125,11 @@ async function runIndexSupplyQuery(
 export const Route = createFileRoute('/api/account/$address')({
 	beforeLoad: async ({ search, params }) => {
 		const { address } = params
-		const { offset, limit, include } = search
+		const { offset, limit, include, sort } = search
 
 		if (limit > MAX_LIMIT) throw new Error('Limit is too high')
 
-		return { address, offset, limit, include }
+		return { address, offset, limit, include, sort }
 	},
 	server: {
 		handlers: {
@@ -148,6 +148,9 @@ export const Route = createFileRoute('/api/account/$address')({
 						: includeParam === 'received'
 							? 'received'
 							: 'all'
+				const sortParam = (url.searchParams.get('sort') ?? 'desc').toLowerCase()
+				const sort: 'asc' | 'desc' = sortParam === 'asc' ? 'asc' : 'desc'
+				const sortDirection = sort === 'asc' ? 'ASC' : 'DESC'
 
 				const offset = Math.max(
 					0,
@@ -227,7 +230,7 @@ export const Route = createFileRoute('/api/account/$address')({
 								FROM txs t
 								WHERE t.chain = ${chainId}
 									AND (${addressFilter})
-								ORDER BY t.block_num DESC, t.hash DESC
+								ORDER BY t.block_num ${sortDirection}, t.hash ${sortDirection}
 								LIMIT ${limit}
 								OFFSET ${offset}
 							`,
@@ -332,5 +335,6 @@ export const Route = createFileRoute('/api/account/$address')({
 		offset: z.prefault(z.coerce.number(), 0),
 		limit: z.prefault(z.coerce.number(), 100),
 		include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
+		sort: z.prefault(z.enum(['asc', 'desc']), 'desc'),
 	}),
 })
