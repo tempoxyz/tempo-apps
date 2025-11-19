@@ -32,15 +32,7 @@ import {
 } from '#lib/known-events'
 import { TokenMetadata } from '#lib/token-metadata'
 import { config } from '#wagmi.config'
-
-type TransactionsResponse = {
-	transactions: Array<Transaction>
-	knownEvents: Record<Hex.Hex, KnownEvent[]>
-	total: number
-	offset: number // Next offset to use for pagination
-	limit: number
-	hasMore: boolean
-}
+import * as AccountServer from '../../../lib/account.server.ts'
 
 const rowsPerPage = 10
 
@@ -62,14 +54,13 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			params._key,
 		],
 		queryFn: async ({ client }) => {
-			const searchParams = new URLSearchParams({
-				limit: params.limit.toString(),
-				offset: params.offset.toString(),
+			const data = await AccountServer.fetchTransactions({
+				data: {
+					address: params.address,
+					offset: params.offset,
+					limit: params.limit,
+				},
 			})
-			const url = `/api/account/${params.address}?${searchParams.toString()}`
-			const data = await fetch(url).then(
-				(res) => res.json() as unknown as TransactionsResponse,
-			)
 			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
 			const transactions = await Promise.all(
 				data.transactions.map(async (transaction) => {
@@ -283,13 +274,7 @@ function useAccountTotalValue(address: Address.Address) {
 	return useQuery({
 		queryKey: ['account-total-value', address],
 		queryFn: async () => {
-			const response = await fetch(`/api/account/${address}/total-value`)
-			if (!response.ok)
-				throw new Error('Failed to fetch total value', {
-					cause: response.statusText,
-				})
-			const data = await response.text()
-			return Number(data)
+			return await AccountServer.getTotalValue({ data: { address } })
 		},
 	})
 }
