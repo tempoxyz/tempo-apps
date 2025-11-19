@@ -25,12 +25,14 @@ export const Route = createFileRoute('/api/account/$address/total-value')({
 					`https://api.indexsupply.net/v2/query?${searchParams.toString()}`,
 				)
 
-				if (!response.ok)
+				if (!response.ok) {
+					const text = await response.text()
+					console.error(text)
 					return Response.json(
-						{ error: 'Failed to fetch total value' },
+						{ error: 'Failed to fetch total value', cause: text },
 						{ status: response.status },
 					)
-
+				}
 				const responseData = await response.json()
 
 				const result = z

@@ -231,9 +231,16 @@ function transactionsQueryOptions(
 				`/api/account/${params.address}?${searchParams.toString()}`,
 				baseUrl,
 			)
-			const data = (await fetch(url, {
+			const data = await fetch(url, {
 				headers,
-			}).then((res) => res.json())) as TransactionsApiResponse
+			}).then(async (response) => {
+				if (!response.ok) {
+					const text = await response.text()
+					console.error(text)
+					throw new Error('Failed to fetch transactions', { cause: text })
+				}
+				return response.json() as unknown as TransactionsApiResponse
+			})
 			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
 			const transactions = await Promise.all(
 				data.transactions.map(async (transaction) => {
@@ -411,11 +418,12 @@ function useAccountTotalValue(address: Address.Address) {
 			const response = await fetch(`/api/account/${address}/total-value`, {
 				headers,
 			})
-			if (!response.ok)
-				throw new Error('Failed to fetch total value', {
-					cause: response.statusText,
-				})
-			const data = (await response.json()) as { totalValue: number }
+			if (!response.ok) {
+				const text = await response.text()
+				console.error(text)
+				throw new Error('Failed to fetch total value', { cause: text })
+			}
+			const data = (await response.json()) as unknown as { totalValue: number }
 			return Number(data.totalValue)
 		},
 	})
