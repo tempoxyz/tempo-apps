@@ -45,16 +45,13 @@ jobs:
           BASIC_AUTH_USERNAME: ${{ secrets.BASIC_AUTH_USERNAME }}
           BASIC_AUTH_PASSWORD: ${{ secrets.BASIC_AUTH_PASSWORD }}
           INDEXSUPPLY_API_KEY: ${{ secrets.INDEXSUPPLY_API_KEY }}
+          CLOUDFLARE_INCLUDE_PROCESS_ENV: true
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           quiet: false
           command: versions upload
           workingDirectory: apps/${{ matrix.app }}
-          secrets: |
-            INDEXSUPPLY_API_KEY
-            BASIC_AUTH_USERNAME
-            BASIC_AUTH_PASSWORD
 
       - name: Comment Preview URL on PR
         uses: moojing/cf-preview-bot@v1
