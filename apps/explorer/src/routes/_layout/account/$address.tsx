@@ -474,7 +474,9 @@ function SectionsWrapper(props: {
 	}
 
 	const isLoadingPage =
-		(state.isLoading && state.location.pathname.includes('/account/')) ||
+		(state.isLoading &&
+			state.location.pathname.includes('/account/') &&
+			!state.location.pathname.includes('api/')) ||
 		isLoading
 
 	const isMobile = useMediaQuery('(max-width: 1239px)')

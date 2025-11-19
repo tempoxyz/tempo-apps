@@ -79,65 +79,6 @@ type RunQueryOptions = {
 	signatures?: string[]
 }
 
-async function runIndexSupplyQuery(
-	query: string,
-	options: RunQueryOptions = {},
-) {
-	const url = new URL(INDEX_SUPPLY_ENDPOINT)
-	url.searchParams.set('api-key', apiKey)
-	const signatures =
-		options.signatures && options.signatures.length > 0
-			? options.signatures
-			: ['']
-
-	const response = await fetch(url, {
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify([
-			{
-				cursor: chainCursor,
-				signatures,
-				query: query.replace(/\s+/g, ' ').trim(),
-			},
-		]),
-	})
-
-	let json: unknown
-	try {
-		json = await response.json()
-	} catch (error) {
-		console.error('IndexSupply API returned invalid JSON', error)
-		throw new Error('IndexSupply API returned invalid JSON', { cause: error })
-	}
-
-	if (!response.ok) {
-		const message =
-			typeof json === 'object' &&
-			json !== null &&
-			'message' in json &&
-			typeof (json as { message?: string }).message === 'string'
-				? (json as { message: string }).message
-				: response.statusText
-		throw new Error(`IndexSupply API error (${response.status}): ${message}`)
-	}
-
-	const parsed = indexSupplyResponseSchema.safeParse(json)
-	if (!parsed.success) {
-		const message =
-			typeof json === 'object' &&
-			json !== null &&
-			'message' in json &&
-			typeof (json as { message?: string }).message === 'string'
-				? (json as { message: string }).message
-				: z.prettifyError(parsed.error)
-		throw new Error(`IndexSupply response shape is unexpected: ${message}`)
-	}
-
-	const [result] = parsed.data
-	if (!result) throw new Error('IndexSupply returned an empty result set')
-	return result
-}
-
 export const Route = createFileRoute('/api/account/$address')({
 	beforeLoad: async ({ search, params }) => {
 		const { address } = params
@@ -150,6 +91,72 @@ export const Route = createFileRoute('/api/account/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params, request }) => {
+				async function runIndexSupplyQuery(
+					query: string,
+					options: RunQueryOptions = {},
+				) {
+					const url = new URL(INDEX_SUPPLY_ENDPOINT)
+					url.searchParams.set('api-key', apiKey)
+					const signatures =
+						options.signatures && options.signatures.length > 0
+							? options.signatures
+							: ['']
+
+					const response = await fetch(url, {
+						method: 'POST',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify([
+							{
+								cursor: chainCursor,
+								signatures,
+								query: query.replace(/\s+/g, ' ').trim(),
+							},
+						]),
+					})
+
+					let json: unknown
+					try {
+						json = await response.json()
+					} catch (error) {
+						console.error('IndexSupply API returned invalid JSON', error)
+						throw new Error('IndexSupply API returned invalid JSON', {
+							cause: error,
+						})
+					}
+
+					if (!response.ok) {
+						const message =
+							typeof json === 'object' &&
+							json !== null &&
+							'message' in json &&
+							typeof (json as { message?: string }).message === 'string'
+								? (json as { message: string }).message
+								: response.statusText
+						throw new Error(
+							`IndexSupply API error (${response.status}): ${message}`,
+						)
+					}
+
+					const parsed = indexSupplyResponseSchema.safeParse(json)
+					if (!parsed.success) {
+						const message =
+							typeof json === 'object' &&
+							json !== null &&
+							'message' in json &&
+							typeof (json as { message?: string }).message === 'string'
+								? (json as { message: string }).message
+								: z.prettifyError(parsed.error)
+						throw new Error(
+							`IndexSupply response shape is unexpected: ${message}`,
+						)
+					}
+
+					const [result] = parsed.data
+					if (!result)
+						throw new Error('IndexSupply returned an empty result set')
+					return result
+				}
+
 				const address = params.address.toLowerCase() as Address.Address
 				const url = new URL(request.url)
 				const searchParams = SearchParamsSchema.safeParse(
