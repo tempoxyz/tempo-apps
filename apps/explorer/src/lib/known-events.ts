@@ -67,6 +67,10 @@ export interface KnownEvent {
 	type: string
 	parts: KnownEventPart[]
 	note?: string
+	meta?: {
+		from?: Address.Address
+		to?: Address.Address
+	}
 }
 
 type TransactionLike = {
@@ -372,6 +376,7 @@ export function parseKnownEvents(
 						{ type: 'secondary', value: 'to' },
 						{ type: 'account', value: to },
 					],
+					meta: { from, to },
 				})
 				break
 			}

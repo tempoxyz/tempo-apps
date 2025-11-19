@@ -90,15 +90,13 @@ export const Route = createFileRoute('/api/account/$address/total-value')({
 			},
 		},
 	},
-	params: {
-		parse: z.object({
-			address: z.pipe(
-				z.string(),
-				z.transform((x) => {
-					Address.assert(x)
-					return x
-				}),
-			),
-		}).parse,
-	},
+	params: z.object({
+		address: z.pipe(
+			z.string(),
+			z.transform((x) => {
+				Address.assert(x)
+				return x
+			}),
+		),
+	}),
 })

@@ -25,11 +25,10 @@
 		"noUnusedParameters": true,
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true,
-		"baseUrl": ".",
 		"resolveJsonModule": true,
 		"paths": {
+			"*": ["./*"],
 			"#*": ["./src/*"],
-			"#explore*": ["./src/routes/explore/*"],
 			"#components": ["./src/components/*"],
 			"#cva": ["./src/cva.config.ts"]
 		}
