@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { type Address, type Hash, isAddress, isHash } from 'viem'
-import { cx } from '#cva.config.ts'
+import { cx } from '#cva.config'
 import ArrowRight from '~icons/lucide/arrow-right'
 
 export function ExploreInput(props: ExploreInput.Props) {
