@@ -1,38 +1,20 @@
-import { createIsomorphicFn } from '@tanstack/react-start'
-import { getRequestUrl } from '@tanstack/react-start/server'
+import * as z from 'zod/mini'
 
-export type TempoEnv = 'testnet' | 'moderato' | 'devnet' | 'presto'
+const ServerEnvSchema = z.object({
+	INDEXSUPPLY_API_KEY: z.string(),
+	INDEXSUPPLY_ENDPOINT: z.prefault(
+		z.url(),
+		'https://api.indexsupply.net/v2/query',
+	),
+})
 
-export const getRequestURL = createIsomorphicFn()
-	.client(() => new URL(__BASE_URL__ || window.location.origin))
-	.server(() => getRequestUrl())
+const ClientEnvSchema = z.object({
+	VITE_ENABLE_COLOR_SCHEME_TOGGLE: z.prefault(z.coerce.boolean(), false),
+	VITE_ENABLE_ERUDA: z.prefault(z.coerce.boolean(), false),
+})
 
-export const getTempoEnv = createIsomorphicFn()
-	.client(() => import.meta.env.VITE_TEMPO_ENV as TempoEnv)
-	.server(() => process.env.VITE_TEMPO_ENV as TempoEnv)
+export const server = ServerEnvSchema.parse(process.env)
 
-export const isTestnet = createIsomorphicFn()
-	.client(
-		() =>
-			import.meta.env.VITE_TEMPO_ENV === 'testnet' ||
-			import.meta.env.VITE_TEMPO_ENV === 'moderato',
-	)
-	.server(
-		() =>
-			process.env.VITE_TEMPO_ENV === 'testnet' ||
-			process.env.VITE_TEMPO_ENV === 'moderato',
-	)
+export const client = ClientEnvSchema.parse(import.meta.env)
 
-export const hasIndexSupply = createIsomorphicFn()
-	.client(
-		() =>
-			import.meta.env.VITE_TEMPO_ENV === 'testnet' ||
-			import.meta.env.VITE_TEMPO_ENV === 'moderato' ||
-			import.meta.env.VITE_TEMPO_ENV === 'presto',
-	)
-	.server(
-		() =>
-			process.env.VITE_TEMPO_ENV === 'testnet' ||
-			process.env.VITE_TEMPO_ENV === 'moderato' ||
-			process.env.VITE_TEMPO_ENV === 'presto',
-	)
+export const env = { server, client }
