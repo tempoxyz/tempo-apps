@@ -81,16 +81,16 @@ export const Route = createFileRoute('/_layout/account/$address')({
 			context.queryClient.fetchQuery(latestOptions),
 		])
 
-		const totalTransactions = latestData.total ?? pageData.total ?? 0
+		const totalTransactions = pageData.total ?? latestData.total ?? 0
 		let earliestData: TransactionsResponse | undefined
 		if (totalTransactions > 0) {
-			const lastPageOffset = Math.max(0, totalTransactions - 1)
 			earliestData = await context.queryClient.fetchQuery(
 				transactionsQueryOptions({
 					address,
-					page: Math.max(1, Math.ceil(totalTransactions)),
+					page: 1,
 					limit: 1,
-					offset: lastPageOffset,
+					offset: 0,
+					sort: 'asc',
 					_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
 				}),
 			)
@@ -201,8 +201,8 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			params.page,
 			params.limit,
 			params._key,
-			params.include,
-			params.sort,
+			params.include ?? 'all',
+			params.sort ?? 'desc',
 		],
 		queryFn: async ({ client }) => {
 			const include = params.include ?? 'all'
@@ -279,15 +279,13 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 
 	const totalTransactions =
 		recentData?.total ?? loaderLastActivity?.total ?? loaderCreated?.total ?? 0
-	const lastPageOffset = Math.max(0, totalTransactions - 1)
-	const lastPageNumber =
-		totalTransactions > 0 ? Math.max(1, Math.ceil(totalTransactions)) : 1
 
 	const earliestQueryOptions = transactionsQueryOptions({
 		address,
-		page: lastPageNumber,
+		page: 1,
 		limit: 1,
-		offset: lastPageOffset,
+		offset: 0,
+		sort: 'asc',
 		_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
 	})
 	const { data: oldestData } = useQuery({
