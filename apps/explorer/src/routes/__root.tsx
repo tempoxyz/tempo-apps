@@ -10,8 +10,8 @@ import {
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 import { WagmiProvider } from 'wagmi'
-import { ErrorBoundary } from '#components/ErrorBoundary'
-import { config, persister, queryClient } from '#wagmi.config'
+import { ErrorBoundary } from '#components/ErrorBoundary.tsx'
+import { config, persister, queryClient } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
 export const Route = createRootRouteWithContext<{

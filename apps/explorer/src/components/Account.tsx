@@ -1,8 +1,8 @@
 import { ClientOnly, getRouteApi } from '@tanstack/react-router'
 import type { Address } from 'ox'
-import { RelativeTime } from '#components/RelativeTime'
+import { RelativeTime } from '#components/RelativeTime.tsx'
 import { cx } from '#cva.config.ts'
-import { useCopy, useMediaQuery } from '#lib/hooks'
+import { useCopy, useMediaQuery } from '#lib/hooks.ts'
 import CopyIcon from '~icons/lucide/copy'
 
 const Route = getRouteApi('/_layout/account/$address')
@@ -34,7 +34,7 @@ export function AccountCard(props: AccountCard.Props) {
 				Account
 			</h1>
 
-			<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px]">
+			<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px">
 				<div className="px-[18px] py-[18px] border-b border-dashed border-card-border">
 					<button
 						type="button"

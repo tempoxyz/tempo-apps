@@ -10,12 +10,12 @@ export const Route = createFileRoute('/api/account/$address/total-value')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				const { address } = params
+				const address = params.address.toLowerCase() as Address.Address
 
 				const chainId = getChainId(config)
 
 				const searchParams = new URLSearchParams({
-					query: `SELECT address as token_address, SUM(CASE WHEN "to" = '${address}' THEN tokens ELSE 0 END) - SUM(CASE WHEN "from" = '${address}' THEN tokens ELSE 0 END) as balance FROM transfer WHERE chain = ${chainId} AND ("to" = '${address}' OR "from" = '${address}') GROUP BY address`,
+					query: /* sql */ `SELECT address as token_address, SUM(CASE WHEN "to" = '${address}' THEN tokens ELSE 0 END) - SUM(CASE WHEN "from" = '${address}' THEN tokens ELSE 0 END) as balance FROM transfer WHERE chain = ${chainId} AND ("to" = '${address}' OR "from" = '${address}') GROUP BY address`,
 					signatures:
 						'Transfer(address indexed from, address indexed to, uint tokens)',
 					'api-key': process.env.INDEXSUPPLY_API_KEY,
@@ -26,9 +26,10 @@ export const Route = createFileRoute('/api/account/$address/total-value')({
 				)
 
 				if (!response.ok)
-					return new Response(await response.text(), {
-						status: response.status,
-					})
+					return Response.json(
+						{ error: 'Failed to fetch total value' },
+						{ status: response.status },
+					)
 
 				const responseData = await response.json()
 
@@ -48,9 +49,10 @@ export const Route = createFileRoute('/api/account/$address/total-value')({
 					.safeParse(responseData)
 
 				if (!result.success)
-					return new Response(z.prettifyError(result.error), {
-						status: response.status,
-					})
+					return Response.json(
+						{ error: z.prettifyError(result.error) },
+						{ status: response.status },
+					)
 
 				const rowsWithBalance =
 					result.data
@@ -86,7 +88,8 @@ export const Route = createFileRoute('/api/account/$address/total-value')({
 					})
 					.reduce((acc, balance) => acc + balance * PRICE_PER_TOKEN, 0)
 
-				return Response.json(totalValue, { status: 200 })
+				console.info('totalValue', totalValue)
+				return Response.json({ totalValue }, { status: 200 })
 			},
 		},
 	},

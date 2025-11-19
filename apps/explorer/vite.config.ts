@@ -35,6 +35,7 @@ export default defineConfig((config) => {
 		build: {
 			rolldownOptions: {
 				output: {
+					cleanDir: true,
 					minify: {
 						compress:
 							config.mode === 'production'

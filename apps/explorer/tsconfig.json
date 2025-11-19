@@ -26,8 +26,8 @@
 		"noFallthroughCasesInSwitch": true,
 		"noUncheckedSideEffectImports": true,
 		"resolveJsonModule": true,
+		"baseUrl": ".",
 		"paths": {
-			"*": ["./*"],
 			"#*": ["./src/*"],
 			"#components": ["./src/components/*"],
 			"#cva": ["./src/cva.config.ts"]

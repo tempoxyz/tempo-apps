@@ -19,97 +19,26 @@ import {
 } from 'wagmi/query'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
-import { EventDescription } from '#components/EventDescription'
-import { NotFound } from '#components/NotFound'
-import { RelativeTime } from '#components/RelativeTime'
-import { Sections } from '#components/Sections'
-import { HexFormatter, PriceFormatter } from '#lib/formatting'
-import { useMediaQuery } from '#lib/hooks'
+import { EventDescription } from '#components/EventDescription.tsx'
+import { NotFound } from '#components/NotFound.tsx'
+import { RelativeTime } from '#components/RelativeTime.tsx'
+import { Sections } from '#components/Sections.tsx'
+import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { useMediaQuery } from '#lib/hooks.ts'
 import {
 	type KnownEvent,
 	type KnownEventPart,
 	parseKnownEvents,
-} from '#lib/known-events'
-import { TokenMetadata } from '#lib/token-metadata'
-import { config } from '#wagmi.config'
-
-type TransactionsResponse = {
-	transactions: Array<Transaction>
-	knownEvents: Record<Hex.Hex, KnownEvent[]>
-	total: number
-	offset: number // Next offset to use for pagination
-	limit: number
-	hasMore: boolean
-}
+} from '#lib/known-events.ts'
+import { TokenMetadata } from '#lib/token-metadata.ts'
+import { config } from '#wagmi.config.ts'
 
 const rowsPerPage = 10
 
-type TransactionQuery = {
-	address: Address.Address
-	page: number
-	limit: number
-	offset: number
-	_key?: string | undefined
-}
-
-function transactionsQueryOptions(
-	params: TransactionQuery,
-	baseUrl = import.meta.env.BASE_URL,
-) {
-	return queryOptions({
-		queryKey: [
-			'account-transactions',
-			params.address,
-			params.page,
-			params.limit,
-			params._key,
-		],
-		queryFn: async ({ client }) => {
-			const searchParams = new URLSearchParams({
-				limit: params.limit.toString(),
-				offset: params.offset.toString(),
-			})
-			const url = new URL(
-				`/api/account/${params.address}?${searchParams.toString()}`,
-				baseUrl,
-			)
-			const data = await fetch(url.toString()).then(
-				(res) => res.json() as unknown as TransactionsResponse,
-			)
-			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
-			const transactions = await Promise.all(
-				data.transactions.map(async (transaction) => {
-					const [receipt, block] = await Promise.all([
-						client.fetchQuery(
-							getTransactionReceiptQueryOptions(config, {
-								hash: transaction.hash,
-							}),
-						),
-						client.fetchQuery(
-							getBlockQueryOptions(config, {
-								blockNumber: transaction.blockNumber
-									? Hex.toBigInt(transaction.blockNumber)
-									: undefined,
-							}),
-						),
-					])
-					const tokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
-					knownEvents[transaction.hash] = parseKnownEvents(receipt, {
-						transaction,
-						tokenMetadata,
-					})
-					return { ...transaction, block, receipt }
-				}),
-			)
-			return { ...data, transactions, knownEvents }
-		},
-		// auto-refresh page 1 since new transactions appear there
-		refetchInterval: params.page === 1 ? 4_000 : false,
-		refetchIntervalInBackground: params.page === 1,
-		refetchOnWindowFocus: params.page === 1,
-		placeholderData: keepPreviousData,
-	})
-}
+const headers = new Headers({
+	'Content-Type': 'application/json',
+	Authorization: `Basic ${btoa(`eng:zealous-mayer`)}`,
+})
 
 export const Route = createFileRoute('/_layout/account/$address')({
 	component: RouteComponent,
@@ -154,6 +83,138 @@ const assets = [
 	'0x20c0000000000000000000000000000000000002',
 	'0x20c0000000000000000000000000000000000003',
 ] as const
+
+function RouteComponent() {
+	const navigate = useNavigate()
+	const route = useRouter()
+	const { address } = Route.useParams()
+	const { page, tab, limit } = Route.useSearch()
+
+	Address.assert(address)
+
+	React.useEffect(() => {
+		// preload pages around the active page (3 before and 3 after)
+		for (let i = -3; i <= 3; i++) {
+			if (i === 0) continue // skip current page
+			const preloadPage = page + i
+			if (preloadPage < 1) continue // only preload valid page numbers
+			route.preloadRoute({ to: '.', search: { page: preloadPage, tab, limit } })
+		}
+	}, [route, page, tab, limit])
+
+	const goToPage = React.useCallback(
+		(newPage: number) => {
+			navigate({
+				to: '.',
+				search: { page: newPage, tab, limit },
+				resetScroll: false,
+			})
+		},
+		[navigate, tab, limit],
+	)
+
+	const setActiveSection = React.useCallback(
+		(newIndex: number) => {
+			const newTab = newIndex === 0 ? 'history' : 'assets'
+			navigate({
+				to: '.',
+				search: { page, tab: newTab, limit },
+				resetScroll: false,
+			})
+		},
+		[navigate, page, limit],
+	)
+
+	return (
+		<div className="flex flex-col min-[1240px]:grid max-w-[1080px] w-full min-[1240px]:pt-20 pt-10 min-[1240px]:pb-16 pb-8 px-4 gap-[14px] min-w-0 min-[1240px]:grid-cols-[auto_1fr]">
+			<AccountCardWithTimestamps address={address} />
+			<SectionsWrapper
+				address={address}
+				page={page}
+				limit={limit}
+				goToPage={goToPage}
+				activeSection={tab === 'history' ? 0 : 1}
+				onSectionChange={setActiveSection}
+			/>
+		</div>
+	)
+}
+
+type TransactionsResponse = {
+	transactions: Array<Transaction>
+	knownEvents: Record<Hex.Hex, KnownEvent[]>
+	total: number
+	offset: number // Next offset to use for pagination
+	limit: number
+	hasMore: boolean
+}
+
+type TransactionQuery = {
+	address: Address.Address
+	page: number
+	limit: number
+	offset: number
+	_key?: string | undefined
+}
+
+function transactionsQueryOptions(
+	params: TransactionQuery,
+	baseUrl = import.meta.env.BASE_URL,
+) {
+	return queryOptions({
+		queryKey: [
+			'account-transactions',
+			params.address,
+			params.page,
+			params.limit,
+			params._key,
+		],
+		queryFn: async ({ client }) => {
+			const searchParams = new URLSearchParams({
+				limit: params.limit.toString(),
+				offset: params.offset.toString(),
+			})
+			const url = new URL(
+				`/api/account/${params.address}?${searchParams.toString()}`,
+				baseUrl,
+			)
+			const data = await fetch(url, {
+				headers,
+			}).then((res) => res.json() as unknown as TransactionsResponse)
+			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
+			const transactions = await Promise.all(
+				data.transactions.map(async (transaction) => {
+					const [receipt, block] = await Promise.all([
+						client.fetchQuery(
+							getTransactionReceiptQueryOptions(config, {
+								hash: transaction.hash,
+							}),
+						),
+						client.fetchQuery(
+							getBlockQueryOptions(config, {
+								blockNumber: transaction.blockNumber
+									? Hex.toBigInt(transaction.blockNumber)
+									: undefined,
+							}),
+						),
+					])
+					const tokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
+					knownEvents[transaction.hash] = parseKnownEvents(receipt, {
+						transaction,
+						tokenMetadata,
+					})
+					return { ...transaction, block, receipt }
+				}),
+			)
+			return { ...data, transactions, knownEvents }
+		},
+		// auto-refresh page 1 since new transactions appear there
+		refetchInterval: params.page === 1 ? 4_000 : false,
+		refetchIntervalInBackground: params.page === 1,
+		refetchOnWindowFocus: params.page === 1,
+		placeholderData: keepPreviousData,
+	})
+}
 
 function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const { address } = props
@@ -290,80 +351,23 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 	)
 }
 
-function useAccountTotalValue(
-	address: Address.Address,
-	baseUrl = import.meta.env.BASE_URL,
-) {
+function useAccountTotalValue(address: Address.Address) {
 	return useQuery({
 		queryKey: ['account-total-value', address],
 		queryFn: async () => {
-			const url = new URL(`/api/account/${address}/total-value`, baseUrl)
-			const response = await fetch(url)
+			const response = await fetch(`/api/account/${address}/total-value`, {
+				headers,
+			})
 			if (!response.ok)
 				throw new Error('Failed to fetch total value', {
 					cause: response.statusText,
 				})
-			const data = await response.text()
-			return Number(data)
+			const data = (await response.json()) as { totalValue: number }
+			return Number(data.totalValue)
 		},
 	})
 }
 
-function RouteComponent() {
-	const navigate = useNavigate()
-	const route = useRouter()
-	const { address } = Route.useParams()
-	const { page, tab, limit } = Route.useSearch()
-
-	Address.assert(address)
-
-	React.useEffect(() => {
-		// preload pages around the active page (3 before and 3 after)
-		for (let i = -3; i <= 3; i++) {
-			if (i === 0) continue // skip current page
-			const preloadPage = page + i
-			if (preloadPage < 1) continue // only preload valid page numbers
-			route.preloadRoute({ to: '.', search: { page: preloadPage, tab, limit } })
-		}
-	}, [route, page, tab, limit])
-
-	const goToPage = React.useCallback(
-		(newPage: number) => {
-			navigate({
-				to: '.',
-				search: { page: newPage, tab, limit },
-				resetScroll: false,
-			})
-		},
-		[navigate, tab, limit],
-	)
-
-	const setActiveSection = React.useCallback(
-		(newIndex: number) => {
-			const newTab = newIndex === 0 ? 'history' : 'assets'
-			navigate({
-				to: '.',
-				search: { page, tab: newTab, limit },
-				resetScroll: false,
-			})
-		},
-		[navigate, page, limit],
-	)
-
-	return (
-		<div className="flex flex-col min-[1240px]:grid max-w-[1080px] w-full min-[1240px]:pt-20 pt-10 min-[1240px]:pb-16 pb-8 px-4 gap-[14px] min-w-0 min-[1240px]:grid-cols-[auto_1fr]">
-			<AccountCardWithTimestamps address={address} />
-			<SectionsWrapper
-				address={address}
-				page={page}
-				limit={limit}
-				goToPage={goToPage}
-				activeSection={tab === 'history' ? 0 : 1}
-				onSectionChange={setActiveSection}
-			/>
-		</div>
-	)
-}
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
