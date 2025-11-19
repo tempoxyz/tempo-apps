@@ -290,11 +290,15 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 	)
 }
 
-function useAccountTotalValue(address: Address.Address) {
+function useAccountTotalValue(
+	address: Address.Address,
+	baseUrl = import.meta.env.BASE_URL,
+) {
 	return useQuery({
 		queryKey: ['account-total-value', address],
 		queryFn: async () => {
-			const response = await fetch(`/api/account/${address}/total-value`)
+			const url = new URL(`/api/account/${address}/total-value`, baseUrl)
+			const response = await fetch(url)
 			if (!response.ok)
 				throw new Error('Failed to fetch total value', {
 					cause: response.statusText,

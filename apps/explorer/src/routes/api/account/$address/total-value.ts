@@ -3,7 +3,7 @@ import { Address } from 'ox'
 import { Abis } from 'tempo.ts/viem'
 import { formatUnits } from 'viem'
 import { getChainId, readContract } from 'wagmi/actions'
-import { z } from 'zod'
+import * as z from 'zod/mini'
 import { config, getConfig } from '#wagmi.config.ts'
 
 export const Route = createFileRoute('/api/account/$address/total-value')({
@@ -90,13 +90,15 @@ export const Route = createFileRoute('/api/account/$address/total-value')({
 			},
 		},
 	},
-	params: z.object({
-		address: z.pipe(
-			z.string(),
-			z.transform((x) => {
-				Address.assert(x)
-				return x
-			}),
-		),
-	}),
+	params: {
+		parse: z.object({
+			address: z.pipe(
+				z.string(),
+				z.transform((x) => {
+					Address.assert(x)
+					return x
+				}),
+			),
+		}).parse,
+	},
 })
