@@ -53,6 +53,7 @@
 		"unplugin-icons": "^22.5.0",
 		"vite": "npm:rolldown-vite@latest",
 		"vite-tsconfig-paths": "^5.1.4",
+		"vitest": "^4.0.10",
 		"wrangler": "^4.49.0"
 	}
 }
