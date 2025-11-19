@@ -8,7 +8,7 @@
 		"dev": "vite dev",
 		"check": "biome check --write --unsafe",
 		"check:types": "tsc --project tsconfig.json --noEmit",
-		"gen:types": "wrangler types",
+		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
 		"postinstall": "pnpm gen:types && pnpm build",
 		"preview": "vite preview",
 		"test": "vitest run"
