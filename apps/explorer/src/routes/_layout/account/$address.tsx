@@ -12,7 +12,6 @@ import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { formatUnits } from 'viem'
-import { useBlock } from 'wagmi'
 import {
 	getBlockQueryOptions,
 	getTransactionReceiptQueryOptions,
@@ -34,6 +33,8 @@ import { TokenMetadata } from '#lib/token-metadata.ts'
 import { config } from '#wagmi.config.ts'
 
 const rowsPerPage = 10
+const ACCOUNT_ACTIVITY_LATEST_KEY = 'account-activity-latest'
+const ACCOUNT_ACTIVITY_EARLIEST_KEY = 'account-activity-earliest'
 
 const headers = new Headers({
 	'Content-Type': 'application/json',
@@ -63,17 +64,54 @@ export const Route = createFileRoute('/_layout/account/$address')({
 
 		const offset = (page - 1) * limit
 
-		return await context.queryClient.fetchQuery(
-			transactionsQueryOptions(
-				{
-					address,
-					page,
-					limit,
-					offset,
-				},
-				url.origin,
-			),
+		const pageOptions = transactionsQueryOptions(
+			{
+				address,
+				page,
+				limit,
+				offset,
+			},
+			url.origin,
 		)
+		const latestOptions = transactionsQueryOptions(
+			{
+				address,
+				page: 1,
+				limit: 1,
+				offset: 0,
+				_key: ACCOUNT_ACTIVITY_LATEST_KEY,
+			},
+			url.origin,
+		)
+
+		const [pageData, latestData] = await Promise.all([
+			context.queryClient.fetchQuery(pageOptions),
+			context.queryClient.fetchQuery(latestOptions),
+		])
+
+		const totalTransactions = latestData.total ?? pageData.total ?? 0
+		let earliestData: TransactionsResponse | undefined
+		if (totalTransactions > 0) {
+			const lastPageOffset = Math.max(0, totalTransactions - 1)
+			earliestData = await context.queryClient.fetchQuery(
+				transactionsQueryOptions(
+					{
+						address,
+						page: Math.max(1, Math.ceil(totalTransactions)),
+						limit: 1,
+						offset: lastPageOffset,
+						_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
+					},
+					url.origin,
+				),
+			)
+		}
+
+		return {
+			pageData,
+			lastActivityData: latestData,
+			createdData: earliestData,
+		}
 	},
 })
 
@@ -140,21 +178,36 @@ function RouteComponent() {
 	)
 }
 
-type TransactionsResponse = {
-	transactions: Array<Transaction>
-	knownEvents: Record<Hex.Hex, KnownEvent[]>
-	total: number
-	offset: number // Next offset to use for pagination
-	limit: number
-	hasMore: boolean
-}
-
 type TransactionQuery = {
 	address: Address.Address
 	page: number
 	limit: number
 	offset: number
 	_key?: string | undefined
+}
+
+type TransactionWithMeta = Transaction & {
+	block: { timestamp: bigint }
+	receipt: TransactionReceipt & { chainId: 42429 }
+}
+
+type TransactionsApiResponse = {
+	transactions: Array<Transaction>
+	total: number
+	offset: number // Next offset to use for pagination
+	limit: number
+	hasMore: boolean
+}
+
+type TransactionsResponse = {
+	transactions: Array<TransactionWithMeta>
+	knownEvents: Record<Hex.Hex, KnownEvent[]>
+} & Omit<TransactionsApiResponse, 'transactions'>
+
+type AccountRouteLoaderData = {
+	pageData: TransactionsResponse
+	lastActivityData?: TransactionsResponse
+	createdData?: TransactionsResponse
 }
 
 function transactionsQueryOptions(
@@ -178,9 +231,9 @@ function transactionsQueryOptions(
 				`/api/account/${params.address}?${searchParams.toString()}`,
 				baseUrl,
 			)
-			const data = await fetch(url, {
+			const data = (await fetch(url, {
 				headers,
-			}).then((res) => res.json() as unknown as TransactionsResponse)
+			}).then((res) => res.json())) as TransactionsApiResponse
 			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
 			const transactions = await Promise.all(
 				data.transactions.map(async (transaction) => {
@@ -203,10 +256,18 @@ function transactionsQueryOptions(
 						transaction,
 						tokenMetadata,
 					})
-					return { ...transaction, block, receipt }
+					return {
+						...transaction,
+						block,
+						receipt,
+					} satisfies TransactionWithMeta
 				}),
 			)
-			return { ...data, transactions, knownEvents }
+			return {
+				...data,
+				transactions,
+				knownEvents,
+			} satisfies TransactionsResponse
 		},
 		// auto-refresh page 1 since new transactions appear there
 		refetchInterval: params.page === 1 ? 4_000 : false,
@@ -218,50 +279,42 @@ function transactionsQueryOptions(
 
 function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const { address } = props
+	const { lastActivityData: loaderLastActivity, createdData: loaderCreated } =
+		Route.useLoaderData() as AccountRouteLoaderData
 
-	// fetch the most recent transactions (pg.1)
-	const { data: recentData } = useQuery(
-		transactionsQueryOptions({
-			address,
-			page: 1,
-			limit: 1,
-			offset: 0,
-			_key: 'account-creation',
-		}),
-	)
-
-	// get the 1st (most recent) transaction's block timestamp for "last activity"
-	const recentTransaction = recentData?.transactions?.at(0)
-	const { data: lastActivityTimestamp } = useBlock({
-		blockNumber: Hex.toBigInt(recentTransaction?.blockNumber ?? '0x0'),
-		query: {
-			enabled: Boolean(recentTransaction?.blockNumber),
-			select: (block) => block.timestamp,
-		},
+	const latestQueryOptions = transactionsQueryOptions({
+		address,
+		page: 1,
+		limit: 1,
+		offset: 0,
+		_key: ACCOUNT_ACTIVITY_LATEST_KEY,
+	})
+	const { data: recentData } = useQuery({
+		...latestQueryOptions,
+		...(loaderLastActivity ? { initialData: loaderLastActivity } : {}),
 	})
 
-	// for "created" timestamp, fetch the earliest transaction, this would be the last page of transactions
-	const totalTransactions = recentData?.total ?? 0
+	const totalTransactions =
+		recentData?.total ?? loaderLastActivity?.total ?? loaderCreated?.total ?? 0
 	const lastPageOffset = Math.max(0, totalTransactions - 1)
+	const lastPageNumber =
+		totalTransactions > 0 ? Math.max(1, Math.ceil(totalTransactions)) : 1
 
-	const { data: oldestData } = useQuery(
-		transactionsQueryOptions({
-			address,
-			page: Math.ceil(totalTransactions / 1),
-			limit: 1,
-			offset: lastPageOffset,
-			_key: 'account-creation',
-		}),
-	)
-
-	const [oldestTransaction] = oldestData?.transactions ?? []
-	const { data: createdTimestamp } = useBlock({
-		blockNumber: Hex.toBigInt(oldestTransaction?.blockNumber ?? '0x0'),
-		query: {
-			enabled: Boolean(oldestTransaction?.blockNumber),
-			select: (block) => block.timestamp,
-		},
+	const earliestQueryOptions = transactionsQueryOptions({
+		address,
+		page: lastPageNumber,
+		limit: 1,
+		offset: lastPageOffset,
+		_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
 	})
+	const { data: oldestData } = useQuery({
+		...earliestQueryOptions,
+		enabled: totalTransactions > 0,
+		...(loaderCreated ? { initialData: loaderCreated } : {}),
+	})
+
+	const lastActivityTimestamp = recentData?.transactions?.at(0)?.block.timestamp
+	const createdTimestamp = oldestData?.transactions?.at(0)?.block.timestamp
 
 	// Calculate total holdings value
 	const totalValue = useAccountTotalValue(address)
@@ -380,7 +433,8 @@ function SectionsWrapper(props: {
 		props
 
 	const state = useRouterState()
-	const initialData = Route.useLoaderData()
+	const { pageData: initialData } =
+		Route.useLoaderData() as AccountRouteLoaderData
 
 	const { data, isLoading } = useQuery({
 		...transactionsQueryOptions({
