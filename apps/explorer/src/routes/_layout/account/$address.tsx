@@ -108,6 +108,7 @@ export const Route = createFileRoute('/_layout/account/$address')({
 		}
 
 		return {
+			baseUrl: url.origin,
 			pageData,
 			lastActivityData: latestData,
 			createdData: earliestData,
@@ -205,15 +206,13 @@ type TransactionsResponse = {
 } & Omit<TransactionsApiResponse, 'transactions'>
 
 type AccountRouteLoaderData = {
+	baseUrl: string
 	pageData: TransactionsResponse
 	lastActivityData?: TransactionsResponse
 	createdData?: TransactionsResponse
 }
 
-function transactionsQueryOptions(
-	params: TransactionQuery,
-	baseUrl = import.meta.env.BASE_URL,
-) {
+function transactionsQueryOptions(params: TransactionQuery, baseUrl: string) {
 	return queryOptions({
 		queryKey: [
 			'account-transactions',
@@ -286,16 +285,23 @@ function transactionsQueryOptions(
 
 function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const { address } = props
-	const { lastActivityData: loaderLastActivity, createdData: loaderCreated } =
-		Route.useLoaderData() as AccountRouteLoaderData
 
-	const latestQueryOptions = transactionsQueryOptions({
-		address,
-		page: 1,
-		limit: 1,
-		offset: 0,
-		_key: ACCOUNT_ACTIVITY_LATEST_KEY,
-	})
+	const {
+		baseUrl,
+		lastActivityData: loaderLastActivity,
+		createdData: loaderCreated,
+	} = Route.useLoaderData() as AccountRouteLoaderData
+
+	const latestQueryOptions = transactionsQueryOptions(
+		{
+			address,
+			page: 1,
+			limit: 1,
+			offset: 0,
+			_key: ACCOUNT_ACTIVITY_LATEST_KEY,
+		},
+		baseUrl,
+	)
 	const { data: recentData } = useQuery({
 		...latestQueryOptions,
 		...(loaderLastActivity ? { initialData: loaderLastActivity } : {}),
@@ -307,13 +313,16 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const lastPageNumber =
 		totalTransactions > 0 ? Math.max(1, Math.ceil(totalTransactions)) : 1
 
-	const earliestQueryOptions = transactionsQueryOptions({
-		address,
-		page: lastPageNumber,
-		limit: 1,
-		offset: lastPageOffset,
-		_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
-	})
+	const earliestQueryOptions = transactionsQueryOptions(
+		{
+			address,
+			page: lastPageNumber,
+			limit: 1,
+			offset: lastPageOffset,
+			_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
+		},
+		baseUrl,
+	)
 	const { data: oldestData } = useQuery({
 		...earliestQueryOptions,
 		enabled: totalTransactions > 0,
@@ -444,13 +453,18 @@ function SectionsWrapper(props: {
 	const { pageData: initialData } =
 		Route.useLoaderData() as AccountRouteLoaderData
 
+	const { baseUrl } = Route.useLoaderData()
+
 	const { data, isLoading } = useQuery({
-		...transactionsQueryOptions({
-			address,
-			page,
-			limit,
-			offset: (page - 1) * limit,
-		}),
+		...transactionsQueryOptions(
+			{
+				address,
+				page,
+				limit,
+				offset: (page - 1) * limit,
+			},
+			baseUrl,
+		),
 		initialData,
 	})
 	const { transactions, total, knownEvents } = data ?? {

@@ -4,11 +4,12 @@ import { tempoAndantino } from 'tempo.ts/chains'
 import type { RpcTransaction } from 'viem'
 import * as z from 'zod/mini'
 
+import { env } from '#env.ts'
+
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 
 const INDEX_SUPPLY_ENDPOINT = 'https://api.indexsupply.net/v2/query'
-const apiKey = process.env.INDEXSUPPLY_API_KEY
-if (!apiKey) throw new Error('INDEXSUPPLY_API_KEY is not configured')
+const apiKey = env.INDEXSUPPLY_API_KEY
 
 const chainId = tempoAndantino.id
 const chainIdHex = Hex.fromNumber(chainId)

@@ -14,6 +14,7 @@
 		"test": "vitest run"
 	},
 	"dependencies": {
+		"@t3-oss/env-core": "^0.13.8",
 		"@tailwindcss/vite": "^4.1.17",
 		"@tanstack/query-async-storage-persister": "^5.90.12",
 		"@tanstack/react-devtools": "^0.8.1",
