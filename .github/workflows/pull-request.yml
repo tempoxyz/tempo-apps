@@ -35,10 +35,10 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: Build
-        run: pnpm run build
-        env:
-          CLOUDFLARE_INCLUDE_PROCESS_ENV: true
-          INDEXSUPPLY_API_KEY: ${{ secrets.INDEXSUPPLY_API_KEY }}
+        run: |
+          export INDEXSUPPLY_API_KEY=${{ secrets.INDEXSUPPLY_API_KEY }}
+          export CLOUDFLARE_INCLUDE_PROCESS_ENV=true
+          pnpm run build
         working-directory: apps/${{ matrix.app }}
 
       - name: Upload Worker Version
