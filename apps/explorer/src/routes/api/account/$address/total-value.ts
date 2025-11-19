@@ -6,14 +6,14 @@ import { getChainId, readContract } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { config, getConfig } from '#wagmi.config.ts'
 
-const INDEX_SUPPLY_ENDPOINT = 'https://api.indexsupply.net/v2/query'
-const apiKey = process.env.INDEXSUPPLY_API_KEY
-
 export const Route = createFileRoute('/api/account/$address/total-value')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
 				const address = params.address.toLowerCase() as Address.Address
+
+				const INDEXSUPPLY_API_KEY = process.env.INDEXSUPPLY_API_KEY
+				const INDEXSUPPLY_ENDPOINT = 'https://api.indexsupply.net/v2/query'
 
 				const chainId = getChainId(config)
 
@@ -21,11 +21,11 @@ export const Route = createFileRoute('/api/account/$address/total-value')({
 					query: /* sql */ `SELECT address as token_address, SUM(CASE WHEN "to" = '${address}' THEN tokens ELSE 0 END) - SUM(CASE WHEN "from" = '${address}' THEN tokens ELSE 0 END) as balance FROM transfer WHERE chain = ${chainId} AND ("to" = '${address}' OR "from" = '${address}') GROUP BY address`,
 					signatures:
 						'Transfer(address indexed from, address indexed to, uint tokens)',
-					'api-key': apiKey,
+					'api-key': INDEXSUPPLY_API_KEY,
 				})
 
 				const response = await fetch(
-					`${INDEX_SUPPLY_ENDPOINT}?${searchParams.toString()}`,
+					`${INDEXSUPPLY_ENDPOINT}?${searchParams.toString()}`,
 				)
 
 				if (!response.ok) {
