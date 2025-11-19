@@ -125,11 +125,11 @@ async function runIndexSupplyQuery(
 export const Route = createFileRoute('/api/account/$address')({
 	beforeLoad: async ({ search, params }) => {
 		const { address } = params
-		const { offset, limit } = search
+		const { offset, limit, include } = search
 
 		if (limit > MAX_LIMIT) throw new Error('Limit is too high')
 
-		return { address, offset, limit }
+		return { address, offset, limit, include }
 	},
 	server: {
 		handlers: {
@@ -139,6 +139,15 @@ export const Route = createFileRoute('/api/account/$address')({
 				const normalizedAddress = address.toLowerCase() as Address.Address
 				const rawOffset = Number(url.searchParams.get('offset') ?? 0)
 				const rawLimit = Number(url.searchParams.get('limit') ?? DEFAULT_LIMIT)
+				const includeParam = (
+					url.searchParams.get('include') ?? 'all'
+				).toLowerCase()
+				const include: 'sent' | 'received' | 'all' =
+					includeParam === 'sent'
+						? 'sent'
+						: includeParam === 'received'
+							? 'received'
+							: 'all'
 
 				const offset = Math.max(
 					0,
@@ -156,16 +165,39 @@ export const Route = createFileRoute('/api/account/$address')({
 
 				const transferSignature =
 					'Transfer(address indexed from, address indexed to, uint tokens)'
-				const addressFilter = `
-					t."from" = '${normalizedAddress}'
-					OR t."to" = '${normalizedAddress}'
-					OR t.hash IN (
-						SELECT DISTINCT tr.tx_hash
-						FROM transfer tr
-						WHERE tr.chain = ${chainId}
-							AND (tr."from" = '${normalizedAddress}' OR tr."to" = '${normalizedAddress}')
-					)
-				`
+				const includeSent = include === 'all' || include === 'sent'
+				const includeReceived = include === 'all' || include === 'received'
+
+				const directConditions: string[] = []
+				if (includeSent)
+					directConditions.push(`t."from" = '${normalizedAddress}'`)
+				if (includeReceived)
+					directConditions.push(`t."to" = '${normalizedAddress}'`)
+
+				const transferConditions: string[] = []
+				if (includeSent)
+					transferConditions.push(`tr."from" = '${normalizedAddress}'`)
+				if (includeReceived)
+					transferConditions.push(`tr."to" = '${normalizedAddress}'`)
+
+				const addressFilterParts: string[] = []
+				if (directConditions.length)
+					addressFilterParts.push(`(${directConditions.join(' OR ')})`)
+
+				if (transferConditions.length) {
+					addressFilterParts.push(`
+						t.hash IN (
+							SELECT DISTINCT tr.tx_hash
+							FROM transfer tr
+							WHERE tr.chain = ${chainId}
+								AND (${transferConditions.join(' OR ')})
+						)
+					`)
+				}
+
+				if (addressFilterParts.length === 0) addressFilterParts.push('FALSE')
+
+				const addressFilter = addressFilterParts.join(' OR ')
 
 				try {
 					// Parallelize count and transactions fetch
@@ -299,5 +331,6 @@ export const Route = createFileRoute('/api/account/$address')({
 	validateSearch: z.object({
 		offset: z.prefault(z.coerce.number(), 0),
 		limit: z.prefault(z.coerce.number(), 100),
+		include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
 	}),
 })
