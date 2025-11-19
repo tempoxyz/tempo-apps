@@ -26,5 +26,10 @@
 			"onFail": "download"
 		}
 	},
+	"pnpm": {
+		"overrides": {
+			"vite": "npm:rolldown-vite@latest"
+		}
+	},
 	"packageManager": "pnpm@10.22.0"
 }
