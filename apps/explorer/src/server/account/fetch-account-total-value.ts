@@ -4,18 +4,15 @@ import { Abis } from 'tempo.ts/viem'
 import { formatUnits } from 'viem'
 import { getChainId, readContract } from 'wagmi/actions'
 import * as z from 'zod/mini'
-
+import { env } from '#lib/env.ts'
 import { config, getConfig } from '#wagmi.config.ts'
-
-const INDEX_SUPPLY_ENDPOINT = 'https://api.indexsupply.net/v2/query'
 
 const TotalValueInputSchema = z.object({
 	address: z.pipe(
 		z.string(),
 		z.transform((value) => {
-			const normalized = value.toLowerCase() as Address.Address
-			Address.assert(normalized)
-			return normalized
+			Address.assert(value)
+			return value
 		}),
 	),
 })
@@ -36,26 +33,25 @@ const indexSupplyResponseSchema = z.array(
 export type AccountTotalValueResult = { totalValue: number }
 
 export const fetchAccountTotalValue = createServerFn({ method: 'POST' })
-	.inputValidator((input) => TotalValueInputSchema.parse(input))
+	.inputValidator(TotalValueInputSchema)
 	.handler(async ({ data }) => {
-		const apiKey = process.env.INDEXSUPPLY_API_KEY
-		if (!apiKey) throw new Error('INDEXSUPPLY_API_KEY is not configured')
-
 		const chainId = getChainId(config)
+		const address = data.address.toLowerCase() as Address.Address
+
 		const searchParams = new URLSearchParams({
 			query: /* sql */ `SELECT address as token_address,
-			SUM(CASE WHEN "to" = '${data.address}' THEN tokens ELSE 0 END) -
-			SUM(CASE WHEN "from" = '${data.address}' THEN tokens ELSE 0 END) as balance
+			SUM(CASE WHEN "to" = '${address}' THEN tokens ELSE 0 END) -
+			SUM(CASE WHEN "from" = '${address}' THEN tokens ELSE 0 END) as balance
 			FROM transfer
-			WHERE chain = ${chainId} AND ("to" = '${data.address}' OR "from" = '${data.address}')
+			WHERE chain = ${chainId} AND ("to" = '${address}' OR "from" = '${address}')
 			GROUP BY address`,
 			signatures:
 				'Transfer(address indexed from, address indexed to, uint tokens)',
-			'api-key': apiKey,
+			'api-key': env.server.INDEXSUPPLY_API_KEY,
 		})
 
 		const response = await fetch(
-			`${INDEX_SUPPLY_ENDPOINT}?${searchParams.toString()}`,
+			`${env.server.INDEXSUPPLY_ENDPOINT}?${searchParams.toString()}`,
 		)
 
 		if (!response.ok) {

@@ -3,10 +3,10 @@ import { Address, Hex } from 'ox'
 import { tempoAndantino } from 'tempo.ts/chains'
 import type { RpcTransaction } from 'viem'
 import * as z from 'zod/mini'
+import { env } from '#lib/env.ts'
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 
-const INDEX_SUPPLY_ENDPOINT = 'https://api.indexsupply.net/v2/query'
 const chainId = tempoAndantino.id
 const chainIdHex = Hex.fromNumber(chainId)
 const chainCursor = `${chainId}-0`
@@ -57,10 +57,8 @@ type RunQueryOptions = {
 }
 
 export const fetchAccountTransactions = createServerFn({ method: 'POST' })
-	.inputValidator((input) => FetchAccountTransactionsInputSchema.parse(input))
+	.inputValidator(FetchAccountTransactionsInputSchema)
 	.handler(async ({ data }) => {
-		const apiKey = process.env.INDEXSUPPLY_API_KEY
-		if (!apiKey) throw new Error('INDEXSUPPLY_API_KEY is not configured')
 
 		const include = data.include ?? 'all'
 		const sort = (data.sort ?? 'desc') === 'asc' ? 'ASC' : 'DESC'
@@ -104,7 +102,6 @@ export const fetchAccountTransactions = createServerFn({ method: 'POST' })
 					WHERE t.chain = ${chainId}
 						AND (${addressFilter})
 				`,
-				apiKey,
 				{ signatures: [transferSignature] },
 			),
 			runIndexSupplyQuery(
@@ -127,7 +124,6 @@ export const fetchAccountTransactions = createServerFn({ method: 'POST' })
 					LIMIT ${data.limit}
 					OFFSET ${data.offset}
 				`,
-				apiKey,
 				{ signatures: [transferSignature] },
 			),
 		])
@@ -194,11 +190,10 @@ export const fetchAccountTransactions = createServerFn({ method: 'POST' })
 
 async function runIndexSupplyQuery(
 	query: string,
-	apiKey: string,
 	options: RunQueryOptions = {},
 ) {
-	const url = new URL(INDEX_SUPPLY_ENDPOINT)
-	url.searchParams.set('api-key', apiKey)
+	const url = new URL(env.server.INDEXSUPPLY_ENDPOINT)
+	url.searchParams.set('api-key', env.server.INDEXSUPPLY_API_KEY)
 	const signatures =
 		options.signatures && options.signatures.length > 0
 			? options.signatures
