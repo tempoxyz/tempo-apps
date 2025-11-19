@@ -32,6 +32,11 @@ export default defineConfig((config) => {
 			port: Number(env.PORT ?? 3_000),
 			allowedHosts: config.mode === 'development' ? true : undefined,
 		},
+		define: {
+			'process.env.INDEXSUPPLY_API_KEY': JSON.stringify(
+				env.INDEXSUPPLY_API_KEY,
+			),
+		},
 		build: {
 			rolldownOptions: {
 				output: {

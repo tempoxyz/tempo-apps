@@ -36,6 +36,8 @@ jobs:
 
       - name: Build
         run: pnpm run build
+        env:
+          INDEXSUPPLY_API_KEY: ${{ secrets.INDEXSUPPLY_API_KEY }}
         working-directory: apps/${{ matrix.app }}
 
       - name: Upload Worker Version
