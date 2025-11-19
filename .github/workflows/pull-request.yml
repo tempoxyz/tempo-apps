@@ -40,7 +40,7 @@ jobs:
 
       - name: Upload Worker Version
         id: deploy
-        uses: cloudflare/wrangler-action@main
+        uses: cloudflare/wrangler-action@v3
         env:
           BASIC_AUTH_USERNAME: ${{ secrets.BASIC_AUTH_USERNAME }}
           BASIC_AUTH_PASSWORD: ${{ secrets.BASIC_AUTH_PASSWORD }}
