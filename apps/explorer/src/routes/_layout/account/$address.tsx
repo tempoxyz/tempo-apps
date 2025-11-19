@@ -70,7 +70,8 @@ function transactionsQueryOptions(
 				offset: params.offset.toString(),
 			})
 			const url = new URL(
-				`${baseUrl}/api/account/${params.address}?${searchParams.toString()}`,
+				`/api/account/${params.address}?${searchParams.toString()}`,
+				baseUrl,
 			)
 			const data = await fetch(url.toString()).then(
 				(res) => res.json() as unknown as TransactionsResponse,
