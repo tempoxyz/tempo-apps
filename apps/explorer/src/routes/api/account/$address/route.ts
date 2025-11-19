@@ -6,9 +6,6 @@ import * as z from 'zod/mini'
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 
-const INDEX_SUPPLY_ENDPOINT = 'https://api.indexsupply.net/v2/query'
-const apiKey = process.env.INDEXSUPPLY_API_KEY
-
 const chainId = tempoAndantino.id
 const chainIdHex = Hex.fromNumber(chainId)
 const chainCursor = `${chainId}-0`
@@ -93,8 +90,10 @@ export const Route = createFileRoute('/api/account/$address')({
 					query: string,
 					options: RunQueryOptions = {},
 				) {
-					const url = new URL(INDEX_SUPPLY_ENDPOINT)
-					url.searchParams.set('api-key', apiKey)
+					const INDEXSUPPLY_ENDPOINT = 'https://api.indexsupply.net/v2/query'
+					const INDEXSUPPLY_API_KEY = process.env.INDEXSUPPLY_API_KEY
+					const url = new URL(INDEXSUPPLY_ENDPOINT)
+					url.searchParams.set('api-key', INDEXSUPPLY_API_KEY)
 					const signatures =
 						options.signatures && options.signatures.length > 0
 							? options.signatures
