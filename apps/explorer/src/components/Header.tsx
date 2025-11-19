@@ -23,16 +23,11 @@ export function Header(props: Header.Props) {
 		select: (match) => match.params.address,
 		shouldThrow: false,
 	})
-	const blockMatch = useMatch({
-		from: '/_layout/block/$id',
-		shouldThrow: false,
-	})
 	const hash = (txMatch?.params as { hash: string | undefined })?.hash
 	const address = (accountMatch?.params as { address: string | undefined })
 		?.address
 
 	const showInput = Boolean(hash || address)
-	const showLiveBlockNumber = !blockMatch
 
 	React.useEffect(() => {
 		if (hash || address || block) [setInputValue(''), setIsNavigating(false)]
@@ -77,11 +72,9 @@ export function Header(props: Header.Props) {
 						/>
 					</div>
 				)}
-				{showLiveBlockNumber && (
-					<div className="relative z-1">
-						<Header.BlockNumber initial={initialBlockNumber} />
-					</div>
-				)}
+				<div className="relative z-1">
+					<Header.BlockNumber initial={initialBlockNumber} />
+				</div>
 			</div>
 		</header>
 	)
