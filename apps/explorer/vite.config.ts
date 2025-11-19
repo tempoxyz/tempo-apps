@@ -11,7 +11,7 @@ const requiredSecrets = ['INDEXSUPPLY_API_KEY']
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
 
-	if (requiredSecrets.some((secret) => !env[secret]))
+	if (requiredSecrets.some((secret) => !env[secret] || !process.env[secret]))
 		throw new Error(`${requiredSecrets.join(', ')} are required`)
 
 	return {
@@ -39,7 +39,7 @@ export default defineConfig((config) => {
 		},
 		define: {
 			'process.env.INDEXSUPPLY_API_KEY': JSON.stringify(
-				env.INDEXSUPPLY_API_KEY,
+				env.INDEXSUPPLY_API_KEY || process.env.INDEXSUPPLY_API_KEY,
 			),
 		},
 		build: {
