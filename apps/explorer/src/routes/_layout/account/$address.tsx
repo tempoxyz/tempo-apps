@@ -52,7 +52,10 @@ type TransactionQuery = {
 	_key?: string | undefined
 }
 
-function transactionsQueryOptions(params: TransactionQuery) {
+function transactionsQueryOptions(
+	params: TransactionQuery,
+	baseUrl = import.meta.env.BASE_URL,
+) {
 	return queryOptions({
 		queryKey: [
 			'account-transactions',
@@ -66,8 +69,10 @@ function transactionsQueryOptions(params: TransactionQuery) {
 				limit: params.limit.toString(),
 				offset: params.offset.toString(),
 			})
-			const url = `/api/account/${params.address}?${searchParams.toString()}`
-			const data = await fetch(url).then(
+			const url = new URL(
+				`${baseUrl}/api/account/${params.address}?${searchParams.toString()}`,
+			)
+			const data = await fetch(url.toString()).then(
 				(res) => res.json() as unknown as TransactionsResponse,
 			)
 			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
@@ -120,19 +125,24 @@ export const Route = createFileRoute('/_layout/account/$address')({
 		tab: z.prefault(z.enum(['history', 'assets']), 'history'),
 	}),
 	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
-	loader: async ({ deps: { page, limit }, params, context }) => {
+	loader: async ({ deps: { page, limit }, params, context, location }) => {
+		const url = new URL(location.url)
+
 		const { address } = params
 		if (!Address.validate(address)) throw notFound()
 
 		const offset = (page - 1) * limit
 
 		return await context.queryClient.fetchQuery(
-			transactionsQueryOptions({
-				address,
-				page,
-				limit,
-				offset,
-			}),
+			transactionsQueryOptions(
+				{
+					address,
+					page,
+					limit,
+					offset,
+				},
+				url.origin,
+			),
 		)
 	},
 })
