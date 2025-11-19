@@ -30,6 +30,7 @@ import {
 	parseKnownEvents,
 } from '#lib/known-events.ts'
 import { TokenMetadata } from '#lib/token-metadata.ts'
+import type { TransactionsApiResponse } from '#server/account/fetch-account-transactions.ts'
 import { config } from '#wagmi.config.ts'
 
 const rowsPerPage = 10
@@ -185,19 +186,13 @@ type TransactionQuery = {
 	limit: number
 	offset: number
 	_key?: string | undefined
+	include?: 'all' | 'sent' | 'received'
+	sort?: 'asc' | 'desc'
 }
 
 type TransactionWithMeta = Transaction & {
 	block: { timestamp: bigint }
 	receipt: TransactionReceipt & { chainId: 42429 }
-}
-
-type TransactionsApiResponse = {
-	transactions: Array<Transaction>
-	total: number
-	offset: number // Next offset to use for pagination
-	limit: number
-	hasMore: boolean
 }
 
 type TransactionsResponse = {
@@ -222,24 +217,18 @@ function transactionsQueryOptions(params: TransactionQuery, baseUrl: string) {
 			params._key,
 		],
 		queryFn: async ({ client }) => {
-			const searchParams = new URLSearchParams({
-				limit: params.limit.toString(),
-				offset: params.offset.toString(),
-			})
-			const url = new URL(
-				`/api/account/${params.address}?${searchParams.toString()}`,
-				baseUrl,
-			)
-			const data = await fetch(url, {
-				headers,
-			}).then(async (response) => {
-				if (!response.ok) {
-					const text = await response.text()
-					console.error(text)
-					throw new Error('Failed to fetch transactions', { cause: text })
-				}
-				return response.json() as unknown as TransactionsApiResponse
-			})
+			const include = params.include ?? 'all'
+			const sort = params.sort ?? 'desc'
+			const requestParams = {
+				address: params.address,
+				offset: params.offset,
+				limit: params.limit,
+				include,
+				sort,
+			}
+			const data = import.meta.env.SSR
+				? await fetchTransactionsServer(requestParams)
+				: await fetchTransactionsHttp(requestParams, baseUrl)
 			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
 			const transactions = await Promise.all(
 				data.transactions.map(async (transaction) => {
@@ -280,6 +269,52 @@ function transactionsQueryOptions(params: TransactionQuery, baseUrl: string) {
 		refetchIntervalInBackground: params.page === 1,
 		refetchOnWindowFocus: params.page === 1,
 		placeholderData: keepPreviousData,
+	})
+}
+
+type TransactionsHttpParams = {
+	address: Address.Address
+	limit: number
+	offset: number
+	include: 'all' | 'sent' | 'received'
+	sort: 'asc' | 'desc'
+}
+
+async function fetchTransactionsHttp(
+	params: TransactionsHttpParams,
+	baseUrl: string,
+): Promise<TransactionsApiResponse> {
+	const searchParams = new URLSearchParams({
+		limit: params.limit.toString(),
+		offset: params.offset.toString(),
+		include: params.include,
+		sort: params.sort,
+	})
+	const url = new URL(
+		`/api/account/${params.address}?${searchParams.toString()}`,
+		baseUrl,
+	)
+	const response = await fetch(url, { headers })
+	if (!response.ok) {
+		const text = await response.text()
+		console.error(text)
+		throw new Error('Failed to fetch transactions', { cause: text })
+	}
+	return (await response.json()) as TransactionsApiResponse
+}
+
+async function fetchTransactionsServer(
+	params: TransactionsHttpParams,
+): Promise<TransactionsApiResponse> {
+	const { fetchAccountTransactions } = await import(
+		'#server/account/fetch-account-transactions.ts'
+	)
+	return fetchAccountTransactions({
+		address: params.address,
+		offset: params.offset,
+		limit: params.limit,
+		include: params.include,
+		sort: params.sort === 'asc' ? 'ASC' : 'DESC',
 	})
 }
 
