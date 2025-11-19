@@ -12,98 +12,34 @@ import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { formatUnits } from 'viem'
-import { useBlock } from 'wagmi'
 import {
 	getBlockQueryOptions,
 	getTransactionReceiptQueryOptions,
 } from 'wagmi/query'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
-import { EventDescription } from '#components/EventDescription'
-import { NotFound } from '#components/NotFound'
-import { RelativeTime } from '#components/RelativeTime'
-import { Sections } from '#components/Sections'
-import { HexFormatter, PriceFormatter } from '#lib/formatting'
-import { useMediaQuery } from '#lib/hooks'
+import { EventDescription } from '#components/EventDescription.tsx'
+import { NotFound } from '#components/NotFound.tsx'
+import { RelativeTime } from '#components/RelativeTime.tsx'
+import { Sections } from '#components/Sections.tsx'
+import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { useMediaQuery } from '#lib/hooks.ts'
 import {
 	type KnownEvent,
 	type KnownEventPart,
 	parseKnownEvents,
-} from '#lib/known-events'
-import { TokenMetadata } from '#lib/token-metadata'
-import { config } from '#wagmi.config'
-
-type TransactionsResponse = {
-	transactions: Array<Transaction>
-	knownEvents: Record<Hex.Hex, KnownEvent[]>
-	total: number
-	offset: number // Next offset to use for pagination
-	limit: number
-	hasMore: boolean
-}
+} from '#lib/known-events.ts'
+import { TokenMetadata } from '#lib/token-metadata.ts'
+import { fetchAccountTotalValue } from '#server/account/fetch-account-total-value.ts'
+import {
+	fetchAccountTransactions,
+	type TransactionsApiResponse,
+} from '#server/account/fetch-account-transactions.ts'
+import { config } from '#wagmi.config.ts'
 
 const rowsPerPage = 10
-
-type TransactionQuery = {
-	address: Address.Address
-	page: number
-	limit: number
-	offset: number
-	_key?: string | undefined
-}
-
-function transactionsQueryOptions(params: TransactionQuery) {
-	return queryOptions({
-		queryKey: [
-			'account-transactions',
-			params.address,
-			params.page,
-			params.limit,
-			params._key,
-		],
-		queryFn: async ({ client }) => {
-			const searchParams = new URLSearchParams({
-				limit: params.limit.toString(),
-				offset: params.offset.toString(),
-			})
-			const url = `/api/account/${params.address}?${searchParams.toString()}`
-			const data = await fetch(url).then(
-				(res) => res.json() as unknown as TransactionsResponse,
-			)
-			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
-			const transactions = await Promise.all(
-				data.transactions.map(async (transaction) => {
-					const [receipt, block] = await Promise.all([
-						client.fetchQuery(
-							getTransactionReceiptQueryOptions(config, {
-								hash: transaction.hash,
-							}),
-						),
-						client.fetchQuery(
-							getBlockQueryOptions(config, {
-								blockNumber: transaction.blockNumber
-									? Hex.toBigInt(transaction.blockNumber)
-									: undefined,
-							}),
-						),
-					])
-					const tokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
-					knownEvents[transaction.hash] = parseKnownEvents(receipt, {
-						transaction,
-						tokenMetadata,
-					})
-					return { ...transaction, block, receipt }
-				}),
-			)
-			return { ...data, transactions, knownEvents }
-		},
-		// auto-refresh page 1 since new transactions appear there
-		refetchInterval: params.page === 1 ? 4_000 : false,
-		refetchIntervalInBackground: params.page === 1,
-		refetchOnWindowFocus: params.page === 1,
-		placeholderData: keepPreviousData,
-	})
-}
+const ACCOUNT_ACTIVITY_LATEST_KEY = 'account-activity-latest'
+const ACCOUNT_ACTIVITY_EARLIEST_KEY = 'account-activity-earliest'
 
 export const Route = createFileRoute('/_layout/account/$address')({
 	component: RouteComponent,
@@ -126,14 +62,45 @@ export const Route = createFileRoute('/_layout/account/$address')({
 
 		const offset = (page - 1) * limit
 
-		return await context.queryClient.fetchQuery(
-			transactionsQueryOptions({
-				address,
-				page,
-				limit,
-				offset,
-			}),
-		)
+		const pageOptions = transactionsQueryOptions({
+			address,
+			page,
+			limit,
+			offset,
+		})
+		const latestOptions = transactionsQueryOptions({
+			address,
+			page: 1,
+			limit: 1,
+			offset: 0,
+			_key: ACCOUNT_ACTIVITY_LATEST_KEY,
+		})
+
+		const [pageData, latestData] = await Promise.all([
+			context.queryClient.fetchQuery(pageOptions),
+			context.queryClient.fetchQuery(latestOptions),
+		])
+
+		const totalTransactions = latestData.total ?? pageData.total ?? 0
+		let earliestData: TransactionsResponse | undefined
+		if (totalTransactions > 0) {
+			const lastPageOffset = Math.max(0, totalTransactions - 1)
+			earliestData = await context.queryClient.fetchQuery(
+				transactionsQueryOptions({
+					address,
+					page: Math.max(1, Math.ceil(totalTransactions)),
+					limit: 1,
+					offset: lastPageOffset,
+					_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
+				}),
+			)
+		}
+
+		return {
+			pageData,
+			lastActivityData: latestData,
+			createdData: earliestData,
+		}
 	},
 })
 
@@ -144,52 +111,193 @@ const assets = [
 	'0x20c0000000000000000000000000000000000003',
 ] as const
 
+function RouteComponent() {
+	const navigate = useNavigate()
+	const route = useRouter()
+	const { address } = Route.useParams()
+	const { page, tab, limit } = Route.useSearch()
+
+	Address.assert(address)
+
+	React.useEffect(() => {
+		// preload pages around the active page (3 before and 3 after)
+		for (let i = -3; i <= 3; i++) {
+			if (i === 0) continue // skip current page
+			const preloadPage = page + i
+			if (preloadPage < 1) continue // only preload valid page numbers
+			route.preloadRoute({ to: '.', search: { page: preloadPage, tab, limit } })
+		}
+	}, [route, page, tab, limit])
+
+	const goToPage = React.useCallback(
+		(newPage: number) => {
+			navigate({
+				to: '.',
+				search: { page: newPage, tab, limit },
+				resetScroll: false,
+			})
+		},
+		[navigate, tab, limit],
+	)
+
+	const setActiveSection = React.useCallback(
+		(newIndex: number) => {
+			const newTab = newIndex === 0 ? 'history' : 'assets'
+			navigate({
+				to: '.',
+				search: { page, tab: newTab, limit },
+				resetScroll: false,
+			})
+		},
+		[navigate, page, limit],
+	)
+
+	return (
+		<div className="flex flex-col min-[1240px]:grid max-w-[1080px] w-full min-[1240px]:pt-20 pt-10 min-[1240px]:pb-16 pb-8 px-4 gap-[14px] min-w-0 min-[1240px]:grid-cols-[auto_1fr]">
+			<AccountCardWithTimestamps address={address} />
+			<SectionsWrapper
+				address={address}
+				page={page}
+				limit={limit}
+				goToPage={goToPage}
+				activeSection={tab === 'history' ? 0 : 1}
+				onSectionChange={setActiveSection}
+			/>
+		</div>
+	)
+}
+
+type TransactionQuery = {
+	address: Address.Address
+	page: number
+	limit: number
+	offset: number
+	_key?: string | undefined
+	include?: 'all' | 'sent' | 'received'
+	sort?: 'asc' | 'desc'
+}
+
+type TransactionWithMeta = Transaction & {
+	block: { timestamp: bigint }
+	receipt: TransactionReceipt & { chainId: 42429 }
+}
+
+type TransactionsResponse = {
+	transactions: Array<TransactionWithMeta>
+	knownEvents: Record<Hex.Hex, KnownEvent[]>
+} & Omit<TransactionsApiResponse, 'transactions'>
+
+type AccountRouteLoaderData = {
+	pageData: TransactionsResponse
+	lastActivityData?: TransactionsResponse
+	createdData?: TransactionsResponse
+}
+
+function transactionsQueryOptions(params: TransactionQuery) {
+	return queryOptions({
+		queryKey: [
+			'account-transactions',
+			params.address,
+			params.page,
+			params.limit,
+			params._key,
+			params.include,
+			params.sort,
+		],
+		queryFn: async ({ client }) => {
+			const include = params.include ?? 'all'
+			const sort = params.sort ?? 'desc'
+			const data = await fetchAccountTransactions({
+				data: {
+					address: params.address,
+					offset: params.offset,
+					limit: params.limit,
+					include,
+					sort,
+				},
+			})
+			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
+			const transactions = await Promise.all(
+				data.transactions.map(async (transaction) => {
+					const [receipt, block] = await Promise.all([
+						client.fetchQuery(
+							getTransactionReceiptQueryOptions(config, {
+								hash: transaction.hash,
+							}),
+						),
+						client.fetchQuery(
+							getBlockQueryOptions(config, {
+								blockNumber: transaction.blockNumber
+									? Hex.toBigInt(transaction.blockNumber)
+									: undefined,
+							}),
+						),
+					])
+					const tokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
+					knownEvents[transaction.hash] = parseKnownEvents(receipt, {
+						transaction,
+						tokenMetadata,
+					})
+					return {
+						...transaction,
+						block,
+						receipt,
+					} satisfies TransactionWithMeta
+				}),
+			)
+			return {
+				...data,
+				transactions,
+				knownEvents,
+			} satisfies TransactionsResponse
+		},
+		// auto-refresh page 1 since new transactions appear there
+		refetchInterval: params.page === 1 ? 4_000 : false,
+		refetchIntervalInBackground: params.page === 1,
+		refetchOnWindowFocus: params.page === 1,
+		placeholderData: keepPreviousData,
+	})
+}
+
 function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const { address } = props
 
-	// fetch the most recent transactions (pg.1)
-	const { data: recentData } = useQuery(
-		transactionsQueryOptions({
-			address,
-			page: 1,
-			limit: 1,
-			offset: 0,
-			_key: 'account-creation',
-		}),
-	)
+	const { lastActivityData: loaderLastActivity, createdData: loaderCreated } =
+		Route.useLoaderData() as AccountRouteLoaderData
 
-	// get the 1st (most recent) transaction's block timestamp for "last activity"
-	const recentTransaction = recentData?.transactions?.at(0)
-	const { data: lastActivityTimestamp } = useBlock({
-		blockNumber: Hex.toBigInt(recentTransaction?.blockNumber ?? '0x0'),
-		query: {
-			enabled: Boolean(recentTransaction?.blockNumber),
-			select: (block) => block.timestamp,
-		},
+	const latestQueryOptions = transactionsQueryOptions({
+		address,
+		page: 1,
+		limit: 1,
+		offset: 0,
+		_key: ACCOUNT_ACTIVITY_LATEST_KEY,
+	})
+	const { data: recentData } = useQuery({
+		...latestQueryOptions,
+		...(loaderLastActivity ? { initialData: loaderLastActivity } : {}),
 	})
 
-	// for "created" timestamp, fetch the earliest transaction, this would be the last page of transactions
-	const totalTransactions = recentData?.total ?? 0
+	const totalTransactions =
+		recentData?.total ?? loaderLastActivity?.total ?? loaderCreated?.total ?? 0
 	const lastPageOffset = Math.max(0, totalTransactions - 1)
+	const lastPageNumber =
+		totalTransactions > 0 ? Math.max(1, Math.ceil(totalTransactions)) : 1
 
-	const { data: oldestData } = useQuery(
-		transactionsQueryOptions({
-			address,
-			page: Math.ceil(totalTransactions / 1),
-			limit: 1,
-			offset: lastPageOffset,
-			_key: 'account-creation',
-		}),
-	)
-
-	const [oldestTransaction] = oldestData?.transactions ?? []
-	const { data: createdTimestamp } = useBlock({
-		blockNumber: Hex.toBigInt(oldestTransaction?.blockNumber ?? '0x0'),
-		query: {
-			enabled: Boolean(oldestTransaction?.blockNumber),
-			select: (block) => block.timestamp,
-		},
+	const earliestQueryOptions = transactionsQueryOptions({
+		address,
+		page: lastPageNumber,
+		limit: 1,
+		offset: lastPageOffset,
+		_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
 	})
+	const { data: oldestData } = useQuery({
+		...earliestQueryOptions,
+		enabled: totalTransactions > 0,
+		...(loaderCreated ? { initialData: loaderCreated } : {}),
+	})
+
+	const lastActivityTimestamp = recentData?.transactions?.at(0)?.block.timestamp
+	const createdTimestamp = oldestData?.transactions?.at(0)?.block.timestamp
 
 	// Calculate total holdings value
 	const totalValue = useAccountTotalValue(address)
@@ -283,72 +391,14 @@ function useAccountTotalValue(address: Address.Address) {
 	return useQuery({
 		queryKey: ['account-total-value', address],
 		queryFn: async () => {
-			const response = await fetch(`/api/account/${address}/total-value`)
-			if (!response.ok)
-				throw new Error('Failed to fetch total value', {
-					cause: response.statusText,
-				})
-			const data = await response.text()
-			return Number(data)
+			const result = await fetchAccountTotalValue({
+				data: { address },
+			})
+			return Number(result.totalValue)
 		},
 	})
 }
 
-function RouteComponent() {
-	const navigate = useNavigate()
-	const route = useRouter()
-	const { address } = Route.useParams()
-	const { page, tab, limit } = Route.useSearch()
-
-	Address.assert(address)
-
-	React.useEffect(() => {
-		// preload pages around the active page (3 before and 3 after)
-		for (let i = -3; i <= 3; i++) {
-			if (i === 0) continue // skip current page
-			const preloadPage = page + i
-			if (preloadPage < 1) continue // only preload valid page numbers
-			route.preloadRoute({ to: '.', search: { page: preloadPage, tab, limit } })
-		}
-	}, [route, page, tab, limit])
-
-	const goToPage = React.useCallback(
-		(newPage: number) => {
-			navigate({
-				to: '.',
-				search: { page: newPage, tab, limit },
-				resetScroll: false,
-			})
-		},
-		[navigate, tab, limit],
-	)
-
-	const setActiveSection = React.useCallback(
-		(newIndex: number) => {
-			const newTab = newIndex === 0 ? 'history' : 'assets'
-			navigate({
-				to: '.',
-				search: { page, tab: newTab, limit },
-				resetScroll: false,
-			})
-		},
-		[navigate, page, limit],
-	)
-
-	return (
-		<div className="flex flex-col min-[1240px]:grid max-w-[1080px] w-full min-[1240px]:pt-20 pt-10 min-[1240px]:pb-16 pb-8 px-4 gap-[14px] min-w-0 min-[1240px]:grid-cols-[auto_1fr]">
-			<AccountCardWithTimestamps address={address} />
-			<SectionsWrapper
-				address={address}
-				page={page}
-				limit={limit}
-				goToPage={goToPage}
-				activeSection={tab === 'history' ? 0 : 1}
-				onSectionChange={setActiveSection}
-			/>
-		</div>
-	)
-}
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
@@ -361,7 +411,8 @@ function SectionsWrapper(props: {
 		props
 
 	const state = useRouterState()
-	const initialData = Route.useLoaderData()
+	const { pageData: initialData } =
+		Route.useLoaderData() as AccountRouteLoaderData
 
 	const { data, isLoading } = useQuery({
 		...transactionsQueryOptions({
@@ -379,7 +430,9 @@ function SectionsWrapper(props: {
 	}
 
 	const isLoadingPage =
-		(state.isLoading && state.location.pathname.includes('/account/')) ||
+		(state.isLoading &&
+			state.location.pathname.includes('/account/') &&
+			!state.location.pathname.includes('api/')) ||
 		isLoading
 
 	const isMobile = useMediaQuery('(max-width: 1239px)')

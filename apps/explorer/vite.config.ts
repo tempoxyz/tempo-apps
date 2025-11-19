@@ -33,14 +33,10 @@ export default defineConfig((config) => {
 			allowedHosts: config.mode === 'development' ? true : undefined,
 		},
 		build: {
+			emptyOutDir: true,
 			rolldownOptions: {
 				output: {
-					minify: {
-						compress:
-							config.mode === 'production'
-								? { dropConsole: true, dropDebugger: true }
-								: undefined,
-					},
+					cleanDir: true,
 				},
 			},
 		},

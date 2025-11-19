@@ -1,7 +1,7 @@
 import { ClientOnly } from '@tanstack/react-router'
 import * as React from 'react'
 import { cx } from '#cva.config.ts'
-import { Pagination } from './Pagination'
+import { Pagination } from './Pagination.tsx'
 
 export function Sections(props: Sections.Props) {
 	const {

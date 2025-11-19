@@ -3,7 +3,7 @@ import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
-import { ExploreInput } from './ExploreInput'
+import { ExploreInput } from './ExploreInput.tsx'
 
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
@@ -111,7 +111,7 @@ export namespace Header {
 		const network = chain.name.match(/Tempo (.+)/)?.[1]
 		if (!network) return null
 		return (
-			<div className="flex items-center gap-[4px] px-[8px] h-[28px] border-[1px] border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium">
+			<div className="flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium">
 				<Music4 width={14} height={14} className="text-accent" />
 				{network}
 			</div>

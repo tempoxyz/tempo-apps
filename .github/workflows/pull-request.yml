@@ -41,9 +41,13 @@ jobs:
       - name: Upload Worker Version
         id: deploy
         uses: cloudflare/wrangler-action@v3
+        env:
+          INDEXSUPPLY_API_KEY: ${{ secrets.INDEXSUPPLY_API_KEY }}
+          CLOUDFLARE_INCLUDE_PROCESS_ENV: true
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          quiet: false
           command: versions upload
           workingDirectory: apps/${{ matrix.app }}
 

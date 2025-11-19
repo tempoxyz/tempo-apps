@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { DateFormatter } from '#lib/formatting'
+import { DateFormatter } from '#lib/formatting.ts'
 
 export function RelativeTime(props: RelativeTime.Props) {
 	const { timestamp, ...props_ } = props

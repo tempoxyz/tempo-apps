@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { Address as AddressType } from 'ox'
-import { HexFormatter } from '#lib/formatting'
+import { HexFormatter } from '#lib/formatting.ts'
 
 export function Address(props: Address.Props) {
 	const { address, chars, self, className } = props
