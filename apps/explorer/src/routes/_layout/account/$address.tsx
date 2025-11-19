@@ -438,6 +438,7 @@ function SectionsWrapper(props: {
 									transaction={transaction}
 									knownEvents={knownEvents[transaction.hash] ?? []}
 									receipt={receipt}
+									accountAddress={address}
 								/>,
 								<TransactionHashLink key="hash" hash={transaction.hash} />,
 								<TransactionFee key="fee" receipt={receipt} />,
@@ -523,14 +524,16 @@ function TransactionRowDescription(props: {
 	transaction: Transaction
 	knownEvents: KnownEvent[]
 	receipt?: TransactionReceipt
+	accountAddress: Address.Address
 }) {
-	const { transaction, knownEvents, receipt } = props
+	const { transaction, knownEvents, receipt, accountAddress } = props
 
 	return (
 		<TransactionDescription
 			transaction={transaction}
 			knownEvents={knownEvents}
 			transactionReceipt={receipt}
+			accountAddress={accountAddress}
 		/>
 	)
 }
@@ -682,8 +685,9 @@ function TransactionDescription(props: {
 	transaction: Transaction
 	knownEvents: Array<KnownEvent>
 	transactionReceipt: TransactionReceipt | undefined
+	accountAddress: Address.Address
 }) {
-	const { knownEvents } = props
+	const { knownEvents, accountAddress } = props
 
 	const [expanded, setExpanded] = React.useState(false)
 
@@ -696,18 +700,20 @@ function TransactionDescription(props: {
 
 	const eventsToShow = expanded ? knownEvents : [knownEvents[0]]
 	const remainingCount = knownEvents.length - eventsToShow.length
-
-	const [_event] = knownEvents
+	const perspectiveEvents = eventsToShow.map((event) =>
+		getPerspectiveEvent(event, accountAddress),
+	)
 
 	return (
 		<div className="text-primary h-5 flex items-center whitespace-nowrap">
-			{eventsToShow.map((event, index) => (
+			{perspectiveEvents.map((event, index) => (
 				<div
 					key={`${event.type}-${index}`}
 					className="inline-flex items-center"
 				>
 					<EventDescription
 						event={event}
+						seenAs={accountAddress}
 						className="flex flex-row items-center gap-[6px] leading-[18px] w-auto justify-center flex-nowrap"
 					/>
 					{index === 0 && remainingCount > 0 && (
@@ -732,6 +738,29 @@ function TransactionDescription(props: {
 			)} */}
 		</div>
 	)
+}
+
+function getPerspectiveEvent(
+	event: KnownEvent,
+	accountAddress?: Address.Address,
+) {
+	if (!accountAddress) return event
+	if (event.type !== 'send') return event
+	const toMatches =
+		event.meta?.to && Address.isEqual(event.meta.to, accountAddress)
+	const fromMatches =
+		event.meta?.from && Address.isEqual(event.meta.from, accountAddress)
+	if (!toMatches || fromMatches) return event
+
+	const sender = event.meta?.from
+	const updatedParts = event.parts.map((part) => {
+		if (part.type === 'action') return { ...part, value: 'Received' }
+		if (part.type === 'secondary' && part.value.toLowerCase() === 'to')
+			return { ...part, value: 'from' }
+		if (part.type === 'account' && sender) return { ...part, value: sender }
+		return part
+	})
+	return { ...event, parts: updatedParts }
 }
 
 function TransactionHashLink(props: { hash: Hex.Hex | null | undefined }) {
