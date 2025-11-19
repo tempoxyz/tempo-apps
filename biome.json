@@ -45,6 +45,9 @@
 		},
 		"rules": {
 			"recommended": true,
+			"correctness": {
+				"useImportExtensions": "error"
+			},
 			"suspicious": {
 				"noUnknownAtRules": {
 					"level": "warn",

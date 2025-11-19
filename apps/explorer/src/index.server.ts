@@ -14,8 +14,6 @@ export default {
 
 /** @deprecated TODO: remove once we go public */
 function basicAuth(request: Request): Response | null {
-	if (request.headers.get('cf-ew-subrequest') === '1') return null
-
 	const authHeader = request.headers.get('Authorization')
 
 	if (!authHeader)

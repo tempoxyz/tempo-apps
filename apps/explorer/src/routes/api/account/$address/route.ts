@@ -36,11 +36,13 @@ export const Route = createFileRoute('/api/account/$address')({
 
 				try {
 					const result = await fetchAccountTransactions({
-						address,
-						offset,
-						limit,
-						include: searchParams.data.include,
-						sort: searchParams.data.sort,
+						data: {
+							address,
+							offset,
+							limit,
+							include: searchParams.data.include,
+							sort: searchParams.data.sort,
+						},
 					})
 
 					const cacheControl =

@@ -11,7 +11,6 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 import { WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#components/ErrorBoundary.tsx'
-import { env } from '#env.ts'
 import { config, persister, queryClient } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
@@ -138,7 +137,7 @@ let theme: 'light' | 'dark' | undefined
 
 function useDevTools() {
 	useEffect(() => {
-		if (!env.VITE_ENABLE_COLOR_SCHEME_TOGGLE) return
+		if (import.meta.env.VITE_ENABLE_COLOR_SCHEME_TOGGLE !== 'true') return
 		const handleKeyPress = (e: KeyboardEvent) => {
 			if (
 				// ⌘ + 1 = color scheme toggle
@@ -167,7 +166,10 @@ function useDevTools() {
 	}, [])
 
 	useEffect(() => {
-		if (import.meta.env.MODE === 'development' && env.VITE_ENABLE_ERUDA) {
+		if (
+			import.meta.env.MODE === 'development' &&
+			import.meta.env.VITE_ENABLE_ERUDA === 'true'
+		) {
 			void import('eruda').then(({ default: eruda }) => eruda.init())
 		}
 	}, [])

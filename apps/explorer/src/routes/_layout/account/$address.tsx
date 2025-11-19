@@ -30,17 +30,16 @@ import {
 	parseKnownEvents,
 } from '#lib/known-events.ts'
 import { TokenMetadata } from '#lib/token-metadata.ts'
-import type { TransactionsApiResponse } from '#server/account/fetch-account-transactions.ts'
+import { fetchAccountTotalValue } from '#server/account/fetch-account-total-value.ts'
+import {
+	fetchAccountTransactions,
+	type TransactionsApiResponse,
+} from '#server/account/fetch-account-transactions.ts'
 import { config } from '#wagmi.config.ts'
 
 const rowsPerPage = 10
 const ACCOUNT_ACTIVITY_LATEST_KEY = 'account-activity-latest'
 const ACCOUNT_ACTIVITY_EARLIEST_KEY = 'account-activity-earliest'
-
-const headers = new Headers({
-	'Content-Type': 'application/json',
-	Authorization: `Basic ${btoa(`eng:zealous-mayer`)}`,
-})
 
 export const Route = createFileRoute('/_layout/account/$address')({
 	component: RouteComponent,
@@ -57,33 +56,25 @@ export const Route = createFileRoute('/_layout/account/$address')({
 		tab: z.prefault(z.enum(['history', 'assets']), 'history'),
 	}),
 	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
-	loader: async ({ deps: { page, limit }, params, context, location }) => {
-		const url = new URL(location.url)
-
+	loader: async ({ deps: { page, limit }, params, context }) => {
 		const { address } = params
 		if (!Address.validate(address)) throw notFound()
 
 		const offset = (page - 1) * limit
 
-		const pageOptions = transactionsQueryOptions(
-			{
-				address,
-				page,
-				limit,
-				offset,
-			},
-			url.origin,
-		)
-		const latestOptions = transactionsQueryOptions(
-			{
-				address,
-				page: 1,
-				limit: 1,
-				offset: 0,
-				_key: ACCOUNT_ACTIVITY_LATEST_KEY,
-			},
-			url.origin,
-		)
+		const pageOptions = transactionsQueryOptions({
+			address,
+			page,
+			limit,
+			offset,
+		})
+		const latestOptions = transactionsQueryOptions({
+			address,
+			page: 1,
+			limit: 1,
+			offset: 0,
+			_key: ACCOUNT_ACTIVITY_LATEST_KEY,
+		})
 
 		const [pageData, latestData] = await Promise.all([
 			context.queryClient.fetchQuery(pageOptions),
@@ -95,21 +86,17 @@ export const Route = createFileRoute('/_layout/account/$address')({
 		if (totalTransactions > 0) {
 			const lastPageOffset = Math.max(0, totalTransactions - 1)
 			earliestData = await context.queryClient.fetchQuery(
-				transactionsQueryOptions(
-					{
-						address,
-						page: Math.max(1, Math.ceil(totalTransactions)),
-						limit: 1,
-						offset: lastPageOffset,
-						_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
-					},
-					url.origin,
-				),
+				transactionsQueryOptions({
+					address,
+					page: Math.max(1, Math.ceil(totalTransactions)),
+					limit: 1,
+					offset: lastPageOffset,
+					_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
+				}),
 			)
 		}
 
 		return {
-			baseUrl: url.origin,
 			pageData,
 			lastActivityData: latestData,
 			createdData: earliestData,
@@ -201,13 +188,12 @@ type TransactionsResponse = {
 } & Omit<TransactionsApiResponse, 'transactions'>
 
 type AccountRouteLoaderData = {
-	baseUrl: string
 	pageData: TransactionsResponse
 	lastActivityData?: TransactionsResponse
 	createdData?: TransactionsResponse
 }
 
-function transactionsQueryOptions(params: TransactionQuery, baseUrl: string) {
+function transactionsQueryOptions(params: TransactionQuery) {
 	return queryOptions({
 		queryKey: [
 			'account-transactions',
@@ -215,20 +201,21 @@ function transactionsQueryOptions(params: TransactionQuery, baseUrl: string) {
 			params.page,
 			params.limit,
 			params._key,
+			params.include,
+			params.sort,
 		],
 		queryFn: async ({ client }) => {
 			const include = params.include ?? 'all'
 			const sort = params.sort ?? 'desc'
-			const requestParams = {
-				address: params.address,
-				offset: params.offset,
-				limit: params.limit,
-				include,
-				sort,
-			}
-			const data = import.meta.env.SSR
-				? await fetchTransactionsServer(requestParams)
-				: await fetchTransactionsHttp(requestParams, baseUrl)
+			const data = await fetchAccountTransactions({
+				data: {
+					address: params.address,
+					offset: params.offset,
+					limit: params.limit,
+					include,
+					sort,
+				},
+			})
 			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
 			const transactions = await Promise.all(
 				data.transactions.map(async (transaction) => {
@@ -272,71 +259,19 @@ function transactionsQueryOptions(params: TransactionQuery, baseUrl: string) {
 	})
 }
 
-type TransactionsHttpParams = {
-	address: Address.Address
-	limit: number
-	offset: number
-	include: 'all' | 'sent' | 'received'
-	sort: 'asc' | 'desc'
-}
-
-async function fetchTransactionsHttp(
-	params: TransactionsHttpParams,
-	baseUrl: string,
-): Promise<TransactionsApiResponse> {
-	const searchParams = new URLSearchParams({
-		limit: params.limit.toString(),
-		offset: params.offset.toString(),
-		include: params.include,
-		sort: params.sort,
-	})
-	const url = new URL(
-		`/api/account/${params.address}?${searchParams.toString()}`,
-		baseUrl,
-	)
-	const response = await fetch(url, { headers })
-	if (!response.ok) {
-		const text = await response.text()
-		console.error(text)
-		throw new Error('Failed to fetch transactions', { cause: text })
-	}
-	return (await response.json()) as TransactionsApiResponse
-}
-
-async function fetchTransactionsServer(
-	params: TransactionsHttpParams,
-): Promise<TransactionsApiResponse> {
-	const { fetchAccountTransactions } = await import(
-		'#server/account/fetch-account-transactions.ts'
-	)
-	return fetchAccountTransactions({
-		address: params.address,
-		offset: params.offset,
-		limit: params.limit,
-		include: params.include,
-		sort: params.sort === 'asc' ? 'ASC' : 'DESC',
-	})
-}
-
 function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const { address } = props
 
-	const {
-		baseUrl,
-		lastActivityData: loaderLastActivity,
-		createdData: loaderCreated,
-	} = Route.useLoaderData() as AccountRouteLoaderData
+	const { lastActivityData: loaderLastActivity, createdData: loaderCreated } =
+		Route.useLoaderData() as AccountRouteLoaderData
 
-	const latestQueryOptions = transactionsQueryOptions(
-		{
-			address,
-			page: 1,
-			limit: 1,
-			offset: 0,
-			_key: ACCOUNT_ACTIVITY_LATEST_KEY,
-		},
-		baseUrl,
-	)
+	const latestQueryOptions = transactionsQueryOptions({
+		address,
+		page: 1,
+		limit: 1,
+		offset: 0,
+		_key: ACCOUNT_ACTIVITY_LATEST_KEY,
+	})
 	const { data: recentData } = useQuery({
 		...latestQueryOptions,
 		...(loaderLastActivity ? { initialData: loaderLastActivity } : {}),
@@ -348,16 +283,13 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const lastPageNumber =
 		totalTransactions > 0 ? Math.max(1, Math.ceil(totalTransactions)) : 1
 
-	const earliestQueryOptions = transactionsQueryOptions(
-		{
-			address,
-			page: lastPageNumber,
-			limit: 1,
-			offset: lastPageOffset,
-			_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
-		},
-		baseUrl,
-	)
+	const earliestQueryOptions = transactionsQueryOptions({
+		address,
+		page: lastPageNumber,
+		limit: 1,
+		offset: lastPageOffset,
+		_key: ACCOUNT_ACTIVITY_EARLIEST_KEY,
+	})
 	const { data: oldestData } = useQuery({
 		...earliestQueryOptions,
 		enabled: totalTransactions > 0,
@@ -459,16 +391,10 @@ function useAccountTotalValue(address: Address.Address) {
 	return useQuery({
 		queryKey: ['account-total-value', address],
 		queryFn: async () => {
-			const response = await fetch(`/api/account/${address}/total-value`, {
-				headers,
+			const result = await fetchAccountTotalValue({
+				data: { address },
 			})
-			if (!response.ok) {
-				const text = await response.text()
-				console.error(text)
-				throw new Error('Failed to fetch total value', { cause: text })
-			}
-			const data = (await response.json()) as unknown as { totalValue: number }
-			return Number(data.totalValue)
+			return Number(result.totalValue)
 		},
 	})
 }
@@ -488,18 +414,13 @@ function SectionsWrapper(props: {
 	const { pageData: initialData } =
 		Route.useLoaderData() as AccountRouteLoaderData
 
-	const { baseUrl } = Route.useLoaderData()
-
 	const { data, isLoading } = useQuery({
-		...transactionsQueryOptions(
-			{
-				address,
-				page,
-				limit,
-				offset: (page - 1) * limit,
-			},
-			baseUrl,
-		),
+		...transactionsQueryOptions({
+			address,
+			page,
+			limit,
+			offset: (page - 1) * limit,
+		}),
 		initialData,
 	})
 	const { transactions, total, knownEvents } = data ?? {

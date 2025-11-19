@@ -33,29 +33,22 @@ jobs:
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
-        env:
-          INDEXSUPPLY_API_KEY: ${{ secrets.INDEXSUPPLY_API_KEY }}
 
       - name: Build
-        run: |
-          export INDEXSUPPLY_API_KEY=${{ secrets.INDEXSUPPLY_API_KEY }}
-          export CLOUDFLARE_INCLUDE_PROCESS_ENV=true
-          pnpm run build
+        run: pnpm run build
         working-directory: apps/${{ matrix.app }}
 
       - name: Upload Worker Version
         id: deploy
         uses: cloudflare/wrangler-action@v3
         env:
-          BASIC_AUTH_USERNAME: ${{ secrets.BASIC_AUTH_USERNAME }}
-          BASIC_AUTH_PASSWORD: ${{ secrets.BASIC_AUTH_PASSWORD }}
           INDEXSUPPLY_API_KEY: ${{ secrets.INDEXSUPPLY_API_KEY }}
           CLOUDFLARE_INCLUDE_PROCESS_ENV: true
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           quiet: false
-          command: versions upload --var 'INDEXSUPPLY_API_KEY:${{ secrets.INDEXSUPPLY_API_KEY }}'
+          command: versions upload
           workingDirectory: apps/${{ matrix.app }}
 
       - name: Comment Preview URL on PR
