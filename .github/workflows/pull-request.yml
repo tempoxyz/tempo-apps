@@ -48,8 +48,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          quiet: false
           command: versions upload
-          packageManager: pnpm
           workingDirectory: apps/${{ matrix.app }}
           secrets: |
             INDEXSUPPLY_API_KEY
