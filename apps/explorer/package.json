@@ -4,7 +4,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "vite build",
-		"deploy": "pnpm build && wrangler deploy",
+		"deploy": "pnpm build && wrangler deploy --keep-vars",
 		"dev": "vite dev",
 		"check": "biome check --write --unsafe",
 		"check:types": "tsc --project tsconfig.json --noEmit",

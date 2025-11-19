@@ -55,7 +55,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           quiet: false
-          command: versions upload --keep-vars
+          command: versions upload --var 'INDEXSUPPLY_API_KEY:${{ secrets.INDEXSUPPLY_API_KEY }}'
           workingDirectory: apps/${{ matrix.app }}
 
       - name: Comment Preview URL on PR
