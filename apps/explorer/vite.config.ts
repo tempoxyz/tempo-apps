@@ -1,6 +1,5 @@
 import { cloudflare } from '@cloudflare/vite-plugin'
 import tailwind from '@tailwindcss/vite'
-import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
 import Icons from 'unplugin-icons/vite'
@@ -12,7 +11,6 @@ export default defineConfig((config) => {
 
 	return {
 		plugins: [
-			devtools(),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tsconfigPaths({
 				projects: ['./tsconfig.json'],
