@@ -6,8 +6,13 @@ import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
+const requiredSecrets = ['INDEXSUPPLY_API_KEY']
+
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
+
+	if (requiredSecrets.some((secret) => !env[secret]))
+		throw new Error(`${requiredSecrets.join(', ')} are required`)
 
 	return {
 		plugins: [
@@ -38,6 +43,7 @@ export default defineConfig((config) => {
 			),
 		},
 		build: {
+			emptyOutDir: true,
 			rolldownOptions: {
 				output: {
 					cleanDir: true,

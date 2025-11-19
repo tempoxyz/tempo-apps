@@ -2,7 +2,10 @@
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
 	"name": "explorer",
 	"compatibility_date": "2025-10-11",
-	"compatibility_flags": ["nodejs_compat"],
+	"compatibility_flags": [
+		"nodejs_compat",
+		"nodejs_compat_populate_process_env"
+	],
 	"main": "./src/index.server.ts",
 	"browser": {
 		"binding": "BROWSER"

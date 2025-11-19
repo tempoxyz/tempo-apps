@@ -4,11 +4,10 @@ import { Abis } from 'tempo.ts/viem'
 import { formatUnits } from 'viem'
 import { getChainId, readContract } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { env } from '#env.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 
 const INDEX_SUPPLY_ENDPOINT = 'https://api.indexsupply.net/v2/query'
-const apiKey = env.INDEXSUPPLY_API_KEY
+const apiKey = process.env.INDEXSUPPLY_API_KEY
 
 export const Route = createFileRoute('/api/account/$address/total-value')({
 	server: {
