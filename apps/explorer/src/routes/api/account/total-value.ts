@@ -1,18 +1,16 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Address } from 'ox'
 import * as z from 'zod/mini'
 
+import { zAddress } from '#lib/zod'
 import { fetchAccountTotalValue } from '#server/account/fetch-account-total-value.ts'
 
 export const Route = createFileRoute('/api/account/total-value')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				const address = params.address.toLowerCase() as Address.Address
-
 				try {
 					const result = await fetchAccountTotalValue({
-						data: { address },
+						data: { address: params.address },
 					})
 					return Response.json(result, { status: 200 })
 				} catch (error) {
@@ -32,13 +30,7 @@ export const Route = createFileRoute('/api/account/total-value')({
 	},
 	params: {
 		parse: z.object({
-			address: z.pipe(
-				z.string(),
-				z.transform((x) => {
-					Address.assert(x)
-					return x
-				}),
-			),
+			address: zAddress(),
 		}).parse,
 	},
 })

@@ -5,19 +5,13 @@ import { formatUnits } from 'viem'
 import { getChainId, readContract } from 'wagmi/actions'
 import * as z from 'zod/mini'
 
+import { zAddress } from '#lib/zod'
 import { config, getConfig } from '#wagmi.config.ts'
 
 const INDEX_SUPPLY_ENDPOINT = 'https://api.indexsupply.net/v2/query'
 
 const TotalValueInputSchema = z.object({
-	address: z.pipe(
-		z.string(),
-		z.transform((value) => {
-			const normalized = value.toLowerCase() as Address.Address
-			Address.assert(normalized)
-			return normalized
-		}),
-	),
+	address: zAddress({ lowercase: true }),
 })
 
 const indexSupplyResponseSchema = z.array(
