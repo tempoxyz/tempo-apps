@@ -40,12 +40,21 @@ jobs:
 
       - name: Upload Worker Version
         id: deploy
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@main
+        env:
+          BASIC_AUTH_USERNAME: ${{ secrets.BASIC_AUTH_USERNAME }}
+          BASIC_AUTH_PASSWORD: ${{ secrets.BASIC_AUTH_PASSWORD }}
+          INDEXSUPPLY_API_KEY: ${{ secrets.INDEXSUPPLY_API_KEY }}
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: versions upload
+          packageManager: pnpm
           workingDirectory: apps/${{ matrix.app }}
+          secrets: |
+            INDEXSUPPLY_API_KEY
+            BASIC_AUTH_USERNAME
+            BASIC_AUTH_PASSWORD
 
       - name: Comment Preview URL on PR
         uses: moojing/cf-preview-bot@v1

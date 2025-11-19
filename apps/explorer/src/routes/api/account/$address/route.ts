@@ -5,7 +5,11 @@ import type { RpcTransaction } from 'viem'
 import * as z from 'zod/mini'
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
+
 const INDEX_SUPPLY_ENDPOINT = 'https://api.indexsupply.net/v2/query'
+const apiKey = process.env.INDEXSUPPLY_API_KEY
+if (!apiKey) throw new Error('INDEXSUPPLY_API_KEY is not configured')
+
 const chainId = tempoAndantino.id
 const chainIdHex = Hex.fromNumber(chainId)
 const chainCursor = `${chainId}-0`
@@ -78,9 +82,6 @@ async function runIndexSupplyQuery(
 	query: string,
 	options: RunQueryOptions = {},
 ) {
-	const apiKey = process.env.INDEXSUPPLY_API_KEY
-	if (!apiKey) throw new Error('INDEXSUPPLY_API_KEY is not configured')
-
 	const url = new URL(INDEX_SUPPLY_ENDPOINT)
 	url.searchParams.set('api-key', apiKey)
 	const signatures =
