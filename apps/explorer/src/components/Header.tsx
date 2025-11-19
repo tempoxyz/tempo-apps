@@ -3,7 +3,7 @@ import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
-import { ExploreInput } from './ExploreInput'
+import { ExploreInput } from './ExploreInput.tsx'
 
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
@@ -16,16 +16,11 @@ export function Header(props: Header.Props) {
 		from: '/_layout/account/$address',
 		shouldThrow: false,
 	})
-	const blockMatch = useMatch({
-		from: '/_layout/block/$id',
-		shouldThrow: false,
-	})
 	const hash = (txMatch?.params as { hash: string | undefined })?.hash
 	const address = (accountMatch?.params as { address: string | undefined })
 		?.address
 
 	const showInput = Boolean(hash || address)
-	const showLiveBlockNumber = !blockMatch
 
 	React.useEffect(() => {
 		if (hash || address) {
@@ -70,11 +65,9 @@ export function Header(props: Header.Props) {
 						/>
 					</div>
 				)}
-				{showLiveBlockNumber && (
-					<div className="relative z-1">
-						<Header.BlockNumber initial={initialBlockNumber} />
-					</div>
-				)}
+				<div className="relative z-1">
+					<Header.BlockNumber initial={initialBlockNumber} />
+				</div>
 			</div>
 		</header>
 	)
@@ -95,7 +88,11 @@ export namespace Header {
 			},
 		})
 		return (
-			<div className="flex items-center gap-[6px] text-[15px] font-medium text-secondary">
+			<Link
+				params={{ id: initial?.toString() ?? '' }}
+				to="/block/$id"
+				className="flex items-center gap-[6px] text-[15px] font-medium text-secondary"
+			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
 					<span className="@min-[1240px]:inline hidden">Block </span>
@@ -103,7 +100,7 @@ export namespace Header {
 						<span ref={ref}>{initial ? String(initial) : '…'}</span>
 					</span>
 				</div>
-			</div>
+			</Link>
 		)
 	}
 
@@ -118,7 +115,7 @@ export namespace Header {
 		const network = chain.name.match(/Tempo (.+)/)?.[1]
 		if (!network) return null
 		return (
-			<div className="flex items-center gap-[4px] px-[8px] h-[28px] border-[1px] border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium">
+			<div className="flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium">
 				<Music4 width={14} height={14} className="text-accent" />
 				{network}
 			</div>
