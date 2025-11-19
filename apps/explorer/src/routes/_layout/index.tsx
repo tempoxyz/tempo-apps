@@ -1,13 +1,13 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
-import { ExploreInput } from '#components/ExploreInput.tsx'
-import { Intro } from '#components/Intro.tsx'
+import { ExploreInput } from '#components/ExploreInput'
+import { Intro } from '#components/Intro'
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
 })
 
-function Component() {
+export function Component() {
 	const navigate = useNavigate()
 	const [inputValue, setInputValue] = useState('')
 
