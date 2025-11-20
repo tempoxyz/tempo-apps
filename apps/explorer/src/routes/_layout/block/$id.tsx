@@ -1,9 +1,4 @@
-import {
-	createFileRoute,
-	Link,
-	notFound,
-	useNavigate,
-} from '@tanstack/react-router'
+import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { Hex, Value } from 'ox'
 import * as React from 'react'
 import type { Block as BlockType } from 'viem'
@@ -11,12 +6,14 @@ import { isHex } from 'viem'
 import { useBlock, useChains, useWatchBlockNumber } from 'wagmi'
 
 import { Address as AddressLink } from '#components/Address.tsx'
-import { ExploreInput } from '#components/ExploreInput.tsx'
 import { NotFound } from '#components/NotFound.tsx'
 import { RelativeTime } from '#components/RelativeTime.tsx'
 import { Sections } from '#components/Sections.tsx'
+import { cx } from '#cva.config.ts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
-import { useMediaQuery } from '#lib/hooks.ts'
+import { useCopy, useMediaQuery } from '#lib/hooks.ts'
+import ChevronDown from '~icons/lucide/chevron-down'
+import CopyIcon from '~icons/lucide/copy'
 
 type BlockIdentifier =
 	| { kind: 'hash'; blockHash: Hex.Hex }
@@ -72,9 +69,7 @@ export const Route = createFileRoute('/_layout/block/$id')({
 })
 
 function RouteComponent() {
-	const navigate = useNavigate()
-	const blockRef = Route.useLoaderData() as BlockIdentifier
-	const [searchValue, setSearchValue] = React.useState('')
+	const blockRef = Route.useLoaderData()
 
 	const blockQuery = useBlock<true>({
 		includeTransactions: true,
@@ -88,7 +83,6 @@ function RouteComponent() {
 	})
 	const block = blockQuery.data
 	const isLoading = blockQuery.isPending
-	const hasError = blockQuery.isError
 
 	const [chain] = useChains()
 	const decimals = chain?.nativeCurrency.decimals ?? 18
@@ -126,69 +120,29 @@ function RouteComponent() {
 
 	return (
 		<section className="w-full flex-1 flex justify-center px-4 sm:px-6 lg:px-10 pt-8 pb-12">
-			<div className="grid w-full max-w-[1080px] gap-[14px] min-w-0 min-[1240px]:grid-cols-[340px,minmax(0,1fr)]">
-				<div className="min-[1240px]:col-span-2 flex flex-col gap-4 items-center">
-					<div className="w-full flex justify-center">
-						<div className="w-full max-w-[520px]">
-							<ExploreInput
-								value={searchValue}
-								size="large"
-								onChange={setSearchValue}
-								onAddress={(address) => {
-									navigate({ to: '/account/$address', params: { address } })
-								}}
-								onHash={(hash) => {
-									navigate({ to: '/tx/$hash', params: { hash } })
-								}}
-								onActivate={({ type, value }) => {
-									if (type === 'address') {
-										navigate({
-											to: '/account/$address',
-											params: { address: value },
-										})
-										return
-									}
-									if (type === 'hash') {
-										navigate({ to: '/tx/$hash', params: { hash: value } })
-										return
-									}
-									if (/^\d+$/.test(value)) {
-										navigate({ to: '/block/$id', params: { id: value } })
-										return
-									}
-									if (value.startsWith('0x')) {
-										navigate({ to: '/block/$id', params: { id: value } })
-									}
-								}}
-							/>
-						</div>
-					</div>
-				</div>
-
-				{hasError ? (
-					<div className="min-[1240px]:col-span-2">
-						<BlockError />
-					</div>
-				) : (
-					<>
-						<div className="min-w-0">
-							<BlockSummaryCard
-								block={block}
-								isLoading={isLoading}
-								latestBlockNumber={latestBlockNumber}
-								requestedNumber={requestedNumber}
-							/>
-						</div>
-						<div className="min-w-0">
-							<BlockTransactionsCard
-								isLoading={isLoading}
-								transactions={transactions}
-								decimals={decimals}
-								symbol={symbol}
-							/>
-						</div>
-					</>
+			<div
+				className={cx(
+					'grid w-full max-w-[1280px] gap-[14px] min-w-0',
+					'min-[1240px]:grid-cols-[auto_1fr]',
+					'*:min-w-0 *:max-w-full',
 				)}
+			>
+				<div className={cx('min-[1240px]:max-w-74')}>
+					<BlockSummaryCard
+						block={block}
+						isLoading={isLoading}
+						latestBlockNumber={latestBlockNumber}
+						requestedNumber={requestedNumber}
+					/>
+				</div>
+				<div className={cx('min-[1240px]:max-w-full')}>
+					<BlockTransactionsCard
+						isLoading={isLoading}
+						transactions={transactions}
+						decimals={decimals}
+						symbol={symbol}
+					/>
+				</div>
 			</div>
 		</section>
 	)
@@ -196,6 +150,7 @@ function RouteComponent() {
 
 function BlockSummaryCard(props: BlockSummaryCardProps) {
 	const { block, isLoading, latestBlockNumber, requestedNumber } = props
+	const [showAdvanced, setShowAdvanced] = React.useState(true)
 
 	if (isLoading) return <BlockSummarySkeleton />
 
@@ -206,7 +161,8 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 			</article>
 		)
 
-	const formattedNumber = formatBlockNumber(block.number ?? requestedNumber)
+	const blockNumberValue = block.number ?? requestedNumber
+	const formattedNumber = formatBlockNumber(blockNumberValue)
 	const confirmations =
 		block.number && latestBlockNumber && latestBlockNumber >= block.number
 			? Number(latestBlockNumber - block.number) + 1
@@ -218,17 +174,25 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 
 	const gasUsage = getGasUsagePercent(block)
 	const roots = [
-		{ label: 'State', value: block.stateRoot },
-		{ label: 'Txns', value: block.transactionsRoot },
-		{ label: 'Receipts', value: block.receiptsRoot },
-		{ label: 'Withdrawals', value: block.withdrawalsRoot },
-	].filter((entry) => Boolean(entry.value))
+		{ label: 'state', value: block.stateRoot },
+		{ label: 'txns', value: block.transactionsRoot },
+		{ label: 'receipts', value: block.receiptsRoot },
+		{ label: 'withdraws', value: block.withdrawalsRoot },
+	]
 
 	return (
 		<article className="font-mono rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_4px_44px_rgba(0,0,0,0.05)]">
-			<header className="text-[13px] uppercase text-tertiary px-[18px] pt-[12px] pb-[8px]">
-				Block
-			</header>
+			<div className="flex items-center justify-between px-[18px] pt-[12px] pb-[8px] border-b border-card-border">
+				<span className="text-[11px] uppercase tracking-[0.35em] text-tertiary">
+					Block
+				</span>
+				{blockNumberValue && (
+					<CopyButton
+						value={blockNumberValue.toString()}
+						ariaLabel="Copy block number"
+					/>
+				)}
+			</div>
 			<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px px-[18px] py-[20px] flex flex-col gap-[18px]">
 				<div className="flex flex-col gap-[6px] border-b border-dashed border-card-border pb-[16px]">
 					<div className="text-[28px] font-semibold tracking-[0.18em] text-primary tabular-nums">
@@ -241,100 +205,120 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 					)}
 				</div>
 
-				<div className="flex flex-col gap-[12px]">
-					<InfoRow label="UTC" value={utcLabel} />
-					<InfoRow label="UNIX" value={unixLabel} />
-					<InfoRow
-						label="Hash"
-						value={
-							block.hash ? (
-								<span title={block.hash}>
-									{HexFormatter.shortenHex(block.hash, 6)}
-								</span>
-							) : (
-								'—'
-							)
-						}
-					/>
-					<InfoRow
-						label="Parent"
-						value={
-							block.parentHash ? (
-								<Link
-									to="/block/$id"
-									params={{ id: block.parentHash }}
-									className="text-accent"
-									title={block.parentHash}
-								>
-									{HexFormatter.shortenHex(block.parentHash, 6)}
-								</Link>
-							) : (
-								'—'
-							)
-						}
-					/>
-					<InfoRow
-						label="Miner"
-						value={
-							block.miner ? (
-								<AddressLink
-									address={block.miner}
-									chars={4}
-									className="text-primary"
-								/>
-							) : (
-								'—'
-							)
-						}
-					/>
-					<InfoRow
-						label="Confirmations"
-						value={confirmations !== undefined ? confirmations.toString() : '—'}
-					/>
+				<div className="flex flex-col gap-[10px]">
+					<TimestampChip label="UTC" value={utcLabel} />
+					<TimestampChip label="UNIX" value={unixLabel} />
 				</div>
 
-				<div className="flex flex-col gap-[16px] border-t border-dashed border-card-border pt-[16px]">
-					<div className="flex items-center justify-between text-[12px] uppercase tracking-[0.2em] text-tertiary">
+				<DetailSection
+					label="Hash"
+					copyValue={block.hash ?? undefined}
+					value={
+						<p className="text-[12px] leading-[18px] text-primary wrap-break-word">
+							{block.hash ?? '—'}
+						</p>
+					}
+				>
+					{block.parentHash && (
+						<div className="flex items-center gap-[6px] text-[12px]">
+							<span className="text-tertiary">↳ Parent</span>
+							<Link
+								to="/block/$id"
+								params={{ id: block.parentHash }}
+								className="text-accent"
+								title={block.parentHash}
+							>
+								{HexFormatter.shortenHex(block.parentHash, 6)}
+							</Link>
+						</div>
+					)}
+				</DetailSection>
+
+				<DetailSection
+					label="Miner"
+					copyValue={block.miner ?? undefined}
+					value={
+						block.miner ? (
+							<AddressLink
+								address={block.miner}
+								chars={4}
+								className="text-primary"
+							/>
+						) : (
+							<span className="text-tertiary">—</span>
+						)
+					}
+				/>
+
+				<DetailSection
+					label="Confirmations"
+					value={
+						<span className="text-primary text-[13px]">
+							{confirmations !== undefined ? confirmations.toString() : '—'}
+						</span>
+					}
+				/>
+
+				<section className="flex flex-col gap-[12px] border-t border-dashed border-card-border pt-[14px]">
+					<button
+						type="button"
+						className="flex items-center justify-between text-[11px] uppercase tracking-[0.35em] text-tertiary cursor-pointer"
+						onClick={() => setShowAdvanced((prev) => !prev)}
+					>
 						<span>Advanced</span>
-						{gasUsage !== undefined && (
-							<span className="tracking-normal text-[13px] text-base-content-secondary font-normal">
-								Gas {gasUsage.toFixed(2)}%
-							</span>
-						)}
-					</div>
-					{block.gasUsed !== undefined && block.gasLimit !== undefined && (
-						<div className="flex flex-col gap-2">
-							<div className="h-[6px] rounded-full bg-base-border/40 overflow-hidden">
-								<div
-									className="h-full rounded-full bg-accent transition-[width] duration-300"
-									style={{ width: `${Math.min(100, gasUsage ?? 0)}%` }}
-								/>
+						<span className="flex items-center gap-[6px] text-[12px] font-normal tracking-normal text-base-content-secondary">
+							{gasUsage !== undefined ? `${gasUsage.toFixed(2)}%` : '—'}
+							<ChevronDown
+								className={`size-[14px] transition-transform ${showAdvanced ? '' : '-rotate-90'}`}
+							/>
+						</span>
+					</button>
+					{showAdvanced && (
+						<div className="flex flex-col gap-[12px]">
+							<div className="flex flex-col gap-[6px]">
+								<div className="flex items-center justify-between text-[13px] text-primary">
+									<span>Gas Usage</span>
+									<span className="text-base-content-secondary">
+										{gasUsage !== undefined ? `${gasUsage.toFixed(2)}%` : '—'}
+									</span>
+								</div>
+								<div className="h-[5px] rounded-full bg-base-border/50 overflow-hidden">
+									<div
+										className="h-full rounded-full bg-accent transition-[width] duration-300"
+										style={{ width: `${Math.min(100, gasUsage ?? 0)}%` }}
+									/>
+								</div>
+								<div className="flex items-center justify-between text-[11px] text-tertiary uppercase tracking-wider tabular-nums">
+									<span>{formatGasValue(block.gasUsed)}</span>
+									<span>{formatGasValue(block.gasLimit)}</span>
+								</div>
 							</div>
-							<div className="flex items-center justify-between text-[12px] text-base-content-secondary">
-								<span>{block.gasUsed.toLocaleString()}</span>
-								<span>{block.gasLimit.toLocaleString()}</span>
+							<div className="flex flex-col gap-[6px]">
+								<span className="text-[11px] uppercase tracking-[0.35em] text-tertiary">
+									Roots
+								</span>
+								{roots.map((root) => (
+									<div
+										key={root.label}
+										className="flex items-center justify-between text-[12px] text-primary leading-[16px]"
+									>
+										<span className="text-tertiary capitalize">
+											{root.label}
+										</span>
+										<span
+											className="tabular-nums"
+											title={root.value ?? undefined}
+										>
+											{root.value
+												? HexFormatter.shortenHex(root.value, 6)
+												: '—'}
+										</span>
+									</div>
+								))}
 							</div>
 						</div>
 					)}
-					<div className="flex flex-col gap-2">
-						<span className="text-[12px] uppercase tracking-[0.2em] text-tertiary">
-							Roots
-						</span>
-						<div className="flex flex-col gap-2">
-							{roots.map((root) => (
-								<div
-									key={root.label}
-									className="flex items-center justify-between text-[12px]"
-								>
-									<span className="text-tertiary capitalize">{root.label}</span>
-									<span title={root.value ?? undefined}>
-										{root.value ? HexFormatter.shortenHex(root.value, 6) : '—'}
-									</span>
-								</div>
-							))}
-						</div>
-					</div>
-				</div>
+				</section>
 			</div>
 		</article>
 	)
@@ -566,22 +550,59 @@ function BlockSummarySkeleton() {
 	)
 }
 
-function InfoRow(props: { label: string; value?: React.ReactNode }) {
+function TimestampChip(props: { label: string; value?: string }) {
 	const { label, value } = props
 	return (
-		<div className="flex items-center justify-between gap-4 text-[13px]">
-			<span className="text-tertiary uppercase tracking-[0.2em]">{label}</span>
-			<span className="text-right break-all text-primary">{value ?? '—'}</span>
+		<div className="flex items-center gap-[10px] text-[13px] leading-[18px] capitalize">
+			<span className="text-xs uppercase text-tertiary bg-base-alt/80 px-1 py-0.5">
+				{label}
+			</span>
+			<span className="text-primary">{value ?? '—'}</span>
 		</div>
 	)
 }
 
-function BlockError() {
+function DetailSection(props: {
+	label: string
+	copyValue?: string
+	value?: React.ReactNode
+	children?: React.ReactNode
+}) {
+	const { label, copyValue, value, children } = props
 	return (
-		<div className="font-mono rounded-[10px] border border-card-border bg-card-header shadow-[0px_4px_44px_rgba(0,0,0,0.05)] px-[24px] py-[32px] text-center text-base-content-secondary text-[14px]">
-			Unable to load this block. The identifier might be wrong or the block has
-			not been produced yet.
+		<div className="flex flex-col gap-[6px]">
+			<div className="flex items-center gap-[6px] text-[11px] uppercase tracking-[0.3em] text-tertiary">
+				<span>{label}</span>
+				{copyValue && (
+					<CopyButton
+						value={copyValue}
+						ariaLabel={`Copy ${label.toLowerCase()}`}
+					/>
+				)}
+			</div>
+			{value ?? <span className="text-tertiary">—</span>}
+			{children}
 		</div>
+	)
+}
+
+function CopyButton(props: { value: string; ariaLabel: string }) {
+	const { value, ariaLabel } = props
+	const { copy, notifying } = useCopy()
+	return (
+		<button
+			type="button"
+			onClick={() => copy(value)}
+			className="flex items-center gap-[4px] text-tertiary hover:text-primary transition-colors text-[12px]"
+			aria-label={ariaLabel}
+		>
+			<CopyIcon className="size-[14px]" />
+			{notifying && (
+				<span className="text-[10px] uppercase tracking-widest text-primary">
+					copied
+				</span>
+			)}
+		</button>
 	)
 }
 
@@ -591,9 +612,15 @@ function formatBlockNumber(value?: bigint) {
 	return base.padStart(12, '0')
 }
 
+function formatGasValue(value?: bigint, digits = 9) {
+	if (value === undefined) return '—'
+	const string = value.toString()
+	return string.length >= digits ? string : string.padStart(digits, '0')
+}
+
 function formatUtcTimestamp(timestamp: bigint) {
-	return new Date(Number(timestamp) * 1_000).toLocaleString(undefined, {
-		year: 'numeric',
+	return new Intl.DateTimeFormat('en-US', {
+		year: '2-digit',
 		month: '2-digit',
 		day: '2-digit',
 		hour: '2-digit',
@@ -601,7 +628,7 @@ function formatUtcTimestamp(timestamp: bigint) {
 		second: '2-digit',
 		hour12: false,
 		timeZone: 'UTC',
-	})
+	}).format(new Date(Number(timestamp) * 1_000))
 }
 
 function getGasUsagePercent(block: BlockWithTransactions) {
