@@ -8,6 +8,8 @@
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:production": "wrangler deploy --env production",
     "tail": "wrangler tail",
+    "test": "node test-simple.mjs",
+    "test:integration": "node test-sponsor.js",
     "typecheck": "tsc --noEmit",
     "format": "biome format --write .",
     "lint": "biome check --write ."

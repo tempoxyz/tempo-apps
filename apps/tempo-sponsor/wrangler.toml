@@ -1,13 +1,5 @@
 name = "tempo-sponsor"
 main = "src/index.ts"
-compatibility_date = "2024-11-20"
-node_compat = true
-
-[env.production]
-name = "tempo-sponsor"
-
-[env.staging]
-name = "tempo-sponsor-staging"
 
 [vars]
 TEMPO_RPC_URL = "https://eng:zealous-mayer@rpc.testnet.tempo.xyz"

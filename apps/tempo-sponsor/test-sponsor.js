@@ -1,0 +1,127 @@
+#!/usr/bin/env node
+
+const { createClient, http, walletActions } = require('viem');
+const { privateKeyToAccount } = require('viem/accounts');
+const { tempo } = require('tempo.ts/chains');
+const { withFeePayer } = require('tempo.ts/viem');
+
+// Configuration
+const SPONSOR_URL = process.env.SPONSOR_URL || 'http://localhost:8787'; // Local wrangler dev URL
+const TEST_PRIVATE_KEY = process.env.TEST_PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
+const RECIPIENT = '0x9761812cADB002BB89c90ec0b15304F9B008E14C'
+
+async function testSponsor() {
+  console.log('🚀 Testing Tempo Sponsor Service\n');
+  console.log('Configuration:');
+  console.log(`  Sponsor URL: ${SPONSOR_URL}`);
+  console.log(`  Test Account: ${privateKeyToAccount(TEST_PRIVATE_KEY).address}`);
+  console.log(`  Recipient: ${RECIPIENT}\n`);
+
+  try {
+    // Create client with fee payer
+    const client = createClient({
+      account: privateKeyToAccount(TEST_PRIVATE_KEY),
+      chain: tempo({ feeToken: '0x20c0000000000000000000000000000000000001' }),
+      transport: withFeePayer(
+        http('https://eng:zealous-mayer@rpc.testnet.tempo.xyz'),
+        http(SPONSOR_URL),
+      ),
+    }).extend(walletActions);
+
+    console.log('📝 Sending sponsored transaction...\n');
+    
+    // Send a sponsored transaction
+    const hash = await client.sendTransactionSync({
+      feePayer: true,
+      to: RECIPIENT,
+      value: 1000000n, // 1 USDC (6 decimals)
+    });
+
+    console.log('✅ Transaction sponsored successfully!');
+    console.log(`  Transaction Hash: ${hash}\n`);
+
+    // Get transaction receipt
+    console.log('⏳ Waiting for transaction receipt...\n');
+    const receipt = await client.getTransactionReceipt({ hash });
+    
+    console.log('📋 Transaction Receipt:');
+    console.log(`  Status: ${receipt.status}`);
+    console.log(`  Block Number: ${receipt.blockNumber}`);
+    console.log(`  Gas Used: ${receipt.gasUsed}`);
+    console.log(`  Fee Payer: ${receipt.from}`);
+    
+  } catch (error) {
+    console.error('❌ Error testing sponsor:', error.message);
+    if (error.cause) {
+      console.error('Cause:', error.cause);
+    }
+    process.exit(1);
+  }
+}
+
+// Direct RPC test without viem (for debugging)
+async function testDirectRPC() {
+  console.log('\n📡 Testing Direct RPC Call to Sponsor...\n');
+  
+  try {
+    // Create a simple transaction
+    const testAccount = privateKeyToAccount(TEST_PRIVATE_KEY);
+    const client = createClient({
+      account: testAccount,
+      chain: tempo({ feeToken: '0x20c0000000000000000000000000000000000001' }),
+      transport: http('https://eng:zealous-mayer@rpc.testnet.tempo.xyz'),
+    }).extend(walletActions);
+
+    // Sign a transaction (but don't send it)
+    const serialized = await client.signTransaction({
+      to: RECIPIENT,
+      value: 1000000n,
+    });
+
+    console.log(`  Serialized Transaction: ${serialized.substring(0, 50)}...`);
+
+    // Send to sponsor service
+    const response = await fetch(SPONSOR_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_sendRawTransaction',
+        params: [serialized],
+      }),
+    });
+
+    const result = await response.json();
+    
+    if (result.error) {
+      throw new Error(`RPC Error: ${result.error.message}`);
+    }
+
+    console.log('✅ Direct RPC call successful!');
+    console.log(`  Transaction Hash: ${result.result}\n`);
+    
+  } catch (error) {
+    console.error('❌ Direct RPC Error:', error.message);
+  }
+}
+
+// Run tests
+async function main() {
+  // Check if running locally
+  const isLocal = SPONSOR_URL.includes('localhost') || SPONSOR_URL.includes('127.0.0.1');
+  
+  if (isLocal) {
+    console.log('⚠️  Testing against local server. Make sure to run `pnpm dev` in another terminal.\n');
+  }
+
+  // Run direct RPC test first (simpler)
+  await testDirectRPC();
+  
+  // Then run full integration test
+  await testSponsor();
+}
+
+main().catch(console.error);
