@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
-import { fetchTokenMetadata } from '#server/token/fetch-token-metadata'
 import { zAddress } from '#lib/zod'
+import { fetchTokenMetadata } from '#server/token/fetch-token-metadata'
 
 export const Route = createFileRoute('/api/token/$address')({
 	server: {

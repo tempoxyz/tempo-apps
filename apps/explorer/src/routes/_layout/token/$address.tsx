@@ -8,11 +8,12 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { Address, Hex } from 'ox'
+import { Address, type Hex } from 'ox'
 import * as React from 'react'
 import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import * as z from 'zod/mini'
+import { ellipsis } from '#chars'
 import { InfoCard } from '#components/InfoCard'
 import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
@@ -23,7 +24,6 @@ import { fetchTokenHolders } from '#server/token/fetch-token-holders'
 import { fetchTokenTransfers } from '#server/token/fetch-token-transfers'
 import { config } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
-import { ellipsis } from '#chars'
 
 const rowsPerPage = 10
 

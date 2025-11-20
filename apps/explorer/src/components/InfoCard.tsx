@@ -24,9 +24,10 @@ export function InfoCard(props: InfoCard.Props) {
 					const isSectionEntry =
 						section && typeof section === 'object' && 'label' in section
 					const isLast = index === sections.length - 1
+					const key = `section-${index}`
 					return (
 						<div
-							key={index}
+							key={key}
 							className={cx(
 								'px-[18px] py-[12px] flex items-center',
 								!isLast && 'border-b border-dashed border-card-border',

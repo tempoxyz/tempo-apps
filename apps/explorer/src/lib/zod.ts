@@ -1,5 +1,5 @@
-import { z } from 'zod'
 import { Address, Hex } from 'ox'
+import { z } from 'zod'
 
 export const zAddress = (opts?: { lowercase?: boolean }) =>
 	z.pipe(
