@@ -374,7 +374,7 @@ function RouteComponent() {
 		(newPage: number) => {
 			navigate({
 				to: '.',
-				search: (prev) => ({
+				search: () => ({
 					...(newPage !== 1 ? { page: newPage } : {}),
 					...(tab !== 'transfers' ? { tab } : {}),
 					...(limit !== rowsPerPage ? { limit } : {}),
@@ -391,7 +391,7 @@ function RouteComponent() {
 			const newTab = tabs[newIndex] || 'transfers'
 			navigate({
 				to: '.',
-				search: (prev) => ({
+				search: () => ({
 					...(newTab !== 'transfers' ? { tab: newTab } : {}),
 					...(limit !== rowsPerPage ? { limit } : {}),
 				}),
@@ -454,7 +454,9 @@ function SectionsWrapper(props: {
 
 	const { data: transfersData, isLoading: isLoadingTransfers } = useQuery({
 		...transfersOptions,
-		...(activeSection === 0 && transfersQueryPage === page && loaderData.transfers
+		...(activeSection === 0 &&
+		transfersQueryPage === page &&
+		loaderData.transfers
 			? { initialData: loaderData.transfers }
 			: {}),
 	})
