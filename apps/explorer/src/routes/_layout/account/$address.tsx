@@ -3,6 +3,7 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
+	rootRouteId,
 	useNavigate,
 	useRouter,
 	useRouterState,
@@ -112,19 +113,29 @@ export const Route = createFileRoute('/_layout/account/$address')({
 	}),
 	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
 	loader: async ({ deps: { page, limit }, params, context }) => {
-		const { address } = params
-		if (!Address.validate(address)) throw notFound()
+		try {
+			const { address } = params
+			if (!Address.validate(address)) throw notFound()
 
-		const offset = (page - 1) * limit
+			const offset = (page - 1) * limit
 
-		return await context.queryClient.fetchQuery(
-			transactionsQueryOptions({
-				address,
-				page,
-				limit,
-				offset,
-			}),
-		)
+			return await context.queryClient.fetchQuery(
+				transactionsQueryOptions({
+					address,
+					page,
+					limit,
+					offset,
+				}),
+			)
+		} catch (error) {
+			console.error('onCatch', error)
+			throw notFound({
+				routeId: rootRouteId,
+				data: {
+					error: error instanceof Error ? error.message : 'Unknown error',
+				},
+			})
+		}
 	},
 })
 
