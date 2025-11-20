@@ -241,7 +241,7 @@ function Component() {
 	)
 }
 
-export namespace TextRenderer {
+namespace TextRenderer {
 	const width = 50
 	const indent = '  '
 
