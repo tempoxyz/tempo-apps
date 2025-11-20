@@ -108,17 +108,22 @@ export function Sections(props: Sections.Props) {
 						type="button"
 						onClick={() => onSectionChange?.(index)}
 						className={cx(
+							'h-full flex items-center text-[13px] font-medium uppercase',
+							'focus-visible:-outline-offset-2! press-down cursor-pointer transition-[color]',
 							index === 0
 								? 'pl-[18px] pr-[12px] !rounded-tl-[10px]'
 								: 'px-[12px]',
-							'h-full flex items-center text-[13px] font-medium uppercase',
-							'focus-visible:-outline-offset-2! press-down cursor-pointer transition-[color]',
 							activeSection === index
 								? 'text-primary'
 								: 'text-tertiary hover:text-secondary',
 						)}
 					>
-						{section.title}
+						<div className="relative h-full flex items-center">
+							{section.title}
+							{activeSection === index && (
+								<div className="absolute h-[2px] bg-accent -bottom-[1.5px] left-0 right-0 -mx-[2px]" />
+							)}
+						</div>
 					</button>
 				))}
 			</div>
