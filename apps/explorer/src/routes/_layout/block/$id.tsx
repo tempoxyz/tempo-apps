@@ -7,11 +7,9 @@ import { useBlock, useChains, useWatchBlockNumber } from 'wagmi'
 
 import { Address as AddressLink } from '#components/Address.tsx'
 import { NotFound } from '#components/NotFound.tsx'
-import { RelativeTime } from '#components/RelativeTime.tsx'
-import { Sections } from '#components/Sections.tsx'
 import { cx } from '#cva.config.ts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
-import { useCopy, useMediaQuery } from '#lib/hooks.ts'
+import { useCopy } from '#lib/hooks.ts'
 import ChevronDown from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -156,13 +154,15 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 
 	if (!block)
 		return (
-			<article className="font-mono rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_4px_44px_rgba(0,0,0,0.05)] px-[18px] py-[18px] text-base-content-secondary">
+			<article className="font-mono rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_12px_40px_rgba(0,0,0,0.06)] px-[18px] py-[18px] text-base-content-secondary">
 				<span>Awaiting block data…</span>
 			</article>
 		)
 
 	const blockNumberValue = block.number ?? requestedNumber
 	const formattedNumber = formatBlockNumber(blockNumberValue)
+	const leadingZeros = formattedNumber.match(/^0+/)?.[0] ?? ''
+	const trailingDigits = formattedNumber.slice(leadingZeros.length)
 	const confirmations =
 		block.number && latestBlockNumber && latestBlockNumber >= block.number
 			? Number(latestBlockNumber - block.number) + 1
@@ -181,46 +181,43 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 	]
 
 	return (
-		<article className="font-mono rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_4px_44px_rgba(0,0,0,0.05)]">
-			<div className="flex items-center justify-between px-[18px] pt-[12px] pb-[8px] border-b border-card-border">
-				<span className="text-[11px] uppercase tracking-[0.35em] text-tertiary">
-					Block
-				</span>
-				{blockNumberValue && (
-					<CopyButton
-						value={blockNumberValue.toString()}
-						ariaLabel="Copy block number"
-					/>
-				)}
-			</div>
-			<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px px-[18px] py-[20px] flex flex-col gap-[18px]">
-				<div className="flex flex-col gap-[6px] border-b border-dashed border-card-border pb-[16px]">
-					<div className="text-[28px] font-semibold tracking-[0.18em] text-primary tabular-nums">
-						{formattedNumber}
-					</div>
-					{block.timestamp && (
-						<span className="text-[12px] text-base-content-secondary">
-							Verified <RelativeTime timestamp={block.timestamp} />
-						</span>
+		<article className="font-mono rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_12px_40px_rgba(0,0,0,0.06)]">
+			<div className="px-[18px] pt-[14px] pb-[10px] border-b border-card-border">
+				<div className="flex items-center justify-between">
+					<span className="text-[11px] uppercase tracking-[0.32em] text-tertiary">
+						Block
+					</span>
+					{blockNumberValue && (
+						<CopyButton
+							value={blockNumberValue.toString()}
+							ariaLabel="Copy block number"
+						/>
 					)}
 				</div>
-
-				<div className="flex flex-col gap-[10px]">
-					<TimestampChip label="UTC" value={utcLabel} />
-					<TimestampChip label="UNIX" value={unixLabel} />
+				<div className="mt-[6px] text-[22px] leading-[26px] tracking-[0.18em] text-primary tabular-nums">
+					<span className="text-[#bbbbbb]">{leadingZeros}</span>
+					{trailingDigits || '—'}
 				</div>
+			</div>
 
-				<DetailSection
-					label="Hash"
-					copyValue={block.hash ?? undefined}
-					value={
-						<p className="text-[12px] leading-[18px] text-primary wrap-break-word">
-							{block.hash ?? '—'}
-						</p>
-					}
-				>
+			<div className="divide-y divide-card-border">
+				<BlockTimeRow label="UTC" value={utcLabel} />
+				<BlockTimeRow label="UNIX" value={unixLabel} subtle />
+
+				<div className="px-[18px] py-[14px] space-y-[8px]">
+					<div className="flex items-center justify-between">
+						<span className="text-[11px] uppercase tracking-[0.32em] text-tertiary">
+							Hash
+						</span>
+						{block.hash && (
+							<CopyButton value={block.hash} ariaLabel="Copy block hash" />
+						)}
+					</div>
+					<p className="text-[13px] leading-[18px] text-primary wrap-break-word">
+						{block.hash ?? '—'}
+					</p>
 					{block.parentHash && (
-						<div className="flex items-center gap-[6px] text-[12px]">
+						<div className="flex items-center gap-[8px] text-[13px]">
 							<span className="text-tertiary">↳ Parent</span>
 							<Link
 								to="/block/$id"
@@ -232,75 +229,72 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 							</Link>
 						</div>
 					)}
-				</DetailSection>
+				</div>
 
-				<DetailSection
-					label="Miner"
-					copyValue={block.miner ?? undefined}
-					value={
-						block.miner ? (
-							<AddressLink
-								address={block.miner}
-								chars={4}
-								className="text-primary"
-							/>
-						) : (
-							<span className="text-tertiary">—</span>
-						)
-					}
-				/>
+				<div className="px-[18px] py-[12px] flex items-center justify-between text-[13px]">
+					<span className="text-tertiary">Miner</span>
+					{block.miner ? (
+						<AddressLink
+							address={block.miner}
+							chars={4}
+							className="text-accent"
+						/>
+					) : (
+						<span className="text-tertiary">—</span>
+					)}
+				</div>
 
-				<DetailSection
-					label="Confirmations"
-					value={
-						<span className="text-primary text-[13px]">
-							{confirmations !== undefined ? confirmations.toString() : '—'}
-						</span>
-					}
-				/>
+				<div className="px-[18px] py-[12px] flex items-center justify-between text-[13px]">
+					<span className="text-tertiary">Confirmations</span>
+					<span className="text-primary tabular-nums">
+						{confirmations !== undefined ? confirmations.toString() : '—'}
+					</span>
+				</div>
 
-				<section className="flex flex-col gap-[12px] border-t border-dashed border-card-border pt-[14px]">
+				<div className="px-[18px] py-[12px]">
 					<button
 						type="button"
-						className="flex items-center justify-between text-[11px] uppercase tracking-[0.35em] text-tertiary cursor-pointer"
+						className="flex w-full items-center justify-between text-[13px] text-tertiary"
 						onClick={() => setShowAdvanced((prev) => !prev)}
 					>
-						<span>Advanced</span>
-						<span className="flex items-center gap-[6px] text-[12px] font-normal tracking-normal text-base-content-secondary">
+						<span className="uppercase tracking-[0.28em]">Advanced</span>
+						<span className="flex items-center gap-[6px] text-primary text-[12px]">
 							{gasUsage !== undefined ? `${gasUsage.toFixed(2)}%` : '—'}
 							<ChevronDown
 								className={`size-[14px] transition-transform ${showAdvanced ? '' : '-rotate-90'}`}
 							/>
 						</span>
 					</button>
+
 					{showAdvanced && (
-						<div className="flex flex-col gap-[12px]">
-							<div className="flex flex-col gap-[6px]">
-								<div className="flex items-center justify-between text-[13px] text-primary">
+						<div className="mt-[14px] space-y-[14px] text-[13px]">
+							<div className="space-y-[6px]">
+								<div className="flex items-center justify-between text-primary">
 									<span>Gas Usage</span>
-									<span className="text-base-content-secondary">
+									<span className="text-primary">
 										{gasUsage !== undefined ? `${gasUsage.toFixed(2)}%` : '—'}
 									</span>
 								</div>
-								<div className="h-[5px] rounded-full bg-base-border/50 overflow-hidden">
+								<div className="relative h-[6px] rounded-full bg-[#e8e8e8] overflow-hidden">
 									<div
-										className="h-full rounded-full bg-accent transition-[width] duration-300"
+										className="absolute inset-y-0 left-0 bg-accent transition-[width] duration-300"
 										style={{ width: `${Math.min(100, gasUsage ?? 0)}%` }}
 									/>
 								</div>
-								<div className="flex items-center justify-between text-[11px] text-tertiary uppercase tracking-wider tabular-nums">
+								<div className="flex items-center justify-between text-[11px] text-tertiary uppercase tracking-[0.25em] tabular-nums">
 									<span>{formatGasValue(block.gasUsed)}</span>
 									<span>{formatGasValue(block.gasLimit)}</span>
 								</div>
 							</div>
-							<div className="flex flex-col gap-[6px]">
-								<span className="text-[11px] uppercase tracking-[0.35em] text-tertiary">
+
+							<div className="space-y-[8px]">
+								<span className="text-[11px] uppercase tracking-[0.28em] text-tertiary">
 									Roots
 								</span>
 								{roots.map((root) => (
 									<div
 										key={root.label}
-										className="flex items-center justify-between text-[12px] text-primary leading-[16px]"
+										className="flex items-center justify-between text-primary leading-[18px]"
 									>
 										<span className="text-tertiary capitalize">
 											{root.label}
@@ -318,12 +312,11 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 							</div>
 						</div>
 					)}
-				</section>
+				</div>
 			</div>
 		</article>
 	)
 }
-
 interface BlockSummaryCardProps {
 	block?: BlockWithTransactions
 	isLoading: boolean
@@ -333,76 +326,122 @@ interface BlockSummaryCardProps {
 
 function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 	const { transactions, isLoading, decimals, symbol } = props
-	const isMobile = useMediaQuery('(max-width: 1239px)')
-	const mode: 'tabs' | 'stacked' = isMobile ? 'stacked' : 'tabs'
 
-	if (!transactions.length && !isLoading)
+	const displayRows: Array<BlockTransaction | undefined> =
+		transactions.length > 0
+			? transactions
+			: Array.from({ length: isLoading ? 7 : 0 }).map(() => undefined)
+
+	if (!displayRows.length && !isLoading)
 		return (
-			<section className="flex flex-col font-mono w-full overflow-hidden rounded-[10px] border border-card-border bg-card-header shadow-[0px_4px_44px_rgba(0,0,0,0.05)] p-[24px] text-center text-base-content-secondary">
+			<section className="flex flex-col font-mono w-full overflow-hidden rounded-[10px] border border-card-border bg-card-header shadow-[0px_12px_40px_rgba(0,0,0,0.06)] p-[24px] text-center text-base-content-secondary">
 				No transactions were included in this block.
 			</section>
 		)
 
-	const totalItems = Math.max(transactions.length, isLoading ? 1 : 0)
-	const itemsPerPage = Math.max(transactions.length, 1)
-
-	const section: Sections.Section = {
-		title: `Transactions`,
-		columns: {
-			tabs: [
-				{ label: 'Index', minWidth: 80 },
-				{ label: 'Description', minWidth: 260 },
-				{ label: 'Hash', minWidth: 140 },
-				{ label: 'Fee', align: 'end', minWidth: 120 },
-				{ label: 'Total', align: 'end', minWidth: 120 },
-			],
-			stacked: [
-				{ label: '#', minWidth: 60 },
-				{ label: 'Details', minWidth: 200 },
-				{ label: 'Amount', align: 'end', minWidth: 120 },
-			],
-		},
-		items: (currentMode) =>
-			transactions.map((transaction, index) =>
-				buildTransactionCells({
-					transaction,
-					index,
-					decimals,
-					symbol,
-					mode: currentMode,
-				}),
-			),
-		totalItems,
-		page: 1,
-		isPending: isLoading,
-		onPageChange: () => {},
-		itemsLabel: 'transactions',
-		itemsPerPage,
-	}
-
-	const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage))
-
 	return (
 		<section
-			className="flex flex-col font-mono w-full overflow-hidden rounded-[10px] border border-card-border bg-card-header shadow-[0px_4px_44px_rgba(0,0,0,0.05)]"
+			className="flex flex-col font-mono w-full overflow-hidden rounded-[10px] border border-card-border bg-card-header shadow-[0px_12px_40px_rgba(0,0,0,0.06)]"
 			aria-label="Block transactions"
 		>
-			<div className="flex items-center justify-between px-[18px] pt-[12px] pb-[8px]">
-				<h2 className="text-[13px] font-medium uppercase text-primary">
+			<div className="flex items-center justify-between px-[18px] pt-[12px] pb-[10px] border-b border-card-border">
+				<h2 className="text-[13px] font-medium text-primary">
 					Transactions{' '}
 					<span className="text-tertiary lowercase not-italic">
 						({transactions.length})
 					</span>
 				</h2>
 			</div>
-			<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0">
-				<Sections.SectionContent
-					section={section}
-					totalPages={totalPages}
-					itemsLabel="transactions"
-					itemsPerPage={itemsPerPage}
-					mode={mode}
-				/>
+			<div className="overflow-x-auto">
+				<table className="min-w-full text-[13px] text-primary">
+					<thead className="bg-card-header text-tertiary">
+						<tr>
+							<th className="px-[16px] py-[12px] text-left font-normal">
+								Index
+							</th>
+							<th className="px-[16px] py-[12px] text-left font-normal">
+								Description
+							</th>
+							<th className="px-[16px] py-[12px] text-left font-normal">
+								Hash
+							</th>
+							<th className="px-[16px] py-[12px] text-right font-normal">
+								Fee
+							</th>
+							<th className="px-[16px] py-[12px] text-right font-normal">
+								Total
+							</th>
+						</tr>
+					</thead>
+					<tbody className="divide-y divide-[#e8e8e8]">
+						{displayRows.map((transaction, index) => {
+							const isPlaceholder = !transaction
+							const transactionIndex =
+								!isPlaceholder &&
+								(transaction.transactionIndex ?? null) !== null
+									? Number(transaction.transactionIndex) + 1
+									: index + 1
+							const amountDisplay = !isPlaceholder
+								? formatNativeAmount(transaction.value, decimals, symbol)
+								: '—'
+							const fee = !isPlaceholder
+								? getEstimatedFee(transaction)
+								: undefined
+							const feeDisplay =
+								fee !== undefined && fee > 0n
+									? formatNativeAmount(fee, decimals, symbol)
+									: '—'
+							const feeOutput = feeDisplay === '—' ? '—' : `(${feeDisplay})`
+							const hashCell =
+								!isPlaceholder && transaction.hash ? (
+									<Link
+										to="/tx/$hash"
+										params={{ hash: transaction.hash }}
+										className="text-accent font-mono"
+										title={transaction.hash}
+									>
+										{HexFormatter.shortenHex(transaction.hash, 6)}
+									</Link>
+								) : (
+									<span className="text-tertiary">—</span>
+								)
+							const totalClass =
+								!isPlaceholder && transaction.value > 0n
+									? 'text-base-content-positive'
+									: 'text-primary'
+
+							return (
+								<tr
+									key={transaction?.hash ?? `placeholder-${index}`}
+									className="bg-card"
+								>
+									<td className="px-[16px] py-[12px] align-top text-tertiary tabular-nums">
+										[{transactionIndex}]
+									</td>
+									<td className="px-[16px] py-[12px] align-top">
+										{!isPlaceholder ? (
+											<TransactionDescription
+												transaction={transaction}
+												amountDisplay={amountDisplay}
+											/>
+										) : (
+											<span className="text-tertiary">Loading…</span>
+										)}
+									</td>
+									<td className="px-[16px] py-[12px] align-top">{hashCell}</td>
+									<td className="px-[16px] py-[12px] align-top text-right text-base-content-secondary">
+										{feeOutput}
+									</td>
+									<td
+										className={`px-[16px] py-[12px] align-top text-right tabular-nums ${totalClass}`}
+									>
+										{amountDisplay}
+									</td>
+								</tr>
+							)
+						})}
+					</tbody>
+				</table>
 			</div>
 		</section>
 	)
@@ -415,117 +454,41 @@ interface BlockTransactionsCardProps {
 	symbol: string
 }
 
-function buildTransactionCells(params: {
-	transaction: BlockTransaction
-	index: number
-	decimals: number
-	symbol: string
-	mode: 'tabs' | 'stacked'
-}) {
-	const { transaction, index, decimals, symbol, mode } = params
-	const transactionIndex =
-		(transaction?.transactionIndex ?? null) !== null
-			? Number(transaction.transactionIndex) + 1
-			: index + 1
-	const amountDisplay = formatNativeAmount(transaction.value, decimals, symbol)
-	const fee = getEstimatedFee(transaction)
-	const feeDisplay = fee > 0n ? formatNativeAmount(fee, decimals, symbol) : '—'
-
-	const hashLink = transaction.hash ? (
-		<Link
-			to="/tx/$hash"
-			params={{ hash: transaction.hash }}
-			className="text-accent font-mono text-[13px]"
-			title={transaction.hash}
-		>
-			{HexFormatter.shortenHex(transaction.hash, 6)}
-		</Link>
-	) : (
-		'—'
-	)
-
-	const fromRow = (
-		<div className="text-[12px] text-tertiary">
-			From{' '}
-			{transaction.from ? (
-				<AddressLink
-					address={transaction.from}
-					chars={4}
-					className="text-primary"
-				/>
-			) : (
-				'—'
-			)}
-		</div>
-	)
-
-	if (mode === 'stacked')
-		return [
-			<span key="index" className="text-tertiary font-mono">
-				[{transactionIndex}]
-			</span>,
-			<div key="description" className="flex flex-col gap-[6px]">
-				<TransactionDescription
-					transaction={transaction}
-					amountDisplay={amountDisplay}
-				/>
-				{hashLink !== '—' && <div className="text-[12px]">{hashLink}</div>}
-				{fromRow}
-			</div>,
-			<div key="fee" className="flex flex-col items-end gap-[4px] text-[13px]">
-				<span className="text-base-content-secondary font-mono">
-					Fee {feeDisplay}
-				</span>
-				<span className="text-primary font-mono font-medium">
-					{amountDisplay}
-				</span>
-			</div>,
-		]
-
-	return [
-		<span key="index" className="text-tertiary font-mono">
-			[{transactionIndex}]
-		</span>,
-		<div key="description" className="flex flex-col gap-[6px]">
-			<TransactionDescription
-				transaction={transaction}
-				amountDisplay={amountDisplay}
-			/>
-			{fromRow}
-		</div>,
-		hashLink,
-		<span key="fee" className="text-base-content-secondary font-mono">
-			{feeDisplay}
-		</span>,
-		<span key="amount" className="text-primary font-mono font-medium">
-			{amountDisplay}
-		</span>,
-	]
-}
-
 function TransactionDescription(props: TransactionDescriptionProps) {
 	const { transaction, amountDisplay } = props
-	if (!transaction.to) return <span>Deploy contract with {amountDisplay}</span>
+	if (!transaction.to)
+		return (
+			<span className="text-primary">
+				Deploy contract with{' '}
+				<span className="text-base-content-positive font-medium">
+					{amountDisplay}
+				</span>
+			</span>
+		)
 
 	if (transaction.value === 0n)
 		return (
-			<span>
+			<span className="text-primary">
 				Call{' '}
 				<AddressLink
 					address={transaction.to}
 					chars={4}
-					className="text-primary"
+					className="text-accent font-medium"
 				/>
 			</span>
 		)
 
 	return (
-		<span>
-			Send <span className="font-medium text-primary">{amountDisplay}</span> to{' '}
+		<span className="text-primary">
+			Send{' '}
+			<span className="font-medium text-base-content-positive">
+				{amountDisplay}
+			</span>{' '}
+			to{' '}
 			<AddressLink
 				address={transaction.to}
 				chars={4}
-				className="text-primary"
+				className="text-accent font-medium"
 			/>
 		</span>
 	)
@@ -550,38 +513,27 @@ function BlockSummarySkeleton() {
 	)
 }
 
-function TimestampChip(props: { label: string; value?: string }) {
-	const { label, value } = props
-	return (
-		<div className="flex items-center gap-[10px] text-[13px] leading-[18px] capitalize">
-			<span className="text-xs uppercase text-tertiary bg-base-alt/80 px-1 py-0.5">
-				{label}
-			</span>
-			<span className="text-primary">{value ?? '—'}</span>
-		</div>
-	)
-}
-
-function DetailSection(props: {
+function BlockTimeRow(props: {
 	label: string
-	copyValue?: string
-	value?: React.ReactNode
-	children?: React.ReactNode
+	value?: string
+	subtle?: boolean
 }) {
-	const { label, copyValue, value, children } = props
+	const { label, value, subtle } = props
 	return (
-		<div className="flex flex-col gap-[6px]">
-			<div className="flex items-center gap-[6px] text-[11px] uppercase tracking-[0.3em] text-tertiary">
-				<span>{label}</span>
-				{copyValue && (
-					<CopyButton
-						value={copyValue}
-						ariaLabel={`Copy ${label.toLowerCase()}`}
-					/>
+		<div className="px-[18px] py-[12px] flex items-center justify-between text-[13px] leading-[18px]">
+			<span className="inline-flex items-center gap-[8px]">
+				<span className="text-[11px] uppercase text-tertiary bg-base-alt/80 px-[6px] py-[3px] rounded-[4px] tracking-[0.18em]">
+					{label}
+				</span>
+			</span>
+			<span
+				className={cx(
+					'text-right tabular-nums',
+					subtle ? 'text-base-content-secondary' : 'text-primary',
 				)}
-			</div>
-			{value ?? <span className="text-tertiary">—</span>}
-			{children}
+			>
+				{value ?? '—'}
+			</span>
 		</div>
 	)
 }
