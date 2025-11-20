@@ -2,7 +2,7 @@ import { Link, useMatch } from '@tanstack/react-router'
 import { Hex } from 'ox'
 import { Footer } from './Footer.tsx'
 import { Header } from './Header.tsx'
-import { apos } from '#chars'
+import { apostrophe } from '#chars'
 
 export function NotFound() {
 	const txMatch = useMatch({
@@ -17,11 +17,11 @@ export function NotFound() {
 	const [title, message] = isTx
 		? [
 				'Transaction Not Found',
-				`The transaction doesn${apos}t exist or hasn${apos}t been processed yet.`,
+				`The transaction doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`,
 			]
 		: [
 				'Page Not Found',
-				`The page you${apos}re looking for doesn${apos}t exist or has been moved.`,
+				`The page you${apostrophe}re looking for doesn${apostrophe}t exist or has been moved.`,
 			]
 
 	return (

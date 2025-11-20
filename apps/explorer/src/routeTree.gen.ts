@@ -17,6 +17,7 @@ import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
 import { Route as LayoutAccountAddressRouteImport } from './routes/_layout/account/$address'
+import { Route as ApiTokenAddressRouteRouteImport } from './routes/api/token/$address/route'
 import { Route as ApiAccountAddressRouteRouteImport } from './routes/api/account/$address/route'
 
 const LayoutRoute = LayoutRouteImport.update({
@@ -58,6 +59,11 @@ const LayoutAccountAddressRoute = LayoutAccountAddressRouteImport.update({
   path: '/account/$address',
   getParentRoute: () => LayoutRoute,
 } as any)
+const ApiTokenAddressRouteRoute = ApiTokenAddressRouteRouteImport.update({
+  id: '/api/token/$address',
+  path: '/api/token/$address',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAccountAddressRouteRoute = ApiAccountAddressRouteRouteImport.update({
   id: '/api/account/$address',
   path: '/api/account/$address',
@@ -68,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/': typeof LayoutIndexRoute
   '/api/account/$address': typeof ApiAccountAddressRouteRoute
+  '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/account/$address': typeof LayoutAccountAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
   '/token/$address': typeof LayoutTokenAddressRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/': typeof LayoutIndexRoute
   '/api/account/$address': typeof ApiAccountAddressRouteRoute
+  '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/account/$address': typeof LayoutAccountAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
   '/token/$address': typeof LayoutTokenAddressRoute
@@ -90,6 +98,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/_layout/': typeof LayoutIndexRoute
   '/api/account/$address': typeof ApiAccountAddressRouteRoute
+  '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/_layout/account/$address': typeof LayoutAccountAddressRoute
   '/_layout/block/$id': typeof LayoutBlockIdRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
@@ -102,6 +111,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/'
     | '/api/account/$address'
+    | '/api/token/$address'
     | '/account/$address'
     | '/block/$id'
     | '/token/$address'
@@ -112,6 +122,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/'
     | '/api/account/$address'
+    | '/api/token/$address'
     | '/account/$address'
     | '/block/$id'
     | '/token/$address'
@@ -123,6 +134,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/_layout/'
     | '/api/account/$address'
+    | '/api/token/$address'
     | '/_layout/account/$address'
     | '/_layout/block/$id'
     | '/_layout/token/$address'
@@ -134,6 +146,7 @@ export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
   ApiHealthRoute: typeof ApiHealthRoute
   ApiAccountAddressRouteRoute: typeof ApiAccountAddressRouteRoute
+  ApiTokenAddressRouteRoute: typeof ApiTokenAddressRouteRoute
   ApiAccountTotalValueRoute: typeof ApiAccountTotalValueRoute
 }
 
@@ -195,6 +208,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAccountAddressRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/api/token/$address': {
+      id: '/api/token/$address'
+      path: '/api/token/$address'
+      fullPath: '/api/token/$address'
+      preLoaderRoute: typeof ApiTokenAddressRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/account/$address': {
       id: '/api/account/$address'
       path: '/api/account/$address'
@@ -228,6 +248,7 @@ const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
   ApiHealthRoute: ApiHealthRoute,
   ApiAccountAddressRouteRoute: ApiAccountAddressRouteRoute,
+  ApiTokenAddressRouteRoute: ApiTokenAddressRouteRoute,
   ApiAccountTotalValueRoute: ApiAccountTotalValueRoute,
 }
 export const routeTree = rootRouteImport
