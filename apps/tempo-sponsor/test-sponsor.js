@@ -44,6 +44,11 @@ async function testSponsor() {
       value: 0n,
     });
 
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    await sleep(1000)
+
     const receipt = await client.getTransactionReceipt({ hash })
     console.log(hash)
     console.log(receipt)
@@ -58,55 +63,6 @@ async function testSponsor() {
   }
 }
 
-// Direct RPC test without viem (for debugging)
-async function testDirectRPC() {
-  console.log('\n📡 Testing Direct RPC Call to Sponsor...\n');
-  
-  try {
-    // Create a simple transaction
-    const testAccount = privateKeyToAccount(TEST_PRIVATE_KEY);
-    const client = createClient({
-      account: testAccount,
-      chain: tempo({ feeToken: '0x20c0000000000000000000000000000000000001' }),
-      transport: http('https://eng:zealous-mayer@rpc.testnet.tempo.xyz'),
-    }).extend(walletActions);
-
-    // Sign a transaction (but don't send it)
-    const serialized = await client.signTransaction({
-      to: RECIPIENT,
-      value: 1000000n,
-    });
-
-    console.log(`  Serialized Transaction: ${serialized.substring(0, 50)}...`);
-
-    // Send to sponsor service
-    const response = await fetch(SPONSOR_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'eth_sendRawTransaction',
-        params: [serialized],
-      }),
-    });
-
-    const result = await response.json();
-    
-    if (result.error) {
-      throw new Error(`RPC Error: ${result.error.message}`);
-    }
-
-    console.log('✅ Direct RPC call successful!');
-    console.log(`  Transaction Hash: ${result.result}\n`);
-    
-  } catch (error) {
-    console.error('❌ Direct RPC Error:', error.message);
-  }
-}
-
 // Run tests
 async function main() {
   // Check if running locally
@@ -116,9 +72,6 @@ async function main() {
     console.log('⚠️  Testing against local server. Make sure to run `pnpm dev` in another terminal.\n');
   }
 
-  // Run direct RPC test first (simpler)
-  await testDirectRPC();
-  
   // Then run full integration test
   await testSponsor();
 }
