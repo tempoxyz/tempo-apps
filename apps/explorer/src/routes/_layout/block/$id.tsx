@@ -105,7 +105,7 @@ function RouteComponent() {
 			<div
 				className={cx(
 					'grid w-full max-w-[1280px] gap-[14px] min-w-0',
-					'min-[1240px]:grid-cols-[auto_1fr]',
+					'min-[1240px]:grid-cols-[auto_1fr] min-[1240px]:pt-20 pt-10',
 					'*:min-w-0 *:max-w-full',
 				)}
 			>
@@ -338,8 +338,8 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 			</div>
 			<div className="overflow-x-auto">
 				<table className="min-w-full text-[13px] text-primary">
-					<thead className="bg-card-header text-tertiary">
-						<tr>
+					<thead>
+						<tr className="border-b border-dashed border-card-border text-tertiary">
 							<th className="px-[16px] py-[12px] text-left font-normal">
 								Index
 							</th>
@@ -357,7 +357,7 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 							</th>
 						</tr>
 					</thead>
-					<tbody className="divide-y divide-[#e8e8e8]">
+					<tbody className="divide-y divide-dashed divide-card-border">
 						{displayRows.map((transaction, index) => {
 							const isPlaceholder = !transaction
 							const transactionIndex =

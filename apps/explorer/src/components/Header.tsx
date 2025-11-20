@@ -1,4 +1,5 @@
 import { Link, useMatch, useNavigate } from '@tanstack/react-router'
+import { Address } from 'ox'
 import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import Music4 from '~icons/lucide/music-4'
@@ -11,23 +12,27 @@ export function Header(props: Header.Props) {
 	const [inputValue, setInputValue] = React.useState('')
 	const [isNavigating, setIsNavigating] = React.useState(false)
 
-	const txMatch = useMatch({ from: '/_layout/tx/$hash', shouldThrow: false })
-	const accountMatch = useMatch({
-		from: '/_layout/account/$address',
+	const hash = useMatch({
+		from: '/_layout/tx/$hash',
+		select: (match) => match.params.hash,
 		shouldThrow: false,
 	})
-	const hash = (txMatch?.params as { hash: string | undefined })?.hash
-	const address = (accountMatch?.params as { address: string | undefined })
-		?.address
 
-	const showInput = Boolean(hash || address)
+	const address = useMatch({
+		from: '/_layout/account/$address',
+		select: (match) => match.params.address,
+		shouldThrow: false,
+	})
+
+	const block = useMatch({
+		from: '/_layout/block/$id',
+		select: (match) => match.params.id,
+		shouldThrow: false,
+	})
 
 	React.useEffect(() => {
-		if (hash || address) {
-			setInputValue('')
-			setIsNavigating(false)
-		}
-	}, [hash, address])
+		if (hash || address || block) [setInputValue(''), setIsNavigating(false)]
+	}, [hash, address, block])
 
 	return (
 		<header className="@container">
@@ -38,7 +43,7 @@ export function Header(props: Header.Props) {
 					</Link>
 					<Header.NetworkBadge />
 				</div>
-				{showInput && (
+				{Boolean(hash || address || block) && (
 					<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex">
 						<ExploreInput
 							value={inputValue}
@@ -47,18 +52,21 @@ export function Header(props: Header.Props) {
 							onActivate={({ value, type }) => {
 								if (type === 'hash') {
 									if (hash !== value) setIsNavigating(true)
-									navigate({
-										params: { hash: value },
-										to: '/tx/$hash',
-									})
+									navigate({ params: { hash: value }, to: '/tx/$hash' })
 									return
 								}
 								if (type === 'address') {
 									if (address !== value) setIsNavigating(true)
+									Address.assert(value)
 									navigate({
 										params: { address: value },
 										to: '/account/$address',
 									})
+									return
+								}
+								if (type === 'block') {
+									if (block !== value) setIsNavigating(true)
+									navigate({ params: { id: value }, to: '/block/$id' })
 									return
 								}
 							}}
