@@ -5,7 +5,7 @@ export function Footer(props: Footer.Props) {
 	const { recentTransactions = [] } = props
 	return (
 		<footer className="pt-[24px] pb-[48px] relative z-1">
-			<ul className="flex items-center justify-center gap-[24px] text-[15px] text-base-content-secondary">
+			<ul className="flex items-center justify-center gap-[24px] text-[15px] text-base-content-secondary select-none">
 				{/* <Footer.Link to="https://tempo.xyz" external>About</Footer.Link> */}
 				{/* <Footer.Link to="https://docs.tempo.xyz" external>Documentation</Footer.Link> */}
 				{/* <Footer.Link to="https://github.com/tempoxyz" external>GitHub</Footer.Link> */}
@@ -50,26 +50,26 @@ export namespace Footer {
 		const { hashes } = props
 		return (
 			<>
+				<li>Demo:</li>
 				<Footer.Link
 					to="/account/$address"
 					params={{ address: DemoLinks.demoAccount }}
 				>
 					Account
 				</Footer.Link>
-				{Array.from({ length: 2 }, (_, index) => {
-					const hash = hashes[index]
-					const label = `Receipt ${index + 1}`
-					const key = hash ?? String(index)
-					return hash ? (
-						<Footer.Link to="/tx/$hash" params={{ hash }} key={key}>
-							{label}
-						</Footer.Link>
-					) : (
-						<span className="select-none opacity-50" key={key}>
-							{label}
-						</span>
-					)
-				})}
+				<Footer.Link
+					to="/token/$address"
+					params={{ address: DemoLinks.demoToken }}
+				>
+					Token
+				</Footer.Link>
+				{hashes[0] ? (
+					<Footer.Link to="/tx/$hash" params={{ hash: hashes[0] }}>
+						Receipt
+					</Footer.Link>
+				) : (
+					<span className="select-none opacity-50">Receipt</span>
+				)}
 			</>
 		)
 	}
@@ -80,5 +80,6 @@ export namespace Footer {
 		}
 
 		export const demoAccount = '0x5bc1473610754a5ca10749552b119df90c1a1877'
+		export const demoToken = '0x20c0000000000000000000000000000000000002'
 	}
 }
