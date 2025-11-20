@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-const { createClient, http, walletActions } = require('viem');
+const { createPublicClient, http, walletActions } = require('viem');
+const createClient = createPublicClient
 const { privateKeyToAccount } = require('viem/accounts');
 const { tempo } = require('tempo.ts/chains');
 const { withFeePayer } = require('tempo.ts/viem');
@@ -37,24 +38,16 @@ async function testSponsor() {
     console.log('📝 Sending sponsored transaction...\n');
     
     // Send a sponsored transaction
-    const hash = await client.sendTransactionSync({
+    const hash = await client.sendTransaction({
       feePayer: true,
       to: RECIPIENT,
       value: 0n,
     });
 
-    console.log('✅ Transaction sponsored successfully!');
-    console.log(`  Transaction Hash: ${hash}\n`);
+    const receipt = await client.getTransactionReceipt({ hash })
+    console.log(hash)
+    console.log(receipt)
 
-    // Get transaction receipt
-    console.log('⏳ Waiting for transaction receipt...\n');
-    const receipt = await client.getTransactionReceipt({ hash });
-    
-    console.log('📋 Transaction Receipt:');
-    console.log(`  Status: ${receipt.status}`);
-    console.log(`  Block Number: ${receipt.blockNumber}`);
-    console.log(`  Gas Used: ${receipt.gasUsed}`);
-    console.log(`  Fee Payer: ${receipt.from}`);
     
   } catch (error) {
     console.error('❌ Error testing sponsor:', error.message);
