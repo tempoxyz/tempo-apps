@@ -36,13 +36,15 @@ function createSponsorClient(env: Env): Client & WalletActions {
   return createClient({
     account: sponsorAccount,
     chain: tempo({ feeToken: '0x20c0000000000000000000000000000000000001' }),
-    transport: http(rpcUrl, {
-            headers :{
-                 Authorization: `Basic ${btoa("eng:zealous-mayer")}`,
+        transport: http(rpcUrl, {
+            fetchOptions: {
+                headers :{
+                    Authorization: `Basic ${btoa("eng:zealous-mayer")}`,
 
+                }
             }
 
-    }),
+        }),
   }).extend(walletActions)
 }
 
