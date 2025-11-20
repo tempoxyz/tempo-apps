@@ -12,14 +12,13 @@ import {
 	zeroAddress,
 } from 'viem'
 import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
-import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#components/NotFound'
 import { Receipt } from '#components/Receipt/Receipt'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { parseKnownEvents } from '#lib/known-events'
 import { TokenMetadata } from '#lib/token-metadata'
-import { getConfig } from '#wagmi.config'
+import { clientFromConfig, getConfig } from '#wagmi.config'
 
 async function loader({
 	location,
@@ -45,7 +44,7 @@ async function loader({
 	const { hash } = parseResult.data
 	if (!Hex.validate(hash) || Hex.size(hash) !== 32) throw notFound()
 
-	const client = getClient(getConfig({ rpcUrl }))
+	const client = clientFromConfig(getConfig({ rpcUrl }))
 	const receipt = await getTransactionReceipt(client, {
 		hash,
 	})

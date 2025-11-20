@@ -1,11 +1,10 @@
 import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
 import { getBlock } from 'viem/actions'
-import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { Footer } from '#components/Footer'
 import { Header } from '#components/Header'
 import { Sphere } from '#components/Sphere'
-import { getConfig } from '#wagmi.config'
+import { clientFromConfig, getConfig } from '#wagmi.config'
 import css from './styles.css?url'
 
 export const Route = createFileRoute('/_layout')({
@@ -22,7 +21,7 @@ export const Route = createFileRoute('/_layout')({
 		plain: z.optional(z.string()),
 	}).parse,
 	loader: async () => {
-		const client = getClient(getConfig())
+		const client = clientFromConfig(getConfig())
 		const block = await getBlock(client)
 		return {
 			recentTransactions: block.transactions.slice(0, 2),
