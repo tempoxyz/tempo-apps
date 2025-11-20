@@ -1,9 +1,8 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
-
 import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { Layout } from '#components/Layout.tsx'
-import { getConfig } from '#wagmi.config'
+import { getConfig } from '#wagmi.config.ts'
 
 export const Route = createFileRoute('/_layout')({
 	component: Component,
