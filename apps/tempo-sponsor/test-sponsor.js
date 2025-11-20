@@ -40,7 +40,7 @@ async function testSponsor() {
     const hash = await client.sendTransactionSync({
       feePayer: true,
       to: RECIPIENT,
-      value: 1000000n, // 1 USDC (6 decimals)
+      value: 0n,
     });
 
     console.log('✅ Transaction sponsored successfully!');
