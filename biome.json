@@ -46,7 +46,10 @@
 		"rules": {
 			"recommended": true,
 			"correctness": {
-				"useImportExtensions": "error"
+				"useImportExtensions": "off"
+			},
+			"style": {
+				"useComponentExportOnlyModules": "off"
 			},
 			"suspicious": {
 				"noUnknownAtRules": {
@@ -55,9 +58,6 @@
 						"ignore": ["@custom-variant", "@theme"]
 					}
 				}
-			},
-			"style": {
-				"useComponentExportOnlyModules": "off"
 			},
 			"a11y": {
 				"noAutofocus": "off"

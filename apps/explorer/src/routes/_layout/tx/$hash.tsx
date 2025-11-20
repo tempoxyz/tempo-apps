@@ -14,12 +14,12 @@ import {
 import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import { getClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { NotFound } from '#components/NotFound.tsx'
-import { Receipt } from '#components/Receipt/Receipt.tsx'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
-import { parseKnownEvents } from '#lib/known-events.ts'
-import { TokenMetadata } from '#lib/token-metadata.ts'
-import { getConfig } from '#wagmi.config.ts'
+import { NotFound } from '#components/NotFound'
+import { Receipt } from '#components/Receipt/Receipt'
+import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import { parseKnownEvents } from '#lib/known-events'
+import { TokenMetadata } from '#lib/token-metadata'
+import { getConfig } from '#wagmi.config'
 
 async function loader({
 	location,
@@ -241,7 +241,7 @@ function Component() {
 	)
 }
 
-namespace TextRenderer {
+export namespace TextRenderer {
 	const width = 50
 	const indent = '  '
 
@@ -308,7 +308,7 @@ namespace TextRenderer {
 
 const abi = Object.values(Abis).flat()
 
-namespace LineItems {
+export namespace LineItems {
 	export function fromReceipt(
 		receipt: TransactionReceipt,
 		{ tokenMetadata }: { tokenMetadata: TokenMetadata.MetadataMap },
@@ -687,7 +687,7 @@ namespace LineItems {
 	}
 }
 
-namespace LineItem {
+export namespace LineItem {
 	export type LineItem = {
 		/**
 		 * Event log emitted.

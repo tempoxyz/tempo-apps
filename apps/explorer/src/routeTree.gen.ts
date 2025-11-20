@@ -11,14 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
-import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as ApiAccountTotalValueRouteImport } from './routes/api/account/total-value'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
 import { Route as LayoutAccountAddressRouteImport } from './routes/_layout/account/$address'
 import { Route as ApiTokenAddressRouteRouteImport } from './routes/api/token/$address/route'
-import { Route as ApiAccountAddressRouteRouteImport } from './routes/api/account/$address/route'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -28,16 +25,6 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => LayoutRoute,
-} as any)
-const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiAccountTotalValueRoute = ApiAccountTotalValueRouteImport.update({
-  id: '/api/account/total-value',
-  path: '/api/account/total-value',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const LayoutTxHashRoute = LayoutTxHashRouteImport.update({
   id: '/tx/$hash',
@@ -64,90 +51,64 @@ const ApiTokenAddressRouteRoute = ApiTokenAddressRouteRouteImport.update({
   path: '/api/token/$address',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAccountAddressRouteRoute = ApiAccountAddressRouteRouteImport.update({
-  id: '/api/account/$address',
-  path: '/api/account/$address',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
-  '/api/health': typeof ApiHealthRoute
   '/': typeof LayoutIndexRoute
-  '/api/account/$address': typeof ApiAccountAddressRouteRoute
   '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/account/$address': typeof LayoutAccountAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
-  '/api/account/total-value': typeof ApiAccountTotalValueRoute
 }
 export interface FileRoutesByTo {
-  '/api/health': typeof ApiHealthRoute
   '/': typeof LayoutIndexRoute
-  '/api/account/$address': typeof ApiAccountAddressRouteRoute
   '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/account/$address': typeof LayoutAccountAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
-  '/api/account/total-value': typeof ApiAccountTotalValueRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
-  '/api/health': typeof ApiHealthRoute
   '/_layout/': typeof LayoutIndexRoute
-  '/api/account/$address': typeof ApiAccountAddressRouteRoute
   '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/_layout/account/$address': typeof LayoutAccountAddressRoute
   '/_layout/block/$id': typeof LayoutBlockIdRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
-  '/api/account/total-value': typeof ApiAccountTotalValueRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/api/health'
     | '/'
-    | '/api/account/$address'
     | '/api/token/$address'
     | '/account/$address'
     | '/block/$id'
     | '/token/$address'
     | '/tx/$hash'
-    | '/api/account/total-value'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/api/health'
     | '/'
-    | '/api/account/$address'
     | '/api/token/$address'
     | '/account/$address'
     | '/block/$id'
     | '/token/$address'
     | '/tx/$hash'
-    | '/api/account/total-value'
   id:
     | '__root__'
     | '/_layout'
-    | '/api/health'
     | '/_layout/'
-    | '/api/account/$address'
     | '/api/token/$address'
     | '/_layout/account/$address'
     | '/_layout/block/$id'
     | '/_layout/token/$address'
     | '/_layout/tx/$hash'
-    | '/api/account/total-value'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
-  ApiHealthRoute: typeof ApiHealthRoute
-  ApiAccountAddressRouteRoute: typeof ApiAccountAddressRouteRoute
   ApiTokenAddressRouteRoute: typeof ApiTokenAddressRouteRoute
-  ApiAccountTotalValueRoute: typeof ApiAccountTotalValueRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -165,20 +126,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
-    }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/account/total-value': {
-      id: '/api/account/total-value'
-      path: '/api/account/total-value'
-      fullPath: '/api/account/total-value'
-      preLoaderRoute: typeof ApiAccountTotalValueRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/_layout/tx/$hash': {
       id: '/_layout/tx/$hash'
@@ -215,13 +162,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTokenAddressRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/account/$address': {
-      id: '/api/account/$address'
-      path: '/api/account/$address'
-      fullPath: '/api/account/$address'
-      preLoaderRoute: typeof ApiAccountAddressRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -246,10 +186,7 @@ const LayoutRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
-  ApiHealthRoute: ApiHealthRoute,
-  ApiAccountAddressRouteRoute: ApiAccountAddressRouteRoute,
   ApiTokenAddressRouteRoute: ApiTokenAddressRouteRoute,
-  ApiAccountTotalValueRoute: ApiAccountTotalValueRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

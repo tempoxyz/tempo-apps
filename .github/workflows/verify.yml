@@ -7,8 +7,6 @@ jobs:
   checks:
     name: Checks
     runs-on: ubuntu-latest
-    env:
-      INDEXSUPPLY_API_KEY: ${{ secrets.INDEXSUPPLY_API_KEY }}
 
     steps:
       - name: Clone repository
@@ -18,8 +16,6 @@ jobs:
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
-        env:
-          INDEXSUPPLY_API_KEY: ${{ secrets.INDEXSUPPLY_API_KEY }}
 
       - name: Check code
         run: pnpm check
