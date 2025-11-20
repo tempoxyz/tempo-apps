@@ -2,8 +2,7 @@ import { QueryClient } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { hashFn } from 'wagmi/query'
-
-import { NotFound } from '#components/NotFound'
+import { NotFound } from '#components/NotFound.tsx'
 import { Layout } from '#routes/_layout'
 import { routeTree } from '#routeTree.gen.ts'
 
