@@ -30,13 +30,19 @@ function getCorsHeaders(origin: string | null, env: Env): HeadersInit {
 }
 
 function createSponsorClient(env: Env): Client & WalletActions {
-  const rpcUrl = env.TEMPO_RPC_URL || 'https://eng:zealous-mayer@rpc.testnet.tempo.xyz'
+  const rpcUrl = 'https://rpc.testnet.tempo.xyz'
   const sponsorAccount = privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`)
   
   return createClient({
     account: sponsorAccount,
     chain: tempo({ feeToken: '0x20c0000000000000000000000000000000000001' }),
-    transport: http(rpcUrl),
+    transport: http(rpcUrl, {
+            headers :{
+                 Authorization: `Basic ${btoa("eng:zealous-mayer")}`,
+
+            }
+
+    }),
   }).extend(walletActions)
 }
 
