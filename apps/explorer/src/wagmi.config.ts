@@ -1,6 +1,6 @@
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { QueryClient } from '@tanstack/react-query'
-import { tempoAndantino } from 'tempo.ts/chains'
+import { tempoAndantino, tempoLocal } from 'tempo.ts/chains'
 import type { OneOf } from 'viem'
 import { createConfig, deserialize, http, serialize, webSocket } from 'wagmi'
 import { hashFn } from 'wagmi/query'
@@ -24,12 +24,17 @@ export const persister = createAsyncStoragePersister({
 	deserialize,
 })
 
+const chain =
+	import.meta.env.VITE_LOCALNET === 'true'
+		? tempoLocal({ feeToken: 1n })
+		: tempoAndantino({ feeToken: 1n })
+
 export function getConfig(
 	parameters: OneOf<{ rpcUrl?: string | undefined }> = {},
 ) {
 	const { rpcUrl } = parameters
 	return createConfig({
-		chains: [tempoAndantino({ feeToken: 1n })],
+		chains: [chain],
 		ssr: true,
 		batch: { multicall: false },
 		transports: {
@@ -46,6 +51,9 @@ export function getConfig(
 					: webSocket(
 							'wss://rpc.testnet.tempo.xyz?supersecretargument=pleasedonotusemeinprod',
 						),
+			[tempoLocal.id]: http(undefined, {
+				batch: true,
+			}),
 		},
 	})
 }

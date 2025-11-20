@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
-import { getBlock } from 'viem/actions'
-import { getClient } from 'wagmi/actions'
+
+import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { Footer } from '#components/Footer'
 import { Header } from '#components/Header'
@@ -22,8 +22,7 @@ export const Route = createFileRoute('/_layout')({
 		plain: z.optional(z.string()),
 	}).parse,
 	loader: async () => {
-		const client = getClient(getConfig())
-		const block = await getBlock(client)
+		const block = await getBlock(getConfig())
 		return {
 			recentTransactions: block.transactions.slice(0, 2),
 			blockNumber: block.number,
