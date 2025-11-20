@@ -11,14 +11,15 @@ import {
 	type TransactionReceipt,
 	zeroAddress,
 } from 'viem'
-import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
+
+import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#components/NotFound'
 import { Receipt } from '#components/Receipt/Receipt'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { parseKnownEvents } from '#lib/known-events'
 import { TokenMetadata } from '#lib/token-metadata'
-import { clientFromConfig, getConfig } from '#wagmi.config'
+import { getConfig } from '#wagmi.config'
 
 async function loader({
 	location,
@@ -44,15 +45,15 @@ async function loader({
 	const { hash } = parseResult.data
 	if (!Hex.validate(hash) || Hex.size(hash) !== 32) throw notFound()
 
-	const client = clientFromConfig(getConfig({ rpcUrl }))
-	const receipt = await getTransactionReceipt(client, {
+	const config = getConfig({ rpcUrl })
+	const receipt = await getTransactionReceipt(config, {
 		hash,
 	})
 	const [block, transaction, tokenMetadata] = await Promise.all([
-		getBlock(client, {
+		getBlock(config, {
 			blockHash: receipt.blockHash,
 		}),
-		getTransaction(client, {
+		getTransaction(config, {
 			hash: receipt.transactionHash,
 		}),
 		TokenMetadata.fromLogs(receipt.logs),

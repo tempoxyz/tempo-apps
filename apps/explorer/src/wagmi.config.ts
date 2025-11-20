@@ -2,15 +2,7 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import { QueryClient } from '@tanstack/react-query'
 import { tempoAndantino, tempoLocal } from 'tempo.ts/chains'
 import type { OneOf } from 'viem'
-import {
-	type Config,
-	createConfig,
-	deserialize,
-	http,
-	serialize,
-	webSocket,
-} from 'wagmi'
-import { getClient } from 'wagmi/actions'
+import { createConfig, deserialize, http, serialize, webSocket } from 'wagmi'
 import { hashFn } from 'wagmi/query'
 
 const browser = typeof window !== 'undefined'
@@ -64,14 +56,6 @@ export function getConfig(
 			}),
 		},
 	})
-}
-
-export function clientFromConfig(config: Config) {
-	const client = getClient(config, { chainId: chain.id })
-	if (!client) {
-		throw new Error('Could not find client')
-	}
-	return client
 }
 
 export const config = getConfig()
