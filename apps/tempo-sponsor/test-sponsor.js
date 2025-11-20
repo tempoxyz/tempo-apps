@@ -22,10 +22,16 @@ async function testSponsor() {
     const client = createClient({
       account: privateKeyToAccount(TEST_PRIVATE_KEY),
       chain: tempo({ feeToken: '0x20c0000000000000000000000000000000000001' }),
-      transport: withFeePayer(
-        http('https://eng:zealous-mayer@rpc.testnet.tempo.xyz'),
-        http(SPONSOR_URL),
-      ),
+            transport: withFeePayer(
+                http('https://rpc.testnet.tempo.xyz', {
+                    fetchOptions: {
+                        headers: {
+                            Authorization: `Basic ${btoa("eng:zealous-mayer")}`,
+                        }
+                    }
+                }),
+                http(SPONSOR_URL),
+            ),
     }).extend(walletActions);
 
     console.log('📝 Sending sponsored transaction...\n');
