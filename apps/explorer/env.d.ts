@@ -1,5 +1,5 @@
 interface EnvironmentVariables {
-	readonly INDEXSUPPLY_API_KEY: string
+	readonly INDEXSUPPLY_API_KEY: string | undefined
 }
 
 interface ImportMetaEnv extends Cloudflare.Env {}
