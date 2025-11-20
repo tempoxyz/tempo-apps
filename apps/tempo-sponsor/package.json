@@ -1,0 +1,26 @@
+{
+  "name": "tempo-sponsor",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit",
+    "format": "biome format --write .",
+    "lint": "biome check --write ."
+  },
+  "dependencies": {
+    "ox": "^0.5.0",
+    "tempo.ts": "^0.5.0",
+    "viem": "^2.21.55"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "wrangler": "^3.102.0"
+  }
+}

@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        app: [explorer]
+        app: [explorer, tempo-sponsor]
     steps:
       - uses: actions/checkout@v5
         with:
@@ -27,6 +27,15 @@ jobs:
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
+
+      - name: Set sponsor secrets
+        if: matrix.app == 'tempo-sponsor'
+        run: |
+          cd apps/${{ matrix.app }}
+          echo "${{ secrets.SPONSOR_PRIVATE_KEY }}" | npx wrangler secret put SPONSOR_PRIVATE_KEY --env production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Build & Deploy Workers
         uses: cloudflare/wrangler-action@v3
