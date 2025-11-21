@@ -721,17 +721,8 @@ function TransactionDescription(props: {
 							and {remainingCount} more
 						</button>
 					)}
-					{event.note && (
-						<span className="text-tertiary truncate">
-							{' '}
-							(note: {event.note})
-						</span>
-					)}
 				</div>
 			))}
-			{/* {event.note && (
-				<span className="text-tertiary"> (note: {event.note})</span>
-			)} */}
 		</div>
 	)
 }
@@ -751,7 +742,7 @@ function getPerspectiveEvent(
 	const sender = event.meta?.from
 	const updatedParts = event.parts.map((part) => {
 		if (part.type === 'action') return { ...part, value: 'Received' }
-		if (part.type === 'secondary' && part.value.toLowerCase() === 'to')
+		if (part.type === 'text' && part.value.toLowerCase() === 'to')
 			return { ...part, value: 'from' }
 		if (part.type === 'account' && sender) return { ...part, value: sender }
 		return part

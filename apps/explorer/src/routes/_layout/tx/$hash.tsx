@@ -51,12 +51,8 @@ async function loader({
 			hash,
 		})
 		const [block, transaction, tokenMetadata] = await Promise.all([
-			getBlock(config, {
-				blockHash: receipt.blockHash,
-			}),
-			getTransaction(config, {
-				hash: receipt.transactionHash,
-			}),
+			getBlock(config, { blockHash: receipt.blockHash }),
+			getTransaction(config, { hash: receipt.transactionHash }),
 			TokenMetadata.fromLogs(receipt.logs),
 		])
 		const timestampFormatted = DateFormatter.format(block.timestamp)

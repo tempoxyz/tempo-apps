@@ -98,6 +98,21 @@ export namespace DateFormatter {
 		if (diffHour < 24) return { fullDate, text: rtf.format(-diffHour, 'hour') }
 		return { text: rtf.format(-diffDay, 'day'), fullDate }
 	}
+
+	export function formatDuration(seconds: number): string {
+		const days = Math.floor(seconds / 86400)
+		const hrs = Math.floor((seconds % 86400) / 3600)
+		const mins = Math.floor((seconds % 3600) / 60)
+		const secs = seconds % 60
+
+		const parts = []
+		if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`)
+		if (hrs > 0) parts.push(`${hrs}h`)
+		if (mins > 0) parts.push(`${mins}m`)
+		if (secs > 0 || parts.length === 0) parts.push(`${secs}s`)
+
+		return parts.join(' ')
+	}
 }
 
 export namespace PriceFormatter {
