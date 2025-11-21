@@ -373,6 +373,14 @@ function SectionsWrapper(props: {
 
 	if (transactions.length === 0 && isLoadingPage)
 		return <SectionsSkeleton totalItems={total} />
+	const historyColumns: Sections.Column[] = [
+		{ label: 'Time', align: 'start', minWidth: 100 },
+		{ label: 'Description', align: 'start' },
+		{ label: 'Hash', align: 'end' },
+		{ label: 'Fee', align: 'end' },
+		{ label: 'Total', align: 'end' },
+	]
+
 	return (
 		<Sections
 			mode={mode}
@@ -380,39 +388,11 @@ function SectionsWrapper(props: {
 				{
 					title: 'History',
 					columns: {
-						stacked: [
-							{ label: 'Time', align: 'start', minWidth: 100 },
-							{ label: 'Hash', align: 'start' },
-							{ label: 'Total', align: 'end' },
-						],
-						tabs: [
-							{ label: 'Time', align: 'start', minWidth: 100 },
-							{ label: 'Description', align: 'start' },
-							{ label: 'Hash', align: 'end' },
-							{ label: 'Fee', align: 'end' },
-							{ label: 'Total', align: 'end' },
-						],
+						stacked: historyColumns,
+						tabs: historyColumns,
 					},
-					items: (mode) => {
-						if (mode === 'stacked')
-							return transactions.map((transaction) => {
-								const receipt = transaction.receipt
-								return [
-									<TransactionTimestamp
-										key="time"
-										timestamp={transaction.block.timestamp}
-									/>,
-									<TransactionHashLink key="hash" hash={transaction.hash} />,
-									<TransactionRowTotal
-										key="total"
-										transaction={transaction}
-										knownEvents={knownEvents[transaction.hash] ?? []}
-										receipt={receipt}
-									/>,
-								]
-							})
-
-						return transactions.map((transaction) => {
+					items: () =>
+						transactions.map((transaction) => {
 							const receipt = transaction.receipt
 							return [
 								<TransactionTimestamp
@@ -435,8 +415,7 @@ function SectionsWrapper(props: {
 									receipt={receipt}
 								/>,
 							]
-						})
-					},
+						}),
 					totalItems: total,
 					page,
 					isPending: isLoadingPage,
