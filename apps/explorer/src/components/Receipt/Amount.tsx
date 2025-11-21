@@ -1,4 +1,5 @@
 import { type Address, Value } from 'ox'
+import { Link } from '@tanstack/react-router'
 import { Hooks } from 'tempo.ts/wagmi'
 import { PriceFormatter } from '#lib/formatting.ts'
 
@@ -22,7 +23,15 @@ export function Amount(props: Amount.Props) {
 
 	return (
 		<span className="items-end whitespace-nowrap">
-			{formatted} <span className="text-base-content-positive">{symbol_}</span>
+			{formatted}{' '}
+			<Link
+				className="text-base-content-positive press-down inline-flex"
+				params={{ address: token }}
+				title={token}
+				to="/token/$address"
+			>
+				{symbol_}
+			</Link>
 		</span>
 	)
 }
