@@ -47,5 +47,9 @@
 	"files.exclude": {
 		"**/.tanstack": true,
 		"**/*.wrangler": true
-	}
+	},
+	"tailwindCSS.experimental.classRegex": [
+		"cx\\(([^)]+)\\)",
+		"twMerge\\(([^)]+)\\)"
+	]
 }

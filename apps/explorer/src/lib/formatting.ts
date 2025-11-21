@@ -49,6 +49,27 @@ export namespace DateFormatter {
 		timeZoneName: 'shortOffset',
 	})
 
+	/**
+	 * Formats a timestamp to a UTC date-time string.
+	 *
+	 * @param timestamp - The timestamp in seconds.
+	 * @returns The formatted UTC date-time string.
+	 */
+	const utcFormatter = new Intl.DateTimeFormat('en-US', {
+		year: '2-digit',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		hour12: false,
+		timeZone: 'UTC',
+	})
+
+	export function formatUtcTimestamp(timestamp: bigint) {
+		return utcFormatter.format(new Date(Number(timestamp) * 1_000))
+	}
+
 	export function formatTimestampDate(timestamp: bigint): string {
 		return dateFormatter.format(new Date(Number(timestamp) * 1000))
 	}
