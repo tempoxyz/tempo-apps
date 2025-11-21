@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, Link, notFound } from '@tanstack/react-router'
+import {
+	createFileRoute,
+	Link,
+	notFound,
+	rootRouteId,
+} from '@tanstack/react-router'
 import { Hex, Value } from 'ox'
 import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
@@ -16,6 +21,7 @@ import { useCopy } from '#lib/hooks.ts'
 import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
 import { TokenMetadata } from '#lib/token-metadata.ts'
 import { config, queryClient } from '#wagmi.config.ts'
+import ArrowUp10Icon from '~icons/lucide/arrow-up-10'
 import ChevronDown from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -27,6 +33,41 @@ type BlockIdentifier =
 
 type BlockWithTransactions = BlockType<bigint, true>
 type BlockTransaction = BlockWithTransactions['transactions'][number]
+
+interface TransactionTypeResult {
+	type: 'system' | 'sub-block' | 'fee-token' | 'regular'
+	label: string
+}
+
+function getTransactionType(
+	transaction: BlockTransaction,
+): TransactionTypeResult {
+	// System transactions have from address as 0x0000...0000
+	if (transaction.from === zeroAddress) {
+		const systemTxNames: Record<string, string> = {
+			'0x3000000000000000000000000000000000000000': 'Rewards Registry',
+			'0xfeec000000000000000000000000000000000000': 'Fee Manager',
+			'0xdec0000000000000000000000000000000000000': 'Stablecoin Exchange',
+			'0x0000000000000000000000000000000000000000': 'Subblock Metadata',
+		}
+		const to = transaction.to || ''
+		const name = systemTxNames[to] || 'System'
+		return { type: 'system', label: name }
+	}
+
+	// Check for sub-block transactions (nonce starts with 0x5b)
+	const nonceHex = transaction.nonce?.toString(16).padStart(8, '0') || ''
+	if (nonceHex.startsWith('5b'))
+		return { type: 'sub-block', label: 'Sub-block' }
+
+	// Check for fee token transactions (type 0x76)
+	// @ts-expect-error - check transaction type field
+	if (transaction.type === '0x76' || transaction.type === 118) {
+		return { type: 'fee-token', label: 'Fee Token' }
+	}
+
+	return { type: 'regular', label: 'Regular' }
+}
 
 export const Route = createFileRoute('/_layout/block/$id')({
 	component: RouteComponent,
@@ -43,7 +84,7 @@ export const Route = createFileRoute('/_layout/block/$id')({
 			Hex.assert(id)
 			return {
 				kind: 'hash',
-				blockHash: id as Hex.Hex,
+				blockHash: id,
 			} satisfies BlockIdentifier
 		}
 
@@ -54,14 +95,17 @@ export const Route = createFileRoute('/_layout/block/$id')({
 				blockNumber: BigInt(parsedNumber),
 			} satisfies BlockIdentifier
 
-		throw notFound()
+		throw notFound({
+			routeId: rootRouteId,
+			data: { error: 'Invalid block ID' },
+		})
 	},
 })
 
 function RouteComponent() {
 	const blockRef = Route.useLoaderData()
 
-	const blockQuery = useBlock<true>({
+	const blockQuery = useBlock({
 		includeTransactions: true,
 		...(blockRef.kind === 'hash'
 			? { blockHash: blockRef.blockHash }
@@ -81,14 +125,14 @@ function RouteComponent() {
 	const requestedNumber =
 		blockRef.kind === 'number' ? blockRef.blockNumber : undefined
 
-	const transactions: BlockTransaction[] = React.useMemo(() => {
+	const transactions = React.useMemo(() => {
 		if (!block?.transactions) return []
-		return block.transactions as BlockTransaction[]
+		return block.transactions
 	}, [block?.transactions])
 
-	const [latestBlockNumber, setLatestBlockNumber] = React.useState<
-		bigint | undefined
-	>(block?.number ?? requestedNumber)
+	const [latestBlockNumber, setLatestBlockNumber] = React.useState(
+		block?.number ?? requestedNumber,
+	)
 
 	React.useEffect(() => {
 		if (!block?.number) return
@@ -160,7 +204,7 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 			? Number(latestBlockNumber - block.number) + 1
 			: undefined
 	const utcLabel = block.timestamp
-		? formatUtcTimestamp(block.timestamp)
+		? DateFormatter.formatUtcTimestamp(block.timestamp)
 		: undefined
 	const unixLabel = block.timestamp ? block.timestamp.toString() : undefined
 
@@ -173,57 +217,60 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 	]
 
 	return (
-		<article className="font-mono rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_12px_40px_rgba(0,0,0,0.06)]">
-			<div className="px-[18px] pt-[14px] pb-[10px] border-b border-card-border">
+		<article className="divide-y divide-dashed divide-card-border font-mono rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_12px_40px_rgba(0,0,0,0.06)]">
+			<div className="px-4 py-3">
 				<div className="flex items-center justify-between">
-					<span className="text-[11px] uppercase tracking-[0.32em] text-tertiary">
-						Block
-					</span>
-					{blockNumberValue && (
-						<CopyButton
-							value={blockNumberValue.toString()}
-							ariaLabel="Copy block number"
-						/>
-					)}
+					<span className="text-xs uppercase text-tertiary">Block</span>
+
+					<CopyButton
+						className="mr-auto pl-2"
+						disabled={!blockNumberValue}
+						ariaLabel="Copy block number"
+						value={blockNumberValue?.toString() ?? ''}
+					/>
 				</div>
-				<div className="mt-[6px] text-[22px] leading-[26px] tracking-[0.18em] text-primary tabular-nums">
+				<div className="mt-[10px] text-[2vw] leading-[26px] tracking-[0.18em] text-primary tabular-nums">
 					<span className="text-[#bbbbbb]">{leadingZeros}</span>
 					{trailingDigits || '—'}
 				</div>
 			</div>
 
-			<div className="divide-y divide-card-border">
-				<BlockTimeRow label="UTC" value={utcLabel} />
-				<BlockTimeRow label="UNIX" value={unixLabel} subtle />
-
+			<div className="divide-y divide-dashed divide-card-border">
+				<div>
+					<BlockTimeRow label="UTC" value={utcLabel} />
+					<BlockTimeRow label="UNIX" value={unixLabel} subtle />
+				</div>
 				<div className="px-[18px] py-[14px] space-y-[8px]">
 					<div className="flex items-center justify-between">
-						<span className="text-[11px] uppercase tracking-[0.32em] text-tertiary">
-							Hash
-						</span>
-						{block.hash && (
-							<CopyButton value={block.hash} ariaLabel="Copy block hash" />
-						)}
+						<span className="text-xs text-tertiary">Hash</span>
+						<CopyButton
+							value={block.hash ?? ''}
+							ariaLabel="Copy block hash"
+							className="mr-auto pl-2"
+							disabled={!block.hash}
+						/>
 					</div>
-					<p className="text-[13px] leading-[18px] text-primary wrap-break-word">
+					<div className="text-sm text-primary wrap-break-word">
 						{block.hash ?? '—'}
-					</p>
-					{block.parentHash && (
-						<div className="flex items-center gap-[8px] text-[13px]">
-							<span className="text-tertiary">↳ Parent</span>
-							<Link
-								to="/block/$id"
-								params={{ id: block.parentHash }}
-								className="text-accent"
-								title={block.parentHash}
-							>
-								{HexFormatter.shortenHex(block.parentHash, 6)}
-							</Link>
-						</div>
-					)}
+					</div>
+
+					<div className="flex items-center gap-[6px] text-sm justify-between">
+						<ArrowUp10Icon className="size-4 text-tertiary" />
+						<span className="text-sm text-tertiary text-left mr-auto">
+							Parent
+						</span>
+						<Link
+							to="/block/$id"
+							params={{ id: block.parentHash }}
+							className="text-accent"
+							title={block.parentHash}
+						>
+							{HexFormatter.shortenHex(block.parentHash, 6)}
+						</Link>
+					</div>
 				</div>
 
-				<div className="px-[18px] py-[12px] flex items-center justify-between text-[13px]">
+				<div className="px-[18px] py-[12px] flex items-center justify-between text-sm">
 					<span className="text-tertiary">Miner</span>
 					{block.miner ? (
 						<AddressLink
@@ -236,7 +283,7 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 					)}
 				</div>
 
-				<div className="px-[18px] py-[12px] flex items-center justify-between text-[13px]">
+				<div className="px-[18px] py-[12px] flex items-center justify-between text-sm">
 					<span className="text-tertiary">Confirmations</span>
 					<span className="text-primary tabular-nums">
 						{confirmations !== undefined ? confirmations.toString() : '—'}
@@ -249,22 +296,27 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 						className="flex w-full items-center justify-between text-[13px] text-tertiary"
 						onClick={() => setShowAdvanced((prev) => !prev)}
 					>
-						<span className="uppercase tracking-[0.28em]">Advanced</span>
+						<span className="text-sm">Advanced</span>
 						<span className="flex items-center gap-[6px] text-primary text-[12px]">
-							{gasUsage !== undefined ? `${gasUsage.toFixed(2)}%` : '—'}
 							<ChevronDown
-								className={`size-[14px] transition-transform ${showAdvanced ? '' : '-rotate-90'}`}
+								className={cx(
+									'rotate-180 size-[14px] transition-transform duration-300',
+									{ 'rotate-0': !showAdvanced },
+								)}
 							/>
 						</span>
 					</button>
 
+					{/* TODO: handle this hiding and showing with CSS */}
 					{showAdvanced && (
 						<div className="mt-[14px] space-y-[14px] text-[13px]">
 							<div className="space-y-[6px]">
 								<div className="flex items-center justify-between text-primary">
 									<span>Gas Usage</span>
 									<span className="text-primary">
-										{gasUsage !== undefined ? `${gasUsage.toFixed(2)}%` : '—'}
+										{gasUsage !== undefined
+											? `${gasUsage.toFixed(2)}%`
+											: '0.00%'}
 									</span>
 								</div>
 								<div className="relative h-[6px] rounded-full bg-[#e8e8e8] overflow-hidden">
@@ -280,25 +332,27 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 							</div>
 
 							<div className="space-y-[8px]">
-								<span className="text-[11px] uppercase tracking-[0.28em] text-tertiary">
-									Roots
-								</span>
+								<span className="text-sm">Roots</span>
 								{roots.map((root) => (
 									<div
 										key={root.label}
-										className="flex items-center justify-between text-primary leading-[18px]"
+										className="flex items-center justify-between text-primary text-sm lowercase"
 									>
-										<span className="text-tertiary capitalize">
-											{root.label}
-										</span>
+										<span className="text-xs text-tertiary">{root.label}</span>
 										<span
-											className="tabular-nums"
-											title={root.value ?? undefined}
+											className="tabular-nums flex-1 text-right"
+											title={root.value}
 										>
 											{root.value
 												? HexFormatter.shortenHex(root.value, 6)
 												: '—'}
 										</span>
+										<CopyButton
+											value={root.value ?? ''}
+											ariaLabel="Copy root"
+											className="ml-2"
+											disabled={!root.value}
+										/>
 									</div>
 								))}
 							</div>
@@ -309,12 +363,15 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 		</article>
 	)
 }
+
 interface BlockSummaryCardProps {
 	block?: BlockWithTransactions
 	isLoading: boolean
 	latestBlockNumber?: bigint
 	requestedNumber?: bigint
 }
+
+const GAS_DECIMALS = 18
 
 function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 	const { transactions, isLoading, decimals, symbol } = props
@@ -397,6 +454,12 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 								Index
 							</th>
 							<th className="px-[16px] py-[12px] text-left font-normal">
+								Type
+							</th>
+							<th className="px-[16px] py-[12px] text-left font-normal">
+								From
+							</th>
+							<th className="px-[16px] py-[12px] text-left font-normal">
 								Description
 							</th>
 							<th className="px-[16px] py-[12px] text-left font-normal">
@@ -418,6 +481,23 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 								(transaction.transactionIndex ?? null) !== null
 									? Number(transaction.transactionIndex) + 1
 									: index + 1
+
+							let fromCell = <span className="text-tertiary">—</span>
+
+							if (!isPlaceholder) {
+								if (transaction.from === zeroAddress) {
+									fromCell = <span className="text-tertiary">System</span>
+								} else {
+									fromCell = (
+										<AddressLink
+											address={transaction.from}
+											chars={4}
+											className="text-accent font-medium text-[12px]"
+										/>
+									)
+								}
+							}
+
 							const amountDisplay = !isPlaceholder
 								? formatNativeAmount(transaction.value, decimals, symbol)
 								: '—'
@@ -426,7 +506,7 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 								: undefined
 							const feeDisplay =
 								fee !== undefined && fee > 0n
-									? formatNativeAmount(fee, decimals, symbol)
+									? formatNativeAmount(fee, GAS_DECIMALS, symbol)
 									: '—'
 							const feeOutput = feeDisplay === '—' ? '—' : `(${feeDisplay})`
 							const hashCell =
@@ -442,10 +522,7 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 								) : (
 									<span className="text-tertiary">—</span>
 								)
-							const totalClass =
-								!isPlaceholder && transaction.value > 0n
-									? 'text-base-content-positive'
-									: 'text-primary'
+
 							const knownEvents =
 								!isPlaceholder && transaction.hash
 									? knownEventsByHash[transaction.hash]
@@ -458,6 +535,34 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 								>
 									<td className="px-[16px] py-[12px] align-top text-tertiary tabular-nums">
 										[{transactionIndex}]
+									</td>
+									<td className="px-[16px] py-[12px] align-top">
+										{!isPlaceholder ? (
+											(() => {
+												const txType = getTransactionType(transaction)
+												return (
+													<div
+														className={cx(
+															txType.type === 'system'
+																? 'text-tertiary'
+																: 'text-primary',
+															'text-[12px] font-medium',
+														)}
+													>
+														{txType.label}
+													</div>
+												)
+											})()
+										) : (
+											<span className="text-tertiary">—</span>
+										)}
+									</td>
+									<td className="px-[16px] py-[12px] align-top">
+										{!isPlaceholder ? (
+											fromCell
+										) : (
+											<span className="text-tertiary">—</span>
+										)}
 									</td>
 									<td className="px-[16px] py-[12px] align-top">
 										{!isPlaceholder ? (
@@ -476,7 +581,12 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 										{feeOutput}
 									</td>
 									<td
-										className={`px-[16px] py-[12px] align-top text-right tabular-nums ${totalClass}`}
+										className={cx([
+											'px-[16px] py-[12px] align-top text-right tabular-nums',
+											!isPlaceholder && transaction.value > 0n
+												? 'text-base-content-positive'
+												: 'text-primary',
+										])}
 									>
 										{amountDisplay}
 									</td>
@@ -642,35 +752,43 @@ function BlockTimeRow(props: {
 }) {
 	const { label, value, subtle } = props
 	return (
-		<div className="px-[18px] py-[12px] flex items-center justify-between text-[13px] leading-[18px]">
-			<span className="inline-flex items-center gap-[8px]">
-				<span className="text-[11px] uppercase text-tertiary bg-base-alt/80 px-[6px] py-[3px] rounded-[4px] tracking-[0.18em]">
-					{label}
-				</span>
+		<div className="px-[18px] py-[12px] flex items-center justify-between text-sm">
+			<span className="text-xs uppercase text-tertiary bg-base-alt/65 px-1 py-0.5">
+				{label}
 			</span>
+
 			<span
 				className={cx(
 					'text-right tabular-nums',
 					subtle ? 'text-base-content-secondary' : 'text-primary',
 				)}
 			>
-				{value ?? '—'}
+				{value?.replaceAll(',', '')}
 			</span>
 		</div>
 	)
 }
 
-function CopyButton(props: { value: string; ariaLabel: string }) {
-	const { value, ariaLabel } = props
+function CopyButton(props: {
+	value: string
+	ariaLabel: string
+	disabled?: boolean
+	className?: string
+}) {
+	const { value, ariaLabel, disabled, className } = props
 	const { copy, notifying } = useCopy()
 	return (
 		<button
 			type="button"
 			onClick={() => copy(value)}
-			className="flex items-center gap-[4px] text-tertiary hover:text-primary transition-colors text-[12px]"
+			className={cx(
+				'flex items-center gap-[4px] text-tertiary/60 hover:text-primary transition-colors text-[12px]',
+				className,
+			)}
 			aria-label={ariaLabel}
+			disabled={disabled}
 		>
-			<CopyIcon className="size-[14px]" />
+			<CopyIcon className="size-4" />
 			{notifying && (
 				<span className="text-[10px] uppercase tracking-widest text-primary">
 					copied
@@ -690,19 +808,6 @@ function formatGasValue(value?: bigint, digits = 9) {
 	if (value === undefined) return '—'
 	const string = value.toString()
 	return string.length >= digits ? string : string.padStart(digits, '0')
-}
-
-function formatUtcTimestamp(timestamp: bigint) {
-	return new Intl.DateTimeFormat('en-US', {
-		year: '2-digit',
-		month: '2-digit',
-		day: '2-digit',
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit',
-		hour12: false,
-		timeZone: 'UTC',
-	}).format(new Date(Number(timestamp) * 1_000))
 }
 
 function getGasUsagePercent(block: BlockWithTransactions) {
