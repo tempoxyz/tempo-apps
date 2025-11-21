@@ -20,8 +20,7 @@ import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
-import { fetchTokenHolders } from '#server/token/fetch-token-holders'
-import { fetchTokenTransfers } from '#server/token/fetch-token-transfers'
+import { fetchHolders, fetchTransfers } from '#lib/token.server'
 import { config } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -52,7 +51,7 @@ function transfersQueryOptions(params: TransfersQuery) {
 			params._key,
 		],
 		queryFn: async () => {
-			const data = await fetchTokenTransfers({
+			const data = await fetchTransfers({
 				data: {
 					address: params.address,
 					offset: params.offset,
@@ -69,7 +68,7 @@ function holdersQueryOptions(params: HoldersQuery) {
 	return queryOptions({
 		queryKey: ['token-holders', params.address, params.page, params.limit],
 		queryFn: async () => {
-			const data = await fetchTokenHolders({
+			const data = await fetchHolders({
 				data: {
 					address: params.address,
 					offset: params.offset,
@@ -546,7 +545,6 @@ function SectionsWrapper(props: {
 					totalItems: transfersTotal,
 					page,
 					isPending: isLoadingPage,
-					onPageChange: goToPage,
 					itemsLabel: 'transfers',
 					itemsPerPage: limit,
 				},
@@ -590,7 +588,6 @@ function SectionsWrapper(props: {
 					totalItems: holdersTotal,
 					page,
 					isPending: isLoadingPage,
-					onPageChange: goToPage,
 					itemsLabel: 'holders',
 					itemsPerPage: limit,
 				},
