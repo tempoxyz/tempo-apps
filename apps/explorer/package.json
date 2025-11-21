@@ -4,13 +4,15 @@
 	"type": "module",
 	"scripts": {
 		"build": "vite build",
-		"deploy": "pnpm build && wrangler deploy",
-		"dev": "vite dev",
 		"check": "biome check --write --unsafe",
 		"check:types": "tsc --project tsconfig.json --noEmit",
+		"check:types:test": "tsc --project tsconfig.test.json --noEmit",
+		"deploy": "pnpm build && wrangler deploy",
+		"dev": "vite dev",
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
 		"postinstall": "pnpm gen:types && pnpm build",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"test": "vitest"
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.1.17",
@@ -36,6 +38,7 @@
 	"devDependencies": {
 		"@cloudflare/puppeteer": "^1.0.4",
 		"@cloudflare/vite-plugin": "^1.14.1",
+		"@cloudflare/vitest-pool-workers": "^0.10.10",
 		"@iconify/json": "^2.2.406",
 		"@svgr/core": "^8.1.0",
 		"@svgr/plugin-jsx": "^8.1.0",
@@ -53,6 +56,7 @@
 		"unplugin-icons": "^22.5.0",
 		"vite": "npm:rolldown-vite@latest",
 		"vite-tsconfig-paths": "^5.1.4",
-		"wrangler": "^4.47.0"
+		"vitest": "^3.2.4",
+		"wrangler": "^4.49.0"
 	}
 }

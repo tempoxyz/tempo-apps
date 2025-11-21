@@ -1,141 +1,21 @@
 import { env } from 'cloudflare:workers'
 import { createServerFn } from '@tanstack/react-start'
-import { Address, Hex } from 'ox'
-import { tempoAndantino } from 'tempo.ts/chains'
+import type { Address } from 'ox'
 import { Abis } from 'tempo.ts/viem'
 import { formatUnits, type RpcTransaction } from 'viem'
 import { getChainId, readContract } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import * as IS from '#lib/index-supply'
+import { zAddress } from '#lib/zod'
 import { config, getConfig } from '#wagmi.config.ts'
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
-const INDEX_SUPPLY_ENDPOINT = 'https://api.indexsupply.net/v2/query'
-const chainId = tempoAndantino.id
-const chainIdHex = Hex.fromNumber(chainId)
-const chainCursor = `${chainId}-0`
-
-const rowValueSchema = z.union([z.string(), z.number(), z.null()])
-
-const indexSupplyResponseSchema = z.array(
-	z.object({
-		cursor: z.optional(z.string()),
-		columns: z.array(
-			z.object({
-				name: z.string(),
-				pgtype: z.string(),
-			}),
-		),
-		rows: z.array(z.array(rowValueSchema)),
-	}),
-)
-
-type RowValue = z.infer<typeof rowValueSchema>
-
-const toBigInt = (value: RowValue | null | undefined): bigint => {
-	if (value === null || value === undefined) return 0n
-	if (typeof value === 'number') return BigInt(value)
-	const normalized = value.trim()
-	if (normalized === '') return 0n
-	return BigInt(normalized)
-}
-
-const toQuantityHex = (
-	value: RowValue | null | undefined,
-	fallback: bigint = 0n,
-) =>
-	Hex.fromNumber(
-		value === null || value === undefined ? fallback : toBigInt(value),
-	)
-
-const toHexData = (value: RowValue | null | undefined): Hex.Hex => {
-	if (typeof value !== 'string' || value.length === 0) return '0x'
-	Hex.assert(value)
-	return value
-}
-
-const toAddressValue = (
-	value: RowValue | null | undefined,
-): Address.Address | null => {
-	if (typeof value !== 'string' || value.length === 0) return null
-	Address.assert(value)
-	return value
-}
-
-type RunQueryOptions = {
-	signatures?: string[]
-}
-
-async function runIndexSupplyQuery(
-	query: string,
-	options: RunQueryOptions = {},
-) {
-	const apiKey = env.INDEXSUPPLY_API_KEY
-	if (!apiKey) throw new Error('INDEXSUPPLY_API_KEY is not configured')
-
-	const url = new URL(INDEX_SUPPLY_ENDPOINT)
-	url.searchParams.set('api-key', apiKey)
-	const signatures =
-		options.signatures && options.signatures.length > 0
-			? options.signatures
-			: ['']
-
-	const response = await fetch(url, {
-		method: 'POST',
-		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify([
-			{
-				cursor: chainCursor,
-				signatures,
-				query: query.replace(/\s+/g, ' ').trim(),
-			},
-		]),
-	})
-
-	let json: unknown
-	try {
-		json = await response.json()
-	} catch {
-		throw new Error('IndexSupply API returned invalid JSON')
-	}
-
-	if (!response.ok) {
-		const message =
-			typeof json === 'object' &&
-			json !== null &&
-			'message' in json &&
-			typeof (json as { message?: string }).message === 'string'
-				? (json as { message: string }).message
-				: response.statusText
-		throw new Error(`IndexSupply API error (${response.status}): ${message}`)
-	}
-
-	const parsed = indexSupplyResponseSchema.safeParse(json)
-	if (!parsed.success) {
-		const message =
-			typeof json === 'object' &&
-			json !== null &&
-			'message' in json &&
-			typeof (json as { message?: string }).message === 'string'
-				? (json as { message: string }).message
-				: z.prettifyError(parsed.error)
-		throw new Error(`IndexSupply response shape is unexpected: ${message}`)
-	}
-
-	const [result] = parsed.data
-	if (!result) throw new Error('IndexSupply returned an empty result set')
-	return result
-}
+const { chainId, chainIdHex } = IS
 
 export const fetchTransactions = createServerFn()
 	.inputValidator(
 		z.object({
-			address: z.pipe(
-				z.string(),
-				z.transform((x) => {
-					Address.assert(x)
-					return x
-				}),
-			),
+			address: zAddress(),
 			offset: z.prefault(z.coerce.number(), 0),
 			limit: z.prefault(z.coerce.number(), 100),
 			include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
@@ -149,8 +29,7 @@ export const fetchTransactions = createServerFn()
 				: params.include === 'received'
 					? 'received'
 					: 'all'
-		const sort = params.sort === 'asc' ? 'asc' : 'desc'
-		const sortDirection = sort === 'asc' ? 'ASC' : 'DESC'
+		const sortDirection = params.sort === 'asc' ? 'ASC' : 'DESC'
 
 		const offset = Math.max(
 			0,
@@ -200,7 +79,7 @@ export const fetchTransactions = createServerFn()
 
 		// Parallelize count and transactions fetch
 		const [countResult, txsResult] = await Promise.all([
-			runIndexSupplyQuery(
+			IS.runIndexSupplyQuery(
 				/* sql */ `
 								SELECT count(t.hash) as total
 								FROM txs t
@@ -209,7 +88,7 @@ export const fetchTransactions = createServerFn()
 							`,
 				{ signatures: [transferSignature] },
 			),
-			runIndexSupplyQuery(
+			IS.runIndexSupplyQuery(
 				/* sql */ `
 								SELECT
 									t.hash,
@@ -244,7 +123,7 @@ export const fetchTransactions = createServerFn()
 		const txColumns = new Map(
 			txsResult.columns.map((column, index) => [column.name, index]),
 		)
-		const getColumnValue = (row: RowValue[], name: string) => {
+		const getColumnValue = (row: IS.RowValue[], name: string) => {
 			const columnIndex = txColumns.get(name)
 			if (columnIndex === undefined)
 				throw new Error(`Missing "${name}" column in IndexSupply response`)
@@ -252,26 +131,26 @@ export const fetchTransactions = createServerFn()
 		}
 
 		const transactions: RpcTransaction[] = txsResult.rows.map((row) => {
-			const hash = toHexData(getColumnValue(row, 'hash'))
-			const from = toAddressValue(getColumnValue(row, 'from'))
+			const hash = IS.toHexData(getColumnValue(row, 'hash'))
+			const from = IS.toAddressValue(getColumnValue(row, 'from'))
 			if (!from) throw new Error('Transaction is missing a "from" address')
 
-			const to = toAddressValue(getColumnValue(row, 'to'))
+			const to = IS.toAddressValue(getColumnValue(row, 'to'))
 
 			return {
 				blockHash: null,
-				blockNumber: toQuantityHex(getColumnValue(row, 'block_num')),
+				blockNumber: IS.toQuantityHex(getColumnValue(row, 'block_num')),
 				chainId: chainIdHex,
 				from,
-				gas: toQuantityHex(getColumnValue(row, 'gas')),
-				gasPrice: toQuantityHex(getColumnValue(row, 'gas_price')),
+				gas: IS.toQuantityHex(getColumnValue(row, 'gas')),
+				gasPrice: IS.toQuantityHex(getColumnValue(row, 'gas_price')),
 				hash,
-				input: toHexData(getColumnValue(row, 'input')),
-				nonce: toQuantityHex(getColumnValue(row, 'nonce')),
+				input: IS.toHexData(getColumnValue(row, 'input')),
+				nonce: IS.toQuantityHex(getColumnValue(row, 'nonce')),
 				to,
 				transactionIndex: null,
-				value: toQuantityHex(getColumnValue(row, 'value')),
-				type: toQuantityHex(
+				value: IS.toQuantityHex(getColumnValue(row, 'value')),
+				type: IS.toQuantityHex(
 					getColumnValue(row, 'type'),
 				) as RpcTransaction['type'],
 				v: '0x0',
@@ -296,13 +175,7 @@ export const fetchTransactions = createServerFn()
 export const getTotalValue = createServerFn()
 	.inputValidator(
 		z.object({
-			address: z.pipe(
-				z.string(),
-				z.transform((x) => {
-					Address.assert(x)
-					return x
-				}),
-			),
+			address: zAddress(),
 		}),
 	)
 	.handler(async ({ data: params }) => {
@@ -316,15 +189,12 @@ export const getTotalValue = createServerFn()
 			'api-key': env.INDEXSUPPLY_API_KEY || '',
 		})
 
-		const response = await fetch(
-			`https://api.indexsupply.net/v2/query?${searchParams.toString()}`,
-		)
+		const response = await fetch(`${IS.endpoint}?${searchParams}`)
 
-		if (!response.ok) {
+		if (!response.ok)
 			throw new Error(
 				`Failed to fetch total value: ${response.status} ${await response.text()}`,
 			)
-		}
 
 		const responseData = await response.json()
 
