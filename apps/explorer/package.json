@@ -10,8 +10,7 @@
 		"check:types": "tsc --project tsconfig.json --noEmit",
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
 		"postinstall": "pnpm gen:types && pnpm build",
-		"preview": "vite preview",
-		"test": "vitest run"
+		"preview": "vite preview"
 	},
 	"dependencies": {
 		"@tailwindcss/vite": "^4.1.17",

@@ -204,6 +204,12 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	validateSearch: z.object({
 		r: z.optional(z.string()),
 	}).parse,
+	params: z.object({
+		hash: z.pipe(
+			z.string(),
+			z.transform((val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex),
+		),
+	}),
 })
 
 function Component() {
