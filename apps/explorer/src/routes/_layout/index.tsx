@@ -34,6 +34,9 @@ function Component() {
 						onHash={(hash) => {
 							navigate({ to: '/tx/$hash', params: { hash } })
 						}}
+						onBlock={(block) => {
+							navigate({ to: '/block/$id', params: { id: block } })
+						}}
 					/>
 				</div>
 			</div>

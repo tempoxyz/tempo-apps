@@ -1,9 +1,10 @@
 import { Link, useMatch, useNavigate } from '@tanstack/react-router'
+import { Address } from 'ox'
 import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
-import { ExploreInput } from './ExploreInput'
+import { ExploreInput } from './ExploreInput.tsx'
 
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
@@ -11,23 +12,27 @@ export function Header(props: Header.Props) {
 	const [inputValue, setInputValue] = React.useState('')
 	const [isNavigating, setIsNavigating] = React.useState(false)
 
-	const txMatch = useMatch({ from: '/_layout/tx/$hash', shouldThrow: false })
-	const accountMatch = useMatch({
-		from: '/_layout/account/$address',
+	const hash = useMatch({
+		from: '/_layout/tx/$hash',
+		select: (match) => match.params.hash,
 		shouldThrow: false,
 	})
-	const hash = (txMatch?.params as { hash: string | undefined })?.hash
-	const address = (accountMatch?.params as { address: string | undefined })
-		?.address
 
-	const showInput = Boolean(hash || address)
+	const address = useMatch({
+		from: '/_layout/account/$address',
+		select: (match) => match.params.address,
+		shouldThrow: false,
+	})
+
+	const block = useMatch({
+		from: '/_layout/block/$id',
+		select: (match) => match.params.id,
+		shouldThrow: false,
+	})
 
 	React.useEffect(() => {
-		if (hash || address) {
-			setInputValue('')
-			setIsNavigating(false)
-		}
-	}, [hash, address])
+		if (hash || address || block) [setInputValue(''), setIsNavigating(false)]
+	}, [hash, address, block])
 
 	return (
 		<header className="@container">
@@ -38,7 +43,7 @@ export function Header(props: Header.Props) {
 					</Link>
 					<Header.NetworkBadge />
 				</div>
-				{showInput && (
+				{Boolean(hash || address || block) && (
 					<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex">
 						<ExploreInput
 							value={inputValue}
@@ -47,18 +52,21 @@ export function Header(props: Header.Props) {
 							onActivate={({ value, type }) => {
 								if (type === 'hash') {
 									if (hash !== value) setIsNavigating(true)
-									navigate({
-										params: { hash: value },
-										to: '/tx/$hash',
-									})
+									navigate({ params: { hash: value }, to: '/tx/$hash' })
 									return
 								}
 								if (type === 'address') {
 									if (address !== value) setIsNavigating(true)
+									Address.assert(value)
 									navigate({
 										params: { address: value },
 										to: '/account/$address',
 									})
+									return
+								}
+								if (type === 'block') {
+									if (block !== value) setIsNavigating(true)
+									navigate({ params: { id: value }, to: '/block/$id' })
 									return
 								}
 							}}
@@ -88,7 +96,11 @@ export namespace Header {
 			},
 		})
 		return (
-			<div className="flex items-center gap-[6px] text-[15px] font-medium text-secondary">
+			<Link
+				params={{ id: initial?.toString() ?? '' }}
+				to="/block/$id"
+				className="flex items-center gap-[6px] text-[15px] font-medium text-secondary"
+			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
 					<span className="@min-[1240px]:inline hidden">Block </span>
@@ -96,7 +108,7 @@ export namespace Header {
 						<span ref={ref}>{initial ? String(initial) : '…'}</span>
 					</span>
 				</div>
-			</div>
+			</Link>
 		)
 	}
 
@@ -111,7 +123,7 @@ export namespace Header {
 		const network = chain.name.match(/Tempo (.+)/)?.[1]
 		if (!network) return null
 		return (
-			<div className="flex items-center gap-[4px] px-[8px] h-[28px] border-[1px] border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium">
+			<div className="flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium">
 				<Music4 width={14} height={14} className="text-accent" />
 				{network}
 			</div>
