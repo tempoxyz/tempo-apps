@@ -15,9 +15,9 @@
 		"lint": "biome check --write ."
 	},
 	"dependencies": {
-		"ox": "^0.5.0",
-		"tempo.ts": "^0.5.4",
-		"viem": "^2.21.55"
+		"ox": "^0.9.14",
+		"viem": "^2.39.0",
+		"tempo.ts": "^0.5.4"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20241127.0",

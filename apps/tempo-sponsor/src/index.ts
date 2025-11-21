@@ -82,8 +82,8 @@ export default {
 
 			// 1. Validate request
 			if (
-				!rpcRequest.method ||
-				!rpcRequest.method.includes('eth_sendRawTransaction')
+				rpcRequest.method !== 'eth_sendRawTransaction' &&
+				rpcRequest.method !== 'eth_sendRawTransactionSync'
 			) {
 				return new Response(
 					JSON.stringify(
@@ -131,7 +131,7 @@ export default {
 			})
 
 			const result = await client.request({
-				method: 'eth_sendRawTransaction',
+				method: rpcRequest.method,
 				params: [serializedTransaction],
 			})
 
