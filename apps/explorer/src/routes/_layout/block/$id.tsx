@@ -722,7 +722,12 @@ function getEstimatedFee(transaction: BlockTransaction) {
 	return gasPrice * (transaction.gas ?? 0n)
 }
 
-function formatNativeAmount(value: bigint, decimals: number, symbol: string) {
+function formatNativeAmount(
+	value: bigint | undefined,
+	decimals: number,
+	symbol: string,
+) {
+	if (value === undefined) return '—'
 	const decimalString = Value.format(value, decimals)
 	const formatted = PriceFormatter.formatAmount(decimalString)
 	return `${formatted} ${symbol}`

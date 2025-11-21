@@ -17,3 +17,7 @@ pnpm-lock.yaml
 yarn.lock
 
 logs
+
+_tempo_docs
+_scripts
+_docs
