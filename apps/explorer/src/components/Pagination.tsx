@@ -1,5 +1,4 @@
-import { ClientOnly, Link } from '@tanstack/react-router'
-import * as React from 'react'
+import { Link } from '@tanstack/react-router'
 import { cx } from '#cva.config.ts'
 import ChevronLeft from '~icons/lucide/chevron-left'
 import ChevronRight from '~icons/lucide/chevron-right'
@@ -141,9 +140,7 @@ export function Pagination(props: Pagination.Props) {
 				<span className="text-tertiary">•</span>
 				<span className="text-primary">{totalItems || '…'}</span>
 				<span className="text-tertiary">
-					<ClientOnly fallback={<React.Fragment>…</React.Fragment>}>
-						{totalItems === 1 ? itemsLabel.replace(/s$/, '') : itemsLabel}
-					</ClientOnly>
+					{totalItems === 1 ? itemsLabel.replace(/s$/, '') : itemsLabel}
 				</span>
 			</div>
 		</div>

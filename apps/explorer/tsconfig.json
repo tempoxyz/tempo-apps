@@ -34,5 +34,5 @@
 		}
 	},
 	"files": ["env.d.ts", "worker-configuration.d.ts"],
-	"exclude": ["**/_/**", "node_modules"]
+	"exclude": ["**/_/**", "node_modules", "**/*.test.ts", "**/*.test.tsx"]
 }

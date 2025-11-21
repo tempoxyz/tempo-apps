@@ -21,7 +21,7 @@ export function ErrorBoundary({ error }: ErrorComponentProps) {
 				</div>
 				{error?.message && (
 					<div className="bg-surface border border-base-border rounded-[10px] p-[16px] max-w-full overflow-hidden relative">
-						<pre className="text-[13px] text-base-content-secondary whitespace-pre-wrap pr-[32px]">
+						<pre className="text-[13px] text-base-content-secondary whitespace-pre-wrap pr-[32px] leading-[20px] min-h-[40px]">
 							{error.message}
 						</pre>
 						{copy.notifying && (
