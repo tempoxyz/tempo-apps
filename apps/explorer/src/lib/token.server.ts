@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
-import { Address, type Hex } from 'ox'
+import type { Address, Hex } from 'ox'
 import * as z from 'zod/mini'
 import * as IS from '#lib/index-supply'
 import { parsePgTimestamp } from '#lib/postgres'

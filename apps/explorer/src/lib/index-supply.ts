@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
-import { tempoAndantino } from 'tempo.ts/chains'
 import { Address, Hex } from 'ox'
+import { tempoAndantino } from 'tempo.ts/chains'
 import * as z from 'zod/mini'
 
 export const endpoint = 'https://api.indexsupply.net/v2/query'

@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
 import { createServerFn } from '@tanstack/react-start'
-import { Address } from 'ox'
+import type { Address } from 'ox'
 import { Abis } from 'tempo.ts/viem'
 import { formatUnits, type RpcTransaction } from 'viem'
 import { getChainId, readContract } from 'wagmi/actions'

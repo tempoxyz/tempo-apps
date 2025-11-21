@@ -312,7 +312,6 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 					totalItems,
 					page: 1,
 					isPending: false,
-					onPageChange: () => {},
 					itemsLabel: 'transfers',
 					itemsPerPage: rowsPerPage,
 				},
@@ -333,7 +332,6 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 					totalItems: 0,
 					page: 1,
 					isPending: false,
-					onPageChange: () => {},
 					itemsLabel: 'holders',
 				},
 			]}
@@ -430,8 +428,7 @@ function SectionsWrapper(props: {
 	activeSection: number
 	onSectionChange: (index: number) => void
 }) {
-	const { address, page, limit, goToPage, activeSection, onSectionChange } =
-		props
+	const { address, page, limit, activeSection, onSectionChange } = props
 
 	const state = useRouterState()
 	const loaderData = Route.useLoaderData()
