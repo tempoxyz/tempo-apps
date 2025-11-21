@@ -5,7 +5,7 @@ import { tempoAndantino } from 'tempo.ts/chains'
 import { Abis } from 'tempo.ts/viem'
 import { formatUnits, type RpcTransaction } from 'viem'
 import { getChainId, readContract } from 'wagmi/actions'
-import { z } from 'zod'
+import * as z from 'zod/mini'
 import { config, getConfig } from '#wagmi.config.ts'
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]

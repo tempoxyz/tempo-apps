@@ -1,6 +1,6 @@
 import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
-import { createFileRoute, notFound } from '@tanstack/react-router'
+import { createFileRoute, notFound, rootRouteId } from '@tanstack/react-router'
 import { Address, Hex, Json, Value } from 'ox'
 import { TokenRole } from 'tempo.ts/ox'
 import { Abis, Addresses } from 'tempo.ts/viem'
@@ -11,8 +11,8 @@ import {
 	type TransactionReceipt,
 	zeroAddress,
 } from 'viem'
-import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
-import { getClient } from 'wagmi/actions'
+
+import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#components/NotFound'
 import { Receipt } from '#components/Receipt/Receipt'
@@ -28,45 +28,58 @@ async function loader({
 	location: { search: { r?: string | undefined } }
 	params: unknown
 }) {
-	const { r: rpcUrl } = location.search
-	const parseResult = z
-		.object({
-			hash: z.pipe(
-				z.string(),
-				z.transform(
-					(val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex,
+	try {
+		const { r: rpcUrl } = location.search
+		const parseResult = z
+			.object({
+				hash: z.pipe(
+					z.string(),
+					z.transform(
+						(val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex,
+					),
 				),
-			),
+			})
+			.safeParse(params)
+
+		if (!parseResult.success) throw notFound()
+
+		const { hash } = parseResult.data
+		if (!Hex.validate(hash) || Hex.size(hash) !== 32) throw notFound()
+
+		const config = getConfig({ rpcUrl })
+		const receipt = await getTransactionReceipt(config, {
+			hash,
 		})
-		.safeParse(params)
+		const [block, transaction, tokenMetadata] = await Promise.all([
+			getBlock(config, { blockHash: receipt.blockHash }),
+			getTransaction(config, { hash: receipt.transactionHash }),
+			TokenMetadata.fromLogs(receipt.logs),
+		])
+		const timestampFormatted = DateFormatter.format(block.timestamp)
 
-	if (!parseResult.success) throw notFound()
+		const lineItems = LineItems.fromReceipt(receipt, { tokenMetadata })
+		const knownEvents = parseKnownEvents(receipt, {
+			transaction,
+			tokenMetadata,
+		})
 
-	const { hash } = parseResult.data
-	if (!Hex.validate(hash) || Hex.size(hash) !== 32) throw notFound()
-
-	const client = getClient(getConfig({ rpcUrl }))
-	const receipt = await getTransactionReceipt(client, {
-		hash,
-	})
-	const [block, transaction, tokenMetadata] = await Promise.all([
-		getBlock(client, { blockHash: receipt.blockHash }),
-		getTransaction(client, { hash: receipt.transactionHash }),
-		TokenMetadata.fromLogs(receipt.logs),
-	])
-	const timestampFormatted = DateFormatter.format(block.timestamp)
-
-	const lineItems = LineItems.fromReceipt(receipt, { tokenMetadata })
-	const knownEvents = parseKnownEvents(receipt, { transaction, tokenMetadata })
-
-	return {
-		block,
-		knownEvents,
-		lineItems,
-		receipt,
-		timestampFormatted,
-		tokenMetadata,
-		transaction,
+		return {
+			block,
+			knownEvents,
+			lineItems,
+			receipt,
+			timestampFormatted,
+			tokenMetadata,
+			transaction,
+		}
+	} catch (error) {
+		console.error(error)
+		throw notFound({
+			routeId: rootRouteId,
+			data: {
+				error: error instanceof Error ? error.message : 'Unknown error',
+			},
+		})
 	}
 }
 
@@ -237,7 +250,7 @@ function Component() {
 	)
 }
 
-export namespace TextRenderer {
+namespace TextRenderer {
 	const width = 50
 	const indent = '  '
 

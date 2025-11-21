@@ -7,7 +7,7 @@ export const Route = createFileRoute('/_layout/')({
 	component: Component,
 })
 
-export function Component() {
+function Component() {
 	const navigate = useNavigate()
 	const [inputValue, setInputValue] = useState('')
 
