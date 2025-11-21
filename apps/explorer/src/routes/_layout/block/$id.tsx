@@ -229,7 +229,7 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 						value={blockNumberValue?.toString() ?? ''}
 					/>
 				</div>
-				<div className="mt-[10px] text-[2vw] leading-[26px] tracking-[0.18em] text-primary tabular-nums">
+				<div className="mt-[10px] text-2xl leading-[26px] tracking-[0.18em] text-primary tabular-nums">
 					<span className="text-[#bbbbbb]">{leadingZeros}</span>
 					{trailingDigits || '—'}
 				</div>

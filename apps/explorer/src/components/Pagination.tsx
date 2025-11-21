@@ -1,8 +1,13 @@
-import { ClientOnly } from '@tanstack/react-router'
+import { ClientOnly, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import { cx } from '#cva.config.ts'
 import ChevronLeft from '~icons/lucide/chevron-left'
 import ChevronRight from '~icons/lucide/chevron-right'
+
+/**
+ * useful links:
+ * - `<Link search />` https://tanstack.com/router/v1/docs/framework/react/guide/search-params#link-search-
+ */
 
 export function Pagination(props: Pagination.Props) {
 	const {
@@ -11,16 +16,19 @@ export function Pagination(props: Pagination.Props) {
 		totalItems,
 		itemsLabel,
 		isPending,
-		onPageChange,
 		compact = false,
 	} = props
 
 	if (compact)
 		return (
 			<div className="flex items-center justify-center gap-[8px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary w-full">
-				<button
-					type="button"
-					onClick={() => onPageChange(page - 1)}
+				<Link
+					to="."
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: (previous?.page ?? 1) - 1,
+					})}
 					disabled={page <= 1 || isPending}
 					className={cx(
 						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
@@ -28,15 +36,20 @@ export function Pagination(props: Pagination.Props) {
 					aria-label="Previous page"
 				>
 					<ChevronLeft className="size-[14px]" />
-				</button>
+				</Link>
 
 				<span className="text-primary font-medium">
 					Page {page} of {totalPages}
 				</span>
 
-				<button
+				<Link
+					to="."
 					type="button"
-					onClick={() => onPageChange(page + 1)}
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: (previous?.page ?? 1) + 1,
+					})}
 					disabled={page >= totalPages || isPending}
 					className={cx(
 						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
@@ -44,16 +57,20 @@ export function Pagination(props: Pagination.Props) {
 					aria-label="Next page"
 				>
 					<ChevronRight className="size-[14px]" />
-				</button>
+				</Link>
 			</div>
 		)
 
 	return (
 		<div className="flex flex-col gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary md:flex-row md:items-center md:justify-between">
 			<div className="flex flex-row items-center gap-[8px] mx-auto md:mx-0">
-				<button
-					type="button"
-					onClick={() => onPageChange(page - 1)}
+				<Link
+					to="."
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: (previous?.page ?? 1) - 1,
+					})}
 					disabled={page <= 1 || isPending}
 					className={cx(
 						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[28px] text-primary',
@@ -61,7 +78,7 @@ export function Pagination(props: Pagination.Props) {
 					aria-label="Previous page"
 				>
 					<ChevronLeft className="size-[16px]" />
-				</button>
+				</Link>
 
 				<div className="flex items-center gap-[6px]">
 					{(() => {
@@ -80,11 +97,12 @@ export function Pagination(props: Pagination.Props) {
 								)
 
 							return (
-								<button
+								<Link
 									key={p}
-									type="button"
-									onClick={() => onPageChange(p)}
+									to="."
+									resetScroll={false}
 									disabled={page === p || isPending}
+									search={(previous) => ({ ...previous, page: p })}
 									className={`rounded-[4px] flex w-[28px] h-[28px] items-center justify-center ${
 										page === p
 											? 'border border-accent/50 text-primary cursor-default'
@@ -92,15 +110,19 @@ export function Pagination(props: Pagination.Props) {
 									} ${isPending && page !== p ? 'opacity-50 cursor-not-allowed' : ''}`}
 								>
 									{p}
-								</button>
+								</Link>
 							)
 						})
 					})()}
 				</div>
 
-				<button
-					type="button"
-					onClick={() => onPageChange(page + 1)}
+				<Link
+					to="."
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: (previous?.page ?? 1) + 1,
+					})}
 					disabled={page >= totalPages || isPending}
 					className={cx(
 						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[28px] text-primary',
@@ -108,7 +130,7 @@ export function Pagination(props: Pagination.Props) {
 					aria-label="Next page"
 				>
 					<ChevronRight className="size-[16px]" />
-				</button>
+				</Link>
 			</div>
 
 			<div className="space-x-[8px]">
@@ -135,7 +157,6 @@ export namespace Pagination {
 		totalItems: number
 		itemsLabel: string
 		isPending: boolean
-		onPageChange: (page: number) => void
 		compact?: boolean
 	}
 
