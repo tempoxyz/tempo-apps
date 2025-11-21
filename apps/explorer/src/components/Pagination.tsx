@@ -16,16 +16,19 @@ export function Pagination(props: Pagination.Props) {
 		totalItems,
 		itemsLabel,
 		isPending,
-		onPageChange,
 		compact = false,
 	} = props
 
 	if (compact)
 		return (
 			<div className="flex items-center justify-center gap-[8px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary w-full">
-				<button
-					type="button"
-					onClick={() => onPageChange(page - 1)}
+				<Link
+					to="."
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: (previous?.page ?? 1) - 1,
+					})}
 					disabled={page <= 1 || isPending}
 					className={cx(
 						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
@@ -33,15 +36,20 @@ export function Pagination(props: Pagination.Props) {
 					aria-label="Previous page"
 				>
 					<ChevronLeft className="size-[14px]" />
-				</button>
+				</Link>
 
 				<span className="text-primary font-medium">
 					Page {page} of {totalPages}
 				</span>
 
-				<button
+				<Link
+					to="."
 					type="button"
-					onClick={() => onPageChange(page + 1)}
+					resetScroll={false}
+					search={(previous) => ({
+						...previous,
+						page: (previous?.page ?? 1) + 1,
+					})}
 					disabled={page >= totalPages || isPending}
 					className={cx(
 						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
@@ -49,7 +57,7 @@ export function Pagination(props: Pagination.Props) {
 					aria-label="Next page"
 				>
 					<ChevronRight className="size-[14px]" />
-				</button>
+				</Link>
 			</div>
 		)
 
@@ -149,7 +157,7 @@ export namespace Pagination {
 		totalItems: number
 		itemsLabel: string
 		isPending: boolean
-		onPageChange: (page: number) => void
+		onPageChange?: ((page: number) => void) | undefined
 		compact?: boolean
 	}
 
