@@ -24,6 +24,7 @@ import { EventDescription } from '#components/EventDescription'
 import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
+import { cx } from '#cva.config.ts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import {
@@ -208,7 +209,7 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 }
 
 function SectionsSkeleton({ totalItems }: { totalItems: number }) {
-	const isMobile = useMediaQuery('(max-width: 1239px)')
+	const isMobile = useMediaQuery('(max-width: 799px)')
 	return (
 		<Sections
 			mode={isMobile ? 'stacked' : 'tabs'}
@@ -319,7 +320,12 @@ function RouteComponent() {
 	)
 
 	return (
-		<div className="flex flex-col min-[1240px]:grid max-w-[1080px] w-full min-[1240px]:pt-20 pt-10 min-[1240px]:pb-16 pb-8 px-4 gap-[14px] min-w-0 min-[1240px]:grid-cols-[auto_1fr]">
+		<div
+			className={cx(
+				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
+				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
+			)}
+		>
 			<AccountCardWithTimestamps address={address} />
 			<SectionsWrapper
 				address={address}
@@ -362,7 +368,7 @@ function SectionsWrapper(props: {
 		(state.isLoading && state.location.pathname.includes('/account/')) ||
 		isLoading
 
-	const isMobile = useMediaQuery('(max-width: 1239px)')
+	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
 	if (transactions.length === 0 && isLoadingPage)
