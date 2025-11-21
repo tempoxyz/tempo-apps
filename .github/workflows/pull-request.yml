@@ -39,17 +39,6 @@ jobs:
         run: pnpm run build
         working-directory: apps/${{ matrix.app }}
 
-      - name: Set sponsor secrets
-        if: matrix.app == 'tempo-sponsor'
-        run: |
-          cd apps/${{ matrix.app }}
-          echo "${{ secrets.SPONSOR_PRIVATE_KEY }}" | npx wrangler secret put SPONSOR_PRIVATE_KEY --env production
-          echo "${{ secrets.TEMPO_RPC_USERNAME }}" | npx wrangler secret put TEMPO_RPC_USERNAME --env production
-          echo "${{ secrets.TEMPO_RPC_PASSWORD }}" | npx wrangler secret put TEMPO_RPC_PASSWORD --env production
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
       - name: Upload Worker Version
         id: deploy
         uses: cloudflare/wrangler-action@v3
