@@ -166,14 +166,13 @@ export namespace Sections {
 		totalItems: number
 		page: number
 		isPending: boolean
-		onPageChange: (page: number) => void
 		itemsLabel?: string
 		itemsPerPage?: number
 	}
 
 	export function SectionContent(props: SectionContent.Props) {
 		const { section, totalPages, itemsLabel, mode } = props
-		const { page, isPending, onPageChange, totalItems } = section
+		const { page, isPending, totalItems } = section
 
 		const columns =
 			mode === 'stacked' ? section.columns.stacked : section.columns.tabs
@@ -245,7 +244,6 @@ export namespace Sections {
 						totalItems={totalItems}
 						itemsLabel={itemsLabel}
 						isPending={isPending}
-						onPageChange={onPageChange}
 						compact={mode === 'stacked'}
 					/>
 				</div>

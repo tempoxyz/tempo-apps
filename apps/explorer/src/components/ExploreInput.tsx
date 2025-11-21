@@ -8,6 +8,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		onActivate,
 		onAddress,
 		onHash,
+		onBlock,
 		autoFocus,
 		value,
 		onChange,
@@ -48,6 +49,10 @@ export function ExploreInput(props: ExploreInput.Props) {
 					onActivate?.({ type: 'hash', value })
 					return
 				}
+				if (Number.isSafeInteger(Number(value))) {
+					onActivate?.({ type: 'block', value })
+					return
+				}
 				onActivate?.({ type: 'text', value })
 			}}
 			className="relative w-full max-w-[448px]"
@@ -81,6 +86,10 @@ export function ExploreInput(props: ExploreInput.Props) {
 						onAddress?.(val_)
 						return
 					}
+					if (Number.isSafeInteger(Number(val_))) {
+						onBlock?.(val_)
+						return
+					}
 				}}
 			/>
 			<div
@@ -105,17 +114,19 @@ export function ExploreInput(props: ExploreInput.Props) {
 }
 
 export namespace ExploreInput {
-	export type ValueType = 'address' | 'hash' | 'text'
+	export type ValueType = 'address' | 'hash' | 'block' | 'text'
 
 	export interface Props {
 		onActivate?: (
 			data:
 				| { value: Address; type: 'address' }
 				| { value: Hash; type: 'hash' }
+				| { value: string; type: 'block' }
 				| { value: string; type: 'text' },
 		) => void
 		onAddress?: (address: Address) => void
 		onHash?: (hash: Hash) => void
+		onBlock?: (block: string) => void
 		autoFocus?: boolean
 		value: string
 		onChange: (value: string) => void

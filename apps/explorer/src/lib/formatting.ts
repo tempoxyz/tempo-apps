@@ -49,6 +49,27 @@ export namespace DateFormatter {
 		timeZoneName: 'shortOffset',
 	})
 
+	/**
+	 * Formats a timestamp to a UTC date-time string.
+	 *
+	 * @param timestamp - The timestamp in seconds.
+	 * @returns The formatted UTC date-time string.
+	 */
+	const utcFormatter = new Intl.DateTimeFormat('en-US', {
+		year: '2-digit',
+		month: '2-digit',
+		day: '2-digit',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		hour12: false,
+		timeZone: 'UTC',
+	})
+
+	export function formatUtcTimestamp(timestamp: bigint) {
+		return utcFormatter.format(new Date(Number(timestamp) * 1_000))
+	}
+
 	export function formatTimestampDate(timestamp: bigint): string {
 		return dateFormatter.format(new Date(Number(timestamp) * 1000))
 	}
@@ -97,6 +118,21 @@ export namespace DateFormatter {
 		if (diffMin < 60) return { fullDate, text: rtf.format(-diffMin, 'minute') }
 		if (diffHour < 24) return { fullDate, text: rtf.format(-diffHour, 'hour') }
 		return { text: rtf.format(-diffDay, 'day'), fullDate }
+	}
+
+	export function formatDuration(seconds: number): string {
+		const days = Math.floor(seconds / 86400)
+		const hrs = Math.floor((seconds % 86400) / 3600)
+		const mins = Math.floor((seconds % 3600) / 60)
+		const secs = seconds % 60
+
+		const parts = []
+		if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`)
+		if (hrs > 0) parts.push(`${hrs}h`)
+		if (mins > 0) parts.push(`${mins}m`)
+		if (secs > 0 || parts.length === 0) parts.push(`${secs}s`)
+
+		return parts.join(' ')
 	}
 }
 

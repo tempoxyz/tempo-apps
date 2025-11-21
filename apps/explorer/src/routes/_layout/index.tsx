@@ -7,7 +7,7 @@ export const Route = createFileRoute('/_layout/')({
 	component: Component,
 })
 
-export function Component() {
+function Component() {
 	const navigate = useNavigate()
 	const [inputValue, setInputValue] = useState('')
 
@@ -33,6 +33,9 @@ export function Component() {
 						}}
 						onHash={(hash) => {
 							navigate({ to: '/tx/$hash', params: { hash } })
+						}}
+						onBlock={(block) => {
+							navigate({ to: '/block/$id', params: { id: block } })
 						}}
 					/>
 				</div>

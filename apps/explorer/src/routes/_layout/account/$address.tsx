@@ -3,6 +3,7 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
+	rootRouteId,
 	useNavigate,
 	useRouter,
 	useRouterState,
@@ -112,19 +113,29 @@ export const Route = createFileRoute('/_layout/account/$address')({
 	}),
 	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
 	loader: async ({ deps: { page, limit }, params, context }) => {
-		const { address } = params
-		if (!Address.validate(address)) throw notFound()
+		try {
+			const { address } = params
+			if (!Address.validate(address)) throw notFound()
 
-		const offset = (page - 1) * limit
+			const offset = (page - 1) * limit
 
-		return await context.queryClient.fetchQuery(
-			transactionsQueryOptions({
-				address,
-				page,
-				limit,
-				offset,
-			}),
-		)
+			return await context.queryClient.fetchQuery(
+				transactionsQueryOptions({
+					address,
+					page,
+					limit,
+					offset,
+				}),
+			)
+		} catch (error) {
+			console.error('onCatch', error)
+			throw notFound({
+				routeId: rootRouteId,
+				data: {
+					error: error instanceof Error ? error.message : 'Unknown error',
+				},
+			})
+		}
 	},
 })
 
@@ -238,7 +249,6 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 					totalItems,
 					page: 1,
 					isPending: false,
-					onPageChange: () => {},
 					itemsLabel: 'transactions',
 					itemsPerPage: rowsPerPage,
 				},
@@ -260,7 +270,6 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 					totalItems: 0,
 					page: 1,
 					isPending: false,
-					onPageChange: () => {},
 					itemsLabel: 'assets',
 				},
 			]}
@@ -297,17 +306,6 @@ function RouteComponent() {
 		}
 	}, [route, page, tab, limit])
 
-	const goToPage = React.useCallback(
-		(newPage: number) => {
-			navigate({
-				to: '.',
-				search: { page: newPage, tab, limit },
-				resetScroll: false,
-			})
-		},
-		[navigate, tab, limit],
-	)
-
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
 			const newTab = newIndex === 0 ? 'history' : 'assets'
@@ -327,7 +325,6 @@ function RouteComponent() {
 				address={address}
 				page={page}
 				limit={limit}
-				goToPage={goToPage}
 				activeSection={tab === 'history' ? 0 : 1}
 				onSectionChange={setActiveSection}
 			/>
@@ -338,12 +335,10 @@ function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
 	limit: number
-	goToPage: (page: number) => void
 	activeSection: number
 	onSectionChange: (index: number) => void
 }) {
-	const { address, page, limit, goToPage, activeSection, onSectionChange } =
-		props
+	const { address, page, limit, activeSection, onSectionChange } = props
 
 	const state = useRouterState()
 	const initialData = Route.useLoaderData()
@@ -439,7 +434,6 @@ function SectionsWrapper(props: {
 					totalItems: total,
 					page,
 					isPending: isLoadingPage,
-					onPageChange: goToPage,
 					itemsLabel: 'transactions',
 					itemsPerPage: limit,
 				},
@@ -494,7 +488,6 @@ function SectionsWrapper(props: {
 					totalItems: assets.length,
 					page: 1, // TODO
 					isPending: false,
-					onPageChange: () => {},
 					itemsLabel: 'assets',
 					itemsPerPage: assets.length,
 				},
@@ -710,17 +703,8 @@ function TransactionDescription(props: {
 							and {remainingCount} more
 						</button>
 					)}
-					{event.note && (
-						<span className="text-tertiary truncate">
-							{' '}
-							(note: {event.note})
-						</span>
-					)}
 				</div>
 			))}
-			{/* {event.note && (
-				<span className="text-tertiary"> (note: {event.note})</span>
-			)} */}
 		</div>
 	)
 }
@@ -740,7 +724,7 @@ function getPerspectiveEvent(
 	const sender = event.meta?.from
 	const updatedParts = event.parts.map((part) => {
 		if (part.type === 'action') return { ...part, value: 'Received' }
-		if (part.type === 'secondary' && part.value.toLowerCase() === 'to')
+		if (part.type === 'text' && part.value.toLowerCase() === 'to')
 			return { ...part, value: 'from' }
 		if (part.type === 'account' && sender) return { ...part, value: sender }
 		return part

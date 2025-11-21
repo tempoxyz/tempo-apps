@@ -129,8 +129,8 @@ export function Receipt(props: Receipt.Props) {
 								>
 									<div className="flex flex-col gap-[8px]">
 										<div className="flex flex-row justify-between items-start gap-[10px]">
-											<div className="flex flex-row items-start gap-[4px] grow min-w-0">
-												<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 leading-[24px]"></div>
+											<div className="flex flex-row items-start gap-[4px] grow min-w-0 text-tertiary">
+												<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 leading-[24px] min-w-[20px]"></div>
 												<EventDescription event={event} />
 											</div>
 											<div className="flex items-center text-right shrink-0 leading-[24px]">
@@ -150,13 +150,30 @@ export function Receipt(props: Receipt.Props) {
 										</div>
 										{event.note && (
 											<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
-												<div className="border-l border-base-border h-[20px] shrink-0" />
-												<span
-													className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
-													title={event.note}
-												>
-													{event.note}
-												</span>
+												<div className="border-l border-base-border pl-[10px]">
+													{typeof event.note === 'string' ? (
+														<span
+															className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
+															title={event.note}
+														>
+															{event.note}
+														</span>
+													) : (
+														<div className="flex flex-col gap-1 text-secondary text-[13px]">
+															{event.note.map(([label, part], index) => {
+																const key = `${label}${index}`
+																return (
+																	<div key={key} className="flex gap-2">
+																		<div className="text-tertiary">
+																			{label}:
+																		</div>
+																		<EventDescription.Part part={part} />
+																	</div>
+																)
+															})}
+														</div>
+													)}
+												</div>
 											</div>
 										)}
 									</div>
