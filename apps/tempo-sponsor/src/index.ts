@@ -76,7 +76,8 @@ export default {
 		try {
 			const client = createSponsorClient(env)
 
-			const requestData = (await request.json()) as any
+			const requestData =
+				(await request.json()) as RpcRequest.from.Options<string>
 			const rpcRequest = RpcRequest.from(requestData)
 
 			// 1. Validate request
