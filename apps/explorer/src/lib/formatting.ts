@@ -152,8 +152,6 @@ export namespace PriceFormatter {
 					format?: 'short' | 'full'
 			  },
 	) {
-		if (Number(value) > 0 && Number(value) < 0.01) return '<$0.01'
-
 		const options =
 			typeof decimalsOrOptions === 'number'
 				? { decimals: decimalsOrOptions }
@@ -162,13 +160,16 @@ export namespace PriceFormatter {
 		options.format ??= 'full'
 		options.decimals ??= 0
 
+		const normalizedValue =
+			typeof value === 'number'
+				? value
+				: Number(Value.format(BigInt(value), options.decimals))
+
+		if (normalizedValue > 0 && normalizedValue < 0.01) return '<$0.01'
+
 		const formatter = options.format === 'short' ? numberIntlShort : numberIntl
 
-		return formatter.format(
-			typeof value === 'number'
-				? value // ignore decimals when value is a number
-				: Number(Value.format(BigInt(value), options.decimals)),
-		)
+		return formatter.format(normalizedValue)
 	}
 
 	/** @internal */
