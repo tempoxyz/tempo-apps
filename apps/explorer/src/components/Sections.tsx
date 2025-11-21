@@ -175,7 +175,7 @@ export namespace Sections {
 
 		return (
 			<div className="flex flex-col h-full min-h-0">
-				<div className="rounded-t-lg relative w-full">
+				<div className="rounded-t-lg relative w-full overflow-x-auto">
 					<ClientOnly>
 						{isPending && (
 							<>
@@ -186,7 +186,7 @@ export namespace Sections {
 							</>
 						)}
 					</ClientOnly>
-					<table className="w-full border-collapse text-[14px] rounded-t-[2px]">
+					<table className="w-full border-collapse text-[14px] rounded-t-[2px] min-w-max">
 						<thead>
 							<tr className="border-dashed border-b border-card-border text-[13px] text-tertiary">
 								{columns.map((column, index) => {
@@ -219,9 +219,10 @@ export namespace Sections {
 										return (
 											<td
 												key={key}
-												className={`px-[10px] first-of-type:pl-[16px] last-of-type:pr-[16px] py-[12px] text-primary align-middle ${
-													align === 'end' ? 'text-right' : 'text-left'
-												}`}
+												className={cx(
+													'px-[10px] first-of-type:pl-[16px] last-of-type:pr-[16px] py-[12px] text-primary align-middle whitespace-nowrap',
+													align === 'end' ? 'text-right' : 'text-left',
+												)}
 											>
 												{cell}
 											</td>
