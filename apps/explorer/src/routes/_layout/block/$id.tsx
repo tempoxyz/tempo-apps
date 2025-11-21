@@ -88,22 +88,6 @@ export const Route = createFileRoute('/_layout/block/$id')({
 			} satisfies BlockIdentifier
 		}
 
-		const _parsedNumber = Number(id)
-		if (Number.isSafeInteger(parsedNumber))
-			return {
-				kind: 'number',
-				blockNumber: BigInt(parsedNumber),
-			} satisfies BlockIdentifier
-
-		throw notFound()
-		if (isHex(id)) {
-			Hex.assert(id)
-			return {
-				kind: 'hash',
-				blockHash: id as Hex.Hex,
-			} satisfies BlockIdentifier
-		}
-
 		const parsedNumber = Number(id)
 		if (Number.isSafeInteger(parsedNumber))
 			return {
