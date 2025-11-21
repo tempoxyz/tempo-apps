@@ -157,7 +157,6 @@ export namespace Pagination {
 		totalItems: number
 		itemsLabel: string
 		isPending: boolean
-		onPageChange?: ((page: number) => void) | undefined
 		compact?: boolean
 	}
 
