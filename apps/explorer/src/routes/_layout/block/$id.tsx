@@ -1,17 +1,25 @@
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { Hex, Value } from 'ox'
 import * as React from 'react'
+import { Abis } from 'tempo.ts/viem'
 import type { Block as BlockType } from 'viem'
-import { isHex } from 'viem'
+import { decodeFunctionData, isHex, zeroAddress } from 'viem'
 import { useBlock, useChains, useWatchBlockNumber } from 'wagmi'
-
+import { getTransactionReceiptQueryOptions } from 'wagmi/query'
 import { Address as AddressLink } from '#components/Address.tsx'
+import { EventDescription } from '#components/EventDescription'
 import { NotFound } from '#components/NotFound.tsx'
 import { cx } from '#cva.config.ts'
-import { HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
 import { useCopy } from '#lib/hooks.ts'
+import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
+import { TokenMetadata } from '#lib/token-metadata.ts'
+import { config, queryClient } from '#wagmi.config.ts'
 import ChevronDown from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
+
+const combinedAbi = Object.values(Abis).flat()
 
 type BlockIdentifier =
 	| { kind: 'hash'; blockHash: Hex.Hex }
@@ -311,6 +319,51 @@ interface BlockSummaryCardProps {
 function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 	const { transactions, isLoading, decimals, symbol } = props
 
+	const transactionHashes = React.useMemo(
+		() => transactions.map((transaction) => transaction.hash),
+		[transactions],
+	)
+
+	const { data: knownEventsByHash = {}, isFetching: isFetchingKnownEvents } =
+		useQuery({
+			queryKey: ['block-known-events', transactionHashes],
+			enabled: transactions.length > 0,
+			staleTime: 30_000,
+			queryFn: async () => {
+				const entries = await Promise.all(
+					transactions.map(async (transaction) => {
+						if (!transaction?.hash)
+							return [transaction.hash ?? 'unknown', []] as const
+
+						try {
+							const receipt = await queryClient.fetchQuery(
+								getTransactionReceiptQueryOptions(config, {
+									hash: transaction.hash,
+								}),
+							)
+							const tokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
+							const events = parseKnownEvents(receipt, {
+								transaction,
+								tokenMetadata,
+							})
+
+							return [transaction.hash, events] as const
+						} catch (error) {
+							console.error('Failed to load transaction description', {
+								hash: transaction.hash,
+								error,
+							})
+							return [transaction.hash, []] as const
+						}
+					}),
+				)
+
+				return Object.fromEntries(
+					entries.filter(([hash]) => Boolean(hash)),
+				) as Record<Hex.Hex, KnownEvent[]>
+			},
+		})
+
 	const displayRows: Array<BlockTransaction | undefined> =
 		transactions.length > 0
 			? transactions
@@ -393,6 +446,10 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 								!isPlaceholder && transaction.value > 0n
 									? 'text-base-content-positive'
 									: 'text-primary'
+							const knownEvents =
+								!isPlaceholder && transaction.hash
+									? knownEventsByHash[transaction.hash]
+									: undefined
 
 							return (
 								<tr
@@ -407,6 +464,8 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 											<TransactionDescription
 												transaction={transaction}
 												amountDisplay={amountDisplay}
+												knownEvents={knownEvents}
+												isLoading={isFetchingKnownEvents}
 											/>
 										) : (
 											<span className="text-tertiary">Loading…</span>
@@ -439,7 +498,74 @@ interface BlockTransactionsCardProps {
 }
 
 function TransactionDescription(props: TransactionDescriptionProps) {
-	const { transaction, amountDisplay } = props
+	const { transaction, amountDisplay, knownEvents, isLoading } = props
+
+	const decodedCall = React.useMemo(() => {
+		const data = transaction.input
+		if (!data || data === '0x') return undefined
+		try {
+			return decodeFunctionData({ abi: combinedAbi, data })
+		} catch {
+			return undefined
+		}
+	}, [transaction.input])
+
+	const selector = transaction.input?.slice(0, 10)
+
+	const { title, subtitle } = React.useMemo(() => {
+		if (!decodedCall)
+			return {
+				title: selector ?? 'Call',
+				subtitle: undefined,
+			}
+
+		if (decodedCall.functionName === 'finalizeStreams') {
+			const ts = decodedCall.args?.[0]
+			const asBigInt = typeof ts === 'bigint' ? ts : undefined
+			return {
+				title: 'Finalize reward streams',
+				subtitle:
+					asBigInt !== undefined
+						? `at ${DateFormatter.format(asBigInt)} (unix ${asBigInt})`
+						: undefined,
+			}
+		}
+
+		if (decodedCall.functionName === 'executeBlock') {
+			return {
+				title: 'Execute orderbook block',
+				subtitle: 'Settle stablecoin exchange batch',
+			}
+		}
+
+		return {
+			title: decodedCall.functionName
+				? `${decodedCall.functionName}()`
+				: (selector ?? 'Call'),
+			subtitle: undefined,
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [decodedCall?.functionName, decodedCall?.args, selector, decodedCall])
+
+	if (knownEvents && knownEvents.length > 0) {
+		const [firstEvent, ...rest] = knownEvents
+		return (
+			<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
+				<EventDescription
+					event={firstEvent}
+					className="flex flex-row items-center gap-[6px]"
+				/>
+				{rest.length > 0 && (
+					<span className="text-tertiary whitespace-nowrap">
+						+{rest.length} more
+					</span>
+				)}
+			</div>
+		)
+	}
+
+	if (isLoading) return <span className="text-tertiary">Analyzing…</span>
+
 	if (!transaction.to)
 		return (
 			<span className="text-primary">
@@ -452,14 +578,24 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 	if (transaction.value === 0n)
 		return (
-			<span className="text-primary">
-				Call{' '}
-				<AddressLink
-					address={transaction.to}
-					chars={4}
-					className="text-accent font-medium"
-				/>
-			</span>
+			<div className="flex flex-col gap-[2px]">
+				<span className="text-primary">
+					{title}{' '}
+					<AddressLink
+						address={transaction.to}
+						chars={4}
+						className="text-accent font-medium"
+					/>
+					{transaction.from === zeroAddress && (
+						<span className="text-tertiary"> (system)</span>
+					)}
+				</span>
+				{subtitle && (
+					<span className="text-base-content-secondary text-[12px]">
+						{subtitle}
+					</span>
+				)}
+			</div>
 		)
 
 	return (
@@ -481,6 +617,8 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 interface TransactionDescriptionProps {
 	transaction: BlockTransaction
 	amountDisplay: string
+	knownEvents?: KnownEvent[]
+	isLoading: boolean
 }
 
 function BlockSummarySkeleton() {
