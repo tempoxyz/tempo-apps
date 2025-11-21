@@ -1,5 +1,5 @@
-import { type Address, Value } from 'ox'
 import { Link } from '@tanstack/react-router'
+import { type Address, Value } from 'ox'
 import { Hooks } from 'tempo.ts/wagmi'
 import { PriceFormatter } from '#lib/formatting.ts'
 

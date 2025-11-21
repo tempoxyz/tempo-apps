@@ -1,8 +1,8 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
-import { Hex, Address } from 'ox'
+import { type Address, Hex } from 'ox'
 import { Abis } from 'tempo.ts/viem'
-import { encodeAbiParameters, encodeEventTopics, zeroAddress } from 'viem'
 import type { Log, TransactionReceipt } from 'viem'
+import { encodeAbiParameters, encodeEventTopics, zeroAddress } from 'viem'
 import { Receipt } from '#components/Receipt/Receipt'
 import { parseKnownEvents } from '#lib/known-events'
 
@@ -52,16 +52,23 @@ const adminAddress = `0x${'b'.repeat(40)}` as const
 
 const transferWithMemoEvent = Abis.tip20.find(
 	(e) => e.type === 'event' && e.name === 'TransferWithMemo',
-)!
+)
+if (!transferWithMemoEvent) throw new Error()
+
 const supplyCapUpdateEvent = Abis.tip20.find(
 	(e) => e.type === 'event' && e.name === 'SupplyCapUpdate',
-)!
+)
+if (!supplyCapUpdateEvent) throw new Error()
+
 const rewardScheduledEvent = Abis.tip20.find(
 	(e) => e.type === 'event' && e.name === 'RewardScheduled',
-)!
+)
+if (!rewardScheduledEvent) throw new Error()
+
 const policyAdminUpdatedEvent = Abis.tip403Registry.find(
 	(e) => e.type === 'event' && e.name === 'PolicyAdminUpdated',
-)!
+)
+if (!policyAdminUpdatedEvent) throw new Error()
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()

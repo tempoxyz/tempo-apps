@@ -160,12 +160,17 @@ export function Receipt(props: Receipt.Props) {
 														</span>
 													) : (
 														<div className="flex flex-col gap-1 text-secondary text-[13px]">
-															{event.note.map(([label, part], idx) => (
-																<div key={idx} className="flex gap-2">
-																	<div className="text-tertiary">{label}:</div>
-																	<EventDescription.Part part={part} />
-																</div>
-															))}
+															{event.note.map(([label, part], index) => {
+																const key = `${label}${index}`
+																return (
+																	<div key={key} className="flex gap-2">
+																		<div className="text-tertiary">
+																			{label}:
+																		</div>
+																		<EventDescription.Part part={part} />
+																	</div>
+																)
+															})}
 														</div>
 													)}
 												</div>

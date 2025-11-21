@@ -1,8 +1,8 @@
-import { Value, type Address as AddressType } from 'ox'
 import { Link } from '@tanstack/react-router'
+import { type Address as AddressType, Value } from 'ox'
 import { isAddressEqual } from 'viem'
 import { cx } from '#cva.config.ts'
-import { HexFormatter, PriceFormatter, DateFormatter } from '#lib/formatting.ts'
+import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
 import type { KnownEvent, KnownEventPart } from '#lib/known-events.ts'
 import { Address } from './Address.tsx'
 import { Amount } from './Receipt/Amount.tsx'
@@ -17,7 +17,11 @@ export function EventDescription(props: EventDescription.Props) {
 			)}
 		>
 			{event.parts.map((part, index) => (
-				<EventDescription.Part key={index} part={part} seenAs={seenAs} />
+				<EventDescription.Part
+					key={`${part.type}${index}`}
+					part={part}
+					seenAs={seenAs}
+				/>
 			))}
 		</div>
 	)
