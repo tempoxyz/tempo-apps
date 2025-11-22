@@ -36,24 +36,26 @@ export function ExploreInput(props: ExploreInput.Props) {
 			ref={formRef}
 			onSubmit={(event) => {
 				event.preventDefault()
-				if (!formRef.current) return
+				if (!formRef.current || disabled) return
+
 				const data = new FormData(formRef.current)
-				let value = data.get('value')
-				if (typeof value !== 'string') return
-				value = value.trim()
-				if (isAddress(value)) {
-					onActivate?.({ type: 'address', value })
+				let formValue = data.get('value')
+				if (!formValue || typeof formValue !== 'string') return
+
+				formValue = formValue.trim()
+				if (isAddress(formValue)) {
+					onActivate?.({ type: 'address', value: formValue })
 					return
 				}
-				if (isHash(value)) {
-					onActivate?.({ type: 'hash', value })
+				if (isHash(formValue)) {
+					onActivate?.({ type: 'hash', value: formValue })
 					return
 				}
-				if (Number.isSafeInteger(Number(value))) {
-					onActivate?.({ type: 'block', value })
+				if (Number.isSafeInteger(Number(formValue))) {
+					onActivate?.({ type: 'block', value: formValue })
 					return
 				}
-				onActivate?.({ type: 'text', value })
+				onActivate?.({ type: 'text', value: formValue })
 			}}
 			className="relative w-full max-w-[448px]"
 		>
