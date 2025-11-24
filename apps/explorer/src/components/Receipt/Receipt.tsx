@@ -204,7 +204,23 @@ export function Receipt(props: Receipt.Props) {
 											<span className="text-tertiary">
 												Fee{' '}
 												{item.symbol && (
-													<span className="text-positive">({item.symbol})</span>
+													<span>
+														(
+														{item.token ? (
+															<Link
+																to="/token/$address"
+																params={{ address: item.token }}
+																className="text-base-content-positive press-down"
+															>
+																{item.symbol}
+															</Link>
+														) : (
+															<span className="text-base-content-positive">
+																{item.symbol}
+															</span>
+														)}
+														)
+													</span>
 												)}
 											</span>
 											<div className="flex items-center gap-1">
