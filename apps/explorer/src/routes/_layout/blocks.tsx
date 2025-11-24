@@ -9,10 +9,15 @@ import type { Block } from 'viem'
 import { useBlock, useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { Pagination } from '#components/Pagination'
 import { cx } from '#cva.config'
 import { DateFormatter, HexFormatter } from '#lib/formatting'
 import { config } from '#wagmi.config'
+import ChevronFirst from '~icons/lucide/chevron-first'
+import ChevronLast from '~icons/lucide/chevron-last'
+import ChevronLeft from '~icons/lucide/chevron-left'
+import ChevronRight from '~icons/lucide/chevron-right'
+import Pause from '~icons/lucide/pause'
+import Play from '~icons/lucide/play'
 
 const BLOCKS_PER_PAGE = 12
 
@@ -20,17 +25,19 @@ export const Route = createFileRoute('/_layout/blocks')({
 	component: BlocksPage,
 	validateSearch: z.object({
 		page: z.optional(z.number()),
+		live: z.optional(z.boolean()),
 	}).parse,
 })
 
 function BlocksPage() {
-	const { page = 1 } = Route.useSearch()
+	const { page = 1, live = true } = Route.useSearch()
 	const [latestBlockNumber, setLatestBlockNumber] = React.useState<bigint>()
 	const queryClient = useQueryClient()
 
 	// Watch for new blocks in realtime
 	useWatchBlockNumber({
 		pollingInterval: 1000,
+		enabled: live,
 		onBlockNumber: (blockNumber) => {
 			setLatestBlockNumber(blockNumber)
 			// Invalidate queries when on first page to show new blocks
@@ -116,17 +123,100 @@ function BlocksPage() {
 					</div>
 				</div>
 
-				{/* Pagination */}
-				{totalPages > 1 && (
-					<Pagination
-						page={page}
-						totalPages={totalPages}
-						totalItems={totalBlocks}
-						itemsLabel="blocks"
-						isPending={isLoading}
-						compact
-					/>
-				)}
+				{/* Footer with pagination and live toggle */}
+				<div className="flex items-center justify-between border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
+					{/* Pagination controls */}
+					<div className="flex items-center gap-[6px]">
+						<Link
+							to="."
+							resetScroll={false}
+							search={{ page: 1 }}
+							disabled={page <= 1 || isLoading}
+							className={cx(
+								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+							)}
+							aria-label="First page"
+						>
+							<ChevronFirst className="size-[14px]" />
+						</Link>
+						<Link
+							to="."
+							resetScroll={false}
+							search={(prev) => ({ page: (prev?.page ?? 1) - 1 })}
+							disabled={page <= 1 || isLoading}
+							className={cx(
+								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+							)}
+							aria-label="Previous page"
+						>
+							<ChevronLeft className="size-[14px]" />
+						</Link>
+
+						<span className="text-primary font-medium tabular-nums px-[4px]">
+							Page {page.toLocaleString()} of {totalPages.toLocaleString()}
+						</span>
+
+						<Link
+							to="."
+							resetScroll={false}
+							search={(prev) => ({ page: (prev?.page ?? 1) + 1 })}
+							disabled={page >= totalPages || isLoading}
+							className={cx(
+								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+							)}
+							aria-label="Next page"
+						>
+							<ChevronRight className="size-[14px]" />
+						</Link>
+						<Link
+							to="."
+							resetScroll={false}
+							search={{ page: totalPages }}
+							disabled={page >= totalPages || isLoading}
+							className={cx(
+								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+							)}
+							aria-label="Last page"
+						>
+							<ChevronLast className="size-[14px]" />
+						</Link>
+					</div>
+
+					{/* Live toggle and blocks count */}
+					<div className="flex items-center gap-[12px]">
+						<Link
+							to="."
+							resetScroll={false}
+							search={(prev) => ({ ...prev, live: !live })}
+							className={cx(
+								'flex items-center gap-[6px] px-[10px] py-[5px] rounded-[6px] text-[12px] font-medium transition-colors',
+								live
+									? 'bg-accent/10 text-accent hover:bg-accent/20'
+									: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
+							)}
+							title={live ? 'Pause live updates' : 'Resume live updates'}
+						>
+							{live ? (
+								<>
+									<Pause className="size-[12px]" />
+									<span>Live</span>
+								</>
+							) : (
+								<>
+									<Play className="size-[12px]" />
+									<span>Paused</span>
+								</>
+							)}
+						</Link>
+
+						<div className="space-x-[8px]">
+							<span className="text-primary tabular-nums">
+								{totalBlocks.toLocaleString()}
+							</span>
+							<span className="text-tertiary">blocks</span>
+						</div>
+					</div>
+				</div>
 			</section>
 		</div>
 	)
@@ -136,10 +226,6 @@ function BlockRow({ block }: { block: Block }) {
 	const txCount = block.transactions?.length ?? 0
 	const blockNumber = block.number?.toString() ?? '0'
 	const blockHash = block.hash ?? '0x'
-
-	const { text: relativeTime, fullDate } = DateFormatter.formatRelativeTime(
-		block.timestamp,
-	)
 
 	return (
 		<div className="grid grid-cols-[100px_180px_1fr_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 transition-colors">
@@ -163,9 +249,22 @@ function BlockRow({ block }: { block: Block }) {
 				</Link>
 			</div>
 			<div className="text-right text-secondary">
-				<span title={fullDate}>{relativeTime}</span>
+				<RelativeTime timestamp={block.timestamp} />
 			</div>
 			<div className="text-right text-secondary">{txCount}</div>
 		</div>
 	)
+}
+
+function RelativeTime({ timestamp }: { timestamp: bigint }) {
+	const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
+
+	React.useEffect(() => {
+		const interval = setInterval(forceUpdate, 1000)
+		return () => clearInterval(interval)
+	}, [])
+
+	const { text, fullDate } = DateFormatter.formatRelativeTime(timestamp)
+
+	return <span title={fullDate}>{text}</span>
 }
