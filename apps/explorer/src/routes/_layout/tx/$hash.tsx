@@ -69,7 +69,6 @@ async function loader({
 			lineItems,
 			receipt,
 			timestampFormatted,
-			getTokenMetadata,
 			transaction,
 		}
 	} catch (error) {
