@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
-import { Fragment, useState } from 'react'
+import { useState } from 'react'
 import { EventDescription } from '#components/EventDescription'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
@@ -197,36 +197,35 @@ export function Receipt(props: Receipt.Props) {
 									})
 									const isSponsored = item.payer && item.payer !== sender
 									return (
-										<Fragment
+										<div
 											key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
+											className="flex flex-wrap gap-2 items-center justify-between"
 										>
-											{isSponsored && (
-												<div className="flex items-center gap-1 text-tertiary">
-													<span>Paid by</span>
-													<Link
-														to={'/account/$address'}
-														// biome-ignore lint/style/noNonNullAssertion: _
-														params={{ address: item.payer! }}
-														className="text-accent press-down"
-														title={item.payer}
-													>
-														{/* biome-ignore lint/style/noNonNullAssertion: _ */}
-														{HexFormatter.shortenHex(item.payer!)}
-													</Link>
-												</div>
-											)}
-											<div className="flex flex-wrap gap-2 items-center justify-between">
-												<span className="text-tertiary">
-													Fee{' '}
-													{item.symbol && (
-														<span className="text-positive">
-															({item.symbol})
-														</span>
-													)}
-												</span>
-												<span className="text-right">{formattedAmount}</span>
+											<span className="text-tertiary">
+												Fee{' '}
+												{item.symbol && (
+													<span className="text-positive">({item.symbol})</span>
+												)}
+											</span>
+											<div className="flex items-center gap-1">
+												{isSponsored && (
+													<>
+														<Link
+															to={'/account/$address'}
+															// biome-ignore lint/style/noNonNullAssertion: _
+															params={{ address: item.payer! }}
+															className="text-accent press-down"
+															title={item.payer}
+														>
+															{/* biome-ignore lint/style/noNonNullAssertion: _ */}
+															{HexFormatter.shortenHex(item.payer!)}
+														</Link>
+														<span className="text-tertiary">paid</span>
+													</>
+												)}
+												<span>{formattedAmount}</span>
 											</div>
-										</Fragment>
+										</div>
 									)
 								})
 							: hasFee && (
