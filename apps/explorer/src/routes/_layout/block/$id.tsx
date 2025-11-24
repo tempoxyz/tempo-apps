@@ -398,10 +398,12 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 									hash: transaction.hash,
 								}),
 							)
-							const tokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
+							const getTokenMetadata = await TokenMetadata.fromLogs(
+								receipt.logs,
+							)
 							const events = parseKnownEvents(receipt, {
 								transaction,
-								tokenMetadata,
+								getTokenMetadata,
 							})
 
 							return [transaction.hash, events] as const

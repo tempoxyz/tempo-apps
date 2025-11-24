@@ -8,13 +8,13 @@ import {
 	type TransactionReceipt,
 	zeroAddress,
 } from 'viem'
+import type { TokenMetadata } from './token-metadata'
 
 const abi = Object.values(Abis).flat()
 const ZERO_ADDRESS = zeroAddress
 const FEE_MANAGER = Addresses.feeManager
 const STABLECOIN_EXCHANGE = Addresses.stablecoinExchange
 
-type ParsedEvent = ReturnType<typeof parseEventLogs<typeof abi>>[number]
 type FeeTransferEvent = {
 	amount: bigint
 	token: Address.Address
@@ -27,371 +27,591 @@ export function isFeeTransferEvent(
 	return event.type === 'fee transfer'
 }
 
-function createAmount(
-	value: bigint,
-	token: Address.Address,
-	tokenMetadata?: Map<
-		Address.Address,
-		{
-			decimals: number
-			symbol: string
-		}
-	>,
-): Amount {
-	const metadata = tokenMetadata?.get(token)
-	const amount: Amount = { token, value }
-	if (metadata) {
-		amount.decimals = metadata.decimals
-		amount.symbol = metadata.symbol
-	}
-	return amount
+type ParsedEvent = ReturnType<typeof parseEventLogs<typeof abi>>[number]
+
+function createDetectors(
+	createAmount: (value: bigint, token: Address.Address) => Amount,
+	getTokenMetadata?: TokenMetadata.GetFn,
+) {
+	return {
+		tip20(event: ParsedEvent) {
+			const { eventName, args, address } = event
+
+			if (eventName === 'Transfer' || eventName === 'TransferWithMemo')
+				return Address.isEqual(args.to, FEE_MANAGER) &&
+					!Address.isEqual(args.from, ZERO_ADDRESS)
+					? {
+							type: 'fee transfer',
+							amount: args.amount,
+							token: address,
+						}
+					: {
+							type: 'send',
+							note:
+								'memo' in args
+									? Hex.toString(Hex.trimLeft(args.memo))
+									: undefined,
+							parts: [
+								{ type: 'action', value: 'Send' },
+								{
+									type: 'amount',
+									value: createAmount(args.amount, address),
+								},
+								{ type: 'text', value: 'to' },
+								{ type: 'account', value: args.to },
+							],
+							meta: { from: args.from, to: args.to },
+						}
+
+			if (eventName === 'Mint')
+				// Only handle TIP20 token mint, not liquidity pool mint
+				return Address.isEqual(address, FEE_MANAGER) || !('amount' in args)
+					? null
+					: {
+							type: 'mint',
+							parts: [
+								{ type: 'action', value: 'Mint' },
+								{
+									type: 'amount',
+									value: createAmount(args.amount, address),
+								},
+								{ type: 'text', value: 'to' },
+								{ type: 'account', value: args.to },
+							],
+						}
+
+			if (eventName === 'Burn')
+				return 'amount' in args
+					? {
+							type: 'burn',
+							parts: [
+								{ type: 'action', value: 'Burn' },
+								{
+									type: 'amount',
+									value: createAmount(args.amount, address),
+								},
+								{ type: 'text', value: 'from' },
+								{ type: 'account', value: args.from },
+							],
+						}
+					: null
+
+			if (eventName === 'RoleMembershipUpdated')
+				return {
+					type: args.hasRole ? 'grant role' : 'revoke role',
+					parts: [
+						{
+							type: 'action',
+							value: args.hasRole ? 'Grant Role' : 'Revoke Role',
+						},
+						{ type: 'hex', value: args.role },
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: args.account },
+					],
+				}
+
+			if (eventName === 'PauseStateUpdate')
+				return {
+					type: args.isPaused ? 'pause' : 'unpause',
+					parts: [
+						{
+							type: 'action',
+							value: args.isPaused ? 'Pause Transfers' : 'Resume Transfers',
+						},
+						{ type: 'text', value: 'for' },
+						{ type: 'token', value: { address } },
+					],
+				}
+
+			if (eventName === 'SupplyCapUpdate') {
+				const metadata = getTokenMetadata?.(address)
+				return {
+					type: 'supply cap update',
+					parts: [
+						{ type: 'action', value: 'Supply Cap Update' },
+						{ type: 'text', value: 'for' },
+						{
+							type: 'token',
+							value: { address, symbol: metadata?.symbol },
+						},
+					],
+					note: [
+						[
+							'New',
+							{
+								type: 'number',
+								value:
+									metadata?.decimals === undefined
+										? args.newSupplyCap
+										: [args.newSupplyCap, metadata.decimals],
+							},
+						],
+					],
+				}
+			}
+
+			if (eventName === 'RewardScheduled') {
+				const metadata = getTokenMetadata?.(address)
+				return {
+					type: 'reward scheduled',
+					parts: [
+						{ type: 'action', value: 'Reward Stream' },
+						{ type: 'text', value: 'created for' },
+						{
+							type: 'token',
+							value: { address, symbol: metadata?.symbol },
+						},
+					],
+					note: [
+						['ID', { type: 'text', value: String(args.id) }],
+						['Funder', { type: 'account', value: args.funder }],
+						[
+							'Amount',
+							{
+								type: 'number',
+								value:
+									metadata?.decimals === undefined
+										? args.amount
+										: [args.amount, metadata.decimals],
+							},
+						],
+						['Duration', { type: 'duration', value: args.durationSeconds }],
+					],
+				}
+			}
+
+			if (eventName === 'RewardCanceled') {
+				const metadata = getTokenMetadata?.(address)
+				return {
+					type: 'reward canceled',
+					parts: [
+						{ type: 'action', value: 'Cancel Reward Stream' },
+						{ type: 'text', value: 'for' },
+						{
+							type: 'token',
+							value: { address, symbol: metadata?.symbol },
+						},
+					],
+					note: [
+						['ID', { type: 'text', value: String(args.id) }],
+						['Funder', { type: 'account', value: args.funder }],
+						[
+							'Refund',
+							{
+								type: 'number',
+								value:
+									metadata?.decimals === undefined
+										? args.refund
+										: [args.refund, metadata.decimals],
+							},
+						],
+					],
+				}
+			}
+
+			if (eventName === 'RewardRecipientSet')
+				return {
+					type: 'reward recipient set',
+					parts: [
+						{ type: 'action', value: 'Set Reward Recipient' },
+						{ type: 'account', value: args.recipient },
+						{ type: 'text', value: 'for holder' },
+						{ type: 'account', value: args.holder },
+					],
+				}
+
+			if (eventName === 'Approval')
+				return {
+					type: 'approval',
+					parts: [
+						{ type: 'action', value: 'Approve' },
+						{
+							type: 'amount',
+							value: createAmount(args.amount, address),
+						},
+						{ type: 'text', value: 'for spender' },
+						{ type: 'account', value: args.spender },
+					],
+				}
+
+			if (eventName === 'BurnBlocked')
+				return {
+					type: 'burn blocked',
+					parts: [
+						{ type: 'action', value: 'Burn Blocked' },
+						{
+							type: 'amount',
+							value: createAmount(args.amount, address),
+						},
+						{ type: 'text', value: 'from' },
+						{ type: 'account', value: args.from },
+					],
+				}
+
+			if (eventName === 'TransferPolicyUpdate')
+				return {
+					type: 'transfer policy update',
+					parts: [
+						{ type: 'action', value: 'Update Transfer Policy' },
+						{ type: 'text', value: `#${args.newPolicyId}` },
+						{ type: 'text', value: 'for' },
+						{ type: 'token', value: { address } },
+					],
+					note: [['Updater', { type: 'account', value: args.updater }]],
+				}
+
+			if (eventName === 'NextQuoteTokenSet') {
+				const metadata = getTokenMetadata?.(address)
+				return {
+					type: 'next quote token set',
+					parts: [
+						{ type: 'action', value: 'Set Next Quote Token' },
+						{ type: 'token', value: { address: args.nextQuoteToken } },
+						{ type: 'text', value: 'for' },
+						{
+							type: 'token',
+							value: { address, symbol: metadata?.symbol },
+						},
+					],
+					note: [['Updater', { type: 'account', value: args.updater }]],
+				}
+			}
+
+			if (eventName === 'QuoteTokenUpdate') {
+				const metadata = getTokenMetadata?.(address)
+				return {
+					type: 'quote token update',
+					parts: [
+						{ type: 'action', value: 'Update Quote Token' },
+						{ type: 'token', value: { address: args.newQuoteToken } },
+						{ type: 'text', value: 'for' },
+						{
+							type: 'token',
+							value: { address, symbol: metadata?.symbol },
+						},
+					],
+					note: [['Updater', { type: 'account', value: args.updater }]],
+				}
+			}
+
+			if (eventName === 'RoleAdminUpdated')
+				return {
+					type: 'role admin updated',
+					parts: [
+						{ type: 'action', value: 'Update Role Admin' },
+						{ type: 'hex', value: args.role },
+						{ type: 'text', value: 'to' },
+						{ type: 'hex', value: args.newAdminRole },
+					],
+					note: [['Sender', { type: 'account', value: args.sender }]],
+				}
+
+			return null
+		},
+
+		tip20Factory(event: ParsedEvent) {
+			const { eventName, args, address } = event
+
+			if (eventName === 'TokenCreated')
+				return {
+					type: 'create token',
+					parts: [
+						{ type: 'action', value: 'Create Token' },
+						{ type: 'token', value: { address, symbol: args.symbol } },
+					],
+				}
+
+			return null
+		},
+
+		stablecoinExchange(event: ParsedEvent) {
+			const { eventName, args, address } = event
+
+			if (eventName === 'Mint')
+				return !Address.isEqual(address, FEE_MANAGER) &&
+					'amountUserToken' in args &&
+					'amountValidatorToken' in args &&
+					args.amountUserToken > 0n &&
+					args.amountValidatorToken > 0n
+					? {
+							type: 'mint',
+							parts: [
+								{ type: 'action', value: 'Add Liquidity' },
+								{
+									type: 'amount',
+									value: createAmount(args.amountUserToken, args.userToken),
+								},
+								{ type: 'text', value: 'and' },
+								{
+									type: 'amount',
+									value: createAmount(
+										args.amountValidatorToken,
+										args.validatorToken,
+									),
+								},
+							],
+						}
+					: null
+
+			if (eventName === 'OrderPlaced')
+				return {
+					type: 'order placed',
+					parts: [
+						{ type: 'action', value: `Limit ${args.isBid ? 'Buy' : 'Sell'}` },
+						{
+							type: 'amount',
+							value: createAmount(args.amount, args.token),
+						},
+						{ type: 'text', value: 'at tick' },
+						{ type: 'tick', value: args.tick },
+					],
+				}
+
+			if (eventName === 'FlipOrderPlaced')
+				return {
+					type: 'flip order placed',
+					parts: [
+						{ type: 'action', value: `Flip ${args.isBid ? 'Buy' : 'Sell'}` },
+						{
+							type: 'amount',
+							value: createAmount(args.amount, args.token),
+						},
+						{ type: 'text', value: 'at tick' },
+						{ type: 'tick', value: args.tick },
+					],
+				}
+
+			if (eventName === 'OrderFilled')
+				return {
+					type: 'order filled',
+					parts: [
+						{
+							type: 'action',
+							value: args.partialFill ? 'Partial Fill' : 'Complete Fill',
+						},
+						{ type: 'text', value: String(args.amountFilled) },
+					],
+				}
+
+			if (eventName === 'OrderCancelled')
+				return {
+					type: 'order cancelled',
+					parts: [{ type: 'action', value: 'Cancel Order' }],
+				}
+
+			if (eventName === 'PairCreated')
+				return {
+					type: 'create pair',
+					parts: [
+						{ type: 'action', value: 'Create Pair' },
+						{ type: 'token', value: { address: args.base } },
+						{ type: 'text', value: '/' },
+						{ type: 'token', value: { address: args.quote } },
+					],
+				}
+
+			return null
+		},
+
+		tip403Registry(event: ParsedEvent) {
+			const { eventName, args } = event
+
+			if (eventName === 'WhitelistUpdated')
+				return {
+					type: 'whitelist',
+					parts: [
+						{ type: 'action', value: 'Whitelist' },
+						{ type: 'account', value: args.account },
+						{ type: 'text', value: 'on Policy' },
+						{ type: 'text', value: `#${args.policyId}` },
+					],
+				}
+
+			if (eventName === 'BlacklistUpdated')
+				return {
+					type: 'blacklist',
+					parts: [
+						{ type: 'action', value: 'Blacklist' },
+						{ type: 'account', value: args.account },
+						{ type: 'text', value: 'on Policy' },
+						{ type: 'text', value: `#${args.policyId}` },
+					],
+				}
+
+			if (eventName === 'PolicyAdminUpdated')
+				return {
+					type: 'policy admin updated',
+					parts: [
+						{ type: 'action', value: 'New Admin' },
+						{ type: 'account', value: args.admin },
+						{ type: 'text', value: 'on Policy' },
+						{ type: 'text', value: `#${args.policyId}` },
+					],
+					note: [
+						// ['Registry', { type: 'account', value: TODO }],
+						['Updater', { type: 'account', value: args.updater }],
+					],
+				}
+
+			if (eventName === 'PolicyCreated')
+				return {
+					type: 'policy created',
+					parts: [
+						{ type: 'action', value: 'Create Policy' },
+						{ type: 'text', value: `#${args.policyId}` },
+					],
+				}
+
+			return null
+		},
+
+		feeManager(event: ParsedEvent) {
+			const { eventName, args } = event
+
+			if (eventName === 'UserTokenSet')
+				return {
+					type: 'user token set',
+					parts: [
+						{ type: 'action', value: 'Set Fee Token' },
+						{ type: 'token', value: { address: args.token } },
+						{ type: 'text', value: 'for' },
+						{ type: 'account', value: args.user },
+					],
+				}
+
+			if (eventName === 'ValidatorTokenSet')
+				return {
+					type: 'validator token set',
+					parts: [
+						{ type: 'action', value: 'Set Fee Token' },
+						{ type: 'token', value: { address: args.token } },
+						{ type: 'text', value: 'for' },
+						{ type: 'account', value: args.validator },
+					],
+				}
+
+			return null
+		},
+
+		nonce(event: ParsedEvent) {
+			const { eventName, args } = event
+
+			if (eventName === 'NonceIncremented')
+				return {
+					type: 'nonce incremented',
+					parts: [
+						{ type: 'action', value: 'Increment Nonce' },
+						{ type: 'account', value: args.account },
+					],
+					note: [
+						['Key', { type: 'text', value: String(args.nonceKey) }],
+						['New Nonce', { type: 'text', value: String(args.newNonce) }],
+					],
+				}
+
+			if (eventName === 'ActiveKeyCountChanged')
+				return {
+					type: 'active key count changed',
+					parts: [
+						{ type: 'action', value: 'Key Count Changed' },
+						{ type: 'account', value: args.account },
+					],
+					note: [['New Count', { type: 'text', value: String(args.newCount) }]],
+				}
+
+			return null
+		},
+
+		feeAmm(event: ParsedEvent) {
+			const { eventName, args, address } = event
+
+			if (eventName === 'Mint')
+				return !Address.isEqual(address, FEE_MANAGER) &&
+					'amountUserToken' in args &&
+					'amountValidatorToken' in args
+					? {
+							type: 'mint',
+							parts: [
+								{ type: 'action', value: 'Add Liquidity' },
+								{
+									type: 'amount',
+									value: createAmount(args.amountUserToken, args.userToken),
+								},
+								{ type: 'text', value: 'and' },
+								{
+									type: 'amount',
+									value: createAmount(
+										args.amountValidatorToken,
+										args.validatorToken,
+									),
+								},
+							],
+						}
+					: null
+
+			if (eventName === 'Burn')
+				return 'amountUserToken' in args && 'amountValidatorToken' in args
+					? {
+							type: 'burn',
+							parts: [
+								{ type: 'action', value: 'Remove Liquidity' },
+								{
+									type: 'amount',
+									value: createAmount(args.amountUserToken, args.userToken),
+								},
+								{ type: 'text', value: 'and' },
+								{
+									type: 'amount',
+									value: createAmount(
+										args.amountValidatorToken,
+										args.validatorToken,
+									),
+								},
+							],
+						}
+					: null
+
+			if (eventName === 'RebalanceSwap')
+				return {
+					type: 'rebalance swap',
+					parts: [
+						{ type: 'action', value: 'Rebalance Swap' },
+						{
+							type: 'amount',
+							value: createAmount(args.amountIn, args.userToken),
+						},
+						{ type: 'text', value: 'for' },
+						{
+							type: 'amount',
+							value: createAmount(args.amountOut, args.validatorToken),
+						},
+					],
+				}
+
+			if (eventName === 'FeeSwap')
+				return {
+					type: 'fee swap',
+					parts: [
+						{ type: 'action', value: 'Fee Swap' },
+						{
+							type: 'amount',
+							value: createAmount(args.amountIn, args.userToken),
+						},
+						{ type: 'text', value: 'for' },
+						{
+							type: 'amount',
+							value: createAmount(args.amountOut, args.validatorToken),
+						},
+					],
+				}
+
+			return null
+		},
+	} as const satisfies Record<
+		string,
+		(event: ParsedEvent) => KnownEvent | FeeTransferEvent | null
+	>
 }
-
-export const detectors = {
-	tip20(event, tokenMetadata) {
-		const { eventName, args, address } = event
-
-		if (eventName === 'Transfer' || eventName === 'TransferWithMemo')
-			return Address.isEqual(args.to, FEE_MANAGER) &&
-				!Address.isEqual(args.from, ZERO_ADDRESS)
-				? {
-						type: 'fee transfer',
-						amount: args.amount,
-						token: address,
-					}
-				: {
-						type: 'send',
-						note:
-							'memo' in args
-								? Hex.toString(Hex.trimLeft(args.memo))
-								: undefined,
-						parts: [
-							{ type: 'action', value: 'Send' },
-							{
-								type: 'amount',
-								value: createAmount(args.amount, address, tokenMetadata),
-							},
-							{ type: 'text', value: 'to' },
-							{ type: 'account', value: args.to },
-						],
-						meta: { from: args.from, to: args.to },
-					}
-
-		if (eventName === 'Mint')
-			// Only handle TIP20 token mint, not liquidity pool mint
-			return Address.isEqual(address, FEE_MANAGER) || !('amount' in args)
-				? null
-				: {
-						type: 'mint',
-						parts: [
-							{ type: 'action', value: 'Mint' },
-							{
-								type: 'amount',
-								value: createAmount(args.amount, address, tokenMetadata),
-							},
-							{ type: 'text', value: 'to' },
-							{ type: 'account', value: args.to },
-						],
-					}
-
-		if (eventName === 'Burn')
-			return 'amount' in args
-				? {
-						type: 'burn',
-						parts: [
-							{ type: 'action', value: 'Burn' },
-							{
-								type: 'amount',
-								value: createAmount(args.amount, address, tokenMetadata),
-							},
-							{ type: 'text', value: 'from' },
-							{ type: 'account', value: args.from },
-						],
-					}
-				: null
-
-		if (eventName === 'RoleMembershipUpdated')
-			return {
-				type: args.hasRole ? 'grant role' : 'revoke role',
-				parts: [
-					{
-						type: 'action',
-						value: args.hasRole ? 'Grant Role' : 'Revoke Role',
-					},
-					{ type: 'hex', value: args.role },
-					{ type: 'text', value: 'to' },
-					{ type: 'account', value: args.account },
-				],
-			}
-
-		if (eventName === 'PauseStateUpdate')
-			return {
-				type: args.isPaused ? 'pause' : 'unpause',
-				parts: [
-					{
-						type: 'action',
-						value: args.isPaused ? 'Pause Transfers' : 'Resume Transfers',
-					},
-					{ type: 'text', value: 'for' },
-					{ type: 'token', value: { address } },
-				],
-			}
-
-		if (eventName === 'SupplyCapUpdate') {
-			const metadata = tokenMetadata?.get(address)
-			return {
-				type: 'supply cap update',
-				parts: [
-					{ type: 'action', value: 'Supply Cap Update' },
-					{ type: 'text', value: 'for' },
-					{
-						type: 'token',
-						value: { address, symbol: metadata?.symbol },
-					},
-				],
-				note: [
-					[
-						'New',
-						{
-							type: 'number',
-							value:
-								metadata?.decimals === undefined
-									? args.newSupplyCap
-									: [args.newSupplyCap, metadata.decimals],
-						},
-					],
-				],
-			}
-		}
-
-		if (eventName === 'RewardScheduled') {
-			const metadata = tokenMetadata?.get(address)
-			return {
-				type: 'reward scheduled',
-				parts: [
-					{ type: 'action', value: 'Reward Stream' },
-					{ type: 'text', value: 'created for' },
-					{
-						type: 'token',
-						value: { address, symbol: metadata?.symbol },
-					},
-				],
-				note: [
-					['ID', { type: 'text', value: String(args.id) }],
-					['Funder', { type: 'account', value: args.funder }],
-					[
-						'Amount',
-						{
-							type: 'number',
-							value:
-								metadata?.decimals === undefined
-									? args.amount
-									: [args.amount, metadata.decimals],
-						},
-					],
-					['Duration', { type: 'duration', value: args.durationSeconds }],
-				],
-			}
-		}
-
-		return null
-	},
-
-	tip20Factory(event, _tokenMetadata) {
-		const { eventName, args, address } = event
-
-		if (eventName === 'TokenCreated')
-			return {
-				type: 'create token',
-				parts: [
-					{ type: 'action', value: 'Create Token' },
-					{ type: 'token', value: { address, symbol: args.symbol } },
-				],
-			}
-
-		return null
-	},
-
-	stablecoinExchange(event, tokenMetadata) {
-		const { eventName, args, address } = event
-
-		if (eventName === 'Mint')
-			return !Address.isEqual(address, FEE_MANAGER) &&
-				'amountUserToken' in args &&
-				'amountValidatorToken' in args &&
-				args.amountUserToken > 0n &&
-				args.amountValidatorToken > 0n
-				? {
-						type: 'mint',
-						parts: [
-							{ type: 'action', value: 'Add Liquidity' },
-							{
-								type: 'amount',
-								value: createAmount(
-									args.amountUserToken,
-									args.userToken,
-									tokenMetadata,
-								),
-							},
-							{ type: 'text', value: 'and' },
-							{
-								type: 'amount',
-								value: createAmount(
-									args.amountValidatorToken,
-									args.validatorToken,
-									tokenMetadata,
-								),
-							},
-						],
-					}
-				: null
-
-		if (eventName === 'OrderPlaced')
-			return {
-				type: 'order placed',
-				parts: [
-					{ type: 'action', value: `Limit ${args.isBid ? 'Buy' : 'Sell'}` },
-					{
-						type: 'amount',
-						value: createAmount(args.amount, args.token, tokenMetadata),
-					},
-					{ type: 'text', value: 'at tick' },
-					{ type: 'tick', value: args.tick },
-				],
-			}
-
-		if (eventName === 'FlipOrderPlaced')
-			return {
-				type: 'flip order placed',
-				parts: [
-					{ type: 'action', value: `Flip ${args.isBid ? 'Buy' : 'Sell'}` },
-					{
-						type: 'amount',
-						value: createAmount(args.amount, args.token, tokenMetadata),
-					},
-					{ type: 'text', value: 'at tick' },
-					{ type: 'tick', value: args.tick },
-				],
-			}
-
-		if (eventName === 'OrderFilled')
-			return {
-				type: 'order filled',
-				parts: [
-					{
-						type: 'action',
-						value: args.partialFill ? 'Partial Fill' : 'Complete Fill',
-					},
-					{ type: 'text', value: String(args.amountFilled) },
-				],
-			}
-
-		if (eventName === 'OrderCancelled')
-			return {
-				type: 'order cancelled',
-				parts: [{ type: 'action', value: 'Cancel Order' }],
-			}
-
-		if (eventName === 'PairCreated')
-			return {
-				type: 'create pair',
-				parts: [
-					{ type: 'action', value: 'Create Pair' },
-					{ type: 'token', value: { address: args.base } },
-					{ type: 'text', value: '/' },
-					{ type: 'token', value: { address: args.quote } },
-				],
-			}
-
-		return null
-	},
-
-	tip403Registry(event, _tokenMetadata) {
-		const { eventName, args } = event
-
-		if (eventName === 'WhitelistUpdated')
-			return {
-				type: 'whitelist',
-				parts: [
-					{ type: 'action', value: 'Whitelist' },
-					{ type: 'account', value: args.account },
-					{ type: 'text', value: 'on Policy' },
-					{ type: 'text', value: `#${args.policyId}` },
-				],
-			}
-
-		if (eventName === 'BlacklistUpdated')
-			return {
-				type: 'blacklist',
-				parts: [
-					{ type: 'action', value: 'Blacklist' },
-					{ type: 'account', value: args.account },
-					{ type: 'text', value: 'on Policy' },
-					{ type: 'text', value: `#${args.policyId}` },
-				],
-			}
-
-		if (eventName === 'PolicyAdminUpdated')
-			return {
-				type: 'policy admin updated',
-				parts: [
-					{ type: 'action', value: 'New Admin' },
-					{ type: 'account', value: args.admin },
-					{ type: 'text', value: 'on Policy' },
-					{ type: 'text', value: `#${args.policyId}` },
-				],
-				note: [
-					// ['Registry', { type: 'account', value: TODO }],
-					['Updater', { type: 'account', value: args.updater }],
-				],
-			}
-
-		if (eventName === 'PolicyCreated')
-			return {
-				type: 'policy created',
-				parts: [
-					{ type: 'action', value: 'Create Policy' },
-					{ type: 'text', value: `#${args.policyId}` },
-				],
-			}
-
-		return null
-	},
-
-	feeManager(event, _tokenMetadata) {
-		const { eventName, args } = event
-
-		if (eventName === 'UserTokenSet')
-			return {
-				type: 'user token set',
-				parts: [
-					{ type: 'action', value: 'Set Fee Token' },
-					{ type: 'token', value: { address: args.token } },
-					{ type: 'text', value: 'for' },
-					{ type: 'account', value: args.user },
-				],
-			}
-
-		if (eventName === 'ValidatorTokenSet')
-			return {
-				type: 'validator token set',
-				parts: [
-					{ type: 'action', value: 'Set Fee Token' },
-					{ type: 'token', value: { address: args.token } },
-					{ type: 'text', value: 'for' },
-					{ type: 'account', value: args.validator },
-				],
-			}
-
-		return null
-	},
-} as const satisfies Record<
-	string,
-	(
-		event: ParsedEvent,
-		tokenMetadata?: Map<Address.Address, { decimals: number; symbol: string }>,
-	) => KnownEvent | FeeTransferEvent | null
->
 
 type TransferEventArgs = {
 	from: Address.Address
@@ -489,12 +709,24 @@ export function parseKnownEvents(
 	receipt: TransactionReceipt,
 	options?: {
 		transaction?: TransactionLike
-		tokenMetadata?: Map<Address.Address, { decimals: number; symbol: string }>
+		getTokenMetadata?: TokenMetadata.GetFn
 	},
 ): KnownEvent[] {
 	const { logs } = receipt
 	const events = parseEventLogs({ abi, logs })
-	const tokenMetadata = options?.tokenMetadata
+	const getTokenMetadata = options?.getTokenMetadata
+
+	const createAmount = (value: bigint, token: Address.Address): Amount => {
+		const metadata = getTokenMetadata?.(token)
+		const amount: Amount = { token, value }
+		if (metadata) {
+			amount.decimals = metadata.decimals
+			amount.symbol = metadata.symbol
+		}
+		return amount
+	}
+
+	const detectors = createDetectors(createAmount, getTokenMetadata)
 
 	const feeManagerCall: FeeManagerAddLiquidityCall | undefined = (() => {
 		const transaction = options?.transaction
@@ -635,16 +867,12 @@ export function parseKnownEvents(
 			{ type: 'action', value: 'Add Liquidity' },
 			{
 				type: 'amount',
-				value: createAmount(amountUserToken, userToken, tokenMetadata),
+				value: createAmount(amountUserToken, userToken),
 			},
 			{ type: 'text', value: 'and' },
 			{
 				type: 'amount',
-				value: createAmount(
-					amountValidatorToken,
-					validatorToken,
-					tokenMetadata,
-				),
+				value: createAmount(amountValidatorToken, validatorToken),
 			},
 		]
 
@@ -695,20 +923,12 @@ export function parseKnownEvents(
 							{ type: 'action', value: 'Swap' },
 							{
 								type: 'amount',
-								value: createAmount(
-									args1.amount,
-									event1.address,
-									tokenMetadata,
-								),
+								value: createAmount(args1.amount, event1.address),
 							},
 							{ type: 'text', value: 'for' },
 							{
 								type: 'amount',
-								value: createAmount(
-									args2.amount,
-									event2.address,
-									tokenMetadata,
-								),
+								value: createAmount(args2.amount, event2.address),
 							},
 						],
 					})
@@ -730,11 +950,13 @@ export function parseKnownEvents(
 		const event = dedupedEvents[index]
 
 		const detected =
-			detectors.tip20(event, tokenMetadata) ||
-			detectors.tip20Factory(event, tokenMetadata) ||
-			detectors.stablecoinExchange(event, tokenMetadata) ||
-			detectors.tip403Registry(event, tokenMetadata) ||
-			detectors.feeManager(event, tokenMetadata)
+			detectors.tip20(event) ||
+			detectors.tip20Factory(event) ||
+			detectors.stablecoinExchange(event) ||
+			detectors.tip403Registry(event) ||
+			detectors.feeManager(event) ||
+			detectors.nonce(event) ||
+			detectors.feeAmm(event)
 
 		if (!detected) continue
 
@@ -755,7 +977,7 @@ export function parseKnownEvents(
 			if (index > 0) parts.push({ type: 'text', value: 'and' })
 			parts.push({
 				type: 'amount',
-				value: createAmount(fee.amount, fee.token, tokenMetadata),
+				value: createAmount(fee.amount, fee.token),
 			})
 		}
 

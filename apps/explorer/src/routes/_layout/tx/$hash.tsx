@@ -50,17 +50,17 @@ async function loader({
 		const receipt = await getTransactionReceipt(config, {
 			hash,
 		})
-		const [block, transaction, tokenMetadata] = await Promise.all([
+		const [block, transaction, getTokenMetadata] = await Promise.all([
 			getBlock(config, { blockHash: receipt.blockHash }),
 			getTransaction(config, { hash: receipt.transactionHash }),
 			TokenMetadata.fromLogs(receipt.logs),
 		])
 		const timestampFormatted = DateFormatter.format(block.timestamp)
 
-		const lineItems = LineItems.fromReceipt(receipt, { tokenMetadata })
+		const lineItems = LineItems.fromReceipt(receipt, { getTokenMetadata })
 		const knownEvents = parseKnownEvents(receipt, {
 			transaction,
-			tokenMetadata,
+			getTokenMetadata,
 		})
 
 		return {
@@ -69,7 +69,7 @@ async function loader({
 			lineItems,
 			receipt,
 			timestampFormatted,
-			tokenMetadata,
+			getTokenMetadata,
 			transaction,
 		}
 	} catch (error) {
@@ -326,7 +326,7 @@ const abi = Object.values(Abis).flat()
 export namespace LineItems {
 	export function fromReceipt(
 		receipt: TransactionReceipt,
-		{ tokenMetadata }: { tokenMetadata: TokenMetadata.MetadataMap },
+		{ getTokenMetadata }: { getTokenMetadata: TokenMetadata.GetFn },
 	) {
 		const { from: sender, logs } = receipt
 		const senderChecksum = Address.checksum(sender)
@@ -414,7 +414,7 @@ export namespace LineItems {
 					if ('amount' in event.args) {
 						const { amount, from } = event.args
 
-						const metadata = tokenMetadata.get(event.address)
+						const metadata = getTokenMetadata(event.address)
 						if (!metadata) {
 							items.main.push(LineItem.noop(event))
 							break
@@ -486,7 +486,7 @@ export namespace LineItems {
 
 				case 'Mint': {
 					if ('amount' in event.args) {
-						const metadata = tokenMetadata.get(event.address)
+						const metadata = getTokenMetadata(event.address)
 						if (!metadata) {
 							items.main.push(LineItem.noop(event))
 							break
@@ -537,7 +537,7 @@ export namespace LineItems {
 					const { amount, from, to } = event.args
 					const token = event.address
 
-					const metadata = tokenMetadata.get(token)
+					const metadata = getTokenMetadata(token)
 					if (!metadata) {
 						items.main.push(LineItem.noop(event))
 						break
