@@ -46,7 +46,8 @@
 		"rules": {
 			"recommended": true,
 			"correctness": {
-				"useImportExtensions": "off"
+				"useImportExtensions": "off",
+				"noUndeclaredDependencies": "off"
 			},
 			"style": {
 				"useComponentExportOnlyModules": "off"

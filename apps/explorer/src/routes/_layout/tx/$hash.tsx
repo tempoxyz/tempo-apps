@@ -69,7 +69,6 @@ async function loader({
 			lineItems,
 			receipt,
 			timestampFormatted,
-			getTokenMetadata,
 			transaction,
 		}
 	} catch (error) {
@@ -249,6 +248,7 @@ function Component() {
 				events={knownEvents}
 				fee={fee}
 				feeDisplay={feeDisplay}
+				feeBreakdown={lineItems.feeBreakdown}
 				total={total}
 				totalDisplay={totalDisplay}
 			/>
@@ -297,6 +297,24 @@ namespace TextRenderer {
 			lines.push('')
 		}
 
+		// Fee breakdown
+		if (lineItems.feeBreakdown?.length) {
+			for (const item of lineItems.feeBreakdown) {
+				const label = item.symbol ? `Fee (${item.symbol})` : 'Fee'
+				const amount = PriceFormatter.format(item.amount, {
+					decimals: item.decimals,
+					format: 'short',
+				})
+				lines.push(leftRight(label.toUpperCase(), amount))
+				if (item.payer)
+					lines.push(
+						`${indent}Paid by: ${HexFormatter.truncate(item.payer, 6)}`,
+					)
+			}
+
+			lines.push('')
+		}
+
 		// Fee totals
 		if (lineItems.feeTotals)
 			for (const item of lineItems.feeTotals)
@@ -324,6 +342,13 @@ namespace TextRenderer {
 const abi = Object.values(Abis).flat()
 
 export namespace LineItems {
+	export type Result = {
+		main: LineItem.LineItem[]
+		feeTotals: LineItem.LineItem[]
+		totals: LineItem.LineItem[]
+		feeBreakdown: LineItem.FeeBreakdownItem[]
+	}
+
 	export function fromReceipt(
 		receipt: TransactionReceipt,
 		{ getTokenMetadata }: { getTokenMetadata: TokenMetadata.GetFn },
@@ -400,12 +425,13 @@ export namespace LineItems {
 
 		////////////////////////////////////////////////////////////
 
-		const items: Record<'main' | 'feeTotals' | 'totals', LineItem.LineItem[]> =
-			{
-				main: [],
-				feeTotals: [],
-				totals: [],
-			}
+		const items: Result = {
+			main: [],
+			feeTotals: [],
+			totals: [],
+			feeBreakdown: [],
+		}
+		const feeEvents: LineItem.LineItem[] = []
 
 		// Map log events to receipt line items.
 		for (const event of dedupedEvents) {
@@ -558,25 +584,30 @@ export namespace LineItems {
 					if (isFee) {
 						const feePayer = !Address.isEqual(from, senderChecksum) ? from : ''
 
-						items.feeTotals.push(
-							LineItem.from({
-								event,
-								isFee,
-								price: {
-									amount,
-									currency,
-									decimals,
-									symbol,
-									token,
-								},
-								ui: {
-									left: `${symbol} ${feePayer ? `(PAID BY ${HexFormatter.truncate(feePayer)})` : ''}`,
-									right: decimals
-										? PriceFormatter.format(amount, decimals)
-										: '-',
-								},
-							}),
-						)
+						const feeLineItem = LineItem.from({
+							event,
+							isFee,
+							price: {
+								amount,
+								currency,
+								decimals,
+								symbol,
+								token,
+							},
+							ui: {
+								left: `${symbol} ${feePayer ? `(PAID BY ${HexFormatter.truncate(feePayer)})` : ''}`,
+								right: decimals ? PriceFormatter.format(amount, decimals) : '-',
+							},
+						})
+						feeEvents.push(feeLineItem)
+						items.feeBreakdown.push({
+							amount,
+							currency,
+							decimals,
+							symbol,
+							token,
+							payer: Address.checksum(from),
+						})
 						break
 					}
 
@@ -621,7 +652,7 @@ export namespace LineItems {
 				tokens: Map<Symbol, LineItem.LineItem['price']>
 			}
 		>()
-		for (const item of items.feeTotals) {
+		for (const item of feeEvents) {
 			if (!item.isFee) continue
 
 			const { price } = item
@@ -650,7 +681,7 @@ export namespace LineItems {
 
 		// Add fee totals to line items
 		for (const [currency, { amount, decimals }] of feeTotals)
-			items.feeTotals = [
+			items.feeTotals.push(
 				LineItem.from({
 					position: 'end',
 					price: {
@@ -665,7 +696,7 @@ export namespace LineItems {
 							: '-',
 					},
 				}),
-			]
+			)
 
 		// Calculate totals grouped by currency
 		const totals = new Map<string, LineItem.LineItem['price']>()
@@ -771,6 +802,15 @@ export namespace LineItem {
 			 */
 			right: string
 		}
+	}
+
+	export type FeeBreakdownItem = {
+		amount: bigint
+		currency: string
+		decimals: number
+		symbol?: string
+		token?: Address.Address
+		payer?: Address.Address
 	}
 
 	export function from<const item extends LineItem>(

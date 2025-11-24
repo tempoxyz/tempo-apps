@@ -18,6 +18,7 @@ export function Receipt(props: Receipt.Props) {
 		total,
 		feeDisplay,
 		totalDisplay,
+		feeBreakdown = [],
 	} = props
 	const [hashExpanded, setHashExpanded] = useState(false)
 	const { copy, notifying } = useCopy()
@@ -25,6 +26,7 @@ export function Receipt(props: Receipt.Props) {
 	const hasFee = feeDisplay !== undefined || (fee !== undefined && fee !== null)
 	const hasTotal =
 		totalDisplay !== undefined || (total !== undefined && total !== null)
+	const showFeeBreakdown = feeBreakdown.length > 0
 
 	return (
 		<div className="flex flex-col w-[360px] bg-base-plane border border-base-border shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] text-base-content">
@@ -183,19 +185,76 @@ export function Receipt(props: Receipt.Props) {
 					</div>
 				</>
 			)}
-			{(hasFee || hasTotal) && (
+			{(showFeeBreakdown || hasFee || hasTotal) && (
 				<>
 					<div className="border-t border-dashed border-base-border" />
 					<div className="flex flex-col gap-2 px-[20px] py-[16px] font-mono text-[13px] leading-4">
-						{hasFee && (
-							<div className="flex justify-between items-center">
-								<span className="text-tertiary">Fee</span>
-								<span className="text-right">
-									{feeDisplay ??
-										PriceFormatter.format(fee ?? 0, { format: 'short' })}
-								</span>
-							</div>
-						)}
+						{showFeeBreakdown
+							? feeBreakdown.map((item, index) => {
+									const formattedAmount = PriceFormatter.format(item.amount, {
+										decimals: item.decimals,
+										format: 'short',
+									})
+									const isSponsored =
+										item.payer &&
+										item.payer.toLowerCase() !== sender.toLowerCase()
+									return (
+										<div
+											key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
+											className="flex flex-wrap gap-2 items-center justify-between"
+										>
+											<span className="text-tertiary">
+												Fee{' '}
+												{item.symbol && (
+													<span>
+														(
+														{item.token ? (
+															<Link
+																to="/token/$address"
+																params={{ address: item.token }}
+																className="text-base-content-positive press-down"
+															>
+																{item.symbol}
+															</Link>
+														) : (
+															<span className="text-base-content-positive">
+																{item.symbol}
+															</span>
+														)}
+														)
+													</span>
+												)}
+											</span>
+											<div className="flex items-center gap-1">
+												{isSponsored && (
+													<>
+														<Link
+															to={'/account/$address'}
+															// biome-ignore lint/style/noNonNullAssertion: _
+															params={{ address: item.payer! }}
+															className="text-accent press-down"
+															title={item.payer}
+														>
+															{/* biome-ignore lint/style/noNonNullAssertion: _ */}
+															{HexFormatter.shortenHex(item.payer!)}
+														</Link>
+														<span className="text-tertiary">paid</span>
+													</>
+												)}
+												<span>{formattedAmount}</span>
+											</div>
+										</div>
+									)
+								})
+							: hasFee && (
+									<div className="flex justify-between items-center">
+										<span className="text-tertiary">Fee</span>
+										<span className="text-right">
+											{feeDisplay ??
+												PriceFormatter.format(fee ?? 0, { format: 'short' })}
+										</span>
+									</div>
+								)}
 						{hasTotal && (
 							<div className="flex justify-between items-center">
 								<span className="text-tertiary">Total</span>
@@ -223,5 +282,14 @@ export namespace Receipt {
 		feeDisplay?: string
 		total?: number
 		totalDisplay?: string
+		feeBreakdown?: FeeBreakdownItem[]
+	}
+
+	export interface FeeBreakdownItem {
+		amount: bigint
+		decimals: number
+		symbol?: string
+		token?: Address.Address
+		payer?: Address.Address
 	}
 }
