@@ -122,6 +122,7 @@ function BlocksPage() {
 						totalItems={totalBlocks}
 						itemsLabel="blocks"
 						isPending={isLoading}
+						compact
 					/>
 				)}
 			</section>
