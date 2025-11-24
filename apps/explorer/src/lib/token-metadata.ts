@@ -8,26 +8,25 @@ const abi = Object.values(Abis).flat()
 
 export namespace TokenMetadata {
 	export type Metadata = Actions.token.getMetadata.ReturnValue
-	export type MetadataMap = Map<Address.Address, Metadata>
 
-	export async function fromLogs(logs: Log[]) {
-		const events = parseEventLogs({
-			abi,
-			logs,
-		})
+	export type GetFn = (address: Address.Address) => Metadata | undefined
+
+	export async function fromLogs(logs: Log[]): Promise<GetFn> {
+		const events = parseEventLogs({ abi, logs })
 
 		const tip20Addresses = events
 			.filter((event) => event.address.toLowerCase().startsWith('0x20c000000'))
 			.map((event) => event.address)
+
 		const metadataResults = await Promise.all(
 			tip20Addresses.map((token) =>
 				Actions.token.getMetadata(config, { token }),
 			),
 		)
-		const tokenMetadata = new Map<Address.Address, Metadata>()
+		const map = new Map<string, Metadata>()
 		for (const [index, address] of tip20Addresses.entries())
-			tokenMetadata.set(address, metadataResults[index])
+			map.set(address.toLowerCase(), metadataResults[index])
 
-		return tokenMetadata
+		return (address: Address.Address) => map.get(address.toLowerCase())
 	}
 }

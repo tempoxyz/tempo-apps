@@ -80,10 +80,10 @@ function transactionsQueryOptions(params: TransactionQuery) {
 							}),
 						),
 					])
-					const tokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
+					const getTokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
 					knownEvents[transaction.hash] = parseKnownEvents(receipt, {
 						transaction,
-						tokenMetadata,
+						getTokenMetadata,
 					})
 					return { ...transaction, block, receipt }
 				}),

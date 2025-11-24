@@ -30,7 +30,7 @@
 		"react-dom": "^19.2.0",
 		"tailwind-merge": "^3.4.0",
 		"tailwindcss": "^4.1.17",
-		"tempo.ts": "^0.4.2",
+		"tempo.ts": "^0.5.4",
 		"viem": "^2.39.0",
 		"wagmi": "^2.19.3",
 		"zod": "^4.1.12"
