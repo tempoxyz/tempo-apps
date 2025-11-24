@@ -124,9 +124,9 @@ function BlocksPage() {
 				</div>
 
 				{/* Footer with pagination and live toggle */}
-				<div className="flex items-center justify-between border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
+				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
 					{/* Pagination controls */}
-					<div className="flex items-center gap-[6px]">
+					<div className="flex items-center justify-center sm:justify-start gap-[6px]">
 						<Link
 							to="."
 							resetScroll={false}
@@ -183,7 +183,7 @@ function BlocksPage() {
 					</div>
 
 					{/* Live toggle and blocks count */}
-					<div className="flex items-center gap-[12px]">
+					<div className="flex items-center justify-center sm:justify-end gap-[12px]">
 						<Link
 							to="."
 							resetScroll={false}
