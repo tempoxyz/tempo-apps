@@ -195,7 +195,9 @@ export function Receipt(props: Receipt.Props) {
 										decimals: item.decimals,
 										format: 'short',
 									})
-									const isSponsored = item.payer && item.payer !== sender
+									const isSponsored =
+										item.payer &&
+										item.payer.toLowerCase() !== sender.toLowerCase()
 									return (
 										<div
 											key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
