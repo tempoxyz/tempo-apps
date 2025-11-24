@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { EventDescription } from '#components/EventDescription'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
@@ -197,9 +197,8 @@ export function Receipt(props: Receipt.Props) {
 									})
 									const isSponsored = item.payer && item.payer !== sender
 									return (
-										<div
+										<Fragment
 											key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
-											className="flex flex-col gap-1"
 										>
 											{isSponsored && (
 												<div className="flex items-center gap-1 text-tertiary">
@@ -211,7 +210,7 @@ export function Receipt(props: Receipt.Props) {
 														className="text-accent press-down"
 														title={item.payer}
 													>
-														{/** biome-ignore lint/style/noNonNullAssertion: _ */}
+														{/* biome-ignore lint/style/noNonNullAssertion: _ */}
 														{HexFormatter.shortenHex(item.payer!)}
 													</Link>
 												</div>
@@ -227,7 +226,7 @@ export function Receipt(props: Receipt.Props) {
 												</span>
 												<span className="text-right">{formattedAmount}</span>
 											</div>
-										</div>
+										</Fragment>
 									)
 								})
 							: hasFee && (
