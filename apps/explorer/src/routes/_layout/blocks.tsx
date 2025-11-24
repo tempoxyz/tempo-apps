@@ -89,29 +89,31 @@ function BlocksPage() {
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 				)}
 			>
-				{/* Header */}
-				<div className="grid grid-cols-[100px_1fr_180px_100px] gap-4 px-4 py-3 border-b border-card-border bg-card-header text-[12px] text-tertiary uppercase">
-					<div>Block</div>
-					<div>Hash</div>
-					<div>Timestamp</div>
-					<div className="text-right">Txns</div>
-				</div>
+				<div className="overflow-x-auto">
+					{/* Header */}
+					<div className="grid grid-cols-[100px_180px_1fr_50px] gap-4 px-4 py-3 border-b border-card-border bg-card-header text-[12px] text-tertiary uppercase min-w-[500px]">
+						<div>Block</div>
+						<div>Hash</div>
+						<div className="text-right">Timestamp</div>
+						<div className="text-right">Txns</div>
+					</div>
 
-				{/* Blocks list */}
-				<div className="flex flex-col divide-y divide-card-border">
-					{isLoading ? (
-						<div className="px-4 py-8 text-center text-tertiary">
-							Loading blocks...
-						</div>
-					) : blocks && blocks.length > 0 ? (
-						blocks.map((block) => (
-							<BlockRow key={block.number?.toString()} block={block} />
-						))
-					) : (
-						<div className="px-4 py-8 text-center text-tertiary">
-							No blocks found
-						</div>
-					)}
+					{/* Blocks list */}
+					<div className="flex flex-col divide-y divide-card-border min-w-[500px]">
+						{isLoading ? (
+							<div className="px-4 py-8 text-center text-tertiary">
+								Loading blocks...
+							</div>
+						) : blocks && blocks.length > 0 ? (
+							blocks.map((block) => (
+								<BlockRow key={block.number?.toString()} block={block} />
+							))
+						) : (
+							<div className="px-4 py-8 text-center text-tertiary">
+								No blocks found
+							</div>
+						)}
+					</div>
 				</div>
 
 				{/* Pagination */}
@@ -140,7 +142,7 @@ function BlockRow({ block }: { block: Block }) {
 	)
 
 	return (
-		<div className="grid grid-cols-[100px_1fr_180px_100px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 transition-colors">
+		<div className="grid grid-cols-[100px_180px_1fr_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 transition-colors">
 			<div>
 				<Link
 					to="/block/$id"
@@ -160,7 +162,7 @@ function BlockRow({ block }: { block: Block }) {
 					{HexFormatter.shortenHex(blockHash, 10)}
 				</Link>
 			</div>
-			<div className="text-secondary">
+			<div className="text-right text-secondary">
 				<span title={fullDate}>{relativeTime}</span>
 			</div>
 			<div className="text-right text-secondary">{txCount}</div>
