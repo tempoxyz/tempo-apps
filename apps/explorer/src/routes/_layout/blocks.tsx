@@ -13,7 +13,6 @@ import { Pagination } from '#components/Pagination'
 import { cx } from '#cva.config'
 import { DateFormatter, HexFormatter } from '#lib/formatting'
 import { config } from '#wagmi.config'
-import SquareSquare from '~icons/lucide/square-square'
 
 const BLOCKS_PER_PAGE = 12
 
@@ -83,16 +82,6 @@ function BlocksPage() {
 
 	return (
 		<div className="flex flex-col gap-6 px-6 py-8 max-w-[1200px] mx-auto w-full">
-			<div className="flex items-center gap-3">
-				<SquareSquare className="size-6 text-accent" />
-				<h1 className="text-xl font-semibold text-primary">Blocks</h1>
-				{currentLatest && (
-					<span className="text-tertiary text-sm">
-						Latest: #{currentLatest.toString()}
-					</span>
-				)}
-			</div>
-
 			<section
 				className={cx(
 					'flex flex-col font-mono w-full overflow-hidden',
