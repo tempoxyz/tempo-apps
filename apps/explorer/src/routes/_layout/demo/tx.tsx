@@ -473,7 +473,12 @@ function loader() {
 					},
 				}) as [Hex.Hex, ...Hex.Hex[]],
 				data: encodeAbiParameters(
-					[{ type: 'uint128' }, { type: 'bool' }, { type: 'int16' }, { type: 'int16' }],
+					[
+						{ type: 'uint128' },
+						{ type: 'bool' },
+						{ type: 'int16' },
+						{ type: 'int16' },
+					],
 					[2000000n, false, 105, 95],
 				),
 			}),

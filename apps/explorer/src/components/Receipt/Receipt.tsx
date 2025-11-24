@@ -195,11 +195,27 @@ export function Receipt(props: Receipt.Props) {
 										decimals: item.decimals,
 										format: 'short',
 									})
+									const isSponsored = item.payer && item.payer !== sender
 									return (
 										<div
 											key={`${item.token ?? item.symbol ?? 'fee'}-${index}`}
 											className="flex flex-col gap-1"
 										>
+											{isSponsored && (
+												<div className="flex items-center gap-1 text-tertiary">
+													<span>Paid by</span>
+													<Link
+														to={'/account/$address'}
+														// biome-ignore lint/style/noNonNullAssertion: _
+														params={{ address: item.payer! }}
+														className="text-accent press-down"
+														title={item.payer}
+													>
+														{/** biome-ignore lint/style/noNonNullAssertion: _ */}
+														{HexFormatter.shortenHex(item.payer!)}
+													</Link>
+												</div>
+											)}
 											<div className="flex flex-wrap gap-2 items-center justify-between">
 												<span className="text-tertiary">
 													Fee{' '}
@@ -209,20 +225,7 @@ export function Receipt(props: Receipt.Props) {
 														</span>
 													)}
 												</span>
-												<div className="flex flex-wrap gap-1 items-center justify-end text-right">
-													{item.payer && (
-														<Link
-															to={'/account/$address'}
-															params={{ address: item.payer }}
-															className="text-accent press-down"
-															title={item.payer}
-														>
-															{HexFormatter.shortenHex(item.payer)}
-														</Link>
-													)}
-													<span className="text-tertiary lowercase">paid</span>
-													<span className="text-right">{formattedAmount}</span>
-												</div>
+												<span className="text-right">{formattedAmount}</span>
 											</div>
 										</div>
 									)
