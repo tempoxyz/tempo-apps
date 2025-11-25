@@ -672,9 +672,6 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 						chars={4}
 						className="text-accent font-medium"
 					/>
-					{transaction.from === zeroAddress && (
-						<span className="text-tertiary"> (system)</span>
-					)}
 				</span>
 				{subtitle && (
 					<span className="text-base-content-secondary text-[12px]">
