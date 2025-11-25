@@ -34,7 +34,7 @@ function Component() {
 }
 
 export function Layout(props: Layout.Props) {
-	const { children, blockNumber, recentTransactions } = props
+	const { children, blockNumber } = props
 	const matchRoute = useMatchRoute()
 	return (
 		<main className="flex min-h-dvh flex-col">
@@ -42,7 +42,7 @@ export function Layout(props: Layout.Props) {
 			<main className="flex flex-1 size-full flex-col items-center relative z-1">
 				{children}
 			</main>
-			<Footer recentTransactions={recentTransactions} />
+			<Footer />
 			<Sphere animate={Boolean(matchRoute({ to: '/' }))} />
 		</main>
 	)
