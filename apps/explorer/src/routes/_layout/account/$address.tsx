@@ -20,6 +20,7 @@ import {
 } from 'wagmi/query'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
+import { DataGrid } from '#components/DataGrid'
 import { EventDescription } from '#components/EventDescription'
 import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
@@ -216,62 +217,78 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 			sections={[
 				{
 					title: 'History',
-					columns: {
-						stacked: [
-							{ label: 'Time', align: 'start', minWidth: 100 },
-							{ label: 'Hash', align: 'start' },
-							{ label: 'Total', align: 'end' },
-						],
-						tabs: [
-							{ label: 'Time', align: 'start', minWidth: 100 },
-							{ label: 'Description', align: 'start' },
-							{ label: 'Hash', align: 'end' },
-							{ label: 'Fee', align: 'end' },
-							{ label: 'Total', align: 'end' },
-						],
-					},
-					items: (mode) =>
-						Array.from({ length: rowsPerPage }, (_, index) => {
-							const key = `skeleton-${index}`
-							return mode === 'stacked'
-								? [
-										<div key={`${key}-time`} className="h-5" />,
-										<div key={`${key}-hash`} className="h-5" />,
-										<div key={`${key}-total`} className="h-5" />,
-									]
-								: [
-										<div key={`${key}-time`} className="h-5" />,
-										<div key={`${key}-desc`} className="h-5" />,
-										<div key={`${key}-hash`} className="h-5" />,
-										<div key={`${key}-fee`} className="h-5" />,
-										<div key={`${key}-total`} className="h-5" />,
-									]
-						}),
 					totalItems,
-					page: 1,
-					isPending: false,
 					itemsLabel: 'transactions',
-					itemsPerPage: rowsPerPage,
+					content: (
+						<DataGrid
+							columns={{
+								stacked: [
+									{ label: 'Time', align: 'start', minWidth: 100 },
+									{ label: 'Hash', align: 'start' },
+									{ label: 'Total', align: 'end' },
+								],
+								tabs: [
+									{ label: 'Time', align: 'start', minWidth: 100 },
+									{ label: 'Description', align: 'start' },
+									{ label: 'Hash', align: 'end' },
+									{ label: 'Fee', align: 'end' },
+									{ label: 'Total', align: 'end' },
+								],
+							}}
+							items={(mode) =>
+								Array.from({ length: rowsPerPage }, (_, index) => {
+									const key = `skeleton-${index}`
+									return {
+										cells:
+											mode === 'stacked'
+												? [
+														<div key={`${key}-time`} className="h-5" />,
+														<div key={`${key}-hash`} className="h-5" />,
+														<div key={`${key}-total`} className="h-5" />,
+													]
+												: [
+														<div key={`${key}-time`} className="h-5" />,
+														<div key={`${key}-desc`} className="h-5" />,
+														<div key={`${key}-hash`} className="h-5" />,
+														<div key={`${key}-fee`} className="h-5" />,
+														<div key={`${key}-total`} className="h-5" />,
+													],
+									}
+								})
+							}
+							totalItems={totalItems}
+							page={1}
+							isPending={false}
+							itemsLabel="transactions"
+							itemsPerPage={rowsPerPage}
+						/>
+					),
 				},
 				{
 					title: 'Assets',
-					columns: {
-						stacked: [
-							{ label: 'Name', align: 'start' },
-							{ label: 'Balance', align: 'end' },
-						],
-						tabs: [
-							{ label: 'Name', align: 'start' },
-							{ label: 'Ticker', align: 'start' },
-							{ label: 'Balance', align: 'end' },
-							{ label: 'Value', align: 'end' },
-						],
-					},
-					items: () => [],
 					totalItems: 0,
-					page: 1,
-					isPending: false,
 					itemsLabel: 'assets',
+					content: (
+						<DataGrid
+							columns={{
+								stacked: [
+									{ label: 'Name', align: 'start' },
+									{ label: 'Balance', align: 'end' },
+								],
+								tabs: [
+									{ label: 'Name', align: 'start' },
+									{ label: 'Ticker', align: 'start' },
+									{ label: 'Balance', align: 'end' },
+									{ label: 'Value', align: 'end' },
+								],
+							}}
+							items={() => []}
+							totalItems={0}
+							page={1}
+							isPending={false}
+							itemsLabel="assets"
+						/>
+					),
 				},
 			]}
 			activeSection={0}
@@ -373,7 +390,8 @@ function SectionsWrapper(props: {
 
 	if (transactions.length === 0 && isLoadingPage)
 		return <SectionsSkeleton totalItems={total} />
-	const historyColumns: Sections.Column[] = [
+
+	const historyColumns: DataGrid.Column[] = [
 		{ label: 'Time', align: 'start', minWidth: 100 },
 		{ label: 'Description', align: 'start' },
 		{ label: 'Hash', align: 'end' },
@@ -387,94 +405,131 @@ function SectionsWrapper(props: {
 			sections={[
 				{
 					title: 'History',
-					columns: {
-						stacked: historyColumns,
-						tabs: historyColumns,
-					},
-					items: () =>
-						transactions.map((transaction) => {
-							const receipt = transaction.receipt
-							return [
-								<TransactionTimestamp
-									key="time"
-									timestamp={transaction.block.timestamp}
-								/>,
-								<TransactionRowDescription
-									key="desc"
-									transaction={transaction}
-									knownEvents={knownEvents[transaction.hash] ?? []}
-									receipt={receipt}
-									accountAddress={address}
-								/>,
-								<TransactionHashLink key="hash" hash={transaction.hash} />,
-								<TransactionFee key="fee" receipt={receipt} />,
-								<TransactionRowTotal
-									key="total"
-									transaction={transaction}
-									knownEvents={knownEvents[transaction.hash] ?? []}
-									receipt={receipt}
-								/>,
-							]
-						}),
 					totalItems: total,
-					page,
-					isPending: isLoadingPage,
 					itemsLabel: 'transactions',
-					itemsPerPage: limit,
+					content: (
+						<DataGrid
+							columns={{
+								stacked: historyColumns,
+								tabs: historyColumns,
+							}}
+							items={() =>
+								transactions.map((transaction) => {
+									const receipt = transaction.receipt
+									return {
+										cells: [
+											<TransactionTimestamp
+												key="time"
+												timestamp={transaction.block.timestamp}
+												link={`/tx/${transaction.hash}`}
+											/>,
+											<TransactionRowDescription
+												key="desc"
+												transaction={transaction}
+												knownEvents={knownEvents[transaction.hash] ?? []}
+												receipt={receipt}
+												accountAddress={address}
+											/>,
+											<TransactionHashLink
+												key="hash"
+												hash={transaction.hash}
+											/>,
+											<TransactionFee key="fee" receipt={receipt} />,
+											<TransactionRowTotal
+												key="total"
+												transaction={transaction}
+												knownEvents={knownEvents[transaction.hash] ?? []}
+												receipt={receipt}
+											/>,
+										],
+										link: {
+											href: `/tx/${transaction.hash}`,
+											title: `View receipt ${transaction.hash}`,
+										},
+									}
+								})
+							}
+							totalItems={total}
+							page={page}
+							isPending={isLoadingPage}
+							itemsLabel="transactions"
+							itemsPerPage={limit}
+						/>
+					),
 				},
 				{
 					title: 'Assets',
-					columns: {
-						stacked: [
-							{ label: 'Name', align: 'start' },
-							{ label: 'Contract', align: 'start' },
-							{ label: 'Amount', align: 'end' },
-						],
-						tabs: [
-							{ label: 'Name', align: 'start' },
-							{ label: 'Ticker', align: 'start' },
-							{ label: 'Currency', align: 'start' },
-							{ label: 'Amount', align: 'end' },
-							{ label: 'Value', align: 'end' },
-						],
-					},
-					items: (mode) =>
-						assets.map((assetAddress) => {
-							if (mode === 'stacked')
-								return [
-									<TokenName key="name" contractAddress={assetAddress} />,
-									<AssetContract
-										key="contract"
-										contractAddress={assetAddress}
-									/>,
-									<AssetAmount
-										key="amount"
-										contractAddress={assetAddress}
-										accountAddress={address}
-									/>,
-								]
-
-							return [
-								<TokenName key="name" contractAddress={assetAddress} />,
-								<TokenSymbol key="symbol" contractAddress={assetAddress} />,
-								<span key="currency">USD</span>,
-								<AssetAmount
-									key="amount"
-									contractAddress={assetAddress}
-									accountAddress={address}
-								/>,
-								<AssetValue
-									key="value"
-									contractAddress={assetAddress}
-									accountAddress={address}
-								/>,
-							]
-						}),
 					totalItems: assets.length,
-					page: 1, // TODO
-					isPending: false,
 					itemsLabel: 'assets',
-					itemsPerPage: assets.length,
+					content: (
+						<DataGrid
+							columns={{
+								stacked: [
+									{ label: 'Name', align: 'start' },
+									{ label: 'Contract', align: 'start' },
+									{ label: 'Amount', align: 'end' },
+								],
+								tabs: [
+									{ label: 'Name', align: 'start' },
+									{ label: 'Ticker', align: 'start' },
+									{ label: 'Currency', align: 'start' },
+									{ label: 'Amount', align: 'end' },
+									{ label: 'Value', align: 'end' },
+								],
+							}}
+							items={(mode) =>
+								assets.map((assetAddress) => ({
+									cells:
+										mode === 'stacked'
+											? [
+													<TokenName
+														key="name"
+														contractAddress={assetAddress}
+													/>,
+													<AssetContract
+														key="contract"
+														contractAddress={assetAddress}
+													/>,
+													<AssetAmount
+														key="amount"
+														contractAddress={assetAddress}
+														accountAddress={address}
+													/>,
+												]
+											: [
+													<TokenName
+														key="name"
+														contractAddress={assetAddress}
+													/>,
+													<TokenSymbol
+														key="symbol"
+														contractAddress={assetAddress}
+													/>,
+													<span key="currency">USD</span>,
+													<AssetAmount
+														key="amount"
+														contractAddress={assetAddress}
+														accountAddress={address}
+													/>,
+													<AssetValue
+														key="value"
+														contractAddress={assetAddress}
+														accountAddress={address}
+													/>,
+												],
+									link: {
+										href: `/token/${assetAddress}`,
+										title: `View token ${assetAddress}`,
+									},
+								}))
+							}
+							totalItems={assets.length}
+							page={1}
+							isPending={false}
+							itemsLabel="assets"
+							itemsPerPage={assets.length}
+						/>
+					),
 				},
 			]}
 			activeSection={activeSection}
@@ -523,15 +578,7 @@ function TokenName(props: { contractAddress: Address.Address }) {
 		},
 	})
 
-	return (
-		<Link
-			to="/token/$address"
-			params={{ address: contractAddress }}
-			className="hover:text-accent transition-colors"
-		>
-			{metadata?.name || 'Unknown Token'}
-		</Link>
-	)
+	return <span>{metadata?.name || 'Unknown Token'}</span>
 }
 
 function TokenSymbol(props: { contractAddress: Address.Address }) {
@@ -544,28 +591,16 @@ function TokenSymbol(props: { contractAddress: Address.Address }) {
 		},
 	})
 
-	return (
-		<Link
-			to="/token/$address"
-			params={{ address: contractAddress }}
-			className="text-accent hover:text-accent/80 transition-colors"
-		>
-			{metadata?.symbol || 'TOKEN'}
-		</Link>
-	)
+	return <span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>
 }
 
 function AssetContract(props: { contractAddress: Address.Address }) {
 	const { contractAddress } = props
 
 	return (
-		<Link
-			to="/token/$address"
-			params={{ address: contractAddress }}
-			className="text-accent hover:text-accent/80 transition-colors text-[13px]"
-		>
+		<span className="text-accent text-[13px]">
 			{HexFormatter.truncate(contractAddress, 10)}
-		</Link>
+		</span>
 	)
 }
 
@@ -733,12 +768,18 @@ function TransactionHashLink(props: { hash: Hex.Hex | null | undefined }) {
 	)
 }
 
-function TransactionTimestamp(props: { timestamp: bigint }) {
-	const { timestamp } = props
+function TransactionTimestamp(props: { timestamp: bigint; link?: string }) {
+	const { timestamp, link } = props
 
 	return (
 		<div className="text-nowrap">
-			<RelativeTime timestamp={timestamp} className="text-tertiary" />
+			{link ? (
+				<Link to={link} className="text-tertiary hover:text-secondary">
+					<RelativeTime timestamp={timestamp} />
+				</Link>
+			) : (
+				<RelativeTime timestamp={timestamp} className="text-tertiary" />
+			)}
 		</div>
 	)
 }

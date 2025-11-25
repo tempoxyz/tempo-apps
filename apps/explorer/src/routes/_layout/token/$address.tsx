@@ -14,6 +14,7 @@ import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import * as z from 'zod/mini'
 import { ellipsis } from '#chars'
+import { DataGrid } from '#components/DataGrid'
 import { InfoCard } from '#components/InfoCard'
 import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
@@ -286,53 +287,68 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 			sections={[
 				{
 					title: 'Transfers',
-					columns: {
-						stacked: [
-							{ label: 'Time', align: 'start', minWidth: 100 },
-							{ label: 'From', align: 'start' },
-							{ label: 'To', align: 'start' },
-						],
-						tabs: [
-							{ label: 'Time', align: 'start', minWidth: 100 },
-							{ label: 'Transaction', align: 'start' },
-							{ label: 'From', align: 'start' },
-							{ label: 'To', align: 'start' },
-							{ label: 'Amount', align: 'end' },
-						],
-					},
-					items: () =>
-						Array.from({ length: rowsPerPage }, (_, index) => {
-							const key = `skeleton-${index}`
-							return [
-								<div key={`${key}-time`} className="h-5" />,
-								<div key={`${key}-from`} className="h-5" />,
-								<div key={`${key}-to`} className="h-5" />,
-							]
-						}),
 					totalItems,
-					page: 1,
-					isPending: false,
 					itemsLabel: 'transfers',
-					itemsPerPage: rowsPerPage,
+					content: (
+						<DataGrid
+							columns={{
+								stacked: [
+									{ label: 'Time', align: 'start', minWidth: 100 },
+									{ label: 'From', align: 'start' },
+									{ label: 'To', align: 'start' },
+								],
+								tabs: [
+									{ label: 'Time', align: 'start', minWidth: 100 },
+									{ label: 'Transaction', align: 'start' },
+									{ label: 'From', align: 'start' },
+									{ label: 'To', align: 'start' },
+									{ label: 'Amount', align: 'end' },
+								],
+							}}
+							items={() =>
+								Array.from({ length: rowsPerPage }, (_, index) => {
+									const key = `skeleton-${index}`
+									return {
+										cells: [
+											<div key={`${key}-time`} className="h-5" />,
+											<div key={`${key}-from`} className="h-5" />,
+											<div key={`${key}-to`} className="h-5" />,
+										],
+									}
+								})
+							}
+							totalItems={totalItems}
+							page={1}
+							isPending={false}
+							itemsLabel="transfers"
+							itemsPerPage={rowsPerPage}
+						/>
+					),
 				},
 				{
 					title: 'Holders',
-					columns: {
-						stacked: [
-							{ label: 'Address', align: 'start' },
-							{ label: 'Balance', align: 'end' },
-						],
-						tabs: [
-							{ label: 'Address', align: 'start' },
-							{ label: 'Balance', align: 'end' },
-							{ label: 'Percentage', align: 'end' },
-						],
-					},
-					items: () => [],
 					totalItems: 0,
-					page: 1,
-					isPending: false,
 					itemsLabel: 'holders',
+					content: (
+						<DataGrid
+							columns={{
+								stacked: [
+									{ label: 'Address', align: 'start' },
+									{ label: 'Balance', align: 'end' },
+								],
+								tabs: [
+									{ label: 'Address', align: 'start' },
+									{ label: 'Balance', align: 'end' },
+									{ label: 'Percentage', align: 'end' },
+								],
+							}}
+							items={() => []}
+							totalItems={0}
+							page={1}
+							isPending={false}
+							itemsLabel="holders"
+						/>
+					),
 				},
 			]}
 			activeSection={0}
@@ -493,100 +509,155 @@ function SectionsWrapper(props: {
 			sections={[
 				{
 					title: 'Transfers',
-					columns: {
-						stacked: [
-							{ label: 'Time', align: 'start', minWidth: 100 },
-							{ label: 'From', align: 'start' },
-							{ label: 'To', align: 'start' },
-						],
-						tabs: [
-							{ label: 'Time', align: 'start', minWidth: 100 },
-							{ label: 'Transaction', align: 'start' },
-							{ label: 'From', align: 'start' },
-							{ label: 'To', align: 'start' },
-							{ label: 'Amount', align: 'end' },
-						],
-					},
-					items: (mode) => {
-						const validTransfers = transfers.filter(
-							(t): t is typeof t & { timestamp: string; value: string } =>
-								t.timestamp !== null && t.value !== null,
-						)
-
-						if (mode === 'stacked')
-							return validTransfers.map((transfer) => [
-								<TransferTime
-									key="time"
-									timestamp={BigInt(transfer.timestamp)}
-								/>,
-								<AddressLink key="from" address={transfer.from} label="From" />,
-								<AddressLink key="to" address={transfer.to} label="To" />,
-							])
-
-						return validTransfers.map((transfer) => [
-							<TransferTime
-								key="time"
-								timestamp={BigInt(transfer.timestamp)}
-							/>,
-							<TransactionLink key="tx" hash={transfer.transactionHash} />,
-							<AddressLink key="from" address={transfer.from} label="From" />,
-							<AddressLink key="to" address={transfer.to} label="To" />,
-							<TransferAmount
-								key="amount"
-								value={BigInt(transfer.value)}
-								decimals={metadata?.decimals}
-								symbol={metadata?.symbol}
-							/>,
-						])
-					},
 					totalItems: transfersTotal,
-					page,
-					isPending: isLoadingPage,
 					itemsLabel: 'transfers',
-					itemsPerPage: limit,
+					content: (
+						<DataGrid
+							columns={{
+								stacked: [
+									{ label: 'Time', align: 'start', minWidth: 100 },
+									{ label: 'From', align: 'start' },
+									{ label: 'To', align: 'start' },
+								],
+								tabs: [
+									{ label: 'Time', align: 'start', minWidth: 100 },
+									{ label: 'Transaction', align: 'start' },
+									{ label: 'From', align: 'start' },
+									{ label: 'To', align: 'start' },
+									{ label: 'Amount', align: 'end' },
+								],
+							}}
+							items={(mode) => {
+								const validTransfers = transfers.filter(
+									(t): t is typeof t & { timestamp: string; value: string } =>
+										t.timestamp !== null && t.value !== null,
+								)
+
+								return validTransfers.map((transfer) => ({
+									cells:
+										mode === 'stacked'
+											? [
+													<TransferTime
+														key="time"
+														timestamp={BigInt(transfer.timestamp)}
+														link={`/tx/${transfer.transactionHash}`}
+													/>,
+													<AddressLink
+														key="from"
+														address={transfer.from}
+														label="From"
+													/>,
+													<AddressLink
+														key="to"
+														address={transfer.to}
+														label="To"
+													/>,
+												]
+											: [
+													<TransferTime
+														key="time"
+														timestamp={BigInt(transfer.timestamp)}
+														link={`/tx/${transfer.transactionHash}`}
+													/>,
+													<TransactionLink
+														key="tx"
+														hash={transfer.transactionHash}
+													/>,
+													<AddressLink
+														key="from"
+														address={transfer.from}
+														label="From"
+													/>,
+													<AddressLink
+														key="to"
+														address={transfer.to}
+														label="To"
+													/>,
+													<TransferAmount
+														key="amount"
+														value={BigInt(transfer.value)}
+														decimals={metadata?.decimals}
+														symbol={metadata?.symbol}
+													/>,
+												],
+									link: {
+										href: `/tx/${transfer.transactionHash}`,
+										title: `View receipt ${transfer.transactionHash}`,
+									},
+								}))
+							}}
+							totalItems={transfersTotal}
+							page={page}
+							isPending={isLoadingPage}
+							itemsLabel="transfers"
+							itemsPerPage={limit}
+						/>
+					),
 				},
 				{
 					title: 'Holders',
-					columns: {
-						stacked: [
-							{ label: 'Address', align: 'start' },
-							{ label: 'Balance', align: 'end' },
-						],
-						tabs: [
-							{ label: 'Address', align: 'start' },
-							{ label: 'Balance', align: 'end' },
-							{ label: 'Percentage', align: 'end' },
-						],
-					},
-					items: (mode) =>
-						holders.map((holder) => {
-							if (mode === 'stacked')
-								return [
-									<AddressLink key="address" address={holder.address} />,
-									<HolderBalance
-										key="balance"
-										balance={holder.balance}
-										decimals={metadata?.decimals}
-									/>,
-								]
-
-							return [
-								<AddressLink key="address" address={holder.address} />,
-								<HolderBalance
-									key="balance"
-									balance={holder.balance}
-									decimals={metadata?.decimals}
-								/>,
-								<span key="percentage" className="text-[12px] text-primary">
-									{holder.percentage.toFixed(2)}%
-								</span>,
-							]
-						}),
 					totalItems: holdersTotal,
-					page,
-					isPending: isLoadingPage,
 					itemsLabel: 'holders',
-					itemsPerPage: limit,
+					content: (
+						<DataGrid
+							columns={{
+								stacked: [
+									{ label: 'Address', align: 'start' },
+									{ label: 'Balance', align: 'end' },
+								],
+								tabs: [
+									{ label: 'Address', align: 'start' },
+									{ label: 'Balance', align: 'end' },
+									{ label: 'Percentage', align: 'end' },
+								],
+							}}
+							items={(mode) =>
+								holders.map((holder) => ({
+									cells:
+										mode === 'stacked'
+											? [
+													<AddressLink
+														key="address"
+														address={holder.address}
+														asLink={false}
+													/>,
+													<HolderBalance
+														key="balance"
+														balance={holder.balance}
+														decimals={metadata?.decimals}
+													/>,
+												]
+											: [
+													<AddressLink
+														key="address"
+														address={holder.address}
+														asLink={false}
+													/>,
+													<HolderBalance
+														key="balance"
+														balance={holder.balance}
+														decimals={metadata?.decimals}
+													/>,
+													<span
+														key="percentage"
+														className="text-[12px] text-primary"
+													>
+														{holder.percentage.toFixed(2)}%
+													</span>,
+												],
+									link: {
+										href: `/account/${holder.address}`,
+										title: `View account ${holder.address}`,
+									},
+								}))
+							}
+							totalItems={holdersTotal}
+							page={page}
+							isPending={isLoadingPage}
+							itemsLabel="holders"
+							itemsPerPage={limit}
+						/>
+					),
 				},
 			]}
 			activeSection={activeSection}
@@ -595,11 +666,17 @@ function SectionsWrapper(props: {
 	)
 }
 
-function TransferTime(props: { timestamp: bigint }) {
-	const { timestamp } = props
+function TransferTime(props: { timestamp: bigint; link?: string }) {
+	const { timestamp, link } = props
 	return (
 		<div className="text-nowrap">
-			<RelativeTime timestamp={timestamp} className="text-tertiary" />
+			{link ? (
+				<Link to={link} className="text-tertiary hover:text-secondary">
+					<RelativeTime timestamp={timestamp} />
+				</Link>
+			) : (
+				<RelativeTime timestamp={timestamp} className="text-tertiary" />
+			)}
 		</div>
 	)
 }
@@ -618,16 +695,30 @@ function TransactionLink(props: { hash: Hex.Hex }) {
 	)
 }
 
-function AddressLink(props: { address: Address.Address; label?: string }) {
-	const { address, label } = props
+function AddressLink(props: {
+	address: Address.Address
+	label?: string
+	asLink?: boolean
+}) {
+	const { address, label, asLink = true } = props
+	const content = HexFormatter.truncate(address, 8)
+	const title = `${label ? `${label}: ` : ''}${address}`
+
+	if (!asLink)
+		return (
+			<span className="text-[13px] text-accent" title={title}>
+				{content}
+			</span>
+		)
+
 	return (
 		<Link
 			to="/account/$address"
 			params={{ address }}
 			className="text-[13px] text-accent hover:text-accent/80 transition-colors press-down"
-			title={`${label ? `${label}: ` : ''}${address}`}
+			title={title}
 		>
-			{HexFormatter.truncate(address, 8)}
+			{content}
 		</Link>
 	)
 }

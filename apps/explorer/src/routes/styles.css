@@ -220,7 +220,7 @@ input[type="number"] {
 }
 
 @utility press-down {
-	&:active {
+	&:active:not([aria-disabled="true"]) {
 		transform: translateY(0.5px);
 	}
 }
