@@ -68,10 +68,13 @@ export const Route = createFileRoute('/_layout/blocks')({
 function BlocksPage() {
 	const { page = 1, live = true } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
-	const [latestBlockNumber, setLatestBlockNumber] = React.useState<bigint>(
-		loaderData.latestBlockNumber,
-	)
+	const [latestBlockNumber, setLatestBlockNumber] = React.useState<
+		bigint | undefined
+	>()
 	const queryClient = useQueryClient()
+
+	// Use loader data for initial render, then live updates
+	const currentLatest = latestBlockNumber ?? loaderData.latestBlockNumber
 
 	// Watch for new blocks in realtime
 	useWatchBlockNumber({
@@ -81,21 +84,19 @@ function BlocksPage() {
 			setLatestBlockNumber(blockNumber)
 			// Invalidate queries when on first page to show new blocks
 			if (page === 1) {
-				queryClient.invalidateQueries({ queryKey: ['blocks'] })
+				queryClient.invalidateQueries({ queryKey: ['blocks', page] })
 			}
 		},
 	})
-
-	const currentLatest = latestBlockNumber
 
 	// Calculate which blocks to show for this page
 	const startBlock = currentLatest
 		? currentLatest - BigInt((page - 1) * BLOCKS_PER_PAGE)
 		: undefined
 
-	// Fetch blocks for the current page
-	const { data: blocks, isLoading } = useQuery({
-		queryKey: ['blocks', page, currentLatest?.toString()],
+	// Fetch blocks for the current page (skip on first page if we have loader data)
+	const { data: fetchedBlocks, isLoading: isFetching } = useQuery({
+		queryKey: ['blocks', page, startBlock?.toString()],
 		queryFn: async () => {
 			if (!startBlock || !currentLatest) return []
 
@@ -113,11 +114,15 @@ function BlocksPage() {
 
 			return results.filter(Boolean) as Block[]
 		},
-		enabled: !!startBlock && !!currentLatest,
-		staleTime: page === 1 ? 0 : 60_000, // First page refreshes, others are cached
-		placeholderData: keepPreviousData, // Keep old data while fetching new
-		initialData: page === 1 ? loaderData.blocks : undefined, // Use SSR data for first page
+		enabled:
+			!!startBlock && !!currentLatest && (page !== 1 || !!latestBlockNumber),
+		staleTime: page === 1 ? 0 : 60_000,
+		placeholderData: keepPreviousData,
 	})
+
+	// Use loader data for first page initial render, then fetched data
+	const blocks = fetchedBlocks ?? (page === 1 ? loaderData.blocks : undefined)
+	const isLoading = !blocks && isFetching
 
 	const totalBlocks = currentLatest ? Number(currentLatest) + 1 : 0
 	const totalPages = Math.ceil(totalBlocks / BLOCKS_PER_PAGE)
