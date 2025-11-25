@@ -1,5 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { cx } from '#cva.config.ts'
+import ChevronFirst from '~icons/lucide/chevron-first'
+import ChevronLast from '~icons/lucide/chevron-last'
 import ChevronLeft from '~icons/lucide/chevron-left'
 import ChevronRight from '~icons/lucide/chevron-right'
 
@@ -20,43 +22,87 @@ export function Pagination(props: Pagination.Props) {
 
 	if (compact)
 		return (
-			<div className="flex items-center justify-center gap-[8px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary w-full">
-				<Link
-					to="."
-					resetScroll={false}
-					search={(previous) => ({
-						...previous,
-						page: (previous?.page ?? 1) - 1,
-					})}
-					disabled={page <= 1 || isPending}
-					className={cx(
-						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
-					)}
-					aria-label="Previous page"
-				>
-					<ChevronLeft className="size-[14px]" />
-				</Link>
+			<div className="flex items-center justify-between border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary w-full">
+				<div className="flex items-center gap-[6px]">
+					<Link
+						to="."
+						resetScroll={false}
+						search={(previous) => ({
+							...previous,
+							page: 1,
+						})}
+						disabled={page <= 1 || isPending}
+						className={cx(
+							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+						)}
+						aria-label="First page"
+					>
+						<ChevronFirst className="size-[14px]" />
+					</Link>
 
-				<span className="text-primary font-medium">
-					Page {page} of {totalPages}
-				</span>
+					<Link
+						to="."
+						resetScroll={false}
+						search={(previous) => ({
+							...previous,
+							page: (previous?.page ?? 1) - 1,
+						})}
+						disabled={page <= 1 || isPending}
+						className={cx(
+							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+						)}
+						aria-label="Previous page"
+					>
+						<ChevronLeft className="size-[14px]" />
+					</Link>
 
-				<Link
-					to="."
-					type="button"
-					resetScroll={false}
-					search={(previous) => ({
-						...previous,
-						page: (previous?.page ?? 1) + 1,
-					})}
-					disabled={page >= totalPages || isPending}
-					className={cx(
-						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
-					)}
-					aria-label="Next page"
-				>
-					<ChevronRight className="size-[14px]" />
-				</Link>
+					<span className="text-primary font-medium tabular-nums px-[4px]">
+						Page {page.toLocaleString()} of {totalPages.toLocaleString()}
+					</span>
+
+					<Link
+						to="."
+						type="button"
+						resetScroll={false}
+						search={(previous) => ({
+							...previous,
+							page: (previous?.page ?? 1) + 1,
+						})}
+						disabled={page >= totalPages || isPending}
+						className={cx(
+							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+						)}
+						aria-label="Next page"
+					>
+						<ChevronRight className="size-[14px]" />
+					</Link>
+
+					<Link
+						to="."
+						type="button"
+						resetScroll={false}
+						search={(previous) => ({
+							...previous,
+							page: totalPages,
+						})}
+						disabled={page >= totalPages || isPending}
+						className={cx(
+							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+						)}
+						aria-label="Last page"
+					>
+						<ChevronLast className="size-[14px]" />
+					</Link>
+				</div>
+
+				<div className="space-x-[8px]">
+					<span className="text-primary tabular-nums">
+						{totalItems.toLocaleString()}
+					</span>
+					<span className="text-tertiary">
+						{totalItems === 1 ? itemsLabel.replace(/s$/, '') : itemsLabel}
+					</span>
+				</div>
 			</div>
 		)
 
