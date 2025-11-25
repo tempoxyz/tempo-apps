@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
@@ -10,8 +9,8 @@ import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
 import type { Block as BlockType } from 'viem'
 import { decodeFunctionData, isHex, zeroAddress } from 'viem'
-import { useBlock, useChains, useWatchBlockNumber } from 'wagmi'
-import { getTransactionReceiptQueryOptions } from 'wagmi/query'
+import { useChains, useWatchBlockNumber } from 'wagmi'
+import { getBlock } from 'wagmi/actions'
 import { Address as AddressLink } from '#components/Address.tsx'
 import { EventDescription } from '#components/EventDescription'
 import { NotFound } from '#components/NotFound.tsx'
@@ -20,7 +19,7 @@ import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
 import { useCopy } from '#lib/hooks.ts'
 import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
 import { TokenMetadata } from '#lib/token-metadata.ts'
-import { config, queryClient } from '#wagmi.config.ts'
+import { getConfig } from '#wagmi.config.ts'
 import ArrowUp10Icon from '~icons/lucide/arrow-up-10'
 import ChevronDown from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
@@ -69,54 +68,95 @@ function getTransactionType(
 	return { type: 'regular', label: 'Regular' }
 }
 
+async function loader({ params }: { params: { id: string } }) {
+	try {
+		const { id } = params
+
+		let blockRef: BlockIdentifier
+		if (isHex(id)) {
+			Hex.assert(id)
+			blockRef = { kind: 'hash', blockHash: id }
+		} else {
+			const parsedNumber = Number(id)
+			if (!Number.isSafeInteger(parsedNumber)) throw notFound()
+			blockRef = { kind: 'number', blockNumber: BigInt(parsedNumber) }
+		}
+
+		const wagmiConfig = getConfig()
+		const block = await getBlock(wagmiConfig, {
+			includeTransactions: true,
+			...(blockRef.kind === 'hash'
+				? { blockHash: blockRef.blockHash }
+				: { blockNumber: blockRef.blockNumber }),
+		})
+
+		// Fetch known events for each transaction during SSR
+		const knownEventsByHash = await fetchKnownEventsForTransactions(
+			block.transactions as BlockTransaction[],
+			wagmiConfig,
+		)
+
+		return {
+			blockRef,
+			block: block as BlockWithTransactions,
+			knownEventsByHash,
+		}
+	} catch (error) {
+		console.error(error)
+		throw notFound({
+			routeId: rootRouteId,
+			data: {
+				error: error instanceof Error ? error.message : 'Invalid block ID',
+			},
+		})
+	}
+}
+
+async function fetchKnownEventsForTransactions(
+	transactions: BlockTransaction[],
+	wagmiConfig: ReturnType<typeof getConfig>,
+): Promise<Record<Hex.Hex, KnownEvent[]>> {
+	const { getTransactionReceipt } = await import('wagmi/actions')
+
+	const entries = await Promise.all(
+		transactions.map(async (transaction) => {
+			if (!transaction?.hash)
+				return [transaction.hash ?? 'unknown', []] as const
+
+			try {
+				const receipt = await getTransactionReceipt(wagmiConfig, {
+					hash: transaction.hash,
+				})
+				const getTokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
+				const events = parseKnownEvents(receipt, {
+					transaction,
+					getTokenMetadata,
+				})
+
+				return [transaction.hash, events] as const
+			} catch (error) {
+				console.error('Failed to load transaction description', {
+					hash: transaction.hash,
+					error,
+				})
+				return [transaction.hash, []] as const
+			}
+		}),
+	)
+
+	return Object.fromEntries(
+		entries.filter(([hash]) => Boolean(hash)),
+	) as Record<Hex.Hex, KnownEvent[]>
+}
+
 export const Route = createFileRoute('/_layout/block/$id')({
 	component: RouteComponent,
 	notFoundComponent: NotFound,
-	params: {
-		parse: (params) => {
-			if (!params?.id) throw notFound()
-			return { id: params.id }
-		},
-	},
-	loader: async ({ params }) => {
-		const { id } = params
-		if (isHex(id)) {
-			Hex.assert(id)
-			return {
-				kind: 'hash',
-				blockHash: id,
-			} satisfies BlockIdentifier
-		}
-
-		const parsedNumber = Number(id)
-		if (Number.isSafeInteger(parsedNumber))
-			return {
-				kind: 'number',
-				blockNumber: BigInt(parsedNumber),
-			} satisfies BlockIdentifier
-
-		throw notFound({
-			routeId: rootRouteId,
-			data: { error: 'Invalid block ID' },
-		})
-	},
+	loader,
 })
 
 function RouteComponent() {
-	const blockRef = Route.useLoaderData()
-
-	const blockQuery = useBlock({
-		includeTransactions: true,
-		...(blockRef.kind === 'hash'
-			? { blockHash: blockRef.blockHash }
-			: { blockNumber: blockRef.blockNumber }),
-		query: {
-			refetchOnWindowFocus: false,
-			staleTime: 30_000,
-		},
-	})
-	const block = blockQuery.data
-	const isLoading = blockQuery.isPending
+	const { block, blockRef, knownEventsByHash } = Route.useLoaderData()
 
 	const [chain] = useChains()
 	const decimals = chain?.nativeCurrency.decimals ?? 18
@@ -135,10 +175,11 @@ function RouteComponent() {
 	)
 
 	React.useEffect(() => {
-		if (!block?.number) return
+		const blockNumber = block?.number
+		if (blockNumber === null || blockNumber === undefined) return
 		setLatestBlockNumber((current) => {
-			if (!current) return block.number
-			return current > block.number ? current : block.number
+			if (!current) return blockNumber
+			return current > blockNumber ? current : blockNumber
 		})
 	}, [block?.number])
 
@@ -164,15 +205,14 @@ function RouteComponent() {
 				<div className={cx('min-[1240px]:max-w-74')}>
 					<BlockSummaryCard
 						block={block}
-						isLoading={isLoading}
 						latestBlockNumber={latestBlockNumber}
 						requestedNumber={requestedNumber}
 					/>
 				</div>
 				<div className={cx('min-[1240px]:max-w-full')}>
 					<BlockTransactionsCard
-						isLoading={isLoading}
 						transactions={transactions}
+						knownEventsByHash={knownEventsByHash}
 						decimals={decimals}
 						symbol={symbol}
 					/>
@@ -183,17 +223,8 @@ function RouteComponent() {
 }
 
 function BlockSummaryCard(props: BlockSummaryCardProps) {
-	const { block, isLoading, latestBlockNumber, requestedNumber } = props
+	const { block, latestBlockNumber, requestedNumber } = props
 	const [showAdvanced, setShowAdvanced] = React.useState(true)
-
-	if (isLoading) return <BlockSummarySkeleton />
-
-	if (!block)
-		return (
-			<article className="font-mono rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_12px_40px_rgba(0,0,0,0.06)] px-[18px] py-[18px] text-base-content-secondary">
-				<span>Awaiting block data…</span>
-			</article>
-		)
 
 	const blockNumberValue = block.number ?? requestedNumber
 	const formattedNumber = formatBlockNumber(blockNumberValue)
@@ -365,8 +396,7 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 }
 
 interface BlockSummaryCardProps {
-	block?: BlockWithTransactions
-	isLoading: boolean
+	block: BlockWithTransactions
 	latestBlockNumber?: bigint
 	requestedNumber?: bigint
 }
@@ -374,61 +404,9 @@ interface BlockSummaryCardProps {
 const GAS_DECIMALS = 18
 
 function BlockTransactionsCard(props: BlockTransactionsCardProps) {
-	const { transactions, isLoading, decimals, symbol } = props
+	const { transactions, knownEventsByHash, decimals, symbol } = props
 
-	const transactionHashes = React.useMemo(
-		() => transactions.map((transaction) => transaction.hash),
-		[transactions],
-	)
-
-	const { data: knownEventsByHash = {}, isFetching: isFetchingKnownEvents } =
-		useQuery({
-			queryKey: ['block-known-events', transactionHashes],
-			enabled: transactions.length > 0,
-			staleTime: 30_000,
-			queryFn: async () => {
-				const entries = await Promise.all(
-					transactions.map(async (transaction) => {
-						if (!transaction?.hash)
-							return [transaction.hash ?? 'unknown', []] as const
-
-						try {
-							const receipt = await queryClient.fetchQuery(
-								getTransactionReceiptQueryOptions(config, {
-									hash: transaction.hash,
-								}),
-							)
-							const getTokenMetadata = await TokenMetadata.fromLogs(
-								receipt.logs,
-							)
-							const events = parseKnownEvents(receipt, {
-								transaction,
-								getTokenMetadata,
-							})
-
-							return [transaction.hash, events] as const
-						} catch (error) {
-							console.error('Failed to load transaction description', {
-								hash: transaction.hash,
-								error,
-							})
-							return [transaction.hash, []] as const
-						}
-					}),
-				)
-
-				return Object.fromEntries(
-					entries.filter(([hash]) => Boolean(hash)),
-				) as Record<Hex.Hex, KnownEvent[]>
-			},
-		})
-
-	const displayRows: Array<BlockTransaction | undefined> =
-		transactions.length > 0
-			? transactions
-			: Array.from({ length: isLoading ? 7 : 0 }).map(() => undefined)
-
-	if (!displayRows.length && !isLoading)
+	if (transactions.length === 0)
 		return (
 			<section className="flex flex-col font-mono w-full overflow-hidden rounded-[10px] border border-card-border bg-card-header shadow-[0px_12px_40px_rgba(0,0,0,0.06)] p-[24px] text-center text-base-content-secondary">
 				No transactions were included in this block.
@@ -449,143 +427,123 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 				</h2>
 			</div>
 			<div className="overflow-x-auto">
-				<table className="min-w-full text-[13px] text-primary">
+				<table className="min-w-full text-[13px] text-primary table-fixed">
+					<colgroup>
+						<col className="w-[52px]" />
+						<col className="w-[100px]" />
+						<col className="w-[90px]" />
+						<col />
+						<col className="w-[110px]" />
+						<col className="w-[80px]" />
+						<col className="w-[70px]" />
+					</colgroup>
 					<thead>
 						<tr className="border-b border-dashed border-card-border text-tertiary">
-							<th className="px-[16px] py-[12px] text-left font-normal">
-								Index
+							<th className="px-[12px] py-[12px] text-left font-normal whitespace-nowrap">
+								#
 							</th>
-							<th className="px-[16px] py-[12px] text-left font-normal">
+							<th className="px-[12px] py-[12px] text-left font-normal whitespace-nowrap">
 								Type
 							</th>
-							<th className="px-[16px] py-[12px] text-left font-normal">
+							<th className="px-[12px] py-[12px] text-left font-normal whitespace-nowrap">
 								From
 							</th>
-							<th className="px-[16px] py-[12px] text-left font-normal">
+							<th className="px-[12px] py-[12px] text-left font-normal">
 								Description
 							</th>
-							<th className="px-[16px] py-[12px] text-left font-normal">
+							<th className="px-[12px] py-[12px] text-left font-normal whitespace-nowrap">
 								Hash
 							</th>
-							<th className="px-[16px] py-[12px] text-right font-normal">
+							<th className="px-[12px] py-[12px] text-right font-normal whitespace-nowrap">
 								Fee
 							</th>
-							<th className="px-[16px] py-[12px] text-right font-normal">
-								Total
+							<th className="px-[12px] py-[12px] text-right font-normal whitespace-nowrap">
+								Value
 							</th>
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-dashed divide-card-border">
-						{displayRows.map((transaction, index) => {
-							const isPlaceholder = !transaction
+						{transactions.map((transaction, index) => {
 							const transactionIndex =
-								!isPlaceholder &&
 								(transaction.transactionIndex ?? null) !== null
 									? Number(transaction.transactionIndex) + 1
 									: index + 1
 
-							let fromCell = <span className="text-tertiary">—</span>
-
-							if (!isPlaceholder) {
-								if (transaction.from === zeroAddress) {
-									fromCell = <span className="text-tertiary">System</span>
-								} else {
-									fromCell = (
-										<AddressLink
-											address={transaction.from}
-											chars={4}
-											className="text-accent font-medium text-[12px]"
-										/>
-									)
-								}
-							}
-
-							const amountDisplay = !isPlaceholder
-								? formatNativeAmount(transaction.value, decimals, symbol)
-								: '—'
-							const fee = !isPlaceholder
-								? getEstimatedFee(transaction)
-								: undefined
-							const feeDisplay =
-								fee !== undefined && fee > 0n
-									? formatNativeAmount(fee, GAS_DECIMALS, symbol)
-									: '—'
-							const feeOutput = feeDisplay === '—' ? '—' : `(${feeDisplay})`
-							const hashCell =
-								!isPlaceholder && transaction.hash ? (
-									<Link
-										to="/tx/$hash"
-										params={{ hash: transaction.hash }}
-										className="text-accent font-mono"
-										title={transaction.hash}
-									>
-										{HexFormatter.shortenHex(transaction.hash, 6)}
-									</Link>
+							const fromCell =
+								transaction.from === zeroAddress ? (
+									<span className="text-tertiary">System</span>
 								) : (
-									<span className="text-tertiary">—</span>
+									<AddressLink
+										address={transaction.from}
+										chars={4}
+										className="text-accent font-medium text-[12px]"
+									/>
 								)
 
-							const knownEvents =
-								!isPlaceholder && transaction.hash
-									? knownEventsByHash[transaction.hash]
-									: undefined
+							const amountDisplay = formatNativeAmount(
+								transaction.value,
+								decimals,
+								symbol,
+							)
+							const fee = getEstimatedFee(transaction)
+							const feeDisplay =
+								fee > 0n ? formatNativeAmount(fee, GAS_DECIMALS, symbol) : '—'
+							const feeOutput = feeDisplay === '—' ? '—' : `(${feeDisplay})`
+							const hashCell = transaction.hash ? (
+								<Link
+									to="/tx/$hash"
+									params={{ hash: transaction.hash }}
+									className="text-accent font-mono"
+									title={transaction.hash}
+								>
+									{HexFormatter.shortenHex(transaction.hash, 6)}
+								</Link>
+							) : (
+								<span className="text-tertiary">—</span>
+							)
+
+							const knownEvents = transaction.hash
+								? knownEventsByHash[transaction.hash]
+								: undefined
+							const txType = getTransactionType(transaction)
 
 							return (
-								<tr
-									key={transaction?.hash ?? `placeholder-${index}`}
-									className="bg-card"
-								>
-									<td className="px-[16px] py-[12px] align-top text-tertiary tabular-nums">
+								<tr key={transaction.hash} className="bg-card">
+									<td className="px-[12px] py-[12px] align-top text-tertiary tabular-nums whitespace-nowrap">
 										[{transactionIndex}]
 									</td>
-									<td className="px-[16px] py-[12px] align-top">
-										{!isPlaceholder ? (
-											(() => {
-												const txType = getTransactionType(transaction)
-												return (
-													<div
-														className={cx(
-															txType.type === 'system'
-																? 'text-tertiary'
-																: 'text-primary',
-															'text-[12px] font-medium',
-														)}
-													>
-														{txType.label}
-													</div>
-												)
-											})()
-										) : (
-											<span className="text-tertiary">—</span>
-										)}
+									<td className="px-[12px] py-[12px] align-top whitespace-nowrap">
+										<div
+											className={cx(
+												txType.type === 'system'
+													? 'text-tertiary'
+													: 'text-primary',
+												'text-[12px] font-medium',
+											)}
+										>
+											{txType.label}
+										</div>
 									</td>
-									<td className="px-[16px] py-[12px] align-top">
-										{!isPlaceholder ? (
-											fromCell
-										) : (
-											<span className="text-tertiary">—</span>
-										)}
+									<td className="px-[12px] py-[12px] align-top whitespace-nowrap">
+										{fromCell}
 									</td>
-									<td className="px-[16px] py-[12px] align-top">
-										{!isPlaceholder ? (
-											<TransactionDescription
-												transaction={transaction}
-												amountDisplay={amountDisplay}
-												knownEvents={knownEvents}
-												isLoading={isFetchingKnownEvents}
-											/>
-										) : (
-											<span className="text-tertiary">Loading…</span>
-										)}
+									<td className="px-[12px] py-[12px] align-top">
+										<TransactionDescription
+											transaction={transaction}
+											amountDisplay={amountDisplay}
+											knownEvents={knownEvents}
+										/>
 									</td>
-									<td className="px-[16px] py-[12px] align-top">{hashCell}</td>
-									<td className="px-[16px] py-[12px] align-top text-right text-base-content-secondary">
+									<td className="px-[12px] py-[12px] align-top whitespace-nowrap">
+										{hashCell}
+									</td>
+									<td className="px-[12px] py-[12px] align-top text-right text-base-content-secondary whitespace-nowrap">
 										{feeOutput}
 									</td>
 									<td
 										className={cx([
-											'px-[16px] py-[12px] align-top text-right tabular-nums',
-											!isPlaceholder && transaction.value > 0n
+											'px-[12px] py-[12px] align-top text-right tabular-nums whitespace-nowrap',
+											transaction.value > 0n
 												? 'text-base-content-positive'
 												: 'text-primary',
 										])}
@@ -604,13 +562,13 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 
 interface BlockTransactionsCardProps {
 	transactions: BlockTransaction[]
-	isLoading: boolean
+	knownEventsByHash: Record<Hex.Hex, KnownEvent[]>
 	decimals: number
 	symbol: string
 }
 
 function TransactionDescription(props: TransactionDescriptionProps) {
-	const { transaction, amountDisplay, knownEvents, isLoading } = props
+	const { transaction, amountDisplay, knownEvents } = props
 
 	const decodedCall = React.useMemo(() => {
 		const data = transaction.input
@@ -659,6 +617,34 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [decodedCall?.functionName, decodedCall?.args, selector, decodedCall])
 
+	// Contract creation takes priority - check before known events
+	// (contract constructors often emit Transfer events that would otherwise show)
+	if (!transaction.to) {
+		if (knownEvents && knownEvents.length > 0) {
+			// Prioritize "create token" events for contract deployments as they're more descriptive
+			const tokenCreationEvent = knownEvents.find(
+				(e) => e.type === 'create token',
+			)
+			const primaryEvent = tokenCreationEvent ?? knownEvents[0]
+			const otherEvents = knownEvents.filter((e) => e !== primaryEvent)
+
+			return (
+				<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
+					<EventDescription
+						event={primaryEvent}
+						className="flex flex-row items-center gap-[6px]"
+					/>
+					{otherEvents.length > 0 && (
+						<span className="text-tertiary whitespace-nowrap">
+							+{otherEvents.length} more
+						</span>
+					)}
+				</div>
+			)
+		}
+		return <span className="text-primary">Deploy contract</span>
+	}
+
 	if (knownEvents && knownEvents.length > 0) {
 		const [firstEvent, ...rest] = knownEvents
 		return (
@@ -676,18 +662,6 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 		)
 	}
 
-	if (isLoading) return <span className="text-tertiary">Analyzing…</span>
-
-	if (!transaction.to)
-		return (
-			<span className="text-primary">
-				Deploy contract with{' '}
-				<span className="text-base-content-positive font-medium">
-					{amountDisplay}
-				</span>
-			</span>
-		)
-
 	if (transaction.value === 0n)
 		return (
 			<div className="flex flex-col gap-[2px]">
@@ -698,9 +672,6 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 						chars={4}
 						className="text-accent font-medium"
 					/>
-					{transaction.from === zeroAddress && (
-						<span className="text-tertiary"> (system)</span>
-					)}
 				</span>
 				{subtitle && (
 					<span className="text-base-content-secondary text-[12px]">
@@ -730,21 +701,6 @@ interface TransactionDescriptionProps {
 	transaction: BlockTransaction
 	amountDisplay: string
 	knownEvents?: KnownEvent[]
-	isLoading: boolean
-}
-
-function BlockSummarySkeleton() {
-	return (
-		<article className="font-mono rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_4px_44px_rgba(0,0,0,0.05)] px-[18px] py-[18px]">
-			{Array.from({ length: 8 }).map((_, index) => (
-				<div
-					// biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholder
-					key={index}
-					className="h-[16px] bg-base-border/50 rounded-full animate-pulse mb-[10px]"
-				/>
-			))}
-		</article>
-	)
 }
 
 function BlockTimeRow(props: {
