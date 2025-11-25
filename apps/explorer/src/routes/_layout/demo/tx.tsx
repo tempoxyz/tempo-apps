@@ -366,6 +366,7 @@ function loader() {
 				}) as [Hex.Hex, ...Hex.Hex[]],
 				data: encodeAbiParameters([{ type: 'uint256' }], [250000n]),
 			}),
+			// Test case: Mint without memo (just Mint event)
 			mockLog({
 				address: tokenAddress,
 				topics: encodeEventTopics({
@@ -377,6 +378,7 @@ function loader() {
 				}) as [Hex.Hex, ...Hex.Hex[]],
 				data: encodeAbiParameters([{ type: 'uint256' }], [500000n]),
 			}),
+			// Test case: Burn without memo (just Burn event)
 			mockLog({
 				address: tokenAddress,
 				topics: encodeEventTopics({
@@ -387,6 +389,56 @@ function loader() {
 					},
 				}) as [Hex.Hex, ...Hex.Hex[]],
 				data: encodeAbiParameters([{ type: 'uint256' }], [100000n]),
+			}),
+			// Test case: Mint WITH memo (Mint + TransferWithMemo pair - should dedupe to just Mint with memo)
+			mockLog({
+				address: tokenAddress,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'Mint',
+					args: {
+						to: accountAddress,
+					},
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [200000n]),
+			}),
+			mockLog({
+				address: tokenAddress,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'TransferWithMemo',
+					args: {
+						from: zeroAddress,
+						to: accountAddress,
+						memo: Hex.padLeft(Hex.fromString('Minted for you!'), 32),
+					},
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [200000n]),
+			}),
+			// Test case: Burn WITH memo (Burn + TransferWithMemo pair - should dedupe to just Burn with memo)
+			mockLog({
+				address: tokenAddress,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'Burn',
+					args: {
+						from: adminAddress,
+					},
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [75000n]),
+			}),
+			mockLog({
+				address: tokenAddress,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'TransferWithMemo',
+					args: {
+						from: adminAddress,
+						to: zeroAddress,
+						memo: Hex.padLeft(Hex.fromString('Burned by admin'), 32),
+					},
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [75000n]),
 			}),
 			mockLog({
 				address: tokenAddress,
