@@ -1,7 +1,15 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import {
+	createFileRoute,
+	getRouteApi,
+	Link,
+	useNavigate,
+} from '@tanstack/react-router'
+import type { Hex } from 'ox'
 import { useState } from 'react'
 import { ExploreInput } from '#components/ExploreInput'
 import { Intro } from '#components/Intro'
+
+const layoutRoute = getRouteApi('/_layout')
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
@@ -10,6 +18,7 @@ export const Route = createFileRoute('/_layout/')({
 function Component() {
 	const navigate = useNavigate()
 	const [inputValue, setInputValue] = useState('')
+	const { recentTransactions } = layoutRoute.useLoaderData()
 
 	return (
 		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
@@ -39,7 +48,55 @@ function Component() {
 						}}
 					/>
 				</div>
+				<SpotlightLinks recentTransactions={recentTransactions} />
 			</div>
 		</div>
+	)
+}
+
+function SpotlightLinks(props: { recentTransactions?: Hex.Hex[] }) {
+	const { recentTransactions = [] } = props
+	return (
+		<div className="flex items-center gap-[8px] mt-[24px] text-[14px] text-base-content-tertiary">
+			<span>Try:</span>
+			<SpotlightLink
+				to="/account/$address"
+				params={{ address: '0x5bc1473610754a5ca10749552b119df90c1a1877' }}
+			>
+				Account
+			</SpotlightLink>
+			<span>·</span>
+			<SpotlightLink
+				to="/token/$address"
+				params={{ address: '0x20c0000000000000000000000000000000000002' }}
+			>
+				Token
+			</SpotlightLink>
+			<span>·</span>
+			{recentTransactions[0] ? (
+				<SpotlightLink to="/tx/$hash" params={{ hash: recentTransactions[0] }}>
+					Receipt
+				</SpotlightLink>
+			) : (
+				<span className="opacity-50">Receipt</span>
+			)}
+		</div>
+	)
+}
+
+function SpotlightLink(props: {
+	to: string
+	params: Record<string, string>
+	children: React.ReactNode
+}) {
+	const { to, params, children } = props
+	return (
+		<Link
+			to={to}
+			params={params}
+			className="text-base-content-secondary hover:text-base-content transition-colors duration-150 underline underline-offset-2 decoration-base-border hover:decoration-base-content-secondary"
+		>
+			{children}
+		</Link>
 	)
 }
