@@ -1,12 +1,8 @@
-import {
-	keepPreviousData,
-	useQuery,
-	useQueryClient,
-} from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Block } from 'viem'
-import { useWatchBlockNumber } from 'wagmi'
+import { useBlock, useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { RelativeTime } from '#components/RelativeTime'
@@ -17,10 +13,12 @@ import ChevronFirst from '~icons/lucide/chevron-first'
 import ChevronLast from '~icons/lucide/chevron-last'
 import ChevronLeft from '~icons/lucide/chevron-left'
 import ChevronRight from '~icons/lucide/chevron-right'
-import Pause from '~icons/lucide/pause'
 import Play from '~icons/lucide/play'
 
 const BLOCKS_PER_PAGE = 12
+
+// Track which block numbers are "new" for animation purposes
+const recentlyAddedBlocks = new Set<string>()
 
 async function loader({
 	location,
@@ -28,10 +26,10 @@ async function loader({
 	location: { search: { page?: number } }
 }) {
 	const page = location.search.page ?? 1
-	const wagmiConfig = getConfig({})
+	const wagmiConfig = getConfig()
 
 	// Fetch latest block to get the current block number
-	const latestBlock = await getBlock(wagmiConfig, {})
+	const latestBlock = await getBlock(wagmiConfig)
 	const latestBlockNumber = latestBlock.number
 
 	// Calculate which blocks to fetch for this page
@@ -71,30 +69,74 @@ function BlocksPage() {
 	const [latestBlockNumber, setLatestBlockNumber] = React.useState<
 		bigint | undefined
 	>()
-	const queryClient = useQueryClient()
+	// Initialize with loader data to prevent layout shift
+	const [liveBlocks, setLiveBlocks] = React.useState<Block[]>(() =>
+		loaderData.blocks.slice(0, BLOCKS_PER_PAGE),
+	)
 
 	// Use loader data for initial render, then live updates
 	const currentLatest = latestBlockNumber ?? loaderData.latestBlockNumber
 
-	// Watch for new blocks in realtime
+	// Watch for new blocks (enabled on all pages when live)
 	useWatchBlockNumber({
-		pollingInterval: 1000,
+		pollingInterval: 500, // Fast polling for snappy updates
 		enabled: live,
 		onBlockNumber: (blockNumber) => {
-			setLatestBlockNumber(blockNumber)
-			// Invalidate queries when on first page to show new blocks
-			if (page === 1) {
-				queryClient.invalidateQueries({ queryKey: ['blocks', page] })
+			// Only update if this is actually a new block
+			if (latestBlockNumber === undefined || blockNumber > latestBlockNumber) {
+				setLatestBlockNumber(blockNumber)
+				// Only mark as recently added for animation on page 1
+				if (page === 1) {
+					recentlyAddedBlocks.add(blockNumber.toString())
+					// Clear the animation flag after animation completes
+					setTimeout(() => {
+						recentlyAddedBlocks.delete(blockNumber.toString())
+					}, 400)
+				}
 			}
 		},
 	})
+
+	// Fetch the latest block when block number changes (for live updates on page 1)
+	const { data: latestBlock } = useBlock({
+		blockNumber: latestBlockNumber,
+		query: {
+			enabled: live && page === 1 && latestBlockNumber !== undefined,
+			staleTime: Number.POSITIVE_INFINITY, // Block data never changes
+		},
+	})
+
+	// Add new blocks as they arrive
+	React.useEffect(() => {
+		if (!live || page !== 1 || !latestBlock) return
+
+		setLiveBlocks((prev) => {
+			// Don't add if already exists
+			if (prev.some((b) => b.number === latestBlock.number)) return prev
+			// Prepend new block and keep only BLOCKS_PER_PAGE
+			return [latestBlock, ...prev].slice(0, BLOCKS_PER_PAGE)
+		})
+	}, [latestBlock, live, page])
+
+	// Re-initialize when navigating back to page 1 with live mode
+	React.useEffect(() => {
+		if (page === 1 && live && loaderData.blocks) {
+			setLiveBlocks((prev) => {
+				// Only reinitialize if we have no blocks or stale data
+				if (prev.length === 0) {
+					return loaderData.blocks.slice(0, BLOCKS_PER_PAGE)
+				}
+				return prev
+			})
+		}
+	}, [page, live, loaderData.blocks])
 
 	// Calculate which blocks to show for this page
 	const startBlock = currentLatest
 		? currentLatest - BigInt((page - 1) * BLOCKS_PER_PAGE)
 		: undefined
 
-	// Fetch blocks for the current page (skip on first page if we have loader data)
+	// Fetch blocks for non-page-1 or when live is off
 	const { data: fetchedBlocks, isLoading: isFetching } = useQuery({
 		queryKey: ['blocks', page, startBlock?.toString()],
 		queryFn: async () => {
@@ -115,13 +157,21 @@ function BlocksPage() {
 			return results.filter(Boolean) as Block[]
 		},
 		enabled:
-			!!startBlock && !!currentLatest && (page !== 1 || !!latestBlockNumber),
-		staleTime: page === 1 ? 0 : 60_000,
+			!!startBlock &&
+			!!currentLatest &&
+			(page !== 1 || !live || liveBlocks.length === 0),
+		staleTime: page === 1 && live ? 0 : 60_000,
 		placeholderData: keepPreviousData,
 	})
 
-	// Use loader data for first page initial render, then fetched data
-	const blocks = fetchedBlocks ?? (page === 1 ? loaderData.blocks : undefined)
+	// Use live blocks on page 1 when live, otherwise use fetched/loader data
+	const blocks = React.useMemo(() => {
+		if (page === 1 && live && liveBlocks.length > 0) {
+			return liveBlocks
+		}
+		return fetchedBlocks ?? (page === 1 ? loaderData.blocks : undefined)
+	}, [page, live, liveBlocks, fetchedBlocks, loaderData.blocks])
+
 	const isLoading = !blocks && isFetching
 
 	const totalBlocks = currentLatest ? Number(currentLatest) + 1 : 0
@@ -152,8 +202,15 @@ function BlocksPage() {
 								Loading blocks...
 							</div>
 						) : blocks && blocks.length > 0 ? (
-							blocks.map((block) => (
-								<BlockRow key={block.number?.toString()} block={block} />
+							blocks.map((block, index) => (
+								<BlockRow
+									key={block.number?.toString()}
+									block={block}
+									isNew={recentlyAddedBlocks.has(
+										block.number?.toString() ?? '',
+									)}
+									isLatest={live && page === 1 && index === 0}
+								/>
 							))
 						) : (
 							<div className="px-4 py-8 text-center text-tertiary">
@@ -231,14 +288,17 @@ function BlocksPage() {
 							className={cx(
 								'flex items-center gap-[6px] px-[10px] py-[5px] rounded-[6px] text-[12px] font-medium transition-colors',
 								live
-									? 'bg-accent/10 text-accent hover:bg-accent/20'
+									? 'bg-positive/10 text-positive hover:bg-positive/20'
 									: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
 							)}
 							title={live ? 'Pause live updates' : 'Resume live updates'}
 						>
 							{live ? (
 								<>
-									<Pause className="size-[12px]" />
+									<span className="relative flex size-[8px]">
+										<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-positive opacity-75" />
+										<span className="relative inline-flex rounded-full size-[8px] bg-positive" />
+									</span>
 									<span>Live</span>
 								</>
 							) : (
@@ -262,14 +322,27 @@ function BlocksPage() {
 	)
 }
 
-function BlockRow({ block }: { block: Block }) {
+function BlockRow({
+	block,
+	isNew,
+	isLatest,
+}: {
+	block: Block
+	isNew?: boolean
+	isLatest?: boolean
+}) {
 	const txCount = block.transactions?.length ?? 0
 	const blockNumber = block.number?.toString() ?? '0'
 	const blockHash = block.hash ?? '0x'
 
 	return (
-		<div className="grid grid-cols-[100px_180px_1fr_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 transition-colors border-b border-dashed border-card-border last:border-b-0">
-			<div>
+		<div
+			className={cx(
+				'grid grid-cols-[100px_180px_1fr_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 border-b border-dashed border-card-border last:border-b-0',
+				isNew && 'bg-positive/5',
+			)}
+		>
+			<div className="tabular-nums">
 				<Link
 					to="/block/$id"
 					params={{ id: blockNumber }}
@@ -288,10 +361,10 @@ function BlockRow({ block }: { block: Block }) {
 					{HexFormatter.shortenHex(blockHash, 10)}
 				</Link>
 			</div>
-			<div className="text-right text-secondary">
-				<RelativeTime timestamp={block.timestamp} />
+			<div className="text-right text-secondary tabular-nums">
+				{isLatest ? 'now' : <RelativeTime timestamp={block.timestamp} />}
 			</div>
-			<div className="text-right text-secondary">{txCount}</div>
+			<div className="text-right text-secondary tabular-nums">{txCount}</div>
 		</div>
 	)
 }
