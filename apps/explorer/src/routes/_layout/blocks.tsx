@@ -6,12 +6,13 @@ import {
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Block } from 'viem'
-import { useBlock, useWatchBlockNumber } from 'wagmi'
+import { useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { RelativeTime } from '#components/RelativeTime'
 import { cx } from '#cva.config'
-import { DateFormatter, HexFormatter } from '#lib/formatting'
-import { config } from '#wagmi.config'
+import { HexFormatter } from '#lib/formatting'
+import { config, getConfig } from '#wagmi.config'
 import ChevronFirst from '~icons/lucide/chevron-first'
 import ChevronLast from '~icons/lucide/chevron-last'
 import ChevronLeft from '~icons/lucide/chevron-left'
@@ -21,17 +22,55 @@ import Play from '~icons/lucide/play'
 
 const BLOCKS_PER_PAGE = 12
 
+async function loader({
+	location,
+}: {
+	location: { search: { page?: number } }
+}) {
+	const page = location.search.page ?? 1
+	const wagmiConfig = getConfig({})
+
+	// Fetch latest block to get the current block number
+	const latestBlock = await getBlock(wagmiConfig, {})
+	const latestBlockNumber = latestBlock.number
+
+	// Calculate which blocks to fetch for this page
+	const startBlock = latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
+
+	const blockNumbers: bigint[] = []
+	for (let i = 0n; i < BigInt(BLOCKS_PER_PAGE); i++) {
+		const blockNum = startBlock - i
+		if (blockNum >= 0n) blockNumbers.push(blockNum)
+	}
+
+	// Fetch all blocks in parallel
+	const blocks = await Promise.all(
+		blockNumbers.map((blockNumber) =>
+			getBlock(wagmiConfig, { blockNumber }).catch(() => null),
+		),
+	)
+
+	return {
+		latestBlockNumber,
+		blocks: blocks.filter(Boolean) as Block[],
+	}
+}
+
 export const Route = createFileRoute('/_layout/blocks')({
 	component: BlocksPage,
 	validateSearch: z.object({
 		page: z.optional(z.number()),
 		live: z.optional(z.boolean()),
 	}).parse,
+	loader,
 })
 
 function BlocksPage() {
 	const { page = 1, live = true } = Route.useSearch()
-	const [latestBlockNumber, setLatestBlockNumber] = React.useState<bigint>()
+	const loaderData = Route.useLoaderData()
+	const [latestBlockNumber, setLatestBlockNumber] = React.useState<bigint>(
+		loaderData.latestBlockNumber,
+	)
 	const queryClient = useQueryClient()
 
 	// Watch for new blocks in realtime
@@ -47,12 +86,7 @@ function BlocksPage() {
 		},
 	})
 
-	// Get the latest block to determine the total
-	const { data: latestBlock } = useBlock({
-		query: { enabled: !latestBlockNumber },
-	})
-
-	const currentLatest = latestBlockNumber ?? latestBlock?.number
+	const currentLatest = latestBlockNumber
 
 	// Calculate which blocks to show for this page
 	const startBlock = currentLatest
@@ -82,6 +116,7 @@ function BlocksPage() {
 		enabled: !!startBlock && !!currentLatest,
 		staleTime: page === 1 ? 0 : 60_000, // First page refreshes, others are cached
 		placeholderData: keepPreviousData, // Keep old data while fetching new
+		initialData: page === 1 ? loaderData.blocks : undefined, // Use SSR data for first page
 	})
 
 	const totalBlocks = currentLatest ? Number(currentLatest) + 1 : 0
@@ -106,7 +141,7 @@ function BlocksPage() {
 					</div>
 
 					{/* Blocks list */}
-					<div className="flex flex-col divide-y divide-card-border min-w-[500px]">
+					<div className="flex flex-col min-w-[500px]">
 						{isLoading ? (
 							<div className="px-4 py-8 text-center text-tertiary">
 								Loading blocks...
@@ -130,7 +165,7 @@ function BlocksPage() {
 						<Link
 							to="."
 							resetScroll={false}
-							search={{ page: 1 }}
+							search={(prev) => ({ ...prev, page: 1 })}
 							disabled={page <= 1 || isLoading}
 							className={cx(
 								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
@@ -142,7 +177,7 @@ function BlocksPage() {
 						<Link
 							to="."
 							resetScroll={false}
-							search={(prev) => ({ page: (prev?.page ?? 1) - 1 })}
+							search={(prev) => ({ ...prev, page: (prev?.page ?? 1) - 1 })}
 							disabled={page <= 1 || isLoading}
 							className={cx(
 								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
@@ -159,7 +194,7 @@ function BlocksPage() {
 						<Link
 							to="."
 							resetScroll={false}
-							search={(prev) => ({ page: (prev?.page ?? 1) + 1 })}
+							search={(prev) => ({ ...prev, page: (prev?.page ?? 1) + 1 })}
 							disabled={page >= totalPages || isLoading}
 							className={cx(
 								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
@@ -171,7 +206,7 @@ function BlocksPage() {
 						<Link
 							to="."
 							resetScroll={false}
-							search={{ page: totalPages }}
+							search={(prev) => ({ ...prev, page: totalPages })}
 							disabled={page >= totalPages || isLoading}
 							className={cx(
 								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
@@ -228,7 +263,7 @@ function BlockRow({ block }: { block: Block }) {
 	const blockHash = block.hash ?? '0x'
 
 	return (
-		<div className="grid grid-cols-[100px_180px_1fr_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 transition-colors">
+		<div className="grid grid-cols-[100px_180px_1fr_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 transition-colors border-b border-dashed border-card-border last:border-b-0">
 			<div>
 				<Link
 					to="/block/$id"
@@ -254,17 +289,4 @@ function BlockRow({ block }: { block: Block }) {
 			<div className="text-right text-secondary">{txCount}</div>
 		</div>
 	)
-}
-
-function RelativeTime({ timestamp }: { timestamp: bigint }) {
-	const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
-
-	React.useEffect(() => {
-		const interval = setInterval(forceUpdate, 1000)
-		return () => clearInterval(interval)
-	}, [])
-
-	const { text, fullDate } = DateFormatter.formatRelativeTime(timestamp)
-
-	return <span title={fullDate}>{text}</span>
 }
