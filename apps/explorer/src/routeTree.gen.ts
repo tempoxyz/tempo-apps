@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
@@ -25,6 +26,11 @@ const LayoutRoute = LayoutRouteImport.update({
 const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutBlocksRoute = LayoutBlocksRouteImport.update({
+  id: '/blocks',
+  path: '/blocks',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutTxHashRoute = LayoutTxHashRouteImport.update({
@@ -59,6 +65,7 @@ const ApiTokenAddressRouteRoute = ApiTokenAddressRouteRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/blocks': typeof LayoutBlocksRoute
   '/': typeof LayoutIndexRoute
   '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/account/$address': typeof LayoutAccountAddressRoute
@@ -68,6 +75,7 @@ export interface FileRoutesByFullPath {
   '/tx/$hash': typeof LayoutTxHashRoute
 }
 export interface FileRoutesByTo {
+  '/blocks': typeof LayoutBlocksRoute
   '/': typeof LayoutIndexRoute
   '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/account/$address': typeof LayoutAccountAddressRoute
@@ -79,6 +87,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
+  '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/': typeof LayoutIndexRoute
   '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/_layout/account/$address': typeof LayoutAccountAddressRoute
@@ -90,6 +99,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/blocks'
     | '/'
     | '/api/token/$address'
     | '/account/$address'
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/tx/$hash'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/blocks'
     | '/'
     | '/api/token/$address'
     | '/account/$address'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_layout'
+    | '/_layout/blocks'
     | '/_layout/'
     | '/api/token/$address'
     | '/_layout/account/$address'
@@ -137,6 +149,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof LayoutIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/blocks': {
+      id: '/_layout/blocks'
+      path: '/blocks'
+      fullPath: '/blocks'
+      preLoaderRoute: typeof LayoutBlocksRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/tx/$hash': {
@@ -185,6 +204,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface LayoutRouteChildren {
+  LayoutBlocksRoute: typeof LayoutBlocksRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAccountAddressRoute: typeof LayoutAccountAddressRoute
   LayoutBlockIdRoute: typeof LayoutBlockIdRoute
@@ -194,6 +214,7 @@ interface LayoutRouteChildren {
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutBlocksRoute: LayoutBlocksRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAccountAddressRoute: LayoutAccountAddressRoute,
   LayoutBlockIdRoute: LayoutBlockIdRoute,
