@@ -1,5 +1,5 @@
-import * as React from 'react'
 import { ClientOnly, Link } from '@tanstack/react-router'
+import type * as React from 'react'
 import { cx } from '#cva.config.ts'
 import { Pagination } from './Pagination'
 import { Sections } from './Sections'
@@ -42,18 +42,21 @@ export function DataGrid(props: DataGrid.Props) {
 					style={{ gridTemplateColumns }}
 				>
 					<div className="grid col-span-full border-b border-dashed border-card-border grid-cols-subgrid">
-						{activeColumns.map((column, index) => (
-							<div
-								key={`header-${index}`}
-								className={cx(
-									'px-[10px] first:pl-[16px] last:pr-[16px] h-[40px] flex items-center',
-									'text-[13px] text-tertiary font-normal whitespace-nowrap',
-									column.align === 'end' ? 'justify-end' : 'justify-start',
-								)}
-							>
-								{column.label}
-							</div>
-						))}
+						{activeColumns.map((column, index) => {
+							const key = `header-${index}`
+							return (
+								<div
+									key={key}
+									className={cx(
+										'px-[10px] first:pl-[16px] last:pr-[16px] h-[40px] flex items-center',
+										'text-[13px] text-tertiary font-normal whitespace-nowrap',
+										column.align === 'end' ? 'justify-end' : 'justify-start',
+									)}
+								>
+									{column.label}
+								</div>
+							)
+						})}
 					</div>
 					{activeItems.map((item, rowIndex) => {
 						return (
@@ -73,10 +76,11 @@ export function DataGrid(props: DataGrid.Props) {
 									/>
 								)}
 								{item.cells.map((cell, cellIndex) => {
+									const key = `cell-${rowIndex}-${cellIndex}`
 									const column = activeColumns[cellIndex]
 									return (
 										<div
-											key={`cell-${rowIndex}-${cellIndex}`}
+											key={key}
 											className={cx(
 												'px-[10px] first:pl-[16px] last:pr-[16px] py-[12px] flex items-center',
 												'text-primary whitespace-nowrap',

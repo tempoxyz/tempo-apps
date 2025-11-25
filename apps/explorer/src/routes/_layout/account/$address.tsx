@@ -430,7 +430,10 @@ function SectionsWrapper(props: {
 												receipt={receipt}
 												accountAddress={address}
 											/>,
-											<TransactionHashLink key="hash" hash={transaction.hash} />,
+											<TransactionHashLink
+												key="hash"
+												hash={transaction.hash}
+											/>,
 											<TransactionFee key="fee" receipt={receipt} />,
 											<TransactionRowTotal
 												key="total"
@@ -479,7 +482,10 @@ function SectionsWrapper(props: {
 									cells:
 										mode === 'stacked'
 											? [
-													<TokenName key="name" contractAddress={assetAddress} />,
+													<TokenName
+														key="name"
+														contractAddress={assetAddress}
+													/>,
 													<AssetContract
 														key="contract"
 														contractAddress={assetAddress}
@@ -491,7 +497,10 @@ function SectionsWrapper(props: {
 													/>,
 												]
 											: [
-													<TokenName key="name" contractAddress={assetAddress} />,
+													<TokenName
+														key="name"
+														contractAddress={assetAddress}
+													/>,
 													<TokenSymbol
 														key="symbol"
 														contractAddress={assetAddress}
