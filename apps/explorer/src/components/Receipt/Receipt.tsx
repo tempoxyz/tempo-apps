@@ -38,7 +38,7 @@ export function Receipt(props: Receipt.Props) {
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Block</span>
 						<Link
-							to={'/block/$id'}
+							to="/block/$id"
 							params={{ id: blockNumber.toString() }}
 							className="text-accent text-right before:content-['#'] press-down"
 						>
@@ -48,7 +48,7 @@ export function Receipt(props: Receipt.Props) {
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Sender</span>
 						<Link
-							to={'/address/$address'}
+							to="/address/$address"
 							params={{ address: sender }}
 							className="text-accent text-right press-down"
 							title={sender}
@@ -229,7 +229,7 @@ export function Receipt(props: Receipt.Props) {
 												{isSponsored && item.payer && (
 													<>
 														<Link
-															to={'/address/$address'}
+															to="/address/$address"
 															params={{ address: item.payer }}
 															className="text-accent press-down"
 															title={item.payer}
