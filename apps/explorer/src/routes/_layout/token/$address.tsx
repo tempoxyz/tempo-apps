@@ -4,6 +4,7 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
+	stripSearchParams,
 	useNavigate,
 	useRouter,
 	useRouterState,
@@ -25,7 +26,11 @@ import { fetchHolders, fetchTransfers } from '#lib/token.server'
 import { config } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
 
-const rowsPerPage = 10
+const defaultSearchValues = {
+	page: 1,
+	limit: 10,
+	tab: 'transfers',
+} as const
 
 type TransfersQuery = {
 	address: Address.Address
@@ -86,13 +91,13 @@ export const Route = createFileRoute('/_layout/token/$address')({
 	component: RouteComponent,
 	notFoundComponent: NotFound,
 	validateSearch: z.object({
-		page: z.prefault(z.number(), 1),
+		page: z.prefault(z.number(), defaultSearchValues.page),
 		limit: z.prefault(
 			z.pipe(
 				z.number(),
 				z.transform((val) => Math.min(100, val)),
 			),
-			rowsPerPage,
+			defaultSearchValues.limit,
 		),
 		tab: z.prefault(
 			z.pipe(
@@ -102,9 +107,12 @@ export const Route = createFileRoute('/_layout/token/$address')({
 					return 'transfers'
 				}),
 			),
-			'transfers',
+			defaultSearchValues.tab,
 		),
 	}),
+	search: {
+		middlewares: [stripSearchParams(defaultSearchValues)],
+	},
 	loaderDeps: ({ search: { page, limit, tab } }) => ({ page, limit, tab }),
 	loader: async ({ deps: { page, limit, tab }, params, context }) => {
 		const { address } = params
@@ -306,22 +314,25 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 								],
 							}}
 							items={() =>
-								Array.from({ length: rowsPerPage }, (_, index) => {
-									const key = `skeleton-${index}`
-									return {
-										cells: [
-											<div key={`${key}-time`} className="h-5" />,
-											<div key={`${key}-from`} className="h-5" />,
-											<div key={`${key}-to`} className="h-5" />,
-										],
-									}
-								})
+								Array.from(
+									{ length: defaultSearchValues.limit },
+									(_, index) => {
+										const key = `skeleton-${index}`
+										return {
+											cells: [
+												<div key={`${key}-time`} className="h-5" />,
+												<div key={`${key}-from`} className="h-5" />,
+												<div key={`${key}-to`} className="h-5" />,
+											],
+										}
+									},
+								)
 							}
 							totalItems={totalItems}
 							page={1}
 							isPending={false}
 							itemsLabel="transfers"
-							itemsPerPage={rowsPerPage}
+							itemsPerPage={defaultSearchValues.limit}
 						/>
 					),
 				},
@@ -377,7 +388,7 @@ function RouteComponent() {
 				search: {
 					...(preloadPage !== 1 ? { page: preloadPage } : {}),
 					...(tab !== 'transfers' ? { tab } : {}),
-					...(limit !== rowsPerPage ? { limit } : {}),
+					...(limit !== defaultSearchValues.limit ? { limit } : {}),
 				},
 			})
 		}
@@ -390,7 +401,7 @@ function RouteComponent() {
 				search: () => ({
 					...(newPage !== 1 ? { page: newPage } : {}),
 					...(tab !== 'transfers' ? { tab } : {}),
-					...(limit !== rowsPerPage ? { limit } : {}),
+					...(limit !== defaultSearchValues.limit ? { limit } : {}),
 				}),
 				resetScroll: false,
 			})
@@ -406,7 +417,7 @@ function RouteComponent() {
 				to: '.',
 				search: () => ({
 					...(newTab !== 'transfers' ? { tab: newTab } : {}),
-					...(limit !== rowsPerPage ? { limit } : {}),
+					...(limit !== defaultSearchValues.limit ? { limit } : {}),
 				}),
 				resetScroll: false,
 			})
