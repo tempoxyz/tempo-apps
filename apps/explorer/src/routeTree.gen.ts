@@ -18,7 +18,6 @@ import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
 import { Route as LayoutDemoAccountRouteImport } from './routes/_layout/demo/account'
 import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
 import { Route as LayoutAccountAddressRouteImport } from './routes/_layout/account/$address'
-import { Route as ApiTokenAddressRouteRouteImport } from './routes/api/token/$address/route'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -64,16 +63,10 @@ const LayoutAccountAddressRoute = LayoutAccountAddressRouteImport.update({
   path: '/account/$address',
   getParentRoute: () => LayoutRoute,
 } as any)
-const ApiTokenAddressRouteRoute = ApiTokenAddressRouteRouteImport.update({
-  id: '/api/token/$address',
-  path: '/api/token/$address',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/blocks': typeof LayoutBlocksRoute
   '/': typeof LayoutIndexRoute
-  '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/account/$address': typeof LayoutAccountAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
   '/demo/account': typeof LayoutDemoAccountRoute
@@ -84,7 +77,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/blocks': typeof LayoutBlocksRoute
   '/': typeof LayoutIndexRoute
-  '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/account/$address': typeof LayoutAccountAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
   '/demo/account': typeof LayoutDemoAccountRoute
@@ -97,7 +89,6 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/': typeof LayoutIndexRoute
-  '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/_layout/account/$address': typeof LayoutAccountAddressRoute
   '/_layout/block/$id': typeof LayoutBlockIdRoute
   '/_layout/demo/account': typeof LayoutDemoAccountRoute
@@ -110,7 +101,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/blocks'
     | '/'
-    | '/api/token/$address'
     | '/account/$address'
     | '/block/$id'
     | '/demo/account'
@@ -121,7 +111,6 @@ export interface FileRouteTypes {
   to:
     | '/blocks'
     | '/'
-    | '/api/token/$address'
     | '/account/$address'
     | '/block/$id'
     | '/demo/account'
@@ -133,7 +122,6 @@ export interface FileRouteTypes {
     | '/_layout'
     | '/_layout/blocks'
     | '/_layout/'
-    | '/api/token/$address'
     | '/_layout/account/$address'
     | '/_layout/block/$id'
     | '/_layout/demo/account'
@@ -144,7 +132,6 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
-  ApiTokenAddressRouteRoute: typeof ApiTokenAddressRouteRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -212,13 +199,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAccountAddressRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/api/token/$address': {
-      id: '/api/token/$address'
-      path: '/api/token/$address'
-      fullPath: '/api/token/$address'
-      preLoaderRoute: typeof ApiTokenAddressRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -249,7 +229,6 @@ const LayoutRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
-  ApiTokenAddressRouteRoute: ApiTokenAddressRouteRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
