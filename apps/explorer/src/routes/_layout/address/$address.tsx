@@ -430,12 +430,12 @@ function SectionsWrapper(props: {
 									return {
 										cells: [
 											<TransactionTimestamp
-												key='time'
+												key="time"
 												timestamp={transaction.block.timestamp}
-												link={'/tx/${transaction.hash}'}
+												link={`/tx/${transaction.hash}`}
 											/>,
 											<TransactionRowDescription
-												key='desc'
+												key="desc"
 												transaction={transaction}
 												knownEvents={knownEvents[transaction.hash] ?? []}
 												receipt={receipt}
@@ -444,14 +444,14 @@ function SectionsWrapper(props: {
 											<TransactionHash key="hash" hash={transaction.hash} />,
 											<TransactionFee key="fee" receipt={receipt} />,
 											<TransactionRowTotal
-												key='total'
+												key="total"
 												transaction={transaction}
 												knownEvents={knownEvents[transaction.hash] ?? []}
 												receipt={receipt}
 											/>,
 										],
 										link: {
-											href: '/tx/${transaction.hash}',
+											href: `/tx/${transaction.hash}`,
 											title: `View receipt ${transaction.hash}`,
 										},
 									}

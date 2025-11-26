@@ -712,7 +712,7 @@ function FilterIndicator(props: {
 		<div className="flex items-center gap-[8px] text-[12px]">
 			<span className="text-tertiary">Filtered:</span>
 			<Link
-				to="/account/$address"
+				to="/address/$address"
 				params={{ address: account }}
 				className="text-accent press-down"
 				title={account}
