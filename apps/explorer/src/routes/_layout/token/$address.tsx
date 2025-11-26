@@ -20,6 +20,7 @@ import { InfoCard } from '#components/InfoCard'
 import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
+import { cx } from '#cva.config.ts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { fetchHolders, fetchTransfers } from '#lib/token.server'
@@ -299,7 +300,22 @@ function TokenCard(props: {
 }
 
 function SectionsSkeleton({ totalItems }: { totalItems: number }) {
-	const isMobile = useMediaQuery('(max-width: 1239px)')
+	const isMobile = useMediaQuery('(max-width: 799px)')
+
+	const transfersColumns: DataGrid.Column[] = [
+		{ label: 'Time', align: 'start', minWidth: 100 },
+		{ label: 'Transaction', align: 'start', minWidth: 120 },
+		{ label: 'From', align: 'start', minWidth: 140 },
+		{ label: 'To', align: 'start', minWidth: 140 },
+		{ label: 'Amount', align: 'end', minWidth: 100 },
+	]
+
+	const holdersColumns: DataGrid.Column[] = [
+		{ label: 'Address', align: 'start', minWidth: 140 },
+		{ label: 'Balance', align: 'end', minWidth: 120 },
+		{ label: 'Percentage', align: 'end', minWidth: 100 },
+	]
+
 	return (
 		<Sections
 			mode={isMobile ? 'stacked' : 'tabs'}
@@ -311,18 +327,8 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 					content: (
 						<DataGrid
 							columns={{
-								stacked: [
-									{ label: 'Time', align: 'start', minWidth: 100 },
-									{ label: 'From', align: 'start' },
-									{ label: 'To', align: 'start' },
-								],
-								tabs: [
-									{ label: 'Time', align: 'start', minWidth: 100 },
-									{ label: 'Transaction', align: 'start' },
-									{ label: 'From', align: 'start' },
-									{ label: 'To', align: 'start' },
-									{ label: 'Amount', align: 'end' },
-								],
+								stacked: transfersColumns,
+								tabs: transfersColumns,
 							}}
 							items={() =>
 								Array.from(
@@ -332,8 +338,10 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 										return {
 											cells: [
 												<div key={`${key}-time`} className="h-5" />,
+												<div key={`${key}-tx`} className="h-5" />,
 												<div key={`${key}-from`} className="h-5" />,
 												<div key={`${key}-to`} className="h-5" />,
+												<div key={`${key}-amount`} className="h-5" />,
 											],
 										}
 									},
@@ -354,15 +362,8 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 					content: (
 						<DataGrid
 							columns={{
-								stacked: [
-									{ label: 'Address', align: 'start' },
-									{ label: 'Balance', align: 'end' },
-								],
-								tabs: [
-									{ label: 'Address', align: 'start' },
-									{ label: 'Balance', align: 'end' },
-									{ label: 'Percentage', align: 'end' },
-								],
+								stacked: holdersColumns,
+								tabs: holdersColumns,
 							}}
 							items={() => []}
 							totalItems={0}
@@ -442,7 +443,12 @@ function RouteComponent() {
 	const activeSection = tab === 'transfers' ? 0 : 1
 
 	return (
-		<div className="flex flex-col min-[1240px]:grid max-w-[1080px] w-full min-[1240px]:pt-20 pt-10 min-[1240px]:pb-16 pb-8 px-4 gap-[14px] min-w-0 min-[1240px]:grid-cols-[auto_1fr]">
+		<div
+			className={cx(
+				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
+				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
+			)}
+		>
 			<TokenCard
 				address={address}
 				className="self-start"
@@ -533,11 +539,25 @@ function SectionsWrapper(props: {
 		isLoadingTransfers ||
 		isLoadingHolders
 
-	const isMobile = useMediaQuery('(max-width: 1239px)')
+	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
 	if (transfers.length === 0 && isLoadingPage && activeSection === 0)
 		return <SectionsSkeleton totalItems={transfersTotal} />
+
+	const transfersColumns: DataGrid.Column[] = [
+		{ label: 'Time', align: 'start', minWidth: 100 },
+		{ label: 'Transaction', align: 'start', minWidth: 120 },
+		{ label: 'From', align: 'start', minWidth: 140 },
+		{ label: 'To', align: 'start', minWidth: 140 },
+		{ label: 'Amount', align: 'end', minWidth: 100 },
+	]
+
+	const holdersColumns: DataGrid.Column[] = [
+		{ label: 'Address', align: 'start', minWidth: 140 },
+		{ label: 'Balance', align: 'end', minWidth: 120 },
+		{ label: 'Percentage', align: 'end', minWidth: 100 },
+	]
 
 	return (
 		<Sections
@@ -553,72 +573,39 @@ function SectionsWrapper(props: {
 					content: (
 						<DataGrid
 							columns={{
-								stacked: [
-									{ label: 'Time', align: 'start', minWidth: 100 },
-									{ label: 'From', align: 'start' },
-									{ label: 'To', align: 'start' },
-								],
-								tabs: [
-									{ label: 'Time', align: 'start', minWidth: 100 },
-									{ label: 'Transaction', align: 'start' },
-									{ label: 'From', align: 'start' },
-									{ label: 'To', align: 'start' },
-									{ label: 'Amount', align: 'end' },
-								],
+								stacked: transfersColumns,
+								tabs: transfersColumns,
 							}}
-							items={(mode) => {
+							items={() => {
 								const validTransfers = transfers.filter(
 									(t): t is typeof t & { timestamp: string; value: string } =>
 										t.timestamp !== null && t.value !== null,
 								)
 
 								return validTransfers.map((transfer) => ({
-									cells:
-										mode === 'stacked'
-											? [
-													<TransferTime
-														key="time"
-														timestamp={BigInt(transfer.timestamp)}
-														link={`/tx/${transfer.transactionHash}`}
-													/>,
-													<AddressLink
-														key="from"
-														address={transfer.from}
-														label="From"
-													/>,
-													<AddressLink
-														key="to"
-														address={transfer.to}
-														label="To"
-													/>,
-												]
-											: [
-													<TransferTime
-														key="time"
-														timestamp={BigInt(transfer.timestamp)}
-														link={`/tx/${transfer.transactionHash}`}
-													/>,
-													<TransactionLink
-														key="tx"
-														hash={transfer.transactionHash}
-													/>,
-													<AddressLink
-														key="from"
-														address={transfer.from}
-														label="From"
-													/>,
-													<AddressLink
-														key="to"
-														address={transfer.to}
-														label="To"
-													/>,
-													<TransferAmount
-														key="amount"
-														value={BigInt(transfer.value)}
-														decimals={metadata?.decimals}
-														symbol={metadata?.symbol}
-													/>,
-												],
+									cells: [
+										<TransferTime
+											key="time"
+											timestamp={BigInt(transfer.timestamp)}
+											link={`/tx/${transfer.transactionHash}`}
+										/>,
+										<TransactionLink
+											key="tx"
+											hash={transfer.transactionHash}
+										/>,
+										<AddressLink
+											key="from"
+											address={transfer.from}
+											label="From"
+										/>,
+										<AddressLink key="to" address={transfer.to} label="To" />,
+										<TransferAmount
+											key="amount"
+											value={BigInt(transfer.value)}
+											decimals={metadata?.decimals}
+											symbol={metadata?.symbol}
+										/>,
+									],
 									link: {
 										href: `/tx/${transfer.transactionHash}`,
 										title: `View receipt ${transfer.transactionHash}`,
@@ -640,48 +627,22 @@ function SectionsWrapper(props: {
 					content: (
 						<DataGrid
 							columns={{
-								stacked: [
-									{ label: 'Address', align: 'start' },
-									{ label: 'Balance', align: 'end' },
-								],
-								tabs: [
-									{ label: 'Address', align: 'start' },
-									{ label: 'Balance', align: 'end' },
-									{ label: 'Percentage', align: 'end' },
-								],
+								stacked: holdersColumns,
+								tabs: holdersColumns,
 							}}
-							items={(mode) =>
+							items={() =>
 								holders.map((holder) => ({
-									cells:
-										mode === 'stacked'
-											? [
-													<AddressLink
-														key="address"
-														address={holder.address}
-													/>,
-													<HolderBalance
-														key="balance"
-														balance={holder.balance}
-														decimals={metadata?.decimals}
-													/>,
-												]
-											: [
-													<AddressLink
-														key="address"
-														address={holder.address}
-													/>,
-													<HolderBalance
-														key="balance"
-														balance={holder.balance}
-														decimals={metadata?.decimals}
-													/>,
-													<span
-														key="percentage"
-														className="text-[12px] text-primary"
-													>
-														{holder.percentage.toFixed(2)}%
-													</span>,
-												],
+									cells: [
+										<AddressLink key="address" address={holder.address} />,
+										<HolderBalance
+											key="balance"
+											balance={holder.balance}
+											decimals={metadata?.decimals}
+										/>,
+										<span key="percentage" className="text-[12px] text-primary">
+											{holder.percentage.toFixed(2)}%
+										</span>,
+									],
 									link: {
 										href: `/token/${address}?a=${holder.address}`,
 										title: `View transfers for ${holder.address}`,
@@ -725,7 +686,7 @@ function FilterIndicator(props: {
 				className="text-tertiary press-down"
 				title="Clear filter"
 			>
-				<XIcon className="w-[14px] h-[14px] translate-y-[1px]" />
+				<XIcon className="w-[14px] h-[14px] translate-y-px" />
 			</Link>
 		</div>
 	)

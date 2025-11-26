@@ -63,43 +63,52 @@ function Component() {
 function SpotlightLinks(props: { recentTransactions?: Hex.Hex[] }) {
 	const { recentTransactions = [] } = props
 	return (
-		<div className="flex items-center gap-[8px] mt-[24px] text-[14px] text-base-content-tertiary">
-			<span>Try:</span>
-			<SpotlightLink
-				to="/address/$address"
-				params={{ address: '0x5bc1473610754a5ca10749552b119df90c1a1877' }}
-			>
-				Account
-			</SpotlightLink>
-			<span>·</span>
-			<SpotlightLink
-				to="/token/$address"
-				params={{ address: '0x20c0000000000000000000000000000000000002' }}
-			>
-				Token
-			</SpotlightLink>
-			<span>·</span>
-			{recentTransactions[0] ? (
-				<SpotlightLink to="/tx/$hash" params={{ hash: recentTransactions[0] }}>
-					Receipt
+		<section className="text-center">
+			<span className="text-sm font-medium text-base-content-tertiary">
+				Try
+			</span>
+			<div className="flex items-center gap-[8px] mt-2 text-[14px] text-base-content-tertiary">
+				<SpotlightLink
+					to="/address/$address"
+					params={{ address: '0x5bc1473610754a5ca10749552b119df90c1a1877' }}
+				>
+					Account
 				</SpotlightLink>
-			) : (
-				<span className="opacity-50">Receipt</span>
-			)}
-		</div>
+				<span>·</span>
+				<SpotlightLink to="/blocks">Blocks</SpotlightLink>
+				<span>·</span>
+				<SpotlightLink
+					to="/token/$address"
+					params={{ address: '0x20c0000000000000000000000000000000000002' }}
+				>
+					Token
+				</SpotlightLink>
+				<span>·</span>
+				{recentTransactions[0] ? (
+					<SpotlightLink
+						to="/tx/$hash"
+						params={{ hash: recentTransactions[0] }}
+					>
+						Receipt
+					</SpotlightLink>
+				) : (
+					<span className="opacity-50">Receipt</span>
+				)}
+			</div>
+		</section>
 	)
 }
 
 function SpotlightLink(props: {
 	to: string
-	params: Record<string, string>
+	params?: Record<string, string>
 	children: React.ReactNode
 }) {
 	const { to, params, children } = props
 	return (
 		<Link
 			to={to}
-			params={params}
+			{...(params ? { params } : {})}
 			className="text-base-content-secondary hover:text-base-content transition-colors duration-150 underline underline-offset-2 decoration-base-border hover:decoration-base-content-secondary"
 		>
 			{children}
