@@ -18,7 +18,7 @@ import { NotFound } from '#components/NotFound'
 import { Receipt } from '#components/Receipt/Receipt'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { parseKnownEvents } from '#lib/known-events'
-import { TokenMetadata } from '#lib/token-metadata'
+import * as Tip20 from '#lib/tip20'
 import { getConfig } from '#wagmi.config'
 
 async function loader({
@@ -53,7 +53,7 @@ async function loader({
 		const [block, transaction, getTokenMetadata] = await Promise.all([
 			getBlock(config, { blockHash: receipt.blockHash }),
 			getTransaction(config, { hash: receipt.transactionHash }),
-			TokenMetadata.fromLogs(receipt.logs),
+			Tip20.metadataFromLogs(receipt.logs),
 		])
 		const timestampFormatted = DateFormatter.format(block.timestamp)
 
@@ -353,7 +353,7 @@ export namespace LineItems {
 
 	export function fromReceipt(
 		receipt: TransactionReceipt,
-		{ getTokenMetadata }: { getTokenMetadata: TokenMetadata.GetFn },
+		{ getTokenMetadata }: { getTokenMetadata: Tip20.GetTip20MetadataFn },
 	) {
 		const { from: sender, logs } = receipt
 		const senderChecksum = Address.checksum(sender)

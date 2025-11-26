@@ -8,7 +8,7 @@ import {
 	type TransactionReceipt,
 	zeroAddress,
 } from 'viem'
-import type { TokenMetadata } from './token-metadata'
+import type * as Tip20 from './tip20'
 
 const abi = Object.values(Abis).flat()
 const ZERO_ADDRESS = zeroAddress
@@ -31,7 +31,7 @@ type ParsedEvent = ReturnType<typeof parseEventLogs<typeof abi>>[number]
 
 function createDetectors(
 	createAmount: (value: bigint, token: Address.Address) => Amount,
-	getTokenMetadata?: TokenMetadata.GetFn,
+	getTokenMetadata?: Tip20.GetTip20MetadataFn,
 	mintBurnMemos?: Map<string, string>,
 ) {
 	return {
@@ -726,7 +726,7 @@ export function parseKnownEvents(
 	receipt: TransactionReceipt,
 	options?: {
 		transaction?: TransactionLike
-		getTokenMetadata?: TokenMetadata.GetFn
+		getTokenMetadata?: Tip20.GetTip20MetadataFn
 	},
 ): KnownEvent[] {
 	const { logs } = receipt

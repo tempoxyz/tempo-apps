@@ -2,6 +2,7 @@ import { Link, useMatch, useNavigate } from '@tanstack/react-router'
 import { Address } from 'ox'
 import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
+import * as Tip20 from '#lib/tip20'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
 import { ExploreInput } from './ExploreInput.tsx'
@@ -60,7 +61,9 @@ export function Header(props: Header.Props) {
 									Address.assert(value)
 									navigate({
 										params: { address: value },
-										to: '/account/$address',
+										to: Tip20.isTip20Address(value)
+											? '/token/$address'
+											: '/account/$address',
 									})
 									return
 								}
