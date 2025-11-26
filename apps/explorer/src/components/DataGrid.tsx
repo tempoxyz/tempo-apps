@@ -1,4 +1,4 @@
-import { ClientOnly, Link } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import * as React from 'react'
 import { cx } from '#cva.config.ts'
 import { Pagination } from './Pagination'
@@ -27,16 +27,6 @@ export function DataGrid(props: DataGrid.Props) {
 	return (
 		<div className="flex flex-col h-full min-h-0">
 			<div className="relative w-full">
-				<ClientOnly>
-					{isPending && (
-						<>
-							<div className="absolute top-0 left-0 right-0 h-[2px] bg-accent/30 z-10">
-								<div className="h-full w-1/4 bg-accent animate-pulse" />
-							</div>
-							<div className="absolute inset-0 bg-black-white/5 pointer-events-none z-5" />
-						</>
-					)}
-				</ClientOnly>
 				<div
 					className="w-full text-[14px] rounded-t-[2px] min-w-max grid"
 					style={{ gridTemplateColumns }}
