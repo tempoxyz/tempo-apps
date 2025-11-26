@@ -15,7 +15,7 @@ import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
-import { Route as LayoutDemoAccountRouteImport } from './routes/_layout/demo/account'
+import { Route as LayoutDemoAddressRouteImport } from './routes/_layout/demo/address'
 import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
 import { Route as LayoutAddressAddressRouteImport } from './routes/_layout/address/$address'
 
@@ -48,9 +48,9 @@ const LayoutDemoTxRoute = LayoutDemoTxRouteImport.update({
   path: '/demo/tx',
   getParentRoute: () => LayoutRoute,
 } as any)
-const LayoutDemoAccountRoute = LayoutDemoAccountRouteImport.update({
-  id: '/demo/account',
-  path: '/demo/account',
+const LayoutDemoAddressRoute = LayoutDemoAddressRouteImport.update({
+  id: '/demo/address',
+  path: '/demo/address',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutBlockIdRoute = LayoutBlockIdRouteImport.update({
@@ -69,7 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
-  '/demo/account': typeof LayoutDemoAccountRoute
+  '/demo/address': typeof LayoutDemoAddressRoute
   '/demo/tx': typeof LayoutDemoTxRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
@@ -79,7 +79,7 @@ export interface FileRoutesByTo {
   '/': typeof LayoutIndexRoute
   '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
-  '/demo/account': typeof LayoutDemoAccountRoute
+  '/demo/address': typeof LayoutDemoAddressRoute
   '/demo/tx': typeof LayoutDemoTxRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
@@ -91,7 +91,7 @@ export interface FileRoutesById {
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/address/$address': typeof LayoutAddressAddressRoute
   '/_layout/block/$id': typeof LayoutBlockIdRoute
-  '/_layout/demo/account': typeof LayoutDemoAccountRoute
+  '/_layout/demo/address': typeof LayoutDemoAddressRoute
   '/_layout/demo/tx': typeof LayoutDemoTxRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
@@ -103,7 +103,7 @@ export interface FileRouteTypes {
     | '/'
     | '/address/$address'
     | '/block/$id'
-    | '/demo/account'
+    | '/demo/address'
     | '/demo/tx'
     | '/token/$address'
     | '/tx/$hash'
@@ -113,7 +113,7 @@ export interface FileRouteTypes {
     | '/'
     | '/address/$address'
     | '/block/$id'
-    | '/demo/account'
+    | '/demo/address'
     | '/demo/tx'
     | '/token/$address'
     | '/tx/$hash'
@@ -124,7 +124,7 @@ export interface FileRouteTypes {
     | '/_layout/'
     | '/_layout/address/$address'
     | '/_layout/block/$id'
-    | '/_layout/demo/account'
+    | '/_layout/demo/address'
     | '/_layout/demo/tx'
     | '/_layout/token/$address'
     | '/_layout/tx/$hash'
@@ -178,11 +178,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDemoTxRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/demo/account': {
-      id: '/_layout/demo/account'
-      path: '/demo/account'
-      fullPath: '/demo/account'
-      preLoaderRoute: typeof LayoutDemoAccountRouteImport
+    '/_layout/demo/address': {
+      id: '/_layout/demo/address'
+      path: '/demo/address'
+      fullPath: '/demo/address'
+      preLoaderRoute: typeof LayoutDemoAddressRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/block/$id': {
@@ -207,7 +207,7 @@ interface LayoutRouteChildren {
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAddressAddressRoute: typeof LayoutAddressAddressRoute
   LayoutBlockIdRoute: typeof LayoutBlockIdRoute
-  LayoutDemoAccountRoute: typeof LayoutDemoAccountRoute
+  LayoutDemoAddressRoute: typeof LayoutDemoAddressRoute
   LayoutDemoTxRoute: typeof LayoutDemoTxRoute
   LayoutTokenAddressRoute: typeof LayoutTokenAddressRoute
   LayoutTxHashRoute: typeof LayoutTxHashRoute
@@ -218,7 +218,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAddressAddressRoute: LayoutAddressAddressRoute,
   LayoutBlockIdRoute: LayoutBlockIdRoute,
-  LayoutDemoAccountRoute: LayoutDemoAccountRoute,
+  LayoutDemoAddressRoute: LayoutDemoAddressRoute,
   LayoutDemoTxRoute: LayoutDemoTxRoute,
   LayoutTokenAddressRoute: LayoutTokenAddressRoute,
   LayoutTxHashRoute: LayoutTxHashRoute,
