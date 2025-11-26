@@ -1,123 +1,35 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
-import { type Address, Hex } from 'ox'
+import { Hex } from 'ox'
 import { Abis } from 'tempo.ts/viem'
-import type { Log, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics, zeroAddress } from 'viem'
 import { Receipt } from '#components/Receipt/Receipt'
+import {
+	accountAddress,
+	adminAddress,
+	baseTokenAddress,
+	blockNumber,
+	exchangeAddress,
+	factoryAddress,
+	feeAmmAddress,
+	getTokenMetadata,
+	makerAddress,
+	mockLog,
+	mockReceipt,
+	quoteTokenAddress,
+	recipientAddress,
+	registryAddress,
+	spenderAddress,
+	tokenAddress,
+	transactionHash,
+	updaterAddress,
+	userTokenAddress,
+	validatorAddress,
+	validatorTokenAddress,
+} from '#lib/demo'
 import { parseKnownEvents } from '#lib/known-events'
-
-const transactionHash = `0x${'1'.repeat(64)}` as const
-const blockHash = zeroAddress
-const blockNumber = 12345n
-
-function mockLog(log: Partial<Log>): Log {
-	return {
-		address: zeroAddress,
-		topics: [],
-		data: '0x',
-		blockHash,
-		blockNumber,
-		transactionHash,
-		transactionIndex: 0,
-		logIndex: 0,
-		removed: false,
-		...log,
-	} as Log
-}
-
-function mockReceipt(logs: Log[], from: Address.Address): TransactionReceipt {
-	return {
-		blockHash,
-		blockNumber,
-		contractAddress: null,
-		cumulativeGasUsed: 100000n,
-		effectiveGasPrice: 1000000000n,
-		from,
-		gasUsed: 50000n,
-		logs,
-		logsBloom: `0x${'0'.repeat(512)}`,
-		status: 'success',
-		to: logs[0]?.address ?? zeroAddress,
-		transactionHash,
-		transactionIndex: 0,
-		type: 'eip1559',
-	} as TransactionReceipt
-}
-
-const tokenAddress = `0x${'1234567890'.repeat(4)}` as const
-const registryAddress = `0x${'a'.repeat(40)}` as const
-const updaterAddress = `0x${'abcde'.repeat(8)}` as const
-const recipientAddress = `0x${'9'.repeat(40)}` as const
-const adminAddress = `0x${'b'.repeat(40)}` as const
-const spenderAddress = `0x${'c'.repeat(40)}` as const
-const userTokenAddress = `0x${'d'.repeat(40)}` as const
-const validatorTokenAddress = `0x${'e'.repeat(40)}` as const
-const accountAddress = `0x${'f'.repeat(40)}` as const
-const feeAmmAddress = `0x${'1'.repeat(40)}` as const
-const factoryAddress = `0x${'2'.repeat(40)}` as const
-const exchangeAddress = `0x${'3'.repeat(40)}` as const
-const makerAddress = `0x${'4'.repeat(40)}` as const
-const baseTokenAddress = `0x${'5'.repeat(40)}` as const
-const quoteTokenAddress = `0x${'6'.repeat(40)}` as const
-const validatorAddress = `0x${'7'.repeat(40)}` as const
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()
-
-	const metadataMap = new Map([
-		[
-			tokenAddress.toLowerCase(),
-			{
-				currency: 'USD',
-				decimals: 2,
-				symbol: 'TEST2',
-				name: 'Test Token 2',
-				totalSupply: 1000000n,
-			},
-		],
-		[
-			userTokenAddress.toLowerCase(),
-			{
-				currency: 'USD',
-				decimals: 6,
-				symbol: 'USDC',
-				name: 'USD Coin',
-				totalSupply: 1000000000000n,
-			},
-		],
-		[
-			validatorTokenAddress.toLowerCase(),
-			{
-				currency: 'USD',
-				decimals: 6,
-				symbol: 'LINK',
-				name: 'Chainlink',
-				totalSupply: 1000000000000n,
-			},
-		],
-		[
-			baseTokenAddress.toLowerCase(),
-			{
-				currency: 'USD',
-				decimals: 6,
-				symbol: 'DAI',
-				name: 'Dai Stablecoin',
-				totalSupply: 1000000000000n,
-			},
-		],
-		[
-			quoteTokenAddress.toLowerCase(),
-			{
-				currency: 'USD',
-				decimals: 6,
-				symbol: 'USDT',
-				name: 'Tether USD',
-				totalSupply: 1000000000000n,
-			},
-		],
-	])
-	const getTokenMetadata = (address: Address.Address) =>
-		metadataMap.get(address.toLowerCase())
 
 	const receipt = mockReceipt(
 		[

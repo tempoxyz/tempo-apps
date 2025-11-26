@@ -242,16 +242,16 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 										cells:
 											mode === 'stacked'
 												? [
-														<div key={`${key}-time`} className="h-5" />,
-														<div key={`${key}-hash`} className="h-5" />,
-														<div key={`${key}-total`} className="h-5" />,
+														<div key={`${key}-time`} className="h-[20px]" />,
+														<div key={`${key}-hash`} className="h-[20px]" />,
+														<div key={`${key}-total`} className="h-[20px]" />,
 													]
 												: [
-														<div key={`${key}-time`} className="h-5" />,
-														<div key={`${key}-desc`} className="h-5" />,
-														<div key={`${key}-hash`} className="h-5" />,
-														<div key={`${key}-fee`} className="h-5" />,
-														<div key={`${key}-total`} className="h-5" />,
+														<div key={`${key}-time`} className="h-[20px]" />,
+														<div key={`${key}-desc`} className="h-[20px]" />,
+														<div key={`${key}-hash`} className="h-[20px]" />,
+														<div key={`${key}-fee`} className="h-[20px]" />,
+														<div key={`${key}-total`} className="h-[20px]" />,
 													],
 									}
 								})
@@ -430,10 +430,7 @@ function SectionsWrapper(props: {
 												receipt={receipt}
 												accountAddress={address}
 											/>,
-											<TransactionHashLink
-												key="hash"
-												hash={transaction.hash}
-											/>,
+											<TransactionHash key="hash" hash={transaction.hash} />,
 											<TransactionFee key="fee" receipt={receipt} />,
 											<TransactionRowTotal
 												key="total"
@@ -667,7 +664,7 @@ function AssetValue(props: {
 	)
 }
 
-function TransactionFee(props: { receipt: TransactionReceipt }) {
+export function TransactionFee(props: { receipt: TransactionReceipt }) {
 	const { receipt } = props
 
 	if (!receipt) return <span className="text-tertiary">…</span>
@@ -691,7 +688,7 @@ function TransactionDescription(props: {
 
 	if (!knownEvents || knownEvents.length === 0)
 		return (
-			<div className="text-tertiary h-5 flex items-center whitespace-nowrap">
+			<div className="text-tertiary h-[20px] flex items-center whitespace-nowrap">
 				<span className="inline-block">…</span>
 			</div>
 		)
@@ -703,7 +700,7 @@ function TransactionDescription(props: {
 	)
 
 	return (
-		<div className="text-primary h-5 flex items-center whitespace-nowrap">
+		<div className="text-primary h-[20px] flex items-center whitespace-nowrap">
 			{perspectiveEvents.map((event, index) => (
 				<div
 					key={`${event.type}-${index}`}
@@ -729,7 +726,7 @@ function TransactionDescription(props: {
 	)
 }
 
-function getPerspectiveEvent(
+export function getPerspectiveEvent(
 	event: KnownEvent,
 	accountAddress?: Address.Address,
 ) {
@@ -752,29 +749,25 @@ function getPerspectiveEvent(
 	return { ...event, parts: updatedParts }
 }
 
-function TransactionHashLink(props: { hash: Hex.Hex | null | undefined }) {
+export function TransactionHash(props: { hash: Hex.Hex }) {
 	const { hash } = props
-
-	if (!hash) return null
 	return (
-		<Link
-			to={'/tx/$hash'}
-			params={{ hash }}
-			className="text-[13px] text-tertiary press-down inline-flex items-center gap-1"
-			title={hash}
-		>
-			{HexFormatter.truncate(hash, 6)}
-		</Link>
+		<div className="text-[13px] text-tertiary whitespace-nowrap" title={hash}>
+			{HexFormatter.truncate(hash, 4)}
+		</div>
 	)
 }
 
-function TransactionTimestamp(props: { timestamp: bigint; link?: string }) {
+export function TransactionTimestamp(props: {
+	timestamp: bigint
+	link?: string
+}) {
 	const { timestamp, link } = props
 
 	return (
 		<div className="text-nowrap">
 			{link ? (
-				<Link to={link} className="text-tertiary hover:text-secondary">
+				<Link to={link} className="text-tertiary">
 					<RelativeTime timestamp={timestamp} />
 				</Link>
 			) : (
@@ -784,7 +777,7 @@ function TransactionTimestamp(props: { timestamp: bigint; link?: string }) {
 	)
 }
 
-function TransactionTotal(props: {
+export function TransactionTotal(props: {
 	transaction: Transaction
 	knownEvents: KnownEvent[]
 }) {
