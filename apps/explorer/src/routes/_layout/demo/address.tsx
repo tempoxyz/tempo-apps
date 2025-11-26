@@ -896,7 +896,7 @@ function loader() {
 	}
 }
 
-export const Route = createFileRoute('/_layout/demo/account')({
+export const Route = createFileRoute('/_layout/demo/address')({
 	component: Component,
 	loader,
 })
