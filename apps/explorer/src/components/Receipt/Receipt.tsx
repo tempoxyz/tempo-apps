@@ -38,7 +38,7 @@ export function Receipt(props: Receipt.Props) {
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Block</span>
 						<Link
-							to={'/block/$id'}
+							to="/block/$id"
 							params={{ id: blockNumber.toString() }}
 							className="text-accent text-right before:content-['#'] press-down"
 						>
@@ -48,7 +48,7 @@ export function Receipt(props: Receipt.Props) {
 					<div className="flex justify-between items-end">
 						<span className="text-tertiary capitalize">Sender</span>
 						<Link
-							to={'/account/$address'}
+							to="/address/$address"
 							params={{ address: sender }}
 							className="text-accent text-right press-down"
 							title={sender}
@@ -226,17 +226,15 @@ export function Receipt(props: Receipt.Props) {
 												)}
 											</span>
 											<div className="flex items-center gap-1">
-												{isSponsored && (
+												{isSponsored && item.payer && (
 													<>
 														<Link
-															to={'/account/$address'}
-															// biome-ignore lint/style/noNonNullAssertion: _
-															params={{ address: item.payer! }}
+															to="/address/$address"
+															params={{ address: item.payer }}
 															className="text-accent press-down"
 															title={item.payer}
 														>
-															{/* biome-ignore lint/style/noNonNullAssertion: _ */}
-															{HexFormatter.shortenHex(item.payer!)}
+															{HexFormatter.shortenHex(item.payer)}
 														</Link>
 														<span className="text-tertiary">paid</span>
 													</>

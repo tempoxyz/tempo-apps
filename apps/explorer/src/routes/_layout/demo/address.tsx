@@ -1,22 +1,15 @@
 import { ClientOnly, createFileRoute, notFound } from '@tanstack/react-router'
 import { Hex } from 'ox'
 import * as React from 'react'
+import { Abis } from 'tempo.ts/viem'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
-import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
-import { Abis } from 'viem/tempo'
-import { DataGrid } from '#comps/DataGrid'
-import { InfoCard } from '#comps/InfoCard'
-import { Midcut } from '#comps/Midcut'
-import { RelativeTime } from '#comps/RelativeTime'
-import { Sections } from '#comps/Sections'
-import { TxEventDescription } from '#comps/TxEventDescription'
-import {
-	getPerspectiveEvent,
-	TransactionFee,
-	TransactionTimestamp,
-	TransactionTotal,
-} from '#comps/TxTransactionRow'
-import { cx } from '#lib/css'
+import { encodeAbiParameters, encodeEventTopics } from 'viem'
+import { DataGrid } from '#components/DataGrid'
+import { EventDescription } from '#components/EventDescription'
+import { InfoCard } from '#components/InfoCard'
+import { RelativeTime } from '#components/RelativeTime'
+import { Sections } from '#components/Sections'
+import { cx } from '#cva.config.ts'
 import {
 	accountAddress,
 	adminAddress,
@@ -39,11 +32,18 @@ import {
 	userTokenAddress,
 	validatorTokenAddress,
 } from '#lib/demo'
-import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { useCopy, useMediaQuery } from '#lib/hooks'
+import { type KnownEvent, parseKnownEvents } from '#lib/known-events'
+import {
+	getPerspectiveEvent,
+	TransactionFee,
+	TransactionHash,
+	TransactionTimestamp,
+	TransactionTotal,
+} from '#routes/_layout/address/$address'
 import CopyIcon from '~icons/lucide/copy'
 
-type MockTransactionData = {
+type MockTxData = {
 	hash: Hex.Hex
 	transaction: Transaction
 	receipt: TransactionReceipt
@@ -51,8 +51,8 @@ type MockTransactionData = {
 	knownEvents: KnownEvent[]
 }
 
-function createMockTransactions(): MockTransactionData[] {
-	const transactions: MockTransactionData[] = []
+function createMockTransactions(): MockTxData[] {
+	const transactions: MockTxData[] = []
 
 	// Tx 1: Transfer with memo
 	{
@@ -208,14 +208,14 @@ function createMockTransactions(): MockTransactionData[] {
 						abi: Abis.feeAmm,
 						eventName: 'Mint',
 						args: {
-							to: accountAddress,
+							sender: accountAddress,
 							userToken: userTokenAddress,
 							validatorToken: validatorTokenAddress,
 						},
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters(
-						[{ type: 'address' }, { type: 'uint256' }, { type: 'uint256' }],
-						[accountAddress, 500000000n, 707106781n],
+						[{ type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }],
+						[1000000000n, 500000000n, 707106781n],
 					),
 				},
 				hash,
@@ -330,7 +330,47 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinDex,
+						abi: Abis.stablecoinExchange,
+						eventName: 'OrderPlaced',
+						args: {
+							orderId: 123n,
+							maker: accountAddress,
+							token: baseTokenAddress,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters(
+						[{ type: 'uint128' }, { type: 'bool' }, { type: 'int16' }],
+						[1000000n, true, 100],
+					),
+				},
+				hash,
+			),
+		]
+		const receipt = mockReceipt(logs, accountAddress, hash)
+		const transaction = mockTransaction(
+			hash,
+			accountAddress,
+			exchangeAddress,
+			blockNumber - 70n,
+		)
+		transactions.push({
+			hash,
+			transaction,
+			receipt,
+			block: { timestamp: baseTimestamp - 28800n },
+			knownEvents: parseKnownEvents(receipt, { transaction, getTokenMetadata }),
+		})
+	}
+
+	// Tx 9: Order Filled
+	{
+		const hash = `0x${'3'.repeat(63)}0` as const
+		const logs = [
+			mockLog(
+				{
+					address: exchangeAddress,
+					topics: encodeEventTopics({
+						abi: Abis.stablecoinExchange,
 						eventName: 'OrderFilled',
 						args: {
 							orderId: 123n,
@@ -447,6 +487,7 @@ function createMockTransactions(): MockTransactionData[] {
 						eventName: 'TokenCreated',
 						args: {
 							token: tokenAddress,
+							tokenId: 1n,
 						},
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters(
@@ -456,16 +497,8 @@ function createMockTransactions(): MockTransactionData[] {
 							{ type: 'string' },
 							{ type: 'address' },
 							{ type: 'address' },
-							{ type: 'bytes32' },
 						],
-						[
-							'Test Token 2',
-							'TEST2',
-							'USD',
-							userTokenAddress,
-							accountAddress,
-							zeroHash,
-						],
+						['Test Token 2', 'TEST2', 'USD', userTokenAddress, accountAddress],
 					),
 				},
 				hash,
@@ -746,7 +779,7 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinDex,
+						abi: Abis.stablecoinExchange,
 						eventName: 'OrderPlaced',
 						args: {
 							orderId: 456n,
@@ -765,7 +798,7 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinDex,
+						abi: Abis.stablecoinExchange,
 						eventName: 'OrderFilled',
 						args: {
 							orderId: 456n,
@@ -806,6 +839,24 @@ function createMockTransactions(): MockTransactionData[] {
 						},
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters([{ type: 'uint256' }], [2525000n]),
+				},
+				hash,
+			),
+			mockLog(
+				{
+					address: feeAmmAddress,
+					topics: encodeEventTopics({
+						abi: Abis.feeAmm,
+						eventName: 'FeeSwap',
+						args: {
+							userToken: userTokenAddress,
+							validatorToken: validatorTokenAddress,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters(
+						[{ type: 'uint256' }, { type: 'uint256' }],
+						[25000n, 24500n],
+					),
 				},
 				hash,
 			),
@@ -896,7 +947,7 @@ function Component() {
 								)}
 							</div>
 						</div>
-						<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[21ch]">
+						<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[22ch]">
 							{accountAddress}
 						</p>
 					</button>,
@@ -963,7 +1014,7 @@ function Component() {
 											perspectiveEvents.map((event, i) => {
 												const key = `${event.type}-${i}`
 												return (
-													<TxEventDescription
+													<EventDescription
 														key={key}
 														event={event}
 														seenAs={accountAddress}
@@ -977,7 +1028,7 @@ function Component() {
 												className="text-primary h-[20px] flex items-center whitespace-nowrap"
 											>
 												{perspectiveEvents[0] && (
-													<TxEventDescription
+													<EventDescription
 														event={perspectiveEvents[0]}
 														seenAs={accountAddress}
 														className="flex flex-row items-center gap-[6px] leading-[18px] w-auto justify-center flex-nowrap"
@@ -1006,18 +1057,19 @@ function Component() {
 												<TransactionTimestamp
 													key="time"
 													timestamp={tx.block.timestamp}
-													link={`/receipt/${tx.hash}`}
+													link={`/tx/${tx.hash}`}
 												/>,
 												descriptionCell,
-												<Midcut key="hash" value={tx.hash} prefix="0x" />,
+												<TransactionHash key="hash" hash={tx.hash} />,
 												<TransactionFee key="fee" receipt={tx.receipt} />,
 												<TransactionTotal
 													key="total"
 													transaction={tx.transaction}
+													knownEvents={knownEvents[tx.hash] ?? []}
 												/>,
 											],
 											link: {
-												href: `/receipt/${tx.hash}`,
+												href: `/tx/${tx.hash}`,
 												title: `View receipt ${tx.hash}`,
 											},
 											expanded: isExpanded,
@@ -1026,6 +1078,7 @@ function Component() {
 								}
 								totalItems={total}
 								page={1}
+								isPending={false}
 								itemsLabel="transactions"
 								itemsPerPage={total}
 							/>

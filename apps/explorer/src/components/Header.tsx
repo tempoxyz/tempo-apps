@@ -20,7 +20,7 @@ export function Header(props: Header.Props) {
 	})
 
 	const address = useMatch({
-		from: '/_layout/account/$address',
+		from: '/_layout/address/$address',
 		select: (match) => match.params.address,
 		shouldThrow: false,
 	})
@@ -63,7 +63,7 @@ export function Header(props: Header.Props) {
 										params: { address: value },
 										to: Tip20.isTip20Address(value)
 											? '/token/$address'
-											: '/account/$address',
+											: '/address/$address',
 									})
 									return
 								}
