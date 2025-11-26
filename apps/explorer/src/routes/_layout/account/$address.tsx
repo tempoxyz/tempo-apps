@@ -4,6 +4,7 @@ import {
 	Link,
 	notFound,
 	rootRouteId,
+	stripSearchParams,
 	useNavigate,
 	useRouter,
 	useRouterState,
@@ -37,7 +38,11 @@ import * as Tip20 from '#lib/tip20'
 import { config } from '#wagmi.config'
 import * as AccountServer from '../../../lib/account.server.ts'
 
-const rowsPerPage = 10
+const defaultSearchValues = {
+	page: 1,
+	limit: 10,
+	tab: 'history',
+} as const
 
 type TransactionQuery = {
 	address: Address.Address
@@ -103,16 +108,19 @@ export const Route = createFileRoute('/_layout/account/$address')({
 	component: RouteComponent,
 	notFoundComponent: NotFound,
 	validateSearch: z.object({
-		page: z.prefault(z.number(), 1),
+		page: z.prefault(z.number(), defaultSearchValues.page),
 		limit: z.prefault(
 			z.pipe(
 				z.number(),
 				z.transform((val) => Math.min(100, val)),
 			),
-			rowsPerPage,
+			defaultSearchValues.limit,
 		),
-		tab: z.prefault(z.enum(['history', 'assets']), 'history'),
+		tab: z.prefault(z.enum(['history', 'assets']), defaultSearchValues.tab),
 	}),
+	search: {
+		middlewares: [stripSearchParams(defaultSearchValues)],
+	},
 	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
 	loader: async ({ deps: { page, limit }, params, context }) => {
 		try {
@@ -236,31 +244,34 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 								],
 							}}
 							items={(mode) =>
-								Array.from({ length: rowsPerPage }, (_, index) => {
-									const key = `skeleton-${index}`
-									return {
-										cells:
-											mode === 'stacked'
-												? [
-														<div key={`${key}-time`} className="h-[20px]" />,
-														<div key={`${key}-hash`} className="h-[20px]" />,
-														<div key={`${key}-total`} className="h-[20px]" />,
-													]
-												: [
-														<div key={`${key}-time`} className="h-[20px]" />,
-														<div key={`${key}-desc`} className="h-[20px]" />,
-														<div key={`${key}-hash`} className="h-[20px]" />,
-														<div key={`${key}-fee`} className="h-[20px]" />,
-														<div key={`${key}-total`} className="h-[20px]" />,
-													],
-									}
-								})
+								Array.from(
+									{ length: defaultSearchValues.limit },
+									(_, index) => {
+										const key = `skeleton-${index}`
+										return {
+											cells:
+												mode === 'stacked'
+													? [
+															<div key={`${key}-time`} className="h-[20px]" />,
+															<div key={`${key}-hash`} className="h-[20px]" />,
+															<div key={`${key}-total`} className="h-[20px]" />,
+														]
+													: [
+															<div key={`${key}-time`} className="h-[20px]" />,
+															<div key={`${key}-desc`} className="h-[20px]" />,
+															<div key={`${key}-hash`} className="h-[20px]" />,
+															<div key={`${key}-fee`} className="h-[20px]" />,
+															<div key={`${key}-total`} className="h-[20px]" />,
+														],
+										}
+									},
+								)
 							}
 							totalItems={totalItems}
 							page={1}
 							isPending={false}
 							itemsLabel="transactions"
-							itemsPerPage={rowsPerPage}
+							itemsPerPage={defaultSearchValues.limit}
 						/>
 					),
 				},
