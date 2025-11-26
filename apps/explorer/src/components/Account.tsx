@@ -5,7 +5,7 @@ import { RelativeTime } from '#components/RelativeTime'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
-const Route = getRouteApi('/_layout/account/$address')
+const Route = getRouteApi('/_layout/address/$address')
 
 export function AccountCard(props: AccountCard.Props) {
 	const params = Route.useParams()

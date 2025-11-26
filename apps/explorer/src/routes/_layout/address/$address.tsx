@@ -99,7 +99,7 @@ function transactionsQueryOptions(params: TransactionQuery) {
 	})
 }
 
-export const Route = createFileRoute('/_layout/account/$address')({
+export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
 	notFoundComponent: NotFound,
 	validateSearch: z.object({
@@ -286,7 +286,7 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 							totalItems={0}
 							page={1}
 							isPending={false}
-							itemsLabel="assets"
+							itemsLabel='assets'
 						/>
 					),
 				},
@@ -382,7 +382,7 @@ function SectionsWrapper(props: {
 	}
 
 	const isLoadingPage =
-		(state.isLoading && state.location.pathname.includes('/account/')) ||
+		(state.isLoading && state.location.pathname.includes('/address/')) ||
 		isLoading
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
@@ -419,12 +419,12 @@ function SectionsWrapper(props: {
 									return {
 										cells: [
 											<TransactionTimestamp
-												key="time"
+												key='time'
 												timestamp={transaction.block.timestamp}
-												link={`/tx/${transaction.hash}`}
+												link={'/tx/${transaction.hash}'}
 											/>,
 											<TransactionRowDescription
-												key="desc"
+												key='desc'
 												transaction={transaction}
 												knownEvents={knownEvents[transaction.hash] ?? []}
 												receipt={receipt}
@@ -433,14 +433,14 @@ function SectionsWrapper(props: {
 											<TransactionHash key="hash" hash={transaction.hash} />,
 											<TransactionFee key="fee" receipt={receipt} />,
 											<TransactionRowTotal
-												key="total"
+												key='total'
 												transaction={transaction}
 												knownEvents={knownEvents[transaction.hash] ?? []}
 												receipt={receipt}
 											/>,
 										],
 										link: {
-											href: `/tx/${transaction.hash}`,
+											href: '/tx/${transaction.hash}',
 											title: `View receipt ${transaction.hash}`,
 										},
 									}
@@ -480,36 +480,36 @@ function SectionsWrapper(props: {
 										mode === 'stacked'
 											? [
 													<TokenName
-														key="name"
+														key='name'
 														contractAddress={assetAddress}
 													/>,
 													<AssetContract
-														key="contract"
+														key='contract'
 														contractAddress={assetAddress}
 													/>,
 													<AssetAmount
-														key="amount"
+														key='amount'
 														contractAddress={assetAddress}
 														accountAddress={address}
 													/>,
 												]
 											: [
 													<TokenName
-														key="name"
+														key='name'
 														contractAddress={assetAddress}
 													/>,
 													<TokenSymbol
-														key="symbol"
+														key='symbol'
 														contractAddress={assetAddress}
 													/>,
-													<span key="currency">USD</span>,
+													<span key='currency'>USD</span>,
 													<AssetAmount
-														key="amount"
+														key='amount'
 														contractAddress={assetAddress}
 														accountAddress={address}
 													/>,
 													<AssetValue
-														key="value"
+														key='value'
 														contractAddress={assetAddress}
 														accountAddress={address}
 													/>,
@@ -523,7 +523,7 @@ function SectionsWrapper(props: {
 							totalItems={assets.length}
 							page={1}
 							isPending={false}
-							itemsLabel="assets"
+							itemsLabel='assets'
 							itemsPerPage={assets.length}
 						/>
 					),
@@ -713,7 +713,7 @@ function TransactionDescription(props: {
 					/>
 					{index === 0 && remainingCount > 0 && (
 						<button
-							type="button"
+							type='button'
 							onClick={() => setExpanded(true)}
 							className="ml-1 text-base-content-secondary cursor-pointer press-down shrink-0"
 						>

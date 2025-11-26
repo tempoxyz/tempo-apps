@@ -646,7 +646,7 @@ function SectionsWrapper(props: {
 													</span>,
 												],
 									link: {
-										href: `/account/${holder.address}`,
+										href: `/address/${holder.address}`,
 										title: `View account ${holder.address}`,
 									},
 								}))
@@ -713,7 +713,7 @@ function AddressLink(props: {
 
 	return (
 		<Link
-			to="/account/$address"
+			to="/address/$address"
 			params={{ address }}
 			className="text-[13px] text-accent hover:text-accent/80 transition-colors press-down"
 			title={title}

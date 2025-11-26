@@ -7,7 +7,7 @@ export function Address(props: Address.Props) {
 	return (
 		<>
 			<Link
-				to="/account/$address"
+				to="/address/$address"
 				params={{ address }}
 				title={address}
 				className={className}

@@ -40,7 +40,7 @@ import {
 	TransactionHash,
 	TransactionTimestamp,
 	TransactionTotal,
-} from '#routes/_layout/account/$address'
+} from '#routes/_layout/address/$address'
 import CopyIcon from '~icons/lucide/copy'
 
 type MockTxData = {

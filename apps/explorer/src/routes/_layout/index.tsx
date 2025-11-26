@@ -42,7 +42,7 @@ function Component() {
 							navigate({
 								to: Tip20.isTip20Address(address)
 									? '/token/$address'
-									: '/account/$address',
+									: '/address/$address',
 								params: { address },
 							})
 						}}
@@ -66,7 +66,7 @@ function SpotlightLinks(props: { recentTransactions?: Hex.Hex[] }) {
 		<div className="flex items-center gap-[8px] mt-[24px] text-[14px] text-base-content-tertiary">
 			<span>Try:</span>
 			<SpotlightLink
-				to="/account/$address"
+				to="/address/$address"
 				params={{ address: '0x5bc1473610754a5ca10749552b119df90c1a1877' }}
 			>
 				Account
