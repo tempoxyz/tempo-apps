@@ -15,14 +15,14 @@
 		"lint": "biome check --write ."
 	},
 	"dependencies": {
-		"ox": "^0.9.14",
-		"viem": "^2.39.0",
-		"tempo.ts": "^0.5.4"
+		"ox": "^0.9.16",
+		"tempo.ts": "^0.6.2",
+		"viem": "^2.40.2"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20241127.0",
-		"@types/node": "^22.10.2",
-		"typescript": "^5.7.2",
-		"wrangler": "^4.47.0"
+		"@cloudflare/workers-types": "^4.20251125.0",
+		"@types/node": "^24.10.1",
+		"typescript": "^5.9.3",
+		"wrangler": "^4.50.0"
 	}
 }
