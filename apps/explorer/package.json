@@ -8,7 +8,7 @@
 		"check:types": "tsc --project tsconfig.json --noEmit",
 		"check:types:test": "tsc --project tsconfig.test.json --noEmit",
 		"deploy": "pnpm build && wrangler deploy",
-		"dev": "vite dev",
+		"dev": "VITE_ENABLE_DEMO=true vite dev",
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
 		"postinstall": "pnpm gen:types && pnpm build",
 		"preview": "vite preview",
