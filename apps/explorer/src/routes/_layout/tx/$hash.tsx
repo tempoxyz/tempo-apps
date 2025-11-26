@@ -168,11 +168,13 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 							Authorization: authHeader,
 						})
 
-					// Get the current URL without .pdf extension
-					const htmlUrl = `${url.href.replace(/\.pdf$/, '')}?plain`
+					// Build the equivalent HTML URL, preserving existing query params
+					const htmlUrl = new URL(url.href)
+					htmlUrl.pathname = htmlUrl.pathname.replace(/\.pdf$/, '')
+					htmlUrl.searchParams.set('plain', '')
 
 					// Navigate to the HTML version of the receipt
-					await page.goto(htmlUrl, { waitUntil: 'domcontentloaded' })
+					await page.goto(htmlUrl.toString(), { waitUntil: 'domcontentloaded' })
 
 					// Generate PDF
 					const pdf = await page.pdf({

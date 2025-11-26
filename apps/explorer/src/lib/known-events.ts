@@ -32,6 +32,7 @@ type ParsedEvent = ReturnType<typeof parseEventLogs<typeof abi>>[number]
 function createDetectors(
 	createAmount: (value: bigint, token: Address.Address) => Amount,
 	getTokenMetadata?: TokenMetadata.GetFn,
+	mintBurnMemos?: Map<string, string>,
 ) {
 	return {
 		tip20(event: ParsedEvent) {
@@ -63,38 +64,54 @@ function createDetectors(
 							meta: { from: args.from, to: args.to },
 						}
 
-			if (eventName === 'Mint')
+			if (eventName === 'Mint') {
 				// Only handle TIP20 token mint, not liquidity pool mint
-				return Address.isEqual(address, FEE_MANAGER) || !('amount' in args)
-					? null
-					: {
-							type: 'mint',
-							parts: [
-								{ type: 'action', value: 'Mint' },
-								{
-									type: 'amount',
-									value: createAmount(args.amount, address),
-								},
-								{ type: 'text', value: 'to' },
-								{ type: 'account', value: args.to },
-							],
-						}
+				if (Address.isEqual(address, FEE_MANAGER) || !('amount' in args))
+					return null
 
-			if (eventName === 'Burn')
-				return 'amount' in args
-					? {
-							type: 'burn',
-							parts: [
-								{ type: 'action', value: 'Burn' },
-								{
-									type: 'amount',
-									value: createAmount(args.amount, address),
-								},
-								{ type: 'text', value: 'from' },
-								{ type: 'account', value: args.from },
-							],
-						}
-					: null
+				const { amount, to } = args as { amount: bigint; to: Address.Address }
+				const mintKey = `mint:${address}:${amount}:${to}`
+				const memo = mintBurnMemos?.get(mintKey)
+
+				return {
+					type: 'mint',
+					note: memo,
+					parts: [
+						{ type: 'action', value: 'Mint' },
+						{
+							type: 'amount',
+							value: createAmount(amount, address),
+						},
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: to },
+					],
+				}
+			}
+
+			if (eventName === 'Burn') {
+				if (!('amount' in args)) return null
+
+				const { amount, from } = args as {
+					amount: bigint
+					from: Address.Address
+				}
+				const burnKey = `burn:${address}:${amount}:${from}`
+				const memo = mintBurnMemos?.get(burnKey)
+
+				return {
+					type: 'burn',
+					note: memo,
+					parts: [
+						{ type: 'action', value: 'Burn' },
+						{
+							type: 'amount',
+							value: createAmount(amount, address),
+						},
+						{ type: 'text', value: 'from' },
+						{ type: 'account', value: from },
+					],
+				}
+			}
 
 			if (eventName === 'RoleMembershipUpdated')
 				return {
@@ -726,8 +743,6 @@ export function parseKnownEvents(
 		return amount
 	}
 
-	const detectors = createDetectors(createAmount, getTokenMetadata)
-
 	const feeManagerCall: FeeManagerAddLiquidityCall | undefined = (() => {
 		const transaction = options?.transaction
 		if (!transaction) return
@@ -774,6 +789,10 @@ export function parseKnownEvents(
 		token: Address.Address
 	}> = []
 
+	// Map to store memos from TransferWithMemo events that pair with Mint/Burn
+	// Key format: `${token}:${amount}:${address}` where address is `to` for Mint, `from` for Burn
+	const mintBurnMemos = new Map<string, string>()
+
 	for (const event of events) {
 		let key: string | undefined
 
@@ -784,22 +803,65 @@ export function parseKnownEvents(
 			key = `${from}${to}`
 		}
 
-		// `Mint` and `Transfer` events are paired with each other,
+		// `Mint` and `Transfer`/`TransferWithMemo` events are paired with each other,
 		// we will need to take preference on `Mint` for those instances.
-		if (event.eventName === 'Mint') {
-			const [_, to] = event.topics
-			key = `${event.address}${event.data}${to}`
+		if (event.eventName === 'Mint' && 'amount' in event.args) {
+			const { amount, to } = event.args as {
+				amount: bigint
+				to: Address.Address
+			}
+			key = `mint:${event.address}:${amount}:${to}`
 		}
 
-		// `Burn` and `Transfer` events are paired with each other,
+		// `Burn` and `Transfer`/`TransferWithMemo` events are paired with each other,
 		// we will need to take preference on `Burn` for those instances.
-		if (event.eventName === 'Burn') {
-			const [_, from] = event.topics
-			key = `${event.address}${event.data}${from}`
+		if (event.eventName === 'Burn' && 'amount' in event.args) {
+			const { amount, from } = event.args as {
+				amount: bigint
+				from: Address.Address
+			}
+			key = `burn:${event.address}:${amount}:${from}`
 		}
 
 		if (key) preferenceMap.set(key, event.eventName)
 	}
+
+	// Second pass: collect memos from TransferWithMemo events that pair with Mint/Burn
+	for (const event of events) {
+		if (event.eventName === 'TransferWithMemo' && 'memo' in event.args) {
+			const { from, to, amount, memo } = event.args as {
+				from: Address.Address
+				to: Address.Address
+				amount: bigint
+				memo: Hex.Hex
+			}
+			const memoText = Hex.toString(Hex.trimLeft(memo))
+			if (!memoText) continue
+
+			// Check if this pairs with a Mint (transfer from zero address)
+			if (Address.isEqual(from, ZERO_ADDRESS)) {
+				const mintKey = `mint:${event.address}:${amount}:${to}`
+				if (preferenceMap.get(mintKey) === 'Mint') {
+					mintBurnMemos.set(mintKey, memoText)
+				}
+			}
+
+			// Check if this pairs with a Burn (transfer to zero address)
+			if (Address.isEqual(to, ZERO_ADDRESS)) {
+				const burnKey = `burn:${event.address}:${amount}:${from}`
+				if (preferenceMap.get(burnKey) === 'Burn') {
+					mintBurnMemos.set(burnKey, memoText)
+				}
+			}
+		}
+	}
+
+	// Create detectors after mintBurnMemos is populated so they can access the memos
+	const detectors = createDetectors(
+		createAmount,
+		getTokenMetadata,
+		mintBurnMemos,
+	)
 
 	const dedupedEvents = events.filter((event) => {
 		let include = true
@@ -812,19 +874,64 @@ export function parseKnownEvents(
 				if (preferenceMap.get(key)?.includes('TransferWithMemo'))
 					include = false
 			}
-
-			{
-				// Check Mint dedup
-				const [_, __, to] = event.topics
-				const key = `${event.address}${event.data}${to}`
-				if (preferenceMap.get(key)?.includes('Mint')) include = false
+			// Check Mint dedup (transfer from zero address)
+			if (
+				'args' in event &&
+				typeof event.args === 'object' &&
+				event.args !== null
+			) {
+				const { from, to, amount } = event.args as {
+					from: Address.Address
+					to: Address.Address
+					amount: bigint
+				}
+				if (Address.isEqual(from, ZERO_ADDRESS)) {
+					const mintKey = `mint:${event.address}:${amount}:${to}`
+					if (preferenceMap.get(mintKey) === 'Mint') include = false
+				}
 			}
+			// Check Burn dedup (transfer to zero address)
+			if (
+				'args' in event &&
+				typeof event.args === 'object' &&
+				event.args !== null
+			) {
+				const { from, to, amount } = event.args as {
+					from: Address.Address
+					to: Address.Address
+					amount: bigint
+				}
+				if (Address.isEqual(to, ZERO_ADDRESS)) {
+					const burnKey = `burn:${event.address}:${amount}:${from}`
+					if (preferenceMap.get(burnKey) === 'Burn') include = false
+				}
+			}
+		}
 
-			{
-				// Check Burn dedup
-				const [_, from] = event.topics
-				const key = `${event.address}${event.data}${from}`
-				if (preferenceMap.get(key)?.includes('Burn')) include = false
+		// Also filter out TransferWithMemo events that pair with Mint/Burn
+		if (event.eventName === 'TransferWithMemo') {
+			if (
+				'args' in event &&
+				typeof event.args === 'object' &&
+				event.args !== null
+			) {
+				const { from, to, amount } = event.args as {
+					from: Address.Address
+					to: Address.Address
+					amount: bigint
+				}
+
+				// Check Mint dedup (transfer from zero address)
+				if (Address.isEqual(from, ZERO_ADDRESS)) {
+					const mintKey = `mint:${event.address}:${amount}:${to}`
+					if (preferenceMap.get(mintKey) === 'Mint') include = false
+				}
+
+				// Check Burn dedup (transfer to zero address)
+				if (Address.isEqual(to, ZERO_ADDRESS)) {
+					const burnKey = `burn:${event.address}:${amount}:${from}`
+					if (preferenceMap.get(burnKey) === 'Burn') include = false
+				}
 			}
 		}
 

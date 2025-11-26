@@ -22,7 +22,7 @@ export function Pagination(props: Pagination.Props) {
 
 	if (compact)
 		return (
-			<div className="flex items-center justify-between border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary w-full">
+			<div className="flex items-center justify-between px-[16px] py-[12px] text-[12px] text-tertiary w-full">
 				<div className="flex items-center gap-[6px]">
 					<Link
 						to="."
@@ -33,7 +33,7 @@ export function Pagination(props: Pagination.Props) {
 						})}
 						disabled={page <= 1 || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
 						aria-label="First page"
 					>
@@ -49,7 +49,7 @@ export function Pagination(props: Pagination.Props) {
 						})}
 						disabled={page <= 1 || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
 						aria-label="Previous page"
 					>
@@ -70,7 +70,7 @@ export function Pagination(props: Pagination.Props) {
 						})}
 						disabled={page >= totalPages || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
 						aria-label="Next page"
 					>
@@ -87,7 +87,7 @@ export function Pagination(props: Pagination.Props) {
 						})}
 						disabled={page >= totalPages || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
 						aria-label="Last page"
 					>
@@ -107,7 +107,7 @@ export function Pagination(props: Pagination.Props) {
 		)
 
 	return (
-		<div className="flex flex-col gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary md:flex-row md:items-center md:justify-between">
+		<div className="flex flex-col gap-[12px] px-[16px] py-[12px] text-[12px] text-tertiary md:flex-row md:items-center md:justify-between">
 			<div className="flex flex-row items-center gap-[8px] mx-auto md:mx-0">
 				<Link
 					to="."
@@ -118,7 +118,7 @@ export function Pagination(props: Pagination.Props) {
 					})}
 					disabled={page <= 1 || isPending}
 					className={cx(
-						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[28px] text-primary',
+						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
 					)}
 					aria-label="Previous page"
 				>
@@ -170,7 +170,7 @@ export function Pagination(props: Pagination.Props) {
 					})}
 					disabled={page >= totalPages || isPending}
 					className={cx(
-						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[28px] text-primary',
+						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
 					)}
 					aria-label="Next page"
 				>
