@@ -5,7 +5,7 @@
 	"scripts": {
 		"build": "vite build",
 		"check": "biome check --write --unsafe",
-		"check:types": "tsc --project tsconfig.json --noEmit",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"check:types:test": "tsc --project tsconfig.test.json --noEmit",
 		"deploy": "pnpm build && wrangler deploy",
 		"dev": "VITE_ENABLE_DEMO=true vite dev",
@@ -36,7 +36,7 @@
 		"zod": "^4.1.13"
 	},
 	"devDependencies": {
-		"@cloudflare/puppeteer": "^1.0.4",
+    "@cloudflare/puppeteer": "^1.0.4",
 		"@cloudflare/vite-plugin": "^1.15.2",
 		"@cloudflare/vitest-pool-workers": "^0.10.10",
 		"@iconify/json": "^2.2.410",
