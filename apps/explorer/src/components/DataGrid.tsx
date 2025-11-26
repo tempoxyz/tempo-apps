@@ -81,40 +81,43 @@ export function DataGrid(props: DataGrid.Props) {
 										className="absolute inset-0 -left-[3px] z-0 [&:active~div]:translate-y-[0.5px] -outline-offset-2!"
 									/>
 								)}
-								{Array.from({ length: maxLines }, (_, lineIndex) => (
-									<React.Fragment key={`line-${rowIndex}-${lineIndex}`}>
-										{item.cells.map((cell, cellIndex) => {
-											const key = `cell-${rowIndex}-${cellIndex}-${lineIndex}`
-											const column = activeColumns[cellIndex]
-											const lines = Array.isArray(cell) ? cell : [cell]
-											const content = lines[lineIndex] ?? null
-											const isFirstColumn = cellIndex === 0
-											const isLastColumn =
-												cellIndex === activeColumns.length - 1
-											return (
-												<div
-													key={key}
-													className={cx(
-														'px-[10px] py-[12px] flex items-start',
-														'text-primary',
-														isFirstColumn && 'pl-[16px]',
-														isLastColumn && 'pr-[16px]',
-														column?.align === 'end'
-															? 'justify-end'
-															: 'justify-start',
-														item.link &&
-															'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1]',
-													)}
-												>
-													{content}
-												</div>
-											)
-										})}
-										{lineIndex < maxLines - 1 && (
-											<div className="col-span-full border-b border-dashed border-distinct" />
-										)}
-									</React.Fragment>
-								))}
+								{Array.from({ length: maxLines }, (_, lineIndex) => {
+									const key = `line-${rowIndex}-${lineIndex}`
+									return (
+										<React.Fragment key={key}>
+											{item.cells.map((cell, cellIndex) => {
+												const key = `cell-${rowIndex}-${cellIndex}-${lineIndex}`
+												const column = activeColumns[cellIndex]
+												const lines = Array.isArray(cell) ? cell : [cell]
+												const content = lines[lineIndex] ?? null
+												const isFirstColumn = cellIndex === 0
+												const isLastColumn =
+													cellIndex === activeColumns.length - 1
+												return (
+													<div
+														key={key}
+														className={cx(
+															'px-[10px] py-[12px] flex items-start',
+															'text-primary',
+															isFirstColumn && 'pl-[16px]',
+															isLastColumn && 'pr-[16px]',
+															column?.align === 'end'
+																? 'justify-end'
+																: 'justify-start',
+															item.link &&
+																'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1]',
+														)}
+													>
+														{content}
+													</div>
+												)
+											})}
+											{lineIndex < maxLines - 1 && (
+												<div className="col-span-full border-b border-dashed border-distinct" />
+											)}
+										</React.Fragment>
+									)
+								})}
 							</div>
 						)
 					})}

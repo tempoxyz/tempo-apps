@@ -35,11 +35,11 @@ import {
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { type KnownEvent, parseKnownEvents } from '#lib/known-events'
 import {
+	getPerspectiveEvent,
 	TransactionFee,
 	TransactionHash,
 	TransactionTimestamp,
 	TransactionTotal,
-	getPerspectiveEvent,
 } from '#routes/_layout/account/$address'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -1011,16 +1011,22 @@ function Component() {
 										)
 
 										const descriptionCell = isExpanded ? (
-											perspectiveEvents.map((event, i) => (
-												<EventDescription
-													key={i}
-													event={event}
-													seenAs={accountAddress}
-													className="flex flex-row items-center gap-[6px] leading-[18px] w-auto flex-wrap"
-												/>
-											))
+											perspectiveEvents.map((event, i) => {
+												const key = `${event.type}-${i}`
+												return (
+													<EventDescription
+														key={key}
+														event={event}
+														seenAs={accountAddress}
+														className="flex flex-row items-center gap-[6px] leading-[18px] w-auto flex-wrap"
+													/>
+												)
+											})
 										) : (
-											<div className="text-primary h-[20px] flex items-center whitespace-nowrap">
+											<div
+												key="collapsed"
+												className="text-primary h-[20px] flex items-center whitespace-nowrap"
+											>
 												{perspectiveEvents[0] && (
 													<EventDescription
 														event={perspectiveEvents[0]}
