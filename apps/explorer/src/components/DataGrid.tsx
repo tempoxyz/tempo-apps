@@ -1,5 +1,5 @@
 import { ClientOnly, Link } from '@tanstack/react-router'
-import type * as React from 'react'
+import * as React from 'react'
 import { cx } from '#cva.config.ts'
 import { Pagination } from './Pagination'
 import { Sections } from './Sections'
@@ -41,7 +41,7 @@ export function DataGrid(props: DataGrid.Props) {
 					className="w-full text-[14px] rounded-t-[2px] min-w-max grid"
 					style={{ gridTemplateColumns }}
 				>
-					<div className="grid col-span-full border-b border-dashed border-card-border grid-cols-subgrid">
+					<div className="grid col-span-full border-b border-dashed border-distinct grid-cols-subgrid">
 						{activeColumns.map((column, index) => {
 							const key = `header-${index}`
 							return (
@@ -59,40 +59,63 @@ export function DataGrid(props: DataGrid.Props) {
 						})}
 					</div>
 					{activeItems.map((item, rowIndex) => {
+						let maxLines = 1
+						for (const cell of item.cells) {
+							if (Array.isArray(cell) && cell.length > maxLines)
+								maxLines = cell.length
+						}
 						return (
 							<div
 								key={`row-${rowIndex}-${page}`}
 								className={cx(
-									'grid col-span-full relative border-b border-dashed border-card-border grid-cols-subgrid',
+									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid]',
 									item.link &&
-										'hover:bg-card-border hover:border-solid transition-[background-color] duration-75 hover:-mt-[1px] hover:border-t hover:border-t-card-border',
+										'hover:bg-base-alt hover:border-solid transition-[background-color] duration-75 hover:-mt-[1px] hover:border-t hover:border-t-distinct',
+									item.expanded && 'border-l-distinct',
 								)}
 							>
 								{item.link && (
 									<Link
 										to={item.link.href}
 										title={item.link.title}
-										className="absolute inset-0 z-0 [&:active~div]:translate-y-[0.5px] -outline-offset-2!"
+										className="absolute inset-0 -left-[3px] z-0 [&:active~div]:translate-y-[0.5px] -outline-offset-2!"
 									/>
 								)}
-								{item.cells.map((cell, cellIndex) => {
-									const key = `cell-${rowIndex}-${cellIndex}`
-									const column = activeColumns[cellIndex]
+								{Array.from({ length: maxLines }, (_, lineIndex) => {
+									const key = `line-${rowIndex}-${lineIndex}`
 									return (
-										<div
-											key={key}
-											className={cx(
-												'px-[10px] first:pl-[16px] last:pr-[16px] py-[12px] flex items-center',
-												'text-primary whitespace-nowrap',
-												column?.align === 'end'
-													? 'justify-end'
-													: 'justify-start',
-												item.link &&
-													'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1]',
+										<React.Fragment key={key}>
+											{item.cells.map((cell, cellIndex) => {
+												const key = `cell-${rowIndex}-${cellIndex}-${lineIndex}`
+												const column = activeColumns[cellIndex]
+												const lines = Array.isArray(cell) ? cell : [cell]
+												const content = lines[lineIndex] ?? null
+												const isFirstColumn = cellIndex === 0
+												const isLastColumn =
+													cellIndex === activeColumns.length - 1
+												return (
+													<div
+														key={key}
+														className={cx(
+															'px-[10px] py-[12px] flex items-start',
+															'text-primary',
+															isFirstColumn && 'pl-[16px]',
+															isLastColumn && 'pr-[16px]',
+															column?.align === 'end'
+																? 'justify-end'
+																: 'justify-start',
+															item.link &&
+																'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1]',
+														)}
+													>
+														{content}
+													</div>
+												)
+											})}
+											{lineIndex < maxLines - 1 && (
+												<div className="col-span-full border-b border-dashed border-distinct" />
 											)}
-										>
-											{cell}
-										</div>
+										</React.Fragment>
 									)
 								})}
 							</div>
@@ -126,9 +149,12 @@ export namespace DataGrid {
 		title: string
 	}
 
+	export type Cell = React.ReactNode | React.ReactNode[]
+
 	export interface Row {
-		cells: React.ReactNode[]
+		cells: Cell[]
 		link?: RowLink
+		expanded?: boolean
 	}
 
 	export interface Props {

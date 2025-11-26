@@ -15,6 +15,7 @@ import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
+import { Route as LayoutDemoAccountRouteImport } from './routes/_layout/demo/account'
 import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
 import { Route as LayoutAccountAddressRouteImport } from './routes/_layout/account/$address'
 import { Route as ApiTokenAddressRouteRouteImport } from './routes/api/token/$address/route'
@@ -48,6 +49,11 @@ const LayoutDemoTxRoute = LayoutDemoTxRouteImport.update({
   path: '/demo/tx',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutDemoAccountRoute = LayoutDemoAccountRouteImport.update({
+  id: '/demo/account',
+  path: '/demo/account',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutBlockIdRoute = LayoutBlockIdRouteImport.update({
   id: '/block/$id',
   path: '/block/$id',
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/account/$address': typeof LayoutAccountAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
+  '/demo/account': typeof LayoutDemoAccountRoute
   '/demo/tx': typeof LayoutDemoTxRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByTo {
   '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/account/$address': typeof LayoutAccountAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
+  '/demo/account': typeof LayoutDemoAccountRoute
   '/demo/tx': typeof LayoutDemoTxRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
@@ -92,6 +100,7 @@ export interface FileRoutesById {
   '/api/token/$address': typeof ApiTokenAddressRouteRoute
   '/_layout/account/$address': typeof LayoutAccountAddressRoute
   '/_layout/block/$id': typeof LayoutBlockIdRoute
+  '/_layout/demo/account': typeof LayoutDemoAccountRoute
   '/_layout/demo/tx': typeof LayoutDemoTxRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
     | '/api/token/$address'
     | '/account/$address'
     | '/block/$id'
+    | '/demo/account'
     | '/demo/tx'
     | '/token/$address'
     | '/tx/$hash'
@@ -114,6 +124,7 @@ export interface FileRouteTypes {
     | '/api/token/$address'
     | '/account/$address'
     | '/block/$id'
+    | '/demo/account'
     | '/demo/tx'
     | '/token/$address'
     | '/tx/$hash'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
     | '/api/token/$address'
     | '/_layout/account/$address'
     | '/_layout/block/$id'
+    | '/_layout/demo/account'
     | '/_layout/demo/tx'
     | '/_layout/token/$address'
     | '/_layout/tx/$hash'
@@ -179,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDemoTxRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/demo/account': {
+      id: '/_layout/demo/account'
+      path: '/demo/account'
+      fullPath: '/demo/account'
+      preLoaderRoute: typeof LayoutDemoAccountRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/block/$id': {
       id: '/_layout/block/$id'
       path: '/block/$id'
@@ -208,6 +227,7 @@ interface LayoutRouteChildren {
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAccountAddressRoute: typeof LayoutAccountAddressRoute
   LayoutBlockIdRoute: typeof LayoutBlockIdRoute
+  LayoutDemoAccountRoute: typeof LayoutDemoAccountRoute
   LayoutDemoTxRoute: typeof LayoutDemoTxRoute
   LayoutTokenAddressRoute: typeof LayoutTokenAddressRoute
   LayoutTxHashRoute: typeof LayoutTxHashRoute
@@ -218,6 +238,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAccountAddressRoute: LayoutAccountAddressRoute,
   LayoutBlockIdRoute: LayoutBlockIdRoute,
+  LayoutDemoAccountRoute: LayoutDemoAccountRoute,
   LayoutDemoTxRoute: LayoutDemoTxRoute,
   LayoutTokenAddressRoute: LayoutTokenAddressRoute,
   LayoutTxHashRoute: LayoutTxHashRoute,
