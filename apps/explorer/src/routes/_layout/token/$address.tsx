@@ -25,6 +25,7 @@ import { useCopy, useMediaQuery } from '#lib/hooks'
 import { fetchHolders, fetchTransfers } from '#lib/token.server'
 import { config } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
+import XIcon from '~icons/lucide/x'
 
 const defaultSearchValues = {
 	page: 1,
@@ -37,6 +38,7 @@ type TransfersQuery = {
 	page: number
 	limit: number
 	offset: number
+	account?: Address.Address | undefined
 	_key?: string | undefined
 }
 
@@ -54,6 +56,7 @@ function transfersQueryOptions(params: TransfersQuery) {
 			params.address,
 			params.page,
 			params.limit,
+			params.account,
 			params._key,
 		],
 		queryFn: async () => {
@@ -62,6 +65,7 @@ function transfersQueryOptions(params: TransfersQuery) {
 					address: params.address,
 					offset: params.offset,
 					limit: params.limit,
+					account: params.account,
 				},
 			})
 			return data
@@ -109,15 +113,22 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			),
 			defaultSearchValues.tab,
 		),
+		a: z.optional(z.string()),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page, limit, tab } }) => ({ page, limit, tab }),
-	loader: async ({ deps: { page, limit, tab }, params, context }) => {
+	loaderDeps: ({ search: { page, limit, tab, a } }) => ({
+		page,
+		limit,
+		tab,
+		a,
+	}),
+	loader: async ({ deps: { page, limit, tab, a }, params, context }) => {
 		const { address } = params
 		if (!Address.validate(address)) throw notFound()
 
+		const account = a && Address.validate(a) ? a : undefined
 		const offset = (page - 1) * limit
 
 		const holdersSummary = await context.queryClient.fetchQuery(
@@ -128,7 +139,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			const [metadata, transfers] = await Promise.all([
 				Actions.token.getMetadata(config, { token: address }),
 				context.queryClient.fetchQuery(
-					transfersQueryOptions({ address, page, limit, offset }),
+					transfersQueryOptions({ address, page, limit, offset, account }),
 				),
 			])
 			return { holders: undefined, holdersSummary, metadata, transfers }
@@ -372,7 +383,7 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const route = useRouter()
 	const { address } = Route.useParams()
-	const { page, tab, limit } = Route.useSearch()
+	const { page, tab, limit, a } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 
 	Address.assert(address)
@@ -388,11 +399,12 @@ function RouteComponent() {
 				search: {
 					...(preloadPage !== 1 ? { page: preloadPage } : {}),
 					...(tab !== 'transfers' ? { tab } : {}),
+					...(a ? { a } : {}),
 					...(limit !== defaultSearchValues.limit ? { limit } : {}),
 				},
 			})
 		}
-	}, [route, page, tab, limit])
+	}, [route, page, tab, limit, a])
 
 	const goToPage = React.useCallback(
 		(newPage: number) => {
@@ -401,12 +413,13 @@ function RouteComponent() {
 				search: () => ({
 					...(newPage !== 1 ? { page: newPage } : {}),
 					...(tab !== 'transfers' ? { tab } : {}),
+					...(a ? { a } : {}),
 					...(limit !== defaultSearchValues.limit ? { limit } : {}),
 				}),
 				resetScroll: false,
 			})
 		},
-		[navigate, tab, limit],
+		[navigate, tab, limit, a],
 	)
 
 	const setActiveSection = React.useCallback(
@@ -417,12 +430,13 @@ function RouteComponent() {
 				to: '.',
 				search: () => ({
 					...(newTab !== 'transfers' ? { tab: newTab } : {}),
+					...(a && newTab === 'transfers' ? { a } : {}),
 					...(limit !== defaultSearchValues.limit ? { limit } : {}),
 				}),
 				resetScroll: false,
 			})
 		},
-		[navigate, limit],
+		[navigate, limit, a],
 	)
 
 	const activeSection = tab === 'transfers' ? 0 : 1
@@ -439,6 +453,7 @@ function RouteComponent() {
 				address={address}
 				page={page}
 				limit={limit}
+				account={a}
 				goToPage={goToPage}
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
@@ -451,11 +466,20 @@ function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
 	limit: number
+	account?: string
 	goToPage: (page: number) => void
 	activeSection: number
 	onSectionChange: (index: number) => void
 }) {
-	const { address, page, limit, activeSection, onSectionChange } = props
+	const {
+		address,
+		page,
+		limit,
+		account: account_,
+		activeSection,
+		onSectionChange,
+	} = props
+	const account = account_ && Address.validate(account_) ? account_ : undefined
 
 	const state = useRouterState()
 	const loaderData = Route.useLoaderData()
@@ -473,6 +497,7 @@ function SectionsWrapper(props: {
 		page: transfersQueryPage,
 		limit,
 		offset: activeSection === 0 ? (page - 1) * limit : 0,
+		account,
 	})
 
 	const { data: transfersData, isLoading: isLoadingTransfers } = useQuery({
@@ -522,6 +547,9 @@ function SectionsWrapper(props: {
 					title: 'Transfers',
 					totalItems: transfersTotal,
 					itemsLabel: 'transfers',
+					contextual: account && (
+						<FilterIndicator account={account} tokenAddress={address} />
+					),
 					content: (
 						<DataGrid
 							columns={{
@@ -630,7 +658,6 @@ function SectionsWrapper(props: {
 													<AddressLink
 														key="address"
 														address={holder.address}
-														asLink={false}
 													/>,
 													<HolderBalance
 														key="balance"
@@ -642,7 +669,6 @@ function SectionsWrapper(props: {
 													<AddressLink
 														key="address"
 														address={holder.address}
-														asLink={false}
 													/>,
 													<HolderBalance
 														key="balance"
@@ -657,8 +683,8 @@ function SectionsWrapper(props: {
 													</span>,
 												],
 									link: {
-										href: `/account/${holder.address}`,
-										title: `View account ${holder.address}`,
+										href: `/token/${address}?a=${holder.address}`,
+										title: `View transfers for ${holder.address}`,
 									},
 								}))
 							}
@@ -674,6 +700,34 @@ function SectionsWrapper(props: {
 			activeSection={activeSection}
 			onSectionChange={onSectionChange}
 		/>
+	)
+}
+
+function FilterIndicator(props: {
+	account: Address.Address
+	tokenAddress: Address.Address
+}) {
+	const { account, tokenAddress } = props
+	return (
+		<div className="flex items-center gap-[8px] text-[12px]">
+			<span className="text-tertiary">Filtered:</span>
+			<Link
+				to="/account/$address"
+				params={{ address: account }}
+				className="text-accent press-down"
+				title={account}
+			>
+				{HexFormatter.truncate(account, 8)}
+			</Link>
+			<Link
+				to="/token/$address"
+				params={{ address: tokenAddress }}
+				className="text-tertiary press-down"
+				title="Clear filter"
+			>
+				<XIcon className="w-[14px] h-[14px] translate-y-[1px]" />
+			</Link>
+		</div>
 	)
 }
 

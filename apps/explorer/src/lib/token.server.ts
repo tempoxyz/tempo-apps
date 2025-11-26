@@ -143,6 +143,7 @@ const FetchTokenTransfersInputSchema = z.object({
 	address: zAddress({ lowercase: true }),
 	offset: z.coerce.number().check(z.gte(0)),
 	limit: z.coerce.number().check(z.gte(1), z.lte(MAX_LIMIT)),
+	account: z.optional(zAddress({ lowercase: true })),
 })
 
 export type FetchTokenTransfersInput = z.infer<
@@ -168,8 +169,8 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokenTransfersInputSchema.parse(input))
 	.handler(async ({ data }) => {
 		const [transfers, total] = await Promise.all([
-			fetchTransfersData(data.address, data.limit, data.offset),
-			fetchTotalCount(data.address),
+			fetchTransfersData(data.address, data.limit, data.offset, data.account),
+			fetchTotalCount(data.address, data.account),
 		])
 
 		const nextOffset = data.offset + transfers.length
@@ -186,13 +187,19 @@ async function fetchTransfersData(
 	address: Address.Address,
 	limit: number,
 	offset: number,
+	account?: Address.Address,
 ) {
+	const accountFilter = account
+		? `AND ("from" = '${account}' OR "to" = '${account}')`
+		: ''
+
 	const result = await IS.runIndexSupplyQuery(
 		/* sql */ `
 			SELECT "from", "to", tokens, tx_hash, block_num, log_idx, block_timestamp
 			FROM transfer
 			WHERE chain = ${chainId}
 				AND address = '${address}'
+				${accountFilter}
 			ORDER BY block_num DESC, log_idx DESC
 			LIMIT ${limit}
 			OFFSET ${offset}
@@ -219,13 +226,21 @@ async function fetchTransfersData(
 	})
 }
 
-async function fetchTotalCount(address: Address.Address) {
+async function fetchTotalCount(
+	address: Address.Address,
+	account?: Address.Address,
+) {
+	const accountFilter = account
+		? `AND ("from" = '${account}' OR "to" = '${account}')`
+		: ''
+
 	const result = await IS.runIndexSupplyQuery(
 		/* sql */ `
 			SELECT COUNT(tx_hash)
 			FROM transfer
 			WHERE chain = ${chainId}
 				AND address = '${address}'
+				${accountFilter}
 		`,
 		{
 			signatures: [

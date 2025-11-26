@@ -67,6 +67,11 @@ export function Sections(props: Sections.Props) {
 
 								{!isCollapsed && (
 									<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
+										{section.contextual && (
+											<div className="px-[18px] py-[10px] border-b border-dashed border-card-border">
+												{section.contextual}
+											</div>
+										)}
 										{section.content}
 									</div>
 								)}
@@ -91,31 +96,36 @@ export function Sections(props: Sections.Props) {
 					className,
 				)}
 			>
-				<div className="h-[40px] flex items-center">
-					{sections.map((section, index) => (
-						<button
-							key={section.title}
-							type="button"
-							onClick={() => onSectionChange?.(index)}
-							className={cx(
-								'h-full flex items-center text-[13px] font-medium uppercase',
-								'focus-visible:-outline-offset-2! press-down cursor-pointer transition-[color]',
-								index === 0
-									? 'pl-[18px] pr-[12px] !rounded-tl-[10px]'
-									: 'px-[12px]',
-								activeSection === index
-									? 'text-primary'
-									: 'text-tertiary hover:text-secondary',
-							)}
-						>
-							<div className="relative h-full flex items-center">
-								{section.title}
-								{activeSection === index && (
-									<div className="absolute h-[2px] bg-accent -bottom-[1.5px] left-0 right-0 -mx-[2px]" />
+				<div className="h-[40px] flex items-center justify-between">
+					<div className="flex items-center h-full">
+						{sections.map((section, index) => (
+							<button
+								key={section.title}
+								type="button"
+								onClick={() => onSectionChange?.(index)}
+								className={cx(
+									'h-full flex items-center text-[13px] font-medium uppercase',
+									'focus-visible:-outline-offset-2! press-down cursor-pointer transition-[color]',
+									index === 0
+										? 'pl-[18px] pr-[12px] !rounded-tl-[10px]'
+										: 'px-[12px]',
+									activeSection === index
+										? 'text-primary'
+										: 'text-tertiary hover:text-secondary',
 								)}
-							</div>
-						</button>
-					))}
+							>
+								<div className="relative h-full flex items-center">
+									{section.title}
+									{activeSection === index && (
+										<div className="absolute h-[2px] bg-accent -bottom-[1.5px] left-0 right-0 -mx-[2px]" />
+									)}
+								</div>
+							</button>
+						))}
+					</div>
+					{currentSection.contextual && (
+						<div className="pr-[18px]">{currentSection.contextual}</div>
+					)}
 				</div>
 
 				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex-1 flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
@@ -142,6 +152,7 @@ export namespace Sections {
 		content: React.ReactNode
 		totalItems: number
 		itemsLabel?: string
+		contextual?: React.ReactNode
 	}
 
 	export const defaultMode = 'tabs'
