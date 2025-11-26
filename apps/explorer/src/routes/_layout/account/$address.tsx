@@ -33,7 +33,7 @@ import {
 	type KnownEventPart,
 	parseKnownEvents,
 } from '#lib/known-events'
-import { TokenMetadata } from '#lib/token-metadata'
+import * as Tip20 from '#lib/tip20'
 import { config } from '#wagmi.config'
 import * as AccountServer from '../../../lib/account.server.ts'
 
@@ -81,7 +81,7 @@ function transactionsQueryOptions(params: TransactionQuery) {
 							}),
 						),
 					])
-					const getTokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
+					const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
 					knownEvents[transaction.hash] = parseKnownEvents(receipt, {
 						transaction,
 						getTokenMetadata,

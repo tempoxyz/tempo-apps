@@ -8,6 +8,7 @@ import type { Hex } from 'ox'
 import { useState } from 'react'
 import { ExploreInput } from '#components/ExploreInput'
 import { Intro } from '#components/Intro'
+import * as Tip20 from '#lib/tip20'
 
 const layoutRoute = getRouteApi('/_layout')
 
@@ -38,7 +39,12 @@ function Component() {
 							// navigate({ to: '/search/$value', params: { value } })
 						}}
 						onAddress={(address) => {
-							navigate({ to: '/account/$address', params: { address } })
+							navigate({
+								to: Tip20.isTip20Address(address)
+									? '/token/$address'
+									: '/account/$address',
+								params: { address },
+							})
 						}}
 						onHash={(hash) => {
 							navigate({ to: '/tx/$hash', params: { hash } })

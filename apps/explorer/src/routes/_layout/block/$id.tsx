@@ -18,7 +18,7 @@ import { cx } from '#cva.config.ts'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
 import { useCopy } from '#lib/hooks.ts'
 import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
-import { TokenMetadata } from '#lib/token-metadata.ts'
+import * as Tip20 from '#lib/tip20'
 import { getConfig } from '#wagmi.config.ts'
 import ArrowUp10Icon from '~icons/lucide/arrow-up-10'
 import ChevronDown from '~icons/lucide/chevron-down'
@@ -127,7 +127,7 @@ async function fetchKnownEventsForTransactions(
 				const receipt = await getTransactionReceipt(wagmiConfig, {
 					hash: transaction.hash,
 				})
-				const getTokenMetadata = await TokenMetadata.fromLogs(receipt.logs)
+				const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
 				const events = parseKnownEvents(receipt, {
 					transaction,
 					getTokenMetadata,
