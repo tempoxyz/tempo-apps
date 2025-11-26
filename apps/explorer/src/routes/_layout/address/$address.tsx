@@ -297,7 +297,7 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 							totalItems={0}
 							page={1}
 							isPending={false}
-							itemsLabel='assets'
+							itemsLabel="assets"
 						/>
 					),
 				},
@@ -491,36 +491,36 @@ function SectionsWrapper(props: {
 										mode === 'stacked'
 											? [
 													<TokenName
-														key='name'
+														key="name"
 														contractAddress={assetAddress}
 													/>,
 													<AssetContract
-														key='contract'
+														key="contract"
 														contractAddress={assetAddress}
 													/>,
 													<AssetAmount
-														key='amount'
+														key="amount"
 														contractAddress={assetAddress}
 														accountAddress={address}
 													/>,
 												]
 											: [
 													<TokenName
-														key='name'
+														key="name"
 														contractAddress={assetAddress}
 													/>,
 													<TokenSymbol
-														key='symbol'
+														key="symbol"
 														contractAddress={assetAddress}
 													/>,
-													<span key='currency'>USD</span>,
+													<span key="currency">USD</span>,
 													<AssetAmount
-														key='amount'
+														key="amount"
 														contractAddress={assetAddress}
 														accountAddress={address}
 													/>,
 													<AssetValue
-														key='value'
+														key="value"
 														contractAddress={assetAddress}
 														accountAddress={address}
 													/>,
@@ -534,7 +534,7 @@ function SectionsWrapper(props: {
 							totalItems={assets.length}
 							page={1}
 							isPending={false}
-							itemsLabel='assets'
+							itemsLabel="assets"
 							itemsPerPage={assets.length}
 						/>
 					),
@@ -724,7 +724,7 @@ function TransactionDescription(props: {
 					/>
 					{index === 0 && remainingCount > 0 && (
 						<button
-							type='button'
+							type="button"
 							onClick={() => setExpanded(true)}
 							className="ml-1 text-base-content-secondary cursor-pointer press-down shrink-0"
 						>
