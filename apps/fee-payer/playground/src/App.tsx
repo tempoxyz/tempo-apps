@@ -1,19 +1,19 @@
+import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, pad, parseUnits, stringToHex } from 'viem'
 import {
+	useAccount,
 	useConnect,
-	useConnection,
 	useConnectors,
 	useDisconnect,
 	useWatchBlockNumber,
 } from 'wagmi'
-import { Hooks } from 'wagmi/tempo'
 import { alphaUsd } from './wagmi.config'
 
 export function App() {
-	const connection = useConnection()
+	const account = useAccount()
 
 	const alphaUsdBalance = Hooks.token.useGetBalance({
-		account: connection?.address,
+		account: account?.address,
 		token: alphaUsd,
 	})
 
@@ -21,7 +21,7 @@ export function App() {
 		<div>
 			<h1>Tempo Example</h1>
 			<hr />
-			{connection?.isConnected ? (
+			{account.isConnected ? (
 				<>
 					<h2>Account</h2>
 					<Account />
@@ -54,18 +54,13 @@ export function Connect() {
 		<div>
 			<button
 				onClick={() =>
-					connect.mutate({ connector, capabilities: { type: 'sign-up' } })
+					connect.connect({ connector, capabilities: { createAccount: true } })
 				}
 				type="button"
 			>
 				Sign up
 			</button>
-			<button
-				onClick={() =>
-					connect.mutate({ connector, capabilities: { type: 'sign-in' } })
-				}
-				type="button"
-			>
+			<button onClick={() => connect.connect({ connector })} type="button">
 				Sign in
 			</button>
 		</div>
@@ -73,14 +68,14 @@ export function Connect() {
 }
 
 export function Account() {
-	const connection = useConnection()
+	const account = useAccount()
 	const disconnect = useDisconnect()
 
 	return (
 		<div>
 			<div>
 				<strong>Address: </strong>
-				{connection?.address}
+				{account.address}
 			</div>
 			<button type="button" onClick={() => disconnect.disconnect()}>
 				Disconnect
@@ -90,10 +85,10 @@ export function Account() {
 }
 
 export function Balance() {
-	const connection = useConnection()
+	const account = useAccount()
 
 	const alphaUsdBalance = Hooks.token.useGetBalance({
-		account: connection?.address,
+		account: account?.address,
 		token: alphaUsd,
 	})
 	const alphaUsdMetadata = Hooks.token.useGetMetadata({
@@ -121,17 +116,16 @@ export function Balance() {
 }
 
 export function FundAccount() {
-	const connection = useConnection()
+	const account = useAccount()
 	const fund = Hooks.faucet.useFund()
 
-	if (!connection?.address) return null
+	if (!account.address) return null
 	return (
 		<div>
 			<button
 				disabled={fund.isPending}
 				type="button"
-				// biome-ignore lint/style/noNonNullAssertion: _
-				onClick={() => fund.mutate({ account: connection.address! })}
+				onClick={() => fund.mutate({ account: account.address! })}
 			>
 				Fund Account
 			</button>

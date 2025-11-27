@@ -23,7 +23,7 @@ jobs:
       pull-requests: write
     strategy:
       matrix:
-        app: [explorer, tempo-sponsor]
+        app: [explorer, fee-payer]
 
     steps:
       - name: Clone repository
@@ -35,8 +35,7 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: Build
-        if: matrix.app == 'explorer'
-        run: pnpm run build
+        run: pnpm build
         working-directory: apps/${{ matrix.app }}
 
       - name: Upload Worker Version

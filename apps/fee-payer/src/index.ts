@@ -1,93 +1,37 @@
 import { env } from 'cloudflare:workers'
-import { zValidator } from '@hono/zod-validator'
-import { Hono } from 'hono'
-import { cors } from 'hono/cors'
+import { tempo } from 'tempo.ts/chains'
 import { Handler } from 'tempo.ts/server'
 import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import type { Chain } from 'viem/chains'
-import * as z from 'zod'
-import { tempoChain } from './lib/chain.js'
-import {
-	FeePayerEvents,
-	captureEvent,
-	getRequestContext,
-} from './lib/posthog.js'
-import { rateLimitMiddleware } from './lib/rate-limit.js'
-import { getUsage } from './lib/usage.js'
 
-const app = new Hono()
-
-app.use(
-	'*',
-	cors({
-		origin: (origin) => {
-			if (env.ALLOWED_ORIGINS === '*') return '*'
-			if (origin && env.ALLOWED_ORIGINS.includes(origin)) return origin
-			return null
-		},
-		allowMethods: ['GET', 'POST', 'OPTIONS'],
-		allowHeaders: ['Content-Type', 'Authorization'],
-		maxAge: 86400,
-	}),
-)
-
-app.get(
-	'/usage',
-	zValidator(
-		'query',
-		z.object({
-			blockTimestampFrom: z.optional(z.coerce.number()),
-			blockTimestampTo: z.optional(z.coerce.number()),
-		}),
-	),
-	async (c) => {
-		const { blockTimestampFrom, blockTimestampTo } = c.req.valid('query')
-		const account = privateKeyToAccount(
-			env.SPONSOR_PRIVATE_KEY as `0x${string}`,
-		)
-
-		const requestContext = getRequestContext(c.req.raw)
-		c.executionCtx.waitUntil(
-			captureEvent({
-				distinctId: requestContext.origin ?? 'unknown',
-				event: FeePayerEvents.USAGE_QUERY,
-				properties: requestContext,
-			}),
-		)
-
-		const data = await getUsage(
-			account.address,
-			blockTimestampFrom,
-			blockTimestampTo,
-		)
-
-		return c.json(data)
-	},
-)
-
-app.all('*', rateLimitMiddleware, async (c) => {
-	const requestContext = getRequestContext(c.req.raw)
-
-	const handler = Handler.feePayer({
-		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
-		chain: tempoChain as Chain,
-		transport: http(env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0]),
-		async onRequest(request) {
-			console.log(`Sponsoring transaction: ${request.method}`)
-			c.executionCtx.waitUntil(
-				captureEvent({
-					distinctId: requestContext.origin ?? 'unknown',
-					event: FeePayerEvents.SPONSORSHIP_REQUEST,
-					properties: {
-						...requestContext,
-						rpcMethod: request.method,
-					},
-				}),
-			)
-		},
-	})
-	return handler.fetch(c.req.raw)
+const headers = new Headers({
+	'Access-Control-Allow-Methods': 'POST, OPTIONS',
+	'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+	'Access-Control-Max-Age': '86400',
 })
 
-export default app
+export default {
+	async fetch(request) {
+		const origin = request.headers.get('origin')
+		if (env.ALLOWED_ORIGINS === '*')
+			headers.set('Access-Control-Allow-Origin', '*')
+		else if (origin && env.ALLOWED_ORIGINS.includes(origin))
+			headers.set('Access-Control-Allow-Origin', origin)
+
+		return await Handler.feePayer({
+			account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
+			chain: tempo({ feeToken: '0x20c0000000000000000000000000000000000001' }),
+			headers,
+			transport: http(env.TEMPO_RPC_URL, {
+				fetchOptions: {
+					headers: {
+						Authorization: `Basic ${btoa(env.TEMPO_RPC_CREDENTIALS)}`,
+					},
+				},
+			}),
+			async onRequest(request) {
+				console.log(`Sponsoring transaction: ${request.method}`)
+			},
+		}).fetch(request)
+	},
+} satisfies ExportedHandler<Env>

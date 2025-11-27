@@ -3,40 +3,25 @@
 	"private": true,
 	"scripts": {
 		"build": "echo 'noop'",
-		"check": "pnpm check:biome && pnpm check:types",
-		"check:biome": "biome check --write .",
+		"check": "biome check --write .",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"dev": "wrangler dev",
 		"dev:playground": "pnpm --filter fee-payer-playground dev",
 		"deploy": "wrangler deploy",
-		"deploy:mainnet": "wrangler deploy --env mainnet",
-		"deploy:privy": "wrangler deploy --env privy",
 		"format": "biome format --write .",
-		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
-		"tail": "wrangler tail",
-		"test": "vitest --run",
-		"test:watch": "vitest",
-		"test:testnet": "TEMPO_ENV=testnet vitest --run"
+		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
+		"postinstall": "pnpm gen:types",
+		"tail": "wrangler tail"
 	},
 	"dependencies": {
-		"@hono/zod-validator": "catalog:",
-		"hono": "catalog:",
-		"idxs": "catalog:",
-		"kysely": "catalog:",
 		"ox": "catalog:",
 		"tempo.ts": "catalog:",
-		"viem": "catalog:",
-		"zod": "catalog:"
+		"viem": "catalog:"
 	},
 	"devDependencies": {
-		"@cloudflare/vitest-pool-workers": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
 		"@types/node": "catalog:",
-		"dotenv": "catalog:",
-		"prool": "catalog:",
-		"testcontainers": "catalog:",
 		"typescript": "catalog:",
-		"vitest": "catalog:",
 		"wrangler": "catalog:"
 	}
 }

@@ -17,7 +17,7 @@
 		"preview": "pnpm -r preview"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.7",
+		"@biomejs/biome": "catalog:",
 		"@typescript/native-preview": "7.0.0-dev.20251126.1",
 		"typescript": "^5.9.3"
 	},

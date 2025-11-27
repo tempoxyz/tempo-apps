@@ -6,15 +6,12 @@ import { App } from './App.tsx'
 
 import { config, queryClient } from './wagmi.config.ts'
 
-const root = document.querySelector('div#root')
-if (!root) throw new Error('Root element not found')
-
-createRoot(root).render(
-	<StrictMode>
-		<WagmiProvider config={config}>
-			<QueryClientProvider client={queryClient}>
-				<App />
-			</QueryClientProvider>
-		</WagmiProvider>
-	</StrictMode>,
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <App />
+      </QueryClientProvider>
+    </WagmiProvider>
+  </StrictMode>,
 )

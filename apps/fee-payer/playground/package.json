@@ -3,16 +3,15 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"prebuild": "pnpm check:types",
-		"build": "vite build",
-		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"build": "tsc -b && vite build",
+		"check:types": "tsc -b",
 		"dev": "vite",
 		"preview": "vite preview"
 	},
 	"dependencies": {
-		"@tanstack/react-query": "catalog:",
-		"react": "catalog:",
-		"react-dom": "catalog:",
+		"@tanstack/react-query": "^5",
+		"react": "^19",
+		"react-dom": "^19",
 		"tempo.ts": "catalog:",
 		"viem": "catalog:",
 		"wagmi": "catalog:"
