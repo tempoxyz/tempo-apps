@@ -13,7 +13,7 @@
 	},
 	"dependencies": {
 		"ox": "^0.9.16",
-		"tempo.ts": "0.7.0",
+		"tempo.ts": "~0.7.3",
 		"viem": "^2.40.2"
 	},
 	"devDependencies": {

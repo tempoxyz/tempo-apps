@@ -1,4 +1,3 @@
-import type { RpcRequest } from 'ox'
 import { tempo } from 'tempo.ts/chains'
 import { Handler } from 'tempo.ts/server'
 import { http } from 'viem'
@@ -67,40 +66,17 @@ export default {
 			},
 		})
 
-		try {
-			// note: we pass a clone of the request to avoid mutating the original request
-			const response = await handler.fetch(request.clone())
+		// note: we pass a clone of the request to avoid mutating the original request
+		const response = await handler.fetch(request.clone())
 
-			// Add CORS headers to response
-			return new Response(response.body, {
-				status: response.status,
-				statusText: response.statusText,
-				headers: {
-					...Object.fromEntries(response.headers),
-					...corsHeaders,
-				},
-			})
-		} catch (error) {
-			console.error('Sponsor error:', error)
-
-			return new Response(
-				JSON.stringify({
-					jsonrpc: '2.0',
-					error: {
-						code: -32603,
-						message:
-							error instanceof Error ? error.message : 'Internal server error',
-					},
-					id: ((await request.json()) as RpcRequest.RpcRequest)?.id ?? null,
-				}),
-				{
-					status: 200,
-					headers: {
-						...corsHeaders,
-						'Content-Type': 'application/json',
-					},
-				},
-			)
-		}
+		// Add CORS headers to response
+		return new Response(response.body, {
+			status: response.status,
+			statusText: response.statusText,
+			headers: {
+				...Object.fromEntries(response.headers),
+				...corsHeaders,
+			},
+		})
 	},
 }
