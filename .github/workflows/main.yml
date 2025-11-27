@@ -19,7 +19,8 @@ jobs:
     timeout-minutes: 60
     strategy:
       matrix:
-        app: [explorer, tempo-sponsor]
+        app: [explorer, fee-payer]
+        
     steps:
       - uses: actions/checkout@v5
         with:

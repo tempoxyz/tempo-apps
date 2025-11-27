@@ -1,0 +1,27 @@
+{
+	"name": "fee-payer",
+	"private": true,
+	"scripts": {
+		"build": "echo 'noop'",
+		"check": "biome check --write .",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"dev": "wrangler dev",
+		"dev:playground": "pnpm --filter fee-payer-playground dev",
+		"deploy": "wrangler deploy",
+		"format": "biome format --write .",
+		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
+		"postinstall": "pnpm gen:types",
+		"tail": "wrangler tail"
+	},
+	"dependencies": {
+		"ox": "catalog:",
+		"tempo.ts": "catalog:",
+		"viem": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

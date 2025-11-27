@@ -1,6 +1,6 @@
 {
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
-	"name": "fee-sponsor",
+	"name": "fee-payer",
 	"compatibility_date": "2025-11-20",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.ts",
@@ -15,11 +15,5 @@
 			"invocation_logs": true,
 			"persist": true
 		}
-	},
-	"vars": {
-		"ALLOWED_ORIGINS": "*",
-		"TEMPO_RPC_URL": "https://rpc.testnet.tempo.xyz",
-		"TEMPO_RPC_USERNAME": "eng",
-		"TEMPO_RPC_PASSWORD": "zealous-mayer"
 	}
 }
