@@ -65,6 +65,39 @@ async function testSponsor() {
 	}
 }
 
+async function testErrorHandling() {
+	console.log('\n🧪 Testing error handling...\n')
+
+	// Test 1: Invalid transaction data should return JSON-RPC error
+	try {
+		const response = await fetch(SPONSOR_URL, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'eth_sendRawTransaction',
+				params: ['0x76invalid'], // Invalid serialized transaction
+			}),
+		})
+
+		const data = await response.json()
+		console.log('Error response:', JSON.stringify(data, null, 2))
+
+		if (data.error && data.error.code === -32000) {
+			console.log(
+				'✅ Error handling test passed: received proper JSON-RPC error',
+			)
+		} else {
+			console.error('❌ Error handling test failed: expected JSON-RPC error')
+			process.exit(1)
+		}
+	} catch (error) {
+		console.error('❌ Error handling test failed:', error.message)
+		process.exit(1)
+	}
+}
+
 // Run tests
 async function main() {
 	// Check if running locally
@@ -76,6 +109,9 @@ async function main() {
 			'⚠️  Testing against local server. Make sure to run `pnpm dev` in another terminal.\n',
 		)
 	}
+
+	// Test error handling first
+	await testErrorHandling()
 
 	// Then run full integration test
 	await testSponsor()
