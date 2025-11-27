@@ -70,15 +70,13 @@ export default {
 			const response = await handler.fetch(request)
 
 			// Add CORS headers to response
-			const newHeaders = new Headers(response.headers)
-			for (const [key, value] of Object.entries(corsHeaders)) {
-				newHeaders.set(key, value)
-			}
-
 			return new Response(response.body, {
 				status: response.status,
 				statusText: response.statusText,
-				headers: newHeaders,
+				headers: {
+					...Object.fromEntries(response.headers),
+					...corsHeaders,
+				},
 			})
 		} catch (error) {
 			console.error('Sponsor error:', error)
