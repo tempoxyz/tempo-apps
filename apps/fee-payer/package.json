@@ -14,14 +14,14 @@
 		"tail": "wrangler tail"
 	},
 	"dependencies": {
-		"ox": "^0.9.16",
-		"tempo.ts": "~0.7.5",
-		"viem": "^2.40.2"
+		"ox": "catalog:",
+		"tempo.ts": "catalog:",
+		"viem": "catalog:"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20251125.0",
-		"@types/node": "^24.10.1",
-		"typescript": "^5.9.3",
-		"wrangler": "^4.50.0"
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"wrangler": "catalog:"
 	}
 }
