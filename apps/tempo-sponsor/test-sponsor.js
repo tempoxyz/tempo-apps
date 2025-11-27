@@ -7,7 +7,7 @@ const { tempo } = require('tempo.ts/chains')
 const { withFeePayer } = require('tempo.ts/viem')
 
 // Configuration
-const SPONSOR_URL = process.env.SPONSOR_URL || 'http://localhost:8788' // Local wrangler dev URL
+const SPONSOR_URL = process.env.SPONSOR_URL || 'http://localhost:8787' // Local wrangler dev URL
 const TEST_PRIVATE_KEY =
 	process.env.TEST_PRIVATE_KEY ||
 	'0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
