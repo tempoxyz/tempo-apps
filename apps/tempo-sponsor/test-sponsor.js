@@ -7,7 +7,7 @@ const { tempo } = require('tempo.ts/chains')
 const { withFeePayer } = require('tempo.ts/viem')
 
 // Configuration
-const SPONSOR_URL = process.env.SPONSOR_URL || 'http://localhost:8787' // Local wrangler dev URL
+const SPONSOR_URL = process.env.SPONSOR_URL || 'http://localhost:8788' // Local wrangler dev URL
 const TEST_PRIVATE_KEY =
 	process.env.TEST_PRIVATE_KEY ||
 	'0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80'
@@ -84,7 +84,7 @@ async function testErrorHandling() {
 		const data = await response.json()
 		console.log('Error response:', JSON.stringify(data, null, 2))
 
-		if (data.error && data.error.code === -32000) {
+		if (data.error && data.error.code === -32603) {
 			console.log(
 				'✅ Error handling test passed: received proper JSON-RPC error',
 			)
