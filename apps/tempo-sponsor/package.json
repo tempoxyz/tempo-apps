@@ -5,18 +5,15 @@
 	"scripts": {
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
-		"deploy:staging": "wrangler deploy --env staging",
-		"deploy:production": "wrangler deploy --env production",
 		"tail": "wrangler tail",
-		"test": "node test-simple.mjs",
 		"test:integration": "node test-sponsor.js",
-		"typecheck": "tsc --noEmit",
 		"format": "biome format --write .",
-		"lint": "biome check --write ."
+		"check": "biome check --write .",
+		"check:types": "tsgo --project tsconfig.json --noEmit"
 	},
 	"dependencies": {
 		"ox": "^0.9.16",
-		"tempo.ts": "^0.6.2",
+		"tempo.ts": "~0.7.3",
 		"viem": "^2.40.2"
 	},
 	"devDependencies": {
