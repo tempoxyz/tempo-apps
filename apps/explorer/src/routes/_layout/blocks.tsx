@@ -5,14 +5,11 @@ import type { Block } from 'viem'
 import { useBlock, useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { Pagination } from '#components/Pagination'
 import { RelativeTime } from '#components/RelativeTime'
 import { cx } from '#cva.config'
 import { HexFormatter } from '#lib/formatting'
 import { config, getConfig } from '#wagmi.config'
-import ChevronFirst from '~icons/lucide/chevron-first'
-import ChevronLast from '~icons/lucide/chevron-last'
-import ChevronLeft from '~icons/lucide/chevron-left'
-import ChevronRight from '~icons/lucide/chevron-right'
 import Play from '~icons/lucide/play'
 
 const BLOCKS_PER_PAGE = 12
@@ -220,66 +217,12 @@ function BlocksPage() {
 					</div>
 				</div>
 
-				{/* Footer with pagination and live toggle */}
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
-					{/* Pagination controls */}
-					<div className="flex items-center justify-center sm:justify-start gap-[6px]">
-						<Link
-							to="."
-							resetScroll={false}
-							search={(prev) => ({ ...prev, page: 1 })}
-							disabled={page <= 1 || isLoading}
-							className={cx(
-								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
-							)}
-							aria-label="First page"
-						>
-							<ChevronFirst className="size-[14px]" />
-						</Link>
-						<Link
-							to="."
-							resetScroll={false}
-							search={(prev) => ({ ...prev, page: (prev?.page ?? 1) - 1 })}
-							disabled={page <= 1 || isLoading}
-							className={cx(
-								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
-							)}
-							aria-label="Previous page"
-						>
-							<ChevronLeft className="size-[14px]" />
-						</Link>
-
-						<span className="text-primary font-medium tabular-nums px-[4px]">
-							Page {page.toLocaleString()} of {totalPages.toLocaleString()}
-						</span>
-
-						<Link
-							to="."
-							resetScroll={false}
-							search={(prev) => ({ ...prev, page: (prev?.page ?? 1) + 1 })}
-							disabled={page >= totalPages || isLoading}
-							className={cx(
-								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
-							)}
-							aria-label="Next page"
-						>
-							<ChevronRight className="size-[14px]" />
-						</Link>
-						<Link
-							to="."
-							resetScroll={false}
-							search={(prev) => ({ ...prev, page: totalPages })}
-							disabled={page >= totalPages || isLoading}
-							className={cx(
-								'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
-							)}
-							aria-label="Last page"
-						>
-							<ChevronLast className="size-[14px]" />
-						</Link>
-					</div>
-
-					{/* Live toggle and blocks count */}
+					<Pagination.Simple
+						page={page}
+						totalPages={totalPages}
+						isPending={isLoading}
+					/>
 					<div className="flex items-center justify-center sm:justify-end gap-[12px]">
 						<Link
 							to="."
@@ -308,13 +251,7 @@ function BlocksPage() {
 								</>
 							)}
 						</Link>
-
-						<div className="space-x-[8px]">
-							<span className="text-primary tabular-nums">
-								{totalBlocks.toLocaleString()}
-							</span>
-							<span className="text-tertiary">blocks</span>
-						</div>
+						<Pagination.Count totalItems={totalBlocks} itemsLabel="blocks" />
 					</div>
 				</div>
 			</section>

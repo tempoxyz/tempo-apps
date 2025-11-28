@@ -26,7 +26,10 @@ export function Sections(props: Sections.Props) {
 				<div className={cx('flex flex-col gap-[14px]', className)}>
 					{sections.map((section, index) => {
 						const itemsLabel = section.itemsLabel ?? 'items'
-						const isCollapsed = collapsedSections[index]
+						const isCollapsed =
+							section.autoCollapse !== false && collapsedSections[index]
+
+						const canCollapse = section.autoCollapse !== false
 
 						return (
 							<section
@@ -37,33 +40,41 @@ export function Sections(props: Sections.Props) {
 									'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 								)}
 							>
-								<button
-									type="button"
-									onClick={() => toggleSection(index)}
-									className={cx(
-										'h-[54px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-[2px]!',
-										isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
-									)}
-								>
-									<h1 className="text-[13px] font-medium uppercase text-primary">
-										{section.title}
-									</h1>
-									<div className="flex items-center gap-[12px]">
-										{isCollapsed && (
-											<span className="text-[13px] text-tertiary">
-												{section.totalItems} {itemsLabel}
-											</span>
+								{canCollapse ? (
+									<button
+										type="button"
+										onClick={() => toggleSection(index)}
+										className={cx(
+											'h-[54px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-[2px]!',
+											isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
 										)}
-										<div
-											className={cx(
-												'accent text-[16px] font-mono',
-												isCollapsed ? 'text-accent' : 'text-tertiary',
+									>
+										<h1 className="text-[13px] font-medium uppercase text-primary">
+											{section.title}
+										</h1>
+										<div className="flex items-center gap-[12px]">
+											{isCollapsed && (
+												<span className="text-[13px] text-tertiary">
+													{section.totalItems} {itemsLabel}
+												</span>
 											)}
-										>
-											[{isCollapsed ? '+' : '–'}]
+											<div
+												className={cx(
+													'accent text-[16px] font-mono',
+													isCollapsed ? 'text-accent' : 'text-tertiary',
+												)}
+											>
+												[{isCollapsed ? '+' : '–'}]
+											</div>
 										</div>
+									</button>
+								) : (
+									<div className="h-[54px] flex items-center justify-between px-[18px] rounded-t-[10px]">
+										<h1 className="text-[13px] font-medium uppercase text-primary">
+											{section.title}
+										</h1>
 									</div>
-								</button>
+								)}
 
 								{!isCollapsed && (
 									<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
@@ -153,6 +164,7 @@ export namespace Sections {
 		totalItems: number
 		itemsLabel?: string
 		contextual?: React.ReactNode
+		autoCollapse?: boolean
 	}
 
 	export const defaultMode = 'tabs'
