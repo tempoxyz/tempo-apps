@@ -1,0 +1,28 @@
+{
+	"name": "fee-payer-playground",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "tsc -b && vite build",
+		"check:types": "tsc -b",
+		"dev": "vite",
+		"preview": "vite preview"
+	},
+	"dependencies": {
+		"@tanstack/react-query": "^5",
+		"react": "^19",
+		"react-dom": "^19",
+		"tempo.ts": "catalog:",
+		"viem": "catalog:",
+		"wagmi": "catalog:"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:",
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"@vitejs/plugin-react": "catalog:",
+		"globals": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:"
+	}
+}
