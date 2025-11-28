@@ -14,9 +14,7 @@ function tokensQueryOptions(params: { page: number; limit: number }) {
 	const offset = (params.page - 1) * params.limit
 	return queryOptions({
 		queryKey: ['tokens', params.page, params.limit],
-		queryFn: async () => {
-			return fetchTokens({ data: { offset, limit: params.limit } })
-		},
+		queryFn: () => fetchTokens({ data: { offset, limit: params.limit } }),
 		placeholderData: keepPreviousData,
 	})
 }
