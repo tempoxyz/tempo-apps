@@ -13,6 +13,7 @@ export function DataGrid(props: DataGrid.Props) {
 		isPending,
 		itemsLabel = 'items',
 		itemsPerPage = 10,
+		pagination = 'default',
 	} = props
 
 	const mode = Sections.useSectionsMode()
@@ -114,14 +115,25 @@ export function DataGrid(props: DataGrid.Props) {
 				</div>
 			</div>
 			<div className="mt-auto">
-				<Pagination
-					page={page}
-					totalPages={totalPages}
-					totalItems={totalItems}
-					itemsLabel={itemsLabel}
-					isPending={isPending}
-					compact={mode === 'stacked'}
-				/>
+				{pagination === 'simple' ? (
+					<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
+						<Pagination.Simple
+							page={page}
+							totalPages={totalPages}
+							isPending={isPending}
+						/>
+						<Pagination.Count totalItems={totalItems} itemsLabel={itemsLabel} />
+					</div>
+				) : (
+					<Pagination
+						page={page}
+						totalPages={totalPages}
+						totalItems={totalItems}
+						itemsLabel={itemsLabel}
+						isPending={isPending}
+						compact={mode === 'stacked'}
+					/>
+				)}
 			</div>
 		</div>
 	)
@@ -158,5 +170,6 @@ export namespace DataGrid {
 		isPending: boolean
 		itemsLabel?: string
 		itemsPerPage?: number
+		pagination?: 'default' | 'simple'
 	}
 }

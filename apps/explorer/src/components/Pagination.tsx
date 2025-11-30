@@ -22,20 +22,17 @@ export function Pagination(props: Pagination.Props) {
 
 	if (compact)
 		return (
-			<div className="flex items-center justify-between px-[16px] py-[12px] text-[12px] text-tertiary w-full">
+			<div className="flex flex-col items-center gap-[12px] sm:flex-row sm:justify-between px-[16px] py-[12px] text-[12px] text-tertiary w-full">
 				<div className="flex items-center gap-[6px]">
 					<Link
 						to="."
 						resetScroll={false}
-						search={(previous) => ({
-							...previous,
-							page: 1,
-						})}
+						search={(previous) => ({ ...previous, page: 1 })}
 						disabled={page <= 1 || isPending}
 						className={cx(
 							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
-						aria-label="First page"
+						title="First page"
 					>
 						<ChevronFirst className="size-[14px]" />
 					</Link>
@@ -51,12 +48,12 @@ export function Pagination(props: Pagination.Props) {
 						className={cx(
 							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
-						aria-label="Previous page"
+						title="Previous page"
 					>
 						<ChevronLeft className="size-[14px]" />
 					</Link>
 
-					<span className="text-primary font-medium tabular-nums px-[4px]">
+					<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
 						Page {page.toLocaleString()} of {totalPages.toLocaleString()}
 					</span>
 
@@ -72,7 +69,7 @@ export function Pagination(props: Pagination.Props) {
 						className={cx(
 							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
-						aria-label="Next page"
+						title="Next page"
 					>
 						<ChevronRight className="size-[14px]" />
 					</Link>
@@ -89,20 +86,13 @@ export function Pagination(props: Pagination.Props) {
 						className={cx(
 							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
-						aria-label="Last page"
+						title="Last page"
 					>
 						<ChevronLast className="size-[14px]" />
 					</Link>
 				</div>
 
-				<div className="space-x-[8px]">
-					<span className="text-primary tabular-nums">
-						{totalItems.toLocaleString()}
-					</span>
-					<span className="text-tertiary">
-						{totalItems === 1 ? itemsLabel.replace(/s$/, '') : itemsLabel}
-					</span>
-				</div>
+				<Pagination.Count totalItems={totalItems} itemsLabel={itemsLabel} />
 			</div>
 		)
 
@@ -120,7 +110,7 @@ export function Pagination(props: Pagination.Props) {
 					className={cx(
 						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
 					)}
-					aria-label="Previous page"
+					title="Previous page"
 				>
 					<ChevronLeft className="size-[16px]" />
 				</Link>
@@ -172,23 +162,18 @@ export function Pagination(props: Pagination.Props) {
 					className={cx(
 						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
 					)}
-					aria-label="Next page"
+					title="Next page"
 				>
 					<ChevronRight className="size-[16px]" />
 				</Link>
 			</div>
 
-			<div className="space-x-[8px]">
-				<span className="text-tertiary">Page</span>
-				<span className="text-primary">{page}</span>
-				<span className="text-tertiary">of</span>
-				<span className="text-primary">{totalPages}</span>
-				<span className="text-tertiary">•</span>
-				<span className="text-primary">{totalItems || '…'}</span>
-				<span className="text-tertiary">
-					{totalItems === 1 ? itemsLabel.replace(/s$/, '') : itemsLabel}
-				</span>
-			</div>
+			<Pagination.Count
+				page={page}
+				totalPages={totalPages}
+				totalItems={totalItems}
+				itemsLabel={itemsLabel}
+			/>
 		</div>
 	)
 }
@@ -224,5 +209,104 @@ export namespace Pagination {
 			]
 
 		return [1, Ellipsis, page - 1, page, page + 1, Ellipsis, totalPages]
+	}
+
+	export function Simple(props: Simple.Props) {
+		const { page, totalPages, isPending } = props
+		return (
+			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
+				<Link
+					to="."
+					resetScroll={false}
+					search={(prev) => ({ ...prev, page: 1 })}
+					disabled={page <= 1 || isPending}
+					className={cx(
+						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+					)}
+					title="First page"
+				>
+					<ChevronFirst className="size-[14px]" />
+				</Link>
+				<Link
+					to="."
+					resetScroll={false}
+					search={(prev) => ({ ...prev, page: (prev?.page ?? 1) - 1 })}
+					disabled={page <= 1 || isPending}
+					className={cx(
+						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+					)}
+					title="Previous page"
+				>
+					<ChevronLeft className="size-[14px]" />
+				</Link>
+				<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
+					Page {page.toLocaleString()} of {totalPages.toLocaleString()}
+				</span>
+				<Link
+					to="."
+					resetScroll={false}
+					search={(prev) => ({ ...prev, page: (prev?.page ?? 1) + 1 })}
+					disabled={page >= totalPages || isPending}
+					className={cx(
+						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+					)}
+					title="Next page"
+				>
+					<ChevronRight className="size-[14px]" />
+				</Link>
+				<Link
+					to="."
+					resetScroll={false}
+					search={(prev) => ({ ...prev, page: totalPages })}
+					disabled={page >= totalPages || isPending}
+					className={cx(
+						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+					)}
+					title="Last page"
+				>
+					<ChevronLast className="size-[14px]" />
+				</Link>
+			</div>
+		)
+	}
+
+	export namespace Simple {
+		export interface Props {
+			page: number
+			totalPages: number
+			isPending?: boolean
+		}
+	}
+
+	export function Count(props: Count.Props) {
+		const { page, totalPages, totalItems, itemsLabel } = props
+		return (
+			<div className="flex items-center justify-center sm:justify-end gap-[8px]">
+				{page != null && totalPages != null && (
+					<>
+						<span className="text-tertiary">Page</span>
+						<span className="text-primary">{page}</span>
+						<span className="text-tertiary">of</span>
+						<span className="text-primary">{totalPages}</span>
+						<span className="text-tertiary">•</span>
+					</>
+				)}
+				<span className="text-primary tabular-nums">
+					{totalItems.toLocaleString('en-US')}
+				</span>
+				<span className="text-tertiary">
+					{totalItems === 1 ? itemsLabel.replace(/s$/, '') : itemsLabel}
+				</span>
+			</div>
+		)
+	}
+
+	export namespace Count {
+		export interface Props {
+			page?: number
+			totalPages?: number
+			totalItems: number
+			itemsLabel: string
+		}
 	}
 }

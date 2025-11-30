@@ -77,12 +77,7 @@ function SpotlightLinks(props: { recentTransactions?: Hex.Hex[] }) {
 				<span>·</span>
 				<SpotlightLink to="/blocks">Blocks</SpotlightLink>
 				<span>·</span>
-				<SpotlightLink
-					to="/token/$address"
-					params={{ address: '0x20c0000000000000000000000000000000000002' }}
-				>
-					Token
-				</SpotlightLink>
+				<SpotlightLink to="/tokens">Tokens</SpotlightLink>
 				<span>·</span>
 				{recentTransactions[0] ? (
 					<SpotlightLink

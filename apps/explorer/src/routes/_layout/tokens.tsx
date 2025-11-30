@@ -1,34 +1,22 @@
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import * as z from 'zod/mini'
-import { Address } from '#comps/Address'
-import { DataGrid } from '#comps/DataGrid'
-import { Sections } from '#comps/Sections'
-import {
-	FormattedTimestamp,
-	TimeColumnHeader,
-	useTimeFormat,
-} from '#comps/TimeFormat'
-import { TokenIcon } from '#comps/TokenIcon'
-import { TOKEN_COUNT_MAX } from '#lib/constants'
-import { useIsMounted, useMediaQuery } from '#lib/hooks'
-import { withLoaderTiming } from '#lib/profiling'
-import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
-import type { Token } from '#lib/server/tokens.server'
-import { getRequestURL } from '#lib/env.ts'
+import { DataGrid } from '#components/DataGrid'
+import { RelativeTime } from '#components/RelativeTime'
+import { Sections } from '#components/Sections'
+import { HexFormatter } from '#lib/formatting'
+import { useMediaQuery } from '#lib/hooks'
+import { fetchTokens, type Token } from '#lib/tokens.server'
 
-async function fetchTokensCount() {
-	const requestUrl = getRequestURL()
-	const response = await fetch(`${requestUrl.origin}/api/tokens/count`, {
-		headers: { 'Content-Type': 'application/json' },
+const TOKENS_PER_PAGE = 12
+
+function tokensQueryOptions(params: { page: number; limit: number }) {
+	const offset = (params.page - 1) * params.limit
+	return queryOptions({
+		queryKey: ['tokens', params.page, params.limit],
+		queryFn: () => fetchTokens({ data: { offset, limit: params.limit } }),
+		placeholderData: keepPreviousData,
 	})
-	if (!response.ok) throw new Error('Failed to fetch total token count')
-	const { data, success, error } = z.safeParse(
-		z.object({ data: z.number(), error: z.nullable(z.string()) }),
-		await response.json(),
-	)
-	if (!success) throw new Error(z.prettifyError(error))
-	return data
 }
 
 export const Route = createFileRoute('/_layout/tokens')({
@@ -39,50 +27,21 @@ export const Route = createFileRoute('/_layout/tokens')({
 	validateSearch: z.object({
 		page: z.optional(z.number()),
 	}).parse,
-	loader: ({ context }) =>
-		withLoaderTiming('/_layout/tokens', async () =>
-			context.queryClient.ensureQueryData(
-				tokensListQueryOptions({
-					page: 1,
-					limit: TOKENS_PER_PAGE,
-					includeCount: false,
-				}),
-			),
-		),
+	loader: async () => {
+		return fetchTokens({ data: { offset: 0, limit: TOKENS_PER_PAGE } })
+	},
 })
 
 function TokensPage() {
 	const { page = 1 } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
-	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
-	const isMounted = useIsMounted()
 
-	const { data, isPlaceholderData, isPending } = useQuery({
-		...tokensListQueryOptions({
-			page,
-			limit: TOKENS_PER_PAGE,
-			includeCount: false,
-		}),
-		initialData: page === 1 ? loaderData : undefined,
-	})
+	const { data, isLoading } = useQuery(
+		tokensQueryOptions({ page, limit: TOKENS_PER_PAGE }),
+	)
 
-	// Fetch count separately in the background
-	const countQuery = useQuery({
-		queryKey: ['tokens-count'],
-		queryFn: fetchTokensCount,
-		staleTime: 60_000,
-		refetchInterval: false,
-		refetchOnWindowFocus: false,
-	})
-
-	const tokens = data?.tokens ?? []
-	const exactCount = isMounted ? countQuery.data?.data : undefined
-	const isCapped = exactCount !== undefined && exactCount >= TOKEN_COUNT_MAX
-	const paginationTotal = exactCount ?? TOKEN_COUNT_MAX
-	const displayTotal =
-		exactCount === undefined
-			? '…'
-			: `${isCapped ? '> ' : ''}${isCapped ? TOKEN_COUNT_MAX : exactCount}`
+	const tokens = data?.tokens ?? loaderData.tokens
+	const total = data?.total ?? loaderData.total
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -92,18 +51,7 @@ function TokensPage() {
 		{ label: 'Name', align: 'start' },
 		{ label: 'Currency', align: 'start', minWidth: 80 },
 		{ label: 'Address', align: 'start' },
-		{
-			label: (
-				<TimeColumnHeader
-					label="Created"
-					formatLabel={formatLabel}
-					onCycle={cycleTimeFormat}
-					className="text-secondary hover:text-accent cursor-pointer transition-colors"
-				/>
-			),
-			align: 'end',
-			minWidth: 100,
-		},
+		{ label: 'Created', align: 'end', minWidth: 100 },
 	]
 
 	return (
@@ -113,7 +61,7 @@ function TokensPage() {
 				sections={[
 					{
 						title: 'Tokens',
-						totalItems: displayTotal,
+						totalItems: total,
 						itemsLabel: 'tokens',
 						autoCollapse: false,
 						content: (
@@ -124,25 +72,26 @@ function TokensPage() {
 										cells: [
 											<span
 												key="symbol"
-												className="inline-flex items-center gap-2 text-base-content-positive font-medium"
+												className="text-base-content-positive font-medium"
 											>
-												<TokenIcon
-													address={token.address}
-													name={token.symbol}
-												/>
 												{token.symbol}
 											</span>,
-											<span key="name" className="truncate max-w-[40ch]">
+											<span key="name" className="truncate">
 												{token.name}
 											</span>,
 											<span key="currency" className="text-secondary">
 												{token.currency}
 											</span>,
-											<Address key="address" address={token.address} />,
-											<FormattedTimestamp
+											<span
+												key="address"
+												className="text-accent truncate"
+												title={token.address}
+											>
+												{HexFormatter.shortenHex(token.address, 8)}
+											</span>,
+											<RelativeTime
 												key="created"
 												timestamp={BigInt(token.createdAt)}
-												format={timeFormat}
 												className="text-secondary"
 											/>,
 										],
@@ -152,17 +101,12 @@ function TokensPage() {
 										},
 									}))
 								}
-								totalItems={paginationTotal}
-								displayCount={isCapped ? TOKEN_COUNT_MAX : exactCount}
-								displayCountCapped={isCapped}
+								totalItems={total}
 								page={page}
-								fetching={isPlaceholderData}
-								loading={isPending}
-								countLoading={!exactCount}
+								isPending={isLoading}
 								itemsLabel="tokens"
 								itemsPerPage={TOKENS_PER_PAGE}
 								pagination="simple"
-								emptyState="No tokens found."
 							/>
 						),
 					},
