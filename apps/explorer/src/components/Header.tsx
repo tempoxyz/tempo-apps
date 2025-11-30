@@ -1,40 +1,19 @@
-import { Link, useMatch, useNavigate } from '@tanstack/react-router'
-import { Address } from 'ox'
+import {
+	Link,
+	useLocation,
+	useNavigate,
+	useRouter,
+	useRouterState,
+} from '@tanstack/react-router'
 import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import * as Tip20 from '#lib/tip20'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
-import { ExploreInput } from './ExploreInput.tsx'
+import { ExploreInput } from './ExploreInput'
 
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
-	const navigate = useNavigate()
-	const [inputValue, setInputValue] = React.useState('')
-	const [isNavigating, setIsNavigating] = React.useState(false)
-
-	const hash = useMatch({
-		from: '/_layout/tx/$hash',
-		select: (match) => match.params.hash,
-		shouldThrow: false,
-	})
-
-	const address = useMatch({
-		from: '/_layout/address/$address',
-		select: (match) => match.params.address,
-		shouldThrow: false,
-	})
-
-	const block = useMatch({
-		from: '/_layout/block/$id',
-		select: (match) => match.params.id,
-		shouldThrow: false,
-	})
-
-	React.useEffect(() => {
-		if (hash || address || block) [setInputValue(''), setIsNavigating(false)]
-	}, [hash, address, block])
-
 	return (
 		<header className="@container">
 			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1">
@@ -44,38 +23,7 @@ export function Header(props: Header.Props) {
 					</Link>
 					<Header.NetworkBadge />
 				</div>
-				{Boolean(hash || address || block) && (
-					<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex">
-						<ExploreInput
-							value={inputValue}
-							onChange={setInputValue}
-							disabled={isNavigating}
-							onActivate={({ value, type }) => {
-								if (type === 'hash') {
-									if (hash !== value) setIsNavigating(true)
-									navigate({ params: { hash: value }, to: '/tx/$hash' })
-									return
-								}
-								if (type === 'address') {
-									if (address !== value) setIsNavigating(true)
-									Address.assert(value)
-									navigate({
-										params: { address: value },
-										to: Tip20.isTip20Address(value)
-											? '/token/$address'
-											: '/address/$address',
-									})
-									return
-								}
-								if (type === 'block') {
-									if (block !== value) setIsNavigating(true)
-									navigate({ params: { id: value }, to: '/block/$id' })
-									return
-								}
-							}}
-						/>
-					</div>
-				)}
+				<Header.Search />
 				<div className="relative z-1">
 					<Header.BlockNumber initial={initialBlockNumber} />
 				</div>
@@ -87,6 +35,63 @@ export function Header(props: Header.Props) {
 export namespace Header {
 	export interface Props {
 		initialBlockNumber?: bigint
+	}
+
+	export function Search() {
+		const router = useRouter()
+		const navigate = useNavigate()
+		const [inputValue, setInputValue] = React.useState('')
+		const [isMounted, setIsMounted] = React.useState(false)
+		const isNavigating = useRouterState({
+			select: (state) => state.status === 'pending',
+		})
+
+		React.useEffect(() => setIsMounted(true), [])
+
+		const { pathname } = useLocation()
+
+		React.useEffect(() => {
+			return router.subscribe('onResolved', ({ hrefChanged }) => {
+				if (hrefChanged) setInputValue('')
+			})
+		}, [router])
+
+		return (
+			pathname !== '/' && (
+				<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex">
+					<ExploreInput
+						value={inputValue}
+						onChange={setInputValue}
+						disabled={isMounted && isNavigating}
+						onActivate={({ value, type }) => {
+							if (type === 'hash') {
+								navigate({
+									to: '/tx/$hash',
+									params: { hash: value },
+								})
+								return
+							}
+							if (type === 'address') {
+								navigate({
+									to: Tip20.isTip20Address(value)
+										? '/token/$address'
+										: '/address/$address',
+									params: { address: value },
+								})
+								return
+							}
+							if (type === 'block') {
+								navigate({
+									to: '/block/$id',
+									params: { id: value },
+								})
+								return
+							}
+						}}
+					/>
+				</div>
+			)
+		)
 	}
 
 	export function BlockNumber(props: BlockNumber.Props) {
