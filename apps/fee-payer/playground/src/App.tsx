@@ -125,6 +125,7 @@ export function FundAccount() {
 			<button
 				disabled={fund.isPending}
 				type="button"
+				// biome-ignore lint/style/noNonNullAssertion: _
 				onClick={() => fund.mutate({ account: account.address! })}
 			>
 				Fund Account

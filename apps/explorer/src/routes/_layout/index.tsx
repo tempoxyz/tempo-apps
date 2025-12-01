@@ -1,16 +1,8 @@
-import {
-	createFileRoute,
-	getRouteApi,
-	Link,
-	useNavigate,
-} from '@tanstack/react-router'
-import type { Hex } from 'ox'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { ExploreInput } from '#components/ExploreInput'
 import { Intro } from '#components/Intro'
 import * as Tip20 from '#lib/tip20'
-
-const layoutRoute = getRouteApi('/_layout')
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
@@ -19,7 +11,6 @@ export const Route = createFileRoute('/_layout/')({
 function Component() {
 	const navigate = useNavigate()
 	const [inputValue, setInputValue] = useState('')
-	const { recentTransactions } = layoutRoute.useLoaderData()
 
 	return (
 		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
@@ -54,14 +45,13 @@ function Component() {
 						}}
 					/>
 				</div>
-				<SpotlightLinks recentTransactions={recentTransactions} />
+				<SpotlightLinks />
 			</div>
 		</div>
 	)
 }
 
-function SpotlightLinks(props: { recentTransactions?: Hex.Hex[] }) {
-	const { recentTransactions = [] } = props
+function SpotlightLinks() {
 	return (
 		<section className="text-center">
 			<span className="text-sm font-medium text-base-content-tertiary">
@@ -79,16 +69,14 @@ function SpotlightLinks(props: { recentTransactions?: Hex.Hex[] }) {
 				<span>·</span>
 				<SpotlightLink to="/tokens">Tokens</SpotlightLink>
 				<span>·</span>
-				{recentTransactions[0] ? (
-					<SpotlightLink
-						to="/tx/$hash"
-						params={{ hash: recentTransactions[0] }}
-					>
-						Receipt
-					</SpotlightLink>
-				) : (
-					<span className="opacity-50">Receipt</span>
-				)}
+				<SpotlightLink
+					to="/tx/$hash"
+					params={{
+						hash: '0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd',
+					}}
+				>
+					Receipt
+				</SpotlightLink>
 			</div>
 		</section>
 	)
