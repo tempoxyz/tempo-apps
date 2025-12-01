@@ -14,9 +14,11 @@
 		"tail": "wrangler tail"
 	},
 	"dependencies": {
+		"hono": "^4.6.0",
 		"ox": "catalog:",
 		"tempo.ts": "catalog:",
-		"viem": "catalog:"
+		"viem": "catalog:",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:",
