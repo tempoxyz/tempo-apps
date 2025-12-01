@@ -970,7 +970,7 @@ function buildContractFields(props: {
 function ContractSection(props: {
 	address: Address.Address
 	metadata?: TokenMetadata
-	fields: ContractField[]
+	fields: Array<ContractField>
 	isLoading?: boolean
 }) {
 	const { address, metadata, isLoading } = props
@@ -1171,7 +1171,7 @@ function ReadFixedValue(props: {
 	const { label, value, isLoading } = props
 	return (
 		<div className="flex flex-col gap-[4px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px]">
-			<span className="text-[12px] uppercase text-tertiary">{label}</span>
+			<span className="text-[12px] text-tertiary">{label}</span>
 			<span className="text-[13px] text-primary">
 				{isLoading ? ellipsis : (value ?? ellipsis)}
 			</span>
@@ -1204,7 +1204,7 @@ function ReadBalanceFunction(props: {
 
 	return (
 		<div className="flex flex-col gap-[6px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px]">
-			<label className="text-[12px] uppercase text-tertiary" htmlFor={inputId}>
+			<label className="text-[12px] text-tertiary" htmlFor={inputId}>
 				balanceOf
 			</label>
 			<input
@@ -1258,7 +1258,7 @@ function ReadAllowanceFunction(props: {
 
 	return (
 		<div className="flex flex-col gap-[6px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px]">
-			<span className="text-[12px] uppercase text-tertiary">allowance</span>
+			<span className="text-[12px] text-tertiary">allowance</span>
 			<label className="text-[11px] text-tertiary" htmlFor={ownerId}>
 				Owner
 			</label>
