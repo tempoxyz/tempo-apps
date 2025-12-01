@@ -35,7 +35,24 @@ const defaultSearchValues = {
 	tab: 'transfers',
 } as const
 
+const assets = [
+	'0x20c0000000000000000000000000000000000000',
+	'0x20c0000000000000000000000000000000000001',
+	'0x20c0000000000000000000000000000000000002',
+	'0x20c0000000000000000000000000000000000003',
+] as const
+
 const tabOrder = ['transfers', 'holders', 'contract'] as const
+
+const knownContractAbis = new Map<Address.Address, string>(
+	assets.map((address) => {
+		Address.assert(address)
+		return [
+			address.toLowerCase() as Address.Address,
+			JSON.stringify(Abis.tip20 ?? [], null, 2),
+		] as const
+	}),
+)
 
 type TransfersQuery = {
 	address: Address.Address
@@ -179,8 +196,6 @@ function RouteComponent() {
 	const { address } = Route.useParams()
 	const { page, tab, limit, a } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
-
-	Address.assert(address)
 
 	React.useEffect(() => {
 		// Preload only 1 page before and after to reduce API calls
@@ -975,14 +990,16 @@ function ContractSection(props: {
 }) {
 	const { address, metadata, isLoading } = props
 	const { copy: copyAbi, notifying: copiedAbi } = useCopy()
-	const abi = React.useMemo(() => JSON.stringify(Abis.tip20 ?? [], null, 2), [])
+	const normalizedAddress = address.toLowerCase() as Address.Address
+	const abi = knownContractAbis.get(normalizedAddress)
 
 	const handleCopyAbi = React.useCallback(() => {
+		if (!abi) return
 		void copyAbi(abi)
 	}, [abi, copyAbi])
 
 	const handleDownloadAbi = React.useCallback(() => {
-		if (typeof window === 'undefined') return
+		if (!abi || typeof window === 'undefined') return
 		const blob = new Blob([abi], { type: 'application/json' })
 		const url = URL.createObjectURL(blob)
 		const anchor = document.createElement('a')
@@ -995,13 +1012,14 @@ function ContractSection(props: {
 	}, [abi, address])
 
 	return (
-		<div className="flex flex-col gap-1">
+		<div className="flex flex-col gap-[14px]">
 			<AbiViewer
 				abi={abi}
 				onCopy={handleCopyAbi}
 				onDownload={handleDownloadAbi}
 				copied={copiedAbi}
 			/>
+			<div aria-hidden="true" className="border-b border-card-border" />
 			<ReadContractPanel
 				address={address}
 				metadata={metadata}
@@ -1037,12 +1055,13 @@ function ContractFeatureCard(props: {
 }
 
 function AbiViewer(props: {
-	abi: string
+	abi?: string
 	onCopy: () => void
 	onDownload: () => void
 	copied: boolean
 }) {
 	const { abi, onCopy, onDownload, copied } = props
+	const actionsDisabled = !abi
 	return (
 		<ContractFeatureCard
 			title="Contract ABI"
@@ -1051,24 +1070,48 @@ function AbiViewer(props: {
 				<div className="flex gap-[8px]">
 					<button
 						type="button"
-						onClick={onCopy}
-						className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors"
-					>
-						{copied ? 'Copied' : 'Copy JSON'}
-					</button>
-					<button
-						type="button"
 						onClick={onDownload}
-						className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors"
+						disabled={actionsDisabled}
+						className={cx(
+							'text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors',
+							actionsDisabled && 'opacity-50 cursor-not-allowed',
+						)}
 					>
 						Download
 					</button>
 				</div>
 			}
 		>
-			<pre className="max-h-[280px] overflow-auto rounded-[8px] text-[12px] leading-[18px] text-primary/90">
-				{abi}
-			</pre>
+			{abi ? (
+				<div className="relative">
+					<div className="absolute right-[8px] top-[8px] flex items-center gap-[4px]">
+						{copied && (
+							<span className="text-[11px] uppercase tracking-wide text-tertiary leading-none">
+								copied
+							</span>
+						)}
+						<button
+							type="button"
+							onClick={onCopy}
+							disabled={actionsDisabled}
+							title={copied ? 'Copied' : 'Copy JSON'}
+							className={cx(
+								'rounded-[6px] bg-card p-[6px] text-tertiary press-down hover:text-primary transition-colors',
+								actionsDisabled && 'opacity-50 cursor-not-allowed',
+							)}
+						>
+							<CopyIcon className="h-[14px] w-[14px]" />
+						</button>
+					</div>
+					<pre className="max-h-[280px] overflow-auto rounded-[8px] text-[12px] leading-[18px] text-primary/90">
+						{abi}
+					</pre>
+				</div>
+			) : (
+				<p className="text-[13px] text-tertiary">
+					Add this contract to the known map to expose its ABI.
+				</p>
+			)}
 		</ContractFeatureCard>
 	)
 }
