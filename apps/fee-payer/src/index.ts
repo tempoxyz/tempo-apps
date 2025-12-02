@@ -32,8 +32,6 @@ app.get(
 		z.preprocess((rawQuery: Record<string, string | string[] | undefined>) => {
 			const blockTimestamp: Record<string, string> = {}
 
-			console.log('rawQuery', rawQuery)
-
 			for (const [key, value] of Object.entries(rawQuery)) {
 				if (typeof value !== 'string') continue
 
@@ -42,8 +40,6 @@ app.get(
 					blockTimestamp[match[1]] = value
 				}
 			}
-
-			console.log('blockTimestamp', blockTimestamp)
 
 			return {
 				block_timestamp:
