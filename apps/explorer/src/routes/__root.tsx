@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/tanstackstart-react'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { QueryClient } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -9,7 +10,7 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { useEffect } from 'react'
+import * as React from 'react'
 import { WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { ProgressLine } from '#comps/ProgressLine'
@@ -125,11 +126,17 @@ export const Route = createRootRouteWithContext<{
 			},
 		],
 	}),
-	errorComponent: (props) => (
-		<RootDocument>
-			<ErrorBoundary {...props} />
-		</RootDocument>
-	),
+	errorComponent: (props) => {
+		React.useEffect(() => {
+			Sentry.captureException(props.error)
+		}, [props.error])
+
+		return (
+			<RootDocument>
+				<ErrorBoundary {...props} />
+			</RootDocument>
+		)
+	},
 	shellComponent: RootDocument,
 })
 
@@ -151,6 +158,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					start={800}
 					className="fixed top-0 left-0 right-0 z-1"
 				/>
+				<button
+					type="button"
+					onClick={() => {
+						throw new Error('Sentry Test Error')
+					}}
+				>
+					Break the world
+				</button>
 				<WagmiProvider config={config}>
 					<PersistQueryClientProvider
 						client={queryClient}
@@ -185,7 +200,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 let theme: 'light' | 'dark' | undefined
 
 function useDevTools() {
-	useEffect(() => {
+	React.useEffect(() => {
 		if (import.meta.env.VITE_ENABLE_COLOR_SCHEME_TOGGLE !== 'true') return
 		const handleKeyPress = (e: KeyboardEvent) => {
 			if (
@@ -214,7 +229,7 @@ function useDevTools() {
 		return () => window.removeEventListener('keydown', handleKeyPress)
 	}, [])
 
-	useEffect(() => {
+	React.useEffect(() => {
 		if (
 			import.meta.env.MODE === 'development' &&
 			import.meta.env.VITE_ENABLE_DEVTOOLS !== 'false'
