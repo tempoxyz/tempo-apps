@@ -11,17 +11,18 @@ import {
 } from '@tanstack/react-router'
 import { Address, type Hex } from 'ox'
 import * as React from 'react'
-import { Abis } from 'tempo.ts/viem'
 import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import * as z from 'zod/mini'
 import { ellipsis } from '#chars'
+import { ContractReader } from '#components/ContractReader'
 import { DataGrid } from '#components/DataGrid'
 import { InfoCard } from '#components/InfoCard'
 import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
 import { cx } from '#cva.config.ts'
+import { getContractInfo } from '#lib/contracts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { fetchHolders, fetchTransfers } from '#lib/token.server'
@@ -35,24 +36,7 @@ const defaultSearchValues = {
 	tab: 'transfers',
 } as const
 
-const assets = [
-	'0x20c0000000000000000000000000000000000000',
-	'0x20c0000000000000000000000000000000000001',
-	'0x20c0000000000000000000000000000000000002',
-	'0x20c0000000000000000000000000000000000003',
-] as const
-
 const tabOrder = ['transfers', 'holders', 'contract'] as const
-
-const knownContractAbis = new Map<Address.Address, string>(
-	assets.map((address) => {
-		Address.assert(address)
-		return [
-			address.toLowerCase() as Address.Address,
-			JSON.stringify(Abis.tip20 ?? [], null, 2),
-		] as const
-	}),
-)
 
 type TransfersQuery = {
 	address: Address.Address
@@ -424,20 +408,6 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 		{ label: 'Percentage', align: 'end', minWidth: 100 },
 	]
 
-	const contractColumns: DataGrid.Column[] = [
-		{ label: 'Field', align: 'start', minWidth: 140 },
-		{ label: 'Value', align: 'start', minWidth: 160 },
-	]
-
-	const contractSkeletonFields = [
-		'Address',
-		'Name',
-		'Symbol',
-		'Currency',
-		'Decimals',
-		'Status',
-	] as const
-
 	return (
 		<Sections
 			mode={isMobile ? 'stacked' : 'tabs'}
@@ -498,28 +468,12 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 				{
 					title: 'Contract',
 					totalItems: 0,
-					itemsLabel: 'fields',
+					itemsLabel: 'functions',
 					content: (
-						<DataGrid
-							columns={{
-								stacked: contractColumns,
-								tabs: contractColumns,
-							}}
-							items={() =>
-								contractSkeletonFields.map((field) => ({
-									cells: [
-										<div key={`${field}-label`} className="h-5" />,
-										<div key={`${field}-value`} className="h-5" />,
-									],
-								}))
-							}
-							totalItems={0}
-							page={1}
-							isPending={false}
-							itemsLabel="fields"
-							itemsPerPage={contractSkeletonFields.length}
-							pagination="simple"
-						/>
+						<div className="animate-pulse space-y-[12px]">
+							<div className="h-[200px] rounded-[10px] bg-card-header" />
+							<div className="h-[300px] rounded-[10px] bg-card-header" />
+						</div>
 					),
 				},
 			]}
@@ -551,14 +505,13 @@ function SectionsWrapper(props: {
 	const state = useRouterState()
 	const loaderData = Route.useLoaderData()
 
-	const { data: metadata, isPending: isMetadataPending } =
-		Hooks.token.useGetMetadata({
-			token: address,
-			query: {
-				enabled: Boolean(address),
-				initialData: loaderData.metadata,
-			},
-		})
+	const { data: metadata } = Hooks.token.useGetMetadata({
+		token: address,
+		query: {
+			enabled: Boolean(address),
+			initialData: loaderData.metadata,
+		},
+	})
 
 	const transfersQueryPage = activeSection === 0 ? page : 1
 	const transfersOptions = transfersQueryOptions({
@@ -601,15 +554,12 @@ function SectionsWrapper(props: {
 		state.isLoading && state.location.pathname.includes('/token/')
 	const transfersPending = routeIsLoading || isLoadingTransfers
 	const holdersPending = routeIsLoading || isLoadingHolders
-	const contractPending = routeIsLoading || isMetadataPending
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
 	if (transfers.length === 0 && transfersPending && activeSection === 0)
 		return <SectionsSkeleton totalItems={transfersTotal} />
-
-	const contractFields = buildContractFields({ address, metadata })
 
 	const transfersColumns: DataGrid.Column[] = [
 		{ label: 'Time', align: 'start', minWidth: 100 },
@@ -725,16 +675,9 @@ function SectionsWrapper(props: {
 				},
 				{
 					title: 'Contract',
-					totalItems: contractFields.length,
-					itemsLabel: 'fields',
-					content: (
-						<ContractSection
-							address={address}
-							metadata={metadata}
-							fields={contractFields}
-							isLoading={contractPending}
-						/>
-					),
+					totalItems: 0,
+					itemsLabel: 'functions',
+					content: <ContractSection address={address} />,
 				},
 			]}
 			activeSection={activeSection}
@@ -850,502 +793,15 @@ function HolderBalance(props: { balance: string; decimals?: number }) {
 	return <span className="text-[12px] text-primary">{formatted}</span>
 }
 
-type ContractField = {
-	key: string
-	label: string
-	value: React.ReactNode
-}
-
-function buildContractFields(props: {
-	address: Address.Address
-	metadata?: TokenMetadata
-}): ContractField[] {
-	const { address, metadata } = props
-	const placeholder = (
-		<span className="text-tertiary text-[13px]">{ellipsis}</span>
-	)
-
-	const decimals = metadata?.decimals
-	const symbol = metadata?.symbol
-
-	const formatTokenValue = (value?: bigint): React.ReactNode => {
-		if (value === undefined || decimals === undefined) return placeholder
-		const formatted = formatUnits(value, decimals)
-		const amount = PriceFormatter.formatAmount(formatted)
-		return (
-			<span
-				className="text-[13px]"
-				title={`${formatted} ${symbol ?? ''}`.trim()}
-			>
-				{amount}
-				{symbol ? ` ${symbol}` : ''}
-			</span>
-		)
-	}
-
-	const safeQuoteToken =
-		metadata?.quoteToken && Address.validate(metadata.quoteToken)
-			? (metadata.quoteToken as Address.Address)
-			: undefined
-
-	const quoteTokenValue = safeQuoteToken ? (
-		<Link
-			to="/token/$address"
-			params={{ address: safeQuoteToken }}
-			className="text-[13px] text-accent hover:text-accent/80 transition-colors press-down"
-			title={`View token ${safeQuoteToken}`}
-		>
-			{HexFormatter.truncate(safeQuoteToken, 8)}
-		</Link>
-	) : null
-
-	const ensureValue = (value: React.ReactNode): React.ReactNode => {
-		if (
-			value === undefined ||
-			value === null ||
-			(typeof value === 'string' && value.trim() === '')
-		)
-			return placeholder
-		return value
-	}
-
-	const statusValue =
-		metadata?.paused === undefined ? null : metadata.paused ? (
-			<span className="text-tertiary">Paused</span>
-		) : (
-			<span className="text-accent">Active</span>
-		)
-
-	return [
-		{
-			key: 'address',
-			label: 'Address',
-			value: <AddressLink address={address} />,
-		},
-		{
-			key: 'name',
-			label: 'Name',
-			value: metadata?.name,
-		},
-		{
-			key: 'symbol',
-			label: 'Symbol',
-			value: metadata?.symbol,
-		},
-		{
-			key: 'currency',
-			label: 'Currency',
-			value: metadata?.currency?.toUpperCase(),
-		},
-		{
-			key: 'decimals',
-			label: 'Decimals',
-			value:
-				metadata?.decimals !== undefined
-					? metadata.decimals.toLocaleString()
-					: null,
-		},
-		{
-			key: 'status',
-			label: 'Status',
-			value: statusValue,
-		},
-		{
-			key: 'total-supply',
-			label: 'Total Supply',
-			value: formatTokenValue(metadata?.totalSupply),
-		},
-		{
-			key: 'supply-cap',
-			label: 'Supply Cap',
-			value:
-				metadata?.supplyCap !== undefined
-					? formatTokenValue(metadata.supplyCap)
-					: null,
-		},
-		{
-			key: 'quote-token',
-			label: 'Quote Token',
-			value: quoteTokenValue,
-		},
-		{
-			key: 'transfer-policy',
-			label: 'Transfer Policy',
-			value:
-				metadata?.transferPolicyId !== undefined
-					? `Policy #${metadata.transferPolicyId.toString()}`
-					: null,
-		},
-	].map((field) => ({
-		...field,
-		value: ensureValue(field.value),
-	}))
-}
-
-function ContractSection(props: {
-	address: Address.Address
-	metadata?: TokenMetadata
-	fields: Array<ContractField>
-	isLoading?: boolean
-}) {
-	const { address, metadata, isLoading } = props
-	const { copy: copyAbi, notifying: copiedAbi } = useCopy()
-	const normalizedAddress = address.toLowerCase() as Address.Address
-	const abi = knownContractAbis.get(normalizedAddress)
-
-	const handleCopyAbi = React.useCallback(() => {
-		if (!abi) return
-		void copyAbi(abi)
-	}, [abi, copyAbi])
-
-	const handleDownloadAbi = React.useCallback(() => {
-		if (!abi || typeof window === 'undefined') return
-		const blob = new Blob([abi], { type: 'application/json' })
-		const url = URL.createObjectURL(blob)
-		const anchor = document.createElement('a')
-		anchor.href = url
-		anchor.download = `${address}-tip20-abi.json`
-		document.body.appendChild(anchor)
-		anchor.click()
-		document.body.removeChild(anchor)
-		URL.revokeObjectURL(url)
-	}, [abi, address])
+function ContractSection(props: { address: Address.Address }) {
+	const { address } = props
+	const contractInfo = getContractInfo(address)
 
 	return (
-		<div className="flex flex-col gap-[14px]">
-			<AbiViewer
-				abi={abi}
-				onCopy={handleCopyAbi}
-				onDownload={handleDownloadAbi}
-				copied={copiedAbi}
-			/>
-			<div aria-hidden="true" className="border-b border-card-border" />
-			<ReadContractPanel
-				address={address}
-				metadata={metadata}
-				isLoading={isLoading}
-			/>
-		</div>
+		<ContractReader
+			address={address}
+			abi={contractInfo?.abi}
+			docsUrl={contractInfo?.docsUrl}
+		/>
 	)
-}
-
-function ContractFeatureCard(props: {
-	title: string
-	description?: React.ReactNode
-	actions?: React.ReactNode
-	children: React.ReactNode
-}) {
-	const { title, description, actions, children } = props
-	return (
-		<section className="rounded-[10px] bg-card-header overflow-hidden">
-			<div className="flex flex-col gap-[6px] px-[18px] py-[12px] sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<p className="text-[13px] uppercase text-tertiary">{title}</p>
-					{description && (
-						<p className="text-[12px] text-tertiary/80">{description}</p>
-					)}
-				</div>
-				{actions}
-			</div>
-			<div className="border-t border-card-border bg-card px-[18px] py-[14px]">
-				{children}
-			</div>
-		</section>
-	)
-}
-
-function AbiViewer(props: {
-	abi?: string
-	onCopy: () => void
-	onDownload: () => void
-	copied: boolean
-}) {
-	const { abi, onCopy, onDownload, copied } = props
-	const actionsDisabled = !abi
-	return (
-		<ContractFeatureCard
-			title="Contract ABI"
-			description="Shareable interface definition for read/write tooling."
-			actions={
-				<div className="flex gap-[8px]">
-					<button
-						type="button"
-						onClick={onDownload}
-						disabled={actionsDisabled}
-						className={cx(
-							'text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors',
-							actionsDisabled && 'opacity-50 cursor-not-allowed',
-						)}
-					>
-						Download
-					</button>
-				</div>
-			}
-		>
-			{abi ? (
-				<div className="relative">
-					<div className="absolute right-[8px] top-[8px] flex items-center gap-[4px]">
-						{copied && (
-							<span className="text-[11px] uppercase tracking-wide text-tertiary leading-none">
-								copied
-							</span>
-						)}
-						<button
-							type="button"
-							onClick={onCopy}
-							disabled={actionsDisabled}
-							title={copied ? 'Copied' : 'Copy JSON'}
-							className={cx(
-								'rounded-[6px] bg-card p-[6px] text-tertiary press-down hover:text-primary transition-colors',
-								actionsDisabled && 'opacity-50 cursor-not-allowed',
-							)}
-						>
-							<CopyIcon className="h-[14px] w-[14px]" />
-						</button>
-					</div>
-					<pre className="max-h-[280px] overflow-auto rounded-[8px] text-[12px] leading-[18px] text-primary/90">
-						{abi}
-					</pre>
-				</div>
-			) : (
-				<p className="text-[13px] text-tertiary">
-					Add this contract to the known map to expose its ABI.
-				</p>
-			)}
-		</ContractFeatureCard>
-	)
-}
-
-function ReadContractPanel(props: {
-	address: Address.Address
-	metadata?: TokenMetadata
-	isLoading?: boolean
-}) {
-	const { address, metadata, isLoading } = props
-	const safeQuoteToken =
-		metadata?.quoteToken && Address.validate(metadata.quoteToken)
-			? (metadata.quoteToken as Address.Address)
-			: undefined
-
-	const readRows: Array<{
-		key: string
-		label: string
-		value?: React.ReactNode
-	}> = [
-		{ key: 'name', label: 'name()', value: metadata?.name },
-		{ key: 'symbol', label: 'symbol()', value: metadata?.symbol },
-		{
-			key: 'decimals',
-			label: 'decimals()',
-			value: metadata?.decimals?.toLocaleString(),
-		},
-		{
-			key: 'totalSupply',
-			label: 'totalSupply()',
-			value: formatTokenAmount(
-				metadata?.totalSupply,
-				metadata?.decimals,
-				metadata?.symbol,
-			),
-		},
-		{
-			key: 'currency',
-			label: 'currency()',
-			value: metadata?.currency?.toUpperCase(),
-		},
-		{
-			key: 'quoteToken',
-			label: 'quoteToken()',
-			value: safeQuoteToken ? (
-				<AddressLink address={safeQuoteToken} />
-			) : undefined,
-		},
-		{
-			key: 'paused',
-			label: 'paused()',
-			value:
-				metadata?.paused === undefined
-					? undefined
-					: metadata.paused
-						? 'true'
-						: 'false',
-		},
-		{
-			key: 'transferPolicy',
-			label: 'transferPolicyId()',
-			value: metadata?.transferPolicyId?.toString(),
-		},
-	]
-
-	return (
-		<ContractFeatureCard
-			title="Read contract"
-			description="Call view methods exactly like Etherscan."
-		>
-			<div className="flex flex-col gap-[12px]">
-				{readRows.map((row) => (
-					<ReadFixedValue
-						key={row.key}
-						label={row.label}
-						value={row.value}
-						isLoading={isLoading}
-					/>
-				))}
-				<ReadBalanceFunction
-					address={address}
-					decimals={metadata?.decimals}
-					symbol={metadata?.symbol}
-				/>
-				<ReadAllowanceFunction
-					address={address}
-					decimals={metadata?.decimals}
-					symbol={metadata?.symbol}
-				/>
-			</div>
-		</ContractFeatureCard>
-	)
-}
-
-function ReadFixedValue(props: {
-	label: string
-	value?: React.ReactNode
-	isLoading?: boolean
-}) {
-	const { label, value, isLoading } = props
-	return (
-		<div className="flex flex-col gap-[4px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px]">
-			<span className="text-[12px] text-tertiary">{label}</span>
-			<span className="text-[13px] text-primary">
-				{isLoading ? ellipsis : (value ?? ellipsis)}
-			</span>
-		</div>
-	)
-}
-
-function ReadBalanceFunction(props: {
-	address: Address.Address
-	decimals?: number
-	symbol?: string
-}) {
-	const { address, decimals, symbol } = props
-	const [input, setInput] = React.useState('')
-	const inputId = React.useId()
-	const normalized = React.useMemo(() => normalizeAddress(input), [input])
-	const { data: balance, isFetching } = Hooks.token.useGetBalance({
-		token: address,
-		account: normalized,
-		query: {
-			enabled: Boolean(normalized),
-		},
-	})
-
-	let message: React.ReactNode = 'Enter an address to fetch the balance.'
-	if (input.trim().length > 0 && !normalized) message = 'Invalid address.'
-	else if (isFetching) message = 'Loading balance…'
-	else if (normalized && balance !== undefined && balance !== null)
-		message = formatTokenAmount(balance, decimals, symbol)
-
-	return (
-		<div className="flex flex-col gap-[6px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px]">
-			<label className="text-[12px] text-tertiary" htmlFor={inputId}>
-				balanceOf
-			</label>
-			<input
-				id={inputId}
-				value={input}
-				onChange={(event) => setInput(event.target.value)}
-				placeholder="0x..."
-				className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-tertiary focus-visible:outline-1 focus-visible:outline-accent"
-			/>
-			<span className="text-[12px] text-tertiary">{message}</span>
-		</div>
-	)
-}
-
-function ReadAllowanceFunction(props: {
-	address: Address.Address
-	decimals?: number
-	symbol?: string
-}) {
-	const { address, decimals, symbol } = props
-	const [ownerInput, setOwnerInput] = React.useState('')
-	const [spenderInput, setSpenderInput] = React.useState('')
-	const ownerId = React.useId()
-	const spenderId = React.useId()
-
-	const owner = React.useMemo(() => normalizeAddress(ownerInput), [ownerInput])
-	const spender = React.useMemo(
-		() => normalizeAddress(spenderInput),
-		[spenderInput],
-	)
-
-	const { data: allowance, isFetching } = Hooks.token.useGetAllowance({
-		token: address,
-		account: owner,
-		spender,
-		query: {
-			enabled: Boolean(owner && spender),
-		},
-	})
-
-	let message: React.ReactNode =
-		'Enter owner + spender addresses to fetch allowance.'
-	if (
-		(ownerInput.trim().length > 0 && !owner) ||
-		(spenderInput.trim().length > 0 && !spender)
-	)
-		message = 'Addresses must be valid hex strings.'
-	else if (isFetching) message = 'Loading allowance…'
-	else if (owner && spender && allowance !== undefined && allowance !== null)
-		message = formatTokenAmount(allowance, decimals, symbol)
-
-	return (
-		<div className="flex flex-col gap-[6px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px]">
-			<span className="text-[12px] text-tertiary">allowance</span>
-			<label className="text-[11px] text-tertiary" htmlFor={ownerId}>
-				Owner
-			</label>
-			<input
-				id={ownerId}
-				value={ownerInput}
-				onChange={(event) => setOwnerInput(event.target.value)}
-				placeholder="Owner address"
-				className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-tertiary focus-visible:outline-1 focus-visible:outline-accent"
-			/>
-			<label className="text-[11px] text-tertiary" htmlFor={spenderId}>
-				Spender
-			</label>
-			<input
-				id={spenderId}
-				value={spenderInput}
-				onChange={(event) => setSpenderInput(event.target.value)}
-				placeholder="Spender address"
-				className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-tertiary focus-visible:outline-1 focus-visible:outline-accent"
-			/>
-			<span className="text-[12px] text-tertiary">{message}</span>
-		</div>
-	)
-}
-
-function normalizeAddress(value: string): Address.Address | undefined {
-	const trimmed = value.trim()
-	if (!trimmed) return undefined
-	try {
-		Address.assert(trimmed)
-		return trimmed
-	} catch {
-		return undefined
-	}
-}
-
-function formatTokenAmount(
-	value?: bigint | null,
-	decimals?: number,
-	symbol?: string,
-) {
-	if (value === undefined || value === null || decimals === undefined)
-		return ellipsis
-	const formatted = formatUnits(value, decimals)
-	const amount = PriceFormatter.formatAmount(formatted)
-	return symbol ? `${amount} ${symbol}` : amount
 }

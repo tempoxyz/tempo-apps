@@ -21,12 +21,14 @@ import {
 } from 'wagmi/query'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
+import { ContractReader } from '#components/ContractReader'
 import { DataGrid } from '#components/DataGrid'
 import { EventDescription } from '#components/EventDescription'
 import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
 import { cx } from '#cva.config.ts'
+import { getContractInfo, isKnownContract } from '#lib/contracts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import {
@@ -43,6 +45,8 @@ const defaultSearchValues = {
 	limit: 10,
 	tab: 'history',
 } as const
+
+type TabValue = 'history' | 'assets' | 'contract'
 
 type TransactionQuery = {
 	address: Address.Address
@@ -116,7 +120,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			),
 			defaultSearchValues.limit,
 		),
-		tab: z.prefault(z.enum(['history', 'assets']), defaultSearchValues.tab),
+		tab: z.prefault(
+			z.enum(['history', 'assets', 'contract']),
+			defaultSearchValues.tab,
+		),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
@@ -335,17 +342,25 @@ function RouteComponent() {
 		}
 	}, [route, page, tab, limit])
 
+	const hasContract = isKnownContract(address)
+
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
-			const newTab = newIndex === 0 ? 'history' : 'assets'
+			const tabs: TabValue[] = hasContract
+				? ['history', 'assets', 'contract']
+				: ['history', 'assets']
+			const newTab = tabs[newIndex] ?? 'history'
 			navigate({
 				to: '.',
 				search: { page, tab: newTab, limit },
 				resetScroll: false,
 			})
 		},
-		[navigate, page, limit],
+		[navigate, page, limit, hasContract],
 	)
+
+	const activeSection =
+		tab === 'history' ? 0 : tab === 'assets' ? 1 : hasContract ? 2 : 0
 
 	return (
 		<div
@@ -359,7 +374,7 @@ function RouteComponent() {
 				address={address}
 				page={page}
 				limit={limit}
-				activeSection={tab === 'history' ? 0 : 1}
+				activeSection={activeSection}
 				onSectionChange={setActiveSection}
 			/>
 		</div>
@@ -373,6 +388,8 @@ function SectionsWrapper(props: {
 	onSectionChange: (index: number) => void
 }) {
 	const { address, page, limit, activeSection, onSectionChange } = props
+
+	const contractInfo = getContractInfo(address)
 
 	const state = useRouterState()
 	const initialData = Route.useLoaderData()
@@ -539,6 +556,23 @@ function SectionsWrapper(props: {
 						/>
 					),
 				},
+				// Contract tab - only shown for known contracts
+				...(contractInfo
+					? [
+							{
+								title: 'Contract',
+								totalItems: 0,
+								itemsLabel: 'functions',
+								content: (
+									<ContractReader
+										address={address}
+										abi={contractInfo.abi}
+										docsUrl={contractInfo.docsUrl}
+									/>
+								),
+							},
+						]
+					: []),
 			]}
 			activeSection={activeSection}
 			onSectionChange={onSectionChange}

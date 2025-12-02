@@ -1,0 +1,494 @@
+import { Link } from '@tanstack/react-router'
+import { Address } from 'ox'
+import * as React from 'react'
+import type { Abi, AbiFunction } from 'viem'
+import { readContract } from 'wagmi/actions'
+import { ellipsis } from '#chars.ts'
+import { cx } from '#cva.config.ts'
+import {
+	formatOutputValue,
+	getContractAbi,
+	getFunctionSignature,
+	getInputFunctions,
+	getInputType,
+	getNoInputFunctions,
+	getPlaceholder,
+	isArrayType,
+	parseInputValue,
+} from '#lib/contracts.ts'
+import { useCopy } from '#lib/hooks.ts'
+import { config } from '#wagmi.config.ts'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
+import CopyIcon from '~icons/lucide/copy'
+import DownloadIcon from '~icons/lucide/download'
+import ExternalLinkIcon from '~icons/lucide/external-link'
+
+// ============================================================================
+// Types
+// ============================================================================
+
+type ReadFunction = AbiFunction & { stateMutability: 'view' | 'pure' }
+
+// ============================================================================
+// Main Component
+// ============================================================================
+
+export function ContractReader(props: {
+	address: Address.Address
+	abi?: Abi
+	docsUrl?: string
+}) {
+	const { address, docsUrl } = props
+	const { copy: copyAbi, notifying: copiedAbi } = useCopy()
+
+	const abi = props.abi ?? getContractAbi(address)
+
+	const handleCopyAbi = React.useCallback(() => {
+		if (!abi) return
+		void copyAbi(JSON.stringify(abi, null, 2))
+	}, [abi, copyAbi])
+
+	const handleDownloadAbi = React.useCallback(() => {
+		if (!abi || typeof window === 'undefined') return
+		const json = JSON.stringify(abi, null, 2)
+		const blob = new Blob([json], { type: 'application/json' })
+		const url = URL.createObjectURL(blob)
+		const anchor = document.createElement('a')
+		anchor.href = url
+		anchor.download = `${address}-abi.json`
+		document.body.appendChild(anchor)
+		anchor.click()
+		document.body.removeChild(anchor)
+		URL.revokeObjectURL(url)
+	}, [abi, address])
+
+	if (!abi) {
+		return (
+			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
+				<p className="text-sm font-medium text-tertiary">
+					No ABI available for this contract.
+				</p>
+			</div>
+		)
+	}
+
+	const noInputFunctions = getNoInputFunctions(abi)
+	const inputFunctions = getInputFunctions(abi)
+
+	return (
+		<div className="flex flex-col gap-[14px]">
+			{/* ABI Viewer */}
+			<AbiViewer
+				abi={abi}
+				onCopy={handleCopyAbi}
+				onDownload={handleDownloadAbi}
+				copied={copiedAbi}
+				docsUrl={docsUrl}
+			/>
+
+			<div aria-hidden="true" className="border-b border-card-border" />
+
+			{/* Read Contract Panel */}
+			<ContractFeatureCard
+				title="Read contract"
+				description="Call view methods to read contract state."
+			>
+				<div className="flex flex-col gap-[12px]">
+					{/* Functions without inputs - show as static values */}
+					{noInputFunctions.map((fn) => (
+						<StaticReadFunction
+							key={fn.name}
+							address={address}
+							abi={abi}
+							fn={fn}
+						/>
+					))}
+
+					{/* Functions with inputs - show as expandable forms */}
+					{inputFunctions.map((fn) => (
+						<DynamicReadFunction
+							key={fn.name}
+							address={address}
+							abi={abi}
+							fn={fn}
+						/>
+					))}
+
+					{noInputFunctions.length === 0 && inputFunctions.length === 0 && (
+						<p className="text-[13px] text-tertiary">
+							No read functions available.
+						</p>
+					)}
+				</div>
+			</ContractFeatureCard>
+		</div>
+	)
+}
+
+// ============================================================================
+// ABI Viewer
+// ============================================================================
+
+function AbiViewer(props: {
+	abi: Abi
+	onCopy: () => void
+	onDownload: () => void
+	copied: boolean
+	docsUrl?: string
+}) {
+	const { abi, onCopy, onDownload, copied, docsUrl } = props
+
+	return (
+		<ContractFeatureCard
+			title="Contract ABI"
+			description="Shareable interface definition for read/write tooling."
+			actions={
+				<div className="flex gap-[8px]">
+					{docsUrl && (
+						<a
+							href={docsUrl}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors inline-flex items-center gap-[4px]"
+						>
+							Docs
+							<ExternalLinkIcon className="w-[12px] h-[12px]" />
+						</a>
+					)}
+					<button
+						type="button"
+						onClick={onDownload}
+						className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors inline-flex items-center gap-[4px]"
+					>
+						<DownloadIcon className="w-[12px] h-[12px]" />
+						Download
+					</button>
+				</div>
+			}
+		>
+			<div className="relative">
+				<div className="absolute right-[8px] top-[8px] flex items-center gap-[4px]">
+					{copied && (
+						<span className="text-[11px] uppercase tracking-wide text-tertiary leading-none">
+							copied
+						</span>
+					)}
+					<button
+						type="button"
+						onClick={onCopy}
+						title={copied ? 'Copied' : 'Copy JSON'}
+						className="rounded-[6px] bg-card p-[6px] text-tertiary press-down hover:text-primary transition-colors"
+					>
+						<CopyIcon className="h-[14px] w-[14px]" />
+					</button>
+				</div>
+				<pre className="max-h-[280px] overflow-auto rounded-[8px] text-[12px] leading-[18px] text-primary/90">
+					{JSON.stringify(abi, null, 2)}
+				</pre>
+			</div>
+		</ContractFeatureCard>
+	)
+}
+
+// ============================================================================
+// Static Read Function (no inputs)
+// ============================================================================
+
+function StaticReadFunction(props: {
+	address: Address.Address
+	abi: Abi
+	fn: ReadFunction
+}) {
+	const { address, abi, fn } = props
+	const [result, setResult] = React.useState<unknown>(undefined)
+	const [isLoading, setIsLoading] = React.useState(true)
+	const [error, setError] = React.useState<string | null>(null)
+
+	React.useEffect(() => {
+		let cancelled = false
+		setIsLoading(true)
+		setError(null)
+
+		readContract(config, {
+			address,
+			abi,
+			functionName: fn.name,
+			args: [],
+		})
+			.then((data) => {
+				if (!cancelled) {
+					setResult(data)
+					setIsLoading(false)
+				}
+			})
+			.catch((err) => {
+				if (!cancelled) {
+					setError(err instanceof Error ? err.message : 'Failed to read')
+					setIsLoading(false)
+				}
+			})
+
+		return () => {
+			cancelled = true
+		}
+	}, [address, abi, fn.name])
+
+	const outputType = fn.outputs[0]?.type ?? 'unknown'
+	const displayValue = error
+		? error
+		: isLoading
+			? ellipsis
+			: formatOutputValue(result, outputType)
+
+	// Format address outputs as links
+	const isAddressOutput = outputType === 'address'
+	const isValidAddress =
+		isAddressOutput &&
+		typeof result === 'string' &&
+		Address.validate(result as string)
+
+	return (
+		<div className="flex flex-col gap-[4px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px]">
+			<span className="text-[12px] text-tertiary font-mono">
+				{getFunctionSignature(fn)}
+			</span>
+			{isValidAddress ? (
+				<Link
+					to="/address/$address"
+					params={{ address: result as Address.Address }}
+					className="text-[13px] text-accent hover:text-accent/80 transition-colors"
+				>
+					{displayValue}
+				</Link>
+			) : (
+				<span
+					className={cx('text-[13px]', error ? 'text-red-400' : 'text-primary')}
+				>
+					{displayValue}
+				</span>
+			)}
+		</div>
+	)
+}
+
+// ============================================================================
+// Dynamic Read Function (with inputs)
+// ============================================================================
+
+function DynamicReadFunction(props: {
+	address: Address.Address
+	abi: Abi
+	fn: ReadFunction
+}) {
+	const { address, abi, fn } = props
+	const [isExpanded, setIsExpanded] = React.useState(false)
+	const [inputs, setInputs] = React.useState<Record<string, string>>({})
+	const [result, setResult] = React.useState<unknown>(undefined)
+	const [isLoading, setIsLoading] = React.useState(false)
+	const [error, setError] = React.useState<string | null>(null)
+
+	const handleInputChange = (name: string, value: string) => {
+		setInputs((prev) => ({ ...prev, [name]: value }))
+	}
+
+	const handleQuery = async () => {
+		setIsLoading(true)
+		setError(null)
+		setResult(undefined)
+
+		try {
+			const args = fn.inputs.map((input) => {
+				const value = inputs[input.name ?? ''] ?? ''
+				return parseInputValue(value, input.type)
+			})
+
+			const data = await readContract(config, {
+				address,
+				abi,
+				functionName: fn.name,
+				args,
+			})
+
+			setResult(data)
+		} catch (err) {
+			setError(err instanceof Error ? err.message : 'Query failed')
+		} finally {
+			setIsLoading(false)
+		}
+	}
+
+	const allInputsFilled = fn.inputs.every((input) => {
+		const value = inputs[input.name ?? '']
+		return value !== undefined && value.trim() !== ''
+	})
+
+	const outputType = fn.outputs[0]?.type ?? 'unknown'
+
+	return (
+		<div className="rounded-[8px] border border-dashed border-card-border overflow-hidden">
+			<button
+				type="button"
+				onClick={() => setIsExpanded(!isExpanded)}
+				className="w-full flex items-center justify-between px-[12px] py-[10px] hover:bg-card-header/50 transition-colors"
+			>
+				<span className="text-[12px] text-tertiary font-mono">
+					{getFunctionSignature(fn)}
+				</span>
+				<ChevronDownIcon
+					className={cx(
+						'w-[14px] h-[14px] text-tertiary transition-transform',
+						isExpanded && 'rotate-180',
+					)}
+				/>
+			</button>
+
+			{isExpanded && (
+				<div className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]">
+					{fn.inputs.map((input, index) => (
+						<FunctionInput
+							key={input.name ?? index}
+							input={input}
+							value={inputs[input.name ?? ''] ?? ''}
+							onChange={(value) =>
+								handleInputChange(input.name ?? `arg${index}`, value)
+							}
+						/>
+					))}
+
+					<button
+						type="button"
+						onClick={handleQuery}
+						disabled={!allInputsFilled || isLoading}
+						className={cx(
+							'text-[12px] rounded-[6px] px-[12px] py-[8px] transition-colors',
+							allInputsFilled && !isLoading
+								? 'bg-accent text-white hover:bg-accent/90'
+								: 'bg-card-header text-tertiary cursor-not-allowed',
+						)}
+					>
+						{isLoading ? 'Querying...' : 'Query'}
+					</button>
+
+					{(result !== undefined || error) && (
+						<div className="mt-[4px] p-[10px] rounded-[6px] bg-card-header">
+							<span className="text-[11px] text-tertiary uppercase tracking-wide">
+								Result
+							</span>
+							<p
+								className={cx(
+									'text-[13px] mt-[4px] break-all',
+									error ? 'text-red-400' : 'text-primary',
+								)}
+							>
+								{error ?? formatOutputValue(result, outputType)}
+							</p>
+						</div>
+					)}
+				</div>
+			)}
+		</div>
+	)
+}
+
+// ============================================================================
+// Function Input Component
+// ============================================================================
+
+function FunctionInput(props: {
+	input: { name?: string; type: string }
+	value: string
+	onChange: (value: string) => void
+}) {
+	const { input, value, onChange } = props
+	const inputId = React.useId()
+	const inputType = getInputType(input.type)
+	const placeholder = getPlaceholder(input as { name: string; type: string })
+
+	// Special handling for bool type
+	if (inputType === 'checkbox') {
+		return (
+			<div className="flex items-center gap-[8px]">
+				<input
+					id={inputId}
+					type="checkbox"
+					checked={value === 'true'}
+					onChange={(e) => onChange(e.target.checked ? 'true' : 'false')}
+					className="w-[16px] h-[16px] rounded border-base-border"
+				/>
+				<label htmlFor={inputId} className="text-[12px] text-tertiary">
+					{input.name || 'value'}{' '}
+					<span className="text-tertiary/60">({input.type})</span>
+				</label>
+			</div>
+		)
+	}
+
+	// Textarea for complex types
+	if (inputType === 'textarea' || isArrayType(input.type)) {
+		return (
+			<div className="flex flex-col gap-[4px]">
+				<label htmlFor={inputId} className="text-[11px] text-tertiary">
+					{input.name || 'value'}{' '}
+					<span className="text-tertiary/60">({input.type})</span>
+				</label>
+				<textarea
+					id={inputId}
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					placeholder={placeholder}
+					rows={3}
+					className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-tertiary focus-visible:outline-1 focus-visible:outline-accent resize-none font-mono"
+				/>
+			</div>
+		)
+	}
+
+	// Standard text input
+	return (
+		<div className="flex flex-col gap-[4px]">
+			<label htmlFor={inputId} className="text-[11px] text-tertiary">
+				{input.name || 'value'}{' '}
+				<span className="text-tertiary/60">({input.type})</span>
+			</label>
+			<input
+				id={inputId}
+				type="text"
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				placeholder={placeholder}
+				className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-tertiary focus-visible:outline-1 focus-visible:outline-accent font-mono"
+			/>
+		</div>
+	)
+}
+
+// ============================================================================
+// Shared Components
+// ============================================================================
+
+function ContractFeatureCard(props: {
+	title: string
+	description?: React.ReactNode
+	actions?: React.ReactNode
+	children: React.ReactNode
+}) {
+	const { title, description, actions, children } = props
+	return (
+		<section className="rounded-[10px] bg-card-header overflow-hidden">
+			<div className="flex flex-col gap-[6px] px-[18px] py-[12px] sm:flex-row sm:items-center sm:justify-between">
+				<div>
+					<p className="text-[13px] uppercase text-tertiary">{title}</p>
+					{description && (
+						<p className="text-[12px] text-tertiary/80">{description}</p>
+					)}
+				</div>
+				{actions}
+			</div>
+			<div className="border-t border-card-border bg-card px-[18px] py-[14px]">
+				{children}
+			</div>
+		</section>
+	)
+}
+
+export { ContractFeatureCard }
