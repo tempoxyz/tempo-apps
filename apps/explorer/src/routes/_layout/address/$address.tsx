@@ -28,7 +28,7 @@ import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
 import { cx } from '#cva.config.ts'
-import { getContractInfo, isKnownContract } from '#lib/contracts.ts'
+import { type ContractInfo, getContractInfo } from '#lib/contracts.ts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import {
@@ -148,10 +148,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 		const offset = (page - 1) * limit
 
-		// Await prefetch for SSR hydration consistency, but catch errors
-		// so API failures don't cause 404 - component will handle them
-		await context.queryClient
-			.prefetchQuery(
+		const contractInfo = getContractInfo(address)
+		const hasContract = Boolean(contractInfo)
+
+		const transactionsData = await context.queryClient
+			.fetchQuery(
 				transactionsQueryOptions({
 					address,
 					page,
@@ -159,9 +160,20 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					offset,
 				}),
 			)
-			.catch((error) => console.error('Prefetch error (non-blocking):', error))
+			.catch((error) => {
+				console.error('Fetch error (non-blocking):', error)
+				return undefined
+			})
 
-		return { address, page, limit, offset }
+		return {
+			address,
+			page,
+			limit,
+			offset,
+			hasContract,
+			contractInfo,
+			transactionsData,
+		}
 	},
 })
 
@@ -339,10 +351,10 @@ function RouteComponent() {
 	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, limit } = Route.useSearch()
+	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
 
 	Address.assert(address)
 
-	const hasContract = isKnownContract(address)
 	const hash = location.hash
 
 	// Track which hash we've already redirected for (prevents re-redirect when
@@ -417,29 +429,46 @@ function RouteComponent() {
 				limit={limit}
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
+				contractInfo={contractInfo}
+				initialData={transactionsData}
 			/>
 		</div>
 	)
 }
+type TransactionsData = Awaited<
+	ReturnType<
+		NonNullable<ReturnType<typeof transactionsQueryOptions>['queryFn']>
+	>
+>
+
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
 	limit: number
 	activeSection: number
 	onSectionChange: (index: number) => void
+	contractInfo: ContractInfo | undefined
+	initialData: TransactionsData | undefined
 }) {
-	const { address, page, limit, activeSection, onSectionChange } = props
+	const {
+		address,
+		page,
+		limit,
+		activeSection,
+		onSectionChange,
+		contractInfo,
+		initialData,
+	} = props
 
-	const contractInfo = getContractInfo(address)
-
-	const { data, isPending, error } = useQuery(
-		transactionsQueryOptions({
+	const { data, isPending, error } = useQuery({
+		...transactionsQueryOptions({
 			address,
 			page,
 			limit,
 			offset: (page - 1) * limit,
 		}),
-	)
+		initialData,
+	})
 	const { transactions, total, knownEvents } = data ?? {
 		transactions: [],
 		total: 0,
