@@ -1,11 +1,12 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { EventDescription } from '#components/EventDescription'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import type { KnownEvent } from '#lib/known-events'
 import { ReceiptMark } from './ReceiptMark'
+import CopyIcon from '~icons/lucide/copy'
 
 export function Receipt(props: Receipt.Props) {
 	const {
@@ -19,10 +20,23 @@ export function Receipt(props: Receipt.Props) {
 		feeDisplay,
 		totalDisplay,
 		feeBreakdown = [],
+		rawData,
 	} = props
 	const [hashExpanded, setHashExpanded] = useState(false)
-	const { copy, notifying } = useCopy()
+	const [showRawData, setShowRawData] = useState(false)
+	const rawDataRef = useRef<HTMLDivElement>(null)
+	const copyHash = useCopy()
+	const copyRawData = useCopy()
 	const formattedTime = DateFormatter.formatTimestampTime(timestamp)
+
+	useEffect(() => {
+		if (!showRawData || !rawDataRef.current) return
+		const { bottom: y } = rawDataRef.current.getBoundingClientRect()
+		window.scrollTo({
+			behavior: 'instant',
+			top: y + 40 - window.innerHeight + window.scrollY,
+		})
+	}, [showRawData])
 	const hasFee = feeDisplay !== undefined || (fee !== undefined && fee !== null)
 	const hasTotal =
 		totalDisplay !== undefined || (total !== undefined && total !== null)
@@ -59,7 +73,7 @@ export function Receipt(props: Receipt.Props) {
 					<div className="flex justify-between items-start">
 						<div className="relative">
 							<span className="text-tertiary capitalize">Hash</span>
-							{notifying && (
+							{copyHash.notifying && (
 								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px] text-accent">
 									copied
 								</span>
@@ -68,7 +82,7 @@ export function Receipt(props: Receipt.Props) {
 						{hashExpanded ? (
 							<button
 								type="button"
-								onClick={() => copy(hash)}
+								onClick={() => copyHash.copy(hash)}
 								className="text-right break-all max-w-[11ch] cursor-pointer press-down"
 							>
 								{hash}
@@ -265,6 +279,39 @@ export function Receipt(props: Receipt.Props) {
 					</div>
 				</>
 			)}
+			<div className="px-[20px] py-[8px] font-mono text-[13px] border-t border-base-border border-dashed">
+				<div className="flex justify-end">
+					{showRawData ? (
+						<button
+							type="button"
+							className="press-down cursor-pointer flex items-center gap-[4px] text-primary text-[11px] px-[4px] py-[2px] z-10"
+							onClick={() => copyRawData.copy(rawData)}
+						>
+							<span className="-translate-y-[1px]">
+								{copyRawData.notifying ? 'Copied' : 'Copy data'}
+							</span>
+							<CopyIcon className="size-[12px]" />
+						</button>
+					) : (
+						<button
+							type="button"
+							className="press-down cursor-pointer text-[11px]"
+							onClick={() => setShowRawData((v) => !v)}
+						>
+							See full data
+						</button>
+					)}
+				</div>
+				<div
+					ref={rawDataRef}
+					className="pb-[8px] pt-[8px] relative"
+					style={{ display: showRawData ? 'block' : 'none' }}
+				>
+					<pre className="bg-base-alt/50 text-[11px] leading-[14px] overflow-auto max-h-[268px] whitespace-pre-wrap break-all text-base-content p-[16px] focus:outline-focus focus-within:outline-[2px] rounded-[4px] ">
+						{rawData}
+					</pre>
+				</div>
+			</div>
 		</div>
 	)
 }
@@ -281,6 +328,7 @@ export namespace Receipt {
 		total?: number
 		totalDisplay?: string
 		feeBreakdown?: FeeBreakdownItem[]
+		rawData: string
 	}
 
 	export interface FeeBreakdownItem {
