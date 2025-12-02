@@ -1,8 +1,8 @@
 import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, pad, parseUnits, stringToHex } from 'viem'
 import {
-	useAccount,
 	useConnect,
+	useConnection,
 	useConnectors,
 	useDisconnect,
 	useWatchBlockNumber,
@@ -10,10 +10,10 @@ import {
 import { alphaUsd } from './wagmi.config'
 
 export function App() {
-	const account = useAccount()
+	const connection = useConnection()
 
 	const alphaUsdBalance = Hooks.token.useGetBalance({
-		account: account?.address,
+		account: connection?.address,
 		token: alphaUsd,
 	})
 
@@ -21,7 +21,7 @@ export function App() {
 		<div>
 			<h1>Tempo Example</h1>
 			<hr />
-			{account.isConnected ? (
+			{connection?.isConnected ? (
 				<>
 					<h2>Account</h2>
 					<Account />
@@ -68,14 +68,14 @@ export function Connect() {
 }
 
 export function Account() {
-	const account = useAccount()
+	const connection = useConnection()
 	const disconnect = useDisconnect()
 
 	return (
 		<div>
 			<div>
 				<strong>Address: </strong>
-				{account.address}
+				{connection?.address}
 			</div>
 			<button type="button" onClick={() => disconnect.disconnect()}>
 				Disconnect
@@ -85,10 +85,10 @@ export function Account() {
 }
 
 export function Balance() {
-	const account = useAccount()
+	const connection = useConnection()
 
 	const alphaUsdBalance = Hooks.token.useGetBalance({
-		account: account?.address,
+		account: connection?.address,
 		token: alphaUsd,
 	})
 	const alphaUsdMetadata = Hooks.token.useGetMetadata({
@@ -116,17 +116,17 @@ export function Balance() {
 }
 
 export function FundAccount() {
-	const account = useAccount()
+	const connection = useConnection()
 	const fund = Hooks.faucet.useFund()
 
-	if (!account.address) return null
+	if (!connection?.address) return null
 	return (
 		<div>
 			<button
 				disabled={fund.isPending}
 				type="button"
 				// biome-ignore lint/style/noNonNullAssertion: _
-				onClick={() => fund.mutate({ account: account.address! })}
+				onClick={() => fund.mutate({ account: connection.address! })}
 			>
 				Fund Account
 			</button>
