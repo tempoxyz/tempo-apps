@@ -8,3 +8,6 @@ tsconfig.json linguist-language=JSON-with-Comments
 .vscode/*.json linguist-language=JSON-with-Comments
 
 routeTree.gen.ts linguist-generated=true
+
+# explorer
+./apps/explorer/src/data/tokens-index.json linguist-generated=true
