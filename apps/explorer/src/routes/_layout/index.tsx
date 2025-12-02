@@ -1,16 +1,34 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import {
+	createFileRoute,
+	Link,
+	useNavigate,
+	useRouter,
+	useRouterState,
+} from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
 import { ExploreInput } from '#components/ExploreInput'
 import { Intro } from '#components/Intro'
-import * as Tip20 from '#lib/tip20'
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
 })
 
 function Component() {
+	const router = useRouter()
 	const navigate = useNavigate()
 	const [inputValue, setInputValue] = useState('')
+	const [isMounted, setIsMounted] = useState(false)
+	const isNavigating = useRouterState({
+		select: (state) => state.status === 'pending',
+	})
+
+	useEffect(() => setIsMounted(true), [])
+
+	useEffect(() => {
+		return router.subscribe('onResolved', ({ hrefChanged }) => {
+			if (hrefChanged) setInputValue('')
+		})
+	}, [router])
 
 	return (
 		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
@@ -25,23 +43,26 @@ function Component() {
 						size="large"
 						value={inputValue}
 						onChange={setInputValue}
-						onActivate={() => {
-							// TODO: search screen?
-							// navigate({ to: '/search/$value', params: { value } })
-						}}
-						onAddress={(address) => {
-							navigate({
-								to: Tip20.isTip20Address(address)
-									? '/token/$address'
-									: '/address/$address',
-								params: { address },
-							})
-						}}
-						onHash={(hash) => {
-							navigate({ to: '/tx/$hash', params: { hash } })
-						}}
-						onBlock={(block) => {
-							navigate({ to: '/block/$id', params: { id: block } })
+						disabled={isMounted && isNavigating}
+						onActivate={(data) => {
+							if (data.type === 'hash') {
+								navigate({ to: '/tx/$hash', params: { hash: data.value } })
+								return
+							}
+							if (data.type === 'token') {
+								navigate({
+									to: '/token/$address',
+									params: { address: data.value },
+								})
+								return
+							}
+							if (data.type === 'address') {
+								navigate({
+									to: '/address/$address',
+									params: { address: data.value },
+								})
+								return
+							}
 						}}
 					/>
 				</div>

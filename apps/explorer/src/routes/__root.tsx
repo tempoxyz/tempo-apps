@@ -9,9 +9,10 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#components/ErrorBoundary'
+import { ProgressLine } from '#components/ProgressLine'
 import { config, persister, queryClient } from '#wagmi.config'
 import css from './styles.css?url'
 
@@ -93,13 +94,21 @@ export const Route = createRootRouteWithContext<{
 function RootDocument({ children }: { children: React.ReactNode }) {
 	useDevTools()
 
+	const isLoading = useRouterState({
+		select: (state) => state.status === 'pending',
+	})
+
 	return (
 		<html lang="en" className="scheme-light-dark">
 			<head>
 				<HeadContent />
 			</head>
 			<body className="antialiased">
-				<TopLoader />
+				<ProgressLine
+					loading={isLoading}
+					start={800}
+					className="fixed top-0 left-0 right-0 z-1"
+				/>
 				<WagmiProvider config={config}>
 					<PersistQueryClientProvider
 						client={queryClient}
@@ -171,62 +180,4 @@ function useDevTools() {
 			void import('eruda').then(({ default: eruda }) => eruda.init())
 		}
 	}, [])
-}
-
-function TopLoader() {
-	const endDelay = 200
-	const progressInterval = 300
-	const startDelay = 800
-
-	const { isLoading } = useRouterState()
-
-	const [show, setShow] = useState(false)
-	const [progress, setProgress] = useState(0)
-
-	// Start delay
-	useEffect(() => {
-		if (!isLoading) return
-		const delayTimer = setTimeout(() => setShow(true), startDelay)
-		return () => clearTimeout(delayTimer)
-	}, [isLoading])
-
-	// Progress interval
-	useEffect(() => {
-		if (!show || !isLoading) return
-
-		setProgress(0)
-		const progressTimer = setInterval(() => {
-			setProgress((prev) => {
-				if (prev >= 90) return prev // Cap at 90% until complete
-				return prev + Math.random() * 10
-			})
-		}, progressInterval)
-
-		return () => clearInterval(progressTimer)
-	}, [show, isLoading])
-
-	// Finish progress
-	useEffect(() => {
-		if (isLoading) return
-
-		setProgress(99)
-		const hideTimer = setTimeout(() => {
-			setShow(false)
-			setProgress(0)
-		}, endDelay)
-		return () => clearTimeout(hideTimer)
-	}, [isLoading])
-
-	if (!show) return null
-	return (
-		<div
-			className="fixed bg-inverse top-0 left-0 right-0 h-[1px] z-50 pointer-events-none"
-			style={{
-				width: `${progress}%`,
-				opacity: progress === 100 ? 0 : 1,
-				transition:
-					progress === 100 ? 'width 0.1s ease-out' : 'width 0.1s ease',
-			}}
-		/>
-	)
 }
