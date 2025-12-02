@@ -5,8 +5,8 @@ import { EventDescription } from '#components/EventDescription'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import type { KnownEvent } from '#lib/known-events'
-import { ReceiptMark } from './ReceiptMark'
 import CopyIcon from '~icons/lucide/copy'
+import { ReceiptMark } from './ReceiptMark'
 
 export function Receipt(props: Receipt.Props) {
 	const {
