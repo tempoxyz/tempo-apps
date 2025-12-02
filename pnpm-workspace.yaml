@@ -9,6 +9,7 @@ catalog:
   '@cloudflare/workers-types': ^4.20251202.0
   '@hono/zod-validator': ^0.7.5
   '@iconify/json': ^2.2.413
+  '@shazow/whatsabi': ^0.23.0
   '@svgr/core': ^8.1.0
   '@svgr/plugin-jsx': ^8.1.0
   '@tailwindcss/vite': ^4.1.17

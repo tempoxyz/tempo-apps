@@ -19,7 +19,7 @@ export function InfoCard(props: InfoCard.Props) {
 				</h1>
 				{secondary && <h2 className="text-[13px]">{secondary}</h2>}
 			</div>
-			<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px]">
+			<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px">
 				{sections.map((section, index) => {
 					const isSectionEntry =
 						section && typeof section === 'object' && 'label' in section

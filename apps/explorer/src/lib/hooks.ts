@@ -36,7 +36,8 @@ export declare namespace useCopy {
 }
 
 export function useMediaQuery(query: string) {
-	const [matches, setMatches] = React.useState(false)
+	// Use null to indicate "unknown" state during SSR
+	const [matches, setMatches] = React.useState<boolean | null>(null)
 
 	React.useEffect(() => {
 		const mediaQuery = window.matchMedia(query)
@@ -47,5 +48,6 @@ export function useMediaQuery(query: string) {
 		return () => mediaQuery.removeEventListener('change', handler)
 	}, [query])
 
-	return matches
+	// Return false during SSR/initial render to ensure consistent hydration
+	return matches ?? false
 }
