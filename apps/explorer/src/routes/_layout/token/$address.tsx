@@ -15,12 +15,14 @@ import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import * as z from 'zod/mini'
 import { ellipsis } from '#chars'
+import { ContractReader } from '#components/Contract/Read.tsx'
 import { DataGrid } from '#components/DataGrid'
 import { InfoCard } from '#components/InfoCard'
 import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
 import { cx } from '#cva.config.ts'
+import { getContractInfo } from '#lib/contracts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { fetchHolders, fetchTransfers } from '#lib/token.server'
@@ -33,6 +35,8 @@ const defaultSearchValues = {
 	limit: 10,
 	tab: 'transfers',
 } as const
+
+const tabOrder = ['transfers', 'holders', 'contract'] as const
 
 type TransfersQuery = {
 	address: Address.Address
@@ -49,6 +53,8 @@ type HoldersQuery = {
 	limit: number
 	offset: number
 }
+
+type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
 function transfersQueryOptions(params: TransfersQuery) {
 	return queryOptions({
@@ -108,7 +114,8 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			z.pipe(
 				z.string(),
 				z.transform((val) => {
-					if (val === 'transfers' || val === 'holders') return val
+					if (val === 'transfers' || val === 'holders' || val === 'contract')
+						return val
 					return 'transfers'
 				}),
 			),
@@ -167,10 +174,95 @@ export const Route = createFileRoute('/_layout/token/$address')({
 	},
 })
 
+function RouteComponent() {
+	const navigate = useNavigate()
+	const route = useRouter()
+	const { address } = Route.useParams()
+	const { page, tab, limit, a } = Route.useSearch()
+	const loaderData = Route.useLoaderData()
+
+	React.useEffect(() => {
+		// Preload only 1 page before and after to reduce API calls
+		for (let i = -1; i <= 1; i++) {
+			if (i === 0) continue
+			const preloadPage = page + i
+			if (preloadPage < 1) continue
+			route.preloadRoute({
+				to: '.',
+				search: {
+					...(preloadPage !== 1 ? { page: preloadPage } : {}),
+					...(tab !== 'transfers' ? { tab } : {}),
+					...(a ? { a } : {}),
+					...(limit !== defaultSearchValues.limit ? { limit } : {}),
+				},
+			})
+		}
+	}, [route, page, tab, limit, a])
+
+	const goToPage = React.useCallback(
+		(newPage: number) => {
+			navigate({
+				to: '.',
+				search: () => ({
+					...(newPage !== 1 ? { page: newPage } : {}),
+					...(tab !== 'transfers' ? { tab } : {}),
+					...(a ? { a } : {}),
+					...(limit !== defaultSearchValues.limit ? { limit } : {}),
+				}),
+				resetScroll: false,
+			})
+		},
+		[navigate, tab, limit, a],
+	)
+
+	const setActiveSection = React.useCallback(
+		(newIndex: number) => {
+			const newTab = tabOrder[newIndex] ?? 'transfers'
+			navigate({
+				to: '.',
+				search: () => ({
+					...(newTab !== 'transfers' ? { tab: newTab } : {}),
+					...(a && newTab === 'transfers' ? { a } : {}),
+					...(limit !== defaultSearchValues.limit ? { limit } : {}),
+				}),
+				resetScroll: false,
+			})
+		},
+		[navigate, limit, a],
+	)
+
+	const activeSection = tab === 'holders' ? 1 : tab === 'contract' ? 2 : 0
+
+	return (
+		<div
+			className={cx(
+				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
+				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
+			)}
+		>
+			<TokenCard
+				address={address}
+				className="self-start"
+				initialMetadata={loaderData.metadata}
+				holdersSummary={loaderData.holdersSummary}
+			/>
+			<SectionsWrapper
+				address={address}
+				page={page}
+				limit={limit}
+				account={a}
+				goToPage={goToPage}
+				activeSection={activeSection}
+				onSectionChange={setActiveSection}
+			/>
+		</div>
+	)
+}
+
 function TokenCard(props: {
 	address: Address.Address
 	className?: string
-	initialMetadata?: Actions.token.getMetadata.ReturnValue
+	initialMetadata?: TokenMetadata
 	holdersSummary?: {
 		holders: Array<{
 			address: Address.Address
@@ -373,98 +465,21 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 						/>
 					),
 				},
+				{
+					title: 'Contract',
+					totalItems: 0,
+					itemsLabel: 'functions',
+					content: (
+						<div className="animate-pulse space-y-[12px]">
+							<div className="h-[200px] rounded-[10px] bg-card-header" />
+							<div className="h-[300px] rounded-[10px] bg-card-header" />
+						</div>
+					),
+				},
 			]}
 			activeSection={0}
 			onSectionChange={() => {}}
 		/>
-	)
-}
-
-function RouteComponent() {
-	const navigate = useNavigate()
-	const route = useRouter()
-	const { address } = Route.useParams()
-	const { page, tab, limit, a } = Route.useSearch()
-	const loaderData = Route.useLoaderData()
-
-	Address.assert(address)
-
-	React.useEffect(() => {
-		// Preload only 1 page before and after to reduce API calls
-		for (let i = -1; i <= 1; i++) {
-			if (i === 0) continue
-			const preloadPage = page + i
-			if (preloadPage < 1) continue
-			route.preloadRoute({
-				to: '.',
-				search: {
-					...(preloadPage !== 1 ? { page: preloadPage } : {}),
-					...(tab !== 'transfers' ? { tab } : {}),
-					...(a ? { a } : {}),
-					...(limit !== defaultSearchValues.limit ? { limit } : {}),
-				},
-			})
-		}
-	}, [route, page, tab, limit, a])
-
-	const goToPage = React.useCallback(
-		(newPage: number) => {
-			navigate({
-				to: '.',
-				search: () => ({
-					...(newPage !== 1 ? { page: newPage } : {}),
-					...(tab !== 'transfers' ? { tab } : {}),
-					...(a ? { a } : {}),
-					...(limit !== defaultSearchValues.limit ? { limit } : {}),
-				}),
-				resetScroll: false,
-			})
-		},
-		[navigate, tab, limit, a],
-	)
-
-	const setActiveSection = React.useCallback(
-		(newIndex: number) => {
-			const tabs = ['transfers', 'holders'] as const
-			const newTab = tabs[newIndex] || 'transfers'
-			navigate({
-				to: '.',
-				search: () => ({
-					...(newTab !== 'transfers' ? { tab: newTab } : {}),
-					...(a && newTab === 'transfers' ? { a } : {}),
-					...(limit !== defaultSearchValues.limit ? { limit } : {}),
-				}),
-				resetScroll: false,
-			})
-		},
-		[navigate, limit, a],
-	)
-
-	const activeSection = tab === 'transfers' ? 0 : 1
-
-	return (
-		<div
-			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
-			)}
-		>
-			<TokenCard
-				address={address}
-				className="self-start"
-				initialMetadata={loaderData.metadata}
-				holdersSummary={loaderData.holdersSummary}
-			/>
-			<SectionsWrapper
-				address={address}
-				page={page}
-				limit={limit}
-				account={a}
-				goToPage={goToPage}
-				activeSection={activeSection}
-				onSectionChange={setActiveSection}
-			/>
-		</div>
 	)
 }
 
@@ -494,6 +509,7 @@ function SectionsWrapper(props: {
 		token: address,
 		query: {
 			enabled: Boolean(address),
+			initialData: loaderData.metadata,
 		},
 	})
 
@@ -534,15 +550,15 @@ function SectionsWrapper(props: {
 
 	const { holders = [], total: holdersTotal = 0 } = holdersData ?? {}
 
-	const isLoadingPage =
-		(state.isLoading && state.location.pathname.includes('/token/')) ||
-		isLoadingTransfers ||
-		isLoadingHolders
+	const routeIsLoading =
+		state.isLoading && state.location.pathname.includes('/token/')
+	const transfersPending = routeIsLoading || isLoadingTransfers
+	const holdersPending = routeIsLoading || isLoadingHolders
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
-	if (transfers.length === 0 && isLoadingPage && activeSection === 0)
+	if (transfers.length === 0 && transfersPending && activeSection === 0)
 		return <SectionsSkeleton totalItems={transfersTotal} />
 
 	const transfersColumns: DataGrid.Column[] = [
@@ -614,7 +630,7 @@ function SectionsWrapper(props: {
 							}}
 							totalItems={transfersTotal}
 							page={page}
-							isPending={isLoadingPage}
+							isPending={transfersPending}
 							itemsLabel="transfers"
 							itemsPerPage={limit}
 						/>
@@ -651,11 +667,17 @@ function SectionsWrapper(props: {
 							}
 							totalItems={holdersTotal}
 							page={page}
-							isPending={isLoadingPage}
+							isPending={holdersPending}
 							itemsLabel="holders"
 							itemsPerPage={limit}
 						/>
 					),
+				},
+				{
+					title: 'Contract',
+					totalItems: 0,
+					itemsLabel: 'functions',
+					content: <ContractSection address={address} />,
 				},
 			]}
 			activeSection={activeSection}
@@ -769,4 +791,17 @@ function HolderBalance(props: { balance: string; decimals?: number }) {
 		formatUnits(BigInt(balance), decimals),
 	)
 	return <span className="text-[12px] text-primary">{formatted}</span>
+}
+
+function ContractSection(props: { address: Address.Address }) {
+	const { address } = props
+	const contractInfo = getContractInfo(address)
+
+	return (
+		<ContractReader
+			address={address}
+			abi={contractInfo?.abi}
+			docsUrl={contractInfo?.docsUrl}
+		/>
+	)
 }

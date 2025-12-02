@@ -12,6 +12,9 @@ import { config, getConfig } from '#wagmi.config.ts'
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const { chainId, chainIdHex } = IS
 
+/** Normalize SQL for cleaner logging (collapse whitespace) */
+const normalizeSQL = (sql: string) => sql.replace(/\s+/g, ' ').trim()
+
 export const fetchTransactions = createServerFn()
 	.inputValidator(
 		z.object({
@@ -77,39 +80,53 @@ export const fetchTransactions = createServerFn()
 
 		const addressFilter = addressFilterParts.join(' OR ')
 
+		const countQuery = /* sql */ `
+			SELECT count(t.hash) as total
+			FROM txs t
+			WHERE t.chain = ${chainId}
+				AND (${addressFilter})
+		`
+
+		const txsQuery = /* sql */ `
+			SELECT
+				t.hash,
+				t.block_num,
+				t."from",
+				t."to",
+				t.value,
+				t.input,
+				t.nonce,
+				t.gas,
+				t.gas_price,
+				t.type
+			FROM txs t
+			WHERE t.chain = ${chainId}
+				AND (${addressFilter})
+			ORDER BY t.block_num ${sortDirection}, t.hash ${sortDirection}
+			LIMIT ${limit}
+			OFFSET ${offset}
+		`
+
 		// Parallelize count and transactions fetch
 		const [countResult, txsResult] = await Promise.all([
-			IS.runIndexSupplyQuery(
-				/* sql */ `
-								SELECT count(t.hash) as total
-								FROM txs t
-								WHERE t.chain = ${chainId}
-									AND (${addressFilter})
-							`,
-				{ signatures: [transferSignature] },
-			),
-			IS.runIndexSupplyQuery(
-				/* sql */ `
-								SELECT
-									t.hash,
-									t.block_num,
-									t."from",
-									t."to",
-									t.value,
-									t.input,
-									t.nonce,
-									t.gas,
-									t.gas_price,
-									t.type
-								FROM txs t
-								WHERE t.chain = ${chainId}
-									AND (${addressFilter})
-								ORDER BY t.block_num ${sortDirection}, t.hash ${sortDirection}
-								LIMIT ${limit}
-								OFFSET ${offset}
-							`,
-				{ signatures: [transferSignature] },
-			),
+			IS.runIndexSupplyQuery(countQuery, {
+				signatures: [transferSignature],
+			}).catch((error) => {
+				console.error('IndexSupply count query failed:', {
+					query: normalizeSQL(countQuery),
+					error,
+				})
+				throw error
+			}),
+			IS.runIndexSupplyQuery(txsQuery, {
+				signatures: [transferSignature],
+			}).catch((error) => {
+				console.error('IndexSupply txs query failed:', {
+					query: normalizeSQL(txsQuery),
+					error,
+				})
+				throw error
+			}),
 		])
 
 		const totalValue = countResult.rows.at(0)?.at(0)
@@ -182,8 +199,10 @@ export const getTotalValue = createServerFn()
 		const { address } = params
 		const chainId = getChainId(config)
 
+		const query = `SELECT address as token_address, SUM(CASE WHEN "to" = '${address}' THEN tokens ELSE 0 END) - SUM(CASE WHEN "from" = '${address}' THEN tokens ELSE 0 END) as balance FROM transfer WHERE chain = ${chainId} AND ("to" = '${address}' OR "from" = '${address}') GROUP BY address`
+
 		const searchParams = new URLSearchParams({
-			query: `SELECT address as token_address, SUM(CASE WHEN "to" = '${address}' THEN tokens ELSE 0 END) - SUM(CASE WHEN "from" = '${address}' THEN tokens ELSE 0 END) as balance FROM transfer WHERE chain = ${chainId} AND ("to" = '${address}' OR "from" = '${address}') GROUP BY address`,
+			query,
 			signatures:
 				'Transfer(address indexed from, address indexed to, uint tokens)',
 			'api-key': env.INDEXSUPPLY_API_KEY || '',
@@ -191,10 +210,17 @@ export const getTotalValue = createServerFn()
 
 		const response = await fetch(`${IS.endpoint}?${searchParams}`)
 
-		if (!response.ok)
+		if (!response.ok) {
+			const errorText = await response.text()
+			console.error('IndexSupply total value query failed:', {
+				query: normalizeSQL(query),
+				status: response.status,
+				error: errorText,
+			})
 			throw new Error(
-				`Failed to fetch total value: ${response.status} ${await response.text()}`,
+				`Failed to fetch total value: ${response.status} ${errorText}`,
 			)
+		}
 
 		const responseData = await response.json()
 

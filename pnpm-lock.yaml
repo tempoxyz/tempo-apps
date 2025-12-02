@@ -27,6 +27,9 @@ catalogs:
     '@iconify/json':
       specifier: ^2.2.413
       version: 2.2.413
+    '@shazow/whatsabi':
+      specifier: ^0.23.0
+      version: 0.23.0
     '@svgr/core':
       specifier: ^8.1.0
       version: 8.1.0
@@ -164,6 +167,9 @@ importers:
 
   apps/explorer:
     dependencies:
+      '@shazow/whatsabi':
+        specifier: 'catalog:'
+        version: 0.23.0(@noble/hashes@1.8.0)(typescript@5.9.3)(zod@4.1.13)
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.1.17(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0))
@@ -1548,6 +1554,11 @@ packages:
 
   '@scure/bip39@1.6.0':
     resolution: {integrity: sha512-+lF0BbLiJNwVlev4eKelw1WWLaiKXw7sSl8T6FvBlWkdX+94aGJ4o8XjUdlyhTCjd8c+B3KT3JfS8P0bLRNU6A==}
+
+  '@shazow/whatsabi@0.23.0':
+    resolution: {integrity: sha512-40jW6gd7uRmEqwOta7SianYfJ7T+6Mjd7COJDS8teqcD56sG10IhX2nsly5SJi9Uae6A4kgKhZRXkESEY34MsA==}
+    peerDependencies:
+      '@noble/hashes': ^1
 
   '@sindresorhus/is@7.1.1':
     resolution: {integrity: sha512-rO92VvpgMc3kfiTjGT52LEtJ8Yc5kCWhZjLQ3LwlA4pSgPpQO7bVpYXParOD8Jwf+cVQECJo3yP/4I8aZtUQTQ==}
@@ -4570,6 +4581,14 @@ snapshots:
     dependencies:
       '@noble/hashes': 1.8.0
       '@scure/base': 1.2.6
+
+  '@shazow/whatsabi@0.23.0(@noble/hashes@1.8.0)(typescript@5.9.3)(zod@4.1.13)':
+    dependencies:
+      '@noble/hashes': 1.8.0
+      ox: 0.9.17(typescript@5.9.3)(zod@4.1.13)
+    transitivePeerDependencies:
+      - typescript
+      - zod
 
   '@sindresorhus/is@7.1.1': {}
 
