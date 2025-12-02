@@ -7,7 +7,7 @@ import { Handler } from 'tempo.ts/server'
 import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import * as z from 'zod'
-import { GetUsageRequestSchema, getUsage } from './lib/usage.js'
+import { getUsage } from './lib/usage.js'
 
 const app = new Hono()
 
@@ -29,30 +29,21 @@ app.get(
 	'/usage',
 	zValidator(
 		'query',
-		z.preprocess((rawQuery: Record<string, string | string[] | undefined>) => {
-			const blockTimestamp: Record<string, string> = {}
-
-			for (const [key, value] of Object.entries(rawQuery)) {
-				if (typeof value !== 'string') continue
-
-				const match = key.match(/^block_timestamp\[(\w+)\]$/)
-				if (match?.[1]) {
-					blockTimestamp[match[1]] = value
-				}
-			}
-
-			return {
-				block_timestamp:
-					Object.keys(blockTimestamp).length > 0 ? blockTimestamp : undefined,
-			}
-		}, GetUsageRequestSchema),
+		z.object({
+			blockTimestampFrom: z.optional(z.coerce.number()),
+			blockTimestampTo: z.optional(z.coerce.number()),
+		}),
 	),
 	async (c) => {
-		const validatedQuery = c.req.valid('query')
+		const { blockTimestampFrom, blockTimestampTo } = c.req.valid('query')
 		const account = privateKeyToAccount(
 			env.SPONSOR_PRIVATE_KEY as `0x${string}`,
 		)
-		const data = await getUsage(account.address, validatedQuery.block_timestamp)
+		const data = await getUsage(
+			account.address,
+			blockTimestampFrom,
+			blockTimestampTo,
+		)
 
 		return c.json(data)
 	},

@@ -1,19 +1,5 @@
 import type { Address } from 'ox'
-import * as z from 'zod'
 import { runQuery, toBigInt } from './index-supply'
-
-export const BlockTimestampFilterSchema = z.object({
-	gt: z.optional(z.coerce.number()),
-	gte: z.optional(z.coerce.number()),
-	lt: z.optional(z.coerce.number()),
-	lte: z.optional(z.coerce.number()),
-})
-
-export const GetUsageRequestSchema = z.object({
-	block_timestamp: z.optional(BlockTimestampFilterSchema),
-})
-
-export type BlockTimestampFilter = z.infer<typeof BlockTimestampFilterSchema>
 
 const FEE_MANAGER_CONTRACT = '0xfeec000000000000000000000000000000000000'
 const TRANSFER_SIGNATURE =
@@ -27,36 +13,30 @@ function epochToTimestamp(epoch: number): string {
 /**
  * Fetch fee payer usage statistics from IndexSupply
  * @param feePayerAddress Address of the fee payer account
- * @param blockTimestampFilter Optional timestamp range filters (gt, gte, lt, lte)
+ * @param blockTimestampFrom Optional start timestamp (inclusive)
+ * @param blockTimestampTo Optional end timestamp (inclusive)
  * @returns Usage statistics including fees paid, transaction count, and time range
  */
 export async function getUsage(
 	feePayerAddress: Address.Address,
-	blockTimestampFilter?: BlockTimestampFilter,
+	blockTimestampFrom?: number,
+	blockTimestampTo?: number,
 ) {
 	const whereConditions = [
 		`"from" = '${feePayerAddress}'`,
 		`"to" = '${FEE_MANAGER_CONTRACT}'`,
 	]
 
-	if (blockTimestampFilter) {
-		const operators = {
-			gt: '>',
-			gte: '>=',
-			lt: '<',
-			lte: '<=',
-		} as Record<keyof BlockTimestampFilter, string>
+	if (blockTimestampFrom !== undefined) {
+		whereConditions.push(
+			`block_timestamp::timestamp >= '${epochToTimestamp(blockTimestampFrom)}'`,
+		)
+	}
 
-		for (const [key, value] of Object.entries(blockTimestampFilter) as [
-			keyof BlockTimestampFilter,
-			number | undefined,
-		][]) {
-			if (value !== undefined) {
-				whereConditions.push(
-					`block_timestamp::timestamp ${operators[key]} '${epochToTimestamp(value)}'`,
-				)
-			}
-		}
+	if (blockTimestampTo !== undefined) {
+		whereConditions.push(
+			`block_timestamp::timestamp <= '${epochToTimestamp(blockTimestampTo)}'`,
+		)
 	}
 
 	const whereClause = whereConditions.join('\n\t\t\t\tand ')
