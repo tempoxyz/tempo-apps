@@ -19,8 +19,13 @@ import { ContractReader } from '#components/Contract/Read.tsx'
 import { DataGrid } from '#components/DataGrid'
 import { InfoCard } from '#components/InfoCard'
 import { NotFound } from '#components/NotFound'
-import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
+import {
+	FormattedTimestamp,
+	TimeColumnHeader,
+	type TimeFormat,
+	useTimeFormat,
+} from '#components/TimeFormat'
 import { cx } from '#cva.config.ts'
 import { getContractInfo } from '#lib/contracts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
@@ -501,6 +506,7 @@ function SectionsWrapper(props: {
 		onSectionChange,
 	} = props
 	const account = account_ && Address.validate(account_) ? account_ : undefined
+	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	const state = useRouterState()
 	const loaderData = Route.useLoaderData()
@@ -562,7 +568,18 @@ function SectionsWrapper(props: {
 		return <SectionsSkeleton totalItems={transfersTotal} />
 
 	const transfersColumns: DataGrid.Column[] = [
-		{ label: 'Time', align: 'start', minWidth: 100 },
+		{
+			label: (
+				<TimeColumnHeader
+					label="Time"
+					formatLabel={formatLabel}
+					onCycle={cycleTimeFormat}
+					className="hover:text-accent cursor-pointer transition-colors"
+				/>
+			),
+			align: 'start',
+			minWidth: 100,
+		},
 		{ label: 'Transaction', align: 'start', minWidth: 120 },
 		{ label: 'From', align: 'start', minWidth: 140 },
 		{ label: 'To', align: 'start', minWidth: 140 },
@@ -604,6 +621,7 @@ function SectionsWrapper(props: {
 											key="time"
 											timestamp={BigInt(transfer.timestamp)}
 											link={`/tx/${transfer.transactionHash}`}
+											format={timeFormat}
 										/>,
 										<TransactionLink
 											key="tx"
@@ -714,16 +732,24 @@ function FilterIndicator(props: {
 	)
 }
 
-function TransferTime(props: { timestamp: bigint; link?: string }) {
-	const { timestamp, link } = props
+function TransferTime(props: {
+	timestamp: bigint
+	link?: string
+	format?: TimeFormat
+}) {
+	const { timestamp, link, format = 'relative' } = props
 	return (
 		<div className="text-nowrap">
 			{link ? (
 				<Link to={link} className="text-tertiary hover:text-secondary">
-					<RelativeTime timestamp={timestamp} />
+					<FormattedTimestamp timestamp={timestamp} format={format} />
 				</Link>
 			) : (
-				<RelativeTime timestamp={timestamp} className="text-tertiary" />
+				<FormattedTimestamp
+					timestamp={timestamp}
+					format={format}
+					className="text-tertiary"
+				/>
 			)}
 		</div>
 	)

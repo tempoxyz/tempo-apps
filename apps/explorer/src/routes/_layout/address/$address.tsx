@@ -25,8 +25,13 @@ import { ContractReader } from '#components/Contract/Read.tsx'
 import { DataGrid } from '#components/DataGrid.tsx'
 import { EventDescription } from '#components/EventDescription.tsx'
 import { NotFound } from '#components/NotFound'
-import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
+import {
+	FormattedTimestamp,
+	TimeColumnHeader,
+	type TimeFormat,
+	useTimeFormat,
+} from '#components/TimeFormat'
 import { cx } from '#cva.config.ts'
 import { type ContractInfo, getContractInfo } from '#lib/contracts.ts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
@@ -459,6 +464,7 @@ function SectionsWrapper(props: {
 		contractInfo,
 		initialData,
 	} = props
+	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	const { data, isPending, error } = useQuery({
 		...transactionsQueryOptions({
@@ -498,7 +504,18 @@ function SectionsWrapper(props: {
 	) : null
 
 	const historyColumns: DataGrid.Column[] = [
-		{ label: 'Time', align: 'start', minWidth: 100 },
+		{
+			label: (
+				<TimeColumnHeader
+					label="Time"
+					formatLabel={formatLabel}
+					onCycle={cycleTimeFormat}
+					className="hover:text-accent cursor-pointer transition-colors"
+				/>
+			),
+			align: 'start',
+			minWidth: 100,
+		},
 		{ label: 'Description', align: 'start' },
 		{ label: 'Hash', align: 'end' },
 		{ label: 'Fee', align: 'end' },
@@ -531,6 +548,7 @@ function SectionsWrapper(props: {
 													key="time"
 													timestamp={block.timestamp}
 													link={`/tx/${transaction.hash}`}
+													format={timeFormat}
 												/>
 											) : (
 												<span key="time" className="text-tertiary text-[13px]">
@@ -892,17 +910,22 @@ export function TransactionHash(props: { hash: Hex.Hex }) {
 export function TransactionTimestamp(props: {
 	timestamp: bigint
 	link?: string
+	format?: TimeFormat
 }) {
-	const { timestamp, link } = props
+	const { timestamp, link, format = 'relative' } = props
 
 	return (
 		<div className="text-nowrap">
 			{link ? (
 				<Link to={link} className="text-tertiary">
-					<RelativeTime timestamp={timestamp} />
+					<FormattedTimestamp timestamp={timestamp} format={format} />
 				</Link>
 			) : (
-				<RelativeTime timestamp={timestamp} className="text-tertiary" />
+				<FormattedTimestamp
+					timestamp={timestamp}
+					format={format}
+					className="text-tertiary"
+				/>
 			)}
 		</div>
 	)
