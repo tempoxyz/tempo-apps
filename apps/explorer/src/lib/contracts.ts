@@ -329,11 +329,3 @@ export function formatOutputValue(value: unknown, _type: string): string {
 
 	return String(value)
 }
-
-/**
- * Generate a function signature string like Etherscan
- */
-export function getFunctionSignature(fn: AbiFunction) {
-	const inputs = fn.inputs.map((i) => i.type).join(', ')
-	return `${fn.name}(${inputs})`
-}
