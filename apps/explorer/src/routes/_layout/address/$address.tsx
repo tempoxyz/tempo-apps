@@ -8,7 +8,6 @@ import {
 	useLocation,
 	useNavigate,
 	useRouter,
-	useRouterState,
 } from '@tanstack/react-router'
 import { Address, Hex, Value } from 'ox'
 import * as React from 'react'
@@ -77,25 +76,33 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
 			const transactions = await Promise.all(
 				data.transactions.map(async (transaction) => {
+					// Fetch receipt and block with error handling for sync lag
+					// (IndexSupply may return txs that RPC hasn't indexed yet)
 					const [receipt, block] = await Promise.all([
-						client.fetchQuery(
-							getTransactionReceiptQueryOptions(config, {
-								hash: transaction.hash,
-							}),
-						),
-						client.fetchQuery(
-							getBlockQueryOptions(config, {
-								blockNumber: transaction.blockNumber
-									? Hex.toBigInt(transaction.blockNumber)
-									: undefined,
-							}),
-						),
+						client
+							.fetchQuery(
+								getTransactionReceiptQueryOptions(config, {
+									hash: transaction.hash,
+								}),
+							)
+							.catch(() => null),
+						client
+							.fetchQuery(
+								getBlockQueryOptions(config, {
+									blockNumber: transaction.blockNumber
+										? Hex.toBigInt(transaction.blockNumber)
+										: undefined,
+								}),
+							)
+							.catch(() => null),
 					])
-					const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
-					knownEvents[transaction.hash] = parseKnownEvents(receipt, {
-						transaction,
-						getTokenMetadata,
-					})
+					if (receipt) {
+						const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
+						knownEvents[transaction.hash] = parseKnownEvents(receipt, {
+							transaction,
+							getTokenMetadata,
+						})
+					}
 					return { ...transaction, block, receipt }
 				}),
 			)
@@ -131,13 +138,20 @@ export const Route = createFileRoute('/_layout/address/$address')({
 	},
 	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
 	loader: async ({ deps: { page, limit }, params, context }) => {
-		try {
-			const { address } = params
-			if (!Address.validate(address)) throw notFound()
+		const { address } = params
+		// Only throw notFound for truly invalid addresses
+		if (!Address.validate(address))
+			throw notFound({
+				routeId: rootRouteId,
+				data: { error: 'Invalid address format' },
+			})
 
-			const offset = (page - 1) * limit
+		const offset = (page - 1) * limit
 
-			return await context.queryClient.fetchQuery(
+		// Await prefetch for SSR hydration consistency, but catch errors
+		// so API failures don't cause 404 - component will handle them
+		await context.queryClient
+			.prefetchQuery(
 				transactionsQueryOptions({
 					address,
 					page,
@@ -145,15 +159,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					offset,
 				}),
 			)
-		} catch (error) {
-			console.error('onCatch', error)
-			throw notFound({
-				routeId: rootRouteId,
-				data: {
-					error: error instanceof Error ? error.message : 'Unknown error',
-				},
-			})
-		}
+			.catch((error) => console.error('Prefetch error (non-blocking):', error))
+
+		return { address, page, limit, offset }
 	},
 })
 
@@ -424,33 +432,41 @@ function SectionsWrapper(props: {
 
 	const contractInfo = getContractInfo(address)
 
-	const state = useRouterState()
-	const initialData = Route.useLoaderData()
-
-	const { data, isLoading } = useQuery({
-		...transactionsQueryOptions({
+	const { data, isPending, error } = useQuery(
+		transactionsQueryOptions({
 			address,
 			page,
 			limit,
 			offset: (page - 1) * limit,
 		}),
-		initialData,
-	})
+	)
 	const { transactions, total, knownEvents } = data ?? {
 		transactions: [],
 		total: 0,
-		knownEvents: {},
+		knownEvents: {} as Record<Hex.Hex, KnownEvent[]>,
 	}
 
-	const isLoadingPage =
-		(state.isLoading && state.location.pathname.includes('/address/')) ||
-		isLoading
+	// Use isPending for SSR-consistent loading state
+	const isLoadingPage = isPending
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
-	if (transactions.length === 0 && isLoadingPage)
-		return <SectionsSkeleton totalItems={total} />
+	// Only show skeleton if we have no data AND we're loading
+	// Use data presence check to avoid hydration mismatch
+	if (!data && isPending) return <SectionsSkeleton totalItems={total} />
+
+	// Show error state for API failures (instead of crashing the whole page)
+	const historyError = error ? (
+		<div className="rounded-[10px] bg-card-header p-[18px]">
+			<p className="text-sm font-medium text-red-400">
+				Failed to load transaction history
+			</p>
+			<p className="text-xs text-tertiary mt-1">
+				{error instanceof Error ? error.message : 'Unknown error'}
+			</p>
+		</div>
+	) : null
 
 	const historyColumns: DataGrid.Column[] = [
 		{ label: 'Time', align: 'start', minWidth: 100 },
@@ -468,7 +484,7 @@ function SectionsWrapper(props: {
 					title: 'History',
 					totalItems: total,
 					itemsLabel: 'transactions',
-					content: (
+					content: historyError ?? (
 						<DataGrid
 							columns={{
 								stacked: historyColumns,
@@ -476,14 +492,22 @@ function SectionsWrapper(props: {
 							}}
 							items={() =>
 								transactions.map((transaction) => {
-									const receipt = transaction.receipt
+									// receipt/block can be null if RPC hasn't indexed yet
+									const receipt = transaction.receipt ?? undefined
+									const block = transaction.block
 									return {
 										cells: [
-											<TransactionTimestamp
-												key="time"
-												timestamp={transaction.block.timestamp}
-												link={`/tx/${transaction.hash}`}
-											/>,
+											block ? (
+												<TransactionTimestamp
+													key="time"
+													timestamp={block.timestamp}
+													link={`/tx/${transaction.hash}`}
+												/>
+											) : (
+												<span key="time" className="text-tertiary text-[13px]">
+													Pending...
+												</span>
+											),
 											<TransactionRowDescription
 												key="desc"
 												transaction={transaction}
@@ -742,7 +766,7 @@ function AssetValue(props: {
 	)
 }
 
-export function TransactionFee(props: { receipt: TransactionReceipt }) {
+export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 	const { receipt } = props
 
 	if (!receipt) return <span className="text-tertiary">…</span>
