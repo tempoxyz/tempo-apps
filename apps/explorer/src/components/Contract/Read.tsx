@@ -300,40 +300,42 @@ function StaticReadFunction(props: {
 			id={fn.name}
 			className="flex flex-col gap-[4px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px] transition-all duration-300"
 		>
-			<div className="flex items-center gap-[8px]">
+			<div className="flex items-center justify-between gap-[8px]">
 				<span className="text-[12px] text-secondary font-mono">
 					{getFunctionSignature(fn)}
 				</span>
-				<button
-					type="button"
-					onClick={handleCopyMethod}
-					title={notifying ? 'Copied!' : 'Copy method name'}
-					className={cx(
-						'transition-colors press-down',
-						notifying ? 'text-positive' : 'text-tertiary hover:text-primary',
-					)}
-				>
-					{notifying ? (
-						<CheckIcon className="w-[12px] h-[12px]" />
-					) : (
-						<CopyIcon className="w-[12px] h-[12px]" />
-					)}
-				</button>
-				<button
-					type="button"
-					onClick={handleCopyPermalink}
-					title={linkCopied ? 'Copied!' : 'Copy permalink'}
-					className={cx(
-						'transition-colors press-down',
-						linkCopied ? 'text-positive' : 'text-tertiary hover:text-primary',
-					)}
-				>
-					{linkCopied ? (
-						<CheckIcon className="w-[12px] h-[12px]" />
-					) : (
-						<LinkIcon className="w-[12px] h-[12px]" />
-					)}
-				</button>
+				<div className="flex items-center gap-[8px]">
+					<button
+						type="button"
+						onClick={handleCopyMethod}
+						title={notifying ? 'Copied!' : 'Copy method name'}
+						className={cx(
+							'transition-colors press-down',
+							notifying ? 'text-positive' : 'text-tertiary hover:text-primary',
+						)}
+					>
+						{notifying ? (
+							<CheckIcon className="w-[12px] h-[12px]" />
+						) : (
+							<CopyIcon className="w-[12px] h-[12px]" />
+						)}
+					</button>
+					<button
+						type="button"
+						onClick={handleCopyPermalink}
+						title={linkCopied ? 'Copied!' : 'Copy permalink'}
+						className={cx(
+							'transition-colors press-down',
+							linkCopied ? 'text-positive' : 'text-tertiary hover:text-primary',
+						)}
+					>
+						{linkCopied ? (
+							<CheckIcon className="w-[12px] h-[12px]" />
+						) : (
+							<LinkIcon className="w-[12px] h-[12px]" />
+						)}
+					</button>
+				</div>
 			</div>
 			{isValidAddress ? (
 				<Link
