@@ -5,10 +5,10 @@ import * as React from 'react'
 import { cx } from '#cva.config'
 import { HexFormatter } from '#lib/formatting'
 import type {
+	AddressSearchResult,
 	SearchApiResponse,
 	SearchResult,
 	TokenSearchResult,
-	AddressSearchResult,
 } from '#routes/api/search'
 import ArrowRight from '~icons/lucide/arrow-right'
 import { ProgressLine } from './ProgressLine'
@@ -377,44 +377,6 @@ export namespace ExploreInput {
 			if (isSelected) itemRef.current?.scrollIntoView({ block: 'nearest' })
 		}, [isSelected])
 
-		const [start, end] =
-			suggestion.type === 'token'
-				? [
-						<div className="flex items-center gap-[10px] min-w-0 flex-1">
-							<span className="text-[16px] font-medium text-base-content truncate">
-								{suggestion.name}
-							</span>
-							<span className="text-[11px] font-medium text-base-content bg-border-primary p-[4px] rounded-[4px] shrink-0">
-								{suggestion.symbol}
-							</span>
-						</div>,
-						<span className="text-[13px] font-mono text-accent">
-							{HexFormatter.shortenHex(suggestion.address, 6)}
-						</span>,
-					]
-				: suggestion.type === 'address'
-					? [
-							<span className="text-[13px] font-mono text-accent truncate">
-								{suggestion.address}
-							</span>,
-							null,
-						]
-					: suggestion.type === 'transaction'
-						? [
-								<span className="text-[13px] font-mono text-accent truncate min-w-0 flex-1">
-									{HexFormatter.shortenHex(suggestion.hash, 8)}
-								</span>,
-								suggestion.timestamp ? (
-									<RelativeTime
-										timestamp={BigInt(suggestion.timestamp)}
-										className="text-[12px] text-tertiary"
-									/>
-								) : (
-									<span className="text-[12px] text-tertiary">−</span>
-								),
-							]
-						: [null, null]
-
 		return (
 			<button
 				ref={itemRef}
@@ -429,8 +391,41 @@ export namespace ExploreInput {
 					isSelected && 'bg-base-alt/25',
 				)}
 			>
-				<div className="flex items-center min-w-0 flex-1">{start}</div>
-				{end}
+				{suggestion.type === 'token' && (
+					<>
+						<div className="flex items-center gap-[10px] min-w-0 flex-1">
+							<span className="text-[16px] font-medium text-base-content truncate">
+								{suggestion.name}
+							</span>
+							<span className="text-[11px] font-medium text-base-content bg-border-primary p-[4px] rounded-[4px] shrink-0">
+								{suggestion.symbol}
+							</span>
+						</div>
+						<span className="text-[13px] font-mono text-accent">
+							{HexFormatter.shortenHex(suggestion.address, 6)}
+						</span>
+					</>
+				)}
+				{suggestion.type === 'address' && (
+					<span className="text-[13px] font-mono text-accent truncate">
+						{suggestion.address}
+					</span>
+				)}
+				{suggestion.type === 'transaction' && (
+					<>
+						<span className="text-[13px] font-mono text-accent truncate min-w-0 flex-1">
+							{HexFormatter.shortenHex(suggestion.hash, 8)}
+						</span>
+						{suggestion.timestamp ? (
+							<RelativeTime
+								timestamp={BigInt(suggestion.timestamp)}
+								className="text-[12px] text-tertiary"
+							/>
+						) : (
+							<span className="text-[12px] text-tertiary">−</span>
+						)}
+					</>
+				)}
 			</button>
 		)
 	}

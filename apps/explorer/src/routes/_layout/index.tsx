@@ -55,11 +55,17 @@ function Component() {
 								return
 							}
 							if (data.type === 'token') {
-								navigate({ to: '/token/$address', params: { address: data.value } })
+								navigate({
+									to: '/token/$address',
+									params: { address: data.value },
+								})
 								return
 							}
 							if (data.type === 'address') {
-								navigate({ to: '/address/$address', params: { address: data.value } })
+								navigate({
+									to: '/address/$address',
+									params: { address: data.value },
+								})
 								return
 							}
 						}}

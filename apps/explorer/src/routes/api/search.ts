@@ -1,9 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
+import tokensIndex from '#data/tokens-index.json' with { type: 'json' }
 import * as IS from '#lib/index-supply'
 import { parsePgTimestamp } from '#lib/postgres'
 import { isTip20Address } from '#lib/tip20'
-import tokensIndex from '#data/tokens-index.json' with { type: 'json' }
 
 export type SearchResult =
 	| {

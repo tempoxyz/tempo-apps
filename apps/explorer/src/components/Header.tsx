@@ -72,7 +72,10 @@ export namespace Header {
 								return
 							}
 							if (type === 'address') {
-								navigate({ to: '/address/$address', params: { address: value } })
+								navigate({
+									to: '/address/$address',
+									params: { address: value },
+								})
 								return
 							}
 						}}
