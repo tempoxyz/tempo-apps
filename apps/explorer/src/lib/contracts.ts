@@ -20,7 +20,7 @@ export type ContractInfo = {
 /**
  * Known contract registry mapping addresses to their metadata and ABIs.
  */
-export const contractRegistry = new Map<Address.Address, ContractInfo>([
+export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 	// TIP-20 Tokens
 	[
 		'0x20c0000000000000000000000000000000000000',
@@ -32,7 +32,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 			docsUrl:
 				'https://docs.tempo.xyz/documentation/protocol/exchange/linkingUSD',
 		},
-	] as const,
+	],
 	[
 		'0x20c0000000000000000000000000000000000001',
 		{
@@ -41,7 +41,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 			abi: Abis.tip20,
 			category: 'token',
 		},
-	] as const,
+	],
 	[
 		'0x20c0000000000000000000000000000000000002',
 		{
@@ -50,7 +50,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 			abi: Abis.tip20,
 			category: 'token',
 		},
-	] as const,
+	],
 	[
 		'0x20c0000000000000000000000000000000000003',
 		{
@@ -59,7 +59,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 			abi: Abis.tip20,
 			category: 'token',
 		},
-	] as const,
+	],
 
 	// System Contracts
 	[
@@ -71,7 +71,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/tip20/overview',
 		},
-	] as const,
+	],
 	[
 		Addresses.feeManager,
 		{
@@ -82,7 +82,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 			docsUrl:
 				'https://docs.tempo.xyz/documentation/protocol/fees/spec-fee-amm#2-feemanager-contract',
 		},
-	] as const,
+	],
 	[
 		Addresses.stablecoinExchange,
 		{
@@ -92,7 +92,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/exchange',
 		},
-	] as const,
+	],
 	[
 		Addresses.tip403Registry,
 		{
@@ -102,7 +102,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/tip403/spec',
 		},
-	] as const,
+	],
 
 	// Account Abstraction
 	[
@@ -113,7 +113,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 			abi: Abis.tipAccountRegistrar,
 			category: 'account',
 		},
-	] as const,
+	],
 ])
 
 /**

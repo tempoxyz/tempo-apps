@@ -102,7 +102,7 @@ function SpotlightLinks() {
 				<SpotlightLink
 					to="/address/$address"
 					params={{
-						address: '0xfeec000000000000000000000000000000000000',
+						address: '0x20fc000000000000000000000000000000000000',
 					}}
 				>
 					Contract

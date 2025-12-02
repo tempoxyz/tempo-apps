@@ -1,15 +1,16 @@
 import { Link, useLocation } from '@tanstack/react-router'
 import { Address } from 'ox'
+import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
 import type { Abi, AbiFunction } from 'viem'
 import { toFunctionSelector } from 'viem'
+import { useReadContract } from 'wagmi'
 import { readContract as wagmiReadContract } from 'wagmi/actions'
 import { ellipsis } from '#chars.ts'
 import { cx } from '#cva.config.ts'
 import {
 	formatOutputValue,
 	getContractAbi,
-	getFunctionSignature,
 	getInputFunctions,
 	getInputType,
 	getNoInputFunctions,
@@ -302,7 +303,7 @@ function StaticReadFunction(props: {
 		>
 			<div className="flex items-center justify-between gap-[8px]">
 				<span className="text-[12px] text-secondary font-mono">
-					{getFunctionSignature(fn)}
+					{getSignature(fn)}
 				</span>
 				<div className="flex items-center gap-[8px]">
 					<button
@@ -371,46 +372,50 @@ function DynamicReadFunction(props: {
 	const { address, abi, fn } = props
 	const [isExpanded, setIsExpanded] = React.useState(false)
 	const [inputs, setInputs] = React.useState<Record<string, string>>({})
-	const [result, setResult] = React.useState<unknown>(undefined)
-	const [isLoading, setIsLoading] = React.useState(false)
-	const [error, setError] = React.useState<string | null>(null)
-	const { copy, notifying } = useCopy({ timeout: 2000 })
-	const { copy: copyLink, notifying: linkCopied } = useCopy({ timeout: 2000 })
+	const { copy, notifying } = useCopy({ timeout: 2_000 })
+	const { copy: copyLink, notifying: linkCopied } = useCopy({ timeout: 2_000 })
 
 	const handleInputChange = (name: string, value: string) => {
 		setInputs((prev) => ({ ...prev, [name]: value }))
-	}
-
-	const handleQuery = async () => {
-		setIsLoading(true)
-		setError(null)
-		setResult(undefined)
-
-		try {
-			const args = fn.inputs.map((input) => {
-				const value = inputs[input.name ?? ''] ?? ''
-				return parseInputValue(value, input.type)
-			})
-
-			const data = await wagmiReadContract(config, {
-				address,
-				abi,
-				functionName: fn.name,
-				args,
-			})
-
-			setResult(data)
-		} catch (err) {
-			setError(err instanceof Error ? err.message : 'Query failed')
-		} finally {
-			setIsLoading(false)
-		}
 	}
 
 	const allInputsFilled = fn.inputs.every((input) => {
 		const value = inputs[input.name ?? '']
 		return value !== undefined && value.trim() !== ''
 	})
+
+	const parsedArgs = React.useMemo(() => {
+		if (!allInputsFilled) return { args: [] as Array<unknown>, error: null }
+		try {
+			const args = fn.inputs.map((input) => {
+				const value = inputs[input.name ?? ''] ?? ''
+				return parseInputValue(value, input.type)
+			})
+			return { args, error: null }
+		} catch (err) {
+			return {
+				args: [] as Array<unknown>,
+				error: err instanceof Error ? err.message : 'Failed to parse inputs',
+			}
+		}
+	}, [fn.inputs, inputs, allInputsFilled])
+
+	const {
+		data: result,
+		error: queryError,
+		isLoading,
+	} = useReadContract({
+		address,
+		abi,
+		functionName: fn.name,
+		args: parsedArgs.args,
+		query: {
+			enabled: allInputsFilled && !parsedArgs.error,
+		},
+	})
+
+	const error =
+		parsedArgs.error ?? (queryError ? queryError.message : null) ?? null
 
 	const outputType = fn.outputs[0]?.type ?? 'unknown'
 
@@ -438,7 +443,7 @@ function DynamicReadFunction(props: {
 					className="flex-1 text-left"
 				>
 					<span className="text-[12px] text-secondary font-mono">
-						{getFunctionSignature(fn)}
+						{getSignature(fn)}
 					</span>
 				</button>
 				<div className="flex items-center gap-[8px]">
@@ -488,13 +493,7 @@ function DynamicReadFunction(props: {
 			</div>
 
 			{isExpanded && (
-				<form
-					onSubmit={(e) => {
-						e.preventDefault()
-						if (allInputsFilled && !isLoading) handleQuery()
-					}}
-					className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]"
-				>
+				<div className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]">
 					{fn.inputs.map((input, index) => (
 						<FunctionInput
 							key={input.name ?? index}
@@ -506,21 +505,12 @@ function DynamicReadFunction(props: {
 						/>
 					))}
 
-					<button
-						type="submit"
-						disabled={!allInputsFilled || isLoading}
-						className={cx(
-							'text-[12px] rounded-[6px] px-[12px] py-[8px] transition-colors font-medium',
-							allInputsFilled && !isLoading
-								? 'bg-accent text-white hover:bg-accent/90'
-								: 'bg-card-header text-secondary cursor-not-allowed',
-						)}
-					>
-						{isLoading ? 'Querying...' : 'Query'}
-					</button>
+					{isLoading && (
+						<p className="text-[12px] text-secondary">{ellipsis}</p>
+					)}
 
-					{(result !== undefined || error) && (
-						<div className="mt-1 p-2.5 rounded-md bg-card-header flex flex-col gap-2">
+					{!isLoading && (result !== undefined || error) && (
+						<div className="p-2.5 rounded-md bg-card-header flex flex-col gap-2">
 							<span className="text-[11px] text-secondary uppercase tracking-wide font-medium">
 								Result
 							</span>
@@ -534,7 +524,7 @@ function DynamicReadFunction(props: {
 							</p>
 						</div>
 					)}
-				</form>
+				</div>
 			)}
 		</div>
 	)
