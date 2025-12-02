@@ -1,33 +1,30 @@
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import * as ABIS from '../src/lib/abis.ts'
 
-const indexSupplyEndpoint = 'https://api.tempo.xyz/indexer/query'
+const indexSupplyEndpoint = 'https://api.indexsupply.net/v2/query'
+const chainId = 42429
 
-const SUPPORTED_CHAINS = [31318, 42429, 42431, 4217] as const
-type SupportedChain = (typeof SUPPORTED_CHAINS)[number]
+const eventSignature =
+	'TokenCreated(address indexed token, uint256 indexed tokenId, string name, string symbol, string currency, address quoteToken, address admin)'
+
+const query =
+	`SELECT token, symbol, name FROM tokencreated ` +
+	`WHERE chain = ${chainId} ORDER BY block_timestamp DESC`
 
 type Token = [address: string, symbol: string, name: string]
 
-const NATIVE_TOKENS: Token[] = [
-	['0x20c0000000000000000000000000000000000000', 'pathUSD', 'pathUSD'],
+// native tokens (not created via factory)
+const nativeTokens: Token[] = [
+	['0x20c0000000000000000000000000000000000000', 'linkingUSD', 'linkingUSD'],
 	['0x20c0000000000000000000000000000000000001', 'AlphaUSD', 'AlphaUSD'],
 	['0x20c0000000000000000000000000000000000002', 'BetaUSD', 'BetaUSD'],
 	['0x20c0000000000000000000000000000000000003', 'ThetaUSD', 'ThetaUSD'],
 ]
 
-async function fetchTokensForChain(chainId: SupportedChain): Promise<Token[]> {
-	const apiKey = process.env.INDEXER_API_KEY
+async function fetchAllTokens(): Promise<Token[]> {
+	const apiKey = process.env.INDEXSUPPLY_API_KEY
 	if (!apiKey)
-		throw new Error('INDEXER_API_KEY environment variable is required')
-
-	const eventSignature = ABIS.getTokenCreatedEvent(chainId).replace(
-		/^event /,
-		'',
-	)
-	const query =
-		`SELECT token, symbol, name FROM tokencreated ` +
-		`WHERE chain = ${chainId} ORDER BY block_timestamp DESC`
+		throw new Error('INDEXSUPPLY_API_KEY environment variable is required')
 
 	const url = new URL(indexSupplyEndpoint)
 	url.searchParams.set('api-key', apiKey)
@@ -60,41 +57,23 @@ async function fetchTokensForChain(chainId: SupportedChain): Promise<Token[]> {
 	)
 }
 
-async function generateForChain(chainId: SupportedChain) {
-	console.log(`Fetching tokens for chain ${chainId} from IndexSupply…`)
+async function main() {
+	console.log('Fetching tokens from IndexSupply…')
 
-	const fetchedTokens = await fetchTokensForChain(chainId)
+	const fetchedTokens = await fetchAllTokens()
 	console.log(`Found ${fetchedTokens.length} tokens.`)
 
-	const tokens = [...NATIVE_TOKENS, ...fetchedTokens]
+	const tokens = [...nativeTokens, ...fetchedTokens]
 	console.log(`Total including native: ${tokens.length}.`)
 
 	const outputPath = resolve(
 		import.meta.dirname,
-		`../src/data/tokens-index-${chainId}.json`,
+		'../src/data/tokens-index.json',
 	)
 
 	const lines = tokens.map((t) => `\t${JSON.stringify(t)}`)
 	writeFileSync(outputPath, `[\n${lines.join(',\n')}\n]\n`)
-	console.log(`Written to ${outputPath}\n`)
-}
-
-async function main() {
-	const arg = process.argv[2]
-
-	if (arg === 'all') {
-		await Promise.all(SUPPORTED_CHAINS.map(generateForChain))
-		return
-	}
-
-	const chainId = Number(arg) as SupportedChain
-	if (!chainId || !SUPPORTED_CHAINS.includes(chainId)) {
-		console.error('Usage: generate-tokens-index.ts <chainId | all>')
-		console.error(`Supported chains: ${SUPPORTED_CHAINS.join(', ')}`)
-		process.exit(1)
-	}
-
-	await generateForChain(chainId)
+	console.log(`Written to ${outputPath}`)
 }
 
 main().catch((error) => {

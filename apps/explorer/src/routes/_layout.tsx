@@ -37,14 +37,18 @@ export function Layout(props: Layout.Props) {
 	const { children, blockNumber } = props
 	const matchRoute = useMatchRoute()
 	return (
-		<main className="flex min-h-dvh flex-col">
-			<Header initialBlockNumber={blockNumber} />
+		<div className="flex min-h-dvh flex-col">
+			<div className="relative z-2">
+				<Header initialBlockNumber={blockNumber} />
+			</div>
 			<main className="flex flex-1 size-full flex-col items-center relative z-1">
 				{children}
 			</main>
-			<Footer />
+			<div className="w-full mt-40 relative z-1">
+				<Footer />
+			</div>
 			<Sphere animate={Boolean(matchRoute({ to: '/' }))} />
-		</main>
+		</div>
 	)
 }
 

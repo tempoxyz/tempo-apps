@@ -1,13 +1,11 @@
 import {
 	Link,
-	useLocation,
 	useNavigate,
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
-import * as Tip20 from '#lib/tip20'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
 import { ExploreInput } from './ExploreInput'
@@ -15,7 +13,7 @@ import { ExploreInput } from './ExploreInput'
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
 	return (
-		<header className="@container">
+		<header className="@container relative z-1">
 			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1">
 				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
 					<Link to="/" className="flex items-center press-down py-[4px]">
@@ -45,10 +43,11 @@ export namespace Header {
 		const isNavigating = useRouterState({
 			select: (state) => state.status === 'pending',
 		})
+		const pathname = useRouterState({
+			select: (state) => state.location.pathname,
+		})
 
 		React.useEffect(() => setIsMounted(true), [])
-
-		const { pathname } = useLocation()
 
 		React.useEffect(() => {
 			return router.subscribe('onResolved', ({ hrefChanged }) => {
@@ -58,32 +57,24 @@ export namespace Header {
 
 		return (
 			pathname !== '/' && (
-				<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex">
+				<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex z-1 h-0 items-center">
 					<ExploreInput
 						value={inputValue}
 						onChange={setInputValue}
 						disabled={isMounted && isNavigating}
 						onActivate={({ value, type }) => {
 							if (type === 'hash') {
-								navigate({
-									to: '/tx/$hash',
-									params: { hash: value },
-								})
+								navigate({ to: '/tx/$hash', params: { hash: value } })
+								return
+							}
+							if (type === 'token') {
+								navigate({ to: '/token/$address', params: { address: value } })
 								return
 							}
 							if (type === 'address') {
 								navigate({
-									to: Tip20.isTip20Address(value)
-										? '/token/$address'
-										: '/address/$address',
+									to: '/address/$address',
 									params: { address: value },
-								})
-								return
-							}
-							if (type === 'block') {
-								navigate({
-									to: '/block/$id',
-									params: { id: value },
 								})
 								return
 							}

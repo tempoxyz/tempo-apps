@@ -224,3 +224,16 @@ input[type="number"] {
 		transform: translateY(0.5px);
 	}
 }
+
+@keyframes progressline {
+	0% {
+		width: 0%;
+	}
+	50% {
+		width: 70%;
+	}
+	100% {
+		width: 100%;
+		opacity: 0;
+	}
+}
