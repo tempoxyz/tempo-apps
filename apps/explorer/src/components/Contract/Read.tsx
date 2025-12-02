@@ -1,8 +1,9 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
 import { Address } from 'ox'
 import * as React from 'react'
 import type { Abi, AbiFunction } from 'viem'
-import { readContract } from 'wagmi/actions'
+import { toFunctionSelector } from 'viem'
+import { readContract as wagmiReadContract } from 'wagmi/actions'
 import { ellipsis } from '#chars.ts'
 import { cx } from '#cva.config.ts'
 import {
@@ -18,16 +19,30 @@ import {
 } from '#lib/contracts.ts'
 import { useCopy } from '#lib/hooks.ts'
 import { config } from '#wagmi.config.ts'
+import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 import DownloadIcon from '~icons/lucide/download'
 import ExternalLinkIcon from '~icons/lucide/external-link'
+import LinkIcon from '~icons/lucide/link'
 
 // ============================================================================
 // Types
 // ============================================================================
 
 type ReadFunction = AbiFunction & { stateMutability: 'view' | 'pure' }
+
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Get method name with selector, e.g., "approve (0x095ea7b3)"
+ */
+function getMethodWithSelector(fn: AbiFunction): string {
+	const selector = toFunctionSelector(fn)
+	return `${fn.name} (${selector})`
+}
 
 // ============================================================================
 // Main Component
@@ -39,9 +54,30 @@ export function ContractReader(props: {
 	docsUrl?: string
 }) {
 	const { address, docsUrl } = props
-	const { copy: copyAbi, notifying: copiedAbi } = useCopy()
+	const { copy: copyAbi, notifying: copiedAbi } = useCopy({ timeout: 2000 })
+	const location = useLocation()
 
 	const abi = props.abi ?? getContractAbi(address)
+
+	// Scroll to function when hash is present
+	React.useEffect(() => {
+		const hash = location.hash
+		if (hash && typeof window !== 'undefined') {
+			// Small delay to ensure DOM is rendered
+			const timer = setTimeout(() => {
+				const element = document.getElementById(hash)
+				if (element) {
+					element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+					// Add a brief highlight effect
+					element.classList.add('ring-1', 'ring-accent', 'ring-offset-1')
+					setTimeout(() => {
+						element.classList.remove('ring-1', 'ring-accent', 'ring-offset-1')
+					}, 2_000)
+				}
+			}, 100)
+			return () => clearTimeout(timer)
+		}
+	}, [location.hash])
 
 	const handleCopyAbi = React.useCallback(() => {
 		if (!abi) return
@@ -182,7 +218,7 @@ function AbiViewer(props: {
 						<CopyIcon className="h-[14px] w-[14px]" />
 					</button>
 				</div>
-				<pre className="max-h-[280px] overflow-auto rounded-[8px] text-[12px] leading-[18px] text-primary/90">
+				<pre className="max-h-[280px] overflow-auto rounded-[8px] text-[12px] leading-[18px] text-primary/90 font-mono">
 					{JSON.stringify(abi, null, 2)}
 				</pre>
 			</div>
@@ -203,13 +239,15 @@ function StaticReadFunction(props: {
 	const [result, setResult] = React.useState<unknown>(undefined)
 	const [isLoading, setIsLoading] = React.useState(true)
 	const [error, setError] = React.useState<string | null>(null)
+	const { copy, notifying } = useCopy({ timeout: 2000 })
+	const { copy: copyLink, notifying: linkCopied } = useCopy({ timeout: 2_000 })
 
 	React.useEffect(() => {
 		let cancelled = false
 		setIsLoading(true)
 		setError(null)
 
-		readContract(config, {
+		wagmiReadContract(config, {
 			address,
 			abi,
 			functionName: fn.name,
@@ -247,22 +285,70 @@ function StaticReadFunction(props: {
 		typeof result === 'string' &&
 		Address.validate(result as string)
 
+	const handleCopyMethod = () => {
+		void copy(getMethodWithSelector(fn))
+	}
+
+	const handleCopyPermalink = () => {
+		const url = new URL(window.location.href)
+		url.hash = fn.name
+		void copyLink(url.toString())
+	}
+
 	return (
-		<div className="flex flex-col gap-[4px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px]">
-			<span className="text-[12px] text-tertiary font-mono">
-				{getFunctionSignature(fn)}
-			</span>
+		<div
+			id={fn.name}
+			className="flex flex-col gap-[4px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px] transition-all duration-300"
+		>
+			<div className="flex items-center gap-[8px]">
+				<span className="text-[12px] text-secondary font-mono">
+					{getFunctionSignature(fn)}
+				</span>
+				<button
+					type="button"
+					onClick={handleCopyMethod}
+					title={notifying ? 'Copied!' : 'Copy method name'}
+					className={cx(
+						'transition-colors press-down',
+						notifying ? 'text-positive' : 'text-tertiary hover:text-primary',
+					)}
+				>
+					{notifying ? (
+						<CheckIcon className="w-[12px] h-[12px]" />
+					) : (
+						<CopyIcon className="w-[12px] h-[12px]" />
+					)}
+				</button>
+				<button
+					type="button"
+					onClick={handleCopyPermalink}
+					title={linkCopied ? 'Copied!' : 'Copy permalink'}
+					className={cx(
+						'transition-colors press-down',
+						linkCopied ? 'text-positive' : 'text-tertiary hover:text-primary',
+					)}
+				>
+					{linkCopied ? (
+						<CheckIcon className="w-[12px] h-[12px]" />
+					) : (
+						<LinkIcon className="w-[12px] h-[12px]" />
+					)}
+				</button>
+			</div>
 			{isValidAddress ? (
 				<Link
 					to="/address/$address"
 					params={{ address: result as Address.Address }}
-					className="text-[13px] text-accent hover:text-accent/80 transition-colors"
+					className="text-[13px] text-accent hover:text-accent/80 transition-colors font-mono"
 				>
 					{displayValue}
 				</Link>
 			) : (
 				<span
-					className={cx('text-[13px]', error ? 'text-red-400' : 'text-primary')}
+					className={cx(
+						'text-[13px] font-mono',
+						error ? 'text-red-400' : 'text-primary',
+					)}
 				>
 					{displayValue}
 				</span>
@@ -286,6 +372,8 @@ function DynamicReadFunction(props: {
 	const [result, setResult] = React.useState<unknown>(undefined)
 	const [isLoading, setIsLoading] = React.useState(false)
 	const [error, setError] = React.useState<string | null>(null)
+	const { copy, notifying } = useCopy({ timeout: 2000 })
+	const { copy: copyLink, notifying: linkCopied } = useCopy({ timeout: 2000 })
 
 	const handleInputChange = (name: string, value: string) => {
 		setInputs((prev) => ({ ...prev, [name]: value }))
@@ -302,7 +390,7 @@ function DynamicReadFunction(props: {
 				return parseInputValue(value, input.type)
 			})
 
-			const data = await readContract(config, {
+			const data = await wagmiReadContract(config, {
 				address,
 				abi,
 				functionName: fn.name,
@@ -324,26 +412,87 @@ function DynamicReadFunction(props: {
 
 	const outputType = fn.outputs[0]?.type ?? 'unknown'
 
+	const handleCopyMethod = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		void copy(getMethodWithSelector(fn))
+	}
+
+	const handleCopyPermalink = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		const url = new URL(window.location.href)
+		url.hash = fn.name
+		void copyLink(url.toString())
+	}
+
 	return (
-		<div className="rounded-[8px] border border-dashed border-card-border overflow-hidden">
-			<button
-				type="button"
-				onClick={() => setIsExpanded(!isExpanded)}
-				className="w-full flex items-center justify-between px-[12px] py-[10px] hover:bg-card-header/50 transition-colors"
-			>
-				<span className="text-[12px] text-tertiary font-mono">
-					{getFunctionSignature(fn)}
-				</span>
-				<ChevronDownIcon
-					className={cx(
-						'w-[14px] h-[14px] text-tertiary transition-transform',
-						isExpanded && 'rotate-180',
-					)}
-				/>
-			</button>
+		<div
+			id={fn.name}
+			className="rounded-[8px] border border-dashed border-card-border overflow-hidden transition-all duration-300"
+		>
+			<div className="w-full flex items-center justify-between px-[12px] py-[10px] hover:bg-card-header/50 transition-colors">
+				<button
+					type="button"
+					onClick={() => setIsExpanded(!isExpanded)}
+					className="flex-1 text-left"
+				>
+					<span className="text-[12px] text-secondary font-mono">
+						{getFunctionSignature(fn)}
+					</span>
+				</button>
+				<div className="flex items-center gap-[8px]">
+					<button
+						type="button"
+						onClick={handleCopyMethod}
+						title={notifying ? 'Copied!' : 'Copy method name'}
+						className={cx(
+							'transition-colors press-down',
+							notifying ? 'text-positive' : 'text-tertiary hover:text-primary',
+						)}
+					>
+						{notifying ? (
+							<CheckIcon className="w-[12px] h-[12px]" />
+						) : (
+							<CopyIcon className="w-[12px] h-[12px]" />
+						)}
+					</button>
+					<button
+						type="button"
+						onClick={handleCopyPermalink}
+						title={linkCopied ? 'Copied!' : 'Copy permalink'}
+						className={cx(
+							'transition-colors press-down',
+							linkCopied ? 'text-positive' : 'text-tertiary hover:text-primary',
+						)}
+					>
+						{linkCopied ? (
+							<CheckIcon className="w-[12px] h-[12px]" />
+						) : (
+							<LinkIcon className="w-[12px] h-[12px]" />
+						)}
+					</button>
+					<button
+						type="button"
+						onClick={() => setIsExpanded(!isExpanded)}
+						className="text-secondary"
+					>
+						<ChevronDownIcon
+							className={cx(
+								'w-[14px] h-[14px] transition-transform',
+								isExpanded && 'rotate-180',
+							)}
+						/>
+					</button>
+				</div>
+			</div>
 
 			{isExpanded && (
-				<div className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]">
+				<form
+					onSubmit={(e) => {
+						e.preventDefault()
+						if (allInputsFilled && !isLoading) handleQuery()
+					}}
+					className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]"
+				>
 					{fn.inputs.map((input, index) => (
 						<FunctionInput
 							key={input.name ?? index}
@@ -356,27 +505,26 @@ function DynamicReadFunction(props: {
 					))}
 
 					<button
-						type="button"
-						onClick={handleQuery}
+						type="submit"
 						disabled={!allInputsFilled || isLoading}
 						className={cx(
-							'text-[12px] rounded-[6px] px-[12px] py-[8px] transition-colors',
+							'text-[12px] rounded-[6px] px-[12px] py-[8px] transition-colors font-medium',
 							allInputsFilled && !isLoading
 								? 'bg-accent text-white hover:bg-accent/90'
-								: 'bg-card-header text-tertiary cursor-not-allowed',
+								: 'bg-card-header text-secondary cursor-not-allowed',
 						)}
 					>
 						{isLoading ? 'Querying...' : 'Query'}
 					</button>
 
 					{(result !== undefined || error) && (
-						<div className="mt-[4px] p-[10px] rounded-[6px] bg-card-header">
-							<span className="text-[11px] text-tertiary uppercase tracking-wide">
+						<div className="mt-1 p-2.5 rounded-md bg-card-header flex flex-col gap-2">
+							<span className="text-[11px] text-secondary uppercase tracking-wide font-medium">
 								Result
 							</span>
 							<p
 								className={cx(
-									'text-[13px] mt-[4px] break-all',
+									'text-[13px] mt-[4px] break-all font-mono',
 									error ? 'text-red-400' : 'text-primary',
 								)}
 							>
@@ -384,7 +532,7 @@ function DynamicReadFunction(props: {
 							</p>
 						</div>
 					)}
-				</div>
+				</form>
 			)}
 		</div>
 	)
@@ -415,9 +563,9 @@ function FunctionInput(props: {
 					onChange={(e) => onChange(e.target.checked ? 'true' : 'false')}
 					className="w-[16px] h-[16px] rounded border-base-border"
 				/>
-				<label htmlFor={inputId} className="text-[12px] text-tertiary">
+				<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
 					{input.name || 'value'}{' '}
-					<span className="text-tertiary/60">({input.type})</span>
+					<span className="text-secondary">({input.type})</span>
 				</label>
 			</div>
 		)
@@ -427,9 +575,9 @@ function FunctionInput(props: {
 	if (inputType === 'textarea' || isArrayType(input.type)) {
 		return (
 			<div className="flex flex-col gap-[4px]">
-				<label htmlFor={inputId} className="text-[11px] text-tertiary">
+				<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
 					{input.name || 'value'}{' '}
-					<span className="text-tertiary/60">({input.type})</span>
+					<span className="text-secondary">({input.type})</span>
 				</label>
 				<textarea
 					id={inputId}
@@ -437,7 +585,7 @@ function FunctionInput(props: {
 					onChange={(e) => onChange(e.target.value)}
 					placeholder={placeholder}
 					rows={3}
-					className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-tertiary focus-visible:outline-1 focus-visible:outline-accent resize-none font-mono"
+					className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent resize-none font-mono"
 				/>
 			</div>
 		)
@@ -446,9 +594,9 @@ function FunctionInput(props: {
 	// Standard text input
 	return (
 		<div className="flex flex-col gap-[4px]">
-			<label htmlFor={inputId} className="text-[11px] text-tertiary">
+			<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
 				{input.name || 'value'}{' '}
-				<span className="text-tertiary/60">({input.type})</span>
+				<span className="text-secondary">({input.type})</span>
 			</label>
 			<input
 				id={inputId}
@@ -456,7 +604,7 @@ function FunctionInput(props: {
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
 				placeholder={placeholder}
-				className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-tertiary focus-visible:outline-1 focus-visible:outline-accent font-mono"
+				className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent font-mono"
 			/>
 		</div>
 	)
@@ -475,16 +623,18 @@ function ContractFeatureCard(props: {
 	const { title, description, actions, children } = props
 	return (
 		<section className="rounded-[10px] bg-card-header overflow-hidden">
-			<div className="flex flex-col gap-[6px] px-[18px] py-[12px] sm:flex-row sm:items-center sm:justify-between">
+			<div className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
 				<div>
-					<p className="text-[13px] uppercase text-tertiary">{title}</p>
+					<p className="text-[13px] uppercase text-primary font-medium">
+						{title}
+					</p>
 					{description && (
-						<p className="text-[12px] text-tertiary/80">{description}</p>
+						<p className="text-[12px] text-secondary">{description}</p>
 					)}
 				</div>
 				{actions}
 			</div>
-			<div className="border-t border-card-border bg-card px-[18px] py-[14px]">
+			<div className="border-t border-card-border bg-card px-4 py-3.5">
 				{children}
 			</div>
 		</section>

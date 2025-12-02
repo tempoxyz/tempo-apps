@@ -5,6 +5,7 @@ import {
 	notFound,
 	rootRouteId,
 	stripSearchParams,
+	useLocation,
 	useNavigate,
 	useRouter,
 	useRouterState,
@@ -21,14 +22,14 @@ import {
 } from 'wagmi/query'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
-import { ContractReader } from '#components/ContractReader'
-import { DataGrid } from '#components/DataGrid'
-import { EventDescription } from '#components/EventDescription'
+import { ContractReader } from '#components/Contract/Read.tsx'
+import { DataGrid } from '#components/DataGrid.tsx'
+import { EventDescription } from '#components/EventDescription.tsx'
 import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
 import { cx } from '#cva.config.ts'
-import { getContractInfo, isKnownContract } from '#lib/contracts'
+import { getContractInfo, isKnownContract } from '#lib/contracts.ts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import {
@@ -327,12 +328,46 @@ function useAccountTotalValue(address: Address.Address) {
 function RouteComponent() {
 	const navigate = useNavigate()
 	const route = useRouter()
+	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, limit } = Route.useSearch()
 
 	Address.assert(address)
 
+	const hasContract = isKnownContract(address)
+	const hash = location.hash
+
+	// Track if we've already handled the hash redirect
+	const hasRedirectedRef = React.useRef(false)
+
+	// When URL has a hash fragment (e.g., #functionName), switch to contract tab
 	React.useEffect(() => {
+		// Only redirect once, and only if we're not already on contract tab
+		if (
+			hash &&
+			hasContract &&
+			tab !== 'contract' &&
+			!hasRedirectedRef.current
+		) {
+			hasRedirectedRef.current = true
+			navigate({
+				to: '.',
+				search: { page: 1, tab: 'contract', limit },
+				hash,
+				replace: true,
+				resetScroll: false,
+			})
+		}
+	}, [hash, hasContract, tab, navigate, limit])
+
+	// Reset redirect flag when hash changes
+	React.useEffect(() => {
+		hasRedirectedRef.current = false
+	}, [])
+
+	React.useEffect(() => {
+		// Only preload for history tab (transaction pagination)
+		if (tab !== 'history') return
 		// preload pages around the active page (3 before and 3 after)
 		for (let i = -3; i <= 3; i++) {
 			if (i === 0) continue // skip current page
@@ -341,8 +376,6 @@ function RouteComponent() {
 			route.preloadRoute({ to: '.', search: { page: preloadPage, tab, limit } })
 		}
 	}, [route, page, tab, limit])
-
-	const hasContract = isKnownContract(address)
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {

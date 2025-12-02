@@ -27,7 +27,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 		{
 			name: 'linkingUSD',
 			description: 'Non-transferable DEX accounting unit',
-			abi: Abis.tip20 as Abi,
+			abi: Abis.tip20,
 			category: 'token',
 			docsUrl:
 				'https://docs.tempo.xyz/documentation/protocol/exchange/linkingUSD',
@@ -38,7 +38,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 		{
 			name: 'AlphaUSD',
 			description: 'TIP-20 stablecoin (AUSD)',
-			abi: Abis.tip20 as Abi,
+			abi: Abis.tip20,
 			category: 'token',
 		},
 	] as const,
@@ -47,7 +47,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 		{
 			name: 'BetaUSD',
 			description: 'TIP-20 stablecoin (BUSD)',
-			abi: Abis.tip20 as Abi,
+			abi: Abis.tip20,
 			category: 'token',
 		},
 	] as const,
@@ -56,7 +56,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 		{
 			name: 'ThetaUSD',
 			description: 'TIP-20 stablecoin (TUSD)',
-			abi: Abis.tip20 as Abi,
+			abi: Abis.tip20,
 			category: 'token',
 		},
 	] as const,
@@ -67,7 +67,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 		{
 			name: 'TIP-20 Factory',
 			description: 'Create new TIP-20 tokens',
-			abi: Abis.tip20Factory as Abi,
+			abi: Abis.tip20Factory,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/tip20/overview',
 		},
@@ -77,7 +77,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 		{
 			name: 'Fee Manager',
 			description: 'Handle fee payments and conversions',
-			abi: Abis.feeManager as Abi,
+			abi: Abis.feeManager,
 			category: 'system',
 			docsUrl:
 				'https://docs.tempo.xyz/documentation/protocol/fees/spec-fee-amm#2-feemanager-contract',
@@ -88,7 +88,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 		{
 			name: 'Stablecoin Exchange',
 			description: 'Enshrined DEX for stablecoin swaps',
-			abi: Abis.stablecoinExchange as Abi,
+			abi: Abis.stablecoinExchange,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/exchange',
 		},
@@ -98,7 +98,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 		{
 			name: 'TIP-403 Registry',
 			description: 'Transfer policy registry',
-			abi: Abis.tip403Registry as Abi,
+			abi: Abis.tip403Registry,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/tip403/spec',
 		},
@@ -110,7 +110,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 		{
 			name: 'IthacaAccount',
 			description: 'Reference account implementation',
-			abi: Abis.tipAccountRegistrar as Abi,
+			abi: Abis.tipAccountRegistrar,
 			category: 'account',
 		},
 	] as const,
@@ -305,7 +305,7 @@ export function formatOutputValue(value: unknown, _type: string): string {
 /**
  * Generate a function signature string like Etherscan
  */
-export function getFunctionSignature(fn: AbiFunction): string {
+export function getFunctionSignature(fn: AbiFunction) {
 	const inputs = fn.inputs.map((i) => i.type).join(', ')
 	return `${fn.name}(${inputs})`
 }
