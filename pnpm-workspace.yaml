@@ -7,6 +7,7 @@ catalog:
   '@cloudflare/vite-plugin': ^1.15.3
   '@cloudflare/vitest-pool-workers': ^0.10.11
   '@cloudflare/workers-types': ^4.20251202.0
+  '@hono/zod-validator': ^0.7.5
   '@iconify/json': ^2.2.413
   '@svgr/core': ^8.1.0
   '@svgr/plugin-jsx': ^8.1.0

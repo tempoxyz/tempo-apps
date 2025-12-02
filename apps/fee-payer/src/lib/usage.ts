@@ -1,22 +1,14 @@
-import { env } from 'cloudflare:workers'
-import * as IDX from 'idxs'
-import { sql } from 'kysely'
 import type { Address } from 'ox'
-import { createPublicClient, formatUnits, http } from 'viem'
-import { Actions, Addresses } from 'viem/tempo'
-import { tempoChain } from './chain.js'
+import { runQuery, toBigInt } from './index-supply'
 
-const IS = IDX.IndexSupply.create({
-	apiKey: env.INDEXSUPPLY_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
-
+const FEE_MANAGER_CONTRACT = '0xfeec000000000000000000000000000000000000'
 const TRANSFER_SIGNATURE =
-	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
+	'Transfer(address indexed from, address indexed to, uint256 amount)'
 
-const epochToTimestamp = (epoch: number): string =>
-	new Date(epoch * 1000).toISOString()
+function epochToTimestamp(epoch: number): string {
+	const date = new Date(epoch * 1000)
+	return date.toISOString().replace('T', ' ').substring(0, 19)
+}
 
 /**
  * Fetch fee payer usage statistics from IndexSupply
@@ -30,49 +22,44 @@ export async function getUsage(
 	blockTimestampFrom?: number,
 	blockTimestampTo?: number,
 ) {
-	const query = QB.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.fn.sum('tokens').as('total_spent'),
-			sql<number>`max(transfer.block_timestamp)`.as('ending_at'),
-			sql<number>`min(transfer.block_timestamp)`.as('starting_at'),
-			eb.fn.count('tx_hash').as('n_transactions'),
-		])
-		.where('chain', '=', tempoChain.id)
-		.where('from', '=', feePayerAddress)
-		.where('to', '=', Addresses.feeManager)
-		.$if(blockTimestampFrom !== undefined, (eb) =>
-			eb.where(
-				sql`transfer.block_timestamp::timestamp`,
-				'>=',
-				`'${epochToTimestamp(blockTimestampFrom as number)}'`,
-			),
+	const whereConditions = [
+		`"from" = '${feePayerAddress}'`,
+		`"to" = '${FEE_MANAGER_CONTRACT}'`,
+	]
+
+	if (blockTimestampFrom !== undefined) {
+		whereConditions.push(
+			`block_timestamp::timestamp >= '${epochToTimestamp(blockTimestampFrom)}'`,
 		)
-		.$if(blockTimestampTo !== undefined, (eb) =>
-			eb.where(
-				sql`transfer.block_timestamp::timestamp`,
-				'<=',
-				`'${epochToTimestamp(blockTimestampTo as number)}'`,
-			),
+	}
+
+	if (blockTimestampTo !== undefined) {
+		whereConditions.push(
+			`block_timestamp::timestamp <= '${epochToTimestamp(blockTimestampTo)}'`,
 		)
+	}
 
-	const result = await query.executeTakeFirst()
+	const whereClause = whereConditions.join('\n\t\t\t\tand ')
 
-	const feesPaid = result?.total_spent ? BigInt(result.total_spent) : 0n
-	const feeTokenMetadata = await Actions.token.getMetadata(
-		createPublicClient({
-			chain: tempoChain,
-			transport: http(env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0]),
-		}),
-		{ token: tempoChain.feeToken },
-	)
+	const query = `
+		select
+			sum(amount) as total_spent,
+			max(block_timestamp) as ending_at,
+			min(block_timestamp) as starting_at,
+			count(tx_hash) as n_transactions
+		from
+			transfer
+		where
+			${whereClause}
+		`
 
+	const result = await runQuery(query, { signatures: [TRANSFER_SIGNATURE] })
+	const feesPaid = toBigInt(result.rows[0]?.[0])
 	return {
 		feePayerAddress,
-		feesPaid: formatUnits(feesPaid, feeTokenMetadata.decimals),
-		feeCurrency: feeTokenMetadata.currency,
-		numTransactions: result?.n_transactions ? Number(result.n_transactions) : 0,
-		endingAt: result?.ending_at ?? null,
-		startingAt: result?.starting_at ?? null,
+		feesPaid: feesPaid.toString(),
+		numTransactions: result.rows[0]?.[3],
+		endingAt: result.rows[0]?.[1],
+		startingAt: result.rows[0]?.[2],
 	}
 }
