@@ -66,7 +66,8 @@ export function ContractReader(props: {
 		if (hash && typeof window !== 'undefined') {
 			// Small delay to ensure DOM is rendered
 			const timer = setTimeout(() => {
-				const element = document.getElementById(hash)
+				// Strip the leading '#' since getElementById expects just the ID
+				const element = document.getElementById(hash.slice(1))
 				if (element) {
 					element.scrollIntoView({ behavior: 'smooth', block: 'center' })
 					// Add a brief highlight effect

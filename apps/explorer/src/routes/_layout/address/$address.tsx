@@ -345,19 +345,24 @@ function RouteComponent() {
 	const hasContract = isKnownContract(address)
 	const hash = location.hash
 
-	// Track if we've already handled the hash redirect
-	const hasRedirectedRef = React.useRef(false)
+	// Track which hash we've already redirected for (prevents re-redirect when
+	// user manually switches tabs, but allows redirect for new hash values)
+	const redirectedForHashRef = React.useRef<string | null>(null)
 
 	// When URL has a hash fragment (e.g., #functionName), switch to contract tab
 	React.useEffect(() => {
-		// Only redirect once, and only if we're not already on contract tab
+		// Only redirect if:
+		// 1. We have a hash
+		// 2. Address has a known contract
+		// 3. Not already on contract tab
+		// 4. Haven't already redirected for this specific hash
 		if (
 			hash &&
 			hasContract &&
 			tab !== 'contract' &&
-			!hasRedirectedRef.current
+			redirectedForHashRef.current !== hash
 		) {
-			hasRedirectedRef.current = true
+			redirectedForHashRef.current = hash
 			navigate({
 				to: '.',
 				search: { page: 1, tab: 'contract', limit },
@@ -367,11 +372,6 @@ function RouteComponent() {
 			})
 		}
 	}, [hash, hasContract, tab, navigate, limit])
-
-	// Reset redirect flag when hash changes
-	React.useEffect(() => {
-		hasRedirectedRef.current = false
-	}, [])
 
 	React.useEffect(() => {
 		// Only preload for history tab (transaction pagination)
