@@ -5,7 +5,6 @@ import * as React from 'react'
 import type { Abi, AbiFunction } from 'viem'
 import { toFunctionSelector } from 'viem'
 import { useReadContract } from 'wagmi'
-import { readContract as wagmiReadContract } from 'wagmi/actions'
 import { ellipsis } from '#chars.ts'
 import { cx } from '#cva.config.ts'
 import {
@@ -19,7 +18,6 @@ import {
 	parseInputValue,
 } from '#lib/contracts.ts'
 import { useCopy } from '#lib/hooks.ts'
-import { config } from '#wagmi.config.ts'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
@@ -238,40 +236,21 @@ function StaticReadFunction(props: {
 	fn: ReadFunction
 }) {
 	const { address, abi, fn } = props
-	const [result, setResult] = React.useState<unknown>(undefined)
-	const [isLoading, setIsLoading] = React.useState(true)
-	const [error, setError] = React.useState<string | null>(null)
-	const { copy, notifying } = useCopy({ timeout: 2000 })
+	const { copy, notifying } = useCopy({ timeout: 2_000 })
 	const { copy: copyLink, notifying: linkCopied } = useCopy({ timeout: 2_000 })
 
-	React.useEffect(() => {
-		let cancelled = false
-		setIsLoading(true)
-		setError(null)
+	const {
+		data: result,
+		error: queryError,
+		isLoading,
+	} = useReadContract({
+		address,
+		abi,
+		functionName: fn.name,
+		args: [],
+	})
 
-		wagmiReadContract(config, {
-			address,
-			abi,
-			functionName: fn.name,
-			args: [],
-		})
-			.then((data) => {
-				if (!cancelled) {
-					setResult(data)
-					setIsLoading(false)
-				}
-			})
-			.catch((err) => {
-				if (!cancelled) {
-					setError(err instanceof Error ? err.message : 'Failed to read')
-					setIsLoading(false)
-				}
-			})
-
-		return () => {
-			cancelled = true
-		}
-	}, [address, abi, fn.name])
+	const error = queryError ? queryError.message : null
 
 	const outputType = fn.outputs[0]?.type ?? 'unknown'
 	const displayValue = error
