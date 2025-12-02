@@ -117,12 +117,37 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>([
 ])
 
 /**
+ * Detect TIP-20 addresses
+ */
+const TIP20_PREFIX = '0x20c000000'
+export type Tip20Address = `${typeof TIP20_PREFIX}${string}`
+export function isTip20Address(address: string): address is Tip20Address {
+	return address.toLowerCase().startsWith(TIP20_PREFIX)
+}
+
+/**
  * Get contract info by address (case-insensitive)
+ * Also handles TIP-20 tokens that aren't explicitly registered
  */
 export function getContractInfo(
 	address: Address.Address,
 ): ContractInfo | undefined {
-	return contractRegistry.get(address.toLowerCase() as Address.Address)
+	const registered = contractRegistry.get(
+		address.toLowerCase() as Address.Address,
+	)
+	if (registered) return registered
+
+	// Dynamic TIP-20 token detection
+	if (isTip20Address(address)) {
+		return {
+			name: 'TIP-20 Token',
+			description: 'TIP-20 compatible token',
+			abi: Abis.tip20,
+			category: 'token',
+		}
+	}
+
+	return undefined
 }
 
 /**
@@ -133,10 +158,13 @@ export function getContractAbi(address: Address.Address): Abi | undefined {
 }
 
 /**
- * Check if an address is a known contract
+ * Check if an address is a known contract (includes TIP-20 tokens)
  */
 export function isKnownContract(address: Address.Address): boolean {
-	return contractRegistry.has(address.toLowerCase() as Address.Address)
+	return (
+		contractRegistry.has(address.toLowerCase() as Address.Address) ||
+		isTip20Address(address)
+	)
 }
 
 // ============================================================================
