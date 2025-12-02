@@ -1,17 +1,13 @@
 import {
 	createFileRoute,
-	getRouteApi,
 	Link,
 	useNavigate,
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import type { Hex } from 'ox'
 import { useEffect, useState } from 'react'
 import { ExploreInput } from '#components/ExploreInput'
 import { Intro } from '#components/Intro'
-
-const layoutRoute = getRouteApi('/_layout')
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
@@ -25,7 +21,6 @@ function Component() {
 	const isNavigating = useRouterState({
 		select: (state) => state.status === 'pending',
 	})
-	const { recentTransactions } = layoutRoute.useLoaderData()
 
 	useEffect(() => setIsMounted(true), [])
 
@@ -71,14 +66,13 @@ function Component() {
 						}}
 					/>
 				</div>
-				<SpotlightLinks recentTransactions={recentTransactions} />
+				<SpotlightLinks />
 			</div>
 		</div>
 	)
 }
 
-function SpotlightLinks(props: { recentTransactions?: Hex.Hex[] }) {
-	const { recentTransactions = [] } = props
+function SpotlightLinks() {
 	return (
 		<section className="text-center">
 			<span className="text-sm font-medium text-base-content-tertiary">
@@ -96,16 +90,14 @@ function SpotlightLinks(props: { recentTransactions?: Hex.Hex[] }) {
 				<span>·</span>
 				<SpotlightLink to="/tokens">Tokens</SpotlightLink>
 				<span>·</span>
-				{recentTransactions[0] ? (
-					<SpotlightLink
-						to="/tx/$hash"
-						params={{ hash: recentTransactions[0] }}
-					>
-						Receipt
-					</SpotlightLink>
-				) : (
-					<span className="opacity-50">Receipt</span>
-				)}
+				<SpotlightLink
+					to="/tx/$hash"
+					params={{
+						hash: '0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd',
+					}}
+				>
+					Receipt
+				</SpotlightLink>
 			</div>
 		</section>
 	)
