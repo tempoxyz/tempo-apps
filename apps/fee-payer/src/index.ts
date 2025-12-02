@@ -1,18 +1,15 @@
 import { env } from 'cloudflare:workers'
+import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import type { Address } from 'ox'
 import { tempo } from 'tempo.ts/chains'
 import { Handler } from 'tempo.ts/server'
 import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { runQuery, toBigInt } from './lib/index-supply'
+import * as z from 'zod'
+import { getUsage } from './lib/usage.js'
 
 const app = new Hono()
-
-const FEE_MANAGER_CONTRACT = '0xfeec000000000000000000000000000000000000'
-const TRANSFER_SIGNATURE =
-	'Transfer(address indexed from, address indexed to, uint256 amount)'
 
 app.use(
 	'*',
@@ -28,37 +25,29 @@ app.use(
 	}),
 )
 
-async function getUsage(feePayerAddress: Address.Address) {
-	const result = await runQuery(
-		`
-			select
-				sum(amount) as total_spent,
-				max(block_timestamp) as ending_at,
-				min(block_timestamp) as starting_at,
-				count(tx_hash) as n_transactions
-			from
-				transfer
-			where
-				"from" = '${feePayerAddress}'
-				and "to" = '${FEE_MANAGER_CONTRACT}'
-			`,
-		{ signatures: [TRANSFER_SIGNATURE] },
-	)
-	const feesPaid = toBigInt(result.rows[0]?.[0])
-	return {
-		feePayerAddress,
-		feesPaid: feesPaid.toString(),
-		numTransactions: result.rows[0]?.[3],
-		endingAt: result.rows[0]?.[1],
-		startingAt: result.rows[0]?.[2],
-	}
-}
+app.get(
+	'/usage',
+	zValidator(
+		'query',
+		z.object({
+			blockTimestampFrom: z.optional(z.coerce.number()),
+			blockTimestampTo: z.optional(z.coerce.number()),
+		}),
+	),
+	async (c) => {
+		const { blockTimestampFrom, blockTimestampTo } = c.req.valid('query')
+		const account = privateKeyToAccount(
+			env.SPONSOR_PRIVATE_KEY as `0x${string}`,
+		)
+		const data = await getUsage(
+			account.address,
+			blockTimestampFrom,
+			blockTimestampTo,
+		)
 
-app.get('/usage', async (c) => {
-	const account = privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`)
-	const data = await getUsage(account.address)
-	return c.json(data)
-})
+		return c.json(data)
+	},
+)
 
 app.all('*', async (c) => {
 	const handler = Handler.feePayer({
