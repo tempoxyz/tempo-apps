@@ -50,13 +50,7 @@ export namespace RawTransaction {
 				</div>
 				<div className="flex flex-col">
 					{entries.map(([key, value]) => (
-						<Row
-							key={key}
-							label={key}
-							value={value}
-							pad={maxKeyLength}
-							indent={1}
-						/>
+						<Row key={key} label={key} value={value} pad={maxKeyLength} />
 					))}
 				</div>
 			</div>
@@ -71,7 +65,7 @@ export namespace RawTransaction {
 	}
 
 	export function Row(props: Row.Props) {
-		const { label, value, pad = 21, indent = 0 } = props
+		const { label, value, pad = 21 } = props
 		const isArray = Array.isArray(value)
 		const isFilledArray = isArray && value.length > 0
 		const isObject =
@@ -79,15 +73,10 @@ export namespace RawTransaction {
 
 		if (isFilledArray)
 			return (
-				<div className="flex flex-col" style={{ paddingLeft: indent * 8 }}>
+				<div className="flex flex-col pl-[8px]">
 					<div className="text-tertiary">{label}</div>
 					{value.map((item, index) => (
-						<ArrayItem
-							key={`${index}${item}`}
-							index={index}
-							value={item}
-							indent={1}
-						/>
+						<ArrayItem key={`${index}${item}`} index={index} value={item} />
 					))}
 				</div>
 			)
@@ -96,23 +85,17 @@ export namespace RawTransaction {
 			const entries = Object.entries(value as Record<string, unknown>)
 			const nestedMaxKeyLength = Math.max(...entries.map(([k]) => k.length), 0)
 			return (
-				<div className="flex flex-col" style={{ paddingLeft: indent * 8 }}>
+				<div className="flex flex-col pl-[8px]">
 					<div className="text-tertiary">{label}</div>
 					{entries.map(([key, val]) => (
-						<Row
-							key={key}
-							label={key}
-							value={val}
-							pad={nestedMaxKeyLength}
-							indent={1}
-						/>
+						<Row key={key} label={key} value={val} pad={nestedMaxKeyLength} />
 					))}
 				</div>
 			)
 		}
 
 		return (
-			<div className="flex gap-[16px]" style={{ paddingLeft: indent * 8 }}>
+			<div className="flex gap-[16px] pl-[8px]">
 				<span className="text-tertiary shrink-0" style={{ width: `${pad}ch` }}>
 					{label}
 				</span>
@@ -126,12 +109,11 @@ export namespace RawTransaction {
 			label: string
 			value: unknown
 			pad?: number
-			indent?: number
 		}
 	}
 
 	export function ArrayItem(props: ArrayItem.Props) {
-		const { index, value, indent = 0 } = props
+		const { index, value } = props
 		const isObject =
 			typeof value === 'object' && value !== null && !Array.isArray(value)
 
@@ -139,25 +121,17 @@ export namespace RawTransaction {
 			const entries = Object.entries(value as Record<string, unknown>)
 			const maxKeyLength = Math.max(...entries.map(([k]) => k.length), 0)
 			return (
-				<div className="flex flex-col" style={{ paddingLeft: indent * 8 }}>
+				<div className="flex flex-col pl-[8px]">
 					<div className="text-tertiary">[{index}]</div>
-					{entries.map(([key, val]) => {
-						return (
-							<Row
-								key={key}
-								label={key}
-								value={val}
-								pad={maxKeyLength}
-								indent={1}
-							/>
-						)
-					})}
+					{entries.map(([key, val]) => (
+						<Row key={key} label={key} value={val} pad={maxKeyLength} />
+					))}
 				</div>
 			)
 		}
 
 		return (
-			<div className="flex gap-[16px]" style={{ paddingLeft: indent * 8 }}>
+			<div className="flex gap-[16px] pl-[8px]">
 				<span className="text-tertiary">[{index}]</span>
 				<span className="break-all">{RawTransaction.formatValue(value)}</span>
 			</div>
@@ -168,7 +142,6 @@ export namespace RawTransaction {
 		export interface Props {
 			index: number
 			value: unknown
-			indent?: number
 		}
 	}
 }
