@@ -2,8 +2,12 @@ import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import * as z from 'zod/mini'
 import { DataGrid } from '#components/DataGrid'
-import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
+import {
+	FormattedTimestamp,
+	TimeColumnHeader,
+	useTimeFormat,
+} from '#components/TimeFormat'
 import { HexFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import { fetchTokens, type Token } from '#lib/tokens.server'
@@ -35,6 +39,7 @@ export const Route = createFileRoute('/_layout/tokens')({
 function TokensPage() {
 	const { page = 1 } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
+	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	const { data, isLoading } = useQuery(
 		tokensQueryOptions({ page, limit: TOKENS_PER_PAGE }),
@@ -51,7 +56,18 @@ function TokensPage() {
 		{ label: 'Name', align: 'start' },
 		{ label: 'Currency', align: 'start', minWidth: 80 },
 		{ label: 'Address', align: 'start' },
-		{ label: 'Created', align: 'end', minWidth: 100 },
+		{
+			label: (
+				<TimeColumnHeader
+					label="Created"
+					formatLabel={formatLabel}
+					onCycle={cycleTimeFormat}
+					className="hover:text-accent cursor-pointer transition-colors"
+				/>
+			),
+			align: 'end',
+			minWidth: 100,
+		},
 	]
 
 	return (
@@ -89,9 +105,10 @@ function TokensPage() {
 											>
 												{HexFormatter.shortenHex(token.address, 8)}
 											</span>,
-											<RelativeTime
+											<FormattedTimestamp
 												key="created"
 												timestamp={BigInt(token.createdAt)}
+												format={timeFormat}
 												className="text-secondary"
 											/>,
 										],
