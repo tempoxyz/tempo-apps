@@ -1,6 +1,10 @@
-import type { Address } from 'ox'
+import { whatsabi } from '@shazow/whatsabi'
+import type { Address, Hex } from 'ox'
 import { Abis, Addresses } from 'tempo.ts/viem'
 import type { Abi, AbiFunction, AbiParameter } from 'viem'
+import { toFunctionSelector } from 'viem'
+import { getPublicClient } from 'wagmi/actions'
+import { config } from '#wagmi.config.ts'
 
 /**
  * Registry of known contract addresses to their ABIs and metadata.
@@ -10,6 +14,7 @@ import type { Abi, AbiFunction, AbiParameter } from 'viem'
 export type ContractInfo = {
 	name: string
 	description?: string
+	code: Hex.Hex
 	abi: Abi
 	/** Category for grouping in UI */
 	category: 'token' | 'system' | 'utility' | 'account'
@@ -28,6 +33,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			name: 'linkingUSD',
 			description: 'Non-transferable DEX accounting unit',
 			abi: Abis.tip20,
+			code: '0xef',
 			category: 'token',
 			docsUrl:
 				'https://docs.tempo.xyz/documentation/protocol/exchange/linkingUSD',
@@ -37,6 +43,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		'0x20c0000000000000000000000000000000000001',
 		{
 			name: 'AlphaUSD',
+			code: '0xef',
 			description: 'TIP-20 stablecoin (AUSD)',
 			abi: Abis.tip20,
 			category: 'token',
@@ -46,6 +53,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		'0x20c0000000000000000000000000000000000002',
 		{
 			name: 'BetaUSD',
+			code: '0xef',
 			description: 'TIP-20 stablecoin (BUSD)',
 			abi: Abis.tip20,
 			category: 'token',
@@ -55,6 +63,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		'0x20c0000000000000000000000000000000000003',
 		{
 			name: 'ThetaUSD',
+			code: '0xef',
 			description: 'TIP-20 stablecoin (TUSD)',
 			abi: Abis.tip20,
 			category: 'token',
@@ -66,6 +75,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		Addresses.tip20Factory,
 		{
 			name: 'TIP-20 Factory',
+			code: '0xef',
 			description: 'Create new TIP-20 tokens',
 			abi: Abis.tip20Factory,
 			category: 'system',
@@ -76,6 +86,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		Addresses.feeManager,
 		{
 			name: 'Fee Manager',
+			code: '0xef',
 			description: 'Handle fee payments and conversions',
 			abi: Abis.feeManager,
 			category: 'system',
@@ -87,6 +98,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		Addresses.stablecoinExchange,
 		{
 			name: 'Stablecoin Exchange',
+			code: '0xef',
 			description: 'Enshrined DEX for stablecoin swaps',
 			abi: Abis.stablecoinExchange,
 			category: 'system',
@@ -97,6 +109,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		Addresses.tip403Registry,
 		{
 			name: 'TIP-403 Registry',
+			code: '0xef',
 			description: 'Transfer policy registry',
 			abi: Abis.tip403Registry,
 			category: 'system',
@@ -109,6 +122,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		Addresses.accountImplementation,
 		{
 			name: 'IthacaAccount',
+			code: '0xef',
 			description: 'Reference account implementation',
 			abi: Abis.tipAccountRegistrar,
 			category: 'account',
@@ -138,14 +152,14 @@ export function getContractInfo(
 	if (registered) return registered
 
 	// Dynamic TIP-20 token detection
-	if (isTip20Address(address)) {
+	if (isTip20Address(address))
 		return {
 			name: 'TIP-20 Token',
+			code: '0xef',
 			description: 'TIP-20 compatible token',
 			abi: Abis.tip20,
 			category: 'token',
 		}
-	}
 
 	return undefined
 }
@@ -177,40 +191,194 @@ export type WriteFunction = AbiFunction & {
 }
 
 /**
- * Extract read-only functions (view/pure) from an ABI
+ * Whatsabi adds a `selector` property to ABI items with the actual selector from bytecode.
+ * This is needed because whatsabi doesn't always recover the function name.
  */
-export function getReadFunctions(abi: Abi): ReadFunction[] {
-	return abi.filter(
-		(item): item is ReadFunction =>
-			item.type === 'function' &&
-			(item.stateMutability === 'view' || item.stateMutability === 'pure'),
-	)
+type WhatsabiAbiFunction = AbiFunction & { selector?: string }
+
+/**
+ * Get the function selector, using whatsabi's extracted selector if available,
+ * otherwise computing it from the function signature.
+ */
+export function getFunctionSelector(fn: AbiFunction): string {
+	const whatsabiFn = fn as WhatsabiAbiFunction
+	if (whatsabiFn.selector) return whatsabiFn.selector
+	// Only compute if we have a name (otherwise toFunctionSelector gives wrong result)
+	if (fn.name) return toFunctionSelector(fn)
+	// Fallback - shouldn't happen for valid ABIs
+	return '0x00000000'
 }
 
 /**
- * Extract write functions (nonpayable/payable) from an ABI
+ * Common read function name patterns.
+ * Used to include functions that are likely read-only even if marked as 'nonpayable'.
+ */
+const READ_FUNCTION_PATTERNS = [
+	/^get[A-Z_]/i,
+	/^is[A-Z_]/i,
+	/^has[A-Z_]/i,
+	/^can[A-Z_]/i,
+	/^check[A-Z_]/i,
+	/^query[A-Z_]/i,
+	/^fetch[A-Z_]/i,
+	/^read[A-Z_]/i,
+	/^view[A-Z_]/i,
+	/^calculate[A-Z_]/i,
+	/^compute[A-Z_]/i,
+	/^estimate[A-Z_]/i,
+	/^predict[A-Z_]/i,
+	/^current[A-Z_]/i,
+	/^total[A-Z_]/i,
+	/^balance/i,
+	/^allowance/i,
+	/^owner/i,
+	/^name$/i,
+	/^symbol$/i,
+	/^decimals$/i,
+	/^version$/i,
+	/^nonce/i,
+	/^supply/i,
+	/^length$/i,
+	/^count$/i,
+	/^size$/i,
+	/^index$/i,
+]
+
+/**
+ * Common write function name patterns.
+ * Used to filter out functions that whatsabi incorrectly marked as 'view'.
+ */
+const WRITE_FUNCTION_PATTERNS = [
+	/^transfer/i,
+	/^approve/i,
+	/^set[A-Z_]/i,
+	/^mint/i,
+	/^burn/i,
+	/^withdraw/i,
+	/^deposit/i,
+	/^send/i,
+	/^swap/i,
+	/^add[A-Z_]/i,
+	/^remove[A-Z_]/i,
+	/^update/i,
+	/^execute/i,
+	/^submit/i,
+	/^claim/i,
+	/^stake/i,
+	/^unstake/i,
+	/^lock/i,
+	/^unlock/i,
+	/^pause/i,
+	/^unpause/i,
+	/^revoke/i,
+	/^grant/i,
+	/^renounce/i,
+	/^initialize/i,
+	/^create/i,
+	/^delete/i,
+	/^cancel/i,
+	/^close/i,
+	/^open/i,
+	/^enable/i,
+	/^disable/i,
+]
+
+/**
+ * Check if a function name looks like a read function.
+ * Used for whatsabi-extracted functions where stateMutability might be incorrect.
+ */
+function looksLikeReadFunction(name: string | undefined): boolean {
+	if (!name) return false
+	return READ_FUNCTION_PATTERNS.some((pattern) => pattern.test(name))
+}
+
+/**
+ * Check if a function name looks like a write function.
+ * Used for whatsabi-extracted functions where stateMutability might be incorrect.
+ */
+function looksLikeWriteFunction(name: string | undefined): boolean {
+	if (!name) return false
+	return WRITE_FUNCTION_PATTERNS.some((pattern) => pattern.test(name))
+}
+
+/**
+ * Extract read-only functions from an ABI, deduplicated by selector.
+ * - For standard ABIs: returns view/pure functions with outputs
+ * - For whatsabi ABIs: uses name heuristics since stateMutability is often incorrect
+ */
+export function getReadFunctions(abi: Abi): ReadFunction[] {
+	const functions = abi.filter((item): item is ReadFunction => {
+		if (item.type !== 'function') return false
+		if (!Array.isArray(item.inputs)) return false
+
+		const whatsabiItem = item as WhatsabiAbiFunction
+		const isWhatsabi = Boolean(whatsabiItem.selector)
+
+		// For standard ABIs, use stateMutability and require outputs
+		if (!isWhatsabi) {
+			if (!Array.isArray(item.outputs) || item.outputs.length === 0)
+				return false
+			return item.stateMutability === 'view' || item.stateMutability === 'pure'
+		}
+
+		// For whatsabi ABIs, stateMutability is often wrong (everything is nonpayable)
+		// Use name-based heuristics instead
+		if (looksLikeWriteFunction(item.name)) return false
+		if (looksLikeReadFunction(item.name)) return true
+
+		// Functions with no inputs that don't look like writes are likely getters
+		// (e.g., typeAndVersion(), owner(), MAX_RET_BYTES(), etc.)
+		if (item.inputs.length === 0) return true
+
+		// Default: only include if explicitly view/pure
+		return item.stateMutability === 'view' || item.stateMutability === 'pure'
+	})
+
+	// Deduplicate by selector (whatsabi can return duplicates)
+	const seen = new Set<string>()
+	return functions.filter((fn) => {
+		const selector = getFunctionSelector(fn)
+		if (seen.has(selector)) return false
+		seen.add(selector)
+		return true
+	})
+}
+
+/**
+ * Extract write functions (nonpayable/payable) from an ABI, deduplicated by selector.
+ * Also filters out malformed entries (missing inputs array).
  */
 export function getWriteFunctions(abi: Abi): WriteFunction[] {
-	return abi.filter(
+	const functions = abi.filter(
 		(item): item is WriteFunction =>
 			item.type === 'function' &&
 			(item.stateMutability === 'nonpayable' ||
-				item.stateMutability === 'payable'),
+				item.stateMutability === 'payable') &&
+			Array.isArray(item.inputs),
 	)
+
+	// Deduplicate by selector
+	const seen = new Set<string>()
+	return functions.filter((fn) => {
+		const selector = getFunctionSelector(fn)
+		if (seen.has(selector)) return false
+		seen.add(selector)
+		return true
+	})
 }
 
 /**
  * Get functions without inputs (can be displayed as static values)
  */
 export function getNoInputFunctions(abi: Abi): ReadFunction[] {
-	return getReadFunctions(abi).filter((fn) => fn.inputs.length === 0)
+	return getReadFunctions(abi).filter((fn) => fn?.inputs?.length === 0)
 }
 
 /**
  * Get functions with inputs (require user input)
  */
 export function getInputFunctions(abi: Abi): ReadFunction[] {
-	return getReadFunctions(abi).filter((fn) => fn.inputs.length > 0)
+	return getReadFunctions(abi).filter((fn) => fn?.inputs?.length > 0)
 }
 
 // ============================================================================
@@ -328,4 +496,50 @@ export function formatOutputValue(value: unknown, _type: string): string {
 		)
 
 	return String(value)
+}
+
+/**
+ * Get the bytecode for a contract address
+ */
+export async function getContractBytecode(
+	address: Address.Address,
+): Promise<Hex.Hex | undefined> {
+	const client = getPublicClient(config)
+	const code = await client.getCode({ address })
+	if (!code || code === '0x') return undefined
+	return code
+}
+
+// ============================================================================
+// Whatsabi - ABI extraction from bytecode
+// ============================================================================
+
+/**
+ * Attempts to extract an ABI from contract bytecode using whatsabi.autoload.
+ * Returns undefined if the address has no code or extraction fails.
+ */
+export async function extractContractAbi(
+	address: Address.Address,
+): Promise<Abi | undefined> {
+	try {
+		const client = getPublicClient(config)
+
+		const result = await whatsabi.autoload(address, {
+			provider: client,
+			followProxies: true,
+			// Disable ABI loader (requires Etherscan API key)
+			abiLoader: false,
+			signatureLookup: new whatsabi.loaders.MultiSignatureLookup([
+				new whatsabi.loaders.OpenChainSignatureLookup(),
+				new whatsabi.loaders.SamczunSignatureLookup(),
+			]),
+		})
+
+		if (!result.abi || result.abi.length === 0) return undefined
+
+		return result.abi as Abi
+	} catch (error) {
+		console.error('Failed to extract ABI:', error)
+		return undefined
+	}
 }

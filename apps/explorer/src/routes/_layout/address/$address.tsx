@@ -33,7 +33,13 @@ import {
 	useTimeFormat,
 } from '#components/TimeFormat'
 import { cx } from '#cva.config.ts'
-import { type ContractInfo, getContractInfo } from '#lib/contracts.ts'
+import * as AccountServer from '#lib/account.server.ts'
+import {
+	type ContractInfo,
+	extractContractAbi,
+	getContractBytecode,
+	getContractInfo,
+} from '#lib/contracts.ts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import {
@@ -43,7 +49,6 @@ import {
 } from '#lib/known-events'
 import * as Tip20 from '#lib/tip20'
 import { config } from '#wagmi.config'
-import * as AccountServer from '../../../lib/account.server.ts'
 
 const defaultSearchValues = {
 	page: 1,
@@ -113,10 +118,10 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			)
 			return { ...data, transactions, knownEvents }
 		},
-		// auto-refresh page 1 since new transactions appear there
-		refetchInterval: params.page === 1 ? 4_000 : false,
-		refetchIntervalInBackground: params.page === 1,
-		refetchOnWindowFocus: params.page === 1,
+		// Default to no auto-refresh; useQuery call overrides for reactivity
+		refetchInterval: false,
+		refetchIntervalInBackground: false,
+		refetchOnWindowFocus: false,
 		placeholderData: keepPreviousData,
 	})
 }
@@ -153,7 +158,32 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 		const offset = (page - 1) * limit
 
-		const contractInfo = getContractInfo(address)
+		// check if it's a known contract from our registry
+		let contractInfo: ContractInfo | undefined = getContractInfo(address)
+
+		// if not in registry, try to extract ABI from bytecode using whatsabi
+		if (!contractInfo) {
+			const contractBytecode = await getContractBytecode(address).catch(
+				() => undefined,
+			)
+
+			if (contractBytecode) {
+				const contractAbi = await extractContractAbi(address).catch(
+					() => undefined,
+				)
+
+				if (contractAbi) {
+					contractInfo = {
+						name: 'Unknown Contract',
+						description: 'ABI extracted from bytecode',
+						code: contractBytecode,
+						abi: contractAbi,
+						category: 'utility',
+					}
+				}
+			}
+		}
+
 		const hasContract = Boolean(contractInfo)
 
 		const transactionsData = await context.queryClient
@@ -466,6 +496,10 @@ function SectionsWrapper(props: {
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
+	const isHistoryTabActive = activeSection === 0
+	// Only auto-refresh on page 1 when history tab is active
+	const shouldAutoRefresh = page === 1 && isHistoryTabActive
+
 	const { data, isPending, error } = useQuery({
 		...transactionsQueryOptions({
 			address,
@@ -474,6 +508,9 @@ function SectionsWrapper(props: {
 			offset: (page - 1) * limit,
 		}),
 		initialData,
+		// Override refetch settings reactively based on tab state
+		refetchInterval: shouldAutoRefresh ? 4_000 : false,
+		refetchOnWindowFocus: shouldAutoRefresh,
 	})
 	const { transactions, total, knownEvents } = data ?? {
 		transactions: [],

@@ -3,13 +3,14 @@ import { Address } from 'ox'
 import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
 import type { Abi, AbiFunction } from 'viem'
-import { toFunctionSelector } from 'viem'
-import { useReadContract } from 'wagmi'
+import { decodeFunctionResult, encodeFunctionData } from 'viem'
+import { useCall, useReadContract } from 'wagmi'
 import { ellipsis } from '#chars.ts'
 import { cx } from '#cva.config.ts'
 import {
 	formatOutputValue,
 	getContractAbi,
+	getFunctionSelector,
 	getInputFunctions,
 	getInputType,
 	getNoInputFunctions,
@@ -36,11 +37,24 @@ type ReadFunction = AbiFunction & { stateMutability: 'view' | 'pure' }
 // ============================================================================
 
 /**
+ * Get a display-friendly function signature.
+ * Uses getSignature for named functions, falls back to selector for unnamed (whatsabi).
+ */
+function getFunctionDisplaySignature(fn: AbiFunction): string {
+	if (fn.name) return getSignature(fn)
+	// Fallback for whatsabi-extracted functions without names
+	const selector = getFunctionSelector(fn)
+	const inputs = fn.inputs?.map((i) => i.type).join(', ') ?? ''
+	return `${selector}(${inputs})`
+}
+
+/**
  * Get method name with selector, e.g., "approve (0x095ea7b3)"
  */
 function getMethodWithSelector(fn: AbiFunction): string {
-	const selector = toFunctionSelector(fn)
-	return `${fn.name} (${selector})`
+	const selector = getFunctionSelector(fn)
+	const name = fn.name || selector
+	return `${name} (${selector})`
 }
 
 // ============================================================================
@@ -57,6 +71,8 @@ export function ContractReader(props: {
 	const location = useLocation()
 
 	const abi = props.abi ?? getContractAbi(address)
+
+	const key = React.useId()
 
 	// Scroll to function when hash is present
 	React.useEffect(() => {
@@ -114,13 +130,35 @@ export function ContractReader(props: {
 	return (
 		<div className="flex flex-col gap-[14px]">
 			{/* ABI Viewer */}
-			<AbiViewer
-				abi={abi}
-				onCopy={handleCopyAbi}
-				onDownload={handleDownloadAbi}
-				copied={copiedAbi}
-				docsUrl={docsUrl}
-			/>
+			<ContractFeatureCard
+				title="ABI"
+				description="Shareable interface definition for read/write tooling."
+				actions={
+					<div className="flex gap-[8px]">
+						{docsUrl && (
+							<a
+								href={docsUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors inline-flex items-center gap-[4px]"
+							>
+								Docs
+								<ExternalLinkIcon className="w-[12px] h-[12px]" />
+							</a>
+						)}
+						<button
+							type="button"
+							onClick={handleDownloadAbi}
+							className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors inline-flex items-center gap-[4px]"
+						>
+							<DownloadIcon className="w-[12px] h-[12px]" />
+							Download
+						</button>
+					</div>
+				}
+			>
+				<AbiViewer abi={abi} onCopy={handleCopyAbi} copied={copiedAbi} />
+			</ContractFeatureCard>
 
 			<div aria-hidden="true" className="border-b border-card-border" />
 
@@ -143,7 +181,7 @@ export function ContractReader(props: {
 					{/* Functions with inputs - show as expandable forms */}
 					{inputFunctions.map((fn) => (
 						<DynamicReadFunction
-							key={fn.name}
+							key={`${fn.name}-${key}-${fn.inputs?.length}`}
 							address={address}
 							abi={abi}
 							fn={fn}
@@ -165,64 +203,30 @@ export function ContractReader(props: {
 // ABI Viewer
 // ============================================================================
 
-function AbiViewer(props: {
-	abi: Abi
-	onCopy: () => void
-	onDownload: () => void
-	copied: boolean
-	docsUrl?: string
-}) {
-	const { abi, onCopy, onDownload, copied, docsUrl } = props
+function AbiViewer(props: { abi: Abi; onCopy: () => void; copied: boolean }) {
+	const { abi, onCopy, copied } = props
 
 	return (
-		<ContractFeatureCard
-			title="Contract ABI"
-			description="Shareable interface definition for read/write tooling."
-			actions={
-				<div className="flex gap-[8px]">
-					{docsUrl && (
-						<a
-							href={docsUrl}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors inline-flex items-center gap-[4px]"
-						>
-							Docs
-							<ExternalLinkIcon className="w-[12px] h-[12px]" />
-						</a>
-					)}
-					<button
-						type="button"
-						onClick={onDownload}
-						className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors inline-flex items-center gap-[4px]"
-					>
-						<DownloadIcon className="w-[12px] h-[12px]" />
-						Download
-					</button>
-				</div>
-			}
-		>
-			<div className="relative">
-				<div className="absolute right-[8px] top-[8px] flex items-center gap-[4px]">
-					{copied && (
-						<span className="text-[11px] uppercase tracking-wide text-tertiary leading-none">
-							copied
-						</span>
-					)}
-					<button
-						type="button"
-						onClick={onCopy}
-						title={copied ? 'Copied' : 'Copy JSON'}
-						className="rounded-[6px] bg-card p-[6px] text-tertiary press-down hover:text-primary transition-colors"
-					>
-						<CopyIcon className="h-[14px] w-[14px]" />
-					</button>
-				</div>
-				<pre className="max-h-[280px] overflow-auto rounded-[8px] text-[12px] leading-[18px] text-primary/90 font-mono">
-					{JSON.stringify(abi, null, 2)}
-				</pre>
+		<div className="relative">
+			<div className="absolute right-[8px] top-[8px] flex items-center gap-[4px]">
+				{copied && (
+					<span className="text-[11px] uppercase tracking-wide text-tertiary leading-none">
+						copied
+					</span>
+				)}
+				<button
+					type="button"
+					onClick={onCopy}
+					title={copied ? 'Copied' : 'Copy JSON'}
+					className="rounded-[6px] bg-card p-[6px] text-tertiary press-down hover:text-primary transition-colors"
+				>
+					<CopyIcon className="h-[14px] w-[14px]" />
+				</button>
 			</div>
-		</ContractFeatureCard>
+			<pre className="max-h-[280px] overflow-auto rounded-[8px] text-[12px] leading-[18px] text-primary/90 font-mono">
+				{JSON.stringify(abi, null, 2)}
+			</pre>
+		</div>
 	)
 }
 
@@ -239,51 +243,134 @@ function StaticReadFunction(props: {
 	const { copy, notifying } = useCopy({ timeout: 2_000 })
 	const { copy: copyLink, notifying: linkCopied } = useCopy({ timeout: 2_000 })
 
+	const [mounted, setMounted] = React.useState(false)
+	React.useEffect(() => setMounted(true), [])
+
+	const hasOutputs = Array.isArray(fn.outputs) && fn.outputs.length > 0
+
 	const {
-		data: result,
-		error: queryError,
-		isLoading,
+		data: typedResult,
+		error: typedError,
+		isLoading: typedLoading,
 	} = useReadContract({
 		address,
 		abi,
 		functionName: fn.name,
 		args: [],
+		query: { enabled: mounted && hasOutputs },
 	})
 
+	// Raw call fallback for functions without outputs
+	const callData = React.useMemo(() => {
+		if (hasOutputs) return undefined
+		try {
+			return encodeFunctionData({ abi, functionName: fn.name, args: [] })
+		} catch {
+			return undefined
+		}
+	}, [abi, fn.name, hasOutputs])
+
+	const {
+		data: rawResult,
+		error: rawError,
+		isLoading: rawLoading,
+	} = useCall({
+		to: address,
+		data: callData,
+		query: { enabled: mounted && !hasOutputs && Boolean(callData) },
+	})
+
+	const decodedRawResult = React.useMemo(() => {
+		if (hasOutputs || !rawResult?.data) return undefined
+		const data = rawResult.data
+
+		// Check if it looks like a padded address (32 bytes with 12 leading zero bytes)
+		// Address encoding: 0x + 24 zeros + 40 hex chars (20 bytes address)
+		const looksLikeAddress =
+			data.length === 66 &&
+			data.slice(2, 26) === '000000000000000000000000' &&
+			data.slice(26) !== '0000000000000000000000000000000000000000'
+
+		if (looksLikeAddress) {
+			try {
+				const addressAbi = [{ ...fn, outputs: [{ type: 'address', name: '' }] }]
+				return decodeFunctionResult({
+					abi: addressAbi,
+					functionName: fn.name,
+					data,
+				})
+			} catch {
+				// Fall through to other attempts
+			}
+		}
+
+		// Try decoding as string (common for functions like typeAndVersion)
+		try {
+			const stringAbi = [{ ...fn, outputs: [{ type: 'string', name: '' }] }]
+			return decodeFunctionResult({
+				abi: stringAbi,
+				functionName: fn.name,
+				data,
+			})
+		} catch {
+			// Fall through
+		}
+
+		// Try decoding as uint256 (common for numeric getters)
+		try {
+			const uint256Abi = [{ ...fn, outputs: [{ type: 'uint256', name: '' }] }]
+			return decodeFunctionResult({
+				abi: uint256Abi,
+				functionName: fn.name,
+				data,
+			})
+		} catch {
+			// Return raw hex if all decode attempts fail
+			return data
+		}
+	}, [hasOutputs, rawResult, fn])
+
+	const isLoading = !mounted || (hasOutputs ? typedLoading : rawLoading)
+	const result = hasOutputs ? typedResult : decodedRawResult
+	const queryError = hasOutputs ? typedError : rawError
 	const error = queryError ? queryError.message : null
 
-	const outputType = fn.outputs[0]?.type ?? 'unknown'
+	const isResultAddress =
+		typeof result === 'string' && Address.validate(result as string)
+	const outputType =
+		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'string')
+
 	const displayValue = error
 		? error
 		: isLoading
 			? ellipsis
 			: formatOutputValue(result, outputType)
 
-	// Format address outputs as links
-	const isAddressOutput = outputType === 'address'
-	const isValidAddress =
-		isAddressOutput &&
-		typeof result === 'string' &&
-		Address.validate(result as string)
+	// Format address outputs as links (only after mount to avoid hydration mismatch)
+	const isAddressOutput = outputType === 'address' || isResultAddress
+	const isValidAddress = mounted && isAddressOutput && isResultAddress
 
 	const handleCopyMethod = () => {
 		void copy(getMethodWithSelector(fn))
 	}
 
+	const selector = getFunctionSelector(fn)
+	const fnId = fn.name || selector
+
 	const handleCopyPermalink = () => {
 		const url = new URL(window.location.href)
-		url.hash = fn.name
+		url.hash = fnId
 		void copyLink(url.toString())
 	}
 
 	return (
 		<div
-			id={fn.name}
+			id={fnId}
 			className="flex flex-col gap-[4px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px] transition-all duration-300"
 		>
 			<div className="flex items-center justify-between gap-[8px]">
 				<span className="text-[12px] text-secondary font-mono">
-					{getSignature(fn)}
+					{getFunctionDisplaySignature(fn)}
 				</span>
 				<div className="flex items-center gap-[8px]">
 					<button
@@ -355,11 +442,14 @@ function DynamicReadFunction(props: {
 	const { copy, notifying } = useCopy({ timeout: 2_000 })
 	const { copy: copyLink, notifying: linkCopied } = useCopy({ timeout: 2_000 })
 
+	const selector = getFunctionSelector(fn)
+	const fnId = fn.name || selector
+
 	const handleInputChange = (name: string, value: string) => {
 		setInputs((prev) => ({ ...prev, [name]: value }))
 	}
 
-	const allInputsFilled = fn.inputs.every((input) => {
+	const allInputsFilled = (fn.inputs ?? []).every((input) => {
 		const value = inputs[input.name ?? '']
 		return value !== undefined && value.trim() !== ''
 	})
@@ -367,7 +457,7 @@ function DynamicReadFunction(props: {
 	const parsedArgs = React.useMemo(() => {
 		if (!allInputsFilled) return { args: [] as Array<unknown>, error: null }
 		try {
-			const args = fn.inputs.map((input) => {
+			const args = (fn.inputs ?? []).map((input) => {
 				const value = inputs[input.name ?? ''] ?? ''
 				return parseInputValue(value, input.type)
 			})
@@ -387,7 +477,7 @@ function DynamicReadFunction(props: {
 	} = useReadContract({
 		address,
 		abi,
-		functionName: fn.name,
+		functionName: fnId,
 		args: parsedArgs.args,
 		query: {
 			enabled: allInputsFilled && !parsedArgs.error,
@@ -397,7 +487,7 @@ function DynamicReadFunction(props: {
 	const error =
 		parsedArgs.error ?? (queryError ? queryError.message : null) ?? null
 
-	const outputType = fn.outputs[0]?.type ?? 'unknown'
+	const outputType = fn.outputs?.[0]?.type ?? 'unknown'
 
 	const handleCopyMethod = (e: React.MouseEvent) => {
 		e.stopPropagation()
@@ -407,13 +497,13 @@ function DynamicReadFunction(props: {
 	const handleCopyPermalink = (e: React.MouseEvent) => {
 		e.stopPropagation()
 		const url = new URL(window.location.href)
-		url.hash = fn.name
+		url.hash = fnId
 		void copyLink(url.toString())
 	}
 
 	return (
 		<div
-			id={fn.name}
+			id={fnId}
 			className="rounded-[8px] border border-dashed border-card-border overflow-hidden transition-all duration-300"
 		>
 			<div className="w-full flex items-center justify-between px-[12px] py-[10px] hover:bg-card-header/50 transition-colors">
@@ -423,7 +513,7 @@ function DynamicReadFunction(props: {
 					className="flex-1 text-left"
 				>
 					<span className="text-[12px] text-secondary font-mono">
-						{getSignature(fn)}
+						{getFunctionDisplaySignature(fn)}
 					</span>
 				</button>
 				<div className="flex items-center gap-[8px]">
