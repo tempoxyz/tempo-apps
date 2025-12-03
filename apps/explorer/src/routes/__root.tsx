@@ -32,6 +32,10 @@ export const Route = createRootRouteWithContext<{
 				title: 'Tempo Explorer',
 			},
 			{
+				name: 'og:title',
+				content: 'Tempo Explorer',
+			},
+			{
 				name: 'viewport',
 				content: 'width=device-width, initial-scale=1, maximum-scale=1',
 			},
