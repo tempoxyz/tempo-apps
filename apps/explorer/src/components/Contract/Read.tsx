@@ -3,7 +3,8 @@ import { Address } from 'ox'
 import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
 import type { Abi, AbiFunction } from 'viem'
-import { useReadContract } from 'wagmi'
+import { decodeFunctionResult, encodeFunctionData } from 'viem'
+import { useCall, useReadContract } from 'wagmi'
 import { ellipsis } from '#chars.ts'
 import { cx } from '#cva.config.ts'
 import {
@@ -242,32 +243,112 @@ function StaticReadFunction(props: {
 	const { copy, notifying } = useCopy({ timeout: 2_000 })
 	const { copy: copyLink, notifying: linkCopied } = useCopy({ timeout: 2_000 })
 
+	const [mounted, setMounted] = React.useState(false)
+	React.useEffect(() => setMounted(true), [])
+
+	const hasOutputs = Array.isArray(fn.outputs) && fn.outputs.length > 0
+
 	const {
-		data: result,
-		error: queryError,
-		isLoading,
+		data: typedResult,
+		error: typedError,
+		isLoading: typedLoading,
 	} = useReadContract({
 		address,
 		abi,
 		functionName: fn.name,
 		args: [],
+		query: { enabled: mounted && hasOutputs },
 	})
 
+	// Raw call fallback for functions without outputs
+	const callData = React.useMemo(() => {
+		if (hasOutputs) return undefined
+		try {
+			return encodeFunctionData({ abi, functionName: fn.name, args: [] })
+		} catch {
+			return undefined
+		}
+	}, [abi, fn.name, hasOutputs])
+
+	const {
+		data: rawResult,
+		error: rawError,
+		isLoading: rawLoading,
+	} = useCall({
+		to: address,
+		data: callData,
+		query: { enabled: mounted && !hasOutputs && Boolean(callData) },
+	})
+
+	const decodedRawResult = React.useMemo(() => {
+		if (hasOutputs || !rawResult?.data) return undefined
+		const data = rawResult.data
+
+		// Check if it looks like a padded address (32 bytes with 12 leading zero bytes)
+		// Address encoding: 0x + 24 zeros + 40 hex chars (20 bytes address)
+		const looksLikeAddress =
+			data.length === 66 &&
+			data.slice(2, 26) === '000000000000000000000000' &&
+			data.slice(26) !== '0000000000000000000000000000000000000000'
+
+		if (looksLikeAddress) {
+			try {
+				const addressAbi = [{ ...fn, outputs: [{ type: 'address', name: '' }] }]
+				return decodeFunctionResult({
+					abi: addressAbi,
+					functionName: fn.name,
+					data,
+				})
+			} catch {
+				// Fall through to other attempts
+			}
+		}
+
+		// Try decoding as string (common for functions like typeAndVersion)
+		try {
+			const stringAbi = [{ ...fn, outputs: [{ type: 'string', name: '' }] }]
+			return decodeFunctionResult({
+				abi: stringAbi,
+				functionName: fn.name,
+				data,
+			})
+		} catch {
+			// Fall through
+		}
+
+		// Try decoding as uint256 (common for numeric getters)
+		try {
+			const uint256Abi = [{ ...fn, outputs: [{ type: 'uint256', name: '' }] }]
+			return decodeFunctionResult({
+				abi: uint256Abi,
+				functionName: fn.name,
+				data,
+			})
+		} catch {
+			// Return raw hex if all decode attempts fail
+			return data
+		}
+	}, [hasOutputs, rawResult, fn])
+
+	const isLoading = !mounted || (hasOutputs ? typedLoading : rawLoading)
+	const result = hasOutputs ? typedResult : decodedRawResult
+	const queryError = hasOutputs ? typedError : rawError
 	const error = queryError ? queryError.message : null
 
-	const outputType = fn.outputs[0]?.type ?? 'unknown'
+	const isResultAddress =
+		typeof result === 'string' && Address.validate(result as string)
+	const outputType =
+		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'string')
+
 	const displayValue = error
 		? error
 		: isLoading
 			? ellipsis
 			: formatOutputValue(result, outputType)
 
-	// Format address outputs as links
-	const isAddressOutput = outputType === 'address'
-	const isValidAddress =
-		isAddressOutput &&
-		typeof result === 'string' &&
-		Address.validate(result as string)
+	// Format address outputs as links (only after mount to avoid hydration mismatch)
+	const isAddressOutput = outputType === 'address' || isResultAddress
+	const isValidAddress = mounted && isAddressOutput && isResultAddress
 
 	const handleCopyMethod = () => {
 		void copy(getMethodWithSelector(fn))

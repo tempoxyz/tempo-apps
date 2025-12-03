@@ -210,17 +210,129 @@ export function getFunctionSelector(fn: AbiFunction): string {
 }
 
 /**
- * Extract read-only functions (view/pure) from an ABI, deduplicated by selector.
- * Deduplication is needed because whatsabi may return duplicate entries.
- * Also filters out malformed entries (missing inputs array).
+ * Common read function name patterns.
+ * Used to include functions that are likely read-only even if marked as 'nonpayable'.
+ */
+const READ_FUNCTION_PATTERNS = [
+	/^get[A-Z_]/i,
+	/^is[A-Z_]/i,
+	/^has[A-Z_]/i,
+	/^can[A-Z_]/i,
+	/^check[A-Z_]/i,
+	/^query[A-Z_]/i,
+	/^fetch[A-Z_]/i,
+	/^read[A-Z_]/i,
+	/^view[A-Z_]/i,
+	/^calculate[A-Z_]/i,
+	/^compute[A-Z_]/i,
+	/^estimate[A-Z_]/i,
+	/^predict[A-Z_]/i,
+	/^current[A-Z_]/i,
+	/^total[A-Z_]/i,
+	/^balance/i,
+	/^allowance/i,
+	/^owner/i,
+	/^name$/i,
+	/^symbol$/i,
+	/^decimals$/i,
+	/^version$/i,
+	/^nonce/i,
+	/^supply/i,
+	/^length$/i,
+	/^count$/i,
+	/^size$/i,
+	/^index$/i,
+]
+
+/**
+ * Common write function name patterns.
+ * Used to filter out functions that whatsabi incorrectly marked as 'view'.
+ */
+const WRITE_FUNCTION_PATTERNS = [
+	/^transfer/i,
+	/^approve/i,
+	/^set[A-Z_]/i,
+	/^mint/i,
+	/^burn/i,
+	/^withdraw/i,
+	/^deposit/i,
+	/^send/i,
+	/^swap/i,
+	/^add[A-Z_]/i,
+	/^remove[A-Z_]/i,
+	/^update/i,
+	/^execute/i,
+	/^submit/i,
+	/^claim/i,
+	/^stake/i,
+	/^unstake/i,
+	/^lock/i,
+	/^unlock/i,
+	/^pause/i,
+	/^unpause/i,
+	/^revoke/i,
+	/^grant/i,
+	/^renounce/i,
+	/^initialize/i,
+	/^create/i,
+	/^delete/i,
+	/^cancel/i,
+	/^close/i,
+	/^open/i,
+	/^enable/i,
+	/^disable/i,
+]
+
+/**
+ * Check if a function name looks like a read function.
+ * Used for whatsabi-extracted functions where stateMutability might be incorrect.
+ */
+function looksLikeReadFunction(name: string | undefined): boolean {
+	if (!name) return false
+	return READ_FUNCTION_PATTERNS.some((pattern) => pattern.test(name))
+}
+
+/**
+ * Check if a function name looks like a write function.
+ * Used for whatsabi-extracted functions where stateMutability might be incorrect.
+ */
+function looksLikeWriteFunction(name: string | undefined): boolean {
+	if (!name) return false
+	return WRITE_FUNCTION_PATTERNS.some((pattern) => pattern.test(name))
+}
+
+/**
+ * Extract read-only functions from an ABI, deduplicated by selector.
+ * - For standard ABIs: returns view/pure functions with outputs
+ * - For whatsabi ABIs: uses name heuristics since stateMutability is often incorrect
  */
 export function getReadFunctions(abi: Abi): ReadFunction[] {
-	const functions = abi.filter(
-		(item): item is ReadFunction =>
-			item.type === 'function' &&
-			(item.stateMutability === 'view' || item.stateMutability === 'pure') &&
-			Array.isArray(item.inputs), // Filter out malformed entries from whatsabi
-	)
+	const functions = abi.filter((item): item is ReadFunction => {
+		if (item.type !== 'function') return false
+		if (!Array.isArray(item.inputs)) return false
+
+		const whatsabiItem = item as WhatsabiAbiFunction
+		const isWhatsabi = Boolean(whatsabiItem.selector)
+
+		// For standard ABIs, use stateMutability and require outputs
+		if (!isWhatsabi) {
+			if (!Array.isArray(item.outputs) || item.outputs.length === 0)
+				return false
+			return item.stateMutability === 'view' || item.stateMutability === 'pure'
+		}
+
+		// For whatsabi ABIs, stateMutability is often wrong (everything is nonpayable)
+		// Use name-based heuristics instead
+		if (looksLikeWriteFunction(item.name)) return false
+		if (looksLikeReadFunction(item.name)) return true
+
+		// Functions with no inputs that don't look like writes are likely getters
+		// (e.g., typeAndVersion(), owner(), MAX_RET_BYTES(), etc.)
+		if (item.inputs.length === 0) return true
+
+		// Default: only include if explicitly view/pure
+		return item.stateMutability === 'view' || item.stateMutability === 'pure'
+	})
 
 	// Deduplicate by selector (whatsabi can return duplicates)
 	const seen = new Set<string>()
@@ -403,22 +515,31 @@ export async function getContractBytecode(
 // ============================================================================
 
 /**
- * Attempts to extract an ABI from contract bytecode using whatsabi.
+ * Attempts to extract an ABI from contract bytecode using whatsabi.autoload.
  * Returns undefined if the address has no code or extraction fails.
  */
 export async function extractContractAbi(
 	address: Address.Address,
 ): Promise<Abi | undefined> {
 	try {
-		const code = await getContractBytecode(address)
+		const client = getPublicClient(config)
 
-		if (!code || code === '0x') return undefined
+		const result = await whatsabi.autoload(address, {
+			provider: client,
+			followProxies: true,
+			// Disable ABI loader (requires Etherscan API key)
+			abiLoader: false,
+			signatureLookup: new whatsabi.loaders.MultiSignatureLookup([
+				new whatsabi.loaders.OpenChainSignatureLookup(),
+				new whatsabi.loaders.SamczunSignatureLookup(),
+			]),
+		})
 
-		const abi = whatsabi.abiFromBytecode(code)
+		if (!result.abi || result.abi.length === 0) return undefined
 
-		return abi as Abi
+		return result.abi as Abi
 	} catch (error) {
-		console.error('Failed to extract ABI from bytecode:', error)
+		console.error('Failed to extract ABI:', error)
 		return undefined
 	}
 }

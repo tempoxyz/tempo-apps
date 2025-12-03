@@ -28,6 +28,7 @@ import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
 import { cx } from '#cva.config.ts'
+import * as AccountServer from '#lib/account.server.ts'
 import {
 	type ContractInfo,
 	extractContractAbi,
@@ -43,7 +44,6 @@ import {
 } from '#lib/known-events'
 import * as Tip20 from '#lib/tip20'
 import { config } from '#wagmi.config'
-import * as AccountServer from '../../../lib/account.server.ts'
 
 const defaultSearchValues = {
 	page: 1,
@@ -113,10 +113,10 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			)
 			return { ...data, transactions, knownEvents }
 		},
-		// auto-refresh page 1 since new transactions appear there
-		refetchInterval: params.page === 1 ? 4_000 : false,
-		refetchIntervalInBackground: params.page === 1,
-		refetchOnWindowFocus: params.page === 1,
+		// Default to no auto-refresh; useQuery call overrides for reactivity
+		refetchInterval: false,
+		refetchIntervalInBackground: false,
+		refetchOnWindowFocus: false,
 		placeholderData: keepPreviousData,
 	})
 }
@@ -490,6 +490,10 @@ function SectionsWrapper(props: {
 		initialData,
 	} = props
 
+	const isHistoryTabActive = activeSection === 0
+	// Only auto-refresh on page 1 when history tab is active
+	const shouldAutoRefresh = page === 1 && isHistoryTabActive
+
 	const { data, isPending, error } = useQuery({
 		...transactionsQueryOptions({
 			address,
@@ -498,6 +502,9 @@ function SectionsWrapper(props: {
 			offset: (page - 1) * limit,
 		}),
 		initialData,
+		// Override refetch settings reactively based on tab state
+		refetchInterval: shouldAutoRefresh ? 4_000 : false,
+		refetchOnWindowFocus: shouldAutoRefresh,
 	})
 	const { transactions, total, knownEvents } = data ?? {
 		transactions: [],
