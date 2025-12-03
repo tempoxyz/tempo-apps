@@ -244,13 +244,14 @@ function Component() {
 		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow">
 			<Receipt
 				blockNumber={receipt.blockNumber}
-				sender={transaction.from}
-				hash={receipt.transactionHash}
-				timestamp={block.timestamp}
 				events={knownEvents}
 				fee={fee}
-				feeDisplay={feeDisplay}
 				feeBreakdown={lineItems.feeBreakdown}
+				feeDisplay={feeDisplay}
+				hash={receipt.transactionHash}
+				rawData={Json.stringify({ tx: transaction, receipt }, null, 2)}
+				sender={transaction.from}
+				timestamp={block.timestamp}
 				total={total}
 				totalDisplay={totalDisplay}
 			/>

@@ -547,6 +547,7 @@ function loader() {
 		feeDisplay: '$0.05',
 		total: 0.05,
 		totalDisplay: '$0.05',
+		rawData: JSON.stringify({ demo: true }, null, 2),
 	}
 }
 
