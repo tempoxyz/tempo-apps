@@ -39,4 +39,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/${{ matrix.app }}
-          command: ${{ matrix.env == 'privy' && 'deploy --env privy' || 'deploy' }}
+          command: ${{ matrix.env == 'privy' && 'deploy --env privy' || 'deploy --env=""' }}

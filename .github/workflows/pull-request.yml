@@ -52,32 +52,3 @@ jobs:
         with:
           deployment_url: ${{ steps.deploy.outputs.deployment-url }}
           branch_preview_url: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
-
-  test-deploy:
-    name: Test Deploy (${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    strategy:
-      matrix:
-        include:
-          - app: explorer
-          - app: fee-payer
-          - app: fee-payer
-            env: privy
-        
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          submodules: 'recursive'
-
-      - name: Install dependencies
-        uses: ./.github/actions/install-dependencies
-
-      - name: Test Deploy Command (Dry Run)
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/${{ matrix.app }}
-          # todo(struong): remove --dry-run before merging
-          command: ${{ matrix.env == 'privy' && 'deploy --dry-run --env privy' || 'deploy --dry-run' }}
