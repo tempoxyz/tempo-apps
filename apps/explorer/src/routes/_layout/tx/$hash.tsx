@@ -249,7 +249,7 @@ function Component() {
 				feeBreakdown={lineItems.feeBreakdown}
 				feeDisplay={feeDisplay}
 				hash={receipt.transactionHash}
-				rawData={Json.stringify({ lineItems, receipt }, null, 2)}
+				rawData={Json.stringify({ tx: transaction, receipt }, null, 2)}
 				sender={transaction.from}
 				timestamp={block.timestamp}
 				total={total}

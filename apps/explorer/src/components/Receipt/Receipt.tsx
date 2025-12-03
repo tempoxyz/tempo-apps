@@ -6,6 +6,7 @@ import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import type { KnownEvent } from '#lib/known-events'
 import CopyIcon from '~icons/lucide/copy'
+import { RawTransaction } from './RawTransaction'
 import { ReceiptMark } from './ReceiptMark'
 
 export function Receipt(props: Receipt.Props) {
@@ -280,36 +281,38 @@ export function Receipt(props: Receipt.Props) {
 				</>
 			)}
 			<div className="px-[20px] py-[8px] font-mono text-[13px] border-t border-base-border border-dashed">
-				<div className="flex justify-end">
-					{showRawData ? (
-						<button
-							type="button"
-							className="press-down cursor-pointer flex items-center gap-[4px] text-primary text-[11px] px-[4px] py-[2px] z-10"
-							onClick={() => copyRawData.copy(rawData)}
-						>
-							<span className="-translate-y-[1px]">
-								{copyRawData.notifying ? 'Copied' : 'Copy data'}
-							</span>
-							<CopyIcon className="size-[12px]" />
-						</button>
-					) : (
-						<button
-							type="button"
-							className="press-down cursor-pointer text-[11px]"
-							onClick={() => setShowRawData((v) => !v)}
-						>
-							See full data
-						</button>
-					)}
-				</div>
+				<button
+					type="button"
+					className="press-down cursor-pointer text-[11px] px-[4px] py-[2px] flex"
+					onClick={() => setShowRawData((v) => !v)}
+				>
+					<span className="-translate-y-[1px]">
+						{showRawData ? 'Close data' : 'Full data'}
+					</span>
+				</button>
 				<div
 					ref={rawDataRef}
-					className="pb-[8px] pt-[8px] relative"
+					className="pb-[8px] pt-[4px]"
 					style={{ display: showRawData ? 'block' : 'none' }}
 				>
-					<pre className="bg-base-alt/50 text-[11px] leading-[14px] overflow-auto max-h-[268px] whitespace-pre-wrap break-all text-base-content p-[16px] focus:outline-focus focus-within:outline-[2px] rounded-[4px] ">
-						{rawData}
-					</pre>
+					<div className="relative bg-base-alt/50 text-[11px] leading-[14px] overflow-auto max-h-[272px] text-base-content p-[8px] focus:outline-focus focus:outline-[2px] rounded-[4px]">
+						<div className="absolute top-[6px] right-[4px] flex items-center gap-[4px] text-tertiary">
+							{copyRawData.notifying && (
+								<span className="-translate-y-[1px] select-none pl-[4px]">
+									copied
+								</span>
+							)}
+							<button
+								type="button"
+								className="press-down cursor-pointer hover:text-secondary p-[4px]"
+								onClick={() => copyRawData.copy(rawData)}
+								title="Copy"
+							>
+								<CopyIcon className="size-[14px]" />
+							</button>
+						</div>
+						<RawTransaction data={rawData} />
+					</div>
 				</div>
 			</div>
 		</div>
