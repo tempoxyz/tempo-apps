@@ -82,7 +82,12 @@ export namespace RawTransaction {
 				<div className="flex flex-col" style={{ paddingLeft: indent * 8 }}>
 					<div className="text-tertiary">{label}</div>
 					{value.map((item, index) => (
-						<ArrayItem key={index} index={index} value={item} indent={1} />
+						<ArrayItem
+							key={`${index}${item}`}
+							index={index}
+							value={item}
+							indent={1}
+						/>
 					))}
 				</div>
 			)
@@ -136,15 +141,17 @@ export namespace RawTransaction {
 			return (
 				<div className="flex flex-col" style={{ paddingLeft: indent * 8 }}>
 					<div className="text-tertiary">[{index}]</div>
-					{entries.map(([key, val]) => (
-						<Row
-							key={key}
-							label={key}
-							value={val}
-							pad={maxKeyLength}
-							indent={1}
-						/>
-					))}
+					{entries.map(([key, val]) => {
+						return (
+							<Row
+								key={key}
+								label={key}
+								value={val}
+								pad={maxKeyLength}
+								indent={1}
+							/>
+						)
+					})}
 				</div>
 			)
 		}
