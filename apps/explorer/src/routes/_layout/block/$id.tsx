@@ -12,17 +12,16 @@ import { decodeFunctionData, isHex, zeroAddress } from 'viem'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import { Address as AddressLink } from '#components/Address.tsx'
-import { EventDescription } from '#components/EventDescription'
+import { CopyButton } from '#components/CopyButton.tsx'
+import { EventDescription } from '#components/EventDescription.tsx'
 import { NotFound } from '#components/NotFound.tsx'
 import { cx } from '#cva.config.ts'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
-import { useCopy } from '#lib/hooks.ts'
 import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
-import * as Tip20 from '#lib/tip20'
+import * as Tip20 from '#lib/tip20.ts'
 import { getConfig } from '#wagmi.config.ts'
 import ArrowUp10Icon from '~icons/lucide/arrow-up-10'
 import ChevronDown from '~icons/lucide/chevron-down'
-import CopyIcon from '~icons/lucide/copy'
 
 const combinedAbi = Object.values(Abis).flat()
 
@@ -724,35 +723,6 @@ function BlockTimeRow(props: {
 				{value?.replaceAll(',', '')}
 			</span>
 		</div>
-	)
-}
-
-function CopyButton(props: {
-	value: string
-	ariaLabel: string
-	disabled?: boolean
-	className?: string
-}) {
-	const { value, ariaLabel, disabled, className } = props
-	const { copy, notifying } = useCopy()
-	return (
-		<button
-			type="button"
-			onClick={() => copy(value)}
-			className={cx(
-				'flex items-center gap-[4px] text-tertiary/60 hover:text-primary transition-colors text-[12px]',
-				className,
-			)}
-			aria-label={ariaLabel}
-			disabled={disabled}
-		>
-			<CopyIcon className="size-4" />
-			{notifying && (
-				<span className="text-[10px] uppercase tracking-widest text-primary">
-					copied
-				</span>
-			)}
-		</button>
 	)
 }
 

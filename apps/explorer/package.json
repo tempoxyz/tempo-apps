@@ -57,6 +57,7 @@
 		"typed-query-selector": "catalog:",
 		"unplugin-icons": "catalog:",
 		"vite": "catalog:",
+		"vite-plugin-devtools-json": "^1.0.0",
 		"vite-tsconfig-paths": "catalog:",
 		"vitest": "catalog:",
 		"wrangler": "catalog:"

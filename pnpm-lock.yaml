@@ -217,7 +217,7 @@ importers:
         version: 4.1.17
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.7.6(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.0)(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.0))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.0))(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13))(wagmi@3.0.2(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.0))(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+        version: 0.7.6(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.0)(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.0))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.0))(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13))(wagmi@3.0.2(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.0))(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
       viem:
         specifier: 'catalog:'
         version: 2.40.4(typescript@5.9.3)(zod@4.1.13)
@@ -233,7 +233,7 @@ importers:
         version: 1.0.4
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
-        version: 1.15.3(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0))(workerd@1.20251125.0)(wrangler@4.51.0(@cloudflare/workers-types@4.20251202.0))
+        version: 1.15.3(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0))(workerd@1.20251128.0)(wrangler@4.51.0(@cloudflare/workers-types@4.20251202.0))
       '@cloudflare/vitest-pool-workers':
         specifier: 'catalog:'
         version: 0.10.12(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@3.2.4)(@vitest/snapshot@3.2.4)(vitest@3.2.4(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))
@@ -285,6 +285,9 @@ importers:
       vite:
         specifier: 'catalog:'
         version: rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)
+      vite-plugin-devtools-json:
+        specifier: ^1.0.0
+        version: 1.0.0(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0))
       vite-tsconfig-paths:
         specifier: 'catalog:'
         version: 5.1.4(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0))(typescript@5.9.3)
@@ -342,7 +345,7 @@ importers:
         version: 19.2.0(react@19.2.0)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.7.6(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.0)(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.0))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.0))(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13))(wagmi@3.0.2(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.0))(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+        version: 0.7.6(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.0)(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.0))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.0))(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13))(wagmi@3.0.2(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.0))(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
       viem:
         specifier: 'catalog:'
         version: 2.40.4(typescript@5.9.3)(zod@4.1.13)
@@ -3460,6 +3463,10 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
+  uuid@11.1.0:
+    resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
+    hasBin: true
+
   viem@2.40.4:
     resolution: {integrity: sha512-3W4f23daRtoOExWKwgT+Uy8c8Hoy4wTikhxRrjlKGU3m9hp8wQ+62TDXngapQ7kaEbHabCqb4aJSRVnEa7N62g==}
     peerDependencies:
@@ -3472,6 +3479,11 @@ packages:
     resolution: {integrity: sha512-EbKSKh+bh1E1IFxeO0pg1n4dvoOTt0UDiXMd/qn++r98+jPO1xtJilvXldeuQ8giIB5IkpjCgMleHMNEsGH6pg==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
     hasBin: true
+
+  vite-plugin-devtools-json@1.0.0:
+    resolution: {integrity: sha512-MobvwqX76Vqt/O4AbnNMNWoXWGrKUqZbphCUle/J2KXH82yKQiunOeKnz/nqEPosPsoWWPP9FtNuPBSYpiiwkw==}
+    peerDependencies:
+      vite: ^5.0.0 || ^6.0.0 || ^7.0.0
 
   vite-tsconfig-paths@5.1.4:
     resolution: {integrity: sha512-cYj0LRuLV2c2sMqhqhGpaO3LretdtMn/BVX4cPLanIZuwwrkVl+lK84E/miEXkCHWXuq65rhNN4rXsBcOB3S4w==}
@@ -3971,15 +3983,21 @@ snapshots:
     optionalDependencies:
       workerd: 1.20251125.0
 
+  '@cloudflare/unenv-preset@2.7.11(unenv@2.0.0-rc.24)(workerd@1.20251128.0)':
+    dependencies:
+      unenv: 2.0.0-rc.24
+    optionalDependencies:
+      workerd: 1.20251128.0
+
   '@cloudflare/unenv-preset@2.7.12(unenv@2.0.0-rc.24)(workerd@1.20251128.0)':
     dependencies:
       unenv: 2.0.0-rc.24
     optionalDependencies:
       workerd: 1.20251128.0
 
-  '@cloudflare/vite-plugin@1.15.3(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0))(workerd@1.20251125.0)(wrangler@4.51.0(@cloudflare/workers-types@4.20251202.0))':
+  '@cloudflare/vite-plugin@1.15.3(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0))(workerd@1.20251128.0)(wrangler@4.51.0(@cloudflare/workers-types@4.20251202.0))':
     dependencies:
-      '@cloudflare/unenv-preset': 2.7.11(unenv@2.0.0-rc.24)(workerd@1.20251125.0)
+      '@cloudflare/unenv-preset': 2.7.11(unenv@2.0.0-rc.24)(workerd@1.20251128.0)
       '@remix-run/node-fetch-server': 0.8.1
       get-port: 7.1.0
       miniflare: 4.20251125.0
@@ -5312,9 +5330,9 @@ snapshots:
       loupe: 3.2.1
       tinyrainbow: 2.0.0
 
-  '@wagmi/connectors@7.0.2(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.0))(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13))':
+  '@wagmi/connectors@7.0.2(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.0))(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13))':
     dependencies:
-      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.0))(viem@2.40.4(typescript@5.9.3)(zod@4.1.13))
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.0))(viem@2.40.4(typescript@5.9.3)(zod@4.1.13))
       viem: 2.40.4(typescript@5.9.3)(zod@4.1.13)
     optionalDependencies:
       typescript: 5.9.3
@@ -5348,7 +5366,6 @@ snapshots:
       - immer
       - react
       - use-sync-external-store
-    optional: true
 
   abitype@1.1.0(typescript@5.9.3)(zod@4.1.13):
     optionalDependencies:
@@ -6604,6 +6621,8 @@ snapshots:
     dependencies:
       react: 19.2.0
 
+  uuid@11.1.0: {}
+
   viem@2.40.4(typescript@5.9.3)(zod@4.1.13):
     dependencies:
       '@noble/curves': 1.9.1
@@ -6641,6 +6660,11 @@ snapshots:
       - terser
       - tsx
       - yaml
+
+  vite-plugin-devtools-json@1.0.0(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)):
+    dependencies:
+      uuid: 11.1.0
+      vite: rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)
 
   vite-tsconfig-paths@5.1.4(rolldown-vite@7.2.9(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0))(typescript@5.9.3):
     dependencies:
@@ -6716,7 +6740,7 @@ snapshots:
   wagmi@3.0.2(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.0))(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)):
     dependencies:
       '@tanstack/react-query': 5.90.11(react@19.2.0)
-      '@wagmi/connectors': 7.0.2(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.0))(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13))
+      '@wagmi/connectors': 7.0.2(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.0))(viem@2.40.4(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.40.4(typescript@5.9.3)(zod@4.1.13))
       '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.0)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.0))(viem@2.40.4(typescript@5.9.3)(zod@4.1.13))
       react: 19.2.0
       use-sync-external-store: 1.4.0(react@19.2.0)
@@ -6869,4 +6893,3 @@ snapshots:
       '@types/react': 19.2.7
       react: 19.2.0
       use-sync-external-store: 1.6.0(react@19.2.0)
-    optional: true
