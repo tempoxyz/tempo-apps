@@ -5,6 +5,12 @@
 	"javascript.preferences.importModuleSpecifierEnding": "js",
 	"typescript.preferences.importModuleSpecifier": "non-relative",
 	"javascript.preferences.importModuleSpecifier": "non-relative",
+	"typescript.preferences.autoImportFileExcludePatterns": [
+		"**/node_modules/**/_*/**"
+	],
+	"javascript.preferences.autoImportFileExcludePatterns": [
+		"**/node_modules/**/_*/**"
+	],
 	"editor.formatOnSave": true,
 	"files.watcherExclude": {
 		"**/routeTree.gen.ts": true
