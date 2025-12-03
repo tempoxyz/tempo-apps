@@ -4,7 +4,8 @@
 	"compatibility_date": "2025-11-20",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.ts",
-	"workers_dev": true,
+	"routes": [{ "pattern": "sponsor.testnet.tempo.xyz", "custom_domain": true }],
+	"workers_dev": false,
 	"preview_urls": true,
 	"keep_vars": true,
 	"observability": {
@@ -14,6 +15,15 @@
 			"head_sampling_rate": 1,
 			"invocation_logs": true,
 			"persist": true
+		}
+	},
+	"env": {
+		"privy": {
+			"name": "fee-payer-privy",
+			"routes": [
+				{ "pattern": "privy-sponsor.testnet.tempo.xyz", "custom_domain": true }
+			],
+			"workers_dev": false
 		}
 	}
 }
