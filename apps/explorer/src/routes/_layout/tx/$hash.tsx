@@ -52,9 +52,7 @@ async function loader({
 		})
 		const [block, transaction, getTokenMetadata] = await Promise.all([
 			getBlock(config, { blockHash: receipt.blockHash }),
-			getTransaction(config, { hash: receipt.transactionHash }).catch(
-				() => undefined,
-			),
+			getTransaction(config, { hash: receipt.transactionHash }),
 			Tip20.metadataFromLogs(receipt.logs),
 		])
 		const timestampFormatted = DateFormatter.format(block.timestamp)
