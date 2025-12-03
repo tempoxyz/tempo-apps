@@ -5,9 +5,8 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useChains } from 'wagmi'
+import { useChains, useWatchBlockNumber } from 'wagmi'
 import { cx } from '#cva.config'
-import { fetchLatestBlock } from '#lib/latest-block.server'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
 import { ExploreInput } from './ExploreInput'
@@ -94,17 +93,13 @@ export namespace Header {
 
 	export function BlockNumber(props: BlockNumber.Props) {
 		const { initial } = props
-		const ref = React.useRef<HTMLSpanElement>(null)
-		const blockNumberRef = React.useRef(initial)
 
-		React.useEffect(() => {
-			const interval = setInterval(async () => {
-				const blockNumber = await fetchLatestBlock()
-				blockNumberRef.current = blockNumber
+		const ref = React.useRef<HTMLSpanElement>(null)
+		useWatchBlockNumber({
+			onBlockNumber: (blockNumber) => {
 				if (ref.current) ref.current.textContent = String(blockNumber)
-			}, 1_000)
-			return () => clearInterval(interval)
-		}, [])
+			},
+		})
 
 		return (
 			<Link
@@ -115,8 +110,11 @@ export namespace Header {
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
 					<span className="@min-[1240px]:inline hidden">Block </span>
-					<span className="text-primary font-medium tabular-nums min-w-[6ch] inline-block">
-						<span ref={ref}>{initial ? String(initial) : '…'}</span>
+					<span
+						ref={ref}
+						className="text-primary font-medium tabular-nums min-w-[6ch] inline-block"
+					>
+						{initial ? String(initial) : '…'}
 					</span>
 				</div>
 			</Link>
