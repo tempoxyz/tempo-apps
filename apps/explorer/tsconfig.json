@@ -27,9 +27,8 @@
 		"noUncheckedSideEffectImports": true,
 		"resolveJsonModule": true,
 		"paths": {
-			"*": ["./*"],
 			"#*": ["./src/*"],
-			"#components": ["./src/components/*"],
+			"#components/*": ["./src/components/*"],
 			"#cva": ["./src/cva.config.ts"]
 		}
 	},

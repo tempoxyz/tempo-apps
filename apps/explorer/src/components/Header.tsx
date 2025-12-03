@@ -44,7 +44,7 @@ export namespace Header {
 			select: (state) => state.status === 'pending',
 		})
 		const pathname = useRouterState({
-			select: (state) => state.location.pathname,
+			select: (state) => state.resolvedLocation?.pathname,
 		})
 
 		React.useEffect(() => setIsMounted(true), [])
@@ -56,6 +56,7 @@ export namespace Header {
 		}, [router])
 
 		return (
+			pathname &&
 			pathname !== '/' && (
 				<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex z-1 h-0 items-center">
 					<ExploreInput

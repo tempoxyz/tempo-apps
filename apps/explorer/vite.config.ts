@@ -5,6 +5,7 @@ import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
 import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv } from 'vite'
+import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig((config) => {
@@ -13,6 +14,7 @@ export default defineConfig((config) => {
 	return {
 		plugins: [
 			devtools(),
+			vitePluginChromiumDevTools(),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tsconfigPaths({
 				projects: ['./tsconfig.json'],
