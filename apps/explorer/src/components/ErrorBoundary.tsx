@@ -1,4 +1,4 @@
-import { type ErrorComponentProps, Link } from '@tanstack/react-router'
+import type { ErrorComponentProps } from '@tanstack/react-router'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 import { Footer } from './Footer'
@@ -38,9 +38,13 @@ export function ErrorBoundary({ error }: ErrorComponentProps) {
 						</button>
 					</div>
 				)}
-				<Link to="/" className="text-accent rounded-[8px] press-down">
+				<button
+					type="button"
+					onClick={() => window.history.back()}
+					className="text-accent rounded-[8px] press-down"
+				>
 					Go Back
-				</Link>
+				</button>
 			</section>
 			<Footer />
 		</main>

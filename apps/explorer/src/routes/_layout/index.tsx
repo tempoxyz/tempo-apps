@@ -98,6 +98,15 @@ function SpotlightLinks() {
 				>
 					Receipt
 				</SpotlightLink>
+				<span>·</span>
+				<SpotlightLink
+					to="/address/$address"
+					params={{
+						address: '0x20fc000000000000000000000000000000000000',
+					}}
+				>
+					Contract
+				</SpotlightLink>
 			</div>
 		</section>
 	)

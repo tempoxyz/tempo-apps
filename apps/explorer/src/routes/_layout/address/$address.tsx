@@ -5,9 +5,9 @@ import {
 	notFound,
 	rootRouteId,
 	stripSearchParams,
+	useLocation,
 	useNavigate,
 	useRouter,
-	useRouterState,
 } from '@tanstack/react-router'
 import { Address, Hex, Value } from 'ox'
 import * as React from 'react'
@@ -21,12 +21,25 @@ import {
 } from 'wagmi/query'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
-import { DataGrid } from '#components/DataGrid'
-import { EventDescription } from '#components/EventDescription'
+import { ContractReader } from '#components/Contract/Read.tsx'
+import { DataGrid } from '#components/DataGrid.tsx'
+import { EventDescription } from '#components/EventDescription.tsx'
 import { NotFound } from '#components/NotFound'
-import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
+import {
+	FormattedTimestamp,
+	TimeColumnHeader,
+	type TimeFormat,
+	useTimeFormat,
+} from '#components/TimeFormat'
 import { cx } from '#cva.config.ts'
+import * as AccountServer from '#lib/account.server.ts'
+import {
+	type ContractInfo,
+	extractContractAbi,
+	getContractBytecode,
+	getContractInfo,
+} from '#lib/contracts.ts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import {
@@ -36,13 +49,14 @@ import {
 } from '#lib/known-events'
 import * as Tip20 from '#lib/tip20'
 import { config } from '#wagmi.config'
-import * as AccountServer from '../../../lib/account.server.ts'
 
 const defaultSearchValues = {
 	page: 1,
 	limit: 10,
 	tab: 'history',
 } as const
+
+type TabValue = 'history' | 'assets' | 'contract'
 
 type TransactionQuery = {
 	address: Address.Address
@@ -72,34 +86,42 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
 			const transactions = await Promise.all(
 				data.transactions.map(async (transaction) => {
+					// Fetch receipt and block with error handling for sync lag
+					// (IndexSupply may return txs that RPC hasn't indexed yet)
 					const [receipt, block] = await Promise.all([
-						client.fetchQuery(
-							getTransactionReceiptQueryOptions(config, {
-								hash: transaction.hash,
-							}),
-						),
-						client.fetchQuery(
-							getBlockQueryOptions(config, {
-								blockNumber: transaction.blockNumber
-									? Hex.toBigInt(transaction.blockNumber)
-									: undefined,
-							}),
-						),
+						client
+							.fetchQuery(
+								getTransactionReceiptQueryOptions(config, {
+									hash: transaction.hash,
+								}),
+							)
+							.catch(() => null),
+						client
+							.fetchQuery(
+								getBlockQueryOptions(config, {
+									blockNumber: transaction.blockNumber
+										? Hex.toBigInt(transaction.blockNumber)
+										: undefined,
+								}),
+							)
+							.catch(() => null),
 					])
-					const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
-					knownEvents[transaction.hash] = parseKnownEvents(receipt, {
-						transaction,
-						getTokenMetadata,
-					})
+					if (receipt) {
+						const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
+						knownEvents[transaction.hash] = parseKnownEvents(receipt, {
+							transaction,
+							getTokenMetadata,
+						})
+					}
 					return { ...transaction, block, receipt }
 				}),
 			)
 			return { ...data, transactions, knownEvents }
 		},
-		// auto-refresh page 1 since new transactions appear there
-		refetchInterval: params.page === 1 ? 4_000 : false,
-		refetchIntervalInBackground: params.page === 1,
-		refetchOnWindowFocus: params.page === 1,
+		// Default to no auto-refresh; useQuery call overrides for reactivity
+		refetchInterval: false,
+		refetchIntervalInBackground: false,
+		refetchOnWindowFocus: false,
 		placeholderData: keepPreviousData,
 	})
 }
@@ -116,20 +138,56 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			),
 			defaultSearchValues.limit,
 		),
-		tab: z.prefault(z.enum(['history', 'assets']), defaultSearchValues.tab),
+		tab: z.prefault(
+			z.enum(['history', 'assets', 'contract']),
+			defaultSearchValues.tab,
+		),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
 	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
 	loader: async ({ deps: { page, limit }, params, context }) => {
-		try {
-			const { address } = params
-			if (!Address.validate(address)) throw notFound()
+		const { address } = params
+		// Only throw notFound for truly invalid addresses
+		if (!Address.validate(address))
+			throw notFound({
+				routeId: rootRouteId,
+				data: { error: 'Invalid address format' },
+			})
 
-			const offset = (page - 1) * limit
+		const offset = (page - 1) * limit
 
-			return await context.queryClient.ensureQueryData(
+		// check if it's a known contract from our registry
+		let contractInfo: ContractInfo | undefined = getContractInfo(address)
+
+		// if not in registry, try to extract ABI from bytecode using whatsabi
+		if (!contractInfo) {
+			const contractBytecode = await getContractBytecode(address).catch(
+				() => undefined,
+			)
+
+			if (contractBytecode) {
+				const contractAbi = await extractContractAbi(address).catch(
+					() => undefined,
+				)
+
+				if (contractAbi) {
+					contractInfo = {
+						name: 'Unknown Contract',
+						description: 'ABI extracted from bytecode',
+						code: contractBytecode,
+						abi: contractAbi,
+						category: 'utility',
+					}
+				}
+			}
+		}
+
+		const hasContract = Boolean(contractInfo)
+
+		const transactionsData = await context.queryClient
+			.ensureQueryData(
 				transactionsQueryOptions({
 					address,
 					page,
@@ -137,14 +195,19 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					offset,
 				}),
 			)
-		} catch (error) {
-			console.error('onCatch', error)
-			throw notFound({
-				routeId: rootRouteId,
-				data: {
-					error: error instanceof Error ? error.message : 'Unknown error',
-				},
+			.catch((error) => {
+				console.error('Fetch error (non-blocking):', error)
+				return undefined
 			})
+
+		return {
+			address,
+			page,
+			limit,
+			offset,
+			hasContract,
+			contractInfo,
+			transactionsData,
 		}
 	},
 })
@@ -320,12 +383,46 @@ function useAccountTotalValue(address: Address.Address) {
 function RouteComponent() {
 	const navigate = useNavigate()
 	const route = useRouter()
+	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, limit } = Route.useSearch()
+	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
 
 	Address.assert(address)
 
+	const hash = location.hash
+
+	// Track which hash we've already redirected for (prevents re-redirect when
+	// user manually switches tabs, but allows redirect for new hash values)
+	const redirectedForHashRef = React.useRef<string | null>(null)
+
+	// When URL has a hash fragment (e.g., #functionName), switch to contract tab
 	React.useEffect(() => {
+		// Only redirect if:
+		// 1. We have a hash
+		// 2. Address has a known contract
+		// 3. Not already on contract tab
+		// 4. Haven't already redirected for this specific hash
+		if (
+			hash &&
+			hasContract &&
+			tab !== 'contract' &&
+			redirectedForHashRef.current !== hash
+		) {
+			redirectedForHashRef.current = hash
+			navigate({
+				to: '.',
+				search: { page: 1, tab: 'contract', limit },
+				hash,
+				replace: true,
+				resetScroll: false,
+			})
+		}
+	}, [hash, hasContract, tab, navigate, limit])
+
+	React.useEffect(() => {
+		// Only preload for history tab (transaction pagination)
+		if (tab !== 'history') return
 		// preload pages around the active page (3 before and 3 after)
 		for (let i = -3; i <= 3; i++) {
 			if (i === 0) continue // skip current page
@@ -337,15 +434,21 @@ function RouteComponent() {
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
-			const newTab = newIndex === 0 ? 'history' : 'assets'
+			const tabs: TabValue[] = hasContract
+				? ['history', 'assets', 'contract']
+				: ['history', 'assets']
+			const newTab = tabs[newIndex] ?? 'history'
 			navigate({
 				to: '.',
 				search: { page, tab: newTab, limit },
 				resetScroll: false,
 			})
 		},
-		[navigate, page, limit],
+		[navigate, page, limit, hasContract],
 	)
+
+	const activeSection =
+		tab === 'history' ? 0 : tab === 'assets' ? 1 : hasContract ? 2 : 0
 
 	return (
 		<div
@@ -359,25 +462,45 @@ function RouteComponent() {
 				address={address}
 				page={page}
 				limit={limit}
-				activeSection={tab === 'history' ? 0 : 1}
+				activeSection={activeSection}
 				onSectionChange={setActiveSection}
+				contractInfo={contractInfo}
+				initialData={transactionsData}
 			/>
 		</div>
 	)
 }
+type TransactionsData = Awaited<
+	ReturnType<
+		NonNullable<ReturnType<typeof transactionsQueryOptions>['queryFn']>
+	>
+>
+
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
 	limit: number
 	activeSection: number
 	onSectionChange: (index: number) => void
+	contractInfo: ContractInfo | undefined
+	initialData: TransactionsData | undefined
 }) {
-	const { address, page, limit, activeSection, onSectionChange } = props
+	const {
+		address,
+		page,
+		limit,
+		activeSection,
+		onSectionChange,
+		contractInfo,
+		initialData,
+	} = props
+	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
-	const state = useRouterState()
-	const initialData = Route.useLoaderData()
+	const isHistoryTabActive = activeSection === 0
+	// Only auto-refresh on page 1 when history tab is active
+	const shouldAutoRefresh = page === 1 && isHistoryTabActive
 
-	const { data, isLoading } = useQuery({
+	const { data, isPending, error } = useQuery({
 		...transactionsQueryOptions({
 			address,
 			page,
@@ -385,25 +508,51 @@ function SectionsWrapper(props: {
 			offset: (page - 1) * limit,
 		}),
 		initialData,
+		// Override refetch settings reactively based on tab state
+		refetchInterval: shouldAutoRefresh ? 4_000 : false,
+		refetchOnWindowFocus: shouldAutoRefresh,
 	})
 	const { transactions, total, knownEvents } = data ?? {
 		transactions: [],
 		total: 0,
-		knownEvents: {},
+		knownEvents: {} as Record<Hex.Hex, KnownEvent[]>,
 	}
 
-	const isLoadingPage =
-		(state.isLoading && state.location.pathname.includes('/address/')) ||
-		isLoading
+	// Use isPending for SSR-consistent loading state
+	const isLoadingPage = isPending
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
-	if (transactions.length === 0 && isLoadingPage)
-		return <SectionsSkeleton totalItems={total} />
+	// Only show skeleton if we have no data AND we're loading
+	// Use data presence check to avoid hydration mismatch
+	if (!data && isPending) return <SectionsSkeleton totalItems={total} />
+
+	// Show error state for API failures (instead of crashing the whole page)
+	const historyError = error ? (
+		<div className="rounded-[10px] bg-card-header p-[18px]">
+			<p className="text-sm font-medium text-red-400">
+				Failed to load transaction history
+			</p>
+			<p className="text-xs text-tertiary mt-1">
+				{error instanceof Error ? error.message : 'Unknown error'}
+			</p>
+		</div>
+	) : null
 
 	const historyColumns: DataGrid.Column[] = [
-		{ label: 'Time', align: 'start', minWidth: 100 },
+		{
+			label: (
+				<TimeColumnHeader
+					label="Time"
+					formatLabel={formatLabel}
+					onCycle={cycleTimeFormat}
+					className="hover:text-accent cursor-pointer transition-colors"
+				/>
+			),
+			align: 'start',
+			minWidth: 100,
+		},
 		{ label: 'Description', align: 'start' },
 		{ label: 'Hash', align: 'end' },
 		{ label: 'Fee', align: 'end' },
@@ -418,7 +567,7 @@ function SectionsWrapper(props: {
 					title: 'History',
 					totalItems: total,
 					itemsLabel: 'transactions',
-					content: (
+					content: historyError ?? (
 						<DataGrid
 							columns={{
 								stacked: historyColumns,
@@ -426,14 +575,23 @@ function SectionsWrapper(props: {
 							}}
 							items={() =>
 								transactions.map((transaction) => {
-									const receipt = transaction.receipt
+									// receipt/block can be null if RPC hasn't indexed yet
+									const receipt = transaction.receipt ?? undefined
+									const block = transaction.block
 									return {
 										cells: [
-											<TransactionTimestamp
-												key="time"
-												timestamp={transaction.block.timestamp}
-												link={`/tx/${transaction.hash}`}
-											/>,
+											block ? (
+												<TransactionTimestamp
+													key="time"
+													timestamp={block.timestamp}
+													link={`/tx/${transaction.hash}`}
+													format={timeFormat}
+												/>
+											) : (
+												<span key="time" className="text-tertiary text-[13px]">
+													Pending...
+												</span>
+											),
 											<TransactionRowDescription
 												key="desc"
 												transaction={transaction}
@@ -539,6 +697,23 @@ function SectionsWrapper(props: {
 						/>
 					),
 				},
+				// Contract tab - only shown for known contracts
+				...(contractInfo
+					? [
+							{
+								title: 'Contract',
+								totalItems: 0,
+								itemsLabel: 'functions',
+								content: (
+									<ContractReader
+										address={address}
+										abi={contractInfo.abi}
+										docsUrl={contractInfo.docsUrl}
+									/>
+								),
+							},
+						]
+					: []),
 			]}
 			activeSection={activeSection}
 			onSectionChange={onSectionChange}
@@ -675,7 +850,7 @@ function AssetValue(props: {
 	)
 }
 
-export function TransactionFee(props: { receipt: TransactionReceipt }) {
+export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 	const { receipt } = props
 
 	if (!receipt) return <span className="text-tertiary">…</span>
@@ -772,17 +947,22 @@ export function TransactionHash(props: { hash: Hex.Hex }) {
 export function TransactionTimestamp(props: {
 	timestamp: bigint
 	link?: string
+	format?: TimeFormat
 }) {
-	const { timestamp, link } = props
+	const { timestamp, link, format = 'relative' } = props
 
 	return (
 		<div className="text-nowrap">
 			{link ? (
 				<Link to={link} className="text-tertiary">
-					<RelativeTime timestamp={timestamp} />
+					<FormattedTimestamp timestamp={timestamp} format={format} />
 				</Link>
 			) : (
-				<RelativeTime timestamp={timestamp} className="text-tertiary" />
+				<FormattedTimestamp
+					timestamp={timestamp}
+					format={format}
+					className="text-tertiary"
+				/>
 			)}
 		</div>
 	)

@@ -16,6 +16,7 @@
 		"test": "vitest"
 	},
 	"dependencies": {
+		"@shazow/whatsabi": "catalog:",
 		"@tailwindcss/vite": "catalog:",
 		"@tanstack/query-async-storage-persister": "catalog:",
 		"@tanstack/react-query": "catalog:",
