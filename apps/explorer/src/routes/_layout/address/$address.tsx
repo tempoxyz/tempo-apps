@@ -129,7 +129,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 			const offset = (page - 1) * limit
 
-			return await context.queryClient.fetchQuery(
+			return await context.queryClient.ensureQueryData(
 				transactionsQueryOptions({
 					address,
 					page,

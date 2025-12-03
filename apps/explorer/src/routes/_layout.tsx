@@ -1,33 +1,27 @@
 import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
-import type { Hex } from 'ox'
-
-import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { Footer } from '#components/Footer'
 import { Header } from '#components/Header'
 import { Sphere } from '#components/Sphere'
-import { getConfig } from '#wagmi.config'
+import { fetchLatestBlock } from '#lib/latest-block.server'
 
 export const Route = createFileRoute('/_layout')({
-	component: Component,
+	component: RouteComponent,
 	validateSearch: z.object({
 		plain: z.optional(z.string()),
 	}).parse,
-	loader: async () => {
-		const block = await getBlock(getConfig())
-		return {
-			recentTransactions: block.transactions.slice(0, 2),
-			blockNumber: block.number,
-		}
-	},
+	loader: () => fetchLatestBlock(),
 })
 
-function Component() {
+function RouteComponent() {
 	const search = Route.useSearch()
-	const { recentTransactions, blockNumber } = Route.useLoaderData()
-	if ('plain' in search) return <Outlet />
+	const isPlain = 'plain' in search
+	const blockNumber = Route.useLoaderData()
+
+	if (isPlain) return <Outlet />
+
 	return (
-		<Layout blockNumber={blockNumber} recentTransactions={recentTransactions}>
+		<Layout blockNumber={blockNumber}>
 			<Outlet />
 		</Layout>
 	)
@@ -56,6 +50,5 @@ export namespace Layout {
 	export interface Props {
 		children: React.ReactNode
 		blockNumber?: bigint
-		recentTransactions?: Hex.Hex[]
 	}
 }

@@ -5,7 +5,9 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useChains, useWatchBlockNumber } from 'wagmi'
+import { useChains } from 'wagmi'
+import { cx } from '#cva.config'
+import { fetchLatestBlock } from '#lib/latest-block.server'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
 import { ExploreInput } from './ExploreInput'
@@ -40,12 +42,14 @@ export namespace Header {
 		const navigate = useNavigate()
 		const [inputValue, setInputValue] = React.useState('')
 		const [isMounted, setIsMounted] = React.useState(false)
-		const isNavigating = useRouterState({
-			select: (state) => state.status === 'pending',
+		const { currentPathname, isNavigating } = useRouterState({
+			select: (state) => ({
+				currentPathname:
+					state.matches.at(-1)?.pathname ?? state.location.pathname,
+				isNavigating: state.status === 'pending',
+			}),
 		})
-		const pathname = useRouterState({
-			select: (state) => state.location.pathname,
-		})
+		const showSearch = currentPathname !== '/'
 
 		React.useEffect(() => setIsMounted(true), [])
 
@@ -56,48 +60,56 @@ export namespace Header {
 		}, [router])
 
 		return (
-			pathname !== '/' && (
-				<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex z-1 h-0 items-center">
-					<ExploreInput
-						value={inputValue}
-						onChange={setInputValue}
-						disabled={isMounted && isNavigating}
-						onActivate={({ value, type }) => {
-							if (type === 'hash') {
-								navigate({ to: '/tx/$hash', params: { hash: value } })
-								return
-							}
-							if (type === 'token') {
-								navigate({ to: '/token/$address', params: { address: value } })
-								return
-							}
-							if (type === 'address') {
-								navigate({
-									to: '/address/$address',
-									params: { address: value },
-								})
-								return
-							}
-						}}
-					/>
-				</div>
-			)
+			<div
+				className={cx(
+					'absolute left-0 right-0 justify-center hidden @min-[1240px]:flex z-1 h-0 items-center',
+					!showSearch && 'invisible',
+				)}
+			>
+				<ExploreInput
+					value={inputValue}
+					onChange={setInputValue}
+					disabled={isMounted && isNavigating}
+					onActivate={({ value, type }) => {
+						if (type === 'hash') {
+							navigate({ to: '/tx/$hash', params: { hash: value } })
+							return
+						}
+						if (type === 'token') {
+							navigate({ to: '/token/$address', params: { address: value } })
+							return
+						}
+						if (type === 'address') {
+							navigate({
+								to: '/address/$address',
+								params: { address: value },
+							})
+							return
+						}
+					}}
+				/>
+			</div>
 		)
 	}
 
 	export function BlockNumber(props: BlockNumber.Props) {
 		const { initial } = props
 		const ref = React.useRef<HTMLSpanElement>(null)
-		useWatchBlockNumber({
-			pollingInterval: 1000,
-			onBlockNumber: (blockNumber) => {
+		const blockNumberRef = React.useRef(initial)
+
+		React.useEffect(() => {
+			const interval = setInterval(async () => {
+				const blockNumber = await fetchLatestBlock()
+				blockNumberRef.current = blockNumber
 				if (ref.current) ref.current.textContent = String(blockNumber)
-			},
-		})
+			}, 1_000)
+			return () => clearInterval(interval)
+		}, [])
+
 		return (
 			<Link
-				params={{ id: initial?.toString() ?? '' }}
 				to="/block/$id"
+				params={{ id: 'latest' }}
 				className="flex items-center gap-[6px] text-[15px] font-medium text-secondary"
 			>
 				<SquareSquare className="size-[18px] text-accent" />

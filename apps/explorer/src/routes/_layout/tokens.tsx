@@ -27,8 +27,10 @@ export const Route = createFileRoute('/_layout/tokens')({
 	validateSearch: z.object({
 		page: z.optional(z.number()),
 	}).parse,
-	loader: async () => {
-		return fetchTokens({ data: { offset: 0, limit: TOKENS_PER_PAGE } })
+	loader: async ({ context }) => {
+		return context.queryClient.ensureQueryData(
+			tokensQueryOptions({ page: 1, limit: TOKENS_PER_PAGE }),
+		)
 	},
 })
 
@@ -36,12 +38,13 @@ function TokensPage() {
 	const { page = 1 } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 
-	const { data, isLoading } = useQuery(
-		tokensQueryOptions({ page, limit: TOKENS_PER_PAGE }),
-	)
+	const { data, isLoading } = useQuery({
+		...tokensQueryOptions({ page, limit: TOKENS_PER_PAGE }),
+		initialData: page === 1 ? loaderData : undefined,
+	})
 
-	const tokens = data?.tokens ?? loaderData.tokens
-	const total = data?.total ?? loaderData.total
+	const tokens = data?.tokens ?? []
+	const total = data?.total ?? 0
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'

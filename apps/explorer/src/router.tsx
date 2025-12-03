@@ -21,6 +21,7 @@ export const getRouter = () => {
 		routeTree,
 		scrollRestoration: true,
 		context: { queryClient },
+		defaultPreload: 'viewport',
 		defaultNotFoundComponent: () => (
 			<Layout>
 				<NotFound />
