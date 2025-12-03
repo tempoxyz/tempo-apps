@@ -2,8 +2,6 @@ name: Main
 on:
   push:
     branches: [main]
-  # todo(struong): remove before merging
-  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -41,5 +39,4 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/${{ matrix.app }}
-          # todo(struong): remove --dry-run before merging
-          command: ${{ matrix.env == 'privy' && 'deploy --dry-run --env privy' || 'deploy --dry-run' }}
+          command: ${{ matrix.env == 'privy' && 'deploy --env privy' || 'deploy' }}
