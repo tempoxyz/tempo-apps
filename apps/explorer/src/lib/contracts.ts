@@ -1,6 +1,10 @@
-import type { Address } from 'ox'
+import { whatsabi } from '@shazow/whatsabi'
+import type { Address, Hex } from 'ox'
 import { Abis, Addresses } from 'tempo.ts/viem'
 import type { Abi, AbiFunction, AbiParameter } from 'viem'
+import { toFunctionSelector } from 'viem'
+import { getPublicClient } from 'wagmi/actions'
+import { config } from '#wagmi.config.ts'
 
 /**
  * Registry of known contract addresses to their ABIs and metadata.
@@ -10,6 +14,7 @@ import type { Abi, AbiFunction, AbiParameter } from 'viem'
 export type ContractInfo = {
 	name: string
 	description?: string
+	code: Hex.Hex
 	abi: Abi
 	/** Category for grouping in UI */
 	category: 'token' | 'system' | 'utility' | 'account'
@@ -28,6 +33,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			name: 'linkingUSD',
 			description: 'Non-transferable DEX accounting unit',
 			abi: Abis.tip20,
+			code: '0xef',
 			category: 'token',
 			docsUrl:
 				'https://docs.tempo.xyz/documentation/protocol/exchange/linkingUSD',
@@ -37,6 +43,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		'0x20c0000000000000000000000000000000000001',
 		{
 			name: 'AlphaUSD',
+			code: '0xef',
 			description: 'TIP-20 stablecoin (AUSD)',
 			abi: Abis.tip20,
 			category: 'token',
@@ -46,6 +53,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		'0x20c0000000000000000000000000000000000002',
 		{
 			name: 'BetaUSD',
+			code: '0xef',
 			description: 'TIP-20 stablecoin (BUSD)',
 			abi: Abis.tip20,
 			category: 'token',
@@ -55,6 +63,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		'0x20c0000000000000000000000000000000000003',
 		{
 			name: 'ThetaUSD',
+			code: '0xef',
 			description: 'TIP-20 stablecoin (TUSD)',
 			abi: Abis.tip20,
 			category: 'token',
@@ -66,6 +75,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		Addresses.tip20Factory,
 		{
 			name: 'TIP-20 Factory',
+			code: '0xef',
 			description: 'Create new TIP-20 tokens',
 			abi: Abis.tip20Factory,
 			category: 'system',
@@ -76,6 +86,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		Addresses.feeManager,
 		{
 			name: 'Fee Manager',
+			code: '0xef',
 			description: 'Handle fee payments and conversions',
 			abi: Abis.feeManager,
 			category: 'system',
@@ -87,6 +98,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		Addresses.stablecoinExchange,
 		{
 			name: 'Stablecoin Exchange',
+			code: '0xef',
 			description: 'Enshrined DEX for stablecoin swaps',
 			abi: Abis.stablecoinExchange,
 			category: 'system',
@@ -97,6 +109,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		Addresses.tip403Registry,
 		{
 			name: 'TIP-403 Registry',
+			code: '0xef',
 			description: 'Transfer policy registry',
 			abi: Abis.tip403Registry,
 			category: 'system',
@@ -109,6 +122,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		Addresses.accountImplementation,
 		{
 			name: 'IthacaAccount',
+			code: '0xef',
 			description: 'Reference account implementation',
 			abi: Abis.tipAccountRegistrar,
 			category: 'account',
@@ -138,14 +152,14 @@ export function getContractInfo(
 	if (registered) return registered
 
 	// Dynamic TIP-20 token detection
-	if (isTip20Address(address)) {
+	if (isTip20Address(address))
 		return {
 			name: 'TIP-20 Token',
+			code: '0xef',
 			description: 'TIP-20 compatible token',
 			abi: Abis.tip20,
 			category: 'token',
 		}
-	}
 
 	return undefined
 }
@@ -177,40 +191,82 @@ export type WriteFunction = AbiFunction & {
 }
 
 /**
- * Extract read-only functions (view/pure) from an ABI
+ * Whatsabi adds a `selector` property to ABI items with the actual selector from bytecode.
+ * This is needed because whatsabi doesn't always recover the function name.
  */
-export function getReadFunctions(abi: Abi): ReadFunction[] {
-	return abi.filter(
-		(item): item is ReadFunction =>
-			item.type === 'function' &&
-			(item.stateMutability === 'view' || item.stateMutability === 'pure'),
-	)
+type WhatsabiAbiFunction = AbiFunction & { selector?: string }
+
+/**
+ * Get the function selector, using whatsabi's extracted selector if available,
+ * otherwise computing it from the function signature.
+ */
+export function getFunctionSelector(fn: AbiFunction): string {
+	const whatsabiFn = fn as WhatsabiAbiFunction
+	if (whatsabiFn.selector) return whatsabiFn.selector
+	// Only compute if we have a name (otherwise toFunctionSelector gives wrong result)
+	if (fn.name) return toFunctionSelector(fn)
+	// Fallback - shouldn't happen for valid ABIs
+	return '0x00000000'
 }
 
 /**
- * Extract write functions (nonpayable/payable) from an ABI
+ * Extract read-only functions (view/pure) from an ABI, deduplicated by selector.
+ * Deduplication is needed because whatsabi may return duplicate entries.
+ * Also filters out malformed entries (missing inputs array).
+ */
+export function getReadFunctions(abi: Abi): ReadFunction[] {
+	const functions = abi.filter(
+		(item): item is ReadFunction =>
+			item.type === 'function' &&
+			(item.stateMutability === 'view' || item.stateMutability === 'pure') &&
+			Array.isArray(item.inputs), // Filter out malformed entries from whatsabi
+	)
+
+	// Deduplicate by selector (whatsabi can return duplicates)
+	const seen = new Set<string>()
+	return functions.filter((fn) => {
+		const selector = getFunctionSelector(fn)
+		if (seen.has(selector)) return false
+		seen.add(selector)
+		return true
+	})
+}
+
+/**
+ * Extract write functions (nonpayable/payable) from an ABI, deduplicated by selector.
+ * Also filters out malformed entries (missing inputs array).
  */
 export function getWriteFunctions(abi: Abi): WriteFunction[] {
-	return abi.filter(
+	const functions = abi.filter(
 		(item): item is WriteFunction =>
 			item.type === 'function' &&
 			(item.stateMutability === 'nonpayable' ||
-				item.stateMutability === 'payable'),
+				item.stateMutability === 'payable') &&
+			Array.isArray(item.inputs),
 	)
+
+	// Deduplicate by selector
+	const seen = new Set<string>()
+	return functions.filter((fn) => {
+		const selector = getFunctionSelector(fn)
+		if (seen.has(selector)) return false
+		seen.add(selector)
+		return true
+	})
 }
 
 /**
  * Get functions without inputs (can be displayed as static values)
  */
 export function getNoInputFunctions(abi: Abi): ReadFunction[] {
-	return getReadFunctions(abi).filter((fn) => fn.inputs.length === 0)
+	return getReadFunctions(abi).filter((fn) => fn?.inputs?.length === 0)
 }
 
 /**
  * Get functions with inputs (require user input)
  */
 export function getInputFunctions(abi: Abi): ReadFunction[] {
-	return getReadFunctions(abi).filter((fn) => fn.inputs.length > 0)
+	return getReadFunctions(abi).filter((fn) => fn?.inputs?.length > 0)
 }
 
 // ============================================================================
@@ -328,4 +384,41 @@ export function formatOutputValue(value: unknown, _type: string): string {
 		)
 
 	return String(value)
+}
+
+/**
+ * Get the bytecode for a contract address
+ */
+export async function getContractBytecode(
+	address: Address.Address,
+): Promise<Hex.Hex | undefined> {
+	const client = getPublicClient(config)
+	const code = await client.getCode({ address })
+	if (!code || code === '0x') return undefined
+	return code
+}
+
+// ============================================================================
+// Whatsabi - ABI extraction from bytecode
+// ============================================================================
+
+/**
+ * Attempts to extract an ABI from contract bytecode using whatsabi.
+ * Returns undefined if the address has no code or extraction fails.
+ */
+export async function extractContractAbi(
+	address: Address.Address,
+): Promise<Abi | undefined> {
+	try {
+		const code = await getContractBytecode(address)
+
+		if (!code || code === '0x') return undefined
+
+		const abi = whatsabi.abiFromBytecode(code)
+
+		return abi as Abi
+	} catch (error) {
+		console.error('Failed to extract ABI from bytecode:', error)
+		return undefined
+	}
 }

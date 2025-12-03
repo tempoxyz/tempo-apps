@@ -28,7 +28,12 @@ import { NotFound } from '#components/NotFound'
 import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
 import { cx } from '#cva.config.ts'
-import { type ContractInfo, getContractInfo } from '#lib/contracts.ts'
+import {
+	type ContractInfo,
+	extractContractAbi,
+	getContractBytecode,
+	getContractInfo,
+} from '#lib/contracts.ts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import {
@@ -148,7 +153,32 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 		const offset = (page - 1) * limit
 
-		const contractInfo = getContractInfo(address)
+		// check if it's a known contract from our registry
+		let contractInfo: ContractInfo | undefined = getContractInfo(address)
+
+		// if not in registry, try to extract ABI from bytecode using whatsabi
+		if (!contractInfo) {
+			const contractBytecode = await getContractBytecode(address).catch(
+				() => undefined,
+			)
+
+			if (contractBytecode) {
+				const contractAbi = await extractContractAbi(address).catch(
+					() => undefined,
+				)
+
+				if (contractAbi) {
+					contractInfo = {
+						name: 'Unknown Contract',
+						description: 'ABI extracted from bytecode',
+						code: contractBytecode,
+						abi: contractAbi,
+						category: 'utility',
+					}
+				}
+			}
+		}
+
 		const hasContract = Boolean(contractInfo)
 
 		const transactionsData = await context.queryClient
