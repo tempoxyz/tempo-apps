@@ -15,12 +15,10 @@ export function RawTransaction(props: RawTransaction.Props) {
 	if (!parsed.success)
 		return <pre className="whitespace-pre-wrap break-all">{data}</pre>
 
-	const { tx, receipt } = parsed.data
-
 	return (
 		<div className="font-mono flex flex-col gap-[8px]">
-			<RawTransaction.Section title="TX" data={tx} />
-			<RawTransaction.Section title="RECEIPT" data={receipt} />
+			<RawTransaction.Section title="TX" data={parsed.data.tx} />
+			<RawTransaction.Section title="RECEIPT" data={parsed.data.receipt} />
 		</div>
 	)
 }
@@ -108,13 +106,12 @@ export namespace RawTransaction {
 			)
 		}
 
-		const formatted = RawTransaction.formatValue(value)
 		return (
 			<div className="flex gap-[16px]" style={{ paddingLeft: indent * 8 }}>
 				<span className="text-tertiary shrink-0" style={{ width: `${pad}ch` }}>
 					{label}
 				</span>
-				<span className="break-all">{formatted}</span>
+				<span className="break-all">{RawTransaction.formatValue(value)}</span>
 			</div>
 		)
 	}
