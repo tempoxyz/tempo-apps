@@ -6,7 +6,6 @@ import {
 } from '@tanstack/react-router'
 import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
-import { cx } from '#cva.config'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
 import { ExploreInput } from './ExploreInput'
@@ -59,35 +58,32 @@ export namespace Header {
 		}, [router])
 
 		return (
-			<div
-				className={cx(
-					'absolute left-0 right-0 justify-center hidden @min-[1240px]:flex z-1 h-0 items-center',
-					!showSearch && 'invisible',
-				)}
-			>
-				<ExploreInput
-					value={inputValue}
-					onChange={setInputValue}
-					disabled={isMounted && isNavigating}
-					onActivate={({ value, type }) => {
-						if (type === 'hash') {
-							navigate({ to: '/tx/$hash', params: { hash: value } })
-							return
-						}
-						if (type === 'token') {
-							navigate({ to: '/token/$address', params: { address: value } })
-							return
-						}
-						if (type === 'address') {
-							navigate({
-								to: '/address/$address',
-								params: { address: value },
-							})
-							return
-						}
-					}}
-				/>
-			</div>
+			showSearch && (
+				<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex z-1 h-0 items-center">
+					<ExploreInput
+						value={inputValue}
+						onChange={setInputValue}
+						disabled={isMounted && isNavigating}
+						onActivate={({ value, type }) => {
+							if (type === 'hash') {
+								navigate({ to: '/tx/$hash', params: { hash: value } })
+								return
+							}
+							if (type === 'token') {
+								navigate({ to: '/token/$address', params: { address: value } })
+								return
+							}
+							if (type === 'address') {
+								navigate({
+									to: '/address/$address',
+									params: { address: value },
+								})
+								return
+							}
+						}}
+					/>
+				</div>
+			)
 		)
 	}
 

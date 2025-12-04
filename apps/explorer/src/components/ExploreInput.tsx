@@ -1,5 +1,4 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
-import { useRouter } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { cx } from '#cva.config'
@@ -123,15 +122,14 @@ export function ExploreInput(props: ExploreInput.Props) {
 		return () => window.removeEventListener('keydown', handleKeyDown)
 	}, [])
 
-	// autoFocus after navigation resolves (native autoFocus only handles first render,
-	// and scroll restoration steals focus after mount)
-	const router = useRouter()
+	// the route transition appears to sometimes steal the focus,
+	// so we need to re-focus in case it happens
 	React.useEffect(() => {
-		if (!autoFocus) return
-		return router.subscribe('onResolved', () => {
-			inputRef.current?.focus()
-		})
-	}, [autoFocus, router])
+		const timer = setTimeout(() => {
+			if (autoFocus) inputRef.current?.focus()
+		}, 100)
+		return () => clearTimeout(timer)
+	}, [autoFocus])
 
 	const handleSelect = React.useCallback(
 		(result: SearchResult) => {
