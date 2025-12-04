@@ -14,7 +14,6 @@ import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { formatUnits } from 'viem'
-import { useBlock } from 'wagmi'
 import {
 	getBlockQueryOptions,
 	getTransactionReceiptQueryOptions,
@@ -235,13 +234,7 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 
 	// get the 1st (most recent) transaction's block timestamp for "last activity"
 	const recentTransaction = recentData?.transactions?.at(0)
-	const { data: lastActivityTimestamp } = useBlock({
-		blockNumber: Hex.toBigInt(recentTransaction?.blockNumber ?? '0x0'),
-		query: {
-			enabled: Boolean(recentTransaction?.blockNumber),
-			select: (block) => block.timestamp,
-		},
-	})
+	const lastActivityTimestamp = recentTransaction?.blockTimestamp ?? undefined
 
 	// for "created" timestamp, fetch the earliest transaction, this would be the last page of transactions
 	const totalTransactions = recentData?.total ?? 0
@@ -258,13 +251,7 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	)
 
 	const [oldestTransaction] = oldestData?.transactions ?? []
-	const { data: createdTimestamp } = useBlock({
-		blockNumber: Hex.toBigInt(oldestTransaction?.blockNumber ?? '0x0'),
-		query: {
-			enabled: Boolean(oldestTransaction?.blockNumber),
-			select: (block) => block.timestamp,
-		},
-	})
+	const createdTimestamp = oldestTransaction?.blockTimestamp ?? undefined
 
 	// Calculate total holdings value
 	const totalValue = useAccountTotalValue(address)

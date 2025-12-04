@@ -12,6 +12,10 @@ import { config, getConfig } from '#wagmi.config.ts'
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const { chainId, chainIdHex } = IS
 
+export type TransactionWithTimestamp = RpcTransaction & {
+	blockTimestamp: bigint | null
+}
+
 /** Normalize SQL for cleaner logging (collapse whitespace) */
 const normalizeSQL = (sql: string) => sql.replace(/\s+/g, ' ').trim()
 
@@ -67,13 +71,14 @@ export const fetchTransactions = createServerFn()
 
 		if (transferConditions.length) {
 			addressFilterParts.push(`
-						t.hash IN (
-							SELECT DISTINCT tr.tx_hash
-							FROM transfer tr
-							WHERE tr.chain = ${chainId}
-								AND (${transferConditions.join(' OR ')})
-						)
-					`)
+				EXISTS (
+					SELECT 1
+					FROM transfer tr
+					WHERE tr.tx_hash = t.hash
+						AND tr.chain = ${chainId}
+						AND (${transferConditions.join(' OR ')})
+				)
+			`)
 		}
 
 		if (addressFilterParts.length === 0) addressFilterParts.push('FALSE')
@@ -98,8 +103,10 @@ export const fetchTransactions = createServerFn()
 				t.nonce,
 				t.gas,
 				t.gas_price,
-				t.type
+				t.type,
+				b.timestamp as block_timestamp
 			FROM txs t
+			LEFT JOIN blocks b ON b.num = t.block_num AND b.chain = ${chainId}
 			WHERE t.chain = ${chainId}
 				AND (${addressFilter})
 			ORDER BY t.block_num ${sortDirection}, t.hash ${sortDirection}
@@ -147,34 +154,40 @@ export const fetchTransactions = createServerFn()
 			return row[columnIndex] ?? null
 		}
 
-		const transactions: RpcTransaction[] = txsResult.rows.map((row) => {
-			const hash = IS.toHexData(getColumnValue(row, 'hash'))
-			const from = IS.toAddressValue(getColumnValue(row, 'from'))
-			if (!from) throw new Error('Transaction is missing a "from" address')
+		const transactions: TransactionWithTimestamp[] = txsResult.rows.map(
+			(row) => {
+				const hash = IS.toHexData(getColumnValue(row, 'hash'))
+				const from = IS.toAddressValue(getColumnValue(row, 'from'))
+				if (!from) throw new Error('Transaction is missing a "from" address')
 
-			const to = IS.toAddressValue(getColumnValue(row, 'to'))
+				const to = IS.toAddressValue(getColumnValue(row, 'to'))
+				const blockTimestampValue = getColumnValue(row, 'block_timestamp')
 
-			return {
-				blockHash: null,
-				blockNumber: IS.toQuantityHex(getColumnValue(row, 'block_num')),
-				chainId: chainIdHex,
-				from,
-				gas: IS.toQuantityHex(getColumnValue(row, 'gas')),
-				gasPrice: IS.toQuantityHex(getColumnValue(row, 'gas_price')),
-				hash,
-				input: IS.toHexData(getColumnValue(row, 'input')),
-				nonce: IS.toQuantityHex(getColumnValue(row, 'nonce')),
-				to,
-				transactionIndex: null,
-				value: IS.toQuantityHex(getColumnValue(row, 'value')),
-				type: IS.toQuantityHex(
-					getColumnValue(row, 'type'),
-				) as RpcTransaction['type'],
-				v: '0x0',
-				r: '0x0',
-				s: '0x0',
-			} as RpcTransaction
-		})
+				return {
+					blockHash: null,
+					blockNumber: IS.toQuantityHex(getColumnValue(row, 'block_num')),
+					blockTimestamp: blockTimestampValue
+						? IS.toTimestamp(String(blockTimestampValue))
+						: null,
+					chainId: chainIdHex,
+					from,
+					gas: IS.toQuantityHex(getColumnValue(row, 'gas')),
+					gasPrice: IS.toQuantityHex(getColumnValue(row, 'gas_price')),
+					hash,
+					input: IS.toHexData(getColumnValue(row, 'input')),
+					nonce: IS.toQuantityHex(getColumnValue(row, 'nonce')),
+					to,
+					transactionIndex: null,
+					value: IS.toQuantityHex(getColumnValue(row, 'value')),
+					type: IS.toQuantityHex(
+						getColumnValue(row, 'type'),
+					) as RpcTransaction['type'],
+					v: '0x0',
+					r: '0x0',
+					s: '0x0',
+				} as TransactionWithTimestamp
+			},
+		)
 
 		const nextOffset = offset + transactions.length
 		const hasMore = nextOffset < total
