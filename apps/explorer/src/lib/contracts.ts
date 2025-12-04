@@ -35,8 +35,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			abi: Abis.tip20,
 			code: '0xef',
 			category: 'token',
-			docsUrl:
-				'https://docs.tempo.xyz/documentation/protocol/exchange/pathUSD',
+			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/exchange/pathUSD',
 		},
 	],
 	[
