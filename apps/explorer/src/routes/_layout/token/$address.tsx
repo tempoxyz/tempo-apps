@@ -26,6 +26,7 @@ import {
 	type TimeFormat,
 	useTimeFormat,
 } from '#components/TimeFormat'
+import { TruncatedHash } from '#components/TruncatedHash'
 import { cx } from '#cva.config.ts'
 import { getContractInfo } from '#lib/contracts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
@@ -574,7 +575,7 @@ function SectionsWrapper(props: {
 					label="Time"
 					formatLabel={formatLabel}
 					onCycle={cycleTimeFormat}
-					className="hover:text-accent cursor-pointer transition-colors"
+					className="text-secondary hover:text-accent cursor-pointer transition-colors"
 				/>
 			),
 			align: 'start',
@@ -761,10 +762,10 @@ function TransactionLink(props: { hash: Hex.Hex }) {
 		<Link
 			to="/tx/$hash"
 			params={{ hash }}
-			className="text-[13px] text-tertiary press-down inline-flex items-center gap-1"
+			className="text-[13px] text-tertiary press-down"
 			title={hash}
 		>
-			{HexFormatter.truncate(hash, 6)}
+			<TruncatedHash hash={hash} minChars={6} />
 		</Link>
 	)
 }
@@ -775,13 +776,12 @@ function AddressLink(props: {
 	asLink?: boolean
 }) {
 	const { address, label, asLink = true } = props
-	const content = HexFormatter.truncate(address, 8)
 	const title = `${label ? `${label}: ` : ''}${address}`
 
 	if (!asLink)
 		return (
 			<span className="text-[13px] text-accent" title={title}>
-				{content}
+				<TruncatedHash hash={address} minChars={8} />
 			</span>
 		)
 
@@ -792,7 +792,7 @@ function AddressLink(props: {
 			className="text-[13px] text-accent hover:text-accent/80 transition-colors press-down"
 			title={title}
 		>
-			{content}
+			<TruncatedHash hash={address} minChars={8} />
 		</Link>
 	)
 }
