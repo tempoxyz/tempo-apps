@@ -18,7 +18,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
-		"@typescript/native-preview": "^7.0.0-dev.20251202.1",
+		"@typescript/native-preview": "^7.0.0-dev.20251203.1",
 		"typescript": "^5.9.3"
 	},
 	"devEngines": {

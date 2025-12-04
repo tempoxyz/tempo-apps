@@ -22,9 +22,12 @@ function blocksQueryOptions(page: number) {
 		queryKey: ['blocks-loader', page],
 		queryFn: async () => {
 			const wagmiConfig = getConfig()
+
+			// Fetch latest block to get the current block number
 			const latestBlock = await getBlock(wagmiConfig)
 			const latestBlockNumber = latestBlock.number
 
+			// Calculate which blocks to fetch for this page
 			const startBlock =
 				latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
 
@@ -51,18 +54,18 @@ function blocksQueryOptions(page: number) {
 }
 
 export const Route = createFileRoute('/_layout/blocks')({
-	component: BlocksPage,
+	component: RouteComponent,
 	validateSearch: z.object({
-		page: z.optional(z.number()),
-		live: z.optional(z.boolean()),
-	}).parse,
-	loaderDeps: ({ search: { page } }) => ({ page: page ?? 1 }),
-	loader: async ({ deps: { page }, context }) => {
-		return context.queryClient.ensureQueryData(blocksQueryOptions(page))
+		page: z.prefault(z.coerce.number(), 1),
+		live: z.prefault(z.coerce.boolean(), true),
+	}),
+	loaderDeps: ({ search: { page, live } }) => ({ page, live }),
+	loader: async ({ deps, context }) => {
+		return context.queryClient.ensureQueryData(blocksQueryOptions(deps.page))
 	},
 })
 
-function BlocksPage() {
+function RouteComponent() {
 	const { page = 1, live = true } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 
