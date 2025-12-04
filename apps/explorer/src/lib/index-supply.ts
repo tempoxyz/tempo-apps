@@ -1,10 +1,10 @@
 import { env } from 'cloudflare:workers'
 import { Address, Hex } from 'ox'
-import { tempoAndantino } from 'tempo.ts/chains'
+import { tempoTestnet } from 'tempo.ts/chains'
 import * as z from 'zod/mini'
 
 export const endpoint = 'https://api.indexsupply.net/v2/query'
-export const chainId = tempoAndantino.id
+export const chainId = tempoTestnet.id
 export const chainIdHex = Hex.fromNumber(chainId)
 export const chainCursor = `${chainId}-0`
 
