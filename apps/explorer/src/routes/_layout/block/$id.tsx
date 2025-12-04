@@ -1,7 +1,9 @@
+import { queryOptions, useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
 	notFound,
+	redirect,
 	rootRouteId,
 } from '@tanstack/react-router'
 import { Hex, Value } from 'ox'
@@ -18,6 +20,7 @@ import { NotFound } from '#components/NotFound.tsx'
 import { cx } from '#cva.config.ts'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
 import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
+import { fetchLatestBlock } from '#lib/latest-block.server'
 import * as Tip20 from '#lib/tip20.ts'
 import { getConfig } from '#wagmi.config.ts'
 import ArrowUp10Icon from '~icons/lucide/arrow-up-10'
@@ -67,48 +70,31 @@ function getTransactionType(
 	return { type: 'regular', label: 'Regular' }
 }
 
-async function loader({ params }: { params: { id: string } }) {
-	try {
-		const { id } = params
+function blockDetailQueryOptions(blockRef: BlockIdentifier) {
+	return queryOptions({
+		queryKey: ['block-detail', blockRef],
+		queryFn: async () => {
+			const wagmiConfig = getConfig()
+			const block = await getBlock(wagmiConfig, {
+				includeTransactions: true,
+				...(blockRef.kind === 'hash'
+					? { blockHash: blockRef.blockHash }
+					: { blockNumber: blockRef.blockNumber }),
+			})
 
-		let blockRef: BlockIdentifier
-		if (isHex(id)) {
-			Hex.assert(id)
-			blockRef = { kind: 'hash', blockHash: id }
-		} else {
-			const parsedNumber = Number(id)
-			if (!Number.isSafeInteger(parsedNumber)) throw notFound()
-			blockRef = { kind: 'number', blockNumber: BigInt(parsedNumber) }
-		}
+			// Fetch known events for each transaction
+			const knownEventsByHash = await fetchKnownEventsForTransactions(
+				block.transactions as BlockTransaction[],
+				wagmiConfig,
+			)
 
-		const wagmiConfig = getConfig()
-		const block = await getBlock(wagmiConfig, {
-			includeTransactions: true,
-			...(blockRef.kind === 'hash'
-				? { blockHash: blockRef.blockHash }
-				: { blockNumber: blockRef.blockNumber }),
-		})
-
-		// Fetch known events for each transaction during SSR
-		const knownEventsByHash = await fetchKnownEventsForTransactions(
-			block.transactions as BlockTransaction[],
-			wagmiConfig,
-		)
-
-		return {
-			blockRef,
-			block: block as BlockWithTransactions,
-			knownEventsByHash,
-		}
-	} catch (error) {
-		console.error(error)
-		throw notFound({
-			routeId: rootRouteId,
-			data: {
-				error: error instanceof Error ? error.message : 'Invalid block ID',
-			},
-		})
-	}
+			return {
+				blockRef,
+				block: block as BlockWithTransactions,
+				knownEventsByHash,
+			}
+		},
+	})
 }
 
 async function fetchKnownEventsForTransactions(
@@ -151,11 +137,49 @@ async function fetchKnownEventsForTransactions(
 export const Route = createFileRoute('/_layout/block/$id')({
 	component: RouteComponent,
 	notFoundComponent: NotFound,
-	loader,
+	loader: async ({ params, context }) => {
+		const { id } = params
+
+		if (id === 'latest') {
+			const blockNumber = await fetchLatestBlock()
+			throw redirect({ to: '/block/$id', params: { id: String(blockNumber) } })
+		}
+
+		try {
+			let blockRef: BlockIdentifier
+			if (isHex(id)) {
+				Hex.assert(id)
+				blockRef = { kind: 'hash', blockHash: id }
+			} else {
+				const parsedNumber = Number(id)
+				if (!Number.isSafeInteger(parsedNumber)) throw notFound()
+				blockRef = { kind: 'number', blockNumber: BigInt(parsedNumber) }
+			}
+
+			return await context.queryClient.ensureQueryData(
+				blockDetailQueryOptions(blockRef),
+			)
+		} catch (error) {
+			console.error(error)
+			throw notFound({
+				routeId: rootRouteId,
+				data: {
+					error: error instanceof Error ? error.message : 'Invalid block ID',
+				},
+			})
+		}
+	},
 })
 
 function RouteComponent() {
-	const { block, blockRef, knownEventsByHash } = Route.useLoaderData()
+	const loaderData = Route.useLoaderData()
+
+	const { data } = useQuery({
+		...blockDetailQueryOptions(loaderData.blockRef),
+		initialData: loaderData,
+	})
+
+	const { block, blockRef, knownEventsByHash } = data
 
 	const [chain] = useChains()
 	const decimals = chain?.nativeCurrency.decimals ?? 18

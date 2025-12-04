@@ -187,7 +187,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const hasContract = Boolean(contractInfo)
 
 		const transactionsData = await context.queryClient
-			.fetchQuery(
+			.ensureQueryData(
 				transactionsQueryOptions({
 					address,
 					page,
