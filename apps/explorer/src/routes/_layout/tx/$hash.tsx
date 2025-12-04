@@ -250,7 +250,7 @@ function Component() {
 				feeDisplay={feeDisplay}
 				hash={receipt.transactionHash}
 				rawData={Json.stringify({ tx: transaction, receipt }, null, 2)}
-				sender={transaction.from}
+				sender={receipt.from}
 				timestamp={block.timestamp}
 				total={total}
 				totalDisplay={totalDisplay}
@@ -264,7 +264,7 @@ namespace TextRenderer {
 	const indent = '  '
 
 	export function render(data: Awaited<ReturnType<typeof loader>>) {
-		const { lineItems, receipt, timestampFormatted, transaction } = data
+		const { lineItems, receipt, timestampFormatted } = data
 
 		const lines: string[] = []
 
@@ -276,7 +276,7 @@ namespace TextRenderer {
 		lines.push(`Tx Hash: ${HexFormatter.truncate(receipt.transactionHash, 8)}`)
 		lines.push(`Date: ${timestampFormatted}`)
 		lines.push(`Block: ${receipt.blockNumber.toString()}`)
-		lines.push(`Sender: ${HexFormatter.truncate(transaction.from, 6)}`)
+		lines.push(`Sender: ${HexFormatter.truncate(receipt.from, 6)}`)
 		lines.push('')
 		lines.push('-'.repeat(width))
 		lines.push('')
