@@ -3,13 +3,12 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Block } from 'viem'
 import { useBlock, useWatchBlockNumber } from 'wagmi'
-import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { Pagination } from '#components/Pagination'
 import { FormattedTimestamp, useTimeFormat } from '#components/TimeFormat'
 import { cx } from '#cva.config'
+import { fetchBlocksPage, type BlockSummary } from '#lib/blocks.server'
 import { HexFormatter } from '#lib/formatting'
-import { config, getConfig } from '#wagmi.config'
 import Play from '~icons/lucide/play'
 
 const BLOCKS_PER_PAGE = 12
@@ -20,35 +19,7 @@ const recentlyAddedBlocks = new Set<string>()
 function blocksQueryOptions(page: number) {
 	return queryOptions({
 		queryKey: ['blocks-loader', page],
-		queryFn: async () => {
-			const wagmiConfig = getConfig()
-
-			// Fetch latest block to get the current block number
-			const latestBlock = await getBlock(wagmiConfig)
-			const latestBlockNumber = latestBlock.number
-
-			// Calculate which blocks to fetch for this page
-			const startBlock =
-				latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
-
-			const blockNumbers: bigint[] = []
-			for (let i = 0n; i < BigInt(BLOCKS_PER_PAGE); i++) {
-				const blockNum = startBlock - i
-				if (blockNum >= 0n) blockNumbers.push(blockNum)
-			}
-
-			// Fetch all blocks in parallel
-			const blocks = await Promise.all(
-				blockNumbers.map((blockNumber) =>
-					getBlock(wagmiConfig, { blockNumber }).catch(() => null),
-				),
-			)
-
-			return {
-				latestBlockNumber,
-				blocks: blocks.filter(Boolean) as Block[],
-			}
-		},
+		queryFn: () => fetchBlocksPage({ data: { page, limit: BLOCKS_PER_PAGE } }),
 		placeholderData: keepPreviousData,
 	})
 }
@@ -77,10 +48,10 @@ function RouteComponent() {
 	const [latestBlockNumber, setLatestBlockNumber] = React.useState<
 		bigint | undefined
 	>()
-	// Initialize with loader data to prevent layout shift
-	const [liveBlocks, setLiveBlocks] = React.useState<Block[]>(() =>
-		queryData.blocks.slice(0, BLOCKS_PER_PAGE),
-	)
+	// Live blocks start as BlockSummary (Index Supply) then switch to Block (RPC)
+	const [liveBlocks, setLiveBlocks] = React.useState<
+		Array<Block | BlockSummary>
+	>(() => queryData.blocks.slice(0, BLOCKS_PER_PAGE))
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	// Use loader data for initial render, then live updates
@@ -121,7 +92,8 @@ function RouteComponent() {
 
 		setLiveBlocks((prev) => {
 			// Don't add if already exists
-			if (prev.some((b) => b.number === latestBlock.number)) return prev
+			const latestNum = latestBlock.number
+			if (prev.some((b) => b.number === latestNum)) return prev
 			// Prepend new block and keep only BLOCKS_PER_PAGE
 			return [latestBlock, ...prev].slice(0, BLOCKS_PER_PAGE)
 		})
@@ -129,52 +101,25 @@ function RouteComponent() {
 
 	// Re-initialize when navigating back to page 1 with live mode
 	React.useEffect(() => {
-		if (page === 1 && live && queryData.blocks) {
-			setLiveBlocks((prev) => {
+		if (page === 1 && live && queryData.blocks)
+			setLiveBlocks((prev) =>
 				// Only reinitialize if we have no blocks or stale data
-				if (prev.length === 0) {
-					return queryData.blocks.slice(0, BLOCKS_PER_PAGE)
-				}
-				return prev
-			})
-		}
+				prev.length === 0 ? queryData.blocks.slice(0, BLOCKS_PER_PAGE) : prev,
+			)
 	}, [page, live, queryData.blocks])
 
-	// Calculate which blocks to show for this page
-	const startBlock = currentLatest
-		? currentLatest - BigInt((page - 1) * BLOCKS_PER_PAGE)
-		: undefined
-
 	// Fetch blocks for non-page-1 or when live is off
-	const { data: fetchedBlocks, isLoading: isFetching } = useQuery({
-		queryKey: ['blocks', page, startBlock?.toString()],
-		queryFn: async () => {
-			if (!startBlock || !currentLatest) return []
-
-			const blockNumbers: bigint[] = []
-			for (let i = 0n; i < BigInt(BLOCKS_PER_PAGE); i++) {
-				const blockNum = startBlock - i
-				if (blockNum >= 0n) blockNumbers.push(blockNum)
-			}
-
-			const results = await Promise.all(
-				blockNumbers.map((blockNumber) =>
-					getBlock(config, { blockNumber }).catch(() => null),
-				),
-			)
-
-			return results.filter(Boolean) as Block[]
-		},
-		enabled:
-			!!startBlock &&
-			!!currentLatest &&
-			(page !== 1 || !live || liveBlocks.length === 0),
+	const { data: fetchedData, isLoading: isFetching } = useQuery({
+		queryKey: ['blocks', page],
+		queryFn: () => fetchBlocksPage({ data: { page, limit: BLOCKS_PER_PAGE } }),
+		enabled: page !== 1 || !live || liveBlocks.length === 0,
 		staleTime: page === 1 && live ? 0 : 60_000,
 		placeholderData: keepPreviousData,
 	})
+	const fetchedBlocks = fetchedData?.blocks
 
 	// Use live blocks on page 1 when live, otherwise use fetched/loader data
-	const blocks = React.useMemo(() => {
+	const blocks = React.useMemo((): Array<Block | BlockSummary> | undefined => {
 		if (page === 1 && live && liveBlocks.length > 0) {
 			return liveBlocks
 		}
@@ -210,7 +155,9 @@ function RouteComponent() {
 								Timestamp <span className="opacity-60">({formatLabel})</span>
 							</button>
 						</div>
-						<div className="text-right">Txns</div>
+						<div className="text-right" title="Transactions">
+							Txns
+						</div>
 					</div>
 
 					{/* Blocks list */}
@@ -287,12 +234,14 @@ function BlockRow({
 	isLatest,
 	timeFormat,
 }: {
-	block: Block
+	block: Block | BlockSummary
 	isNew?: boolean
 	isLatest?: boolean
 	timeFormat: 'relative' | 'local' | 'utc' | 'unix'
 }) {
-	const txCount = block.transactions?.length ?? 0
+	// Handle both Block (from RPC) and BlockSummary (from Index Supply)
+	const txCount =
+		'txCount' in block ? block.txCount : (block.transactions?.length ?? 0)
 	const blockNumber = block.number?.toString() ?? '0'
 	const blockHash = block.hash ?? '0x'
 
