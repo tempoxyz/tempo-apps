@@ -1,5 +1,5 @@
 import { QueryClient } from '@tanstack/react-query'
-import { tempoAndantino } from 'tempo.ts/chains'
+import { tempoTestnet } from 'tempo.ts/chains'
 import { withFeePayer } from 'tempo.ts/viem'
 import { KeyManager, webAuthn } from 'tempo.ts/wagmi'
 import { createConfig, http, webSocket } from 'wagmi'
@@ -17,10 +17,10 @@ export const config = createConfig({
 			keyManager: KeyManager.localStorage(),
 		}),
 	],
-	chains: [tempoAndantino({ feeToken: alphaUsd })],
+	chains: [tempoTestnet({ feeToken: alphaUsd })],
 	multiInjectedProviderDiscovery: false,
 	transports: {
-		[tempoAndantino.id]: withFeePayer(
+		[tempoTestnet.id]: withFeePayer(
 			// Transport for regular transactions
 			webSocket(
 				'wss://rpc.testnet.tempo.xyz?supersecretargument=pleasedonotusemeinprod',
