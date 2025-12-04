@@ -15,7 +15,7 @@ type Token = [address: string, symbol: string, name: string]
 
 // native tokens (not created via factory)
 const nativeTokens: Token[] = [
-	['0x20c0000000000000000000000000000000000000', 'linkingUSD', 'linkingUSD'],
+	['0x20c0000000000000000000000000000000000000', 'pathUSD', 'pathUSD'],
 	['0x20c0000000000000000000000000000000000001', 'AlphaUSD', 'AlphaUSD'],
 	['0x20c0000000000000000000000000000000000002', 'BetaUSD', 'BetaUSD'],
 	['0x20c0000000000000000000000000000000000003', 'ThetaUSD', 'ThetaUSD'],

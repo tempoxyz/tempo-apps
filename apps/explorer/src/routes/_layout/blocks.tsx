@@ -8,7 +8,7 @@ import { Pagination } from '#components/Pagination'
 import { FormattedTimestamp, useTimeFormat } from '#components/TimeFormat'
 import { cx } from '#cva.config'
 import { fetchBlocksPage, type BlockSummary } from '#lib/blocks.server'
-import { HexFormatter } from '#lib/formatting'
+import { TruncatedHash } from '#components/TruncatedHash.tsx'
 import Play from '~icons/lucide/play'
 
 const BLOCKS_PER_PAGE = 12
@@ -142,17 +142,17 @@ function RouteComponent() {
 			>
 				<div className="overflow-x-auto">
 					{/* Header */}
-					<div className="grid grid-cols-[100px_180px_1fr_50px] gap-4 px-4 py-3 border-b border-card-border bg-card-header text-[12px] text-tertiary uppercase min-w-[500px]">
+					<div className="grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 border-b border-card-border bg-card-header text-[12px] text-tertiary uppercase min-w-[500px]">
 						<div>Block</div>
 						<div>Hash</div>
-						<div className="text-right">
+						<div className="text-right min-w-[120px]">
 							<button
 								type="button"
 								onClick={cycleTimeFormat}
-								className="hover:text-accent cursor-pointer transition-colors"
-								title="Click to cycle time format"
+								className="text-secondary hover:text-accent cursor-pointer transition-colors"
+								title={`Showing ${formatLabel} time - click to change`}
 							>
-								Timestamp <span className="opacity-60">({formatLabel})</span>
+								Time
 							</button>
 						</div>
 						<div className="text-right" title="Transactions">
@@ -248,7 +248,7 @@ function BlockRow({
 	return (
 		<div
 			className={cx(
-				'grid grid-cols-[100px_180px_1fr_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 border-b border-dashed border-card-border last:border-b-0',
+				'grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 border-b border-dashed border-card-border last:border-b-0',
 				isNew && 'bg-positive/5',
 			)}
 		>
@@ -261,17 +261,17 @@ function BlockRow({
 					#{blockNumber}
 				</Link>
 			</div>
-			<div className="truncate">
+			<div className="min-w-0">
 				<Link
 					to="/block/$id"
 					params={{ id: blockHash }}
 					className="text-secondary hover:text-accent transition-colors"
 					title={blockHash}
 				>
-					{HexFormatter.shortenHex(blockHash, 10)}
+					<TruncatedHash hash={blockHash} minChars={8} />
 				</Link>
 			</div>
-			<div className="text-right text-secondary tabular-nums">
+			<div className="text-right text-secondary tabular-nums min-w-[120px]">
 				{isLatest ? (
 					'now'
 				) : (
