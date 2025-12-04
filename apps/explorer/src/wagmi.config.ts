@@ -50,6 +50,11 @@ export function getConfig(
 					? http(rpcUrl)
 					: webSocket(
 							'wss://rpc.testnet.tempo.xyz?supersecretargument=pleasedonotusemeinprod',
+							{
+								keepAlive: {
+									interval: 1_000,
+								},
+							},
 						),
 			[tempoLocal.id]: http(undefined, {
 				batch: true,
