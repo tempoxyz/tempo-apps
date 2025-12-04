@@ -1,5 +1,6 @@
 import type { Hex } from 'ox'
 import * as React from 'react'
+import { cx } from '#cva.config.ts'
 
 /**
  * Displays a hex hash that truncates in the middle when space is limited.
@@ -12,7 +13,6 @@ export function TruncatedHash(props: TruncatedHash.Props) {
 	const measureRef = React.useRef<HTMLSpanElement>(null)
 	const textRef = React.useRef<HTMLSpanElement>(null)
 
-	// Use layout effect to measure and update before browser paint
 	React.useLayoutEffect(() => {
 		const container = containerRef.current
 		const measure = measureRef.current
@@ -76,23 +76,13 @@ export function TruncatedHash(props: TruncatedHash.Props) {
 	return (
 		<span
 			ref={containerRef}
-			className={className}
-			style={{
-				display: 'block',
-				overflow: 'hidden',
-				whiteSpace: 'nowrap',
-			}}
+			className={cx('block overflow-hidden whitespace-nowrap', className)}
 		>
 			{/* Hidden span for measuring text width */}
 			<span
 				ref={measureRef}
 				aria-hidden
-				style={{
-					position: 'absolute',
-					visibility: 'hidden',
-					whiteSpace: 'nowrap',
-					pointerEvents: 'none',
-				}}
+				className="absolute invisible whitespace-nowrap pointer-events-none"
 			/>
 			{/* Text span that gets updated directly via ref to avoid re-renders */}
 			<span ref={textRef}>{truncateHash(hash, minChars)}</span>
