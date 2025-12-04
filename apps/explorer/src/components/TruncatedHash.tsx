@@ -1,6 +1,7 @@
 import type { Hex } from 'ox'
 import * as React from 'react'
 import { cx } from '#cva.config.ts'
+import { HexFormatter } from '#lib/formatting.ts'
 
 /**
  * Displays a hex hash that truncates in the middle when space is limited.
@@ -53,7 +54,7 @@ export function TruncatedHash(props: TruncatedHash.Props) {
 				Math.floor((maxChars - prefixLength) / 2),
 			)
 
-			text.textContent = truncateHash(hash, charsPerSide)
+			text.textContent = HexFormatter.shortenHex(hash, charsPerSide)
 		}
 
 		// Initial calculation
@@ -85,7 +86,7 @@ export function TruncatedHash(props: TruncatedHash.Props) {
 				className="absolute invisible whitespace-nowrap pointer-events-none"
 			/>
 			{/* Text span that gets updated directly via ref to avoid re-renders */}
-			<span ref={textRef}>{truncateHash(hash, minChars)}</span>
+			<span ref={textRef}>{HexFormatter.shortenHex(hash, minChars)}</span>
 		</span>
 	)
 }
@@ -96,15 +97,4 @@ declare namespace TruncatedHash {
 		minChars?: number
 		className?: string
 	}
-}
-
-function truncateHash(hash: Hex.Hex, charsPerSide: number) {
-	const prefixLength = 2 // "0x"
-	const hashBody = hash.slice(prefixLength)
-
-	if (charsPerSide * 2 >= hashBody.length) return hash
-
-	const start = hash.slice(0, prefixLength + charsPerSide)
-	const end = hash.slice(-charsPerSide)
-	return `${start}…${end}`
 }
