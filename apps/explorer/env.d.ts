@@ -11,5 +11,3 @@ interface ImportMeta {
 declare namespace NodeJS {
 	interface ProcessEnv extends EnvironmentVariables {}
 }
-
-interface ProvidedEnv extends Cloudflare.Env {}
