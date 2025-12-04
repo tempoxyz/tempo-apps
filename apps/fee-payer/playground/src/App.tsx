@@ -54,13 +54,18 @@ export function Connect() {
 		<div>
 			<button
 				onClick={() =>
-					connect.connect({ connector, capabilities: { createAccount: true } })
+					connect.mutate({ connector, capabilities: { type: 'sign-up' } })
 				}
 				type="button"
 			>
 				Sign up
 			</button>
-			<button onClick={() => connect.connect({ connector })} type="button">
+			<button
+				onClick={() =>
+					connect.mutate({ connector, capabilities: { type: 'sign-in' } })
+				}
+				type="button"
+			>
 				Sign in
 			</button>
 		</div>

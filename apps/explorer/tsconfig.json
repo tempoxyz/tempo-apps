@@ -32,6 +32,6 @@
 			"#cva": ["./src/cva.config.ts"]
 		}
 	},
-	"files": ["env.d.ts", "worker-configuration.d.ts"],
+	"files": ["env.d.ts", "reset.d.ts", "worker-configuration.d.ts"],
 	"exclude": ["**/_/**", "node_modules", "**/*.test.ts", "**/*.test.tsx"]
 }
