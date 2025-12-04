@@ -144,14 +144,14 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const account = a && Address.validate(a) ? a : undefined
 		const offset = (page - 1) * limit
 
-		const holdersSummary = await context.queryClient.fetchQuery(
+		const holdersSummary = await context.queryClient.ensureQueryData(
 			holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
 		)
 
 		if (tab === 'transfers') {
 			const [metadata, transfers] = await Promise.all([
 				Actions.token.getMetadata(config, { token: address }),
-				context.queryClient.fetchQuery(
+				context.queryClient.ensureQueryData(
 					transfersQueryOptions({ address, page, limit, offset, account }),
 				),
 			])
@@ -160,7 +160,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 
 		const [metadata, holders] = await Promise.all([
 			Actions.token.getMetadata(config, { token: address }),
-			context.queryClient.fetchQuery(
+			context.queryClient.ensureQueryData(
 				holdersQueryOptions({ address, page, limit, offset }),
 			),
 		])

@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
+import { queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute, notFound, rootRouteId } from '@tanstack/react-router'
 import { Address, Hex, Json, Value } from 'ox'
 import { TokenRole } from 'tempo.ts/ox'
@@ -21,65 +22,59 @@ import { parseKnownEvents } from '#lib/known-events'
 import * as Tip20 from '#lib/tip20'
 import { getConfig } from '#wagmi.config'
 
-async function loader({
-	location,
-	params,
-}: {
-	location: { search: { r?: string | undefined } }
-	params: unknown
-}) {
-	try {
-		const { r: rpcUrl } = location.search
-		const parseResult = z
-			.object({
-				hash: z.pipe(
-					z.string(),
-					z.transform(
-						(val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex,
-					),
-				),
-			})
-			.safeParse(params)
+function txDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
+	return queryOptions({
+		queryKey: ['tx-detail', params.hash, params.rpcUrl],
+		queryFn: () => fetchTxData(params),
+	})
+}
 
-		if (!parseResult.success) throw notFound()
+async function fetchTxData(params: { hash: Hex.Hex; rpcUrl?: string }) {
+	const config = getConfig({ rpcUrl: params.rpcUrl })
+	const receipt = await getTransactionReceipt(config, {
+		hash: params.hash,
+	})
+	const [block, transaction, getTokenMetadata] = await Promise.all([
+		getBlock(config, { blockHash: receipt.blockHash }),
+		getTransaction(config, { hash: receipt.transactionHash }),
+		Tip20.metadataFromLogs(receipt.logs),
+	])
+	const timestampFormatted = DateFormatter.format(block.timestamp)
 
-		const { hash } = parseResult.data
-		if (!Hex.validate(hash) || Hex.size(hash) !== 32) throw notFound()
+	const lineItems = LineItems.fromReceipt(receipt, { getTokenMetadata })
+	const knownEvents = parseKnownEvents(receipt, {
+		transaction,
+		getTokenMetadata,
+	})
 
-		const config = getConfig({ rpcUrl })
-		const receipt = await getTransactionReceipt(config, {
-			hash,
-		})
-		const [block, transaction, getTokenMetadata] = await Promise.all([
-			getBlock(config, { blockHash: receipt.blockHash }),
-			getTransaction(config, { hash: receipt.transactionHash }),
-			Tip20.metadataFromLogs(receipt.logs),
-		])
-		const timestampFormatted = DateFormatter.format(block.timestamp)
-
-		const lineItems = LineItems.fromReceipt(receipt, { getTokenMetadata })
-		const knownEvents = parseKnownEvents(receipt, {
-			transaction,
-			getTokenMetadata,
-		})
-
-		return {
-			block,
-			knownEvents,
-			lineItems,
-			receipt,
-			timestampFormatted,
-			transaction,
-		}
-	} catch (error) {
-		console.error(error)
-		throw notFound({
-			routeId: rootRouteId,
-			data: {
-				error: error instanceof Error ? error.message : 'Unknown error',
-			},
-		})
+	return {
+		block,
+		knownEvents,
+		lineItems,
+		receipt,
+		timestampFormatted,
+		transaction,
 	}
+}
+
+function parseHashFromParams(params: unknown): Hex.Hex | null {
+	const parseResult = z
+		.object({
+			hash: z.pipe(
+				z.string(),
+				z.transform(
+					(val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex,
+				),
+			),
+		})
+		.safeParse(params)
+
+	if (!parseResult.success) return null
+
+	const { hash } = parseResult.data
+	if (!Hex.validate(hash) || Hex.size(hash) !== 32) return null
+
+	return hash
 }
 
 export const Route = createFileRoute('/_layout/tx/$hash')({
@@ -93,7 +88,24 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 			: {}),
 	}),
 	// @ts-expect-error - TODO: fix
-	loader,
+	loader: async ({ params, context }) => {
+		try {
+			const hash = parseHashFromParams(params)
+			if (!hash) throw notFound()
+
+			return await context.queryClient.ensureQueryData(
+				txDetailQueryOptions({ hash }),
+			)
+		} catch (error) {
+			console.error(error)
+			throw notFound({
+				routeId: rootRouteId,
+				data: {
+					error: error instanceof Error ? error.message : 'Unknown error',
+				},
+			})
+		}
+	},
 	server: {
 		handlers: {
 			async GET({ params, request, next }) {
@@ -126,12 +138,11 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 				})()
 
 				const rpcUrl = url.searchParams.get('r') ?? undefined
+				const hash = parseHashFromParams(params)
 
 				if (type === 'text/plain') {
-					const data = await loader({
-						location: { search: { r: rpcUrl } },
-						params,
-					})
+					if (!hash) return new Response('Not found', { status: 404 })
+					const data = await fetchTxData({ hash, rpcUrl })
 					const text = TextRenderer.render(data)
 					return new Response(text, {
 						headers: {
@@ -148,10 +159,9 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 				}
 
 				if (type === 'application/json') {
-					const { lineItems, receipt } = await loader({
-						location: { search: { r: rpcUrl } },
-						params,
-					})
+					if (!hash)
+						return Response.json({ error: 'Not found' }, { status: 404 })
+					const { lineItems, receipt } = await fetchTxData({ hash, rpcUrl })
 					return Response.json(
 						JSON.parse(Json.stringify({ lineItems, receipt })),
 					)
@@ -214,8 +224,17 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 })
 
 function Component() {
-	const { block, knownEvents, lineItems, receipt, transaction } =
-		Route.useLoaderData()
+	const { hash } = Route.useParams()
+	const loaderData = Route.useLoaderData() as Awaited<
+		ReturnType<typeof fetchTxData>
+	>
+
+	const { data } = useQuery({
+		...txDetailQueryOptions({ hash }),
+		initialData: loaderData,
+	})
+
+	const { block, knownEvents, lineItems, receipt, transaction } = data
 
 	const feePrice = lineItems.feeTotals?.[0]?.price
 	const previousFee = feePrice
@@ -263,7 +282,7 @@ namespace TextRenderer {
 	const width = 50
 	const indent = '  '
 
-	export function render(data: Awaited<ReturnType<typeof loader>>) {
+	export function render(data: Awaited<ReturnType<typeof fetchTxData>>) {
 		const { lineItems, receipt, timestampFormatted } = data
 
 		const lines: string[] = []

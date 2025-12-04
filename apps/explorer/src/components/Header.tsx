@@ -40,12 +40,14 @@ export namespace Header {
 		const navigate = useNavigate()
 		const [inputValue, setInputValue] = React.useState('')
 		const [isMounted, setIsMounted] = React.useState(false)
-		const isNavigating = useRouterState({
-			select: (state) => state.status === 'pending',
+		const { currentPathname, isNavigating } = useRouterState({
+			select: (state) => ({
+				currentPathname:
+					state.matches.at(-1)?.pathname ?? state.location.pathname,
+				isNavigating: state.status === 'pending',
+			}),
 		})
-		const pathname = useRouterState({
-			select: (state) => state.resolvedLocation?.pathname,
-		})
+		const showSearch = currentPathname !== '/'
 
 		React.useEffect(() => setIsMounted(true), [])
 
@@ -56,8 +58,7 @@ export namespace Header {
 		}, [router])
 
 		return (
-			pathname &&
-			pathname !== '/' && (
+			showSearch && (
 				<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex z-1 h-0 items-center">
 					<ExploreInput
 						value={inputValue}
@@ -88,24 +89,28 @@ export namespace Header {
 
 	export function BlockNumber(props: BlockNumber.Props) {
 		const { initial } = props
+
 		const ref = React.useRef<HTMLSpanElement>(null)
 		useWatchBlockNumber({
-			pollingInterval: 1000,
 			onBlockNumber: (blockNumber) => {
 				if (ref.current) ref.current.textContent = String(blockNumber)
 			},
 		})
+
 		return (
 			<Link
-				params={{ id: initial?.toString() ?? '' }}
 				to="/block/$id"
+				params={{ id: 'latest' }}
 				className="flex items-center gap-[6px] text-[15px] font-medium text-secondary"
 			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
 					<span className="@min-[1240px]:inline hidden">Block </span>
-					<span className="text-primary font-medium tabular-nums min-w-[6ch] inline-block">
-						<span ref={ref}>{initial ? String(initial) : '…'}</span>
+					<span
+						ref={ref}
+						className="text-primary font-medium tabular-nums min-w-[6ch] inline-block"
+					>
+						{initial ? String(initial) : '…'}
 					</span>
 				</div>
 			</Link>

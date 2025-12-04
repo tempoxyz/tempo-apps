@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Block } from 'viem'
@@ -17,6 +17,42 @@ const BLOCKS_PER_PAGE = 12
 // Track which block numbers are "new" for animation purposes
 const recentlyAddedBlocks = new Set<string>()
 
+function blocksQueryOptions(page: number) {
+	return queryOptions({
+		queryKey: ['blocks-loader', page],
+		queryFn: async () => {
+			const wagmiConfig = getConfig()
+
+			// Fetch latest block to get the current block number
+			const latestBlock = await getBlock(wagmiConfig)
+			const latestBlockNumber = latestBlock.number
+
+			// Calculate which blocks to fetch for this page
+			const startBlock =
+				latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
+
+			const blockNumbers: bigint[] = []
+			for (let i = 0n; i < BigInt(BLOCKS_PER_PAGE); i++) {
+				const blockNum = startBlock - i
+				if (blockNum >= 0n) blockNumbers.push(blockNum)
+			}
+
+			// Fetch all blocks in parallel
+			const blocks = await Promise.all(
+				blockNumbers.map((blockNumber) =>
+					getBlock(wagmiConfig, { blockNumber }).catch(() => null),
+				),
+			)
+
+			return {
+				latestBlockNumber,
+				blocks: blocks.filter(Boolean) as Block[],
+			}
+		},
+		placeholderData: keepPreviousData,
+	})
+}
+
 export const Route = createFileRoute('/_layout/blocks')({
 	component: RouteComponent,
 	validateSearch: z.object({
@@ -24,51 +60,31 @@ export const Route = createFileRoute('/_layout/blocks')({
 		live: z.prefault(z.coerce.boolean(), true),
 	}),
 	loaderDeps: ({ search: { page, live } }) => ({ page, live }),
-	loader: async ({ deps }) => {
-		const page = deps.page ?? 1
-		const wagmiConfig = getConfig()
-
-		// Fetch latest block to get the current block number
-		const latestBlock = await getBlock(wagmiConfig)
-		const latestBlockNumber = latestBlock.number
-
-		// Calculate which blocks to fetch for this page
-		const startBlock = latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
-
-		const blockNumbers: bigint[] = []
-		for (let index = 0n; index < BigInt(BLOCKS_PER_PAGE); index++) {
-			const blockNumber = startBlock - index
-			if (blockNumber >= 0n) blockNumbers.push(blockNumber)
-		}
-
-		// Fetch all blocks in parallel
-		const blocks = await Promise.all(
-			blockNumbers.map((blockNumber) =>
-				getBlock(wagmiConfig, { blockNumber }).catch(() => null),
-			),
-		)
-
-		return {
-			latestBlockNumber,
-			blocks: blocks.filter(Boolean),
-		}
+	loader: async ({ deps, context }) => {
+		return context.queryClient.ensureQueryData(blocksQueryOptions(deps.page))
 	},
 })
 
 function RouteComponent() {
 	const { page = 1, live = true } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
+
+	const { data: queryData } = useQuery({
+		...blocksQueryOptions(page),
+		initialData: loaderData,
+	})
+
 	const [latestBlockNumber, setLatestBlockNumber] = React.useState<
 		bigint | undefined
 	>()
 	// Initialize with loader data to prevent layout shift
 	const [liveBlocks, setLiveBlocks] = React.useState<Block[]>(() =>
-		loaderData.blocks.slice(0, BLOCKS_PER_PAGE),
+		queryData.blocks.slice(0, BLOCKS_PER_PAGE),
 	)
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	// Use loader data for initial render, then live updates
-	const currentLatest = latestBlockNumber ?? loaderData.latestBlockNumber
+	const currentLatest = latestBlockNumber ?? queryData.latestBlockNumber
 
 	// Watch for new blocks (enabled on all pages when live)
 	useWatchBlockNumber({
@@ -113,16 +129,16 @@ function RouteComponent() {
 
 	// Re-initialize when navigating back to page 1 with live mode
 	React.useEffect(() => {
-		if (page === 1 && live && loaderData.blocks) {
+		if (page === 1 && live && queryData.blocks) {
 			setLiveBlocks((prev) => {
 				// Only reinitialize if we have no blocks or stale data
 				if (prev.length === 0) {
-					return loaderData.blocks.slice(0, BLOCKS_PER_PAGE)
+					return queryData.blocks.slice(0, BLOCKS_PER_PAGE)
 				}
 				return prev
 			})
 		}
-	}, [page, live, loaderData.blocks])
+	}, [page, live, queryData.blocks])
 
 	// Calculate which blocks to show for this page
 	const startBlock = currentLatest
@@ -162,8 +178,8 @@ function RouteComponent() {
 		if (page === 1 && live && liveBlocks.length > 0) {
 			return liveBlocks
 		}
-		return fetchedBlocks ?? (page === 1 ? loaderData.blocks : undefined)
-	}, [page, live, liveBlocks, fetchedBlocks, loaderData.blocks])
+		return fetchedBlocks ?? (page === 1 ? queryData.blocks : undefined)
+	}, [page, live, liveBlocks, fetchedBlocks, queryData.blocks])
 
 	const isLoading = !blocks && isFetching
 
