@@ -30,13 +30,13 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 	[
 		'0x20c0000000000000000000000000000000000000',
 		{
-			name: 'linkingUSD',
+			name: 'pathUSD',
 			description: 'Non-transferable DEX accounting unit',
 			abi: Abis.tip20,
 			code: '0xef',
 			category: 'token',
 			docsUrl:
-				'https://docs.tempo.xyz/documentation/protocol/exchange/linkingUSD',
+				'https://docs.tempo.xyz/documentation/protocol/exchange/pathUSD',
 		},
 	],
 	[
