@@ -2,7 +2,6 @@ import { createServerFn } from '@tanstack/react-start'
 import type { Address } from 'ox'
 import * as z from 'zod/mini'
 import * as IS from '#lib/index-supply'
-import { parsePgTimestamp } from '#lib/postgres'
 
 const { chainId } = IS
 
@@ -56,7 +55,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 			symbol: String(row[1]),
 			name: String(row[2]),
 			currency: String(row[3]),
-			createdAt: parsePgTimestamp(String(row[4])),
+			createdAt: Number(IS.toTimestamp(String(row[4]))),
 		}))
 
 		const total = Number(countResult.rows[0]?.[0] ?? 0)

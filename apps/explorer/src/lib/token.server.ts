@@ -2,7 +2,6 @@ import { createServerFn } from '@tanstack/react-start'
 import type { Address, Hex } from 'ox'
 import * as z from 'zod/mini'
 import * as IS from '#lib/index-supply'
-import { parsePgTimestamp } from '#lib/postgres'
 import { zAddress } from '#lib/zod'
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
@@ -221,7 +220,7 @@ async function fetchTransfersData(
 			transactionHash: transactionHash as Hex.Hex,
 			blockNumber: String(blockNumber),
 			logIndex: Number(logIndex),
-			timestamp: timestamp ? String(parsePgTimestamp(String(timestamp))) : null,
+			timestamp: timestamp ? String(Number(IS.toTimestamp(String(timestamp)))) : null,
 		}
 	})
 }
