@@ -60,7 +60,12 @@ export function Connect() {
 			>
 				Sign up
 			</button>
-			<button onClick={() => connect.mutate({ connector })} type="button">
+			<button
+				onClick={() =>
+					connect.mutate({ connector, capabilities: { type: 'sign-in' } })
+				}
+				type="button"
+			>
 				Sign in
 			</button>
 		</div>
