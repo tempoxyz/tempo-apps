@@ -6,7 +6,8 @@ Monorepo for Tempo Apps
 
 | Workspace | Description | URL |
 | --------- | ----------- | ----------- |
-| [`apps/explorer`](apps/explorer) | Chain explorer. | [`https://explore.tempo.xyz/*`](https://explore.tempo.xyz) |
+| [`apps/explorer`](apps/explorer) | Chain explorer. | [`explore.tempo.xyz`](<https://explore.tempo.xyz>) |
+| [`apps/fee-payer`](apps/fee-payer) | Fee payer. | [`sponsor.testnet.tempo.xyz`](<https://sponsor.testnet.tempo.xyz>) |
 
 ## Contributing
 
