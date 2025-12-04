@@ -547,7 +547,7 @@ function SectionsWrapper(props: {
 					label="Time"
 					formatLabel={formatLabel}
 					onCycle={cycleTimeFormat}
-					className="hover:text-accent cursor-pointer transition-colors"
+					className="text-secondary hover:text-accent cursor-pointer transition-colors"
 				/>
 			),
 			align: 'start',

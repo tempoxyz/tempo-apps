@@ -94,9 +94,9 @@ export function TimeColumnHeader(props: {
 			type="button"
 			onClick={onCycle}
 			className={className}
-			title="Click to cycle time format"
+			title={`Showing ${formatLabel} time - click to change`}
 		>
-			{label} <span className="opacity-60">({formatLabel})</span>
+			{label}
 		</button>
 	)
 }

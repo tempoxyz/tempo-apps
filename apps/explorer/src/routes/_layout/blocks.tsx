@@ -204,10 +204,10 @@ function RouteComponent() {
 							<button
 								type="button"
 								onClick={cycleTimeFormat}
-								className="hover:text-accent cursor-pointer transition-colors"
-								title="Click to cycle time format"
+								className="text-secondary hover:text-accent cursor-pointer transition-colors"
+								title={`Showing ${formatLabel} time - click to change`}
 							>
-								Timestamp <span className="opacity-60">({formatLabel})</span>
+								Time
 							</button>
 						</div>
 						<div className="text-right">Txns</div>
