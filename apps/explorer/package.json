@@ -48,6 +48,7 @@
 		"@tanstack/react-devtools": "catalog:",
 		"@tanstack/react-query-devtools": "catalog:",
 		"@tanstack/react-router-devtools": "catalog:",
+		"@total-typescript/ts-reset": "^0.6.1",
 		"@types/node": "catalog:",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",

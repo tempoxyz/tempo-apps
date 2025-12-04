@@ -17,50 +17,45 @@ const BLOCKS_PER_PAGE = 12
 // Track which block numbers are "new" for animation purposes
 const recentlyAddedBlocks = new Set<string>()
 
-async function loader({
-	location,
-}: {
-	location: { search: { page?: number } }
-}) {
-	const page = location.search.page ?? 1
-	const wagmiConfig = getConfig()
-
-	// Fetch latest block to get the current block number
-	const latestBlock = await getBlock(wagmiConfig)
-	const latestBlockNumber = latestBlock.number
-
-	// Calculate which blocks to fetch for this page
-	const startBlock = latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
-
-	const blockNumbers: bigint[] = []
-	for (let i = 0n; i < BigInt(BLOCKS_PER_PAGE); i++) {
-		const blockNum = startBlock - i
-		if (blockNum >= 0n) blockNumbers.push(blockNum)
-	}
-
-	// Fetch all blocks in parallel
-	const blocks = await Promise.all(
-		blockNumbers.map((blockNumber) =>
-			getBlock(wagmiConfig, { blockNumber }).catch(() => null),
-		),
-	)
-
-	return {
-		latestBlockNumber,
-		blocks: blocks.filter(Boolean) as Block[],
-	}
-}
-
 export const Route = createFileRoute('/_layout/blocks')({
-	component: BlocksPage,
+	component: RouteComponent,
 	validateSearch: z.object({
-		page: z.optional(z.number()),
-		live: z.optional(z.boolean()),
-	}).parse,
-	loader,
+		page: z.prefault(z.coerce.number(), 1),
+		live: z.prefault(z.coerce.boolean(), true),
+	}),
+	loaderDeps: ({ search: { page, live } }) => ({ page, live }),
+	loader: async ({ deps }) => {
+		const page = deps.page ?? 1
+		const wagmiConfig = getConfig()
+
+		// Fetch latest block to get the current block number
+		const latestBlock = await getBlock(wagmiConfig)
+		const latestBlockNumber = latestBlock.number
+
+		// Calculate which blocks to fetch for this page
+		const startBlock = latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
+
+		const blockNumbers: bigint[] = []
+		for (let index = 0n; index < BigInt(BLOCKS_PER_PAGE); index++) {
+			const blockNumber = startBlock - index
+			if (blockNumber >= 0n) blockNumbers.push(blockNumber)
+		}
+
+		// Fetch all blocks in parallel
+		const blocks = await Promise.all(
+			blockNumbers.map((blockNumber) =>
+				getBlock(wagmiConfig, { blockNumber }).catch(() => null),
+			),
+		)
+
+		return {
+			latestBlockNumber,
+			blocks: blocks.filter(Boolean),
+		}
+	},
 })
 
-function BlocksPage() {
+function RouteComponent() {
 	const { page = 1, live = true } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 	const [latestBlockNumber, setLatestBlockNumber] = React.useState<
