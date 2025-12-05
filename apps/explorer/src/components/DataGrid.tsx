@@ -67,7 +67,7 @@ export function DataGrid(props: DataGrid.Props) {
 							<div
 								key={`row-${rowIndex}-${page}`}
 								className={cx(
-									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid] min-h-[48px]',
+									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid]',
 									item.link &&
 										'hover:bg-base-alt hover:border-solid transition-[background-color] duration-75 hover:-mt-[1px] hover:border-t hover:border-t-distinct',
 									item.expanded && 'border-l-distinct',
@@ -96,7 +96,7 @@ export function DataGrid(props: DataGrid.Props) {
 													<div
 														key={key}
 														className={cx(
-															'px-[10px] py-[12px] flex items-start',
+															'px-[10px] py-[12px] flex items-start min-h-[48px]',
 															'text-primary',
 															isFirstColumn && 'pl-[16px]',
 															isLastColumn && 'pr-[16px]',
