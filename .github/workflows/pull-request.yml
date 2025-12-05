@@ -23,7 +23,7 @@ jobs:
       pull-requests: write
     strategy:
       matrix:
-        app: [explorer, fee-payer, api]
+        app: [explorer, fee-payer, proxy]
 
     steps:
       - name: Clone repository

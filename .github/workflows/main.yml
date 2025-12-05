@@ -23,8 +23,8 @@ jobs:
           - app: explorer
           - app: fee-payer
             env: privy
-          - app: api
-        
+          - app: proxy
+
     steps:
       - uses: actions/checkout@v5
         with:
