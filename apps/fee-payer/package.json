@@ -3,7 +3,8 @@
 	"private": true,
 	"scripts": {
 		"build": "echo 'noop'",
-		"check": "biome check --write .",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write .",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"dev": "wrangler dev",
 		"dev:playground": "pnpm --filter fee-payer-playground dev",

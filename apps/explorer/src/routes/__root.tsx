@@ -179,7 +179,7 @@ function useDevTools() {
 	useEffect(() => {
 		if (
 			import.meta.env.MODE === 'development' &&
-			import.meta.env.VITE_ENABLE_ERUDA === 'true'
+			import.meta.env.VITE_ENABLE_DEVTOOLS !== 'false'
 		) {
 			void import('eruda').then(({ default: eruda }) => eruda.init())
 		}

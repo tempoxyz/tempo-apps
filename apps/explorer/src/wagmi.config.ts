@@ -48,9 +48,7 @@ export function getConfig(
 					})
 				: rpcUrl
 					? http(rpcUrl)
-					: webSocket(
-							'wss://rpc-orchestra.testnet.tempo.xyz/zealous-mayer',
-						),
+					: webSocket('wss://rpc-orchestra.testnet.tempo.xyz/zealous-mayer'),
 			[tempoLocal.id]: http(undefined, {
 				batch: true,
 			}),

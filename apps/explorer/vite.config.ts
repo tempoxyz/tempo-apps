@@ -10,11 +10,12 @@ import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
+	const showDevtools = env.VITE_ENABLE_DEVTOOLS !== 'false'
 
 	return {
 		plugins: [
-			devtools(),
-			vitePluginChromiumDevTools(),
+			showDevtools && devtools(),
+			showDevtools && vitePluginChromiumDevTools(),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tsconfigPaths({
 				projects: ['./tsconfig.json'],
