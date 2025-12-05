@@ -22,7 +22,11 @@ export function DataGrid(props: DataGrid.Props) {
 	const totalPages = Math.ceil(totalItems / itemsPerPage)
 
 	const gridTemplateColumns = activeColumns
-		.map((col) => (col.minWidth ? `minmax(${col.minWidth}px, auto)` : 'auto'))
+		.map((col) => {
+			if (col.width) return `${col.width}px`
+			if (col.minWidth) return `minmax(${col.minWidth}px, auto)`
+			return 'auto'
+		})
 		.join(' ')
 
 	return (
@@ -144,6 +148,7 @@ export namespace DataGrid {
 		label: React.ReactNode
 		align?: 'start' | 'end'
 		minWidth?: number
+		width?: number
 	}
 
 	export interface RowLink {

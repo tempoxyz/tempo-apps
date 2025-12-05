@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { type Address as AddressType, Value } from 'ox'
+import * as React from 'react'
 import { isAddressEqual } from 'viem'
 import { cx } from '#cva.config.ts'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
@@ -97,6 +98,64 @@ export namespace EventDescription {
 		export interface Props {
 			part: KnownEventPart
 			seenAs?: AddressType.Address
+		}
+	}
+
+	export function ExpandGroup(props: ExpandGroup.Props) {
+		const {
+			events,
+			seenAs,
+			transformEvent,
+			emptyContent = '…',
+			limit = 1,
+		} = props
+		const [expanded, setExpanded] = React.useState(false)
+
+		if (!events || events.length === 0) {
+			return (
+				<div className="text-tertiary flex items-center">
+					<span className="inline-block">{emptyContent}</span>
+				</div>
+			)
+		}
+
+		const eventsToShow = expanded ? events : events.slice(0, limit)
+		const remainingCount = events.length - eventsToShow.length
+		const displayEvents = transformEvent
+			? eventsToShow.map(transformEvent)
+			: eventsToShow
+
+		return (
+			<div className="flex flex-col gap-[4px]">
+				{displayEvents.map((event, index) => (
+					<div key={`${event.type}-${index}`} className="flex items-center">
+						<EventDescription
+							event={event}
+							seenAs={seenAs}
+							className="flex flex-row items-center gap-[6px] leading-[18px]"
+						/>
+						{index === eventsToShow.length - 1 && remainingCount > 0 && (
+							<button
+								type="button"
+								onClick={() => setExpanded(true)}
+								className="ml-1 text-base-content-secondary cursor-pointer press-down shrink-0"
+							>
+								and {remainingCount} more
+							</button>
+						)}
+					</div>
+				))}
+			</div>
+		)
+	}
+
+	export namespace ExpandGroup {
+		export interface Props {
+			events: KnownEvent[]
+			seenAs?: AddressType.Address
+			transformEvent?: (event: KnownEvent) => KnownEvent
+			emptyContent?: React.ReactNode
+			limit?: number
 		}
 	}
 }

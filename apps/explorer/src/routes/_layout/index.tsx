@@ -91,12 +91,21 @@ function SpotlightLinks() {
 				<SpotlightLink to="/tokens">Tokens</SpotlightLink>
 				<span>·</span>
 				<SpotlightLink
-					to="/tx/$hash"
+					to="/receipt/$hash"
 					params={{
 						hash: '0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd',
 					}}
 				>
 					Receipt
+				</SpotlightLink>
+				<span>·</span>
+				<SpotlightLink
+					to="/tx/$hash"
+					params={{
+						hash: '0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd',
+					}}
+				>
+					Tx
 				</SpotlightLink>
 				<span>·</span>
 				<SpotlightLink
