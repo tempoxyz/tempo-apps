@@ -870,45 +870,17 @@ function TransactionDescription(props: {
 }) {
 	const { knownEvents, accountAddress } = props
 
-	const [expanded, setExpanded] = React.useState(false)
-
-	if (!knownEvents || knownEvents.length === 0)
-		return (
-			<div className="text-tertiary h-[20px] flex items-center whitespace-nowrap">
-				<span className="inline-block">…</span>
-			</div>
-		)
-
-	const eventsToShow = expanded ? knownEvents : [knownEvents[0]]
-	const remainingCount = knownEvents.length - eventsToShow.length
-	const perspectiveEvents = eventsToShow.map((event) =>
-		getPerspectiveEvent(event, accountAddress),
+	const transformEvent = React.useCallback(
+		(event: KnownEvent) => getPerspectiveEvent(event, accountAddress),
+		[accountAddress],
 	)
 
 	return (
-		<div className="text-primary h-[20px] flex items-center whitespace-nowrap">
-			{perspectiveEvents.map((event, index) => (
-				<div
-					key={`${event.type}-${index}`}
-					className="inline-flex items-center"
-				>
-					<EventDescription
-						event={event}
-						seenAs={accountAddress}
-						className="flex flex-row items-center gap-[6px] leading-[18px] w-auto justify-center flex-nowrap"
-					/>
-					{index === 0 && remainingCount > 0 && (
-						<button
-							type="button"
-							onClick={() => setExpanded(true)}
-							className="ml-1 text-base-content-secondary cursor-pointer press-down shrink-0"
-						>
-							and {remainingCount} more
-						</button>
-					)}
-				</div>
-			))}
-		</div>
+		<EventDescription.ExpandGroup
+			events={knownEvents}
+			seenAs={accountAddress}
+			transformEvent={transformEvent}
+		/>
 	)
 }
 
