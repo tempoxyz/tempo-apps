@@ -19,6 +19,9 @@
 			"persist": true
 		}
 	},
+	"placement": {
+		"mode": "smart"
+	},
 	"vars": {
 		"BASIC_AUTH_USERNAME": "eng",
 		"BASIC_AUTH_PASSWORD": "zealous-mayer"
