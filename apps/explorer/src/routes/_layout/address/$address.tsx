@@ -349,16 +349,16 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 						<DataGrid
 							columns={{
 								stacked: [
-									{ label: 'Time', align: 'start', minWidth: 100 },
-									{ label: 'Hash', align: 'start' },
-									{ label: 'Total', align: 'end' },
+									{ label: 'Time', align: 'start', width: '0.5fr' },
+									{ label: 'Hash', align: 'start', width: '1fr' },
+									{ label: 'Total', align: 'end', width: '0.5fr' },
 								],
 								tabs: [
-									{ label: 'Time', align: 'start', minWidth: 100 },
-									{ label: 'Description', align: 'start' },
-									{ label: 'Hash', align: 'end' },
-									{ label: 'Fee', align: 'end' },
-									{ label: 'Total', align: 'end' },
+									{ label: 'Time', align: 'start', width: '0.5fr' },
+									{ label: 'Description', align: 'start', width: '2fr' },
+									{ label: 'Hash', align: 'end', width: '1fr' },
+									{ label: 'Fee', align: 'end', width: '0.5fr' },
+									{ label: 'Total', align: 'end', width: '0.5fr' },
 								],
 							}}
 							items={(mode) =>
@@ -401,14 +401,14 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 						<DataGrid
 							columns={{
 								stacked: [
-									{ label: 'Name', align: 'start' },
-									{ label: 'Balance', align: 'end' },
+									{ label: 'Name', align: 'start', width: '1fr' },
+									{ label: 'Balance', align: 'end', width: '0.5fr' },
 								],
 								tabs: [
-									{ label: 'Name', align: 'start' },
-									{ label: 'Ticker', align: 'start' },
-									{ label: 'Balance', align: 'end' },
-									{ label: 'Value', align: 'end' },
+									{ label: 'Name', align: 'start', width: '1fr' },
+									{ label: 'Ticker', align: 'start', width: '0.5fr' },
+									{ label: 'Balance', align: 'end', width: '0.5fr' },
+									{ label: 'Value', align: 'end', width: '0.5fr' },
 								],
 							}}
 							items={() => []}
@@ -528,12 +528,12 @@ function SectionsWrapper(props: {
 				/>
 			),
 			align: 'start',
-			minWidth: 100,
+			width: '0.5fr',
 		},
-		{ label: 'Description', align: 'start' },
-		{ label: 'Hash', align: 'end' },
-		{ label: 'Fee', align: 'end' },
-		{ label: 'Total', align: 'end' },
+		{ label: 'Description', align: 'start', width: '2fr' },
+		{ label: 'Hash', align: 'end', width: '1fr' },
+		{ label: 'Fee', align: 'end', width: '0.5fr' },
+		{ label: 'Total', align: 'end', width: '0.5fr' },
 	]
 
 	return (
@@ -589,16 +589,16 @@ function SectionsWrapper(props: {
 						<DataGrid
 							columns={{
 								stacked: [
-									{ label: 'Name', align: 'start' },
-									{ label: 'Contract', align: 'start' },
-									{ label: 'Amount', align: 'end' },
+									{ label: 'Name', align: 'start', width: '1fr' },
+									{ label: 'Contract', align: 'start', width: '1fr' },
+									{ label: 'Amount', align: 'end', width: '0.5fr' },
 								],
 								tabs: [
-									{ label: 'Name', align: 'start' },
-									{ label: 'Ticker', align: 'start' },
-									{ label: 'Currency', align: 'start' },
-									{ label: 'Amount', align: 'end' },
-									{ label: 'Value', align: 'end' },
+									{ label: 'Name', align: 'start', width: '1fr' },
+									{ label: 'Ticker', align: 'start', width: '0.5fr' },
+									{ label: 'Currency', align: 'start', width: '0.5fr' },
+									{ label: 'Amount', align: 'end', width: '0.5fr' },
+									{ label: 'Value', align: 'end', width: '0.5fr' },
 								],
 							}}
 							items={(mode) =>
@@ -978,7 +978,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			),
 		)
 	}, [data, status])
-	if (!amountParts?.length) return <>$0.00</>
+	if (!amountParts?.length) return <span className="text-tertiary">—</span>
 	console.info('amount parts', amountParts)
 	const totalValue = amountParts.reduce((sum, part) => {
 		const decimals = part.value.decimals ?? 6

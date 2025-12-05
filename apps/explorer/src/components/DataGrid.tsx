@@ -23,7 +23,11 @@ export function DataGrid(props: DataGrid.Props) {
 
 	const gridTemplateColumns = activeColumns
 		.map((col) => {
-			if (col.width) return `${col.width}px`
+			if (typeof col.width === 'number') return `${col.width}px`
+			if (typeof col.width === 'string')
+				return col.minWidth
+					? `minmax(${col.minWidth}px, ${col.width})`
+					: col.width
 			if (col.minWidth) return `minmax(${col.minWidth}px, auto)`
 			return 'auto'
 		})
@@ -63,7 +67,7 @@ export function DataGrid(props: DataGrid.Props) {
 							<div
 								key={`row-${rowIndex}-${page}`}
 								className={cx(
-									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid]',
+									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid] min-h-[48px]',
 									item.link &&
 										'hover:bg-base-alt hover:border-solid transition-[background-color] duration-75 hover:-mt-[1px] hover:border-t hover:border-t-distinct',
 									item.expanded && 'border-l-distinct',
@@ -148,7 +152,7 @@ export namespace DataGrid {
 		label: React.ReactNode
 		align?: 'start' | 'end'
 		minWidth?: number
-		width?: number
+		width?: number | `${number}fr`
 	}
 
 	export interface RowLink {
