@@ -1,10 +1,6 @@
 interface Env {
 	readonly PORT: string
-	readonly ENVIRONMENT: 'development' | 'production'
-
 	readonly LOGGING?: 'verbose' | 'normal' | 'silent' | undefined
-
-	readonly APP_VERSION: string
 }
 
 // Node.js `process.env` auto-completion

@@ -37,7 +37,8 @@ app.notFound((context) => {
 
 app.get('/', async (context) => {
 	const key = context.req.query('api-key')
-	if (!key) return context.json({ error: 'api-key is required' }, 400)
+	if (!key && !context.env.INDEXSUPPLY_API_KEY)
+		return context.json({ error: 'api-key is required' }, 400)
 
 	const query = context.req.query('query')
 	if (!query) return context.json({ error: 'query is required' }, 400)
@@ -47,7 +48,7 @@ app.get('/', async (context) => {
 
 	const indexSupplyUrl = new URL(INDEX_SUPPLY_URL)
 	const searchParams = new URLSearchParams({
-		'api-key': key,
+		'api-key': key ?? context.env.INDEXSUPPLY_API_KEY,
 		query,
 		signatures,
 	})

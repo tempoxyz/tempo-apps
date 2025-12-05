@@ -2,9 +2,7 @@
 	"name": "index-supply",
 	"type": "module",
 	"imports": {
-		"#*": "./src/*",
-		"#package.json": "./package.json",
-		"#wrangler.json": "./wrangler.json"
+		"#*": "./src/*"
 	},
 	"scripts": {
 		"dev": "vite",
