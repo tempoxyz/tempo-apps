@@ -2,8 +2,12 @@ import { env } from 'cloudflare:workers'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { HTTPException } from 'hono/http-exception'
+import { cloneRawRequest } from 'hono/request'
+import { RpcRequest } from 'ox'
 import { tempo } from 'tempo.ts/chains'
 import { Handler } from 'tempo.ts/server'
+import { Transaction } from 'tempo.ts/viem'
 import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import * as z from 'zod'
@@ -50,6 +54,23 @@ app.get(
 )
 
 app.all('*', async (c) => {
+	const request = RpcRequest.from((await c.req.json()) as any)
+	const serialized = (request as any).params?.[0] as `0x76${string}`
+	const transaction = Transaction.deserialize(serialized)
+	const from = (transaction as any).from
+
+	const { success } = await env.AddressRateLimiter.limit({
+		key: from,
+	})
+	if (!success) {
+		return c.json({ error: 'Rate limit exceeded' }, 429)
+	}
+
+	console.log(`Sponsoring transaction: `, {
+		method: request.method,
+		from,
+	})
+
 	const handler = Handler.feePayer({
 		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
 		chain: tempo({ feeToken: '0x20c0000000000000000000000000000000000001' }),
@@ -60,11 +81,8 @@ app.all('*', async (c) => {
 				},
 			},
 		}),
-		async onRequest(request) {
-			console.log(`Sponsoring transaction: ${request.method}`)
-		},
 	})
-	return handler.fetch(c.req.raw)
+	return handler.fetch(await cloneRawRequest(c.req))
 })
 
 export default app
