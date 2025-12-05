@@ -21,19 +21,33 @@ jobs:
       matrix:
         include:
           - app: explorer
-          - app: fee-payer
-          - app: fee-payer
+          - app: fee-payer # default
+          - app: fee-payer # privy
             env: privy
-        
+
     steps:
       - uses: actions/checkout@v5
         with:
-          submodules: 'recursive'
+          submodules: "recursive"
+          fetch-depth: 0
+
+      # deploy workspace preview only if there are relevant changes
+      # deploy all apps if root lockfile is changed
+      - name: Check for relevant changes
+        id: changes
+        run: |
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE "^(apps/${{ matrix.app }}/|pnpm-lock.yaml)"; then
+            echo "relevant=true" >> $GITHUB_OUTPUT
+          else
+            echo "relevant=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Install dependencies
+        if: steps.changes.outputs.relevant == 'true'
         uses: ./.github/actions/install-dependencies
 
       - name: Build & Deploy Workers
+        if: steps.changes.outputs.relevant == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
