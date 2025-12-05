@@ -227,7 +227,7 @@ function OverviewSection(props: {
 		<div className="flex flex-col">
 			{knownEvents.length > 0 && (
 				<InfoRow label="Description">
-					<EventDescription.ExpandGroup events={knownEvents} />
+					<EventDescription.ExpandGroup events={knownEvents} limit={5} />
 				</InfoRow>
 			)}
 			<InfoRow label="Value">
