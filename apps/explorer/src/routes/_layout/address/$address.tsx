@@ -758,7 +758,7 @@ function TransactionRowDescription(props: {
 		const count = receipt?.logs.length ?? 0
 		return (
 			<span className="text-secondary">
-				{count} {count === 1 ? 'event' : 'events'}
+				{count === 0 ? 'No events' : `${count} events`}
 			</span>
 		)
 	}
