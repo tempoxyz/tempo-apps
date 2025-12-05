@@ -39,7 +39,7 @@ export function getConfig(
 		batch: { multicall: false },
 		transports: {
 			[tempoTestnet.id]: !browser
-				? http(rpcUrl ?? 'https://rpc.testnet.tempo.xyz', {
+				? http(rpcUrl ?? 'https://rpc-orchestra.testnet.tempo.xyz', {
 						fetchOptions: {
 							headers: {
 								Authorization: `Basic ${btoa('eng:zealous-mayer')}`,
@@ -49,7 +49,7 @@ export function getConfig(
 				: rpcUrl
 					? http(rpcUrl)
 					: webSocket(
-							'wss://rpc.testnet.tempo.xyz?supersecretargument=pleasedonotusemeinprod',
+							'wss://rpc-orchestra.testnet.tempo.xyz/zealous-mayer',
 						),
 			[tempoLocal.id]: http(undefined, {
 				batch: true,
