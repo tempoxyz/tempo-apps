@@ -22,8 +22,8 @@ jobs:
         include:
           - app: explorer
           - app: fee-payer
-          - app: index-supply
             env: privy
+          - app: index-supply
         
     steps:
       - uses: actions/checkout@v5
