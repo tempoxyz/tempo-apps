@@ -22,11 +22,7 @@
 		"noFallthroughCasesInSwitch": true,
 		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
-		"types": [
-			"node",
-			"typed-query-selector/strict",
-			"@cloudflare/workers-types"
-		]
+		"types": ["node", "@cloudflare/workers-types"]
 	},
 	"include": ["src/**/*"],
 	"files": [

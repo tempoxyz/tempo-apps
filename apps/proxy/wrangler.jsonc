@@ -1,6 +1,6 @@
 {
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
-	"name": "indexer",
+	"name": "api",
 	"compatibility_date": "2025-10-11",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.ts",

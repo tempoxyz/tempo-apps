@@ -1,5 +1,5 @@
 {
-	"name": "index-supply",
+	"name": "api",
 	"type": "module",
 	"imports": {
 		"#*": "./src/*"
@@ -15,20 +15,15 @@
 		"postinstall": "pnpm gen:types && pnpm build"
 	},
 	"dependencies": {
-		"@hono/zod-validator": "catalog:",
 		"hono": "^4.10.7",
-		"vite": "catalog:",
-		"zod": "catalog:"
+		"vite": "catalog:"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/node": "catalog:",
-		"vitest": "catalog:",
 		"typescript": "catalog:",
-		"typed-query-selector": "catalog:",
-		"@cloudflare/vitest-pool-workers": "catalog:",
 		"wrangler": "catalog:"
 	}
 }

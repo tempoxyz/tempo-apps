@@ -8,6 +8,7 @@ Monorepo for Tempo Apps
 | --------- | ----------- | ----------- |
 | [`apps/explorer`](apps/explorer) | Chain explorer. | [`explore.tempo.xyz`](<https://explore.tempo.xyz>) |
 | [`apps/fee-payer`](apps/fee-payer) | Fee payer. | [`sponsor.testnet.tempo.xyz`](<https://sponsor.testnet.tempo.xyz>) |
+| [`apps/api`](apps/api) | General proxy worker for Tempo. | [`api.tempo.xyz`](<https://api.tempo.xyz>) |
 
 ## Contributing
 

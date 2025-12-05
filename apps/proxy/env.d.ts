@@ -16,8 +16,3 @@ interface ImportMetaEnv extends Env {}
 interface ImportMeta {
 	readonly env: ImportMetaEnv
 }
-
-declare module 'cloudflare:test' {
-	// ProvidedEnv controls the type of `import("cloudflare:test").env`
-	interface ProvidedEnv extends Env {}
-}

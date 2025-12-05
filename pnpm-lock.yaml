@@ -411,15 +411,40 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.1
-      typed-query-selector:
-        specifier: 'catalog:'
-        version: 2.12.0
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
       vitest:
         specifier: 'catalog:'
         version: 3.2.4(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.52.1(@cloudflare/workers-types@4.20251202.0)
+
+  apps/proxy:
+    dependencies:
+      hono:
+        specifier: ^4.10.7
+        version: 4.10.7
+      vite:
+        specifier: 'catalog:'
+        version: rolldown-vite@7.2.10(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: 'catalog:'
+        version: 1.16.1(rolldown-vite@7.2.10(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0))(workerd@1.20251202.0)(wrangler@4.52.1(@cloudflare/workers-types@4.20251202.0))
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 4.20251202.0
+      '@total-typescript/ts-reset':
+        specifier: 'catalog:'
+        version: 0.6.1
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.1
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
       wrangler:
         specifier: 'catalog:'
         version: 4.52.1(@cloudflare/workers-types@4.20251202.0)
