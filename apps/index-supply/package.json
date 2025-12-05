@@ -1,0 +1,29 @@
+{
+	"name": "index-supply",
+	"type": "module",
+	"imports": {
+		"#*": "./src/*",
+		"#package.json": "./package.json",
+		"#wrangler.json": "./wrangler.json"
+	},
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"deploy": "wrangler --config='wrangler.json' deploy",
+		"check": "biome check . --write --unsafe",
+		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
+		"postinstall": "pnpm gen:types && pnpm build"
+	},
+	"dependencies": {
+		"hono": "^4.10.7",
+		"vite": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "catalog:",
+		"@total-typescript/ts-reset": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

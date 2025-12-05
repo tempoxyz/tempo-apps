@@ -22,7 +22,7 @@ jobs:
         include:
           - app: explorer
           - app: fee-payer
-          - app: fee-payer
+          - app: index-supply
             env: privy
         
     steps:

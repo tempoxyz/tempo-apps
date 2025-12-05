@@ -1,0 +1,19 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "indexer",
+	"compatibility_date": "2025-10-11",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.ts",
+	"workers_dev": true,
+	"preview_urls": true,
+	"keep_vars": true,
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		}
+	}
+}
