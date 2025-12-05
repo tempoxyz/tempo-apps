@@ -30,15 +30,30 @@ jobs:
         uses: actions/checkout@v5
         with:
           submodules: "recursive"
+          fetch-depth: 0
+
+      # deploy workspace preview only if there are relevant changes
+      # deploy all apps if root lockfile is changed
+      - name: Check for relevant changes
+        id: changes
+        run: |
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -qE "^(apps/${{ matrix.app }}/|pnpm-lock.yaml)"; then
+            echo "relevant=true" >> $GITHUB_OUTPUT
+          else
+            echo "relevant=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Install dependencies
+        if: steps.changes.outputs.relevant == 'true'
         uses: ./.github/actions/install-dependencies
 
       - name: Build
+        if: steps.changes.outputs.relevant == 'true'
         run: pnpm build
         working-directory: apps/${{ matrix.app }}
 
       - name: Upload Worker Version
+        if: steps.changes.outputs.relevant == 'true'
         id: deploy
         uses: cloudflare/wrangler-action@v3
         with:
@@ -48,6 +63,7 @@ jobs:
           workingDirectory: apps/${{ matrix.app }}
 
       - name: Comment Preview URL on PR
+        if: steps.changes.outputs.relevant == 'true'
         uses: moojing/cf-preview-bot@v1
         with:
           deployment_url: ${{ steps.deploy.outputs.deployment-url }}

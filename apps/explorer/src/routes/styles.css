@@ -72,16 +72,6 @@
 	--color-outline-negative: light-dark(#dc2626, #ef4444);
 	--outline-negative: var(--color-outline-negative);
 
-	/* Badge Colors */
-	--color-badge-content: light-dark(#737373, #a3a3a3);
-	--badge-content: var(--color-badge-content);
-	--color-badge-info-content: light-dark(#3b82f6, #60a5fa);
-	--badge-info-content: var(--color-badge-info-content);
-	--color-badge-positive-bg: light-dark(#dcfce7, #14532d);
-	--badge-positive-bg: var(--color-badge-positive-bg);
-	--color-badge-negative-bg: light-dark(#fee2e2, #450a0a);
-	--badge-negative-bg: var(--color-badge-negative-bg);
-
 	/* Field Colors */
 	--color-field-content-secondary: light-dark(#a3a3a3, #737373);
 	--field-content-secondary: var(--color-field-content-secondary);
@@ -112,6 +102,7 @@
 	--color-base-content: light-dark(#202020, #eeeeee);
 	--color-base-content-secondary: light-dark(#7b7b7b, #7b7b7b);
 	--color-base-content-positive: light-dark(#30a46c, #30a46c);
+	--color-base-content-negative: light-dark(#e5484d, #e5484d);
 	--color-distinct: light-dark(#e8e8e8, #313131);
 
 	--font-display: system-ui, sans-serif;

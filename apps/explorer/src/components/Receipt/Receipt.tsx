@@ -1,12 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { EventDescription } from '#components/EventDescription'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import type { KnownEvent } from '#lib/known-events'
-import CopyIcon from '~icons/lucide/copy'
-import { RawTransaction } from './RawTransaction'
 import { ReceiptMark } from './ReceiptMark'
 
 export function Receipt(props: Receipt.Props) {
@@ -21,13 +19,9 @@ export function Receipt(props: Receipt.Props) {
 		feeDisplay,
 		totalDisplay,
 		feeBreakdown = [],
-		rawData,
 	} = props
 	const [hashExpanded, setHashExpanded] = useState(false)
-	const [showRawData, setShowRawData] = useState(false)
-	const rawDataRef = useRef<HTMLDivElement>(null)
 	const copyHash = useCopy()
-	const copyRawData = useCopy()
 	const formattedTime = DateFormatter.formatTimestampTime(timestamp)
 
 	const hasFee = feeDisplay !== undefined || (fee !== undefined && fee !== null)
@@ -276,42 +270,15 @@ export function Receipt(props: Receipt.Props) {
 				)}
 			</div>
 
-			<div className="flex flex-col items-center gap-2 -mt-5 w-full">
+			<div className="flex flex-col items-center -mt-5 w-full">
 				<div className="max-w-[360px] w-full">
-					<button
-						type="button"
-						className="press-down cursor-pointer text-[11px] px-[4px] py-[2px] flex"
-						onClick={() => setShowRawData((v) => !v)}
+					<Link
+						to="/tx/$hash"
+						params={{ hash }}
+						className="press-down text-[11px] px-[4px] flex"
 					>
-						<span className="-translate-y-px">
-							{showRawData ? 'Close' : 'Show full data'}
-						</span>
-					</button>
-				</div>
-				<div className="max-w-[1024px] w-full px-4">
-					<div
-						ref={rawDataRef}
-						style={{ display: showRawData ? 'block' : 'none' }}
-					>
-						<div className="relative bg-base-alt/50 text-[11px] leading-[14px] overflow-auto text-base-content p-[16px] focus:outline-focus focus:outline-2 rounded-[4px]">
-							<div className="absolute top-[6px] right-[4px] flex items-center gap-[4px] text-tertiary">
-								{copyRawData.notifying && (
-									<span className="-translate-y-px select-none pl-[4px]">
-										copied
-									</span>
-								)}
-								<button
-									type="button"
-									className="press-down cursor-pointer hover:text-secondary p-[4px]"
-									onClick={() => copyRawData.copy(rawData)}
-									title="Copy"
-								>
-									<CopyIcon className="size-[14px]" />
-								</button>
-							</div>
-							<RawTransaction data={rawData} />
-						</div>
-					</div>
+						View transaction
+					</Link>
 				</div>
 			</div>
 		</>
@@ -330,7 +297,6 @@ export namespace Receipt {
 		total?: number
 		totalDisplay?: string
 		feeBreakdown?: FeeBreakdownItem[]
-		rawData: string
 	}
 
 	export interface FeeBreakdownItem {
