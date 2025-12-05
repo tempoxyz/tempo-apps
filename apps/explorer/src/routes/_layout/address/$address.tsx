@@ -90,6 +90,13 @@ function transactionsQueryOptions(params: TransactionQuery) {
 	})
 }
 
+const assets = [
+	'0x20c0000000000000000000000000000000000000',
+	'0x20c0000000000000000000000000000000000001',
+	'0x20c0000000000000000000000000000000000002',
+	'0x20c0000000000000000000000000000000000003',
+] as const
+
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
 	notFoundComponent: NotFound,
@@ -176,12 +183,96 @@ export const Route = createFileRoute('/_layout/address/$address')({
 	},
 })
 
-const assets = [
-	'0x20c0000000000000000000000000000000000000',
-	'0x20c0000000000000000000000000000000000001',
-	'0x20c0000000000000000000000000000000000002',
-	'0x20c0000000000000000000000000000000000003',
-] as const
+function RouteComponent() {
+	const navigate = useNavigate()
+	const route = useRouter()
+	const location = useLocation()
+	const { address } = Route.useParams()
+	const { page, tab, limit } = Route.useSearch()
+	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
+
+	Address.assert(address)
+
+	const hash = location.hash
+
+	// Track which hash we've already redirected for (prevents re-redirect when
+	// user manually switches tabs, but allows redirect for new hash values)
+	const redirectedForHashRef = React.useRef<string | null>(null)
+
+	// When URL has a hash fragment (e.g., #functionName), switch to contract tab
+	React.useEffect(() => {
+		// Only redirect if:
+		// 1. We have a hash
+		// 2. Address has a known contract
+		// 3. Not already on contract tab
+		// 4. Haven't already redirected for this specific hash
+		if (
+			hash &&
+			hasContract &&
+			tab !== 'contract' &&
+			redirectedForHashRef.current !== hash
+		) {
+			redirectedForHashRef.current = hash
+			navigate({
+				to: '.',
+				search: { page: 1, tab: 'contract', limit },
+				hash,
+				replace: true,
+				resetScroll: false,
+			})
+		}
+	}, [hash, hasContract, tab, navigate, limit])
+
+	React.useEffect(() => {
+		// Only preload for history tab (transaction pagination)
+		if (tab !== 'history') return
+		// preload pages around the active page (3 before and 3 after)
+		for (let i = -3; i <= 3; i++) {
+			if (i === 0) continue // skip current page
+			const preloadPage = page + i
+			if (preloadPage < 1) continue // only preload valid page numbers
+			route.preloadRoute({ to: '.', search: { page: preloadPage, tab, limit } })
+		}
+	}, [route, page, tab, limit])
+
+	const setActiveSection = React.useCallback(
+		(newIndex: number) => {
+			const tabs: TabValue[] = hasContract
+				? ['history', 'assets', 'contract']
+				: ['history', 'assets']
+			const newTab = tabs[newIndex] ?? 'history'
+			navigate({
+				to: '.',
+				search: { page, tab: newTab, limit },
+				resetScroll: false,
+			})
+		},
+		[navigate, page, limit, hasContract],
+	)
+
+	const activeSection =
+		tab === 'history' ? 0 : tab === 'assets' ? 1 : hasContract ? 2 : 0
+
+	return (
+		<div
+			className={cx(
+				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
+				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
+			)}
+		>
+			<AccountCardWithTimestamps address={address} />
+			<SectionsWrapper
+				address={address}
+				page={page}
+				limit={limit}
+				activeSection={activeSection}
+				onSectionChange={setActiveSection}
+				contractInfo={contractInfo}
+				initialData={transactionsData}
+			/>
+		</div>
+	)
+}
 
 function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const { address } = props
@@ -354,96 +445,6 @@ function useTransactionCount(address: Address.Address) {
 	})
 }
 
-function RouteComponent() {
-	const navigate = useNavigate()
-	const route = useRouter()
-	const location = useLocation()
-	const { address } = Route.useParams()
-	const { page, tab, limit } = Route.useSearch()
-	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
-
-	Address.assert(address)
-
-	const hash = location.hash
-
-	// Track which hash we've already redirected for (prevents re-redirect when
-	// user manually switches tabs, but allows redirect for new hash values)
-	const redirectedForHashRef = React.useRef<string | null>(null)
-
-	// When URL has a hash fragment (e.g., #functionName), switch to contract tab
-	React.useEffect(() => {
-		// Only redirect if:
-		// 1. We have a hash
-		// 2. Address has a known contract
-		// 3. Not already on contract tab
-		// 4. Haven't already redirected for this specific hash
-		if (
-			hash &&
-			hasContract &&
-			tab !== 'contract' &&
-			redirectedForHashRef.current !== hash
-		) {
-			redirectedForHashRef.current = hash
-			navigate({
-				to: '.',
-				search: { page: 1, tab: 'contract', limit },
-				hash,
-				replace: true,
-				resetScroll: false,
-			})
-		}
-	}, [hash, hasContract, tab, navigate, limit])
-
-	React.useEffect(() => {
-		// Only preload for history tab (transaction pagination)
-		if (tab !== 'history') return
-		// preload pages around the active page (3 before and 3 after)
-		for (let i = -3; i <= 3; i++) {
-			if (i === 0) continue // skip current page
-			const preloadPage = page + i
-			if (preloadPage < 1) continue // only preload valid page numbers
-			route.preloadRoute({ to: '.', search: { page: preloadPage, tab, limit } })
-		}
-	}, [route, page, tab, limit])
-
-	const setActiveSection = React.useCallback(
-		(newIndex: number) => {
-			const tabs: TabValue[] = hasContract
-				? ['history', 'assets', 'contract']
-				: ['history', 'assets']
-			const newTab = tabs[newIndex] ?? 'history'
-			navigate({
-				to: '.',
-				search: { page, tab: newTab, limit },
-				resetScroll: false,
-			})
-		},
-		[navigate, page, limit, hasContract],
-	)
-
-	const activeSection =
-		tab === 'history' ? 0 : tab === 'assets' ? 1 : hasContract ? 2 : 0
-
-	return (
-		<div
-			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
-			)}
-		>
-			<AccountCardWithTimestamps address={address} />
-			<SectionsWrapper
-				address={address}
-				page={page}
-				limit={limit}
-				activeSection={activeSection}
-				onSectionChange={setActiveSection}
-				contractInfo={contractInfo}
-				initialData={transactionsData}
-			/>
-		</div>
-	)
-}
 type TransactionsData = Awaited<
 	ReturnType<
 		NonNullable<ReturnType<typeof transactionsQueryOptions>['queryFn']>
@@ -720,18 +721,6 @@ function useFetchTxData(hash?: Hex.Hex | undefined) {
 	})
 }
 
-// function useTransactionKnownEvents(
-// 	transaction: Transaction,
-// 	receipt: TransactionReceipt | undefined,
-// ) {
-// 	// const {data:} = useTransactionReceipt({ hash: transaction.hash })
-// 	return React.useMemo(async () => {
-// 		if (!receipt) return []
-// 		const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
-// 		return parseKnownEvents(receipt, { transaction, getTokenMetadata })
-// 	}, [receipt, transaction])
-// }
-
 function TransactionRowTime(props: {
 	transaction: Transaction
 	format: TimeFormat
@@ -948,11 +937,6 @@ export function getPerspectiveEvent(
 
 export function TransactionHash(props: { hash: Hex.Hex }) {
 	const { hash } = props
-	// return (
-	// 	<div className="text-[13px] text-tertiary whitespace-nowrap" title={hash}>
-	// 		{HexFormatter.truncate(hash, 4)}
-	// 	</div>
-	// )
 	return <TruncatedHash hash={hash} minChars={8} />
 }
 
