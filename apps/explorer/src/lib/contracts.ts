@@ -422,13 +422,13 @@ export function getPlaceholder(param: AbiParameter): string {
 
 	switch (baseType) {
 		case 'address':
-			return '0x...'
+			return '0x…'
 		case 'bool':
 			return 'true or false'
 		case 'string':
-			return name || 'Enter text...'
+			return name || 'Enter text…'
 		case 'bytes':
-			return '0x...'
+			return '0x…'
 		case 'uint':
 		case 'int':
 			return '0'

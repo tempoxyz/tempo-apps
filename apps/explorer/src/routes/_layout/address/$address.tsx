@@ -731,7 +731,7 @@ function TransactionRowTime(props: {
 	)
 
 	if (!block) {
-		return <span className="text-tertiary text-[13px]">...</span>
+		return <span className="text-tertiary">—</span>
 	}
 
 	return (
@@ -752,7 +752,16 @@ function TransactionRowDescription(props: {
 	// const knownEvents = useTransactionKnownEvents(transaction, receipt)
 	const { data, status } = useFetchTxData(transaction.hash)
 
-	if (status !== 'success' || !data) return <>.</>
+	if (status !== 'success' || !data)
+		return <span className="text-tertiary">—</span>
+	if (!data.knownEvents.length) {
+		const count = receipt?.logs.length ?? 0
+		return (
+			<span className="text-secondary">
+				{count} {count === 1 ? 'event' : 'events'}
+			</span>
+		)
+	}
 
 	return (
 		<TransactionDescription

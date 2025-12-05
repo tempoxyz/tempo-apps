@@ -372,14 +372,11 @@ function EventsSection(props: { logs: Log[]; knownEvents: KnownEvent[] }) {
 		{ label: '#', align: 'start', width: '0.5fr' },
 		{ label: 'Event', align: 'start', width: '4fr' },
 		{ label: 'Contract', align: 'end', width: '2fr' },
-	]
+	] satisfies DataGrid.Props['columns']['stacked']
 
 	return (
 		<DataGrid
-			columns={{
-				stacked: cols,
-				tabs: cols,
-			}}
+			columns={{ stacked: cols, tabs: cols }}
 			items={() =>
 				logs.map((log, index) => {
 					const knownEvent = knownEvents[index]

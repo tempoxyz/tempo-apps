@@ -217,7 +217,7 @@ function RouteComponent() {
 					<div className="flex flex-col min-w-[500px]">
 						{isLoading ? (
 							<div className="px-4 py-8 text-center text-tertiary">
-								Loading blocks...
+								Loading blocks…
 							</div>
 						) : blocks && blocks.length > 0 ? (
 							blocks.map((block, index) => (
