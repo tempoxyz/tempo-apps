@@ -9,7 +9,7 @@ import { NotFound } from '#components/NotFound'
 import { Receipt } from '#components/Receipt/Receipt'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { parseKnownEvents } from '#lib/known-events'
-import { LineItems } from '#lib/line-items'
+import { LineItems } from '#lib/receipt'
 import * as Tip20 from '#lib/tip20'
 import { getConfig } from '#wagmi.config'
 

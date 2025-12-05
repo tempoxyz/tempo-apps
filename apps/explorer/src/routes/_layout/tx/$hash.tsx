@@ -23,7 +23,7 @@ import { cx } from '#cva.config.ts'
 import { HexFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { type KnownEvent, parseKnownEvents } from '#lib/known-events'
-import { LineItems } from '#lib/line-items'
+import { getFeeBreakdown, type FeeBreakdownItem } from '#lib/receipt'
 import * as Tip20 from '#lib/tip20'
 import { zHash } from '#lib/zod'
 import { getConfig } from '#wagmi.config'
@@ -57,12 +57,12 @@ async function fetchTxData(params: { hash: Hex.Hex }) {
 		getTokenMetadata,
 	})
 
-	const lineItems = LineItems.fromReceipt(receipt, { getTokenMetadata })
+	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
 
 	return {
 		block,
+		feeBreakdown,
 		knownEvents,
-		lineItems,
 		receipt,
 		transaction,
 	}
@@ -88,7 +88,6 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	// @ts-expect-error - TODO: fix
 	loader: async ({ params, context }) => {
 		const parsedParams = z.object({ hash: zHash() }).safeParse(params)
 		if (!parsedParams.success) throw notFound()
@@ -116,16 +115,14 @@ function Component() {
 	const navigate = useNavigate()
 	const { hash } = Route.useParams()
 	const { tab } = Route.useSearch()
-	const loaderData = Route.useLoaderData() as Awaited<
-		ReturnType<typeof fetchTxData>
-	>
+	const loaderData = Route.useLoaderData()
 
 	const { data } = useQuery({
 		...txQueryOptions({ hash }),
 		initialData: loaderData,
 	})
 
-	const { block, knownEvents, lineItems, receipt, transaction } = data
+	const { block, feeBreakdown, knownEvents, receipt, transaction } = data
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -175,7 +172,7 @@ function Component() {
 								transaction={transaction}
 								block={block}
 								knownEvents={knownEvents}
-								feeBreakdown={lineItems.feeBreakdown}
+								feeBreakdown={feeBreakdown}
 							/>
 						),
 					},
@@ -206,7 +203,7 @@ function OverviewSection(props: {
 	transaction: Awaited<ReturnType<typeof fetchTxData>>['transaction']
 	block: Awaited<ReturnType<typeof fetchTxData>>['block']
 	knownEvents: KnownEvent[]
-	feeBreakdown: LineItems.Result['feeBreakdown']
+	feeBreakdown: FeeBreakdownItem[]
 }) {
 	const { receipt, transaction, block, knownEvents, feeBreakdown } = props
 

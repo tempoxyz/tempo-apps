@@ -13,6 +13,58 @@ import type * as Tip20 from '#lib/tip20'
 
 const abi = Object.values(Abis).flat()
 
+export type FeeBreakdownItem = {
+	amount: bigint
+	currency: string
+	decimals: number
+	symbol?: string
+	token?: Address.Address
+	payer?: Address.Address
+}
+
+export function getFeeBreakdown(
+	receipt: TransactionReceipt,
+	{ getTokenMetadata }: { getTokenMetadata: Tip20.GetTip20MetadataFn },
+): FeeBreakdownItem[] {
+	const { logs } = receipt
+
+	const events = parseEventLogs({ abi, logs })
+	const feeBreakdown: FeeBreakdownItem[] = []
+
+	for (const event of events) {
+		if (
+			event.eventName !== 'Transfer' &&
+			event.eventName !== 'TransferWithMemo'
+		)
+			continue
+
+		const { amount, from, to } = event.args
+		const token = event.address
+
+		const isFee =
+			Address.isEqual(to, Addresses.feeManager) &&
+			!Address.isEqual(from, zeroAddress)
+
+		if (!isFee) continue
+
+		const metadata = getTokenMetadata(token)
+		if (!metadata) continue
+
+		const { currency, decimals, symbol } = metadata
+
+		feeBreakdown.push({
+			amount,
+			currency,
+			decimals,
+			symbol,
+			token,
+			payer: Address.checksum(from),
+		})
+	}
+
+	return feeBreakdown
+}
+
 export namespace LineItems {
 	export type Result = {
 		main: LineItem.LineItem[]
