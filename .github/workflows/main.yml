@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          submodules: 'recursive'
+          submodules: "recursive"
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
