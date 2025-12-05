@@ -61,33 +61,14 @@ export const fetchTransactions = createServerFn()
 		if (includeReceived)
 			transferConditions.push(`tr."to" = '${params.address}'`)
 
-		const addressFilterParts: string[] = []
-		if (directConditions.length)
-			addressFilterParts.push(`(${directConditions.join(' OR ')})`)
+		const directFilter =
+			directConditions.length > 0 ? directConditions.join(' OR ') : 'FALSE'
+		const transferFilter =
+			transferConditions.length > 0 ? transferConditions.join(' OR ') : 'FALSE'
 
-		if (transferConditions.length) {
-			addressFilterParts.push(`
-						t.hash IN (
-							SELECT DISTINCT tr.tx_hash
-							FROM transfer tr
-							WHERE tr.chain = ${chainId}
-								AND (${transferConditions.join(' OR ')})
-						)
-					`)
-		}
+		const fetchSize = offset + limit + 1
 
-		if (addressFilterParts.length === 0) addressFilterParts.push('FALSE')
-
-		const addressFilter = addressFilterParts.join(' OR ')
-
-		const countQuery = /* sql */ `
-			SELECT count(t.hash) as total
-			FROM txs t
-			WHERE t.chain = ${chainId}
-				AND (${addressFilter})
-		`
-
-		const txsQuery = /* sql */ `
+		const directTxsQuery = /* sql */ `
 			SELECT
 				t.hash,
 				t.block_num,
@@ -100,42 +81,103 @@ export const fetchTransactions = createServerFn()
 				t.gas_price,
 				t.type
 			FROM txs t
-			WHERE t.chain = ${chainId}
-				AND (${addressFilter})
+			WHERE t.chain = ${chainId} AND (${directFilter})
 			ORDER BY t.block_num ${sortDirection}, t.hash ${sortDirection}
-			LIMIT ${limit}
-			OFFSET ${offset}
+			LIMIT ${fetchSize}
 		`
 
-		// Parallelize count and transactions fetch
-		const [countResult, txsResult] = await Promise.all([
-			IS.runIndexSupplyQuery(countQuery, {
-				signatures: [transferSignature],
-			}).catch((error) => {
-				console.error('IndexSupply count query failed:', {
-					query: normalizeSQL(countQuery),
-					error,
-				})
-				throw error
-			}),
-			IS.runIndexSupplyQuery(txsQuery, {
-				signatures: [transferSignature],
-			}).catch((error) => {
-				console.error('IndexSupply txs query failed:', {
-					query: normalizeSQL(txsQuery),
-					error,
-				})
-				throw error
-			}),
-		])
+		const transferTxHashesQuery = /* sql */ `
+			SELECT DISTINCT tr.tx_hash as hash, tr.block_num
+			FROM transfer tr
+			WHERE tr.chain = ${chainId} AND (${transferFilter})
+			ORDER BY tr.block_num ${sortDirection}, tr.tx_hash ${sortDirection}
+			LIMIT ${fetchSize}
+		`
 
-		const totalValue = countResult.rows.at(0)?.at(0)
-		const total =
-			typeof totalValue === 'number'
-				? totalValue
-				: typeof totalValue === 'string'
-					? Number(totalValue)
-					: 0
+		const [directTxsResult, transferHashesResult] =
+			await IS.runIndexSupplyBatch([
+				{ query: directTxsQuery },
+				{ query: transferTxHashesQuery, signatures: [transferSignature] },
+			])
+
+		const directTxColumns = new Map(
+			directTxsResult.columns.map((column, index) => [column.name, index]),
+		)
+		const hashIdx = directTxColumns.get('hash')
+		const blockNumIdx = directTxColumns.get('block_num')
+		if (hashIdx === undefined || blockNumIdx === undefined) {
+			throw new Error(
+				'Missing hash or block_num column in IndexSupply response',
+			)
+		}
+
+		type TxRow = {
+			hash: string
+			block_num: number
+			row: IS.RowValue[]
+		}
+
+		const txsByHash = new Map<string, TxRow>()
+		for (const row of directTxsResult.rows) {
+			const hash = row[hashIdx]
+			const blockNum = row[blockNumIdx]
+			if (typeof hash === 'string' && typeof blockNum === 'number') {
+				txsByHash.set(hash, { hash, block_num: blockNum, row })
+			}
+		}
+
+		const transferHashes: string[] = []
+		for (const row of transferHashesResult.rows) {
+			const hash = row[0]
+			if (typeof hash === 'string' && !txsByHash.has(hash)) {
+				transferHashes.push(hash)
+			}
+		}
+
+		if (transferHashes.length > 0) {
+			const hashList = transferHashes
+				.slice(0, 500)
+				.map((h) => `'${h}'`)
+				.join(',')
+			const transferTxsQuery = /* sql */ `
+				SELECT
+					t.hash,
+					t.block_num,
+					t."from",
+					t."to",
+					t.value,
+					t.input,
+					t.nonce,
+					t.gas,
+					t.gas_price,
+					t.type
+				FROM txs t
+				WHERE t.chain = ${chainId} AND t.hash IN (${hashList})
+			`
+			const transferTxsResult = await IS.runIndexSupplyQuery(transferTxsQuery, {
+				signatures: [''],
+			})
+			for (const row of transferTxsResult.rows) {
+				const hash = row[hashIdx]
+				const blockNum = row[blockNumIdx]
+				if (typeof hash === 'string' && typeof blockNum === 'number') {
+					txsByHash.set(hash, { hash, block_num: blockNum, row })
+				}
+			}
+		}
+
+		const sortedTxs = [...txsByHash.values()].sort((a, b) =>
+			sortDirection === 'DESC'
+				? b.block_num - a.block_num
+				: a.block_num - b.block_num,
+		)
+
+		const hasMore = sortedTxs.length > offset + limit
+		const paginatedTxs = sortedTxs.slice(offset, offset + limit)
+		const txsResult = {
+			rows: paginatedTxs.map((tx) => tx.row),
+			columns: directTxsResult.columns,
+		}
 
 		const txColumns = new Map(
 			txsResult.columns.map((column, index) => [column.name, index]),
@@ -177,16 +219,71 @@ export const fetchTransactions = createServerFn()
 		})
 
 		const nextOffset = offset + transactions.length
-		const hasMore = nextOffset < total
 
 		return {
 			transactions,
-			total,
+			total: hasMore ? nextOffset + 1 : nextOffset,
 			offset: nextOffset,
 			limit: transactions.length,
 			hasMore,
 			error: null,
 		}
+	})
+
+export const fetchTransactionCount = createServerFn()
+	.inputValidator(
+		z.object({
+			address: zAddress(),
+			include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
+		}),
+	)
+	.handler(async ({ data: params }) => {
+		const include =
+			params.include === 'sent'
+				? 'sent'
+				: params.include === 'received'
+					? 'received'
+					: 'all'
+
+		const transferSignature =
+			'Transfer(address indexed from, address indexed to, uint tokens)'
+		const includeSent = include === 'all' || include === 'sent'
+		const includeReceived = include === 'all' || include === 'received'
+
+		const directConditions: string[] = []
+		if (includeSent) directConditions.push(`t."from" = '${params.address}'`)
+		if (includeReceived) directConditions.push(`t."to" = '${params.address}'`)
+
+		const transferConditions: string[] = []
+		if (includeSent) transferConditions.push(`tr."from" = '${params.address}'`)
+		if (includeReceived)
+			transferConditions.push(`tr."to" = '${params.address}'`)
+
+		const directFilter =
+			directConditions.length > 0 ? directConditions.join(' OR ') : 'FALSE'
+		const transferFilter =
+			transferConditions.length > 0 ? transferConditions.join(' OR ') : 'FALSE'
+
+		const directCountQuery = /* sql */ `
+			SELECT COUNT(DISTINCT t.hash) as cnt FROM txs t
+			WHERE t.chain = ${chainId} AND (${directFilter})
+		`
+
+		const transferCountQuery = /* sql */ `
+			SELECT COUNT(DISTINCT tr.tx_hash) as cnt FROM transfer tr
+			WHERE tr.chain = ${chainId} AND (${transferFilter})
+		`
+
+		const [directCountResult, transferCountResult] =
+			await IS.runIndexSupplyBatch([
+				{ query: directCountQuery },
+				{ query: transferCountQuery, signatures: [transferSignature] },
+			])
+
+		const directCount = Number(directCountResult.rows.at(0)?.at(0) ?? 0)
+		const transferCount = Number(transferCountResult.rows.at(0)?.at(0) ?? 0)
+
+		return Math.max(directCount, transferCount)
 	})
 
 export const getTotalValue = createServerFn()

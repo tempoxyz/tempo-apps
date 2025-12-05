@@ -380,6 +380,16 @@ function useAccountTotalValue(address: Address.Address) {
 	})
 }
 
+function useTransactionCount(address: Address.Address) {
+	return useQuery({
+		queryKey: ['account-transaction-count', address],
+		queryFn: async () => {
+			return await AccountServer.fetchTransactionCount({ data: { address } })
+		},
+		staleTime: 30_000,
+	})
+}
+
 function RouteComponent() {
 	const navigate = useNavigate()
 	const route = useRouter()
@@ -512,11 +522,18 @@ function SectionsWrapper(props: {
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
-	const { transactions, total, knownEvents } = data ?? {
+	const {
+		transactions,
+		total: approximateTotal,
+		knownEvents,
+	} = data ?? {
 		transactions: [],
 		total: 0,
 		knownEvents: {} as Record<Hex.Hex, KnownEvent[]>,
 	}
+
+	const { data: exactTotal } = useTransactionCount(address)
+	const total = exactTotal ?? approximateTotal
 
 	// Use isPending for SSR-consistent loading state
 	const isLoadingPage = isPending

@@ -24,6 +24,7 @@ catalog:
   '@tanstack/react-router-ssr-query': ^1.139.14
   '@tanstack/react-start': ^1.139.14
   '@tanstack/router-plugin': ^1.139.14
+  '@total-typescript/ts-reset': ^0.6.1
   '@types/node': ^24.10.1
   '@types/react': ^19.2.7
   '@types/react-dom': ^19.2.3
@@ -49,5 +50,7 @@ catalog:
   wagmi: ^3.1.0
   wrangler: ^4.52.1
   zod: ^4.1.13
+  idxs: ^0.0.3
+
 
 catalogMode: strict
