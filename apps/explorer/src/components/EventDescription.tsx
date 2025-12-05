@@ -122,10 +122,7 @@ export namespace EventDescription {
 		return (
 			<div className="flex flex-col gap-[4px]">
 				{displayEvents.map((event, index) => (
-					<div
-						key={`${event.type}-${index}`}
-						className="flex items-center"
-					>
+					<div key={`${event.type}-${index}`} className="flex items-center">
 						<EventDescription
 							event={event}
 							seenAs={seenAs}

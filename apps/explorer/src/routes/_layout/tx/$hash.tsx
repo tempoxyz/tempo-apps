@@ -7,7 +7,7 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { Hex, Json, Value } from 'ox'
+import { type Hex, Json, Value } from 'ox'
 import * as React from 'react'
 import type { Log, TransactionReceipt } from 'viem'
 import { useChains } from 'wagmi'
@@ -22,12 +22,12 @@ import { TransactionCard } from '#components/TransactionCard'
 import { cx } from '#cva.config.ts'
 import { HexFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
-import CopyIcon from '~icons/lucide/copy'
 import { type KnownEvent, parseKnownEvents } from '#lib/known-events'
+import { LineItems } from '#lib/line-items'
 import * as Tip20 from '#lib/tip20'
 import { zHash } from '#lib/zod'
 import { getConfig } from '#wagmi.config'
-import { LineItems } from '../receipt/$hash'
+import CopyIcon from '~icons/lucide/copy'
 
 const defaultSearchValues = {
 	tab: 'overview',
@@ -88,6 +88,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
+	// @ts-expect-error - TODO: fix
 	loader: async ({ params, context }) => {
 		const parsedParams = z.object({ hash: zHash() }).safeParse(params)
 		if (!parsedParams.success) throw notFound()
@@ -115,7 +116,9 @@ function Component() {
 	const navigate = useNavigate()
 	const { hash } = Route.useParams()
 	const { tab } = Route.useSearch()
-	const loaderData = Route.useLoaderData()
+	const loaderData = Route.useLoaderData() as Awaited<
+		ReturnType<typeof fetchTxData>
+	>
 
 	const { data } = useQuery({
 		...txQueryOptions({ hash }),
@@ -238,28 +241,33 @@ function OverviewSection(props: {
 			<InfoRow label="Transaction Fee">
 				{feeBreakdown.length > 0 ? (
 					<div className="flex flex-col gap-[4px]">
-						{feeBreakdown.map((item, index) => (
-							<span key={index} className="text-primary">
-								{Value.format(item.amount, item.decimals)}{' '}
-								{item.token ? (
-									<Link
-										to="/token/$address"
-										params={{ address: item.token }}
-										className="text-base-content-positive press-down"
-									>
-										{item.symbol}
-									</Link>
-								) : (
-									<span className="text-base-content-positive">
-										{item.symbol}
-									</span>
-								)}
-							</span>
-						))}
+						{feeBreakdown.map((item, index) => {
+							return (
+								<span key={`${index}${item.token}`} className="text-primary">
+									{Value.format(item.amount, item.decimals)}{' '}
+									{item.token ? (
+										<Link
+											to="/token/$address"
+											params={{ address: item.token }}
+											className="text-base-content-positive press-down"
+										>
+											{item.symbol}
+										</Link>
+									) : (
+										<span className="text-base-content-positive">
+											{item.symbol}
+										</span>
+									)}
+								</span>
+							)
+						})}
 					</div>
 				) : (
 					<span className="text-primary">
-						{Value.format(receipt.effectiveGasPrice * receipt.gasUsed, decimals)}{' '}
+						{Value.format(
+							receipt.effectiveGasPrice * receipt.gasUsed,
+							decimals,
+						)}{' '}
 						{symbol}
 					</span>
 				)}
