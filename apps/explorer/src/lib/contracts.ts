@@ -82,6 +82,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 		},
 	],
 	[
+		// 0xfeec000000000000000000000000000000000000
 		Addresses.feeManager,
 		{
 			name: 'Fee Manager',

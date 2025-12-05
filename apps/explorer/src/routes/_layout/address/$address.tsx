@@ -13,12 +13,9 @@ import { Address, Hex, Value } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
-import { formatUnits } from 'viem'
-import { useBlock } from 'wagmi'
-import {
-	getBlockQueryOptions,
-	getTransactionReceiptQueryOptions,
-} from 'wagmi/query'
+import { formatUnits, isHash } from 'viem'
+import { useBlock, useTransactionReceipt } from 'wagmi'
+import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
 import { ContractReader } from '#components/Contract/Read.tsx'
@@ -32,6 +29,7 @@ import {
 	type TimeFormat,
 	useTimeFormat,
 } from '#components/TimeFormat'
+import { TruncatedHash } from '#components/TruncatedHash.tsx'
 import { cx } from '#cva.config.ts'
 import * as AccountServer from '#lib/account.server.ts'
 import {
@@ -47,8 +45,9 @@ import {
 	type KnownEventPart,
 	parseKnownEvents,
 } from '#lib/known-events'
+import { getFeeBreakdown } from '#lib/receipt.ts'
 import * as Tip20 from '#lib/tip20'
-import { config } from '#wagmi.config'
+import { getConfig } from '#wagmi.config.ts'
 
 const defaultSearchValues = {
 	page: 1,
@@ -75,50 +74,15 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			params.limit,
 			params._key,
 		],
-		queryFn: async ({ client }) => {
-			const data = await AccountServer.fetchTransactions({
+		queryFn: async () => {
+			return await AccountServer.fetchTransactions({
 				data: {
 					address: params.address,
 					offset: params.offset,
 					limit: params.limit,
 				},
 			})
-			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
-			const transactions = await Promise.all(
-				data.transactions.map(async (transaction) => {
-					// Fetch receipt and block with error handling for sync lag
-					// (IndexSupply may return txs that RPC hasn't indexed yet)
-					const [receipt, block] = await Promise.all([
-						client
-							.fetchQuery(
-								getTransactionReceiptQueryOptions(config, {
-									hash: transaction.hash,
-								}),
-							)
-							.catch(() => null),
-						client
-							.fetchQuery(
-								getBlockQueryOptions(config, {
-									blockNumber: transaction.blockNumber
-										? Hex.toBigInt(transaction.blockNumber)
-										: undefined,
-								}),
-							)
-							.catch(() => null),
-					])
-					if (receipt) {
-						const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
-						knownEvents[transaction.hash] = parseKnownEvents(receipt, {
-							transaction,
-							getTokenMetadata,
-						})
-					}
-					return { ...transaction, block, receipt }
-				}),
-			)
-			return { ...data, transactions, knownEvents }
 		},
-		// Default to no auto-refresh; useQuery call overrides for reactivity
 		refetchInterval: false,
 		refetchIntervalInBackground: false,
 		refetchOnWindowFocus: false,
@@ -464,7 +428,7 @@ function RouteComponent() {
 		<div
 			className={cx(
 				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
+				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
 			)}
 		>
 			<AccountCardWithTimestamps address={address} />
@@ -522,14 +486,9 @@ function SectionsWrapper(props: {
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
-	const {
-		transactions,
-		total: approximateTotal,
-		knownEvents,
-	} = data ?? {
+	const { transactions, total: approximateTotal } = data ?? {
 		transactions: [],
 		total: 0,
-		knownEvents: {} as Record<Hex.Hex, KnownEvent[]>,
 	}
 
 	const { data: exactTotal } = useTransactionCount(address)
@@ -591,46 +550,27 @@ function SectionsWrapper(props: {
 								tabs: historyColumns,
 							}}
 							items={() =>
-								transactions.map((transaction) => {
-									// receipt/block can be null if RPC hasn't indexed yet
-									const receipt = transaction.receipt ?? undefined
-									const block = transaction.block
-									return {
-										cells: [
-											block ? (
-												<TransactionTimestamp
-													key="time"
-													timestamp={block.timestamp}
-													link={`/tx/${transaction.hash}`}
-													format={timeFormat}
-												/>
-											) : (
-												<span key="time" className="text-tertiary text-[13px]">
-													Pending...
-												</span>
-											),
-											<TransactionRowDescription
-												key="desc"
-												transaction={transaction}
-												knownEvents={knownEvents[transaction.hash] ?? []}
-												receipt={receipt}
-												accountAddress={address}
-											/>,
-											<TransactionHash key="hash" hash={transaction.hash} />,
-											<TransactionFee key="fee" receipt={receipt} />,
-											<TransactionRowTotal
-												key="total"
-												transaction={transaction}
-												knownEvents={knownEvents[transaction.hash] ?? []}
-												receipt={receipt}
-											/>,
-										],
-										link: {
-											href: `/tx/${transaction.hash}`,
-											title: `View receipt ${transaction.hash}`,
-										},
-									}
-								})
+								transactions.map((transaction) => ({
+									cells: [
+										<TransactionRowTime
+											key="time"
+											transaction={transaction}
+											format={timeFormat}
+										/>,
+										<TransactionRowDescription
+											key="desc"
+											transaction={transaction}
+											accountAddress={address}
+										/>,
+										<TransactionHash key="hash" hash={transaction.hash} />,
+										<TransactionRowFee key="fee" transaction={transaction} />,
+										<TransactionTotal key="total" transaction={transaction} />,
+									],
+									link: {
+										href: `/tx/${transaction.hash}`,
+										title: `View receipt ${transaction.hash}`,
+									},
+								}))
 							}
 							totalItems={total}
 							page={page}
@@ -738,33 +678,115 @@ function SectionsWrapper(props: {
 	)
 }
 
+function useTransactionBlock(blockNumber: Hex.Hex | undefined) {
+	return useBlock({
+		blockNumber: blockNumber ? Hex.toBigInt(blockNumber) : undefined,
+		query: { enabled: Boolean(blockNumber) },
+	})
+}
+
+function useFetchTxData(hash?: Hex.Hex | undefined) {
+	return useQuery({
+		queryKey: [hash],
+		enabled: hash && isHash(hash),
+		queryFn: async () => {
+			if (!hash) return
+			const config = getConfig()
+			const receipt = await getTransactionReceipt(config, {
+				hash,
+			})
+
+			const [block, transaction, getTokenMetadata] = await Promise.all([
+				getBlock(config, { blockHash: receipt.blockHash }),
+				getTransaction(config, { hash: receipt.transactionHash }),
+				Tip20.metadataFromLogs(receipt.logs),
+			])
+
+			const knownEvents = parseKnownEvents(receipt, {
+				transaction,
+				getTokenMetadata,
+			})
+
+			const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
+
+			return {
+				block,
+				feeBreakdown,
+				knownEvents,
+				receipt,
+				transaction,
+			}
+		},
+	})
+}
+
+// function useTransactionKnownEvents(
+// 	transaction: Transaction,
+// 	receipt: TransactionReceipt | undefined,
+// ) {
+// 	// const {data:} = useTransactionReceipt({ hash: transaction.hash })
+// 	return React.useMemo(async () => {
+// 		if (!receipt) return []
+// 		const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
+// 		return parseKnownEvents(receipt, { transaction, getTokenMetadata })
+// 	}, [receipt, transaction])
+// }
+
+function TransactionRowTime(props: {
+	transaction: Transaction
+	format: TimeFormat
+}) {
+	const { transaction, format } = props
+	const { data: block } = useTransactionBlock(
+		transaction.blockNumber ?? undefined,
+	)
+
+	if (!block) {
+		return <span className="text-tertiary text-[13px]">...</span>
+	}
+
+	return (
+		<TransactionTimestamp
+			timestamp={block.timestamp}
+			link={`/tx/${transaction.hash}`}
+			format={format}
+		/>
+	)
+}
+
 function TransactionRowDescription(props: {
 	transaction: Transaction
-	knownEvents: KnownEvent[]
-	receipt?: TransactionReceipt
 	accountAddress: Address.Address
 }) {
-	const { transaction, knownEvents, receipt, accountAddress } = props
+	const { transaction, accountAddress } = props
+	const { data: receipt } = useTransactionReceipt({ hash: transaction.hash })
+	// const knownEvents = useTransactionKnownEvents(transaction, receipt)
+	const { data, status } = useFetchTxData(transaction.hash)
+
+	if (status !== 'success' || !data) return <>.</>
 
 	return (
 		<TransactionDescription
 			transaction={transaction}
-			knownEvents={knownEvents}
+			knownEvents={data.knownEvents}
 			transactionReceipt={receipt}
 			accountAddress={accountAddress}
 		/>
 	)
 }
 
-function TransactionRowTotal(props: {
-	transaction: Transaction
-	knownEvents: KnownEvent[]
-	receipt?: TransactionReceipt
-}) {
-	const { transaction, knownEvents } = props
+function TransactionRowFee(props: { transaction: Transaction }) {
+	const { transaction } = props
+
+	const { data, status } = useTransactionReceipt({ hash: transaction.hash })
+	if (status !== 'success') return <span className="text-tertiary">—</span>
+
+	const fee = data.effectiveGasPrice * data.cumulativeGasUsed
 
 	return (
-		<TransactionTotal transaction={transaction} knownEvents={knownEvents} />
+		<span className="text-tertiary">
+			{PriceFormatter.format(fee, { decimals: 18, format: 'short' })}
+		</span>
 	)
 }
 
@@ -926,11 +948,12 @@ export function getPerspectiveEvent(
 
 export function TransactionHash(props: { hash: Hex.Hex }) {
 	const { hash } = props
-	return (
-		<div className="text-[13px] text-tertiary whitespace-nowrap" title={hash}>
-			{HexFormatter.truncate(hash, 4)}
-		</div>
-	)
+	// return (
+	// 	<div className="text-[13px] text-tertiary whitespace-nowrap" title={hash}>
+	// 		{HexFormatter.truncate(hash, 4)}
+	// 	</div>
+	// )
+	return <TruncatedHash hash={hash} minChars={8} />
 }
 
 export function TransactionTimestamp(props: {
@@ -957,23 +980,22 @@ export function TransactionTimestamp(props: {
 	)
 }
 
-export function TransactionTotal(props: {
-	transaction: Transaction
-	knownEvents: KnownEvent[]
-}) {
-	const { transaction, knownEvents } = props
+export function TransactionTotal(props: { transaction: Transaction }) {
+	const { transaction } = props
+	const { data, status } = useFetchTxData(transaction.hash)
 
-	const amountParts = React.useMemo(
-		() =>
-			knownEvents.flatMap((event) =>
-				event.parts.filter(
-					(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
-						part.type === 'amount',
-				),
+	const amountParts = React.useMemo(() => {
+		if (status !== 'success' || !data) return
+
+		return data.knownEvents.flatMap((event) =>
+			event.parts.filter(
+				(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
+					part.type === 'amount',
 			),
-		[knownEvents],
-	)
-
+		)
+	}, [data, status])
+	if (!amountParts?.length) return <>$0.00</>
+	console.info('amount parts', amountParts)
 	const totalValue = amountParts.reduce((sum, part) => {
 		const decimals = part.value.decimals ?? 6
 		return sum + Number(Value.format(part.value.value, decimals))

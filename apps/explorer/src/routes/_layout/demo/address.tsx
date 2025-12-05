@@ -1065,7 +1065,6 @@ function Component() {
 												<TransactionTotal
 													key="total"
 													transaction={tx.transaction}
-													knownEvents={knownEvents[tx.hash] ?? []}
 												/>,
 											],
 											link: {
