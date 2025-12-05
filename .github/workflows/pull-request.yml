@@ -35,7 +35,7 @@ jobs:
       - name: Check for relevant changes
         id: changes
         run: |
-          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -qE "^(apps/${{ matrix.app }}/|packages/)"; then
+          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -qE "^(apps/${{ matrix.app }}/|packages/|pnpm-lock.yaml)"; then
             echo "relevant=true" >> $GITHUB_OUTPUT
           else
             echo "relevant=false" >> $GITHUB_OUTPUT
