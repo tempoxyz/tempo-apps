@@ -10,18 +10,25 @@
 		"preview": "vite preview",
 		"deploy": "wrangler --config='wrangler.json' deploy",
 		"check": "biome check . --write --unsafe",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
 		"postinstall": "pnpm gen:types && pnpm build"
 	},
 	"dependencies": {
+		"@hono/zod-validator": "catalog:",
 		"hono": "^4.10.7",
-		"vite": "catalog:"
+		"vite": "catalog:",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/node": "catalog:",
+		"vitest": "catalog:",
 		"typescript": "catalog:",
+		"typed-query-selector": "catalog:",
+		"@cloudflare/vitest-pool-workers": "catalog:",
 		"wrangler": "catalog:"
 	}
 }

@@ -2,22 +2,18 @@
 	"schema": "https://json.schemastore.org/tsconfig.json",
 	"compilerOptions": {
 		"strict": true,
-		"baseUrl": ".",
 		"noEmit": true,
 		"allowJs": true,
-		"checkJs": true,
-		"lib": ["DOM", "ESNext"],
+		"checkJs": false,
+		"lib": ["ESNext"],
 		"target": "ESNext",
 		"module": "ESNext",
 		"skipLibCheck": true,
 		"alwaysStrict": true,
 		"esModuleInterop": true,
-		"isolatedModules": true,
 		"strictNullChecks": true,
 		"resolveJsonModule": true,
-		"verbatimModuleSyntax": true,
 		"moduleResolution": "Bundler",
-		"useDefineForClassFields": true,
 		"allowArbitraryExtensions": true,
 		"resolvePackageJsonImports": true,
 		"resolvePackageJsonExports": true,
@@ -26,7 +22,11 @@
 		"noFallthroughCasesInSwitch": true,
 		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
-		"types": ["node"]
+		"types": [
+			"node",
+			"typed-query-selector/strict",
+			"@cloudflare/workers-types"
+		]
 	},
 	"include": ["src/**/*"],
 	"files": [

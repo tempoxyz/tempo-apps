@@ -220,7 +220,7 @@ importers:
         version: 4.1.17
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.8.3(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.0)(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+        version: 0.8.3(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.0)(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
       viem:
         specifier: 'catalog:'
         version: 2.41.2(typescript@5.9.3)(zod@4.1.13)
@@ -351,7 +351,7 @@ importers:
         version: 19.2.1(react@19.2.1)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.8.3(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.0)(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+        version: 0.8.3(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.0)(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.11)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.11)(@tanstack/react-query@5.90.11(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
       viem:
         specifier: 'catalog:'
         version: 2.41.2(typescript@5.9.3)(zod@4.1.13)
@@ -383,25 +383,43 @@ importers:
 
   apps/index-supply:
     dependencies:
+      '@hono/zod-validator':
+        specifier: 'catalog:'
+        version: 0.7.5(hono@4.10.7)(zod@4.1.13)
       hono:
         specifier: ^4.10.7
         version: 4.10.7
       vite:
         specifier: 'catalog:'
         version: rolldown-vite@7.2.10(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)
+      zod:
+        specifier: 'catalog:'
+        version: 4.1.13
     devDependencies:
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
         version: 1.16.1(rolldown-vite@7.2.10(@types/node@24.10.1)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0))(workerd@1.20251202.0)(wrangler@4.52.1(@cloudflare/workers-types@4.20251202.0))
+      '@cloudflare/vitest-pool-workers':
+        specifier: 'catalog:'
+        version: 0.10.13(@cloudflare/workers-types@4.20251202.0)(@vitest/runner@3.2.4)(@vitest/snapshot@3.2.4)(vitest@3.2.4(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 4.20251202.0
       '@total-typescript/ts-reset':
         specifier: 'catalog:'
         version: 0.6.1
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.1
+      typed-query-selector:
+        specifier: 'catalog:'
+        version: 2.12.0
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.4(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)
       wrangler:
         specifier: 'catalog:'
         version: 4.52.1(@cloudflare/workers-types@4.20251202.0)

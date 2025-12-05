@@ -1,0 +1,13 @@
+{
+	"extends": "./tsconfig.json",
+	"include": [
+		"./**/*.ts",
+		"./test/index.test.ts",
+		"./env.d.ts",
+		"./worker-configuration.d.ts"
+	],
+	"compilerOptions": {
+		"moduleResolution": "bundler",
+		"types": ["@cloudflare/vitest-pool-workers"]
+	}
+}
