@@ -12,6 +12,7 @@ app.use(poweredBy({ serverName: 'Tempo' }))
 app.use(requestId({ headerName: 'X-Tempo-Request-Id' }))
 app.use(secureHeaders()) // must come last otherwise it will reset any prior headers
 
+app.get('/', context => context.text('tempo'))
 app.get('/health', (context) => context.text('ok'))
 
 app.route('/indexer', indexerApp)
