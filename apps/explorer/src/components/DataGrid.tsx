@@ -14,6 +14,7 @@ export function DataGrid(props: DataGrid.Props) {
 		itemsLabel = 'items',
 		itemsPerPage = 10,
 		pagination = 'default',
+		emptyState = 'No items found.',
 	} = props
 
 	const mode = Sections.useSectionsMode()
@@ -57,6 +58,14 @@ export function DataGrid(props: DataGrid.Props) {
 							)
 						})}
 					</div>
+					{activeItems.length === 0 ? (
+						<div
+							className="px-[16px] py-[32px] text-tertiary col-span-full flex items-center justify-center"
+							style={{ minHeight: itemsPerPage * 49 }}
+						>
+							{emptyState}
+						</div>
+					) : null}
 					{activeItems.map((item, rowIndex) => {
 						let maxLines = 1
 						for (const cell of item.cells) {
@@ -180,5 +189,6 @@ export namespace DataGrid {
 		itemsLabel?: string
 		itemsPerPage?: number
 		pagination?: 'default' | 'simple'
+		emptyState?: React.ReactNode
 	}
 }

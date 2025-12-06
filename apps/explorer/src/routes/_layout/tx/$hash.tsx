@@ -404,6 +404,7 @@ function EventsSection(props: { logs: Log[]; knownEvents: KnownEvent[] }) {
 			isPending={false}
 			itemsLabel="events"
 			itemsPerPage={logs.length}
+			emptyState="No events emitted."
 		/>
 	)
 }
