@@ -105,7 +105,6 @@ export namespace Header {
 			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
-					<span className="@min-[1240px]:inline hidden">Block </span>
 					<span
 						ref={ref}
 						className="text-primary font-medium tabular-nums min-w-[6ch] inline-block"
