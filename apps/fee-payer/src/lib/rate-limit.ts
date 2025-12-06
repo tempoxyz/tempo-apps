@@ -1,0 +1,28 @@
+import { env } from 'cloudflare:workers'
+import type { Context, Next } from 'hono'
+import { cloneRawRequest } from 'hono/request'
+import { RpcRequest } from 'ox'
+import { Transaction } from 'tempo.ts/viem'
+
+/**
+ * Middleware that rate limits requests based on the transaction's `from` address.
+ * Extracts the transaction from the RPC request and checks against the rate limiter.
+ * Returns 429 if rate limit is exceeded.
+ */
+export async function rateLimitMiddleware(c: Context, next: Next) {
+	// Clone the request to read the body without consuming the original
+	const clonedRequest = await cloneRawRequest(c.req)
+	const request = RpcRequest.from((await clonedRequest.json()) as any)
+	const serialized = request.params?.[0] as `0x76${string}`
+
+	const transaction = Transaction.deserialize(serialized)
+	const from = (transaction as any).from
+
+	const { success } = await env.AddressRateLimiter.limit({
+		key: from,
+	})
+
+	if (!success) return c.json({ error: 'Rate limit exceeded' }, 429)
+
+	await next()
+}
