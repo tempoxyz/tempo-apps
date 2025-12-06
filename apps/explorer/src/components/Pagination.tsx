@@ -18,7 +18,7 @@ export function Pagination(props: Pagination.Props) {
 		itemsLabel: itemsLabel_,
 		isPending,
 		compact: compact_,
-		hideOnSinglePage,
+		hideOnSinglePage = true,
 	} = props
 
 	const compact = compact_ ?? totalPages > 999
