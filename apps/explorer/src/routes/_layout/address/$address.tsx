@@ -1,4 +1,9 @@
-import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
+import {
+	keepPreviousData,
+	queryOptions,
+	useQueries,
+	useQuery,
+} from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
@@ -14,13 +19,8 @@ import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { formatUnits, isHash } from 'viem'
-import { useBlock, useTransactionReceipt } from 'wagmi'
-import {
-	getBlock,
-	getChainId,
-	getTransaction,
-	getTransactionReceipt,
-} from 'wagmi/actions'
+import { useBlock } from 'wagmi'
+import { getBlock, getChainId, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
 import { ContractReader } from '#components/Contract/Read.tsx'
@@ -50,7 +50,7 @@ import {
 	type KnownEventPart,
 	parseKnownEvents,
 } from '#lib/known-events'
-import { getFeeBreakdown } from '#lib/receipt.ts'
+
 import * as Tip20 from '#lib/tip20'
 import { config, getConfig } from '#wagmi.config.ts'
 
@@ -61,6 +61,70 @@ const defaultSearchValues = {
 } as const
 
 type TabValue = 'history' | 'assets' | 'contract'
+
+type TxData = {
+	receipt: TransactionReceipt
+	block: Awaited<ReturnType<typeof getBlock>>
+	knownEvents: KnownEvent[]
+}
+
+type BatchTransactionDataContextValue = {
+	transactionDataMap: Map<Hex.Hex, TxData>
+	isLoading: boolean
+}
+
+const BatchTransactionDataContext =
+	React.createContext<BatchTransactionDataContextValue>({
+		transactionDataMap: new Map(),
+		isLoading: true,
+	})
+
+function useBatchTransactionData(transactions: Transaction[]) {
+	const hashes = React.useMemo(
+		() => transactions.map((tx) => tx.hash).filter(isHash),
+		[transactions],
+	)
+
+	const queries = useQueries({
+		queries: hashes.map((hash) => ({
+			queryKey: ['tx-data-batch', hash],
+			queryFn: async (): Promise<TxData | null> => {
+				const cfg = getConfig()
+				const receipt = await getTransactionReceipt(cfg, { hash })
+				const [block, getTokenMetadata] = await Promise.all([
+					getBlock(cfg, { blockHash: receipt.blockHash }),
+					Tip20.metadataFromLogs(receipt.logs),
+				])
+				const transaction = transactions.find((tx) => tx.hash === hash)
+				const knownEvents = parseKnownEvents(receipt, {
+					transaction,
+					getTokenMetadata,
+				})
+				return { receipt, block, knownEvents }
+			},
+			staleTime: 60_000,
+		})),
+	})
+
+	const transactionDataMap = React.useMemo(() => {
+		const map = new Map<Hex.Hex, TxData>()
+		for (let index = 0; index < hashes.length; index++) {
+			const data = queries[index]?.data
+			if (data) map.set(hashes[index], data)
+		}
+		return map
+	}, [hashes, queries])
+
+	const isLoading = queries.some((q) => q.isLoading)
+
+	return { transactionDataMap, isLoading }
+}
+
+function useTxDataFromBatch(hash: Hex.Hex) {
+	return React.useContext(BatchTransactionDataContext).transactionDataMap.get(
+		hash,
+	)
+}
 
 type TransactionQuery = {
 	address: Address.Address
@@ -247,13 +311,9 @@ function RouteComponent() {
 	React.useEffect(() => {
 		// Only preload for history tab (transaction pagination)
 		if (tab !== 'history') return
-		// preload pages around the active page (3 before and 3 after)
-		for (let i = -3; i <= 3; i++) {
-			if (i === 0) continue // skip current page
-			const preloadPage = page + i
-			if (preloadPage < 1) continue // only preload valid page numbers
-			route.preloadRoute({ to: '.', search: { page: preloadPage, tab, limit } })
-		}
+		// preload next page only to reduce initial load overhead
+		const nextPage = page + 1
+		route.preloadRoute({ to: '.', search: { page: nextPage, tab, limit } })
 	}, [route, page, tab, limit])
 
 	const setActiveSection = React.useCallback(
@@ -514,6 +574,8 @@ function SectionsWrapper(props: {
 		total: 0,
 	}
 
+	const batchTransactionDataContextValue = useBatchTransactionData(transactions)
+
 	const { data: exactTotal } = useTransactionCount(address)
 	const total = exactTotal ?? approximateTotal
 
@@ -560,187 +622,157 @@ function SectionsWrapper(props: {
 	]
 
 	return (
-		<Sections
-			mode={mode}
-			sections={[
-				{
-					title: 'History',
-					totalItems: Number(total),
-					itemsLabel: 'transactions',
-					content: historyError ?? (
-						<DataGrid
-							columns={{
-								stacked: historyColumns,
-								tabs: historyColumns,
-							}}
-							items={() =>
-								transactions.map((transaction) => ({
-									cells: [
-										<TransactionRowTime
-											key="time"
-											transaction={transaction}
-											format={timeFormat}
-										/>,
-										<TransactionRowDescription
-											key="desc"
-											transaction={transaction}
-											accountAddress={address}
-										/>,
-										<TruncatedHash
-											key="hash"
-											minChars={8}
-											hash={transaction.hash}
-										/>,
-										<TransactionRowFee key="fee" transaction={transaction} />,
-										<TransactionTotal key="total" transaction={transaction} />,
+		<BatchTransactionDataContext.Provider
+			value={batchTransactionDataContextValue}
+		>
+			<Sections
+				mode={mode}
+				sections={[
+					{
+						title: 'History',
+						totalItems: Number(total),
+						itemsLabel: 'transactions',
+						content: historyError ?? (
+							<DataGrid
+								columns={{
+									stacked: historyColumns,
+									tabs: historyColumns,
+								}}
+								items={() =>
+									transactions.map((transaction) => ({
+										cells: [
+											<TransactionRowTime
+												key="time"
+												transaction={transaction}
+												format={timeFormat}
+											/>,
+											<TransactionRowDescription
+												key="desc"
+												transaction={transaction}
+												accountAddress={address}
+											/>,
+											<TruncatedHash
+												key="hash"
+												minChars={8}
+												hash={transaction.hash}
+											/>,
+											<TransactionRowFee key="fee" transaction={transaction} />,
+											<TransactionTotal
+												key="total"
+												transaction={transaction}
+											/>,
+										],
+										link: {
+											href: `/tx/${transaction.hash}`,
+											title: `View receipt ${transaction.hash}`,
+										},
+									}))
+								}
+								totalItems={Number(total)}
+								page={page}
+								isPending={isLoadingPage}
+								itemsLabel="transactions"
+								itemsPerPage={limit}
+							/>
+						),
+					},
+					{
+						title: 'Assets',
+						totalItems: assets.length,
+						itemsLabel: 'assets',
+						content: (
+							<DataGrid
+								columns={{
+									stacked: [
+										{ label: 'Name', align: 'start', width: '1fr' },
+										{ label: 'Contract', align: 'start', width: '1fr' },
+										{ label: 'Amount', align: 'end', width: '0.5fr' },
 									],
-									link: {
-										href: `/tx/${transaction.hash}`,
-										title: `View receipt ${transaction.hash}`,
-									},
-								}))
-							}
-							totalItems={Number(total)}
-							page={page}
-							isPending={isLoadingPage}
-							itemsLabel="transactions"
-							itemsPerPage={limit}
-						/>
-					),
-				},
-				{
-					title: 'Assets',
-					totalItems: assets.length,
-					itemsLabel: 'assets',
-					content: (
-						<DataGrid
-							columns={{
-								stacked: [
-									{ label: 'Name', align: 'start', width: '1fr' },
-									{ label: 'Contract', align: 'start', width: '1fr' },
-									{ label: 'Amount', align: 'end', width: '0.5fr' },
-								],
-								tabs: [
-									{ label: 'Name', align: 'start', width: '1fr' },
-									{ label: 'Ticker', align: 'start', width: '0.5fr' },
-									{ label: 'Currency', align: 'start', width: '0.5fr' },
-									{ label: 'Amount', align: 'end', width: '0.5fr' },
-									{ label: 'Value', align: 'end', width: '0.5fr' },
-								],
-							}}
-							items={(mode) =>
-								assets.map((assetAddress) => ({
-									cells:
-										mode === 'stacked'
-											? [
-													<TokenName
-														key="name"
-														contractAddress={assetAddress}
-													/>,
-													<AssetContract
-														key="contract"
-														contractAddress={assetAddress}
-													/>,
-													<AssetAmount
-														key="amount"
-														contractAddress={assetAddress}
-														accountAddress={address}
-													/>,
-												]
-											: [
-													<TokenName
-														key="name"
-														contractAddress={assetAddress}
-													/>,
-													<TokenSymbol
-														key="symbol"
-														contractAddress={assetAddress}
-													/>,
-													<span key="currency">USD</span>,
-													<AssetAmount
-														key="amount"
-														contractAddress={assetAddress}
-														accountAddress={address}
-													/>,
-													<AssetValue
-														key="value"
-														contractAddress={assetAddress}
-														accountAddress={address}
-													/>,
-												],
-									link: {
-										href: `/token/${assetAddress}`,
-										title: `View token ${assetAddress}`,
-									},
-								}))
-							}
-							totalItems={assets.length}
-							page={1}
-							isPending={false}
-							itemsLabel="assets"
-							itemsPerPage={assets.length}
-						/>
-					),
-				},
-				// Contract tab - only shown for known contracts
-				...(contractInfo
-					? [
-							{
-								title: 'Contract',
-								totalItems: 0,
-								itemsLabel: 'functions',
-								content: (
-									<ContractReader
-										address={address}
-										abi={contractInfo.abi}
-										docsUrl={contractInfo.docsUrl}
-									/>
-								),
-							},
-						]
-					: []),
-			]}
-			activeSection={activeSection}
-			onSectionChange={onSectionChange}
-		/>
+									tabs: [
+										{ label: 'Name', align: 'start', width: '1fr' },
+										{ label: 'Ticker', align: 'start', width: '0.5fr' },
+										{ label: 'Currency', align: 'start', width: '0.5fr' },
+										{ label: 'Amount', align: 'end', width: '0.5fr' },
+										{ label: 'Value', align: 'end', width: '0.5fr' },
+									],
+								}}
+								items={(mode) =>
+									assets.map((assetAddress) => ({
+										cells:
+											mode === 'stacked'
+												? [
+														<TokenName
+															key="name"
+															contractAddress={assetAddress}
+														/>,
+														<AssetContract
+															key="contract"
+															contractAddress={assetAddress}
+														/>,
+														<AssetAmount
+															key="amount"
+															contractAddress={assetAddress}
+															accountAddress={address}
+														/>,
+													]
+												: [
+														<TokenName
+															key="name"
+															contractAddress={assetAddress}
+														/>,
+														<TokenSymbol
+															key="symbol"
+															contractAddress={assetAddress}
+														/>,
+														<span key="currency">USD</span>,
+														<AssetAmount
+															key="amount"
+															contractAddress={assetAddress}
+															accountAddress={address}
+														/>,
+														<AssetValue
+															key="value"
+															contractAddress={assetAddress}
+															accountAddress={address}
+														/>,
+													],
+										link: {
+											href: `/token/${assetAddress}`,
+											title: `View token ${assetAddress}`,
+										},
+									}))
+								}
+								totalItems={assets.length}
+								page={1}
+								isPending={false}
+								itemsLabel="assets"
+								itemsPerPage={assets.length}
+							/>
+						),
+					},
+					// Contract tab - only shown for known contracts
+					...(contractInfo
+						? [
+								{
+									title: 'Contract',
+									totalItems: 0,
+									itemsLabel: 'functions',
+									content: (
+										<ContractReader
+											address={address}
+											abi={contractInfo.abi}
+											docsUrl={contractInfo.docsUrl}
+										/>
+									),
+								},
+							]
+						: []),
+				]}
+				activeSection={activeSection}
+				onSectionChange={onSectionChange}
+			/>
+		</BatchTransactionDataContext.Provider>
 	)
-}
-
-function useFetchTxData(hash?: Hex.Hex | undefined) {
-	const query = useQuery({
-		queryKey: ['tx-data', hash],
-		enabled: Boolean(hash && isHash(hash)),
-		queryFn: async () => {
-			if (!hash) return
-			const config = getConfig()
-			const receipt = await getTransactionReceipt(config, {
-				hash,
-			})
-
-			const [block, transaction, getTokenMetadata] = await Promise.all([
-				getBlock(config, { blockHash: receipt.blockHash }),
-				getTransaction(config, { hash: receipt.transactionHash }),
-				Tip20.metadataFromLogs(receipt.logs),
-			])
-
-			const knownEvents = parseKnownEvents(receipt, {
-				transaction,
-				getTokenMetadata,
-			})
-
-			const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
-
-			return {
-				block,
-				feeBreakdown,
-				knownEvents,
-				receipt,
-				transaction,
-			}
-		},
-	})
-
-	return query
 }
 
 function TransactionRowTime(props: {
@@ -748,20 +780,15 @@ function TransactionRowTime(props: {
 	format: TimeFormat
 }) {
 	const { transaction, format } = props
-	const { data: block, status } = useBlock({
-		blockNumber: Hex.toBigInt(transaction.blockNumber ?? '0x0'),
-		query: {
-			enabled: Boolean(transaction.blockNumber),
-		},
-	})
+	const batchData = useTxDataFromBatch(transaction.hash)
 
-	if (status !== 'success' || !block) {
+	if (!batchData?.block) {
 		return <span className="text-tertiary">—</span>
 	}
 
 	return (
 		<TransactionTimestamp
-			timestamp={block.timestamp}
+			timestamp={batchData.block.timestamp}
 			link={`/tx/${transaction.hash}`}
 			format={format}
 		/>
@@ -773,12 +800,11 @@ function TransactionRowDescription(props: {
 	accountAddress: Address.Address
 }) {
 	const { transaction, accountAddress } = props
-	const { data, status } = useFetchTxData(transaction.hash)
+	const batchData = useTxDataFromBatch(transaction.hash)
 
-	if (status !== 'success' || !data)
-		return <span className="text-tertiary">—</span>
-	if (!data.knownEvents.length) {
-		const count = data.receipt?.logs.length ?? 0
+	if (!batchData) return <span className="text-tertiary">—</span>
+	if (!batchData.knownEvents.length) {
+		const count = batchData.receipt?.logs.length ?? 0
 		return (
 			<span className="text-secondary">
 				{count === 0 ? 'No events' : `${count} events`}
@@ -789,8 +815,8 @@ function TransactionRowDescription(props: {
 	return (
 		<TransactionDescription
 			transaction={transaction}
-			knownEvents={data.knownEvents}
-			transactionReceipt={data.receipt}
+			knownEvents={batchData.knownEvents}
+			transactionReceipt={batchData.receipt}
 			accountAddress={accountAddress}
 		/>
 	)
@@ -798,11 +824,12 @@ function TransactionRowDescription(props: {
 
 function TransactionRowFee(props: { transaction: Transaction }) {
 	const { transaction } = props
+	const batchData = useTxDataFromBatch(transaction.hash)
 
-	const { data, status } = useTransactionReceipt({ hash: transaction.hash })
-	if (status !== 'success') return <span className="text-tertiary">—</span>
+	if (!batchData?.receipt) return <span className="text-tertiary">—</span>
 
-	const fee = data.effectiveGasPrice * data.cumulativeGasUsed
+	const fee =
+		batchData.receipt.effectiveGasPrice * batchData.receipt.cumulativeGasUsed
 
 	return (
 		<span className="text-tertiary">
@@ -993,18 +1020,18 @@ export function TransactionTimestamp(props: {
 
 export function TransactionTotal(props: { transaction: Transaction }) {
 	const { transaction } = props
-	const { data, status } = useFetchTxData(transaction.hash)
+	const batchData = useTxDataFromBatch(transaction.hash)
 
 	const amountParts = React.useMemo(() => {
-		if (status !== 'success' || !data) return
+		if (!batchData) return
 
-		return data.knownEvents.flatMap((event) =>
+		return batchData.knownEvents.flatMap((event) =>
 			event.parts.filter(
 				(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
 					part.type === 'amount',
 			),
 		)
-	}, [data, status])
+	}, [batchData])
 	if (!amountParts?.length) return <>$0.00</>
 
 	const totalValue = amountParts.reduce((sum, part) => {

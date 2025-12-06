@@ -76,10 +76,11 @@ export async function runIndexSupplyQuery(
 
 	const normalizedQuery = query.replace(/\s+/g, ' ').trim()
 	const startTime = performance.now()
-	console.log('[IndexSupply] Query started:', {
-		query: normalizedQuery,
-		signatures,
-	})
+	if (env.LOG_LEVEL === 'info')
+		console.log('[IndexSupply] Query started:', {
+			query: normalizedQuery,
+			signatures,
+		})
 
 	const response = await fetch(url, {
 		method: 'POST',
@@ -127,12 +128,14 @@ export async function runIndexSupplyQuery(
 	if (!result) throw new Error('IndexSupply returned an empty result set')
 
 	const duration = performance.now() - startTime
-	console.log('[IndexSupply] Query completed:', {
-		duration: `${duration.toFixed(0)}ms`,
-		rows: result.rows.length,
-		query:
-			normalizedQuery.slice(0, 80) + (normalizedQuery.length > 80 ? '...' : ''),
-	})
+	if (env.LOG_LEVEL === 'info')
+		console.log('[IndexSupply] Query completed:', {
+			duration: `${duration.toFixed(0)}ms`,
+			rows: result.rows.length,
+			query:
+				normalizedQuery.slice(0, 80) +
+				(normalizedQuery.length > 80 ? '...' : ''),
+		})
 
 	return result
 }
@@ -158,10 +161,11 @@ export async function runIndexSupplyBatch<T extends BatchQuery[]>(
 	}))
 
 	const startTime = performance.now()
-	console.log('[IndexSupply] Batch started:', {
-		count: queries.length,
-		queries: body.map((b) => `${b.query.slice(0, 60)}...`),
-	})
+	if (env.LOG_LEVEL === 'info')
+		console.log('[IndexSupply] Batch started:', {
+			count: queries.length,
+			queries: body.map((b) => `${b.query.slice(0, 60)}...`),
+		})
 
 	const response = await fetch(url, {
 		method: 'POST',
@@ -206,10 +210,11 @@ export async function runIndexSupplyBatch<T extends BatchQuery[]>(
 	}
 
 	const duration = performance.now() - startTime
-	console.log('[IndexSupply] Batch completed:', {
-		duration: `${duration.toFixed(0)}ms`,
-		results: parsed.data.map((r) => r.rows.length),
-	})
+	if (env.LOG_LEVEL === 'info')
+		console.log('[IndexSupply] Batch completed:', {
+			duration: `${duration.toFixed(0)}ms`,
+			results: parsed.data.map((r) => r.rows.length),
+		})
 
 	return parsed.data as {
 		[K in keyof T]: z.infer<typeof responseSchema>[number]
