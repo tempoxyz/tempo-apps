@@ -4,6 +4,7 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
+	stripSearchParams,
 	useNavigate,
 	useRouter,
 	useRouterState,
@@ -128,6 +129,9 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		),
 		a: z.optional(z.string()),
 	}),
+	search: {
+		middlewares: [stripSearchParams(defaultSearchValues)],
+	},
 	loaderDeps: ({ search: { page, limit, tab, a } }) => ({
 		page,
 		limit,
