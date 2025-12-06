@@ -670,6 +670,7 @@ function SectionsWrapper(props: {
 								isPending={isLoadingPage}
 								itemsLabel="transactions"
 								itemsPerPage={limit}
+								emptyState="No transactions found."
 							/>
 						),
 					},
@@ -744,6 +745,7 @@ function SectionsWrapper(props: {
 								isPending={false}
 								itemsLabel="assets"
 								itemsPerPage={assets.length}
+								emptyState="No assets found."
 							/>
 						),
 					},
