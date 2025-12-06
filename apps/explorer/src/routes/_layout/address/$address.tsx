@@ -143,8 +143,8 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			params.limit,
 			params._key,
 		],
-		queryFn: async () => {
-			return await AccountServer.fetchTransactions({
+		queryFn: () => {
+			return AccountServer.fetchTransactions({
 				data: {
 					address: params.address,
 					offset: params.offset,
