@@ -246,62 +246,6 @@ export const fetchTransactions = createServerFn()
 		}
 	})
 
-// export const fetchTransactionCount = createServerFn()
-// 	.inputValidator(
-// 		z.object({
-// 			address: zAddress(),
-// 			include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
-// 		}),
-// 	)
-// 	.handler(async ({ data: params }) => {
-// 		const include =
-// 			params.include === 'sent'
-// 				? 'sent'
-// 				: params.include === 'received'
-// 					? 'received'
-// 					: 'all'
-
-// 		const transferSignature =
-// 			'Transfer(address indexed from, address indexed to, uint tokens)'
-// 		const includeSent = include === 'all' || include === 'sent'
-// 		const includeReceived = include === 'all' || include === 'received'
-
-// 		const directConditions: string[] = []
-// 		if (includeSent) directConditions.push(`t."from" = '${params.address}'`)
-// 		if (includeReceived) directConditions.push(`t."to" = '${params.address}'`)
-
-// 		const transferConditions: string[] = []
-// 		if (includeSent) transferConditions.push(`tr."from" = '${params.address}'`)
-// 		if (includeReceived)
-// 			transferConditions.push(`tr."to" = '${params.address}'`)
-
-// 		const directFilter =
-// 			directConditions.length > 0 ? directConditions.join(' OR ') : 'FALSE'
-// 		const transferFilter =
-// 			transferConditions.length > 0 ? transferConditions.join(' OR ') : 'FALSE'
-
-// 		const directCountQuery = /* sql */ `
-// 			SELECT COUNT(DISTINCT t.hash) as cnt FROM txs t
-// 			WHERE t.chain = ${chainId} AND (${directFilter})
-// 		`
-
-// 		const transferCountQuery = /* sql */ `
-// 			SELECT COUNT(DISTINCT tr.tx_hash) as cnt FROM transfer tr
-// 			WHERE tr.chain = ${chainId} AND (${transferFilter})
-// 		`
-
-// 		const [directCountResult, transferCountResult] =
-// 			await IS.runIndexSupplyBatch([
-// 				{ query: directCountQuery },
-// 				{ query: transferCountQuery, signatures: [transferSignature] },
-// 			])
-
-// 		const directCount = Number(directCountResult.rows.at(0)?.at(0) ?? 0)
-// 		const transferCount = Number(transferCountResult.rows.at(0)?.at(0) ?? 0)
-
-// 		return Math.max(directCount, transferCount)
-// 	})
-
 export const getTotalValue = createServerFn()
 	.inputValidator(
 		z.object({
