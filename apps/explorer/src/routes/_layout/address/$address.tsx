@@ -380,19 +380,21 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 		},
 	})
 
-	// for "created" timestamp, fetch the earliest transaction, this would be the last page of transactions
-	const totalTransactions = recentData?.total ?? 0
+	// Use the real transaction count (not the approximate total from pagination)
+	const { data: exactTotal } = useTransactionCount(address)
+	const totalTransactions = Number(exactTotal ?? 0n)
 	const lastPageOffset = Math.max(0, totalTransactions - 1)
 
-	const { data: oldestData } = useQuery(
-		transactionsQueryOptions({
+	const { data: oldestData } = useQuery({
+		...transactionsQueryOptions({
 			address,
 			page: Math.ceil(totalTransactions / 1),
 			limit: 1,
 			offset: lastPageOffset,
 			_key: 'account-creation',
 		}),
-	)
+		enabled: totalTransactions > 0,
+	})
 
 	const [oldestTransaction] = oldestData?.transactions ?? []
 	const { data: createdTimestamp } = useBlock({
