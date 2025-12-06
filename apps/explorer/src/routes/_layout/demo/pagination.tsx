@@ -12,10 +12,21 @@ export const Route = createFileRoute('/_layout/demo/pagination')({
 })
 
 const examples = [
-	{ totalPages: 1, page: 1, totalItems: 0, label: '0 items, hideOnSinglePage', hideOnSinglePage: true },
-	{ totalPages: 1, page: 1, totalItems: 1, label: '1 item, hideOnSinglePage', hideOnSinglePage: true },
-	{ totalPages: 1, page: 1, totalItems: 5, label: '5 items, hideOnSinglePage', hideOnSinglePage: true },
-	{ totalPages: 1, page: 1, label: '1 page' },
+	{
+		totalPages: 1,
+		page: 1,
+		totalItems: 0,
+		label: '0 items, hideOnSinglePage',
+		hideOnSinglePage: true,
+	},
+	{
+		totalPages: 1,
+		page: 1,
+		totalItems: 1,
+		label: '1 item, hideOnSinglePage',
+		hideOnSinglePage: true,
+	},
+	{ totalPages: 1, page: 1, label: '1 page', hideOnSinglePage: false },
 	{ totalPages: 2, page: 1, label: '2 pages' },
 	{ totalPages: 7, page: 4, label: '7 pages' },
 	{ totalPages: 999, page: 500, label: '999 pages (max before compact)' },
