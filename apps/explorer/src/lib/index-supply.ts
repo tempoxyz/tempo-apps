@@ -1,4 +1,3 @@
-import { env } from 'cloudflare:workers'
 import { Address, Hex } from 'ox'
 import { tempoTestnet } from 'tempo.ts/chains'
 import * as z from 'zod/mini'
@@ -64,8 +63,8 @@ export async function runIndexSupplyQuery(
 	query: string,
 	options: RunQueryOptions = {},
 ) {
-	const apiKey = env.INDEXSUPPLY_API_KEY
-	if (!apiKey) throw new Error('INDEXSUPPLY_API_KEY is not configured')
+	const apiKey = process.env.INDEXER_API_KEY
+	if (!apiKey) throw new Error('INDEXER_API_KEY is not configured')
 
 	const url = new URL(endpoint)
 	url.searchParams.set('api-key', apiKey)
@@ -75,12 +74,12 @@ export async function runIndexSupplyQuery(
 			: ['']
 
 	const normalizedQuery = query.replace(/\s+/g, ' ').trim()
-	const startTime = performance.now()
-	if (import.meta.env.VITE_LOG_LEVEL === 'info')
-		console.log('[IndexSupply] Query started:', {
-			query: normalizedQuery,
-			signatures,
-		})
+	// const _startTime = performance.now()
+	// if (import.meta.env.VITE_LOG_LEVEL === 'info')
+	// console.log('[IndexSupply] Query started:', {
+	// 	query: normalizedQuery,
+	// 	signatures,
+	// })
 
 	const response = await fetch(url, {
 		method: 'POST',
@@ -127,15 +126,15 @@ export async function runIndexSupplyQuery(
 	const [result] = parsed.data
 	if (!result) throw new Error('IndexSupply returned an empty result set')
 
-	const duration = performance.now() - startTime
-	if (import.meta.env.VITE_LOG_LEVEL === 'info')
-		console.log('[IndexSupply] Query completed:', {
-			duration: `${duration.toFixed(0)}ms`,
-			rows: result.rows.length,
-			query:
-				normalizedQuery.slice(0, 80) +
-				(normalizedQuery.length > 80 ? '...' : ''),
-		})
+	// const _duration = performance.now() - startTime
+	// if (import.meta.env.VITE_LOG_LEVEL === 'info')
+	// console.log('[IndexSupply] Query completed:', {
+	// 	duration: `${duration.toFixed(0)}ms`,
+	// 	rows: result.rows.length,
+	// 	query:
+	// 		normalizedQuery.slice(0, 80) +
+	// 		(normalizedQuery.length > 80 ? '...' : ''),
+	// })
 
 	return result
 }
@@ -148,8 +147,8 @@ type BatchQuery = {
 export async function runIndexSupplyBatch<T extends BatchQuery[]>(
 	queries: T,
 ): Promise<{ [K in keyof T]: z.infer<typeof responseSchema>[number] }> {
-	const apiKey = env.INDEXSUPPLY_API_KEY
-	if (!apiKey) throw new Error('INDEXSUPPLY_API_KEY is not configured')
+	const apiKey = process.env.INDEXER_API_KEY
+	if (!apiKey) throw new Error('INDEXER_API_KEY is not configured')
 
 	const url = new URL(endpoint)
 	url.searchParams.set('api-key', apiKey)
@@ -160,12 +159,12 @@ export async function runIndexSupplyBatch<T extends BatchQuery[]>(
 		query: q.query.replace(/\s+/g, ' ').trim(),
 	}))
 
-	const startTime = performance.now()
-	if (import.meta.env.VITE_LOG_LEVEL === 'info')
-		console.log('[IndexSupply] Batch started:', {
-			count: queries.length,
-			queries: body.map((b) => `${b.query.slice(0, 60)}...`),
-		})
+	// const startTime = performance.now()
+	// // if (import.meta.env.VITE_LOG_LEVEL === 'info')
+	// // console.log('[IndexSupply] Batch started:', {
+	// 		count: queries.length,
+	// 		queries: body.map((b) => `${b.query.slice(0, 60)}...`),
+	// 	// })
 
 	const response = await fetch(url, {
 		method: 'POST',
@@ -209,12 +208,12 @@ export async function runIndexSupplyBatch<T extends BatchQuery[]>(
 		)
 	}
 
-	const duration = performance.now() - startTime
-	if (import.meta.env.VITE_LOG_LEVEL === 'info')
-		console.log('[IndexSupply] Batch completed:', {
-			duration: `${duration.toFixed(0)}ms`,
-			results: parsed.data.map((r) => r.rows.length),
-		})
+	// const duration = performance.now() - startTime
+	// if (import.meta.env.VITE_LOG_LEVEL === 'info')
+	// console.log('[IndexSupply] Batch completed:', {
+	// 	duration: `${duration.toFixed(0)}ms`,
+	// 	results: parsed.data.map((r) => r.rows.length),
+	// })
 
 	return parsed.data as {
 		[K in keyof T]: z.infer<typeof responseSchema>[number]

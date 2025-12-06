@@ -1,13 +1,18 @@
 import { createServerFn } from '@tanstack/react-start'
+import * as IDX from 'idxs'
 import type { Address, Hex } from 'ox'
 import * as z from 'zod/mini'
-import * as IS from '#lib/index-supply'
-import { parsePgTimestamp } from '#lib/postgres'
 import { zAddress } from '#lib/zod'
+import { config } from '#wagmi.config.ts'
+
+const IS = IDX.IndexSupply.create({
+	apiKey: process.env.INDEXER_API_KEY,
+})
+
+const QB = IDX.QueryBuilder.from(IS)
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const HOLDERS_CACHING = 60_000
-const { chainId } = IS
 
 const holdersCache = new Map<
 	string,
@@ -19,6 +24,9 @@ const holdersCache = new Map<
 		timestamp: number
 	}
 >()
+
+const TRANSFER_SIGNATURE =
+	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
 const FetchTokenHoldersInputSchema = z.object({
 	address: zAddress({ lowercase: true }),
@@ -45,6 +53,7 @@ export type TokenHoldersApiResponse = {
 export const fetchHolders = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokenHoldersInputSchema.parse(input))
 	.handler(async ({ data }) => {
+		const chainId = config.getClient().chain.id
 		const cacheKey = `${chainId}-${data.address}`
 
 		const cached = holdersCache.get(cacheKey)
@@ -57,7 +66,7 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 			allHolders = cached.data.allHolders
 			totalSupply = cached.data.totalSupply
 		} else {
-			const result = await fetchHoldersData(data.address)
+			const result = await fetchHoldersData(data.address, chainId)
 			allHolders = result.allHolders
 			totalSupply = result.totalSupply
 
@@ -93,29 +102,20 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 		}
 	})
 
-async function fetchHoldersData(address: Address.Address) {
-	const result = await IS.runIndexSupplyQuery(
-		/* sql */ `
-			SELECT "from", "to", tokens
-			FROM transfer
-			WHERE chain = ${chainId}
-				AND address = '${address}'
-		`,
-		{
-			signatures: [
-				'Transfer(address indexed from, address indexed to, uint tokens)',
-			],
-		},
-	)
+async function fetchHoldersData(address: Address.Address, chainId: number) {
+	const result = await QB.withSignatures([TRANSFER_SIGNATURE])
+		.selectFrom('transfer')
+		.select(['from', 'to', 'tokens'])
+		.where('chain', '=', chainId)
+		.where('address', '=', address)
+		.execute()
 
 	const balances = new Map<string, bigint>()
 
-	for (const row of result.rows) {
-		const [fromRaw, toRaw, tokensRaw] = row
-		if (tokensRaw === null) continue
-		const from = String(fromRaw)
-		const to = String(toRaw)
-		const value = BigInt(tokensRaw)
+	for (const row of result) {
+		const from = String(row.from)
+		const to = String(row.to)
+		const value = BigInt(row.tokens)
 
 		if (from !== '0x0000000000000000000000000000000000000000') {
 			const fromBalance = balances.get(from) ?? 0n
@@ -168,18 +168,25 @@ export type TokenTransfersApiResponse = {
 export const fetchTransfers = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokenTransfersInputSchema.parse(input))
 	.handler(async ({ data }) => {
+		const chainId = config.getClient().chain.id
 		const [transfers, total] = await Promise.all([
-			fetchTransfersData(data.address, data.limit, data.offset, data.account),
-			fetchTotalCount(data.address, data.account),
+			fetchTransfersData(
+				data.address,
+				data.limit,
+				data.offset,
+				chainId,
+				data.account,
+			),
+			fetchTotalCount(data.address, chainId, data.account),
 		])
 
-		const nextOffset = data.offset + transfers.length
+		const nextOffset = data.offset + (transfers?.length ?? 0)
 
 		return {
 			transfers,
 			total,
 			offset: nextOffset,
-			limit: transfers.length,
+			limit: transfers?.length,
 		}
 	})
 
@@ -187,69 +194,67 @@ async function fetchTransfersData(
 	address: Address.Address,
 	limit: number,
 	offset: number,
+	chainId: number,
 	account?: Address.Address,
 ) {
-	const accountFilter = account
-		? `AND ("from" = '${account}' OR "to" = '${account}')`
-		: ''
+	let query = QB.withSignatures([TRANSFER_SIGNATURE])
+		.selectFrom('transfer')
+		.select([
+			'from',
+			'to',
+			'tokens',
+			'tx_hash',
+			'block_num',
+			'log_idx',
+			'block_timestamp',
+		])
+		.where('chain', '=', chainId)
+		.where('address', '=', address)
 
-	const result = await IS.runIndexSupplyQuery(
-		/* sql */ `
-			SELECT "from", "to", tokens, tx_hash, block_num, log_idx, block_timestamp
-			FROM transfer
-			WHERE chain = ${chainId}
-				AND address = '${address}'
-				${accountFilter}
-			ORDER BY block_num DESC, log_idx DESC
-			LIMIT ${limit}
-			OFFSET ${offset}
-		`,
-		{
-			signatures: [
-				'Transfer(address indexed from, address indexed to, uint tokens)',
-			],
-		},
-	)
+	if (account) {
+		query = query.where((eb) =>
+			eb.or([eb('from', '=', account), eb('to', '=', account)]),
+		)
+	}
 
-	return result.rows.map((row) => {
-		const [from, to, value, transactionHash, blockNumber, logIndex, timestamp] =
-			row
-		return {
-			from: from as Address.Address,
-			to: to as Address.Address,
-			value: String(value),
-			transactionHash: transactionHash as Hex.Hex,
-			blockNumber: String(blockNumber),
-			logIndex: Number(logIndex),
-			timestamp: timestamp ? String(parsePgTimestamp(String(timestamp))) : null,
-		}
-	})
+	const result = await query
+		.orderBy('block_num', 'desc')
+		.orderBy('log_idx', 'desc')
+		.limit(limit)
+		.offset(offset)
+		.execute()
+
+	return result.map((row) => ({
+		from: row.from as Address.Address,
+		to: row.to as Address.Address,
+		value: String(row.tokens),
+		transactionHash: row.tx_hash as Hex.Hex,
+		blockNumber: String(row.block_num),
+		logIndex: Number(row.log_idx),
+		timestamp: row.block_timestamp ? String(row.block_timestamp) : null,
+	}))
 }
 
 async function fetchTotalCount(
 	address: Address.Address,
+	chainId: number,
 	account?: Address.Address,
 ) {
-	const accountFilter = account
-		? `AND ("from" = '${account}' OR "to" = '${account}')`
-		: ''
+	let query = QB.withSignatures([TRANSFER_SIGNATURE])
+		.selectFrom('transfer')
+		.select((eb) => eb.fn.count('tx_hash').as('count'))
+		.where('chain', '=', chainId)
+		.where('address', '=', address)
 
-	const result = await IS.runIndexSupplyQuery(
-		/* sql */ `
-			SELECT COUNT(tx_hash)
-			FROM transfer
-			WHERE chain = ${chainId}
-				AND address = '${address}'
-				${accountFilter}
-		`,
-		{
-			signatures: [
-				'Transfer(address indexed from, address indexed to, uint tokens)',
-			],
-		},
-	)
+	if (account) {
+		query = query.where((eb) =>
+			eb.or([eb('from', '=', account), eb('to', '=', account)]),
+		)
+	}
 
-	return Number(result.rows[0]?.[0] ?? 0)
+	const result = await query.executeTakeFirstOrThrow()
+
+	return Number(result.count)
 }
 
 export { MAX_LIMIT, DEFAULT_LIMIT }

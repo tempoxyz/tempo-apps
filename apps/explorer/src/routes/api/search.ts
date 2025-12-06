@@ -133,7 +133,7 @@ export const Route = createFileRoute('/api/search')({
 							 WHERE chain = ${IS.chainId} AND hash = '${query}'
 							 LIMIT 1`,
 						)
-						const row = result.rows[0]
+						const row = result?.rows[0]
 						const timestamp = row?.[0]
 						results.push({
 							type: 'transaction',
