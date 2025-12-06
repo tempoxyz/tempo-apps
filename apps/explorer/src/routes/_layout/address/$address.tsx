@@ -15,7 +15,12 @@ import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { formatUnits, isHash } from 'viem'
 import { useBlock, useTransactionReceipt } from 'wagmi'
-import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
+import {
+	getBlock,
+	getChainId,
+	getTransaction,
+	getTransactionReceipt,
+} from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
 import { ContractReader } from '#components/Contract/Read.tsx'
@@ -47,7 +52,8 @@ import {
 } from '#lib/known-events'
 import { getFeeBreakdown } from '#lib/receipt.ts'
 import * as Tip20 from '#lib/tip20'
-import { getConfig } from '#wagmi.config.ts'
+import { fetchTotalAddressTxs } from '#lib/transactions.server.ts'
+import { config, getConfig } from '#wagmi.config.ts'
 
 const defaultSearchValues = {
 	page: 1,
@@ -171,6 +177,16 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				return undefined
 			})
 
+		const totalAddressTransactions = await context.queryClient.ensureQueryData({
+			queryKey: ['total-address-txs', address],
+			queryFn: async () => {
+				return await fetchTotalAddressTxs({
+					data: { address, chainId: getChainId(config) },
+				})
+			},
+			staleTime: 30_000,
+		})
+
 		return {
 			address,
 			page,
@@ -179,6 +195,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			hasContract,
 			contractInfo,
 			transactionsData,
+			totalAddressTransactions,
 		}
 	},
 })
@@ -189,7 +206,12 @@ function RouteComponent() {
 	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, limit } = Route.useSearch()
-	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
+	const {
+		hasContract,
+		contractInfo,
+		transactionsData,
+		totalAddressTransactions,
+	} = Route.useLoaderData()
 
 	Address.assert(address)
 
@@ -269,6 +291,7 @@ function RouteComponent() {
 				onSectionChange={setActiveSection}
 				contractInfo={contractInfo}
 				initialData={transactionsData}
+				totalAddressTransactions={totalAddressTransactions}
 			/>
 		</div>
 	)
@@ -459,6 +482,7 @@ function SectionsWrapper(props: {
 	onSectionChange: (index: number) => void
 	contractInfo: ContractInfo | undefined
 	initialData: TransactionsData | undefined
+	totalAddressTransactions: bigint
 }) {
 	const {
 		address,
@@ -468,6 +492,7 @@ function SectionsWrapper(props: {
 		onSectionChange,
 		contractInfo,
 		initialData,
+		totalAddressTransactions,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
@@ -503,7 +528,8 @@ function SectionsWrapper(props: {
 
 	// Only show skeleton if we have no data AND we're loading
 	// Use data presence check to avoid hydration mismatch
-	if (!data && isPending) return <SectionsSkeleton totalItems={total} />
+	if (!data && isPending)
+		return <SectionsSkeleton totalItems={Number(totalAddressTransactions)} />
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const historyError = error ? (
@@ -687,11 +713,12 @@ function useTransactionBlock(blockNumber: Hex.Hex | undefined) {
 }
 
 function useFetchTxData(hash?: Hex.Hex | undefined) {
-	return useQuery({
-		queryKey: [hash],
-		enabled: hash && isHash(hash),
+	const query = useQuery({
+		queryKey: ['tx-data', hash],
+		enabled: Boolean(hash && isHash(hash)),
 		queryFn: async () => {
 			if (!hash) return
+			console.log('[useFetchTxData] fetching', hash.slice(0, 10))
 			const config = getConfig()
 			const receipt = await getTransactionReceipt(config, {
 				hash,
@@ -710,6 +737,12 @@ function useFetchTxData(hash?: Hex.Hex | undefined) {
 
 			const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
 
+			console.log('[useFetchTxData] success', hash.slice(0, 10), {
+				hasReceipt: Boolean(receipt),
+				hasBlock: Boolean(block),
+				knownEventsCount: knownEvents.length,
+			})
+
 			return {
 				block,
 				feeBreakdown,
@@ -719,6 +752,14 @@ function useFetchTxData(hash?: Hex.Hex | undefined) {
 			}
 		},
 	})
+
+	React.useEffect(() => {
+		if (query.error) {
+			console.error('[useFetchTxData] error', hash?.slice(0, 10), query.error)
+		}
+	}, [query.error, hash])
+
+	return query
 }
 
 function TransactionRowTime(props: {
@@ -987,8 +1028,8 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			),
 		)
 	}, [data, status])
-	if (!amountParts?.length) return <span className="text-tertiary">—</span>
-	console.info('amount parts', amountParts)
+	if (!amountParts?.length) return <>$0.00</>
+
 	const totalValue = amountParts.reduce((sum, part) => {
 		const decimals = part.value.decimals ?? 6
 		return sum + Number(Value.format(part.value.value, decimals))
