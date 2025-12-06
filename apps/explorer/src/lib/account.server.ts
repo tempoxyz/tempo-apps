@@ -135,39 +135,47 @@ export const fetchTransactions = createServerFn()
 		}
 
 		if (transferHashes.length > 0) {
-			const hashList = transferHashes
-				.slice(0, 500)
-				.map((h) => `'${h}'`)
-				.join(',')
-			const transferTxsQuery = /* sql */ `
-				SELECT
-					t.hash,
-					t.block_num,
-					t."from",
-					t."to",
-					t.value,
-					t.input,
-					t.nonce,
-					t.gas,
-					t.gas_price,
-					t.type
-				FROM txs t
-				WHERE t.chain = ${chainId} AND t.hash IN (${hashList})
-			`
-			const transferTxsResult = await IS.runIndexSupplyQuery(transferTxsQuery, {
-				signatures: [''],
-			})
-			const transferTxColumns = new Map(
-				transferTxsResult.columns.map((column, index) => [column.name, index]),
-			)
-			const transferHashIdx = transferTxColumns.get('hash')
-			const transferBlockNumIdx = transferTxColumns.get('block_num')
-			if (transferHashIdx !== undefined && transferBlockNumIdx !== undefined) {
-				for (const row of transferTxsResult.rows) {
-					const hash = row[transferHashIdx]
-					const blockNum = row[transferBlockNumIdx]
-					if (typeof hash === 'string' && typeof blockNum === 'number') {
-						txsByHash.set(hash, { hash, block_num: blockNum, row })
+			const BATCH_SIZE = 500
+			for (let index = 0; index < transferHashes.length; index += BATCH_SIZE) {
+				const batch = transferHashes.slice(index, index + BATCH_SIZE)
+				const hashList = batch.map((h) => `'${h}'`).join(',')
+				const transferTxsQuery = /* sql */ `
+					SELECT
+						t.hash,
+						t.block_num,
+						t."from",
+						t."to",
+						t.value,
+						t.input,
+						t.nonce,
+						t.gas,
+						t.gas_price,
+						t.type
+					FROM txs t
+					WHERE t.chain = ${chainId} AND t.hash IN (${hashList})
+				`
+				const transferTxsResult = await IS.runIndexSupplyQuery(
+					transferTxsQuery,
+					{ signatures: [''] },
+				)
+				const transferTxColumns = new Map(
+					transferTxsResult.columns.map((column, index) => [
+						column.name,
+						index,
+					]),
+				)
+				const transferHashIdx = transferTxColumns.get('hash')
+				const transferBlockNumIdx = transferTxColumns.get('block_num')
+				if (
+					transferHashIdx !== undefined &&
+					transferBlockNumIdx !== undefined
+				) {
+					for (const row of transferTxsResult.rows) {
+						const hash = row[transferHashIdx]
+						const blockNum = row[transferBlockNumIdx]
+						if (typeof hash === 'string' && typeof blockNum === 'number') {
+							txsByHash.set(hash, { hash, block_num: blockNum, row })
+						}
 					}
 				}
 			}
