@@ -62,7 +62,7 @@ app.all('*', rateLimitMiddleware, async (c) => {
 				},
 			},
 		}),
-		onRequest: async (request) => {
+		async onRequest(request) {
 			console.log(`Sponsoring transaction: ${request.method}`)
 		},
 	})
