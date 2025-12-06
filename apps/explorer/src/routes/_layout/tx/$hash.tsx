@@ -7,13 +7,14 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { type Hex, Json, Value } from 'ox'
+import { type Address, type Hex, Json, Value } from 'ox'
 import * as React from 'react'
 import type { Log, TransactionReceipt } from 'viem'
 import { useChains } from 'wagmi'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { DataGrid } from '#components/DataGrid'
+import { DecodedCalldata } from '#components/DecodedCalldata'
 import { EventDescription } from '#components/EventDescription'
 import { NotFound } from '#components/NotFound'
 import { RawTransaction } from '#components/Receipt/RawTransaction'
@@ -32,8 +33,6 @@ import CopyIcon from '~icons/lucide/copy'
 const defaultSearchValues = {
 	tab: 'overview',
 } as const
-
-type TabValue = 'overview' | 'events' | 'raw'
 
 function txQueryOptions(params: { hash: Hex.Hex }) {
 	return queryOptions({
@@ -81,7 +80,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	validateSearch: z.object({
 		r: z.optional(z.string()),
 		tab: z.prefault(
-			z.enum(['overview', 'events', 'raw']),
+			z.enum(['overview', 'calls', 'events', 'raw']),
 			defaultSearchValues.tab,
 		),
 	}),
@@ -127,19 +126,26 @@ function Component() {
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
-	const activeSection = tab === 'overview' ? 0 : tab === 'events' ? 1 : 2
+	const calls = 'calls' in transaction ? transaction.calls : undefined
+	const hasCalls = Boolean(calls && calls.length > 0)
+
+	const tabs = [
+		'overview',
+		...(hasCalls ? ['calls'] : []),
+		'events',
+		'raw',
+	] as const
+	const activeSection = tabs.indexOf(tab)
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
-			const tabs: TabValue[] = ['overview', 'events', 'raw']
-			const newTab = tabs[newIndex] ?? 'overview'
 			navigate({
 				to: '.',
-				search: { tab: newTab },
+				search: { tab: tabs[newIndex] ?? 'overview' },
 				resetScroll: false,
 			})
 		},
-		[navigate],
+		[navigate, tabs],
 	)
 
 	return (
@@ -176,6 +182,16 @@ function Component() {
 							/>
 						),
 					},
+					...(hasCalls && calls
+						? [
+								{
+									title: 'Calls',
+									totalItems: calls.length,
+									itemsLabel: 'calls',
+									content: <CallsSection calls={calls} />,
+								},
+							]
+						: []),
 					{
 						title: 'Events',
 						totalItems: receipt.logs.length,
@@ -304,7 +320,9 @@ function OverviewSection(props: {
 			<InfoRow label="Position in Block">
 				<span className="text-primary">{positionInBlock}</span>
 			</InfoRow>
-			{input && input !== '0x' && <InputDataRow input={input} />}
+			{input && input !== '0x' && (
+				<InputDataRow input={input} to={transaction.to} />
+			)}
 		</div>
 	)
 }
@@ -321,11 +339,9 @@ function InfoRow(props: { label: string; children: React.ReactNode }) {
 	)
 }
 
-function InputDataRow(props: { input: Hex.Hex }) {
-	const { input } = props
-	const [expanded, setExpanded] = React.useState(false)
-
-	const truncatedInput = input.slice(0, 66) + (input.length > 66 ? '…' : '')
+function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
+	const { input, to } = props
+	const [showRaw, setShowRaw] = React.useState(false)
 
 	return (
 		<div className="flex flex-col px-[18px] py-[12px] border-b border-dashed border-card-border last:border-b-0">
@@ -333,26 +349,83 @@ function InputDataRow(props: { input: Hex.Hex }) {
 				<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
 					Input Data
 				</span>
-				<div className="flex flex-col gap-[8px] flex-1">
-					<button
-						type="button"
-						onClick={() => setExpanded(!expanded)}
-						className="text-[13px] text-accent hover:underline text-left cursor-pointer"
-					>
-						{expanded ? 'Hide' : 'Show'} ({input.length} bytes)
-					</button>
-					{expanded && (
-						<pre className="text-[12px] text-primary break-all whitespace-pre-wrap bg-card-header rounded-[6px] p-[12px] max-h-[300px] overflow-auto">
-							{input}
-						</pre>
-					)}
-					{!expanded && input.length > 66 && (
-						<span className="text-[12px] text-tertiary font-mono">
-							{truncatedInput}
-						</span>
-					)}
+				<div className="flex flex-col gap-[12px] flex-1">
+					<DecodedCalldata address={to} data={input} />
+					<div>
+						<button
+							type="button"
+							onClick={() => setShowRaw(!showRaw)}
+							className="text-[11px] text-accent hover:underline text-left cursor-pointer"
+						>
+							{showRaw ? 'Hide' : 'Show'} raw ({input.length} bytes)
+						</button>
+						{showRaw && (
+							<pre className="text-[12px] text-primary break-all whitespace-pre-wrap bg-distinct rounded-[6px] p-[12px] max-h-[300px] overflow-auto mt-[8px]">
+								{input}
+							</pre>
+						)}
+					</div>
 				</div>
 			</div>
+		</div>
+	)
+}
+
+function CallsSection(props: {
+	calls: ReadonlyArray<{
+		to?: Address.Address | null
+		data?: Hex.Hex
+		value?: bigint
+	}>
+}) {
+	const { calls } = props
+
+	if (calls.length === 0) {
+		return (
+			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
+				No calls in this transaction
+			</div>
+		)
+	}
+
+	return (
+		<div className="flex flex-col divide-y divide-card-border">
+			{calls.map((call, i) => (
+				<CallItem key={`${call.to}-${i}`} call={call} index={i} />
+			))}
+		</div>
+	)
+}
+
+function CallItem(props: {
+	call: { to?: Address.Address | null; data?: Hex.Hex; value?: bigint }
+	index: number
+}) {
+	const { call, index } = props
+	const data = call.data
+
+	return (
+		<div className="flex flex-col gap-[12px] px-[18px] py-[16px]">
+			<div className="flex items-center gap-[8px] text-[13px] font-mono">
+				<span className="text-primary">#{index}</span>
+				{call.to ? (
+					<Link
+						to="/address/$address"
+						params={{ address: call.to }}
+						className="text-accent hover:underline press-down"
+					>
+						{HexFormatter.truncate(call.to, 8)}
+					</Link>
+				) : (
+					<span className="text-tertiary">Contract Creation</span>
+				)}
+				{data && data !== '0x' && (
+					<span className="text-tertiary">({data.length} bytes)</span>
+				)}
+			</div>
+			{data && data !== '0x' && (
+				<DecodedCalldata address={call.to} data={data} />
+			)}
 		</div>
 	)
 }
