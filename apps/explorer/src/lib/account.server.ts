@@ -61,33 +61,14 @@ export const fetchTransactions = createServerFn()
 		if (includeReceived)
 			transferConditions.push(`tr."to" = '${params.address}'`)
 
-		const addressFilterParts: string[] = []
-		if (directConditions.length)
-			addressFilterParts.push(`(${directConditions.join(' OR ')})`)
+		const directFilter =
+			directConditions.length > 0 ? directConditions.join(' OR ') : 'FALSE'
+		const transferFilter =
+			transferConditions.length > 0 ? transferConditions.join(' OR ') : 'FALSE'
 
-		if (transferConditions.length) {
-			addressFilterParts.push(`
-						t.hash IN (
-							SELECT DISTINCT tr.tx_hash
-							FROM transfer tr
-							WHERE tr.chain = ${chainId}
-								AND (${transferConditions.join(' OR ')})
-						)
-					`)
-		}
+		const fetchSize = offset + limit + 1
 
-		if (addressFilterParts.length === 0) addressFilterParts.push('FALSE')
-
-		const addressFilter = addressFilterParts.join(' OR ')
-
-		const countQuery = /* sql */ `
-			SELECT count(t.hash) as total
-			FROM txs t
-			WHERE t.chain = ${chainId}
-				AND (${addressFilter})
-		`
-
-		const txsQuery = /* sql */ `
+		const directTxsQuery = /* sql */ `
 			SELECT
 				t.hash,
 				t.block_num,
@@ -100,45 +81,130 @@ export const fetchTransactions = createServerFn()
 				t.gas_price,
 				t.type
 			FROM txs t
-			WHERE t.chain = ${chainId}
-				AND (${addressFilter})
+			WHERE t.chain = ${chainId} AND (${directFilter})
 			ORDER BY t.block_num ${sortDirection}, t.hash ${sortDirection}
-			LIMIT ${limit}
-			OFFSET ${offset}
+			LIMIT ${fetchSize}
 		`
 
-		// Parallelize count and transactions fetch
-		const [countResult, txsResult] = await Promise.all([
-			IS.runIndexSupplyQuery(countQuery, {
-				signatures: [transferSignature],
-			}).catch((error) => {
-				console.error('IndexSupply count query failed:', {
-					query: normalizeSQL(countQuery),
-					error,
-				})
-				throw error
-			}),
-			IS.runIndexSupplyQuery(txsQuery, {
-				signatures: [transferSignature],
-			}).catch((error) => {
-				console.error('IndexSupply txs query failed:', {
-					query: normalizeSQL(txsQuery),
-					error,
-				})
-				throw error
-			}),
-		])
+		const transferTxHashesQuery = /* sql */ `
+			SELECT DISTINCT tr.tx_hash as hash, tr.block_num
+			FROM transfer tr
+			WHERE tr.chain = ${chainId} AND (${transferFilter})
+			ORDER BY tr.block_num ${sortDirection}, tr.tx_hash ${sortDirection}
+			LIMIT ${fetchSize}
+		`
 
-		const totalValue = countResult.rows.at(0)?.at(0)
-		const total =
-			typeof totalValue === 'number'
-				? totalValue
-				: typeof totalValue === 'string'
-					? Number(totalValue)
-					: 0
+		const [directTxsResult, transferHashesResult] =
+			await IS.runIndexSupplyBatch([
+				{ query: directTxsQuery },
+				{ query: transferTxHashesQuery, signatures: [transferSignature] },
+			])
 
+		const directTxColumns = new Map(
+			directTxsResult.columns.map((column, index) => [column.name, index]),
+		)
+		const hashIdx = directTxColumns.get('hash')
+		const blockNumIdx = directTxColumns.get('block_num')
+
+		// Handle empty results (no columns returned when no rows match)
+		const hasDirectColumns = hashIdx !== undefined && blockNumIdx !== undefined
+
+		type TxRow = {
+			hash: string
+			block_num: number
+			row: IS.RowValue[]
+		}
+
+		const txsByHash = new Map<string, TxRow>()
+		if (hasDirectColumns) {
+			for (const row of directTxsResult.rows) {
+				const hash = row[hashIdx]
+				const blockNum = row[blockNumIdx]
+				if (typeof hash === 'string' && typeof blockNum === 'number') {
+					txsByHash.set(hash, { hash, block_num: blockNum, row })
+				}
+			}
+		}
+
+		const transferHashes: string[] = []
+		for (const row of transferHashesResult.rows) {
+			const hash = row[0]
+			if (typeof hash === 'string' && !txsByHash.has(hash)) {
+				transferHashes.push(hash)
+			}
+		}
+
+		if (transferHashes.length > 0) {
+			const BATCH_SIZE = 500
+			for (let index = 0; index < transferHashes.length; index += BATCH_SIZE) {
+				const batch = transferHashes.slice(index, index + BATCH_SIZE)
+				const hashList = batch.map((h) => `'${h}'`).join(',')
+				const transferTxsQuery = /* sql */ `
+					SELECT
+						t.hash,
+						t.block_num,
+						t."from",
+						t."to",
+						t.value,
+						t.input,
+						t.nonce,
+						t.gas,
+						t.gas_price,
+						t.type
+					FROM txs t
+					WHERE t.chain = ${chainId} AND t.hash IN (${hashList})
+				`
+				const transferTxsResult = await IS.runIndexSupplyQuery(
+					transferTxsQuery,
+					{ signatures: [''] },
+				)
+				const transferTxColumns = new Map(
+					transferTxsResult.columns.map((column, index) => [
+						column.name,
+						index,
+					]),
+				)
+				const transferHashIdx = transferTxColumns.get('hash')
+				const transferBlockNumIdx = transferTxColumns.get('block_num')
+				if (
+					transferHashIdx !== undefined &&
+					transferBlockNumIdx !== undefined
+				) {
+					for (const row of transferTxsResult.rows) {
+						const hash = row[transferHashIdx]
+						const blockNum = row[transferBlockNumIdx]
+						if (typeof hash === 'string' && typeof blockNum === 'number') {
+							txsByHash.set(hash, { hash, block_num: blockNum, row })
+						}
+					}
+				}
+			}
+		}
+
+		const sortedTxs = [...txsByHash.values()].sort((a, b) =>
+			sortDirection === 'DESC'
+				? b.block_num - a.block_num
+				: a.block_num - b.block_num,
+		)
+
+		const hasMore = sortedTxs.length > offset + limit
+		const paginatedTxs = sortedTxs.slice(offset, offset + limit)
+
+		// Expected columns in consistent order (matches our SELECT queries)
+		const expectedColumns = [
+			{ name: 'hash', pgtype: 'bytea' },
+			{ name: 'block_num', pgtype: 'int8' },
+			{ name: 'from', pgtype: 'bytea' },
+			{ name: 'to', pgtype: 'bytea' },
+			{ name: 'value', pgtype: 'numeric' },
+			{ name: 'input', pgtype: 'bytea' },
+			{ name: 'nonce', pgtype: 'int8' },
+			{ name: 'gas', pgtype: 'int8' },
+			{ name: 'gas_price', pgtype: 'int8' },
+			{ name: 'type', pgtype: 'int2' },
+		]
 		const txColumns = new Map(
-			txsResult.columns.map((column, index) => [column.name, index]),
+			expectedColumns.map((column, index) => [column.name, index]),
 		)
 		const getColumnValue = (row: IS.RowValue[], name: string) => {
 			const columnIndex = txColumns.get(name)
@@ -147,7 +213,7 @@ export const fetchTransactions = createServerFn()
 			return row[columnIndex] ?? null
 		}
 
-		const transactions: RpcTransaction[] = txsResult.rows.map((row) => {
+		const transactions: RpcTransaction[] = paginatedTxs.map(({ row }) => {
 			const hash = IS.toHexData(getColumnValue(row, 'hash'))
 			const from = IS.toAddressValue(getColumnValue(row, 'from'))
 			if (!from) throw new Error('Transaction is missing a "from" address')
@@ -177,11 +243,10 @@ export const fetchTransactions = createServerFn()
 		})
 
 		const nextOffset = offset + transactions.length
-		const hasMore = nextOffset < total
 
 		return {
 			transactions,
-			total,
+			total: hasMore ? nextOffset + 1 : nextOffset,
 			offset: nextOffset,
 			limit: transactions.length,
 			hasMore,
@@ -276,4 +341,25 @@ export const getTotalValue = createServerFn()
 			.reduce((acc, balance) => acc + balance * PRICE_PER_TOKEN, 0)
 
 		return totalValue
+	})
+
+export const FetchAddressTransactionsCountSchema = z.object({
+	address: zAddress({ lowercase: true }),
+	chainId: z.coerce.number(),
+})
+
+export const fetchAddressTransactionsCount = createServerFn({ method: 'GET' })
+	.inputValidator((input) => FetchAddressTransactionsCountSchema.parse(input))
+	.handler(async ({ data: { address, chainId } }) => {
+		const result = await IS.runIndexSupplyQuery(/* sql */ `
+SELECT SUM(CASE WHEN "from" = '${address}' THEN 1 ELSE 0 END) as sent, 
+       SUM(CASE WHEN "to" = '${address}' THEN 1 ELSE 0 END) as received 
+       FROM txs WHERE ("from" = '${address}' OR "to" = '${address}') AND chain = ${chainId}`)
+
+		const cursor = result.cursor
+		if (!cursor?.includes('-')) return 0n
+
+		const [, total] = cursor.split('-')
+
+		return BigInt(total)
 	})
