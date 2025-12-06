@@ -1,4 +1,9 @@
-import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
+import {
+	keepPreviousData,
+	queryOptions,
+	useQueries,
+	useQuery,
+} from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
@@ -13,12 +18,9 @@ import { Address, Hex, Value } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
-import { formatUnits } from 'viem'
+import { formatUnits, isHash } from 'viem'
 import { useBlock } from 'wagmi'
-import {
-	getBlockQueryOptions,
-	getTransactionReceiptQueryOptions,
-} from 'wagmi/query'
+import { getBlock, getChainId, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/Account.tsx'
 import { ContractReader } from '#components/Contract/Read.tsx'
@@ -32,6 +34,7 @@ import {
 	type TimeFormat,
 	useTimeFormat,
 } from '#components/TimeFormat'
+import { TruncatedHash } from '#components/TruncatedHash.tsx'
 import { cx } from '#cva.config.ts'
 import * as AccountServer from '#lib/account.server.ts'
 import {
@@ -47,8 +50,9 @@ import {
 	type KnownEventPart,
 	parseKnownEvents,
 } from '#lib/known-events'
+
 import * as Tip20 from '#lib/tip20'
-import { config } from '#wagmi.config'
+import { config, getConfig } from '#wagmi.config.ts'
 
 const defaultSearchValues = {
 	page: 1,
@@ -57,6 +61,70 @@ const defaultSearchValues = {
 } as const
 
 type TabValue = 'history' | 'assets' | 'contract'
+
+type TxData = {
+	receipt: TransactionReceipt
+	block: Awaited<ReturnType<typeof getBlock>>
+	knownEvents: KnownEvent[]
+}
+
+type BatchTransactionDataContextValue = {
+	transactionDataMap: Map<Hex.Hex, TxData>
+	isLoading: boolean
+}
+
+const BatchTransactionDataContext =
+	React.createContext<BatchTransactionDataContextValue>({
+		transactionDataMap: new Map(),
+		isLoading: true,
+	})
+
+function useBatchTransactionData(transactions: Transaction[]) {
+	const hashes = React.useMemo(
+		() => transactions.map((tx) => tx.hash).filter(isHash),
+		[transactions],
+	)
+
+	const queries = useQueries({
+		queries: hashes.map((hash) => ({
+			queryKey: ['tx-data-batch', hash],
+			queryFn: async (): Promise<TxData | null> => {
+				const cfg = getConfig()
+				const receipt = await getTransactionReceipt(cfg, { hash })
+				const [block, getTokenMetadata] = await Promise.all([
+					getBlock(cfg, { blockHash: receipt.blockHash }),
+					Tip20.metadataFromLogs(receipt.logs),
+				])
+				const transaction = transactions.find((tx) => tx.hash === hash)
+				const knownEvents = parseKnownEvents(receipt, {
+					transaction,
+					getTokenMetadata,
+				})
+				return { receipt, block, knownEvents }
+			},
+			staleTime: 60_000,
+		})),
+	})
+
+	const transactionDataMap = React.useMemo(() => {
+		const map = new Map<Hex.Hex, TxData>()
+		for (let index = 0; index < hashes.length; index++) {
+			const data = queries[index]?.data
+			if (data) map.set(hashes[index], data)
+		}
+		return map
+	}, [hashes, queries])
+
+	const isLoading = queries.some((q) => q.isLoading)
+
+	return { transactionDataMap, isLoading }
+}
+
+function useTxDataFromBatch(hash: Hex.Hex) {
+	return React.useContext(BatchTransactionDataContext).transactionDataMap.get(
+		hash,
+	)
+}
 
 type TransactionQuery = {
 	address: Address.Address
@@ -75,56 +143,27 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			params.limit,
 			params._key,
 		],
-		queryFn: async ({ client }) => {
-			const data = await AccountServer.fetchTransactions({
+		queryFn: () =>
+			AccountServer.fetchTransactions({
 				data: {
 					address: params.address,
 					offset: params.offset,
 					limit: params.limit,
 				},
-			})
-			const knownEvents: Record<Hex.Hex, KnownEvent[]> = {}
-			const transactions = await Promise.all(
-				data.transactions.map(async (transaction) => {
-					// Fetch receipt and block with error handling for sync lag
-					// (IndexSupply may return txs that RPC hasn't indexed yet)
-					const [receipt, block] = await Promise.all([
-						client
-							.fetchQuery(
-								getTransactionReceiptQueryOptions(config, {
-									hash: transaction.hash,
-								}),
-							)
-							.catch(() => null),
-						client
-							.fetchQuery(
-								getBlockQueryOptions(config, {
-									blockNumber: transaction.blockNumber
-										? Hex.toBigInt(transaction.blockNumber)
-										: undefined,
-								}),
-							)
-							.catch(() => null),
-					])
-					if (receipt) {
-						const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
-						knownEvents[transaction.hash] = parseKnownEvents(receipt, {
-							transaction,
-							getTokenMetadata,
-						})
-					}
-					return { ...transaction, block, receipt }
-				}),
-			)
-			return { ...data, transactions, knownEvents }
-		},
-		// Default to no auto-refresh; useQuery call overrides for reactivity
+			}),
 		refetchInterval: false,
 		refetchIntervalInBackground: false,
 		refetchOnWindowFocus: false,
 		placeholderData: keepPreviousData,
 	})
 }
+
+const assets = [
+	'0x20c0000000000000000000000000000000000000',
+	'0x20c0000000000000000000000000000000000001',
+	'0x20c0000000000000000000000000000000000002',
+	'0x20c0000000000000000000000000000000000003',
+] as const
 
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
@@ -200,6 +239,15 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				return undefined
 			})
 
+		const addressTransactionCount = await context.queryClient.ensureQueryData({
+			queryKey: ['address-transaction-count', address],
+			queryFn: () =>
+				AccountServer.fetchAddressTransactionsCount({
+					data: { address, chainId: getChainId(config) },
+				}),
+			staleTime: 30_000,
+		})
+
 		return {
 			address,
 			page,
@@ -208,16 +256,103 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			hasContract,
 			contractInfo,
 			transactionsData,
+			addressTransactionCount,
 		}
 	},
 })
 
-const assets = [
-	'0x20c0000000000000000000000000000000000000',
-	'0x20c0000000000000000000000000000000000001',
-	'0x20c0000000000000000000000000000000000002',
-	'0x20c0000000000000000000000000000000000003',
-] as const
+function RouteComponent() {
+	const navigate = useNavigate()
+	const route = useRouter()
+	const location = useLocation()
+	const { address } = Route.useParams()
+	const { page, tab, limit } = Route.useSearch()
+	const {
+		hasContract,
+		contractInfo,
+		transactionsData,
+		addressTransactionCount,
+	} = Route.useLoaderData()
+
+	Address.assert(address)
+
+	const hash = location.hash
+
+	// Track which hash we've already redirected for (prevents re-redirect when
+	// user manually switches tabs, but allows redirect for new hash values)
+	const redirectedForHashRef = React.useRef<string | null>(null)
+
+	// When URL has a hash fragment (e.g., #functionName), switch to contract tab
+	React.useEffect(() => {
+		// Only redirect if:
+		// 1. We have a hash
+		// 2. Address has a known contract
+		// 3. Not already on contract tab
+		// 4. Haven't already redirected for this specific hash
+		if (
+			hash &&
+			hasContract &&
+			tab !== 'contract' &&
+			redirectedForHashRef.current !== hash
+		) {
+			redirectedForHashRef.current = hash
+			navigate({
+				to: '.',
+				search: { page: 1, tab: 'contract', limit },
+				hash,
+				replace: true,
+				resetScroll: false,
+			})
+		}
+	}, [hash, hasContract, tab, navigate, limit])
+
+	React.useEffect(() => {
+		// Only preload for history tab (transaction pagination)
+		if (tab !== 'history') return
+		// preload next page only to reduce initial load overhead
+		const nextPage = page + 1
+		route.preloadRoute({ to: '.', search: { page: nextPage, tab, limit } })
+	}, [route, page, tab, limit])
+
+	const setActiveSection = React.useCallback(
+		(newIndex: number) => {
+			const tabs: TabValue[] = hasContract
+				? ['history', 'assets', 'contract']
+				: ['history', 'assets']
+			const newTab = tabs[newIndex] ?? 'history'
+			navigate({
+				to: '.',
+				search: { page, tab: newTab, limit },
+				resetScroll: false,
+			})
+		},
+		[navigate, page, limit, hasContract],
+	)
+
+	const activeSection =
+		tab === 'history' ? 0 : tab === 'assets' ? 1 : hasContract ? 2 : 0
+
+	return (
+		<div
+			className={cx(
+				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
+				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
+			)}
+		>
+			<AccountCardWithTimestamps address={address} />
+			<SectionsWrapper
+				address={address}
+				page={page}
+				limit={limit}
+				activeSection={activeSection}
+				onSectionChange={setActiveSection}
+				contractInfo={contractInfo}
+				initialData={transactionsData}
+				addressTransactionCount={addressTransactionCount}
+			/>
+		</div>
+	)
+}
 
 function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	const { address } = props
@@ -243,19 +378,21 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 		},
 	})
 
-	// for "created" timestamp, fetch the earliest transaction, this would be the last page of transactions
-	const totalTransactions = recentData?.total ?? 0
+	// Use the real transaction count (not the approximate total from pagination)
+	const { data: exactTotal } = useTransactionCount(address)
+	const totalTransactions = Number(exactTotal ?? 0n)
 	const lastPageOffset = Math.max(0, totalTransactions - 1)
 
-	const { data: oldestData } = useQuery(
-		transactionsQueryOptions({
+	const { data: oldestData } = useQuery({
+		...transactionsQueryOptions({
 			address,
 			page: Math.ceil(totalTransactions / 1),
 			limit: 1,
 			offset: lastPageOffset,
 			_key: 'account-creation',
 		}),
-	)
+		enabled: totalTransactions > 0,
+	})
 
 	const [oldestTransaction] = oldestData?.transactions ?? []
 	const { data: createdTimestamp } = useBlock({
@@ -267,7 +404,10 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	})
 
 	// Calculate total holdings value
-	const totalValue = useAccountTotalValue(address)
+	const totalValue = useQuery({
+		queryKey: ['account-total-value', address],
+		queryFn: () => AccountServer.getTotalValue({ data: { address } }),
+	})
 
 	return (
 		<AccountCard
@@ -294,16 +434,16 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 						<DataGrid
 							columns={{
 								stacked: [
-									{ label: 'Time', align: 'start', minWidth: 100 },
-									{ label: 'Hash', align: 'start' },
-									{ label: 'Total', align: 'end' },
+									{ label: 'Time', align: 'start', width: '0.5fr' },
+									{ label: 'Hash', align: 'start', width: '1fr' },
+									{ label: 'Total', align: 'end', width: '0.5fr' },
 								],
 								tabs: [
-									{ label: 'Time', align: 'start', minWidth: 100 },
-									{ label: 'Description', align: 'start' },
-									{ label: 'Hash', align: 'end' },
-									{ label: 'Fee', align: 'end' },
-									{ label: 'Total', align: 'end' },
+									{ label: 'Time', align: 'start', width: '0.5fr' },
+									{ label: 'Description', align: 'start', width: '2fr' },
+									{ label: 'Hash', align: 'end', width: '1fr' },
+									{ label: 'Fee', align: 'end', width: '0.5fr' },
+									{ label: 'Total', align: 'end', width: '0.5fr' },
 								],
 							}}
 							items={(mode) =>
@@ -346,14 +486,14 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 						<DataGrid
 							columns={{
 								stacked: [
-									{ label: 'Name', align: 'start' },
-									{ label: 'Balance', align: 'end' },
+									{ label: 'Name', align: 'start', width: '1fr' },
+									{ label: 'Balance', align: 'end', width: '0.5fr' },
 								],
 								tabs: [
-									{ label: 'Name', align: 'start' },
-									{ label: 'Ticker', align: 'start' },
-									{ label: 'Balance', align: 'end' },
-									{ label: 'Value', align: 'end' },
+									{ label: 'Name', align: 'start', width: '1fr' },
+									{ label: 'Ticker', align: 'start', width: '0.5fr' },
+									{ label: 'Balance', align: 'end', width: '0.5fr' },
+									{ label: 'Value', align: 'end', width: '0.5fr' },
 								],
 							}}
 							items={() => []}
@@ -371,105 +511,17 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 	)
 }
 
-function useAccountTotalValue(address: Address.Address) {
+function useTransactionCount(address: Address.Address) {
 	return useQuery({
-		queryKey: ['account-total-value', address],
-		queryFn: async () => {
-			return await AccountServer.getTotalValue({ data: { address } })
-		},
+		queryKey: ['account-transaction-count', address],
+		queryFn: () =>
+			AccountServer.fetchAddressTransactionsCount({
+				data: { address, chainId: getChainId(config) },
+			}),
+		staleTime: 30_000,
 	})
 }
 
-function RouteComponent() {
-	const navigate = useNavigate()
-	const route = useRouter()
-	const location = useLocation()
-	const { address } = Route.useParams()
-	const { page, tab, limit } = Route.useSearch()
-	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
-
-	Address.assert(address)
-
-	const hash = location.hash
-
-	// Track which hash we've already redirected for (prevents re-redirect when
-	// user manually switches tabs, but allows redirect for new hash values)
-	const redirectedForHashRef = React.useRef<string | null>(null)
-
-	// When URL has a hash fragment (e.g., #functionName), switch to contract tab
-	React.useEffect(() => {
-		// Only redirect if:
-		// 1. We have a hash
-		// 2. Address has a known contract
-		// 3. Not already on contract tab
-		// 4. Haven't already redirected for this specific hash
-		if (
-			hash &&
-			hasContract &&
-			tab !== 'contract' &&
-			redirectedForHashRef.current !== hash
-		) {
-			redirectedForHashRef.current = hash
-			navigate({
-				to: '.',
-				search: { page: 1, tab: 'contract', limit },
-				hash,
-				replace: true,
-				resetScroll: false,
-			})
-		}
-	}, [hash, hasContract, tab, navigate, limit])
-
-	React.useEffect(() => {
-		// Only preload for history tab (transaction pagination)
-		if (tab !== 'history') return
-		// preload pages around the active page (3 before and 3 after)
-		for (let i = -3; i <= 3; i++) {
-			if (i === 0) continue // skip current page
-			const preloadPage = page + i
-			if (preloadPage < 1) continue // only preload valid page numbers
-			route.preloadRoute({ to: '.', search: { page: preloadPage, tab, limit } })
-		}
-	}, [route, page, tab, limit])
-
-	const setActiveSection = React.useCallback(
-		(newIndex: number) => {
-			const tabs: TabValue[] = hasContract
-				? ['history', 'assets', 'contract']
-				: ['history', 'assets']
-			const newTab = tabs[newIndex] ?? 'history'
-			navigate({
-				to: '.',
-				search: { page, tab: newTab, limit },
-				resetScroll: false,
-			})
-		},
-		[navigate, page, limit, hasContract],
-	)
-
-	const activeSection =
-		tab === 'history' ? 0 : tab === 'assets' ? 1 : hasContract ? 2 : 0
-
-	return (
-		<div
-			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
-			)}
-		>
-			<AccountCardWithTimestamps address={address} />
-			<SectionsWrapper
-				address={address}
-				page={page}
-				limit={limit}
-				activeSection={activeSection}
-				onSectionChange={setActiveSection}
-				contractInfo={contractInfo}
-				initialData={transactionsData}
-			/>
-		</div>
-	)
-}
 type TransactionsData = Awaited<
 	ReturnType<
 		NonNullable<ReturnType<typeof transactionsQueryOptions>['queryFn']>
@@ -484,6 +536,7 @@ function SectionsWrapper(props: {
 	onSectionChange: (index: number) => void
 	contractInfo: ContractInfo | undefined
 	initialData: TransactionsData | undefined
+	addressTransactionCount: bigint
 }) {
 	const {
 		address,
@@ -493,6 +546,7 @@ function SectionsWrapper(props: {
 		onSectionChange,
 		contractInfo,
 		initialData,
+		addressTransactionCount,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
@@ -512,11 +566,15 @@ function SectionsWrapper(props: {
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
-	const { transactions, total, knownEvents } = data ?? {
+	const { transactions, total: approximateTotal } = data ?? {
 		transactions: [],
 		total: 0,
-		knownEvents: {} as Record<Hex.Hex, KnownEvent[]>,
 	}
+
+	const batchTransactionDataContextValue = useBatchTransactionData(transactions)
+
+	const { data: exactTotal } = useTransactionCount(address)
+	const total = exactTotal ?? approximateTotal
 
 	// Use isPending for SSR-consistent loading state
 	const isLoadingPage = isPending
@@ -526,7 +584,8 @@ function SectionsWrapper(props: {
 
 	// Only show skeleton if we have no data AND we're loading
 	// Use data presence check to avoid hydration mismatch
-	if (!data && isPending) return <SectionsSkeleton totalItems={total} />
+	if (!data && isPending)
+		return <SectionsSkeleton totalItems={Number(addressTransactionCount)} />
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const historyError = error ? (
@@ -551,203 +610,228 @@ function SectionsWrapper(props: {
 				/>
 			),
 			align: 'start',
-			minWidth: 100,
+			width: '0.5fr',
 		},
-		{ label: 'Description', align: 'start' },
-		{ label: 'Hash', align: 'end' },
-		{ label: 'Fee', align: 'end' },
-		{ label: 'Total', align: 'end' },
+		{ label: 'Description', align: 'start', width: '2fr' },
+		{ label: 'Hash', align: 'end', width: '1fr' },
+		{ label: 'Fee', align: 'end', width: '0.5fr' },
+		{ label: 'Total', align: 'end', width: '0.5fr' },
 	]
 
 	return (
-		<Sections
-			mode={mode}
-			sections={[
-				{
-					title: 'History',
-					totalItems: total,
-					itemsLabel: 'transactions',
-					content: historyError ?? (
-						<DataGrid
-							columns={{
-								stacked: historyColumns,
-								tabs: historyColumns,
-							}}
-							items={() =>
-								transactions.map((transaction) => {
-									// receipt/block can be null if RPC hasn't indexed yet
-									const receipt = transaction.receipt ?? undefined
-									const block = transaction.block
-									return {
+		<BatchTransactionDataContext.Provider
+			value={batchTransactionDataContextValue}
+		>
+			<Sections
+				mode={mode}
+				sections={[
+					{
+						title: 'History',
+						totalItems: Number(total),
+						itemsLabel: 'transactions',
+						content: historyError ?? (
+							<DataGrid
+								columns={{
+									stacked: historyColumns,
+									tabs: historyColumns,
+								}}
+								items={() =>
+									transactions.map((transaction) => ({
 										cells: [
-											block ? (
-												<TransactionTimestamp
-													key="time"
-													timestamp={block.timestamp}
-													link={`/tx/${transaction.hash}`}
-													format={timeFormat}
-												/>
-											) : (
-												<span key="time" className="text-tertiary text-[13px]">
-													Pending...
-												</span>
-											),
+											<TransactionRowTime
+												key="time"
+												transaction={transaction}
+												format={timeFormat}
+											/>,
 											<TransactionRowDescription
 												key="desc"
 												transaction={transaction}
-												knownEvents={knownEvents[transaction.hash] ?? []}
-												receipt={receipt}
 												accountAddress={address}
 											/>,
-											<TransactionHash key="hash" hash={transaction.hash} />,
-											<TransactionFee key="fee" receipt={receipt} />,
-											<TransactionRowTotal
+											<TruncatedHash
+												key="hash"
+												minChars={8}
+												hash={transaction.hash}
+											/>,
+											<TransactionRowFee key="fee" transaction={transaction} />,
+											<TransactionTotal
 												key="total"
 												transaction={transaction}
-												knownEvents={knownEvents[transaction.hash] ?? []}
-												receipt={receipt}
 											/>,
 										],
 										link: {
 											href: `/tx/${transaction.hash}`,
 											title: `View receipt ${transaction.hash}`,
 										},
-									}
-								})
-							}
-							totalItems={total}
-							page={page}
-							isPending={isLoadingPage}
-							itemsLabel="transactions"
-							itemsPerPage={limit}
-						/>
-					),
-				},
-				{
-					title: 'Assets',
-					totalItems: assets.length,
-					itemsLabel: 'assets',
-					content: (
-						<DataGrid
-							columns={{
-								stacked: [
-									{ label: 'Name', align: 'start' },
-									{ label: 'Contract', align: 'start' },
-									{ label: 'Amount', align: 'end' },
-								],
-								tabs: [
-									{ label: 'Name', align: 'start' },
-									{ label: 'Ticker', align: 'start' },
-									{ label: 'Currency', align: 'start' },
-									{ label: 'Amount', align: 'end' },
-									{ label: 'Value', align: 'end' },
-								],
-							}}
-							items={(mode) =>
-								assets.map((assetAddress) => ({
-									cells:
-										mode === 'stacked'
-											? [
-													<TokenName
-														key="name"
-														contractAddress={assetAddress}
-													/>,
-													<AssetContract
-														key="contract"
-														contractAddress={assetAddress}
-													/>,
-													<AssetAmount
-														key="amount"
-														contractAddress={assetAddress}
-														accountAddress={address}
-													/>,
-												]
-											: [
-													<TokenName
-														key="name"
-														contractAddress={assetAddress}
-													/>,
-													<TokenSymbol
-														key="symbol"
-														contractAddress={assetAddress}
-													/>,
-													<span key="currency">USD</span>,
-													<AssetAmount
-														key="amount"
-														contractAddress={assetAddress}
-														accountAddress={address}
-													/>,
-													<AssetValue
-														key="value"
-														contractAddress={assetAddress}
-														accountAddress={address}
-													/>,
-												],
-									link: {
-										href: `/token/${assetAddress}`,
-										title: `View token ${assetAddress}`,
-									},
-								}))
-							}
-							totalItems={assets.length}
-							page={1}
-							isPending={false}
-							itemsLabel="assets"
-							itemsPerPage={assets.length}
-						/>
-					),
-				},
-				// Contract tab - only shown for known contracts
-				...(contractInfo
-					? [
-							{
-								title: 'Contract',
-								totalItems: 0,
-								itemsLabel: 'functions',
-								content: (
-									<ContractReader
-										address={address}
-										abi={contractInfo.abi}
-										docsUrl={contractInfo.docsUrl}
-									/>
-								),
-							},
-						]
-					: []),
-			]}
-			activeSection={activeSection}
-			onSectionChange={onSectionChange}
+									}))
+								}
+								totalItems={Number(total)}
+								page={page}
+								isPending={isLoadingPage}
+								itemsLabel="transactions"
+								itemsPerPage={limit}
+							/>
+						),
+					},
+					{
+						title: 'Assets',
+						totalItems: assets.length,
+						itemsLabel: 'assets',
+						content: (
+							<DataGrid
+								columns={{
+									stacked: [
+										{ label: 'Name', align: 'start', width: '1fr' },
+										{ label: 'Contract', align: 'start', width: '1fr' },
+										{ label: 'Amount', align: 'end', width: '0.5fr' },
+									],
+									tabs: [
+										{ label: 'Name', align: 'start', width: '1fr' },
+										{ label: 'Ticker', align: 'start', width: '0.5fr' },
+										{ label: 'Currency', align: 'start', width: '0.5fr' },
+										{ label: 'Amount', align: 'end', width: '0.5fr' },
+										{ label: 'Value', align: 'end', width: '0.5fr' },
+									],
+								}}
+								items={(mode) =>
+									assets.map((assetAddress) => ({
+										cells:
+											mode === 'stacked'
+												? [
+														<TokenName
+															key="name"
+															contractAddress={assetAddress}
+														/>,
+														<AssetContract
+															key="contract"
+															contractAddress={assetAddress}
+														/>,
+														<AssetAmount
+															key="amount"
+															contractAddress={assetAddress}
+															accountAddress={address}
+														/>,
+													]
+												: [
+														<TokenName
+															key="name"
+															contractAddress={assetAddress}
+														/>,
+														<TokenSymbol
+															key="symbol"
+															contractAddress={assetAddress}
+														/>,
+														<span key="currency">USD</span>,
+														<AssetAmount
+															key="amount"
+															contractAddress={assetAddress}
+															accountAddress={address}
+														/>,
+														<AssetValue
+															key="value"
+															contractAddress={assetAddress}
+															accountAddress={address}
+														/>,
+													],
+										link: {
+											href: `/token/${assetAddress}`,
+											title: `View token ${assetAddress}`,
+										},
+									}))
+								}
+								totalItems={assets.length}
+								page={1}
+								isPending={false}
+								itemsLabel="assets"
+								itemsPerPage={assets.length}
+							/>
+						),
+					},
+					// Contract tab - only shown for known contracts
+					...(contractInfo
+						? [
+								{
+									title: 'Contract',
+									totalItems: 0,
+									itemsLabel: 'functions',
+									content: (
+										<ContractReader
+											address={address}
+											abi={contractInfo.abi}
+											docsUrl={contractInfo.docsUrl}
+										/>
+									),
+								},
+							]
+						: []),
+				]}
+				activeSection={activeSection}
+				onSectionChange={onSectionChange}
+			/>
+		</BatchTransactionDataContext.Provider>
+	)
+}
+
+function TransactionRowTime(props: {
+	transaction: Transaction
+	format: TimeFormat
+}) {
+	const { transaction, format } = props
+	const batchData = useTxDataFromBatch(transaction.hash)
+
+	if (!batchData?.block) {
+		return <span className="text-tertiary">—</span>
+	}
+
+	return (
+		<TransactionTimestamp
+			timestamp={batchData.block.timestamp}
+			link={`/tx/${transaction.hash}`}
+			format={format}
 		/>
 	)
 }
 
 function TransactionRowDescription(props: {
 	transaction: Transaction
-	knownEvents: KnownEvent[]
-	receipt?: TransactionReceipt
 	accountAddress: Address.Address
 }) {
-	const { transaction, knownEvents, receipt, accountAddress } = props
+	const { transaction, accountAddress } = props
+	const batchData = useTxDataFromBatch(transaction.hash)
+
+	if (!batchData) return <span className="text-tertiary">—</span>
+	if (!batchData.knownEvents.length) {
+		const count = batchData.receipt?.logs.length ?? 0
+		return (
+			<span className="text-secondary">
+				{count === 0 ? 'No events' : `${count} events`}
+			</span>
+		)
+	}
 
 	return (
 		<TransactionDescription
 			transaction={transaction}
-			knownEvents={knownEvents}
-			transactionReceipt={receipt}
+			knownEvents={batchData.knownEvents}
+			transactionReceipt={batchData.receipt}
 			accountAddress={accountAddress}
 		/>
 	)
 }
 
-function TransactionRowTotal(props: {
-	transaction: Transaction
-	knownEvents: KnownEvent[]
-	receipt?: TransactionReceipt
-}) {
-	const { transaction, knownEvents } = props
+function TransactionRowFee(props: { transaction: Transaction }) {
+	const { transaction } = props
+	const batchData = useTxDataFromBatch(transaction.hash)
+
+	if (!batchData?.receipt) return <span className="text-tertiary">—</span>
+
+	const fee =
+		batchData.receipt.effectiveGasPrice * batchData.receipt.cumulativeGasUsed
 
 	return (
-		<TransactionTotal transaction={transaction} knownEvents={knownEvents} />
+		<span className="text-tertiary">
+			{PriceFormatter.format(fee, { decimals: 18, format: 'short' })}
+		</span>
 	)
 }
 
@@ -862,7 +946,7 @@ export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 	return <span className="text-tertiary">{PriceFormatter.format(fee)}</span>
 }
 
-function TransactionDescription(props: {
+export function TransactionDescription(props: {
 	transaction: Transaction
 	knownEvents: Array<KnownEvent>
 	transactionReceipt: TransactionReceipt | undefined
@@ -907,15 +991,6 @@ export function getPerspectiveEvent(
 	return { ...event, parts: updatedParts }
 }
 
-export function TransactionHash(props: { hash: Hex.Hex }) {
-	const { hash } = props
-	return (
-		<div className="text-[13px] text-tertiary whitespace-nowrap" title={hash}>
-			{HexFormatter.truncate(hash, 4)}
-		</div>
-	)
-}
-
 export function TransactionTimestamp(props: {
 	timestamp: bigint
 	link?: string
@@ -940,22 +1015,21 @@ export function TransactionTimestamp(props: {
 	)
 }
 
-export function TransactionTotal(props: {
-	transaction: Transaction
-	knownEvents: KnownEvent[]
-}) {
-	const { transaction, knownEvents } = props
+export function TransactionTotal(props: { transaction: Transaction }) {
+	const { transaction } = props
+	const batchData = useTxDataFromBatch(transaction.hash)
 
-	const amountParts = React.useMemo(
-		() =>
-			knownEvents.flatMap((event) =>
-				event.parts.filter(
-					(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
-						part.type === 'amount',
-				),
+	const amountParts = React.useMemo(() => {
+		if (!batchData) return
+
+		return batchData.knownEvents.flatMap((event) =>
+			event.parts.filter(
+				(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
+					part.type === 'amount',
 			),
-		[knownEvents],
-	)
+		)
+	}, [batchData])
+	if (!amountParts?.length) return <>$0.00</>
 
 	const totalValue = amountParts.reduce((sum, part) => {
 		const decimals = part.value.decimals ?? 6

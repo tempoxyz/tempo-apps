@@ -3,7 +3,7 @@ import { Address, Hex } from 'ox'
 import { tempoTestnet } from 'tempo.ts/chains'
 import * as z from 'zod/mini'
 
-export const endpoint = 'https://api.indexsupply.net/v2/query'
+export const endpoint = 'https://api.tempo.xyz/indexer/query'
 export const chainId = tempoTestnet.id
 export const chainIdHex = Hex.fromNumber(chainId)
 export const chainCursor = `${chainId}-0`
@@ -74,6 +74,14 @@ export async function runIndexSupplyQuery(
 			? options.signatures
 			: ['']
 
+	const normalizedQuery = query.replace(/\s+/g, ' ').trim()
+	const startTime = performance.now()
+	if (env.LOG_LEVEL === 'info')
+		console.log('[IndexSupply] Query started:', {
+			query: normalizedQuery,
+			signatures,
+		})
+
 	const response = await fetch(url, {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
@@ -81,7 +89,7 @@ export async function runIndexSupplyQuery(
 			{
 				cursor: chainCursor,
 				signatures,
-				query: query.replace(/\s+/g, ' ').trim(),
+				query: normalizedQuery,
 			},
 		]),
 	})
@@ -118,5 +126,97 @@ export async function runIndexSupplyQuery(
 
 	const [result] = parsed.data
 	if (!result) throw new Error('IndexSupply returned an empty result set')
+
+	const duration = performance.now() - startTime
+	if (env.LOG_LEVEL === 'info')
+		console.log('[IndexSupply] Query completed:', {
+			duration: `${duration.toFixed(0)}ms`,
+			rows: result.rows.length,
+			query:
+				normalizedQuery.slice(0, 80) +
+				(normalizedQuery.length > 80 ? '...' : ''),
+		})
+
 	return result
+}
+
+type BatchQuery = {
+	query: string
+	signatures?: string[]
+}
+
+export async function runIndexSupplyBatch<T extends BatchQuery[]>(
+	queries: T,
+): Promise<{ [K in keyof T]: z.infer<typeof responseSchema>[number] }> {
+	const apiKey = env.INDEXSUPPLY_API_KEY
+	if (!apiKey) throw new Error('INDEXSUPPLY_API_KEY is not configured')
+
+	const url = new URL(endpoint)
+	url.searchParams.set('api-key', apiKey)
+
+	const body = queries.map((q) => ({
+		cursor: chainCursor,
+		signatures: q.signatures && q.signatures.length > 0 ? q.signatures : [''],
+		query: q.query.replace(/\s+/g, ' ').trim(),
+	}))
+
+	const startTime = performance.now()
+	if (env.LOG_LEVEL === 'info')
+		console.log('[IndexSupply] Batch started:', {
+			count: queries.length,
+			queries: body.map((b) => `${b.query.slice(0, 60)}...`),
+		})
+
+	const response = await fetch(url, {
+		method: 'POST',
+		headers: { 'content-type': 'application/json' },
+		body: JSON.stringify(body),
+	})
+
+	let json: unknown
+	try {
+		json = await response.json()
+	} catch {
+		throw new Error('IndexSupply API returned invalid JSON')
+	}
+
+	if (!response.ok) {
+		const message =
+			typeof json === 'object' &&
+			json !== null &&
+			'message' in json &&
+			typeof (json as { message?: string }).message === 'string'
+				? (json as { message: string }).message
+				: response.statusText
+		throw new Error(`IndexSupply API error (${response.status}): ${message}`)
+	}
+
+	const parsed = responseSchema.safeParse(json)
+	if (!parsed.success) {
+		const message =
+			typeof json === 'object' &&
+			json !== null &&
+			'message' in json &&
+			typeof (json as { message?: string }).message === 'string'
+				? (json as { message: string }).message
+				: z.prettifyError(parsed.error)
+		throw new Error(`IndexSupply response shape is unexpected: ${message}`)
+	}
+
+	if (parsed.data.length !== queries.length) {
+		throw new Error(
+			`IndexSupply returned ${parsed.data.length} results for ${queries.length} queries`,
+		)
+	}
+
+	const duration = performance.now() - startTime
+	if (env.LOG_LEVEL === 'info')
+		console.log('[IndexSupply] Batch completed:', {
+			duration: `${duration.toFixed(0)}ms`,
+			results: parsed.data.map((r) => r.rows.length),
+		})
+
+	return parsed.data as {
+		[K in keyof T]: z.infer<typeof responseSchema>[number]
+	}
 }

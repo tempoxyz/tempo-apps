@@ -23,7 +23,11 @@ export function DataGrid(props: DataGrid.Props) {
 
 	const gridTemplateColumns = activeColumns
 		.map((col) => {
-			if (col.width) return `${col.width}px`
+			if (typeof col.width === 'number') return `${col.width}px`
+			if (typeof col.width === 'string')
+				return col.minWidth
+					? `minmax(${col.minWidth}px, ${col.width})`
+					: col.width
 			if (col.minWidth) return `minmax(${col.minWidth}px, auto)`
 			return 'auto'
 		})
@@ -92,7 +96,7 @@ export function DataGrid(props: DataGrid.Props) {
 													<div
 														key={key}
 														className={cx(
-															'px-[10px] py-[12px] flex items-start',
+															'px-[10px] py-[12px] flex items-start min-h-[48px]',
 															'text-primary',
 															isFirstColumn && 'pl-[16px]',
 															isLastColumn && 'pr-[16px]',
@@ -148,7 +152,7 @@ export namespace DataGrid {
 		label: React.ReactNode
 		align?: 'start' | 'end'
 		minWidth?: number
-		width?: number
+		width?: number | `${number}fr`
 	}
 
 	export interface RowLink {
