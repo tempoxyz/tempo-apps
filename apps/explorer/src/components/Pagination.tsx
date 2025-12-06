@@ -21,7 +21,7 @@ export function Pagination(props: Pagination.Props) {
 		hideOnSinglePage = true,
 	} = props
 
-	const compact = compact_ ?? totalPages > 999
+	const compact = compact_ || totalPages > 999
 
 	// TODO: better pluralization
 	const itemsLabel =
