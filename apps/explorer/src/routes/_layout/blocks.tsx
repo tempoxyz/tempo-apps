@@ -5,9 +5,12 @@ import type { Block } from 'viem'
 import { useBlock, useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { Pagination } from '#components/Pagination.tsx'
-import { FormattedTimestamp, useTimeFormat } from '#components/TimeFormat.tsx'
-import { TruncatedHash } from '#components/TruncatedHash.tsx'
+import { TruncatedHash } from '#components/transaction/TruncatedHash'
+import { Pagination } from '#components/ui/Pagination'
+import {
+	FormattedTimestamp,
+	useTimeFormat,
+} from '#components/ui/TimeFormat.tsx'
 import { cx } from '#cva.config.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 import Play from '~icons/lucide/play'
@@ -60,9 +63,8 @@ export const Route = createFileRoute('/_layout/blocks')({
 		live: z.prefault(z.coerce.boolean(), true),
 	}),
 	loaderDeps: ({ search: { page, live } }) => ({ page, live }),
-	loader: async ({ deps, context }) => {
-		return context.queryClient.ensureQueryData(blocksQueryOptions(deps.page))
-	},
+	loader: async ({ deps, context }) =>
+		context.queryClient.ensureQueryData(blocksQueryOptions(deps.page)),
 })
 
 function RouteComponent() {

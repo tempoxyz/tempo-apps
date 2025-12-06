@@ -1,6 +1,8 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
+import { ProgressLine } from '#components/ui/ProgressLine'
+import { RelativeTime } from '#components/ui/RelativeTime'
 import { cx } from '#cva.config'
 import { HexFormatter } from '#lib/formatting'
 import type {
@@ -10,8 +12,6 @@ import type {
 	TokenSearchResult,
 } from '#routes/api/search'
 import ArrowRight from '~icons/lucide/arrow-right'
-import { ProgressLine } from './ProgressLine'
-import { RelativeTime } from './RelativeTime'
 
 export function ExploreInput(props: ExploreInput.Props) {
 	const {

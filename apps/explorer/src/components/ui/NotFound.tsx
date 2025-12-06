@@ -1,6 +1,6 @@
 import { Link, useMatch } from '@tanstack/react-router'
 import { Hex } from 'ox'
-import { apostrophe } from '#chars'
+import { apostrophe } from '#lib/chars'
 
 export function NotFound() {
 	const txMatch = useMatch({

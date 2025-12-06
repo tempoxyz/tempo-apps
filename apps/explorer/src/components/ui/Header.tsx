@@ -6,9 +6,9 @@ import {
 } from '@tanstack/react-router'
 import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
+import { ExploreInput } from '#components/ui/ExploreInput'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
-import { ExploreInput } from './ExploreInput'
 
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
@@ -105,7 +105,6 @@ export namespace Header {
 			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
-					<span className="@min-[1240px]:inline hidden">Block </span>
 					<span
 						ref={ref}
 						className="text-primary font-medium tabular-nums min-w-[6ch] inline-block"

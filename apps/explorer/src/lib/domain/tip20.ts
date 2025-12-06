@@ -1,9 +1,8 @@
 import type { Address } from 'ox'
+import { Abis } from 'tempo.ts/viem'
+import { Actions } from 'tempo.ts/wagmi'
 import { type Log, parseEventLogs } from 'viem'
-import { Abis } from 'viem/tempo'
-import { Actions } from 'wagmi/tempo'
-import type { Config } from 'wagmi'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { config } from '#wagmi.config'
 
 const abi = Object.values(Abis).flat()
 
@@ -28,13 +27,8 @@ export async function metadataFromLogs(
 		.map(({ address }) => address)
 		.filter(isTip20Address)
 
-	const config = getWagmiConfig()
-
-	// TODO: investigate & consider batch/multicall
 	const metadataResults = await Promise.all(
-		tip20Addresses.map((token) =>
-			Actions.token.getMetadata(config as Config, { token }),
-		),
+		tip20Addresses.map((token) => Actions.token.getMetadata(config, { token })),
 	)
 	const map = new Map<string, Metadata>()
 	for (const [index, address] of tip20Addresses.entries())

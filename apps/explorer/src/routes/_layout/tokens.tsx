@@ -1,16 +1,16 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import * as z from 'zod/mini'
-import { DataGrid } from '#components/DataGrid'
-import { Sections } from '#components/Sections'
+import { DataGrid } from '#components/ui/DataGrid'
+import { Sections } from '#components/ui/Sections'
 import {
 	FormattedTimestamp,
 	TimeColumnHeader,
 	useTimeFormat,
-} from '#components/TimeFormat'
+} from '#components/ui/TimeFormat'
 import { HexFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
-import { fetchTokens, type Token } from '#lib/tokens.server'
+import { fetchTokens, type Token } from '#lib/server/tokens.server'
 
 const TOKENS_PER_PAGE = 12
 

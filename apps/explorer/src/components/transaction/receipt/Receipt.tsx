@@ -1,11 +1,11 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import { useState } from 'react'
-import { EventDescription } from '#components/EventDescription'
+import { EventDescription } from '#components/transaction/EventDescription'
+import { ReceiptMark } from '#components/transaction/receipt/ReceiptMark'
+import type { KnownEvent } from '#lib/domain/known-events'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
-import type { KnownEvent } from '#lib/known-events'
-import { ReceiptMark } from './ReceiptMark'
 
 export function Receipt(props: Receipt.Props) {
 	const {

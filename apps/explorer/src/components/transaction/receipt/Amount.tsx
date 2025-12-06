@@ -1,8 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import { type Address, Value } from 'ox'
 import { Hooks } from 'tempo.ts/wagmi'
+import { isTip20Address } from '#lib/domain/tip20.ts'
 import { PriceFormatter } from '#lib/formatting.ts'
-import { isTip20Address } from '#lib/tip20.ts'
 
 export function Amount(props: Amount.Props) {
 	const { value, token, decimals, symbol } = props

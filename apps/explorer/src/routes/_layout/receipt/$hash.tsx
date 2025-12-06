@@ -5,12 +5,12 @@ import { createFileRoute, notFound, rootRouteId } from '@tanstack/react-router'
 import { Hex, Json, Value } from 'ox'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { NotFound } from '#components/NotFound'
-import { Receipt } from '#components/Receipt/Receipt'
+import { Receipt } from '#components/transaction/receipt/Receipt'
+import { NotFound } from '#components/ui/NotFound'
+import { parseKnownEvents } from '#lib/domain/known-events'
+import { LineItems } from '#lib/domain/receipt'
+import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
-import { parseKnownEvents } from '#lib/known-events'
-import { LineItems } from '#lib/receipt'
-import * as Tip20 from '#lib/tip20'
 import { getConfig } from '#wagmi.config'
 
 function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
@@ -206,9 +206,6 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			},
 		},
 	},
-	validateSearch: z.object({
-		r: z.optional(z.string()),
-	}).parse,
 	params: z.object({
 		hash: z.pipe(
 			z.string(),

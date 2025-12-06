@@ -200,4 +200,28 @@ export namespace PriceFormatter {
 		if (number > 0 && number < 0.01) return '<0.01'
 		return amountFormatter.format(number)
 	}
+
+	export function formatNativeAmount(
+		value: bigint | undefined,
+		decimals: number,
+		symbol: string,
+	) {
+		if (value === undefined) return '—'
+		const decimalString = Value.format(value, decimals)
+		const formatted = PriceFormatter.formatAmount(decimalString)
+		return `${formatted} ${symbol}`
+	}
+	export function formatGasValue(value?: bigint, digits = 9) {
+		if (value === undefined) return '—'
+		const string = value.toString()
+		return string.length >= digits ? string : string.padStart(digits, '0')
+	}
+}
+
+export namespace NumberFormatter {
+	export function formatBlockNumber(value?: bigint) {
+		if (!value) return '—'
+		const base = value.toString()
+		return base.padStart(12, '0')
+	}
 }

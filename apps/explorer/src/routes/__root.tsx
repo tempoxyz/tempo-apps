@@ -11,8 +11,8 @@ import {
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { useEffect } from 'react'
 import { WagmiProvider } from 'wagmi'
-import { ErrorBoundary } from '#components/ErrorBoundary'
-import { ProgressLine } from '#components/ProgressLine'
+import { ErrorBoundary } from '#components/ui/ErrorBoundary'
+import { ProgressLine } from '#components/ui/ProgressLine'
 import { config, persister, queryClient } from '#wagmi.config'
 import css from './styles.css?url'
 

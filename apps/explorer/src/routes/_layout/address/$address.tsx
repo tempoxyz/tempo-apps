@@ -6,7 +6,6 @@ import {
 } from '@tanstack/react-query'
 import {
 	createFileRoute,
-	Link,
 	notFound,
 	rootRouteId,
 	stripSearchParams,
@@ -14,44 +13,45 @@ import {
 	useNavigate,
 	useRouter,
 } from '@tanstack/react-router'
-import { Address, Hex, Value } from 'ox'
+import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
-import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
+import type { RpcTransaction as Transaction } from 'viem'
 import { formatUnits, isHash } from 'viem'
 import { useBlock } from 'wagmi'
 import { getBlock, getChainId, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { AccountCard } from '#components/Account.tsx'
-import { ContractReader } from '#components/Contract/Read.tsx'
-import { DataGrid } from '#components/DataGrid.tsx'
-import { EventDescription } from '#components/EventDescription.tsx'
-import { NotFound } from '#components/NotFound'
-import { Sections } from '#components/Sections'
+import { AccountCard } from '#components/address/Account.tsx'
+import { ContractReader } from '#components/contract/Read.tsx'
 import {
-	FormattedTimestamp,
+	BatchTransactionDataContext,
+	type TransactionData,
+	TransactionDescription,
+	TransactionTimestamp,
+	TransactionTotal,
+	useTransactionDataFromBatch,
+} from '#components/transaction/TransactionRow.tsx'
+import { TruncatedHash } from '#components/transaction/TruncatedHash'
+import { DataGrid } from '#components/ui/DataGrid.tsx'
+import { NotFound } from '#components/ui/NotFound'
+import { Sections } from '#components/ui/Sections'
+import {
 	TimeColumnHeader,
 	type TimeFormat,
 	useTimeFormat,
-} from '#components/TimeFormat'
-import { TruncatedHash } from '#components/TruncatedHash.tsx'
+} from '#components/ui/TimeFormat'
 import { cx } from '#cva.config.ts'
-import * as AccountServer from '#lib/account.server.ts'
 import {
 	type ContractInfo,
 	extractContractAbi,
 	getContractBytecode,
 	getContractInfo,
-} from '#lib/contracts.ts'
+} from '#lib/domain/contracts'
+import { parseKnownEvents } from '#lib/domain/known-events'
+import * as Tip20 from '#lib/domain/tip20'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
-import {
-	type KnownEvent,
-	type KnownEventPart,
-	parseKnownEvents,
-} from '#lib/known-events'
-
-import * as Tip20 from '#lib/tip20'
+import * as AccountServer from '#lib/server/account.server.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 
 const defaultSearchValues = {
@@ -62,23 +62,6 @@ const defaultSearchValues = {
 
 type TabValue = 'history' | 'assets' | 'contract'
 
-type TxData = {
-	receipt: TransactionReceipt
-	block: Awaited<ReturnType<typeof getBlock>>
-	knownEvents: KnownEvent[]
-}
-
-type BatchTransactionDataContextValue = {
-	transactionDataMap: Map<Hex.Hex, TxData>
-	isLoading: boolean
-}
-
-const BatchTransactionDataContext =
-	React.createContext<BatchTransactionDataContextValue>({
-		transactionDataMap: new Map(),
-		isLoading: true,
-	})
-
 function useBatchTransactionData(transactions: Transaction[]) {
 	const hashes = React.useMemo(
 		() => transactions.map((tx) => tx.hash).filter(isHash),
@@ -88,7 +71,7 @@ function useBatchTransactionData(transactions: Transaction[]) {
 	const queries = useQueries({
 		queries: hashes.map((hash) => ({
 			queryKey: ['tx-data-batch', hash],
-			queryFn: async (): Promise<TxData | null> => {
+			queryFn: async (): Promise<TransactionData | null> => {
 				const cfg = getConfig()
 				const receipt = await getTransactionReceipt(cfg, { hash })
 				const [block, getTokenMetadata] = await Promise.all([
@@ -107,7 +90,7 @@ function useBatchTransactionData(transactions: Transaction[]) {
 	})
 
 	const transactionDataMap = React.useMemo(() => {
-		const map = new Map<Hex.Hex, TxData>()
+		const map = new Map<Hex.Hex, TransactionData>()
 		for (let index = 0; index < hashes.length; index++) {
 			const data = queries[index]?.data
 			if (data) map.set(hashes[index], data)
@@ -118,12 +101,6 @@ function useBatchTransactionData(transactions: Transaction[]) {
 	const isLoading = queries.some((q) => q.isLoading)
 
 	return { transactionDataMap, isLoading }
-}
-
-function useTxDataFromBatch(hash: Hex.Hex) {
-	return React.useContext(BatchTransactionDataContext).transactionDataMap.get(
-		hash,
-	)
 }
 
 type TransactionQuery = {
@@ -218,6 +195,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 						code: contractBytecode,
 						abi: contractAbi,
 						category: 'utility',
+						address,
 					}
 				}
 			}
@@ -263,7 +241,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 function RouteComponent() {
 	const navigate = useNavigate()
-	const route = useRouter()
+	const router = useRouter()
 	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, limit } = Route.useSearch()
@@ -310,9 +288,20 @@ function RouteComponent() {
 		// Only preload for history tab (transaction pagination)
 		if (tab !== 'history') return
 		// preload next page only to reduce initial load overhead
-		const nextPage = page + 1
-		route.preloadRoute({ to: '.', search: { page: nextPage, tab, limit } })
-	}, [route, page, tab, limit])
+		async function preload() {
+			try {
+				const nextPage = page + 1
+				router.preloadRoute({
+					to: '.',
+					search: { page: nextPage, tab, limit },
+				})
+			} catch (error) {
+				console.error('Preload error (non-blocking):', error)
+			}
+		}
+
+		preload()
+	}, [page, router, tab, limit])
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
@@ -779,7 +768,7 @@ function TransactionRowTime(props: {
 	format: TimeFormat
 }) {
 	const { transaction, format } = props
-	const batchData = useTxDataFromBatch(transaction.hash)
+	const batchData = useTransactionDataFromBatch(transaction.hash)
 
 	if (!batchData?.block) {
 		return <span className="text-tertiary">—</span>
@@ -799,7 +788,7 @@ function TransactionRowDescription(props: {
 	accountAddress: Address.Address
 }) {
 	const { transaction, accountAddress } = props
-	const batchData = useTxDataFromBatch(transaction.hash)
+	const batchData = useTransactionDataFromBatch(transaction.hash)
 
 	if (!batchData) return <span className="text-tertiary">—</span>
 	if (!batchData.knownEvents.length) {
@@ -823,7 +812,7 @@ function TransactionRowDescription(props: {
 
 function TransactionRowFee(props: { transaction: Transaction }) {
 	const { transaction } = props
-	const batchData = useTxDataFromBatch(transaction.hash)
+	const batchData = useTransactionDataFromBatch(transaction.hash)
 
 	if (!batchData?.receipt) return <span className="text-tertiary">—</span>
 
@@ -933,122 +922,5 @@ function AssetValue(props: {
 					format: 'short',
 				})}
 		</span>
-	)
-}
-
-export function TransactionFee(props: { receipt?: TransactionReceipt }) {
-	const { receipt } = props
-
-	if (!receipt) return <span className="text-tertiary">…</span>
-
-	const fee = Number(
-		Value.format(receipt.effectiveGasPrice * receipt.gasUsed, 18),
-	)
-
-	return <span className="text-tertiary">{PriceFormatter.format(fee)}</span>
-}
-
-export function TransactionDescription(props: {
-	transaction: Transaction
-	knownEvents: Array<KnownEvent>
-	transactionReceipt: TransactionReceipt | undefined
-	accountAddress: Address.Address
-}) {
-	const { knownEvents, accountAddress } = props
-
-	const transformEvent = React.useCallback(
-		(event: KnownEvent) => getPerspectiveEvent(event, accountAddress),
-		[accountAddress],
-	)
-
-	return (
-		<EventDescription.ExpandGroup
-			events={knownEvents}
-			seenAs={accountAddress}
-			transformEvent={transformEvent}
-		/>
-	)
-}
-
-export function getPerspectiveEvent(
-	event: KnownEvent,
-	accountAddress?: Address.Address,
-) {
-	if (!accountAddress) return event
-	if (event.type !== 'send') return event
-	const toMatches =
-		event.meta?.to && Address.isEqual(event.meta.to, accountAddress)
-	const fromMatches =
-		event.meta?.from && Address.isEqual(event.meta.from, accountAddress)
-	if (!toMatches || fromMatches) return event
-
-	const sender = event.meta?.from
-	const updatedParts = event.parts.map((part) => {
-		if (part.type === 'action') return { ...part, value: 'Received' }
-		if (part.type === 'text' && part.value.toLowerCase() === 'to')
-			return { ...part, value: 'from' }
-		if (part.type === 'account' && sender) return { ...part, value: sender }
-		return part
-	})
-	return { ...event, parts: updatedParts }
-}
-
-export function TransactionTimestamp(props: {
-	timestamp: bigint
-	link?: string
-	format?: TimeFormat
-}) {
-	const { timestamp, link, format = 'relative' } = props
-
-	return (
-		<div className="text-nowrap">
-			{link ? (
-				<Link to={link} className="text-tertiary">
-					<FormattedTimestamp timestamp={timestamp} format={format} />
-				</Link>
-			) : (
-				<FormattedTimestamp
-					timestamp={timestamp}
-					format={format}
-					className="text-tertiary"
-				/>
-			)}
-		</div>
-	)
-}
-
-export function TransactionTotal(props: { transaction: Transaction }) {
-	const { transaction } = props
-	const batchData = useTxDataFromBatch(transaction.hash)
-
-	const amountParts = React.useMemo(() => {
-		if (!batchData) return
-
-		return batchData.knownEvents.flatMap((event) =>
-			event.parts.filter(
-				(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
-					part.type === 'amount',
-			),
-		)
-	}, [batchData])
-	if (!amountParts?.length) return <>$0.00</>
-
-	const totalValue = amountParts.reduce((sum, part) => {
-		const decimals = part.value.decimals ?? 6
-		return sum + Number(Value.format(part.value.value, decimals))
-	}, 0)
-
-	if (totalValue === 0) {
-		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
-		if (value === 0n) return <span className="text-tertiary">—</span>
-		return (
-			<span className="text-primary">
-				{PriceFormatter.format(value, { decimals: 18, format: 'short' })}
-			</span>
-		)
-	}
-
-	return (
-		<span className="text-primary">{PriceFormatter.format(totalValue)}</span>
 	)
 }

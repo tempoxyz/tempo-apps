@@ -6,22 +6,28 @@ import {
 	redirect,
 	rootRouteId,
 } from '@tanstack/react-router'
-import { Hex, Value } from 'ox'
+import { Hex } from 'ox'
 import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
 import type { Block as BlockType } from 'viem'
 import { decodeFunctionData, isHex, zeroAddress } from 'viem'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
-import { Address as AddressLink } from '#components/Address.tsx'
-import { CopyButton } from '#components/CopyButton.tsx'
-import { EventDescription } from '#components/EventDescription.tsx'
-import { NotFound } from '#components/NotFound.tsx'
+import { Address as AddressLink } from '#components/address/Address'
+import { EventDescription } from '#components/transaction/EventDescription'
+import { TruncatedHash } from '#components/transaction/TruncatedHash'
+import { CopyButton } from '#components/ui/CopyButton.tsx'
+import { NotFound } from '#components/ui/NotFound'
 import { cx } from '#cva.config.ts'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
-import { type KnownEvent, parseKnownEvents } from '#lib/known-events.ts'
-import { fetchLatestBlock } from '#lib/latest-block.server'
-import * as Tip20 from '#lib/tip20.ts'
+import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
+import * as Tip20 from '#lib/domain/tip20.ts'
+import {
+	DateFormatter,
+	HexFormatter,
+	NumberFormatter,
+	PriceFormatter,
+} from '#lib/formatting.ts'
+import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
 import { getConfig } from '#wagmi.config.ts'
 import ArrowUp10Icon from '~icons/lucide/arrow-up-10'
 import ChevronDown from '~icons/lucide/chevron-down'
@@ -38,100 +44,6 @@ type BlockTransaction = BlockWithTransactions['transactions'][number]
 interface TransactionTypeResult {
 	type: 'system' | 'sub-block' | 'fee-token' | 'regular'
 	label: string
-}
-
-function getTransactionType(
-	transaction: BlockTransaction,
-): TransactionTypeResult {
-	// System transactions have from address as 0x0000...0000
-	if (transaction.from === zeroAddress) {
-		const systemTxNames: Record<string, string> = {
-			'0x3000000000000000000000000000000000000000': 'Rewards Registry',
-			'0xfeec000000000000000000000000000000000000': 'Fee Manager',
-			'0xdec0000000000000000000000000000000000000': 'Stablecoin Exchange',
-			'0x0000000000000000000000000000000000000000': 'Subblock Metadata',
-		}
-		const to = transaction.to || ''
-		const name = systemTxNames[to] || 'System'
-		return { type: 'system', label: name }
-	}
-
-	// Check for sub-block transactions (nonce starts with 0x5b)
-	const nonceHex = transaction.nonce?.toString(16).padStart(8, '0') || ''
-	if (nonceHex.startsWith('5b'))
-		return { type: 'sub-block', label: 'Sub-block' }
-
-	// Check for fee token transactions (type 0x76)
-	// @ts-expect-error - check transaction type field
-	if (transaction.type === '0x76' || transaction.type === 118) {
-		return { type: 'fee-token', label: 'Fee Token' }
-	}
-
-	return { type: 'regular', label: 'Regular' }
-}
-
-function blockDetailQueryOptions(blockRef: BlockIdentifier) {
-	return queryOptions({
-		queryKey: ['block-detail', blockRef],
-		queryFn: async () => {
-			const wagmiConfig = getConfig()
-			const block = await getBlock(wagmiConfig, {
-				includeTransactions: true,
-				...(blockRef.kind === 'hash'
-					? { blockHash: blockRef.blockHash }
-					: { blockNumber: blockRef.blockNumber }),
-			})
-
-			// Fetch known events for each transaction
-			const knownEventsByHash = await fetchKnownEventsForTransactions(
-				block.transactions as BlockTransaction[],
-				wagmiConfig,
-			)
-
-			return {
-				blockRef,
-				block: block as BlockWithTransactions,
-				knownEventsByHash,
-			}
-		},
-	})
-}
-
-async function fetchKnownEventsForTransactions(
-	transactions: BlockTransaction[],
-	wagmiConfig: ReturnType<typeof getConfig>,
-): Promise<Record<Hex.Hex, KnownEvent[]>> {
-	const { getTransactionReceipt } = await import('wagmi/actions')
-
-	const entries = await Promise.all(
-		transactions.map(async (transaction) => {
-			if (!transaction?.hash)
-				return [transaction.hash ?? 'unknown', []] as const
-
-			try {
-				const receipt = await getTransactionReceipt(wagmiConfig, {
-					hash: transaction.hash,
-				})
-				const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
-				const events = parseKnownEvents(receipt, {
-					transaction,
-					getTokenMetadata,
-				})
-
-				return [transaction.hash, events] as const
-			} catch (error) {
-				console.error('Failed to load transaction description', {
-					hash: transaction.hash,
-					error,
-				})
-				return [transaction.hash, []] as const
-			}
-		}),
-	)
-
-	return Object.fromEntries(
-		entries.filter(([hash]) => Boolean(hash)),
-	) as Record<Hex.Hex, KnownEvent[]>
 }
 
 export const Route = createFileRoute('/_layout/block/$id')({
@@ -245,12 +157,106 @@ function RouteComponent() {
 	)
 }
 
+function getTransactionType(
+	transaction: BlockTransaction,
+): TransactionTypeResult {
+	// System transactions have from address as 0x0000...0000
+	if (transaction.from === zeroAddress) {
+		const systemTxNames: Record<string, string> = {
+			'0x3000000000000000000000000000000000000000': 'Rewards Registry',
+			'0xfeec000000000000000000000000000000000000': 'Fee Manager',
+			'0xdec0000000000000000000000000000000000000': 'Stablecoin Exchange',
+			'0x0000000000000000000000000000000000000000': 'Subblock Metadata',
+		}
+		const to = transaction.to || ''
+		const name = systemTxNames[to] || 'System'
+		return { type: 'system', label: name }
+	}
+
+	// Check for sub-block transactions (nonce starts with 0x5b)
+	const nonceHex = transaction.nonce?.toString(16).padStart(8, '0') || ''
+	if (nonceHex.startsWith('5b'))
+		return { type: 'sub-block', label: 'Sub-block' }
+
+	// Check for fee token transactions (type 0x76)
+	// @ts-expect-error - check transaction type field
+	if (transaction.type === '0x76' || transaction.type === 118) {
+		return { type: 'fee-token', label: 'Fee Token' }
+	}
+
+	return { type: 'regular', label: 'Regular' }
+}
+
+function blockDetailQueryOptions(blockRef: BlockIdentifier) {
+	return queryOptions({
+		queryKey: ['block-detail', blockRef],
+		queryFn: async () => {
+			const wagmiConfig = getConfig()
+			const block = await getBlock(wagmiConfig, {
+				includeTransactions: true,
+				...(blockRef.kind === 'hash'
+					? { blockHash: blockRef.blockHash }
+					: { blockNumber: blockRef.blockNumber }),
+			})
+
+			// Fetch known events for each transaction
+			const knownEventsByHash = await fetchKnownEventsForTransactions(
+				block.transactions as BlockTransaction[],
+				wagmiConfig,
+			)
+
+			return {
+				blockRef,
+				block: block as BlockWithTransactions,
+				knownEventsByHash,
+			}
+		},
+	})
+}
+
+async function fetchKnownEventsForTransactions(
+	transactions: BlockTransaction[],
+	wagmiConfig: ReturnType<typeof getConfig>,
+): Promise<Record<Hex.Hex, KnownEvent[]>> {
+	const { getTransactionReceipt } = await import('wagmi/actions')
+
+	const entries = await Promise.all(
+		transactions.map(async (transaction) => {
+			if (!transaction?.hash)
+				return [transaction.hash ?? 'unknown', []] as const
+
+			try {
+				const receipt = await getTransactionReceipt(wagmiConfig, {
+					hash: transaction.hash,
+				})
+				const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
+				const events = parseKnownEvents(receipt, {
+					transaction,
+					getTokenMetadata,
+				})
+
+				return [transaction.hash, events] as const
+			} catch (error) {
+				console.error('Failed to load transaction description', {
+					hash: transaction.hash,
+					error,
+				})
+				return [transaction.hash, []] as const
+			}
+		}),
+	)
+
+	return Object.fromEntries(
+		entries.filter(([hash]) => Boolean(hash)),
+	) as Record<Hex.Hex, KnownEvent[]>
+}
+
 function BlockSummaryCard(props: BlockSummaryCardProps) {
 	const { block, latestBlockNumber, requestedNumber } = props
 	const [showAdvanced, setShowAdvanced] = React.useState(true)
 
 	const blockNumberValue = block.number ?? requestedNumber
-	const formattedNumber = formatBlockNumber(blockNumberValue)
+	const formattedNumber = NumberFormatter.formatBlockNumber(blockNumberValue)
 	const leadingZeros = formattedNumber.match(/^0+/)?.[0] ?? ''
 	const trailingDigits = formattedNumber.slice(leadingZeros.length)
 	const confirmations =
@@ -305,7 +311,13 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 						/>
 					</div>
 					<div className="text-sm text-primary wrap-break-word">
-						{block.hash ?? '—'}
+						{block.hash && (
+							<TruncatedHash
+								hash={block.hash}
+								minChars={6}
+								className="tabular-nums"
+							/>
+						)}
 					</div>
 
 					<div className="flex items-center gap-[6px] text-sm justify-between">
@@ -319,7 +331,11 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 							className="text-accent"
 							title={block.parentHash}
 						>
-							{HexFormatter.shortenHex(block.parentHash, 6)}
+							<TruncatedHash
+								hash={block.parentHash}
+								minChars={6}
+								className="tabular-nums"
+							/>
 						</Link>
 					</div>
 				</div>
@@ -327,9 +343,9 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 				<div className="px-[18px] py-[12px] flex items-center justify-between text-sm">
 					<span className="text-tertiary">Miner</span>
 					{block.miner ? (
-						<AddressLink
-							address={block.miner}
-							chars={4}
+						<TruncatedHash
+							hash={block.miner}
+							minChars={6}
 							className="text-accent"
 						/>
 					) : (
@@ -380,8 +396,8 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 									/>
 								</div>
 								<div className="flex items-center justify-between text-[11px] text-tertiary uppercase tracking-[0.25em] tabular-nums">
-									<span>{formatGasValue(block.gasUsed)}</span>
-									<span>{formatGasValue(block.gasLimit)}</span>
+									<span>{PriceFormatter.formatGasValue(block.gasUsed)}</span>
+									<span>{PriceFormatter.formatGasValue(block.gasLimit)}</span>
 								</div>
 							</div>
 
@@ -393,20 +409,15 @@ function BlockSummaryCard(props: BlockSummaryCardProps) {
 										className="flex items-center justify-between text-primary text-sm lowercase"
 									>
 										<span className="text-xs text-tertiary">{root.label}</span>
-										<span
-											className="tabular-nums flex-1 text-right"
-											title={root.value}
-										>
-											{root.value
-												? HexFormatter.shortenHex(root.value, 6)
-												: '—'}
-										</span>
-										<CopyButton
-											value={root.value ?? ''}
-											ariaLabel="Copy root"
-											className="ml-2"
-											disabled={!root.value}
-										/>
+										{root.value ? (
+											<TruncatedHash
+												hash={root.value}
+												minChars={6}
+												className="tabular-nums flex-1 text-right"
+											/>
+										) : (
+											<span className="text-tertiary">—</span>
+										)}
 									</div>
 								))}
 							</div>
@@ -503,14 +514,16 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 									/>
 								)
 
-							const amountDisplay = formatNativeAmount(
+							const amountDisplay = PriceFormatter.formatNativeAmount(
 								transaction.value,
 								decimals,
 								symbol,
 							)
 							const fee = getEstimatedFee(transaction)
 							const feeDisplay =
-								fee > 0n ? formatNativeAmount(fee, GAS_DECIMALS, symbol) : '—'
+								fee > 0n
+									? PriceFormatter.formatNativeAmount(fee, GAS_DECIMALS, symbol)
+									: '—'
 							const feeOutput = feeDisplay === '—' ? '—' : `(${feeDisplay})`
 							const hashCell = transaction.hash ? (
 								<Link
@@ -750,18 +763,6 @@ function BlockTimeRow(props: {
 	)
 }
 
-function formatBlockNumber(value?: bigint) {
-	if (!value) return '—'
-	const base = value.toString()
-	return base.padStart(12, '0')
-}
-
-function formatGasValue(value?: bigint, digits = 9) {
-	if (value === undefined) return '—'
-	const string = value.toString()
-	return string.length >= digits ? string : string.padStart(digits, '0')
-}
-
 function getGasUsagePercent(block: BlockWithTransactions) {
 	if (!block.gasUsed || !block.gasLimit) return undefined
 	const used = Number(block.gasUsed)
@@ -777,15 +778,4 @@ function getEstimatedFee(transaction: BlockTransaction) {
 			? transaction.maxFeePerGas
 			: 0n)
 	return gasPrice * (transaction.gas ?? 0n)
-}
-
-function formatNativeAmount(
-	value: bigint | undefined,
-	decimals: number,
-	symbol: string,
-) {
-	if (value === undefined) return '—'
-	const decimalString = Value.format(value, decimals)
-	const formatted = PriceFormatter.formatAmount(decimalString)
-	return `${formatted} ${symbol}`
 }

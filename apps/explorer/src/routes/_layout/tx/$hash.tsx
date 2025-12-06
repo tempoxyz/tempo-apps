@@ -13,19 +13,19 @@ import type { Log, TransactionReceipt } from 'viem'
 import { useChains } from 'wagmi'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { DataGrid } from '#components/DataGrid'
-import { DecodedCalldata } from '#components/DecodedCalldata'
-import { EventDescription } from '#components/EventDescription'
-import { NotFound } from '#components/NotFound'
-import { RawTransaction } from '#components/Receipt/RawTransaction'
-import { Sections } from '#components/Sections'
-import { TransactionCard } from '#components/TransactionCard'
+import { DecodedCalldata } from '#components/transaction/DecodedCalldata'
+import { EventDescription } from '#components/transaction/EventDescription'
+import { RawTransaction } from '#components/transaction/receipt/RawTransaction'
+import { TransactionCard } from '#components/transaction/TransactionCard'
+import { DataGrid } from '#components/ui/DataGrid'
+import { NotFound } from '#components/ui/NotFound'
+import { Sections } from '#components/ui/Sections'
 import { cx } from '#cva.config.ts'
+import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
+import { type FeeBreakdownItem, getFeeBreakdown } from '#lib/domain/receipt'
+import * as Tip20 from '#lib/domain/tip20'
 import { HexFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
-import { type KnownEvent, parseKnownEvents } from '#lib/known-events'
-import { type FeeBreakdownItem, getFeeBreakdown } from '#lib/receipt'
-import * as Tip20 from '#lib/tip20'
 import { zHash } from '#lib/zod'
 import { getConfig } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
@@ -41,34 +41,8 @@ function txQueryOptions(params: { hash: Hex.Hex }) {
 	})
 }
 
-async function fetchTxData(params: { hash: Hex.Hex }) {
-	const config = getConfig()
-	const receipt = await getTransactionReceipt(config, { hash: params.hash })
-
-	const [block, transaction, getTokenMetadata] = await Promise.all([
-		getBlock(config, { blockHash: receipt.blockHash }),
-		getTransaction(config, { hash: receipt.transactionHash }),
-		Tip20.metadataFromLogs(receipt.logs),
-	])
-
-	const knownEvents = parseKnownEvents(receipt, {
-		transaction,
-		getTokenMetadata,
-	})
-
-	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
-
-	return {
-		block,
-		feeBreakdown,
-		knownEvents,
-		receipt,
-		transaction,
-	}
-}
-
 export const Route = createFileRoute('/_layout/tx/$hash')({
-	component: Component,
+	component: RouteComponent,
 	notFoundComponent: NotFound,
 	headers: () => ({
 		...(import.meta.env.PROD
@@ -88,12 +62,9 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
 	loader: async ({ params, context }) => {
-		const parsedParams = z.object({ hash: zHash() }).safeParse(params)
-		if (!parsedParams.success) throw notFound()
-
 		try {
 			return await context.queryClient.ensureQueryData(
-				txQueryOptions({ hash: parsedParams.data.hash }),
+				txQueryOptions({ hash: params.hash }),
 			)
 		} catch (error) {
 			console.error(error)
@@ -110,7 +81,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	}),
 })
 
-function Component() {
+function RouteComponent() {
 	const navigate = useNavigate()
 	const { hash } = Route.useParams()
 	const { tab } = Route.useSearch()
@@ -212,6 +183,32 @@ function Component() {
 			/>
 		</div>
 	)
+}
+
+async function fetchTxData(params: { hash: Hex.Hex }) {
+	const config = getConfig()
+	const receipt = await getTransactionReceipt(config, { hash: params.hash })
+
+	const [block, transaction, getTokenMetadata] = await Promise.all([
+		getBlock(config, { blockHash: receipt.blockHash }),
+		getTransaction(config, { hash: receipt.transactionHash }),
+		Tip20.metadataFromLogs(receipt.logs),
+	])
+
+	const knownEvents = parseKnownEvents(receipt, {
+		transaction,
+		getTokenMetadata,
+	})
+
+	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
+
+	return {
+		block,
+		feeBreakdown,
+		knownEvents,
+		receipt,
+		transaction,
+	}
 }
 
 function OverviewSection(props: {

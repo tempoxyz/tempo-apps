@@ -2,7 +2,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import * as IDX from 'idxs'
 import { Address, Hex } from 'ox'
 import tokensIndex from '#data/tokens-index.json' with { type: 'json' }
-import { isTip20Address } from '#lib/tip20'
+import { isTip20Address } from '#lib/domain/tip20'
 import { config } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({

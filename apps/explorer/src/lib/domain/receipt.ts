@@ -1,5 +1,6 @@
 import { Address, Hex } from 'ox'
-import { TokenRole } from 'ox/tempo'
+import { TokenRole } from 'tempo.ts/ox'
+import { Abis, Addresses } from 'tempo.ts/viem'
 import {
 	type AbiEvent,
 	type Log,
@@ -7,7 +8,6 @@ import {
 	type TransactionReceipt,
 	zeroAddress,
 } from 'viem'
-import { Abis, Addresses } from 'viem/tempo'
 import type * as Tip20 from '#lib/domain/tip20'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 

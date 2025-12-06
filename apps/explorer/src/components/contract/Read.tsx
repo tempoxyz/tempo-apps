@@ -5,8 +5,8 @@ import * as React from 'react'
 import type { Abi, AbiFunction } from 'viem'
 import { decodeFunctionResult, encodeFunctionData } from 'viem'
 import { useCall, useReadContract } from 'wagmi'
-import { ellipsis } from '#chars.ts'
 import { cx } from '#cva.config.ts'
+import { ellipsis } from '#lib/chars'
 import {
 	formatOutputValue,
 	getContractAbi,
@@ -17,7 +17,7 @@ import {
 	getPlaceholder,
 	isArrayType,
 	parseInputValue,
-} from '#lib/contracts.ts'
+} from '#lib/domain/contracts.ts'
 import { useCopy } from '#lib/hooks.ts'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'

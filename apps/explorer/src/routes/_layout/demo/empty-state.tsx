@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
-import { DataGrid } from '#components/DataGrid'
-import { Sections } from '#components/Sections'
+import { DataGrid } from '#components/ui/DataGrid'
+import { Sections } from '#components/ui/Sections'
 import { useMediaQuery } from '#lib/hooks'
 
 function loader() {

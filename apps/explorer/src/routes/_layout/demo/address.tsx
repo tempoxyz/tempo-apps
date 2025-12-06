@@ -4,12 +4,18 @@ import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics } from 'viem'
-import { DataGrid } from '#components/DataGrid'
-import { EventDescription } from '#components/EventDescription'
-import { InfoCard } from '#components/InfoCard'
-import { RelativeTime } from '#components/RelativeTime'
-import { Sections } from '#components/Sections'
-import { TruncatedHash } from '#components/TruncatedHash.tsx'
+import { EventDescription } from '#components/transaction/EventDescription'
+import {
+	getPerspectiveEvent,
+	TransactionFee,
+	TransactionTimestamp,
+	TransactionTotal,
+} from '#components/transaction/TransactionRow.tsx'
+import { TruncatedHash } from '#components/transaction/TruncatedHash'
+import { DataGrid } from '#components/ui/DataGrid'
+import { InfoCard } from '#components/ui/InfoCard'
+import { RelativeTime } from '#components/ui/RelativeTime'
+import { Sections } from '#components/ui/Sections'
 import { cx } from '#cva.config.ts'
 import {
 	accountAddress,
@@ -33,17 +39,11 @@ import {
 	userTokenAddress,
 	validatorTokenAddress,
 } from '#lib/demo'
+import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { useCopy, useMediaQuery } from '#lib/hooks'
-import { type KnownEvent, parseKnownEvents } from '#lib/known-events'
-import {
-	getPerspectiveEvent,
-	TransactionFee,
-	TransactionTimestamp,
-	TransactionTotal,
-} from '#routes/_layout/address/$address'
 import CopyIcon from '~icons/lucide/copy'
 
-type MockTxData = {
+type MockTransactionData = {
 	hash: Hex.Hex
 	transaction: Transaction
 	receipt: TransactionReceipt
@@ -51,8 +51,8 @@ type MockTxData = {
 	knownEvents: KnownEvent[]
 }
 
-function createMockTransactions(): MockTxData[] {
-	const transactions: MockTxData[] = []
+function createMockTransactions(): MockTransactionData[] {
+	const transactions: MockTransactionData[] = []
 
 	// Tx 1: Transfer with memo
 	{
