@@ -127,6 +127,7 @@ function TokensPage() {
 								itemsLabel="tokens"
 								itemsPerPage={TOKENS_PER_PAGE}
 								pagination="simple"
+								emptyState="No tokens found."
 							/>
 						),
 					},

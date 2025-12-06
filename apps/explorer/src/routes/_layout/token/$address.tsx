@@ -652,6 +652,7 @@ function SectionsWrapper(props: {
 							isPending={transfersPending}
 							itemsLabel="transfers"
 							itemsPerPage={limit}
+							emptyState="No transfers found."
 						/>
 					),
 				},
@@ -689,6 +690,7 @@ function SectionsWrapper(props: {
 							isPending={holdersPending}
 							itemsLabel="holders"
 							itemsPerPage={limit}
+							emptyState="No holders found."
 						/>
 					),
 				},

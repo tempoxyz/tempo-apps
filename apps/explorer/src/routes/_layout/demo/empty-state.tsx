@@ -1,6 +1,6 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
-import { DataGrid } from '#comps/DataGrid'
-import { Sections } from '#comps/Sections'
+import { DataGrid } from '#components/DataGrid'
+import { Sections } from '#components/Sections'
 import { useMediaQuery } from '#lib/hooks'
 
 function loader() {
@@ -38,6 +38,7 @@ function Component() {
 								items={() => []}
 								totalItems={0}
 								page={1}
+								isPending={false}
 								itemsLabel="transactions"
 								emptyState="No transactions found."
 							/>

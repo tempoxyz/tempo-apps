@@ -20,6 +20,7 @@ import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$
 import { Route as LayoutReceiptHashRouteImport } from './routes/_layout/receipt/$hash'
 import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
 import { Route as LayoutDemoPaginationRouteImport } from './routes/_layout/demo/pagination'
+import { Route as LayoutDemoEmptyStateRouteImport } from './routes/_layout/demo/empty-state'
 import { Route as LayoutDemoAddressRouteImport } from './routes/_layout/demo/address'
 import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
 import { Route as LayoutAddressAddressRouteImport } from './routes/_layout/address/$address'
@@ -78,6 +79,11 @@ const LayoutDemoPaginationRoute = LayoutDemoPaginationRouteImport.update({
   path: '/demo/pagination',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutDemoEmptyStateRoute = LayoutDemoEmptyStateRouteImport.update({
+  id: '/demo/empty-state',
+  path: '/demo/empty-state',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutDemoAddressRoute = LayoutDemoAddressRouteImport.update({
   id: '/demo/address',
   path: '/demo/address',
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
   '/demo/address': typeof LayoutDemoAddressRoute
+  '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
@@ -117,6 +124,7 @@ export interface FileRoutesByTo {
   '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
   '/demo/address': typeof LayoutDemoAddressRoute
+  '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
@@ -134,6 +142,7 @@ export interface FileRoutesById {
   '/_layout/address/$address': typeof LayoutAddressAddressRoute
   '/_layout/block/$id': typeof LayoutBlockIdRoute
   '/_layout/demo/address': typeof LayoutDemoAddressRoute
+  '/_layout/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/_layout/demo/pagination': typeof LayoutDemoPaginationRoute
   '/_layout/demo/tx': typeof LayoutDemoTxRoute
   '/_layout/receipt/$hash': typeof LayoutReceiptHashRoute
@@ -151,6 +160,7 @@ export interface FileRouteTypes {
     | '/address/$address'
     | '/block/$id'
     | '/demo/address'
+    | '/demo/empty-state'
     | '/demo/pagination'
     | '/demo/tx'
     | '/receipt/$hash'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/address/$address'
     | '/block/$id'
     | '/demo/address'
+    | '/demo/empty-state'
     | '/demo/pagination'
     | '/demo/tx'
     | '/receipt/$hash'
@@ -182,6 +193,7 @@ export interface FileRouteTypes {
     | '/_layout/address/$address'
     | '/_layout/block/$id'
     | '/_layout/demo/address'
+    | '/_layout/demo/empty-state'
     | '/_layout/demo/pagination'
     | '/_layout/demo/tx'
     | '/_layout/receipt/$hash'
@@ -274,6 +286,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDemoPaginationRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/demo/empty-state': {
+      id: '/_layout/demo/empty-state'
+      path: '/demo/empty-state'
+      fullPath: '/demo/empty-state'
+      preLoaderRoute: typeof LayoutDemoEmptyStateRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/demo/address': {
       id: '/_layout/demo/address'
       path: '/demo/address'
@@ -305,6 +324,7 @@ interface LayoutRouteChildren {
   LayoutAddressAddressRoute: typeof LayoutAddressAddressRoute
   LayoutBlockIdRoute: typeof LayoutBlockIdRoute
   LayoutDemoAddressRoute: typeof LayoutDemoAddressRoute
+  LayoutDemoEmptyStateRoute: typeof LayoutDemoEmptyStateRoute
   LayoutDemoPaginationRoute: typeof LayoutDemoPaginationRoute
   LayoutDemoTxRoute: typeof LayoutDemoTxRoute
   LayoutReceiptHashRoute: typeof LayoutReceiptHashRoute
@@ -320,6 +340,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAddressAddressRoute: LayoutAddressAddressRoute,
   LayoutBlockIdRoute: LayoutBlockIdRoute,
   LayoutDemoAddressRoute: LayoutDemoAddressRoute,
+  LayoutDemoEmptyStateRoute: LayoutDemoEmptyStateRoute,
   LayoutDemoPaginationRoute: LayoutDemoPaginationRoute,
   LayoutDemoTxRoute: LayoutDemoTxRoute,
   LayoutReceiptHashRoute: LayoutReceiptHashRoute,
