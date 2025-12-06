@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
-const indexSupplyEndpoint = 'https://api.indexsupply.net/v2/query'
+const indexSupplyEndpoint = 'https://api.tempo.xyz/indexer/query'
 const chainId = 42429
 
 const eventSignature =

@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers'
 import { tempo } from 'tempo.ts/chains'
 import * as z from 'zod/mini'
 
-const endpoint = 'https://api.indexsupply.net/v2/query'
+const endpoint = 'https://api.tempo.xyz/indexer/query'
 const chainId = tempo.id
 const chainCursor = `${chainId}-0`
 

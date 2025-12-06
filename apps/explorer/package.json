@@ -17,6 +17,7 @@
 		"test": "vitest"
 	},
 	"dependencies": {
+		"idxs": "catalog:",
 		"@shazow/whatsabi": "catalog:",
 		"@tailwindcss/vite": "catalog:",
 		"@tanstack/query-async-storage-persister": "catalog:",

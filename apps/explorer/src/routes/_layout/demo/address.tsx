@@ -9,6 +9,7 @@ import { EventDescription } from '#components/EventDescription'
 import { InfoCard } from '#components/InfoCard'
 import { RelativeTime } from '#components/RelativeTime'
 import { Sections } from '#components/Sections'
+import { TruncatedHash } from '#components/TruncatedHash.tsx'
 import { cx } from '#cva.config.ts'
 import {
 	accountAddress,
@@ -37,7 +38,6 @@ import { type KnownEvent, parseKnownEvents } from '#lib/known-events'
 import {
 	getPerspectiveEvent,
 	TransactionFee,
-	TransactionHash,
 	TransactionTimestamp,
 	TransactionTotal,
 } from '#routes/_layout/address/$address'
@@ -1060,12 +1060,15 @@ function Component() {
 													link={`/tx/${tx.hash}`}
 												/>,
 												descriptionCell,
-												<TransactionHash key="hash" hash={tx.hash} />,
+												<TruncatedHash
+													key="hash"
+													hash={tx.hash}
+													minChars={8}
+												/>,
 												<TransactionFee key="fee" receipt={tx.receipt} />,
 												<TransactionTotal
 													key="total"
 													transaction={tx.transaction}
-													knownEvents={knownEvents[tx.hash] ?? []}
 												/>,
 											],
 											link: {
