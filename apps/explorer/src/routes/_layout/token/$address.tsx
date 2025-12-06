@@ -16,17 +16,17 @@ import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import * as z from 'zod/mini'
 import { ContractReader } from '#components/contract/Read'
-import { NotFound } from '#components/layout/NotFound'
-import { Sections } from '#components/layout/Sections'
+import { TruncatedHash } from '#components/transaction/TruncatedHash'
+import { DataGrid } from '#components/ui/DataGrid'
+import { InfoCard } from '#components/ui/InfoCard'
+import { NotFound } from '#components/ui/NotFound'
+import { Sections } from '#components/ui/Sections'
 import {
 	FormattedTimestamp,
 	TimeColumnHeader,
 	type TimeFormat,
 	useTimeFormat,
-} from '#components/TimeFormat'
-import { TruncatedHash } from '#components/transaction/TruncatedHash'
-import { DataGrid } from '#components/ui/DataGrid'
-import { InfoCard } from '#components/ui/InfoCard'
+} from '#components/ui/TimeFormat'
 import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'

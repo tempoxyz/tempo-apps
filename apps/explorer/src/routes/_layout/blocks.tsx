@@ -5,9 +5,12 @@ import type { Block } from 'viem'
 import { useBlock, useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { FormattedTimestamp, useTimeFormat } from '#components/TimeFormat.tsx'
 import { TruncatedHash } from '#components/transaction/TruncatedHash'
 import { Pagination } from '#components/ui/Pagination'
+import {
+	FormattedTimestamp,
+	useTimeFormat,
+} from '#components/ui/TimeFormat.tsx'
 import { cx } from '#cva.config.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 import Play from '~icons/lucide/play'

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { RelativeTime } from '#components/RelativeTime'
+import { RelativeTime } from '#components/ui/RelativeTime'
 
 export type TimeFormat = 'relative' | 'local' | 'utc' | 'unix'
 

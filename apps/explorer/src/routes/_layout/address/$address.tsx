@@ -23,13 +23,6 @@ import { getBlock, getChainId, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/address/Account.tsx'
 import { ContractReader } from '#components/contract/Read'
-import { NotFound } from '#components/layout/NotFound'
-import { Sections } from '#components/layout/Sections'
-import {
-	TimeColumnHeader,
-	type TimeFormat,
-	useTimeFormat,
-} from '#components/TimeFormat'
 import {
 	BatchTransactionDataContext,
 	type TransactionData,
@@ -40,6 +33,13 @@ import {
 } from '#components/transaction/TransactionRow.tsx'
 import { TruncatedHash } from '#components/transaction/TruncatedHash'
 import { DataGrid } from '#components/ui/DataGrid.tsx'
+import { NotFound } from '#components/ui/NotFound'
+import { Sections } from '#components/ui/Sections'
+import {
+	TimeColumnHeader,
+	type TimeFormat,
+	useTimeFormat,
+} from '#components/ui/TimeFormat'
 import { cx } from '#cva.config.ts'
 import {
 	type ContractInfo,

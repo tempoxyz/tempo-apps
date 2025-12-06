@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import * as React from 'react'
-import { Sections } from '#components/layout/Sections'
+import { Sections } from '#components/ui/Sections'
 import { cx } from '#cva.config.ts'
 import { Pagination } from './Pagination'
 
