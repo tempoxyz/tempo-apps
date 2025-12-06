@@ -99,6 +99,9 @@ catalogs:
     idxs:
       specifier: ^0.0.3
       version: 0.0.3
+    kysely:
+      specifier: ^0.28.8
+      version: 0.28.8
     ox:
       specifier: ^0.9.17
       version: 0.9.17
@@ -206,6 +209,9 @@ importers:
       idxs:
         specifier: 'catalog:'
         version: 0.0.3(typescript@5.9.3)
+      kysely:
+        specifier: 'catalog:'
+        version: 0.28.8
       ox:
         specifier: 'catalog:'
         version: 0.9.17(typescript@5.9.3)(zod@4.1.13)

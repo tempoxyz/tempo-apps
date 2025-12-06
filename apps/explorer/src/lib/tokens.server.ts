@@ -1,10 +1,14 @@
 import { createServerFn } from '@tanstack/react-start'
+import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import * as z from 'zod/mini'
-import * as IS from '#lib/index-supply'
-import { parsePgTimestamp } from '#lib/postgres'
+import { config } from '#wagmi.config.ts'
 
-const { chainId } = IS
+const IS = IDX.IndexSupply.create({
+	apiKey: process.env.INDEXER_API_KEY,
+})
+
+const QB = IDX.QueryBuilder.from(IS)
 
 export type Token = {
 	address: Address.Address
@@ -19,8 +23,6 @@ const FetchTokensInputSchema = z.object({
 	limit: z.coerce.number().check(z.gte(1), z.lte(100)),
 })
 
-export type FetchTokensInput = z.infer<typeof FetchTokensInputSchema>
-
 export type TokensApiResponse = {
 	tokens: Token[]
 	total: number
@@ -29,42 +31,40 @@ export type TokensApiResponse = {
 }
 
 const EVENT_SIGNATURE =
-	'TokenCreated(address indexed token, uint256 indexed tokenId, string name, string symbol, string currency, address quoteToken, address admin)'
+	'event TokenCreated(address indexed token, uint256 indexed tokenId, string name, string symbol, string currency, address quoteToken, address admin)'
 
 export const fetchTokens = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokensInputSchema.parse(input))
 	.handler(async ({ data }): Promise<TokensApiResponse> => {
 		const { offset, limit } = data
 
-		const [tokensResult, countResult] = await Promise.all([
-			IS.runIndexSupplyQuery(
-				`SELECT token, symbol, name, currency, block_timestamp FROM tokencreated
-				 WHERE chain = ${chainId}
-				 ORDER BY block_timestamp DESC
-				 LIMIT ${limit} OFFSET ${offset}`,
-				{ signatures: [EVENT_SIGNATURE] },
-			),
-			IS.runIndexSupplyQuery(
-				`SELECT COUNT(token) FROM tokencreated
-				 WHERE chain = ${chainId}`,
-				{ signatures: [EVENT_SIGNATURE] },
-			),
-		])
+		const chainId = config.getClient().chain.id
 
-		const tokens: Token[] = tokensResult.rows.map((row) => ({
-			address: row[0] as Address.Address,
-			symbol: String(row[1]),
-			name: String(row[2]),
-			currency: String(row[3]),
-			createdAt: parsePgTimestamp(String(row[4])),
-		}))
+		const tokensResult = await QB.withSignatures([EVENT_SIGNATURE])
+			.selectFrom('tokencreated')
+			.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
+			.where('chain', '=', chainId)
+			.orderBy('block_timestamp', 'desc')
+			.limit(limit)
+			.offset(offset)
+			.execute()
 
-		const total = Number(countResult.rows[0]?.[0] ?? 0)
+		const { count } = await QB.withSignatures([EVENT_SIGNATURE])
+			.selectFrom('tokencreated')
+			.select((eb) => eb.fn.count('token').as('count'))
+			.where('chain', '=', chainId)
+			.executeTakeFirstOrThrow()
 
 		return {
-			tokens,
-			total,
 			offset,
 			limit,
+			total: Number(count),
+			tokens: tokensResult.map(
+				({ token: address, block_timestamp, ...rest }) => ({
+					...rest,
+					address,
+					createdAt: Number(block_timestamp),
+				}),
+			),
 		}
 	})
