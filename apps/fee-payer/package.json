@@ -17,7 +17,7 @@
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
-		"hono": "^4.6.0",
+		"hono": "^4.10.7",
 		"ox": "catalog:",
 		"tempo.ts": "catalog:",
 		"viem": "catalog:",

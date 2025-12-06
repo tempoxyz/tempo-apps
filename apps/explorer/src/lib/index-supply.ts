@@ -76,7 +76,7 @@ export async function runIndexSupplyQuery(
 
 	const normalizedQuery = query.replace(/\s+/g, ' ').trim()
 	const startTime = performance.now()
-	if (env.LOG_LEVEL === 'info')
+	if (import.meta.env.VITE_LOG_LEVEL === 'info')
 		console.log('[IndexSupply] Query started:', {
 			query: normalizedQuery,
 			signatures,
@@ -128,7 +128,7 @@ export async function runIndexSupplyQuery(
 	if (!result) throw new Error('IndexSupply returned an empty result set')
 
 	const duration = performance.now() - startTime
-	if (env.LOG_LEVEL === 'info')
+	if (import.meta.env.VITE_LOG_LEVEL === 'info')
 		console.log('[IndexSupply] Query completed:', {
 			duration: `${duration.toFixed(0)}ms`,
 			rows: result.rows.length,
@@ -161,7 +161,7 @@ export async function runIndexSupplyBatch<T extends BatchQuery[]>(
 	}))
 
 	const startTime = performance.now()
-	if (env.LOG_LEVEL === 'info')
+	if (import.meta.env.VITE_LOG_LEVEL === 'info')
 		console.log('[IndexSupply] Batch started:', {
 			count: queries.length,
 			queries: body.map((b) => `${b.query.slice(0, 60)}...`),
@@ -210,7 +210,7 @@ export async function runIndexSupplyBatch<T extends BatchQuery[]>(
 	}
 
 	const duration = performance.now() - startTime
-	if (env.LOG_LEVEL === 'info')
+	if (import.meta.env.VITE_LOG_LEVEL === 'info')
 		console.log('[IndexSupply] Batch completed:', {
 			duration: `${duration.toFixed(0)}ms`,
 			results: parsed.data.map((r) => r.rows.length),
