@@ -21,7 +21,11 @@ function Component() {
 		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-4 pt-16 pb-8 grow">
 			<h1 className="text-tertiary uppercase">Demo</h1>
 			{demoPages.map((page) => (
-				<Link key={page.path} to={page.path} className="text-primary press-down">
+				<Link
+					key={page.path}
+					to={page.path}
+					className="text-primary press-down"
+				>
 					{page.label}
 				</Link>
 			))}
