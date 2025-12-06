@@ -143,15 +143,14 @@ function transactionsQueryOptions(params: TransactionQuery) {
 			params.limit,
 			params._key,
 		],
-		queryFn: () => {
-			return AccountServer.fetchTransactions({
+		queryFn: () =>
+			AccountServer.fetchTransactions({
 				data: {
 					address: params.address,
 					offset: params.offset,
 					limit: params.limit,
 				},
-			})
-		},
+			}),
 		refetchInterval: false,
 		refetchIntervalInBackground: false,
 		refetchOnWindowFocus: false,
@@ -242,11 +241,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 		const addressTransactionCount = await context.queryClient.ensureQueryData({
 			queryKey: ['address-transaction-count', address],
-			queryFn: async () => {
-				return await AccountServer.fetchAddressTransactionsCount({
+			queryFn: () =>
+				AccountServer.fetchAddressTransactionsCount({
 					data: { address, chainId: getChainId(config) },
-				})
-			},
+				}),
 			staleTime: 30_000,
 		})
 
@@ -408,9 +406,7 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	// Calculate total holdings value
 	const totalValue = useQuery({
 		queryKey: ['account-total-value', address],
-		queryFn: async () => {
-			return await AccountServer.getTotalValue({ data: { address } })
-		},
+		queryFn: () => AccountServer.getTotalValue({ data: { address } }),
 	})
 
 	return (
@@ -518,11 +514,10 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 function useTransactionCount(address: Address.Address) {
 	return useQuery({
 		queryKey: ['account-transaction-count', address],
-		queryFn: async () => {
-			return await AccountServer.fetchAddressTransactionsCount({
+		queryFn: () =>
+			AccountServer.fetchAddressTransactionsCount({
 				data: { address, chainId: getChainId(config) },
-			})
-		},
+			}),
 		staleTime: 30_000,
 	})
 }
