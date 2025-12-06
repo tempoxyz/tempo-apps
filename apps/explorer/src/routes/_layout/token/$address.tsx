@@ -4,6 +4,7 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
+	redirect,
 	stripSearchParams,
 	useNavigate,
 	useRouter,
@@ -145,29 +146,37 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const account = a && Address.validate(a) ? a : undefined
 		const offset = (page - 1) * limit
 
-		// prefetch holders in background (non-blocking) - slow query that reconstructs all balances
-		// prefetch page 1 for sidebar stats, and current page for holders tab
-		context.queryClient.prefetchQuery(
-			holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
-		)
-		if (page !== 1 || limit !== 10) {
+		try {
+			// prefetch holders in background (non-blocking) - slow query that reconstructs all balances
+			// prefetch page 1 for sidebar stats, and current page for holders tab
 			context.queryClient.prefetchQuery(
-				holdersQueryOptions({ address, page, limit, offset }),
+				holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
 			)
-		}
+			if (page !== 1 || limit !== 10) {
+				context.queryClient.prefetchQuery(
+					holdersQueryOptions({ address, page, limit, offset }),
+				)
+			}
 
-		if (tab === 'transfers') {
-			const [metadata, transfers] = await Promise.all([
-				Actions.token.getMetadata(config, { token: address }),
-				context.queryClient.ensureQueryData(
-					transfersQueryOptions({ address, page, limit, offset, account }),
-				),
-			])
-			return { metadata, transfers }
-		}
+			if (tab === 'transfers') {
+				const [metadata, transfers] = await Promise.all([
+					Actions.token.getMetadata(config, { token: address }),
+					context.queryClient.ensureQueryData(
+						transfersQueryOptions({ address, page, limit, offset, account }),
+					),
+				])
+				return { metadata, transfers }
+			}
 
-		const metadata = await Actions.token.getMetadata(config, { token: address })
-		return { metadata, transfers: undefined }
+			const metadata = await Actions.token.getMetadata(config, {
+				token: address,
+			})
+			return { metadata, transfers: undefined }
+		} catch (error) {
+			console.error(error)
+			// redirect to `/address/$address` and if it's not an address, that route will throw a notFound
+			throw redirect({ to: '/address/$address', params: { address } })
+		}
 	},
 	params: {
 		parse: z.object({
