@@ -17,7 +17,6 @@
 		"test": "vitest"
 	},
 	"dependencies": {
-		"idxs": "catalog:",
 		"@shazow/whatsabi": "catalog:",
 		"@tailwindcss/vite": "catalog:",
 		"@tanstack/query-async-storage-persister": "catalog:",
@@ -29,6 +28,7 @@
 		"@tanstack/router-plugin": "catalog:",
 		"abitype": "catalog:",
 		"cva": "catalog:",
+		"idxs": "catalog:",
 		"ox": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:",
