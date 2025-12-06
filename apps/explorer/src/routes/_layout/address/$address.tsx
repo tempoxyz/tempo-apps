@@ -52,7 +52,6 @@ import {
 } from '#lib/known-events'
 import { getFeeBreakdown } from '#lib/receipt.ts'
 import * as Tip20 from '#lib/tip20'
-import { fetchTotalAddressTxs } from '#lib/transactions.server.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 
 const defaultSearchValues = {
@@ -177,10 +176,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				return undefined
 			})
 
-		const totalAddressTransactions = await context.queryClient.ensureQueryData({
-			queryKey: ['total-address-txs', address],
+		const addressTransactionCount = await context.queryClient.ensureQueryData({
+			queryKey: ['address-transaction-count', address],
 			queryFn: async () => {
-				return await fetchTotalAddressTxs({
+				return await AccountServer.fetchAddressTransactionsCount({
 					data: { address, chainId: getChainId(config) },
 				})
 			},
@@ -195,7 +194,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			hasContract,
 			contractInfo,
 			transactionsData,
-			totalAddressTransactions,
+			addressTransactionCount,
 		}
 	},
 })
@@ -210,7 +209,7 @@ function RouteComponent() {
 		hasContract,
 		contractInfo,
 		transactionsData,
-		totalAddressTransactions,
+		addressTransactionCount,
 	} = Route.useLoaderData()
 
 	Address.assert(address)
@@ -291,7 +290,7 @@ function RouteComponent() {
 				onSectionChange={setActiveSection}
 				contractInfo={contractInfo}
 				initialData={transactionsData}
-				totalAddressTransactions={totalAddressTransactions}
+				addressTransactionCount={addressTransactionCount}
 			/>
 		</div>
 	)
@@ -345,7 +344,12 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 	})
 
 	// Calculate total holdings value
-	const totalValue = useAccountTotalValue(address)
+	const totalValue = useQuery({
+		queryKey: ['account-total-value', address],
+		queryFn: async () => {
+			return await AccountServer.getTotalValue({ data: { address } })
+		},
+	})
 
 	return (
 		<AccountCard
@@ -449,20 +453,13 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 	)
 }
 
-function useAccountTotalValue(address: Address.Address) {
-	return useQuery({
-		queryKey: ['account-total-value', address],
-		queryFn: async () => {
-			return await AccountServer.getTotalValue({ data: { address } })
-		},
-	})
-}
-
 function useTransactionCount(address: Address.Address) {
 	return useQuery({
 		queryKey: ['account-transaction-count', address],
 		queryFn: async () => {
-			return await AccountServer.fetchTransactionCount({ data: { address } })
+			return await AccountServer.fetchAddressTransactionsCount({
+				data: { address, chainId: getChainId(config) },
+			})
 		},
 		staleTime: 30_000,
 	})
@@ -482,7 +479,7 @@ function SectionsWrapper(props: {
 	onSectionChange: (index: number) => void
 	contractInfo: ContractInfo | undefined
 	initialData: TransactionsData | undefined
-	totalAddressTransactions: bigint
+	addressTransactionCount: bigint
 }) {
 	const {
 		address,
@@ -492,7 +489,7 @@ function SectionsWrapper(props: {
 		onSectionChange,
 		contractInfo,
 		initialData,
-		totalAddressTransactions,
+		addressTransactionCount,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
@@ -529,7 +526,7 @@ function SectionsWrapper(props: {
 	// Only show skeleton if we have no data AND we're loading
 	// Use data presence check to avoid hydration mismatch
 	if (!data && isPending)
-		return <SectionsSkeleton totalItems={Number(totalAddressTransactions)} />
+		return <SectionsSkeleton totalItems={Number(addressTransactionCount)} />
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const historyError = error ? (
@@ -568,7 +565,7 @@ function SectionsWrapper(props: {
 			sections={[
 				{
 					title: 'History',
-					totalItems: total,
+					totalItems: Number(total),
 					itemsLabel: 'transactions',
 					content: historyError ?? (
 						<DataGrid
@@ -589,7 +586,11 @@ function SectionsWrapper(props: {
 											transaction={transaction}
 											accountAddress={address}
 										/>,
-										<TransactionHash key="hash" hash={transaction.hash} />,
+										<TruncatedHash
+											key="hash"
+											minChars={8}
+											hash={transaction.hash}
+										/>,
 										<TransactionRowFee key="fee" transaction={transaction} />,
 										<TransactionTotal key="total" transaction={transaction} />,
 									],
@@ -599,7 +600,7 @@ function SectionsWrapper(props: {
 									},
 								}))
 							}
-							totalItems={total}
+							totalItems={Number(total)}
 							page={page}
 							isPending={isLoadingPage}
 							itemsLabel="transactions"
@@ -705,20 +706,12 @@ function SectionsWrapper(props: {
 	)
 }
 
-function useTransactionBlock(blockNumber: Hex.Hex | undefined) {
-	return useBlock({
-		blockNumber: blockNumber ? Hex.toBigInt(blockNumber) : undefined,
-		query: { enabled: Boolean(blockNumber) },
-	})
-}
-
 function useFetchTxData(hash?: Hex.Hex | undefined) {
 	const query = useQuery({
 		queryKey: ['tx-data', hash],
 		enabled: Boolean(hash && isHash(hash)),
 		queryFn: async () => {
 			if (!hash) return
-			console.log('[useFetchTxData] fetching', hash.slice(0, 10))
 			const config = getConfig()
 			const receipt = await getTransactionReceipt(config, {
 				hash,
@@ -737,12 +730,6 @@ function useFetchTxData(hash?: Hex.Hex | undefined) {
 
 			const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
 
-			console.log('[useFetchTxData] success', hash.slice(0, 10), {
-				hasReceipt: Boolean(receipt),
-				hasBlock: Boolean(block),
-				knownEventsCount: knownEvents.length,
-			})
-
 			return {
 				block,
 				feeBreakdown,
@@ -753,12 +740,6 @@ function useFetchTxData(hash?: Hex.Hex | undefined) {
 		},
 	})
 
-	React.useEffect(() => {
-		if (query.error) {
-			console.error('[useFetchTxData] error', hash?.slice(0, 10), query.error)
-		}
-	}, [query.error, hash])
-
 	return query
 }
 
@@ -767,11 +748,14 @@ function TransactionRowTime(props: {
 	format: TimeFormat
 }) {
 	const { transaction, format } = props
-	const { data: block } = useTransactionBlock(
-		transaction.blockNumber ?? undefined,
-	)
+	const { data: block, status } = useBlock({
+		blockNumber: Hex.toBigInt(transaction.blockNumber ?? '0x0'),
+		query: {
+			enabled: Boolean(transaction.blockNumber),
+		},
+	})
 
-	if (!block) {
+	if (status !== 'success' || !block) {
 		return <span className="text-tertiary">—</span>
 	}
 
@@ -789,14 +773,12 @@ function TransactionRowDescription(props: {
 	accountAddress: Address.Address
 }) {
 	const { transaction, accountAddress } = props
-	const { data: receipt } = useTransactionReceipt({ hash: transaction.hash })
-	// const knownEvents = useTransactionKnownEvents(transaction, receipt)
 	const { data, status } = useFetchTxData(transaction.hash)
 
 	if (status !== 'success' || !data)
 		return <span className="text-tertiary">—</span>
 	if (!data.knownEvents.length) {
-		const count = receipt?.logs.length ?? 0
+		const count = data.receipt?.logs.length ?? 0
 		return (
 			<span className="text-secondary">
 				{count === 0 ? 'No events' : `${count} events`}
@@ -808,7 +790,7 @@ function TransactionRowDescription(props: {
 		<TransactionDescription
 			transaction={transaction}
 			knownEvents={data.knownEvents}
-			transactionReceipt={receipt}
+			transactionReceipt={data.receipt}
 			accountAddress={accountAddress}
 		/>
 	)
@@ -940,7 +922,7 @@ export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 	return <span className="text-tertiary">{PriceFormatter.format(fee)}</span>
 }
 
-function TransactionDescription(props: {
+export function TransactionDescription(props: {
 	transaction: Transaction
 	knownEvents: Array<KnownEvent>
 	transactionReceipt: TransactionReceipt | undefined
@@ -983,11 +965,6 @@ export function getPerspectiveEvent(
 		return part
 	})
 	return { ...event, parts: updatedParts }
-}
-
-export function TransactionHash(props: { hash: Hex.Hex }) {
-	const { hash } = props
-	return <TruncatedHash hash={hash} minChars={8} />
 }
 
 export function TransactionTimestamp(props: {

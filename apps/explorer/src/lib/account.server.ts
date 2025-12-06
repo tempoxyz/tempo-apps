@@ -105,11 +105,9 @@ export const fetchTransactions = createServerFn()
 		)
 		const hashIdx = directTxColumns.get('hash')
 		const blockNumIdx = directTxColumns.get('block_num')
-		if (hashIdx === undefined || blockNumIdx === undefined) {
-			throw new Error(
-				'Missing hash or block_num column in IndexSupply response',
-			)
-		}
+
+		// Handle empty results (no columns returned when no rows match)
+		const hasDirectColumns = hashIdx !== undefined && blockNumIdx !== undefined
 
 		type TxRow = {
 			hash: string
@@ -118,11 +116,13 @@ export const fetchTransactions = createServerFn()
 		}
 
 		const txsByHash = new Map<string, TxRow>()
-		for (const row of directTxsResult.rows) {
-			const hash = row[hashIdx]
-			const blockNum = row[blockNumIdx]
-			if (typeof hash === 'string' && typeof blockNum === 'number') {
-				txsByHash.set(hash, { hash, block_num: blockNum, row })
+		if (hasDirectColumns) {
+			for (const row of directTxsResult.rows) {
+				const hash = row[hashIdx]
+				const blockNum = row[blockNumIdx]
+				if (typeof hash === 'string' && typeof blockNum === 'number') {
+					txsByHash.set(hash, { hash, block_num: blockNum, row })
+				}
 			}
 		}
 
@@ -157,11 +157,18 @@ export const fetchTransactions = createServerFn()
 			const transferTxsResult = await IS.runIndexSupplyQuery(transferTxsQuery, {
 				signatures: [''],
 			})
-			for (const row of transferTxsResult.rows) {
-				const hash = row[hashIdx]
-				const blockNum = row[blockNumIdx]
-				if (typeof hash === 'string' && typeof blockNum === 'number') {
-					txsByHash.set(hash, { hash, block_num: blockNum, row })
+			const transferTxColumns = new Map(
+				transferTxsResult.columns.map((column, index) => [column.name, index]),
+			)
+			const transferHashIdx = transferTxColumns.get('hash')
+			const transferBlockNumIdx = transferTxColumns.get('block_num')
+			if (transferHashIdx !== undefined && transferBlockNumIdx !== undefined) {
+				for (const row of transferTxsResult.rows) {
+					const hash = row[transferHashIdx]
+					const blockNum = row[transferBlockNumIdx]
+					if (typeof hash === 'string' && typeof blockNum === 'number') {
+						txsByHash.set(hash, { hash, block_num: blockNum, row })
+					}
 				}
 			}
 		}
@@ -174,13 +181,22 @@ export const fetchTransactions = createServerFn()
 
 		const hasMore = sortedTxs.length > offset + limit
 		const paginatedTxs = sortedTxs.slice(offset, offset + limit)
-		const txsResult = {
-			rows: paginatedTxs.map((tx) => tx.row),
-			columns: directTxsResult.columns,
-		}
 
+		// Expected columns in consistent order (matches our SELECT queries)
+		const expectedColumns = [
+			{ name: 'hash', pgtype: 'bytea' },
+			{ name: 'block_num', pgtype: 'int8' },
+			{ name: 'from', pgtype: 'bytea' },
+			{ name: 'to', pgtype: 'bytea' },
+			{ name: 'value', pgtype: 'numeric' },
+			{ name: 'input', pgtype: 'bytea' },
+			{ name: 'nonce', pgtype: 'int8' },
+			{ name: 'gas', pgtype: 'int8' },
+			{ name: 'gas_price', pgtype: 'int8' },
+			{ name: 'type', pgtype: 'int2' },
+		]
 		const txColumns = new Map(
-			txsResult.columns.map((column, index) => [column.name, index]),
+			expectedColumns.map((column, index) => [column.name, index]),
 		)
 		const getColumnValue = (row: IS.RowValue[], name: string) => {
 			const columnIndex = txColumns.get(name)
@@ -189,7 +205,7 @@ export const fetchTransactions = createServerFn()
 			return row[columnIndex] ?? null
 		}
 
-		const transactions: RpcTransaction[] = txsResult.rows.map((row) => {
+		const transactions: RpcTransaction[] = paginatedTxs.map(({ row }) => {
 			const hash = IS.toHexData(getColumnValue(row, 'hash'))
 			const from = IS.toAddressValue(getColumnValue(row, 'from'))
 			if (!from) throw new Error('Transaction is missing a "from" address')
@@ -230,61 +246,61 @@ export const fetchTransactions = createServerFn()
 		}
 	})
 
-export const fetchTransactionCount = createServerFn()
-	.inputValidator(
-		z.object({
-			address: zAddress(),
-			include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
-		}),
-	)
-	.handler(async ({ data: params }) => {
-		const include =
-			params.include === 'sent'
-				? 'sent'
-				: params.include === 'received'
-					? 'received'
-					: 'all'
+// export const fetchTransactionCount = createServerFn()
+// 	.inputValidator(
+// 		z.object({
+// 			address: zAddress(),
+// 			include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
+// 		}),
+// 	)
+// 	.handler(async ({ data: params }) => {
+// 		const include =
+// 			params.include === 'sent'
+// 				? 'sent'
+// 				: params.include === 'received'
+// 					? 'received'
+// 					: 'all'
 
-		const transferSignature =
-			'Transfer(address indexed from, address indexed to, uint tokens)'
-		const includeSent = include === 'all' || include === 'sent'
-		const includeReceived = include === 'all' || include === 'received'
+// 		const transferSignature =
+// 			'Transfer(address indexed from, address indexed to, uint tokens)'
+// 		const includeSent = include === 'all' || include === 'sent'
+// 		const includeReceived = include === 'all' || include === 'received'
 
-		const directConditions: string[] = []
-		if (includeSent) directConditions.push(`t."from" = '${params.address}'`)
-		if (includeReceived) directConditions.push(`t."to" = '${params.address}'`)
+// 		const directConditions: string[] = []
+// 		if (includeSent) directConditions.push(`t."from" = '${params.address}'`)
+// 		if (includeReceived) directConditions.push(`t."to" = '${params.address}'`)
 
-		const transferConditions: string[] = []
-		if (includeSent) transferConditions.push(`tr."from" = '${params.address}'`)
-		if (includeReceived)
-			transferConditions.push(`tr."to" = '${params.address}'`)
+// 		const transferConditions: string[] = []
+// 		if (includeSent) transferConditions.push(`tr."from" = '${params.address}'`)
+// 		if (includeReceived)
+// 			transferConditions.push(`tr."to" = '${params.address}'`)
 
-		const directFilter =
-			directConditions.length > 0 ? directConditions.join(' OR ') : 'FALSE'
-		const transferFilter =
-			transferConditions.length > 0 ? transferConditions.join(' OR ') : 'FALSE'
+// 		const directFilter =
+// 			directConditions.length > 0 ? directConditions.join(' OR ') : 'FALSE'
+// 		const transferFilter =
+// 			transferConditions.length > 0 ? transferConditions.join(' OR ') : 'FALSE'
 
-		const directCountQuery = /* sql */ `
-			SELECT COUNT(DISTINCT t.hash) as cnt FROM txs t
-			WHERE t.chain = ${chainId} AND (${directFilter})
-		`
+// 		const directCountQuery = /* sql */ `
+// 			SELECT COUNT(DISTINCT t.hash) as cnt FROM txs t
+// 			WHERE t.chain = ${chainId} AND (${directFilter})
+// 		`
 
-		const transferCountQuery = /* sql */ `
-			SELECT COUNT(DISTINCT tr.tx_hash) as cnt FROM transfer tr
-			WHERE tr.chain = ${chainId} AND (${transferFilter})
-		`
+// 		const transferCountQuery = /* sql */ `
+// 			SELECT COUNT(DISTINCT tr.tx_hash) as cnt FROM transfer tr
+// 			WHERE tr.chain = ${chainId} AND (${transferFilter})
+// 		`
 
-		const [directCountResult, transferCountResult] =
-			await IS.runIndexSupplyBatch([
-				{ query: directCountQuery },
-				{ query: transferCountQuery, signatures: [transferSignature] },
-			])
+// 		const [directCountResult, transferCountResult] =
+// 			await IS.runIndexSupplyBatch([
+// 				{ query: directCountQuery },
+// 				{ query: transferCountQuery, signatures: [transferSignature] },
+// 			])
 
-		const directCount = Number(directCountResult.rows.at(0)?.at(0) ?? 0)
-		const transferCount = Number(transferCountResult.rows.at(0)?.at(0) ?? 0)
+// 		const directCount = Number(directCountResult.rows.at(0)?.at(0) ?? 0)
+// 		const transferCount = Number(transferCountResult.rows.at(0)?.at(0) ?? 0)
 
-		return Math.max(directCount, transferCount)
-	})
+// 		return Math.max(directCount, transferCount)
+// 	})
 
 export const getTotalValue = createServerFn()
 	.inputValidator(
@@ -373,4 +389,25 @@ export const getTotalValue = createServerFn()
 			.reduce((acc, balance) => acc + balance * PRICE_PER_TOKEN, 0)
 
 		return totalValue
+	})
+
+export const FetchAddressTransactionsCountSchema = z.object({
+	address: zAddress({ lowercase: true }),
+	chainId: z.coerce.number(),
+})
+
+export const fetchAddressTransactionsCount = createServerFn({ method: 'GET' })
+	.inputValidator((input) => FetchAddressTransactionsCountSchema.parse(input))
+	.handler(async ({ data: { address, chainId } }) => {
+		const result = await IS.runIndexSupplyQuery(/* sql */ `
+SELECT SUM(CASE WHEN "from" = '${address}' THEN 1 ELSE 0 END) as sent, 
+       SUM(CASE WHEN "to" = '${address}' THEN 1 ELSE 0 END) as received 
+       FROM txs WHERE ("from" = '${address}' OR "to" = '${address}') AND chain = ${chainId}`)
+
+		const cursor = result.cursor
+		if (!cursor?.includes('-')) return 0n
+
+		const [, total] = cursor.split('-')
+
+		return BigInt(total)
 	})
