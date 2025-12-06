@@ -2,7 +2,7 @@ import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Hex } from 'ox'
 import { Abis } from 'tempo.ts/viem'
 import { encodeAbiParameters, encodeEventTopics, zeroAddress } from 'viem'
-import { Receipt } from '#components/Receipt/Receipt'
+import { Receipt } from '#components/transaction/receipt/Receipt'
 import {
 	accountAddress,
 	adminAddress,
@@ -26,7 +26,7 @@ import {
 	validatorAddress,
 	validatorTokenAddress,
 } from '#lib/demo'
-import { parseKnownEvents } from '#lib/known-events'
+import { parseKnownEvents } from '#lib/domain/known-events'
 
 function loader() {
 	if (import.meta.env.VITE_ENABLE_DEMO !== 'true') throw notFound()

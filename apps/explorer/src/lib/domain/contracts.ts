@@ -4,6 +4,7 @@ import { Abis, Addresses } from 'tempo.ts/viem'
 import type { Abi, AbiFunction, AbiParameter } from 'viem'
 import { toFunctionSelector } from 'viem'
 import { getPublicClient } from 'wagmi/actions'
+import { isTip20Address } from '#lib/domain/tip20.ts'
 import { config } from '#wagmi.config.ts'
 
 /**
@@ -20,12 +21,15 @@ export type ContractInfo = {
 	category: 'token' | 'system' | 'utility' | 'account'
 	/** External documentation link */
 	docsUrl?: string
+	address: Address.Address
 }
 
 /**
- * Known contract registry mapping addresses to their metadata and ABIs.
+ * Known TIP-20 Token contracts registry mapping addresses to their metadata and ABIs.
  */
-export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
+export const tip20ContractRegistry = new Map<Address.Address, ContractInfo>(<
+	const
+>[
 	// TIP-20 Tokens
 	[
 		'0x20c0000000000000000000000000000000000000',
@@ -36,6 +40,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			code: '0xef',
 			category: 'token',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/exchange/pathUSD',
+			address: '0x20c0000000000000000000000000000000000000',
 		},
 	],
 	[
@@ -46,6 +51,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			description: 'TIP-20 stablecoin (AUSD)',
 			abi: Abis.tip20,
 			category: 'token',
+			address: '0x20c0000000000000000000000000000000000001',
 		},
 	],
 	[
@@ -56,6 +62,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			description: 'TIP-20 stablecoin (BUSD)',
 			abi: Abis.tip20,
 			category: 'token',
+			address: '0x20c0000000000000000000000000000000000002',
 		},
 	],
 	[
@@ -66,9 +73,17 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			description: 'TIP-20 stablecoin (TUSD)',
 			abi: Abis.tip20,
 			category: 'token',
+			address: '0x20c0000000000000000000000000000000000003',
 		},
 	],
+])
 
+/**
+ * Known System contracts registry mapping addresses to their metadata and ABIs.
+ */
+export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
+	const
+>[
 	// System Contracts
 	[
 		Addresses.tip20Factory,
@@ -79,6 +94,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			abi: Abis.tip20Factory,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/tip20/overview',
+			address: Addresses.tip20Factory,
 		},
 	],
 	[
@@ -92,6 +108,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			category: 'system',
 			docsUrl:
 				'https://docs.tempo.xyz/documentation/protocol/fees/spec-fee-amm#2-feemanager-contract',
+			address: Addresses.feeManager,
 		},
 	],
 	[
@@ -103,6 +120,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			abi: Abis.stablecoinExchange,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/exchange',
+			address: Addresses.stablecoinExchange,
 		},
 	],
 	[
@@ -114,6 +132,7 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			abi: Abis.tip403Registry,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/tip403/spec',
+			address: Addresses.tip403Registry,
 		},
 	],
 
@@ -126,17 +145,24 @@ export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
 			description: 'Reference account implementation',
 			abi: Abis.tipAccountRegistrar,
 			category: 'account',
+			address: Addresses.accountImplementation,
 		},
 	],
 ])
 
 /**
- * Detect TIP-20 addresses
+ * Known contract registry mapping addresses to their metadata and ABIs.
  */
-const TIP20_PREFIX = '0x20c000000'
-export type Tip20Address = `${typeof TIP20_PREFIX}${string}`
-export function isTip20Address(address: string): address is Tip20Address {
-	return address.toLowerCase().startsWith(TIP20_PREFIX)
+export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
+	...systemContractRegistry.entries(),
+	...tip20ContractRegistry.entries(),
+])
+
+/**
+ * detect if an address is a system address (i.e., not a token)
+ */
+export function systemAddress(address: Address.Address): boolean {
+	return systemContractRegistry.has(address.toLowerCase() as Address.Address)
 }
 
 /**
@@ -154,6 +180,7 @@ export function getContractInfo(
 	// Dynamic TIP-20 token detection
 	if (isTip20Address(address))
 		return {
+			address,
 			name: 'TIP-20 Token',
 			code: '0xef',
 			description: 'TIP-20 compatible token',

@@ -8,8 +8,8 @@ import {
 	type TransactionReceipt,
 	zeroAddress,
 } from 'viem'
+import type * as Tip20 from '#lib/domain/tip20'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
-import type * as Tip20 from '#lib/tip20'
 
 const abi = Object.values(Abis).flat()
 

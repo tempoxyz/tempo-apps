@@ -6,9 +6,9 @@ import {
 } from '@tanstack/react-router'
 import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
+import { ExploreInput } from '#components/ui/ExploreInput'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
-import { ExploreInput } from './ExploreInput'
 
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
