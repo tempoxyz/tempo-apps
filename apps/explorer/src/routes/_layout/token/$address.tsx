@@ -141,8 +141,8 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const account = a && Address.validate(a) ? a : undefined
 		const offset = (page - 1) * limit
 
-		// Prefetch holders in background (non-blocking) - slow query that reconstructs all balances
-		// Prefetch page 1 for sidebar stats, and current page for holders tab
+		// prefetch holders in background (non-blocking) - slow query that reconstructs all balances
+		// prefetch page 1 for sidebar stats, and current page for holders tab
 		context.queryClient.prefetchQuery(
 			holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
 		)
