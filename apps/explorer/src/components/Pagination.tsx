@@ -15,10 +15,27 @@ export function Pagination(props: Pagination.Props) {
 		page,
 		totalPages,
 		totalItems,
-		itemsLabel,
+		itemsLabel: itemsLabel_,
 		isPending,
-		compact = false,
+		compact: compact_,
+		hideOnSinglePage = true,
 	} = props
+
+	const compact = compact_ || totalPages > 999
+
+	// TODO: better pluralization
+	const itemsLabel =
+		totalItems === 1 ? itemsLabel_.replace(/s$/, '') : itemsLabel_
+
+	if (hideOnSinglePage && totalPages <= 1)
+		return (
+			<div className="flex items-center justify-end px-[16px] py-[12px] text-[12px] text-tertiary">
+				<span className="text-primary tabular-nums">
+					{Pagination.numFormat.format(totalItems)}
+				</span>
+				<span className="ml-[8px]">{itemsLabel}</span>
+			</div>
+		)
 
 	if (compact)
 		return (
@@ -54,7 +71,8 @@ export function Pagination(props: Pagination.Props) {
 					</Link>
 
 					<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
-						Page {page.toLocaleString()} of {totalPages.toLocaleString()}
+						Page {Pagination.numFormat.format(page)} of{' '}
+						{Pagination.numFormat.format(totalPages)}
 					</span>
 
 					<Link
@@ -120,18 +138,15 @@ export function Pagination(props: Pagination.Props) {
 						const pages = Pagination.getPagination(page, totalPages)
 						let ellipsisCount = 0
 
-						return pages.map((p) => {
-							if (p === Pagination.Ellipsis)
-								return (
-									<span
-										key={`ellipsis-${ellipsisCount++}`}
-										className="text-tertiary flex w-[28px] h-[28px] items-center justify-center"
-									>
-										…
-									</span>
-								)
-
-							return (
+						return pages.map((p) =>
+							p === Pagination.Ellipsis ? (
+								<span
+									key={`ellipsis-${ellipsisCount++}`}
+									className="text-tertiary flex w-[28px] h-[28px] items-center justify-center"
+								>
+									…
+								</span>
+							) : (
 								<Link
 									key={p}
 									to="."
@@ -146,8 +161,8 @@ export function Pagination(props: Pagination.Props) {
 								>
 									{p}
 								</Link>
-							)
-						})
+							),
+						)
 					})()}
 				</div>
 
@@ -186,9 +201,15 @@ export namespace Pagination {
 		itemsLabel: string
 		isPending: boolean
 		compact?: boolean
+		hideOnSinglePage?: boolean
 	}
 
 	export const Ellipsis = -1
+
+	export const numFormat = new Intl.NumberFormat('en-US', {
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 0,
+	})
 
 	export function getPagination(page: number, totalPages: number): number[] {
 		if (totalPages <= 7)
@@ -240,7 +261,8 @@ export namespace Pagination {
 					<ChevronLeft className="size-[14px]" />
 				</Link>
 				<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
-					Page {page.toLocaleString()} of {totalPages.toLocaleString()}
+					Page {Pagination.numFormat.format(page)} of{' '}
+					{Pagination.numFormat.format(totalPages)}
 				</span>
 				<Link
 					to="."
@@ -292,11 +314,9 @@ export namespace Pagination {
 					</>
 				)}
 				<span className="text-primary tabular-nums">
-					{totalItems.toLocaleString('en-US')}
+					{Pagination.numFormat.format(totalItems)}
 				</span>
-				<span className="text-tertiary">
-					{totalItems === 1 ? itemsLabel.replace(/s$/, '') : itemsLabel}
-				</span>
+				<span className="text-tertiary">{itemsLabel}</span>
 			</div>
 		)
 	}
