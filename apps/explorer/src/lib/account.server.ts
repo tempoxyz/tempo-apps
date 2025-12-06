@@ -1,19 +1,40 @@
-import { env } from 'cloudflare:workers'
 import { createServerFn } from '@tanstack/react-start'
-import type { Address } from 'ox'
+import * as IDX from 'idxs'
+import { Address, Hex } from 'ox'
 import { Abis } from 'tempo.ts/viem'
 import { formatUnits, type RpcTransaction } from 'viem'
-import { getChainId, readContract } from 'wagmi/actions'
+import { readContract } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import * as IS from '#lib/index-supply'
 import { zAddress } from '#lib/zod'
 import { config, getConfig } from '#wagmi.config.ts'
 
-const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
-const { chainId, chainIdHex } = IS
+const IS = IDX.IndexSupply.create({
+	apiKey: process.env.INDEXER_API_KEY,
+})
 
-/** Normalize SQL for cleaner logging (collapse whitespace) */
-const normalizeSQL = (sql: string) => sql.replace(/\s+/g, ' ').trim()
+const QB = IDX.QueryBuilder.from(IS)
+
+const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
+
+const TRANSFER_SIGNATURE =
+	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
+
+function toQuantityHex(value: unknown, fallback: bigint = 0n): Hex.Hex {
+	if (value === null || value === undefined) return Hex.fromNumber(fallback)
+	return Hex.fromNumber(BigInt(value as string | number))
+}
+
+function toHexData(value: unknown): Hex.Hex {
+	if (typeof value !== 'string' || value.length === 0) return '0x'
+	Hex.assert(value)
+	return value
+}
+
+function toAddressValue(value: unknown): Address.Address | null {
+	if (typeof value !== 'string' || value.length === 0) return null
+	Address.assert(value)
+	return value
+}
 
 export const fetchTransactions = createServerFn()
 	.inputValidator(
@@ -26,13 +47,16 @@ export const fetchTransactions = createServerFn()
 		}),
 	)
 	.handler(async ({ data: params }) => {
+		const chainId = config.getClient().chain.id
+		const chainIdHex = Hex.fromNumber(chainId)
+
 		const include =
 			params.include === 'sent'
 				? 'sent'
 				: params.include === 'received'
 					? 'received'
 					: 'all'
-		const sortDirection = params.sort === 'asc' ? 'ASC' : 'DESC'
+		const sortDirection = params.sort === 'asc' ? 'asc' : 'desc'
 
 		const offset = Math.max(
 			0,
@@ -47,89 +71,106 @@ export const fetchTransactions = createServerFn()
 
 		if (limit < 1) limit = 1
 
-		const transferSignature =
-			'Transfer(address indexed from, address indexed to, uint tokens)'
 		const includeSent = include === 'all' || include === 'sent'
 		const includeReceived = include === 'all' || include === 'received'
 
-		const directConditions: string[] = []
-		if (includeSent) directConditions.push(`t."from" = '${params.address}'`)
-		if (includeReceived) directConditions.push(`t."to" = '${params.address}'`)
-
-		const transferConditions: string[] = []
-		if (includeSent) transferConditions.push(`tr."from" = '${params.address}'`)
-		if (includeReceived)
-			transferConditions.push(`tr."to" = '${params.address}'`)
-
-		const directFilter =
-			directConditions.length > 0 ? directConditions.join(' OR ') : 'FALSE'
-		const transferFilter =
-			transferConditions.length > 0 ? transferConditions.join(' OR ') : 'FALSE'
-
 		const fetchSize = offset + limit + 1
 
-		const directTxsQuery = /* sql */ `
-			SELECT
-				t.hash,
-				t.block_num,
-				t."from",
-				t."to",
-				t.value,
-				t.input,
-				t.nonce,
-				t.gas,
-				t.gas_price,
-				t.type
-			FROM txs t
-			WHERE t.chain = ${chainId} AND (${directFilter})
-			ORDER BY t.block_num ${sortDirection}, t.hash ${sortDirection}
-			LIMIT ${fetchSize}
-		`
-
-		const transferTxHashesQuery = /* sql */ `
-			SELECT DISTINCT tr.tx_hash as hash, tr.block_num
-			FROM transfer tr
-			WHERE tr.chain = ${chainId} AND (${transferFilter})
-			ORDER BY tr.block_num ${sortDirection}, tr.tx_hash ${sortDirection}
-			LIMIT ${fetchSize}
-		`
-
-		const [directTxsResult, transferHashesResult] =
-			await IS.runIndexSupplyBatch([
-				{ query: directTxsQuery },
-				{ query: transferTxHashesQuery, signatures: [transferSignature] },
+		// Build direct transactions query
+		let directTxsQuery = QB.selectFrom('txs')
+			.select([
+				'hash',
+				'block_num',
+				'from',
+				'to',
+				'value',
+				'input',
+				'nonce',
+				'gas',
+				'gas_price',
+				'type',
 			])
+			.where('chain', '=', chainId)
 
-		const directTxColumns = new Map(
-			directTxsResult.columns.map((column, index) => [column.name, index]),
-		)
-		const hashIdx = directTxColumns.get('hash')
-		const blockNumIdx = directTxColumns.get('block_num')
+		if (includeSent && includeReceived) {
+			directTxsQuery = directTxsQuery.where((eb) =>
+				eb.or([eb('from', '=', params.address), eb('to', '=', params.address)]),
+			)
+		} else if (includeSent) {
+			directTxsQuery = directTxsQuery.where('from', '=', params.address)
+		} else if (includeReceived) {
+			directTxsQuery = directTxsQuery.where('to', '=', params.address)
+		}
 
-		// Handle empty results (no columns returned when no rows match)
-		const hasDirectColumns = hashIdx !== undefined && blockNumIdx !== undefined
+		directTxsQuery = directTxsQuery
+			.orderBy('block_num', sortDirection)
+			.orderBy('hash', sortDirection)
+			.limit(fetchSize)
+
+		// Build transfer hashes query
+		let transferHashesQuery = QB.withSignatures([TRANSFER_SIGNATURE])
+			.selectFrom('transfer')
+			.select(['tx_hash', 'block_num'])
+			.distinct()
+			.where('chain', '=', chainId)
+
+		if (includeSent && includeReceived) {
+			transferHashesQuery = transferHashesQuery.where((eb) =>
+				eb.or([eb('from', '=', params.address), eb('to', '=', params.address)]),
+			)
+		} else if (includeSent) {
+			transferHashesQuery = transferHashesQuery.where(
+				'from',
+				'=',
+				params.address,
+			)
+		} else if (includeReceived) {
+			transferHashesQuery = transferHashesQuery.where('to', '=', params.address)
+		}
+
+		transferHashesQuery = transferHashesQuery
+			.orderBy('block_num', sortDirection)
+			.orderBy('tx_hash', sortDirection)
+			.limit(fetchSize)
+
+		const [directTxsResult, transferHashesResult] = await Promise.all([
+			directTxsQuery.execute(),
+			transferHashesQuery.execute(),
+		])
 
 		type TxRow = {
 			hash: string
 			block_num: number
-			row: IS.RowValue[]
+			from: string
+			to: string | null
+			value: string
+			input: string
+			nonce: string
+			gas: string
+			gas_price: string
+			type: number
 		}
 
 		const txsByHash = new Map<string, TxRow>()
-		if (hasDirectColumns) {
-			for (const row of directTxsResult.rows) {
-				const hash = row[hashIdx]
-				const blockNum = row[blockNumIdx]
-				if (typeof hash === 'string' && typeof blockNum === 'number') {
-					txsByHash.set(hash, { hash, block_num: blockNum, row })
-				}
-			}
+		for (const row of directTxsResult) {
+			txsByHash.set(String(row.hash), {
+				hash: String(row.hash),
+				block_num: Number(row.block_num),
+				from: String(row.from),
+				to: row.to ? String(row.to) : null,
+				value: String(row.value),
+				input: String(row.input),
+				nonce: String(row.nonce),
+				gas: String(row.gas),
+				gas_price: String(row.gas_price),
+				type: Number(row.type),
+			})
 		}
 
 		const transferHashes: string[] = []
-		for (const row of transferHashesResult.rows) {
-			const hash = row[0]
-			if (typeof hash === 'string' && !txsByHash.has(hash)) {
+		for (const row of transferHashesResult) {
+			const hash = String(row.tx_hash)
+			if (!txsByHash.has(hash)) {
 				transferHashes.push(hash)
 			}
 		}
@@ -138,51 +179,43 @@ export const fetchTransactions = createServerFn()
 			const BATCH_SIZE = 500
 			for (let index = 0; index < transferHashes.length; index += BATCH_SIZE) {
 				const batch = transferHashes.slice(index, index + BATCH_SIZE)
-				const hashList = batch.map((h) => `'${h}'`).join(',')
-				const transferTxsQuery = /* sql */ `
-					SELECT
-						t.hash,
-						t.block_num,
-						t."from",
-						t."to",
-						t.value,
-						t.input,
-						t.nonce,
-						t.gas,
-						t.gas_price,
-						t.type
-					FROM txs t
-					WHERE t.chain = ${chainId} AND t.hash IN (${hashList})
-				`
-				const transferTxsResult = await IS.runIndexSupplyQuery(
-					transferTxsQuery,
-					{ signatures: [''] },
-				)
-				const transferTxColumns = new Map(
-					transferTxsResult.columns.map((column, index) => [
-						column.name,
-						index,
-					]),
-				)
-				const transferHashIdx = transferTxColumns.get('hash')
-				const transferBlockNumIdx = transferTxColumns.get('block_num')
-				if (
-					transferHashIdx !== undefined &&
-					transferBlockNumIdx !== undefined
-				) {
-					for (const row of transferTxsResult.rows) {
-						const hash = row[transferHashIdx]
-						const blockNum = row[transferBlockNumIdx]
-						if (typeof hash === 'string' && typeof blockNum === 'number') {
-							txsByHash.set(hash, { hash, block_num: blockNum, row })
-						}
-					}
+
+				const transferTxsResult = await QB.selectFrom('txs')
+					.select([
+						'hash',
+						'block_num',
+						'from',
+						'to',
+						'value',
+						'input',
+						'nonce',
+						'gas',
+						'gas_price',
+						'type',
+					])
+					.where('chain', '=', chainId)
+					.where('hash', 'in', batch)
+					.execute()
+
+				for (const row of transferTxsResult) {
+					txsByHash.set(String(row.hash), {
+						hash: String(row.hash),
+						block_num: Number(row.block_num),
+						from: String(row.from),
+						to: row.to ? String(row.to) : null,
+						value: String(row.value),
+						input: String(row.input),
+						nonce: String(row.nonce),
+						gas: String(row.gas),
+						gas_price: String(row.gas_price),
+						type: Number(row.type),
+					})
 				}
 			}
 		}
 
 		const sortedTxs = [...txsByHash.values()].sort((a, b) =>
-			sortDirection === 'DESC'
+			sortDirection === 'desc'
 				? b.block_num - a.block_num
 				: a.block_num - b.block_num,
 		)
@@ -190,52 +223,27 @@ export const fetchTransactions = createServerFn()
 		const hasMore = sortedTxs.length > offset + limit
 		const paginatedTxs = sortedTxs.slice(offset, offset + limit)
 
-		// Expected columns in consistent order (matches our SELECT queries)
-		const expectedColumns = [
-			{ name: 'hash', pgtype: 'bytea' },
-			{ name: 'block_num', pgtype: 'int8' },
-			{ name: 'from', pgtype: 'bytea' },
-			{ name: 'to', pgtype: 'bytea' },
-			{ name: 'value', pgtype: 'numeric' },
-			{ name: 'input', pgtype: 'bytea' },
-			{ name: 'nonce', pgtype: 'int8' },
-			{ name: 'gas', pgtype: 'int8' },
-			{ name: 'gas_price', pgtype: 'int8' },
-			{ name: 'type', pgtype: 'int2' },
-		]
-		const txColumns = new Map(
-			expectedColumns.map((column, index) => [column.name, index]),
-		)
-		const getColumnValue = (row: IS.RowValue[], name: string) => {
-			const columnIndex = txColumns.get(name)
-			if (columnIndex === undefined)
-				throw new Error(`Missing "${name}" column in IndexSupply response`)
-			return row[columnIndex] ?? null
-		}
-
-		const transactions: RpcTransaction[] = paginatedTxs.map(({ row }) => {
-			const hash = IS.toHexData(getColumnValue(row, 'hash'))
-			const from = IS.toAddressValue(getColumnValue(row, 'from'))
+		const transactions: RpcTransaction[] = paginatedTxs.map((row) => {
+			const hash = toHexData(row.hash)
+			const from = toAddressValue(row.from)
 			if (!from) throw new Error('Transaction is missing a "from" address')
 
-			const to = IS.toAddressValue(getColumnValue(row, 'to'))
+			const to = toAddressValue(row.to)
 
 			return {
 				blockHash: null,
-				blockNumber: IS.toQuantityHex(getColumnValue(row, 'block_num')),
+				blockNumber: toQuantityHex(row.block_num),
 				chainId: chainIdHex,
 				from,
-				gas: IS.toQuantityHex(getColumnValue(row, 'gas')),
-				gasPrice: IS.toQuantityHex(getColumnValue(row, 'gas_price')),
+				gas: toQuantityHex(row.gas),
+				gasPrice: toQuantityHex(row.gas_price),
 				hash,
-				input: IS.toHexData(getColumnValue(row, 'input')),
-				nonce: IS.toQuantityHex(getColumnValue(row, 'nonce')),
+				input: toHexData(row.input),
+				nonce: toQuantityHex(row.nonce),
 				to,
 				transactionIndex: null,
-				value: IS.toQuantityHex(getColumnValue(row, 'value')),
-				type: IS.toQuantityHex(
-					getColumnValue(row, 'type'),
-				) as RpcTransaction['type'],
+				value: toQuantityHex(row.value),
+				type: toQuantityHex(row.type) as RpcTransaction['type'],
 				v: '0x0',
 				r: '0x0',
 				s: '0x0',
@@ -262,62 +270,46 @@ export const getTotalValue = createServerFn()
 	)
 	.handler(async ({ data: params }) => {
 		const { address } = params
-		const chainId = getChainId(config)
+		const chainId = config.getClient().chain.id
 
-		const query = `SELECT address as token_address, SUM(CASE WHEN "to" = '${address}' THEN tokens ELSE 0 END) - SUM(CASE WHEN "from" = '${address}' THEN tokens ELSE 0 END) as balance FROM transfer WHERE chain = ${chainId} AND ("to" = '${address}' OR "from" = '${address}') GROUP BY address`
+		const result = await QB.withSignatures([TRANSFER_SIGNATURE])
+			.selectFrom('transfer')
+			.select(['address', 'from', 'to', 'tokens'])
+			.where('chain', '=', chainId)
+			.where((eb) => eb.or([eb('from', '=', address), eb('to', '=', address)]))
+			.execute()
 
-		const searchParams = new URLSearchParams({
-			query,
-			signatures:
-				'Transfer(address indexed from, address indexed to, uint tokens)',
-			'api-key': env.INDEXSUPPLY_API_KEY || '',
-		})
+		// Calculate balance per token
+		const balances = new Map<string, bigint>()
+		for (const row of result) {
+			const tokenAddress = String(row.address)
+			const from = String(row.from).toLowerCase()
+			const to = String(row.to).toLowerCase()
+			const tokens = BigInt(row.tokens)
+			const addressLower = address.toLowerCase()
 
-		const response = await fetch(`${IS.endpoint}?${searchParams}`)
-
-		if (!response.ok) {
-			const errorText = await response.text()
-			console.error('IndexSupply total value query failed:', {
-				query: normalizeSQL(query),
-				status: response.status,
-				error: errorText,
-			})
-			throw new Error(
-				`Failed to fetch total value: ${response.status} ${errorText}`,
-			)
+			const currentBalance = balances.get(tokenAddress) ?? 0n
+			let newBalance = currentBalance
+			if (to === addressLower) {
+				newBalance += tokens
+			}
+			if (from === addressLower) {
+				newBalance -= tokens
+			}
+			balances.set(tokenAddress, newBalance)
 		}
 
-		const responseData = await response.json()
-
-		const result = z
-			.array(
-				z.object({
-					cursor: z.string(),
-					columns: z.array(
-						z.object({
-							name: z.string(),
-							pgtype: z.enum(['bytea', 'numeric']),
-						}),
-					),
-					rows: z.array(z.tuple([z.string(), z.string()])),
-				}),
-			)
-			.safeParse(responseData)
-
-		if (!result.success) {
-			throw new Error(`Invalid response data: ${z.prettifyError(result.error)}`)
-		}
-
-		const rowsWithBalance =
-			result.data.at(0)?.rows.filter(([_, balance]) => BigInt(balance) > 0n) ??
-			[]
+		// Filter for positive balances
+		const rowsWithBalance = [...balances.entries()]
+			.filter(([_, balance]) => balance > 0n)
+			.map(([token_address, balance]) => ({ token_address, balance }))
 
 		const decimals =
 			(await Promise.all(
-				rowsWithBalance.map(([address]) =>
+				rowsWithBalance.map((row) =>
 					// TODO: use readContracts when multicall is not broken
 					readContract(getConfig(), {
-						address: address as Address.Address,
+						address: row.token_address as Address.Address,
 						abi: Abis.tip20,
 						functionName: 'decimals',
 					}),
@@ -326,7 +318,7 @@ export const getTotalValue = createServerFn()
 
 		const decimalsMap = new Map<Address.Address, number>(
 			decimals.map((decimal, index) => [
-				rowsWithBalance[index][0] as Address.Address,
+				rowsWithBalance[index].token_address as Address.Address,
 				decimal,
 			]),
 		)
@@ -334,9 +326,10 @@ export const getTotalValue = createServerFn()
 		const PRICE_PER_TOKEN = 1 // TODO: fetch actual price per token
 
 		const totalValue = rowsWithBalance
-			.map(([address, balance]) => {
-				const tokenDecimals = decimalsMap.get(address as Address.Address) ?? 0
-				return Number(formatUnits(BigInt(balance), tokenDecimals))
+			.map((row) => {
+				const tokenDecimals =
+					decimalsMap.get(row.token_address as Address.Address) ?? 0
+				return Number(formatUnits(row.balance, tokenDecimals))
 			})
 			.reduce((acc, balance) => acc + balance * PRICE_PER_TOKEN, 0)
 
@@ -351,17 +344,21 @@ export const FetchAddressTransactionsCountSchema = z.object({
 export const fetchAddressTransactionsCount = createServerFn({ method: 'GET' })
 	.inputValidator((input) => FetchAddressTransactionsCountSchema.parse(input))
 	.handler(async ({ data: { address, chainId } }) => {
-		const [txSentResult, txReceivedResult] = await IS.runIndexSupplyBatch([
-			{
-				query: /* sql */ `SELECT COUNT(1) as cnt FROM txs WHERE "from" = ${address} AND chain = ${chainId}`,
-			},
-			{
-				query: /* sql */ `SELECT COUNT(1) as cnt FROM txs WHERE "to" = ${address} AND chain = ${chainId}`,
-			},
+		const [txSentResult, txReceivedResult] = await Promise.all([
+			QB.selectFrom('txs')
+				.select((eb) => eb.fn.count('hash').as('cnt'))
+				.where('from', '=', address)
+				.where('chain', '=', chainId)
+				.executeTakeFirstOrThrow(),
+			QB.selectFrom('txs')
+				.select((eb) => eb.fn.count('hash').as('cnt'))
+				.where('to', '=', address)
+				.where('chain', '=', chainId)
+				.executeTakeFirstOrThrow(),
 		])
 
-		const txSent = BigInt(txSentResult.rows?.at(0)?.at(0) ?? 0)
-		const txReceived = BigInt(txReceivedResult.rows?.at(0)?.at(0) ?? 0)
+		const txSent = BigInt(txSentResult.cnt ?? 0)
+		const txReceived = BigInt(txReceivedResult.cnt ?? 0)
 
 		return txSent + txReceived
 	})

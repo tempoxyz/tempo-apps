@@ -22,9 +22,9 @@ const nativeTokens: Token[] = [
 ]
 
 async function fetchAllTokens(): Promise<Token[]> {
-	const apiKey = process.env.INDEXSUPPLY_API_KEY
+	const apiKey = process.env.INDEXER_API_KEY
 	if (!apiKey)
-		throw new Error('INDEXSUPPLY_API_KEY environment variable is required')
+		throw new Error('INDEXER_API_KEY environment variable is required')
 
 	const url = new URL(indexSupplyEndpoint)
 	url.searchParams.set('api-key', apiKey)

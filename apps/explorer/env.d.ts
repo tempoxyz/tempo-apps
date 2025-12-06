@@ -1,5 +1,5 @@
 interface EnvironmentVariables {
-	readonly INDEXSUPPLY_API_KEY: string | undefined
+	readonly INDEXER_API_KEY: string | undefined
 	readonly VITE_LOG_LEVEL: 'info' | 'warn' | 'silent'
 }
 
