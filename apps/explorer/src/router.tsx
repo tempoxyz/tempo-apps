@@ -22,6 +22,7 @@ export const getRouter = () => {
 		scrollRestoration: true,
 		context: { queryClient },
 		defaultPreload: 'intent',
+		defaultStructuralSharing: true,
 		defaultNotFoundComponent: () => (
 			<Layout>
 				<NotFound />
@@ -33,7 +34,6 @@ export const getRouter = () => {
 	setupRouterSsrQueryIntegration({
 		router,
 		queryClient,
-		wrapQueryClient: false,
 	})
 
 	return router
