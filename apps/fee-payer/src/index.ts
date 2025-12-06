@@ -7,6 +7,7 @@ import { Handler } from 'tempo.ts/server'
 import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import * as z from 'zod'
+import { rateLimitMiddleware } from './lib/rate-limit.js'
 import { getUsage } from './lib/usage.js'
 
 const app = new Hono()
@@ -23,6 +24,7 @@ app.use(
 		allowHeaders: ['Content-Type', 'Authorization'],
 		maxAge: 86400,
 	}),
+	rateLimitMiddleware,
 )
 
 app.get(
