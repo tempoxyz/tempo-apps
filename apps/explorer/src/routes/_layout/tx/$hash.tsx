@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
@@ -11,8 +11,8 @@ import { type Address, type Hex, Json, Value } from 'ox'
 import * as React from 'react'
 import type { Log, TransactionReceipt } from 'viem'
 import { useChains } from 'wagmi'
-import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { InfoRow } from '#components/data'
 import { DecodedCalldata } from '#components/transaction/DecodedCalldata'
 import { EventDescription } from '#components/transaction/EventDescription'
 import { RawTransaction } from '#components/transaction/receipt/RawTransaction'
@@ -21,25 +21,17 @@ import { DataGrid } from '#components/ui/DataGrid'
 import { NotFound } from '#components/ui/NotFound'
 import { Sections } from '#components/ui/Sections'
 import { cx } from '#cva.config.ts'
-import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
-import { type FeeBreakdownItem, getFeeBreakdown } from '#lib/domain/receipt'
-import * as Tip20 from '#lib/domain/tip20'
+import type { KnownEvent } from '#lib/domain/known-events'
+import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { HexFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
+import { type TxData, txQueryOptions } from '#lib/queries'
 import { zHash } from '#lib/zod'
-import { getConfig } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
 
 const defaultSearchValues = {
 	tab: 'overview',
 } as const
-
-function txQueryOptions(params: { hash: Hex.Hex }) {
-	return queryOptions({
-		queryKey: ['tx-detail', params.hash],
-		queryFn: () => fetchTxData(params),
-	})
-}
 
 export const Route = createFileRoute('/_layout/tx/$hash')({
 	component: RouteComponent,
@@ -185,36 +177,10 @@ function RouteComponent() {
 	)
 }
 
-async function fetchTxData(params: { hash: Hex.Hex }) {
-	const config = getConfig()
-	const receipt = await getTransactionReceipt(config, { hash: params.hash })
-
-	const [block, transaction, getTokenMetadata] = await Promise.all([
-		getBlock(config, { blockHash: receipt.blockHash }),
-		getTransaction(config, { hash: receipt.transactionHash }),
-		Tip20.metadataFromLogs(receipt.logs),
-	])
-
-	const knownEvents = parseKnownEvents(receipt, {
-		transaction,
-		getTokenMetadata,
-	})
-
-	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
-
-	return {
-		block,
-		feeBreakdown,
-		knownEvents,
-		receipt,
-		transaction,
-	}
-}
-
 function OverviewSection(props: {
 	receipt: TransactionReceipt
-	transaction: Awaited<ReturnType<typeof fetchTxData>>['transaction']
-	block: Awaited<ReturnType<typeof fetchTxData>>['block']
+	transaction: TxData['transaction']
+	block: TxData['block']
 	knownEvents: KnownEvent[]
 	feeBreakdown: FeeBreakdownItem[]
 }) {
@@ -320,18 +286,6 @@ function OverviewSection(props: {
 			{input && input !== '0x' && (
 				<InputDataRow input={input} to={transaction.to} />
 			)}
-		</div>
-	)
-}
-
-function InfoRow(props: { label: string; children: React.ReactNode }) {
-	const { label, children } = props
-	return (
-		<div className="flex items-start gap-[16px] px-[18px] py-[12px] border-b border-dashed border-card-border last:border-b-0">
-			<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
-				{label}
-			</span>
-			<div className="text-[13px] break-all">{children}</div>
 		</div>
 	)
 }
@@ -531,7 +485,7 @@ function EventCell(props: { log: Log; knownEvent?: KnownEvent }) {
 }
 
 function RawSection(props: {
-	transaction: Awaited<ReturnType<typeof fetchTxData>>['transaction']
+	transaction: TxData['transaction']
 	receipt: TransactionReceipt
 }) {
 	const { transaction, receipt } = props
