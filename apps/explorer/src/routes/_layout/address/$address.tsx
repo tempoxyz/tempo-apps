@@ -22,7 +22,7 @@ import { useBlock } from 'wagmi'
 import { getBlock, getChainId, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#components/address/Account.tsx'
-import { ContractReader } from '#components/contract/Read'
+import { ContractReader } from '#components/contract/Read.tsx'
 import {
 	BatchTransactionDataContext,
 	type TransactionData,
