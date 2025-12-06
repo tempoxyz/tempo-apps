@@ -4,6 +4,7 @@ const demoPages = [
 	{ path: '/demo/tx', label: 'Transaction' },
 	{ path: '/demo/address', label: 'Address' },
 	{ path: '/demo/pagination', label: 'Pagination' },
+	{ path: '/demo/empty-state', label: 'Empty State' },
 ]
 
 function loader() {
