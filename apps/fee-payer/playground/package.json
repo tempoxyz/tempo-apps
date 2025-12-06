@@ -9,9 +9,9 @@
 		"preview": "vite preview"
 	},
 	"dependencies": {
-		"@tanstack/react-query": "^5",
-		"react": "^19",
-		"react-dom": "^19",
+		"@tanstack/react-query": "^5.90.12",
+		"react": "^19.0.1",
+		"react-dom": "^19.0.1",
 		"tempo.ts": "catalog:",
 		"viem": "catalog:",
 		"wagmi": "catalog:"
