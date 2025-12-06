@@ -351,15 +351,17 @@ export const FetchAddressTransactionsCountSchema = z.object({
 export const fetchAddressTransactionsCount = createServerFn({ method: 'GET' })
 	.inputValidator((input) => FetchAddressTransactionsCountSchema.parse(input))
 	.handler(async ({ data: { address, chainId } }) => {
-		const result = await IS.runIndexSupplyQuery(/* sql */ `
-SELECT SUM(CASE WHEN "from" = '${address}' THEN 1 ELSE 0 END) as sent, 
-       SUM(CASE WHEN "to" = '${address}' THEN 1 ELSE 0 END) as received 
-       FROM txs WHERE ("from" = '${address}' OR "to" = '${address}') AND chain = ${chainId}`)
+		const [txSentResult, txReceivedResult] = await IS.runIndexSupplyBatch([
+			{
+				query: /* sql */ `SELECT COUNT(1) as cnt FROM txs WHERE "from" = ${address} AND chain = ${chainId}`,
+			},
+			{
+				query: /* sql */ `SELECT COUNT(1) as cnt FROM txs WHERE "to" = ${address} AND chain = ${chainId}`,
+			},
+		])
 
-		const cursor = result.cursor
-		if (!cursor?.includes('-')) return 0n
+		const txSent = BigInt(txSentResult.rows?.at(0)?.at(0) ?? 0)
+		const txReceived = BigInt(txReceivedResult.rows?.at(0)?.at(0) ?? 0)
 
-		const [, total] = cursor.split('-')
-
-		return BigInt(total)
+		return txSent + txReceived
 	})
