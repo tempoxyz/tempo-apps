@@ -145,9 +145,16 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const account = a && Address.validate(a) ? a : undefined
 		const offset = (page - 1) * limit
 
-		const holdersSummary = await context.queryClient.ensureQueryData(
+		// prefetch holders in background (non-blocking) - slow query that reconstructs all balances
+		// prefetch page 1 for sidebar stats, and current page for holders tab
+		context.queryClient.prefetchQuery(
 			holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
 		)
+		if (page !== 1 || limit !== 10) {
+			context.queryClient.prefetchQuery(
+				holdersQueryOptions({ address, page, limit, offset }),
+			)
+		}
 
 		if (tab === 'transfers') {
 			const [metadata, transfers] = await Promise.all([
@@ -156,16 +163,11 @@ export const Route = createFileRoute('/_layout/token/$address')({
 					transfersQueryOptions({ address, page, limit, offset, account }),
 				),
 			])
-			return { holders: undefined, holdersSummary, metadata, transfers }
+			return { metadata, transfers }
 		}
 
-		const [metadata, holders] = await Promise.all([
-			Actions.token.getMetadata(config, { token: address }),
-			context.queryClient.ensureQueryData(
-				holdersQueryOptions({ address, page, limit, offset }),
-			),
-		])
-		return { holders, holdersSummary, metadata, transfers: undefined }
+		const metadata = await Actions.token.getMetadata(config, { token: address })
+		return { metadata, transfers: undefined }
 	},
 	params: {
 		parse: z.object({
@@ -250,7 +252,6 @@ function RouteComponent() {
 				address={address}
 				className="self-start"
 				initialMetadata={loaderData.metadata}
-				holdersSummary={loaderData.holdersSummary}
 			/>
 			<SectionsWrapper
 				address={address}
@@ -269,19 +270,8 @@ function TokenCard(props: {
 	address: Address.Address
 	className?: string
 	initialMetadata?: TokenMetadata
-	holdersSummary?: {
-		holders: Array<{
-			address: Address.Address
-			balance: string
-			percentage: number
-		}>
-		total: number
-		totalSupply: string
-		offset: number
-		limit: number
-	}
 }) {
-	const { address, className, initialMetadata, holdersSummary } = props
+	const { address, className, initialMetadata } = props
 
 	const { data: metadata } = Hooks.token.useGetMetadata({
 		token: address,
@@ -290,6 +280,11 @@ function TokenCard(props: {
 			initialData: initialMetadata,
 		},
 	})
+
+	// Fetch holders summary asynchronously (was prefetched in loader)
+	const { data: holdersSummary } = useQuery(
+		holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
+	)
 
 	const { copy, notifying } = useCopy()
 
@@ -546,12 +541,8 @@ function SectionsWrapper(props: {
 		offset: activeSection === 1 ? (page - 1) * limit : 0,
 	})
 
-	const { data: holdersData, isLoading: isLoadingHolders } = useQuery({
-		...holdersOptions,
-		...(activeSection === 1 && holdersQueryPage === page && loaderData.holders
-			? { initialData: loaderData.holders }
-			: {}),
-	})
+	const { data: holdersData, isLoading: isLoadingHolders } =
+		useQuery(holdersOptions)
 
 	const { transfers = [], total: transfersTotal = 0 } = transfersData ?? {}
 
