@@ -1,57 +1,34 @@
 import { keepPreviousData, queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
-import type { RpcTransaction } from 'viem'
-import type * as z from 'zod/mini'
+import * as AccountServer from '#lib/server/account.server.ts'
 
-import type { RequestParametersSchema as AccountRequestParametersSchema } from '#routes/api/address/$address.ts'
-
-type AccountRequestParameters = Omit<
-	z.infer<typeof AccountRequestParametersSchema>,
-	'page' | 'sort' | 'include'
->
-
-type TransactionsApiResponse = {
-	transactions: Array<RpcTransaction>
-	total: number
-	offset: number
+export type TransactionQueryParams = {
+	address: Address.Address
+	page: number
 	limit: number
-	hasMore: boolean
-	error: null | string
+	offset: number
+	_key?: string | undefined
 }
 
-export function transactionsQueryOptions(
-	params: {
-		page: number
-		include?: 'all' | 'sent' | 'received' | undefined
-		address: Address.Address
-		_key?: string | undefined
-	} & AccountRequestParameters,
-) {
-	const searchParams = new URLSearchParams({
-		include: params?.include ?? 'all',
-		limit: params.limit.toString(),
-		offset: params.offset.toString(),
-	})
+export function transactionsQueryOptions(params: TransactionQueryParams) {
 	return queryOptions({
 		queryKey: [
 			'account-transactions',
 			params.address,
 			params.page,
 			params.limit,
-			params.offset,
 			params._key,
 		],
-		queryFn: async ({ signal }): Promise<TransactionsApiResponse> => {
-			const response = await fetch(
-				`${__BASE_URL__}/api/address/${params.address}?${searchParams}`,
-				{ signal },
-			)
-			const data = await response.json()
-			return data as TransactionsApiResponse
-		},
-		// Prevent immediate refetch on hydration - let SSR data be used
-		staleTime: 10_000,
+		queryFn: () =>
+			AccountServer.fetchTransactions({
+				data: {
+					address: params.address,
+					offset: params.offset,
+					limit: params.limit,
+				},
+			}),
 		refetchInterval: false,
+		refetchIntervalInBackground: false,
 		refetchOnWindowFocus: false,
 		placeholderData: keepPreviousData,
 	})

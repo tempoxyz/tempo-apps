@@ -2,20 +2,15 @@ import { Link } from '@tanstack/react-router'
 import { Address, Hex, Value } from 'ox'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
-import type { GetBlockReturnType } from 'wagmi/actions'
-import { Amount } from '#comps/Amount'
+import type { getBlock } from 'wagmi/actions'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
-import { TxEventDescription } from '#comps/TxEventDescription'
-import {
-	type KnownEvent,
-	type KnownEventPart,
-	preferredEventsFilter,
-} from '#lib/domain/known-events'
+import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
 import { PriceFormatter } from '#lib/formatting'
+import { TxEventDescription } from '#comps/TxEventDescription'
 
 export type TransactionData = {
 	receipt: TransactionReceipt
-	block: GetBlockReturnType
+	block: Awaited<ReturnType<typeof getBlock>>
 	knownEvents: KnownEvent[]
 }
 
@@ -66,7 +61,6 @@ export function TransactionDescription(props: {
 			events={knownEvents}
 			seenAs={accountAddress}
 			transformEvent={transformEvent}
-			limitFilter={preferredEventsFilter}
 		/>
 	)
 }
@@ -132,49 +126,24 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			),
 		)
 	}, [batchData])
+	if (!amountParts?.length) return <>$0.00</>
 
-	const infiniteLabel = <span className="text-secondary">−</span>
-
-	if (!amountParts?.length)
-		return (
-			<Amount.Base
-				value={0n}
-				decimals={0}
-				prefix="$"
-				short
-				infinite={infiniteLabel}
-			/>
-		)
-
-	// Normalize all amounts to 18 decimals and sum as bigints
-	const normalizedDecimals = 18
 	const totalValue = amountParts.reduce((sum, part) => {
 		const decimals = part.value.decimals ?? 6
-		const scale = 10n ** BigInt(normalizedDecimals - decimals)
-		return sum + part.value.value * scale
-	}, 0n)
+		return sum + Number(Value.format(part.value.value, decimals))
+	}, 0)
 
-	if (totalValue === 0n) {
+	if (totalValue === 0) {
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
 		if (value === 0n) return <span className="text-tertiary">—</span>
 		return (
-			<Amount.Base
-				value={value}
-				decimals={18}
-				infinite={infiniteLabel}
-				prefix="$"
-				short
-			/>
+			<span className="text-primary">
+				{PriceFormatter.format(value, { decimals: 18, format: 'short' })}
+			</span>
 		)
 	}
 
 	return (
-		<Amount.Base
-			value={totalValue}
-			decimals={normalizedDecimals}
-			infinite={infiniteLabel}
-			prefix="$"
-			short
-		/>
+		<span className="text-primary">{PriceFormatter.format(totalValue)}</span>
 	)
 }

@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
@@ -9,37 +9,32 @@ import {
 import { Hex } from 'ox'
 import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
-import type { Block as BlockType } from 'viem'
 import { decodeFunctionData, isHex, zeroAddress } from 'viem'
 import { useChains, useWatchBlockNumber } from 'wagmi'
-import { getBlock } from 'wagmi/actions'
-import { Address as AddressLink } from '#components/address/Address'
-import { EventDescription } from '#components/transaction/EventDescription'
-import { TruncatedHash } from '#components/transaction/TruncatedHash'
-import { CopyButton } from '#components/ui/CopyButton.tsx'
-import { NotFound } from '#components/ui/NotFound'
+import { Address as AddressLink } from '#comps/Address'
+import { TxEventDescription } from '#comps/TxEventDescription'
+import { TruncatedHash } from '#comps/TruncatedHash'
+import { CopyButton } from '#comps/CopyButton'
+import { NotFound } from '#comps/NotFound'
 import { cx } from '#cva.config.ts'
-import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
-import * as Tip20 from '#lib/domain/tip20.ts'
+import type { KnownEvent } from '#lib/domain/known-events'
 import {
 	DateFormatter,
 	HexFormatter,
 	NumberFormatter,
 	PriceFormatter,
 } from '#lib/formatting.ts'
+import {
+	type BlockIdentifier,
+	type BlockTransaction,
+	type BlockWithTransactions,
+	blockDetailQueryOptions,
+} from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
-import { getConfig } from '#wagmi.config.ts'
 import ArrowUp10Icon from '~icons/lucide/arrow-up-10'
 import ChevronDown from '~icons/lucide/chevron-down'
 
 const combinedAbi = Object.values(Abis).flat()
-
-type BlockIdentifier =
-	| { kind: 'hash'; blockHash: Hex.Hex }
-	| { kind: 'number'; blockNumber: bigint }
-
-type BlockWithTransactions = BlockType<bigint, true>
-type BlockTransaction = BlockWithTransactions['transactions'][number]
 
 interface TransactionTypeResult {
 	type: 'system' | 'sub-block' | 'fee-token' | 'regular'
@@ -185,70 +180,6 @@ function getTransactionType(
 	}
 
 	return { type: 'regular', label: 'Regular' }
-}
-
-function blockDetailQueryOptions(blockRef: BlockIdentifier) {
-	return queryOptions({
-		queryKey: ['block-detail', blockRef],
-		queryFn: async () => {
-			const wagmiConfig = getConfig()
-			const block = await getBlock(wagmiConfig, {
-				includeTransactions: true,
-				...(blockRef.kind === 'hash'
-					? { blockHash: blockRef.blockHash }
-					: { blockNumber: blockRef.blockNumber }),
-			})
-
-			// Fetch known events for each transaction
-			const knownEventsByHash = await fetchKnownEventsForTransactions(
-				block.transactions as BlockTransaction[],
-				wagmiConfig,
-			)
-
-			return {
-				blockRef,
-				block: block as BlockWithTransactions,
-				knownEventsByHash,
-			}
-		},
-	})
-}
-
-async function fetchKnownEventsForTransactions(
-	transactions: BlockTransaction[],
-	wagmiConfig: ReturnType<typeof getConfig>,
-): Promise<Record<Hex.Hex, KnownEvent[]>> {
-	const { getTransactionReceipt } = await import('wagmi/actions')
-
-	const entries = await Promise.all(
-		transactions.map(async (transaction) => {
-			if (!transaction?.hash)
-				return [transaction.hash ?? 'unknown', []] as const
-
-			try {
-				const receipt = await getTransactionReceipt(wagmiConfig, {
-					hash: transaction.hash,
-				})
-				const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
-				const events = parseKnownEvents(receipt, {
-					transaction,
-					getTokenMetadata,
-				})
-
-				return [transaction.hash, events] as const
-			} catch (error) {
-				console.error('Failed to load transaction description', {
-					hash: transaction.hash,
-					error,
-				})
-				return [transaction.hash, []] as const
-			}
-		}),
-	)
-
-	return Object.fromEntries(
-		entries.filter(([hash]) => Boolean(hash)),
-	) as Record<Hex.Hex, KnownEvent[]>
 }
 
 function BlockSummaryCard(props: BlockSummaryCardProps) {
@@ -666,7 +597,7 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 			return (
 				<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
-					<EventDescription
+					<TxEventDescription
 						event={primaryEvent}
 						className="flex flex-row items-center gap-[6px]"
 					/>
@@ -685,7 +616,7 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 		const [firstEvent, ...rest] = knownEvents
 		return (
 			<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
-				<EventDescription
+				<TxEventDescription
 					event={firstEvent}
 					className="flex flex-row items-center gap-[6px]"
 				/>

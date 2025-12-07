@@ -1,15 +1,10 @@
 import { keepPreviousData, queryOptions } from '@tanstack/react-query'
 import type { Hex } from 'ox'
-import type { Block, Log, TransactionReceipt } from 'viem'
-import { getBlock } from 'wagmi/actions'
-import type { Actions } from 'wagmi/tempo'
-import {
-	decodeKnownCall,
-	type KnownEvent,
-	parseKnownEvents,
-} from '#lib/domain/known-events'
-import { isTip20Address } from '#lib/domain/tip20.ts'
-import { getBatchedClient, getWagmiConfig } from '#wagmi.config.ts'
+import type { Block } from 'viem'
+import { getBlock, getTransactionReceipt } from 'wagmi/actions'
+import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
+import * as Tip20 from '#lib/domain/tip20.ts'
+import { getConfig } from '#wagmi.config.ts'
 
 export const BLOCKS_PER_PAGE = 12
 
@@ -20,15 +15,17 @@ export type BlockIdentifier =
 export type BlockWithTransactions = Block<bigint, true>
 export type BlockTransaction = BlockWithTransactions['transactions'][number]
 
-export function blocksQueryOptions(start?: number) {
+export function blocksQueryOptions(page: number) {
 	return queryOptions({
-		queryKey: ['blocks-loader', start],
+		queryKey: ['blocks-loader', page],
 		queryFn: async () => {
-			const config = getWagmiConfig()
-			const latestBlock = await getBlock(config)
+			const wagmiConfig = getConfig()
+
+			const latestBlock = await getBlock(wagmiConfig)
 			const latestBlockNumber = latestBlock.number
 
-			const startBlock = start != null ? BigInt(start) : latestBlockNumber
+			const startBlock =
+				latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
 
 			const blockNumbers: bigint[] = []
 			for (let i = 0n; i < BigInt(BLOCKS_PER_PAGE); i++) {
@@ -36,10 +33,9 @@ export function blocksQueryOptions(start?: number) {
 				if (blockNum >= 0n) blockNumbers.push(blockNum)
 			}
 
-			// TODO: investigate & consider batch/multicall
 			const blocks = await Promise.all(
 				blockNumbers.map((blockNumber) =>
-					getBlock(config, { blockNumber }).catch(() => null),
+					getBlock(wagmiConfig, { blockNumber }).catch(() => null),
 				),
 			)
 
@@ -52,108 +48,63 @@ export function blocksQueryOptions(start?: number) {
 	})
 }
 
-export const TRANSACTIONS_PER_PAGE = 20
-
 export function blockDetailQueryOptions(blockRef: BlockIdentifier) {
 	return queryOptions({
 		queryKey: ['block-detail', blockRef],
 		queryFn: async () => {
-			const config = getWagmiConfig()
-			const block = await getBlock(config, {
+			const wagmiConfig = getConfig()
+			const block = await getBlock(wagmiConfig, {
 				includeTransactions: true,
 				...(blockRef.kind === 'hash'
 					? { blockHash: blockRef.blockHash }
 					: { blockNumber: blockRef.blockNumber }),
 			})
 
+			const knownEventsByHash = await fetchKnownEventsForTransactions(
+				block.transactions as BlockTransaction[],
+				wagmiConfig,
+			)
+
 			return {
 				blockRef,
 				block: block as BlockWithTransactions,
+				knownEventsByHash,
 			}
 		},
-		placeholderData: keepPreviousData,
 	})
 }
 
-// Batch query for page transaction known events
-export function blockKnownEventsQueryOptions(
-	blockNumber: bigint,
+async function fetchKnownEventsForTransactions(
 	transactions: BlockTransaction[],
-	page: number = 1,
-) {
-	return queryOptions({
-		queryKey: ['block-known-events', blockNumber.toString(), page],
-		queryFn: async () => {
-			const client = getBatchedClient()
+	wagmiConfig: ReturnType<typeof getConfig>,
+): Promise<Record<Hex.Hex, KnownEvent[]>> {
+	const entries = await Promise.all(
+		transactions.map(async (transaction) => {
+			if (!transaction?.hash)
+				return [transaction.hash ?? 'unknown', []] as const
 
-			const txsWithHash = transactions.filter(({ hash }) => hash)
-			const receipts = await Promise.all(
-				txsWithHash.map(({ hash }) =>
-					client.getTransactionReceipt({ hash }).catch(() => null),
-				),
-			)
-
-			const receiptByHash = new Map<string, TransactionReceipt>()
-			for (const receipt of receipts) {
-				if (receipt) {
-					receiptByHash.set(receipt.transactionHash.toLowerCase(), receipt)
-				}
-			}
-
-			const allTip20Addresses = new Set<string>()
-			for (const receipt of receipts) {
-				if (!receipt) continue
-				for (const log of receipt.logs as Log[]) {
-					if (isTip20Address(log.address)) {
-						allTip20Addresses.add(log.address.toLowerCase())
-					}
-				}
-			}
-
-			const tip20Array = Array.from(allTip20Addresses) as Hex.Hex[]
-			const metadataResults = await Promise.all(
-				tip20Array.map((token) => client.token.getMetadata({ token })),
-			)
-
-			const tokenMetadataMap = new Map<
-				string,
-				Actions.token.getMetadata.ReturnValue
-			>()
-			for (const [index, address] of tip20Array.entries()) {
-				const metadata = metadataResults[index]
-				if (metadata) tokenMetadataMap.set(address.toLowerCase(), metadata)
-			}
-
-			const result: Record<Hex.Hex, KnownEvent[]> = {}
-			for (const transaction of transactions) {
-				if (!transaction.hash) continue
-				const receipt = receiptByHash.get(transaction.hash.toLowerCase())
-				if (!receipt) continue
-
-				const getTokenMetadata = (address: Hex.Hex) =>
-					tokenMetadataMap.get(address.toLowerCase())
-
-				const parsedEvents = parseKnownEvents(receipt, {
+			try {
+				const receipt = await getTransactionReceipt(wagmiConfig, {
+					hash: transaction.hash,
+				})
+				const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
+				const events = parseKnownEvents(receipt, {
 					transaction,
 					getTokenMetadata,
 				})
 
-				// Try to decode known contract calls (e.g., validator precompile)
-				// Prioritize decoded calls over fee-only events
-				const knownCall =
-					transaction.to && transaction.input && transaction.input !== '0x'
-						? decodeKnownCall(transaction.to, transaction.input)
-						: null
-
-				const events = knownCall
-					? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
-					: parsedEvents
-
-				result[transaction.hash] = events
+				return [transaction.hash, events] as const
+			} catch (error) {
+				console.error('Failed to load transaction description', {
+					hash: transaction.hash,
+					error,
+				})
+				return [transaction.hash, []] as const
 			}
+		}),
+	)
 
-			return result
-		},
-		staleTime: Number.POSITIVE_INFINITY, // Receipts don't change
-	})
+	return Object.fromEntries(
+		entries.filter(([hash]) => Boolean(hash)),
+	) as Record<Hex.Hex, KnownEvent[]>
 }

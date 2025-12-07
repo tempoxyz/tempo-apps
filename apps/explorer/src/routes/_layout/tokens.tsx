@@ -1,27 +1,17 @@
-import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import * as z from 'zod/mini'
-import { DataGrid } from '#components/ui/DataGrid'
-import { Sections } from '#components/ui/Sections'
+import { DataGrid } from '#comps/DataGrid'
+import { Sections } from '#comps/Sections'
 import {
 	FormattedTimestamp,
 	TimeColumnHeader,
 	useTimeFormat,
-} from '#components/ui/TimeFormat'
+} from '#comps/TimeFormat'
 import { HexFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
-import { fetchTokens, type Token } from '#lib/server/tokens.server'
-
-const TOKENS_PER_PAGE = 12
-
-function tokensQueryOptions(params: { page: number; limit: number }) {
-	const offset = (params.page - 1) * params.limit
-	return queryOptions({
-		queryKey: ['tokens', params.page, params.limit],
-		queryFn: () => fetchTokens({ data: { offset, limit: params.limit } }),
-		placeholderData: keepPreviousData,
-	})
-}
+import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
+import type { Token } from '#lib/server/tokens.server'
 
 export const Route = createFileRoute('/_layout/tokens')({
 	component: TokensPage,
@@ -33,7 +23,7 @@ export const Route = createFileRoute('/_layout/tokens')({
 	}).parse,
 	loader: async ({ context }) => {
 		return context.queryClient.ensureQueryData(
-			tokensQueryOptions({ page: 1, limit: TOKENS_PER_PAGE }),
+			tokensListQueryOptions({ page: 1, limit: TOKENS_PER_PAGE }),
 		)
 	},
 })
@@ -44,7 +34,7 @@ function TokensPage() {
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	const { data, isLoading } = useQuery({
-		...tokensQueryOptions({ page, limit: TOKENS_PER_PAGE }),
+		...tokensListQueryOptions({ page, limit: TOKENS_PER_PAGE }),
 		initialData: page === 1 ? loaderData : undefined,
 	})
 

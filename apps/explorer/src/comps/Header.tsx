@@ -5,20 +5,16 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useWatchBlockNumber } from 'wagmi'
+import { useChains, useWatchBlockNumber } from 'wagmi'
 import { ExploreInput } from '#comps/ExploreInput'
-import { cx } from '#lib/css'
-import { isTestnet } from '#lib/env'
-import { useIsMounted } from '#lib/hooks'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
 
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
-
 	return (
 		<header className="@container relative z-1">
-			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1 print:justify-center">
+			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1">
 				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
 					<Link to="/" className="flex items-center press-down py-[4px]">
 						<Header.TempoWordmark />
@@ -26,11 +22,10 @@ export function Header(props: Header.Props) {
 					<Header.NetworkBadge />
 				</div>
 				<Header.Search />
-				<div className="relative z-1 print:hidden">
+				<div className="relative z-1">
 					<Header.BlockNumber initial={initialBlockNumber} />
 				</div>
 			</div>
-			<Header.Search compact />
 		</header>
 	)
 }
@@ -40,13 +35,11 @@ export namespace Header {
 		initialBlockNumber?: bigint
 	}
 
-	export function Search(props: { compact?: boolean }) {
-		const { compact = false } = props
+	export function Search() {
 		const router = useRouter()
 		const navigate = useNavigate()
 		const [inputValue, setInputValue] = React.useState('')
-
-		const [delayedNavigating, setDelayedNavigating] = React.useState(false)
+		const [isMounted, setIsMounted] = React.useState(false)
 		const { currentPathname, isNavigating } = useRouterState({
 			select: (state) => ({
 				currentPathname:
@@ -56,7 +49,7 @@ export namespace Header {
 		})
 		const showSearch = currentPathname !== '/'
 
-		const isMounted = useIsMounted()
+		React.useEffect(() => setIsMounted(true), [])
 
 		React.useEffect(() => {
 			return router.subscribe('onResolved', ({ hrefChanged }) => {
@@ -64,54 +57,16 @@ export namespace Header {
 			})
 		}, [router])
 
-		// delay disabling the input to avoid blinking on fast navigations
-		React.useEffect(() => {
-			if (!isNavigating) {
-				setDelayedNavigating(false)
-				return
-			}
-			const timer = setTimeout(() => setDelayedNavigating(true), 100)
-			return () => clearTimeout(timer)
-		}, [isNavigating])
-
-		if (!showSearch) return null
-
-		const exploreInput = (
-			<ExploreInput
-				value={inputValue}
-				onChange={setInputValue}
-				disabled={isMounted && delayedNavigating}
-				onActivate={({ value, type }) => {
-					if (type === 'hash') {
-						navigate({ to: '/receipt/$hash', params: { hash: value } })
-						return
-					}
-					if (type === 'token') {
-						navigate({ to: '/token/$address', params: { address: value } })
-						return
-					}
-					if (type === 'address') {
-						navigate({
-							to: '/address/$address',
-							params: { address: value },
-						})
-						return
-					}
-				}}
-			/>
-		)
-
-		if (compact)
-			return (
-				<div className="@min-[800px]:hidden sticky top-0 z-10 px-[24px] pt-[16px] pb-[12px] print:hidden">
+		return (
+			showSearch && (
+				<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex z-1 h-0 items-center">
 					<ExploreInput
-						wide
 						value={inputValue}
 						onChange={setInputValue}
-						disabled={isMounted && delayedNavigating}
+						disabled={isMounted && isNavigating}
 						onActivate={({ value, type }) => {
 							if (type === 'hash') {
-								navigate({ to: '/receipt/$hash', params: { hash: value } })
+								navigate({ to: '/tx/$hash', params: { hash: value } })
 								return
 							}
 							if (type === 'token') {
@@ -129,69 +84,30 @@ export namespace Header {
 					/>
 				</div>
 			)
-
-		return (
-			<>
-				<div className="absolute left-0 right-0 justify-center flex z-1 h-0 items-center @max-[1239px]:hidden print:hidden">
-					{exploreInput}
-				</div>
-				<div className="flex-1 flex justify-center px-[24px] @max-[799px]:hidden @min-[1240px]:hidden print:hidden">
-					<ExploreInput
-						wide
-						value={inputValue}
-						onChange={setInputValue}
-						disabled={isMounted && delayedNavigating}
-						onActivate={({ value, type }) => {
-							if (type === 'hash') {
-								navigate({ to: '/receipt/$hash', params: { hash: value } })
-								return
-							}
-							if (type === 'token') {
-								navigate({ to: '/token/$address', params: { address: value } })
-								return
-							}
-							if (type === 'address') {
-								navigate({
-									to: '/address/$address',
-									params: { address: value },
-								})
-								return
-							}
-						}}
-					/>
-				</div>
-			</>
 		)
 	}
 
 	export function BlockNumber(props: BlockNumber.Props) {
-		const { initial, className } = props
+		const { initial } = props
 
 		const ref = React.useRef<HTMLSpanElement>(null)
-
 		useWatchBlockNumber({
 			onBlockNumber: (blockNumber) => {
 				if (ref.current) ref.current.textContent = String(blockNumber)
 			},
-			poll: true,
 		})
 
 		return (
 			<Link
-				disabled={!isTestnet()}
 				to="/block/$id"
 				params={{ id: 'latest' }}
-				className={cx(
-					className,
-					'flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down',
-				)}
-				title="View latest block"
+				className="flex items-center gap-[6px] text-[15px] font-medium text-secondary"
 			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
 					<span
 						ref={ref}
-						className="text-primary font-medium tabular-nums font-mono min-w-[6ch] inline-block"
+						className="text-primary font-medium tabular-nums min-w-[6ch] inline-block"
 					>
 						{initial ? String(initial) : '…'}
 					</span>
@@ -203,37 +119,19 @@ export namespace Header {
 	export namespace BlockNumber {
 		export interface Props {
 			initial?: bigint
-			className?: string | undefined
 		}
 	}
 
-	export function NetworkBadge(props: NetworkBadge.Props) {
-		const { className } = props
-		const network = import.meta.env.VITE_TEMPO_ENV
+	export function NetworkBadge() {
+		const [chain] = useChains()
+		const network = chain.name.match(/Tempo (.+)/)?.[1]
 		if (!network) return null
-		const name =
-			network === 'testnet'
-				? 'Andantino'
-				: network.charAt(0).toUpperCase() + network.slice(1)
 		return (
-			<div
-				title={`${name} Network`}
-				className={cx(
-					'flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct',
-					'bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium',
-					className,
-				)}
-			>
+			<div className="flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium">
 				<Music4 width={14} height={14} className="text-accent" />
-				<span>{name}</span>
+				{network}
 			</div>
 		)
-	}
-
-	export namespace NetworkBadge {
-		export interface Props {
-			className?: string
-		}
 	}
 
 	export function TempoWordmark(props: TempoWordmark.Props) {

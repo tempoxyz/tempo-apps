@@ -6,8 +6,8 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { ExploreInput } from '#components/ui/ExploreInput'
-import { Intro } from '#components/ui/Intro'
+import { ExploreInput } from '#comps/ExploreInput'
+import { Intro } from '#comps/Intro'
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,

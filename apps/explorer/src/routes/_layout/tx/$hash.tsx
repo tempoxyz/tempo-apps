@@ -1,4 +1,4 @@
-import { queryOptions, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
@@ -11,35 +11,27 @@ import { type Address, type Hex, Json, Value } from 'ox'
 import * as React from 'react'
 import type { Log, TransactionReceipt } from 'viem'
 import { useChains } from 'wagmi'
-import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { DecodedCalldata } from '#components/transaction/DecodedCalldata'
-import { EventDescription } from '#components/transaction/EventDescription'
-import { RawTransaction } from '#components/transaction/receipt/RawTransaction'
-import { TransactionCard } from '#components/transaction/TransactionCard'
-import { DataGrid } from '#components/ui/DataGrid'
-import { NotFound } from '#components/ui/NotFound'
-import { Sections } from '#components/ui/Sections'
+import { InfoRow } from '#comps/InfoRow'
+import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
+import { TxEventDescription } from '#comps/TxEventDescription'
+import { TxRawTransaction } from '#comps/TxRawTransaction'
+import { TxTransactionCard } from '#comps/TxTransactionCard'
+import { DataGrid } from '#comps/DataGrid'
+import { NotFound } from '#comps/NotFound'
+import { Sections } from '#comps/Sections'
 import { cx } from '#cva.config.ts'
-import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
-import { type FeeBreakdownItem, getFeeBreakdown } from '#lib/domain/receipt'
-import * as Tip20 from '#lib/domain/tip20'
+import type { KnownEvent } from '#lib/domain/known-events'
+import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { HexFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
+import { type TxData, txQueryOptions } from '#lib/queries'
 import { zHash } from '#lib/zod'
-import { getConfig } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
 
 const defaultSearchValues = {
 	tab: 'overview',
 } as const
-
-function txQueryOptions(params: { hash: Hex.Hex }) {
-	return queryOptions({
-		queryKey: ['tx-detail', params.hash],
-		queryFn: () => fetchTxData(params),
-	})
-}
 
 export const Route = createFileRoute('/_layout/tx/$hash')({
 	component: RouteComponent,
@@ -126,7 +118,7 @@ function RouteComponent() {
 				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
 			)}
 		>
-			<TransactionCard
+			<TxTransactionCard
 				hash={receipt.transactionHash}
 				status={receipt.status}
 				blockNumber={receipt.blockNumber}
@@ -185,36 +177,10 @@ function RouteComponent() {
 	)
 }
 
-async function fetchTxData(params: { hash: Hex.Hex }) {
-	const config = getConfig()
-	const receipt = await getTransactionReceipt(config, { hash: params.hash })
-
-	const [block, transaction, getTokenMetadata] = await Promise.all([
-		getBlock(config, { blockHash: receipt.blockHash }),
-		getTransaction(config, { hash: receipt.transactionHash }),
-		Tip20.metadataFromLogs(receipt.logs),
-	])
-
-	const knownEvents = parseKnownEvents(receipt, {
-		transaction,
-		getTokenMetadata,
-	})
-
-	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
-
-	return {
-		block,
-		feeBreakdown,
-		knownEvents,
-		receipt,
-		transaction,
-	}
-}
-
 function OverviewSection(props: {
 	receipt: TransactionReceipt
-	transaction: Awaited<ReturnType<typeof fetchTxData>>['transaction']
-	block: Awaited<ReturnType<typeof fetchTxData>>['block']
+	transaction: TxData['transaction']
+	block: TxData['block']
 	knownEvents: KnownEvent[]
 	feeBreakdown: FeeBreakdownItem[]
 }) {
@@ -240,7 +206,7 @@ function OverviewSection(props: {
 		<div className="flex flex-col">
 			{knownEvents.length > 0 && (
 				<InfoRow label="Description">
-					<EventDescription.ExpandGroup events={knownEvents} limit={5} />
+					<TxEventDescription.ExpandGroup events={knownEvents} limit={5} />
 				</InfoRow>
 			)}
 			<InfoRow label="Value">
@@ -324,18 +290,6 @@ function OverviewSection(props: {
 	)
 }
 
-function InfoRow(props: { label: string; children: React.ReactNode }) {
-	const { label, children } = props
-	return (
-		<div className="flex items-start gap-[16px] px-[18px] py-[12px] border-b border-dashed border-card-border last:border-b-0">
-			<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
-				{label}
-			</span>
-			<div className="text-[13px] break-all">{children}</div>
-		</div>
-	)
-}
-
 function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
 	const { input, to } = props
 	const [showRaw, setShowRaw] = React.useState(false)
@@ -347,7 +301,7 @@ function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
 					Input Data
 				</span>
 				<div className="flex flex-col gap-[12px] flex-1">
-					<DecodedCalldata address={to} data={input} />
+					<TxDecodedCalldata address={to} data={input} />
 					<div>
 						<button
 							type="button"
@@ -421,7 +375,7 @@ function CallItem(props: {
 				)}
 			</div>
 			{data && data !== '0x' && (
-				<DecodedCalldata address={call.to} data={data} />
+				<TxDecodedCalldata address={call.to} data={data} />
 			)}
 		</div>
 	)
@@ -488,7 +442,7 @@ function EventCell(props: { log: Log; knownEvent?: KnownEvent }) {
 	return (
 		<div className="flex flex-col gap-[4px]">
 			{knownEvent ? (
-				<EventDescription
+				<TxEventDescription
 					event={knownEvent}
 					className="flex flex-row items-center gap-[6px] leading-[18px]"
 				/>
@@ -531,7 +485,7 @@ function EventCell(props: { log: Log; knownEvent?: KnownEvent }) {
 }
 
 function RawSection(props: {
-	transaction: Awaited<ReturnType<typeof fetchTxData>>['transaction']
+	transaction: TxData['transaction']
 	receipt: TransactionReceipt
 }) {
 	const { transaction, receipt } = props
@@ -552,7 +506,7 @@ function RawSection(props: {
 					<CopyIcon className="size-[14px]" />
 				</button>
 			</div>
-			<RawTransaction data={rawData} />
+			<TxRawTransaction data={rawData} />
 		</div>
 	)
 }

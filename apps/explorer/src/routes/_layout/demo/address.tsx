@@ -4,18 +4,18 @@ import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics } from 'viem'
-import { EventDescription } from '#components/transaction/EventDescription'
+import { TxEventDescription } from '#comps/TxEventDescription'
 import {
 	getPerspectiveEvent,
 	TransactionFee,
 	TransactionTimestamp,
 	TransactionTotal,
-} from '#components/transaction/TransactionRow.tsx'
-import { TruncatedHash } from '#components/transaction/TruncatedHash'
-import { DataGrid } from '#components/ui/DataGrid'
-import { InfoCard } from '#components/ui/InfoCard'
-import { RelativeTime } from '#components/ui/RelativeTime'
-import { Sections } from '#components/ui/Sections'
+} from '#comps/TxTransactionRow'
+import { TruncatedHash } from '#comps/TruncatedHash'
+import { DataGrid } from '#comps/DataGrid'
+import { InfoCard } from '#comps/InfoCard'
+import { RelativeTime } from '#comps/RelativeTime'
+import { Sections } from '#comps/Sections'
 import { cx } from '#cva.config.ts'
 import {
 	accountAddress,
@@ -1014,7 +1014,7 @@ function Component() {
 											perspectiveEvents.map((event, i) => {
 												const key = `${event.type}-${i}`
 												return (
-													<EventDescription
+													<TxEventDescription
 														key={key}
 														event={event}
 														seenAs={accountAddress}
@@ -1028,7 +1028,7 @@ function Component() {
 												className="text-primary h-[20px] flex items-center whitespace-nowrap"
 											>
 												{perspectiveEvents[0] && (
-													<EventDescription
+													<TxEventDescription
 														event={perspectiveEvents[0]}
 														seenAs={accountAddress}
 														className="flex flex-row items-center gap-[6px] leading-[18px] w-auto justify-center flex-nowrap"

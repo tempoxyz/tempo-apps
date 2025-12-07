@@ -1,9 +1,4 @@
-import {
-	keepPreviousData,
-	queryOptions,
-	useQueries,
-	useQuery,
-} from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	notFound,
@@ -16,13 +11,12 @@ import {
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
-import type { RpcTransaction as Transaction } from 'viem'
-import { formatUnits, isHash } from 'viem'
+import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { useBlock } from 'wagmi'
 import { getBlock, getChainId, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { AccountCard } from '#components/address/Account.tsx'
-import { ContractReader } from '#components/contract/Read.tsx'
+import { AccountCard } from '#comps/AccountCard'
+import { ContractReader } from '#comps/ContractReader'
 import {
 	BatchTransactionDataContext,
 	type TransactionData,
@@ -30,16 +24,16 @@ import {
 	TransactionTimestamp,
 	TransactionTotal,
 	useTransactionDataFromBatch,
-} from '#components/transaction/TransactionRow.tsx'
-import { TruncatedHash } from '#components/transaction/TruncatedHash'
-import { DataGrid } from '#components/ui/DataGrid.tsx'
-import { NotFound } from '#components/ui/NotFound'
-import { Sections } from '#components/ui/Sections'
+} from '#comps/TxTransactionRow'
+import { TruncatedHash } from '#comps/TruncatedHash'
+import { DataGrid } from '#comps/DataGrid'
+import { NotFound } from '#comps/NotFound'
+import { Sections } from '#comps/Sections'
 import {
 	TimeColumnHeader,
 	type TimeFormat,
 	useTimeFormat,
-} from '#components/ui/TimeFormat'
+} from '#comps/TimeFormat'
 import { cx } from '#cva.config.ts'
 import {
 	type ContractInfo,
@@ -51,6 +45,10 @@ import { parseKnownEvents } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
+import {
+	type TransactionsData,
+	transactionsQueryOptions,
+} from '#lib/queries/account.ts'
 import * as AccountServer from '#lib/server/account.server.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 
@@ -101,38 +99,6 @@ function useBatchTransactionData(transactions: Transaction[]) {
 	const isLoading = queries.some((q) => q.isLoading)
 
 	return { transactionDataMap, isLoading }
-}
-
-type TransactionQuery = {
-	address: Address.Address
-	page: number
-	limit: number
-	offset: number
-	_key?: string | undefined
-}
-
-function transactionsQueryOptions(params: TransactionQuery) {
-	return queryOptions({
-		queryKey: [
-			'account-transactions',
-			params.address,
-			params.page,
-			params.limit,
-			params._key,
-		],
-		queryFn: () =>
-			AccountServer.fetchTransactions({
-				data: {
-					address: params.address,
-					offset: params.offset,
-					limit: params.limit,
-				},
-			}),
-		refetchInterval: false,
-		refetchIntervalInBackground: false,
-		refetchOnWindowFocus: false,
-		placeholderData: keepPreviousData,
-	})
 }
 
 const assets = [
@@ -511,12 +477,6 @@ function useTransactionCount(address: Address.Address) {
 	})
 }
 
-type TransactionsData = Awaited<
-	ReturnType<
-		NonNullable<ReturnType<typeof transactionsQueryOptions>['queryFn']>
-	>
->
-
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
@@ -627,12 +587,12 @@ function SectionsWrapper(props: {
 								items={() =>
 									transactions.map((transaction) => ({
 										cells: [
-											<TransactionRowTime
+											<TransactionTimeCell
 												key="time"
-												transaction={transaction}
+												hash={transaction.hash}
 												format={timeFormat}
 											/>,
-											<TransactionRowDescription
+											<TransactionDescCell
 												key="desc"
 												transaction={transaction}
 												accountAddress={address}
@@ -642,7 +602,7 @@ function SectionsWrapper(props: {
 												minChars={8}
 												hash={transaction.hash}
 											/>,
-											<TransactionRowFee key="fee" transaction={transaction} />,
+											<TransactionFeeCell key="fee" hash={transaction.hash} />,
 											<TransactionTotal
 												key="total"
 												transaction={transaction}
@@ -688,7 +648,7 @@ function SectionsWrapper(props: {
 										cells:
 											mode === 'stacked'
 												? [
-														<TokenName
+														<AssetName
 															key="name"
 															contractAddress={assetAddress}
 														/>,
@@ -696,31 +656,34 @@ function SectionsWrapper(props: {
 															key="contract"
 															contractAddress={assetAddress}
 														/>,
-														<AssetAmount
+														<AssetBalance
 															key="amount"
 															contractAddress={assetAddress}
 															accountAddress={address}
+															format="amount"
 														/>,
 													]
 												: [
-														<TokenName
+														<AssetName
 															key="name"
 															contractAddress={assetAddress}
 														/>,
-														<TokenSymbol
+														<AssetSymbol
 															key="symbol"
 															contractAddress={assetAddress}
 														/>,
 														<span key="currency">USD</span>,
-														<AssetAmount
+														<AssetBalance
 															key="amount"
 															contractAddress={assetAddress}
 															accountAddress={address}
+															format="amount"
 														/>,
-														<AssetValue
+														<AssetBalance
 															key="value"
 															contractAddress={assetAddress}
 															accountAddress={address}
+															format="value"
 														/>,
 													],
 										link: {
@@ -763,33 +726,25 @@ function SectionsWrapper(props: {
 	)
 }
 
-function TransactionRowTime(props: {
-	transaction: Transaction
-	format: TimeFormat
-}) {
-	const { transaction, format } = props
-	const batchData = useTransactionDataFromBatch(transaction.hash)
-
-	if (!batchData?.block) {
-		return <span className="text-tertiary">—</span>
-	}
-
+function TransactionTimeCell(props: { hash: Hex.Hex; format: TimeFormat }) {
+	const { hash, format } = props
+	const batchData = useTransactionDataFromBatch(hash)
+	if (!batchData?.block) return <span className="text-tertiary">—</span>
 	return (
 		<TransactionTimestamp
 			timestamp={batchData.block.timestamp}
-			link={`/tx/${transaction.hash}`}
+			link={`/tx/${hash}`}
 			format={format}
 		/>
 	)
 }
 
-function TransactionRowDescription(props: {
+function TransactionDescCell(props: {
 	transaction: Transaction
 	accountAddress: Address.Address
 }) {
 	const { transaction, accountAddress } = props
 	const batchData = useTransactionDataFromBatch(transaction.hash)
-
 	if (!batchData) return <span className="text-tertiary">—</span>
 	if (!batchData.knownEvents.length) {
 		const count = batchData.receipt?.logs.length ?? 0
@@ -799,7 +754,6 @@ function TransactionRowDescription(props: {
 			</span>
 		)
 	}
-
 	return (
 		<TransactionDescription
 			transaction={transaction}
@@ -810,117 +764,78 @@ function TransactionRowDescription(props: {
 	)
 }
 
-function TransactionRowFee(props: { transaction: Transaction }) {
-	const { transaction } = props
-	const batchData = useTransactionDataFromBatch(transaction.hash)
-
+function TransactionFeeCell(props: { hash: Hex.Hex }) {
+	const batchData = useTransactionDataFromBatch(props.hash)
 	if (!batchData?.receipt) return <span className="text-tertiary">—</span>
-
-	const fee =
-		batchData.receipt.effectiveGasPrice * batchData.receipt.cumulativeGasUsed
-
 	return (
 		<span className="text-tertiary">
-			{PriceFormatter.format(fee, { decimals: 18, format: 'short' })}
+			{PriceFormatter.format(
+				batchData.receipt.effectiveGasPrice *
+					batchData.receipt.cumulativeGasUsed,
+				{ decimals: 18, format: 'short' },
+			)}
 		</span>
 	)
 }
 
-function TokenName(props: { contractAddress: Address.Address }) {
-	const { contractAddress } = props
-
+function AssetName(props: { contractAddress: Address.Address }) {
 	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: contractAddress,
-		query: {
-			enabled: Boolean(contractAddress),
-		},
+		token: props.contractAddress,
+		query: { enabled: true },
 	})
-
 	return <span>{metadata?.name || 'Unknown Token'}</span>
 }
 
-function TokenSymbol(props: { contractAddress: Address.Address }) {
-	const { contractAddress } = props
-
+function AssetSymbol(props: { contractAddress: Address.Address }) {
 	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: contractAddress,
-		query: {
-			enabled: Boolean(contractAddress),
-		},
+		token: props.contractAddress,
+		query: { enabled: true },
 	})
-
 	return <span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>
 }
 
 function AssetContract(props: { contractAddress: Address.Address }) {
-	const { contractAddress } = props
-
 	return (
 		<span className="text-accent text-[13px]">
-			{HexFormatter.truncate(contractAddress, 10)}
+			{HexFormatter.truncate(props.contractAddress, 10)}
 		</span>
 	)
 }
 
-function AssetAmount(props: {
+function AssetBalance(props: {
 	contractAddress: Address.Address
 	accountAddress: Address.Address
+	format: 'amount' | 'value'
 }) {
-	const { contractAddress, accountAddress } = props
-
+	const { contractAddress, accountAddress, format } = props
 	const { data: metadata } = Hooks.token.useGetMetadata({
 		token: contractAddress,
-		query: {
-			enabled: Boolean(contractAddress),
-		},
+		query: { enabled: true },
 	})
-
 	const { data: balance } = Hooks.token.useGetBalance({
 		token: contractAddress,
 		account: accountAddress,
-		query: {
-			enabled: Boolean(accountAddress && contractAddress),
-		},
+		query: { enabled: true },
 	})
 
-	return (
-		<span className="text-[12px]">
-			{metadata?.decimals !== undefined &&
-				PriceFormatter.formatAmount(
+	if (metadata?.decimals === undefined) return null
+
+	if (format === 'amount') {
+		return (
+			<span className="text-[12px]">
+				{PriceFormatter.formatAmount(
 					formatUnits(balance ?? 0n, metadata.decimals),
 				)}
-		</span>
-	)
-}
-
-function AssetValue(props: {
-	contractAddress: Address.Address
-	accountAddress: Address.Address
-}) {
-	const { contractAddress, accountAddress } = props
-
-	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: contractAddress,
-		query: {
-			enabled: Boolean(contractAddress),
-		},
-	})
-
-	const { data: balance } = Hooks.token.useGetBalance({
-		token: contractAddress,
-		account: accountAddress,
-		query: {
-			enabled: Boolean(accountAddress && contractAddress),
-		},
-	})
+			</span>
+		)
+	}
 
 	return (
 		<span className="text-[12px]">
-			{metadata?.decimals !== undefined &&
-				PriceFormatter.format(balance ?? 0n, {
-					decimals: metadata.decimals,
-					format: 'short',
-				})}
+			{PriceFormatter.format(balance ?? 0n, {
+				decimals: metadata.decimals,
+				format: 'short',
+			})}
 		</span>
 	)
 }

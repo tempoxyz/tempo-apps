@@ -1,4 +1,4 @@
-import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
 	ClientOnly,
 	createFileRoute,
@@ -10,29 +10,27 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { Address, type Hex } from 'ox'
+import { Address } from 'ox'
 import * as React from 'react'
 import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import * as z from 'zod/mini'
-import { ContractReader } from '#components/contract/Read.tsx'
-import { TruncatedHash } from '#components/transaction/TruncatedHash'
-import { DataGrid } from '#components/ui/DataGrid'
-import { InfoCard } from '#components/ui/InfoCard'
-import { NotFound } from '#components/ui/NotFound'
-import { Sections } from '#components/ui/Sections'
-import {
-	FormattedTimestamp,
-	TimeColumnHeader,
-	type TimeFormat,
-	useTimeFormat,
-} from '#components/ui/TimeFormat'
+import { ContractReader } from '#comps/ContractReader'
+import { AddressCell } from '#comps/AddressCell'
+import { AmountCell, BalanceCell } from '#comps/AmountCell'
+import { TimestampCell } from '#comps/TimestampCell'
+import { TransactionCell } from '#comps/TransactionCell'
+import { DataGrid } from '#comps/DataGrid'
+import { InfoCard } from '#comps/InfoCard'
+import { NotFound } from '#comps/NotFound'
+import { Sections } from '#comps/Sections'
+import { TimeColumnHeader, useTimeFormat } from '#comps/TimeFormat'
 import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
-import { fetchHolders, fetchTransfers } from '#lib/server/token.server.ts'
+import { holdersQueryOptions, transfersQueryOptions } from '#lib/queries'
 import { config } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
 import XIcon from '~icons/lucide/x'
@@ -45,65 +43,7 @@ const defaultSearchValues = {
 
 const tabOrder = ['transfers', 'holders', 'contract'] as const
 
-type TransfersQuery = {
-	address: Address.Address
-	page: number
-	limit: number
-	offset: number
-	account?: Address.Address | undefined
-	_key?: string | undefined
-}
-
-type HoldersQuery = {
-	address: Address.Address
-	page: number
-	limit: number
-	offset: number
-}
-
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
-
-function transfersQueryOptions(params: TransfersQuery) {
-	return queryOptions({
-		queryKey: [
-			'token-transfers',
-			params.address,
-			params.page,
-			params.limit,
-			params.account,
-			params._key,
-		],
-		queryFn: async () => {
-			const data = await fetchTransfers({
-				data: {
-					address: params.address,
-					offset: params.offset,
-					limit: params.limit,
-					account: params.account,
-				},
-			})
-			return data
-		},
-		placeholderData: keepPreviousData,
-	})
-}
-
-function holdersQueryOptions(params: HoldersQuery) {
-	return queryOptions({
-		queryKey: ['token-holders', params.address, params.page, params.limit],
-		queryFn: async () => {
-			const data = await fetchHolders({
-				data: {
-					address: params.address,
-					offset: params.offset,
-					limit: params.limit,
-				},
-			})
-			return data
-		},
-		placeholderData: keepPreviousData,
-	})
-}
 
 export const Route = createFileRoute('/_layout/token/$address')({
 	component: RouteComponent,
@@ -618,23 +558,23 @@ function SectionsWrapper(props: {
 
 								return validTransfers.map((transfer) => ({
 									cells: [
-										<TransferTime
+										<TimestampCell
 											key="time"
 											timestamp={BigInt(transfer.timestamp)}
 											link={`/tx/${transfer.transactionHash}`}
 											format={timeFormat}
 										/>,
-										<TransactionLink
+										<TransactionCell
 											key="tx"
 											hash={transfer.transactionHash}
 										/>,
-										<AddressLink
+										<AddressCell
 											key="from"
 											address={transfer.from}
 											label="From"
 										/>,
-										<AddressLink key="to" address={transfer.to} label="To" />,
-										<TransferAmount
+										<AddressCell key="to" address={transfer.to} label="To" />,
+										<AmountCell
 											key="amount"
 											value={BigInt(transfer.value)}
 											decimals={metadata?.decimals}
@@ -669,8 +609,8 @@ function SectionsWrapper(props: {
 							items={() =>
 								holders.map((holder) => ({
 									cells: [
-										<AddressLink key="address" address={holder.address} />,
-										<HolderBalance
+										<AddressCell key="address" address={holder.address} />,
+										<BalanceCell
 											key="balance"
 											balance={holder.balance}
 											decimals={metadata?.decimals}
@@ -733,92 +673,6 @@ function FilterIndicator(props: {
 			</Link>
 		</div>
 	)
-}
-
-function TransferTime(props: {
-	timestamp: bigint
-	link?: string
-	format?: TimeFormat
-}) {
-	const { timestamp, link, format = 'relative' } = props
-	return (
-		<div className="text-nowrap">
-			{link ? (
-				<Link to={link} className="text-tertiary hover:text-secondary">
-					<FormattedTimestamp timestamp={timestamp} format={format} />
-				</Link>
-			) : (
-				<FormattedTimestamp
-					timestamp={timestamp}
-					format={format}
-					className="text-tertiary"
-				/>
-			)}
-		</div>
-	)
-}
-
-function TransactionLink(props: { hash: Hex.Hex }) {
-	const { hash } = props
-	return (
-		<Link
-			to="/tx/$hash"
-			params={{ hash }}
-			className="text-[13px] text-tertiary press-down"
-			title={hash}
-		>
-			<TruncatedHash hash={hash} minChars={6} />
-		</Link>
-	)
-}
-
-function AddressLink(props: {
-	address: Address.Address
-	label?: string
-	asLink?: boolean
-}) {
-	const { address, label, asLink = true } = props
-	const title = `${label ? `${label}: ` : ''}${address}`
-
-	if (!asLink)
-		return (
-			<span className="text-[13px] text-accent" title={title}>
-				<TruncatedHash hash={address} minChars={8} />
-			</span>
-		)
-
-	return (
-		<Link
-			to="/address/$address"
-			params={{ address }}
-			className="text-[13px] text-accent hover:text-accent/80 transition-colors press-down"
-			title={title}
-		>
-			<TruncatedHash hash={address} minChars={8} />
-		</Link>
-	)
-}
-
-function TransferAmount(props: {
-	value: bigint
-	decimals?: number
-	symbol?: string
-}) {
-	const { value, decimals = 18, symbol } = props
-	const formatted = PriceFormatter.formatAmount(formatUnits(value, decimals))
-	return (
-		<span className="text-[12px] text-primary">
-			{formatted} {symbol}
-		</span>
-	)
-}
-
-function HolderBalance(props: { balance: string; decimals?: number }) {
-	const { balance, decimals = 18 } = props
-	const formatted = PriceFormatter.formatAmount(
-		formatUnits(BigInt(balance), decimals),
-	)
-	return <span className="text-[12px] text-primary">{formatted}</span>
 }
 
 function ContractSection(props: { address: Address.Address }) {

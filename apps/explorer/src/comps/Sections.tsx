@@ -1,15 +1,14 @@
 import * as React from 'react'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config.ts'
 
 export function Sections(props: Sections.Props) {
 	const {
-		sections: sections_,
+		sections,
 		activeSection = 0,
 		onSectionChange,
+		className,
 		mode = Sections.defaultMode,
 	} = props
-
-	const sections = sections_.filter((section) => section.visible !== false)
 
 	const [collapsedSections, setCollapsedSections] = React.useState<boolean[]>(
 		new Array(sections.length).fill(true),
@@ -24,7 +23,7 @@ export function Sections(props: Sections.Props) {
 	if (mode === 'stacked')
 		return (
 			<Sections.Context.Provider value={{ mode }}>
-				<div className="flex flex-col gap-[14px]">
+				<div className={cx('flex flex-col gap-[14px]', className)}>
 					{sections.map((section, index) => {
 						const itemsLabel = section.itemsLabel ?? 'items'
 						const isCollapsed =
@@ -36,7 +35,7 @@ export function Sections(props: Sections.Props) {
 							<section
 								key={section.title}
 								className={cx(
-									'flex flex-col font-sans w-full overflow-hidden',
+									'flex flex-col font-mono w-full overflow-hidden',
 									'rounded-[10px] border border-card-border bg-card-header',
 									'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 								)}
@@ -46,15 +45,15 @@ export function Sections(props: Sections.Props) {
 										type="button"
 										onClick={() => toggleSection(index)}
 										className={cx(
-											'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
+											'h-[54px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-[2px]!',
 											isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
 										)}
 									>
-										<h1 className="text-[13px] font-medium text-primary font-sans">
+										<h1 className="text-[13px] font-medium uppercase text-primary">
 											{section.title}
 										</h1>
 										<div className="flex items-center gap-[12px]">
-											{isCollapsed && Boolean(section.totalItems) && (
+											{isCollapsed && (
 												<span className="text-[13px] text-tertiary">
 													{section.totalItems} {itemsLabel}
 												</span>
@@ -70,15 +69,15 @@ export function Sections(props: Sections.Props) {
 										</div>
 									</button>
 								) : (
-									<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-[10px]">
-										<h1 className="text-[13px] font-medium text-primary font-sans">
+									<div className="h-[54px] flex items-center justify-between px-[18px] rounded-t-[10px]">
+										<h1 className="text-[13px] font-medium uppercase text-primary">
 											{section.title}
 										</h1>
 									</div>
 								)}
 
 								{!isCollapsed && (
-									<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
+									<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
 										{section.contextual && (
 											<div className="px-[18px] py-[10px] border-b border-dashed border-card-border">
 												{section.contextual}
@@ -94,75 +93,55 @@ export function Sections(props: Sections.Props) {
 			</Sections.Context.Provider>
 		)
 
+	const currentSection = sections[activeSection]
+	if (!currentSection)
+		throw new Error(`Invalid activeSection index: ${activeSection}`)
+
 	return (
 		<Sections.Context.Provider value={{ mode }}>
 			<section
 				className={cx(
-					'flex flex-col font-sans w-full overflow-hidden min-h-0 self-start',
+					'flex flex-col font-mono w-full overflow-hidden h-full min-h-0',
 					'rounded-[10px] border border-card-border bg-card-header',
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
+					className,
 				)}
 			>
-				<div className="h-[36px] flex items-center justify-between">
-					<div className="flex items-center h-full font-sans">
-						{sections.length === 1 ? (
-							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px] font-sans">
-								<span className="text-primary">{sections[0].title}</span>
-								{Boolean(sections[0].totalItems) && (
-									<span className="text-tertiary">
-										({sections[0].totalItems})
-									</span>
+				<div className="h-[40px] flex items-center justify-between">
+					<div className="flex items-center h-full">
+						{sections.map((section, index) => (
+							<button
+								key={section.title}
+								type="button"
+								onClick={() => onSectionChange?.(index)}
+								className={cx(
+									'h-full flex items-center text-[13px] font-medium uppercase',
+									'focus-visible:-outline-offset-2! press-down cursor-pointer transition-[color]',
+									index === 0
+										? 'pl-[18px] pr-[12px] !rounded-tl-[10px]'
+										: 'px-[12px]',
+									activeSection === index
+										? 'text-primary'
+										: 'text-tertiary hover:text-secondary',
 								)}
-							</div>
-						) : (
-							sections.map((section, index) => (
-								<button
-									key={section.title}
-									type="button"
-									onPointerDown={() => {
-										if (activeSection === index) return
-										onSectionChange?.(index)
-									}}
-									className={cx(
-										'h-full flex items-center text-[13px] font-medium font-sans',
-										'focus-visible:-outline-offset-2! cursor-pointer',
-										index === 0
-											? 'pl-[18px] pr-[12px] rounded-tl-[10px]!'
-											: 'px-[12px]',
-										activeSection === index ? 'text-primary' : 'text-tertiary',
+							>
+								<div className="relative h-full flex items-center">
+									{section.title}
+									{activeSection === index && (
+										<div className="absolute h-[2px] bg-accent -bottom-[1.5px] left-0 right-0 -mx-[2px]" />
 									)}
-								>
-									<div className="relative h-full flex items-center">
-										{section.title}
-										{activeSection === index && (
-											<div className="absolute h-[2px] bg-accent -bottom-[1.5px] left-0 right-0 -mx-[2px]" />
-										)}
-									</div>
-								</button>
-							))
-						)}
+								</div>
+							</button>
+						))}
 					</div>
-					{sections.map((section, index) => (
-						<div
-							key={section.title}
-							className={cx('pr-[18px]', activeSection !== index && 'hidden')}
-						>
-							{section.contextual}
-						</div>
-					))}
+					{currentSection.contextual && (
+						<div className="pr-[18px]">{currentSection.contextual}</div>
+					)}
 				</div>
 
-				{sections.map((section, index) => (
-					<div
-						key={section.title}
-						className={cx(
-							'rounded-t-[10px] border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!',
-							activeSection !== index && 'hidden',
-						)}
-					>
-						{section.content}
-					</div>
-				))}
+				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex-1 flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
+					{currentSection.content}
+				</div>
 			</section>
 		</Sections.Context.Provider>
 	)
@@ -170,31 +149,32 @@ export function Sections(props: Sections.Props) {
 
 export namespace Sections {
 	export interface Props {
-		activeSection?: number
-		mode?: Mode
-		onSectionChange?: (index: number) => void
 		sections: Section[]
+		activeSection?: number
+		onSectionChange?: (index: number) => void
+		className?: string
+		mode?: Mode
 	}
 
 	export type Mode = 'tabs' | 'stacked'
 
 	export interface Section {
-		autoCollapse?: boolean
-		content: React.ReactNode
-		contextual?: React.ReactNode
-		itemsLabel?: string
 		title: string
-		totalItems?: number | string
-		visible?: boolean
+		content: React.ReactNode
+		totalItems: number
+		itemsLabel?: string
+		contextual?: React.ReactNode
+		autoCollapse?: boolean
 	}
 
 	export const defaultMode = 'tabs'
 
-	export const Context = React.createContext<{ mode: Mode }>({
-		mode: defaultMode,
-	})
+	export const Context = React.createContext<{
+		mode: Mode
+	}>({ mode: defaultMode })
 
 	export function useSectionsMode() {
-		return React.useContext(Context).mode
+		const { mode } = React.useContext(Context)
+		return mode
 	}
 }

@@ -1,12 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import { useState } from 'react'
-import { Amount } from '#comps/Amount'
-import { Midcut } from '#comps/Midcut'
-import { ReceiptMark } from '#comps/ReceiptMark'
 import { TxEventDescription } from '#comps/TxEventDescription'
+import { ReceiptMark } from '#comps/ReceiptMark'
 import type { KnownEvent } from '#lib/domain/known-events'
-import { DateFormatter, PriceFormatter } from '#lib/formatting'
+import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 
 export function Receipt(props: Receipt.Props) {
@@ -15,7 +13,6 @@ export function Receipt(props: Receipt.Props) {
 		sender,
 		hash,
 		timestamp,
-		status,
 		events = [],
 		fee,
 		total,
@@ -31,25 +28,17 @@ export function Receipt(props: Receipt.Props) {
 	const hasTotal =
 		totalDisplay !== undefined || (total !== undefined && total !== null)
 	const showFeeBreakdown = feeBreakdown.length > 0
-	const filteredEvents = events.filter(
-		(event) =>
-			event.type !== 'active key count changed' &&
-			event.type !== 'nonce incremented',
-	)
 
 	return (
 		<>
-			<div
-				data-receipt
-				className="flex flex-col w-[360px] bg-base-plane border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
-			>
+			<div className="flex flex-col w-[360px] bg-base-plane border border-base-border shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] text-base-content">
 				<div className="flex gap-[40px] px-[20px] pt-[24px] pb-[16px]">
 					<div className="shrink-0">
 						<ReceiptMark />
 					</div>
 					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
 						<div className="flex justify-between items-end">
-							<span className="text-tertiary">Block</span>
+							<span className="text-tertiary capitalize">Block</span>
 							<Link
 								to="/block/$id"
 								params={{ id: blockNumber.toString() }}
@@ -58,19 +47,20 @@ export function Receipt(props: Receipt.Props) {
 								{String(blockNumber)}
 							</Link>
 						</div>
-						<div className="flex justify-between items-end gap-4">
-							<span className="text-tertiary shrink-0">Sender</span>
+						<div className="flex justify-between items-end">
+							<span className="text-tertiary capitalize">Sender</span>
 							<Link
 								to="/address/$address"
 								params={{ address: sender }}
-								className="text-accent text-right press-down min-w-0 flex-1 flex justify-end"
+								className="text-accent text-right press-down"
+								title={sender}
 							>
-								<Midcut value={sender} prefix="0x" align="end" />
+								{HexFormatter.shortenHex(sender)}
 							</Link>
 						</div>
-						<div className="flex justify-between items-start gap-4">
-							<div className="relative shrink-0">
-								<span className="text-tertiary">Hash</span>
+						<div className="flex justify-between items-start">
+							<div className="relative">
+								<span className="text-tertiary capitalize">Hash</span>
 								{copyHash.notifying && (
 									<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px] text-accent">
 										copied
@@ -81,7 +71,7 @@ export function Receipt(props: Receipt.Props) {
 								<button
 									type="button"
 									onClick={() => copyHash.copy(hash)}
-									className="text-right break-all max-w-[11ch] cursor-pointer press-down min-w-0 flex-1"
+									className="text-right break-all max-w-[11ch] cursor-pointer press-down"
 								>
 									{hash}
 								</button>
@@ -89,40 +79,33 @@ export function Receipt(props: Receipt.Props) {
 								<button
 									type="button"
 									onClick={() => setHashExpanded(true)}
-									className="text-right cursor-pointer press-down min-w-0 flex-1 flex justify-end"
+									className="text-right cursor-pointer press-down"
+									title={hash}
 								>
-									<Midcut value={hash} prefix="0x" align="end" />
+									{HexFormatter.shortenHex(hash)}
 								</button>
 							)}
 						</div>
 						<div className="flex justify-between items-end">
-							<span className="text-tertiary">Date</span>
+							<span className="text-tertiary capitalize">Date</span>
 							<span className="text-right">
 								{DateFormatter.formatTimestampDate(timestamp)}
 							</span>
 						</div>
 						<div className="flex justify-between items-end">
-							<span className="text-tertiary">Time</span>
+							<span className="text-tertiary capitalize">Time</span>
 							<span className="text-right">
 								{formattedTime.time} {formattedTime.timezone}
 								<span className="text-tertiary">{formattedTime.offset}</span>
 							</span>
 						</div>
-						{status === 'reverted' && (
-							<div className="flex justify-between items-end">
-								<span className="text-tertiary">Status</span>
-								<span className="text-base-content-negative uppercase text-[11px]">
-									Failed
-								</span>
-							</div>
-						)}
 					</div>
 				</div>
-				{filteredEvents.length > 0 && (
+				{events.length > 0 && (
 					<>
 						<div className="border-t border-dashed border-base-border" />
 						<div className="flex flex-col gap-3 px-[20px] py-[16px] font-mono text-[13px] leading-4 [counter-reset:event]">
-							{filteredEvents.map((event, index) => {
+							{events.map((event, index) => {
 								// Calculate total amount from event parts
 								// For swaps, only show the first amount (what's being swapped out)
 								const amountParts = event.parts.filter(
@@ -150,26 +133,29 @@ export function Receipt(props: Receipt.Props) {
 										className="[counter-increment:event]"
 									>
 										<div className="flex flex-col gap-[8px]">
-											<div className="grid grid-cols-[1fr_minmax(0,30%)] gap-[10px]">
+											<div className="flex flex-row justify-between items-start gap-[10px]">
 												<div className="flex flex-row items-start gap-[4px] grow min-w-0 text-tertiary">
 													<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 leading-[24px] min-w-[20px]"></div>
 													<TxEventDescription event={event} />
 												</div>
-												<div className="flex items-start justify-end shrink leading-[24px]">
+												<div className="flex items-center text-right shrink-0 leading-[24px]">
 													{totalAmountBigInt > 0n && (
-														<Amount.Base
-															decimals={decimals}
-															infinite={null}
-															prefix="$"
-															short
-															value={totalAmountBigInt}
-														/>
+														<span
+															title={PriceFormatter.format(totalAmountBigInt, {
+																decimals,
+															})}
+														>
+															{PriceFormatter.format(totalAmountBigInt, {
+																decimals,
+																format: 'short',
+															})}
+														</span>
 													)}
 												</div>
 											</div>
 											{event.note && (
 												<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
-													<div className="border-l border-base-border pl-[10px] w-full">
+													<div className="border-l border-base-border pl-[10px]">
 														{typeof event.note === 'string' ? (
 															<span
 																className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
@@ -182,16 +168,11 @@ export function Receipt(props: Receipt.Props) {
 																{event.note.map(([label, part], index) => {
 																	const key = `${label}${index}`
 																	return (
-																		<div
-																			key={key}
-																			className="flex gap-2 min-w-0"
-																		>
-																			<div className="text-tertiary shrink-0">
+																		<div key={key} className="flex gap-2">
+																			<div className="text-tertiary">
 																				{label}:
 																			</div>
-																			<div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-																				<TxEventDescription.Part part={part} />
-																			</div>
+																			<TxEventDescription.Part part={part} />
 																		</div>
 																	)
 																})}
@@ -254,8 +235,9 @@ export function Receipt(props: Receipt.Props) {
 																to="/address/$address"
 																params={{ address: item.payer }}
 																className="text-accent press-down"
+																title={item.payer}
 															>
-																<Midcut value={item.payer} prefix="0x" />
+																{HexFormatter.shortenHex(item.payer)}
 															</Link>
 															<span className="text-tertiary">paid</span>
 														</>
@@ -288,15 +270,14 @@ export function Receipt(props: Receipt.Props) {
 				)}
 			</div>
 
-			<div className="flex flex-col items-center -mt-8 w-full print:hidden">
+			<div className="flex flex-col items-center -mt-5 w-full">
 				<div className="max-w-[360px] w-full">
 					<Link
 						to="/tx/$hash"
 						params={{ hash }}
-						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-base-plane-interactive border border-base-border rounded-bl-[10px]! rounded-br-[10px]! hover:bg-base-plane text-tertiary hover:text-primary transition-[background-color,color] duration-100 -mt-px focus-visible:-outline-offset-2!"
+						className="press-down text-[11px] px-[4px] flex"
 					>
-						<span>View transaction</span>
-						<span aria-hidden="true">→</span>
+						View transaction
 					</Link>
 				</div>
 			</div>
@@ -310,7 +291,6 @@ export namespace Receipt {
 		sender: Address.Address
 		hash: Hex.Hex
 		timestamp: bigint
-		status?: 'success' | 'reverted'
 		events?: KnownEvent[]
 		fee?: number
 		feeDisplay?: string

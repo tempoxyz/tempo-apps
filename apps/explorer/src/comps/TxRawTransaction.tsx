@@ -1,9 +1,7 @@
-import { Link } from '@tanstack/react-router'
 import { Json } from 'ox'
 import { useMemo } from 'react'
 import * as z from 'zod/mini'
 import { useCopy } from '#lib/hooks'
-import CopyIcon from '~icons/lucide/copy'
 
 export function TxRawTransaction(props: TxRawTransaction.Props) {
 	const { data } = props
@@ -25,17 +23,16 @@ export function TxRawTransaction(props: TxRawTransaction.Props) {
 	if (!parsed.success) return <pre className="whitespace-pre-wrap">{data}</pre>
 
 	return (
-		<div className="font-mono flex flex-col gap-[24px]">
+		<div className="font-mono flex flex-col gap-[32px]">
 			<TxRawTransaction.Section
-				title="Transaction"
+				title="TX"
 				data={parsed.data.tx}
 				maxKeyLength={maxKeyLength}
 			/>
 			<TxRawTransaction.Section
-				title="Receipt"
+				title="RECEIPT"
 				data={parsed.data.receipt}
 				maxKeyLength={maxKeyLength}
-				showBorder
 			/>
 		</div>
 	)
@@ -74,32 +71,12 @@ export namespace TxRawTransaction {
 	}
 
 	export function Section(props: Section.Props) {
-		const { title, data, maxKeyLength, showBorder } = props
-		const { copy, notifying } = useCopy()
+		const { title, data, maxKeyLength } = props
 		const entries = Object.entries(data).sort(([a], [b]) => a.localeCompare(b))
 
 		return (
-			<div
-				className={showBorder ? 'pt-[24px] border-t border-card-border' : ''}
-			>
-				<div className="flex items-center justify-between mb-[12px]">
-					<div className="text-primary font-sans text-[13px]">{title}</div>
-					<button
-						type="button"
-						onClick={() => copy(stringify(data))}
-						className="flex items-center gap-[6px] text-tertiary hover:text-secondary cursor-pointer press-down text-[11px]"
-						title={`Copy ${title.toLowerCase()} data`}
-					>
-						{notifying ? (
-							<span className="text-primary">copied</span>
-						) : (
-							<>
-								<CopyIcon className="size-[12px]" />
-								<span className="font-sans">Copy</span>
-							</>
-						)}
-					</button>
-				</div>
+			<div className="flex flex-col">
+				<div className="text-primary uppercase mb-[4px]">{title}</div>
 				<div className="flex flex-col">
 					{entries.map(([key, value]) => (
 						<Row
@@ -120,20 +97,7 @@ export namespace TxRawTransaction {
 			title: string
 			data: Record<string, unknown>
 			maxKeyLength: number
-			showBorder?: boolean
 		}
-	}
-
-	// Fields that should be linked
-	const linkableFields: Record<string, (value: string) => string> = {
-		blockNumber: (v) => `/block/${v}`,
-		blockHash: (v) => `/block/${v}`,
-		hash: (v) => `/receipt/${v}`,
-		from: (v) => `/address/${v}`,
-		to: (v) => `/address/${v}`,
-		contractAddress: (v) => `/address/${v}`,
-		feePayer: (v) => `/address/${v}`,
-		feeToken: (v) => `/token/${v}`,
 	}
 
 	export function Row(props: Row.Props) {
@@ -151,7 +115,7 @@ export namespace TxRawTransaction {
 			return (
 				<div className="flex flex-col">
 					<button
-						className="text-tertiary press-down cursor-pointer text-left py-[4px]"
+						className="text-tertiary press-down cursor-pointer text-left"
 						onClick={() => copy(stringify(value))}
 						style={{
 							paddingLeft: `${indent}px`,
@@ -180,7 +144,7 @@ export namespace TxRawTransaction {
 			return (
 				<div className="flex flex-col">
 					<button
-						className="text-tertiary press-down cursor-pointer text-left py-[4px]"
+						className="text-tertiary press-down cursor-pointer text-left"
 						onClick={() => copy(stringify(value))}
 						style={{
 							paddingLeft: `${indent}px`,
@@ -203,16 +167,12 @@ export namespace TxRawTransaction {
 			)
 		}
 
-		const formattedValue = TxRawTransaction.formatValue(value)
-		const linkTo = label in linkableFields ? linkableFields[label] : null
-		const isLinkable = linkTo && formattedValue && formattedValue !== ''
-
 		return (
-			<div className="flex gap-[16px] py-[4px]">
+			<div className="flex gap-[16px]">
 				<button
 					className="flex items-start press-down cursor-pointer text-left"
 					type="button"
-					onClick={() => copy(formattedValue)}
+					onClick={() => copy(TxRawTransaction.formatValue(value))}
 					style={{
 						paddingLeft: `${indent}px`,
 						minWidth: `${pad}ch`,
@@ -222,22 +182,13 @@ export namespace TxRawTransaction {
 						{notifying ? <span className="text-primary">copied</span> : label}
 					</span>
 				</button>
-				{isLinkable ? (
-					<Link
-						to={linkTo(formattedValue)}
-						className="text-accent hover:underline press-down"
-					>
-						{formattedValue}
-					</Link>
-				) : (
-					<button
-						className="flex items-start press-down cursor-pointer text-left"
-						type="button"
-						onClick={() => copy(formattedValue)}
-					>
-						<span>{formattedValue}</span>
-					</button>
-				)}
+				<button
+					className="flex items-start press-down cursor-pointer text-left"
+					type="button"
+					onClick={() => copy(TxRawTransaction.formatValue(value))}
+				>
+					<span>{TxRawTransaction.formatValue(value)}</span>
+				</button>
 			</div>
 		)
 	}
@@ -267,7 +218,7 @@ export namespace TxRawTransaction {
 			return (
 				<div className="flex flex-col">
 					<div
-						className="text-tertiary py-[4px]"
+						className="text-tertiary"
 						style={{
 							paddingLeft: `${indent}px`,
 							width: `${pad}ch`,
@@ -289,7 +240,7 @@ export namespace TxRawTransaction {
 		}
 
 		return (
-			<div className="flex gap-[16px] py-[4px]">
+			<div className="flex gap-[16px]">
 				<button
 					className="text-tertiary text-left"
 					onClick={() => copy(TxRawTransaction.formatValue(value))}

@@ -1,11 +1,10 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
-import { Midcut } from '#comps/Midcut'
-import { useMountAnim } from '#lib/animation'
 import { ProgressLine } from '#comps/ProgressLine'
 import { RelativeTime } from '#comps/RelativeTime'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config'
+import { HexFormatter } from '#lib/formatting'
 import type {
 	AddressSearchResult,
 	SearchApiResponse,
@@ -17,42 +16,27 @@ import ArrowRight from '~icons/lucide/arrow-right'
 export function ExploreInput(props: ExploreInput.Props) {
 	const {
 		onActivate,
-		inputRef: externalInputRef,
-		wrapperRef: externalWrapperRef,
+		autoFocus,
 		value,
 		onChange,
 		size = 'medium',
 		disabled,
-		className,
-		wide,
-		tabIndex,
 	} = props
 	const formRef = React.useRef<HTMLFormElement>(null)
 	const resultsRef = React.useRef<HTMLDivElement>(null)
 
-	const internalInputRef = React.useRef<HTMLInputElement>(null)
-	const inputRef = externalInputRef ?? internalInputRef
+	const inputRef = React.useRef<HTMLInputElement>(null)
 
 	const [showResults, setShowResults] = React.useState(false)
 	const [selectedIndex, setSelectedIndex] = React.useState(-1)
-	const menuMounted = useMountAnim(showResults, resultsRef)
 	const resultsId = React.useId()
 
-	// prevents the menu from reopening when
-	// activating a menu item fills the input
-	const submittingRef = React.useRef(false)
-
 	const query = value.trim()
-	const isValidInput =
-		query.length > 0 &&
-		(Address.validate(query) || (Hex.validate(query) && Hex.size(query) === 32))
 	const { data: searchResults, isFetching } = useQuery(
 		queryOptions({
 			queryKey: ['search', query],
-			queryFn: async ({ signal }): Promise<SearchApiResponse> => {
-				const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
-					signal,
-				})
+			queryFn: async (): Promise<SearchApiResponse> => {
+				const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
 				if (!res.ok) throw new Error('Search failed')
 				return res.json()
 			},
@@ -98,10 +82,6 @@ export function ExploreInput(props: ExploreInput.Props) {
 	)
 
 	React.useEffect(() => {
-		if (submittingRef.current) {
-			submittingRef.current = false
-			return
-		}
 		setShowResults(disabled ? false : query.length > 0)
 	}, [query, disabled])
 
@@ -128,7 +108,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		}
 		document.addEventListener('mousedown', onMouseDown)
 		return () => document.removeEventListener('mousedown', onMouseDown)
-	}, [showResults, inputRef])
+	}, [showResults])
 
 	// cmd+k shortcut
 	React.useEffect(() => {
@@ -140,11 +120,19 @@ export function ExploreInput(props: ExploreInput.Props) {
 		}
 		window.addEventListener('keydown', handleKeyDown)
 		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [inputRef])
+	}, [])
+
+	// the route transition appears to sometimes steal the focus,
+	// so we need to re-focus in case it happens
+	React.useEffect(() => {
+		const timer = setTimeout(() => {
+			if (autoFocus) inputRef.current?.focus()
+		}, 100)
+		return () => clearTimeout(timer)
+	}, [autoFocus])
 
 	const handleSelect = React.useCallback(
 		(result: SearchResult) => {
-			submittingRef.current = true
 			setShowResults(false)
 			setSelectedIndex(-1)
 
@@ -170,149 +158,131 @@ export function ExploreInput(props: ExploreInput.Props) {
 	)
 
 	return (
-		<div className={cx('relative z-10 w-full', !wide && 'max-w-md')}>
-			<div
-				ref={externalWrapperRef}
-				className="overflow-hidden"
-				style={
-					externalWrapperRef ? { opacity: 0, pointerEvents: 'none' } : undefined
+		<form
+			ref={formRef}
+			onSubmit={(event) => {
+				event.preventDefault()
+				if (!formRef.current || disabled) return
+
+				const data = new FormData(formRef.current)
+				let formValue = data.get('value')
+				if (!formValue || typeof formValue !== 'string') return
+
+				formValue = formValue.trim()
+				if (!formValue) return
+
+				if (Address.validate(formValue)) {
+					onActivate?.({ type: 'address', value: formValue })
+					return
 				}
-			>
-				<form
-					ref={formRef}
-					onSubmit={(event) => {
+
+				if (Hex.validate(formValue) && Hex.size(formValue) === 32) {
+					onActivate?.({ type: 'hash', value: formValue })
+					return
+				}
+			}}
+			className="relative z-1 w-full max-w-[448px]"
+		>
+			<input
+				ref={inputRef}
+				autoCapitalize="none"
+				autoComplete="off"
+				autoCorrect="off"
+				autoFocus={autoFocus}
+				value={value}
+				disabled={disabled}
+				className={cx(
+					'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50',
+					size === 'large' ? 'h-[52px] text-[17px]' : 'h-[42px] text-[15px]',
+				)}
+				data-1p-ignore
+				name="value"
+				placeholder="Enter an address, token or transaction…"
+				spellCheck={false}
+				type="text"
+				onKeyDown={(event) => {
+					if (event.key === 'Escape' && showResults) {
 						event.preventDefault()
-						if (!formRef.current || disabled) return
+						setShowResults(false)
+						setSelectedIndex(-1)
+						return
+					}
 
-						const data = new FormData(formRef.current)
-						let formValue = data.get('value')
-						if (!formValue || typeof formValue !== 'string') return
+					if (!showResults || flatSuggestions.length === 0) return
 
-						formValue = formValue.trim()
-						if (!formValue) return
+					if (event.key === 'ArrowDown') {
+						event.preventDefault()
+						setSelectedIndex((prev) =>
+							prev < flatSuggestions.length - 1 ? prev + 1 : 0,
+						)
+						return
+					}
 
-						if (Address.validate(formValue)) {
-							onActivate?.({ type: 'address', value: formValue })
-							return
+					if (event.key === 'ArrowUp') {
+						event.preventDefault()
+						setSelectedIndex((prev) =>
+							prev > 0 ? prev - 1 : flatSuggestions.length - 1,
+						)
+						return
+					}
+
+					if (event.key === 'Enter') {
+						const index = selectedIndex >= 0 ? selectedIndex : 0
+						if (index < flatSuggestions.length) {
+							event.preventDefault()
+							handleSelect(flatSuggestions[index])
 						}
-
-						if (Hex.validate(formValue) && Hex.size(formValue) === 32) {
-							onActivate?.({ type: 'hash', value: formValue })
-							return
-						}
-					}}
-					className="relative w-full"
+						return
+					}
+				}}
+				onChange={(event) => {
+					onChange?.(event.target.value)
+				}}
+				onFocus={() => {
+					if (query.length > 0 && flatSuggestions.length > 0)
+						setShowResults(true)
+				}}
+				role="combobox"
+				aria-expanded={showResults}
+				aria-haspopup="listbox"
+				aria-autocomplete="list"
+				aria-controls={resultsId}
+				aria-activedescendant={
+					selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
+				}
+				title="Enter an address, token or transaction to explore (Cmd+K to focus)"
+			/>
+			<div
+				className={cx(
+					'absolute top-[50%] -translate-y-[50%]',
+					size === 'large' ? 'right-[16px]' : 'right-[12px]',
+				)}
+			>
+				<button
+					type="submit"
+					disabled={disabled}
+					className={cx(
+						'rounded-full! bg-accent text-base-plane flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50',
+						size === 'large' ? 'size-[28px]' : 'size-[24px]',
+					)}
 				>
-					<input
-						ref={inputRef}
-						autoCapitalize="none"
-						autoComplete="off"
-						autoCorrect="off"
-						tabIndex={tabIndex}
-						value={value}
-						disabled={disabled}
-						className={cx(
-							'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50',
-							size === 'large'
-								? 'h-[52px] text-[17px]'
-								: 'h-[42px] text-[15px]',
-							className,
-						)}
-						data-1p-ignore
-						name="value"
-						placeholder="Enter an address, token or transaction…"
-						spellCheck={false}
-						type="text"
-						onKeyDown={(event) => {
-							if (event.key === 'Escape' && showResults) {
-								event.preventDefault()
-								setShowResults(false)
-								setSelectedIndex(-1)
-								return
-							}
-
-							if (!showResults || flatSuggestions.length === 0) return
-
-							if (event.key === 'ArrowDown') {
-								event.preventDefault()
-								setSelectedIndex((prev) =>
-									prev < flatSuggestions.length - 1 ? prev + 1 : 0,
-								)
-								return
-							}
-
-							if (event.key === 'ArrowUp') {
-								event.preventDefault()
-								setSelectedIndex((prev) =>
-									prev > 0 ? prev - 1 : flatSuggestions.length - 1,
-								)
-								return
-							}
-
-							if (event.key === 'Enter') {
-								const index = selectedIndex >= 0 ? selectedIndex : 0
-								if (index < flatSuggestions.length) {
-									event.preventDefault()
-									handleSelect(flatSuggestions[index])
-								}
-								return
-							}
-						}}
-						onChange={(event) => {
-							onChange?.(event.target.value)
-						}}
-						onFocus={() => {
-							if (query.length > 0 && flatSuggestions.length > 0)
-								setShowResults(true)
-						}}
-						role="combobox"
-						aria-expanded={showResults}
-						aria-haspopup="listbox"
-						aria-autocomplete="list"
-						aria-controls={resultsId}
-						aria-activedescendant={
-							selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
-						}
-						title="Enter an address, token or transaction to explore (Cmd+K to focus)"
+					<ArrowRight
+						className={size === 'large' ? 'size-[16px]' : 'size-[14px]'}
 					/>
-					<div
-						className={cx(
-							'absolute top-[50%] -translate-y-[50%]',
-							size === 'large' ? 'right-[16px]' : 'right-[12px]',
-						)}
-					>
-						<button
-							type="submit"
-							disabled={disabled || !isValidInput}
-							aria-label="Search"
-							className={cx(
-								'rounded-full! flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed transition-colors',
-								size === 'large' ? 'size-[28px]' : 'size-[24px]',
-								isValidInput
-									? 'bg-accent text-base-plane cursor-pointer'
-									: 'bg-base-alt text-tertiary cursor-default',
-							)}
-						>
-							<ArrowRight
-								className={size === 'large' ? 'size-[16px]' : 'size-[14px]'}
-							/>
-						</button>
-					</div>
-				</form>
+				</button>
 			</div>
 
-			{menuMounted && (
+			{showResults && (
 				<div
 					ref={resultsRef}
 					id={resultsId}
 					role="listbox"
 					aria-label="Search suggestions"
 					className={cx(
-						'absolute left-0 right-0 mt-2 z-50',
+						'absolute left-0 right-0 mt-[8px]',
 						'bg-surface border border-base-border rounded-[10px] overflow-hidden',
 						'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 					)}
-					style={{ opacity: 0 }}
 				>
 					<ProgressLine
 						loading={isFetching}
@@ -370,7 +340,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 					)}
 				</div>
 			)}
-		</div>
+		</form>
 	)
 }
 
@@ -384,15 +354,11 @@ export namespace ExploreInput {
 				| { value: Address.Address; type: 'token' }
 				| { value: Hex.Hex; type: 'hash' },
 		) => void
-		inputRef?: React.RefObject<HTMLInputElement | null>
-		wrapperRef?: React.RefObject<HTMLDivElement | null>
+		autoFocus?: boolean
 		value: string
 		onChange: (value: string) => void
 		size?: 'large' | 'medium'
 		disabled?: boolean
-		className?: string
-		wide?: boolean
-		tabIndex?: number
 	}
 
 	export type SuggestionGroup = {
@@ -425,7 +391,7 @@ export namespace ExploreInput {
 			>
 				{suggestion.type === 'token' && (
 					<>
-						<div className="flex items-center gap-[10px] min-w-0 shrink">
+						<div className="flex items-center gap-[10px] min-w-0 flex-1">
 							<span className="text-[16px] font-medium text-base-content truncate">
 								{suggestion.name}
 							</span>
@@ -433,8 +399,8 @@ export namespace ExploreInput {
 								{suggestion.symbol}
 							</span>
 						</div>
-						<span className="text-[13px] font-mono text-accent flex-1 text-right">
-							<Midcut value={suggestion.address} prefix="0x" align="end" />
+						<span className="text-[13px] font-mono text-accent">
+							{HexFormatter.shortenHex(suggestion.address, 6)}
 						</span>
 					</>
 				)}
@@ -446,7 +412,7 @@ export namespace ExploreInput {
 				{suggestion.type === 'transaction' && (
 					<>
 						<span className="text-[13px] font-mono text-accent truncate min-w-0 flex-1">
-							<Midcut value={suggestion.hash} prefix="0x" />
+							{HexFormatter.shortenHex(suggestion.hash, 8)}
 						</span>
 						{suggestion.timestamp ? (
 							<RelativeTime

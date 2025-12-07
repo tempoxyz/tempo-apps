@@ -24,16 +24,17 @@ function toQuantityHex(value: unknown, fallback: bigint = 0n): Hex.Hex {
 	return Hex.fromNumber(BigInt(value as string | number))
 }
 
-function toHexData(value: unknown): Hex.Hex {
-	if (typeof value !== 'string' || value.length === 0) return '0x'
-	Hex.assert(value)
-	return value
-}
-
-function toAddressValue(value: unknown): Address.Address | null {
-	if (typeof value !== 'string' || value.length === 0) return null
-	Address.assert(value)
-	return value
+type TxRow = {
+	hash: string
+	block_num: number
+	from: string
+	to: string | null
+	value: string
+	input: string
+	nonce: string
+	gas: string
+	gas_price: string
+	type: number
 }
 
 export const fetchTransactions = createServerFn()
@@ -138,19 +139,6 @@ export const fetchTransactions = createServerFn()
 			transferHashesQuery.execute(),
 		])
 
-		type TxRow = {
-			hash: string
-			block_num: number
-			from: string
-			to: string | null
-			value: string
-			input: string
-			nonce: string
-			gas: string
-			gas_price: string
-			type: number
-		}
-
 		const txsByHash = new Map<string, TxRow>()
 		for (const row of directTxsResult) {
 			txsByHash.set(String(row.hash), {
@@ -224,11 +212,10 @@ export const fetchTransactions = createServerFn()
 		const paginatedTxs = sortedTxs.slice(offset, offset + limit)
 
 		const transactions: RpcTransaction[] = paginatedTxs.map((row) => {
-			const hash = toHexData(row.hash)
-			const from = toAddressValue(row.from)
+			const from = Address.checksum(row.from)
 			if (!from) throw new Error('Transaction is missing a "from" address')
 
-			const to = toAddressValue(row.to)
+			const to = row.to ? Address.checksum(row.to) : null
 
 			return {
 				blockHash: null,
@@ -237,8 +224,8 @@ export const fetchTransactions = createServerFn()
 				from,
 				gas: toQuantityHex(row.gas),
 				gasPrice: toQuantityHex(row.gas_price),
-				hash,
-				input: toHexData(row.input),
+				hash: Hex.fromString(row.hash),
+				input: Hex.fromString(row.input),
 				nonce: toQuantityHex(row.nonce),
 				to,
 				transactionIndex: null,

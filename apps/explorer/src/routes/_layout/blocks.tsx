@@ -1,60 +1,23 @@
-import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Block } from 'viem'
 import { useBlock, useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { TruncatedHash } from '#components/transaction/TruncatedHash'
-import { Pagination } from '#components/ui/Pagination'
+import { TruncatedHash } from '#comps/TruncatedHash'
+import { Pagination } from '#comps/Pagination'
 import {
 	FormattedTimestamp,
 	useTimeFormat,
-} from '#components/ui/TimeFormat.tsx'
+} from '#comps/TimeFormat'
 import { cx } from '#cva.config.ts'
-import { config, getConfig } from '#wagmi.config.ts'
+import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
+import { config } from '#wagmi.config.ts'
 import Play from '~icons/lucide/play'
-
-const BLOCKS_PER_PAGE = 12
 
 // Track which block numbers are "new" for animation purposes
 const recentlyAddedBlocks = new Set<string>()
-
-function blocksQueryOptions(page: number) {
-	return queryOptions({
-		queryKey: ['blocks-loader', page],
-		queryFn: async () => {
-			const wagmiConfig = getConfig()
-
-			// Fetch latest block to get the current block number
-			const latestBlock = await getBlock(wagmiConfig)
-			const latestBlockNumber = latestBlock.number
-
-			// Calculate which blocks to fetch for this page
-			const startBlock =
-				latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
-
-			const blockNumbers: bigint[] = []
-			for (let i = 0n; i < BigInt(BLOCKS_PER_PAGE); i++) {
-				const blockNum = startBlock - i
-				if (blockNum >= 0n) blockNumbers.push(blockNum)
-			}
-
-			// Fetch all blocks in parallel
-			const blocks = await Promise.all(
-				blockNumbers.map((blockNumber) =>
-					getBlock(wagmiConfig, { blockNumber }).catch(() => null),
-				),
-			)
-
-			return {
-				latestBlockNumber,
-				blocks: blocks.filter(Boolean) as Block[],
-			}
-		},
-		placeholderData: keepPreviousData,
-	})
-}
 
 export const Route = createFileRoute('/_layout/blocks')({
 	component: RouteComponent,

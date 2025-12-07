@@ -1,41 +1,26 @@
 import { Link } from '@tanstack/react-router'
 import * as React from 'react'
-import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
-import { cx } from '#lib/css'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
+import { cx } from '#cva.config.ts'
+import { Pagination } from '#comps/Pagination'
 
 export function DataGrid(props: DataGrid.Props) {
 	const {
 		columns,
 		items,
 		totalItems,
-		pages: pagesProp,
-		displayCount,
-		displayCountCapped = false,
 		page,
-		fetching = false,
-		loading = false,
-		countLoading = false,
-		disableLastPage = false,
+		isPending,
 		itemsLabel = 'items',
 		itemsPerPage = 10,
 		pagination = 'default',
 		emptyState = 'No items found.',
-		flexible = false,
 	} = props
 
 	const mode = Sections.useSectionsMode()
 	const activeColumns = mode === 'stacked' ? columns.stacked : columns.tabs
-	const activeItems: DataGrid.Row[] = loading
-		? Array.from({ length: itemsPerPage }, (_, index) => ({
-				cells: activeColumns.map((_, colIndex) => {
-					const cellKey = `skeleton-${index}-${colIndex}`
-					return <div key={cellKey} className="h-[20px]" />
-				}),
-			}))
-		: items(mode)
-	const pages = pagesProp ?? Math.ceil(totalItems / itemsPerPage)
+	const activeItems = items(mode)
+	const totalPages = Math.ceil(totalItems / itemsPerPage)
 
 	const gridTemplateColumns = activeColumns
 		.map((col) => {
@@ -45,50 +30,30 @@ export function DataGrid(props: DataGrid.Props) {
 					? `minmax(${col.minWidth}px, ${col.width})`
 					: col.width
 			if (col.minWidth) return `minmax(${col.minWidth}px, auto)`
-			return mode === 'tabs' ? 'minmax(0, auto)' : 'auto'
+			return 'auto'
 		})
 		.join(' ')
 
 	return (
-		<div className="flex flex-col min-h-0">
+		<div className="flex flex-col h-full min-h-0">
 			<div className="relative w-full">
 				<div
-					className={cx(
-						'w-full text-[13px] rounded-t-[2px] grid',
-						flexible && 'min-w-max',
-						mode === 'tabs' && 'max-w-full',
-					)}
+					className="w-full text-[14px] rounded-t-[2px] min-w-max grid"
 					style={{ gridTemplateColumns }}
 				>
 					<div className="grid col-span-full border-b border-dashed border-distinct grid-cols-subgrid">
 						{activeColumns.map((column, index) => {
 							const key = `header-${index}`
-							const sortDir = column.sortDirection
-							const hasSort = sortDir === 'asc' || sortDir === 'desc'
-							const label =
-								typeof column.label === 'string'
-									? column.label.charAt(0) + column.label.slice(1).toLowerCase()
-									: column.label
 							return (
 								<div
 									key={key}
 									className={cx(
-										'px-[10px] first:pl-[16px] last:pr-[16px] h-[40px] flex items-center gap-[6px]',
-										'text-[13px] text-tertiary font-normal whitespace-nowrap font-sans',
+										'px-[10px] first:pl-[16px] last:pr-[16px] h-[40px] flex items-center',
+										'text-[13px] text-tertiary font-normal whitespace-nowrap',
 										column.align === 'end' ? 'justify-end' : 'justify-start',
 									)}
 								>
-									<span className="inline-flex items-center gap-[4px]">
-										{label}
-										{hasSort && (
-											<ChevronDownIcon
-												className={cx(
-													'size-[12px] text-tertiary',
-													sortDir === 'asc' && 'rotate-180',
-												)}
-											/>
-										)}
-									</span>
+									{column.label}
 								</div>
 							)
 						})}
@@ -111,17 +76,15 @@ export function DataGrid(props: DataGrid.Props) {
 							<div
 								key={`row-${rowIndex}-${page}`}
 								className={cx(
-									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid] last:border-b-0',
+									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid]',
 									item.link &&
-										'hover:bg-base-alt hover:border-solid transition-[background-color] duration-75 hover:-mt-px hover:border-t hover:border-t-distinct',
+										'hover:bg-base-alt hover:border-solid transition-[background-color] duration-75 hover:-mt-[1px] hover:border-t hover:border-t-distinct',
 									item.expanded && 'border-l-distinct',
-									item.className,
 								)}
 							>
 								{item.link && (
 									<Link
 										to={item.link.href}
-										search={item.link.search}
 										title={item.link.title}
 										className="absolute inset-0 -left-[3px] z-0 [&:active~div]:translate-y-[0.5px] -outline-offset-2!"
 									/>
@@ -143,15 +106,14 @@ export function DataGrid(props: DataGrid.Props) {
 														key={key}
 														className={cx(
 															'px-[10px] py-[12px] flex items-start min-h-[48px]',
-															'text-primary font-mono',
+															'text-primary',
 															isFirstColumn && 'pl-[16px]',
 															isLastColumn && 'pr-[16px]',
 															column?.align === 'end'
-																? 'justify-end text-right'
+																? 'justify-end'
 																: 'justify-start',
 															item.link &&
-																'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-1 [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-1',
-															mode === 'tabs' && 'min-w-0 overflow-hidden',
+																'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1]',
 														)}
 													>
 														{content}
@@ -164,50 +126,32 @@ export function DataGrid(props: DataGrid.Props) {
 										</React.Fragment>
 									)
 								})}
-								{item.expanded && typeof item.expanded !== 'boolean' && (
-									<div className="col-span-full px-[16px] pb-[12px] contain-[inline-size] -mt-[4px]">
-										{item.expanded}
-									</div>
-								)}
 							</div>
 						)
 					})}
 				</div>
 			</div>
-			{/* Hide pagination when no items and not loading */}
-			{(totalItems > 0 || loading) && (
-				<div className="mt-auto">
-					{pagination !== 'default' && pagination !== 'simple' ? (
-						pagination
-					) : pagination === 'simple' ? (
-						<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
-							<Pagination.Simple
-								page={page}
-								pages={pages}
-								fetching={fetching && !loading}
-								countLoading={countLoading}
-								disableLastPage={disableLastPage}
-							/>
-							{/* Show transaction count - loading state shown while fetching */}
-							<Pagination.Count
-								totalItems={displayCount ?? 0}
-								itemsLabel={itemsLabel}
-								loading={loading || displayCount == null}
-								capped={displayCountCapped}
-							/>
-						</div>
-					) : (
-						<Pagination
+			<div className="mt-auto">
+				{pagination === 'simple' ? (
+					<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
+						<Pagination.Simple
 							page={page}
-							pages={typeof pages === 'number' ? pages : 1}
-							totalItems={totalItems}
-							itemsLabel={itemsLabel}
-							isPending={fetching}
-							compact={mode === 'stacked'}
+							totalPages={totalPages}
+							isPending={isPending}
 						/>
-					)}
-				</div>
-			)}
+						<Pagination.Count totalItems={totalItems} itemsLabel={itemsLabel} />
+					</div>
+				) : (
+					<Pagination
+						page={page}
+						totalPages={totalPages}
+						totalItems={totalItems}
+						itemsLabel={itemsLabel}
+						isPending={isPending}
+						compact={mode === 'stacked'}
+					/>
+				)}
+			</div>
 		</div>
 	)
 }
@@ -218,12 +162,10 @@ export namespace DataGrid {
 		align?: 'start' | 'end'
 		minWidth?: number
 		width?: number | `${number}fr`
-		sortDirection?: 'asc' | 'desc'
 	}
 
 	export interface RowLink {
 		href: string
-		search?: Record<string, unknown>
 		title: string
 	}
 
@@ -232,8 +174,7 @@ export namespace DataGrid {
 	export interface Row {
 		cells: Cell[]
 		link?: RowLink
-		expanded?: boolean | React.ReactNode
-		className?: string
+		expanded?: boolean
 	}
 
 	export interface Props {
@@ -243,22 +184,11 @@ export namespace DataGrid {
 		}
 		items: (mode: Sections.Mode) => Row[]
 		totalItems: number
-		/** Total pages (number) or indefinite pagination ({ hasMore: boolean }) */
-		pages?: number | { hasMore: boolean }
-		/** Optional separate count for display (e.g., exact transaction count) */
-		displayCount?: number
-		/** Whether the display count is capped (shows "> X" prefix) */
-		displayCountCapped?: boolean
 		page: number
-		fetching?: boolean
-		loading?: boolean
-		countLoading?: boolean
-		/** Disable "Last page" button when we can't reliably navigate there */
-		disableLastPage?: boolean
+		isPending: boolean
 		itemsLabel?: string
 		itemsPerPage?: number
-		pagination?: 'default' | 'simple' | React.ReactNode
+		pagination?: 'default' | 'simple'
 		emptyState?: React.ReactNode
-		flexible?: boolean
 	}
 }
