@@ -3,8 +3,8 @@ import type { Address, Hex } from 'ox'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { InfoCard } from '#comps/InfoCard'
 import { FormattedTimestamp } from '#comps/TimeFormat'
+import { TruncatedHash } from '#comps/TruncatedHash'
 import { cx } from '#cva.config.ts'
-import { HexFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -70,7 +70,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 							className="text-[13px] text-accent hover:underline"
 							title={from}
 						>
-							{HexFormatter.truncate(from, 6)}
+							<TruncatedHash hash={from} minChars={6} />
 						</Link>
 					),
 				},
@@ -84,7 +84,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 									className="text-[13px] text-accent hover:underline"
 									title={to}
 								>
-									{HexFormatter.truncate(to, 6)}
+									<TruncatedHash hash={to} minChars={6} />
 								</Link>
 							),
 						}
