@@ -19,24 +19,6 @@ const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
-function toQuantityHex(value: unknown, fallback: bigint = 0n): Hex.Hex {
-	if (value === null || value === undefined) return Hex.fromNumber(fallback)
-	return Hex.fromNumber(BigInt(value as string | number))
-}
-
-type TxRow = {
-	hash: string
-	block_num: number
-	from: string
-	to: string | null
-	value: string
-	input: string
-	nonce: string
-	gas: string
-	gas_price: string
-	type: number
-}
-
 export const fetchTransactions = createServerFn()
 	.inputValidator(
 		z.object({
@@ -139,28 +121,13 @@ export const fetchTransactions = createServerFn()
 			transferHashesQuery.execute(),
 		])
 
-		const txsByHash = new Map<string, TxRow>()
-		for (const row of directTxsResult) {
-			txsByHash.set(String(row.hash), {
-				hash: String(row.hash),
-				block_num: Number(row.block_num),
-				from: String(row.from),
-				to: row.to ? String(row.to) : null,
-				value: String(row.value),
-				input: String(row.input),
-				nonce: String(row.nonce),
-				gas: String(row.gas),
-				gas_price: String(row.gas_price),
-				type: Number(row.type),
-			})
-		}
+		const txsByHash = new Map<Hex.Hex, (typeof directTxsResult)[number]>()
+		for (const row of directTxsResult) txsByHash.set(row.hash, row)
 
-		const transferHashes: string[] = []
+		const transferHashes: Hex.Hex[] = []
 		for (const row of transferHashesResult) {
-			const hash = String(row.tx_hash)
-			if (!txsByHash.has(hash)) {
-				transferHashes.push(hash)
-			}
+			const hash = row.tx_hash
+			if (!txsByHash.has(hash)) transferHashes.push(hash)
 		}
 
 		if (transferHashes.length > 0) {
@@ -185,27 +152,14 @@ export const fetchTransactions = createServerFn()
 					.where('hash', 'in', batch)
 					.execute()
 
-				for (const row of transferTxsResult) {
-					txsByHash.set(String(row.hash), {
-						hash: String(row.hash),
-						block_num: Number(row.block_num),
-						from: String(row.from),
-						to: row.to ? String(row.to) : null,
-						value: String(row.value),
-						input: String(row.input),
-						nonce: String(row.nonce),
-						gas: String(row.gas),
-						gas_price: String(row.gas_price),
-						type: Number(row.type),
-					})
-				}
+				for (const row of transferTxsResult) txsByHash.set(row.hash, row)
 			}
 		}
 
 		const sortedTxs = [...txsByHash.values()].sort((a, b) =>
 			sortDirection === 'desc'
-				? b.block_num - a.block_num
-				: a.block_num - b.block_num,
+				? Number(b.block_num) - Number(a.block_num)
+				: Number(a.block_num) - Number(b.block_num),
 		)
 
 		const hasMore = sortedTxs.length > offset + limit
@@ -219,18 +173,18 @@ export const fetchTransactions = createServerFn()
 
 			return {
 				blockHash: null,
-				blockNumber: toQuantityHex(row.block_num),
+				blockNumber: Hex.fromNumber(row.block_num),
 				chainId: chainIdHex,
 				from,
-				gas: toQuantityHex(row.gas),
-				gasPrice: toQuantityHex(row.gas_price),
-				hash: Hex.fromString(row.hash),
-				input: Hex.fromString(row.input),
-				nonce: toQuantityHex(row.nonce),
+				gas: Hex.fromNumber(row.gas),
+				gasPrice: Hex.fromNumber(row.gas_price),
+				hash: row.hash,
+				input: row.input,
+				nonce: Hex.fromNumber(row.nonce),
 				to,
 				transactionIndex: null,
-				value: toQuantityHex(row.value),
-				type: toQuantityHex(row.type) as RpcTransaction['type'],
+				value: Hex.fromNumber(row.value),
+				type: Hex.fromNumber(row.type) as RpcTransaction['type'],
 				v: '0x0',
 				r: '0x0',
 				s: '0x0',
