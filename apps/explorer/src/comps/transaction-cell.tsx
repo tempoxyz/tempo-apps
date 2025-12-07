@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { Hex } from 'ox'
-import { TruncatedHash } from '#components/transaction/TruncatedHash'
+import { TruncatedHash } from '#comps/truncated-hash'
 
 export function TransactionCell(props: { hash: Hex.Hex; chars?: number }) {
 	const { hash, chars = 6 } = props

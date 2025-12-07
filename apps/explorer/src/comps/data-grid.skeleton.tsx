@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { DataGrid } from '#components/ui/DataGrid.tsx'
+import { DataGrid } from '#comps/data-grid'
 
 export function DataGridSkeleton(props: {
 	columns: DataGrid.Column[]

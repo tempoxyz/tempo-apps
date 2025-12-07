@@ -4,18 +4,18 @@ import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics } from 'viem'
-import { EventDescription } from '#components/transaction/EventDescription'
+import { EventDescription } from '#comps/tx.event-description'
 import {
 	getPerspectiveEvent,
 	TransactionFee,
 	TransactionTimestamp,
 	TransactionTotal,
-} from '#components/transaction/TransactionRow.tsx'
-import { TruncatedHash } from '#components/transaction/TruncatedHash'
-import { DataGrid } from '#components/ui/DataGrid'
-import { InfoCard } from '#components/ui/InfoCard'
-import { RelativeTime } from '#components/ui/RelativeTime'
-import { Sections } from '#components/ui/Sections'
+} from '#comps/tx.transaction-row'
+import { TruncatedHash } from '#comps/truncated-hash'
+import { DataGrid } from '#comps/data-grid'
+import { InfoCard } from '#comps/info-card'
+import { RelativeTime } from '#comps/relative-time'
+import { Sections } from '#comps/sections'
 import { cx } from '#cva.config.ts'
 import {
 	accountAddress,

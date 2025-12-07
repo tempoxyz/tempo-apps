@@ -1,7 +1,7 @@
 import { ClientOnly, getRouteApi } from '@tanstack/react-router'
 import type { Address } from 'ox'
-import { InfoCard } from '#components/ui/InfoCard'
-import { RelativeTime } from '#components/ui/RelativeTime'
+import { InfoCard } from '#comps/info-card'
+import { RelativeTime } from '#comps/relative-time'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 

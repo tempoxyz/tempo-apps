@@ -3,10 +3,10 @@ import { Address, Hex, Value } from 'ox'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import type { getBlock } from 'wagmi/actions'
-import { FormattedTimestamp, type TimeFormat } from '#components/ui/TimeFormat'
+import { FormattedTimestamp, type TimeFormat } from '#comps/time-format'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
 import { PriceFormatter } from '#lib/formatting'
-import { EventDescription } from './EventDescription.tsx'
+import { EventDescription } from '#comps/tx.event-description'
 
 export type TransactionData = {
 	receipt: TransactionReceipt

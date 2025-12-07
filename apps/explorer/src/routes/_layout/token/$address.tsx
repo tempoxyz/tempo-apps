@@ -15,19 +15,16 @@ import * as React from 'react'
 import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import * as z from 'zod/mini'
-import { ContractReader } from '#components/contract/Read.tsx'
-import {
-	AddressCell,
-	AmountCell,
-	BalanceCell,
-	TimestampCell,
-	TransactionCell,
-} from '#components/data'
-import { DataGrid } from '#components/ui/DataGrid'
-import { InfoCard } from '#components/ui/InfoCard'
-import { NotFound } from '#components/ui/NotFound'
-import { Sections } from '#components/ui/Sections'
-import { TimeColumnHeader, useTimeFormat } from '#components/ui/TimeFormat'
+import { ContractReader } from '#comps/contract.read'
+import { AddressCell } from '#comps/address-cell'
+import { AmountCell, BalanceCell } from '#comps/amount-cell'
+import { TimestampCell } from '#comps/timestamp-cell'
+import { TransactionCell } from '#comps/transaction-cell'
+import { DataGrid } from '#comps/data-grid'
+import { InfoCard } from '#comps/info-card'
+import { NotFound } from '#comps/not-found'
+import { Sections } from '#comps/sections'
+import { TimeColumnHeader, useTimeFormat } from '#comps/time-format'
 import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'

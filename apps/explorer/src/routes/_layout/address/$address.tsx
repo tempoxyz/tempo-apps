@@ -15,25 +15,25 @@ import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { useBlock } from 'wagmi'
 import { getBlock, getChainId, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { AccountCard } from '#components/address/Account.tsx'
-import { ContractReader } from '#components/contract/Read.tsx'
+import { AccountCard } from '#comps/account'
+import { ContractReader } from '#comps/contract.read'
 import {
 	BatchTransactionDataContext,
 	type TransactionData,
 	TransactionDescription,
 	TransactionTimestamp,
 	TransactionTotal,
-	TruncatedHash,
 	useTransactionDataFromBatch,
-} from '#components/transaction'
+} from '#comps/tx.transaction-row'
+import { TruncatedHash } from '#comps/truncated-hash'
+import { DataGrid } from '#comps/data-grid'
+import { NotFound } from '#comps/not-found'
+import { Sections } from '#comps/sections'
 import {
-	DataGrid,
-	NotFound,
-	Sections,
 	TimeColumnHeader,
 	type TimeFormat,
 	useTimeFormat,
-} from '#components/ui'
+} from '#comps/time-format'
 import { cx } from '#cva.config.ts'
 import {
 	type ContractInfo,
