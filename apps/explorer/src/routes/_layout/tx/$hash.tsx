@@ -13,6 +13,7 @@ import type { Log, TransactionReceipt } from 'viem'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
 import { InfoRow } from '#comps/InfoRow'
+import { TruncatedHash } from '#comps/TruncatedHash'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
@@ -23,7 +24,6 @@ import { Sections } from '#comps/Sections'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
-import { HexFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { type TxData, txQueryOptions } from '#lib/queries'
 import { zHash } from '#lib/zod'
@@ -365,7 +365,7 @@ function CallItem(props: {
 						params={{ address: call.to }}
 						className="text-accent hover:underline press-down"
 					>
-						{HexFormatter.truncate(call.to, 8)}
+						<TruncatedHash hash={call.to} minChars={8} />
 					</Link>
 				) : (
 					<span className="text-tertiary">Contract Creation</span>
@@ -417,7 +417,7 @@ function EventsSection(props: { logs: Log[]; knownEvents: KnownEvent[] }) {
 								className="text-accent hover:underline whitespace-nowrap"
 								title={log.address}
 							>
-								{HexFormatter.truncate(log.address, 6)}
+								<TruncatedHash hash={log.address} minChars={6} />
 							</Link>,
 						],
 					}
@@ -448,9 +448,11 @@ function EventCell(props: { log: Log; knownEvent?: KnownEvent }) {
 				/>
 			) : (
 				<span className="text-primary">
-					{eventSignature
-						? HexFormatter.truncate(eventSignature, 8)
-						: 'Unknown'}
+					{eventSignature ? (
+						<TruncatedHash hash={eventSignature} minChars={8} />
+					) : (
+						'Unknown'
+					)}
 				</span>
 			)}
 			<button

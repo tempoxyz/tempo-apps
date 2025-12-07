@@ -8,7 +8,7 @@ import {
 	TimeColumnHeader,
 	useTimeFormat,
 } from '#comps/TimeFormat'
-import { HexFormatter } from '#lib/formatting'
+import { TruncatedHash } from '#comps/TruncatedHash'
 import { useMediaQuery } from '#lib/hooks'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens.server'
@@ -91,13 +91,12 @@ function TokensPage() {
 											<span key="currency" className="text-secondary">
 												{token.currency}
 											</span>,
-											<span
+											<TruncatedHash
 												key="address"
-												className="text-accent truncate"
-												title={token.address}
-											>
-												{HexFormatter.shortenHex(token.address, 8)}
-											</span>,
+												hash={token.address}
+												minChars={8}
+												className="text-accent"
+											/>,
 											<FormattedTimestamp
 												key="created"
 												timestamp={BigInt(token.createdAt)}

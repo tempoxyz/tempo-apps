@@ -15,8 +15,8 @@ import * as React from 'react'
 import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import * as z from 'zod/mini'
-import { ContractReader } from '#comps/ContractReader'
 import { AddressCell } from '#comps/AddressCell'
+import { ContractReader } from '#comps/ContractReader'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
 import { TimestampCell } from '#comps/TimestampCell'
 import { TransactionCell } from '#comps/TransactionCell'
@@ -25,10 +25,11 @@ import { InfoCard } from '#comps/InfoCard'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TimeColumnHeader, useTimeFormat } from '#comps/TimeFormat'
+import { TruncatedHash } from '#comps/TruncatedHash'
 import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
-import { HexFormatter, PriceFormatter } from '#lib/formatting'
+import { PriceFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { holdersQueryOptions, transfersQueryOptions } from '#lib/queries'
 import { config } from '#wagmi.config'
@@ -661,7 +662,7 @@ function FilterIndicator(props: {
 				className="text-accent press-down"
 				title={account}
 			>
-				{HexFormatter.truncate(account, 8)}
+				<TruncatedHash hash={account} minChars={8} />
 			</Link>
 			<Link
 				to="/token/$address"
