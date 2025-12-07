@@ -315,6 +315,9 @@ importers:
       hono:
         specifier: ^4.10.7
         version: 4.10.7
+      idxs:
+        specifier: 'catalog:'
+        version: 0.0.4(typescript@5.9.3)
       ox:
         specifier: 'catalog:'
         version: 0.9.17(typescript@5.9.3)(zod@4.1.13)
