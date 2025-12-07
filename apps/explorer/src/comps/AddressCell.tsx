@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
-import { TruncatedHash } from '#comps/truncated-hash'
+import { TruncatedHash } from '#comps/TruncatedHash'
 
 export function AddressCell(props: {
 	address: Address.Address

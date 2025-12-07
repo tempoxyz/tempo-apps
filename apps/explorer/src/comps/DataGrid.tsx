@@ -1,8 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import * as React from 'react'
-import { Sections } from '#comps/sections'
+import { Sections } from '#comps/Sections'
 import { cx } from '#cva.config.ts'
-import { Pagination } from '#comps/pagination'
+import { Pagination } from '#comps/Pagination'
 
 export function DataGrid(props: DataGrid.Props) {
 	const {

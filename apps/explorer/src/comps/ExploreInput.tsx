@@ -1,8 +1,8 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
-import { ProgressLine } from '#comps/progress-line'
-import { RelativeTime } from '#comps/relative-time'
+import { ProgressLine } from '#comps/ProgressLine'
+import { RelativeTime } from '#comps/RelativeTime'
 import { cx } from '#cva.config'
 import { HexFormatter } from '#lib/formatting'
 import type {

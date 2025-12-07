@@ -3,11 +3,11 @@ import { useMemo } from 'react'
 import * as z from 'zod/mini'
 import { useCopy } from '#lib/hooks'
 
-export function RawTransaction(props: RawTransaction.Props) {
+export function TxRawTransaction(props: TxRawTransaction.Props) {
 	const { data } = props
 	const parsed = useMemo(() => {
 		try {
-			return RawTransaction.TxDataSchema.safeParse(Json.parse(data))
+			return TxRawTransaction.TxDataSchema.safeParse(Json.parse(data))
 		} catch {
 			return { success: false } as const
 		}
@@ -15,8 +15,8 @@ export function RawTransaction(props: RawTransaction.Props) {
 
 	const maxKeyLength = useMemo(() => {
 		if (!parsed.success) return 0
-		const txMax = RawTransaction.getMaxKeyLength(parsed.data.tx)
-		const receiptMax = RawTransaction.getMaxKeyLength(parsed.data.receipt)
+		const txMax = TxRawTransaction.getMaxKeyLength(parsed.data.tx)
+		const receiptMax = TxRawTransaction.getMaxKeyLength(parsed.data.receipt)
 		return Math.max(txMax, receiptMax)
 	}, [parsed])
 
@@ -24,12 +24,12 @@ export function RawTransaction(props: RawTransaction.Props) {
 
 	return (
 		<div className="font-mono flex flex-col gap-[32px]">
-			<RawTransaction.Section
+			<TxRawTransaction.Section
 				title="TX"
 				data={parsed.data.tx}
 				maxKeyLength={maxKeyLength}
 			/>
-			<RawTransaction.Section
+			<TxRawTransaction.Section
 				title="RECEIPT"
 				data={parsed.data.receipt}
 				maxKeyLength={maxKeyLength}
@@ -38,7 +38,7 @@ export function RawTransaction(props: RawTransaction.Props) {
 	)
 }
 
-export namespace RawTransaction {
+export namespace TxRawTransaction {
 	export interface Props {
 		data: string
 	}
@@ -172,7 +172,7 @@ export namespace RawTransaction {
 				<button
 					className="flex items-start press-down cursor-pointer text-left"
 					type="button"
-					onClick={() => copy(RawTransaction.formatValue(value))}
+					onClick={() => copy(TxRawTransaction.formatValue(value))}
 					style={{
 						paddingLeft: `${indent}px`,
 						minWidth: `${pad}ch`,
@@ -185,9 +185,9 @@ export namespace RawTransaction {
 				<button
 					className="flex items-start press-down cursor-pointer text-left"
 					type="button"
-					onClick={() => copy(RawTransaction.formatValue(value))}
+					onClick={() => copy(TxRawTransaction.formatValue(value))}
 				>
-					<span>{RawTransaction.formatValue(value)}</span>
+					<span>{TxRawTransaction.formatValue(value)}</span>
 				</button>
 			</div>
 		)
@@ -243,7 +243,7 @@ export namespace RawTransaction {
 			<div className="flex gap-[16px]">
 				<button
 					className="text-tertiary text-left"
-					onClick={() => copy(RawTransaction.formatValue(value))}
+					onClick={() => copy(TxRawTransaction.formatValue(value))}
 					style={{
 						paddingLeft: `${indent}px`,
 						width: `${pad}ch`,
@@ -259,9 +259,9 @@ export namespace RawTransaction {
 				<button
 					className="press-down cursor-pointer text-left"
 					type="button"
-					onClick={() => copy(RawTransaction.formatValue(value))}
+					onClick={() => copy(TxRawTransaction.formatValue(value))}
 				>
-					{RawTransaction.formatValue(value)}
+					{TxRawTransaction.formatValue(value)}
 				</button>
 			</div>
 		)

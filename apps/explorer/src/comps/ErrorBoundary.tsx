@@ -1,8 +1,8 @@
 import type { ErrorComponentProps } from '@tanstack/react-router'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
-import { Footer } from '#comps/footer'
-import { Header } from '#comps/header'
+import { Footer } from '#comps/Footer'
+import { Header } from '#comps/Header'
 
 export function ErrorBoundary({ error }: ErrorComponentProps) {
 	const copy = useCopy()

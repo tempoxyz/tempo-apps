@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { FormattedTimestamp, type TimeFormat } from '#comps/time-format'
+import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 
 export function TimestampCell(props: {
 	timestamp: bigint

@@ -5,12 +5,12 @@ import type { Block } from 'viem'
 import { useBlock, useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { TruncatedHash } from '#comps/truncated-hash'
-import { Pagination } from '#comps/pagination'
+import { TruncatedHash } from '#comps/TruncatedHash'
+import { Pagination } from '#comps/Pagination'
 import {
 	FormattedTimestamp,
 	useTimeFormat,
-} from '#comps/time-format'
+} from '#comps/TimeFormat'
 import { cx } from '#cva.config.ts'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
 import { config } from '#wagmi.config.ts'

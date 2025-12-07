@@ -17,19 +17,19 @@ import { useCopy } from '#lib/hooks.ts'
 import { config } from '#wagmi.config.ts'
 import CopyIcon from '~icons/lucide/copy'
 
-export function DecodedCalldata(props: DecodedCalldata.Props) {
+export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 	const { address, data } = props
 	const selector = slice(data, 0, 4)
 	const copySignature = useCopy()
 	const copyRaw = useCopy()
 	const [showRaw, setShowRaw] = useState(false)
 
-	const { data: autoloadAbi } = DecodedCalldata.useAutoloadAbi({
+	const { data: autoloadAbi } = TxDecodedCalldata.useAutoloadAbi({
 		address,
 		enabled: Boolean(data) && data !== '0x',
 	})
 
-	const { data: signature, isFetched } = DecodedCalldata.useLookupSignature({
+	const { data: signature, isFetched } = TxDecodedCalldata.useLookupSignature({
 		selector,
 	})
 
@@ -41,14 +41,14 @@ export function DecodedCalldata(props: DecodedCalldata.Props) {
 	const abiItem = useMemo(() => {
 		const autoloadAbiItem =
 			autoloadAbi &&
-			(DecodedCalldata.getAbiItem({
+			(TxDecodedCalldata.getAbiItem({
 				abi: autoloadAbi as unknown as Abi,
 				selector,
 			}) as AbiFunction)
 
 		const signatureAbiItem =
 			signatureAbi &&
-			(DecodedCalldata.getAbiItem({
+			(TxDecodedCalldata.getAbiItem({
 				abi: signatureAbi,
 				selector,
 			}) as AbiFunction)
@@ -144,7 +144,7 @@ export function DecodedCalldata(props: DecodedCalldata.Props) {
 				{args && args.length > 0 && (
 					<div className="divide-y divide-card-border">
 						{abiItem.inputs?.map((input, i) => (
-							<DecodedCalldata.ArgumentRow
+							<TxDecodedCalldata.ArgumentRow
 								key={`${input.type}-${input.name ?? i}`}
 								input={input}
 								value={args[i]}
@@ -186,7 +186,7 @@ export function DecodedCalldata(props: DecodedCalldata.Props) {
 	)
 }
 
-export namespace DecodedCalldata {
+export namespace TxDecodedCalldata {
 	export interface Props {
 		address?: Address | null
 		data: Hex
@@ -195,7 +195,7 @@ export namespace DecodedCalldata {
 	export function ArgumentRow(props: ArgumentRow.Props) {
 		const { input, value } = props
 		const { copy, notifying } = useCopy()
-		const formattedValue = DecodedCalldata.formatValue(value)
+		const formattedValue = TxDecodedCalldata.formatValue(value)
 
 		return (
 			<button

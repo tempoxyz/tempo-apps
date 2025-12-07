@@ -2,13 +2,13 @@ import { Link } from '@tanstack/react-router'
 import { type Address as AddressType, Value } from 'ox'
 import * as React from 'react'
 import { isAddressEqual } from 'viem'
-import { Address } from '#comps/address'
-import { Amount } from '#comps/amount'
+import { Address } from '#comps/Address'
+import { Amount } from '#comps/Amount'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
 
-export function EventDescription(props: EventDescription.Props) {
+export function TxEventDescription(props: TxEventDescription.Props) {
 	const { event, seenAs, className } = props
 	return (
 		<div
@@ -18,7 +18,7 @@ export function EventDescription(props: EventDescription.Props) {
 			)}
 		>
 			{event.parts.map((part, index) => (
-				<EventDescription.Part
+				<TxEventDescription.Part
 					key={`${part.type}${index}`}
 					part={part}
 					seenAs={seenAs}
@@ -28,7 +28,7 @@ export function EventDescription(props: EventDescription.Props) {
 	)
 }
 
-export namespace EventDescription {
+export namespace TxEventDescription {
 	export interface Props {
 		event: KnownEvent
 		seenAs?: AddressType.Address
@@ -129,7 +129,7 @@ export namespace EventDescription {
 			<div className="flex flex-col gap-[4px]">
 				{displayEvents.map((event, index) => (
 					<div key={`${event.type}-${index}`} className="flex items-center">
-						<EventDescription
+						<TxEventDescription
 							event={event}
 							seenAs={seenAs}
 							className="flex flex-row items-center gap-[6px] leading-[18px]"

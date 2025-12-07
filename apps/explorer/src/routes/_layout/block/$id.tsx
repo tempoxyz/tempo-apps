@@ -11,11 +11,11 @@ import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
 import { decodeFunctionData, isHex, zeroAddress } from 'viem'
 import { useChains, useWatchBlockNumber } from 'wagmi'
-import { Address as AddressLink } from '#comps/address'
-import { EventDescription } from '#comps/tx.event-description'
-import { TruncatedHash } from '#comps/truncated-hash'
-import { CopyButton } from '#comps/copy-button'
-import { NotFound } from '#comps/not-found'
+import { Address as AddressLink } from '#comps/Address'
+import { TxEventDescription } from '#comps/TxEventDescription'
+import { TruncatedHash } from '#comps/TruncatedHash'
+import { CopyButton } from '#comps/CopyButton'
+import { NotFound } from '#comps/NotFound'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent } from '#lib/domain/known-events'
 import {
@@ -597,7 +597,7 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 			return (
 				<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
-					<EventDescription
+					<TxEventDescription
 						event={primaryEvent}
 						className="flex flex-row items-center gap-[6px]"
 					/>
@@ -616,7 +616,7 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 		const [firstEvent, ...rest] = knownEvents
 		return (
 			<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
-				<EventDescription
+				<TxEventDescription
 					event={firstEvent}
 					className="flex flex-row items-center gap-[6px]"
 				/>

@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import * as z from 'zod/mini'
-import { DataGrid } from '#comps/data-grid'
-import { Sections } from '#comps/sections'
+import { DataGrid } from '#comps/DataGrid'
+import { Sections } from '#comps/Sections'
 import {
 	FormattedTimestamp,
 	TimeColumnHeader,
 	useTimeFormat,
-} from '#comps/time-format'
+} from '#comps/TimeFormat'
 import { HexFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'

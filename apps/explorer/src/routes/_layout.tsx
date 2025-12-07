@@ -1,8 +1,8 @@
 import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
 import * as z from 'zod/mini'
-import { Footer } from '#comps/footer'
-import { Header } from '#comps/header'
-import { Sphere } from '#comps/sphere'
+import { Footer } from '#comps/Footer'
+import { Header } from '#comps/Header'
+import { Sphere } from '#comps/Sphere'
 import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
 
 export const Route = createFileRoute('/_layout')({

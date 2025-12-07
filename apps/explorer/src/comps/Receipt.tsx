@@ -1,8 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import { useState } from 'react'
-import { EventDescription } from '#comps/tx.event-description'
-import { ReceiptMark } from '#comps/receipt-mark'
+import { TxEventDescription } from '#comps/TxEventDescription'
+import { ReceiptMark } from '#comps/ReceiptMark'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
@@ -136,7 +136,7 @@ export function Receipt(props: Receipt.Props) {
 											<div className="flex flex-row justify-between items-start gap-[10px]">
 												<div className="flex flex-row items-start gap-[4px] grow min-w-0 text-tertiary">
 													<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 leading-[24px] min-w-[20px]"></div>
-													<EventDescription event={event} />
+													<TxEventDescription event={event} />
 												</div>
 												<div className="flex items-center text-right shrink-0 leading-[24px]">
 													{totalAmountBigInt > 0n && (
@@ -172,7 +172,7 @@ export function Receipt(props: Receipt.Props) {
 																			<div className="text-tertiary">
 																				{label}:
 																			</div>
-																			<EventDescription.Part part={part} />
+																			<TxEventDescription.Part part={part} />
 																		</div>
 																	)
 																})}

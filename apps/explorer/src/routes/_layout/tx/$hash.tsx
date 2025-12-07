@@ -12,14 +12,14 @@ import * as React from 'react'
 import type { Log, TransactionReceipt } from 'viem'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
-import { InfoRow } from '#comps/info-row'
-import { DecodedCalldata } from '#comps/tx.decoded-calldata'
-import { EventDescription } from '#comps/tx.event-description'
-import { RawTransaction } from '#comps/tx.raw-transaction'
-import { TransactionCard } from '#comps/tx.transaction-card'
-import { DataGrid } from '#comps/data-grid'
-import { NotFound } from '#comps/not-found'
-import { Sections } from '#comps/sections'
+import { InfoRow } from '#comps/InfoRow'
+import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
+import { TxEventDescription } from '#comps/TxEventDescription'
+import { TxRawTransaction } from '#comps/TxRawTransaction'
+import { TxTransactionCard } from '#comps/TxTransactionCard'
+import { DataGrid } from '#comps/DataGrid'
+import { NotFound } from '#comps/NotFound'
+import { Sections } from '#comps/Sections'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
@@ -118,7 +118,7 @@ function RouteComponent() {
 				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
 			)}
 		>
-			<TransactionCard
+			<TxTransactionCard
 				hash={receipt.transactionHash}
 				status={receipt.status}
 				blockNumber={receipt.blockNumber}
@@ -206,7 +206,7 @@ function OverviewSection(props: {
 		<div className="flex flex-col">
 			{knownEvents.length > 0 && (
 				<InfoRow label="Description">
-					<EventDescription.ExpandGroup events={knownEvents} limit={5} />
+					<TxEventDescription.ExpandGroup events={knownEvents} limit={5} />
 				</InfoRow>
 			)}
 			<InfoRow label="Value">
@@ -301,7 +301,7 @@ function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
 					Input Data
 				</span>
 				<div className="flex flex-col gap-[12px] flex-1">
-					<DecodedCalldata address={to} data={input} />
+					<TxDecodedCalldata address={to} data={input} />
 					<div>
 						<button
 							type="button"
@@ -375,7 +375,7 @@ function CallItem(props: {
 				)}
 			</div>
 			{data && data !== '0x' && (
-				<DecodedCalldata address={call.to} data={data} />
+				<TxDecodedCalldata address={call.to} data={data} />
 			)}
 		</div>
 	)
@@ -442,7 +442,7 @@ function EventCell(props: { log: Log; knownEvent?: KnownEvent }) {
 	return (
 		<div className="flex flex-col gap-[4px]">
 			{knownEvent ? (
-				<EventDescription
+				<TxEventDescription
 					event={knownEvent}
 					className="flex flex-row items-center gap-[6px] leading-[18px]"
 				/>
@@ -506,7 +506,7 @@ function RawSection(props: {
 					<CopyIcon className="size-[14px]" />
 				</button>
 			</div>
-			<RawTransaction data={rawData} />
+			<TxRawTransaction data={rawData} />
 		</div>
 	)
 }
