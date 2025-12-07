@@ -300,7 +300,6 @@ function OverviewSection(props: {
 
 function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
 	const { input, to } = props
-	const [showRaw, setShowRaw] = React.useState(false)
 
 	return (
 		<div className="flex flex-col px-[18px] py-[12px] border-b border-dashed border-card-border last:border-b-0">
@@ -308,22 +307,8 @@ function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
 				<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
 					Input Data
 				</span>
-				<div className="flex flex-col gap-[12px] flex-1">
+				<div className="flex-1">
 					<TxDecodedCalldata address={to} data={input} />
-					<div>
-						<button
-							type="button"
-							onClick={() => setShowRaw(!showRaw)}
-							className="text-[11px] text-accent hover:underline text-left cursor-pointer"
-						>
-							{showRaw ? 'Hide' : 'Show'} raw ({input.length} bytes)
-						</button>
-						{showRaw && (
-							<pre className="text-[12px] text-primary break-all whitespace-pre-wrap bg-distinct rounded-[6px] p-[12px] max-h-[300px] overflow-auto mt-[8px]">
-								{input}
-							</pre>
-						)}
-					</div>
 				</div>
 			</div>
 		</div>
