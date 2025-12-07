@@ -97,8 +97,8 @@ catalogs:
       specifier: ^16.5.0
       version: 16.5.0
     idxs:
-      specifier: ^0.0.3
-      version: 0.0.3
+      specifier: ^0.0.4
+      version: 0.0.4
     ox:
       specifier: ^0.9.17
       version: 0.9.17
@@ -205,7 +205,7 @@ importers:
         version: 1.0.0-beta.4(typescript@5.9.3)
       idxs:
         specifier: 'catalog:'
-        version: 0.0.3(typescript@5.9.3)
+        version: 0.0.4(typescript@5.9.3)
       ox:
         specifier: 'catalog:'
         version: 0.9.17(typescript@5.9.3)(zod@4.1.13)
@@ -2648,8 +2648,8 @@ packages:
   idb-keyval@6.2.2:
     resolution: {integrity: sha512-yjD9nARJ/jb1g+CvD0tlhUHOrJ9Sy0P8T9MF3YaLlHnSRpwPfpTX0XIvpmw3gAJUmEu3FiICLBDPXVwyEvrleg==}
 
-  idxs@0.0.3:
-    resolution: {integrity: sha512-DQ0R8euzn7VFP3RUZNeMDjSb77ajKuomwJWB4yrIJGK5EwmQgXe2/wgkJKZtNwjqwLrjfbi2lvKpn2HTv2ZfNQ==}
+  idxs@0.0.4:
+    resolution: {integrity: sha512-G4BqzG/nFRLrr/LgPJvLjkF7zbx83GiGHjNHEGQz1UoM6X+BfVrlj5yMXgFgInAw/U38pdc0ZbE027JkYVc8Uw==}
 
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
@@ -5832,7 +5832,7 @@ snapshots:
 
   idb-keyval@6.2.2: {}
 
-  idxs@0.0.3(typescript@5.9.3):
+  idxs@0.0.4(typescript@5.9.3):
     dependencies:
       abitype: 1.2.1(typescript@5.9.3)(zod@4.1.13)
       kysely: 0.28.8
