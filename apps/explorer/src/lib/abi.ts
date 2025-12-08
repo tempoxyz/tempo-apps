@@ -5,8 +5,8 @@ import {
 	type Abi,
 	type Address,
 	decodeEventLog,
-	type Hex,
 	getAbiItem as getAbiItem_viem,
+	type Hex,
 	stringify,
 } from 'viem'
 import { getPublicClient } from 'wagmi/actions'
