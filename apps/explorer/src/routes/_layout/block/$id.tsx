@@ -227,7 +227,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 							transaction.hash ? (
 								<Link
 									key="hash"
-									to="/tx/$hash"
+									to="/receipt/$hash"
 									params={{ hash: transaction.hash }}
 									className="text-accent hover:underline press-down"
 									title={transaction.hash}
