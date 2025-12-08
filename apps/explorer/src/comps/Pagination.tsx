@@ -239,7 +239,7 @@ export namespace Pagination {
 				<Link
 					to="."
 					resetScroll={false}
-					search={(prev) => ({ ...prev, page: 1 })}
+					search={(prev) => ({ ...prev, page: 1, live: true })}
 					disabled={page <= 1 || isPending}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
@@ -251,7 +251,10 @@ export namespace Pagination {
 				<Link
 					to="."
 					resetScroll={false}
-					search={(prev) => ({ ...prev, page: (prev?.page ?? 1) - 1 })}
+					search={(prev) => {
+						const newPage = (prev?.page ?? 1) - 1
+						return { ...prev, page: newPage, live: newPage === 1 }
+					}}
 					disabled={page <= 1 || isPending}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
@@ -267,7 +270,11 @@ export namespace Pagination {
 				<Link
 					to="."
 					resetScroll={false}
-					search={(prev) => ({ ...prev, page: (prev?.page ?? 1) + 1 })}
+					search={(prev) => ({
+						...prev,
+						page: (prev?.page ?? 1) + 1,
+						live: false,
+					})}
 					disabled={page >= totalPages || isPending}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
@@ -279,7 +286,7 @@ export namespace Pagination {
 				<Link
 					to="."
 					resetScroll={false}
-					search={(prev) => ({ ...prev, page: totalPages })}
+					search={(prev) => ({ ...prev, page: totalPages, live: false })}
 					disabled={page >= totalPages || isPending}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
