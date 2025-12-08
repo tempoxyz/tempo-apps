@@ -48,9 +48,14 @@ export function blocksQueryOptions(page: number) {
 	})
 }
 
-export function blockDetailQueryOptions(blockRef: BlockIdentifier) {
+export const TRANSACTIONS_PER_PAGE = 20
+
+export function blockDetailQueryOptions(
+	blockRef: BlockIdentifier,
+	page: number = 1,
+) {
 	return queryOptions({
-		queryKey: ['block-detail', blockRef],
+		queryKey: ['block-detail', blockRef, page],
 		queryFn: async () => {
 			const wagmiConfig = getConfig()
 			const block = await getBlock(wagmiConfig, {
@@ -60,8 +65,15 @@ export function blockDetailQueryOptions(blockRef: BlockIdentifier) {
 					: { blockNumber: blockRef.blockNumber }),
 			})
 
+			const allTransactions = block.transactions as BlockTransaction[]
+			const startIndex = (page - 1) * TRANSACTIONS_PER_PAGE
+			const pageTransactions = allTransactions.slice(
+				startIndex,
+				startIndex + TRANSACTIONS_PER_PAGE,
+			)
+
 			const knownEventsByHash = await fetchKnownEventsForTransactions(
-				block.transactions as BlockTransaction[],
+				pageTransactions,
 				wagmiConfig,
 			)
 
@@ -69,8 +81,10 @@ export function blockDetailQueryOptions(blockRef: BlockIdentifier) {
 				blockRef,
 				block: block as BlockWithTransactions,
 				knownEventsByHash,
+				page,
 			}
 		},
+		placeholderData: keepPreviousData,
 	})
 }
 
