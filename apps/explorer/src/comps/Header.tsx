@@ -101,7 +101,8 @@ export namespace Header {
 			<Link
 				to="/block/$id"
 				params={{ id: 'latest' }}
-				className="flex items-center gap-[6px] text-[15px] font-medium text-secondary"
+				className="flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down"
+				title="View latest block"
 			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
