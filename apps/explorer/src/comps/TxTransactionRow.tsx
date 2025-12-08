@@ -5,7 +5,11 @@ import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import type { getBlock } from 'wagmi/actions'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 import { TxEventDescription } from '#comps/TxEventDescription'
-import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
+import {
+	type KnownEvent,
+	type KnownEventPart,
+	preferredEventsFilter,
+} from '#lib/domain/known-events'
 import { PriceFormatter } from '#lib/formatting'
 
 export type TransactionData = {
@@ -61,6 +65,7 @@ export function TransactionDescription(props: {
 			events={knownEvents}
 			seenAs={accountAddress}
 			transformEvent={transformEvent}
+			limitFilter={preferredEventsFilter}
 		/>
 	)
 }
