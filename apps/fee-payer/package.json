@@ -18,6 +18,8 @@
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
 		"hono": "^4.10.7",
+		"idxs": "catalog:",
+		"kysely": "catalog:",
 		"ox": "catalog:",
 		"tempo.ts": "catalog:",
 		"viem": "catalog:",
