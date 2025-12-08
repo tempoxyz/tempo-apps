@@ -21,7 +21,13 @@ export function AccountCard(props: AccountCard.Props) {
 
 	return (
 		<InfoCard
-			title="Account"
+			title={
+				<div className="flex items-center justify-between px-[18px] pt-[10px] pb-[8px]">
+					<h1 className="text-[13px] uppercase text-tertiary select-none">
+						Account
+					</h1>
+				</div>
+			}
 			className={className}
 			sections={[
 				<button
