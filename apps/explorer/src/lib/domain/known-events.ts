@@ -756,6 +756,14 @@ export function parseKnownEvent(
 	return detected
 }
 
+// e.g. for TxEventDescription.ExpandGroup's limitFilter
+export function preferredEventsFilter(event: KnownEvent): boolean {
+	return (
+		event.type !== 'active key count changed' &&
+		event.type !== 'nonce incremented'
+	)
+}
+
 export function parseKnownEvents(
 	receipt: TransactionReceipt,
 	options?: {

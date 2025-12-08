@@ -214,7 +214,14 @@ function OverviewSection(props: {
 		<div className="flex flex-col">
 			{knownEvents.length > 0 && (
 				<InfoRow label="Description">
-					<TxEventDescription.ExpandGroup events={knownEvents} limit={5} />
+					<TxEventDescription.ExpandGroup
+						events={knownEvents}
+						limit={5}
+						limitFilter={(event) =>
+							event.type !== 'active key count changed' &&
+							event.type !== 'nonce incremented'
+						}
+					/>
 				</InfoRow>
 			)}
 			<InfoRow label="Value">
