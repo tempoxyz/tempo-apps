@@ -126,9 +126,9 @@ export function BlockCard(props: BlockCard.Props) {
 									)}
 								</div>
 							</div>
-							<p className="text-[14px] font-normal leading-[18px] tracking-[1px] text-primary break-all max-w-[calc(22ch+22px)]">
+							<div className="text-[14px] font-normal leading-[18px] tracking-[1px] text-primary break-all max-w-[calc(22ch+22px)]">
 								{hash}
-							</p>
+							</div>
 						</button>
 					)}
 					<div className="w-full flex items-center justify-between gap-[8px]">
@@ -261,16 +261,19 @@ export namespace BlockCard {
 		const str = String(value).padStart(14, '0')
 		const zerosEnd = str.match(/^0*/)?.[0].length ?? 0
 		return (
-			<p className="flex justify-between gap-[1px] text-[22px] text-tertiary">
-				{str.split('').map((char, index) => (
-					<span
-						key={`${index}-${char}`}
-						className={index >= zerosEnd ? 'text-primary' : undefined}
-					>
-						{char}
-					</span>
-				))}
-			</p>
+			// the 14px font size is used to set the same width as the block hash
+			<div className="text-[14px] max-w-[calc(22ch+22px)]">
+				<span className="flex justify-between gap-[1px] text-[22px] text-tertiary">
+					{str.split('').map((char, index) => (
+						<span
+							key={`${index}-${char}`}
+							className={index >= zerosEnd ? 'text-primary' : undefined}
+						>
+							{char}
+						</span>
+					))}
+				</span>
+			</div>
 		)
 	}
 

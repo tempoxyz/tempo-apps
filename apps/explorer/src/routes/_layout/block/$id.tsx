@@ -6,18 +6,22 @@ import {
 	redirect,
 	rootRouteId,
 } from '@tanstack/react-router'
-import { Hex } from 'ox'
+import { Hex, Value } from 'ox'
 import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
 import { decodeFunctionData, isHex, zeroAddress } from 'viem'
 import { useChains } from 'wagmi'
 import { Address as AddressLink } from '#comps/Address'
 import { BlockCard } from '#comps/BlockCard'
+import { DataGrid } from '#comps/DataGrid'
 import { NotFound } from '#comps/NotFound'
+import { Sections } from '#comps/Sections'
+import { TruncatedHash } from '#comps/TruncatedHash'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent } from '#lib/domain/known-events'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { DateFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { useMediaQuery } from '#lib/hooks'
 import {
 	type BlockIdentifier,
 	type BlockTransaction,
@@ -88,28 +92,37 @@ function RouteComponent() {
 		return block.transactions
 	}, [block?.transactions])
 
+	const isMobile = useMediaQuery('(max-width: 799px)')
+	const mode = isMobile ? 'stacked' : 'tabs'
+
 	return (
-		<section className="w-full flex-1 flex justify-center px-4">
-			<div
-				className={cx(
-					'grid w-full max-w-[1280px] gap-[14px] min-w-0',
-					'min-[1240px]:grid-cols-[auto_1fr] pt-20 pb-16',
-					'*:min-w-0 *:max-w-full',
-				)}
-			>
-				<div className={cx('min-[1240px]:max-w-74')}>
-					<BlockCard block={block} />
-				</div>
-				<div className={cx('min-[1240px]:max-w-full')}>
-					<BlockTransactionsCard
-						transactions={transactions}
-						knownEventsByHash={knownEventsByHash}
-						decimals={decimals}
-						symbol={symbol}
-					/>
-				</div>
-			</div>
-		</section>
+		<div
+			className={cx(
+				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
+				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
+			)}
+		>
+			<BlockCard block={block} />
+			<Sections
+				mode={mode}
+				sections={[
+					{
+						title: 'Transactions',
+						totalItems: transactions.length,
+						itemsLabel: 'txns',
+						autoCollapse: false,
+						content: (
+							<TransactionsSection
+								transactions={transactions}
+								knownEventsByHash={knownEventsByHash}
+								decimals={decimals}
+								symbol={symbol}
+							/>
+						),
+					},
+				]}
+			/>
+		</div>
 	)
 }
 
@@ -145,170 +158,157 @@ function getTransactionType(
 
 const GAS_DECIMALS = 18
 
-function BlockTransactionsCard(props: BlockTransactionsCardProps) {
+function TransactionsSection(props: TransactionsSectionProps) {
 	const { transactions, knownEventsByHash, decimals, symbol } = props
 
-	if (transactions.length === 0)
-		return (
-			<section className="flex flex-col font-mono w-full overflow-hidden rounded-[10px] border border-card-border bg-card-header shadow-[0px_12px_40px_rgba(0,0,0,0.06)] p-[24px] text-center text-base-content-secondary">
-				No transactions were included in this block.
-			</section>
-		)
+	const cols = [
+		{ label: 'Index', align: 'start', width: '0.5fr' },
+		{ label: 'Description', align: 'start', width: '3fr' },
+		{ label: 'From', align: 'start', width: '1.5fr' },
+		{ label: 'Hash', align: 'end', width: '1.5fr' },
+		{ label: 'Fee', align: 'end', width: '1fr' },
+		{ label: 'Total', align: 'end', width: '1fr' },
+	] satisfies DataGrid.Props['columns']['stacked']
 
 	return (
-		<section
-			className="flex flex-col font-mono w-full overflow-hidden rounded-[10px] border border-card-border bg-card-header shadow-[0px_12px_40px_rgba(0,0,0,0.06)]"
-			aria-label="Block transactions"
-		>
-			<div className="flex items-center justify-between px-[18px] pt-[12px] pb-[10px] border-b border-card-border">
-				<h2 className="text-[13px] font-medium text-primary">
-					Transactions{' '}
-					<span className="text-tertiary lowercase not-italic">
-						({transactions.length})
-					</span>
-				</h2>
-			</div>
-			<div className="overflow-x-auto">
-				<table className="min-w-full text-[13px] text-primary table-fixed">
-					<colgroup>
-						<col className="w-[52px]" />
-						<col className="w-[100px]" />
-						<col className="w-[90px]" />
-						<col />
-						<col className="w-[110px]" />
-						<col className="w-[80px]" />
-						<col className="w-[70px]" />
-					</colgroup>
-					<thead>
-						<tr className="border-b border-dashed border-card-border text-tertiary">
-							<th className="px-[12px] py-[12px] text-left font-normal whitespace-nowrap">
-								#
-							</th>
-							<th className="px-[12px] py-[12px] text-left font-normal whitespace-nowrap">
-								Type
-							</th>
-							<th className="px-[12px] py-[12px] text-left font-normal whitespace-nowrap">
-								From
-							</th>
-							<th className="px-[12px] py-[12px] text-left font-normal">
-								Description
-							</th>
-							<th className="px-[12px] py-[12px] text-left font-normal whitespace-nowrap">
-								Hash
-							</th>
-							<th className="px-[12px] py-[12px] text-right font-normal whitespace-nowrap">
-								Fee
-							</th>
-							<th className="px-[12px] py-[12px] text-right font-normal whitespace-nowrap">
-								Value
-							</th>
-						</tr>
-					</thead>
-					<tbody className="divide-y divide-dashed divide-card-border">
-						{transactions.map((transaction, index) => {
-							const transactionIndex =
-								(transaction.transactionIndex ?? null) !== null
-									? Number(transaction.transactionIndex) + 1
-									: index + 1
+		<DataGrid
+			columns={{ stacked: cols, tabs: cols }}
+			items={() =>
+				transactions.map((transaction, index) => {
+					const transactionIndex =
+						(transaction.transactionIndex ?? null) !== null
+							? Number(transaction.transactionIndex) + 1
+							: index + 1
 
-							const fromCell =
-								transaction.from === zeroAddress ? (
-									<span className="text-tertiary">System</span>
-								) : (
-									<AddressLink
-										address={transaction.from}
-										chars={4}
-										className="text-accent font-medium text-[12px]"
-									/>
-								)
+					const txType = getTransactionType(transaction)
+					const knownEvents = transaction.hash
+						? knownEventsByHash[transaction.hash]
+						: undefined
 
-							const amountDisplay = PriceFormatter.formatNativeAmount(
-								transaction.value,
-								decimals,
-								symbol,
-							)
-							const fee = getEstimatedFee(transaction)
-							const feeDisplay =
-								fee > 0n
-									? PriceFormatter.formatNativeAmount(fee, GAS_DECIMALS, symbol)
-									: '—'
-							const feeOutput = feeDisplay === '—' ? '—' : `(${feeDisplay})`
-							const hashCell = transaction.hash ? (
+					const fee = getEstimatedFee(transaction)
+					const feeValue = fee ? Number(Value.format(fee, GAS_DECIMALS)) : 0
+					const feeDisplay =
+						feeValue > 0 ? PriceFormatter.format(feeValue) : '—'
+
+					const txValue = transaction.value ?? 0n
+					const totalValue = Number(Value.format(txValue, decimals))
+					const totalDisplay =
+						totalValue > 0 ? PriceFormatter.format(totalValue) : '—'
+
+					const amountDisplay = PriceFormatter.formatNativeAmount(
+						txValue,
+						decimals,
+						symbol,
+					)
+
+					return {
+						cells: [
+							<span key="index" className="text-tertiary tabular-nums">
+								[{transactionIndex}]
+							</span>,
+							<TransactionDescription
+								key="desc"
+								transaction={transaction}
+								amountDisplay={amountDisplay}
+								knownEvents={knownEvents}
+							/>,
+							txType.type === 'system' ? (
+								<span key="from" className="text-tertiary">
+									{txType.label}
+								</span>
+							) : (
+								<AddressLink
+									key="from"
+									address={transaction.from}
+									chars={4}
+									className="text-accent press-down whitespace-nowrap"
+								/>
+							),
+							transaction.hash ? (
 								<Link
+									key="hash"
 									to="/tx/$hash"
 									params={{ hash: transaction.hash }}
-									className="text-accent font-mono"
+									className="text-accent hover:underline press-down"
 									title={transaction.hash}
 								>
-									{HexFormatter.shortenHex(transaction.hash, 6)}
+									<TruncatedHash hash={transaction.hash} minChars={6} />
 								</Link>
 							) : (
-								<span className="text-tertiary">—</span>
-							)
-
-							const knownEvents = transaction.hash
-								? knownEventsByHash[transaction.hash]
-								: undefined
-							const txType = getTransactionType(transaction)
-
-							return (
-								<tr key={transaction.hash} className="bg-card">
-									<td className="px-[12px] py-[12px] align-top text-tertiary tabular-nums whitespace-nowrap">
-										[{transactionIndex}]
-									</td>
-									<td className="px-[12px] py-[12px] align-top whitespace-nowrap">
-										<div
-											className={cx(
-												txType.type === 'system'
-													? 'text-tertiary'
-													: 'text-primary',
-												'text-[12px] font-medium',
-											)}
-										>
-											{txType.label}
-										</div>
-									</td>
-									<td className="px-[12px] py-[12px] align-top whitespace-nowrap">
-										{fromCell}
-									</td>
-									<td className="px-[12px] py-[12px] align-top">
-										<TransactionDescription
-											transaction={transaction}
-											amountDisplay={amountDisplay}
-											knownEvents={knownEvents}
-										/>
-									</td>
-									<td className="px-[12px] py-[12px] align-top whitespace-nowrap">
-										{hashCell}
-									</td>
-									<td className="px-[12px] py-[12px] align-top text-right text-base-content-secondary whitespace-nowrap">
-										{feeOutput}
-									</td>
-									<td
-										className={cx([
-											'px-[12px] py-[12px] align-top text-right tabular-nums whitespace-nowrap',
-											transaction.value > 0n
-												? 'text-base-content-positive'
-												: 'text-primary',
-										])}
-									>
-										{amountDisplay}
-									</td>
-								</tr>
-							)
-						})}
-					</tbody>
-				</table>
-			</div>
-		</section>
+								<span key="hash" className="text-tertiary">
+									—
+								</span>
+							),
+							<span key="fee" className="text-tertiary">
+								{feeDisplay}
+							</span>,
+							<span
+								key="total"
+								className={totalValue > 0 ? 'text-primary' : 'text-tertiary'}
+							>
+								{totalDisplay}
+							</span>,
+						],
+						link: transaction.hash
+							? {
+									href: `/tx/${transaction.hash}`,
+									title: `View transaction ${transaction.hash}`,
+								}
+							: undefined,
+					}
+				})
+			}
+			totalItems={transactions.length}
+			page={1}
+			isPending={false}
+			itemsLabel="transactions"
+			itemsPerPage={transactions.length}
+			emptyState="No transactions were included in this block."
+		/>
 	)
 }
 
-interface BlockTransactionsCardProps {
+interface TransactionsSectionProps {
 	transactions: BlockTransaction[]
 	knownEventsByHash: Record<Hex.Hex, KnownEvent[]>
 	decimals: number
 	symbol: string
+}
+
+function ExpandableEvents(props: { events: KnownEvent[] }) {
+	const { events } = props
+	const [expanded, setExpanded] = React.useState(false)
+
+	if (events.length === 0) return null
+
+	const [firstEvent, ...rest] = events
+	const showAll = expanded || rest.length === 0
+
+	return (
+		<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
+			<TxEventDescription
+				event={firstEvent}
+				className="flex flex-row items-center gap-[6px]"
+			/>
+			{showAll ? (
+				rest.map((event, index) => (
+					<TxEventDescription
+						key={`${event.type}-${index}`}
+						event={event}
+						className="flex flex-row items-center gap-[6px]"
+					/>
+				))
+			) : (
+				<button
+					type="button"
+					onClick={() => setExpanded(true)}
+					className="text-tertiary whitespace-nowrap cursor-pointer hover:text-secondary/70"
+				>
+					+{rest.length} more
+				</button>
+			)}
+		</div>
+	)
 }
 
 function TransactionDescription(props: TransactionDescriptionProps) {
@@ -371,50 +371,26 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 			)
 			const primaryEvent = tokenCreationEvent ?? knownEvents[0]
 			const otherEvents = knownEvents.filter((e) => e !== primaryEvent)
+			const reorderedEvents = [primaryEvent, ...otherEvents]
 
-			return (
-				<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
-					<TxEventDescription
-						event={primaryEvent}
-						className="flex flex-row items-center gap-[6px]"
-					/>
-					{otherEvents.length > 0 && (
-						<span className="text-tertiary whitespace-nowrap">
-							+{otherEvents.length} more
-						</span>
-					)}
-				</div>
-			)
+			return <ExpandableEvents events={reorderedEvents} />
 		}
 		return <span className="text-primary">Deploy contract</span>
 	}
 
 	if (knownEvents && knownEvents.length > 0) {
-		const [firstEvent, ...rest] = knownEvents
-		return (
-			<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
-				<TxEventDescription
-					event={firstEvent}
-					className="flex flex-row items-center gap-[6px]"
-				/>
-				{rest.length > 0 && (
-					<span className="text-tertiary whitespace-nowrap">
-						+{rest.length} more
-					</span>
-				)}
-			</div>
-		)
+		return <ExpandableEvents events={knownEvents} />
 	}
 
 	if (transaction.value === 0n)
 		return (
 			<div className="flex flex-col gap-[2px]">
-				<span className="text-primary">
+				<span className="text-primary whitespace-nowrap">
 					{title}{' '}
 					<AddressLink
 						address={transaction.to}
 						chars={4}
-						className="text-accent font-medium"
+						className="text-accent press-down"
 					/>
 				</span>
 				{subtitle && (
@@ -426,16 +402,13 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 		)
 
 	return (
-		<span className="text-primary">
-			Send{' '}
-			<span className="font-medium text-base-content-positive">
-				{amountDisplay}
-			</span>{' '}
+		<span className="text-primary whitespace-nowrap">
+			Send <span className="text-base-content-positive">{amountDisplay}</span>{' '}
 			to{' '}
 			<AddressLink
 				address={transaction.to}
 				chars={4}
-				className="text-accent font-medium"
+				className="text-accent press-down"
 			/>
 		</span>
 	)

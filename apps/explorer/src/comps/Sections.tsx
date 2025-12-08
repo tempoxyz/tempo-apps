@@ -101,7 +101,7 @@ export function Sections(props: Sections.Props) {
 		<Sections.Context.Provider value={{ mode }}>
 			<section
 				className={cx(
-					'flex flex-col font-mono w-full overflow-hidden h-full min-h-0',
+					'flex flex-col font-mono w-full overflow-hidden min-h-0 self-start',
 					'rounded-[10px] border border-card-border bg-card-header',
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 					className,
@@ -109,37 +109,46 @@ export function Sections(props: Sections.Props) {
 			>
 				<div className="h-[40px] flex items-center justify-between">
 					<div className="flex items-center h-full">
-						{sections.map((section, index) => (
-							<button
-								key={section.title}
-								type="button"
-								onClick={() => onSectionChange?.(index)}
-								className={cx(
-									'h-full flex items-center text-[13px] font-medium uppercase',
-									'focus-visible:-outline-offset-2! press-down cursor-pointer transition-[color]',
-									index === 0
-										? 'pl-[18px] pr-[12px] !rounded-tl-[10px]'
-										: 'px-[12px]',
-									activeSection === index
-										? 'text-primary'
-										: 'text-tertiary hover:text-secondary',
-								)}
-							>
-								<div className="relative h-full flex items-center">
-									{section.title}
-									{activeSection === index && (
-										<div className="absolute h-[2px] bg-accent -bottom-[1.5px] left-0 right-0 -mx-[2px]" />
+						{sections.length === 1 ? (
+							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px]">
+								<span className="text-primary">{sections[0].title}</span>
+								<span className="text-tertiary">
+									({sections[0].totalItems})
+								</span>
+							</div>
+						) : (
+							sections.map((section, index) => (
+								<button
+									key={section.title}
+									type="button"
+									onClick={() => onSectionChange?.(index)}
+									className={cx(
+										'h-full flex items-center text-[13px] font-medium',
+										'focus-visible:-outline-offset-2! press-down cursor-pointer transition-[color]',
+										index === 0
+											? 'pl-[18px] pr-[12px] !rounded-tl-[10px]'
+											: 'px-[12px]',
+										activeSection === index
+											? 'text-primary'
+											: 'text-tertiary hover:text-secondary',
 									)}
-								</div>
-							</button>
-						))}
+								>
+									<div className="relative h-full flex items-center">
+										{section.title}
+										{activeSection === index && (
+											<div className="absolute h-[2px] bg-accent -bottom-[1.5px] left-0 right-0 -mx-[2px]" />
+										)}
+									</div>
+								</button>
+							))
+						)}
 					</div>
 					{currentSection.contextual && (
 						<div className="pr-[18px]">{currentSection.contextual}</div>
 					)}
 				</div>
 
-				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex-1 flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
+				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
 					{currentSection.content}
 				</div>
 			</section>
