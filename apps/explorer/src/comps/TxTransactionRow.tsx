@@ -61,6 +61,10 @@ export function TransactionDescription(props: {
 			events={knownEvents}
 			seenAs={accountAddress}
 			transformEvent={transformEvent}
+			limitFilter={(event) =>
+				event.type !== 'active key count changed' &&
+				event.type !== 'nonce incremented'
+			}
 		/>
 	)
 }
