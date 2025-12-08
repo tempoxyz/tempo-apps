@@ -216,6 +216,12 @@ input[type="number"] {
 	}
 }
 
+@utility press-down-mini {
+	&:active:not([aria-disabled="true"]) {
+		transform: translateY(0.1px);
+	}
+}
+
 @keyframes progressline {
 	0% {
 		width: 0%;

@@ -8,10 +8,13 @@ import {
 	type Log,
 	parseAbiItem,
 } from 'viem'
-import { Abis } from 'viem/tempo'
-import { decodeEventLog_guessed, formatAbiValue } from '#lib/domain/contracts'
+import {
+	decodeEventLog_guessed,
+	formatAbiValue,
+	useAutoloadAbi,
+	useLookupSignature,
+} from '#lib/abi'
 import { useCopy } from '#lib/hooks'
-import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
 import CopyIcon from '~icons/lucide/copy'
 
 export function TxDecodedTopics(props: TxDecodedTopics.Props) {
@@ -35,15 +38,6 @@ export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 		}) as AbiEvent | undefined
 	}, [autoloadAbi, eventSelector])
 
-	const tempoTsAbiItem = useMemo(() => {
-		if (!eventSelector) return undefined
-		const tempoTsAbi = Object.values(Abis).flat()
-		return getAbiItem({
-			abi: tempoTsAbi as unknown as Abi,
-			name: eventSelector,
-		}) as AbiEvent | undefined
-	}, [eventSelector])
-
 	const signatureAbiItem = useMemo(() => {
 		if (!signature) return undefined
 		try {
@@ -53,7 +47,7 @@ export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 		}
 	}, [signature])
 
-	const abiItem = autoloadAbiItem ?? tempoTsAbiItem ?? signatureAbiItem
+	const abiItem = autoloadAbiItem ?? signatureAbiItem
 
 	const decoded = useMemo(() => {
 		if (!abiItem) return undefined
@@ -107,7 +101,7 @@ export namespace TxDecodedTopics {
 					.map(
 						(input, i) =>
 							`${
-								input.indexed ? `topic[${i + 1}] ` : ''
+								input.indexed ? `index_topic_${i + 1} ` : ''
 							}${input.type}${input.name ? ` ${input.name}` : ''}`,
 					)
 					.join(', ')})`,
@@ -124,7 +118,7 @@ export namespace TxDecodedTopics {
 						<span key={`${input.type}-${input.name ?? i}`}>
 							{i > 0 && <span className="text-secondary">, </span>}
 							{input.indexed && (
-								<span className="text-tertiary">topic[{i + 1}] </span>
+								<span className="text-tertiary">index_topic_{i + 1} </span>
 							)}
 							<span className="text-secondary">{input.type}</span>
 							{input.name && (
@@ -162,14 +156,14 @@ export namespace TxDecodedTopics {
 
 		return (
 			<div className="px-[10px] py-[8px]">
-				<div className="text-[11px] text-tertiary mb-[6px] flex items-center gap-[6px]">
-					<span>Arguments</span>
+				<div className="text-[11px] text-tertiary mb-[6px]">
+					Arguments{' '}
 					<button
 						type="button"
 						onClick={() => setShowRaw(!showRaw)}
-						className="text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[8px] py-[2px] cursor-pointer press-down"
+						className="text-accent hover:underline cursor-pointer press-down"
 					>
-						{showRaw ? 'raw' : 'decoded'}
+						({showRaw ? 'raw' : 'decoded'})
 					</button>
 				</div>
 				{showRaw ? (
@@ -182,7 +176,7 @@ export namespace TxDecodedTopics {
 						{log.data && log.data !== '0x' && <RawDataInline data={log.data} />}
 					</div>
 				) : (
-					<div className="grid" style={{ gridTemplateColumns: 'auto 1fr' }}>
+					<div className="flex flex-col gap-[4px]">
 						{abiItem.inputs.map((input, index) => {
 							const argValue =
 								(args as Record<string, unknown>)[input.name ?? ''] ??
@@ -220,13 +214,11 @@ export namespace TxDecodedTopics {
 			<button
 				type="button"
 				onClick={() => copy(displayValue)}
-				className="col-span-2 grid grid-cols-subgrid items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[4px] -mx-[4px]"
+				className="flex items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] w-full"
 			>
-				<span className="text-[11px] text-tertiary whitespace-pre">
+				<span className="text-[11px] text-tertiary shrink-0">
 					{notifying ? (
-						<span className="text-primary">
-							{'copied'.padEnd(label.length + 1)}
-						</span>
+						<span className="text-primary">copied</span>
 					) : (
 						<>{label}:</>
 					)}

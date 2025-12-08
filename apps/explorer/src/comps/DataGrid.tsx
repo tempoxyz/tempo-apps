@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import * as React from 'react'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
-import { cx } from '#cva.config.ts'
+import { cx } from '#cva.config'
 
 export function DataGrid(props: DataGrid.Props) {
 	const {
@@ -35,8 +35,8 @@ export function DataGrid(props: DataGrid.Props) {
 		.join(' ')
 
 	return (
-		<div className="flex flex-col h-full min-h-0">
-			<div className="relative w-full">
+		<div className="flex flex-col h-full min-h-0 w-full">
+			<div className="relative w-full overflow-x-auto">
 				<div
 					className="w-full text-[14px] rounded-t-[2px] min-w-max grid"
 					style={{ gridTemplateColumns }}
@@ -126,6 +126,11 @@ export function DataGrid(props: DataGrid.Props) {
 										</React.Fragment>
 									)
 								})}
+								{item.expanded && typeof item.expanded !== 'boolean' && (
+									<div className="col-span-full px-[16px] pb-[12px] [contain:inline-size] -mt-[4px]">
+										{item.expanded}
+									</div>
+								)}
 							</div>
 						)
 					})}
@@ -174,7 +179,7 @@ export namespace DataGrid {
 	export interface Row {
 		cells: Cell[]
 		link?: RowLink
-		expanded?: boolean
+		expanded?: boolean | React.ReactNode
 	}
 
 	export interface Props {
