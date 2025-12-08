@@ -18,6 +18,7 @@ import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TruncatedHash } from '#comps/TruncatedHash'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
+import { TxDecodedTopics } from '#comps/TxDecodedTopics'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
@@ -84,7 +85,14 @@ function RouteComponent() {
 		initialData: loaderData,
 	})
 
-	const { block, feeBreakdown, knownEvents, receipt, transaction } = data
+	const {
+		block,
+		feeBreakdown,
+		knownEvents,
+		knownEventsByLog = [],
+		receipt,
+		transaction,
+	} = data
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -100,16 +108,13 @@ function RouteComponent() {
 	] as const
 	const activeSection = tabs.indexOf(tab)
 
-	const setActiveSection = React.useCallback(
-		(newIndex: number) => {
-			navigate({
-				to: '.',
-				search: { tab: tabs[newIndex] ?? 'overview' },
-				resetScroll: false,
-			})
-		},
-		[navigate, tabs],
-	)
+	const setActiveSection = (newIndex: number) => {
+		navigate({
+			to: '.',
+			search: { tab: tabs[newIndex] ?? 'overview' },
+			resetScroll: false,
+		})
+	}
 
 	return (
 		<div
@@ -160,7 +165,10 @@ function RouteComponent() {
 						totalItems: receipt.logs.length,
 						itemsLabel: 'events',
 						content: (
-							<EventsSection logs={receipt.logs} knownEvents={knownEvents} />
+							<EventsSection
+								logs={receipt.logs}
+								knownEvents={knownEventsByLog}
+							/>
 						),
 					},
 					{
@@ -292,7 +300,6 @@ function OverviewSection(props: {
 
 function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
 	const { input, to } = props
-	const [showRaw, setShowRaw] = React.useState(false)
 
 	return (
 		<div className="flex flex-col px-[18px] py-[12px] border-b border-dashed border-card-border last:border-b-0">
@@ -300,22 +307,8 @@ function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
 				<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
 					Input Data
 				</span>
-				<div className="flex flex-col gap-[12px] flex-1">
+				<div className="flex-1">
 					<TxDecodedCalldata address={to} data={input} />
-					<div>
-						<button
-							type="button"
-							onClick={() => setShowRaw(!showRaw)}
-							className="text-[11px] text-accent hover:underline text-left cursor-pointer"
-						>
-							{showRaw ? 'Hide' : 'Show'} raw ({input.length} bytes)
-						</button>
-						{showRaw && (
-							<pre className="text-[12px] text-primary break-all whitespace-pre-wrap bg-distinct rounded-[6px] p-[12px] max-h-[300px] overflow-auto mt-[8px]">
-								{input}
-							</pre>
-						)}
-					</div>
 				</div>
 			</div>
 		</div>
@@ -330,16 +323,11 @@ function CallsSection(props: {
 	}>
 }) {
 	const { calls } = props
-
-	if (calls.length === 0) {
-		return (
-			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
-				No calls in this transaction
-			</div>
-		)
-	}
-
-	return (
+	return calls.length === 0 ? (
+		<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
+			No calls in this transaction
+		</div>
+	) : (
 		<div className="flex flex-col divide-y divide-card-border">
 			{calls.map((call, i) => (
 				<CallItem key={`${call.to}-${i}`} call={call} index={i} />
@@ -349,12 +337,15 @@ function CallsSection(props: {
 }
 
 function CallItem(props: {
-	call: { to?: Address.Address | null; data?: Hex.Hex; value?: bigint }
+	call: {
+		to?: Address.Address | null
+		data?: Hex.Hex
+		value?: bigint
+	}
 	index: number
 }) {
 	const { call, index } = props
 	const data = call.data
-
 	return (
 		<div className="flex flex-col gap-[12px] px-[18px] py-[16px]">
 			<div className="flex items-center gap-[8px] text-[13px] font-mono">
@@ -381,16 +372,28 @@ function CallItem(props: {
 	)
 }
 
-function EventsSection(props: { logs: Log[]; knownEvents: KnownEvent[] }) {
+function EventsSection(props: {
+	logs: Log[]
+	knownEvents: (KnownEvent | null)[]
+}) {
 	const { logs, knownEvents } = props
+	const [expandedRows, setExpandedRows] = React.useState<Set<number>>(new Set())
 
-	if (logs.length === 0) {
+	const toggleRow = (index: number) => {
+		setExpandedRows((expanded) => {
+			const newExpanded = new Set(expanded)
+			if (newExpanded.has(index)) newExpanded.delete(index)
+			else newExpanded.add(index)
+			return newExpanded
+		})
+	}
+
+	if (logs.length === 0)
 		return (
 			<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
 				No events emitted in this transaction
 			</div>
 		)
-	}
 
 	const cols = [
 		{ label: '#', align: 'start', width: '0.5fr' },
@@ -403,23 +406,35 @@ function EventsSection(props: { logs: Log[]; knownEvents: KnownEvent[] }) {
 			columns={{ stacked: cols, tabs: cols }}
 			items={() =>
 				logs.map((log, index) => {
-					const knownEvent = knownEvents[index]
+					const knownEvent = knownEvents[index] ?? undefined
+					const isExpanded = expandedRows.has(index)
 					return {
 						cells: [
 							<span key="index" className="text-tertiary">
 								{index}
 							</span>,
-							<EventCell key="event" log={log} knownEvent={knownEvent} />,
+							<EventCell
+								key="event"
+								log={log}
+								knownEvent={knownEvent}
+								expanded={isExpanded}
+								onToggle={() => toggleRow(index)}
+							/>,
 							<Link
 								key="contract"
 								to="/address/$address"
 								params={{ address: log.address }}
-								className="text-accent hover:underline whitespace-nowrap"
+								className="text-accent hover:underline whitespace-nowrap press-down"
 								title={log.address}
 							>
 								<TruncatedHash hash={log.address} minChars={6} />
 							</Link>,
 						],
+						expanded: isExpanded ? (
+							<TxDecodedTopics key={log.logIndex} log={log} />
+						) : (
+							false
+						),
 					}
 				})
 			}
@@ -433,10 +448,13 @@ function EventsSection(props: { logs: Log[]; knownEvents: KnownEvent[] }) {
 	)
 }
 
-function EventCell(props: { log: Log; knownEvent?: KnownEvent }) {
-	const { log, knownEvent } = props
-	const [expanded, setExpanded] = React.useState(false)
-
+function EventCell(props: {
+	log: Log
+	knownEvent?: KnownEvent
+	expanded: boolean
+	onToggle: () => void
+}) {
+	const { log, knownEvent, expanded, onToggle } = props
 	const [eventSignature] = log.topics
 
 	return (
@@ -455,33 +473,15 @@ function EventCell(props: { log: Log; knownEvent?: KnownEvent }) {
 					)}
 				</span>
 			)}
-			<button
-				type="button"
-				onClick={() => setExpanded(!expanded)}
-				className="text-[11px] text-accent hover:underline text-left cursor-pointer"
-			>
-				{expanded ? 'Hide topics' : 'Show topics'}
-			</button>
-			{expanded && (
-				<div className="flex flex-col gap-[2px] mt-[4px]">
-					{log.topics.map((topic, i) => (
-						<div key={topic} className="flex gap-[8px]">
-							<span className="text-[11px] text-tertiary">[{i}]</span>
-							<span className="text-[11px] text-primary font-mono break-all">
-								{topic}
-							</span>
-						</div>
-					))}
-					{log.data && log.data !== '0x' && (
-						<div className="flex gap-[8px] mt-[4px]">
-							<span className="text-[11px] text-tertiary">data</span>
-							<span className="text-[11px] text-primary font-mono break-all max-w-[400px]">
-								{log.data}
-							</span>
-						</div>
-					)}
-				</div>
-			)}
+			<div>
+				<button
+					type="button"
+					onClick={onToggle}
+					className="text-[11px] text-accent hover:underline text-left cursor-pointer press-down-mini"
+				>
+					{expanded ? 'Hide details' : 'Show details'}
+				</button>
+			</div>
 		</div>
 	)
 }

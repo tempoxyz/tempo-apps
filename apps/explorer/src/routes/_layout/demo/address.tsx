@@ -1057,7 +1057,7 @@ function Component() {
 												<TransactionTimestamp
 													key="time"
 													timestamp={tx.block.timestamp}
-													link={`/tx/${tx.hash}`}
+													link={`/receipt/${tx.hash}`}
 												/>,
 												descriptionCell,
 												<TruncatedHash
@@ -1072,7 +1072,7 @@ function Component() {
 												/>,
 											],
 											link: {
-												href: `/tx/${tx.hash}`,
+												href: `/receipt/${tx.hash}`,
 												title: `View receipt ${tx.hash}`,
 											},
 											expanded: isExpanded,

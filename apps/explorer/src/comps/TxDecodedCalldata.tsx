@@ -1,20 +1,20 @@
-import { loaders, whatsabi } from '@shazow/whatsabi'
-import { queryOptions, useQuery } from '@tanstack/react-query'
 import type { AbiFunction } from 'abitype'
 import { useMemo, useState } from 'react'
 import {
 	type Abi,
 	type Address,
 	decodeAbiParameters,
-	getAbiItem as getAbiItem_viem,
 	type Hex,
 	parseAbiItem,
 	slice,
-	stringify,
 } from 'viem'
-import { getPublicClient } from 'wagmi/actions'
-import { useCopy } from '#lib/hooks.ts'
-import { config } from '#wagmi.config.ts'
+import {
+	formatAbiValue,
+	getAbiItem,
+	useAutoloadAbi,
+	useLookupSignature,
+} from '#lib/abi'
+import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
 export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
@@ -24,12 +24,12 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 	const copyRaw = useCopy()
 	const [showRaw, setShowRaw] = useState(false)
 
-	const { data: autoloadAbi } = TxDecodedCalldata.useAutoloadAbi({
+	const { data: autoloadAbi } = useAutoloadAbi({
 		address,
 		enabled: Boolean(data) && data !== '0x',
 	})
 
-	const { data: signature, isFetched } = TxDecodedCalldata.useLookupSignature({
+	const { data: signature, isFetched } = useLookupSignature({
 		selector,
 	})
 
@@ -41,14 +41,14 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 	const abiItem = useMemo(() => {
 		const autoloadAbiItem =
 			autoloadAbi &&
-			(TxDecodedCalldata.getAbiItem({
+			(getAbiItem({
 				abi: autoloadAbi as unknown as Abi,
 				selector,
 			}) as AbiFunction)
 
 		const signatureAbiItem =
 			signatureAbi &&
-			(TxDecodedCalldata.getAbiItem({
+			(getAbiItem({
 				abi: signatureAbi,
 				selector,
 			}) as AbiFunction)
@@ -195,7 +195,7 @@ export namespace TxDecodedCalldata {
 	export function ArgumentRow(props: ArgumentRow.Props) {
 		const { input, value } = props
 		const { copy, notifying } = useCopy()
-		const formattedValue = TxDecodedCalldata.formatValue(value)
+		const formattedValue = formatAbiValue(value)
 
 		return (
 			<button
@@ -225,121 +225,5 @@ export namespace TxDecodedCalldata {
 			input: { type: string; name?: string }
 			value: unknown
 		}
-	}
-
-	export function useAutoloadAbi(args: useAutoloadAbi.Parameters) {
-		const { address, enabled } = args
-		const client = getPublicClient(config)
-
-		return useQuery(
-			queryOptions({
-				enabled: enabled && Boolean(address) && Boolean(client),
-				gcTime: Number.POSITIVE_INFINITY,
-				staleTime: Number.POSITIVE_INFINITY,
-				queryKey: ['autoload-abi', address],
-				async queryFn() {
-					if (!address) throw new Error('address is required')
-					if (!client) throw new Error('client is required')
-
-					const result = await whatsabi.autoload(address, {
-						provider: client,
-						followProxies: true,
-						abiLoader: new loaders.MultiABILoader([
-							new loaders.SourcifyABILoader({
-								chainId: client.chain?.id,
-							}),
-						]),
-					})
-
-					if (!result.abi.some((item) => (item as { name?: string }).name))
-						return null
-
-					return result.abi.map((abiItem) => ({
-						...abiItem,
-						outputs:
-							'outputs' in abiItem && abiItem.outputs ? abiItem.outputs : [],
-					}))
-				},
-			}),
-		)
-	}
-
-	export namespace useAutoloadAbi {
-		export interface Parameters {
-			address?: Address | null
-			enabled?: boolean
-		}
-	}
-
-	export function useLookupSignature(args: useLookupSignature.Parameters) {
-		const { enabled = true, selector } = args
-
-		return useQuery(
-			queryOptions({
-				enabled: enabled && Boolean(selector),
-				gcTime: Number.POSITIVE_INFINITY,
-				staleTime: Number.POSITIVE_INFINITY,
-				queryKey: ['lookup-signature', selector],
-				async queryFn() {
-					if (!selector) throw new Error('selector is required')
-
-					const signature =
-						selector.length === 10
-							? await loaders.defaultSignatureLookup.loadFunctions(selector)
-							: await loaders.defaultSignatureLookup.loadEvents(selector)
-
-					return signature[0] ?? null
-				},
-			}),
-		)
-	}
-
-	export namespace useLookupSignature {
-		export interface Parameters {
-			enabled?: boolean
-			selector?: Hex
-		}
-	}
-
-	export function getAbiItem({
-		abi,
-		selector,
-	}: {
-		abi: Abi
-		selector: Hex
-	}): AbiFunction | undefined {
-		const abiItem =
-			(getAbiItem_viem({
-				abi: abi.map((x) => ({
-					...x,
-					inputs: (x as AbiFunction).inputs || [],
-					outputs: (x as AbiFunction).outputs || [],
-				})),
-				name: selector,
-			}) as AbiFunction) ||
-			abi.find((x) => (x as AbiFunction).name === selector) ||
-			abi.find((x) => (x as { selector?: string }).selector === selector)
-
-		if (!abiItem) return
-
-		return {
-			...abiItem,
-			outputs: abiItem.outputs || [],
-			inputs: abiItem.inputs || [],
-			name: abiItem.name || (abiItem as { selector?: string }).selector || '',
-		} as AbiFunction
-	}
-
-	export function formatValue(value: unknown): string {
-		if (typeof value === 'bigint') {
-			return value.toString()
-		}
-		if (Array.isArray(value)) {
-			return `[${value.map(formatValue).join(', ')}]`
-		}
-		if (typeof value === 'object' && value !== null) {
-			return stringify(value)
-		}
-		return String(value ?? '')
 	}
 }

@@ -722,6 +722,40 @@ type FeeManagerAddLiquidityCall =
 			args: readonly [Address.Address, Address.Address, bigint, Address.Address]
 	  }
 
+export function parseKnownEvent(
+	log: Log,
+	options?: { getTokenMetadata?: Tip20.GetTip20MetadataFn },
+): KnownEvent | null {
+	const [event] = parseEventLogs({ abi, logs: [log] })
+	if (!event) return null
+
+	const getTokenMetadata = options?.getTokenMetadata
+
+	const createAmount = (value: bigint, token: Address.Address): Amount => {
+		const metadata = getTokenMetadata?.(token)
+		const amount: Amount = { token, value }
+		if (metadata) {
+			amount.decimals = metadata.decimals
+			amount.symbol = metadata.symbol
+		}
+		return amount
+	}
+
+	const detectors = createDetectors(createAmount, getTokenMetadata)
+
+	const detected =
+		detectors.tip20(event) ||
+		detectors.tip20Factory(event) ||
+		detectors.stablecoinExchange(event) ||
+		detectors.tip403Registry(event) ||
+		detectors.feeManager(event) ||
+		detectors.nonce(event) ||
+		detectors.feeAmm(event)
+
+	if (!detected || isFeeTransferEvent(detected)) return null
+	return detected
+}
+
 export function parseKnownEvents(
 	receipt: TransactionReceipt,
 	options?: {

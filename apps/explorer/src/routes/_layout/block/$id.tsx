@@ -16,8 +16,8 @@ import * as z from 'zod/mini'
 import { Address as AddressLink } from '#comps/Address'
 import { BlockCard } from '#comps/BlockCard'
 import { DataGrid } from '#comps/DataGrid'
-import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
+import { NotFound } from '#comps/NotFound'
 import { TruncatedHash } from '#comps/TruncatedHash'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#cva.config.ts'
@@ -255,7 +255,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 							transaction.hash ? (
 								<Link
 									key="hash"
-									to="/tx/$hash"
+									to="/receipt/$hash"
 									params={{ hash: transaction.hash }}
 									className="text-accent hover:underline press-down"
 									title={transaction.hash}
