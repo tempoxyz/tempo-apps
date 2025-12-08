@@ -5,12 +5,14 @@ import {
 	notFound,
 	redirect,
 	rootRouteId,
+	stripSearchParams,
 } from '@tanstack/react-router'
 import { Hex, Value } from 'ox'
 import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
 import { decodeFunctionData, isHex, zeroAddress } from 'viem'
 import { useChains } from 'wagmi'
+import * as z from 'zod/mini'
 import { Address as AddressLink } from '#comps/Address'
 import { BlockCard } from '#comps/BlockCard'
 import { DataGrid } from '#comps/DataGrid'
@@ -26,8 +28,11 @@ import {
 	type BlockIdentifier,
 	type BlockTransaction,
 	blockDetailQueryOptions,
+	TRANSACTIONS_PER_PAGE,
 } from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
+
+const defaultSearchValues = { page: 1 } as const
 
 const combinedAbi = Object.values(Abis).flat()
 
@@ -39,7 +44,14 @@ interface TransactionTypeResult {
 export const Route = createFileRoute('/_layout/block/$id')({
 	component: RouteComponent,
 	notFoundComponent: NotFound,
-	loader: async ({ params, context }) => {
+	validateSearch: z.object({
+		page: z.prefault(z.coerce.number(), defaultSearchValues.page),
+	}),
+	search: {
+		middlewares: [stripSearchParams(defaultSearchValues)],
+	},
+	loaderDeps: ({ search: { page } }) => ({ page }),
+	loader: async ({ params, deps: { page }, context }) => {
 		const { id } = params
 
 		if (id === 'latest') {
@@ -59,7 +71,7 @@ export const Route = createFileRoute('/_layout/block/$id')({
 			}
 
 			return await context.queryClient.ensureQueryData(
-				blockDetailQueryOptions(blockRef),
+				blockDetailQueryOptions(blockRef, page),
 			)
 		} catch (error) {
 			console.error(error)
@@ -74,23 +86,26 @@ export const Route = createFileRoute('/_layout/block/$id')({
 })
 
 function RouteComponent() {
+	const { page } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 
 	const { data } = useQuery({
-		...blockDetailQueryOptions(loaderData.blockRef),
-		initialData: loaderData,
+		...blockDetailQueryOptions(loaderData.blockRef, page),
+		initialData: loaderData.page === page ? loaderData : undefined,
 	})
 
-	const { block, knownEventsByHash } = data
+	const { block, knownEventsByHash } = data ?? loaderData
 
 	const [chain] = useChains()
 	const decimals = chain?.nativeCurrency.decimals ?? 18
 	const symbol = chain?.nativeCurrency.symbol ?? 'UNIT'
 
-	const transactions = React.useMemo(() => {
-		if (!block?.transactions) return []
-		return block.transactions
-	}, [block?.transactions])
+	const allTransactions = block?.transactions ?? []
+	const startIndex = (page - 1) * TRANSACTIONS_PER_PAGE
+	const transactions = allTransactions.slice(
+		startIndex,
+		startIndex + TRANSACTIONS_PER_PAGE,
+	)
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -98,17 +113,19 @@ function RouteComponent() {
 	return (
 		<div
 			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
+				'max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 w-full',
 				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
 			)}
 		>
-			<BlockCard block={block} />
+			<div className="self-start max-[800px]:self-stretch">
+				<BlockCard block={block} />
+			</div>
 			<Sections
 				mode={mode}
 				sections={[
 					{
 						title: 'Transactions',
-						totalItems: transactions.length,
+						totalItems: allTransactions.length,
 						itemsLabel: 'txns',
 						autoCollapse: false,
 						content: (
@@ -117,6 +134,9 @@ function RouteComponent() {
 								knownEventsByHash={knownEventsByHash}
 								decimals={decimals}
 								symbol={symbol}
+								page={page}
+								totalItems={allTransactions.length}
+								startIndex={startIndex}
 							/>
 						),
 					},
@@ -159,12 +179,20 @@ function getTransactionType(
 const GAS_DECIMALS = 18
 
 function TransactionsSection(props: TransactionsSectionProps) {
-	const { transactions, knownEventsByHash, decimals, symbol } = props
+	const {
+		transactions,
+		knownEventsByHash,
+		decimals,
+		symbol,
+		page,
+		totalItems,
+		startIndex,
+	} = props
 
 	const cols = [
 		{ label: 'Index', align: 'start', width: '0.5fr' },
 		{ label: 'Description', align: 'start', width: '3fr' },
-		{ label: 'From', align: 'start', width: '1.5fr' },
+		{ label: 'From', align: 'end', width: '1.5fr' },
 		{ label: 'Hash', align: 'end', width: '1.5fr' },
 		{ label: 'Fee', align: 'end', width: '1fr' },
 		{ label: 'Total', align: 'end', width: '1fr' },
@@ -178,7 +206,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 					const transactionIndex =
 						(transaction.transactionIndex ?? null) !== null
 							? Number(transaction.transactionIndex) + 1
-							: index + 1
+							: startIndex + index + 1
 
 					const txType = getTransactionType(transaction)
 					const knownEvents = transaction.hash
@@ -213,7 +241,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 								knownEvents={knownEvents}
 							/>,
 							txType.type === 'system' ? (
-								<span key="from" className="text-tertiary">
+								<span key="from" className="text-tertiary whitespace-nowrap">
 									{txType.label}
 								</span>
 							) : (
@@ -221,7 +249,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 									key="from"
 									address={transaction.from}
 									chars={4}
-									className="text-accent press-down whitespace-nowrap"
+									className="text-accent press-down"
 								/>
 							),
 							transaction.hash ? (
@@ -258,11 +286,11 @@ function TransactionsSection(props: TransactionsSectionProps) {
 					}
 				})
 			}
-			totalItems={transactions.length}
-			page={1}
+			totalItems={totalItems}
+			page={page}
 			isPending={false}
 			itemsLabel="transactions"
-			itemsPerPage={transactions.length}
+			itemsPerPage={TRANSACTIONS_PER_PAGE}
 			emptyState="No transactions were included in this block."
 		/>
 	)
@@ -273,6 +301,9 @@ interface TransactionsSectionProps {
 	knownEventsByHash: Record<Hex.Hex, KnownEvent[]>
 	decimals: number
 	symbol: string
+	page: number
+	totalItems: number
+	startIndex: number
 }
 
 function ExpandableEvents(props: { events: KnownEvent[] }) {
