@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
-import { ReceiptMark } from '#comps/ReceiptMark'
 import { InfoCard } from '#comps/InfoCard'
+import { ReceiptMark } from '#comps/ReceiptMark'
 import { FormattedTimestamp } from '#comps/TimeFormat'
 import { TruncatedHash } from '#comps/TruncatedHash'
 import { cx } from '#cva.config.ts'

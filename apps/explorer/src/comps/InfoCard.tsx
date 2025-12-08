@@ -2,17 +2,13 @@ import type { ReactNode } from 'react'
 import { cx } from '#cva.config.ts'
 
 export function InfoCard(props: InfoCard.Props) {
-	const {
-		title,
-		sections,
-		titlePosition = 'outside',
-		className,
-	} = props
+	const { title, sections, titlePosition = 'outside', className } = props
 
 	const isInside = titlePosition === 'inside'
 
 	const sectionsContent = sections.map((section, index) => {
-		const isSectionEntry = section && typeof section === 'object' && 'label' in section
+		const isSectionEntry =
+			section && typeof section === 'object' && 'label' in section
 		const isLast = index === sections.length - 1
 		const key = `section-${index}`
 

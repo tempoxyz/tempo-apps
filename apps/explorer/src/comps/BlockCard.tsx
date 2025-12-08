@@ -5,8 +5,8 @@ import { useWatchBlockNumber } from 'wagmi'
 import { InfoCard } from '#comps/InfoCard'
 import { TruncatedHash } from '#comps/TruncatedHash'
 import { cx } from '#cva.config'
-import { useCopy } from '#lib/hooks'
 import { DateFormatter } from '#lib/formatting'
+import { useCopy } from '#lib/hooks'
 import type { BlockWithTransactions } from '#lib/queries'
 import ArrowUp10 from '~icons/lucide/arrow-up-1-0'
 import ChevronDown from '~icons/lucide/chevron-down'
@@ -262,8 +262,11 @@ export namespace BlockCard {
 		const zerosEnd = str.match(/^0*/)?.[0].length ?? 0
 		return (
 			<p className="flex justify-between gap-[1px] text-[22px] text-tertiary">
-				{str.split('').map((char, i) => (
-					<span key={i} className={i >= zerosEnd ? 'text-primary' : undefined}>
+				{str.split('').map((char, index) => (
+					<span
+						key={`${index}-${char}`}
+						className={index >= zerosEnd ? 'text-primary' : undefined}
+					>
 						{char}
 					</span>
 				))}
