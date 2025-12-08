@@ -46,6 +46,7 @@
 	--color-positive: var(--color-content-positive);
 	--color-negative: var(--color-content-negative);
 	--color-disabled: var(--color-content-disabled);
+	--color-content-dimmed: light-dark(#bebebe, #4e4e4e);
 
 	/* Accent & Interactive */
 	--color-accent: light-dark(#3b82f6, #60a5fa);

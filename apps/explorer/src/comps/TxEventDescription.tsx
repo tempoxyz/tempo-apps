@@ -82,7 +82,7 @@ export namespace TxEventDescription {
 						to="/token/$address"
 						params={{ address: part.value.address }}
 						title={part.value.address}
-						className="press-down"
+						className="press-down whitespace-nowrap"
 					>
 						<span className="text-base-content-positive items-end">
 							{part.value.symbol || HexFormatter.shortenHex(part.value.address)}

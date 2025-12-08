@@ -15,6 +15,7 @@ export function DataGrid(props: DataGrid.Props) {
 		itemsPerPage = 10,
 		pagination = 'default',
 		emptyState = 'No items found.',
+		flexible = false,
 	} = props
 
 	const mode = Sections.useSectionsMode()
@@ -35,10 +36,13 @@ export function DataGrid(props: DataGrid.Props) {
 		.join(' ')
 
 	return (
-		<div className="flex flex-col h-full min-h-0 w-full">
-			<div className="relative w-full overflow-x-auto">
+		<div className="flex flex-col min-h-0">
+			<div className="relative w-full">
 				<div
-					className="w-full text-[14px] rounded-t-[2px] min-w-max grid"
+					className={cx(
+						'w-full text-[14px] rounded-t-[2px] grid',
+						flexible && 'min-w-max',
+					)}
 					style={{ gridTemplateColumns }}
 				>
 					<div className="grid col-span-full border-b border-dashed border-distinct grid-cols-subgrid">
@@ -195,5 +199,6 @@ export namespace DataGrid {
 		itemsPerPage?: number
 		pagination?: 'default' | 'simple'
 		emptyState?: React.ReactNode
+		flexible?: boolean
 	}
 }

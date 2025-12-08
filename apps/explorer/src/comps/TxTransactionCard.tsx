@@ -13,8 +13,14 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 	const { copy, notifying } = useCopy()
 	return (
 		<InfoCard
-			title="Transaction"
-			secondary={<StatusBadge status={status} />}
+			title={
+				<div className="flex items-center justify-between px-[18px] pt-[10px] pb-[8px]">
+					<h1 className="text-[13px] uppercase text-tertiary select-none">
+						Transaction
+					</h1>
+					<StatusBadge status={status} />
+				</div>
+			}
 			className={className}
 			sections={[
 				<button
@@ -45,7 +51,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						<Link
 							to="/block/$id"
 							params={{ id: String(blockNumber) }}
-							className="text-[13px] text-accent hover:underline"
+							className="text-[13px] text-accent hover:underline press-down"
 						>
 							{blockNumber}
 						</Link>
@@ -67,7 +73,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						<Link
 							to="/address/$address"
 							params={{ address: from }}
-							className="text-[13px] text-accent hover:underline"
+							className="text-[13px] text-accent hover:underline press-down"
 							title={from}
 						>
 							<TruncatedHash hash={from} minChars={6} />
@@ -81,7 +87,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 								<Link
 									to="/address/$address"
 									params={{ address: to }}
-									className="text-[13px] text-accent hover:underline"
+									className="text-[13px] text-accent hover:underline press-down"
 									title={to}
 								>
 									<TruncatedHash hash={to} minChars={6} />
