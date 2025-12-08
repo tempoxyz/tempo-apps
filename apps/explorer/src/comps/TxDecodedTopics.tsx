@@ -8,7 +8,12 @@ import {
 	getAbiItem,
 	parseAbiItem,
 } from 'viem'
-import { formatAbiValue, useAutoloadAbi, useLookupSignature } from '#lib/abi'
+import {
+	decodeEventLog_guessed,
+	formatAbiValue,
+	useAutoloadAbi,
+	useLookupSignature,
+} from '#lib/abi'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -54,7 +59,13 @@ export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 				data: log.data,
 			})
 		} catch {
-			return undefined
+			// If decoding with given indexed parameters fails, try to guess the
+			// positions of the indexed parameters
+			return decodeEventLog_guessed({
+				abiItem,
+				topics: log.topics,
+				data: log.data,
+			})
 		}
 	}, [abiItem, log.topics, log.data])
 

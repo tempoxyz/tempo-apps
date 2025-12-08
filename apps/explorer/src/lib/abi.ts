@@ -1,7 +1,14 @@
 import { loaders, whatsabi } from '@shazow/whatsabi'
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import type { AbiFunction } from 'abitype'
-import { type Abi, type Address, type Hex, getAbiItem as getAbiItem_viem, stringify } from 'viem'
+import type { AbiEvent, AbiFunction } from 'abitype'
+import {
+	type Abi,
+	type Address,
+	decodeEventLog,
+	type Hex,
+	getAbiItem as getAbiItem_viem,
+	stringify,
+} from 'viem'
 import { getPublicClient } from 'wagmi/actions'
 import { config } from '#wagmi.config'
 
@@ -111,4 +118,39 @@ export function formatAbiValue(value: unknown): string {
 		return stringify(value)
 	}
 	return String(value ?? '')
+}
+
+// https://github.com/paradigmxyz/rivet/blob/fd94089ba4bec65bbf3fa288efbeab7306cb1537/src/utils/abi.ts#L13
+export function decodeEventLog_guessed(args: {
+	abiItem: AbiEvent
+	data: Hex
+	topics: readonly Hex[]
+}) {
+	const { abiItem, data, topics } = args
+	const indexedValues = topics.slice(1)
+
+	for (let i = 0; i < indexedValues.length; i++) {
+		const offset = indexedValues.length - i
+		for (
+			let j = 0;
+			j < abiItem.inputs.length - indexedValues.length + 1 - i;
+			j++
+		) {
+			const inputs = abiItem.inputs.map((input, index) => ({
+				...input,
+				indexed:
+					index < offset - 1 ||
+					index === i + j + offset - 1 ||
+					index >= abiItem.inputs.length - (indexedValues.length - offset),
+			}))
+			const abi = [{ ...abiItem, inputs }]
+			try {
+				return decodeEventLog({
+					abi,
+					topics: topics as [Hex, ...Hex[]],
+					data,
+				})
+			} catch {}
+		}
+	}
 }
