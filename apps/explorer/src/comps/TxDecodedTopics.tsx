@@ -76,20 +76,11 @@ export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 		<div className="flex flex-col gap-[8px] w-full min-w-0 max-w-full overflow-hidden">
 			<div className="bg-distinct rounded-[6px] overflow-hidden w-full min-w-0">
 				<TxDecodedTopics.SignatureHeader abiItem={abiItem} />
-				<div className="divide-y divide-card-border">
-					<TxDecodedTopics.TopicSection
-						topics={log.topics}
-						abiItem={abiItem}
-						args={decoded?.args}
-					/>
-					{log.data && log.data !== '0x' && (
-						<TxDecodedTopics.DataSection
-							data={log.data}
-							abiItem={abiItem}
-							args={decoded?.args}
-						/>
-					)}
-				</div>
+				<TxDecodedTopics.ArgumentsSection
+					abiItem={abiItem}
+					args={decoded?.args}
+					log={log}
+				/>
 			</div>
 		</div>
 	)
@@ -157,160 +148,69 @@ export namespace TxDecodedTopics {
 		}
 	}
 
-	export function TopicSection(props: TopicSection.Props) {
-		const { topics, abiItem, args } = props
+	export function ArgumentsSection(props: ArgumentsSection.Props) {
+		const { abiItem, args, log } = props
+		const [showRaw, setShowRaw] = useState(false)
 
-		const indexedInputs = abiItem.inputs
-			.map((input, index) => ({ input, index }))
-			.filter(({ input }) => input.indexed)
+		if (!args || abiItem.inputs.length === 0) return null
 
 		return (
 			<div className="px-[10px] py-[8px]">
-				<div className="text-[11px] text-tertiary mb-[6px]">Topics</div>
-				<div className="flex flex-col gap-[4px]">
-					{topics.map((topic, topicIndex) => {
-						const indexed =
-							topicIndex > 0 ? indexedInputs[topicIndex - 1] : undefined
-						const argValue =
-							indexed && args
-								? ((args as Record<string, unknown>)[
-										indexed.input.name ?? ''
-									] ?? (args as readonly unknown[])[indexed.index])
-								: undefined
-
-						return (
-							<TopicRow
-								key={topic}
-								index={topicIndex}
-								topic={topic}
-								input={indexed?.input}
-								value={argValue}
-							/>
-						)
-					})}
-				</div>
-			</div>
-		)
-	}
-	export namespace TopicSection {
-		export interface Props {
-			topics: readonly Hex[]
-			abiItem: AbiEvent
-			args?: Record<string, unknown> | readonly unknown[]
-		}
-	}
-
-	export function TopicRow(props: TopicRow.Props) {
-		const { index, topic, input, value } = props
-		const { copy, notifying } = useCopy()
-
-		const displayValue = value !== undefined ? formatAbiValue(value) : topic
-		const label = input?.name || (input ? `arg${index}` : undefined)
-
-		return (
-			<button
-				type="button"
-				onClick={() => copy(displayValue)}
-				className="flex items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px]"
-			>
-				<span className="text-[11px] text-tertiary shrink-0">
-					{notifying ? (
-						<span className="text-primary">copied</span>
-					) : label ? (
-						`${index}: ${label}`
-					) : (
-						index
-					)}
-				</span>
-				<span className="text-[11px] text-primary font-mono break-all min-w-0">
-					{displayValue}
-				</span>
-			</button>
-		)
-	}
-	export namespace TopicRow {
-		export interface Props {
-			index: number
-			topic: Hex
-			input?: AbiEvent['inputs'][number]
-			value?: unknown
-		}
-	}
-
-	export function DataSection(props: DataSection.Props) {
-		const { data, abiItem, args } = props
-		const { copy, notifying } = useCopy()
-		const [showRaw, setShowRaw] = useState(false)
-
-		const nonIndexedInputs = abiItem.inputs
-			.map((input, index) => ({ input, index }))
-			.filter(({ input }) => !input.indexed)
-
-		const hasDecodedArgs = Boolean(args && nonIndexedInputs.length > 0)
-
-		return (
-			<div className="px-[10px] py-[8px] min-w-0">
 				<div className="text-[11px] text-tertiary mb-[6px]">
-					{notifying ? <span className="text-primary">copied</span> : 'Data'}
-					{hasDecodedArgs && (
-						<>
-							{' '}
-							<button
-								type="button"
-								onClick={() => setShowRaw(!showRaw)}
-								className="text-accent hover:underline cursor-pointer"
-							>
-								({showRaw ? 'raw' : 'decoded'})
-							</button>
-						</>
-					)}
+					{showRaw ? 'Raw' : 'Arguments'}{' '}
+					<button
+						type="button"
+						onClick={() => setShowRaw(!showRaw)}
+						className="text-accent hover:underline cursor-pointer"
+					>
+						({showRaw ? 'raw' : 'decoded'})
+					</button>
 				</div>
-				{hasDecodedArgs && !showRaw ? (
+				{showRaw ? (
+					<div className="flex flex-col gap-[8px]">
+						<div className="flex flex-col gap-[4px]">
+							{log.topics.map((topic, i) => (
+								<RawTopicRow key={topic} index={i} topic={topic} />
+							))}
+						</div>
+						{log.data && log.data !== '0x' && (
+							<RawDataInline data={log.data} />
+						)}
+					</div>
+				) : (
 					<div className="flex flex-col gap-[4px]">
-						{nonIndexedInputs.map(({ input, index }) => {
-							const argValue = args
-								? ((args as Record<string, unknown>)[input.name ?? ''] ??
-									(args as readonly unknown[])[index])
-								: undefined
+						{abiItem.inputs.map((input, index) => {
+							const argValue =
+								(args as Record<string, unknown>)[input.name ?? ''] ??
+								(args as readonly unknown[])[index]
 
 							return (
-								<DataRow
+								<ArgumentRow
 									key={input.name ?? index}
 									input={input}
-									index={index}
 									value={argValue}
 								/>
 							)
 						})}
 					</div>
-				) : (
-					<button
-						type="button"
-						onClick={() => copy(data)}
-						className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
-					>
-						<span className="text-[11px] text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
-							{data}
-						</span>
-					</button>
 				)}
 			</div>
 		)
 	}
-	export namespace DataSection {
+	export namespace ArgumentsSection {
 		export interface Props {
-			data: Hex
 			abiItem: AbiEvent
 			args?: Record<string, unknown> | readonly unknown[]
+			log: Log
 		}
 	}
 
-	export function DataRow(props: DataRow.Props) {
-		const { input, index, value } = props
+	export function ArgumentRow(props: ArgumentRow.Props) {
+		const { input, value } = props
 		const { copy, notifying } = useCopy()
 
 		const displayValue = value !== undefined ? formatAbiValue(value) : ''
-		const label = input.name || `arg${index}`
+		const label = input.name || input.type
 
 		return (
 			<button
@@ -325,17 +225,43 @@ export namespace TxDecodedTopics {
 						<>{label}:</>
 					)}
 				</span>
-				<span className="text-[11px] text-primary font-mono break-all">
+				<span className="text-[11px] text-primary font-mono break-all min-w-0">
 					{displayValue}
 				</span>
 			</button>
 		)
 	}
-	export namespace DataRow {
+	export namespace ArgumentRow {
 		export interface Props {
 			input: AbiEvent['inputs'][number]
-			index: number
 			value?: unknown
+		}
+	}
+
+	export function RawDataInline(props: RawDataInline.Props) {
+		const { data } = props
+		const { copy, notifying } = useCopy()
+
+		return (
+			<div>
+				<div className="text-[11px] text-tertiary mb-[4px]">
+					{notifying ? <span className="text-primary">copied</span> : 'Data'}
+				</div>
+				<button
+					type="button"
+					onClick={() => copy(data)}
+					className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
+				>
+					<span className="text-[11px] text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
+						{data}
+					</span>
+				</button>
+			</div>
+		)
+	}
+	export namespace RawDataInline {
+		export interface Props {
+			data: Hex
 		}
 	}
 
@@ -382,7 +308,11 @@ export namespace TxDecodedTopics {
 				className="flex items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px]"
 			>
 				<span className="text-[11px] text-tertiary shrink-0">
-					{notifying ? <span className="text-primary">copied</span> : index}
+					{notifying ? (
+						<span className="text-primary">copied</span>
+					) : (
+						`topic[${index}]`
+					)}
 				</span>
 				<span className="text-[11px] text-primary font-mono break-all min-w-0">
 					{topic}
