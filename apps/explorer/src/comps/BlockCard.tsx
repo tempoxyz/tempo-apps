@@ -126,7 +126,7 @@ export function BlockCard(props: BlockCard.Props) {
 									)}
 								</div>
 							</div>
-							<p className="text-[14px] font-normal leading-[17px] text-primary break-all max-w-[23ch]">
+							<p className="text-[14px] font-normal leading-[18px] tracking-[1px] text-primary break-all max-w-[calc(22ch+22px)]">
 								{hash}
 							</p>
 						</button>
@@ -261,7 +261,7 @@ export namespace BlockCard {
 		const str = String(value).padStart(14, '0')
 		const zerosEnd = str.match(/^0*/)?.[0].length ?? 0
 		return (
-			<p className="flex justify-between text-[22px] text-[#bbbbbb]">
+			<p className="flex justify-between gap-[1px] text-[22px] text-tertiary">
 				{str.split('').map((char, i) => (
 					<span key={i} className={i >= zerosEnd ? 'text-primary' : undefined}>
 						{char}
