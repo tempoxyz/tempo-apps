@@ -24,7 +24,6 @@ app.use(
 		allowHeaders: ['Content-Type', 'Authorization'],
 		maxAge: 86400,
 	}),
-	rateLimitMiddleware,
 )
 
 app.get(
@@ -51,7 +50,7 @@ app.get(
 	},
 )
 
-app.all('*', async (c) => {
+app.all('*', rateLimitMiddleware, async (c) => {
 	const handler = Handler.feePayer({
 		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
 		chain: tempo({ feeToken: '0x20c0000000000000000000000000000000000001' }),
