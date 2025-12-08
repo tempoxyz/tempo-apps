@@ -1,7 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { Hex } from 'ox'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
-import { parseKnownEvents } from '#lib/domain/known-events'
+import { parseKnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { getFeeBreakdown } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { getConfig } from '#wagmi.config'
@@ -30,10 +30,15 @@ async function fetchTxData(params: { hash: Hex.Hex }) {
 
 	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
 
+	const knownEventsByLog = receipt.logs.map((log) =>
+		parseKnownEvent(log, { getTokenMetadata }),
+	)
+
 	return {
 		block,
 		feeBreakdown,
 		knownEvents,
+		knownEventsByLog,
 		receipt,
 		transaction,
 	}
