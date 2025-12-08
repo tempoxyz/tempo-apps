@@ -48,10 +48,10 @@ function RouteComponent() {
 	// Use loader data for initial render, then live updates
 	const currentLatest = latestBlockNumber ?? queryData.latestBlockNumber
 
-	// Watch for new blocks (enabled on all pages when live)
+	// Watch for new blocks (only on page 1 when live)
 	useWatchBlockNumber({
 		pollingInterval: 500, // Fast polling for snappy updates
-		enabled: live,
+		enabled: live && page === 1,
 		onBlockNumber: (blockNumber) => {
 			// Only update if this is actually a new block
 			if (latestBlockNumber === undefined || blockNumber > latestBlockNumber) {
