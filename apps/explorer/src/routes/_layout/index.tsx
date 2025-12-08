@@ -46,7 +46,7 @@ function Component() {
 						disabled={isMounted && isNavigating}
 						onActivate={(data) => {
 							if (data.type === 'hash') {
-								navigate({ to: '/tx/$hash', params: { hash: data.value } })
+								navigate({ to: '/receipt/$hash', params: { hash: data.value } })
 								return
 							}
 							if (data.type === 'token') {

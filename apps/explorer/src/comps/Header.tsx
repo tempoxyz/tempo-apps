@@ -66,7 +66,7 @@ export namespace Header {
 						disabled={isMounted && isNavigating}
 						onActivate={({ value, type }) => {
 							if (type === 'hash') {
-								navigate({ to: '/tx/$hash', params: { hash: value } })
+								navigate({ to: '/receipt/$hash', params: { hash: value } })
 								return
 							}
 							if (type === 'token') {

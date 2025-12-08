@@ -17,15 +17,6 @@ import { getBlock, getChainId, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractReader } from '#comps/ContractReader'
-import {
-	BatchTransactionDataContext,
-	type TransactionData,
-	TransactionDescription,
-	TransactionTimestamp,
-	TransactionTotal,
-	useTransactionDataFromBatch,
-} from '#comps/TxTransactionRow'
-import { TruncatedHash } from '#comps/TruncatedHash'
 import { DataGrid } from '#comps/DataGrid'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
@@ -34,6 +25,15 @@ import {
 	type TimeFormat,
 	useTimeFormat,
 } from '#comps/TimeFormat'
+import { TruncatedHash } from '#comps/TruncatedHash'
+import {
+	BatchTransactionDataContext,
+	type TransactionData,
+	TransactionDescription,
+	TransactionTimestamp,
+	TransactionTotal,
+	useTransactionDataFromBatch,
+} from '#comps/TxTransactionRow'
 import { cx } from '#cva.config.ts'
 import {
 	type ContractInfo,
@@ -609,7 +609,7 @@ function SectionsWrapper(props: {
 											/>,
 										],
 										link: {
-											href: `/tx/${transaction.hash}`,
+											href: `/receipt/${transaction.hash}`,
 											title: `View receipt ${transaction.hash}`,
 										},
 									}))
@@ -733,7 +733,7 @@ function TransactionTimeCell(props: { hash: Hex.Hex; format: TimeFormat }) {
 	return (
 		<TransactionTimestamp
 			timestamp={batchData.block.timestamp}
-			link={`/tx/${hash}`}
+			link={`/receipt/${hash}`}
 			format={format}
 		/>
 	)

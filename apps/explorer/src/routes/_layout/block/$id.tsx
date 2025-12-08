@@ -12,10 +12,10 @@ import { Abis } from 'tempo.ts/viem'
 import { decodeFunctionData, isHex, zeroAddress } from 'viem'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import { Address as AddressLink } from '#comps/Address'
-import { TxEventDescription } from '#comps/TxEventDescription'
-import { TruncatedHash } from '#comps/TruncatedHash'
 import { CopyButton } from '#comps/CopyButton'
 import { NotFound } from '#comps/NotFound'
+import { TruncatedHash } from '#comps/TruncatedHash'
+import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent } from '#lib/domain/known-events'
 import {
@@ -458,7 +458,7 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 							const feeOutput = feeDisplay === '—' ? '—' : `(${feeDisplay})`
 							const hashCell = transaction.hash ? (
 								<Link
-									to="/tx/$hash"
+									to="/receipt/$hash"
 									params={{ hash: transaction.hash }}
 									className="text-accent font-mono"
 									title={transaction.hash}

@@ -16,15 +16,15 @@ import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
-import { ContractReader } from '#comps/ContractReader'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
-import { TimestampCell } from '#comps/TimestampCell'
-import { TransactionCell } from '#comps/TransactionCell'
+import { ContractReader } from '#comps/ContractReader'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TimeColumnHeader, useTimeFormat } from '#comps/TimeFormat'
+import { TimestampCell } from '#comps/TimestampCell'
+import { TransactionCell } from '#comps/TransactionCell'
 import { TruncatedHash } from '#comps/TruncatedHash'
 import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
@@ -562,7 +562,7 @@ function SectionsWrapper(props: {
 										<TimestampCell
 											key="time"
 											timestamp={BigInt(transfer.timestamp)}
-											link={`/tx/${transfer.transactionHash}`}
+											link={`/receipt/${transfer.transactionHash}`}
 											format={timeFormat}
 										/>,
 										<TransactionCell
@@ -583,7 +583,7 @@ function SectionsWrapper(props: {
 										/>,
 									],
 									link: {
-										href: `/tx/${transfer.transactionHash}`,
+										href: `/receipt/${transfer.transactionHash}`,
 										title: `View receipt ${transfer.transactionHash}`,
 									},
 								}))
