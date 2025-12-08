@@ -108,6 +108,7 @@ export namespace TxEventDescription {
 			transformEvent,
 			emptyContent = '…',
 			limit = 1,
+			limitFilter,
 		} = props
 		const [expanded, setExpanded] = React.useState(false)
 
@@ -119,7 +120,12 @@ export namespace TxEventDescription {
 			)
 		}
 
-		const eventsToShow = expanded ? events : events.slice(0, limit)
+		let eventsToShow = events
+		if (!expanded) {
+			let filtered = limitFilter ? events.filter(limitFilter) : events
+			if (filtered.length === 0) filtered = events
+			eventsToShow = filtered.slice(0, limit)
+		}
 		const remainingCount = events.length - eventsToShow.length
 		const displayEvents = transformEvent
 			? eventsToShow.map(transformEvent)
@@ -156,6 +162,7 @@ export namespace TxEventDescription {
 			transformEvent?: (event: KnownEvent) => KnownEvent
 			emptyContent?: React.ReactNode
 			limit?: number
+			limitFilter?: (event: KnownEvent) => boolean
 		}
 	}
 }
