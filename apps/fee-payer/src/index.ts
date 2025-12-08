@@ -54,13 +54,7 @@ app.all('*', rateLimitMiddleware, async (c) => {
 	const handler = Handler.feePayer({
 		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
 		chain: tempo({ feeToken: '0x20c0000000000000000000000000000000000001' }),
-		transport: http(env.TEMPO_RPC_URL, {
-			fetchOptions: {
-				headers: {
-					Authorization: `Basic ${btoa(env.TEMPO_RPC_CREDENTIALS)}`,
-				},
-			},
-		}),
+		transport: http(env.TEMPO_RPC_URL),
 		async onRequest(request) {
 			console.log(`Sponsoring transaction: ${request.method}`)
 		},

@@ -22,9 +22,7 @@ export const config = createConfig({
 	transports: {
 		[tempoTestnet.id]: withFeePayer(
 			// Transport for regular transactions
-			webSocket(
-				'wss://rpc.testnet.tempo.xyz?supersecretargument=pleasedonotusemeinprod',
-			),
+			webSocket('wss://rpc.testnet.tempo.xyz'),
 			// Transport for sponsored transactions (feePayer: true)
 			http(import.meta.env.VITE_FEE_PAYER_URL ?? 'http://localhost:8787'),
 		),
