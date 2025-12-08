@@ -157,11 +157,11 @@ export namespace TxDecodedTopics {
 		return (
 			<div className="px-[10px] py-[8px]">
 				<div className="text-[11px] text-tertiary mb-[6px]">
-					{showRaw ? 'Raw' : 'Arguments'}{' '}
+					Arguments{' '}
 					<button
 						type="button"
 						onClick={() => setShowRaw(!showRaw)}
-						className="text-accent hover:underline cursor-pointer"
+						className="text-accent hover:underline cursor-pointer press-down"
 					>
 						({showRaw ? 'raw' : 'decoded'})
 					</button>
@@ -173,9 +173,7 @@ export namespace TxDecodedTopics {
 								<RawTopicRow key={topic} index={i} topic={topic} />
 							))}
 						</div>
-						{log.data && log.data !== '0x' && (
-							<RawDataInline data={log.data} />
-						)}
+						{log.data && log.data !== '0x' && <RawDataInline data={log.data} />}
 					</div>
 				) : (
 					<div className="flex flex-col gap-[4px]">

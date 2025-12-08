@@ -431,7 +431,7 @@ function EventsSection(props: {
 							</Link>,
 						],
 						expanded: isExpanded ? (
-							<TxDecodedTopics key={index} log={log} />
+							<TxDecodedTopics key={log.logIndex} log={log} />
 						) : (
 							false
 						),
