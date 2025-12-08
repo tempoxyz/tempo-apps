@@ -609,7 +609,7 @@ function SectionsWrapper(props: {
 											/>,
 										],
 										link: {
-											href: `/tx/${transaction.hash}`,
+											href: `/receipt/${transaction.hash}`,
 											title: `View receipt ${transaction.hash}`,
 										},
 									}))
@@ -733,7 +733,7 @@ function TransactionTimeCell(props: { hash: Hex.Hex; format: TimeFormat }) {
 	return (
 		<TransactionTimestamp
 			timestamp={batchData.block.timestamp}
-			link={`/tx/${hash}`}
+			link={`/receipt/${hash}`}
 			format={format}
 		/>
 	)

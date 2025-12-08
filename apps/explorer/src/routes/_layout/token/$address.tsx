@@ -562,7 +562,7 @@ function SectionsWrapper(props: {
 										<TimestampCell
 											key="time"
 											timestamp={BigInt(transfer.timestamp)}
-											link={`/tx/${transfer.transactionHash}`}
+											link={`/receipt/${transfer.transactionHash}`}
 											format={timeFormat}
 										/>,
 										<TransactionCell
@@ -583,7 +583,7 @@ function SectionsWrapper(props: {
 										/>,
 									],
 									link: {
-										href: `/tx/${transfer.transactionHash}`,
+										href: `/receipt/${transfer.transactionHash}`,
 										title: `View receipt ${transfer.transactionHash}`,
 									},
 								}))

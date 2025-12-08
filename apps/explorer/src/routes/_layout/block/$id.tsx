@@ -458,7 +458,7 @@ function BlockTransactionsCard(props: BlockTransactionsCardProps) {
 							const feeOutput = feeDisplay === '—' ? '—' : `(${feeDisplay})`
 							const hashCell = transaction.hash ? (
 								<Link
-									to="/tx/$hash"
+									to="/receipt/$hash"
 									params={{ hash: transaction.hash }}
 									className="text-accent font-mono"
 									title={transaction.hash}
