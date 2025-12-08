@@ -245,8 +245,16 @@ function TokenCard(props: {
 
 	return (
 		<InfoCard
-			title="Token"
-			secondary={metadata?.symbol}
+			title={
+				<div className="flex items-center justify-between px-[18px] pt-[10px] pb-[8px]">
+					<h1 className="text-[13px] uppercase text-tertiary select-none">
+						Token
+					</h1>
+					{metadata?.symbol && (
+						<h2 className="text-[13px]">{metadata.symbol}</h2>
+					)}
+				</div>
+			}
 			className={className}
 			sections={[
 				<button

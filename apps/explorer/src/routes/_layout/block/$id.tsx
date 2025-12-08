@@ -10,29 +10,20 @@ import { Hex } from 'ox'
 import * as React from 'react'
 import { Abis } from 'tempo.ts/viem'
 import { decodeFunctionData, isHex, zeroAddress } from 'viem'
-import { useChains, useWatchBlockNumber } from 'wagmi'
+import { useChains } from 'wagmi'
 import { Address as AddressLink } from '#comps/Address'
+import { BlockCard } from '#comps/BlockCard'
 import { TxEventDescription } from '#comps/TxEventDescription'
-import { TruncatedHash } from '#comps/TruncatedHash'
-import { CopyButton } from '#comps/CopyButton'
 import { NotFound } from '#comps/NotFound'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent } from '#lib/domain/known-events'
-import {
-	DateFormatter,
-	HexFormatter,
-	NumberFormatter,
-	PriceFormatter,
-} from '#lib/formatting.ts'
+import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
 import {
 	type BlockIdentifier,
 	type BlockTransaction,
-	type BlockWithTransactions,
 	blockDetailQueryOptions,
 } from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
-import ArrowUp10Icon from '~icons/lucide/arrow-up-10'
-import ChevronDown from '~icons/lucide/chevron-down'
 
 const combinedAbi = Object.values(Abis).flat()
 
@@ -86,58 +77,28 @@ function RouteComponent() {
 		initialData: loaderData,
 	})
 
-	const { block, blockRef, knownEventsByHash } = data
+	const { block, knownEventsByHash } = data
 
 	const [chain] = useChains()
 	const decimals = chain?.nativeCurrency.decimals ?? 18
 	const symbol = chain?.nativeCurrency.symbol ?? 'UNIT'
-
-	const requestedNumber =
-		blockRef.kind === 'number' ? blockRef.blockNumber : undefined
 
 	const transactions = React.useMemo(() => {
 		if (!block?.transactions) return []
 		return block.transactions
 	}, [block?.transactions])
 
-	const [latestBlockNumber, setLatestBlockNumber] = React.useState(
-		block?.number ?? requestedNumber,
-	)
-
-	React.useEffect(() => {
-		const blockNumber = block?.number
-		if (blockNumber === null || blockNumber === undefined) return
-		setLatestBlockNumber((current) => {
-			if (!current) return blockNumber
-			return current > blockNumber ? current : blockNumber
-		})
-	}, [block?.number])
-
-	useWatchBlockNumber({
-		enabled: true,
-		onBlockNumber(nextNumber) {
-			setLatestBlockNumber((current) => {
-				if (!current) return nextNumber
-				return current > nextNumber ? current : nextNumber
-			})
-		},
-	})
-
 	return (
-		<section className="w-full flex-1 flex justify-center px-4 sm:px-6 lg:px-10 pt-8 pb-12">
+		<section className="w-full flex-1 flex justify-center px-4">
 			<div
 				className={cx(
 					'grid w-full max-w-[1280px] gap-[14px] min-w-0',
-					'min-[1240px]:grid-cols-[auto_1fr] min-[1240px]:pt-20 pt-10',
+					'min-[1240px]:grid-cols-[auto_1fr] pt-20 pb-16',
 					'*:min-w-0 *:max-w-full',
 				)}
 			>
 				<div className={cx('min-[1240px]:max-w-74')}>
-					<BlockSummaryCard
-						block={block}
-						latestBlockNumber={latestBlockNumber}
-						requestedNumber={requestedNumber}
-					/>
+					<BlockCard block={block} />
 				</div>
 				<div className={cx('min-[1240px]:max-w-full')}>
 					<BlockTransactionsCard
@@ -180,190 +141,6 @@ function getTransactionType(
 	}
 
 	return { type: 'regular', label: 'Regular' }
-}
-
-function BlockSummaryCard(props: BlockSummaryCardProps) {
-	const { block, latestBlockNumber, requestedNumber } = props
-	const [showAdvanced, setShowAdvanced] = React.useState(true)
-
-	const blockNumberValue = block.number ?? requestedNumber
-	const formattedNumber = NumberFormatter.formatBlockNumber(blockNumberValue)
-	const leadingZeros = formattedNumber.match(/^0+/)?.[0] ?? ''
-	const trailingDigits = formattedNumber.slice(leadingZeros.length)
-	const confirmations =
-		block.number && latestBlockNumber && latestBlockNumber >= block.number
-			? Number(latestBlockNumber - block.number) + 1
-			: undefined
-	const utcLabel = block.timestamp
-		? DateFormatter.formatUtcTimestamp(block.timestamp)
-		: undefined
-	const unixLabel = block.timestamp ? block.timestamp.toString() : undefined
-
-	const gasUsage = getGasUsagePercent(block)
-	const roots = [
-		{ label: 'state', value: block.stateRoot },
-		{ label: 'txns', value: block.transactionsRoot },
-		{ label: 'receipts', value: block.receiptsRoot },
-		{ label: 'withdraws', value: block.withdrawalsRoot },
-	]
-
-	return (
-		<article className="divide-y divide-dashed divide-card-border font-mono rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_12px_40px_rgba(0,0,0,0.06)]">
-			<div className="px-4 py-3">
-				<div className="flex items-center justify-between">
-					<span className="text-xs uppercase text-tertiary">Block</span>
-
-					<CopyButton
-						className="mr-auto pl-2"
-						disabled={!blockNumberValue}
-						ariaLabel="Copy block number"
-						value={blockNumberValue?.toString() ?? ''}
-					/>
-				</div>
-				<div className="mt-[10px] text-2xl leading-[26px] tracking-[0.18em] text-primary tabular-nums">
-					<span className="text-[#bbbbbb]">{leadingZeros}</span>
-					{trailingDigits || '—'}
-				</div>
-			</div>
-
-			<div className="divide-y divide-dashed divide-card-border">
-				<div>
-					<BlockTimeRow label="UTC" value={utcLabel} />
-					<BlockTimeRow label="UNIX" value={unixLabel} subtle />
-				</div>
-				<div className="px-[18px] py-[14px] space-y-[8px]">
-					<div className="flex items-center justify-between">
-						<span className="text-xs text-tertiary">Hash</span>
-						<CopyButton
-							value={block.hash ?? ''}
-							ariaLabel="Copy block hash"
-							className="mr-auto pl-2"
-							disabled={!block.hash}
-						/>
-					</div>
-					<div className="text-sm text-primary wrap-break-word">
-						{block.hash && (
-							<TruncatedHash
-								hash={block.hash}
-								minChars={6}
-								className="tabular-nums"
-							/>
-						)}
-					</div>
-
-					<div className="flex items-center gap-[6px] text-sm justify-between">
-						<ArrowUp10Icon className="size-4 text-tertiary" />
-						<span className="text-sm text-tertiary text-left mr-auto">
-							Parent
-						</span>
-						<Link
-							to="/block/$id"
-							params={{ id: block.parentHash }}
-							className="text-accent"
-							title={block.parentHash}
-						>
-							<TruncatedHash
-								hash={block.parentHash}
-								minChars={6}
-								className="tabular-nums"
-							/>
-						</Link>
-					</div>
-				</div>
-
-				<div className="px-[18px] py-[12px] flex items-center justify-between text-sm">
-					<span className="text-tertiary">Miner</span>
-					{block.miner ? (
-						<TruncatedHash
-							hash={block.miner}
-							minChars={6}
-							className="text-accent"
-						/>
-					) : (
-						<span className="text-tertiary">—</span>
-					)}
-				</div>
-
-				<div className="px-[18px] py-[12px] flex items-center justify-between text-sm">
-					<span className="text-tertiary">Confirmations</span>
-					<span className="text-primary tabular-nums">
-						{confirmations !== undefined ? confirmations.toString() : '—'}
-					</span>
-				</div>
-
-				<div className="px-[18px] py-[12px]">
-					<button
-						type="button"
-						className="flex w-full items-center justify-between text-[13px] text-tertiary"
-						onClick={() => setShowAdvanced((prev) => !prev)}
-					>
-						<span className="text-sm">Advanced</span>
-						<span className="flex items-center gap-[6px] text-primary text-[12px]">
-							<ChevronDown
-								className={cx(
-									'rotate-180 size-[14px] transition-transform duration-300',
-									{ 'rotate-0': !showAdvanced },
-								)}
-							/>
-						</span>
-					</button>
-
-					{/* TODO: handle this hiding and showing with CSS */}
-					{showAdvanced && (
-						<div className="mt-[14px] space-y-[14px] text-[13px]">
-							<div className="space-y-[6px]">
-								<div className="flex items-center justify-between text-primary">
-									<span>Gas Usage</span>
-									<span className="text-primary">
-										{gasUsage !== undefined
-											? `${gasUsage.toFixed(2)}%`
-											: '0.00%'}
-									</span>
-								</div>
-								<div className="relative h-[6px] rounded-full bg-[#e8e8e8] overflow-hidden">
-									<div
-										className="absolute inset-y-0 left-0 bg-accent transition-[width] duration-300"
-										style={{ width: `${Math.min(100, gasUsage ?? 0)}%` }}
-									/>
-								</div>
-								<div className="flex items-center justify-between text-[11px] text-tertiary uppercase tracking-[0.25em] tabular-nums">
-									<span>{PriceFormatter.formatGasValue(block.gasUsed)}</span>
-									<span>{PriceFormatter.formatGasValue(block.gasLimit)}</span>
-								</div>
-							</div>
-
-							<div className="space-y-[8px]">
-								<span className="text-sm">Roots</span>
-								{roots.map((root) => (
-									<div
-										key={root.label}
-										className="flex items-center justify-between text-primary text-sm lowercase"
-									>
-										<span className="text-xs text-tertiary">{root.label}</span>
-										{root.value ? (
-											<TruncatedHash
-												hash={root.value}
-												minChars={6}
-												className="tabular-nums flex-1 text-right"
-											/>
-										) : (
-											<span className="text-tertiary">—</span>
-										)}
-									</div>
-								))}
-							</div>
-						</div>
-					)}
-				</div>
-			</div>
-		</article>
-	)
-}
-
-interface BlockSummaryCardProps {
-	block: BlockWithTransactions
-	latestBlockNumber?: bigint
-	requestedNumber?: bigint
 }
 
 const GAS_DECIMALS = 18
@@ -668,38 +445,6 @@ interface TransactionDescriptionProps {
 	transaction: BlockTransaction
 	amountDisplay: string
 	knownEvents?: KnownEvent[]
-}
-
-function BlockTimeRow(props: {
-	label: string
-	value?: string
-	subtle?: boolean
-}) {
-	const { label, value, subtle } = props
-	return (
-		<div className="px-[18px] py-[12px] flex items-center justify-between text-sm">
-			<span className="text-xs uppercase text-tertiary bg-base-alt/65 px-1 py-0.5">
-				{label}
-			</span>
-
-			<span
-				className={cx(
-					'text-right tabular-nums',
-					subtle ? 'text-base-content-secondary' : 'text-primary',
-				)}
-			>
-				{value?.replaceAll(',', '')}
-			</span>
-		</div>
-	)
-}
-
-function getGasUsagePercent(block: BlockWithTransactions) {
-	if (!block.gasUsed || !block.gasLimit) return undefined
-	const used = Number(block.gasUsed)
-	const limit = Number(block.gasLimit)
-	if (!limit) return undefined
-	return (used / limit) * 100
 }
 
 function getEstimatedFee(transaction: BlockTransaction) {
