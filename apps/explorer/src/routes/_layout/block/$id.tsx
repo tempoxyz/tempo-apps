@@ -192,7 +192,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 	const cols = [
 		{ label: 'Index', align: 'start', width: '0.5fr' },
 		{ label: 'Description', align: 'start', width: '3fr' },
-		{ label: 'From', align: 'start', width: '1.5fr' },
+		{ label: 'From', align: 'end', width: '1.5fr' },
 		{ label: 'Hash', align: 'end', width: '1.5fr' },
 		{ label: 'Fee', align: 'end', width: '1fr' },
 		{ label: 'Total', align: 'end', width: '1fr' },
@@ -241,7 +241,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 								knownEvents={knownEvents}
 							/>,
 							txType.type === 'system' ? (
-								<span key="from" className="text-tertiary">
+								<span key="from" className="text-tertiary whitespace-nowrap">
 									{txType.label}
 								</span>
 							) : (
@@ -249,7 +249,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 									key="from"
 									address={transaction.from}
 									chars={4}
-									className="text-accent press-down whitespace-nowrap"
+									className="text-accent press-down"
 								/>
 							),
 							transaction.hash ? (
