@@ -18,5 +18,5 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: Check code and types
-        run: pnpm check
+        run: pnpm gen:types && pnpm check
 
