@@ -402,6 +402,9 @@ importers:
         specifier: 'catalog:'
         version: 4.10.7
     devDependencies:
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 4.20251205.0
       wrangler:
         specifier: 'catalog:'
         version: 4.53.0(@cloudflare/workers-types@4.20251205.0)

@@ -11,6 +11,7 @@
 		"hono": "catalog:"
 	},
 	"devDependencies": {
+		"@cloudflare/workers-types": "catalog:",
 		"wrangler": "catalog:"
 	}
 }
