@@ -10,6 +10,7 @@ const scalarConfig = {
 	operationTitleSource: 'path',
 	title: 'Tokenlist API Reference',
 	proxyUrl: 'https://proxy.scalar.com',
+	favicon: 'https://explore.tempo.xyz/favicon.ico',
 }
 
 export const Docs = () => {
