@@ -22,6 +22,7 @@ import { TruncatedHash } from '#comps/TruncatedHash'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { preferredEventsFilter } from '#lib/domain/known-events'
 import { DateFormatter, PriceFormatter } from '#lib/formatting.ts'
 import { useMediaQuery } from '#lib/hooks'
 import {
@@ -313,16 +314,16 @@ function ExpandableEvents(props: { events: KnownEvent[] }) {
 	if (events.length === 0) return null
 
 	const [firstEvent, ...rest] = events
+	const preferredEvents = events.filter(preferredEventsFilter)
+
+	const mainEvent = preferredEvents.length > 0 ? preferredEvents[0] : firstEvent
+
 	const showAll = expanded || rest.length === 0
 
 	return (
 		<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
-			<TxEventDescription
-				event={firstEvent}
-				className="flex flex-row items-center gap-[6px]"
-			/>
 			{showAll ? (
-				rest.map((event, index) => (
+				events.map((event, index) => (
 					<TxEventDescription
 						key={`${event.type}-${index}`}
 						event={event}
@@ -330,13 +331,19 @@ function ExpandableEvents(props: { events: KnownEvent[] }) {
 					/>
 				))
 			) : (
-				<button
-					type="button"
-					onClick={() => setExpanded(true)}
-					className="text-tertiary whitespace-nowrap cursor-pointer hover:text-secondary/70"
-				>
-					+{rest.length} more
-				</button>
+				<>
+					<TxEventDescription
+						event={mainEvent}
+						className="flex flex-row items-center gap-[6px]"
+					/>
+					<button
+						type="button"
+						onClick={() => setExpanded(true)}
+						className="text-tertiary whitespace-nowrap cursor-pointer hover:text-secondary/70"
+					>
+						+{rest.length} more
+					</button>
+				</>
 			)}
 		</div>
 	)
