@@ -165,7 +165,8 @@ function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
 		const decimals = asset.metadata?.decimals
 		const balance = asset.balance
 		if (decimals === undefined || balance === undefined) continue
-		total = (total ?? 0) + Number(formatUnits(balance, decimals)) * PRICE_PER_TOKEN
+		total =
+			(total ?? 0) + Number(formatUnits(balance, decimals)) * PRICE_PER_TOKEN
 	}
 	return total
 }
