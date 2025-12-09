@@ -12,18 +12,20 @@ export function NotFound() {
 		shouldThrow: false,
 	})
 
-	const txHash = (txMatch?.params as { hash: string | undefined })?.hash
-	const receiptHash = (receiptMatch?.params as { hash: string | undefined })
-		?.hash
+	const txHash = txMatch?.params?.hash
+	const receiptHash = receiptMatch?.params?.hash
 
-	const isValidTxHash =
-		txHash && Hex.validate(txHash) && Hex.size(txHash) === 32
-	const isValidReceiptHash =
-		receiptHash && Hex.validate(receiptHash) && Hex.size(receiptHash) === 32
+	const isTxNotFound =
+		txMatch?.status === 'notFound' &&
+		txHash &&
+		Hex.validate(txHash) &&
+		Hex.size(txHash) === 32
 
-	const isTxNotFound = txMatch?.status === 'notFound' && isValidTxHash
 	const isReceiptNotFound =
-		receiptMatch?.status === 'notFound' && isValidReceiptHash
+		receiptMatch?.status === 'notFound' &&
+		receiptHash &&
+		Hex.validate(receiptHash) &&
+		Hex.size(receiptHash) === 32
 
 	const hash = isTxNotFound ? txHash : isReceiptNotFound ? receiptHash : null
 
