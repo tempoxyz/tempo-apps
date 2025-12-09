@@ -264,29 +264,6 @@
 					}
 				}
 			}
-		},
-		"/stats": {
-			"get": {
-				"tags": ["System"],
-				"summary": "Get server statistics",
-				"description": "Retrieve server statistics including pending requests",
-				"operationId": "get_stats",
-				"responses": {
-					"200": {
-						"description": "Server statistics",
-						"content": {
-							"application/json": {
-								"schema": {
-									"$ref": "#/components/schemas/ServerStats"
-								},
-								"example": {
-									"pending": 5
-								}
-							}
-						}
-					}
-				}
-			}
 		}
 	},
 	"components": {
@@ -403,21 +380,6 @@
 						},
 						"minItems": 0,
 						"maxItems": 100
-					}
-				}
-			},
-			"ServerStats": {
-				"type": "object",
-				"description": "Server statistics",
-				"required": ["pending"],
-				"properties": {
-					"pending": {
-						"type": "integer",
-						"format": "int32",
-						"minimum": 0,
-						"maximum": 100000,
-						"description": "Number of pending requests",
-						"example": 5
 					}
 				}
 			},
