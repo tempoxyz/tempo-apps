@@ -4,7 +4,7 @@
 	"scripts": {
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
-		"check:types": "tsgo",
+		"check:types": "tsgo --project tsconfig.json",
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types"
 	},
 	"dependencies": {
