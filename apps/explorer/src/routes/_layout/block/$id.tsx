@@ -313,13 +313,10 @@ function ExpandableEvents(props: { events: KnownEvent[] }) {
 
 	if (events.length === 0) return null
 
-	// Filter out 'active key count changed' and 'nonce incremented' events
-	// to match transaction page behavior
+	
+	const [firstEvent, ...rest] = events
 	const preferredEvents = events.filter(preferredEventsFilter)
 
-	const [firstEvent, ...rest] = events
-
-	// Show first preferred event if available, otherwise first event
 	const mainEvent = preferredEvents.length > 0 ? preferredEvents[0] : firstEvent
 
 	const showAll = expanded || rest.length === 0
