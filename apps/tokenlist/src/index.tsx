@@ -147,4 +147,7 @@ app.get('/lists/all', async (context) => {
 		.filter((list): list is TokenListSchema => list !== null)
 
 	return context.json(fulfilled)
-}) satisfies ExportedHandler<Cloudflare.Env>
+})
+
+export default app satisfies ExportedHandler<Cloudflare.Env>
+
