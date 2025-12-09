@@ -1,0 +1,16 @@
+{
+	"name": "service-proxy",
+	"type": "module",
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"check:types": "tsgo",
+		"gen:types": "test -f .env || cp .env.example .env; wrangler types"
+	},
+	"dependencies": {
+		"hono": "catalog:"
+	},
+	"devDependencies": {
+		"wrangler": "catalog:"
+	}
+}
