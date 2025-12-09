@@ -84,6 +84,7 @@ export function DataGrid(props: DataGrid.Props) {
 									item.link &&
 										'hover:bg-base-alt hover:border-solid transition-[background-color] duration-75 hover:-mt-[1px] hover:border-t hover:border-t-distinct',
 									item.expanded && 'border-l-distinct',
+									item.className,
 								)}
 							>
 								{item.link && (
@@ -184,6 +185,7 @@ export namespace DataGrid {
 		cells: Cell[]
 		link?: RowLink
 		expanded?: boolean | React.ReactNode
+		className?: string
 	}
 
 	export interface Props {

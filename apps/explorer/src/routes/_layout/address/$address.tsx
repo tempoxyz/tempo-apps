@@ -1,6 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import {
 	createFileRoute,
+	Link,
 	notFound,
 	rootRouteId,
 	stripSearchParams,
@@ -107,6 +108,67 @@ const assets = [
 	'0x20c0000000000000000000000000000000000002',
 	'0x20c0000000000000000000000000000000000003',
 ] as const
+
+type AssetData = {
+	address: Address.Address
+	metadata: { name?: string; symbol?: string; decimals?: number } | undefined
+	balance: bigint | undefined
+}
+
+function useAssetsData(accountAddress: Address.Address): AssetData[] {
+	const meta0 = Hooks.token.useGetMetadata({ token: assets[0] })
+	const meta1 = Hooks.token.useGetMetadata({ token: assets[1] })
+	const meta2 = Hooks.token.useGetMetadata({ token: assets[2] })
+	const meta3 = Hooks.token.useGetMetadata({ token: assets[3] })
+
+	const bal0 = Hooks.token.useGetBalance({
+		token: assets[0],
+		account: accountAddress,
+	})
+	const bal1 = Hooks.token.useGetBalance({
+		token: assets[1],
+		account: accountAddress,
+	})
+	const bal2 = Hooks.token.useGetBalance({
+		token: assets[2],
+		account: accountAddress,
+	})
+	const bal3 = Hooks.token.useGetBalance({
+		token: assets[3],
+		account: accountAddress,
+	})
+
+	return React.useMemo(
+		() => [
+			{ address: assets[0], metadata: meta0.data, balance: bal0.data },
+			{ address: assets[1], metadata: meta1.data, balance: bal1.data },
+			{ address: assets[2], metadata: meta2.data, balance: bal2.data },
+			{ address: assets[3], metadata: meta3.data, balance: bal3.data },
+		],
+		[
+			meta0.data,
+			meta1.data,
+			meta2.data,
+			meta3.data,
+			bal0.data,
+			bal1.data,
+			bal2.data,
+			bal3.data,
+		],
+	)
+}
+
+function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
+	const PRICE_PER_TOKEN = 1
+	let total: number | undefined
+	for (const asset of assetsData) {
+		const decimals = asset.metadata?.decimals
+		const balance = asset.balance
+		if (decimals === undefined || balance === undefined) continue
+		total = (total ?? 0) + Number(formatUnits(balance, decimals)) * PRICE_PER_TOKEN
+	}
+	return total
+}
 
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
@@ -287,6 +349,8 @@ function RouteComponent() {
 	const activeSection =
 		tab === 'history' ? 0 : tab === 'assets' ? 1 : hasContract ? 2 : 0
 
+	const assetsData = useAssetsData(address)
+
 	return (
 		<div
 			className={cx(
@@ -294,7 +358,7 @@ function RouteComponent() {
 				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
 			)}
 		>
-			<AccountCardWithTimestamps address={address} />
+			<AccountCardWithTimestamps address={address} assetsData={assetsData} />
 			<SectionsWrapper
 				address={address}
 				page={page}
@@ -304,13 +368,17 @@ function RouteComponent() {
 				contractInfo={contractInfo}
 				initialData={transactionsData}
 				addressTransactionCount={addressTransactionCount}
+				assetsData={assetsData}
 			/>
 		</div>
 	)
 }
 
-function AccountCardWithTimestamps(props: { address: Address.Address }) {
-	const { address } = props
+function AccountCardWithTimestamps(props: {
+	address: Address.Address
+	assetsData: AssetData[]
+}) {
+	const { address, assetsData } = props
 
 	// fetch the most recent transactions (pg.1)
 	const { data: recentData } = useQuery(
@@ -358,11 +426,7 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 		},
 	})
 
-	// Calculate total holdings value
-	const totalValue = useQuery({
-		queryKey: ['account-total-value', address],
-		queryFn: () => AccountServer.getTotalValue({ data: { address } }),
-	})
+	const totalValue = calculateTotalHoldings(assetsData)
 
 	return (
 		<AccountCard
@@ -370,7 +434,7 @@ function AccountCardWithTimestamps(props: { address: Address.Address }) {
 			className="self-start"
 			createdTimestamp={createdTimestamp}
 			lastActivityTimestamp={lastActivityTimestamp}
-			totalValue={totalValue.data}
+			totalValue={totalValue}
 		/>
 	)
 }
@@ -486,6 +550,7 @@ function SectionsWrapper(props: {
 	contractInfo: ContractInfo | undefined
 	initialData: TransactionsData | undefined
 	addressTransactionCount: bigint
+	assetsData: AssetData[]
 }) {
 	const {
 		address,
@@ -496,6 +561,7 @@ function SectionsWrapper(props: {
 		contractInfo,
 		initialData,
 		addressTransactionCount,
+		assetsData,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
@@ -644,51 +710,25 @@ function SectionsWrapper(props: {
 									],
 								}}
 								items={(mode) =>
-									assets.map((assetAddress) => ({
+									assetsData.map((asset) => ({
+										className: 'text-[13px]',
 										cells:
 											mode === 'stacked'
 												? [
-														<AssetName
-															key="name"
-															contractAddress={assetAddress}
-														/>,
-														<AssetContract
-															key="contract"
-															contractAddress={assetAddress}
-														/>,
-														<AssetBalance
-															key="amount"
-															contractAddress={assetAddress}
-															accountAddress={address}
-															format="amount"
-														/>,
+														<AssetName key="name" asset={asset} />,
+														<AssetContract key="contract" asset={asset} />,
+														<AssetAmount key="amount" asset={asset} />,
 													]
 												: [
-														<AssetName
-															key="name"
-															contractAddress={assetAddress}
-														/>,
-														<AssetSymbol
-															key="symbol"
-															contractAddress={assetAddress}
-														/>,
+														<AssetName key="name" asset={asset} />,
+														<AssetSymbol key="symbol" asset={asset} />,
 														<span key="currency">USD</span>,
-														<AssetBalance
-															key="amount"
-															contractAddress={assetAddress}
-															accountAddress={address}
-															format="amount"
-														/>,
-														<AssetBalance
-															key="value"
-															contractAddress={assetAddress}
-															accountAddress={address}
-															format="value"
-														/>,
+														<AssetAmount key="amount" asset={asset} />,
+														<AssetValue key="value" asset={asset} />,
 													],
 										link: {
-											href: `/token/${assetAddress}`,
-											title: `View token ${assetAddress}`,
+											href: `/token/${asset.address}?a=${address}`,
+											title: `View token ${asset.address}`,
 										},
 									}))
 								}
@@ -778,62 +818,50 @@ function TransactionFeeCell(props: { hash: Hex.Hex }) {
 	)
 }
 
-function AssetName(props: { contractAddress: Address.Address }) {
-	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: props.contractAddress,
-		query: { enabled: true },
-	})
-	return <span>{metadata?.name || 'Unknown Token'}</span>
+function AssetName(props: { asset: AssetData }) {
+	const { asset } = props
+	if (!asset.metadata?.name) return <span className="text-tertiary">…</span>
+	return <span>{asset.metadata.name}</span>
 }
 
-function AssetSymbol(props: { contractAddress: Address.Address }) {
-	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: props.contractAddress,
-		query: { enabled: true },
-	})
-	return <span className="text-accent">{metadata?.symbol || 'TOKEN'}</span>
-}
-
-function AssetContract(props: { contractAddress: Address.Address }) {
+function AssetSymbol(props: { asset: AssetData }) {
+	const { asset } = props
+	if (!asset.metadata?.symbol) return <span className="text-tertiary">…</span>
 	return (
-		<span className="text-accent text-[13px]">
-			{HexFormatter.truncate(props.contractAddress, 10)}
+		<Link
+			to="/token/$address"
+			params={{ address: asset.address }}
+			className="text-accent hover:underline press-down"
+		>
+			{asset.metadata.symbol}
+		</Link>
+	)
+}
+
+function AssetContract(props: { asset: AssetData }) {
+	return (
+		<span className="text-accent">
+			{HexFormatter.truncate(props.asset.address, 10)}
 		</span>
 	)
 }
 
-function AssetBalance(props: {
-	contractAddress: Address.Address
-	accountAddress: Address.Address
-	format: 'amount' | 'value'
-}) {
-	const { contractAddress, accountAddress, format } = props
-	const { data: metadata } = Hooks.token.useGetMetadata({
-		token: contractAddress,
-		query: { enabled: true },
-	})
-	const { data: balance } = Hooks.token.useGetBalance({
-		token: contractAddress,
-		account: accountAddress,
-		query: { enabled: true },
-	})
+function AssetAmount(props: { asset: AssetData }) {
+	const { asset } = props
+	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
+		return <span className="text-tertiary">…</span>
+	const formatted = formatUnits(asset.balance, asset.metadata.decimals)
+	return <span>{PriceFormatter.formatAmountShort(formatted)}</span>
+}
 
-	if (metadata?.decimals === undefined) return null
-
-	if (format === 'amount') {
-		return (
-			<span className="text-[12px]">
-				{PriceFormatter.formatAmount(
-					formatUnits(balance ?? 0n, metadata.decimals),
-				)}
-			</span>
-		)
-	}
-
+function AssetValue(props: { asset: AssetData }) {
+	const { asset } = props
+	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
+		return <span className="text-tertiary">…</span>
 	return (
-		<span className="text-[12px]">
-			{PriceFormatter.format(balance ?? 0n, {
-				decimals: metadata.decimals,
+		<span>
+			{PriceFormatter.format(asset.balance, {
+				decimals: asset.metadata.decimals,
 				format: 'short',
 			})}
 		</span>
