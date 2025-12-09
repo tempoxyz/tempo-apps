@@ -18,6 +18,7 @@ import { getBlock, getChainId, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractReader } from '#comps/ContractReader'
+import { ContractSources } from '#comps/ContractSources'
 import { DataGrid } from '#comps/DataGrid'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
@@ -36,6 +37,10 @@ import {
 	useTransactionDataFromBatch,
 } from '#comps/TxTransactionRow'
 import { cx } from '#cva.config.ts'
+import {
+	type ContractSourceFile,
+	fetchContractSources,
+} from '#lib/domain/contract-sources'
 import {
 	type ContractInfo,
 	extractContractAbi,
@@ -60,47 +65,6 @@ const defaultSearchValues = {
 } as const
 
 type TabValue = 'history' | 'assets' | 'contract'
-
-function useBatchTransactionData(transactions: Transaction[]) {
-	const hashes = React.useMemo(
-		() => transactions.map((tx) => tx.hash).filter(isHash),
-		[transactions],
-	)
-
-	const queries = useQueries({
-		queries: hashes.map((hash) => ({
-			queryKey: ['tx-data-batch', hash],
-			queryFn: async (): Promise<TransactionData | null> => {
-				const cfg = getConfig()
-				const receipt = await getTransactionReceipt(cfg, { hash })
-				const [block, getTokenMetadata] = await Promise.all([
-					getBlock(cfg, { blockHash: receipt.blockHash }),
-					Tip20.metadataFromLogs(receipt.logs),
-				])
-				const transaction = transactions.find((tx) => tx.hash === hash)
-				const knownEvents = parseKnownEvents(receipt, {
-					transaction,
-					getTokenMetadata,
-				})
-				return { receipt, block, knownEvents }
-			},
-			staleTime: 60_000,
-		})),
-	})
-
-	const transactionDataMap = React.useMemo(() => {
-		const map = new Map<Hex.Hex, TransactionData>()
-		for (let index = 0; index < hashes.length; index++) {
-			const data = queries[index]?.data
-			if (data) map.set(hashes[index], data)
-		}
-		return map
-	}, [hashes, queries])
-
-	const isLoading = queries.some((q) => q.isLoading)
-
-	return { transactionDataMap, isLoading }
-}
 
 const assets = [
 	'0x20c0000000000000000000000000000000000000',
@@ -202,6 +166,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 
 		const offset = (page - 1) * limit
+		const chainId = getChainId(config)
 
 		// check if it's a known contract from our registry
 		let contractInfo: ContractInfo | undefined = getContractInfo(address)
@@ -232,6 +197,17 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 		const hasContract = Boolean(contractInfo)
 
+		let contractSources: ContractSourceFile[] | undefined
+		if (hasContract) {
+			contractSources = await fetchContractSources({
+				address,
+				chainId,
+			}).catch((error) => {
+				console.error('Failed to load contract sources:', error)
+				return undefined
+			})
+		}
+
 		const transactionsData = await context.queryClient
 			.ensureQueryData(
 				transactionsQueryOptions({
@@ -250,7 +226,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			queryKey: ['address-transaction-count', address],
 			queryFn: () =>
 				AccountServer.fetchAddressTransactionsCount({
-					data: { address, chainId: getChainId(config) },
+					data: { address, chainId },
 				}),
 			staleTime: 30_000,
 		})
@@ -262,6 +238,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			offset,
 			hasContract,
 			contractInfo,
+			contractSources,
 			transactionsData,
 			addressTransactionCount,
 		}
@@ -277,6 +254,7 @@ function RouteComponent() {
 	const {
 		hasContract,
 		contractInfo,
+		contractSources,
 		transactionsData,
 		addressTransactionCount,
 	} = Route.useLoaderData()
@@ -367,6 +345,7 @@ function RouteComponent() {
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
 				contractInfo={contractInfo}
+				contractSources={contractSources}
 				initialData={transactionsData}
 				addressTransactionCount={addressTransactionCount}
 				assetsData={assetsData}
@@ -375,11 +354,49 @@ function RouteComponent() {
 	)
 }
 
-function AccountCardWithTimestamps(props: {
-	address: Address.Address
-	assetsData: AssetData[]
-}) {
-	const { address, assetsData } = props
+function useBatchTransactionData(transactions: Transaction[]) {
+	const hashes = React.useMemo(
+		() => transactions.map((tx) => tx.hash).filter(isHash),
+		[transactions],
+	)
+
+	const queries = useQueries({
+		queries: hashes.map((hash) => ({
+			queryKey: ['tx-data-batch', hash],
+			queryFn: async (): Promise<TransactionData | null> => {
+				const cfg = getConfig()
+				const receipt = await getTransactionReceipt(cfg, { hash })
+				const [block, getTokenMetadata] = await Promise.all([
+					getBlock(cfg, { blockHash: receipt.blockHash }),
+					Tip20.metadataFromLogs(receipt.logs),
+				])
+				const transaction = transactions.find((tx) => tx.hash === hash)
+				const knownEvents = parseKnownEvents(receipt, {
+					transaction,
+					getTokenMetadata,
+				})
+				return { receipt, block, knownEvents }
+			},
+			staleTime: 60_000,
+		})),
+	})
+
+	const transactionDataMap = React.useMemo(() => {
+		const map = new Map<Hex.Hex, TransactionData>()
+		for (let index = 0; index < hashes.length; index++) {
+			const data = queries[index]?.data
+			if (data) map.set(hashes[index], data)
+		}
+		return map
+	}, [hashes, queries])
+
+	const isLoading = queries.some((q) => q.isLoading)
+
+	return { transactionDataMap, isLoading }
+}
+
+function AccountCardWithTimestamps(props: { address: Address.Address }) {
+	const { address } = props
 
 	// fetch the most recent transactions (pg.1)
 	const { data: recentData } = useQuery(
@@ -549,6 +566,7 @@ function SectionsWrapper(props: {
 	activeSection: number
 	onSectionChange: (index: number) => void
 	contractInfo: ContractInfo | undefined
+	contractSources?: ContractSourceFile[]
 	initialData: TransactionsData | undefined
 	addressTransactionCount: bigint
 	assetsData: AssetData[]
@@ -560,6 +578,7 @@ function SectionsWrapper(props: {
 		activeSection,
 		onSectionChange,
 		contractInfo,
+		contractSources,
 		initialData,
 		addressTransactionCount,
 		assetsData,
@@ -597,6 +616,7 @@ function SectionsWrapper(props: {
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
+	const hasContractSources = Boolean(contractSources?.length)
 
 	// Only show skeleton if we have no data AND we're loading
 	// Use data presence check to avoid hydration mismatch
@@ -750,11 +770,16 @@ function SectionsWrapper(props: {
 									totalItems: 0,
 									itemsLabel: 'functions',
 									content: (
-										<ContractReader
-											address={address}
-											abi={contractInfo.abi}
-											docsUrl={contractInfo.docsUrl}
-										/>
+										<div className="flex flex-col gap-[14px]">
+											{hasContractSources && contractSources && (
+												<ContractSources files={contractSources} />
+											)}
+											<ContractReader
+												address={address}
+												abi={contractInfo.abi}
+												docsUrl={contractInfo.docsUrl}
+											/>
+										</div>
 									),
 								},
 							]

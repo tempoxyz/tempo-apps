@@ -34,6 +34,7 @@
 		"react-dom": "catalog:",
 		"tailwind-merge": "catalog:",
 		"tailwindcss": "catalog:",
+		"shiki": "^3.19.0",
 		"tempo.ts": "catalog:",
 		"viem": "catalog:",
 		"wagmi": "catalog:",
