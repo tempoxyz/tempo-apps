@@ -1,6 +1,6 @@
 # Tempo Tokenlist Registry & API
 
-`@uniswap/token-lists`-compatible API for serving token lists and icons for Tempo chains (testnet, mainnet).
+[Uniswap Token Lists](https://tokenlists.org)-compatible API for serving token lists and icons for Tempo chains (testnet, mainnet).
 
 ## Adding a New Token
 
