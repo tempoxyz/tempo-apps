@@ -313,7 +313,6 @@ function ExpandableEvents(props: { events: KnownEvent[] }) {
 
 	if (events.length === 0) return null
 
-	
 	const [firstEvent, ...rest] = events
 	const preferredEvents = events.filter(preferredEventsFilter)
 
