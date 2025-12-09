@@ -1,7 +1,7 @@
 export function Sphere(props: Sphere.Props) {
 	const { animate } = props
 	return (
-		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[280px] z-0">
+		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[280px] z-0 print:hidden">
 			<div
 				ref={(el) => {
 					if (!el) return
