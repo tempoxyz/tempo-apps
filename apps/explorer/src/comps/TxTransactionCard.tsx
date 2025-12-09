@@ -106,7 +106,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 					key="receipt"
 					to="/receipt/$hash"
 					params={{ hash }}
-					className="press-down flex items-end justify-between w-full"
+					className="press-down flex items-end justify-between w-full print:hidden"
 				>
 					<span className="text-[13px] text-tertiary">View</span>
 					<ReceiptMark />
