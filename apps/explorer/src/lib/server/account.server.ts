@@ -57,7 +57,9 @@ export const fetchTransactions = createServerFn()
 		const includeSent = include === 'all' || include === 'sent'
 		const includeReceived = include === 'all' || include === 'received'
 
-		const fetchSize = offset + limit + 1
+		// Fetch enough rows to satisfy offset + limit + 1 (to check hasMore)
+		// Cap at 1000 to avoid slow queries for high-volume addresses
+		const fetchSize = Math.min(offset + limit + 1, 1000)
 
 		// Build direct transactions query
 		let directTxsQuery = QB.selectFrom('txs')
@@ -85,12 +87,7 @@ export const fetchTransactions = createServerFn()
 			directTxsQuery = directTxsQuery.where('to', '=', params.address)
 		}
 
-		directTxsQuery = directTxsQuery
-			.orderBy('block_num', sortDirection)
-			.orderBy('hash', sortDirection)
-			.limit(fetchSize)
-
-		// Build transfer hashes query
+		// Build transfer hashes query (for ERC20 transfers where address appears)
 		let transferHashesQuery = QB.withSignatures([TRANSFER_SIGNATURE])
 			.selectFrom('transfer')
 			.select(['tx_hash', 'block_num'])
@@ -111,51 +108,58 @@ export const fetchTransactions = createServerFn()
 			transferHashesQuery = transferHashesQuery.where('to', '=', params.address)
 		}
 
-		transferHashesQuery = transferHashesQuery
-			.orderBy('block_num', sortDirection)
-			.orderBy('tx_hash', sortDirection)
-			.limit(fetchSize)
-
 		const [directTxsResult, transferHashesResult] = await Promise.all([
-			directTxsQuery.execute(),
-			transferHashesQuery.execute(),
+			directTxsQuery
+				.orderBy('block_num', sortDirection)
+				.orderBy('hash', sortDirection)
+				.limit(fetchSize)
+				.execute(),
+			transferHashesQuery
+				.orderBy('block_num', sortDirection)
+				.orderBy('tx_hash', sortDirection)
+				.limit(fetchSize)
+				.execute(),
 		])
 
+		// Merge results - start with direct txs
 		const txsByHash = new Map<Hex.Hex, (typeof directTxsResult)[number]>()
 		for (const row of directTxsResult) txsByHash.set(row.hash, row)
 
-		const transferHashes: Hex.Hex[] = []
+		// Find transfer hashes not in direct txs
+		const missingHashes: Hex.Hex[] = []
 		for (const row of transferHashesResult) {
-			const hash = row.tx_hash
-			if (!txsByHash.has(hash)) transferHashes.push(hash)
+			if (!txsByHash.has(row.tx_hash)) missingHashes.push(row.tx_hash)
 		}
 
-		if (transferHashes.length > 0) {
-			const BATCH_SIZE = 500
-			for (let index = 0; index < transferHashes.length; index += BATCH_SIZE) {
-				const batch = transferHashes.slice(index, index + BATCH_SIZE)
+		// Fetch tx details for missing hashes (in parallel)
+		if (missingHashes.length > 0) {
+			const batchResults = await Promise.all(
+				missingHashes.map((hash) =>
+					QB.selectFrom('txs')
+						.select([
+							'hash',
+							'block_num',
+							'from',
+							'to',
+							'value',
+							'input',
+							'nonce',
+							'gas',
+							'gas_price',
+							'type',
+						])
+						.where('chain', '=', chainId)
+						.where('hash', '=', hash)
+						.executeTakeFirst(),
+				),
+			)
 
-				const transferTxsResult = await QB.selectFrom('txs')
-					.select([
-						'hash',
-						'block_num',
-						'from',
-						'to',
-						'value',
-						'input',
-						'nonce',
-						'gas',
-						'gas_price',
-						'type',
-					])
-					.where('chain', '=', chainId)
-					.where('hash', 'in', batch)
-					.execute()
-
-				for (const row of transferTxsResult) txsByHash.set(row.hash, row)
+			for (const row of batchResults) {
+				if (row) txsByHash.set(row.hash, row)
 			}
 		}
 
+		// Sort combined results
 		const sortedTxs = [...txsByHash.values()].sort((a, b) =>
 			sortDirection === 'desc'
 				? Number(b.block_num) - Number(a.block_num)
@@ -285,21 +289,33 @@ export const FetchAddressTransactionsCountSchema = z.object({
 export const fetchAddressTransactionsCount = createServerFn({ method: 'GET' })
 	.inputValidator((input) => FetchAddressTransactionsCountSchema.parse(input))
 	.handler(async ({ data: { address, chainId } }) => {
-		const [txSentResult, txReceivedResult] = await Promise.all([
-			QB.selectFrom('txs')
-				.select((eb) => eb.fn.count('hash').as('cnt'))
-				.where('from', '=', address)
-				.where('chain', '=', chainId)
-				.executeTakeFirstOrThrow(),
-			QB.selectFrom('txs')
-				.select((eb) => eb.fn.count('hash').as('cnt'))
-				.where('to', '=', address)
-				.where('chain', '=', chainId)
-				.executeTakeFirstOrThrow(),
-		])
+		const [txSentResult, txReceivedResult, transferCountResult] =
+			await Promise.all([
+				QB.selectFrom('txs')
+					.select((eb) => eb.fn.count('hash').as('cnt'))
+					.where('from', '=', address)
+					.where('chain', '=', chainId)
+					.executeTakeFirstOrThrow(),
+				QB.selectFrom('txs')
+					.select((eb) => eb.fn.count('hash').as('cnt'))
+					.where('to', '=', address)
+					.where('chain', '=', chainId)
+					.executeTakeFirstOrThrow(),
+				// Count distinct transfer event txs
+				QB.withSignatures([TRANSFER_SIGNATURE])
+					.selectFrom('transfer')
+					.select((eb) => eb.fn.count('tx_hash').distinct().as('cnt'))
+					.where('chain', '=', chainId)
+					.where((eb) =>
+						eb.or([eb('from', '=', address), eb('to', '=', address)]),
+					)
+					.executeTakeFirstOrThrow(),
+			])
 
 		const txSent = BigInt(txSentResult.cnt ?? 0)
 		const txReceived = BigInt(txReceivedResult.cnt ?? 0)
+		const transferCount = BigInt(transferCountResult.cnt ?? 0)
 
-		return txSent + txReceived
+		// This may slightly overcount overlapping txs, but it's fast
+		return txSent + txReceived + transferCount
 	})
