@@ -1,0 +1,57 @@
+{
+	"$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
+	"name": "Tempo Testnet",
+	"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icon.svg",
+	"timestamp": "2025-12-06T00:00:00Z",
+	"version": {
+		"major": 1,
+		"minor": 0,
+		"patch": 0
+	},
+	"tokens": [
+		{
+			"name": "pathUSD",
+			"symbol": "pathUSD",
+			"decimals": 6,
+			"chainId": 42429,
+			"address": "0x20c0000000000000000000000000000000000000",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
+			"extensions": {
+				"chain": "tempo"
+			}
+		},
+		{
+			"name": "AlphaUSD",
+			"symbol": "AlphaUSD",
+			"decimals": 6,
+			"chainId": 42429,
+			"address": "0x20c0000000000000000000000000000000000001",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/alphausd.svg",
+			"extensions": {
+				"chain": "tempo"
+			}
+		},
+		{
+			"name": "BetaUSD",
+			"symbol": "BetaUSD",
+			"decimals": 6,
+			"chainId": 42429,
+			"address": "0x20c0000000000000000000000000000000000002",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/alphausd.svg",
+			"extensions": {
+				"chain": "tempo"
+			}
+		},
+		{
+			"name": "ThetaUSD",
+			"symbol": "ThetaUSD",
+			"decimals": 6,
+			"chainId": 42429,
+			"address": "0x20c0000000000000000000000000000000000003",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/alphausd.svg",
+			"extensions": {
+				"chain": "tempo"
+			}
+		}
+	]
+}
