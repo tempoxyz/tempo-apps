@@ -485,27 +485,37 @@ function createDetectors(
 		feeManager(event: ParsedEvent) {
 			const { eventName, args } = event
 
-			if (eventName === 'UserTokenSet')
+			if (eventName === 'UserTokenSet') {
+				const metadata = getTokenMetadata?.(args.token)
 				return {
 					type: 'user token set',
 					parts: [
 						{ type: 'action', value: 'Set Fee Token' },
-						{ type: 'token', value: { address: args.token } },
+						{
+							type: 'token',
+							value: { address: args.token, symbol: metadata?.symbol },
+						},
 						{ type: 'text', value: 'for' },
 						{ type: 'account', value: args.user },
 					],
 				}
+			}
 
-			if (eventName === 'ValidatorTokenSet')
+			if (eventName === 'ValidatorTokenSet') {
+				const metadata = getTokenMetadata?.(args.token)
 				return {
 					type: 'validator token set',
 					parts: [
 						{ type: 'action', value: 'Set Fee Token' },
-						{ type: 'token', value: { address: args.token } },
+						{
+							type: 'token',
+							value: { address: args.token, symbol: metadata?.symbol },
+						},
 						{ type: 'text', value: 'for' },
 						{ type: 'account', value: args.validator },
 					],
 				}
+			}
 
 			return null
 		},
