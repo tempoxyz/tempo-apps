@@ -2,6 +2,7 @@ import { ClientOnly, getRouteApi } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { InfoCard } from '#comps/InfoCard'
 import { RelativeTime } from '#comps/RelativeTime'
+import { PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -53,6 +54,25 @@ export function AccountCard(props: AccountCard.Props) {
 					</p>
 				</button>,
 				{
+					label: 'Holdings',
+					value: (
+						<ClientOnly
+							fallback={<span className="text-tertiary text-[13px]">…</span>}
+						>
+							{totalValue !== undefined ? (
+								<span
+									className="text-[13px] text-primary"
+									title={PriceFormatter.format(totalValue)}
+								>
+									{PriceFormatter.format(totalValue, { format: 'short' })}
+								</span>
+							) : (
+								<span className="text-tertiary text-[13px]">…</span>
+							)}
+						</ClientOnly>
+					),
+				},
+				{
 					label: 'Active',
 					value: (
 						<ClientOnly
@@ -63,22 +83,6 @@ export function AccountCard(props: AccountCard.Props) {
 									timestamp={lastActivityTimestamp}
 									className="text-[13px] text-primary"
 								/>
-							) : (
-								<span className="text-tertiary text-[13px]">…</span>
-							)}
-						</ClientOnly>
-					),
-				},
-				{
-					label: 'Holdings',
-					value: (
-						<ClientOnly
-							fallback={<span className="text-tertiary text-[13px]">…</span>}
-						>
-							{totalValue !== undefined ? (
-								<span className="text-[13px] text-primary">
-									${totalValue.toFixed(2)}
-								</span>
 							) : (
 								<span className="text-tertiary text-[13px]">…</span>
 							)}

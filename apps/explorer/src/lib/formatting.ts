@@ -195,10 +195,22 @@ export namespace PriceFormatter {
 		maximumFractionDigits: 18,
 	})
 
+	const amountFormatterShort = new Intl.NumberFormat('en-US', {
+		notation: 'compact',
+		minimumFractionDigits: 0,
+		maximumFractionDigits: 2,
+	})
+
 	export function formatAmount(value: string): string {
 		const number = Number(value)
 		if (number > 0 && number < 0.01) return '<0.01'
 		return amountFormatter.format(number)
+	}
+
+	export function formatAmountShort(value: string): string {
+		const number = Number(value)
+		if (number > 0 && number < 0.01) return '<0.01'
+		return amountFormatterShort.format(number)
 	}
 
 	export function formatNativeAmount(

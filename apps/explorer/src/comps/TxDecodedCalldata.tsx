@@ -77,7 +77,7 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 		return { args: undefined }
 	}, [abiItem, rawArgs])
 
-	if (!isFetched)
+	if (!isFetched || !abiItem)
 		return (
 			<div className="bg-distinct rounded-[6px] overflow-hidden">
 				<div className="relative px-[10px] py-[8px]">
@@ -100,8 +100,6 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 				</div>
 			</div>
 		)
-
-	if (!abiItem) return null
 
 	return (
 		<div className="flex flex-col gap-[8px]">
