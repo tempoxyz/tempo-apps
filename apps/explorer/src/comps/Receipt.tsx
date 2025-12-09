@@ -270,7 +270,7 @@ export function Receipt(props: Receipt.Props) {
 				)}
 			</div>
 
-			<div className="flex flex-col items-center -mt-5 w-full">
+			<div className="flex flex-col items-center -mt-5 w-full print:hidden">
 				<div className="max-w-[360px] w-full">
 					<Link
 						to="/tx/$hash"
