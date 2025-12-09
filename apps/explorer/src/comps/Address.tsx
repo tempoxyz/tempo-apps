@@ -1,22 +1,19 @@
 import { Link } from '@tanstack/react-router'
 import type { Address as AddressType } from 'ox'
-import { TruncatedHash } from '#comps/TruncatedHash'
-import { cx } from '#cva.config'
+import { HexFormatter } from '#lib/formatting'
 
 export function Address(props: Address.Props) {
 	const { address, chars, self, className } = props
 	return (
 		<>
-			<div className="inline-block align-bottom press-down">
-				<Link
-					to="/address/$address"
-					params={{ address }}
-					title={address}
-					className={cx('hover:underline', className)}
-				>
-					<TruncatedHash hash={address} minChars={chars} />
-				</Link>
-			</div>
+			<Link
+				to="/address/$address"
+				params={{ address }}
+				title={address}
+				className={className}
+			>
+				{HexFormatter.shortenHex(address, chars)}
+			</Link>
 			{self && <span className="text-tertiary"> (self)</span>}
 		</>
 	)
