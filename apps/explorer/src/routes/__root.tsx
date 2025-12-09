@@ -49,6 +49,22 @@ export const Route = createRootRouteWithContext<{
 				content:
 					'Explore and analyze blocks, transactions, contracts and more on Tempo.',
 			},
+			{
+				name: 'og:image',
+				content: '/og-explorer.png',
+			},
+			{
+				name: 'og:image:type',
+				content: 'image/png',
+			},
+			{
+				name: 'og:image:width',
+				content: '1200',
+			},
+			{
+				name: 'og:image:height',
+				content: '630',
+			},
 		],
 		links: [
 			{
@@ -58,24 +74,52 @@ export const Route = createRootRouteWithContext<{
 			{
 				rel: 'icon',
 				type: 'image/svg+xml',
+				href: '/favicon-dark.svg',
+				media: '(prefers-color-scheme: dark)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/svg+xml',
 				href: '/favicon-light.svg',
+				media: '(prefers-color-scheme: light)',
 			},
 			{
 				rel: 'icon',
 				type: 'image/svg+xml',
 				href: '/favicon-dark.svg',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '32x32',
+				href: '/favicon-dark-32x32.png',
 				media: '(prefers-color-scheme: dark)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '32x32',
+				href: '/favicon-light-32x32.png',
+				media: '(prefers-color-scheme: light)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '16x16',
+				href: '/favicon-dark-16x16.png',
+				media: '(prefers-color-scheme: dark)',
+			},
+			{
+				rel: 'icon',
+				type: 'image/png',
+				sizes: '16x16',
+				href: '/favicon-light-16x16.png',
+				media: '(prefers-color-scheme: light)',
 			},
 			{
 				rel: 'apple-touch-icon',
 				sizes: '180x180',
-				href: '/favicon-light.png',
-			},
-			{
-				rel: 'apple-touch-icon',
-				sizes: '180x180',
-				href: '/favicon-dark.png',
-				media: '(prefers-color-scheme: dark)',
+				href: '/apple-touch-icon-dark.png',
 			},
 		],
 	}),
