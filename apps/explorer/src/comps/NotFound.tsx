@@ -7,20 +7,42 @@ export function NotFound() {
 		from: '/_layout/tx/$hash',
 		shouldThrow: false,
 	})
+	const receiptMatch = useMatch({
+		from: '/_layout/receipt/$hash',
+		shouldThrow: false,
+	})
 
-	const hash = (txMatch?.params as { hash: string | undefined })?.hash
-	const isValidHash = hash && Hex.validate(hash) && Hex.size(hash) === 32
-	const isTx = txMatch?.status === 'notFound' && isValidHash
+	const txHash = (txMatch?.params as { hash: string | undefined })?.hash
+	const receiptHash = (receiptMatch?.params as { hash: string | undefined })
+		?.hash
 
-	const [title, message] = isTx
-		? [
+	const isValidTxHash =
+		txHash && Hex.validate(txHash) && Hex.size(txHash) === 32
+	const isValidReceiptHash =
+		receiptHash && Hex.validate(receiptHash) && Hex.size(receiptHash) === 32
+
+	const isTxNotFound = txMatch?.status === 'notFound' && isValidTxHash
+	const isReceiptNotFound =
+		receiptMatch?.status === 'notFound' && isValidReceiptHash
+
+	const hash = isTxNotFound ? txHash : isReceiptNotFound ? receiptHash : null
+
+	const [title, message] = (() => {
+		if (isTxNotFound)
+			return [
 				'Transaction Not Found',
 				`The transaction doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`,
 			]
-		: [
-				'Page Not Found',
-				`The page you${apostrophe}re looking for doesn${apostrophe}t exist or has been moved.`,
+		if (isReceiptNotFound)
+			return [
+				'Receipt Not Found',
+				`The receipt doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`,
 			]
+		return [
+			'Page Not Found',
+			`The page you${apostrophe}re looking for doesn${apostrophe}t exist or has been moved.`,
+		]
+	})()
 
 	return (
 		<section className="flex flex-1 size-full items-center justify-center relative">
@@ -31,7 +53,7 @@ export function NotFound() {
 				<p className="text-base-content-secondary text-[15px] lg:text-[18px] text-center">
 					{message}
 				</p>
-				{isTx && hash && (
+				{hash && (
 					<pre className="text-[13px] text-base-content-secondary break-all bg-surface border border-base-border rounded-[10px] p-[12px] my-[16px] w-full whitespace-pre-wrap text-center">
 						{hash}
 					</pre>
