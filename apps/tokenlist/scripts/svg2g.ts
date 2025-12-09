@@ -4,15 +4,16 @@
  * write the optimized svg to the same path
  */
 
+import NodeFS from 'node:fs/promises'
 import NodePath from 'node:path'
 import { optimize } from 'svgo'
 
 const dataDirectoryPath = NodePath.join(process.cwd(), 'data')
-const glob = new Bun.Glob(NodePath.join(dataDirectoryPath, '**/*.svg'))
+const svgGlob = NodeFS.glob(NodePath.join(dataDirectoryPath, '**/*.svg'))
 
-for await (const absoluteFilePath of glob.scan('.')) {
+for await (const absoluteFilePath of svgGlob) {
 	console.info(`Optimizing ${absoluteFilePath}…`)
-	const svg = await Bun.file(absoluteFilePath).text()
+	const svg = await NodeFS.readFile(absoluteFilePath, 'utf-8')
 	const optimized = optimize(svg)
-	await Bun.write(absoluteFilePath, optimized.data)
+	await NodeFS.writeFile(absoluteFilePath, optimized.data)
 }

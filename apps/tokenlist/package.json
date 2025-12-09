@@ -16,7 +16,7 @@
 		"build:types": "wrangler types",
 		"check": "biome check . --write --unsafe",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
-		"process-icons": "node ./scripts/process-icons.ts",
+		"process-icons": "node ./scripts/svg2g.ts",
 		"tail": "wrangler tail"
 	},
 	"dependencies": {
@@ -31,7 +31,6 @@
 		"@cloudflare/workers-types": "catalog:",
 		"@scalar/api-reference": "^1.40.2",
 		"@total-typescript/ts-reset": "catalog:",
-		"@types/bun": "^1.3.4",
 		"@types/node": "catalog:",
 		"typescript": "catalog:",
 		"vite": "catalog:",

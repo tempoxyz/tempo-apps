@@ -1,7 +1,9 @@
 #! /usr/bin/env bun
 
+import NodeFS from 'node:fs/promises'
 import NodePath from 'node:path'
-import type { TokenInfo } from '#tokenlist.types.ts'
+import NodeProcess from 'node:process'
+import type { TokenInfo, TokenListSchema } from '#tokenlist.types.ts'
 
 /**
  * example
@@ -11,7 +13,7 @@ import type { TokenInfo } from '#tokenlist.types.ts'
  * ```
  */
 
-const [filepath] = Bun.argv.slice(2)
+const [filepath] = NodeProcess.argv.slice(2)
 
 if (!filepath) {
 	console.error('Usage: bun ./src/svg-encode.ts <filepath>')
@@ -25,21 +27,22 @@ svgToUrlEncoded(filepath).then(async (result) => {
 	const token = filepath.split('/').pop()?.replaceAll('.svg', '')
 	const tokenListPath = `${filepath.split('/').slice(0, -2).join('/')}/tokenlist.json`
 
-	const tokenlist = await Bun.file(tokenListPath).json()
-
-	tokenlist.tokens.forEach((item: TokenInfo) => {
+	const tokenlist = JSON.parse(
+		await NodeFS.readFile(tokenListPath, 'utf-8'),
+	) as TokenListSchema
+	tokenlist.tokens?.forEach((item: TokenInfo) => {
 		if (item.symbol.toLowerCase() === token?.toLowerCase()) {
 			console.info(`found token: ${item.name}`)
 			if (item.extensions?.inlined) item.extensions.inlined = result
 		}
 	})
-	await Bun.file(tokenListPath).write(JSON.stringify(tokenlist, null, 2))
+	await NodeFS.writeFile(tokenListPath, JSON.stringify(tokenlist, null, 2))
 })
 
 export async function svgToUrlEncoded(filepath: string) {
 	const normalizedPath = NodePath.normalize(filepath)
 
-	const svgString = await Bun.file(normalizedPath).text()
+	const svgString = await NodeFS.readFile(normalizedPath, 'utf-8')
 
 	return svgString
 		.replace(

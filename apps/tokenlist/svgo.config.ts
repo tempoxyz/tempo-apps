@@ -1,6 +1,7 @@
+import NodeProcess from 'node:process'
 import type * as Svgo from 'svgo'
 
-const args = Bun.argv.slice(2)
+const args = NodeProcess.argv.slice(2)
 
 export default {
 	js2svg: { indent: 2, pretty: true },
