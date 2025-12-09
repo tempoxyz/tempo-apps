@@ -17,7 +17,7 @@
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
-		"hono": "^4.10.7",
+		"hono": "catalog:",
 		"idxs": "catalog:",
 		"kysely": "catalog:",
 		"ox": "catalog:",
