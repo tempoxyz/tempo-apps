@@ -261,6 +261,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 				<button
 					type="submit"
 					disabled={disabled}
+					aria-label="Search"
 					className={cx(
 						'rounded-full! bg-accent text-base-plane flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50',
 						size === 'large' ? 'size-[28px]' : 'size-[24px]',

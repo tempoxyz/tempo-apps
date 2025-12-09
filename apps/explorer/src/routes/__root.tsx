@@ -39,6 +39,16 @@ export const Route = createRootRouteWithContext<{
 				name: 'viewport',
 				content: 'width=device-width, initial-scale=1, maximum-scale=1',
 			},
+			{
+				name: 'description',
+				content:
+					'Explore and analyze blocks, transactions, contracts and more on Tempo.',
+			},
+			{
+				name: 'og:description',
+				content:
+					'Explore and analyze blocks, transactions, contracts and more on Tempo.',
+			},
 		],
 		links: [
 			{
