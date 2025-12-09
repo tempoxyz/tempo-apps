@@ -150,4 +150,3 @@ app.get('/lists/all', async (context) => {
 })
 
 export default app satisfies ExportedHandler<Cloudflare.Env>
-

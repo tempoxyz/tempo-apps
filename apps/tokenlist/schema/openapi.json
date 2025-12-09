@@ -146,6 +146,57 @@
 				}
 			}
 		},
+		"/asset/{chain_id}/{id}": {
+			"get": {
+				"tags": ["Token Lists"],
+				"summary": "Get a single token by symbol or address",
+				"description": "Retrieve information about a specific token on a given chain. The token can be identified by either its symbol (e.g., 'USDC') or its contract address.",
+				"operationId": "get_asset",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/chain_id"
+					},
+					{
+						"name": "id",
+						"in": "path",
+						"description": "Token identifier - either the token symbol (e.g., 'pathUSD') or the token contract address (e.g., '0x20c0000000000000000000000000000000000000')",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 42,
+							"example": "pathUSD"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successful response with token information",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TokenInfo"
+								},
+								"example": {
+									"name": "pathUSD",
+									"symbol": "pathUSD",
+									"decimals": 6,
+									"chainId": 42429,
+									"address": "0x20c0000000000000000000000000000000000000",
+									"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
+									"extensions": {
+										"chain": "tempo"
+									}
+								}
+							}
+						}
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					}
+				}
+			}
+		},
 		"/lists/all": {
 			"get": {
 				"tags": ["Token Lists"],
@@ -620,7 +671,7 @@
 		},
 		{
 			"name": "Token Lists",
-			"description": "Endpoints for retrieving token list data"
+			"description": "Endpoints for retrieving token list and asset JSON data"
 		},
 		{
 			"name": "System",
