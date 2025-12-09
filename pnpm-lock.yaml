@@ -96,6 +96,9 @@ catalogs:
     globals:
       specifier: ^16.5.0
       version: 16.5.0
+    hono:
+      specifier: ^4.10.7
+      version: 4.10.7
     idxs:
       specifier: ^0.0.4
       version: 0.0.4
@@ -316,7 +319,7 @@ importers:
         specifier: 'catalog:'
         version: 0.7.5(hono@4.10.7)(zod@4.1.13)
       hono:
-        specifier: ^4.10.7
+        specifier: 'catalog:'
         version: 4.10.7
       idxs:
         specifier: 'catalog:'
@@ -396,11 +399,11 @@ importers:
   apps/service-proxy:
     dependencies:
       hono:
-        specifier: ^4.10.7
+        specifier: 'catalog:'
         version: 4.10.7
     devDependencies:
       wrangler:
-        specifier: ^4.4.0
+        specifier: 'catalog:'
         version: 4.53.0(@cloudflare/workers-types@4.20251205.0)
 
 packages:
