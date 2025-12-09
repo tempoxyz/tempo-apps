@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers'
-import { Context, Hono, Next } from 'hono'
+import { type Context, Hono, type Next } from 'hono'
 import { cors } from 'hono/cors'
 
 const app = new Hono()
