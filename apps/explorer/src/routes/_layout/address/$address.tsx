@@ -395,8 +395,11 @@ function useBatchTransactionData(transactions: Transaction[]) {
 	return { transactionDataMap, isLoading }
 }
 
-function AccountCardWithTimestamps(props: { address: Address.Address }) {
-	const { address } = props
+function AccountCardWithTimestamps(props: {
+	address: Address.Address
+	assetsData: AssetData[]
+}) {
+	const { address, assetsData } = props
 
 	// fetch the most recent transactions (pg.1)
 	const { data: recentData } = useQuery(
