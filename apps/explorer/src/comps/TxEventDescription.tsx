@@ -134,17 +134,20 @@ export namespace TxEventDescription {
 		return (
 			<div className="flex flex-col gap-[4px]">
 				{displayEvents.map((event, index) => (
-					<div key={`${event.type}-${index}`} className="flex items-center">
+					<div
+						key={`${event.type}-${index}`}
+						className="inline-flex items-center gap-[6px] flex-wrap"
+					>
 						<TxEventDescription
 							event={event}
 							seenAs={seenAs}
-							className="flex flex-row items-center gap-[6px] leading-[18px]"
+							className="flex flex-row items-center gap-[6px]"
 						/>
-						{index === eventsToShow.length - 1 && remainingCount > 0 && (
+						{index === displayEvents.length - 1 && remainingCount > 0 && (
 							<button
 								type="button"
 								onClick={() => setExpanded(true)}
-								className="ml-1 text-base-content-secondary cursor-pointer press-down shrink-0"
+								className="text-base-content-secondary cursor-pointer press-down shrink-0"
 							>
 								and {remainingCount} more
 							</button>

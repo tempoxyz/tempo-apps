@@ -307,48 +307,6 @@ interface TransactionsSectionProps {
 	startIndex: number
 }
 
-function ExpandableEvents(props: { events: KnownEvent[] }) {
-	const { events } = props
-	const [expanded, setExpanded] = React.useState(false)
-
-	if (events.length === 0) return null
-
-	const [firstEvent, ...rest] = events
-	const preferredEvents = events.filter(preferredEventsFilter)
-
-	const mainEvent = preferredEvents.length > 0 ? preferredEvents[0] : firstEvent
-
-	const showAll = expanded || rest.length === 0
-
-	return (
-		<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
-			{showAll ? (
-				events.map((event, index) => (
-					<TxEventDescription
-						key={`${event.type}-${index}`}
-						event={event}
-						className="flex flex-row items-center gap-[6px]"
-					/>
-				))
-			) : (
-				<>
-					<TxEventDescription
-						event={mainEvent}
-						className="flex flex-row items-center gap-[6px]"
-					/>
-					<button
-						type="button"
-						onClick={() => setExpanded(true)}
-						className="text-tertiary whitespace-nowrap cursor-pointer hover:text-secondary/70"
-					>
-						+{rest.length} more
-					</button>
-				</>
-			)}
-		</div>
-	)
-}
-
 function TransactionDescription(props: TransactionDescriptionProps) {
 	const { transaction, amountDisplay, knownEvents } = props
 
@@ -411,13 +369,23 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 			const otherEvents = knownEvents.filter((e) => e !== primaryEvent)
 			const reorderedEvents = [primaryEvent, ...otherEvents]
 
-			return <ExpandableEvents events={reorderedEvents} />
+			return (
+				<TxEventDescription.ExpandGroup
+					events={reorderedEvents}
+					limitFilter={preferredEventsFilter}
+				/>
+			)
 		}
 		return <span className="text-primary">Deploy contract</span>
 	}
 
 	if (knownEvents && knownEvents.length > 0) {
-		return <ExpandableEvents events={knownEvents} />
+		return (
+			<TxEventDescription.ExpandGroup
+				events={knownEvents}
+				limitFilter={preferredEventsFilter}
+			/>
+		)
 	}
 
 	if (transaction.value === 0n)
