@@ -1,5 +1,6 @@
 import type { AbiEvent } from 'abitype'
 import { useMemo, useState } from 'react'
+import { Abis } from 'tempo.ts/viem'
 import {
 	type Abi,
 	decodeEventLog,
@@ -38,6 +39,15 @@ export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 		}) as AbiEvent | undefined
 	}, [autoloadAbi, eventSelector])
 
+	const tempoTsAbiItem = useMemo(() => {
+		if (!eventSelector) return undefined
+		const tempoTsAbi = Object.values(Abis).flat()
+		return getAbiItem({
+			abi: tempoTsAbi as unknown as Abi,
+			name: eventSelector,
+		}) as AbiEvent | undefined
+	}, [eventSelector])
+
 	const signatureAbiItem = useMemo(() => {
 		if (!signature) return undefined
 		try {
@@ -47,7 +57,7 @@ export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 		}
 	}, [signature])
 
-	const abiItem = autoloadAbiItem ?? signatureAbiItem
+	const abiItem = autoloadAbiItem ?? tempoTsAbiItem ?? signatureAbiItem
 
 	const decoded = useMemo(() => {
 		if (!abiItem) return undefined
@@ -101,7 +111,7 @@ export namespace TxDecodedTopics {
 					.map(
 						(input, i) =>
 							`${
-								input.indexed ? `index_topic_${i + 1} ` : ''
+								input.indexed ? `topic[${i + 1}] ` : ''
 							}${input.type}${input.name ? ` ${input.name}` : ''}`,
 					)
 					.join(', ')})`,
@@ -118,7 +128,7 @@ export namespace TxDecodedTopics {
 						<span key={`${input.type}-${input.name ?? i}`}>
 							{i > 0 && <span className="text-secondary">, </span>}
 							{input.indexed && (
-								<span className="text-tertiary">index_topic_{i + 1} </span>
+								<span className="text-tertiary">topic[{i + 1}] </span>
 							)}
 							<span className="text-secondary">{input.type}</span>
 							{input.name && (
@@ -176,7 +186,7 @@ export namespace TxDecodedTopics {
 						{log.data && log.data !== '0x' && <RawDataInline data={log.data} />}
 					</div>
 				) : (
-					<div className="flex flex-col gap-[4px]">
+					<div className="grid" style={{ gridTemplateColumns: 'auto 1fr' }}>
 						{abiItem.inputs.map((input, index) => {
 							const argValue =
 								(args as Record<string, unknown>)[input.name ?? ''] ??
@@ -214,11 +224,13 @@ export namespace TxDecodedTopics {
 			<button
 				type="button"
 				onClick={() => copy(displayValue)}
-				className="flex items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] w-full"
+				className="col-span-2 grid grid-cols-subgrid items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[4px] -mx-[4px]"
 			>
-				<span className="text-[11px] text-tertiary shrink-0">
+				<span className="text-[11px] text-tertiary whitespace-pre">
 					{notifying ? (
-						<span className="text-primary">copied</span>
+						<span className="text-primary">
+							{'copied'.padEnd(label.length + 1)}
+						</span>
 					) : (
 						<>{label}:</>
 					)}
