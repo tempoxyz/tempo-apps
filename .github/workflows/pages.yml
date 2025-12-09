@@ -2,14 +2,10 @@ name: Publish GitHub Page
 
 on:
   pull_request:
-    paths:
-      - "apps/tokenlist/**"
   workflow_dispatch:
   push:
     branches:
       - "main"
-    paths:
-      - "apps/tokenlist/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -28,7 +24,7 @@ jobs:
     runs-on: ["ubuntu-latest"]
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v6
+        uses: actions/checkout@v5
         with:
           submodules: "recursive"
           fetch-depth: 0

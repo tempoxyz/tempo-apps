@@ -29,6 +29,3 @@ interface ImportMetaEnv extends Env {}
 interface ImportMeta {
 	readonly env: ImportMetaEnv
 }
-
-
-declare const __BUILD_VERSION__: string

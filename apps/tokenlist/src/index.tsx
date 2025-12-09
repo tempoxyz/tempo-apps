@@ -1,30 +1,21 @@
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
+import { tempoDevnet, tempoTestnet } from '#chains.ts'
 import { Docs } from '#docs.tsx'
-
-import { CHAIN_IDS } from '#chains.ts'
 import { OpenAPISpec, TokenList } from '#schema.ts'
 import type { TokenListSchema } from '#tokenlist.types.ts'
 
 const app = new Hono<{ Bindings: Cloudflare.Env }>()
 
-app.use('*', cors())
+const CHAIN_IDS = [tempoDevnet.id, tempoTestnet.id]
 
 const staticAssetBindingError =
 	'Static assets binding "ASSETS" is not configured.'
 
-app
-	.get('/', (context) => context.redirect('/docs'))
-	.get('/health', (_context) => new Response('ok'))
-	.get('/docs', async (context) => context.html(<Docs />))
-	.get('/version', async (context) =>
-		context.json({
-			timestamp: Date.now(),
-			source: 'https://github.com/tempoxyz/tempo-apps',
-			rev: __BUILD_VERSION__,
-			chains: CHAIN_IDS,
-		}),
-	)
+app.get('/', (_context) => new Response('ok'))
+
+app.get('/health', (_context) => new Response('ok'))
+
+app.get('/docs', async (context) => context.html(<Docs />))
 
 app
 	.get('/schema/openapi', async (context) => context.json(OpenAPISpec))
@@ -34,9 +25,11 @@ app
 
 app.get('/icon/:chain_id', async (context) => {
 	const chainId = context.req.param('chain_id')
-	if (!CHAIN_IDS.includes(Number(chainId))) return context.notFound()
+	if (![tempoDevnet.id, tempoTestnet.id].includes(Number(chainId)))
+		return context.notFound()
 
 	const assets = context.env.ASSETS
+	console.log(assets)
 	if (!assets)
 		return new Response(staticAssetBindingError, {
 			status: 500,
@@ -61,7 +54,8 @@ app.get('/icon/:chain_id/:address', async (context) => {
 	const address = context.req.param('address')
 	const chainId = context.req.param('chain_id')
 
-	if (!CHAIN_IDS.includes(Number(chainId))) return context.notFound()
+	if (![tempoDevnet.id, tempoTestnet.id].includes(Number(chainId)))
+		return context.notFound()
 
 	const assets = context.env.ASSETS
 	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
@@ -70,12 +64,9 @@ app.get('/icon/:chain_id/:address', async (context) => {
 		`/${chainId}/icons/${address.toLowerCase().replace('.svg', '')}.svg`,
 		'http://assets',
 	)
-	let assetResponse = await assets.fetch(assetUrl)
+	const assetResponse = await assets.fetch(assetUrl)
 
-	if (assetResponse.status !== 200)
-		assetResponse = await assets.fetch(
-			new URL(`/${chainId}/icons/fallback.svg`, 'http://assets'),
-		)
+	if (assetResponse.status === 404) return context.notFound()
 
 	// Let CF set correct headers; override only when missing
 	const headers = new Headers(assetResponse.headers)
@@ -89,7 +80,8 @@ app.get('/icon/:chain_id/:address', async (context) => {
 
 app.get('/list/:chain_id', async (context) => {
 	const chainId = context.req.param('chain_id')
-	if (!CHAIN_IDS.includes(Number(chainId))) return context.notFound()
+	if (![tempoDevnet.id, tempoTestnet.id].includes(Number(chainId)))
+		return context.notFound()
 
 	const assets = context.env.ASSETS
 	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
@@ -110,7 +102,8 @@ app.get('/asset/:chain_id/:id', async (context) => {
 	const id = context.req.param('id')
 	const chainId = context.req.param('chain_id')
 
-	if (!CHAIN_IDS.includes(Number(chainId))) return context.notFound()
+	if (![tempoDevnet.id, tempoTestnet.id].includes(Number(chainId)))
+		return context.notFound()
 
 	const assets = context.env.ASSETS
 	if (!assets) return new Response(staticAssetBindingError, { status: 500 })

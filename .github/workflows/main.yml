@@ -25,6 +25,7 @@ jobs:
           - app: fee-payer # privy
             env: privy
           - app: service-proxy
+          - app: tokenlist
 
     steps:
       - uses: actions/checkout@v5
