@@ -33,6 +33,7 @@ catalog:
   cva: ^1.0.0-beta.4
   eruda: ^3.4.3
   globals: ^16.5.0
+  hono: ^4.10.7
   idxs: ^0.0.4
   kysely: ^0.28.8
   ox: ^0.9.17
