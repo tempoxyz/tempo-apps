@@ -53,8 +53,10 @@ export default app
 
 /** Rate limit middleware. */
 async function rateLimit(c: Context, next: Next) {
+	const ip = c.req.raw.headers.get('cf-connecting-ip') || 'unknown'
+	const path = c.req.path
 	const { success } = await env.REQUESTS_RATE_LIMITER.limit({
-		key: c.req.raw.headers.get('cf-connecting-ip') || 'unknown',
+		key: `${ip}:${path}`,
 	})
 	if (!success) return c.json({ error: 'Rate limit exceeded' }, 429)
 	await next()
