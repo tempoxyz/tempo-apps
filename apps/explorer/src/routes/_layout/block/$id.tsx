@@ -318,7 +318,7 @@ function ExpandableEvents(props: { events: KnownEvent[] }) {
 	const preferredEvents = events.filter(preferredEventsFilter)
 
 	const [firstEvent, ...rest] = events
-	
+
 	// Show first preferred event if available, otherwise first event
 	const mainEvent = preferredEvents.length > 0 ? preferredEvents[0] : firstEvent
 
@@ -326,7 +326,6 @@ function ExpandableEvents(props: { events: KnownEvent[] }) {
 
 	return (
 		<div className="inline-flex items-center gap-[8px] text-primary flex-wrap">
-			
 			{showAll ? (
 				events.map((event, index) => (
 					<TxEventDescription
@@ -337,17 +336,17 @@ function ExpandableEvents(props: { events: KnownEvent[] }) {
 				))
 			) : (
 				<>
-				<TxEventDescription
-				event={mainEvent}
-				className="flex flex-row items-center gap-[6px]"
-			/>
-				<button
-					type="button"
-					onClick={() => setExpanded(true)}
-					className="text-tertiary whitespace-nowrap cursor-pointer hover:text-secondary/70"
-				>
-					+{rest.length} more
-				</button>
+					<TxEventDescription
+						event={mainEvent}
+						className="flex flex-row items-center gap-[6px]"
+					/>
+					<button
+						type="button"
+						onClick={() => setExpanded(true)}
+						className="text-tertiary whitespace-nowrap cursor-pointer hover:text-secondary/70"
+					>
+						+{rest.length} more
+					</button>
 				</>
 			)}
 		</div>
