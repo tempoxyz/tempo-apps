@@ -1,0 +1,2 @@
+export const alphaUsd =
+	'0x20c0000000000000000000000000000000000001' as const
