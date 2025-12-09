@@ -1,0 +1,41 @@
+{
+	"name": "tokenlist",
+	"version": "1.0.0",
+	"type": "module",
+	"imports": {
+		"#*": "./src/*",
+		"#data/*": "./data/*",
+		"#schema/*": "./schema/*",
+		"#package.json": "./package.json",
+		"#tokenlist.schema.json": "./tokenlist.schema.json"
+	},
+	"scripts": {
+		"dev": "vite dev",
+		"preview": "vite preview",
+		"build": "vite build && node ./scripts/postbuild.ts",
+		"check": "biome check . --write --unsafe",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"process-icons": "node ./scripts/svg2g.ts",
+		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
+		"postinstall": "pnpm gen:types && pnpm build",
+		"tail": "wrangler tail"
+	},
+	"dependencies": {
+		"hono": "catalog:",
+		"svgo": "^4.0.0",
+		"tempo.ts": "catalog:",
+		"viem": "catalog:"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "catalog:",
+		"@cloudflare/vite-plugin": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"@scalar/api-reference": "^1.40.2",
+		"@total-typescript/ts-reset": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:",
+		"wrangler": "catalog:"
+	},
+	"license": "MIT"
+}
