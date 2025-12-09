@@ -13,7 +13,7 @@ interface Env {
 	readonly S3_SECRET_ACCESS_KEY: string
 	readonly S3_PUBLIC_DEVELOPMENT_URL: string
 
-  readonly ASSETS: Fetcher
+	readonly ASSETS: Fetcher
 }
 
 // Node.js `process.env` auto-completion

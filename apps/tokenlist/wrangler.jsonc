@@ -20,5 +20,12 @@
 			"head_sampling_rate": 1,
 			"invocation_logs": true
 		}
-	}
+	},
+	"r2_buckets": [
+		{
+			"bucket_name": "tokenlist",
+			"binding": "TOKENLIST",
+			"remote": true
+		}
+	]
 }

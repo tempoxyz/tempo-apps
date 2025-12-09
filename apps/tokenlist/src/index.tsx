@@ -1,12 +1,15 @@
 import { Hono } from 'hono'
 import { tempoDevnet, tempoTestnet } from '#chains.ts'
 import { Docs } from '#docs.tsx'
-import { OpenAPISpecification, TokenList } from '#schema.ts'
+import { OpenAPISpec, TokenList } from '#schema.ts'
 import type { TokenListSchema } from '#tokenlist.types.ts'
 
 const app = new Hono<{ Bindings: Cloudflare.Env }>()
 
 const CHAIN_IDS = [tempoDevnet.id, tempoTestnet.id]
+
+const staticAssetBindingError =
+	'Static assets binding "ASSETS" is not configured.'
 
 app.get('/', (_context) => new Response('ok'))
 
@@ -15,12 +18,8 @@ app.get('/health', (_context) => new Response('ok'))
 app.get('/docs', async (context) => context.html(<Docs />))
 
 app
-	.get('/schema/openapi', async (context) => context.json(OpenAPISpecification))
-	.get('/schema/openapi.json', async (context) =>
-		context.json(OpenAPISpecification),
-	)
-
-app
+	.get('/schema/openapi', async (context) => context.json(OpenAPISpec))
+	.get('/schema/openapi.json', async (context) => context.json(OpenAPISpec))
 	.get('/schema/tokenlist', async (context) => context.json(TokenList))
 	.get('/schema/tokenlist.json', async (context) => context.json(TokenList))
 
@@ -32,7 +31,7 @@ app.get('/icon/:chain_id', async (context) => {
 	const assets = context.env.ASSETS
 	console.log(assets)
 	if (!assets)
-		return new Response('Static assets binding "ASSETS" is not configured.', {
+		return new Response(staticAssetBindingError, {
 			status: 500,
 		})
 
@@ -59,10 +58,7 @@ app.get('/icon/:chain_id/:address', async (context) => {
 		return context.notFound()
 
 	const assets = context.env.ASSETS
-	if (!assets)
-		return new Response('Static assets binding "ASSETS" is not configured.', {
-			status: 500,
-		})
+	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
 
 	const assetUrl = new URL(
 		`/${chainId}/icons/${address.toLowerCase().replace('.svg', '')}.svg`,
@@ -88,10 +84,7 @@ app.get('/list/:chain_id', async (context) => {
 		return context.notFound()
 
 	const assets = context.env.ASSETS
-	if (!assets)
-		return new Response('Static assets binding "ASSETS" is not configured.', {
-			status: 500,
-		})
+	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
 
 	const assetUrl = new URL(`/${chainId}/tokenlist.json`, 'http://assets')
 	const assetResponse = await assets.fetch(assetUrl)
@@ -113,10 +106,7 @@ app.get('/asset/:chain_id/:id', async (context) => {
 		return context.notFound()
 
 	const assets = context.env.ASSETS
-	if (!assets)
-		return new Response('Static assets binding "ASSETS" is not configured.', {
-			status: 500,
-		})
+	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
 
 	const assetUrl = new URL(`/${chainId}/tokenlist.json`, 'http://assets')
 	const assetResponse = await assets.fetch(assetUrl)
@@ -136,22 +126,10 @@ app.get('/asset/:chain_id/:id', async (context) => {
 
 	return context.json(asset)
 })
-const isFulfilled = <T,>(
-	p: PromiseSettledResult<T>,
-): p is PromiseFulfilledResult<T> => p.status === 'fulfilled'
-const isRejected = <T,>(
-	p: PromiseSettledResult<T>,
-): p is PromiseRejectedResult => p.status === 'rejected'
 
 app.get('/lists/all', async (context) => {
 	const assets = context.env.ASSETS
-	if (!assets)
-		return new Response('Static assets binding "ASSETS" is not configured.', {
-			status: 500,
-		})
-
-	// const assetUrl = new URL(`/data/42429/tokenlist.json`, 'http://assets')
-	// const assetResponse = await assets.fetch(assetUrl)
+	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
 
 	const responses = await Promise.allSettled(
 		CHAIN_IDS.map((chainId) =>
@@ -162,13 +140,11 @@ app.get('/lists/all', async (context) => {
 		),
 	)
 
-	const fulfilled = responses.filter(isFulfilled)
-	const rejected = responses.filter(isRejected)
+	const fulfilled = responses
+		.map((response) =>
+			response.status === 'fulfilled' ? response.value.list : null,
+		)
+		.filter((list): list is TokenListSchema => list !== null)
 
-	const lists = fulfilled.map(({ value }) => value.list)
-	const errors = rejected.map(({ reason }) => reason)
-
-	return context.json({ lists, errors })
-})
-
-export default app satisfies ExportedHandler<Cloudflare.Env>
+	return context.json(fulfilled)
+}) satisfies ExportedHandler<Cloudflare.Env>

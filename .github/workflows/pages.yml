@@ -36,7 +36,9 @@ jobs:
           path: "apps/tokenlist/data" # upload generated folder
 
   deploy:
-    if: github.ref == 'refs/heads/main'
+    name: "Deploy tokenlist to GitHub Pages"
+    # if the branch is main or invoked by workflow_dispatch
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     needs: "pages-directory-listing"
     permissions:
       pages: "write"
@@ -47,6 +49,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ["ubuntu-latest"]
     steps:
-      - name: "Deploy tokenlist to GitHub Pages"
+      - name: "Deploy Pages"
         id: deployment
         uses: actions/deploy-pages@main
