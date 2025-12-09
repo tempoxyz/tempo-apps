@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import type { Address, Hex } from 'ox'
+import { zeroAddress } from 'viem'
 import * as z from 'zod/mini'
 import { zAddress } from '#lib/zod'
 import { config } from '#wagmi.config.ts'
@@ -103,32 +104,51 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 	})
 
 async function fetchHoldersData(address: Address.Address, chainId: number) {
-	const result = await QB.withSignatures([TRANSFER_SIGNATURE])
+	// Aggregate balances directly in the indexer instead of streaming every transfer.
+	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
+
+	// Sum outgoing per holder (exclude mints from zero)
+	const outgoing = await qb
 		.selectFrom('transfer')
-		.select(['from', 'to', 'tokens'])
+		.select((eb) => [
+			eb.ref('from').as('holder'),
+			eb.fn.sum('tokens').as('sent'),
+		])
 		.where('chain', '=', chainId)
 		.where('address', '=', address)
+		.where('from', '<>', zeroAddress)
+		.groupBy('from')
+		.execute()
+
+	// Sum incoming per holder
+	const incoming = await qb
+		.selectFrom('transfer')
+		.select((eb) => [
+			eb.ref('to').as('holder'),
+			eb.fn.sum('tokens').as('received'),
+		])
+		.where('chain', '=', chainId)
+		.where('address', '=', address)
+		.groupBy('to')
 		.execute()
 
 	const balances = new Map<string, bigint>()
 
-	for (const row of result) {
-		const from = String(row.from)
-		const to = String(row.to)
-		const value = BigInt(row.tokens)
+	for (const row of incoming) {
+		const holder = row.holder
+		const received = BigInt(row.received)
+		balances.set(holder, (balances.get(holder) ?? 0n) + received)
+	}
 
-		if (from !== '0x0000000000000000000000000000000000000000') {
-			const fromBalance = balances.get(from) ?? 0n
-			balances.set(from, fromBalance - value)
-		}
-
-		const toBalance = balances.get(to) ?? 0n
-		balances.set(to, toBalance + value)
+	for (const row of outgoing) {
+		const holder = row.holder
+		const sent = BigInt(row.sent)
+		balances.set(holder, (balances.get(holder) ?? 0n) - sent)
 	}
 
 	const allHolders = Array.from(balances.entries())
-		.filter(([_, balance]) => balance > 0n)
-		.map(([address, balance]) => ({ address, balance }))
+		.filter(([, balance]) => balance > 0n)
+		.map(([holder, balance]) => ({ address: holder, balance }))
 		.sort((a, b) => (b.balance > a.balance ? 1 : -1))
 
 	const totalSupply = allHolders.reduce(
@@ -225,10 +245,10 @@ async function fetchTransfersData(
 		.execute()
 
 	return result.map((row) => ({
-		from: row.from as Address.Address,
-		to: row.to as Address.Address,
+		from: row.from,
+		to: row.to,
 		value: String(row.tokens),
-		transactionHash: row.tx_hash as Hex.Hex,
+		transactionHash: row.tx_hash,
 		blockNumber: String(row.block_num),
 		logIndex: Number(row.log_idx),
 		timestamp: row.block_timestamp ? String(row.block_timestamp) : null,
