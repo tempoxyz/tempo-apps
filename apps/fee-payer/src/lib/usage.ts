@@ -2,7 +2,10 @@ import { env } from 'cloudflare:workers'
 import * as IDX from 'idxs'
 import { sql } from 'kysely'
 import type { Address } from 'ox'
-import { tempo } from 'tempo.ts/chains'
+import { tempo, tempoTestnet } from 'tempo.ts/chains'
+import { Actions, Addresses } from 'tempo.ts/viem'
+import { createPublicClient, formatUnits, http } from 'viem'
+import { alphaUsd } from './consts.js'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: env.INDEXSUPPLY_API_KEY,
@@ -10,7 +13,6 @@ const IS = IDX.IndexSupply.create({
 
 const QB = IDX.QueryBuilder.from(IS)
 
-const FEE_MANAGER_CONTRACT = '0xfeec000000000000000000000000000000000000'
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
@@ -39,7 +41,7 @@ export async function getUsage(
 		])
 		.where('chain', '=', tempo.id)
 		.where('from', '=', feePayerAddress)
-		.where('to', '=', FEE_MANAGER_CONTRACT)
+		.where('to', '=', Addresses.feeManager)
 		.$if(blockTimestampFrom !== undefined, (eb) =>
 			eb.where(
 				sql`transfer.block_timestamp::timestamp`,
@@ -58,10 +60,18 @@ export async function getUsage(
 	const result = await query.executeTakeFirst()
 
 	const feesPaid = result?.total_spent ? BigInt(result.total_spent) : 0n
+	const feeTokenMetadata = await Actions.token.getMetadata(
+		createPublicClient({
+			chain: tempoTestnet({}),
+			transport: http(),
+		}),
+		{ token: alphaUsd },
+	)
 
 	return {
 		feePayerAddress,
-		feesPaid: feesPaid.toString(),
+		feesPaid: formatUnits(feesPaid, feeTokenMetadata.decimals),
+		feeCurrency: feeTokenMetadata.currency,
 		numTransactions: result?.n_transactions ? Number(result.n_transactions) : 0,
 		endingAt: result?.ending_at ?? null,
 		startingAt: result?.starting_at ?? null,
