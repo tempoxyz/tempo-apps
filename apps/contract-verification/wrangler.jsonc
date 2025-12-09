@@ -1,0 +1,19 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "contract-verification",
+	"compatibility_date": "2025-10-11",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.tsx",
+	"keep_vars": true,
+	"workers_dev": true,
+	"preview_urls": true,
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"persist": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true
+		}
+	}
+}

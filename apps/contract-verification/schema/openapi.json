@@ -1,0 +1,25 @@
+{
+	"openapi": "3.1.1",
+	"info": {
+		"title": "Contract Verification API",
+		"description": "API for verifying contracts on various blockchain networks. Provides endpoints to verify contract code, contract ABI, and contract bytecode for multiple chains.",
+		"version": "1.0.0",
+		"contact": {
+			"name": "API Support"
+		},
+		"license": {
+			"name": "MIT",
+			"url": "https://opensource.org/licenses/MIT"
+		}
+	},
+	"servers": [
+		{
+			"url": "https://contracts.tempo.xyz",
+			"description": "Production"
+		},
+		{
+			"url": "http://localhost:6969",
+			"description": "local"
+		}
+	]
+}
