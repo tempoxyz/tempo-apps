@@ -54,9 +54,11 @@ export const getRouter = () => {
 			// https://docs.sentry.io/platforms/javascript/guides/tanstackstart-react/configuration/options/#sendDefaultPii
 			sendDefaultPii: true,
 			enableMetrics: true,
+			enableLogs: true,
 			integrations: [
 				Sentry.dedupeIntegration(),
 				Sentry.zodErrorsIntegration(),
+				Sentry.feedbackAsyncIntegration(),
 				Sentry.captureConsoleIntegration(),
 				Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
 			],

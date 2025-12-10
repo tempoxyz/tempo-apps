@@ -3,13 +3,14 @@ import handler, { type ServerEntry } from '@tanstack/react-start/server-entry'
 
 export default Sentry.withSentry(
 	(env: Cloudflare.Env) => {
-		const { id: versionId } = env.CF_VERSION_METADATA
+		const metadata = env.CF_VERSION_METADATA
 		return {
 			dsn: 'https://170113585c24ca7a67704f86cccd6750@o4510262603481088.ingest.us.sentry.io/4510467689218048',
-			release: versionId,
+			release: metadata.id,
 			// Adds request headers and IP for users, for more info visit:
 			// https://docs.sentry.io/platforms/javascript/guides/cloudflare/configuration/options/#sendDefaultPii
 			sendDefaultPii: true,
+			enableLogs: true,
 		}
 	},
 	{
