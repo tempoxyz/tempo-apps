@@ -58,7 +58,8 @@ export const getRouter = () => {
 			integrations: [
 				Sentry.dedupeIntegration(),
 				Sentry.zodErrorsIntegration(),
-				Sentry.feedbackAsyncIntegration(),
+    // keep disabled until we add feedback modal
+				// Sentry.feedbackAsyncIntegration(),
 				Sentry.captureConsoleIntegration(),
 				Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
 			],
