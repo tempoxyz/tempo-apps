@@ -29,24 +29,29 @@ export function useAutoloadAbi(args: {
 				if (!address) throw new Error('address is required')
 				if (!client) throw new Error('client is required')
 
-				const result = await whatsabi.autoload(address, {
-					provider: client,
-					followProxies: true,
-					abiLoader: new loaders.MultiABILoader([
-						new loaders.SourcifyABILoader({
-							chainId: client.chain?.id,
-						}),
-					]),
-				})
+				try {
+					const result = await whatsabi.autoload(address, {
+						provider: client,
+						followProxies: true,
+						abiLoader: new loaders.MultiABILoader([
+							new loaders.SourcifyABILoader({
+								chainId: client.chain?.id,
+							}),
+						]),
+						onError: () => false,
+					})
 
-				if (!result.abi.some((item) => (item as { name?: string }).name))
+					if (!result.abi.some((item) => (item as { name?: string }).name))
+						return null
+
+					return result.abi.map((abiItem) => ({
+						...abiItem,
+						inputs: ('inputs' in abiItem && abiItem.inputs) || [],
+						outputs: ('outputs' in abiItem && abiItem.outputs) || [],
+					}))
+				} catch {
 					return null
-
-				return result.abi.map((abiItem) => ({
-					...abiItem,
-					outputs:
-						'outputs' in abiItem && abiItem.outputs ? abiItem.outputs : [],
-				}))
+				}
 			},
 		}),
 	)
