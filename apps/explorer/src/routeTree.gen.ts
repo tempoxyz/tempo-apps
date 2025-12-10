@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as ApiTunnelRouteImport } from './routes/api/tunnel'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
@@ -33,6 +34,11 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => LayoutRoute,
+} as any)
+const ApiTunnelRoute = ApiTunnelRouteImport.update({
+  id: '/api/tunnel',
+  path: '/api/tunnel',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
@@ -104,6 +110,7 @@ export interface FileRoutesByFullPath {
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/tunnel': typeof ApiTunnelRoute
   '/': typeof LayoutIndexRoute
   '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
@@ -120,6 +127,7 @@ export interface FileRoutesByTo {
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/tunnel': typeof ApiTunnelRoute
   '/': typeof LayoutIndexRoute
   '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/tokens': typeof LayoutTokensRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/tunnel': typeof ApiTunnelRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/address/$address': typeof LayoutAddressAddressRoute
   '/_layout/block/$id': typeof LayoutBlockIdRoute
@@ -156,6 +165,7 @@ export interface FileRouteTypes {
     | '/blocks'
     | '/tokens'
     | '/api/search'
+    | '/api/tunnel'
     | '/'
     | '/address/$address'
     | '/block/$id'
@@ -172,6 +182,7 @@ export interface FileRouteTypes {
     | '/blocks'
     | '/tokens'
     | '/api/search'
+    | '/api/tunnel'
     | '/'
     | '/address/$address'
     | '/block/$id'
@@ -189,6 +200,7 @@ export interface FileRouteTypes {
     | '/_layout/blocks'
     | '/_layout/tokens'
     | '/api/search'
+    | '/api/tunnel'
     | '/_layout/'
     | '/_layout/address/$address'
     | '/_layout/block/$id'
@@ -205,6 +217,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
   ApiSearchRoute: typeof ApiSearchRoute
+  ApiTunnelRoute: typeof ApiTunnelRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -222,6 +235,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
+    }
+    '/api/tunnel': {
+      id: '/api/tunnel'
+      path: '/api/tunnel'
+      fullPath: '/api/tunnel'
+      preLoaderRoute: typeof ApiTunnelRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/search': {
       id: '/api/search'
@@ -355,6 +375,7 @@ const LayoutRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
   ApiSearchRoute: ApiSearchRoute,
+  ApiTunnelRoute: ApiTunnelRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

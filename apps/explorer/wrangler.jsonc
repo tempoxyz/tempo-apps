@@ -13,7 +13,6 @@
 		"mode": "smart"
 	},
 	"keep_vars": true,
-
 	"observability": {
 		"enabled": true,
 		"logs": {

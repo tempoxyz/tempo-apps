@@ -62,6 +62,7 @@ export const getRouter = () => {
 				Sentry.captureConsoleIntegration(),
 				Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
 			],
+			tunnel: '/api/tunnel',
 		})
 	}
 
