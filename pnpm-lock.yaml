@@ -21,12 +21,6 @@ catalogs:
     '@cloudflare/workers-types':
       specifier: ^4.20251209.0
       version: 4.20251209.0
-    '@ethereum-sourcify/compilers':
-      specifier: ^1.0.14
-      version: 1.0.14
-    '@ethereum-sourcify/lib-sourcify':
-      specifier: ^3.0.4
-      version: 3.0.4
     '@hono/zod-validator':
       specifier: ^0.7.5
       version: 0.7.5
@@ -127,7 +121,7 @@ catalogs:
       specifier: ^0.28.8
       version: 0.28.8
     ox:
-      specifier: ^0.9.17
+      specifier: 0.9.17
       version: 0.9.17
     react:
       specifier: ^19.2.1
@@ -175,7 +169,7 @@ catalogs:
       specifier: ^4.53.0
       version: 4.53.0
     zod:
-      specifier: ^4.1.13
+      specifier: 4.1.13
       version: 4.1.13
 
 importers:
@@ -197,18 +191,24 @@ importers:
 
   apps/contract-verification:
     dependencies:
+      '@cloudflare/containers':
+        specifier: ^0.0.30
+        version: 0.0.30
       '@ethereum-sourcify/compilers':
-        specifier: 'catalog:'
+        specifier: ^1.0.14
         version: 1.0.14
       '@ethereum-sourcify/lib-sourcify':
-        specifier: 'catalog:'
+        specifier: ^3.0.4
         version: 3.0.4
       drizzle-orm:
         specifier: ^0.45.0
-        version: 0.45.0(@cloudflare/workers-types@4.20251209.0)(better-sqlite3@12.5.0)(kysely@0.28.8)
+        version: 0.45.0(@cloudflare/workers-types@4.20251209.0)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.8)
       hono:
         specifier: 'catalog:'
         version: 4.10.8
+      ox:
+        specifier: 'catalog:'
+        version: 0.9.17(typescript@5.9.3)(zod@4.1.13)
       tempo.ts:
         specifier: 'catalog:'
         version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
@@ -225,9 +225,15 @@ importers:
       '@cloudflare/workers-types':
         specifier: 'catalog:'
         version: 4.20251209.0
+      '@ethereum-sourcify/compilers-types':
+        specifier: ^1.0.10
+        version: 1.0.10
       '@total-typescript/ts-reset':
         specifier: 'catalog:'
         version: 0.6.1
+      '@types/bun':
+        specifier: ^1.3.4
+        version: 1.3.4
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.2
@@ -784,6 +790,9 @@ packages:
     resolution: {integrity: sha512-l2M+Z8DO2vbvADOBNLbbh9y5ST1RY5sqkWOg/58GkUPBYou/cuNZ68SGQ644f1CvZ8kcOxyZtw06+dxWHIoN/w==}
     cpu: [x64]
     os: [win32]
+
+  '@cloudflare/containers@0.0.30':
+    resolution: {integrity: sha512-i148xBgmyn/pje82ZIyuTr/Ae0BT/YWwa1/GTJcw6DxEjUHAzZLaBCiX446U9OeuJ2rBh/L/9FIzxX5iYNt1AQ==}
 
   '@cloudflare/kv-asset-handler@0.4.1':
     resolution: {integrity: sha512-Nu8ahitGFFJztxUml9oD/DLb7Z28C8cd8F46IVQ7y5Btz575pvMY8AqZsXkX7Gds29eCKdMgIHjIvzskHgPSFg==}
@@ -1546,6 +1555,9 @@ packages:
   '@ethereum-sourcify/bytecode-utils@1.3.17':
     resolution: {integrity: sha512-Ix0TEd0o3umXXZ2zCJ6hd7+yaQMd2BojSvKUMLfka02gUSv/rJTW4rsPLUCx5npUuiQO6hF1XoqqPiEaD/CTpA==}
     engines: {node: '>=22.0.0'}
+
+  '@ethereum-sourcify/compilers-types@1.0.10':
+    resolution: {integrity: sha512-HaSZ8WNN0nmOy/1peDHbYhXU4rVJhly+XJSIxEdrJpzkCN6PXYS2lnXpNZKCrOWkQriXFOcdaznCNdZboXNZVQ==}
 
   '@ethereum-sourcify/compilers@1.0.14':
     resolution: {integrity: sha512-LXyBmPq6l0XXYyg2QposR5zDof18ll9UXl/sZIwZ5mg2h4JzFdG351SMlVzzyNMUBcitXYecickzGdnsOP4N4g==}
@@ -2991,6 +3003,9 @@ packages:
   '@types/babel__traverse@7.28.0':
     resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
 
+  '@types/bun@1.3.4':
+    resolution: {integrity: sha512-EEPTKXHP+zKGPkhRLv+HI0UEX8/o+65hqARxLy8Ov5rIxMBPNTjeZww00CIihrIQGEQBYg+0roO5qOnS/7boGA==}
+
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
 
@@ -3524,6 +3539,9 @@ packages:
 
   buffer@5.7.1:
     resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
+
+  bun-types@1.3.4:
+    resolution: {integrity: sha512-5ua817+BZPZOlNaRgGBpZJOSAQ9RQ17pkwPD0yR7CfJg+r8DgIILByFifDTa+IPDDxzf5VNhtNlcKqFzDgJvlQ==}
 
   cac@6.7.14:
     resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
@@ -6153,6 +6171,8 @@ snapshots:
   '@cbor-extract/cbor-extract-win32-x64@2.2.0':
     optional: true
 
+  '@cloudflare/containers@0.0.30': {}
+
   '@cloudflare/kv-asset-handler@0.4.1':
     dependencies:
       mime: 3.0.0
@@ -6685,6 +6705,8 @@ snapshots:
       semver: 7.7.3
     optionalDependencies:
       fsevents: 2.3.3
+
+  '@ethereum-sourcify/compilers-types@1.0.10': {}
 
   '@ethereum-sourcify/compilers@1.0.14':
     dependencies:
@@ -8608,6 +8630,10 @@ snapshots:
     dependencies:
       '@babel/types': 7.28.5
 
+  '@types/bun@1.3.4':
+    dependencies:
+      bun-types: 1.3.4
+
   '@types/chai@5.2.3':
     dependencies:
       '@types/deep-eql': 4.0.2
@@ -9120,6 +9146,10 @@ snapshots:
       base64-js: 1.5.1
       ieee754: 1.2.1
 
+  bun-types@1.3.4:
+    dependencies:
+      '@types/node': 24.10.2
+
   cac@6.7.14: {}
 
   callsites@3.1.0: {}
@@ -9384,10 +9414,11 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.45.0(@cloudflare/workers-types@4.20251209.0)(better-sqlite3@12.5.0)(kysely@0.28.8):
+  drizzle-orm@0.45.0(@cloudflare/workers-types@4.20251209.0)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.8):
     optionalDependencies:
       '@cloudflare/workers-types': 4.20251209.0
       better-sqlite3: 12.5.0
+      bun-types: 1.3.4
       kysely: 0.28.8
 
   electron-to-chromium@1.5.267: {}

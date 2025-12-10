@@ -4,8 +4,6 @@ set -eou pipefail
 
 # Scans `.wrangler/state/v3/d1/miniflare-D1DatabaseObject`
 # for the latest sqlite file and returns its full path
-# Compatible with macOS (BSD) and Linux (GNU)
-
 d1_dir=".wrangler/state/v3/d1/miniflare-D1DatabaseObject"
 
 if [[ ! -d "$d1_dir" ]]; then
