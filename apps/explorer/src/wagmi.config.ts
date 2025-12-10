@@ -39,8 +39,8 @@ export function getConfig(
 		batch: { multicall: false },
 		transports: {
 			[tempoTestnet.id]: rpcUrl
-					? http(rpcUrl)
-					: webSocket('wss://rpc-orchestra.testnet.tempo.xyz'),
+				? http(rpcUrl)
+				: webSocket('wss://rpc-orchestra.testnet.tempo.xyz'),
 			[tempoLocal.id]: http(undefined, {
 				batch: true,
 			}),

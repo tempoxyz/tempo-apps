@@ -7,6 +7,7 @@ import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'
 import { Receipt } from '#comps/Receipt'
+import { apostrophe } from '#lib/chars'
 import { parseKnownEvents } from '#lib/domain/known-events'
 import { LineItems } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
@@ -70,7 +71,12 @@ function parseHashFromParams(params: unknown): Hex.Hex | null {
 
 export const Route = createFileRoute('/_layout/receipt/$hash')({
 	component: Component,
-	notFoundComponent: NotFound,
+	notFoundComponent: () => (
+		<NotFound
+			title="Receipt Not Found"
+			message={`The receipt doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
+		/>
+	),
 	headers: () => ({
 		...(import.meta.env.PROD
 			? {

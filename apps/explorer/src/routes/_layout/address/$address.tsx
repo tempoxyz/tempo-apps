@@ -36,6 +36,7 @@ import {
 	useTransactionDataFromBatch,
 } from '#comps/TxTransactionRow'
 import { cx } from '#cva.config.ts'
+import { apostrophe } from '#lib/chars'
 import {
 	type ContractInfo,
 	extractContractAbi,
@@ -165,14 +166,20 @@ function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
 		const decimals = asset.metadata?.decimals
 		const balance = asset.balance
 		if (decimals === undefined || balance === undefined) continue
-		total = (total ?? 0) + Number(formatUnits(balance, decimals)) * PRICE_PER_TOKEN
+		total =
+			(total ?? 0) + Number(formatUnits(balance, decimals)) * PRICE_PER_TOKEN
 	}
 	return total
 }
 
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
-	notFoundComponent: NotFound,
+	notFoundComponent: () => (
+		<NotFound
+			title="Address Not Found"
+			message={`The address doesn${apostrophe}t exist or is invalid.`}
+		/>
+	),
 	validateSearch: z.object({
 		page: z.prefault(z.number(), defaultSearchValues.page),
 		limit: z.prefault(

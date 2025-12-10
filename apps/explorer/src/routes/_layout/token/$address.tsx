@@ -27,7 +27,7 @@ import { TimestampCell } from '#comps/TimestampCell'
 import { TransactionCell } from '#comps/TransactionCell'
 import { TruncatedHash } from '#comps/TruncatedHash'
 import { cx } from '#cva.config.ts'
-import { ellipsis } from '#lib/chars'
+import { apostrophe, ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
 import { PriceFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
@@ -48,7 +48,12 @@ type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
 export const Route = createFileRoute('/_layout/token/$address')({
 	component: RouteComponent,
-	notFoundComponent: NotFound,
+	notFoundComponent: () => (
+		<NotFound
+			title="Token Not Found"
+			message={`The token doesn${apostrophe}t exist or is invalid.`}
+		/>
+	),
 	validateSearch: z.object({
 		page: z.prefault(z.number(), defaultSearchValues.page),
 		limit: z.prefault(

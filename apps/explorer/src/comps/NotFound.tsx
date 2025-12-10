@@ -1,51 +1,12 @@
-import { Link, useMatch } from '@tanstack/react-router'
-import { Hex } from 'ox'
-import { apostrophe } from '#lib/chars'
+import { Link } from '@tanstack/react-router'
 
-export function NotFound() {
-	const txMatch = useMatch({
-		from: '/_layout/tx/$hash',
-		shouldThrow: false,
-	})
-	const receiptMatch = useMatch({
-		from: '/_layout/receipt/$hash',
-		shouldThrow: false,
-	})
+export interface NotFoundProps {
+	title: string
+	message: string
+	hash?: string
+}
 
-	const txHash = txMatch?.params?.hash
-	const receiptHash = receiptMatch?.params?.hash
-
-	const isTxNotFound =
-		txMatch?.status === 'notFound' &&
-		txHash &&
-		Hex.validate(txHash) &&
-		Hex.size(txHash) === 32
-
-	const isReceiptNotFound =
-		receiptMatch?.status === 'notFound' &&
-		receiptHash &&
-		Hex.validate(receiptHash) &&
-		Hex.size(receiptHash) === 32
-
-	const hash = isTxNotFound ? txHash : isReceiptNotFound ? receiptHash : null
-
-	const [title, message] = (() => {
-		if (isTxNotFound)
-			return [
-				'Transaction Not Found',
-				`The transaction doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`,
-			]
-		if (isReceiptNotFound)
-			return [
-				'Receipt Not Found',
-				`The receipt doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`,
-			]
-		return [
-			'Page Not Found',
-			`The page you${apostrophe}re looking for doesn${apostrophe}t exist or has been moved.`,
-		]
-	})()
-
+export function NotFound({ title, message, hash }: NotFoundProps) {
 	return (
 		<section className="flex flex-1 size-full items-center justify-center relative">
 			<div className="flex flex-col items-center gap-[8px] z-1 px-[16px] w-full max-w-[600px]">

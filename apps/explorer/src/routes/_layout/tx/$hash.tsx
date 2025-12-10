@@ -23,6 +23,7 @@ import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#cva.config.ts'
+import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
@@ -36,7 +37,12 @@ const defaultSearchValues = {
 
 export const Route = createFileRoute('/_layout/tx/$hash')({
 	component: RouteComponent,
-	notFoundComponent: NotFound,
+	notFoundComponent: () => (
+		<NotFound
+			title="Transaction Not Found"
+			message={`The transaction doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
+		/>
+	),
 	headers: () => ({
 		...(import.meta.env.PROD
 			? {

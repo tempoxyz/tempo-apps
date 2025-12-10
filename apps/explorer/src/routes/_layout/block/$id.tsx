@@ -21,6 +21,7 @@ import { Sections } from '#comps/Sections'
 import { TruncatedHash } from '#comps/TruncatedHash'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#cva.config.ts'
+import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { DateFormatter, PriceFormatter } from '#lib/formatting.ts'
 import { useMediaQuery } from '#lib/hooks'
@@ -43,7 +44,12 @@ interface TransactionTypeResult {
 
 export const Route = createFileRoute('/_layout/block/$id')({
 	component: RouteComponent,
-	notFoundComponent: NotFound,
+	notFoundComponent: () => (
+		<NotFound
+			title="Block Not Found"
+			message={`The block doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
+		/>
+	),
 	validateSearch: z.object({
 		page: z.prefault(z.coerce.number(), defaultSearchValues.page),
 	}),

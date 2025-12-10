@@ -3,6 +3,7 @@ import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { hashFn } from 'wagmi/query'
 import { NotFound } from '#comps/NotFound'
+import { apostrophe } from '#lib/chars'
 import { Layout } from '#routes/_layout'
 import { routeTree } from '#routeTree.gen.ts'
 
@@ -26,7 +27,10 @@ export const getRouter = () => {
 		defaultPreloadDelay: 150,
 		defaultNotFoundComponent: () => (
 			<Layout>
-				<NotFound />
+				<NotFound
+					title="Page Not Found"
+					message={`The page you${apostrophe}re looking for doesn${apostrophe}t exist or has been moved.`}
+				/>
 			</Layout>
 		),
 	})
