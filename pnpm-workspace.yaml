@@ -8,7 +8,9 @@ catalog:
   '@cloudflare/vite-plugin': ^1.17.0
   '@cloudflare/vitest-pool-workers': ^0.10.14
   '@cloudflare/workers-types': ^4.20251209.0
-  '@hono/zod-validator': 0.7.5
+  '@ethereum-sourcify/compilers': ^1.0.14
+  '@ethereum-sourcify/lib-sourcify': ^3.0.4
+  '@hono/zod-validator': ^0.7.5
   '@iconify/json': ^2.2.416
   '@sentry/browser': ^10.29.0
   '@sentry/cloudflare': ^10.29.0
@@ -60,3 +62,7 @@ catalog:
   zod: 4.2.0
 
 catalogMode: strict
+
+onlyBuiltDependencies:
+  - better-sqlite3
+  - esbuild
