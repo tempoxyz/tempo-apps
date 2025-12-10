@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 
+const SENTRY_INGEST_HOST = 'o4510467689218048.ingest.us.sentry.io'
 const ALLOWED_PROJECT_IDS = new Set(['4510467689218048'])
 
 export const Route = createFileRoute('/api/tunnel')({
@@ -17,7 +18,7 @@ export const Route = createFileRoute('/api/tunnel')({
 
 					let envelope: { dsn?: string }
 					try {
-						envelope = JSON.parse(headerLine)
+						envelope = JSON.parse(headerLine) as { dsn?: string }
 					} catch {
 						return new Response('Invalid envelope: malformed header', {
 							status: 400,
@@ -36,7 +37,7 @@ export const Route = createFileRoute('/api/tunnel')({
 					if (!ALLOWED_PROJECT_IDS.has(projectId))
 						return new Response('Invalid project ID', { status: 400 })
 
-					const sentryIngestUrl = `https://${dsnUrl.host}/api/${projectId}/envelope/`
+					const sentryIngestUrl = `https://${SENTRY_INGEST_HOST}/api/${projectId}/envelope/`
 
 					const response = await fetch(sentryIngestUrl, {
 						method: 'POST',
