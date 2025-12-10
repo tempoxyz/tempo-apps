@@ -1,6 +1,7 @@
 {
 	"recommendations": [
 		"biomejs.biome",
+		"timonwong.shellcheck",
 		"dorzey.vscode-sqlfluff",
 		"bradlc.vscode-tailwindcss",
 		"wayou.vscode-todo-highlight"

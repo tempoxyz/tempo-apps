@@ -8,8 +8,6 @@ catalog:
   '@cloudflare/vite-plugin': ^1.17.0
   '@cloudflare/vitest-pool-workers': ^0.10.14
   '@cloudflare/workers-types': ^4.20251209.0
-  '@ethereum-sourcify/compilers': ^1.0.14
-  '@ethereum-sourcify/lib-sourcify': ^3.0.4
   '@hono/zod-validator': ^0.7.5
   '@iconify/json': ^2.2.416
   '@sentry/browser': ^10.29.0
@@ -43,7 +41,7 @@ catalog:
   hono: ^4.10.8
   idxs: ^0.0.5
   kysely: ^0.28.8
-  ox: ^0.9.17
+  ox: 0.9.17
   react: ^19.2.1
   react-dom: ^19.2.1
   tailwind-merge: ^3.4.0
@@ -59,10 +57,12 @@ catalog:
   vitest: 3.2.4
   wagmi: ^3.1.0
   wrangler: ^4.53.0
+<<<<<<< HEAD
   zod: 4.2.0
+||||||| parent of 8d80cd0 (feat: local example running e2e)
+  zod: ^4.1.13
+=======
+  zod: 4.1.13
+>>>>>>> 8d80cd0 (feat: local example running e2e)
 
 catalogMode: strict
-
-onlyBuiltDependencies:
-  - better-sqlite3
-  - esbuild

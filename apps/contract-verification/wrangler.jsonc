@@ -7,6 +7,36 @@
 	"keep_vars": true,
 	"workers_dev": true,
 	"preview_urls": true,
+	"d1_databases": [
+		{
+			"binding": "CONTRACTS_DB",
+			"migrations_dir": "drizzle",
+			"database_name": "CONTRACTS-DB",
+			"database_id": "9e8d88e6-8bf0-40ae-860a-c1385dccaefc"
+		}
+	],
+	"containers": [
+		{
+			"max_instances": 5,
+			"name": "VerificationContainer",
+			"class_name": "VerificationContainer",
+			"image": "./Dockerfile"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "VERIFICATION_CONTAINER",
+				"class_name": "VerificationContainer"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["VerificationContainer"]
+		}
+	],
 	"observability": {
 		"enabled": true,
 		"logs": {
@@ -15,13 +45,5 @@
 			"head_sampling_rate": 1,
 			"invocation_logs": true
 		}
-	},
-	"d1_databases": [
-		{
-			"binding": "CONTRACTS_DB",
-			"migrations_dir": "drizzle",
-			"database_name": "CONTRACTS-DB",
-			"database_id": "9e8d88e6-8bf0-40ae-860a-c1385dccaefc"
-		}
-	]
+	}
 }
