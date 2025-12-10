@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/tanstackstart-react'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { QueryClient } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -9,9 +10,9 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { useEffect } from 'react'
+import * as React from 'react'
 import { WagmiProvider } from 'wagmi'
-import { ErrorBoundary } from '#comps/ErrorBoundary'
+import { SentryWrappedErrorBoundary } from '#comps/ErrorBoundary'
 import { ProgressLine } from '#comps/ProgressLine'
 import { config, persister, queryClient } from '#wagmi.config'
 import css from './styles.css?url'
@@ -125,11 +126,17 @@ export const Route = createRootRouteWithContext<{
 			},
 		],
 	}),
-	errorComponent: (props) => (
-		<RootDocument>
-			<ErrorBoundary {...props} />
-		</RootDocument>
-	),
+	errorComponent: (props) => {
+		React.useEffect(() => {
+			Sentry.captureException(props.error)
+		}, [props.error])
+
+		return (
+			<RootDocument>
+				<SentryWrappedErrorBoundary {...props} />
+			</RootDocument>
+		)
+	},
 	shellComponent: RootDocument,
 })
 
@@ -185,7 +192,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 let theme: 'light' | 'dark' | undefined
 
 function useDevTools() {
-	useEffect(() => {
+	React.useEffect(() => {
 		if (import.meta.env.VITE_ENABLE_COLOR_SCHEME_TOGGLE !== 'true') return
 		const handleKeyPress = (e: KeyboardEvent) => {
 			if (
@@ -214,7 +221,7 @@ function useDevTools() {
 		return () => window.removeEventListener('keydown', handleKeyPress)
 	}, [])
 
-	useEffect(() => {
+	React.useEffect(() => {
 		if (
 			import.meta.env.MODE === 'development' &&
 			import.meta.env.VITE_ENABLE_DEVTOOLS !== 'false'
