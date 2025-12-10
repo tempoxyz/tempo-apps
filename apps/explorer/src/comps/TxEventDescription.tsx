@@ -6,7 +6,12 @@ import { Address } from '#comps/Address'
 import { Amount } from '#comps/Amount'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import {
+	DateFormatter,
+	HexFormatter,
+	PriceFormatter,
+	RoleFormatter,
+} from '#lib/formatting.ts'
 
 export function TxEventDescription(props: TxEventDescription.Props) {
 	const { event, seenAs, className } = props
@@ -70,6 +75,13 @@ export namespace TxEventDescription {
 								? Value.format(...part.value)
 								: Value.format(BigInt(part.value)),
 						)}
+					</span>
+				)
+			case 'role':
+				return (
+					<span className="items-end whitespace-nowrap" title={part.value}>
+						{RoleFormatter.getRoleName(part.value) ||
+							HexFormatter.shortenHex(part.value)}
 					</span>
 				)
 			case 'text':

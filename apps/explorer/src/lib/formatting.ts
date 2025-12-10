@@ -1,4 +1,4 @@
-import { type Hex, Value } from 'ox'
+import { Hash, Hex, Value } from 'ox'
 
 export namespace HexFormatter {
 	export function truncate(value: Hex.Hex, chars = 4) {
@@ -12,6 +12,24 @@ export namespace HexFormatter {
 		return hex.length < chars * 2 + 2
 			? hex
 			: `${hex.slice(0, chars + 2)}…${hex.slice(-chars)}`
+	}
+}
+
+export namespace RoleFormatter {
+	const KNOWN_ROLES = [
+		'DEFAULT_ADMIN_ROLE',
+		'ISSUER_ROLE',
+		'PAUSE_ROLE',
+		'UNPAUSE_ROLE',
+		'BURN_BLOCKED_ROLE',
+	] as const
+
+	const roleHashMap = new Map<Hex.Hex, string>(
+		KNOWN_ROLES.map((role) => [Hash.keccak256(Hex.fromString(role)), role]),
+	)
+
+	export function getRoleName(roleHash: Hex.Hex): string | undefined {
+		return roleHashMap.get(roleHash)
 	}
 }
 
