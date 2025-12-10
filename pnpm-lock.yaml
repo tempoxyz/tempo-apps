@@ -27,6 +27,9 @@ catalogs:
     '@iconify/json':
       specifier: ^2.2.416
       version: 2.2.416
+    '@sentry/browser':
+      specifier: ^10.29.0
+      version: 10.29.0
     '@sentry/cloudflare':
       specifier: ^10.29.0
       version: 10.29.0
@@ -188,6 +191,9 @@ importers:
 
   apps/explorer:
     dependencies:
+      '@sentry/browser':
+        specifier: 'catalog:'
+        version: 10.29.0
       '@sentry/cloudflare':
         specifier: 'catalog:'
         version: 10.29.0(@cloudflare/workers-types@4.20251209.0)

@@ -1,9 +1,8 @@
-import { env } from 'cloudflare:workers'
 import * as Sentry from '@sentry/cloudflare'
 import handler, { type ServerEntry } from '@tanstack/react-start/server-entry'
 
 export default Sentry.withSentry(
-	(env: Env) => {
+	(env: Cloudflare.Env) => {
 		const { id: versionId } = env.CF_VERSION_METADATA
 		return {
 			dsn: 'https://170113585c24ca7a67704f86cccd6750@o4510262603481088.ingest.us.sentry.io/4510467689218048',

@@ -19,9 +19,9 @@ export default defineConfig((config) => {
 			showDevtools && vitePluginChromiumDevTools(),
 			config.mode === 'production' &&
 				sentryVitePlugin({
-					org: 'sentry',
-					project: 'explorer',
-					authToken: process.env.SENTRY_AUTH_TOKEN,
+					org: 'tempoxyz',
+					project: 'tempo-explorer',
+					authToken: env.SENTRY_AUTH_TOKEN,
 				}),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tsconfigPaths({

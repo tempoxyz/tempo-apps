@@ -10,5 +10,7 @@ interface ImportMeta {
 }
 
 declare namespace NodeJS {
-	interface ProcessEnv extends EnvironmentVariables {}
+	interface ProcessEnv extends EnvironmentVariables {
+		readonly NODE_ENV: 'development' | 'production' | 'test'
+	}
 }

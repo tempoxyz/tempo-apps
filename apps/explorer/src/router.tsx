@@ -32,22 +32,36 @@ export const getRouter = () => {
 		),
 	})
 
-	if (!router.isServer)
-		Sentry.init({
-			dsn: 'https://170113585c24ca7a67704f86cccd6750@o4510262603481088.ingest.us.sentry.io/4510467689218048',
-			// enabled: import.meta.env.PROD,
-			// 'tunnel'
-			// Adds request headers and IP for users, for more info visit:
-			// https://docs.sentry.io/platforms/javascript/guides/tanstackstart-react/configuration/options/#sendDefaultPii
-			sendDefaultPii: true,
-		})
-
 	// @see https://tanstack.com/router/latest/docs/integrations/query
 	setupRouterSsrQueryIntegration({
 		router,
 		queryClient,
 		wrapQueryClient: false,
 	})
+
+	if (!router.isServer) {
+		Sentry.init({
+			dsn: 'https://170113585c24ca7a67704f86cccd6750@o4510262603481088.ingest.us.sentry.io/4510467689218048',
+			enabled: import.meta.env.PROD,
+			// This sets the sample rate to be 10%. You may want this to be 100% while
+			// in development and sample at a lower rate in production
+			replaysSessionSampleRate: 0.1,
+			// If the entire session is not sampled, use the below sample rate to sample
+			// sessions when an error occurs.
+			replaysOnErrorSampleRate: 1.0,
+			// 'tunnel'
+			// Adds request headers and IP for users, for more info visit:
+			// https://docs.sentry.io/platforms/javascript/guides/tanstackstart-react/configuration/options/#sendDefaultPii
+			sendDefaultPii: true,
+			enableMetrics: true,
+			integrations: [
+				Sentry.dedupeIntegration(),
+				Sentry.zodErrorsIntegration(),
+				Sentry.captureConsoleIntegration(),
+				Sentry.replayIntegration({ maskAllText: true, blockAllMedia: true }),
+			],
+		})
+	}
 
 	return router
 }

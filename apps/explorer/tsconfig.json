@@ -17,7 +17,7 @@
 		"allowImportingTsExtensions": true,
 		"verbatimModuleSyntax": false,
 		"noEmit": true,
-
+		"allowJs": true,
 		/* Linting */
 		"skipLibCheck": true,
 		"strict": true,
@@ -32,6 +32,11 @@
 			"#cva": ["./src/cva.config.ts"]
 		}
 	},
-	"files": ["env.d.ts", "reset.d.ts", "worker-configuration.d.ts"],
+	"files": [
+		"env.d.ts",
+		"reset.d.ts",
+		"worker-configuration.d.ts",
+		"instrument.server.mjs"
+	],
 	"exclude": ["**/_/**", "node_modules", "**/*.test.ts", "**/*.test.tsx"]
 }

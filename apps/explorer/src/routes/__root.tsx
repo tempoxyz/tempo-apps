@@ -12,7 +12,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
 import { WagmiProvider } from 'wagmi'
-import { ErrorBoundary } from '#comps/ErrorBoundary'
+import { SentryWrappedErrorBoundary } from '#comps/ErrorBoundary'
 import { ProgressLine } from '#comps/ProgressLine'
 import { config, persister, queryClient } from '#wagmi.config'
 import css from './styles.css?url'
@@ -133,7 +133,7 @@ export const Route = createRootRouteWithContext<{
 
 		return (
 			<RootDocument>
-				<ErrorBoundary {...props} />
+				<SentryWrappedErrorBoundary {...props} />
 			</RootDocument>
 		)
 	},
@@ -158,14 +158,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					start={800}
 					className="fixed top-0 left-0 right-0 z-1"
 				/>
-				<button
-					type="button"
-					onClick={() => {
-						throw new Error('Sentry Test Error')
-					}}
-				>
-					Break the world
-				</button>
 				<WagmiProvider config={config}>
 					<PersistQueryClientProvider
 						client={queryClient}

@@ -17,6 +17,7 @@
 		"test": "vitest"
 	},
 	"dependencies": {
+		"@sentry/browser": "catalog:",
 		"@sentry/cloudflare": "catalog:",
 		"@sentry/tanstackstart-react": "catalog:",
 		"@shazow/whatsabi": "catalog:",
