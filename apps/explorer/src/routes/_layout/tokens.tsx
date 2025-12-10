@@ -85,7 +85,7 @@ function TokensPage() {
 											>
 												{token.symbol}
 											</span>,
-											<span key="name" className="truncate">
+											<span key="name" className="truncate max-w-[40ch]">
 												{token.name}
 											</span>,
 											<span key="currency" className="text-secondary">
