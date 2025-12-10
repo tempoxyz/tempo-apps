@@ -5,9 +5,9 @@ import type { Block } from 'viem'
 import { useBlock, useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { Midcut } from '#comps/Midcut'
 import { Pagination } from '#comps/Pagination'
 import { FormattedTimestamp, useTimeFormat } from '#comps/TimeFormat'
-import { TruncatedHash } from '#comps/TruncatedHash'
 import { cx } from '#cva.config.ts'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
 import { config } from '#wagmi.config.ts'
@@ -281,7 +281,7 @@ function BlockRow({
 					className="text-secondary hover:text-accent transition-colors"
 					title={blockHash}
 				>
-					<TruncatedHash hash={blockHash} minChars={8} />
+					<Midcut value={blockHash} prefix="0x" />
 				</Link>
 			</div>
 			<div className="text-right text-secondary tabular-nums min-w-[120px]">

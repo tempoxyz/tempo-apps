@@ -149,6 +149,8 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 	}
 
 	return (
-		<span className="text-primary">{PriceFormatter.format(totalValue)}</span>
+		<span className="text-primary">
+			{PriceFormatter.format(totalValue, { format: 'short' })}
+		</span>
 	)
 }

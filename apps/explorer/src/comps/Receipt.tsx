@@ -1,10 +1,11 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import { useState } from 'react'
+import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 
 export function Receipt(props: Receipt.Props) {
@@ -47,19 +48,18 @@ export function Receipt(props: Receipt.Props) {
 								{String(blockNumber)}
 							</Link>
 						</div>
-						<div className="flex justify-between items-end">
-							<span className="text-tertiary capitalize">Sender</span>
+						<div className="flex justify-between items-end gap-4">
+							<span className="text-tertiary capitalize shrink-0">Sender</span>
 							<Link
 								to="/address/$address"
 								params={{ address: sender }}
-								className="text-accent text-right press-down"
-								title={sender}
+								className="text-accent text-right press-down min-w-0 flex-1 flex justify-end"
 							>
-								{HexFormatter.shortenHex(sender)}
+								<Midcut value={sender} prefix="0x" align="end" />
 							</Link>
 						</div>
-						<div className="flex justify-between items-start">
-							<div className="relative">
+						<div className="flex justify-between items-start gap-4">
+							<div className="relative shrink-0">
 								<span className="text-tertiary capitalize">Hash</span>
 								{copyHash.notifying && (
 									<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px] text-accent">
@@ -71,7 +71,7 @@ export function Receipt(props: Receipt.Props) {
 								<button
 									type="button"
 									onClick={() => copyHash.copy(hash)}
-									className="text-right break-all max-w-[11ch] cursor-pointer press-down"
+									className="text-right break-all max-w-[11ch] cursor-pointer press-down min-w-0 flex-1"
 								>
 									{hash}
 								</button>
@@ -79,10 +79,9 @@ export function Receipt(props: Receipt.Props) {
 								<button
 									type="button"
 									onClick={() => setHashExpanded(true)}
-									className="text-right cursor-pointer press-down"
-									title={hash}
+									className="text-right cursor-pointer press-down min-w-0 flex-1 flex justify-end"
 								>
-									{HexFormatter.shortenHex(hash)}
+									<Midcut value={hash} prefix="0x" align="end" />
 								</button>
 							)}
 						</div>
@@ -155,7 +154,7 @@ export function Receipt(props: Receipt.Props) {
 											</div>
 											{event.note && (
 												<div className="flex flex-row items-center pl-[24px] gap-[11px] overflow-hidden">
-													<div className="border-l border-base-border pl-[10px]">
+													<div className="border-l border-base-border pl-[10px] w-full">
 														{typeof event.note === 'string' ? (
 															<span
 																className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
@@ -168,11 +167,16 @@ export function Receipt(props: Receipt.Props) {
 																{event.note.map(([label, part], index) => {
 																	const key = `${label}${index}`
 																	return (
-																		<div key={key} className="flex gap-2">
-																			<div className="text-tertiary">
+																		<div
+																			key={key}
+																			className="flex gap-2 min-w-0"
+																		>
+																			<div className="text-tertiary shrink-0">
 																				{label}:
 																			</div>
-																			<TxEventDescription.Part part={part} />
+																			<div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+																				<TxEventDescription.Part part={part} />
+																			</div>
 																		</div>
 																	)
 																})}
@@ -235,9 +239,8 @@ export function Receipt(props: Receipt.Props) {
 																to="/address/$address"
 																params={{ address: item.payer }}
 																className="text-accent press-down"
-																title={item.payer}
 															>
-																{HexFormatter.shortenHex(item.payer)}
+																<Midcut value={item.payer} prefix="0x" />
 															</Link>
 															<span className="text-tertiary">paid</span>
 														</>
@@ -271,7 +274,7 @@ export function Receipt(props: Receipt.Props) {
 			</div>
 
 			<div className="flex flex-col items-center -mt-5 w-full print:hidden">
-				<div className="max-w-[360px] w-full">
+				<div className="max-w-[360px] w-full flex">
 					<Link
 						to="/tx/$hash"
 						params={{ hash }}

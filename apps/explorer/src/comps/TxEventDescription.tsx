@@ -4,16 +4,17 @@ import * as React from 'react'
 import { isAddressEqual } from 'viem'
 import { Address } from '#comps/Address'
 import { Amount } from '#comps/Amount'
+import { Midcut } from '#comps/Midcut'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { DateFormatter, PriceFormatter } from '#lib/formatting.ts'
 
 export function TxEventDescription(props: TxEventDescription.Props) {
-	const { event, seenAs, className } = props
+	const { event, seenAs, className, suffix } = props
 	return (
 		<div
 			className={cx(
-				'flex flex-row items-center gap-[6px] leading-[18px] flex-wrap',
+				'flex flex-row items-center gap-[6px] leading-[18px] flex-wrap min-w-0 flex-1',
 				className,
 			)}
 		>
@@ -24,6 +25,7 @@ export function TxEventDescription(props: TxEventDescription.Props) {
 					seenAs={seenAs}
 				/>
 			))}
+			{suffix}
 		</div>
 	)
 }
@@ -33,6 +35,7 @@ export namespace TxEventDescription {
 		event: KnownEvent
 		seenAs?: AddressType.Address
 		className?: string | undefined
+		suffix?: React.ReactNode
 	}
 
 	export function Part(props: Part.Props) {
@@ -58,20 +61,25 @@ export namespace TxEventDescription {
 				return <span>{DateFormatter.formatDuration(part.value)}</span>
 			case 'hex':
 				return (
-					<span className="items-end whitespace-nowrap" title={part.value}>
-						{HexFormatter.shortenHex(part.value)}
+					<span className="items-end whitespace-nowrap min-w-0 flex-1">
+						<Midcut value={part.value} prefix="0x" />
 					</span>
 				)
-			case 'number':
+			case 'number': {
+				const formatted = PriceFormatter.formatAmount(
+					Array.isArray(part.value)
+						? Value.format(...part.value)
+						: Value.format(BigInt(part.value)),
+				)
 				return (
-					<span className="items-end">
-						{PriceFormatter.formatAmount(
-							Array.isArray(part.value)
-								? Value.format(...part.value)
-								: Value.format(BigInt(part.value)),
-						)}
+					<span
+						className="items-end overflow-hidden text-ellipsis whitespace-nowrap"
+						title={formatted}
+					>
+						{formatted}
 					</span>
 				)
+			}
 			case 'text':
 				return <span>{part.value}</span>
 			case 'tick':
@@ -82,10 +90,15 @@ export namespace TxEventDescription {
 						to="/token/$address"
 						params={{ address: part.value.address }}
 						title={part.value.address}
-						className="press-down whitespace-nowrap"
+						className={cx(
+							'press-down whitespace-nowrap',
+							!part.value.symbol && 'min-w-0 flex-1',
+						)}
 					>
 						<span className="text-base-content-positive items-end">
-							{part.value.symbol || HexFormatter.shortenHex(part.value.address)}
+							{part.value.symbol || (
+								<Midcut value={part.value.address} prefix="0x" />
+							)}
 						</span>
 					</Link>
 				)
@@ -112,13 +125,12 @@ export namespace TxEventDescription {
 		} = props
 		const [expanded, setExpanded] = React.useState(false)
 
-		if (!events || events.length === 0) {
+		if (!events || events.length === 0)
 			return (
 				<div className="text-tertiary flex items-center">
 					<span className="inline-block">{emptyContent}</span>
 				</div>
 			)
-		}
 
 		let eventsToShow = events
 		if (!expanded) {
@@ -132,28 +144,30 @@ export namespace TxEventDescription {
 			: eventsToShow
 
 		return (
-			<div className="flex flex-col gap-[4px]">
-				{displayEvents.map((event, index) => (
-					<div
-						key={`${event.type}-${index}`}
-						className="inline-flex items-center gap-[6px] flex-wrap"
-					>
+			<div className="flex flex-col gap-[4px] flex-1">
+				{displayEvents.map((event, index) => {
+					const isLast = index === displayEvents.length - 1
+					const showMore = isLast && remainingCount > 0
+					return (
 						<TxEventDescription
+							key={`${event.type}-${index}`}
 							event={event}
 							seenAs={seenAs}
 							className="flex flex-row items-center gap-[6px]"
+							suffix={
+								showMore && (
+									<button
+										type="button"
+										onClick={() => setExpanded(true)}
+										className="text-base-content-secondary cursor-pointer press-down shrink-0"
+									>
+										and {remainingCount} more
+									</button>
+								)
+							}
 						/>
-						{index === displayEvents.length - 1 && remainingCount > 0 && (
-							<button
-								type="button"
-								onClick={() => setExpanded(true)}
-								className="text-base-content-secondary cursor-pointer press-down shrink-0"
-							>
-								and {remainingCount} more
-							</button>
-						)}
-					</div>
-				))}
+					)
+				})}
 			</div>
 		)
 	}

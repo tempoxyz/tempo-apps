@@ -76,7 +76,7 @@ function SpotlightLinks() {
 	return (
 		<section className="text-center">
 			<span className="text-sm font-medium text-base-content-tertiary">
-				Try
+				Check out our examples
 			</span>
 			<div className="flex items-center gap-[8px] mt-2 text-[14px] text-base-content-tertiary">
 				<SpotlightLink
@@ -131,7 +131,7 @@ function SpotlightLink(props: {
 		<Link
 			to={to}
 			{...(params ? { params } : {})}
-			className="text-base-content-secondary hover:text-base-content transition-colors duration-150 underline underline-offset-2 decoration-base-border hover:decoration-base-content-secondary"
+			className="text-base-content-secondary hover:text-base-content underline underline-offset-2 decoration-base-border hover:decoration-base-content-secondary press-down"
 		>
 			{children}
 		</Link>
