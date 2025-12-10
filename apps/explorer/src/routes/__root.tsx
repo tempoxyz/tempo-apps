@@ -115,13 +115,13 @@ export const Route = createRootRouteWithContext<{
 			{
 				rel: 'apple-touch-icon',
 				sizes: '180x180',
-				href: '/apple-touch-icon-light.png',
+				href: '/favicon-light.png',
 				media: '(prefers-color-scheme: light)',
 			},
 			{
 				rel: 'apple-touch-icon',
 				sizes: '180x180',
-				href: '/apple-touch-icon-dark.png',
+				href: '/favicon-dark.png',
 				media: '(prefers-color-scheme: dark)',
 			},
 		],

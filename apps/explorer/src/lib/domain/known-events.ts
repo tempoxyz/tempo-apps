@@ -121,7 +121,7 @@ function createDetectors(
 							type: 'action',
 							value: args.hasRole ? 'Grant Role' : 'Revoke Role',
 						},
-						{ type: 'hex', value: args.role },
+						{ type: 'role', value: args.role },
 						{ type: 'text', value: 'to' },
 						{ type: 'account', value: args.account },
 					],
@@ -316,9 +316,9 @@ function createDetectors(
 					type: 'role admin updated',
 					parts: [
 						{ type: 'action', value: 'Update Role Admin' },
-						{ type: 'hex', value: args.role },
+						{ type: 'role', value: args.role },
 						{ type: 'text', value: 'to' },
-						{ type: 'hex', value: args.newAdminRole },
+						{ type: 'role', value: args.newAdminRole },
 					],
 					note: [['Sender', { type: 'account', value: args.sender }]],
 				}
@@ -689,6 +689,7 @@ export type KnownEventPart =
 			type: 'number'
 			value: bigint | number | [value: bigint, decimals: number]
 	  }
+	| { type: 'role'; value: Hex.Hex }
 	| { type: 'text'; value: string }
 	| { type: 'tick'; value: number }
 	| { type: 'token'; value: Token }
@@ -831,6 +832,9 @@ export function parseKnownEvents(
 					// fall through and continue searching other calls
 				}
 
+			// NOTE: We expand from the transaction to its calls here
+			// which is why the queue is a TransactionLike, as it's looking at
+			// multiple data types
 			if (call.calls) queue.push(...call.calls)
 		}
 	})()

@@ -7,7 +7,12 @@ import { Amount } from '#comps/Amount'
 import { Midcut } from '#comps/Midcut'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
-import { DateFormatter, PriceFormatter } from '#lib/formatting.ts'
+import {
+	DateFormatter,
+	HexFormatter,
+	PriceFormatter,
+	RoleFormatter,
+} from '#lib/formatting.ts'
 
 export function TxEventDescription(props: TxEventDescription.Props) {
 	const { event, seenAs, className, suffix } = props
@@ -80,6 +85,13 @@ export namespace TxEventDescription {
 					</span>
 				)
 			}
+			case 'role':
+				return (
+					<span className="items-end whitespace-nowrap" title={part.value}>
+						{RoleFormatter.getRoleName(part.value) ||
+							HexFormatter.shortenHex(part.value)}
+					</span>
+				)
 			case 'text':
 				return <span>{part.value}</span>
 			case 'tick':
