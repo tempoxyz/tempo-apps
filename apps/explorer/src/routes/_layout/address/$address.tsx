@@ -24,6 +24,7 @@ import {
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractReader } from '#comps/ContractReader'
+import { ContractSources } from '#comps/ContractSource.tsx'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
@@ -43,6 +44,10 @@ import {
 	useTransactionDataFromBatch,
 } from '#comps/TxTransactionRow'
 import { cx } from '#cva.config.ts'
+import {
+	type ContractSourceFile,
+	fetchContractSources,
+} from '#lib/domain/contract-source.ts'
 import {
 	type ContractInfo,
 	extractContractAbi,
@@ -246,6 +251,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 
 		const offset = (page - 1) * limit
+		const chainId = getChainId(config)
 
 		// check if it's a known contract from our registry
 		let contractInfo = getContractInfo(address)
@@ -275,6 +281,17 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		}
 
 		const hasContract = Boolean(contractInfo)
+
+		let contractSources: ContractSourceFile[] | undefined
+		if (hasContract) {
+			contractSources = await fetchContractSources({
+				address,
+				chainId,
+			}).catch((error) => {
+				console.error('Failed to load contract sources:', error)
+				return undefined
+			})
+		}
 
 		// Add timeout to prevent SSR from hanging on slow queries
 		const QUERY_TIMEOUT_MS = 3000
@@ -327,6 +344,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			offset,
 			hasContract,
 			contractInfo,
+			contractSources,
 			transactionsData,
 			txCountResponse,
 			totalValueResponse,
@@ -451,8 +469,14 @@ function RouteComponent() {
 	const router = useRouter()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, limit, live } = Route.useSearch()
-	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
+	const { page, tab, limit } = Route.useSearch()
+	const {
+		hasContract,
+		contractInfo,
+		contractSources,
+		transactionsData,
+		addressTransactionCount,
+	} = Route.useLoaderData()
 
 	Address.assert(address)
 
@@ -540,6 +564,7 @@ function RouteComponent() {
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
 				contractInfo={contractInfo}
+				contractSources={contractSources}
 				initialData={transactionsData}
 				assetsData={assetsData}
 				live={live}
@@ -621,6 +646,7 @@ function SectionsWrapper(props: {
 	activeSection: number
 	onSectionChange: (index: number) => void
 	contractInfo: ContractInfo | undefined
+	contractSources?: ContractSourceFile[] | undefined
 	initialData: TransactionsData | undefined
 	assetsData: AssetData[]
 	live: boolean
@@ -632,6 +658,7 @@ function SectionsWrapper(props: {
 		activeSection,
 		onSectionChange,
 		contractInfo,
+		contractSources,
 		initialData,
 		assetsData,
 		live,
@@ -695,6 +722,8 @@ function SectionsWrapper(props: {
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
+
+	const hasContractSources = Boolean(contractSources?.length)
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const historyError = error ? (
@@ -847,11 +876,16 @@ function SectionsWrapper(props: {
 									totalItems: 0,
 									itemsLabel: 'functions',
 									content: (
-										<ContractReader
-											address={address}
-											abi={contractInfo.abi}
-											docsUrl={contractInfo.docsUrl}
-										/>
+										<div className="flex flex-col gap-[14px]">
+											{hasContractSources && contractSources && (
+												<ContractSources files={contractSources} />
+											)}
+											<ContractReader
+												address={address}
+												abi={contractInfo.abi}
+												docsUrl={contractInfo.docsUrl}
+											/>
+										</div>
 									),
 								},
 							]

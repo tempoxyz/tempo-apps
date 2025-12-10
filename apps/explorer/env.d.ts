@@ -17,3 +17,8 @@ declare namespace NodeJS {
 
 declare const __BASE_URL__: string
 declare const __BUILD_VERSION__: string
+
+declare module 'shiki/onig.wasm' {
+	const wasm: unknown
+	export default wasm
+}

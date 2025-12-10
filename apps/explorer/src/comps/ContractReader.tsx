@@ -179,7 +179,7 @@ export function ContractReader(props: {
 	const inputFunctions = getInputFunctions(abi)
 
 	return (
-		<div className="flex flex-col gap-[14px]">
+		<div className="flex flex-col gap-3.5">
 			{/* ABI Viewer */}
 			<ContractFeatureCard
 				title="ABI"
@@ -761,7 +761,7 @@ function ContractFeatureCard(props: {
 				</div>
 				{actions}
 			</div>
-			<div className="border-t border-card-border bg-card px-4 py-3.5">
+			<div className="border-t border-card-border bg-card px-2.5">
 				{children}
 			</div>
 		</section>
