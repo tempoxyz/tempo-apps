@@ -1,5 +1,10 @@
 interface Env {
 	readonly PORT: string
+
+	readonly CLOUDFLARE_ACCOUNT_ID: string
+	readonly CLOUDFLARE_DATABASE_ID: string
+	readonly CLOUDFLARE_D1_TOKEN: string
+	readonly CLOUDFLARE_D1_ENVIRONMENT: 'local' | (string & {})
 }
 
 // Node.js `process.env` auto-completion

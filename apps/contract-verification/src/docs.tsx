@@ -1,7 +1,7 @@
 import { html, raw } from 'hono/html'
 
 const scalarConfig = {
-	slug: 'contract-verification',
+	slug: 'contracts',
 	hideModels: true,
 	hideClientButton: true,
 	url: '/schema/openapi.json',
@@ -10,7 +10,7 @@ const scalarConfig = {
 	operationTitleSource: 'path',
 	title: 'Contract Verification API Reference',
 	proxyUrl: 'https://proxy.scalar.com',
-	favicon: 'https://contracts.tempo.xyz/favicon.ico',
+	favicon: 'https://explore.tempo.xyz/favicon.ico',
 }
 
 export const Docs = () => {

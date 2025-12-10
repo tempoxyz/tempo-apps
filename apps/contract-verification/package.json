@@ -1,5 +1,5 @@
 {
-	"name": "contract-verification",
+	"name": "contracts",
 	"version": "1.0.0",
 	"type": "module",
 	"imports": {
@@ -14,9 +14,17 @@
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
 		"postinstall": "pnpm gen:types",
-		"tail": "wrangler tail"
+		"tail": "wrangler tail",
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "wrangler d1 migrations apply CONTRACTS-DB --local",
+		"db:migrate:remote": "wrangler d1 migrations apply CONTRACTS-DB --remote",
+		"db:studio": "drizzle-kit studio",
+		"db:push": "drizzle-kit push"
 	},
 	"dependencies": {
+		"@ethereum-sourcify/compilers": "catalog:",
+		"@ethereum-sourcify/lib-sourcify": "catalog:",
+		"drizzle-orm": "^0.45.0",
 		"hono": "catalog:",
 		"tempo.ts": "catalog:",
 		"viem": "catalog:"
@@ -27,6 +35,9 @@
 		"@cloudflare/workers-types": "catalog:",
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/node": "catalog:",
+		"better-sqlite3": "^12.5.0",
+		"dbmate": "^2.28.0",
+		"drizzle-kit": "^0.31.8",
 		"typescript": "catalog:",
 		"vite": "catalog:",
 		"wrangler": "catalog:"
