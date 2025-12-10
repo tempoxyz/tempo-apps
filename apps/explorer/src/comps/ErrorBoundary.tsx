@@ -5,12 +5,6 @@ import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import CopyIcon from '~icons/lucide/copy'
 
-// export function ErrorBoundary({ error }: ErrorComponentProps) {
-// 	const copy = useCopy()
-// 	console.error(error)
-
-// }
-
 class ErrorBoundary extends React.Component<
 	ErrorComponentProps,
 	{ error: Error | null }

@@ -1,5 +1,5 @@
 {
-	"include": ["**/*.ts", "**/*.tsx", "./scripts", "instrument.server.mjs"],
+	"include": ["**/*.ts", "**/*.tsx", "./scripts"],
 	"compilerOptions": {
 		"target": "ES2024",
 		"jsx": "react-jsx",
