@@ -48,7 +48,7 @@ type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
 export const Route = createFileRoute('/_layout/token/$address')({
 	component: RouteComponent,
-	notFoundComponent: () => (
+	notFoundComponent: (_props) => (
 		<NotFound
 			title="Token Not Found"
 			message={`The token doesn${apostrophe}t exist or is invalid.`}

@@ -173,7 +173,7 @@ function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
 
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
-	notFoundComponent: () => (
+	notFoundComponent: (_props) => (
 		<NotFound
 			title="Address Not Found"
 			message={`The address doesn${apostrophe}t exist or is invalid.`}

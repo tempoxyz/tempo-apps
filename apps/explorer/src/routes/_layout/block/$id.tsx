@@ -43,7 +43,7 @@ interface TransactionTypeResult {
 
 export const Route = createFileRoute('/_layout/block/$id')({
 	component: RouteComponent,
-	notFoundComponent: () => (
+	notFoundComponent: (_props) => (
 		<NotFound
 			title="Block Not Found"
 			message={`The block doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}

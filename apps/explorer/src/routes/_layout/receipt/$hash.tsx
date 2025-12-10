@@ -71,12 +71,23 @@ function parseHashFromParams(params: unknown): Hex.Hex | null {
 
 export const Route = createFileRoute('/_layout/receipt/$hash')({
 	component: Component,
-	notFoundComponent: () => (
-		<NotFound
-			title="Receipt Not Found"
-			message={`The receipt doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
-		/>
-	),
+	notFoundComponent: (_props) => {
+		// Access route params through useParams hook based on the routeId
+		const { useParams } = Route
+		const params = useParams()
+		const hash = params?.hash
+
+		// Validate hash before displaying
+		const isValidHash = hash && Hex.validate(hash) && Hex.size(hash) === 32
+
+		return (
+			<NotFound
+				title="Receipt Not Found"
+				message={`The receipt doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
+				hash={isValidHash ? hash : undefined}
+			/>
+		)
+	},
 	headers: () => ({
 		...(import.meta.env.PROD
 			? {

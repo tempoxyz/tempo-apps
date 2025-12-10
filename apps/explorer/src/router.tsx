@@ -25,7 +25,7 @@ export const getRouter = () => {
 		context: { queryClient },
 		defaultPreload: 'intent',
 		defaultPreloadDelay: 150,
-		defaultNotFoundComponent: () => (
+		defaultNotFoundComponent: (_props) => (
 			<Layout>
 				<NotFound
 					title="Page Not Found"
