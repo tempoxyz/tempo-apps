@@ -23,6 +23,7 @@ import {
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractReader } from '#comps/ContractReader'
+import { ContractSources } from '#comps/ContractSource.tsx'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
@@ -41,6 +42,10 @@ import {
 	useTransactionDataFromBatch,
 } from '#comps/TxTransactionRow'
 import { cx } from '#cva.config.ts'
+import {
+	type ContractSourceFile,
+	fetchContractSources,
+} from '#lib/domain/contract-source.ts'
 import {
 	type ContractInfo,
 	extractContractAbi,
@@ -217,6 +222,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 
 		const offset = (page - 1) * limit
+		const chainId = getChainId(config)
 
 		// check if it's a known contract from our registry
 		let contractInfo: ContractInfo | undefined = getContractInfo(address)
@@ -246,6 +252,17 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		}
 
 		const hasContract = Boolean(contractInfo)
+
+		let contractSources: ContractSourceFile[] | undefined
+		if (hasContract) {
+			contractSources = await fetchContractSources({
+				address,
+				chainId,
+			}).catch((error) => {
+				console.error('Failed to load contract sources:', error)
+				return undefined
+			})
+		}
 
 		const transactionsData = await context.queryClient
 			.ensureQueryData(
@@ -277,6 +294,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			offset,
 			hasContract,
 			contractInfo,
+			contractSources,
 			transactionsData,
 			addressTransactionCount,
 		}
@@ -292,6 +310,7 @@ function RouteComponent() {
 	const {
 		hasContract,
 		contractInfo,
+		contractSources,
 		transactionsData,
 		addressTransactionCount,
 	} = Route.useLoaderData()
@@ -382,6 +401,7 @@ function RouteComponent() {
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
 				contractInfo={contractInfo}
+				contractSources={contractSources}
 				initialData={transactionsData}
 				addressTransactionCount={addressTransactionCount}
 				assetsData={assetsData}
@@ -564,6 +584,7 @@ function SectionsWrapper(props: {
 	activeSection: number
 	onSectionChange: (index: number) => void
 	contractInfo: ContractInfo | undefined
+	contractSources?: ContractSourceFile[] | undefined
 	initialData: TransactionsData | undefined
 	addressTransactionCount: bigint
 	assetsData: AssetData[]
@@ -575,6 +596,7 @@ function SectionsWrapper(props: {
 		activeSection,
 		onSectionChange,
 		contractInfo,
+		contractSources,
 		initialData,
 		addressTransactionCount,
 		assetsData,
@@ -615,6 +637,8 @@ function SectionsWrapper(props: {
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
+
+	const hasContractSources = Boolean(contractSources?.length)
 
 	// Only show skeleton if we have no data AND we're loading
 	// Use data presence check to avoid hydration mismatch
@@ -769,11 +793,16 @@ function SectionsWrapper(props: {
 									totalItems: 0,
 									itemsLabel: 'functions',
 									content: (
-										<ContractReader
-											address={address}
-											abi={contractInfo.abi}
-											docsUrl={contractInfo.docsUrl}
-										/>
+										<div className="flex flex-col gap-[14px]">
+											{hasContractSources && contractSources && (
+												<ContractSources files={contractSources} />
+											)}
+											<ContractReader
+												address={address}
+												abi={contractInfo.abi}
+												docsUrl={contractInfo.docsUrl}
+											/>
+										</div>
 									),
 								},
 							]
