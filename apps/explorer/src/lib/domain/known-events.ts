@@ -832,6 +832,9 @@ export function parseKnownEvents(
 					// fall through and continue searching other calls
 				}
 
+			// NOTE: We expand from the transaction to its calls here
+			// which is why the queue is a TransactionLike, as it's looking at
+			// multiple data types
 			if (call.calls) queue.push(...call.calls)
 		}
 	})()
