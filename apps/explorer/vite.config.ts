@@ -20,6 +20,7 @@ export default defineConfig((config) => {
 			config.mode === 'production' &&
 				sentryVitePlugin({
 					org: 'tempoxyz',
+					telemetry: false,
 					project: 'tempo-explorer',
 					authToken: env.SENTRY_AUTH_TOKEN,
 				}),
