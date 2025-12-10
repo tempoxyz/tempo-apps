@@ -16,7 +16,12 @@ export async function rateLimitMiddleware(c: Context, next: Next) {
 	const serialized = request.params?.[0] as `0x76${string}`
 
 	const transaction = Transaction.deserialize(serialized)
-	const from = (transaction as any).from
+	
+	// Type-safe access to 'from' address
+	const from = 'from' in transaction ? transaction.from : null
+	if (!from) {
+		return c.json({ error: 'Invalid transaction: missing from address' }, 400)
+	}
 
 	const { success } = await env.AddressRateLimiter.limit({
 		key: from,
