@@ -18,7 +18,7 @@ export function Amount(props: Amount.Props) {
 		},
 	})
 
-	const { data: erc20Data } = useReadContracts({
+	const { data: nonTip20Data } = useReadContracts({
 		contracts: [
 			{ address: token, abi: Abis.tip20, functionName: 'decimals' },
 			{ address: token, abi: Abis.tip20, functionName: 'symbol' },
@@ -28,11 +28,11 @@ export function Amount(props: Amount.Props) {
 		},
 	})
 
-	const erc20Decimals = erc20Data?.[0]?.result
-	const erc20Symbol = erc20Data?.[1]?.result
+	const nonTip20Decimals = nonTip20Data?.[0]?.result
+	const nonTip20Symbol = nonTip20Data?.[1]?.result
 
-	const decimals_ = decimals ?? metadata?.decimals ?? erc20Decimals
-	const symbol_ = symbol ?? metadata?.symbol ?? erc20Symbol
+	const decimals_ = decimals ?? metadata?.decimals ?? nonTip20Decimals
+	const symbol_ = symbol ?? metadata?.symbol ?? nonTip20Symbol
 
 	const isLoading = decimals_ === undefined
 
