@@ -14,7 +14,12 @@ import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { useBlock } from 'wagmi'
-import { getBlock, getChainId, getTransactionReceipt } from 'wagmi/actions'
+import {
+	getBlock,
+	getChainId,
+	getTransaction,
+	getTransactionReceipt,
+} from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractReader } from '#comps/ContractReader'
@@ -73,11 +78,11 @@ function useBatchTransactionData(transactions: Transaction[]) {
 			queryFn: async (): Promise<TransactionData | null> => {
 				const cfg = getConfig()
 				const receipt = await getTransactionReceipt(cfg, { hash })
-				const [block, getTokenMetadata] = await Promise.all([
+				const [block, transaction, getTokenMetadata] = await Promise.all([
 					getBlock(cfg, { blockHash: receipt.blockHash }),
+					getTransaction(config, { hash: receipt.transactionHash }),
 					Tip20.metadataFromLogs(receipt.logs),
 				])
-				const transaction = transactions.find((tx) => tx.hash === hash)
 				const knownEvents = parseKnownEvents(receipt, {
 					transaction,
 					getTokenMetadata,
