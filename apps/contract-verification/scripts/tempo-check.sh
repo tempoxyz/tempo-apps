@@ -2,7 +2,7 @@
 
 # call with
 
-# `/bin/bash TEMPO_RPC_URL=https://testnet.tempo.xyz scripts/build-test-contract.sh`
+# `/bin/bash TEMPO_RPC_URL=https://testnet.tempo.xyz scripts/tempo-check.sh`
 
 # this is directly from:
 # https://github.com/tempoxyz/tempo-foundry/blob/master/.github/scripts/tempo-check.sh
