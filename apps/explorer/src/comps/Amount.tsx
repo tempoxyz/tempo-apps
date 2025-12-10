@@ -1,26 +1,43 @@
 import { Link } from '@tanstack/react-router'
 import { type Address, Value } from 'ox'
+import { Abis } from 'tempo.ts/viem'
 import { Hooks } from 'tempo.ts/wagmi'
+import { useReadContracts } from 'wagmi'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { PriceFormatter } from '#lib/formatting.ts'
 
 export function Amount(props: Amount.Props) {
 	const { value, token, decimals, symbol } = props
 
+	const isTip20 = isTip20Address(token)
+
 	const { data: metadata } = Hooks.token.useGetMetadata({
 		token,
 		query: {
-			enabled: decimals === undefined,
+			enabled: decimals === undefined && isTip20,
 		},
 	})
 
-	const decimals_ = decimals ?? metadata?.decimals
-	const symbol_ = symbol ?? metadata?.symbol
+	const { data: erc20Data } = useReadContracts({
+		contracts: [
+			{ address: token, abi: Abis.tip20, functionName: 'decimals' },
+			{ address: token, abi: Abis.tip20, functionName: 'symbol' },
+		],
+		query: {
+			enabled: (decimals === undefined || symbol === undefined) && !isTip20,
+		},
+	})
 
-	const rawFormatted =
-		decimals_ === undefined ? '…' : Value.format(value, decimals_)
-	const formatted =
-		rawFormatted === '…' ? '…' : PriceFormatter.formatAmount(rawFormatted)
+	const erc20Decimals = erc20Data?.[0]?.result
+	const erc20Symbol = erc20Data?.[1]?.result
+
+	const decimals_ = decimals ?? metadata?.decimals ?? erc20Decimals
+	const symbol_ = symbol ?? metadata?.symbol ?? erc20Symbol
+
+	const isLoading = decimals_ === undefined
+
+	const rawFormatted = isLoading ? '…' : Value.format(value, decimals_)
+	const formatted = isLoading ? '…' : PriceFormatter.formatAmount(rawFormatted)
 
 	return (
 		<span className="items-end whitespace-nowrap">
