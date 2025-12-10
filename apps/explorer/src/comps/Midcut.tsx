@@ -35,7 +35,7 @@ export function Midcut({
               .${id}-ellipsis { display: flex }
               .${id}-part {
                 overflow: hidden;
-                width: calc(max((100cqw - ${prefix.length + 1}ch - 1ch - 1ch) / 2, 0ch));
+                width: calc((100cqw - ${prefix.length + 3}ch) / 2);
               }
             }
           `}
