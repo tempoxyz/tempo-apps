@@ -553,7 +553,7 @@ function createDetectors(
 			const { eventName, args, address } = event
 
 			if (eventName === 'Mint')
-				return !Address.isEqual(address, FEE_MANAGER) &&
+				return Address.isEqual(address, FEE_MANAGER) &&
 					'amountUserToken' in args &&
 					'amountValidatorToken' in args
 					? {
