@@ -3,7 +3,6 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
-	rootRouteId,
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
@@ -67,12 +66,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 			)
 		} catch (error) {
 			console.error(error)
-			throw notFound({
-				routeId: rootRouteId,
-				data: {
-					error: error instanceof Error ? error.message : 'Unknown error',
-				},
-			})
+			throw notFound()
 		}
 	},
 	params: z.object({

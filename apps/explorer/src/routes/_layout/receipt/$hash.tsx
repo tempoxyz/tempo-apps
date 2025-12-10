@@ -1,7 +1,7 @@
 import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { createFileRoute, notFound, rootRouteId } from '@tanstack/react-router'
+import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Hex, Json, Value } from 'ox'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
@@ -95,12 +95,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			)
 		} catch (error) {
 			console.error(error)
-			throw notFound({
-				routeId: rootRouteId,
-				data: {
-					error: error instanceof Error ? error.message : 'Unknown error',
-				},
-			})
+			throw notFound()
 		}
 	},
 	server: {

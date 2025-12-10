@@ -3,7 +3,6 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
-	rootRouteId,
 	stripSearchParams,
 	useLocation,
 	useNavigate,
@@ -201,11 +200,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 	loader: async ({ deps: { page, limit }, params, context }) => {
 		const { address } = params
 		// Only throw notFound for truly invalid addresses
-		if (!Address.validate(address))
-			throw notFound({
-				routeId: rootRouteId,
-				data: { error: 'Invalid address format' },
-			})
+		if (!Address.validate(address)) throw notFound()
 
 		const offset = (page - 1) * limit
 

@@ -4,7 +4,6 @@ import {
 	Link,
 	notFound,
 	redirect,
-	rootRouteId,
 	stripSearchParams,
 } from '@tanstack/react-router'
 import { Hex, Value } from 'ox'
@@ -81,12 +80,7 @@ export const Route = createFileRoute('/_layout/block/$id')({
 			)
 		} catch (error) {
 			console.error(error)
-			throw notFound({
-				routeId: rootRouteId,
-				data: {
-					error: error instanceof Error ? error.message : 'Invalid block ID',
-				},
-			})
+			throw notFound()
 		}
 	},
 })
