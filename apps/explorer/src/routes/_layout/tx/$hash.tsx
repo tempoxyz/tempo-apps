@@ -433,10 +433,8 @@ function EventsSection(props: {
 							/>,
 							<Address align="end" key="contract" address={log.address} />,
 						],
-						expanded: isExpanded ? (
+						expanded: isExpanded && (
 							<TxDecodedTopics key={log.logIndex} log={log} />
-						) : (
-							false
 						),
 					}
 				})
