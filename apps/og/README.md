@@ -1,8 +1,12 @@
-# Service Proxy
+# Open Graph API
 
-A Cloudflare Worker that proxies requests to external services that require credentials.
+A Worker that generates OG preview image dynamically.
 
 ```bash
 pnpm i          # Install dependencies
 pnpm dev        # Start development server
 ```
+
+__
+
+[What is The Open Graph Protocol?](https://ogp.me)
