@@ -17,6 +17,8 @@ catalog:
   '@svgr/core': ^8.1.0
   '@svgr/plugin-jsx': ^8.1.0
   '@tailwindcss/vite': ^4.1.17
+  '@takumi-rs/image-response': ^0.57.3
+  '@takumi-rs/wasm': ^0.57.3
   '@tanstack/devtools-vite': ^0.3.12
   '@tanstack/query-async-storage-persister': ^5.90.14
   '@tanstack/react-devtools': ^0.8.4

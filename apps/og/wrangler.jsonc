@@ -1,0 +1,21 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "og",
+	"main": "src/index.tsx",
+	"compatibility_date": "2025-12-08",
+	"compatibility_flags": ["nodejs_compat"],
+	"ratelimits": [
+		{
+			"name": "REQUESTS_RATE_LIMITER",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 30,
+				"period": 10
+			}
+		}
+	],
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	}
+}

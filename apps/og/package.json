@@ -1,0 +1,19 @@
+{
+	"name": "og",
+	"type": "module",
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"check:types": "tsgo --project tsconfig.json",
+		"gen:types": "test -f .env || cp .env.example .env; wrangler types"
+	},
+	"dependencies": {
+		"@takumi-rs/image-response": "catalog:",
+		"@takumi-rs/wasm": "catalog:",
+		"hono": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "catalog:",
+		"wrangler": "catalog:"
+	}
+}
