@@ -855,8 +855,7 @@ function detectContractCall(
 	return {
 		type: 'contract call',
 		parts: [
-			{ type: 'account', value: receipt.from },
-			{ type: 'action', value: 'Called' },
+			{ type: 'action', value: 'Call To' },
 			{
 				type: 'contractCall',
 				value: { address: contractAddress, input: callInput },
