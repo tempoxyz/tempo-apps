@@ -7,11 +7,12 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { type Address, type Hex, Json, Value } from 'ox'
+import { type Hex, Json, type Address as OxAddress, Value } from 'ox'
 import * as React from 'react'
-import type { Log, TransactionReceipt } from 'viem'
+import { type Log, type TransactionReceipt, toEventSelector } from 'viem'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
+import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoRow } from '#comps/InfoRow'
 import { NotFound } from '#comps/NotFound'
@@ -305,7 +306,10 @@ function OverviewSection(props: {
 	)
 }
 
-function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
+function InputDataRow(props: {
+	input: Hex.Hex
+	to?: OxAddress.Address | null
+}) {
 	const { input, to } = props
 
 	return (
@@ -324,7 +328,7 @@ function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
 
 function CallsSection(props: {
 	calls: ReadonlyArray<{
-		to?: Address.Address | null
+		to?: OxAddress.Address | null
 		data?: Hex.Hex
 		value?: bigint
 	}>
@@ -345,7 +349,7 @@ function CallsSection(props: {
 
 function CallItem(props: {
 	call: {
-		to?: Address.Address | null
+		to?: OxAddress.Address | null
 		data?: Hex.Hex
 		value?: bigint
 	}
@@ -379,18 +383,119 @@ function CallItem(props: {
 	)
 }
 
+type EventGroup = {
+	logs: Log[]
+	startIndex: number
+	knownEvent: KnownEvent | null
+}
+
+function groupRelatedEvents(
+	logs: Log[],
+	knownEvents: (KnownEvent | null)[],
+): EventGroup[] {
+	const groups: EventGroup[] = []
+	let i = 0
+
+	while (i < logs.length) {
+		const log = logs[i]
+		const event = knownEvents[i]
+		const eventName = getEventName(log)
+
+		// Transfer = possible group
+		if (eventName === 'Transfer') {
+			const secondLog = logs[i + 1]
+			const secondEventName = secondLog ? getEventName(secondLog) : null
+
+			// Transfer + Mint or Transfer + Burn (+ optional TransferWithMemo)
+			if (secondEventName === 'Mint' || secondEventName === 'Burn') {
+				const thirdLog = logs[i + 2]
+				const thirdEventName = thirdLog ? getEventName(thirdLog) : null
+
+				// check for mintWithMemo / burnWithMemo pattern (3 events)
+				if (thirdEventName === 'TransferWithMemo') {
+					groups.push({
+						logs: [log, secondLog, thirdLog],
+						startIndex: i,
+						knownEvent: knownEvents[i + 1], // use Mint / Burn as primary
+					})
+					i += 3
+					continue
+				}
+
+				// Transfer + Mint / Burn (2 events)
+				groups.push({
+					logs: [log, secondLog],
+					startIndex: i,
+					knownEvent: knownEvents[i + 1], // use Mint / Burn as primary
+				})
+				i += 2
+				continue
+			}
+
+			// Transfer + TransferWithMemo
+			if (secondEventName === 'TransferWithMemo') {
+				groups.push({
+					logs: [log, secondLog],
+					startIndex: i,
+					knownEvent: knownEvents[i + 1], // use TransferWithMemo as primary
+				})
+				i += 2
+				continue
+			}
+		}
+
+		// single event
+		groups.push({
+			logs: [log],
+			startIndex: i,
+			knownEvent: event,
+		})
+		i++
+	}
+
+	return groups
+}
+
+const eventSignatures = {
+	Transfer: toEventSelector(
+		'event Transfer(address indexed, address indexed, uint256)',
+	),
+	TransferWithMemo: toEventSelector(
+		'event TransferWithMemo(address indexed, address indexed, uint256, bytes32 indexed)',
+	),
+	Mint: toEventSelector('event Mint(address indexed, uint256)'),
+	Burn: toEventSelector('event Burn(address indexed, uint256)'),
+}
+
+function getEventName(log: Log): string | null {
+	const topic0 = log.topics[0]?.toLowerCase()
+	if (topic0 === eventSignatures.Transfer.toLowerCase()) return 'Transfer'
+	if (topic0 === eventSignatures.TransferWithMemo.toLowerCase())
+		return 'TransferWithMemo'
+	if (topic0 === eventSignatures.Mint.toLowerCase()) return 'Mint'
+	if (topic0 === eventSignatures.Burn.toLowerCase()) return 'Burn'
+	return null
+}
+
 function EventsSection(props: {
 	logs: Log[]
 	knownEvents: (KnownEvent | null)[]
 }) {
 	const { logs, knownEvents } = props
-	const [expandedRows, setExpandedRows] = React.useState<Set<number>>(new Set())
+	const [expandedGroups, setExpandedGroups] = React.useState<Set<number>>(
+		new Set(),
+	)
 
-	const toggleRow = (index: number) => {
-		setExpandedRows((expanded) => {
+	const groups = React.useMemo(
+		() => groupRelatedEvents(logs, knownEvents),
+		[logs, knownEvents],
+	)
+
+	const toggleGroup = (groupIndex: number) => {
+		setExpandedGroups((expanded) => {
 			const newExpanded = new Set(expanded)
-			if (newExpanded.has(index)) newExpanded.delete(index)
-			else newExpanded.add(index)
+			if (newExpanded.has(groupIndex)) newExpanded.delete(groupIndex)
+			else newExpanded.add(groupIndex)
 			return newExpanded
 		})
 	}
@@ -412,57 +517,57 @@ function EventsSection(props: {
 		<DataGrid
 			columns={{ stacked: cols, tabs: cols }}
 			items={() =>
-				logs.map((log, index) => {
-					const knownEvent = knownEvents[index] ?? undefined
-					const isExpanded = expandedRows.has(index)
+				groups.map((group, groupIndex) => {
+					const isExpanded = expandedGroups.has(groupIndex)
+					const endIndex = group.startIndex + group.logs.length - 1
+					const indexLabel =
+						group.logs.length === 1
+							? String(group.startIndex)
+							: `${group.startIndex}-${endIndex}`
+
 					return {
 						cells: [
 							<span key="index" className="text-tertiary">
-								{index}
+								{indexLabel}
 							</span>,
-							<EventCell
+							<EventGroupCell
 								key="event"
-								log={log}
-								knownEvent={knownEvent}
+								group={group}
 								expanded={isExpanded}
-								onToggle={() => toggleRow(index)}
+								onToggle={() => toggleGroup(groupIndex)}
 							/>,
-							<Link
-								key="contract"
-								to="/address/$address"
-								params={{ address: log.address }}
-								className="text-accent hover:underline whitespace-nowrap press-down"
-								title={log.address}
-							>
-								<TruncatedHash hash={log.address} minChars={6} />
-							</Link>,
+							<Address key="contract" address={group.logs[0].address} />,
 						],
 						expanded: isExpanded ? (
-							<TxDecodedTopics key={log.logIndex} log={log} />
+							<div className="flex flex-col gap-4">
+								{group.logs.map((log, i) => (
+									<TxDecodedTopics key={log.logIndex ?? i} log={log} />
+								))}
+							</div>
 						) : (
 							false
 						),
 					}
 				})
 			}
-			totalItems={logs.length}
+			totalItems={groups.length}
 			page={1}
 			isPending={false}
 			itemsLabel="events"
-			itemsPerPage={logs.length}
+			itemsPerPage={groups.length}
 			emptyState="No events emitted."
 		/>
 	)
 }
 
-function EventCell(props: {
-	log: Log
-	knownEvent?: KnownEvent
+function EventGroupCell(props: {
+	group: EventGroup
 	expanded: boolean
 	onToggle: () => void
 }) {
-	const { log, knownEvent, expanded, onToggle } = props
-	const [eventSignature] = log.topics
+	const { group, expanded, onToggle } = props
+	const { knownEvent, logs } = group
+	const eventCount = logs.length
 
 	return (
 		<div className="flex flex-col gap-[4px]">
@@ -473,8 +578,8 @@ function EventCell(props: {
 				/>
 			) : (
 				<span className="text-primary">
-					{eventSignature ? (
-						<TruncatedHash hash={eventSignature} minChars={8} />
+					{logs[0].topics[0] ? (
+						<TruncatedHash hash={logs[0].topics[0]} minChars={8} />
 					) : (
 						'Unknown'
 					)}
@@ -486,7 +591,13 @@ function EventCell(props: {
 					onClick={onToggle}
 					className="text-[11px] text-accent hover:underline text-left cursor-pointer press-down-mini"
 				>
-					{expanded ? 'Hide details' : 'Show details'}
+					{expanded
+						? eventCount > 1
+							? `Hide details (${eventCount})`
+							: 'Hide details'
+						: eventCount > 1
+							? `Show details (${eventCount})`
+							: 'Show details'}
 				</button>
 			</div>
 		</div>
