@@ -14,7 +14,7 @@ export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
 	return (
 		<header className="@container relative z-1">
-			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1">
+			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1 print:justify-center">
 				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
 					<Link to="/" className="flex items-center press-down py-[4px]">
 						<Header.TempoWordmark />
@@ -22,7 +22,7 @@ export function Header(props: Header.Props) {
 					<Header.NetworkBadge />
 				</div>
 				<Header.Search />
-				<div className="relative z-1">
+				<div className="relative z-1 print:hidden">
 					<Header.BlockNumber initial={initialBlockNumber} />
 				</div>
 			</div>
@@ -123,16 +123,25 @@ export namespace Header {
 		}
 	}
 
-	export function NetworkBadge() {
+	export function NetworkBadge(props: NetworkBadge.Props) {
+		const { className } = props
 		const [chain] = useChains()
 		const network = chain.name.match(/Tempo (.+)/)?.[1]
 		if (!network) return null
 		return (
-			<div className="flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium">
+			<div
+				className={`flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium ${className ?? ''}`}
+			>
 				<Music4 width={14} height={14} className="text-accent" />
 				{network}
 			</div>
 		)
+	}
+
+	export namespace NetworkBadge {
+		export interface Props {
+			className?: string
+		}
 	}
 
 	export function TempoWordmark(props: TempoWordmark.Props) {

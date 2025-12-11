@@ -1,0 +1,58 @@
+name: Publish GitHub Page
+
+on:
+  pull_request:
+  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  ACTIONS_RUNNER_DEBUG: true
+
+jobs:
+  pages-directory-listing:
+    name: "Directory Listing Index"
+    runs-on: ["ubuntu-latest"]
+    steps:
+      - name: "Checkout"
+        uses: actions/checkout@v5
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+
+      - name: "Generate Directory Listings"
+        uses: jayanta525/github-pages-directory-listing@main
+        with:
+          FOLDER: apps/tokenlist/data #directory to generate index
+
+      - name: "Upload Artifact"
+        uses: actions/upload-pages-artifact@main
+        with:
+          path: "apps/tokenlist/data" # upload generated folder
+
+  deploy:
+    name: "Deploy tokenlist to GitHub Pages"
+    # if the branch is main or invoked by workflow_dispatch
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: "pages-directory-listing"
+    permissions:
+      pages: "write"
+      id-token: "write"
+
+    environment:
+      name: "tokenlist-github-pages"
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ["ubuntu-latest"]
+    steps:
+      - name: "Deploy Pages"
+        id: deployment
+        uses: actions/deploy-pages@main

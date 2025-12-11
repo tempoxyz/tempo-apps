@@ -9,6 +9,9 @@
 	},
 	"workers_dev": true,
 	"preview_urls": true,
+	"placement": {
+		"mode": "smart"
+	},
 	"keep_vars": true,
 	"observability": {
 		"enabled": true,
@@ -19,7 +22,7 @@
 			"persist": true
 		}
 	},
-	"placement": {
-		"mode": "smart"
+	"version_metadata": {
+		"binding": "CF_VERSION_METADATA"
 	}
 }

@@ -2,7 +2,7 @@ import { Link as RouterLink } from '@tanstack/react-router'
 
 export function Footer() {
 	return (
-		<footer className="pt-[24px] pb-[48px] relative">
+		<footer className="pt-[24px] pb-[48px] relative print:hidden">
 			<ul className="flex items-center justify-center gap-[24px] text-[15px] text-base-content-secondary select-none">
 				<Footer.Link to="https://tempo.xyz" external>
 					About

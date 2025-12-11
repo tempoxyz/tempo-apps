@@ -1,0 +1,643 @@
+{
+	"openapi": "3.1.1",
+	"info": {
+		"title": "Tokenlist API",
+		"description": "API for serving token lists and icons for various blockchain networks. Provides endpoints to fetch token icons, chain icons, and token list data for multiple chains.",
+		"version": "1.0.0",
+		"contact": {
+			"name": "API Support"
+		},
+		"license": {
+			"name": "MIT",
+			"url": "https://opensource.org/licenses/MIT"
+		}
+	},
+	"servers": [
+		{
+			"url": "https://tokenlist.tempo.xyz",
+			"description": "Production"
+		},
+		{
+			"url": "http://localhost:6969",
+			"description": "local"
+		}
+	],
+	"paths": {
+		"/icon/{chain_id}": {
+			"get": {
+				"tags": ["Icons"],
+				"summary": "Get chain icon",
+				"description": "Retrieve the main icon for a specific blockchain network",
+				"operationId": "get_icon",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/chain_id"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successful response with SVG icon",
+						"content": {
+							"image/svg+xml": {
+								"schema": {
+									"type": "string",
+									"format": "binary",
+									"description": "SVG image data",
+									"minLength": 1,
+									"maxLength": 1000000
+								}
+							}
+						}
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					}
+				}
+			}
+		},
+		"/icon/{chain_id}/{address}": {
+			"get": {
+				"tags": ["Icons"],
+				"summary": "Get token icon",
+				"description": "Retrieve an SVG icon for a specific token on a given chain",
+				"operationId": "get_icon_address",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/chain_id"
+					},
+					{
+						"name": "address",
+						"in": "path",
+						"description": "Token contract address. Can include '.svg' extension or be provided without it",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 42,
+							"maxLength": 46,
+							"pattern": "^0x[a-fA-F0-9]{40}(\\.svg)?$",
+							"example": "0x20c0000000000000000000000000000000000000"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successful response with SVG icon",
+						"content": {
+							"image/svg+xml": {
+								"schema": {
+									"type": "string",
+									"format": "binary",
+									"description": "SVG image data",
+									"minLength": 1,
+									"maxLength": 1000000
+								}
+							}
+						}
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					}
+				}
+			}
+		},
+		"/list/{chain_id}": {
+			"get": {
+				"tags": ["Token Lists"],
+				"summary": "Get token list for a chain",
+				"description": "Retrieve the complete token list for a specific blockchain network",
+				"operationId": "get_list",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/chain_id"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successful response with token list",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TokenList"
+								},
+								"example": {
+									"schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
+									"name": "Tempo Testnet",
+									"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icon.svg",
+									"tokens": [
+										{
+											"name": "pathUSD",
+											"symbol": "pathUSD",
+											"decimals": 6,
+											"chainId": 42429,
+											"address": "0x20c0000000000000000000000000000000000000",
+											"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
+											"extensions": {
+												"chain": "tempo"
+											}
+										}
+									]
+								}
+							}
+						}
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					}
+				}
+			}
+		},
+		"/asset/{chain_id}/{id}": {
+			"get": {
+				"tags": ["Token Lists"],
+				"summary": "Get a single token by symbol or address",
+				"description": "Retrieve information about a specific token on a given chain. The token can be identified by either its symbol (e.g., 'USDC') or its contract address.",
+				"operationId": "get_asset",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/chain_id"
+					},
+					{
+						"name": "id",
+						"in": "path",
+						"description": "Token identifier - either the token symbol (e.g., 'pathUSD') or the token contract address (e.g., '0x20c0000000000000000000000000000000000000')",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 42,
+							"example": "pathUSD"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successful response with token information",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TokenInfo"
+								},
+								"example": {
+									"name": "pathUSD",
+									"symbol": "pathUSD",
+									"decimals": 6,
+									"chainId": 42429,
+									"address": "0x20c0000000000000000000000000000000000000",
+									"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
+									"extensions": {
+										"chain": "tempo"
+									}
+								}
+							}
+						}
+					},
+					"404": {
+						"$ref": "#/components/responses/NotFound"
+					}
+				}
+			}
+		},
+		"/lists/all": {
+			"get": {
+				"tags": ["Token Lists"],
+				"summary": "Get all token lists",
+				"description": "Retrieve token lists for all supported blockchain networks",
+				"operationId": "get_lists_all",
+				"responses": {
+					"200": {
+						"description": "Successful response with all token lists",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/AllTokenLists"
+								},
+								"example": {
+									"chains": {
+										"42429": {
+											"schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
+											"name": "Tempo Testnet",
+											"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icon.svg",
+											"tokens": [
+												{
+													"name": "pathUSD",
+													"symbol": "pathUSD",
+													"decimals": 6,
+													"chainId": 42429,
+													"address": "0x20c0000000000000000000000000000000000000",
+													"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
+													"extensions": {
+														"chain": "tempo"
+													}
+												}
+											],
+											"keywords": ["tempo", "testnet"]
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/health": {
+			"get": {
+				"tags": ["System"],
+				"summary": "Health check",
+				"description": "Check if the API service is running",
+				"operationId": "health_check",
+				"responses": {
+					"200": {
+						"description": "Service is healthy",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"description": "Health status message",
+									"minLength": 2,
+									"maxLength": 10,
+									"pattern": "^[a-z]+$",
+									"example": "ok"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"parameters": {
+			"chain_id": {
+				"name": "chain_id",
+				"in": "path",
+				"description": "Chain ID (e.g., '42429' for Tempo Testnet)",
+				"required": true,
+				"schema": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 20,
+					"pattern": "^[a-zA-Z0-9_-]+$",
+					"example": "42429"
+				}
+			}
+		},
+		"responses": {
+			"NotFound": {
+				"description": "Resource not found",
+				"content": {
+					"application/json": {
+						"schema": {
+							"$ref": "#/components/schemas/ErrorResponse"
+						},
+						"example": {
+							"message": "Resource not found",
+							"code": "not_found",
+							"trace": "req-abc123",
+							"errors": [
+								{
+									"code": "not_found",
+									"message": "Icon not found",
+									"more_info": "https://api.example.com/docs/errors#not-found"
+								}
+							]
+						}
+					}
+				}
+			}
+		},
+		"schemas": {
+			"ErrorItem": {
+				"type": "object",
+				"description": "Detailed error item",
+				"required": ["code", "message", "more_info"],
+				"properties": {
+					"code": {
+						"type": "string",
+						"description": "Error code identifying the type of error",
+						"minLength": 1,
+						"maxLength": 50,
+						"pattern": "^[a-zA-Z0-9_]+$",
+						"enum": ["not_found", "invalid_request", "server_error"]
+					},
+					"message": {
+						"type": "string",
+						"description": "Human-readable error message",
+						"minLength": 1,
+						"maxLength": 500,
+						"pattern": "^[\\w\\s\\.,:]+$"
+					},
+					"field": {
+						"type": "string",
+						"description": "Field causing the error, if applicable",
+						"minLength": 1,
+						"maxLength": 100,
+						"pattern": "^[a-zA-Z0-9_]+$"
+					},
+					"more_info": {
+						"type": "string",
+						"description": "URL to additional error documentation",
+						"minLength": 1,
+						"maxLength": 500,
+						"pattern": "^https?://.+$",
+						"example": "https://api.example.com/docs/errors#not-found"
+					}
+				}
+			},
+			"ErrorResponse": {
+				"type": "object",
+				"description": "Standard error response",
+				"required": ["message", "code", "trace", "errors"],
+				"properties": {
+					"message": {
+						"type": "string",
+						"description": "Human-readable error message",
+						"minLength": 1,
+						"maxLength": 500,
+						"example": "Resource not found",
+						"pattern": "^[\\w\\s\\.,:]+$"
+					},
+					"code": {
+						"type": "string",
+						"description": "Error code identifying the type of error",
+						"minLength": 1,
+						"maxLength": 50,
+						"example": "not_found",
+						"pattern": "^[a-zA-Z0-9_]+$"
+					},
+					"trace": {
+						"type": "string",
+						"description": "Request trace identifier",
+						"minLength": 1,
+						"maxLength": 200,
+						"pattern": "^[a-zA-Z0-9_-]+$"
+					},
+					"errors": {
+						"type": "array",
+						"description": "List of detailed error items",
+						"items": {
+							"$ref": "#/components/schemas/ErrorItem"
+						},
+						"minItems": 0,
+						"maxItems": 100
+					}
+				}
+			},
+			"AllTokenLists": {
+				"type": "object",
+				"description": "Collection of token lists keyed by chain ID (e.g., '1', '137').",
+				"required": ["chains"],
+				"properties": {
+					"chains": {
+						"type": "object",
+						"description": "Mapping of chain IDs to their respective token lists",
+						"additionalProperties": {
+							"$ref": "#/components/schemas/TokenList"
+						}
+					}
+				}
+			},
+			"TagsMap": {
+				"type": "object",
+				"description": "Mapping of tag identifiers to their definitions",
+				"additionalProperties": {
+					"$ref": "#/components/schemas/TagDefinition"
+				}
+			},
+			"TokenMap": {
+				"type": "object",
+				"description": "Mapping of 'chainId_tokenAddress' to token objects",
+				"additionalProperties": {
+					"$ref": "#/components/schemas/TokenInfo"
+				}
+			},
+			"TokenList": {
+				"type": "object",
+				"description": "Token list for a specific blockchain network",
+				"required": ["name", "tokens", "keywords"],
+				"properties": {
+					"schema": {
+						"type": "string",
+						"format": "url",
+						"description": "JSON Schema reference",
+						"minLength": 1,
+						"maxLength": 500,
+						"pattern": "^https?://.+$",
+						"example": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json"
+					},
+					"name": {
+						"type": "string",
+						"description": "Name of the token list",
+						"minLength": 1,
+						"maxLength": 30,
+						"pattern": "^[\\w ]+$",
+						"example": "Tempo Testnet"
+					},
+					"timestamp": {
+						"type": "string",
+						"format": "date-time",
+						"minLength": 1,
+						"maxLength": 50,
+						"description": "Timestamp of this list version"
+					},
+					"version": {
+						"$ref": "#/components/schemas/Version"
+					},
+					"logo_uri": {
+						"type": "string",
+						"format": "url",
+						"minLength": 1,
+						"maxLength": 500,
+						"pattern": "^https?://.+$",
+						"description": "URI for the logo of the token list",
+						"example": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icon.svg"
+					},
+					"keywords": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 20,
+							"pattern": "^[\\w ]+$"
+						},
+						"minItems": 0,
+						"maxItems": 20,
+						"uniqueItems": true,
+						"description": "Keywords associated with the token list"
+					},
+					"tags": {
+						"$ref": "#/components/schemas/TagsMap"
+					},
+					"tokens": {
+						"type": "array",
+						"items": {
+							"$ref": "#/components/schemas/TokenInfo"
+						},
+						"minItems": 1,
+						"maxItems": 10000,
+						"description": "List of tokens included in the list"
+					},
+					"token_map": {
+						"$ref": "#/components/schemas/TokenMap"
+					}
+				}
+			},
+			"Version": {
+				"type": "object",
+				"description": "Version information for the token list",
+				"required": ["major", "minor", "patch"],
+				"properties": {
+					"major": {
+						"type": "integer",
+						"format": "int32",
+						"minimum": 0,
+						"maximum": 999,
+						"description": "Major version (incremented when tokens are removed or addresses changed)"
+					},
+					"minor": {
+						"type": "integer",
+						"format": "int32",
+						"minimum": 0,
+						"maximum": 999,
+						"description": "Minor version (incremented when tokens are added)"
+					},
+					"patch": {
+						"type": "integer",
+						"format": "int32",
+						"minimum": 0,
+						"maximum": 999,
+						"description": "Patch version (incremented for any changes)"
+					}
+				}
+			},
+			"TokenInfo": {
+				"type": "object",
+				"description": "Information about a specific token",
+				"required": [
+					"chain_id",
+					"address",
+					"decimals",
+					"name",
+					"symbol",
+					"tags"
+				],
+				"properties": {
+					"chain_id": {
+						"type": "integer",
+						"format": "int32",
+						"minimum": 1,
+						"maximum": 999999,
+						"description": "Chain ID of the network where token is deployed",
+						"example": 1
+					},
+					"address": {
+						"type": "string",
+						"pattern": "^0x[a-fA-F0-9]{40}$",
+						"minLength": 42,
+						"maxLength": 42,
+						"description": "Checksummed address of the token contract",
+						"example": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+					},
+					"decimals": {
+						"type": "integer",
+						"format": "int32",
+						"minimum": 0,
+						"maximum": 255,
+						"description": "Number of decimals for token balance",
+						"example": 18
+					},
+					"name": {
+						"type": "string",
+						"minLength": 0,
+						"maxLength": 60,
+						"pattern": "^[\\w\\s\\.,:]*$",
+						"description": "Name of the token",
+						"example": "USD Coin"
+					},
+					"symbol": {
+						"type": "string",
+						"minLength": 0,
+						"maxLength": 20,
+						"pattern": "^[\\w]*$",
+						"description": "Symbol of the token",
+						"example": "USDC"
+					},
+					"logo_uri": {
+						"type": "string",
+						"format": "url",
+						"minLength": 1,
+						"maxLength": 500,
+						"pattern": "^https?://.+$",
+						"description": "URI to the token logo (SVG or PNG, 64x64 recommended)",
+						"example": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/usdc.svg"
+					},
+					"tags": {
+						"type": "array",
+						"items": {
+							"type": "string",
+							"minLength": 1,
+							"maxLength": 10,
+							"pattern": "^[\\w]+$"
+						},
+						"minItems": 0,
+						"maxItems": 10,
+						"description": "Array of tag identifiers associated with the token"
+					},
+					"extensions": {
+						"$ref": "#/components/schemas/ExtensionMap"
+					}
+				}
+			},
+			"TagDefinition": {
+				"type": "object",
+				"description": "Definition of a tag that can be associated with tokens",
+				"required": ["name", "description"],
+				"properties": {
+					"name": {
+						"type": "string",
+						"pattern": "^[\\w]+$",
+						"minLength": 1,
+						"maxLength": 20,
+						"description": "Name of the tag"
+					},
+					"description": {
+						"type": "string",
+						"pattern": "^[\\w\\s\\.,:]+$",
+						"minLength": 1,
+						"maxLength": 200,
+						"description": "User-friendly description of the tag"
+					}
+				}
+			},
+			"ExtensionMap": {
+				"type": "object",
+				"maxProperties": 10,
+				"additionalProperties": {
+					"type": "string",
+					"minLength": 1,
+					"maxLength": 1000,
+					"pattern": "^.+$"
+				},
+				"description": "Object containing arbitrary or vendor-specific token metadata",
+				"example": {
+					"chain": "tempo",
+					"inlined": "%3Csvg..."
+				}
+			}
+		}
+	},
+	"tags": [
+		{
+			"name": "Icons",
+			"description": "Endpoints for retrieving token and chain icons"
+		},
+		{
+			"name": "Token Lists",
+			"description": "Endpoints for retrieving token list and asset JSON data"
+		},
+		{
+			"name": "System",
+			"description": "System and health check endpoints"
+		}
+	]
+}

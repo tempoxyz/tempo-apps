@@ -1,4 +1,5 @@
 import { cloudflare } from '@cloudflare/vite-plugin'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 import tailwind from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
@@ -16,6 +17,13 @@ export default defineConfig((config) => {
 		plugins: [
 			showDevtools && devtools(),
 			showDevtools && vitePluginChromiumDevTools(),
+			config.mode === 'production' &&
+				sentryVitePlugin({
+					org: 'tempoxyz',
+					telemetry: false,
+					project: 'tempo-explorer',
+					authToken: env.SENTRY_AUTH_TOKEN,
+				}),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tsconfigPaths({
 				projects: ['./tsconfig.json'],

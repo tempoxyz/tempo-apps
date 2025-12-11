@@ -12,10 +12,12 @@ import { Transaction } from 'tempo.ts/viem'
 export async function rateLimitMiddleware(c: Context, next: Next) {
 	// Clone the request to read the body without consuming the original
 	const clonedRequest = await cloneRawRequest(c.req)
+	// biome-ignore lint/suspicious/noExplicitAny: _
 	const request = RpcRequest.from((await clonedRequest.json()) as any)
 	const serialized = request.params?.[0] as `0x76${string}`
 
 	const transaction = Transaction.deserialize(serialized)
+	// biome-ignore lint/suspicious/noExplicitAny: _
 	const from = (transaction as any).from
 
 	const { success } = await env.AddressRateLimiter.limit({
