@@ -182,7 +182,13 @@ function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
 
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
-	notFoundComponent: NotFound,
+	notFoundComponent: ({ data }) => (
+		<NotFound
+			title="Address Not Found"
+			message="The address is invalid or could not be found."
+			data={data as NotFound.NotFoundData}
+		/>
+	),
 	validateSearch: z.object({
 		page: z.prefault(z.number(), defaultSearchValues.page),
 		limit: z.prefault(

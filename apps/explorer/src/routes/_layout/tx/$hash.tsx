@@ -7,7 +7,7 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { type Address as OxAddress, type Hex, Json, Value } from 'ox'
+import { type Hex, Json, type Address as OxAddress, Value } from 'ox'
 import * as React from 'react'
 import { type Log, type TransactionReceipt, toEventSelector } from 'viem'
 import { useChains } from 'wagmi'
@@ -15,15 +15,16 @@ import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoRow } from '#comps/InfoRow'
+import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
-import { Midcut } from '#comps/Midcut'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#cva.config.ts'
+import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
@@ -37,7 +38,13 @@ const defaultSearchValues = {
 
 export const Route = createFileRoute('/_layout/tx/$hash')({
 	component: RouteComponent,
-	notFoundComponent: NotFound,
+	notFoundComponent: ({ data }) => (
+		<NotFound
+			title="Transaction Not Found"
+			message={`The transaction doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
+			data={data as NotFound.NotFoundData}
+		/>
+	),
 	headers: () => ({
 		...(import.meta.env.PROD
 			? {
@@ -64,9 +71,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 			console.error(error)
 			throw notFound({
 				routeId: rootRouteId,
-				data: {
-					error: error instanceof Error ? error.message : 'Unknown error',
-				},
+				data: { type: 'hash', value: params.hash },
 			})
 		}
 	},

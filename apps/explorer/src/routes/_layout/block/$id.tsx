@@ -44,7 +44,13 @@ interface TransactionTypeResult {
 
 export const Route = createFileRoute('/_layout/block/$id')({
 	component: RouteComponent,
-	notFoundComponent: NotFound,
+	notFoundComponent: ({ data }) => (
+		<NotFound
+			title="Block Not Found"
+			message="The block does not exist or could not be found."
+			data={data as NotFound.NotFoundData}
+		/>
+	),
 	validateSearch: z.object({
 		page: z.prefault(z.coerce.number(), defaultSearchValues.page),
 	}),
