@@ -20,12 +20,12 @@ import { AmountCell, BalanceCell } from '#comps/AmountCell'
 import { ContractReader } from '#comps/ContractReader'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
+import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TimeColumnHeader, useTimeFormat } from '#comps/TimeFormat'
 import { TimestampCell } from '#comps/TimestampCell'
 import { TransactionCell } from '#comps/TransactionCell'
-import { Midcut } from '#comps/Midcut'
 import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
@@ -48,7 +48,13 @@ type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
 export const Route = createFileRoute('/_layout/token/$address')({
 	component: RouteComponent,
-	notFoundComponent: NotFound,
+	notFoundComponent: ({ data }) => (
+		<NotFound
+			title="Token Not Found"
+			message="The token does not exist or could not be found."
+			data={data as NotFound.NotFoundData}
+		/>
+	),
 	validateSearch: z.object({
 		page: z.prefault(z.number(), defaultSearchValues.page),
 		limit: z.prefault(
