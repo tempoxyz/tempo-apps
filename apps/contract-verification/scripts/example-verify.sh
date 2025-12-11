@@ -3,18 +3,18 @@
 set -euo pipefail
 
 PORT="${PORT:-22222}"
-
+URL="${URL:-http://localhost:${PORT}}"
 CHAIN_ID="${CHAIN_ID:-42429}"
-ADDRESS="0x79F64BEc60826079ac7398BFd308e1B9A236A703"
+ADDRESS="${ADDRESS:-0x6c12eB13Ec6C8AC4EaF16CAf4c0c2141386c4c26}"
 
 echo "Verifying contract $ADDRESS"
 echo "on chain $CHAIN_ID"
-echo "verify API is running on http://localhost:${PORT}"
+echo "verify API is running on ${URL}"
 echo
 
 curl --silent \
   --request POST \
-  --url "http://localhost:${PORT}/v2/verify/${CHAIN_ID}/${ADDRESS}" \
+  --url "${URL}/v2/verify/${CHAIN_ID}/${ADDRESS}" \
   --header 'Content-Type: application/json' \
   --data '{
   "stdJsonInput": {
