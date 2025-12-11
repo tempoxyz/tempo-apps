@@ -54,7 +54,7 @@ import { config, getConfig } from '#wagmi.config.ts'
 
 async function fetchAddressTransactionsCount(address: Address.Address) {
 	const response = await fetch(
-		`${__BASE_URL__}/api/address/${address}/txs-count`,
+		`${__BASE_URL__}/api/address/txs-count/${address}`,
 		{ headers: { 'Content-Type': 'application/json' } },
 	)
 	return response.json() as Promise<{ data: number }>

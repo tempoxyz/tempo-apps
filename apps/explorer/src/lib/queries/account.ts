@@ -33,7 +33,14 @@ export function transactionsQueryOptions(
 		offset: params.offset.toString(),
 	})
 	return queryOptions({
-		queryKey: ['account-transactions', params.address, params.page],
+		queryKey: [
+			'account-transactions',
+			params.address,
+			params.page,
+			params.limit,
+			params.offset,
+			params._key,
+		],
 		queryFn: async (): Promise<TransactionsApiResponse> => {
 			const response = await fetch(
 				`${__BASE_URL__}/api/address/${params.address}?${searchParams.toString()}`,
