@@ -663,12 +663,9 @@ function createDetectors(
 			// Viewer paying their own fee
 			if (Address.isEqual(args.from, transactionSender)) {
 				return {
-					type: 'pay fee',
-					parts: [
-						{ type: 'action', value: 'Pay Fee' },
-						{ type: 'amount', value: createAmount(args.amount, address) },
-					],
-					meta: { from: args.from, to: args.to },
+					type: 'fee transfer',
+					amount: args.amount,
+					token: address,
 				}
 			}
 
