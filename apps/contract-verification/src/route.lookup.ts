@@ -16,12 +16,12 @@ import {
  * GET /v2/contracts/{chainId}
  */
 
-const lookupApp = new Hono<{ Bindings: Cloudflare.Env }>()
-const lookupAllChainContracts = new Hono<{ Bindings: Cloudflare.Env }>()
+const lookupRoute = new Hono<{ Bindings: Cloudflare.Env }>()
+const lookupAllChainContractsRoute = new Hono<{ Bindings: Cloudflare.Env }>()
 
 // GET /v2/contract/all-chains/:address - Get verified contract at an address on all chains
 // Note: This route must be defined before /:chainId/:address to avoid matching conflicts
-lookupApp.get('/all-chains/:address', async (context) => {
+lookupRoute.get('/all-chains/:address', async (context) => {
 	try {
 		const { address } = context.req.param()
 
@@ -97,7 +97,7 @@ lookupApp.get('/all-chains/:address', async (context) => {
 })
 
 // GET /v2/contract/:chainId/:address - Get verified contract
-lookupApp.get('/:chainId/:address', async (context) => {
+lookupRoute.get('/:chainId/:address', async (context) => {
 	try {
 		const { chainId, address } = context.req.param()
 		const { fields, omit } = context.req.query()
@@ -283,8 +283,8 @@ lookupApp.get('/:chainId/:address', async (context) => {
 	}
 })
 
-lookupAllChainContracts.get('/:chain-id', (context) =>
+lookupAllChainContractsRoute.get('/:chain-id', (context) =>
 	context.json({ error: 'Not implemented' }),
 )
 
-export { lookupApp, lookupAllChainContracts }
+export { lookupRoute, lookupAllChainContractsRoute }

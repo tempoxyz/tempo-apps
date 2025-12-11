@@ -3,6 +3,7 @@ import { getContainer } from '@cloudflare/containers'
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
 import { Address, Hex } from 'ox'
 import { type Chain, createPublicClient, http, keccak256 } from 'viem'
 
@@ -42,10 +43,23 @@ import {
  * POST /verify/solc-json
  */
 
-const verifyApp = new Hono<{ Bindings: Cloudflare.Env }>()
+const verifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
+
+verifyRoute.use(
+	'*',
+	bodyLimit({
+		maxSize: 2 * 1024 * 1024, // 2mb
+		onError: (context) => {
+			const message = `[requestId: ${context.req.header('Tempo-Request-Id')}] Body limit exceeded`
+
+			console.error(message)
+			return context.json({ error: message }, 413)
+		},
+	}),
+)
 
 // POST /v2/verify/:chainId/:address - Verify Contract (Standard JSON)
-verifyApp.post('/:chainId/:address', async (context) => {
+verifyRoute.post('/:chainId/:address', async (context) => {
 	try {
 		const { chainId, address } = context.req.param()
 		const body = (await context.req.json()) as {
@@ -469,18 +483,18 @@ verifyApp.post('/:chainId/:address', async (context) => {
 })
 
 // POST /v2/verify/metadata/:chainId/:address - Verify Contract (using Solidity metadata.json)
-verifyApp.post('/metadata/:chainId/:address', (context) =>
+verifyRoute.post('/metadata/:chainId/:address', (context) =>
 	context.json({ error: 'Not implemented' }, 501),
 )
 
 // POST /v2/verify/similarity/:chainId/:address - Verify contract via similarity search
-verifyApp.post('/similarity/:chainId/:address', (context) =>
+verifyRoute.post('/similarity/:chainId/:address', (context) =>
 	context.json({ error: 'Not implemented' }, 501),
 )
 
 // GET /v2/verify/:verificationId - Check verification job status
-verifyApp.get('/:verificationId', (context) =>
+verifyRoute.get('/:verificationId', (context) =>
 	context.json({ error: 'Not implemented' }, 501),
 )
 
-export { verifyApp }
+export { verifyRoute }

@@ -18,7 +18,7 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "wrangler d1 migrations apply CONTRACTS-DB --local",
 		"db:migrate:remote": "wrangler d1 migrations apply CONTRACTS-DB --remote",
-		"db:studio": "drizzle-kit studio",
+		"db:studio": "drizzle-kit studio --config='drizzle.config.ts'",
 		"db:push": "drizzle-kit push"
 	},
 	"dependencies": {
