@@ -112,11 +112,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			)
 		}
 
-		const {
-			stdJsonInput,
-			compilerVersion: _compilerVersion,
-			contractIdentifier,
-		} = body
+		const { stdJsonInput, compilerVersion, contractIdentifier } = body
 
 		// Parse contractIdentifier: "contracts/Token.sol:Token" -> { path: "contracts/Token.sol", name: "Token" }
 		const lastColonIndex = contractIdentifier.lastIndexOf(':')
@@ -201,7 +197,11 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			new Request('http://container/compile', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ input: stdJsonInput }),
+				body: JSON.stringify({
+					compilerVersion,
+					contractIdentifier,
+					input: stdJsonInput,
+				}),
 			}),
 		)
 
