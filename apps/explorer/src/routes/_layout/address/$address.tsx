@@ -66,7 +66,10 @@ const defaultSearchValues = {
 
 type TabValue = 'history' | 'assets' | 'contract'
 
-function useBatchTransactionData(transactions: Transaction[]) {
+function useBatchTransactionData(
+	transactions: Transaction[],
+	viewer: Address.Address,
+) {
 	const hashes = React.useMemo(
 		() => transactions.map((tx) => tx.hash).filter(isHash),
 		[transactions],
@@ -74,7 +77,7 @@ function useBatchTransactionData(transactions: Transaction[]) {
 
 	const queries = useQueries({
 		queries: hashes.map((hash) => ({
-			queryKey: ['tx-data-batch', hash],
+			queryKey: ['tx-data-batch', viewer, hash],
 			queryFn: async (): Promise<TransactionData | null> => {
 				const cfg = getConfig()
 				const receipt = await getTransactionReceipt(cfg, { hash })
@@ -86,6 +89,7 @@ function useBatchTransactionData(transactions: Transaction[]) {
 				const knownEvents = parseKnownEvents(receipt, {
 					transaction,
 					getTokenMetadata,
+					viewer,
 				})
 				return { receipt, block, knownEvents }
 			},
@@ -592,7 +596,10 @@ function SectionsWrapper(props: {
 		total: 0,
 	}
 
-	const batchTransactionDataContextValue = useBatchTransactionData(transactions)
+	const batchTransactionDataContextValue = useBatchTransactionData(
+		transactions,
+		address,
+	)
 
 	const { data: exactTotal } = useTransactionCount(address)
 	const total = exactTotal ?? approximateTotal
