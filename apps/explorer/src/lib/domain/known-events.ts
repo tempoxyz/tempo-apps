@@ -835,8 +835,6 @@ export function parseKnownEvents(
 	const getTokenMetadata = options?.getTokenMetadata
 	const viewer = options?.viewer
 	const transactionSender = receipt.from
-		? Address.checksum(receipt.from)
-		: undefined
 
 	const createAmount = (value: bigint, token: Address.Address): Amount => {
 		const metadata = getTokenMetadata?.(token)
