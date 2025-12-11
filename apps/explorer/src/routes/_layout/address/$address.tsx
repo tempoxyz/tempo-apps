@@ -24,6 +24,7 @@ import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractReader } from '#comps/ContractReader'
 import { DataGrid } from '#comps/DataGrid'
+import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import {
@@ -31,7 +32,6 @@ import {
 	type TimeFormat,
 	useTimeFormat,
 } from '#comps/TimeFormat'
-import { TruncatedHash } from '#comps/TruncatedHash'
 import {
 	BatchTransactionDataContext,
 	type TransactionData,
@@ -669,10 +669,11 @@ function SectionsWrapper(props: {
 												transaction={transaction}
 												accountAddress={address}
 											/>,
-											<TruncatedHash
+											<Midcut
 												key="hash"
-												minChars={8}
-												hash={transaction.hash}
+												value={transaction.hash}
+												prefix="0x"
+												align="end"
 											/>,
 											<TransactionFeeCell key="fee" hash={transaction.hash} />,
 											<TransactionTotal

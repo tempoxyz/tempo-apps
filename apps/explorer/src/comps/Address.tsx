@@ -1,18 +1,18 @@
 import { Link } from '@tanstack/react-router'
 import type { Address as AddressType } from 'ox'
-import { HexFormatter } from '#lib/formatting'
+import { Midcut } from '#comps/Midcut'
+import { cx } from '#cva.config'
 
 export function Address(props: Address.Props) {
-	const { address, chars, self, className } = props
+	const { address, align, chars = 3, className, self } = props
 	return (
 		<>
 			<Link
 				to="/address/$address"
 				params={{ address }}
-				title={address}
-				className={className}
+				className={cx(className, 'flex-1 text-accent press-down')}
 			>
-				{HexFormatter.shortenHex(address, chars)}
+				<Midcut align={align} min={chars} prefix="0x" value={address} />
 			</Link>
 			{self && <span className="text-tertiary"> (self)</span>}
 		</>
@@ -22,8 +22,9 @@ export function Address(props: Address.Props) {
 export namespace Address {
 	export interface Props {
 		address: AddressType.Address
+		align?: Midcut.Props['align']
 		chars?: number
-		self?: boolean
 		className?: string
+		self?: boolean
 	}
 }

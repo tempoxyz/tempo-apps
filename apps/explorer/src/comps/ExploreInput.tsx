@@ -1,10 +1,10 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
+import { Midcut } from '#comps/Midcut'
 import { ProgressLine } from '#comps/ProgressLine'
 import { RelativeTime } from '#comps/RelativeTime'
 import { cx } from '#cva.config'
-import { HexFormatter } from '#lib/formatting'
 import type {
 	AddressSearchResult,
 	SearchApiResponse,
@@ -401,7 +401,7 @@ export namespace ExploreInput {
 							</span>
 						</div>
 						<span className="text-[13px] font-mono text-accent">
-							{HexFormatter.shortenHex(suggestion.address, 6)}
+							<Midcut value={suggestion.address} prefix="0x" />
 						</span>
 					</>
 				)}
@@ -413,7 +413,7 @@ export namespace ExploreInput {
 				{suggestion.type === 'transaction' && (
 					<>
 						<span className="text-[13px] font-mono text-accent truncate min-w-0 flex-1">
-							{HexFormatter.shortenHex(suggestion.hash, 8)}
+							<Midcut value={suggestion.hash} prefix="0x" />
 						</span>
 						{suggestion.timestamp ? (
 							<RelativeTime

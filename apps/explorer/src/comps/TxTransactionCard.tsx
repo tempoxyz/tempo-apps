@@ -1,9 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import { InfoCard } from '#comps/InfoCard'
+import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { FormattedTimestamp } from '#comps/TimeFormat'
-import { TruncatedHash } from '#comps/TruncatedHash'
 import { cx } from '#cva.config.ts'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
@@ -73,10 +73,10 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						<Link
 							to="/address/$address"
 							params={{ address: from }}
-							className="text-[13px] text-accent hover:underline press-down"
+							className="text-[13px] text-accent hover:underline press-down w-full"
 							title={from}
 						>
-							<TruncatedHash hash={from} minChars={6} />
+							<Midcut value={from} prefix="0x" min={4} align="end" />
 						</Link>
 					),
 				},
@@ -87,10 +87,10 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 								<Link
 									to="/address/$address"
 									params={{ address: to }}
-									className="text-[13px] text-accent hover:underline press-down"
+									className="text-[13px] text-accent hover:underline press-down w-full"
 									title={to}
 								>
-									<TruncatedHash hash={to} minChars={6} />
+									<Midcut value={to} prefix="0x" min={4} align="end" />
 								</Link>
 							),
 						}

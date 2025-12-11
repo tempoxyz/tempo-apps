@@ -16,9 +16,9 @@ import * as z from 'zod/mini'
 import { Address as AddressLink } from '#comps/Address'
 import { BlockCard } from '#comps/BlockCard'
 import { DataGrid } from '#comps/DataGrid'
+import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
-import { TruncatedHash } from '#comps/TruncatedHash'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent } from '#lib/domain/known-events'
@@ -258,10 +258,10 @@ function TransactionsSection(props: TransactionsSectionProps) {
 									key="hash"
 									to="/receipt/$hash"
 									params={{ hash: transaction.hash }}
-									className="text-accent hover:underline press-down"
+									className="text-accent hover:underline press-down w-full"
 									title={transaction.hash}
 								>
-									<TruncatedHash hash={transaction.hash} minChars={6} />
+									<Midcut value={transaction.hash} prefix="0x" align="end" />
 								</Link>
 							) : (
 								<span key="hash" className="text-tertiary">
@@ -341,12 +341,11 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 			}
 		}
 
-		if (decodedCall.functionName === 'executeBlock') {
+		if (decodedCall.functionName === 'executeBlock')
 			return {
 				title: 'Execute orderbook block',
 				subtitle: 'Settle stablecoin exchange batch',
 			}
-		}
 
 		return {
 			title: decodedCall.functionName
@@ -379,26 +378,21 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 		return <span className="text-primary">Deploy contract</span>
 	}
 
-	if (knownEvents && knownEvents.length > 0) {
+	if (knownEvents && knownEvents.length > 0)
 		return (
 			<TxEventDescription.ExpandGroup
 				events={knownEvents}
 				limitFilter={preferredEventsFilter}
 			/>
 		)
-	}
 
 	if (transaction.value === 0n)
 		return (
-			<div className="flex flex-col gap-[2px]">
-				<span className="text-primary whitespace-nowrap">
-					{title}{' '}
-					<AddressLink
-						address={transaction.to}
-						chars={4}
-						className="text-accent press-down"
-					/>
-				</span>
+			<div className="flex flex-col gap-[2px] flex-1">
+				<div className="text-primary flex-1 flex-nowrap flex gap-[8px]">
+					<div>{title} </div>
+					<AddressLink address={transaction.to} chars={4} />
+				</div>
 				{subtitle && (
 					<span className="text-base-content-secondary text-[12px]">
 						{subtitle}

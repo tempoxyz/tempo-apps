@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import * as z from 'zod/mini'
+import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
 import {
@@ -8,7 +9,6 @@ import {
 	TimeColumnHeader,
 	useTimeFormat,
 } from '#comps/TimeFormat'
-import { TruncatedHash } from '#comps/TruncatedHash'
 import { useMediaQuery } from '#lib/hooks'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens.server'
@@ -85,18 +85,13 @@ function TokensPage() {
 											>
 												{token.symbol}
 											</span>,
-											<span key="name" className="truncate">
+											<span key="name" className="truncate max-w-[40ch]">
 												{token.name}
 											</span>,
 											<span key="currency" className="text-secondary">
 												{token.currency}
 											</span>,
-											<TruncatedHash
-												key="address"
-												hash={token.address}
-												minChars={8}
-												className="text-accent"
-											/>,
+											<Address key="address" address={token.address} />,
 											<FormattedTimestamp
 												key="created"
 												timestamp={BigInt(token.createdAt)}

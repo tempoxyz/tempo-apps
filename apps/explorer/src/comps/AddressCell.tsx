@@ -1,20 +1,19 @@
 import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
-import { TruncatedHash } from '#comps/TruncatedHash'
+import { Midcut } from '#comps/Midcut'
 
 export function AddressCell(props: {
 	address: Address.Address
 	label?: string
 	asLink?: boolean
-	chars?: number
 }) {
-	const { address, label, asLink = true, chars = 8 } = props
+	const { address, label, asLink = true } = props
 	const title = `${label ? `${label}: ` : ''}${address}`
 
 	if (!asLink)
 		return (
-			<span className="text-[13px] text-accent" title={title}>
-				<TruncatedHash hash={address} minChars={chars} />
+			<span className="text-[13px] text-accent w-full" title={title}>
+				<Midcut value={address} prefix="0x" />
 			</span>
 		)
 
@@ -22,10 +21,10 @@ export function AddressCell(props: {
 		<Link
 			to="/address/$address"
 			params={{ address }}
-			className="text-[13px] text-accent hover:text-accent/80 transition-colors press-down"
+			className="text-[13px] text-accent hover:text-accent/80 transition-colors press-down w-full"
 			title={title}
 		>
-			<TruncatedHash hash={address} minChars={chars} />
+			<Midcut value={address} prefix="0x" />
 		</Link>
 	)
 }
