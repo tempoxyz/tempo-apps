@@ -14,12 +14,7 @@ import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { useBlock } from 'wagmi'
-import {
-	getBlock,
-	getChainId,
-	getTransaction,
-	getTransactionReceipt,
-} from 'wagmi/actions'
+import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractReader } from '#comps/ContractReader'
@@ -55,8 +50,15 @@ import {
 	type TransactionsData,
 	transactionsQueryOptions,
 } from '#lib/queries/account.ts'
-import * as AccountServer from '#lib/server/account.server.ts'
 import { config, getConfig } from '#wagmi.config.ts'
+
+async function fetchAddressTransactionsCount(address: Address.Address) {
+	const response = await fetch(
+		`${__BASE_URL__}/api/address/${address}/txs-count`,
+		{ headers: { 'Content-Type': 'application/json' } },
+	)
+	return response.json() as Promise<{ data: number }>
+}
 
 const defaultSearchValues = {
 	page: 1,
@@ -263,10 +265,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 		const addressTransactionCount = await context.queryClient.ensureQueryData({
 			queryKey: ['address-transaction-count', address],
-			queryFn: () =>
-				AccountServer.fetchAddressTransactionsCount({
-					data: { address, chainId: getChainId(config) },
-				}),
+			queryFn: () => fetchAddressTransactionsCount(address),
 			staleTime: 30_000,
 		})
 
@@ -383,7 +382,7 @@ function RouteComponent() {
 				onSectionChange={setActiveSection}
 				contractInfo={contractInfo}
 				initialData={transactionsData}
-				addressTransactionCount={addressTransactionCount}
+				addressTransactionCount={BigInt(addressTransactionCount.data)}
 				assetsData={assetsData}
 			/>
 		</div>
@@ -549,10 +548,7 @@ function SectionsSkeleton({ totalItems }: { totalItems: number }) {
 function useTransactionCount(address: Address.Address) {
 	return useQuery({
 		queryKey: ['account-transaction-count', address],
-		queryFn: () =>
-			AccountServer.fetchAddressTransactionsCount({
-				data: { address, chainId: getChainId(config) },
-			}),
+		queryFn: () => fetchAddressTransactionsCount(address),
 		staleTime: 30_000,
 	})
 }

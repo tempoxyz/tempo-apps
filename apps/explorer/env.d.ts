@@ -3,7 +3,7 @@ interface EnvironmentVariables {
 	readonly VITE_LOG_LEVEL: 'info' | 'warn' | 'silent'
 }
 
-interface ImportMetaEnv extends Cloudflare.Env {}
+interface ImportMetaEnv extends EnvironmentVariables {}
 
 interface ImportMeta {
 	readonly env: ImportMetaEnv
@@ -14,3 +14,6 @@ declare namespace NodeJS {
 		readonly NODE_ENV: 'development' | 'production' | 'test'
 	}
 }
+
+declare const __BASE_URL__: string
+declare const __BUILD_VERSION__: string

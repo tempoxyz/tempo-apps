@@ -9,11 +9,29 @@ import { defineConfig, loadEnv } from 'vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
+const [, , , ...args] = process.argv
+
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
 	const showDevtools = env.VITE_ENABLE_DEVTOOLS !== 'false'
 
+	const lastPort = (() => {
+		const index = args.lastIndexOf('--port')
+		return index === -1 ? null : (args.at(index + 1) ?? null)
+	})()
+	const port = Number(lastPort ?? env.PORT ?? 3_000)
+
 	return {
+		define: {
+			__BASE_URL__: JSON.stringify(
+				config.mode === 'development'
+					? `http://localhost:${port}`
+					: (env.VITE_BASE_URL ?? ''),
+			),
+			__BUILD_VERSION__: JSON.stringify(
+				env.CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? Date.now().toString(),
+			),
+		},
 		plugins: [
 			showDevtools && devtools(),
 			showDevtools && vitePluginChromiumDevTools(),
@@ -42,7 +60,7 @@ export default defineConfig((config) => {
 			react(),
 		],
 		server: {
-			port: Number(env.PORT ?? 3_000),
+			port,
 			allowedHosts: config.mode === 'development' ? true : undefined,
 		},
 		build: {

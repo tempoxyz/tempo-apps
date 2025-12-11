@@ -1,34 +1,47 @@
 import { keepPreviousData, queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
-import * as AccountServer from '#lib/server/account.server.ts'
+import type { RpcTransaction } from 'viem'
+import type * as z from 'zod/mini'
 
-export type TransactionQueryParams = {
-	address: Address.Address
-	page: number
-	limit: number
+import type { RequestParametersSchema as AccountRequestParametersSchema } from '#routes/api/address/$address.ts'
+
+type AccountRequestParameters = Omit<
+	z.infer<typeof AccountRequestParametersSchema>,
+	'page' | 'sort' | 'include'
+>
+
+type TransactionsApiResponse = {
+	transactions: Array<RpcTransaction>
+	total: number
 	offset: number
-	_key?: string | undefined
+	limit: number
+	hasMore: boolean
+	error: null | string
 }
 
-export function transactionsQueryOptions(params: TransactionQueryParams) {
+export function transactionsQueryOptions(
+	params: {
+		page: number
+		include?: 'all' | 'sent' | 'received' | undefined
+		address: Address.Address
+		_key?: string | undefined
+	} & AccountRequestParameters,
+) {
+	const searchParams = new URLSearchParams({
+		include: params?.include ?? 'all',
+		limit: params.limit.toString(),
+		offset: params.offset.toString(),
+	})
 	return queryOptions({
-		queryKey: [
-			'account-transactions',
-			params.address,
-			params.page,
-			params.limit,
-			params._key,
-		],
-		queryFn: () =>
-			AccountServer.fetchTransactions({
-				data: {
-					address: params.address,
-					offset: params.offset,
-					limit: params.limit,
-				},
-			}),
+		queryKey: ['account-transactions', params.address, params.page],
+		queryFn: async (): Promise<TransactionsApiResponse> => {
+			const response = await fetch(
+				`${__BASE_URL__}/api/address/${params.address}?${searchParams.toString()}`,
+			)
+			const data = await response.json()
+			return data as TransactionsApiResponse
+		},
 		refetchInterval: false,
-		refetchIntervalInBackground: false,
 		refetchOnWindowFocus: false,
 		placeholderData: keepPreviousData,
 	})
