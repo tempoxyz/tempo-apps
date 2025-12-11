@@ -76,7 +76,7 @@ function SpotlightLinks() {
 	return (
 		<section className="text-center">
 			<span className="text-sm font-medium text-base-content-tertiary">
-				Check out our examples
+				Try
 			</span>
 			<div className="flex items-center gap-[8px] mt-2 text-[14px] text-base-content-tertiary">
 				<SpotlightLink
