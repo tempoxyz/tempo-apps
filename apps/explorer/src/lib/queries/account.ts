@@ -27,7 +27,7 @@ export function transactionsQueryOptions(params: TransactionQueryParams) {
 					limit: params.limit,
 				},
 			}),
-		refetchInterval: 10000,
+		refetchInterval: false,
 		refetchIntervalInBackground: false,
 		refetchOnWindowFocus: false,
 		placeholderData: keepPreviousData,
