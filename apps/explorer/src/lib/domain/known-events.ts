@@ -656,12 +656,23 @@ function createDetectors(
 			// Avoid mints
 			if (Address.isEqual(args.from, ZERO_ADDRESS)) return null
 
-			// Only trigger when viewer is the fee payer AND different from tx sender
+			// Only trigger when viewer is the fee payer
 			if (!viewer || !transactionSender) return null
 			if (!Address.isEqual(args.from, viewer)) return null
-			if (Address.isEqual(args.from, transactionSender)) return null
 
-			// This is a sponsored fee payment
+			// Viewer paying their own fee
+			if (Address.isEqual(args.from, transactionSender)) {
+				return {
+					type: 'pay fee',
+					parts: [
+						{ type: 'action', value: 'Pay Fee' },
+						{ type: 'amount', value: createAmount(args.amount, address) },
+					],
+					meta: { from: args.from, to: args.to },
+				}
+			}
+
+			// Viewer sponsoring someone else's fee
 			return {
 				type: 'sponsor fee',
 				parts: [
