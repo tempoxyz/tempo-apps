@@ -33,36 +33,47 @@ function createDetectors(
 	createAmount: (value: bigint, token: Address.Address) => Amount,
 	getTokenMetadata?: Tip20.GetTip20MetadataFn,
 	mintBurnMemos?: Map<string, string>,
+	viewer?: Address.Address,
+	transactionSender?: Address.Address,
 ) {
 	return {
 		tip20(event: ParsedEvent) {
 			const { eventName, args, address } = event
 
-			if (eventName === 'Transfer' || eventName === 'TransferWithMemo')
-				return Address.isEqual(args.to, FEE_MANAGER) &&
+			if (eventName === 'Transfer' || eventName === 'TransferWithMemo') {
+				const isFeeTransfer =
+					Address.isEqual(args.to, FEE_MANAGER) &&
 					!Address.isEqual(args.from, ZERO_ADDRESS)
-					? {
-							type: 'fee transfer',
-							amount: args.amount,
-							token: address,
-						}
-					: {
-							type: 'send',
-							note:
-								'memo' in args
-									? Hex.toString(Hex.trimLeft(args.memo))
-									: undefined,
-							parts: [
-								{ type: 'action', value: 'Send' },
-								{
-									type: 'amount',
-									value: createAmount(args.amount, address),
-								},
-								{ type: 'text', value: 'to' },
-								{ type: 'account', value: args.to },
-							],
-							meta: { from: args.from, to: args.to },
-						}
+
+				if (isFeeTransfer) {
+					// When viewer mode is active, let feePayer detector handle fee transfers
+					// involving the viewer as the payer
+					if (viewer && Address.isEqual(args.from, viewer)) {
+						return null
+					}
+					return {
+						type: 'fee transfer',
+						amount: args.amount,
+						token: address,
+					}
+				}
+
+				return {
+					type: 'send',
+					note:
+						'memo' in args ? Hex.toString(Hex.trimLeft(args.memo)) : undefined,
+					parts: [
+						{ type: 'action', value: 'Send' },
+						{
+							type: 'amount',
+							value: createAmount(args.amount, address),
+						},
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: args.to },
+					],
+					meta: { from: args.from, to: args.to },
+				}
+			}
 
 			if (eventName === 'Mint') {
 				// Only handle TIP20 token mint, not liquidity pool mint
@@ -634,6 +645,42 @@ function createDetectors(
 
 			return null
 		},
+
+		feePayer(event: ParsedEvent) {
+			const { eventName, args, address } = event
+
+			// Only handle transfers to FeeManager
+			if (eventName !== 'Transfer' && eventName !== 'TransferWithMemo')
+				return null
+			if (!Address.isEqual(args.to, FEE_MANAGER)) return null
+			// Avoid mints
+			if (Address.isEqual(args.from, ZERO_ADDRESS)) return null
+
+			// Only trigger when viewer is the fee payer
+			if (!viewer || !transactionSender) return null
+			if (!Address.isEqual(args.from, viewer)) return null
+
+			// Viewer paying their own fee
+			if (Address.isEqual(args.from, transactionSender)) {
+				return {
+					type: 'fee transfer',
+					amount: args.amount,
+					token: address,
+				}
+			}
+
+			// Viewer sponsoring someone else's fee
+			return {
+				type: 'sponsor fee',
+				parts: [
+					{ type: 'action', value: 'Sponsor Fee' },
+					{ type: 'amount', value: createAmount(args.amount, address) },
+					{ type: 'text', value: 'for' },
+					{ type: 'account', value: transactionSender },
+				],
+				meta: { from: args.from, to: args.to },
+			}
+		},
 	} as const satisfies Record<
 		string,
 		(event: ParsedEvent) => KnownEvent | FeeTransferEvent | null
@@ -780,11 +827,14 @@ export function parseKnownEvents(
 	options?: {
 		transaction?: TransactionLike
 		getTokenMetadata?: Tip20.GetTip20MetadataFn
+		viewer?: Address.Address
 	},
 ): KnownEvent[] {
 	const { logs } = receipt
 	const events = parseEventLogs({ abi, logs })
 	const getTokenMetadata = options?.getTokenMetadata
+	const viewer = options?.viewer
+	const transactionSender = receipt.from
 
 	const createAmount = (value: bigint, token: Address.Address): Amount => {
 		const metadata = getTokenMetadata?.(token)
@@ -917,6 +967,8 @@ export function parseKnownEvents(
 		createAmount,
 		getTokenMetadata,
 		mintBurnMemos,
+		viewer,
+		transactionSender,
 	)
 
 	const dedupedEvents = events.filter((event) => {
@@ -1113,6 +1165,7 @@ export function parseKnownEvents(
 		const event = dedupedEvents[index]
 
 		const detected =
+			detectors.feePayer(event) ||
 			detectors.tip20(event) ||
 			detectors.tip20Factory(event) ||
 			detectors.stablecoinExchange(event) ||
@@ -1126,6 +1179,14 @@ export function parseKnownEvents(
 		if (isFeeTransferEvent(detected)) {
 			feeTransferEvents.push(detected)
 			continue
+		}
+
+		// Filter by viewer if specified - only include events involving the viewer
+		if (viewer && 'meta' in detected && detected.meta) {
+			const involvesViewer =
+				(detected.meta.from && Address.isEqual(detected.meta.from, viewer)) ||
+				(detected.meta.to && Address.isEqual(detected.meta.to, viewer))
+			if (!involvesViewer) continue
 		}
 
 		knownEvents.push(detected)
