@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
 import { Address, Hex } from 'ox'
@@ -283,8 +283,95 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 	}
 })
 
-lookupAllChainContractsRoute.get('/:chain-id', (context) =>
-	context.json({ error: 'Not implemented' }),
-)
+// GET /v2/contracts/:chainId - List verified contracts on a specific chain
+lookupAllChainContractsRoute.get('/:chainId', async (context) => {
+	try {
+		const { chainId } = context.req.param()
+		const { sort, limit, afterMatchId } = context.req.query()
+
+		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(Number(chainId)))
+			return context.json(
+				{
+					customCode: 'unsupported_chain',
+					message: `The chain with chainId ${chainId} is not supported`,
+					errorId: crypto.randomUUID(),
+				},
+				400,
+			)
+
+		// Validate and parse query params
+		const sortOrder = sort === 'asc' ? 'asc' : 'desc'
+		const limitNum = Math.min(Math.max(Number(limit) || 200, 1), 200)
+
+		const db = drizzle(context.env.CONTRACTS_DB)
+
+		// Build query
+		const query = db
+			.select({
+				matchId: verifiedContractsTable.id,
+				verifiedAt: verifiedContractsTable.createdAt,
+				runtimeMatch: verifiedContractsTable.runtimeMatch,
+				creationMatch: verifiedContractsTable.creationMatch,
+				chainId: contractDeploymentsTable.chainId,
+				address: contractDeploymentsTable.address,
+			})
+			.from(verifiedContractsTable)
+			.innerJoin(
+				contractDeploymentsTable,
+				eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
+			)
+			.where(
+				afterMatchId
+					? and(
+							eq(contractDeploymentsTable.chainId, Number(chainId)),
+							sortOrder === 'desc'
+								? lt(verifiedContractsTable.id, Number(afterMatchId))
+								: gt(verifiedContractsTable.id, Number(afterMatchId)),
+						)
+					: eq(contractDeploymentsTable.chainId, Number(chainId)),
+			)
+			.orderBy(
+				sortOrder === 'desc'
+					? desc(verifiedContractsTable.id)
+					: asc(verifiedContractsTable.id),
+			)
+			.limit(limitNum)
+
+		const results = await query
+
+		// Transform results to match OpenAPI spec
+		const contracts = results.map((row) => {
+			const runtimeMatchStatus = row.runtimeMatch ? 'exact_match' : 'match'
+			const creationMatchStatus = row.creationMatch ? 'exact_match' : 'match'
+			const matchStatus =
+				runtimeMatchStatus === 'exact_match' ||
+				creationMatchStatus === 'exact_match'
+					? 'exact_match'
+					: 'match'
+
+			return {
+				matchId: String(row.matchId),
+				match: matchStatus,
+				creationMatch: creationMatchStatus,
+				runtimeMatch: runtimeMatchStatus,
+				chainId: String(row.chainId),
+				address: Hex.fromBytes(new Uint8Array(row.address as ArrayBuffer)),
+				verifiedAt: row.verifiedAt,
+			}
+		})
+
+		return context.json({ results: contracts })
+	} catch (error) {
+		console.error(error)
+		return context.json(
+			{
+				customCode: 'internal_error',
+				message: 'An unexpected error occurred',
+				errorId: crypto.randomUUID(),
+			},
+			500,
+		)
+	}
+})
 
 export { lookupRoute, lookupAllChainContractsRoute }

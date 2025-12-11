@@ -7,7 +7,6 @@ export class VerificationContainer extends Container {
 	envVars = {
 		ZKGM: 'hello',
 	}
-	entrypoint = ['node', '/usr/src/app/index.ts']
 
 	override async onStart(): Promise<void> {
 		console.log('onStart hook called')
