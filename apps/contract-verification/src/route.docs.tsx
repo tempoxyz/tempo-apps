@@ -1,10 +1,13 @@
+import { Hono } from 'hono'
 import { html, raw } from 'hono/html'
+
+export const docsRoute = new Hono<{ Bindings: Cloudflare.Env }>()
 
 const scalarConfig = {
 	slug: 'contracts',
 	hideModels: true,
 	hideClientButton: true,
-	url: '/schema/openapi.json',
+	url: '/openapi.json',
 	showDeveloperTools: 'never',
 	documentDownloadType: 'json',
 	operationTitleSource: 'path',
@@ -13,7 +16,7 @@ const scalarConfig = {
 	favicon: 'https://explore.tempo.xyz/favicon.ico',
 }
 
-export const Docs = () => {
+const Docs = () => {
 	return (
 		<html lang="en">
 			<head>
@@ -30,3 +33,5 @@ export const Docs = () => {
 		</html>
 	)
 }
+
+docsRoute.get('/', (context) => context.html(<Docs />))

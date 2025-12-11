@@ -1,7 +1,6 @@
 import { Container } from '@cloudflare/containers'
 
 export class VerificationContainer extends Container {
-	// Configure default port for the container
 	defaultPort = 8080
 	sleepAfter = '10m'
 	enableInternet = true
@@ -13,7 +12,7 @@ export class VerificationContainer extends Container {
 	override async onStart(): Promise<void> {
 		console.log('onStart hook called')
 
-		const response = await this.containerFetch('http://localhost:8080/health')
+		const response = await this.containerFetch('http://localhost:8080/health') // TODO: update domain
 		if (!response.ok) throw new Error('Container health check failed')
 
 		const data = await response.text()

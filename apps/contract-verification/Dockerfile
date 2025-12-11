@@ -5,7 +5,7 @@ ENV NODE_ENV="production"
 
 WORKDIR /usr/src/app
 
-# Copy solc binary
+# Copy solc binary. TODO: switch to dynamic solc version
 COPY --from=ghcr.io/argotorg/solc:0.8.30-alpine /usr/local/bin/solc /usr/local/bin/solc
 COPY container/index.ts index.ts
 
