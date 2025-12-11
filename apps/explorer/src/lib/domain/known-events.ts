@@ -1244,7 +1244,7 @@ export function parseKnownEvents(
 	}
 
 	// If no known events were parsed but there was a fee transfer,
-	// show it as a fee payment event (only if viewer is the fee payer or no viewer)
+	// show it as a fee payment event
 	if (knownEvents.length === 0 && feeTransferEvents.length > 0) {
 		const parts: KnownEventPart[] = [{ type: 'action', value: 'Pay Fee' }]
 
