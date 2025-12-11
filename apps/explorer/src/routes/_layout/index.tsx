@@ -131,7 +131,7 @@ function SpotlightLink(props: {
 		<Link
 			to={to}
 			{...(params ? { params } : {})}
-			className="text-base-content-secondary hover:text-base-content transition-colors duration-150 underline underline-offset-2 decoration-base-border hover:decoration-base-content-secondary"
+			className="text-base-content-secondary hover:text-base-content underline underline-offset-2 decoration-base-border hover:decoration-base-content-secondary press-down"
 		>
 			{children}
 		</Link>

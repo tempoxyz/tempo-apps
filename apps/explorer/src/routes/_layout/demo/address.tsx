@@ -6,9 +6,9 @@ import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics } from 'viem'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
+import { Midcut } from '#comps/Midcut'
 import { RelativeTime } from '#comps/RelativeTime'
 import { Sections } from '#comps/Sections'
-import { TruncatedHash } from '#comps/TruncatedHash'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import {
 	getPerspectiveEvent,
@@ -1060,11 +1060,7 @@ function Component() {
 													link={`/receipt/${tx.hash}`}
 												/>,
 												descriptionCell,
-												<TruncatedHash
-													key="hash"
-													hash={tx.hash}
-													minChars={8}
-												/>,
+												<Midcut key="hash" value={tx.hash} prefix="0x" />,
 												<TransactionFee key="fee" receipt={tx.receipt} />,
 												<TransactionTotal
 													key="total"

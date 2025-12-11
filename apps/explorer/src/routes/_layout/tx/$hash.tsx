@@ -7,7 +7,7 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { type Hex, Json, type Address as OxAddress, Value } from 'ox'
+import { type Address as OxAddress, type Hex, Json, Value } from 'ox'
 import * as React from 'react'
 import { type Log, type TransactionReceipt, toEventSelector } from 'viem'
 import { useChains } from 'wagmi'
@@ -17,7 +17,7 @@ import { DataGrid } from '#comps/DataGrid'
 import { InfoRow } from '#comps/InfoRow'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
-import { TruncatedHash } from '#comps/TruncatedHash'
+import { Midcut } from '#comps/Midcut'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
 import { TxEventDescription } from '#comps/TxEventDescription'
@@ -367,7 +367,7 @@ function CallItem(props: {
 						params={{ address: call.to }}
 						className="text-accent hover:underline press-down"
 					>
-						<TruncatedHash hash={call.to} minChars={8} />
+						<Midcut value={call.to} prefix="0x" />
 					</Link>
 				) : (
 					<span className="text-tertiary">Contract Creation</span>
@@ -536,7 +536,11 @@ function EventsSection(props: {
 								expanded={isExpanded}
 								onToggle={() => toggleGroup(groupIndex)}
 							/>,
-							<Address key="contract" address={group.logs[0].address} />,
+							<Address
+								align="end"
+								key="contract"
+								address={group.logs[0].address}
+							/>,
 						],
 						expanded: isExpanded ? (
 							<div className="flex flex-col gap-4">
@@ -570,7 +574,7 @@ function EventGroupCell(props: {
 	const eventCount = logs.length
 
 	return (
-		<div className="flex flex-col gap-[4px]">
+		<div className="flex flex-col gap-[4px] w-full">
 			{knownEvent ? (
 				<TxEventDescription
 					event={knownEvent}
@@ -579,7 +583,7 @@ function EventGroupCell(props: {
 			) : (
 				<span className="text-primary">
 					{logs[0].topics[0] ? (
-						<TruncatedHash hash={logs[0].topics[0]} minChars={8} />
+						<Midcut value={logs[0].topics[0]} prefix="0x" />
 					) : (
 						'Unknown'
 					)}
