@@ -23,35 +23,44 @@ export const Route = createFileRoute('/api/address/txs-count/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				const address = zAddress().parse(params.address)
-				Address.assert(address)
+				try {
+					const address = zAddress().parse(params.address)
+					Address.assert(address)
 
-				const parseResult = RequestSchema.safeParse(params)
-				if (!parseResult.success)
-					return json(
-						{ error: z.prettifyError(parseResult.error), data: null },
-						{ status: 400 },
-					)
+					const parseResult = RequestSchema.safeParse(params)
+					if (!parseResult.success)
+						return json(
+							{ error: z.prettifyError(parseResult.error), data: null },
+							{ status: 400 },
+						)
 
-				const { chainId } = parseResult.data
+					const { chainId } = parseResult.data
 
-				const [txSentResult, txReceivedResult] = await Promise.all([
-					QB.selectFrom('txs')
-						.select((eb) => eb.fn.count('hash').as('cnt'))
-						.where('from', '=', address)
-						.where('chain', '=', chainId)
-						.executeTakeFirstOrThrow(),
-					QB.selectFrom('txs')
-						.select((eb) => eb.fn.count('hash').as('cnt'))
-						.where('to', '=', address)
-						.where('chain', '=', chainId)
-						.executeTakeFirstOrThrow(),
-				])
+					const [txSentResult, txReceivedResult] = await Promise.all([
+						QB.selectFrom('txs')
+							.select((eb) => eb.fn.count('hash').as('cnt'))
+							.where('from', '=', address)
+							.where('chain', '=', chainId)
+							.executeTakeFirstOrThrow(),
+						QB.selectFrom('txs')
+							.select((eb) => eb.fn.count('hash').as('cnt'))
+							.where('to', '=', address)
+							.where('chain', '=', chainId)
+							.executeTakeFirstOrThrow(),
+					])
 
-				const txSent = txSentResult.cnt ?? 0
-				const txReceived = txReceivedResult.cnt ?? 0
+					const txSent = txSentResult.cnt ?? 0
+					const txReceived = txReceivedResult.cnt ?? 0
 
-				return json({ data: Number(txSent) + Number(txReceived), error: null })
+					return json({
+						data: Number(txSent) + Number(txReceived),
+						error: null,
+					})
+				} catch (error) {
+					console.error(error)
+					const errorMessage = error instanceof Error ? error.message : error
+					return json({ data: null, error: errorMessage }, { status: 500 })
+				}
 			},
 		},
 	},

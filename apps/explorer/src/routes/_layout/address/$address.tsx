@@ -271,7 +271,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 			.catch((error) => {
 				console.error('Fetch txs-count error (non-blocking):', error)
-				return { data: 0, error: null }
+				return { data: undefined, error: null }
 			})
 
 		return {
