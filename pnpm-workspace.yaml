@@ -40,7 +40,7 @@ catalog:
   hono: ^4.10.8
   idxs: ^0.0.5
   kysely: ^0.28.8
-  ox: ^0.9.17
+  ox: 0.9.17
   react: ^19.2.1
   react-dom: ^19.2.1
   tailwind-merge: ^3.4.0
@@ -56,6 +56,6 @@ catalog:
   vitest: 3.2.4
   wagmi: ^3.1.0
   wrangler: ^4.53.0
-  zod: ^4.1.13
+  zod: 4.1.13
 
 catalogMode: strict

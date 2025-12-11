@@ -43,6 +43,7 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"shiki": "^3.19.0",
 		"@cloudflare/puppeteer": "catalog:",
 		"@cloudflare/vite-plugin": "catalog:",
 		"@cloudflare/vitest-pool-workers": "catalog:",

@@ -14,3 +14,8 @@ declare namespace NodeJS {
 		readonly NODE_ENV: 'development' | 'production' | 'test'
 	}
 }
+
+declare module 'shiki/onig.wasm' {
+	const wasm: unknown
+	export default wasm
+}
