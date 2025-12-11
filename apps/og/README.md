@@ -7,6 +7,4 @@ pnpm i          # Install dependencies
 pnpm dev        # Start development server
 ```
 
-__
-
-[What is The Open Graph Protocol?](https://ogp.me)
+<sub>[What is The Open Graph Protocol?](https://ogp.me)</sub>
