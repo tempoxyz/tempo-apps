@@ -30,7 +30,8 @@ export const Route = createFileRoute('/api/address/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params, request }) => {
-				const url = new URL(request.url, __BASE_URL__)
+				// fallback base needed for dev SSR where request.url may be relative
+				const url = new URL(request.url, __BASE_URL__ || 'http://localhost')
 				const address = zAddress().parse(params.address)
 				Address.assert(address)
 
