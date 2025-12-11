@@ -1,6 +1,5 @@
 import { getContainer } from '@cloudflare/containers'
 import { Hono } from 'hono'
-import { cache } from 'hono/cache'
 import { csrf } from 'hono/csrf'
 import { prettyJSON } from 'hono/pretty-json'
 import { requestId } from 'hono/request-id'
@@ -18,6 +17,7 @@ export { VerificationContainer }
 /**
  * TODO:
  * - CORS,
+ * - Cache,
  * - Security
  * - Rate limiting,
  */
@@ -30,13 +30,6 @@ app.use(secureHeaders())
 app.use(csrf())
 // TODO: update before merging to main
 app.use('*', timeout(20_000)) // 20 seconds
-app.use(
-	'*',
-	cache({
-		cacheName: 'contract-verification',
-		cacheControl: 'max-age=3600',
-	}),
-)
 app.use(prettyJSON())
 
 app.route('/docs', docsRoute)
@@ -53,7 +46,7 @@ app
 			.fetch(new Request('http://container/health'))
 			.then((response) =>
 				response.ok
-					? context.json({ message: response.text() })
+					? context.json({ message: 'ok' })
 					: context.json({ error: 'Failed to ping container' }, 500),
 			),
 	)
