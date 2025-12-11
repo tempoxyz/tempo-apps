@@ -1,11 +1,13 @@
+import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { type Address as AddressType, Value } from 'ox'
+import { type Address as AddressType, Hex, Value } from 'ox'
 import * as React from 'react'
-import { isAddressEqual } from 'viem'
+import { decodeFunctionData, isAddressEqual } from 'viem'
 import { Address } from '#comps/Address'
 import { Amount } from '#comps/Amount'
 import { Midcut } from '#comps/Midcut'
 import { cx } from '#cva.config.ts'
+import { extractContractAbi, getContractAbi } from '#lib/domain/contracts.ts'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
 import {
 	DateFormatter,
@@ -13,6 +15,56 @@ import {
 	PriceFormatter,
 	RoleFormatter,
 } from '#lib/formatting.ts'
+
+/**
+ * Renders a contract call with decoded function name.
+ * Fetches ABI from registry or extracts from bytecode using whatsabi.
+ */
+function ContractCallPart(props: {
+	address: AddressType.Address
+	input: Hex.Hex
+}) {
+	const { address, input } = props
+	const selector = Hex.slice(input, 0, 4)
+
+	const { data: functionName, isLoading } = useQuery({
+		queryKey: ['contract-call-function', address, selector],
+		queryFn: async () => {
+			// Try known ABI first
+			let abi = getContractAbi(address)
+
+			// Fall back to extracting from bytecode
+			if (!abi) {
+				abi = await extractContractAbi(address)
+			}
+
+			if (!abi) return null
+
+			try {
+				const decoded = decodeFunctionData({ abi, data: input })
+				return decoded.functionName
+			} catch {
+				return null
+			}
+		},
+		staleTime: Number.POSITIVE_INFINITY,
+	})
+
+	// Show selector while loading or if we couldn't decode
+	const displayText = isLoading ? selector : (functionName ?? selector)
+
+	return (
+		<Link
+			to="/address/$address"
+			params={{ address }}
+			search={{ tab: 'contract' }}
+			title={`${address} - ${functionName ?? selector}`}
+			className="press-down whitespace-nowrap"
+		>
+			<span className="text-accent items-end">{displayText}</span>
+		</Link>
+	)
+}
 
 export function TxEventDescription(props: TxEventDescription.Props) {
 	const { event, seenAs, className, suffix } = props
@@ -114,6 +166,8 @@ export namespace TxEventDescription {
 						</span>
 					</Link>
 				)
+			case 'contractCall':
+				return <ContractCallPart {...part.value} />
 			default:
 				return null
 		}
