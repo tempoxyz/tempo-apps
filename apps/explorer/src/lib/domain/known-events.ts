@@ -653,6 +653,7 @@ function createDetectors(
 			if (eventName !== 'Transfer' && eventName !== 'TransferWithMemo')
 				return null
 			if (!Address.isEqual(args.to, FEE_MANAGER)) return null
+			// Avoid mints
 			if (Address.isEqual(args.from, ZERO_ADDRESS)) return null
 
 			// Only trigger when viewer is the fee payer AND different from tx sender
