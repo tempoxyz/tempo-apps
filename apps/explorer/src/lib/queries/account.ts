@@ -41,6 +41,8 @@ export function transactionsQueryOptions(
 			const data = await response.json()
 			return data as TransactionsApiResponse
 		},
+		// Prevent immediate refetch on hydration - let SSR data be used
+		staleTime: 10_000,
 		refetchInterval: false,
 		refetchOnWindowFocus: false,
 		placeholderData: keepPreviousData,

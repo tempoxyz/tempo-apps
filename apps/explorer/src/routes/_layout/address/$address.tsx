@@ -263,11 +263,16 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				return undefined
 			})
 
-		const addressTransactionCount = await context.queryClient.ensureQueryData({
-			queryKey: ['address-transaction-count', address],
-			queryFn: () => fetchAddressTransactionsCount(address),
-			staleTime: 30_000,
-		})
+		const addressTransactionCount = await context.queryClient
+			.ensureQueryData({
+				queryKey: ['address-transaction-count', address],
+				queryFn: () => fetchAddressTransactionsCount(address),
+				staleTime: 30_000,
+			})
+			.catch((error) => {
+				console.error('Fetch txs-count error (non-blocking):', error)
+				return { data: 0, error: null }
+			})
 
 		return {
 			address,
@@ -382,7 +387,7 @@ function RouteComponent() {
 				onSectionChange={setActiveSection}
 				contractInfo={contractInfo}
 				initialData={transactionsData}
-				addressTransactionCount={BigInt(addressTransactionCount.data)}
+				addressTransactionCount={BigInt(addressTransactionCount.data ?? 0)}
 				assetsData={assetsData}
 			/>
 		</div>
@@ -417,8 +422,8 @@ function AccountCardWithTimestamps(props: {
 	})
 
 	// Use the real transaction count (not the approximate total from pagination)
-	const { data: exactTotal } = useTransactionCount(address)
-	const totalTransactions = Number(exactTotal ?? 0n)
+	const { data: exactTotalResponse } = useTransactionCount(address)
+	const totalTransactions = Number(exactTotalResponse?.data ?? 0)
 	const lastPageOffset = Math.max(0, totalTransactions - 1)
 
 	const { data: oldestData } = useQuery({
@@ -603,8 +608,8 @@ function SectionsWrapper(props: {
 		address,
 	)
 
-	const { data: exactTotal } = useTransactionCount(address)
-	const total = exactTotal ?? approximateTotal
+	const { data: exactTotalResponse } = useTransactionCount(address)
+	const total = exactTotalResponse?.data ?? approximateTotal
 
 	// Use isPending for SSR-consistent loading state
 	const isLoadingPage = isPending

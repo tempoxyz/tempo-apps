@@ -24,8 +24,6 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 		handlers: {
 			GET: async ({ params }) => {
 				const address = zAddress().parse(params.address)
-				console.info('address', address)
-
 				const chainId = config.getClient().chain.id
 
 				const result = await QB.withSignatures([TRANSFER_SIGNATURE])
@@ -36,7 +34,6 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 						eb.or([eb('from', '=', address), eb('to', '=', address)]),
 					)
 					.execute()
-				console.info('result', result)
 
 				// Calculate balance per token
 				const balances = new Map<string, bigint>()

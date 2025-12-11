@@ -172,11 +172,17 @@ export const Route = createFileRoute('/api/address/$address')({
 					}
 				}
 
-				const sortedTxs = [...txsByHash.values()].sort((a, b) =>
-					sortDirection === 'desc'
-						? Number(b.block_num) - Number(a.block_num)
-						: Number(a.block_num) - Number(b.block_num),
-				)
+				const sortedTxs = [...txsByHash.values()].sort((a, b) => {
+					const blockDiff =
+						sortDirection === 'desc'
+							? Number(b.block_num) - Number(a.block_num)
+							: Number(a.block_num) - Number(b.block_num)
+					// Use hash as tiebreaker for stable sorting
+					if (blockDiff !== 0) return blockDiff
+					return sortDirection === 'desc'
+						? b.hash.localeCompare(a.hash)
+						: a.hash.localeCompare(b.hash)
+				})
 
 				const hasMore = sortedTxs.length > offset + limit
 				const paginatedTxs = sortedTxs.slice(offset, offset + limit)
