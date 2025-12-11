@@ -19,6 +19,8 @@ export const queryClient = new QueryClient({
 })
 
 export const persister = createAsyncStoragePersister({
+	// Cache key includes build version - automatically invalidates on new deploys
+	key: `tempo-query-cache-${__BUILD_VERSION__}`,
 	serialize,
 	storage: browser ? window.localStorage : undefined,
 	deserialize,
