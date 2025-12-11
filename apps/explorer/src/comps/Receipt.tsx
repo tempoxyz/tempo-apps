@@ -4,7 +4,10 @@ import { useState } from 'react'
 import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { TxEventDescription } from '#comps/TxEventDescription'
-import type { KnownEvent } from '#lib/domain/known-events'
+import {
+	type KnownEvent,
+	preferredEventsFilter,
+} from '#lib/domain/known-events'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 
@@ -29,6 +32,7 @@ export function Receipt(props: Receipt.Props) {
 	const hasTotal =
 		totalDisplay !== undefined || (total !== undefined && total !== null)
 	const showFeeBreakdown = feeBreakdown.length > 0
+	const filteredEvents = events.filter(preferredEventsFilter)
 
 	return (
 		<>
@@ -100,11 +104,11 @@ export function Receipt(props: Receipt.Props) {
 						</div>
 					</div>
 				</div>
-				{events.length > 0 && (
+				{filteredEvents.length > 0 && (
 					<>
 						<div className="border-t border-dashed border-base-border" />
 						<div className="flex flex-col gap-3 px-[20px] py-[16px] font-mono text-[13px] leading-4 [counter-reset:event]">
-							{events.map((event, index) => {
+							{filteredEvents.map((event, index) => {
 								// Calculate total amount from event parts
 								// For swaps, only show the first amount (what's being swapped out)
 								const amountParts = event.parts.filter(
