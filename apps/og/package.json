@@ -8,8 +8,8 @@
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types"
 	},
 	"dependencies": {
-		"@takumi-rs/image-response": "catalog:",
-		"@takumi-rs/wasm": "catalog:",
+		"@takumi-rs/image-response": "^0.57.3",
+		"@takumi-rs/wasm": "^0.57.3",
 		"hono": "catalog:"
 	},
 	"devDependencies": {

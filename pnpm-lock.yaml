@@ -51,12 +51,6 @@ catalogs:
     '@tailwindcss/vite':
       specifier: ^4.1.17
       version: 4.1.17
-    '@takumi-rs/image-response':
-      specifier: ^0.57.3
-      version: 0.57.3
-    '@takumi-rs/wasm':
-      specifier: ^0.57.3
-      version: 0.57.3
     '@tanstack/devtools-vite':
       specifier: ^0.3.12
       version: 0.3.12
@@ -432,10 +426,10 @@ importers:
   apps/og:
     dependencies:
       '@takumi-rs/image-response':
-        specifier: 'catalog:'
+        specifier: ^0.57.3
         version: 0.57.3
       '@takumi-rs/wasm':
-        specifier: 'catalog:'
+        specifier: ^0.57.3
         version: 0.57.3
       hono:
         specifier: 'catalog:'
