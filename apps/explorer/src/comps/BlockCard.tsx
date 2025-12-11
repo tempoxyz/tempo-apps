@@ -3,7 +3,7 @@ import type { Hex } from 'ox'
 import * as React from 'react'
 import { useWatchBlockNumber } from 'wagmi'
 import { InfoCard } from '#comps/InfoCard'
-import { TruncatedHash } from '#comps/TruncatedHash'
+import { Midcut } from '#comps/Midcut'
 import { cx } from '#cva.config'
 import { DateFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
@@ -132,17 +132,17 @@ export function BlockCard(props: BlockCard.Props) {
 						</button>
 					)}
 					<div className="w-full flex items-center justify-between gap-[8px]">
-						<span className="flex items-center gap-[6px] font-normal capitalize text-tertiary">
+						<span className="flex items-center gap-[6px] font-normal capitalize text-tertiary shrink-0">
 							<ArrowUp10 className="size-[14px] text-content-dimmed" />
 							Parent
 						</span>
 						<Link
 							to="/block/$id"
 							params={{ id: parentHash }}
-							className="text-accent hover:underline press-down"
+							className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end"
 							title={parentHash}
 						>
-							<TruncatedHash hash={parentHash} minChars={4} />
+							<Midcut value={parentHash} prefix="0x" align="end" />
 						</Link>
 					</div>
 				</div>,
@@ -155,10 +155,10 @@ export function BlockCard(props: BlockCard.Props) {
 							<Link
 								to="/address/$address"
 								params={{ address: miner }}
-								className="text-accent hover:underline press-down"
+								className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end"
 								title={miner}
 							>
-								<TruncatedHash hash={miner} minChars={4} />
+								<Midcut value={miner} prefix="0x" align="end" />
 							</Link>
 						) : (
 							<span className="text-tertiary">—</span>
@@ -287,7 +287,9 @@ export namespace BlockCard {
 		const { label, children } = props
 		return (
 			<div className="w-full flex items-center justify-between gap-[8px]">
-				<span className="font-normal capitalize text-tertiary">{label}</span>
+				<span className="font-normal capitalize text-tertiary shrink-0">
+					{label}
+				</span>
 				{children}
 			</div>
 		)
@@ -329,7 +331,7 @@ export namespace BlockCard {
 		if (!hash) {
 			return (
 				<div className="flex items-center justify-between gap-[8px] text-primary lowercase">
-					<span className="text-[12px] text-tertiary">{label}</span>
+					<span className="text-[12px] text-tertiary shrink-0">{label}</span>
 					<span className="text-tertiary">—</span>
 				</div>
 			)
@@ -342,12 +344,12 @@ export namespace BlockCard {
 				className="w-full flex items-center justify-between gap-[8px] text-primary lowercase cursor-pointer press-down"
 				title={hash}
 			>
-				<span className="text-[12px] text-tertiary">
+				<span className="text-[12px] text-tertiary shrink-0">
 					{notifying ? 'copied' : label}
 				</span>
-				<div className="flex items-center gap-[8px]">
-					<TruncatedHash hash={hash} minChars={4} />
-					<CopyIcon className="w-[12px] h-[12px] text-content-dimmed" />
+				<div className="flex items-center gap-[8px] min-w-0 flex-1 justify-end">
+					<Midcut value={hash} prefix="0x" align="end" />
+					<CopyIcon className="w-[12px] h-[12px] text-content-dimmed shrink-0" />
 				</div>
 			</button>
 		)

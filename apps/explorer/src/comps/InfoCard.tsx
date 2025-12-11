@@ -22,10 +22,12 @@ export function InfoCard(props: InfoCard.Props) {
 			>
 				{isSectionEntry ? (
 					<div className="flex items-center gap-[8px] justify-between w-full">
-						<span className="text-[13px] font-normal capitalize text-tertiary">
+						<span className="text-[13px] font-normal capitalize text-tertiary shrink-0">
 							{section.label}
 						</span>
-						{section.value}
+						<div className="min-w-0 flex-1 flex justify-end">
+							{section.value}
+						</div>
 					</div>
 				) : (
 					section

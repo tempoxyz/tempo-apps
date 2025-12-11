@@ -366,7 +366,7 @@ function StaticReadFunction(props: {
 	return (
 		<div
 			id={fnId}
-			className="flex flex-col gap-[4px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px] transition-all duration-300"
+			className="flex flex-col gap-[4px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px] transition-all duration-300 overflow-hidden"
 		>
 			<div className="flex items-center justify-between gap-[8px]">
 				<span className="text-[12px] text-secondary font-mono">
@@ -416,9 +416,10 @@ function StaticReadFunction(props: {
 			) : (
 				<span
 					className={cx(
-						'text-[13px] font-mono',
+						'text-[13px] font-mono truncate',
 						error ? 'text-red-400' : 'text-primary',
 					)}
+					title={displayValue}
 				>
 					{displayValue}
 				</span>

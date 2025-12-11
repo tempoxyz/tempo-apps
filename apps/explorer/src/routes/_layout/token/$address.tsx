@@ -25,7 +25,7 @@ import { Sections } from '#comps/Sections'
 import { TimeColumnHeader, useTimeFormat } from '#comps/TimeFormat'
 import { TimestampCell } from '#comps/TimestampCell'
 import { TransactionCell } from '#comps/TransactionCell'
-import { TruncatedHash } from '#comps/TruncatedHash'
+import { Midcut } from '#comps/Midcut'
 import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
@@ -670,7 +670,7 @@ function FilterIndicator(props: {
 				className="text-accent press-down"
 				title={account}
 			>
-				<TruncatedHash hash={account} minChars={8} />
+				<Midcut value={account} prefix="0x" />
 			</Link>
 			<Link
 				to="/token/$address"

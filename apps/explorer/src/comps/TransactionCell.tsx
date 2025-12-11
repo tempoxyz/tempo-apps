@@ -1,17 +1,16 @@
 import { Link } from '@tanstack/react-router'
 import type { Hex } from 'ox'
-import { TruncatedHash } from '#comps/TruncatedHash'
+import { Midcut } from '#comps/Midcut'
 
-export function TransactionCell(props: { hash: Hex.Hex; chars?: number }) {
-	const { hash, chars = 6 } = props
+export function TransactionCell(props: { hash: Hex.Hex }) {
+	const { hash } = props
 	return (
 		<Link
 			to="/receipt/$hash"
 			params={{ hash }}
-			className="text-[13px] text-tertiary press-down"
-			title={hash}
+			className="text-[13px] text-tertiary press-down w-full"
 		>
-			<TruncatedHash hash={hash} minChars={chars} />
+			<Midcut value={hash} prefix="0x" />
 		</Link>
 	)
 }

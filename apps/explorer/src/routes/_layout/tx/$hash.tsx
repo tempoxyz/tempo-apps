@@ -7,7 +7,7 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { type Address, type Hex, Json, Value } from 'ox'
+import { type Address as OxAddress, type Hex, Json, Value } from 'ox'
 import * as React from 'react'
 import type { Log, TransactionReceipt } from 'viem'
 import { useChains } from 'wagmi'
@@ -16,7 +16,7 @@ import { DataGrid } from '#comps/DataGrid'
 import { InfoRow } from '#comps/InfoRow'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
-import { TruncatedHash } from '#comps/TruncatedHash'
+import { Midcut } from '#comps/Midcut'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
 import { TxEventDescription } from '#comps/TxEventDescription'
@@ -29,6 +29,7 @@ import { useCopy, useMediaQuery } from '#lib/hooks'
 import { type TxData, txQueryOptions } from '#lib/queries'
 import { zHash } from '#lib/zod'
 import CopyIcon from '~icons/lucide/copy'
+import { Address } from '#comps/Address'
 
 const defaultSearchValues = {
 	tab: 'overview',
@@ -305,7 +306,10 @@ function OverviewSection(props: {
 	)
 }
 
-function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
+function InputDataRow(props: {
+	input: Hex.Hex
+	to?: OxAddress.Address | null
+}) {
 	const { input, to } = props
 
 	return (
@@ -324,7 +328,7 @@ function InputDataRow(props: { input: Hex.Hex; to?: Address.Address | null }) {
 
 function CallsSection(props: {
 	calls: ReadonlyArray<{
-		to?: Address.Address | null
+		to?: OxAddress.Address | null
 		data?: Hex.Hex
 		value?: bigint
 	}>
@@ -345,7 +349,7 @@ function CallsSection(props: {
 
 function CallItem(props: {
 	call: {
-		to?: Address.Address | null
+		to?: OxAddress.Address | null
 		data?: Hex.Hex
 		value?: bigint
 	}
@@ -363,7 +367,7 @@ function CallItem(props: {
 						params={{ address: call.to }}
 						className="text-accent hover:underline press-down"
 					>
-						<TruncatedHash hash={call.to} minChars={8} />
+						<Midcut value={call.to} prefix="0x" />
 					</Link>
 				) : (
 					<span className="text-tertiary">Contract Creation</span>
@@ -427,20 +431,10 @@ function EventsSection(props: {
 								expanded={isExpanded}
 								onToggle={() => toggleRow(index)}
 							/>,
-							<Link
-								key="contract"
-								to="/address/$address"
-								params={{ address: log.address }}
-								className="text-accent hover:underline whitespace-nowrap press-down"
-								title={log.address}
-							>
-								<TruncatedHash hash={log.address} minChars={6} />
-							</Link>,
+							<Address align="end" key="contract" address={log.address} />,
 						],
-						expanded: isExpanded ? (
+						expanded: isExpanded && (
 							<TxDecodedTopics key={log.logIndex} log={log} />
-						) : (
-							false
 						),
 					}
 				})
@@ -465,7 +459,7 @@ function EventCell(props: {
 	const [eventSignature] = log.topics
 
 	return (
-		<div className="flex flex-col gap-[4px]">
+		<div className="flex flex-col gap-[4px] w-full">
 			{knownEvent ? (
 				<TxEventDescription
 					event={knownEvent}
@@ -474,7 +468,7 @@ function EventCell(props: {
 			) : (
 				<span className="text-primary">
 					{eventSignature ? (
-						<TruncatedHash hash={eventSignature} minChars={8} />
+						<Midcut value={eventSignature} prefix="0x" />
 					) : (
 						'Unknown'
 					)}
