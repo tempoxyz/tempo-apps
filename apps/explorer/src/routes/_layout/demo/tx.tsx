@@ -352,6 +352,32 @@ function loader() {
 				}) as [Hex.Hex, ...Hex.Hex[]],
 				data: encodeAbiParameters([{ type: 'uint256' }], [75000n]),
 			}),
+			// Test case: Transfer WITH memo (Transfer + TransferWithMemo pair - should dedupe to just TransferWithMemo)
+			mockLog({
+				address: tokenAddress,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'Transfer',
+					args: {
+						from: updaterAddress,
+						to: recipientAddress,
+					},
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [150000n]),
+			}),
+			mockLog({
+				address: tokenAddress,
+				topics: encodeEventTopics({
+					abi: Abis.tip20,
+					eventName: 'TransferWithMemo',
+					args: {
+						from: updaterAddress,
+						to: recipientAddress,
+						memo: Hex.padLeft(Hex.fromString('Payment memo'), 32),
+					},
+				}) as [Hex.Hex, ...Hex.Hex[]],
+				data: encodeAbiParameters([{ type: 'uint256' }], [150000n]),
+			}),
 			mockLog({
 				address: tokenAddress,
 				topics: encodeEventTopics({
