@@ -15,6 +15,7 @@ import * as z from 'zod/mini'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoRow } from '#comps/InfoRow'
 import { NotFound } from '#comps/NotFound'
+import { apostrophe } from '#lib/chars'
 import { Sections } from '#comps/Sections'
 import { TruncatedHash } from '#comps/TruncatedHash'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
@@ -36,7 +37,13 @@ const defaultSearchValues = {
 
 export const Route = createFileRoute('/_layout/tx/$hash')({
 	component: RouteComponent,
-	notFoundComponent: NotFound,
+	notFoundComponent: ({ data }) => (
+		<NotFound
+			title="Transaction Not Found"
+			message={`The transaction doesn${apostrophe}t exist or hasn${apostrophe}t been processed yet.`}
+			data={data as NotFound.NotFoundData}
+		/>
+	),
 	headers: () => ({
 		...(import.meta.env.PROD
 			? {
@@ -63,9 +70,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 			console.error(error)
 			throw notFound({
 				routeId: rootRouteId,
-				data: {
-					error: error instanceof Error ? error.message : 'Unknown error',
-				},
+				data: { type: 'hash', value: params.hash },
 			})
 		}
 	},
