@@ -1,4 +1,5 @@
 export * from './account'
+export * from './balance-changes'
 export * from './blocks'
 export * from './tokens'
 export * from './tx'

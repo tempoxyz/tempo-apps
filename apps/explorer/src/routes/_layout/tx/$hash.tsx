@@ -18,6 +18,7 @@ import { InfoRow } from '#comps/InfoRow'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
+import { TxBalanceChanges } from '#comps/TxBalanceChanges'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
 import { TxEventDescription } from '#comps/TxEventDescription'
@@ -28,12 +29,13 @@ import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
-import { type TxData, txQueryOptions } from '#lib/queries'
+import { balanceChangesQueryOptions, type TxData, txQueryOptions } from '#lib/queries'
 import { zHash } from '#lib/zod'
 import CopyIcon from '~icons/lucide/copy'
 
 const defaultSearchValues = {
 	tab: 'overview',
+	page: 1,
 } as const
 
 export const Route = createFileRoute('/_layout/tx/$hash')({
@@ -55,18 +57,26 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	validateSearch: z.object({
 		r: z.optional(z.string()),
 		tab: z.prefault(
-			z.enum(['overview', 'calls', 'events', 'raw']),
+			z.enum(['overview', 'calls', 'events', 'changes', 'raw']),
 			defaultSearchValues.tab,
 		),
+		page: z.prefault(z.coerce.number(), defaultSearchValues.page),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loader: async ({ params, context }) => {
+	loaderDeps: ({ search: { page } }) => ({ page }),
+	loader: async ({ params, context, deps: { page } }) => {
 		try {
-			return await context.queryClient.ensureQueryData(
-				txQueryOptions({ hash: params.hash }),
-			)
+			const [txData, balanceChangesData] = await Promise.all([
+				context.queryClient.ensureQueryData(
+					txQueryOptions({ hash: params.hash }),
+				),
+				context.queryClient
+					.ensureQueryData(balanceChangesQueryOptions({ hash: params.hash, page }))
+					.catch(() => ({ changes: [], tokenMetadata: {}, total: 0 })),
+			])
+			return { ...txData, balanceChangesData }
 		} catch (error) {
 			console.error(error)
 			throw notFound({
@@ -83,12 +93,13 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 function RouteComponent() {
 	const navigate = useNavigate()
 	const { hash } = Route.useParams()
-	const { tab } = Route.useSearch()
+	const { tab, page } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
+	const { balanceChangesData, ...txLoaderData } = loaderData
 
 	const { data } = useQuery({
 		...txQueryOptions({ hash }),
-		initialData: loaderData,
+		initialData: txLoaderData,
 	})
 
 	const {
@@ -110,6 +121,7 @@ function RouteComponent() {
 		'overview',
 		...(hasCalls ? ['calls'] : []),
 		'events',
+		'changes',
 		'raw',
 	] as const
 	const activeSection = tabs.indexOf(tab)
@@ -176,6 +188,12 @@ function RouteComponent() {
 								knownEvents={knownEventsByLog}
 							/>
 						),
+					},
+					{
+						title: 'Changes',
+						totalItems: balanceChangesData.total,
+						itemsLabel: 'changes',
+						content: <TxBalanceChanges data={balanceChangesData} page={page} />,
 					},
 					{
 						title: 'Raw',
