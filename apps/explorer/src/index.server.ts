@@ -694,11 +694,41 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 		const tokenAddress = address.toLowerCase() as Address.Address
 		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
-		// Check if address is a predeployed contract by prefix
-		// On Tempo, user accounts can have code (EIP-7702), so we use prefix detection
-		// 0xDEc0... = predeployed system contracts
-		const lowerAddress = address.toLowerCase()
-		const isContract = lowerAddress.startsWith('0xdec0')
+		// Check if address is a contract by trying to call symbol()
+		// Contracts (non-tokens) won't have a symbol method
+		let isContract = false
+		try {
+			const symbolRes = await fetch(RPC_URL, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					method: 'eth_call',
+					params: [{ to: address, data: '0x95d89b41' }, 'latest'], // symbol()
+					id: 1,
+				}),
+			})
+			const symbolJson = (await symbolRes.json()) as { result?: string; error?: unknown }
+			// If symbol() returns empty or errors, it's likely a contract (not a token)
+			// Tokens and EOAs with code will have a symbol
+			const hasSymbol = symbolJson.result && symbolJson.result !== '0x' && symbolJson.result.length > 2
+			// It's a contract if it has code but no symbol
+			const codeRes = await fetch(RPC_URL, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					method: 'eth_getCode',
+					params: [address, 'latest'],
+					id: 1,
+				}),
+			})
+			const codeJson = (await codeRes.json()) as { result?: string }
+			const hasCode = codeJson.result && codeJson.result !== '0x'
+			isContract = hasCode && !hasSymbol
+		} catch {
+			// Ignore errors, assume not a contract
+		}
 
 		// Get all transfers involving this address
 		const [incoming, outgoing] = await Promise.all([
