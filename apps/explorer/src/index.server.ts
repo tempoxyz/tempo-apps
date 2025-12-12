@@ -461,7 +461,8 @@ function formatEventForOg(event: KnownEvent): string {
 		}
 	}
 
-	return `${action}|${details}|${usdAmount}`
+	// Truncate action and details to prevent overflow
+	return `${truncateOgText(action, 20)}|${truncateOgText(details, 60)}|${truncateOgText(usdAmount, 15)}`
 }
 
 async function buildTxOgData(hash: string): Promise<{
@@ -747,14 +748,15 @@ async function buildTokenOgData(address: string): Promise<{
 
 	const params = new URLSearchParams()
 	if (tokenData) {
-		params.set('name', tokenData.name)
-		params.set('symbol', tokenData.symbol)
-		params.set('currency', tokenData.currency)
+		// Truncate user-defined fields to prevent overflow
+		params.set('name', truncateOgText(tokenData.name, 40))
+		params.set('symbol', truncateOgText(tokenData.symbol, 12))
+		params.set('currency', truncateOgText(tokenData.currency, 16))
 		params.set('holders', tokenData.holders.toString())
-		params.set('supply', tokenData.supply)
+		params.set('supply', truncateOgText(tokenData.supply, 20))
 		params.set('created', tokenData.created)
 		if (tokenData.quoteToken) {
-			params.set('quoteToken', tokenData.quoteToken)
+			params.set('quoteToken', truncateOgText(tokenData.quoteToken, 16))
 		}
 		if (isFeeToken) {
 			params.set('isFeeToken', 'true')
@@ -1167,18 +1169,26 @@ async function buildAddressOgData(address: string): Promise<{
 
 	const params = new URLSearchParams()
 	if (addressData) {
-		params.set('holdings', addressData.holdings)
+		params.set('holdings', truncateOgText(addressData.holdings, 20))
 		params.set('txCount', addressData.txCount.toString())
 		params.set('lastActive', addressData.lastActive)
 		params.set('created', addressData.created)
-		params.set('feeToken', addressData.feeToken)
+		params.set('feeToken', truncateOgText(addressData.feeToken, 16))
 		if (addressData.tokensHeld.length > 0) {
-			params.set('tokens', addressData.tokensHeld.join(','))
+			// Truncate each token symbol
+			const truncatedTokens = addressData.tokensHeld.map((t) =>
+				truncateOgText(t, 10),
+			)
+			params.set('tokens', truncatedTokens.join(','))
 		}
 		if (addressData.isContract) {
 			params.set('isContract', 'true')
 			if (addressData.methods.length > 0) {
-				params.set('methods', addressData.methods.join(','))
+				// Truncate method names
+				const truncatedMethods = addressData.methods.map((m) =>
+					truncateOgText(m, 14),
+				)
+				params.set('methods', truncatedMethods.join(','))
 			}
 		}
 	}
