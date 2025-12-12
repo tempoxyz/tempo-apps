@@ -5,7 +5,7 @@
 	"compatibility_date": "2025-12-08",
 	"compatibility_flags": ["nodejs_compat"],
 	"vars": {
-		"EXPLORER_URL": "https://68b49abc-explorer.porto.workers.dev"
+		"EXPLORER_URL": "https://explorer.tempo.xyz"
 	},
 	"assets": {
 		"directory": "./public",
