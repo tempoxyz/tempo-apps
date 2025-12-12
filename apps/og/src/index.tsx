@@ -605,16 +605,16 @@ function ReceiptCard({
 							backgroundColor: '#d1d5db',
 						}}
 					/>
-				<div
-					tw="flex flex-col py-5 px-8 text-[25px]"
-					style={{
-						fontFamily: 'GeistMono',
-						gap: '18px',
-						width: '100%',
-						letterSpacing: '-0.02em',
-					}}
-				>
-					{data.fee && (
+					<div
+						tw="flex flex-col py-5 px-8 text-[25px]"
+						style={{
+							fontFamily: 'GeistMono',
+							gap: '18px',
+							width: '100%',
+							letterSpacing: '-0.02em',
+						}}
+					>
+						{data.fee && (
 							<div
 								tw="flex items-center"
 								style={{ width: '100%', justifyContent: 'space-between' }}
