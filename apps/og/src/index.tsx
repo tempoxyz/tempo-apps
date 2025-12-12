@@ -270,8 +270,8 @@ function ReceiptCard({
 						style={{
 							height: '1px',
 							backgroundColor: '#d1d5db',
-							marginLeft: 32,
-							marginRight: 32,
+							marginLeft: 28,
+							marginRight: 28,
 						}}
 					/>
 					<div
@@ -279,40 +279,24 @@ function ReceiptCard({
 						style={{
 							fontFamily: 'GeistMono',
 							gap: '12px',
-							paddingLeft: 32,
-							paddingRight: 32,
+							paddingLeft: 28,
+							paddingRight: 28,
 						}}
 					>
 						{data.events.slice(0, 4).map((event, index) => (
 							<div
 								key={`${event.action}-${index}`}
-								tw="flex flex-col"
+								tw="flex justify-between items-center"
 								style={{ width: '100%' }}
 							>
-								<div
-									tw="flex justify-between items-center"
-									style={{ width: '100%' }}
-								>
-									<div tw="flex items-center" style={{ gap: '8px' }}>
-										<span tw="text-gray-400">{index + 1}.</span>
-										<span tw="flex bg-gray-100 px-2 py-1 rounded">
-											{event.action}
-										</span>
-										{event.details && (
-											<span tw="text-emerald-600">{event.details}</span>
-										)}
-									</div>
-									{event.amount && <span tw="shrink-0">{event.amount}</span>}
+								<div tw="flex items-center" style={{ gap: '6px' }}>
+									<span tw="text-gray-400">{index + 1}.</span>
+									<span tw="flex bg-gray-100 px-2 py-1 rounded">
+										{event.action}
+									</span>
+									{event.details && <EventDetails details={event.details} />}
 								</div>
-								{event.message && (
-									<div
-										tw="flex text-gray-400 text-[20px] mt-1"
-										style={{ marginLeft: '24px' }}
-									>
-										<span tw="mr-2">|</span>
-										<span>{event.message}</span>
-									</div>
-								)}
+								{event.amount && <span tw="shrink-0">{event.amount}</span>}
 							</div>
 						))}
 					</div>
@@ -327,36 +311,32 @@ function ReceiptCard({
 						style={{
 							height: '1px',
 							backgroundColor: '#d1d5db',
-							marginLeft: 32,
-							marginRight: 32,
+							marginLeft: 28,
+							marginRight: 28,
 						}}
 					/>
 					<div
 						tw="flex flex-col py-5 text-[22px]"
 						style={{
 							fontFamily: 'GeistMono',
-							gap: '10px',
-							paddingLeft: 32,
-							paddingRight: 32,
+							gap: '12px',
+							paddingLeft: 28,
+							paddingRight: 28,
 						}}
 					>
 						{data.fee && (
-							<div
-								tw="flex justify-between items-center"
-								style={{ width: '100%' }}
-							>
-								<span tw="text-gray-400">
+							<div tw="flex" style={{ width: '100%' }}>
+								<span tw="text-gray-400" style={{ flex: 1 }}>
 									Fee{data.feeToken ? ` (${data.feeToken})` : ''}
 								</span>
 								<span>{data.fee}</span>
 							</div>
 						)}
 						{data.total && (
-							<div
-								tw="flex justify-between items-center"
-								style={{ width: '100%' }}
-							>
-								<span tw="text-gray-400">Total</span>
+							<div tw="flex" style={{ width: '100%' }}>
+								<span tw="text-gray-400" style={{ flex: 1 }}>
+									Total
+								</span>
 								<span>{data.total}</span>
 							</div>
 						)}
@@ -373,6 +353,60 @@ function truncateHash(hash: string, chars = 4): string {
 	if (!hash || hash === '—') return hash
 	if (hash.length <= chars * 2 + 2) return hash
 	return `${hash.slice(0, chars + 2)}…${hash.slice(-chars)}`
+}
+
+// Parse event details and highlight assets (green) and addresses (blue)
+function EventDetails({ details }: { details: string }) {
+	const parts: { text: string; type: 'normal' | 'asset' | 'address' }[] = []
+
+	const words = details.split(' ')
+	let i = 0
+	while (i < words.length) {
+		const word = words[i]
+
+		// Check if this is an address (starts with 0x or contains ...)
+		if (
+			word?.startsWith('0x') ||
+			(word?.includes('...') && word?.match(/[0-9a-fA-F]/))
+		) {
+			parts.push({ text: word, type: 'address' })
+			i++
+		}
+		// Check if this is a number followed by a token name
+		else if (
+			word?.match(/^[\d.]+$/) &&
+			words[i + 1] &&
+			!['for', 'to', 'from'].includes(words[i + 1])
+		) {
+			parts.push({ text: `${word} ${words[i + 1]}`, type: 'asset' })
+			i += 2
+		}
+		// Regular word
+		else {
+			parts.push({ text: word || '', type: 'normal' })
+			i++
+		}
+	}
+
+	return (
+		<span tw="flex">
+			{parts.map((part, idx) => (
+				<span
+					key={`${part.text}-${idx}`}
+					tw={
+						part.type === 'asset'
+							? 'text-emerald-600'
+							: part.type === 'address'
+								? 'text-blue-600'
+								: 'text-gray-500'
+					}
+				>
+					{part.text}
+					{idx < parts.length - 1 ? ' ' : ''}
+				</span>
+			))}
+		</span>
+	)
 }
 
 // ============ Asset Loading ============
