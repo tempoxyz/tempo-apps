@@ -507,7 +507,7 @@ function ReceiptCard({
 					tw="flex flex-col flex-1 text-[25px]"
 					style={{
 						fontFamily: 'GeistMono',
-						gap: '18px',
+						gap: '20px',
 						marginLeft: '12px',
 						letterSpacing: '-0.02em',
 					}}
@@ -537,15 +537,15 @@ function ReceiptCard({
 							backgroundColor: '#d1d5db',
 						}}
 					/>
-				<div
-					tw="flex flex-col py-5 px-8 text-[25px]"
-					style={{
-						fontFamily: 'GeistMono',
-						gap: '24px',
-						width: '100%',
-						letterSpacing: '-0.02em',
-					}}
-				>
+					<div
+						tw="flex flex-col py-5 px-8 text-[25px]"
+						style={{
+							fontFamily: 'GeistMono',
+							gap: '24px',
+							width: '100%',
+							letterSpacing: '-0.02em',
+						}}
+					>
 						{data.events.slice(0, 5).map((event, index) => (
 							<div
 								key={`${event.action}-${index}`}
@@ -605,16 +605,16 @@ function ReceiptCard({
 							backgroundColor: '#d1d5db',
 						}}
 					/>
-					<div
-						tw="flex flex-col py-5 px-8 text-[24px]"
-						style={{
-							fontFamily: 'GeistMono',
-							gap: '14px',
-							width: '100%',
-							letterSpacing: '-0.02em',
-						}}
-					>
-						{data.fee && (
+				<div
+					tw="flex flex-col py-5 px-8 text-[25px]"
+					style={{
+						fontFamily: 'GeistMono',
+						gap: '18px',
+						width: '100%',
+						letterSpacing: '-0.02em',
+					}}
+				>
+					{data.fee && (
 							<div
 								tw="flex items-center"
 								style={{ width: '100%', justifyContent: 'space-between' }}
@@ -775,13 +775,13 @@ function AddressCard({ data }: { data: AddressData }) {
 			{/* Address header */}
 			<div tw="flex w-full px-8 pt-8 pb-6 justify-between items-start">
 				<span
-					tw="text-gray-400 text-[23.5px]"
+					tw="text-gray-400 text-[25px]"
 					style={{ fontFamily: 'GeistMono' }}
 				>
 					Address
 				</span>
 				<div
-					tw="flex flex-col items-end text-[23.5px] text-blue-500"
+					tw="flex flex-col items-end text-[25px] text-blue-500"
 					style={{ fontFamily: 'GeistMono', lineHeight: '1.3' }}
 				>
 					<span>{addrLine1}</span>
