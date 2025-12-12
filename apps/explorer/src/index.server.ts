@@ -1,5 +1,13 @@
 import * as Sentry from '@sentry/cloudflare'
 import handler, { type ServerEntry } from '@tanstack/react-start/server-entry'
+import type { Address } from 'ox'
+import type { TransactionReceipt } from 'viem'
+import {
+	type KnownEvent,
+	type KnownEventPart,
+	parseKnownEvents,
+	preferredEventsFilter,
+} from '#lib/domain/known-events'
 
 const OG_BASE_URL = 'https://og.porto.workers.dev'
 const RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
@@ -68,6 +76,7 @@ interface TxData {
 	timestamp: number
 	fee: string
 	total: string
+	events: KnownEvent[]
 }
 
 async function fetchTxData(hash: string): Promise<TxData | null> {
@@ -98,28 +107,29 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 
 		const [txJson, receiptJson] = await Promise.all([
 			txRes.json() as Promise<{
-				result?: { blockNumber?: string; from?: string; gasPrice?: string }
+				result?: {
+					blockNumber?: string
+					from?: string
+					gasPrice?: string
+					to?: string
+					input?: string
+				}
 			}>,
 			receiptRes.json() as Promise<{
-				result?: {
-					from?: string
-					gasUsed?: string
-					effectiveGasPrice?: string
-				}
+				result?: TransactionReceipt
 			}>,
 		])
 
 		const blockNumber = txJson.result?.blockNumber
-		const from = receiptJson.result?.from || txJson.result?.from
+		const receipt = receiptJson.result
+		const from = (receipt?.from as string) || txJson.result?.from
 
-		if (!blockNumber || !from) return null
+		if (!blockNumber || !from || !receipt) return null
 
 		// Calculate fee from gasUsed * effectiveGasPrice
-		const gasUsed = receiptJson.result?.gasUsed
-			? BigInt(receiptJson.result.gasUsed)
-			: 0n
-		const gasPrice = receiptJson.result?.effectiveGasPrice
-			? BigInt(receiptJson.result.effectiveGasPrice)
+		const gasUsed = receipt.gasUsed ? BigInt(receipt.gasUsed) : 0n
+		const gasPrice = receipt.effectiveGasPrice
+			? BigInt(receipt.effectiveGasPrice)
 			: txJson.result?.gasPrice
 				? BigInt(txJson.result.gasPrice)
 				: 0n
@@ -149,12 +159,29 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 		const feeStr =
 			feeUsd < 0.01 ? '<$0.01' : `$${feeUsd.toFixed(feeUsd < 1 ? 3 : 2)}`
 
+		// Parse known events from receipt
+		let events: KnownEvent[] = []
+		try {
+			const transaction = txJson.result
+				? {
+						to: txJson.result.to as Address.Address | undefined,
+						input: txJson.result.input as `0x${string}` | undefined,
+					}
+				: undefined
+			events = parseKnownEvents(receipt, { transaction })
+				.filter(preferredEventsFilter)
+				.slice(0, 6) // Limit to 6 events for OG image
+		} catch {
+			// Ignore event parsing errors
+		}
+
 		return {
 			blockNumber: Number.parseInt(blockNumber, 16).toString(),
 			from,
 			timestamp,
 			fee: feeStr,
-			total: feeStr, // For now, total = fee (no value transfers counted)
+			total: feeStr,
+			events,
 		}
 	} catch {
 		return null
@@ -177,6 +204,67 @@ function formatTime(timestamp: number): string {
 	})
 }
 
+function truncateAddress(address: string): string {
+	if (address.length <= 13) return address
+	return `${address.slice(0, 6)}…${address.slice(-4)}`
+}
+
+function formatAmount(amount: {
+	value: bigint
+	decimals?: number
+	symbol?: string
+}): string {
+	const decimals = amount.decimals ?? 18
+	const value = Number(amount.value) / 10 ** decimals
+	const formatted = value < 0.01 ? '<0.01' : value.toFixed(2)
+	return amount.symbol ? `${formatted} ${amount.symbol}` : formatted
+}
+
+function formatEventPart(part: KnownEventPart): string {
+	switch (part.type) {
+		case 'action':
+			return part.value
+		case 'text':
+			return part.value
+		case 'account':
+			return truncateAddress(part.value)
+		case 'amount':
+			return formatAmount(part.value)
+		case 'token':
+			return part.value.symbol || truncateAddress(part.value.address)
+		case 'number': {
+			if (Array.isArray(part.value)) {
+				const [val, dec] = part.value
+				return (Number(val) / 10 ** dec).toFixed(2)
+			}
+			return part.value.toString()
+		}
+		case 'hex':
+			return truncateAddress(part.value)
+		default:
+			return ''
+	}
+}
+
+function formatEventForOg(event: KnownEvent): string {
+	// Format: "Action|Details|Amount"
+	// Find action part
+	const actionPart = event.parts.find((p) => p.type === 'action')
+	const action = actionPart ? formatEventPart(actionPart) : event.type
+
+	// Build details from non-action, non-amount parts
+	const detailParts = event.parts.filter(
+		(p) => p.type !== 'action' && p.type !== 'amount',
+	)
+	const details = detailParts.map(formatEventPart).join(' ')
+
+	// Find amount
+	const amountPart = event.parts.find((p) => p.type === 'amount')
+	const amount = amountPart ? formatEventPart(amountPart) : ''
+
+	return `${action}|${details}|${amount}`
+}
+
 async function buildOgUrl(hash: string): Promise<string> {
 	const txData = await fetchTxData(hash)
 
@@ -188,6 +276,13 @@ async function buildOgUrl(hash: string): Promise<string> {
 		params.set('time', formatTime(txData.timestamp))
 		params.set('fee', txData.fee)
 		params.set('total', txData.total)
+
+		// Add events as e1, e2, e3, etc.
+		txData.events.forEach((event, index) => {
+			if (index < 6) {
+				params.set(`e${index + 1}`, formatEventForOg(event))
+			}
+		})
 	}
 
 	return `${OG_BASE_URL}/tx/${hash}?${params.toString()}`
