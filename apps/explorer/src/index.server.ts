@@ -2,6 +2,7 @@ import * as Sentry from '@sentry/cloudflare'
 import handler, { type ServerEntry } from '@tanstack/react-start/server-entry'
 
 const OG_BASE_URL = 'https://og.porto.workers.dev'
+const RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
 
 // Inject OG meta tags for transaction pages (for social media crawlers)
 class OgMetaInjector {
@@ -42,9 +43,104 @@ class OgMetaInjector {
 	}
 }
 
-function buildBasicOgUrl(hash: string): string {
-	// Build a basic OG URL - the OG worker will fetch full data if needed
-	return `${OG_BASE_URL}/tx/${hash}`
+interface TxData {
+	blockNumber: string
+	from: string
+	timestamp: number
+}
+
+async function fetchTxData(hash: string): Promise<TxData | null> {
+	try {
+		// Fetch transaction and receipt in parallel
+		const [txRes, receiptRes] = await Promise.all([
+			fetch(RPC_URL, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					method: 'eth_getTransactionByHash',
+					params: [hash],
+					id: 1,
+				}),
+			}),
+			fetch(RPC_URL, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					method: 'eth_getTransactionReceipt',
+					params: [hash],
+					id: 2,
+				}),
+			}),
+		])
+
+		const [txJson, receiptJson] = await Promise.all([
+			txRes.json() as Promise<{ result?: { blockNumber?: string; from?: string } }>,
+			receiptRes.json() as Promise<{ result?: { from?: string } }>,
+		])
+
+		const blockNumber = txJson.result?.blockNumber
+		const from = receiptJson.result?.from || txJson.result?.from
+
+		if (!blockNumber || !from) return null
+
+		// Fetch block for timestamp
+		const blockRes = await fetch(RPC_URL, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				jsonrpc: '2.0',
+				method: 'eth_getBlockByNumber',
+				params: [blockNumber, false],
+				id: 3,
+			}),
+		})
+		const blockJson = (await blockRes.json()) as {
+			result?: { timestamp?: string }
+		}
+		const timestamp = blockJson.result?.timestamp
+			? Number.parseInt(blockJson.result.timestamp, 16) * 1000
+			: Date.now()
+
+		return {
+			blockNumber: Number.parseInt(blockNumber, 16).toString(),
+			from,
+			timestamp,
+		}
+	} catch {
+		return null
+	}
+}
+
+function formatDate(timestamp: number): string {
+	return new Date(timestamp).toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+	})
+}
+
+function formatTime(timestamp: number): string {
+	return new Date(timestamp).toLocaleTimeString('en-US', {
+		hour: 'numeric',
+		minute: '2-digit',
+		hour12: true,
+	})
+}
+
+async function buildOgUrl(hash: string): Promise<string> {
+	const txData = await fetchTxData(hash)
+
+	const params = new URLSearchParams()
+	if (txData) {
+		params.set('block', txData.blockNumber)
+		params.set('sender', txData.from)
+		params.set('date', formatDate(txData.timestamp))
+		params.set('time', formatTime(txData.timestamp))
+	}
+
+	return `${OG_BASE_URL}/tx/${hash}?${params.toString()}`
 }
 
 export default Sentry.withSentry(
@@ -76,7 +172,7 @@ export default Sentry.withSentry(
 			if (txMatch && response.headers.get('content-type')?.includes('text/html')) {
 				const pathParts = url.pathname.split('/')
 				const hash = pathParts[2] // Gets the hash from /tx/{hash} or /receipt/{hash}
-				const ogImageUrl = buildBasicOgUrl(hash)
+				const ogImageUrl = await buildOgUrl(hash)
 				const title = `Transaction ${hash.slice(0, 10)}...${hash.slice(-6)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to inject OG meta tags
