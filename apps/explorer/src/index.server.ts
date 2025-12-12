@@ -311,6 +311,7 @@ function buildTxDescription(txData: TxData | null, _hash: string): string {
 }
 
 // Generate contextual OG description for tokens
+// Format: "testUSD (tUSD) · 1.00M total supply"
 function buildTokenDescription(
 	tokenData: TokenData | null,
 	_address: string,
@@ -319,21 +320,17 @@ function buildTokenDescription(
 		return `View token details and activity on Tempo Explorer.`
 	}
 
-	const parts: string[] = []
-
-	if (tokenData.symbol && tokenData.symbol !== '—') {
-		parts.push(tokenData.symbol)
-	}
+	// Build: "testUSD (tUSD) · 1.00M total supply"
+	const namePart =
+		tokenData.symbol && tokenData.symbol !== '—'
+			? `${tokenData.name} (${tokenData.symbol})`
+			: tokenData.name
 
 	if (tokenData.supply && tokenData.supply !== '—') {
-		parts.push(`${tokenData.supply} total supply`)
+		return `${namePart} · ${tokenData.supply} total supply. View token activity on Tempo Explorer.`
 	}
 
-	if (parts.length > 0) {
-		return `${tokenData.name} (${parts.join(' · ')}). View token activity on Tempo Explorer.`
-	}
-
-	return `${tokenData.name} token on Tempo. View activity and details on Tempo Explorer.`
+	return `${namePart}. View token activity on Tempo Explorer.`
 }
 
 function truncateAddress(address: string): string {
@@ -818,14 +815,20 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 		let totalValue = 0
 		for (const [, balance] of balances) {
 			if (balance > 0n) {
-				// Assume 6 decimals for stablecoins
-				totalValue += Number(balance) / 1e6
+				// Assume 18 decimals as default
+				totalValue += Number(balance) / 1e18
 			}
 		}
-		const holdings =
-			totalValue > 0
-				? `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-				: '—'
+
+		// Format holdings with K/M/B suffixes
+		const formatCompactValue = (n: number): string => {
+			if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
+			if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`
+			if (n >= 1e3) return `$${(n / 1e3).toFixed(2)}K`
+			return `$${n.toFixed(2)}`
+		}
+
+		const holdings = totalValue > 0 ? formatCompactValue(totalValue) : '—'
 
 		return {
 			holdings,
