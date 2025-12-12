@@ -12,7 +12,21 @@ import {
 } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 
-const OG_BASE_URL = 'https://og.porto.workers.dev'
+// Production OG URL - staging URLs are derived at runtime from request URL
+const OG_PROD_URL = 'https://og.porto.workers.dev'
+
+// Derive OG URL from request - if we're on staging (hash-prefixed URL), use staging OG
+function getOgBaseUrl(requestUrl: URL): string {
+	const host = requestUrl.hostname
+	// Check if this is a staging deployment (format: {hash}-explorer.porto.workers.dev)
+	const stagingMatch = host.match(/^([a-f0-9]+)-explorer\.porto\.workers\.dev$/)
+	if (stagingMatch) {
+		// For staging, we can't know the OG hash, so use production OG
+		// TODO: Pass OG_SERVICE_URL as env var in CI for proper staging support
+		return process.env.OG_SERVICE_URL || OG_PROD_URL
+	}
+	return OG_PROD_URL
+}
 const RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
 const CHAIN_ID = 42429 // Testnet chain ID
 
@@ -360,7 +374,10 @@ function formatEventForOg(event: KnownEvent): string {
 	return `${action}|${details}|${usdAmount}`
 }
 
-async function buildTxOgData(hash: string): Promise<{
+async function buildTxOgData(
+	hash: string,
+	ogBaseUrl: string,
+): Promise<{
 	url: string
 	description: string
 }> {
@@ -384,7 +401,7 @@ async function buildTxOgData(hash: string): Promise<{
 	}
 
 	return {
-		url: `${OG_BASE_URL}/tx/${hash}?${params.toString()}`,
+		url: `${ogBaseUrl}/tx/${hash}?${params.toString()}`,
 		description: buildTxDescription(txData, hash),
 	}
 }
@@ -581,7 +598,10 @@ async function fetchTokenData(address: string): Promise<TokenData | null> {
 	}
 }
 
-async function buildTokenOgData(address: string): Promise<{
+async function buildTokenOgData(
+	address: string,
+	ogBaseUrl: string,
+): Promise<{
 	url: string
 	description: string
 }> {
@@ -601,7 +621,7 @@ async function buildTokenOgData(address: string): Promise<{
 	}
 
 	return {
-		url: `${OG_BASE_URL}/token/${address}?${params.toString()}`,
+		url: `${ogBaseUrl}/token/${address}?${params.toString()}`,
 		description: buildTokenDescription(tokenData, address),
 	}
 }
@@ -762,7 +782,10 @@ function buildAddressDescription(
 	return `View address activity and holdings on Tempo Explorer.`
 }
 
-async function buildAddressOgData(address: string): Promise<{
+async function buildAddressOgData(
+	address: string,
+	ogBaseUrl: string,
+): Promise<{
 	url: string
 	description: string
 }> {
@@ -781,7 +804,7 @@ async function buildAddressOgData(address: string): Promise<{
 	}
 
 	return {
-		url: `${OG_BASE_URL}/address/${address}?${params.toString()}`,
+		url: `${ogBaseUrl}/address/${address}?${params.toString()}`,
 		description: buildAddressDescription(addressData, address),
 	}
 }
@@ -804,6 +827,9 @@ export default Sentry.withSentry(
 			if (url.pathname === '/debug-sentry')
 				throw new Error('My first Sentry error!')
 
+			// Get the OG base URL (staging or production based on request URL)
+			const ogBaseUrl = getOgBaseUrl(url)
+
 			// Get the response from the app
 			const response = await handler.fetch(
 				request,
@@ -818,7 +844,7 @@ export default Sentry.withSentry(
 			) {
 				const pathParts = url.pathname.split('/')
 				const hash = pathParts[2] // Gets the hash from /tx/{hash} or /receipt/{hash}
-				const ogData = await buildTxOgData(hash)
+				const ogData = await buildTxOgData(hash, ogBaseUrl)
 				const title = `Transaction ${hash.slice(0, 10)}...${hash.slice(-6)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to remove existing OG tags and inject transaction-specific ones
@@ -835,7 +861,7 @@ export default Sentry.withSentry(
 				response.headers.get('content-type')?.includes('text/html')
 			) {
 				const address = url.pathname.split('/token/')[1]
-				const ogData = await buildTokenOgData(address)
+				const ogData = await buildTokenOgData(address, ogBaseUrl)
 				const title = `Token ${address.slice(0, 10)}...${address.slice(-6)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to remove existing OG tags and inject token-specific ones
@@ -852,7 +878,7 @@ export default Sentry.withSentry(
 				response.headers.get('content-type')?.includes('text/html')
 			) {
 				const address = url.pathname.split('/address/')[1]
-				const ogData = await buildAddressOgData(address)
+				const ogData = await buildAddressOgData(address, ogBaseUrl)
 				const title = `Address ${address.slice(0, 10)}...${address.slice(-6)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to remove existing OG tags and inject address-specific ones
