@@ -148,7 +148,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	})
 
 	return (
-		<html lang="en" className="scheme-light-dark">
+		<html lang="en" className="scheme-light-dark scrollbar-gutter-stable">
 			<head>
 				<HeadContent />
 			</head>
