@@ -236,8 +236,8 @@ function ReceiptCard({
 
 				{/* Details - right aligned values */}
 				<div
-					tw="flex flex-col flex-1 text-[26px]"
-					style={{ fontFamily: 'GeistMono', gap: '4px' }}
+					tw="flex flex-col flex-1 text-[24px]"
+					style={{ fontFamily: 'GeistMono', gap: '12px' }}
 				>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Block</span>
@@ -267,9 +267,12 @@ function ReceiptCard({
 			{/* Events */}
 			{data.events.length > 0 && (
 				<>
-					<div tw="flex mx-8" style={{ borderTop: '2px dashed #e5e7eb' }} />
 					<div
-						tw="flex flex-col px-8 py-6"
+						tw="flex w-full mx-8"
+						style={{ borderTop: '2px dashed #e5e7eb' }}
+					/>
+					<div
+						tw="flex flex-col px-8 py-6 w-full"
 						style={{ fontFamily: 'GeistMono', gap: '16px' }}
 					>
 						{data.events.slice(0, 4).map((event, index) => (
@@ -277,11 +280,11 @@ function ReceiptCard({
 								<div tw="flex w-full justify-between items-center text-[24px]">
 									<div tw="flex items-center" style={{ gap: '10px' }}>
 										<span tw="text-gray-400">{index + 1}.</span>
-										<span tw="flex bg-gray-100 px-3 py-1 text-[22px] rounded">
+										<span tw="flex bg-gray-100 px-3 py-1 text-[24px] rounded">
 											{event.action}
 										</span>
 										{event.details && (
-											<span tw="text-emerald-600 text-[22px]">
+											<span tw="text-emerald-600 text-[24px]">
 												{event.details}
 											</span>
 										)}
@@ -294,7 +297,7 @@ function ReceiptCard({
 								</div>
 								{event.message && (
 									<div
-										tw="flex text-gray-400 text-[20px] mt-1"
+										tw="flex text-gray-400 text-[24px] mt-1"
 										style={{ marginLeft: '36px' }}
 									>
 										<span tw="mr-2">|</span>
@@ -310,9 +313,12 @@ function ReceiptCard({
 			{/* Fee and Total rows */}
 			{(data.fee || data.total) && (
 				<>
-					<div tw="flex mx-8" style={{ borderTop: '2px dashed #e5e7eb' }} />
 					<div
-						tw="flex flex-col px-8 py-4"
+						tw="flex mx-8 w-full"
+						style={{ borderTop: '2px dashed #e5e7eb' }}
+					/>
+					<div
+						tw="flex flex-col px-8 py-4 w-full"
 						style={{ fontFamily: 'GeistMono', gap: '8px' }}
 					>
 						{data.fee && (
@@ -320,14 +326,14 @@ function ReceiptCard({
 								<div tw="flex items-center">
 									<span tw="text-gray-400">Fee</span>
 									{data.feeToken && (
-										<span tw="text-emerald-600"> ({data.feeToken})</span>
+										<span tw="text-emerald-600 ml-1">({data.feeToken})</span>
 									)}
 								</div>
 								<div tw="flex items-center">
 									{data.feePayer && (
 										<>
 											<span tw="text-emerald-600">{data.feePayer}</span>
-											<span tw="text-gray-400"> paid </span>
+											<span tw="text-gray-400 mx-1">paid</span>
 										</>
 									)}
 									<span>{data.fee}</span>
