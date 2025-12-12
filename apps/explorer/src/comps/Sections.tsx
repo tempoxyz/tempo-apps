@@ -149,7 +149,14 @@ export function Sections(props: Sections.Props) {
 				</div>
 
 				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
-					{currentSection.content}
+					{sections.map((section, index) => (
+						<div
+							key={section.title}
+							className={activeSection === index ? undefined : 'hidden'}
+						>
+							{section.content}
+						</div>
+					))}
 				</div>
 			</section>
 		</Sections.Context.Provider>
