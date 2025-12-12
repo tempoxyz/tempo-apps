@@ -267,12 +267,9 @@ function ReceiptCard({
 			{/* Events */}
 			{data.events.length > 0 && (
 				<>
+					<div tw="flex mx-8" style={{ borderTop: '2px dashed #e5e7eb' }} />
 					<div
-						tw="flex w-full mx-8"
-						style={{ borderTop: '2px dashed #e5e7eb' }}
-					/>
-					<div
-						tw="flex flex-col px-8 py-6 w-full"
+						tw="flex flex-col px-8 py-6"
 						style={{ fontFamily: 'GeistMono', gap: '16px' }}
 					>
 						{data.events.slice(0, 4).map((event, index) => (
@@ -313,12 +310,9 @@ function ReceiptCard({
 			{/* Fee and Total rows */}
 			{(data.fee || data.total) && (
 				<>
+					<div tw="flex mx-8" style={{ borderTop: '2px dashed #e5e7eb' }} />
 					<div
-						tw="flex mx-8 w-full"
-						style={{ borderTop: '2px dashed #e5e7eb' }}
-					/>
-					<div
-						tw="flex flex-col px-8 py-4 w-full"
+						tw="flex flex-col px-8 py-4"
 						style={{ fontFamily: 'GeistMono', gap: '8px' }}
 					>
 						{data.fee && (
