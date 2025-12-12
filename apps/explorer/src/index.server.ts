@@ -269,19 +269,18 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 }
 
 function formatDate(timestamp: number): string {
-	return new Date(timestamp).toLocaleDateString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric',
-	})
+	const d = new Date(timestamp)
+	const month = d.toLocaleDateString('en-US', { month: 'short' })
+	const day = d.getDate()
+	const year = d.getFullYear()
+	return `${month} ${day} ${year}`
 }
 
 function formatTime(timestamp: number): string {
-	return new Date(timestamp).toLocaleTimeString('en-US', {
-		hour: 'numeric',
-		minute: '2-digit',
-		hour12: true,
-	})
+	const d = new Date(timestamp)
+	const hours = String(d.getHours()).padStart(2, '0')
+	const minutes = String(d.getMinutes()).padStart(2, '0')
+	return `${hours}:${minutes}`
 }
 
 // Generate contextual OG description for transactions

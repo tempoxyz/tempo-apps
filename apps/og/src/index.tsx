@@ -69,7 +69,7 @@ app.get('/health', () => new Response('OK'))
  *   - "Approve|for 0x1234...5678|$10|"
  *
  * Example URL:
- * /tx/0x123...?block=12331&sender=0x8f5a...3bc3&date=11/24/2025&time=11:04:01 GMT+0&fee=-$0.013&feeToken=aUSD&feePayer=0x8f5a...3bc3&total=-$1.55&e1=Send|aUSD to|-$1.54|Thanks for the coffee.
+ * /tx/0x123...?block=12331&sender=0x8f5a...3bc3&date=Dec 12 2025&time=16:00&fee=-$0.013&feeToken=aUSD&feePayer=0x8f5a...3bc3&total=-$1.55&e1=Send|aUSD to|-$1.54|Thanks for the coffee.
  */
 app.get('/tx/:hash', async (c) => {
 	const hash = c.req.param('hash')
@@ -320,8 +320,8 @@ app.get('/token/:address', async (c) => {
  * - address: Account address (0x...)
  * - holdings: Total holdings value (e.g., "$32,325.41")
  * - txCount: Number of transactions
- * - lastActive: Last activity datetime (e.g., "11/19/2025 11:35")
- * - created: Account creation datetime (e.g., "11/1/2025 16:43")
+ * - lastActive: Last activity datetime (e.g., "Dec 12 2025 16:00")
+ * - created: Account creation datetime (e.g., "Nov 1 2025 10:30")
  * - feeToken: Fee token symbol (e.g., "pathUSD")
  * - tokens: Comma-separated list of token symbols held (e.g., "AUSD,BUSD,CUSD")
  */
