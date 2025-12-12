@@ -15,6 +15,8 @@ const devicePixelRatio = 1.0
 
 // Cache TTL: 1 hour for OG images
 const CACHE_TTL = 3600
+// Screenshot timeout - if exceeded, return fast fallback
+const SCREENSHOT_TIMEOUT_MS = 12000
 
 // Global font cache (stays warm across requests in the same isolate)
 let fontCache: {
@@ -53,7 +55,7 @@ app.get('/tx/:hash', async (c) => {
 	const cacheKey = new Request(url.toString(), c.req.raw)
 
 	// 1. CHECK CACHE FIRST - fastest path
-	const cache = caches.default
+	const cache = (caches as unknown as { default: Cache }).default
 	const cachedResponse = await cache.match(cacheKey)
 	if (cachedResponse) {
 		console.log('Cache HIT for', hash)
@@ -72,8 +74,14 @@ app.get('/tx/:hash', async (c) => {
 			loadFonts(),
 			// Images (use cache if available)
 			loadImages(c),
-			// Screenshot with timeout
-			takeScreenshotWithTimeout(c, hash, explorerUrl, isLocalDev, 8000),
+			// Screenshot with timeout - returns null if too slow
+			takeScreenshotWithTimeout(
+				c,
+				hash,
+				explorerUrl,
+				isLocalDev,
+				SCREENSHOT_TIMEOUT_MS,
+			),
 		])
 
 		// 3. Generate the OG image
@@ -133,7 +141,12 @@ app.get('/tx/:hash', async (c) => {
 					}}
 				>
 					{/* Tempo lockup logo */}
-					<img src={images.logo} alt="Tempo" tw="mb-2" width={120} height={28} />
+					<img
+						src={images.logo}
+						alt="Tempo"
+						tw="mb-2"
+						style={{ width: '60px', height: '14px' }}
+					/>
 
 					{/* CTA text */}
 					<div
@@ -202,7 +215,11 @@ async function loadFonts() {
 		])
 		fontCache = { mono, inter, interBold }
 	}
-	return fontCache as { mono: ArrayBuffer; inter: ArrayBuffer; interBold: ArrayBuffer }
+	return fontCache as {
+		mono: ArrayBuffer
+		inter: ArrayBuffer
+		interBold: ArrayBuffer
+	}
 }
 
 // Helper: Load images with in-memory caching
@@ -217,9 +234,10 @@ async function loadImages(c: { env: Cloudflare.Env }) {
 			logo: await logoRes.arrayBuffer(),
 		}
 	}
+	const { bg, logo } = imageCache as { bg: ArrayBuffer; logo: ArrayBuffer }
 	return {
-		bg: `data:image/png;base64,${Buffer.from(imageCache.bg).toString('base64')}`,
-		logo: `data:image/png;base64,${Buffer.from(imageCache.logo).toString('base64')}`,
+		bg: `data:image/png;base64,${Buffer.from(bg).toString('base64')}`,
+		logo: `data:image/png;base64,${Buffer.from(logo).toString('base64')}`,
 	}
 }
 
@@ -251,7 +269,7 @@ async function takeScreenshotWithTimeout(
 
 		if (!c.env.BROWSER) return null
 
-		let browser
+		let browser: Awaited<ReturnType<typeof puppeteer.launch>> | undefined
 		try {
 			browser = await puppeteer.launch(c.env.BROWSER)
 			const page = await browser.newPage()
@@ -263,11 +281,12 @@ async function takeScreenshotWithTimeout(
 			})
 
 			const receiptUrl = `${explorerUrl}/receipt/${hash}`
-			await page.goto(receiptUrl, { waitUntil: 'networkidle0', timeout: 6000 })
+			// Use 'load' instead of 'networkidle0' for faster page load
+			await page.goto(receiptUrl, { waitUntil: 'load', timeout: 4000 })
 
 			// Try data-receipt first, then fall back to w-[360px] class selector
 			await page
-				.waitForSelector('[data-receipt], .w-\\[360px\\]', { timeout: 3000 })
+				.waitForSelector('[data-receipt], .w-\\[360px\\]', { timeout: 2000 })
 				.catch(() => {})
 
 			let receiptElement = await page.$('[data-receipt]')
@@ -325,7 +344,9 @@ app.get('/', async (c) => {
 			height: 630 * devicePixelRatio,
 			format: 'webp',
 			module,
-			fonts: [{ weight: 400, name: 'Inter', data: fonts.mono, style: 'normal' }],
+			fonts: [
+				{ weight: 400, name: 'Inter', data: fonts.mono, style: 'normal' },
+			],
 		},
 	)
 })

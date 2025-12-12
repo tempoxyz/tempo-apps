@@ -2,9 +2,10 @@
  * Local screenshot server for OG image development
  * Run with: pnpm tsx scripts/screenshot-server.ts
  */
+
+import http from 'node:http'
+import { URL } from 'node:url'
 import puppeteer, { type Browser } from 'puppeteer'
-import http from 'http'
-import { URL } from 'url'
 
 const PORT = 3001
 const EXPLORER_URL = 'http://localhost:3000'
@@ -40,23 +41,25 @@ async function takeScreenshot(hash: string): Promise<Buffer> {
 		await page.goto(receiptUrl, { waitUntil: 'networkidle0' })
 
 		// Wait for the receipt to render
-		await page.waitForSelector('[data-receipt]', { timeout: 15000 }).catch(() => {
-			console.log('data-receipt selector not found')
-		})
+		await page
+			.waitForSelector('[data-receipt]', { timeout: 15000 })
+			.catch(() => {
+				console.log('data-receipt selector not found')
+			})
 
 		// Take screenshot of the receipt element
 		const receiptElement = await page.$('[data-receipt]')
 		let screenshot: Buffer
 
-	if (receiptElement) {
-		screenshot = await receiptElement.screenshot({ type: 'png' }) as Buffer
-	} else {
-		// Fallback to centered area - Receipt is 360px wide, centered in 420px viewport
-		screenshot = await page.screenshot({
-			type: 'png',
-			clip: { x: 20, y: 80, width: 380, height: 650 },
-		}) as Buffer
-	}
+		if (receiptElement) {
+			screenshot = (await receiptElement.screenshot({ type: 'png' })) as Buffer
+		} else {
+			// Fallback to centered area - Receipt is 360px wide, centered in 420px viewport
+			screenshot = (await page.screenshot({
+				type: 'png',
+				clip: { x: 20, y: 80, width: 380, height: 650 },
+			})) as Buffer
+		}
 
 		return screenshot
 	} finally {
@@ -88,7 +91,7 @@ const server = http.createServer(async (req, res) => {
 	const match = url.pathname.match(/^\/screenshot\/(.+)$/)
 	if (match) {
 		const hash = match[1]
-		
+
 		if (!hash || !hash.startsWith('0x') || hash.length !== 66) {
 			res.writeHead(400, { 'Content-Type': 'text/plain' })
 			res.end('Invalid hash')
@@ -105,7 +108,9 @@ const server = http.createServer(async (req, res) => {
 		} catch (error) {
 			console.error('Screenshot error:', error)
 			res.writeHead(500, { 'Content-Type': 'text/plain' })
-			res.end(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`)
+			res.end(
+				`Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			)
 		}
 		return
 	}
@@ -130,4 +135,3 @@ process.on('SIGINT', async () => {
 	}
 	process.exit(0)
 })
-
