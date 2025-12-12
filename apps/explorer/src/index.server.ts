@@ -694,31 +694,12 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 		const tokenAddress = address.toLowerCase() as Address.Address
 		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
-		// Check if address is a contract by trying to call symbol()
-		// Contracts (non-tokens) won't have a symbol method
+		// Check if address is a contract
+		// - EOAs have no code
+		// - EIP-7702 smart wallets have code starting with 0xef0100 (delegation prefix)
+		// - Traditional contracts have other bytecode
 		let isContract = false
 		try {
-			const symbolRes = await fetch(RPC_URL, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					method: 'eth_call',
-					params: [{ to: address, data: '0x95d89b41' }, 'latest'], // symbol()
-					id: 1,
-				}),
-			})
-			const symbolJson = (await symbolRes.json()) as {
-				result?: string
-				error?: unknown
-			}
-			// If symbol() returns empty or errors, it's likely a contract (not a token)
-			// Tokens and EOAs with code will have a symbol
-			const hasSymbol =
-				symbolJson.result &&
-				symbolJson.result !== '0x' &&
-				symbolJson.result.length > 2
-			// It's a contract if it has code but no symbol
 			const codeRes = await fetch(RPC_URL, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -730,8 +711,20 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 				}),
 			})
 			const codeJson = (await codeRes.json()) as { result?: string }
-			const hasCode = codeJson.result && codeJson.result !== '0x'
-			isContract = hasCode && !hasSymbol
+			const code = codeJson.result || '0x'
+
+			// No code = EOA, not a contract
+			if (code === '0x') {
+				isContract = false
+			}
+			// EIP-7702 delegation prefix (0xef0100) = smart wallet, not a contract
+			else if (code.toLowerCase().startsWith('0xef0100')) {
+				isContract = false
+			}
+			// Has other bytecode = traditional contract
+			else {
+				isContract = true
+			}
 		} catch {
 			// Ignore errors, assume not a contract
 		}
