@@ -651,11 +651,65 @@ async function fetchTokenData(address: string): Promise<TokenData | null> {
 	}
 }
 
+// Check if a token has Fee AMM liquidity (required to be a functional fee token)
+async function hasFeeAmmLiquidity(tokenAddress: string): Promise<boolean> {
+	try {
+		const FEE_MANAGER = '0xfeec000000000000000000000000000000000000'
+		const PATH_USD = '0x20c0000000000000000000000000000000000000'
+		const ALPHA_USD = '0x20c0000000000000000000000000000000000001'
+
+		// getPool(address,address) selector = 0x531aa03e
+		// Check liquidity: pair token with pathUSD, unless token IS pathUSD
+		const paddedToken = tokenAddress.slice(2).toLowerCase().padStart(64, '0')
+		// If token is pathUSD, check against AlphaUSD instead
+		const pairToken =
+			tokenAddress.toLowerCase() === PATH_USD.toLowerCase()
+				? ALPHA_USD
+				: PATH_USD
+		const paddedPair = pairToken.slice(2).padStart(64, '0')
+
+		const res = await fetch(RPC_URL, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				jsonrpc: '2.0',
+				method: 'eth_call',
+				params: [
+					{ to: FEE_MANAGER, data: `0x531aa03e${paddedToken}${paddedPair}` },
+					'latest',
+				],
+				id: 1,
+			}),
+		})
+		const json = (await res.json()) as { result?: string }
+
+		if (json.result && json.result !== '0x' && json.result.length >= 130) {
+			// Pool struct: (uint128 reserveUserToken, uint128 reserveValidatorToken)
+			const reserveUser = BigInt('0x' + json.result.slice(2, 66))
+			const reserveValidator = BigInt('0x' + json.result.slice(66, 130))
+			return reserveUser > 0n || reserveValidator > 0n
+		}
+		return false
+	} catch {
+		return false
+	}
+}
+
 async function buildTokenOgData(address: string): Promise<{
 	url: string
 	description: string
 }> {
 	const tokenData = await fetchTokenData(address)
+
+	// Fee tokens are USD-denominated TIP-20 tokens WITH Fee AMM liquidity
+	// 1. Must be TIP-20 (0x20c prefix)
+	// 2. Must have currency = USD
+	// 3. Must have liquidity in Fee AMM pools
+	const isTIP20 = address.toLowerCase().startsWith('0x20c')
+	let isFeeToken = false
+	if (isTIP20 && tokenData?.currency === 'USD') {
+		isFeeToken = await hasFeeAmmLiquidity(address)
+	}
 
 	const params = new URLSearchParams()
 	if (tokenData) {
@@ -667,6 +721,9 @@ async function buildTokenOgData(address: string): Promise<{
 		params.set('created', tokenData.created)
 		if (tokenData.quoteToken) {
 			params.set('quoteToken', tokenData.quoteToken)
+		}
+		if (isFeeToken) {
+			params.set('isFeeToken', 'true')
 		}
 	}
 
@@ -686,6 +743,7 @@ interface AddressData {
 	feeToken: string
 	tokensHeld: string[]
 	isContract: boolean
+	methods: string[] // Contract methods detected
 }
 
 async function fetchAddressData(address: string): Promise<AddressData | null> {
@@ -726,6 +784,88 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			}
 		} catch {
 			// Ignore errors, assume not a contract
+		}
+
+		// Detect contract type and set method names
+		let detectedMethods: string[] = []
+		let contractType = '' // For description
+		if (isContract) {
+			const addrLower = address.toLowerCase()
+
+			// Check known system contracts first
+			if (addrLower === '0x20fc000000000000000000000000000000000000') {
+				// TIP-20 Factory
+				contractType = 'TIP-20 Factory'
+				detectedMethods = ['createToken', 'isTIP20', 'tokenIdCounter']
+			} else if (addrLower === '0xfeec000000000000000000000000000000000000') {
+				// Fee Manager
+				contractType = 'Fee Manager'
+				detectedMethods = [
+					'getPool',
+					'setUserToken',
+					'setValidatorToken',
+					'rebalanceSwap',
+				]
+			} else if (addrLower === '0xdec0000000000000000000000000000000000000') {
+				// Stablecoin DEX
+				contractType = 'Stablecoin DEX'
+				detectedMethods = [
+					'swap',
+					'getQuote',
+					'addLiquidity',
+					'removeLiquidity',
+				]
+			} else if (addrLower === '0x403c000000000000000000000000000000000000') {
+				// TIP-403 Registry
+				contractType = 'TIP-403 Registry'
+				detectedMethods = ['isAuthorized', 'getPolicyOwner', 'createPolicy']
+			} else if (addrLower.startsWith('0x20c')) {
+				// TIP-20 Token
+				contractType = 'TIP-20 Token'
+				detectedMethods = [
+					'transfer',
+					'approve',
+					'balanceOf',
+					'allowance',
+					'totalSupply',
+					'decimals',
+					'symbol',
+					'name',
+				]
+			} else {
+				// Unknown contract - try to detect if it's a token
+				try {
+					const res = await fetch(RPC_URL, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'eth_call',
+							params: [{ to: address, data: '0x95d89b41' }, 'latest'], // symbol()
+							id: 1,
+						}),
+					})
+					const json = (await res.json()) as {
+						result?: string
+						error?: unknown
+					}
+					if (json.result && json.result !== '0x' && !json.error) {
+						contractType = 'Token'
+						detectedMethods = [
+							'transfer',
+							'approve',
+							'balanceOf',
+							'allowance',
+							'totalSupply',
+							'decimals',
+							'symbol',
+							'name',
+						]
+					}
+				} catch {
+					// Unknown contract type
+				}
+			}
 		}
 
 		// Get all transfers involving this address
@@ -793,8 +933,28 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			}
 		}
 
-		// Total transaction count
-		const txCount = incoming.length + outgoing.length
+		// Total transaction count - query from txs table like frontend does
+		let txCount = 0
+		try {
+			const [txSent, txReceived] = await Promise.all([
+				qb
+					.selectFrom('txs')
+					.select((eb) => eb.fn.count('hash').as('cnt'))
+					.where('from', '=', tokenAddress)
+					.where('chain', '=', CHAIN_ID)
+					.executeTakeFirst(),
+				qb
+					.selectFrom('txs')
+					.select((eb) => eb.fn.count('hash').as('cnt'))
+					.where('to', '=', tokenAddress)
+					.where('chain', '=', CHAIN_ID)
+					.executeTakeFirst(),
+			])
+			txCount = Number(txSent?.cnt ?? 0) + Number(txReceived?.cnt ?? 0)
+		} catch {
+			// Fallback to transfer count if txs query fails
+			txCount = incoming.length + outgoing.length
+		}
 
 		// Get timestamps
 		const allTransfers = [...incoming, ...outgoing].sort(
@@ -925,6 +1085,7 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			feeToken: allTokensHeld[0] || '—',
 			tokensHeld: allTokensHeld,
 			isContract,
+			methods: detectedMethods,
 		}
 	} catch (e) {
 		console.error('Failed to fetch address data:', e)
@@ -979,6 +1140,9 @@ async function buildAddressOgData(address: string): Promise<{
 		}
 		if (addressData.isContract) {
 			params.set('isContract', 'true')
+			if (addressData.methods.length > 0) {
+				params.set('methods', addressData.methods.join(','))
+			}
 		}
 	}
 

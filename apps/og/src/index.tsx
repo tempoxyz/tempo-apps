@@ -326,6 +326,8 @@ app.get('/address/:address', async (c) => {
 
 	const url = new URL(c.req.url)
 	const params = url.searchParams
+
+	const methodsParam = c.req.query('methods') || ''
 	const cacheKey = new Request(url.toString(), c.req.raw)
 
 	// Check cache first
@@ -336,17 +338,18 @@ app.get('/address/:address', async (c) => {
 	}
 
 	try {
-		// Parse URL parameters
-		const tokensParam = params.get('tokens') || ''
+		// Parse URL parameters using Hono's query helper
+		const tokensParam = c.req.query('tokens') || ''
 		const addressData: AddressData = {
 			address,
-			holdings: params.get('holdings') || '—',
-			txCount: params.get('txCount') || '—',
-			lastActive: params.get('lastActive') || '—',
-			created: params.get('created') || '—',
-			feeToken: params.get('feeToken') || '—',
+			holdings: c.req.query('holdings') || '—',
+			txCount: c.req.query('txCount') || '—',
+			lastActive: c.req.query('lastActive') || '—',
+			created: c.req.query('created') || '—',
+			feeToken: c.req.query('feeToken') || '—',
 			tokensHeld: tokensParam ? tokensParam.split(',').filter(Boolean) : [],
-			isContract: params.get('isContract') === 'true',
+			isContract: c.req.query('isContract') === 'true',
+			methods: methodsParam ? methodsParam.split(',').filter(Boolean) : [],
 		}
 
 		// Fetch assets
@@ -441,9 +444,10 @@ interface AddressData {
 	txCount: string
 	lastActive: string
 	created: string
-	feeToken: string
+	feeToken?: string
 	tokensHeld: string[] // Array of token symbols
-	isContract?: boolean // Whether this is a contract address
+	isContract: boolean // Whether this is a contract address
+	methods?: string[] // Contract methods detected
 }
 
 interface ReceiptData {
@@ -575,7 +579,14 @@ function ReceiptCard({
 										alignItems: 'flex-start',
 									}}
 								>
-									{/* Left: number + action + details all in one wrapping flex */}
+									{/* Number - fixed width, content won't wrap under it */}
+									<span
+										tw="text-gray-500 shrink-0"
+										style={{ lineHeight: '34px', width: '28px' }}
+									>
+										{index + 1}.
+									</span>
+									{/* Content: action + details - wraps within its own space */}
 									<div
 										tw="flex"
 										style={{
@@ -585,13 +596,6 @@ function ReceiptCard({
 											flexWrap: 'wrap',
 										}}
 									>
-										{/* Number */}
-										<span
-											tw="text-gray-500 shrink-0"
-											style={{ lineHeight: '34px' }}
-										>
-											{index + 1}.
-										</span>
 										{/* Action badge */}
 										<span
 											tw="flex bg-gray-100 px-2 py-1 rounded shrink-0"
@@ -721,7 +725,7 @@ function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 					</div>
 					{data.isFeeToken && (
 						<div
-							tw="flex items-center px-4 py-3 bg-emerald-100 rounded-lg text-emerald-700 text-xl"
+							tw="flex items-center px-5 py-3 bg-emerald-100 rounded-lg text-emerald-700 text-2xl"
 							style={{ fontFamily: 'GeistMono' }}
 						>
 							Fee Token
@@ -794,29 +798,92 @@ function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 
 // ============ Token Badges Helper ============
 
-function TokenBadges({ tokens }: { tokens: string[] }) {
-	// Create unique keys by counting occurrences
-	const keyedTokens = tokens.map((token, i) => {
-		const prevCount = tokens.slice(0, i).filter((t) => t === token).length
-		return { token, key: `${token}-${prevCount}` }
-	})
+function TokenBadges({
+	tokens,
+	maxTokens = 4,
+}: {
+	tokens: string[]
+	maxTokens?: number
+}) {
+	// Truncate token name if too long
+	const truncateToken = (token: string, maxLen = 8) => {
+		if (token.length <= maxLen) return token
+		return `${token.slice(0, maxLen - 1)}…`
+	}
+
+	// Show up to maxTokens tokens
+	const displayTokens = tokens.slice(0, maxTokens)
+	const remaining = tokens.length - maxTokens
 
 	return (
 		<>
-			{keyedTokens.map(({ token, key }) => (
+			{displayTokens.map((token, i) => (
 				<span
-					key={key}
+					key={`${token}-${i}`}
 					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-700 text-[22px]"
 					style={{
 						fontFamily: 'GeistMono',
 						marginRight: '12px',
-						marginBottom: '12px',
 					}}
 				>
-					{token}
+					{truncateToken(token)}
 				</span>
 			))}
+			{remaining > 0 && (
+				<span
+					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-500 text-[22px]"
+					style={{ fontFamily: 'GeistMono' }}
+				>
+					+{remaining}
+				</span>
+			)}
 		</>
+	)
+}
+
+// ============ Method Badges Helper ============
+
+function MethodBadges({ methods }: { methods: string[] }) {
+	const m0 = methods[0]
+	const m1 = methods[1]
+	const m2 = methods[2]
+	const remaining = methods.length - 3
+
+	return (
+		<div tw="flex flex-wrap justify-end" style={{ gap: '10px' }}>
+			{m0 && (
+				<span
+					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[22px]"
+					style={{ fontFamily: 'GeistMono' }}
+				>
+					{m0}
+				</span>
+			)}
+			{m1 && (
+				<span
+					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[22px]"
+					style={{ fontFamily: 'GeistMono' }}
+				>
+					{m1}
+				</span>
+			)}
+			{m2 && (
+				<span
+					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[22px]"
+					style={{ fontFamily: 'GeistMono' }}
+				>
+					{m2}
+				</span>
+			)}
+			{remaining > 0 && (
+				<span
+					tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[22px]"
+					style={{ fontFamily: 'GeistMono' }}
+				>
+					+{remaining}
+				</span>
+			)}
+		</div>
 	)
 }
 
@@ -881,31 +948,20 @@ function AddressCard({ data }: { data: AddressData }) {
 					paddingLeft: '56px',
 				}}
 			>
-				{/* Holdings */}
-				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Holdings</span>
-					<span tw="text-gray-900">{data.holdings}</span>
-				</div>
+				{/* Holdings - show for EOAs only */}
+				{!data.isContract && (
+					<div tw="flex w-full justify-between">
+						<span tw="text-gray-500">Holdings</span>
+						<span tw="text-gray-900">{data.holdings}</span>
+					</div>
+				)}
 
-				{/* Tokens Held section - hide for contracts */}
+				{/* Tokens Held section - show for EOAs only */}
 				{data.tokensHeld.length > 0 && !data.isContract && (
-					<div tw="flex flex-col w-full" style={{ marginTop: '8px' }}>
-						<div
-							tw="flex py-4"
-							style={{
-								flexWrap: 'wrap',
-								width: '100%',
-							}}
-						>
-							<TokenBadges tokens={data.tokensHeld.slice(0, 8)} />
-							{data.tokensHeld.length > 8 && (
-								<span
-									tw="flex px-4 py-2 bg-gray-100 rounded text-gray-500 text-[22px]"
-									style={{ fontFamily: 'GeistMono' }}
-								>
-									+{data.tokensHeld.length - 8}
-								</span>
-							)}
+					<div tw="flex flex-col w-full items-end" style={{ marginTop: '8px' }}>
+						{/* Single row of tokens */}
+						<div tw="flex justify-end py-1" style={{ width: '100%' }}>
+							<TokenBadges tokens={data.tokensHeld} maxTokens={4} />
 						</div>
 						{/* Divider - dashed */}
 						<div
@@ -920,8 +976,33 @@ function AddressCard({ data }: { data: AddressData }) {
 					</div>
 				)}
 
-				{/* Divider - dashed (when no tokens) */}
-				{(data.tokensHeld.length === 0 || data.isContract) && (
+				{/* Contract Methods - show for contracts only */}
+				{data.isContract && data.methods && data.methods.length > 0 && (
+					<div tw="flex flex-col w-full" style={{ marginTop: '4px' }}>
+						<span
+							tw="text-gray-500 text-[27px]"
+							style={{ marginBottom: '12px' }}
+						>
+							Methods
+						</span>
+						<div tw="flex justify-end py-1" style={{ width: '100%' }}>
+							<MethodBadges methods={data.methods || []} />
+						</div>
+						{/* Divider - dashed */}
+						<div
+							tw="flex w-full"
+							style={{
+								height: '1px',
+								backgroundColor: '#d1d5db',
+								borderStyle: 'dashed',
+								marginTop: '16px',
+							}}
+						/>
+					</div>
+				)}
+
+				{/* Divider - dashed (when no tokens and not contract) */}
+				{data.tokensHeld.length === 0 && !data.isContract && (
 					<div
 						tw="flex w-full"
 						style={{
@@ -950,11 +1031,13 @@ function AddressCard({ data }: { data: AddressData }) {
 					<span tw="text-gray-900">{data.created}</span>
 				</div>
 
-				{/* Fee Token */}
-				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Fee Token</span>
-					<span tw="text-gray-900">{data.feeToken}</span>
-				</div>
+				{/* Fee Token - hide for contracts */}
+				{!data.isContract && (
+					<div tw="flex w-full justify-between">
+						<span tw="text-gray-500">Fee Token</span>
+						<span tw="text-gray-900">{data.feeToken}</span>
+					</div>
+				)}
 			</div>
 		</div>
 	)
