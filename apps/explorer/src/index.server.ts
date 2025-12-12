@@ -287,15 +287,20 @@ function truncateAddress(address: string): string {
 	return `${address.slice(0, 6)}…${address.slice(-4)}`
 }
 
-function formatAmount(amount: {
-	value: bigint
-	decimals?: number
-	symbol?: string
-}): string {
+function formatAmount(
+	amount: {
+		value: bigint
+		decimals?: number
+		symbol?: string
+	},
+	includeSymbol = true,
+): string {
 	const decimals = amount.decimals ?? 18
 	const value = Number(amount.value) / 10 ** decimals
 	const formatted = value < 0.01 ? '<0.01' : value.toFixed(2)
-	return amount.symbol ? `${formatted} ${amount.symbol}` : formatted
+	return includeSymbol && amount.symbol
+		? `${formatted} ${amount.symbol}`
+		: formatted
 }
 
 function formatEventPart(part: KnownEventPart): string {
@@ -338,12 +343,12 @@ function formatEventForOg(event: KnownEvent): string {
 	const detailParts = event.parts.filter((p) => p.type !== 'action')
 	const details = detailParts.map(formatEventPart).filter(Boolean).join(' ')
 
-	// Calculate USD value for display (last column)
+	// Calculate USD value for display (last column) - just the number, no token name
 	// Use the first amount we find as a rough estimate
 	let usdAmount = ''
 	for (const part of event.parts) {
 		if (part.type === 'amount') {
-			const formatted = formatAmount(part.value)
+			const formatted = formatAmount(part.value, false) // No symbol for right column
 			// Format as USD - if it's already formatted like "<0.01", prefix with $
 			usdAmount = formatted.startsWith('<')
 				? `<$${formatted.slice(1)}`
