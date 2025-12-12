@@ -44,17 +44,18 @@ app.get('/health', () => new Response('OK'))
  * - sender: Sender address (0x...)
  * - date: Date string (e.g., "12/01/2025")
  * - time: Time string (e.g., "18:32:21 GMT+0")
- * - fee: Fee display string (e.g., "<$0.01")
- * - total: Total display string (e.g., "<$0.01")
- * - e1, e2, e3, e4: Event strings in format "Action|Details|Amount"
+ * - fee: Fee amount (e.g., "-$0.013")
+ * - feeToken: Token used for fee (e.g., "aUSD")
+ * - feePayer: Address that paid fee (e.g., "0x8f5a...3bc3")
+ * - total: Total display string (e.g., "-$1.55")
+ * - e1, e2, e3, e4: Event strings in format "Action|Details|Amount|Message"
  *   Examples:
- *   - "Swap|10 pathUSD for 10 AlphaUSD|$10"
- *   - "Approve|for 0x1234...5678|$10"
- *   - "Send|to 0x1234...5678|$10"
- *   - "Partial Fill|10000000|"
+ *   - "Send|aUSD to|-$1.54|Thanks for the coffee."
+ *   - "Swap|10 pathUSD for 10 AlphaUSD|$10|"
+ *   - "Approve|for 0x1234...5678|$10|"
  *
  * Example URL:
- * /tx/0x123...?block=3284958&sender=0x566f...b45f&date=12/01/2025&time=18:32:21 GMT+0&fee=<$0.01&e1=Swap|10 pathUSD for 10 AlphaUSD|$10
+ * /tx/0x123...?block=12331&sender=0x8f5a...3bc3&date=11/24/2025&time=11:04:01 GMT+0&fee=-$0.013&feeToken=aUSD&feePayer=0x8f5a...3bc3&total=-$1.55&e1=Send|aUSD to|-$1.54|Thanks for the coffee.
  */
 app.get('/tx/:hash', async (c) => {
 	const hash = c.req.param('hash')
@@ -83,20 +84,23 @@ app.get('/tx/:hash', async (c) => {
 			date: params.get('date') || '—',
 			time: params.get('time') || '—',
 			fee: params.get('fee') || undefined,
+			feeToken: params.get('feeToken') || undefined,
+			feePayer: params.get('feePayer') || undefined,
 			total: params.get('total') || undefined,
 			events: [],
 		}
 
-		// Parse events (e1, e2, e3, e4)
+		// Parse events (e1, e2, e3, e4) - format: "Action|Details|Amount|Message"
 		for (let i = 1; i <= 6; i++) {
 			const eventParam = params.get(`e${i}`)
 			if (eventParam) {
-				const [action, details, amount] = eventParam.split('|')
+				const [action, details, amount, message] = eventParam.split('|')
 				if (action) {
 					receiptData.events.push({
 						action: action || '',
 						details: details || '',
 						amount: amount || undefined,
+						message: message || undefined,
 					})
 				}
 			}
@@ -118,7 +122,7 @@ app.get('/tx/:hash', async (c) => {
 				{/* Receipt */}
 				<div
 					tw="absolute flex"
-					style={{ left: '24px', top: '20px', bottom: '0' }}
+					style={{ left: '56px', top: '40px', bottom: '0' }}
 				>
 					<ReceiptCard data={receiptData} receiptLogo={images.receiptLogo} />
 				</div>
@@ -126,23 +130,23 @@ app.get('/tx/:hash', async (c) => {
 				{/* Right side branding */}
 				<div
 					tw="absolute flex flex-col gap-6"
-					style={{ right: '48px', top: '120px', left: '640px' }}
+					style={{ right: '56px', top: '100px', left: '720px' }}
 				>
 					<img
 						src={images.logo}
 						alt="Tempo"
-						tw="mb-4"
-						style={{ width: '320px', height: '75px' }}
+						tw="mb-2"
+						style={{ width: '280px', height: '66px' }}
 					/>
 					<div
-						tw="flex flex-col text-[44px] text-gray-600 leading-tight"
+						tw="flex flex-col text-[40px] text-gray-500 leading-snug"
 						style={{ fontFamily: 'Inter', letterSpacing: '-0.02em' }}
 					>
 						<span>View more about this</span>
 						<span>transaction using</span>
-						<div tw="flex items-center gap-3">
+						<div tw="flex items-center" style={{ gap: '12px' }}>
 							<span>the explorer</span>
-							<span tw="text-black text-[52px]">→</span>
+							<span tw="text-black text-[48px]">→</span>
 						</div>
 					</div>
 				</div>
@@ -186,6 +190,8 @@ interface ReceiptData {
 	date: string
 	time: string
 	fee?: string
+	feeToken?: string
+	feePayer?: string
 	total?: string
 	events: ReceiptEvent[]
 }
@@ -194,6 +200,7 @@ interface ReceiptEvent {
 	action: string
 	details: string
 	amount?: string
+	message?: string
 }
 
 // ============ Receipt Component ============
@@ -209,25 +216,25 @@ function ReceiptCard({
 		<div
 			tw="flex flex-col bg-white rounded-t-3xl shadow-2xl"
 			style={{
-				width: '580px',
+				width: '640px',
 				boxShadow: '0 8px 60px rgba(0,0,0,0.12)',
 			}}
 		>
 			{/* Header */}
-			<div tw="flex px-7 pt-7 pb-5" style={{ gap: '20px' }}>
-				{/* Logo - maintain aspect ratio */}
+			<div tw="flex px-8 pt-8 pb-6" style={{ gap: '24px' }}>
+				{/* T Logo icon */}
 				<div tw="flex shrink-0 items-start">
 					<img
 						src={receiptLogo}
-						alt="Tempo Receipt"
-						style={{ width: '120px', height: 'auto' }}
+						alt="Tempo"
+						style={{ width: '90px', height: '90px' }}
 					/>
 				</div>
 
 				{/* Details */}
 				<div
-					tw="flex flex-col flex-1 text-[26px]"
-					style={{ fontFamily: 'GeistMono', gap: '6px' }}
+					tw="flex flex-col flex-1 text-[30px]"
+					style={{ fontFamily: 'GeistMono', gap: '4px' }}
 				>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Block</span>
@@ -235,11 +242,11 @@ function ReceiptCard({
 					</div>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Sender</span>
-						<span tw="text-emerald-600">{truncateHash(data.sender)}</span>
+						<span tw="text-emerald-600">{truncateHash(data.sender, 6)}</span>
 					</div>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Hash</span>
-						<span>{truncateHash(data.hash)}</span>
+						<span>{truncateHash(data.hash, 6)}</span>
 					</div>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Date</span>
@@ -255,29 +262,37 @@ function ReceiptCard({
 			{/* Events */}
 			{data.events.length > 0 && (
 				<>
-					<div tw="flex mx-7" style={{ borderTop: '2px dashed #e5e7eb' }} />
+					<div tw="flex mx-8" style={{ borderTop: '2px dashed #e5e7eb' }} />
 					<div
-						tw="flex flex-col px-7 py-5"
-						style={{ fontFamily: 'GeistMono', gap: '12px' }}
+						tw="flex flex-col px-8 py-6"
+						style={{ fontFamily: 'GeistMono', gap: '16px' }}
 					>
-						{data.events.slice(0, 5).map((event, index) => (
-							<div
-								key={`${event.action}-${index}`}
-								tw="flex w-full justify-between items-start text-[24px]"
-							>
-								<div tw="flex items-start" style={{ gap: '8px', flex: 1 }}>
-									<span tw="text-gray-400">{index + 1}.</span>
-									<span tw="flex bg-gray-100 px-2 py-1 text-[22px] rounded shrink-0">
-										{event.action}
-									</span>
-									{event.details && (
-										<span tw="text-gray-500 text-[22px]">{event.details}</span>
+						{data.events.slice(0, 4).map((event, index) => (
+							<div key={`${event.action}-${index}`} tw="flex flex-col">
+								<div tw="flex w-full justify-between items-center text-[28px]">
+									<div tw="flex items-center" style={{ gap: '10px' }}>
+										<span tw="text-gray-400">{index + 1}.</span>
+										<span tw="flex bg-gray-100 px-3 py-1 text-[26px] rounded">
+											{event.action}
+										</span>
+										{event.details && (
+											<span tw="text-emerald-600 text-[26px]">
+												{event.details}
+											</span>
+										)}
+									</div>
+									{event.amount && (
+										<span tw="text-[28px] shrink-0 ml-4">{event.amount}</span>
 									)}
 								</div>
-								{event.amount && (
-									<span tw="text-[24px] shrink-0 ml-3 text-right">
-										{event.amount}
-									</span>
+								{event.message && (
+									<div
+										tw="flex text-gray-400 text-[24px] mt-1"
+										style={{ marginLeft: '36px' }}
+									>
+										<span tw="mr-2">|</span>
+										<span>{event.message}</span>
+									</div>
 								)}
 							</div>
 						))}
@@ -285,22 +300,45 @@ function ReceiptCard({
 				</>
 			)}
 
-			{/* Fee and Total - opposite ends */}
-			{(data.fee || data.total) && (
+			{/* Fee row */}
+			{data.fee && (
 				<>
-					<div tw="flex mx-7" style={{ borderTop: '2px dashed #e5e7eb' }} />
+					<div tw="flex mx-8" style={{ borderTop: '2px dashed #e5e7eb' }} />
 					<div
-						tw="flex w-full px-7 py-5 justify-between items-center text-[26px]"
+						tw="flex w-full px-8 py-4 justify-between items-center text-[28px]"
 						style={{ fontFamily: 'GeistMono' }}
 					>
-						<div tw="flex" style={{ gap: '10px' }}>
+						<div tw="flex items-center" style={{ gap: '8px' }}>
 							<span tw="text-gray-400">Fee</span>
-							<span>{data.fee || '—'}</span>
+							{data.feeToken && (
+								<span tw="text-emerald-600">({data.feeToken})</span>
+							)}
 						</div>
-						<div tw="flex" style={{ gap: '10px' }}>
-							<span tw="text-gray-400">Total</span>
-							<span tw="font-medium">{data.total || '—'}</span>
+						<div tw="flex items-center" style={{ gap: '8px' }}>
+							{data.feePayer && (
+								<>
+									<span tw="text-emerald-600">{data.feePayer}</span>
+									<span tw="text-gray-400">paid</span>
+								</>
+							)}
+							<span>{data.fee}</span>
 						</div>
+					</div>
+				</>
+			)}
+
+			{/* Total row */}
+			{data.total && (
+				<>
+					{!data.fee && (
+						<div tw="flex mx-8" style={{ borderTop: '2px dashed #e5e7eb' }} />
+					)}
+					<div
+						tw="flex w-full px-8 py-4 justify-between items-center text-[28px]"
+						style={{ fontFamily: 'GeistMono' }}
+					>
+						<span tw="text-gray-400">Total</span>
+						<span tw="font-medium">{data.total}</span>
 					</div>
 				</>
 			)}
