@@ -708,10 +708,16 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 					id: 1,
 				}),
 			})
-			const symbolJson = (await symbolRes.json()) as { result?: string; error?: unknown }
+			const symbolJson = (await symbolRes.json()) as {
+				result?: string
+				error?: unknown
+			}
 			// If symbol() returns empty or errors, it's likely a contract (not a token)
 			// Tokens and EOAs with code will have a symbol
-			const hasSymbol = symbolJson.result && symbolJson.result !== '0x' && symbolJson.result.length > 2
+			const hasSymbol =
+				symbolJson.result &&
+				symbolJson.result !== '0x' &&
+				symbolJson.result.length > 2
 			// It's a contract if it has code but no symbol
 			const codeRes = await fetch(RPC_URL, {
 				method: 'POST',
@@ -853,7 +859,7 @@ function buildAddressDescription(
 	_address: string,
 ): string {
 	if (!addressData) {
-		return `View address activity and holdings on Tempo Explorer.`
+		return `View address activity & holdings on Tempo Explorer.`
 	}
 
 	const parts: string[] = []
@@ -868,7 +874,7 @@ function buildAddressDescription(
 		return `${parts.join(' · ')}. View full activity on Tempo Explorer.`
 	}
 
-	return `View address activity and holdings on Tempo Explorer.`
+	return `View address activity & holdings on Tempo Explorer.`
 }
 
 async function buildAddressOgData(address: string): Promise<{
