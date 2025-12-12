@@ -694,24 +694,11 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 		const tokenAddress = address.toLowerCase() as Address.Address
 		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
-		// Check if address is a contract by fetching code
-		let isContract = false
-		try {
-			const codeRes = await fetch(RPC_URL, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					method: 'eth_getCode',
-					params: [address, 'latest'],
-					id: 1,
-				}),
-			})
-			const codeJson = (await codeRes.json()) as { result?: string }
-			isContract = codeJson.result !== undefined && codeJson.result !== '0x'
-		} catch {
-			// Ignore errors, assume not a contract
-		}
+		// Check if address is a predeployed contract by prefix
+		// On Tempo, user accounts can have code (EIP-7702), so we use prefix detection
+		// 0xDEc0... = predeployed system contracts
+		const lowerAddress = address.toLowerCase()
+		const isContract = lowerAddress.startsWith('0xdec0')
 
 		// Get all transfers involving this address
 		const [incoming, outgoing] = await Promise.all([
