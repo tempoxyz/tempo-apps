@@ -129,7 +129,7 @@ app.get('/tx/:hash', async (c) => {
 
 				{/* Right side branding */}
 				<div
-					tw="absolute flex flex-col"
+					tw="absolute flex flex-col ml-16"
 					style={{ right: '48px', top: '100px', left: '700px', gap: '20px' }}
 				>
 					<img
@@ -266,30 +266,41 @@ function ReceiptCard({
 			{data.events.length > 0 && (
 				<>
 					<div
-						tw="flex mx-8"
-						style={{ height: '1px', backgroundColor: '#d1d5db' }}
+						tw="flex"
+						style={{
+							height: '1px',
+							backgroundColor: '#d1d5db',
+						}}
 					/>
 					<div
-						tw="flex flex-col px-8 py-5 text-[22px]"
-						style={{ fontFamily: 'GeistMono', gap: '12px' }}
+						tw="flex flex-col py-5 px-8 text-[22px]"
+						style={{
+							fontFamily: 'GeistMono',
+							gap: '12px',
+							width: '100%',
+						}}
 					>
 						{data.events.slice(0, 4).map((event, index) => (
 							<div
 								key={`${event.action}-${index}`}
-								tw="flex justify-between items-center"
-								style={{ width: '100%' }}
+								tw="flex items-start"
+								style={{
+									width: '100%',
+									justifyContent: 'space-between',
+									flexWrap: 'wrap',
+								}}
 							>
 								<div
 									tw="flex items-center"
-									style={{ gap: '6px', flexWrap: 'nowrap' }}
+									style={{ gap: '8px', flexWrap: 'wrap' }}
 								>
 									<span tw="text-gray-400">{index + 1}.</span>
-									<span tw="flex bg-gray-100 px-2 py-1 rounded shrink-0">
+									<span tw="flex bg-gray-100 px-2 py-1 rounded">
 										{event.action}
 									</span>
 									{event.details && <EventDetails details={event.details} />}
 								</div>
-								{event.amount && <span tw="shrink-0">{event.amount}</span>}
+								{event.amount && <span>{event.amount}</span>}
 							</div>
 						))}
 					</div>
@@ -300,15 +311,25 @@ function ReceiptCard({
 			{(data.fee || data.total) && (
 				<>
 					<div
-						tw="flex mx-8"
-						style={{ height: '1px', backgroundColor: '#d1d5db' }}
+						tw="flex"
+						style={{
+							height: '1px',
+							backgroundColor: '#d1d5db',
+						}}
 					/>
 					<div
-						tw="flex flex-col px-8 py-5 text-[22px]"
-						style={{ fontFamily: 'GeistMono', gap: '12px' }}
+						tw="flex flex-col py-5 px-8 text-[22px]"
+						style={{
+							fontFamily: 'GeistMono',
+							gap: '12px',
+							width: '100%',
+						}}
 					>
 						{data.fee && (
-							<div tw="flex justify-between" style={{ width: '100%' }}>
+							<div
+								tw="flex items-center"
+								style={{ width: '100%', justifyContent: 'space-between' }}
+							>
 								<span tw="text-gray-400">
 									Fee{data.feeToken ? ` (${data.feeToken})` : ''}
 								</span>
@@ -316,7 +337,10 @@ function ReceiptCard({
 							</div>
 						)}
 						{data.total && (
-							<div tw="flex justify-between" style={{ width: '100%' }}>
+							<div
+								tw="flex items-center"
+								style={{ width: '100%', justifyContent: 'space-between' }}
+							>
 								<span tw="text-gray-400">Total</span>
 								<span>{data.total}</span>
 							</div>
