@@ -248,21 +248,31 @@ function formatEventPart(part: KnownEventPart): string {
 
 function formatEventForOg(event: KnownEvent): string {
 	// Format: "Action|Details|Amount"
+	// OG expects: "Swap|10 pathUSD for 10 AlphaUSD|$10"
+	//            "Approve|10 pathUSD for spender 0x1234...5678|$10"
+
 	// Find action part
 	const actionPart = event.parts.find((p) => p.type === 'action')
 	const action = actionPart ? formatEventPart(actionPart) : event.type
 
-	// Build details from non-action, non-amount parts
-	const detailParts = event.parts.filter(
-		(p) => p.type !== 'action' && p.type !== 'amount',
-	)
-	const details = detailParts.map(formatEventPart).join(' ')
+	// Build details from ALL non-action parts (including amounts and tokens)
+	// This gives us "10 pathUSD for 10 AlphaUSD" for swaps
+	const detailParts = event.parts.filter((p) => p.type !== 'action')
+	const details = detailParts.map(formatEventPart).filter(Boolean).join(' ')
 
-	// Find amount
-	const amountPart = event.parts.find((p) => p.type === 'amount')
-	const amount = amountPart ? formatEventPart(amountPart) : ''
+	// Calculate USD value for display (last column)
+	// Use the first amount we find as a rough estimate
+	let usdAmount = ''
+	for (const part of event.parts) {
+		if (part.type === 'amount') {
+			const formatted = formatAmount(part.value)
+			// Format as USD - if it's already formatted like "<0.01", prefix with $
+			usdAmount = formatted.startsWith('<') ? `<$${formatted.slice(1)}` : `$${formatted}`
+			break
+		}
+	}
 
-	return `${action}|${details}|${amount}`
+	return `${action}|${details}|${usdAmount}`
 }
 
 async function buildTxOgUrl(hash: string): Promise<string> {
@@ -381,16 +391,15 @@ async function fetchTokenData(address: string): Promise<TokenData | null> {
 			? Number.parseInt(decimalsRes.result, 16)
 			: 18
 
-		const totalSupplyRaw = supplyRes.result
-			? BigInt(supplyRes.result)
-			: 0n
+		const totalSupplyRaw = supplyRes.result ? BigInt(supplyRes.result) : 0n
 		const totalSupply = Number(totalSupplyRaw) / 10 ** decimals
 
 		// Format supply with commas
 		const formatSupply = (n: number): string => {
 			if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`
 			if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`
-			if (n >= 1e3) return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+			if (n >= 1e3)
+				return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
 			return n.toFixed(2)
 		}
 
