@@ -23,9 +23,10 @@ export function DataGrid(props: DataGrid.Props) {
 	const activeColumns = mode === 'stacked' ? columns.stacked : columns.tabs
 	const activeItems: DataGrid.Row[] = loading
 		? Array.from({ length: itemsPerPage }, (_, index) => ({
-				cells: activeColumns.map((_, colIndex) => (
-					<div key={`skeleton-${index}-${colIndex}`} className="h-[20px]" />
-				)),
+				cells: activeColumns.map((_, colIndex) => {
+					const cellKey = `skeleton-${index}-${colIndex}`
+					return <div key={cellKey} className="h-[20px]" />
+				}),
 			}))
 		: items(mode)
 	const totalPages = Math.ceil(totalItems / itemsPerPage)
