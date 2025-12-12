@@ -184,7 +184,141 @@ app.get('/tx/:hash', async (c) => {
 	}
 })
 
+/**
+ * Token/Asset OG Image
+ *
+ * URL Parameters:
+ * - address: Token address (0x...)
+ * - name: Token name (e.g., "alphaUSD")
+ * - symbol: Token symbol (e.g., "AUSD")
+ * - currency: Currency (e.g., "USD")
+ * - holders: Number of holders
+ * - supply: Total supply formatted
+ * - created: Creation date
+ * - quoteToken: Quote token symbol (e.g., "pathUSD")
+ */
+app.get('/token/:address', async (c) => {
+	const address = c.req.param('address')
+
+	if (!address || !address.startsWith('0x')) {
+		return new Response('Invalid token address', { status: 400 })
+	}
+
+	const url = new URL(c.req.url)
+	const params = url.searchParams
+	const cacheKey = new Request(url.toString(), c.req.raw)
+
+	// Check cache first
+	const cache = (caches as unknown as { default: Cache }).default
+	const cachedResponse = await cache.match(cacheKey)
+	if (cachedResponse) {
+		return cachedResponse
+	}
+
+	try {
+		// Parse URL parameters
+		const tokenData: TokenData = {
+			address,
+			name: params.get('name') || '—',
+			symbol: params.get('symbol') || '—',
+			currency: params.get('currency') || '—',
+			holders: params.get('holders') || '—',
+			supply: params.get('supply') || '—',
+			created: params.get('created') || '—',
+			quoteToken: params.get('quoteToken') || undefined,
+		}
+
+		// Fetch assets
+		const [fonts, images] = await Promise.all([loadFonts(), loadImages(c)])
+
+		const response = new ImageResponse(
+			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
+				{/* Background image */}
+				<img
+					src={images.bg}
+					alt=""
+					tw="absolute inset-0 w-full h-full"
+					style={{ objectFit: 'cover' }}
+				/>
+
+				{/* Token Card */}
+				<div
+					tw="absolute flex"
+					style={{
+						left: '64px',
+						top: '80px',
+						bottom: '0',
+					}}
+				>
+					<TokenCard data={tokenData} />
+				</div>
+
+				{/* Tempo branding - bottom right */}
+				<div
+					tw="absolute flex flex-col items-start"
+					style={{
+						right: '64px',
+						top: '80px',
+					}}
+				>
+					{/* Tempo lockup logo */}
+					<img src={images.logo} alt="Tempo" tw="mb-2" width={200} height={46} />
+
+					{/* CTA text */}
+					<div
+						tw="flex flex-col text-[28px] text-gray-500"
+						style={{ fontFamily: 'Inter', lineHeight: '1.4' }}
+					>
+						<span>View more about this</span>
+						<span>asset using the</span>
+						<span tw="flex items-center">
+							explorer <span tw="text-gray-500 ml-2">→</span>
+						</span>
+					</div>
+				</div>
+			</div>,
+			{
+				width: 1200 * devicePixelRatio,
+				height: 630 * devicePixelRatio,
+				format: 'webp',
+				module,
+				fonts: [
+					{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
+					{ weight: 500, name: 'Inter', data: fonts.inter, style: 'normal' },
+				],
+			},
+		)
+
+		const responseToCache = new Response(response.body, {
+			headers: {
+				'Content-Type': 'image/webp',
+				'Cache-Control': `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}`,
+			},
+		})
+
+		c.executionCtx.waitUntil(cache.put(cacheKey, responseToCache.clone()))
+		return responseToCache
+	} catch (error) {
+		console.error('Error generating token OG image:', error)
+		return new Response(
+			`Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			{ status: 500 },
+		)
+	}
+})
+
 // ============ Types ============
+
+interface TokenData {
+	address: string
+	name: string
+	symbol: string
+	currency: string
+	holders: string
+	supply: string
+	created: string
+	quoteToken?: string
+}
 
 interface ReceiptData {
 	hash: string
@@ -377,6 +511,101 @@ function ReceiptCard({
 					</div>
 				</>
 			)}
+		</div>
+	)
+}
+
+// ============ Token Card Component ============
+
+function TokenCard({ data }: { data: TokenData }) {
+	return (
+		<div
+			tw="flex flex-col bg-white rounded-3xl shadow-2xl"
+			style={{
+				width: '640px',
+				boxShadow: '0 8px 60px rgba(0,0,0,0.12)',
+			}}
+		>
+			{/* Header with icon and name */}
+			<div tw="flex items-center px-8 pt-8 pb-6" style={{ gap: '16px' }}>
+				{/* Token icon placeholder - blue circle with first letter */}
+				<div
+					tw="flex items-center justify-center rounded-full bg-blue-500 text-white text-3xl font-bold"
+					style={{ width: '64px', height: '64px' }}
+				>
+					{data.symbol?.[0]?.toUpperCase() || 'T'}
+				</div>
+				<div tw="flex flex-col flex-1">
+					<span tw="text-3xl font-semibold text-gray-900">{data.name}</span>
+				</div>
+				{/* Symbol badge */}
+				<div
+					tw="flex items-center px-4 py-2 bg-gray-100 rounded-lg text-gray-600 text-xl"
+					style={{ fontFamily: 'GeistMono' }}
+				>
+					{data.symbol}
+				</div>
+			</div>
+
+			{/* Divider */}
+			<div
+				tw="flex mx-8"
+				style={{
+					height: '1px',
+					backgroundColor: '#e5e7eb',
+					borderStyle: 'dashed',
+				}}
+			/>
+
+			{/* Details */}
+			<div
+				tw="flex flex-col px-8 py-6 text-[22px]"
+				style={{
+					fontFamily: 'GeistMono',
+					gap: '20px',
+					letterSpacing: '-0.02em',
+				}}
+			>
+				{/* Address */}
+				<div tw="flex w-full justify-between items-start">
+					<span tw="text-gray-400">Address</span>
+					<span tw="text-blue-500" style={{ maxWidth: '320px', textAlign: 'right' }}>
+						{data.address}
+					</span>
+				</div>
+
+				{/* Currency */}
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-400">Currency</span>
+					<span tw="text-gray-900">{data.currency}</span>
+				</div>
+
+				{/* Holders */}
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-400">Holders</span>
+					<span tw="text-gray-900">{data.holders}</span>
+				</div>
+
+				{/* Supply */}
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-400">Supply</span>
+					<span tw="text-gray-900">{data.supply}</span>
+				</div>
+
+				{/* Created */}
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-400">Created</span>
+					<span tw="text-gray-900">{data.created}</span>
+				</div>
+
+				{/* Quote Token (if available) */}
+				{data.quoteToken && (
+					<div tw="flex w-full justify-between">
+						<span tw="text-gray-400">Quote Token</span>
+						<span tw="text-gray-900">{data.quoteToken}</span>
+					</div>
+				)}
+			</div>
 		</div>
 	)
 }

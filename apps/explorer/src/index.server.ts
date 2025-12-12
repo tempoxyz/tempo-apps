@@ -265,7 +265,7 @@ function formatEventForOg(event: KnownEvent): string {
 	return `${action}|${details}|${amount}`
 }
 
-async function buildOgUrl(hash: string): Promise<string> {
+async function buildTxOgUrl(hash: string): Promise<string> {
 	const txData = await fetchTxData(hash)
 
 	const params = new URLSearchParams()
@@ -286,6 +286,144 @@ async function buildOgUrl(hash: string): Promise<string> {
 	}
 
 	return `${OG_BASE_URL}/tx/${hash}?${params.toString()}`
+}
+
+// ============ Token OG Image ============
+
+interface TokenData {
+	name: string
+	symbol: string
+	currency: string
+	holders: number
+	supply: string
+	created: string
+	quoteToken?: string
+}
+
+async function fetchTokenData(address: string): Promise<TokenData | null> {
+	try {
+		// Fetch token metadata via RPC call to the token contract
+		// For now, use a simple approach - call name(), symbol(), decimals(), totalSupply()
+		const calls = [
+			// name()
+			{
+				jsonrpc: '2.0',
+				method: 'eth_call',
+				params: [
+					{ to: address, data: '0x06fdde03' }, // name()
+					'latest',
+				],
+				id: 1,
+			},
+			// symbol()
+			{
+				jsonrpc: '2.0',
+				method: 'eth_call',
+				params: [
+					{ to: address, data: '0x95d89b41' }, // symbol()
+					'latest',
+				],
+				id: 2,
+			},
+			// decimals()
+			{
+				jsonrpc: '2.0',
+				method: 'eth_call',
+				params: [
+					{ to: address, data: '0x313ce567' }, // decimals()
+					'latest',
+				],
+				id: 3,
+			},
+			// totalSupply()
+			{
+				jsonrpc: '2.0',
+				method: 'eth_call',
+				params: [
+					{ to: address, data: '0x18160ddd' }, // totalSupply()
+					'latest',
+				],
+				id: 4,
+			},
+		]
+
+		const responses = await Promise.all(
+			calls.map((call) =>
+				fetch(RPC_URL, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(call),
+				}).then((r) => r.json() as Promise<{ result?: string }>),
+			),
+		)
+
+		const [nameRes, symbolRes, decimalsRes, supplyRes] = responses
+
+		// Decode string results (remove 0x prefix and decode ABI-encoded string)
+		const decodeName = (hex: string | undefined): string => {
+			if (!hex || hex === '0x') return '—'
+			try {
+				// ABI-encoded string: skip first 64 chars (offset) + 64 chars (length), then decode
+				const data = hex.slice(2)
+				if (data.length < 128) return '—'
+				const length = Number.parseInt(data.slice(64, 128), 16)
+				const strHex = data.slice(128, 128 + length * 2)
+				return Buffer.from(strHex, 'hex').toString('utf8').replace(/\0/g, '')
+			} catch {
+				return '—'
+			}
+		}
+
+		const name = decodeName(nameRes.result)
+		const symbol = decodeName(symbolRes.result)
+
+		const decimals = decimalsRes.result
+			? Number.parseInt(decimalsRes.result, 16)
+			: 18
+
+		const totalSupplyRaw = supplyRes.result
+			? BigInt(supplyRes.result)
+			: 0n
+		const totalSupply = Number(totalSupplyRaw) / 10 ** decimals
+
+		// Format supply with commas
+		const formatSupply = (n: number): string => {
+			if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`
+			if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`
+			if (n >= 1e3) return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+			return n.toFixed(2)
+		}
+
+		return {
+			name: name || '—',
+			symbol: symbol || '—',
+			currency: 'USD', // Default for now
+			holders: 0, // Would need indexer query
+			supply: formatSupply(totalSupply),
+			created: '—', // Would need indexer query
+		}
+	} catch {
+		return null
+	}
+}
+
+async function buildTokenOgUrl(address: string): Promise<string> {
+	const tokenData = await fetchTokenData(address)
+
+	const params = new URLSearchParams()
+	if (tokenData) {
+		params.set('name', tokenData.name)
+		params.set('symbol', tokenData.symbol)
+		params.set('currency', tokenData.currency)
+		params.set('holders', tokenData.holders.toString())
+		params.set('supply', tokenData.supply)
+		params.set('created', tokenData.created)
+		if (tokenData.quoteToken) {
+			params.set('quoteToken', tokenData.quoteToken)
+		}
+	}
+
+	return `${OG_BASE_URL}/token/${address}?${params.toString()}`
 }
 
 export default Sentry.withSentry(
@@ -320,10 +458,27 @@ export default Sentry.withSentry(
 			) {
 				const pathParts = url.pathname.split('/')
 				const hash = pathParts[2] // Gets the hash from /tx/{hash} or /receipt/{hash}
-				const ogImageUrl = await buildOgUrl(hash)
+				const ogImageUrl = await buildTxOgUrl(hash)
 				const title = `Transaction ${hash.slice(0, 10)}...${hash.slice(-6)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to remove existing OG tags and inject transaction-specific ones
+				return new HTMLRewriter()
+					.on('meta', new OgMetaRemover())
+					.on('head', new OgMetaInjector(ogImageUrl, title))
+					.transform(response)
+			}
+
+			// Check if this is a token page and inject OG meta tags
+			const tokenMatch = url.pathname.match(/^\/token\/0x[a-fA-F0-9]{40}$/)
+			if (
+				tokenMatch &&
+				response.headers.get('content-type')?.includes('text/html')
+			) {
+				const address = url.pathname.split('/token/')[1]
+				const ogImageUrl = await buildTokenOgUrl(address)
+				const title = `Token ${address.slice(0, 10)}...${address.slice(-6)} ⋅ Tempo Explorer`
+
+				// Use HTMLRewriter to remove existing OG tags and inject token-specific ones
 				return new HTMLRewriter()
 					.on('meta', new OgMetaRemover())
 					.on('head', new OgMetaInjector(ogImageUrl, title))
