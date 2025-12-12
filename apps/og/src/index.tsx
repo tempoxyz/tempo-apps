@@ -253,10 +253,7 @@ app.get('/token/:address', async (c) => {
 
 				{/* Token Card */}
 				<div tw="absolute flex" style={{ left: '56px', top: '40px' }}>
-					<TokenCard
-						data={tokenData}
-						icon={tokenIcon || images.nullIcon}
-					/>
+					<TokenCard data={tokenData} icon={tokenIcon || images.nullIcon} />
 				</div>
 
 				{/* Right side branding - same as tx version */}
@@ -660,7 +657,7 @@ function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 			}}
 		>
 			{/* Header with icon and name */}
-			<div tw="flex items-center px-8 pt-8 pb-6" style={{ gap: '16px' }}>
+			<div tw="flex items-center px-8 pt-12 pb-12" style={{ gap: '16px' }}>
 				{/* Token icon from tokenlist or fallback to null icon */}
 				<img
 					src={icon}

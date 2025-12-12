@@ -1,7 +1,9 @@
 import * as Sentry from '@sentry/cloudflare'
 import handler, { type ServerEntry } from '@tanstack/react-start/server-entry'
+import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import type { TransactionReceipt } from 'viem'
+import { zeroAddress } from 'viem'
 import {
 	type KnownEvent,
 	type KnownEventPart,
@@ -11,6 +13,15 @@ import {
 
 const OG_BASE_URL = 'https://og.porto.workers.dev'
 const RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
+const CHAIN_ID = 42429 // Testnet chain ID
+
+// Indexer setup for token holder queries
+const IS = IDX.IndexSupply.create({
+	apiKey: process.env.INDEXER_API_KEY,
+})
+const QB = IDX.QueryBuilder.from(IS)
+const TRANSFER_SIGNATURE =
+	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
 // Remove existing OG meta tags so we can inject transaction-specific ones
 class OgMetaRemover {
@@ -33,10 +44,12 @@ class OgMetaRemover {
 class OgMetaInjector {
 	private ogImageUrl: string
 	private title: string
+	private description: string
 
-	constructor(ogImageUrl: string, title: string) {
+	constructor(ogImageUrl: string, title: string, description: string) {
 		this.ogImageUrl = ogImageUrl
 		this.title = title
+		this.description = description
 	}
 
 	element(element: Element) {
@@ -47,9 +60,11 @@ class OgMetaInjector {
 		)
 		element.prepend(
 			'<meta name="twitter:card" content="summary_large_image" />',
-			{
-				html: true,
-			},
+			{ html: true },
+		)
+		element.prepend(
+			`<meta name="twitter:description" content="${this.description}" />`,
+			{ html: true },
 		)
 		element.prepend('<meta property="og:image:height" content="630" />', {
 			html: true,
@@ -62,6 +77,10 @@ class OgMetaInjector {
 		})
 		element.prepend(
 			`<meta property="og:image" content="${this.ogImageUrl}" />`,
+			{ html: true },
+		)
+		element.prepend(
+			`<meta property="og:description" content="${this.description}" />`,
 			{ html: true },
 		)
 		element.prepend(`<meta property="og:title" content="${this.title}" />`, {
@@ -204,6 +223,56 @@ function formatTime(timestamp: number): string {
 	})
 }
 
+// Generate contextual OG description for transactions
+function buildTxDescription(txData: TxData | null, _hash: string): string {
+	if (!txData) {
+		return `View transaction details on Tempo Explorer.`
+	}
+
+	const date = formatDate(txData.timestamp)
+	const eventCount = txData.events.length
+
+	// Try to summarize the main action
+	if (eventCount > 0) {
+		const firstEvent = txData.events[0]
+		const actionPart = firstEvent.parts.find((p) => p.type === 'action')
+		const action = actionPart ? String(actionPart.value).toLowerCase() : 'transaction'
+
+		if (eventCount === 1) {
+			return `A ${action} on ${date} from ${truncateAddress(txData.from)}. View full details on Tempo Explorer.`
+		}
+		return `A ${action} and ${eventCount - 1} other action${eventCount > 2 ? 's' : ''} on ${date}. View full details on Tempo Explorer.`
+	}
+
+	return `Transaction on ${date} from ${truncateAddress(txData.from)}. View details on Tempo Explorer.`
+}
+
+// Generate contextual OG description for tokens
+function buildTokenDescription(
+	tokenData: TokenData | null,
+	_address: string,
+): string {
+	if (!tokenData || tokenData.name === '—') {
+		return `View token details and activity on Tempo Explorer.`
+	}
+
+	const parts: string[] = []
+
+	if (tokenData.symbol && tokenData.symbol !== '—') {
+		parts.push(tokenData.symbol)
+	}
+
+	if (tokenData.supply && tokenData.supply !== '—') {
+		parts.push(`${tokenData.supply} total supply`)
+	}
+
+	if (parts.length > 0) {
+		return `${tokenData.name} (${parts.join(' · ')}). View token activity on Tempo Explorer.`
+	}
+
+	return `${tokenData.name} token on Tempo. View activity and details on Tempo Explorer.`
+}
+
 function truncateAddress(address: string): string {
 	if (address.length <= 13) return address
 	return `${address.slice(0, 6)}…${address.slice(-4)}`
@@ -277,7 +346,10 @@ function formatEventForOg(event: KnownEvent): string {
 	return `${action}|${details}|${usdAmount}`
 }
 
-async function buildTxOgUrl(hash: string): Promise<string> {
+async function buildTxOgData(hash: string): Promise<{
+	url: string
+	description: string
+}> {
 	const txData = await fetchTxData(hash)
 
 	const params = new URLSearchParams()
@@ -297,7 +369,10 @@ async function buildTxOgUrl(hash: string): Promise<string> {
 		})
 	}
 
-	return `${OG_BASE_URL}/tx/${hash}?${params.toString()}`
+	return {
+		url: `${OG_BASE_URL}/tx/${hash}?${params.toString()}`,
+		description: buildTxDescription(txData, hash),
+	}
 }
 
 // ============ Token OG Image ============
@@ -312,10 +387,80 @@ interface TokenData {
 	quoteToken?: string
 }
 
+// Fetch holder count and first transfer date from indexer
+async function fetchTokenIndexerData(
+	address: string,
+): Promise<{ holders: number; created: string }> {
+	try {
+		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
+		const tokenAddress = address.toLowerCase() as Address.Address
+
+		// Get unique holder count by aggregating incoming transfers
+		const incoming = await qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('to').as('holder'),
+				eb.fn.sum('tokens').as('received'),
+			])
+			.where('chain', '=', CHAIN_ID)
+			.where('address', '=', tokenAddress)
+			.groupBy('to')
+			.execute()
+
+		const outgoing = await qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('from').as('holder'),
+				eb.fn.sum('tokens').as('sent'),
+			])
+			.where('chain', '=', CHAIN_ID)
+			.where('address', '=', tokenAddress)
+			.where('from', '<>', zeroAddress)
+			.groupBy('from')
+			.execute()
+
+		// Calculate balances to count holders with balance > 0
+		const balances = new Map<string, bigint>()
+		for (const row of incoming) {
+			const received = BigInt(row.received)
+			balances.set(row.holder, (balances.get(row.holder) ?? 0n) + received)
+		}
+		for (const row of outgoing) {
+			const sent = BigInt(row.sent)
+			balances.set(row.holder, (balances.get(row.holder) ?? 0n) - sent)
+		}
+		const holders = Array.from(balances.values()).filter((b) => b > 0n).length
+
+		// Get first transfer (token creation)
+		const firstTransfer = await qb
+			.selectFrom('transfer')
+			.select(['block_timestamp'])
+			.where('chain', '=', CHAIN_ID)
+			.where('address', '=', tokenAddress)
+			.orderBy('block_num', 'asc')
+			.limit(1)
+			.executeTakeFirst()
+
+		let created = '—'
+		if (firstTransfer?.block_timestamp) {
+			const date = new Date(Number(firstTransfer.block_timestamp) * 1000)
+			created = date.toLocaleDateString('en-US', {
+				month: 'short',
+				day: 'numeric',
+				year: 'numeric',
+			})
+		}
+
+		return { holders, created }
+	} catch (e) {
+		console.error('Failed to fetch token indexer data:', e)
+		return { holders: 0, created: '—' }
+	}
+}
+
 async function fetchTokenData(address: string): Promise<TokenData | null> {
 	try {
-		// Fetch token metadata via RPC call to the token contract
-		// For now, use a simple approach - call name(), symbol(), decimals(), totalSupply()
+		// Fetch token metadata via RPC and indexer data in parallel
 		const calls = [
 			// name()
 			{
@@ -359,15 +504,19 @@ async function fetchTokenData(address: string): Promise<TokenData | null> {
 			},
 		]
 
-		const responses = await Promise.all(
-			calls.map((call) =>
-				fetch(RPC_URL, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(call),
-				}).then((r) => r.json() as Promise<{ result?: string }>),
+		// Fetch RPC data and indexer data in parallel
+		const [responses, indexerData] = await Promise.all([
+			Promise.all(
+				calls.map((call) =>
+					fetch(RPC_URL, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(call),
+					}).then((r) => r.json() as Promise<{ result?: string }>),
+				),
 			),
-		)
+			fetchTokenIndexerData(address),
+		])
 
 		const [nameRes, symbolRes, decimalsRes, supplyRes] = responses
 
@@ -408,17 +557,20 @@ async function fetchTokenData(address: string): Promise<TokenData | null> {
 		return {
 			name: name || '—',
 			symbol: symbol || '—',
-			currency: 'USD', // Default for now
-			holders: 0, // Would need indexer query
+			currency: 'USD',
+			holders: indexerData.holders,
 			supply: formatSupply(totalSupply),
-			created: '—', // Would need indexer query
+			created: indexerData.created,
 		}
 	} catch {
 		return null
 	}
 }
 
-async function buildTokenOgUrl(address: string): Promise<string> {
+async function buildTokenOgData(address: string): Promise<{
+	url: string
+	description: string
+}> {
 	const tokenData = await fetchTokenData(address)
 
 	const params = new URLSearchParams()
@@ -434,7 +586,10 @@ async function buildTokenOgUrl(address: string): Promise<string> {
 		}
 	}
 
-	return `${OG_BASE_URL}/token/${address}?${params.toString()}`
+	return {
+		url: `${OG_BASE_URL}/token/${address}?${params.toString()}`,
+		description: buildTokenDescription(tokenData, address),
+	}
 }
 
 export default Sentry.withSentry(
@@ -469,13 +624,13 @@ export default Sentry.withSentry(
 			) {
 				const pathParts = url.pathname.split('/')
 				const hash = pathParts[2] // Gets the hash from /tx/{hash} or /receipt/{hash}
-				const ogImageUrl = await buildTxOgUrl(hash)
+				const ogData = await buildTxOgData(hash)
 				const title = `Transaction ${hash.slice(0, 10)}...${hash.slice(-6)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to remove existing OG tags and inject transaction-specific ones
 				return new HTMLRewriter()
 					.on('meta', new OgMetaRemover())
-					.on('head', new OgMetaInjector(ogImageUrl, title))
+					.on('head', new OgMetaInjector(ogData.url, title, ogData.description))
 					.transform(response)
 			}
 
@@ -486,13 +641,13 @@ export default Sentry.withSentry(
 				response.headers.get('content-type')?.includes('text/html')
 			) {
 				const address = url.pathname.split('/token/')[1]
-				const ogImageUrl = await buildTokenOgUrl(address)
+				const ogData = await buildTokenOgData(address)
 				const title = `Token ${address.slice(0, 10)}...${address.slice(-6)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to remove existing OG tags and inject token-specific ones
 				return new HTMLRewriter()
 					.on('meta', new OgMetaRemover())
-					.on('head', new OgMetaInjector(ogImageUrl, title))
+					.on('head', new OgMetaInjector(ogData.url, title, ogData.description))
 					.transform(response)
 			}
 
