@@ -287,20 +287,24 @@ function ReceiptCard({
 								style={{
 									width: '100%',
 									justifyContent: 'space-between',
-									flexWrap: 'wrap',
 								}}
 							>
-								<div
-									tw="flex items-center"
-									style={{ gap: '8px', flexWrap: 'wrap' }}
-								>
-									<span tw="text-gray-400">{index + 1}.</span>
-									<span tw="flex bg-gray-100 px-2 py-1 rounded">
-										{event.action}
-									</span>
-									{event.details && <EventDetails details={event.details} />}
+								{/* Left: number + wrapping action/details */}
+								<div tw="flex items-start" style={{ gap: '8px', flex: 1 }}>
+									<span tw="text-gray-400 shrink-0">{index + 1}.</span>
+									{/* Action + details wrap together */}
+									<div
+										tw="flex items-center"
+										style={{ gap: '8px', flexWrap: 'wrap' }}
+									>
+										<span tw="flex bg-gray-100 px-2 py-1 rounded shrink-0">
+											{event.action}
+										</span>
+										{event.details && <EventDetails details={event.details} />}
+									</div>
 								</div>
-								{event.amount && <span>{event.amount}</span>}
+								{/* Amount stays on right */}
+								{event.amount && <span tw="shrink-0">{event.amount}</span>}
 							</div>
 						))}
 					</div>
