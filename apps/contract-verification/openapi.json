@@ -11,6 +11,10 @@
 			"description": "Production"
 		},
 		{
+			"url": "https://o.bun-alewife.ts.net/",
+			"description": "Localhost Funneled"
+		},
+		{
 			"url": "http://localhost:23033",
 			"description": "local"
 		}

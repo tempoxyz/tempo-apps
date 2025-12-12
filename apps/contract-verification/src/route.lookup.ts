@@ -72,11 +72,11 @@ lookupRoute.get('/all-chains/:address', async (context) => {
 					: runtimeMatchStatus || creationMatchStatus
 
 			return {
-				matchId: String(row.matchId),
+				matchId: row.matchId,
 				match: matchStatus,
 				creationMatch: creationMatchStatus,
 				runtimeMatch: runtimeMatchStatus,
-				chainId: String(row.chainId),
+				chainId: row.chainId,
 				address: Hex.fromBytes(new Uint8Array(row.address as ArrayBuffer)),
 				verifiedAt: row.verifiedAt,
 			}
@@ -210,11 +210,11 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 
 		// Minimal response (default)
 		const minimalResponse = {
-			matchId: String(row.matchId),
+			matchId: row.matchId,
 			match: matchStatus,
 			creationMatch: creationMatchStatus,
 			runtimeMatch: runtimeMatchStatus,
-			chainId: String(row.chainId),
+			chainId: row.chainId,
 			address: Hex.fromBytes(new Uint8Array(row.address as ArrayBuffer)),
 			verifiedAt: row.verifiedAt,
 		}
@@ -350,11 +350,11 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 					: 'match'
 
 			return {
-				matchId: String(row.matchId),
+				matchId: row.matchId,
 				match: matchStatus,
 				creationMatch: creationMatchStatus,
 				runtimeMatch: runtimeMatchStatus,
-				chainId: String(row.chainId),
+				chainId: row.chainId,
 				address: Hex.fromBytes(new Uint8Array(row.address as ArrayBuffer)),
 				verifiedAt: row.verifiedAt,
 			}
