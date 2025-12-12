@@ -223,6 +223,10 @@ input[type="number"] {
 	}
 }
 
+@utility scrollbar-gutter-stable {
+	scrollbar-gutter: stable;
+}
+
 @keyframes progressline {
 	0% {
 		width: 0%;
