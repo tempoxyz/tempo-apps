@@ -7,6 +7,10 @@ const FONT_MONO_URL =
 const FONT_INTER_URL =
 	'https://unpkg.com/@fontsource/inter/files/inter-latin-500-normal.woff2'
 
+// Token icon service - {chainId}/{tokenAddress}
+const TOKENLIST_ICON_URL = 'https://tokenlist.tempo.xyz/icon'
+const TESTNET_CHAIN_ID = 42429
+
 const devicePixelRatio = 1.0
 
 // Cache TTL: 1 hour for OG images
@@ -230,8 +234,12 @@ app.get('/token/:address', async (c) => {
 			quoteToken: params.get('quoteToken') || undefined,
 		}
 
-		// Fetch assets
-		const [fonts, images] = await Promise.all([loadFonts(), loadImages(c)])
+		// Fetch assets and token icon in parallel
+		const [fonts, images, tokenIcon] = await Promise.all([
+			loadFonts(),
+			loadImages(c),
+			fetchTokenIcon(address),
+		])
 
 		const response = new ImageResponse(
 			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
@@ -245,7 +253,10 @@ app.get('/token/:address', async (c) => {
 
 				{/* Token Card */}
 				<div tw="absolute flex" style={{ left: '56px', top: '40px' }}>
-					<TokenCard data={tokenData} nullIcon={images.nullIcon} />
+					<TokenCard
+						data={tokenData}
+						icon={tokenIcon || images.nullIcon}
+					/>
 				</div>
 
 				{/* Right side branding - same as tx version */}
@@ -267,9 +278,9 @@ app.get('/token/:address', async (c) => {
 						}}
 					>
 						<span>View more about this</span>
-						<span>asset using</span>
+						<span>asset using the</span>
 						<div tw="flex items-center" style={{ gap: '8px' }}>
-							<span>the explorer</span>
+							<span>explorer</span>
 							<span tw="text-gray-500 text-[34px]">→</span>
 						</div>
 					</div>
@@ -305,6 +316,121 @@ app.get('/token/:address', async (c) => {
 	}
 })
 
+/**
+ * Address/Account OG Image
+ *
+ * URL Parameters:
+ * - address: Account address (0x...)
+ * - balance: Total balance formatted (e.g., "$1,234.56")
+ * - txCount: Number of transactions
+ * - tokens: Number of tokens held
+ * - nfts: Number of NFTs held
+ * - firstSeen: First activity date
+ */
+app.get('/address/:address', async (c) => {
+	const address = c.req.param('address')
+
+	if (!address || !address.startsWith('0x')) {
+		return new Response('Invalid address', { status: 400 })
+	}
+
+	const url = new URL(c.req.url)
+	const params = url.searchParams
+	const cacheKey = new Request(url.toString(), c.req.raw)
+
+	// Check cache first
+	const cache = (caches as unknown as { default: Cache }).default
+	const cachedResponse = await cache.match(cacheKey)
+	if (cachedResponse) {
+		return cachedResponse
+	}
+
+	try {
+		// Parse URL parameters
+		const addressData: AddressData = {
+			address,
+			balance: params.get('balance') || '—',
+			txCount: params.get('txCount') || '—',
+			tokens: params.get('tokens') || '—',
+			nfts: params.get('nfts') || '—',
+			firstSeen: params.get('firstSeen') || '—',
+		}
+
+		// Fetch assets
+		const [fonts, images] = await Promise.all([loadFonts(), loadImages(c)])
+
+		const response = new ImageResponse(
+			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
+				{/* Background image */}
+				<img
+					src={images.bg}
+					alt=""
+					tw="absolute inset-0 w-full h-full"
+					style={{ objectFit: 'cover' }}
+				/>
+
+				{/* Address Card */}
+				<div tw="absolute flex" style={{ left: '56px', top: '40px' }}>
+					<AddressCard data={addressData} nullIcon={images.nullIcon} />
+				</div>
+
+				{/* Right side branding - same as tx version */}
+				<div
+					tw="absolute flex flex-col ml-16"
+					style={{ right: '48px', top: '100px', left: '700px', gap: '20px' }}
+				>
+					<img
+						src={images.logo}
+						alt="Tempo"
+						style={{ width: '260px', height: '61px' }}
+					/>
+					<div
+						tw="flex flex-col text-[34px] text-gray-500"
+						style={{
+							fontFamily: 'Inter',
+							letterSpacing: '-0.02em',
+							lineHeight: '1.35',
+						}}
+					>
+						<span>View more about this</span>
+						<span>address using the</span>
+						<div tw="flex items-center" style={{ gap: '8px' }}>
+							<span>explorer</span>
+							<span tw="text-gray-500 text-[34px]">→</span>
+						</div>
+					</div>
+				</div>
+			</div>,
+			{
+				width: 1200 * devicePixelRatio,
+				height: 630 * devicePixelRatio,
+				format: 'webp',
+				module,
+				fonts: [
+					{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
+					{ weight: 500, name: 'Inter', data: fonts.inter, style: 'normal' },
+				],
+			},
+		)
+
+		const responseToCache = new Response(response.body, {
+			headers: {
+				'Content-Type': 'image/webp',
+				'Cache-Control': `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}`,
+			},
+		})
+
+		c.executionCtx.waitUntil(cache.put(cacheKey, responseToCache.clone()))
+		return responseToCache
+	} catch (error) {
+		console.error('Error generating address OG image:', error)
+		return new Response(
+			`Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+			{ status: 500 },
+		)
+	}
+})
+
 // ============ Types ============
 
 interface TokenData {
@@ -316,6 +442,15 @@ interface TokenData {
 	supply: string
 	created: string
 	quoteToken?: string
+}
+
+interface AddressData {
+	address: string
+	balance: string
+	txCount: string
+	tokens: string
+	nfts: string
+	firstSeen: string
 }
 
 interface ReceiptData {
@@ -515,7 +650,7 @@ function ReceiptCard({
 
 // ============ Token Card Component ============
 
-function TokenCard({ data, nullIcon }: { data: TokenData; nullIcon: string }) {
+function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 	return (
 		<div
 			tw="flex flex-col bg-white rounded-3xl shadow-2xl"
@@ -526,9 +661,9 @@ function TokenCard({ data, nullIcon }: { data: TokenData; nullIcon: string }) {
 		>
 			{/* Header with icon and name */}
 			<div tw="flex items-center px-8 pt-8 pb-6" style={{ gap: '16px' }}>
-				{/* Token icon - use null icon as placeholder */}
+				{/* Token icon from tokenlist or fallback to null icon */}
 				<img
-					src={nullIcon}
+					src={icon}
 					alt=""
 					tw="rounded-full"
 					style={{ width: '64px', height: '64px' }}
@@ -605,12 +740,118 @@ function TokenCard({ data, nullIcon }: { data: TokenData; nullIcon: string }) {
 	)
 }
 
+// ============ Address Card Component ============
+
+function AddressCard({
+	data,
+	nullIcon,
+}: {
+	data: AddressData
+	nullIcon: string
+}) {
+	return (
+		<div
+			tw="flex flex-col bg-white rounded-3xl shadow-2xl"
+			style={{
+				width: '640px',
+				boxShadow: '0 8px 60px rgba(0,0,0,0.12)',
+			}}
+		>
+			{/* Header with icon and address */}
+			<div tw="flex items-center px-8 pt-8 pb-6" style={{ gap: '16px' }}>
+				{/* Account icon */}
+				<img
+					src={nullIcon}
+					alt=""
+					tw="rounded-full"
+					style={{ width: '64px', height: '64px' }}
+				/>
+				<div tw="flex flex-col flex-1">
+					<span tw="text-2xl text-gray-500" style={{ fontFamily: 'GeistMono' }}>
+						{truncateHash(data.address, 10)}
+					</span>
+				</div>
+				{/* Balance badge */}
+				<div
+					tw="flex items-center px-4 py-2 bg-emerald-50 rounded-lg text-emerald-700 text-xl font-semibold"
+					style={{ fontFamily: 'GeistMono' }}
+				>
+					{data.balance}
+				</div>
+			</div>
+
+			{/* Divider */}
+			<div
+				tw="flex mx-8"
+				style={{
+					height: '1px',
+					backgroundColor: '#d1d5db',
+				}}
+			/>
+
+			{/* Details */}
+			<div
+				tw="flex flex-col px-8 py-6 text-[23.5px]"
+				style={{
+					fontFamily: 'GeistMono',
+					gap: '16px',
+					letterSpacing: '-0.02em',
+				}}
+			>
+				{/* Transactions */}
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-400">Transactions</span>
+					<span tw="text-gray-900">{data.txCount}</span>
+				</div>
+
+				{/* Tokens */}
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-400">Tokens</span>
+					<span tw="text-gray-900">{data.tokens}</span>
+				</div>
+
+				{/* NFTs */}
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-400">NFTs</span>
+					<span tw="text-gray-900">{data.nfts}</span>
+				</div>
+
+				{/* First Seen */}
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-400">First Seen</span>
+					<span tw="text-gray-900">{data.firstSeen}</span>
+				</div>
+			</div>
+		</div>
+	)
+}
+
 // ============ Helpers ============
 
 function truncateHash(hash: string, chars = 4): string {
 	if (!hash || hash === '—') return hash
 	if (hash.length <= chars * 2 + 2) return hash
 	return `${hash.slice(0, chars + 2)}…${hash.slice(-chars)}`
+}
+
+// Fetch token icon from tokenlist service, returns base64 data URL or null
+async function fetchTokenIcon(address: string): Promise<string | null> {
+	try {
+		const iconUrl = `${TOKENLIST_ICON_URL}/${TESTNET_CHAIN_ID}/${address}`
+		const response = await fetch(iconUrl, {
+			cf: { cacheTtl: 3600 }, // Cache for 1 hour
+		})
+
+		if (!response.ok) return null
+
+		const contentType = response.headers.get('content-type') || 'image/svg+xml'
+		const data = await response.arrayBuffer()
+
+		// Convert to base64 data URL
+		return `data:${contentType};base64,${Buffer.from(data).toString('base64')}`
+	} catch {
+		return null
+	}
 }
 
 // Parse event details and highlight assets (green) and addresses (blue)
