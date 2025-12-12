@@ -135,7 +135,7 @@ app.get('/tx/:hash', async (c) => {
 
 				{/* Right side branding */}
 				<div
-					tw="absolute flex flex-col"
+					tw="absolute flex flex-col ml-16"
 					style={{ right: '40px', top: '80px', left: '780px', gap: '16px' }}
 				>
 					<img
@@ -541,7 +541,7 @@ function ReceiptCard({
 						tw="flex flex-col py-5 px-8 text-[24px]"
 						style={{
 							fontFamily: 'GeistMono',
-							gap: '14px',
+							gap: '20px',
 							width: '100%',
 							letterSpacing: '-0.02em',
 						}}
