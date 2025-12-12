@@ -4,6 +4,9 @@
 	"main": "src/index.tsx",
 	"compatibility_date": "2025-12-08",
 	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"EXPLORER_URL": "https://68b49abc-explorer.porto.workers.dev"
+	},
 	"assets": {
 		"directory": "./public",
 		"binding": "ASSETS"

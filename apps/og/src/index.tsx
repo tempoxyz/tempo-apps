@@ -10,7 +10,6 @@ const FONT_INTER_URL =
 const FONT_INTER_BOLD_URL =
 	'https://unpkg.com/@fontsource/inter/files/inter-latin-700-normal.woff2'
 
-const EXPLORER_URL = 'https://explorer.tempo.xyz'
 const LOCAL_SCREENSHOT_SERVER = 'http://localhost:3001'
 
 const devicePixelRatio = 1.0
@@ -42,6 +41,9 @@ app.get('/tx/:hash', async (c) => {
 		const isLocalDev =
 			baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')
 
+		// Get explorer URL from env or use default
+		const explorerUrl = c.env.EXPLORER_URL || 'https://explorer.tempo.xyz'
+
 		if (isLocalDev) {
 			// Local dev: Use local screenshot server
 			try {
@@ -69,14 +71,21 @@ app.get('/tx/:hash', async (c) => {
 					deviceScaleFactor: 2,
 				})
 
-				const receiptUrl = `${EXPLORER_URL}/receipt/${hash}`
+				const receiptUrl = `${explorerUrl}/receipt/${hash}`
 				await page.goto(receiptUrl, { waitUntil: 'networkidle0' })
 
+				// Try data-receipt first, then fall back to w-[360px] class selector
+				const receiptSelector = '[data-receipt], .w-\\[360px\\]'
 				await page
-					.waitForSelector('[data-receipt]', { timeout: 10000 })
+					.waitForSelector(receiptSelector, { timeout: 10000 })
 					.catch(() => {})
 
-				const receiptElement = await page.$('[data-receipt]')
+				// Try to find the receipt element
+				let receiptElement = await page.$('[data-receipt]')
+				if (!receiptElement) {
+					receiptElement = await page.$('.w-\\[360px\\]')
+				}
+
 				const screenshotBuffer = receiptElement
 					? await receiptElement.screenshot({ type: 'png' })
 					: await page.screenshot({
