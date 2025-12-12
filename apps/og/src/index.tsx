@@ -318,11 +318,12 @@ app.get('/token/:address', async (c) => {
  *
  * URL Parameters:
  * - address: Account address (0x...)
- * - balance: Total balance formatted (e.g., "$1,234.56")
+ * - holdings: Total holdings value (e.g., "$32,325.41")
  * - txCount: Number of transactions
- * - tokens: Number of tokens held
- * - nfts: Number of NFTs held
- * - firstSeen: First activity date
+ * - lastActive: Last activity datetime (e.g., "11/19/2025 11:35")
+ * - created: Account creation datetime (e.g., "11/1/2025 16:43")
+ * - feeToken: Fee token symbol (e.g., "pathUSD")
+ * - tokens: Comma-separated list of token symbols held (e.g., "AUSD,BUSD,CUSD")
  */
 app.get('/address/:address', async (c) => {
 	const address = c.req.param('address')
@@ -344,13 +345,15 @@ app.get('/address/:address', async (c) => {
 
 	try {
 		// Parse URL parameters
+		const tokensParam = params.get('tokens') || ''
 		const addressData: AddressData = {
 			address,
-			balance: params.get('balance') || '—',
+			holdings: params.get('holdings') || '—',
 			txCount: params.get('txCount') || '—',
-			tokens: params.get('tokens') || '—',
-			nfts: params.get('nfts') || '—',
-			firstSeen: params.get('firstSeen') || '—',
+			lastActive: params.get('lastActive') || '—',
+			created: params.get('created') || '—',
+			feeToken: params.get('feeToken') || '—',
+			tokensHeld: tokensParam ? tokensParam.split(',').filter(Boolean) : [],
 		}
 
 		// Fetch assets
@@ -368,7 +371,7 @@ app.get('/address/:address', async (c) => {
 
 				{/* Address Card */}
 				<div tw="absolute flex" style={{ left: '56px', top: '40px' }}>
-					<AddressCard data={addressData} nullIcon={images.nullIcon} />
+					<AddressCard data={addressData} />
 				</div>
 
 				{/* Right side branding - same as tx version */}
@@ -443,11 +446,12 @@ interface TokenData {
 
 interface AddressData {
 	address: string
-	balance: string
+	holdings: string
 	txCount: string
-	tokens: string
-	nfts: string
-	firstSeen: string
+	lastActive: string
+	created: string
+	feeToken: string
+	tokensHeld: string[] // Array of token symbols
 }
 
 interface ReceiptData {
@@ -737,15 +741,37 @@ function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 	)
 }
 
+// ============ Token Badges Helper ============
+
+function TokenBadges({ tokens }: { tokens: string[] }) {
+	// Create unique keys by counting occurrences
+	const keyedTokens = tokens.map((token, i) => {
+		const prevCount = tokens.slice(0, i).filter((t) => t === token).length
+		return { token, key: `${token}-${prevCount}` }
+	})
+
+	return (
+		<>
+			{keyedTokens.map(({ token, key }) => (
+				<span
+					key={key}
+					tw="flex px-3 py-1 bg-gray-100 rounded text-gray-700 text-[18px]"
+					style={{ fontFamily: 'GeistMono' }}
+				>
+					{token}
+				</span>
+			))}
+		</>
+	)
+}
+
 // ============ Address Card Component ============
 
-function AddressCard({
-	data,
-	nullIcon,
-}: {
-	data: AddressData
-	nullIcon: string
-}) {
+function AddressCard({ data }: { data: AddressData }) {
+	// Split address into two lines for display
+	const addrLine1 = data.address.slice(0, 22)
+	const addrLine2 = data.address.slice(22)
+
 	return (
 		<div
 			tw="flex flex-col bg-white rounded-3xl shadow-2xl"
@@ -754,35 +780,27 @@ function AddressCard({
 				boxShadow: '0 8px 60px rgba(0,0,0,0.12)',
 			}}
 		>
-			{/* Header with icon and address */}
-			<div tw="flex items-center px-8 pt-8 pb-6" style={{ gap: '16px' }}>
-				{/* Account icon */}
-				<img
-					src={nullIcon}
-					alt=""
-					tw="rounded-full"
-					style={{ width: '64px', height: '64px' }}
-				/>
-				<div tw="flex flex-col flex-1">
-					<span tw="text-2xl text-gray-500" style={{ fontFamily: 'GeistMono' }}>
-						{truncateHash(data.address, 10)}
-					</span>
-				</div>
-				{/* Balance badge */}
+			{/* Address header */}
+			<div tw="flex w-full px-8 pt-8 pb-6 justify-between items-start">
+				<span tw="text-gray-400 text-[23.5px]" style={{ fontFamily: 'GeistMono' }}>
+					Address
+				</span>
 				<div
-					tw="flex items-center px-4 py-2 bg-emerald-50 rounded-lg text-emerald-700 text-xl font-semibold"
-					style={{ fontFamily: 'GeistMono' }}
+					tw="flex flex-col items-end text-[23.5px] text-blue-500"
+					style={{ fontFamily: 'GeistMono', lineHeight: '1.3' }}
 				>
-					{data.balance}
+					<span>{addrLine1}</span>
+					<span>{addrLine2}</span>
 				</div>
 			</div>
 
-			{/* Divider */}
+			{/* Divider - dashed */}
 			<div
 				tw="flex mx-8"
 				style={{
 					height: '1px',
 					backgroundColor: '#d1d5db',
+					borderStyle: 'dashed',
 				}}
 			/>
 
@@ -795,30 +813,71 @@ function AddressCard({
 					letterSpacing: '-0.02em',
 				}}
 			>
+				{/* Holdings */}
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-400">Holdings</span>
+					<span tw="text-gray-900">{data.holdings}</span>
+				</div>
+
 				{/* Transactions */}
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-400">Transactions</span>
 					<span tw="text-gray-900">{data.txCount}</span>
 				</div>
 
-				{/* Tokens */}
+				{/* Last Active */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">Tokens</span>
-					<span tw="text-gray-900">{data.tokens}</span>
+					<span tw="text-gray-400">Last Active</span>
+					<span tw="text-gray-900">{data.lastActive}</span>
 				</div>
 
-				{/* NFTs */}
+				{/* Created */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">NFTs</span>
-					<span tw="text-gray-900">{data.nfts}</span>
+					<span tw="text-gray-400">Created</span>
+					<span tw="text-gray-900">{data.created}</span>
 				</div>
 
-				{/* First Seen */}
+				{/* Fee Token */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">First Seen</span>
-					<span tw="text-gray-900">{data.firstSeen}</span>
+					<span tw="text-gray-400">Fee Token</span>
+					<span tw="text-gray-900">{data.feeToken}</span>
 				</div>
 			</div>
+
+			{/* Tokens Held section */}
+			{data.tokensHeld.length > 0 && (
+				<>
+					{/* Divider - dashed */}
+					<div
+						tw="flex mx-8"
+						style={{
+							height: '1px',
+							backgroundColor: '#d1d5db',
+							borderStyle: 'dashed',
+						}}
+					/>
+
+					<div tw="flex flex-col px-8 py-6" style={{ gap: '12px' }}>
+						<span
+							tw="text-gray-400 text-[23.5px]"
+							style={{ fontFamily: 'GeistMono' }}
+						>
+							Tokens Held
+						</span>
+						<div tw="flex flex-wrap" style={{ gap: '8px' }}>
+							<TokenBadges tokens={data.tokensHeld.slice(0, 12)} />
+							{data.tokensHeld.length > 12 && (
+								<span
+									tw="flex px-3 py-1 bg-gray-100 rounded text-gray-500 text-[18px]"
+									style={{ fontFamily: 'GeistMono' }}
+								>
+									+{data.tokensHeld.length - 12}
+								</span>
+							)}
+						</div>
+					</div>
+				</>
+			)}
 		</div>
 	)
 }

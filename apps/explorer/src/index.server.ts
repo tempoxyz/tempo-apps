@@ -601,6 +601,186 @@ async function buildTokenOgData(address: string): Promise<{
 	}
 }
 
+// ============ Address OG Image ============
+
+interface AddressData {
+	holdings: string
+	txCount: number
+	lastActive: string
+	created: string
+	feeToken: string
+	tokensHeld: string[]
+}
+
+async function fetchAddressData(address: string): Promise<AddressData | null> {
+	try {
+		const tokenAddress = address.toLowerCase() as Address.Address
+		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
+
+		// Get all transfers involving this address
+		const [incoming, outgoing] = await Promise.all([
+			qb
+				.selectFrom('transfer')
+				.select(['tokens', 'address', 'block_timestamp'])
+				.where('chain', '=', CHAIN_ID)
+				.where('to', '=', tokenAddress)
+				.orderBy('block_timestamp', 'desc')
+				.execute(),
+			qb
+				.selectFrom('transfer')
+				.select(['tokens', 'address', 'block_timestamp'])
+				.where('chain', '=', CHAIN_ID)
+				.where('from', '=', tokenAddress)
+				.orderBy('block_timestamp', 'desc')
+				.execute(),
+		])
+
+		// Calculate balances per token
+		const balances = new Map<string, bigint>()
+		for (const row of incoming) {
+			const current = balances.get(row.address) ?? 0n
+			balances.set(row.address, current + BigInt(row.tokens))
+		}
+		for (const row of outgoing) {
+			const current = balances.get(row.address) ?? 0n
+			balances.set(row.address, current - BigInt(row.tokens))
+		}
+
+		// Get tokens with positive balance
+		const tokensWithBalance = Array.from(balances.entries())
+			.filter(([, balance]) => balance > 0n)
+			.map(([addr]) => addr)
+
+		// Get token symbols for held tokens
+		const tokensHeld: string[] = []
+		for (const tokenAddr of tokensWithBalance.slice(0, 12)) {
+			try {
+				const symbolRes = await fetch(RPC_URL, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						method: 'eth_call',
+						params: [{ to: tokenAddr, data: '0x95d89b41' }, 'latest'],
+						id: 1,
+					}),
+				})
+				const json = (await symbolRes.json()) as { result?: string }
+				if (json.result && json.result !== '0x') {
+					const data = json.result.slice(2)
+					if (data.length >= 128) {
+						const length = Number.parseInt(data.slice(64, 128), 16)
+						const strHex = data.slice(128, 128 + length * 2)
+						const symbol = Buffer.from(strHex, 'hex')
+							.toString('utf8')
+							.replace(/\0/g, '')
+						if (symbol) tokensHeld.push(symbol)
+					}
+				}
+			} catch {
+				// Skip tokens we can't decode
+			}
+		}
+
+		// Total transaction count
+		const txCount = incoming.length + outgoing.length
+
+		// Get timestamps
+		const allTransfers = [...incoming, ...outgoing].sort(
+			(a, b) => Number(b.block_timestamp) - Number(a.block_timestamp),
+		)
+		const lastActive =
+			allTransfers.length > 0
+				? formatDateTime(Number(allTransfers[0].block_timestamp) * 1000)
+				: '—'
+
+		const oldestTransfers = [...incoming, ...outgoing].sort(
+			(a, b) => Number(a.block_timestamp) - Number(b.block_timestamp),
+		)
+		const created =
+			oldestTransfers.length > 0
+				? formatDateTime(Number(oldestTransfers[0].block_timestamp) * 1000)
+				: '—'
+
+		// Calculate rough holdings value (simplified - assumes 1:1 USD for stablecoins)
+		let totalValue = 0
+		for (const [, balance] of balances) {
+			if (balance > 0n) {
+				// Assume 6 decimals for stablecoins
+				totalValue += Number(balance) / 1e6
+			}
+		}
+		const holdings =
+			totalValue > 0
+				? `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+				: '—'
+
+		return {
+			holdings,
+			txCount,
+			lastActive,
+			created,
+			feeToken: tokensHeld[0] || '—',
+			tokensHeld,
+		}
+	} catch (e) {
+		console.error('Failed to fetch address data:', e)
+		return null
+	}
+}
+
+function formatDateTime(timestamp: number): string {
+	const date = new Date(timestamp)
+	return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`
+}
+
+function buildAddressDescription(
+	addressData: AddressData | null,
+	_address: string,
+): string {
+	if (!addressData) {
+		return `View address activity and holdings on Tempo Explorer.`
+	}
+
+	const parts: string[] = []
+	if (addressData.holdings !== '—') {
+		parts.push(`${addressData.holdings} in holdings`)
+	}
+	if (addressData.txCount > 0) {
+		parts.push(`${addressData.txCount} transactions`)
+	}
+
+	if (parts.length > 0) {
+		return `${parts.join(' · ')}. View full activity on Tempo Explorer.`
+	}
+
+	return `View address activity and holdings on Tempo Explorer.`
+}
+
+async function buildAddressOgData(address: string): Promise<{
+	url: string
+	description: string
+}> {
+	const addressData = await fetchAddressData(address)
+
+	const params = new URLSearchParams()
+	if (addressData) {
+		params.set('holdings', addressData.holdings)
+		params.set('txCount', addressData.txCount.toString())
+		params.set('lastActive', addressData.lastActive)
+		params.set('created', addressData.created)
+		params.set('feeToken', addressData.feeToken)
+		if (addressData.tokensHeld.length > 0) {
+			params.set('tokens', addressData.tokensHeld.join(','))
+		}
+	}
+
+	return {
+		url: `${OG_BASE_URL}/address/${address}?${params.toString()}`,
+		description: buildAddressDescription(addressData, address),
+	}
+}
+
 export default Sentry.withSentry(
 	(env: Cloudflare.Env) => {
 		const metadata = env.CF_VERSION_METADATA
@@ -654,6 +834,23 @@ export default Sentry.withSentry(
 				const title = `Token ${address.slice(0, 10)}...${address.slice(-6)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to remove existing OG tags and inject token-specific ones
+				return new HTMLRewriter()
+					.on('meta', new OgMetaRemover())
+					.on('head', new OgMetaInjector(ogData.url, title, ogData.description))
+					.transform(response)
+			}
+
+			// Check if this is an address page and inject OG meta tags
+			const addressMatch = url.pathname.match(/^\/address\/0x[a-fA-F0-9]{40}$/)
+			if (
+				addressMatch &&
+				response.headers.get('content-type')?.includes('text/html')
+			) {
+				const address = url.pathname.split('/address/')[1]
+				const ogData = await buildAddressOgData(address)
+				const title = `Address ${address.slice(0, 10)}...${address.slice(-6)} ⋅ Tempo Explorer`
+
+				// Use HTMLRewriter to remove existing OG tags and inject address-specific ones
 				return new HTMLRewriter()
 					.on('meta', new OgMetaRemover())
 					.on('head', new OgMetaInjector(ogData.url, title, ogData.description))
