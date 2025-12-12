@@ -811,12 +811,32 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 				? formatDateTime(Number(oldestTransfers[0].block_timestamp) * 1000)
 				: '—'
 
-		// Calculate rough holdings value (simplified - assumes 1:1 USD for stablecoins)
+		// Calculate holdings by fetching decimals for each token
 		let totalValue = 0
-		for (const [, balance] of balances) {
+		for (const [tokenAddr, balance] of balances) {
 			if (balance > 0n) {
-				// Assume 18 decimals as default
-				totalValue += Number(balance) / 1e18
+				try {
+					// Fetch decimals for this token
+					const decimalsRes = await fetch(RPC_URL, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'eth_call',
+							params: [{ to: tokenAddr, data: '0x313ce567' }, 'latest'], // decimals()
+							id: 1,
+						}),
+					})
+					const decimalsJson = (await decimalsRes.json()) as { result?: string }
+					const decimals =
+						decimalsJson.result && decimalsJson.result !== '0x'
+							? Number.parseInt(decimalsJson.result, 16)
+							: 18
+					totalValue += Number(balance) / 10 ** decimals
+				} catch {
+					// Fallback to 18 decimals
+					totalValue += Number(balance) / 1e18
+				}
 			}
 		}
 
