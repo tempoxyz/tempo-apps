@@ -4,6 +4,7 @@ import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import type { Log, TransactionReceipt } from 'viem'
 import { zeroAddress } from 'viem'
+import { Actions } from 'tempo.ts/wagmi'
 import {
 	type KnownEvent,
 	type KnownEventPart,
@@ -11,6 +12,7 @@ import {
 	preferredEventsFilter,
 } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
+import { config } from '#wagmi.config'
 
 const OG_BASE_URL = 'https://og.porto.workers.dev'
 const RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
@@ -197,6 +199,48 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 			events = parseKnownEvents(receipt, { transaction, getTokenMetadata })
 				.filter(preferredEventsFilter)
 				.slice(0, 6) // Limit to 6 events for OG image
+
+			// Backfill missing symbols for amount parts
+			const tokensMissingSymbols = new Set<Address.Address>()
+			for (const event of events) {
+				for (const part of event.parts) {
+					if (part.type === 'amount' && !part.value.symbol && part.value.token) {
+						tokensMissingSymbols.add(part.value.token)
+					}
+				}
+			}
+
+			if (tokensMissingSymbols.size > 0) {
+				const missingMetadata = await Promise.all(
+					Array.from(tokensMissingSymbols).map(async (token) => {
+						try {
+							const metadata = await Actions.token.getMetadata(config, { token })
+							return { token, metadata }
+						} catch {
+							return { token, metadata: null }
+						}
+					}),
+				)
+
+				const metadataMap = new Map(
+					missingMetadata
+						.filter((m) => m.metadata)
+						.map((m) => [m.token, m.metadata]),
+				)
+
+				// Update events with missing symbols
+				for (const event of events) {
+					for (const part of event.parts) {
+						if (part.type === 'amount' && !part.value.symbol && part.value.token) {
+							const metadata = metadataMap.get(part.value.token)
+							if (metadata) {
+								part.value.symbol = metadata.symbol
+								part.value.decimals = metadata.decimals
+							}
+						}
+					}
+				}
+			}
 		} catch {
 			// Ignore event parsing errors
 		}
