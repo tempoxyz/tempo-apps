@@ -266,22 +266,12 @@ function ReceiptCard({
 			{data.events.length > 0 && (
 				<>
 					<div
-						tw="flex"
-						style={{
-							height: '1px',
-							backgroundColor: '#d1d5db',
-							marginLeft: 28,
-							marginRight: 28,
-						}}
+						tw="flex mx-8"
+						style={{ height: '1px', backgroundColor: '#d1d5db' }}
 					/>
 					<div
-						tw="flex flex-col py-5 text-[22px]"
-						style={{
-							fontFamily: 'GeistMono',
-							gap: '12px',
-							paddingLeft: 28,
-							paddingRight: 28,
-						}}
+						tw="flex flex-col px-8 py-5 text-[22px]"
+						style={{ fontFamily: 'GeistMono', gap: '12px' }}
 					>
 						{data.events.slice(0, 4).map((event, index) => (
 							<div
@@ -289,9 +279,12 @@ function ReceiptCard({
 								tw="flex justify-between items-center"
 								style={{ width: '100%' }}
 							>
-								<div tw="flex items-center" style={{ gap: '6px' }}>
+								<div
+									tw="flex items-center"
+									style={{ gap: '6px', flexWrap: 'nowrap' }}
+								>
 									<span tw="text-gray-400">{index + 1}.</span>
-									<span tw="flex bg-gray-100 px-2 py-1 rounded">
+									<span tw="flex bg-gray-100 px-2 py-1 rounded shrink-0">
 										{event.action}
 									</span>
 									{event.details && <EventDetails details={event.details} />}
@@ -307,36 +300,24 @@ function ReceiptCard({
 			{(data.fee || data.total) && (
 				<>
 					<div
-						tw="flex"
-						style={{
-							height: '1px',
-							backgroundColor: '#d1d5db',
-							marginLeft: 28,
-							marginRight: 28,
-						}}
+						tw="flex mx-8"
+						style={{ height: '1px', backgroundColor: '#d1d5db' }}
 					/>
 					<div
-						tw="flex flex-col py-5 text-[22px]"
-						style={{
-							fontFamily: 'GeistMono',
-							gap: '12px',
-							paddingLeft: 28,
-							paddingRight: 28,
-						}}
+						tw="flex flex-col px-8 py-5 text-[22px]"
+						style={{ fontFamily: 'GeistMono', gap: '12px' }}
 					>
 						{data.fee && (
-							<div tw="flex" style={{ width: '100%' }}>
-								<span tw="text-gray-400" style={{ flex: 1 }}>
+							<div tw="flex justify-between" style={{ width: '100%' }}>
+								<span tw="text-gray-400">
 									Fee{data.feeToken ? ` (${data.feeToken})` : ''}
 								</span>
 								<span>{data.fee}</span>
 							</div>
 						)}
 						{data.total && (
-							<div tw="flex" style={{ width: '100%' }}>
-								<span tw="text-gray-400" style={{ flex: 1 }}>
-									Total
-								</span>
+							<div tw="flex justify-between" style={{ width: '100%' }}>
+								<span tw="text-gray-400">Total</span>
 								<span>{data.total}</span>
 							</div>
 						)}
@@ -389,7 +370,7 @@ function EventDetails({ details }: { details: string }) {
 	}
 
 	return (
-		<span tw="flex">
+		<span tw="flex shrink-0" style={{ whiteSpace: 'nowrap', gap: '4px' }}>
 			{parts.map((part, idx) => (
 				<span
 					key={`${part.text}-${idx}`}
@@ -402,7 +383,6 @@ function EventDetails({ details }: { details: string }) {
 					}
 				>
 					{part.text}
-					{idx < parts.length - 1 ? ' ' : ''}
 				</span>
 			))}
 		</span>
