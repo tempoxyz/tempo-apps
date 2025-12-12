@@ -13,10 +13,13 @@
 		"@takumi-rs/image-response": "^0.57.3",
 		"@takumi-rs/wasm": "^0.57.3",
 		"hono": "catalog:",
-		"ox": "^0.10.0"
+		"ox": "^0.10.0",
+		"tempo.ts": "^0.10.5",
+		"viem": "^2.41.2"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "^25.0.1",
 		"puppeteer": "^24.33.0",
 		"tsx": "^4.21.0",
 		"wrangler": "catalog:"

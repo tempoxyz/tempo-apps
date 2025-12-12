@@ -32,7 +32,7 @@
 			"*": ["./*"],
 			"#*": ["./src/*"]
 		},
-		"types": ["@cloudflare/workers-types"]
+		"types": ["@cloudflare/workers-types", "node"]
 	},
 	"include": ["src/**/*"],
 	"files": ["worker-configuration.d.ts"],
