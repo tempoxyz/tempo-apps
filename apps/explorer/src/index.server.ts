@@ -4,6 +4,23 @@ import handler, { type ServerEntry } from '@tanstack/react-start/server-entry'
 const OG_BASE_URL = 'https://og.porto.workers.dev'
 const RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
 
+// Remove existing OG meta tags so we can inject transaction-specific ones
+class OgMetaRemover {
+	element(element: Element) {
+		const property = element.getAttribute('property')
+		const name = element.getAttribute('name')
+
+		// Remove existing og:title, og:image, og:description and twitter tags
+		if (
+			property?.startsWith('og:') ||
+			name?.startsWith('og:') ||
+			name?.startsWith('twitter:')
+		) {
+			element.remove()
+		}
+	}
+}
+
 // Inject OG meta tags for transaction pages (for social media crawlers)
 class OgMetaInjector {
 	private ogImageUrl: string
@@ -15,31 +32,30 @@ class OgMetaInjector {
 	}
 
 	element(element: Element) {
-		// Inject OG meta tags at the end of <head>
-		element.append(
-			`<meta property="og:title" content="${this.title}" />`,
-			{ html: true },
-		)
-		element.append(
-			`<meta property="og:image" content="${this.ogImageUrl}" />`,
-			{ html: true },
-		)
-		element.append('<meta property="og:image:type" content="image/png" />', {
-			html: true,
-		})
-		element.append('<meta property="og:image:width" content="1200" />', {
-			html: true,
-		})
-		element.append('<meta property="og:image:height" content="630" />', {
-			html: true,
-		})
-		element.append('<meta name="twitter:card" content="summary_large_image" />', {
-			html: true,
-		})
-		element.append(
+		// Prepend OG meta tags at the start of <head> (after charset/viewport)
+		element.prepend(
 			`<meta name="twitter:image" content="${this.ogImageUrl}" />`,
 			{ html: true },
 		)
+		element.prepend('<meta name="twitter:card" content="summary_large_image" />', {
+			html: true,
+		})
+		element.prepend('<meta property="og:image:height" content="630" />', {
+			html: true,
+		})
+		element.prepend('<meta property="og:image:width" content="1200" />', {
+			html: true,
+		})
+		element.prepend('<meta property="og:image:type" content="image/png" />', {
+			html: true,
+		})
+		element.prepend(
+			`<meta property="og:image" content="${this.ogImageUrl}" />`,
+			{ html: true },
+		)
+		element.prepend(`<meta property="og:title" content="${this.title}" />`, {
+			html: true,
+		})
 	}
 }
 
@@ -76,7 +92,9 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 		])
 
 		const [txJson, receiptJson] = await Promise.all([
-			txRes.json() as Promise<{ result?: { blockNumber?: string; from?: string } }>,
+			txRes.json() as Promise<{
+				result?: { blockNumber?: string; from?: string }
+			}>,
 			receiptRes.json() as Promise<{ result?: { from?: string } }>,
 		])
 
@@ -169,14 +187,18 @@ export default Sentry.withSentry(
 
 			// Check if this is a transaction or receipt page and inject OG meta tags
 			const txMatch = url.pathname.match(/^\/(tx|receipt)\/0x[a-fA-F0-9]{64}$/)
-			if (txMatch && response.headers.get('content-type')?.includes('text/html')) {
+			if (
+				txMatch &&
+				response.headers.get('content-type')?.includes('text/html')
+			) {
 				const pathParts = url.pathname.split('/')
 				const hash = pathParts[2] // Gets the hash from /tx/{hash} or /receipt/{hash}
 				const ogImageUrl = await buildOgUrl(hash)
 				const title = `Transaction ${hash.slice(0, 10)}...${hash.slice(-6)} ⋅ Tempo Explorer`
 
-				// Use HTMLRewriter to inject OG meta tags
+				// Use HTMLRewriter to remove existing OG tags and inject transaction-specific ones
 				return new HTMLRewriter()
+					.on('meta', new OgMetaRemover())
 					.on('head', new OgMetaInjector(ogImageUrl, title))
 					.transform(response)
 			}
