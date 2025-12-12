@@ -216,38 +216,38 @@ function OverviewSection(props: {
 	const positionInBlock = receipt.transactionIndex
 	const input = transaction.input
 
-        const memoNotes = knownEvents
-                .map((event) => event.note)
-                .filter((note): note is string => typeof note === 'string' && note.trim().length > 0)
+	const memos = knownEvents
+		.map((event) => event.note)
+		.filter((note): note is string => typeof note === 'string' && !!note.trim())
 
-        return (
-                <div className="flex flex-col">
-                        {knownEvents.length > 0 && (
-                                <InfoRow label="Description">
-                                        <div className="flex flex-col gap-[6px]">
-                                                <TxEventDescription.ExpandGroup
-                                                        events={knownEvents}
-                                                        limit={5}
-                                                        limitFilter={(event) =>
-                                                                event.type !== 'active key count changed' &&
-                                                                event.type !== 'nonce incremented'
-                                                        }
-                                                />
-                                                {memoNotes.length > 0 && (
-                                                        <div className="flex flex-row items-center gap-[11px] overflow-hidden">
-                                                                <div className="border-l border-base-border pl-[10px] w-full">
-                                                                        <span
-                                                                                className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
-                                                                                title={memoNotes[0]}
-                                                                        >
-                                                                                {memoNotes[0]}
-                                                                        </span>
-                                                                </div>
-                                                        </div>
-                                                )}
-                                        </div>
-                                </InfoRow>
-                        )}
+	return (
+		<div className="flex flex-col">
+			{knownEvents.length > 0 && (
+				<InfoRow label="Description">
+					<div className="flex flex-col gap-[6px]">
+						<TxEventDescription.ExpandGroup
+							events={knownEvents}
+							limit={5}
+							limitFilter={(event) =>
+								event.type !== 'active key count changed' &&
+								event.type !== 'nonce incremented'
+							}
+						/>
+						{memos.length > 0 && (
+							<div className="flex flex-row items-center gap-[11px] overflow-hidden">
+								<div className="border-l border-base-border pl-[10px] w-full">
+									<span
+										className="text-tertiary items-end overflow-hidden text-ellipsis whitespace-nowrap"
+										title={memos[0]}
+									>
+										{memos[0]}
+									</span>
+								</div>
+							</div>
+						)}
+					</div>
+				</InfoRow>
+			)}
 			<InfoRow label="Value">
 				<span className="text-primary">
 					{Value.format(value, decimals)} {symbol}
