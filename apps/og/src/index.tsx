@@ -504,10 +504,10 @@ function ReceiptCard({
 
 				{/* Details - condensed */}
 				<div
-					tw="flex flex-col flex-1 text-[24px]"
+					tw="flex flex-col flex-1 text-[25px]"
 					style={{
 						fontFamily: 'GeistMono',
-						gap: '14px',
+						gap: '18px',
 						marginLeft: '12px',
 						letterSpacing: '-0.02em',
 					}}
@@ -537,15 +537,15 @@ function ReceiptCard({
 							backgroundColor: '#d1d5db',
 						}}
 					/>
-					<div
-						tw="flex flex-col py-5 px-8 text-[24px]"
-						style={{
-							fontFamily: 'GeistMono',
-							gap: '20px',
-							width: '100%',
-							letterSpacing: '-0.02em',
-						}}
-					>
+				<div
+					tw="flex flex-col py-5 px-8 text-[25px]"
+					style={{
+						fontFamily: 'GeistMono',
+						gap: '24px',
+						width: '100%',
+						letterSpacing: '-0.02em',
+					}}
+				>
 						{data.events.slice(0, 5).map((event, index) => (
 							<div
 								key={`${event.action}-${index}`}

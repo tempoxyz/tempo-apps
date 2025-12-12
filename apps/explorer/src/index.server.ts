@@ -2,9 +2,9 @@ import * as Sentry from '@sentry/cloudflare'
 import handler, { type ServerEntry } from '@tanstack/react-start/server-entry'
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
+import { Actions } from 'tempo.ts/wagmi'
 import type { Log, TransactionReceipt } from 'viem'
 import { zeroAddress } from 'viem'
-import { Actions } from 'tempo.ts/wagmi'
 import {
 	type KnownEvent,
 	type KnownEventPart,
@@ -204,7 +204,11 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 			const tokensMissingSymbols = new Set<Address.Address>()
 			for (const event of events) {
 				for (const part of event.parts) {
-					if (part.type === 'amount' && !part.value.symbol && part.value.token) {
+					if (
+						part.type === 'amount' &&
+						!part.value.symbol &&
+						part.value.token
+					) {
 						tokensMissingSymbols.add(part.value.token)
 					}
 				}
@@ -214,7 +218,9 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 				const missingMetadata = await Promise.all(
 					Array.from(tokensMissingSymbols).map(async (token) => {
 						try {
-							const metadata = await Actions.token.getMetadata(config, { token })
+							const metadata = await Actions.token.getMetadata(config, {
+								token,
+							})
 							return { token, metadata }
 						} catch {
 							return { token, metadata: null }
@@ -231,7 +237,11 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 				// Update events with missing symbols
 				for (const event of events) {
 					for (const part of event.parts) {
-						if (part.type === 'amount' && !part.value.symbol && part.value.token) {
+						if (
+							part.type === 'amount' &&
+							!part.value.symbol &&
+							part.value.token
+						) {
 							const metadata = metadataMap.get(part.value.token)
 							if (metadata) {
 								part.value.symbol = metadata.symbol
