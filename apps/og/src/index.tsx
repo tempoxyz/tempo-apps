@@ -130,26 +130,26 @@ app.get('/tx/:hash', async (c) => {
 				{/* Right side branding */}
 				<div
 					tw="absolute flex flex-col"
-					style={{ right: '56px', top: '100px', left: '760px', gap: '24px' }}
+					style={{ right: '48px', top: '100px', left: '700px', gap: '20px' }}
 				>
 					<img
 						src={images.logo}
 						alt="Tempo"
-						style={{ width: '280px', height: '66px' }}
+						style={{ width: '260px', height: '61px' }}
 					/>
 					<div
-						tw="flex flex-col text-[40px] text-gray-500"
+						tw="flex flex-col text-[36px] text-gray-500"
 						style={{
 							fontFamily: 'Inter',
 							letterSpacing: '-0.02em',
-							lineHeight: '1.3',
+							lineHeight: '1.35',
 						}}
 					>
 						<span>View more about this</span>
 						<span>transaction using</span>
-						<div tw="flex items-center" style={{ gap: '10px' }}>
+						<div tw="flex items-center" style={{ gap: '8px' }}>
 							<span>the explorer</span>
-							<span tw="text-gray-500 text-[40px]">→</span>
+							<span tw="text-gray-500 text-[36px]">→</span>
 						</div>
 					</div>
 				</div>
@@ -316,18 +316,18 @@ function ReceiptCard({
 						style={{ fontFamily: 'GeistMono', gap: '8px' }}
 					>
 						{data.fee && (
-							<div tw="flex w-full justify-between items-center text-[22px]">
-								<div tw="flex items-center" style={{ gap: '6px' }}>
+							<div tw="flex w-full justify-between items-center text-[20px]">
+								<div tw="flex items-center">
 									<span tw="text-gray-400">Fee</span>
 									{data.feeToken && (
-										<span tw="text-emerald-600">({data.feeToken})</span>
+										<span tw="text-emerald-600"> ({data.feeToken})</span>
 									)}
 								</div>
-								<div tw="flex items-center" style={{ gap: '6px' }}>
+								<div tw="flex items-center">
 									{data.feePayer && (
 										<>
 											<span tw="text-emerald-600">{data.feePayer}</span>
-											<span tw="text-gray-400">paid</span>
+											<span tw="text-gray-400"> paid </span>
 										</>
 									)}
 									<span>{data.fee}</span>
@@ -335,7 +335,7 @@ function ReceiptCard({
 							</div>
 						)}
 						{data.total && (
-							<div tw="flex w-full justify-between items-center text-[22px]">
+							<div tw="flex w-full justify-between items-center text-[20px]">
 								<span tw="text-gray-400">Total</span>
 								<span tw="font-medium">{data.total}</span>
 							</div>
