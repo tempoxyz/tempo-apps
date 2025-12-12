@@ -507,17 +507,21 @@ function ReceiptCard({
 					tw="flex flex-col flex-1 text-[24px]"
 					style={{
 						fontFamily: 'GeistMono',
-						gap: '16px',
+						gap: '14px',
 						marginLeft: '12px',
 						letterSpacing: '-0.02em',
 					}}
 				>
 					<div tw="flex w-full justify-between">
+						<span tw="text-gray-400">Block</span>
+						<span tw="text-emerald-600">#{data.blockNumber}</span>
+					</div>
+					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Sender</span>
 						<span tw="text-emerald-600">{truncateHash(data.sender, 6)}</span>
 					</div>
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-400">When</span>
+						<span tw="text-gray-400">Date</span>
 						<span>{when}</span>
 					</div>
 				</div>
