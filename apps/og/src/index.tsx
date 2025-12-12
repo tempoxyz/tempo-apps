@@ -857,44 +857,74 @@ function TokenBadges({
 // ============ Method Badges Helper ============
 
 function MethodBadges({ methods }: { methods: string[] }) {
-	const m0 = methods[0]
-	const m1 = methods[1]
-	const m2 = methods[2]
-	const remaining = methods.length - 3
+	// Split methods into rows based on character count (~40 chars per row)
+	const maxCharsPerRow = 40
+	const row1: string[] = []
+	const row2: string[] = []
+	let row1Chars = 0
+	let row2Chars = 0
+
+	for (const m of methods) {
+		if (row1Chars + m.length <= maxCharsPerRow || row1.length === 0) {
+			row1.push(m)
+			row1Chars += m.length + 2
+		} else if (row2Chars + m.length <= maxCharsPerRow || row2.length === 0) {
+			row2.push(m)
+			row2Chars += m.length + 2
+		} else {
+			break
+		}
+	}
+
+	const displayed = row1.length + row2.length
+	const remaining = methods.length - displayed
+
+	const renderBadge = (m: string, idx: number) => (
+		<span
+			key={idx}
+			tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
+			style={{ fontFamily: 'GeistMono' }}
+		>
+			{m}
+		</span>
+	)
 
 	return (
-		<div tw="flex flex-wrap justify-end" style={{ gap: '10px' }}>
-			{m0 && (
-				<span
-					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
-					style={{ fontFamily: 'GeistMono' }}
-				>
-					{m0}
-				</span>
+		<div tw="flex flex-col items-end" style={{ gap: '8px' }}>
+			{/* Row 1 */}
+			<div tw="flex justify-end" style={{ gap: '10px' }}>
+				{row1[0] && renderBadge(row1[0], 0)}
+				{row1[1] && renderBadge(row1[1], 1)}
+				{row1[2] && renderBadge(row1[2], 2)}
+				{row1[3] && renderBadge(row1[3], 3)}
+			</div>
+			{/* Row 2 */}
+			{row2.length > 0 && (
+				<div tw="flex justify-end" style={{ gap: '10px' }}>
+					{row2[0] && renderBadge(row2[0], 10)}
+					{row2[1] && renderBadge(row2[1], 11)}
+					{row2[2] && renderBadge(row2[2], 12)}
+					{row2[3] && renderBadge(row2[3], 13)}
+					{remaining > 0 && (
+						<span
+							tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
+							style={{ fontFamily: 'GeistMono' }}
+						>
+							+{remaining}
+						</span>
+					)}
+				</div>
 			)}
-			{m1 && (
-				<span
-					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
-					style={{ fontFamily: 'GeistMono' }}
-				>
-					{m1}
-				</span>
-			)}
-			{m2 && (
-				<span
-					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
-					style={{ fontFamily: 'GeistMono' }}
-				>
-					{m2}
-				</span>
-			)}
-			{remaining > 0 && (
-				<span
-					tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
-					style={{ fontFamily: 'GeistMono' }}
-				>
-					+{remaining}
-				</span>
+			{/* +remaining if only one row */}
+			{row2.length === 0 && remaining > 0 && (
+				<div tw="flex justify-end" style={{ gap: '10px' }}>
+					<span
+						tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
+						style={{ fontFamily: 'GeistMono' }}
+					>
+						+{remaining}
+					</span>
+				</div>
 			)}
 		</div>
 	)
@@ -989,14 +1019,6 @@ function AddressCard({ data }: { data: AddressData }) {
 					</div>
 				)}
 
-				{/* Contract Methods - show for contracts only */}
-				{data.isContract && data.methods && data.methods.length > 0 && (
-					<div tw="flex w-full justify-between items-center">
-						<span tw="text-gray-500">Methods</span>
-						<MethodBadges methods={data.methods || []} />
-					</div>
-				)}
-
 				{/* Divider - dashed (when no tokens and not contract) */}
 				{data.tokensHeld.length === 0 && !data.isContract && (
 					<div
@@ -1032,6 +1054,16 @@ function AddressCard({ data }: { data: AddressData }) {
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-500">Fee Token</span>
 						<span tw="text-gray-900">{data.feeToken}</span>
+					</div>
+				)}
+
+				{/* Contract Methods - show for contracts only, at bottom */}
+				{data.isContract && data.methods && data.methods.length > 0 && (
+					<div tw="flex flex-col w-full" style={{ marginTop: '4px' }}>
+						<span tw="text-gray-500" style={{ marginBottom: '12px' }}>
+							Methods
+						</span>
+						<MethodBadges methods={data.methods || []} />
 					</div>
 				)}
 			</div>
