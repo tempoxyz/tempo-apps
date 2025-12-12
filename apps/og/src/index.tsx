@@ -129,24 +129,27 @@ app.get('/tx/:hash', async (c) => {
 
 				{/* Right side branding */}
 				<div
-					tw="absolute flex flex-col gap-6"
-					style={{ right: '56px', top: '100px', left: '720px' }}
+					tw="absolute flex flex-col"
+					style={{ right: '56px', top: '100px', left: '720px', gap: '24px' }}
 				>
 					<img
 						src={images.logo}
 						alt="Tempo"
-						tw="mb-2"
 						style={{ width: '280px', height: '66px' }}
 					/>
 					<div
-						tw="flex flex-col text-[40px] text-gray-500 leading-snug"
-						style={{ fontFamily: 'Inter', letterSpacing: '-0.02em' }}
+						tw="flex flex-col text-[40px] text-gray-500"
+						style={{
+							fontFamily: 'Inter',
+							letterSpacing: '-0.02em',
+							lineHeight: '1.3',
+						}}
 					>
 						<span>View more about this</span>
 						<span>transaction using</span>
-						<div tw="flex items-center" style={{ gap: '12px' }}>
+						<div tw="flex items-center" style={{ gap: '10px' }}>
 							<span>the explorer</span>
-							<span tw="text-black text-[48px]">→</span>
+							<span tw="text-gray-500 text-[40px]">→</span>
 						</div>
 					</div>
 				</div>
@@ -222,39 +225,41 @@ function ReceiptCard({
 		>
 			{/* Header */}
 			<div tw="flex px-8 pt-8 pb-6" style={{ gap: '24px' }}>
-				{/* T Logo icon */}
+				{/* Tempo Receipt logo - natural aspect ratio */}
 				<div tw="flex shrink-0 items-start">
 					<img
 						src={receiptLogo}
-						alt="Tempo"
-						style={{ width: '90px', height: '90px' }}
+						alt="Tempo Receipt"
+						style={{ width: '140px', height: 'auto' }}
 					/>
 				</div>
 
-				{/* Details */}
+				{/* Details - right aligned values */}
 				<div
 					tw="flex flex-col flex-1 text-[30px]"
 					style={{ fontFamily: 'GeistMono', gap: '4px' }}
 				>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Block</span>
-						<span tw="text-emerald-600">#{data.blockNumber}</span>
+						<span tw="text-emerald-600 text-right">#{data.blockNumber}</span>
 					</div>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Sender</span>
-						<span tw="text-emerald-600">{truncateHash(data.sender, 6)}</span>
+						<span tw="text-emerald-600 text-right">
+							{truncateHash(data.sender, 6)}
+						</span>
 					</div>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Hash</span>
-						<span>{truncateHash(data.hash, 6)}</span>
+						<span tw="text-right">{truncateHash(data.hash, 6)}</span>
 					</div>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Date</span>
-						<span>{data.date}</span>
+						<span tw="text-right">{data.date}</span>
 					</div>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Time</span>
-						<span>{data.time}</span>
+						<span tw="text-right">{data.time}</span>
 					</div>
 				</div>
 			</div>
@@ -282,7 +287,9 @@ function ReceiptCard({
 										)}
 									</div>
 									{event.amount && (
-										<span tw="text-[28px] shrink-0 ml-4">{event.amount}</span>
+										<span tw="text-[28px] shrink-0 ml-4 text-right">
+											{event.amount}
+										</span>
 									)}
 								</div>
 								{event.message && (
@@ -314,7 +321,7 @@ function ReceiptCard({
 								<span tw="text-emerald-600">({data.feeToken})</span>
 							)}
 						</div>
-						<div tw="flex items-center" style={{ gap: '8px' }}>
+						<div tw="flex items-center text-right" style={{ gap: '8px' }}>
 							{data.feePayer && (
 								<>
 									<span tw="text-emerald-600">{data.feePayer}</span>
@@ -338,7 +345,7 @@ function ReceiptCard({
 						style={{ fontFamily: 'GeistMono' }}
 					>
 						<span tw="text-gray-400">Total</span>
-						<span tw="font-medium">{data.total}</span>
+						<span tw="font-medium text-right">{data.total}</span>
 					</div>
 				</>
 			)}
