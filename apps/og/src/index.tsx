@@ -289,19 +289,13 @@ function ReceiptCard({
 									justifyContent: 'space-between',
 								}}
 							>
-								{/* Left: number + wrapping action/details */}
+								{/* Left: number + action + details */}
 								<div tw="flex items-start" style={{ gap: '8px', flex: 1 }}>
 									<span tw="text-gray-400 shrink-0">{index + 1}.</span>
-									{/* Action + details wrap together */}
-									<div
-										tw="flex items-center"
-										style={{ gap: '8px', flexWrap: 'wrap' }}
-									>
-										<span tw="flex bg-gray-100 px-2 py-1 rounded shrink-0">
-											{event.action}
-										</span>
-										{event.details && <EventDetails details={event.details} />}
-									</div>
+									<span tw="flex bg-gray-100 px-2 py-1 rounded shrink-0">
+										{event.action}
+									</span>
+									{event.details && <EventDetails details={event.details} />}
 								</div>
 								{/* Amount stays on right */}
 								{event.amount && <span tw="shrink-0">{event.amount}</span>}
@@ -398,7 +392,7 @@ function EventDetails({ details }: { details: string }) {
 	}
 
 	return (
-		<span tw="flex shrink-0" style={{ whiteSpace: 'nowrap', gap: '4px' }}>
+		<span tw="flex" style={{ flexWrap: 'wrap', gap: '4px', flex: 1, minWidth: 0 }}>
 			{parts.map((part, idx) => (
 				<span
 					key={`${part.text}-${idx}`}
