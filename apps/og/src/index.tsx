@@ -160,7 +160,7 @@ app.get('/tx/:hash', async (c) => {
 			{
 				width: 1200 * devicePixelRatio,
 				height: 630 * devicePixelRatio,
-				format: 'webp',
+				format: 'png',
 				module,
 				fonts: [
 					{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
@@ -171,7 +171,7 @@ app.get('/tx/:hash', async (c) => {
 
 		const responseToCache = new Response(response.body, {
 			headers: {
-				'Content-Type': 'image/webp',
+				'Content-Type': 'image/png',
 				'Cache-Control': `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}`,
 			},
 		})
@@ -283,7 +283,7 @@ app.get('/token/:address', async (c) => {
 			{
 				width: 1200 * devicePixelRatio,
 				height: 630 * devicePixelRatio,
-				format: 'webp',
+				format: 'png',
 				module,
 				fonts: [
 					{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
@@ -294,7 +294,7 @@ app.get('/token/:address', async (c) => {
 
 		const responseToCache = new Response(response.body, {
 			headers: {
-				'Content-Type': 'image/webp',
+				'Content-Type': 'image/png',
 				'Cache-Control': `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}`,
 			},
 		})
@@ -401,7 +401,7 @@ app.get('/address/:address', async (c) => {
 			{
 				width: 1200 * devicePixelRatio,
 				height: 630 * devicePixelRatio,
-				format: 'webp',
+				format: 'png',
 				module,
 				fonts: [
 					{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
@@ -412,7 +412,7 @@ app.get('/address/:address', async (c) => {
 
 		const responseToCache = new Response(response.body, {
 			headers: {
-				'Content-Type': 'image/webp',
+				'Content-Type': 'image/png',
 				'Cache-Control': `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}`,
 			},
 		})
@@ -852,14 +852,14 @@ function AddressCard({ data }: { data: AddressData }) {
 						}}
 					/>
 
-					<div tw="flex flex-col px-8 py-6" style={{ gap: '12px' }}>
+					<div tw="flex flex-col w-full px-8 py-6" style={{ gap: '12px' }}>
 						<span
 							tw="text-gray-400 text-[23.5px]"
 							style={{ fontFamily: 'GeistMono' }}
 						>
 							Tokens Held
 						</span>
-						<div tw="flex flex-wrap" style={{ gap: '8px' }}>
+						<div tw="flex flex-wrap w-full" style={{ gap: '8px' }}>
 							<TokenBadges tokens={data.tokensHeld.slice(0, 12)} />
 							{data.tokensHeld.length > 12 && (
 								<span
@@ -1059,7 +1059,7 @@ app.get('/', async (c) => {
 		{
 			width: 1200 * devicePixelRatio,
 			height: 630 * devicePixelRatio,
-			format: 'webp',
+			format: 'png',
 			module,
 			fonts: [
 				{ weight: 400, name: 'Inter', data: fonts.mono, style: 'normal' },

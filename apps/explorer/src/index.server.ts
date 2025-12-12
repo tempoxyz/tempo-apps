@@ -819,7 +819,7 @@ export default Sentry.withSentry(
 				const pathParts = url.pathname.split('/')
 				const hash = pathParts[2] // Gets the hash from /tx/{hash} or /receipt/{hash}
 				const ogData = await buildTxOgData(hash)
-				const title = `Transaction ${hash.slice(0, 10)}...${hash.slice(-6)} ⋅ Tempo Explorer`
+				const title = `Transaction ${hash.slice(0, 6)}...${hash.slice(-4)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to remove existing OG tags and inject transaction-specific ones
 				return new HTMLRewriter()
@@ -836,7 +836,7 @@ export default Sentry.withSentry(
 			) {
 				const address = url.pathname.split('/token/')[1]
 				const ogData = await buildTokenOgData(address)
-				const title = `Token ${address.slice(0, 10)}...${address.slice(-6)} ⋅ Tempo Explorer`
+				const title = `Token ${address.slice(0, 6)}...${address.slice(-4)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to remove existing OG tags and inject token-specific ones
 				return new HTMLRewriter()
@@ -853,7 +853,7 @@ export default Sentry.withSentry(
 			) {
 				const address = url.pathname.split('/address/')[1]
 				const ogData = await buildAddressOgData(address)
-				const title = `Address ${address.slice(0, 10)}...${address.slice(-6)} ⋅ Tempo Explorer`
+				const title = `Address ${address.slice(0, 6)}...${address.slice(-4)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to remove existing OG tags and inject address-specific ones
 				return new HTMLRewriter()
