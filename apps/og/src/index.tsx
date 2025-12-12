@@ -237,7 +237,7 @@ function ReceiptCard({
 				{/* Details - right aligned values */}
 				<div
 					tw="flex flex-col flex-1 text-[22px]"
-					style={{ fontFamily: 'GeistMono', gap: '8px' }}
+					style={{ fontFamily: 'GeistMono', gap: '12px', marginLeft: '12px' }}
 				>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Block</span>
@@ -265,10 +265,23 @@ function ReceiptCard({
 			{/* Events */}
 			{data.events.length > 0 && (
 				<>
-					<div tw="flex mx-8" style={{ borderTop: '2px dashed #e5e7eb' }} />
 					<div
-						tw="flex flex-col px-8 py-5 text-[22px]"
-						style={{ fontFamily: 'GeistMono', gap: '12px', width: '100%' }}
+						tw="flex"
+						style={{
+							height: '1px',
+							backgroundColor: '#d1d5db',
+							marginLeft: 32,
+							marginRight: 32,
+						}}
+					/>
+					<div
+						tw="flex flex-col py-5 text-[22px]"
+						style={{
+							fontFamily: 'GeistMono',
+							gap: '12px',
+							paddingLeft: 32,
+							paddingRight: 32,
+						}}
 					>
 						{data.events.slice(0, 4).map((event, index) => (
 							<div
@@ -294,7 +307,7 @@ function ReceiptCard({
 								{event.message && (
 									<div
 										tw="flex text-gray-400 text-[20px] mt-1"
-										style={{ marginLeft: '32px' }}
+										style={{ marginLeft: '24px' }}
 									>
 										<span tw="mr-2">|</span>
 										<span>{event.message}</span>
@@ -309,10 +322,23 @@ function ReceiptCard({
 			{/* Fee and Total rows */}
 			{(data.fee || data.total) && (
 				<>
-					<div tw="flex mx-8" style={{ borderTop: '2px dashed #e5e7eb' }} />
 					<div
-						tw="flex flex-col px-8 py-4 text-[22px]"
-						style={{ fontFamily: 'GeistMono', gap: '6px', width: '100%' }}
+						tw="flex"
+						style={{
+							height: '1px',
+							backgroundColor: '#d1d5db',
+							marginLeft: 32,
+							marginRight: 32,
+						}}
+					/>
+					<div
+						tw="flex flex-col py-5 text-[22px]"
+						style={{
+							fontFamily: 'GeistMono',
+							gap: '10px',
+							paddingLeft: 32,
+							paddingRight: 32,
+						}}
 					>
 						{data.fee && (
 							<div
