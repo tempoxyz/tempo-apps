@@ -492,8 +492,21 @@ function ReceiptCard({
 	data: ReceiptData
 	receiptLogo: string
 }) {
+	// Format date: remove comma, e.g. "Dec 12, 2025" -> "Dec 12 2025"
+	const formattedDate = data.date.replace(',', '')
+	// Format time: convert "1:03 PM" to "13:03"
+	let formattedTime = data.time
+	const timeMatch = data.time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
+	if (timeMatch) {
+		let hours = parseInt(timeMatch[1], 10)
+		const minutes = timeMatch[2]
+		const period = timeMatch[3].toUpperCase()
+		if (period === 'PM' && hours !== 12) hours += 12
+		if (period === 'AM' && hours === 12) hours = 0
+		formattedTime = `${hours.toString().padStart(2, '0')}:${minutes}`
+	}
 	// Combine date and time
-	const when = data.date !== '—' ? `${data.date} ${data.time}` : '—'
+	const when = data.date !== '—' ? `${formattedDate} ${formattedTime}` : '—'
 
 	return (
 		<div
