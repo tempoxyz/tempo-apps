@@ -43,6 +43,16 @@ class OgMetaRemover {
 	}
 }
 
+// Escape HTML entities to prevent XSS in meta tags
+function escapeHtml(text: string): string {
+	return text
+		.replace(/&/g, '&amp;')
+		.replace(/</g, '&lt;')
+		.replace(/>/g, '&gt;')
+		.replace(/"/g, '&quot;')
+		.replace(/'/g, '&#39;')
+}
+
 // Inject OG meta tags for transaction pages (for social media crawlers)
 class OgMetaInjector {
 	private ogImageUrl: string
@@ -51,8 +61,8 @@ class OgMetaInjector {
 
 	constructor(ogImageUrl: string, title: string, description: string) {
 		this.ogImageUrl = ogImageUrl
-		this.title = title
-		this.description = description
+		this.title = escapeHtml(title)
+		this.description = escapeHtml(description)
 	}
 
 	element(element: Element) {
@@ -283,7 +293,7 @@ function formatTime(timestamp: number): string {
 	return `${hours}:${minutes}`
 }
 
-// Generate contextual OG description for transactions
+// Generate contextual OG description for transactions (max 160 chars)
 function buildTxDescription(txData: TxData | null, _hash: string): string {
 	if (!txData) {
 		return `View transaction details on Tempo Explorer.`
@@ -297,19 +307,28 @@ function buildTxDescription(txData: TxData | null, _hash: string): string {
 		const firstEvent = txData.events[0]
 		const actionPart = firstEvent.parts.find((p) => p.type === 'action')
 		const action = actionPart
-			? String(actionPart.value).toLowerCase()
+			? truncateOgText(String(actionPart.value).toLowerCase(), 20)
 			: 'transaction'
 
 		if (eventCount === 1) {
-			return `A ${action} on ${date} from ${truncateAddress(txData.from)}. View full details on Tempo Explorer.`
+			return truncateOgText(
+				`A ${action} on ${date} from ${truncateAddress(txData.from)}. View full details on Tempo Explorer.`,
+				160,
+			)
 		}
-		return `A ${action} and ${eventCount - 1} other action${eventCount > 2 ? 's' : ''} on ${date}. View full details on Tempo Explorer.`
+		return truncateOgText(
+			`A ${action} and ${eventCount - 1} other action${eventCount > 2 ? 's' : ''} on ${date}. View full details on Tempo Explorer.`,
+			160,
+		)
 	}
 
-	return `Transaction on ${date} from ${truncateAddress(txData.from)}. View details on Tempo Explorer.`
+	return truncateOgText(
+		`Transaction on ${date} from ${truncateAddress(txData.from)}. View details on Tempo Explorer.`,
+		160,
+	)
 }
 
-// Generate contextual OG description for tokens
+// Generate contextual OG description for tokens (max 160 chars)
 // Format: "testUSD (tUSD) · 1.00M total supply"
 function buildTokenDescription(
 	tokenData: TokenData | null,
@@ -319,22 +338,38 @@ function buildTokenDescription(
 		return `View token details and activity on Tempo Explorer.`
 	}
 
-	// Build: "testUSD (tUSD) · 1.00M total supply"
-	const namePart =
+	// Truncate name/symbol if too long
+	const name = truncateOgText(tokenData.name, 30)
+	const symbol =
 		tokenData.symbol && tokenData.symbol !== '—'
-			? `${tokenData.name} (${tokenData.symbol})`
-			: tokenData.name
+			? truncateOgText(tokenData.symbol, 12)
+			: null
+
+	// Build: "testUSD (tUSD) · 1.00M total supply"
+	const namePart = symbol ? `${name} (${symbol})` : name
 
 	if (tokenData.supply && tokenData.supply !== '—') {
-		return `${namePart} · ${tokenData.supply} total supply. View token activity on Tempo Explorer.`
+		return truncateOgText(
+			`${namePart} · ${tokenData.supply} total supply. View token activity on Tempo Explorer.`,
+			160,
+		)
 	}
 
-	return `${namePart}. View token activity on Tempo Explorer.`
+	return truncateOgText(
+		`${namePart}. View token activity on Tempo Explorer.`,
+		160,
+	)
 }
 
 function truncateAddress(address: string): string {
 	if (address.length <= 13) return address
 	return `${address.slice(0, 6)}…${address.slice(-4)}`
+}
+
+// Truncate OG text (title max 60 chars, description max 160 chars)
+function truncateOgText(text: string, maxLength: number): string {
+	if (text.length <= maxLength) return text
+	return `${text.slice(0, maxLength - 1)}…`
 }
 
 function formatAmount(
@@ -1107,14 +1142,17 @@ function buildAddressDescription(
 
 	const parts: string[] = []
 	if (addressData.holdings !== '—') {
-		parts.push(`${addressData.holdings} in holdings`)
+		parts.push(`${truncateOgText(addressData.holdings, 20)} in holdings`)
 	}
 	if (addressData.txCount > 0) {
 		parts.push(`${addressData.txCount} transactions`)
 	}
 
 	if (parts.length > 0) {
-		return `${parts.join(' · ')}. View full activity on Tempo Explorer.`
+		return truncateOgText(
+			`${parts.join(' · ')}. View full activity on Tempo Explorer.`,
+			160,
+		)
 	}
 
 	return `View address activity & holdings on Tempo Explorer.`

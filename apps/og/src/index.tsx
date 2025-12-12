@@ -571,7 +571,7 @@ function ReceiptCard({
 				}}
 			/>
 
-			{/* Events */}
+			{/* Events - show max 2, then "...and n more" */}
 			{data.events.length > 0 && (
 				<>
 					<div
@@ -591,7 +591,7 @@ function ReceiptCard({
 							letterSpacing: '-0.02em',
 						}}
 					>
-						{data.events.slice(0, 5).map((event, index) => {
+						{data.events.slice(0, 2).map((event, index) => {
 							const detailParts = event.details
 								? parseEventDetails(event.details)
 								: []
@@ -627,7 +627,7 @@ function ReceiptCard({
 											tw="flex bg-gray-100 px-2 py-1 rounded shrink-0"
 											style={{ lineHeight: '26px' }}
 										>
-											{event.action}
+											{truncateText(event.action, 20)}
 										</span>
 										{/* Details - each part in the same flex container */}
 										{detailParts.map((part, idx) => (
@@ -641,12 +641,24 @@ function ReceiptCard({
 									{/* Amount on right */}
 									{event.amount && (
 										<span tw="shrink-0" style={{ lineHeight: '34px' }}>
-											{event.amount}
+											{truncateText(event.amount, 15)}
 										</span>
 									)}
 								</div>
 							)
 						})}
+						{/* "...and n more" row */}
+						{data.events.length > 2 && (
+							<div
+								tw="flex justify-center items-center py-3 mx-8 rounded-lg text-gray-500"
+								style={{
+									backgroundColor: 'rgba(0, 0, 0, 0.05)',
+									fontFamily: 'GeistMono',
+								}}
+							>
+								...and {data.events.length - 2} more
+							</div>
+						)}
 					</div>
 				</>
 			)}
@@ -738,16 +750,18 @@ function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 					tw="rounded-full"
 					style={{ width: '80px', height: '80px' }}
 				/>
-				<div tw="flex flex-col flex-1">
-					<span tw="text-5xl font-semibold text-gray-900">{data.name}</span>
+				<div tw="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
+					<span tw="text-5xl font-semibold text-gray-900">
+						{truncateText(data.name, 24)}
+					</span>
 				</div>
 				{/* Symbol badge */}
-				<div tw="flex items-center" style={{ gap: '12px' }}>
+				<div tw="flex items-center shrink-0" style={{ gap: '12px' }}>
 					<div
 						tw="flex items-center px-5 py-3 bg-gray-100 rounded-lg text-gray-600 text-2xl"
 						style={{ fontFamily: 'GeistMono' }}
 					>
-						{data.symbol}
+						{truncateText(data.symbol, 12)}
 					</div>
 					{data.isFeeToken && (
 						<div
@@ -789,19 +803,19 @@ function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 				{/* Currency */}
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Currency</span>
-					<span tw="text-gray-900">{data.currency}</span>
+					<span tw="text-gray-900">{truncateText(data.currency, 16)}</span>
 				</div>
 
 				{/* Holders */}
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Holders</span>
-					<span tw="text-gray-900">{data.holders}</span>
+					<span tw="text-gray-900">{truncateText(data.holders, 16)}</span>
 				</div>
 
 				{/* Supply */}
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Supply</span>
-					<span tw="text-gray-900">{data.supply}</span>
+					<span tw="text-gray-900">{truncateText(data.supply, 20)}</span>
 				</div>
 
 				{/* Created */}
@@ -892,13 +906,19 @@ function MethodBadges({ methods }: { methods: string[] }) {
 	const displayed = row1.length + row2.length
 	const remaining = methods.length - displayed
 
+	// Truncate method name if too long
+	const truncateMethod = (m: string, maxLen = 14) => {
+		if (m.length <= maxLen) return m
+		return `${m.slice(0, maxLen - 1)}…`
+	}
+
 	const renderBadge = (m: string, idx: number) => (
 		<span
 			key={idx}
 			tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
 			style={{ fontFamily: 'GeistMono' }}
 		>
-			{m}
+			{truncateMethod(m)}
 		</span>
 	)
 
@@ -1008,7 +1028,7 @@ function AddressCard({ data }: { data: AddressData }) {
 				{!data.isContract && (
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-500">Holdings</span>
-						<span tw="text-gray-900">{data.holdings}</span>
+						<span tw="text-gray-900">{truncateText(data.holdings, 20)}</span>
 					</div>
 				)}
 
@@ -1090,6 +1110,12 @@ function truncateHash(hash: string, chars = 4): string {
 	if (!hash || hash === '—') return hash
 	if (hash.length <= chars * 2 + 2) return hash
 	return `${hash.slice(0, chars + 2)}…${hash.slice(-chars)}`
+}
+
+// Truncate any text to max length with ellipsis
+function truncateText(text: string, maxLength: number): string {
+	if (!text || text.length <= maxLength) return text
+	return `${text.slice(0, maxLength - 1)}…`
 }
 
 // Fetch token icon from tokenlist service, returns base64 data URL or null
