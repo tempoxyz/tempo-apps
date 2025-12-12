@@ -34,7 +34,8 @@ import { zHash } from '#lib/zod'
 import CopyIcon from '~icons/lucide/copy'
 
 // OG Image URL builder
-const OG_BASE_URL = import.meta.env.VITE_OG_URL || 'https://og.porto.workers.dev'
+const OG_BASE_URL =
+	import.meta.env.VITE_OG_URL || 'https://og.porto.workers.dev'
 
 function buildOgImageUrl(data: TxData, hash: string): string {
 	const params = new URLSearchParams()
