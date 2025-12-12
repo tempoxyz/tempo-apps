@@ -229,6 +229,7 @@ app.get('/token/:address', async (c) => {
 			supply: params.get('supply') || '—',
 			created: params.get('created') || '—',
 			quoteToken: params.get('quoteToken') || undefined,
+			isFeeToken: params.get('isFeeToken') === 'true',
 		}
 
 		// Fetch assets and token icon in parallel
@@ -249,7 +250,7 @@ app.get('/token/:address', async (c) => {
 				/>
 
 				{/* Token Card */}
-				<div tw="absolute flex" style={{ left: '56px', top: '40px' }}>
+				<div tw="absolute flex" style={{ left: '56px', top: '60px' }}>
 					<TokenCard data={tokenData} icon={tokenIcon || images.nullIcon} />
 				</div>
 
@@ -368,7 +369,7 @@ app.get('/address/:address', async (c) => {
 				/>
 
 				{/* Address Card */}
-				<div tw="absolute flex" style={{ left: '56px', top: '40px' }}>
+				<div tw="absolute flex" style={{ left: '56px', top: '60px' }}>
 					<AddressCard data={addressData} />
 				</div>
 
@@ -440,6 +441,7 @@ interface TokenData {
 	supply: string
 	created: string
 	quoteToken?: string
+	isFeeToken?: boolean
 }
 
 interface AddressData {
@@ -667,11 +669,21 @@ function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 					<span tw="text-3xl font-semibold text-gray-900">{data.name}</span>
 				</div>
 				{/* Symbol badge */}
-				<div
-					tw="flex items-center px-4 py-2 bg-gray-100 rounded-lg text-gray-600 text-xl"
-					style={{ fontFamily: 'GeistMono' }}
-				>
-					{data.symbol}
+				<div tw="flex items-center" style={{ gap: '10px' }}>
+					<div
+						tw="flex items-center px-4 py-2 bg-gray-100 rounded-lg text-gray-600 text-xl"
+						style={{ fontFamily: 'GeistMono' }}
+					>
+						{data.symbol}
+					</div>
+					{data.isFeeToken && (
+						<div
+							tw="flex items-center px-3 py-2 bg-emerald-100 rounded-lg text-emerald-700 text-lg"
+							style={{ fontFamily: 'GeistMono' }}
+						>
+							Fee Token
+						</div>
+					)}
 				</div>
 			</div>
 
@@ -686,10 +698,10 @@ function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 
 			{/* Details */}
 			<div
-				tw="flex flex-col px-8 py-6 text-[23.5px]"
+				tw="flex flex-col px-8 py-8 text-[23.5px]"
 				style={{
 					fontFamily: 'GeistMono',
-					gap: '16px',
+					gap: '20px',
 					letterSpacing: '-0.02em',
 				}}
 			>
@@ -841,8 +853,8 @@ function AddressCard({ data }: { data: AddressData }) {
 				</div>
 			</div>
 
-			{/* Tokens Held section */}
-			{data.tokensHeld.length > 0 && (
+			{/* Tokens Held section - hide for contracts */}
+			{data.tokensHeld.length > 0 && !data.isContract && (
 				<>
 					{/* Divider - dashed */}
 					<div
