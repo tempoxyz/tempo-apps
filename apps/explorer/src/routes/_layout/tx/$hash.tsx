@@ -25,12 +25,136 @@ import { TxRawTransaction } from '#comps/TxRawTransaction'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#cva.config.ts'
 import { apostrophe } from '#lib/chars'
-import type { KnownEvent } from '#lib/domain/known-events'
+import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
+import { DateFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { type TxData, txQueryOptions } from '#lib/queries'
 import { zHash } from '#lib/zod'
 import CopyIcon from '~icons/lucide/copy'
+
+// OG Image URL builder
+const OG_BASE_URL = import.meta.env.VITE_OG_URL || 'https://og.porto.workers.dev'
+
+function buildOgImageUrl(data: TxData, hash: string): string {
+	const params = new URLSearchParams()
+
+	// Block number
+	params.set('block', String(data.block.number))
+
+	// Sender
+	params.set('sender', data.receipt.from)
+
+	// Date and time
+	const timestamp = data.block.timestamp
+	params.set('date', DateFormatter.formatTimestampDate(timestamp))
+	const timeInfo = DateFormatter.formatTimestampTime(timestamp)
+	params.set('time', `${timeInfo.time} ${timeInfo.timezone}${timeInfo.offset}`)
+
+	// Fee and total from fee breakdown
+	if (data.feeBreakdown.length > 0) {
+		const totalFee = data.feeBreakdown.reduce((sum, item) => {
+			const amount = Number(Value.format(item.amount, item.decimals))
+			return sum + amount
+		}, 0)
+		const feeDisplay =
+			totalFee > 0 && totalFee < 0.01 ? '<$0.01' : `$${totalFee.toFixed(2)}`
+		params.set('fee', feeDisplay)
+		params.set('total', feeDisplay)
+	}
+
+	// Events (up to 5)
+	data.knownEvents.slice(0, 5).forEach((event, index) => {
+		const eventStr = formatEventForOg(event)
+		if (eventStr) {
+			params.set(`e${index + 1}`, eventStr)
+		}
+	})
+
+	return `${OG_BASE_URL}/tx/${hash}?${params.toString()}`
+}
+
+function formatEventForOg(event: KnownEvent): string {
+	// Extract action from first part
+	const actionPart = event.parts.find((p) => p.type === 'action')
+	const action = actionPart?.type === 'action' ? actionPart.value : event.type
+
+	// Build details string from remaining parts
+	const details = event.parts
+		.filter((p) => p.type !== 'action')
+		.map((part) => formatPartForOg(part))
+		.filter(Boolean)
+		.join(' ')
+
+	// Extract amount if present
+	const amountPart = event.parts.find((p) => p.type === 'amount')
+	let amount = ''
+	if (amountPart?.type === 'amount') {
+		const val = Number(
+			Value.format(amountPart.value.value, amountPart.value.decimals ?? 6),
+		)
+		amount = val > 0 && val < 0.01 ? '<$0.01' : `$${val.toFixed(0)}`
+	}
+
+	return `${action}|${details}|${amount}`
+}
+
+function formatPartForOg(part: KnownEventPart): string {
+	switch (part.type) {
+		case 'text':
+			return part.value
+		case 'amount':
+			return `${Value.format(part.value.value, part.value.decimals ?? 6)} ${part.value.symbol || ''}`
+		case 'account':
+			return truncateAddress(part.value)
+		case 'token':
+			return part.value.symbol || truncateAddress(part.value.address)
+		default:
+			return ''
+	}
+}
+
+function truncateAddress(address: string): string {
+	if (address.length <= 10) return address
+	return `${address.slice(0, 6)}…${address.slice(-4)}`
+}
+
+// Hook to set OG meta tags for the transaction page
+function useTxOgMeta(data: TxData | undefined, hash: string) {
+	React.useEffect(() => {
+		if (!data) return
+
+		const ogImageUrl = buildOgImageUrl(data, hash)
+		const title = `Transaction ${hash.slice(0, 10)}...${hash.slice(-6)} ⋅ Tempo Explorer`
+
+		// Update document title
+		document.title = title
+
+		// Set OG meta tags
+		setMetaTag('og:title', title)
+		setMetaTag('og:image', ogImageUrl)
+		setMetaTag('og:image:type', 'image/webp')
+		setMetaTag('og:image:width', '1200')
+		setMetaTag('og:image:height', '630')
+		setMetaTag('twitter:card', 'summary_large_image')
+		setMetaTag('twitter:image', ogImageUrl)
+
+		return () => {
+			// Cleanup - restore default meta tags
+			document.title = 'Explorer ⋅ Tempo'
+		}
+	}, [data, hash])
+}
+
+function setMetaTag(name: string, content: string) {
+	let meta = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement
+	if (!meta) {
+		meta = document.createElement('meta')
+		meta.name = name
+		document.head.appendChild(meta)
+	}
+	meta.content = content
+}
 
 const defaultSearchValues = {
 	tab: 'overview',
@@ -90,6 +214,9 @@ function RouteComponent() {
 		...txQueryOptions({ hash }),
 		initialData: loaderData,
 	})
+
+	// Set OG meta tags for social sharing
+	useTxOgMeta(data, hash)
 
 	const {
 		block,

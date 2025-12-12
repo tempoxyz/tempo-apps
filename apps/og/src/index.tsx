@@ -1,16 +1,12 @@
 import { ImageResponse } from '@takumi-rs/image-response/wasm'
 import module from '@takumi-rs/wasm/takumi_wasm_bg.wasm'
 import { Hono } from 'hono'
-import { Address, type Hex, Value } from 'ox'
-import { Abis, Addresses } from 'tempo.ts/viem'
-import { parseEventLogs, type TransactionReceipt, zeroAddress } from 'viem'
 
 const FONT_MONO_URL =
 	'https://unpkg.com/geist/dist/fonts/geist-mono/GeistMono-Regular.woff2'
 const FONT_INTER_URL =
 	'https://unpkg.com/@fontsource/inter/files/inter-latin-500-normal.woff2'
 
-const RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
 const devicePixelRatio = 1.0
 
 // Cache TTL: 1 hour for OG images
@@ -21,9 +17,14 @@ let fontCache: { mono: ArrayBuffer | null; inter: ArrayBuffer | null } = {
 	mono: null,
 	inter: null,
 }
-let imageCache: { bg: ArrayBuffer | null; logo: ArrayBuffer | null } = {
+let imageCache: {
+	bg: ArrayBuffer | null
+	logo: ArrayBuffer | null
+	receiptLogo: ArrayBuffer | null
+} = {
 	bg: null,
 	logo: null,
+	receiptLogo: null,
 }
 
 const app = new Hono<{ Bindings: Cloudflare.Env }>()
@@ -34,15 +35,36 @@ app.get('/favicon.ico', () =>
 
 app.get('/health', () => new Response('OK'))
 
-// Transaction OG image
+/**
+ * Transaction OG Image
+ *
+ * URL Parameters:
+ * - hash: Transaction hash (0x...)
+ * - block: Block number
+ * - sender: Sender address (0x...)
+ * - date: Date string (e.g., "12/01/2025")
+ * - time: Time string (e.g., "18:32:21 GMT+0")
+ * - fee: Fee display string (e.g., "<$0.01")
+ * - total: Total display string (e.g., "<$0.01")
+ * - e1, e2, e3, e4: Event strings in format "Action|Details|Amount"
+ *   Examples:
+ *   - "Swap|10 pathUSD for 10 AlphaUSD|$10"
+ *   - "Approve|for 0x1234...5678|$10"
+ *   - "Send|to 0x1234...5678|$10"
+ *   - "Partial Fill|10000000|"
+ *
+ * Example URL:
+ * /tx/0x123...?block=3284958&sender=0x566f...b45f&date=12/01/2025&time=18:32:21 GMT+0&fee=<$0.01&e1=Swap|10 pathUSD for 10 AlphaUSD|$10
+ */
 app.get('/tx/:hash', async (c) => {
-	const hash = c.req.param('hash') as Hex.Hex
+	const hash = c.req.param('hash')
 
 	if (!hash || !hash.startsWith('0x') || hash.length !== 66) {
 		return new Response('Invalid transaction hash', { status: 400 })
 	}
 
 	const url = new URL(c.req.url)
+	const params = url.searchParams
 	const cacheKey = new Request(url.toString(), c.req.raw)
 
 	// Check cache first
@@ -53,12 +75,35 @@ app.get('/tx/:hash', async (c) => {
 	}
 
 	try {
-		// Fetch everything in parallel
-		const [fonts, images, receiptData] = await Promise.all([
-			loadFonts(),
-			loadImages(c),
-			fetchReceiptData(hash),
-		])
+		// Parse URL parameters
+		const receiptData: ReceiptData = {
+			hash,
+			blockNumber: params.get('block') || '—',
+			sender: params.get('sender') || '—',
+			date: params.get('date') || '—',
+			time: params.get('time') || '—',
+			fee: params.get('fee') || undefined,
+			total: params.get('total') || undefined,
+			events: [],
+		}
+
+		// Parse events (e1, e2, e3, e4)
+		for (let i = 1; i <= 6; i++) {
+			const eventParam = params.get(`e${i}`)
+			if (eventParam) {
+				const [action, details, amount] = eventParam.split('|')
+				if (action) {
+					receiptData.events.push({
+						action: action || '',
+						details: details || '',
+						amount: amount || undefined,
+					})
+				}
+			}
+		}
+
+		// Fetch assets
+		const [fonts, images] = await Promise.all([loadFonts(), loadImages(c)])
 
 		const response = new ImageResponse(
 			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
@@ -75,29 +120,29 @@ app.get('/tx/:hash', async (c) => {
 					tw="absolute flex"
 					style={{ left: '32px', top: '24px', bottom: '0' }}
 				>
-					<ReceiptCard data={receiptData} />
+					<ReceiptCard data={receiptData} receiptLogo={images.receiptLogo} />
 				</div>
 
 				{/* Right side branding */}
 				<div
-					tw="absolute flex flex-col gap-4"
-					style={{ right: '40px', top: '140px', left: '420px' }}
+					tw="absolute flex flex-col gap-6"
+					style={{ right: '40px', top: '120px', left: '460px' }}
 				>
 					<img
 						src={images.logo}
 						alt="Tempo"
 						tw="mb-4"
-						style={{ width: '180px', height: '42px' }}
+						style={{ width: '320px', height: '75px' }}
 					/>
 					<div
-						tw="flex flex-col text-[32px] text-gray-600 leading-tight"
+						tw="flex flex-col text-[44px] text-gray-600 leading-tight"
 						style={{ fontFamily: 'Inter', letterSpacing: '-0.02em' }}
 					>
 						<span>View more about this</span>
 						<span>transaction using</span>
 						<div tw="flex items-center gap-3">
 							<span>the explorer</span>
-							<span tw="text-black text-[38px]">→</span>
+							<span tw="text-black text-[52px]">→</span>
 						</div>
 					</div>
 				</div>
@@ -132,76 +177,77 @@ app.get('/tx/:hash', async (c) => {
 	}
 })
 
-// ============ Receipt Component ============
+// ============ Types ============
 
 interface ReceiptData {
-	blockNumber: bigint
-	sender: string
 	hash: string
-	timestamp: bigint
-	events: ParsedEvent[]
-	feeDisplay?: string
-	totalDisplay?: string
+	blockNumber: string
+	sender: string
+	date: string
+	time: string
+	fee?: string
+	total?: string
+	events: ReceiptEvent[]
 }
 
-interface ParsedEvent {
-	type: string
+interface ReceiptEvent {
 	action: string
 	details: string
 	amount?: string
 }
 
-function ReceiptCard({ data }: { data: ReceiptData }) {
-	const date = formatDate(data.timestamp)
-	const time = formatTime(data.timestamp)
+// ============ Receipt Component ============
 
+function ReceiptCard({
+	data,
+	receiptLogo,
+}: {
+	data: ReceiptData
+	receiptLogo: string
+}) {
 	return (
 		<div
 			tw="flex flex-col bg-white rounded-t-2xl shadow-2xl"
 			style={{
-				width: '360px',
+				width: '400px',
 				boxShadow: '0 8px 60px rgba(0,0,0,0.12)',
 			}}
 		>
 			{/* Header */}
-			<div tw="flex px-5 pt-6 pb-4">
+			<div tw="flex px-6 pt-6 pb-5" style={{ gap: '24px' }}>
 				{/* Logo */}
-				<div tw="flex flex-col shrink-0 mr-8">
-					<div tw="flex text-[18px] font-bold" style={{ fontFamily: 'Inter' }}>
-						Tempo
-					</div>
-					<div
-						tw="flex text-[10px] text-gray-400 tracking-widest"
-						style={{ fontFamily: 'GeistMono' }}
-					>
-						RECEIPT
-					</div>
+				<div tw="flex shrink-0">
+					<img
+						src={receiptLogo}
+						alt="Tempo Receipt"
+						style={{ width: '90px', height: '54px' }}
+					/>
 				</div>
 
 				{/* Details */}
 				<div
-					tw="flex flex-col flex-1 text-[13px]"
-					style={{ fontFamily: 'GeistMono', gap: '6px' }}
+					tw="flex flex-col flex-1 text-[15px]"
+					style={{ fontFamily: 'GeistMono', gap: '8px' }}
 				>
-					<div tw="flex justify-between">
+					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Block</span>
-						<span tw="text-emerald-600">#{String(data.blockNumber)}</span>
+						<span tw="text-emerald-600">#{data.blockNumber}</span>
 					</div>
-					<div tw="flex justify-between">
+					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Sender</span>
 						<span tw="text-emerald-600">{truncateHash(data.sender)}</span>
 					</div>
-					<div tw="flex justify-between">
+					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Hash</span>
 						<span>{truncateHash(data.hash)}</span>
 					</div>
-					<div tw="flex justify-between">
+					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Date</span>
-						<span>{date}</span>
+						<span>{data.date}</span>
 					</div>
-					<div tw="flex justify-between">
+					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Time</span>
-						<span>{time}</span>
+						<span>{data.time}</span>
 					</div>
 				</div>
 			</div>
@@ -209,29 +255,26 @@ function ReceiptCard({ data }: { data: ReceiptData }) {
 			{/* Events */}
 			{data.events.length > 0 && (
 				<>
+					<div tw="flex mx-6" style={{ borderTop: '1px dashed #e5e7eb' }} />
 					<div
-						tw="flex mx-5"
-						style={{
-							borderTop: '1px dashed #e5e7eb',
-						}}
-					/>
-					<div
-						tw="flex flex-col px-5 py-4"
-						style={{ fontFamily: 'GeistMono', gap: '10px' }}
+						tw="flex flex-col px-6 py-5"
+						style={{ fontFamily: 'GeistMono', gap: '12px' }}
 					>
-						{data.events.slice(0, 4).map((event, index) => (
+						{data.events.slice(0, 5).map((event, index) => (
 							<div
-								key={`${event.type}-${event.action}-${index}`}
-								tw="flex justify-between text-[13px]"
+								key={`${event.action}-${index}`}
+								tw="flex w-full justify-between items-center text-[15px]"
 							>
-								<div tw="flex items-center" style={{ gap: '6px' }}>
+								<div tw="flex items-center" style={{ gap: '8px' }}>
 									<span tw="text-gray-400">{index + 1}.</span>
-									<span tw="flex bg-gray-100 px-1.5 py-0.5 text-[12px]">
+									<span tw="flex bg-gray-100 px-2 py-1 text-[14px]">
 										{event.action}
 									</span>
-									<span tw="text-gray-500 text-[12px]">{event.details}</span>
+									{event.details && (
+										<span tw="text-gray-500 text-[14px]">{event.details}</span>
+									)}
 								</div>
-								{event.amount && <span>{event.amount}</span>}
+								{event.amount && <span tw="text-[15px]">{event.amount}</span>}
 							</div>
 						))}
 					</div>
@@ -239,28 +282,23 @@ function ReceiptCard({ data }: { data: ReceiptData }) {
 			)}
 
 			{/* Totals */}
-			{(data.feeDisplay || data.totalDisplay) && (
+			{(data.fee || data.total) && (
 				<>
+					<div tw="flex mx-6" style={{ borderTop: '1px dashed #e5e7eb' }} />
 					<div
-						tw="flex mx-5"
-						style={{
-							borderTop: '1px dashed #e5e7eb',
-						}}
-					/>
-					<div
-						tw="flex flex-col px-5 py-4"
-						style={{ fontFamily: 'GeistMono', gap: '6px' }}
+						tw="flex flex-col px-6 py-5"
+						style={{ fontFamily: 'GeistMono', gap: '8px' }}
 					>
-						{data.feeDisplay && (
-							<div tw="flex justify-between text-[13px]">
+						{data.fee && (
+							<div tw="flex w-full justify-between text-[15px]">
 								<span tw="text-gray-400">Fee</span>
-								<span>{data.feeDisplay}</span>
+								<span>{data.fee}</span>
 							</div>
 						)}
-						{data.totalDisplay && (
-							<div tw="flex justify-between text-[13px]">
+						{data.total && (
+							<div tw="flex w-full justify-between text-[15px]">
 								<span tw="text-gray-400">Total</span>
-								<span>{data.totalDisplay}</span>
+								<span>{data.total}</span>
 							</div>
 						)}
 					</div>
@@ -270,243 +308,12 @@ function ReceiptCard({ data }: { data: ReceiptData }) {
 	)
 }
 
-// ============ Data Fetching ============
-
-async function fetchReceiptData(hash: Hex.Hex): Promise<ReceiptData> {
-	const [receipt, _block] = await Promise.all([
-		rpcCall<TransactionReceipt>('eth_getTransactionReceipt', [hash]),
-		rpcCall<{ timestamp: string }>('eth_getBlockByHash', [null, false]).catch(
-			() => null,
-		),
-	])
-
-	if (!receipt) {
-		throw new Error('Transaction receipt not found')
-	}
-
-	// Get block for timestamp
-	const blockData = await rpcCall<{ timestamp: string }>('eth_getBlockByHash', [
-		receipt.blockHash,
-		false,
-	])
-
-	const timestamp = BigInt(blockData?.timestamp || '0')
-	const events = parseEvents(receipt)
-	const { feeDisplay, totalDisplay } = calculateFees(receipt)
-
-	return {
-		blockNumber: BigInt(receipt.blockNumber),
-		sender: receipt.from,
-		hash,
-		timestamp,
-		events,
-		feeDisplay,
-		totalDisplay,
-	}
-}
-
-async function rpcCall<T>(method: string, params: unknown[]): Promise<T> {
-	const response = await fetch(RPC_URL, {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-	})
-	const data = (await response.json()) as {
-		result: T
-		error?: { message: string }
-	}
-	if (data.error) throw new Error(data.error.message)
-	return data.result
-}
-
-// ============ Event Parsing ============
-
-const abi = Object.values(Abis).flat()
-
-function parseEvents(receipt: TransactionReceipt): ParsedEvent[] {
-	const events: ParsedEvent[] = []
-
-	try {
-		const parsedLogs = parseEventLogs({ abi, logs: receipt.logs })
-
-		for (const log of parsedLogs) {
-			const event = parseLogToEvent(log, receipt.from)
-			if (event) events.push(event)
-		}
-	} catch (e) {
-		// If parsing fails, return empty events
-		console.error('Event parsing error:', e)
-	}
-
-	return events
-}
-
-function parseLogToEvent(
-	log: ReturnType<typeof parseEventLogs<typeof abi>>[number],
-	_sender: string,
-): ParsedEvent | null {
-	const { eventName, args } = log
-
-	if (eventName === 'Transfer' || eventName === 'TransferWithMemo') {
-		const { amount, from, to } = args as {
-			amount: bigint
-			from: string
-			to: string
-		}
-
-		// Check if it's a fee transfer
-		if (
-			Address.isEqual(to as Address.Address, Addresses.feeManager) &&
-			!Address.isEqual(from as Address.Address, zeroAddress)
-		) {
-			return null // Skip fee transfers, handled in totals
-		}
-
-		// Check if it's a swap (to stablecoin exchange)
-		if (Address.isEqual(to as Address.Address, Addresses.stablecoinExchange)) {
-			return {
-				type: 'swap',
-				action: 'Swap',
-				details: `${formatAmount(amount)} for ...`,
-				amount: formatPrice(amount),
-			}
-		}
-
-		return {
-			type: 'send',
-			action: 'Send',
-			details: `to ${truncateHash(to)}`,
-			amount: formatPrice(amount),
-		}
-	}
-
-	if (eventName === 'Approval') {
-		const { amount, spender } = args as { amount: bigint; spender: string }
-		return {
-			type: 'approval',
-			action: 'Approve',
-			details: `for ${truncateHash(spender)}`,
-			amount: formatPrice(amount),
-		}
-	}
-
-	if (eventName === 'Mint' && 'amount' in args) {
-		const { amount, to } = args as { amount: bigint; to: string }
-		return {
-			type: 'mint',
-			action: 'Mint',
-			details: `to ${truncateHash(to)}`,
-			amount: formatPrice(amount),
-		}
-	}
-
-	if (eventName === 'Burn' && 'amount' in args) {
-		const { amount, from } = args as { amount: bigint; from: string }
-		return {
-			type: 'burn',
-			action: 'Burn',
-			details: `from ${truncateHash(from)}`,
-			amount: formatPrice(amount),
-		}
-	}
-
-	if (eventName === 'OrderFilled') {
-		const { partialFill, amountFilled } = args as {
-			partialFill: boolean
-			amountFilled: bigint
-		}
-		return {
-			type: 'order_filled',
-			action: partialFill ? 'Partial Fill' : 'Fill',
-			details: String(amountFilled),
-		}
-	}
-
-	return null
-}
-
-function calculateFees(receipt: TransactionReceipt): {
-	feeDisplay?: string
-	totalDisplay?: string
-} {
-	let totalFee = 0n
-
-	try {
-		const parsedLogs = parseEventLogs({ abi, logs: receipt.logs })
-
-		for (const log of parsedLogs) {
-			if (
-				log.eventName === 'Transfer' ||
-				log.eventName === 'TransferWithMemo'
-			) {
-				const { amount, from, to } = log.args as {
-					amount: bigint
-					from: string
-					to: string
-				}
-
-				if (
-					Address.isEqual(to as Address.Address, Addresses.feeManager) &&
-					!Address.isEqual(from as Address.Address, zeroAddress)
-				) {
-					totalFee += amount
-				}
-			}
-		}
-	} catch (e) {
-		console.error('Fee calculation error:', e)
-	}
-
-	if (totalFee === 0n) return {}
-
-	const feeDisplay = formatPrice(totalFee)
-	return { feeDisplay, totalDisplay: feeDisplay }
-}
-
-// ============ Formatting Helpers ============
+// ============ Helpers ============
 
 function truncateHash(hash: string, chars = 4): string {
+	if (!hash || hash === '—') return hash
 	if (hash.length <= chars * 2 + 2) return hash
 	return `${hash.slice(0, chars + 2)}…${hash.slice(-chars)}`
-}
-
-function formatDate(timestamp: bigint): string {
-	const date = new Date(Number(timestamp) * 1000)
-	return date.toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit',
-	})
-}
-
-function formatTime(timestamp: bigint): string {
-	const date = new Date(Number(timestamp) * 1000)
-	return `${date.toLocaleTimeString('en-US', {
-		hour: '2-digit',
-		minute: '2-digit',
-		second: '2-digit',
-		hour12: false,
-	})} GMT+0`
-}
-
-function formatAmount(value: bigint, decimals = 6): string {
-	const formatted = Number(Value.format(value, decimals))
-	if (formatted > 0 && formatted < 0.01) return '<0.01'
-	return new Intl.NumberFormat('en-US', {
-		minimumFractionDigits: 0,
-		maximumFractionDigits: 2,
-	}).format(formatted)
-}
-
-function formatPrice(value: bigint, decimals = 6): string {
-	const formatted = Number(Value.format(value, decimals))
-	if (formatted > 0 && formatted < 0.01) return '<$0.01'
-	return new Intl.NumberFormat('en-US', {
-		style: 'currency',
-		currency: 'USD',
-		minimumFractionDigits: 0,
-		maximumFractionDigits: 2,
-	}).format(formatted)
 }
 
 // ============ Asset Loading ============
@@ -523,20 +330,27 @@ async function loadFonts() {
 }
 
 async function loadImages(c: { env: Cloudflare.Env }) {
-	if (!imageCache.bg || !imageCache.logo) {
-		const [bgRes, logoRes] = await Promise.all([
+	if (!imageCache.bg || !imageCache.logo || !imageCache.receiptLogo) {
+		const [bgRes, logoRes, receiptLogoRes] = await Promise.all([
 			c.env.ASSETS.fetch(new Request('https://assets/bg-template.png')),
 			c.env.ASSETS.fetch(new Request('https://assets/tempo-lockup.png')),
+			c.env.ASSETS.fetch(new Request('https://assets/tempo-receipt.png')),
 		])
 		imageCache = {
 			bg: await bgRes.arrayBuffer(),
 			logo: await logoRes.arrayBuffer(),
+			receiptLogo: await receiptLogoRes.arrayBuffer(),
 		}
 	}
-	const { bg, logo } = imageCache as { bg: ArrayBuffer; logo: ArrayBuffer }
+	const { bg, logo, receiptLogo } = imageCache as {
+		bg: ArrayBuffer
+		logo: ArrayBuffer
+		receiptLogo: ArrayBuffer
+	}
 	return {
 		bg: `data:image/png;base64,${Buffer.from(bg).toString('base64')}`,
 		logo: `data:image/png;base64,${Buffer.from(logo).toString('base64')}`,
+		receiptLogo: `data:image/png;base64,${Buffer.from(receiptLogo).toString('base64')}`,
 	}
 }
 
@@ -571,9 +385,7 @@ app.get('/', async (c) => {
 			height: 630 * devicePixelRatio,
 			format: 'webp',
 			module,
-			fonts: [
-				{ weight: 400, name: 'Inter', data: fonts.mono, style: 'normal' },
-			],
+			fonts: [{ weight: 400, name: 'Inter', data: fonts.mono, style: 'normal' }],
 		},
 	)
 })
