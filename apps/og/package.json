@@ -2,6 +2,7 @@
 	"name": "og",
 	"type": "module",
 	"scripts": {
+		"build": "echo 'No build step needed for Cloudflare Worker'",
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
 		"check:types": "tsgo --project tsconfig.json",
