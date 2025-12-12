@@ -236,7 +236,7 @@ function ReceiptCard({
 
 				{/* Details - right aligned values */}
 				<div
-					tw="flex flex-col flex-1 text-[24px]"
+					tw="flex flex-col flex-1 text-[23.5px]"
 					style={{
 						fontFamily: 'GeistMono',
 						gap: '16px',
@@ -278,7 +278,7 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-6 px-8 text-[24px]"
+						tw="flex flex-col py-6 px-8 text-[23.5px]"
 						style={{
 							fontFamily: 'GeistMono',
 							gap: '16px',
@@ -346,7 +346,7 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-6 px-8 text-[24px]"
+						tw="flex flex-col py-6 px-8 text-[23.5px]"
 						style={{
 							fontFamily: 'GeistMono',
 							gap: '16px',
