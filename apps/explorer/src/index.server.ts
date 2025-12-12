@@ -2,7 +2,7 @@ import * as Sentry from '@sentry/cloudflare'
 import handler, { type ServerEntry } from '@tanstack/react-start/server-entry'
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
-import type { TransactionReceipt } from 'viem'
+import type { Log, TransactionReceipt } from 'viem'
 import { zeroAddress } from 'viem'
 import {
 	type KnownEvent,
@@ -10,6 +10,7 @@ import {
 	parseKnownEvents,
 	preferredEventsFilter,
 } from '#lib/domain/known-events'
+import * as Tip20 from '#lib/domain/tip20'
 
 const OG_BASE_URL = 'https://og.porto.workers.dev'
 const RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
@@ -178,7 +179,7 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 		const feeStr =
 			feeUsd < 0.01 ? '<$0.01' : `$${feeUsd.toFixed(feeUsd < 1 ? 3 : 2)}`
 
-		// Parse known events from receipt
+		// Parse known events from receipt with token metadata
 		let events: KnownEvent[] = []
 		try {
 			const transaction = txJson.result
@@ -187,7 +188,13 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 						input: txJson.result.input as `0x${string}` | undefined,
 					}
 				: undefined
-			events = parseKnownEvents(receipt, { transaction })
+
+			// Get token metadata from logs to resolve symbols
+			const getTokenMetadata = await Tip20.metadataFromLogs(
+				receipt.logs as Log[],
+			)
+
+			events = parseKnownEvents(receipt, { transaction, getTokenMetadata })
 				.filter(preferredEventsFilter)
 				.slice(0, 6) // Limit to 6 events for OG image
 		} catch {
@@ -236,7 +243,9 @@ function buildTxDescription(txData: TxData | null, _hash: string): string {
 	if (eventCount > 0) {
 		const firstEvent = txData.events[0]
 		const actionPart = firstEvent.parts.find((p) => p.type === 'action')
-		const action = actionPart ? String(actionPart.value).toLowerCase() : 'transaction'
+		const action = actionPart
+			? String(actionPart.value).toLowerCase()
+			: 'transaction'
 
 		if (eventCount === 1) {
 			return `A ${action} on ${date} from ${truncateAddress(txData.from)}. View full details on Tempo Explorer.`
