@@ -561,7 +561,6 @@ function EventsSection(props: {
 			}
 			totalItems={groups.length}
 			page={1}
-			isPending={false}
 			itemsLabel="events"
 			itemsPerPage={groups.length}
 			emptyState="No events emitted."

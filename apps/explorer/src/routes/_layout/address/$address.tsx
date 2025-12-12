@@ -263,15 +263,14 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				return undefined
 			})
 
-		const addressTransactionCount = await context.queryClient
+		await context.queryClient
 			.ensureQueryData({
-				queryKey: ['address-transaction-count', address],
+				queryKey: ['account-transaction-count', address],
 				queryFn: () => fetchAddressTransactionsCount(address),
 				staleTime: 30_000,
 			})
 			.catch((error) => {
 				console.error('Fetch txs-count error (non-blocking):', error)
-				return { data: undefined, error: null }
 			})
 
 		return {
@@ -282,7 +281,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			hasContract,
 			contractInfo,
 			transactionsData,
-			addressTransactionCount,
 		}
 	},
 })
@@ -293,12 +291,7 @@ function RouteComponent() {
 	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, limit } = Route.useSearch()
-	const {
-		hasContract,
-		contractInfo,
-		transactionsData,
-		addressTransactionCount,
-	} = Route.useLoaderData()
+	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
 
 	Address.assert(address)
 
@@ -387,7 +380,6 @@ function RouteComponent() {
 				onSectionChange={setActiveSection}
 				contractInfo={contractInfo}
 				initialData={transactionsData}
-				addressTransactionCount={BigInt(addressTransactionCount.data ?? 0)}
 				assetsData={assetsData}
 			/>
 		</div>
@@ -459,97 +451,6 @@ function AccountCardWithTimestamps(props: {
 	)
 }
 
-function SectionsSkeleton({ totalItems }: { totalItems: number }) {
-	const isMobile = useMediaQuery('(max-width: 799px)')
-	return (
-		<Sections
-			mode={isMobile ? 'stacked' : 'tabs'}
-			sections={[
-				{
-					title: 'History',
-					totalItems,
-					itemsLabel: 'transactions',
-					content: (
-						<DataGrid
-							columns={{
-								stacked: [
-									{ label: 'Time', align: 'start', width: '0.5fr' },
-									{ label: 'Hash', align: 'start', width: '1fr' },
-									{ label: 'Total', align: 'end', width: '0.5fr' },
-								],
-								tabs: [
-									{ label: 'Time', align: 'start', width: '0.5fr' },
-									{ label: 'Description', align: 'start', width: '2fr' },
-									{ label: 'Hash', align: 'end', width: '1fr' },
-									{ label: 'Fee', align: 'end', width: '0.5fr' },
-									{ label: 'Total', align: 'end', width: '0.5fr' },
-								],
-							}}
-							items={(mode) =>
-								Array.from(
-									{ length: defaultSearchValues.limit },
-									(_, index) => {
-										const key = `skeleton-${index}`
-										return {
-											cells:
-												mode === 'stacked'
-													? [
-															<div key={`${key}-time`} className="h-[20px]" />,
-															<div key={`${key}-hash`} className="h-[20px]" />,
-															<div key={`${key}-total`} className="h-[20px]" />,
-														]
-													: [
-															<div key={`${key}-time`} className="h-[20px]" />,
-															<div key={`${key}-desc`} className="h-[20px]" />,
-															<div key={`${key}-hash`} className="h-[20px]" />,
-															<div key={`${key}-fee`} className="h-[20px]" />,
-															<div key={`${key}-total`} className="h-[20px]" />,
-														],
-										}
-									},
-								)
-							}
-							totalItems={totalItems}
-							page={1}
-							isPending={false}
-							itemsLabel="transactions"
-							itemsPerPage={defaultSearchValues.limit}
-						/>
-					),
-				},
-				{
-					title: 'Assets',
-					totalItems: 0,
-					itemsLabel: 'assets',
-					content: (
-						<DataGrid
-							columns={{
-								stacked: [
-									{ label: 'Name', align: 'start', width: '1fr' },
-									{ label: 'Balance', align: 'end', width: '0.5fr' },
-								],
-								tabs: [
-									{ label: 'Name', align: 'start', width: '1fr' },
-									{ label: 'Ticker', align: 'start', width: '0.5fr' },
-									{ label: 'Balance', align: 'end', width: '0.5fr' },
-									{ label: 'Value', align: 'end', width: '0.5fr' },
-								],
-							}}
-							items={() => []}
-							totalItems={0}
-							page={1}
-							isPending={false}
-							itemsLabel="assets"
-						/>
-					),
-				},
-			]}
-			activeSection={0}
-			onSectionChange={() => {}}
-		/>
-	)
-}
-
 function useTransactionCount(address: Address.Address) {
 	return useQuery({
 		queryKey: ['account-transaction-count', address],
@@ -566,7 +467,6 @@ function SectionsWrapper(props: {
 	onSectionChange: (index: number) => void
 	contractInfo: ContractInfo | undefined
 	initialData: TransactionsData | undefined
-	addressTransactionCount: bigint
 	assetsData: AssetData[]
 }) {
 	const {
@@ -577,7 +477,6 @@ function SectionsWrapper(props: {
 		onSectionChange,
 		contractInfo,
 		initialData,
-		addressTransactionCount,
 		assetsData,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
@@ -586,14 +485,14 @@ function SectionsWrapper(props: {
 	// Only auto-refresh on page 1 when history tab is active
 	const shouldAutoRefresh = page === 1 && isHistoryTabActive
 
-	const { data, isPending, error } = useQuery({
+	const { data, isPlaceholderData, error } = useQuery({
 		...transactionsQueryOptions({
 			address,
 			page,
 			limit,
 			offset: (page - 1) * limit,
 		}),
-		initialData,
+		initialData: page === 1 ? initialData : undefined,
 		// Override refetch settings reactively based on tab state
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
@@ -611,16 +510,8 @@ function SectionsWrapper(props: {
 	const { data: exactTotalResponse } = useTransactionCount(address)
 	const total = exactTotalResponse?.data ?? approximateTotal
 
-	// Use isPending for SSR-consistent loading state
-	const isLoadingPage = isPending
-
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
-
-	// Only show skeleton if we have no data AND we're loading
-	// Use data presence check to avoid hydration mismatch
-	if (!data && isPending)
-		return <SectionsSkeleton totalItems={Number(addressTransactionCount)} />
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const historyError = error ? (
@@ -662,7 +553,7 @@ function SectionsWrapper(props: {
 				sections={[
 					{
 						title: 'History',
-						totalItems: Number(total),
+						totalItems: data && Number(total),
 						itemsLabel: 'transactions',
 						content: historyError ?? (
 							<DataGrid
@@ -703,9 +594,11 @@ function SectionsWrapper(props: {
 								}
 								totalItems={Number(total)}
 								page={page}
-								isPending={isLoadingPage}
+								fetching={isPlaceholderData}
+								loading={!data}
 								itemsLabel="transactions"
 								itemsPerPage={limit}
+								pagination="simple"
 								emptyState="No transactions found."
 							/>
 						),
@@ -755,7 +648,6 @@ function SectionsWrapper(props: {
 								}
 								totalItems={assets.length}
 								page={1}
-								isPending={false}
 								itemsLabel="assets"
 								itemsPerPage={assets.length}
 								emptyState="No assets found."

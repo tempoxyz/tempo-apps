@@ -38,7 +38,6 @@ function Component() {
 								items={() => []}
 								totalItems={0}
 								page={1}
-								isPending={false}
 								itemsLabel="transactions"
 								emptyState="No transactions found."
 							/>
