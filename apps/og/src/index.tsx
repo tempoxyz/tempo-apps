@@ -100,21 +100,25 @@ app.get('/tx/:hash', async (c) => {
 			}
 		}
 
-		// Fetch fonts and background
-		const [
-			fontMonoData,
-			fontInterData,
-			fontInterBoldData,
-			bgImageData,
-			tempoLockupData,
-		] = await Promise.all([
+		// Fetch fonts
+		const [fontMonoData, fontInterData, fontInterBoldData] = await Promise.all([
 			fetch(FONT_MONO_URL).then((res) => res.arrayBuffer()),
 			fetch(FONT_INTER_URL).then((res) => res.arrayBuffer()),
 			fetch(FONT_INTER_BOLD_URL).then((res) => res.arrayBuffer()),
-			fetch(`${baseUrl}/bg-template.png`).then((res) => res.arrayBuffer()),
-			fetch(`${baseUrl}/tempo-lockup.png`).then((res) => res.arrayBuffer()),
 		])
 
+		// Fetch images using ASSETS binding (avoids self-fetch issues)
+		const bgImageResponse = await c.env.ASSETS.fetch(
+			new Request('https://assets/bg-template.png'),
+		)
+		const tempoLockupResponse = await c.env.ASSETS.fetch(
+			new Request('https://assets/tempo-lockup.png'),
+		)
+
+		const bgImageData = await bgImageResponse.arrayBuffer()
+		const tempoLockupData = await tempoLockupResponse.arrayBuffer()
+
+		// Convert to base64 data URLs
 		const bgImageBase64 = `data:image/png;base64,${Buffer.from(bgImageData).toString('base64')}`
 		const tempoLockupBase64 = `data:image/png;base64,${Buffer.from(tempoLockupData).toString('base64')}`
 
@@ -131,8 +135,8 @@ app.get('/tx/:hash', async (c) => {
 				<div
 					tw="absolute flex"
 					style={{
-						left: '56px',
-						top: '40px',
+						left: '32px',
+						top: '16px',
 						bottom: '0',
 					}}
 				>
@@ -141,15 +145,16 @@ app.get('/tx/:hash', async (c) => {
 							src={receiptScreenshot}
 							tw="rounded-t-2xl shadow-2xl"
 							style={{
-								width: '520px',
-								height: 'auto',
+								width: '580px',
 								boxShadow: '0 8px 60px rgba(0,0,0,0.15)',
 							}}
 						/>
 					) : (
 						<div
-							tw="flex flex-col bg-white rounded-t-2xl shadow-2xl items-center justify-center text-gray-400 w-full h-full"
+							tw="flex flex-col bg-white rounded-t-2xl shadow-2xl items-center justify-center text-gray-400"
 							style={{
+								width: '580px',
+								height: '620px',
 								boxShadow: '0 8px 60px rgba(0,0,0,0.15)',
 							}}
 						>
@@ -161,26 +166,21 @@ app.get('/tx/:hash', async (c) => {
 					)}
 				</div>
 
-				{/* Right side branding - positioned with margin from receipt */}
+				{/* Right side branding */}
 				<div
-					tw="absolute flex flex-col gap-5 ml-12"
+					tw="absolute flex flex-col gap-4"
 					style={{
-						right: '60px',
+						right: '40px',
 						top: '120px',
-						left: '580px',
+						left: '660px',
 					}}
 				>
-					{/* Tempo lockup logo - 2x size */}
-					<div tw="flex">
-						<img
-							src={tempoLockupBase64}
-							style={{ width: '280px', height: '66px' }}
-						/>
-					</div>
+					{/* Tempo lockup logo */}
+					<img src={tempoLockupBase64} tw="mb-2" width={120} height={28} />
 
-					{/* CTA text - 2x size */}
+					{/* CTA text */}
 					<div
-						tw="flex flex-col text-[40px] text-gray-600 leading-tight"
+						tw="flex flex-col text-[36px] text-gray-600 leading-tight"
 						style={{
 							fontFamily: 'Inter',
 							letterSpacing: '-0.02em',
@@ -190,7 +190,7 @@ app.get('/tx/:hash', async (c) => {
 						<span>transaction using</span>
 						<div tw="flex items-center gap-3">
 							<span>the explorer</span>
-							<span tw="text-black text-[48px]">→</span>
+							<span tw="text-black text-[42px]">→</span>
 						</div>
 					</div>
 				</div>
