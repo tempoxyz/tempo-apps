@@ -297,7 +297,19 @@ function formatAmount(
 ): string {
 	const decimals = amount.decimals ?? 18
 	const value = Number(amount.value) / 10 ** decimals
-	const formatted = value < 0.01 ? '<0.01' : value.toFixed(2)
+	// Show more precision for small amounts
+	let formatted: string
+	if (value === 0) {
+		formatted = '0'
+	} else if (value < 0.001) {
+		formatted = '<0.001'
+	} else if (value < 1) {
+		formatted = value.toFixed(4).replace(/\.?0+$/, '') // Up to 4 decimals, trim trailing zeros
+	} else if (value < 100) {
+		formatted = value.toFixed(2)
+	} else {
+		formatted = value.toLocaleString('en-US', { maximumFractionDigits: 2 })
+	}
 	return includeSymbol && amount.symbol
 		? `${formatted} ${amount.symbol}`
 		: formatted
@@ -318,7 +330,12 @@ function formatEventPart(part: KnownEventPart): string {
 		case 'number': {
 			if (Array.isArray(part.value)) {
 				const [val, dec] = part.value
-				return (Number(val) / 10 ** dec).toFixed(2)
+				const num = Number(val) / 10 ** dec
+				// Show more precision for small numbers
+				if (num < 1) {
+					return num.toFixed(4).replace(/\.?0+$/, '')
+				}
+				return num.toFixed(2)
 			}
 			return part.value.toString()
 		}
