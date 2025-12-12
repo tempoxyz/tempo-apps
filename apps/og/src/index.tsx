@@ -290,28 +290,38 @@ function ReceiptCard({
 									alignItems: 'flex-start',
 								}}
 							>
-								{/* Left: fixed-width columns for alignment */}
-								<div tw="flex" style={{ flex: 1, alignItems: 'flex-start' }}>
-									{/* Number - fixed width, with padding to match action badge */}
+								{/* Left: number + action + details */}
+								<div
+									tw="flex"
+									style={{
+										flex: 1,
+										alignItems: 'flex-start',
+										gap: '6px',
+										flexWrap: 'wrap',
+									}}
+								>
+									{/* Number */}
 									<span
-										tw="text-gray-400 shrink-0 py-1"
-										style={{ width: '28px' }}
+										tw="text-gray-400 shrink-0"
+										style={{ lineHeight: '28px' }}
 									>
 										{index + 1}.
 									</span>
-									{/* Action - fixed width */}
+									{/* Action badge */}
 									<span
 										tw="flex bg-gray-100 px-2 py-1 rounded shrink-0"
-										style={{ width: '72px', justifyContent: 'center' }}
+										style={{ lineHeight: '20px' }}
 									>
 										{event.action}
 									</span>
-									{/* Details - wraps internally */}
+									{/* Details - wraps to new line */}
 									{event.details && <EventDetails details={event.details} />}
 								</div>
-								{/* Amount stays on right, with padding to align with first line */}
+								{/* Amount on right */}
 								{event.amount && (
-									<span tw="shrink-0 py-1">{event.amount}</span>
+									<span tw="shrink-0" style={{ lineHeight: '28px' }}>
+										{event.amount}
+									</span>
 								)}
 							</div>
 						))}
@@ -420,14 +430,15 @@ function EventDetails({ details }: { details: string }) {
 
 	return (
 		<span
-			tw="flex py-1"
+			tw="flex"
 			style={{
 				flexWrap: 'wrap',
-				gap: '4px',
+				gap: '6px',
 				flex: 1,
 				minWidth: 0,
-				marginLeft: '8px',
-				alignItems: 'center',
+				alignItems: 'flex-start',
+				alignContent: 'flex-start',
+				lineHeight: '28px',
 			}}
 		>
 			{groups.map((part, idx) => (
