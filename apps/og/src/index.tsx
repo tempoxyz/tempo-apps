@@ -302,7 +302,7 @@ function ReceiptCard({
 									style={{
 										flex: 1,
 										alignItems: 'flex-start',
-										gap: '6px',
+										gap: '8px',
 										flexWrap: 'wrap',
 									}}
 								>
@@ -440,7 +440,7 @@ function EventDetails({ details }: { details: string }) {
 			tw="flex"
 			style={{
 				flexWrap: 'wrap',
-				gap: '6px',
+				gap: '8px',
 				flex: 1,
 				minWidth: 0,
 				alignItems: 'flex-start',
