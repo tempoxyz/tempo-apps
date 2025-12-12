@@ -351,6 +351,7 @@ app.get('/address/:address', async (c) => {
 			created: params.get('created') || '—',
 			feeToken: params.get('feeToken') || '—',
 			tokensHeld: tokensParam ? tokensParam.split(',').filter(Boolean) : [],
+			isContract: params.get('isContract') === 'true',
 		}
 
 		// Fetch assets
@@ -449,6 +450,7 @@ interface AddressData {
 	created: string
 	feeToken: string
 	tokensHeld: string[] // Array of token symbols
+	isContract?: boolean // Whether this is a contract address
 }
 
 interface ReceiptData {
@@ -778,7 +780,7 @@ function AddressCard({ data }: { data: AddressData }) {
 					tw="text-gray-400 text-[25px]"
 					style={{ fontFamily: 'GeistMono' }}
 				>
-					Address
+					{data.isContract ? 'Contract' : 'Address'}
 				</span>
 				<div
 					tw="flex flex-col items-end text-[25px] text-blue-500"
@@ -852,18 +854,21 @@ function AddressCard({ data }: { data: AddressData }) {
 						}}
 					/>
 
-					<div tw="flex flex-col w-full px-8 py-6" style={{ gap: '12px' }}>
+					<div
+						tw="flex flex-col px-8 py-6"
+						style={{ gap: '12px', width: '100%' }}
+					>
 						<span
-							tw="text-gray-400 text-[23.5px]"
+							tw="text-gray-400 text-[25px]"
 							style={{ fontFamily: 'GeistMono' }}
 						>
 							Tokens Held
 						</span>
-						<div tw="flex flex-wrap w-full" style={{ gap: '8px' }}>
+						<div tw="flex flex-wrap" style={{ gap: '10px', width: '100%' }}>
 							<TokenBadges tokens={data.tokensHeld.slice(0, 12)} />
 							{data.tokensHeld.length > 12 && (
 								<span
-									tw="flex px-3 py-1 bg-gray-100 rounded text-gray-500 text-[18px]"
+									tw="flex px-3 py-1 bg-gray-100 rounded text-gray-500 text-[20px]"
 									style={{ fontFamily: 'GeistMono' }}
 								>
 									+{data.tokensHeld.length - 12}

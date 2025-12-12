@@ -686,12 +686,32 @@ interface AddressData {
 	created: string
 	feeToken: string
 	tokensHeld: string[]
+	isContract: boolean
 }
 
 async function fetchAddressData(address: string): Promise<AddressData | null> {
 	try {
 		const tokenAddress = address.toLowerCase() as Address.Address
 		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
+
+		// Check if address is a contract by fetching code
+		let isContract = false
+		try {
+			const codeRes = await fetch(RPC_URL, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					method: 'eth_getCode',
+					params: [address, 'latest'],
+					id: 1,
+				}),
+			})
+			const codeJson = (await codeRes.json()) as { result?: string }
+			isContract = codeJson.result !== undefined && codeJson.result !== '0x'
+		} catch {
+			// Ignore errors, assume not a contract
+		}
 
 		// Get all transfers involving this address
 		const [incoming, outgoing] = await Promise.all([
@@ -798,6 +818,7 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			created,
 			feeToken: tokensHeld[0] || '—',
 			tokensHeld,
+			isContract,
 		}
 	} catch (e) {
 		console.error('Failed to fetch address data:', e)
@@ -836,6 +857,7 @@ function buildAddressDescription(
 async function buildAddressOgData(address: string): Promise<{
 	url: string
 	description: string
+	isContract: boolean
 }> {
 	const addressData = await fetchAddressData(address)
 
@@ -849,11 +871,15 @@ async function buildAddressOgData(address: string): Promise<{
 		if (addressData.tokensHeld.length > 0) {
 			params.set('tokens', addressData.tokensHeld.join(','))
 		}
+		if (addressData.isContract) {
+			params.set('isContract', 'true')
+		}
 	}
 
 	return {
 		url: `${OG_BASE_URL}/address/${address}?${params.toString()}`,
 		description: buildAddressDescription(addressData, address),
+		isContract: addressData?.isContract ?? false,
 	}
 }
 
@@ -931,7 +957,10 @@ export default Sentry.withSentry(
 				if (response.headers.get('content-type')?.includes('text/html')) {
 					return new HTMLRewriter()
 						.on('meta', new OgMetaRemover())
-						.on('head', new OgMetaInjector(ogData.url, title, ogData.description))
+						.on(
+							'head',
+							new OgMetaInjector(ogData.url, title, ogData.description),
+						)
 						.transform(response)
 				}
 			}
@@ -944,7 +973,8 @@ export default Sentry.withSentry(
 			) {
 				const address = url.pathname.split('/address/')[1]
 				const ogData = await buildAddressOgData(address)
-				const title = `Address ${address.slice(0, 6)}...${address.slice(-4)} ⋅ Tempo Explorer`
+				const label = ogData.isContract ? 'Contract' : 'Address'
+				const title = `${label} ${address.slice(0, 6)}...${address.slice(-4)} ⋅ Tempo Explorer`
 
 				// Use HTMLRewriter to remove existing OG tags and inject address-specific ones
 				return new HTMLRewriter()
