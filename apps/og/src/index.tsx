@@ -130,7 +130,7 @@ app.get('/tx/:hash', async (c) => {
 				{/* Right side branding */}
 				<div
 					tw="absolute flex flex-col"
-					style={{ right: '56px', top: '100px', left: '720px', gap: '24px' }}
+					style={{ right: '56px', top: '100px', left: '760px', gap: '24px' }}
 				>
 					<img
 						src={images.logo}
@@ -236,7 +236,7 @@ function ReceiptCard({
 
 				{/* Details - right aligned values */}
 				<div
-					tw="flex flex-col flex-1 text-[30px]"
+					tw="flex flex-col flex-1 text-[26px]"
 					style={{ fontFamily: 'GeistMono', gap: '4px' }}
 				>
 					<div tw="flex w-full justify-between">
@@ -274,27 +274,27 @@ function ReceiptCard({
 					>
 						{data.events.slice(0, 4).map((event, index) => (
 							<div key={`${event.action}-${index}`} tw="flex flex-col">
-								<div tw="flex w-full justify-between items-center text-[28px]">
+								<div tw="flex w-full justify-between items-center text-[24px]">
 									<div tw="flex items-center" style={{ gap: '10px' }}>
 										<span tw="text-gray-400">{index + 1}.</span>
-										<span tw="flex bg-gray-100 px-3 py-1 text-[26px] rounded">
+										<span tw="flex bg-gray-100 px-3 py-1 text-[22px] rounded">
 											{event.action}
 										</span>
 										{event.details && (
-											<span tw="text-emerald-600 text-[26px]">
+											<span tw="text-emerald-600 text-[22px]">
 												{event.details}
 											</span>
 										)}
 									</div>
 									{event.amount && (
-										<span tw="text-[28px] shrink-0 ml-4 text-right">
+										<span tw="text-[24px] shrink-0 ml-4 text-right">
 											{event.amount}
 										</span>
 									)}
 								</div>
 								{event.message && (
 									<div
-										tw="flex text-gray-400 text-[24px] mt-1"
+										tw="flex text-gray-400 text-[20px] mt-1"
 										style={{ marginLeft: '36px' }}
 									>
 										<span tw="mr-2">|</span>
@@ -307,45 +307,39 @@ function ReceiptCard({
 				</>
 			)}
 
-			{/* Fee row */}
-			{data.fee && (
+			{/* Fee and Total rows */}
+			{(data.fee || data.total) && (
 				<>
 					<div tw="flex mx-8" style={{ borderTop: '2px dashed #e5e7eb' }} />
 					<div
-						tw="flex w-full px-8 py-4 justify-between items-center text-[28px]"
-						style={{ fontFamily: 'GeistMono' }}
+						tw="flex flex-col px-8 py-4"
+						style={{ fontFamily: 'GeistMono', gap: '8px' }}
 					>
-						<div tw="flex items-center" style={{ gap: '8px' }}>
-							<span tw="text-gray-400">Fee</span>
-							{data.feeToken && (
-								<span tw="text-emerald-600">({data.feeToken})</span>
-							)}
-						</div>
-						<div tw="flex items-center text-right" style={{ gap: '8px' }}>
-							{data.feePayer && (
-								<>
-									<span tw="text-emerald-600">{data.feePayer}</span>
-									<span tw="text-gray-400">paid</span>
-								</>
-							)}
-							<span>{data.fee}</span>
-						</div>
-					</div>
-				</>
-			)}
-
-			{/* Total row */}
-			{data.total && (
-				<>
-					{!data.fee && (
-						<div tw="flex mx-8" style={{ borderTop: '2px dashed #e5e7eb' }} />
-					)}
-					<div
-						tw="flex w-full px-8 py-4 justify-between items-center text-[28px]"
-						style={{ fontFamily: 'GeistMono' }}
-					>
-						<span tw="text-gray-400">Total</span>
-						<span tw="font-medium text-right">{data.total}</span>
+						{data.fee && (
+							<div tw="flex w-full justify-between items-center text-[22px]">
+								<div tw="flex items-center" style={{ gap: '6px' }}>
+									<span tw="text-gray-400">Fee</span>
+									{data.feeToken && (
+										<span tw="text-emerald-600">({data.feeToken})</span>
+									)}
+								</div>
+								<div tw="flex items-center" style={{ gap: '6px' }}>
+									{data.feePayer && (
+										<>
+											<span tw="text-emerald-600">{data.feePayer}</span>
+											<span tw="text-gray-400">paid</span>
+										</>
+									)}
+									<span>{data.fee}</span>
+								</div>
+							</div>
+						)}
+						{data.total && (
+							<div tw="flex w-full justify-between items-center text-[22px]">
+								<span tw="text-gray-400">Total</span>
+								<span tw="font-medium">{data.total}</span>
+							</div>
+						)}
 					</div>
 				</>
 			)}
