@@ -495,7 +495,7 @@ function ReceiptCard({
 			{/* Header */}
 			<div
 				tw="flex w-full pr-8 pt-10 pb-8"
-				style={{ gap: '28px', paddingLeft: '48px' }}
+				style={{ gap: '27px', paddingLeft: '48px' }}
 			>
 				{/* Tempo Receipt logo */}
 				<div tw="flex shrink-0 items-start">
@@ -508,7 +508,7 @@ function ReceiptCard({
 
 				{/* Details - condensed */}
 				<div
-					tw="flex flex-col flex-1 text-[28px]"
+					tw="flex flex-col flex-1 text-[27px]"
 					style={{
 						fontFamily: 'GeistMono',
 						gap: '20px',
@@ -553,10 +553,10 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-6 pr-8 text-[28px]"
+						tw="flex flex-col py-6 pr-8 text-[27px]"
 						style={{
 							fontFamily: 'GeistMono',
-							gap: '28px',
+							gap: '27px',
 							width: '100%',
 							letterSpacing: '-0.02em',
 						}}
@@ -632,7 +632,7 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col pr-8 pb-12 text-[28px]"
+						tw="flex flex-col pr-8 pb-12 text-[27px]"
 						style={{
 							fontFamily: 'GeistMono',
 							gap: '22px',
@@ -731,10 +731,10 @@ function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 
 			{/* Details */}
 			<div
-				tw="flex flex-col pr-10 py-10 text-[28px]"
+				tw="flex flex-col pr-10 py-10 text-[29px]"
 				style={{
 					fontFamily: 'GeistMono',
-					gap: '28px',
+					gap: '29px',
 					letterSpacing: '-0.02em',
 					paddingLeft: '56px',
 				}}
@@ -831,13 +831,13 @@ function AddressCard({ data }: { data: AddressData }) {
 				style={{ paddingLeft: '56px' }}
 			>
 				<span
-					tw="text-gray-500 text-[28px]"
+					tw="text-gray-500 text-[29px]"
 					style={{ fontFamily: 'GeistMono' }}
 				>
 					{data.isContract ? 'Contract' : 'Address'}
 				</span>
 				<div
-					tw="flex flex-col items-end text-[28px] text-blue-500"
+					tw="flex flex-col items-end text-[29px] text-blue-500"
 					style={{ fontFamily: 'GeistMono', lineHeight: '1.3' }}
 				>
 					<span>{addrLine1}</span>
@@ -858,7 +858,7 @@ function AddressCard({ data }: { data: AddressData }) {
 
 			{/* Details */}
 			<div
-				tw="flex flex-col pr-10 py-8 text-[28px]"
+				tw="flex flex-col pr-10 py-8 text-[29px]"
 				style={{
 					fontFamily: 'GeistMono',
 					gap: '22px',
