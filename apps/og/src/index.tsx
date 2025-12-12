@@ -830,9 +830,9 @@ function TokenBadges({
 
 	return (
 		<>
-			{displayTokens.map((token, i) => (
+			{displayTokens.map((token) => (
 				<span
-					key={`${token}-${i}`}
+					key={token}
 					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
 					style={{
 						fontFamily: 'GeistMono',
