@@ -273,7 +273,7 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-5 px-8 text-[23px]"
+						tw="flex flex-col py-6 px-8 text-[22px]"
 						style={{
 							fontFamily: 'GeistMono',
 							gap: '12px',
@@ -283,16 +283,20 @@ function ReceiptCard({
 						{data.events.slice(0, 4).map((event, index) => (
 							<div
 								key={`${event.action}-${index}`}
-								tw="flex items-start"
+								tw="flex"
 								style={{
 									width: '100%',
 									justifyContent: 'space-between',
+									alignItems: 'flex-start',
 								}}
 							>
 								{/* Left: fixed-width columns for alignment */}
-								<div tw="flex items-start" style={{ flex: 1 }}>
-									{/* Number - fixed width */}
-									<span tw="text-gray-400 shrink-0" style={{ width: '28px' }}>
+								<div tw="flex" style={{ flex: 1, alignItems: 'flex-start' }}>
+									{/* Number - fixed width, with padding to match action badge */}
+									<span
+										tw="text-gray-400 shrink-0 py-1"
+										style={{ width: '28px' }}
+									>
 										{index + 1}.
 									</span>
 									{/* Action - fixed width */}
@@ -305,8 +309,10 @@ function ReceiptCard({
 									{/* Details - wraps internally */}
 									{event.details && <EventDetails details={event.details} />}
 								</div>
-								{/* Amount stays on right */}
-								{event.amount && <span tw="shrink-0">{event.amount}</span>}
+								{/* Amount stays on right, with padding to align with first line */}
+								{event.amount && (
+									<span tw="shrink-0 py-1">{event.amount}</span>
+								)}
 							</div>
 						))}
 					</div>
@@ -324,7 +330,7 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-5 px-8 text-[23px]"
+						tw="flex flex-col py-6 px-8 text-[22px]"
 						style={{
 							fontFamily: 'GeistMono',
 							gap: '12px',
@@ -388,16 +394,17 @@ function EventDetails({ details }: { details: string }) {
 		else if (
 			word?.match(/^[\d.]+$/) &&
 			words[i + 1] &&
-			!['for', 'to', 'from'].includes(words[i + 1])
+			!['for', 'to', 'from'].includes(words[i + 1] as string)
 		) {
-			let assetText = `${word} ${words[i + 1]}`
+			// Asset: "10.00 pathUSD"
+			groups.push({ text: `${word} ${words[i + 1]}`, type: 'asset' })
 			i += 2
-			// Include following connector word (for, to, from) to prevent orphan wrap
-			if (words[i] && ['for', 'to', 'from'].includes(words[i])) {
-				assetText += ` ${words[i]}`
+			// Add following connector word (for, to, from) as normal/gray
+			const connector = words[i]
+			if (connector && ['for', 'to', 'from'].includes(connector)) {
+				groups.push({ text: connector, type: 'normal' })
 				i++
 			}
-			groups.push({ text: assetText, type: 'asset' })
 		}
 		// Connector word at start (like "to 0x...")
 		else if (['for', 'to', 'from'].includes(word || '')) {
@@ -413,13 +420,14 @@ function EventDetails({ details }: { details: string }) {
 
 	return (
 		<span
-			tw="flex items-start"
+			tw="flex py-1"
 			style={{
 				flexWrap: 'wrap',
 				gap: '4px',
 				flex: 1,
 				minWidth: 0,
 				marginLeft: '8px',
+				alignItems: 'center',
 			}}
 		>
 			{groups.map((part, idx) => (
