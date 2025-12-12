@@ -37,9 +37,12 @@ class OgMetaInjector {
 			`<meta name="twitter:image" content="${this.ogImageUrl}" />`,
 			{ html: true },
 		)
-		element.prepend('<meta name="twitter:card" content="summary_large_image" />', {
-			html: true,
-		})
+		element.prepend(
+			'<meta name="twitter:card" content="summary_large_image" />',
+			{
+				html: true,
+			},
+		)
 		element.prepend('<meta property="og:image:height" content="630" />', {
 			html: true,
 		})
@@ -63,6 +66,8 @@ interface TxData {
 	blockNumber: string
 	from: string
 	timestamp: number
+	fee: string
+	total: string
 }
 
 async function fetchTxData(hash: string): Promise<TxData | null> {
@@ -93,15 +98,34 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 
 		const [txJson, receiptJson] = await Promise.all([
 			txRes.json() as Promise<{
-				result?: { blockNumber?: string; from?: string }
+				result?: { blockNumber?: string; from?: string; gasPrice?: string }
 			}>,
-			receiptRes.json() as Promise<{ result?: { from?: string } }>,
+			receiptRes.json() as Promise<{
+				result?: {
+					from?: string
+					gasUsed?: string
+					effectiveGasPrice?: string
+				}
+			}>,
 		])
 
 		const blockNumber = txJson.result?.blockNumber
 		const from = receiptJson.result?.from || txJson.result?.from
 
 		if (!blockNumber || !from) return null
+
+		// Calculate fee from gasUsed * effectiveGasPrice
+		const gasUsed = receiptJson.result?.gasUsed
+			? BigInt(receiptJson.result.gasUsed)
+			: 0n
+		const gasPrice = receiptJson.result?.effectiveGasPrice
+			? BigInt(receiptJson.result.effectiveGasPrice)
+			: txJson.result?.gasPrice
+				? BigInt(txJson.result.gasPrice)
+				: 0n
+		const feeWei = gasUsed * gasPrice
+		// Convert to USD (assuming 18 decimals and ~1 USD per token for simplicity)
+		const feeUsd = Number(feeWei) / 1e18
 
 		// Fetch block for timestamp
 		const blockRes = await fetch(RPC_URL, {
@@ -121,10 +145,16 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 			? Number.parseInt(blockJson.result.timestamp, 16) * 1000
 			: Date.now()
 
+		// Format fee string
+		const feeStr =
+			feeUsd < 0.01 ? '<$0.01' : `$${feeUsd.toFixed(feeUsd < 1 ? 3 : 2)}`
+
 		return {
 			blockNumber: Number.parseInt(blockNumber, 16).toString(),
 			from,
 			timestamp,
+			fee: feeStr,
+			total: feeStr, // For now, total = fee (no value transfers counted)
 		}
 	} catch {
 		return null
@@ -156,6 +186,8 @@ async function buildOgUrl(hash: string): Promise<string> {
 		params.set('sender', txData.from)
 		params.set('date', formatDate(txData.timestamp))
 		params.set('time', formatTime(txData.timestamp))
+		params.set('fee', txData.fee)
+		params.set('total', txData.total)
 	}
 
 	return `${OG_BASE_URL}/tx/${hash}?${params.toString()}`
