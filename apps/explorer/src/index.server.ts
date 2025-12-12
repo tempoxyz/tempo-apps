@@ -348,18 +348,20 @@ function formatAmount(
 ): string {
 	const decimals = amount.decimals ?? 18
 	const value = Number(amount.value) / 10 ** decimals
-	// Show more precision for small amounts
+	// Always show 2 decimal places for consistency
 	let formatted: string
 	if (value === 0) {
-		formatted = '0'
-	} else if (value < 0.001) {
-		formatted = '<0.001'
-	} else if (value < 1) {
-		formatted = value.toFixed(4).replace(/\.?0+$/, '') // Up to 4 decimals, trim trailing zeros
-	} else if (value < 100) {
-		formatted = value.toFixed(2)
+		formatted = '0.00'
+	} else if (value < 0.01) {
+		formatted = '<0.01'
+	} else if (value >= 1000000000) {
+		formatted = `${(value / 1000000000).toFixed(2)}B`
+	} else if (value >= 1000000) {
+		formatted = `${(value / 1000000).toFixed(2)}M`
+	} else if (value >= 1000) {
+		formatted = `${(value / 1000).toFixed(2)}K`
 	} else {
-		formatted = value.toLocaleString('en-US', { maximumFractionDigits: 2 })
+		formatted = value.toFixed(2)
 	}
 	return includeSymbol && amount.symbol
 		? `${formatted} ${amount.symbol}`

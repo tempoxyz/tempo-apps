@@ -126,29 +126,26 @@ app.get('/tx/:hash', async (c) => {
 				/>
 
 				{/* Receipt */}
-				<div
-					tw="absolute flex"
-					style={{ left: '40px', top: '24px', bottom: '0' }}
-				>
+				<div tw="absolute flex" style={{ left: '0', top: '40px' }}>
 					<ReceiptCard data={receiptData} receiptLogo={images.receiptLogo} />
 				</div>
 
 				{/* Right side branding */}
 				<div
-					tw="absolute flex flex-col ml-16"
-					style={{ right: '40px', top: '80px', left: '780px', gap: '16px' }}
+					tw="absolute flex flex-col ml-8"
+					style={{ right: '56px', top: '80px', left: '790px', gap: '20px' }}
 				>
 					<img
 						src={images.logo}
 						alt="Tempo"
-						style={{ width: '220px', height: '52px' }}
+						style={{ width: '260px', height: '61px' }}
 					/>
 					<div
-						tw="flex flex-col text-[28px] text-gray-500"
+						tw="flex flex-col text-[32px] text-gray-500"
 						style={{
 							fontFamily: 'Inter',
 							letterSpacing: '-0.02em',
-							lineHeight: '1.4',
+							lineHeight: '1.35',
 						}}
 					>
 						<span>View more about</span>
@@ -250,14 +247,14 @@ app.get('/token/:address', async (c) => {
 				/>
 
 				{/* Token Card */}
-				<div tw="absolute flex" style={{ left: '56px', top: '60px' }}>
+				<div tw="absolute flex" style={{ left: '0', top: '40px' }}>
 					<TokenCard data={tokenData} icon={tokenIcon || images.nullIcon} />
 				</div>
 
 				{/* Right side branding - same as tx version */}
 				<div
-					tw="absolute flex flex-col ml-16"
-					style={{ right: '48px', top: '100px', left: '700px', gap: '20px' }}
+					tw="absolute flex flex-col ml-8"
+					style={{ right: '56px', top: '80px', left: '790px', gap: '20px' }}
 				>
 					<img
 						src={images.logo}
@@ -265,19 +262,16 @@ app.get('/token/:address', async (c) => {
 						style={{ width: '260px', height: '61px' }}
 					/>
 					<div
-						tw="flex flex-col text-[34px] text-gray-500"
+						tw="flex flex-col text-[32px] text-gray-500"
 						style={{
 							fontFamily: 'Inter',
 							letterSpacing: '-0.02em',
 							lineHeight: '1.35',
 						}}
 					>
-						<span>View more about this</span>
-						<span>asset using the</span>
-						<div tw="flex items-center" style={{ gap: '8px' }}>
-							<span>explorer</span>
-							<span tw="text-gray-500 text-[34px]">→</span>
-						</div>
+						<span>View more about</span>
+						<span>this asset using</span>
+						<span>the explorer →</span>
 					</div>
 				</div>
 			</div>,
@@ -369,14 +363,14 @@ app.get('/address/:address', async (c) => {
 				/>
 
 				{/* Address Card */}
-				<div tw="absolute flex" style={{ left: '56px', top: '60px' }}>
+				<div tw="absolute flex" style={{ left: '0', top: '40px' }}>
 					<AddressCard data={addressData} />
 				</div>
 
 				{/* Right side branding - same as tx version */}
 				<div
-					tw="absolute flex flex-col ml-16"
-					style={{ right: '48px', top: '100px', left: '700px', gap: '20px' }}
+					tw="absolute flex flex-col ml-8"
+					style={{ right: '56px', top: '80px', left: '790px', gap: '20px' }}
 				>
 					<img
 						src={images.logo}
@@ -384,19 +378,16 @@ app.get('/address/:address', async (c) => {
 						style={{ width: '260px', height: '61px' }}
 					/>
 					<div
-						tw="flex flex-col text-[34px] text-gray-500"
+						tw="flex flex-col text-[32px] text-gray-500"
 						style={{
 							fontFamily: 'Inter',
 							letterSpacing: '-0.02em',
 							lineHeight: '1.35',
 						}}
 					>
-						<span>View more about this</span>
-						<span>address using the</span>
-						<div tw="flex items-center" style={{ gap: '8px' }}>
-							<span>explorer</span>
-							<span tw="text-gray-500 text-[34px]">→</span>
-						</div>
+						<span>View more about</span>
+						<span>this address using</span>
+						<span>the explorer →</span>
 					</div>
 				</div>
 			</div>,
@@ -489,47 +480,66 @@ function ReceiptCard({
 
 	return (
 		<div
-			tw="flex flex-col bg-white rounded-t-3xl shadow-2xl"
+			tw="flex flex-col bg-white"
 			style={{
-				width: '720px',
-				boxShadow: '0 8px 60px rgba(0,0,0,0.12)',
+				width: '750px',
+				maxWidth: '750px',
+				boxShadow:
+					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
+				borderTopRightRadius: '24px',
+				borderBottomRightRadius: '24px',
+				borderTopLeftRadius: '0',
+				borderBottomLeftRadius: '0',
 			}}
 		>
 			{/* Header */}
-			<div tw="flex w-full px-8 pt-8 pb-6" style={{ gap: '24px' }}>
+			<div
+				tw="flex w-full pr-8 pt-10 pb-8"
+				style={{ gap: '28px', paddingLeft: '48px' }}
+			>
 				{/* Tempo Receipt logo */}
 				<div tw="flex shrink-0 items-start">
 					<img
 						src={receiptLogo}
 						alt="Tempo Receipt"
-						style={{ width: '170px', height: 'auto' }}
+						style={{ width: '190px', height: 'auto' }}
 					/>
 				</div>
 
 				{/* Details - condensed */}
 				<div
-					tw="flex flex-col flex-1 text-[25px]"
+					tw="flex flex-col flex-1 text-[28px]"
 					style={{
 						fontFamily: 'GeistMono',
 						gap: '20px',
-						marginLeft: '12px',
+						marginLeft: '16px',
 						letterSpacing: '-0.02em',
 					}}
 				>
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-400">Block</span>
+						<span tw="text-gray-500">Block</span>
 						<span tw="text-emerald-600">#{data.blockNumber}</span>
 					</div>
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-400">Sender</span>
-						<span tw="text-emerald-600">{truncateHash(data.sender, 6)}</span>
+						<span tw="text-gray-500">Sender</span>
+						<span tw="text-blue-500">{truncateHash(data.sender, 6)}</span>
 					</div>
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-400">Date</span>
+						<span tw="text-gray-500">Date</span>
 						<span>{when}</span>
 					</div>
 				</div>
 			</div>
+
+			{/* Divider */}
+			<div
+				tw="flex mr-10"
+				style={{
+					height: '1px',
+					backgroundColor: '#d1d5db',
+					marginLeft: '56px',
+				}}
+			/>
 
 			{/* Events */}
 			{data.events.length > 0 && (
@@ -539,13 +549,14 @@ function ReceiptCard({
 						style={{
 							height: '1px',
 							backgroundColor: '#d1d5db',
+							marginLeft: '48px',
 						}}
 					/>
 					<div
-						tw="flex flex-col py-5 px-8 text-[25px]"
+						tw="flex flex-col py-6 pr-8 text-[28px]"
 						style={{
 							fontFamily: 'GeistMono',
-							gap: '24px',
+							gap: '28px',
 							width: '100%',
 							letterSpacing: '-0.02em',
 						}}
@@ -566,21 +577,21 @@ function ReceiptCard({
 									style={{
 										flex: 1,
 										alignItems: 'flex-start',
-										gap: '8px',
+										gap: '10px',
 										flexWrap: 'wrap',
 									}}
 								>
 									{/* Number */}
 									<span
-										tw="text-gray-400 shrink-0"
-										style={{ lineHeight: '30px' }}
+										tw="text-gray-500 shrink-0"
+										style={{ lineHeight: '34px' }}
 									>
 										{index + 1}.
 									</span>
 									{/* Action badge */}
 									<span
 										tw="flex bg-gray-100 px-2 py-1 rounded shrink-0"
-										style={{ lineHeight: '22px' }}
+										style={{ lineHeight: '26px' }}
 									>
 										{event.action}
 									</span>
@@ -589,7 +600,7 @@ function ReceiptCard({
 								</div>
 								{/* Amount on right */}
 								{event.amount && (
-									<span tw="shrink-0" style={{ lineHeight: '30px' }}>
+									<span tw="shrink-0" style={{ lineHeight: '34px' }}>
 										{event.amount}
 									</span>
 								)}
@@ -599,6 +610,16 @@ function ReceiptCard({
 				</>
 			)}
 
+			{/* Divider */}
+			<div
+				tw="flex mr-10"
+				style={{
+					height: '1px',
+					backgroundColor: '#d1d5db',
+					marginLeft: '56px',
+				}}
+			/>
+
 			{/* Fee and Total rows */}
 			{(data.fee || data.total) && (
 				<>
@@ -607,15 +628,18 @@ function ReceiptCard({
 						style={{
 							height: '1px',
 							backgroundColor: '#d1d5db',
+							marginLeft: '48px',
 						}}
 					/>
 					<div
-						tw="flex flex-col py-5 px-8 text-[25px]"
+						tw="flex flex-col pr-8 pb-12 text-[28px]"
 						style={{
 							fontFamily: 'GeistMono',
-							gap: '18px',
+							gap: '22px',
 							width: '100%',
 							letterSpacing: '-0.02em',
+							paddingTop: '24px',
+							paddingBottom: '32px',
 						}}
 					>
 						{data.fee && (
@@ -623,7 +647,7 @@ function ReceiptCard({
 								tw="flex items-center"
 								style={{ width: '100%', justifyContent: 'space-between' }}
 							>
-								<span tw="text-gray-400">
+								<span tw="text-gray-500">
 									Fee{data.feeToken ? ` (${data.feeToken})` : ''}
 								</span>
 								<span>{data.fee}</span>
@@ -634,7 +658,7 @@ function ReceiptCard({
 								tw="flex items-center"
 								style={{ width: '100%', justifyContent: 'space-between' }}
 							>
-								<span tw="text-gray-400">Total</span>
+								<span tw="text-gray-500">Total</span>
 								<span>{data.total}</span>
 							</div>
 						)}
@@ -650,35 +674,43 @@ function ReceiptCard({
 function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 	return (
 		<div
-			tw="flex flex-col bg-white rounded-3xl shadow-2xl"
+			tw="flex flex-col bg-white"
 			style={{
-				width: '640px',
-				boxShadow: '0 8px 60px rgba(0,0,0,0.12)',
+				width: '750px',
+				boxShadow:
+					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
+				borderTopRightRadius: '24px',
+				borderBottomRightRadius: '24px',
+				borderTopLeftRadius: '0',
+				borderBottomLeftRadius: '0',
 			}}
 		>
 			{/* Header with icon and name */}
-			<div tw="flex items-center px-8 pt-12 pb-12" style={{ gap: '16px' }}>
+			<div
+				tw="flex items-center pr-10 pt-14 pb-12"
+				style={{ gap: '20px', paddingLeft: '56px' }}
+			>
 				{/* Token icon from tokenlist or fallback to null icon */}
 				<img
 					src={icon}
 					alt=""
 					tw="rounded-full"
-					style={{ width: '64px', height: '64px' }}
+					style={{ width: '80px', height: '80px' }}
 				/>
 				<div tw="flex flex-col flex-1">
-					<span tw="text-3xl font-semibold text-gray-900">{data.name}</span>
+					<span tw="text-5xl font-semibold text-gray-900">{data.name}</span>
 				</div>
 				{/* Symbol badge */}
-				<div tw="flex items-center" style={{ gap: '10px' }}>
+				<div tw="flex items-center" style={{ gap: '12px' }}>
 					<div
-						tw="flex items-center px-4 py-2 bg-gray-100 rounded-lg text-gray-600 text-xl"
+						tw="flex items-center px-5 py-3 bg-gray-100 rounded-lg text-gray-600 text-2xl"
 						style={{ fontFamily: 'GeistMono' }}
 					>
 						{data.symbol}
 					</div>
 					{data.isFeeToken && (
 						<div
-							tw="flex items-center px-3 py-2 bg-emerald-100 rounded-lg text-emerald-700 text-lg"
+							tw="flex items-center px-4 py-3 bg-emerald-100 rounded-lg text-emerald-700 text-xl"
 							style={{ fontFamily: 'GeistMono' }}
 						>
 							Fee Token
@@ -689,56 +721,58 @@ function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 
 			{/* Divider */}
 			<div
-				tw="flex mx-8"
+				tw="flex mr-10"
 				style={{
 					height: '1px',
 					backgroundColor: '#d1d5db',
+					marginLeft: '56px',
 				}}
 			/>
 
 			{/* Details */}
 			<div
-				tw="flex flex-col px-8 py-8 text-[23.5px]"
+				tw="flex flex-col pr-10 py-10 text-[28px]"
 				style={{
 					fontFamily: 'GeistMono',
-					gap: '20px',
+					gap: '28px',
 					letterSpacing: '-0.02em',
+					paddingLeft: '56px',
 				}}
 			>
 				{/* Address - truncated */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">Address</span>
+					<span tw="text-gray-500">Address</span>
 					<span tw="text-blue-500">{truncateHash(data.address, 8)}</span>
 				</div>
 
 				{/* Currency */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">Currency</span>
+					<span tw="text-gray-500">Currency</span>
 					<span tw="text-gray-900">{data.currency}</span>
 				</div>
 
 				{/* Holders */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">Holders</span>
+					<span tw="text-gray-500">Holders</span>
 					<span tw="text-gray-900">{data.holders}</span>
 				</div>
 
 				{/* Supply */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">Supply</span>
+					<span tw="text-gray-500">Supply</span>
 					<span tw="text-gray-900">{data.supply}</span>
 				</div>
 
 				{/* Created */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">Created</span>
+					<span tw="text-gray-500">Created</span>
 					<span tw="text-gray-900">{data.created}</span>
 				</div>
 
 				{/* Quote Token (if available) */}
 				{data.quoteToken && (
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-400">Quote Token</span>
+						<span tw="text-gray-500">Quote Token</span>
 						<span tw="text-gray-900">{data.quoteToken}</span>
 					</div>
 				)}
@@ -761,7 +795,7 @@ function TokenBadges({ tokens }: { tokens: string[] }) {
 			{keyedTokens.map(({ token, key }) => (
 				<span
 					key={key}
-					tw="flex px-3 py-1 bg-gray-100 rounded text-gray-700 text-[18px]"
+					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-700 text-[22px]"
 					style={{ fontFamily: 'GeistMono' }}
 				>
 					{token}
@@ -780,22 +814,30 @@ function AddressCard({ data }: { data: AddressData }) {
 
 	return (
 		<div
-			tw="flex flex-col bg-white rounded-3xl shadow-2xl"
+			tw="flex flex-col bg-white"
 			style={{
-				width: '640px',
-				boxShadow: '0 8px 60px rgba(0,0,0,0.12)',
+				width: '750px',
+				boxShadow:
+					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
+				borderTopRightRadius: '24px',
+				borderBottomRightRadius: '24px',
+				borderTopLeftRadius: '0',
+				borderBottomLeftRadius: '0',
 			}}
 		>
 			{/* Address header */}
-			<div tw="flex w-full px-8 pt-8 pb-6 justify-between items-start">
+			<div
+				tw="flex w-full pr-10 pt-10 pb-8 justify-between items-start"
+				style={{ paddingLeft: '56px' }}
+			>
 				<span
-					tw="text-gray-400 text-[25px]"
+					tw="text-gray-500 text-[28px]"
 					style={{ fontFamily: 'GeistMono' }}
 				>
 					{data.isContract ? 'Contract' : 'Address'}
 				</span>
 				<div
-					tw="flex flex-col items-end text-[25px] text-blue-500"
+					tw="flex flex-col items-end text-[28px] text-blue-500"
 					style={{ fontFamily: 'GeistMono', lineHeight: '1.3' }}
 				>
 					<span>{addrLine1}</span>
@@ -805,91 +847,92 @@ function AddressCard({ data }: { data: AddressData }) {
 
 			{/* Divider - dashed */}
 			<div
-				tw="flex mx-8"
+				tw="flex mr-10"
 				style={{
 					height: '1px',
 					backgroundColor: '#d1d5db',
 					borderStyle: 'dashed',
+					marginLeft: '56px',
 				}}
 			/>
 
 			{/* Details */}
 			<div
-				tw="flex flex-col px-8 py-6 text-[23.5px]"
+				tw="flex flex-col pr-10 py-8 text-[28px]"
 				style={{
 					fontFamily: 'GeistMono',
-					gap: '16px',
+					gap: '22px',
 					letterSpacing: '-0.02em',
+					paddingLeft: '56px',
 				}}
 			>
 				{/* Holdings */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">Holdings</span>
+					<span tw="text-gray-500">Holdings</span>
 					<span tw="text-gray-900">{data.holdings}</span>
 				</div>
 
+				{/* Tokens Held section - hide for contracts */}
+				{data.tokensHeld.length > 0 && !data.isContract && (
+					<div tw="flex flex-col w-full">
+						{/* Divider - dashed */}
+						<div
+							tw="flex w-full"
+							style={{
+								height: '1px',
+								backgroundColor: '#d1d5db',
+								borderStyle: 'dashed',
+								marginLeft: '56px',
+								paddingRight: '40px',
+							}}
+						/>
+
+						<div
+							tw="flex flex-col w-full py-8"
+							style={{ gap: '16px', paddingLeft: '56px', paddingRight: '40px' }}
+						>
+							<div
+								tw="flex w-full align-end gap-4"
+								style={{ gap: '12px', flexWrap: 'wrap' }}
+							>
+								<TokenBadges tokens={data.tokensHeld.slice(0, 12)} />
+								{data.tokensHeld.length > 12 && (
+									<span
+										tw="flex px-4 py-2 bg-gray-100 rounded text-gray-500 text-[22px]"
+										style={{ fontFamily: 'GeistMono' }}
+									>
+										+{data.tokensHeld.length - 12}
+									</span>
+								)}
+							</div>
+						</div>
+					</div>
+				)}
+
 				{/* Transactions */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">Transactions</span>
+					<span tw="text-gray-500">Transactions</span>
 					<span tw="text-gray-900">{data.txCount}</span>
 				</div>
 
 				{/* Last Active */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">Last Active</span>
+					<span tw="text-gray-500">Last Active</span>
 					<span tw="text-gray-900">{data.lastActive}</span>
 				</div>
 
 				{/* Created */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">Created</span>
+					<span tw="text-gray-500">Created</span>
 					<span tw="text-gray-900">{data.created}</span>
 				</div>
 
 				{/* Fee Token */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-400">Fee Token</span>
+					<span tw="text-gray-500">Fee Token</span>
 					<span tw="text-gray-900">{data.feeToken}</span>
 				</div>
 			</div>
-
-			{/* Tokens Held section - hide for contracts */}
-			{data.tokensHeld.length > 0 && !data.isContract && (
-				<>
-					{/* Divider - dashed */}
-					<div
-						tw="flex mx-8"
-						style={{
-							height: '1px',
-							backgroundColor: '#d1d5db',
-							borderStyle: 'dashed',
-						}}
-					/>
-
-					<div
-						tw="flex flex-col px-8 py-6"
-						style={{ gap: '12px', width: '100%' }}
-					>
-						<span
-							tw="text-gray-400 text-[25px]"
-							style={{ fontFamily: 'GeistMono' }}
-						>
-							Tokens Held
-						</span>
-						<div tw="flex flex-wrap" style={{ gap: '10px', width: '100%' }}>
-							<TokenBadges tokens={data.tokensHeld.slice(0, 12)} />
-							{data.tokensHeld.length > 12 && (
-								<span
-									tw="flex px-3 py-1 bg-gray-100 rounded text-gray-500 text-[20px]"
-									style={{ fontFamily: 'GeistMono' }}
-								>
-									+{data.tokensHeld.length - 12}
-								</span>
-							)}
-						</div>
-					</div>
-				</>
-			)}
 		</div>
 	)
 }
