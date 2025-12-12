@@ -24,6 +24,7 @@ jobs:
           - app: fee-payer # default
           - app: fee-payer # privy
             env: privy
+          - app: og
           - app: service-proxy
           - app: tokenlist
 

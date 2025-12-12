@@ -4,174 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-catalogs:
-  default:
-    '@biomejs/biome':
-      specifier: ^2.3.8
-      version: 2.3.8
-    '@cloudflare/puppeteer':
-      specifier: ^1.0.4
-      version: 1.0.4
-    '@cloudflare/vite-plugin':
-      specifier: ^1.17.0
-      version: 1.17.0
-    '@cloudflare/vitest-pool-workers':
-      specifier: ^0.10.14
-      version: 0.10.14
-    '@cloudflare/workers-types':
-      specifier: ^4.20251209.0
-      version: 4.20251210.0
-    '@hono/zod-validator':
-      specifier: ^0.7.5
-      version: 0.7.5
-    '@iconify/json':
-      specifier: ^2.2.416
-      version: 2.2.416
-    '@sentry/browser':
-      specifier: ^10.29.0
-      version: 10.29.0
-    '@sentry/cloudflare':
-      specifier: ^10.29.0
-      version: 10.29.0
-    '@sentry/tanstackstart-react':
-      specifier: ^10.29.0
-      version: 10.29.0
-    '@sentry/vite-plugin':
-      specifier: ^4.6.1
-      version: 4.6.1
-    '@shazow/whatsabi':
-      specifier: ^0.24.0
-      version: 0.24.0
-    '@svgr/core':
-      specifier: ^8.1.0
-      version: 8.1.0
-    '@svgr/plugin-jsx':
-      specifier: ^8.1.0
-      version: 8.1.0
-    '@tailwindcss/vite':
-      specifier: ^4.1.17
-      version: 4.1.17
-    '@tanstack/devtools-vite':
-      specifier: ^0.3.12
-      version: 0.3.12
-    '@tanstack/query-async-storage-persister':
-      specifier: ^5.90.14
-      version: 5.90.14
-    '@tanstack/react-devtools':
-      specifier: ^0.8.4
-      version: 0.8.4
-    '@tanstack/react-query':
-      specifier: ^5.90.12
-      version: 5.90.12
-    '@tanstack/react-query-devtools':
-      specifier: ^5.91.1
-      version: 5.91.1
-    '@tanstack/react-query-persist-client':
-      specifier: ^5.90.14
-      version: 5.90.14
-    '@tanstack/react-router':
-      specifier: ^1.140.0
-      version: 1.140.1
-    '@tanstack/react-router-devtools':
-      specifier: ^1.140.0
-      version: 1.140.1
-    '@tanstack/react-router-ssr-query':
-      specifier: ^1.140.0
-      version: 1.140.1
-    '@tanstack/react-start':
-      specifier: ^1.140.0
-      version: 1.140.3
-    '@tanstack/router-plugin':
-      specifier: ^1.140.0
-      version: 1.140.1
-    '@total-typescript/ts-reset':
-      specifier: ^0.6.1
-      version: 0.6.1
-    '@types/node':
-      specifier: ^24.10.2
-      version: 24.10.2
-    '@types/react':
-      specifier: ^19.2.7
-      version: 19.2.7
-    '@types/react-dom':
-      specifier: ^19.2.3
-      version: 19.2.3
-    '@vitejs/plugin-react':
-      specifier: ^5.1.2
-      version: 5.1.2
-    abitype:
-      specifier: ^1.2.1
-      version: 1.2.2
-    cva:
-      specifier: ^1.0.0-beta.4
-      version: 1.0.0-beta.4
-    eruda:
-      specifier: ^3.4.3
-      version: 3.4.3
-    globals:
-      specifier: ^16.5.0
-      version: 16.5.0
-    hono:
-      specifier: ^4.10.8
-      version: 4.10.8
-    idxs:
-      specifier: ^0.0.5
-      version: 0.0.5
-    kysely:
-      specifier: ^0.28.8
-      version: 0.28.8
-    ox:
-      specifier: ^0.9.17
-      version: 0.9.17
-    react:
-      specifier: ^19.2.1
-      version: 19.2.1
-    react-dom:
-      specifier: ^19.2.1
-      version: 19.2.1
-    tailwind-merge:
-      specifier: ^3.4.0
-      version: 3.4.0
-    tailwindcss:
-      specifier: ^4.1.17
-      version: 4.1.17
-    tempo.ts:
-      specifier: ~0.10.5
-      version: 0.10.5
-    tw-animate-css:
-      specifier: ^1.4.0
-      version: 1.4.0
-    typed-query-selector:
-      specifier: ^2.12.0
-      version: 2.12.0
-    typescript:
-      specifier: ^5.9.3
-      version: 5.9.3
-    unplugin-icons:
-      specifier: ^22.5.0
-      version: 22.5.0
-    viem:
-      specifier: ^2.41.2
-      version: 2.41.2
-    vite:
-      specifier: npm:rolldown-vite@latest
-      version: 7.2.10
-    vite-tsconfig-paths:
-      specifier: ^5.1.4
-      version: 5.1.4
-    vitest:
-      specifier: 3.2.4
-      version: 3.2.4
-    wagmi:
-      specifier: ^3.1.0
-      version: 3.1.0
-    wrangler:
-      specifier: ^4.53.0
-      version: 4.53.0
-    zod:
-      specifier: ^4.1.13
-      version: 4.1.13
-
 importers:
 
   .:
@@ -182,9 +14,6 @@ importers:
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20251209.1
         version: 7.0.0-dev.20251210.1
-      node:
-        specifier: runtime:24.11.1
-        version: runtime:24.11.1
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -359,7 +188,7 @@ importers:
         version: 0.9.17(typescript@5.9.3)(zod@4.1.13)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12)(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
       viem:
         specifier: 'catalog:'
         version: 2.41.2(typescript@5.9.3)(zod@4.1.13)
@@ -393,7 +222,7 @@ importers:
         version: 19.2.1(react@19.2.1)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
       viem:
         specifier: 'catalog:'
         version: 2.41.2(typescript@5.9.3)(zod@4.1.13)
@@ -425,6 +254,9 @@ importers:
 
   apps/og:
     dependencies:
+      '@cloudflare/puppeteer':
+        specifier: ^1.0.4
+        version: 1.0.4
       '@takumi-rs/image-response':
         specifier: ^0.57.3
         version: 0.57.3
@@ -434,10 +266,19 @@ importers:
       hono:
         specifier: 'catalog:'
         version: 4.10.8
+      ox:
+        specifier: ^0.10.0
+        version: 0.10.0(typescript@5.9.3)(zod@4.1.13)
     devDependencies:
       '@cloudflare/workers-types':
         specifier: 'catalog:'
         version: 4.20251210.0
+      puppeteer:
+        specifier: ^24.33.0
+        version: 24.33.0(typescript@5.9.3)
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       wrangler:
         specifier: 'catalog:'
         version: 4.53.0(@cloudflare/workers-types@4.20251210.0)
@@ -465,7 +306,7 @@ importers:
         version: 4.0.0
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12)(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
       viem:
         specifier: 'catalog:'
         version: 2.41.2(typescript@5.9.3)(zod@4.1.13)
@@ -1735,6 +1576,11 @@ packages:
     resolution: {integrity: sha512-QcuYy25pkXM8BJ37wVFBO7Zh34nyRV1GOb2n3lPkkbRYfl4hWl3PTcImP41P0KrzVXfa/45p6eVCos27x3exIg==}
     peerDependencies:
       '@opentelemetry/api': ^1.8
+
+  '@puppeteer/browsers@2.11.0':
+    resolution: {integrity: sha512-n6oQX6mYkG8TRPuPXmbPidkUbsSRalhmaaVAQxvH1IkQy63cwsH+kOjB3e4cpCDHg0aSvsiX9bQ4s2VB6mGWUQ==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   '@puppeteer/browsers@2.2.4':
     resolution: {integrity: sha512-BdG2qiI1dn89OTUUsx2GZSpUzW+DRffR1wlMJyKxVHYrhnKoELSDxDd+2XImUkuWPEKk76H5FcM/gPFrEK1Tfw==}
@@ -3265,6 +3111,11 @@ packages:
     resolution: {integrity: sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==}
     engines: {node: '>= 8.10.0'}
 
+  chromium-bidi@11.0.0:
+    resolution: {integrity: sha512-cM3DI+OOb89T3wO8cpPSro80Q9eKYJ7hGVXoGS3GkDPxnYSqiv+6xwpIf6XERyJ9Tdsl09hmNmY94BkgZdVekw==}
+    peerDependencies:
+      devtools-protocol: '*'
+
   cjs-module-lexer@1.4.3:
     resolution: {integrity: sha512-9z8TZaGM1pfswYeXrUpzPrkx8UnWYdhJclsiYMm6x/w5+nN+8Tf/LnAgfLGQCm59qAOxU8WwHEq2vNwF6i4j+Q==}
 
@@ -3315,6 +3166,15 @@ packages:
 
   cosmiconfig@8.3.6:
     resolution: {integrity: sha512-kcZ6+W5QzcJ3P1Mt+83OUv/oHFqZHIx8DuxG6eZ5RGMERoLqp4BuGjhHLYGK+Kf5XVkQvqBSmAy/nGWN3qDgEA==}
+    engines: {node: '>=14'}
+    peerDependencies:
+      typescript: '>=4.9.5'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  cosmiconfig@9.0.0:
+    resolution: {integrity: sha512-itvL5h8RETACmOTFc4UfIyB2RfEHi71Ax6E/PivVxq9NseKbOWpeyHEOIbmAw1rs8Ak0VursQNww7lf7YtUwzg==}
     engines: {node: '>=14'}
     peerDependencies:
       typescript: '>=4.9.5'
@@ -3411,6 +3271,9 @@ packages:
   devtools-protocol@0.0.1299070:
     resolution: {integrity: sha512-+qtL3eX50qsJ7c+qVyagqi7AWMoQCBGNfoyJZMwm/NSXVqLYbuitrWEEIzxfUmTNy7//Xe8yhMmQ+elj3uAqSg==}
 
+  devtools-protocol@0.0.1534754:
+    resolution: {integrity: sha512-26T91cV5dbOYnXdJi5qQHoTtUoNEqwkHcAyu/IKtjIAxiEqPMrDiRkDOPWVsGfNZGmlQVHQbZRSjD8sxagWVsQ==}
+
   diff@8.0.2:
     resolution: {integrity: sha512-sSuxWU5j5SR9QQji/o2qMvqRNYRDOcBTgsJ/DeCf4iSN4gW+gNMXM7wFIP+fdXZxoNiAnHUTGjCr+TSWXdRDKg==}
     engines: {node: '>=0.3.1'}
@@ -3464,6 +3327,10 @@ packages:
   entities@6.0.1:
     resolution: {integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==}
     engines: {node: '>=0.12'}
+
+  env-paths@2.2.1:
+    resolution: {integrity: sha512-+h1lkLKhZMTYjog1VEpJNG7NZJWcuc2DDk/qsqSTRRCOXiLjeQ1d1/udrUGhqMxUgAlwKNZ0cf2uqan5GLuS2A==}
+    engines: {node: '>=6'}
 
   error-ex@1.3.4:
     resolution: {integrity: sha512-sqQamAnR14VgCr1A618A3sGrygcpK+HEbenA/HiEAkkUwcZIIB/tgWqHFxWgOyDh4nB4JCRimh79dR5Ywc9MDQ==}
@@ -4202,96 +4069,6 @@ packages:
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
 
-  node@runtime:24.11.1:
-    resolution:
-      type: variations
-      variants:
-        - resolution:
-            archive: tarball
-            bin: bin/node
-            integrity: sha256-mLqRmgOQ2MQi1LsxBexbd3I89UFDtMHkudd2kPoHUgY=
-            type: binary
-            url: https://nodejs.org/download/release/v24.11.1/node-v24.11.1-aix-ppc64.tar.gz
-          targets:
-            - cpu: ppc64
-              os: aix
-        - resolution:
-            archive: tarball
-            bin: bin/node
-            integrity: sha256-sFqjpm7+aAAj+TC9WvP9u9VCeU2lZEyirXEdaMvU3DU=
-            type: binary
-            url: https://nodejs.org/download/release/v24.11.1/node-v24.11.1-darwin-arm64.tar.gz
-          targets:
-            - cpu: arm64
-              os: darwin
-        - resolution:
-            archive: tarball
-            bin: bin/node
-            integrity: sha256-CWCBttb83T9boPXx1EpH6DA3rS546tomZxwlL+ZN0RE=
-            type: binary
-            url: https://nodejs.org/download/release/v24.11.1/node-v24.11.1-darwin-x64.tar.gz
-          targets:
-            - cpu: x64
-              os: darwin
-        - resolution:
-            archive: tarball
-            bin: bin/node
-            integrity: sha256-Dck+xceYsNNH8GjbbSBdA96ppxdl5qU5IraCuRJl1x8=
-            type: binary
-            url: https://nodejs.org/download/release/v24.11.1/node-v24.11.1-linux-arm64.tar.gz
-          targets:
-            - cpu: arm64
-              os: linux
-        - resolution:
-            archive: tarball
-            bin: bin/node
-            integrity: sha256-zUFAfzNS3i8GbqJsXF0OqbY2I3TWthg4Wp8una0iBhY=
-            type: binary
-            url: https://nodejs.org/download/release/v24.11.1/node-v24.11.1-linux-ppc64le.tar.gz
-          targets:
-            - cpu: ppc64le
-              os: linux
-        - resolution:
-            archive: tarball
-            bin: bin/node
-            integrity: sha256-XUyLyl+PJZP5CB3uOYNHYOhaFvphyVDz6G7IWZbwBVA=
-            type: binary
-            url: https://nodejs.org/download/release/v24.11.1/node-v24.11.1-linux-s390x.tar.gz
-          targets:
-            - cpu: s390x
-              os: linux
-        - resolution:
-            archive: tarball
-            bin: bin/node
-            integrity: sha256-WKX/XMjyIA5Fi+oi4ynVwZlKobER1JnKRuwkEdWCOco=
-            type: binary
-            url: https://nodejs.org/download/release/v24.11.1/node-v24.11.1-linux-x64.tar.gz
-          targets:
-            - cpu: x64
-              os: linux
-        - resolution:
-            archive: zip
-            bin: node.exe
-            integrity: sha256-zp7k5Ufr3/NVvrSOMJsWbCTfa+ApHJ6vEDzhXz3p5bQ=
-            prefix: node-v24.11.1-win-arm64
-            type: binary
-            url: https://nodejs.org/download/release/v24.11.1/node-v24.11.1-win-arm64.zip
-          targets:
-            - cpu: arm64
-              os: win32
-        - resolution:
-            archive: zip
-            bin: node.exe
-            integrity: sha256-U1WubXxJ7dz959NKw0hoIGAKgxv4HcO9ylyNtqm7DnY=
-            prefix: node-v24.11.1-win-x64
-            type: binary
-            url: https://nodejs.org/download/release/v24.11.1/node-v24.11.1-win-x64.zip
-          targets:
-            - cpu: x64
-              os: win32
-    version: 24.11.1
-    hasBin: true
-
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
@@ -4301,6 +4078,14 @@ packages:
 
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
+
+  ox@0.10.0:
+    resolution: {integrity: sha512-ICCIdcaemYBTgKfwmtdms75V2FkmgoMoS6ZsfeAKaNskDM1phYFCP2emSLtzKQ0Qx4CJaVuj/ShzydmkT83Dbg==}
+    peerDependencies:
+      typescript: '>=5.4.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
 
   ox@0.9.17:
     resolution: {integrity: sha512-rKAnhzhRU3Xh3hiko+i1ZxywZ55eWQzeS/Q4HRKLx2PqfHOolisZHErSsJVipGlmQKHW5qwOED/GighEw9dbLg==}
@@ -4470,6 +4255,15 @@ packages:
 
   pump@3.0.3:
     resolution: {integrity: sha512-todwxLMY7/heScKmntwQG8CXVkWUOdYxIvY2s0VWAAMh/nd8SoYiRaKjlr7+iCs984f2P8zvrfWcDDYVb73NfA==}
+
+  puppeteer-core@24.33.0:
+    resolution: {integrity: sha512-tPTxVg+Qdj/8av4cy6szv3GlhxeOoNhiiMZ955fjxQyvPQE/6DjCa6ZyF/x0WJrlgBZtaLSP8TQgJb7FdLDXXA==}
+    engines: {node: '>=18'}
+
+  puppeteer@24.33.0:
+    resolution: {integrity: sha512-nl3wsAztq5F8zybn4Tk41OCnYIzFIzGC6AN0WcF2KCUnWenajvRRPgBmS6LvNUV2HEeIzT2zRZHH0TgVxLDKew==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   quansync@0.2.11:
     resolution: {integrity: sha512-AifT7QEbW9Nri4tAwR5M/uzpBuqfZf+zwaEM/QkzEjj7NBuFD2rBuy0K3dE+8wltbezDV7JMA0WfnCPYRSYbXA==}
@@ -5153,6 +4947,9 @@ packages:
   web-namespaces@2.0.1:
     resolution: {integrity: sha512-bKr1DkiNa2krS7qxNtdrtHAmzuYGFQLiQ13TsorsdT6ULTkPLKuu5+GsFpDlg6JFjUTwX2DyhMPG2be8uPrqsQ==}
 
+  webdriver-bidi-protocol@0.3.9:
+    resolution: {integrity: sha512-uIYvlRQ0PwtZR1EzHlTMol1G0lAlmOe6wPykF9a77AK3bkpvZHzIVxRE2ThOx5vjy2zISe0zhwf5rzuUfbo1PQ==}
+
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
 
@@ -5310,6 +5107,174 @@ packages:
 
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
+
+catalogs:
+  default:
+    '@biomejs/biome':
+      specifier: ^2.3.8
+      version: 2.3.8
+    '@cloudflare/puppeteer':
+      specifier: ^1.0.4
+      version: 1.0.4
+    '@cloudflare/vite-plugin':
+      specifier: ^1.17.0
+      version: 1.17.0
+    '@cloudflare/vitest-pool-workers':
+      specifier: ^0.10.14
+      version: 0.10.14
+    '@cloudflare/workers-types':
+      specifier: ^4.20251209.0
+      version: 4.20251210.0
+    '@hono/zod-validator':
+      specifier: ^0.7.5
+      version: 0.7.5
+    '@iconify/json':
+      specifier: ^2.2.416
+      version: 2.2.416
+    '@sentry/browser':
+      specifier: ^10.29.0
+      version: 10.29.0
+    '@sentry/cloudflare':
+      specifier: ^10.29.0
+      version: 10.29.0
+    '@sentry/tanstackstart-react':
+      specifier: ^10.29.0
+      version: 10.29.0
+    '@sentry/vite-plugin':
+      specifier: ^4.6.1
+      version: 4.6.1
+    '@shazow/whatsabi':
+      specifier: ^0.24.0
+      version: 0.24.0
+    '@svgr/core':
+      specifier: ^8.1.0
+      version: 8.1.0
+    '@svgr/plugin-jsx':
+      specifier: ^8.1.0
+      version: 8.1.0
+    '@tailwindcss/vite':
+      specifier: ^4.1.17
+      version: 4.1.17
+    '@tanstack/devtools-vite':
+      specifier: ^0.3.12
+      version: 0.3.12
+    '@tanstack/query-async-storage-persister':
+      specifier: ^5.90.14
+      version: 5.90.14
+    '@tanstack/react-devtools':
+      specifier: ^0.8.4
+      version: 0.8.4
+    '@tanstack/react-query':
+      specifier: ^5.90.12
+      version: 5.90.12
+    '@tanstack/react-query-devtools':
+      specifier: ^5.91.1
+      version: 5.91.1
+    '@tanstack/react-query-persist-client':
+      specifier: ^5.90.14
+      version: 5.90.14
+    '@tanstack/react-router':
+      specifier: ^1.140.0
+      version: 1.140.1
+    '@tanstack/react-router-devtools':
+      specifier: ^1.140.0
+      version: 1.140.1
+    '@tanstack/react-router-ssr-query':
+      specifier: ^1.140.0
+      version: 1.140.1
+    '@tanstack/react-start':
+      specifier: ^1.140.0
+      version: 1.140.3
+    '@tanstack/router-plugin':
+      specifier: ^1.140.0
+      version: 1.140.1
+    '@total-typescript/ts-reset':
+      specifier: ^0.6.1
+      version: 0.6.1
+    '@types/node':
+      specifier: ^24.10.2
+      version: 24.10.2
+    '@types/react':
+      specifier: ^19.2.7
+      version: 19.2.7
+    '@types/react-dom':
+      specifier: ^19.2.3
+      version: 19.2.3
+    '@vitejs/plugin-react':
+      specifier: ^5.1.2
+      version: 5.1.2
+    abitype:
+      specifier: ^1.2.1
+      version: 1.2.2
+    cva:
+      specifier: ^1.0.0-beta.4
+      version: 1.0.0-beta.4
+    eruda:
+      specifier: ^3.4.3
+      version: 3.4.3
+    globals:
+      specifier: ^16.5.0
+      version: 16.5.0
+    hono:
+      specifier: ^4.10.8
+      version: 4.10.8
+    idxs:
+      specifier: ^0.0.5
+      version: 0.0.5
+    kysely:
+      specifier: ^0.28.8
+      version: 0.28.8
+    ox:
+      specifier: ^0.9.17
+      version: 0.9.17
+    react:
+      specifier: ^19.2.1
+      version: 19.2.1
+    react-dom:
+      specifier: ^19.2.1
+      version: 19.2.1
+    tailwind-merge:
+      specifier: ^3.4.0
+      version: 3.4.0
+    tailwindcss:
+      specifier: ^4.1.17
+      version: 4.1.17
+    tempo.ts:
+      specifier: ~0.10.5
+      version: 0.10.5
+    tw-animate-css:
+      specifier: ^1.4.0
+      version: 1.4.0
+    typed-query-selector:
+      specifier: ^2.12.0
+      version: 2.12.0
+    typescript:
+      specifier: ^5.9.3
+      version: 5.9.3
+    unplugin-icons:
+      specifier: ^22.5.0
+      version: 22.5.0
+    viem:
+      specifier: ^2.41.2
+      version: 2.41.2
+    vite:
+      specifier: npm:rolldown-vite@latest
+      version: 7.2.10
+    vite-tsconfig-paths:
+      specifier: ^5.1.4
+      version: 5.1.4
+    vitest:
+      specifier: 3.2.4
+      version: 3.2.4
+    wagmi:
+      specifier: ^3.1.0
+      version: 3.1.0
+    wrangler:
+      specifier: ^4.53.0
+      version: 4.53.0
+    zod:
+      specifier: ^4.1.13
+      version: 4.1.13
 
 snapshots:
 
@@ -6491,6 +6456,21 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/instrumentation': 0.208.0(@opentelemetry/api@1.9.0)
     transitivePeerDependencies:
+      - supports-color
+
+  '@puppeteer/browsers@2.11.0':
+    dependencies:
+      debug: 4.4.3
+      extract-zip: 2.0.1
+      progress: 2.0.3
+      proxy-agent: 6.5.0
+      semver: 7.7.3
+      tar-fs: 3.1.1
+      yargs: 17.7.2
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bare-buffer
+      - react-native-b4a
       - supports-color
 
   '@puppeteer/browsers@2.2.4':
@@ -8071,6 +8051,14 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
+  '@wagmi/connectors@7.0.2(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(typescript@5.9.3)(use-sync-external-store@1.4.0)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))':
+    dependencies:
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(typescript@5.9.3)(use-sync-external-store@1.4.0)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+      viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+    optionalDependencies:
+      typescript: 5.9.3
+    optional: true
+
   '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))':
     dependencies:
       eventemitter3: 5.0.1
@@ -8086,12 +8074,44 @@ snapshots:
       - react
       - use-sync-external-store
 
-  '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))':
+  '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))':
     dependencies:
       eventemitter3: 5.0.1
       mipd: 0.0.7(typescript@5.9.3)
       viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
-      zustand: 5.0.0(@types/react@19.2.7)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+      zustand: 5.0.0(@types/react@19.2.7)(react@19.2.1)(use-sync-external-store@1.4.0(react@19.2.1))
+    optionalDependencies:
+      '@tanstack/query-core': 5.90.12
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@types/react'
+      - immer
+      - react
+      - use-sync-external-store
+    optional: true
+
+  '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(typescript@5.9.3)(use-sync-external-store@1.4.0)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))':
+    dependencies:
+      eventemitter3: 5.0.1
+      mipd: 0.0.7(typescript@5.9.3)
+      viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+      zustand: 5.0.0(use-sync-external-store@1.4.0)
+    optionalDependencies:
+      '@tanstack/query-core': 5.90.12
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@types/react'
+      - immer
+      - react
+      - use-sync-external-store
+    optional: true
+
+  '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))':
+    dependencies:
+      eventemitter3: 5.0.1
+      mipd: 0.0.7(typescript@5.9.3)
+      viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+      zustand: 5.0.0(@types/react@19.2.7)(react@19.2.1)(use-sync-external-store@1.4.0(react@19.2.1))
     optionalDependencies:
       '@tanstack/query-core': 5.90.12
       typescript: 5.9.3
@@ -8330,6 +8350,12 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.3
 
+  chromium-bidi@11.0.0(devtools-protocol@0.0.1534754):
+    dependencies:
+      devtools-protocol: 0.0.1534754
+      mitt: 3.0.1
+      zod: 3.25.76
+
   cjs-module-lexer@1.4.3: {}
 
   cliui@8.0.1:
@@ -8376,6 +8402,15 @@ snapshots:
       js-yaml: 4.1.1
       parse-json: 5.2.0
       path-type: 4.0.0
+    optionalDependencies:
+      typescript: 5.9.3
+
+  cosmiconfig@9.0.0(typescript@5.9.3):
+    dependencies:
+      env-paths: 2.2.1
+      import-fresh: 3.3.1
+      js-yaml: 4.1.1
+      parse-json: 5.2.0
     optionalDependencies:
       typescript: 5.9.3
 
@@ -8457,6 +8492,8 @@ snapshots:
 
   devtools-protocol@0.0.1299070: {}
 
+  devtools-protocol@0.0.1534754: {}
+
   diff@8.0.2: {}
 
   dom-serializer@2.0.0:
@@ -8509,6 +8546,8 @@ snapshots:
   entities@4.5.0: {}
 
   entities@6.0.1: {}
+
+  env-paths@2.2.1: {}
 
   error-ex@1.3.4:
     dependencies:
@@ -9505,8 +9544,6 @@ snapshots:
 
   node-releases@2.0.27: {}
 
-  node@runtime:24.11.1: {}
-
   normalize-path@3.0.0: {}
 
   nth-check@2.1.1:
@@ -9516,6 +9553,21 @@ snapshots:
   once@1.4.0:
     dependencies:
       wrappy: 1.0.2
+
+  ox@0.10.0(typescript@5.9.3)(zod@4.1.13):
+    dependencies:
+      '@adraffy/ens-normalize': 1.11.1
+      '@noble/ciphers': 1.3.0
+      '@noble/curves': 1.9.1
+      '@noble/hashes': 1.8.0
+      '@scure/bip32': 1.7.0
+      '@scure/bip39': 1.6.0
+      abitype: 1.2.2(typescript@5.9.3)(zod@4.1.13)
+      eventemitter3: 5.0.1
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - zod
 
   ox@0.9.17(typescript@5.9.3)(zod@4.1.13):
     dependencies:
@@ -9701,6 +9753,40 @@ snapshots:
     dependencies:
       end-of-stream: 1.4.5
       once: 1.4.0
+
+  puppeteer-core@24.33.0:
+    dependencies:
+      '@puppeteer/browsers': 2.11.0
+      chromium-bidi: 11.0.0(devtools-protocol@0.0.1534754)
+      debug: 4.4.3
+      devtools-protocol: 0.0.1534754
+      typed-query-selector: 2.12.0
+      webdriver-bidi-protocol: 0.3.9
+      ws: 8.18.3
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bare-buffer
+      - bufferutil
+      - react-native-b4a
+      - supports-color
+      - utf-8-validate
+
+  puppeteer@24.33.0(typescript@5.9.3):
+    dependencies:
+      '@puppeteer/browsers': 2.11.0
+      chromium-bidi: 11.0.0(devtools-protocol@0.0.1534754)
+      cosmiconfig: 9.0.0(typescript@5.9.3)
+      devtools-protocol: 0.0.1534754
+      puppeteer-core: 24.33.0
+      typed-query-selector: 2.12.0
+    transitivePeerDependencies:
+      - bare-abort-controller
+      - bare-buffer
+      - bufferutil
+      - react-native-b4a
+      - supports-color
+      - typescript
+      - utf-8-validate
 
   quansync@0.2.11: {}
 
@@ -10113,7 +10199,7 @@ snapshots:
       - typescript
       - zod
 
-  tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13):
+  tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13):
     dependencies:
       '@remix-run/fetch-router': 0.12.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)
       idb-keyval: 6.2.2
@@ -10121,9 +10207,27 @@ snapshots:
     optionalDependencies:
       '@tanstack/query-core': 5.90.12
       '@tanstack/react-query': 5.90.12(react@19.2.1)
-      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
       viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
       wagmi: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+    transitivePeerDependencies:
+      - '@remix-run/headers'
+      - '@remix-run/route-pattern'
+      - '@remix-run/session'
+      - typescript
+      - zod
+
+  tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12)(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13):
+    dependencies:
+      '@remix-run/fetch-router': 0.12.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)
+      idb-keyval: 6.2.2
+      ox: 0.9.17(typescript@5.9.3)(zod@4.1.13)
+    optionalDependencies:
+      '@tanstack/query-core': 5.90.12
+      '@tanstack/react-query': 5.90.12(react@19.2.1)
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+      viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+      wagmi: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
     transitivePeerDependencies:
       - '@remix-run/headers'
       - '@remix-run/route-pattern'
@@ -10481,7 +10585,32 @@ snapshots:
       - immer
       - porto
 
+  wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)):
+    dependencies:
+      '@tanstack/react-query': 5.90.12(react@19.2.1)
+      '@wagmi/connectors': 7.0.2(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(typescript@5.9.3)(use-sync-external-store@1.4.0)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(typescript@5.9.3)(use-sync-external-store@1.4.0)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+      use-sync-external-store: 1.4.0(react@19.2.1)
+      viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@base-org/account'
+      - '@coinbase/wallet-sdk'
+      - '@gemini-wallet/core'
+      - '@metamask/sdk'
+      - '@safe-global/safe-apps-provider'
+      - '@safe-global/safe-apps-sdk'
+      - '@tanstack/query-core'
+      - '@types/react'
+      - '@walletconnect/ethereum-provider'
+      - immer
+      - porto
+    optional: true
+
   web-namespaces@2.0.1: {}
+
+  webdriver-bidi-protocol@0.3.9: {}
 
   webidl-conversions@3.0.1: {}
 
@@ -10615,11 +10744,9 @@ snapshots:
       react: 19.2.1
       use-sync-external-store: 1.4.0(react@19.2.1)
 
-  zustand@5.0.0(@types/react@19.2.7)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1)):
+  zustand@5.0.0(use-sync-external-store@1.4.0):
     optionalDependencies:
-      '@types/react': 19.2.7
-      react: 19.2.1
-      use-sync-external-store: 1.6.0(react@19.2.1)
+      use-sync-external-store: 1.4.0(react@19.2.1)
     optional: true
 
   zwitch@2.0.4: {}

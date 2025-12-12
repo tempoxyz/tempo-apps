@@ -4,6 +4,13 @@
 	"main": "src/index.tsx",
 	"compatibility_date": "2025-12-08",
 	"compatibility_flags": ["nodejs_compat"],
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS"
+	},
+	"browser": {
+		"binding": "BROWSER"
+	},
 	"ratelimits": [
 		{
 			"name": "REQUESTS_RATE_LIMITER",
