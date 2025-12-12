@@ -127,6 +127,7 @@ app.get('/tx/:hash', async (c) => {
 				{/* Background image */}
 				<img
 					src={bgImageBase64}
+					alt=""
 					tw="absolute inset-0 w-full h-full"
 					style={{ objectFit: 'cover' }}
 				/>
@@ -143,6 +144,7 @@ app.get('/tx/:hash', async (c) => {
 					{receiptScreenshot ? (
 						<img
 							src={receiptScreenshot}
+							alt="Transaction receipt"
 							tw="rounded-t-2xl shadow-2xl"
 							style={{
 								width: '580px',
@@ -176,7 +178,7 @@ app.get('/tx/:hash', async (c) => {
 					}}
 				>
 					{/* Tempo lockup logo */}
-					<img src={tempoLockupBase64} tw="mb-2" width={120} height={28} />
+					<img src={tempoLockupBase64} alt="Tempo" tw="mb-2" width={120} height={28} />
 
 					{/* CTA text */}
 					<div
