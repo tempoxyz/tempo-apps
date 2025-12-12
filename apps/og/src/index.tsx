@@ -236,7 +236,7 @@ function ReceiptCard({
 
 				{/* Details - right aligned values */}
 				<div
-					tw="flex flex-col flex-1 text-[22px]"
+					tw="flex flex-col flex-1 text-[23px]"
 					style={{ fontFamily: 'GeistMono', gap: '12px', marginLeft: '12px' }}
 				>
 					<div tw="flex w-full justify-between">
@@ -273,7 +273,7 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-5 px-8 text-[22px]"
+						tw="flex flex-col py-5 px-8 text-[23px]"
 						style={{
 							fontFamily: 'GeistMono',
 							gap: '12px',
@@ -289,12 +289,20 @@ function ReceiptCard({
 									justifyContent: 'space-between',
 								}}
 							>
-								{/* Left: number + action + details */}
-								<div tw="flex items-start" style={{ gap: '8px', flex: 1 }}>
-									<span tw="text-gray-400 shrink-0">{index + 1}.</span>
-									<span tw="flex bg-gray-100 px-2 py-1 rounded shrink-0">
+								{/* Left: fixed-width columns for alignment */}
+								<div tw="flex items-start" style={{ flex: 1 }}>
+									{/* Number - fixed width */}
+									<span tw="text-gray-400 shrink-0" style={{ width: '28px' }}>
+										{index + 1}.
+									</span>
+									{/* Action - fixed width */}
+									<span
+										tw="flex bg-gray-100 px-2 py-1 rounded shrink-0"
+										style={{ width: '72px', justifyContent: 'center' }}
+									>
 										{event.action}
 									</span>
+									{/* Details - wraps internally */}
 									{event.details && <EventDetails details={event.details} />}
 								</div>
 								{/* Amount stays on right */}
@@ -316,7 +324,7 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-5 px-8 text-[22px]"
+						tw="flex flex-col py-5 px-8 text-[23px]"
 						style={{
 							fontFamily: 'GeistMono',
 							gap: '12px',
@@ -360,7 +368,8 @@ function truncateHash(hash: string, chars = 4): string {
 
 // Parse event details and highlight assets (green) and addresses (blue)
 function EventDetails({ details }: { details: string }) {
-	const parts: { text: string; type: 'normal' | 'asset' | 'address' }[] = []
+	// Parse into groups that should stay together (asset + connector like "for")
+	const groups: { text: string; type: 'normal' | 'asset' | 'address' }[] = []
 
 	const words = details.split(' ')
 	let i = 0
@@ -372,28 +381,48 @@ function EventDetails({ details }: { details: string }) {
 			word?.startsWith('0x') ||
 			(word?.includes('...') && word?.match(/[0-9a-fA-F]/))
 		) {
-			parts.push({ text: word, type: 'address' })
+			groups.push({ text: word, type: 'address' })
 			i++
 		}
-		// Check if this is a number followed by a token name
+		// Check if this is a number followed by a token name (asset)
 		else if (
 			word?.match(/^[\d.]+$/) &&
 			words[i + 1] &&
 			!['for', 'to', 'from'].includes(words[i + 1])
 		) {
-			parts.push({ text: `${word} ${words[i + 1]}`, type: 'asset' })
+			let assetText = `${word} ${words[i + 1]}`
 			i += 2
+			// Include following connector word (for, to, from) to prevent orphan wrap
+			if (words[i] && ['for', 'to', 'from'].includes(words[i])) {
+				assetText += ` ${words[i]}`
+				i++
+			}
+			groups.push({ text: assetText, type: 'asset' })
+		}
+		// Connector word at start (like "to 0x...")
+		else if (['for', 'to', 'from'].includes(word || '')) {
+			groups.push({ text: word || '', type: 'normal' })
+			i++
 		}
 		// Regular word
 		else {
-			parts.push({ text: word || '', type: 'normal' })
+			groups.push({ text: word || '', type: 'normal' })
 			i++
 		}
 	}
 
 	return (
-		<span tw="flex" style={{ flexWrap: 'wrap', gap: '4px', flex: 1, minWidth: 0 }}>
-			{parts.map((part, idx) => (
+		<span
+			tw="flex items-start"
+			style={{
+				flexWrap: 'wrap',
+				gap: '4px',
+				flex: 1,
+				minWidth: 0,
+				marginLeft: '8px',
+			}}
+		>
+			{groups.map((part, idx) => (
 				<span
 					key={`${part.text}-${idx}`}
 					tw={
@@ -403,6 +432,7 @@ function EventDetails({ details }: { details: string }) {
 								? 'text-blue-600'
 								: 'text-gray-500'
 					}
+					style={{ whiteSpace: 'nowrap' }}
 				>
 					{part.text}
 				</span>
