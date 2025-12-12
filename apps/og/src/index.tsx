@@ -138,7 +138,7 @@ app.get('/tx/:hash', async (c) => {
 						style={{ width: '260px', height: '61px' }}
 					/>
 					<div
-						tw="flex flex-col text-[36px] text-gray-500"
+						tw="flex flex-col text-[34px] text-gray-500"
 						style={{
 							fontFamily: 'Inter',
 							letterSpacing: '-0.02em',
@@ -149,7 +149,7 @@ app.get('/tx/:hash', async (c) => {
 						<span>transaction using</span>
 						<div tw="flex items-center" style={{ gap: '8px' }}>
 							<span>the explorer</span>
-							<span tw="text-gray-500 text-[36px]">→</span>
+							<span tw="text-gray-500 text-[34px]">→</span>
 						</div>
 					</div>
 				</div>
@@ -230,14 +230,19 @@ function ReceiptCard({
 					<img
 						src={receiptLogo}
 						alt="Tempo Receipt"
-						style={{ width: '140px', height: 'auto' }}
+						style={{ width: '170px', height: 'auto' }}
 					/>
 				</div>
 
 				{/* Details - right aligned values */}
 				<div
-					tw="flex flex-col flex-1 text-[23px]"
-					style={{ fontFamily: 'GeistMono', gap: '12px', marginLeft: '12px' }}
+					tw="flex flex-col flex-1 text-[24px]"
+					style={{
+						fontFamily: 'GeistMono',
+						gap: '16px',
+						marginLeft: '12px',
+						letterSpacing: '-0.02em',
+					}}
 				>
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Block</span>
@@ -273,11 +278,12 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-6 px-8 text-[22px]"
+						tw="flex flex-col py-6 px-8 text-[24px]"
 						style={{
 							fontFamily: 'GeistMono',
-							gap: '12px',
+							gap: '16px',
 							width: '100%',
+							letterSpacing: '-0.02em',
 						}}
 					>
 						{data.events.slice(0, 4).map((event, index) => (
@@ -340,11 +346,12 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-6 px-8 text-[22px]"
+						tw="flex flex-col py-6 px-8 text-[24px]"
 						style={{
 							fontFamily: 'GeistMono',
-							gap: '12px',
+							gap: '16px',
 							width: '100%',
+							letterSpacing: '-0.02em',
 						}}
 					>
 						{data.fee && (
