@@ -508,7 +508,7 @@ function ReceiptCard({
 
 				{/* Details - condensed */}
 				<div
-					tw="flex flex-col flex-1 text-[27px]"
+					tw="flex flex-col flex-1 text-[28px]"
 					style={{
 						fontFamily: 'GeistMono',
 						gap: '20px',
@@ -553,7 +553,7 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-6 pr-8 text-[27px]"
+						tw="flex flex-col py-6 pr-8 text-[28px]"
 						style={{
 							fontFamily: 'GeistMono',
 							gap: '27px',
@@ -561,51 +561,62 @@ function ReceiptCard({
 							letterSpacing: '-0.02em',
 						}}
 					>
-						{data.events.slice(0, 5).map((event, index) => (
-							<div
-								key={`${event.action}-${index}`}
-								tw="flex"
-								style={{
-									width: '100%',
-									justifyContent: 'space-between',
-									alignItems: 'flex-start',
-								}}
-							>
-								{/* Left: number + action + details */}
+						{data.events.slice(0, 5).map((event, index) => {
+							const detailParts = event.details
+								? parseEventDetails(event.details)
+								: []
+							return (
 								<div
+									key={`${event.action}-${index}`}
 									tw="flex"
 									style={{
-										flex: 1,
+										width: '100%',
+										justifyContent: 'space-between',
 										alignItems: 'flex-start',
-										gap: '10px',
-										flexWrap: 'wrap',
 									}}
 								>
-									{/* Number */}
-									<span
-										tw="text-gray-500 shrink-0"
-										style={{ lineHeight: '34px' }}
+									{/* Left: number + action + details all in one wrapping flex */}
+									<div
+										tw="flex"
+										style={{
+											flex: 1,
+											alignItems: 'center',
+											gap: '10px',
+											flexWrap: 'wrap',
+										}}
 									>
-										{index + 1}.
-									</span>
-									{/* Action badge */}
-									<span
-										tw="flex bg-gray-100 px-2 py-1 rounded shrink-0"
-										style={{ lineHeight: '26px' }}
-									>
-										{event.action}
-									</span>
-									{/* Details */}
-									{event.details && <EventDetails details={event.details} />}
+										{/* Number */}
+										<span
+											tw="text-gray-500 shrink-0"
+											style={{ lineHeight: '34px' }}
+										>
+											{index + 1}.
+										</span>
+										{/* Action badge */}
+										<span
+											tw="flex bg-gray-100 px-2 py-1 rounded shrink-0"
+											style={{ lineHeight: '26px' }}
+										>
+											{event.action}
+										</span>
+										{/* Details - each part in the same flex container */}
+										{detailParts.map((part, idx) => (
+											<DetailPart
+												key={`${part.text}-${idx}`}
+												part={part}
+												idx={idx}
+											/>
+										))}
+									</div>
+									{/* Amount on right */}
+									{event.amount && (
+										<span tw="shrink-0" style={{ lineHeight: '34px' }}>
+											{event.amount}
+										</span>
+									)}
 								</div>
-								{/* Amount on right */}
-								{event.amount && (
-									<span tw="shrink-0" style={{ lineHeight: '34px' }}>
-										{event.amount}
-									</span>
-								)}
-							</div>
-						))}
+							)
+						})}
 					</div>
 				</>
 			)}
@@ -632,7 +643,7 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col pr-8 pb-12 text-[27px]"
+						tw="flex flex-col pr-8 pb-12 text-[28px]"
 						style={{
 							fontFamily: 'GeistMono',
 							gap: '22px',
@@ -874,7 +885,21 @@ function AddressCard({ data }: { data: AddressData }) {
 
 				{/* Tokens Held section - hide for contracts */}
 				{data.tokensHeld.length > 0 && !data.isContract && (
-					<div tw="flex flex-col w-full">
+					<div tw="flex flex-col w-full" style={{ marginTop: '8px' }}>
+						<div
+							tw="flex w-full justify-end py-4"
+							style={{ gap: '20px', flexWrap: 'wrap' }}
+						>
+							<TokenBadges tokens={data.tokensHeld.slice(0, 12)} />
+							{data.tokensHeld.length > 12 && (
+								<span
+									tw="flex px-4 py-2 bg-gray-100 rounded text-gray-500 text-[22px]"
+									style={{ fontFamily: 'GeistMono' }}
+								>
+									+{data.tokensHeld.length - 12}
+								</span>
+							)}
+						</div>
 						{/* Divider - dashed */}
 						<div
 							tw="flex w-full"
@@ -882,31 +907,22 @@ function AddressCard({ data }: { data: AddressData }) {
 								height: '1px',
 								backgroundColor: '#d1d5db',
 								borderStyle: 'dashed',
-								marginLeft: '56px',
-								paddingRight: '40px',
+								marginTop: '16px',
 							}}
 						/>
-
-						<div
-							tw="flex flex-col w-full py-8"
-							style={{ gap: '16px', paddingLeft: '56px', paddingRight: '40px' }}
-						>
-							<div
-								tw="flex w-full align-end gap-4"
-								style={{ gap: '12px', flexWrap: 'wrap' }}
-							>
-								<TokenBadges tokens={data.tokensHeld.slice(0, 12)} />
-								{data.tokensHeld.length > 12 && (
-									<span
-										tw="flex px-4 py-2 bg-gray-100 rounded text-gray-500 text-[22px]"
-										style={{ fontFamily: 'GeistMono' }}
-									>
-										+{data.tokensHeld.length - 12}
-									</span>
-								)}
-							</div>
-						</div>
 					</div>
+				)}
+
+				{/* Divider - dashed (when no tokens) */}
+				{(data.tokensHeld.length === 0 || data.isContract) && (
+					<div
+						tw="flex w-full"
+						style={{
+							height: '1px',
+							backgroundColor: '#d1d5db',
+							borderStyle: 'dashed',
+						}}
+					/>
 				)}
 
 				{/* Transactions */}
@@ -965,9 +981,10 @@ async function fetchTokenIcon(address: string): Promise<string | null> {
 	}
 }
 
-// Parse event details and highlight assets (green) and addresses (blue)
-function EventDetails({ details }: { details: string }) {
-	// Parse into groups that should stay together (asset + connector like "for")
+// Parse event details into groups for rendering
+function parseEventDetails(
+	details: string,
+): { text: string; type: 'normal' | 'asset' | 'address' }[] {
 	const groups: { text: string; type: 'normal' | 'asset' | 'address' }[] = []
 
 	const words = details.split(' ')
@@ -1011,34 +1028,30 @@ function EventDetails({ details }: { details: string }) {
 		}
 	}
 
+	return groups
+}
+
+// Render a single detail part with appropriate styling
+function DetailPart({
+	part,
+	idx,
+}: {
+	part: { text: string; type: 'normal' | 'asset' | 'address' }
+	idx: number
+}) {
 	return (
 		<span
-			tw="flex"
-			style={{
-				flexWrap: 'wrap',
-				gap: '8px',
-				flex: 1,
-				minWidth: 0,
-				alignItems: 'flex-start',
-				alignContent: 'flex-start',
-				lineHeight: '30px',
-			}}
+			key={`${part.text}-${idx}`}
+			tw={
+				part.type === 'asset'
+					? 'text-emerald-600'
+					: part.type === 'address'
+						? 'text-blue-600'
+						: 'text-gray-500'
+			}
+			style={{ whiteSpace: 'nowrap', lineHeight: '34px' }}
 		>
-			{groups.map((part, idx) => (
-				<span
-					key={`${part.text}-${idx}`}
-					tw={
-						part.type === 'asset'
-							? 'text-emerald-600'
-							: part.type === 'address'
-								? 'text-blue-600'
-								: 'text-gray-500'
-					}
-					style={{ whiteSpace: 'nowrap' }}
-				>
-					{part.text}
-				</span>
-			))}
+			{part.text}
 		</span>
 	)
 }
