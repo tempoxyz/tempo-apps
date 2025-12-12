@@ -23,11 +23,19 @@ let fontCache: { mono: ArrayBuffer | null; inter: ArrayBuffer | null } = {
 }
 let imageCache: {
 	bg: ArrayBuffer | null
+	bgTx: ArrayBuffer | null
+	bgToken: ArrayBuffer | null
+	bgAddress: ArrayBuffer | null
+	bgContract: ArrayBuffer | null
 	logo: ArrayBuffer | null
 	receiptLogo: ArrayBuffer | null
 	nullIcon: ArrayBuffer | null
 } = {
 	bg: null,
+	bgTx: null,
+	bgToken: null,
+	bgAddress: null,
+	bgContract: null,
 	logo: null,
 	receiptLogo: null,
 	nullIcon: null,
@@ -117,9 +125,9 @@ app.get('/tx/:hash', async (c) => {
 
 		const response = new ImageResponse(
 			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
-				{/* Background image */}
+				{/* Background image - transaction template */}
 				<img
-					src={images.bg}
+					src={images.bgTx}
 					alt=""
 					tw="absolute inset-0 w-full h-full"
 					style={{ objectFit: 'cover' }}
@@ -130,8 +138,8 @@ app.get('/tx/:hash', async (c) => {
 					<ReceiptCard data={receiptData} receiptLogo={images.receiptLogo} />
 				</div>
 
-				{/* Right side branding */}
-				<div
+				{/* Right side branding - now built into background template */}
+				{/* <div
 					tw="absolute flex flex-col ml-8"
 					style={{ right: '56px', top: '80px', left: '790px', gap: '20px' }}
 				>
@@ -152,7 +160,7 @@ app.get('/tx/:hash', async (c) => {
 						<span>this transaction</span>
 						<span>using the explorer →</span>
 					</div>
-				</div>
+				</div> */}
 			</div>,
 			{
 				width: 1200 * devicePixelRatio,
@@ -238,9 +246,9 @@ app.get('/token/:address', async (c) => {
 
 		const response = new ImageResponse(
 			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
-				{/* Background image */}
+				{/* Background image - token template */}
 				<img
-					src={images.bg}
+					src={images.bgToken}
 					alt=""
 					tw="absolute inset-0 w-full h-full"
 					style={{ objectFit: 'cover' }}
@@ -251,8 +259,8 @@ app.get('/token/:address', async (c) => {
 					<TokenCard data={tokenData} icon={tokenIcon || images.nullIcon} />
 				</div>
 
-				{/* Right side branding - same as tx version */}
-				<div
+				{/* Right side branding - now built into background template */}
+				{/* <div
 					tw="absolute flex flex-col ml-8"
 					style={{ right: '56px', top: '80px', left: '790px', gap: '20px' }}
 				>
@@ -273,7 +281,7 @@ app.get('/token/:address', async (c) => {
 						<span>this asset using</span>
 						<span>the explorer →</span>
 					</div>
-				</div>
+				</div> */}
 			</div>,
 			{
 				width: 1200 * devicePixelRatio,
@@ -355,11 +363,16 @@ app.get('/address/:address', async (c) => {
 		// Fetch assets
 		const [fonts, images] = await Promise.all([loadFonts(), loadImages(c)])
 
+		// Choose background based on whether it's a contract or address
+		const bgImage = addressData.isContract
+			? images.bgContract
+			: images.bgAddress
+
 		const response = new ImageResponse(
 			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
-				{/* Background image */}
+				{/* Background image - address or contract template */}
 				<img
-					src={images.bg}
+					src={bgImage}
 					alt=""
 					tw="absolute inset-0 w-full h-full"
 					style={{ objectFit: 'cover' }}
@@ -370,8 +383,8 @@ app.get('/address/:address', async (c) => {
 					<AddressCard data={addressData} />
 				</div>
 
-				{/* Right side branding - same as tx version */}
-				<div
+				{/* Right side branding - now built into background template */}
+				{/* <div
 					tw="absolute flex flex-col ml-8"
 					style={{ right: '56px', top: '80px', left: '790px', gap: '20px' }}
 				>
@@ -392,7 +405,7 @@ app.get('/address/:address', async (c) => {
 						<span>this address using</span>
 						<span>the explorer →</span>
 					</div>
-				</div>
+				</div> */}
 			</div>,
 			{
 				width: 1200 * devicePixelRatio,
@@ -486,8 +499,8 @@ function ReceiptCard({
 		<div
 			tw="flex flex-col bg-white"
 			style={{
-				width: '750px',
-				maxWidth: '750px',
+				width: '700px',
+				maxWidth: '700px',
 				boxShadow:
 					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
 				borderTopRightRadius: '24px',
@@ -691,7 +704,7 @@ function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 		<div
 			tw="flex flex-col bg-white"
 			style={{
-				width: '750px',
+				width: '700px',
 				boxShadow:
 					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
 				borderTopRightRadius: '24px',
@@ -820,7 +833,7 @@ function TokenBadges({
 			{displayTokens.map((token, i) => (
 				<span
 					key={`${token}-${i}`}
-					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-700 text-[22px]"
+					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
 					style={{
 						fontFamily: 'GeistMono',
 						marginRight: '12px',
@@ -831,7 +844,7 @@ function TokenBadges({
 			))}
 			{remaining > 0 && (
 				<span
-					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-500 text-[22px]"
+					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
 					style={{ fontFamily: 'GeistMono' }}
 				>
 					+{remaining}
@@ -853,7 +866,7 @@ function MethodBadges({ methods }: { methods: string[] }) {
 		<div tw="flex flex-wrap justify-end" style={{ gap: '10px' }}>
 			{m0 && (
 				<span
-					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[22px]"
+					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
 					style={{ fontFamily: 'GeistMono' }}
 				>
 					{m0}
@@ -861,7 +874,7 @@ function MethodBadges({ methods }: { methods: string[] }) {
 			)}
 			{m1 && (
 				<span
-					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[22px]"
+					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
 					style={{ fontFamily: 'GeistMono' }}
 				>
 					{m1}
@@ -869,7 +882,7 @@ function MethodBadges({ methods }: { methods: string[] }) {
 			)}
 			{m2 && (
 				<span
-					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[22px]"
+					tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
 					style={{ fontFamily: 'GeistMono' }}
 				>
 					{m2}
@@ -877,7 +890,7 @@ function MethodBadges({ methods }: { methods: string[] }) {
 			)}
 			{remaining > 0 && (
 				<span
-					tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[22px]"
+					tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
 					style={{ fontFamily: 'GeistMono' }}
 				>
 					+{remaining}
@@ -898,7 +911,7 @@ function AddressCard({ data }: { data: AddressData }) {
 		<div
 			tw="flex flex-col bg-white"
 			style={{
-				width: '750px',
+				width: '700px',
 				boxShadow:
 					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
 				borderTopRightRadius: '24px',
@@ -978,26 +991,9 @@ function AddressCard({ data }: { data: AddressData }) {
 
 				{/* Contract Methods - show for contracts only */}
 				{data.isContract && data.methods && data.methods.length > 0 && (
-					<div tw="flex flex-col w-full" style={{ marginTop: '4px' }}>
-						<span
-							tw="text-gray-500 text-[27px]"
-							style={{ marginBottom: '12px' }}
-						>
-							Methods
-						</span>
-						<div tw="flex justify-end py-1" style={{ width: '100%' }}>
-							<MethodBadges methods={data.methods || []} />
-						</div>
-						{/* Divider - dashed */}
-						<div
-							tw="flex w-full"
-							style={{
-								height: '1px',
-								backgroundColor: '#d1d5db',
-								borderStyle: 'dashed',
-								marginTop: '16px',
-							}}
-						/>
+					<div tw="flex w-full justify-between items-center">
+						<span tw="text-gray-500">Methods</span>
+						<MethodBadges methods={data.methods || []} />
 					</div>
 				)}
 
@@ -1162,31 +1158,73 @@ async function loadFonts() {
 async function loadImages(c: { env: Cloudflare.Env }) {
 	if (
 		!imageCache.bg ||
+		!imageCache.bgTx ||
+		!imageCache.bgToken ||
+		!imageCache.bgAddress ||
+		!imageCache.bgContract ||
 		!imageCache.logo ||
 		!imageCache.receiptLogo ||
 		!imageCache.nullIcon
 	) {
-		const [bgRes, logoRes, receiptLogoRes, nullIconRes] = await Promise.all([
+		const [
+			bgRes,
+			bgTxRes,
+			bgTokenRes,
+			bgAddressRes,
+			bgContractRes,
+			logoRes,
+			receiptLogoRes,
+			nullIconRes,
+		] = await Promise.all([
 			c.env.ASSETS.fetch(new Request('https://assets/bg-template.png')),
+			c.env.ASSETS.fetch(
+				new Request('https://assets/bg-template-transaction.png'),
+			),
+			c.env.ASSETS.fetch(new Request('https://assets/bg-template-token.png')),
+			c.env.ASSETS.fetch(new Request('https://assets/bg-template-address.png')),
+			c.env.ASSETS.fetch(
+				new Request('https://assets/bg-template-contract.png'),
+			),
 			c.env.ASSETS.fetch(new Request('https://assets/tempo-lockup.png')),
 			c.env.ASSETS.fetch(new Request('https://assets/tempo-receipt.png')),
 			c.env.ASSETS.fetch(new Request('https://assets/null.png')),
 		])
 		imageCache = {
 			bg: await bgRes.arrayBuffer(),
+			bgTx: await bgTxRes.arrayBuffer(),
+			bgToken: await bgTokenRes.arrayBuffer(),
+			bgAddress: await bgAddressRes.arrayBuffer(),
+			bgContract: await bgContractRes.arrayBuffer(),
 			logo: await logoRes.arrayBuffer(),
 			receiptLogo: await receiptLogoRes.arrayBuffer(),
 			nullIcon: await nullIconRes.arrayBuffer(),
 		}
 	}
-	const { bg, logo, receiptLogo, nullIcon } = imageCache as {
+	const {
+		bg,
+		bgTx,
+		bgToken,
+		bgAddress,
+		bgContract,
+		logo,
+		receiptLogo,
+		nullIcon,
+	} = imageCache as {
 		bg: ArrayBuffer
+		bgTx: ArrayBuffer
+		bgToken: ArrayBuffer
+		bgAddress: ArrayBuffer
+		bgContract: ArrayBuffer
 		logo: ArrayBuffer
 		receiptLogo: ArrayBuffer
 		nullIcon: ArrayBuffer
 	}
 	return {
 		bg: `data:image/png;base64,${Buffer.from(bg).toString('base64')}`,
+		bgTx: `data:image/png;base64,${Buffer.from(bgTx).toString('base64')}`,
+		bgToken: `data:image/png;base64,${Buffer.from(bgToken).toString('base64')}`,
+		bgAddress: `data:image/png;base64,${Buffer.from(bgAddress).toString('base64')}`,
+		bgContract: `data:image/png;base64,${Buffer.from(bgContract).toString('base64')}`,
 		logo: `data:image/png;base64,${Buffer.from(logo).toString('base64')}`,
 		receiptLogo: `data:image/png;base64,${Buffer.from(receiptLogo).toString('base64')}`,
 		nullIcon: `data:image/png;base64,${Buffer.from(nullIcon).toString('base64')}`,
