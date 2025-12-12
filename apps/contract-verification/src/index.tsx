@@ -1,6 +1,7 @@
 import { getContainer } from '@cloudflare/containers'
 import { Hono } from 'hono'
 import { csrf } from 'hono/csrf'
+import { showRoutes } from 'hono/dev'
 import { prettyJSON } from 'hono/pretty-json'
 import { requestId } from 'hono/request-id'
 import { secureHeaders } from 'hono/secure-headers'
@@ -50,5 +51,7 @@ app
 					: context.json({ error: 'Failed to ping container' }, 500),
 			),
 	)
+
+showRoutes(app)
 
 export default app satisfies ExportedHandler<Cloudflare.Env>

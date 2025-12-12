@@ -61,7 +61,7 @@ verifyRoute.use(
 // POST /v2/verify/:chainId/:address - Verify Contract (Standard JSON)
 verifyRoute.post('/:chainId/:address', async (context) => {
 	try {
-		const { chainId, address } = context.req.param()
+		const { chainId: _chainId, address } = context.req.param()
 		const body = (await context.req.json()) as {
 			stdJsonInput: {
 				language: string
@@ -73,8 +73,8 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			creationTransactionHash?: string
 		}
 
-		const chainIdNum = Number(chainId)
-		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(chainIdNum)) {
+		const chainId = Number(_chainId)
+		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(chainId)) {
 			return context.json(
 				{
 					error: 'Invalid chainId',
@@ -148,7 +148,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			)
 			.where(
 				and(
-					eq(contractDeploymentsTable.chainId, chainIdNum),
+					eq(contractDeploymentsTable.chainId, chainId),
 					eq(contractDeploymentsTable.address, addressBytes),
 				),
 			)
@@ -157,19 +157,24 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		if (existingVerification.length > 0 && existingVerification[0]) {
 			const [v] = existingVerification
 			const matchStatus = v.runtimeMetadataMatch ? 'exact_match' : 'match'
-			return context.json({
-				address,
-				match: matchStatus,
-				creationMatch: null,
-				verifiedAt: v.verifiedAt,
-				status: 'already_verified',
-				runtimeMatch: matchStatus,
-				matchId: String(v.matchId),
-				chainId: String(chainIdNum),
-			})
+
+			return context.json(
+				{
+					verificationId: v.matchId,
+					address,
+					match: matchStatus,
+					creationMatch: null,
+					verifiedAt: v.verifiedAt,
+					status: 'already_verified',
+					runtimeMatch: matchStatus,
+					matchId: v.matchId,
+					chainId: chainId,
+				},
+				202,
+			)
 		}
 
-		const chain = chains[chainIdNum as keyof typeof chains] as unknown as Chain
+		const chain = chains[chainId as keyof typeof chains] as unknown as Chain
 		const client = createPublicClient({
 			chain,
 			transport: http('https://rpc.testnet.tempo.xyz'),
@@ -389,7 +394,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			.from(contractDeploymentsTable)
 			.where(
 				and(
-					eq(contractDeploymentsTable.chainId, chainIdNum),
+					eq(contractDeploymentsTable.chainId, chainId),
 					eq(contractDeploymentsTable.address, addressBytes),
 				),
 			)
@@ -402,7 +407,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			deploymentId = crypto.randomUUID()
 			await db.insert(contractDeploymentsTable).values({
 				id: deploymentId,
-				chainId: chainIdNum,
+				chainId: chainId,
 				address: addressBytes,
 				contractId,
 				createdBy: auditUser,
@@ -460,15 +465,28 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			})
 			.onConflictDoNothing()
 
-		return context.json({
-			status: 'verified',
-			match: perfectMatch ? 'perfect' : 'partial',
-			chainId,
-			address,
-			contractName,
-			contractPath,
-			abi: compiledContract.abi,
-		})
+		const verificationResult = await db
+			.select({ id: verifiedContractsTable.id })
+			.from(verifiedContractsTable)
+			.where(eq(verifiedContractsTable.deploymentId, deploymentId))
+			.limit(1)
+
+		const verificationId =
+			verificationResult.at(0)?.id?.toString() ?? crypto.randomUUID()
+
+		return context.json(
+			{
+				verificationId,
+				status: 'verified',
+				match: perfectMatch ? 'perfect' : 'partial',
+				chainId,
+				address,
+				contractName,
+				contractPath,
+				abi: compiledContract.abi,
+			},
+			202,
+		)
 	} catch (error) {
 		console.error(error)
 		return context.json(
@@ -493,8 +511,74 @@ verifyRoute.post('/similarity/:chainId/:address', (context) =>
 )
 
 // GET /v2/verify/:verificationId - Check verification job status
-verifyRoute.get('/:verificationId', (context) =>
-	context.json({ error: 'Not implemented' }, 501),
-)
+verifyRoute.get('/:verificationId', async (context) => {
+	try {
+		const { verificationId } = context.req.param()
+
+		const db = drizzle(context.env.CONTRACTS_DB)
+
+		const result = await db
+			.select({
+				matchId: verifiedContractsTable.id,
+				verifiedAt: verifiedContractsTable.createdAt,
+				runtimeMatch: verifiedContractsTable.runtimeMatch,
+				creationMatch: verifiedContractsTable.creationMatch,
+				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+				chainId: contractDeploymentsTable.chainId,
+				address: contractDeploymentsTable.address,
+				contractName: compiledContractsTable.name,
+			})
+			.from(verifiedContractsTable)
+			.innerJoin(
+				contractDeploymentsTable,
+				eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
+			)
+			.innerJoin(
+				compiledContractsTable,
+				eq(verifiedContractsTable.compilationId, compiledContractsTable.id),
+			)
+			.where(eq(verifiedContractsTable.id, Number(verificationId)))
+			.limit(1)
+
+		if (result.length === 0 || !result[0]) {
+			return context.json(
+				{
+					customCode: 'not_found',
+					message: `No verification job found for ID ${verificationId}`,
+					errorId: crypto.randomUUID(),
+				},
+				404,
+			)
+		}
+
+		const [v] = result
+		const runtimeMatchStatus = v.runtimeMetadataMatch ? 'exact_match' : 'match'
+		const creationMatchStatus = v.creationMatch ? 'exact_match' : 'match'
+
+		// Foundry expects this format for completed jobs
+		return context.json({
+			isJobCompleted: true,
+			contract: {
+				match: runtimeMatchStatus,
+				creationMatch: creationMatchStatus,
+				runtimeMatch: runtimeMatchStatus,
+				chainId: v.chainId,
+				address: Hex.fromBytes(new Uint8Array(v.address as ArrayBuffer)),
+				name: v.contractName,
+				verifiedAt: v.verifiedAt,
+			},
+		})
+	} catch (error) {
+		console.error(error)
+		return context.json(
+			{
+				customCode: 'internal_error',
+				message: 'An unexpected error occurred',
+				errorId: crypto.randomUUID(),
+			},
+			500,
+		)
+	}
+})
 
 export { verifyRoute }
