@@ -21,10 +21,12 @@ let imageCache: {
 	bg: ArrayBuffer | null
 	logo: ArrayBuffer | null
 	receiptLogo: ArrayBuffer | null
+	nullIcon: ArrayBuffer | null
 } = {
 	bg: null,
 	logo: null,
 	receiptLogo: null,
+	nullIcon: null,
 }
 
 const app = new Hono<{ Bindings: Cloudflare.Env }>()
@@ -242,38 +244,34 @@ app.get('/token/:address', async (c) => {
 				/>
 
 				{/* Token Card */}
-				<div
-					tw="absolute flex"
-					style={{
-						left: '64px',
-						top: '80px',
-						bottom: '0',
-					}}
-				>
-					<TokenCard data={tokenData} />
+				<div tw="absolute flex" style={{ left: '56px', top: '40px' }}>
+					<TokenCard data={tokenData} nullIcon={images.nullIcon} />
 				</div>
 
-				{/* Tempo branding - bottom right */}
+				{/* Right side branding - same as tx version */}
 				<div
-					tw="absolute flex flex-col items-start"
-					style={{
-						right: '64px',
-						top: '80px',
-					}}
+					tw="absolute flex flex-col ml-16"
+					style={{ right: '48px', top: '100px', left: '700px', gap: '20px' }}
 				>
-					{/* Tempo lockup logo */}
-					<img src={images.logo} alt="Tempo" tw="mb-2" width={200} height={46} />
-
-					{/* CTA text */}
+					<img
+						src={images.logo}
+						alt="Tempo"
+						style={{ width: '260px', height: '61px' }}
+					/>
 					<div
-						tw="flex flex-col text-[28px] text-gray-500"
-						style={{ fontFamily: 'Inter', lineHeight: '1.4' }}
+						tw="flex flex-col text-[34px] text-gray-500"
+						style={{
+							fontFamily: 'Inter',
+							letterSpacing: '-0.02em',
+							lineHeight: '1.35',
+						}}
 					>
 						<span>View more about this</span>
-						<span>asset using the</span>
-						<span tw="flex items-center">
-							explorer <span tw="text-gray-500 ml-2">→</span>
-						</span>
+						<span>asset using</span>
+						<div tw="flex items-center" style={{ gap: '8px' }}>
+							<span>the explorer</span>
+							<span tw="text-gray-500 text-[34px]">→</span>
+						</div>
 					</div>
 				</div>
 			</div>,
@@ -517,7 +515,7 @@ function ReceiptCard({
 
 // ============ Token Card Component ============
 
-function TokenCard({ data }: { data: TokenData }) {
+function TokenCard({ data, nullIcon }: { data: TokenData; nullIcon: string }) {
 	return (
 		<div
 			tw="flex flex-col bg-white rounded-3xl shadow-2xl"
@@ -528,13 +526,13 @@ function TokenCard({ data }: { data: TokenData }) {
 		>
 			{/* Header with icon and name */}
 			<div tw="flex items-center px-8 pt-8 pb-6" style={{ gap: '16px' }}>
-				{/* Token icon placeholder - blue circle with first letter */}
-				<div
-					tw="flex items-center justify-center rounded-full bg-blue-500 text-white text-3xl font-bold"
+				{/* Token icon - use null icon as placeholder */}
+				<img
+					src={nullIcon}
+					alt=""
+					tw="rounded-full"
 					style={{ width: '64px', height: '64px' }}
-				>
-					{data.symbol?.[0]?.toUpperCase() || 'T'}
-				</div>
+				/>
 				<div tw="flex flex-col flex-1">
 					<span tw="text-3xl font-semibold text-gray-900">{data.name}</span>
 				</div>
@@ -552,26 +550,23 @@ function TokenCard({ data }: { data: TokenData }) {
 				tw="flex mx-8"
 				style={{
 					height: '1px',
-					backgroundColor: '#e5e7eb',
-					borderStyle: 'dashed',
+					backgroundColor: '#d1d5db',
 				}}
 			/>
 
 			{/* Details */}
 			<div
-				tw="flex flex-col px-8 py-6 text-[22px]"
+				tw="flex flex-col px-8 py-6 text-[23.5px]"
 				style={{
 					fontFamily: 'GeistMono',
-					gap: '20px',
+					gap: '16px',
 					letterSpacing: '-0.02em',
 				}}
 			>
-				{/* Address */}
-				<div tw="flex w-full justify-between items-start">
+				{/* Address - truncated */}
+				<div tw="flex w-full justify-between">
 					<span tw="text-gray-400">Address</span>
-					<span tw="text-blue-500" style={{ maxWidth: '320px', textAlign: 'right' }}>
-						{data.address}
-					</span>
+					<span tw="text-blue-500">{truncateHash(data.address, 8)}</span>
 				</div>
 
 				{/* Currency */}
@@ -710,27 +705,36 @@ async function loadFonts() {
 }
 
 async function loadImages(c: { env: Cloudflare.Env }) {
-	if (!imageCache.bg || !imageCache.logo || !imageCache.receiptLogo) {
-		const [bgRes, logoRes, receiptLogoRes] = await Promise.all([
+	if (
+		!imageCache.bg ||
+		!imageCache.logo ||
+		!imageCache.receiptLogo ||
+		!imageCache.nullIcon
+	) {
+		const [bgRes, logoRes, receiptLogoRes, nullIconRes] = await Promise.all([
 			c.env.ASSETS.fetch(new Request('https://assets/bg-template.png')),
 			c.env.ASSETS.fetch(new Request('https://assets/tempo-lockup.png')),
 			c.env.ASSETS.fetch(new Request('https://assets/tempo-receipt.png')),
+			c.env.ASSETS.fetch(new Request('https://assets/null.png')),
 		])
 		imageCache = {
 			bg: await bgRes.arrayBuffer(),
 			logo: await logoRes.arrayBuffer(),
 			receiptLogo: await receiptLogoRes.arrayBuffer(),
+			nullIcon: await nullIconRes.arrayBuffer(),
 		}
 	}
-	const { bg, logo, receiptLogo } = imageCache as {
+	const { bg, logo, receiptLogo, nullIcon } = imageCache as {
 		bg: ArrayBuffer
 		logo: ArrayBuffer
 		receiptLogo: ArrayBuffer
+		nullIcon: ArrayBuffer
 	}
 	return {
 		bg: `data:image/png;base64,${Buffer.from(bg).toString('base64')}`,
 		logo: `data:image/png;base64,${Buffer.from(logo).toString('base64')}`,
 		receiptLogo: `data:image/png;base64,${Buffer.from(receiptLogo).toString('base64')}`,
+		nullIcon: `data:image/png;base64,${Buffer.from(nullIcon).toString('base64')}`,
 	}
 }
 

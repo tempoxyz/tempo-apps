@@ -267,7 +267,9 @@ function formatEventForOg(event: KnownEvent): string {
 		if (part.type === 'amount') {
 			const formatted = formatAmount(part.value)
 			// Format as USD - if it's already formatted like "<0.01", prefix with $
-			usdAmount = formatted.startsWith('<') ? `<$${formatted.slice(1)}` : `$${formatted}`
+			usdAmount = formatted.startsWith('<')
+				? `<$${formatted.slice(1)}`
+				: `$${formatted}`
 			break
 		}
 	}
