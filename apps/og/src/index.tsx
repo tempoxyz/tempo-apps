@@ -128,35 +128,32 @@ app.get('/tx/:hash', async (c) => {
 				{/* Receipt */}
 				<div
 					tw="absolute flex"
-					style={{ left: '56px', top: '40px', bottom: '0' }}
+					style={{ left: '40px', top: '24px', bottom: '0' }}
 				>
 					<ReceiptCard data={receiptData} receiptLogo={images.receiptLogo} />
 				</div>
 
 				{/* Right side branding */}
 				<div
-					tw="absolute flex flex-col ml-16"
-					style={{ right: '48px', top: '100px', left: '700px', gap: '20px' }}
+					tw="absolute flex flex-col"
+					style={{ right: '40px', top: '80px', left: '780px', gap: '16px' }}
 				>
 					<img
 						src={images.logo}
 						alt="Tempo"
-						style={{ width: '260px', height: '61px' }}
+						style={{ width: '220px', height: '52px' }}
 					/>
 					<div
-						tw="flex flex-col text-[34px] text-gray-500"
+						tw="flex flex-col text-[28px] text-gray-500"
 						style={{
 							fontFamily: 'Inter',
 							letterSpacing: '-0.02em',
-							lineHeight: '1.35',
+							lineHeight: '1.4',
 						}}
 					>
-						<span>View more about this</span>
-						<span>transaction using</span>
-						<div tw="flex items-center" style={{ gap: '8px' }}>
-							<span>the explorer</span>
-							<span tw="text-gray-500 text-[34px]">→</span>
-						</div>
+						<span>View more about</span>
+						<span>this transaction</span>
+						<span>using the explorer →</span>
 					</div>
 				</div>
 			</div>,
@@ -483,17 +480,20 @@ function ReceiptCard({
 	data: ReceiptData
 	receiptLogo: string
 }) {
+	// Combine date and time
+	const when = data.date !== '—' ? `${data.date} ${data.time}` : '—'
+
 	return (
 		<div
 			tw="flex flex-col bg-white rounded-t-3xl shadow-2xl"
 			style={{
-				width: '640px',
+				width: '720px',
 				boxShadow: '0 8px 60px rgba(0,0,0,0.12)',
 			}}
 		>
 			{/* Header */}
 			<div tw="flex w-full px-8 pt-8 pb-6" style={{ gap: '24px' }}>
-				{/* Tempo Receipt logo - natural aspect ratio */}
+				{/* Tempo Receipt logo */}
 				<div tw="flex shrink-0 items-start">
 					<img
 						src={receiptLogo}
@@ -502,9 +502,9 @@ function ReceiptCard({
 					/>
 				</div>
 
-				{/* Details - right aligned values */}
+				{/* Details - condensed */}
 				<div
-					tw="flex flex-col flex-1 text-[23.5px]"
+					tw="flex flex-col flex-1 text-[24px]"
 					style={{
 						fontFamily: 'GeistMono',
 						gap: '16px',
@@ -513,24 +513,12 @@ function ReceiptCard({
 					}}
 				>
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-400">Block</span>
-						<span tw="text-emerald-600">#{data.blockNumber}</span>
-					</div>
-					<div tw="flex w-full justify-between">
 						<span tw="text-gray-400">Sender</span>
 						<span tw="text-emerald-600">{truncateHash(data.sender, 6)}</span>
 					</div>
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-400">Hash</span>
-						<span>{truncateHash(data.hash, 6)}</span>
-					</div>
-					<div tw="flex w-full justify-between">
-						<span tw="text-gray-400">Date</span>
-						<span>{data.date}</span>
-					</div>
-					<div tw="flex w-full justify-between">
-						<span tw="text-gray-400">Time</span>
-						<span>{data.time}</span>
+						<span tw="text-gray-400">When</span>
+						<span>{when}</span>
 					</div>
 				</div>
 			</div>
@@ -546,15 +534,15 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-6 px-8 text-[23.5px]"
+						tw="flex flex-col py-5 px-8 text-[24px]"
 						style={{
 							fontFamily: 'GeistMono',
-							gap: '16px',
+							gap: '14px',
 							width: '100%',
 							letterSpacing: '-0.02em',
 						}}
 					>
-						{data.events.slice(0, 4).map((event, index) => (
+						{data.events.slice(0, 5).map((event, index) => (
 							<div
 								key={`${event.action}-${index}`}
 								tw="flex"
@@ -577,23 +565,23 @@ function ReceiptCard({
 									{/* Number */}
 									<span
 										tw="text-gray-400 shrink-0"
-										style={{ lineHeight: '28px' }}
+										style={{ lineHeight: '30px' }}
 									>
 										{index + 1}.
 									</span>
 									{/* Action badge */}
 									<span
 										tw="flex bg-gray-100 px-2 py-1 rounded shrink-0"
-										style={{ lineHeight: '20px' }}
+										style={{ lineHeight: '22px' }}
 									>
 										{event.action}
 									</span>
-									{/* Details - wraps to new line */}
+									{/* Details */}
 									{event.details && <EventDetails details={event.details} />}
 								</div>
 								{/* Amount on right */}
 								{event.amount && (
-									<span tw="shrink-0" style={{ lineHeight: '28px' }}>
+									<span tw="shrink-0" style={{ lineHeight: '30px' }}>
 										{event.amount}
 									</span>
 								)}
@@ -614,10 +602,10 @@ function ReceiptCard({
 						}}
 					/>
 					<div
-						tw="flex flex-col py-6 px-8 text-[23.5px]"
+						tw="flex flex-col py-5 px-8 text-[24px]"
 						style={{
 							fontFamily: 'GeistMono',
-							gap: '16px',
+							gap: '14px',
 							width: '100%',
 							letterSpacing: '-0.02em',
 						}}
@@ -782,7 +770,10 @@ function AddressCard({ data }: { data: AddressData }) {
 		>
 			{/* Address header */}
 			<div tw="flex w-full px-8 pt-8 pb-6 justify-between items-start">
-				<span tw="text-gray-400 text-[23.5px]" style={{ fontFamily: 'GeistMono' }}>
+				<span
+					tw="text-gray-400 text-[23.5px]"
+					style={{ fontFamily: 'GeistMono' }}
+				>
 					Address
 				</span>
 				<div
@@ -966,7 +957,7 @@ function EventDetails({ details }: { details: string }) {
 				minWidth: 0,
 				alignItems: 'flex-start',
 				alignContent: 'flex-start',
-				lineHeight: '28px',
+				lineHeight: '30px',
 			}}
 		>
 			{groups.map((part, idx) => (
