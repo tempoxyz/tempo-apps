@@ -71,10 +71,11 @@ export default Sentry.withSentry(
 				opts as Parameters<ServerEntry['fetch']>[1],
 			)
 
-			// Check if this is a transaction page and inject OG meta tags
-			const txMatch = url.pathname.match(/^\/tx\/0x[a-fA-F0-9]{64}$/)
+			// Check if this is a transaction or receipt page and inject OG meta tags
+			const txMatch = url.pathname.match(/^\/(tx|receipt)\/0x[a-fA-F0-9]{64}$/)
 			if (txMatch && response.headers.get('content-type')?.includes('text/html')) {
-				const hash = url.pathname.split('/tx/')[1]
+				const pathParts = url.pathname.split('/')
+				const hash = pathParts[2] // Gets the hash from /tx/{hash} or /receipt/{hash}
 				const ogImageUrl = buildBasicOgUrl(hash)
 				const title = `Transaction ${hash.slice(0, 10)}...${hash.slice(-6)} ⋅ Tempo Explorer`
 
