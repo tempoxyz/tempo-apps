@@ -807,7 +807,11 @@ function TokenBadges({ tokens }: { tokens: string[] }) {
 				<span
 					key={key}
 					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-700 text-[22px]"
-					style={{ fontFamily: 'GeistMono' }}
+					style={{
+						fontFamily: 'GeistMono',
+						marginRight: '12px',
+						marginBottom: '12px',
+					}}
 				>
 					{token}
 				</span>
@@ -887,16 +891,19 @@ function AddressCard({ data }: { data: AddressData }) {
 				{data.tokensHeld.length > 0 && !data.isContract && (
 					<div tw="flex flex-col w-full" style={{ marginTop: '8px' }}>
 						<div
-							tw="flex w-full justify-end py-4"
-							style={{ gap: '20px', flexWrap: 'wrap' }}
+							tw="flex py-4"
+							style={{
+								flexWrap: 'wrap',
+								width: '100%',
+							}}
 						>
-							<TokenBadges tokens={data.tokensHeld.slice(0, 12)} />
-							{data.tokensHeld.length > 12 && (
+							<TokenBadges tokens={data.tokensHeld.slice(0, 8)} />
+							{data.tokensHeld.length > 8 && (
 								<span
 									tw="flex px-4 py-2 bg-gray-100 rounded text-gray-500 text-[22px]"
 									style={{ fontFamily: 'GeistMono' }}
 								>
-									+{data.tokensHeld.length - 12}
+									+{data.tokensHeld.length - 8}
 								</span>
 							)}
 						</div>

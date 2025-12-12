@@ -813,34 +813,99 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 				? formatDateTime(Number(oldestTransfers[0].block_timestamp) * 1000)
 				: '—'
 
-		// Calculate holdings by fetching decimals for each token
+		// Calculate holdings using same tokens as frontend
+		// Frontend uses these 4 specific token addresses
+		const KNOWN_TOKENS = [
+			'0x20c0000000000000000000000000000000000000',
+			'0x20c0000000000000000000000000000000000001',
+			'0x20c0000000000000000000000000000000000002',
+			'0x20c0000000000000000000000000000000000003',
+		]
+
 		let totalValue = 0
-		for (const [tokenAddr, balance] of balances) {
-			if (balance > 0n) {
-				try {
-					// Fetch decimals for this token
-					const decimalsRes = await fetch(RPC_URL, {
+		const PRICE_PER_TOKEN = 1
+		const knownTokensHeld: string[] = []
+
+		// Fetch balanceOf, decimals, and symbol for each known token
+		for (const tokenAddr of KNOWN_TOKENS) {
+			try {
+				// balanceOf(address) - 0x70a08231 + padded address
+				const balanceOfData = `0x70a08231000000000000000000000000${address.slice(2).toLowerCase()}`
+
+				const [balanceRes, decimalsRes, symbolRes] = await Promise.all([
+					fetch(RPC_URL, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'eth_call',
+							params: [{ to: tokenAddr, data: balanceOfData }, 'latest'],
+							id: 1,
+						}),
+					}),
+					fetch(RPC_URL, {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({
 							jsonrpc: '2.0',
 							method: 'eth_call',
 							params: [{ to: tokenAddr, data: '0x313ce567' }, 'latest'], // decimals()
-							id: 1,
+							id: 2,
 						}),
-					})
-					const decimalsJson = (await decimalsRes.json()) as { result?: string }
-					const decimals =
-						decimalsJson.result && decimalsJson.result !== '0x'
-							? Number.parseInt(decimalsJson.result, 16)
-							: 18
-					totalValue += Number(balance) / 10 ** decimals
-				} catch {
-					// Fallback to 18 decimals
-					totalValue += Number(balance) / 1e18
+					}),
+					fetch(RPC_URL, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							jsonrpc: '2.0',
+							method: 'eth_call',
+							params: [{ to: tokenAddr, data: '0x95d89b41' }, 'latest'], // symbol()
+							id: 3,
+						}),
+					}),
+				])
+
+				const balanceJson = (await balanceRes.json()) as { result?: string }
+				const decimalsJson = (await decimalsRes.json()) as { result?: string }
+				const symbolJson = (await symbolRes.json()) as { result?: string }
+
+				const balance =
+					balanceJson.result && balanceJson.result !== '0x'
+						? BigInt(balanceJson.result)
+						: 0n
+				const decimals =
+					decimalsJson.result && decimalsJson.result !== '0x'
+						? Number.parseInt(decimalsJson.result, 16)
+						: 18
+
+				if (balance > 0n) {
+					// Same calculation as frontend: Number(formatUnits(balance, decimals)) * PRICE_PER_TOKEN
+					totalValue += (Number(balance) / 10 ** decimals) * PRICE_PER_TOKEN
+
+					// Also get symbol for tokensHeld
+					if (symbolJson.result && symbolJson.result !== '0x') {
+						const data = symbolJson.result.slice(2)
+						if (data.length >= 128) {
+							const length = Number.parseInt(data.slice(64, 128), 16)
+							const strHex = data.slice(128, 128 + length * 2)
+							const symbol = Buffer.from(strHex, 'hex')
+								.toString('utf8')
+								.replace(/\0/g, '')
+							if (symbol && !knownTokensHeld.includes(symbol)) {
+								knownTokensHeld.push(symbol)
+							}
+						}
+					}
 				}
+			} catch {
+				// Skip tokens we can't fetch
 			}
 		}
+
+		// Combine tokensHeld from indexer with known tokens, limit to 8 (2 rows worth)
+		const allTokensHeld = [
+			...new Set([...knownTokensHeld, ...tokensHeld]),
+		].slice(0, 8)
 
 		// Format holdings with K/M/B suffixes
 		const formatCompactValue = (n: number): string => {
@@ -857,8 +922,8 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			txCount,
 			lastActive,
 			created,
-			feeToken: tokensHeld[0] || '—',
-			tokensHeld,
+			feeToken: allTokensHeld[0] || '—',
+			tokensHeld: allTokensHeld,
 			isContract,
 		}
 	} catch (e) {
