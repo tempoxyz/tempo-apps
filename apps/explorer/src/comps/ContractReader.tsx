@@ -2,10 +2,14 @@ import { Link, useLocation } from '@tanstack/react-router'
 import { Address } from 'ox'
 import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
-import type { Abi, AbiFunction } from 'viem'
-import { decodeFunctionResult, encodeFunctionData } from 'viem'
+import {
+	type Abi,
+	type AbiFunction,
+	decodeFunctionResult,
+	encodeFunctionData,
+} from 'viem'
 import { useCall, useReadContract } from 'wagmi'
-import { cx } from '#cva.config.ts'
+import { cx } from '#cva.config'
 import { ellipsis } from '#lib/chars'
 import {
 	formatOutputValue,
@@ -17,10 +21,11 @@ import {
 	getPlaceholder,
 	isArrayType,
 	parseInputValue,
-} from '#lib/domain/contracts.ts'
-import { useCopy } from '#lib/hooks.ts'
+} from '#lib/domain/contracts'
+import { useCopy } from '#lib/hooks'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
+import ChevronsUpDownIcon from '~icons/lucide/chevrons-up-down'
 import CopyIcon from '~icons/lucide/copy'
 import DownloadIcon from '~icons/lucide/download'
 import ExternalLinkIcon from '~icons/lucide/external-link'
@@ -55,6 +60,52 @@ function getMethodWithSelector(fn: AbiFunction): string {
 	const selector = getFunctionSelector(fn)
 	const name = fn.name || selector
 	return `${name} (${selector})`
+}
+
+function Expandable(props: {
+	className?: string
+	expanded?: boolean
+	lineHeight?: number
+	onOverflowChange?: (overflows: boolean) => void
+	rows?: number
+	value: string
+}) {
+	const {
+		className,
+		expanded,
+		lineHeight = 20,
+		onOverflowChange,
+		rows = 8,
+		value,
+	} = props
+	const contentRef = React.useRef<HTMLDivElement>(null)
+
+	React.useEffect(() => {
+		const el = contentRef.current
+		if (!el) return
+		const onResize = () =>
+			onOverflowChange?.(el.scrollHeight > lineHeight * rows)
+		onResize()
+		const observer = new ResizeObserver(onResize)
+		observer.observe(el)
+		return () => observer.disconnect()
+	}, [onOverflowChange])
+
+	return (
+		<div
+			ref={contentRef}
+			style={{
+				maxHeight: expanded ? undefined : lineHeight * rows,
+				lineHeight: `${20}px`,
+			}}
+			className={cx(
+				'text-primary overflow-auto text-[13px] font-mono outline-focus focus-visible:outline-2 outline-offset-1 rounded-[4px]',
+				className,
+			)}
+		>
+			{value}
+		</div>
+	)
 }
 
 // ============================================================================
@@ -223,7 +274,7 @@ function AbiViewer(props: { abi: Abi; onCopy: () => void; copied: boolean }) {
 					<CopyIcon className="h-[14px] w-[14px]" />
 				</button>
 			</div>
-			<pre className="max-h-[280px] overflow-auto rounded-[8px] text-[12px] leading-[18px] text-primary/90 font-mono">
+			<pre className="max-h-[280px] overflow-auto rounded-[8px] text-[12px] leading-[18px] text-primary/90 font-mono outline-focus focus-visible:outline-2">
 				{JSON.stringify(abi, null, 2)}
 			</pre>
 		</div>
@@ -242,6 +293,8 @@ function StaticReadFunction(props: {
 	const { address, abi, fn } = props
 	const { copy, notifying } = useCopy({ timeout: 2_000 })
 	const { copy: copyLink, notifying: linkCopied } = useCopy({ timeout: 2_000 })
+	const [expanded, setExpanded] = React.useState(false)
+	const [overflows, setOverflows] = React.useState(false)
 
 	const [mounted, setMounted] = React.useState(false)
 	React.useEffect(() => setMounted(true), [])
@@ -403,26 +456,37 @@ function StaticReadFunction(props: {
 							<LinkIcon className="w-[12px] h-[12px]" />
 						)}
 					</button>
+					{overflows && (
+						<button
+							type="button"
+							onClick={() => setExpanded((v) => !v)}
+							title={expanded ? 'Collapse' : 'Expand'}
+							className="transition-colors press-down text-tertiary hover:text-primary"
+						>
+							<ChevronsUpDownIcon className="w-[12px] h-[12px]" />
+						</button>
+					)}
 				</div>
 			</div>
-			{isValidAddress ? (
-				<Link
-					to="/address/$address"
-					params={{ address: result as Address.Address }}
-					className="text-[13px] text-accent hover:text-accent/80 transition-colors font-mono"
-				>
-					{displayValue}
-				</Link>
+			{isLoading ? (
+				<div className="text-[13px] text-secondary">{ellipsis}</div>
+			) : isValidAddress ? (
+				<div>
+					<Link
+						to="/address/$address"
+						params={{ address: result as Address.Address }}
+						className="text-[13px] text-accent hover:text-accent/80 transition-colors font-mono"
+					>
+						{displayValue}
+					</Link>
+				</div>
 			) : (
-				<span
-					className={cx(
-						'text-[13px] font-mono truncate',
-						error ? 'text-red-400' : 'text-primary',
-					)}
-					title={displayValue}
-				>
-					{displayValue}
-				</span>
+				<Expandable
+					expanded={expanded}
+					onOverflowChange={setOverflows}
+					className={cx(error ? 'text-red-400' : 'text-primary')}
+					value={displayValue}
+				/>
 			)}
 		</div>
 	)
