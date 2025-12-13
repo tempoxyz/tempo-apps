@@ -96,9 +96,9 @@ function RouteComponent() {
 	const { page } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 
-	const { data } = useQuery({
+	const { data, isPlaceholderData } = useQuery({
 		...blockDetailQueryOptions(loaderData.blockRef, page),
-		initialData: loaderData.page === page ? loaderData : undefined,
+		initialData: page === 1 ? loaderData : undefined,
 	})
 
 	const { block, knownEventsByHash } = data ?? loaderData
@@ -144,6 +144,7 @@ function RouteComponent() {
 								page={page}
 								totalItems={allTransactions.length}
 								startIndex={startIndex}
+								fetching={isPlaceholderData}
 							/>
 						),
 					},
@@ -194,15 +195,16 @@ function TransactionsSection(props: TransactionsSectionProps) {
 		page,
 		totalItems,
 		startIndex,
+		fetching,
 	} = props
 
 	const cols = [
 		{ label: 'Index', align: 'start', width: '0.5fr' },
 		{ label: 'Description', align: 'start', width: '3fr' },
-		{ label: 'From', align: 'end', width: '1.5fr' },
-		{ label: 'Hash', align: 'end', width: '1.5fr' },
-		{ label: 'Fee', align: 'end', width: '1fr' },
-		{ label: 'Total', align: 'end', width: '1fr' },
+		{ label: 'From', align: 'end', width: '1fr' },
+		{ label: 'Hash', align: 'end', width: '1fr' },
+		{ label: 'Fee', align: 'end', width: '0.5fr' },
+		{ label: 'Total', align: 'end', width: '0.5fr' },
 	] satisfies DataGrid.Props['columns']['stacked']
 
 	return (
@@ -295,7 +297,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 			}
 			totalItems={totalItems}
 			page={page}
-			isPending={false}
+			fetching={fetching}
 			itemsLabel="transactions"
 			itemsPerPage={TRANSACTIONS_PER_PAGE}
 			emptyState="No transactions were included in this block."
@@ -311,6 +313,7 @@ interface TransactionsSectionProps {
 	page: number
 	totalItems: number
 	startIndex: number
+	fetching: boolean
 }
 
 function TransactionDescription(props: TransactionDescriptionProps) {

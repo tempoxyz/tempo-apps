@@ -202,11 +202,7 @@ function RouteComponent() {
 				</div>
 
 				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
-					<Pagination.Simple
-						page={page}
-						totalPages={totalPages}
-						isPending={isLoading}
-					/>
+					<Pagination.Simple page={page} totalPages={totalPages} />
 					<div className="flex items-center justify-center sm:justify-end gap-[12px]">
 						<Link
 							to="."
