@@ -1,13 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { json } from '@tanstack/react-start'
 import type { Address } from 'ox'
+import { Abis } from 'tempo.ts/viem'
 import type { Log } from 'viem'
 import { getAbiItem, parseEventLogs, zeroAddress } from 'viem'
 import { getTransactionReceipt, readContract } from 'viem/actions'
-import { Abis } from 'viem/tempo'
 import * as z from 'zod/mini'
-import { mapWithConcurrency } from '#lib/network.ts'
+
 import { zHash } from '#lib/zod'
-import { getWagmiConfig, type WagmiConfig } from '#wagmi.config.ts'
+import { getConfig } from '#wagmi.config'
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
@@ -73,7 +74,7 @@ function computeBalanceChanges(logs: Log[]) {
 }
 
 async function getBalanceAtBlock(
-	client: ReturnType<WagmiConfig['getClient']>,
+	client: ReturnType<ReturnType<typeof getConfig>['getClient']>,
 	token: Address.Address,
 	account: Address.Address,
 	blockNumber: bigint,
@@ -92,10 +93,9 @@ async function getBalanceAtBlock(
 }
 
 async function getTokenMetadata(
-	client: ReturnType<ReturnType<typeof getWagmiConfig>['getClient']>,
+	client: ReturnType<ReturnType<typeof getConfig>['getClient']>,
 	token: Address.Address,
 ) {
-	// TODO: investigate & consider batch/multicall
 	const [decimals, symbol] = await Promise.all([
 		readContract(client, {
 			address: token,
@@ -110,68 +110,6 @@ async function getTokenMetadata(
 	])
 	if (decimals === null || symbol === null) return null
 	return { decimals, symbol }
-}
-
-export async function fetchBalanceChanges(params: {
-	hash: Address.Address
-	limit: number
-	offset: number
-}): Promise<BalanceChangesData> {
-	const { hash, limit, offset } = params
-	const client = getWagmiConfig().getClient()
-
-	const receipt = await getTransactionReceipt(client, { hash })
-
-	const balanceChanges = computeBalanceChanges(receipt.logs)
-
-	if (balanceChanges.length === 0) {
-		return { changes: [], tokenMetadata: {}, total: 0 }
-	}
-
-	const uniqueTokens = [...new Set(balanceChanges.map(({ token }) => token))]
-
-	const tokenMetadataEntries = await mapWithConcurrency(
-		uniqueTokens,
-		async (token) => [token, await getTokenMetadata(client, token)] as const,
-	)
-
-	const balanceAfterResults = await mapWithConcurrency(
-		balanceChanges,
-		async (change) => ({
-			...change,
-			balanceAfter: await getBalanceAtBlock(
-				client,
-				change.token,
-				change.address,
-				receipt.blockNumber,
-			),
-		}),
-	)
-
-	const tokenMetadata = Object.fromEntries(
-		tokenMetadataEntries.filter(
-			(entry): entry is [Address.Address, TokenMetadata] => entry[1] !== null,
-		),
-	)
-
-	const allChanges = balanceAfterResults
-		.filter(
-			(change): change is typeof change & { balanceAfter: bigint } =>
-				change.balanceAfter !== null && Boolean(tokenMetadata[change.token]),
-		)
-		.map((change) => ({
-			address: change.address,
-			token: change.token,
-			balanceBefore: String(change.balanceAfter - change.diff),
-			balanceAfter: String(change.balanceAfter),
-			diff: String(change.diff),
-		}))
-
-	return {
-		changes: allChanges.slice(offset, offset + limit),
-		tokenMetadata,
-		total: allChanges.length,
-	}
 }
 
 const querySchema = z.object({
@@ -193,11 +131,77 @@ export const Route = createFileRoute('/api/tx/balance-changes/$hash')({
 					const limit = Math.min(MAX_LIMIT, query.limit ?? DEFAULT_LIMIT)
 					const offset = query.offset ?? 0
 
-					const data = await fetchBalanceChanges({ hash, limit, offset })
-					return Response.json(data)
+					const config = getConfig()
+					const client = config.getClient()
+
+					const receipt = await getTransactionReceipt(client, { hash }).catch(
+						() => null,
+					)
+
+					if (!receipt)
+						return json({ error: 'Transaction not found' }, { status: 404 })
+
+					const balanceChanges = computeBalanceChanges(receipt.logs)
+
+					if (balanceChanges.length === 0)
+						return json<BalanceChangesData>({
+							changes: [],
+							tokenMetadata: {},
+							total: 0,
+						})
+
+					const uniqueTokens = [
+						...new Set(balanceChanges.map(({ token }) => token)),
+					]
+
+					const [tokenMetadataEntries, balanceAfterResults] = await Promise.all(
+						[
+							Promise.all(
+								uniqueTokens.map(async (token) => [
+									token,
+									await getTokenMetadata(client, token),
+								]),
+							),
+							Promise.all(
+								balanceChanges.map(async (change) => ({
+									...change,
+									balanceAfter: await getBalanceAtBlock(
+										client,
+										change.token,
+										change.address,
+										receipt.blockNumber,
+									),
+								})),
+							),
+						],
+					)
+
+					const tokenMetadata = Object.fromEntries(
+						tokenMetadataEntries.filter(([, meta]) => meta !== null),
+					)
+
+					const allChanges = balanceAfterResults
+						.filter(
+							(change): change is typeof change & { balanceAfter: bigint } =>
+								change.balanceAfter !== null &&
+								Boolean(tokenMetadata[change.token]),
+						)
+						.map((change) => ({
+							address: change.address,
+							token: change.token,
+							balanceBefore: String(change.balanceAfter - change.diff),
+							balanceAfter: String(change.balanceAfter),
+							diff: String(change.diff),
+						}))
+
+					return json<BalanceChangesData>({
+						changes: allChanges.slice(offset, offset + limit),
+						tokenMetadata,
+						total: allChanges.length,
+					})
 				} catch (error) {
 					console.error('Balance changes error:', error)
-					return Response.json(
+					return json(
 						{ error: 'Failed to fetch balance changes' },
 						{ status: 500 },
 					)

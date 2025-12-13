@@ -3,13 +3,11 @@ import type { Address as OxAddress } from 'ox'
 import { Value } from 'ox'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
-import { TokenIcon } from '#comps/TokenIcon'
-import { cx } from '#lib/css'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
 import {
-	type BalanceChangesData,
 	LIMIT,
+	type BalanceChangesData,
 	type TokenMetadata,
 } from '#lib/queries/balance-changes'
 
@@ -25,10 +23,10 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 
 	const cols: DataGrid.Column[] = [
 		{ label: 'Address', align: 'start', width: '2fr' },
-		{ label: 'Token', align: 'start', width: '1fr', minWidth: 120 },
-		{ label: 'Before', align: 'end', width: '2fr', minWidth: 160 },
-		{ label: 'After', align: 'end', width: '2fr', minWidth: 160 },
-		{ label: 'Change', align: 'end', width: '2fr', minWidth: 160 },
+		{ label: 'Token', align: 'start', width: '1fr' },
+		{ label: 'Before', align: 'end', width: '1.5fr' },
+		{ label: 'After', align: 'end', width: '1.5fr' },
+		{ label: 'Change', align: 'end', width: '1.5fr' },
 	]
 
 	return (
@@ -70,6 +68,7 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 			}
 			totalItems={data.total}
 			page={page}
+			isPending={false}
 			itemsLabel="changes"
 			itemsPerPage={LIMIT}
 			emptyState="No balance changes detected."
@@ -90,12 +89,11 @@ export namespace TxBalanceChanges {
 
 		return (
 			<Link
-				className="text-base-content-positive press-down inline-flex items-center gap-1 font-mono"
+				className="text-base-content-positive press-down"
 				params={{ address: token }}
 				title={token}
 				to={isTip20 ? '/token/$address' : '/address/$address'}
 			>
-				<TokenIcon address={token} name={metadata?.symbol} />
 				{metadata?.symbol ?? '…'}
 			</Link>
 		)
@@ -123,7 +121,7 @@ export namespace TxBalanceChanges {
 		const raw = Value.format(value, metadata.decimals)
 		const formatted = PriceFormatter.formatAmount(raw)
 
-		return <span className="text-secondary font-mono">{formatted}</span>
+		return <span className="text-secondary">{formatted}</span>
 	}
 
 	export namespace BalanceCell {
@@ -150,12 +148,7 @@ export namespace TxBalanceChanges {
 		const formatted = PriceFormatter.formatAmount(raw)
 
 		return (
-			<span
-				className={cx(
-					'font-mono',
-					isPositive ? 'text-base-content-positive' : undefined,
-				)}
-			>
+			<span className={isPositive ? 'text-base-content-positive' : undefined}>
 				{formatted}
 			</span>
 		)
