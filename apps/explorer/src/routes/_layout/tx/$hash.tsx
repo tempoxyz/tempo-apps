@@ -25,16 +25,16 @@ import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#cva.config.ts'
+import { autoloadAbiQueryOptions, lookupSignatureQueryOptions } from '#lib/abi'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import {
-	autoloadAbiQueryOptions,
-	lookupSignatureQueryOptions,
-} from '#lib/abi'
-import { type TxData, txQueryOptions } from '#lib/queries'
-import { balanceChangesQueryOptions, type TxData, txQueryOptions } from '#lib/queries'
+	balanceChangesQueryOptions,
+	type TxData,
+	txQueryOptions,
+} from '#lib/queries'
 import { zHash } from '#lib/zod'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -78,7 +78,9 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 					txQueryOptions({ hash: params.hash }),
 				),
 				context.queryClient
-					.ensureQueryData(balanceChangesQueryOptions({ hash: params.hash, page }))
+					.ensureQueryData(
+						balanceChangesQueryOptions({ hash: params.hash, page }),
+					)
 					.catch(() => ({ changes: [], tokenMetadata: {}, total: 0 })),
 			])
 			return { ...txData, balanceChangesData }
