@@ -84,23 +84,22 @@ function RouteComponent() {
 		setLiveBlocks((prev) => {
 			// Don't add if already exists
 			if (prev.some((b) => b.number === latestBlock.number)) return prev
+
+			// If we have existing blocks, check for continuity
+			const prevLatest = prev[0]?.number
+			if (prevLatest != null && latestBlock.number != null) {
+				// If there's a gap (new block is more than 1 ahead), reset
+				// This happens when returning from another page or after pausing
+				if (latestBlock.number > prevLatest + 1n) {
+					// Clear to trigger refetch with fresh data
+					return []
+				}
+			}
+
 			// Prepend new block and keep only BLOCKS_PER_PAGE
 			return [latestBlock, ...prev].slice(0, BLOCKS_PER_PAGE)
 		})
 	}, [latestBlock, live, page])
-
-	// Re-initialize when navigating back to page 1 with live mode
-	React.useEffect(() => {
-		if (page === 1 && live && queryData.blocks) {
-			setLiveBlocks((prev) => {
-				// Only reinitialize if we have no blocks or stale data
-				if (prev.length === 0) {
-					return queryData.blocks.slice(0, BLOCKS_PER_PAGE)
-				}
-				return prev
-			})
-		}
-	}, [page, live, queryData.blocks])
 
 	// Calculate which blocks to show for this page
 	const startBlock = currentLatest
@@ -134,6 +133,17 @@ function RouteComponent() {
 		staleTime: page === 1 && live ? 0 : 60_000,
 		placeholderData: keepPreviousData,
 	})
+
+	// Re-initialize liveBlocks when empty and fetchedBlocks is ready
+	// Don't fall back to queryData.blocks here - it may be stale after a gap reset.
+	// The blocks memo handles the temporary display while fetchedBlocks loads.
+	React.useEffect(() => {
+		if (page === 1 && live && liveBlocks.length === 0) {
+			if (fetchedBlocks && fetchedBlocks.length > 0) {
+				setLiveBlocks(fetchedBlocks.slice(0, BLOCKS_PER_PAGE))
+			}
+		}
+	}, [page, live, liveBlocks.length, fetchedBlocks])
 
 	// Use live blocks on page 1 when live, otherwise use fetched/loader data
 	const blocks = React.useMemo(() => {
