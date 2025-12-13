@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
@@ -29,6 +29,11 @@ import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
+import {
+	autoloadAbiQueryOptions,
+	lookupSignatureQueryOptions,
+} from '#lib/abi'
+import { type TxData, txQueryOptions } from '#lib/queries'
 import { balanceChangesQueryOptions, type TxData, txQueryOptions } from '#lib/queries'
 import { zHash } from '#lib/zod'
 import CopyIcon from '~icons/lucide/copy'
@@ -523,6 +528,7 @@ function EventsSection(props: {
 	knownEvents: (KnownEvent | null)[]
 }) {
 	const { logs, knownEvents } = props
+	const queryClient = useQueryClient()
 	const [expandedGroups, setExpandedGroups] = React.useState<Set<number>>(
 		new Set(),
 	)
@@ -531,6 +537,20 @@ function EventsSection(props: {
 		() => groupRelatedEvents(logs, knownEvents),
 		[logs, knownEvents],
 	)
+
+	React.useEffect(() => {
+		for (const log of logs) {
+			const [eventSelector] = log.topics
+			if (eventSelector) {
+				queryClient.prefetchQuery(
+					autoloadAbiQueryOptions({ address: log.address }),
+				)
+				queryClient.prefetchQuery(
+					lookupSignatureQueryOptions({ selector: eventSelector }),
+				)
+			}
+		}
+	}, [logs, queryClient])
 
 	const toggleGroup = (groupIndex: number) => {
 		setExpandedGroups((expanded) => {

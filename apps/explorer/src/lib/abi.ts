@@ -12,49 +12,78 @@ import {
 import { getPublicClient } from 'wagmi/actions'
 import { config } from '#wagmi.config'
 
+export function autoloadAbiQueryOptions(args: { address?: Address | null }) {
+	const { address } = args
+	const client = getPublicClient(config)
+
+	return queryOptions({
+		enabled: Boolean(address) && Boolean(client),
+		gcTime: Number.POSITIVE_INFINITY,
+		staleTime: Number.POSITIVE_INFINITY,
+		queryKey: ['autoload-abi', address],
+		async queryFn() {
+			if (!address) throw new Error('address is required')
+			if (!client) throw new Error('client is required')
+
+			try {
+				const result = await whatsabi.autoload(address, {
+					provider: client,
+					followProxies: true,
+					abiLoader: new loaders.MultiABILoader([
+						new loaders.SourcifyABILoader({
+							chainId: client.chain?.id,
+						}),
+					]),
+					onError: () => false,
+				})
+
+				if (!result.abi.some((item) => (item as { name?: string }).name))
+					return null
+
+				return result.abi.map((abiItem) => ({
+					...abiItem,
+					inputs: ('inputs' in abiItem && abiItem.inputs) || [],
+					outputs: ('outputs' in abiItem && abiItem.outputs) || [],
+				}))
+			} catch {
+				return null
+			}
+		},
+	})
+}
+
 export function useAutoloadAbi(args: {
 	address?: Address | null
 	enabled?: boolean
 }) {
 	const { address, enabled } = args
-	const client = getPublicClient(config)
+	const options = autoloadAbiQueryOptions({ address })
 
-	return useQuery(
-		queryOptions({
-			enabled: enabled && Boolean(address) && Boolean(client),
-			gcTime: Number.POSITIVE_INFINITY,
-			staleTime: Number.POSITIVE_INFINITY,
-			queryKey: ['autoload-abi', address],
-			async queryFn() {
-				if (!address) throw new Error('address is required')
-				if (!client) throw new Error('client is required')
+	return useQuery({
+		...options,
+		enabled: enabled && options.enabled,
+	})
+}
 
-				try {
-					const result = await whatsabi.autoload(address, {
-						provider: client,
-						followProxies: true,
-						abiLoader: new loaders.MultiABILoader([
-							new loaders.SourcifyABILoader({
-								chainId: client.chain?.id,
-							}),
-						]),
-						onError: () => false,
-					})
+export function lookupSignatureQueryOptions(args: { selector?: Hex }) {
+	const { selector } = args
 
-					if (!result.abi.some((item) => (item as { name?: string }).name))
-						return null
+	return queryOptions({
+		enabled: Boolean(selector),
+		gcTime: Number.POSITIVE_INFINITY,
+		staleTime: Number.POSITIVE_INFINITY,
+		queryKey: ['lookup-signature', selector],
+		async queryFn() {
+			if (!selector) throw new Error('selector is required')
 
-					return result.abi.map((abiItem) => ({
-						...abiItem,
-						inputs: ('inputs' in abiItem && abiItem.inputs) || [],
-						outputs: ('outputs' in abiItem && abiItem.outputs) || [],
-					}))
-				} catch {
-					return null
-				}
-			},
-		}),
-	)
+			const signature =
+				selector.length === 10
+					? await loaders.defaultSignatureLookup.loadFunctions(selector)
+					: await loaders.defaultSignatureLookup.loadEvents(selector)
+
+			return signature[0] ?? null
+		},
+	})
 }
 
 export function useLookupSignature(args: {
@@ -62,25 +91,12 @@ export function useLookupSignature(args: {
 	selector?: Hex
 }) {
 	const { enabled = true, selector } = args
+	const options = lookupSignatureQueryOptions({ selector })
 
-	return useQuery(
-		queryOptions({
-			enabled: enabled && Boolean(selector),
-			gcTime: Number.POSITIVE_INFINITY,
-			staleTime: Number.POSITIVE_INFINITY,
-			queryKey: ['lookup-signature', selector],
-			async queryFn() {
-				if (!selector) throw new Error('selector is required')
-
-				const signature =
-					selector.length === 10
-						? await loaders.defaultSignatureLookup.loadFunctions(selector)
-						: await loaders.defaultSignatureLookup.loadEvents(selector)
-
-				return signature[0] ?? null
-			},
-		}),
-	)
+	return useQuery({
+		...options,
+		enabled: enabled && options.enabled,
+	})
 }
 
 export function getAbiItem({
