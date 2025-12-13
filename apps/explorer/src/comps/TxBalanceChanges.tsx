@@ -6,8 +6,8 @@ import { DataGrid } from '#comps/DataGrid'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
 import {
-	LIMIT,
 	type BalanceChangesData,
+	LIMIT,
 	type TokenMetadata,
 } from '#lib/queries/balance-changes'
 
@@ -68,7 +68,6 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 			}
 			totalItems={data.total}
 			page={page}
-			isPending={false}
 			itemsLabel="changes"
 			itemsPerPage={LIMIT}
 			emptyState="No balance changes detected."
