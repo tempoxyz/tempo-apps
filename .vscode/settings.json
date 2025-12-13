@@ -58,5 +58,8 @@
 	"tailwindCSS.experimental.classRegex": [
 		"cx\\(([^)]+)\\)",
 		"twMerge\\(([^)]+)\\)"
-	]
+	],
+	"markdownlint.config": {
+		"no-inline-html": false
+	}
 }

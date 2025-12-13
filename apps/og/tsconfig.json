@@ -1,0 +1,40 @@
+{
+	"schema": "https://json.schemastore.org/tsconfig.json",
+	"compilerOptions": {
+		"strict": true,
+		"noEmit": true,
+		"allowJs": true,
+		"checkJs": true,
+		"lib": ["DOM", "ESNext"],
+		"target": "ESNext",
+		"module": "ESNext",
+		"jsx": "react-jsx",
+		"skipLibCheck": true,
+		"alwaysStrict": true,
+		"esModuleInterop": true,
+		"isolatedModules": true,
+		"strictNullChecks": true,
+		"resolveJsonModule": true,
+		"verbatimModuleSyntax": true,
+		"jsxImportSource": "hono/jsx",
+		"moduleResolution": "Bundler",
+		"useDefineForClassFields": true,
+		"allowArbitraryExtensions": true,
+		"noUncheckedIndexedAccess": true,
+		"resolvePackageJsonImports": true,
+		"resolvePackageJsonExports": true,
+		"useUnknownInCatchVariables": true,
+		"allowImportingTsExtensions": true,
+		"noFallthroughCasesInSwitch": true,
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"paths": {
+			"*": ["./*"],
+			"#*": ["./src/*"]
+		},
+		"types": ["@cloudflare/workers-types", "node"]
+	},
+	"include": ["src/**/*"],
+	"files": ["worker-configuration.d.ts"],
+	"exclude": ["_", "dist", "node_modules"]
+}
