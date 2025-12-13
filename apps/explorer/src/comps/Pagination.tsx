@@ -233,16 +233,16 @@ export namespace Pagination {
 	}
 
 	export function Simple(props: Simple.Props) {
-		const { page, totalPages, isPending } = props
+		const { page, totalPages, fetching } = props
 		return (
 			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
 				<Link
 					to="."
 					resetScroll={false}
 					search={(prev) => ({ ...prev, page: 1, live: true })}
-					disabled={page <= 1 || isPending}
+					disabled={page <= 1}
 					className={cx(
-						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
 					title="First page"
 				>
@@ -255,17 +255,20 @@ export namespace Pagination {
 						const newPage = (prev?.page ?? 1) - 1
 						return { ...prev, page: newPage, live: newPage === 1 }
 					}}
-					disabled={page <= 1 || isPending}
+					disabled={page <= 1}
 					className={cx(
-						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
 					title="Previous page"
 				>
 					<ChevronLeft className="size-[14px]" />
 				</Link>
 				<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
-					Page {Pagination.numFormat.format(page)} of{' '}
-					{Pagination.numFormat.format(totalPages)}
+					Page{' '}
+					<span className={fetching ? 'opacity-50' : undefined}>
+						{Pagination.numFormat.format(page)}
+					</span>{' '}
+					of {totalPages > 0 ? Pagination.numFormat.format(totalPages) : '…'}
 				</span>
 				<Link
 					to="."
@@ -275,9 +278,9 @@ export namespace Pagination {
 						page: (prev?.page ?? 1) + 1,
 						live: false,
 					})}
-					disabled={page >= totalPages || isPending}
+					disabled={page >= totalPages}
 					className={cx(
-						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
 					title="Next page"
 				>
@@ -287,9 +290,9 @@ export namespace Pagination {
 					to="."
 					resetScroll={false}
 					search={(prev) => ({ ...prev, page: totalPages, live: false })}
-					disabled={page >= totalPages || isPending}
+					disabled={page >= totalPages}
 					className={cx(
-						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
 					title="Last page"
 				>
@@ -303,12 +306,12 @@ export namespace Pagination {
 		export interface Props {
 			page: number
 			totalPages: number
-			isPending?: boolean
+			fetching?: boolean
 		}
 	}
 
 	export function Count(props: Count.Props) {
-		const { page, totalPages, totalItems, itemsLabel } = props
+		const { page, totalPages, totalItems, itemsLabel, loading } = props
 		return (
 			<div className="flex items-center justify-center sm:justify-end gap-[8px]">
 				{page != null && totalPages != null && (
@@ -321,7 +324,7 @@ export namespace Pagination {
 					</>
 				)}
 				<span className="text-primary tabular-nums">
-					{Pagination.numFormat.format(totalItems)}
+					{loading ? '…' : Pagination.numFormat.format(totalItems)}
 				</span>
 				<span className="text-tertiary">{itemsLabel}</span>
 			</div>
@@ -334,6 +337,7 @@ export namespace Pagination {
 			totalPages?: number
 			totalItems: number
 			itemsLabel: string
+			loading?: boolean
 		}
 	}
 }

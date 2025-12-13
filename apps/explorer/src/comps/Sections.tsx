@@ -113,7 +113,7 @@ export function Sections(props: Sections.Props) {
 							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px]">
 								<span className="text-primary">{sections[0].title}</span>
 								<span className="text-tertiary">
-									({sections[0].totalItems})
+									({sections[0].totalItems ?? '…'})
 								</span>
 							</div>
 						) : (
@@ -170,7 +170,7 @@ export namespace Sections {
 	export interface Section {
 		title: string
 		content: React.ReactNode
-		totalItems: number
+		totalItems?: number
 		itemsLabel?: string
 		contextual?: React.ReactNode
 		autoCollapse?: boolean

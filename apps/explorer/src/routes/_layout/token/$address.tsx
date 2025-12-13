@@ -8,7 +8,6 @@ import {
 	stripSearchParams,
 	useNavigate,
 	useRouter,
-	useRouterState,
 } from '@tanstack/react-router'
 import { Address } from 'ox'
 import * as React from 'react'
@@ -356,98 +355,6 @@ function TokenCard(props: {
 	)
 }
 
-function SectionsSkeleton({ totalItems }: { totalItems: number }) {
-	const isMobile = useMediaQuery('(max-width: 799px)')
-
-	const transfersColumns: DataGrid.Column[] = [
-		{ label: 'Time', align: 'start', minWidth: 100 },
-		{ label: 'Transaction', align: 'start', minWidth: 120 },
-		{ label: 'From', align: 'start', minWidth: 140 },
-		{ label: 'To', align: 'start', minWidth: 140 },
-		{ label: 'Amount', align: 'end', minWidth: 100 },
-	]
-
-	const holdersColumns: DataGrid.Column[] = [
-		{ label: 'Address', align: 'start', minWidth: 140 },
-		{ label: 'Balance', align: 'end', minWidth: 120 },
-		{ label: 'Percentage', align: 'end', minWidth: 100 },
-	]
-
-	return (
-		<Sections
-			mode={isMobile ? 'stacked' : 'tabs'}
-			sections={[
-				{
-					title: 'Transfers',
-					totalItems,
-					itemsLabel: 'transfers',
-					content: (
-						<DataGrid
-							columns={{
-								stacked: transfersColumns,
-								tabs: transfersColumns,
-							}}
-							items={() =>
-								Array.from(
-									{ length: defaultSearchValues.limit },
-									(_, index) => {
-										const key = `skeleton-${index}`
-										return {
-											cells: [
-												<div key={`${key}-time`} className="h-5" />,
-												<div key={`${key}-tx`} className="h-5" />,
-												<div key={`${key}-from`} className="h-5" />,
-												<div key={`${key}-to`} className="h-5" />,
-												<div key={`${key}-amount`} className="h-5" />,
-											],
-										}
-									},
-								)
-							}
-							totalItems={totalItems}
-							page={1}
-							isPending={false}
-							itemsLabel="transfers"
-							itemsPerPage={defaultSearchValues.limit}
-						/>
-					),
-				},
-				{
-					title: 'Holders',
-					totalItems: 0,
-					itemsLabel: 'holders',
-					content: (
-						<DataGrid
-							columns={{
-								stacked: holdersColumns,
-								tabs: holdersColumns,
-							}}
-							items={() => []}
-							totalItems={0}
-							page={1}
-							isPending={false}
-							itemsLabel="holders"
-						/>
-					),
-				},
-				{
-					title: 'Contract',
-					totalItems: 0,
-					itemsLabel: 'functions',
-					content: (
-						<div className="animate-pulse space-y-[12px]">
-							<div className="h-[200px] rounded-[10px] bg-card-header" />
-							<div className="h-[300px] rounded-[10px] bg-card-header" />
-						</div>
-					),
-				},
-			]}
-			activeSection={0}
-			onSectionChange={() => {}}
-		/>
-	)
-}
-
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
@@ -467,8 +374,6 @@ function SectionsWrapper(props: {
 	} = props
 	const account = account_ && Address.validate(account_) ? account_ : undefined
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
-
-	const state = useRouterState()
 	const loaderData = Route.useLoaderData()
 
 	const { data: metadata } = Hooks.token.useGetMetadata({
@@ -488,14 +393,15 @@ function SectionsWrapper(props: {
 		account,
 	})
 
-	const { data: transfersData, isLoading: isLoadingTransfers } = useQuery({
-		...transfersOptions,
-		...(activeSection === 0 &&
-		transfersQueryPage === page &&
-		loaderData.transfers
-			? { initialData: loaderData.transfers }
-			: {}),
-	})
+	const { data: transfersData, isPlaceholderData: isTransfersPlaceholder } =
+		useQuery({
+			...transfersOptions,
+			...(activeSection === 0 &&
+			transfersQueryPage === page &&
+			loaderData.transfers
+				? { initialData: loaderData.transfers }
+				: {}),
+		})
 
 	const holdersQueryPage = activeSection === 1 ? page : 1
 	const holdersOptions = holdersQueryOptions({
@@ -505,23 +411,14 @@ function SectionsWrapper(props: {
 		offset: activeSection === 1 ? (page - 1) * limit : 0,
 	})
 
-	const { data: holdersData, isLoading: isLoadingHolders } =
+	const { data: holdersData, isPlaceholderData: isHoldersPlaceholder } =
 		useQuery(holdersOptions)
 
 	const { transfers = [], total: transfersTotal = 0 } = transfersData ?? {}
 
 	const { holders = [], total: holdersTotal = 0 } = holdersData ?? {}
 
-	const routeIsLoading =
-		state.isLoading && state.location.pathname.includes('/token/')
-	const transfersPending = routeIsLoading || isLoadingTransfers
-	const holdersPending = routeIsLoading || isLoadingHolders
-
 	const isMobile = useMediaQuery('(max-width: 799px)')
-	const mode = isMobile ? 'stacked' : 'tabs'
-
-	if (transfers.length === 0 && transfersPending && activeSection === 0)
-		return <SectionsSkeleton totalItems={transfersTotal} />
 
 	const transfersColumns: DataGrid.Column[] = [
 		{
@@ -550,11 +447,11 @@ function SectionsWrapper(props: {
 
 	return (
 		<Sections
-			mode={mode}
+			mode={isMobile ? 'stacked' : 'tabs'}
 			sections={[
 				{
 					title: 'Transfers',
-					totalItems: transfersTotal,
+					totalItems: transfersData && transfersTotal,
 					itemsLabel: 'transfers',
 					contextual: account && (
 						<FilterIndicator account={account} tokenAddress={address} />
@@ -604,16 +501,18 @@ function SectionsWrapper(props: {
 							}}
 							totalItems={transfersTotal}
 							page={page}
-							isPending={transfersPending}
+							fetching={isTransfersPlaceholder}
+							loading={!transfersData}
 							itemsLabel="transfers"
 							itemsPerPage={limit}
+							pagination="simple"
 							emptyState="No transfers found."
 						/>
 					),
 				},
 				{
 					title: 'Holders',
-					totalItems: holdersTotal,
+					totalItems: holdersData && holdersTotal,
 					itemsLabel: 'holders',
 					content: (
 						<DataGrid
@@ -642,9 +541,11 @@ function SectionsWrapper(props: {
 							}
 							totalItems={holdersTotal}
 							page={page}
-							isPending={holdersPending}
+							fetching={isHoldersPlaceholder}
+							loading={!holdersData}
 							itemsLabel="holders"
 							itemsPerPage={limit}
+							pagination="simple"
 							emptyState="No holders found."
 						/>
 					),
