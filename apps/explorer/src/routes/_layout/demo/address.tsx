@@ -1077,7 +1077,6 @@ function Component() {
 								}
 								totalItems={total}
 								page={1}
-								isPending={false}
 								itemsLabel="transactions"
 								itemsPerPage={total}
 							/>
