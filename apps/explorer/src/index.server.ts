@@ -14,13 +14,11 @@ export default Sentry.withSentry(
 		}
 	},
 	{
-		fetch: async (request: Request, opts) => {
+		fetch: (request: Request, opts) => {
 			const url = new URL(request.url)
 			if (url.pathname === '/debug-sentry')
 				throw new Error('My first Sentry error!')
 
-			// Get the response from the app.
-			// Note: Route-level `head` is responsible for OG/meta tags (SSR + client navs).
 			return handler.fetch(request, opts as Parameters<ServerEntry['fetch']>[1])
 		},
 	},
