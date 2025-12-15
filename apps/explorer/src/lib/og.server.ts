@@ -10,7 +10,6 @@ import {
 } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import {
-	OG_BASE_URL,
 	buildAddressDescription,
 	buildTokenDescription,
 	buildTxDescription,
@@ -18,6 +17,7 @@ import {
 	formatDateTime,
 	formatEventForOgServer,
 	formatTime,
+	OG_BASE_URL,
 	truncateOgText,
 } from '#lib/og'
 import { config } from '#wagmi.config'

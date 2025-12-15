@@ -31,7 +31,11 @@ import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { useTxOgMeta } from '#lib/og'
-import { type TxData, txQueryOptions, balanceChangesQueryOptions } from '#lib/queries'
+import {
+	balanceChangesQueryOptions,
+	type TxData,
+	txQueryOptions,
+} from '#lib/queries'
 import { zHash } from '#lib/zod'
 import CopyIcon from '~icons/lucide/copy'
 
