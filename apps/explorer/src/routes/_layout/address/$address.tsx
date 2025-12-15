@@ -470,13 +470,8 @@ function RouteComponent() {
 	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, limit } = Route.useSearch()
-	const {
-		hasContract,
-		contractInfo,
-		contractSources,
-		transactionsData,
-		addressTransactionCount,
-	} = Route.useLoaderData()
+	const { hasContract, contractInfo, contractSources, transactionsData } =
+		Route.useLoaderData()
 
 	Address.assert(address)
 
