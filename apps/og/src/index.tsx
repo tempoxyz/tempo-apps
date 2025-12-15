@@ -36,7 +36,7 @@ const isTxHash = (value: string): boolean =>
 
 const shouldCache = (hostname: string): boolean => hostname === 'og.tempo.xyz'
 
-const toBase64DataUrl = (data: ArrayBuffer, mime = 'image/png'): string =>
+const toBase64DataUrl = (data: ArrayBuffer, mime = 'image/webp'): string =>
 	`data:${mime};base64,${Buffer.from(data).toString('base64')}`
 
 // ============ Global Asset Cache ============
@@ -79,21 +79,21 @@ async function loadImages(env: Cloudflare.Env): Promise<ImageCache> {
 			const [bgTx, bgToken, bgAddress, bgContract, receiptLogo, nullIcon] =
 				await Promise.all([
 					env.ASSETS.fetch(
-						new Request('https://assets/bg-template-transaction.png'),
+						new Request('https://assets/bg-template-transaction.webp'),
 					).then((r) => r.arrayBuffer()),
 					env.ASSETS.fetch(
-						new Request('https://assets/bg-template-token.png'),
+						new Request('https://assets/bg-template-token.webp'),
 					).then((r) => r.arrayBuffer()),
 					env.ASSETS.fetch(
-						new Request('https://assets/bg-template-address.png'),
+						new Request('https://assets/bg-template-address.webp'),
 					).then((r) => r.arrayBuffer()),
 					env.ASSETS.fetch(
-						new Request('https://assets/bg-template-contract.png'),
+						new Request('https://assets/bg-template-contract.webp'),
 					).then((r) => r.arrayBuffer()),
 					env.ASSETS.fetch(
-						new Request('https://assets/tempo-receipt.png'),
+						new Request('https://assets/tempo-receipt.webp'),
 					).then((r) => r.arrayBuffer()),
-					env.ASSETS.fetch(new Request('https://assets/null.png')).then((r) =>
+					env.ASSETS.fetch(new Request('https://assets/null.webp')).then((r) =>
 						r.arrayBuffer(),
 					),
 				])
