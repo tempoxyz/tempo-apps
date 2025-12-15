@@ -1,9 +1,16 @@
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { Value } from 'ox'
+import { Abis } from 'tempo.ts/viem'
 import { Actions } from 'tempo.ts/wagmi'
-import type { Log, TransactionReceipt } from 'viem'
 import { zeroAddress } from 'viem'
+import {
+	getBlock,
+	getBytecode,
+	getTransaction,
+	getTransactionReceipt,
+	readContract,
+} from 'wagmi/actions'
 import {
 	type KnownEvent,
 	type KnownEventPart,
@@ -22,7 +29,7 @@ import {
 	type TxOgParams,
 } from '#lib/og-params'
 import type { TxData as TxDataQuery } from '#lib/queries'
-import { config, DEFAULT_TESTNET_RPC_URL } from '#wagmi.config'
+import { config } from '#wagmi.config'
 
 // ============ Constants ============
 
@@ -346,8 +353,6 @@ export function buildAddressOgImageUrl(params: {
 	return buildAddressOgUrl(OG_BASE_URL, ogParams)
 }
 
-const RPC_URL =
-	config.chains[0]?.rpcUrls?.default?.http?.[0] ?? DEFAULT_TESTNET_RPC_URL
 const CHAIN_ID = config.getClient().chain.id
 
 // Indexer setup for token holder queries
@@ -371,92 +376,28 @@ interface TxData {
 
 async function fetchTxData(hash: string): Promise<TxData | null> {
 	try {
-		const [txRes, receiptRes] = await Promise.all([
-			fetch(RPC_URL, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					method: 'eth_getTransactionByHash',
-					params: [hash],
-					id: 1,
-				}),
-			}),
-			fetch(RPC_URL, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					method: 'eth_getTransactionReceipt',
-					params: [hash],
-					id: 2,
-				}),
-			}),
+		const receipt = await getTransactionReceipt(config, {
+			hash: hash as `0x${string}`,
+		})
+
+		const [block, transaction, getTokenMetadata] = await Promise.all([
+			getBlock(config, { blockHash: receipt.blockHash }),
+			getTransaction(config, { hash: receipt.transactionHash }),
+			Tip20.metadataFromLogs(receipt.logs),
 		])
 
-		const [txJson, receiptJson] = await Promise.all([
-			txRes.json() as Promise<{
-				result?: {
-					blockNumber?: string
-					from?: string
-					gasPrice?: string
-					to?: string
-					input?: string
-				}
-			}>,
-			receiptRes.json() as Promise<{
-				result?: TransactionReceipt
-			}>,
-		])
-
-		const blockNumber = txJson.result?.blockNumber
-		const receipt = receiptJson.result
-		const from = (receipt?.from as string) || txJson.result?.from
-
-		if (!blockNumber || !from || !receipt) return null
-
-		const gasUsed = receipt.gasUsed ? BigInt(receipt.gasUsed) : 0n
-		const gasPrice = receipt.effectiveGasPrice
-			? BigInt(receipt.effectiveGasPrice)
-			: txJson.result?.gasPrice
-				? BigInt(txJson.result.gasPrice)
-				: 0n
+		const gasUsed = receipt.gasUsed ?? 0n
+		const gasPrice = receipt.effectiveGasPrice ?? transaction.gasPrice ?? 0n
 		const feeWei = gasUsed * gasPrice
 		const feeUsd = Number.parseFloat(Value.format(feeWei, 18))
 
-		const blockRes = await fetch(RPC_URL, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				jsonrpc: '2.0',
-				method: 'eth_getBlockByNumber',
-				params: [blockNumber, false],
-				id: 3,
-			}),
-		})
-		const blockJson = (await blockRes.json()) as {
-			result?: { timestamp?: string }
-		}
-		const timestamp = blockJson.result?.timestamp
-			? Number.parseInt(blockJson.result.timestamp, 16) * 1000
-			: Date.now()
+		const timestamp = Number(block.timestamp) * 1000
 
 		const feeStr =
 			feeUsd < 0.01 ? '<$0.01' : `$${feeUsd.toFixed(feeUsd < 1 ? 3 : 2)}`
 
 		let events: KnownEvent[] = []
 		try {
-			const transaction = txJson.result
-				? {
-						to: txJson.result.to as Address.Address | undefined,
-						input: txJson.result.input as `0x${string}` | undefined,
-					}
-				: undefined
-
-			const getTokenMetadata = await Tip20.metadataFromLogs(
-				receipt.logs as Log[],
-			)
-
 			events = parseKnownEvents(receipt, { transaction, getTokenMetadata })
 				.filter(preferredEventsFilter)
 				.slice(0, 6)
@@ -515,8 +456,8 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 		}
 
 		return {
-			blockNumber: Number.parseInt(blockNumber, 16).toString(),
-			from,
+			blockNumber: block.number.toString(),
+			from: receipt.from,
 			timestamp,
 			fee: feeStr,
 			total: feeStr,
@@ -636,69 +577,36 @@ async function fetchTokenIndexerData(
 
 async function fetchTokenData(address: string): Promise<TokenData | null> {
 	try {
-		const calls = [
-			{
-				jsonrpc: '2.0',
-				method: 'eth_call',
-				params: [{ to: address, data: '0x06fdde03' }, 'latest'],
-				id: 1,
-			},
-			{
-				jsonrpc: '2.0',
-				method: 'eth_call',
-				params: [{ to: address, data: '0x95d89b41' }, 'latest'],
-				id: 2,
-			},
-			{
-				jsonrpc: '2.0',
-				method: 'eth_call',
-				params: [{ to: address, data: '0x313ce567' }, 'latest'],
-				id: 3,
-			},
-			{
-				jsonrpc: '2.0',
-				method: 'eth_call',
-				params: [{ to: address, data: '0x18160ddd' }, 'latest'],
-				id: 4,
-			},
-		]
+		const tokenAddress = address as Address.Address
 
-		const [responses, indexerData] = await Promise.all([
-			Promise.all(
-				calls.map((call) =>
-					fetch(RPC_URL, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify(call),
-					}).then((r) => r.json() as Promise<{ result?: string }>),
-				),
-			),
+		const [tokenData, indexerData] = await Promise.all([
+			Promise.all([
+				readContract(config, {
+					address: tokenAddress,
+					abi: Abis.tip20,
+					functionName: 'name',
+				}).catch(() => '—'),
+				readContract(config, {
+					address: tokenAddress,
+					abi: Abis.tip20,
+					functionName: 'symbol',
+				}).catch(() => '—'),
+				readContract(config, {
+					address: tokenAddress,
+					abi: Abis.tip20,
+					functionName: 'decimals',
+				}).catch(() => 18),
+				readContract(config, {
+					address: tokenAddress,
+					abi: Abis.tip20,
+					functionName: 'totalSupply',
+				}).catch(() => 0n),
+			]),
 			fetchTokenIndexerData(address),
 		])
 
-		const [nameRes, symbolRes, decimalsRes, supplyRes] = responses
+		const [name, symbol, decimals, totalSupplyRaw] = tokenData
 
-		const decodeName = (hex: string | undefined): string => {
-			if (!hex || hex === '0x') return '—'
-			try {
-				const data = hex.slice(2)
-				if (data.length < 128) return '—'
-				const length = Number.parseInt(data.slice(64, 128), 16)
-				const strHex = data.slice(128, 128 + length * 2)
-				return Buffer.from(strHex, 'hex').toString('utf8').replace(/\0/g, '')
-			} catch {
-				return '—'
-			}
-		}
-
-		const name = decodeName(nameRes.result)
-		const symbol = decodeName(symbolRes.result)
-
-		const decimals = decimalsRes.result
-			? Number.parseInt(decimalsRes.result, 16)
-			: 18
-
-		const totalSupplyRaw = supplyRes.result ? BigInt(supplyRes.result) : 0n
 		const totalSupply = Number.parseFloat(
 			Value.format(totalSupplyRaw, decimals),
 		)
@@ -726,38 +634,40 @@ async function fetchTokenData(address: string): Promise<TokenData | null> {
 
 async function hasFeeAmmLiquidity(tokenAddress: string): Promise<boolean> {
 	try {
-		const FEE_MANAGER = '0xfeec000000000000000000000000000000000000'
+		const FEE_MANAGER =
+			'0xfeec000000000000000000000000000000000000' as Address.Address
 		const PATH_USD = '0x20c0000000000000000000000000000000000000'
 		const ALPHA_USD = '0x20c0000000000000000000000000000000000001'
 
-		const paddedToken = tokenAddress.slice(2).toLowerCase().padStart(64, '0')
 		const pairToken =
 			tokenAddress.toLowerCase() === PATH_USD.toLowerCase()
 				? ALPHA_USD
 				: PATH_USD
-		const paddedPair = pairToken.slice(2).padStart(64, '0')
 
-		const res = await fetch(RPC_URL, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				jsonrpc: '2.0',
-				method: 'eth_call',
-				params: [
-					{ to: FEE_MANAGER, data: `0x531aa03e${paddedToken}${paddedPair}` },
-					'latest',
+		const getPoolAbi = [
+			{
+				type: 'function',
+				name: 'getPool',
+				inputs: [
+					{ name: 'tokenA', type: 'address' },
+					{ name: 'tokenB', type: 'address' },
 				],
-				id: 1,
-			}),
-		})
-		const json = (await res.json()) as { result?: string }
+				outputs: [
+					{ name: 'reserveUser', type: 'uint256' },
+					{ name: 'reserveValidator', type: 'uint256' },
+				],
+			},
+		] as const
 
-		if (json.result && json.result !== '0x' && json.result.length >= 130) {
-			const reserveUser = BigInt(`0x${json.result.slice(2, 66)}`)
-			const reserveValidator = BigInt(`0x${json.result.slice(66, 130)}`)
-			return reserveUser > 0n || reserveValidator > 0n
-		}
-		return false
+		const result = await readContract(config, {
+			address: FEE_MANAGER,
+			abi: getPoolAbi,
+			functionName: 'getPool',
+			args: [tokenAddress as Address.Address, pairToken as Address.Address],
+		})
+
+		const [reserveUser, reserveValidator] = result as [bigint, bigint]
+		return reserveUser > 0n || reserveValidator > 0n
 	} catch {
 		return false
 	}
@@ -813,20 +723,11 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 
 		let isContract = false
 		try {
-			const codeRes = await fetch(RPC_URL, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					method: 'eth_getCode',
-					params: [address, 'latest'],
-					id: 1,
-				}),
+			const code = await getBytecode(config, {
+				address: address as Address.Address,
 			})
-			const codeJson = (await codeRes.json()) as { result?: string }
-			const code = codeJson.result || '0x'
 
-			if (code === '0x') {
+			if (!code || code === '0x') {
 				isContract = false
 			} else if (code.toLowerCase().startsWith('0xef0100')) {
 				isContract = false
@@ -872,21 +773,12 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 				]
 			} else {
 				try {
-					const res = await fetch(RPC_URL, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							jsonrpc: '2.0',
-							method: 'eth_call',
-							params: [{ to: address, data: '0x95d89b41' }, 'latest'],
-							id: 1,
-						}),
+					const symbol = await readContract(config, {
+						address: address as Address.Address,
+						abi: Abis.tip20,
+						functionName: 'symbol',
 					})
-					const json = (await res.json()) as {
-						result?: string
-						error?: unknown
-					}
-					if (json.result && json.result !== '0x' && !json.error) {
+					if (symbol) {
 						detectedMethods = [
 							'transfer',
 							'approve',
@@ -936,33 +828,21 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			.map(([addr]) => addr)
 
 		const tokensHeld: string[] = []
-		for (const tokenAddr of tokensWithBalance.slice(0, 12)) {
-			try {
-				const symbolRes = await fetch(RPC_URL, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						jsonrpc: '2.0',
-						method: 'eth_call',
-						params: [{ to: tokenAddr, data: '0x95d89b41' }, 'latest'],
-						id: 1,
-					}),
-				})
-				const json = (await symbolRes.json()) as { result?: string }
-				if (json.result && json.result !== '0x') {
-					const data = json.result.slice(2)
-					if (data.length >= 128) {
-						const length = Number.parseInt(data.slice(64, 128), 16)
-						const strHex = data.slice(128, 128 + length * 2)
-						const symbol = Buffer.from(strHex, 'hex')
-							.toString('utf8')
-							.replace(/\0/g, '')
-						if (symbol) tokensHeld.push(symbol)
-					}
+		const symbolResults = await Promise.all(
+			tokensWithBalance.slice(0, 12).map(async (tokenAddr) => {
+				try {
+					return await readContract(config, {
+						address: tokenAddr as Address.Address,
+						abi: Abis.tip20,
+						functionName: 'symbol',
+					})
+				} catch {
+					return null
 				}
-			} catch {
-				// Skip tokens we can't decode
-			}
+			}),
+		)
+		for (const symbol of symbolResults) {
+			if (symbol) tokensHeld.push(symbol)
 		}
 
 		let txCount = 0
@@ -1007,82 +887,51 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			'0x20c0000000000000000000000000000000000001',
 			'0x20c0000000000000000000000000000000000002',
 			'0x20c0000000000000000000000000000000000003',
-		]
+		] as const
 
 		let totalValue = 0
 		const PRICE_PER_TOKEN = 1
 		const knownTokensHeld: string[] = []
 
-		for (const tokenAddr of KNOWN_TOKENS) {
-			try {
-				const balanceOfData = `0x70a08231000000000000000000000000${address.slice(2).toLowerCase()}`
-
-				const [balanceRes, decimalsRes, symbolRes] = await Promise.all([
-					fetch(RPC_URL, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							jsonrpc: '2.0',
-							method: 'eth_call',
-							params: [{ to: tokenAddr, data: balanceOfData }, 'latest'],
-							id: 1,
+		const knownTokenResults = await Promise.all(
+			KNOWN_TOKENS.map(async (tokenAddr) => {
+				try {
+					const [balance, decimals, symbol] = await Promise.all([
+						readContract(config, {
+							address: tokenAddr,
+							abi: Abis.tip20,
+							functionName: 'balanceOf',
+							args: [address as Address.Address],
 						}),
-					}),
-					fetch(RPC_URL, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							jsonrpc: '2.0',
-							method: 'eth_call',
-							params: [{ to: tokenAddr, data: '0x313ce567' }, 'latest'],
-							id: 2,
+						readContract(config, {
+							address: tokenAddr,
+							abi: Abis.tip20,
+							functionName: 'decimals',
 						}),
-					}),
-					fetch(RPC_URL, {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							jsonrpc: '2.0',
-							method: 'eth_call',
-							params: [{ to: tokenAddr, data: '0x95d89b41' }, 'latest'],
-							id: 3,
+						readContract(config, {
+							address: tokenAddr,
+							abi: Abis.tip20,
+							functionName: 'symbol',
 						}),
-					}),
-				])
-
-				const balanceJson = (await balanceRes.json()) as { result?: string }
-				const decimalsJson = (await decimalsRes.json()) as { result?: string }
-				const symbolJson = (await symbolRes.json()) as { result?: string }
-
-				const balance =
-					balanceJson.result && balanceJson.result !== '0x'
-						? BigInt(balanceJson.result)
-						: 0n
-				const decimals =
-					decimalsJson.result && decimalsJson.result !== '0x'
-						? Number.parseInt(decimalsJson.result, 16)
-						: 18
-
-				if (balance > 0n) {
-					totalValue +=
-						Number.parseFloat(Value.format(balance, decimals)) * PRICE_PER_TOKEN
-
-					if (symbolJson.result && symbolJson.result !== '0x') {
-						const data = symbolJson.result.slice(2)
-						if (data.length >= 128) {
-							const length = Number.parseInt(data.slice(64, 128), 16)
-							const strHex = data.slice(128, 128 + length * 2)
-							const symbol = Buffer.from(strHex, 'hex')
-								.toString('utf8')
-								.replace(/\0/g, '')
-							if (symbol && !knownTokensHeld.includes(symbol)) {
-								knownTokensHeld.push(symbol)
-							}
-						}
-					}
+					])
+					return { balance, decimals, symbol }
+				} catch {
+					return null
 				}
-			} catch {
-				// Skip tokens we can't fetch
+			}),
+		)
+
+		for (const result of knownTokenResults) {
+			if (!result) continue
+			const { balance, decimals, symbol } = result
+
+			if (balance > 0n) {
+				totalValue +=
+					Number.parseFloat(Value.format(balance, decimals)) * PRICE_PER_TOKEN
+
+				if (symbol && !knownTokensHeld.includes(symbol)) {
+					knownTokensHeld.push(symbol)
+				}
 			}
 		}
 
