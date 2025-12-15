@@ -27,6 +27,7 @@ import {
 	type TimeFormat,
 	useTimeFormat,
 } from '#comps/TimeFormat'
+import { TokenIcon } from '#comps/TokenIcon'
 import {
 	BatchTransactionDataContext,
 	type TransactionData,
@@ -826,13 +827,10 @@ function AssetName(props: { asset: AssetData }) {
 	if (!asset.metadata?.name) return <span className="text-tertiary">…</span>
 	return (
 		<span className="inline-flex items-center gap-2">
-			<img
-				src={`https://tokenlist.tempo.xyz/icon/42429/${asset.address}`}
-				alt=""
-				className="size-5 rounded-full shrink-0"
-				onError={(error) => {
-					error.currentTarget.style.display = 'none'
-				}}
+			<TokenIcon
+				address={asset.address}
+				name={asset.metadata?.name}
+				className="size-5"
 			/>
 			<span className="truncate">{asset.metadata.name}</span>
 		</span>

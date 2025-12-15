@@ -24,6 +24,7 @@ import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TimeColumnHeader, useTimeFormat } from '#comps/TimeFormat'
 import { TimestampCell } from '#comps/TimestampCell'
+import { TokenIcon } from '#comps/TokenIcon'
 import { TransactionCell } from '#comps/TransactionCell'
 import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
@@ -295,7 +296,14 @@ function TokenCard(props: {
 						Token
 					</h1>
 					{metadata?.symbol && (
-						<h2 className="text-[13px]">{metadata.symbol}</h2>
+						<h2 className="text-[13px] inline-flex items-center gap-1.5">
+							<TokenIcon
+								address={address}
+								name={metadata?.symbol}
+								className="size-5"
+							/>
+							{metadata.symbol}
+						</h2>
 					)}
 				</div>
 			}
