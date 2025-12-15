@@ -305,6 +305,7 @@ export function buildTokenOgImageUrl(params: {
 	address: string
 	name?: string
 	symbol?: string
+	currency?: string
 	holders?: number
 	supply?: string
 	created?: string
@@ -314,6 +315,7 @@ export function buildTokenOgImageUrl(params: {
 		address: params.address,
 		name: params.name,
 		symbol: params.symbol,
+		currency: params.currency,
 		holders:
 			typeof params.holders === 'number'
 				? params.holders.toString()

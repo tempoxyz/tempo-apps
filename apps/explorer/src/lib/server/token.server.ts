@@ -21,6 +21,7 @@ const holdersCache = new Map<
 		data: {
 			allHolders: Array<{ address: string; balance: bigint }>
 			totalSupply: bigint
+			created: string | null
 		}
 		timestamp: number
 	}
@@ -49,6 +50,7 @@ export type TokenHoldersApiResponse = {
 	totalSupply: string
 	offset: number
 	limit: number
+	created: string | null
 }
 
 export const fetchHolders = createServerFn({ method: 'POST' })
@@ -62,17 +64,20 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 
 		let allHolders: Array<{ address: string; balance: bigint }>
 		let totalSupply: bigint
+		let created: string | null = null
 
 		if (cached && now - cached.timestamp < HOLDERS_CACHING) {
 			allHolders = cached.data.allHolders
 			totalSupply = cached.data.totalSupply
+			created = cached.data.created
 		} else {
 			const result = await fetchHoldersData(data.address, chainId)
 			allHolders = result.allHolders
 			totalSupply = result.totalSupply
+			created = result.created
 
 			holdersCache.set(cacheKey, {
-				data: { allHolders, totalSupply },
+				data: { allHolders, totalSupply, created },
 				timestamp: now,
 			})
 		}
@@ -100,6 +105,7 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 			totalSupply: totalSupply.toString(),
 			offset: nextOffset,
 			limit: holders.length,
+			created,
 		}
 	})
 
@@ -132,6 +138,26 @@ async function fetchHoldersData(address: Address.Address, chainId: number) {
 		.groupBy('to')
 		.execute()
 
+	// Fetch the first transfer to get the created date
+	const firstTransfer = await qb
+		.selectFrom('transfer')
+		.select(['block_timestamp'])
+		.where('chain', '=', chainId)
+		.where('address', '=', address)
+		.orderBy('block_num', 'asc')
+		.limit(1)
+		.executeTakeFirst()
+
+	let created: string | null = null
+	if (firstTransfer?.block_timestamp) {
+		const date = new Date(Number(firstTransfer.block_timestamp) * 1000)
+		created = date.toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric',
+		})
+	}
+
 	const balances = new Map<string, bigint>()
 
 	for (const row of incoming) {
@@ -156,7 +182,7 @@ async function fetchHoldersData(address: Address.Address, chainId: number) {
 		0n,
 	)
 
-	return { allHolders, totalSupply }
+	return { allHolders, totalSupply, created }
 }
 
 const FetchTokenTransfersInputSchema = z.object({
