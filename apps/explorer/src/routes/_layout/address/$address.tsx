@@ -824,7 +824,19 @@ function TransactionFeeCell(props: { hash: Hex.Hex }) {
 function AssetName(props: { asset: AssetData }) {
 	const { asset } = props
 	if (!asset.metadata?.name) return <span className="text-tertiary">…</span>
-	return <span>{asset.metadata.name}</span>
+	return (
+		<span className="inline-flex items-center gap-2">
+			<img
+				src={`https://tokenlist.tempo.xyz/icon/42429/${asset.address}`}
+				alt=""
+				className="size-5 rounded-full shrink-0"
+				onError={(error) => {
+					error.currentTarget.style.display = 'none'
+				}}
+			/>
+			<span className="truncate">{asset.metadata.name}</span>
+		</span>
+	)
 }
 
 function AssetSymbol(props: { asset: AssetData }) {
