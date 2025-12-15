@@ -30,6 +30,7 @@ import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
 import { PriceFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
+import { buildTokenDescription, buildTokenOgImageUrl } from '#lib/og'
 import { holdersQueryOptions, transfersQueryOptions } from '#lib/queries'
 import { config } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
@@ -93,11 +94,13 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const offset = (page - 1) * limit
 
 		try {
-			// prefetch holders in background (non-blocking) - slow query that reconstructs all balances
-			// prefetch page 1 for sidebar stats, and current page for holders tab
-			context.queryClient.prefetchQuery(
-				holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
-			)
+			// Fetch holders summary for OG/meta + sidebar stats.
+			const holdersSummary = await context.queryClient
+				.ensureQueryData(
+					holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
+				)
+				.catch(() => undefined)
+
 			if (page !== 1 || limit !== 10) {
 				context.queryClient.prefetchQuery(
 					holdersQueryOptions({ address, page, limit, offset }),
@@ -111,13 +114,13 @@ export const Route = createFileRoute('/_layout/token/$address')({
 						transfersQueryOptions({ address, page, limit, offset, account }),
 					),
 				])
-				return { metadata, transfers }
+				return { metadata, transfers, holdersSummary }
 			}
 
 			const metadata = await Actions.token.getMetadata(config, {
 				token: address,
 			})
-			return { metadata, transfers: undefined }
+			return { metadata, transfers: undefined, holdersSummary }
 		} catch (error) {
 			console.error(error)
 			// redirect to `/address/$address` and if it's not an address, that route will throw a notFound
@@ -134,6 +137,57 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				}),
 			),
 		}).parse,
+	},
+	head: ({ params, loaderData }) => {
+		const title = `Token ${params.address.slice(0, 6)}…${params.address.slice(-4)} ⋅ Tempo Explorer`
+		const metadata = loaderData?.metadata
+		const holdersSummary = loaderData?.holdersSummary
+
+		const holders =
+			holdersSummary?.total !== undefined
+				? Number(holdersSummary.total)
+				: undefined
+		const totalSupply =
+			holdersSummary?.totalSupply !== undefined &&
+			metadata?.decimals !== undefined
+				? PriceFormatter.formatAmountShort(
+						formatUnits(BigInt(holdersSummary.totalSupply), metadata.decimals),
+					)
+				: undefined
+
+		const description = buildTokenDescription(
+			metadata
+				? {
+						name: metadata.name ?? '—',
+						symbol: metadata.symbol,
+						supply: totalSupply,
+					}
+				: null,
+		)
+
+		const ogImageUrl = buildTokenOgImageUrl({
+			address: params.address,
+			name: metadata?.name,
+			symbol: metadata?.symbol,
+			holders,
+			supply: totalSupply,
+		})
+
+		return {
+			title,
+			meta: [
+				{ title },
+				{ property: 'og:title', content: title },
+				{ property: 'og:description', content: description },
+				{ name: 'twitter:description', content: description },
+				{ property: 'og:image', content: ogImageUrl },
+				{ property: 'og:image:type', content: 'image/png' },
+				{ property: 'og:image:width', content: '1200' },
+				{ property: 'og:image:height', content: '630' },
+				{ name: 'twitter:card', content: 'summary_large_image' },
+				{ name: 'twitter:image', content: ogImageUrl },
+			],
+		}
 	},
 })
 

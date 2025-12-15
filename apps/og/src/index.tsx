@@ -1,6 +1,7 @@
 import { ImageResponse } from '@takumi-rs/image-response/wasm'
 import module from '@takumi-rs/wasm/takumi_wasm_bg.wasm'
 import { Hono } from 'hono'
+import { Address, Hex } from 'ox'
 
 const FONT_MONO_URL =
 	'https://unpkg.com/geist/dist/fonts/geist-mono/GeistMono-Regular.woff2'
@@ -15,6 +16,47 @@ const devicePixelRatio = 1.0
 
 // Cache TTL: 1 hour for OG images
 const CACHE_TTL = 3600
+
+// Input caps (OG endpoints are public; keep cache keys + render costs bounded)
+const MAX_PARAM_SHORT = 64
+const MAX_PARAM_MED = 256
+const MAX_PARAM_LONG = 1024
+const MAX_EVENTS = 6
+
+function isTxHash(value: string): boolean {
+	// 32-byte hex
+	return Hex.validate(value) && Hex.size(value as Hex.Hex) === 32
+}
+
+function sanitizeInlineText(value: string): string {
+	// Strip control chars/newlines that can blow up layout or cache keys.
+	let out = ''
+	for (let i = 0; i < value.length; i++) {
+		const code = value.charCodeAt(i)
+		// C0 controls + DEL
+		if ((code >= 0x00 && code <= 0x1f) || code === 0x7f) {
+			out += ' '
+			continue
+		}
+		out += value[i] ?? ''
+	}
+	return out.replace(/\s+/g, ' ').trim()
+}
+
+function getParam(
+	params: URLSearchParams,
+	key: string,
+	maxLen: number,
+): string | undefined {
+	const raw = params.get(key)
+	if (!raw) return undefined
+	return sanitizeInlineText(raw).slice(0, maxLen)
+}
+
+function getCacheKey(url: URL): Request {
+	// Normalize cache key: avoid including request headers/method/body, etc.
+	return new Request(url.toString(), { method: 'GET' })
+}
 
 // Global caches
 let fontCache: { mono: ArrayBuffer | null; inter: ArrayBuffer | null } = {
@@ -41,6 +83,10 @@ let imageCache: {
 	nullIcon: null,
 }
 
+let fontsInFlight: Promise<{ mono: ArrayBuffer; inter: ArrayBuffer }> | null =
+	null
+let imagesInFlight: Promise<void> | null = null
+
 const app = new Hono<{ Bindings: Cloudflare.Env }>()
 
 app.get('/favicon.ico', () =>
@@ -62,7 +108,7 @@ app.get('/health', () => new Response('OK'))
  * - feeToken: Token used for fee (e.g., "aUSD")
  * - feePayer: Address that paid fee (e.g., "0x8f5a...3bc3")
  * - total: Total display string (e.g., "-$1.55")
- * - e1, e2, e3, e4: Event strings in format "Action|Details|Amount|Message"
+ * - e1..e6: Event strings in format "Action|Details|Amount" (optional 4th field: Message)
  *   Examples:
  *   - "Send|aUSD to|-$1.54|Thanks for the coffee."
  *   - "Swap|10 pathUSD for 10 AlphaUSD|$10|"
@@ -74,13 +120,13 @@ app.get('/health', () => new Response('OK'))
 app.get('/tx/:hash', async (c) => {
 	const hash = c.req.param('hash')
 
-	if (!hash || !hash.startsWith('0x') || hash.length !== 66) {
+	if (!hash || !isTxHash(hash)) {
 		return new Response('Invalid transaction hash', { status: 400 })
 	}
 
 	const url = new URL(c.req.url)
 	const params = url.searchParams
-	const cacheKey = new Request(url.toString(), c.req.raw)
+	const cacheKey = getCacheKey(url)
 
 	// Check cache first
 	const cache = (caches as unknown as { default: Cache }).default
@@ -93,28 +139,30 @@ app.get('/tx/:hash', async (c) => {
 		// Parse URL parameters
 		const receiptData: ReceiptData = {
 			hash,
-			blockNumber: params.get('block') || '—',
-			sender: params.get('sender') || '—',
-			date: params.get('date') || '—',
-			time: params.get('time') || '—',
-			fee: params.get('fee') || undefined,
-			feeToken: params.get('feeToken') || undefined,
-			feePayer: params.get('feePayer') || undefined,
-			total: params.get('total') || undefined,
+			blockNumber: getParam(params, 'block', MAX_PARAM_SHORT) || '—',
+			sender: getParam(params, 'sender', MAX_PARAM_MED) || '—',
+			date: getParam(params, 'date', MAX_PARAM_SHORT) || '—',
+			time: getParam(params, 'time', MAX_PARAM_SHORT) || '—',
+			fee: getParam(params, 'fee', MAX_PARAM_SHORT) || undefined,
+			feeToken: getParam(params, 'feeToken', 24) || undefined,
+			feePayer: getParam(params, 'feePayer', MAX_PARAM_MED) || undefined,
+			total: getParam(params, 'total', MAX_PARAM_SHORT) || undefined,
 			events: [],
 		}
 
-		// Parse events (e1, e2, e3, e4) - format: "Action|Details|Amount|Message"
-		for (let i = 1; i <= 6; i++) {
-			const eventParam = params.get(`e${i}`)
+		// Parse events (e1..e6) - format: "Action|Details|Amount" (optional "|Message")
+		for (let i = 1; i <= MAX_EVENTS; i++) {
+			const eventParam = getParam(params, `e${i}`, MAX_PARAM_LONG)
 			if (eventParam) {
-				const [action, details, amount, message] = eventParam.split('|')
+				const [action, details, amount, message] = eventParam
+					.slice(0, MAX_PARAM_LONG)
+					.split('|')
 				if (action) {
 					receiptData.events.push({
-						action: action || '',
-						details: details || '',
-						amount: amount || undefined,
-						message: message || undefined,
+						action: truncateText(action || '', 40),
+						details: truncateText(details || '', 180),
+						amount: amount ? truncateText(amount, 30) : undefined,
+						message: message ? truncateText(message, 140) : undefined,
 					})
 				}
 			}
@@ -208,13 +256,13 @@ app.get('/tx/:hash', async (c) => {
 app.get('/token/:address', async (c) => {
 	const address = c.req.param('address')
 
-	if (!address || !address.startsWith('0x')) {
+	if (!address || !Address.validate(address)) {
 		return new Response('Invalid token address', { status: 400 })
 	}
 
 	const url = new URL(c.req.url)
 	const params = url.searchParams
-	const cacheKey = new Request(url.toString(), c.req.raw)
+	const cacheKey = getCacheKey(url)
 
 	// Check cache first
 	const cache = (caches as unknown as { default: Cache }).default
@@ -227,13 +275,13 @@ app.get('/token/:address', async (c) => {
 		// Parse URL parameters
 		const tokenData: TokenData = {
 			address,
-			name: params.get('name') || '—',
-			symbol: params.get('symbol') || '—',
-			currency: params.get('currency') || '—',
-			holders: params.get('holders') || '—',
-			supply: params.get('supply') || '—',
-			created: params.get('created') || '—',
-			quoteToken: params.get('quoteToken') || undefined,
+			name: getParam(params, 'name', 48) || '—',
+			symbol: getParam(params, 'symbol', 24) || '—',
+			currency: getParam(params, 'currency', 12) || '—',
+			holders: getParam(params, 'holders', 24) || '—',
+			supply: getParam(params, 'supply', 32) || '—',
+			created: getParam(params, 'created', 32) || '—',
+			quoteToken: getParam(params, 'quoteToken', 24) || undefined,
 			isFeeToken: params.get('isFeeToken') === 'true',
 		}
 
@@ -328,14 +376,17 @@ app.get('/token/:address', async (c) => {
 app.get('/address/:address', async (c) => {
 	const address = c.req.param('address')
 
-	if (!address || !address.startsWith('0x')) {
+	if (!address || !Address.validate(address)) {
 		return new Response('Invalid address', { status: 400 })
 	}
 
 	const url = new URL(c.req.url)
 
-	const methodsParam = c.req.query('methods') || ''
-	const cacheKey = new Request(url.toString(), c.req.raw)
+	const methodsParam = sanitizeInlineText(c.req.query('methods') || '').slice(
+		0,
+		MAX_PARAM_LONG,
+	)
+	const cacheKey = getCacheKey(url)
 
 	// Check cache first
 	const cache = (caches as unknown as { default: Cache }).default
@@ -346,17 +397,44 @@ app.get('/address/:address', async (c) => {
 
 	try {
 		// Parse URL parameters using Hono's query helper
-		const tokensParam = c.req.query('tokens') || ''
+		const tokensParam = sanitizeInlineText(c.req.query('tokens') || '').slice(
+			0,
+			MAX_PARAM_LONG,
+		)
 		const addressData: AddressData = {
 			address,
-			holdings: c.req.query('holdings') || '—',
-			txCount: c.req.query('txCount') || '—',
-			lastActive: c.req.query('lastActive') || '—',
-			created: c.req.query('created') || '—',
-			feeToken: c.req.query('feeToken') || '—',
-			tokensHeld: tokensParam ? tokensParam.split(',').filter(Boolean) : [],
+			holdings:
+				truncateText(sanitizeInlineText(c.req.query('holdings') || '—'), 24) ||
+				'—',
+			txCount:
+				truncateText(sanitizeInlineText(c.req.query('txCount') || '—'), 16) ||
+				'—',
+			lastActive:
+				truncateText(
+					sanitizeInlineText(c.req.query('lastActive') || '—'),
+					40,
+				) || '—',
+			created:
+				truncateText(sanitizeInlineText(c.req.query('created') || '—'), 40) ||
+				'—',
+			feeToken:
+				truncateText(sanitizeInlineText(c.req.query('feeToken') || '—'), 24) ||
+				'—',
+			tokensHeld: tokensParam
+				? tokensParam
+						.split(',')
+						.map((t) => truncateText(t.trim(), 24))
+						.filter(Boolean)
+						.slice(0, 12)
+				: [],
 			isContract: c.req.query('isContract') === 'true',
-			methods: methodsParam ? methodsParam.split(',').filter(Boolean) : [],
+			methods: methodsParam
+				? methodsParam
+						.split(',')
+						.map((m) => truncateText(m.trim(), 32))
+						.filter(Boolean)
+						.slice(0, 16)
+				: [],
 		}
 
 		// Fetch assets
@@ -497,14 +575,16 @@ function ReceiptCard({
 	let formattedTime = data.time
 	const timeMatch = data.time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
 	if (timeMatch) {
-		// @ts-expect-error TODO: fix this
-		let hours = parseInt(timeMatch[1], 10)
+		const hoursStr = timeMatch[1]
 		const minutes = timeMatch[2]
-		// @ts-expect-error TODO: fix this
-		const period = timeMatch[3].toUpperCase()
-		if (period === 'PM' && hours !== 12) hours += 12
-		if (period === 'AM' && hours === 12) hours = 0
-		formattedTime = `${hours.toString().padStart(2, '0')}:${minutes}`
+		const periodRaw = timeMatch[3]
+		if (hoursStr && minutes && periodRaw) {
+			let hours = Number.parseInt(hoursStr, 10)
+			const period = periodRaw.toUpperCase()
+			if (period === 'PM' && hours !== 12) hours += 12
+			if (period === 'AM' && hours === 12) hours = 0
+			formattedTime = `${hours.toString().padStart(2, '0')}:${minutes}`
+		}
 	}
 	// Combine date and time
 	const when = data.date !== '—' ? `${formattedDate} ${formattedTime}` : '—'
@@ -1218,11 +1298,17 @@ function DetailPart({
 
 async function loadFonts() {
 	if (!fontCache.mono || !fontCache.inter) {
-		const [mono, inter] = await Promise.all([
-			fetch(FONT_MONO_URL).then((r) => r.arrayBuffer()),
-			fetch(FONT_INTER_URL).then((r) => r.arrayBuffer()),
-		])
-		fontCache = { mono, inter }
+		if (!fontsInFlight) {
+			fontsInFlight = Promise.all([
+				fetch(FONT_MONO_URL).then((r) => r.arrayBuffer()),
+				fetch(FONT_INTER_URL).then((r) => r.arrayBuffer()),
+			]).then(([mono, inter]) => {
+				fontCache = { mono, inter }
+				return { mono, inter }
+			})
+		}
+		await fontsInFlight
+		fontsInFlight = null
 	}
 	return fontCache as { mono: ArrayBuffer; inter: ArrayBuffer }
 }
@@ -1238,39 +1324,49 @@ async function loadImages(c: { env: Cloudflare.Env }) {
 		!imageCache.receiptLogo ||
 		!imageCache.nullIcon
 	) {
-		const [
-			bgRes,
-			bgTxRes,
-			bgTokenRes,
-			bgAddressRes,
-			bgContractRes,
-			logoRes,
-			receiptLogoRes,
-			nullIconRes,
-		] = await Promise.all([
-			c.env.ASSETS.fetch(new Request('https://assets/bg-template.png')),
-			c.env.ASSETS.fetch(
-				new Request('https://assets/bg-template-transaction.png'),
-			),
-			c.env.ASSETS.fetch(new Request('https://assets/bg-template-token.png')),
-			c.env.ASSETS.fetch(new Request('https://assets/bg-template-address.png')),
-			c.env.ASSETS.fetch(
-				new Request('https://assets/bg-template-contract.png'),
-			),
-			c.env.ASSETS.fetch(new Request('https://assets/tempo-lockup.png')),
-			c.env.ASSETS.fetch(new Request('https://assets/tempo-receipt.png')),
-			c.env.ASSETS.fetch(new Request('https://assets/null.png')),
-		])
-		imageCache = {
-			bg: await bgRes.arrayBuffer(),
-			bgTx: await bgTxRes.arrayBuffer(),
-			bgToken: await bgTokenRes.arrayBuffer(),
-			bgAddress: await bgAddressRes.arrayBuffer(),
-			bgContract: await bgContractRes.arrayBuffer(),
-			logo: await logoRes.arrayBuffer(),
-			receiptLogo: await receiptLogoRes.arrayBuffer(),
-			nullIcon: await nullIconRes.arrayBuffer(),
+		if (!imagesInFlight) {
+			imagesInFlight = (async () => {
+				const [
+					bgRes,
+					bgTxRes,
+					bgTokenRes,
+					bgAddressRes,
+					bgContractRes,
+					logoRes,
+					receiptLogoRes,
+					nullIconRes,
+				] = await Promise.all([
+					c.env.ASSETS.fetch(new Request('https://assets/bg-template.png')),
+					c.env.ASSETS.fetch(
+						new Request('https://assets/bg-template-transaction.png'),
+					),
+					c.env.ASSETS.fetch(
+						new Request('https://assets/bg-template-token.png'),
+					),
+					c.env.ASSETS.fetch(
+						new Request('https://assets/bg-template-address.png'),
+					),
+					c.env.ASSETS.fetch(
+						new Request('https://assets/bg-template-contract.png'),
+					),
+					c.env.ASSETS.fetch(new Request('https://assets/tempo-lockup.png')),
+					c.env.ASSETS.fetch(new Request('https://assets/tempo-receipt.png')),
+					c.env.ASSETS.fetch(new Request('https://assets/null.png')),
+				])
+				imageCache = {
+					bg: await bgRes.arrayBuffer(),
+					bgTx: await bgTxRes.arrayBuffer(),
+					bgToken: await bgTokenRes.arrayBuffer(),
+					bgAddress: await bgAddressRes.arrayBuffer(),
+					bgContract: await bgContractRes.arrayBuffer(),
+					logo: await logoRes.arrayBuffer(),
+					receiptLogo: await receiptLogoRes.arrayBuffer(),
+					nullIcon: await nullIconRes.arrayBuffer(),
+				}
+			})()
 		}
+		await imagesInFlight
+		imagesInFlight = null
 	}
 	const {
 		bg,
@@ -1303,42 +1399,4 @@ async function loadImages(c: { env: Cloudflare.Env }) {
 	}
 }
 
-// ============ Legacy Route ============
-
-app.get('/', async (c) => {
-	const { searchParams } = new URL(c.req.url)
-	const title = searchParams.get('title')
-	const theme = searchParams.get('theme')
-	const description = searchParams.get('description')
-
-	if (!title || !description || !theme) {
-		return new Response('Bad Request', { status: 400 })
-	}
-
-	const fonts = await loadFonts()
-
-	return new ImageResponse(
-		<div
-			tw={`size-full min-w-full flex flex-col items-center justify-center ${theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}`}
-		>
-			<img
-				alt="tempo"
-				tw="w-92"
-				src="https://raw.githubusercontent.com/tempoxyz/.github/refs/heads/main/assets/combomark-dark.svg"
-			/>
-			<h1 tw="text-9xl font-bold">{title}</h1>
-			<p tw="text-2xl">{description}</p>
-		</div>,
-		{
-			width: 1200 * devicePixelRatio,
-			height: 630 * devicePixelRatio,
-			format: 'png',
-			module,
-			fonts: [
-				{ weight: 400, name: 'Inter', data: fonts.mono, style: 'normal' },
-			],
-		},
-	)
-})
-
-export default app
+export default app satisfies ExportedHandler<Cloudflare.Env>

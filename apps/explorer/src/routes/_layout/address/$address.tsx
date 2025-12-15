@@ -46,6 +46,7 @@ import { parseKnownEvents } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
+import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
 import {
 	type TransactionsData,
 	transactionsQueryOptions,
@@ -58,6 +59,14 @@ async function fetchAddressTransactionsCount(address: Address.Address) {
 		{ headers: { 'Content-Type': 'application/json' } },
 	)
 	return response.json() as Promise<{ data: number }>
+}
+
+async function fetchAddressTotalValue(address: Address.Address) {
+	const response = await fetch(
+		`${__BASE_URL__}/api/address/total-value/${address}`,
+		{ headers: { 'Content-Type': 'application/json' } },
+	)
+	return response.json() as Promise<{ totalValue: number }>
 }
 
 const defaultSearchValues = {
@@ -263,7 +272,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				return undefined
 			})
 
-		await context.queryClient
+		const txCountResponse = await context.queryClient
 			.ensureQueryData({
 				queryKey: ['account-transaction-count', address],
 				queryFn: () => fetchAddressTransactionsCount(address),
@@ -271,6 +280,18 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 			.catch((error) => {
 				console.error('Fetch txs-count error (non-blocking):', error)
+				return undefined
+			})
+
+		const totalValueResponse = await context.queryClient
+			.ensureQueryData({
+				queryKey: ['account-total-value', address],
+				queryFn: () => fetchAddressTotalValue(address),
+				staleTime: 60_000,
+			})
+			.catch((error) => {
+				console.error('Fetch total-value error (non-blocking):', error)
+				return undefined
 			})
 
 		return {
@@ -281,6 +302,46 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			hasContract,
 			contractInfo,
 			transactionsData,
+			txCountResponse,
+			totalValueResponse,
+		}
+	},
+	head: ({ params, loaderData }) => {
+		const isContract = Boolean(loaderData?.hasContract)
+		const label = isContract ? 'Contract' : 'Address'
+		const title = `${label} ${params.address.slice(0, 6)}…${params.address.slice(-4)} ⋅ Tempo Explorer`
+
+		const txCount = Number(loaderData?.txCountResponse?.data ?? 0)
+		const totalValue = loaderData?.totalValueResponse?.totalValue
+		const holdings =
+			totalValue !== undefined ? PriceFormatter.format(totalValue) : '—'
+
+		const description = buildAddressDescription(
+			{ holdings, txCount },
+			params.address,
+		)
+
+		const ogImageUrl = buildAddressOgImageUrl({
+			address: params.address,
+			holdings,
+			txCount,
+			isContract,
+		})
+
+		return {
+			title,
+			meta: [
+				{ title },
+				{ property: 'og:title', content: title },
+				{ property: 'og:description', content: description },
+				{ name: 'twitter:description', content: description },
+				{ property: 'og:image', content: ogImageUrl },
+				{ property: 'og:image:type', content: 'image/png' },
+				{ property: 'og:image:width', content: '1200' },
+				{ property: 'og:image:height', content: '630' },
+				{ name: 'twitter:card', content: 'summary_large_image' },
+				{ name: 'twitter:image', content: ogImageUrl },
+			],
 		}
 	},
 })

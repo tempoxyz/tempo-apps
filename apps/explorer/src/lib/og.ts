@@ -14,7 +14,7 @@ import {
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter } from '#lib/formatting'
 import type { TxData as TxDataQuery } from '#lib/queries'
-import { config } from '#wagmi.config'
+import { config, DEFAULT_TESTNET_RPC_URL } from '#wagmi.config'
 
 // ============ Constants ============
 
@@ -51,7 +51,7 @@ export function buildOgImageUrl(data: TxDataQuery, hash: string): string {
 
 	if (data.feeBreakdown.length > 0) {
 		const totalFee = data.feeBreakdown.reduce((sum, item) => {
-			const amount = Number(Value.format(item.amount, item.decimals))
+			const amount = Number.parseFloat(Value.format(item.amount, item.decimals))
 			return sum + amount
 		}, 0)
 		const feeDisplay =
@@ -107,14 +107,21 @@ function formatPartForOgClient(part: KnownEventPart): string {
 	}
 }
 
-function setMetaTag(name: string, content: string) {
-	let meta = document.querySelector(`meta[name="${name}"]`)
+function setMetaTag(key: string, content: string) {
+	const attr = key.startsWith('og:') ? 'property' : 'name'
+	let meta = document.querySelector(
+		`meta[${attr}="${key}"], meta[name="${key}"], meta[property="${key}"]`,
+	)
 	if (!meta) {
 		meta = document.createElement('meta')
-		meta.name = name
+		meta.setAttribute(attr, key)
 		document.head.appendChild(meta)
+	} else {
+		meta.setAttribute(attr, key)
+		if (attr === 'property') meta.removeAttribute('name')
+		if (attr === 'name') meta.removeAttribute('property')
 	}
-	meta.content = content
+	meta.setAttribute('content', content)
 }
 
 export function useTxOgMeta(data: TxDataQuery | undefined, hash: string) {
@@ -163,7 +170,7 @@ export class OgMetaInjector {
 	private description: string
 
 	constructor(ogImageUrl: string, title: string, description: string) {
-		this.ogImageUrl = ogImageUrl
+		this.ogImageUrl = escapeHtml(ogImageUrl)
 		this.title = escapeHtml(title)
 		this.description = escapeHtml(description)
 	}
@@ -213,7 +220,7 @@ export function formatAmount(
 	includeSymbol = true,
 ): string {
 	const decimals = amount.decimals ?? 18
-	const value = Number(amount.value) / 10 ** decimals
+	const value = Number.parseFloat(Value.format(amount.value, decimals))
 	let formatted: string
 	if (value === 0) {
 		formatted = '0.00'
@@ -248,7 +255,7 @@ export function formatEventPart(part: KnownEventPart): string {
 		case 'number': {
 			if (Array.isArray(part.value)) {
 				const [val, dec] = part.value
-				const num = Number(val) / 10 ** dec
+				const num = Number.parseFloat(Value.format(val, dec))
 				if (num < 1) {
 					return num.toFixed(4).replace(/\.?0+$/, '')
 				}
@@ -393,8 +400,65 @@ export function buildAddressDescription(
 	return `View address activity & holdings on Tempo Explorer.`
 }
 
-const RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
-const CHAIN_ID = 42429 // Testnet chain ID
+export function buildTokenOgImageUrl(params: {
+	address: string
+	name?: string
+	symbol?: string
+	holders?: number
+	supply?: string
+	created?: string
+	isFeeToken?: boolean
+}): string {
+	const search = new URLSearchParams()
+	if (params.name) search.set('name', truncateOgText(params.name, 40))
+	if (params.symbol) search.set('symbol', truncateOgText(params.symbol, 16))
+	if (typeof params.holders === 'number')
+		search.set('holders', params.holders.toString())
+	if (params.supply) search.set('supply', params.supply)
+	if (params.created) search.set('created', params.created)
+	if (params.isFeeToken) search.set('isFeeToken', 'true')
+	return `${OG_BASE_URL}/token/${params.address}?${search.toString()}`
+}
+
+export function buildAddressOgImageUrl(params: {
+	address: string
+	holdings?: string
+	txCount?: number
+	lastActive?: string
+	created?: string
+	feeToken?: string
+	tokens?: string[]
+	isContract?: boolean
+	methods?: string[]
+}): string {
+	const search = new URLSearchParams()
+	if (params.holdings)
+		search.set('holdings', truncateOgText(params.holdings, 20))
+	if (typeof params.txCount === 'number')
+		search.set('txCount', params.txCount.toString())
+	if (params.lastActive) search.set('lastActive', params.lastActive)
+	if (params.created) search.set('created', params.created)
+	if (params.feeToken)
+		search.set('feeToken', truncateOgText(params.feeToken, 16))
+	if (params.tokens && params.tokens.length > 0)
+		search.set(
+			'tokens',
+			params.tokens.map((t) => truncateOgText(t, 10)).join(','),
+		)
+	if (params.isContract) {
+		search.set('isContract', 'true')
+		if (params.methods && params.methods.length > 0)
+			search.set(
+				'methods',
+				params.methods.map((m) => truncateOgText(m, 14)).join(','),
+			)
+	}
+	return `${OG_BASE_URL}/address/${params.address}?${search.toString()}`
+}
+
+const RPC_URL =
+	config.chains[0]?.rpcUrls?.default?.http?.[0] ?? DEFAULT_TESTNET_RPC_URL
+const CHAIN_ID = config.getClient().chain.id
 
 // Indexer setup for token holder queries
 const IS = IDX.IndexSupply.create({
@@ -468,7 +532,7 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 				? BigInt(txJson.result.gasPrice)
 				: 0n
 		const feeWei = gasUsed * gasPrice
-		const feeUsd = Number(feeWei) / 1e18
+		const feeUsd = Number.parseFloat(Value.format(feeWei, 18))
 
 		const blockRes = await fetch(RPC_URL, {
 			method: 'POST',
@@ -745,7 +809,9 @@ async function fetchTokenData(address: string): Promise<TokenData | null> {
 			: 18
 
 		const totalSupplyRaw = supplyRes.result ? BigInt(supplyRes.result) : 0n
-		const totalSupply = Number(totalSupplyRaw) / 10 ** decimals
+		const totalSupply = Number.parseFloat(
+			Value.format(totalSupplyRaw, decimals),
+		)
 
 		const formatSupply = (n: number): string => {
 			if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`
@@ -1108,7 +1174,8 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 						: 18
 
 				if (balance > 0n) {
-					totalValue += (Number(balance) / 10 ** decimals) * PRICE_PER_TOKEN
+					totalValue +=
+						Number.parseFloat(Value.format(balance, decimals)) * PRICE_PER_TOKEN
 
 					if (symbolJson.result && symbolJson.result !== '0x') {
 						const data = symbolJson.result.slice(2)
