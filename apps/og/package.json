@@ -9,7 +9,6 @@
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types"
 	},
 	"dependencies": {
-		"@cloudflare/puppeteer": "catalog:",
 		"@takumi-rs/image-response": "^0.57.3",
 		"@takumi-rs/wasm": "^0.57.3",
 		"hono": "catalog:",
@@ -20,7 +19,6 @@
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:",
 		"@types/node": "catalog:",
-		"puppeteer": "^24.33.0",
 		"wrangler": "catalog:"
 	}
 }
