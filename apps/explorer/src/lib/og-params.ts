@@ -74,13 +74,13 @@ export function truncateText(text: string, maxLength: number): string {
 
 export function sanitizeText(value: string): string {
 	let out = ''
-	for (let i = 0; i < value.length; i++) {
-		const code = value.charCodeAt(i)
+	for (let index = 0; index < value.length; index += 1) {
+		const code = value.charCodeAt(index)
 		if ((code >= 0x00 && code <= 0x1f) || code === 0x7f) {
 			out += ' '
 			continue
 		}
-		out += value[i] ?? ''
+		out += value[index] ?? ''
 	}
 	return out.replace(/\s+/g, ' ').trim()
 }
@@ -112,7 +112,9 @@ export function buildTxOgUrl(baseUrl: string, params: TxOgParams): string {
 			event.amount ? truncateText(event.amount, 30) : '',
 			event.message ? truncateText(event.message, 140) : '',
 		]
-		search.set(`e${index + 1}`, parts.join('|'))
+		// Use `ev{n}` instead of `e{n}` to avoid potential upstream query-param filtering.
+		// The OG renderer supports both.
+		search.set(`ev${index + 1}`, parts.join('|'))
 	})
 
 	return `${baseUrl}/tx/${params.hash}?${search.toString()}`

@@ -67,12 +67,14 @@ export namespace DateFormatter {
 		year: 'numeric',
 		month: 'short',
 		day: 'numeric',
+		timeZone: 'UTC',
 	})
 
 	const ogTimeFormatter = new Intl.DateTimeFormat('en-US', {
 		hour: '2-digit',
 		minute: '2-digit',
 		hour12: false,
+		timeZone: 'UTC',
 	})
 
 	const timezoneFormatter = new Intl.DateTimeFormat('en-US', {

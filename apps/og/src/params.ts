@@ -104,7 +104,12 @@ export function parseTxOgParams(
 	const events: TxOgEvent[] = []
 
 	for (let i = 1; i <= MAX_EVENTS; i++) {
-		const eventParam = getParam(params, `e${i}`, MAX_PARAM_LONG)
+		// Events can arrive via multiple key formats depending on who generated the URL.
+		// Prefer the newer `ev{n}` keys, but keep backwards compatibility with `e{n}`.
+		const eventParam =
+			getParam(params, `ev${i}`, MAX_PARAM_LONG) ??
+			getParam(params, `e${i}`, MAX_PARAM_LONG) ??
+			getParam(params, `event${i}`, MAX_PARAM_LONG)
 		if (eventParam) {
 			const [action, details, amount, message] = eventParam.split('|')
 			if (action) {

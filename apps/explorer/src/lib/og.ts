@@ -485,7 +485,9 @@ export async function buildTxOgData(hash: string): Promise<{
 
 		txData.events.forEach((event, index) => {
 			if (index < 6) {
-				params.set(`e${index + 1}`, formatEventForOgServer(event))
+				// Use `ev{n}` instead of `e{n}` to avoid potential upstream query-param filtering.
+				// The OG renderer supports both.
+				params.set(`ev${index + 1}`, formatEventForOgServer(event))
 			}
 		})
 	}
@@ -569,8 +571,8 @@ async function fetchTokenIndexerData(
 		}
 
 		return { holders, created }
-	} catch (e) {
-		console.error('Failed to fetch token indexer data:', e)
+	} catch (error) {
+		console.error('Failed to fetch token indexer data:', error)
 		return { holders: 0, created: '—' }
 	}
 }
@@ -958,8 +960,8 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			isContract,
 			methods: detectedMethods,
 		}
-	} catch (e) {
-		console.error('Failed to fetch address data:', e)
+	} catch (error) {
+		console.error('Failed to fetch address data:', error)
 		return null
 	}
 }

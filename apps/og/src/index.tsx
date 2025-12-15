@@ -99,12 +99,15 @@ app.get('/tx/:hash', async (c) => {
 	const url = new URL(c.req.url)
 	const params = url.searchParams
 	const cacheKey = getCacheKey(url)
+	const isDev = url.hostname === 'localhost' || url.hostname === '127.0.0.1'
 
-	// Check cache first
+	// Check cache first (skip in dev)
 	const cache = (caches as unknown as { default: Cache }).default
-	const cachedResponse = await cache.match(cacheKey)
-	if (cachedResponse) {
-		return cachedResponse
+	if (!isDev) {
+		const cachedResponse = await cache.match(cacheKey)
+		if (cachedResponse) {
+			return cachedResponse
+		}
 	}
 
 	try {
@@ -185,11 +188,15 @@ app.get('/tx/:hash', async (c) => {
 		const responseToCache = new Response(response.body, {
 			headers: {
 				'Content-Type': 'image/png',
-				'Cache-Control': `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}`,
+				'Cache-Control': isDev
+					? 'no-store'
+					: `public, max-age=${CACHE_TTL}, s-maxage=${CACHE_TTL}`,
 			},
 		})
 
-		c.executionCtx.waitUntil(cache.put(cacheKey, responseToCache.clone()))
+		if (!isDev) {
+			c.executionCtx.waitUntil(cache.put(cacheKey, responseToCache.clone()))
+		}
 		return responseToCache
 	} catch (error) {
 		console.error('Error generating OG image:', error)
@@ -623,96 +630,53 @@ function ReceiptCard({
 				}}
 			/>
 
-			{/* Events - show max 2, then "...and n more" */}
-			{data.events.length > 0 && (
-				<>
-					<div
-						tw="flex"
-						style={{
-							height: '1px',
-							backgroundColor: '#d1d5db',
-							marginLeft: '48px',
-						}}
-					/>
-					<div
-						tw="flex flex-col py-6 pr-8 text-[28px]"
-						style={{
-							fontFamily: 'GeistMono',
-							gap: '27px',
-							width: '100%',
-							letterSpacing: '-0.02em',
-						}}
-					>
-						{data.events.slice(0, 2).map((event, index) => {
-							const detailParts = event.details
-								? parseEventDetails(event.details)
-								: []
-							return (
-								<div
-									key={`${event.action}-${index}`}
-									tw="flex"
-									style={{
-										width: '100%',
-										justifyContent: 'space-between',
-										alignItems: 'flex-start',
-									}}
-								>
-									{/* Number - fixed width, content won't wrap under it */}
-									<span
-										tw="text-gray-500 shrink-0"
-										style={{ lineHeight: '34px', width: '28px' }}
-									>
-										{index + 1}.
+			{/* Events - show max 3, then "...and n more" */}
+			{data.events.length > 0 &&
+				data.events.slice(0, 3).map((event, index) => {
+					const parts = parseEventDetails(event.details || '')
+					return (
+						<div
+							key={`event-${event.details}`}
+							tw="flex px-12 py-4 text-[28px]"
+							style={{
+								fontFamily: 'GeistMono',
+								letterSpacing: '-0.02em',
+								justifyContent: 'space-between',
+							}}
+						>
+							<div tw="flex" style={{ gap: '8px', maxWidth: '85%' }}>
+								<span tw="text-gray-500 shrink-0">{index + 1}.</span>
+								<div tw="flex flex-wrap" style={{ gap: '8px' }}>
+									<span tw="bg-gray-100 px-3 py-1 rounded shrink-0">
+										{event.action}
 									</span>
-									{/* Content: action + details - wraps within its own space */}
-									<div
-										tw="flex"
-										style={{
-											flex: 1,
-											alignItems: 'center',
-											gap: '10px',
-											flexWrap: 'wrap',
-										}}
-									>
-										{/* Action badge */}
+									{parts.map((part) => (
 										<span
-											tw="flex bg-gray-100 px-2 py-1 rounded shrink-0"
-											style={{ lineHeight: '26px' }}
+											key={`part-${part.text}`}
+											tw={
+												part.type === 'asset'
+													? 'text-emerald-600'
+													: part.type === 'address'
+														? 'text-blue-600'
+														: 'text-gray-500'
+											}
 										>
-											{truncateText(event.action, 20)}
+											{part.text}
 										</span>
-										{/* Details - each part in the same flex container */}
-										{detailParts.map((part, idx) => (
-											<DetailPart
-												key={`${part.text}-${idx}`}
-												part={part}
-												idx={idx}
-											/>
-										))}
-									</div>
-									{/* Amount on right */}
-									{event.amount && (
-										<span tw="shrink-0" style={{ lineHeight: '34px' }}>
-											{truncateText(event.amount, 15)}
-										</span>
-									)}
+									))}
 								</div>
-							)
-						})}
-						{/* "...and n more" row */}
-						{data.events.length > 2 && (
-							<div
-								tw="flex justify-center items-center py-3 mx-8 rounded-lg text-gray-500"
-								style={{
-									backgroundColor: 'rgba(0, 0, 0, 0.05)',
-									fontFamily: 'GeistMono',
-								}}
-							>
-								...and {data.events.length - 2} more
 							</div>
-						)}
-					</div>
-				</>
+							{event.amount && <span tw="shrink-0">{event.amount}</span>}
+						</div>
+					)
+				})}
+			{data.events.length > 3 && (
+				<div
+					tw="flex justify-center py-3 mx-12 text-gray-500 text-[24px]"
+					style={{ fontFamily: 'GeistMono' }}
+				>
+					...and {data.events.length - 3} more
+				</div>
 			)}
 
 			{/* Divider */}
@@ -1235,7 +1199,7 @@ function parseEventDetails(
 }
 
 // Render a single detail part with appropriate styling
-function DetailPart({
+function _DetailPart({
 	part,
 	idx,
 }: {

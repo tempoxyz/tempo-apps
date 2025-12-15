@@ -248,8 +248,20 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			)
 			search.set('date', ogTimestamp.date)
 			search.set('time', ogTimestamp.time)
+
+			// Include fee so the OG receipt can render the Fee row.
+			const gasUsed = loaderData.receipt.gasUsed ?? 0n
+			const gasPrice =
+				loaderData.receipt.effectiveGasPrice ??
+				loaderData.transaction.gasPrice ??
+				0n
+			const feeAmount = gasUsed * gasPrice
+			const fee = Number(Value.format(feeAmount, 18))
+			const feeDisplay = PriceFormatter.format(fee)
+			search.set('fee', feeDisplay)
+
 			loaderData.knownEvents?.slice(0, 6).forEach((event, index) => {
-				search.set(`e${index + 1}`, formatEventForOgServer(event))
+				search.set(`ev${index + 1}`, formatEventForOgServer(event))
 			})
 		}
 

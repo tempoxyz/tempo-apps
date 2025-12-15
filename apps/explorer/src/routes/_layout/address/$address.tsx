@@ -309,7 +309,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 	head: ({ params, loaderData }) => {
 		const isContract = Boolean(loaderData?.hasContract)
 		const label = isContract ? 'Contract' : 'Address'
-		const title = `${label} ${params.address.slice(0, 6)}…${params.address.slice(-4)} ⋅ Tempo Explorer`
+		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
 
 		const txCount = Number(loaderData?.txCountResponse?.data ?? 0)
 		const totalValue = loaderData?.totalValueResponse?.totalValue
