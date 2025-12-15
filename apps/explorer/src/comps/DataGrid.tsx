@@ -10,7 +10,8 @@ export function DataGrid(props: DataGrid.Props) {
 		items,
 		totalItems,
 		page,
-		isPending,
+		fetching = false,
+		loading = false,
 		itemsLabel = 'items',
 		itemsPerPage = 10,
 		pagination = 'default',
@@ -20,7 +21,14 @@ export function DataGrid(props: DataGrid.Props) {
 
 	const mode = Sections.useSectionsMode()
 	const activeColumns = mode === 'stacked' ? columns.stacked : columns.tabs
-	const activeItems = items(mode)
+	const activeItems: DataGrid.Row[] = loading
+		? Array.from({ length: itemsPerPage }, (_, index) => ({
+				cells: activeColumns.map((_, colIndex) => {
+					const cellKey = `skeleton-${index}-${colIndex}`
+					return <div key={cellKey} className="h-[20px]" />
+				}),
+			}))
+		: items(mode)
 	const totalPages = Math.ceil(totalItems / itemsPerPage)
 
 	const gridTemplateColumns = activeColumns
@@ -80,7 +88,7 @@ export function DataGrid(props: DataGrid.Props) {
 							<div
 								key={`row-${rowIndex}-${page}`}
 								className={cx(
-									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid]',
+									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid] last:border-b-0',
 									item.link &&
 										'hover:bg-base-alt hover:border-solid transition-[background-color] duration-75 hover:-mt-[1px] hover:border-t hover:border-t-distinct',
 									item.expanded && 'border-l-distinct',
@@ -147,9 +155,13 @@ export function DataGrid(props: DataGrid.Props) {
 						<Pagination.Simple
 							page={page}
 							totalPages={totalPages}
-							isPending={isPending}
+							fetching={fetching && !loading}
 						/>
-						<Pagination.Count totalItems={totalItems} itemsLabel={itemsLabel} />
+						<Pagination.Count
+							totalItems={totalItems}
+							itemsLabel={itemsLabel}
+							loading={loading}
+						/>
 					</div>
 				) : (
 					<Pagination
@@ -157,7 +169,7 @@ export function DataGrid(props: DataGrid.Props) {
 						totalPages={totalPages}
 						totalItems={totalItems}
 						itemsLabel={itemsLabel}
-						isPending={isPending}
+						isPending={fetching}
 						compact={mode === 'stacked'}
 					/>
 				)}
@@ -196,7 +208,8 @@ export namespace DataGrid {
 		items: (mode: Sections.Mode) => Row[]
 		totalItems: number
 		page: number
-		isPending: boolean
+		fetching?: boolean
+		loading?: boolean
 		itemsLabel?: string
 		itemsPerPage?: number
 		pagination?: 'default' | 'simple'

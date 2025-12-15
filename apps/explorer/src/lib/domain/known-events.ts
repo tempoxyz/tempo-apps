@@ -726,10 +726,16 @@ type Token = {
 	symbol?: string
 }
 
+type ContractCall = {
+	address: Address.Address
+	input: Hex.Hex
+}
+
 export type KnownEventPart =
 	| { type: 'account'; value: Address.Address }
 	| { type: 'action'; value: string }
 	| { type: 'amount'; value: Amount }
+	| { type: 'contractCall'; value: ContractCall }
 	| { type: 'duration'; value: number } // in seconds
 	| { type: 'hex'; value: Hex.Hex }
 	| {
@@ -820,6 +826,42 @@ export function preferredEventsFilter(event: KnownEvent): boolean {
 		event.type !== 'active key count changed' &&
 		event.type !== 'nonce incremented'
 	)
+}
+
+/**
+ * Detects a contract call when viewing a transaction from the called contract's perspective.
+ * Returns a KnownEvent if the viewer is the contract being called, otherwise null.
+ */
+function detectContractCall(
+	receipt: TransactionReceipt,
+	options?: {
+		transaction?: TransactionLike
+		viewer?: Address.Address
+	},
+): KnownEvent | null {
+	const { viewer } = options ?? {}
+	const contractAddress = receipt.to
+
+	// Only show contract call when viewing as the called contract
+	if (!contractAddress || !viewer || !Address.isEqual(contractAddress, viewer))
+		return null
+
+	const transaction = options?.transaction
+	const callInput = transaction?.input ?? transaction?.data
+
+	// Need input data to show a contract call
+	if (!callInput || callInput === '0x') return null
+
+	return {
+		type: 'contract call',
+		parts: [
+			{ type: 'action', value: 'Call To' },
+			{
+				type: 'contractCall',
+				value: { address: contractAddress, input: callInput },
+			},
+		],
+	}
 }
 
 export function parseKnownEvents(
@@ -1190,6 +1232,14 @@ export function parseKnownEvents(
 		}
 
 		knownEvents.push(detected)
+	}
+
+	// If no known events, look for a known contract call event
+	if (knownEvents.length === 0) {
+		const contractCallEvent = detectContractCall(receipt, options)
+		if (contractCallEvent) {
+			knownEvents.push(contractCallEvent)
+		}
 	}
 
 	// If no known events were parsed but there was a fee transfer,

@@ -33,7 +33,7 @@ function TokensPage() {
 	const loaderData = Route.useLoaderData()
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
-	const { data, isLoading } = useQuery({
+	const { data, isPlaceholderData, isPending } = useQuery({
 		...tokensListQueryOptions({ page, limit: TOKENS_PER_PAGE }),
 		initialData: page === 1 ? loaderData : undefined,
 	})
@@ -70,7 +70,7 @@ function TokensPage() {
 				sections={[
 					{
 						title: 'Tokens',
-						totalItems: total,
+						totalItems: isPending ? undefined : total,
 						itemsLabel: 'tokens',
 						autoCollapse: false,
 						content: (
@@ -107,7 +107,8 @@ function TokensPage() {
 								}
 								totalItems={total}
 								page={page}
-								isPending={isLoading}
+								fetching={isPlaceholderData}
+								loading={isPending}
 								itemsLabel="tokens"
 								itemsPerPage={TOKENS_PER_PAGE}
 								pagination="simple"

@@ -33,7 +33,17 @@
 			"routes": [
 				{ "pattern": "privy-sponsor.testnet.tempo.xyz", "custom_domain": true }
 			],
-			"workers_dev": false
+			"workers_dev": false,
+			"ratelimits": [
+				{
+					"name": "AddressRateLimiter",
+					"namespace_id": "888",
+					"simple": {
+						"limit": 1000,
+						"period": 60
+					}
+				}
+			]
 		}
 	}
 }

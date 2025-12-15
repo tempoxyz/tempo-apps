@@ -113,7 +113,7 @@ export function Sections(props: Sections.Props) {
 							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px]">
 								<span className="text-primary">{sections[0].title}</span>
 								<span className="text-tertiary">
-									({sections[0].totalItems})
+									({sections[0].totalItems ?? '…'})
 								</span>
 							</div>
 						) : (
@@ -149,7 +149,14 @@ export function Sections(props: Sections.Props) {
 				</div>
 
 				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
-					{currentSection.content}
+					{sections.map((section, index) => (
+						<div
+							key={section.title}
+							className={activeSection === index ? undefined : 'hidden'}
+						>
+							{section.content}
+						</div>
+					))}
 				</div>
 			</section>
 		</Sections.Context.Provider>
@@ -170,7 +177,7 @@ export namespace Sections {
 	export interface Section {
 		title: string
 		content: React.ReactNode
-		totalItems: number
+		totalItems?: number
 		itemsLabel?: string
 		contextual?: React.ReactNode
 		autoCollapse?: boolean
