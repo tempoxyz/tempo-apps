@@ -25,7 +25,6 @@ export function BlockCard(props: BlockCard.Props) {
 		stateRoot,
 		transactionsRoot,
 		receiptsRoot,
-		withdrawalsRoot,
 	} = block
 
 	const [showAdvanced, setShowAdvanced] = React.useState(false)
