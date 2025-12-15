@@ -11,9 +11,6 @@
 		"directory": "./public",
 		"binding": "ASSETS"
 	},
-	"browser": {
-		"binding": "BROWSER"
-	},
 	"ratelimits": [
 		{
 			"name": "REQUESTS_RATE_LIMITER",
