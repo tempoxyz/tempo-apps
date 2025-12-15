@@ -7,6 +7,9 @@ import { hashFn } from 'wagmi/query'
 
 const browser = typeof window !== 'undefined'
 
+export const DEFAULT_TESTNET_RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
+export const DEFAULT_TESTNET_WS_URL = 'wss://rpc-orchestra.testnet.tempo.xyz'
+
 export const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
@@ -41,8 +44,8 @@ export function getConfig(
 		batch: { multicall: false },
 		transports: {
 			[tempoTestnet.id]: browser
-				? webSocket('wss://rpc-orchestra.testnet.tempo.xyz')
-				: http(rpcUrl ?? 'https://rpc-orchestra.testnet.tempo.xyz'),
+				? webSocket(DEFAULT_TESTNET_WS_URL)
+				: http(rpcUrl ?? DEFAULT_TESTNET_RPC_URL),
 			[tempoLocal.id]: http(undefined, {
 				batch: true,
 			}),

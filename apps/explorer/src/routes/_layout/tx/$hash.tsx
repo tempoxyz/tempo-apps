@@ -30,6 +30,7 @@ import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
+import { buildOgImageUrl, buildTxDescription } from '#lib/og'
 import {
 	balanceChangesQueryOptions,
 	type TxData,
@@ -95,6 +96,39 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	params: z.object({
 		hash: zHash(),
 	}),
+	head: ({ params, loaderData }) => {
+		const title = `Transaction ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
+		const ogImageUrl = loaderData
+			? buildOgImageUrl(loaderData, params.hash)
+			: undefined
+		const description = loaderData
+			? buildTxDescription({
+					timestamp: Number(loaderData.block.timestamp) * 1000,
+					from: loaderData.receipt.from,
+					events: loaderData.knownEvents ?? [],
+				})
+			: 'View transaction details on Tempo Explorer.'
+
+		return {
+			title,
+			meta: [
+				{ title },
+				{ property: 'og:title', content: title },
+				{ property: 'og:description', content: description },
+				{ name: 'twitter:description', content: description },
+				...(ogImageUrl
+					? [
+							{ property: 'og:image', content: ogImageUrl },
+							{ property: 'og:image:type', content: 'image/png' },
+							{ property: 'og:image:width', content: '1200' },
+							{ property: 'og:image:height', content: '630' },
+							{ name: 'twitter:card', content: 'summary_large_image' },
+							{ name: 'twitter:image', content: ogImageUrl },
+						]
+					: []),
+			],
+		}
+	},
 })
 
 function RouteComponent() {

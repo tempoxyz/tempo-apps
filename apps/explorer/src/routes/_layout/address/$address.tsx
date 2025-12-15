@@ -44,8 +44,9 @@ import {
 } from '#lib/domain/contracts'
 import { parseKnownEvents } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
-import { HexFormatter, PriceFormatter } from '#lib/formatting'
+import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
+import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
 import {
 	type TransactionsData,
 	transactionsQueryOptions,
@@ -58,6 +59,14 @@ async function fetchAddressTransactionsCount(address: Address.Address) {
 		{ headers: { 'Content-Type': 'application/json' } },
 	)
 	return response.json() as Promise<{ data: number }>
+}
+
+async function fetchAddressTotalValue(address: Address.Address) {
+	const response = await fetch(
+		`${__BASE_URL__}/api/address/total-value/${address}`,
+		{ headers: { 'Content-Type': 'application/json' } },
+	)
+	return response.json() as Promise<{ totalValue: number }>
 }
 
 const defaultSearchValues = {
@@ -263,7 +272,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				return undefined
 			})
 
-		await context.queryClient
+		const txCountResponse = await context.queryClient
 			.ensureQueryData({
 				queryKey: ['account-transaction-count', address],
 				queryFn: () => fetchAddressTransactionsCount(address),
@@ -271,6 +280,18 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 			.catch((error) => {
 				console.error('Fetch txs-count error (non-blocking):', error)
+				return undefined
+			})
+
+		const totalValueResponse = await context.queryClient
+			.ensureQueryData({
+				queryKey: ['account-total-value', address],
+				queryFn: () => fetchAddressTotalValue(address),
+				staleTime: 60_000,
+			})
+			.catch((error) => {
+				console.error('Fetch total-value error (non-blocking):', error)
+				return undefined
 			})
 
 		return {
@@ -281,6 +302,75 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			hasContract,
 			contractInfo,
 			transactionsData,
+			txCountResponse,
+			totalValueResponse,
+		}
+	},
+	head: async ({ params, loaderData }) => {
+		const isContract = Boolean(loaderData?.hasContract)
+		const label = isContract ? 'Contract' : 'Address'
+		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
+
+		const txCount = Number(loaderData?.txCountResponse?.data ?? 0)
+		const totalValue = loaderData?.totalValueResponse?.totalValue
+		const holdings =
+			totalValue !== undefined ? PriceFormatter.format(totalValue) : '—'
+
+		// Fetch lastActive timestamp with a timeout to avoid blocking too long
+		let lastActive: string | undefined
+
+		const TIMEOUT_MS = 500
+		const timeout = <T,>(promise: Promise<T>, ms: number): Promise<T | null> =>
+			Promise.race([
+				promise,
+				new Promise<null>((r) => setTimeout(() => r(null), ms)),
+			])
+
+		try {
+			// Get the most recent transaction for lastActive (already in loaderData)
+			const recentTx = loaderData?.transactionsData?.transactions?.at(0)
+			if (recentTx?.blockNumber) {
+				const recentBlock = await timeout(
+					getBlock(config, { blockNumber: Hex.toBigInt(recentTx.blockNumber) }),
+					TIMEOUT_MS,
+				)
+				if (recentBlock) {
+					lastActive = DateFormatter.formatTimestampForOg(
+						recentBlock.timestamp,
+					).date
+				}
+			}
+		} catch {
+			// Ignore errors, lastActive will be undefined
+		}
+
+		const description = buildAddressDescription(
+			{ holdings, txCount },
+			params.address,
+		)
+
+		const ogImageUrl = buildAddressOgImageUrl({
+			address: params.address,
+			holdings,
+			txCount,
+			isContract,
+			lastActive,
+		})
+
+		return {
+			title,
+			meta: [
+				{ title },
+				{ property: 'og:title', content: title },
+				{ property: 'og:description', content: description },
+				{ name: 'twitter:description', content: description },
+				{ property: 'og:image', content: ogImageUrl },
+				{ property: 'og:image:type', content: 'image/png' },
+				{ property: 'og:image:width', content: '1200' },
+				{ property: 'og:image:height', content: '630' },
+				{ name: 'twitter:card', content: 'summary_large_image' },
+				{ name: 'twitter:image', content: ogImageUrl },
+			],
 		}
 	},
 })

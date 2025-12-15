@@ -2,8 +2,6 @@ import { truncateText } from '#params.ts'
 
 // ============ Types ============
 
-export type AccountType = 'empty' | 'account' | 'contract'
-
 export interface AddressData {
 	address: string
 	holdings: string
@@ -12,7 +10,7 @@ export interface AddressData {
 	created: string
 	feeToken?: string
 	tokensHeld: string[] // Array of token symbols
-	accountType?: AccountType // Type of address: empty, account, or contract
+	isContract: boolean // Whether this is a contract address
 	methods?: string[] // Contract methods detected
 }
 
@@ -618,11 +616,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 					tw="text-gray-500 text-[29px]"
 					style={{ fontFamily: 'GeistMono' }}
 				>
-					{data.accountType === 'contract'
-						? 'Contract'
-						: data.accountType === 'account'
-							? 'Account'
-							: 'Empty'}
+					{data.isContract ? 'Contract' : 'Address'}
 				</span>
 				<div
 					tw="flex flex-col items-end text-[29px] text-blue-500"
@@ -654,16 +648,16 @@ export function AddressCard({ data }: { data: AddressData }) {
 					paddingLeft: '56px',
 				}}
 			>
-				{/* Holdings - show for non-contracts only */}
-				{data.accountType !== 'contract' && (
+				{/* Holdings - show for EOAs only */}
+				{!data.isContract && (
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-500">Holdings</span>
 						<span tw="text-gray-900">{truncateText(data.holdings, 20)}</span>
 					</div>
 				)}
 
-				{/* Tokens Held section - show for non-contracts only */}
-				{data.tokensHeld.length > 0 && data.accountType !== 'contract' && (
+				{/* Tokens Held section - show for EOAs only */}
+				{data.tokensHeld.length > 0 && !data.isContract && (
 					<div tw="flex flex-col w-full items-end" style={{ marginTop: '8px' }}>
 						{/* Single row of tokens */}
 						<div tw="flex justify-end py-1" style={{ width: '100%' }}>
@@ -683,7 +677,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 				)}
 
 				{/* Divider - dashed (when no tokens and not contract) */}
-				{data.tokensHeld.length === 0 && data.accountType !== 'contract' && (
+				{data.tokensHeld.length === 0 && !data.isContract && (
 					<div
 						tw="flex w-full"
 						style={{
@@ -713,16 +707,14 @@ export function AddressCard({ data }: { data: AddressData }) {
 				</div>
 
 				{/* Contract Methods - show for contracts only, at bottom */}
-				{data.accountType === 'contract' &&
-					data.methods &&
-					data.methods.length > 0 && (
-						<div tw="flex flex-col w-full" style={{ marginTop: '4px' }}>
-							<span tw="text-gray-500" style={{ marginBottom: '12px' }}>
-								Methods
-							</span>
-							<MethodBadges methods={data.methods || []} />
-						</div>
-					)}
+				{data.isContract && data.methods && data.methods.length > 0 && (
+					<div tw="flex flex-col w-full" style={{ marginTop: '4px' }}>
+						<span tw="text-gray-500" style={{ marginBottom: '12px' }}>
+							Methods
+						</span>
+						<MethodBadges methods={data.methods || []} />
+					</div>
+				)}
 			</div>
 		</div>
 	)

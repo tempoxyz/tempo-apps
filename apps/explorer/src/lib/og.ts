@@ -1,19 +1,16 @@
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { Value } from 'ox'
+import { Abis } from 'tempo.ts/viem'
+import { Actions } from 'tempo.ts/wagmi'
 import { zeroAddress } from 'viem'
-import { Abis } from 'viem/tempo'
-import type { Config } from 'wagmi'
 import {
 	getBlock,
 	getBytecode,
-	getChainId,
 	getTransaction,
 	getTransactionReceipt,
 	readContract,
 } from 'wagmi/actions'
-import { Actions } from 'wagmi/tempo'
-import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type KnownEvent,
 	type KnownEventPart,
@@ -32,11 +29,13 @@ import {
 	type TxOgParams,
 } from '#lib/og-params'
 import type { TxData as TxDataQuery } from '#lib/queries'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { config } from '#wagmi.config'
 
 // ============ Constants ============
 
-export const OG_BASE_URL = 'https://og.tempo.xyz'
+export const OG_BASE_URL = import.meta.env?.VITE_OG_URL
+	? import.meta.env.VITE_OG_URL
+	: 'https://og.porto.workers.dev'
 
 function truncateOgText(text: string, maxLength: number): string {
 	if (text.length <= maxLength) return text
@@ -304,25 +303,21 @@ export function buildAddressDescription(
 
 export function buildTokenOgImageUrl(params: {
 	address: string
-	chainId: number
 	name?: string
 	symbol?: string
-	currency?: string
-	holders?: number | string
+	holders?: number
 	supply?: string
 	created?: string
 	isFeeToken?: boolean
 }): string {
 	const ogParams: TokenOgParams = {
 		address: params.address,
-		chainId: params.chainId,
 		name: params.name,
 		symbol: params.symbol,
-		currency: params.currency,
 		holders:
 			typeof params.holders === 'number'
 				? params.holders.toString()
-				: params.holders,
+				: undefined,
 		supply: params.supply,
 		created: params.created,
 		isFeeToken: params.isFeeToken,
@@ -338,7 +333,7 @@ export function buildAddressOgImageUrl(params: {
 	created?: string
 	feeToken?: string
 	tokens?: string[]
-	accountType?: AccountType
+	isContract?: boolean
 	methods?: string[]
 }): string {
 	const ogParams: AddressOgParams = {
@@ -352,11 +347,13 @@ export function buildAddressOgImageUrl(params: {
 		created: params.created,
 		feeToken: params.feeToken,
 		tokens: params.tokens,
-		accountType: params.accountType,
+		isContract: params.isContract,
 		methods: params.methods,
 	}
 	return buildAddressOgUrl(OG_BASE_URL, ogParams)
 }
+
+const CHAIN_ID = config.getClient().chain.id
 
 // Indexer setup for token holder queries
 const IS = IDX.IndexSupply.create({
@@ -379,12 +376,10 @@ interface TxData {
 
 async function fetchTxData(hash: string): Promise<TxData | null> {
 	try {
-		const config = getWagmiConfig()
 		const receipt = await getTransactionReceipt(config, {
 			hash: hash as `0x${string}`,
 		})
 
-		// TODO: investigate & consider batch/multicall
 		const [block, transaction, getTokenMetadata] = await Promise.all([
 			getBlock(config, { blockHash: receipt.blockHash }),
 			getTransaction(config, { hash: receipt.transactionHash }),
@@ -421,14 +416,12 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 			}
 
 			if (tokensMissingSymbols.size > 0) {
-				// TODO: investigate & consider batch/multicall
 				const missingMetadata = await Promise.all(
 					Array.from(tokensMissingSymbols).map(async (token) => {
 						try {
-							const metadata = await Actions.token.getMetadata(
-								config as Config,
-								{ token },
-							)
+							const metadata = await Actions.token.getMetadata(config, {
+								token,
+							})
 							return { token, metadata }
 						} catch {
 							return { token, metadata: null }
@@ -524,15 +517,13 @@ async function fetchTokenIndexerData(
 		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 		const tokenAddress = address.toLowerCase() as Address.Address
 
-		const chainId = getChainId(getWagmiConfig())
-
 		const incoming = await qb
 			.selectFrom('transfer')
 			.select((eb) => [
 				eb.ref('to').as('holder'),
 				eb.fn.sum('tokens').as('received'),
 			])
-			.where('chain', '=', chainId)
+			.where('chain', '=', CHAIN_ID)
 			.where('address', '=', tokenAddress)
 			.groupBy('to')
 			.execute()
@@ -543,7 +534,7 @@ async function fetchTokenIndexerData(
 				eb.ref('from').as('holder'),
 				eb.fn.sum('tokens').as('sent'),
 			])
-			.where('chain', '=', chainId)
+			.where('chain', '=', CHAIN_ID)
 			.where('address', '=', tokenAddress)
 			.where('from', '<>', zeroAddress)
 			.groupBy('from')
@@ -563,7 +554,7 @@ async function fetchTokenIndexerData(
 		const firstTransfer = await qb
 			.selectFrom('transfer')
 			.select(['block_timestamp'])
-			.where('chain', '=', chainId)
+			.where('chain', '=', CHAIN_ID)
 			.where('address', '=', tokenAddress)
 			.orderBy('block_num', 'asc')
 			.limit(1)
@@ -588,10 +579,8 @@ async function fetchTokenIndexerData(
 
 async function fetchTokenData(address: string): Promise<TokenData | null> {
 	try {
-		const config = getWagmiConfig()
 		const tokenAddress = address as Address.Address
 
-		// TODO: investigate & consider batch/multicall
 		const [tokenData, indexerData] = await Promise.all([
 			Promise.all([
 				readContract(config, {
@@ -672,8 +661,6 @@ async function hasFeeAmmLiquidity(tokenAddress: string): Promise<boolean> {
 			},
 		] as const
 
-		const config = getWagmiConfig()
-
 		const result = await readContract(config, {
 			address: FEE_MANAGER,
 			abi: getPoolAbi,
@@ -727,7 +714,7 @@ interface AddressData {
 	created: string
 	feeToken: string
 	tokensHeld: string[]
-	accountType: AccountType
+	isContract: boolean
 	methods: string[]
 }
 
@@ -736,21 +723,25 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 		const tokenAddress = address.toLowerCase() as Address.Address
 		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
-		const config = getWagmiConfig()
-		const chainId = getChainId(config)
-
-		let accountType: AccountType = 'empty'
+		let isContract = false
 		try {
 			const code = await getBytecode(config, {
 				address: address as Address.Address,
 			})
-			accountType = getAccountType(code)
+
+			if (!code || code === '0x') {
+				isContract = false
+			} else if (code.toLowerCase().startsWith('0xef0100')) {
+				isContract = false
+			} else {
+				isContract = true
+			}
 		} catch {
-			// Ignore errors, assume empty
+			// Ignore errors, assume not a contract
 		}
 
 		let detectedMethods: string[] = []
-		if (accountType === 'contract') {
+		if (isContract) {
 			const addrLower = address.toLowerCase()
 
 			if (addrLower === '0x20fc000000000000000000000000000000000000') {
@@ -811,14 +802,14 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			qb
 				.selectFrom('transfer')
 				.select(['tokens', 'address', 'block_timestamp'])
-				.where('chain', '=', chainId)
+				.where('chain', '=', CHAIN_ID)
 				.where('to', '=', tokenAddress)
 				.orderBy('block_timestamp', 'desc')
 				.execute(),
 			qb
 				.selectFrom('transfer')
 				.select(['tokens', 'address', 'block_timestamp'])
-				.where('chain', '=', chainId)
+				.where('chain', '=', CHAIN_ID)
 				.where('from', '=', tokenAddress)
 				.orderBy('block_timestamp', 'desc')
 				.execute(),
@@ -839,7 +830,6 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			.map(([addr]) => addr)
 
 		const tokensHeld: string[] = []
-		// TODO: investigate & consider batch/multicall
 		const symbolResults = await Promise.all(
 			tokensWithBalance.slice(0, 12).map(async (tokenAddr) => {
 				try {
@@ -864,13 +854,13 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 					.selectFrom('txs')
 					.select((eb) => eb.fn.count('hash').as('cnt'))
 					.where('from', '=', tokenAddress)
-					.where('chain', '=', chainId)
+					.where('chain', '=', CHAIN_ID)
 					.executeTakeFirst(),
 				qb
 					.selectFrom('txs')
 					.select((eb) => eb.fn.count('hash').as('cnt'))
 					.where('to', '=', tokenAddress)
-					.where('chain', '=', chainId)
+					.where('chain', '=', CHAIN_ID)
 					.executeTakeFirst(),
 			])
 			txCount = Number(txSent?.cnt ?? 0) + Number(txReceived?.cnt ?? 0)
@@ -905,11 +895,9 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 		const PRICE_PER_TOKEN = 1
 		const knownTokensHeld: string[] = []
 
-		// TODO: investigate & consider batch/multicall
 		const knownTokenResults = await Promise.all(
 			KNOWN_TOKENS.map(async (tokenAddr) => {
 				try {
-					// TODO: investigate & consider batch/multicall
 					const [balance, decimals, symbol] = await Promise.all([
 						readContract(config, {
 							address: tokenAddr,
@@ -969,7 +957,7 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			created,
 			feeToken: allTokensHeld[0] || '—',
 			tokensHeld: allTokensHeld,
-			accountType,
+			isContract,
 			methods: detectedMethods,
 		}
 	} catch (error) {
@@ -981,7 +969,7 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 export async function buildAddressOgData(address: string): Promise<{
 	url: string
 	description: string
-	accountType: AccountType
+	isContract: boolean
 }> {
 	const addressData = await fetchAddressData(address)
 
@@ -998,12 +986,9 @@ export async function buildAddressOgData(address: string): Promise<{
 			)
 			params.set('tokens', truncatedTokens.join(','))
 		}
-		if (addressData.accountType) {
-			params.set('accountType', addressData.accountType)
-			if (
-				addressData.accountType === 'contract' &&
-				addressData.methods.length > 0
-			) {
+		if (addressData.isContract) {
+			params.set('isContract', 'true')
+			if (addressData.methods.length > 0) {
 				const truncatedMethods = addressData.methods.map((m) =>
 					truncateOgText(m, 14),
 				)
@@ -1015,6 +1000,6 @@ export async function buildAddressOgData(address: string): Promise<{
 	return {
 		url: `${OG_BASE_URL}/address/${address}?${params.toString()}`,
 		description: buildAddressDescription(addressData, address),
-		accountType: addressData?.accountType ?? 'empty',
+		isContract: addressData?.isContract ?? false,
 	}
 }
