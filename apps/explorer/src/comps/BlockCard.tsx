@@ -64,7 +64,6 @@ export function BlockCard(props: BlockCard.Props) {
 		{ label: 'state', value: stateRoot },
 		{ label: 'txns', value: transactionsRoot },
 		{ label: 'receipts', value: receiptsRoot },
-		{ label: 'withdraws', value: withdrawalsRoot },
 	]
 
 	const showAdvancedSection = true
