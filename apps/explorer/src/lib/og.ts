@@ -1,7 +1,6 @@
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { Value } from 'ox'
-import * as React from 'react'
 import { Actions } from 'tempo.ts/wagmi'
 import type { Log, TransactionReceipt } from 'viem'
 import { zeroAddress } from 'viem'
@@ -13,6 +12,15 @@ import {
 } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter } from '#lib/formatting'
+import {
+	type AddressOgParams,
+	buildAddressOgUrl,
+	buildTokenOgUrl,
+	buildTxOgUrl,
+	type TokenOgParams,
+	type TxOgEvent,
+	type TxOgParams,
+} from '#lib/og-params'
 import type { TxData as TxDataQuery } from '#lib/queries'
 import { config, DEFAULT_TESTNET_RPC_URL } from '#wagmi.config'
 
@@ -22,33 +30,19 @@ export const OG_BASE_URL = import.meta.env?.VITE_OG_URL
 	? import.meta.env.VITE_OG_URL
 	: 'https://og.porto.workers.dev'
 
-export function truncateOgText(text: string, maxLength: number): string {
+function truncateOgText(text: string, maxLength: number): string {
 	if (text.length <= maxLength) return text
 	return `${text.slice(0, maxLength - 1)}…`
-}
-
-export function escapeHtml(text: string): string {
-	return text
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-		.replace(/'/g, '&#39;')
 }
 
 // ============ Client-side OG (for $hash.tsx) ============
 
 export function buildOgImageUrl(data: TxDataQuery, hash: string): string {
-	const params = new URLSearchParams()
-
-	params.set('block', String(data.block.number))
-	params.set('sender', data.receipt.from)
-
 	const timestamp = data.block.timestamp
-	params.set('date', DateFormatter.formatTimestampDate(timestamp))
-	const timeInfo = DateFormatter.formatTimestampTime(timestamp)
-	params.set('time', `${timeInfo.time} ${timeInfo.timezone}${timeInfo.offset}`)
+	const ogTimestamp = DateFormatter.formatTimestampForOg(timestamp)
 
+	let fee: string | undefined
+	let total: string | undefined
 	if (data.feeBreakdown.length > 0) {
 		const totalFee = data.feeBreakdown.reduce((sum, item) => {
 			const amount = Number.parseFloat(Value.format(item.amount, item.decimals))
@@ -56,40 +50,44 @@ export function buildOgImageUrl(data: TxDataQuery, hash: string): string {
 		}, 0)
 		const feeDisplay =
 			totalFee > 0 && totalFee < 0.01 ? '<$0.01' : `$${totalFee.toFixed(2)}`
-		params.set('fee', feeDisplay)
-		params.set('total', feeDisplay)
+		fee = feeDisplay
+		total = feeDisplay
 	}
 
-	data.knownEvents.slice(0, 5).forEach((event, index) => {
-		const eventStr = formatEventForOgClient(event)
-		if (eventStr) {
-			params.set(`e${index + 1}`, eventStr)
+	const events: TxOgEvent[] = data.knownEvents.slice(0, 5).map((event) => {
+		const actionPart = event.parts.find((p) => p.type === 'action')
+		const action = actionPart?.type === 'action' ? actionPart.value : event.type
+
+		const details = event.parts
+			.filter((p) => p.type !== 'action')
+			.map((part) => formatPartForOgClient(part))
+			.filter(Boolean)
+			.join(' ')
+
+		const amountPart = event.parts.find((p) => p.type === 'amount')
+		let amount = ''
+		if (amountPart?.type === 'amount') {
+			const val = Number(
+				Value.format(amountPart.value.value, amountPart.value.decimals ?? 6),
+			)
+			amount = val > 0 && val < 0.01 ? '<$0.01' : `$${val.toFixed(0)}`
 		}
+
+		return { action, details, amount: amount || undefined }
 	})
 
-	return `${OG_BASE_URL}/tx/${hash}?${params.toString()}`
-}
-
-function formatEventForOgClient(event: KnownEvent): string {
-	const actionPart = event.parts.find((p) => p.type === 'action')
-	const action = actionPart?.type === 'action' ? actionPart.value : event.type
-
-	const details = event.parts
-		.filter((p) => p.type !== 'action')
-		.map((part) => formatPartForOgClient(part))
-		.filter(Boolean)
-		.join(' ')
-
-	const amountPart = event.parts.find((p) => p.type === 'amount')
-	let amount = ''
-	if (amountPart?.type === 'amount') {
-		const val = Number(
-			Value.format(amountPart.value.value, amountPart.value.decimals ?? 6),
-		)
-		amount = val > 0 && val < 0.01 ? '<$0.01' : `$${val.toFixed(0)}`
+	const params: TxOgParams = {
+		hash,
+		block: String(data.block.number),
+		sender: data.receipt.from,
+		date: ogTimestamp.date,
+		time: ogTimestamp.time,
+		fee,
+		total,
+		events,
 	}
 
-	return `${action}|${details}|${amount}`
+	return buildTxOgUrl(OG_BASE_URL, params)
 }
 
 function formatPartForOgClient(part: KnownEventPart): string {
@@ -107,111 +105,7 @@ function formatPartForOgClient(part: KnownEventPart): string {
 	}
 }
 
-function setMetaTag(key: string, content: string) {
-	const attr = key.startsWith('og:') ? 'property' : 'name'
-	let meta = document.querySelector(
-		`meta[${attr}="${key}"], meta[name="${key}"], meta[property="${key}"]`,
-	)
-	if (!meta) {
-		meta = document.createElement('meta')
-		meta.setAttribute(attr, key)
-		document.head.appendChild(meta)
-	} else {
-		meta.setAttribute(attr, key)
-		if (attr === 'property') meta.removeAttribute('name')
-		if (attr === 'name') meta.removeAttribute('property')
-	}
-	meta.setAttribute('content', content)
-}
-
-export function useTxOgMeta(data: TxDataQuery | undefined, hash: string) {
-	React.useEffect(() => {
-		if (!data) return
-
-		const ogImageUrl = buildOgImageUrl(data, hash)
-		const title = `Transaction ${hash.slice(0, 10)}…${hash.slice(-6)} ⋅ Tempo Explorer`
-
-		document.title = title
-
-		setMetaTag('og:title', title)
-		setMetaTag('og:image', ogImageUrl)
-		setMetaTag('og:image:type', 'image/webp')
-		setMetaTag('og:image:width', '1200')
-		setMetaTag('og:image:height', '630')
-		setMetaTag('twitter:card', 'summary_large_image')
-		setMetaTag('twitter:image', ogImageUrl)
-
-		return () => {
-			document.title = 'Explorer ⋅ Tempo'
-		}
-	}, [data, hash])
-}
-
-// ============ Server-side OG (for index.server.ts) ============
-
-export class OgMetaRemover {
-	element(element: Element) {
-		const property = element.getAttribute('property')
-		const name = element.getAttribute('name')
-
-		if (
-			property?.startsWith('og:') ||
-			name?.startsWith('og:') ||
-			name?.startsWith('twitter:')
-		) {
-			element.remove()
-		}
-	}
-}
-
-export class OgMetaInjector {
-	private ogImageUrl: string
-	private title: string
-	private description: string
-
-	constructor(ogImageUrl: string, title: string, description: string) {
-		this.ogImageUrl = escapeHtml(ogImageUrl)
-		this.title = escapeHtml(title)
-		this.description = escapeHtml(description)
-	}
-
-	element(element: Element) {
-		element.prepend(
-			`<meta name="twitter:image" content="${this.ogImageUrl}" />`,
-			{ html: true },
-		)
-		element.prepend(
-			'<meta name="twitter:card" content="summary_large_image" />',
-			{ html: true },
-		)
-		element.prepend(
-			`<meta name="twitter:description" content="${this.description}" />`,
-			{ html: true },
-		)
-		element.prepend('<meta property="og:image:height" content="630" />', {
-			html: true,
-		})
-		element.prepend('<meta property="og:image:width" content="1200" />', {
-			html: true,
-		})
-		element.prepend('<meta property="og:image:type" content="image/png" />', {
-			html: true,
-		})
-		element.prepend(
-			`<meta property="og:image" content="${this.ogImageUrl}" />`,
-			{ html: true },
-		)
-		element.prepend(
-			`<meta property="og:description" content="${this.description}" />`,
-			{ html: true },
-		)
-		element.prepend(`<meta property="og:title" content="${this.title}" />`, {
-			html: true,
-		})
-	}
-}
-
-export function formatAmount(
+function formatAmount(
 	amount: {
 		value: bigint
 		decimals?: number
@@ -240,7 +134,7 @@ export function formatAmount(
 		: formatted
 }
 
-export function formatEventPart(part: KnownEventPart): string {
+function formatEventPart(part: KnownEventPart): string {
 	switch (part.type) {
 		case 'action':
 			return part.value
@@ -409,15 +303,19 @@ export function buildTokenOgImageUrl(params: {
 	created?: string
 	isFeeToken?: boolean
 }): string {
-	const search = new URLSearchParams()
-	if (params.name) search.set('name', truncateOgText(params.name, 40))
-	if (params.symbol) search.set('symbol', truncateOgText(params.symbol, 16))
-	if (typeof params.holders === 'number')
-		search.set('holders', params.holders.toString())
-	if (params.supply) search.set('supply', params.supply)
-	if (params.created) search.set('created', params.created)
-	if (params.isFeeToken) search.set('isFeeToken', 'true')
-	return `${OG_BASE_URL}/token/${params.address}?${search.toString()}`
+	const ogParams: TokenOgParams = {
+		address: params.address,
+		name: params.name,
+		symbol: params.symbol,
+		holders:
+			typeof params.holders === 'number'
+				? params.holders.toString()
+				: undefined,
+		supply: params.supply,
+		created: params.created,
+		isFeeToken: params.isFeeToken,
+	}
+	return buildTokenOgUrl(OG_BASE_URL, ogParams)
 }
 
 export function buildAddressOgImageUrl(params: {
@@ -431,29 +329,21 @@ export function buildAddressOgImageUrl(params: {
 	isContract?: boolean
 	methods?: string[]
 }): string {
-	const search = new URLSearchParams()
-	if (params.holdings)
-		search.set('holdings', truncateOgText(params.holdings, 20))
-	if (typeof params.txCount === 'number')
-		search.set('txCount', params.txCount.toString())
-	if (params.lastActive) search.set('lastActive', params.lastActive)
-	if (params.created) search.set('created', params.created)
-	if (params.feeToken)
-		search.set('feeToken', truncateOgText(params.feeToken, 16))
-	if (params.tokens && params.tokens.length > 0)
-		search.set(
-			'tokens',
-			params.tokens.map((t) => truncateOgText(t, 10)).join(','),
-		)
-	if (params.isContract) {
-		search.set('isContract', 'true')
-		if (params.methods && params.methods.length > 0)
-			search.set(
-				'methods',
-				params.methods.map((m) => truncateOgText(m, 14)).join(','),
-			)
+	const ogParams: AddressOgParams = {
+		address: params.address,
+		holdings: params.holdings,
+		txCount:
+			typeof params.txCount === 'number'
+				? params.txCount.toString()
+				: undefined,
+		lastActive: params.lastActive,
+		created: params.created,
+		feeToken: params.feeToken,
+		tokens: params.tokens,
+		isContract: params.isContract,
+		methods: params.methods,
 	}
-	return `${OG_BASE_URL}/address/${params.address}?${search.toString()}`
+	return buildAddressOgUrl(OG_BASE_URL, ogParams)
 }
 
 const RPC_URL =

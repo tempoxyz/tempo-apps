@@ -3,58 +3,30 @@ import module from '@takumi-rs/wasm/takumi_wasm_bg.wasm'
 import { Hono } from 'hono'
 import { Address, Hex } from 'ox'
 
+import {
+	parseAddressOgParams,
+	parseTokenOgParams,
+	parseTxOgParams,
+	truncateText,
+} from '#params.ts'
+
 const FONT_MONO_URL =
 	'https://unpkg.com/geist/dist/fonts/geist-mono/GeistMono-Regular.woff2'
 const FONT_INTER_URL =
 	'https://unpkg.com/@fontsource/inter/files/inter-latin-500-normal.woff2'
 
-// Token icon service - {chainId}/{tokenAddress}
 const TOKENLIST_ICON_URL = 'https://tokenlist.tempo.xyz/icon'
 const TESTNET_CHAIN_ID = 42429
 
 const devicePixelRatio = 1.0
 
-// Cache TTL: 1 hour for OG images
 const CACHE_TTL = 3600
 
-// Input caps (OG endpoints are public; keep cache keys + render costs bounded)
-const MAX_PARAM_SHORT = 64
-const MAX_PARAM_MED = 256
-const MAX_PARAM_LONG = 1024
-const MAX_EVENTS = 6
-
 function isTxHash(value: string): boolean {
-	// 32-byte hex
 	return Hex.validate(value) && Hex.size(value as Hex.Hex) === 32
 }
 
-function sanitizeInlineText(value: string): string {
-	// Strip control chars/newlines that can blow up layout or cache keys.
-	let out = ''
-	for (let i = 0; i < value.length; i++) {
-		const code = value.charCodeAt(i)
-		// C0 controls + DEL
-		if ((code >= 0x00 && code <= 0x1f) || code === 0x7f) {
-			out += ' '
-			continue
-		}
-		out += value[i] ?? ''
-	}
-	return out.replace(/\s+/g, ' ').trim()
-}
-
-function getParam(
-	params: URLSearchParams,
-	key: string,
-	maxLen: number,
-): string | undefined {
-	const raw = params.get(key)
-	if (!raw) return undefined
-	return sanitizeInlineText(raw).slice(0, maxLen)
-}
-
 function getCacheKey(url: URL): Request {
-	// Normalize cache key: avoid including request headers/method/body, etc.
 	return new Request(url.toString(), { method: 'GET' })
 }
 
@@ -136,36 +108,24 @@ app.get('/tx/:hash', async (c) => {
 	}
 
 	try {
-		// Parse URL parameters
-		const receiptData: ReceiptData = {
-			hash,
-			blockNumber: getParam(params, 'block', MAX_PARAM_SHORT) || '—',
-			sender: getParam(params, 'sender', MAX_PARAM_MED) || '—',
-			date: getParam(params, 'date', MAX_PARAM_SHORT) || '—',
-			time: getParam(params, 'time', MAX_PARAM_SHORT) || '—',
-			fee: getParam(params, 'fee', MAX_PARAM_SHORT) || undefined,
-			feeToken: getParam(params, 'feeToken', 24) || undefined,
-			feePayer: getParam(params, 'feePayer', MAX_PARAM_MED) || undefined,
-			total: getParam(params, 'total', MAX_PARAM_SHORT) || undefined,
-			events: [],
-		}
+		const txParams = parseTxOgParams(hash, params)
 
-		// Parse events (e1..e6) - format: "Action|Details|Amount" (optional "|Message")
-		for (let i = 1; i <= MAX_EVENTS; i++) {
-			const eventParam = getParam(params, `e${i}`, MAX_PARAM_LONG)
-			if (eventParam) {
-				const [action, details, amount, message] = eventParam
-					.slice(0, MAX_PARAM_LONG)
-					.split('|')
-				if (action) {
-					receiptData.events.push({
-						action: truncateText(action || '', 40),
-						details: truncateText(details || '', 180),
-						amount: amount ? truncateText(amount, 30) : undefined,
-						message: message ? truncateText(message, 140) : undefined,
-					})
-				}
-			}
+		const receiptData: ReceiptData = {
+			hash: txParams.hash,
+			blockNumber: txParams.block,
+			sender: txParams.sender,
+			date: txParams.date,
+			time: txParams.time,
+			fee: txParams.fee,
+			feeToken: txParams.feeToken,
+			feePayer: txParams.feePayer,
+			total: txParams.total,
+			events: txParams.events.map((e) => ({
+				action: e.action,
+				details: e.details,
+				amount: e.amount,
+				message: e.message,
+			})),
 		}
 
 		// Fetch assets
@@ -272,17 +232,18 @@ app.get('/token/:address', async (c) => {
 	}
 
 	try {
-		// Parse URL parameters
+		const tokenParams = parseTokenOgParams(address, params)
+
 		const tokenData: TokenData = {
-			address,
-			name: getParam(params, 'name', 48) || '—',
-			symbol: getParam(params, 'symbol', 24) || '—',
-			currency: getParam(params, 'currency', 12) || '—',
-			holders: getParam(params, 'holders', 24) || '—',
-			supply: getParam(params, 'supply', 32) || '—',
-			created: getParam(params, 'created', 32) || '—',
-			quoteToken: getParam(params, 'quoteToken', 24) || undefined,
-			isFeeToken: params.get('isFeeToken') === 'true',
+			address: tokenParams.address,
+			name: tokenParams.name,
+			symbol: tokenParams.symbol,
+			currency: tokenParams.currency,
+			holders: tokenParams.holders,
+			supply: tokenParams.supply,
+			created: tokenParams.created,
+			quoteToken: tokenParams.quoteToken,
+			isFeeToken: tokenParams.isFeeToken,
 		}
 
 		// Fetch assets and token icon in parallel
@@ -381,14 +342,9 @@ app.get('/address/:address', async (c) => {
 	}
 
 	const url = new URL(c.req.url)
-
-	const methodsParam = sanitizeInlineText(c.req.query('methods') || '').slice(
-		0,
-		MAX_PARAM_LONG,
-	)
+	const params = url.searchParams
 	const cacheKey = getCacheKey(url)
 
-	// Check cache first
 	const cache = (caches as unknown as { default: Cache }).default
 	const cachedResponse = await cache.match(cacheKey)
 	if (cachedResponse) {
@@ -396,45 +352,18 @@ app.get('/address/:address', async (c) => {
 	}
 
 	try {
-		// Parse URL parameters using Hono's query helper
-		const tokensParam = sanitizeInlineText(c.req.query('tokens') || '').slice(
-			0,
-			MAX_PARAM_LONG,
-		)
+		const addrParams = parseAddressOgParams(address, params)
+
 		const addressData: AddressData = {
-			address,
-			holdings:
-				truncateText(sanitizeInlineText(c.req.query('holdings') || '—'), 24) ||
-				'—',
-			txCount:
-				truncateText(sanitizeInlineText(c.req.query('txCount') || '—'), 16) ||
-				'—',
-			lastActive:
-				truncateText(
-					sanitizeInlineText(c.req.query('lastActive') || '—'),
-					40,
-				) || '—',
-			created:
-				truncateText(sanitizeInlineText(c.req.query('created') || '—'), 40) ||
-				'—',
-			feeToken:
-				truncateText(sanitizeInlineText(c.req.query('feeToken') || '—'), 24) ||
-				'—',
-			tokensHeld: tokensParam
-				? tokensParam
-						.split(',')
-						.map((t) => truncateText(t.trim(), 24))
-						.filter(Boolean)
-						.slice(0, 12)
-				: [],
-			isContract: c.req.query('isContract') === 'true',
-			methods: methodsParam
-				? methodsParam
-						.split(',')
-						.map((m) => truncateText(m.trim(), 32))
-						.filter(Boolean)
-						.slice(0, 16)
-				: [],
+			address: addrParams.address,
+			holdings: addrParams.holdings,
+			txCount: addrParams.txCount,
+			lastActive: addrParams.lastActive,
+			created: addrParams.created,
+			feeToken: addrParams.feeToken,
+			tokensHeld: addrParams.tokens,
+			isContract: addrParams.isContract,
+			methods: addrParams.methods,
 		}
 
 		// Fetch assets
@@ -569,15 +498,45 @@ function ReceiptCard({
 	data: ReceiptData
 	receiptLogo: string
 }) {
-	// Format date: remove comma, e.g. "Dec 12, 2025" -> "Dec 12 2025"
-	const formattedDate = data.date.replace(',', '')
-	// Format time: convert "1:03 PM" to "13:03"
+	// Format date to "Dec 1 2025" format
+	let formattedDate = data.date
+	// Handle "Dec 1, 2025" format - remove comma
+	if (data.date.includes(',')) {
+		formattedDate = data.date.replace(',', '')
+	}
+	// Handle "12/01/2025" or "MM/DD/YYYY" format - convert to "Dec 1 2025"
+	const dateMatch = data.date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+	if (dateMatch) {
+		const [, monthStr, dayStr, year] = dateMatch
+		const month = Number.parseInt(monthStr ?? '1', 10)
+		const day = Number.parseInt(dayStr ?? '1', 10)
+		const monthNames = [
+			'Jan',
+			'Feb',
+			'Mar',
+			'Apr',
+			'May',
+			'Jun',
+			'Jul',
+			'Aug',
+			'Sep',
+			'Oct',
+			'Nov',
+			'Dec',
+		]
+		formattedDate = `${monthNames[month - 1]} ${day} ${year}`
+	}
+
+	// Format time to "HH:MM" (24-hour)
 	let formattedTime = data.time
-	const timeMatch = data.time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
-	if (timeMatch) {
-		const hoursStr = timeMatch[1]
-		const minutes = timeMatch[2]
-		const periodRaw = timeMatch[3]
+	// Handle "1:03 PM" or "10:32 AM GMT-8" format (12-hour with optional timezone)
+	const timeMatch12 = data.time.match(
+		/^(\d{1,2}):(\d{2})\s*(AM|PM)(?:\s*GMT[+-]\d+)?$/i,
+	)
+	if (timeMatch12) {
+		const hoursStr = timeMatch12[1]
+		const minutes = timeMatch12[2]
+		const periodRaw = timeMatch12[3]
 		if (hoursStr && minutes && periodRaw) {
 			let hours = Number.parseInt(hoursStr, 10)
 			const period = periodRaw.toUpperCase()
@@ -586,6 +545,18 @@ function ReceiptCard({
 			formattedTime = `${hours.toString().padStart(2, '0')}:${minutes}`
 		}
 	}
+	// Handle "10:32:21 GMT-8" format (24-hour) - extract HH:MM
+	else {
+		const timeMatch24 = data.time.match(
+			/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(?:GMT[+-]\d+)?$/i,
+		)
+		if (timeMatch24) {
+			const hours = timeMatch24[1]
+			const minutes = timeMatch24[2]
+			formattedTime = `${hours?.padStart(2, '0')}:${minutes}`
+		}
+	}
+
 	// Combine date and time
 	const when = data.date !== '—' ? `${formattedDate} ${formattedTime}` : '—'
 
@@ -628,15 +599,15 @@ function ReceiptCard({
 					}}
 				>
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-500">Block</span>
+						<span tw="text-gray-500 shrink-0">Block</span>
 						<span tw="text-emerald-600">#{data.blockNumber}</span>
 					</div>
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-500">Sender</span>
+						<span tw="text-gray-500 shrink-0">Sender</span>
 						<span tw="text-blue-500">{truncateHash(data.sender, 6)}</span>
 					</div>
 					<div tw="flex w-full justify-between">
-						<span tw="text-gray-500">Date</span>
+						<span tw="text-gray-500 shrink-0">Date</span>
 						<span>{when}</span>
 					</div>
 				</div>
@@ -1191,12 +1162,6 @@ function truncateHash(hash: string, chars = 4): string {
 	if (!hash || hash === '—') return hash
 	if (hash.length <= chars * 2 + 2) return hash
 	return `${hash.slice(0, chars + 2)}…${hash.slice(-chars)}`
-}
-
-// Truncate any text to max length with ellipsis
-function truncateText(text: string, maxLength: number): string {
-	if (!text || text.length <= maxLength) return text
-	return `${text.slice(0, maxLength - 1)}…`
 }
 
 // Fetch token icon from tokenlist service, returns base64 data URL or null

@@ -243,17 +243,11 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 		if (loaderData) {
 			search.set('block', loaderData.block.number.toString())
 			search.set('sender', loaderData.receipt.from)
-			search.set(
-				'date',
-				DateFormatter.formatTimestampDate(loaderData.block.timestamp),
-			)
-			const timeInfo = DateFormatter.formatTimestampTime(
+			const ogTimestamp = DateFormatter.formatTimestampForOg(
 				loaderData.block.timestamp,
 			)
-			search.set(
-				'time',
-				`${timeInfo.time} ${timeInfo.timezone}${timeInfo.offset}`,
-			)
+			search.set('date', ogTimestamp.date)
+			search.set('time', ogTimestamp.time)
 			loaderData.knownEvents?.slice(0, 6).forEach((event, index) => {
 				search.set(`e${index + 1}`, formatEventForOgServer(event))
 			})
