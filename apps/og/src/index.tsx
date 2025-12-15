@@ -333,7 +333,6 @@ app.get('/address/:address', async (c) => {
 	}
 
 	const url = new URL(c.req.url)
-	const params = url.searchParams
 
 	const methodsParam = c.req.query('methods') || ''
 	const cacheKey = new Request(url.toString(), c.req.raw)
@@ -498,8 +497,10 @@ function ReceiptCard({
 	let formattedTime = data.time
 	const timeMatch = data.time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
 	if (timeMatch) {
+		// @ts-expect-error TODO: fix this
 		let hours = parseInt(timeMatch[1], 10)
 		const minutes = timeMatch[2]
+		// @ts-expect-error TODO: fix this
 		const period = timeMatch[3].toUpperCase()
 		if (period === 'PM' && hours !== 12) hours += 12
 		if (period === 'AM' && hours === 12) hours = 0

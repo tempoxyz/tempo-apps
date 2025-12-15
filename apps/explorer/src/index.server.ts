@@ -720,8 +720,8 @@ async function hasFeeAmmLiquidity(tokenAddress: string): Promise<boolean> {
 
 		if (json.result && json.result !== '0x' && json.result.length >= 130) {
 			// Pool struct: (uint128 reserveUserToken, uint128 reserveValidatorToken)
-			const reserveUser = BigInt('0x' + json.result.slice(2, 66))
-			const reserveValidator = BigInt('0x' + json.result.slice(66, 130))
+			const reserveUser = BigInt(`0x${json.result.slice(2, 66)}`)
+			const reserveValidator = BigInt(`0x${json.result.slice(66, 130)}`)
 			return reserveUser > 0n || reserveValidator > 0n
 		}
 		return false
@@ -824,18 +824,13 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 
 		// Detect contract type and set method names
 		let detectedMethods: string[] = []
-		let contractType = '' // For description
 		if (isContract) {
 			const addrLower = address.toLowerCase()
 
 			// Check known system contracts first
 			if (addrLower === '0x20fc000000000000000000000000000000000000') {
-				// TIP-20 Factory
-				contractType = 'TIP-20 Factory'
 				detectedMethods = ['createToken', 'isTIP20', 'tokenIdCounter']
 			} else if (addrLower === '0xfeec000000000000000000000000000000000000') {
-				// Fee Manager
-				contractType = 'Fee Manager'
 				detectedMethods = [
 					'getPool',
 					'setUserToken',
@@ -843,8 +838,6 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 					'rebalanceSwap',
 				]
 			} else if (addrLower === '0xdec0000000000000000000000000000000000000') {
-				// Stablecoin DEX
-				contractType = 'Stablecoin DEX'
 				detectedMethods = [
 					'swap',
 					'getQuote',
@@ -852,12 +845,8 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 					'removeLiquidity',
 				]
 			} else if (addrLower === '0x403c000000000000000000000000000000000000') {
-				// TIP-403 Registry
-				contractType = 'TIP-403 Registry'
 				detectedMethods = ['isAuthorized', 'getPolicyOwner', 'createPolicy']
 			} else if (addrLower.startsWith('0x20c')) {
-				// TIP-20 Token
-				contractType = 'TIP-20 Token'
 				detectedMethods = [
 					'transfer',
 					'approve',
@@ -886,7 +875,6 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 						error?: unknown
 					}
 					if (json.result && json.result !== '0x' && !json.error) {
-						contractType = 'Token'
 						detectedMethods = [
 							'transfer',
 							'approve',
