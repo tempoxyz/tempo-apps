@@ -6,6 +6,7 @@ import { decodeFunctionData, isAddressEqual } from 'viem'
 import { Address } from '#comps/Address'
 import { Amount } from '#comps/Amount'
 import { Midcut } from '#comps/Midcut'
+import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#cva.config.ts'
 import { extractContractAbi, getContractAbi } from '#lib/domain/contracts.ts'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
@@ -155,10 +156,11 @@ export namespace TxEventDescription {
 						params={{ address: part.value.address }}
 						title={part.value.address}
 						className={cx(
-							'press-down whitespace-nowrap',
+							'press-down whitespace-nowrap inline-flex items-center gap-1',
 							!part.value.symbol && 'min-w-0 flex-1',
 						)}
 					>
+						<TokenIcon address={part.value.address} name={part.value.symbol} />
 						<span className="text-base-content-positive items-end">
 							{part.value.symbol || (
 								<Midcut value={part.value.address} prefix="0x" />
