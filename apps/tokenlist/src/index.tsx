@@ -11,11 +11,10 @@ const CHAIN_IDS = [tempoDevnet.id, tempoTestnet.id]
 const staticAssetBindingError =
 	'Static assets binding "ASSETS" is not configured.'
 
-app.get('/', (_context) => new Response('ok'))
-
-app.get('/health', (_context) => new Response('ok'))
-
-app.get('/docs', async (context) => context.html(<Docs />))
+app
+	.get('/', (context) => context.redirect('/docs'))
+	.get('/health', (_context) => new Response('ok'))
+	.get('/docs', async (context) => context.html(<Docs />))
 
 app
 	.get('/schema/openapi', async (context) => context.json(OpenAPISpec))
@@ -29,7 +28,6 @@ app.get('/icon/:chain_id', async (context) => {
 		return context.notFound()
 
 	const assets = context.env.ASSETS
-	console.log(assets)
 	if (!assets)
 		return new Response(staticAssetBindingError, {
 			status: 500,
@@ -64,9 +62,12 @@ app.get('/icon/:chain_id/:address', async (context) => {
 		`/${chainId}/icons/${address.toLowerCase().replace('.svg', '')}.svg`,
 		'http://assets',
 	)
-	const assetResponse = await assets.fetch(assetUrl)
+	let assetResponse = await assets.fetch(assetUrl)
 
-	if (assetResponse.status === 404) return context.notFound()
+	if (assetResponse.status !== 200)
+		assetResponse = await assets.fetch(
+			new URL(`/${chainId}/icons/fallback.svg`, 'http://assets'),
+		)
 
 	// Let CF set correct headers; override only when missing
 	const headers = new Headers(assetResponse.headers)
