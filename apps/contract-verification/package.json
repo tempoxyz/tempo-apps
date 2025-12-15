@@ -22,10 +22,8 @@
 		"db:push": "drizzle-kit push"
 	},
 	"dependencies": {
-		"@cloudflare/containers": "^0.0.30",
-		"@ethereum-sourcify/compilers": "^1.0.14",
-		"@ethereum-sourcify/lib-sourcify": "^3.0.4",
-		"drizzle-orm": "^0.45.0",
+		"@cloudflare/containers": "^0.0.31",
+		"drizzle-orm":"^0.45.1",
 		"hono": "catalog:",
 		"ox": "catalog:",
 		"tempo.ts": "catalog:",
@@ -35,7 +33,6 @@
 		"@biomejs/biome": "catalog:",
 		"@cloudflare/vite-plugin": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
-		"@ethereum-sourcify/compilers-types": "^1.0.10",
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/bun": "^1.3.4",
 		"@types/node": "catalog:",

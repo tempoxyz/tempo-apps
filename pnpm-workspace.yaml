@@ -41,7 +41,7 @@ catalog:
   hono: ^4.10.8
   idxs: ^0.0.5
   kysely: ^0.28.8
-  ox: 0.9.17
+  ox: ^0.9.17
   react: ^19.2.1
   react-dom: ^19.2.1
   tailwind-merge: ^3.4.0
@@ -56,13 +56,7 @@ catalog:
   vite-tsconfig-paths: ^5.1.4
   vitest: 3.2.4
   wagmi: ^3.1.0
-  wrangler: ^4.53.0
-<<<<<<< HEAD
-  zod: 4.2.0
-||||||| parent of 8d80cd0 (feat: local example running e2e)
+  wrangler: ^4.54.0
   zod: ^4.1.13
-=======
-  zod: 4.1.13
->>>>>>> 8d80cd0 (feat: local example running e2e)
 
 catalogMode: strict

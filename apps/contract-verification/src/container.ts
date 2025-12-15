@@ -1,12 +1,9 @@
-import { Container } from '@cloudflare/containers'
+import { Container, type StopParams } from '@cloudflare/containers'
 
-export class VerificationContainer extends Container {
+export class VerificationContainer extends Container<Cloudflare.Env> {
 	defaultPort = 8080
 	sleepAfter = '10m'
 	enableInternet = true
-	envVars = {
-		ZKGM: 'hello',
-	}
 
 	override async onStart(): Promise<void> {
 		console.log('onStart hook called')
@@ -18,8 +15,11 @@ export class VerificationContainer extends Container {
 		console.log('onStart hook called with data:', data)
 	}
 
-	override async onStop(): Promise<void> {
-		console.log('onStop hook called')
+	override onStop(stopParams: StopParams): void {
+		if (stopParams.exitCode === 0) console.log('Container stopped gracefully')
+		else console.log('Container stopped with exit code:', stopParams.exitCode)
+
+		console.log('Container stop reason:', stopParams.reason)
 	}
 
 	override onError(error: unknown): unknown {
