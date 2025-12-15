@@ -10,12 +10,14 @@
 		"postinstall": "pnpm gen:types"
 	},
 	"dependencies": {
+		"@hono/zod-validator": "catalog:",
 		"@takumi-rs/image-response": "^0.57.3",
 		"@takumi-rs/wasm": "^0.57.3",
 		"hono": "catalog:",
 		"ox": "catalog:",
 		"tempo.ts": "catalog:",
-		"viem": "catalog:"
+		"viem": "catalog:",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:",

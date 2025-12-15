@@ -8,62 +8,14 @@
  * Keep them in sync until we create a shared package.
  */
 
+import * as z from 'zod/mini'
+
 // ============ Constants ============
 
 export const MAX_PARAM_SHORT = 64
 export const MAX_PARAM_MED = 256
 export const MAX_PARAM_LONG = 1024
 export const MAX_EVENTS = 6
-
-// ============ Transaction OG Params ============
-
-export interface TxOgEvent {
-	action: string
-	details: string
-	amount?: string
-	message?: string
-}
-
-export interface TxOgParams {
-	hash: string
-	block: string
-	sender: string
-	date: string
-	time: string
-	fee?: string
-	feeToken?: string
-	feePayer?: string
-	total?: string
-	events: TxOgEvent[]
-}
-
-// ============ Token OG Params ============
-
-export interface TokenOgParams {
-	address: string
-	name: string
-	symbol: string
-	currency: string
-	holders: string
-	supply: string
-	created: string
-	quoteToken?: string
-	isFeeToken: boolean
-}
-
-// ============ Address OG Params ============
-
-export interface AddressOgParams {
-	address: string
-	holdings: string
-	txCount: string
-	lastActive: string
-	created: string
-	feeToken: string
-	tokens: string[]
-	isContract: boolean
-	methods: string[]
-}
 
 // ============ Utility Functions ============
 
@@ -85,109 +37,182 @@ export function sanitizeText(value: string): string {
 	return out.replace(/\s+/g, ' ').trim()
 }
 
-function getParam(
-	params: URLSearchParams,
-	key: string,
-	maxLen: number,
-): string | undefined {
-	const raw = params.get(key)
-	if (!raw) return undefined
-	return sanitizeText(raw).slice(0, maxLen)
+/** Sanitize + truncate transform for Zod Mini */
+const sanitized = (maxLen: number) =>
+	z.pipe(
+		z.optional(z.string()),
+		z.transform((v) => (v ? sanitizeText(v).slice(0, maxLen) : undefined)),
+	)
+
+/** Sanitize + truncate with default value */
+const sanitizedWithDefault = (maxLen: number, defaultValue = '—') =>
+	z.pipe(
+		z.optional(z.string()),
+		z.transform((v) =>
+			v ? sanitizeText(v).slice(0, maxLen) : sanitizeText(defaultValue),
+		),
+	)
+
+/** Boolean from string "true" */
+const booleanString = z.pipe(
+	z.optional(z.string()),
+	z.transform((v) => v === 'true'),
+)
+
+/** Optional string field */
+const optionalString = z.optional(z.string())
+
+/** Parse pipe-delimited event string */
+function parseEventString(eventParam: string | undefined) {
+	if (!eventParam) return undefined
+	const sanitizedParam = sanitizeText(eventParam).slice(0, MAX_PARAM_LONG)
+	const [action, details, amount, message] = sanitizedParam.split('|')
+	if (!action) return undefined
+	return {
+		action: truncateText(action, 40),
+		details: truncateText(details || '', 180),
+		amount: amount ? truncateText(amount, 30) : undefined,
+		message: message ? truncateText(message, 140) : undefined,
+	}
 }
 
-// ============ URL Parsers ============
+// ============ Transaction OG Schema ============
 
-export function parseTxOgParams(
-	hash: string,
-	params: URLSearchParams,
-): TxOgParams {
-	const events: TxOgEvent[] = []
+export interface TxOgEvent {
+	action: string
+	details: string
+	amount?: string
+	message?: string
+}
 
-	for (let i = 1; i <= MAX_EVENTS; i++) {
-		// Events can arrive via multiple key formats depending on who generated the URL.
-		// Prefer the newer `ev{n}` keys, but keep backwards compatibility with `e{n}`.
-		const eventParam =
-			getParam(params, `ev${i}`, MAX_PARAM_LONG) ??
-			getParam(params, `e${i}`, MAX_PARAM_LONG) ??
-			getParam(params, `event${i}`, MAX_PARAM_LONG)
-		if (eventParam) {
-			const [action, details, amount, message] = eventParam.split('|')
-			if (action) {
-				events.push({
-					action: truncateText(action, 40),
-					details: truncateText(details || '', 180),
-					amount: amount ? truncateText(amount, 30) : undefined,
-					message: message ? truncateText(message, 140) : undefined,
-				})
-			}
+export const txOgQuerySchema = z.pipe(
+	z.object({
+		block: sanitizedWithDefault(MAX_PARAM_SHORT),
+		sender: sanitizedWithDefault(MAX_PARAM_MED),
+		date: sanitizedWithDefault(MAX_PARAM_SHORT),
+		time: sanitizedWithDefault(MAX_PARAM_SHORT),
+		fee: sanitized(MAX_PARAM_SHORT),
+		feeToken: sanitized(24),
+		feePayer: sanitized(MAX_PARAM_MED),
+		total: sanitized(MAX_PARAM_SHORT),
+		// Events can arrive via multiple key formats: ev{n}, e{n}, event{n}
+		ev1: optionalString,
+		ev2: optionalString,
+		ev3: optionalString,
+		ev4: optionalString,
+		ev5: optionalString,
+		ev6: optionalString,
+		e1: optionalString,
+		e2: optionalString,
+		e3: optionalString,
+		e4: optionalString,
+		e5: optionalString,
+		e6: optionalString,
+		event1: optionalString,
+		event2: optionalString,
+		event3: optionalString,
+		event4: optionalString,
+		event5: optionalString,
+		event6: optionalString,
+	}),
+	z.transform((data) => {
+		const events: TxOgEvent[] = []
+		for (let i = 1; i <= MAX_EVENTS; i++) {
+			const eventParam =
+				data[`ev${i}` as keyof typeof data] ??
+				data[`e${i}` as keyof typeof data] ??
+				data[`event${i}` as keyof typeof data]
+			const event = parseEventString(eventParam as string | undefined)
+			if (event) events.push(event)
 		}
-	}
+		return {
+			block: data.block,
+			sender: data.sender,
+			date: data.date,
+			time: data.time,
+			fee: data.fee,
+			feeToken: data.feeToken,
+			feePayer: data.feePayer,
+			total: data.total,
+			events,
+		}
+	}),
+)
 
-	return {
-		hash,
-		block: getParam(params, 'block', MAX_PARAM_SHORT) || '—',
-		sender: getParam(params, 'sender', MAX_PARAM_MED) || '—',
-		date: getParam(params, 'date', MAX_PARAM_SHORT) || '—',
-		time: getParam(params, 'time', MAX_PARAM_SHORT) || '—',
-		fee: getParam(params, 'fee', MAX_PARAM_SHORT),
-		feeToken: getParam(params, 'feeToken', 24),
-		feePayer: getParam(params, 'feePayer', MAX_PARAM_MED),
-		total: getParam(params, 'total', MAX_PARAM_SHORT),
-		events,
-	}
-}
+export type TxOgQueryParams = z.output<typeof txOgQuerySchema>
 
-export function parseTokenOgParams(
-	address: string,
-	params: URLSearchParams,
-): TokenOgParams {
-	return {
-		address,
-		name: getParam(params, 'name', 48) || '—',
-		symbol: getParam(params, 'symbol', 24) || '—',
-		currency: getParam(params, 'currency', 12) || '—',
-		holders: getParam(params, 'holders', 24) || '—',
-		supply: getParam(params, 'supply', 32) || '—',
-		created: getParam(params, 'created', 32) || '—',
-		quoteToken: getParam(params, 'quoteToken', 24),
-		isFeeToken: params.get('isFeeToken') === 'true',
-	}
-}
+// ============ Token OG Schema ============
 
-export function parseAddressOgParams(
-	address: string,
-	params: URLSearchParams,
-): AddressOgParams {
-	const tokensParam = sanitizeText(params.get('tokens') || '').slice(
-		0,
-		MAX_PARAM_LONG,
+export const tokenOgQuerySchema = z.pipe(
+	z.object({
+		name: sanitizedWithDefault(48),
+		symbol: sanitizedWithDefault(24),
+		currency: sanitizedWithDefault(12),
+		holders: sanitizedWithDefault(24),
+		supply: sanitizedWithDefault(32),
+		created: sanitizedWithDefault(32),
+		quoteToken: sanitized(24),
+		isFeeToken: booleanString,
+	}),
+	z.transform((data) => ({
+		name: data.name,
+		symbol: data.symbol,
+		currency: data.currency,
+		holders: data.holders,
+		supply: data.supply,
+		created: data.created,
+		quoteToken: data.quoteToken,
+		isFeeToken: data.isFeeToken,
+	})),
+)
+
+export type TokenOgQueryParams = z.output<typeof tokenOgQuerySchema>
+
+// ============ Address OG Schema ============
+
+/** Parse comma-separated list with truncation */
+const commaSeparatedList = (itemMaxLen: number, maxItems: number) =>
+	z.pipe(
+		z.optional(z.string()),
+		z.transform((v) => {
+			if (!v) return []
+			return sanitizeText(v)
+				.slice(0, MAX_PARAM_LONG)
+				.split(',')
+				.map((item) => truncateText(item.trim(), itemMaxLen))
+				.filter(Boolean)
+				.slice(0, maxItems)
+		}),
 	)
-	const methodsParam = sanitizeText(params.get('methods') || '').slice(
-		0,
-		MAX_PARAM_LONG,
+
+/** Sanitize string with default and truncation */
+const sanitizedField = (maxLen: number, defaultValue = '—') =>
+	z.pipe(
+		z.optional(z.string()),
+		z.transform((v) => truncateText(sanitizeText(v || defaultValue), maxLen)),
 	)
 
-	return {
-		address,
-		holdings: truncateText(sanitizeText(params.get('holdings') || '—'), 24),
-		txCount: truncateText(sanitizeText(params.get('txCount') || '—'), 16),
-		lastActive: truncateText(sanitizeText(params.get('lastActive') || '—'), 40),
-		created: truncateText(sanitizeText(params.get('created') || '—'), 40),
-		feeToken: truncateText(sanitizeText(params.get('feeToken') || '—'), 24),
-		tokens: tokensParam
-			? tokensParam
-					.split(',')
-					.map((t) => truncateText(t.trim(), 24))
-					.filter(Boolean)
-					.slice(0, 12)
-			: [],
-		isContract: params.get('isContract') === 'true',
-		methods: methodsParam
-			? methodsParam
-					.split(',')
-					.map((m) => truncateText(m.trim(), 32))
-					.filter(Boolean)
-					.slice(0, 16)
-			: [],
-	}
-}
+export const addressOgQuerySchema = z.pipe(
+	z.object({
+		holdings: sanitizedField(24),
+		txCount: sanitizedField(16),
+		lastActive: sanitizedField(40),
+		created: sanitizedField(40),
+		feeToken: sanitizedField(24),
+		tokens: commaSeparatedList(24, 12),
+		methods: commaSeparatedList(32, 16),
+		isContract: booleanString,
+	}),
+	z.transform((data) => ({
+		holdings: data.holdings,
+		txCount: data.txCount,
+		lastActive: data.lastActive,
+		created: data.created,
+		feeToken: data.feeToken,
+		tokens: data.tokens,
+		methods: data.methods,
+		isContract: data.isContract,
+	})),
+)
+
+export type AddressOgQueryParams = z.output<typeof addressOgQuerySchema>
