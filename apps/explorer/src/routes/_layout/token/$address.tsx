@@ -94,9 +94,9 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const offset = (page - 1) * limit
 
 		try {
-			// Fetch holders summary for OG/meta + sidebar stats.
-			const holdersSummary = await context.queryClient
-				.ensureQueryData(
+			// Prefetch holders in background (don't block page render - it's slow for popular tokens)
+			context.queryClient
+				.prefetchQuery(
 					holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
 				)
 				.catch(() => undefined)
@@ -114,13 +114,13 @@ export const Route = createFileRoute('/_layout/token/$address')({
 						transfersQueryOptions({ address, page, limit, offset, account }),
 					),
 				])
-				return { metadata, transfers, holdersSummary }
+				return { metadata, transfers }
 			}
 
 			const metadata = await Actions.token.getMetadata(config, {
 				token: address,
 			})
-			return { metadata, transfers: undefined, holdersSummary }
+			return { metadata, transfers: undefined }
 		} catch (error) {
 			console.error(error)
 			// redirect to `/address/$address` and if it's not an address, that route will throw a notFound
@@ -141,26 +141,13 @@ export const Route = createFileRoute('/_layout/token/$address')({
 	head: ({ params, loaderData }) => {
 		const title = `Token ${params.address.slice(0, 6)}…${params.address.slice(-4)} ⋅ Tempo Explorer`
 		const metadata = loaderData?.metadata
-		const holdersSummary = loaderData?.holdersSummary
-
-		const holders =
-			holdersSummary?.total !== undefined
-				? Number(holdersSummary.total)
-				: undefined
-		const totalSupply =
-			holdersSummary?.totalSupply !== undefined &&
-			metadata?.decimals !== undefined
-				? PriceFormatter.formatAmountShort(
-						formatUnits(BigInt(holdersSummary.totalSupply), metadata.decimals),
-					)
-				: undefined
 
 		const description = buildTokenDescription(
 			metadata
 				? {
 						name: metadata.name ?? '—',
 						symbol: metadata.symbol,
-						supply: totalSupply,
+						supply: undefined,
 					}
 				: null,
 		)
@@ -169,8 +156,6 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			address: params.address,
 			name: metadata?.name,
 			symbol: metadata?.symbol,
-			holders,
-			supply: totalSupply,
 		})
 
 		return {

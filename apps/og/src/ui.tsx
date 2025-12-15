@@ -706,14 +706,6 @@ export function AddressCard({ data }: { data: AddressData }) {
 					<span tw="text-gray-900">{data.created}</span>
 				</div>
 
-				{/* Fee Token - hide for contracts */}
-				{!data.isContract && (
-					<div tw="flex w-full justify-between">
-						<span tw="text-gray-500">Fee Token</span>
-						<span tw="text-gray-900">{data.feeToken}</span>
-					</div>
-				)}
-
 				{/* Contract Methods - show for contracts only, at bottom */}
 				{data.isContract && data.methods && data.methods.length > 0 && (
 					<div tw="flex flex-col w-full" style={{ marginTop: '4px' }}>
