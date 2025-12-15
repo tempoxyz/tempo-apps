@@ -25,7 +25,6 @@ export function BlockCard(props: BlockCard.Props) {
 		stateRoot,
 		transactionsRoot,
 		receiptsRoot,
-		withdrawalsRoot,
 	} = block
 
 	const [showAdvanced, setShowAdvanced] = React.useState(false)
@@ -64,7 +63,6 @@ export function BlockCard(props: BlockCard.Props) {
 		{ label: 'state', value: stateRoot },
 		{ label: 'txns', value: transactionsRoot },
 		{ label: 'receipts', value: receiptsRoot },
-		{ label: 'withdraws', value: withdrawalsRoot },
 	]
 
 	const showAdvancedSection = true
