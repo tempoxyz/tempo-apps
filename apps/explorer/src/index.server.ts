@@ -6,7 +6,7 @@ import {
 	buildTxOgData,
 	OgMetaInjector,
 	OgMetaRemover,
-} from '#lib/og.server'
+} from '#lib/og.ts'
 
 export default Sentry.withSentry(
 	(env: Cloudflare.Env) => {
