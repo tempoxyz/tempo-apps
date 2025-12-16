@@ -61,6 +61,24 @@ async function fetchAddressTotalValue(address: Address.Address) {
 	return response.json() as Promise<{ totalValue: number }>
 }
 
+async function fetchAddressTotalCount(address: Address.Address) {
+	const response = await fetch(
+		`${__BASE_URL__}/api/address/txs-count/${address}`,
+		{ headers: { 'Content-Type': 'application/json' } },
+	)
+	if (!response.ok) throw new Error('Failed to fetch total transaction count')
+	const {
+		data: safeData,
+		success,
+		error,
+	} = z.safeParse(
+		z.object({ data: z.number(), error: z.nullable(z.string()) }),
+		await response.json(),
+	)
+	if (!success) throw new Error(z.prettifyError(error))
+	return safeData
+}
+
 const defaultSearchValues = {
 	page: 1,
 	limit: 10,
@@ -205,6 +223,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			z.enum(['history', 'assets', 'contract']),
 			defaultSearchValues.tab,
 		),
+		live: z.prefault(z.boolean(), true),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
@@ -378,7 +397,7 @@ function RouteComponent() {
 	const router = useRouter()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, limit } = Route.useSearch()
+	const { page, tab, limit, live } = Route.useSearch()
 	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
 
 	Address.assert(address)
@@ -469,6 +488,7 @@ function RouteComponent() {
 				contractInfo={contractInfo}
 				initialData={transactionsData}
 				assetsData={assetsData}
+				live={live}
 			/>
 		</div>
 	)
@@ -549,6 +569,7 @@ function SectionsWrapper(props: {
 	contractInfo: ContractInfo | undefined
 	initialData: TransactionsData | undefined
 	assetsData: AssetData[]
+	live: boolean
 }) {
 	const {
 		address,
@@ -559,12 +580,13 @@ function SectionsWrapper(props: {
 		contractInfo,
 		initialData,
 		assetsData,
+		live,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	const isHistoryTabActive = activeSection === 0
-	// Only auto-refresh on page 1 when history tab is active
-	const shouldAutoRefresh = page === 1 && isHistoryTabActive
+	// Only auto-refresh on page 1 when history tab is active and live=true
+	const shouldAutoRefresh = page === 1 && isHistoryTabActive && live
 
 	const { data, isPlaceholderData, error } = useQuery({
 		...transactionsQueryOptions({
@@ -588,12 +610,28 @@ function SectionsWrapper(props: {
 		hasMore: false,
 	}
 
+	// Fetch exact total count in the background (only when on history tab)
+	// Don't cache across tabs/pages - always show "..." until loaded each time
+	const {
+		// TODO: use me for the total count of txs
+		data: _totalCountResponse,
+		isLoading: isTotalCountLoading,
+	} = useQuery({
+		queryKey: ['address-total-count', address],
+		queryFn: () => fetchAddressTotalCount(address),
+		staleTime: 0, // Don't cache - always refetch to show "..." while loading
+		refetchInterval: false,
+		refetchOnWindowFocus: false,
+		enabled: isHistoryTabActive,
+	})
+
 	const batchTransactionDataContextValue = useBatchTransactionData(
 		transactions,
 		address,
 	)
 
-	// Use hasMore from API for pagination - don't need exact total count
+	// Use hasMore from API for pagination - don't use txs-count for page calculation
+	// txs-count counts differently (from OR to) than pagination (direct + transfers deduped)
 	// This makes pagination responsive without waiting for separate count query
 	// When hasMore is true, set total to be high enough to enable next page button
 	const total = hasMore
@@ -686,6 +724,7 @@ function SectionsWrapper(props: {
 								page={page}
 								fetching={isPlaceholderData}
 								loading={!data}
+								countLoading={isTotalCountLoading}
 								itemsLabel="transactions"
 								itemsPerPage={limit}
 								pagination="simple"

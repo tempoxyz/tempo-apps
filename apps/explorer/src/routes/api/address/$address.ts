@@ -21,7 +21,7 @@ const TRANSFER_SIGNATURE =
 
 export const RequestParametersSchema = z.object({
 	offset: z.prefault(z.coerce.number(), 0),
-	limit: z.prefault(z.coerce.number(), 100),
+	limit: z.prefault(z.coerce.number(), 10),
 	sort: z.prefault(z.enum(['asc', 'desc']), 'desc'),
 	include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
 })
@@ -121,10 +121,11 @@ export const Route = createFileRoute('/api/address/$address')({
 						.orderBy('block_num', sortDirection)
 						.orderBy('tx_hash', sortDirection)
 
-					// OPTIMIZATION: Bound fetch size to avoid huge offsets on deep pagination.
-					// We need at least offset+fetchSize rows, but cap at 500 for memory efficiency.
-					// This avoids expensive database offset operations while ensuring we have enough data.
-					const bufferSize = Math.min(offset + fetchSize, 500)
+					// bound fetch size to avoid huge offsets on deep pagination
+					const bufferSize = Math.min(
+						Math.max(offset + fetchSize * 5, limit * 3),
+						500,
+					)
 
 					// Run both queries in parallel and merge-sort to get top N hashes
 					const [directResult, transferResult] = await Promise.all([
@@ -225,7 +226,7 @@ export const Route = createFileRoute('/api/address/$address')({
 						transactions,
 						total: hasMore ? nextOffset + 1 : nextOffset,
 						offset: nextOffset,
-						limit: transactions.length,
+						limit,
 						hasMore,
 						error: null,
 					})

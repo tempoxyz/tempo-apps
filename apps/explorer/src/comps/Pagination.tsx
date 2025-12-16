@@ -233,7 +233,7 @@ export namespace Pagination {
 	}
 
 	export function Simple(props: Simple.Props) {
-		const { page, totalPages, fetching } = props
+		const { page, totalPages, fetching, countLoading } = props
 		return (
 			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
 				<Link
@@ -268,7 +268,12 @@ export namespace Pagination {
 					<span className={fetching ? 'opacity-50' : undefined}>
 						{Pagination.numFormat.format(page)}
 					</span>{' '}
-					of {totalPages > 0 ? Pagination.numFormat.format(totalPages) : '…'}
+					of{' '}
+					{countLoading
+						? '…'
+						: totalPages > 0
+							? Pagination.numFormat.format(totalPages)
+							: '…'}
 				</span>
 				<Link
 					to="."
@@ -307,13 +312,20 @@ export namespace Pagination {
 			page: number
 			totalPages: number
 			fetching?: boolean
+			countLoading?: boolean
 		}
 	}
 
 	export function Count(props: Count.Props) {
-		const { page, totalPages, totalItems, itemsLabel, loading } = props
+		const { page, totalPages, totalItems, itemsLabel, loading, className } =
+			props
 		return (
-			<div className="flex items-center justify-center sm:justify-end gap-[8px]">
+			<div
+				className={cx(
+					'flex items-center justify-center sm:justify-end gap-[8px]',
+					className,
+				)}
+			>
 				{page != null && totalPages != null && (
 					<>
 						<span className="text-tertiary">Page</span>
@@ -338,6 +350,7 @@ export namespace Pagination {
 			totalItems: number
 			itemsLabel: string
 			loading?: boolean
+			className?: string
 		}
 	}
 }
