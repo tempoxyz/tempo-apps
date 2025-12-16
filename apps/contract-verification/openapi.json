@@ -1,9 +1,14 @@
 {
+	"$schema": "https://schemas.sourcemeta.com/openapi/v3.1/schema/2025-09-15.json",
 	"openapi": "3.1.0",
 	"info": {
-		"version": "1.0.0",
+		"version": "0.0.1",
 		"title": "Contract Verification API",
 		"description": "API for verifying contracts on various blockchain networks. Provides endpoints to verify contract code, contract ABI, and contract bytecode for multiple chains."
+	},
+	"externalDocs": {
+		"url": "https://contracts.tempo.xyz/docs",
+		"description": "Contract Verification API Documentation"
 	},
 	"servers": [
 		{
@@ -11,12 +16,32 @@
 			"description": "Production"
 		},
 		{
-			"url": "https://o.bun-alewife.ts.net/",
+			"url": "https://o.bun-alewife.ts.net",
 			"description": "Localhost Funneled"
 		},
 		{
-			"url": "http://localhost:23033",
-			"description": "local"
+			"url": "http://localhost:{port}",
+			"description": "local",
+			"variables": {
+				"port": {
+					"default": "22222",
+					"description": "localhost port number"
+				}
+			}
+		},
+		{
+			"url": "https://sourcify.dev/server",
+			"description": "Sourcify hosted API"
+		},
+		{
+			"url": "{CUSTOM_URL}",
+			"description": "Custom Sourcify-compatible API base URL",
+			"variables": {
+				"CUSTOM_URL": {
+					"default": "https://sourcify.dev/server",
+					"description": "The URL of the custom Sourcify-compatible API base URL"
+				}
+			}
 		}
 	],
 	"tags": [
@@ -7151,12 +7176,5 @@
 			}
 		}
 	},
-	"components": {
-		"securitySchemes": {
-			"BearerAuth": {
-				"type": "http",
-				"scheme": "bearer"
-			}
-		}
-	}
+	"components": {}
 }

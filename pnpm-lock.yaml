@@ -20,13 +20,21 @@ catalogs:
       version: 0.10.15
     '@cloudflare/workers-types':
       specifier: ^4.20251209.0
-      version: 4.20251210.0
+      version: 4.20251216.0
     '@hono/zod-validator':
       specifier: 0.7.5
       version: 0.7.5
     '@iconify/json':
       specifier: ^2.2.416
       version: 2.2.418
+<<<<<<< HEAD
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      version: 2.2.416
+=======
+    '@scalar/api-reference':
+      specifier: ^1.40.3
+      version: 1.40.5
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     '@sentry/browser':
       specifier: ^10.29.0
       version: 10.30.0
@@ -101,7 +109,7 @@ catalogs:
       version: 5.1.2
     abitype:
       specifier: ^1.2.1
-      version: 1.2.2
+      version: 1.2.3
     cva:
       specifier: ^1.0.0-beta.4
       version: 1.0.0-beta.4
@@ -177,7 +185,7 @@ catalogs:
       version: 4.54.0
     zod:
       specifier: ^4.1.13
-      version: 4.1.13
+      version: 4.2.1
 
 importers:
 
@@ -188,7 +196,13 @@ importers:
         version: 2.3.9
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20251209.1
+<<<<<<< HEAD
         version: 7.0.0-dev.20251215.1
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 7.0.0-dev.20251210.1
+=======
+        version: 7.0.0-dev.20251216.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       node:
         specifier: runtime:24.11.1
         version: runtime:24.11.1
@@ -232,42 +246,89 @@ importers:
         version: 0.45.0(@cloudflare/workers-types@4.20251209.0)(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.8)(pg@8.16.3)
 =======
         specifier: ^0.45.1
+<<<<<<< HEAD
         version: 0.45.1(@cloudflare/workers-types@4.20251209.0)(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.8)(pg@8.16.3)
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 0.45.1(@cloudflare/workers-types@4.20251209.0)(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.8)(pg@8.16.3)
+=======
+        version: 0.45.1(@cloudflare/workers-types@4.20251216.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.9)(mysql2@3.15.3)(pg@8.16.3)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       hono:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 4.10.8
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 4.10.8
+      ox:
+        specifier: 'catalog:'
+        version: 0.9.17(typescript@5.9.3)(zod@4.1.13)
+=======
+        version: 4.11.1
+      ox:
+        specifier: 'catalog:'
+        version: 0.9.17(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(zod@4.2.1)
       viem:
         specifier: 'catalog:'
-        version: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+        version: 2.42.1(typescript@5.9.3)(zod@4.2.1)
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'
-        version: 2.3.8
+        version: 2.3.9
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
-        version: 1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251209.0))
+        version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0))
       '@cloudflare/workers-types':
         specifier: 'catalog:'
-        version: 4.20251209.0
+        version: 4.20251216.0
+      '@scalar/api-reference':
+        specifier: 'catalog:'
+        version: 1.40.5(idb-keyval@6.2.2)(tailwindcss@4.1.18)(typescript@5.9.3)
       '@total-typescript/ts-reset':
         specifier: 'catalog:'
         version: 0.6.1
       '@types/node':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 24.10.2
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 24.10.2
+      better-sqlite3:
+        specifier: ^12.5.0
+        version: 12.5.0
+      dbmate:
+        specifier: ^2.28.0
+        version: 2.28.0
+      drizzle-kit:
+        specifier: ^0.31.8
+        version: 0.31.8
+=======
+        version: 24.10.4
+      better-sqlite3:
+        specifier: ^12.5.0
+        version: 12.5.0
+      dbmate:
+        specifier: ^2.28.0
+        version: 2.28.0
+      drizzle-kit:
+        specifier: ^0.31.8
+        version: 0.31.8
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
       vite:
         specifier: 'catalog:'
-        version: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+        version: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       wrangler:
         specifier: 'catalog:'
-        version: 4.54.0(@cloudflare/workers-types@4.20251209.0)
+        version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+
+  apps/contract-verification/_verify/lib/forge-std: {}
 
   apps/explorer:
     dependencies:
@@ -276,16 +337,34 @@ importers:
         version: 10.30.0
       '@sentry/cloudflare':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 10.30.0(@cloudflare/workers-types@4.20251213.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 10.29.0(@cloudflare/workers-types@4.20251210.0)
+=======
+        version: 10.30.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@sentry/tanstackstart-react':
         specifier: 'catalog:'
         version: 10.30.0(react@19.2.3)
       '@shazow/whatsabi':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 0.24.0(@noble/hashes@1.8.0)(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 0.24.0(@noble/hashes@1.8.0)(typescript@5.9.3)(zod@4.1.13)
+=======
+        version: 0.24.0(@noble/hashes@1.8.0)(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@tailwindcss/vite':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 4.1.18(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 4.1.17(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+=======
+        version: 4.1.18(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@tanstack/query-async-storage-persister':
         specifier: 'catalog:'
         version: 5.90.14
@@ -303,13 +382,31 @@ importers:
         version: 1.141.2(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@tanstack/react-router@1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tanstack/router-core@1.141.2)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tanstack/react-start':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 1.141.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 1.140.3(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+=======
+        version: 1.141.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@tanstack/router-plugin':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 1.141.2(@tanstack/react-router@1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 1.140.1(@tanstack/react-router@1.140.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+=======
+        version: 1.141.2(@tanstack/react-router@1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       abitype:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 1.2.2(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 1.2.2(typescript@5.9.3)(zod@4.1.13)
+=======
+        version: 1.2.3(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       cva:
         specifier: 'catalog:'
         version: 1.0.0-beta.4(typescript@5.9.3)
@@ -318,7 +415,13 @@ importers:
         version: 0.0.5(typescript@5.9.3)
       ox:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 0.9.17(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 0.9.17(typescript@5.9.3)(zod@4.1.13)
+=======
+        version: 0.9.17(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       react:
         specifier: 'catalog:'
         version: 19.2.3
@@ -333,16 +436,40 @@ importers:
         version: 4.1.18
       tempo.ts:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+=======
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       viem:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 2.42.1(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+=======
+        version: 2.42.1(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       wagmi:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+=======
+        version: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       zod:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 4.2.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 4.1.13
+=======
+        version: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     devDependencies:
       '@cloudflare/puppeteer':
         specifier: 'catalog:'
@@ -350,15 +477,27 @@ importers:
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251213.0))
 ||||||| parent of a547bc4 (chore: update deps)
         version: 1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251202.0)(wrangler@4.53.0(@cloudflare/workers-types@4.20251210.0))
 =======
         version: 1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251202.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251210.0))
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251202.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251210.0))
+=======
+        version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@cloudflare/vitest-pool-workers':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 0.10.15(@cloudflare/workers-types@4.20251213.0)(@vitest/runner@3.2.4)(@vitest/snapshot@3.2.4)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 0.10.14(@cloudflare/workers-types@4.20251210.0)(@vitest/runner@3.2.4)(@vitest/snapshot@3.2.4)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))
+=======
+        version: 0.10.15(@cloudflare/workers-types@4.20251216.0)(@vitest/runner@3.2.4)(@vitest/snapshot@3.2.4)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@iconify/json':
         specifier: 'catalog:'
         version: 2.2.418
@@ -373,7 +512,13 @@ importers:
         version: 8.1.0(@svgr/core@8.1.0(typescript@5.9.3))
       '@tanstack/devtools-vite':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 0.3.12(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 0.3.12(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+=======
+        version: 0.3.12(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@tanstack/react-devtools':
         specifier: 'catalog:'
         version: 0.8.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(csstype@3.2.3)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(solid-js@1.9.10)
@@ -397,13 +542,19 @@ importers:
         version: 19.2.3(@types/react@19.2.7)
       '@vitejs/plugin-react':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 5.1.2(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 5.1.2(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+=======
+        version: 5.1.2(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       eruda:
         specifier: 'catalog:'
         version: 3.4.3
       shiki:
         specifier: ^3.19.0
-        version: 3.19.0
+        version: 3.20.0
       tw-animate-css:
         specifier: 'catalog:'
         version: 1.4.0
@@ -415,18 +566,37 @@ importers:
         version: 22.5.0(@svgr/core@8.1.0(typescript@5.9.3))(@vue/compiler-sfc@3.5.25)
       vite:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+        version: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       vite-plugin-devtools-json:
         specifier: ^1.0.0
+<<<<<<< HEAD
         version: 1.0.0(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 1.0.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+=======
+        version: 1.0.0(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       vite-tsconfig-paths:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 5.1.4(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(typescript@5.9.3)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 5.1.4(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(typescript@5.9.3)
+=======
+        version: 5.1.4(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(typescript@5.9.3)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       vitest:
         specifier: 'catalog:'
         version: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2)
       wrangler:
         specifier: 'catalog:'
+<<<<<<< HEAD
 <<<<<<< HEAD
         version: 4.54.0(@cloudflare/workers-types@4.20251213.0)
 ||||||| parent of a547bc4 (chore: update deps)
@@ -434,12 +604,23 @@ importers:
 =======
         version: 4.54.0(@cloudflare/workers-types@4.20251210.0)
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 4.54.0(@cloudflare/workers-types@4.20251210.0)
+=======
+        version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   apps/fee-payer:
     dependencies:
       '@hono/zod-validator':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 0.7.5(hono@4.11.1)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 0.7.5(hono@4.10.8)(zod@4.1.13)
+=======
+        version: 0.7.5(hono@4.11.1)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       hono:
         specifier: 'catalog:'
         version: 4.11.1
@@ -451,20 +632,50 @@ importers:
         version: 0.28.9
       ox:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 0.9.17(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 0.9.17(typescript@5.9.3)(zod@4.1.13)
+=======
+        version: 0.9.17(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       tempo.ts:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+=======
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       viem:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 2.42.1(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+=======
+        version: 2.42.1(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       zod:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 4.2.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 4.1.13
+=======
+        version: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     devDependencies:
       '@cloudflare/workers-types':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 4.20251213.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 4.20251210.0
+=======
+        version: 4.20251216.0
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -474,12 +685,18 @@ importers:
       wrangler:
         specifier: 'catalog:'
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 4.54.0(@cloudflare/workers-types@4.20251213.0)
 ||||||| parent of a547bc4 (chore: update deps)
         version: 4.53.0(@cloudflare/workers-types@4.20251210.0)
 =======
         version: 4.54.0(@cloudflare/workers-types@4.20251210.0)
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 4.54.0(@cloudflare/workers-types@4.20251210.0)
+=======
+        version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   apps/fee-payer/playground:
     dependencies:
@@ -494,13 +711,31 @@ importers:
         version: 19.2.3(react@19.2.3)
       tempo.ts:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+=======
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       viem:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 2.42.1(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+=======
+        version: 2.42.1(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       wagmi:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+=======
+        version: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -513,7 +748,13 @@ importers:
         version: 19.2.3(@types/react@19.2.7)
       '@vitejs/plugin-react':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 5.1.2(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 5.1.2(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+=======
+        version: 5.1.2(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       globals:
         specifier: 'catalog:'
         version: 16.5.0
@@ -522,6 +763,7 @@ importers:
         version: 5.9.3
       vite:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
 
   apps/og:
@@ -560,6 +802,11 @@ importers:
       wrangler:
         specifier: 'catalog:'
         version: 4.54.0(@cloudflare/workers-types@4.20251213.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+        version: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   apps/service-proxy:
     dependencies:
@@ -569,9 +816,16 @@ importers:
     devDependencies:
       '@cloudflare/workers-types':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 4.20251213.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 4.20251210.0
+=======
+        version: 4.20251216.0
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       wrangler:
         specifier: 'catalog:'
+<<<<<<< HEAD
 <<<<<<< HEAD
         version: 4.54.0(@cloudflare/workers-types@4.20251213.0)
 ||||||| parent of a547bc4 (chore: update deps)
@@ -579,6 +833,11 @@ importers:
 =======
         version: 4.54.0(@cloudflare/workers-types@4.20251210.0)
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 4.54.0(@cloudflare/workers-types@4.20251210.0)
+=======
+        version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   apps/tokenlist:
     dependencies:
@@ -590,10 +849,22 @@ importers:
         version: 4.0.0
       tempo.ts:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13)
+=======
+        version: 0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       viem:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 2.42.1(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+=======
+        version: 2.42.1(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'
@@ -601,15 +872,27 @@ importers:
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251213.0))
 ||||||| parent of a547bc4 (chore: update deps)
         version: 1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251202.0)(wrangler@4.53.0(@cloudflare/workers-types@4.20251210.0))
 =======
         version: 1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251210.0))
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251210.0))
+=======
+        version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@cloudflare/workers-types':
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: 4.20251213.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 4.20251210.0
+=======
+        version: 4.20251216.0
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@scalar/api-reference':
         specifier: ^1.40.2
         version: 1.40.5(idb-keyval@6.2.2)(tailwindcss@4.1.18)(typescript@5.9.3)
@@ -624,9 +907,16 @@ importers:
         version: 5.9.3
       vite:
         specifier: 'catalog:'
+<<<<<<< HEAD
         version: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+        version: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       wrangler:
         specifier: 'catalog:'
+<<<<<<< HEAD
 <<<<<<< HEAD
         version: 4.54.0(@cloudflare/workers-types@4.20251213.0)
 ||||||| parent of a547bc4 (chore: update deps)
@@ -634,6 +924,11 @@ importers:
 =======
         version: 4.54.0(@cloudflare/workers-types@4.20251210.0)
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+        version: 4.54.0(@cloudflare/workers-types@4.20251210.0)
+=======
+        version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
 packages:
 
@@ -917,6 +1212,7 @@ packages:
       '@vitest/snapshot': 2.0.x - 3.2.x
       vitest: 2.0.x - 3.2.x
 
+<<<<<<< HEAD
   '@cloudflare/workerd-darwin-64@1.20251210.0':
     resolution: {integrity: sha512-Nn9X1moUDERA9xtFdCQ2XpQXgAS9pOjiCxvOT8sVx9UJLAiBLkfSCGbpsYdarODGybXCpjRlc77Yppuolvt7oQ==}
     engines: {node: '>=16'}
@@ -930,12 +1226,22 @@ packages:
   '@cloudflare/workerd-darwin-arm64@1.20251202.0':
     resolution: {integrity: sha512-f52xRvcI9cWRd6400EZStRtXiRC5XKEud7K5aFIbbUv0VeINltujFQQ9nHWtsF6g1quIXWkjhh5u01gPAYNNXA==}
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workerd-darwin-64@1.20251202.0':
+    resolution: {integrity: sha512-/uvEAWEukTWb1geHhbjGUeZqcSSSyYzp0mvoPUBl+l0ont4NVGao3fgwM0q8wtKvgoKCHSG6zcG23wj9Opj3Nw==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [darwin]
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@cloudflare/workerd-darwin-64@1.20251210.0':
     resolution: {integrity: sha512-Nn9X1moUDERA9xtFdCQ2XpQXgAS9pOjiCxvOT8sVx9UJLAiBLkfSCGbpsYdarODGybXCpjRlc77Yppuolvt7oQ==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [darwin]
 
+<<<<<<< HEAD
   '@cloudflare/workerd-darwin-arm64@1.20251202.0':
     resolution: {integrity: sha512-f52xRvcI9cWRd6400EZStRtXiRC5XKEud7K5aFIbbUv0VeINltujFQQ9nHWtsF6g1quIXWkjhh5u01gPAYNNXA==}
 >>>>>>> a547bc4 (chore: update deps)
@@ -950,12 +1256,22 @@ packages:
   '@cloudflare/workerd-linux-64@1.20251202.0':
     resolution: {integrity: sha512-HYXinF5RBH7oXbsFUMmwKCj+WltpYbf5mRKUBG5v3EuPhUjSIFB84U+58pDyfBJjcynHdy3EtvTWcvh/+lcgow==}
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workerd-darwin-arm64@1.20251202.0':
+    resolution: {integrity: sha512-f52xRvcI9cWRd6400EZStRtXiRC5XKEud7K5aFIbbUv0VeINltujFQQ9nHWtsF6g1quIXWkjhh5u01gPAYNNXA==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [darwin]
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@cloudflare/workerd-darwin-arm64@1.20251210.0':
     resolution: {integrity: sha512-Mg8iYIZQFnbevq/ls9eW/eneWTk/EE13Pej1MwfkY5et0jVpdHnvOLywy/o+QtMJFef1AjsqXGULwAneYyBfHw==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
 
+<<<<<<< HEAD
   '@cloudflare/workerd-linux-64@1.20251202.0':
     resolution: {integrity: sha512-HYXinF5RBH7oXbsFUMmwKCj+WltpYbf5mRKUBG5v3EuPhUjSIFB84U+58pDyfBJjcynHdy3EtvTWcvh/+lcgow==}
 >>>>>>> a547bc4 (chore: update deps)
@@ -970,12 +1286,22 @@ packages:
   '@cloudflare/workerd-linux-arm64@1.20251202.0':
     resolution: {integrity: sha512-++L02Jdoxz7hEA9qDaQjbVU1RzQS+S+eqIi22DkPe2Tgiq2M3UfNpeu+75k5L9DGRIkZPYvwMBMbcmKvQqdIIg==}
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workerd-linux-64@1.20251202.0':
+    resolution: {integrity: sha512-HYXinF5RBH7oXbsFUMmwKCj+WltpYbf5mRKUBG5v3EuPhUjSIFB84U+58pDyfBJjcynHdy3EtvTWcvh/+lcgow==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [linux]
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@cloudflare/workerd-linux-64@1.20251210.0':
     resolution: {integrity: sha512-kjC2fCZhZ2Gkm1biwk2qByAYpGguK5Gf5ic8owzSCUw0FOUfQxTZUT9Lp3gApxsfTLbbnLBrX/xzWjywH9QR4g==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
 
+<<<<<<< HEAD
   '@cloudflare/workerd-linux-arm64@1.20251202.0':
     resolution: {integrity: sha512-++L02Jdoxz7hEA9qDaQjbVU1RzQS+S+eqIi22DkPe2Tgiq2M3UfNpeu+75k5L9DGRIkZPYvwMBMbcmKvQqdIIg==}
 >>>>>>> a547bc4 (chore: update deps)
@@ -990,12 +1316,22 @@ packages:
   '@cloudflare/workerd-windows-64@1.20251202.0':
     resolution: {integrity: sha512-gzeU6eDydTi7ib+Q9DD/c0hpXtqPucnHk2tfGU03mljPObYxzMkkPGgB5qxpksFvub3y4K0ChjqYxGJB4F+j3g==}
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workerd-linux-arm64@1.20251202.0':
+    resolution: {integrity: sha512-++L02Jdoxz7hEA9qDaQjbVU1RzQS+S+eqIi22DkPe2Tgiq2M3UfNpeu+75k5L9DGRIkZPYvwMBMbcmKvQqdIIg==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [linux]
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@cloudflare/workerd-linux-arm64@1.20251210.0':
     resolution: {integrity: sha512-2IB37nXi7PZVQLa1OCuO7/6pNxqisRSO8DmCQ5x/3sezI5op1vwOxAcb1osAnuVsVN9bbvpw70HJvhKruFJTuA==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
 
+<<<<<<< HEAD
   '@cloudflare/workerd-windows-64@1.20251202.0':
     resolution: {integrity: sha512-gzeU6eDydTi7ib+Q9DD/c0hpXtqPucnHk2tfGU03mljPObYxzMkkPGgB5qxpksFvub3y4K0ChjqYxGJB4F+j3g==}
 >>>>>>> a547bc4 (chore: update deps)
@@ -1013,12 +1349,22 @@ packages:
 =======
 ||||||| parent of a547bc4 (chore: update deps)
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workerd-windows-64@1.20251202.0':
+    resolution: {integrity: sha512-gzeU6eDydTi7ib+Q9DD/c0hpXtqPucnHk2tfGU03mljPObYxzMkkPGgB5qxpksFvub3y4K0ChjqYxGJB4F+j3g==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [win32]
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@cloudflare/workerd-windows-64@1.20251210.0':
     resolution: {integrity: sha512-Uaz6/9XE+D6E7pCY4OvkCuJHu7HcSDzeGcCGY1HLhojXhHd7yL52c3yfiyJdS8hPatiAa0nn5qSI/42+aTdDSw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
 
+<<<<<<< HEAD
 >>>>>>> a547bc4 (chore: update deps)
   '@cloudflare/workers-types@4.20251209.0':
     resolution: {integrity: sha512-O+cbUVwgb4NgUB39R1cITbRshlAAPy1UQV0l8xEy2xcZ3wTh3fMl9f5oBwLsVmE9JRhIZx6llCLOBVf53eI5xA==}
@@ -1026,6 +1372,16 @@ packages:
   '@cloudflare/workers-types@4.20251210.0':
     resolution: {integrity: sha512-EGf2lWqeVO48LjDYFl1peSbi/AvQFDJ1vj+etwRAGqLjGWgq+R1fwFfLCjXr7tMsX8aHykE17XpCAVuroKpZoQ==}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workers-types@4.20251209.0':
+    resolution: {integrity: sha512-O+cbUVwgb4NgUB39R1cITbRshlAAPy1UQV0l8xEy2xcZ3wTh3fMl9f5oBwLsVmE9JRhIZx6llCLOBVf53eI5xA==}
+
+  '@cloudflare/workers-types@4.20251210.0':
+    resolution: {integrity: sha512-EGf2lWqeVO48LjDYFl1peSbi/AvQFDJ1vj+etwRAGqLjGWgq+R1fwFfLCjXr7tMsX8aHykE17XpCAVuroKpZoQ==}
+=======
+  '@cloudflare/workers-types@4.20251216.0':
+    resolution: {integrity: sha512-qRicJsFEPDUjfL83gQi9aMeBRLsoox4O/VQlY2DrXGUOjI2KS/BZKsv0oqJWdT3EX2SKEGZN8Ml/MHrurGBAUA==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   '@codemirror/autocomplete@6.20.0':
     resolution: {integrity: sha512-bOwvTOIJcG5FVo5gUUupiwYh8MioPLQ4UcqbcRf7UQ98X90tCa9E1kZ3Z7tqwpZxYyOvh1YTYbmZE9RTfTp5hg==}
@@ -1146,10 +1502,17 @@ packages:
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
 
+<<<<<<< HEAD
   '@electric-sql/pglite@0.2.13':
     resolution: {integrity: sha512-YRY806NnScVqa21/1L1vaysSQ+0/cAva50z7vlwzaGiBOTS9JhdzIRHN0KfgMhobFAphbznZJ7urMso4RtMBIQ==}
 
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@electric-sql/pglite@0.2.13':
+    resolution: {integrity: sha512-YRY806NnScVqa21/1L1vaysSQ+0/cAva50z7vlwzaGiBOTS9JhdzIRHN0KfgMhobFAphbznZJ7urMso4RtMBIQ==}
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@emnapi/core@1.7.1':
     resolution: {integrity: sha512-o1uhUASyo921r2XtHYOHy7gdkGLge8ghBEQHMWmyJFoXlpU58kIrhhN3w26lpQb6dspetweapMn2CSNwQ8I4wg==}
 
@@ -2699,6 +3062,7 @@ packages:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   '@iconify/json@2.2.418':
     resolution: {integrity: sha512-vSIFcv+o9nvMY8qq4UdjtudA2/7h7hL1UIKurdUgvz/2lwT4aHJ7A7vCDtCi35JoL9UXaRChy6aaoVoPQc7i5g==}
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
@@ -2737,6 +3101,13 @@ packages:
   '@iconify/json@2.2.416':
     resolution: {integrity: sha512-9cD842bd/unmBJhM79Vo+x2LNpc9aN29VYSlsa2i6hKJFB6u6bvSgr3XPCcqht1SRv3kSdcWlbMjSeJ8xSc1Mw==}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@iconify/json@2.2.416':
+    resolution: {integrity: sha512-9cD842bd/unmBJhM79Vo+x2LNpc9aN29VYSlsa2i6hKJFB6u6bvSgr3XPCcqht1SRv3kSdcWlbMjSeJ8xSc1Mw==}
+=======
+  '@iconify/json@2.2.418':
+    resolution: {integrity: sha512-vSIFcv+o9nvMY8qq4UdjtudA2/7h7hL1UIKurdUgvz/2lwT4aHJ7A7vCDtCi35JoL9UXaRChy6aaoVoPQc7i5g==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   '@iconify/types@2.0.0':
     resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
@@ -3139,6 +3510,7 @@ packages:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   '@poppinss/colors@4.1.6':
     resolution: {integrity: sha512-H9xkIdFswbS8n1d6vmRd8+c10t2Qe+rZITbbDHHkQixH5+2x1FDGmi/0K+WgWiqQFKPSlIYB7jlH6Kpfn6Fleg==}
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
@@ -3185,6 +3557,13 @@ packages:
   '@poppinss/colors@4.1.5':
     resolution: {integrity: sha512-FvdDqtcRCtz6hThExcFOgW0cWX+xwSMWcRuQe5ZEb2m7cVQOAVZOIMt+/v9RxGiD9/OY16qJBXK4CVKWAPalBw==}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@poppinss/colors@4.1.5':
+    resolution: {integrity: sha512-FvdDqtcRCtz6hThExcFOgW0cWX+xwSMWcRuQe5ZEb2m7cVQOAVZOIMt+/v9RxGiD9/OY16qJBXK4CVKWAPalBw==}
+=======
+  '@poppinss/colors@4.1.6':
+    resolution: {integrity: sha512-H9xkIdFswbS8n1d6vmRd8+c10t2Qe+rZITbbDHHkQixH5+2x1FDGmi/0K+WgWiqQFKPSlIYB7jlH6Kpfn6Fleg==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   '@poppinss/dumper@0.6.5':
     resolution: {integrity: sha512-NBdYIb90J7LfOI32dOewKI1r7wnkiH6m920puQ3qHUeZkxNkQiFnXVWoE6YtFSv6QOiPPf7ys6i+HWWecDz7sw==}
@@ -3311,113 +3690,289 @@ packages:
   '@rolldown/pluginutils@1.0.0-beta.53':
     resolution: {integrity: sha512-vENRlFU4YbrwVqNDZ7fLvy+JR1CRkyr01jhSiDpE1u6py3OMzQfztQU2jxykW3ALNxO4kSlqIDeYyD0Y9RcQeQ==}
 
+<<<<<<< HEAD
   '@rollup/rollup-android-arm-eabi@4.53.4':
     resolution: {integrity: sha512-PWU3Y92H4DD0bOqorEPp1Y0tbzwAurFmIYpjcObv5axGVOtcTlB0b2UKMd2echo08MgN7jO8WQZSSysvfisFSQ==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-android-arm-eabi@4.53.3':
+    resolution: {integrity: sha512-mRSi+4cBjrRLoaal2PnqH82Wqyb+d3HsPUN/W+WslCXsZsyHa9ZeQQX/pQsZaVIWDkPcpV6jJ+3KLbTbgnwv8w==}
+=======
+  '@rollup/rollup-android-arm-eabi@4.53.5':
+    resolution: {integrity: sha512-iDGS/h7D8t7tvZ1t6+WPK04KD0MwzLZrG0se1hzBjSi5fyxlsiggoJHwh18PCFNn7tG43OWb6pdZ6Y+rMlmyNQ==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm]
     os: [android]
 
+<<<<<<< HEAD
   '@rollup/rollup-android-arm64@4.53.4':
     resolution: {integrity: sha512-Gw0/DuVm3rGsqhMGYkSOXXIx20cC3kTlivZeuaGt4gEgILivykNyBWxeUV5Cf2tDA2nPLah26vq3emlRrWVbng==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-android-arm64@4.53.3':
+    resolution: {integrity: sha512-CbDGaMpdE9sh7sCmTrTUyllhrg65t6SwhjlMJsLr+J8YjFuPmCEjbBSx4Z/e4SmDyH3aB5hGaJUP2ltV/vcs4w==}
+=======
+  '@rollup/rollup-android-arm64@4.53.5':
+    resolution: {integrity: sha512-wrSAViWvZHBMMlWk6EJhvg8/rjxzyEhEdgfMMjREHEq11EtJ6IP6yfcCH57YAEca2Oe3FNCE9DSTgU70EIGmVw==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm64]
     os: [android]
 
+<<<<<<< HEAD
   '@rollup/rollup-darwin-arm64@4.53.4':
     resolution: {integrity: sha512-+w06QvXsgzKwdVg5qRLZpTHh1bigHZIqoIUPtiqh05ZiJVUQ6ymOxaPkXTvRPRLH88575ZCRSRM3PwIoNma01Q==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-darwin-arm64@4.53.3':
+    resolution: {integrity: sha512-Nr7SlQeqIBpOV6BHHGZgYBuSdanCXuw09hon14MGOLGmXAFYjx1wNvquVPmpZnl0tLjg25dEdr4IQ6GgyToCUA==}
+=======
+  '@rollup/rollup-darwin-arm64@4.53.5':
+    resolution: {integrity: sha512-S87zZPBmRO6u1YXQLwpveZm4JfPpAa6oHBX7/ghSiGH3rz/KDgAu1rKdGutV+WUI6tKDMbaBJomhnT30Y2t4VQ==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm64]
     os: [darwin]
 
+<<<<<<< HEAD
   '@rollup/rollup-darwin-x64@4.53.4':
     resolution: {integrity: sha512-EB4Na9G2GsrRNRNFPuxfwvDRDUwQEzJPpiK1vo2zMVhEeufZ1k7J1bKnT0JYDfnPC7RNZ2H5YNQhW6/p2QKATw==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-darwin-x64@4.53.3':
+    resolution: {integrity: sha512-DZ8N4CSNfl965CmPktJ8oBnfYr3F8dTTNBQkRlffnUarJ2ohudQD17sZBa097J8xhQ26AwhHJ5mvUyQW8ddTsQ==}
+=======
+  '@rollup/rollup-darwin-x64@4.53.5':
+    resolution: {integrity: sha512-YTbnsAaHo6VrAczISxgpTva8EkfQus0VPEVJCEaboHtZRIb6h6j0BNxRBOwnDciFTZLDPW5r+ZBmhL/+YpTZgA==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [x64]
     os: [darwin]
 
+<<<<<<< HEAD
   '@rollup/rollup-freebsd-arm64@4.53.4':
     resolution: {integrity: sha512-bldA8XEqPcs6OYdknoTMaGhjytnwQ0NClSPpWpmufOuGPN5dDmvIa32FygC2gneKK4A1oSx86V1l55hyUWUYFQ==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-freebsd-arm64@4.53.3':
+    resolution: {integrity: sha512-yMTrCrK92aGyi7GuDNtGn2sNW+Gdb4vErx4t3Gv/Tr+1zRb8ax4z8GWVRfr3Jw8zJWvpGHNpss3vVlbF58DZ4w==}
+=======
+  '@rollup/rollup-freebsd-arm64@4.53.5':
+    resolution: {integrity: sha512-1T8eY2J8rKJWzaznV7zedfdhD1BqVs1iqILhmHDq/bqCUZsrMt+j8VCTHhP0vdfbHK3e1IQ7VYx3jlKqwlf+vw==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm64]
     os: [freebsd]
 
+<<<<<<< HEAD
   '@rollup/rollup-freebsd-x64@4.53.4':
     resolution: {integrity: sha512-3T8GPjH6mixCd0YPn0bXtcuSXi1Lj+15Ujw2CEb7dd24j9thcKscCf88IV7n76WaAdorOzAgSSbuVRg4C8V8Qw==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-freebsd-x64@4.53.3':
+    resolution: {integrity: sha512-lMfF8X7QhdQzseM6XaX0vbno2m3hlyZFhwcndRMw8fbAGUGL3WFMBdK0hbUBIUYcEcMhVLr1SIamDeuLBnXS+Q==}
+=======
+  '@rollup/rollup-freebsd-x64@4.53.5':
+    resolution: {integrity: sha512-sHTiuXyBJApxRn+VFMaw1U+Qsz4kcNlxQ742snICYPrY+DDL8/ZbaC4DVIB7vgZmp3jiDaKA0WpBdP0aqPJoBQ==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [x64]
     os: [freebsd]
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-arm-gnueabihf@4.53.4':
     resolution: {integrity: sha512-UPMMNeC4LXW7ZSHxeP3Edv09aLsFUMaD1TSVW6n1CWMECnUIJMFFB7+XC2lZTdPtvB36tYC0cJWc86mzSsaviw==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-arm-gnueabihf@4.53.3':
+    resolution: {integrity: sha512-k9oD15soC/Ln6d2Wv/JOFPzZXIAIFLp6B+i14KhxAfnq76ajt0EhYc5YPeX6W1xJkAdItcVT+JhKl1QZh44/qw==}
+=======
+  '@rollup/rollup-linux-arm-gnueabihf@4.53.5':
+    resolution: {integrity: sha512-dV3T9MyAf0w8zPVLVBptVlzaXxka6xg1f16VAQmjg+4KMSTWDvhimI/Y6mp8oHwNrmnmVl9XxJ/w/mO4uIQONA==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm]
     os: [linux]
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-arm-musleabihf@4.53.4':
     resolution: {integrity: sha512-H8uwlV0otHs5Q7WAMSoyvjV9DJPiy5nJ/xnHolY0QptLPjaSsuX7tw+SPIfiYH6cnVx3fe4EWFafo6gH6ekZKA==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-arm-musleabihf@4.53.3':
+    resolution: {integrity: sha512-vTNlKq+N6CK/8UktsrFuc+/7NlEYVxgaEgRXVUVK258Z5ymho29skzW1sutgYjqNnquGwVUObAaxae8rZ6YMhg==}
+=======
+  '@rollup/rollup-linux-arm-musleabihf@4.53.5':
+    resolution: {integrity: sha512-wIGYC1x/hyjP+KAu9+ewDI+fi5XSNiUi9Bvg6KGAh2TsNMA3tSEs+Sh6jJ/r4BV/bx/CyWu2ue9kDnIdRyafcQ==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm]
     os: [linux]
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-arm64-gnu@4.53.4':
     resolution: {integrity: sha512-BLRwSRwICXz0TXkbIbqJ1ibK+/dSBpTJqDClF61GWIrxTXZWQE78ROeIhgl5MjVs4B4gSLPCFeD4xML9vbzvCQ==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-arm64-gnu@4.53.3':
+    resolution: {integrity: sha512-RGrFLWgMhSxRs/EWJMIFM1O5Mzuz3Xy3/mnxJp/5cVhZ2XoCAxJnmNsEyeMJtpK+wu0FJFWz+QF4mjCA7AUQ3w==}
+=======
+  '@rollup/rollup-linux-arm64-gnu@4.53.5':
+    resolution: {integrity: sha512-Y+qVA0D9d0y2FRNiG9oM3Hut/DgODZbU9I8pLLPwAsU0tUKZ49cyV1tzmB/qRbSzGvY8lpgGkJuMyuhH7Ma+Vg==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm64]
     os: [linux]
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-arm64-musl@4.53.4':
     resolution: {integrity: sha512-6bySEjOTbmVcPJAywjpGLckK793A0TJWSbIa0sVwtVGfe/Nz6gOWHOwkshUIAp9j7wg2WKcA4Snu7Y1nUZyQew==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-arm64-musl@4.53.3':
+    resolution: {integrity: sha512-kASyvfBEWYPEwe0Qv4nfu6pNkITLTb32p4yTgzFCocHnJLAHs+9LjUu9ONIhvfT/5lv4YS5muBHyuV84epBo/A==}
+=======
+  '@rollup/rollup-linux-arm64-musl@4.53.5':
+    resolution: {integrity: sha512-juaC4bEgJsyFVfqhtGLz8mbopaWD+WeSOYr5E16y+1of6KQjc0BpwZLuxkClqY1i8sco+MdyoXPNiCkQou09+g==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm64]
     os: [linux]
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-loong64-gnu@4.53.4':
     resolution: {integrity: sha512-U0ow3bXYJZ5MIbchVusxEycBw7bO6C2u5UvD31i5IMTrnt2p4Fh4ZbHSdc/31TScIJQYHwxbj05BpevB3201ug==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-loong64-gnu@4.53.3':
+    resolution: {integrity: sha512-JiuKcp2teLJwQ7vkJ95EwESWkNRFJD7TQgYmCnrPtlu50b4XvT5MOmurWNrCj3IFdyjBQ5p9vnrX4JM6I8OE7g==}
+=======
+  '@rollup/rollup-linux-loong64-gnu@4.53.5':
+    resolution: {integrity: sha512-rIEC0hZ17A42iXtHX+EPJVL/CakHo+tT7W0pbzdAGuWOt2jxDFh7A/lRhsNHBcqL4T36+UiAgwO8pbmn3dE8wA==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [loong64]
     os: [linux]
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-ppc64-gnu@4.53.4':
     resolution: {integrity: sha512-iujDk07ZNwGLVn0YIWM80SFN039bHZHCdCCuX9nyx3Jsa2d9V/0Y32F+YadzwbvDxhSeVo9zefkoPnXEImnM5w==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-ppc64-gnu@4.53.3':
+    resolution: {integrity: sha512-EoGSa8nd6d3T7zLuqdojxC20oBfNT8nexBbB/rkxgKj5T5vhpAQKKnD+h3UkoMuTyXkP5jTjK/ccNRmQrPNDuw==}
+=======
+  '@rollup/rollup-linux-ppc64-gnu@4.53.5':
+    resolution: {integrity: sha512-T7l409NhUE552RcAOcmJHj3xyZ2h7vMWzcwQI0hvn5tqHh3oSoclf9WgTl+0QqffWFG8MEVZZP1/OBglKZx52Q==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [ppc64]
     os: [linux]
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-riscv64-gnu@4.53.4':
     resolution: {integrity: sha512-MUtAktiOUSu+AXBpx1fkuG/Bi5rhlorGs3lw5QeJ2X3ziEGAq7vFNdWVde6XGaVqi0LGSvugwjoxSNJfHFTC0g==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-riscv64-gnu@4.53.3':
+    resolution: {integrity: sha512-4s+Wped2IHXHPnAEbIB0YWBv7SDohqxobiiPA1FIWZpX+w9o2i4LezzH/NkFUl8LRci/8udci6cLq+jJQlh+0g==}
+=======
+  '@rollup/rollup-linux-riscv64-gnu@4.53.5':
+    resolution: {integrity: sha512-7OK5/GhxbnrMcxIFoYfhV/TkknarkYC1hqUw1wU2xUN3TVRLNT5FmBv4KkheSG2xZ6IEbRAhTooTV2+R5Tk0lQ==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [riscv64]
     os: [linux]
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-riscv64-musl@4.53.4':
     resolution: {integrity: sha512-btm35eAbDfPtcFEgaXCI5l3c2WXyzwiE8pArhd66SDtoLWmgK5/M7CUxmUglkwtniPzwvWioBKKl6IXLbPf2sQ==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-riscv64-musl@4.53.3':
+    resolution: {integrity: sha512-68k2g7+0vs2u9CxDt5ktXTngsxOQkSEV/xBbwlqYcUrAVh6P9EgMZvFsnHy4SEiUl46Xf0IObWVbMvPrr2gw8A==}
+=======
+  '@rollup/rollup-linux-riscv64-musl@4.53.5':
+    resolution: {integrity: sha512-GwuDBE/PsXaTa76lO5eLJTyr2k8QkPipAyOrs4V/KJufHCZBJ495VCGJol35grx9xryk4V+2zd3Ri+3v7NPh+w==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [riscv64]
     os: [linux]
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-s390x-gnu@4.53.4':
     resolution: {integrity: sha512-uJlhKE9ccUTCUlK+HUz/80cVtx2RayadC5ldDrrDUFaJK0SNb8/cCmC9RhBhIWuZ71Nqj4Uoa9+xljKWRogdhA==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-s390x-gnu@4.53.3':
+    resolution: {integrity: sha512-VYsFMpULAz87ZW6BVYw3I6sWesGpsP9OPcyKe8ofdg9LHxSbRMd7zrVrr5xi/3kMZtpWL/wC+UIJWJYVX5uTKg==}
+=======
+  '@rollup/rollup-linux-s390x-gnu@4.53.5':
+    resolution: {integrity: sha512-IAE1Ziyr1qNfnmiQLHBURAD+eh/zH1pIeJjeShleII7Vj8kyEm2PF77o+lf3WTHDpNJcu4IXJxNO0Zluro8bOw==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [s390x]
     os: [linux]
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-x64-gnu@4.53.4':
     resolution: {integrity: sha512-jjEMkzvASQBbzzlzf4os7nzSBd/cvPrpqXCUOqoeCh1dQ4BP3RZCJk8XBeik4MUln3m+8LeTJcY54C/u8wb3DQ==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-x64-gnu@4.53.3':
+    resolution: {integrity: sha512-3EhFi1FU6YL8HTUJZ51imGJWEX//ajQPfqWLI3BQq4TlvHy4X0MOr5q3D2Zof/ka0d5FNdPwZXm3Yyib/UEd+w==}
+=======
+  '@rollup/rollup-linux-x64-gnu@4.53.5':
+    resolution: {integrity: sha512-Pg6E+oP7GvZ4XwgRJBuSXZjcqpIW3yCBhK4BcsANvb47qMvAbCjR6E+1a/U2WXz1JJxp9/4Dno3/iSJLcm5auw==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [x64]
     os: [linux]
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-x64-musl@4.53.4':
     resolution: {integrity: sha512-lu90KG06NNH19shC5rBPkrh6mrTpq5kviFylPBXQVpdEu0yzb0mDgyxLr6XdcGdBIQTH/UAhDJnL+APZTBu1aQ==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-x64-musl@4.53.3':
+    resolution: {integrity: sha512-eoROhjcc6HbZCJr+tvVT8X4fW3/5g/WkGvvmwz/88sDtSJzO7r/blvoBDgISDiCjDRZmHpwud7h+6Q9JxFwq1Q==}
+=======
+  '@rollup/rollup-linux-x64-musl@4.53.5':
+    resolution: {integrity: sha512-txGtluxDKTxaMDzUduGP0wdfng24y1rygUMnmlUJ88fzCCULCLn7oE5kb2+tRB+MWq1QDZT6ObT5RrR8HFRKqg==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [x64]
     os: [linux]
 
+<<<<<<< HEAD
   '@rollup/rollup-openharmony-arm64@4.53.4':
     resolution: {integrity: sha512-dFDcmLwsUzhAm/dn0+dMOQZoONVYBtgik0VuY/d5IJUUb787L3Ko/ibvTvddqhb3RaB7vFEozYevHN4ox22R/w==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-openharmony-arm64@4.53.3':
+    resolution: {integrity: sha512-OueLAWgrNSPGAdUdIjSWXw+u/02BRTcnfw9PN41D2vq/JSEPnJnVuBgw18VkN8wcd4fjUs+jFHVM4t9+kBSNLw==}
+=======
+  '@rollup/rollup-openharmony-arm64@4.53.5':
+    resolution: {integrity: sha512-3DFiLPnTxiOQV993fMc+KO8zXHTcIjgaInrqlG8zDp1TlhYl6WgrOHuJkJQ6M8zHEcntSJsUp1XFZSY8C1DYbg==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm64]
     os: [openharmony]
 
+<<<<<<< HEAD
   '@rollup/rollup-win32-arm64-msvc@4.53.4':
     resolution: {integrity: sha512-WvUpUAWmUxZKtRnQWpRKnLW2DEO8HB/l8z6oFFMNuHndMzFTJEXzaYJ5ZAmzNw0L21QQJZsUQFt2oPf3ykAD/w==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-win32-arm64-msvc@4.53.3':
+    resolution: {integrity: sha512-GOFuKpsxR/whszbF/bzydebLiXIHSgsEUp6M0JI8dWvi+fFa1TD6YQa4aSZHtpmh2/uAlj/Dy+nmby3TJ3pkTw==}
+=======
+  '@rollup/rollup-win32-arm64-msvc@4.53.5':
+    resolution: {integrity: sha512-nggc/wPpNTgjGg75hu+Q/3i32R00Lq1B6N1DO7MCU340MRKL3WZJMjA9U4K4gzy3dkZPXm9E1Nc81FItBVGRlA==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm64]
     os: [win32]
 
+<<<<<<< HEAD
   '@rollup/rollup-win32-ia32-msvc@4.53.4':
     resolution: {integrity: sha512-JGbeF2/FDU0x2OLySw/jgvkwWUo05BSiJK0dtuI4LyuXbz3wKiC1xHhLB1Tqm5VU6ZZDmAorj45r/IgWNWku5g==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-win32-ia32-msvc@4.53.3':
+    resolution: {integrity: sha512-iah+THLcBJdpfZ1TstDFbKNznlzoxa8fmnFYK4V67HvmuNYkVdAywJSoteUszvBQ9/HqN2+9AZghbajMsFT+oA==}
+=======
+  '@rollup/rollup-win32-ia32-msvc@4.53.5':
+    resolution: {integrity: sha512-U/54pTbdQpPLBdEzCT6NBCFAfSZMvmjr0twhnD9f4EIvlm9wy3jjQ38yQj1AGznrNO65EWQMgm/QUjuIVrYF9w==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [ia32]
     os: [win32]
 
+<<<<<<< HEAD
   '@rollup/rollup-win32-x64-gnu@4.53.4':
     resolution: {integrity: sha512-zuuC7AyxLWLubP+mlUwEyR8M1ixW1ERNPHJfXm8x7eQNP4Pzkd7hS3qBuKBR70VRiQ04Kw8FNfRMF5TNxuZq2g==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-win32-x64-gnu@4.53.3':
+    resolution: {integrity: sha512-J9QDiOIZlZLdcot5NXEepDkstocktoVjkaKUtqzgzpt2yWjGlbYiKyp05rWwk4nypbYUNoFAztEgixoLaSETkg==}
+=======
+  '@rollup/rollup-win32-x64-gnu@4.53.5':
+    resolution: {integrity: sha512-2NqKgZSuLH9SXBBV2dWNRCZmocgSOx8OJSdpRaEcRlIfX8YrKxUT6z0F1NpvDVhOsl190UFTRh2F2WDWWCYp3A==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [x64]
     os: [win32]
 
+<<<<<<< HEAD
   '@rollup/rollup-win32-x64-msvc@4.53.4':
     resolution: {integrity: sha512-Sbx45u/Lbb5RyptSbX7/3deP+/lzEmZ0BTSHxwxN/IMOZDZf8S0AGo0hJD5n/LQssxb5Z3B4og4P2X6Dd8acCA==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-win32-x64-msvc@4.53.3':
+    resolution: {integrity: sha512-UhTd8u31dXadv0MopwGgNOBpUVROFKWVQgAg5N1ESyCz8AuBcMqm4AuTjrwgQKGDfoFuz02EuMRHQIw/frmYKQ==}
+=======
+  '@rollup/rollup-win32-x64-msvc@4.53.5':
+    resolution: {integrity: sha512-JRpZUhCfhZ4keB5v0fe02gQJy05GqboPOaxvjugW04RLSYYoB/9t2lx2u/tMs/Na/1NXfY8QYjgRljRpN+MjTQ==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [x64]
     os: [win32]
 
@@ -3667,23 +4222,23 @@ packages:
     peerDependencies:
       '@noble/hashes': ^1
 
-  '@shikijs/core@3.19.0':
-    resolution: {integrity: sha512-L7SrRibU7ZoYi1/TrZsJOFAnnHyLTE1SwHG1yNWjZIVCqjOEmCSuK2ZO9thnRbJG6TOkPp+Z963JmpCNw5nzvA==}
+  '@shikijs/core@3.20.0':
+    resolution: {integrity: sha512-f2ED7HYV4JEk827mtMDwe/yQ25pRiXZmtHjWF8uzZKuKiEsJR7Ce1nuQ+HhV9FzDcbIo4ObBCD9GPTzNuy9S1g==}
 
-  '@shikijs/engine-javascript@3.19.0':
-    resolution: {integrity: sha512-ZfWJNm2VMhKkQIKT9qXbs76RRcT0SF/CAvEz0+RkpUDAoDaCx0uFdCGzSRiD9gSlhm6AHkjdieOBJMaO2eC1rQ==}
+  '@shikijs/engine-javascript@3.20.0':
+    resolution: {integrity: sha512-OFx8fHAZuk7I42Z9YAdZ95To6jDePQ9Rnfbw9uSRTSbBhYBp1kEOKv/3jOimcj3VRUKusDYM6DswLauwfhboLg==}
 
-  '@shikijs/engine-oniguruma@3.19.0':
-    resolution: {integrity: sha512-1hRxtYIJfJSZeM5ivbUXv9hcJP3PWRo5prG/V2sWwiubUKTa+7P62d2qxCW8jiVFX4pgRHhnHNp+qeR7Xl+6kg==}
+  '@shikijs/engine-oniguruma@3.20.0':
+    resolution: {integrity: sha512-Yx3gy7xLzM0ZOjqoxciHjA7dAt5tyzJE3L4uQoM83agahy+PlW244XJSrmJRSBvGYELDhYXPacD4R/cauV5bzQ==}
 
-  '@shikijs/langs@3.19.0':
-    resolution: {integrity: sha512-dBMFzzg1QiXqCVQ5ONc0z2ebyoi5BKz+MtfByLm0o5/nbUu3Iz8uaTCa5uzGiscQKm7lVShfZHU1+OG3t5hgwg==}
+  '@shikijs/langs@3.20.0':
+    resolution: {integrity: sha512-le+bssCxcSHrygCWuOrYJHvjus6zhQ2K7q/0mgjiffRbkhM4o1EWu2m+29l0yEsHDbWaWPNnDUTRVVBvBBeKaA==}
 
-  '@shikijs/themes@3.19.0':
-    resolution: {integrity: sha512-H36qw+oh91Y0s6OlFfdSuQ0Ld+5CgB/VE6gNPK+Hk4VRbVG/XQgkjnt4KzfnnoO6tZPtKJKHPjwebOCfjd6F8A==}
+  '@shikijs/themes@3.20.0':
+    resolution: {integrity: sha512-U1NSU7Sl26Q7ErRvJUouArxfM2euWqq1xaSrbqMu2iqa+tSp0D1Yah8216sDYbdDHw4C8b75UpE65eWorm2erQ==}
 
-  '@shikijs/types@3.19.0':
-    resolution: {integrity: sha512-Z2hdeEQlzuntf/BZpFG8a+Fsw9UVXdML7w0o3TgSXV3yNESGon+bs9ITkQb3Ki7zxoXOOu5oJWqZ2uto06V9iQ==}
+  '@shikijs/types@3.20.0':
+    resolution: {integrity: sha512-lhYAATn10nkZcBQ0BlzSbJA3wcmL5MXUUF8d2Zzon6saZDlToKaiRX60n2+ZaHJCmXEcZRWNzn+k9vplr8Jhsw==}
 
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
@@ -4224,14 +4779,11 @@ packages:
   '@types/mysql@2.15.27':
     resolution: {integrity: sha512-YfWiV16IY0OeBfBCk8+hXKmdTKrKlwKN1MNKAPBu5JYxLwBEZl7QzeEpGnlZb3VMGJrrGmB84gXiH+ofs/TezA==}
 
-  '@types/node@20.19.26':
-    resolution: {integrity: sha512-0l6cjgF0XnihUpndDhk+nyD3exio3iKaYROSgvh/qSevPXax3L8p5DBRFjbvalnwatGgHEQn2R88y2fA3g4irg==}
+  '@types/node@22.19.3':
+    resolution: {integrity: sha512-1N9SBnWYOJTrNZCdh/yJE+t910Y128BoyY+zBLWhL3r0TYzlTmFdXrPwHL9DyFZmlEXNQQolTZh3KHV31QDhyA==}
 
-  '@types/node@22.19.2':
-    resolution: {integrity: sha512-LPM2G3Syo1GLzXLGJAKdqoU35XvrWzGJ21/7sgZTUpbkBaOasTj8tjwn6w+hCkqaa1TfJ/w67rJSwYItlJ2mYw==}
-
-  '@types/node@24.10.2':
-    resolution: {integrity: sha512-WOhQTZ4G8xZ1tjJTvKOpyEVSGgOTvJAfDK3FNFgELyaTpzhdgHVHeqW8V+UJvzF5BT+/B54T/1S2K6gd9c7bbA==}
+  '@types/node@24.10.4':
+    resolution: {integrity: sha512-vnDVpYPMzs4wunl27jHrfmwojOGKya0xyM3sH+UE5iv5uPS6vX7UIoh6m+vQc5LGBq52HBKPIn/zcSZVzeDEZg==}
 
   '@types/pg-pool@2.0.6':
     resolution: {integrity: sha512-TaAUE5rq2VQYxab5Ts7WZhKNmuN78Q6PiFonTDdpbx8a1H0M1vhy3rhiMjl+e2iHmogyMw7jZF4FrE6eJUy5HQ==}
@@ -4278,6 +4830,7 @@ packages:
   '@types/yauzl@2.10.3':
     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   '@typescript/native-preview-darwin-arm64@7.0.0-dev.20251215.1':
@@ -4408,41 +4961,104 @@ packages:
   '@typescript/native-preview-darwin-arm64@7.0.0-dev.20251210.1':
     resolution: {integrity: sha512-6FLhFMAdaW/JMzTPqaIxVTgCFhMQY2v88qVGLUmcf9coCJx5plxuY0zxzXaLrvQulGnDurIKZMW5tBGmQy4Buw==}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20251210.1':
+    resolution: {integrity: sha512-6FLhFMAdaW/JMzTPqaIxVTgCFhMQY2v88qVGLUmcf9coCJx5plxuY0zxzXaLrvQulGnDurIKZMW5tBGmQy4Buw==}
+=======
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20251216.1':
+    resolution: {integrity: sha512-2hKNSD6mDwUnoGNHBMvo8M3GVjqc9utRE740RzMxjTkpJJxrzSROqTb3s7wccjhWvowHlA1hNccCMDhvzQHxeQ==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm64]
     os: [darwin]
 
+<<<<<<< HEAD
   '@typescript/native-preview-darwin-x64@7.0.0-dev.20251215.1':
     resolution: {integrity: sha512-wZ89zZjZ5rf/suQHeIhQyyt8IzyJI9YjxpBhPtNwrE2wJmyG6qadN31g2GFIf40SfCy9FgibFTgMQMFq9oRdtA==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20251210.1':
+    resolution: {integrity: sha512-JrsZ913/ZyeoFDCVq+k4h0VUJHyqjT6te/IC8aMtLZQRkusQEX+57Anfr/BVXzWBa8+JwIXPGzllilw5dkrHNw==}
+=======
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20251216.1':
+    resolution: {integrity: sha512-pm9+EOLIAD3qjoLKuaj7TLxw3MtYgSi5H0y3Zq2bTFsuFopxfMLhK84jBQUsRMTRd4SZK57voKvwzlqFvvEPvA==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [x64]
     os: [darwin]
 
+<<<<<<< HEAD
   '@typescript/native-preview-linux-arm64@7.0.0-dev.20251215.1':
     resolution: {integrity: sha512-OXV3VZhoxdPDuK/lw/oIeTomRu68wUHFNpe8bm3zCb2XU8AHkTHpyER2u/j+Fv592FaR10UmQ2FIFfhgKF1C4Q==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20251210.1':
+    resolution: {integrity: sha512-GViH0JIkpEHCo04VYD/iAKqYjIB2uLXXtTmmLaImzBVd+h1dlKFgi2aOMi51mYnSefnbj7P7PeqIQNLKwi4NSQ==}
+=======
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20251216.1':
+    resolution: {integrity: sha512-0lziHrVHxjyQ/abwzDvlBspZu4MWg31GP9rLmbezjITYb5b6Fy6mbnukd9DHaIDaTZblgA8Oi/FyovBSzI6RMA==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm64]
     os: [linux]
 
+<<<<<<< HEAD
   '@typescript/native-preview-linux-arm@7.0.0-dev.20251215.1':
     resolution: {integrity: sha512-59gbNNUn9wRDSXbrweqQwkvLkLBhgF+dPmjIT7sX0NwTfWclYIqO5oXL0POXwF+8WoPLnHc0S0DhiXfSq0lAaw==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20251210.1':
+    resolution: {integrity: sha512-v1hyGd8TWHaoRU8BJfGAdW6ML70TLUOB9+0Xeo30m3xHlOdO1zxunXa/FVhqzrChqzOkcty61PGe9tAPhrIh1w==}
+=======
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20251216.1':
+    resolution: {integrity: sha512-MPPWpviN5aNz8L/+jdL2c2u06jeb5rt9+Q04scfDCoOJn239jzGxWcAU+7RSYw2AO3KkhCcLj8EmZx/v340PFw==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm]
     os: [linux]
 
+<<<<<<< HEAD
   '@typescript/native-preview-linux-x64@7.0.0-dev.20251215.1':
     resolution: {integrity: sha512-YE9+BnhxztvmduHhPryx+q052471Y4ZfsKjo2GuFy+1CNS2ZF03cojeW7gpsV1+52Ey6JvoayGQvwEMSWC8Zug==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20251210.1':
+    resolution: {integrity: sha512-X6p2MrcRcYE9T+ecNHYZHFYew0t+k9Sc2GbyjbNB0+MJ/Lffp3aUH59dp+JASZoyOxugPwN+MCJ/kNzYqiK9vg==}
+=======
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20251216.1':
+    resolution: {integrity: sha512-zm0ua1ED7oYGAtYAoYNFBOIHAMrARCGNX0wk7L6i6BvI96rScaZNAHxIatc/bXb3KucsbRV7DWZ/Orj/LDNxAA==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [x64]
     os: [linux]
 
+<<<<<<< HEAD
   '@typescript/native-preview-win32-arm64@7.0.0-dev.20251215.1':
     resolution: {integrity: sha512-spZW/Gq+uVbeMB2m+WsvU5ElCbvzwSmokEiSDcUhbY/0gICbVKQw0pChsZUibTjqYQmkyOXbx7CwnW9qOisZ7A==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20251210.1':
+    resolution: {integrity: sha512-FewUZSh7d9YnX0j3hr+N+zQ5B54k4jsVpZp8QbuDduMtautxI18bNO+vL5oO86ezqLWbUnZajXV/61MGfpEtMg==}
+=======
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20251216.1':
+    resolution: {integrity: sha512-X8NTq7m1+AhVMq2yCflMFrr2yqeg8lGaSCygGa69FwAcxNTphh+4CloR/VQWoXddF+Xk5EU8vpevHPWs2rlDSQ==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [arm64]
     os: [win32]
 
+<<<<<<< HEAD
   '@typescript/native-preview-win32-x64@7.0.0-dev.20251215.1':
     resolution: {integrity: sha512-tvq8PbFmgy8C+oBw2UUbFbIndOuRfzf62S4ARDkmLxv7wvVysyv3Eai0wdv1xdJdPTLkaar7IOd1NqiN9Dw4kA==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20251210.1':
+    resolution: {integrity: sha512-NdqTPzm/Ls3F1amP/e/akCuhY32mjBXT0NMQnYODgT9ltbdkk08b572Bp4GbdfRj9AiJxK70pqoNeZWw4e5fhg==}
+=======
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20251216.1':
+    resolution: {integrity: sha512-vS3B5uGtBjCy2qGjLZrV1+irycEvirnrW+twjANWQEteEAIOop/ODGYIuZsvMKA31vuWQ3G9TEWoG9LWb4Lsng==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     cpu: [x64]
     os: [win32]
 
+<<<<<<< HEAD
   '@typescript/native-preview@7.0.0-dev.20251215.1':
     resolution: {integrity: sha512-l9hUMsS+EsiwSp/CXc3JSMVEwXnK/SCv6yTwFPGghDOwPk+BOvj0Y3ANrez2gsmB9vkotLwq5HAEfeDhkuAsqQ==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@typescript/native-preview@7.0.0-dev.20251210.1':
+    resolution: {integrity: sha512-SiSRpp42K80X+qJKAi8qvjo2xMZIgJgROXCJo0MiZ8a6fjQK6IetRfUvwdApUsDltf/VaEc/j8v2Hiqp8SGhLQ==}
+=======
+  '@typescript/native-preview@7.0.0-dev.20251216.1':
+    resolution: {integrity: sha512-5BkDN1eXucR8r3YmskTClcrWRjDALqnXjRGcUYUPgrTBI3kh09B3L9uuDSSnGKWg0tfzPn8ESNBmMGgtRb+2yw==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     hasBin: true
 
   '@ungap/structured-clone@1.3.0':
@@ -4650,8 +5266,8 @@ packages:
       zod:
         optional: true
 
-  abitype@1.2.2:
-    resolution: {integrity: sha512-4DOIMWscIB3j8hboLAUjLZCE8TMLdgecBpHFumfU4PdO/C1SBCVx4Nu1wPYXaL2iK8B0Jk3tiwnDLCpUtm3fZg==}
+  abitype@1.2.3:
+    resolution: {integrity: sha512-Ofer5QUnuUdTFsBRwARMoWKOH1ND5ehwYhJ3OJ/BQO+StkwQjHw0XyVh4vDttzHB7QOFhPHa/o413PJ82gU/Tg==}
     peerDependencies:
       typescript: '>=5.0.4'
       zod: ^3.22.0 || ^4.0.0
@@ -4760,6 +5376,10 @@ packages:
   ast-types@0.16.1:
     resolution: {integrity: sha512-6t10qk83GOG8p0vKmaCr8eiilZwO171AvbROMtvvNiwrTly62t+7XkA8RdIIVbpMhCASAsxgAzdRSwh6nw/5Dg==}
     engines: {node: '>=4'}
+
+  aws-ssl-profiles@1.1.2:
+    resolution: {integrity: sha512-NZKeq9AfyQvEeNlN0zSYAaWrmBffJh3IELMZfRpJVWgrpEbtEpnjvzqBPf+mxoI287JohRDoa+/nsfqqiZmF6g==}
+    engines: {node: '>= 6.0.0'}
 
   b4a@1.7.3:
     resolution: {integrity: sha512-5Q2mfq2WfGuFp3uS//0s6baOJLMoVduPYVeNmDYxu5OUA1/cBfvr2RIS7vi62LdNj/urk1hfmj867I3qt6uZ7Q==}
@@ -5199,6 +5819,10 @@ packages:
     resolution: {integrity: sha512-TllpMR/t0M5sqCXfj85i4XaAzxmS5tVA16dqvdkMwGmzI+dXLXnw3J+3Vdv7VKw+ThlTMboK6i9rnZ6Nntj5CQ==}
     engines: {node: '>= 14'}
 
+  denque@2.1.0:
+    resolution: {integrity: sha512-HVQE3AAb/pxF8fQAoiqpvg9i3evqug3hoiwakOyZAwJm+6vZehbkYXZ0l4JxS+I3QxM97v5aaRNhj8v5oBhekw==}
+    engines: {node: '>=0.10'}
+
   dequal@2.0.3:
     resolution: {integrity: sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==}
     engines: {node: '>=6'}
@@ -5207,6 +5831,7 @@ packages:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   devalue@5.6.1:
@@ -5229,6 +5854,13 @@ packages:
   devalue@5.6.0:
     resolution: {integrity: sha512-BaD1s81TFFqbD6Uknni42TrolvEWA1Ih5L+OiHWmi4OYMJVwAYPGtha61I9KxTf52OvVHozHyjPu8zljqdF3uA==}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  devalue@5.6.0:
+    resolution: {integrity: sha512-BaD1s81TFFqbD6Uknni42TrolvEWA1Ih5L+OiHWmi4OYMJVwAYPGtha61I9KxTf52OvVHozHyjPu8zljqdF3uA==}
+=======
+  devalue@5.6.1:
+    resolution: {integrity: sha512-jDwizj+IlEZBunHcOuuFVBnIMPAEHvTsJj0BcIp94xYguLRVBcXO853px/MyIJvbVzWdsGvrRweIUWJw8hBP7A==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   devlop@1.1.0:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
@@ -6119,6 +6751,9 @@ packages:
     resolution: {integrity: sha512-trLf4SzuuUxfusZADLINj+dE8clK1frKdmqiJNb1Es75fmI5oY6X2mxLVUciLLjxqw/xr72Dhy+lER6dGd02FQ==}
     engines: {node: '>=10'}
 
+  generate-function@2.3.1:
+    resolution: {integrity: sha512-eeB5GfMNeevm/GRYq20ShmsaGcmI81kIX2K9XQx5miC8KdHaC6Jm0qQ8ZNeGOi7wYB8OsdxKs+Y2oVuTFuVwKQ==}
+
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
     engines: {node: '>=6.9.0'}
@@ -6277,6 +6912,10 @@ packages:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
     engines: {node: '>=0.10.0'}
 
+  iconv-lite@0.7.1:
+    resolution: {integrity: sha512-2Tth85cXwGFHfvRgZWszZSvdo+0Xsqmw8k8ZwxScfcBneNUraK+dxRxRm24nszx80Y0TVio8kKLt5sLE7ZCLlw==}
+    engines: {node: '>=0.10.0'}
+
   idb-keyval@6.2.2:
     resolution: {integrity: sha512-yjD9nARJ/jb1g+CvD0tlhUHOrJ9Sy0P8T9MF3YaLlHnSRpwPfpTX0XIvpmw3gAJUmEu3FiICLBDPXVwyEvrleg==}
 
@@ -6374,6 +7013,9 @@ packages:
   is-plain-obj@4.1.0:
     resolution: {integrity: sha512-+Pgi+vMuUNkJyExiMBt5IlFoMyKnr5zhJ4Uspz58WOhBF5QoIZkFyNHIbBAtHwzVAgk5RtndVNsDRN61/mmDqg==}
     engines: {node: '>=12'}
+
+  is-property@1.0.2:
+    resolution: {integrity: sha512-Ks/IoX00TtClbGQr4TWXemAnktAQvYB7HzcCxDGqEZU6oCmb2INHuOoKxbtR+HFkmYWBKv/dOZtGRiAjDhj92g==}
 
   is-regexp@3.1.0:
     resolution: {integrity: sha512-rbku49cWloU5bSMI+zaRaXdQHXnthP6DZ/vLnfdSKyL4zUzuWnomtOEiZZOd+ioQ+avFo/qau3KPTc7Fjy1uPA==}
@@ -6473,6 +7115,7 @@ packages:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   kysely@0.28.9:
     resolution: {integrity: sha512-3BeXMoiOhpOwu62CiVpO6lxfq4eS6KMYfQdMsN/2kUCRNuF2YiEr7u0HLHaQU+O4Xu8YXE3bHVkwaQ85i72EuA==}
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
@@ -6493,6 +7136,13 @@ packages:
   kysely@0.28.8:
     resolution: {integrity: sha512-QUOgl5ZrS9IRuhq5FvOKFSsD/3+IA6MLE81/bOOTRA/YQpKDza2sFdN5g6JCB9BOpqMJDGefLCQ9F12hRS13TA==}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  kysely@0.28.8:
+    resolution: {integrity: sha512-QUOgl5ZrS9IRuhq5FvOKFSsD/3+IA6MLE81/bOOTRA/YQpKDza2sFdN5g6JCB9BOpqMJDGefLCQ9F12hRS13TA==}
+=======
+  kysely@0.28.9:
+    resolution: {integrity: sha512-3BeXMoiOhpOwu62CiVpO6lxfq4eS6KMYfQdMsN/2kUCRNuF2YiEr7u0HLHaQU+O4Xu8YXE3bHVkwaQ85i72EuA==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     engines: {node: '>=20.0.0'}
 
   launch-editor@2.12.0:
@@ -6608,6 +7258,9 @@ packages:
     resolution: {integrity: sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw==}
     engines: {node: '>=10'}
 
+  long@5.3.2:
+    resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
+
   longest-streak@3.1.0:
     resolution: {integrity: sha512-9Ri+o0JYgehTaVBBDoMqIl8GXtbWg711O3srftcHhZ0dqnETqLaoIK0x17fUw9rFSlK/0NlsKe0Ahhyl5pXE2g==}
 
@@ -6640,6 +7293,10 @@ packages:
   lru-cache@7.18.3:
     resolution: {integrity: sha512-jumlc0BIUrS3qJGgIkWZsyfAM7NCWiBcCDhnd+3NNM5KbBmLTgHVfWBcg6W+rLUsIpzpERPsvwUP7CckAQSOoA==}
     engines: {node: '>=12'}
+
+  lru.min@1.1.3:
+    resolution: {integrity: sha512-Lkk/vx6ak3rYkRR0Nhu4lFUT2VDnQSxBe8Hbl7f36358p6ow8Bnvr8lrLt98H8J1aGxfhbX4Fs5tYg2+FTwr5Q==}
+    engines: {bun: '>=1.0.0', deno: '>=1.30.0', node: '>=8.0.0'}
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -6826,6 +7483,7 @@ packages:
     resolution: {integrity: sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==}
     engines: {node: '>=10'}
 
+<<<<<<< HEAD
 =======
   mimic-fn@2.1.0:
     resolution: {integrity: sha512-OqbOk5oEQeAZ8WXWydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ37nbJgYzGqGcg==}
@@ -6856,6 +7514,14 @@ packages:
     engines: {node: '>=18.0.0'}
     hasBin: true
 
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  miniflare@4.20251202.1:
+    resolution: {integrity: sha512-cRp2QNgnt9wpLMoNs4MOzzomyfe9UTS9sPRxIpUvxMl+mweCZ0FHpWWQvCnU7wWlfAP8VGZrHwqSsV5ERA6ahQ==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   miniflare@4.20251210.0:
     resolution: {integrity: sha512-k6kIoXwGVqlPZb0hcn+X7BmnK+8BjIIkusQPY22kCo2RaQJ/LzAjtxHQdGXerlHSnJyQivDQsL6BJHMpQfUFyw==}
     engines: {node: '>=18.0.0'}
@@ -6900,6 +7566,14 @@ packages:
 
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
+
+  mysql2@3.15.3:
+    resolution: {integrity: sha512-FBrGau0IXmuqg4haEZRBfHNWB5mUARw6hNwPDXXGg0XzVJ50mr/9hb267lvpVMnhZ1FON3qNd4Xfcez1rbFwSg==}
+    engines: {node: '>= 8.0'}
+
+  named-placeholders@1.1.6:
+    resolution: {integrity: sha512-Tz09sEL2EEuv5fFowm419c1+a/jSMiBjI9gHxVLrVdbUkkNUUfjsVYs9pVZu5oCon/kmRh9TfLEObFtkVxmY0w==}
+    engines: {node: '>=8.0.0'}
 
   nanoid@3.3.11:
     resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
@@ -7335,8 +8009,24 @@ packages:
     peerDependencies:
       vue: '>= 3.2.0'
 
+<<<<<<< HEAD
   react-dom@19.2.1:
     resolution: {integrity: sha512-ibrK8llX2a4eOskq1mXKu/TGZj9qzomO+sNfO98M6d9zIPOEhlBkMkBUBLd1vgS0gQsLDBzA+8jJBVXDnfHmJg==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  rc@1.2.8:
+    resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
+    hasBin: true
+
+  react-dom@19.2.1:
+    resolution: {integrity: sha512-ibrK8llX2a4eOskq1mXKu/TGZj9qzomO+sNfO98M6d9zIPOEhlBkMkBUBLd1vgS0gQsLDBzA+8jJBVXDnfHmJg==}
+=======
+  rc@1.2.8:
+    resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
+    hasBin: true
+
+  react-dom@19.2.3:
+    resolution: {integrity: sha512-yELu4WmLPw5Mr/lmeEpox5rw3RETacE++JgHqQzd2dg+YbJuat3jH4ingc+WPZhxaoFzdv9y33G+F7Nl5O0GBg==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     peerDependencies:
       react: ^19.2.3
 
@@ -7456,6 +8146,7 @@ packages:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   rolldown-vite@7.2.11:
     resolution: {integrity: sha512-WwCantGLbztBNipg+WwcA+a1c3Mo9LPY0VZ35IFXnUsQyZzsMHtzmy+H5PqELPj3AOauI9L/HMCjoJZp3i9eFg==}
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
@@ -7494,6 +8185,13 @@ packages:
   rolldown-vite@7.2.10:
     resolution: {integrity: sha512-v2ekZjuVLfumjp1Cr7LSQM1n2oOo3+gMruhOgT0Q4/cQ2J3nkTDLTAWLQQ86UHMbFYyVIN1wGh8BEZbvjkyctg==}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  rolldown-vite@7.2.10:
+    resolution: {integrity: sha512-v2ekZjuVLfumjp1Cr7LSQM1n2oOo3+gMruhOgT0Q4/cQ2J3nkTDLTAWLQQ86UHMbFYyVIN1wGh8BEZbvjkyctg==}
+=======
+  rolldown-vite@7.2.11:
+    resolution: {integrity: sha512-WwCantGLbztBNipg+WwcA+a1c3Mo9LPY0VZ35IFXnUsQyZzsMHtzmy+H5PqELPj3AOauI9L/HMCjoJZp3i9eFg==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -7537,11 +8235,20 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
+<<<<<<< HEAD
   rollup@4.53.4:
     resolution: {integrity: sha512-YpXaaArg0MvrnJpvduEDYIp7uGOqKXbH9NsHGQ6SxKCOsNAjZF018MmxefFUulVP2KLtiGw1UvZbr+/ekjvlDg==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  rollup@4.53.3:
+    resolution: {integrity: sha512-w8GmOxZfBmKknvdXU1sdM9NHcoQejwF/4mNgj2JuEEdRaHwwF12K7e9eXn1nLZ07ad+du76mkVsyeb2rKGllsA==}
+=======
+  rollup@4.53.5:
+    resolution: {integrity: sha512-iTNAbFSlRpcHeeWu73ywU/8KuU/LZmNCSxp6fjQkJBD3ivUb8tpDrXhIxEzA05HlYMEwmtaUnb3RP+YNv162OQ==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     engines: {node: '>=18.0.0', npm: '>=8.0.0'}
     hasBin: true
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   rou3@0.7.11:
     resolution: {integrity: sha512-ELguG3ENDw5NKNmWHO3OGEjcgdxkCNvnMR22gKHEgRXuwiriap5RIYdummOaOiqUNcC5yU5txGCHWNm7KlHuAA==}
@@ -7560,6 +8267,13 @@ packages:
 =======
   rou3@0.7.10:
     resolution: {integrity: sha512-aoFj6f7MJZ5muJ+Of79nrhs9N3oLGqi2VEMe94Zbkjb6Wupha46EuoYgpWSOZlXww3bbd8ojgXTAA2mzimX5Ww==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  rou3@0.7.10:
+    resolution: {integrity: sha512-aoFj6f7MJZ5muJ+Of79nrhs9N3oLGqi2VEMe94Zbkjb6Wupha46EuoYgpWSOZlXww3bbd8ojgXTAA2mzimX5Ww==}
+=======
+  rou3@0.7.12:
+    resolution: {integrity: sha512-iFE4hLDuloSWcD7mjdCDhx2bKcIsYbtOTpfH5MHHLSKMOUyjqQXTeZVa289uuwEGEKFoE/BAPbhaU4B774nceg==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
@@ -7609,6 +8323,9 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  seq-queue@0.0.5:
+    resolution: {integrity: sha512-hr3Wtp/GZIc/6DAGPDcV4/9WoZhjrkXsi5B/07QgX8tsdc6ilr7BFM6PM6rbdAX1kFSDYeZGLipIZZKyQP0O5Q==}
+
   seroval-plugins@1.3.3:
     resolution: {integrity: sha512-16OL3NnUBw8JG1jBLUoZJsLnQq0n5Ua6aHalhJK4fMQkz1lqR7Osz1sA30trBtd9VUDc2NgkuRCn8+/pBwqZ+w==}
     engines: {node: '>=10'}
@@ -7645,8 +8362,8 @@ packages:
     resolution: {integrity: sha512-ObmnIF4hXNg1BqhnHmgbDETF8dLPCggZWBjkQfhZpbszZnYur5DUljTcCHii5LC3J5E0yeO/1LIMyH+UvHQgyw==}
     engines: {node: '>= 0.4'}
 
-  shiki@3.19.0:
-    resolution: {integrity: sha512-77VJr3OR/VUZzPiStyRhADmO2jApMM0V2b1qf0RpfWya8Zr1PeZev5AEpPGAAKWdiYUtcZGBE4F5QvJml1PvWA==}
+  shiki@3.20.0:
+    resolution: {integrity: sha512-kgCOlsnyWb+p0WU+01RjkCH+eBVsjL1jOwUYWv0YDWkM2/A46+LDKVs5yZCUXjJG6bj4ndFoAg5iLIIue6dulg==}
 
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
@@ -7709,6 +8426,10 @@ packages:
   split2@4.2.0:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
     engines: {node: '>= 10.x'}
+
+  sqlstring@2.3.3:
+    resolution: {integrity: sha512-qC9iz2FlN7DQl3+wjwn3802RTyjCx7sDvfQEXchwa6CWOx07/WVfh91gBmQ9fahw8snwGEWU3xGzOt4tFyHLxg==}
+    engines: {node: '>= 0.6'}
 
   srvx@0.8.16:
     resolution: {integrity: sha512-hmcGW4CgroeSmzgF1Ihwgl+Ths0JqAJ7HwjP2X7e3JzY7u4IydLMcdnlqGQiQGUswz+PO9oh/KtCpOISIvs9QQ==}
@@ -8063,6 +8784,7 @@ packages:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   vite@7.3.0:
     resolution: {integrity: sha512-dZwN5L1VlUBewiP6H9s2+B3e3Jg96D0vzN+Ry73sOefebhYr9f94wwkMNN/9ouoU8pV1BqA1d1zGk8928cx0rg==}
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
@@ -8137,6 +8859,13 @@ packages:
   vite@7.2.7:
     resolution: {integrity: sha512-ITcnkFeR3+fI8P1wMgItjGrR10170d8auB4EpMLPqmx6uxElH3a/hHGQabSHKdqd4FXWO1nFIp9rRn7JQ34ACQ==}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  vite@7.2.7:
+    resolution: {integrity: sha512-ITcnkFeR3+fI8P1wMgItjGrR10170d8auB4EpMLPqmx6uxElH3a/hHGQabSHKdqd4FXWO1nFIp9rRn7JQ34ACQ==}
+=======
+  vite@7.3.0:
+    resolution: {integrity: sha512-dZwN5L1VlUBewiP6H9s2+B3e3Jg96D0vzN+Ry73sOefebhYr9f94wwkMNN/9ouoU8pV1BqA1d1zGk8928cx0rg==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -8294,6 +9023,7 @@ packages:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   workerd@1.20251210.0:
     resolution: {integrity: sha512-9MUUneP1BnRE9XAYi94FXxHmiLGbO75EHQZsgWqSiOXjoXSqJCw8aQbIEPxCy19TclEl/kHUFYce8ST2W+Qpjw==}
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
@@ -8324,11 +9054,20 @@ packages:
   wrangler@4.53.0:
     resolution: {integrity: sha512-/wvnHlRnlHsqaeIgGbmcEJE5NFYdTUWHCKow+U5Tv2XwQXI9vXUqBwCLAGy/BwqyS5nnycRt2kppqCzgHgyb7Q==}
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  workerd@1.20251202.0:
+    resolution: {integrity: sha512-p08YfrUMHkjCECNdT36r+6DpJIZX4kixbZ4n6GMUcLR5Gh18fakSCsiQrh72iOm4M9QHv/rM7P8YvCrUPWT5sg==}
+    engines: {node: '>=16'}
+    hasBin: true
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   workerd@1.20251210.0:
     resolution: {integrity: sha512-9MUUneP1BnRE9XAYi94FXxHmiLGbO75EHQZsgWqSiOXjoXSqJCw8aQbIEPxCy19TclEl/kHUFYce8ST2W+Qpjw==}
     engines: {node: '>=16'}
     hasBin: true
 
+<<<<<<< HEAD
   wrangler@4.53.0:
     resolution: {integrity: sha512-/wvnHlRnlHsqaeIgGbmcEJE5NFYdTUWHCKow+U5Tv2XwQXI9vXUqBwCLAGy/BwqyS5nnycRt2kppqCzgHgyb7Q==}
 >>>>>>> a547bc4 (chore: update deps)
@@ -8340,6 +9079,19 @@ packages:
       '@cloudflare/workers-types':
         optional: true
 
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  wrangler@4.53.0:
+    resolution: {integrity: sha512-/wvnHlRnlHsqaeIgGbmcEJE5NFYdTUWHCKow+U5Tv2XwQXI9vXUqBwCLAGy/BwqyS5nnycRt2kppqCzgHgyb7Q==}
+    engines: {node: '>=20.0.0'}
+    hasBin: true
+    peerDependencies:
+      '@cloudflare/workers-types': ^4.20251202.0
+    peerDependenciesMeta:
+      '@cloudflare/workers-types':
+        optional: true
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   wrangler@4.54.0:
     resolution: {integrity: sha512-bANFsjDwJLbprYoBK+hUDZsVbUv2SqJd8QvArLIcZk+fPq4h/Ohtj5vkKXD3k0s2bD1DXLk08D+hYmeNH+xC6A==}
     engines: {node: '>=20.0.0'}
@@ -8435,8 +9187,16 @@ packages:
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
+<<<<<<< HEAD
   zod@4.2.0:
     resolution: {integrity: sha512-Bd5fw9wlIhtqCCxotZgdTOMwGm1a0u75wARVEY9HMs1X17trvA/lMi4+MGK5EUfYkXVTbX8UDiDKW4OgzHVUZw==}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  zod@4.1.13:
+    resolution: {integrity: sha512-AvvthqfqrAhNH9dnfmrfKzX5upOdjUVJYFqNSlkmGf64gRaTzlPwz99IHYnVs28qYAybvAlBV+H7pn0saFY4Ig==}
+=======
+  zod@4.2.1:
+    resolution: {integrity: sha512-0wZ1IRqGGhMP76gLqz8EyfBXKk0J2qo2+H3fi4mcUP/KtTocoX08nmIAHl1Z2kJIZbZee8KOpBCSNPRgauucjw==}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   zustand@5.0.0:
     resolution: {integrity: sha512-LE+VcmbartOPM+auOjCCLQOsQ05zUTp8RkgwRzefUk+2jISdMMFnxvyTjA4YNWr5ZGXYbVsEMZosttuxUBkojQ==}
@@ -8712,7 +9472,7 @@ snapshots:
   '@biomejs/cli-win32-arm64@2.3.9':
     optional: true
 
-  '@biomejs/cli-win32-x64@2.3.8':
+  '@biomejs/cli-win32-x64@2.3.9':
     optional: true
 
 <<<<<<< HEAD
@@ -8759,6 +9519,7 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+<<<<<<< HEAD
   '@cloudflare/unenv-preset@2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251210.0)':
     dependencies:
       unenv: 2.0.0-rc.24
@@ -8775,12 +9536,22 @@ snapshots:
 ||||||| parent of a547bc4 (chore: update deps)
   '@cloudflare/vite-plugin@1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251202.0)(wrangler@4.53.0(@cloudflare/workers-types@4.20251209.0))':
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/unenv-preset@2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251202.0)':
+    dependencies:
+      unenv: 2.0.0-rc.24
+    optionalDependencies:
+      workerd: 1.20251202.0
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@cloudflare/unenv-preset@2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251210.0)':
     dependencies:
       unenv: 2.0.0-rc.24
     optionalDependencies:
       workerd: 1.20251210.0
 
+<<<<<<< HEAD
   '@cloudflare/vite-plugin@1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251202.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251210.0))':
 >>>>>>> a547bc4 (chore: update deps)
     dependencies:
@@ -8808,6 +9579,29 @@ snapshots:
 =======
   '@cloudflare/vite-plugin@1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251209.0))':
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/vite-plugin@1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251202.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251210.0))':
+    dependencies:
+      '@cloudflare/unenv-preset': 2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251202.0)
+      '@remix-run/node-fetch-server': 0.8.1
+      defu: 6.1.4
+      get-port: 7.1.0
+      miniflare: 4.20251202.1
+      picocolors: 1.1.1
+      tinyglobby: 0.2.15
+      unenv: 2.0.0-rc.24
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      wrangler: 4.54.0(@cloudflare/workers-types@4.20251210.0)
+      ws: 8.18.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - workerd
+
+  '@cloudflare/vite-plugin@1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251209.0))':
+=======
+  '@cloudflare/vite-plugin@1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@cloudflare/unenv-preset': 2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251210.0)
       '@remix-run/node-fetch-server': 0.8.1
@@ -8818,6 +9612,7 @@ snapshots:
       tinyglobby: 0.2.15
       unenv: 2.0.0-rc.24
 <<<<<<< HEAD
+<<<<<<< HEAD
       vite: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       wrangler: 4.54.0(@cloudflare/workers-types@4.20251213.0)
 ||||||| parent of a547bc4 (chore: update deps)
@@ -8826,12 +9621,20 @@ snapshots:
 =======
       vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       wrangler: 4.54.0(@cloudflare/workers-types@4.20251209.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      wrangler: 4.54.0(@cloudflare/workers-types@4.20251209.0)
+=======
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      wrangler: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       ws: 8.18.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
       - workerd
 
+<<<<<<< HEAD
   '@cloudflare/vite-plugin@1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251210.0))':
     dependencies:
       '@cloudflare/unenv-preset': 2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251210.0)
@@ -8852,6 +9655,29 @@ snapshots:
       - workerd
 
   '@cloudflare/vitest-pool-workers@0.10.15(@cloudflare/workers-types@4.20251213.0)(@vitest/runner@3.2.4)(@vitest/snapshot@3.2.4)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/vite-plugin@1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251210.0))':
+    dependencies:
+      '@cloudflare/unenv-preset': 2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251210.0)
+      '@remix-run/node-fetch-server': 0.8.1
+      defu: 6.1.4
+      get-port: 7.1.0
+      miniflare: 4.20251202.1
+      picocolors: 1.1.1
+      tinyglobby: 0.2.15
+      unenv: 2.0.0-rc.24
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      wrangler: 4.54.0(@cloudflare/workers-types@4.20251210.0)
+      ws: 8.18.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - workerd
+
+  '@cloudflare/vitest-pool-workers@0.10.14(@cloudflare/workers-types@4.20251210.0)(@vitest/runner@3.2.4)(@vitest/snapshot@3.2.4)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))':
+=======
+  '@cloudflare/vitest-pool-workers@0.10.15(@cloudflare/workers-types@4.20251216.0)(@vitest/runner@3.2.4)(@vitest/snapshot@3.2.4)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@vitest/runner': 3.2.4
       '@vitest/snapshot': 3.2.4
@@ -8861,13 +9687,21 @@ snapshots:
       miniflare: 4.20251210.0
       semver: 7.7.3
       vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2)
+<<<<<<< HEAD
       wrangler: 4.54.0(@cloudflare/workers-types@4.20251213.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      vitest: 3.2.4(@types/debug@4.1.12)(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2)
+      wrangler: 4.53.0(@cloudflare/workers-types@4.20251210.0)
+=======
+      wrangler: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       zod: 3.25.76
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - bufferutil
       - utf-8-validate
 
+<<<<<<< HEAD
   '@cloudflare/workerd-darwin-64@1.20251210.0':
     optional: true
 
@@ -8876,9 +9710,16 @@ snapshots:
 ||||||| parent of a547bc4 (chore: update deps)
   '@cloudflare/workerd-darwin-arm64@1.20251202.0':
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workerd-darwin-64@1.20251202.0':
+    optional: true
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@cloudflare/workerd-darwin-64@1.20251210.0':
     optional: true
 
+<<<<<<< HEAD
   '@cloudflare/workerd-darwin-arm64@1.20251202.0':
 >>>>>>> a547bc4 (chore: update deps)
     optional: true
@@ -8888,9 +9729,16 @@ snapshots:
 ||||||| parent of a547bc4 (chore: update deps)
   '@cloudflare/workerd-linux-64@1.20251202.0':
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workerd-darwin-arm64@1.20251202.0':
+    optional: true
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@cloudflare/workerd-darwin-arm64@1.20251210.0':
     optional: true
 
+<<<<<<< HEAD
   '@cloudflare/workerd-linux-64@1.20251202.0':
 >>>>>>> a547bc4 (chore: update deps)
     optional: true
@@ -8900,9 +9748,16 @@ snapshots:
 ||||||| parent of a547bc4 (chore: update deps)
   '@cloudflare/workerd-linux-arm64@1.20251202.0':
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workerd-linux-64@1.20251202.0':
+    optional: true
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@cloudflare/workerd-linux-64@1.20251210.0':
     optional: true
 
+<<<<<<< HEAD
   '@cloudflare/workerd-linux-arm64@1.20251202.0':
 >>>>>>> a547bc4 (chore: update deps)
     optional: true
@@ -8912,9 +9767,16 @@ snapshots:
 ||||||| parent of a547bc4 (chore: update deps)
   '@cloudflare/workerd-windows-64@1.20251202.0':
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workerd-linux-arm64@1.20251202.0':
+    optional: true
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@cloudflare/workerd-linux-arm64@1.20251210.0':
     optional: true
 
+<<<<<<< HEAD
   '@cloudflare/workerd-windows-64@1.20251202.0':
 >>>>>>> a547bc4 (chore: update deps)
     optional: true
@@ -8927,14 +9789,28 @@ snapshots:
 =======
 ||||||| parent of a547bc4 (chore: update deps)
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workerd-windows-64@1.20251202.0':
+    optional: true
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@cloudflare/workerd-windows-64@1.20251210.0':
     optional: true
 
+<<<<<<< HEAD
 >>>>>>> a547bc4 (chore: update deps)
   '@cloudflare/workers-types@4.20251209.0': {}
 
   '@cloudflare/workers-types@4.20251210.0': {}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@cloudflare/workers-types@4.20251209.0': {}
+
+  '@cloudflare/workers-types@4.20251210.0': {}
+=======
+  '@cloudflare/workers-types@4.20251216.0': {}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   '@codemirror/autocomplete@6.20.0':
     dependencies:
@@ -9083,10 +9959,17 @@ snapshots:
 
   '@drizzle-team/brocli@0.10.2': {}
 
+<<<<<<< HEAD
   '@electric-sql/pglite@0.2.13':
     optional: true
 
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@electric-sql/pglite@0.2.13':
+    optional: true
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   '@emnapi/core@1.7.1':
     dependencies:
       '@emnapi/wasi-threads': 1.1.0
@@ -10470,12 +11353,19 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   '@headlessui/tailwindcss@0.2.2(tailwindcss@4.1.18)':
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   '@headlessui/tailwindcss@0.2.2(tailwindcss@4.1.17)':
 =======
   '@graphql-tools/executor@1.5.0(graphql@16.8.2)':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@headlessui/tailwindcss@0.2.2(tailwindcss@4.1.17)':
+=======
+  '@headlessui/tailwindcss@0.2.2(tailwindcss@4.1.18)':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
+<<<<<<< HEAD
       '@graphql-tools/utils': 10.11.0(graphql@16.8.2)
       '@graphql-typed-document-node/core': 3.2.0(graphql@16.8.2)
       '@repeaterjs/repeater': 3.0.6
@@ -10582,6 +11472,10 @@ snapshots:
   '@headlessui/tailwindcss@0.2.2(tailwindcss@4.1.17)':
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
     dependencies:
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      tailwindcss: 4.1.17
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       tailwindcss: 4.1.18
 
   '@headlessui/vue@1.7.23(vue@3.5.25(typescript@5.9.3))':
@@ -10591,14 +11485,29 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   '@hono/zod-validator@0.7.5(hono@4.11.1)(zod@4.2.0)':
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   '@hono/zod-validator@0.7.5(hono@4.10.8)(zod@4.1.13)':
 =======
   '@hono/node-server@1.19.5(hono@4.10.8)':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@hono/zod-validator@0.7.5(hono@4.10.8)(zod@4.1.13)':
+=======
+  '@hono/zod-validator@0.7.5(hono@4.11.1)(zod@4.2.1)':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
+<<<<<<< HEAD
       hono: 4.10.8
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      hono: 4.10.8
+      zod: 4.1.13
+=======
+      hono: 4.11.1
+      zod: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
+<<<<<<< HEAD
 ||||||| parent of a547bc4 (chore: update deps)
   '@hono/node-server@1.19.5(hono@4.10.8)':
     dependencies:
@@ -10647,6 +11556,11 @@ snapshots:
 >>>>>>> a547bc4 (chore: update deps)
   '@iconify/json@2.2.416':
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@iconify/json@2.2.416':
+=======
+  '@iconify/json@2.2.418':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@iconify/types': 2.0.0
       pathe: 2.0.3
@@ -11097,6 +12011,7 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   '@poppinss/colors@4.1.6':
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   '@poppinss/colors@4.1.5':
@@ -11192,6 +12107,11 @@ snapshots:
 >>>>>>> a547bc4 (chore: update deps)
   '@poppinss/colors@4.1.5':
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@poppinss/colors@4.1.5':
+=======
+  '@poppinss/colors@4.1.6':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       kleur: 4.1.5
 
@@ -11242,6 +12162,7 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   '@replit/codemirror-css-color-picker@6.3.0(@codemirror/language@6.11.3)(@codemirror/state@6.5.2)(@codemirror/view@6.39.4)':
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   '@replit/codemirror-css-color-picker@6.3.0(@codemirror/language@6.11.3)(@codemirror/state@6.5.2)(@codemirror/view@6.39.2)':
@@ -11255,6 +12176,11 @@ snapshots:
 >>>>>>> a547bc4 (chore: update deps)
   '@replit/codemirror-css-color-picker@6.3.0(@codemirror/language@6.11.3)(@codemirror/state@6.5.2)(@codemirror/view@6.39.2)':
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@replit/codemirror-css-color-picker@6.3.0(@codemirror/language@6.11.3)(@codemirror/state@6.5.2)(@codemirror/view@6.39.2)':
+=======
+  '@replit/codemirror-css-color-picker@6.3.0(@codemirror/language@6.11.3)(@codemirror/state@6.5.2)(@codemirror/view@6.39.4)':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@codemirror/language': 6.11.3
       '@codemirror/state': 6.5.2
@@ -11305,75 +12231,213 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.0-beta.53': {}
 
+<<<<<<< HEAD
   '@rollup/rollup-android-arm-eabi@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-android-arm-eabi@4.53.3':
+=======
+  '@rollup/rollup-android-arm-eabi@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-android-arm64@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-android-arm64@4.53.3':
+=======
+  '@rollup/rollup-android-arm64@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-darwin-arm64@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-darwin-arm64@4.53.3':
+=======
+  '@rollup/rollup-darwin-arm64@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-darwin-x64@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-darwin-x64@4.53.3':
+=======
+  '@rollup/rollup-darwin-x64@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-freebsd-arm64@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-freebsd-arm64@4.53.3':
+=======
+  '@rollup/rollup-freebsd-arm64@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-freebsd-x64@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-freebsd-x64@4.53.3':
+=======
+  '@rollup/rollup-freebsd-x64@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-arm-gnueabihf@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-arm-gnueabihf@4.53.3':
+=======
+  '@rollup/rollup-linux-arm-gnueabihf@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-arm-musleabihf@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-arm-musleabihf@4.53.3':
+=======
+  '@rollup/rollup-linux-arm-musleabihf@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-arm64-gnu@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-arm64-gnu@4.53.3':
+=======
+  '@rollup/rollup-linux-arm64-gnu@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-arm64-musl@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-arm64-musl@4.53.3':
+=======
+  '@rollup/rollup-linux-arm64-musl@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-loong64-gnu@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-loong64-gnu@4.53.3':
+=======
+  '@rollup/rollup-linux-loong64-gnu@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-ppc64-gnu@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-ppc64-gnu@4.53.3':
+=======
+  '@rollup/rollup-linux-ppc64-gnu@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-riscv64-gnu@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-riscv64-gnu@4.53.3':
+=======
+  '@rollup/rollup-linux-riscv64-gnu@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-riscv64-musl@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-riscv64-musl@4.53.3':
+=======
+  '@rollup/rollup-linux-riscv64-musl@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-s390x-gnu@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-s390x-gnu@4.53.3':
+=======
+  '@rollup/rollup-linux-s390x-gnu@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-x64-gnu@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-x64-gnu@4.53.3':
+=======
+  '@rollup/rollup-linux-x64-gnu@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-linux-x64-musl@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-linux-x64-musl@4.53.3':
+=======
+  '@rollup/rollup-linux-x64-musl@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-openharmony-arm64@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-openharmony-arm64@4.53.3':
+=======
+  '@rollup/rollup-openharmony-arm64@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-win32-arm64-msvc@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-win32-arm64-msvc@4.53.3':
+=======
+  '@rollup/rollup-win32-arm64-msvc@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-win32-ia32-msvc@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-win32-ia32-msvc@4.53.3':
+=======
+  '@rollup/rollup-win32-ia32-msvc@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-win32-x64-gnu@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-win32-x64-gnu@4.53.3':
+=======
+  '@rollup/rollup-win32-x64-gnu@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
   '@rollup/rollup-win32-x64-msvc@4.53.4':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@rollup/rollup-win32-x64-msvc@4.53.3':
+=======
+  '@rollup/rollup-win32-x64-msvc@4.53.5':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
   '@scalar/analytics-client@1.0.1':
     dependencies:
+<<<<<<< HEAD
       zod: 4.2.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      zod: 4.1.13
+=======
+      zod: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   '@scalar/api-client@2.15.0(idb-keyval@6.2.2)(tailwindcss@4.1.18)(typescript@5.9.3)':
     dependencies:
@@ -11415,7 +12479,13 @@ snapshots:
       vue-router: 4.6.2(vue@3.5.25(typescript@5.9.3))
       whatwg-mimetype: 4.0.0
       yaml: 2.8.2
+<<<<<<< HEAD
       zod: 4.2.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      zod: 4.1.13
+=======
+      zod: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - '@vue/composition-api'
       - async-validator
@@ -11463,7 +12533,13 @@ snapshots:
       nanoid: 5.1.5
       type-fest: 5.0.0
       vue: 3.5.25(typescript@5.9.3)
+<<<<<<< HEAD
       zod: 4.2.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      zod: 4.1.13
+=======
+      zod: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - '@vue/composition-api'
       - async-validator
@@ -11564,7 +12640,13 @@ snapshots:
       flatted: 3.3.3
       type-fest: 5.0.0
       yaml: 2.8.2
+<<<<<<< HEAD
       zod: 4.2.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      zod: 4.1.13
+=======
+      zod: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - supports-color
       - typescript
@@ -11590,7 +12672,13 @@ snapshots:
 
   '@scalar/openapi-types@0.5.3':
     dependencies:
+<<<<<<< HEAD
       zod: 4.2.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      zod: 4.1.13
+=======
+      zod: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   '@scalar/openapi-upgrader@0.1.6':
     dependencies:
@@ -11635,7 +12723,13 @@ snapshots:
     dependencies:
       nanoid: 5.1.5
       type-fest: 5.0.0
+<<<<<<< HEAD
       zod: 4.2.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      zod: 4.1.13
+=======
+      zod: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   '@scalar/use-codemirror@0.13.2(typescript@5.9.3)':
     dependencies:
@@ -11667,7 +12761,13 @@ snapshots:
       cva: 1.0.0-beta.2(typescript@5.9.3)
       tailwind-merge: 2.6.0
       vue: 3.5.25(typescript@5.9.3)
+<<<<<<< HEAD
       zod: 4.2.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      zod: 4.1.13
+=======
+      zod: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - typescript
 
@@ -11796,12 +12896,24 @@ snapshots:
       - encoding
       - supports-color
 
+<<<<<<< HEAD
   '@sentry/cloudflare@10.30.0(@cloudflare/workers-types@4.20251213.0)':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@sentry/cloudflare@10.29.0(@cloudflare/workers-types@4.20251210.0)':
+=======
+  '@sentry/cloudflare@10.30.0(@cloudflare/workers-types@4.20251216.0)':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@sentry/core': 10.30.0
     optionalDependencies:
+<<<<<<< HEAD
       '@cloudflare/workers-types': 4.20251213.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@cloudflare/workers-types': 4.20251210.0
+=======
+      '@cloudflare/workers-types': 4.20251216.0
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   '@sentry/core@10.30.0': {}
 
@@ -11897,41 +13009,53 @@ snapshots:
       - encoding
       - supports-color
 
+<<<<<<< HEAD
   '@shazow/whatsabi@0.24.0(@noble/hashes@1.8.0)(typescript@5.9.3)(zod@4.2.0)':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@shazow/whatsabi@0.24.0(@noble/hashes@1.8.0)(typescript@5.9.3)(zod@4.1.13)':
+=======
+  '@shazow/whatsabi@0.24.0(@noble/hashes@1.8.0)(typescript@5.9.3)(zod@4.2.1)':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@noble/hashes': 1.8.0
+<<<<<<< HEAD
       ox: 0.9.17(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      ox: 0.9.17(typescript@5.9.3)(zod@4.1.13)
+=======
+      ox: 0.9.17(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - typescript
       - zod
 
-  '@shikijs/core@3.19.0':
+  '@shikijs/core@3.20.0':
     dependencies:
-      '@shikijs/types': 3.19.0
+      '@shikijs/types': 3.20.0
       '@shikijs/vscode-textmate': 10.0.2
       '@types/hast': 3.0.4
       hast-util-to-html: 9.0.5
 
-  '@shikijs/engine-javascript@3.19.0':
+  '@shikijs/engine-javascript@3.20.0':
     dependencies:
-      '@shikijs/types': 3.19.0
+      '@shikijs/types': 3.20.0
       '@shikijs/vscode-textmate': 10.0.2
       oniguruma-to-es: 4.3.4
 
-  '@shikijs/engine-oniguruma@3.19.0':
+  '@shikijs/engine-oniguruma@3.20.0':
     dependencies:
-      '@shikijs/types': 3.19.0
+      '@shikijs/types': 3.20.0
       '@shikijs/vscode-textmate': 10.0.2
 
-  '@shikijs/langs@3.19.0':
+  '@shikijs/langs@3.20.0':
     dependencies:
-      '@shikijs/types': 3.19.0
+      '@shikijs/types': 3.20.0
 
-  '@shikijs/themes@3.19.0':
+  '@shikijs/themes@3.20.0':
     dependencies:
-      '@shikijs/types': 3.19.0
+      '@shikijs/types': 3.20.0
 
-  '@shikijs/types@3.19.0':
+  '@shikijs/types@3.20.0':
     dependencies:
       '@shikijs/vscode-textmate': 10.0.2
       '@types/hast': 3.0.4
@@ -12111,11 +13235,18 @@ snapshots:
       '@tailwindcss/oxide-win32-arm64-msvc': 4.1.18
       '@tailwindcss/oxide-win32-x64-msvc': 4.1.18
 
+<<<<<<< HEAD
   '@tailwindcss/vite@4.1.18(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@tailwindcss/vite@4.1.17(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+=======
+  '@tailwindcss/vite@4.1.18(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@tailwindcss/node': 4.1.18
       '@tailwindcss/oxide': 4.1.18
       tailwindcss: 4.1.18
+<<<<<<< HEAD
       vite: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
 
   '@takumi-rs/core-darwin-arm64@0.57.6':
@@ -12162,6 +13293,14 @@ snapshots:
       '@takumi-rs/wasm': 0.57.6
 
   '@takumi-rs/wasm@0.57.6': {}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@tailwindcss/node': 4.1.17
+      '@tailwindcss/oxide': 4.1.17
+      tailwindcss: 4.1.17
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   '@tanstack/devtools-client@0.0.5':
     dependencies:
@@ -12184,7 +13323,13 @@ snapshots:
     transitivePeerDependencies:
       - csstype
 
+<<<<<<< HEAD
   '@tanstack/devtools-vite@0.3.12(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@tanstack/devtools-vite@0.3.12(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+=======
+  '@tanstack/devtools-vite@0.3.12(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@babel/core': 7.28.5
       '@babel/generator': 7.28.5
@@ -12196,7 +13341,13 @@ snapshots:
       chalk: 5.6.2
       launch-editor: 2.12.0
       picomatch: 4.0.3
+<<<<<<< HEAD
       vite: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - bufferutil
       - supports-color
@@ -12218,7 +13369,13 @@ snapshots:
       - csstype
       - utf-8-validate
 
+<<<<<<< HEAD
   '@tanstack/directive-functions-plugin@1.141.0(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@tanstack/directive-functions-plugin@1.140.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+=======
+  '@tanstack/directive-functions-plugin@1.141.0(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@babel/code-frame': 7.27.1
       '@babel/core': 7.28.5
@@ -12228,7 +13385,13 @@ snapshots:
       babel-dead-code-elimination: 1.0.10
       pathe: 2.0.3
       tiny-invariant: 1.3.3
+<<<<<<< HEAD
       vite: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - supports-color
 
@@ -12333,19 +13496,45 @@ snapshots:
     transitivePeerDependencies:
       - crossws
 
+<<<<<<< HEAD
   '@tanstack/react-start@1.141.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@tanstack/react-start@1.140.3(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+=======
+  '@tanstack/react-start@1.141.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@tanstack/react-router': 1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tanstack/react-start-client': 1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tanstack/react-start-server': 1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tanstack/router-utils': 1.141.0
       '@tanstack/start-client-core': 1.141.2
+<<<<<<< HEAD
       '@tanstack/start-plugin-core': 1.141.3(@tanstack/react-router@1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@tanstack/react-router': 1.140.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@tanstack/react-start-client': 1.140.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@tanstack/react-start-server': 1.140.3(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@tanstack/router-utils': 1.140.0
+      '@tanstack/start-client-core': 1.140.2
+      '@tanstack/start-plugin-core': 1.140.3(@tanstack/react-router@1.140.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@tanstack/start-server-core': 1.140.3
+=======
+      '@tanstack/start-plugin-core': 1.141.3(@tanstack/react-router@1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@tanstack/start-server-core': 1.141.2
       pathe: 2.0.3
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
+<<<<<<< HEAD
       vite: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - '@rsbuild/core'
       - crossws
@@ -12393,7 +13582,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+<<<<<<< HEAD
   '@tanstack/router-plugin@1.141.2(@tanstack/react-router@1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@tanstack/router-plugin@1.140.1(@tanstack/react-router@1.140.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+=======
+  '@tanstack/router-plugin@1.141.2(@tanstack/react-router@1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@babel/core': 7.28.5
       '@babel/plugin-syntax-jsx': 7.27.1(@babel/core@7.28.5)
@@ -12411,7 +13606,14 @@ snapshots:
       zod: 3.25.76
     optionalDependencies:
       '@tanstack/react-router': 1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+<<<<<<< HEAD
       vite: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@tanstack/react-router': 1.140.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - supports-color
 
@@ -12433,7 +13635,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+<<<<<<< HEAD
   '@tanstack/server-functions-plugin@1.141.3(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@tanstack/server-functions-plugin@1.140.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+=======
+  '@tanstack/server-functions-plugin@1.141.3(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@babel/code-frame': 7.27.1
       '@babel/core': 7.28.5
@@ -12442,7 +13650,13 @@ snapshots:
       '@babel/template': 7.27.2
       '@babel/traverse': 7.28.5
       '@babel/types': 7.28.5
+<<<<<<< HEAD
       '@tanstack/directive-functions-plugin': 1.141.0(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@tanstack/directive-functions-plugin': 1.140.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+=======
+      '@tanstack/directive-functions-plugin': 1.141.0(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       babel-dead-code-elimination: 1.0.10
       tiny-invariant: 1.3.3
     transitivePeerDependencies:
@@ -12457,7 +13671,13 @@ snapshots:
       tiny-invariant: 1.3.3
       tiny-warning: 1.0.3
 
+<<<<<<< HEAD
   '@tanstack/start-plugin-core@1.141.3(@tanstack/react-router@1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@tanstack/start-plugin-core@1.140.3(@tanstack/react-router@1.140.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+=======
+  '@tanstack/start-plugin-core@1.141.3(@tanstack/react-router@1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@babel/code-frame': 7.26.2
       '@babel/core': 7.28.5
@@ -12465,9 +13685,23 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.40
       '@tanstack/router-core': 1.141.2
       '@tanstack/router-generator': 1.141.2
+<<<<<<< HEAD
       '@tanstack/router-plugin': 1.141.2(@tanstack/react-router@1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@tanstack/router-utils': 1.141.0
       '@tanstack/server-functions-plugin': 1.141.3(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@tanstack/router-core': 1.140.1
+      '@tanstack/router-generator': 1.140.1
+      '@tanstack/router-plugin': 1.140.1(@tanstack/react-router@1.140.1(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@tanstack/router-utils': 1.140.0
+      '@tanstack/server-functions-plugin': 1.140.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@tanstack/start-client-core': 1.140.2
+      '@tanstack/start-server-core': 1.140.3
+=======
+      '@tanstack/router-plugin': 1.141.2(@tanstack/react-router@1.141.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@tanstack/router-utils': 1.141.0
+      '@tanstack/server-functions-plugin': 1.141.3(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       '@tanstack/start-client-core': 1.141.2
       '@tanstack/start-server-core': 1.141.2
       babel-dead-code-elimination: 1.0.10
@@ -12477,8 +13711,16 @@ snapshots:
       srvx: 0.8.16
       tinyglobby: 0.2.15
       ufo: 1.6.1
+<<<<<<< HEAD
       vite: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       vitefu: 1.1.1(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      vitefu: 1.1.1(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+=======
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      vitefu: 1.1.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       xmlbuilder2: 4.0.3
       zod: 3.25.76
     transitivePeerDependencies:
@@ -12558,12 +13800,18 @@ snapshots:
   '@types/connect@3.4.38':
     dependencies:
 <<<<<<< HEAD
+<<<<<<< HEAD
       '@types/node': 24.10.4
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
       '@types/node': 24.10.2
 =======
       '@types/node': 20.19.26
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@types/node': 20.19.26
+=======
+      '@types/node': 24.10.4
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   '@types/debug@4.1.12':
     dependencies:
@@ -12588,22 +13836,38 @@ snapshots:
   '@types/mysql@2.15.27':
     dependencies:
 <<<<<<< HEAD
+<<<<<<< HEAD
       '@types/node': 24.10.4
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
       '@types/node': 24.10.2
 =======
       '@types/node': 20.19.26
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@types/node': 20.19.26
+=======
+      '@types/node': 24.10.4
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
-  '@types/node@20.19.26':
+  '@types/node@22.19.3':
     dependencies:
       undici-types: 6.21.0
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
 
+<<<<<<< HEAD
   '@types/node@22.19.3':
     dependencies:
       undici-types: 6.21.0
 
   '@types/node@24.10.2':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@types/node@22.19.2':
+    dependencies:
+      undici-types: 6.21.0
+
+  '@types/node@24.10.2':
+=======
+  '@types/node@24.10.4':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       undici-types: 7.16.0
 
@@ -12614,12 +13878,18 @@ snapshots:
   '@types/pg@8.15.6':
     dependencies:
 <<<<<<< HEAD
+<<<<<<< HEAD
       '@types/node': 24.10.4
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
       '@types/node': 24.10.2
 =======
       '@types/node': 20.19.26
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@types/node': 20.19.26
+=======
+      '@types/node': 24.10.4
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       pg-protocol: 1.10.3
       pg-types: 2.2.0
 
@@ -12658,7 +13928,7 @@ snapshots:
 >>>>>>> a547bc4 (chore: update deps)
   '@types/tedious@4.0.14':
     dependencies:
-      '@types/node': 20.19.26
+      '@types/node': 24.10.4
 
   '@types/unist@3.0.3': {}
 
@@ -12669,14 +13939,21 @@ snapshots:
   '@types/yauzl@2.10.3':
     dependencies:
 <<<<<<< HEAD
+<<<<<<< HEAD
       '@types/node': 24.10.4
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
       '@types/node': 24.10.2
 =======
       '@types/node': 20.19.26
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@types/node': 20.19.26
+=======
+      '@types/node': 24.10.4
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optional: true
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   '@typescript/native-preview-darwin-arm64@7.0.0-dev.20251215.1':
@@ -12698,7 +13975,55 @@ snapshots:
       natural-compare: 1.4.0
       semver: 7.7.3
       ts-api-utils: 1.4.3(typescript@5.9.3)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20251210.1':
+    optional: true
+
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20251210.1':
+    optional: true
+
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20251210.1':
+    optional: true
+
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20251210.1':
+    optional: true
+
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20251210.1':
+    optional: true
+
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20251210.1':
+    optional: true
+
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20251210.1':
+    optional: true
+
+  '@typescript/native-preview@7.0.0-dev.20251210.1':
+=======
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20251216.1':
+    optional: true
+
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20251216.1':
+    optional: true
+
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20251216.1':
+    optional: true
+
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20251216.1':
+    optional: true
+
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20251216.1':
+    optional: true
+
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20251216.1':
+    optional: true
+
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20251216.1':
+    optional: true
+
+  '@typescript/native-preview@7.0.0-dev.20251216.1':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optionalDependencies:
+<<<<<<< HEAD
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -12889,6 +14214,23 @@ snapshots:
       '@typescript/native-preview-linux-x64': 7.0.0-dev.20251215.1
       '@typescript/native-preview-win32-arm64': 7.0.0-dev.20251215.1
       '@typescript/native-preview-win32-x64': 7.0.0-dev.20251215.1
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20251210.1
+      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20251210.1
+      '@typescript/native-preview-linux-arm': 7.0.0-dev.20251210.1
+      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20251210.1
+      '@typescript/native-preview-linux-x64': 7.0.0-dev.20251210.1
+      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20251210.1
+      '@typescript/native-preview-win32-x64': 7.0.0-dev.20251210.1
+=======
+      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20251216.1
+      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20251216.1
+      '@typescript/native-preview-linux-arm': 7.0.0-dev.20251216.1
+      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20251216.1
+      '@typescript/native-preview-linux-x64': 7.0.0-dev.20251216.1
+      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20251216.1
+      '@typescript/native-preview-win32-x64': 7.0.0-dev.20251216.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   '@ungap/structured-clone@1.3.0': {}
 
@@ -12915,7 +14257,13 @@ snapshots:
       unhead: 1.11.20
       vue: 3.5.25(typescript@5.9.3)
 
+<<<<<<< HEAD
   '@vitejs/plugin-react@5.1.2(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@vitejs/plugin-react@5.1.2(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+=======
+  '@vitejs/plugin-react@5.1.2(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@babel/core': 7.28.5
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.5)
@@ -12923,7 +14271,13 @@ snapshots:
       '@rolldown/pluginutils': 1.0.0-beta.53
       '@types/babel__core': 7.20.5
       react-refresh: 0.18.0
+<<<<<<< HEAD
       vite: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - supports-color
 
@@ -13067,13 +14421,14 @@ snapshots:
     dependencies:
       vue: 3.5.25(typescript@5.9.3)
 
-  '@wagmi/connectors@7.0.2(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))':
+  '@wagmi/connectors@7.0.2(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))':
     dependencies:
-      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
-      viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))
+      viem: 2.42.1(typescript@5.9.3)(zod@4.2.1)
     optionalDependencies:
       typescript: 5.9.3
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))':
@@ -13081,11 +14436,24 @@ snapshots:
   '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))':
 =======
   '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@3.25.76))':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))':
+=======
+  '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       eventemitter3: 5.0.1
       mipd: 0.0.7(typescript@5.9.3)
+<<<<<<< HEAD
       viem: 2.41.2(typescript@5.9.3)(zod@3.25.76)
       zustand: 5.0.0(@types/react@19.2.7)(react@19.2.1)(use-sync-external-store@1.4.0(react@19.2.1))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+      zustand: 5.0.0(@types/react@19.2.7)(react@19.2.1)(use-sync-external-store@1.4.0(react@19.2.1))
+=======
+      viem: 2.42.1(typescript@5.9.3)(zod@4.2.1)
+      zustand: 5.0.0(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.4.0(react@19.2.3))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optionalDependencies:
       '@tanstack/query-core': 5.90.12
       typescript: 5.9.3
@@ -13096,11 +14464,18 @@ snapshots:
       - use-sync-external-store
     optional: true
 
+<<<<<<< HEAD
 ||||||| parent of a547bc4 (chore: update deps)
   '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@3.25.76))':
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))':
+=======
+  '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))':
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       eventemitter3: 5.0.1
       mipd: 0.0.7(typescript@5.9.3)
+<<<<<<< HEAD
       viem: 2.41.2(typescript@5.9.3)(zod@3.25.76)
       zustand: 5.0.0(@types/react@19.2.7)(react@19.2.1)(use-sync-external-store@1.4.0(react@19.2.1))
     optionalDependencies:
@@ -13122,6 +14497,13 @@ snapshots:
       mipd: 0.0.7(typescript@5.9.3)
       viem: 2.42.1(typescript@5.9.3)(zod@4.2.0)
       zustand: 5.0.0(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.4.0(react@19.2.3))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+      zustand: 5.0.0(@types/react@19.2.7)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+=======
+      viem: 2.42.1(typescript@5.9.3)(zod@4.2.1)
+      zustand: 5.0.0(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optionalDependencies:
       '@tanstack/query-core': 5.90.12
       typescript: 5.9.3
@@ -13131,6 +14513,7 @@ snapshots:
       - react
       - use-sync-external-store
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))':
@@ -13143,16 +14526,28 @@ snapshots:
       mipd: 0.0.7(typescript@5.9.3)
       viem: 2.41.2(typescript@5.9.3)(zod@3.25.76)
       zustand: 5.0.0(@types/react@19.2.7)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  abitype@1.1.0(typescript@5.9.3)(zod@4.1.13):
+=======
+  abitype@1.1.0(typescript@5.9.3)(zod@4.2.1):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optionalDependencies:
       '@tanstack/query-core': 5.90.12
       typescript: 5.9.3
+<<<<<<< HEAD
     transitivePeerDependencies:
       - '@types/react'
       - immer
       - react
       - use-sync-external-store
     optional: true
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      zod: 4.1.13
+=======
+      zod: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
+<<<<<<< HEAD
 ||||||| parent of a547bc4 (chore: update deps)
   '@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@3.25.76))':
     dependencies:
@@ -13228,8 +14623,14 @@ snapshots:
       tslib: 2.8.1
 
   abitype@0.10.3(typescript@5.9.3)(zod@3.25.76):
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  abitype@1.2.2(typescript@5.9.3)(zod@4.1.13):
+=======
+  abitype@1.2.3(typescript@5.9.3)(zod@4.2.1):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optionalDependencies:
       typescript: 5.9.3
+<<<<<<< HEAD
       zod: 3.25.76
 
   abitype@1.1.0(typescript@5.9.3)(zod@3.25.76):
@@ -13313,6 +14714,11 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
       zod: 4.2.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      zod: 4.1.13
+=======
+      zod: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   acorn-import-attributes@1.9.5(acorn@8.15.0):
     dependencies:
@@ -13391,6 +14797,9 @@ snapshots:
   ast-types@0.16.1:
     dependencies:
       tslib: 2.8.1
+
+  aws-ssl-profiles@1.1.2:
+    optional: true
 
   b4a@1.7.3: {}
 
@@ -13519,7 +14928,7 @@ snapshots:
 
   bun-types@1.3.4:
     dependencies:
-      '@types/node': 20.19.26
+      '@types/node': 24.10.4
 
   cac@6.7.14: {}
 
@@ -13827,10 +15236,14 @@ snapshots:
       escodegen: 2.1.0
       esprima: 4.0.1
 
+  denque@2.1.0:
+    optional: true
+
   dequal@2.0.3: {}
 
   detect-libc@2.1.2: {}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   devalue@5.6.1: {}
@@ -13850,6 +15263,11 @@ snapshots:
 >>>>>>> a547bc4 (chore: update deps)
   devalue@5.6.0: {}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  devalue@5.6.0: {}
+=======
+  devalue@5.6.1: {}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   devlop@1.1.0:
     dependencies:
@@ -13908,6 +15326,7 @@ snapshots:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   eastasianwidth@0.2.0: {}
 ||||||| parent of 4bb5df9 (chore: sync lockfile)
   drizzle-orm@0.45.0(@cloudflare/workers-types@4.20251209.0)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.8):
@@ -13950,18 +15369,29 @@ snapshots:
 =======
   drizzle-orm@0.45.1(@cloudflare/workers-types@4.20251209.0)(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.8)(pg@8.16.3):
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  drizzle-orm@0.45.1(@cloudflare/workers-types@4.20251209.0)(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.8)(pg@8.16.3):
+=======
+  drizzle-orm@0.45.1(@cloudflare/workers-types@4.20251216.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.9)(mysql2@3.15.3)(pg@8.16.3):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20251209.0
-      '@electric-sql/pglite': 0.2.13
+      '@cloudflare/workers-types': 4.20251216.0
       '@opentelemetry/api': 1.9.0
       '@types/pg': 8.15.6
       better-sqlite3: 12.5.0
       bun-types: 1.3.4
+<<<<<<< HEAD
       kysely: 0.28.8
 <<<<<<< HEAD
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
 =======
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      kysely: 0.28.8
+=======
+      kysely: 0.28.9
+      mysql2: 3.15.3
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       pg: 8.16.3
 
 <<<<<<< HEAD
@@ -14442,6 +15872,11 @@ snapshots:
 
   fuse.js@7.1.0: {}
 
+  generate-function@2.3.1:
+    dependencies:
+      is-property: 1.0.2
+    optional: true
+
   gensync@1.0.0-beta.2: {}
 
   get-caller-file@2.0.5: {}
@@ -14498,12 +15933,18 @@ snapshots:
       cookie-es: 2.0.0
       fetchdts: 0.1.7
 <<<<<<< HEAD
+<<<<<<< HEAD
       rou3: 0.7.12
 ||||||| parent of 4bb5df9 (chore: sync lockfile)
       rou3: 0.7.11
 =======
       rou3: 0.7.10
 >>>>>>> 4bb5df9 (chore: sync lockfile)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      rou3: 0.7.10
+=======
+      rou3: 0.7.12
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       srvx: 0.8.16
 
   hast-util-embedded@3.0.0:
@@ -14686,15 +16127,35 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
+  iconv-lite@0.7.1:
+    dependencies:
+      safer-buffer: 2.1.2
+    optional: true
+
   idb-keyval@6.2.2: {}
 
   idxs@0.0.5(typescript@5.9.3):
     dependencies:
+<<<<<<< HEAD
       abitype: 1.2.2(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      abitype: 1.2.2(typescript@5.9.3)(zod@4.1.13)
+      kysely: 0.28.8
+=======
+      abitype: 1.2.3(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       kysely: 0.28.9
       mitt: 3.0.1
+<<<<<<< HEAD
       ox: 0.9.17(typescript@5.9.3)(zod@4.2.0)
       zod: 4.2.0
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      ox: 0.9.17(typescript@5.9.3)(zod@4.1.13)
+      zod: 4.1.13
+=======
+      ox: 0.9.17(typescript@5.9.3)(zod@4.2.1)
+      zod: 4.2.1
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - typescript
 
@@ -14767,6 +16228,9 @@ snapshots:
 
   is-plain-obj@4.1.0: {}
 
+  is-property@1.0.2:
+    optional: true
+
   is-regexp@3.1.0: {}
 
 <<<<<<< HEAD
@@ -14833,6 +16297,7 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   kysely@0.28.9: {}
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   kysely@0.28.8: {}
@@ -14846,6 +16311,11 @@ snapshots:
 >>>>>>> a547bc4 (chore: update deps)
   kysely@0.28.8: {}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  kysely@0.28.8: {}
+=======
+  kysely@0.28.9: {}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   launch-editor@2.12.0:
     dependencies:
@@ -14945,6 +16415,9 @@ snapshots:
     dependencies:
       p-locate: 5.0.0
 
+  long@5.3.2:
+    optional: true
+
   longest-streak@3.1.0: {}
 
   loupe@3.2.1: {}
@@ -14974,6 +16447,9 @@ snapshots:
       yallist: 3.1.1
 
   lru-cache@7.18.3: {}
+
+  lru.min@1.1.3:
+    optional: true
 
   magic-string@0.30.21:
     dependencies:
@@ -15325,6 +16801,7 @@ snapshots:
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   mimic-response@3.1.0: {}
 
+<<<<<<< HEAD
 =======
   mimic-fn@2.1.0: {}
 
@@ -15358,6 +16835,27 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  miniflare@4.20251202.1:
+    dependencies:
+      '@cspotcode/source-map-support': 0.8.1
+      acorn: 8.14.0
+      acorn-walk: 8.3.2
+      exit-hook: 2.2.1
+      glob-to-regexp: 0.4.1
+      sharp: 0.33.5
+      stoppable: 1.1.0
+      undici: 7.14.0
+      workerd: 1.20251202.0
+      ws: 8.18.0
+      youch: 4.1.0-beta.10
+      zod: 3.22.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   miniflare@4.20251210.0:
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
@@ -15406,6 +16904,24 @@ snapshots:
   module-details-from-path@1.0.4: {}
 
   ms@2.1.3: {}
+
+  mysql2@3.15.3:
+    dependencies:
+      aws-ssl-profiles: 1.1.2
+      denque: 2.1.0
+      generate-function: 2.3.1
+      iconv-lite: 0.7.1
+      long: 5.3.2
+      lru.min: 1.1.3
+      named-placeholders: 1.1.6
+      seq-queue: 0.0.5
+      sqlstring: 2.3.3
+    optional: true
+
+  named-placeholders@1.1.6:
+    dependencies:
+      lru.min: 1.1.3
+    optional: true
 
   nanoid@3.3.11: {}
 
@@ -15489,7 +17005,7 @@ snapshots:
       regex: 6.1.0
       regex-recursion: 6.0.2
 
-  ox@0.9.17(typescript@5.9.3)(zod@4.1.13):
+  ox@0.9.17(typescript@5.9.3)(zod@4.2.1):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
       '@noble/ciphers': 1.3.0
@@ -15497,7 +17013,13 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
+<<<<<<< HEAD
       abitype: 1.2.2(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      abitype: 1.2.2(typescript@5.9.3)(zod@4.1.13)
+=======
+      abitype: 1.2.3(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       eventemitter3: 5.0.1
     optionalDependencies:
       typescript: 5.9.3
@@ -15506,11 +17028,17 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   ox@0.9.6(typescript@5.9.3)(zod@4.2.0):
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   ox@0.9.6(typescript@5.9.3)(zod@4.1.13):
 =======
   ox@0.9.6(typescript@5.9.3)(zod@3.25.76):
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  ox@0.9.6(typescript@5.9.3)(zod@4.1.13):
+=======
+  ox@0.9.6(typescript@5.9.3)(zod@4.2.1):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
       '@noble/ciphers': 1.3.0
@@ -15518,6 +17046,7 @@ snapshots:
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
+<<<<<<< HEAD
       abitype: 1.2.2(typescript@5.9.3)(zod@3.25.76)
       eventemitter3: 5.0.1
     optionalDependencies:
@@ -15553,6 +17082,11 @@ snapshots:
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
       abitype: 1.2.2(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      abitype: 1.2.2(typescript@5.9.3)(zod@4.1.13)
+=======
+      abitype: 1.2.3(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       eventemitter3: 5.0.1
     optionalDependencies:
       typescript: 5.9.3
@@ -15791,16 +17325,36 @@ snapshots:
     transitivePeerDependencies:
       - '@vue/composition-api'
 
+<<<<<<< HEAD
   react-dom@19.2.1(react@19.2.1):
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  rc@1.2.8:
     dependencies:
-      react: 19.2.1
+      deep-extend: 0.6.0
+      ini: 1.3.8
+      minimist: 1.2.8
+      strip-json-comments: 2.0.1
+
+  react-dom@19.2.1(react@19.2.1):
+=======
+  rc@1.2.8:
+    dependencies:
+      deep-extend: 0.6.0
+      ini: 1.3.8
+      minimist: 1.2.8
+      strip-json-comments: 2.0.1
+
+  react-dom@19.2.3(react@19.2.3):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
+    dependencies:
+      react: 19.2.3
       scheduler: 0.27.0
 
   react-is@16.13.1: {}
 
   react-refresh@0.18.0: {}
 
-  react@19.2.1: {}
+  react@19.2.3: {}
 
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -15982,6 +17536,7 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2):
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2):
@@ -16015,6 +17570,11 @@ snapshots:
 >>>>>>> a547bc4 (chore: update deps)
   rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2):
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2):
+=======
+  rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@oxc-project/runtime': 0.101.0
       fdir: 6.5.0(picomatch@4.0.3)
@@ -16025,6 +17585,13 @@ snapshots:
       tinyglobby: 0.2.15
     optionalDependencies:
       '@types/node': 24.10.4
+<<<<<<< HEAD
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@types/node': 24.10.2
+      esbuild: 0.25.12
+=======
+      esbuild: 0.25.12
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       fsevents: 2.3.3
       jiti: 2.6.1
       tsx: 4.21.0
@@ -16049,10 +17616,17 @@ snapshots:
       '@rolldown/binding-win32-arm64-msvc': 1.0.0-beta.53
       '@rolldown/binding-win32-x64-msvc': 1.0.0-beta.53
 
+<<<<<<< HEAD
   rollup@4.53.4:
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  rollup@4.53.3:
+=======
+  rollup@4.53.5:
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@types/estree': 1.0.8
     optionalDependencies:
+<<<<<<< HEAD
       '@rollup/rollup-android-arm-eabi': 4.53.4
       '@rollup/rollup-android-arm64': 4.53.4
       '@rollup/rollup-darwin-arm64': 4.53.4
@@ -16075,8 +17649,56 @@ snapshots:
       '@rollup/rollup-win32-ia32-msvc': 4.53.4
       '@rollup/rollup-win32-x64-gnu': 4.53.4
       '@rollup/rollup-win32-x64-msvc': 4.53.4
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@rollup/rollup-android-arm-eabi': 4.53.3
+      '@rollup/rollup-android-arm64': 4.53.3
+      '@rollup/rollup-darwin-arm64': 4.53.3
+      '@rollup/rollup-darwin-x64': 4.53.3
+      '@rollup/rollup-freebsd-arm64': 4.53.3
+      '@rollup/rollup-freebsd-x64': 4.53.3
+      '@rollup/rollup-linux-arm-gnueabihf': 4.53.3
+      '@rollup/rollup-linux-arm-musleabihf': 4.53.3
+      '@rollup/rollup-linux-arm64-gnu': 4.53.3
+      '@rollup/rollup-linux-arm64-musl': 4.53.3
+      '@rollup/rollup-linux-loong64-gnu': 4.53.3
+      '@rollup/rollup-linux-ppc64-gnu': 4.53.3
+      '@rollup/rollup-linux-riscv64-gnu': 4.53.3
+      '@rollup/rollup-linux-riscv64-musl': 4.53.3
+      '@rollup/rollup-linux-s390x-gnu': 4.53.3
+      '@rollup/rollup-linux-x64-gnu': 4.53.3
+      '@rollup/rollup-linux-x64-musl': 4.53.3
+      '@rollup/rollup-openharmony-arm64': 4.53.3
+      '@rollup/rollup-win32-arm64-msvc': 4.53.3
+      '@rollup/rollup-win32-ia32-msvc': 4.53.3
+      '@rollup/rollup-win32-x64-gnu': 4.53.3
+      '@rollup/rollup-win32-x64-msvc': 4.53.3
+=======
+      '@rollup/rollup-android-arm-eabi': 4.53.5
+      '@rollup/rollup-android-arm64': 4.53.5
+      '@rollup/rollup-darwin-arm64': 4.53.5
+      '@rollup/rollup-darwin-x64': 4.53.5
+      '@rollup/rollup-freebsd-arm64': 4.53.5
+      '@rollup/rollup-freebsd-x64': 4.53.5
+      '@rollup/rollup-linux-arm-gnueabihf': 4.53.5
+      '@rollup/rollup-linux-arm-musleabihf': 4.53.5
+      '@rollup/rollup-linux-arm64-gnu': 4.53.5
+      '@rollup/rollup-linux-arm64-musl': 4.53.5
+      '@rollup/rollup-linux-loong64-gnu': 4.53.5
+      '@rollup/rollup-linux-ppc64-gnu': 4.53.5
+      '@rollup/rollup-linux-riscv64-gnu': 4.53.5
+      '@rollup/rollup-linux-riscv64-musl': 4.53.5
+      '@rollup/rollup-linux-s390x-gnu': 4.53.5
+      '@rollup/rollup-linux-x64-gnu': 4.53.5
+      '@rollup/rollup-linux-x64-musl': 4.53.5
+      '@rollup/rollup-openharmony-arm64': 4.53.5
+      '@rollup/rollup-win32-arm64-msvc': 4.53.5
+      '@rollup/rollup-win32-ia32-msvc': 4.53.5
+      '@rollup/rollup-win32-x64-gnu': 4.53.5
+      '@rollup/rollup-win32-x64-msvc': 4.53.5
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       fsevents: 2.3.3
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   rou3@0.7.11: {}
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
@@ -16091,6 +17713,11 @@ snapshots:
   safe-buffer@5.2.1: {}
 =======
   rou3@0.7.10: {}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  rou3@0.7.10: {}
+=======
+  rou3@0.7.12: {}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   safe-buffer@5.2.1: {}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
@@ -16122,6 +17749,9 @@ snapshots:
   semver@6.3.1: {}
 
   semver@7.7.3: {}
+
+  seq-queue@0.0.5:
+    optional: true
 
   seroval-plugins@1.3.3(seroval@1.3.2):
     dependencies:
@@ -16169,14 +17799,14 @@ snapshots:
 
   shell-quote@1.8.3: {}
 
-  shiki@3.19.0:
+  shiki@3.20.0:
     dependencies:
-      '@shikijs/core': 3.19.0
-      '@shikijs/engine-javascript': 3.19.0
-      '@shikijs/engine-oniguruma': 3.19.0
-      '@shikijs/langs': 3.19.0
-      '@shikijs/themes': 3.19.0
-      '@shikijs/types': 3.19.0
+      '@shikijs/core': 3.20.0
+      '@shikijs/engine-javascript': 3.20.0
+      '@shikijs/engine-oniguruma': 3.20.0
+      '@shikijs/langs': 3.20.0
+      '@shikijs/themes': 3.20.0
+      '@shikijs/types': 3.20.0
       '@shikijs/vscode-textmate': 10.0.2
       '@types/hast': 3.0.4
 
@@ -16242,6 +17872,9 @@ snapshots:
   space-separated-tokens@2.0.2: {}
 
   split2@4.2.0:
+    optional: true
+
+  sqlstring@2.3.3:
     optional: true
 
   srvx@0.8.16: {}
@@ -16379,6 +18012,7 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(zod@4.2.0):
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13):
@@ -16396,16 +18030,38 @@ snapshots:
 >>>>>>> a547bc4 (chore: update deps)
   tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13):
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13):
+=======
+  tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(zod@4.2.1):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@remix-run/fetch-router': 0.12.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)
       idb-keyval: 6.2.2
+<<<<<<< HEAD
       ox: 0.9.17(typescript@5.9.3)(zod@4.2.0)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      ox: 0.9.17(typescript@5.9.3)(zod@4.1.13)
+=======
+      ox: 0.9.17(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optionalDependencies:
       '@tanstack/query-core': 5.90.12
       '@tanstack/react-query': 5.90.12(react@19.2.3)
+<<<<<<< HEAD
       '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))
       viem: 2.42.1(typescript@5.9.3)(zod@4.2.0)
       wagmi: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@tanstack/react-query': 5.90.12(react@19.2.1)
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+      viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+      wagmi: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+=======
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))
+      viem: 2.42.1(typescript@5.9.3)(zod@4.2.1)
+      wagmi: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - '@remix-run/headers'
       - '@remix-run/route-pattern'
@@ -16415,17 +18071,30 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)))(zod@4.2.0):
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13):
 =======
   tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@3.25.76)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@3.25.76))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@3.25.76)))(zod@3.25.76):
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(zod@4.1.13):
+=======
+  tempo.ts@0.10.5(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))(wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(zod@4.2.1):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@remix-run/fetch-router': 0.12.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)
       idb-keyval: 6.2.2
+<<<<<<< HEAD
       ox: 0.9.17(typescript@5.9.3)(zod@3.25.76)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      ox: 0.9.17(typescript@5.9.3)(zod@4.1.13)
+=======
+      ox: 0.9.17(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optionalDependencies:
       '@tanstack/query-core': 5.90.12
+<<<<<<< HEAD
       '@tanstack/react-query': 5.90.12(react@19.2.1)
       '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@3.25.76))
       viem: 2.41.2(typescript@5.9.3)(zod@3.25.76)
@@ -16470,6 +18139,17 @@ snapshots:
       '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))
       viem: 2.42.1(typescript@5.9.3)(zod@4.2.0)
       wagmi: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0))
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      '@tanstack/react-query': 5.90.12(react@19.2.1)
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+      viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+      wagmi: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
+=======
+      '@tanstack/react-query': 5.90.12(react@19.2.3)
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))
+      viem: 2.42.1(typescript@5.9.3)(zod@4.2.1)
+      wagmi: 3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - '@remix-run/headers'
       - '@remix-run/route-pattern'
@@ -16640,6 +18320,7 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   use-sync-external-store@1.4.0(react@19.2.3):
     dependencies:
       react: 19.2.3
@@ -16665,9 +18346,30 @@ snapshots:
 >>>>>>> a547bc4 (chore: update deps)
   use-sync-external-store@1.4.0(react@19.2.1):
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  use-sync-external-store@1.4.0(react@19.2.1):
+=======
+  use-sync-external-store@1.4.0(react@19.2.3):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
+    dependencies:
+      react: 19.2.3
+
+<<<<<<< HEAD
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  use-sync-external-store@1.6.0(react@19.2.1):
     dependencies:
       react: 19.2.1
 
+  util-deprecate@1.0.2: {}
+
+=======
+  use-sync-external-store@1.6.0(react@19.2.3):
+    dependencies:
+      react: 19.2.3
+
+  util-deprecate@1.0.2: {}
+
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   uuid@11.1.0: {}
 
   vfile-location@5.0.3:
@@ -16687,19 +18389,37 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   viem@2.42.1(typescript@5.9.3)(zod@4.2.0):
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   viem@2.41.2(typescript@5.9.3)(zod@4.1.13):
 =======
   viem@2.41.2(typescript@5.9.3)(zod@3.25.76):
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  viem@2.41.2(typescript@5.9.3)(zod@4.1.13):
+=======
+  viem@2.42.1(typescript@5.9.3)(zod@4.2.1):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
+<<<<<<< HEAD
       abitype: 1.1.0(typescript@5.9.3)(zod@3.25.76)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      abitype: 1.1.0(typescript@5.9.3)(zod@4.1.13)
+=======
+      abitype: 1.1.0(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       isows: 1.0.7(ws@8.18.3)
+<<<<<<< HEAD
       ox: 0.9.6(typescript@5.9.3)(zod@3.25.76)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      ox: 0.9.6(typescript@5.9.3)(zod@4.1.13)
+=======
+      ox: 0.9.6(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       ws: 8.18.3
     optionalDependencies:
       typescript: 5.9.3
@@ -16708,6 +18428,7 @@ snapshots:
       - utf-8-validate
       - zod
 
+<<<<<<< HEAD
 ||||||| parent of a547bc4 (chore: update deps)
   viem@2.41.2(typescript@5.9.3)(zod@3.25.76):
     dependencies:
@@ -16793,6 +18514,11 @@ snapshots:
 >>>>>>> a547bc4 (chore: update deps)
   vite-node@3.2.4(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2):
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  vite-node@3.2.4(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2):
+=======
+  vite-node@3.2.4(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       cac: 6.7.14
       debug: 4.4.3
@@ -16813,11 +18539,24 @@ snapshots:
       - tsx
       - yaml
 
+<<<<<<< HEAD
   vite-plugin-devtools-json@1.0.0(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)):
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  vite-plugin-devtools-json@1.0.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)):
+=======
+  vite-plugin-devtools-json@1.0.0(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       uuid: 11.1.0
+<<<<<<< HEAD
       vite: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   vite-tsconfig-paths@5.1.4(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(typescript@5.9.3):
@@ -16825,19 +18564,37 @@ snapshots:
   vite-tsconfig-paths@5.1.4(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(typescript@5.9.3):
 =======
   vite-tsconfig-paths@4.3.1(typescript@5.9.3)(vite@5.4.21(@types/node@20.19.26)(lightningcss@1.30.2)):
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  vite-tsconfig-paths@5.1.4(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(typescript@5.9.3):
+=======
+  vite-tsconfig-paths@5.1.4(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(typescript@5.9.3):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       debug: 4.4.3
       globrex: 0.1.2
       tsconfck: 3.1.6(typescript@5.9.3)
     optionalDependencies:
+<<<<<<< HEAD
       vite: 5.4.21(@types/node@20.19.26)(lightningcss@1.30.2)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     transitivePeerDependencies:
       - supports-color
       - typescript
 
+<<<<<<< HEAD
 ||||||| parent of a547bc4 (chore: update deps)
   vite-tsconfig-paths@4.3.1(typescript@5.9.3)(vite@5.4.21(@types/node@20.19.26)(lightningcss@1.30.2)):
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  vite@7.2.7(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2):
+=======
+  vite@7.3.0(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
+<<<<<<< HEAD
       debug: 4.4.3
       globrex: 0.1.2
       tsconfck: 3.1.6(typescript@5.9.3)
@@ -16893,11 +18650,21 @@ snapshots:
   vite@7.2.7(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2):
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
     dependencies:
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      esbuild: 0.25.12
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       esbuild: 0.27.1
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
       postcss: 8.5.6
+<<<<<<< HEAD
       rollup: 4.53.4
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      rollup: 4.53.3
+=======
+      rollup: 4.53.5
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
       tinyglobby: 0.2.15
     optionalDependencies:
       '@types/node': 24.10.4
@@ -16907,9 +18674,21 @@ snapshots:
       tsx: 4.21.0
       yaml: 2.8.2
 
+<<<<<<< HEAD
   vitefu@1.1.1(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)):
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  vitefu@1.1.1(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)):
+=======
+  vitefu@1.1.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     optionalDependencies:
+<<<<<<< HEAD
       vite: rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+      vite: rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+=======
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   vitest@3.2.4(@types/debug@4.1.12)(@types/node@24.10.4)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0)(yaml@2.8.2):
     dependencies:
@@ -16980,6 +18759,7 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.0)):
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)):
@@ -17037,13 +18817,18 @@ snapshots:
 >>>>>>> a547bc4 (chore: update deps)
   wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)):
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.1))(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)):
+=======
+  wagmi@3.1.0(@tanstack/query-core@5.90.12)(@tanstack/react-query@5.90.12(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
-      '@tanstack/react-query': 5.90.12(react@19.2.1)
-      '@wagmi/connectors': 7.0.2(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13)))(typescript@5.9.3)(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
-      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.1)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.1))(viem@2.41.2(typescript@5.9.3)(zod@4.1.13))
-      react: 19.2.1
-      use-sync-external-store: 1.4.0(react@19.2.1)
-      viem: 2.41.2(typescript@5.9.3)(zod@4.1.13)
+      '@tanstack/react-query': 5.90.12(react@19.2.3)
+      '@wagmi/connectors': 7.0.2(@wagmi/core@3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1)))(typescript@5.9.3)(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))
+      '@wagmi/core': 3.0.0(@tanstack/query-core@5.90.12)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@2.42.1(typescript@5.9.3)(zod@4.2.1))
+      react: 19.2.3
+      use-sync-external-store: 1.4.0(react@19.2.3)
+      viem: 2.42.1(typescript@5.9.3)(zod@4.2.1)
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:
@@ -17091,6 +18876,18 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  workerd@1.20251202.0:
+    optionalDependencies:
+      '@cloudflare/workerd-darwin-64': 1.20251202.0
+      '@cloudflare/workerd-darwin-arm64': 1.20251202.0
+      '@cloudflare/workerd-linux-64': 1.20251202.0
+      '@cloudflare/workerd-linux-arm64': 1.20251202.0
+      '@cloudflare/workerd-windows-64': 1.20251202.0
+
+=======
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
   workerd@1.20251210.0:
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   workerd@1.20251202.0:
@@ -17111,6 +18908,7 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20251210.0
       '@cloudflare/workerd-windows-64': 1.20251210.0
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   wrangler@4.54.0(@cloudflare/workers-types@4.20251213.0):
@@ -17167,23 +18965,28 @@ snapshots:
       - utf-8-validate
 
   wrangler@4.54.0(@cloudflare/workers-types@4.20251209.0):
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  wrangler@4.53.0(@cloudflare/workers-types@4.20251210.0):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.4.1
-      '@cloudflare/unenv-preset': 2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251210.0)
+      '@cloudflare/unenv-preset': 2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251202.0)
       blake3-wasm: 2.1.5
       esbuild: 0.27.0
-      miniflare: 4.20251210.0
+      miniflare: 4.20251202.1
       path-to-regexp: 6.3.0
       unenv: 2.0.0-rc.24
-      workerd: 1.20251210.0
+      workerd: 1.20251202.0
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20251209.0
+      '@cloudflare/workers-types': 4.20251210.0
       fsevents: 2.3.3
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  wrangler@4.54.0(@cloudflare/workers-types@4.20251210.0):
+  wrangler@4.54.0(@cloudflare/workers-types@4.20251209.0):
+=======
+  wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0):
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
       '@cloudflare/kv-asset-handler': 0.4.1
       '@cloudflare/unenv-preset': 2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251210.0)
@@ -17194,7 +18997,7 @@ snapshots:
       unenv: 2.0.0-rc.24
       workerd: 1.20251210.0
     optionalDependencies:
-      '@cloudflare/workers-types': 4.20251210.0
+      '@cloudflare/workers-types': 4.20251216.0
       fsevents: 2.3.3
     transitivePeerDependencies:
       - bufferutil
@@ -17271,7 +19074,13 @@ snapshots:
 
   zod@3.25.76: {}
 
+<<<<<<< HEAD
   zod@4.2.0: {}
+||||||| parent of 10c17c0 (feat: working test script & `/version` route)
+  zod@4.1.13: {}
+=======
+  zod@4.2.1: {}
+>>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
   zustand@5.0.0(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.4.0(react@19.2.3)):
     optionalDependencies:
@@ -17282,7 +19091,7 @@ snapshots:
   zustand@5.0.0(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3)):
     optionalDependencies:
       '@types/react': 19.2.7
-      react: 19.2.1
-      use-sync-external-store: 1.6.0(react@19.2.1)
+      react: 19.2.3
+      use-sync-external-store: 1.6.0(react@19.2.3)
 
   zwitch@2.0.4: {}

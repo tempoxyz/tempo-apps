@@ -10,6 +10,7 @@ catalog:
   '@cloudflare/workers-types': ^4.20251209.0
   '@hono/zod-validator': ^0.7.5
   '@iconify/json': ^2.2.416
+  '@scalar/api-reference': ^1.40.3
   '@sentry/browser': ^10.29.0
   '@sentry/cloudflare': ^10.29.0
   '@sentry/tanstackstart-react': ^10.29.0

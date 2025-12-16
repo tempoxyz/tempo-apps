@@ -22,5 +22,5 @@ _docs
 *.bak
 _sourcify
 _artifacts
-_tmp_verify
 _tmp
+_verify

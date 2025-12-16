@@ -9,6 +9,7 @@ import { timeout } from 'hono/timeout'
 
 import { sourcifyChains } from '#chains.ts'
 import { VerificationContainer } from '#container.ts'
+import packageJSON from '#package.json' with { type: 'json' }
 import { docsRoute } from '#route.docs.tsx'
 import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
 import { verifyRoute } from '#route.verify.ts'
@@ -30,7 +31,7 @@ app.use('*', requestId({ headerName: 'X-Tempo-Request-Id' }))
 app.use(secureHeaders())
 app.use(csrf())
 // TODO: update before merging to main
-app.use('*', timeout(20_000)) // 20 seconds
+app.use('*', timeout(12_000)) // 12 seconds
 app.use(prettyJSON())
 
 app.route('/docs', docsRoute)
@@ -41,7 +42,14 @@ app.route('/v2/contracts', lookupAllChainContractsRoute)
 app
 	.get('/health', (context) => context.text('ok'))
 	.get('/', (context) => context.redirect('/docs'))
+	// TODO: match sourcify `https://sourcify.dev/server/chains` response schema
 	.get('/chains', (context) => context.json(sourcifyChains))
+	.get('/version', async (context) =>
+		context.json({
+			version: packageJSON.version,
+			gitCommitHash: __BUILD_VERSION__,
+		}),
+	)
 	.get('/ping-container', async (context) =>
 		getContainer(context.env.VERIFICATION_CONTAINER, 'singleton')
 			.fetch(new Request('http://container/health'))
