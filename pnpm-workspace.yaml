@@ -57,7 +57,7 @@ catalog:
   vite-tsconfig-paths: ^5.1.4
   vitest: 3.2.4
   wagmi: ^3.1.0
-  wrangler: ^4.54.0
+  wrangler: ^4.55.0
   zod: ^4.1.13
 
 catalogMode: strict

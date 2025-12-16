@@ -16,18 +16,8 @@
 			"description": "Production"
 		},
 		{
-			"url": "https://o.bun-alewife.ts.net",
-			"description": "Localhost Funneled"
-		},
-		{
-			"url": "http://localhost:{port}",
-			"description": "local",
-			"variables": {
-				"port": {
-					"default": "22222",
-					"description": "localhost port number"
-				}
-			}
+			"url": "https://contracts.porto.workers.dev",
+			"description": "Service base workers.dev domain (CACHE DISABLED!)"
 		},
 		{
 			"url": "https://sourcify.dev/server",
@@ -40,6 +30,20 @@
 				"CUSTOM_URL": {
 					"default": "https://sourcify.dev/server",
 					"description": "The URL of the custom Sourcify-compatible API base URL"
+				}
+			}
+		},
+		{
+			"url": "https://o.bun-alewife.ts.net",
+			"description": "Localhost Funneled"
+		},
+		{
+			"url": "http://localhost:{port}",
+			"description": "local",
+			"variables": {
+				"port": {
+					"default": "22222",
+					"description": "localhost port number"
 				}
 			}
 		}

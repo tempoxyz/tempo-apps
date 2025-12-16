@@ -9,6 +9,7 @@ import { timeout } from 'hono/timeout'
 
 import { sourcifyChains } from '#chains.ts'
 import { VerificationContainer } from '#container.ts'
+import OpenApiSpec from '#openapi.json' with { type: 'json' }
 import packageJSON from '#package.json' with { type: 'json' }
 import { docsRoute } from '#route.docs.tsx'
 import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
@@ -50,6 +51,7 @@ app
 			gitCommitHash: __BUILD_VERSION__,
 		}),
 	)
+	.get('/openapi.json', (context) => context.json(OpenApiSpec))
 	.get('/ping-container', async (context) =>
 		getContainer(context.env.VERIFICATION_CONTAINER, 'singleton')
 			.fetch(new Request('http://container/health'))

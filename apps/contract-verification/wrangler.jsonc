@@ -17,10 +17,10 @@
 	],
 	"containers": [
 		{
-			"max_instances": 5,
-			"name": "VerificationContainer",
-			"class_name": "VerificationContainer",
-			"image": "./Dockerfile"
+			"max_instances": 10,
+			"image": "./Dockerfile",
+			"name": "verification-container",
+			"class_name": "VerificationContainer"
 		}
 	],
 	"durable_objects": {

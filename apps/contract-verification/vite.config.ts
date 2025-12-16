@@ -33,5 +33,12 @@ export default defineConfig((config) => {
 			),
 			__BUILD_VERSION__: JSON.stringify(commitSha ?? Date.now().toString()),
 		},
+		publicDir: './openapi.json',
+		build: {
+			copyPublicDir: true,
+			rolldownOptions: {
+				output: { minify: true },
+			},
+		},
 	}
 })

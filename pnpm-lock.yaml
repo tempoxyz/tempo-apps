@@ -14,7 +14,7 @@ catalogs:
       version: 1.0.4
     '@cloudflare/vite-plugin':
       specifier: ^1.17.0
-      version: 1.17.1
+      version: 1.18.0
     '@cloudflare/vitest-pool-workers':
       specifier: ^0.10.14
       version: 0.10.15
@@ -175,6 +175,7 @@ catalogs:
       version: 3.1.0
     wrangler:
 <<<<<<< HEAD
+<<<<<<< HEAD
       specifier: ^4.53.0
 ||||||| parent of a547bc4 (chore: update deps)
       specifier: ^4.53.0
@@ -183,6 +184,13 @@ catalogs:
       specifier: ^4.54.0
 >>>>>>> a547bc4 (chore: update deps)
       version: 4.54.0
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+      specifier: ^4.54.0
+      version: 4.54.0
+=======
+      specifier: ^4.55.0
+      version: 4.55.0
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
     zod:
       specifier: ^4.1.13
       version: 4.2.1
@@ -247,6 +255,7 @@ importers:
 =======
         specifier: ^0.45.1
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 0.45.1(@cloudflare/workers-types@4.20251209.0)(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.8)(pg@8.16.3)
 >>>>>>> a547bc4 (chore: update deps)
 ||||||| parent of 10c17c0 (feat: working test script & `/version` route)
@@ -254,6 +263,11 @@ importers:
 =======
         version: 0.45.1(@cloudflare/workers-types@4.20251216.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.9)(mysql2@3.15.3)(pg@8.16.3)
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+        version: 0.45.1(@cloudflare/workers-types@4.20251216.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.9)(mysql2@3.15.3)(pg@8.16.3)
+=======
+        version: 0.45.1(@cloudflare/workers-types@4.20251216.0)(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(bun-types@1.3.4)(kysely@0.28.9)
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
       hono:
         specifier: 'catalog:'
 <<<<<<< HEAD
@@ -281,10 +295,13 @@ importers:
         version: 2.3.9
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
-        version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0))
+        version: 1.18.0(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251213.0)(wrangler@4.55.0(@cloudflare/workers-types@4.20251216.0))
       '@cloudflare/workers-types':
         specifier: 'catalog:'
         version: 4.20251216.0
+      '@libsql/client':
+        specifier: ^0.15.15
+        version: 0.15.15
       '@scalar/api-reference':
         specifier: 'catalog:'
         version: 1.40.5(idb-keyval@6.2.2)(tailwindcss@4.1.18)(typescript@5.9.3)
@@ -308,9 +325,6 @@ importers:
         version: 0.31.8
 =======
         version: 24.10.4
-      better-sqlite3:
-        specifier: ^12.5.0
-        version: 12.5.0
       dbmate:
         specifier: ^2.28.0
         version: 2.28.0
@@ -326,7 +340,7 @@ importers:
         version: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       wrangler:
         specifier: 'catalog:'
-        version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+        version: 4.55.0(@cloudflare/workers-types@4.20251216.0)
 
   apps/contract-verification/_verify/lib/forge-std: {}
 
@@ -478,6 +492,7 @@ importers:
         specifier: 'catalog:'
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251213.0))
 ||||||| parent of a547bc4 (chore: update deps)
         version: 1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251202.0)(wrangler@4.53.0(@cloudflare/workers-types@4.20251210.0))
@@ -489,6 +504,11 @@ importers:
 =======
         version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0))
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+        version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0))
+=======
+        version: 1.18.0(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.55.0(@cloudflare/workers-types@4.20251216.0))
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
       '@cloudflare/vitest-pool-workers':
         specifier: 'catalog:'
 <<<<<<< HEAD
@@ -598,6 +618,7 @@ importers:
         specifier: 'catalog:'
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 4.54.0(@cloudflare/workers-types@4.20251213.0)
 ||||||| parent of a547bc4 (chore: update deps)
         version: 4.53.0(@cloudflare/workers-types@4.20251210.0)
@@ -609,6 +630,11 @@ importers:
 =======
         version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+        version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+=======
+        version: 4.55.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
 
   apps/fee-payer:
     dependencies:
@@ -686,6 +712,7 @@ importers:
         specifier: 'catalog:'
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 4.54.0(@cloudflare/workers-types@4.20251213.0)
 ||||||| parent of a547bc4 (chore: update deps)
         version: 4.53.0(@cloudflare/workers-types@4.20251210.0)
@@ -697,6 +724,11 @@ importers:
 =======
         version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+        version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+=======
+        version: 4.55.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
 
   apps/fee-payer/playground:
     dependencies:
@@ -827,6 +859,7 @@ importers:
         specifier: 'catalog:'
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 4.54.0(@cloudflare/workers-types@4.20251213.0)
 ||||||| parent of a547bc4 (chore: update deps)
         version: 4.53.0(@cloudflare/workers-types@4.20251210.0)
@@ -838,6 +871,11 @@ importers:
 =======
         version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+        version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+=======
+        version: 4.55.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
 
   apps/tokenlist:
     dependencies:
@@ -873,6 +911,7 @@ importers:
         specifier: 'catalog:'
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251213.0))
 ||||||| parent of a547bc4 (chore: update deps)
         version: 1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251202.0)(wrangler@4.53.0(@cloudflare/workers-types@4.20251210.0))
@@ -884,6 +923,11 @@ importers:
 =======
         version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0))
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+        version: 1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0))
+=======
+        version: 1.18.0(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251213.0)(wrangler@4.55.0(@cloudflare/workers-types@4.20251216.0))
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
       '@cloudflare/workers-types':
         specifier: 'catalog:'
 <<<<<<< HEAD
@@ -918,6 +962,7 @@ importers:
         specifier: 'catalog:'
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         version: 4.54.0(@cloudflare/workers-types@4.20251213.0)
 ||||||| parent of a547bc4 (chore: update deps)
         version: 4.53.0(@cloudflare/workers-types@4.20251210.0)
@@ -929,6 +974,11 @@ importers:
 =======
         version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+        version: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+=======
+        version: 4.55.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
 
 packages:
 
@@ -1199,11 +1249,11 @@ packages:
       workerd:
         optional: true
 
-  '@cloudflare/vite-plugin@1.17.1':
-    resolution: {integrity: sha512-QHxTDhvJakWCs4mu7Q6fB02CPT5MvZkyxufwX7dCIDqLfav5ohIQ7+wdTU7AYwPJ7tF8/a82dBpwnt7+wHooXg==}
+  '@cloudflare/vite-plugin@1.18.0':
+    resolution: {integrity: sha512-qWDKPYI5qdcOlFSeNr3ePhy5vzEPu+bLGRpnvQhe6NR4q6Vq2cs/1+0si0EtPkbLBG/3xSmkNfLFXv19DBAJuQ==}
     peerDependencies:
       vite: ^6.1.0 || ^7.0.0
-      wrangler: ^4.54.0
+      wrangler: ^4.55.0
 
   '@cloudflare/vitest-pool-workers@0.10.15':
     resolution: {integrity: sha512-eISef+JvqC5xr6WBv2+kc6WEjxuKSrZ1MdMuIwdb4vsh8olqw7WHW5pLBL/UzAhbLVlXaAL1uH9UyxIlFkJe7w==}
@@ -1219,6 +1269,7 @@ packages:
     cpu: [x64]
     os: [darwin]
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   '@cloudflare/workerd-darwin-arm64@1.20251210.0':
     resolution: {integrity: sha512-Mg8iYIZQFnbevq/ls9eW/eneWTk/EE13Pej1MwfkY5et0jVpdHnvOLywy/o+QtMJFef1AjsqXGULwAneYyBfHw==}
@@ -1265,12 +1316,22 @@ packages:
 
 =======
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  '@cloudflare/workerd-darwin-64@1.20251213.0':
+    resolution: {integrity: sha512-29mPlP7xgyik85EHotrakuQur5WfuAR4tRAntRFwLEFnB88RB7br6Me9wb15itu/1l9nMyimZWhBMAfnEs5PQw==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [darwin]
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   '@cloudflare/workerd-darwin-arm64@1.20251210.0':
     resolution: {integrity: sha512-Mg8iYIZQFnbevq/ls9eW/eneWTk/EE13Pej1MwfkY5et0jVpdHnvOLywy/o+QtMJFef1AjsqXGULwAneYyBfHw==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [darwin]
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   '@cloudflare/workerd-linux-64@1.20251202.0':
     resolution: {integrity: sha512-HYXinF5RBH7oXbsFUMmwKCj+WltpYbf5mRKUBG5v3EuPhUjSIFB84U+58pDyfBJjcynHdy3EtvTWcvh/+lcgow==}
@@ -1295,12 +1356,22 @@ packages:
 
 =======
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  '@cloudflare/workerd-darwin-arm64@1.20251213.0':
+    resolution: {integrity: sha512-gn4nIg7hbGyHxyNdVqDmSvgMfgytFr4Z/OXGp2ZorP1+OKeGLvfQ70LEEYY/kZwSsbOqEYDXyU6LzPj4n86NZQ==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [darwin]
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   '@cloudflare/workerd-linux-64@1.20251210.0':
     resolution: {integrity: sha512-kjC2fCZhZ2Gkm1biwk2qByAYpGguK5Gf5ic8owzSCUw0FOUfQxTZUT9Lp3gApxsfTLbbnLBrX/xzWjywH9QR4g==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [linux]
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   '@cloudflare/workerd-linux-arm64@1.20251202.0':
     resolution: {integrity: sha512-++L02Jdoxz7hEA9qDaQjbVU1RzQS+S+eqIi22DkPe2Tgiq2M3UfNpeu+75k5L9DGRIkZPYvwMBMbcmKvQqdIIg==}
@@ -1325,12 +1396,22 @@ packages:
 
 =======
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  '@cloudflare/workerd-linux-64@1.20251213.0':
+    resolution: {integrity: sha512-zMO9tV4aGDZnRfsWg5MC1mbXaRdutDcMeqH5XMzGHsuKO66tbBipV38gX76PLqxKH+UfbE3Uo3jk3iqIuPEF3g==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [linux]
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   '@cloudflare/workerd-linux-arm64@1.20251210.0':
     resolution: {integrity: sha512-2IB37nXi7PZVQLa1OCuO7/6pNxqisRSO8DmCQ5x/3sezI5op1vwOxAcb1osAnuVsVN9bbvpw70HJvhKruFJTuA==}
     engines: {node: '>=16'}
     cpu: [arm64]
     os: [linux]
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   '@cloudflare/workerd-windows-64@1.20251202.0':
     resolution: {integrity: sha512-gzeU6eDydTi7ib+Q9DD/c0hpXtqPucnHk2tfGU03mljPObYxzMkkPGgB5qxpksFvub3y4K0ChjqYxGJB4F+j3g==}
@@ -1358,12 +1439,22 @@ packages:
 
 =======
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  '@cloudflare/workerd-linux-arm64@1.20251213.0':
+    resolution: {integrity: sha512-8pQk1dCzdyZdJXehIhxkFMTc5lTLxzqmxskCGlpbem/pWIPTAEjt25OFCxq5Z3iU/x/kI8tcQdYRYx77KS32mQ==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [linux]
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   '@cloudflare/workerd-windows-64@1.20251210.0':
     resolution: {integrity: sha512-Uaz6/9XE+D6E7pCY4OvkCuJHu7HcSDzeGcCGY1HLhojXhHd7yL52c3yfiyJdS8hPatiAa0nn5qSI/42+aTdDSw==}
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> a547bc4 (chore: update deps)
   '@cloudflare/workers-types@4.20251209.0':
@@ -1379,6 +1470,15 @@ packages:
   '@cloudflare/workers-types@4.20251210.0':
     resolution: {integrity: sha512-EGf2lWqeVO48LjDYFl1peSbi/AvQFDJ1vj+etwRAGqLjGWgq+R1fwFfLCjXr7tMsX8aHykE17XpCAVuroKpZoQ==}
 =======
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  '@cloudflare/workerd-windows-64@1.20251213.0':
+    resolution: {integrity: sha512-QBwfyZXTzI2JHLS7ZEuVVMC81PAQyNxPdcv9Dxd8wvV4QYF7B97h9pUtaBnqUdlBwL6e3O8QniYkOl8c7bEFJw==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [win32]
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   '@cloudflare/workers-types@4.20251216.0':
     resolution: {integrity: sha512-qRicJsFEPDUjfL83gQi9aMeBRLsoox4O/VQlY2DrXGUOjI2KS/BZKsv0oqJWdT3EX2SKEGZN8Ml/MHrurGBAUA==}
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
@@ -3276,11 +3376,75 @@ packages:
   '@lezer/yaml@1.0.3':
     resolution: {integrity: sha512-GuBLekbw9jDBDhGur82nuwkxKQ+a3W5H0GfaAthDXcAu+XdpS43VlnxA9E9hllkpSP5ellRDKjLLj7Lu9Wr6xA==}
 
+  '@libsql/client@0.15.15':
+    resolution: {integrity: sha512-twC0hQxPNHPKfeOv3sNT6u2pturQjLcI+CnpTM0SjRpocEGgfiZ7DWKXLNnsothjyJmDqEsBQJ5ztq9Wlu470w==}
+
+  '@libsql/core@0.15.15':
+    resolution: {integrity: sha512-C88Z6UKl+OyuKKPwz224riz02ih/zHYI3Ho/LAcVOgjsunIRZoBw7fjRfaH9oPMmSNeQfhGklSG2il1URoOIsA==}
+
+  '@libsql/darwin-arm64@0.5.22':
+    resolution: {integrity: sha512-4B8ZlX3nIDPndfct7GNe0nI3Yw6ibocEicWdC4fvQbSs/jdq/RC2oCsoJxJ4NzXkvktX70C1J4FcmmoBy069UA==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@libsql/darwin-x64@0.5.22':
+    resolution: {integrity: sha512-ny2HYWt6lFSIdNFzUFIJ04uiW6finXfMNJ7wypkAD8Pqdm6nAByO+Fdqu8t7sD0sqJGeUCiOg480icjyQ2/8VA==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@libsql/hrana-client@0.7.0':
+    resolution: {integrity: sha512-OF8fFQSkbL7vJY9rfuegK1R7sPgQ6kFMkDamiEccNUvieQ+3urzfDFI616oPl8V7T9zRmnTkSjMOImYCAVRVuw==}
+
+  '@libsql/isomorphic-fetch@0.3.1':
+    resolution: {integrity: sha512-6kK3SUK5Uu56zPq/Las620n5aS9xJq+jMBcNSOmjhNf/MUvdyji4vrMTqD7ptY7/4/CAVEAYDeotUz60LNQHtw==}
+    engines: {node: '>=18.0.0'}
+
+  '@libsql/isomorphic-ws@0.1.5':
+    resolution: {integrity: sha512-DtLWIH29onUYR00i0GlQ3UdcTRC6EP4u9w/h9LxpUZJWRMARk6dQwZ6Jkd+QdwVpuAOrdxt18v0K2uIYR3fwFg==}
+
+  '@libsql/linux-arm-gnueabihf@0.5.22':
+    resolution: {integrity: sha512-3Uo3SoDPJe/zBnyZKosziRGtszXaEtv57raWrZIahtQDsjxBVjuzYQinCm9LRCJCUT5t2r5Z5nLDPJi2CwZVoA==}
+    cpu: [arm]
+    os: [linux]
+
+  '@libsql/linux-arm-musleabihf@0.5.22':
+    resolution: {integrity: sha512-LCsXh07jvSojTNJptT9CowOzwITznD+YFGGW+1XxUr7fS+7/ydUrpDfsMX7UqTqjm7xG17eq86VkWJgHJfvpNg==}
+    cpu: [arm]
+    os: [linux]
+
+  '@libsql/linux-arm64-gnu@0.5.22':
+    resolution: {integrity: sha512-KSdnOMy88c9mpOFKUEzPskSaF3VLflfSUCBwas/pn1/sV3pEhtMF6H8VUCd2rsedwoukeeCSEONqX7LLnQwRMA==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@libsql/linux-arm64-musl@0.5.22':
+    resolution: {integrity: sha512-mCHSMAsDTLK5YH//lcV3eFEgiR23Ym0U9oEvgZA0667gqRZg/2px+7LshDvErEKv2XZ8ixzw3p1IrBzLQHGSsw==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@libsql/linux-x64-gnu@0.5.22':
+    resolution: {integrity: sha512-kNBHaIkSg78Y4BqAdgjcR2mBilZXs4HYkAmi58J+4GRwDQZh5fIUWbnQvB9f95DkWUIGVeenqLRFY2pcTmlsew==}
+    cpu: [x64]
+    os: [linux]
+
+  '@libsql/linux-x64-musl@0.5.22':
+    resolution: {integrity: sha512-UZ4Xdxm4pu3pQXjvfJiyCzZop/9j/eA2JjmhMaAhe3EVLH2g11Fy4fwyUp9sT1QJYR1kpc2JLuybPM0kuXv/Tg==}
+    cpu: [x64]
+    os: [linux]
+
+  '@libsql/win32-x64-msvc@0.5.22':
+    resolution: {integrity: sha512-Fj0j8RnBpo43tVZUVoNK6BV/9AtDUM5S7DF3LB4qTYg1LMSZqi3yeCneUTLJD6XomQJlZzbI4mst89yspVSAnA==}
+    cpu: [x64]
+    os: [win32]
+
   '@marijn/find-cluster-break@1.0.2':
     resolution: {integrity: sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==}
 
   '@napi-rs/wasm-runtime@1.1.0':
     resolution: {integrity: sha512-Fq6DJW+Bb5jaWE69/qOE0D1TUN9+6uWhCeZpdnSBk14pjLcCWR7Q8n49PTSPHazM37JqrsdpEthXy2xn6jWWiA==}
+
+  '@neon-rs/load@0.0.4':
+    resolution: {integrity: sha512-kTPhdZyTQxB+2wpiRcFWrDcejc4JI6tkPuS7UZCG4l6Zvc5kU/gGQ/ozvHTh1XR5tS+UlfAfGuPajjzQjCiHCw==}
 
   '@noble/ciphers@1.3.0':
     resolution: {integrity: sha512-2I0gnIVPtfnMw9ee9h1dJG7tp81+8Ob3OJb3Mv37rx5L40/b0i7djjCVvGOVqc9AEIQyvyu1i6ypKdFw8R8gQw==}
@@ -4827,6 +4991,9 @@ packages:
   '@types/web-bluetooth@0.0.21':
     resolution: {integrity: sha512-oIQLCGWtcFZy2JW77j9k8nHzAOpqMHLQejDA48XXMWH6tjCQHz5RCFz1bzsmROyL6PUm+LLnUiI4BCn221inxA==}
 
+  '@types/ws@8.18.1':
+    resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
+
   '@types/yauzl@2.10.3':
     resolution: {integrity: sha512-oJoftv0LSuaDZE3Le4DbKX+KS9G36NzOeSap90UIK0yMA/NhKJhqlSGtNDORNRaIbQfzjXDrQa0ytJ6mNRGz/Q==}
 
@@ -5377,10 +5544,6 @@ packages:
     resolution: {integrity: sha512-6t10qk83GOG8p0vKmaCr8eiilZwO171AvbROMtvvNiwrTly62t+7XkA8RdIIVbpMhCASAsxgAzdRSwh6nw/5Dg==}
     engines: {node: '>=4'}
 
-  aws-ssl-profiles@1.1.2:
-    resolution: {integrity: sha512-NZKeq9AfyQvEeNlN0zSYAaWrmBffJh3IELMZfRpJVWgrpEbtEpnjvzqBPf+mxoI287JohRDoa+/nsfqqiZmF6g==}
-    engines: {node: '>= 6.0.0'}
-
   b4a@1.7.3:
     resolution: {integrity: sha512-5Q2mfq2WfGuFp3uS//0s6baOJLMoVduPYVeNmDYxu5OUA1/cBfvr2RIS7vi62LdNj/urk1hfmj867I3qt6uZ7Q==}
     peerDependencies:
@@ -5448,6 +5611,7 @@ packages:
     engines: {node: '>=10.0.0'}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of a547bc4 (chore: update deps)
   better-sqlite3@12.5.0:
     resolution: {integrity: sha512-WwCZ/5Diz7rsF29o27o0Gcc1Du+l7Zsv7SYtVPG0X3G/uUI1LqdxrQI7c9Hs2FWpqXXERjW9hp6g3/tH7DlVKg==}
@@ -5463,10 +5627,18 @@ packages:
     engines: {node: 20.x || 22.x || 23.x || 24.x || 25.x}
 
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  better-sqlite3@12.5.0:
+    resolution: {integrity: sha512-WwCZ/5Diz7rsF29o27o0Gcc1Du+l7Zsv7SYtVPG0X3G/uUI1LqdxrQI7c9Hs2FWpqXXERjW9hp6g3/tH7DlVKg==}
+    engines: {node: 20.x || 22.x || 23.x || 24.x || 25.x}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   binary-extensions@2.3.0:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   bindings@1.5.0:
@@ -5487,6 +5659,12 @@ packages:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  bindings@1.5.0:
+    resolution: {integrity: sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   birpc@0.2.14:
     resolution: {integrity: sha512-37FHE8rqsYM5JEKCnXFyHpBCzvgHEExwVVTq+nUmloInU7l8ezD1TpOhKpS8oe1DTYFqEK27rFZVKG43oTqXRA==}
 
@@ -5736,6 +5914,10 @@ packages:
       typescript:
         optional: true
 
+  data-uri-to-buffer@4.0.1:
+    resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
+    engines: {node: '>= 12'}
+
   data-uri-to-buffer@6.0.2:
     resolution: {integrity: sha512-7hvf7/GW8e86rW0ptuwS3OcBGDjIi6SZva7hCyWC0yYry2cOPmLIjXAUHI6DK2HsnwJd9ifmt57i8eV2n4YNpw==}
     engines: {node: '>= 14'}
@@ -5791,6 +5973,7 @@ packages:
     engines: {node: '>=6'}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   deep-extend@0.6.0:
     resolution: {integrity: sha512-LOHxIOaPYdHlJRtCQfDIVZtfw/ufM8+rVj649RIHzcm/vGwQRXFt6OPqIFWsm2XEMrNIEtWR64sY1LEKD2vAOA==}
@@ -5812,6 +5995,13 @@ packages:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  deep-extend@0.6.0:
+    resolution: {integrity: sha512-LOHxIOaPYdHlJRtCQfDIVZtfw/ufM8+rVj649RIHzcm/vGwQRXFt6OPqIFWsm2XEMrNIEtWR64sY1LEKD2vAOA==}
+    engines: {node: '>=4.0.0'}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   defu@6.1.4:
     resolution: {integrity: sha512-mEQCMmwJu317oSz8CwdIOdwf3xMif1ttiM8LTufzc3g6kR+9Pe236twL8j3IYT1F7GfRgGcW6MWxzZjLIkuHIg==}
 
@@ -5819,13 +6009,13 @@ packages:
     resolution: {integrity: sha512-TllpMR/t0M5sqCXfj85i4XaAzxmS5tVA16dqvdkMwGmzI+dXLXnw3J+3Vdv7VKw+ThlTMboK6i9rnZ6Nntj5CQ==}
     engines: {node: '>= 14'}
 
-  denque@2.1.0:
-    resolution: {integrity: sha512-HVQE3AAb/pxF8fQAoiqpvg9i3evqug3hoiwakOyZAwJm+6vZehbkYXZ0l4JxS+I3QxM97v5aaRNhj8v5oBhekw==}
-    engines: {node: '>=0.10'}
-
   dequal@2.0.3:
     resolution: {integrity: sha512-0je+qPKHEMohvfRTCEo3CrPG6cAzAYgmzKyxRiYSSDkS6eGJdyVJm7WaYA5ECaAD9wLB2T4EEeymA5aFVcYXCA==}
     engines: {node: '>=6'}
+
+  detect-libc@2.0.2:
+    resolution: {integrity: sha512-UX6sGumvvqSaXgdKGUsgZWqcUyIXZ/vZTrlRT/iobiKhGL0zL4d3osHj3uqllWJK+i+sixDS/3COVEOFbupFyw==}
+    engines: {node: '>=8'}
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -6668,9 +6858,14 @@ packages:
       picomatch:
         optional: true
 
+  fetch-blob@3.2.0:
+    resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
+    engines: {node: ^12.20 || >= 14.13}
+
   fetchdts@0.1.7:
     resolution: {integrity: sha512-YoZjBdafyLIop9lSxXVI33oLD5kN31q4Td+CasofLLYeLXRFeOsuOw0Uo+XNRi9PZlbfdlN2GmRtm4tCEQ9/KA==}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
@@ -6693,6 +6888,12 @@ packages:
     resolution: {integrity: sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==}
 
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  file-uri-to-path@1.0.0:
+    resolution: {integrity: sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
     engines: {node: '>=8'}
@@ -6735,13 +6936,24 @@ packages:
     resolution: {integrity: sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==}
     engines: {node: '>=14'}
 
+  formdata-polyfill@4.0.10:
+    resolution: {integrity: sha512-buewHzMvYL29jdeQTVILecSaZKnt/RJWjoZCF5OW60Z67/GmSLBkOFM7qh1PI3zFNtJbaZL5eQu1vLfazOwj4g==}
+    engines: {node: '>=12.20.0'}
+
   forwarded-parse@2.1.2:
     resolution: {integrity: sha512-alTFZZQDKMporBH77856pXgzhEzaUVmLCDk+egLgIgHst3Tpndzz8MnKe+GzRJRfvVdn69HhpW7cmXzvtLvJAw==}
 
+<<<<<<< HEAD
   fs-constants@1.0.0:
     resolution: {integrity: sha512-y6OAwoSIf7FyjMIv94u+b5rdheZEjzR63GTyZJm5qh4Bi+2YgwLCcI/fPFZkL5PSixOt6ZNKm+w+Hfp/Bciwow==}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  fs-constants@1.0.0:
+    resolution: {integrity: sha512-y6OAwoSIf7FyjMIv94u+b5rdheZEjzR63GTyZJm5qh4Bi+2YgwLCcI/fPFZkL5PSixOt6ZNKm+w+Hfp/Bciwow==}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -6750,9 +6962,6 @@ packages:
   fuse.js@7.1.0:
     resolution: {integrity: sha512-trLf4SzuuUxfusZADLINj+dE8clK1frKdmqiJNb1Es75fmI5oY6X2mxLVUciLLjxqw/xr72Dhy+lER6dGd02FQ==}
     engines: {node: '>=10'}
-
-  generate-function@2.3.1:
-    resolution: {integrity: sha512-eeB5GfMNeevm/GRYq20ShmsaGcmI81kIX2K9XQx5miC8KdHaC6Jm0qQ8ZNeGOi7wYB8OsdxKs+Y2oVuTFuVwKQ==}
 
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
@@ -6912,10 +7121,6 @@ packages:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
     engines: {node: '>=0.10.0'}
 
-  iconv-lite@0.7.1:
-    resolution: {integrity: sha512-2Tth85cXwGFHfvRgZWszZSvdo+0Xsqmw8k8ZwxScfcBneNUraK+dxRxRm24nszx80Y0TVio8kKLt5sLE7ZCLlw==}
-    engines: {node: '>=0.10.0'}
-
   idb-keyval@6.2.2:
     resolution: {integrity: sha512-yjD9nARJ/jb1g+CvD0tlhUHOrJ9Sy0P8T9MF3YaLlHnSRpwPfpTX0XIvpmw3gAJUmEu3FiICLBDPXVwyEvrleg==}
 
@@ -6965,6 +7170,7 @@ packages:
     resolution: {integrity: sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==}
 =======
 
+<<<<<<< HEAD
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
 
@@ -6972,6 +7178,15 @@ packages:
     resolution: {integrity: sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  inherits@2.0.4:
+    resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
+
+  ini@1.3.8:
+    resolution: {integrity: sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   ip-address@10.1.0:
     resolution: {integrity: sha512-XXADHxXmvT9+CRxhXg56LJovE+bmWnEWB78LB83VZTprKTmaC5QfruXocxzTZ2Kl0DNwKuBdlIhjL8LeY8Sf8Q==}
     engines: {node: '>= 12'}
@@ -7013,9 +7228,6 @@ packages:
   is-plain-obj@4.1.0:
     resolution: {integrity: sha512-+Pgi+vMuUNkJyExiMBt5IlFoMyKnr5zhJ4Uspz58WOhBF5QoIZkFyNHIbBAtHwzVAgk5RtndVNsDRN61/mmDqg==}
     engines: {node: '>=12'}
-
-  is-property@1.0.2:
-    resolution: {integrity: sha512-Ks/IoX00TtClbGQr4TWXemAnktAQvYB7HzcCxDGqEZU6oCmb2INHuOoKxbtR+HFkmYWBKv/dOZtGRiAjDhj92g==}
 
   is-regexp@3.1.0:
     resolution: {integrity: sha512-rbku49cWloU5bSMI+zaRaXdQHXnthP6DZ/vLnfdSKyL4zUzuWnomtOEiZZOd+ioQ+avFo/qau3KPTc7Fjy1uPA==}
@@ -7154,6 +7366,7 @@ packages:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   lie@3.3.0:
     resolution: {integrity: sha512-UaiMJzeWRlEujzAuw5LokY1L5ecNQYZKfmyZ9L7wDHb/p5etKaxXhohBcrw0EYby+G/NA52vRSN4N39dxHAIwQ==}
@@ -7177,6 +7390,14 @@ packages:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  libsql@0.5.22:
+    resolution: {integrity: sha512-NscWthMQt7fpU8lqd7LXMvT9pi+KhhmTHAJWUB/Lj6MWa0MKFv0F2V4C6WKKpjCVZl0VwcDz4nOI3CyaT1DDiA==}
+    cpu: [x64, arm64, wasm32, arm]
+    os: [darwin, linux, win32]
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   lightningcss-android-arm64@1.30.2:
     resolution: {integrity: sha512-BH9sEdOCahSgmkVhBLeU7Hc9DWeZ1Eb6wNS6Da8igvUwAe0sqROHddIlvU06q3WyXVEOYDZ6ykBZQnjTbmo4+A==}
     engines: {node: '>= 12.0.0'}
@@ -7258,9 +7479,6 @@ packages:
     resolution: {integrity: sha512-iPZK6eYjbxRu3uB4/WZ3EsEIMJFMqAoopl3R+zuq0UjcAm/MO6KCweDgPfP3elTztoKP3KtnVHxTn2NHBSDVUw==}
     engines: {node: '>=10'}
 
-  long@5.3.2:
-    resolution: {integrity: sha512-mNAgZ1GmyNhD7AuqnTG3/VQ26o760+ZYBPKjPvugO8+nLbYfX6TVpJPseBvopbdY+qpZ/lKUnmEc1LeZYS3QAA==}
-
   longest-streak@3.1.0:
     resolution: {integrity: sha512-9Ri+o0JYgehTaVBBDoMqIl8GXtbWg711O3srftcHhZ0dqnETqLaoIK0x17fUw9rFSlK/0NlsKe0Ahhyl5pXE2g==}
 
@@ -7293,10 +7511,6 @@ packages:
   lru-cache@7.18.3:
     resolution: {integrity: sha512-jumlc0BIUrS3qJGgIkWZsyfAM7NCWiBcCDhnd+3NNM5KbBmLTgHVfWBcg6W+rLUsIpzpERPsvwUP7CckAQSOoA==}
     engines: {node: '>=12'}
-
-  lru.min@1.1.3:
-    resolution: {integrity: sha512-Lkk/vx6ak3rYkRR0Nhu4lFUT2VDnQSxBe8Hbl7f36358p6ow8Bnvr8lrLt98H8J1aGxfhbX4Fs5tYg2+FTwr5Q==}
-    engines: {bun: '>=1.0.0', deno: '>=1.30.0', node: '>=8.0.0'}
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -7478,6 +7692,7 @@ packages:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   mimic-response@3.1.0:
     resolution: {integrity: sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==}
@@ -7522,8 +7737,20 @@ packages:
 
 =======
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  mimic-response@3.1.0:
+    resolution: {integrity: sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==}
+    engines: {node: '>=10'}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   miniflare@4.20251210.0:
     resolution: {integrity: sha512-k6kIoXwGVqlPZb0hcn+X7BmnK+8BjIIkusQPY22kCo2RaQJ/LzAjtxHQdGXerlHSnJyQivDQsL6BJHMpQfUFyw==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
+
+  miniflare@4.20251213.0:
+    resolution: {integrity: sha512-/Or0LuRA6dQMKvL7nztPWNOVXosrJRBiO0BdJX9LUIesyeAUWIZMPFmP9XX+cdny2fIUcqYcG4DuoL5JHxj95w==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -7531,6 +7758,7 @@ packages:
     resolution: {integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==}
     engines: {node: '>=16 || 14 >=14.17'}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   minipass@7.1.2:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
@@ -7543,6 +7771,12 @@ packages:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  minimist@1.2.8:
+    resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   minipass@7.1.2:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
     engines: {node: '>=16 || 14 >=14.17'}
@@ -7567,14 +7801,6 @@ packages:
   ms@2.1.3:
     resolution: {integrity: sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==}
 
-  mysql2@3.15.3:
-    resolution: {integrity: sha512-FBrGau0IXmuqg4haEZRBfHNWB5mUARw6hNwPDXXGg0XzVJ50mr/9hb267lvpVMnhZ1FON3qNd4Xfcez1rbFwSg==}
-    engines: {node: '>= 8.0'}
-
-  named-placeholders@1.1.6:
-    resolution: {integrity: sha512-Tz09sEL2EEuv5fFowm419c1+a/jSMiBjI9gHxVLrVdbUkkNUUfjsVYs9pVZu5oCon/kmRh9TfLEObFtkVxmY0w==}
-    engines: {node: '>=8.0.0'}
-
   nanoid@3.3.11:
     resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -7585,6 +7811,7 @@ packages:
     engines: {node: ^18 || >=20}
     hasBin: true
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   napi-build-utils@2.0.0:
@@ -7605,6 +7832,12 @@ packages:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  napi-build-utils@2.0.0:
+    resolution: {integrity: sha512-GEbrYkbfF7MoNaoh2iGG84Mnf/WZfB0GdGEsM8wz7Expx/LlWf5U8t9nvJKXSp3qr5IsEbK04cBGhol/KwOsWA==}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   netmask@2.0.2:
     resolution: {integrity: sha512-dBpDMdxv9Irdq66304OLfEmQ9tbNRFnFTuZiLo+bD+r332bBmMJ8GBLXklIXXgxd3+v9+KUnZaUR5PJMa75Gsg==}
     engines: {node: '>= 0.4.0'}
@@ -7612,6 +7845,7 @@ packages:
   no-case@3.0.4:
     resolution: {integrity: sha512-fgAN3jGAh+RoxUGZHTSOLJIqUc2wmoBwGR4tbpNAKmmovFoWq0OdRkb0VkldReO2a2iBT/OEulG9XSUc10r3zg==}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   node-fetch@2.7.0:
     resolution: {integrity: sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==}
@@ -7633,6 +7867,16 @@ packages:
   node-abi@3.85.0:
     resolution: {integrity: sha512-zsFhmbkAzwhTft6nd3VxcG0cvJsT70rL+BIGHWVq5fi6MwGrHwzqKaxXE+Hl2GmnGItnDKPPkO5/LQqjVkIdFg==}
     engines: {node: '>=10'}
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  node-abi@3.85.0:
+    resolution: {integrity: sha512-zsFhmbkAzwhTft6nd3VxcG0cvJsT70rL+BIGHWVq5fi6MwGrHwzqKaxXE+Hl2GmnGItnDKPPkO5/LQqjVkIdFg==}
+    engines: {node: '>=10'}
+=======
+  node-domexception@1.0.0:
+    resolution: {integrity: sha512-/jKZoMpw0F8GRwl4/eLROPA3cfcXtLApP0QzLmUT/HuPCZWyB7IY9ZrMeKw2O/nFIqPQB3PVM9aYm0F312AXDQ==}
+    engines: {node: '>=10.5.0'}
+    deprecated: Use your platform's native DOMException instead
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
 
   node-fetch@2.7.0:
     resolution: {integrity: sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==}
@@ -7643,6 +7887,7 @@ packages:
       encoding:
         optional: true
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   node-gyp-build-optional-packages@5.1.1:
     resolution: {integrity: sha512-+P72GAjVAbTxjjwUmwjVrqrdZROD4nf8KgpBoDxqXXTiYZZt/ud60dE5yvCSr9lRO8e8yv6kgJIC0K0PfZFVQw==}
@@ -7656,6 +7901,13 @@ packages:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  node-fetch@3.3.2:
+    resolution: {integrity: sha512-dRB78srN/l6gqWulah9SrxeYnxeddIG30+GOqK/9OlLVyLg3HPnr6SqOWTWOXKRwC2eGYCkZ59NNuSgvSrpgOA==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   node-releases@2.0.27:
     resolution: {integrity: sha512-nmh3lCkYZ3grZvqcCH+fjmQ7X+H0OeZgP40OierEaAptX4XofMh5kwNbWh7lBduUzCcV/8kZ+NDLCwm2iorIlA==}
 
@@ -7856,20 +8108,9 @@ packages:
   pend@1.2.0:
     resolution: {integrity: sha512-F3asv42UuXchdzt+xXqfW1OGlVBe+mxa2mqI0pg5yAHZPvFmY3Y6drSf/GQ1A86WgWEN9Kzh/WrgKa6iGcHXLg==}
 
-  pg-cloudflare@1.2.7:
-    resolution: {integrity: sha512-YgCtzMH0ptvZJslLM1ffsY4EuGaU0cx4XSdXLRFae8bPP4dS5xL1tNB3k2o/N64cHJpwU7dxKli/nZ2lUa5fLg==}
-
-  pg-connection-string@2.9.1:
-    resolution: {integrity: sha512-nkc6NpDcvPVpZXxrreI/FOtX3XemeLl8E0qFr6F2Lrm/I8WOnaWNhIPK2Z7OHpw7gh5XJThi6j6ppgNoaT1w4w==}
-
   pg-int8@1.0.1:
     resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
     engines: {node: '>=4.0.0'}
-
-  pg-pool@3.10.1:
-    resolution: {integrity: sha512-Tu8jMlcX+9d8+QVzKIvM/uJtp07PKr82IUOYEphaWcoBhIYkoHpLXN3qO59nAI11ripznDsEzEv8nUxBVWajGg==}
-    peerDependencies:
-      pg: '>=8.0'
 
   pg-protocol@1.10.3:
     resolution: {integrity: sha512-6DIBgBQaTKDJyxnXaLiLR8wBpQQcGWuAESkRBX/t6OwA8YsqP+iVSiond2EDy6Y/dsGk8rh/jtax3js5NeV7JQ==}
@@ -7877,18 +8118,6 @@ packages:
   pg-types@2.2.0:
     resolution: {integrity: sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==}
     engines: {node: '>=4'}
-
-  pg@8.16.3:
-    resolution: {integrity: sha512-enxc1h0jA/aq5oSDMvqyW3q89ra6XIIDZgCX9vkMrnz5DFTw/Ny3Li2lFQ+pt3L6MCgm/5o2o8HW9hiJji+xvw==}
-    engines: {node: '>= 16.0.0'}
-    peerDependencies:
-      pg-native: '>=3.0.1'
-    peerDependenciesMeta:
-      pg-native:
-        optional: true
-
-  pgpass@1.0.5:
-    resolution: {integrity: sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -7934,12 +8163,21 @@ packages:
     hasBin: true
 =======
 
+<<<<<<< HEAD
   prebuild-install@7.1.3:
     resolution: {integrity: sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==}
     engines: {node: '>=10'}
     hasBin: true
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  prebuild-install@7.1.3:
+    resolution: {integrity: sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==}
+    engines: {node: '>=10'}
+    hasBin: true
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   prettier@3.7.4:
     resolution: {integrity: sha512-v6UNi1+3hSlVvv8fSaoUbggEM5VErKmmpGA7Pl3HF8V6uKY7rvClBOJlH6yNwQtfTueNkGVpOv/mtWL9L4bgRA==}
     engines: {node: '>=14'}
@@ -7988,6 +8226,9 @@ packages:
     resolution: {integrity: sha512-7PiHtLll5LdnKIMw100I+8xJXR5gW2QwWYkT6iJva0bXitZKa/XMrSbdmg3r2Xnaidz9Qumd0VPaMrZlF9V9sA==}
     engines: {node: '>=0.4.0'}
 
+  promise-limit@2.7.0:
+    resolution: {integrity: sha512-7nJ6v5lnJsXwGprnGXga4wx6d1POjvi5Qmf1ivTRxTjH4Z/9Czja/UCMLVmB9N93GeWOU93XaFaEt6jbuoagNw==}
+
   property-information@7.1.0:
     resolution: {integrity: sha512-TwEZ+X+yCJmYfL7TPUOcvBZ4QfoT5YenQiJuX//0th53DE6w0xxLEtfK3iyryQFddXuvkIk51EEgrJQ0WJkOmQ==}
 
@@ -8010,6 +8251,7 @@ packages:
       vue: '>= 3.2.0'
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   react-dom@19.2.1:
     resolution: {integrity: sha512-ibrK8llX2a4eOskq1mXKu/TGZj9qzomO+sNfO98M6d9zIPOEhlBkMkBUBLd1vgS0gQsLDBzA+8jJBVXDnfHmJg==}
 ||||||| parent of 10c17c0 (feat: working test script & `/version` route)
@@ -8024,6 +8266,13 @@ packages:
     resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
     hasBin: true
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  rc@1.2.8:
+    resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
+    hasBin: true
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   react-dom@19.2.3:
     resolution: {integrity: sha512-yELu4WmLPw5Mr/lmeEpox5rw3RETacE++JgHqQzd2dg+YbJuat3jH4ingc+WPZhxaoFzdv9y33G+F7Nl5O0GBg==}
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
@@ -8041,6 +8290,7 @@ packages:
     resolution: {integrity: sha512-Ku/hhYbVjOQnXDZFv2+RibmLFGwFdeeKHFcOTlrt7xplBnya5OGn/hIRDsqDiSUcfORsDC7MPxwork8jBwsIWA==}
     engines: {node: '>=0.10.0'}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
@@ -8078,6 +8328,13 @@ packages:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  readable-stream@3.6.2:
+    resolution: {integrity: sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA==}
+    engines: {node: '>= 6'}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   readdirp@3.6.0:
     resolution: {integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==}
     engines: {node: '>=8.10.0'}
@@ -8262,6 +8519,7 @@ packages:
   safe-buffer@5.1.2:
     resolution: {integrity: sha512-Gd2UZBJDkXlY7GbJxfsE8/nvKkUEU1G38c1siN6QP6a9PT9MmHB8GnpscSmMJSoF8LOIrt8ud/wPtojys4G6+g==}
 
+<<<<<<< HEAD
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
 =======
@@ -8279,6 +8537,12 @@ packages:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  safe-buffer@5.2.1:
+    resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   safer-buffer@2.1.2:
     resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
 
@@ -8322,9 +8586,6 @@ packages:
     resolution: {integrity: sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q==}
     engines: {node: '>=10'}
     hasBin: true
-
-  seq-queue@0.0.5:
-    resolution: {integrity: sha512-hr3Wtp/GZIc/6DAGPDcV4/9WoZhjrkXsi5B/07QgX8tsdc6ilr7BFM6PM6rbdAX1kFSDYeZGLipIZZKyQP0O5Q==}
 
   seroval-plugins@1.3.3:
     resolution: {integrity: sha512-16OL3NnUBw8JG1jBLUoZJsLnQq0n5Ua6aHalhJK4fMQkz1lqR7Osz1sA30trBtd9VUDc2NgkuRCn8+/pBwqZ+w==}
@@ -8380,6 +8641,7 @@ packages:
     resolution: {integrity: sha512-brv7p5WgH0jmQJr1ZDDfKDOSeWWg+OVypG99A/5vYGPqJ6pxiaHLy8nxtFjBA7oMa01ebA9gfh1uMCFqOuXxvA==}
 =======
 
+<<<<<<< HEAD
   simple-concat@1.0.1:
     resolution: {integrity: sha512-cSFtAPtRhljv69IK0hTVZQ+OfE9nePi/rtJmw5UjHeVyVroEqJXP1sFztKUy1qU+xvz3u/sfYJLa947b7nAN2Q==}
 
@@ -8387,6 +8649,15 @@ packages:
     resolution: {integrity: sha512-brv7p5WgH0jmQJr1ZDDfKDOSeWWg+OVypG99A/5vYGPqJ6pxiaHLy8nxtFjBA7oMa01ebA9gfh1uMCFqOuXxvA==}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  simple-concat@1.0.1:
+    resolution: {integrity: sha512-cSFtAPtRhljv69IK0hTVZQ+OfE9nePi/rtJmw5UjHeVyVroEqJXP1sFztKUy1qU+xvz3u/sfYJLa947b7nAN2Q==}
+
+  simple-get@4.0.1:
+    resolution: {integrity: sha512-brv7p5WgH0jmQJr1ZDDfKDOSeWWg+OVypG99A/5vYGPqJ6pxiaHLy8nxtFjBA7oMa01ebA9gfh1uMCFqOuXxvA==}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   simple-swizzle@0.2.4:
     resolution: {integrity: sha512-nAu1WFPQSMNr2Zn9PGSZK9AGn4t/y97lEm+MXTtUDwfP0ksAIX4nO+6ruD9Jwut4C49SB1Ws+fbXsm/yScWOHw==}
 
@@ -8423,14 +8694,6 @@ packages:
   space-separated-tokens@2.0.2:
     resolution: {integrity: sha512-PEGlAwrG8yXGXRjW32fGbg66JAlOAwbObuqVoJpv/mRgoWDQfgH1wDPvtzWyUSNAXBGSk8h755YDbbcEy3SH2Q==}
 
-  split2@4.2.0:
-    resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
-    engines: {node: '>= 10.x'}
-
-  sqlstring@2.3.3:
-    resolution: {integrity: sha512-qC9iz2FlN7DQl3+wjwn3802RTyjCx7sDvfQEXchwa6CWOx07/WVfh91gBmQ9fahw8snwGEWU3xGzOt4tFyHLxg==}
-    engines: {node: '>= 0.6'}
-
   srvx@0.8.16:
     resolution: {integrity: sha512-hmcGW4CgroeSmzgF1Ihwgl+Ths0JqAJ7HwjP2X7e3JzY7u4IydLMcdnlqGQiQGUswz+PO9oh/KtCpOISIvs9QQ==}
     engines: {node: '>=20.16.0'}
@@ -8461,6 +8724,7 @@ packages:
   string_decoder@1.1.1:
     resolution: {integrity: sha512-n/ShnvDi6FHbbVfviro+WojiFzv+s8MPMHBczVePfUpDJLwoLT0ht1l4YwBCbi8pJAveEEdnkHyPyTP/mzRfwg==}
 
+<<<<<<< HEAD
   string_decoder@1.3.0:
     resolution: {integrity: sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA==}
 =======
@@ -8469,6 +8733,12 @@ packages:
     resolution: {integrity: sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA==}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  string_decoder@1.3.0:
+    resolution: {integrity: sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA==}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   stringify-entities@4.0.4:
     resolution: {integrity: sha512-IwfBptatlO+QCJUo19AqvrPNqlVMpW9YEL2LIVY+Rpv2qsjCGxaDLNRgeGsQWJhfItebuJhsGSLjaBbNSQ+ieg==}
 
@@ -8490,11 +8760,19 @@ packages:
     engines: {node: '>=0.10.0'}
 =======
 
+<<<<<<< HEAD
   strip-json-comments@2.0.1:
     resolution: {integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==}
     engines: {node: '>=0.10.0'}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  strip-json-comments@2.0.1:
+    resolution: {integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==}
+    engines: {node: '>=0.10.0'}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   strip-literal@3.1.0:
     resolution: {integrity: sha512-8r3mkIM/2+PpjHoOtiAW8Rg3jJLHaV7xPwG+YRGrv6FP0wwk/toTpATxWYOW0BKdWwl82VT2tFYi5DlROa0Mxg==}
 
@@ -8987,6 +9265,10 @@ packages:
   web-namespaces@2.0.1:
     resolution: {integrity: sha512-bKr1DkiNa2krS7qxNtdrtHAmzuYGFQLiQ13TsorsdT6ULTkPLKuu5+GsFpDlg6JFjUTwX2DyhMPG2be8uPrqsQ==}
 
+  web-streams-polyfill@3.3.3:
+    resolution: {integrity: sha512-d2JWLCivmZYTSIoge9MsgFCZrt571BikcWGYkjC1khllbTeDlGqZ2D8vD8E/lJa8WGWbb7Plm8/XJYV7IJHZZw==}
+    engines: {node: '>= 8'}
+
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
 
@@ -9068,6 +9350,7 @@ packages:
     hasBin: true
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   wrangler@4.53.0:
     resolution: {integrity: sha512-/wvnHlRnlHsqaeIgGbmcEJE5NFYdTUWHCKow+U5Tv2XwQXI9vXUqBwCLAGy/BwqyS5nnycRt2kppqCzgHgyb7Q==}
 >>>>>>> a547bc4 (chore: update deps)
@@ -9092,12 +9375,30 @@ packages:
 
 =======
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  workerd@1.20251213.0:
+    resolution: {integrity: sha512-knLMSqmUKo7EO1wV69u8o2J+6RVDow3H5qK9f1tzk24fd4rEZXkR1cxFiYisfTRjk/Jl3/1URAkQRSDAiWE5RA==}
+    engines: {node: '>=16'}
+    hasBin: true
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   wrangler@4.54.0:
     resolution: {integrity: sha512-bANFsjDwJLbprYoBK+hUDZsVbUv2SqJd8QvArLIcZk+fPq4h/Ohtj5vkKXD3k0s2bD1DXLk08D+hYmeNH+xC6A==}
     engines: {node: '>=20.0.0'}
     hasBin: true
     peerDependencies:
       '@cloudflare/workers-types': ^4.20251210.0
+    peerDependenciesMeta:
+      '@cloudflare/workers-types':
+        optional: true
+
+  wrangler@4.55.0:
+    resolution: {integrity: sha512-50icmLX8UbNaq0FmFHbcvvOh7I6rDA/FyaMYRcNSl1iX0JwuKswezmmtYvYPxPTkbYz7FUYR8GPZLaT23uzFqw==}
+    engines: {node: '>=20.0.0'}
+    hasBin: true
+    peerDependencies:
+      '@cloudflare/workers-types': ^4.20251213.0
     peerDependenciesMeta:
       '@cloudflare/workers-types':
         optional: true
@@ -9528,6 +9829,7 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   '@cloudflare/vite-plugin@1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251213.0))':
 ||||||| parent of 4bb5df9 (chore: sync lockfile)
   '@cloudflare/vite-plugin@1.17.0(rolldown-vite@7.2.10(@types/node@24.10.2)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251202.0)(wrangler@4.53.0(@cloudflare/workers-types@4.20251210.0))':
@@ -9602,12 +9904,23 @@ snapshots:
 =======
   '@cloudflare/vite-plugin@1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0))':
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  '@cloudflare/vite-plugin@1.17.1(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0))':
+=======
+  '@cloudflare/unenv-preset@2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251213.0)':
+    dependencies:
+      unenv: 2.0.0-rc.24
+    optionalDependencies:
+      workerd: 1.20251213.0
+
+  '@cloudflare/vite-plugin@1.18.0(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251210.0)(wrangler@4.55.0(@cloudflare/workers-types@4.20251216.0))':
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
     dependencies:
       '@cloudflare/unenv-preset': 2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251210.0)
       '@remix-run/node-fetch-server': 0.8.1
       defu: 6.1.4
       get-port: 7.1.0
-      miniflare: 4.20251210.0
+      miniflare: 4.20251213.0
       picocolors: 1.1.1
       tinyglobby: 0.2.15
       unenv: 2.0.0-rc.24
@@ -9626,8 +9939,32 @@ snapshots:
       wrangler: 4.54.0(@cloudflare/workers-types@4.20251209.0)
 =======
       vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+<<<<<<< HEAD
       wrangler: 4.54.0(@cloudflare/workers-types@4.20251216.0)
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+      wrangler: 4.54.0(@cloudflare/workers-types@4.20251216.0)
+=======
+      wrangler: 4.55.0(@cloudflare/workers-types@4.20251216.0)
+      ws: 8.18.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - workerd
+
+  '@cloudflare/vite-plugin@1.18.0(rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20251213.0)(wrangler@4.55.0(@cloudflare/workers-types@4.20251216.0))':
+    dependencies:
+      '@cloudflare/unenv-preset': 2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251213.0)
+      '@remix-run/node-fetch-server': 0.8.1
+      defu: 6.1.4
+      get-port: 7.1.0
+      miniflare: 4.20251213.0
+      picocolors: 1.1.1
+      tinyglobby: 0.2.15
+      unenv: 2.0.0-rc.24
+      vite: rolldown-vite@7.2.11(@types/node@24.10.4)(esbuild@0.25.12)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      wrangler: 4.55.0(@cloudflare/workers-types@4.20251216.0)
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
       ws: 8.18.0
     transitivePeerDependencies:
       - bufferutil
@@ -9706,6 +10043,7 @@ snapshots:
     optional: true
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   '@cloudflare/workerd-darwin-arm64@1.20251210.0':
 ||||||| parent of a547bc4 (chore: update deps)
   '@cloudflare/workerd-darwin-arm64@1.20251202.0':
@@ -9735,9 +10073,16 @@ snapshots:
 
 =======
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  '@cloudflare/workerd-darwin-64@1.20251213.0':
+    optional: true
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   '@cloudflare/workerd-darwin-arm64@1.20251210.0':
     optional: true
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   '@cloudflare/workerd-linux-64@1.20251202.0':
 >>>>>>> a547bc4 (chore: update deps)
@@ -9754,9 +10099,16 @@ snapshots:
 
 =======
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  '@cloudflare/workerd-darwin-arm64@1.20251213.0':
+    optional: true
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   '@cloudflare/workerd-linux-64@1.20251210.0':
     optional: true
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   '@cloudflare/workerd-linux-arm64@1.20251202.0':
 >>>>>>> a547bc4 (chore: update deps)
@@ -9773,9 +10125,16 @@ snapshots:
 
 =======
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  '@cloudflare/workerd-linux-64@1.20251213.0':
+    optional: true
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   '@cloudflare/workerd-linux-arm64@1.20251210.0':
     optional: true
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   '@cloudflare/workerd-windows-64@1.20251202.0':
 >>>>>>> a547bc4 (chore: update deps)
@@ -9795,9 +10154,16 @@ snapshots:
 
 =======
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  '@cloudflare/workerd-linux-arm64@1.20251213.0':
+    optional: true
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   '@cloudflare/workerd-windows-64@1.20251210.0':
     optional: true
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 >>>>>>> a547bc4 (chore: update deps)
   '@cloudflare/workers-types@4.20251209.0': {}
@@ -9809,6 +10175,12 @@ snapshots:
 
   '@cloudflare/workers-types@4.20251210.0': {}
 =======
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  '@cloudflare/workerd-windows-64@1.20251213.0':
+    optional: true
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   '@cloudflare/workers-types@4.20251216.0': {}
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
 
@@ -11735,6 +12107,68 @@ snapshots:
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.5
 
+  '@libsql/client@0.15.15':
+    dependencies:
+      '@libsql/core': 0.15.15
+      '@libsql/hrana-client': 0.7.0
+      js-base64: 3.7.8
+      libsql: 0.5.22
+      promise-limit: 2.7.0
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  '@libsql/core@0.15.15':
+    dependencies:
+      js-base64: 3.7.8
+
+  '@libsql/darwin-arm64@0.5.22':
+    optional: true
+
+  '@libsql/darwin-x64@0.5.22':
+    optional: true
+
+  '@libsql/hrana-client@0.7.0':
+    dependencies:
+      '@libsql/isomorphic-fetch': 0.3.1
+      '@libsql/isomorphic-ws': 0.1.5
+      js-base64: 3.7.8
+      node-fetch: 3.3.2
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  '@libsql/isomorphic-fetch@0.3.1': {}
+
+  '@libsql/isomorphic-ws@0.1.5':
+    dependencies:
+      '@types/ws': 8.18.1
+      ws: 8.18.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  '@libsql/linux-arm-gnueabihf@0.5.22':
+    optional: true
+
+  '@libsql/linux-arm-musleabihf@0.5.22':
+    optional: true
+
+  '@libsql/linux-arm64-gnu@0.5.22':
+    optional: true
+
+  '@libsql/linux-arm64-musl@0.5.22':
+    optional: true
+
+  '@libsql/linux-x64-gnu@0.5.22':
+    optional: true
+
+  '@libsql/linux-x64-musl@0.5.22':
+    optional: true
+
+  '@libsql/win32-x64-msvc@0.5.22':
+    optional: true
+
   '@marijn/find-cluster-break@1.0.2': {}
 
   '@napi-rs/wasm-runtime@1.1.0':
@@ -11743,6 +12177,8 @@ snapshots:
       '@emnapi/runtime': 1.7.1
       '@tybys/wasm-util': 0.10.1
     optional: true
+
+  '@neon-rs/load@0.0.4': {}
 
   '@noble/ciphers@1.3.0': {}
 
@@ -13936,6 +14372,10 @@ snapshots:
 
   '@types/web-bluetooth@0.0.21': {}
 
+  '@types/ws@8.18.1':
+    dependencies:
+      '@types/node': 24.10.4
+
   '@types/yauzl@2.10.3':
     dependencies:
 <<<<<<< HEAD
@@ -14798,9 +15238,6 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  aws-ssl-profiles@1.1.2:
-    optional: true
-
   b4a@1.7.3: {}
 
   babel-dead-code-elimination@1.0.10:
@@ -14860,6 +15297,7 @@ snapshots:
   basic-ftp@5.0.5: {}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of a547bc4 (chore: update deps)
   better-sqlite3@12.5.0:
     dependencies:
@@ -14875,8 +15313,17 @@ snapshots:
       prebuild-install: 7.1.3
 
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  better-sqlite3@12.5.0:
+    dependencies:
+      bindings: 1.5.0
+      prebuild-install: 7.1.3
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   binary-extensions@2.3.0: {}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   bindings@1.5.0:
@@ -14897,6 +15344,21 @@ snapshots:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  bindings@1.5.0:
+    dependencies:
+      file-uri-to-path: 1.0.0
+
+  birpc@0.2.14: {}
+
+  bl@4.1.0:
+    dependencies:
+      buffer: 5.7.1
+      inherits: 2.0.4
+      readable-stream: 3.6.2
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   birpc@0.2.14: {}
 
   blake3-wasm@2.1.5: {}
@@ -15156,6 +15618,8 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
+  data-uri-to-buffer@4.0.1: {}
+
   data-uri-to-buffer@6.0.2: {}
 
 <<<<<<< HEAD
@@ -15213,6 +15677,7 @@ snapshots:
   deep-eql@5.0.2: {}
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   deep-extend@0.6.0: {}
 
@@ -15228,6 +15693,11 @@ snapshots:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  deep-extend@0.6.0: {}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   defu@6.1.4: {}
 
   degenerator@5.0.1:
@@ -15236,10 +15706,9 @@ snapshots:
       escodegen: 2.1.0
       esprima: 4.0.1
 
-  denque@2.1.0:
-    optional: true
-
   dequal@2.0.3: {}
+
+  detect-libc@2.0.2: {}
 
   detect-libc@2.1.2: {}
 
@@ -15327,6 +15796,7 @@ snapshots:
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   eastasianwidth@0.2.0: {}
 ||||||| parent of 4bb5df9 (chore: sync lockfile)
   drizzle-orm@0.45.0(@cloudflare/workers-types@4.20251209.0)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.8):
@@ -15374,11 +15844,16 @@ snapshots:
 =======
   drizzle-orm@0.45.1(@cloudflare/workers-types@4.20251216.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.9)(mysql2@3.15.3)(pg@8.16.3):
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  drizzle-orm@0.45.1(@cloudflare/workers-types@4.20251216.0)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.28.9)(mysql2@3.15.3)(pg@8.16.3):
+=======
+  drizzle-orm@0.45.1(@cloudflare/workers-types@4.20251216.0)(@libsql/client@0.15.15)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(bun-types@1.3.4)(kysely@0.28.9):
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
     optionalDependencies:
       '@cloudflare/workers-types': 4.20251216.0
+      '@libsql/client': 0.15.15
       '@opentelemetry/api': 1.9.0
       '@types/pg': 8.15.6
-      better-sqlite3: 12.5.0
       bun-types: 1.3.4
 <<<<<<< HEAD
       kysely: 0.28.8
@@ -15390,9 +15865,15 @@ snapshots:
       kysely: 0.28.8
 =======
       kysely: 0.28.9
+<<<<<<< HEAD
       mysql2: 3.15.3
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
       pg: 8.16.3
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+      mysql2: 3.15.3
+      pg: 8.16.3
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
 
 <<<<<<< HEAD
   drizzle-orm@0.45.1(@cloudflare/workers-types@4.20251210.0)(@electric-sql/pglite@0.2.13)(@opentelemetry/api@1.9.0)(@types/pg@8.15.6)(better-sqlite3@12.5.0)(bun-types@1.3.4)(kysely@0.26.3)(pg@8.16.3):
@@ -15804,12 +16285,21 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.3
 
-  fetchdts@0.1.7: {}
+  fetch-blob@3.2.0:
+    dependencies:
+      node-domexception: 1.0.0
+      web-streams-polyfill: 3.3.3
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   file-uri-to-path@1.0.0: {}
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  file-uri-to-path@1.0.0: {}
+=======
+  fetchdts@0.1.7: {}
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
 
 =======
   file-entry-cache@6.0.1:
@@ -15862,20 +16352,23 @@ snapshots:
       cross-spawn: 7.0.6
       signal-exit: 4.1.0
 
-  forwarded-parse@2.1.2: {}
+  formdata-polyfill@4.0.10:
+    dependencies:
+      fetch-blob: 3.2.0
 
+<<<<<<< HEAD
   fs-constants@1.0.0: {}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  fs-constants@1.0.0: {}
+=======
+  forwarded-parse@2.1.2: {}
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
 
   fsevents@2.3.3:
     optional: true
 
   fuse.js@7.1.0: {}
-
-  generate-function@2.3.1:
-    dependencies:
-      is-property: 1.0.2
-    optional: true
 
   gensync@1.0.0-beta.2: {}
 
@@ -16127,11 +16620,6 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
-  iconv-lite@0.7.1:
-    dependencies:
-      safer-buffer: 2.1.2
-    optional: true
-
   idb-keyval@6.2.2: {}
 
   idxs@0.0.5(typescript@5.9.3):
@@ -16197,11 +16685,19 @@ snapshots:
   ini@1.3.8: {}
 =======
 
+<<<<<<< HEAD
   inherits@2.0.4: {}
 
   ini@1.3.8: {}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  inherits@2.0.4: {}
+
+  ini@1.3.8: {}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   ip-address@10.1.0: {}
 
   is-absolute-url@4.0.1: {}
@@ -16227,9 +16723,6 @@ snapshots:
   is-obj@3.0.0: {}
 
   is-plain-obj@4.1.0: {}
-
-  is-property@1.0.2:
-    optional: true
 
   is-regexp@3.1.0: {}
 
@@ -16326,6 +16819,7 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   lie@3.3.0:
     dependencies:
@@ -16354,6 +16848,24 @@ snapshots:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  libsql@0.5.22:
+    dependencies:
+      '@neon-rs/load': 0.0.4
+      detect-libc: 2.0.2
+    optionalDependencies:
+      '@libsql/darwin-arm64': 0.5.22
+      '@libsql/darwin-x64': 0.5.22
+      '@libsql/linux-arm-gnueabihf': 0.5.22
+      '@libsql/linux-arm-musleabihf': 0.5.22
+      '@libsql/linux-arm64-gnu': 0.5.22
+      '@libsql/linux-arm64-musl': 0.5.22
+      '@libsql/linux-x64-gnu': 0.5.22
+      '@libsql/linux-x64-musl': 0.5.22
+      '@libsql/win32-x64-msvc': 0.5.22
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   lightningcss-android-arm64@1.30.2:
     optional: true
 
@@ -16415,9 +16927,6 @@ snapshots:
     dependencies:
       p-locate: 5.0.0
 
-  long@5.3.2:
-    optional: true
-
   longest-streak@3.1.0: {}
 
   loupe@3.2.1: {}
@@ -16447,9 +16956,6 @@ snapshots:
       yallist: 3.1.1
 
   lru-cache@7.18.3: {}
-
-  lru.min@1.1.3:
-    optional: true
 
   magic-string@0.30.21:
     dependencies:
@@ -16798,6 +17304,7 @@ snapshots:
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   mimic-response@3.1.0: {}
 
@@ -16856,6 +17363,11 @@ snapshots:
 
 =======
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  mimic-response@3.1.0: {}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   miniflare@4.20251210.0:
     dependencies:
       '@cspotcode/source-map-support': 0.8.1
@@ -16874,10 +17386,29 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
+  miniflare@4.20251213.0:
+    dependencies:
+      '@cspotcode/source-map-support': 0.8.1
+      acorn: 8.14.0
+      acorn-walk: 8.3.2
+      exit-hook: 2.2.1
+      glob-to-regexp: 0.4.1
+      sharp: 0.33.5
+      stoppable: 1.1.0
+      undici: 7.14.0
+      workerd: 1.20251213.0
+      ws: 8.18.0
+      youch: 4.1.0-beta.10
+      zod: 3.22.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
   minimatch@9.0.5:
     dependencies:
       brace-expansion: 2.0.2
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   minipass@7.1.2: {}
 ||||||| parent of 4bb5df9 (chore: sync lockfile)
@@ -16886,6 +17417,11 @@ snapshots:
   minimist@1.2.8: {}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  minimist@1.2.8: {}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   minipass@7.1.2: {}
 
   mipd@0.0.7(typescript@5.9.3):
@@ -16905,28 +17441,11 @@ snapshots:
 
   ms@2.1.3: {}
 
-  mysql2@3.15.3:
-    dependencies:
-      aws-ssl-profiles: 1.1.2
-      denque: 2.1.0
-      generate-function: 2.3.1
-      iconv-lite: 0.7.1
-      long: 5.3.2
-      lru.min: 1.1.3
-      named-placeholders: 1.1.6
-      seq-queue: 0.0.5
-      sqlstring: 2.3.3
-    optional: true
-
-  named-placeholders@1.1.6:
-    dependencies:
-      lru.min: 1.1.3
-    optional: true
-
   nanoid@3.3.11: {}
 
   nanoid@5.1.5: {}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
   napi-build-utils@2.0.0: {}
@@ -16943,6 +17462,11 @@ snapshots:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  napi-build-utils@2.0.0: {}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   netmask@2.0.2: {}
 
   no-case@3.0.4:
@@ -16950,6 +17474,7 @@ snapshots:
       lower-case: 2.0.2
       tslib: 2.8.1
 
+<<<<<<< HEAD
   node-fetch@2.7.0:
     dependencies:
 <<<<<<< HEAD
@@ -16963,11 +17488,19 @@ snapshots:
     optional: true
 =======
       semver: 7.7.3
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  node-abi@3.85.0:
+    dependencies:
+      semver: 7.7.3
+=======
+  node-domexception@1.0.0: {}
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
 
   node-fetch@2.7.0:
     dependencies:
       whatwg-url: 5.0.0
 
+<<<<<<< HEAD
 <<<<<<< HEAD
   node-gyp-build-optional-packages@5.1.1:
     dependencies:
@@ -16983,6 +17516,15 @@ snapshots:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  node-fetch@3.3.2:
+    dependencies:
+      data-uri-to-buffer: 4.0.1
+      fetch-blob: 3.2.0
+      formdata-polyfill: 4.0.10
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   node-releases@2.0.27: {}
 
   node@runtime:24.11.1: {}
@@ -17047,6 +17589,7 @@ snapshots:
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
 <<<<<<< HEAD
+<<<<<<< HEAD
       abitype: 1.2.2(typescript@5.9.3)(zod@3.25.76)
       eventemitter3: 5.0.1
     optionalDependencies:
@@ -17087,6 +17630,11 @@ snapshots:
 =======
       abitype: 1.2.3(typescript@5.9.3)(zod@4.2.1)
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+      abitype: 1.2.3(typescript@5.9.3)(zod@4.2.1)
+=======
+      abitype: 1.1.0(typescript@5.9.3)(zod@4.2.1)
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
       eventemitter3: 5.0.1
     optionalDependencies:
       typescript: 5.9.3
@@ -17170,18 +17718,7 @@ snapshots:
 
   pend@1.2.0: {}
 
-  pg-cloudflare@1.2.7:
-    optional: true
-
-  pg-connection-string@2.9.1:
-    optional: true
-
   pg-int8@1.0.1: {}
-
-  pg-pool@3.10.1(pg@8.16.3):
-    dependencies:
-      pg: 8.16.3
-    optional: true
 
   pg-protocol@1.10.3: {}
 
@@ -17192,22 +17729,6 @@ snapshots:
       postgres-bytea: 1.0.0
       postgres-date: 1.0.7
       postgres-interval: 1.2.0
-
-  pg@8.16.3:
-    dependencies:
-      pg-connection-string: 2.9.1
-      pg-pool: 3.10.1(pg@8.16.3)
-      pg-protocol: 1.10.3
-      pg-types: 2.2.0
-      pgpass: 1.0.5
-    optionalDependencies:
-      pg-cloudflare: 1.2.7
-    optional: true
-
-  pgpass@1.0.5:
-    dependencies:
-      split2: 4.2.0
-    optional: true
 
   picocolors@1.1.1: {}
 
@@ -17247,11 +17768,30 @@ snapshots:
     dependencies:
       xtend: 4.0.2
 
+<<<<<<< HEAD
   prebuild-install@7.1.3:
 >>>>>>> 4bb5df9 (chore: sync lockfile)
     dependencies:
       xtend: 4.0.2
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  prebuild-install@7.1.3:
+    dependencies:
+      detect-libc: 2.1.2
+      expand-template: 2.0.3
+      github-from-package: 0.0.0
+      minimist: 1.2.8
+      mkdirp-classic: 0.5.3
+      napi-build-utils: 2.0.0
+      node-abi: 3.85.0
+      pump: 3.0.3
+      rc: 1.2.8
+      simple-get: 4.0.1
+      tar-fs: 2.1.4
+      tunnel-agent: 0.6.0
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   prettier@3.7.4: {}
 
   pretty-bytes@6.1.1: {}
@@ -17283,6 +17823,8 @@ snapshots:
 =======
 >>>>>>> a547bc4 (chore: update deps)
   progress@2.0.3: {}
+
+  promise-limit@2.7.0: {}
 
   property-information@7.1.0: {}
 
@@ -17326,6 +17868,7 @@ snapshots:
       - '@vue/composition-api'
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   react-dom@19.2.1(react@19.2.1):
 ||||||| parent of 10c17c0 (feat: working test script & `/version` route)
   rc@1.2.8:
@@ -17344,6 +17887,16 @@ snapshots:
       minimist: 1.2.8
       strip-json-comments: 2.0.1
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  rc@1.2.8:
+    dependencies:
+      deep-extend: 0.6.0
+      ini: 1.3.8
+      minimist: 1.2.8
+      strip-json-comments: 2.0.1
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   react-dom@19.2.3(react@19.2.3):
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
@@ -17356,6 +17909,7 @@ snapshots:
 
   react@19.2.3: {}
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 ||||||| parent of 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
@@ -17426,6 +17980,15 @@ snapshots:
 
 =======
 >>>>>>> a547bc4 (chore: update deps)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  readable-stream@3.6.2:
+    dependencies:
+      inherits: 2.0.4
+      string_decoder: 1.3.0
+      util-deprecate: 1.0.2
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   readdirp@3.6.0:
     dependencies:
       picomatch: 2.3.1
@@ -17710,6 +18273,7 @@ snapshots:
 
   safe-buffer@5.1.2: {}
 
+<<<<<<< HEAD
   safe-buffer@5.2.1: {}
 =======
   rou3@0.7.10: {}
@@ -17722,6 +18286,11 @@ snapshots:
   safe-buffer@5.2.1: {}
 >>>>>>> 6760c02 (chore: pass `--verifier-url` to `tempo-check.sh`)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  safe-buffer@5.2.1: {}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   safer-buffer@2.1.2: {}
 
   sax@1.4.3: {}
@@ -17749,9 +18318,6 @@ snapshots:
   semver@6.3.1: {}
 
   semver@7.7.3: {}
-
-  seq-queue@0.0.5:
-    optional: true
 
   seroval-plugins@1.3.3(seroval@1.3.2):
     dependencies:
@@ -17824,6 +18390,7 @@ snapshots:
       simple-concat: 1.0.1
 =======
 
+<<<<<<< HEAD
   simple-concat@1.0.1: {}
 
   simple-get@4.0.1:
@@ -17833,6 +18400,17 @@ snapshots:
       simple-concat: 1.0.1
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  simple-concat@1.0.1: {}
+
+  simple-get@4.0.1:
+    dependencies:
+      decompress-response: 6.0.0
+      once: 1.4.0
+      simple-concat: 1.0.1
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   simple-swizzle@0.2.4:
     dependencies:
       is-arrayish: 0.3.4
@@ -17871,12 +18449,6 @@ snapshots:
 
   space-separated-tokens@2.0.2: {}
 
-  split2@4.2.0:
-    optional: true
-
-  sqlstring@2.3.3:
-    optional: true
-
   srvx@0.8.16: {}
 
   stackback@0.0.2: {}
@@ -17911,6 +18483,7 @@ snapshots:
       strip-ansi: 7.1.2
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   string_decoder@1.1.1:
 >>>>>>> 4bb5df9 (chore: sync lockfile)
     dependencies:
@@ -17931,6 +18504,13 @@ snapshots:
       safe-buffer: 5.2.1
 >>>>>>> a547bc4 (chore: update deps)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  string_decoder@1.3.0:
+    dependencies:
+      safe-buffer: 5.2.1
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   stringify-entities@4.0.4:
     dependencies:
       character-entities-html4: 2.1.0
@@ -17954,9 +18534,15 @@ snapshots:
   strip-json-comments@2.0.1: {}
 =======
 
+<<<<<<< HEAD
   strip-json-comments@2.0.1: {}
 >>>>>>> 4bb5df9 (chore: sync lockfile)
 
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  strip-json-comments@2.0.1: {}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   strip-literal@3.1.0:
     dependencies:
       js-tokens: 9.0.1
@@ -18367,9 +18953,15 @@ snapshots:
     dependencies:
       react: 19.2.3
 
+<<<<<<< HEAD
   util-deprecate@1.0.2: {}
 
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+  util-deprecate@1.0.2: {}
+
+=======
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   uuid@11.1.0: {}
 
   vfile-location@5.0.3:
@@ -18846,6 +19438,8 @@ snapshots:
 
   web-namespaces@2.0.1: {}
 
+  web-streams-polyfill@3.3.3: {}
+
   webidl-conversions@3.0.1: {}
 
   webpack-sources@3.3.3: {}
@@ -18908,6 +19502,7 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20251210.0
       '@cloudflare/workerd-windows-64': 1.20251210.0
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
@@ -18985,6 +19580,17 @@ snapshots:
 
   wrangler@4.54.0(@cloudflare/workers-types@4.20251209.0):
 =======
+||||||| parent of 2fbf940 (chore: use `libsql` when local)
+=======
+  workerd@1.20251213.0:
+    optionalDependencies:
+      '@cloudflare/workerd-darwin-64': 1.20251213.0
+      '@cloudflare/workerd-darwin-arm64': 1.20251213.0
+      '@cloudflare/workerd-linux-64': 1.20251213.0
+      '@cloudflare/workerd-linux-arm64': 1.20251213.0
+      '@cloudflare/workerd-windows-64': 1.20251213.0
+
+>>>>>>> 2fbf940 (chore: use `libsql` when local)
   wrangler@4.54.0(@cloudflare/workers-types@4.20251216.0):
 >>>>>>> 10c17c0 (feat: working test script & `/version` route)
     dependencies:
@@ -18996,6 +19602,23 @@ snapshots:
       path-to-regexp: 6.3.0
       unenv: 2.0.0-rc.24
       workerd: 1.20251210.0
+    optionalDependencies:
+      '@cloudflare/workers-types': 4.20251216.0
+      fsevents: 2.3.3
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+
+  wrangler@4.55.0(@cloudflare/workers-types@4.20251216.0):
+    dependencies:
+      '@cloudflare/kv-asset-handler': 0.4.1
+      '@cloudflare/unenv-preset': 2.7.13(unenv@2.0.0-rc.24)(workerd@1.20251213.0)
+      blake3-wasm: 2.1.5
+      esbuild: 0.27.0
+      miniflare: 4.20251213.0
+      path-to-regexp: 6.3.0
+      unenv: 2.0.0-rc.24
+      workerd: 1.20251213.0
     optionalDependencies:
       '@cloudflare/workers-types': 4.20251216.0
       fsevents: 2.3.3
