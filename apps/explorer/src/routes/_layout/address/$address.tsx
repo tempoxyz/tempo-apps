@@ -92,7 +92,7 @@ const defaultSearchValues = {
 	limit: 10,
 } as const
 
-export type AddressTab = 'history' | 'assets' | 'contract'
+export type AddressSection = 'history' | 'assets' | 'contract'
 
 function useBatchTransactionData(
 	transactions: Transaction[],
@@ -446,8 +446,8 @@ function RouteComponent() {
 	return <Outlet />
 }
 
-export function AddressPageContent(props: { tab: AddressTab }) {
-	const { tab } = props
+export function AddressPageContent(props: { section: AddressSection }) {
+	const { section } = props
 	const navigate = useNavigate()
 	const router = useRouter()
 	const location = useLocation()
@@ -463,34 +463,34 @@ export function AddressPageContent(props: { tab: AddressTab }) {
 	// user manually switches tabs, but allows redirect for new hash values)
 	const redirectedForHashRef = React.useRef<string | null>(null)
 
-	// When URL has a hash fragment (e.g., #functionName), switch to contract tab
+	// When URL has a hash fragment (e.g., #functionName), switch to contract section
 	React.useEffect(() => {
 		// Only redirect if:
 		// 1. We have a hash
 		// 2. Address has a known contract
-		// 3. Not already on contract tab
+		// 3. Not already on contract section
 		// 4. Haven't already redirected for this specific hash
 		if (
 			hash &&
 			hasContract &&
-			tab !== 'contract' &&
+			section !== 'contract' &&
 			redirectedForHashRef.current !== hash
 		) {
 			redirectedForHashRef.current = hash
 			navigate({
-				to: '/address/$address/$tab',
-				params: { address, tab: 'contract' },
+				to: '/address/$address/$section',
+				params: { address, section: 'contract' },
 				search: { page: 1, limit },
 				hash,
 				replace: true,
 				resetScroll: false,
 			})
 		}
-	}, [hash, hasContract, tab, navigate, limit, address])
+	}, [hash, hasContract, section, navigate, limit, address])
 
 	React.useEffect(() => {
-		// Only preload for history tab (transaction pagination)
-		if (tab !== 'history') return
+		// Only preload for history section (transaction pagination)
+		if (section !== 'history') return
 		// preload next page only to reduce initial load overhead
 		async function preload() {
 			try {
@@ -506,17 +506,17 @@ export function AddressPageContent(props: { tab: AddressTab }) {
 		}
 
 		preload()
-	}, [page, router, tab, limit, address])
+	}, [page, router, section, limit, address])
 
-	const tabs: AddressTab[] = hasContract
+	const sections: AddressSection[] = hasContract
 		? ['history', 'assets', 'contract']
 		: ['history', 'assets']
-	const activeSection = Math.max(0, tabs.indexOf(tab))
+	const activeSection = Math.max(0, sections.indexOf(section))
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
-			const newTab = tabs[newIndex] ?? 'history'
-			if (newTab === 'history') {
+			const newSection = sections[newIndex] ?? 'history'
+			if (newSection === 'history') {
 				navigate({
 					to: '/address/$address',
 					params: { address },
@@ -525,14 +525,14 @@ export function AddressPageContent(props: { tab: AddressTab }) {
 				})
 			} else {
 				navigate({
-					to: '/address/$address/$tab',
-					params: { address, tab: newTab },
+					to: '/address/$address/$section',
+					params: { address, section: newSection },
 					search: { page, limit },
 					resetScroll: false,
 				})
 			}
 		},
-		[navigate, page, limit, address, tabs],
+		[navigate, page, limit, address, sections],
 	)
 
 	const assetsData = useAssetsData(address)

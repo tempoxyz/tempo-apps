@@ -6,5 +6,5 @@ export const Route = createFileRoute('/_layout/token/$address/')({
 })
 
 function RouteComponent() {
-	return <TokenPageContent tab="transfers" />
+	return <TokenPageContent section="transfers" />
 }

@@ -131,10 +131,10 @@ function RouteComponent() {
 	return <Outlet />
 }
 
-export type TxTab = 'overview' | 'calls' | 'events' | 'changes' | 'raw'
+export type TxSection = 'overview' | 'calls' | 'events' | 'changes' | 'raw'
 
-export function TxPageContent(props: { tab: TxTab }) {
-	const { tab } = props
+export function TxPageContent(props: { section: TxSection }) {
+	const { section } = props
 	const navigate = useNavigate()
 	const { hash } = Route.useParams()
 	const { page } = Route.useSearch()
@@ -161,23 +161,23 @@ export function TxPageContent(props: { tab: TxTab }) {
 	const calls = 'calls' in transaction ? transaction.calls : undefined
 	const hasCalls = Boolean(calls && calls.length > 0)
 
-	const tabs: TxTab[] = [
+	const sections: TxSection[] = [
 		'overview',
 		...(hasCalls ? ['calls' as const] : []),
 		'events',
 		'changes',
 		'raw',
 	]
-	const activeSection = Math.max(0, tabs.indexOf(tab))
+	const activeSection = Math.max(0, sections.indexOf(section))
 
 	const setActiveSection = (newIndex: number) => {
-		const newTab = tabs[newIndex] ?? 'overview'
-		if (newTab === 'overview') {
+		const newSection = sections[newIndex] ?? 'overview'
+		if (newSection === 'overview') {
 			navigate({ to: '/tx/$hash', params: { hash }, resetScroll: false })
 		} else {
 			navigate({
-				to: '/tx/$hash/$tab',
-				params: { hash, tab: newTab },
+				to: '/tx/$hash/$section',
+				params: { hash, section: newSection },
 				resetScroll: false,
 			})
 		}

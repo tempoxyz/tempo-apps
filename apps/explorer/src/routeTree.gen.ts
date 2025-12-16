@@ -33,9 +33,9 @@ import { Route as LayoutAddressAddressIndexRouteImport } from './routes/_layout/
 import { Route as ApiTxBalanceChangesHashRouteImport } from './routes/api/tx/balance-changes/$hash'
 import { Route as ApiAddressTxsCountAddressRouteImport } from './routes/api/address/txs-count/$address'
 import { Route as ApiAddressTotalValueAddressRouteImport } from './routes/api/address/total-value/$address'
-import { Route as LayoutTxHashTabRouteImport } from './routes/_layout/tx/$hash/$tab'
-import { Route as LayoutTokenAddressTabRouteImport } from './routes/_layout/token/$address/$tab'
-import { Route as LayoutAddressAddressTabRouteImport } from './routes/_layout/address/$address/$tab'
+import { Route as LayoutTxHashSectionRouteImport } from './routes/_layout/tx/$hash/$section'
+import { Route as LayoutTokenAddressSectionRouteImport } from './routes/_layout/token/$address/$section'
+import { Route as LayoutAddressAddressSectionRouteImport } from './routes/_layout/address/$address/$section'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -159,21 +159,23 @@ const ApiAddressTotalValueAddressRoute =
     path: '/api/address/total-value/$address',
     getParentRoute: () => rootRouteImport,
   } as any)
-const LayoutTxHashTabRoute = LayoutTxHashTabRouteImport.update({
-  id: '/$tab',
-  path: '/$tab',
+const LayoutTxHashSectionRoute = LayoutTxHashSectionRouteImport.update({
+  id: '/$section',
+  path: '/$section',
   getParentRoute: () => LayoutTxHashRoute,
 } as any)
-const LayoutTokenAddressTabRoute = LayoutTokenAddressTabRouteImport.update({
-  id: '/$tab',
-  path: '/$tab',
-  getParentRoute: () => LayoutTokenAddressRoute,
-} as any)
-const LayoutAddressAddressTabRoute = LayoutAddressAddressTabRouteImport.update({
-  id: '/$tab',
-  path: '/$tab',
-  getParentRoute: () => LayoutAddressAddressRoute,
-} as any)
+const LayoutTokenAddressSectionRoute =
+  LayoutTokenAddressSectionRouteImport.update({
+    id: '/$section',
+    path: '/$section',
+    getParentRoute: () => LayoutTokenAddressRoute,
+  } as any)
+const LayoutAddressAddressSectionRoute =
+  LayoutAddressAddressSectionRouteImport.update({
+    id: '/$section',
+    path: '/$section',
+    getParentRoute: () => LayoutAddressAddressRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/blocks': typeof LayoutBlocksRoute
@@ -193,9 +195,9 @@ export interface FileRoutesByFullPath {
   '/tx/$hash': typeof LayoutTxHashRouteWithChildren
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/demo': typeof LayoutDemoIndexRoute
-  '/address/$address/$tab': typeof LayoutAddressAddressTabRoute
-  '/token/$address/$tab': typeof LayoutTokenAddressTabRoute
-  '/tx/$hash/$tab': typeof LayoutTxHashTabRoute
+  '/address/$address/$section': typeof LayoutAddressAddressSectionRoute
+  '/token/$address/$section': typeof LayoutTokenAddressSectionRoute
+  '/tx/$hash/$section': typeof LayoutTxHashSectionRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
@@ -218,9 +220,9 @@ export interface FileRoutesByTo {
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/demo': typeof LayoutDemoIndexRoute
-  '/address/$address/$tab': typeof LayoutAddressAddressTabRoute
-  '/token/$address/$tab': typeof LayoutTokenAddressTabRoute
-  '/tx/$hash/$tab': typeof LayoutTxHashTabRoute
+  '/address/$address/$section': typeof LayoutAddressAddressSectionRoute
+  '/token/$address/$section': typeof LayoutTokenAddressSectionRoute
+  '/tx/$hash/$section': typeof LayoutTxHashSectionRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
@@ -248,9 +250,9 @@ export interface FileRoutesById {
   '/_layout/tx/$hash': typeof LayoutTxHashRouteWithChildren
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
-  '/_layout/address/$address/$tab': typeof LayoutAddressAddressTabRoute
-  '/_layout/token/$address/$tab': typeof LayoutTokenAddressTabRoute
-  '/_layout/tx/$hash/$tab': typeof LayoutTxHashTabRoute
+  '/_layout/address/$address/$section': typeof LayoutAddressAddressSectionRoute
+  '/_layout/token/$address/$section': typeof LayoutTokenAddressSectionRoute
+  '/_layout/tx/$hash/$section': typeof LayoutTxHashSectionRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
@@ -278,9 +280,9 @@ export interface FileRouteTypes {
     | '/tx/$hash'
     | '/api/address/$address'
     | '/demo'
-    | '/address/$address/$tab'
-    | '/token/$address/$tab'
-    | '/tx/$hash/$tab'
+    | '/address/$address/$section'
+    | '/token/$address/$section'
+    | '/tx/$hash/$section'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
@@ -303,9 +305,9 @@ export interface FileRouteTypes {
     | '/receipt/$hash'
     | '/api/address/$address'
     | '/demo'
-    | '/address/$address/$tab'
-    | '/token/$address/$tab'
-    | '/tx/$hash/$tab'
+    | '/address/$address/$section'
+    | '/token/$address/$section'
+    | '/tx/$hash/$section'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
@@ -332,9 +334,9 @@ export interface FileRouteTypes {
     | '/_layout/tx/$hash'
     | '/api/address/$address'
     | '/_layout/demo/'
-    | '/_layout/address/$address/$tab'
-    | '/_layout/token/$address/$tab'
-    | '/_layout/tx/$hash/$tab'
+    | '/_layout/address/$address/$section'
+    | '/_layout/token/$address/$section'
+    | '/_layout/tx/$hash/$section'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
@@ -524,37 +526,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAddressTotalValueAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_layout/tx/$hash/$tab': {
-      id: '/_layout/tx/$hash/$tab'
-      path: '/$tab'
-      fullPath: '/tx/$hash/$tab'
-      preLoaderRoute: typeof LayoutTxHashTabRouteImport
+    '/_layout/tx/$hash/$section': {
+      id: '/_layout/tx/$hash/$section'
+      path: '/$section'
+      fullPath: '/tx/$hash/$section'
+      preLoaderRoute: typeof LayoutTxHashSectionRouteImport
       parentRoute: typeof LayoutTxHashRoute
     }
-    '/_layout/token/$address/$tab': {
-      id: '/_layout/token/$address/$tab'
-      path: '/$tab'
-      fullPath: '/token/$address/$tab'
-      preLoaderRoute: typeof LayoutTokenAddressTabRouteImport
+    '/_layout/token/$address/$section': {
+      id: '/_layout/token/$address/$section'
+      path: '/$section'
+      fullPath: '/token/$address/$section'
+      preLoaderRoute: typeof LayoutTokenAddressSectionRouteImport
       parentRoute: typeof LayoutTokenAddressRoute
     }
-    '/_layout/address/$address/$tab': {
-      id: '/_layout/address/$address/$tab'
-      path: '/$tab'
-      fullPath: '/address/$address/$tab'
-      preLoaderRoute: typeof LayoutAddressAddressTabRouteImport
+    '/_layout/address/$address/$section': {
+      id: '/_layout/address/$address/$section'
+      path: '/$section'
+      fullPath: '/address/$address/$section'
+      preLoaderRoute: typeof LayoutAddressAddressSectionRouteImport
       parentRoute: typeof LayoutAddressAddressRoute
     }
   }
 }
 
 interface LayoutAddressAddressRouteChildren {
-  LayoutAddressAddressTabRoute: typeof LayoutAddressAddressTabRoute
+  LayoutAddressAddressSectionRoute: typeof LayoutAddressAddressSectionRoute
   LayoutAddressAddressIndexRoute: typeof LayoutAddressAddressIndexRoute
 }
 
 const LayoutAddressAddressRouteChildren: LayoutAddressAddressRouteChildren = {
-  LayoutAddressAddressTabRoute: LayoutAddressAddressTabRoute,
+  LayoutAddressAddressSectionRoute: LayoutAddressAddressSectionRoute,
   LayoutAddressAddressIndexRoute: LayoutAddressAddressIndexRoute,
 }
 
@@ -562,12 +564,12 @@ const LayoutAddressAddressRouteWithChildren =
   LayoutAddressAddressRoute._addFileChildren(LayoutAddressAddressRouteChildren)
 
 interface LayoutTokenAddressRouteChildren {
-  LayoutTokenAddressTabRoute: typeof LayoutTokenAddressTabRoute
+  LayoutTokenAddressSectionRoute: typeof LayoutTokenAddressSectionRoute
   LayoutTokenAddressIndexRoute: typeof LayoutTokenAddressIndexRoute
 }
 
 const LayoutTokenAddressRouteChildren: LayoutTokenAddressRouteChildren = {
-  LayoutTokenAddressTabRoute: LayoutTokenAddressTabRoute,
+  LayoutTokenAddressSectionRoute: LayoutTokenAddressSectionRoute,
   LayoutTokenAddressIndexRoute: LayoutTokenAddressIndexRoute,
 }
 
@@ -575,12 +577,12 @@ const LayoutTokenAddressRouteWithChildren =
   LayoutTokenAddressRoute._addFileChildren(LayoutTokenAddressRouteChildren)
 
 interface LayoutTxHashRouteChildren {
-  LayoutTxHashTabRoute: typeof LayoutTxHashTabRoute
+  LayoutTxHashSectionRoute: typeof LayoutTxHashSectionRoute
   LayoutTxHashIndexRoute: typeof LayoutTxHashIndexRoute
 }
 
 const LayoutTxHashRouteChildren: LayoutTxHashRouteChildren = {
-  LayoutTxHashTabRoute: LayoutTxHashTabRoute,
+  LayoutTxHashSectionRoute: LayoutTxHashSectionRoute,
   LayoutTxHashIndexRoute: LayoutTxHashIndexRoute,
 }
 

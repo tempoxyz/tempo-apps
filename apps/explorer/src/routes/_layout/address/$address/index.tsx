@@ -6,5 +6,5 @@ export const Route = createFileRoute('/_layout/address/$address/')({
 })
 
 function RouteComponent() {
-	return <AddressPageContent tab="history" />
+	return <AddressPageContent section="history" />
 }

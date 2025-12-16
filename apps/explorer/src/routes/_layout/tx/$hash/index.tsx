@@ -6,5 +6,5 @@ export const Route = createFileRoute('/_layout/tx/$hash/')({
 })
 
 function RouteComponent() {
-	return <TxPageContent tab="overview" />
+	return <TxPageContent section="overview" />
 }

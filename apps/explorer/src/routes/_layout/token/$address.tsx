@@ -45,8 +45,8 @@ const defaultSearchValues = {
 	limit: 10,
 } as const
 
-export type TokenTab = 'transfers' | 'holders' | 'contract'
-const tabOrder: TokenTab[] = ['transfers', 'holders', 'contract']
+export type TokenSection = 'transfers' | 'holders' | 'contract'
+const sectionOrder: TokenSection[] = ['transfers', 'holders', 'contract']
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
@@ -194,8 +194,8 @@ function RouteComponent() {
 	return <Outlet />
 }
 
-export function TokenPageContent(props: { tab: TokenTab }) {
-	const { tab } = props
+export function TokenPageContent(props: { section: TokenSection }) {
+	const { section } = props
 	const navigate = useNavigate()
 	const route = useRouter()
 	const { address } = Route.useParams()
@@ -235,12 +235,12 @@ export function TokenPageContent(props: { tab: TokenTab }) {
 		[navigate, limit, a],
 	)
 
-	const activeSection = tabOrder.indexOf(tab)
+	const activeSection = sectionOrder.indexOf(section)
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
-			const newTab = tabOrder[newIndex] ?? 'transfers'
-			if (newTab === 'transfers') {
+			const newSection = sectionOrder[newIndex] ?? 'transfers'
+			if (newSection === 'transfers') {
 				navigate({
 					to: '/token/$address',
 					params: { address },
@@ -252,8 +252,8 @@ export function TokenPageContent(props: { tab: TokenTab }) {
 				})
 			} else {
 				navigate({
-					to: '/token/$address/$tab',
-					params: { address, tab: newTab },
+					to: '/token/$address/$section',
+					params: { address, section: newSection },
 					search: () => ({
 						...(limit !== defaultSearchValues.limit ? { limit } : {}),
 					}),
