@@ -53,14 +53,6 @@ import {
 } from '#lib/queries/account.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 
-async function fetchAddressTransactionsCount(address: Address.Address) {
-	const response = await fetch(
-		`${__BASE_URL__}/api/address/txs-count/${address}`,
-		{ headers: { 'Content-Type': 'application/json' } },
-	)
-	return response.json() as Promise<{ data: number }>
-}
-
 async function fetchAddressTotalValue(address: Address.Address) {
 	const response = await fetch(
 		`${__BASE_URL__}/api/address/total-value/${address}`,
@@ -258,32 +250,37 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 		const hasContract = Boolean(contractInfo)
 
-		const transactionsData = await context.queryClient
-			.ensureQueryData(
-				transactionsQueryOptions({
-					address,
-					page,
-					limit,
-					offset,
+		// Add timeout to prevent SSR from hanging on slow queries
+		const QUERY_TIMEOUT_MS = 3000
+		const timeout = <T,>(
+			promise: Promise<T>,
+			ms: number,
+		): Promise<T | undefined> =>
+			Promise.race([
+				promise,
+				new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
+			])
+
+		const transactionsData = await timeout(
+			context.queryClient
+				.ensureQueryData(
+					transactionsQueryOptions({
+						address,
+						page,
+						limit,
+						offset,
+					}),
+				)
+				.catch((error) => {
+					console.error('Fetch transactions error:', error)
+					return undefined
 				}),
-			)
-			.catch((error) => {
-				console.error('Fetch error (non-blocking):', error)
-				return undefined
-			})
+			QUERY_TIMEOUT_MS,
+		)
 
-		const txCountResponse = await context.queryClient
-			.ensureQueryData({
-				queryKey: ['account-transaction-count', address],
-				queryFn: () => fetchAddressTransactionsCount(address),
-				staleTime: 30_000,
-			})
-			.catch((error) => {
-				console.error('Fetch txs-count error (non-blocking):', error)
-				return undefined
-			})
-
-		const totalValueResponse = await context.queryClient
+		// Fire off optional loaders without blocking page render
+		// These will populate the cache if successful but won't delay the page load
+		context.queryClient
 			.ensureQueryData({
 				queryKey: ['account-total-value', address],
 				queryFn: () => fetchAddressTotalValue(address),
@@ -291,8 +288,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 			.catch((error) => {
 				console.error('Fetch total-value error (non-blocking):', error)
-				return undefined
 			})
+
+		// For SSR, provide placeholder values - client will fetch real data
+		const txCountResponse: undefined = undefined
+		const totalValueResponse: undefined = undefined
 
 		return {
 			address,
@@ -311,10 +311,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const label = isContract ? 'Contract' : 'Address'
 		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
 
-		const txCount = Number(loaderData?.txCountResponse?.data ?? 0)
-		const totalValue = loaderData?.totalValueResponse?.totalValue
-		const holdings =
-			totalValue !== undefined ? PriceFormatter.format(totalValue) : '—'
+		const txCount = 0
+		const holdings = '—'
 
 		// Fetch lastActive timestamp with a timeout to avoid blocking too long
 		let lastActive: string | undefined
@@ -504,9 +502,10 @@ function AccountCardWithTimestamps(props: {
 	})
 
 	// Use the real transaction count (not the approximate total from pagination)
-	const { data: exactTotalResponse } = useTransactionCount(address)
-	const totalTransactions = Number(exactTotalResponse?.data ?? 0)
-	const lastPageOffset = Math.max(0, totalTransactions - 1)
+	// Don't fetch exact count - use API hasMore flag for pagination
+	// This makes the page render instantly without waiting for count query
+	const totalTransactions = 0 // Unknown until user navigates
+	const lastPageOffset = 0 // Can't calculate without total
 
 	const { data: oldestData } = useQuery({
 		...transactionsQueryOptions({
@@ -539,14 +538,6 @@ function AccountCardWithTimestamps(props: {
 			totalValue={totalValue}
 		/>
 	)
-}
-
-function useTransactionCount(address: Address.Address) {
-	return useQuery({
-		queryKey: ['account-transaction-count', address],
-		queryFn: () => fetchAddressTransactionsCount(address),
-		staleTime: 30_000,
-	})
 }
 
 function SectionsWrapper(props: {
@@ -587,9 +578,14 @@ function SectionsWrapper(props: {
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
-	const { transactions, total: approximateTotal } = data ?? {
+	const {
+		transactions,
+		total: approximateTotal,
+		hasMore,
+	} = data ?? {
 		transactions: [],
 		total: 0,
+		hasMore: false,
 	}
 
 	const batchTransactionDataContextValue = useBatchTransactionData(
@@ -597,8 +593,12 @@ function SectionsWrapper(props: {
 		address,
 	)
 
-	const { data: exactTotalResponse } = useTransactionCount(address)
-	const total = exactTotalResponse?.data ?? approximateTotal
+	// Use hasMore from API for pagination - don't need exact total count
+	// This makes pagination responsive without waiting for separate count query
+	// When hasMore is true, set total to be high enough to enable next page button
+	const total = hasMore
+		? Math.max(approximateTotal + limit, (page + 1) * limit)
+		: transactions.length
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'

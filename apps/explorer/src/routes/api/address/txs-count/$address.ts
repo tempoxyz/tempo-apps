@@ -41,16 +41,16 @@ export const Route = createFileRoute('/api/address/txs-count/$address')({
 							.select((eb) => eb.fn.count('hash').as('cnt'))
 							.where('from', '=', address)
 							.where('chain', '=', chainId)
-							.executeTakeFirstOrThrow(),
+							.executeTakeFirst(),
 						QB.selectFrom('txs')
 							.select((eb) => eb.fn.count('hash').as('cnt'))
 							.where('to', '=', address)
 							.where('chain', '=', chainId)
-							.executeTakeFirstOrThrow(),
+							.executeTakeFirst(),
 					])
 
-					const txSent = txSentResult.cnt ?? 0
-					const txReceived = txReceivedResult.cnt ?? 0
+					const txSent = txSentResult?.cnt ?? 0
+					const txReceived = txReceivedResult?.cnt ?? 0
 
 					return json({
 						data: Number(txSent) + Number(txReceived),

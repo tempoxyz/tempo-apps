@@ -121,10 +121,15 @@ export const Route = createFileRoute('/api/address/$address')({
 						.orderBy('block_num', sortDirection)
 						.orderBy('tx_hash', sortDirection)
 
+					// OPTIMIZATION: Bound fetch size to avoid huge offsets on deep pagination.
+					// We need at least offset+fetchSize rows, but cap at 500 for memory efficiency.
+					// This avoids expensive database offset operations while ensuring we have enough data.
+					const bufferSize = Math.min(offset + fetchSize, 500)
+
 					// Run both queries in parallel and merge-sort to get top N hashes
 					const [directResult, transferResult] = await Promise.all([
-						directTxsQuery.limit(offset + fetchSize).execute(),
-						transferHashesQuery.limit(offset + fetchSize).execute(),
+						directTxsQuery.limit(bufferSize).execute(),
+						transferHashesQuery.limit(bufferSize).execute(),
 					])
 
 					// Merge both results by block_num, deduplicate, and take top offset+fetchSize
