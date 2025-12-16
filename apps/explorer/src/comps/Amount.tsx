@@ -3,6 +3,7 @@ import { type Address, Value } from 'ox'
 import { Abis } from 'tempo.ts/viem'
 import { Hooks } from 'tempo.ts/wagmi'
 import { useReadContracts } from 'wagmi'
+import { TokenIcon } from '#comps/TokenIcon.tsx'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { PriceFormatter } from '#lib/formatting.ts'
 
@@ -40,8 +41,8 @@ export function Amount(props: Amount.Props) {
 	const formatted = isLoading ? '…' : PriceFormatter.formatAmount(rawFormatted)
 
 	return (
-		<span className="items-end whitespace-nowrap">
-			{formatted}{' '}
+		<span className="inline-flex items-center gap-1 whitespace-nowrap">
+			{formatted} <TokenIcon address={token} name={symbol_} />
 			<Link
 				className="text-base-content-positive press-down inline-flex"
 				params={{ address: token }}

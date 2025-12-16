@@ -3,6 +3,7 @@ import type { Address as OxAddress } from 'ox'
 import { Value } from 'ox'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
+import { TokenIcon } from '#comps/TokenIcon'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
 import {
@@ -88,11 +89,12 @@ export namespace TxBalanceChanges {
 
 		return (
 			<Link
-				className="text-base-content-positive press-down"
+				className="text-base-content-positive press-down inline-flex items-center gap-1"
 				params={{ address: token }}
 				title={token}
 				to={isTip20 ? '/token/$address' : '/address/$address'}
 			>
+				<TokenIcon address={token} name={metadata?.symbol} />
 				{metadata?.symbol ?? '…'}
 			</Link>
 		)

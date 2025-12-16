@@ -12,6 +12,11 @@ import { parseKnownEvents } from '#lib/domain/known-events'
 import { LineItems } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import {
+	buildTxDescription,
+	formatEventForOgServer,
+	OG_BASE_URL,
+} from '#lib/og'
 import { getConfig } from '#wagmi.config'
 
 function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
@@ -221,6 +226,63 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			z.transform((val) => val.replace(/(\.json|\.txt|\.pdf)$/, '') as Hex.Hex),
 		),
 	}),
+	head: ({ params, loaderData }) => {
+		const title = `Receipt ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
+
+		const description = buildTxDescription(
+			loaderData
+				? {
+						timestamp: Number(loaderData.block.timestamp) * 1000,
+						from: loaderData.receipt.from,
+						events: loaderData.knownEvents ?? [],
+					}
+				: null,
+		)
+
+		const search = new URLSearchParams()
+		if (loaderData) {
+			search.set('block', loaderData.block.number.toString())
+			search.set('sender', loaderData.receipt.from)
+			const ogTimestamp = DateFormatter.formatTimestampForOg(
+				loaderData.block.timestamp,
+			)
+			search.set('date', ogTimestamp.date)
+			search.set('time', ogTimestamp.time)
+
+			// Include fee so the OG receipt can render the Fee row.
+			const gasUsed = loaderData.receipt.gasUsed ?? 0n
+			const gasPrice =
+				loaderData.receipt.effectiveGasPrice ??
+				loaderData.transaction.gasPrice ??
+				0n
+			const feeAmount = gasUsed * gasPrice
+			const fee = Number(Value.format(feeAmount, 18))
+			const feeDisplay = PriceFormatter.format(fee)
+			search.set('fee', feeDisplay)
+
+			loaderData.knownEvents?.slice(0, 6).forEach((event, index) => {
+				search.set(`ev${index + 1}`, formatEventForOgServer(event))
+			})
+		}
+
+		const ogImageUrl = `${OG_BASE_URL}/tx/${params.hash}?${search.toString()}`
+
+		return {
+			title,
+			meta: [
+				{ title },
+				{ property: 'og:title', content: title },
+				{ property: 'og:description', content: description },
+				{ name: 'twitter:description', content: description },
+				{ property: 'og:image', content: ogImageUrl },
+				{ property: 'og:image:type', content: 'image/png' },
+				{ property: 'og:image:width', content: '1200' },
+				{ property: 'og:image:height', content: '630' },
+				{ name: 'twitter:card', content: 'summary_large_image' },
+				{ name: 'twitter:image', content: ogImageUrl },
+			],
+		}
+	},
 })
 
 function Component() {

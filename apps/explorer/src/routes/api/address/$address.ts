@@ -21,7 +21,7 @@ const TRANSFER_SIGNATURE =
 
 export const RequestParametersSchema = z.object({
 	offset: z.prefault(z.coerce.number(), 0),
-	limit: z.prefault(z.coerce.number(), 100),
+	limit: z.prefault(z.coerce.number(), 10),
 	sort: z.prefault(z.enum(['asc', 'desc']), 'desc'),
 	include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
 })
@@ -75,22 +75,11 @@ export const Route = createFileRoute('/api/address/$address')({
 					const includeSent = include === 'all' || include === 'sent'
 					const includeReceived = include === 'all' || include === 'received'
 
-					const fetchSize = offset + limit + 1
+					const fetchSize = limit + 1
 
-					// Build direct transactions query
+					// Build direct transactions query - only fetch hashes first for efficiency
 					let directTxsQuery = QB.selectFrom('txs')
-						.select([
-							'hash',
-							'block_num',
-							'from',
-							'to',
-							'value',
-							'input',
-							'nonce',
-							'gas',
-							'gas_price',
-							'type',
-						])
+						.select(['hash', 'block_num'])
 						.where('chain', '=', chainId)
 
 					if (includeSent && includeReceived) {
@@ -106,7 +95,6 @@ export const Route = createFileRoute('/api/address/$address')({
 					directTxsQuery = directTxsQuery
 						.orderBy('block_num', sortDirection)
 						.orderBy('hash', sortDirection)
-						.limit(fetchSize)
 
 					// Build transfer hashes query
 					let transferHashesQuery = QB.withSignatures([TRANSFER_SIGNATURE])
@@ -132,93 +120,105 @@ export const Route = createFileRoute('/api/address/$address')({
 					transferHashesQuery = transferHashesQuery
 						.orderBy('block_num', sortDirection)
 						.orderBy('tx_hash', sortDirection)
-						.limit(fetchSize)
 
-					const [directTxsResult, transferHashesResult] = await Promise.all([
-						directTxsQuery.execute(),
-						transferHashesQuery.execute(),
+					// bound fetch size to avoid huge offsets on deep pagination
+					const bufferSize = Math.min(
+						Math.max(offset + fetchSize * 5, limit * 3),
+						500,
+					)
+
+					// Run both queries in parallel and merge-sort to get top N hashes
+					const [directResult, transferResult] = await Promise.all([
+						directTxsQuery.limit(bufferSize).execute(),
+						transferHashesQuery.limit(bufferSize).execute(),
 					])
 
-					const txsByHash = new Map<Hex.Hex, (typeof directTxsResult)[number]>()
-					for (const row of directTxsResult) txsByHash.set(row.hash, row)
+					// Merge both results by block_num, deduplicate, and take top offset+fetchSize
+					type HashEntry = { hash: Hex.Hex; block_num: bigint }
+					const allHashes = new Map<Hex.Hex, HashEntry>()
+					for (const row of directResult)
+						allHashes.set(row.hash, {
+							hash: row.hash,
+							block_num: row.block_num,
+						})
+					for (const row of transferResult)
+						if (!allHashes.has(row.tx_hash))
+							allHashes.set(row.tx_hash, {
+								hash: row.tx_hash,
+								block_num: row.block_num,
+							})
 
-					const transferHashes: Hex.Hex[] = []
-					for (const row of transferHashesResult) {
-						const hash = row.tx_hash
-						if (!txsByHash.has(hash)) transferHashes.push(hash)
-					}
-
-					if (transferHashes.length > 0) {
-						const BATCH_SIZE = 500
-						for (
-							let index = 0;
-							index < transferHashes.length;
-							index += BATCH_SIZE
-						) {
-							const batch = transferHashes.slice(index, index + BATCH_SIZE)
-
-							const transferTxsResult = await QB.selectFrom('txs')
-								.select([
-									'hash',
-									'block_num',
-									'from',
-									'to',
-									'value',
-									'input',
-									'nonce',
-									'gas',
-									'gas_price',
-									'type',
-								])
-								.where('chain', '=', chainId)
-								.where('hash', 'in', batch)
-								.execute()
-
-							for (const row of transferTxsResult) txsByHash.set(row.hash, row)
-						}
-					}
-
-					const sortedTxs = [...txsByHash.values()].sort((a, b) => {
+					const sortedHashes = [...allHashes.values()].sort((a, b) => {
 						const blockDiff =
 							sortDirection === 'desc'
 								? Number(b.block_num) - Number(a.block_num)
 								: Number(a.block_num) - Number(b.block_num)
-						// Use hash as tiebreaker for stable sorting
 						if (blockDiff !== 0) return blockDiff
 						return sortDirection === 'desc'
 							? b.hash.localeCompare(a.hash)
 							: a.hash.localeCompare(b.hash)
 					})
 
-					const hasMore = sortedTxs.length > offset + limit
-					const paginatedTxs = sortedTxs.slice(offset, offset + limit)
+					const paginatedHashes = sortedHashes.slice(offset, offset + fetchSize)
+					const hasMore = paginatedHashes.length > limit
+					const finalHashes = hasMore
+						? paginatedHashes.slice(0, limit)
+						: paginatedHashes
 
-					const transactions: RpcTransaction[] = paginatedTxs.map((row) => {
-						const from = Address.checksum(row.from)
-						if (!from)
-							throw new Error('Transaction is missing a "from" address')
+					// Fetch full tx data only for the final set of hashes
+					let transactions: RpcTransaction[] = []
+					if (finalHashes.length > 0) {
+						const txDataResult = await QB.selectFrom('txs')
+							.select([
+								'hash',
+								'block_num',
+								'from',
+								'to',
+								'value',
+								'input',
+								'nonce',
+								'gas',
+								'gas_price',
+								'type',
+							])
+							.where('chain', '=', chainId)
+							.where(
+								'hash',
+								'in',
+								finalHashes.map((h) => h.hash),
+							)
+							.execute()
 
-						const to = row.to ? Address.checksum(row.to) : null
-
-						return {
-							blockHash: null,
-							blockNumber: Hex.fromNumber(row.block_num),
-							chainId: chainIdHex,
-							from,
-							gas: Hex.fromNumber(row.gas),
-							gasPrice: Hex.fromNumber(row.gas_price),
-							hash: row.hash,
-							input: row.input,
-							nonce: Hex.fromNumber(row.nonce),
-							to,
-							transactionIndex: null,
-							value: Hex.fromNumber(row.value),
-							type: Hex.fromNumber(row.type) as RpcTransaction['type'],
-							v: '0x0',
-							r: '0x0',
-							s: '0x0',
-						} as RpcTransaction
-					})
+						// Re-sort to match original order
+						const txByHash = new Map(txDataResult.map((tx) => [tx.hash, tx]))
+						transactions = finalHashes
+							.map((h) => txByHash.get(h.hash))
+							.filter((tx): tx is NonNullable<typeof tx> => tx != null)
+							.map((row) => {
+								const from = Address.checksum(row.from)
+								if (!from)
+									throw new Error('Transaction is missing a "from" address')
+								const to = row.to ? Address.checksum(row.to) : null
+								return {
+									blockHash: null,
+									blockNumber: Hex.fromNumber(row.block_num),
+									chainId: chainIdHex,
+									from,
+									gas: Hex.fromNumber(row.gas),
+									gasPrice: Hex.fromNumber(row.gas_price),
+									hash: row.hash,
+									input: row.input,
+									nonce: Hex.fromNumber(row.nonce),
+									to,
+									transactionIndex: null,
+									value: Hex.fromNumber(row.value),
+									type: Hex.fromNumber(row.type) as RpcTransaction['type'],
+									v: '0x0',
+									r: '0x0',
+									s: '0x0',
+								} as RpcTransaction
+							})
+					}
 
 					const nextOffset = offset + transactions.length
 
@@ -226,7 +226,7 @@ export const Route = createFileRoute('/api/address/$address')({
 						transactions,
 						total: hasMore ? nextOffset + 1 : nextOffset,
 						offset: nextOffset,
-						limit: transactions.length,
+						limit,
 						hasMore,
 						error: null,
 					})

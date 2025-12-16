@@ -9,6 +9,7 @@ import {
 	TimeColumnHeader,
 	useTimeFormat,
 } from '#comps/TimeFormat'
+import { TokenIcon } from '#comps/TokenIcon'
 import { useMediaQuery } from '#lib/hooks'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens.server'
@@ -81,8 +82,12 @@ function TokensPage() {
 										cells: [
 											<span
 												key="symbol"
-												className="text-base-content-positive font-medium"
+												className="inline-flex items-center gap-2 text-base-content-positive font-medium"
 											>
+												<TokenIcon
+													address={token.address}
+													name={token.symbol}
+												/>
 												{token.symbol}
 											</span>,
 											<span key="name" className="truncate max-w-[40ch]">

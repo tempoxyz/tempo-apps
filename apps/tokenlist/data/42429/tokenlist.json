@@ -15,7 +15,7 @@
 			"decimals": 6,
 			"chainId": 42429,
 			"address": "0x20c0000000000000000000000000000000000000",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42429/icons/0x20c0000000000000000000000000000000000000.svg",
 			"extensions": {
 				"chain": "tempo"
 			}
@@ -26,7 +26,7 @@
 			"decimals": 6,
 			"chainId": 42429,
 			"address": "0x20c0000000000000000000000000000000000001",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/alphausd.svg",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42429/icons/0x20c0000000000000000000000000000000000001.svg",
 			"extensions": {
 				"chain": "tempo"
 			}
@@ -37,7 +37,7 @@
 			"decimals": 6,
 			"chainId": 42429,
 			"address": "0x20c0000000000000000000000000000000000002",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/alphausd.svg",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42429/icons/0x20c0000000000000000000000000000000000002.svg",
 			"extensions": {
 				"chain": "tempo"
 			}
@@ -48,7 +48,7 @@
 			"decimals": 6,
 			"chainId": 42429,
 			"address": "0x20c0000000000000000000000000000000000003",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/alphausd.svg",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42429/icons/0x20c0000000000000000000000000000000000003.svg",
 			"extensions": {
 				"chain": "tempo"
 			}

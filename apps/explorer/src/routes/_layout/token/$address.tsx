@@ -11,8 +11,10 @@ import {
 } from '@tanstack/react-router'
 import { Address } from 'ox'
 import * as React from 'react'
+import { Abis } from 'tempo.ts/viem'
 import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
+import { readContract } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
@@ -24,12 +26,14 @@ import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TimeColumnHeader, useTimeFormat } from '#comps/TimeFormat'
 import { TimestampCell } from '#comps/TimestampCell'
+import { TokenIcon } from '#comps/TokenIcon'
 import { TransactionCell } from '#comps/TransactionCell'
 import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
 import { PriceFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
+import { buildTokenDescription, buildTokenOgImageUrl } from '#lib/og'
 import { holdersQueryOptions, transfersQueryOptions } from '#lib/queries'
 import { config } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
@@ -93,31 +97,42 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const offset = (page - 1) * limit
 
 		try {
-			// prefetch holders in background (non-blocking) - slow query that reconstructs all balances
-			// prefetch page 1 for sidebar stats, and current page for holders tab
-			context.queryClient.prefetchQuery(
+			// Fetch holders data for OG image (also used by the page)
+			const holdersPromise = context.queryClient.ensureQueryData(
 				holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
 			)
+
 			if (page !== 1 || limit !== 10) {
 				context.queryClient.prefetchQuery(
 					holdersQueryOptions({ address, page, limit, offset }),
 				)
 			}
 
+			// Fetch currency from contract (TIP-20 tokens have a currency() function)
+			const currencyPromise = readContract(config, {
+				address: address,
+				abi: Abis.tip20,
+				functionName: 'currency',
+			}).catch(() => undefined)
+
 			if (tab === 'transfers') {
-				const [metadata, transfers] = await Promise.all([
+				const [metadata, transfers, holdersData, currency] = await Promise.all([
 					Actions.token.getMetadata(config, { token: address }),
 					context.queryClient.ensureQueryData(
 						transfersQueryOptions({ address, page, limit, offset, account }),
 					),
+					holdersPromise,
+					currencyPromise,
 				])
-				return { metadata, transfers }
+				return { metadata, transfers, holdersData, currency }
 			}
 
-			const metadata = await Actions.token.getMetadata(config, {
-				token: address,
-			})
-			return { metadata, transfers: undefined }
+			const [metadata, holdersData, currency] = await Promise.all([
+				Actions.token.getMetadata(config, { token: address }),
+				holdersPromise,
+				currencyPromise,
+			])
+			return { metadata, transfers: undefined, holdersData, currency }
 		} catch (error) {
 			console.error(error)
 			// redirect to `/address/$address` and if it's not an address, that route will throw a notFound
@@ -134,6 +149,63 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				}),
 			),
 		}).parse,
+	},
+	head: ({ params, loaderData }) => {
+		const title = `Token ${params.address.slice(0, 6)}…${params.address.slice(-4)} ⋅ Tempo Explorer`
+		const metadata = loaderData?.metadata
+		const holdersData = loaderData?.holdersData
+		const currency = loaderData?.currency
+
+		// Format supply for OG image
+		const formatSupply = (totalSupply: string, decimals: number): string => {
+			const value = Number(formatUnits(BigInt(totalSupply), decimals))
+			if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`
+			if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`
+			if (value >= 1e3)
+				return value.toLocaleString('en-US', { maximumFractionDigits: 0 })
+			return value.toFixed(2)
+		}
+
+		const supply =
+			holdersData?.totalSupply && metadata?.decimals !== undefined
+				? formatSupply(holdersData.totalSupply, metadata.decimals)
+				: undefined
+
+		const description = buildTokenDescription(
+			metadata
+				? {
+						name: metadata.name ?? '—',
+						symbol: metadata.symbol,
+						supply,
+					}
+				: null,
+		)
+
+		const ogImageUrl = buildTokenOgImageUrl({
+			address: params.address,
+			name: metadata?.name,
+			symbol: metadata?.symbol,
+			currency,
+			holders: holdersData?.total,
+			supply,
+			created: holdersData?.created ?? undefined,
+		})
+
+		return {
+			title,
+			meta: [
+				{ title },
+				{ property: 'og:title', content: title },
+				{ property: 'og:description', content: description },
+				{ name: 'twitter:description', content: description },
+				{ property: 'og:image', content: ogImageUrl },
+				{ property: 'og:image:type', content: 'image/png' },
+				{ property: 'og:image:width', content: '1200' },
+				{ property: 'og:image:height', content: '630' },
+				{ name: 'twitter:card', content: 'summary_large_image' },
+				{ name: 'twitter:image', content: ogImageUrl },
+			],
+		}
 	},
 })
 
@@ -256,7 +328,14 @@ function TokenCard(props: {
 						Token
 					</h1>
 					{metadata?.symbol && (
-						<h2 className="text-[13px]">{metadata.symbol}</h2>
+						<h2 className="text-[13px] inline-flex items-center gap-1.5">
+							<TokenIcon
+								address={address}
+								name={metadata?.symbol}
+								className="size-5"
+							/>
+							{metadata.symbol}
+						</h2>
 					)}
 				</div>
 			}
@@ -292,7 +371,13 @@ function TokenCard(props: {
 								<span className="text-tertiary text-[13px]">{ellipsis}</span>
 							}
 						>
-							<span className="text-tertiary text-[13px]">{ellipsis}</span>
+							{holdersSummary?.created ? (
+								<span className="text-[13px] text-primary">
+									{holdersSummary.created}
+								</span>
+							) : (
+								<span className="text-tertiary text-[13px]">{ellipsis}</span>
+							)}
 						</ClientOnly>
 					),
 				},

@@ -63,6 +63,20 @@ export namespace DateFormatter {
 		hour12: false,
 	})
 
+	const ogDateFormatter = new Intl.DateTimeFormat('en-US', {
+		year: 'numeric',
+		month: 'short',
+		day: 'numeric',
+		timeZone: 'UTC',
+	})
+
+	const ogTimeFormatter = new Intl.DateTimeFormat('en-US', {
+		hour: '2-digit',
+		minute: '2-digit',
+		hour12: false,
+		timeZone: 'UTC',
+	})
+
 	const timezoneFormatter = new Intl.DateTimeFormat('en-US', {
 		timeZoneName: 'shortOffset',
 	})
@@ -111,6 +125,20 @@ export namespace DateFormatter {
 		const offset = signIndex > 0 ? timeZonePart.slice(signIndex) : '+0'
 
 		return { time: timeFormatter.format(date), timezone, offset }
+	}
+
+	/**
+	 * Formats timestamp for OG images (24-hour, no seconds, no timezone)
+	 */
+	export function formatTimestampForOg(timestamp: bigint): {
+		date: string
+		time: string
+	} {
+		const date = new Date(Number(timestamp) * 1000)
+		return {
+			date: ogDateFormatter.format(date),
+			time: ogTimeFormatter.format(date),
+		}
 	}
 
 	const relativeTimeFormatter = new Intl.RelativeTimeFormat('en-US', {

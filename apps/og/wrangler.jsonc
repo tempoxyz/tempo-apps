@@ -1,0 +1,28 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "og",
+	"main": "src/index.tsx",
+	"compatibility_date": "2025-12-02",
+	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"EXPLORER_URL": "https://explorer.tempo.xyz"
+	},
+	"assets": {
+		"directory": "./public",
+		"binding": "ASSETS"
+	},
+	"ratelimits": [
+		{
+			"name": "REQUESTS_RATE_LIMITER",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 30,
+				"period": 10
+			}
+		}
+	],
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	}
+}

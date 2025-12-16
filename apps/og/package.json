@@ -1,0 +1,27 @@
+{
+	"name": "og",
+	"type": "module",
+	"scripts": {
+		"build": "echo 'No build step needed for Cloudflare Worker'",
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"check:types": "tsgo --project tsconfig.json",
+		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
+		"postinstall": "pnpm gen:types"
+	},
+	"dependencies": {
+		"@hono/zod-validator": "catalog:",
+		"@takumi-rs/image-response": "^0.57.3",
+		"@takumi-rs/wasm": "^0.57.3",
+		"hono": "catalog:",
+		"ox": "catalog:",
+		"tempo.ts": "catalog:",
+		"viem": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

@@ -89,7 +89,7 @@ function Expandable(props: {
 		const observer = new ResizeObserver(onResize)
 		observer.observe(el)
 		return () => observer.disconnect()
-	}, [onOverflowChange])
+	}, [onOverflowChange, lineHeight, rows])
 
 	return (
 		<div
