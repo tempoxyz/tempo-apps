@@ -23,6 +23,7 @@ import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
+import { TxStateDiff } from '#comps/TxStateDiff'
 import { TxTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#cva.config.ts'
@@ -65,7 +66,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	validateSearch: z.object({
 		r: z.optional(z.string()),
 		tab: z.prefault(
-			z.enum(['overview', 'calls', 'trace', 'events', 'changes', 'raw']),
+			z.enum(['overview', 'calls', 'trace', 'events', 'balances', 'raw']),
 			defaultSearchValues.tab,
 		),
 		page: z.prefault(z.coerce.number(), defaultSearchValues.page),
@@ -87,7 +88,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 					.catch(() => ({ changes: [], tokenMetadata: {}, total: 0 })),
 				context.queryClient
 					.ensureQueryData(traceQueryOptions({ hash: params.hash }))
-					.catch(() => ({ trace: null })),
+					.catch(() => ({ trace: null, prestate: null })),
 			])
 			return { ...txData, balanceChangesData, traceData }
 		} catch (error) {
@@ -210,21 +211,25 @@ function RouteComponent() {
 		),
 	})
 
-	tabs.push('changes')
+	tabs.push('balances')
 	sections.push({
-		title: 'Changes',
+		title: 'Balances',
 		totalItems: balanceChangesData.total,
-		itemsLabel: 'changes',
+		itemsLabel: 'balances',
 		content: <TxBalanceChanges data={balanceChangesData} page={page} />,
 	})
 
-	if (traceData.trace) {
+	if (traceData.trace || traceData.prestate) {
 		tabs.push('trace')
 		sections.push({
 			title: 'Trace',
-			totalItems: 0,
-			itemsLabel: 'calls',
-			content: <TxTraceTree trace={traceData.trace} />,
+			itemsLabel: 'views',
+			content: (
+				<div className="flex flex-col">
+					<TxTraceTree trace={traceData.trace} />
+					<TxStateDiff prestate={traceData.prestate} />
+				</div>
+			),
 		})
 	}
 

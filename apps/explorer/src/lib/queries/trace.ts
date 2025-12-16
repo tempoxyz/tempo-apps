@@ -1,7 +1,12 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { TraceData } from '#routes/api/tx/trace/$hash'
 
-export type { CallTrace, TraceData } from '#routes/api/tx/trace/$hash'
+export type {
+	AccountState,
+	CallTrace,
+	PrestateDiff,
+	TraceData,
+} from '#routes/api/tx/trace/$hash'
 
 export function traceQueryOptions(params: { hash: string }) {
 	return queryOptions({
