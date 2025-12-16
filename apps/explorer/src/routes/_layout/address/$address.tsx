@@ -11,10 +11,16 @@ import {
 } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
+import { Abis } from 'tempo.ts/viem'
 import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { useBlock } from 'wagmi'
-import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
+import {
+	getBlock,
+	getTransaction,
+	getTransactionReceipt,
+	readContract,
+} from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractReader } from '#comps/ContractReader'
@@ -223,7 +229,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			z.enum(['history', 'assets', 'contract']),
 			defaultSearchValues.tab,
 		),
-		live: z.prefault(z.boolean(), true),
+		live: z.prefault(z.boolean(), false),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
@@ -241,7 +247,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const offset = (page - 1) * limit
 
 		// check if it's a known contract from our registry
-		let contractInfo: ContractInfo | undefined = getContractInfo(address)
+		let contractInfo = getContractInfo(address)
 
 		// if not in registry, try to extract ABI from bytecode using whatsabi
 		if (!contractInfo) {
@@ -310,8 +316,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 
 		// For SSR, provide placeholder values - client will fetch real data
-		const txCountResponse: undefined = undefined
-		const totalValueResponse: undefined = undefined
+		const txCountResponse = undefined
+		const totalValueResponse = undefined
 
 		return {
 			address,
@@ -331,10 +337,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
 
 		const txCount = 0
-		const holdings = '—'
 
-		// Fetch lastActive timestamp with a timeout to avoid blocking too long
+		// Fetch data with a timeout to avoid blocking too long
 		let lastActive: string | undefined
+		let holdings = '—'
 
 		const TIMEOUT_MS = 500
 		const timeout = <T,>(promise: Promise<T>, ms: number): Promise<T | null> =>
@@ -342,6 +348,53 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				promise,
 				new Promise<null>((r) => setTimeout(() => r(null), ms)),
 			])
+
+		try {
+			// Fetch holdings by directly reading balances from known tokens
+			const accountAddress = params.address as Address.Address
+			const tokenResults = await timeout(
+				Promise.all(
+					assets.map(async (tokenAddress) => {
+						try {
+							const [balance, decimals] = await Promise.all([
+								readContract(config, {
+									address: tokenAddress,
+									abi: Abis.tip20,
+									functionName: 'balanceOf',
+									args: [accountAddress],
+								}),
+								readContract(config, {
+									address: tokenAddress,
+									abi: Abis.tip20,
+									functionName: 'decimals',
+								}),
+							])
+							return { balance, decimals }
+						} catch {
+							return null
+						}
+					}),
+				),
+				TIMEOUT_MS,
+			)
+
+			if (tokenResults) {
+				const PRICE_PER_TOKEN = 1
+				let totalValue = 0
+				for (const result of tokenResults) {
+					if (result && result.balance > 0n) {
+						totalValue +=
+							Number(formatUnits(result.balance, result.decimals)) *
+							PRICE_PER_TOKEN
+					}
+				}
+				if (totalValue > 0) {
+					holdings = PriceFormatter.format(totalValue, { format: 'short' })
+				}
+			}
+		} catch {
+			// Ignore errors, holdings will be '—'
+		}
 
 		try {
 			// Get the most recent transaction for lastActive (already in loaderData)
