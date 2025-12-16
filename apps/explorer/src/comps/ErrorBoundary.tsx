@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import CopyIcon from '~icons/lucide/copy'
+import { useCopy } from '#lib/hooks'
 
 class ErrorBoundary extends React.Component<
 	ErrorComponentProps,
@@ -40,18 +41,7 @@ class ErrorBoundary extends React.Component<
 							<pre className="text-[13px] text-base-content-secondary whitespace-pre-wrap pr-[32px] leading-[20px] min-h-[40px]">
 								{this.state.error.message}
 							</pre>
-							{/* {copy.notifying && (
-								<span className="absolute bottom-[12px] right-[40px] text-[13px] leading-[16px] text-base-content-secondary whitespace-nowrap">
-									copied
-								</span>
-							)} */}
-							<button
-								type="button"
-								// onClick={() => copy.copy(this.state.error.message)}
-								className="absolute bottom-[8px] right-[8px] p-[4px] text-base-content-secondary press-down cursor-pointer"
-							>
-								<CopyIcon className="size-[16px]" />
-							</button>
+							<CopyButton text={this.state.error.message} />
 						</div>
 					)}
 					<button
@@ -66,6 +56,26 @@ class ErrorBoundary extends React.Component<
 			</main>
 		)
 	}
+}
+
+function CopyButton({ text }: { text: string }) {
+	const copy = useCopy()
+	return (
+		<>
+			{copy.notifying && (
+				<span className="absolute bottom-[12px] right-[40px] text-[13px] leading-[16px] text-base-content-secondary whitespace-nowrap">
+					copied
+				</span>
+			)}
+			<button
+				type="button"
+				onClick={() => copy.copy(text)}
+				className="absolute bottom-[8px] right-[8px] p-[4px] text-base-content-secondary press-down cursor-pointer"
+			>
+				<CopyIcon className="size-[16px]" />
+			</button>
+		</>
+	)
 }
 
 export const SentryWrappedErrorBoundary = Sentry.withErrorBoundary(
