@@ -17,6 +17,7 @@ import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { useBlock } from 'wagmi'
 import {
 	getBlock,
+	getChainId,
 	getTransaction,
 	getTransactionReceipt,
 	readContract,
@@ -240,8 +241,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
-	loader: async ({ deps: { page, limit }, params, context }) => {
+	loaderDeps: ({ search: { page, limit, live } }) => ({ page, limit, live }),
+	loader: async ({ deps: { page, limit, live }, params, context }) => {
 		const { address } = params
 		// Only throw notFound for truly invalid addresses
 		if (!Address.validate(address))
@@ -338,6 +339,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const totalValueResponse = undefined
 
 		return {
+			live,
 			address,
 			page,
 			limit,
@@ -469,7 +471,7 @@ function RouteComponent() {
 	const router = useRouter()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, limit } = Route.useSearch()
+	const { page, tab, live, limit } = Route.useSearch()
 	const { hasContract, contractInfo, contractSources, transactionsData } =
 		Route.useLoaderData()
 
@@ -548,7 +550,7 @@ function RouteComponent() {
 		<div
 			className={cx(
 				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
+				'grid w-full pt-20 pb-16 px-4 gap-3.5 min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-7xl',
 			)}
 		>
 			<AccountCardWithTimestamps address={address} assetsData={assetsData} />
@@ -722,7 +724,7 @@ function SectionsWrapper(props: {
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const historyError = error ? (
-		<div className="rounded-[10px] bg-card-header p-[18px]">
+		<div className="rounded-[10px] bg-card-header p-4.5">
 			<p className="text-sm font-medium text-red-400">
 				Failed to load transaction history
 			</p>
@@ -871,7 +873,7 @@ function SectionsWrapper(props: {
 									totalItems: 0,
 									itemsLabel: 'functions',
 									content: (
-										<div className="flex flex-col gap-[14px]">
+										<div className="flex flex-col gap-3.5">
 											{hasContractSources && contractSources && (
 												<ContractSources files={contractSources} />
 											)}

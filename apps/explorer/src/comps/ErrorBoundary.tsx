@@ -3,8 +3,8 @@ import type { ErrorComponentProps } from '@tanstack/react-router'
 import * as React from 'react'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
-import CopyIcon from '~icons/lucide/copy'
 import { useCopy } from '#lib/hooks'
+import CopyIcon from '~icons/lucide/copy'
 
 class ErrorBoundary extends React.Component<
 	ErrorComponentProps,
