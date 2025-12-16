@@ -26,6 +26,10 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 				try {
 					const address = zAddress().parse(params.address)
 					const chainId = config.getClient().chain.id
+					const addressLower = address.toLowerCase()
+
+					// Limit to prevent timeouts on addresses with many transfer events
+					const MAX_TRANSFERS = 10000
 
 					const result = await QB.withSignatures([TRANSFER_SIGNATURE])
 						.selectFrom('transfer')
@@ -34,6 +38,7 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 						.where((eb) =>
 							eb.or([eb('from', '=', address), eb('to', '=', address)]),
 						)
+						.limit(MAX_TRANSFERS)
 						.execute()
 
 					// Calculate balance per token
@@ -43,7 +48,6 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 						const from = String(row.from).toLowerCase()
 						const to = String(row.to).toLowerCase()
 						const tokens = BigInt(row.tokens)
-						const addressLower = address.toLowerCase()
 
 						const currentBalance = balances.get(tokenAddress) ?? 0n
 						let newBalance = currentBalance
@@ -61,21 +65,25 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 						.filter(([_, balance]) => balance > 0n)
 						.map(([token_address, balance]) => ({ token_address, balance }))
 
+					// Limit contract reads to prevent slow responses (cap at 20 tokens)
+					const MAX_TOKENS = 20
+					const tokensToFetch = rowsWithBalance.slice(0, MAX_TOKENS)
+
 					const decimals =
 						(await Promise.all(
-							rowsWithBalance.map((row) =>
-								// TODO: use readContracts when multicall is not broken
-								readContract(getConfig(), {
-									address: row.token_address as Address.Address,
-									abi: Abis.tip20,
-									functionName: 'decimals',
-								}),
+							tokensToFetch.map(
+								(row) =>
+									readContract(getConfig(), {
+										address: row.token_address as Address.Address,
+										abi: Abis.tip20,
+										functionName: 'decimals',
+									}).catch(() => 18), // Fallback to 18 decimals on error
 							),
 						)) ?? []
 
 					const decimalsMap = new Map<Address.Address, number>(
 						decimals.map((decimal, index) => [
-							rowsWithBalance[index].token_address as Address.Address,
+							tokensToFetch[index].token_address as Address.Address,
 							decimal,
 						]),
 					)
@@ -85,7 +93,7 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 					const totalValue = rowsWithBalance
 						.map((row) => {
 							const tokenDecimals =
-								decimalsMap.get(row.token_address as Address.Address) ?? 0
+								decimalsMap.get(row.token_address as Address.Address) ?? 18
 							return Number(formatUnits(row.balance, tokenDecimals))
 						})
 						.reduce((acc, balance) => acc + balance * PRICE_PER_TOKEN, 0)

@@ -9,9 +9,12 @@ export function DataGrid(props: DataGrid.Props) {
 		columns,
 		items,
 		totalItems,
+		displayCount,
 		page,
 		fetching = false,
 		loading = false,
+		countLoading = false,
+		disableLastPage = false,
 		itemsLabel = 'items',
 		itemsPerPage = 10,
 		pagination = 'default',
@@ -90,7 +93,7 @@ export function DataGrid(props: DataGrid.Props) {
 								className={cx(
 									'grid col-span-full relative grid-cols-subgrid grid-flow-row border-b border-dashed border-distinct border-l-[3px] border-l-transparent [border-left-style:solid] last:border-b-0',
 									item.link &&
-										'hover:bg-base-alt hover:border-solid transition-[background-color] duration-75 hover:-mt-[1px] hover:border-t hover:border-t-distinct',
+										'hover:bg-base-alt hover:border-solid transition-[background-color] duration-75 hover:-mt-px hover:border-t hover:border-t-distinct',
 									item.expanded && 'border-l-distinct',
 									item.className,
 								)}
@@ -126,7 +129,7 @@ export function DataGrid(props: DataGrid.Props) {
 																? 'justify-end'
 																: 'justify-start',
 															item.link &&
-																'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-[1] [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-[1]',
+																'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-1 [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-1',
 														)}
 													>
 														{content}
@@ -140,7 +143,7 @@ export function DataGrid(props: DataGrid.Props) {
 									)
 								})}
 								{item.expanded && typeof item.expanded !== 'boolean' && (
-									<div className="col-span-full px-[16px] pb-[12px] [contain:inline-size] -mt-[4px]">
+									<div className="col-span-full px-[16px] pb-[12px] contain-[inline-size] -mt-[4px]">
 										{item.expanded}
 									</div>
 								)}
@@ -156,12 +159,17 @@ export function DataGrid(props: DataGrid.Props) {
 							page={page}
 							totalPages={totalPages}
 							fetching={fetching && !loading}
+							countLoading={countLoading}
+							disableLastPage={disableLastPage}
 						/>
-						<Pagination.Count
-							totalItems={totalItems}
-							itemsLabel={itemsLabel}
-							loading={loading}
-						/>
+						{/* Show transaction count when displayCount is available */}
+						{displayCount != null && (
+							<Pagination.Count
+								totalItems={displayCount}
+								itemsLabel={itemsLabel}
+								loading={loading}
+							/>
+						)}
 					</div>
 				) : (
 					<Pagination
@@ -207,9 +215,14 @@ export namespace DataGrid {
 		}
 		items: (mode: Sections.Mode) => Row[]
 		totalItems: number
+		/** Optional separate count for display (e.g., exact transaction count) */
+		displayCount?: number
 		page: number
 		fetching?: boolean
 		loading?: boolean
+		countLoading?: boolean
+		/** Disable "Last page" button when we can't reliably navigate there */
+		disableLastPage?: boolean
 		itemsLabel?: string
 		itemsPerPage?: number
 		pagination?: 'default' | 'simple'

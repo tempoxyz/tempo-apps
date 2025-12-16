@@ -11,10 +11,16 @@ import {
 } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
+import { Abis } from 'tempo.ts/viem'
 import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { useBlock } from 'wagmi'
-import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
+import {
+	getBlock,
+	getTransaction,
+	getTransactionReceipt,
+	readContract,
+} from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractReader } from '#comps/ContractReader'
@@ -54,20 +60,30 @@ import {
 } from '#lib/queries/account.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 
-async function fetchAddressTransactionsCount(address: Address.Address) {
-	const response = await fetch(
-		`${__BASE_URL__}/api/address/txs-count/${address}`,
-		{ headers: { 'Content-Type': 'application/json' } },
-	)
-	return response.json() as Promise<{ data: number }>
-}
-
 async function fetchAddressTotalValue(address: Address.Address) {
 	const response = await fetch(
 		`${__BASE_URL__}/api/address/total-value/${address}`,
 		{ headers: { 'Content-Type': 'application/json' } },
 	)
 	return response.json() as Promise<{ totalValue: number }>
+}
+
+async function fetchAddressTotalCount(address: Address.Address) {
+	const response = await fetch(
+		`${__BASE_URL__}/api/address/txs-count/${address}`,
+		{ headers: { 'Content-Type': 'application/json' } },
+	)
+	if (!response.ok) throw new Error('Failed to fetch total transaction count')
+	const {
+		data: safeData,
+		success,
+		error,
+	} = z.safeParse(
+		z.object({ data: z.number(), error: z.nullable(z.string()) }),
+		await response.json(),
+	)
+	if (!success) throw new Error(z.prettifyError(error))
+	return safeData
 }
 
 const defaultSearchValues = {
@@ -214,6 +230,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			z.enum(['history', 'assets', 'contract']),
 			defaultSearchValues.tab,
 		),
+		live: z.prefault(z.boolean(), false),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
@@ -231,7 +248,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const offset = (page - 1) * limit
 
 		// check if it's a known contract from our registry
-		let contractInfo: ContractInfo | undefined = getContractInfo(address)
+		let contractInfo = getContractInfo(address)
 
 		// if not in registry, try to extract ABI from bytecode using whatsabi
 		if (!contractInfo) {
@@ -259,32 +276,37 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 		const hasContract = Boolean(contractInfo)
 
-		const transactionsData = await context.queryClient
-			.ensureQueryData(
-				transactionsQueryOptions({
-					address,
-					page,
-					limit,
-					offset,
+		// Add timeout to prevent SSR from hanging on slow queries
+		const QUERY_TIMEOUT_MS = 3000
+		const timeout = <T,>(
+			promise: Promise<T>,
+			ms: number,
+		): Promise<T | undefined> =>
+			Promise.race([
+				promise,
+				new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
+			])
+
+		const transactionsData = await timeout(
+			context.queryClient
+				.ensureQueryData(
+					transactionsQueryOptions({
+						address,
+						page,
+						limit,
+						offset,
+					}),
+				)
+				.catch((error) => {
+					console.error('Fetch transactions error:', error)
+					return undefined
 				}),
-			)
-			.catch((error) => {
-				console.error('Fetch error (non-blocking):', error)
-				return undefined
-			})
+			QUERY_TIMEOUT_MS,
+		)
 
-		const txCountResponse = await context.queryClient
-			.ensureQueryData({
-				queryKey: ['account-transaction-count', address],
-				queryFn: () => fetchAddressTransactionsCount(address),
-				staleTime: 30_000,
-			})
-			.catch((error) => {
-				console.error('Fetch txs-count error (non-blocking):', error)
-				return undefined
-			})
-
-		const totalValueResponse = await context.queryClient
+		// Fire off optional loaders without blocking page render
+		// These will populate the cache if successful but won't delay the page load
+		context.queryClient
 			.ensureQueryData({
 				queryKey: ['account-total-value', address],
 				queryFn: () => fetchAddressTotalValue(address),
@@ -292,8 +314,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 			.catch((error) => {
 				console.error('Fetch total-value error (non-blocking):', error)
-				return undefined
 			})
+
+		// For SSR, provide placeholder values - client will fetch real data
+		const txCountResponse = undefined
+		const totalValueResponse = undefined
 
 		return {
 			address,
@@ -312,13 +337,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const label = isContract ? 'Contract' : 'Address'
 		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
 
-		const txCount = Number(loaderData?.txCountResponse?.data ?? 0)
-		const totalValue = loaderData?.totalValueResponse?.totalValue
-		const holdings =
-			totalValue !== undefined ? PriceFormatter.format(totalValue) : '—'
+		const txCount = 0
 
-		// Fetch lastActive timestamp with a timeout to avoid blocking too long
+		// Fetch data with a timeout to avoid blocking too long
 		let lastActive: string | undefined
+		let holdings = '—'
 
 		const TIMEOUT_MS = 500
 		const timeout = <T,>(promise: Promise<T>, ms: number): Promise<T | null> =>
@@ -326,6 +349,53 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				promise,
 				new Promise<null>((r) => setTimeout(() => r(null), ms)),
 			])
+
+		try {
+			// Fetch holdings by directly reading balances from known tokens
+			const accountAddress = params.address as Address.Address
+			const tokenResults = await timeout(
+				Promise.all(
+					assets.map(async (tokenAddress) => {
+						try {
+							const [balance, decimals] = await Promise.all([
+								readContract(config, {
+									address: tokenAddress,
+									abi: Abis.tip20,
+									functionName: 'balanceOf',
+									args: [accountAddress],
+								}),
+								readContract(config, {
+									address: tokenAddress,
+									abi: Abis.tip20,
+									functionName: 'decimals',
+								}),
+							])
+							return { balance, decimals }
+						} catch {
+							return null
+						}
+					}),
+				),
+				TIMEOUT_MS,
+			)
+
+			if (tokenResults) {
+				const PRICE_PER_TOKEN = 1
+				let totalValue = 0
+				for (const result of tokenResults) {
+					if (result && result.balance > 0n) {
+						totalValue +=
+							Number(formatUnits(result.balance, result.decimals)) *
+							PRICE_PER_TOKEN
+					}
+				}
+				if (totalValue > 0) {
+					holdings = PriceFormatter.format(totalValue, { format: 'short' })
+				}
+			}
+		} catch {
+			// Ignore errors, holdings will be '—'
+		}
 
 		try {
 			// Get the most recent transaction for lastActive (already in loaderData)
@@ -381,7 +451,7 @@ function RouteComponent() {
 	const router = useRouter()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, limit } = Route.useSearch()
+	const { page, tab, limit, live } = Route.useSearch()
 	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
 
 	Address.assert(address)
@@ -472,6 +542,7 @@ function RouteComponent() {
 				contractInfo={contractInfo}
 				initialData={transactionsData}
 				assetsData={assetsData}
+				live={live}
 			/>
 		</div>
 	)
@@ -505,9 +576,10 @@ function AccountCardWithTimestamps(props: {
 	})
 
 	// Use the real transaction count (not the approximate total from pagination)
-	const { data: exactTotalResponse } = useTransactionCount(address)
-	const totalTransactions = Number(exactTotalResponse?.data ?? 0)
-	const lastPageOffset = Math.max(0, totalTransactions - 1)
+	// Don't fetch exact count - use API hasMore flag for pagination
+	// This makes the page render instantly without waiting for count query
+	const totalTransactions = 0 // Unknown until user navigates
+	const lastPageOffset = 0 // Can't calculate without total
 
 	const { data: oldestData } = useQuery({
 		...transactionsQueryOptions({
@@ -542,14 +614,6 @@ function AccountCardWithTimestamps(props: {
 	)
 }
 
-function useTransactionCount(address: Address.Address) {
-	return useQuery({
-		queryKey: ['account-transaction-count', address],
-		queryFn: () => fetchAddressTransactionsCount(address),
-		staleTime: 30_000,
-	})
-}
-
 function SectionsWrapper(props: {
 	address: Address.Address
 	page: number
@@ -559,6 +623,7 @@ function SectionsWrapper(props: {
 	contractInfo: ContractInfo | undefined
 	initialData: TransactionsData | undefined
 	assetsData: AssetData[]
+	live: boolean
 }) {
 	const {
 		address,
@@ -569,12 +634,13 @@ function SectionsWrapper(props: {
 		contractInfo,
 		initialData,
 		assetsData,
+		live,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	const isHistoryTabActive = activeSection === 0
-	// Only auto-refresh on page 1 when history tab is active
-	const shouldAutoRefresh = page === 1 && isHistoryTabActive
+	// Only auto-refresh on page 1 when history tab is active and live=true
+	const shouldAutoRefresh = page === 1 && isHistoryTabActive && live
 
 	const { data, isPlaceholderData, error } = useQuery({
 		...transactionsQueryOptions({
@@ -588,18 +654,44 @@ function SectionsWrapper(props: {
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
-	const { transactions, total: approximateTotal } = data ?? {
+	const {
+		transactions,
+		total: approximateTotal,
+		hasMore,
+	} = data ?? {
 		transactions: [],
 		total: 0,
+		hasMore: false,
 	}
+
+	// Fetch exact total count in the background (only when on history tab)
+	// Don't cache across tabs/pages - always show "..." until loaded each time
+	const totalCountQuery = useQuery({
+		queryKey: ['address-total-count', address],
+		queryFn: () => fetchAddressTotalCount(address),
+		staleTime: 0, // Don't cache - always refetch to show "..." while loading
+		refetchInterval: false,
+		refetchOnWindowFocus: false,
+		enabled: isHistoryTabActive,
+	})
 
 	const batchTransactionDataContextValue = useBatchTransactionData(
 		transactions,
 		address,
 	)
 
-	const { data: exactTotalResponse } = useTransactionCount(address)
-	const total = exactTotalResponse?.data ?? approximateTotal
+	// Exact count from dedicated API endpoint (for display only)
+	// txs-count counts "from OR to" while pagination API only serves a subset,
+	// so we can't use exactCount for page calculation - most pages would be empty
+	const exactCount = totalCountQuery.data?.data
+
+	// For pagination: always use hasMore-based estimate
+	// This ensures we only show pages that have data
+	const paginationTotal = hasMore
+		? Math.max(approximateTotal + limit, (page + 1) * limit)
+		: approximateTotal > 0
+			? approximateTotal
+			: transactions.length
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -644,7 +736,7 @@ function SectionsWrapper(props: {
 				sections={[
 					{
 						title: 'History',
-						totalItems: data && Number(total),
+						totalItems: data && (exactCount ?? paginationTotal),
 						itemsLabel: 'transactions',
 						content: historyError ?? (
 							<DataGrid
@@ -683,10 +775,12 @@ function SectionsWrapper(props: {
 										},
 									}))
 								}
-								totalItems={Number(total)}
+								totalItems={paginationTotal}
+								displayCount={exactCount}
 								page={page}
 								fetching={isPlaceholderData}
 								loading={!data}
+								countLoading
 								itemsLabel="transactions"
 								itemsPerPage={limit}
 								pagination="simple"

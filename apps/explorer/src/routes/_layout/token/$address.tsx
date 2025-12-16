@@ -11,8 +11,10 @@ import {
 } from '@tanstack/react-router'
 import { Address } from 'ox'
 import * as React from 'react'
+import { Abis } from 'tempo.ts/viem'
 import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
+import { readContract } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
@@ -95,12 +97,10 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const offset = (page - 1) * limit
 
 		try {
-			// Prefetch holders in background (don't block page render - it's slow for popular tokens)
-			context.queryClient
-				.prefetchQuery(
-					holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
-				)
-				.catch(() => undefined)
+			// Fetch holders data for OG image (also used by the page)
+			const holdersPromise = context.queryClient.ensureQueryData(
+				holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
+			)
 
 			if (page !== 1 || limit !== 10) {
 				context.queryClient.prefetchQuery(
@@ -108,20 +108,31 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				)
 			}
 
+			// Fetch currency from contract (TIP-20 tokens have a currency() function)
+			const currencyPromise = readContract(config, {
+				address: address,
+				abi: Abis.tip20,
+				functionName: 'currency',
+			}).catch(() => undefined)
+
 			if (tab === 'transfers') {
-				const [metadata, transfers] = await Promise.all([
+				const [metadata, transfers, holdersData, currency] = await Promise.all([
 					Actions.token.getMetadata(config, { token: address }),
 					context.queryClient.ensureQueryData(
 						transfersQueryOptions({ address, page, limit, offset, account }),
 					),
+					holdersPromise,
+					currencyPromise,
 				])
-				return { metadata, transfers }
+				return { metadata, transfers, holdersData, currency }
 			}
 
-			const metadata = await Actions.token.getMetadata(config, {
-				token: address,
-			})
-			return { metadata, transfers: undefined }
+			const [metadata, holdersData, currency] = await Promise.all([
+				Actions.token.getMetadata(config, { token: address }),
+				holdersPromise,
+				currencyPromise,
+			])
+			return { metadata, transfers: undefined, holdersData, currency }
 		} catch (error) {
 			console.error(error)
 			// redirect to `/address/$address` and if it's not an address, that route will throw a notFound
@@ -142,13 +153,30 @@ export const Route = createFileRoute('/_layout/token/$address')({
 	head: ({ params, loaderData }) => {
 		const title = `Token ${params.address.slice(0, 6)}…${params.address.slice(-4)} ⋅ Tempo Explorer`
 		const metadata = loaderData?.metadata
+		const holdersData = loaderData?.holdersData
+		const currency = loaderData?.currency
+
+		// Format supply for OG image
+		const formatSupply = (totalSupply: string, decimals: number): string => {
+			const value = Number(formatUnits(BigInt(totalSupply), decimals))
+			if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`
+			if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`
+			if (value >= 1e3)
+				return value.toLocaleString('en-US', { maximumFractionDigits: 0 })
+			return value.toFixed(2)
+		}
+
+		const supply =
+			holdersData?.totalSupply && metadata?.decimals !== undefined
+				? formatSupply(holdersData.totalSupply, metadata.decimals)
+				: undefined
 
 		const description = buildTokenDescription(
 			metadata
 				? {
 						name: metadata.name ?? '—',
 						symbol: metadata.symbol,
-						supply: undefined,
+						supply,
 					}
 				: null,
 		)
@@ -157,6 +185,10 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			address: params.address,
 			name: metadata?.name,
 			symbol: metadata?.symbol,
+			currency,
+			holders: holdersData?.total,
+			supply,
+			created: holdersData?.created ?? undefined,
 		})
 
 		return {
@@ -339,7 +371,13 @@ function TokenCard(props: {
 								<span className="text-tertiary text-[13px]">{ellipsis}</span>
 							}
 						>
-							<span className="text-tertiary text-[13px]">{ellipsis}</span>
+							{holdersSummary?.created ? (
+								<span className="text-[13px] text-primary">
+									{holdersSummary.created}
+								</span>
+							) : (
+								<span className="text-tertiary text-[13px]">{ellipsis}</span>
+							)}
 						</ClientOnly>
 					),
 				},
