@@ -3,6 +3,7 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
+	Outlet,
 	rootRouteId,
 	stripSearchParams,
 	useLocation,
@@ -89,10 +90,9 @@ async function fetchAddressTotalCount(address: Address.Address) {
 const defaultSearchValues = {
 	page: 1,
 	limit: 10,
-	tab: 'history',
 } as const
 
-type TabValue = 'history' | 'assets' | 'contract'
+export type AddressTab = 'history' | 'assets' | 'contract'
 
 function useBatchTransactionData(
 	transactions: Transaction[],
@@ -225,10 +225,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				z.transform((val) => Math.min(100, val)),
 			),
 			defaultSearchValues.limit,
-		),
-		tab: z.prefault(
-			z.enum(['history', 'assets', 'contract']),
-			defaultSearchValues.tab,
 		),
 		live: z.prefault(z.boolean(), false),
 	}),
@@ -447,11 +443,16 @@ export const Route = createFileRoute('/_layout/address/$address')({
 })
 
 function RouteComponent() {
+	return <Outlet />
+}
+
+export function AddressPageContent(props: { tab: AddressTab }) {
+	const { tab } = props
 	const navigate = useNavigate()
 	const router = useRouter()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, limit, live } = Route.useSearch()
+	const { page, limit, live } = Route.useSearch()
 	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
 
 	Address.assert(address)
@@ -477,14 +478,15 @@ function RouteComponent() {
 		) {
 			redirectedForHashRef.current = hash
 			navigate({
-				to: '.',
-				search: { page: 1, tab: 'contract', limit },
+				to: '/address/$address/$tab',
+				params: { address, tab: 'contract' },
+				search: { page: 1, limit },
 				hash,
 				replace: true,
 				resetScroll: false,
 			})
 		}
-	}, [hash, hasContract, tab, navigate, limit])
+	}, [hash, hasContract, tab, navigate, limit, address])
 
 	React.useEffect(() => {
 		// Only preload for history tab (transaction pagination)
@@ -494,8 +496,9 @@ function RouteComponent() {
 			try {
 				const nextPage = page + 1
 				router.preloadRoute({
-					to: '.',
-					search: { page: nextPage, tab, limit },
+					to: '/address/$address',
+					params: { address },
+					search: { page: nextPage, limit },
 				})
 			} catch (error) {
 				console.error('Preload error (non-blocking):', error)
@@ -503,25 +506,34 @@ function RouteComponent() {
 		}
 
 		preload()
-	}, [page, router, tab, limit])
+	}, [page, router, tab, limit, address])
+
+	const tabs: AddressTab[] = hasContract
+		? ['history', 'assets', 'contract']
+		: ['history', 'assets']
+	const activeSection = Math.max(0, tabs.indexOf(tab))
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
-			const tabs: TabValue[] = hasContract
-				? ['history', 'assets', 'contract']
-				: ['history', 'assets']
 			const newTab = tabs[newIndex] ?? 'history'
-			navigate({
-				to: '.',
-				search: { page, tab: newTab, limit },
-				resetScroll: false,
-			})
+			if (newTab === 'history') {
+				navigate({
+					to: '/address/$address',
+					params: { address },
+					search: { page, limit },
+					resetScroll: false,
+				})
+			} else {
+				navigate({
+					to: '/address/$address/$tab',
+					params: { address, tab: newTab },
+					search: { page, limit },
+					resetScroll: false,
+				})
+			}
 		},
-		[navigate, page, limit, hasContract],
+		[navigate, page, limit, address, tabs],
 	)
-
-	const activeSection =
-		tab === 'history' ? 0 : tab === 'assets' ? 1 : hasContract ? 2 : 0
 
 	const assetsData = useAssetsData(address)
 

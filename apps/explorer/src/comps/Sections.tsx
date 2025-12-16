@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { cx } from '#cva.config.ts'
+import { cx } from '#cva.config'
 
 export function Sections(props: Sections.Props) {
 	const {
@@ -10,8 +10,10 @@ export function Sections(props: Sections.Props) {
 		mode = Sections.defaultMode,
 	} = props
 
+	const didScroll = React.useRef(false)
+
 	const [collapsedSections, setCollapsedSections] = React.useState<boolean[]>(
-		new Array(sections.length).fill(true),
+		() => new Array(sections.length).fill(true),
 	)
 
 	const toggleSection = (index: number) => {
@@ -26,14 +28,30 @@ export function Sections(props: Sections.Props) {
 				<div className={cx('flex flex-col gap-[14px]', className)}>
 					{sections.map((section, index) => {
 						const itemsLabel = section.itemsLabel ?? 'items'
+						const isActive = index === activeSection
 						const isCollapsed =
-							section.autoCollapse !== false && collapsedSections[index]
+							section.autoCollapse !== false &&
+							collapsedSections[index] &&
+							!isActive
 
 						const canCollapse = section.autoCollapse !== false
 
 						return (
 							<section
 								key={section.title}
+								ref={(el) => {
+									if (
+										el &&
+										isActive &&
+										activeSection > 0 &&
+										!didScroll.current
+									) {
+										didScroll.current = true
+										const top =
+											el.getBoundingClientRect().top + window.scrollY - 8
+										window.scrollTo({ top, behavior: 'smooth' })
+									}
+								}}
 								className={cx(
 									'flex flex-col font-mono w-full overflow-hidden',
 									'rounded-[10px] border border-card-border bg-card-header',
@@ -166,9 +184,11 @@ export function Sections(props: Sections.Props) {
 export namespace Sections {
 	export interface Props {
 		sections: Section[]
+		/** In tabs mode: which tab is shown. In stacked mode: expands and scrolls to this section on mount (if > 0). */
 		activeSection?: number
 		onSectionChange?: (index: number) => void
 		className?: string
+		/** Layout mode. Default: 'tabs' */
 		mode?: Mode
 	}
 

@@ -56,9 +56,8 @@ function ContractCallPart(props: {
 
 	return (
 		<Link
-			to="/address/$address"
-			params={{ address }}
-			search={{ tab: 'contract' }}
+			to="/address/$address/$tab"
+			params={{ address, tab: 'contract' }}
 			title={`${address} - ${functionName ?? selector}`}
 			className="press-down whitespace-nowrap"
 		>

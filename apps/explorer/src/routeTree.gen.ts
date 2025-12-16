@@ -27,9 +27,15 @@ import { Route as LayoutDemoEmptyStateRouteImport } from './routes/_layout/demo/
 import { Route as LayoutDemoAddressRouteImport } from './routes/_layout/demo/address'
 import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
 import { Route as LayoutAddressAddressRouteImport } from './routes/_layout/address/$address'
+import { Route as LayoutTxHashIndexRouteImport } from './routes/_layout/tx/$hash/index'
+import { Route as LayoutTokenAddressIndexRouteImport } from './routes/_layout/token/$address/index'
+import { Route as LayoutAddressAddressIndexRouteImport } from './routes/_layout/address/$address/index'
 import { Route as ApiTxBalanceChangesHashRouteImport } from './routes/api/tx/balance-changes/$hash'
 import { Route as ApiAddressTxsCountAddressRouteImport } from './routes/api/address/txs-count/$address'
 import { Route as ApiAddressTotalValueAddressRouteImport } from './routes/api/address/total-value/$address'
+import { Route as LayoutTxHashTabRouteImport } from './routes/_layout/tx/$hash/$tab'
+import { Route as LayoutTokenAddressTabRouteImport } from './routes/_layout/token/$address/$tab'
+import { Route as LayoutAddressAddressTabRouteImport } from './routes/_layout/address/$address/$tab'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -120,6 +126,22 @@ const LayoutAddressAddressRoute = LayoutAddressAddressRouteImport.update({
   path: '/address/$address',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutTxHashIndexRoute = LayoutTxHashIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LayoutTxHashRoute,
+} as any)
+const LayoutTokenAddressIndexRoute = LayoutTokenAddressIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LayoutTokenAddressRoute,
+} as any)
+const LayoutAddressAddressIndexRoute =
+  LayoutAddressAddressIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => LayoutAddressAddressRoute,
+  } as any)
 const ApiTxBalanceChangesHashRoute = ApiTxBalanceChangesHashRouteImport.update({
   id: '/api/tx/balance-changes/$hash',
   path: '/api/tx/balance-changes/$hash',
@@ -137,6 +159,21 @@ const ApiAddressTotalValueAddressRoute =
     path: '/api/address/total-value/$address',
     getParentRoute: () => rootRouteImport,
   } as any)
+const LayoutTxHashTabRoute = LayoutTxHashTabRouteImport.update({
+  id: '/$tab',
+  path: '/$tab',
+  getParentRoute: () => LayoutTxHashRoute,
+} as any)
+const LayoutTokenAddressTabRoute = LayoutTokenAddressTabRouteImport.update({
+  id: '/$tab',
+  path: '/$tab',
+  getParentRoute: () => LayoutTokenAddressRoute,
+} as any)
+const LayoutAddressAddressTabRoute = LayoutAddressAddressTabRouteImport.update({
+  id: '/$tab',
+  path: '/$tab',
+  getParentRoute: () => LayoutAddressAddressRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/blocks': typeof LayoutBlocksRoute
@@ -145,20 +182,26 @@ export interface FileRoutesByFullPath {
   '/api/search': typeof ApiSearchRoute
   '/api/tunnel': typeof ApiTunnelRoute
   '/': typeof LayoutIndexRoute
-  '/address/$address': typeof LayoutAddressAddressRoute
+  '/address/$address': typeof LayoutAddressAddressRouteWithChildren
   '/block/$id': typeof LayoutBlockIdRoute
   '/demo/address': typeof LayoutDemoAddressRoute
   '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
-  '/token/$address': typeof LayoutTokenAddressRoute
-  '/tx/$hash': typeof LayoutTxHashRoute
+  '/token/$address': typeof LayoutTokenAddressRouteWithChildren
+  '/tx/$hash': typeof LayoutTxHashRouteWithChildren
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/demo': typeof LayoutDemoIndexRoute
+  '/address/$address/$tab': typeof LayoutAddressAddressTabRoute
+  '/token/$address/$tab': typeof LayoutTokenAddressTabRoute
+  '/tx/$hash/$tab': typeof LayoutTxHashTabRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
+  '/address/$address/': typeof LayoutAddressAddressIndexRoute
+  '/token/$address/': typeof LayoutTokenAddressIndexRoute
+  '/tx/$hash/': typeof LayoutTxHashIndexRoute
 }
 export interface FileRoutesByTo {
   '/blocks': typeof LayoutBlocksRoute
@@ -167,20 +210,23 @@ export interface FileRoutesByTo {
   '/api/search': typeof ApiSearchRoute
   '/api/tunnel': typeof ApiTunnelRoute
   '/': typeof LayoutIndexRoute
-  '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
   '/demo/address': typeof LayoutDemoAddressRoute
   '/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
-  '/token/$address': typeof LayoutTokenAddressRoute
-  '/tx/$hash': typeof LayoutTxHashRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/demo': typeof LayoutDemoIndexRoute
+  '/address/$address/$tab': typeof LayoutAddressAddressTabRoute
+  '/token/$address/$tab': typeof LayoutTokenAddressTabRoute
+  '/tx/$hash/$tab': typeof LayoutTxHashTabRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
+  '/address/$address': typeof LayoutAddressAddressIndexRoute
+  '/token/$address': typeof LayoutTokenAddressIndexRoute
+  '/tx/$hash': typeof LayoutTxHashIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -191,20 +237,26 @@ export interface FileRoutesById {
   '/api/search': typeof ApiSearchRoute
   '/api/tunnel': typeof ApiTunnelRoute
   '/_layout/': typeof LayoutIndexRoute
-  '/_layout/address/$address': typeof LayoutAddressAddressRoute
+  '/_layout/address/$address': typeof LayoutAddressAddressRouteWithChildren
   '/_layout/block/$id': typeof LayoutBlockIdRoute
   '/_layout/demo/address': typeof LayoutDemoAddressRoute
   '/_layout/demo/empty-state': typeof LayoutDemoEmptyStateRoute
   '/_layout/demo/pagination': typeof LayoutDemoPaginationRoute
   '/_layout/demo/tx': typeof LayoutDemoTxRoute
   '/_layout/receipt/$hash': typeof LayoutReceiptHashRoute
-  '/_layout/token/$address': typeof LayoutTokenAddressRoute
-  '/_layout/tx/$hash': typeof LayoutTxHashRoute
+  '/_layout/token/$address': typeof LayoutTokenAddressRouteWithChildren
+  '/_layout/tx/$hash': typeof LayoutTxHashRouteWithChildren
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
+  '/_layout/address/$address/$tab': typeof LayoutAddressAddressTabRoute
+  '/_layout/token/$address/$tab': typeof LayoutTokenAddressTabRoute
+  '/_layout/tx/$hash/$tab': typeof LayoutTxHashTabRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
+  '/_layout/address/$address/': typeof LayoutAddressAddressIndexRoute
+  '/_layout/token/$address/': typeof LayoutTokenAddressIndexRoute
+  '/_layout/tx/$hash/': typeof LayoutTxHashIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -226,9 +278,15 @@ export interface FileRouteTypes {
     | '/tx/$hash'
     | '/api/address/$address'
     | '/demo'
+    | '/address/$address/$tab'
+    | '/token/$address/$tab'
+    | '/tx/$hash/$tab'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
+    | '/address/$address/'
+    | '/token/$address/'
+    | '/tx/$hash/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/blocks'
@@ -237,20 +295,23 @@ export interface FileRouteTypes {
     | '/api/search'
     | '/api/tunnel'
     | '/'
-    | '/address/$address'
     | '/block/$id'
     | '/demo/address'
     | '/demo/empty-state'
     | '/demo/pagination'
     | '/demo/tx'
     | '/receipt/$hash'
-    | '/token/$address'
-    | '/tx/$hash'
     | '/api/address/$address'
     | '/demo'
+    | '/address/$address/$tab'
+    | '/token/$address/$tab'
+    | '/tx/$hash/$tab'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
+    | '/address/$address'
+    | '/token/$address'
+    | '/tx/$hash'
   id:
     | '__root__'
     | '/_layout'
@@ -271,9 +332,15 @@ export interface FileRouteTypes {
     | '/_layout/tx/$hash'
     | '/api/address/$address'
     | '/_layout/demo/'
+    | '/_layout/address/$address/$tab'
+    | '/_layout/token/$address/$tab'
+    | '/_layout/tx/$hash/$tab'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
+    | '/_layout/address/$address/'
+    | '/_layout/token/$address/'
+    | '/_layout/tx/$hash/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -415,6 +482,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAddressAddressRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/tx/$hash/': {
+      id: '/_layout/tx/$hash/'
+      path: '/'
+      fullPath: '/tx/$hash/'
+      preLoaderRoute: typeof LayoutTxHashIndexRouteImport
+      parentRoute: typeof LayoutTxHashRoute
+    }
+    '/_layout/token/$address/': {
+      id: '/_layout/token/$address/'
+      path: '/'
+      fullPath: '/token/$address/'
+      preLoaderRoute: typeof LayoutTokenAddressIndexRouteImport
+      parentRoute: typeof LayoutTokenAddressRoute
+    }
+    '/_layout/address/$address/': {
+      id: '/_layout/address/$address/'
+      path: '/'
+      fullPath: '/address/$address/'
+      preLoaderRoute: typeof LayoutAddressAddressIndexRouteImport
+      parentRoute: typeof LayoutAddressAddressRoute
+    }
     '/api/tx/balance-changes/$hash': {
       id: '/api/tx/balance-changes/$hash'
       path: '/api/tx/balance-changes/$hash'
@@ -436,22 +524,83 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAddressTotalValueAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_layout/tx/$hash/$tab': {
+      id: '/_layout/tx/$hash/$tab'
+      path: '/$tab'
+      fullPath: '/tx/$hash/$tab'
+      preLoaderRoute: typeof LayoutTxHashTabRouteImport
+      parentRoute: typeof LayoutTxHashRoute
+    }
+    '/_layout/token/$address/$tab': {
+      id: '/_layout/token/$address/$tab'
+      path: '/$tab'
+      fullPath: '/token/$address/$tab'
+      preLoaderRoute: typeof LayoutTokenAddressTabRouteImport
+      parentRoute: typeof LayoutTokenAddressRoute
+    }
+    '/_layout/address/$address/$tab': {
+      id: '/_layout/address/$address/$tab'
+      path: '/$tab'
+      fullPath: '/address/$address/$tab'
+      preLoaderRoute: typeof LayoutAddressAddressTabRouteImport
+      parentRoute: typeof LayoutAddressAddressRoute
+    }
   }
 }
+
+interface LayoutAddressAddressRouteChildren {
+  LayoutAddressAddressTabRoute: typeof LayoutAddressAddressTabRoute
+  LayoutAddressAddressIndexRoute: typeof LayoutAddressAddressIndexRoute
+}
+
+const LayoutAddressAddressRouteChildren: LayoutAddressAddressRouteChildren = {
+  LayoutAddressAddressTabRoute: LayoutAddressAddressTabRoute,
+  LayoutAddressAddressIndexRoute: LayoutAddressAddressIndexRoute,
+}
+
+const LayoutAddressAddressRouteWithChildren =
+  LayoutAddressAddressRoute._addFileChildren(LayoutAddressAddressRouteChildren)
+
+interface LayoutTokenAddressRouteChildren {
+  LayoutTokenAddressTabRoute: typeof LayoutTokenAddressTabRoute
+  LayoutTokenAddressIndexRoute: typeof LayoutTokenAddressIndexRoute
+}
+
+const LayoutTokenAddressRouteChildren: LayoutTokenAddressRouteChildren = {
+  LayoutTokenAddressTabRoute: LayoutTokenAddressTabRoute,
+  LayoutTokenAddressIndexRoute: LayoutTokenAddressIndexRoute,
+}
+
+const LayoutTokenAddressRouteWithChildren =
+  LayoutTokenAddressRoute._addFileChildren(LayoutTokenAddressRouteChildren)
+
+interface LayoutTxHashRouteChildren {
+  LayoutTxHashTabRoute: typeof LayoutTxHashTabRoute
+  LayoutTxHashIndexRoute: typeof LayoutTxHashIndexRoute
+}
+
+const LayoutTxHashRouteChildren: LayoutTxHashRouteChildren = {
+  LayoutTxHashTabRoute: LayoutTxHashTabRoute,
+  LayoutTxHashIndexRoute: LayoutTxHashIndexRoute,
+}
+
+const LayoutTxHashRouteWithChildren = LayoutTxHashRoute._addFileChildren(
+  LayoutTxHashRouteChildren,
+)
 
 interface LayoutRouteChildren {
   LayoutBlocksRoute: typeof LayoutBlocksRoute
   LayoutTokensRoute: typeof LayoutTokensRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
-  LayoutAddressAddressRoute: typeof LayoutAddressAddressRoute
+  LayoutAddressAddressRoute: typeof LayoutAddressAddressRouteWithChildren
   LayoutBlockIdRoute: typeof LayoutBlockIdRoute
   LayoutDemoAddressRoute: typeof LayoutDemoAddressRoute
   LayoutDemoEmptyStateRoute: typeof LayoutDemoEmptyStateRoute
   LayoutDemoPaginationRoute: typeof LayoutDemoPaginationRoute
   LayoutDemoTxRoute: typeof LayoutDemoTxRoute
   LayoutReceiptHashRoute: typeof LayoutReceiptHashRoute
-  LayoutTokenAddressRoute: typeof LayoutTokenAddressRoute
-  LayoutTxHashRoute: typeof LayoutTxHashRoute
+  LayoutTokenAddressRoute: typeof LayoutTokenAddressRouteWithChildren
+  LayoutTxHashRoute: typeof LayoutTxHashRouteWithChildren
   LayoutDemoIndexRoute: typeof LayoutDemoIndexRoute
 }
 
@@ -459,15 +608,15 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBlocksRoute: LayoutBlocksRoute,
   LayoutTokensRoute: LayoutTokensRoute,
   LayoutIndexRoute: LayoutIndexRoute,
-  LayoutAddressAddressRoute: LayoutAddressAddressRoute,
+  LayoutAddressAddressRoute: LayoutAddressAddressRouteWithChildren,
   LayoutBlockIdRoute: LayoutBlockIdRoute,
   LayoutDemoAddressRoute: LayoutDemoAddressRoute,
   LayoutDemoEmptyStateRoute: LayoutDemoEmptyStateRoute,
   LayoutDemoPaginationRoute: LayoutDemoPaginationRoute,
   LayoutDemoTxRoute: LayoutDemoTxRoute,
   LayoutReceiptHashRoute: LayoutReceiptHashRoute,
-  LayoutTokenAddressRoute: LayoutTokenAddressRoute,
-  LayoutTxHashRoute: LayoutTxHashRoute,
+  LayoutTokenAddressRoute: LayoutTokenAddressRouteWithChildren,
+  LayoutTxHashRoute: LayoutTxHashRouteWithChildren,
   LayoutDemoIndexRoute: LayoutDemoIndexRoute,
 }
 

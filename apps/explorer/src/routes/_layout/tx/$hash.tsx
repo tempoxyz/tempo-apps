@@ -3,6 +3,7 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
+	Outlet,
 	rootRouteId,
 	stripSearchParams,
 	useNavigate,
@@ -40,7 +41,6 @@ import { zHash } from '#lib/zod'
 import CopyIcon from '~icons/lucide/copy'
 
 const defaultSearchValues = {
-	tab: 'overview',
 	page: 1,
 } as const
 
@@ -62,10 +62,6 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	}),
 	validateSearch: z.object({
 		r: z.optional(z.string()),
-		tab: z.prefault(
-			z.enum(['overview', 'calls', 'events', 'changes', 'raw']),
-			defaultSearchValues.tab,
-		),
 		page: z.prefault(z.coerce.number(), defaultSearchValues.page),
 	}),
 	search: {
@@ -132,9 +128,16 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 })
 
 function RouteComponent() {
+	return <Outlet />
+}
+
+export type TxTab = 'overview' | 'calls' | 'events' | 'changes' | 'raw'
+
+export function TxPageContent(props: { tab: TxTab }) {
+	const { tab } = props
 	const navigate = useNavigate()
 	const { hash } = Route.useParams()
-	const { tab, page } = Route.useSearch()
+	const { page } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 	const { balanceChangesData, ...txLoaderData } = loaderData
 
@@ -158,21 +161,26 @@ function RouteComponent() {
 	const calls = 'calls' in transaction ? transaction.calls : undefined
 	const hasCalls = Boolean(calls && calls.length > 0)
 
-	const tabs = [
+	const tabs: TxTab[] = [
 		'overview',
-		...(hasCalls ? ['calls'] : []),
+		...(hasCalls ? ['calls' as const] : []),
 		'events',
 		'changes',
 		'raw',
-	] as const
-	const activeSection = tabs.indexOf(tab)
+	]
+	const activeSection = Math.max(0, tabs.indexOf(tab))
 
 	const setActiveSection = (newIndex: number) => {
-		navigate({
-			to: '.',
-			search: { tab: tabs[newIndex] ?? 'overview' },
-			resetScroll: false,
-		})
+		const newTab = tabs[newIndex] ?? 'overview'
+		if (newTab === 'overview') {
+			navigate({ to: '/tx/$hash', params: { hash }, resetScroll: false })
+		} else {
+			navigate({
+				to: '/tx/$hash/$tab',
+				params: { hash, tab: newTab },
+				resetScroll: false,
+			})
+		}
 	}
 
 	return (

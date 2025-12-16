@@ -4,6 +4,7 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
+	Outlet,
 	redirect,
 	stripSearchParams,
 	useNavigate,
@@ -42,10 +43,10 @@ import XIcon from '~icons/lucide/x'
 const defaultSearchValues = {
 	page: 1,
 	limit: 10,
-	tab: 'transfers',
 } as const
 
-const tabOrder = ['transfers', 'holders', 'contract'] as const
+export type TokenTab = 'transfers' | 'holders' | 'contract'
+const tabOrder: TokenTab[] = ['transfers', 'holders', 'contract']
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
@@ -67,29 +68,17 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			),
 			defaultSearchValues.limit,
 		),
-		tab: z.prefault(
-			z.pipe(
-				z.string(),
-				z.transform((val) => {
-					if (val === 'transfers' || val === 'holders' || val === 'contract')
-						return val
-					return 'transfers'
-				}),
-			),
-			defaultSearchValues.tab,
-		),
 		a: z.optional(z.string()),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page, limit, tab, a } }) => ({
+	loaderDeps: ({ search: { page, limit, a } }) => ({
 		page,
 		limit,
-		tab,
 		a,
 	}),
-	loader: async ({ deps: { page, limit, tab, a }, params, context }) => {
+	loader: async ({ deps: { page, limit, a }, params, context }) => {
 		const { address } = params
 		if (!Address.validate(address)) throw notFound()
 
@@ -115,24 +104,16 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				functionName: 'currency',
 			}).catch(() => undefined)
 
-			if (tab === 'transfers') {
-				const [metadata, transfers, holdersData, currency] = await Promise.all([
-					Actions.token.getMetadata(config, { token: address }),
-					context.queryClient.ensureQueryData(
-						transfersQueryOptions({ address, page, limit, offset, account }),
-					),
-					holdersPromise,
-					currencyPromise,
-				])
-				return { metadata, transfers, holdersData, currency }
-			}
-
-			const [metadata, holdersData, currency] = await Promise.all([
+			// Always fetch transfers for the default tab
+			const [metadata, transfers, holdersData, currency] = await Promise.all([
 				Actions.token.getMetadata(config, { token: address }),
+				context.queryClient.ensureQueryData(
+					transfersQueryOptions({ address, page, limit, offset, account }),
+				),
 				holdersPromise,
 				currencyPromise,
 			])
-			return { metadata, transfers: undefined, holdersData, currency }
+			return { metadata, transfers, holdersData, currency }
 		} catch (error) {
 			console.error(error)
 			// redirect to `/address/$address` and if it's not an address, that route will throw a notFound
@@ -210,10 +191,15 @@ export const Route = createFileRoute('/_layout/token/$address')({
 })
 
 function RouteComponent() {
+	return <Outlet />
+}
+
+export function TokenPageContent(props: { tab: TokenTab }) {
+	const { tab } = props
 	const navigate = useNavigate()
 	const route = useRouter()
 	const { address } = Route.useParams()
-	const { page, tab, limit, a } = Route.useSearch()
+	const { page, limit, a } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 
 	React.useEffect(() => {
@@ -223,16 +209,16 @@ function RouteComponent() {
 			const preloadPage = page + i
 			if (preloadPage < 1) continue
 			route.preloadRoute({
-				to: '.',
+				to: '/token/$address',
+				params: { address },
 				search: {
 					...(preloadPage !== 1 ? { page: preloadPage } : {}),
-					...(tab !== 'transfers' ? { tab } : {}),
 					...(a ? { a } : {}),
 					...(limit !== defaultSearchValues.limit ? { limit } : {}),
 				},
 			})
 		}
-	}, [route, page, tab, limit, a])
+	}, [route, page, limit, a, address])
 
 	const goToPage = React.useCallback(
 		(newPage: number) => {
@@ -240,24 +226,7 @@ function RouteComponent() {
 				to: '.',
 				search: () => ({
 					...(newPage !== 1 ? { page: newPage } : {}),
-					...(tab !== 'transfers' ? { tab } : {}),
 					...(a ? { a } : {}),
-					...(limit !== defaultSearchValues.limit ? { limit } : {}),
-				}),
-				resetScroll: false,
-			})
-		},
-		[navigate, tab, limit, a],
-	)
-
-	const setActiveSection = React.useCallback(
-		(newIndex: number) => {
-			const newTab = tabOrder[newIndex] ?? 'transfers'
-			navigate({
-				to: '.',
-				search: () => ({
-					...(newTab !== 'transfers' ? { tab: newTab } : {}),
-					...(a && newTab === 'transfers' ? { a } : {}),
 					...(limit !== defaultSearchValues.limit ? { limit } : {}),
 				}),
 				resetScroll: false,
@@ -266,7 +235,34 @@ function RouteComponent() {
 		[navigate, limit, a],
 	)
 
-	const activeSection = tab === 'holders' ? 1 : tab === 'contract' ? 2 : 0
+	const activeSection = tabOrder.indexOf(tab)
+
+	const setActiveSection = React.useCallback(
+		(newIndex: number) => {
+			const newTab = tabOrder[newIndex] ?? 'transfers'
+			if (newTab === 'transfers') {
+				navigate({
+					to: '/token/$address',
+					params: { address },
+					search: () => ({
+						...(a ? { a } : {}),
+						...(limit !== defaultSearchValues.limit ? { limit } : {}),
+					}),
+					resetScroll: false,
+				})
+			} else {
+				navigate({
+					to: '/token/$address/$tab',
+					params: { address, tab: newTab },
+					search: () => ({
+						...(limit !== defaultSearchValues.limit ? { limit } : {}),
+					}),
+					resetScroll: false,
+				})
+			}
+		},
+		[navigate, limit, a, address],
+	)
 
 	return (
 		<div
