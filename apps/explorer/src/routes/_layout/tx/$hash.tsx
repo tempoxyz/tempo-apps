@@ -236,6 +236,9 @@ function RouteComponent() {
 		content: <RawSection transaction={transaction} receipt={receipt} />,
 	})
 
+	const tabIndex = tabs.indexOf(tab)
+	const activeSection = tabIndex !== -1 ? tabIndex : 0
+
 	return (
 		<div
 			className={cx(
@@ -255,7 +258,7 @@ function RouteComponent() {
 			<Sections
 				mode={mode}
 				sections={sections}
-				activeSection={tabs.indexOf(tab)}
+				activeSection={activeSection}
 				onSectionChange={setActiveSection}
 			/>
 		</div>
