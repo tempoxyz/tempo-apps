@@ -612,11 +612,7 @@ function SectionsWrapper(props: {
 
 	// Fetch exact total count in the background (only when on history tab)
 	// Don't cache across tabs/pages - always show "..." until loaded each time
-	const {
-		// TODO: use me for the total count of txs
-		data: _totalCountResponse,
-		isLoading: isTotalCountLoading,
-	} = useQuery({
+	const totalCountQuery = useQuery({
 		queryKey: ['address-total-count', address],
 		queryFn: () => fetchAddressTotalCount(address),
 		staleTime: 0, // Don't cache - always refetch to show "..." while loading
@@ -630,13 +626,18 @@ function SectionsWrapper(props: {
 		address,
 	)
 
-	// Use hasMore from API for pagination - don't use txs-count for page calculation
-	// txs-count counts differently (from OR to) than pagination (direct + transfers deduped)
-	// This makes pagination responsive without waiting for separate count query
-	// When hasMore is true, set total to be high enough to enable next page button
-	const total = hasMore
+	// Exact count from dedicated API endpoint (for display only)
+	// txs-count counts "from OR to" while pagination API only serves a subset,
+	// so we can't use exactCount for page calculation - most pages would be empty
+	const exactCount = totalCountQuery.data?.data
+
+	// For pagination: always use hasMore-based estimate
+	// This ensures we only show pages that have data
+	const paginationTotal = hasMore
 		? Math.max(approximateTotal + limit, (page + 1) * limit)
-		: transactions.length
+		: approximateTotal > 0
+			? approximateTotal
+			: transactions.length
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -681,7 +682,7 @@ function SectionsWrapper(props: {
 				sections={[
 					{
 						title: 'History',
-						totalItems: data && Number(total),
+						totalItems: data && (exactCount ?? paginationTotal),
 						itemsLabel: 'transactions',
 						content: historyError ?? (
 							<DataGrid
@@ -720,11 +721,12 @@ function SectionsWrapper(props: {
 										},
 									}))
 								}
-								totalItems={Number(total)}
+								totalItems={paginationTotal}
+								displayCount={exactCount}
 								page={page}
 								fetching={isPlaceholderData}
 								loading={!data}
-								countLoading={isTotalCountLoading}
+								countLoading
 								itemsLabel="transactions"
 								itemsPerPage={limit}
 								pagination="simple"

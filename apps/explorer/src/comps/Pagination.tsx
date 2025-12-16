@@ -233,7 +233,7 @@ export namespace Pagination {
 	}
 
 	export function Simple(props: Simple.Props) {
-		const { page, totalPages, fetching, countLoading } = props
+		const { page, totalPages, fetching, countLoading, disableLastPage } = props
 		return (
 			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
 				<Link
@@ -295,7 +295,7 @@ export namespace Pagination {
 					to="."
 					resetScroll={false}
 					search={(prev) => ({ ...prev, page: totalPages, live: false })}
-					disabled={page >= totalPages}
+					disabled={page >= totalPages || disableLastPage}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
@@ -313,6 +313,8 @@ export namespace Pagination {
 			totalPages: number
 			fetching?: boolean
 			countLoading?: boolean
+			/** Disable "Last page" button when we can't reliably navigate there */
+			disableLastPage?: boolean
 		}
 	}
 

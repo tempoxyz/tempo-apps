@@ -9,10 +9,12 @@ export function DataGrid(props: DataGrid.Props) {
 		columns,
 		items,
 		totalItems,
+		displayCount,
 		page,
 		fetching = false,
 		loading = false,
 		countLoading = false,
+		disableLastPage = false,
 		itemsLabel = 'items',
 		itemsPerPage = 10,
 		pagination = 'default',
@@ -158,11 +160,12 @@ export function DataGrid(props: DataGrid.Props) {
 							totalPages={totalPages}
 							fetching={fetching && !loading}
 							countLoading={countLoading}
+							disableLastPage={disableLastPage}
 						/>
-						{/* Show transaction count only when count data has loaded */}
-						{!countLoading && (
+						{/* Show transaction count when displayCount is available */}
+						{displayCount != null && (
 							<Pagination.Count
-								totalItems={totalItems}
+								totalItems={displayCount}
 								itemsLabel={itemsLabel}
 								loading={loading}
 							/>
@@ -212,10 +215,14 @@ export namespace DataGrid {
 		}
 		items: (mode: Sections.Mode) => Row[]
 		totalItems: number
+		/** Optional separate count for display (e.g., exact transaction count) */
+		displayCount?: number
 		page: number
 		fetching?: boolean
 		loading?: boolean
 		countLoading?: boolean
+		/** Disable "Last page" button when we can't reliably navigate there */
+		disableLastPage?: boolean
 		itemsLabel?: string
 		itemsPerPage?: number
 		pagination?: 'default' | 'simple'
