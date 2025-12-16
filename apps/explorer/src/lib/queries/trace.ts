@@ -1,18 +1,30 @@
-import { queryOptions } from '@tanstack/react-query'
-import type { TraceData } from '#routes/api/tx/trace/$hash'
+import type { Address, Hex } from 'ox'
+import type { Chain, Client, Transport } from 'viem'
 
-export type { CallTrace, TraceData } from '#routes/api/tx/trace/$hash'
+export interface CallTrace {
+	type: 'CALL' | 'DELEGATECALL' | 'STATICCALL' | 'CREATE' | 'CREATE2'
+	from: Address.Address
+	to?: Address.Address
+	gas: Hex.Hex
+	gasUsed: Hex.Hex
+	input: Hex.Hex
+	output?: Hex.Hex
+	value?: Hex.Hex
+	error?: string
+	revertReason?: string
+	calls?: CallTrace[]
+}
 
-export function traceQueryOptions(params: { hash: string }) {
-	return queryOptions({
-		queryKey: ['trace', params.hash],
-		queryFn: async (): Promise<TraceData> => {
-			const url = `${__BASE_URL__}/api/tx/trace/${params.hash}`
-			const response = await fetch(url)
-			const data: TraceData & { error?: string } = await response.json()
-			if (data.error) throw new Error(data.error)
-			return data
-		},
-		staleTime: Infinity,
-	})
+export interface TraceData {
+	trace: CallTrace | null
+}
+
+export async function traceTransaction(
+	client: Client<Transport, Chain>,
+	hash: Hex.Hex,
+): Promise<CallTrace | null> {
+	return client.request({
+		method: 'debug_traceTransaction',
+		params: [hash, { tracer: 'callTracer' }],
+	} as Parameters<typeof client.request>[0])
 }
