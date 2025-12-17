@@ -1,5 +1,4 @@
 import { Address, Hex } from 'ox'
-import { Abis, Addresses } from 'tempo.ts/viem'
 import {
 	type AbiEvent,
 	decodeFunctionData,
@@ -8,6 +7,7 @@ import {
 	type TransactionReceipt,
 	zeroAddress,
 } from 'viem'
+import { Abis, Addresses } from 'viem/tempo'
 import type * as Tip20 from './tip20'
 
 const abi = Object.values(Abis).flat()

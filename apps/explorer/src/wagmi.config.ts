@@ -1,9 +1,12 @@
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
 import { QueryClient } from '@tanstack/react-query'
-import { tempoLocal, tempoTestnet } from 'tempo.ts/chains'
 import type { OneOf } from 'viem'
+import { tempoLocalnet, tempoTestnet } from 'viem/chains'
 import { createConfig, deserialize, http, serialize, webSocket } from 'wagmi'
 import { hashFn } from 'wagmi/query'
+
+// biome-ignore lint/suspicious/noExplicitAny: TODO
+type TODO = any
 
 const browser = typeof window !== 'undefined'
 
@@ -30,9 +33,7 @@ export const persister = createAsyncStoragePersister({
 })
 
 const chain =
-	import.meta.env.VITE_LOCALNET === 'true'
-		? tempoLocal({ feeToken: 1n })
-		: tempoTestnet({ feeToken: 1n })
+	import.meta.env.VITE_LOCALNET === 'true' ? tempoLocalnet : tempoTestnet
 
 export function getConfig(
 	parameters: OneOf<{ rpcUrl?: string | undefined }> = {},
@@ -46,11 +47,11 @@ export function getConfig(
 			[tempoTestnet.id]: browser
 				? webSocket(DEFAULT_TESTNET_WS_URL)
 				: http(rpcUrl ?? DEFAULT_TESTNET_RPC_URL),
-			[tempoLocal.id]: http(undefined, {
+			[tempoLocalnet.id]: http(undefined, {
 				batch: true,
 			}),
 		},
 	})
 }
 
-export const config = getConfig()
+export const config = getConfig() as TODO

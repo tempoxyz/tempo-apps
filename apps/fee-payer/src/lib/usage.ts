@@ -3,8 +3,8 @@ import * as IDX from 'idxs'
 import { sql } from 'kysely'
 import type { Address } from 'ox'
 import { tempo, tempoTestnet } from 'tempo.ts/chains'
-import { Actions, Addresses } from 'tempo.ts/viem'
 import { createPublicClient, formatUnits, http } from 'viem'
+import { Actions, Addresses } from 'viem/tempo'
 import { alphaUsd } from './consts.js'
 
 const IS = IDX.IndexSupply.create({

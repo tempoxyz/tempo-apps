@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
 import type { Address } from 'ox'
-import { Abis } from 'tempo.ts/viem'
 import type { Log } from 'viem'
 import { getAbiItem, parseEventLogs, zeroAddress } from 'viem'
 import { getTransactionReceipt, readContract } from 'viem/actions'
+import { Abis } from 'viem/tempo'
 import * as z from 'zod/mini'
 
 import { zHash } from '#lib/zod'

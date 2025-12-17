@@ -19,7 +19,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
-		"@typescript/native-preview": "^7.0.0-dev.20251209.1",
+		"@typescript/native-preview": "^7.0.0-dev.20251217.1",
 		"typescript": "^5.9.3"
 	},
 	"devEngines": {
@@ -29,5 +29,5 @@
 			"onFail": "download"
 		}
 	},
-	"packageManager": "pnpm@10.25.0"
+	"packageManager": "pnpm@10.26.0"
 }

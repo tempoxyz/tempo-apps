@@ -1,9 +1,9 @@
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { Value } from 'ox'
-import { Abis } from 'tempo.ts/viem'
 import { Actions } from 'tempo.ts/wagmi'
 import { zeroAddress } from 'viem'
+import { Abis } from 'viem/tempo'
 import {
 	getBlock,
 	getBytecode,

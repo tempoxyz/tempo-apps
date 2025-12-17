@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
 import { tempoTestnet } from 'tempo.ts/chains'
-import { withFeePayer } from 'tempo.ts/viem'
 import { KeyManager, webAuthn } from 'tempo.ts/wagmi'
+import { withFeePayer } from 'viem/tempo'
 import { createConfig, http, webSocket } from 'wagmi'
 
 export const alphaUsd = '0x20c0000000000000000000000000000000000001'
