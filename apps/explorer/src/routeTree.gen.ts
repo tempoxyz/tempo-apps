@@ -28,6 +28,7 @@ import { Route as LayoutDemoEmptyStateRouteImport } from './routes/_layout/demo/
 import { Route as LayoutDemoAddressRouteImport } from './routes/_layout/demo/address'
 import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
 import { Route as LayoutAddressAddressRouteImport } from './routes/_layout/address/$address'
+import { Route as ApiTxTraceHashRouteImport } from './routes/api/tx/trace/$hash'
 import { Route as ApiTxBalanceChangesHashRouteImport } from './routes/api/tx/balance-changes/$hash'
 import { Route as ApiAddressTxsCountAddressRouteImport } from './routes/api/address/txs-count/$address'
 import { Route as ApiAddressTotalValueAddressRouteImport } from './routes/api/address/total-value/$address'
@@ -126,6 +127,11 @@ const LayoutAddressAddressRoute = LayoutAddressAddressRouteImport.update({
   path: '/address/$address',
   getParentRoute: () => LayoutRoute,
 } as any)
+const ApiTxTraceHashRoute = ApiTxTraceHashRouteImport.update({
+  id: '/api/tx/trace/$hash',
+  path: '/api/tx/trace/$hash',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTxBalanceChangesHashRoute = ApiTxBalanceChangesHashRouteImport.update({
   id: '/api/tx/balance-changes/$hash',
   path: '/api/tx/balance-changes/$hash',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
+  '/api/tx/trace/$hash': typeof ApiTxTraceHashRoute
 }
 export interface FileRoutesByTo {
   '/blocks': typeof LayoutBlocksRoute
@@ -189,6 +196,7 @@ export interface FileRoutesByTo {
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
+  '/api/tx/trace/$hash': typeof ApiTxTraceHashRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -214,6 +222,7 @@ export interface FileRoutesById {
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
+  '/api/tx/trace/$hash': typeof ApiTxTraceHashRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -239,6 +248,7 @@ export interface FileRouteTypes {
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
+    | '/api/tx/trace/$hash'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/blocks'
@@ -262,6 +272,7 @@ export interface FileRouteTypes {
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
+    | '/api/tx/trace/$hash'
   id:
     | '__root__'
     | '/_layout'
@@ -286,6 +297,7 @@ export interface FileRouteTypes {
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
+    | '/api/tx/trace/$hash'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -298,6 +310,7 @@ export interface RootRouteChildren {
   ApiAddressTotalValueAddressRoute: typeof ApiAddressTotalValueAddressRoute
   ApiAddressTxsCountAddressRoute: typeof ApiAddressTxsCountAddressRoute
   ApiTxBalanceChangesHashRoute: typeof ApiTxBalanceChangesHashRoute
+  ApiTxTraceHashRoute: typeof ApiTxTraceHashRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -435,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAddressAddressRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/api/tx/trace/$hash': {
+      id: '/api/tx/trace/$hash'
+      path: '/api/tx/trace/$hash'
+      fullPath: '/api/tx/trace/$hash'
+      preLoaderRoute: typeof ApiTxTraceHashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/tx/balance-changes/$hash': {
       id: '/api/tx/balance-changes/$hash'
       path: '/api/tx/balance-changes/$hash'
@@ -504,6 +524,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAddressTotalValueAddressRoute: ApiAddressTotalValueAddressRoute,
   ApiAddressTxsCountAddressRoute: ApiAddressTxsCountAddressRoute,
   ApiTxBalanceChangesHashRoute: ApiTxBalanceChangesHashRoute,
+  ApiTxTraceHashRoute: ApiTxTraceHashRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
