@@ -6,10 +6,8 @@ import * as z from 'zod/mini'
 
 import { config } from '#wagmi.config.ts'
 
-const CONTRACT_VERIFICATION_API_BASE_URL = import.meta.env
-	.VITE_CONTRACT_VERIFY_URL
-	? `${import.meta.env.VITE_CONTRACT_VERIFY_URL}/v2/contract`
-	: 'https://sourcify.dev/server/v2/contract'
+const CONTRACT_VERIFICATION_API_BASE_URL =
+	'https://contracts.tempo.xyz/v2/contract'
 
 const ContractVerificationLookupSchema = z.object({
 	matchId: z.number(),
