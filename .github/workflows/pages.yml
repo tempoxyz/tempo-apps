@@ -2,10 +2,14 @@ name: Publish GitHub Page
 
 on:
   pull_request:
+    paths:
+      - "apps/tokenlist/**"
   workflow_dispatch:
   push:
     branches:
       - "main"
+    paths:
+      - "apps/tokenlist/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
