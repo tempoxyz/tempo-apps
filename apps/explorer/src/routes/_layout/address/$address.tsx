@@ -48,6 +48,7 @@ import { cx } from '#cva.config.ts'
 import {
 	type ContractSource,
 	fetchContractSource,
+	useContractSourceQueryOptions,
 } from '#lib/domain/contract-source.ts'
 import {
 	type ContractInfo,
@@ -686,6 +687,16 @@ function SectionsWrapper(props: {
 	const [isMounted, setIsMounted] = React.useState(false)
 	React.useEffect(() => setIsMounted(true), [])
 
+	// Fetch contract source client-side if not provided by SSR loader
+	// This ensures source code is available when navigating directly to ?tab=contract
+	const isContractTabActive = activeSection === 2
+	const contractSourceQuery = useQuery({
+		...useContractSourceQueryOptions({ address }),
+		initialData: contractSource,
+		enabled: Boolean(contractInfo) && !contractSource && isContractTabActive,
+	})
+	const resolvedContractSource = contractSource ?? contractSourceQuery.data
+
 	const isHistoryTabActive = activeSection === 0
 	// Only auto-refresh on page 1 when history tab is active and live=true
 	const shouldAutoRefresh = page === 1 && isHistoryTabActive && live
@@ -745,7 +756,7 @@ function SectionsWrapper(props: {
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
-	const hasContractSource = Boolean(contractSource)
+	const hasContractSource = Boolean(resolvedContractSource)
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const historyError = error ? (
@@ -899,8 +910,8 @@ function SectionsWrapper(props: {
 									itemsLabel: 'functions',
 									content: (
 										<div className="flex flex-col gap-3.5">
-											{hasContractSource && contractSource && (
-												<ContractSources {...contractSource} />
+											{hasContractSource && resolvedContractSource && (
+												<ContractSources {...resolvedContractSource} />
 											)}
 											<ContractReader
 												address={address}
