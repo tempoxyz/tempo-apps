@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
 import type { Address, Hex } from 'ox'
-import type { Client, Transport, Chain } from 'viem'
+import type { Chain, Client, Transport } from 'viem'
 import { zHash } from '#lib/zod'
 import { getConfig } from '#wagmi.config'
 
@@ -52,7 +52,10 @@ async function tracePrestate(
 ): Promise<PrestateDiff | null> {
 	return client.request({
 		method: 'debug_traceTransaction',
-		params: [hash, { tracer: 'prestateTracer', tracerConfig: { diffMode: true } }],
+		params: [
+			hash,
+			{ tracer: 'prestateTracer', tracerConfig: { diffMode: true } },
+		],
 	} as Parameters<typeof client.request>[0])
 }
 
