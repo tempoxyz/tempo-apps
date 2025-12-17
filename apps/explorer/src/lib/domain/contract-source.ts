@@ -103,9 +103,7 @@ export async function fetchContractSource(params: {
 	const { address, chainId, signal } = params
 
 	try {
-		const url = new URL('/api/code', __BASE_URL__)
-		url.searchParams.set('address', address.toLowerCase())
-		url.searchParams.set('chainId', chainId.toString())
+		const url = `${__BASE_URL__}/api/code?address=${address.toLowerCase()}&chainId=${chainId}`
 
 		const response = await fetch(url, { signal })
 
