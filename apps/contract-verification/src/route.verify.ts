@@ -1,4 +1,3 @@
-import crypto from 'node:crypto'
 import { getContainer } from '@cloudflare/containers'
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
@@ -7,7 +6,13 @@ import { bodyLimit } from 'hono/body-limit'
 import { Address, Hex } from 'ox'
 import { type Chain, createPublicClient, http, keccak256 } from 'viem'
 
+import {
+	type ImmutableReferences,
+	type LinkReferences,
+	matchBytecode,
+} from '#bytecode-matching.ts'
 import { chains, DEVNET_CHAIN_ID, TESTNET_CHAIN_ID } from '#chains.ts'
+
 import {
 	codeTable,
 	compiledContractsSignaturesTable,
@@ -20,6 +25,7 @@ import {
 	sourcesTable,
 	verifiedContractsTable,
 } from '#database/schema.ts'
+import { sourcifyError } from '#utilities.ts'
 
 /**
  * TODO:
@@ -55,12 +61,32 @@ verifyRoute.use(
 	bodyLimit({
 		maxSize: 2 * 1024 * 1024, // 2mb
 		onError: (context) => {
-			const message = `[requestId: ${context.req.header('Tempo-Request-Id')}] Body limit exceeded`
+			const message = `[requestId: ${context.req.header('X-Tempo-Request-Id')}] Body limit exceeded`
 
 			console.error(message)
-			return context.json({ error: message }, 413)
+			return sourcifyError(context, 413, 'body_too_large', message)
 		},
 	}),
+)
+
+// POST /v2/verify/metadata/:chainId/:address - Verify Contract (using Solidity metadata.json)
+verifyRoute.post('/metadata/:chainId/:address', (context) =>
+	sourcifyError(
+		context,
+		501,
+		'not_implemented',
+		'Metadata-based verification is not implemented',
+	),
+)
+
+// POST /v2/verify/similarity/:chainId/:address - Verify contract via similarity search
+verifyRoute.post('/similarity/:chainId/:address', (context) =>
+	sourcifyError(
+		context,
+		501,
+		'not_implemented',
+		'Similarity-based verification is not implemented',
+	),
 )
 
 // POST /v2/verify/:chainId/:address - Verify Contract (Standard JSON)
@@ -80,24 +106,20 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 
 		const chainId = Number(_chainId)
 		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(chainId)) {
-			return context.json(
-				{
-					error: 'Invalid chainId',
-					message: `Invalid chainId: ${chainId}`,
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				400,
+				'unsupported_chain',
+				`The chain with chainId ${chainId} is not supported`,
 			)
 		}
 
 		if (!Address.validate(address, { strict: true })) {
-			return context.json(
-				{
-					error: 'Invalid address',
-					message: `Invalid address: ${address}`,
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				400,
+				'invalid_address',
+				`Invalid address: ${address}`,
 			)
 		}
 
@@ -106,14 +128,11 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			!Object.hasOwn(body, 'compilerVersion') ||
 			!Object.hasOwn(body, 'contractIdentifier')
 		) {
-			return context.json(
-				{
-					error: 'Missing required fields',
-					message:
-						'stdJsonInput, compilerVersion, and contractIdentifier are required',
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				400,
+				'missing_params',
+				'stdJsonInput, compilerVersion, and contractIdentifier are required',
 			)
 		}
 
@@ -122,14 +141,11 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		// Parse contractIdentifier: "contracts/Token.sol:Token" -> { path: "contracts/Token.sol", name: "Token" }
 		const lastColonIndex = contractIdentifier.lastIndexOf(':')
 		if (lastColonIndex === -1) {
-			return context.json(
-				{
-					error: 'Invalid contractIdentifier',
-					message:
-						'contractIdentifier must be in format "path/to/Contract.sol:ContractName"',
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				400,
+				'invalid_contract_identifier',
+				'contractIdentifier must be in format "path/to/Contract.sol:ContractName"',
 			)
 		}
 		const contractPath = contractIdentifier.slice(0, lastColonIndex)
@@ -159,22 +175,9 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			)
 			.limit(1)
 
-		if (existingVerification.length > 0 && existingVerification[0]) {
-			const [v] = existingVerification
-			const matchStatus = v.runtimeMetadataMatch ? 'exact_match' : 'match'
-
+		if (existingVerification.length > 0) {
 			return context.json(
-				{
-					verificationId: v.matchId,
-					address,
-					match: matchStatus,
-					creationMatch: null,
-					verifiedAt: v.verifiedAt,
-					status: 'already_verified',
-					runtimeMatch: matchStatus,
-					matchId: v.matchId,
-					chainId: chainId,
-				},
+				{ verificationId: existingVerification.at(0)?.matchId?.toString() },
 				202,
 			)
 		}
@@ -182,18 +185,20 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		const chain = chains[chainId as keyof typeof chains] as unknown as Chain
 		const client = createPublicClient({
 			chain,
-			transport: http('https://rpc.testnet.tempo.xyz'),
+			transport: http(
+				chain.id === TESTNET_CHAIN_ID
+					? 'https://rpc-orchestra.testnet.tempo.xyz'
+					: undefined,
+			),
 		})
 
 		const onchainBytecode = await client.getCode({ address: address })
-		if (!Hex.validate(onchainBytecode)) {
-			return context.json(
-				{
-					error: 'Contract not found',
-					message: `No bytecode found at address ${address} on chain ${chainId}`,
-					errorId: crypto.randomUUID(),
-				},
+		if (!onchainBytecode || onchainBytecode === '0x') {
+			return sourcifyError(
+				context,
 				404,
+				'contract_not_found',
+				`No bytecode found at address ${address} on chain ${chainId}`,
 			)
 		}
 
@@ -216,15 +221,8 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		)
 
 		if (!compileResponse.ok) {
-			const error = await compileResponse.text()
-			return context.json(
-				{
-					error: 'Compilation failed',
-					message: error,
-					errorId: crypto.randomUUID(),
-				},
-				500,
-			)
+			const errorText = await compileResponse.text()
+			return sourcifyError(context, 500, 'compilation_failed', errorText)
 		}
 
 		const compileOutput = (await compileResponse.json()) as {
@@ -233,11 +231,28 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 				Record<
 					string,
 					{
-						abi: unknown[]
+						abi: Array<{
+							type: string
+							name?: string
+							inputs?: Array<{ type: string; name?: string }>
+						}>
 						evm: {
-							bytecode: { object: string }
-							deployedBytecode: { object: string }
+							bytecode: {
+								object: string
+								linkReferences?: LinkReferences
+								sourceMap?: string
+							}
+							deployedBytecode: {
+								object: string
+								linkReferences?: LinkReferences
+								immutableReferences?: ImmutableReferences
+								sourceMap?: string
+							}
 						}
+						metadata?: string
+						storageLayout?: unknown
+						userdoc?: unknown
+						devdoc?: unknown
 					}
 				>
 			>
@@ -251,15 +266,11 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		const errors =
 			compileOutput.errors?.filter((e) => e.severity === 'error') ?? []
 		if (errors.length > 0) {
-			return context.json(
-				{
-					error: 'Compilation errors',
-					message: errors
-						.map((e) => e.formattedMessage ?? e.message)
-						.join('\n'),
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				400,
+				'compilation_error',
+				errors.map((e) => e.formattedMessage ?? e.message).join('\n'),
 			)
 		}
 
@@ -267,72 +278,48 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		const compiledContract =
 			compileOutput.contracts?.[contractPath]?.[contractName]
 		if (!compiledContract) {
-			return context.json(
-				{
-					error: 'Contract not found in compilation output',
-					message: `Could not find ${contractName} in ${contractPath}`,
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				400,
+				'contract_not_found_in_output',
+				`Could not find ${contractName} in ${contractPath}`,
 			)
 		}
 
 		const compiledBytecode = `0x${compiledContract.evm.deployedBytecode.object}`
 
-		// Step 4: Compare bytecodes
-		// Note: This is a simplified comparison. Real verification needs to handle:
-		// - Constructor arguments (appended to creation bytecode)
-		// - Immutable variables
-		// - Metadata hash differences (partial vs perfect match)
-		// - CBOR-encoded metadata at the end of bytecode
+		// Step 4: Compare bytecodes using proper matching with transformations
+		const runtimeMatchResult = matchBytecode({
+			onchainBytecode: onchainBytecode,
+			recompiledBytecode: compiledBytecode,
+			isCreation: false,
+			linkReferences: compiledContract.evm.deployedBytecode.linkReferences,
+			immutableReferences:
+				compiledContract.evm.deployedBytecode.immutableReferences,
+			abi: compiledContract.abi,
+		})
 
-		// Strip metadata hash for comparison (last 43 bytes typically contain CBOR metadata)
-		// Format: 0xa2 0x64 'i' 'p' 'f' 's' ... (IPFS hash) ... 0x64 's' 'o' 'l' 'c' ... (solc version)
-		const stripMetadata = (bytecode: string) => {
-			// Find CBOR metadata marker (0xa2 or 0xa1 near the end)
-			const code = bytecode.toLowerCase()
-			// Look for common metadata patterns - this is simplified
-			// Real implementation should properly decode CBOR length
-			const metadataMarkers = ['a264', 'a265', 'a164', 'a165']
-			for (const marker of metadataMarkers) {
-				const lastIndex = code.lastIndexOf(marker)
-				if (lastIndex > code.length - 200 && lastIndex > 0) {
-					return code.slice(0, lastIndex)
-				}
-			}
-			return code
-		}
-
-		const onchainStripped = stripMetadata(onchainBytecode)
-		const compiledStripped = stripMetadata(compiledBytecode)
-
-		const perfectMatch =
-			onchainBytecode.toLowerCase() === compiledBytecode.toLowerCase()
-		const partialMatch = onchainStripped === compiledStripped
-
-		if (!partialMatch) {
-			return context.json(
-				{
-					error: 'Bytecode mismatch',
-					message: 'Compiled bytecode does not match on-chain bytecode',
-					errorId: crypto.randomUUID(),
-					debug: {
-						onchainLength: onchainBytecode.length,
-						compiledLength: compiledBytecode.length,
-						onchainPrefix: onchainBytecode.slice(0, 100),
-						compiledPrefix: compiledBytecode.slice(0, 100),
-					},
-				},
+		if (runtimeMatchResult.match === null) {
+			return sourcifyError(
+				context,
 				400,
+				'no_match',
+				runtimeMatchResult.message ||
+					'Compiled bytecode does not match on-chain bytecode',
 			)
 		}
+
+		const isExactMatch = runtimeMatchResult.match === 'exact_match'
 
 		const auditUser = 'verification-api'
 
 		// Compute hashes for runtime bytecode
 		const runtimeBytecodeBytes = Hex.toBytes(compiledBytecode as `0x${string}`)
 		const runtimeCodeHashSha256 = new Uint8Array(
-			await crypto.subtle.digest('SHA-256', runtimeBytecodeBytes),
+			await globalThis.crypto.subtle.digest(
+				'SHA-256',
+				new TextEncoder().encode(compiledBytecode as `0x${string}`),
+			),
 		)
 		const runtimeCodeHashKeccak = Hex.toBytes(
 			keccak256(compiledBytecode as `0x${string}`),
@@ -342,7 +329,10 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		const creationBytecode = `0x${compiledContract.evm.bytecode.object}`
 		const creationBytecodeBytes = Hex.toBytes(creationBytecode as `0x${string}`)
 		const creationCodeHashSha256 = new Uint8Array(
-			await crypto.subtle.digest('SHA-256', creationBytecodeBytes),
+			await globalThis.crypto.subtle.digest(
+				'SHA-256',
+				new TextEncoder().encode(creationBytecode as `0x${string}`),
+			),
 		)
 		const creationCodeHashKeccak = Hex.toBytes(
 			keccak256(creationBytecode as `0x${string}`),
@@ -383,7 +373,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		if (existingContract.length > 0 && existingContract[0]) {
 			contractId = existingContract[0].id
 		} else {
-			contractId = crypto.randomUUID()
+			contractId = globalThis.crypto.randomUUID()
 			await db.insert(contractsTable).values({
 				id: contractId,
 				creationCodeHash: creationCodeHashSha256,
@@ -409,7 +399,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		if (existingDeployment.length > 0 && existingDeployment[0]) {
 			deploymentId = existingDeployment[0].id
 		} else {
-			deploymentId = crypto.randomUUID()
+			deploymentId = globalThis.crypto.randomUUID()
 			await db.insert(contractDeploymentsTable).values({
 				id: deploymentId,
 				chainId: chainId,
@@ -437,7 +427,29 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		if (existingCompilation.length > 0 && existingCompilation[0]) {
 			compilationId = existingCompilation[0].id
 		} else {
-			compilationId = crypto.randomUUID()
+			compilationId = globalThis.crypto.randomUUID()
+
+			// Build code artifacts from compiler output
+			const creationCodeArtifacts = {
+				sourceMap: compiledContract.evm.bytecode.sourceMap,
+				linkReferences: compiledContract.evm.bytecode.linkReferences,
+			}
+			const runtimeCodeArtifacts = {
+				sourceMap: compiledContract.evm.deployedBytecode.sourceMap,
+				linkReferences: compiledContract.evm.deployedBytecode.linkReferences,
+				immutableReferences:
+					compiledContract.evm.deployedBytecode.immutableReferences,
+			}
+
+			// Build compilation artifacts (ABI, docs, storage layout)
+			const compilationArtifacts = {
+				abi: compiledContract.abi,
+				metadata: compiledContract.metadata,
+				storageLayout: compiledContract.storageLayout,
+				userdoc: compiledContract.userdoc,
+				devdoc: compiledContract.devdoc,
+			}
+
 			await db.insert(compiledContractsTable).values({
 				id: compilationId,
 				compiler: 'solc',
@@ -446,11 +458,11 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 				name: contractName,
 				fullyQualifiedName: contractIdentifier,
 				compilerSettings: JSON.stringify(stdJsonInput.settings),
-				compilationArtifacts: JSON.stringify({ abi: compiledContract.abi }),
+				compilationArtifacts: JSON.stringify(compilationArtifacts),
 				creationCodeHash: creationCodeHashSha256,
-				creationCodeArtifacts: JSON.stringify({}),
+				creationCodeArtifacts: JSON.stringify(creationCodeArtifacts),
 				runtimeCodeHash: runtimeCodeHashSha256,
-				runtimeCodeArtifacts: JSON.stringify({}),
+				runtimeCodeArtifacts: JSON.stringify(runtimeCodeArtifacts),
 				createdBy: auditUser,
 				updatedBy: auditUser,
 			})
@@ -463,7 +475,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			const content = sourceData.content
 			const contentBytes = new TextEncoder().encode(content)
 			const sourceHashSha256 = new Uint8Array(
-				await crypto.subtle.digest('SHA-256', contentBytes),
+				await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
 			)
 			const sourceHashKeccak = Hex.toBytes(
 				keccak256(Hex.fromBytes(contentBytes)),
@@ -485,7 +497,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			await db
 				.insert(compiledContractsSourcesTable)
 				.values({
-					id: crypto.randomUUID(),
+					id: globalThis.crypto.randomUUID(),
 					compilationId: compilationId,
 					sourceHash: sourceHashSha256,
 					path: sourcePath,
@@ -494,11 +506,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		}
 
 		// Extract and insert signatures from ABI
-		const abi = compiledContract.abi as Array<{
-			type: string
-			name?: string
-			inputs?: Array<{ type: string }>
-		}>
+		const abi = compiledContract.abi
 		for (const item of abi) {
 			let signatureType: SignatureType | null = null
 			if (item.type === 'function') signatureType = 'function'
@@ -525,7 +533,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 				await db
 					.insert(compiledContractsSignaturesTable)
 					.values({
-						id: crypto.randomUUID(),
+						id: globalThis.crypto.randomUUID(),
 						compilationId: compilationId,
 						signatureHash32: signatureHash32,
 						signatureType: signatureType,
@@ -534,7 +542,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			}
 		}
 
-		// Insert verified contract (or update if exists)
+		// Insert verified contract with transformation data
 		await db
 			.insert(verifiedContractsTable)
 			.values({
@@ -542,7 +550,15 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 				compilationId,
 				creationMatch: false, // We only verified runtime bytecode
 				runtimeMatch: true,
-				runtimeMetadataMatch: perfectMatch,
+				runtimeMetadataMatch: isExactMatch,
+				runtimeValues:
+					Object.keys(runtimeMatchResult.transformationValues).length > 0
+						? JSON.stringify(runtimeMatchResult.transformationValues)
+						: null,
+				runtimeTransformations:
+					runtimeMatchResult.transformations.length > 0
+						? JSON.stringify(runtimeMatchResult.transformations)
+						: null,
 				createdBy: auditUser,
 				updatedBy: auditUser,
 			})
@@ -555,43 +571,19 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			.limit(1)
 
 		const verificationId =
-			verificationResult.at(0)?.id?.toString() ?? crypto.randomUUID()
+			verificationResult.at(0)?.id?.toString() ?? globalThis.crypto.randomUUID()
 
-		return context.json(
-			{
-				verificationId,
-				status: 'verified',
-				match: perfectMatch ? 'perfect' : 'partial',
-				chainId,
-				address,
-				contractName,
-				contractPath,
-				abi: compiledContract.abi,
-			},
-			202,
-		)
+		return context.json({ verificationId }, 202)
 	} catch (error) {
 		console.error(error)
-		return context.json(
-			{
-				error: 'Internal server error',
-				message: 'An unexpected error occurred',
-				errorId: crypto.randomUUID(),
-			},
+		return sourcifyError(
+			context,
 			500,
+			'internal_error',
+			'An unexpected error occurred',
 		)
 	}
 })
-
-// POST /v2/verify/metadata/:chainId/:address - Verify Contract (using Solidity metadata.json)
-verifyRoute.post('/metadata/:chainId/:address', (context) =>
-	context.json({ error: 'Not implemented' }, 501),
-)
-
-// POST /v2/verify/similarity/:chainId/:address - Verify contract via similarity search
-verifyRoute.post('/similarity/:chainId/:address', (context) =>
-	context.json({ error: 'Not implemented' }, 501),
-)
 
 // GET /v2/verify/:verificationId - Check verification job status
 verifyRoute.get('/:verificationId', async (context) => {
@@ -628,7 +620,7 @@ verifyRoute.get('/:verificationId', async (context) => {
 				{
 					customCode: 'not_found',
 					message: `No verification job found for ID ${verificationId}`,
-					errorId: crypto.randomUUID(),
+					errorId: globalThis.crypto.randomUUID(),
 				},
 				404,
 			)
@@ -657,7 +649,7 @@ verifyRoute.get('/:verificationId', async (context) => {
 			{
 				customCode: 'internal_error',
 				message: 'An unexpected error occurred',
-				errorId: crypto.randomUUID(),
+				errorId: globalThis.crypto.randomUUID(),
 			},
 			500,
 		)

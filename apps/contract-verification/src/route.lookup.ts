@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { Address, Hex } from 'ox'
 
 import { DEVNET_CHAIN_ID, TESTNET_CHAIN_ID } from '#chains.ts'
+
 import {
 	codeTable,
 	compiledContractsSignaturesTable,
@@ -14,6 +15,7 @@ import {
 	sourcesTable,
 	verifiedContractsTable,
 } from '#database/schema.ts'
+import { sourcifyError } from '#utilities.ts'
 
 /**
  * GET /v2/contract/{chainId}/{address}
@@ -31,13 +33,11 @@ lookupRoute.get('/all-chains/:address', async (context) => {
 		const { address } = context.req.param()
 
 		if (!Address.validate(address, { strict: true }))
-			return context.json(
-				{
-					error: 'Invalid address',
-					message: `Invalid address: ${address}`,
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				400,
+				'invalid_address',
+				`Invalid address: ${address}`,
 			)
 
 		const db = drizzle(context.env.CONTRACTS_DB)
@@ -90,13 +90,11 @@ lookupRoute.get('/all-chains/:address', async (context) => {
 		return context.json({ results: contracts })
 	} catch (error) {
 		console.error(error)
-		return context.json(
-			{
-				error: 'Internal server error',
-				message: 'An unexpected error occurred',
-				errorId: crypto.randomUUID(),
-			},
+		return sourcifyError(
+			context,
 			500,
+			'internal_error',
+			'An unexpected error occurred',
 		)
 	}
 })
@@ -108,34 +106,27 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 		const { fields, omit } = context.req.query()
 
 		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(Number(chainId)))
-			return context.json(
-				{
-					error: 'Invalid chainId',
-					message: `Invalid chainId: ${chainId}`,
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				400,
+				'unsupported_chain',
+				`The chain with chainId ${chainId} is not supported`,
 			)
 
 		if (!Address.validate(address, { strict: true }))
-			return context.json(
-				{
-					error: 'Invalid address',
-					message: `Invalid address: ${address}`,
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				400,
+				'invalid_address',
+				`Invalid address: ${address}`,
 			)
 
 		if (fields && omit)
-			return context.json(
-				{
-					error: 'Invalid query params',
-					message:
-						'Cannot use both fields and omit query parameters simultaneously',
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				400,
+				'invalid_params',
+				'Cannot use both fields and omit query parameters simultaneously',
 			)
 
 		const db = drizzle(context.env.CONTRACTS_DB)
@@ -194,24 +185,20 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 			.limit(1)
 
 		if (results.length === 0)
-			return context.json(
-				{
-					error: 'Contract not found',
-					message: `Contract ${address} on chain ${chainId} not found or not verified`,
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				404,
+				'contract_not_found',
+				`Contract ${address} on chain ${chainId} not found or not verified`,
 			)
 
 		const [row] = results
 		if (!row) {
-			return context.json(
-				{
-					error: 'Contract not found',
-					message: `Contract ${address} on chain ${chainId} not found or not verified`,
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				404,
+				'contract_not_found',
+				`Contract ${address} on chain ${chainId} not found or not verified`,
 			)
 		}
 
@@ -503,13 +490,11 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 		return context.json(minimalResponse)
 	} catch (error) {
 		console.error(error)
-		return context.json(
-			{
-				error: 'Internal server error',
-				message: 'An unexpected error occurred',
-				errorId: crypto.randomUUID(),
-			},
+		return sourcifyError(
+			context,
 			500,
+			'internal_error',
+			'An unexpected error occurred',
 		)
 	}
 })
@@ -521,13 +506,11 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 		const { sort, limit, afterMatchId } = context.req.query()
 
 		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(Number(chainId)))
-			return context.json(
-				{
-					customCode: 'unsupported_chain',
-					message: `The chain with chainId ${chainId} is not supported`,
-					errorId: crypto.randomUUID(),
-				},
+			return sourcifyError(
+				context,
 				400,
+				'unsupported_chain',
+				`The chain with chainId ${chainId} is not supported`,
 			)
 
 		// Validate and parse query params
@@ -594,13 +577,11 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 		return context.json({ results: contracts })
 	} catch (error) {
 		console.error(error)
-		return context.json(
-			{
-				customCode: 'internal_error',
-				message: 'An unexpected error occurred',
-				errorId: crypto.randomUUID(),
-			},
+		return sourcifyError(
+			context,
 			500,
+			'internal_error',
+			'An unexpected error occurred',
 		)
 	}
 })

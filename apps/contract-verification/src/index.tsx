@@ -1,6 +1,5 @@
 import { getContainer } from '@cloudflare/containers'
 import { Hono } from 'hono'
-import { csrf } from 'hono/csrf'
 import { showRoutes } from 'hono/dev'
 import { prettyJSON } from 'hono/pretty-json'
 import { requestId } from 'hono/request-id'
@@ -30,7 +29,6 @@ const app = new Hono<{ Bindings: Cloudflare.Env }>()
 // @note: order matters
 app.use('*', requestId({ headerName: 'X-Tempo-Request-Id' }))
 app.use(secureHeaders())
-app.use(csrf())
 // TODO: update before merging to main
 app.use('*', timeout(12_000)) // 12 seconds
 app.use(prettyJSON())
