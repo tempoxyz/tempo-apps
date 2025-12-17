@@ -12,9 +12,8 @@ env:
 
 jobs:
   verify:
-    permissions:
-      read: true
-      write: true
+    env:
+      GH_TOKEN: ${{ github.token }}
     name: Run verification script
     runs-on: ubuntu-latest
 
