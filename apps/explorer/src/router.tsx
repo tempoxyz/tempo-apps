@@ -4,7 +4,6 @@ import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { hashFn } from 'wagmi/query'
 import { NotFound } from '#comps/NotFound'
-import { Layout } from '#routes/_layout.tsx'
 import { routeTree } from '#routeTree.gen.ts'
 
 export const getRouter = () => {
@@ -25,11 +24,7 @@ export const getRouter = () => {
 		context: { queryClient },
 		defaultPreload: 'intent',
 		defaultPreloadDelay: 150,
-		defaultNotFoundComponent: () => (
-			<Layout>
-				<NotFound />
-			</Layout>
-		),
+		defaultNotFoundComponent: () => <NotFound />,
 	})
 
 	// @see https://tanstack.com/router/latest/docs/integrations/query

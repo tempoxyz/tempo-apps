@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
@@ -33,12 +33,9 @@ import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription } from '#lib/og'
-import {
-	balanceChangesQueryOptions,
-	type TxData,
-	traceQueryOptions,
-	txQueryOptions,
-} from '#lib/queries'
+import { LIMIT, type TxData, txQueryOptions } from '#lib/queries'
+import { traceQueryOptions } from '#lib/queries/trace'
+import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
 import { zHash } from '#lib/zod'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -76,26 +73,29 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	},
 	loaderDeps: ({ search: { page } }) => ({ page }),
 	loader: async ({ params, context, deps: { page } }) => {
+		const { hash } = params
+
 		try {
+			const offset = (page - 1) * LIMIT
+
 			const [txData, balanceChangesData, traceData] = await Promise.all([
-				context.queryClient.ensureQueryData(
-					txQueryOptions({ hash: params.hash }),
-				),
+				context.queryClient.ensureQueryData(txQueryOptions({ hash })),
+				fetchBalanceChanges({ hash, limit: LIMIT, offset }).catch(() => ({
+					changes: [],
+					tokenMetadata: {},
+					total: 0,
+				})),
 				context.queryClient
-					.ensureQueryData(
-						balanceChangesQueryOptions({ hash: params.hash, page }),
-					)
-					.catch(() => ({ changes: [], tokenMetadata: {}, total: 0 })),
-				context.queryClient
-					.ensureQueryData(traceQueryOptions({ hash: params.hash }))
+					.ensureQueryData(traceQueryOptions({ hash }))
 					.catch(() => ({ trace: null, prestate: null })),
 			])
+
 			return { ...txData, balanceChangesData, traceData }
 		} catch (error) {
 			console.error(error)
 			throw notFound({
 				routeId: rootRouteId,
-				data: { type: 'hash', value: params.hash },
+				data: { type: 'hash', value: hash },
 			})
 		}
 	},
@@ -139,24 +139,17 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 
 function RouteComponent() {
 	const navigate = useNavigate()
-	const { hash } = Route.useParams()
 	const { tab, page } = Route.useSearch()
-	const loaderData = Route.useLoaderData()
-	const { balanceChangesData, traceData, ...txLoaderData } = loaderData
-
-	const { data } = useQuery({
-		...txQueryOptions({ hash }),
-		initialData: txLoaderData,
-	})
-
 	const {
+		balanceChangesData,
+		traceData,
 		block,
 		feeBreakdown,
 		knownEvents,
 		knownEventsByLog = [],
 		receipt,
 		transaction,
-	} = data
+	} = Route.useLoaderData()
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -241,6 +234,9 @@ function RouteComponent() {
 		content: <RawSection transaction={transaction} receipt={receipt} />,
 	})
 
+	const tabIndex = tabs.indexOf(tab)
+	const activeSection = tabIndex !== -1 ? tabIndex : 0
+
 	return (
 		<div
 			className={cx(
@@ -260,7 +256,7 @@ function RouteComponent() {
 			<Sections
 				mode={mode}
 				sections={sections}
-				activeSection={tabs.indexOf(tab)}
+				activeSection={activeSection}
 				onSectionChange={setActiveSection}
 			/>
 		</div>

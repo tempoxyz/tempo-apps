@@ -1,6 +1,15 @@
 import * as Sentry from '@sentry/cloudflare'
 import handler, { type ServerEntry } from '@tanstack/react-start/server-entry'
 
+export const redirects: Array<{
+	from: RegExp
+	to: (match: RegExpMatchArray) => string
+}> = [
+	{ from: /^\/blocks\/(latest|\d+)$/, to: (m) => `/block/${m[1]}` },
+	{ from: /^\/transaction\/(.+)$/, to: (m) => `/tx/${m[1]}` },
+	{ from: /^\/tokens\/(.+)$/, to: (m) => `/token/${m[1]}` },
+]
+
 export default Sentry.withSentry(
 	(env: Cloudflare.Env) => {
 		const metadata = env.CF_VERSION_METADATA
@@ -18,6 +27,14 @@ export default Sentry.withSentry(
 			const url = new URL(request.url)
 			if (url.pathname === '/debug-sentry')
 				throw new Error('My first Sentry error!')
+
+			for (const { from, to } of redirects) {
+				const match = url.pathname.match(from)
+				if (match) {
+					url.pathname = to(match)
+					return Response.redirect(url, 301)
+				}
+			}
 
 			return handler.fetch(request, opts as Parameters<ServerEntry['fetch']>[1])
 		},

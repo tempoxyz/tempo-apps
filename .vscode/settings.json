@@ -45,8 +45,10 @@
 	"editor.codeActionsOnSave": {
 		"source.organizeImports.biome": "explicit"
 	},
+	"sqlfluff.dialect": "sqlite",
 	"files.associations": {
 		"*.svg": "html",
+		".env.*": "dotenv",
 		"biome.json": "jsonc",
 		"*.css": "tailwindcss"
 	},

@@ -162,14 +162,12 @@ export function DataGrid(props: DataGrid.Props) {
 							countLoading={countLoading}
 							disableLastPage={disableLastPage}
 						/>
-						{/* Show transaction count when displayCount is available */}
-						{displayCount != null && (
-							<Pagination.Count
-								totalItems={displayCount}
-								itemsLabel={itemsLabel}
-								loading={loading}
-							/>
-						)}
+						{/* Show transaction count - loading state shown while fetching */}
+						<Pagination.Count
+							totalItems={displayCount ?? 0}
+							itemsLabel={itemsLabel}
+							loading={loading || displayCount == null}
+						/>
 					</div>
 				) : (
 					<Pagination

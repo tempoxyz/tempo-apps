@@ -1,0 +1,49 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "contracts",
+	"compatibility_date": "2025-10-11",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.tsx",
+	"keep_vars": true,
+	"workers_dev": true,
+	"preview_urls": true,
+	"d1_databases": [
+		{
+			"binding": "CONTRACTS_DB",
+			"migrations_dir": "drizzle",
+			"database_name": "CONTRACTS-DB",
+			"database_id": "9e8d88e6-8bf0-40ae-860a-c1385dccaefc"
+		}
+	],
+	"containers": [
+		{
+			"max_instances": 10,
+			"image": "./Dockerfile",
+			"name": "verification-container",
+			"class_name": "VerificationContainer"
+		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "VERIFICATION_CONTAINER",
+				"class_name": "VerificationContainer"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["VerificationContainer"]
+		}
+	],
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"persist": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true
+		}
+	}
+}

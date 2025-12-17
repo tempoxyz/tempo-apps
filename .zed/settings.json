@@ -1,0 +1,116 @@
+{
+	"file_types": {
+		"env": [".env", ".env.*"],
+		"HTML": ["*.html", "*.svg"]
+	},
+	"hidden_files": ["**/.wrangler", "**/.tanstack", "**/.claude"],
+	"file_scan_exclusions": ["**/.wrangler", "**/.vscode", ".git"],
+	"languages": {
+		"HTML": {
+			"language_servers": ["biome"],
+			"code_actions_on_format": {
+				"source.fixAll.biome": true,
+				"source.organizeImports.biome": true
+			},
+			"formatter": {
+				"language_server": {
+					"name": "biome"
+				}
+			}
+		},
+		"svg": {
+			"language_servers": ["biome", "HTML"],
+			"code_actions_on_format": {
+				"source.fixAll.biome": true,
+				"source.organizeImports.biome": true
+			},
+			"formatter": {
+				"language_server": {
+					"name": "biome"
+				}
+			}
+		},
+		"MDX": {
+			"language_servers": ["typescript-language-server", "biome"]
+		},
+		"JSON": {
+			"language_servers": ["biome"],
+			"code_actions_on_format": {
+				"source.fixAll.biome": true,
+				"source.organizeImports.biome": true
+			},
+			"formatter": {
+				"language_server": {
+					"name": "biome"
+				}
+			}
+		},
+		"JSONC": {
+			"language_servers": ["biome"],
+			"code_actions_on_format": {
+				"source.fixAll.biome": true,
+				"source.organizeImports.biome": true
+			},
+			"formatter": {
+				"language_server": {
+					"name": "biome"
+				}
+			}
+		},
+		"JSDoc": {
+			"language_servers": ["typescript-language-server", "biome"],
+			"code_actions_on_format": {
+				"source.fixAll.astro": true,
+				"source.organizeImports.biome": true
+			},
+			"formatter": {
+				"language_server": {
+					"name": "biome"
+				}
+			}
+		},
+		"TSX": {
+			"language_servers": ["typescript-language-server", "biome"],
+			"code_actions_on_format": {
+				"source.fixAll.biome": true,
+				"source.organizeImports.biome": true
+			},
+			"formatter": {
+				"language_server": {
+					"name": "biome"
+				}
+			}
+		},
+		"JavaScript": {
+			"language_servers": ["typescript-language-server", "biome"],
+			"code_actions_on_format": {
+				"source.fixAll.biome": true,
+				"source.organizeImports.biome": true
+			},
+			"formatter": {
+				"language_server": {
+					"name": "biome"
+				}
+			}
+		},
+		"TypeScript": {
+			"language_servers": ["typescript-language-server", "biome"],
+			"code_actions_on_format": {
+				"source.fixAll.biome": true,
+				"source.organizeImports.biome": true
+			},
+			"formatter": {
+				"language_server": {
+					"name": "biome"
+				}
+			}
+		}
+	},
+	"terminal": {
+		"button": true,
+		"dock": "bottom",
+		"toolbar": {
+			"breadcrumbs": false
+		}
+	}
+}
