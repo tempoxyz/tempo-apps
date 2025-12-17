@@ -46,7 +46,8 @@ Pass the API URL to the `--verifier-url` flag and set `--verifier` to `sourcify`
 forge script script/Mail.s.sol --verifier-url https://contracts.tempo.xyz --verifier sourcify
 ```
 
-See [/apps/contract-verification/scripts/quick-verify.sh](./scripts/quick-verify.sh) for and small example you can run.
+See [/apps/contract-verification/scripts/quick-verify.sh](./scripts/quick-verify.sh)
+and [/apps/contract-verification/scripts/medium-verify.sh](./scripts/medium-verify.sh) for small examples you can run.
 
 #### Direct API Usage
 
