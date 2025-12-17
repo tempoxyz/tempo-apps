@@ -12,6 +12,13 @@ export const Route = createFileRoute('/api/code')({
 		handlers: {
 			GET: async (context) => {
 				const url = new URL(context.request.url)
+
+				const normalizedParams = Object.fromEntries(
+					Array.from(url.searchParams.entries()).map(([k, v]) => [
+						k.toLowerCase(),
+						v,
+					]),
+				)
 				const {
 					data: parsedSearchParams,
 					error: parsedSearchParamsError,
@@ -19,9 +26,9 @@ export const Route = createFileRoute('/api/code')({
 				} = z.safeParse(
 					z.object({
 						address: zAddress({ lowercase: true }),
-						chainId: z.coerce.number(),
+						chainid: z.coerce.number(),
 					}),
-					Object.fromEntries(url.searchParams),
+					normalizedParams,
 				)
 
 				if (!parsedSearchParamsSuccess)
@@ -31,7 +38,7 @@ export const Route = createFileRoute('/api/code')({
 					)
 
 				const apiUrl = new URL(
-					`${CONTRACT_VERIFICATION_API_BASE_URL}/${parsedSearchParams.chainId}/${parsedSearchParams.address.toLowerCase()}`,
+					`${CONTRACT_VERIFICATION_API_BASE_URL}/${parsedSearchParams.chainid}/${parsedSearchParams.address.toLowerCase()}`,
 				)
 				apiUrl.searchParams.set('fields', 'stdJsonInput,abi,compilation')
 				const response = await fetch(apiUrl.toString())
