@@ -17,6 +17,7 @@ import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { useBlock } from 'wagmi'
 import {
 	getBlock,
+	getChainId,
 	getTransaction,
 	getTransactionReceipt,
 	readContract,
@@ -24,6 +25,7 @@ import {
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractReader } from '#comps/ContractReader'
+import { ContractSources } from '#comps/ContractSource.tsx'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
@@ -44,6 +46,10 @@ import {
 } from '#comps/TxTransactionRow'
 import { cx } from '#cva.config.ts'
 import {
+	type ContractSource,
+	fetchContractSource,
+} from '#lib/domain/contract-source.ts'
+import {
 	type ContractInfo,
 	extractContractAbi,
 	getContractBytecode,
@@ -52,7 +58,7 @@ import {
 import { parseKnownEvents } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
-import { useMediaQuery } from '#lib/hooks'
+import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
 import {
 	type TransactionsData,
@@ -153,6 +159,9 @@ type AssetData = {
 }
 
 function useAssetsData(accountAddress: Address.Address): AssetData[] {
+	// Track hydration to avoid SSR/client mismatch with cached query data
+	const isMounted = useIsMounted()
+
 	const meta0 = Hooks.token.useGetMetadata({ token: assets[0] })
 	const meta1 = Hooks.token.useGetMetadata({ token: assets[1] })
 	const meta2 = Hooks.token.useGetMetadata({ token: assets[2] })
@@ -177,12 +186,29 @@ function useAssetsData(accountAddress: Address.Address): AssetData[] {
 
 	return React.useMemo(
 		() => [
-			{ address: assets[0], metadata: meta0.data, balance: bal0.data },
-			{ address: assets[1], metadata: meta1.data, balance: bal1.data },
-			{ address: assets[2], metadata: meta2.data, balance: bal2.data },
-			{ address: assets[3], metadata: meta3.data, balance: bal3.data },
+			{
+				address: assets[0],
+				metadata: isMounted() ? meta0.data : undefined,
+				balance: isMounted() ? bal0.data : undefined,
+			},
+			{
+				address: assets[1],
+				metadata: isMounted() ? meta1.data : undefined,
+				balance: isMounted() ? bal1.data : undefined,
+			},
+			{
+				address: assets[2],
+				metadata: isMounted() ? meta2.data : undefined,
+				balance: isMounted() ? bal2.data : undefined,
+			},
+			{
+				address: assets[3],
+				metadata: isMounted() ? meta3.data : undefined,
+				balance: isMounted() ? bal3.data : undefined,
+			},
 		],
 		[
+			isMounted,
 			meta0.data,
 			meta1.data,
 			meta2.data,
@@ -235,8 +261,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page, limit } }) => ({ page, limit }),
-	loader: async ({ deps: { page, limit }, params, context }) => {
+	loaderDeps: ({ search: { page, limit, live } }) => ({ page, limit, live }),
+	loader: async ({ deps: { page, limit, live }, params, context }) => {
 		const { address } = params
 		// Only throw notFound for truly invalid addresses
 		if (!Address.validate(address))
@@ -246,6 +272,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 
 		const offset = (page - 1) * limit
+		const chainId = getChainId(config)
 
 		// check if it's a known contract from our registry
 		let contractInfo = getContractInfo(address)
@@ -276,8 +303,19 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 		const hasContract = Boolean(contractInfo)
 
+		let contractSource: ContractSource | undefined
+		if (hasContract) {
+			contractSource = await fetchContractSource({
+				address,
+				chainId,
+			}).catch((error) => {
+				console.error('Failed to load contract source:', error)
+				return undefined
+			})
+		}
+
 		// Add timeout to prevent SSR from hanging on slow queries
-		const QUERY_TIMEOUT_MS = 3000
+		const QUERY_TIMEOUT_MS = 3_000
 		const timeout = <T,>(
 			promise: Promise<T>,
 			ms: number,
@@ -321,12 +359,14 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const totalValueResponse = undefined
 
 		return {
+			live,
 			address,
 			page,
 			limit,
 			offset,
 			hasContract,
 			contractInfo,
+			contractSource,
 			transactionsData,
 			txCountResponse,
 			totalValueResponse,
@@ -451,8 +491,9 @@ function RouteComponent() {
 	const router = useRouter()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, limit, live } = Route.useSearch()
-	const { hasContract, contractInfo, transactionsData } = Route.useLoaderData()
+	const { page, tab, live, limit } = Route.useSearch()
+	const { hasContract, contractInfo, contractSource, transactionsData } =
+		Route.useLoaderData()
 
 	Address.assert(address)
 
@@ -529,7 +570,7 @@ function RouteComponent() {
 		<div
 			className={cx(
 				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
+				'grid w-full pt-20 pb-16 px-4 gap-3.5 min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-7xl',
 			)}
 		>
 			<AccountCardWithTimestamps address={address} assetsData={assetsData} />
@@ -540,6 +581,7 @@ function RouteComponent() {
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
 				contractInfo={contractInfo}
+				contractSource={contractSource}
 				initialData={transactionsData}
 				assetsData={assetsData}
 				live={live}
@@ -621,6 +663,7 @@ function SectionsWrapper(props: {
 	activeSection: number
 	onSectionChange: (index: number) => void
 	contractInfo: ContractInfo | undefined
+	contractSource?: ContractSource | undefined
 	initialData: TransactionsData | undefined
 	assetsData: AssetData[]
 	live: boolean
@@ -632,11 +675,16 @@ function SectionsWrapper(props: {
 		activeSection,
 		onSectionChange,
 		contractInfo,
+		contractSource,
 		initialData,
 		assetsData,
 		live,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
+
+	// Track hydration to avoid SSR/client mismatch with query data
+	const [isMounted, setIsMounted] = React.useState(false)
+	React.useEffect(() => setIsMounted(true), [])
 
 	const isHistoryTabActive = activeSection === 0
 	// Only auto-refresh on page 1 when history tab is active and live=true
@@ -683,7 +731,8 @@ function SectionsWrapper(props: {
 	// Exact count from dedicated API endpoint (for display only)
 	// txs-count counts "from OR to" while pagination API only serves a subset,
 	// so we can't use exactCount for page calculation - most pages would be empty
-	const exactCount = totalCountQuery.data?.data
+	// Only use after mount to avoid SSR/client hydration mismatch
+	const exactCount = isMounted ? totalCountQuery.data?.data : undefined
 
 	// For pagination: always use hasMore-based estimate
 	// This ensures we only show pages that have data
@@ -696,9 +745,11 @@ function SectionsWrapper(props: {
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
+	const hasContractSource = Boolean(contractSource)
+
 	// Show error state for API failures (instead of crashing the whole page)
 	const historyError = error ? (
-		<div className="rounded-[10px] bg-card-header p-[18px]">
+		<div className="rounded-[10px] bg-card-header p-4.5">
 			<p className="text-sm font-medium text-red-400">
 				Failed to load transaction history
 			</p>
@@ -847,11 +898,16 @@ function SectionsWrapper(props: {
 									totalItems: 0,
 									itemsLabel: 'functions',
 									content: (
-										<ContractReader
-											address={address}
-											abi={contractInfo.abi}
-											docsUrl={contractInfo.docsUrl}
-										/>
+										<div className="flex flex-col gap-3.5">
+											{hasContractSource && contractSource && (
+												<ContractSources {...contractSource} />
+											)}
+											<ContractReader
+												address={address}
+												abi={contractInfo.abi}
+												docsUrl={contractInfo.docsUrl}
+											/>
+										</div>
 									),
 								},
 							]

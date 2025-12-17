@@ -45,7 +45,7 @@ export function Sections(props: Sections.Props) {
 										type="button"
 										onClick={() => toggleSection(index)}
 										className={cx(
-											'h-[54px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-[2px]!',
+											'h-[54px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
 											isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
 										)}
 									>
@@ -77,7 +77,7 @@ export function Sections(props: Sections.Props) {
 								)}
 
 								{!isCollapsed && (
-									<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
+									<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
 										{section.contextual && (
 											<div className="px-[18px] py-[10px] border-b border-dashed border-card-border">
 												{section.contextual}
@@ -128,7 +128,7 @@ export function Sections(props: Sections.Props) {
 										'h-full flex items-center text-[13px] font-medium',
 										'focus-visible:-outline-offset-2! press-down cursor-pointer transition-[color]',
 										index === 0
-											? 'pl-[18px] pr-[12px] !rounded-tl-[10px]'
+											? 'pl-[18px] pr-[12px] rounded-tl-[10px]!'
 											: 'px-[12px]',
 										activeSection === index
 											? 'text-primary'
@@ -150,15 +150,8 @@ export function Sections(props: Sections.Props) {
 					)}
 				</div>
 
-				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-[1px] -mx-[1px] flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
-					{sections.map((section, index) => (
-						<div
-							key={section.title}
-							className={activeSection === index ? undefined : 'hidden'}
-						>
-							{section.content}
-						</div>
-					))}
+				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
+					{currentSection.content}
 				</div>
 			</section>
 		</Sections.Context.Provider>

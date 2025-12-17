@@ -114,6 +114,16 @@
 					"allowTrailingCommas": true
 				}
 			}
+		},
+		{
+			"includes": ["./apps/contract-verification/src/route.docs.tsx"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"useUniqueElementIds": "off"
+					}
+				}
+			}
 		}
 	]
 }
