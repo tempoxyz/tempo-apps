@@ -331,6 +331,7 @@ function Component() {
 				feeDisplay={feeDisplay}
 				hash={receipt.transactionHash}
 				sender={receipt.from}
+				status={receipt.status}
 				timestamp={block.timestamp}
 				total={total}
 				totalDisplay={totalDisplay}
