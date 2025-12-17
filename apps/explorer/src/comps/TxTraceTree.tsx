@@ -1,23 +1,22 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueries } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { useEffect, useMemo, useState } from 'react'
-import type { Hex } from 'viem'
+import { useMemo, useState } from 'react'
 import { type Abi, decodeAbiParameters, erc20Abi, slice } from 'viem'
-import { cx } from '#lib/css'
+import type { Hex } from 'viem'
+import { cx } from '#cva.config.ts'
 import {
+	autoloadAbiQueryOptions,
 	formatAbiValue,
 	getAbiItem,
-	getContractInfo,
-	precompileRegistry,
-} from '#lib/domain/contracts'
-import { decodePrecompile } from '#lib/domain/precompiles'
+	lookupSignatureQueryOptions,
+} from '#lib/abi'
+import { getContractInfo } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
-import { batchAbiQueryOptions, populateCacheFromBatch } from '#lib/queries'
-import ArrowRightIcon from '~icons/lucide/arrow-right'
 import CopyIcon from '~icons/lucide/copy'
-import WrapIcon from '~icons/lucide/corner-down-left'
+import ArrowRightIcon from '~icons/lucide/arrow-right'
 import ReturnIcon from '~icons/lucide/corner-down-right'
+import WrapIcon from '~icons/lucide/corner-down-left'
 
 export function TxTraceTree(props: TxTraceTree.Props) {
 	const { trace } = props
@@ -80,13 +79,12 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 
 function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 	const { addresses, selectors } = useMemo(() => {
-		if (!trace)
-			return { addresses: [] as `0x${string}`[], selectors: [] as Hex[] }
-		const addresses = new Set<`0x${string}`>()
+		if (!trace) return { addresses: [] as string[], selectors: [] as Hex[] }
+		const addresses = new Set<string>()
 		const selectors = new Set<Hex>()
 		const stack = [trace]
 		for (const trace of stack) {
-			if (trace.to) addresses.add(trace.to as `0x${string}`)
+			if (trace.to) addresses.add(trace.to)
 			const hasSelector = trace.input && trace.input.length >= 10
 			if (hasSelector) selectors.add(slice(trace.input, 0, 4))
 			if (trace.calls) stack.push(...trace.calls)
@@ -97,59 +95,39 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 		}
 	}, [trace])
 
-	const queryClient = useQueryClient()
+	const abiQueries = useQueries({
+		queries: addresses.map((address) =>
+			autoloadAbiQueryOptions({ address: address as `0x${string}` }),
+		),
+	})
 
-	// Single batch query instead of N+1 individual queries
-	const { data: batchData } = useQuery(
-		batchAbiQueryOptions({ addresses, selectors }),
-	)
-
-	// Populate individual caches for other components
-	useEffect(() => {
-		if (batchData) populateCacheFromBatch(queryClient, batchData)
-	}, [queryClient, batchData])
+	const sigQueries = useQueries({
+		queries: selectors.map((selector) =>
+			lookupSignatureQueryOptions({ selector }),
+		),
+	})
 
 	return useMemo(() => {
 		if (!trace) return null
 
-		// Build lookup maps from batch response
 		const abiMap = new Map(
-			Object.entries(batchData?.abis ?? {}).map(([addr, abi]) => [
-				addr.toLowerCase(),
-				abi,
-			]),
+			addresses.map((addr, i) => [addr, abiQueries[i]?.data]),
 		)
 		const sigMap = new Map(
-			Object.entries(batchData?.signatures ?? {}).map(([sel, sig]) => [
-				sel.toLowerCase(),
-				sig,
-			]),
+			selectors.map((sel, i) => [sel, sigQueries[i]?.data]),
 		)
 
 		function buildNode(trace: CallTrace): TxTraceTree.Node {
 			const hasSelector = trace.input && trace.input.length >= 10
 			const selector = hasSelector ? slice(trace.input, 0, 4) : undefined
 			const contractInfo = trace.to ? getContractInfo(trace.to) : undefined
-			const precompileInfo = trace.to
-				? precompileRegistry.get(trace.to.toLowerCase() as `0x${string}`)
-				: undefined
 
+			// try to decode function call
 			let functionName: string | undefined
 			let params: string | undefined
 			let decodedOutput: string | undefined
 
-			if (precompileInfo && trace.to) {
-				const decoded = decodePrecompile(
-					trace.to,
-					trace.input || '0x',
-					trace.output,
-				)
-				functionName = 'run'
-				if (decoded) {
-					params = decoded.params
-					decodedOutput = decoded.decodedOutput
-				}
-			} else if (selector) {
+			if (selector) {
 				const autoloadAbi = abiMap.get(trace.to ?? '')
 				const autoloadAbiItem =
 					autoloadAbi && getAbiItem({ abi: autoloadAbi as Abi, selector })
@@ -214,7 +192,7 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 				hasInput: hasSelector,
 				hasOutput: Boolean(trace.output && trace.output !== '0x'),
 				hasError: Boolean(trace.error || trace.revertReason),
-				contractName: precompileInfo?.name ?? contractInfo?.name,
+				contractName: contractInfo?.name,
 				functionName,
 				params,
 				decodedOutput,
@@ -223,7 +201,7 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 		}
 
 		return buildNode(trace)
-	}, [trace, batchData])
+	}, [trace, addresses, selectors, abiQueries, sigQueries])
 }
 
 export namespace TxTraceTree {
@@ -272,7 +250,7 @@ export namespace TxTraceTree {
 			<>
 				<span
 					className={cx(
-						'text-[10px] font-medium px-[4px] py-px rounded text-center whitespace-nowrap select-none',
+						'text-[10px] font-medium px-[4px] py-[1px] rounded text-center whitespace-nowrap select-none',
 						node.hasError
 							? 'bg-negative/20 text-negative'
 							: 'bg-accent/20 text-accent',
