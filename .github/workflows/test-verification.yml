@@ -1,0 +1,47 @@
+name: Test Contract Verification
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  ACTIONS_RUNNER_DEBUG: true
+
+jobs:
+  verify:
+    name: Run verification script
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@master
+        with:
+          version: nightly
+          network: tempo
+
+      - name: Execute verification script
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          TEMP_DIR=$(mktemp -d)
+          cd "$TEMP_DIR"
+
+          gh repo clone grandizzy/oz-dummy-token
+          cd oz-dummy-token
+
+          export VERIFIER_URL="https://contracts.tempo.xyz"
+          export TEMPO_RPC_URL="https://rpc-orchestra.testnet.tempo.xyz"
+          export PRIVATE_KEY="0xa4b3490c35582d544451fbbfd7a0e4c5fa4d0ded06563ccc199057c7a5e6c9de"
+
+          forge build
+          forge script script/DeployMyToken.s.sol \
+            --rpc-url='https://rpc-orchestra.testnet.tempo.xyz' \
+            --private-key='0xa4b3490c35582d544451fbbfd7a0e4c5fa4d0ded06563ccc199057c7a5e6c9de' \
+            --broadcast \
+            --verify \
+            --verifier sourcify \
+            --verifier-url='https://contracts.tempo.xyz'
