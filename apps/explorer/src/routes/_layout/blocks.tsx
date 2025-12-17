@@ -19,16 +19,21 @@ const recentlyAddedBlocks = new Set<string>()
 export const Route = createFileRoute('/_layout/blocks')({
 	component: RouteComponent,
 	validateSearch: z.object({
-		page: z.prefault(z.coerce.number(), 1),
-		live: z.prefault(z.coerce.boolean(), true),
+		page: z.optional(z.coerce.number()),
+		live: z.optional(z.coerce.boolean()),
 	}),
-	loaderDeps: ({ search: { page, live } }) => ({ page, live }),
+	loaderDeps: ({ search: { page, live } }) => ({
+		page: page ?? 1,
+		live: live ?? (page ?? 1) === 1,
+	}),
 	loader: async ({ deps, context }) =>
 		context.queryClient.ensureQueryData(blocksQueryOptions(deps.page)),
 })
 
 function RouteComponent() {
-	const { page = 1, live = true } = Route.useSearch()
+	const search = Route.useSearch()
+	const page = search.page ?? 1
+	const live = search.live ?? page === 1
 	const loaderData = Route.useLoaderData()
 
 	const { data: queryData } = useQuery({
