@@ -28,7 +28,7 @@ import {
 	sourcesTable,
 	verifiedContractsTable,
 } from '#database/schema.ts'
-import { sourcifyError } from '#utilities.ts'
+import { normalizeSourcePath, sourcifyError } from '#utilities.ts'
 
 /**
  * TODO:
@@ -547,14 +547,15 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 				})
 				.onConflictDoNothing()
 
-			// Link source to compilation (ignore if already linked)
+			// Link source to compilation with normalized path (convert absolute to relative)
+			const normalizedPath = normalizeSourcePath(sourcePath)
 			await db
 				.insert(compiledContractsSourcesTable)
 				.values({
 					id: globalThis.crypto.randomUUID(),
 					compilationId: compilationId,
 					sourceHash: sourceHashSha256,
-					path: sourcePath,
+					path: normalizedPath,
 				})
 				.onConflictDoNothing()
 		}

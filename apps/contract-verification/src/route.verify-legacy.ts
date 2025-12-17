@@ -27,7 +27,7 @@ import {
 	sourcesTable,
 	verifiedContractsTable,
 } from '#database/schema.ts'
-import { sourcifyError } from '#utilities.ts'
+import { normalizeSourcePath, sourcifyError } from '#utilities.ts'
 
 /**
  * Legacy Sourcify-compatible routes for Foundry forge verify.
@@ -487,13 +487,15 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				})
 				.onConflictDoNothing()
 
+			// Normalize path (convert absolute to relative)
+			const normalizedPath = normalizeSourcePath(sourcePath)
 			await db
 				.insert(compiledContractsSourcesTable)
 				.values({
 					id: globalThis.crypto.randomUUID(),
 					compilationId: compilationId,
 					sourceHash: sourceHashSha256,
-					path: sourcePath,
+					path: normalizedPath,
 				})
 				.onConflictDoNothing()
 		}

@@ -32,9 +32,14 @@ import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription } from '#lib/og'
-import { LIMIT, traceTransaction, type TxData, txQueryOptions } from '#lib/queries'
+import {
+	LIMIT,
+	type TxData,
+	traceTransaction,
+	txQueryOptions,
+} from '#lib/queries/index.ts'
+import { zHash } from '#lib/zod.ts'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
-import { zHash } from '#lib/zod'
 import { getConfig } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
 
