@@ -86,33 +86,35 @@ export async function getVyperPath(requestedVersion: string) {
 	}
 
 	// Download vyper from GitHub releases
-	// https://github.com/vyperlang/vyper/releases/download/v0.4.1/vyper.0.4.1+commit.XXXXXXX.linux
-	// The naming is inconsistent, so we try multiple patterns
-	const patterns = [
-		`v${version}/vyper.${version}.linux`,
-		`v${version}/vyper.${version}+commit.linux`,
-	]
+	// The naming varies by version, so we fetch the release assets to find the correct file
+	const releaseApiUrl = `https://api.github.com/repos/vyperlang/vyper/releases/tags/v${version}`
+	const releaseResponse = await fetch(releaseApiUrl, {
+		headers: { Accept: 'application/vnd.github.v3+json' },
+	})
 
 	let response: Response | null = null
 
-	for (const pattern of patterns) {
-		const url = `${VYPER_GITHUB_RELEASES_URL}/${pattern}`
-		const attempt = await fetch(url)
-		if (attempt.ok) {
-			response = attempt
-			break
+	if (releaseResponse.ok) {
+		const release = (await releaseResponse.json()) as {
+			assets: Array<{ name: string; browser_download_url: string }>
+		}
+		const linuxAsset = release.assets.find(
+			(a) => a.name.endsWith('.linux') && a.name.startsWith(`vyper.${version}`),
+		)
+		if (linuxAsset) {
+			response = await fetch(linuxAsset.browser_download_url)
 		}
 	}
 
-	// Try the simple pattern that works for most versions
-	if (!response) {
+	// Fallback to simple pattern for older versions
+	if (!response?.ok) {
 		const simpleUrl = `${VYPER_GITHUB_RELEASES_URL}/v${version}/vyper.${version}.linux`
 		response = await fetch(simpleUrl)
 	}
 
 	if (!response?.ok)
 		throw new Error(
-			`Failed to download Vyper ${version}: tried multiple URL patterns`,
+			`Failed to download Vyper ${version}: release not found or no linux binary available`,
 		)
 
 	const bytes = new Uint8Array(await response.arrayBuffer())

@@ -12,6 +12,7 @@ import packageJSON from '#package.json' with { type: 'json' }
 import { docsRoute } from '#route.docs.tsx'
 import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
 import { verifyRoute } from '#route.verify.ts'
+import { legacyVerifyRoute } from '#route.verify-legacy.ts'
 
 export { VerificationContainer }
 
@@ -32,6 +33,7 @@ app.use('*', timeout(20_000)) // 20 seconds
 app.use(prettyJSON())
 
 app.route('/docs', docsRoute)
+app.route('/verify', legacyVerifyRoute)
 app.route('/v2/verify', verifyRoute)
 app.route('/v2/contract', lookupRoute)
 app.route('/v2/contracts', lookupAllChainContractsRoute)
@@ -57,6 +59,12 @@ app
 					: context.json({ error: 'Failed to ping container' }, 500),
 			),
 	)
+
+app.use('*', async (context, next) => {
+	if (context.env.NODE_ENV !== 'development') return await next()
+	console.info(`[${context.req.method}] ${context.req.path}`)
+	await next()
+})
 
 showRoutes(app)
 

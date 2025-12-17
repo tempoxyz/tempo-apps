@@ -7,7 +7,6 @@ import { Address, Hex } from 'ox'
 import { type Chain, createPublicClient, http, keccak256 } from 'viem'
 
 import {
-	AuxdataStyle,
 	getVyperAuxdataStyle,
 	getVyperImmutableReferences,
 	type ImmutableReferences,
@@ -31,81 +30,55 @@ import {
 import { sourcifyError } from '#utilities.ts'
 
 /**
- * TODO:
- * - handle different solc versions
- * - routes:
- *   - /metadata/:chainId/:address
- *   - /similarity/:chainId/:address
- *   - /:verificationId
+ * Legacy Sourcify-compatible routes for Foundry forge verify.
+ *
+ * POST /verify - Solidity verification
+ * POST /verify/vyper - Vyper verification
  */
 
-/**
- * /verify:
- *
- * POST /v2/verify/{chainId}/{address}
- * POST /v2/verify/metadata/{chainId}/{address}
- * POST /v2/verify/similarity/{chainId}/{address}
- * GET  /v2/verify/{verificationId}
- *
- * (deprecated ones but still supported by foundry forge):
- *
- * POST /verify
- * POST /verify/vyper
- * POST /verify/etherscan
- * POST /verify/solc-json
- */
+const legacyVerifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
 
-const verifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
-
-verifyRoute.use(
+legacyVerifyRoute.use(
 	'*',
 	bodyLimit({
 		maxSize: 2 * 1024 * 1024, // 2mb
 		onError: (context) => {
 			const message = `[requestId: ${context.req.header('X-Tempo-Request-Id')}] Body limit exceeded`
-
 			console.error(message)
 			return sourcifyError(context, 413, 'body_too_large', message)
 		},
 	}),
 )
 
-// POST /v2/verify/metadata/:chainId/:address - Verify Contract (using Solidity metadata.json)
-verifyRoute.post('/metadata/:chainId/:address', (context) =>
-	sourcifyError(
-		context,
-		501,
-		'not_implemented',
-		'Metadata-based verification is not implemented',
-	),
-)
+interface LegacyVyperRequest {
+	address: string
+	chain: string
+	files: Record<string, string>
+	contractPath: string
+	contractName: string
+	compilerVersion: string
+	compilerSettings?: object
+	creatorTxHash?: string
+}
 
-// POST /v2/verify/similarity/:chainId/:address - Verify contract via similarity search
-verifyRoute.post('/similarity/:chainId/:address', (context) =>
-	sourcifyError(
-		context,
-		501,
-		'not_implemented',
-		'Similarity-based verification is not implemented',
-	),
-)
-
-// POST /v2/verify/:chainId/:address - Verify Contract (Standard JSON)
-verifyRoute.post('/:chainId/:address', async (context) => {
+// POST /verify/vyper - Legacy Sourcify Vyper verification (used by Foundry)
+legacyVerifyRoute.post('/vyper', async (context) => {
 	try {
-		const { chainId: _chainId, address } = context.req.param()
-		const body = (await context.req.json()) as {
-			stdJsonInput: {
-				language: string
-				sources: Record<string, { content: string }>
-				settings: object
-			}
-			compilerVersion: string
-			contractIdentifier: string // e.g., "contracts/Token.sol:Token"
-			creationTransactionHash?: string
-		}
+		const body = (await context.req.json()) as LegacyVyperRequest
 
-		const chainId = Number(_chainId)
+		console.log('[verify/vyper] Request body:', JSON.stringify(body, null, 2))
+
+		const {
+			address,
+			chain,
+			files,
+			contractPath,
+			contractName,
+			compilerVersion,
+			compilerSettings,
+		} = body
+
+		const chainId = Number(chain)
 		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(chainId)) {
 			return sourcifyError(
 				context,
@@ -124,48 +97,31 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			)
 		}
 
-		if (
-			!Object.hasOwn(body, 'stdJsonInput') ||
-			!Object.hasOwn(body, 'compilerVersion') ||
-			!Object.hasOwn(body, 'contractIdentifier')
-		) {
+		if (!files || Object.keys(files).length === 0) {
+			return sourcifyError(
+				context,
+				400,
+				'missing_files',
+				'No source files provided',
+			)
+		}
+
+		if (!contractPath || !contractName || !compilerVersion) {
 			return sourcifyError(
 				context,
 				400,
 				'missing_params',
-				'stdJsonInput, compilerVersion, and contractIdentifier are required',
+				'contractPath, contractName, and compilerVersion are required',
 			)
 		}
-
-		const { stdJsonInput, compilerVersion, contractIdentifier } = body
-
-		// Detect language from stdJsonInput
-		const language = stdJsonInput.language?.toLowerCase() ?? 'solidity'
-		const isVyper = language === 'vyper'
-
-		// Parse contractIdentifier: "contracts/Token.sol:Token" -> { path: "contracts/Token.sol", name: "Token" }
-		const lastColonIndex = contractIdentifier.lastIndexOf(':')
-		if (lastColonIndex === -1) {
-			return sourcifyError(
-				context,
-				400,
-				'invalid_contract_identifier',
-				'contractIdentifier must be in format "path/to/Contract.sol:ContractName"',
-			)
-		}
-		const contractPath = contractIdentifier.slice(0, lastColonIndex)
-		const contractName = contractIdentifier.slice(lastColonIndex + 1)
 
 		// Check if already verified
 		const db = drizzle(context.env.CONTRACTS_DB)
-		const addressBytes = Hex.toBytes(address)
+		const addressBytes = Hex.toBytes(address as `0x${string}`)
 
 		const existingVerification = await db
 			.select({
 				matchId: verifiedContractsTable.id,
-				verifiedAt: verifiedContractsTable.createdAt,
-				runtimeMatch: verifiedContractsTable.runtimeMatch,
-				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
 			})
 			.from(verifiedContractsTable)
 			.innerJoin(
@@ -181,50 +137,67 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			.limit(1)
 
 		if (existingVerification.length > 0) {
-			return context.json(
-				{ verificationId: existingVerification.at(0)?.matchId?.toString() },
-				202,
-			)
+			return context.json({
+				result: [{ address, chainId: chain, status: 'perfect' }],
+			})
 		}
 
-		const chain = chains[chainId as keyof typeof chains] as unknown as Chain
+		const chainConfig = chains[
+			chainId as keyof typeof chains
+		] as unknown as Chain
 		const client = createPublicClient({
-			chain,
+			chain: chainConfig,
 			transport: http(
-				chain.id === TESTNET_CHAIN_ID
+				chainConfig.id === TESTNET_CHAIN_ID
 					? 'https://rpc-orchestra.testnet.tempo.xyz'
 					: undefined,
 			),
 		})
 
-		const onchainBytecode = await client.getCode({ address: address })
+		const onchainBytecode = await client.getCode({
+			address: address as `0x${string}`,
+		})
 		if (!onchainBytecode || onchainBytecode === '0x') {
-			return sourcifyError(
-				context,
-				404,
-				'contract_not_found',
-				`No bytecode found at address ${address} on chain ${chainId}`,
-			)
+			return context.json({
+				result: [
+					{
+						address,
+						chainId: chain,
+						status: 'null',
+						message: `Chain #${chainId} does not have a contract deployed at ${address}`,
+					},
+				],
+			})
 		}
 
-		// Step 2: Compile via container
+		// Convert legacy format to standard JSON input
+		const sources: Record<string, { content: string }> = {}
+		for (const [path, content] of Object.entries(files)) {
+			sources[path] = { content }
+		}
+
+		const stdJsonInput = {
+			language: 'Vyper',
+			sources,
+			settings: compilerSettings ?? {
+				outputSelection: {
+					'*': ['abi', 'evm.bytecode', 'evm.deployedBytecode'],
+				},
+			},
+		}
+
+		// Compile via container
 		const container = getContainer(
 			context.env.VERIFICATION_CONTAINER,
 			'singleton',
 		)
 
-		// Route to appropriate compiler endpoint based on language
-		const compileEndpoint = isVyper
-			? 'http://container/compile/vyper'
-			: 'http://container/compile'
-
 		const compileResponse = await container.fetch(
-			new Request(compileEndpoint, {
+			new Request('http://container/compile/vyper', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					compilerVersion,
-					contractIdentifier,
 					input: stdJsonInput,
 				}),
 			}),
@@ -284,26 +257,22 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			)
 		}
 
-		// Step 3: Get compiled bytecode for the target contract
-		// Try exact path first, then try matching by suffix (for Vyper absolute paths)
-		let compiledContract =
+		console.log(
+			'[verify/vyper] Compile output contracts:',
+			JSON.stringify(Object.keys(compileOutput.contracts ?? {})),
+		)
+		console.log('[verify/vyper] Looking for:', contractPath, contractName)
+
+		// Get compiled bytecode for the target contract
+		const compiledContract =
 			compileOutput.contracts?.[contractPath]?.[contractName]
-		let _matchedPath = contractPath
-
-		if (!compiledContract && compileOutput.contracts) {
-			for (const outputPath of Object.keys(compileOutput.contracts)) {
-				if (
-					outputPath.endsWith(contractPath) ||
-					outputPath.endsWith(`/${contractPath}`)
-				) {
-					compiledContract = compileOutput.contracts[outputPath]?.[contractName]
-					_matchedPath = outputPath
-					if (compiledContract) break
-				}
-			}
-		}
-
 		if (!compiledContract) {
+			console.log(
+				'[verify/vyper] Available in path:',
+				compileOutput.contracts?.[contractPath]
+					? Object.keys(compileOutput.contracts[contractPath])
+					: 'path not found',
+			)
 			return sourcifyError(
 				context,
 				400,
@@ -312,58 +281,41 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			)
 		}
 
-		const deployedObject = compiledContract.evm.deployedBytecode.object
-		const bytecodeObject = compiledContract.evm.bytecode.object
-		const compiledBytecode = deployedObject.startsWith('0x')
-			? deployedObject
-			: `0x${deployedObject}`
-		const creationBytecodeRaw = bytecodeObject.startsWith('0x')
-			? bytecodeObject
-			: `0x${bytecodeObject}`
+		const compiledBytecode = `0x${compiledContract.evm.deployedBytecode.object}`
+		const creationBytecodeRaw = `0x${compiledContract.evm.bytecode.object}`
 
-		// Step 4: Compare bytecodes using proper matching with transformations
-		// For Vyper, we need to compute immutable references from auxdata
-		const auxdataStyle = isVyper
-			? getVyperAuxdataStyle(compilerVersion)
-			: AuxdataStyle.SOLIDITY
+		const auxdataStyle = getVyperAuxdataStyle(compilerVersion)
 
-		// Vyper doesn't provide immutableReferences in compiler output, we compute them from auxdata
-		const immutableReferences = isVyper
-			? getVyperImmutableReferences(
-					compilerVersion,
-					creationBytecodeRaw,
-					compiledBytecode,
-				)
-			: compiledContract.evm.deployedBytecode.immutableReferences
-
-		// Vyper doesn't support libraries
-		const linkReferences = isVyper
-			? undefined
-			: compiledContract.evm.deployedBytecode.linkReferences
+		const immutableReferences = getVyperImmutableReferences(
+			compilerVersion,
+			creationBytecodeRaw,
+			compiledBytecode,
+		)
 
 		const runtimeMatchResult = matchBytecode({
 			onchainBytecode: onchainBytecode,
 			recompiledBytecode: compiledBytecode,
 			isCreation: false,
-			linkReferences,
+			linkReferences: undefined,
 			immutableReferences,
 			auxdataStyle,
 			abi: compiledContract.abi,
 		})
 
 		if (runtimeMatchResult.match === null) {
-			return sourcifyError(
-				context,
-				400,
-				'no_match',
-				runtimeMatchResult.message ||
-					'Compiled bytecode does not match on-chain bytecode',
+			return context.json(
+				{
+					error:
+						runtimeMatchResult.message ||
+						"The deployed and recompiled bytecode don't match.",
+				},
+				500,
 			)
 		}
 
 		const isExactMatch = runtimeMatchResult.match === 'exact_match'
-
 		const auditUser = 'verification-api'
+		const contractIdentifier = `${contractPath}:${contractName}`
 
 		// Compute hashes for runtime bytecode
 		const runtimeBytecodeBytes = Hex.toBytes(compiledBytecode as `0x${string}`)
@@ -377,8 +329,8 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			keccak256(compiledBytecode as `0x${string}`),
 		)
 
-		// Compute hashes for creation bytecode (reuse creationBytecodeRaw which already handles 0x prefix)
-		const creationBytecode = creationBytecodeRaw
+		// Compute hashes for creation bytecode
+		const creationBytecode = `0x${compiledContract.evm.bytecode.object}`
 		const creationBytecodeBytes = Hex.toBytes(creationBytecode as `0x${string}`)
 		const creationCodeHashSha256 = new Uint8Array(
 			await globalThis.crypto.subtle.digest(
@@ -390,7 +342,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			keccak256(creationBytecode as `0x${string}`),
 		)
 
-		// Insert runtime code (ignore if already exists)
+		// Insert runtime code
 		await db
 			.insert(codeTable)
 			.values({
@@ -402,7 +354,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			})
 			.onConflictDoNothing()
 
-		// Insert creation code (ignore if already exists)
+		// Insert creation code
 		await db
 			.insert(codeTable)
 			.values({
@@ -463,15 +415,14 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		}
 
 		// Get or create compiled contract
-		const compilerName = isVyper ? 'vyper' : 'solc'
 		const existingCompilation = await db
 			.select({ id: compiledContractsTable.id })
 			.from(compiledContractsTable)
 			.where(
 				and(
 					eq(compiledContractsTable.runtimeCodeHash, runtimeCodeHashSha256),
-					eq(compiledContractsTable.compiler, compilerName),
-					eq(compiledContractsTable.version, body.compilerVersion),
+					eq(compiledContractsTable.compiler, 'vyper'),
+					eq(compiledContractsTable.version, compilerVersion),
 				),
 			)
 			.limit(1)
@@ -482,20 +433,13 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		} else {
 			compilationId = globalThis.crypto.randomUUID()
 
-			// Build code artifacts from compiler output
 			const creationCodeArtifacts = {
 				sourceMap: compiledContract.evm.bytecode.sourceMap,
-				linkReferences: isVyper
-					? undefined
-					: compiledContract.evm.bytecode.linkReferences,
 			}
 			const runtimeCodeArtifacts = {
 				sourceMap: compiledContract.evm.deployedBytecode.sourceMap,
-				linkReferences,
 				immutableReferences,
 			}
-
-			// Build compilation artifacts (ABI, docs, storage layout)
 			const compilationArtifacts = {
 				abi: compiledContract.abi,
 				metadata: compiledContract.metadata,
@@ -506,9 +450,9 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 
 			await db.insert(compiledContractsTable).values({
 				id: compilationId,
-				compiler: compilerName,
-				version: body.compilerVersion,
-				language: stdJsonInput.language,
+				compiler: 'vyper',
+				version: compilerVersion,
+				language: 'Vyper',
 				name: contractName,
 				fullyQualifiedName: contractIdentifier,
 				compilerSettings: JSON.stringify(stdJsonInput.settings),
@@ -522,12 +466,9 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			})
 		}
 
-		// Insert sources and link them to the compilation (always, even for existing compilations)
-		for (const [sourcePath, sourceData] of Object.entries(
-			stdJsonInput.sources,
-		)) {
-			const content = sourceData.content
-			const contentBytes = new TextEncoder().encode(content)
+		// Insert sources
+		for (const [sourcePath, sourceContent] of Object.entries(files)) {
+			const contentBytes = new TextEncoder().encode(sourceContent)
 			const sourceHashSha256 = new Uint8Array(
 				await globalThis.crypto.subtle.digest('SHA-256', contentBytes),
 			)
@@ -535,19 +476,17 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 				keccak256(Hex.fromBytes(contentBytes)),
 			)
 
-			// Insert source (ignore if already exists)
 			await db
 				.insert(sourcesTable)
 				.values({
 					sourceHash: sourceHashSha256,
 					sourceHashKeccak: sourceHashKeccak,
-					content: content,
+					content: sourceContent,
 					createdBy: auditUser,
 					updatedBy: auditUser,
 				})
 				.onConflictDoNothing()
 
-			// Link source to compilation (ignore if already linked)
 			await db
 				.insert(compiledContractsSourcesTable)
 				.values({
@@ -574,35 +513,30 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 					keccak256(Hex.fromString(signature)),
 				)
 
-				// Insert signature (ignore if exists)
 				await db
 					.insert(signaturesTable)
-					.values({
-						signatureHash32: signatureHash32,
-						signature: signature,
-					})
+					.values({ signatureHash32, signature })
 					.onConflictDoNothing()
 
-				// Link signature to compilation
 				await db
 					.insert(compiledContractsSignaturesTable)
 					.values({
 						id: globalThis.crypto.randomUUID(),
-						compilationId: compilationId,
-						signatureHash32: signatureHash32,
-						signatureType: signatureType,
+						compilationId,
+						signatureHash32,
+						signatureType,
 					})
 					.onConflictDoNothing()
 			}
 		}
 
-		// Insert verified contract with transformation data
+		// Insert verified contract
 		await db
 			.insert(verifiedContractsTable)
 			.values({
 				deploymentId,
 				compilationId,
-				creationMatch: false, // We only verified runtime bytecode
+				creationMatch: false,
 				runtimeMatch: true,
 				runtimeMetadataMatch: isExactMatch,
 				runtimeValues:
@@ -618,96 +552,20 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			})
 			.onConflictDoNothing()
 
-		const verificationResult = await db
-			.select({ id: verifiedContractsTable.id })
-			.from(verifiedContractsTable)
-			.where(eq(verifiedContractsTable.deploymentId, deploymentId))
-			.limit(1)
-
-		const verificationId =
-			verificationResult.at(0)?.id?.toString() ?? globalThis.crypto.randomUUID()
-
-		return context.json({ verificationId }, 202)
-	} catch (error) {
-		console.error(error)
-		return sourcifyError(
-			context,
-			500,
-			'internal_error',
-			'An unexpected error occurred',
-		)
-	}
-})
-
-// GET /v2/verify/:verificationId - Check verification job status
-verifyRoute.get('/:verificationId', async (context) => {
-	try {
-		const { verificationId } = context.req.param()
-
-		const db = drizzle(context.env.CONTRACTS_DB)
-
-		const result = await db
-			.select({
-				matchId: verifiedContractsTable.id,
-				verifiedAt: verifiedContractsTable.createdAt,
-				runtimeMatch: verifiedContractsTable.runtimeMatch,
-				creationMatch: verifiedContractsTable.creationMatch,
-				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
-				chainId: contractDeploymentsTable.chainId,
-				address: contractDeploymentsTable.address,
-				contractName: compiledContractsTable.name,
-			})
-			.from(verifiedContractsTable)
-			.innerJoin(
-				contractDeploymentsTable,
-				eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
-			)
-			.innerJoin(
-				compiledContractsTable,
-				eq(verifiedContractsTable.compilationId, compiledContractsTable.id),
-			)
-			.where(eq(verifiedContractsTable.id, Number(verificationId)))
-			.limit(1)
-
-		if (result.length === 0 || !result[0]) {
-			return context.json(
-				{
-					customCode: 'not_found',
-					message: `No verification job found for ID ${verificationId}`,
-					errorId: globalThis.crypto.randomUUID(),
-				},
-				404,
-			)
-		}
-
-		const [v] = result
-		const runtimeMatchStatus = v.runtimeMetadataMatch ? 'exact_match' : 'match'
-		const creationMatchStatus = v.creationMatch ? 'exact_match' : 'match'
-
-		// Foundry expects this format for completed jobs
+		// Return legacy Sourcify format
 		return context.json({
-			isJobCompleted: true,
-			contract: {
-				match: runtimeMatchStatus,
-				creationMatch: creationMatchStatus,
-				runtimeMatch: runtimeMatchStatus,
-				chainId: v.chainId,
-				address: Hex.fromBytes(new Uint8Array(v.address as ArrayBuffer)),
-				name: v.contractName,
-				verifiedAt: v.verifiedAt,
-			},
+			result: [
+				{
+					address,
+					chainId: chain,
+					status: isExactMatch ? 'perfect' : 'partial',
+				},
+			],
 		})
 	} catch (error) {
 		console.error(error)
-		return context.json(
-			{
-				customCode: 'internal_error',
-				message: 'An unexpected error occurred',
-				errorId: globalThis.crypto.randomUUID(),
-			},
-			500,
-		)
+		return context.json({ error: 'An unexpected error occurred' }, 500)
 	}
 })
 
-export { verifyRoute }
+export { legacyVerifyRoute }
