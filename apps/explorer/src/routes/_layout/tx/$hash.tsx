@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
@@ -23,6 +23,7 @@ import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
+import { TxTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#cva.config.ts'
 import { autoloadAbiQueryOptions, lookupSignatureQueryOptions } from '#lib/abi'
@@ -31,12 +32,10 @@ import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription } from '#lib/og'
-import {
-	balanceChangesQueryOptions,
-	type TxData,
-	txQueryOptions,
-} from '#lib/queries'
+import { LIMIT, traceTransaction, type TxData, txQueryOptions } from '#lib/queries'
+import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
 import { zHash } from '#lib/zod'
+import { getConfig } from '#wagmi.config'
 import CopyIcon from '~icons/lucide/copy'
 
 const defaultSearchValues = {
@@ -63,7 +62,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	validateSearch: z.object({
 		r: z.optional(z.string()),
 		tab: z.prefault(
-			z.enum(['overview', 'calls', 'events', 'changes', 'raw']),
+			z.enum(['overview', 'calls', 'trace', 'events', 'changes', 'raw']),
 			defaultSearchValues.tab,
 		),
 		page: z.prefault(z.coerce.number(), defaultSearchValues.page),
@@ -73,23 +72,29 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	},
 	loaderDeps: ({ search: { page } }) => ({ page }),
 	loader: async ({ params, context, deps: { page } }) => {
+		const { hash } = params
+
 		try {
-			const [txData, balanceChangesData] = await Promise.all([
-				context.queryClient.ensureQueryData(
-					txQueryOptions({ hash: params.hash }),
-				),
-				context.queryClient
-					.ensureQueryData(
-						balanceChangesQueryOptions({ hash: params.hash, page }),
-					)
-					.catch(() => ({ changes: [], tokenMetadata: {}, total: 0 })),
+			const offset = (page - 1) * LIMIT
+
+			const [txData, balanceChangesData, traceData] = await Promise.all([
+				context.queryClient.ensureQueryData(txQueryOptions({ hash })),
+				fetchBalanceChanges({ hash, limit: LIMIT, offset }).catch(() => ({
+					changes: [],
+					tokenMetadata: {},
+					total: 0,
+				})),
+				traceTransaction(getConfig().getClient(), hash)
+					.then((trace) => ({ trace }))
+					.catch(() => ({ trace: null })),
 			])
-			return { ...txData, balanceChangesData }
+
+			return { ...txData, balanceChangesData, traceData }
 		} catch (error) {
 			console.error(error)
 			throw notFound({
 				routeId: rootRouteId,
-				data: { type: 'hash', value: params.hash },
+				data: { type: 'hash', value: hash },
 			})
 		}
 	},
@@ -133,39 +138,23 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 
 function RouteComponent() {
 	const navigate = useNavigate()
-	const { hash } = Route.useParams()
 	const { tab, page } = Route.useSearch()
-	const loaderData = Route.useLoaderData()
-	const { balanceChangesData, ...txLoaderData } = loaderData
-
-	const { data } = useQuery({
-		...txQueryOptions({ hash }),
-		initialData: txLoaderData,
-	})
-
 	const {
+		balanceChangesData,
+		traceData,
 		block,
 		feeBreakdown,
 		knownEvents,
 		knownEventsByLog = [],
 		receipt,
 		transaction,
-	} = data
+	} = Route.useLoaderData()
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
 	const calls = 'calls' in transaction ? transaction.calls : undefined
 	const hasCalls = Boolean(calls && calls.length > 0)
-
-	const tabs = [
-		'overview',
-		...(hasCalls ? ['calls'] : []),
-		'events',
-		'changes',
-		'raw',
-	] as const
-	const activeSection = tabs.indexOf(tab)
 
 	const setActiveSection = (newIndex: number) => {
 		navigate({
@@ -174,6 +163,74 @@ function RouteComponent() {
 			resetScroll: false,
 		})
 	}
+
+	const tabs: string[] = []
+	const sections: Sections.Section[] = []
+
+	tabs.push('overview')
+	sections.push({
+		title: 'Overview',
+		itemsLabel: 'fields',
+		autoCollapse: false,
+		content: (
+			<OverviewSection
+				receipt={receipt}
+				transaction={transaction}
+				block={block}
+				knownEvents={knownEvents}
+				feeBreakdown={feeBreakdown}
+			/>
+		),
+	})
+
+	if (hasCalls && calls) {
+		tabs.push('calls')
+		sections.push({
+			title: 'Calls',
+			totalItems: calls.length,
+			itemsLabel: 'calls',
+			content: <CallsSection calls={calls} />,
+		})
+	}
+
+	tabs.push('events')
+	sections.push({
+		title: 'Events',
+		totalItems: receipt.logs.length,
+		itemsLabel: 'events',
+		content: (
+			<EventsSection logs={receipt.logs} knownEvents={knownEventsByLog} />
+		),
+	})
+
+	tabs.push('changes')
+	sections.push({
+		title: 'Changes',
+		totalItems: balanceChangesData.total,
+		itemsLabel: 'changes',
+		content: <TxBalanceChanges data={balanceChangesData} page={page} />,
+	})
+
+	if (traceData.trace) {
+		tabs.push('trace')
+		sections.push({
+			title: 'Trace',
+			totalItems: 0,
+			itemsLabel: 'calls',
+			content: <TxTraceTree trace={traceData.trace} />,
+		})
+	}
+
+	tabs.push('raw')
+	sections.push({
+		title: 'Raw',
+		totalItems: 0,
+		itemsLabel: 'data',
+		content: <RawSection transaction={transaction} receipt={receipt} />,
+	})
+
+	const tabIndex = tabs.indexOf(tab)
+	const activeSection = tabIndex !== -1 ? tabIndex : 0
 
 	return (
 		<div
@@ -193,56 +250,7 @@ function RouteComponent() {
 			/>
 			<Sections
 				mode={mode}
-				sections={[
-					{
-						title: 'Overview',
-						totalItems: 0,
-						itemsLabel: 'fields',
-						autoCollapse: false,
-						content: (
-							<OverviewSection
-								receipt={receipt}
-								transaction={transaction}
-								block={block}
-								knownEvents={knownEvents}
-								feeBreakdown={feeBreakdown}
-							/>
-						),
-					},
-					...(hasCalls && calls
-						? [
-								{
-									title: 'Calls',
-									totalItems: calls.length,
-									itemsLabel: 'calls',
-									content: <CallsSection calls={calls} />,
-								},
-							]
-						: []),
-					{
-						title: 'Events',
-						totalItems: receipt.logs.length,
-						itemsLabel: 'events',
-						content: (
-							<EventsSection
-								logs={receipt.logs}
-								knownEvents={knownEventsByLog}
-							/>
-						),
-					},
-					{
-						title: 'Changes',
-						totalItems: balanceChangesData.total,
-						itemsLabel: 'changes',
-						content: <TxBalanceChanges data={balanceChangesData} page={page} />,
-					},
-					{
-						title: 'Raw',
-						totalItems: 0,
-						itemsLabel: 'data',
-						content: <RawSection transaction={transaction} receipt={receipt} />,
-					},
-				]}
+				sections={sections}
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
 			/>
@@ -416,11 +424,7 @@ function CallsSection(props: {
 	}>
 }) {
 	const { calls } = props
-	return calls.length === 0 ? (
-		<div className="px-[18px] py-[24px] text-[13px] text-tertiary text-center">
-			No calls in this transaction
-		</div>
-	) : (
+	return (
 		<div className="flex flex-col divide-y divide-card-border">
 			{calls.map((call, i) => (
 				<CallItem key={`${call.to}-${i}`} call={call} index={i} />
