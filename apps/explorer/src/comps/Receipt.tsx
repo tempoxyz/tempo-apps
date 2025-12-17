@@ -17,6 +17,7 @@ export function Receipt(props: Receipt.Props) {
 		sender,
 		hash,
 		timestamp,
+		status,
 		events = [],
 		fee,
 		total,
@@ -46,7 +47,7 @@ export function Receipt(props: Receipt.Props) {
 					</div>
 					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
 						<div className="flex justify-between items-end">
-							<span className="text-tertiary capitalize">Block</span>
+							<span className="text-tertiary">Block</span>
 							<Link
 								to="/block/$id"
 								params={{ id: blockNumber.toString() }}
@@ -56,7 +57,7 @@ export function Receipt(props: Receipt.Props) {
 							</Link>
 						</div>
 						<div className="flex justify-between items-end gap-4">
-							<span className="text-tertiary capitalize shrink-0">Sender</span>
+							<span className="text-tertiary shrink-0">Sender</span>
 							<Link
 								to="/address/$address"
 								params={{ address: sender }}
@@ -67,7 +68,7 @@ export function Receipt(props: Receipt.Props) {
 						</div>
 						<div className="flex justify-between items-start gap-4">
 							<div className="relative shrink-0">
-								<span className="text-tertiary capitalize">Hash</span>
+								<span className="text-tertiary">Hash</span>
 								{copyHash.notifying && (
 									<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px] text-accent">
 										copied
@@ -93,18 +94,26 @@ export function Receipt(props: Receipt.Props) {
 							)}
 						</div>
 						<div className="flex justify-between items-end">
-							<span className="text-tertiary capitalize">Date</span>
+							<span className="text-tertiary">Date</span>
 							<span className="text-right">
 								{DateFormatter.formatTimestampDate(timestamp)}
 							</span>
 						</div>
 						<div className="flex justify-between items-end">
-							<span className="text-tertiary capitalize">Time</span>
+							<span className="text-tertiary">Time</span>
 							<span className="text-right">
 								{formattedTime.time} {formattedTime.timezone}
 								<span className="text-tertiary">{formattedTime.offset}</span>
 							</span>
 						</div>
+						{status === 'reverted' && (
+							<div className="flex justify-between items-end">
+								<span className="text-tertiary">Status</span>
+								<span className="text-base-content-negative uppercase text-[11px]">
+									Failed
+								</span>
+							</div>
+						)}
 					</div>
 				</div>
 				{filteredEvents.length > 0 && (
@@ -301,6 +310,7 @@ export namespace Receipt {
 		sender: Address.Address
 		hash: Hex.Hex
 		timestamp: bigint
+		status?: 'success' | 'reverted'
 		events?: KnownEvent[]
 		fee?: number
 		feeDisplay?: string
