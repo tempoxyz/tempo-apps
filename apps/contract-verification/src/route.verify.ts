@@ -10,9 +10,14 @@ import { type Chain, createPublicClient, http, keccak256 } from 'viem'
 import { chains, DEVNET_CHAIN_ID, TESTNET_CHAIN_ID } from '#chains.ts'
 import {
 	codeTable,
+	compiledContractsSignaturesTable,
+	compiledContractsSourcesTable,
 	compiledContractsTable,
 	contractDeploymentsTable,
 	contractsTable,
+	type SignatureType,
+	signaturesTable,
+	sourcesTable,
 	verifiedContractsTable,
 } from '#database/schema.ts'
 
@@ -449,6 +454,84 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 				createdBy: auditUser,
 				updatedBy: auditUser,
 			})
+		}
+
+		// Insert sources and link them to the compilation (always, even for existing compilations)
+		for (const [sourcePath, sourceData] of Object.entries(
+			stdJsonInput.sources,
+		)) {
+			const content = sourceData.content
+			const contentBytes = new TextEncoder().encode(content)
+			const sourceHashSha256 = new Uint8Array(
+				await crypto.subtle.digest('SHA-256', contentBytes),
+			)
+			const sourceHashKeccak = Hex.toBytes(
+				keccak256(Hex.fromBytes(contentBytes)),
+			)
+
+			// Insert source (ignore if already exists)
+			await db
+				.insert(sourcesTable)
+				.values({
+					sourceHash: sourceHashSha256,
+					sourceHashKeccak: sourceHashKeccak,
+					content: content,
+					createdBy: auditUser,
+					updatedBy: auditUser,
+				})
+				.onConflictDoNothing()
+
+			// Link source to compilation (ignore if already linked)
+			await db
+				.insert(compiledContractsSourcesTable)
+				.values({
+					id: crypto.randomUUID(),
+					compilationId: compilationId,
+					sourceHash: sourceHashSha256,
+					path: sourcePath,
+				})
+				.onConflictDoNothing()
+		}
+
+		// Extract and insert signatures from ABI
+		const abi = compiledContract.abi as Array<{
+			type: string
+			name?: string
+			inputs?: Array<{ type: string }>
+		}>
+		for (const item of abi) {
+			let signatureType: SignatureType | null = null
+			if (item.type === 'function') signatureType = 'function'
+			else if (item.type === 'event') signatureType = 'event'
+			else if (item.type === 'error') signatureType = 'error'
+
+			if (signatureType && item.name) {
+				const inputTypes = (item.inputs ?? []).map((i) => i.type).join(',')
+				const signature = `${item.name}(${inputTypes})`
+				const signatureHash32 = Hex.toBytes(
+					keccak256(Hex.fromString(signature)),
+				)
+
+				// Insert signature (ignore if exists)
+				await db
+					.insert(signaturesTable)
+					.values({
+						signatureHash32: signatureHash32,
+						signature: signature,
+					})
+					.onConflictDoNothing()
+
+				// Link signature to compilation
+				await db
+					.insert(compiledContractsSignaturesTable)
+					.values({
+						id: crypto.randomUUID(),
+						compilationId: compilationId,
+						signatureHash32: signatureHash32,
+						signatureType: signatureType,
+					})
+					.onConflictDoNothing()
+			}
 		}
 
 		// Insert verified contract (or update if exists)

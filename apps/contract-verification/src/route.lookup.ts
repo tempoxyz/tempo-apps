@@ -5,8 +5,13 @@ import { Address, Hex } from 'ox'
 
 import { DEVNET_CHAIN_ID, TESTNET_CHAIN_ID } from '#chains.ts'
 import {
+	codeTable,
+	compiledContractsSignaturesTable,
+	compiledContractsSourcesTable,
 	compiledContractsTable,
 	contractDeploymentsTable,
+	signaturesTable,
+	sourcesTable,
 	verifiedContractsTable,
 } from '#database/schema.ts'
 
@@ -146,11 +151,19 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 				creationMatch: verifiedContractsTable.creationMatch,
 				runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
 				creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
+				runtimeValues: verifiedContractsTable.runtimeValues,
+				creationValues: verifiedContractsTable.creationValues,
+				runtimeTransformations: verifiedContractsTable.runtimeTransformations,
+				creationTransformations: verifiedContractsTable.creationTransformations,
 				// For extended response
 				chainId: contractDeploymentsTable.chainId,
 				address: contractDeploymentsTable.address,
 				transactionHash: contractDeploymentsTable.transactionHash,
 				blockNumber: contractDeploymentsTable.blockNumber,
+				transactionIndex: contractDeploymentsTable.transactionIndex,
+				deployer: contractDeploymentsTable.deployer,
+				// Compilation info
+				compilationId: compiledContractsTable.id,
 				contractName: compiledContractsTable.name,
 				fullyQualifiedName: compiledContractsTable.fullyQualifiedName,
 				compiler: compiledContractsTable.compiler,
@@ -158,6 +171,10 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 				language: compiledContractsTable.language,
 				compilerSettings: compiledContractsTable.compilerSettings,
 				compilationArtifacts: compiledContractsTable.compilationArtifacts,
+				creationCodeArtifacts: compiledContractsTable.creationCodeArtifacts,
+				runtimeCodeArtifacts: compiledContractsTable.runtimeCodeArtifacts,
+				creationCodeHash: compiledContractsTable.creationCodeHash,
+				runtimeCodeHash: compiledContractsTable.runtimeCodeHash,
 			})
 			.from(verifiedContractsTable)
 			.innerJoin(
@@ -208,6 +225,10 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 				? 'exact_match'
 				: runtimeMatchStatus || creationMatchStatus
 
+		const formattedAddress = Hex.fromBytes(
+			new Uint8Array(row.address as ArrayBuffer),
+		)
+
 		// Minimal response (default)
 		const minimalResponse = {
 			matchId: row.matchId,
@@ -215,12 +236,105 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 			creationMatch: creationMatchStatus,
 			runtimeMatch: runtimeMatchStatus,
 			chainId: row.chainId,
-			address: Hex.fromBytes(new Uint8Array(row.address as ArrayBuffer)),
+			address: formattedAddress,
 			verifiedAt: row.verifiedAt,
 		}
 
 		// If no fields requested, return minimal response
 		if (!fields && !omit) return context.json(minimalResponse)
+
+		// Fetch bytecode from code table
+		const [creationCode, runtimeCode] = await Promise.all([
+			row.creationCodeHash
+				? db
+						.select({ code: codeTable.code })
+						.from(codeTable)
+						.where(eq(codeTable.codeHash, row.creationCodeHash))
+						.limit(1)
+				: Promise.resolve([]),
+			row.runtimeCodeHash
+				? db
+						.select({ code: codeTable.code })
+						.from(codeTable)
+						.where(eq(codeTable.codeHash, row.runtimeCodeHash))
+						.limit(1)
+				: Promise.resolve([]),
+		])
+
+		// Fetch sources
+		const sourcesResult = await db
+			.select({
+				path: compiledContractsSourcesTable.path,
+				content: sourcesTable.content,
+				sourceHash: sourcesTable.sourceHash,
+			})
+			.from(compiledContractsSourcesTable)
+			.innerJoin(
+				sourcesTable,
+				eq(compiledContractsSourcesTable.sourceHash, sourcesTable.sourceHash),
+			)
+			.where(eq(compiledContractsSourcesTable.compilationId, row.compilationId))
+
+		// Fetch signatures
+		const signaturesResult = await db
+			.select({
+				signature: signaturesTable.signature,
+				signatureType: compiledContractsSignaturesTable.signatureType,
+				signatureHash32: signaturesTable.signatureHash32,
+			})
+			.from(compiledContractsSignaturesTable)
+			.innerJoin(
+				signaturesTable,
+				eq(
+					compiledContractsSignaturesTable.signatureHash32,
+					signaturesTable.signatureHash32,
+				),
+			)
+			.where(
+				eq(compiledContractsSignaturesTable.compilationId, row.compilationId),
+			)
+
+		// Build sources object
+		const sources: Record<string, { content: string }> = {}
+		const sourceIds: Record<string, string> = {}
+		for (const source of sourcesResult) {
+			sources[source.path] = { content: source.content }
+			sourceIds[source.path] = Hex.fromBytes(
+				new Uint8Array(source.sourceHash as ArrayBuffer),
+			)
+		}
+
+		// Build signatures object (Sourcify format: grouped by type)
+		const signatures: {
+			function: Array<{
+				signature: string
+				signatureHash32: string
+				signatureHash4: string
+			}>
+			event: Array<{
+				signature: string
+				signatureHash32: string
+				signatureHash4: string
+			}>
+			error: Array<{
+				signature: string
+				signatureHash32: string
+				signatureHash4: string
+			}>
+		} = { function: [], event: [], error: [] }
+
+		for (const sig of signaturesResult) {
+			const hash32Bytes = new Uint8Array(sig.signatureHash32 as ArrayBuffer)
+			const signatureHash32 = Hex.fromBytes(hash32Bytes)
+			const signatureHash4 = Hex.fromBytes(hash32Bytes.slice(0, 4))
+			const type = sig.signatureType as 'function' | 'event' | 'error'
+
+			signatures[type].push({
+				signature: sig.signature,
+				signatureHash32,
+				signatureHash4,
+			})
+		}
 
 		// Build full response for field filtering
 		const artifacts = JSON.parse(row.compilationArtifacts ?? '{}') as {
@@ -228,6 +342,74 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 			userdoc?: unknown
 			devdoc?: unknown
 			storageLayout?: unknown
+			metadata?: unknown
+		}
+
+		const creationCodeArtifacts = JSON.parse(
+			row.creationCodeArtifacts ?? '{}',
+		) as {
+			sourceMap?: string
+			linkReferences?: unknown
+			cborAuxdata?: unknown
+		}
+
+		const runtimeCodeArtifacts = JSON.parse(
+			row.runtimeCodeArtifacts ?? '{}',
+		) as {
+			sourceMap?: string
+			linkReferences?: unknown
+			immutableReferences?: unknown
+			cborAuxdata?: unknown
+		}
+
+		const creationBytecodeData = creationCode[0]?.code
+			? Hex.fromBytes(new Uint8Array(creationCode[0].code as ArrayBuffer))
+			: null
+		const runtimeBytecodeData = runtimeCode[0]?.code
+			? Hex.fromBytes(new Uint8Array(runtimeCode[0].code as ArrayBuffer))
+			: null
+
+		// Build stdJsonInput
+		const stdJsonInput = {
+			language: row.language,
+			sources: Object.fromEntries(
+				Object.entries(sources).map(([path, { content }]) => [
+					path,
+					{ content },
+				]),
+			),
+			settings: JSON.parse(row.compilerSettings),
+		}
+
+		// Build stdJsonOutput (partial - what we have stored)
+		const stdJsonOutput = {
+			contracts: {
+				[row.fullyQualifiedName.split(':')[0] ?? '']: {
+					[row.contractName]: {
+						abi: artifacts.abi,
+						metadata:
+							typeof artifacts.metadata === 'string'
+								? artifacts.metadata
+								: JSON.stringify(artifacts.metadata ?? {}),
+						userdoc: artifacts.userdoc,
+						devdoc: artifacts.devdoc,
+						storageLayout: artifacts.storageLayout,
+						evm: {
+							bytecode: {
+								object: creationBytecodeData,
+								sourceMap: creationCodeArtifacts.sourceMap,
+								linkReferences: creationCodeArtifacts.linkReferences,
+							},
+							deployedBytecode: {
+								object: runtimeBytecodeData,
+								sourceMap: runtimeCodeArtifacts.sourceMap,
+								linkReferences: runtimeCodeArtifacts.linkReferences,
+								immutableReferences: runtimeCodeArtifacts.immutableReferences,
+							},
+						},
+					},
+				},
+			},
 		}
 
 		const fullResponse: Record<string, unknown> = {
@@ -242,10 +424,59 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 			version: row.version,
 			language: row.language,
 			compilerSettings: JSON.parse(row.compilerSettings),
+			runtimeMetadataMatch: row.runtimeMetadataMatch ? 'exact_match' : 'match',
+			creationMetadataMatch: row.creationMetadataMatch
+				? 'exact_match'
+				: 'match',
 			abi: artifacts.abi ?? null,
 			userdoc: artifacts.userdoc ?? null,
 			devdoc: artifacts.devdoc ?? null,
 			storageLayout: artifacts.storageLayout ?? null,
+			metadata: artifacts.metadata ?? null,
+			sources,
+			sourceIds,
+			signatures,
+			creationBytecode: creationBytecodeData
+				? {
+						bytecode: creationBytecodeData,
+						sourceMap: creationCodeArtifacts.sourceMap ?? null,
+						linkReferences: creationCodeArtifacts.linkReferences ?? null,
+						cborAuxdata: creationCodeArtifacts.cborAuxdata ?? null,
+					}
+				: null,
+			runtimeBytecode: runtimeBytecodeData
+				? {
+						bytecode: runtimeBytecodeData,
+						sourceMap: runtimeCodeArtifacts.sourceMap ?? null,
+						linkReferences: runtimeCodeArtifacts.linkReferences ?? null,
+						immutableReferences:
+							runtimeCodeArtifacts.immutableReferences ?? null,
+						cborAuxdata: runtimeCodeArtifacts.cborAuxdata ?? null,
+					}
+				: null,
+			compilation: {
+				compiler: row.compiler,
+				version: row.version,
+				language: row.language,
+				name: row.contractName,
+				fullyQualifiedName: row.fullyQualifiedName,
+				compilerSettings: JSON.parse(row.compilerSettings),
+			},
+			deployment: {
+				chainId: row.chainId,
+				address: formattedAddress,
+				transactionHash: row.transactionHash
+					? Hex.fromBytes(new Uint8Array(row.transactionHash as ArrayBuffer))
+					: null,
+				blockNumber: row.blockNumber,
+				transactionIndex: row.transactionIndex,
+				deployer: row.deployer
+					? Hex.fromBytes(new Uint8Array(row.deployer as ArrayBuffer))
+					: null,
+			},
+			stdJsonInput,
+			stdJsonOutput,
+			proxyResolution: null, // Not implemented yet
 		}
 
 		// Apply field filtering
