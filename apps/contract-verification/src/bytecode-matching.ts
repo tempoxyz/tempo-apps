@@ -1,3 +1,6 @@
+import * as CBOR from 'cbor-x'
+import { Hex } from 'ox'
+import semver from 'semver'
 import {
 	decodeAbiParameters,
 	encodeAbiParameters,
@@ -76,47 +79,266 @@ export interface SolidityDecodedAuxdata {
 	experimental?: boolean
 }
 
+export interface VyperDecodedAuxdata {
+	integrity?: string
+	runtimeSize?: number
+	dataSizes?: number[]
+	immutableSize?: number
+	vyperVersion: string
+}
+
+export enum AuxdataStyle {
+	SOLIDITY = 'solidity',
+	VYPER = 'vyper',
+	VYPER_LT_0_3_10 = 'vyper_lt_0_3_10',
+	VYPER_LT_0_3_5 = 'vyper_lt_0_3_5',
+}
+
 // ============================================================================
 // CBOR Auxdata Utilities
 // ============================================================================
 
 /**
+ * Determines the auxdata style for a Vyper compiler version.
+ */
+export function getVyperAuxdataStyle(
+	compilerVersion: string,
+):
+	| AuxdataStyle.VYPER
+	| AuxdataStyle.VYPER_LT_0_3_10
+	| AuxdataStyle.VYPER_LT_0_3_5 {
+	const version = semver.valid(semver.coerce(compilerVersion))
+	if (!version) {
+		return AuxdataStyle.VYPER
+	}
+	if (semver.lt(version, '0.3.5')) {
+		return AuxdataStyle.VYPER_LT_0_3_5
+	}
+	if (semver.lt(version, '0.3.10')) {
+		return AuxdataStyle.VYPER_LT_0_3_10
+	}
+	return AuxdataStyle.VYPER
+}
+
+/**
  * Splits bytecode into execution bytecode and CBOR auxdata.
- * Solidity appends CBOR-encoded metadata at the end of bytecode.
+ * Supports both Solidity and Vyper auxdata formats.
  * Format: <execution bytecode><cbor data><2 byte length>
  */
-export function splitAuxdata(bytecode: string): {
+export function splitAuxdata(
+	bytecode: string,
+	auxdataStyle: AuxdataStyle = AuxdataStyle.SOLIDITY,
+): {
 	executionBytecode: string
 	auxdata: string | null
 	cborLength: number
+	cborLengthHex: string
 } {
 	if (!bytecode || bytecode.length < 4) {
-		return { executionBytecode: bytecode, auxdata: null, cborLength: 0 }
+		return {
+			executionBytecode: bytecode,
+			auxdata: null,
+			cborLength: 0,
+			cborLengthHex: '',
+		}
 	}
 
-	// Ensure 0x prefix
 	const code = bytecode.startsWith('0x') ? bytecode : `0x${bytecode}`
+	const bytesLength = 4 // 2 bytes = 4 hex chars
 
-	// Last 2 bytes (4 hex chars) contain CBOR length
-	const cborLengthHex = code.slice(-4)
-	const cborLength = Number.parseInt(cborLengthHex, 16) * 2 // in hex chars
+	// Vyper < 0.3.5 has fixed 22-byte (11 bytes = 22 hex chars) auxdata with no length suffix
+	if (auxdataStyle === AuxdataStyle.VYPER_LT_0_3_5) {
+		const fixedAuxdataLength = 22
+		if (code.length <= fixedAuxdataLength + 2) {
+			return {
+				executionBytecode: code,
+				auxdata: null,
+				cborLength: 0,
+				cborLengthHex: '',
+			}
+		}
+		const auxdata = code.slice(-fixedAuxdataLength)
+		const executionBytecode = code.slice(0, -fixedAuxdataLength)
+
+		// Validate it's CBOR encoded
+		if (isCborEncoded(auxdata)) {
+			return {
+				executionBytecode,
+				auxdata,
+				cborLength: fixedAuxdataLength / 2,
+				cborLengthHex: '',
+			}
+		}
+		return {
+			executionBytecode: code,
+			auxdata: null,
+			cborLength: 0,
+			cborLengthHex: '',
+		}
+	}
+
+	// All other formats have a 2-byte length suffix
+	const cborLengthHex = code.slice(-bytesLength)
+	const cborBytesLength = Number.parseInt(cborLengthHex, 16) * 2
 
 	// Validate length
-	if (cborLength <= 0 || cborLength > code.length - 4) {
-		return { executionBytecode: code, auxdata: null, cborLength: 0 }
+	if (
+		cborBytesLength <= 0 ||
+		code.length - bytesLength - cborBytesLength <= 0
+	) {
+		return {
+			executionBytecode: code,
+			auxdata: null,
+			cborLength: 0,
+			cborLengthHex: '',
+		}
 	}
 
-	const auxdataStart = code.length - 4 - cborLength
-	const auxdata = code.slice(auxdataStart, code.length - 4)
-	const executionBytecode = code.slice(0, auxdataStart)
+	let auxdata: string
+	let executionBytecode: string
 
-	// Validate it looks like CBOR by checking for common CBOR map markers
-	// CBOR maps start with 0xa (major type 5) - 0xa1, 0xa2, 0xa3, etc.
-	if (!auxdata.startsWith('a')) {
-		return { executionBytecode: code, auxdata: null, cborLength: 0 }
+	switch (auxdataStyle) {
+		case AuxdataStyle.VYPER:
+			// Vyper >= 0.3.10: length bytes include themselves in the count
+			auxdata = code.slice(
+				code.length - cborBytesLength,
+				code.length - bytesLength,
+			)
+			executionBytecode = code.slice(0, code.length - cborBytesLength)
+			break
+		default:
+			// Solidity and Vyper < 0.3.10: length bytes don't include themselves
+			auxdata = code.slice(
+				code.length - bytesLength - cborBytesLength,
+				code.length - bytesLength,
+			)
+			executionBytecode = code.slice(
+				0,
+				code.length - bytesLength - cborBytesLength,
+			)
+			break
 	}
 
-	return { executionBytecode, auxdata, cborLength: cborLength / 2 }
+	// Validate it's CBOR encoded
+	if (isCborEncoded(auxdata)) {
+		return {
+			executionBytecode,
+			auxdata,
+			cborLength: cborBytesLength / 2,
+			cborLengthHex,
+		}
+	}
+
+	return {
+		executionBytecode: code,
+		auxdata: null,
+		cborLength: 0,
+		cborLengthHex: '',
+	}
+}
+
+/**
+ * Attempts to decode the auxdata to verify if it's CBOR-encoded.
+ */
+function isCborEncoded(auxdata: string): boolean {
+	try {
+		CBOR.decode(Hex.toBytes(`0x${auxdata}`))
+		return true
+	} catch {
+		return false
+	}
+}
+
+/**
+ * Decodes Vyper CBOR auxdata and returns parsed metadata.
+ */
+export function decodeVyperAuxdata(
+	bytecode: string,
+	auxdataStyle: AuxdataStyle,
+): VyperDecodedAuxdata {
+	const { auxdata } = splitAuxdata(bytecode, auxdataStyle)
+	if (!auxdata) {
+		throw new Error('Auxdata is not in the bytecode')
+	}
+
+	const cborDecodedObject = CBOR.decode(Hex.toBytes(`0x${auxdata}`)) as unknown
+
+	if (auxdataStyle === AuxdataStyle.VYPER) {
+		// Vyper >= 0.3.10 stores auxdata as an array
+		if (Array.isArray(cborDecodedObject)) {
+			const lastElement = cborDecodedObject[cborDecodedObject.length - 1] as {
+				vyper: number[]
+			}
+			const compilerVersion = lastElement.vyper.join('.')
+
+			if (semver.gte(compilerVersion, '0.4.1')) {
+				// >= 0.4.1: [integrity, runtimeSize, dataSizes, immutableSize, {vyper: [v]}]
+				return {
+					integrity: cborDecodedObject[0] as string,
+					runtimeSize: cborDecodedObject[1] as number,
+					dataSizes: cborDecodedObject[2] as number[],
+					immutableSize: cborDecodedObject[3] as number,
+					vyperVersion: compilerVersion,
+				}
+			}
+			// >= 0.3.10: [runtimeSize, dataSizes, immutableSize, {vyper: [v]}]
+			return {
+				runtimeSize: cborDecodedObject[0] as number,
+				dataSizes: cborDecodedObject[1] as number[],
+				immutableSize: cborDecodedObject[2] as number,
+				vyperVersion: compilerVersion,
+			}
+		}
+		throw new Error('Invalid Vyper auxdata format for version >= 0.3.10')
+	}
+
+	// Vyper < 0.3.10: just {vyper: [0, 3, 8]}
+	const decoded = cborDecodedObject as { vyper?: number[] } | null
+	if (decoded?.vyper) {
+		return {
+			vyperVersion: decoded.vyper.join('.'),
+		}
+	}
+
+	throw new Error('Invalid Vyper auxdata format')
+}
+
+/**
+ * Computes immutable references for Vyper contracts.
+ * Vyper appends immutables at the end of runtime bytecode (unlike Solidity which has fixed offsets).
+ */
+export function getVyperImmutableReferences(
+	compilerVersion: string,
+	creationBytecode: string,
+	runtimeBytecode: string,
+): ImmutableReferences {
+	const auxdataStyle = getVyperAuxdataStyle(compilerVersion)
+
+	// Only Vyper >= 0.3.10 has immutable size in auxdata
+	if (auxdataStyle !== AuxdataStyle.VYPER) {
+		return {}
+	}
+
+	try {
+		const decoded = decodeVyperAuxdata(creationBytecode, auxdataStyle)
+		if (decoded.immutableSize && decoded.immutableSize > 0) {
+			const runtimeLength = runtimeBytecode.startsWith('0x')
+				? (runtimeBytecode.length - 2) / 2
+				: runtimeBytecode.length / 2
+			return {
+				'0': [
+					{
+						length: decoded.immutableSize,
+						start: runtimeLength,
+					},
+				],
+			}
+		}
+	} catch {
+		// Cannot decode auxdata, return empty
+	}
+
+	return {}
 }
 
 /**
@@ -254,11 +476,15 @@ export function extractLibrariesTransformation(
  * Immutable variables are replaced with zeros in compiled bytecode.
  * We need to extract their actual values from onchain bytecode and
  * replace the zeros with those values for matching.
+ *
+ * For Solidity: immutables are at fixed offsets, we replace zeros with actual values.
+ * For Vyper: immutables are appended at the end of runtime bytecode, we insert them.
  */
 export function extractImmutablesTransformation(
 	recompiledBytecode: string,
 	onchainBytecode: string,
 	immutableReferences: ImmutableReferences | undefined,
+	auxdataStyle: AuxdataStyle = AuxdataStyle.SOLIDITY,
 ): {
 	populatedBytecode: string
 	transformations: Transformation[]
@@ -283,6 +509,11 @@ export function extractImmutablesTransformation(
 		? onchainBytecode.slice(2)
 		: onchainBytecode
 
+	const isVyper =
+		auxdataStyle === AuxdataStyle.VYPER ||
+		auxdataStyle === AuxdataStyle.VYPER_LT_0_3_10 ||
+		auxdataStyle === AuxdataStyle.VYPER_LT_0_3_5
+
 	for (const astId of Object.keys(immutableReferences)) {
 		const refs = immutableReferences[astId]
 		if (!refs) continue
@@ -298,18 +529,30 @@ export function extractImmutablesTransformation(
 				strStart + strLength,
 			)
 
-			// Replace zeros in recompiled bytecode with actual value
-			bytecodeNoPrefix =
-				bytecodeNoPrefix.slice(0, strStart) +
-				immutableValue +
-				bytecodeNoPrefix.slice(strStart + strLength)
+			if (isVyper) {
+				// Vyper: immutables are appended at the end, insert them
+				bytecodeNoPrefix = bytecodeNoPrefix + immutableValue
 
-			transformations.push({
-				type: 'replace',
-				reason: 'immutable',
-				offset: start,
-				id: astId,
-			})
+				transformations.push({
+					type: 'insert',
+					reason: 'immutable',
+					offset: start,
+					id: astId,
+				})
+			} else {
+				// Solidity: immutables are at fixed offsets, replace zeros with actual value
+				bytecodeNoPrefix =
+					bytecodeNoPrefix.slice(0, strStart) +
+					immutableValue +
+					bytecodeNoPrefix.slice(strStart + strLength)
+
+				transformations.push({
+					type: 'replace',
+					reason: 'immutable',
+					offset: start,
+					id: astId,
+				})
+			}
 
 			if (!transformationValues.immutables) {
 				transformationValues.immutables = {}
@@ -550,6 +793,7 @@ export interface MatchBytecodeOptions {
 	linkReferences?: LinkReferences
 	immutableReferences?: ImmutableReferences
 	cborAuxdataPositions?: CborAuxdataPositions
+	auxdataStyle?: AuxdataStyle
 	abi?: Array<{
 		type: string
 		inputs?: Array<{ type: string; name?: string }>
@@ -570,6 +814,7 @@ export function matchBytecode(
 		linkReferences,
 		immutableReferences,
 		cborAuxdataPositions,
+		auxdataStyle = AuxdataStyle.SOLIDITY,
 		abi,
 	} = options
 
@@ -598,6 +843,7 @@ export function matchBytecode(
 			populatedBytecode,
 			onchainBytecode,
 			immutableReferences,
+			auxdataStyle,
 		)
 		populatedBytecode = immutablesResult.populatedBytecode
 		allTransformations.push(...immutablesResult.transformations)
@@ -694,8 +940,14 @@ export function matchBytecode(
 	}
 
 	// 6. No match - try one more thing: strip metadata and compare
-	const { executionBytecode: onchainExec } = splitAuxdata(onchainBytecode)
-	const { executionBytecode: recompiledExec } = splitAuxdata(populatedBytecode)
+	const { executionBytecode: onchainExec } = splitAuxdata(
+		onchainBytecode,
+		auxdataStyle,
+	)
+	const { executionBytecode: recompiledExec } = splitAuxdata(
+		populatedBytecode,
+		auxdataStyle,
+	)
 
 	if (
 		onchainExec &&
