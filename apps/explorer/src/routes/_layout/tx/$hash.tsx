@@ -23,6 +23,7 @@ import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
+import { TxStateDiff } from '#comps/TxStateDiff'
 import { TxTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#cva.config.ts'
@@ -32,15 +33,10 @@ import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription } from '#lib/og'
-import {
-	LIMIT,
-	type TxData,
-	traceTransaction,
-	txQueryOptions,
-} from '#lib/queries/index.ts'
-import { zHash } from '#lib/zod.ts'
+import { LIMIT, type TxData, txQueryOptions } from '#lib/queries'
+import { traceQueryOptions } from '#lib/queries/trace'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
-import { getConfig } from '#wagmi.config'
+import { zHash } from '#lib/zod'
 import CopyIcon from '~icons/lucide/copy'
 
 const defaultSearchValues = {
@@ -67,7 +63,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 	validateSearch: z.object({
 		r: z.optional(z.string()),
 		tab: z.prefault(
-			z.enum(['overview', 'calls', 'trace', 'events', 'changes', 'raw']),
+			z.enum(['overview', 'calls', 'trace', 'events', 'balances', 'raw']),
 			defaultSearchValues.tab,
 		),
 		page: z.prefault(z.coerce.number(), defaultSearchValues.page),
@@ -89,9 +85,9 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 					tokenMetadata: {},
 					total: 0,
 				})),
-				traceTransaction(getConfig().getClient(), hash)
-					.then((trace) => ({ trace }))
-					.catch(() => ({ trace: null })),
+				context.queryClient
+					.ensureQueryData(traceQueryOptions({ hash }))
+					.catch(() => ({ trace: null, prestate: null })),
 			])
 
 			return { ...txData, balanceChangesData, traceData }
@@ -208,21 +204,25 @@ function RouteComponent() {
 		),
 	})
 
-	tabs.push('changes')
+	tabs.push('balances')
 	sections.push({
-		title: 'Changes',
+		title: 'Balances',
 		totalItems: balanceChangesData.total,
-		itemsLabel: 'changes',
+		itemsLabel: 'balances',
 		content: <TxBalanceChanges data={balanceChangesData} page={page} />,
 	})
 
-	if (traceData.trace) {
+	if (traceData.trace || traceData.prestate) {
 		tabs.push('trace')
 		sections.push({
 			title: 'Trace',
-			totalItems: 0,
-			itemsLabel: 'calls',
-			content: <TxTraceTree trace={traceData.trace} />,
+			itemsLabel: 'views',
+			content: (
+				<div className="flex flex-col">
+					<TxTraceTree trace={traceData.trace} />
+					<TxStateDiff prestate={traceData.prestate} />
+				</div>
+			),
 		})
 	}
 
