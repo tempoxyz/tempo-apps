@@ -1,5 +1,22 @@
 import * as React from 'react'
 
+export function useIsMounted() {
+	const isMounted = React.useRef(false)
+
+	React.useEffect(() => {
+		isMounted.current = true
+		return () => {
+			isMounted.current = false
+		}
+	}, [])
+
+	const checker = React.useCallback(() => {
+		return isMounted.current
+	}, [])
+
+	return checker
+}
+
 export function useCopy(props: useCopy.Props = { timeout: 800 }) {
 	const { timeout } = props
 

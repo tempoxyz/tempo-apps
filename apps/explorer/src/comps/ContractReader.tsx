@@ -787,8 +787,9 @@ function ContractFeatureCard(props: {
 					</div>
 					{textGrid && (
 						<div className="flex flex-row justify-between mt-1">
-							{textGrid.map((item) => (
-								<div key={item.left as string} className="text-xs gap-2 flex">
+							{textGrid.map((item, index) => (
+								// biome-ignore lint/suspicious/noArrayIndexKey: textGrid is static and doesn't reorder
+								<div key={index} className="text-xs gap-2 flex">
 									{item.left && item.left}
 									{item.right && item.right}
 								</div>

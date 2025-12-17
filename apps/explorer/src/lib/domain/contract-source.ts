@@ -6,7 +6,7 @@ import * as z from 'zod/mini'
 
 import { config } from '#wagmi.config.ts'
 
-const ContractVerificationLookupSchema = z.object({
+export const ContractVerificationLookupSchema = z.object({
 	matchId: z.number(),
 	match: z.string(),
 	creationMatch: z.string(),
@@ -42,25 +42,7 @@ const ContractVerificationLookupSchema = z.object({
 			libraries: z.record(z.string(), z.string()),
 		}),
 	}),
-	abi: z.array(
-		z.object({
-			inputs: z.array(
-				z.object({
-					internalType: z.string(),
-					name: z.string(),
-					type: z.string(),
-				}),
-			),
-			name: z.string(),
-			outputs: z.array(
-				z.object({
-					internalType: z.string(),
-					name: z.string(),
-					type: z.string(),
-				}),
-			),
-		}),
-	),
+	abi: z.array(z.any()),
 	compilation: z.object({
 		compiler: z.string(),
 		version: z.string(),

@@ -58,7 +58,7 @@ import {
 import { parseKnownEvents } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
-import { useMediaQuery } from '#lib/hooks'
+import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
 import {
 	type TransactionsData,
@@ -159,6 +159,9 @@ type AssetData = {
 }
 
 function useAssetsData(accountAddress: Address.Address): AssetData[] {
+	// Track hydration to avoid SSR/client mismatch with cached query data
+	const isMounted = useIsMounted()
+
 	const meta0 = Hooks.token.useGetMetadata({ token: assets[0] })
 	const meta1 = Hooks.token.useGetMetadata({ token: assets[1] })
 	const meta2 = Hooks.token.useGetMetadata({ token: assets[2] })
@@ -183,12 +186,29 @@ function useAssetsData(accountAddress: Address.Address): AssetData[] {
 
 	return React.useMemo(
 		() => [
-			{ address: assets[0], metadata: meta0.data, balance: bal0.data },
-			{ address: assets[1], metadata: meta1.data, balance: bal1.data },
-			{ address: assets[2], metadata: meta2.data, balance: bal2.data },
-			{ address: assets[3], metadata: meta3.data, balance: bal3.data },
+			{
+				address: assets[0],
+				metadata: isMounted() ? meta0.data : undefined,
+				balance: isMounted() ? bal0.data : undefined,
+			},
+			{
+				address: assets[1],
+				metadata: isMounted() ? meta1.data : undefined,
+				balance: isMounted() ? bal1.data : undefined,
+			},
+			{
+				address: assets[2],
+				metadata: isMounted() ? meta2.data : undefined,
+				balance: isMounted() ? bal2.data : undefined,
+			},
+			{
+				address: assets[3],
+				metadata: isMounted() ? meta3.data : undefined,
+				balance: isMounted() ? bal3.data : undefined,
+			},
 		],
 		[
+			isMounted,
 			meta0.data,
 			meta1.data,
 			meta2.data,
@@ -662,6 +682,10 @@ function SectionsWrapper(props: {
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
+	// Track hydration to avoid SSR/client mismatch with query data
+	const [isMounted, setIsMounted] = React.useState(false)
+	React.useEffect(() => setIsMounted(true), [])
+
 	const isHistoryTabActive = activeSection === 0
 	// Only auto-refresh on page 1 when history tab is active and live=true
 	const shouldAutoRefresh = page === 1 && isHistoryTabActive && live
@@ -707,7 +731,8 @@ function SectionsWrapper(props: {
 	// Exact count from dedicated API endpoint (for display only)
 	// txs-count counts "from OR to" while pagination API only serves a subset,
 	// so we can't use exactCount for page calculation - most pages would be empty
-	const exactCount = totalCountQuery.data?.data
+	// Only use after mount to avoid SSR/client hydration mismatch
+	const exactCount = isMounted ? totalCountQuery.data?.data : undefined
 
 	// For pagination: always use hasMore-based estimate
 	// This ensures we only show pages that have data
