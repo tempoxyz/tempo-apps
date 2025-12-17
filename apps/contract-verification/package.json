@@ -31,10 +31,10 @@
 		"viem": "catalog:"
 	},
 	"devDependencies": {
-		"@libsql/client": "^0.15.15",
 		"@biomejs/biome": "catalog:",
 		"@cloudflare/vite-plugin": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
+		"@libsql/client": "^0.15.15",
 		"@scalar/api-reference": "catalog:",
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/bun": "^1.3.4",

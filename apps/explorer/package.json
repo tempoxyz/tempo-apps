@@ -43,7 +43,6 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"shiki": "^3.19.0",
 		"@cloudflare/puppeteer": "catalog:",
 		"@cloudflare/vite-plugin": "catalog:",
 		"@cloudflare/vitest-pool-workers": "catalog:",
@@ -61,6 +60,7 @@
 		"@types/react-dom": "catalog:",
 		"@vitejs/plugin-react": "catalog:",
 		"eruda": "catalog:",
+		"shiki": "^3.19.0",
 		"tw-animate-css": "catalog:",
 		"typed-query-selector": "catalog:",
 		"unplugin-icons": "catalog:",

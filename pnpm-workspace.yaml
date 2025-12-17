@@ -5,17 +5,17 @@ packages:
 catalog:
   '@biomejs/biome': ^2.3.9
   '@cloudflare/puppeteer': ^1.0.4
-  '@cloudflare/vite-plugin': ^1.17.0
+  '@cloudflare/vite-plugin': ^1.18.0
   '@cloudflare/vitest-pool-workers': ^0.10.14
-  '@cloudflare/workers-types': ^4.20251209.0
+  '@cloudflare/workers-types': ^4.20251217.0
   '@hono/zod-validator': ^0.7.5
   '@iconify/json': ^2.2.416
-  '@scalar/api-reference': ^1.40.3
+  '@scalar/api-reference': ^1.40.5
   '@sentry/browser': ^10.29.0
   '@sentry/cloudflare': ^10.29.0
   '@sentry/tanstackstart-react': ^10.29.0
   '@sentry/vite-plugin': ^4.6.1
-  '@shazow/whatsabi': ^0.24.0
+  '@shazow/whatsabi': ^0.25.0
   '@svgr/core': ^8.1.0
   '@svgr/plugin-jsx': ^8.1.0
   '@tailwindcss/vite': ^4.1.17
@@ -39,7 +39,7 @@ catalog:
   cva: ^1.0.0-beta.4
   eruda: ^3.4.3
   globals: ^16.5.0
-  hono: ^4.10.8
+  hono: ^4.11.1
   idxs: ^0.0.5
   kysely: ^0.28.8
   ox: ^0.9.17
