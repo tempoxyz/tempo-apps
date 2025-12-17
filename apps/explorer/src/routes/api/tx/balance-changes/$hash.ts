@@ -112,6 +112,69 @@ async function getTokenMetadata(
 	return { decimals, symbol }
 }
 
+export async function fetchBalanceChanges(params: {
+	hash: Address.Address
+	limit: number
+	offset: number
+}): Promise<BalanceChangesData> {
+	const { hash, limit, offset } = params
+	const config = getConfig()
+	const client = config.getClient()
+
+	const receipt = await getTransactionReceipt(client, { hash })
+
+	const balanceChanges = computeBalanceChanges(receipt.logs)
+
+	if (balanceChanges.length === 0) {
+		return { changes: [], tokenMetadata: {}, total: 0 }
+	}
+
+	const uniqueTokens = [...new Set(balanceChanges.map(({ token }) => token))]
+
+	const [tokenMetadataEntries, balanceAfterResults] = await Promise.all([
+		Promise.all(
+			uniqueTokens.map(async (token) => [
+				token,
+				await getTokenMetadata(client, token),
+			]),
+		),
+		Promise.all(
+			balanceChanges.map(async (change) => ({
+				...change,
+				balanceAfter: await getBalanceAtBlock(
+					client,
+					change.token,
+					change.address,
+					receipt.blockNumber,
+				),
+			})),
+		),
+	])
+
+	const tokenMetadata = Object.fromEntries(
+		tokenMetadataEntries.filter(([, meta]) => meta !== null),
+	)
+
+	const allChanges = balanceAfterResults
+		.filter(
+			(change): change is typeof change & { balanceAfter: bigint } =>
+				change.balanceAfter !== null && Boolean(tokenMetadata[change.token]),
+		)
+		.map((change) => ({
+			address: change.address,
+			token: change.token,
+			balanceBefore: String(change.balanceAfter - change.diff),
+			balanceAfter: String(change.balanceAfter),
+			diff: String(change.diff),
+		}))
+
+	return {
+		changes: allChanges.slice(offset, offset + limit),
+		tokenMetadata,
+		total: allChanges.length,
+	}
+}
+
 const querySchema = z.object({
 	limit: z.optional(z.coerce.number()),
 	offset: z.optional(z.coerce.number()),
@@ -131,74 +194,8 @@ export const Route = createFileRoute('/api/tx/balance-changes/$hash')({
 					const limit = Math.min(MAX_LIMIT, query.limit ?? DEFAULT_LIMIT)
 					const offset = query.offset ?? 0
 
-					const config = getConfig()
-					const client = config.getClient()
-
-					const receipt = await getTransactionReceipt(client, { hash }).catch(
-						() => null,
-					)
-
-					if (!receipt)
-						return json({ error: 'Transaction not found' }, { status: 404 })
-
-					const balanceChanges = computeBalanceChanges(receipt.logs)
-
-					if (balanceChanges.length === 0)
-						return json<BalanceChangesData>({
-							changes: [],
-							tokenMetadata: {},
-							total: 0,
-						})
-
-					const uniqueTokens = [
-						...new Set(balanceChanges.map(({ token }) => token)),
-					]
-
-					const [tokenMetadataEntries, balanceAfterResults] = await Promise.all(
-						[
-							Promise.all(
-								uniqueTokens.map(async (token) => [
-									token,
-									await getTokenMetadata(client, token),
-								]),
-							),
-							Promise.all(
-								balanceChanges.map(async (change) => ({
-									...change,
-									balanceAfter: await getBalanceAtBlock(
-										client,
-										change.token,
-										change.address,
-										receipt.blockNumber,
-									),
-								})),
-							),
-						],
-					)
-
-					const tokenMetadata = Object.fromEntries(
-						tokenMetadataEntries.filter(([, meta]) => meta !== null),
-					)
-
-					const allChanges = balanceAfterResults
-						.filter(
-							(change): change is typeof change & { balanceAfter: bigint } =>
-								change.balanceAfter !== null &&
-								Boolean(tokenMetadata[change.token]),
-						)
-						.map((change) => ({
-							address: change.address,
-							token: change.token,
-							balanceBefore: String(change.balanceAfter - change.diff),
-							balanceAfter: String(change.balanceAfter),
-							diff: String(change.diff),
-						}))
-
-					return json<BalanceChangesData>({
-						changes: allChanges.slice(offset, offset + limit),
-						tokenMetadata,
-						total: allChanges.length,
-					})
+					const data = await fetchBalanceChanges({ hash, limit, offset })
+					return json<BalanceChangesData>(data)
 				} catch (error) {
 					console.error('Balance changes error:', error)
 					return json(

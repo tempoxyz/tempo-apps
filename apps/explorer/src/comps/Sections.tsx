@@ -53,7 +53,7 @@ export function Sections(props: Sections.Props) {
 											{section.title}
 										</h1>
 										<div className="flex items-center gap-[12px]">
-											{isCollapsed && (
+											{isCollapsed && Boolean(section.totalItems) && (
 												<span className="text-[13px] text-tertiary">
 													{section.totalItems} {itemsLabel}
 												</span>
@@ -112,9 +112,11 @@ export function Sections(props: Sections.Props) {
 						{sections.length === 1 ? (
 							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px]">
 								<span className="text-primary">{sections[0].title}</span>
-								<span className="text-tertiary">
-									({sections[0].totalItems ?? '…'})
-								</span>
+								{Boolean(sections[0].totalItems) && (
+									<span className="text-tertiary">
+										({sections[0].totalItems})
+									</span>
+								)}
 							</div>
 						) : (
 							sections.map((section, index) => (
