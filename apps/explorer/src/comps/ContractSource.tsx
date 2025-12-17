@@ -7,11 +7,10 @@ import pythonLang from 'shiki/langs/python.mjs'
 import solidity from 'shiki/langs/solidity.mjs'
 import typescript from 'shiki/langs/typescript.mjs'
 import vyperLang from 'shiki/langs/vyper.mjs'
-import yamlLang from 'shiki/langs/yaml.mjs'
 import githubDark from 'shiki/themes/github-dark.mjs'
 import { ContractFeatureCard } from '#comps/ContractReader'
 import { cx } from '#cva.config.ts'
-import type { ContractSourceFile } from '#lib/domain/contract-source.ts'
+import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
@@ -20,14 +19,7 @@ const SHIKI_THEMES = {
 	dark: 'github-dark',
 } satisfies Record<'light' | 'dark', string>
 
-const SHIKI_LANGS = [
-	solidity,
-	vyperLang,
-	typescript,
-	jsonLang,
-	yamlLang,
-	pythonLang,
-]
+const SHIKI_LANGS = [solidity, vyperLang, typescript, jsonLang, pythonLang]
 
 // TODO: replace with '../../node_modules/shiki/dist/onig.wasm'
 const ONIG_WASM_CDN = 'https://esm.sh/shiki/onig.wasm'
@@ -48,25 +40,51 @@ async function getHighlighter(): Promise<HighlighterCore> {
 	return highlighterPromise
 }
 
-export function ContractSources(props: { files: ContractSourceFile[] }) {
-	const { files } = props
+export function ContractSources(props: ContractSource) {
+	const {
+		stdJsonInput,
+		// TODO: use this ABI when it's available and only resort to whatsabi if not available
+		abi: _abi,
+		compilation,
+		verifiedAt,
+		runtimeMatch,
+	} = props
+
+	const optimizerText = compilation.compilerSettings.optimizer.enabled
+		? `Optimizer: enabled, runs: ${compilation.compilerSettings.optimizer.runs}`
+		: 'Optimizer: disabled'
 
 	return (
 		<ContractFeatureCard
-			title="Source code"
+			title={`Source code (${runtimeMatch})`}
+			rightSideTitle={verifiedAt}
+			rightSideDescription={optimizerText}
 			description="Verified contract source code."
+			textGrid={[
+				{
+					right: (
+						<span className="font-medium text-primary/80">
+							{compilation.name}
+						</span>
+					),
+				},
+				{
+					right: (
+						<a
+							target="_blank"
+							rel="noopener noreferrer"
+							className="font-medium text-primary/80"
+							href={`https://github.com/argotorg/solidity/releases/tag/v${compilation.version.split('+').at(0)}`}
+						>
+							{compilation.version}
+						</a>
+					),
+				},
+			]}
 		>
 			<div className="flex flex-col gap-2">
-				{files.map((file, index) => (
-					<SourceFile
-						key={file.fileName}
-						file={file}
-						className={
-							index === files.length - 1
-								? undefined
-								: 'border-b border-b-base-content/30 pb-4'
-						}
-					/>
+				{Object.entries(stdJsonInput.sources).map(([fileName, { content }]) => (
+					<SourceFile key={fileName} fileName={fileName} content={content} />
 				))}
 			</div>
 		</ContractFeatureCard>
@@ -74,29 +92,28 @@ export function ContractSources(props: { files: ContractSourceFile[] }) {
 }
 
 function SourceFile(
-	props: { file: ContractSourceFile } & { className?: string | undefined },
+	props: { fileName: string; content: string } & {
+		className?: string | undefined
+	},
 ) {
-	const { file } = props
+	const { fileName, content } = props
 	const [isCollapsed, setIsCollapsed] = React.useState(false)
 	const { copy, notifying } = useCopy({ timeout: 2_000 })
 	const language = React.useMemo(
-		() => getLanguageFromFileName(file.fileName),
-		[file.fileName],
+		() => getLanguageFromFileName(fileName),
+		[fileName],
 	)
 	const { containerRef, hasHighlight, isHighlighting } = useShikiHighlight({
-		source: file.content,
+		source: content,
 		language,
 		enabled: !isCollapsed,
 	})
 
 	const handleCopy = React.useCallback(() => {
-		void copy(file.content)
-	}, [copy, file.content])
+		void copy(content)
+	}, [copy, content])
 
-	const lineCount = React.useMemo(
-		() => file.content.split('\n').length,
-		[file.content],
-	)
+	const lineCount = React.useMemo(() => content.split('\n').length, [content])
 
 	return (
 		<div className={cx('flex flex-col', props.className)}>
@@ -108,7 +125,7 @@ function SourceFile(
 				)}
 			>
 				<span className="text-[12px] font-mono text-secondary break-all text-left">
-					{file.fileName}
+					{fileName}
 				</span>
 				<div className="flex items-center gap-2 shrink-0">
 					{isCollapsed && (
@@ -145,7 +162,7 @@ function SourceFile(
 					<div ref={containerRef} aria-hidden={!hasHighlight} />
 					{!hasHighlight && (
 						<pre className="shiki shiki-block text-primary whitespace-pre">
-							{isHighlighting ? 'Loading source…' : file.content}
+							{isHighlighting ? 'Loading source…' : content}
 						</pre>
 					)}
 				</div>

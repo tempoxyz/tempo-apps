@@ -22,7 +22,7 @@ import {
 	isArrayType,
 	parseInputValue,
 } from '#lib/domain/contracts'
-import { useCopy } from '#lib/hooks'
+import { useCopy, useCopyPermalink } from '#lib/hooks'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import ChevronsUpDownIcon from '~icons/lucide/chevrons-up-down'
@@ -182,8 +182,7 @@ export function ContractReader(props: {
 		<div className="flex flex-col gap-3.5">
 			{/* ABI Viewer */}
 			<ContractFeatureCard
-				title="ABI"
-				description="Shareable interface definition for read/write tooling."
+				title="Contract ABI"
 				actions={
 					<div className="flex gap-[8px]">
 						{docsUrl && (
@@ -214,15 +213,12 @@ export function ContractReader(props: {
 			<div aria-hidden="true" className="border-b border-card-border" />
 
 			{/* Read Contract Panel */}
-			<ContractFeatureCard
-				title="Read contract"
-				description="Call view methods to read contract state."
-			>
+			<ContractFeatureCard title="Read contract">
 				<div className="flex flex-col gap-[12px]">
 					{/* Functions without inputs - show as static values */}
 					{noInputFunctions.map((fn) => (
 						<StaticReadFunction
-							key={fn.name}
+							key={`${fn.name}-${fn.inputs?.length ?? 0}-${address}`}
 							address={address}
 							abi={abi}
 							fn={fn}
@@ -291,8 +287,7 @@ function StaticReadFunction(props: {
 	fn: ReadFunction
 }) {
 	const { address, abi, fn } = props
-	const { copy, notifying } = useCopy({ timeout: 2_000 })
-	const { copy: copyLink, notifying: linkCopied } = useCopy({ timeout: 2_000 })
+	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
 	const [expanded, setExpanded] = React.useState(false)
 	const [overflows, setOverflows] = React.useState(false)
 
@@ -410,11 +405,9 @@ function StaticReadFunction(props: {
 	const selector = getFunctionSelector(fn)
 	const fnId = fn.name || selector
 
-	const handleCopyPermalink = () => {
-		const url = new URL(window.location.href)
-		url.hash = fnId
-		void copyLink(url.toString())
-	}
+	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
+		fragment: fnId,
+	})
 
 	return (
 		<div
@@ -429,13 +422,15 @@ function StaticReadFunction(props: {
 					<button
 						type="button"
 						onClick={handleCopyMethod}
-						title={notifying ? 'Copied!' : 'Copy method name'}
+						title={copyNotifying ? 'Copied!' : 'Copy method name'}
 						className={cx(
 							'transition-colors press-down',
-							notifying ? 'text-positive' : 'text-tertiary hover:text-primary',
+							copyNotifying
+								? 'text-positive'
+								: 'text-tertiary hover:text-primary',
 						)}
 					>
-						{notifying ? (
+						{copyNotifying ? (
 							<CheckIcon className="w-[12px] h-[12px]" />
 						) : (
 							<CopyIcon className="w-[12px] h-[12px]" />
@@ -443,18 +438,19 @@ function StaticReadFunction(props: {
 					</button>
 					<button
 						type="button"
-						onClick={handleCopyPermalink}
-						title={linkCopied ? 'Copied!' : 'Copy permalink'}
+						onClick={(event) => {
+							event.stopPropagation()
+							void handleCopyPermalink()
+						}}
+						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
 						className={cx(
 							'transition-colors press-down',
-							linkCopied ? 'text-positive' : 'text-tertiary hover:text-primary',
+							linkNotifying
+								? 'text-positive'
+								: 'text-tertiary hover:text-primary',
 						)}
 					>
-						{linkCopied ? (
-							<CheckIcon className="w-[12px] h-[12px]" />
-						) : (
-							<LinkIcon className="w-[12px] h-[12px]" />
-						)}
+						<LinkIcon className="w-[12px] h-[12px]" />
 					</button>
 					{overflows && (
 						<button
@@ -504,8 +500,7 @@ function DynamicReadFunction(props: {
 	const { address, abi, fn } = props
 	const [isExpanded, setIsExpanded] = React.useState(false)
 	const [inputs, setInputs] = React.useState<Record<string, string>>({})
-	const { copy, notifying } = useCopy({ timeout: 2_000 })
-	const { copy: copyLink, notifying: linkCopied } = useCopy({ timeout: 2_000 })
+	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
 
 	const selector = getFunctionSelector(fn)
 	const fnId = fn.name || selector
@@ -559,12 +554,9 @@ function DynamicReadFunction(props: {
 		void copy(getMethodWithSelector(fn))
 	}
 
-	const handleCopyPermalink = (e: React.MouseEvent) => {
-		e.stopPropagation()
-		const url = new URL(window.location.href)
-		url.hash = fnId
-		void copyLink(url.toString())
-	}
+	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
+		fragment: fnId,
+	})
 
 	return (
 		<div
@@ -585,28 +577,35 @@ function DynamicReadFunction(props: {
 					<button
 						type="button"
 						onClick={handleCopyMethod}
-						title={notifying ? 'Copied!' : 'Copy method name'}
+						title={copyNotifying ? 'Copied!' : 'Copy method name'}
 						className={cx(
 							'transition-colors press-down',
-							notifying ? 'text-positive' : 'text-tertiary hover:text-primary',
+							copyNotifying
+								? 'text-positive'
+								: 'text-tertiary hover:text-primary',
 						)}
 					>
-						{notifying ? (
+						{copyNotifying ? (
 							<CheckIcon className="w-[12px] h-[12px]" />
 						) : (
-							<CopyIcon className="w-[12px] h-[12px]" />
+							<LinkIcon className="w-[12px] h-[12px]" />
 						)}
 					</button>
 					<button
 						type="button"
-						onClick={handleCopyPermalink}
-						title={linkCopied ? 'Copied!' : 'Copy permalink'}
+						onClick={(event) => {
+							event.stopPropagation()
+							void handleCopyPermalink()
+						}}
+						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
 						className={cx(
 							'transition-colors press-down',
-							linkCopied ? 'text-positive' : 'text-tertiary hover:text-primary',
+							linkNotifying
+								? 'text-positive'
+								: 'text-tertiary hover:text-primary',
 						)}
 					>
-						{linkCopied ? (
+						{linkNotifying ? (
 							<CheckIcon className="w-[12px] h-[12px]" />
 						) : (
 							<LinkIcon className="w-[12px] h-[12px]" />
@@ -743,20 +742,58 @@ function FunctionInput(props: {
 
 function ContractFeatureCard(props: {
 	title: string
+	rightSideTitle?: string
 	description?: React.ReactNode
 	actions?: React.ReactNode
 	children: React.ReactNode
+	rightSideDescription?: string
+	textGrid?: Array<{ left?: React.ReactNode; right?: React.ReactNode }>
 }) {
-	const { title, description, actions, children } = props
+	const {
+		title,
+		description,
+		actions,
+		children,
+		rightSideDescription,
+		rightSideTitle,
+		textGrid,
+	} = props
 	return (
 		<section className="rounded-[10px] bg-card-header overflow-hidden">
-			<div className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-				<div>
-					<p className="text-[13px] uppercase text-primary font-medium">
-						{title}
-					</p>
-					{description && (
-						<p className="text-[12px] text-secondary">{description}</p>
+			<div className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between w-full">
+				<div className="w-full">
+					<div className="flex items-center w-full gap-2 justify-between">
+						<a
+							id={title.toLowerCase().replaceAll(' ', '-')}
+							href={`#${title.toLowerCase().replaceAll(' ', '-')}`}
+							className="text-[13px] text-primary font-medium"
+						>
+							{title}
+						</a>
+
+						<p className="text-[12px] text-primary font-medium">
+							{rightSideTitle}
+						</p>
+					</div>
+					<div className="flex items-center w-full gap-2 justify-between">
+						{description && (
+							<p className="text-[12px] text-secondary">{description}</p>
+						)}
+						{rightSideDescription && (
+							<p className="text-[12px] text-secondary">
+								{rightSideDescription}
+							</p>
+						)}
+					</div>
+					{textGrid && (
+						<div className="flex flex-row justify-between mt-1">
+							{textGrid.map((item) => (
+								<div key={item.left as string} className="text-xs gap-2 flex">
+									{item.left && item.left}
+									{item.right && item.right}
+								</div>
+							))}
+						</div>
 					)}
 				</div>
 				{actions}

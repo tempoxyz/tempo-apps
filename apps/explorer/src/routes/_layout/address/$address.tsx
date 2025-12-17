@@ -46,8 +46,8 @@ import {
 } from '#comps/TxTransactionRow'
 import { cx } from '#cva.config.ts'
 import {
-	type ContractSourceFile,
-	fetchContractSources,
+	type ContractSource,
+	fetchContractSource,
 } from '#lib/domain/contract-source.ts'
 import {
 	type ContractInfo,
@@ -283,19 +283,19 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 		const hasContract = Boolean(contractInfo)
 
-		let contractSources: ContractSourceFile[] | undefined
+		let contractSource: ContractSource | undefined
 		if (hasContract) {
-			contractSources = await fetchContractSources({
+			contractSource = await fetchContractSource({
 				address,
 				chainId,
 			}).catch((error) => {
-				console.error('Failed to load contract sources:', error)
+				console.error('Failed to load contract source:', error)
 				return undefined
 			})
 		}
 
 		// Add timeout to prevent SSR from hanging on slow queries
-		const QUERY_TIMEOUT_MS = 3000
+		const QUERY_TIMEOUT_MS = 3_000
 		const timeout = <T,>(
 			promise: Promise<T>,
 			ms: number,
@@ -346,7 +346,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			offset,
 			hasContract,
 			contractInfo,
-			contractSources,
+			contractSource,
 			transactionsData,
 			txCountResponse,
 			totalValueResponse,
@@ -472,7 +472,7 @@ function RouteComponent() {
 	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, live, limit } = Route.useSearch()
-	const { hasContract, contractInfo, contractSources, transactionsData } =
+	const { hasContract, contractInfo, contractSource, transactionsData } =
 		Route.useLoaderData()
 
 	Address.assert(address)
@@ -561,7 +561,7 @@ function RouteComponent() {
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
 				contractInfo={contractInfo}
-				contractSources={contractSources}
+				contractSource={contractSource}
 				initialData={transactionsData}
 				assetsData={assetsData}
 				live={live}
@@ -643,7 +643,7 @@ function SectionsWrapper(props: {
 	activeSection: number
 	onSectionChange: (index: number) => void
 	contractInfo: ContractInfo | undefined
-	contractSources?: ContractSourceFile[] | undefined
+	contractSource?: ContractSource | undefined
 	initialData: TransactionsData | undefined
 	assetsData: AssetData[]
 	live: boolean
@@ -655,7 +655,7 @@ function SectionsWrapper(props: {
 		activeSection,
 		onSectionChange,
 		contractInfo,
-		contractSources,
+		contractSource,
 		initialData,
 		assetsData,
 		live,
@@ -720,7 +720,7 @@ function SectionsWrapper(props: {
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
-	const hasContractSources = Boolean(contractSources?.length)
+	const hasContractSource = Boolean(contractSource)
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const historyError = error ? (
@@ -874,8 +874,8 @@ function SectionsWrapper(props: {
 									itemsLabel: 'functions',
 									content: (
 										<div className="flex flex-col gap-3.5">
-											{hasContractSources && contractSources && (
-												<ContractSources files={contractSources} />
+											{hasContractSource && contractSource && (
+												<ContractSources {...contractSource} />
 											)}
 											<ContractReader
 												address={address}
