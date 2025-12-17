@@ -1,5 +1,22 @@
 import * as React from 'react'
 
+export function useIsMounted() {
+	const isMounted = React.useRef(false)
+
+	React.useEffect(() => {
+		isMounted.current = true
+		return () => {
+			isMounted.current = false
+		}
+	}, [])
+
+	const checker = React.useCallback(() => {
+		return isMounted.current
+	}, [])
+
+	return checker
+}
+
 export function useCopy(props: useCopy.Props = { timeout: 800 }) {
 	const { timeout } = props
 
@@ -50,4 +67,32 @@ export function useMediaQuery(query: string) {
 
 	// Return false during SSR/initial render to ensure consistent hydration
 	return matches ?? false
+}
+
+export function useCopyPermalink(props: useCopyPermalink.Props) {
+	const { fragment } = props
+
+	const { copy: copyLink, notifying: linkNotifying } = useCopy({
+		timeout: 2_000,
+	})
+
+	const handleCopyPermalink = React.useCallback(() => {
+		const url = new URL(window.location.href)
+		url.hash = fragment
+		void copyLink(url.toString())
+	}, [fragment, copyLink])
+
+	return { copyLink, linkNotifying, handleCopyPermalink }
+}
+
+export declare namespace useCopyPermalink {
+	type Props = {
+		fragment: string
+	}
+
+	type Result = {
+		linkNotifying: boolean
+		handleCopyPermalink: () => Promise<void>
+		copyLink?: (value: string) => Promise<void>
+	}
 }

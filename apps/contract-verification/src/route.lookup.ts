@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
 import { Address, Hex } from 'ox'
 
-import { CHAIN_IDS } from '#chains.ts'
+import { DEVNET_CHAIN_ID, TESTNET_CHAIN_ID } from '#chains.ts'
 
 import {
 	codeTable,
@@ -41,7 +41,7 @@ lookupRoute.get('/all-chains/:address', async (context) => {
 			)
 
 		const db = drizzle(context.env.CONTRACTS_DB)
-		const addressBytes = Hex.toBytes(address)
+		const addressBytes = Hex.toBytes(address as `0x${string}`)
 
 		// Query all verified contracts at this address across all chains
 		const results = await db
@@ -105,7 +105,7 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 		const { chainId, address } = context.req.param()
 		const { fields, omit } = context.req.query()
 
-		if (!CHAIN_IDS.includes(Number(chainId)))
+		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(Number(chainId)))
 			return sourcifyError(
 				context,
 				400,
@@ -281,29 +281,14 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 				eq(compiledContractsSignaturesTable.compilationId, row.compilationId),
 			)
 
-		// Build sources object, preferring normalized (relative) paths over absolute paths
+		// Build sources object
 		const sources: Record<string, { content: string }> = {}
 		const sourceIds: Record<string, string> = {}
-		const seenContentHashes = new Set<string>()
-
-		// Sort to process relative paths first, then absolute paths
-		const sortedSources = [...sourcesResult].sort((a, b) => {
-			const aIsAbsolute = a.path.startsWith('/')
-			const bIsAbsolute = b.path.startsWith('/')
-			if (aIsAbsolute === bIsAbsolute) return 0
-			return aIsAbsolute ? 1 : -1 // Relative paths first
-		})
-
-		for (const source of sortedSources) {
-			const hashHex = Hex.fromBytes(
+		for (const source of sourcesResult) {
+			sources[source.path] = { content: source.content }
+			sourceIds[source.path] = Hex.fromBytes(
 				new Uint8Array(source.sourceHash as ArrayBuffer),
 			)
-			// Skip if we already have this source content (prefer relative path)
-			if (seenContentHashes.has(hashHex)) continue
-			seenContentHashes.add(hashHex)
-
-			sources[source.path] = { content: source.content }
-			sourceIds[source.path] = hashHex
 		}
 
 		// Build signatures object (Sourcify format: grouped by type)
@@ -329,7 +314,7 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 			const hash32Bytes = new Uint8Array(sig.signatureHash32 as ArrayBuffer)
 			const signatureHash32 = Hex.fromBytes(hash32Bytes)
 			const signatureHash4 = Hex.fromBytes(hash32Bytes.slice(0, 4))
-			const type = sig.signatureType
+			const type = sig.signatureType as 'function' | 'event' | 'error'
 
 			signatures[type].push({
 				signature: sig.signature,
@@ -520,7 +505,7 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 		const { chainId } = context.req.param()
 		const { sort, limit, afterMatchId } = context.req.query()
 
-		if (!CHAIN_IDS.includes(Number(chainId)))
+		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(Number(chainId)))
 			return sourcifyError(
 				context,
 				400,

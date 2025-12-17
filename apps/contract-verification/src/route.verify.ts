@@ -2,18 +2,16 @@ import { getContainer } from '@cloudflare/containers'
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
 import { Address, Hex } from 'ox'
-import { createPublicClient, http, keccak256 } from 'viem'
+import { type Chain, createPublicClient, http, keccak256 } from 'viem'
 
 import {
-	AuxdataStyle,
-	getVyperAuxdataStyle,
-	getVyperImmutableReferences,
 	type ImmutableReferences,
 	type LinkReferences,
 	matchBytecode,
 } from '#bytecode-matching.ts'
-import { chains, CHAIN_IDS } from '#chains.ts'
+import { chains, DEVNET_CHAIN_ID, TESTNET_CHAIN_ID } from '#chains.ts'
 
 import {
 	codeTable,
@@ -27,15 +25,17 @@ import {
 	sourcesTable,
 	verifiedContractsTable,
 } from '#database/schema.ts'
-import { normalizeSourcePath, sourcifyError } from '#utilities.ts'
+import { sourcifyError } from '#utilities.ts'
 
 /**
  * TODO:
  * - handle different solc versions
+ * - support vyper
  * - routes:
  *   - /metadata/:chainId/:address
  *   - /similarity/:chainId/:address
  *   - /:verificationId
+ * - - /:verificationId
  */
 
 /**
@@ -55,6 +55,19 @@ import { normalizeSourcePath, sourcifyError } from '#utilities.ts'
  */
 
 const verifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
+
+verifyRoute.use(
+	'*',
+	bodyLimit({
+		maxSize: 2 * 1024 * 1024, // 2mb
+		onError: (context) => {
+			const message = `[requestId: ${context.req.header('X-Tempo-Request-Id')}] Body limit exceeded`
+
+			console.error(message)
+			return sourcifyError(context, 413, 'body_too_large', message)
+		},
+	}),
+)
 
 // POST /v2/verify/metadata/:chainId/:address - Verify Contract (using Solidity metadata.json)
 verifyRoute.post('/metadata/:chainId/:address', (context) =>
@@ -92,7 +105,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		}
 
 		const chainId = Number(_chainId)
-		if (!CHAIN_IDS.includes(chainId)) {
+		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(chainId)) {
 			return sourcifyError(
 				context,
 				400,
@@ -124,10 +137,6 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		}
 
 		const { stdJsonInput, compilerVersion, contractIdentifier } = body
-
-		// Detect language from stdJsonInput
-		const language = stdJsonInput.language?.toLowerCase() ?? 'solidity'
-		const isVyper = language === 'vyper'
 
 		// Parse contractIdentifier: "contracts/Token.sol:Token" -> { path: "contracts/Token.sol", name: "Token" }
 		const lastColonIndex = contractIdentifier.lastIndexOf(':')
@@ -173,10 +182,14 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			)
 		}
 
-		const chain = chains[chainId as keyof typeof chains]
+		const chain = chains[chainId as keyof typeof chains] as unknown as Chain
 		const client = createPublicClient({
 			chain,
-			transport: http(chain.rpcUrls.default.http.at(0)),
+			transport: http(
+				chain.id === TESTNET_CHAIN_ID
+					? 'https://rpc-orchestra.testnet.tempo.xyz'
+					: undefined,
+			),
 		})
 
 		const onchainBytecode = await client.getCode({ address: address })
@@ -195,13 +208,8 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			'singleton',
 		)
 
-		// Route to appropriate compiler endpoint based on language
-		const compileEndpoint = isVyper
-			? 'http://container/compile/vyper'
-			: 'http://container/compile'
-
 		const compileResponse = await container.fetch(
-			new Request(compileEndpoint, {
+			new Request('http://container/compile', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
@@ -262,31 +270,13 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 				context,
 				400,
 				'compilation_error',
-				errors
-					.map((error) => error.formattedMessage ?? error.message)
-					.join('\n'),
+				errors.map((e) => e.formattedMessage ?? e.message).join('\n'),
 			)
 		}
 
 		// Step 3: Get compiled bytecode for the target contract
-		// Try exact path first, then try matching by suffix (for Vyper absolute paths)
-		let compiledContract =
+		const compiledContract =
 			compileOutput.contracts?.[contractPath]?.[contractName]
-		let _matchedPath = contractPath
-
-		if (!compiledContract && compileOutput.contracts) {
-			for (const outputPath of Object.keys(compileOutput.contracts)) {
-				if (
-					outputPath.endsWith(contractPath) ||
-					outputPath.endsWith(`/${contractPath}`)
-				) {
-					compiledContract = compileOutput.contracts[outputPath]?.[contractName]
-					_matchedPath = outputPath
-					if (compiledContract) break
-				}
-			}
-		}
-
 		if (!compiledContract) {
 			return sourcifyError(
 				context,
@@ -296,42 +286,16 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			)
 		}
 
-		const deployedObject = compiledContract.evm.deployedBytecode.object
-		const bytecodeObject = compiledContract.evm.bytecode.object
-		const compiledBytecode = deployedObject.startsWith('0x')
-			? deployedObject
-			: `0x${deployedObject}`
-		const creationBytecodeRaw = bytecodeObject.startsWith('0x')
-			? bytecodeObject
-			: `0x${bytecodeObject}`
+		const compiledBytecode = `0x${compiledContract.evm.deployedBytecode.object}`
 
 		// Step 4: Compare bytecodes using proper matching with transformations
-		// For Vyper, we need to compute immutable references from auxdata
-		const auxdataStyle = isVyper
-			? getVyperAuxdataStyle(compilerVersion)
-			: AuxdataStyle.SOLIDITY
-
-		// Vyper doesn't provide immutableReferences in compiler output, we compute them from auxdata
-		const immutableReferences = isVyper
-			? getVyperImmutableReferences(
-					compilerVersion,
-					creationBytecodeRaw,
-					compiledBytecode,
-				)
-			: compiledContract.evm.deployedBytecode.immutableReferences
-
-		// Vyper doesn't support libraries
-		const linkReferences = isVyper
-			? undefined
-			: compiledContract.evm.deployedBytecode.linkReferences
-
 		const runtimeMatchResult = matchBytecode({
 			onchainBytecode: onchainBytecode,
 			recompiledBytecode: compiledBytecode,
 			isCreation: false,
-			linkReferences,
-			immutableReferences,
-			auxdataStyle,
+			linkReferences: compiledContract.evm.deployedBytecode.linkReferences,
+			immutableReferences:
+				compiledContract.evm.deployedBytecode.immutableReferences,
 			abi: compiledContract.abi,
 		})
 
@@ -361,8 +325,8 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			keccak256(compiledBytecode as `0x${string}`),
 		)
 
-		// Compute hashes for creation bytecode (reuse creationBytecodeRaw which already handles 0x prefix)
-		const creationBytecode = creationBytecodeRaw
+		// Compute hashes for creation bytecode
+		const creationBytecode = `0x${compiledContract.evm.bytecode.object}`
 		const creationBytecodeBytes = Hex.toBytes(creationBytecode as `0x${string}`)
 		const creationCodeHashSha256 = new Uint8Array(
 			await globalThis.crypto.subtle.digest(
@@ -447,14 +411,13 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		}
 
 		// Get or create compiled contract
-		const compilerName = isVyper ? 'vyper' : 'solc'
 		const existingCompilation = await db
 			.select({ id: compiledContractsTable.id })
 			.from(compiledContractsTable)
 			.where(
 				and(
 					eq(compiledContractsTable.runtimeCodeHash, runtimeCodeHashSha256),
-					eq(compiledContractsTable.compiler, compilerName),
+					eq(compiledContractsTable.compiler, 'solc'),
 					eq(compiledContractsTable.version, body.compilerVersion),
 				),
 			)
@@ -469,14 +432,13 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			// Build code artifacts from compiler output
 			const creationCodeArtifacts = {
 				sourceMap: compiledContract.evm.bytecode.sourceMap,
-				linkReferences: isVyper
-					? undefined
-					: compiledContract.evm.bytecode.linkReferences,
+				linkReferences: compiledContract.evm.bytecode.linkReferences,
 			}
 			const runtimeCodeArtifacts = {
 				sourceMap: compiledContract.evm.deployedBytecode.sourceMap,
-				linkReferences,
-				immutableReferences,
+				linkReferences: compiledContract.evm.deployedBytecode.linkReferences,
+				immutableReferences:
+					compiledContract.evm.deployedBytecode.immutableReferences,
 			}
 
 			// Build compilation artifacts (ABI, docs, storage layout)
@@ -490,7 +452,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 
 			await db.insert(compiledContractsTable).values({
 				id: compilationId,
-				compiler: compilerName,
+				compiler: 'solc',
 				version: body.compilerVersion,
 				language: stdJsonInput.language,
 				name: contractName,
@@ -531,15 +493,14 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 				})
 				.onConflictDoNothing()
 
-			// Link source to compilation with normalized path (convert absolute to relative)
-			const normalizedPath = normalizeSourcePath(sourcePath)
+			// Link source to compilation (ignore if already linked)
 			await db
 				.insert(compiledContractsSourcesTable)
 				.values({
 					id: globalThis.crypto.randomUUID(),
 					compilationId: compilationId,
 					sourceHash: sourceHashSha256,
-					path: normalizedPath,
+					path: sourcePath,
 				})
 				.onConflictDoNothing()
 		}

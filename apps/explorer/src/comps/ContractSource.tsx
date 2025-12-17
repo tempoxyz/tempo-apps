@@ -1,36 +1,46 @@
 import * as React from 'react'
-import { ContractFeatureCard } from '#comps/Contract.tsx'
-import { cx } from '#lib/css'
+import { createHighlighterCore, type HighlighterCore } from 'shiki/core'
+import githubLight from 'shiki/dist/themes/github-light.mjs'
+import { createOnigurumaEngine, loadWasm } from 'shiki/engine/oniguruma'
+import jsonLang from 'shiki/langs/json.mjs'
+import pythonLang from 'shiki/langs/python.mjs'
+import solidity from 'shiki/langs/solidity.mjs'
+import typescript from 'shiki/langs/typescript.mjs'
+import vyperLang from 'shiki/langs/vyper.mjs'
+import githubDark from 'shiki/themes/github-dark.mjs'
+import { ContractFeatureCard } from '#comps/ContractReader'
+import { cx } from '#cva.config.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
-import { useCopy, useCopyPermalink } from '#lib/hooks'
-import CheckIcon from '~icons/lucide/check'
+import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
-import LinkIcon from '~icons/lucide/link'
-import SolidityIcon from '~icons/vscode-icons/file-type-solidity'
-import VyperIcon from '~icons/vscode-icons/file-type-vyper'
 
-function getCompilerVersionUrl(compiler: string, version: string) {
-	return `https://github.com/${compiler.toLowerCase() === 'vyper' ? 'vyperlang/vyper' : 'argotorg/solidity'}/releases/tag/v${version}`
-}
+const SHIKI_THEMES = {
+	light: 'github-light',
+	dark: 'github-dark',
+} satisfies Record<'light' | 'dark', string>
 
-function getOptimizerText(compilation: ContractSource['compilation']) {
-	const isVyper = compilation.compiler === 'vyper'
-	if (isVyper) {
-		return compilation.compilerSettings.evmVersion
-			? `EVM: ${compilation.compilerSettings.evmVersion}`
-			: 'Vyper'
+const SHIKI_LANGS = [solidity, vyperLang, typescript, jsonLang, pythonLang]
+
+// TODO: replace with '../../node_modules/shiki/dist/onig.wasm'
+const ONIG_WASM_CDN = 'https://esm.sh/shiki/onig.wasm'
+
+let highlighterPromise: Promise<HighlighterCore> | null = null
+
+async function getHighlighter(): Promise<HighlighterCore> {
+	if (!highlighterPromise) {
+		highlighterPromise = (async () => {
+			await loadWasm(fetch(ONIG_WASM_CDN))
+			return createHighlighterCore({
+				themes: [githubLight, githubDark],
+				langs: SHIKI_LANGS,
+				engine: createOnigurumaEngine(() => fetch(ONIG_WASM_CDN)),
+			})
+		})()
 	}
-	return compilation.compilerSettings.optimizer?.enabled
-		? `Optimizer: enabled, runs: ${compilation.compilerSettings.optimizer.runs}`
-		: 'Optimizer: disabled'
+	return highlighterPromise
 }
 
-function getLanguageFromFileName(fileName: string): string {
-	const ext = fileName.split('.').pop()?.toLowerCase() ?? ''
-	return ext === 'vy' ? 'vyper' : ext === 'rs' ? 'rust' : 'solidity'
-}
-
-export function SourceSection(props: ContractSource) {
+export function ContractSources(props: ContractSource) {
 	const {
 		stdJsonInput,
 		// TODO: use this ABI when it's available and only resort to whatsabi if not available
@@ -40,17 +50,15 @@ export function SourceSection(props: ContractSource) {
 		runtimeMatch,
 	} = props
 
-	const optimizerText = getOptimizerText(compilation)
-	const compilerVersionUrl = getCompilerVersionUrl(
-		compilation.compiler,
-		compilation.version,
-	)
+	const optimizerText = compilation.compilerSettings.optimizer.enabled
+		? `Optimizer: enabled, runs: ${compilation.compilerSettings.optimizer.runs}`
+		: 'Optimizer: disabled'
 
 	return (
 		<ContractFeatureCard
+			title={`Source code (${runtimeMatch})`}
 			rightSideTitle={verifiedAt}
 			rightSideDescription={optimizerText}
-			title={`Source code (${runtimeMatch})`}
 			description="Verified contract source code."
 			textGrid={[
 				{
@@ -66,48 +74,40 @@ export function SourceSection(props: ContractSource) {
 							target="_blank"
 							rel="noopener noreferrer"
 							className="font-medium text-primary/80"
-							href={compilerVersionUrl}
+							href={`https://github.com/argotorg/solidity/releases/tag/v${compilation.version.split('+').at(0)}`}
 						>
-							{compilation.version} ({compilation.compiler})
+							{compilation.version}
 						</a>
 					),
 				},
 			]}
 		>
 			<div className="flex flex-col gap-2">
-				{Object.entries(stdJsonInput.sources).map(([fileName, source]) => (
-					<SourceFile
-						key={fileName}
-						fileName={fileName}
-						content={source.content}
-						highlightedHtml={source.highlightedHtml}
-					/>
+				{Object.entries(stdJsonInput.sources).map(([fileName, { content }]) => (
+					<SourceFile key={fileName} fileName={fileName} content={content} />
 				))}
 			</div>
 		</ContractFeatureCard>
 	)
 }
 
-function SourceFile(props: {
-	fileName: string
-	content: string
-	highlightedHtml?: string
-	className?: string | undefined
-}) {
-	const { fileName, content, highlightedHtml } = props
-
-	const { copy, notifying } = useCopy({ timeout: 2_000 })
+function SourceFile(
+	props: { fileName: string; content: string } & {
+		className?: string | undefined
+	},
+) {
+	const { fileName, content } = props
 	const [isCollapsed, setIsCollapsed] = React.useState(false)
-
-	const sourceFragment = `source-file-${fileName.replace('.', '-').toLowerCase()}`
-	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
-		fragment: sourceFragment,
-	})
-
+	const { copy, notifying } = useCopy({ timeout: 2_000 })
 	const language = React.useMemo(
 		() => getLanguageFromFileName(fileName),
 		[fileName],
 	)
+	const { containerRef, hasHighlight, isHighlighting } = useShikiHighlight({
+		source: content,
+		language,
+		enabled: !isCollapsed,
+	})
 
 	const handleCopy = React.useCallback(() => {
 		void copy(content)
@@ -116,67 +116,35 @@ function SourceFile(props: {
 	const lineCount = React.useMemo(() => content.split('\n').length, [content])
 
 	return (
-		<div
-			className={cx(
-				'flex flex-col border border-card-border bg-card-header rounded-md px-2',
-				props.className,
-			)}
-		>
-			<div className="flex items-center justify-between gap-3 py-2">
-				<button
-					type="button"
-					onClick={() => setIsCollapsed((v) => !v)}
-					className="flex items-center gap-2 align-middle bg-base-alt/40 py-1 px-2 rounded-xs cursor-pointer press-down min-w-0 max-w-full"
-				>
-					{language === 'solidity' ? (
-						<SolidityIcon className="size-[15px] shrink-0" />
-					) : (
-						<VyperIcon className="size-[15px] shrink-0" />
-					)}
-					<span
-						id={`source-file-${fileName.replace('.', '-').toLowerCase()}`}
-						className="text-[12px] font-mono text-primary/50 hover:text-primary whitespace-nowrap overflow-x-auto text-left"
-					>
-						{fileName}
-					</span>
-				</button>
-				<button
-					type="button"
-					title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-					className="press-down text-tertiary/70 hover:text-primary hover:bg-base-alt/50 p-1 transition-colors mr-auto cursor-pointer"
-					onClick={handleCopyPermalink}
-				>
-					{linkNotifying ? (
-						<CheckIcon className="size-3.5" />
-					) : (
-						<LinkIcon className="size-3.5" />
-					)}
-				</button>
+		<div className={cx('flex flex-col', props.className)}>
+			<button
+				type="button"
+				onClick={() => setIsCollapsed((v) => !v)}
+				className={cx(
+					'flex items-center justify-between gap-3 py-2 cursor-pointer press-down -outline-offset-2!',
+				)}
+			>
+				<span className="text-[12px] font-mono text-secondary break-all text-left">
+					{fileName}
+				</span>
 				<div className="flex items-center gap-2 shrink-0">
-					<span
+					{isCollapsed && (
+						<span className="text-[11px] text-tertiary">{lineCount} lines</span>
+					)}
+					<div
 						className={cx(
-							'text-[11px]',
-							isCollapsed ? 'text-tertiary' : 'text-tertiary/50',
-						)}
-					>
-						{lineCount} lines
-					</span>
-					<button
-						type="button"
-						onClick={() => setIsCollapsed((v) => !v)}
-						className={cx(
-							'text-[14px] font-mono cursor-pointer press-down',
+							'text-[14px] font-mono',
 							isCollapsed ? 'text-accent' : 'text-tertiary',
 						)}
 					>
 						[{isCollapsed ? '+' : '–'}]
-					</button>
+					</div>
 				</div>
-			</div>
+			</button>
 
 			{!isCollapsed && (
-				<div className="group relative overflow-hidden">
-					<div className="absolute top-2 right-2 flex items-center gap-1.5">
+				<div className="relative">
+					<div className="absolute top-2 right-2 flex items-center gap-1.5 z-10">
 						{notifying && (
 							<span className="text-[11px] uppercase tracking-wide text-tertiary leading-none">
 								copied
@@ -188,22 +156,93 @@ function SourceFile(props: {
 							title={notifying ? 'Copied' : 'Copy source'}
 							className="rounded-md bg-card p-1.5 text-tertiary press-down hover:text-primary transition-colors"
 						>
-							<CopyIcon className="size-3.5" />
+							<CopyIcon className="h-3.5 w-3.5" />
 						</button>
 					</div>
-					{highlightedHtml ? (
-						<div
-							// biome-ignore lint/security/noDangerouslySetInnerHtml: trusted shiki output from server
-							dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-							className="shiki shiki-block text-primary whitespace-pre bg-card-header! pl-0!"
-						/>
-					) : (
-						<pre className="shiki shiki-block text-primary whitespace-pre bg-card-header! pl-0!">
-							{content}
+					<div ref={containerRef} aria-hidden={!hasHighlight} />
+					{!hasHighlight && (
+						<pre className="shiki shiki-block text-primary whitespace-pre">
+							{isHighlighting ? 'Loading source…' : content}
 						</pre>
 					)}
 				</div>
 			)}
 		</div>
 	)
+}
+
+const EXTENSION_LANGUAGE_MAP: Record<string, string> = {
+	sol: 'solidity',
+	v: 'vyper',
+	ts: 'typescript',
+	json: 'json',
+	py: 'python',
+}
+
+function getLanguageFromFileName(fileName: string): string {
+	const extension = fileName.split('.').pop()?.toLowerCase() ?? ''
+	return EXTENSION_LANGUAGE_MAP[extension] ?? 'solidity'
+}
+
+function useShikiHighlight(params: {
+	source: string
+	language: string
+	enabled?: boolean
+}) {
+	const { source, language, enabled = true } = params
+	const [hasHighlight, setHasHighlight] = React.useState(false)
+	const [isHighlighting, setIsHighlighting] = React.useState(true)
+	const containerRef = React.useRef<HTMLDivElement | null>(null)
+
+	React.useEffect(() => {
+		if (!enabled) return
+
+		let cancelled = false
+		setHasHighlight(false)
+		setIsHighlighting(true)
+		if (containerRef.current) containerRef.current.innerHTML = ''
+
+		void (async () => {
+			try {
+				const highlighter = await getHighlighter()
+				const html = highlighter.codeToHtml(source, {
+					lang: language,
+					themes: SHIKI_THEMES,
+					defaultColor: 'light-dark()',
+				})
+				if (cancelled) return
+				if (containerRef.current) {
+					injectHighlightedHtml(containerRef.current, html)
+				}
+				setHasHighlight(true)
+			} catch (error) {
+				console.error('Failed to highlight contract source:', error)
+			} finally {
+				if (!cancelled) setIsHighlighting(false)
+			}
+		})()
+
+		return () => {
+			cancelled = true
+		}
+	}, [language, source, enabled])
+
+	return { containerRef, hasHighlight, isHighlighting }
+}
+
+function injectHighlightedHtml(container: HTMLDivElement, html: string) {
+	const template = document.createElement('template')
+	template.innerHTML = html.trim()
+	const pre = template.content.querySelector('pre')
+	if (pre) {
+		pre.classList.add('shiki-block')
+		pre.style.backgroundColor = 'transparent'
+		const code = pre.querySelector('code')
+		if (code) {
+			code.style.display = 'block'
+			code.style.padding = '0'
+			code.style.backgroundColor = 'transparent'
+		}
+	}
+	container.replaceChildren(template.content.cloneNode(true))
 }
