@@ -239,3 +239,20 @@ input[type="number"] {
 		opacity: 0;
 	}
 }
+
+.shiki-block,
+.shiki-block.shiki {
+	padding: 0px 12px;
+	background-color: transparent;
+	max-height: 320px;
+	overflow: auto;
+	margin: 0;
+	box-sizing: border-box;
+	font-size: 12px;
+	line-height: 18px;
+}
+
+.shiki-block code {
+	font-family: inherit;
+	background-color: transparent;
+}

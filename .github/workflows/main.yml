@@ -27,6 +27,7 @@ jobs:
           - app: og
           - app: service-proxy
           - app: tokenlist
+          - app: contracts
 
     steps:
       - uses: actions/checkout@v5
