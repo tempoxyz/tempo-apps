@@ -3,8 +3,9 @@
 set -euo pipefail
 
 TEMPO_RPC_URL="https://rpc-orchestra.testnet.tempo.xyz"
+# NOTE: This is a throaway PK created for this test
 PRIVATE_KEY=${PK:-"0xa4b3490c35582d544451fbbfd7a0e4c5fa4d0ded06563ccc199057c7a5e6c9de"}
-VERIFIER_URL=${VERIFIER_URL:-"https://o.bun-alewife.ts.net"}
+VERIFIER_URL=${VERIFIER_URL:-"https://contracts.tempo.xyz"}
 
 TEMP_DIR=$(mktemp -d)
 echo "Creating temporary directory $TEMP_DIR"
@@ -14,7 +15,6 @@ gh repo clone grandizzy/oz-dummy-token "$TEMP_DIR"/oz-dummy-token
 cd "$TEMP_DIR"/oz-dummy-token
 
 echo -e "\n=== FORGE BUILD ==="
-ls -la
 
 forge build
 forge script script/DeployMyToken.s.sol \
