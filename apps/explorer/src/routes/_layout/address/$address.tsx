@@ -278,42 +278,46 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		// check if it's a known contract from our registry
 		let contractInfo = getContractInfo(address)
 
+		// Get bytecode to check if this is a contract
+		const contractBytecode = contractInfo?.code
+			? contractInfo.code
+			: await getContractBytecode(address).catch((error) => {
+					console.error('[loader] Failed to get bytecode:', error)
+					return undefined
+				})
+
 		// if not in registry, try to extract ABI from bytecode using whatsabi
-		if (!contractInfo) {
-			const contractBytecode = await getContractBytecode(address).catch(
+		if (!contractInfo && contractBytecode) {
+			const contractAbi = await extractContractAbi(address).catch(
 				() => undefined,
 			)
 
-			if (contractBytecode) {
-				const contractAbi = await extractContractAbi(address).catch(
-					() => undefined,
-				)
-
-				if (contractAbi) {
-					contractInfo = {
-						name: 'Unknown Contract',
-						description: 'ABI extracted from bytecode',
-						code: contractBytecode,
-						abi: contractAbi,
-						category: 'utility',
-						address,
-					}
+			if (contractAbi) {
+				contractInfo = {
+					name: 'Unknown Contract',
+					description: 'ABI extracted from bytecode',
+					code: contractBytecode,
+					abi: contractAbi,
+					category: 'utility',
+					address,
 				}
 			}
 		}
 
-		const hasContract = Boolean(contractInfo)
-
+		// Try to fetch verified contract source if there's bytecode on chain
 		let contractSource: ContractSource | undefined
-		if (hasContract) {
+		if (contractBytecode) {
 			contractSource = await fetchContractSource({
 				address,
 				chainId,
 			}).catch((error) => {
-				console.error('Failed to load contract source:', error)
+				console.error('[loader] Failed to load contract source:', error)
 				return undefined
 			})
 		}
+
+		// Show contract tab if we have contractInfo OR verified source
+		const hasContract = Boolean(contractInfo) || Boolean(contractSource)
 
 		// Add timeout to prevent SSR from hanging on slow queries
 		const QUERY_TIMEOUT_MS = 3_000
@@ -901,8 +905,8 @@ function SectionsWrapper(props: {
 							/>
 						),
 					},
-					// Contract tab - only shown for known contracts
-					...(contractInfo
+					// Contract tab - shown for known contracts OR verified sources
+					...(contractInfo || resolvedContractSource
 						? [
 								{
 									title: 'Contract',
@@ -913,11 +917,19 @@ function SectionsWrapper(props: {
 											{hasContractSource && resolvedContractSource && (
 												<ContractSources {...resolvedContractSource} />
 											)}
-											<ContractReader
-												address={address}
-												abi={contractInfo.abi}
-												docsUrl={contractInfo.docsUrl}
-											/>
+											{contractInfo && (
+												<ContractReader
+													address={address}
+													abi={contractInfo.abi}
+													docsUrl={contractInfo.docsUrl}
+												/>
+											)}
+											{!contractInfo && resolvedContractSource && (
+												<ContractReader
+													address={address}
+													abi={resolvedContractSource.abi}
+												/>
+											)}
 										</div>
 									),
 								},

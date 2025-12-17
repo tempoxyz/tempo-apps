@@ -281,14 +281,29 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 				eq(compiledContractsSignaturesTable.compilationId, row.compilationId),
 			)
 
-		// Build sources object
+		// Build sources object, preferring normalized (relative) paths over absolute paths
 		const sources: Record<string, { content: string }> = {}
 		const sourceIds: Record<string, string> = {}
-		for (const source of sourcesResult) {
-			sources[source.path] = { content: source.content }
-			sourceIds[source.path] = Hex.fromBytes(
+		const seenContentHashes = new Set<string>()
+
+		// Sort to process relative paths first, then absolute paths
+		const sortedSources = [...sourcesResult].sort((a, b) => {
+			const aIsAbsolute = a.path.startsWith('/')
+			const bIsAbsolute = b.path.startsWith('/')
+			if (aIsAbsolute === bIsAbsolute) return 0
+			return aIsAbsolute ? 1 : -1 // Relative paths first
+		})
+
+		for (const source of sortedSources) {
+			const hashHex = Hex.fromBytes(
 				new Uint8Array(source.sourceHash as ArrayBuffer),
 			)
+			// Skip if we already have this source content (prefer relative path)
+			if (seenContentHashes.has(hashHex)) continue
+			seenContentHashes.add(hashHex)
+
+			sources[source.path] = { content: source.content }
+			sourceIds[source.path] = hashHex
 		}
 
 		// Build signatures object (Sourcify format: grouped by type)

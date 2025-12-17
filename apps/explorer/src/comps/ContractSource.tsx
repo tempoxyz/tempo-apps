@@ -3,10 +3,9 @@ import { createHighlighterCore, type HighlighterCore } from 'shiki/core'
 import githubLight from 'shiki/dist/themes/github-light.mjs'
 import { createOnigurumaEngine, loadWasm } from 'shiki/engine/oniguruma'
 import jsonLang from 'shiki/langs/json.mjs'
-import pythonLang from 'shiki/langs/python.mjs'
 import solidity from 'shiki/langs/solidity.mjs'
 import typescript from 'shiki/langs/typescript.mjs'
-import vyperLang from 'shiki/langs/vyper.mjs'
+import vyper from 'shiki/langs/vyper.mjs'
 import githubDark from 'shiki/themes/github-dark.mjs'
 import { ContractFeatureCard } from '#comps/ContractReader'
 import { cx } from '#cva.config.ts'
@@ -19,7 +18,7 @@ const SHIKI_THEMES = {
 	dark: 'github-dark',
 } satisfies Record<'light' | 'dark', string>
 
-const SHIKI_LANGS = [solidity, vyperLang, typescript, jsonLang, pythonLang]
+const SHIKI_LANGS = [solidity, vyper, typescript, jsonLang]
 
 // TODO: replace with '../../node_modules/shiki/dist/onig.wasm'
 const ONIG_WASM_CDN = 'https://esm.sh/shiki/onig.wasm'
@@ -40,6 +39,22 @@ async function getHighlighter(): Promise<HighlighterCore> {
 	return highlighterPromise
 }
 
+function getCompilerVersionUrl(compiler: string, version: string) {
+	return `https://github.com/${compiler.toLowerCase() === 'vyper' ? 'vyperlang/vyper' : 'argotorg/solidity'}/releases/tag/v${version}`
+}
+
+function getOptimizerText(compilation: ContractSource['compilation']) {
+	const isVyper = compilation.compiler === 'vyper'
+	if (isVyper) {
+		return compilation.compilerSettings.evmVersion
+			? `EVM: ${compilation.compilerSettings.evmVersion}`
+			: 'Vyper'
+	}
+	return compilation.compilerSettings.optimizer?.enabled
+		? `Optimizer: enabled, runs: ${compilation.compilerSettings.optimizer.runs}`
+		: 'Optimizer: disabled'
+}
+
 export function ContractSources(props: ContractSource) {
 	const {
 		stdJsonInput,
@@ -50,9 +65,11 @@ export function ContractSources(props: ContractSource) {
 		runtimeMatch,
 	} = props
 
-	const optimizerText = compilation.compilerSettings.optimizer.enabled
-		? `Optimizer: enabled, runs: ${compilation.compilerSettings.optimizer.runs}`
-		: 'Optimizer: disabled'
+	const optimizerText = getOptimizerText(compilation)
+	const compilerVersionUrl = getCompilerVersionUrl(
+		compilation.compiler,
+		compilation.version,
+	)
 
 	return (
 		<ContractFeatureCard
@@ -74,9 +91,9 @@ export function ContractSources(props: ContractSource) {
 							target="_blank"
 							rel="noopener noreferrer"
 							className="font-medium text-primary/80"
-							href={`https://github.com/argotorg/solidity/releases/tag/v${compilation.version.split('+').at(0)}`}
+							href={compilerVersionUrl}
 						>
-							{compilation.version}
+							{compilation.version} ({compilation.compiler})
 						</a>
 					),
 				},
@@ -173,7 +190,7 @@ function SourceFile(
 
 const EXTENSION_LANGUAGE_MAP: Record<string, string> = {
 	sol: 'solidity',
-	v: 'vyper',
+	vy: 'vyper',
 	ts: 'typescript',
 	json: 'json',
 	py: 'python',

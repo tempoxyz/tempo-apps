@@ -2,8 +2,10 @@ import { getContainer } from '@cloudflare/containers'
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
+import { bodyLimit } from 'hono/body-limit'
 import { Address, Hex } from 'ox'
-import { createPublicClient, http, keccak256 } from 'viem'
+import { type Chain, createPublicClient, http, keccak256 } from 'viem'
+
 import {
 	getVyperAuxdataStyle,
 	getVyperImmutableReferences,
@@ -11,7 +13,7 @@ import {
 	type LinkReferences,
 	matchBytecode,
 } from '#bytecode-matching.ts'
-import { chains, CHAIN_IDS } from '#chains.ts'
+import { chains, DEVNET_CHAIN_ID, TESTNET_CHAIN_ID } from '#chains.ts'
 
 import {
 	codeTable,
@@ -35,6 +37,18 @@ import { normalizeSourcePath, sourcifyError } from '#utilities.ts'
  */
 
 const legacyVerifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
+
+legacyVerifyRoute.use(
+	'*',
+	bodyLimit({
+		maxSize: 2 * 1024 * 1024, // 2mb
+		onError: (context) => {
+			const message = `[requestId: ${context.req.header('X-Tempo-Request-Id')}] Body limit exceeded`
+			console.error(message)
+			return sourcifyError(context, 413, 'body_too_large', message)
+		},
+	}),
+)
 
 interface LegacyVyperRequest {
 	address: string
@@ -65,7 +79,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		} = body
 
 		const chainId = Number(chain)
-		if (!CHAIN_IDS.includes(chainId)) {
+		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(chainId)) {
 			return sourcifyError(
 				context,
 				400,
@@ -103,7 +117,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 
 		// Check if already verified
 		const db = drizzle(context.env.CONTRACTS_DB)
-		const addressBytes = Hex.toBytes(address)
+		const addressBytes = Hex.toBytes(address as `0x${string}`)
 
 		const existingVerification = await db
 			.select({
@@ -128,14 +142,21 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			})
 		}
 
-		const chainConfig = chains[chainId as keyof typeof chains]
+		const chainConfig = chains[
+			chainId as keyof typeof chains
+		] as unknown as Chain
 		const client = createPublicClient({
 			chain: chainConfig,
-			transport: http(chainConfig.rpcUrls.default.http.at(0)),
+			transport: http(
+				chainConfig.id === TESTNET_CHAIN_ID
+					? 'https://rpc-orchestra.testnet.tempo.xyz'
+					: undefined,
+			),
 		})
 
-		const onchainBytecode = await client.getCode({ address })
-
+		const onchainBytecode = await client.getCode({
+			address: address as `0x${string}`,
+		})
 		if (!onchainBytecode || onchainBytecode === '0x') {
 			return context.json({
 				result: [
@@ -236,21 +257,32 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			)
 		}
 
+		console.log(
+			'[verify/vyper] Compile output contracts:',
+			JSON.stringify(Object.keys(compileOutput.contracts ?? {})),
+		)
+		console.log('[verify/vyper] Looking for:', contractPath, contractName)
+
 		// Get compiled bytecode for the target contract
 		const compiledContract =
 			compileOutput.contracts?.[contractPath]?.[contractName]
-		if (!compiledContract)
+		if (!compiledContract) {
+			console.log(
+				'[verify/vyper] Available in path:',
+				compileOutput.contracts?.[contractPath]
+					? Object.keys(compileOutput.contracts[contractPath])
+					: 'path not found',
+			)
 			return sourcifyError(
 				context,
 				400,
 				'contract_not_found_in_output',
 				`Could not find ${contractName} in ${contractPath}`,
 			)
+		}
 
-		const compiledBytecode =
-			`0x${compiledContract.evm.deployedBytecode.object}` as const
-		const creationBytecodeRaw =
-			`0x${compiledContract.evm.bytecode.object}` as const
+		const compiledBytecode = `0x${compiledContract.evm.deployedBytecode.object}`
+		const creationBytecodeRaw = `0x${compiledContract.evm.bytecode.object}`
 
 		const auxdataStyle = getVyperAuxdataStyle(compilerVersion)
 
@@ -286,26 +318,29 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		const contractIdentifier = `${contractPath}:${contractName}`
 
 		// Compute hashes for runtime bytecode
-		const runtimeBytecodeBytes = Hex.toBytes(compiledBytecode)
+		const runtimeBytecodeBytes = Hex.toBytes(compiledBytecode as `0x${string}`)
 		const runtimeCodeHashSha256 = new Uint8Array(
 			await globalThis.crypto.subtle.digest(
 				'SHA-256',
-				new TextEncoder().encode(compiledBytecode),
+				new TextEncoder().encode(compiledBytecode as `0x${string}`),
 			),
 		)
-		const runtimeCodeHashKeccak = Hex.toBytes(keccak256(compiledBytecode))
+		const runtimeCodeHashKeccak = Hex.toBytes(
+			keccak256(compiledBytecode as `0x${string}`),
+		)
 
 		// Compute hashes for creation bytecode
-		const creationBytecode =
-			`0x${compiledContract.evm.bytecode.object}` as const
-		const creationBytecodeBytes = Hex.toBytes(creationBytecode)
+		const creationBytecode = `0x${compiledContract.evm.bytecode.object}`
+		const creationBytecodeBytes = Hex.toBytes(creationBytecode as `0x${string}`)
 		const creationCodeHashSha256 = new Uint8Array(
 			await globalThis.crypto.subtle.digest(
 				'SHA-256',
-				new TextEncoder().encode(creationBytecode),
+				new TextEncoder().encode(creationBytecode as `0x${string}`),
 			),
 		)
-		const creationCodeHashKeccak = Hex.toBytes(keccak256(creationBytecode))
+		const creationCodeHashKeccak = Hex.toBytes(
+			keccak256(creationBytecode as `0x${string}`),
+		)
 
 		// Insert runtime code
 		await db

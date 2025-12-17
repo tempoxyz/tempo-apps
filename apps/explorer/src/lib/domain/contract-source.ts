@@ -6,6 +6,29 @@ import * as z from 'zod/mini'
 
 import { config } from '#wagmi.config.ts'
 
+const SoliditySettingsSchema = z.object({
+	remappings: z.optional(z.array(z.string())),
+	optimizer: z.optional(
+		z.object({
+			enabled: z.boolean(),
+			runs: z.number(),
+		}),
+	),
+	metadata: z.optional(
+		z.object({
+			useLiteralContent: z.optional(z.boolean()),
+			bytecodeHash: z.optional(z.string()),
+			appendCBOR: z.optional(z.boolean()),
+		}),
+	),
+	outputSelection: z.optional(
+		z.record(z.string(), z.record(z.string(), z.array(z.string()))),
+	),
+	evmVersion: z.optional(z.string()),
+	viaIR: z.optional(z.boolean()),
+	libraries: z.optional(z.record(z.string(), z.string())),
+})
+
 export const ContractVerificationLookupSchema = z.object({
 	matchId: z.number(),
 	match: z.string(),
@@ -22,25 +45,7 @@ export const ContractVerificationLookupSchema = z.object({
 				content: z.string(),
 			}),
 		),
-		settings: z.object({
-			remappings: z.array(z.string()),
-			optimizer: z.object({
-				enabled: z.boolean(),
-				runs: z.number(),
-			}),
-			metadata: z.object({
-				useLiteralContent: z.boolean(),
-				bytecodeHash: z.string(),
-				appendCBOR: z.boolean(),
-			}),
-			outputSelection: z.record(
-				z.string(),
-				z.record(z.string(), z.array(z.string())),
-			),
-			evmVersion: z.string(),
-			viaIR: z.boolean(),
-			libraries: z.record(z.string(), z.string()),
-		}),
+		settings: SoliditySettingsSchema,
 	}),
 	abi: z.array(z.any()),
 	compilation: z.object({
@@ -49,25 +54,7 @@ export const ContractVerificationLookupSchema = z.object({
 		language: z.string(),
 		name: z.string(),
 		fullyQualifiedName: z.string(),
-		compilerSettings: z.object({
-			remappings: z.array(z.string()),
-			optimizer: z.object({
-				enabled: z.boolean(),
-				runs: z.number(),
-			}),
-			metadata: z.object({
-				useLiteralContent: z.boolean(),
-				bytecodeHash: z.string(),
-				appendCBOR: z.boolean(),
-			}),
-			outputSelection: z.record(
-				z.string(),
-				z.record(z.string(), z.array(z.string())),
-			),
-			evmVersion: z.string(),
-			viaIR: z.boolean(),
-			libraries: z.record(z.string(), z.string()),
-		}),
+		compilerSettings: SoliditySettingsSchema,
 	}),
 })
 

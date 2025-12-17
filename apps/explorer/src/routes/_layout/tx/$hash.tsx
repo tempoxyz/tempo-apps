@@ -35,8 +35,8 @@ import { useCopy, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription } from '#lib/og'
 import { LIMIT, type TxData, txQueryOptions } from '#lib/queries'
 import { traceQueryOptions } from '#lib/queries/trace'
-import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
 import { zHash } from '#lib/zod'
+import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
 import CopyIcon from '~icons/lucide/copy'
 
 const defaultSearchValues = {

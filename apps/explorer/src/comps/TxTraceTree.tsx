@@ -1,8 +1,8 @@
 import { useQueries } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
-import { type Abi, decodeAbiParameters, erc20Abi, slice } from 'viem'
 import type { Hex } from 'viem'
+import { type Abi, decodeAbiParameters, erc20Abi, slice } from 'viem'
 import { cx } from '#cva.config.ts'
 import {
 	autoloadAbiQueryOptions,
@@ -13,10 +13,10 @@ import {
 import { getContractInfo } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
-import CopyIcon from '~icons/lucide/copy'
 import ArrowRightIcon from '~icons/lucide/arrow-right'
-import ReturnIcon from '~icons/lucide/corner-down-right'
+import CopyIcon from '~icons/lucide/copy'
 import WrapIcon from '~icons/lucide/corner-down-left'
+import ReturnIcon from '~icons/lucide/corner-down-right'
 
 export function TxTraceTree(props: TxTraceTree.Props) {
 	const { trace } = props
@@ -250,7 +250,7 @@ export namespace TxTraceTree {
 			<>
 				<span
 					className={cx(
-						'text-[10px] font-medium px-[4px] py-[1px] rounded text-center whitespace-nowrap select-none',
+						'text-[10px] font-medium px-[4px] py-px rounded text-center whitespace-nowrap select-none',
 						node.hasError
 							? 'bg-negative/20 text-negative'
 							: 'bg-accent/20 text-accent',
