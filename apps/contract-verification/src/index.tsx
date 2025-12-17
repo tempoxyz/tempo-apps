@@ -3,7 +3,6 @@ import { Hono } from 'hono'
 import { showRoutes } from 'hono/dev'
 import { prettyJSON } from 'hono/pretty-json'
 import { requestId } from 'hono/request-id'
-import { secureHeaders } from 'hono/secure-headers'
 import { timeout } from 'hono/timeout'
 
 import { sourcifyChains } from '#chains.ts'
@@ -28,9 +27,8 @@ const app = new Hono<{ Bindings: Cloudflare.Env }>()
 
 // @note: order matters
 app.use('*', requestId({ headerName: 'X-Tempo-Request-Id' }))
-app.use(secureHeaders())
 // TODO: update before merging to main
-app.use('*', timeout(12_000)) // 12 seconds
+app.use('*', timeout(20_000)) // 20 seconds
 app.use(prettyJSON())
 
 app.route('/docs', docsRoute)
