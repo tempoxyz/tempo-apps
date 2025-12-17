@@ -6,9 +6,6 @@ import * as z from 'zod/mini'
 
 import { config } from '#wagmi.config.ts'
 
-const CONTRACT_VERIFICATION_API_BASE_URL =
-	'https://contracts.tempo.xyz/v2/contract'
-
 const ContractVerificationLookupSchema = z.object({
 	matchId: z.number(),
 	match: z.string(),
@@ -106,10 +103,9 @@ export async function fetchContractSource(params: {
 	const { address, chainId, signal } = params
 
 	try {
-		const url = new URL(
-			`${CONTRACT_VERIFICATION_API_BASE_URL}/${chainId}/${address.toLowerCase()}`,
-		)
-		url.searchParams.set('fields', 'stdJsonInput,abi,compilation')
+		const url = new URL('/api/code', __BASE_URL__)
+		url.searchParams.set('address', address.toLowerCase())
+		url.searchParams.set('chainId', chainId.toString())
 
 		const response = await fetch(url, { signal })
 
