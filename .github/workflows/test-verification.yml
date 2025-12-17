@@ -1,0 +1,28 @@
+name: Test Verification
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Run verification script
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Execute verification script
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEMP_DIR=$(mktemp -d)
+          cd "$TEMP_DIR"
+
+          curl -L https://gist.githubusercontent.com/o-az/b3101fe35be98232e1ab9039f94b89ff/raw/dd7417f7282d28cc4143d943ebf9ac4a3db091b2/forge-verify.sh > forge-verify.sh
+
+          export VERIFIER_URL="https://contracts.tempo.xyz"
+
+          bash forge-verify.sh
