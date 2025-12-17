@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { type Address, Value } from 'ox'
-import { Abis } from 'tempo.ts/viem'
 import { Hooks } from 'tempo.ts/wagmi'
+import { Abis } from 'viem/tempo'
 import { useReadContracts } from 'wagmi'
 import { TokenIcon } from '#comps/TokenIcon.tsx'
 import { isTip20Address } from '#lib/domain/tip20.ts'

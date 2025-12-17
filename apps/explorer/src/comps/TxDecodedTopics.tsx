@@ -1,6 +1,5 @@
 import type { AbiEvent } from 'abitype'
 import { useMemo, useState } from 'react'
-import { Abis } from 'tempo.ts/viem'
 import {
 	type Abi,
 	decodeEventLog,
@@ -9,6 +8,7 @@ import {
 	type Log,
 	parseAbiItem,
 } from 'viem'
+import { Abis } from 'viem/tempo'
 import {
 	decodeEventLog_guessed,
 	formatAbiValue,

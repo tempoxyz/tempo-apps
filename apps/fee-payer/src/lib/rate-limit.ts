@@ -2,7 +2,7 @@ import { env } from 'cloudflare:workers'
 import type { Context, Next } from 'hono'
 import { cloneRawRequest } from 'hono/request'
 import { RpcRequest } from 'ox'
-import { Transaction } from 'tempo.ts/viem'
+import { Transaction } from 'viem/tempo'
 
 /**
  * Middleware that rate limits requests based on the transaction's `from` address.

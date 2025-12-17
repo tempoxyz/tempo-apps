@@ -10,8 +10,8 @@
 	},
 	"dependencies": {
 		"@tanstack/react-query": "^5.90.12",
-		"react": "^19.2.1",
-		"react-dom": "^19.2.1",
+		"react": "^19.2.3",
+		"react-dom": "^19.2.3",
 		"tempo.ts": "catalog:",
 		"viem": "catalog:",
 		"wagmi": "catalog:"

@@ -11,9 +11,9 @@ import {
 } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
-import { Abis } from 'tempo.ts/viem'
 import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
+import { Abis } from 'viem/tempo'
 import { useBlock } from 'wagmi'
 import {
 	getBlock,

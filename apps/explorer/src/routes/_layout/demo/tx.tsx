@@ -1,7 +1,7 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Hex } from 'ox'
-import { Abis } from 'tempo.ts/viem'
 import { encodeAbiParameters, encodeEventTopics, zeroAddress } from 'viem'
+import { Abis } from 'viem/tempo'
 import { Receipt } from '#comps/Receipt'
 import {
 	accountAddress,
