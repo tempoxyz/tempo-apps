@@ -156,10 +156,10 @@ function SourceFile(
 						<div
 							// biome-ignore lint/security/noDangerouslySetInnerHtml: trusted shiki output
 							dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-							className="shiki shiki-block text-primary whitespace-pre bg-card-header! pl-0!"
+							className="shiki text-primary whitespace-pre bg-card-header! pl-0!"
 						/>
 					) : (
-						<pre className="shiki shiki-block text-primary whitespace-pre bg-card-header! pl-0!">
+						<pre className="shiki-block text-primary whitespace-pre bg-card-header! pl-0!">
 							{content}
 						</pre>
 					)}
