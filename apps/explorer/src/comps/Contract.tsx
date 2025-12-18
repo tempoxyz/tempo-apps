@@ -58,6 +58,9 @@ export function ContractTabContent(props: {
 
 	return (
 		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
+			{/* Source Section */}
+			{source && <SourceSection {...source} />}
+
 			{/* ABI Section */}
 			<CollapsibleSection
 				first
@@ -104,9 +107,6 @@ export function ContractTabContent(props: {
 
 			{/* Bytecode Section */}
 			<BytecodeSection address={address} />
-
-			{/* Source Section */}
-			{source && <SourceSection {...source} />}
 		</div>
 	)
 }
@@ -251,6 +251,17 @@ export function InteractTabContent(props: {
 
 	return (
 		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
+			{/* Read Contract Section */}
+			<CollapsibleSection
+				title="Read contract"
+				expanded={readExpanded}
+				onToggle={() => setReadExpanded(!readExpanded)}
+			>
+				<div className="px-[10px] pb-[10px]">
+					<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
+				</div>
+			</CollapsibleSection>
+
 			{/* Write Contract Section */}
 			<CollapsibleSection
 				first
@@ -261,17 +272,6 @@ export function InteractTabContent(props: {
 			>
 				<div className="px-[10px] pb-[10px]">
 					<ContractWriter address={address} abi={abi} />
-				</div>
-			</CollapsibleSection>
-
-			{/* Read Contract Section */}
-			<CollapsibleSection
-				title="Read contract"
-				expanded={readExpanded}
-				onToggle={() => setReadExpanded(!readExpanded)}
-			>
-				<div className="px-[10px] pb-[10px]">
-					<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
 				</div>
 			</CollapsibleSection>
 		</div>
