@@ -25,7 +25,6 @@ import {
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract.tsx'
-import { ContractSources } from '#comps/ContractSource.tsx'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
@@ -768,8 +767,6 @@ function SectionsWrapper(props: {
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
-	const hasContractSource = Boolean(resolvedContractSource)
-
 	// Show error state for API failures (instead of crashing the whole page)
 	const historyError = error ? (
 		<div className="rounded-[10px] bg-card-header p-4.5">
@@ -913,7 +910,7 @@ function SectionsWrapper(props: {
 							/>
 						),
 					},
-					// Contract tab - Source Code + ABI
+					// Contract tab - ABI + Source Code
 					...(contractInfo || resolvedContractSource
 						? [
 								{
@@ -921,16 +918,12 @@ function SectionsWrapper(props: {
 									totalItems: 0,
 									itemsLabel: 'items',
 									content: (
-										<div className="flex flex-col gap-2">
-											{hasContractSource && resolvedContractSource && (
-												<ContractSources {...resolvedContractSource} />
-											)}
-											<ContractTabContent
-												address={address}
-												abi={resolvedContractSource?.abi ?? contractInfo?.abi}
-												docsUrl={contractInfo?.docsUrl}
-											/>
-										</div>
+										<ContractTabContent
+											address={address}
+											abi={resolvedContractSource?.abi ?? contractInfo?.abi}
+											docsUrl={contractInfo?.docsUrl}
+											source={resolvedContractSource}
+										/>
 									),
 								},
 								// Interact tab - Read + Write contract

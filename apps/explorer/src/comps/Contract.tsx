@@ -1,27 +1,37 @@
 import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi } from 'viem'
+import { useQuery } from '@tanstack/react-query'
+import { getBytecode } from 'wagmi/actions'
 import { ConnectWallet } from '#comps/ConnectWallet.tsx'
 import { AbiViewer } from '#comps/ContractAbi.tsx'
 import { ContractReader } from '#comps/ContractReader.tsx'
 import { ContractWriter } from '#comps/ContractWriter.tsx'
 import { cx } from '#cva.config.ts'
+import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { getContractAbi } from '#lib/domain/contracts.ts'
 import { useCopy } from '#lib/hooks.ts'
+import { config } from '#wagmi.config.ts'
+import { ellipsis } from '#lib/chars.ts'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
+import CopyIcon from '~icons/lucide/copy'
 import DownloadIcon from '~icons/lucide/download'
 import ExternalLinkIcon from '~icons/lucide/external-link'
+import { SourceSection } from '#comps/ContractSource.tsx'
 
 /**
- * Contract tab content - shows ABI only
+ * Contract tab content - shows ABI and Source
  */
 export function ContractTabContent(props: {
 	address: Address.Address
 	abi?: Abi
 	docsUrl?: string
+	source?: ContractSource
 }) {
-	const { address, docsUrl } = props
+	const { address, docsUrl, source } = props
 
 	const { copy: copyAbi, notifying: copiedAbi } = useCopy({ timeout: 2000 })
+	const [abiExpanded, setAbiExpanded] = React.useState(false)
 
 	const abi = props.abi ?? getContractAbi(address)
 
@@ -55,38 +65,168 @@ export function ContractTabContent(props: {
 	}
 
 	return (
-		<div className="flex flex-col gap-3.5">
-			<ContractFeatureCard
-				title="Contract ABI"
-				collapsible
-				defaultCollapsed
+		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
+			{/* ABI Section */}
+			<CollapsibleSection
+				first
+				title={<span title="Contract ABI">ABI</span>}
+				expanded={abiExpanded}
+				onToggle={() => setAbiExpanded(!abiExpanded)}
 				actions={
-					<div className="flex gap-[8px]">
+					<>
+						{copiedAbi && (
+							<span className="text-[11px] select-none">copied</span>
+						)}
+						<button
+							type="button"
+							onClick={handleCopyAbi}
+							className="press-down cursor-pointer hover:text-secondary p-[4px]"
+							title="Copy ABI"
+						>
+							<CopyIcon className="size-[14px]" />
+						</button>
+						<button
+							type="button"
+							onClick={handleDownloadAbi}
+							className="press-down cursor-pointer hover:text-secondary p-[4px]"
+							title="Download ABI"
+						>
+							<DownloadIcon className="size-[14px]" />
+						</button>
 						{docsUrl && (
 							<a
 								href={docsUrl}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors inline-flex items-center gap-[4px]"
+								className="text-[11px] text-accent hover:underline press-down inline-flex items-center gap-[4px]"
 							>
 								Docs
-								<ExternalLinkIcon className="w-[12px] h-[12px]" />
+								<ExternalLinkIcon className="size-[12px]" />
 							</a>
 						)}
-						<button
-							type="button"
-							onClick={handleDownloadAbi}
-							className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors inline-flex items-center gap-[4px]"
-						>
-							<DownloadIcon className="w-[12px] h-[12px]" />
-							Download
-						</button>
-					</div>
+					</>
 				}
 			>
-				<AbiViewer abi={abi} onCopy={handleCopyAbi} copied={copiedAbi} />
-			</ContractFeatureCard>
+				<AbiViewer abi={abi} />
+			</CollapsibleSection>
+
+			{/* Bytecode Section */}
+			<BytecodeSection address={address} />
+
+			{/* Source Section */}
+			{source && <SourceSection source={source} />}
 		</div>
+	)
+}
+
+/**
+ * Collapsible section component
+ */
+export function CollapsibleSection(props: {
+	title: React.ReactNode
+	expanded: boolean
+	onToggle: () => void
+	actions?: React.ReactNode
+	children: React.ReactNode
+	first?: boolean
+}) {
+	const { title, expanded, onToggle, actions, children, first } = props
+
+	return (
+		<div className="flex flex-col border-b border-dashed border-distinct">
+			<div className="flex items-center h-[40px] shrink-0">
+				<button
+					type="button"
+					onClick={onToggle}
+					className={cx(
+						'flex-1 flex items-center gap-[6px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2!',
+						actions ? 'pr-[12px]' : 'pr-[16px]',
+						first && 'focus-visible:rounded-tl-[8px]!',
+						first && !actions && 'focus-visible:rounded-tr-[8px]!',
+					)}
+				>
+					<ChevronDownIcon
+						className={cx(
+							'size-[14px] text-tertiary',
+							!expanded && '-rotate-90',
+						)}
+					/>
+					<span className="text-[13px] text-tertiary">{title}</span>
+				</button>
+				{actions && (
+					<div className="flex items-center gap-[8px] text-tertiary px-[12px]">
+						{actions}
+					</div>
+				)}
+			</div>
+			<div className={cx(!expanded && 'hidden')}>{children}</div>
+		</div>
+	)
+}
+
+/**
+ * Bytecode section - shows raw bytecode
+ */
+function BytecodeSection(props: { address: Address.Address }) {
+	const { address } = props
+	const [expanded, setExpanded] = React.useState(false)
+	const { copy, notifying } = useCopy({ timeout: 2000 })
+
+	const { data: bytecode } = useQuery({
+		queryKey: ['bytecode', address],
+		queryFn: () => getBytecode(config, { address }),
+	})
+
+	const handleCopy = React.useCallback(() => {
+		if (bytecode) void copy(bytecode)
+	}, [bytecode, copy])
+
+	const handleDownload = React.useCallback(() => {
+		if (!bytecode || typeof window === 'undefined') return
+		const blob = new Blob([bytecode], { type: 'text/plain' })
+		const url = URL.createObjectURL(blob)
+		const anchor = document.createElement('a')
+		anchor.href = url
+		anchor.download = `${address}-bytecode.txt`
+		document.body.appendChild(anchor)
+		anchor.click()
+		document.body.removeChild(anchor)
+		URL.revokeObjectURL(url)
+	}, [bytecode, address])
+
+	return (
+		<CollapsibleSection
+			title="Bytecode"
+			expanded={expanded}
+			onToggle={() => setExpanded(!expanded)}
+			actions={
+				<>
+					{notifying && <span className="text-[11px] select-none">copied</span>}
+					<button
+						type="button"
+						onClick={handleCopy}
+						className="press-down cursor-pointer hover:text-secondary p-[4px]"
+						title="Copy bytecode"
+					>
+						<CopyIcon className="size-[14px]" />
+					</button>
+					<button
+						type="button"
+						onClick={handleDownload}
+						className="press-down cursor-pointer hover:text-secondary p-[4px]"
+						title="Download bytecode"
+					>
+						<DownloadIcon className="size-[14px]" />
+					</button>
+				</>
+			}
+		>
+			<div className="max-h-[280px] overflow-auto px-[18px] py-[12px]">
+				<pre className="text-[12px] leading-[18px] text-primary break-all whitespace-pre-wrap">
+					{bytecode ?? `Loading${ellipsis}`}
+				</pre>
+			</div>
+		</CollapsibleSection>
 	)
 }
 
@@ -164,7 +304,7 @@ export function ContractFeatureCard(props: {
 		return (
 			<section
 				className={cx(
-					'flex flex-col font-mono w-full overflow-hidden',
+					'flex flex-col w-full overflow-hidden',
 					'rounded-[10px] border border-card-border bg-card-header',
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 					className,
@@ -191,7 +331,7 @@ export function ContractFeatureCard(props: {
 							type="button"
 							onClick={() => setIsCollapsed(!isCollapsed)}
 							className={cx(
-								'text-[16px] font-mono cursor-pointer press-down',
+								'text-[16px] cursor-pointer press-down',
 								isCollapsed ? 'text-accent' : 'text-tertiary',
 							)}
 						>

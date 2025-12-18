@@ -7,13 +7,12 @@ import solidity from 'shiki/langs/solidity.mjs'
 import vyper from 'shiki/langs/vyper.mjs'
 import githubDark from 'shiki/themes/github-dark.mjs'
 import githubLight from 'shiki/themes/github-light.mjs'
-import { ContractFeatureCard } from '#comps/Contract.tsx'
+import { CollapsibleSection } from '#comps/Contract.tsx'
 import { cx } from '#cva.config.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 import LinkIcon from '~icons/lucide/link'
-// import RustIcon from '~icons/vscode-icons/file-type-rust'
 import SolidityIcon from '~icons/vscode-icons/file-type-solidity'
 import VyperIcon from '~icons/vscode-icons/file-type-vyper'
 
@@ -51,59 +50,6 @@ function getOptimizerText(compilation: ContractSource['compilation']) {
 	return compilation.compilerSettings.optimizer?.enabled
 		? `Optimizer: enabled, runs: ${compilation.compilerSettings.optimizer.runs}`
 		: 'Optimizer: disabled'
-}
-
-export function ContractSources(props: ContractSource) {
-	const {
-		stdJsonInput,
-		// TODO: use this ABI when it's available and only resort to whatsabi if not available
-		abi: _abi,
-		compilation,
-		verifiedAt,
-		runtimeMatch,
-	} = props
-
-	const optimizerText = getOptimizerText(compilation)
-	const compilerVersionUrl = getCompilerVersionUrl(
-		compilation.compiler,
-		compilation.version,
-	)
-
-	return (
-		<ContractFeatureCard
-			rightSideTitle={verifiedAt}
-			rightSideDescription={optimizerText}
-			title={`Source code (${runtimeMatch})`}
-			description="Verified contract source code."
-			textGrid={[
-				{
-					right: (
-						<span className="font-medium text-primary/80">
-							{compilation.name}
-						</span>
-					),
-				},
-				{
-					right: (
-						<a
-							target="_blank"
-							rel="noopener noreferrer"
-							className="font-medium text-primary/80"
-							href={compilerVersionUrl}
-						>
-							{compilation.version} ({compilation.compiler})
-						</a>
-					),
-				},
-			]}
-		>
-			<div className="flex flex-col gap-2">
-				{Object.entries(stdJsonInput.sources).map(([fileName, { content }]) => (
-					<SourceFile key={fileName} fileName={fileName} content={content} />
-				))}
-			</div>
-		</ContractFeatureCard>
-	)
 }
 
 function SourceFile(
@@ -279,4 +225,56 @@ function processHighlightedHtml(html: string): string {
 		return pre.outerHTML
 	}
 	return html
+}
+
+/**
+ * Source section for ContractTabContent - matches ABI section style
+ */
+export function SourceSection(props: { source: ContractSource }) {
+	const { source } = props
+	const [expanded, setExpanded] = React.useState(true)
+
+	const { compilation, runtimeMatch, verifiedAt, stdJsonInput } = source
+	const fileCount = Object.keys(stdJsonInput.sources).length
+	const compilerVersionUrl = getCompilerVersionUrl(
+		compilation.compiler,
+		compilation.version,
+	)
+
+	const optimizerText = getOptimizerText(compilation)
+
+	return (
+		<CollapsibleSection
+			title="Source"
+			expanded={expanded}
+			onToggle={() => setExpanded(!expanded)}
+		>
+			<div className="flex flex-col gap-2 px-[18px] py-[12px]">
+				<div className="flex justify-between text-[12px] px-[18px] py-[12px] -mx-[18px] -mt-[12px] mb-1 bg-base-alt/50">
+					<div className="flex flex-col gap-0.5">
+						<div className="text-primary/80">{compilation.name}</div>
+						<div className="text-primary/80">Verified: {verifiedAt}</div>
+						<div className="text-tertiary">Match: {runtimeMatch}</div>
+					</div>
+					<div className="flex flex-col gap-0.5 text-right">
+						<div>
+							<a
+								href={compilerVersionUrl}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-primary/80 hover:underline press-down"
+							>
+								{compilation.version} ({compilation.compiler})
+							</a>
+						</div>
+						<div className="text-tertiary">{optimizerText}</div>
+						<div className="text-tertiary">{fileCount} files</div>
+					</div>
+				</div>
+				{Object.entries(stdJsonInput.sources).map(([fileName, { content }]) => (
+					<SourceFile key={fileName} fileName={fileName} content={content} />
+				))}
+			</div>
+		</CollapsibleSection>
+	)
 }
