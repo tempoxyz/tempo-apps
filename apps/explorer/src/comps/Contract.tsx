@@ -243,8 +243,10 @@ export function InteractTabContent(props: {
 }) {
 	const { address, docsUrl } = props
 
-	const abi = props.abi ?? getContractAbi(address)
+	const [readExpanded, setReadExpanded] = React.useState(true)
+	const [writeExpanded, setWriteExpanded] = React.useState(true)
 
+	const abi = props.abi ?? getContractAbi(address)
 	if (!abi) {
 		return (
 			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
@@ -254,9 +256,6 @@ export function InteractTabContent(props: {
 			</div>
 		)
 	}
-
-	const [writeExpanded, setWriteExpanded] = React.useState(true)
-	const [readExpanded, setReadExpanded] = React.useState(true)
 
 	return (
 		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">

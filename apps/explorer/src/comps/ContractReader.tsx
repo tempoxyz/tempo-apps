@@ -363,7 +363,9 @@ function StaticReadFunction(props: {
 			<div className="border-t border-card-border px-[12px] py-[10px] flex">
 				<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
 				{isFetching || isLoading ? (
-					<div className="text-[13px] text-secondary leading-[20px]">{ellipsis}</div>
+					<div className="text-[13px] text-secondary leading-[20px]">
+						{ellipsis}
+					</div>
 				) : isValidAddress ? (
 					<div className="text-[13px] leading-[20px]">
 						<Link
@@ -597,7 +599,8 @@ function DynamicReadFunction(props: {
 						disabled={isFetching || !allInputsFilled}
 						className={cx(
 							'text-accent cursor-pointer press-down h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!',
-							(isFetching || !allInputsFilled) && 'opacity-50 cursor-not-allowed',
+							(isFetching || !allInputsFilled) &&
+								'opacity-50 cursor-not-allowed',
 						)}
 					>
 						<PlayIcon className="size-[14px]" />
@@ -608,10 +611,7 @@ function DynamicReadFunction(props: {
 						className="text-secondary cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
 					>
 						<ChevronDownIcon
-							className={cx(
-								'w-[14px] h-[14px]',
-								isExpanded && 'rotate-180',
-							)}
+							className={cx('w-[14px] h-[14px]', isExpanded && 'rotate-180')}
 						/>
 					</button>
 				</div>
@@ -634,7 +634,9 @@ function DynamicReadFunction(props: {
 					{isFetching && (
 						<div className="flex">
 							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
-							<p className="text-[13px] text-secondary leading-[20px]">{ellipsis}</p>
+							<p className="text-[13px] text-secondary leading-[20px]">
+								{ellipsis}
+							</p>
 						</div>
 					)}
 

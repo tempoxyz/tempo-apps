@@ -110,23 +110,24 @@ function WriteContractFunction(props: {
 	})
 
 	const parsedArgs = React.useMemo(() => {
-		if (!allInputsFilled) return { args: [] as Array<unknown>, error: null }
+		if (!allInputsFilled) return { args: [], error: null }
 		try {
 			const args = (fn.inputs ?? []).map((input) => {
 				const value = inputs[input.name ?? ''] ?? ''
 				return parseInputValue(value, input.type)
 			})
 			return { args, error: null }
-		} catch (err) {
+		} catch (error) {
 			return {
-				args: [] as Array<unknown>,
-				error: err instanceof Error ? err.message : 'Failed to parse inputs',
+				args: [],
+				error:
+					error instanceof Error ? error.message : 'Failed to parse inputs',
 			}
 		}
 	}, [fn.inputs, inputs, allInputsFilled])
 
-	const handleCopyMethod = (e: React.MouseEvent) => {
-		e.stopPropagation()
+	const handleCopyMethod = (event: React.MouseEvent) => {
+		event.stopPropagation()
 		void copy(getMethodWithSelector(fn))
 	}
 
@@ -144,7 +145,7 @@ function WriteContractFunction(props: {
 		mutation: {
 			onSuccess: () =>
 				queryClient.invalidateQueries({
-					queryKey: ['readContract', { address: props.address }],
+					queryKey: ['readContract'],
 				}),
 		},
 	})
@@ -204,7 +205,9 @@ function WriteContractFunction(props: {
 						<button
 							type="button"
 							title="Execute"
-							disabled={writeContract.isPending || (hasInputs && !allInputsFilled)}
+							disabled={
+								writeContract.isPending || (hasInputs && !allInputsFilled)
+							}
 							className={cx(
 								'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
 								hasInputs ? 'pr-[4px]' : 'pr-[12px]',
@@ -235,10 +238,7 @@ function WriteContractFunction(props: {
 							onClick={() => setIsExpanded(!isExpanded)}
 						>
 							<ChevronDownIcon
-								className={cx(
-									'w-[14px] h-[14px]',
-									isExpanded && 'rotate-180',
-								)}
+								className={cx('w-[14px] h-[14px]', isExpanded && 'rotate-180')}
 							/>
 						</button>
 					)}
