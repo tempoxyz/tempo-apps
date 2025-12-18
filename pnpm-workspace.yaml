@@ -54,7 +54,7 @@ catalog:
   unplugin-icons: ^22.5.0
   viem: ^2.43.1
   vite: npm:rolldown-vite@latest
-  vite-tsconfig-paths: ^6.0.2
+  vite-tsconfig-paths: ^5.1.4
   vitest: 3.2.4
   wagmi: ^3.1.0
   wrangler: ^4.55.0
