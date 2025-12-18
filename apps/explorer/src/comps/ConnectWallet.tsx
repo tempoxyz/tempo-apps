@@ -1,3 +1,4 @@
+import { ClientOnly } from '@tanstack/react-router'
 import type { VariantProps } from 'cva'
 import * as React from 'react'
 import {
@@ -20,6 +21,24 @@ export function ConnectWallet({
 }: {
 	showAddChain?: boolean
 }) {
+	return (
+		<ClientOnly
+			fallback={
+				<div className="text-[14px] -tracking-[2%] flex items-center">
+					Detecting wallets…
+				</div>
+			}
+		>
+			<ConnectWalletInner showAddChain={showAddChain} />
+		</ClientOnly>
+	)
+}
+
+function ConnectWalletInner({
+	showAddChain = true,
+}: {
+	showAddChain?: boolean
+}) {
 	const { address, chain, connector } = useConnection()
 	const connect = useConnect()
 	const connectors = useConnectors()
@@ -30,6 +49,7 @@ export function ConnectWallet({
 	const switchChain = useSwitchChain()
 	const chains = useChains()
 	const isSupported = chains.some((c) => c.id === chain?.id)
+
 	if (!injectedConnectors.length)
 		return (
 			<div className="text-[14px] -tracking-[2%] flex items-center">

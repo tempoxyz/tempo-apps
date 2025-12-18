@@ -222,7 +222,10 @@ function BytecodeSection(props: { address: Address.Address }) {
 			}
 		>
 			<div className="max-h-[280px] overflow-auto px-[18px] py-[12px]">
-				<pre className="text-[12px] leading-[18px] text-primary break-all whitespace-pre-wrap">
+				<pre
+					className="text-[12px] leading-[18px] text-primary break-all whitespace-pre-wrap"
+					suppressHydrationWarning
+				>
 					{bytecode ?? `Loading${ellipsis}`}
 				</pre>
 			</div>
@@ -254,6 +257,10 @@ export function InteractTabContent(props: {
 
 	return (
 		<div className="flex flex-col gap-3.5">
+			{/* Read Contract Panel */}
+			<ContractFeatureCard title="Read contract" collapsible>
+				<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
+			</ContractFeatureCard>
 			{/* Write Contract Panel */}
 			<ContractFeatureCard
 				title="Write contract"
@@ -261,11 +268,6 @@ export function InteractTabContent(props: {
 				actions={<ConnectWallet />}
 			>
 				<ContractWriter address={address} abi={abi} />
-			</ContractFeatureCard>
-
-			{/* Read Contract Panel */}
-			<ContractFeatureCard title="Read contract" collapsible>
-				<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
 			</ContractFeatureCard>
 		</div>
 	)
