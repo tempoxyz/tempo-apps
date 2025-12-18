@@ -102,7 +102,7 @@ export function ContractReader(props: {
  * Uses getSignature for named functions, falls back to selector for unnamed (whatsabi).
  */
 function getFunctionDisplaySignature(fn: AbiFunction): string {
-	if (fn.name) return getSignature(fn)
+	if (fn.name) return getSignature(fn).replace(/,/g, ', ')
 	// Fallback for whatsabi-extracted functions without names
 	const selector = getFunctionSelector(fn)
 	const inputs = fn.inputs?.map((i) => i.type).join(', ') ?? ''

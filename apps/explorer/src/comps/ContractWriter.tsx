@@ -75,7 +75,7 @@ export declare namespace ContractWriter {
 }
 
 function getFunctionDisplaySignature(fn: AbiFunction): string {
-	if (fn.name) return getSignature(fn)
+	if (fn.name) return getSignature(fn).replace(/,/g, ', ')
 	const selector = getFunctionSelector(fn)
 	const inputs = fn.inputs?.map((i) => i.type).join(', ') ?? ''
 	return `${selector}(${inputs})`

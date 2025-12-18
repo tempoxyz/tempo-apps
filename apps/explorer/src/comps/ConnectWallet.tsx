@@ -116,7 +116,8 @@ function ConnectedAddress() {
 
 	return (
 		<div className="text-[12px] text-secondary whitespace-nowrap flex items-center gap-[4px]">
-			Connected as <Address address={address} align="end" />
+			<span className="hidden sm:inline">Connected as</span>
+			<Address address={address} align="end" />
 		</div>
 	)
 }
