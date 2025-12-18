@@ -24,7 +24,8 @@ import {
 } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
-import { ContractReader } from '#comps/ContractReader'
+// import { ContractReader } from '#comps/ContractReader'
+import { ContractTabContent } from '#comps/Contract.tsx'
 import { ContractSources } from '#comps/ContractSource.tsx'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
@@ -918,14 +919,14 @@ function SectionsWrapper(props: {
 												<ContractSources {...resolvedContractSource} />
 											)}
 											{contractInfo && (
-												<ContractReader
+												<ContractTabContent
 													address={address}
 													abi={contractInfo.abi}
 													docsUrl={contractInfo.docsUrl}
 												/>
 											)}
 											{!contractInfo && resolvedContractSource && (
-												<ContractReader
+												<ContractTabContent
 													address={address}
 													abi={resolvedContractSource.abi}
 												/>

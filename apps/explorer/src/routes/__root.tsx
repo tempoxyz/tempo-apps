@@ -1,7 +1,5 @@
 import * as Sentry from '@sentry/tanstackstart-react'
-import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { QueryClient } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import {
 	createRootRouteWithContext,
@@ -9,7 +7,6 @@ import {
 	Scripts,
 	useRouterState,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
 import { WagmiProvider } from 'wagmi'
 import { SentryWrappedErrorBoundary } from '#comps/ErrorBoundary'
@@ -164,7 +161,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						persistOptions={{ persister }}
 					>
 						{children}
-						{import.meta.env.DEV && (
+						{/* {import.meta.env.DEV && (
 							<TanStackDevtools
 								config={{
 									position: 'bottom-right',
@@ -180,7 +177,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 									},
 								]}
 							/>
-						)}
+						)} */}
 					</PersistQueryClientProvider>
 				</WagmiProvider>
 				<Scripts />

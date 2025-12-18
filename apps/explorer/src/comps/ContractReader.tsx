@@ -13,7 +13,6 @@ import { cx } from '#cva.config'
 import { ellipsis } from '#lib/chars'
 import {
 	formatOutputValue,
-	getContractAbi,
 	getFunctionSelector,
 	getInputFunctions,
 	getInputType,
@@ -27,19 +26,74 @@ import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import ChevronsUpDownIcon from '~icons/lucide/chevrons-up-down'
 import CopyIcon from '~icons/lucide/copy'
-import DownloadIcon from '~icons/lucide/download'
-import ExternalLinkIcon from '~icons/lucide/external-link'
 import LinkIcon from '~icons/lucide/link'
-
-// ============================================================================
-// Types
-// ============================================================================
 
 type ReadFunction = AbiFunction & { stateMutability: 'view' | 'pure' }
 
-// ============================================================================
-// Helpers
-// ============================================================================
+export function ContractReader(props: {
+	address: Address.Address
+	abi: Abi
+	docsUrl?: string
+}) {
+	const { address, abi } = props
+
+	const key = React.useId()
+	const location = useLocation()
+
+	// Scroll to function when hash is present
+	React.useEffect(() => {
+		const hash = location.hash
+		if (hash && typeof window !== 'undefined') {
+			// Small delay to ensure DOM is rendered
+			const timer = setTimeout(() => {
+				// Strip the leading '#' since getElementById expects just the ID
+				const element = document.getElementById(hash.slice(1))
+				if (element) {
+					element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+					// Add a brief highlight effect
+					element.classList.add('ring-1', 'ring-accent', 'ring-offset-1')
+					setTimeout(() => {
+						element.classList.remove('ring-1', 'ring-accent', 'ring-offset-1')
+					}, 2_000)
+				}
+			}, 100)
+			return () => clearTimeout(timer)
+		}
+	}, [location.hash])
+
+	const noInputFunctions = getNoInputFunctions(abi)
+	const inputFunctions = getInputFunctions(abi)
+
+	return (
+		<div className="flex flex-col gap-[12px]">
+			{/* Functions without inputs - show as static values */}
+			{noInputFunctions.map((fn) => (
+				<StaticReadFunction
+					key={`${fn.name}-${fn.inputs?.length ?? 0}-${address}`}
+					address={address}
+					abi={abi}
+					fn={fn}
+				/>
+			))}
+
+			{/* Functions with inputs - show as expandable forms */}
+			{inputFunctions.map((fn) => (
+				<DynamicReadFunction
+					key={`${fn.name}-${key}-${fn.inputs?.length}`}
+					address={address}
+					abi={abi}
+					fn={fn}
+				/>
+			))}
+
+			{noInputFunctions.length === 0 && inputFunctions.length === 0 && (
+				<p className="text-[13px] text-tertiary">
+					No read functions available.
+				</p>
+			)}
+		</div>
+	)
+}
 
 /**
  * Get a display-friendly function signature.
@@ -107,179 +161,6 @@ function Expandable(props: {
 		</div>
 	)
 }
-
-// ============================================================================
-// Main Component
-// ============================================================================
-
-export function ContractReader(props: {
-	address: Address.Address
-	abi?: Abi
-	docsUrl?: string
-}) {
-	const { address, docsUrl } = props
-	const { copy: copyAbi, notifying: copiedAbi } = useCopy({ timeout: 2000 })
-	const location = useLocation()
-
-	const abi = props.abi ?? getContractAbi(address)
-
-	const key = React.useId()
-
-	// Scroll to function when hash is present
-	React.useEffect(() => {
-		const hash = location.hash
-		if (hash && typeof window !== 'undefined') {
-			// Small delay to ensure DOM is rendered
-			const timer = setTimeout(() => {
-				// Strip the leading '#' since getElementById expects just the ID
-				const element = document.getElementById(hash.slice(1))
-				if (element) {
-					element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-					// Add a brief highlight effect
-					element.classList.add('ring-1', 'ring-accent', 'ring-offset-1')
-					setTimeout(() => {
-						element.classList.remove('ring-1', 'ring-accent', 'ring-offset-1')
-					}, 2_000)
-				}
-			}, 100)
-			return () => clearTimeout(timer)
-		}
-	}, [location.hash])
-
-	const handleCopyAbi = React.useCallback(() => {
-		if (!abi) return
-		void copyAbi(JSON.stringify(abi, null, 2))
-	}, [abi, copyAbi])
-
-	const handleDownloadAbi = React.useCallback(() => {
-		if (!abi || typeof window === 'undefined') return
-		const json = JSON.stringify(abi, null, 2)
-		const blob = new Blob([json], { type: 'application/json' })
-		const url = URL.createObjectURL(blob)
-		const anchor = document.createElement('a')
-		anchor.href = url
-		anchor.download = `${address}-abi.json`
-		document.body.appendChild(anchor)
-		anchor.click()
-		document.body.removeChild(anchor)
-		URL.revokeObjectURL(url)
-	}, [abi, address])
-
-	if (!abi) {
-		return (
-			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
-				<p className="text-sm font-medium text-tertiary">
-					No ABI available for this contract.
-				</p>
-			</div>
-		)
-	}
-
-	const noInputFunctions = getNoInputFunctions(abi)
-	const inputFunctions = getInputFunctions(abi)
-
-	return (
-		<div className="flex flex-col gap-3.5">
-			{/* ABI Viewer */}
-			<ContractFeatureCard
-				title="Contract ABI"
-				actions={
-					<div className="flex gap-[8px]">
-						{docsUrl && (
-							<a
-								href={docsUrl}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors inline-flex items-center gap-[4px]"
-							>
-								Docs
-								<ExternalLinkIcon className="w-[12px] h-[12px]" />
-							</a>
-						)}
-						<button
-							type="button"
-							onClick={handleDownloadAbi}
-							className="text-[12px] rounded-[6px] border border-card-border px-[10px] py-[6px] hover:bg-base-alt transition-colors inline-flex items-center gap-[4px]"
-						>
-							<DownloadIcon className="w-[12px] h-[12px]" />
-							Download
-						</button>
-					</div>
-				}
-			>
-				<AbiViewer abi={abi} onCopy={handleCopyAbi} copied={copiedAbi} />
-			</ContractFeatureCard>
-
-			<div aria-hidden="true" className="border-b border-card-border" />
-
-			{/* Read Contract Panel */}
-			<ContractFeatureCard title="Read contract">
-				<div className="flex flex-col gap-[12px]">
-					{/* Functions without inputs - show as static values */}
-					{noInputFunctions.map((fn) => (
-						<StaticReadFunction
-							key={`${fn.name}-${fn.inputs?.length ?? 0}-${address}`}
-							address={address}
-							abi={abi}
-							fn={fn}
-						/>
-					))}
-
-					{/* Functions with inputs - show as expandable forms */}
-					{inputFunctions.map((fn) => (
-						<DynamicReadFunction
-							key={`${fn.name}-${key}-${fn.inputs?.length}`}
-							address={address}
-							abi={abi}
-							fn={fn}
-						/>
-					))}
-
-					{noInputFunctions.length === 0 && inputFunctions.length === 0 && (
-						<p className="text-[13px] text-tertiary">
-							No read functions available.
-						</p>
-					)}
-				</div>
-			</ContractFeatureCard>
-		</div>
-	)
-}
-
-// ============================================================================
-// ABI Viewer
-// ============================================================================
-
-function AbiViewer(props: { abi: Abi; onCopy: () => void; copied: boolean }) {
-	const { abi, onCopy, copied } = props
-
-	return (
-		<div className="relative">
-			<div className="absolute right-[8px] top-[8px] flex items-center gap-[4px]">
-				{copied && (
-					<span className="text-[11px] uppercase tracking-wide text-tertiary leading-none">
-						copied
-					</span>
-				)}
-				<button
-					type="button"
-					onClick={onCopy}
-					title={copied ? 'Copied' : 'Copy JSON'}
-					className="rounded-[6px] bg-card p-[6px] text-tertiary press-down hover:text-primary transition-colors"
-				>
-					<CopyIcon className="h-[14px] w-[14px]" />
-				</button>
-			</div>
-			<pre className="max-h-[280px] overflow-auto rounded-[8px] text-[12px] leading-[18px] text-primary/90 font-mono outline-focus focus-visible:outline-2">
-				{JSON.stringify(abi, null, 2)}
-			</pre>
-		</div>
-	)
-}
-
-// ============================================================================
-// Static Read Function (no inputs)
-// ============================================================================
 
 function StaticReadFunction(props: {
 	address: Address.Address
@@ -383,8 +264,7 @@ function StaticReadFunction(props: {
 	const queryError = hasOutputs ? typedError : rawError
 	const error = queryError ? queryError.message : null
 
-	const isResultAddress =
-		typeof result === 'string' && Address.validate(result as string)
+	const isResultAddress = typeof result === 'string' && Address.validate(result)
 	const outputType =
 		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'string')
 
@@ -488,10 +368,6 @@ function StaticReadFunction(props: {
 	)
 }
 
-// ============================================================================
-// Dynamic Read Function (with inputs)
-// ============================================================================
-
 function DynamicReadFunction(props: {
 	address: Address.Address
 	abi: Abi
@@ -509,16 +385,18 @@ function DynamicReadFunction(props: {
 		setInputs((prev) => ({ ...prev, [name]: value }))
 	}
 
-	const allInputsFilled = (fn.inputs ?? []).every((input) => {
-		const value = inputs[input.name ?? '']
+	const allInputsFilled = (fn.inputs ?? []).every((input, index) => {
+		const key = input.name ?? `arg${index}`
+		const value = inputs[key]
 		return value !== undefined && value.trim() !== ''
 	})
 
 	const parsedArgs = React.useMemo(() => {
 		if (!allInputsFilled) return { args: [] as Array<unknown>, error: null }
 		try {
-			const args = (fn.inputs ?? []).map((input) => {
-				const value = inputs[input.name ?? ''] ?? ''
+			const args = (fn.inputs ?? []).map((input, index) => {
+				const key = input.name ?? `arg${index}`
+				const value = inputs[key] ?? ''
 				return parseInputValue(value, input.type)
 			})
 			return { args, error: null }
@@ -530,24 +408,112 @@ function DynamicReadFunction(props: {
 		}
 	}, [fn.inputs, inputs, allInputsFilled])
 
+	const hasOutputs = Array.isArray(fn.outputs) && fn.outputs.length > 0
+
 	const {
-		data: result,
-		error: queryError,
-		isLoading,
+		data: typedResult,
+		error: typedError,
+		isLoading: typedLoading,
 	} = useReadContract({
 		address,
 		abi,
 		functionName: fnId,
 		args: parsedArgs.args,
 		query: {
-			enabled: allInputsFilled && !parsedArgs.error,
+			enabled: allInputsFilled && !parsedArgs.error && hasOutputs,
 		},
 	})
+
+	// Raw call fallback for functions without outputs
+	const callData = React.useMemo(() => {
+		if (hasOutputs || !allInputsFilled || parsedArgs.error) return undefined
+		try {
+			return encodeFunctionData({
+				abi,
+				functionName: fn.name,
+				args: parsedArgs.args,
+			})
+		} catch {
+			return undefined
+		}
+	}, [abi, fn.name, hasOutputs, allInputsFilled, parsedArgs])
+
+	const {
+		data: rawResult,
+		error: rawError,
+		isLoading: rawLoading,
+	} = useCall({
+		to: address,
+		data: callData,
+		query: {
+			enabled:
+				!hasOutputs &&
+				allInputsFilled &&
+				!parsedArgs.error &&
+				Boolean(callData),
+		},
+	})
+
+	const decodedRawResult = React.useMemo(() => {
+		if (hasOutputs || !rawResult?.data) return undefined
+		const data = rawResult.data
+
+		// Check if it looks like a padded address
+		const looksLikeAddress =
+			data.length === 66 &&
+			data.slice(2, 26) === '000000000000000000000000' &&
+			data.slice(26) !== '0000000000000000000000000000000000000000'
+
+		if (looksLikeAddress) {
+			try {
+				const addressAbi = [{ ...fn, outputs: [{ type: 'address', name: '' }] }]
+				return decodeFunctionResult({
+					abi: addressAbi,
+					functionName: fn.name,
+					data,
+				})
+			} catch {
+				// Fall through
+			}
+		}
+
+		// Try decoding as uint256 (common for balanceOf, etc.)
+		try {
+			const uint256Abi = [{ ...fn, outputs: [{ type: 'uint256', name: '' }] }]
+			return decodeFunctionResult({
+				abi: uint256Abi,
+				functionName: fn.name,
+				data,
+			})
+		} catch {
+			// Fall through
+		}
+
+		// Try decoding as string
+		try {
+			const stringAbi = [{ ...fn, outputs: [{ type: 'string', name: '' }] }]
+			return decodeFunctionResult({
+				abi: stringAbi,
+				functionName: fn.name,
+				data,
+			})
+		} catch {
+			// Return raw hex if all decode attempts fail
+			return data
+		}
+	}, [hasOutputs, rawResult, fn])
+
+	const isLoading = hasOutputs ? typedLoading : rawLoading
+	const result = hasOutputs ? typedResult : decodedRawResult
+	const queryError = hasOutputs ? typedError : rawError
 
 	const error =
 		parsedArgs.error ?? (queryError ? queryError.message : null) ?? null
 
-	const outputType = fn.outputs?.[0]?.type ?? 'unknown'
+	const isResultAddress =
+		typeof result === 'string' && Address.validate(result as string)
+	const outputType =
+		fn.outputs?.[0]?.type ?? (isResultAddress ? 'address' : 'uint256')
 
 	const handleCopyMethod = (e: React.MouseEvent) => {
 		e.stopPropagation()
@@ -628,16 +594,17 @@ function DynamicReadFunction(props: {
 
 			{isExpanded && (
 				<div className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]">
-					{fn.inputs.map((input, index) => (
-						<FunctionInput
-							key={input.name ?? index}
-							input={input}
-							value={inputs[input.name ?? ''] ?? ''}
-							onChange={(value) =>
-								handleInputChange(input.name ?? `arg${index}`, value)
-							}
-						/>
-					))}
+					{fn.inputs.map((input, index) => {
+						const key = input.name ?? `arg${index}`
+						return (
+							<FunctionInput
+								key={key}
+								input={input}
+								value={inputs[key] ?? ''}
+								onChange={(value) => handleInputChange(key, value)}
+							/>
+						)
+					})}
 
 					{isLoading && (
 						<p className="text-[12px] text-secondary">{ellipsis}</p>
@@ -664,30 +631,33 @@ function DynamicReadFunction(props: {
 	)
 }
 
-// ============================================================================
-// Function Input Component
-// ============================================================================
-
 function FunctionInput(props: {
 	input: { name?: string; type: string }
 	value: string
 	onChange: (value: string) => void
 }) {
 	const { input, value, onChange } = props
+
 	const inputId = React.useId()
+	const placeholder = getPlaceholder(input)
 	const inputType = getInputType(input.type)
-	const placeholder = getPlaceholder(input as { name: string; type: string })
 
 	// Special handling for bool type
 	if (inputType === 'checkbox') {
 		return (
 			<div className="flex items-center gap-[8px]">
 				<input
+					autoCorrect="off"
+					autoComplete="off"
+					spellCheck={false}
+					autoCapitalize="off"
 					id={inputId}
 					type="checkbox"
 					checked={value === 'true'}
-					onChange={(e) => onChange(e.target.checked ? 'true' : 'false')}
 					className="w-[16px] h-[16px] rounded border-base-border"
+					onChange={(event) =>
+						onChange(event.target.checked ? 'true' : 'false')
+					}
 				/>
 				<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
 					{input.name || 'value'}{' '}
@@ -706,11 +676,10 @@ function FunctionInput(props: {
 					<span className="text-secondary">({input.type})</span>
 				</label>
 				<textarea
-					id={inputId}
-					value={value}
-					onChange={(e) => onChange(e.target.value)}
-					placeholder={placeholder}
 					rows={3}
+					id={inputId}
+					placeholder={placeholder}
+					onChange={(event) => onChange(event.target.value)}
 					className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent resize-none font-mono"
 				/>
 			</div>
@@ -725,85 +694,16 @@ function FunctionInput(props: {
 				<span className="text-secondary">({input.type})</span>
 			</label>
 			<input
-				id={inputId}
+				autoCorrect="off"
+				autoComplete="off"
+				spellCheck={false}
+				autoCapitalize="off"
 				type="text"
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
+				id={inputId}
 				placeholder={placeholder}
+				onChange={(event) => onChange(event.target.value)}
 				className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent font-mono"
 			/>
 		</div>
 	)
 }
-
-// ============================================================================
-// Shared Components
-// ============================================================================
-
-function ContractFeatureCard(props: {
-	title: string
-	rightSideTitle?: string
-	description?: React.ReactNode
-	actions?: React.ReactNode
-	children: React.ReactNode
-	rightSideDescription?: string
-	textGrid?: Array<{ left?: React.ReactNode; right?: React.ReactNode }>
-}) {
-	const {
-		title,
-		description,
-		actions,
-		children,
-		rightSideDescription,
-		rightSideTitle,
-		textGrid,
-	} = props
-	return (
-		<section className="rounded-[10px] bg-card-header overflow-hidden">
-			<div className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between w-full">
-				<div className="w-full">
-					<div className="flex items-center w-full gap-2 justify-between">
-						<a
-							id={title.toLowerCase().replaceAll(' ', '-')}
-							href={`#${title.toLowerCase().replaceAll(' ', '-')}`}
-							className="text-[13px] text-primary font-medium"
-						>
-							{title}
-						</a>
-
-						<p className="text-[12px] text-primary font-medium">
-							{rightSideTitle}
-						</p>
-					</div>
-					<div className="flex items-center w-full gap-2 justify-between">
-						{description && (
-							<p className="text-[12px] text-secondary">{description}</p>
-						)}
-						{rightSideDescription && (
-							<p className="text-[12px] text-secondary">
-								{rightSideDescription}
-							</p>
-						)}
-					</div>
-					{textGrid && (
-						<div className="flex flex-row justify-between mt-1">
-							{textGrid.map((item, index) => (
-								// biome-ignore lint/suspicious/noArrayIndexKey: textGrid is static and doesn't reorder
-								<div key={index} className="text-xs gap-2 flex">
-									{item.left && item.left}
-									{item.right && item.right}
-								</div>
-							))}
-						</div>
-					)}
-				</div>
-				{actions}
-			</div>
-			<div className="border-t border-card-border bg-card px-2.5">
-				{children}
-			</div>
-		</section>
-	)
-}
-
-export { ContractFeatureCard }

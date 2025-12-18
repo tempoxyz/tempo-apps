@@ -18,7 +18,7 @@ import { readContract } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
-import { ContractReader } from '#comps/ContractReader'
+import { ContractTabContent } from '#comps/Contract.tsx'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
@@ -681,7 +681,7 @@ function ContractSection(props: { address: Address.Address }) {
 	const contractInfo = getContractInfo(address)
 
 	return (
-		<ContractReader
+		<ContractTabContent
 			address={address}
 			abi={contractInfo?.abi}
 			docsUrl={contractInfo?.docsUrl}

@@ -1,7 +1,388 @@
-/**
- * TODO
- */
+import { useQueryClient } from '@tanstack/react-query'
+import { useLocation } from '@tanstack/react-router'
+import type { Address } from 'ox'
+import { getSignature } from 'ox/AbiItem'
+import * as React from 'react'
+import type { Abi, AbiFunction } from 'viem'
+import { useChainId, useConnect, useConnection, useWriteContract } from 'wagmi'
+import { cx } from '#cva.config'
+import {
+	getFunctionSelector,
+	getInputType,
+	getPlaceholder,
+	getWriteFunctions,
+	isArrayType,
+	parseInputValue,
+	type WriteFunction,
+} from '#lib/domain/contracts'
+import { useCopy, useCopyPermalink } from '#lib/hooks'
+import { config } from '#wagmi.config.ts'
+import CheckIcon from '~icons/lucide/check'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
+import CopyIcon from '~icons/lucide/copy'
+import LinkIcon from '~icons/lucide/link'
 
-export function ContractWriter() {
-	return null
+export function ContractWriter(props: ContractWriter.Props) {
+	const { address, abi } = props
+
+	const key = React.useId()
+	const location = useLocation()
+
+	React.useEffect(() => {
+		const hash = location.hash
+		if (hash && typeof window !== 'undefined') {
+			const timer = setTimeout(() => {
+				const element = document.getElementById(hash.slice(1))
+				if (element) {
+					element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+					element.classList.add('ring-1', 'ring-accent', 'ring-offset-1')
+					setTimeout(() => {
+						element.classList.remove('ring-1', 'ring-accent', 'ring-offset-1')
+					}, 2_000)
+				}
+			}, 100)
+			return () => clearTimeout(timer)
+		}
+	}, [location.hash])
+
+	const writeFunctions = getWriteFunctions(abi)
+
+	return (
+		<div className="flex flex-col gap-[12px] py-2">
+			{/* <div className="flex items-center gap-[8px] px-[12px] py-[10px] rounded-[8px] bg-amber-500/10 border border-amber-500/20">
+				<WalletIcon className="w-[16px] h-[16px] text-amber-500" />
+				<p className="text-[12px] text-amber-500">
+					Wallet connection required to execute write functions
+				</p>
+			</div> */}
+
+			{writeFunctions.map((fn) => (
+				<WriteContractFunction
+					key={`${fn.name}-${key}-${fn.inputs?.length}`}
+					address={address}
+					abi={abi}
+					fn={fn}
+				/>
+			))}
+
+			{writeFunctions.length === 0 && (
+				<p className="text-[13px] text-tertiary">
+					No write functions available.
+				</p>
+			)}
+		</div>
+	)
+}
+
+export declare namespace ContractWriter {
+	interface Props {
+		address: Address.Address
+		abi: Abi
+	}
+}
+
+// export function ConnectWallet() {
+// 	const chainId = useChainId()
+// 	const connect = useConnect({ config })
+
+// 	return (
+// 		<button
+// 			type="button"
+// 			onClick={() => connect.mutate({ connector: injected(), chainId })}
+// 			className={cx(
+// 				'w-full max-w-[100px] flex items-center justify-center gap-[8px] p-[8px] rounded-sm bg-accent/50 text-white text-sm font-medium',
+// 			)}
+// 		>
+// 			<WalletIcon className="size-[14px]" />
+// 			Connect
+// 		</button>
+// 	)
+// }
+
+function getFunctionDisplaySignature(fn: AbiFunction): string {
+	if (fn.name) return getSignature(fn)
+	const selector = getFunctionSelector(fn)
+	const inputs = fn.inputs?.map((i) => i.type).join(', ') ?? ''
+	return `${selector}(${inputs})`
+}
+
+function getMethodWithSelector(fn: AbiFunction): string {
+	const selector = getFunctionSelector(fn)
+	const name = fn.name || selector
+	return `${name} (${selector})`
+}
+
+function WriteContractFunction(props: {
+	address: Address.Address
+	abi: Abi
+	fn: WriteFunction
+}) {
+	const { fn } = props
+	const [isExpanded, setIsExpanded] = React.useState(false)
+	const [inputs, setInputs] = React.useState<Record<string, string>>({})
+	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
+
+	const selector = getFunctionSelector(fn)
+	const fnId = `write-${fn.name || selector}`
+
+	const handleInputChange = (name: string, value: string) => {
+		setInputs((prev) => ({ ...prev, [name]: value }))
+	}
+
+	const allInputsFilled = (fn.inputs ?? []).every((input) => {
+		const value = inputs[input.name ?? '']
+		return value !== undefined && value.trim() !== ''
+	})
+
+	const parsedArgs = React.useMemo(() => {
+		if (!allInputsFilled) return { args: [] as Array<unknown>, error: null }
+		try {
+			const args = (fn.inputs ?? []).map((input) => {
+				const value = inputs[input.name ?? ''] ?? ''
+				return parseInputValue(value, input.type)
+			})
+			return { args, error: null }
+		} catch (err) {
+			return {
+				args: [] as Array<unknown>,
+				error: err instanceof Error ? err.message : 'Failed to parse inputs',
+			}
+		}
+	}, [fn.inputs, inputs, allInputsFilled])
+
+	const handleCopyMethod = (e: React.MouseEvent) => {
+		e.stopPropagation()
+		void copy(getMethodWithSelector(fn))
+	}
+
+	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
+		fragment: fnId,
+	})
+
+	const isPayable = fn.stateMutability === 'payable'
+
+	const _chainId = useChainId()
+	const _connection = useConnection()
+	const _connect = useConnect({ config })
+
+	const queryClient = useQueryClient()
+
+	const _writeContract = useWriteContract({
+		mutation: {
+			onSuccess: () =>
+				queryClient.invalidateQueries({
+					queryKey: ['readContract', { address: props.address }],
+				}),
+		},
+	})
+
+	return (
+		<div
+			id={fnId}
+			className="rounded-[8px] border border-dashed border-card-border overflow-hidden transition-all duration-300"
+		>
+			<div className="w-full flex items-center justify-between px-[12px] py-[10px] hover:bg-card-header/50 transition-colors">
+				<button
+					type="button"
+					onClick={() => setIsExpanded(!isExpanded)}
+					className="flex-1 text-left flex items-center gap-[8px]"
+				>
+					<span className="text-[12px] text-secondary font-mono">
+						{getFunctionDisplaySignature(fn)}
+					</span>
+					{isPayable && (
+						<span className="text-[10px] px-[6px] py-[2px] rounded-[4px] bg-amber-500/20 text-amber-500 font-medium">
+							payable
+						</span>
+					)}
+				</button>
+				<div className="flex items-center gap-[8px]">
+					<button
+						type="button"
+						onClick={handleCopyMethod}
+						title={copyNotifying ? 'Copied!' : 'Copy method name'}
+						className={cx(
+							'transition-colors press-down',
+							copyNotifying
+								? 'text-positive'
+								: 'text-tertiary hover:text-primary',
+						)}
+					>
+						{copyNotifying ? (
+							<CheckIcon className="w-[12px] h-[12px]" />
+						) : (
+							<CopyIcon className="w-[12px] h-[12px]" />
+						)}
+					</button>
+					<button
+						type="button"
+						onClick={(event) => {
+							event.stopPropagation()
+							void handleCopyPermalink()
+						}}
+						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
+						className={cx(
+							'transition-colors press-down',
+							linkNotifying
+								? 'text-positive'
+								: 'text-tertiary hover:text-primary',
+						)}
+					>
+						{linkNotifying ? (
+							<CheckIcon className="w-[12px] h-[12px]" />
+						) : (
+							<LinkIcon className="w-[12px] h-[12px]" />
+						)}
+					</button>
+					<button
+						type="button"
+						onClick={() => setIsExpanded(!isExpanded)}
+						className="text-secondary"
+					>
+						<ChevronDownIcon
+							className={cx(
+								'w-[14px] h-[14px] transition-transform',
+								isExpanded && 'rotate-180',
+							)}
+						/>
+					</button>
+				</div>
+			</div>
+
+			{isExpanded && (
+				<div className="border-t border-card-border px-[12px] py-[10px] flex flex-col gap-[10px]">
+					{isPayable && (
+						<FunctionInput
+							label="Value (wei)"
+							value={inputs.value}
+							input={{ name: 'value', type: 'uint256' }}
+							onChange={(value) => handleInputChange('value', value)}
+						/>
+					)}
+
+					{fn.inputs.map((input, index) => (
+						<FunctionInput
+							key={input.name ?? index}
+							input={input}
+							value={inputs[input.name ?? ''] ?? ''}
+							onChange={(value) =>
+								handleInputChange(input.name ?? `arg${index}`, value)
+							}
+						/>
+					))}
+
+					{parsedArgs.error && (
+						<div className="p-2.5 rounded-md bg-red-500/10 border border-red-500/20">
+							<p className="text-[12px] text-red-400">{parsedArgs.error}</p>
+						</div>
+					)}
+
+					{/* {connection.status === 'disconnected' ? (
+						<button
+							type="button"
+							onClick={() => connect.mutate({ connector: injected(), chainId })}
+							className={cx(
+								'w-full flex items-center justify-center gap-[8px] px-[12px] py-[8px] rounded-[6px] bg-accent text-white text-sm font-medium',
+							)}
+						>
+							<WalletIcon className="size-[14px]" />
+							Connect wallet to write
+						</button>
+					) : (
+						<button
+							type="button"
+							disabled={writeContract.isPending}
+							className={cx(
+								'cursor-pointer hover:bg-card-header/50 size-full',
+								{
+									'opacity-50': writeContract.isPending,
+									'cursor-not-allowed': writeContract.isPending,
+								},
+							)}
+							onClick={() =>
+								writeContract.mutate({
+									address: props.address,
+									abi: props.abi,
+									functionName: fn.name,
+									args: parsedArgs.args,
+									value: isPayable
+										? inputs.value
+											? BigInt(inputs.value)
+											: undefined
+										: undefined,
+								})
+							}
+						>
+							Write
+						</button>
+					)} */}
+				</div>
+			)}
+		</div>
+	)
+}
+
+function FunctionInput(props: {
+	input: { name?: string; type: string }
+	value: string
+	onChange: (value: string) => void
+	label?: string
+}) {
+	const { input, value, onChange, label } = props
+	const inputId = React.useId()
+	const inputType = getInputType(input.type)
+	const placeholder = getPlaceholder(input as { name: string; type: string })
+
+	const displayLabel = label ?? input.name ?? 'value'
+
+	if (inputType === 'checkbox') {
+		return (
+			<div className="flex items-center gap-[8px]">
+				<input
+					id={inputId}
+					type="checkbox"
+					checked={value === 'true'}
+					onChange={(e) => onChange(e.target.checked ? 'true' : 'false')}
+					className="w-[16px] h-[16px] rounded border-base-border"
+				/>
+				<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
+					{displayLabel} <span className="text-secondary">({input.type})</span>
+				</label>
+			</div>
+		)
+	}
+
+	if (inputType === 'textarea' || isArrayType(input.type)) {
+		return (
+			<div className="flex flex-col gap-[4px]">
+				<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
+					{displayLabel} <span className="text-secondary">({input.type})</span>
+				</label>
+				<textarea
+					id={inputId}
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					placeholder={placeholder}
+					rows={3}
+					className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent resize-none font-mono"
+				/>
+			</div>
+		)
+	}
+
+	return (
+		<div className="flex flex-col gap-[4px]">
+			<label htmlFor={inputId} className="text-[12px] text-primary font-mono">
+				{displayLabel} <span className="text-secondary">({input.type})</span>
+			</label>
+			<input
+				id={inputId}
+				type="text"
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				placeholder={placeholder}
+				className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent font-mono"
+			/>
+		</div>
+	)
 }
