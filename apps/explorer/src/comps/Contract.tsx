@@ -134,7 +134,7 @@ export function CollapsibleSection(props: {
 
 	return (
 		<div className="flex flex-col border-b border-dashed border-distinct">
-			<div className="flex items-center h-[40px] shrink-0">
+			<div className="flex items-center h-[36px] shrink-0">
 				<button
 					type="button"
 					onClick={onToggle}
