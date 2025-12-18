@@ -144,9 +144,11 @@ function WriteContractFunction(props: {
 	const writeContract = useWriteContract({
 		mutation: {
 			onSuccess: () =>
-				queryClient.invalidateQueries({
-					queryKey: ['readContract'],
-				}),
+				queryClient
+					.invalidateQueries({ queryKey: ['readContract'] })
+					.then(() =>
+						queryClient.refetchQueries({ queryKey: ['readContract'] }),
+					),
 		},
 	})
 
