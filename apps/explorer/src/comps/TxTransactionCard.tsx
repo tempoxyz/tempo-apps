@@ -14,7 +14,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 	return (
 		<InfoCard
 			title={
-				<div className="flex items-center justify-between px-[18px] pt-[10px] pb-[8px]">
+				<div className="flex items-center justify-between px-[18px] h-[36px]">
 					<h1 className="text-[13px] uppercase text-tertiary select-none">
 						Transaction
 					</h1>

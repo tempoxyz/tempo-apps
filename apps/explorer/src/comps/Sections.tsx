@@ -45,7 +45,7 @@ export function Sections(props: Sections.Props) {
 										type="button"
 										onClick={() => toggleSection(index)}
 										className={cx(
-											'h-[54px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
+											'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
 											isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
 										)}
 									>
@@ -69,7 +69,7 @@ export function Sections(props: Sections.Props) {
 										</div>
 									</button>
 								) : (
-									<div className="h-[54px] flex items-center justify-between px-[18px] rounded-t-[10px]">
+									<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-[10px]">
 										<h1 className="text-[13px] font-medium uppercase text-primary">
 											{section.title}
 										</h1>
@@ -107,7 +107,7 @@ export function Sections(props: Sections.Props) {
 					className,
 				)}
 			>
-				<div className="h-[40px] flex items-center justify-between">
+				<div className="h-[36px] flex items-center justify-between">
 					<div className="flex items-center h-full">
 						{sections.length === 1 ? (
 							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px]">
