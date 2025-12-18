@@ -321,6 +321,7 @@ export namespace Pagination {
 			countLoading?: boolean
 			/** Disable "Last page" button when we can't reliably navigate there */
 			disableLastPage?: boolean
+			hasMore?: boolean
 		}
 	}
 

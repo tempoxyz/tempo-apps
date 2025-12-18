@@ -18,6 +18,7 @@ export function DataGrid(props: DataGrid.Props) {
 		loading = false,
 		countLoading = false,
 		disableLastPage = false,
+		hasMore,
 		itemsLabel = 'items',
 		itemsPerPage = 10,
 		pagination = 'default',
@@ -181,10 +182,11 @@ export function DataGrid(props: DataGrid.Props) {
 					<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
 						<Pagination.Simple
 							page={page}
-							pages={pages}
+							pages={displayCount === Infinity ? 0 : pages}
 							fetching={fetching && !loading}
 							countLoading={countLoading}
 							disableLastPage={disableLastPage}
+							hasMore={hasMore}
 						/>
 						{/* Show transaction count - loading state shown while fetching */}
 						<Pagination.Count
@@ -257,5 +259,6 @@ export namespace DataGrid {
 		pagination?: 'default' | 'simple' | React.ReactNode
 		emptyState?: React.ReactNode
 		flexible?: boolean
+		hasMore?: boolean
 	}
 }
