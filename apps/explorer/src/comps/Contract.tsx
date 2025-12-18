@@ -143,7 +143,9 @@ export function CollapsibleSection(props: {
 							!expanded && '-rotate-90',
 						)}
 					/>
-					<span className="text-[13px] text-tertiary whitespace-nowrap">{title}</span>
+					<span className="text-[13px] text-tertiary whitespace-nowrap">
+						{title}
+					</span>
 				</button>
 				{actions && (
 					<div className="flex-1 flex items-stretch justify-end gap-[8px] text-tertiary px-[12px]">
@@ -332,7 +334,9 @@ export function ContractFeatureCard(props: {
 								isCollapsed && '-rotate-90',
 							)}
 						/>
-						<span className="text-[13px] text-tertiary whitespace-nowrap">{title}</span>
+						<span className="text-[13px] text-tertiary whitespace-nowrap">
+							{title}
+						</span>
 					</button>
 					{actions && (
 						<div className="flex items-center gap-[8px] text-tertiary px-[12px]">
