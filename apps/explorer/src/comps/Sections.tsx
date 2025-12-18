@@ -119,22 +119,28 @@ export function Sections(props: Sections.Props) {
 								<button
 									key={section.title}
 									type="button"
+									disabled={section.disabled}
 									onPointerDown={() => {
+										if (section.disabled) return
 										if (activeSection === index) return
 										onSectionChange?.(index)
 									}}
 									className={cx(
 										'h-full flex items-center text-[13px] font-medium',
-										'focus-visible:-outline-offset-2! cursor-pointer',
+										'focus-visible:-outline-offset-2!',
 										index === 0
 											? 'pl-[18px] pr-[12px] rounded-tl-[10px]!'
 											: 'px-[12px]',
-										activeSection === index ? 'text-primary' : 'text-tertiary',
+										section.disabled
+											? 'text-quaternary cursor-not-allowed'
+											: activeSection === index
+												? 'text-primary cursor-pointer'
+												: 'text-tertiary cursor-pointer',
 									)}
 								>
 									<div className="relative h-full flex items-center">
 										{section.title}
-										{activeSection === index && (
+										{activeSection === index && !section.disabled && (
 											<div className="absolute h-[2px] bg-accent -bottom-[1.5px] left-0 right-0 -mx-[2px]" />
 										)}
 									</div>
@@ -186,6 +192,7 @@ export namespace Sections {
 		itemsLabel?: string
 		contextual?: React.ReactNode
 		autoCollapse?: boolean
+		disabled?: boolean
 	}
 
 	export const defaultMode = 'tabs'

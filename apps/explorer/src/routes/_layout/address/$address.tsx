@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import {
+	ClientOnly,
 	createFileRoute,
 	Link,
 	notFound,
@@ -554,9 +555,8 @@ function RouteComponent() {
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
-			const tabs: TabValue[] = hasContract
-				? ['history', 'assets', 'contract', 'interact']
-				: ['history', 'assets']
+			const tabs: TabValue[] = ['history', 'assets', 'contract', 'interact']
+
 			const newTab = tabs[newIndex] ?? 'history'
 			navigate({
 				to: '.',
@@ -564,7 +564,7 @@ function RouteComponent() {
 				resetScroll: false,
 			})
 		},
-		[navigate, page, limit, hasContract],
+		[navigate, page, limit],
 	)
 
 	const activeSection =
@@ -921,37 +921,35 @@ function SectionsWrapper(props: {
 							/>
 						),
 					},
-					// Contract tab - ABI + Source Code
-					...(contractInfo || resolvedContractSource
-						? [
-								{
-									title: 'Contract',
-									totalItems: 0,
-									itemsLabel: 'items',
-									content: (
-										<ContractTabContent
-											address={address}
-											abi={resolvedContractSource?.abi ?? contractInfo?.abi}
-											docsUrl={contractInfo?.docsUrl}
-											source={resolvedContractSource}
-										/>
-									),
-								},
-								// Interact tab - Read + Write contract
-								{
-									title: 'Interact',
-									totalItems: 0,
-									itemsLabel: 'functions',
-									content: (
-										<InteractTabContent
-											address={address}
-											abi={resolvedContractSource?.abi ?? contractInfo?.abi}
-											docsUrl={contractInfo?.docsUrl}
-										/>
-									),
-								},
-							]
-						: []),
+					// Contract tab - ABI + Source Code (always shown, disabled when no data)
+					{
+						title: 'Contract',
+						totalItems: 0,
+						itemsLabel: 'items',
+						disabled: !contractInfo && !resolvedContractSource,
+						content: (
+							<ContractTabContent
+								address={address}
+								abi={resolvedContractSource?.abi ?? contractInfo?.abi}
+								docsUrl={contractInfo?.docsUrl}
+								source={resolvedContractSource}
+							/>
+						),
+					},
+					// Interact tab - Read + Write contract (always shown, disabled when no data)
+					{
+						title: 'Interact',
+						totalItems: 0,
+						itemsLabel: 'functions',
+						disabled: !contractInfo && !resolvedContractSource,
+						content: (
+							<InteractTabContent
+								address={address}
+								abi={resolvedContractSource?.abi ?? contractInfo?.abi}
+								docsUrl={contractInfo?.docsUrl}
+							/>
+						),
+					},
 				]}
 				activeSection={activeSection}
 				onSectionChange={onSectionChange}
@@ -960,10 +958,23 @@ function SectionsWrapper(props: {
 	)
 }
 
+const placeholder = <span className="text-tertiary">—</span>
+
 function TransactionTimeCell(props: { hash: Hex.Hex; format: TimeFormat }) {
+	return (
+		<ClientOnly fallback={placeholder}>
+			<TransactionTimeCellInner {...props} />
+		</ClientOnly>
+	)
+}
+
+function TransactionTimeCellInner(props: {
+	hash: Hex.Hex
+	format: TimeFormat
+}) {
 	const { hash, format } = props
 	const batchData = useTransactionDataFromBatch(hash)
-	if (!batchData?.block) return <span className="text-tertiary">—</span>
+	if (!batchData?.block) return placeholder
 	return (
 		<TransactionTimestamp
 			timestamp={batchData.block.timestamp}
@@ -977,9 +988,20 @@ function TransactionDescCell(props: {
 	transaction: Transaction
 	accountAddress: Address.Address
 }) {
+	return (
+		<ClientOnly fallback={placeholder}>
+			<TransactionDescCellInner {...props} />
+		</ClientOnly>
+	)
+}
+
+function TransactionDescCellInner(props: {
+	transaction: Transaction
+	accountAddress: Address.Address
+}) {
 	const { transaction, accountAddress } = props
 	const batchData = useTransactionDataFromBatch(transaction.hash)
-	if (!batchData) return <span className="text-tertiary">—</span>
+	if (!batchData) return placeholder
 	if (!batchData.knownEvents.length) {
 		const count = batchData.receipt?.logs.length ?? 0
 		return (
@@ -999,8 +1021,16 @@ function TransactionDescCell(props: {
 }
 
 function TransactionFeeCell(props: { hash: Hex.Hex }) {
+	return (
+		<ClientOnly fallback={placeholder}>
+			<TransactionFeeCellInner {...props} />
+		</ClientOnly>
+	)
+}
+
+function TransactionFeeCellInner(props: { hash: Hex.Hex }) {
 	const batchData = useTransactionDataFromBatch(props.hash)
-	if (!batchData?.receipt) return <span className="text-tertiary">—</span>
+	if (!batchData?.receipt) return placeholder
 	return (
 		<span className="text-tertiary">
 			{PriceFormatter.format(
