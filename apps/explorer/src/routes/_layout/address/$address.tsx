@@ -695,8 +695,7 @@ function SectionsWrapper(props: {
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	// Track hydration to avoid SSR/client mismatch with query data
-	const [isMounted, setIsMounted] = React.useState(false)
-	React.useEffect(() => setIsMounted(true), [])
+	const isMounted = useIsMounted()
 
 	// Fetch contract source client-side if not provided by SSR loader
 	// This ensures source code is available when navigating directly to ?tab=contract
@@ -712,7 +711,11 @@ function SectionsWrapper(props: {
 	// Only auto-refresh on page 1 when history tab is active and live=true
 	const shouldAutoRefresh = page === 1 && isHistoryTabActive && live
 
-	const { data, isPlaceholderData, error } = useQuery({
+	const {
+		data: queryData,
+		isPlaceholderData,
+		error,
+	} = useQuery({
 		...transactionsQueryOptions({
 			address,
 			page,
@@ -724,6 +727,12 @@ function SectionsWrapper(props: {
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
+
+	/**
+	 * use initialData until mounted to avoid hydration mismatch
+	 * (tanstack query may have fresher cached data that differs from SSR)
+	 */
+	const data = isMounted() ? queryData : page === 1 ? initialData : queryData
 	const {
 		transactions,
 		total: approximateTotal,
@@ -754,7 +763,7 @@ function SectionsWrapper(props: {
 	// txs-count counts "from OR to" while pagination API only serves a subset,
 	// so we can't use exactCount for page calculation - most pages would be empty
 	// Only use after mount to avoid SSR/client hydration mismatch
-	const exactCount = isMounted ? totalCountQuery.data?.data : undefined
+	const exactCount = isMounted() ? totalCountQuery.data?.data : undefined
 
 	// For pagination: always use hasMore-based estimate
 	// This ensures we only show pages that have data

@@ -96,3 +96,37 @@ export declare namespace useCopyPermalink {
 		copyLink?: (value: string) => Promise<void>
 	}
 }
+
+export function useDownload(props: useDownload.Props) {
+	const { value, filename, contentType } = props
+
+	const download = React.useCallback(() => {
+		if (!value || typeof window === 'undefined') return
+
+		const blob = new Blob([value], { type: contentType })
+		const url = URL.createObjectURL(blob)
+
+		const anchor = document.createElement('a')
+		anchor.href = url
+		anchor.download = filename
+
+		document.body.appendChild(anchor)
+		anchor.click()
+		document.body.removeChild(anchor)
+		URL.revokeObjectURL(url)
+	}, [value, filename, contentType])
+
+	return { download }
+}
+
+export declare namespace useDownload {
+	type Props = {
+		value: string
+		filename: string
+		contentType:
+			| 'text/csv'
+			| 'text/plain'
+			| 'application/json'
+			| 'application/pdf'
+	}
+}

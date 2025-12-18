@@ -12,7 +12,7 @@ import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { getContractAbi } from '#lib/domain/contracts.ts'
-import { useCopy } from '#lib/hooks.ts'
+import { useCopy, useDownload } from '#lib/hooks.ts'
 import { config } from '#wagmi.config.ts'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
@@ -30,9 +30,9 @@ export function ContractTabContent(props: {
 }) {
 	const { address, docsUrl, source } = props
 
-	const { copy: copyAbi, notifying: copiedAbi } = useCopy({ timeout: 2000 })
-	const [abiExpanded, setAbiExpanded] = React.useState(false)
+	const { copy: copyAbi, notifying: copiedAbi } = useCopy({ timeout: 2_000 })
 
+	const [abiExpanded, setAbiExpanded] = React.useState(false)
 	const abi = props.abi ?? getContractAbi(address)
 
 	const handleCopyAbi = React.useCallback(() => {
@@ -40,19 +40,11 @@ export function ContractTabContent(props: {
 		void copyAbi(JSON.stringify(abi, null, 2))
 	}, [abi, copyAbi])
 
-	const handleDownloadAbi = React.useCallback(() => {
-		if (!abi || typeof window === 'undefined') return
-		const json = JSON.stringify(abi, null, 2)
-		const blob = new Blob([json], { type: 'application/json' })
-		const url = URL.createObjectURL(blob)
-		const anchor = document.createElement('a')
-		anchor.href = url
-		anchor.download = `${address}-abi.json`
-		document.body.appendChild(anchor)
-		anchor.click()
-		document.body.removeChild(anchor)
-		URL.revokeObjectURL(url)
-	}, [abi, address])
+	const { download: downloadAbi } = useDownload({
+		contentType: 'application/json',
+		value: JSON.stringify(abi, null, 2),
+		filename: `${address.toLowerCase()}-abi.json`,
+	})
 
 	if (!abi) {
 		return (
@@ -66,6 +58,9 @@ export function ContractTabContent(props: {
 
 	return (
 		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
+			{/* Source Section */}
+			{source && <SourceSection {...source} />}
+
 			{/* ABI Section */}
 			<CollapsibleSection
 				first
@@ -87,7 +82,7 @@ export function ContractTabContent(props: {
 						</button>
 						<button
 							type="button"
-							onClick={handleDownloadAbi}
+							onClick={downloadAbi}
 							className="press-down cursor-pointer hover:text-secondary p-[4px]"
 							title="Download ABI"
 						>
@@ -112,9 +107,6 @@ export function ContractTabContent(props: {
 
 			{/* Bytecode Section */}
 			<BytecodeSection address={address} />
-
-			{/* Source Section */}
-			{source && <SourceSection {...source} />}
 		</div>
 	)
 }
@@ -243,8 +235,10 @@ export function InteractTabContent(props: {
 }) {
 	const { address, docsUrl } = props
 
-	const abi = props.abi ?? getContractAbi(address)
+	const [readExpanded, setReadExpanded] = React.useState(true)
+	const [writeExpanded, setWriteExpanded] = React.useState(true)
 
+	const abi = props.abi ?? getContractAbi(address)
 	if (!abi) {
 		return (
 			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
@@ -254,9 +248,6 @@ export function InteractTabContent(props: {
 			</div>
 		)
 	}
-
-	const [writeExpanded, setWriteExpanded] = React.useState(true)
-	const [readExpanded, setReadExpanded] = React.useState(true)
 
 	return (
 		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
