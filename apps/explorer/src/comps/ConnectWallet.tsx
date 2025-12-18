@@ -148,7 +148,6 @@ export function Button(
 		className,
 		disabled,
 		render,
-		size,
 		static: static_,
 		variant,
 		...rest
@@ -161,7 +160,6 @@ export function Button(
 			className={buttonClassName({
 				className,
 				disabled,
-				size,
 				static: static_,
 				variant,
 			})}
