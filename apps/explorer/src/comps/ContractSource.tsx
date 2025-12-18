@@ -13,7 +13,7 @@ import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 import LinkIcon from '~icons/lucide/link'
-import RustIcon from '~icons/vscode-icons/file-type-rust'
+// import RustIcon from '~icons/vscode-icons/file-type-rust'
 import SolidityIcon from '~icons/vscode-icons/file-type-solidity'
 import VyperIcon from '~icons/vscode-icons/file-type-vyper'
 
