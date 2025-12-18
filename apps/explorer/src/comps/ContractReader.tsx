@@ -554,7 +554,7 @@ function DynamicReadFunction(props: {
 						{copyNotifying ? (
 							<CheckIcon className="w-[12px] h-[12px]" />
 						) : (
-							<LinkIcon className="w-[12px] h-[12px]" />
+							<CopyIcon className="w-[12px] h-[12px]" />
 						)}
 					</button>
 					<button

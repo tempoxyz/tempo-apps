@@ -8,6 +8,7 @@ import { ContractWriter } from '#comps/ContractWriter.tsx'
 import { cx } from '#cva.config.ts'
 import { getContractAbi } from '#lib/domain/contracts.ts'
 import { useCopy } from '#lib/hooks.ts'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
 import DownloadIcon from '~icons/lucide/download'
 import ExternalLinkIcon from '~icons/lucide/external-link'
 
