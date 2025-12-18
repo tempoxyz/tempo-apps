@@ -48,7 +48,6 @@ export function ContractWriter(props: ContractWriter.Props) {
 
 	return (
 		<div className="flex flex-col gap-[12px] py-2">
-
 			{writeFunctions.map((fn) => (
 				<WriteContractFunction
 					key={`${fn.name}-${key}-${fn.inputs?.length}`}
