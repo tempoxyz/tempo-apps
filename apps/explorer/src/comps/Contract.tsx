@@ -254,11 +254,6 @@ export function InteractTabContent(props: {
 
 	return (
 		<div className="flex flex-col gap-3.5">
-			{/* Read Contract Panel */}
-			<ContractFeatureCard title="Read contract" collapsible>
-				<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
-			</ContractFeatureCard>
-
 			{/* Write Contract Panel */}
 			<ContractFeatureCard
 				title="Write contract"
@@ -266,6 +261,11 @@ export function InteractTabContent(props: {
 				actions={<ConnectWallet />}
 			>
 				<ContractWriter address={address} abi={abi} />
+			</ContractFeatureCard>
+
+			{/* Read Contract Panel */}
+			<ContractFeatureCard title="Read contract" collapsible>
+				<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
 			</ContractFeatureCard>
 		</div>
 	)
@@ -341,7 +341,7 @@ export function ContractFeatureCard(props: {
 				</div>
 
 				{!isCollapsed && (
-					<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto px-2.5">
+					<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto px-[10px] pt-[10px]">
 						{children}
 					</div>
 				)}
