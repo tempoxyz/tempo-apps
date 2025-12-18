@@ -92,14 +92,6 @@ async function fetchAddressTotalCount(address: Address.Address) {
 	return safeData
 }
 
-const defaultSearchValues = {
-	page: 1,
-	limit: 10,
-	tab: 'history',
-} as const
-
-type TabValue = 'history' | 'assets' | 'contract' | 'interact'
-
 function useBatchTransactionData(
 	transactions: Transaction[],
 	viewer: Address.Address,
@@ -234,6 +226,19 @@ function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
 	return total
 }
 
+const defaultSearchValues = {
+	page: 1,
+	limit: 10,
+	tab: 'history',
+} as const
+
+const TabSchema = z.prefault(
+	z.enum(['history', 'assets', 'contract', 'interact']),
+	defaultSearchValues.tab,
+)
+
+type TabValue = z.infer<typeof TabSchema>
+
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
 	notFoundComponent: ({ data }) => (
@@ -252,10 +257,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			),
 			defaultSearchValues.limit,
 		),
-		tab: z.prefault(
-			z.enum(['history', 'assets', 'contract', 'interact']),
-			defaultSearchValues.tab,
-		),
+		tab: TabSchema,
 		live: z.prefault(z.boolean(), false),
 	}),
 	search: {
@@ -570,9 +572,9 @@ function RouteComponent() {
 			? 0
 			: tab === 'assets'
 				? 1
-				: tab === 'contract' && hasContract
+				: tab === 'contract'
 					? 2
-					: tab === 'interact' && hasContract
+					: tab === 'interact'
 						? 3
 						: 0
 
