@@ -1,23 +1,23 @@
+import { useQuery } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi } from 'viem'
-import { useQuery } from '@tanstack/react-query'
 import { getBytecode } from 'wagmi/actions'
 import { ConnectWallet } from '#comps/ConnectWallet.tsx'
 import { AbiViewer } from '#comps/ContractAbi.tsx'
 import { ContractReader } from '#comps/ContractReader.tsx'
+import { SourceSection } from '#comps/ContractSource.tsx'
 import { ContractWriter } from '#comps/ContractWriter.tsx'
 import { cx } from '#cva.config.ts'
+import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { getContractAbi } from '#lib/domain/contracts.ts'
 import { useCopy } from '#lib/hooks.ts'
 import { config } from '#wagmi.config.ts'
-import { ellipsis } from '#lib/chars.ts'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 import DownloadIcon from '~icons/lucide/download'
 import ExternalLinkIcon from '~icons/lucide/external-link'
-import { SourceSection } from '#comps/ContractSource.tsx'
 
 /**
  * Contract tab content - shows ABI and Source
@@ -114,7 +114,7 @@ export function ContractTabContent(props: {
 			<BytecodeSection address={address} />
 
 			{/* Source Section */}
-			{source && <SourceSection source={source} />}
+			{source && <SourceSection {...source} />}
 		</div>
 	)
 }
@@ -354,9 +354,6 @@ export function ContractFeatureCard(props: {
 			className={cx('rounded-[10px] bg-card-header overflow-hidden', className)}
 		>
 			<div className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between w-full">
-				{/* <div className="group relative h-64 w-64">
-					<div className="absolute inset-0 bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-				</div> */}
 				<div className="w-full">
 					<div className="flex items-center w-full gap-2 justify-between">
 						<a

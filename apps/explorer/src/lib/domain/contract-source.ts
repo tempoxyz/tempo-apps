@@ -43,6 +43,7 @@ export const ContractVerificationLookupSchema = z.object({
 			z.string(),
 			z.object({
 				content: z.string(),
+				highlightedHtml: z.optional(z.string()),
 			}),
 		),
 		settings: SoliditySettingsSchema,
@@ -67,12 +68,13 @@ export type ContractSource = z.infer<typeof ContractVerificationLookupSchema>
 export async function fetchContractSource(params: {
 	address: Address.Address
 	chainId: number
+	highlight?: boolean
 	signal?: AbortSignal
 }): Promise<ContractSource> {
-	const { address, chainId, signal } = params
+	const { address, chainId, highlight = true, signal } = params
 
 	try {
-		const url = `${__BASE_URL__}/api/code?address=${address.toLowerCase()}&chainId=${chainId}`
+		const url = `${__BASE_URL__}/api/code?address=${address.toLowerCase()}&chainId=${chainId}&highlight=${highlight}`
 
 		const response = await fetch(url, { signal })
 
