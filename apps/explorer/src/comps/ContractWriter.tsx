@@ -20,6 +20,7 @@ import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 import LinkIcon from '~icons/lucide/link'
+import PlayIcon from '~icons/lucide/play'
 
 export function ContractWriter(props: ContractWriter.Props) {
 	const { address, abi } = props
@@ -134,6 +135,7 @@ function WriteContractFunction(props: {
 	})
 
 	const isPayable = fn.stateMutability === 'payable'
+	const hasInputs = fn.inputs.length > 0 || isPayable
 
 	const connection = useConnection()
 	const queryClient = useQueryClient()
@@ -150,13 +152,16 @@ function WriteContractFunction(props: {
 	return (
 		<div
 			id={fnId}
-			className="rounded-[8px] border border-dashed border-card-border overflow-hidden transition-all duration-300"
+			className="rounded-[8px] border border-card-border bg-card-header overflow-hidden"
 		>
-			<div className="w-full flex items-center justify-between px-[12px] py-[10px] hover:bg-card-header/50 transition-colors">
+			<div className="w-full flex items-center justify-between">
 				<button
 					type="button"
-					onClick={() => setIsExpanded(!isExpanded)}
-					className="flex-1 text-left flex items-center gap-[8px]"
+					onClick={() => hasInputs && setIsExpanded(!isExpanded)}
+					className={cx(
+						'flex-1 text-left flex items-center gap-[8px] h-full py-[10px] pl-[12px] focus-visible:-outline-offset-2! focus-visible:rounded-l-[8px]!',
+						hasInputs && 'cursor-pointer press-down',
+					)}
 				>
 					<span className="text-[12px] text-secondary font-mono">
 						{getFunctionDisplaySignature(fn)}
@@ -167,17 +172,12 @@ function WriteContractFunction(props: {
 						</span>
 					)}
 				</button>
-				<div className="flex items-center gap-[8px]">
+				<div className="flex items-center pl-[12px]">
 					<button
 						type="button"
 						onClick={handleCopyMethod}
 						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className={cx(
-							'transition-colors press-down',
-							copyNotifying
-								? 'text-positive'
-								: 'text-tertiary hover:text-primary',
-						)}
+						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
 					>
 						{copyNotifying ? (
 							<CheckIcon className="w-[12px] h-[12px]" />
@@ -192,12 +192,7 @@ function WriteContractFunction(props: {
 							void handleCopyPermalink()
 						}}
 						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className={cx(
-							'transition-colors press-down',
-							linkNotifying
-								? 'text-positive'
-								: 'text-tertiary hover:text-primary',
-						)}
+						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
 					>
 						{linkNotifying ? (
 							<CheckIcon className="w-[12px] h-[12px]" />
@@ -205,18 +200,48 @@ function WriteContractFunction(props: {
 							<LinkIcon className="w-[12px] h-[12px]" />
 						)}
 					</button>
-					<button
-						type="button"
-						className="text-secondary"
-						onClick={() => setIsExpanded(!isExpanded)}
-					>
-						<ChevronDownIcon
+					{connection.status === 'connected' && (
+						<button
+							type="button"
+							title="Execute"
+							disabled={writeContract.isPending || (hasInputs && !allInputsFilled)}
 							className={cx(
-								'w-[14px] h-[14px] transition-transform',
-								isExpanded && 'rotate-180',
+								'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
+								hasInputs ? 'pr-[4px]' : 'pr-[12px]',
+								(writeContract.isPending || (hasInputs && !allInputsFilled)) &&
+									'opacity-50 cursor-not-allowed',
 							)}
-						/>
-					</button>
+							onClick={() =>
+								writeContract.mutate({
+									address: props.address,
+									abi: props.abi,
+									functionName: fn.name,
+									args: parsedArgs.args,
+									value: isPayable
+										? inputs.value
+											? BigInt(inputs.value)
+											: undefined
+										: undefined,
+								})
+							}
+						>
+							<PlayIcon className="size-[14px]" />
+						</button>
+					)}
+					{hasInputs && (
+						<button
+							type="button"
+							className="text-secondary cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
+							onClick={() => setIsExpanded(!isExpanded)}
+						>
+							<ChevronDownIcon
+								className={cx(
+									'w-[14px] h-[14px]',
+									isExpanded && 'rotate-180',
+								)}
+							/>
+						</button>
+					)}
 				</div>
 			</div>
 
@@ -246,35 +271,6 @@ function WriteContractFunction(props: {
 						<div className="p-2.5 rounded-md bg-red-500/10 border border-red-500/20">
 							<p className="text-[12px] text-red-400">{parsedArgs.error}</p>
 						</div>
-					)}
-
-					{connection.status === 'connected' && (
-						<button
-							type="button"
-							disabled={writeContract.isPending}
-							className={cx(
-								'cursor-pointer hover:bg-card-header/50 size-full',
-								{
-									'opacity-50': writeContract.isPending,
-									'cursor-not-allowed': writeContract.isPending,
-								},
-							)}
-							onClick={() =>
-								writeContract.mutate({
-									address: props.address,
-									abi: props.abi,
-									functionName: fn.name,
-									args: parsedArgs.args,
-									value: isPayable
-										? inputs.value
-											? BigInt(inputs.value)
-											: undefined
-										: undefined,
-								})
-							}
-						>
-							Write
-						</button>
 					)}
 				</div>
 			)}

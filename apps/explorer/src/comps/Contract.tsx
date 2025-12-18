@@ -255,20 +255,34 @@ export function InteractTabContent(props: {
 		)
 	}
 
+	const [writeExpanded, setWriteExpanded] = React.useState(true)
+	const [readExpanded, setReadExpanded] = React.useState(true)
+
 	return (
-		<div className="flex flex-col gap-3.5">
-			{/* Read Contract Panel */}
-			<ContractFeatureCard title="Read contract" collapsible>
-				<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
-			</ContractFeatureCard>
-			{/* Write Contract Panel */}
-			<ContractFeatureCard
+		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
+			{/* Write Contract Section */}
+			<CollapsibleSection
+				first
 				title="Write contract"
-				collapsible
+				expanded={writeExpanded}
+				onToggle={() => setWriteExpanded(!writeExpanded)}
 				actions={<ConnectWallet />}
 			>
-				<ContractWriter address={address} abi={abi} />
-			</ContractFeatureCard>
+				<div className="px-[10px] pb-[10px]">
+					<ContractWriter address={address} abi={abi} />
+				</div>
+			</CollapsibleSection>
+
+			{/* Read Contract Section */}
+			<CollapsibleSection
+				title="Read contract"
+				expanded={readExpanded}
+				onToggle={() => setReadExpanded(!readExpanded)}
+			>
+				<div className="px-[10px] pb-[10px]">
+					<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
+				</div>
+			</CollapsibleSection>
 		</div>
 	)
 }
@@ -312,41 +326,38 @@ export function ContractFeatureCard(props: {
 					className,
 				)}
 			>
-				<div
-					className={cx(
-						'h-[54px] flex items-center justify-between px-[18px]',
-						isCollapsed ? 'rounded-[10px]' : 'rounded-t-[10px]',
-					)}
-				>
+				<div className="flex items-center h-[36px] shrink-0">
 					<button
 						type="button"
 						onClick={() => setIsCollapsed(!isCollapsed)}
-						className="flex-1 text-left cursor-pointer press-down"
+						className={cx(
+							'flex-1 flex items-center gap-[6px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2!',
+							actions ? 'pr-[12px]' : 'pr-[16px]',
+						)}
 					>
-						<h1 className="text-[13px] font-medium uppercase text-primary">
-							{title}
-						</h1>
-					</button>
-					<div className="flex items-center gap-[12px]">
-						{actions}
-						<button
-							type="button"
-							onClick={() => setIsCollapsed(!isCollapsed)}
+						<ChevronDownIcon
 							className={cx(
-								'text-[16px] cursor-pointer press-down',
-								isCollapsed ? 'text-accent' : 'text-tertiary',
+								'size-[14px] text-tertiary',
+								isCollapsed && '-rotate-90',
 							)}
-						>
-							[{isCollapsed ? '+' : '–'}]
-						</button>
-					</div>
+						/>
+						<span className="text-[13px] text-tertiary">{title}</span>
+					</button>
+					{actions && (
+						<div className="flex items-center gap-[8px] text-tertiary px-[12px]">
+							{actions}
+						</div>
+					)}
 				</div>
 
-				{!isCollapsed && (
-					<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto px-[10px] pt-[10px]">
-						{children}
-					</div>
-				)}
+				<div
+					className={cx(
+						'rounded-t-[10px] border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto px-[10px] pt-[10px]',
+						isCollapsed && 'hidden',
+					)}
+				>
+					{children}
+				</div>
 			</section>
 		)
 	}

@@ -26,7 +26,9 @@ import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import ChevronsUpDownIcon from '~icons/lucide/chevrons-up-down'
 import CopyIcon from '~icons/lucide/copy'
+import ReturnIcon from '~icons/lucide/corner-down-right'
 import LinkIcon from '~icons/lucide/link'
+import PlayIcon from '~icons/lucide/play'
 
 type ReadFunction = AbiFunction & { stateMutability: 'view' | 'pure' }
 
@@ -181,6 +183,8 @@ function StaticReadFunction(props: {
 		data: typedResult,
 		error: typedError,
 		isLoading: typedLoading,
+		isFetching: typedFetching,
+		refetch: typedRefetch,
 	} = useReadContract({
 		address,
 		abi,
@@ -203,11 +207,16 @@ function StaticReadFunction(props: {
 		data: rawResult,
 		error: rawError,
 		isLoading: rawLoading,
+		isFetching: rawFetching,
+		refetch: rawRefetch,
 	} = useCall({
 		to: address,
 		data: callData,
 		query: { enabled: mounted && !hasOutputs && Boolean(callData) },
 	})
+
+	const refetch = hasOutputs ? typedRefetch : rawRefetch
+	const isFetching = hasOutputs ? typedFetching : rawFetching
 
 	const decodedRawResult = React.useMemo(() => {
 		if (hasOutputs || !rawResult?.data) return undefined
@@ -292,23 +301,18 @@ function StaticReadFunction(props: {
 	return (
 		<div
 			id={fnId}
-			className="flex flex-col gap-[4px] rounded-[8px] border border-dashed border-card-border px-[12px] py-[10px] transition-all duration-300 overflow-hidden"
+			className="flex flex-col rounded-[8px] border border-card-border bg-card-header overflow-hidden"
 		>
 			<div className="flex items-center justify-between gap-[8px]">
-				<span className="text-[12px] text-secondary font-mono">
+				<span className="text-[12px] text-secondary font-mono py-[10px] pl-[12px]">
 					{getFunctionDisplaySignature(fn)}
 				</span>
-				<div className="flex items-center gap-[8px]">
+				<div className="flex items-center pl-[12px]">
 					<button
 						type="button"
 						onClick={handleCopyMethod}
 						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className={cx(
-							'transition-colors press-down',
-							copyNotifying
-								? 'text-positive'
-								: 'text-tertiary hover:text-primary',
-						)}
+						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
 					>
 						{copyNotifying ? (
 							<CheckIcon className="w-[12px] h-[12px]" />
@@ -323,47 +327,62 @@ function StaticReadFunction(props: {
 							void handleCopyPermalink()
 						}}
 						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
+						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
+					>
+						{linkNotifying ? (
+							<CheckIcon className="w-[12px] h-[12px]" />
+						) : (
+							<LinkIcon className="w-[12px] h-[12px]" />
+						)}
+					</button>
+					<button
+						type="button"
+						onClick={() => void refetch()}
+						title="Refresh"
+						disabled={isFetching}
 						className={cx(
-							'transition-colors press-down',
-							linkNotifying
-								? 'text-positive'
-								: 'text-tertiary hover:text-primary',
+							'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
+							overflows ? 'pr-[4px]' : 'pr-[12px]',
+							isFetching && 'opacity-50 cursor-not-allowed',
 						)}
 					>
-						<LinkIcon className="w-[12px] h-[12px]" />
+						<PlayIcon className="size-[14px]" />
 					</button>
 					{overflows && (
 						<button
 							type="button"
 							onClick={() => setExpanded((v) => !v)}
 							title={expanded ? 'Collapse' : 'Expand'}
-							className="transition-colors press-down text-tertiary hover:text-primary"
+							className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
 						>
 							<ChevronsUpDownIcon className="w-[12px] h-[12px]" />
 						</button>
 					)}
 				</div>
 			</div>
-			{isLoading ? (
-				<div className="text-[13px] text-secondary">{ellipsis}</div>
-			) : isValidAddress ? (
-				<div>
-					<Link
-						to="/address/$address"
-						params={{ address: result as Address.Address }}
-						className="text-[13px] text-accent hover:text-accent/80 transition-colors font-mono"
-					>
-						{displayValue}
-					</Link>
-				</div>
-			) : (
-				<Expandable
-					expanded={expanded}
-					onOverflowChange={setOverflows}
-					className={cx(error ? 'text-red-400' : 'text-primary')}
-					value={displayValue}
-				/>
-			)}
+			<div className="border-t border-card-border px-[12px] py-[10px] flex">
+				<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
+				{isFetching || isLoading ? (
+					<div className="text-[13px] text-secondary leading-[20px]">{ellipsis}</div>
+				) : isValidAddress ? (
+					<div className="text-[13px] leading-[20px]">
+						<Link
+							to="/address/$address"
+							params={{ address: result as Address.Address }}
+							className="text-accent hover:text-accent/80"
+						>
+							{displayValue}
+						</Link>
+					</div>
+				) : (
+					<Expandable
+						expanded={expanded}
+						onOverflowChange={setOverflows}
+						className={cx(error ? 'text-red-400' : 'text-primary')}
+						value={displayValue}
+					/>
+				)}
+			</div>
 		</div>
 	)
 }
@@ -413,7 +432,8 @@ function DynamicReadFunction(props: {
 	const {
 		data: typedResult,
 		error: typedError,
-		isLoading: typedLoading,
+		isFetching: typedFetching,
+		refetch: typedRefetch,
 	} = useReadContract({
 		address,
 		abi,
@@ -441,7 +461,8 @@ function DynamicReadFunction(props: {
 	const {
 		data: rawResult,
 		error: rawError,
-		isLoading: rawLoading,
+		isFetching: rawFetching,
+		refetch: rawRefetch,
 	} = useCall({
 		to: address,
 		data: callData,
@@ -453,6 +474,9 @@ function DynamicReadFunction(props: {
 				Boolean(callData),
 		},
 	})
+
+	const refetch = hasOutputs ? typedRefetch : rawRefetch
+	const isFetching = hasOutputs ? typedFetching : rawFetching
 
 	const decodedRawResult = React.useMemo(() => {
 		if (hasOutputs || !rawResult?.data) return undefined
@@ -503,7 +527,6 @@ function DynamicReadFunction(props: {
 		}
 	}, [hasOutputs, rawResult, fn])
 
-	const isLoading = hasOutputs ? typedLoading : rawLoading
 	const result = hasOutputs ? typedResult : decodedRawResult
 	const queryError = hasOutputs ? typedError : rawError
 
@@ -527,29 +550,24 @@ function DynamicReadFunction(props: {
 	return (
 		<div
 			id={fnId}
-			className="rounded-[8px] border border-dashed border-card-border overflow-hidden transition-all duration-300"
+			className="rounded-[8px] border border-card-border bg-card-header overflow-hidden"
 		>
-			<div className="w-full flex items-center justify-between px-[12px] py-[10px] hover:bg-card-header/50 transition-colors">
+			<div className="w-full flex items-center justify-between">
 				<button
 					type="button"
 					onClick={() => setIsExpanded(!isExpanded)}
-					className="flex-1 text-left"
+					className="flex-1 text-left h-full py-[10px] pl-[12px] cursor-pointer press-down focus-visible:-outline-offset-2! focus-visible:rounded-l-[8px]!"
 				>
 					<span className="text-[12px] text-secondary font-mono">
 						{getFunctionDisplaySignature(fn)}
 					</span>
 				</button>
-				<div className="flex items-center gap-[8px]">
+				<div className="flex items-center pl-[12px]">
 					<button
 						type="button"
 						onClick={handleCopyMethod}
 						title={copyNotifying ? 'Copied!' : 'Copy method name'}
-						className={cx(
-							'transition-colors press-down',
-							copyNotifying
-								? 'text-positive'
-								: 'text-tertiary hover:text-primary',
-						)}
+						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
 					>
 						{copyNotifying ? (
 							<CheckIcon className="w-[12px] h-[12px]" />
@@ -564,12 +582,7 @@ function DynamicReadFunction(props: {
 							void handleCopyPermalink()
 						}}
 						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className={cx(
-							'transition-colors press-down',
-							linkNotifying
-								? 'text-positive'
-								: 'text-tertiary hover:text-primary',
-						)}
+						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
 					>
 						{linkNotifying ? (
 							<CheckIcon className="w-[12px] h-[12px]" />
@@ -579,12 +592,24 @@ function DynamicReadFunction(props: {
 					</button>
 					<button
 						type="button"
+						onClick={() => void refetch()}
+						title="Refresh"
+						disabled={isFetching || !allInputsFilled}
+						className={cx(
+							'text-accent cursor-pointer press-down h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!',
+							(isFetching || !allInputsFilled) && 'opacity-50 cursor-not-allowed',
+						)}
+					>
+						<PlayIcon className="size-[14px]" />
+					</button>
+					<button
+						type="button"
 						onClick={() => setIsExpanded(!isExpanded)}
-						className="text-secondary"
+						className="text-secondary cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
 					>
 						<ChevronDownIcon
 							className={cx(
-								'w-[14px] h-[14px] transition-transform',
+								'w-[14px] h-[14px]',
 								isExpanded && 'rotate-180',
 							)}
 						/>
@@ -606,18 +631,19 @@ function DynamicReadFunction(props: {
 						)
 					})}
 
-					{isLoading && (
-						<p className="text-[12px] text-secondary">{ellipsis}</p>
+					{isFetching && (
+						<div className="flex">
+							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
+							<p className="text-[13px] text-secondary leading-[20px]">{ellipsis}</p>
+						</div>
 					)}
 
-					{!isLoading && (result !== undefined || error) && (
-						<div className="p-2.5 rounded-md bg-card-header flex flex-col gap-2">
-							<span className="text-[11px] text-secondary uppercase tracking-wide font-medium">
-								Result
-							</span>
+					{!isFetching && (result !== undefined || error) && (
+						<div className="flex">
+							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
 							<p
 								className={cx(
-									'text-[13px] mt-[4px] break-all font-mono',
+									'text-[13px] break-all leading-[20px]',
 									error ? 'text-red-400' : 'text-primary',
 								)}
 							>
