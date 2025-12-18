@@ -49,7 +49,7 @@ export function InfoCard(props: InfoCard.Props) {
 			)}
 		>
 			{isInside ? (
-				<div className="px-[18px] h-[36px] flex items-center">{title}</div>
+				<div className="px-[18px] py-[12px] flex items-center">{title}</div>
 			) : (
 				title
 			)}
