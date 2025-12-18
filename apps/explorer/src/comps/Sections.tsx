@@ -93,10 +93,6 @@ export function Sections(props: Sections.Props) {
 			</Sections.Context.Provider>
 		)
 
-	const currentSection = sections[activeSection]
-	if (!currentSection)
-		throw new Error(`Invalid activeSection index: ${activeSection}`)
-
 	return (
 		<Sections.Context.Provider value={{ mode }}>
 			<section
@@ -123,16 +119,17 @@ export function Sections(props: Sections.Props) {
 								<button
 									key={section.title}
 									type="button"
-									onClick={() => onSectionChange?.(index)}
+									onPointerDown={() => {
+										if (activeSection === index) return
+										onSectionChange?.(index)
+									}}
 									className={cx(
 										'h-full flex items-center text-[13px] font-medium',
-										'focus-visible:-outline-offset-2! press-down cursor-pointer transition-[color]',
+										'focus-visible:-outline-offset-2! cursor-pointer',
 										index === 0
 											? 'pl-[18px] pr-[12px] rounded-tl-[10px]!'
 											: 'px-[12px]',
-										activeSection === index
-											? 'text-primary'
-											: 'text-tertiary hover:text-secondary',
+										activeSection === index ? 'text-primary' : 'text-tertiary',
 									)}
 								>
 									<div className="relative h-full flex items-center">
@@ -145,14 +142,27 @@ export function Sections(props: Sections.Props) {
 							))
 						)}
 					</div>
-					{currentSection.contextual && (
-						<div className="pr-[18px]">{currentSection.contextual}</div>
-					)}
+					{sections.map((section, index) => (
+						<div
+							key={section.title}
+							className={cx('pr-[18px]', activeSection !== index && 'hidden')}
+						>
+							{section.contextual}
+						</div>
+					))}
 				</div>
 
-				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
-					{currentSection.content}
-				</div>
+				{sections.map((section, index) => (
+					<div
+						key={section.title}
+						className={cx(
+							'rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!',
+							activeSection !== index && 'hidden',
+						)}
+					>
+						{section.content}
+					</div>
+				))}
 			</section>
 		</Sections.Context.Provider>
 	)
