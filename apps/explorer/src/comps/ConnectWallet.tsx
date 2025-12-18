@@ -44,7 +44,7 @@ export function ConnectWallet({
 						variant="default"
 						className="flex gap-1.5 items-center"
 						key={connector.id}
-						onClick={() => connect.connect({ connector })}
+						onClick={() => connect.mutate({ connector })}
 					>
 						{connector.icon ? (
 							<img
@@ -99,7 +99,14 @@ export function Logout() {
 
 	return (
 		<div className="flex items-center gap-1">
-			<Button onClick={() => copy(address)} variant="default">
+			<Button
+				onClick={(event) => {
+					event.preventDefault()
+					event.stopPropagation()
+					void copy(address)
+				}}
+				variant="default"
+			>
 				{notifying ? (
 					<LucideCheck className="text-gray9 mt-px" />
 				) : (

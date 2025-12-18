@@ -24,8 +24,7 @@ import {
 } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
-// import { ContractReader } from '#comps/ContractReader'
-import { ContractTabContent } from '#comps/Contract.tsx'
+import { ContractTabContent, InteractTabContent } from '#comps/Contract.tsx'
 import { ContractSources } from '#comps/ContractSource.tsx'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
@@ -100,7 +99,7 @@ const defaultSearchValues = {
 	tab: 'history',
 } as const
 
-type TabValue = 'history' | 'assets' | 'contract'
+type TabValue = 'history' | 'assets' | 'contract' | 'interact'
 
 function useBatchTransactionData(
 	transactions: Transaction[],
@@ -255,7 +254,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			defaultSearchValues.limit,
 		),
 		tab: z.prefault(
-			z.enum(['history', 'assets', 'contract']),
+			z.enum(['history', 'assets', 'contract', 'interact']),
 			defaultSearchValues.tab,
 		),
 		live: z.prefault(z.boolean(), false),
@@ -509,23 +508,23 @@ function RouteComponent() {
 	// user manually switches tabs, but allows redirect for new hash values)
 	const redirectedForHashRef = React.useRef<string | null>(null)
 
-	// When URL has a hash fragment (e.g., #functionName), switch to contract tab
+	// When URL has a hash fragment (e.g., #functionName), switch to interact tab
 	React.useEffect(() => {
 		// Only redirect if:
 		// 1. We have a hash
 		// 2. Address has a known contract
-		// 3. Not already on contract tab
+		// 3. Not already on interact tab
 		// 4. Haven't already redirected for this specific hash
 		if (
 			hash &&
 			hasContract &&
-			tab !== 'contract' &&
+			tab !== 'interact' &&
 			redirectedForHashRef.current !== hash
 		) {
 			redirectedForHashRef.current = hash
 			navigate({
 				to: '.',
-				search: { page: 1, tab: 'contract', limit },
+				search: { page: 1, tab: 'interact', limit },
 				hash,
 				replace: true,
 				resetScroll: false,
@@ -555,7 +554,7 @@ function RouteComponent() {
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
 			const tabs: TabValue[] = hasContract
-				? ['history', 'assets', 'contract']
+				? ['history', 'assets', 'contract', 'interact']
 				: ['history', 'assets']
 			const newTab = tabs[newIndex] ?? 'history'
 			navigate({
@@ -568,7 +567,15 @@ function RouteComponent() {
 	)
 
 	const activeSection =
-		tab === 'history' ? 0 : tab === 'assets' ? 1 : hasContract ? 2 : 0
+		tab === 'history'
+			? 0
+			: tab === 'assets'
+				? 1
+				: tab === 'contract' && hasContract
+					? 2
+					: tab === 'interact' && hasContract
+						? 3
+						: 0
 
 	const assetsData = useAssetsData(address)
 
@@ -906,32 +913,37 @@ function SectionsWrapper(props: {
 							/>
 						),
 					},
-					// Contract tab - shown for known contracts OR verified sources
+					// Contract tab - Source Code + ABI
 					...(contractInfo || resolvedContractSource
 						? [
 								{
 									title: 'Contract',
 									totalItems: 0,
-									itemsLabel: 'functions',
+									itemsLabel: 'items',
 									content: (
-										<div className="flex flex-col gap-3.5">
+										<div className="flex flex-col gap-2">
 											{hasContractSource && resolvedContractSource && (
 												<ContractSources {...resolvedContractSource} />
 											)}
-											{contractInfo && (
-												<ContractTabContent
-													address={address}
-													abi={contractInfo.abi}
-													docsUrl={contractInfo.docsUrl}
-												/>
-											)}
-											{!contractInfo && resolvedContractSource && (
-												<ContractTabContent
-													address={address}
-													abi={resolvedContractSource.abi}
-												/>
-											)}
+											<ContractTabContent
+												address={address}
+												abi={resolvedContractSource?.abi ?? contractInfo?.abi}
+												docsUrl={contractInfo?.docsUrl}
+											/>
 										</div>
+									),
+								},
+								// Interact tab - Read + Write contract
+								{
+									title: 'Interact',
+									totalItems: 0,
+									itemsLabel: 'functions',
+									content: (
+										<InteractTabContent
+											address={address}
+											abi={resolvedContractSource?.abi ?? contractInfo?.abi}
+											docsUrl={contractInfo?.docsUrl}
+										/>
 									),
 								},
 							]

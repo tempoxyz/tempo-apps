@@ -11,6 +11,9 @@ import { useCopy } from '#lib/hooks.ts'
 import DownloadIcon from '~icons/lucide/download'
 import ExternalLinkIcon from '~icons/lucide/external-link'
 
+/**
+ * Contract tab content - shows ABI only
+ */
 export function ContractTabContent(props: {
 	address: Address.Address
 	abi?: Abi
@@ -53,7 +56,6 @@ export function ContractTabContent(props: {
 
 	return (
 		<div className="flex flex-col gap-3.5">
-			{/* ABI Viewer */}
 			<ContractFeatureCard
 				title="Contract ABI"
 				collapsible
@@ -84,9 +86,34 @@ export function ContractTabContent(props: {
 			>
 				<AbiViewer abi={abi} onCopy={handleCopyAbi} copied={copiedAbi} />
 			</ContractFeatureCard>
+		</div>
+	)
+}
 
-			<div aria-hidden="true" className="border-b border-card-border" />
+/**
+ * Interact tab content - shows Read and Write contract functions
+ */
+export function InteractTabContent(props: {
+	address: Address.Address
+	abi?: Abi
+	docsUrl?: string
+}) {
+	const { address, docsUrl } = props
 
+	const abi = props.abi ?? getContractAbi(address)
+
+	if (!abi) {
+		return (
+			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
+				<p className="text-sm font-medium text-tertiary">
+					No ABI available for this contract.
+				</p>
+			</div>
+		)
+	}
+
+	return (
+		<div className="flex flex-col gap-3.5">
 			{/* Read Contract Panel */}
 			<ContractFeatureCard title="Read contract" collapsible>
 				<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
@@ -95,7 +122,6 @@ export function ContractTabContent(props: {
 			{/* Write Contract Panel */}
 			<ContractFeatureCard
 				title="Write contract"
-				className="mb-4"
 				collapsible
 				actions={<ConnectWallet />}
 			>
@@ -144,29 +170,35 @@ export function ContractFeatureCard(props: {
 					className,
 				)}
 			>
-				<button
-					type="button"
-					onClick={() => setIsCollapsed(!isCollapsed)}
+				<div
 					className={cx(
-						'h-[54px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
-						isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
+						'h-[54px] flex items-center justify-between px-[18px]',
+						isCollapsed ? 'rounded-[10px]' : 'rounded-t-[10px]',
 					)}
 				>
-					<h1 className="text-[13px] font-medium uppercase text-primary">
-						{title}
-					</h1>
+					<button
+						type="button"
+						onClick={() => setIsCollapsed(!isCollapsed)}
+						className="flex-1 text-left cursor-pointer press-down"
+					>
+						<h1 className="text-[13px] font-medium uppercase text-primary">
+							{title}
+						</h1>
+					</button>
 					<div className="flex items-center gap-[12px]">
 						{actions}
-						<div
+						<button
+							type="button"
+							onClick={() => setIsCollapsed(!isCollapsed)}
 							className={cx(
-								'text-[16px] font-mono',
+								'text-[16px] font-mono cursor-pointer press-down',
 								isCollapsed ? 'text-accent' : 'text-tertiary',
 							)}
 						>
 							[{isCollapsed ? '+' : '–'}]
-						</div>
+						</button>
 					</div>
-				</button>
+				</div>
 
 				{!isCollapsed && (
 					<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto px-2.5">
@@ -182,6 +214,9 @@ export function ContractFeatureCard(props: {
 			className={cx('rounded-[10px] bg-card-header overflow-hidden', className)}
 		>
 			<div className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between w-full">
+				{/* <div className="group relative h-64 w-64">
+					<div className="absolute inset-0 bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+				</div> */}
 				<div className="w-full">
 					<div className="flex items-center w-full gap-2 justify-between">
 						<a
@@ -220,9 +255,7 @@ export function ContractFeatureCard(props: {
 				</div>
 				{actions}
 			</div>
-			<div className="border-t border-card-border bg-card px-2.5">
-				{children}
-			</div>
+			<div className="bg-card p-2">{children}</div>
 		</section>
 	)
 }

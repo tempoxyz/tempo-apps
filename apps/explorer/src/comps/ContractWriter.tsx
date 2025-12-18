@@ -336,11 +336,14 @@ function FunctionInput(props: {
 				{displayLabel} <span className="text-secondary">({input.type})</span>
 			</label>
 			<input
-				id={inputId}
+				autoCorrect="off"
+				autoComplete="off"
+				spellCheck={false}
+				autoCapitalize="off"
 				type="text"
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
+				id={inputId}
 				placeholder={placeholder}
+				onChange={(event) => onChange(event.target.value)}
 				className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent font-mono"
 			/>
 		</div>
