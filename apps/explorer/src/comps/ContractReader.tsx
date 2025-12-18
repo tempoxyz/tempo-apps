@@ -301,7 +301,7 @@ function StaticReadFunction(props: {
 	return (
 		<div
 			id={fnId}
-			className="flex flex-col rounded-[8px] border border-card-border bg-card-header overflow-hidden"
+			className="flex flex-col rounded-[8px] border border-card-border bg-surface overflow-hidden"
 		>
 			<div className="flex items-center justify-between gap-[8px]">
 				<span className="text-[12px] text-secondary font-mono py-[10px] pl-[12px]">
@@ -550,7 +550,7 @@ function DynamicReadFunction(props: {
 	return (
 		<div
 			id={fnId}
-			className="rounded-[8px] border border-card-border bg-card-header overflow-hidden"
+			className="rounded-[8px] border border-card-border bg-surface overflow-hidden"
 		>
 			<div className="w-full flex items-center justify-between">
 				<button
@@ -706,7 +706,7 @@ function FunctionInput(props: {
 					id={inputId}
 					placeholder={placeholder}
 					onChange={(event) => onChange(event.target.value)}
-					className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent resize-none font-mono"
+					className="w-full rounded-[6px] border border-base-border bg-alt px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent resize-none font-mono"
 				/>
 			</div>
 		)
@@ -728,7 +728,7 @@ function FunctionInput(props: {
 				id={inputId}
 				placeholder={placeholder}
 				onChange={(event) => onChange(event.target.value)}
-				className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent font-mono"
+				className="w-full rounded-[6px] border border-base-border bg-alt px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent font-mono"
 			/>
 		</div>
 	)

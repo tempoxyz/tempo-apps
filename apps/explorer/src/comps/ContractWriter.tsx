@@ -48,7 +48,7 @@ export function ContractWriter(props: ContractWriter.Props) {
 	const writeFunctions = getWriteFunctions(abi)
 
 	return (
-		<div className="flex flex-col gap-[12px] py-2">
+		<div className="flex flex-col gap-[12px]">
 			{writeFunctions.map((fn) => (
 				<WriteContractFunction
 					key={`${fn.name}-${key}-${fn.inputs?.length}`}
@@ -152,7 +152,7 @@ function WriteContractFunction(props: {
 	return (
 		<div
 			id={fnId}
-			className="rounded-[8px] border border-card-border bg-card-header overflow-hidden"
+			className="rounded-[8px] border border-card-border bg-surface overflow-hidden"
 		>
 			<div className="w-full flex items-center justify-between">
 				<button
@@ -172,7 +172,7 @@ function WriteContractFunction(props: {
 						</span>
 					)}
 				</button>
-				<div className="flex items-center pl-[12px]">
+				<div className="flex items-center pl-[12px] shrink-0">
 					<button
 						type="button"
 						onClick={handleCopyMethod}
@@ -320,7 +320,7 @@ function FunctionInput(props: {
 					onChange={(e) => onChange(e.target.value)}
 					placeholder={placeholder}
 					rows={3}
-					className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent resize-none font-mono"
+					className="w-full rounded-[6px] border border-base-border bg-alt px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent resize-none font-mono"
 				/>
 			</div>
 		)
@@ -340,7 +340,7 @@ function FunctionInput(props: {
 				id={inputId}
 				placeholder={placeholder}
 				onChange={(event) => onChange(event.target.value)}
-				className="w-full rounded-[6px] border border-base-border bg-card px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent font-mono"
+				className="w-full rounded-[6px] border border-base-border bg-alt px-[10px] py-[6px] text-[13px] text-primary placeholder:text-secondary focus-visible:outline-1 focus-visible:outline-accent font-mono"
 			/>
 		</div>
 	)

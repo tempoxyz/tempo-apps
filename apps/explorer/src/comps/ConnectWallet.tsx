@@ -9,11 +9,10 @@ import {
 	useDisconnect,
 	useSwitchChain,
 } from 'wagmi'
+import { Address } from '#comps/Address'
 import { cva } from '#cva.config.ts'
-import { HexFormatter } from '#lib/formatting.ts'
-import { useCopy } from '#lib/hooks.ts'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
-import LucideCheck from '~icons/lucide/check'
+import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
 
 export function ConnectWallet({
@@ -24,8 +23,8 @@ export function ConnectWallet({
 	return (
 		<ClientOnly
 			fallback={
-				<div className="text-[14px] -tracking-[2%] flex items-center">
-					Detecting wallets…
+				<div className="text-[12px] flex items-center text-secondary">
+					Detecting wallet…
 				</div>
 			}
 		>
@@ -62,27 +61,27 @@ function ConnectWalletInner({
 				{injectedConnectors.map((connector) => (
 					<Button
 						variant="default"
-						className="flex gap-1.5 items-center"
+						className="flex gap-[8px] items-center"
 						key={connector.id}
 						onClick={() => connect.mutate({ connector })}
 					>
 						{connector.icon ? (
 							<img
-								className="size-5"
+								className="size-[12px]"
 								src={connector.icon}
 								alt={connector.name}
 							/>
 						) : (
-							<div />
+							<LucideWalletCards className="size-[12px]" />
 						)}
-						{connector.name}
+						Connect {connector.name}
 					</Button>
 				))}
 			</div>
 		)
 	return (
-		<div className="flex flex-col gap-2">
-			<Logout />
+		<div className="flex items-stretch gap-2 justify-end">
+			<ConnectedAddress />
 			{showAddChain && !isSupported && (
 				<Button
 					className="w-fit"
@@ -101,48 +100,40 @@ function ConnectWalletInner({
 				</Button>
 			)}
 			{switchChain.isSuccess && (
-				<div className="text-[14px] -tracking-[2%] font-normal flex items-center">
+				<span className="text-[12px] font-normal text-tertiary">
 					Added Tempo to {connector?.name ?? 'Wallet'}!
-				</div>
+				</span>
 			)}
+			<SignOut />
 		</div>
 	)
 }
 
-export function Logout() {
-	const disconnect = useDisconnect()
-	const { address, connector } = useConnection()
-
-	const { copy, notifying } = useCopy({ timeout: 2_000 })
+function ConnectedAddress() {
+	const { address } = useConnection()
 
 	if (!address) return null
 
 	return (
-		<div className="flex items-center gap-1">
-			<Button
-				onClick={(event) => {
-					event.preventDefault()
-					event.stopPropagation()
-					void copy(address)
-				}}
-				variant="default"
-			>
-				{notifying ? (
-					<LucideCheck className="text-gray9 mt-px" />
-				) : (
-					<LucideWalletCards className="text-gray9 mt-px" />
-				)}
-				{HexFormatter.truncate(address, 6)}
-			</Button>
-			<Button
-				type="button"
-				variant="destructive"
-				onClick={() => disconnect.mutate({ connector })}
-				className="text-[14px] -tracking-[2%] font-normal"
-			>
-				Sign out
-			</Button>
+		<div className="text-[12px] text-secondary whitespace-nowrap flex items-center gap-[4px]">
+			Connected as <Address address={address} align="end" />
 		</div>
+	)
+}
+
+function SignOut() {
+	const disconnect = useDisconnect()
+	const { connector } = useConnection()
+
+	return (
+		<button
+			type="button"
+			title="Disconnect"
+			className="h-full text-secondary hover:text-primary cursor-pointer press-down"
+			onClick={() => disconnect.mutate({ connector })}
+		>
+			<LucideLogOut className="size-[12px] translate-y-px" />
+		</button>
 	)
 }
 
@@ -179,28 +170,21 @@ export function Button(
 }
 
 const buttonClassName = cva({
-	base: 'relative inline-flex gap-2 items-center justify-center whitespace-nowrap rounded-md font-normal transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+	base: 'inline-flex gap-[6px] items-center whitespace-nowrap font-medium focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer press-down text-[12px] hover:underline',
 	defaultVariants: {
-		size: 'default',
 		variant: 'default',
 	},
 	variants: {
 		disabled: {
 			true: 'pointer-events-none opacity-50',
 		},
-		size: {
-			default: 'text-[14px] -tracking-[2%] h-[32px] px-[14px]',
-		},
 		static: {
 			true: 'pointer-events-none',
 		},
 		variant: {
-			accent:
-				'bg-(--vocs-color_inverted) text-(--vocs-color_background) border dark:border-dashed',
-			default:
-				'text-(--vocs-color_inverted) bg-(--vocs-color_background) border border-dashed',
-			destructive:
-				'bg-(--vocs-color_backgroundRedTint2) text-(--vocs-color_textRed) border border-dashed',
+			accent: 'text-accent',
+			default: 'text-secondary',
+			destructive: 'text-negative',
 		},
 	},
 })

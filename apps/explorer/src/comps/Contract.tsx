@@ -139,8 +139,8 @@ export function CollapsibleSection(props: {
 					type="button"
 					onClick={onToggle}
 					className={cx(
-						'flex-1 flex items-center gap-[6px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2!',
-						actions ? 'pr-[12px]' : 'pr-[16px]',
+						'flex items-center gap-[6px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2!',
+						actions ? 'pr-[12px]' : 'flex-1 pr-[16px]',
 						first && 'focus-visible:rounded-tl-[8px]!',
 						first && !actions && 'focus-visible:rounded-tr-[8px]!',
 					)}
@@ -154,7 +154,7 @@ export function CollapsibleSection(props: {
 					<span className="text-[13px] text-tertiary">{title}</span>
 				</button>
 				{actions && (
-					<div className="flex items-center gap-[8px] text-tertiary px-[12px]">
+					<div className="flex-1 flex items-stretch justify-end gap-[8px] text-tertiary px-[12px]">
 						{actions}
 					</div>
 				)}
