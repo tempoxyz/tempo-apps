@@ -4,7 +4,7 @@ import type { Address } from 'ox'
 import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
 import type { Abi, AbiFunction } from 'viem'
-import { useChainId, useConnect, useConnection, useWriteContract } from 'wagmi'
+import { useConnection, useWriteContract } from 'wagmi'
 import { cx } from '#cva.config'
 import {
 	getFunctionSelector,
@@ -16,7 +16,6 @@ import {
 	type WriteFunction,
 } from '#lib/domain/contracts'
 import { useCopy, useCopyPermalink } from '#lib/hooks'
-import { config } from '#wagmi.config.ts'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
@@ -49,12 +48,6 @@ export function ContractWriter(props: ContractWriter.Props) {
 
 	return (
 		<div className="flex flex-col gap-[12px] py-2">
-			{/* <div className="flex items-center gap-[8px] px-[12px] py-[10px] rounded-[8px] bg-amber-500/10 border border-amber-500/20">
-				<WalletIcon className="w-[16px] h-[16px] text-amber-500" />
-				<p className="text-[12px] text-amber-500">
-					Wallet connection required to execute write functions
-				</p>
-			</div> */}
 
 			{writeFunctions.map((fn) => (
 				<WriteContractFunction
@@ -80,24 +73,6 @@ export declare namespace ContractWriter {
 		abi: Abi
 	}
 }
-
-// export function ConnectWallet() {
-// 	const chainId = useChainId()
-// 	const connect = useConnect({ config })
-
-// 	return (
-// 		<button
-// 			type="button"
-// 			onClick={() => connect.mutate({ connector: injected(), chainId })}
-// 			className={cx(
-// 				'w-full max-w-[100px] flex items-center justify-center gap-[8px] p-[8px] rounded-sm bg-accent/50 text-white text-sm font-medium',
-// 			)}
-// 		>
-// 			<WalletIcon className="size-[14px]" />
-// 			Connect
-// 		</button>
-// 	)
-// }
 
 function getFunctionDisplaySignature(fn: AbiFunction): string {
 	if (fn.name) return getSignature(fn)
@@ -161,13 +136,10 @@ function WriteContractFunction(props: {
 
 	const isPayable = fn.stateMutability === 'payable'
 
-	const _chainId = useChainId()
-	const _connection = useConnection()
-	const _connect = useConnect({ config })
-
+	const connection = useConnection()
 	const queryClient = useQueryClient()
 
-	const _writeContract = useWriteContract({
+	const writeContract = useWriteContract({
 		mutation: {
 			onSuccess: () =>
 				queryClient.invalidateQueries({
@@ -236,8 +208,8 @@ function WriteContractFunction(props: {
 					</button>
 					<button
 						type="button"
-						onClick={() => setIsExpanded(!isExpanded)}
 						className="text-secondary"
+						onClick={() => setIsExpanded(!isExpanded)}
 					>
 						<ChevronDownIcon
 							className={cx(
@@ -277,18 +249,7 @@ function WriteContractFunction(props: {
 						</div>
 					)}
 
-					{/* {connection.status === 'disconnected' ? (
-						<button
-							type="button"
-							onClick={() => connect.mutate({ connector: injected(), chainId })}
-							className={cx(
-								'w-full flex items-center justify-center gap-[8px] px-[12px] py-[8px] rounded-[6px] bg-accent text-white text-sm font-medium',
-							)}
-						>
-							<WalletIcon className="size-[14px]" />
-							Connect wallet to write
-						</button>
-					) : (
+					{connection.status === 'connected' && (
 						<button
 							type="button"
 							disabled={writeContract.isPending}
@@ -315,7 +276,7 @@ function WriteContractFunction(props: {
 						>
 							Write
 						</button>
-					)} */}
+					)}
 				</div>
 			)}
 		</div>

@@ -69,15 +69,6 @@ export default defineConfig((config) => {
 			port,
 			allowedHosts: config.mode === 'development' ? true : undefined,
 		},
-		ssr: {
-			noExternal: [
-				'@tanstack/react-query',
-				'@tanstack/react-query-persist-client',
-				'@tanstack/query-async-storage-persister',
-				'viem',
-				'wagmi',
-			],
-		},
 		build: {
 			rolldownOptions: {
 				output: {
