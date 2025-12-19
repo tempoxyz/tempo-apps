@@ -11,7 +11,23 @@ import { rateLimitMiddleware } from './lib/rate-limit.js'
 import { getUsage } from './lib/usage.js'
 
 const app = new Hono()
-const tempoChain = env.TEMPO_ENV === 'devnet' ? tempoDevnet : tempoTestnet
+
+const tempoChain =
+	env.TEMPO_ENV === 'devnet'
+		? {
+				...tempoDevnet({
+					feeToken: '0x20c0000000000000000000000000000000000001',
+				}),
+				// todo: following is a patch until we consume https://github.com/wevm/viem/pull/4189
+				id: 42429,
+				rpcUrls: {
+					default: {
+						http: ['https://rpc.devnet.tempoxyz.dev'],
+						webSocket: ['wss://rpc.devnet.tempoxyz.dev'],
+					},
+				},
+			}
+		: tempoTestnet({ feeToken: '0x20c0000000000000000000000000000000000001' })
 
 app.use(
 	'*',
@@ -54,9 +70,7 @@ app.get(
 app.all('*', rateLimitMiddleware, async (c) => {
 	const handler = Handler.feePayer({
 		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
-		chain: tempoChain({
-			feeToken: '0x20c0000000000000000000000000000000000001',
-		}),
+		chain: tempoChain,
 		transport: http(env.TEMPO_RPC_URL),
 		async onRequest(request) {
 			console.log(`Sponsoring transaction: ${request.method}`)
