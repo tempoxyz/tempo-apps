@@ -44,7 +44,11 @@ export const persister = createAsyncStoragePersister({
 export const config = createConfig({
 	ssr: true,
 	chains: [
-		import.meta.env.VITE_LOCALNET === 'true' ? tempoLocalnet : tempoTestnet,
+		import.meta.env.VITE_LOCALNET === 'true'
+			? tempoLocalnet
+			: tempoTestnet.extend({
+					feeToken: '0x20c0000000000000000000000000000000000001',
+				}),
 	],
 	connectors: [
 		webAuthn({

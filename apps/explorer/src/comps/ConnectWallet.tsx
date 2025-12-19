@@ -1,6 +1,7 @@
 import { ClientOnly } from '@tanstack/react-router'
 import type { VariantProps } from 'cva'
 import * as React from 'react'
+import { Hooks } from 'tempo.ts/wagmi'
 import {
 	useChains,
 	useConnect,
@@ -8,6 +9,7 @@ import {
 	useConnectors,
 	useDisconnect,
 	useSwitchChain,
+	useWatchBlockNumber,
 } from 'wagmi'
 import { Address } from '#comps/Address'
 import { cva } from '#cva.config.ts'
@@ -26,6 +28,17 @@ export function ConnectPasskey() {
 		[connectors],
 	)
 
+	const balance = Hooks.token.useGetBalance({
+		account: connection.address,
+		token: '0x20c0000000000000000000000000000000000001',
+	})
+
+	const fund = Hooks.faucet.useFund()
+
+	useWatchBlockNumber({
+		onBlockNumber: () => [balance.refetch()],
+	})
+
 	if (!connector || connector.id !== 'webAuthn')
 		return <span className="text-negative">no passkey connector</span>
 
@@ -34,19 +47,22 @@ export function ConnectPasskey() {
 	if (connection.isConnected && connection.address) {
 		return (
 			<div className="flex items-center gap-2">
-				<a
-					target="_blank"
-					rel="noopener noreferrer"
-					className="font-light text-[12px] text-white/80"
-					href={`https://docs.tempo.xyz/quickstart/faucet#funding-others`}
-				>
-					[faucet]
-				</a>
+				<div>
+					<Button
+						hidden={Boolean(balance.data && balance.data > 0n)}
+						variant="default"
+						disabled={fund.isPending}
+						// biome-ignore lint/style/noNonNullAssertion: is ok
+						onClick={() => fund.mutate({ account: connection.address! })}
+					>
+						{fund.isPending ? 'Adding Funds' : 'Add Funds'}
+					</Button>
+				</div>
 				<Address
 					chars={7}
 					align="end"
 					address={connection.address}
-					className="text-accent font-light text-sm"
+					className="text-accent font-light text-[13.5px] my-auto"
 				/>
 				<SignOut />
 			</div>
