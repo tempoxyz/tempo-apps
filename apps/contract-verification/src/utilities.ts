@@ -48,8 +48,15 @@ export function originMatches(params: { origin: string; pattern: string }) {
 
 	const { pattern } = params
 
-	const stripExtra = new URL(params.origin)
-	const origin = `${stripExtra.protocol}//${stripExtra.hostname}`
+	if (!params.origin) return false
+	let origin: string
+
+	try {
+		const stripExtra = new URL(params.origin)
+		origin = `${stripExtra.protocol}//${stripExtra.hostname}`
+	} catch {
+		return false
+	}
 
 	if (origin === pattern) return true
 	if (!pattern.includes('*')) return false
