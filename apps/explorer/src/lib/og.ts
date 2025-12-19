@@ -232,7 +232,7 @@ export function buildTxDescription(
 		if (firstEvent.type === 'contract call') {
 			const contractCallPart = firstEvent.parts.find((p) => p.type === 'contractCall')
 			if (contractCallPart && 'value' in contractCallPart) {
-				action = 'contract interaction'
+				action = 'contract call'
 			}
 		}
 
