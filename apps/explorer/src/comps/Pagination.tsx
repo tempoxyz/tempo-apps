@@ -233,7 +233,15 @@ export namespace Pagination {
 	}
 
 	export function Simple(props: Simple.Props) {
-		const { page, totalPages, fetching, countLoading, disableLastPage } = props
+		const {
+			page,
+			totalPages,
+			fetching,
+			countLoading,
+			disableLastPage,
+			hasMore,
+		} = props
+		const canGoNext = totalPages > 0 ? page < totalPages : hasMore
 		return (
 			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
 				<Link
@@ -267,13 +275,13 @@ export namespace Pagination {
 					Page{' '}
 					<span className={fetching ? 'opacity-50' : undefined}>
 						{Pagination.numFormat.format(page)}
-					</span>{' '}
-					of{' '}
-					{countLoading
-						? '…'
-						: totalPages > 0
-							? Pagination.numFormat.format(totalPages)
-							: '…'}
+					</span>
+					{totalPages > 0 && (
+						<>
+							{' '}
+							of {countLoading ? '…' : Pagination.numFormat.format(totalPages)}
+						</>
+					)}
 				</span>
 				<Link
 					to="."
@@ -283,7 +291,7 @@ export namespace Pagination {
 						page: (prev?.page ?? 1) + 1,
 						live: false,
 					})}
-					disabled={page >= totalPages}
+					disabled={!canGoNext}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
@@ -295,7 +303,7 @@ export namespace Pagination {
 					to="."
 					resetScroll={false}
 					search={(prev) => ({ ...prev, page: totalPages, live: false })}
-					disabled={page >= totalPages || disableLastPage}
+					disabled={page >= totalPages || disableLastPage || totalPages === 0}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
@@ -315,12 +323,15 @@ export namespace Pagination {
 			countLoading?: boolean
 			/** Disable "Last page" button when we can't reliably navigate there */
 			disableLastPage?: boolean
+			hasMore?: boolean
 		}
 	}
 
 	export function Count(props: Count.Props) {
 		const { page, totalPages, totalItems, itemsLabel, loading, className } =
 			props
+		const displayCount =
+			totalItems > 1000 ? '1000+' : Pagination.numFormat.format(totalItems)
 		return (
 			<div
 				className={cx(
@@ -338,7 +349,7 @@ export namespace Pagination {
 					</>
 				)}
 				<span className="text-primary tabular-nums">
-					{loading ? '…' : Pagination.numFormat.format(totalItems)}
+					{loading ? '…' : displayCount}
 				</span>
 				<span className="text-tertiary">{itemsLabel}</span>
 			</div>

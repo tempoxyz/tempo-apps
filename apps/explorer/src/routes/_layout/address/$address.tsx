@@ -10,7 +10,7 @@ import {
 	useNavigate,
 	useRouter,
 } from '@tanstack/react-router'
-import { Address, Hex } from 'ox'
+import { Address as OxAddress, Hex } from 'ox'
 import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
@@ -36,8 +36,10 @@ import {
 	useTimeFormat,
 } from '#comps/TimeFormat'
 import { TokenIcon } from '#comps/TokenIcon'
+import { TxEventDescription } from '#comps/TxEventDescription'
 import {
 	BatchTransactionDataContext,
+	getPerspectiveEvent,
 	type TransactionData,
 	TransactionDescription,
 	TransactionTimestamp,
@@ -57,18 +59,26 @@ import {
 	getContractBytecode,
 	getContractInfo,
 } from '#lib/domain/contracts'
-import { parseKnownEvents } from '#lib/domain/known-events'
+import { parseKnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import { useLookupSignature } from '#lib/abi'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
 import {
 	type TransactionsData,
 	transactionsQueryOptions,
 } from '#lib/queries/account.ts'
+import {
+	type AddressEventData,
+	type AddressEventsApiResponse,
+	type AddressEventsCountResponse,
+	addressEventsQueryOptions,
+	addressEventsCountQueryOptions,
+} from '#lib/queries/address-events.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 
-async function fetchAddressTotalValue(address: Address.Address) {
+async function fetchAddressTotalValue(address: OxAddress.Address) {
 	const response = await fetch(
 		`${__BASE_URL__}/api/address/total-value/${address}`,
 		{ headers: { 'Content-Type': 'application/json' } },
@@ -76,7 +86,7 @@ async function fetchAddressTotalValue(address: Address.Address) {
 	return response.json() as Promise<{ totalValue: number }>
 }
 
-async function fetchAddressTotalCount(address: Address.Address) {
+async function fetchAddressTotalCount(address: OxAddress.Address) {
 	const response = await fetch(
 		`${__BASE_URL__}/api/address/txs-count/${address}`,
 		{ headers: { 'Content-Type': 'application/json' } },
@@ -96,7 +106,7 @@ async function fetchAddressTotalCount(address: Address.Address) {
 
 function useBatchTransactionData(
 	transactions: Transaction[],
-	viewer: Address.Address,
+	viewer: OxAddress.Address,
 ) {
 	const hashes = React.useMemo(
 		() => transactions.map((tx) => tx.hash).filter(isHash),
@@ -147,12 +157,12 @@ const assets = [
 ] as const
 
 type AssetData = {
-	address: Address.Address
+	address: OxAddress.Address
 	metadata: { name?: string; symbol?: string; decimals?: number } | undefined
 	balance: bigint | undefined
 }
 
-function useAssetsData(accountAddress: Address.Address): AssetData[] {
+function useAssetsData(accountAddress: OxAddress.Address): AssetData[] {
 	// Track hydration to avoid SSR/client mismatch with cached query data
 	const isMounted = useIsMounted()
 
@@ -235,7 +245,7 @@ const defaultSearchValues = {
 } as const
 
 const TabSchema = z.prefault(
-	z.enum(['history', 'assets', 'contract', 'interact']),
+	z.enum(['history', 'assets', 'events', 'contract', 'interact']),
 	defaultSearchValues.tab,
 )
 
@@ -269,7 +279,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 	loader: async ({ deps: { page, limit, live }, params, context }) => {
 		const { address } = params
 		// Only throw notFound for truly invalid addresses
-		if (!Address.validate(address))
+		if (!OxAddress.validate(address))
 			throw notFound({
 				routeId: rootRouteId,
 				data: { error: 'Invalid address format' },
@@ -342,22 +352,49 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
 			])
 
-		const transactionsData = await timeout(
-			context.queryClient
-				.ensureQueryData(
-					transactionsQueryOptions({
-						address,
-						page,
-						limit,
-						offset,
+		const [transactionsData, eventsData, eventsCountData] = await Promise.all([
+			timeout(
+				context.queryClient
+					.ensureQueryData(
+						transactionsQueryOptions({
+							address,
+							page,
+							limit,
+							offset,
+						}),
+					)
+					.catch((error) => {
+						console.error('Fetch transactions error:', error)
+						return undefined
 					}),
-				)
-				.catch((error) => {
-					console.error('Fetch transactions error:', error)
-					return undefined
-				}),
-			QUERY_TIMEOUT_MS,
-		)
+				QUERY_TIMEOUT_MS,
+			),
+			timeout(
+				context.queryClient
+					.ensureQueryData(
+						addressEventsQueryOptions({
+							address,
+							page,
+							limit,
+							offset,
+						}),
+					)
+					.catch((error) => {
+						console.error('Fetch events error:', error)
+						return undefined
+					}),
+				QUERY_TIMEOUT_MS,
+			),
+			timeout(
+				context.queryClient
+					.ensureQueryData(addressEventsCountQueryOptions(address))
+					.catch((error) => {
+						console.error('Fetch events count error:', error)
+						return undefined
+					}),
+				QUERY_TIMEOUT_MS,
+			),
+		])
 
 		// Fire off optional loaders without blocking page render
 		// These will populate the cache if successful but won't delay the page load
@@ -385,6 +422,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			contractInfo,
 			contractSource,
 			transactionsData,
+			eventsData,
+			eventsCountData,
 			txCountResponse,
 			totalValueResponse,
 		}
@@ -409,7 +448,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 		try {
 			// Fetch holdings by directly reading balances from known tokens
-			const accountAddress = params.address as Address.Address
+			const accountAddress = params.address as OxAddress.Address
 			const tokenResults = await timeout(
 				Promise.all(
 					assets.map(async (tokenAddress) => {
@@ -509,10 +548,16 @@ function RouteComponent() {
 	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, live, limit } = Route.useSearch()
-	const { hasContract, contractInfo, contractSource, transactionsData } =
-		Route.useLoaderData()
+	const {
+		hasContract,
+		contractInfo,
+		contractSource,
+		transactionsData,
+		eventsData: initialEventsData,
+		eventsCountData: initialEventsCountData,
+	} = Route.useLoaderData()
 
-	Address.assert(address)
+	OxAddress.assert(address)
 
 	const hash = location.hash
 
@@ -565,16 +610,21 @@ function RouteComponent() {
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
-			const tabs: TabValue[] = ['history', 'assets', 'contract', 'interact']
-
+			const tabs: TabValue[] = [
+				'history',
+				'assets',
+				'events',
+				'contract',
+				'interact',
+			]
 			const newTab = tabs[newIndex] ?? 'history'
 			navigate({
 				to: '.',
-				search: { page, tab: newTab, limit },
+				search: { page: 1, tab: newTab, limit },
 				resetScroll: false,
 			})
 		},
-		[navigate, page, limit],
+		[navigate, limit],
 	)
 
 	const activeSection =
@@ -582,11 +632,13 @@ function RouteComponent() {
 			? 0
 			: tab === 'assets'
 				? 1
-				: tab === 'contract'
+				: tab === 'events'
 					? 2
-					: tab === 'interact'
+					: tab === 'contract'
 						? 3
-						: 0
+						: tab === 'interact'
+							? 4
+							: 0
 
 	const assetsData = useAssetsData(address)
 
@@ -604,9 +656,12 @@ function RouteComponent() {
 				limit={limit}
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
+				hasContract={hasContract}
 				contractInfo={contractInfo}
 				contractSource={contractSource}
 				initialData={transactionsData}
+				initialEventsData={initialEventsData}
+				initialEventsCountData={initialEventsCountData}
 				assetsData={assetsData}
 				live={live}
 			/>
@@ -615,7 +670,7 @@ function RouteComponent() {
 }
 
 function AccountCardWithTimestamps(props: {
-	address: Address.Address
+	address: OxAddress.Address
 	assetsData: AssetData[]
 }) {
 	const { address, assetsData } = props
@@ -681,14 +736,17 @@ function AccountCardWithTimestamps(props: {
 }
 
 function SectionsWrapper(props: {
-	address: Address.Address
+	address: OxAddress.Address
 	page: number
 	limit: number
 	activeSection: number
 	onSectionChange: (index: number) => void
+	hasContract: boolean
 	contractInfo: ContractInfo | undefined
 	contractSource?: ContractSource | undefined
 	initialData: TransactionsData | undefined
+	initialEventsData: AddressEventsApiResponse | undefined
+	initialEventsCountData: AddressEventsCountResponse | undefined
 	assetsData: AssetData[]
 	live: boolean
 }) {
@@ -698,9 +756,12 @@ function SectionsWrapper(props: {
 		limit,
 		activeSection,
 		onSectionChange,
+		hasContract,
 		contractInfo,
 		contractSource,
 		initialData,
+		initialEventsData,
+		initialEventsCountData,
 		assetsData,
 		live,
 	} = props
@@ -735,25 +796,19 @@ function SectionsWrapper(props: {
 			limit,
 			offset: (page - 1) * limit,
 		}),
-		initialData: page === 1 ? initialData : undefined,
+		initialData: initialData,
 		// Override refetch settings reactively based on tab state
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
-
 	/**
 	 * use initialData until mounted to avoid hydration mismatch
 	 * (tanstack query may have fresher cached data that differs from SSR)
 	 */
 	const data = isMounted ? queryData : page === 1 ? initialData : queryData
-	const {
-		transactions,
-		total: approximateTotal,
-		hasMore,
-	} = data ?? {
+	const { transactions, total: approximateTotal } = data ?? {
 		transactions: [],
 		total: 0,
-		hasMore: false,
 	}
 
 	// Fetch exact total count in the background (only when on history tab)
@@ -766,6 +821,41 @@ function SectionsWrapper(props: {
 		refetchOnWindowFocus: false,
 		enabled: isHistoryTabActive,
 	})
+
+	// Events tab data fetching
+	const {
+		data: eventsData,
+		isPlaceholderData: isEventsPlaceholderData,
+		error: eventsError,
+	} = useQuery({
+		...addressEventsQueryOptions({
+			address,
+			page,
+			limit,
+			offset: (page - 1) * limit,
+		}),
+		initialData: initialEventsData,
+	})
+	const { events, total: eventsApproximateTotal, hasMore: eventsHasMore } = eventsData ?? {
+		events: [] as AddressEventData[],
+		total: 0,
+		hasMore: false,
+	}
+
+	// Fetch exact events count in the background
+	const eventsCountQuery = useQuery({
+		...addressEventsCountQueryOptions(address),
+		initialData: initialEventsCountData,
+	})
+
+	// SSR data first, then query data
+	const exactEventsCount =
+		initialEventsCountData?.data ?? eventsCountQuery.data?.data
+
+	// Use exact count for events pagination
+	const eventsPaginationTotal =
+		exactEventsCount ??
+		(eventsApproximateTotal > 0 ? eventsApproximateTotal : events.length)
 
 	const batchTransactionDataContextValue = useBatchTransactionData(
 		transactions,
@@ -780,11 +870,9 @@ function SectionsWrapper(props: {
 
 	// For pagination: always use hasMore-based estimate
 	// This ensures we only show pages that have data
-	const paginationTotal = hasMore
-		? Math.max(approximateTotal + limit, (page + 1) * limit)
-		: approximateTotal > 0
-			? approximateTotal
-			: transactions.length
+	// Use server total directly since we fetch a buffer with all transactions
+	const paginationTotal =
+		approximateTotal > 0 ? approximateTotal : transactions.length
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -818,6 +906,30 @@ function SectionsWrapper(props: {
 		{ label: 'Hash', align: 'end', width: '1fr' },
 		{ label: 'Fee', align: 'end', width: '0.5fr' },
 		{ label: 'Total', align: 'end', width: '0.5fr' },
+	]
+
+	const eventsErrorDisplay = eventsError ? (
+		<div className="rounded-[10px] bg-card-header p-4.5">
+			<p className="text-sm font-medium text-red-400">Failed to load events</p>
+			<p className="text-xs text-tertiary mt-1">
+				{eventsError instanceof Error ? eventsError.message : 'Unknown error'}
+			</p>
+		</div>
+	) : null
+
+	const eventsColumns: DataGrid.Column[] = [
+		{ label: 'Time', align: 'start', width: '0.5fr' },
+		{ label: 'Description', align: 'start', width: '1.5fr' },
+		{
+			label: <span title="Event signature (topic0)">Event</span>,
+			align: 'end',
+			width: '1fr',
+		},
+		{
+			label: <span title="Transaction hash">Hash</span>,
+			align: 'end',
+			width: '1.5fr',
+		},
 	]
 
 	return (
@@ -873,7 +985,7 @@ function SectionsWrapper(props: {
 								page={page}
 								fetching={isPlaceholderData}
 								loading={!data}
-								countLoading
+								countLoading={exactCount === undefined}
 								itemsLabel="transactions"
 								itemsPerPage={limit}
 								pagination="simple"
@@ -929,6 +1041,64 @@ function SectionsWrapper(props: {
 								itemsLabel="assets"
 								itemsPerPage={assets.length}
 								emptyState="No assets found."
+							/>
+						),
+					},
+					// Events tab - always shown, disabled when no contract
+					{
+						title: 'Events',
+						totalItems:
+							eventsData && (exactEventsCount ?? eventsPaginationTotal),
+						itemsLabel: 'events',
+						disabled: !hasContract,
+						content: eventsErrorDisplay ?? (
+							<DataGrid
+								columns={{
+									stacked: eventsColumns,
+									tabs: eventsColumns,
+								}}
+								items={() =>
+									events.map((event) => ({
+										cells: [
+											<EventTimeCell
+												key="time"
+												blockNumber={event.blockNumber}
+												format={timeFormat}
+											/>,
+											<EventDescCell
+												key="desc"
+												event={event}
+												accountAddress={address}
+											/>,
+											<EventSignatureCell
+												key="signature"
+												selector={event.topics[0]}
+											/>,
+											<div key="hash" className="flex-1 text-accent">
+												<Midcut
+													value={event.txHash}
+													prefix="0x"
+													align="end"
+												/>
+											</div>,
+										],
+										link: {
+											href: `/tx/${event.txHash}`,
+											title: `View transaction ${event.txHash}`,
+										},
+									}))
+								}
+								totalItems={eventsPaginationTotal}
+								displayCount={exactEventsCount === null ? Infinity : exactEventsCount}
+								page={page}
+								fetching={isEventsPlaceholderData}
+								loading={!eventsData}
+								countLoading={exactEventsCount === undefined}
+								itemsLabel="events"
+								itemsPerPage={limit}
+								pagination="simple"
+								emptyState="No events found."
+								hasMore={eventsHasMore}
 							/>
 						),
 					},
@@ -997,7 +1167,7 @@ function TransactionTimeCellInner(props: {
 
 function TransactionDescCell(props: {
 	transaction: Transaction
-	accountAddress: Address.Address
+	accountAddress: OxAddress.Address
 }) {
 	return (
 		<ClientOnly fallback={placeholder}>
@@ -1008,7 +1178,7 @@ function TransactionDescCell(props: {
 
 function TransactionDescCellInner(props: {
 	transaction: Transaction
-	accountAddress: Address.Address
+	accountAddress: OxAddress.Address
 }) {
 	const { transaction, accountAddress } = props
 	const batchData = useTransactionDataFromBatch(transaction.hash)
@@ -1051,6 +1221,64 @@ function TransactionFeeCellInner(props: { hash: Hex.Hex }) {
 			)}
 		</span>
 	)
+}
+
+function EventTimeCell(props: { blockNumber: Hex.Hex; format: TimeFormat }) {
+	const { blockNumber, format } = props
+	const { data: timestamp } = useBlock({
+		blockNumber: Hex.toBigInt(blockNumber),
+		query: {
+			select: (block) => block.timestamp,
+			staleTime: Infinity,
+		},
+	})
+	if (!timestamp) return <span className="text-tertiary">…</span>
+	return <TransactionTimestamp timestamp={timestamp} format={format} />
+}
+
+function EventSignatureCell(props: { selector: Hex.Hex | undefined }) {
+	const { selector } = props
+	const { data: signature, isFetching } = useLookupSignature({ selector })
+
+	if (!selector) return <span className="text-tertiary">—</span>
+	if (isFetching) return <span className="text-tertiary">…</span>
+	if (!signature) return <Midcut value={selector} prefix="0x" />
+
+	const name = signature.split('(')[0]
+	return <span title={signature}>{name}</span>
+}
+
+function EventDescCell(props: {
+	event: AddressEventData
+	accountAddress: OxAddress.Address
+}) {
+	const { event, accountAddress } = props
+
+	const log = React.useMemo(
+		() => ({
+			address: event.contractAddress,
+			topics: event.topics as [Hex.Hex, ...Hex.Hex[]],
+			data: event.data,
+			blockNumber: Hex.toBigInt(event.blockNumber),
+			transactionHash: event.txHash,
+			logIndex: event.logIndex,
+			blockHash: '0x' as Hex.Hex,
+			transactionIndex: 0,
+			removed: false,
+		}),
+		[event],
+	)
+
+	const knownEvent = React.useMemo(() => parseKnownEvent(log), [log])
+
+	if (!knownEvent) {
+		const selector = event.topics[0]?.slice(0, 10) ?? 'unknown'
+		return <span className="text-secondary font-mono text-xs">{selector}</span>
+	}
+
+	const perspectiveEvent = getPerspectiveEvent(knownEvent, accountAddress)
+
+	return <TxEventDescription event={perspectiveEvent} seenAs={accountAddress} />
 }
 
 function AssetName(props: { asset: AssetData }) {

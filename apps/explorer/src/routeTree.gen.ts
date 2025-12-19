@@ -32,6 +32,8 @@ import { Route as ApiTxTraceHashRouteImport } from './routes/api/tx/trace/$hash'
 import { Route as ApiTxBalanceChangesHashRouteImport } from './routes/api/tx/balance-changes/$hash'
 import { Route as ApiAddressTxsCountAddressRouteImport } from './routes/api/address/txs-count/$address'
 import { Route as ApiAddressTotalValueAddressRouteImport } from './routes/api/address/total-value/$address'
+import { Route as ApiAddressEventsAddressRouteImport } from './routes/api/address/events/$address'
+import { Route as ApiAddressEventsCountAddressRouteImport } from './routes/api/address/events-count/$address'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -149,6 +151,17 @@ const ApiAddressTotalValueAddressRoute =
     path: '/api/address/total-value/$address',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAddressEventsAddressRoute = ApiAddressEventsAddressRouteImport.update({
+  id: '/api/address/events/$address',
+  path: '/api/address/events/$address',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAddressEventsCountAddressRoute =
+  ApiAddressEventsCountAddressRouteImport.update({
+    id: '/api/address/events-count/$address',
+    path: '/api/address/events-count/$address',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/blocks': typeof LayoutBlocksRoute
@@ -169,6 +182,8 @@ export interface FileRoutesByFullPath {
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/demo': typeof LayoutDemoIndexRoute
+  '/api/address/events-count/$address': typeof ApiAddressEventsCountAddressRoute
+  '/api/address/events/$address': typeof ApiAddressEventsAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
@@ -193,6 +208,8 @@ export interface FileRoutesByTo {
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/demo': typeof LayoutDemoIndexRoute
+  '/api/address/events-count/$address': typeof ApiAddressEventsCountAddressRoute
+  '/api/address/events/$address': typeof ApiAddressEventsAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
@@ -219,6 +236,8 @@ export interface FileRoutesById {
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
+  '/api/address/events-count/$address': typeof ApiAddressEventsCountAddressRoute
+  '/api/address/events/$address': typeof ApiAddressEventsAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
@@ -245,6 +264,8 @@ export interface FileRouteTypes {
     | '/tx/$hash'
     | '/api/address/$address'
     | '/demo'
+    | '/api/address/events-count/$address'
+    | '/api/address/events/$address'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
@@ -269,6 +290,8 @@ export interface FileRouteTypes {
     | '/tx/$hash'
     | '/api/address/$address'
     | '/demo'
+    | '/api/address/events-count/$address'
+    | '/api/address/events/$address'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
@@ -294,6 +317,8 @@ export interface FileRouteTypes {
     | '/_layout/tx/$hash'
     | '/api/address/$address'
     | '/_layout/demo/'
+    | '/api/address/events-count/$address'
+    | '/api/address/events/$address'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
@@ -307,6 +332,8 @@ export interface RootRouteChildren {
   ApiSearchRoute: typeof ApiSearchRoute
   ApiTunnelRoute: typeof ApiTunnelRoute
   ApiAddressAddressRoute: typeof ApiAddressAddressRoute
+  ApiAddressEventsCountAddressRoute: typeof ApiAddressEventsCountAddressRoute
+  ApiAddressEventsAddressRoute: typeof ApiAddressEventsAddressRoute
   ApiAddressTotalValueAddressRoute: typeof ApiAddressTotalValueAddressRoute
   ApiAddressTxsCountAddressRoute: typeof ApiAddressTxsCountAddressRoute
   ApiTxBalanceChangesHashRoute: typeof ApiTxBalanceChangesHashRoute
@@ -476,6 +503,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAddressTotalValueAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/address/events/$address': {
+      id: '/api/address/events/$address'
+      path: '/api/address/events/$address'
+      fullPath: '/api/address/events/$address'
+      preLoaderRoute: typeof ApiAddressEventsAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/address/events-count/$address': {
+      id: '/api/address/events-count/$address'
+      path: '/api/address/events-count/$address'
+      fullPath: '/api/address/events-count/$address'
+      preLoaderRoute: typeof ApiAddressEventsCountAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -521,6 +562,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSearchRoute: ApiSearchRoute,
   ApiTunnelRoute: ApiTunnelRoute,
   ApiAddressAddressRoute: ApiAddressAddressRoute,
+  ApiAddressEventsCountAddressRoute: ApiAddressEventsCountAddressRoute,
+  ApiAddressEventsAddressRoute: ApiAddressEventsAddressRoute,
   ApiAddressTotalValueAddressRoute: ApiAddressTotalValueAddressRoute,
   ApiAddressTxsCountAddressRoute: ApiAddressTxsCountAddressRoute,
   ApiTxBalanceChangesHashRoute: ApiTxBalanceChangesHashRoute,

@@ -221,10 +221,12 @@ export const Route = createFileRoute('/api/address/$address')({
 					}
 
 					const nextOffset = offset + transactions.length
+					// Use sortedHashes.length as total (the buffer we fetched)
+					const total = sortedHashes.length
 
 					return json({
 						transactions,
-						total: hasMore ? nextOffset + 1 : nextOffset,
+						total,
 						offset: nextOffset,
 						limit,
 						hasMore,
