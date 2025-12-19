@@ -23,7 +23,7 @@ export function ConnectWallet({
 	return (
 		<ClientOnly
 			fallback={
-				<div className="text-[12px] flex items-center text-secondary">
+				<div className="text-[12px] flex items-center text-secondary whitespace-nowrap">
 					Detecting wallet…
 				</div>
 			}
@@ -51,8 +51,8 @@ function ConnectWalletInner({
 
 	if (!injectedConnectors.length)
 		return (
-			<div className="text-[14px] -tracking-[2%] flex items-center">
-				No browser wallets found.
+			<div className="text-[12px] -tracking-[2%] flex items-center whitespace-nowrap select-none">
+				No wallet found.
 			</div>
 		)
 	if (!address || connector?.id === 'webAuthn')
@@ -100,7 +100,7 @@ function ConnectWalletInner({
 				</Button>
 			)}
 			{switchChain.isSuccess && (
-				<span className="text-[12px] font-normal text-tertiary">
+				<span className="text-[12px] font-normal text-tertiary whitespace-nowrap">
 					Added Tempo to {connector?.name ?? 'Wallet'}!
 				</span>
 			)}
