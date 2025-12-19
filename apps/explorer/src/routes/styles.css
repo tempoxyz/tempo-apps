@@ -240,19 +240,37 @@ input[type="number"] {
 	}
 }
 
+/* pre.shiki, div.shiki {
+	counter-reset: codeblock-line;
+
+	.line {
+		counter-increment: codeblock-line;
+		&::before {
+			content: counter(codeblock-line) " ";
+			@apply font-light text-tertiary/40 text-xs inline-block w-[20px] text-right ml-[-14px] mr-[12px];
+		}
+	}
+} */
+
 .shiki-block,
 .shiki-block.shiki {
-	padding: 0px 12px;
-	background-color: transparent;
+	@apply bg-card-header px-4!;
 	max-height: 320px;
 	overflow: auto;
 	margin: 0;
+	padding-inline: unset;
+	margin-bottom: 8px;
 	box-sizing: border-box;
-	font-size: 12px;
-	line-height: 18px;
+	font-size: 13.5px;
+	line-height: 20px;
 }
 
 .shiki-block code {
 	font-family: inherit;
-	background-color: transparent;
+	@apply bg-card-header!;
+}
+
+pre .shiki,
+.shiki pre {
+	@apply bg-card-header!;
 }

@@ -75,7 +75,7 @@ export function BlockCard(props: BlockCard.Props) {
 				<button
 					type="button"
 					onClick={() => copyBlock.copy(String(blockNumber ?? 0n))}
-					className="w-full text-left cursor-pointer press-down text-tertiary pb-[4px]"
+					className="w-full text-left cursor-pointer press-down text-tertiary pt-[2px] pb-[4px]"
 					title={String(blockNumber ?? 0n)}
 				>
 					<div className="flex items-center gap-[8px] mb-[4px]">

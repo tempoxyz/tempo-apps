@@ -21,6 +21,8 @@
 		"@sentry/cloudflare": "catalog:",
 		"@sentry/tanstackstart-react": "catalog:",
 		"@shazow/whatsabi": "catalog:",
+		"@shikijs/langs": "catalog:",
+		"@shikijs/themes": "catalog:",
 		"@tailwindcss/vite": "catalog:",
 		"@tanstack/query-async-storage-persister": "catalog:",
 		"@tanstack/react-query": "catalog:",
