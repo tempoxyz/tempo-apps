@@ -6,6 +6,11 @@
 	"main": "./src/index.ts",
 	"routes": [{ "pattern": "sponsor.testnet.tempo.xyz", "custom_domain": true }],
 	"workers_dev": false,
+	"vars": {
+		"TEMPO_RPC_URL": "https://rpc.testnet.tempo.xyz",
+		"ALLOWED_ORIGINS": "*",
+		"TEMPO_ENV": "testnet"
+	},
 	"preview_urls": true,
 	"keep_vars": true,
 	"observability": {
@@ -34,6 +39,33 @@
 				{ "pattern": "privy-sponsor.testnet.tempo.xyz", "custom_domain": true }
 			],
 			"workers_dev": false,
+			"vars": {
+				"TEMPO_RPC_URL": "https://rpc.testnet.tempo.xyz",
+				"ALLOWED_ORIGINS": "*",
+				"TEMPO_ENV": "testnet"
+			},
+			"ratelimits": [
+				{
+					"name": "AddressRateLimiter",
+					"namespace_id": "888",
+					"simple": {
+						"limit": 1000,
+						"period": 60
+					}
+				}
+			]
+		},
+		"devnet": {
+			"name": "fee-payer-devnet",
+			"routes": [
+				{ "pattern": "sponsor.devnet.tempo.xyz", "custom_domain": true }
+			],
+			"workers_dev": false,
+			"vars": {
+				"TEMPO_RPC_URL": "https://rpc.devnet.tempoxyz.dev",
+				"ALLOWED_ORIGINS": "*",
+				"TEMPO_ENV": "devnet"
+			},
 			"ratelimits": [
 				{
 					"name": "AddressRateLimiter",

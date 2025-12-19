@@ -21,9 +21,11 @@ jobs:
       matrix:
         include:
           - app: explorer
-          - app: fee-payer # default
+          - app: fee-payer # testnet
           - app: fee-payer # privy
             env: privy
+          - app: fee-payer # devnet
+            env: devnet
           - app: og
           - app: service-proxy
           - app: tokenlist
