@@ -36,10 +36,13 @@ app
 	.use(
 		cors({
 			allowMethods: ['GET', 'POST', 'OPTIONS', 'HEAD'],
-			origin: (origin) =>
-				WHITELISTED_ORIGINS.some((p) => originMatches({ origin, pattern: p }))
+			origin: (origin, context) => {
+				return WHITELISTED_ORIGINS.some((p) =>
+					originMatches({ origin: context.req.url, pattern: p }),
+				)
 					? origin
-					: null,
+					: null
+			},
 		}),
 	)
 	.use(
