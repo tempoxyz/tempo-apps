@@ -7,6 +7,20 @@
 	"keep_vars": true,
 	"workers_dev": true,
 	"preview_urls": true,
+	"vars": {
+		// in addition to localhost
+		"WHITELISTED_ORIGINS": "https://tempo.xyz,https://*.tempo.xyz,https://*.porto.workers.dev"
+	},
+	"ratelimits": [
+		{
+			"name": "RATE_LIMITER",
+			"namespace_id": "1001",
+			"simple": {
+				"limit": 10,
+				"period": 60
+			}
+		}
+	],
 	"d1_databases": [
 		{
 			"binding": "CONTRACTS_DB",
@@ -39,9 +53,9 @@
 	],
 	"observability": {
 		"enabled": true,
+		"head_sampling_rate": 1,
 		"logs": {
 			"enabled": true,
-			"persist": true,
 			"head_sampling_rate": 1,
 			"invocation_logs": true
 		}

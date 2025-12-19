@@ -37,3 +37,14 @@ export function sourcifyError(
 		status,
 	)
 }
+
+export function originMatches(params: { origin: string; pattern: string }) {
+	const { origin, pattern } = params
+
+	if (origin === pattern) return true
+	if (!pattern.includes('*')) return false
+	const regexPattern = pattern
+		.replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+		.replace(/\*/g, '.*')
+	return new RegExp(`^${regexPattern}$`).test(origin)
+}
