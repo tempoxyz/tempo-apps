@@ -66,8 +66,8 @@ import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
 import {
 	type TransactionsData,
 	transactionsQueryOptions,
-} from '#lib/queries/account'
-import { config, getConfig } from '#wagmi.config'
+} from '#lib/queries/account.ts'
+import { config } from '#wagmi.config.ts'
 
 async function fetchAddressTotalValue(address: Address.Address) {
 	const response = await fetch(
@@ -108,10 +108,9 @@ function useBatchTransactionData(
 		queries: hashes.map((hash) => ({
 			queryKey: ['tx-data-batch', viewer, hash],
 			queryFn: async (): Promise<TransactionData | null> => {
-				const cfg = getConfig()
-				const receipt = await getTransactionReceipt(cfg, { hash })
+				const receipt = await getTransactionReceipt(config, { hash })
 				const [block, transaction, getTokenMetadata] = await Promise.all([
-					getBlock(cfg, { blockHash: receipt.blockHash }),
+					getBlock(config, { blockHash: receipt.blockHash }),
 					getTransaction(config, { hash: receipt.transactionHash }),
 					Tip20.metadataFromLogs(receipt.logs),
 				])

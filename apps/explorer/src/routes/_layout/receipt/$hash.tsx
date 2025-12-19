@@ -17,17 +17,16 @@ import {
 	formatEventForOgServer,
 	OG_BASE_URL,
 } from '#lib/og'
-import { getConfig } from '#wagmi.config'
+import { config } from '#wagmi.config'
 
-function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
+function receiptDetailQueryOptions(params: { hash: Hex.Hex }) {
 	return queryOptions({
-		queryKey: ['receipt-detail', params.hash, params.rpcUrl],
+		queryKey: ['receipt-detail', params.hash],
 		queryFn: () => fetchReceiptData(params),
 	})
 }
 
-async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
-	const config = getConfig({ rpcUrl: params.rpcUrl })
+async function fetchReceiptData(params: { hash: Hex.Hex }) {
 	const receipt = await getTransactionReceipt(config, {
 		hash: params.hash,
 	})
@@ -142,12 +141,11 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 						return 'text/plain'
 				})()
 
-				const rpcUrl = url.searchParams.get('r') ?? undefined
 				const hash = parseHashFromParams(params)
 
 				if (type === 'text/plain') {
 					if (!hash) return new Response('Not found', { status: 404 })
-					const data = await fetchReceiptData({ hash, rpcUrl })
+					const data = await fetchReceiptData({ hash })
 					const text = TextRenderer.render(data)
 					return new Response(text, {
 						headers: {
@@ -166,10 +164,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				if (type === 'application/json') {
 					if (!hash)
 						return Response.json({ error: 'Not found' }, { status: 404 })
-					const { lineItems, receipt } = await fetchReceiptData({
-						hash,
-						rpcUrl,
-					})
+					const { lineItems, receipt } = await fetchReceiptData({ hash })
 					return Response.json(
 						JSON.parse(Json.stringify({ lineItems, receipt })),
 					)
