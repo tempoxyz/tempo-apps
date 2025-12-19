@@ -40,6 +40,7 @@ export namespace Header {
 		const navigate = useNavigate()
 		const [inputValue, setInputValue] = React.useState('')
 		const [isMounted, setIsMounted] = React.useState(false)
+		const [delayedNavigating, setDelayedNavigating] = React.useState(false)
 		const { currentPathname, isNavigating } = useRouterState({
 			select: (state) => ({
 				currentPathname:
@@ -57,13 +58,23 @@ export namespace Header {
 			})
 		}, [router])
 
+		// delay disabling the input to avoid blinking on fast navigations
+		React.useEffect(() => {
+			if (!isNavigating) {
+				setDelayedNavigating(false)
+				return
+			}
+			const timer = setTimeout(() => setDelayedNavigating(true), 100)
+			return () => clearTimeout(timer)
+		}, [isNavigating])
+
 		return (
 			showSearch && (
 				<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex z-1 h-0 items-center">
 					<ExploreInput
 						value={inputValue}
 						onChange={setInputValue}
-						disabled={isMounted && isNavigating}
+						disabled={isMounted && delayedNavigating}
 						onActivate={({ value, type }) => {
 							if (type === 'hash') {
 								navigate({ to: '/receipt/$hash', params: { hash: value } })
