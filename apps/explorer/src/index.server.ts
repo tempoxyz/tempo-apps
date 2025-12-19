@@ -19,21 +19,18 @@ export default Sentry.withSentry(
 			// Adds request headers and IP for users, for more info visit:
 			// https://docs.sentry.io/platforms/javascript/guides/cloudflare/configuration/options/#sendDefaultPii
 			sendDefaultPii: true,
-			enableLogs: true,
+			enableLogs: false,
 		}
 	},
 	{
 		fetch: (request: Request, opts) => {
 			const url = new URL(request.url)
-			if (url.pathname === '/debug-sentry')
-				throw new Error('My first Sentry error!')
 
 			for (const { from, to } of redirects) {
 				const match = url.pathname.match(from)
-				if (match) {
-					url.pathname = to(match)
-					return Response.redirect(url, 301)
-				}
+				if (!match) continue
+				url.pathname = to(match)
+				return Response.redirect(url, 301)
 			}
 
 			return handler.fetch(request, opts as Parameters<ServerEntry['fetch']>[1])

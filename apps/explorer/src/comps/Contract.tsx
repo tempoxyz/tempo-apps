@@ -2,7 +2,7 @@ import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi } from 'viem'
 import { useBytecode } from 'wagmi'
-import { ConnectWallet } from '#comps/ConnectWallet.tsx'
+import { ConnectPasskey } from '#comps/ConnectWallet.tsx'
 import { AbiViewer } from '#comps/ContractAbi.tsx'
 import { ContractReader } from '#comps/ContractReader.tsx'
 import { SourceSection } from '#comps/ContractSource.tsx'
@@ -247,7 +247,7 @@ export function InteractTabContent(props: {
 				title="Write contract"
 				expanded={writeExpanded}
 				onToggle={() => setWriteExpanded(!writeExpanded)}
-				actions={<ConnectWallet />}
+				actions={<ConnectPasskey />}
 			>
 				<div className="px-[10px] pb-[10px]">
 					<ContractWriter address={address} abi={abi} />

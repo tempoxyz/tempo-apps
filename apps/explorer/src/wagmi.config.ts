@@ -13,7 +13,7 @@ export const DEFAULT_TESTNET_WS_URL = 'wss://rpc.testnet.tempo.xyz'
 export const queryClient: QueryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
-			gcTime: 1000 * 60 * 60 * 24, // 24 hours
+			gcTime: 1_000 * 60 * 60 * 24, // 24 hours
 			queryKeyHashFn: Json.stringify,
 			refetchOnReconnect: () => !queryClient.isMutating(),
 			retry: 0,
@@ -48,7 +48,7 @@ export const config = createConfig({
 	],
 	connectors: [
 		webAuthn({
-			keyManager: KeyManager.http('psstkey'),
+			keyManager: KeyManager.http(`${__BASE_URL__}/api/webauthn`),
 		}),
 	],
 	batch: { multicall: false },

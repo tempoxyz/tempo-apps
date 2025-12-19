@@ -15,6 +15,65 @@ import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
 
+export function ConnectPasskey() {
+	const connect = useConnect()
+
+	const connection = useConnection()
+	const connectors = useConnectors()
+
+	const connector = React.useMemo(
+		() => connectors.find((connector) => connector.id === 'webAuthn'),
+		[connectors],
+	)
+
+	if (!connector || connector.id !== 'webAuthn')
+		return <span className="text-negative">no passkey connector</span>
+
+	if (connect.status === 'pending') return <p>check prompt…</p>
+
+	if (connection.isConnected && connection.address) {
+		return (
+			<div className="flex items-center gap-2">
+				<a
+					target="_blank"
+					rel="noopener noreferrer"
+					className="font-light text-[12px] text-white/80"
+					href={`https://docs.tempo.xyz/quickstart/faucet#funding-others`}
+				>
+					[faucet]
+				</a>
+				<Address
+					chars={7}
+					align="end"
+					address={connection.address}
+					className="text-accent font-light text-sm"
+				/>
+				<SignOut />
+			</div>
+		)
+	}
+
+	return (
+		<Button
+			onClick={() =>
+				connect
+					.mutateAsync({
+						connector,
+						capabilities: { type: 'sign-in' },
+					})
+					.catch(() =>
+						connect.mutateAsync({
+							connector,
+							capabilities: { type: 'sign-up' },
+						}),
+					)
+			}
+		>
+			Connect
+		</Button>
+	)
+}
+
 export function ConnectWallet({
 	showAddChain = true,
 }: {
