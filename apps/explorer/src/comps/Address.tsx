@@ -10,7 +10,7 @@ export function Address(props: Address.Props) {
 			<Link
 				to="/address/$address"
 				params={{ address }}
-				className={cx(className, 'flex-1 text-accent press-down')}
+				className={cx('text-accent press-down hover:underline', className)}
 			>
 				<Midcut align={align} min={chars} prefix="0x" value={address} />
 			</Link>

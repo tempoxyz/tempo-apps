@@ -18,6 +18,7 @@ import { InfoRow } from '#comps/InfoRow'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
+import { TokenIcon } from '#comps/TokenIcon'
 import { TxBalanceChanges } from '#comps/TxBalanceChanges'
 import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
@@ -30,10 +31,13 @@ import { cx } from '#cva.config.ts'
 import { autoloadAbiQueryOptions, lookupSignatureQueryOptions } from '#lib/abi'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
+import { isTip20Address } from '#lib/domain/tip20'
+import { PriceFormatter } from '#lib/formatting'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription } from '#lib/og'
 import { LIMIT, type TxData, txQueryOptions } from '#lib/queries'
+import type { BalanceChangesData } from '#lib/queries/balance-changes'
 import { traceQueryOptions } from '#lib/queries/trace'
 import { zHash } from '#lib/zod'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
@@ -180,8 +184,17 @@ function RouteComponent() {
 				block={block}
 				knownEvents={knownEvents}
 				feeBreakdown={feeBreakdown}
+				balanceChangesData={balanceChangesData}
 			/>
 		),
+	})
+
+	tabs.push('balances')
+	sections.push({
+		title: 'Balances',
+		totalItems: balanceChangesData.total,
+		itemsLabel: 'balances',
+		content: <TxBalanceChanges data={balanceChangesData} page={page} />,
 	})
 
 	if (hasCalls && calls) {
@@ -202,14 +215,6 @@ function RouteComponent() {
 		content: (
 			<EventsSection logs={receipt.logs} knownEvents={knownEventsByLog} />
 		),
-	})
-
-	tabs.push('balances')
-	sections.push({
-		title: 'Balances',
-		totalItems: balanceChangesData.total,
-		itemsLabel: 'balances',
-		content: <TxBalanceChanges data={balanceChangesData} page={page} />,
 	})
 
 	if (traceData.trace || traceData.prestate) {
@@ -269,8 +274,16 @@ function OverviewSection(props: {
 	block: TxData['block']
 	knownEvents: KnownEvent[]
 	feeBreakdown: FeeBreakdownItem[]
+	balanceChangesData: BalanceChangesData
 }) {
-	const { receipt, transaction, block, knownEvents, feeBreakdown } = props
+	const {
+		receipt,
+		transaction,
+		block,
+		knownEvents,
+		feeBreakdown,
+		balanceChangesData,
+	} = props
 
 	const [chain] = useChains()
 	const { decimals, symbol } = chain.nativeCurrency
@@ -319,6 +332,9 @@ function OverviewSection(props: {
 						)}
 					</div>
 				</InfoRow>
+			)}
+			{balanceChangesData.total > 0 && (
+				<BalanceChangesOverview data={balanceChangesData} />
 			)}
 			<InfoRow label="Value">
 				<span className="text-primary">
@@ -421,6 +437,108 @@ function InputDataRow(props: {
 	)
 }
 
+function BalanceChangesOverview(props: { data: BalanceChangesData }) {
+	const { data } = props
+
+	const groupedByAccount = React.useMemo(() => {
+		const grouped = new Map<
+			OxAddress.Address,
+			Array<(typeof data.changes)[number]>
+		>()
+		for (const change of data.changes) {
+			const existing = grouped.get(change.address)
+			if (existing) existing.push(change)
+			else grouped.set(change.address, [change])
+		}
+		return grouped
+	}, [data.changes])
+
+	return (
+		<div className="flex flex-col px-[18px] py-[12px] border-b border-dashed border-card-border">
+			<div className="flex items-start gap-[16px]">
+				<span className="text-[13px] text-tertiary min-w-[140px] shrink-0">
+					Balance Updates
+				</span>
+				<div className="flex flex-col gap-[4px] flex-1 min-w-0">
+					<div className="flex flex-col gap-[12px] max-h-[360px] overflow-y-auto pb-[8px]">
+						{Array.from(groupedByAccount.entries()).map(
+							([address, changes]) => (
+								<div
+									key={address}
+									className="flex flex-col gap-[4px] text-[13px]"
+								>
+									<Address address={address} />
+									<div className="flex flex-col gap-[2px] pl-[12px] border-l border-base-border">
+										{changes.map((change) => {
+											const metadata = data.tokenMetadata[change.token]
+											const isTip20 = isTip20Address(change.token)
+
+											let diff: bigint
+											try {
+												diff = BigInt(change.diff)
+											} catch {
+												return null
+											}
+
+											const isPositive = diff > 0n
+											const raw = metadata
+												? Value.format(diff, metadata.decimals)
+												: change.diff
+											const formatted = metadata
+												? PriceFormatter.formatAmount(raw)
+												: raw
+
+											return (
+												<div
+													key={change.token}
+													className="flex items-center gap-[8px]"
+												>
+													<span
+														className={cx(
+															'shrink-0',
+															isPositive ? '' : 'text-secondary',
+														)}
+													>
+														{isPositive ? '+' : ''}
+														{formatted}
+													</span>
+													<Link
+														className="inline-flex items-center gap-[4px] text-base-content-positive press-down shrink-0"
+														params={{ address: change.token }}
+														to={
+															isTip20 ? '/token/$address' : '/address/$address'
+														}
+													>
+														<TokenIcon
+															address={change.token}
+															name={metadata?.symbol}
+															className="size-[16px]"
+														/>
+														<span>{metadata?.symbol ?? '…'}</span>
+													</Link>
+												</div>
+											)
+										})}
+									</div>
+								</div>
+							),
+						)}
+					</div>
+					<div>
+						<Link
+							to="."
+							search={{ tab: 'balances' }}
+							className="text-[12px] text-accent hover:underline press-down!"
+						>
+							See all balance updates
+						</Link>
+					</div>
+				</div>
+			</div>
+		</div>
+	)
+}
+
 function CallsSection(props: {
 	calls: ReadonlyArray<{
 		to?: OxAddress.Address | null
@@ -450,13 +568,13 @@ function CallItem(props: {
 	const data = call.data
 	return (
 		<div className="flex flex-col gap-[12px] px-[18px] py-[16px]">
-			<div className="flex items-center gap-[8px] text-[13px] font-mono">
+			<div className="flex items-center gap-[8px] text-[13px]">
 				<span className="text-primary">#{index}</span>
 				{call.to ? (
 					<Link
 						to="/address/$address"
 						params={{ address: call.to }}
-						className="flex-1 text-accent hover:underline press-down"
+						className="text-accent hover:underline press-down"
 					>
 						<Midcut value={call.to} prefix="0x" />
 					</Link>
