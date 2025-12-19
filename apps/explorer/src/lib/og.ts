@@ -225,9 +225,16 @@ export function buildTxDescription(
 	if (eventCount > 0) {
 		const firstEvent = txData.events[0]
 		const actionPart = firstEvent.parts.find((p) => p.type === 'action')
-		const action = actionPart
+		let action = actionPart
 			? truncateOgText(String(actionPart.value).toLowerCase(), 20)
 			: 'transaction'
+
+		if (firstEvent.type === 'contract call') {
+			const contractCallPart = firstEvent.parts.find((p) => p.type === 'contractCall')
+			if (contractCallPart && 'value' in contractCallPart) {
+				action = 'contract interaction'
+			}
+		}
 
 		if (eventCount === 1) {
 			return truncateOgText(
