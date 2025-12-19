@@ -1,3 +1,4 @@
+import { env } from 'cloudflare:workers'
 import type { Context } from 'hono'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
@@ -36,4 +37,31 @@ export function sourcifyError(
 		},
 		status,
 	)
+}
+
+/**
+ * Checks if an origin matches an allowed hostname pattern.
+ * pathname and search parameters are ignored
+ */
+export function originMatches(params: { origin: string; pattern: string }) {
+	if (env.NODE_ENV === 'development') return true
+
+	const { pattern } = params
+
+	if (!params.origin) return false
+	let origin: string
+
+	try {
+		const stripExtra = new URL(params.origin)
+		origin = `${stripExtra.protocol}//${stripExtra.hostname}`
+	} catch {
+		return false
+	}
+
+	if (origin === pattern) return true
+	if (!pattern.includes('*')) return false
+
+	return new RegExp(
+		`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`,
+	).test(origin)
 }
