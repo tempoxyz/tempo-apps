@@ -456,7 +456,7 @@ function CallItem(props: {
 					<Link
 						to="/address/$address"
 						params={{ address: call.to }}
-						className="text-accent hover:underline press-down"
+						className="flex-1 text-accent hover:underline press-down"
 					>
 						<Midcut value={call.to} prefix="0x" />
 					</Link>
