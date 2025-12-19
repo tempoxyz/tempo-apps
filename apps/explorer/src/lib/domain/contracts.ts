@@ -373,16 +373,32 @@ export function getReadFunctions(abi: Abi): ReadFunction[] {
 
 /**
  * Extract write functions (nonpayable/payable) from an ABI, deduplicated by selector.
- * Also filters out malformed entries (missing inputs array).
+ * Also filters out malformed entries (missing inputs array) and read-looking functions
+ * that whatsabi incorrectly marked as nonpayable.
  */
 export function getWriteFunctions(abi: Abi): WriteFunction[] {
-	const functions = abi.filter(
-		(item): item is WriteFunction =>
-			item.type === 'function' &&
-			(item.stateMutability === 'nonpayable' ||
-				item.stateMutability === 'payable') &&
-			Array.isArray(item.inputs),
-	)
+	const functions = abi.filter((item): item is WriteFunction => {
+		if (item.type !== 'function') return false
+		if (!Array.isArray(item.inputs)) return false
+
+		const isNonpayableOrPayable =
+			item.stateMutability === 'nonpayable' ||
+			item.stateMutability === 'payable'
+		if (!isNonpayableOrPayable) return false
+
+		const whatsabiItem = item as WhatsabiAbiFunction
+		const isWhatsabi = Boolean(whatsabiItem.selector)
+
+		// For whatsabi ABIs, filter out functions that look like read functions
+		if (isWhatsabi) {
+			if (looksLikeReadFunction(item.name)) return false
+			// Functions with no inputs that don't look like writes are likely getters
+			if (item.inputs.length === 0 && !looksLikeWriteFunction(item.name))
+				return false
+		}
+
+		return true
+	})
 
 	// Deduplicate by selector
 	const seen = new Set<string>()

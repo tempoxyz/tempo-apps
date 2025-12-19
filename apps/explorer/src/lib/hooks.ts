@@ -1,20 +1,13 @@
 import * as React from 'react'
 
 export function useIsMounted() {
-	const isMounted = React.useRef(false)
+	const [isMounted, setIsMounted] = React.useState(false)
 
 	React.useEffect(() => {
-		isMounted.current = true
-		return () => {
-			isMounted.current = false
-		}
+		setIsMounted(true)
 	}, [])
 
-	const checker = React.useCallback(() => {
-		return isMounted.current
-	}, [])
-
-	return checker
+	return isMounted
 }
 
 export function useCopy(props: useCopy.Props = { timeout: 800 }) {
@@ -94,5 +87,39 @@ export declare namespace useCopyPermalink {
 		linkNotifying: boolean
 		handleCopyPermalink: () => Promise<void>
 		copyLink?: (value: string) => Promise<void>
+	}
+}
+
+export function useDownload(props: useDownload.Props) {
+	const { value, filename, contentType } = props
+
+	const download = React.useCallback(() => {
+		if (!value || typeof window === 'undefined') return
+
+		const blob = new Blob([value], { type: contentType })
+		const url = URL.createObjectURL(blob)
+
+		const anchor = document.createElement('a')
+		anchor.href = url
+		anchor.download = filename
+
+		document.body.appendChild(anchor)
+		anchor.click()
+		document.body.removeChild(anchor)
+		URL.revokeObjectURL(url)
+	}, [value, filename, contentType])
+
+	return { download }
+}
+
+export declare namespace useDownload {
+	type Props = {
+		value: string
+		filename: string
+		contentType:
+			| 'text/csv'
+			| 'text/plain'
+			| 'application/json'
+			| 'application/pdf'
 	}
 }

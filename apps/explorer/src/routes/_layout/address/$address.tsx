@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import {
+	ClientOnly,
 	createFileRoute,
 	Link,
 	notFound,
@@ -24,8 +25,7 @@ import {
 } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
-import { ContractReader } from '#comps/ContractReader'
-import { ContractSources } from '#comps/ContractSource.tsx'
+import { ContractTabContent, InteractTabContent } from '#comps/Contract.tsx'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
@@ -47,7 +47,8 @@ import {
 import { cx } from '#cva.config.ts'
 import {
 	type ContractSource,
-	fetchContractSource,
+	contractSourceQueryOptions,
+	fetchContractSourceDirect,
 	useContractSourceQueryOptions,
 } from '#lib/domain/contract-source.ts'
 import {
@@ -92,14 +93,6 @@ async function fetchAddressTotalCount(address: Address.Address) {
 	if (!success) throw new Error(z.prettifyError(error))
 	return safeData
 }
-
-const defaultSearchValues = {
-	page: 1,
-	limit: 10,
-	tab: 'history',
-} as const
-
-type TabValue = 'history' | 'assets' | 'contract'
 
 function useBatchTransactionData(
 	transactions: Transaction[],
@@ -189,23 +182,23 @@ function useAssetsData(accountAddress: Address.Address): AssetData[] {
 		() => [
 			{
 				address: assets[0],
-				metadata: isMounted() ? meta0.data : undefined,
-				balance: isMounted() ? bal0.data : undefined,
+				metadata: isMounted ? meta0.data : undefined,
+				balance: isMounted ? bal0.data : undefined,
 			},
 			{
 				address: assets[1],
-				metadata: isMounted() ? meta1.data : undefined,
-				balance: isMounted() ? bal1.data : undefined,
+				metadata: isMounted ? meta1.data : undefined,
+				balance: isMounted ? bal1.data : undefined,
 			},
 			{
 				address: assets[2],
-				metadata: isMounted() ? meta2.data : undefined,
-				balance: isMounted() ? bal2.data : undefined,
+				metadata: isMounted ? meta2.data : undefined,
+				balance: isMounted ? bal2.data : undefined,
 			},
 			{
 				address: assets[3],
-				metadata: isMounted() ? meta3.data : undefined,
-				balance: isMounted() ? bal3.data : undefined,
+				metadata: isMounted ? meta3.data : undefined,
+				balance: isMounted ? bal3.data : undefined,
 			},
 		],
 		[
@@ -235,6 +228,19 @@ function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
 	return total
 }
 
+const defaultSearchValues = {
+	page: 1,
+	limit: 10,
+	tab: 'history',
+} as const
+
+const TabSchema = z.prefault(
+	z.enum(['history', 'assets', 'contract', 'interact']),
+	defaultSearchValues.tab,
+)
+
+type TabValue = z.infer<typeof TabSchema>
+
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
 	notFoundComponent: ({ data }) => (
@@ -253,10 +259,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			),
 			defaultSearchValues.limit,
 		),
-		tab: z.prefault(
-			z.enum(['history', 'assets', 'contract']),
-			defaultSearchValues.tab,
-		),
+		tab: TabSchema,
 		live: z.prefault(z.boolean(), false),
 	}),
 	search: {
@@ -305,15 +308,24 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		}
 
 		// Try to fetch verified contract source if there's bytecode on chain
+		// Fetch directly from upstream API (bypasses __BASE_URL__ issues during SSR)
+		// Then seed the query cache for client-side hydration
 		let contractSource: ContractSource | undefined
 		if (contractBytecode) {
-			contractSource = await fetchContractSource({
+			contractSource = await fetchContractSourceDirect({
 				address,
 				chainId,
 			}).catch((error) => {
 				console.error('[loader] Failed to load contract source:', error)
 				return undefined
 			})
+			// Seed the query cache so client hydrates with data already available
+			if (contractSource) {
+				context.queryClient.setQueryData(
+					contractSourceQueryOptions({ address, chainId }).queryKey,
+					contractSource,
+				)
+			}
 		}
 
 		// Show contract tab if we have contractInfo OR verified source
@@ -508,23 +520,23 @@ function RouteComponent() {
 	// user manually switches tabs, but allows redirect for new hash values)
 	const redirectedForHashRef = React.useRef<string | null>(null)
 
-	// When URL has a hash fragment (e.g., #functionName), switch to contract tab
+	// When URL has a hash fragment (e.g., #functionName), switch to interact tab
 	React.useEffect(() => {
 		// Only redirect if:
 		// 1. We have a hash
 		// 2. Address has a known contract
-		// 3. Not already on contract tab
+		// 3. Not already on interact tab
 		// 4. Haven't already redirected for this specific hash
 		if (
 			hash &&
 			hasContract &&
-			tab !== 'contract' &&
+			tab !== 'interact' &&
 			redirectedForHashRef.current !== hash
 		) {
 			redirectedForHashRef.current = hash
 			navigate({
 				to: '.',
-				search: { page: 1, tab: 'contract', limit },
+				search: { page: 1, tab: 'interact', limit },
 				hash,
 				replace: true,
 				resetScroll: false,
@@ -553,9 +565,8 @@ function RouteComponent() {
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
-			const tabs: TabValue[] = hasContract
-				? ['history', 'assets', 'contract']
-				: ['history', 'assets']
+			const tabs: TabValue[] = ['history', 'assets', 'contract', 'interact']
+
 			const newTab = tabs[newIndex] ?? 'history'
 			navigate({
 				to: '.',
@@ -563,11 +574,19 @@ function RouteComponent() {
 				resetScroll: false,
 			})
 		},
-		[navigate, page, limit, hasContract],
+		[navigate, page, limit],
 	)
 
 	const activeSection =
-		tab === 'history' ? 0 : tab === 'assets' ? 1 : hasContract ? 2 : 0
+		tab === 'history'
+			? 0
+			: tab === 'assets'
+				? 1
+				: tab === 'contract'
+					? 2
+					: tab === 'interact'
+						? 3
+						: 0
 
 	const assetsData = useAssetsData(address)
 
@@ -688,24 +707,28 @@ function SectionsWrapper(props: {
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	// Track hydration to avoid SSR/client mismatch with query data
-	const [isMounted, setIsMounted] = React.useState(false)
-	React.useEffect(() => setIsMounted(true), [])
+	const isMounted = useIsMounted()
 
-	// Fetch contract source client-side if not provided by SSR loader
-	// This ensures source code is available when navigating directly to ?tab=contract
-	const isContractTabActive = activeSection === 2
+	// Contract source query - uses cache populated by SSR loader via ensureQueryData
+	// The query will immediately return cached data without flashing
 	const contractSourceQuery = useQuery({
 		...useContractSourceQueryOptions({ address }),
 		initialData: contractSource,
-		enabled: Boolean(contractInfo) && !contractSource && isContractTabActive,
 	})
-	const resolvedContractSource = contractSource ?? contractSourceQuery.data
+	// Use SSR data until mounted to avoid hydration mismatch, then use query data
+	const resolvedContractSource = isMounted
+		? contractSourceQuery.data
+		: contractSource
 
 	const isHistoryTabActive = activeSection === 0
 	// Only auto-refresh on page 1 when history tab is active and live=true
 	const shouldAutoRefresh = page === 1 && isHistoryTabActive && live
 
-	const { data, isPlaceholderData, error } = useQuery({
+	const {
+		data: queryData,
+		isPlaceholderData,
+		error,
+	} = useQuery({
 		...transactionsQueryOptions({
 			address,
 			page,
@@ -717,6 +740,12 @@ function SectionsWrapper(props: {
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
+
+	/**
+	 * use initialData until mounted to avoid hydration mismatch
+	 * (tanstack query may have fresher cached data that differs from SSR)
+	 */
+	const data = isMounted ? queryData : page === 1 ? initialData : queryData
 	const {
 		transactions,
 		total: approximateTotal,
@@ -759,8 +788,6 @@ function SectionsWrapper(props: {
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
-
-	const hasContractSource = Boolean(resolvedContractSource)
 
 	// Show error state for API failures (instead of crashing the whole page)
 	const historyError = error ? (
@@ -905,36 +932,35 @@ function SectionsWrapper(props: {
 							/>
 						),
 					},
-					// Contract tab - shown for known contracts OR verified sources
-					...(contractInfo || resolvedContractSource
-						? [
-								{
-									title: 'Contract',
-									totalItems: 0,
-									itemsLabel: 'functions',
-									content: (
-										<div className="flex flex-col gap-3.5">
-											{hasContractSource && resolvedContractSource && (
-												<ContractSources {...resolvedContractSource} />
-											)}
-											{contractInfo && (
-												<ContractReader
-													address={address}
-													abi={contractInfo.abi}
-													docsUrl={contractInfo.docsUrl}
-												/>
-											)}
-											{!contractInfo && resolvedContractSource && (
-												<ContractReader
-													address={address}
-													abi={resolvedContractSource.abi}
-												/>
-											)}
-										</div>
-									),
-								},
-							]
-						: []),
+					// Contract tab - ABI + Source Code (always shown, disabled when no data)
+					{
+						title: 'Contract',
+						totalItems: 0,
+						itemsLabel: 'items',
+						disabled: !contractInfo && !resolvedContractSource,
+						content: (
+							<ContractTabContent
+								address={address}
+								abi={resolvedContractSource?.abi ?? contractInfo?.abi}
+								docsUrl={contractInfo?.docsUrl}
+								source={resolvedContractSource}
+							/>
+						),
+					},
+					// Interact tab - Read + Write contract (always shown, disabled when no data)
+					{
+						title: 'Interact',
+						totalItems: 0,
+						itemsLabel: 'functions',
+						disabled: !contractInfo && !resolvedContractSource,
+						content: (
+							<InteractTabContent
+								address={address}
+								abi={resolvedContractSource?.abi ?? contractInfo?.abi}
+								docsUrl={contractInfo?.docsUrl}
+							/>
+						),
+					},
 				]}
 				activeSection={activeSection}
 				onSectionChange={onSectionChange}
@@ -943,10 +969,23 @@ function SectionsWrapper(props: {
 	)
 }
 
+const placeholder = <span className="text-tertiary">—</span>
+
 function TransactionTimeCell(props: { hash: Hex.Hex; format: TimeFormat }) {
+	return (
+		<ClientOnly fallback={placeholder}>
+			<TransactionTimeCellInner {...props} />
+		</ClientOnly>
+	)
+}
+
+function TransactionTimeCellInner(props: {
+	hash: Hex.Hex
+	format: TimeFormat
+}) {
 	const { hash, format } = props
 	const batchData = useTransactionDataFromBatch(hash)
-	if (!batchData?.block) return <span className="text-tertiary">—</span>
+	if (!batchData?.block) return placeholder
 	return (
 		<TransactionTimestamp
 			timestamp={batchData.block.timestamp}
@@ -960,9 +999,20 @@ function TransactionDescCell(props: {
 	transaction: Transaction
 	accountAddress: Address.Address
 }) {
+	return (
+		<ClientOnly fallback={placeholder}>
+			<TransactionDescCellInner {...props} />
+		</ClientOnly>
+	)
+}
+
+function TransactionDescCellInner(props: {
+	transaction: Transaction
+	accountAddress: Address.Address
+}) {
 	const { transaction, accountAddress } = props
 	const batchData = useTransactionDataFromBatch(transaction.hash)
-	if (!batchData) return <span className="text-tertiary">—</span>
+	if (!batchData) return placeholder
 	if (!batchData.knownEvents.length) {
 		const count = batchData.receipt?.logs.length ?? 0
 		return (
@@ -982,8 +1032,16 @@ function TransactionDescCell(props: {
 }
 
 function TransactionFeeCell(props: { hash: Hex.Hex }) {
+	return (
+		<ClientOnly fallback={placeholder}>
+			<TransactionFeeCellInner {...props} />
+		</ClientOnly>
+	)
+}
+
+function TransactionFeeCellInner(props: { hash: Hex.Hex }) {
 	const batchData = useTransactionDataFromBatch(props.hash)
-	if (!batchData?.receipt) return <span className="text-tertiary">—</span>
+	if (!batchData?.receipt) return placeholder
 	return (
 		<span className="text-tertiary">
 			{PriceFormatter.format(

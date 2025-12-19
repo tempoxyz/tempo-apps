@@ -18,7 +18,7 @@ import { readContract } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
-import { ContractReader } from '#comps/ContractReader'
+import { ContractTabContent } from '#comps/Contract.tsx'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
@@ -32,7 +32,7 @@ import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
 import { PriceFormatter } from '#lib/formatting'
-import { useCopy, useMediaQuery } from '#lib/hooks'
+import { useCopy, useIsMounted, useMediaQuery } from '#lib/hooks'
 import { buildTokenDescription, buildTokenOgImageUrl } from '#lib/og'
 import { holdersQueryOptions, transfersQueryOptions } from '#lib/queries'
 import { config } from '#wagmi.config'
@@ -461,6 +461,9 @@ function SectionsWrapper(props: {
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const loaderData = Route.useLoaderData()
 
+	// Track hydration to avoid SSR/client mismatch with query data
+	const isMounted = useIsMounted()
+
 	const { data: metadata } = Hooks.token.useGetMetadata({
 		token: address,
 		query: {
@@ -478,15 +481,21 @@ function SectionsWrapper(props: {
 		account,
 	})
 
-	const { data: transfersData, isPlaceholderData: isTransfersPlaceholder } =
-		useQuery({
-			...transfersOptions,
-			...(activeSection === 0 &&
-			transfersQueryPage === page &&
-			loaderData.transfers
-				? { initialData: loaderData.transfers }
-				: {}),
-		})
+	const hasTransfersInitialData =
+		activeSection === 0 && transfersQueryPage === page && loaderData.transfers
+	const {
+		data: transfersQueryData,
+		isPlaceholderData: isTransfersPlaceholder,
+	} = useQuery({
+		...transfersOptions,
+		...(hasTransfersInitialData ? { initialData: loaderData.transfers } : {}),
+	})
+	// Use initialData until mounted to avoid hydration mismatch
+	const transfersData = isMounted
+		? transfersQueryData
+		: hasTransfersInitialData
+			? loaderData.transfers
+			: transfersQueryData
 
 	const holdersQueryPage = activeSection === 1 ? page : 1
 	const holdersOptions = holdersQueryOptions({
@@ -681,7 +690,7 @@ function ContractSection(props: { address: Address.Address }) {
 	const contractInfo = getContractInfo(address)
 
 	return (
-		<ContractReader
+		<ContractTabContent
 			address={address}
 			abi={contractInfo?.abi}
 			docsUrl={contractInfo?.docsUrl}

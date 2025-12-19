@@ -6,6 +6,9 @@ import * as z from 'zod/mini'
 
 import { config } from '#wagmi.config.ts'
 
+const CONTRACT_VERIFICATION_API_BASE_URL =
+	'https://contracts.tempo.xyz/v2/contract'
+
 const SoliditySettingsSchema = z.object({
 	remappings: z.optional(z.array(z.string())),
 	optimizer: z.optional(
@@ -43,6 +46,7 @@ export const ContractVerificationLookupSchema = z.object({
 			z.string(),
 			z.object({
 				content: z.string(),
+				highlightedHtml: z.optional(z.string()),
 			}),
 		),
 		settings: SoliditySettingsSchema,
@@ -61,18 +65,52 @@ export const ContractVerificationLookupSchema = z.object({
 export type ContractSource = z.infer<typeof ContractVerificationLookupSchema>
 
 /**
- * Fetch verified contract sources from Sauce registry.
- * Returns undefined when the contract is not verified or a network error occurs.
+ * Fetch verified contract sources directly from upstream API.
+ * Use this for SSR where __BASE_URL__ may not be reachable.
  */
-export async function fetchContractSource(params: {
+export async function fetchContractSourceDirect(params: {
 	address: Address.Address
 	chainId: number
 	signal?: AbortSignal
 }): Promise<ContractSource> {
 	const { address, chainId, signal } = params
 
+	const apiUrl = new URL(
+		`${CONTRACT_VERIFICATION_API_BASE_URL}/${chainId}/${address.toLowerCase()}`,
+	)
+	apiUrl.searchParams.set('fields', 'stdJsonInput,abi,compilation')
+
+	const response = await fetch(apiUrl.toString(), { signal })
+
+	if (!response.ok) {
+		throw new Error('Failed to fetch contract sources')
+	}
+
+	const { data, success, error } = z.safeParse(
+		ContractVerificationLookupSchema,
+		await response.json(),
+	)
+	if (!success) {
+		throw new Error(z.prettifyError(error))
+	}
+
+	return data
+}
+
+/**
+ * Fetch verified contract sources from Sauce registry via local API.
+ * This provides syntax highlighting via the /api/code endpoint.
+ */
+export async function fetchContractSource(params: {
+	address: Address.Address
+	chainId: number
+	highlight?: boolean
+	signal?: AbortSignal
+}): Promise<ContractSource> {
+	const { address, chainId, highlight = true, signal } = params
+
 	try {
-		const url = `${__BASE_URL__}/api/code?address=${address.toLowerCase()}&chainId=${chainId}`
+		const url = `${__BASE_URL__}/api/code?address=${address.toLowerCase()}&chainId=${chainId}&highlight=${highlight}`
 
 		const response = await fetch(url, { signal })
 
@@ -99,14 +137,26 @@ export async function fetchContractSource(params: {
 	}
 }
 
+export function contractSourceQueryOptions(params: {
+	address: Address.Address
+	chainId: number
+}) {
+	const { address, chainId } = params
+	return queryOptions({
+		enabled: isAddress(address) && Boolean(chainId),
+		queryKey: ['contract-source', address, chainId],
+		queryFn: () => fetchContractSource({ address, chainId }),
+		// staleTime: 0 so client refetches with highlighting after SSR seeds unhighlighted data
+		// gcTime keeps the data cached to prevent flashing during refetch
+		staleTime: 0,
+		gcTime: 1000 * 60 * 60, // 1 hour
+	})
+}
+
 export function useContractSourceQueryOptions(params: {
 	address: Address.Address
 	chainId?: number
 }) {
 	const { address, chainId = getChainId(config) } = params
-	return queryOptions({
-		enabled: isAddress(address) && Boolean(chainId),
-		queryKey: ['contract-source', address, chainId],
-		queryFn: () => fetchContractSource({ address, chainId }),
-	})
+	return contractSourceQueryOptions({ address, chainId })
 }

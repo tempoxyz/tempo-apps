@@ -45,7 +45,7 @@ export function Sections(props: Sections.Props) {
 										type="button"
 										onClick={() => toggleSection(index)}
 										className={cx(
-											'h-[54px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
+											'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
 											isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
 										)}
 									>
@@ -69,7 +69,7 @@ export function Sections(props: Sections.Props) {
 										</div>
 									</button>
 								) : (
-									<div className="h-[54px] flex items-center justify-between px-[18px] rounded-t-[10px]">
+									<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-[10px]">
 										<h1 className="text-[13px] font-medium uppercase text-primary">
 											{section.title}
 										</h1>
@@ -93,10 +93,6 @@ export function Sections(props: Sections.Props) {
 			</Sections.Context.Provider>
 		)
 
-	const currentSection = sections[activeSection]
-	if (!currentSection)
-		throw new Error(`Invalid activeSection index: ${activeSection}`)
-
 	return (
 		<Sections.Context.Provider value={{ mode }}>
 			<section
@@ -107,7 +103,7 @@ export function Sections(props: Sections.Props) {
 					className,
 				)}
 			>
-				<div className="h-[40px] flex items-center justify-between">
+				<div className="h-[36px] flex items-center justify-between">
 					<div className="flex items-center h-full">
 						{sections.length === 1 ? (
 							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px]">
@@ -123,21 +119,28 @@ export function Sections(props: Sections.Props) {
 								<button
 									key={section.title}
 									type="button"
-									onClick={() => onSectionChange?.(index)}
+									disabled={section.disabled}
+									onPointerDown={() => {
+										if (section.disabled) return
+										if (activeSection === index) return
+										onSectionChange?.(index)
+									}}
 									className={cx(
 										'h-full flex items-center text-[13px] font-medium',
-										'focus-visible:-outline-offset-2! press-down cursor-pointer transition-[color]',
+										'focus-visible:-outline-offset-2!',
 										index === 0
 											? 'pl-[18px] pr-[12px] rounded-tl-[10px]!'
 											: 'px-[12px]',
-										activeSection === index
-											? 'text-primary'
-											: 'text-tertiary hover:text-secondary',
+										section.disabled
+											? 'text-quaternary cursor-not-allowed'
+											: activeSection === index
+												? 'text-primary cursor-pointer'
+												: 'text-tertiary cursor-pointer',
 									)}
 								>
 									<div className="relative h-full flex items-center">
 										{section.title}
-										{activeSection === index && (
+										{activeSection === index && !section.disabled && (
 											<div className="absolute h-[2px] bg-accent -bottom-[1.5px] left-0 right-0 -mx-[2px]" />
 										)}
 									</div>
@@ -145,14 +148,27 @@ export function Sections(props: Sections.Props) {
 							))
 						)}
 					</div>
-					{currentSection.contextual && (
-						<div className="pr-[18px]">{currentSection.contextual}</div>
-					)}
+					{sections.map((section, index) => (
+						<div
+							key={section.title}
+							className={cx('pr-[18px]', activeSection !== index && 'hidden')}
+						>
+							{section.contextual}
+						</div>
+					))}
 				</div>
 
-				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
-					{currentSection.content}
-				</div>
+				{sections.map((section, index) => (
+					<div
+						key={section.title}
+						className={cx(
+							'rounded-t-[10px] border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!',
+							activeSection !== index && 'hidden',
+						)}
+					>
+						{section.content}
+					</div>
+				))}
 			</section>
 		</Sections.Context.Provider>
 	)
@@ -176,6 +192,7 @@ export namespace Sections {
 		itemsLabel?: string
 		contextual?: React.ReactNode
 		autoCollapse?: boolean
+		disabled?: boolean
 	}
 
 	export const defaultMode = 'tabs'
