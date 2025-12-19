@@ -62,7 +62,7 @@
 			],
 			"workers_dev": false,
 			"vars": {
-				"TEMPO_RPC_URL": "https://rpc.devnet.tempo.xyz",
+				"TEMPO_RPC_URL": "https://rpc.devnet.tempoxyz.dev",
 				"ALLOWED_ORIGINS": "*",
 				"TEMPO_ENV": "devnet"
 			},
