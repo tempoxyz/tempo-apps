@@ -1,20 +1,13 @@
 import * as React from 'react'
 
 export function useIsMounted() {
-	const isMounted = React.useRef(false)
+	const [isMounted, setIsMounted] = React.useState(false)
 
 	React.useEffect(() => {
-		isMounted.current = true
-		return () => {
-			isMounted.current = false
-		}
+		setIsMounted(true)
 	}, [])
 
-	const checker = React.useCallback(() => {
-		return isMounted.current
-	}, [])
-
-	return checker
+	return isMounted
 }
 
 export function useCopy(props: useCopy.Props = { timeout: 800 }) {

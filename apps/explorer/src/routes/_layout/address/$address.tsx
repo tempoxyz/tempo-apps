@@ -47,7 +47,8 @@ import {
 import { cx } from '#cva.config.ts'
 import {
 	type ContractSource,
-	fetchContractSource,
+	contractSourceQueryOptions,
+	fetchContractSourceDirect,
 	useContractSourceQueryOptions,
 } from '#lib/domain/contract-source.ts'
 import {
@@ -181,23 +182,23 @@ function useAssetsData(accountAddress: Address.Address): AssetData[] {
 		() => [
 			{
 				address: assets[0],
-				metadata: isMounted() ? meta0.data : undefined,
-				balance: isMounted() ? bal0.data : undefined,
+				metadata: isMounted ? meta0.data : undefined,
+				balance: isMounted ? bal0.data : undefined,
 			},
 			{
 				address: assets[1],
-				metadata: isMounted() ? meta1.data : undefined,
-				balance: isMounted() ? bal1.data : undefined,
+				metadata: isMounted ? meta1.data : undefined,
+				balance: isMounted ? bal1.data : undefined,
 			},
 			{
 				address: assets[2],
-				metadata: isMounted() ? meta2.data : undefined,
-				balance: isMounted() ? bal2.data : undefined,
+				metadata: isMounted ? meta2.data : undefined,
+				balance: isMounted ? bal2.data : undefined,
 			},
 			{
 				address: assets[3],
-				metadata: isMounted() ? meta3.data : undefined,
-				balance: isMounted() ? bal3.data : undefined,
+				metadata: isMounted ? meta3.data : undefined,
+				balance: isMounted ? bal3.data : undefined,
 			},
 		],
 		[
@@ -307,15 +308,24 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		}
 
 		// Try to fetch verified contract source if there's bytecode on chain
+		// Fetch directly from upstream API (bypasses __BASE_URL__ issues during SSR)
+		// Then seed the query cache for client-side hydration
 		let contractSource: ContractSource | undefined
 		if (contractBytecode) {
-			contractSource = await fetchContractSource({
+			contractSource = await fetchContractSourceDirect({
 				address,
 				chainId,
 			}).catch((error) => {
 				console.error('[loader] Failed to load contract source:', error)
 				return undefined
 			})
+			// Seed the query cache so client hydrates with data already available
+			if (contractSource) {
+				context.queryClient.setQueryData(
+					contractSourceQueryOptions({ address, chainId }).queryKey,
+					contractSource,
+				)
+			}
 		}
 
 		// Show contract tab if we have contractInfo OR verified source
@@ -699,15 +709,16 @@ function SectionsWrapper(props: {
 	// Track hydration to avoid SSR/client mismatch with query data
 	const isMounted = useIsMounted()
 
-	// Fetch contract source client-side if not provided by SSR loader
-	// This ensures source code is available when navigating directly to ?tab=contract
-	const isContractTabActive = activeSection === 2
+	// Contract source query - uses cache populated by SSR loader via ensureQueryData
+	// The query will immediately return cached data without flashing
 	const contractSourceQuery = useQuery({
 		...useContractSourceQueryOptions({ address }),
 		initialData: contractSource,
-		enabled: Boolean(contractInfo) && !contractSource && isContractTabActive,
 	})
-	const resolvedContractSource = contractSource ?? contractSourceQuery.data
+	// Use SSR data until mounted to avoid hydration mismatch, then use query data
+	const resolvedContractSource = isMounted
+		? contractSourceQuery.data
+		: contractSource
 
 	const isHistoryTabActive = activeSection === 0
 	// Only auto-refresh on page 1 when history tab is active and live=true
@@ -734,7 +745,7 @@ function SectionsWrapper(props: {
 	 * use initialData until mounted to avoid hydration mismatch
 	 * (tanstack query may have fresher cached data that differs from SSR)
 	 */
-	const data = isMounted() ? queryData : page === 1 ? initialData : queryData
+	const data = isMounted ? queryData : page === 1 ? initialData : queryData
 	const {
 		transactions,
 		total: approximateTotal,
@@ -765,7 +776,7 @@ function SectionsWrapper(props: {
 	// txs-count counts "from OR to" while pagination API only serves a subset,
 	// so we can't use exactCount for page calculation - most pages would be empty
 	// Only use after mount to avoid SSR/client hydration mismatch
-	const exactCount = isMounted() ? totalCountQuery.data?.data : undefined
+	const exactCount = isMounted ? totalCountQuery.data?.data : undefined
 
 	// For pagination: always use hasMore-based estimate
 	// This ensures we only show pages that have data

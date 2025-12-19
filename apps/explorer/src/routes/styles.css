@@ -258,6 +258,7 @@ input[type="number"] {
 	max-height: 320px;
 	overflow: auto;
 	margin: 0;
+	padding-inline: unset;
 	margin-bottom: 8px;
 	box-sizing: border-box;
 	font-size: 13.5px;

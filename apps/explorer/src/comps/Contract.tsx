@@ -1,8 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi } from 'viem'
-import { getBytecode } from 'wagmi/actions'
+import { useBytecode } from 'wagmi'
 import { ConnectWallet } from '#comps/ConnectWallet.tsx'
 import { AbiViewer } from '#comps/ContractAbi.tsx'
 import { ContractReader } from '#comps/ContractReader.tsx'
@@ -13,7 +12,6 @@ import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { getContractAbi } from '#lib/domain/contracts.ts'
 import { useCopy, useDownload } from '#lib/hooks.ts'
-import { config } from '#wagmi.config.ts'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 import DownloadIcon from '~icons/lucide/download'
@@ -166,27 +164,17 @@ function BytecodeSection(props: { address: Address.Address }) {
 	const [expanded, setExpanded] = React.useState(false)
 	const { copy, notifying } = useCopy({ timeout: 2000 })
 
-	const { data: bytecode } = useQuery({
-		queryKey: ['bytecode', address],
-		queryFn: () => getBytecode(config, { address }),
-	})
+	const { data: bytecode } = useBytecode({ address })
 
 	const handleCopy = React.useCallback(() => {
 		if (bytecode) void copy(bytecode)
 	}, [bytecode, copy])
 
-	const handleDownload = React.useCallback(() => {
-		if (!bytecode || typeof window === 'undefined') return
-		const blob = new Blob([bytecode], { type: 'text/plain' })
-		const url = URL.createObjectURL(blob)
-		const anchor = document.createElement('a')
-		anchor.href = url
-		anchor.download = `${address}-bytecode.txt`
-		document.body.appendChild(anchor)
-		anchor.click()
-		document.body.removeChild(anchor)
-		URL.revokeObjectURL(url)
-	}, [bytecode, address])
+	const { download: downloadBytecode } = useDownload({
+		value: bytecode ?? '',
+		contentType: 'text/plain',
+		filename: `${address.toLowerCase()}-bytecode.txt`,
+	})
 
 	return (
 		<CollapsibleSection
@@ -206,7 +194,7 @@ function BytecodeSection(props: { address: Address.Address }) {
 					</button>
 					<button
 						type="button"
-						onClick={handleDownload}
+						onClick={downloadBytecode}
 						className="press-down cursor-pointer hover:text-secondary p-[4px]"
 						title="Download bytecode"
 					>

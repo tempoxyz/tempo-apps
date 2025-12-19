@@ -1,13 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
-import { createHighlighterCoreSync, type HighlighterCore } from 'shiki/core'
+import { createHighlighterCore, type HighlighterCore } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
-import jsonLang from 'shiki/langs/json.mjs'
-import rust from 'shiki/langs/rust.mjs'
-import solidity from 'shiki/langs/solidity.mjs'
-import vyper from 'shiki/langs/vyper.mjs'
-import githubDark from 'shiki/themes/github-dark.mjs'
-import githubLight from 'shiki/themes/github-light.mjs'
 import * as z from 'zod/mini'
 import { ContractVerificationLookupSchema } from '#lib/domain/contract-source.ts'
 import { zAddress } from '#lib/zod.ts'
@@ -20,25 +14,31 @@ const SHIKI_THEMES = {
 	dark: 'github-dark',
 } satisfies Record<'light' | 'dark', string>
 
-const SHIKI_LANGS = [solidity, vyper, jsonLang, rust]
-
 const EXTENSION_LANGUAGE_MAP: Record<string, string> = {
 	sol: 'solidity',
 	vy: 'vyper',
 	rs: 'rust',
 }
 
-let highlighterInstance: HighlighterCore | null = null
+let highlighterPromise: Promise<HighlighterCore> | null = null
 
-function getHighlighter(): HighlighterCore {
-	if (!highlighterInstance) {
-		highlighterInstance = createHighlighterCoreSync({
-			themes: [githubLight, githubDark],
-			langs: SHIKI_LANGS,
-			engine: createJavaScriptRegexEngine(),
+async function getHighlighter(): Promise<HighlighterCore> {
+	if (!highlighterPromise) {
+		highlighterPromise = createHighlighterCore({
+			themes: [
+				import('@shikijs/themes/github-light'),
+				import('@shikijs/themes/github-dark'),
+			],
+			langs: [
+				import('@shikijs/langs/solidity'),
+				import('@shikijs/langs/vyper'),
+				import('@shikijs/langs/json'),
+				import('@shikijs/langs/rust'),
+			],
+			engine: createJavaScriptRegexEngine({ forgiving: true }),
 		})
 	}
-	return highlighterInstance
+	return highlighterPromise
 }
 
 function getLanguageFromFileName(fileName: string): string {
@@ -125,9 +125,16 @@ export const Route = createFileRoute('/api/code')({
 				if (!success)
 					return json({ error: z.prettifyError(error) }, { status: 500 })
 
-				if (!parsedSearchParams.highlight) return json(data)
+				// Cache for 1 day - verified contract source code doesn't change
+				const cacheHeaders = {
+					'Cache-Control':
+						'public, max-age=86400, stale-while-revalidate=604800',
+				}
 
-				const highlighter = getHighlighter()
+				if (!parsedSearchParams.highlight)
+					return json(data, { headers: cacheHeaders })
+
+				const highlighter = await getHighlighter()
 				const highlightedSources: Record<
 					string,
 					{ content: string; highlightedHtml?: string }
@@ -153,13 +160,16 @@ export const Route = createFileRoute('/api/code')({
 					}
 				}
 
-				return json({
-					...data,
-					stdJsonInput: {
-						...data.stdJsonInput,
-						sources: highlightedSources,
+				return json(
+					{
+						...data,
+						stdJsonInput: {
+							...data.stdJsonInput,
+							sources: highlightedSources,
+						},
 					},
-				})
+					{ headers: cacheHeaders },
+				)
 			},
 		},
 	},

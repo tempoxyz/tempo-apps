@@ -491,7 +491,7 @@ function SectionsWrapper(props: {
 		...(hasTransfersInitialData ? { initialData: loaderData.transfers } : {}),
 	})
 	// Use initialData until mounted to avoid hydration mismatch
-	const transfersData = isMounted()
+	const transfersData = isMounted
 		? transfersQueryData
 		: hasTransfersInitialData
 			? loaderData.transfers
