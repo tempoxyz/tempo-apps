@@ -1,6 +1,6 @@
 import { truncateText } from '#params.ts'
 
-// ============ Types ============
+export const DEVICE_PIXEL_RATIO = 1.0
 
 export interface AddressData {
 	address: string

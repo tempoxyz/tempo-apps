@@ -29,7 +29,6 @@
 		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
 		"paths": {
-			"*": ["./*"],
 			"#*": ["./src/*"]
 		},
 		"types": ["@cloudflare/workers-types", "node"]

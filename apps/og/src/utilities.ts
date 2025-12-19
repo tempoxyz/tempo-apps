@@ -4,6 +4,10 @@ const FONT_MONO_URL =
 	'https://unpkg.com/geist/dist/fonts/geist-mono/GeistMono-Regular.woff2'
 const FONT_INTER_URL =
 	'https://unpkg.com/@fontsource/inter/files/inter-latin-500-normal.woff2'
+
+const FONT_WITH_SYNTAX_HIGHLIGHTING =
+	'https://esm.sh/gh/FontWithASyntaxHighlighter/FontWithASyntaxHighlighterNightOwl-Regular.woff2'
+
 const TOKENLIST_ICON_URL = 'https://tokenlist.tempo.xyz/icon'
 const TESTNET_CHAIN_ID = 42429
 
@@ -16,9 +20,16 @@ interface ImageCache {
 	nullIcon: ArrayBuffer
 }
 
-let fontCache: { mono: ArrayBuffer; inter: ArrayBuffer } | null = null
-let fontsInFlight: Promise<{ mono: ArrayBuffer; inter: ArrayBuffer }> | null =
-	null
+let fontCache: {
+	mono: ArrayBuffer
+	inter: ArrayBuffer
+	syntaxHighlighting: ArrayBuffer
+} | null = null
+let fontsInFlight: Promise<{
+	mono: ArrayBuffer
+	inter: ArrayBuffer
+	syntaxHighlighting: ArrayBuffer
+}> | null = null
 let imageCache: ImageCache | null = null
 let imagesInFlight: Promise<ImageCache> | null = null
 
@@ -34,10 +45,13 @@ export async function loadFonts() {
 	if (fontCache) return fontCache
 	if (!fontsInFlight) {
 		fontsInFlight = Promise.all([
-			fetch(FONT_MONO_URL).then((r) => r.arrayBuffer()),
-			fetch(FONT_INTER_URL).then((r) => r.arrayBuffer()),
-		]).then(([mono, inter]) => {
-			fontCache = { mono, inter }
+			fetch(FONT_MONO_URL).then((response) => response.arrayBuffer()),
+			fetch(FONT_INTER_URL).then((response) => response.arrayBuffer()),
+			fetch(FONT_WITH_SYNTAX_HIGHLIGHTING).then((response) =>
+				response.arrayBuffer(),
+			),
+		]).then(([mono, inter, syntaxHighlighting]) => {
+			fontCache = { mono, inter, syntaxHighlighting }
 			fontsInFlight = null
 			return fontCache
 		})

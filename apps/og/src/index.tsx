@@ -12,6 +12,7 @@ import {
 	tokenOgQuerySchema,
 	txOgQuerySchema,
 } from '#params.ts'
+import { codeApp } from '#route.code.tsx'
 import {
 	AddressCard,
 	type AddressData,
@@ -28,8 +29,8 @@ import {
 	toBase64DataUrl,
 } from '#utilities.ts'
 
+const CACHE_TTL = 3_600
 const DEVICE_PIXEL_RATIO = 1.0
-const CACHE_TTL = 3600
 
 const factory = createFactory<{ Bindings: Cloudflare.Env }>()
 
@@ -54,6 +55,7 @@ const cacheMiddleware = cache({
 })
 
 const app = factory.createApp()
+app.route('/code', codeApp)
 
 app.onError((error, context) => {
 	if (error instanceof HTTPException) return error.getResponse()
