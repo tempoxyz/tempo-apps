@@ -2,6 +2,7 @@ import NodeChildProcess from 'node:child_process'
 import NodeProcess from 'node:process'
 import { cloudflare } from '@cloudflare/vite-plugin'
 import { defineConfig, loadEnv } from 'vite'
+import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 
 const commitSha =
 	NodeChildProcess.execSync('git rev-parse --short HEAD').toString().trim() ||
@@ -19,10 +20,11 @@ export default defineConfig((config) => {
 	const port = Number(lastPort ?? env.PORT ?? 3_000)
 
 	return {
-		plugins: [cloudflare()],
+		plugins: [cloudflare(), vitePluginChromiumDevTools()],
 		server: {
 			port,
-			cors: config.mode === 'development' ? true : undefined,
+			// https://hono.dev/docs/middleware/builtin/cors#using-with-vite
+			cors: false,
 			allowedHosts: config.mode === 'development' ? true : undefined,
 		},
 		define: {

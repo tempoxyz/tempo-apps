@@ -1,6 +1,7 @@
 interface EnvironmentVariables {
 	readonly PORT: string
 
+	readonly WHITELISTED_ORIGINS: string
 	readonly VITE_LOG_LEVEL: 'info' | 'warn' | 'silent'
 
 	readonly CLOUDFLARE_ACCOUNT_ID: string

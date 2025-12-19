@@ -42,11 +42,13 @@ catalog:
   eruda: ^3.4.3
   globals: ^16.5.0
   hono: ^4.11.1
+  hono-rate-limiter: ^0.5.1
   idxs: ^0.0.5
   kysely: ^0.28.9
   ox: ^0.10.5
   react: ^19.2.3
   react-dom: ^19.2.3
+  shiki: ^3.20.0
   tailwind-merge: ^3.4.0
   tailwindcss: ^4.1.18
   tempo.ts: ^0.11.1
@@ -56,6 +58,7 @@ catalog:
   unplugin-icons: ^22.5.0
   viem: ^2.43.1
   vite: npm:rolldown-vite@latest
+  vite-plugin-devtools-json: ^1.0.0
   vitest: 3.2.4
   wagmi: ^3.1.0
   wrangler: ^4.55.0
