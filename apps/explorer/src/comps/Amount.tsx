@@ -82,8 +82,7 @@ export function Amount(props: Amount.Props) {
 }
 
 export namespace Amount {
-	export interface Props
-		extends Omit<Base.Props, 'decimals'> {
+	export interface Props extends Omit<Base.Props, 'decimals'> {
 		token: Address.Address
 		decimals?: number
 		symbol?: string
@@ -109,19 +108,20 @@ export namespace Amount {
 
 		if (isInfinite && infinite === null) return null
 
-		const infiniteLabel = typeof infinite === 'string' ? infinite : 'infinite'
+		if (isInfinite)
+			return (
+				<span className="inline-flex items-center gap-1 min-w-0">
+					{before}
+					{infinite === true ? 'infinite' : infinite}
+					{after}
+				</span>
+			)
 
-		const rawFormatted = isInfinite
-			? infiniteLabel
-			: Value.format(value, decimals)
-		const fullFormatted = isInfinite
-			? infiniteLabel
-			: PriceFormatter.formatAmount(rawFormatted)
-		const formatted = isInfinite
-			? infiniteLabel
-			: short
-				? PriceFormatter.formatAmountShort(rawFormatted)
-				: fullFormatted
+		const rawFormatted = Value.format(value, decimals)
+		const fullFormatted = PriceFormatter.formatAmount(rawFormatted)
+		const formatted = short
+			? PriceFormatter.formatAmountShort(rawFormatted)
+			: fullFormatted
 
 		return (
 			<span className="inline-flex items-center gap-1 min-w-0">
@@ -129,15 +129,9 @@ export namespace Amount {
 				<span
 					className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
 					style={{ maxWidth: `${maxWidth}ch` }}
-					title={
-						isInfinite
-							? infiniteLabel
-							: `${prefix ?? ''}${fullFormatted}${suffix ?? ''}`
-					}
+					title={`${prefix ?? ''}${fullFormatted}${suffix ?? ''}`}
 				>
-					{isInfinite
-						? infiniteLabel
-						: `${prefix ?? ''}${formatted}${suffix ?? ''}`}
+					{`${prefix ?? ''}${formatted}${suffix ?? ''}`}
 				</span>
 				{after}
 			</span>
@@ -153,10 +147,10 @@ export namespace Amount {
 			 * Controls infinite value detection (uint256 max):
 			 * - `true` (default): detect and show "infinite"
 			 * - `false`: no detection, show the raw value
-			 * - `string`: detect and show custom label
+			 * - `ReactNode`: detect and show custom label
 			 * - `null`: detect and render nothing
 			 */
-			infinite?: boolean | string | null
+			infinite?: boolean | null | React.ReactNode
 			maxWidth?: number
 			prefix?: string
 			short?: boolean

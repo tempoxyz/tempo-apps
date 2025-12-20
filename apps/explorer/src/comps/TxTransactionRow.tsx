@@ -132,9 +132,19 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			),
 		)
 	}, [batchData])
-	if (!amountParts?.length) {
-		return <Amount.Base value={0n} decimals={0} prefix="$" short />
-	}
+
+	const infiniteLabel = <span className="text-secondary">−</span>
+
+	if (!amountParts?.length)
+		return (
+			<Amount.Base
+				value={0n}
+				decimals={0}
+				prefix="$"
+				short
+				infinite={infiniteLabel}
+			/>
+		)
 
 	// Normalize all amounts to 18 decimals and sum as bigints
 	const normalizedDecimals = 18
@@ -148,7 +158,13 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
 		if (value === 0n) return <span className="text-tertiary">—</span>
 		return (
-			<Amount.Base value={value} decimals={18} infinite={null} prefix="$" short />
+			<Amount.Base
+				value={value}
+				decimals={18}
+				infinite={infiniteLabel}
+				prefix="$"
+				short
+			/>
 		)
 	}
 
@@ -156,7 +172,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 		<Amount.Base
 			value={totalValue}
 			decimals={normalizedDecimals}
-			infinite={null}
+			infinite={infiniteLabel}
 			prefix="$"
 			short
 		/>
