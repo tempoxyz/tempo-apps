@@ -338,14 +338,17 @@ function createDetectors(
 		},
 
 		tip20Factory(event: ParsedEvent) {
-			const { eventName, args, address } = event
+			const { eventName, args } = event
 
 			if (eventName === 'TokenCreated')
 				return {
 					type: 'create token',
 					parts: [
 						{ type: 'action', value: 'Create Token' },
-						{ type: 'token', value: { address, symbol: args.symbol } },
+						{
+							type: 'token',
+							value: { address: args.token, symbol: args.symbol },
+						},
 					],
 				}
 
