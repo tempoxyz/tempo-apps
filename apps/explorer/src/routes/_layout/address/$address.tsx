@@ -25,7 +25,7 @@ import {
 } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
-import { ContractTabContent, InteractTabContent } from '#comps/Contract.tsx'
+import { ContractTabContent, InteractTabContent } from '#comps/Contract'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
@@ -44,13 +44,13 @@ import {
 	TransactionTotal,
 	useTransactionDataFromBatch,
 } from '#comps/TxTransactionRow'
-import { cx } from '#cva.config.ts'
+import { cx } from '#cva.config'
 import {
 	type ContractSource,
 	contractSourceQueryOptions,
 	fetchContractSourceDirect,
 	useContractSourceQueryOptions,
-} from '#lib/domain/contract-source.ts'
+} from '#lib/domain/contract-source'
 import {
 	type ContractInfo,
 	extractContractAbi,
@@ -58,6 +58,7 @@ import {
 	getContractInfo,
 } from '#lib/domain/contracts'
 import { parseKnownEvents } from '#lib/domain/known-events'
+import { type AccountType, getAccountType } from '#lib/account'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
@@ -65,8 +66,8 @@ import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
 import {
 	type TransactionsData,
 	transactionsQueryOptions,
-} from '#lib/queries/account.ts'
-import { config, getConfig } from '#wagmi.config.ts'
+} from '#lib/queries/account'
+import { config, getConfig } from '#wagmi.config'
 
 async function fetchAddressTotalValue(address: Address.Address) {
 	const response = await fetch(
@@ -278,40 +279,43 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		const offset = (page - 1) * limit
 		const chainId = getChainId(config)
 
+		// Get bytecode to determine account type
+		const contractBytecode = await getContractBytecode(address).catch(
+			(error) => {
+				console.error('[loader] Failed to get bytecode:', error)
+				return undefined
+			},
+		)
+
+		const accountType = getAccountType(contractBytecode)
+
 		// check if it's a known contract from our registry
 		let contractInfo = getContractInfo(address)
 
-		// Get bytecode to check if this is a contract
-		const contractBytecode = contractInfo?.code
-			? contractInfo.code
-			: await getContractBytecode(address).catch((error) => {
-					console.error('[loader] Failed to get bytecode:', error)
-					return undefined
-				})
+		// Only try to extract ABI/fetch source for actual contracts
+		let contractSource: ContractSource | undefined
+		if (accountType === 'contract') {
+			// if not in registry, try to extract ABI from bytecode using whatsabi
+			if (!contractInfo && contractBytecode) {
+				const contractAbi = await extractContractAbi(address).catch(
+					() => undefined,
+				)
 
-		// if not in registry, try to extract ABI from bytecode using whatsabi
-		if (!contractInfo && contractBytecode) {
-			const contractAbi = await extractContractAbi(address).catch(
-				() => undefined,
-			)
-
-			if (contractAbi) {
-				contractInfo = {
-					name: 'Unknown Contract',
-					description: 'ABI extracted from bytecode',
-					code: contractBytecode,
-					abi: contractAbi,
-					category: 'utility',
-					address,
+				if (contractAbi) {
+					contractInfo = {
+						name: 'Unknown Contract',
+						description: 'ABI extracted from bytecode',
+						code: contractBytecode,
+						abi: contractAbi,
+						category: 'utility',
+						address,
+					}
 				}
 			}
-		}
 
-		// Try to fetch verified contract source if there's bytecode on chain
-		// Fetch directly from upstream API (bypasses __BASE_URL__ issues during SSR)
-		// Then seed the query cache for client-side hydration
-		let contractSource: ContractSource | undefined
-		if (contractBytecode) {
+			// Try to fetch verified contract source if there's bytecode on chain
+			// Fetch directly from upstream API (bypasses __BASE_URL__ issues during SSR)
+			// Then seed the query cache for client-side hydration
 			contractSource = await fetchContractSourceDirect({
 				address,
 				chainId,
@@ -327,9 +331,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				)
 			}
 		}
-
-		// Show contract tab if we have contractInfo OR verified source
-		const hasContract = Boolean(contractInfo) || Boolean(contractSource)
 
 		// Add timeout to prevent SSR from hanging on slow queries
 		const QUERY_TIMEOUT_MS = 3_000
@@ -381,7 +382,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			page,
 			limit,
 			offset,
-			hasContract,
+			accountType,
 			contractInfo,
 			contractSource,
 			transactionsData,
@@ -390,8 +391,13 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		}
 	},
 	head: async ({ params, loaderData }) => {
-		const isContract = Boolean(loaderData?.hasContract)
-		const label = isContract ? 'Contract' : 'Address'
+		const accountType = loaderData?.accountType ?? 'empty'
+		const label =
+			accountType === 'contract'
+				? 'Contract'
+				: accountType === 'account'
+					? 'Account'
+					: 'Address'
 		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
 
 		const txCount = 0
@@ -481,7 +487,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			address: params.address,
 			holdings,
 			txCount,
-			isContract,
+			accountType,
 			lastActive,
 		})
 
@@ -509,7 +515,7 @@ function RouteComponent() {
 	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, live, limit } = Route.useSearch()
-	const { hasContract, contractInfo, contractSource, transactionsData } =
+	const { accountType, contractInfo, contractSource, transactionsData } =
 		Route.useLoaderData()
 
 	Address.assert(address)
@@ -521,15 +527,17 @@ function RouteComponent() {
 	const redirectedForHashRef = React.useRef<string | null>(null)
 
 	// When URL has a hash fragment (e.g., #functionName), switch to interact tab
+	const isContract = accountType === 'contract'
+
 	React.useEffect(() => {
 		// Only redirect if:
 		// 1. We have a hash
-		// 2. Address has a known contract
+		// 2. Address is a contract
 		// 3. Not already on interact tab
 		// 4. Haven't already redirected for this specific hash
 		if (
 			hash &&
-			hasContract &&
+			isContract &&
 			tab !== 'interact' &&
 			redirectedForHashRef.current !== hash
 		) {
@@ -542,7 +550,7 @@ function RouteComponent() {
 				resetScroll: false,
 			})
 		}
-	}, [hash, hasContract, tab, navigate, limit])
+	}, [hash, isContract, tab, navigate, limit])
 
 	React.useEffect(() => {
 		// Only preload for history tab (transaction pagination)
@@ -597,7 +605,11 @@ function RouteComponent() {
 				'grid w-full pt-20 pb-16 px-4 gap-3.5 min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-7xl',
 			)}
 		>
-			<AccountCardWithTimestamps address={address} assetsData={assetsData} />
+			<AccountCardWithTimestamps
+				address={address}
+				assetsData={assetsData}
+				accountType={accountType}
+			/>
 			<SectionsWrapper
 				address={address}
 				page={page}
@@ -617,8 +629,9 @@ function RouteComponent() {
 function AccountCardWithTimestamps(props: {
 	address: Address.Address
 	assetsData: AssetData[]
+	accountType?: AccountType
 }) {
-	const { address, assetsData } = props
+	const { address, assetsData, accountType } = props
 
 	// fetch the most recent transactions (pg.1)
 	const { data: recentData } = useQuery(
@@ -676,6 +689,7 @@ function AccountCardWithTimestamps(props: {
 			createdTimestamp={createdTimestamp}
 			lastActivityTimestamp={lastActivityTimestamp}
 			totalValue={totalValue}
+			accountType={accountType}
 		/>
 	)
 }
@@ -937,7 +951,7 @@ function SectionsWrapper(props: {
 						title: 'Contract',
 						totalItems: 0,
 						itemsLabel: 'items',
-						disabled: !contractInfo && !resolvedContractSource,
+						visible: Boolean(contractInfo || resolvedContractSource),
 						content: (
 							<ContractTabContent
 								address={address}
@@ -952,7 +966,7 @@ function SectionsWrapper(props: {
 						title: 'Interact',
 						totalItems: 0,
 						itemsLabel: 'functions',
-						disabled: !contractInfo && !resolvedContractSource,
+						visible: Boolean(contractInfo || resolvedContractSource),
 						content: (
 							<InteractTabContent
 								address={address}

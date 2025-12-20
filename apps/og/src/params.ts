@@ -53,6 +53,8 @@ const sanitizedWithDefault = (maxLen: number, defaultValue = '—') =>
 		),
 	)
 
+const zAccountType = z.enum(['empty', 'account', 'contract'])
+
 /** Boolean from string "true" */
 const booleanString = z.pipe(
 	z.optional(z.string()),
@@ -201,7 +203,7 @@ export const addressOgQuerySchema = z.pipe(
 		feeToken: sanitizedField(24),
 		tokens: commaSeparatedList(24, 12),
 		methods: commaSeparatedList(32, 16),
-		isContract: booleanString,
+		accountType: z.optional(zAccountType),
 	}),
 	z.transform((data) => ({
 		holdings: data.holdings,
@@ -211,7 +213,7 @@ export const addressOgQuerySchema = z.pipe(
 		feeToken: data.feeToken,
 		tokens: data.tokens,
 		methods: data.methods,
-		isContract: data.isContract,
+		accountType: data.accountType,
 	})),
 )
 
