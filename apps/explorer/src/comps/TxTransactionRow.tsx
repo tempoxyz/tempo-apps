@@ -3,6 +3,7 @@ import { Address, Hex, Value } from 'ox'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import type { getBlock } from 'wagmi/actions'
+import { Amount } from '#comps/Amount'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import {
@@ -131,26 +132,33 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			),
 		)
 	}, [batchData])
-	if (!amountParts?.length) return <>$0.00</>
+	if (!amountParts?.length) {
+		return <Amount.Base value={0n} decimals={0} prefix="$" short />
+	}
 
+	// Normalize all amounts to 18 decimals and sum as bigints
+	const normalizedDecimals = 18
 	const totalValue = amountParts.reduce((sum, part) => {
 		const decimals = part.value.decimals ?? 6
-		return sum + Number(Value.format(part.value.value, decimals))
-	}, 0)
+		const scale = 10n ** BigInt(normalizedDecimals - decimals)
+		return sum + part.value.value * scale
+	}, 0n)
 
-	if (totalValue === 0) {
+	if (totalValue === 0n) {
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
 		if (value === 0n) return <span className="text-tertiary">—</span>
 		return (
-			<span className="text-primary">
-				{PriceFormatter.format(value, { decimals: 18, format: 'short' })}
-			</span>
+			<Amount.Base value={value} decimals={18} infinite={null} prefix="$" short />
 		)
 	}
 
 	return (
-		<span className="text-primary">
-			{PriceFormatter.format(totalValue, { format: 'short' })}
-		</span>
+		<Amount.Base
+			value={totalValue}
+			decimals={normalizedDecimals}
+			infinite={null}
+			prefix="$"
+			short
+		/>
 	)
 }
