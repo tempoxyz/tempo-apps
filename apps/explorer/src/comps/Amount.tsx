@@ -5,9 +5,9 @@ import { maxUint256 } from 'viem'
 import { Abis } from 'viem/tempo'
 import { useReadContracts } from 'wagmi'
 import { TokenIcon } from '#comps/TokenIcon.tsx'
+import { ellipsis } from '#lib/chars'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { PriceFormatter } from '#lib/formatting.ts'
-import { ellipsis } from '#lib/chars'
 
 export function Amount(props: Amount.Props) {
 	const {

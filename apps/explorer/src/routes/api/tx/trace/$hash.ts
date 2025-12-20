@@ -1,9 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
-import {
-	fetchTraceData,
-	type TraceData,
-} from '#lib/queries/trace'
+import { fetchTraceData, type TraceData } from '#lib/queries/trace'
 import { zHash } from '#lib/zod'
 
 export type {
