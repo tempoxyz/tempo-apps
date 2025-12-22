@@ -222,7 +222,7 @@ app.get(
 			created: addrParams.created,
 			feeToken: addrParams.feeToken,
 			tokensHeld: addrParams.tokens,
-			isContract: addrParams.isContract,
+			accountType: addrParams.accountType,
 			methods: addrParams.methods,
 		}
 
@@ -231,7 +231,7 @@ app.get(
 			loadImages(context.env),
 		])
 
-		const bgImage = addressData.isContract
+		const bgImage = addressData.accountType === 'contract'
 			? images.bgContract
 			: images.bgAddress
 

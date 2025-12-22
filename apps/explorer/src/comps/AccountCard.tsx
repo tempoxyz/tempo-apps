@@ -2,6 +2,7 @@ import { ClientOnly, getRouteApi } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { InfoCard } from '#comps/InfoCard'
 import { RelativeTime } from '#comps/RelativeTime'
+import { type AccountType, getAccountTag, isSystemAddress } from '#lib/account'
 import { PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
@@ -16,17 +17,45 @@ export function AccountCard(props: AccountCard.Props) {
 		createdTimestamp,
 		lastActivityTimestamp,
 		totalValue,
+		accountType,
 	} = props
 
 	const { copy, notifying } = useCopy()
+	const tag = getAccountTag(address as Address.Address)
+	const isSystem = isSystemAddress(address as Address.Address)
 
 	return (
 		<InfoCard
 			title={
 				<div className="flex items-center justify-between px-[18px] h-[36px]">
 					<h1 className="text-[13px] uppercase text-tertiary select-none">
-						Account
+						Address
 					</h1>
+					<div
+						className="text-[11px] bg-base-alt rounded text-secondary lowercase select-none"
+						style={{ padding: '2px 6px', marginRight: -10 }}
+						title={
+							tag
+								? tag.id.startsWith('system:')
+									? `System: ${tag.label}`
+									: tag.id.startsWith('genesis-token:')
+										? `Genesis Token: ${tag.label}`
+										: tag.label
+								: accountType === 'empty'
+									? 'Uninitialized account'
+									: undefined
+						}
+					>
+						<div className="translate-y-[-1px]">
+							{isSystem
+								? 'system'
+								: accountType === 'contract'
+									? 'contract'
+									: accountType === 'account'
+										? 'account'
+										: 'empty'}
+						</div>
+					</div>
 				</div>
 			}
 			className={className}
@@ -118,5 +147,6 @@ export declare namespace AccountCard {
 		lastActivityTimestamp?: bigint | undefined
 		createdTimestamp?: bigint | undefined
 		totalValue?: number | undefined
+		accountType?: AccountType | undefined
 	}
 }
