@@ -42,7 +42,7 @@ export function DataGrid(props: DataGrid.Props) {
 					? `minmax(${col.minWidth}px, ${col.width})`
 					: col.width
 			if (col.minWidth) return `minmax(${col.minWidth}px, auto)`
-			return 'auto'
+			return mode === 'tabs' ? 'minmax(0, auto)' : 'auto'
 		})
 		.join(' ')
 
@@ -53,6 +53,7 @@ export function DataGrid(props: DataGrid.Props) {
 					className={cx(
 						'w-full text-[14px] rounded-t-[2px] grid',
 						flexible && 'min-w-max',
+						mode === 'tabs' && 'max-w-full',
 					)}
 					style={{ gridTemplateColumns }}
 				>
@@ -130,6 +131,7 @@ export function DataGrid(props: DataGrid.Props) {
 																: 'justify-start',
 															item.link &&
 																'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-1 [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-1',
+															mode === 'tabs' && 'min-w-0 overflow-hidden',
 														)}
 													>
 														{content}
