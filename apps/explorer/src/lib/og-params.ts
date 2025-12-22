@@ -61,7 +61,7 @@ export interface AddressOgParams {
 	created?: string
 	feeToken?: string
 	tokens?: string[]
-	isContract?: boolean
+	accountType?: 'empty' | 'account' | 'contract'
 	methods?: string[]
 }
 
@@ -160,9 +160,9 @@ export function buildAddressOgUrl(
 				.join(','),
 		)
 	}
-	if (params.isContract) {
-		search.set('isContract', 'true')
-		if (params.methods && params.methods.length > 0) {
+	if (params.accountType) {
+		search.set('accountType', params.accountType)
+		if (params.accountType === 'contract' && params.methods && params.methods.length > 0) {
 			search.set(
 				'methods',
 				params.methods

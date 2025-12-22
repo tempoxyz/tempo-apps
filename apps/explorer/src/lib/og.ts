@@ -11,6 +11,7 @@ import {
 	getTransactionReceipt,
 	readContract,
 } from 'wagmi/actions'
+import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type KnownEvent,
 	type KnownEventPart,
@@ -335,7 +336,7 @@ export function buildAddressOgImageUrl(params: {
 	created?: string
 	feeToken?: string
 	tokens?: string[]
-	isContract?: boolean
+	accountType?: AccountType
 	methods?: string[]
 }): string {
 	const ogParams: AddressOgParams = {
@@ -349,7 +350,7 @@ export function buildAddressOgImageUrl(params: {
 		created: params.created,
 		feeToken: params.feeToken,
 		tokens: params.tokens,
-		isContract: params.isContract,
+		accountType: params.accountType,
 		methods: params.methods,
 	}
 	return buildAddressOgUrl(OG_BASE_URL, ogParams)
@@ -716,7 +717,7 @@ interface AddressData {
 	created: string
 	feeToken: string
 	tokensHeld: string[]
-	isContract: boolean
+	accountType: AccountType
 	methods: string[]
 }
 
@@ -725,25 +726,18 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 		const tokenAddress = address.toLowerCase() as Address.Address
 		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
-		let isContract = false
+		let accountType: AccountType = 'empty'
 		try {
 			const code = await getBytecode(config, {
 				address: address as Address.Address,
 			})
-
-			if (!code || code === '0x') {
-				isContract = false
-			} else if (code.toLowerCase().startsWith('0xef0100')) {
-				isContract = false
-			} else {
-				isContract = true
-			}
+			accountType = getAccountType(code)
 		} catch {
-			// Ignore errors, assume not a contract
+			// Ignore errors, assume empty
 		}
 
 		let detectedMethods: string[] = []
-		if (isContract) {
+		if (accountType === 'contract') {
 			const addrLower = address.toLowerCase()
 
 			if (addrLower === '0x20fc000000000000000000000000000000000000') {
@@ -959,7 +953,7 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			created,
 			feeToken: allTokensHeld[0] || '—',
 			tokensHeld: allTokensHeld,
-			isContract,
+			accountType,
 			methods: detectedMethods,
 		}
 	} catch (error) {
@@ -971,7 +965,7 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 export async function buildAddressOgData(address: string): Promise<{
 	url: string
 	description: string
-	isContract: boolean
+	accountType: AccountType
 }> {
 	const addressData = await fetchAddressData(address)
 
@@ -988,9 +982,9 @@ export async function buildAddressOgData(address: string): Promise<{
 			)
 			params.set('tokens', truncatedTokens.join(','))
 		}
-		if (addressData.isContract) {
-			params.set('isContract', 'true')
-			if (addressData.methods.length > 0) {
+		if (addressData.accountType) {
+			params.set('accountType', addressData.accountType)
+			if (addressData.accountType === 'contract' && addressData.methods.length > 0) {
 				const truncatedMethods = addressData.methods.map((m) =>
 					truncateOgText(m, 14),
 				)
@@ -1002,6 +996,6 @@ export async function buildAddressOgData(address: string): Promise<{
 	return {
 		url: `${OG_BASE_URL}/address/${address}?${params.toString()}`,
 		description: buildAddressDescription(addressData, address),
-		isContract: addressData?.isContract ?? false,
+		accountType: addressData?.accountType ?? 'empty',
 	}
 }

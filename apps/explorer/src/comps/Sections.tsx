@@ -3,12 +3,14 @@ import { cx } from '#cva.config.ts'
 
 export function Sections(props: Sections.Props) {
 	const {
-		sections,
+		sections: sections_,
 		activeSection = 0,
 		onSectionChange,
 		className,
 		mode = Sections.defaultMode,
 	} = props
+
+	const sections = sections_.filter((section) => section.visible !== false)
 
 	const [collapsedSections, setCollapsedSections] = React.useState<boolean[]>(
 		new Array(sections.length).fill(true),
@@ -119,28 +121,22 @@ export function Sections(props: Sections.Props) {
 								<button
 									key={section.title}
 									type="button"
-									disabled={section.disabled}
 									onPointerDown={() => {
-										if (section.disabled) return
 										if (activeSection === index) return
 										onSectionChange?.(index)
 									}}
 									className={cx(
 										'h-full flex items-center text-[13px] font-medium',
-										'focus-visible:-outline-offset-2!',
+										'focus-visible:-outline-offset-2! cursor-pointer',
 										index === 0
 											? 'pl-[18px] pr-[12px] rounded-tl-[10px]!'
 											: 'px-[12px]',
-										section.disabled
-											? 'text-quaternary cursor-not-allowed'
-											: activeSection === index
-												? 'text-primary cursor-pointer'
-												: 'text-tertiary cursor-pointer',
+										activeSection === index ? 'text-primary' : 'text-tertiary',
 									)}
 								>
 									<div className="relative h-full flex items-center">
 										{section.title}
-										{activeSection === index && !section.disabled && (
+										{activeSection === index && (
 											<div className="absolute h-[2px] bg-accent -bottom-[1.5px] left-0 right-0 -mx-[2px]" />
 										)}
 									</div>
@@ -176,33 +172,32 @@ export function Sections(props: Sections.Props) {
 
 export namespace Sections {
 	export interface Props {
-		sections: Section[]
 		activeSection?: number
-		onSectionChange?: (index: number) => void
 		className?: string
 		mode?: Mode
+		onSectionChange?: (index: number) => void
+		sections: Section[]
 	}
 
 	export type Mode = 'tabs' | 'stacked'
 
 	export interface Section {
-		title: string
-		content: React.ReactNode
-		totalItems?: number
-		itemsLabel?: string
-		contextual?: React.ReactNode
 		autoCollapse?: boolean
-		disabled?: boolean
+		content: React.ReactNode
+		contextual?: React.ReactNode
+		itemsLabel?: string
+		title: string
+		totalItems?: number
+		visible?: boolean
 	}
 
 	export const defaultMode = 'tabs'
 
-	export const Context = React.createContext<{
-		mode: Mode
-	}>({ mode: defaultMode })
+	export const Context = React.createContext<{ mode: Mode }>({
+		mode: defaultMode,
+	})
 
 	export function useSectionsMode() {
-		const { mode } = React.useContext(Context)
-		return mode
+		return React.useContext(Context).mode
 	}
 }
