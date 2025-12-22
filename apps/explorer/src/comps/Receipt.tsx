@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import { useState } from 'react'
+import { Amount } from '#comps/Amount'
 import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { TxEventDescription } from '#comps/TxEventDescription'
@@ -148,23 +149,20 @@ export function Receipt(props: Receipt.Props) {
 										className="[counter-increment:event]"
 									>
 										<div className="flex flex-col gap-[8px]">
-											<div className="flex flex-row justify-between items-start gap-[10px]">
+											<div className="grid grid-cols-[1fr_minmax(0,30%)] gap-[10px]">
 												<div className="flex flex-row items-start gap-[4px] grow min-w-0 text-tertiary">
 													<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 leading-[24px] min-w-[20px]"></div>
 													<TxEventDescription event={event} />
 												</div>
-												<div className="flex items-center text-right shrink-0 leading-[24px]">
+												<div className="flex items-start justify-end shrink-1 leading-[24px]">
 													{totalAmountBigInt > 0n && (
-														<span
-															title={PriceFormatter.format(totalAmountBigInt, {
-																decimals,
-															})}
-														>
-															{PriceFormatter.format(totalAmountBigInt, {
-																decimals,
-																format: 'short',
-															})}
-														</span>
+														<Amount.Base
+															decimals={decimals}
+															infinite={null}
+															prefix="$"
+															short
+															value={totalAmountBigInt}
+														/>
 													)}
 												</div>
 											</div>
