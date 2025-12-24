@@ -64,7 +64,7 @@ app
 		}),
 	)
 	.use(bodyLimit({ maxSize: 1024 * 1024 })) // 1mb
-	.use('*', timeout(12_000)) // 12 seconds
+	.use('*', timeout(30_000)) // 30 seconds
 	.use(prettyJSON())
 	.use(async (context, next) => {
 		if (context.env.NODE_ENV !== 'development') return await next()
