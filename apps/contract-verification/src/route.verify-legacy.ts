@@ -149,7 +149,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			chain: chainConfig,
 			transport: http(
 				chainConfig.id === TESTNET_CHAIN_ID
-					? 'https://rpc-orchestra.testnet.tempo.xyz'
+					? 'https://rpc.testnet.tempo.xyz'
 					: undefined,
 			),
 		})

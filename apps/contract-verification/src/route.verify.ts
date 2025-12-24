@@ -192,7 +192,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			chain,
 			transport: http(
 				chain.id === TESTNET_CHAIN_ID
-					? 'https://rpc-orchestra.testnet.tempo.xyz'
+					? 'https://rpc.testnet.tempo.xyz'
 					: undefined,
 			),
 		})
