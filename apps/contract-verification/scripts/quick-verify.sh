@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-TEMPO_RPC_URL="https://rpc-orchestra.testnet.tempo.xyz"
+TEMPO_RPC_URL="https://rpc.testnet.tempo.xyz"
 PRIVATE_KEY=${PK:-"0xa4b3490c35582d544451fbbfd7a0e4c5fa4d0ded06563ccc199057c7a5e6c9de"}
 VERIFIER_URL=${VERIFIER_URL:-"https://o.tail388b2e.ts.net"}
 
