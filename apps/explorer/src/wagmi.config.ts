@@ -10,8 +10,8 @@ type TODO = any
 
 const browser = typeof window !== 'undefined'
 
-export const DEFAULT_TESTNET_RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
-export const DEFAULT_TESTNET_WS_URL = 'wss://rpc-orchestra.testnet.tempo.xyz'
+export const DEFAULT_TESTNET_RPC_URL = 'https://rpc.testnet.tempo.xyz'
+export const DEFAULT_TESTNET_WS_URL = 'wss://rpc.testnet.tempo.xyz'
 
 export const queryClient = new QueryClient({
 	defaultOptions: {
