@@ -63,7 +63,7 @@ app
 			message: { error: 'Rate limit exceeded', retryAfter: '60s' },
 		}),
 	)
-	.use(bodyLimit({ maxSize: 2 * 10_24 })) // 1mb
+	.use(bodyLimit({ maxSize: 1024 * 1024 })) // 1mb
 	.use('*', timeout(12_000)) // 12 seconds
 	.use(prettyJSON())
 	.use(async (context, next) => {
