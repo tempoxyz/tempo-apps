@@ -8,7 +8,7 @@ cd "$tmp_dir"
 forge init -n tempo tempo-check
 cd tempo-check
 
-TEMPO_RPC_URL=https://rpc-orchestra.testnet.tempo.xyz
+TEMPO_RPC_URL=https://rpc.testnet.tempo.xyz
 
 echo -e "\n=== FORGE TEST (LOCAL) ==="
 forge test
