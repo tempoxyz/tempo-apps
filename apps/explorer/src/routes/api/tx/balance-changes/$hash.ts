@@ -8,7 +8,7 @@ import { Abis } from 'viem/tempo'
 import * as z from 'zod/mini'
 
 import { zHash } from '#lib/zod'
-import { getConfig } from '#wagmi.config'
+import { config } from '#wagmi.config'
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
@@ -74,7 +74,7 @@ function computeBalanceChanges(logs: Log[]) {
 }
 
 async function getBalanceAtBlock(
-	client: ReturnType<ReturnType<typeof getConfig>['getClient']>,
+	client: ReturnType<typeof config.getClient>,
 	token: Address.Address,
 	account: Address.Address,
 	blockNumber: bigint,
@@ -93,7 +93,7 @@ async function getBalanceAtBlock(
 }
 
 async function getTokenMetadata(
-	client: ReturnType<ReturnType<typeof getConfig>['getClient']>,
+	client: ReturnType<typeof config.getClient>,
 	token: Address.Address,
 ) {
 	const [decimals, symbol] = await Promise.all([
@@ -118,7 +118,6 @@ export async function fetchBalanceChanges(params: {
 	offset: number
 }): Promise<BalanceChangesData> {
 	const { hash, limit, offset } = params
-	const config = getConfig()
 	const client = config.getClient()
 
 	const receipt = await getTransactionReceipt(client, { hash })

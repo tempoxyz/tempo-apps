@@ -231,9 +231,10 @@ app.get(
 			loadImages(context.env),
 		])
 
-		const bgImage = addressData.accountType === 'contract'
-			? images.bgContract
-			: images.bgAddress
+		const bgImage =
+			addressData.accountType === 'contract'
+				? images.bgContract
+				: images.bgAddress
 
 		const imageResponse = new ImageResponse(
 			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>

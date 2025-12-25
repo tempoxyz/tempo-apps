@@ -103,6 +103,7 @@ export namespace Header {
 
 		const ref = React.useRef<HTMLSpanElement>(null)
 		useWatchBlockNumber({
+			poll: true,
 			onBlockNumber: (blockNumber) => {
 				if (ref.current) ref.current.textContent = String(blockNumber)
 			},

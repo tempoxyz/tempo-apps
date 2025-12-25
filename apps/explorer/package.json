@@ -17,9 +17,6 @@
 		"test": "vitest"
 	},
 	"dependencies": {
-		"@sentry/browser": "catalog:",
-		"@sentry/cloudflare": "catalog:",
-		"@sentry/tanstackstart-react": "catalog:",
 		"@shazow/whatsabi": "catalog:",
 		"@shikijs/langs": "catalog:",
 		"@shikijs/themes": "catalog:",
@@ -49,7 +46,6 @@
 		"@cloudflare/vite-plugin": "catalog:",
 		"@cloudflare/vitest-pool-workers": "catalog:",
 		"@iconify/json": "catalog:",
-		"@sentry/vite-plugin": "catalog:",
 		"@svgr/core": "catalog:",
 		"@svgr/plugin-jsx": "catalog:",
 		"@tanstack/devtools-vite": "catalog:",

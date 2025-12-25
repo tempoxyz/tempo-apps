@@ -4,7 +4,7 @@ import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import { parseKnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { getFeeBreakdown } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
-import { getConfig } from '#wagmi.config'
+import { config } from '#wagmi.config'
 
 export function txQueryOptions(params: { hash: Hex.Hex }) {
 	return queryOptions({
@@ -14,7 +14,6 @@ export function txQueryOptions(params: { hash: Hex.Hex }) {
 }
 
 async function fetchTxData(params: { hash: Hex.Hex }) {
-	const config = getConfig()
 	const receipt = await getTransactionReceipt(config, { hash: params.hash })
 
 	const [block, transaction, getTokenMetadata] = await Promise.all([

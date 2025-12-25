@@ -713,14 +713,16 @@ export function AddressCard({ data }: { data: AddressData }) {
 				</div>
 
 				{/* Contract Methods - show for contracts only, at bottom */}
-				{data.accountType === 'contract' && data.methods && data.methods.length > 0 && (
-					<div tw="flex flex-col w-full" style={{ marginTop: '4px' }}>
-						<span tw="text-gray-500" style={{ marginBottom: '12px' }}>
-							Methods
-						</span>
-						<MethodBadges methods={data.methods || []} />
-					</div>
-				)}
+				{data.accountType === 'contract' &&
+					data.methods &&
+					data.methods.length > 0 && (
+						<div tw="flex flex-col w-full" style={{ marginTop: '4px' }}>
+							<span tw="text-gray-500" style={{ marginBottom: '12px' }}>
+								Methods
+							</span>
+							<MethodBadges methods={data.methods || []} />
+						</div>
+					)}
 			</div>
 		</div>
 	)

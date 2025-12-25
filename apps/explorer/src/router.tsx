@@ -1,5 +1,4 @@
-import * as Sentry from '@sentry/tanstackstart-react'
-import { QueryClient } from '@tanstack/react-query'
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { hashFn } from 'wagmi/query'
@@ -7,14 +6,27 @@ import { NotFound } from '#comps/NotFound'
 import { routeTree } from '#routeTree.gen.ts'
 
 export const getRouter = () => {
-	const queryClient = new QueryClient({
+	const queryClient: QueryClient = new QueryClient({
 		defaultOptions: {
 			queries: {
-				refetchOnWindowFocus: false,
-				queryKeyHashFn: hashFn,
 				gcTime: 1_000 * 60 * 60 * 24, // 24 hours
+				queryKeyHashFn: hashFn,
+				refetchOnReconnect: () => !queryClient.isMutating(),
+				retry: 0,
 			},
 		},
+		mutationCache: new MutationCache({
+			onError: (error) => {
+				if (import.meta.env.MODE !== 'development') return
+				console.error(error)
+			},
+		}),
+		queryCache: new QueryCache({
+			onError: (error, query) => {
+				if (import.meta.env.MODE !== 'development') return
+				if (query.state.data !== undefined) console.error('[tsq]', error)
+			},
+		}),
 	})
 
 	const router = createRouter({
@@ -33,24 +45,6 @@ export const getRouter = () => {
 		queryClient,
 		wrapQueryClient: false,
 	})
-
-	if (!router.isServer) {
-		Sentry.init({
-			dsn: 'https://170113585c24ca7a67704f86cccd6750@o4510262603481088.ingest.us.sentry.io/4510467689218048',
-			enabled: import.meta.env.PROD,
-			replaysSessionSampleRate: 0.1,
-			replaysOnErrorSampleRate: 1.0,
-			sendDefaultPii: true,
-			enableMetrics: true,
-			integrations: [
-				Sentry.dedupeIntegration(),
-				Sentry.zodErrorsIntegration(),
-				Sentry.captureConsoleIntegration(),
-				Sentry.replayIntegration(),
-			],
-			tunnel: '/api/tunnel',
-		})
-	}
 
 	return router
 }

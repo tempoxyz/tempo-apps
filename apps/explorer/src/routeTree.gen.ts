@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
-import { Route as ApiTunnelRouteImport } from './routes/api/tunnel'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
@@ -41,11 +40,6 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => LayoutRoute,
-} as any)
-const ApiTunnelRoute = ApiTunnelRouteImport.update({
-  id: '/api/tunnel',
-  path: '/api/tunnel',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
@@ -156,7 +150,6 @@ export interface FileRoutesByFullPath {
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
-  '/api/tunnel': typeof ApiTunnelRoute
   '/': typeof LayoutIndexRoute
   '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
@@ -180,7 +173,6 @@ export interface FileRoutesByTo {
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
-  '/api/tunnel': typeof ApiTunnelRoute
   '/': typeof LayoutIndexRoute
   '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
@@ -206,7 +198,6 @@ export interface FileRoutesById {
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
-  '/api/tunnel': typeof ApiTunnelRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/address/$address': typeof LayoutAddressAddressRoute
   '/_layout/block/$id': typeof LayoutBlockIdRoute
@@ -232,7 +223,6 @@ export interface FileRouteTypes {
     | '/api/code'
     | '/api/health'
     | '/api/search'
-    | '/api/tunnel'
     | '/'
     | '/address/$address'
     | '/block/$id'
@@ -256,7 +246,6 @@ export interface FileRouteTypes {
     | '/api/code'
     | '/api/health'
     | '/api/search'
-    | '/api/tunnel'
     | '/'
     | '/address/$address'
     | '/block/$id'
@@ -281,7 +270,6 @@ export interface FileRouteTypes {
     | '/api/code'
     | '/api/health'
     | '/api/search'
-    | '/api/tunnel'
     | '/_layout/'
     | '/_layout/address/$address'
     | '/_layout/block/$id'
@@ -305,7 +293,6 @@ export interface RootRouteChildren {
   ApiCodeRoute: typeof ApiCodeRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
-  ApiTunnelRoute: typeof ApiTunnelRoute
   ApiAddressAddressRoute: typeof ApiAddressAddressRoute
   ApiAddressTotalValueAddressRoute: typeof ApiAddressTotalValueAddressRoute
   ApiAddressTxsCountAddressRoute: typeof ApiAddressTxsCountAddressRoute
@@ -328,13 +315,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
-    }
-    '/api/tunnel': {
-      id: '/api/tunnel'
-      path: '/api/tunnel'
-      fullPath: '/api/tunnel'
-      preLoaderRoute: typeof ApiTunnelRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/api/search': {
       id: '/api/search'
@@ -519,7 +499,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCodeRoute: ApiCodeRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
-  ApiTunnelRoute: ApiTunnelRoute,
   ApiAddressAddressRoute: ApiAddressAddressRoute,
   ApiAddressTotalValueAddressRoute: ApiAddressTotalValueAddressRoute,
   ApiAddressTxsCountAddressRoute: ApiAddressTxsCountAddressRoute,

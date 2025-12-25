@@ -1,6 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { Address, Hex } from 'ox'
-import { getConfig } from '#wagmi.config'
+import { config } from '#wagmi.config'
 
 export interface CallTrace {
 	type: 'CALL' | 'DELEGATECALL' | 'STATICCALL' | 'CREATE' | 'CREATE2'
@@ -34,7 +34,7 @@ export interface TraceData {
 }
 
 export async function fetchTraceData(hash: Hex.Hex): Promise<TraceData> {
-	const client = getConfig().getClient()
+	const client = config.getClient()
 	const [trace, prestate] = await Promise.all([
 		(
 			client.request({

@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/tanstackstart-react'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 import type { QueryClient } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
@@ -12,7 +11,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
 import { WagmiProvider } from 'wagmi'
-import { SentryWrappedErrorBoundary } from '#comps/ErrorBoundary'
+import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { ProgressLine } from '#comps/ProgressLine'
 import { config, persister, queryClient } from '#wagmi.config'
 import css from './styles.css?url'
@@ -126,17 +125,11 @@ export const Route = createRootRouteWithContext<{
 			},
 		],
 	}),
-	errorComponent: (props) => {
-		React.useEffect(() => {
-			Sentry.captureException(props.error)
-		}, [props.error])
-
-		return (
-			<RootDocument>
-				<SentryWrappedErrorBoundary {...props} />
-			</RootDocument>
-		)
-	},
+	errorComponent: (props) => (
+		<RootDocument>
+			<ErrorBoundary {...props} />
+		</RootDocument>
+	),
 	shellComponent: RootDocument,
 })
 
@@ -224,7 +217,7 @@ function useDevTools() {
 	React.useEffect(() => {
 		if (
 			import.meta.env.MODE === 'development' &&
-			import.meta.env.VITE_ENABLE_DEVTOOLS !== 'false'
+			import.meta.env.VITE_ENABLE_DEVTOOLS === 'true'
 		) {
 			void import('eruda').then(({ default: eruda }) => eruda.init())
 		}

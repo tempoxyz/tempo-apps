@@ -7,7 +7,7 @@ import { Abis } from 'viem/tempo'
 import { readContract } from 'wagmi/actions'
 
 import { zAddress } from '#lib/zod.ts'
-import { config, getConfig } from '#wagmi.config.ts'
+import { config } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -72,7 +72,7 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 						(await Promise.all(
 							tokensToFetch.map(
 								(row) =>
-									readContract(getConfig(), {
+									readContract(config, {
 										address: row.token_address as Address.Address,
 										abi: Abis.tip20,
 										functionName: 'decimals',

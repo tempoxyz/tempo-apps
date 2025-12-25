@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/tanstackstart-react'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 import * as React from 'react'
 import { Footer } from '#comps/Footer'
@@ -6,7 +5,7 @@ import { Header } from '#comps/Header'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
-class ErrorBoundary extends React.Component<
+export class ErrorBoundary extends React.Component<
 	ErrorComponentProps,
 	{ error: Error | null }
 > {
@@ -20,7 +19,6 @@ class ErrorBoundary extends React.Component<
 	componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
 		this.setState({ error })
 		console.error(error, errorInfo)
-		Sentry.captureException(error)
 	}
 
 	render() {
@@ -77,21 +75,3 @@ function CopyButton({ text }: { text: string }) {
 		</>
 	)
 }
-
-export const SentryWrappedErrorBoundary = Sentry.withErrorBoundary(
-	ErrorBoundary,
-	{
-		onError: (_error) => {
-			const error =
-				_error instanceof Error ? _error : (new Error(String(_error)) as Error)
-			Sentry.captureException(error)
-			return (
-				<ErrorBoundary
-					error={error}
-					// TODO: reset the error boundary
-					reset={() => {}}
-				/>
-			)
-		},
-	},
-)
