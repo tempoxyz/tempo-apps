@@ -20,9 +20,9 @@
 		"hono": "catalog:",
 		"idxs": "catalog:",
 		"kysely": "catalog:",
-		"ox": "catalog:",
+		"ox": "^0.11.1",
 		"tempo.ts": "catalog:",
-		"viem": "catalog:",
+		"viem": "^2.43.3",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
