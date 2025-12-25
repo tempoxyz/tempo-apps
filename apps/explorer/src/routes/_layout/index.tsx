@@ -111,8 +111,9 @@ function SpotlightLinks() {
 				<SpotlightLink
 					to="/address/$address"
 					params={{
-						address: '0x20fc000000000000000000000000000000000000',
+						address: '0x207CAd439A0d2A964A45cDd73B1EBC35C6B01580',
 					}}
+					search={{ tab: 'contract' }}
 				>
 					Contract
 				</SpotlightLink>
@@ -125,10 +126,12 @@ function SpotlightLink(props: {
 	to: string
 	params?: Record<string, string>
 	children: React.ReactNode
+	search?: Record<string, string>
 }) {
-	const { to, params, children } = props
+	const { to, params, children, search } = props
 	return (
 		<Link
+			search={search}
 			to={to}
 			{...(params ? { params } : {})}
 			className="text-base-content-secondary hover:text-base-content underline underline-offset-2 decoration-base-border hover:decoration-base-content-secondary press-down"
