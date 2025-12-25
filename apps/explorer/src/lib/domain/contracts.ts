@@ -574,6 +574,7 @@ export async function extractContractAbi(
 			abiLoader: false,
 			signatureLookup: new whatsabi.loaders.MultiSignatureLookup([
 				new whatsabi.loaders.OpenChainSignatureLookup(),
+				new whatsabi.loaders.FourByteSignatureLookup(),
 				new whatsabi.loaders.SamczunSignatureLookup(),
 			]),
 		})
