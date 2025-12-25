@@ -2,7 +2,7 @@ import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persi
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { Json } from 'ox'
 import { KeyManager, webAuthn } from 'tempo.ts/wagmi'
-import { createConfig, deserialize, http, serialize, webSocket } from 'wagmi'
+import { createConfig, deserialize, http, serialize } from 'wagmi'
 import { tempoLocalnet, tempoTestnet } from 'wagmi/chains'
 
 const browser = typeof window !== 'undefined'
@@ -58,9 +58,7 @@ export const config = createConfig({
 	batch: { multicall: false },
 	multiInjectedProviderDiscovery: false,
 	transports: {
-		[tempoTestnet.id]: browser
-			? webSocket(DEFAULT_TESTNET_WS_URL)
-			: http(DEFAULT_TESTNET_RPC_URL),
+		[tempoTestnet.id]: http(DEFAULT_TESTNET_RPC_URL, { batch: true }),
 		[tempoLocalnet.id]: http(undefined, { batch: true }),
 	},
 })
