@@ -4,7 +4,6 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
-	redirect,
 	stripSearchParams,
 	useNavigate,
 	useRouter,
@@ -135,8 +134,8 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			return { metadata, transfers: undefined, holdersData, currency }
 		} catch (error) {
 			console.error(error)
-			// redirect to `/address/$address` and if it's not an address, that route will throw a notFound
-			throw redirect({ to: '/address/$address', params: { address } })
+			// Not a valid token - show 404 instead of redirecting to avoid potential loops
+			throw notFound()
 		}
 	},
 	params: {

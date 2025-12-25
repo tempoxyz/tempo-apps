@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import type { Address } from 'ox'
 import type { Log } from 'viem'
 import { getAbiItem, parseEventLogs, zeroAddress } from 'viem'
@@ -8,10 +7,30 @@ import { Abis } from 'viem/tempo'
 import * as z from 'zod/mini'
 
 import { zHash } from '#lib/zod'
-import { getConfig } from '#wagmi.config'
+import { config } from '#wagmi.config'
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
+const RPC_CONCURRENCY = 5
+
+async function mapWithConcurrency<T, R>(
+	items: T[],
+	fn: (item: T) => Promise<R>,
+	concurrency: number,
+): Promise<R[]> {
+	const results: R[] = []
+	let index = 0
+
+	async function worker() {
+		while (index < items.length) {
+			const currentIndex = index++
+			results[currentIndex] = await fn(items[currentIndex])
+		}
+	}
+
+	await Promise.all(Array.from({ length: concurrency }, () => worker()))
+	return results
+}
 
 export interface TokenBalanceChange {
 	address: Address.Address
@@ -74,7 +93,7 @@ function computeBalanceChanges(logs: Log[]) {
 }
 
 async function getBalanceAtBlock(
-	client: ReturnType<ReturnType<typeof getConfig>['getClient']>,
+	client: ReturnType<typeof config.getClient>,
 	token: Address.Address,
 	account: Address.Address,
 	blockNumber: bigint,
@@ -93,7 +112,7 @@ async function getBalanceAtBlock(
 }
 
 async function getTokenMetadata(
-	client: ReturnType<ReturnType<typeof getConfig>['getClient']>,
+	client: ReturnType<typeof config.getClient>,
 	token: Address.Address,
 ) {
 	const [decimals, symbol] = await Promise.all([
@@ -118,7 +137,6 @@ export async function fetchBalanceChanges(params: {
 	offset: number
 }): Promise<BalanceChangesData> {
 	const { hash, limit, offset } = params
-	const config = getConfig()
 	const client = config.getClient()
 
 	const receipt = await getTransactionReceipt(client, { hash })
@@ -131,28 +149,30 @@ export async function fetchBalanceChanges(params: {
 
 	const uniqueTokens = [...new Set(balanceChanges.map(({ token }) => token))]
 
-	const [tokenMetadataEntries, balanceAfterResults] = await Promise.all([
-		Promise.all(
-			uniqueTokens.map(async (token) => [
-				token,
-				await getTokenMetadata(client, token),
-			]),
-		),
-		Promise.all(
-			balanceChanges.map(async (change) => ({
-				...change,
-				balanceAfter: await getBalanceAtBlock(
-					client,
-					change.token,
-					change.address,
-					receipt.blockNumber,
-				),
-			})),
-		),
-	])
+	const tokenMetadataEntries = await mapWithConcurrency(
+		uniqueTokens,
+		async (token) => [token, await getTokenMetadata(client, token)] as const,
+		RPC_CONCURRENCY,
+	)
+
+	const balanceAfterResults = await mapWithConcurrency(
+		balanceChanges,
+		async (change) => ({
+			...change,
+			balanceAfter: await getBalanceAtBlock(
+				client,
+				change.token,
+				change.address,
+				receipt.blockNumber,
+			),
+		}),
+		RPC_CONCURRENCY,
+	)
 
 	const tokenMetadata = Object.fromEntries(
-		tokenMetadataEntries.filter(([, meta]) => meta !== null),
+		tokenMetadataEntries.filter(
+			(entry): entry is [Address.Address, TokenMetadata] => entry[1] !== null,
+		),
 	)
 
 	const allChanges = balanceAfterResults
@@ -195,10 +215,10 @@ export const Route = createFileRoute('/api/tx/balance-changes/$hash')({
 					const offset = query.offset ?? 0
 
 					const data = await fetchBalanceChanges({ hash, limit, offset })
-					return json<BalanceChangesData>(data)
+					return Response.json(data)
 				} catch (error) {
 					console.error('Balance changes error:', error)
-					return json(
+					return Response.json(
 						{ error: 'Failed to fetch balance changes' },
 						{ status: 500 },
 					)

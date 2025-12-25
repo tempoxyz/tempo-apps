@@ -7,6 +7,7 @@ import {
 import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import { ExploreInput } from '#comps/ExploreInput'
+import { useIsMounted } from '#lib/hooks'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
 
@@ -39,7 +40,7 @@ export namespace Header {
 		const router = useRouter()
 		const navigate = useNavigate()
 		const [inputValue, setInputValue] = React.useState('')
-		const [isMounted, setIsMounted] = React.useState(false)
+
 		const [delayedNavigating, setDelayedNavigating] = React.useState(false)
 		const { currentPathname, isNavigating } = useRouterState({
 			select: (state) => ({
@@ -50,7 +51,7 @@ export namespace Header {
 		})
 		const showSearch = currentPathname !== '/'
 
-		React.useEffect(() => setIsMounted(true), [])
+		const isMounted = useIsMounted()
 
 		React.useEffect(() => {
 			return router.subscribe('onResolved', ({ hrefChanged }) => {
@@ -102,10 +103,12 @@ export namespace Header {
 		const { initial } = props
 
 		const ref = React.useRef<HTMLSpanElement>(null)
+
 		useWatchBlockNumber({
 			onBlockNumber: (blockNumber) => {
 				if (ref.current) ref.current.textContent = String(blockNumber)
 			},
+			poll: true,
 		})
 
 		return (

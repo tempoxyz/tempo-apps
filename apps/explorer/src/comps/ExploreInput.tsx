@@ -35,8 +35,10 @@ export function ExploreInput(props: ExploreInput.Props) {
 	const { data: searchResults, isFetching } = useQuery(
 		queryOptions({
 			queryKey: ['search', query],
-			queryFn: async (): Promise<SearchApiResponse> => {
-				const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+			queryFn: async ({ signal }): Promise<SearchApiResponse> => {
+				const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+					signal,
+				})
 				if (!res.ok) throw new Error('Search failed')
 				return res.json()
 			},

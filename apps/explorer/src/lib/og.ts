@@ -984,7 +984,10 @@ export async function buildAddressOgData(address: string): Promise<{
 		}
 		if (addressData.accountType) {
 			params.set('accountType', addressData.accountType)
-			if (addressData.accountType === 'contract' && addressData.methods.length > 0) {
+			if (
+				addressData.accountType === 'contract' &&
+				addressData.methods.length > 0
+			) {
 				const truncatedMethods = addressData.methods.map((m) =>
 					truncateOgText(m, 14),
 				)

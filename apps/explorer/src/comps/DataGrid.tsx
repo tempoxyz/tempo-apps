@@ -102,6 +102,7 @@ export function DataGrid(props: DataGrid.Props) {
 								{item.link && (
 									<Link
 										to={item.link.href}
+										search={item.link.search}
 										title={item.link.title}
 										className="absolute inset-0 -left-[3px] z-0 [&:active~div]:translate-y-[0.5px] -outline-offset-2!"
 									/>
@@ -196,6 +197,7 @@ export namespace DataGrid {
 
 	export interface RowLink {
 		href: string
+		search?: Record<string, unknown>
 		title: string
 	}
 

@@ -3,7 +3,8 @@ import puppeteer from '@cloudflare/puppeteer'
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute, notFound, rootRouteId } from '@tanstack/react-router'
 import { Hex, Json, Value } from 'ox'
-import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
+import { createPublicClient, http } from 'viem'
+import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'
 import { Receipt } from '#comps/Receipt'
@@ -17,7 +18,7 @@ import {
 	formatEventForOgServer,
 	OG_BASE_URL,
 } from '#lib/og'
-import { getConfig } from '#wagmi.config'
+import { config } from '#wagmi.config'
 
 function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	return queryOptions({
@@ -27,13 +28,18 @@ function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 }
 
 async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
-	const config = getConfig({ rpcUrl: params.rpcUrl })
-	const receipt = await getTransactionReceipt(config, {
+	const client = params.rpcUrl
+		? createPublicClient({
+				chain: config.chains[0],
+				transport: http(params.rpcUrl),
+			})
+		: config.getClient()
+	const receipt = await getTransactionReceipt(client, {
 		hash: params.hash,
 	})
 	const [block, transaction, getTokenMetadata] = await Promise.all([
-		getBlock(config, { blockHash: receipt.blockHash }),
-		getTransaction(config, { hash: receipt.transactionHash }),
+		getBlock(client, { blockHash: receipt.blockHash }),
+		getTransaction(client, { hash: receipt.transactionHash }),
 		Tip20.metadataFromLogs(receipt.logs),
 	])
 	const timestampFormatted = DateFormatter.format(block.timestamp)

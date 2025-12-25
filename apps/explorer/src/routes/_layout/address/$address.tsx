@@ -45,6 +45,7 @@ import {
 	useTransactionDataFromBatch,
 } from '#comps/TxTransactionRow'
 import { cx } from '#cva.config'
+import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type ContractSource,
 	contractSourceQueryOptions,
@@ -58,7 +59,6 @@ import {
 	getContractInfo,
 } from '#lib/domain/contracts'
 import { parseKnownEvents } from '#lib/domain/known-events'
-import { type AccountType, getAccountType } from '#lib/account'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
@@ -67,7 +67,7 @@ import {
 	type TransactionsData,
 	transactionsQueryOptions,
 } from '#lib/queries/account'
-import { config, getConfig } from '#wagmi.config'
+import { config } from '#wagmi.config'
 
 async function fetchAddressTotalValue(address: Address.Address) {
 	const response = await fetch(
@@ -108,10 +108,9 @@ function useBatchTransactionData(
 		queries: hashes.map((hash) => ({
 			queryKey: ['tx-data-batch', viewer, hash],
 			queryFn: async (): Promise<TransactionData | null> => {
-				const cfg = getConfig()
-				const receipt = await getTransactionReceipt(cfg, { hash })
+				const receipt = await getTransactionReceipt(config, { hash })
 				const [block, transaction, getTokenMetadata] = await Promise.all([
-					getBlock(cfg, { blockHash: receipt.blockHash }),
+					getBlock(config, { blockHash: receipt.blockHash }),
 					getTransaction(config, { hash: receipt.transactionHash }),
 					Tip20.metadataFromLogs(receipt.logs),
 				])
@@ -123,6 +122,7 @@ function useBatchTransactionData(
 				return { receipt, block, knownEvents }
 			},
 			staleTime: 60_000,
+			enabled: hashes.length > 0,
 		})),
 	})
 
@@ -933,7 +933,8 @@ function SectionsWrapper(props: {
 														<AssetValue key="value" asset={asset} />,
 													],
 										link: {
-											href: `/token/${asset.address}?a=${address}`,
+											href: `/token/${asset.address}` as const,
+											search: { a: address },
 											title: `View token ${asset.address}`,
 										},
 									}))

@@ -40,20 +40,23 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 
 		const chainId = config.getClient().chain.id
 
-		const tokensResult = await QB.withSignatures([EVENT_SIGNATURE])
-			.selectFrom('tokencreated')
-			.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
-			.where('chain', '=', chainId)
-			.orderBy('block_timestamp', 'desc')
-			.limit(limit)
-			.offset(offset)
-			.execute()
+		const [tokensResult, countResult] = await Promise.all([
+			QB.withSignatures([EVENT_SIGNATURE])
+				.selectFrom('tokencreated')
+				.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
+				.where('chain', '=', chainId)
+				.orderBy('block_timestamp', 'desc')
+				.limit(limit)
+				.offset(offset)
+				.execute(),
+			QB.withSignatures([EVENT_SIGNATURE])
+				.selectFrom('tokencreated')
+				.select((eb) => eb.fn.count('token').as('count'))
+				.where('chain', '=', chainId)
+				.executeTakeFirst(),
+		])
 
-		const { count } = await QB.withSignatures([EVENT_SIGNATURE])
-			.selectFrom('tokencreated')
-			.select((eb) => eb.fn.count('token').as('count'))
-			.where('chain', '=', chainId)
-			.executeTakeFirstOrThrow()
+		const count = countResult?.count ?? 0
 
 		return {
 			offset,

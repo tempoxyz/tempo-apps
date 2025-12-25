@@ -9,6 +9,7 @@ import { Midcut } from '#comps/Midcut'
 import { Pagination } from '#comps/Pagination'
 import { FormattedTimestamp, useTimeFormat } from '#comps/TimeFormat'
 import { cx } from '#cva.config.ts'
+import { useIsMounted } from '#lib/hooks'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
 import { config } from '#wagmi.config.ts'
 import Play from '~icons/lucide/play'
@@ -20,7 +21,7 @@ export const Route = createFileRoute('/_layout/blocks')({
 	component: RouteComponent,
 	validateSearch: z.object({
 		page: z.optional(z.coerce.number()),
-		live: z.optional(z.coerce.boolean()),
+		live: z.prefault(z.coerce.boolean(), true),
 	}),
 	loaderDeps: ({ search: { page, live } }) => ({
 		page: page ?? 1,
@@ -48,6 +49,7 @@ function RouteComponent() {
 	const [liveBlocks, setLiveBlocks] = React.useState<Block[]>(() =>
 		queryData.blocks.slice(0, BLOCKS_PER_PAGE),
 	)
+	const isMounted = useIsMounted()
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	// Use loader data for initial render, then live updates
@@ -55,8 +57,7 @@ function RouteComponent() {
 
 	// Watch for new blocks (only on page 1 when live)
 	useWatchBlockNumber({
-		pollingInterval: 500, // Fast polling for snappy updates
-		enabled: live && page === 1,
+		enabled: isMounted && live && page === 1,
 		onBlockNumber: (blockNumber) => {
 			// Only update if this is actually a new block
 			if (latestBlockNumber === undefined || blockNumber > latestBlockNumber) {
