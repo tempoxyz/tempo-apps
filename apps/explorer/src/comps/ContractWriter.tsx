@@ -31,17 +31,21 @@ export function ContractWriter(props: ContractWriter.Props) {
 	React.useEffect(() => {
 		const hash = location.hash
 		if (hash && typeof window !== 'undefined') {
+			let highlightTimer: ReturnType<typeof setTimeout> | undefined
 			const timer = setTimeout(() => {
 				const element = document.getElementById(hash.slice(1))
 				if (element) {
 					element.scrollIntoView({ behavior: 'smooth', block: 'center' })
 					element.classList.add('ring-1', 'ring-accent', 'ring-offset-1')
-					setTimeout(() => {
+					highlightTimer = setTimeout(() => {
 						element.classList.remove('ring-1', 'ring-accent', 'ring-offset-1')
 					}, 2_000)
 				}
 			}, 100)
-			return () => clearTimeout(timer)
+			return () => {
+				clearTimeout(timer)
+				clearTimeout(highlightTimer)
+			}
 		}
 	}, [location.hash])
 
@@ -272,6 +276,24 @@ function WriteContractFunction(props: {
 					{parsedArgs.error && (
 						<div className="p-2.5 rounded-md bg-red-500/10 border border-red-500/20">
 							<p className="text-[12px] text-red-400">{parsedArgs.error}</p>
+						</div>
+					)}
+
+					{writeContract.error && (
+						<div className="p-2.5 rounded-md bg-red-500/10 border border-red-500/20">
+							<p className="text-[12px] text-red-400">
+								{'shortMessage' in writeContract.error
+									? writeContract.error.shortMessage
+									: (writeContract.error.message ?? 'Transaction failed')}
+							</p>
+						</div>
+					)}
+
+					{writeContract.isSuccess && writeContract.data && (
+						<div className="p-2.5 rounded-md bg-green-500/10 border border-green-500/20">
+							<p className="text-[12px] text-green-400 font-mono break-all">
+								tx: {writeContract.data}
+							</p>
 						</div>
 					)}
 				</div>
