@@ -1,4 +1,3 @@
-import { env } from 'cloudflare:workers'
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
 import * as IDX from 'idxs'
@@ -11,7 +10,7 @@ import { zAddress } from '#lib/zod.ts'
 import { config, getConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
-	apiKey: env.INDEXER_API_KEY,
+	apiKey: process.env.INDEXER_API_KEY,
 })
 
 const QB = IDX.QueryBuilder.from(IS)
