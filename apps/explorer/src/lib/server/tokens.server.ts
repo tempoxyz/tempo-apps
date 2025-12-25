@@ -53,10 +53,10 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				.selectFrom('tokencreated')
 				.select((eb) => eb.fn.count('token').as('count'))
 				.where('chain', '=', chainId)
-				.executeTakeFirstOrThrow(),
+				.executeTakeFirst(),
 		])
 
-		const { count } = countResult
+		const count = countResult?.count ?? 0
 
 		return {
 			offset,
