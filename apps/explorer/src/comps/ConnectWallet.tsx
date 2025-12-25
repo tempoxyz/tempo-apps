@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query'
 import { ClientOnly } from '@tanstack/react-router'
+import type { Address as OxAddress } from 'ox'
 import * as React from 'react'
 import { Actions, Hooks } from 'tempo.ts/wagmi'
 import {
@@ -15,7 +16,6 @@ import {
 import { Address } from '#comps/Address'
 import { cx } from '#cva.config'
 import { ellipsis } from '#lib/chars'
-import { Address as OxAddress } from 'ox'
 import { filterSupportedInjectedConnectors } from '#lib/wallets'
 import LucideDownload from '~icons/lucide/download'
 import LucideLogOut from '~icons/lucide/log-out'
@@ -82,7 +82,9 @@ export namespace ConnectWallet {
 			)
 
 		if (connect.status === 'pending')
-			return <span className="text-[12px] text-secondary">Connecting{ellipsis}</span>
+			return (
+				<span className="text-[12px] text-secondary">Connecting{ellipsis}</span>
+			)
 
 		if (connection.isConnected && connection.address) {
 			const showFundButton =
@@ -90,17 +92,21 @@ export namespace ConnectWallet {
 			return (
 				<div className="flex items-center gap-2">
 					{showFundButton &&
-					(fund.isPending ? <span className="text-[12px] text-secondary">Funding{ellipsis}</span> : (
-						<button
-							type="button"
-							className="text-[12px] inline-flex items-center gap-1 text-positive hover:underline cursor-pointer press-down"
-							// biome-ignore lint/style/noNonNullAssertion: is ok
-							onClick={() => fund.mutate(connection.address!)}
-						>
-							Fund
-							<LucideDownload className="size-[12px]" />
-						</button>
-					))}
+						(fund.isPending ? (
+							<span className="text-[12px] text-secondary">
+								Funding{ellipsis}
+							</span>
+						) : (
+							<button
+								type="button"
+								className="text-[12px] inline-flex items-center gap-1 text-positive hover:underline cursor-pointer press-down"
+								// biome-ignore lint/style/noNonNullAssertion: is ok
+								onClick={() => fund.mutate(connection.address!)}
+							>
+								Fund
+								<LucideDownload className="size-[12px]" />
+							</button>
+						))}
 					<Address
 						chars={6}
 						align="end"

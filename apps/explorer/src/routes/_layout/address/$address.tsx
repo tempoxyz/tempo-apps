@@ -45,6 +45,7 @@ import {
 	useTransactionDataFromBatch,
 } from '#comps/TxTransactionRow'
 import { cx } from '#cva.config'
+import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type ContractSource,
 	contractSourceQueryOptions,
@@ -58,7 +59,6 @@ import {
 	getContractInfo,
 } from '#lib/domain/contracts'
 import { parseKnownEvents } from '#lib/domain/known-events'
-import { type AccountType, getAccountType } from '#lib/account'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
