@@ -107,7 +107,12 @@
 			}
 		},
 		{
-			"includes": ["**/biome.json", "**/tsconfig.json", "**/.vscode/*.json"],
+			"includes": [
+				"**/biome.json",
+				"**/.zed/*.json",
+				"**/tsconfig.json",
+				"**/.vscode/*.json"
+			],
 			"json": {
 				"parser": {
 					"allowComments": true,
