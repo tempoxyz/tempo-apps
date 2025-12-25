@@ -88,11 +88,11 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 		)
 
 		const holders = paginatedHolders.map((holder) => ({
-			address: holder.address as Address.Address,
+			address: holder.address,
 			balance: holder.balance.toString(),
 			percentage:
 				totalSupply > 0n
-					? Number((holder.balance * 10000n) / totalSupply) / 100
+					? Number((holder.balance * 10_000n) / totalSupply) / 100
 					: 0,
 		}))
 
