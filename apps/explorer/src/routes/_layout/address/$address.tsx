@@ -122,6 +122,7 @@ function useBatchTransactionData(
 				return { receipt, block, knownEvents }
 			},
 			staleTime: 60_000,
+			enabled: hashes.length > 0,
 		})),
 	})
 
