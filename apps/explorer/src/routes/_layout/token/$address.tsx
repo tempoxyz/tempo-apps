@@ -4,7 +4,6 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
-	redirect,
 	stripSearchParams,
 	useNavigate,
 	useRouter,
