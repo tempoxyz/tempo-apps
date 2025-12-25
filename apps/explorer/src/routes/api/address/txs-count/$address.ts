@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import { Address } from 'ox'
 import * as z from 'zod/mini'
@@ -48,7 +47,7 @@ export const Route = createFileRoute('/api/address/txs-count/$address')({
 
 					const parseResult = RequestSchema.safeParse(params)
 					if (!parseResult.success)
-						return json(
+						return Response.json(
 							{ error: z.prettifyError(parseResult.error), data: null },
 							{ status: 400 },
 						)
@@ -74,14 +73,17 @@ export const Route = createFileRoute('/api/address/txs-count/$address')({
 					const txSent = txSentResult?.cnt ?? 0
 					const txReceived = txReceivedResult?.cnt ?? 0
 
-					return json({
+					return Response.json({
 						data: Number(txSent) + Number(txReceived),
 						error: null,
 					})
 				} catch (error) {
 					console.error(error)
 					const errorMessage = error instanceof Error ? error.message : error
-					return json({ data: null, error: errorMessage }, { status: 500 })
+					return Response.json(
+						{ data: null, error: errorMessage },
+						{ status: 500 },
+					)
 				}
 			},
 		},

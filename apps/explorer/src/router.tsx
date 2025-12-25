@@ -34,7 +34,6 @@ export const getRouter = () => {
 
 	const router = createRouter({
 		routeTree,
-		notFoundMode: 'fuzzy',
 		scrollRestoration: true,
 		context: { queryClient },
 		defaultPreload: 'intent',

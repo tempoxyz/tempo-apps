@@ -33,9 +33,9 @@ export const config = createConfig({
 		[tempoTestnet.id]: browser
 			? fallback([
 					webSocket(DEFAULT_TESTNET_WS_URL),
-					http(DEFAULT_TESTNET_RPC_URL, { batch: true }),
+					http(DEFAULT_TESTNET_RPC_URL),
 				])
-			: http(DEFAULT_TESTNET_RPC_URL, { batch: true }),
+			: http(DEFAULT_TESTNET_RPC_URL),
 		[tempoLocalnet.id]: http(undefined, { batch: true }),
 	},
 })

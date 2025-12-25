@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import type { Address } from 'ox'
 import type { Log } from 'viem'
 import { getAbiItem, parseEventLogs, zeroAddress } from 'viem'
@@ -194,10 +193,10 @@ export const Route = createFileRoute('/api/tx/balance-changes/$hash')({
 					const offset = query.offset ?? 0
 
 					const data = await fetchBalanceChanges({ hash, limit, offset })
-					return json<BalanceChangesData>(data)
+					return Response.json(data)
 				} catch (error) {
 					console.error('Balance changes error:', error)
-					return json(
+					return Response.json(
 						{ error: 'Failed to fetch balance changes' },
 						{ status: 500 },
 					)

@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import { Address, Hex } from 'ox'
 import type { RpcTransaction } from 'viem'
@@ -40,7 +39,7 @@ export const Route = createFileRoute('/api/address/$address')({
 						Object.fromEntries(url.searchParams),
 					)
 					if (!parseParams.success)
-						return json(
+						return Response.json(
 							{ error: z.prettifyError(parseParams.error) },
 							{ status: 400 },
 						)
@@ -222,7 +221,7 @@ export const Route = createFileRoute('/api/address/$address')({
 
 					const nextOffset = offset + transactions.length
 
-					return json({
+					return Response.json({
 						transactions,
 						total: hasMore ? nextOffset + 1 : nextOffset,
 						offset: nextOffset,
@@ -233,7 +232,10 @@ export const Route = createFileRoute('/api/address/$address')({
 				} catch (error) {
 					const errorMessage = error instanceof Error ? error.message : error
 					console.error(errorMessage)
-					return json({ data: null, error: errorMessage }, { status: 500 })
+					return Response.json(
+						{ data: null, error: errorMessage },
+						{ status: 500 },
+					)
 				}
 			},
 		},

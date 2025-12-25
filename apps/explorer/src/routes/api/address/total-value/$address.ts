@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { formatUnits } from 'viem'
@@ -97,11 +96,14 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 						})
 						.reduce((acc, balance) => acc + balance * PRICE_PER_TOKEN, 0)
 
-					return json({ totalValue })
+					return Response.json({ totalValue })
 				} catch (error) {
 					console.error(error)
 					const errorMessage = error instanceof Error ? error.message : error
-					return json({ data: null, error: errorMessage }, { status: 500 })
+					return Response.json(
+						{ data: null, error: errorMessage },
+						{ status: 500 },
+					)
 				}
 			},
 		},

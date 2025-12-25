@@ -706,6 +706,8 @@ function EventsSection(props: {
 		[logs, knownEvents],
 	)
 
+	// Only prefetch once when component mounts, using current logs/queryClient
+	// biome-ignore lint/correctness/useExhaustiveDependencies: logs and queryClient are stable from SSR
 	React.useEffect(() => {
 		for (const log of logs) {
 			const [eventSelector] = log.topics
@@ -718,7 +720,7 @@ function EventsSection(props: {
 				)
 			}
 		}
-	}, [logs, queryClient])
+	}, [])
 
 	const toggleGroup = (groupIndex: number) => {
 		setExpandedGroups((expanded) => {

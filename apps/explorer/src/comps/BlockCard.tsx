@@ -6,7 +6,7 @@ import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
 import { cx } from '#cva.config'
 import { DateFormatter } from '#lib/formatting'
-import { useCopy } from '#lib/hooks'
+import { useCopy, useIsMounted } from '#lib/hooks'
 import type { BlockWithTransactions } from '#lib/queries'
 import ArrowUp10 from '~icons/lucide/arrow-up-1-0'
 import ChevronDown from '~icons/lucide/chevron-down'
@@ -34,6 +34,7 @@ export function BlockCard(props: BlockCard.Props) {
 
 	const confirmationsRef = React.useRef<HTMLSpanElement>(null)
 	const latestBlockRef = React.useRef(blockNumber ?? 0n)
+	const isMounted = useIsMounted()
 
 	const getConfirmations = (latest?: bigint) => {
 		if (!blockNumber || !latest || latest < blockNumber) return undefined
@@ -41,6 +42,7 @@ export function BlockCard(props: BlockCard.Props) {
 	}
 
 	useWatchBlockNumber({
+		enabled: isMounted,
 		onBlockNumber: (newBlockNumber) => {
 			if (newBlockNumber > (latestBlockRef.current ?? 0n)) {
 				latestBlockRef.current = newBlockNumber
@@ -197,7 +199,7 @@ export function BlockCard(props: BlockCard.Props) {
 												: '0.00%'}
 										</span>
 									</div>
-									<div className="flex items-center h-[2px] px-[1px] bg-card-border">
+									<div className="flex items-center h-[2px] px-px bg-card-border">
 										<div
 											className="h-full bg-accent"
 											style={{
@@ -261,7 +263,7 @@ export namespace BlockCard {
 		return (
 			// the 14px font size is used to set the same width as the block hash
 			<div className="text-[14px] max-w-[calc(22ch+22px)]">
-				<span className="flex justify-between gap-[1px] text-[22px] text-tertiary">
+				<span className="flex justify-between gap-px text-[22px] text-tertiary">
 					{str.split('').map((char, index) => (
 						<span
 							key={`${index}-${char}`}
