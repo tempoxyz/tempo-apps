@@ -108,6 +108,7 @@ export namespace Header {
 			onBlockNumber: (blockNumber) => {
 				if (ref.current) ref.current.textContent = String(blockNumber)
 			},
+			poll: true,
 		})
 
 		return (
