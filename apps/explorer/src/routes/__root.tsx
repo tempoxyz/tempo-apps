@@ -1,7 +1,6 @@
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import type { QueryClient } from '@tanstack/react-query'
+import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import {
 	createRootRouteWithContext,
 	HeadContent,
@@ -14,7 +13,7 @@ import * as React from 'react'
 import { WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { ProgressLine } from '#comps/ProgressLine'
-import { config, persister } from '#wagmi.config'
+import { config } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
 export const Route = createRootRouteWithContext<{
@@ -154,10 +153,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					className="fixed top-0 left-0 right-0 z-1"
 				/>
 				<WagmiProvider config={config}>
-					<PersistQueryClientProvider
-						client={queryClient}
-						persistOptions={{ persister }}
-					>
+					<QueryClientProvider client={queryClient}>
 						{children}
 						{import.meta.env.DEV && (
 							<TanStackDevtools
@@ -176,7 +172,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 								]}
 							/>
 						)}
-					</PersistQueryClientProvider>
+					</QueryClientProvider>
 				</WagmiProvider>
 				<Scripts />
 			</body>
