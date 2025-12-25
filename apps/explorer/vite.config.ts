@@ -61,7 +61,7 @@ export default defineConfig((config) => {
 		],
 		server: {
 			port,
-      cors: config.mode === 'development' ? false : undefined,
+			cors: config.mode === 'development' ? false : undefined,
 			allowedHosts: config.mode === 'development' ? true : undefined,
 		},
 		build: {

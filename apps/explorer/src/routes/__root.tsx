@@ -6,6 +6,7 @@ import {
 	createRootRouteWithContext,
 	HeadContent,
 	Scripts,
+	useRouteContext,
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
@@ -13,7 +14,7 @@ import * as React from 'react'
 import { WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { ProgressLine } from '#comps/ProgressLine'
-import { config, persister, queryClient } from '#wagmi.config'
+import { config, persister } from '#wagmi.config'
 import css from './styles.css?url'
 
 export const Route = createRootRouteWithContext<{
@@ -136,6 +137,7 @@ export const Route = createRootRouteWithContext<{
 function RootDocument({ children }: { children: React.ReactNode }) {
 	useDevTools()
 
+	const { queryClient } = useRouteContext({ from: '__root__' })
 	const isLoading = useRouterState({
 		select: (state) => state.status === 'pending',
 	})

@@ -6,11 +6,14 @@ import { NotFound } from '#comps/NotFound'
 import { routeTree } from '#routeTree.gen.ts'
 
 export const getRouter = () => {
+	// Fresh QueryClient per request for SSR isolation
 	const queryClient: QueryClient = new QueryClient({
 		defaultOptions: {
 			queries: {
+				staleTime: 60 * 1_000, // needed for SSR - prevents refetch on hydration
 				gcTime: 1_000 * 60 * 60 * 24, // 24 hours
 				queryKeyHashFn: hashFn,
+				refetchOnWindowFocus: false,
 				refetchOnReconnect: () => !queryClient.isMutating(),
 				retry: 0,
 			},
