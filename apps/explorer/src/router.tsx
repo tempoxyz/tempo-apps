@@ -15,7 +15,6 @@ export const getRouter = () => {
 				queryKeyHashFn: hashFn,
 				refetchOnWindowFocus: false,
 				refetchOnReconnect: () => !queryClient.isMutating(),
-				retry: 0,
 			},
 		},
 		mutationCache: new MutationCache({
