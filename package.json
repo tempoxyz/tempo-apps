@@ -6,20 +6,20 @@
 		"apps/*"
 	],
 	"scripts": {
-		"build": "pnpm -r build",
-		"deploy": "pnpm -r deploy",
+		"build": "pnpm --recursive --parallel --stream --reporter='append-only' build",
+		"deploy": "pnpm --recursive --parallel --stream --reporter='append-only' deploy",
 		"dev:explorer": "pnpm --filter explorer dev",
 		"dev:sponsor": "pnpm --filter tempo-sponsor dev",
-		"check": "pnpm check:biome && pnpm check:types",
+		"check": "pnpm --recursive --parallel --stream --reporter='append-only' check:biome",
+		"postcheck": "pnpm check:types",
 		"check:biome": "biome check --write --unsafe",
-		"check:types": "pnpm -r check:types",
-		"gen:types": "pnpm -r gen:types",
-		"postinstall": "pnpm -r postinstall",
-		"preview": "pnpm -r preview"
+		"check:types": "pnpm --recursive --parallel --stream --reporter='append-only' check:types",
+		"gen:types": "pnpm --recursive --parallel --stream --reporter='append-only' gen:types",
+		"postinstall": "pnpm --recursive --parallel --stream --reporter='append-only' postinstall"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
-		"@typescript/native-preview": "^7.0.0-dev.20251217.1",
+		"@typescript/native-preview": "^7.0.0-dev.20251225.1",
 		"typescript": "^5.9.3"
 	},
 	"devEngines": {
@@ -29,5 +29,5 @@
 			"onFail": "download"
 		}
 	},
-	"packageManager": "pnpm@10.26.0"
+	"packageManager": "pnpm@10.26.2"
 }

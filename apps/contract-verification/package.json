@@ -45,6 +45,7 @@
 		"@types/semver": "^7.7.1",
 		"dbmate": "^2.28.0",
 		"drizzle-kit": "^0.31.8",
+		"esbuild": "catalog:",
 		"typescript": "catalog:",
 		"vite": "catalog:",
 		"vite-plugin-devtools-json": "catalog:",
