@@ -16,7 +16,13 @@ export const config = createConfig({
 	transports: {
 		[tempoTestnet.id]: browser
 			? fallback([
-					webSocket(DEFAULT_TESTNET_WS_URL),
+					webSocket(DEFAULT_TESTNET_WS_URL, {
+						reconnect: {
+							attempts: 10,
+							delay: 1000,
+						},
+						keepAlive: { interval: 30_000 },
+					}),
 					http(DEFAULT_TESTNET_RPC_URL),
 				])
 			: http(DEFAULT_TESTNET_RPC_URL),

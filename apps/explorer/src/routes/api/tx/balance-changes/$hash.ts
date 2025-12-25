@@ -11,6 +11,26 @@ import { config } from '#wagmi.config'
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
+const RPC_CONCURRENCY = 5
+
+async function mapWithConcurrency<T, R>(
+	items: T[],
+	fn: (item: T) => Promise<R>,
+	concurrency: number,
+): Promise<R[]> {
+	const results: R[] = []
+	let index = 0
+
+	async function worker() {
+		while (index < items.length) {
+			const currentIndex = index++
+			results[currentIndex] = await fn(items[currentIndex])
+		}
+	}
+
+	await Promise.all(Array.from({ length: concurrency }, () => worker()))
+	return results
+}
 
 export interface TokenBalanceChange {
 	address: Address.Address
@@ -129,28 +149,30 @@ export async function fetchBalanceChanges(params: {
 
 	const uniqueTokens = [...new Set(balanceChanges.map(({ token }) => token))]
 
-	const [tokenMetadataEntries, balanceAfterResults] = await Promise.all([
-		Promise.all(
-			uniqueTokens.map(async (token) => [
-				token,
-				await getTokenMetadata(client, token),
-			]),
-		),
-		Promise.all(
-			balanceChanges.map(async (change) => ({
-				...change,
-				balanceAfter: await getBalanceAtBlock(
-					client,
-					change.token,
-					change.address,
-					receipt.blockNumber,
-				),
-			})),
-		),
-	])
+	const tokenMetadataEntries = await mapWithConcurrency(
+		uniqueTokens,
+		async (token) => [token, await getTokenMetadata(client, token)] as const,
+		RPC_CONCURRENCY,
+	)
+
+	const balanceAfterResults = await mapWithConcurrency(
+		balanceChanges,
+		async (change) => ({
+			...change,
+			balanceAfter: await getBalanceAtBlock(
+				client,
+				change.token,
+				change.address,
+				receipt.blockNumber,
+			),
+		}),
+		RPC_CONCURRENCY,
+	)
 
 	const tokenMetadata = Object.fromEntries(
-		tokenMetadataEntries.filter(([, meta]) => meta !== null),
+		tokenMetadataEntries.filter(
+			(entry): entry is [Address.Address, TokenMetadata] => entry[1] !== null,
+		),
 	)
 
 	const allChanges = balanceAfterResults

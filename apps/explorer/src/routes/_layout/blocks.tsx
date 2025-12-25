@@ -21,7 +21,7 @@ export const Route = createFileRoute('/_layout/blocks')({
 	component: RouteComponent,
 	validateSearch: z.object({
 		page: z.optional(z.coerce.number()),
-		live: z.optional(z.coerce.boolean()),
+		live: z.prefault(z.coerce.boolean(), true),
 	}),
 	loaderDeps: ({ search: { page, live } }) => ({
 		page: page ?? 1,
