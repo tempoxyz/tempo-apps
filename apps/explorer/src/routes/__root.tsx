@@ -221,7 +221,12 @@ function useDevTools() {
 			import.meta.env.MODE === 'development' &&
 			import.meta.env.VITE_ENABLE_DEVTOOLS === 'true'
 		) {
-			void import('eruda').then(({ default: eruda }) => eruda.init())
+			let eruda: typeof import('eruda').default
+			void import('eruda').then(({ default: _eruda }) => {
+				eruda = _eruda
+				eruda.init()
+			})
+			return () => eruda?.destroy()
 		}
 	}, [])
 }
