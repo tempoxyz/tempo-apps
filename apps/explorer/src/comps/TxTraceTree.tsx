@@ -5,14 +5,16 @@ import type { Hex } from 'viem'
 import { type Abi, decodeAbiParameters, erc20Abi, slice } from 'viem'
 import { cx } from '#cva.config.ts'
 import {
-	autoloadAbiQueryOptions,
 	formatAbiValue,
 	getAbiItem,
-	lookupSignatureQueryOptions,
-} from '#lib/abi'
-import { getContractInfo } from '#lib/domain/contracts'
+	getContractInfo,
+} from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
+import {
+	autoloadAbiQueryOptions,
+	lookupSignatureQueryOptions,
+} from '#lib/queries'
 import ArrowRightIcon from '~icons/lucide/arrow-right'
 import CopyIcon from '~icons/lucide/copy'
 import WrapIcon from '~icons/lucide/corner-down-left'

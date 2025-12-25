@@ -9,13 +9,9 @@ import {
 	parseAbiItem,
 } from 'viem'
 import { Abis } from 'viem/tempo'
-import {
-	decodeEventLog_guessed,
-	formatAbiValue,
-	useAutoloadAbi,
-	useLookupSignature,
-} from '#lib/abi'
+import { decodeEventLog_guessed, formatAbiValue } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
+import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
 import CopyIcon from '~icons/lucide/copy'
 
 export function TxDecodedTopics(props: TxDecodedTopics.Props) {

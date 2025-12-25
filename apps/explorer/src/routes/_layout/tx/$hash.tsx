@@ -28,7 +28,6 @@ import { TxStateDiff } from '#comps/TxStateDiff'
 import { TxTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#cva.config.ts'
-import { autoloadAbiQueryOptions, lookupSignatureQueryOptions } from '#lib/abi'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
@@ -36,7 +35,13 @@ import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
 import { useCopy, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription } from '#lib/og'
-import { LIMIT, type TxData, txQueryOptions } from '#lib/queries'
+import {
+	autoloadAbiQueryOptions,
+	LIMIT,
+	lookupSignatureQueryOptions,
+	type TxData,
+	txQueryOptions,
+} from '#lib/queries'
 import type { BalanceChangesData } from '#lib/queries/balance-changes'
 import { traceQueryOptions } from '#lib/queries/trace'
 import { zHash } from '#lib/zod'
