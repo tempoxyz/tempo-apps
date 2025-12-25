@@ -37,7 +37,7 @@ export const getRouter = () => {
 	if (!router.isServer) {
 		Sentry.init({
 			dsn: 'https://170113585c24ca7a67704f86cccd6750@o4510262603481088.ingest.us.sentry.io/4510467689218048',
-			enabled: import.meta.env.PROD,
+			enabled: false,
 			replaysSessionSampleRate: 0.1,
 			replaysOnErrorSampleRate: 1.0,
 			sendDefaultPii: true,

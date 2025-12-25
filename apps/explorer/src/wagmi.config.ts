@@ -1,57 +1,70 @@
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
-import { QueryClient } from '@tanstack/react-query'
-import type { OneOf } from 'viem'
-import { tempoLocalnet, tempoTestnet } from 'viem/chains'
-import { createConfig, deserialize, http, serialize, webSocket } from 'wagmi'
-import { hashFn } from 'wagmi/query'
-
-// biome-ignore lint/suspicious/noExplicitAny: TODO
-type TODO = any
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
+import { Json } from 'ox'
+import { KeyManager, webAuthn } from 'tempo.ts/wagmi'
+import { createConfig, deserialize, http, serialize } from 'wagmi'
+import { tempoLocalnet, tempoTestnet } from 'wagmi/chains'
 
 const browser = typeof window !== 'undefined'
 
 export const DEFAULT_TESTNET_RPC_URL = 'https://rpc.testnet.tempo.xyz'
 export const DEFAULT_TESTNET_WS_URL = 'wss://rpc.testnet.tempo.xyz'
 
-export const queryClient = new QueryClient({
+export const queryClient: QueryClient = new QueryClient({
 	defaultOptions: {
 		queries: {
-			staleTime: 60 * 1_000, // needed for SSR
-			queryKeyHashFn: hashFn,
-			refetchOnWindowFocus: false,
 			gcTime: 1_000 * 60 * 60 * 24, // 24 hours
+			queryKeyHashFn: Json.stringify,
+			refetchOnReconnect: () => !queryClient.isMutating(),
+			retry: 0,
 		},
 	},
+	mutationCache: new MutationCache({
+		onError: (error) => {
+			if (import.meta.env.MODE !== 'development') return
+			console.error(error)
+		},
+	}),
+	queryCache: new QueryCache({
+		onError: (error, query) => {
+			if (import.meta.env.MODE !== 'development') return
+			if (query.state.data !== undefined) console.error('[tsq]', error)
+		},
+	}),
 })
 
 export const persister = createAsyncStoragePersister({
 	// Cache key includes build version - automatically invalidates on new deploys
-	key: `tempo-query-cache-${__BUILD_VERSION__}`,
 	serialize,
-	storage: browser ? window.localStorage : undefined,
 	deserialize,
+	key: `tempo-query-cache-${__BUILD_VERSION__}`,
+	storage: browser ? window.localStorage : undefined,
 })
 
-const chain =
-	import.meta.env.VITE_LOCALNET === 'true' ? tempoLocalnet : tempoTestnet
+export const config = createConfig({
+	ssr: true,
+	chains: [
+		import.meta.env.VITE_LOCALNET === 'true'
+			? tempoLocalnet
+			: tempoTestnet.extend({
+					feeToken: '0x20c0000000000000000000000000000000000001',
+				}),
+	],
+	connectors: [
+		webAuthn({
+			keyManager: KeyManager.http(`${__BASE_URL__}/api/webauthn`),
+		}),
+	],
+	batch: { multicall: false },
+	multiInjectedProviderDiscovery: false,
+	transports: {
+		[tempoTestnet.id]: http(DEFAULT_TESTNET_RPC_URL, { batch: true }),
+		[tempoLocalnet.id]: http(undefined, { batch: true }),
+	},
+})
 
-export function getConfig(
-	parameters: OneOf<{ rpcUrl?: string | undefined }> = {},
-) {
-	const { rpcUrl } = parameters
-	return createConfig({
-		chains: [chain],
-		ssr: true,
-		batch: { multicall: false },
-		transports: {
-			[tempoTestnet.id]: browser
-				? webSocket(DEFAULT_TESTNET_WS_URL)
-				: http(rpcUrl ?? DEFAULT_TESTNET_RPC_URL),
-			[tempoLocalnet.id]: http(undefined, {
-				batch: true,
-			}),
-		},
-	})
+declare module 'wagmi' {
+	interface Register {
+		config: typeof config
+	}
 }
-
-export const config = getConfig() as TODO

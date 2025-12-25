@@ -10,6 +10,8 @@ import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 
 const [, , , ...args] = process.argv
 
+const SENTRY_OFF_TEMPORARILY = true
+
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
 	const showDevtools = env.VITE_ENABLE_DEVTOOLS !== 'false'
@@ -45,6 +47,7 @@ export default defineConfig((config) => {
 			showDevtools && devtools(),
 			showDevtools && vitePluginChromiumDevTools(),
 			config.mode === 'production' &&
+				!SENTRY_OFF_TEMPORARILY &&
 				sentryVitePlugin({
 					org: 'tempoxyz',
 					telemetry: false,
@@ -67,6 +70,7 @@ export default defineConfig((config) => {
 		],
 		server: {
 			port,
+			cors: config.mode === 'development' ? true : undefined,
 			allowedHosts: config.mode === 'development' ? true : undefined,
 		},
 		build: {
