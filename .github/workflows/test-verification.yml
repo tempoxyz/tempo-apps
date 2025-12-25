@@ -3,7 +3,7 @@ name: Test Contract Verification
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */5 * * *'
+    - cron: "0 */5 * * *"
 
 defaults:
   run:
@@ -30,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          
+
           TEMP_DIR=$(mktemp -d)
           cd "$TEMP_DIR"
 
@@ -38,12 +38,12 @@ jobs:
           cd oz-dummy-token
 
           export VERIFIER_URL="https://contracts.tempo.xyz"
-          export TEMPO_RPC_URL="https://rpc-orchestra.testnet.tempo.xyz"
+          export TEMPO_RPC_URL="https://rpc.testnet.tempo.xyz"
           export PRIVATE_KEY="0xa4b3490c35582d544451fbbfd7a0e4c5fa4d0ded06563ccc199057c7a5e6c9de"
 
           forge build
           forge script script/DeployMyToken.s.sol \
-            --rpc-url='https://rpc-orchestra.testnet.tempo.xyz' \
+            --rpc-url='https://rpc.testnet.tempo.xyz' \
             --private-key='0xa4b3490c35582d544451fbbfd7a0e4c5fa4d0ded06563ccc199057c7a5e6c9de' \
             --broadcast \
             --verify \
