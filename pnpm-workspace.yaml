@@ -66,4 +66,4 @@ catalog:
   wrangler: ^4.56.0
   zod: ^4.2.1
 
-catalogMode: 'strict'
+catalogMode: strict

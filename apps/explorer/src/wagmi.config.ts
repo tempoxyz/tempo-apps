@@ -6,8 +6,8 @@ import {
 	cookieToInitialState,
 	createConfig,
 	createStorage,
-	fallback,
 	http,
+	serialize,
 	webSocket,
 } from 'wagmi'
 
@@ -52,20 +52,14 @@ export function getWagmiConfig() {
 		batch: { multicall: false },
 		storage: createStorage({ storage: cookieStorage }),
 		transports: {
-			[tempoTestnet.id]: fallback([
-				webSocket(rpcUrl.websocket),
-				// http(rpcUrl.http),
-			]),
+			[tempoTestnet.id]: webSocket(rpcUrl.websocket),
 			[tempoLocalnet.id]: http(undefined, { batch: true }),
 		},
 	})
 }
 
-export const wagmiStateServerFn = createServerFn().handler(
-	// @ts-expect-error Wagmi State type has non-serializable connector functions,
-	// but cookieToInitialState only returns serializable cookie data
-	async () => {
-		const cookie = getRequestHeader('cookie')
-		return cookieToInitialState(getWagmiConfig(), cookie)
-	},
-)
+export const getWagmiStateSSR = createServerFn().handler(() => {
+	const cookie = getRequestHeader('cookie')
+	const initialState = cookieToInitialState(getWagmiConfig(), cookie)
+	return serialize(initialState)
+})

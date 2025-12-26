@@ -9,10 +9,10 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
-import { WagmiProvider } from 'wagmi'
+import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { ProgressLine } from '#comps/ProgressLine'
-import { getWagmiConfig, wagmiStateServerFn } from '#wagmi.config.ts'
+import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
 export const Route = createRootRouteWithContext<{
@@ -124,25 +124,21 @@ export const Route = createRootRouteWithContext<{
 			},
 		],
 	}),
-	// @ts-expect-error Wagmi State type has non-serializable connector functions,
-	// but cookieToInitialState only returns serializable cookie data
-	loader: async () => ({
-		wagmiState: await wagmiStateServerFn(),
-	}),
 	errorComponent: (props) => (
 		<RootDocument>
 			<ErrorBoundary {...props} />
 		</RootDocument>
 	),
+	loader: () => getWagmiStateSSR(),
 	shellComponent: RootDocument,
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	useDevTools()
 
-	const { wagmiState } = Route.useLoaderData()
 	const { queryClient } = Route.useRouteContext()
 	const [config] = React.useState(() => getWagmiConfig())
+	const wagmiState = Route.useLoaderData({ select: deserialize<State> })
 
 	const isLoading = useRouterState({
 		select: (state) => state.status === 'pending',
