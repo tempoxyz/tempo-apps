@@ -49,11 +49,13 @@
 		"source.organizeImports.biome": "explicit"
 	},
 	"sqlfluff.dialect": "sqlite",
+	"sqlfluff.format.enabled": true,
 	"files.associations": {
 		"*.svg": "html",
 		".env.*": "dotenv",
 		"biome.json": "jsonc",
-		"*.css": "tailwindcss"
+		"*.css": "tailwindcss",
+		"*.sql": "sql"
 	},
 	"files.exclude": {
 		"**/.tanstack": true,

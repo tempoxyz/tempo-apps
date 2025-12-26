@@ -2,9 +2,8 @@ import { getContainer } from '@cloudflare/containers'
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
-import { bodyLimit } from 'hono/body-limit'
 import { Address, Hex } from 'ox'
-import { type Chain, createPublicClient, http, keccak256 } from 'viem'
+import { createPublicClient, http, keccak256 } from 'viem'
 
 import {
 	AuxdataStyle,
@@ -56,19 +55,6 @@ import { normalizeSourcePath, sourcifyError } from '#utilities.ts'
  */
 
 const verifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
-
-verifyRoute.use(
-	'*',
-	bodyLimit({
-		maxSize: 2 * 1024 * 1024, // 2mb
-		onError: (context) => {
-			const message = `[requestId: ${context.req.header('X-Tempo-Request-Id')}] Body limit exceeded`
-
-			console.error(message)
-			return sourcifyError(context, 413, 'body_too_large', message)
-		},
-	}),
-)
 
 // POST /v2/verify/metadata/:chainId/:address - Verify Contract (using Solidity metadata.json)
 verifyRoute.post('/metadata/:chainId/:address', (context) =>
@@ -187,13 +173,13 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 			)
 		}
 
-		const chain = chains[chainId as keyof typeof chains] as unknown as Chain
+		const chain = chains[chainId as keyof typeof chains]
 		const client = createPublicClient({
 			chain,
 			transport: http(
 				chain.id === TESTNET_CHAIN_ID
-					? 'https://rpc.testnet.tempo.xyz'
-					: undefined,
+					? `https://rpc.testnet.tempo.xyz/${context.env.TEMPO_RPC_KEY}`
+					: 'https://rpc.devnet.tempoxyz.dev',
 			),
 		})
 
@@ -280,7 +266,9 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 				context,
 				400,
 				'compilation_error',
-				errors.map((e) => e.formattedMessage ?? e.message).join('\n'),
+				errors
+					.map((error) => error.formattedMessage ?? error.message)
+					.join('\n'),
 			)
 		}
 

@@ -8,7 +8,7 @@ export class VerificationContainer extends Container<Cloudflare.Env> {
 	override async onStart(): Promise<void> {
 		console.log('onStart hook called')
 
-		const response = await this.containerFetch('http://localhost:8080/health') // TODO: update domain
+		const response = await this.containerFetch('http://localhost:8080/health')
 		if (!response.ok) throw new Error('Container health check failed')
 
 		const data = await response.text()

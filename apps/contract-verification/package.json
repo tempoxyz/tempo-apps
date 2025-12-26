@@ -16,11 +16,8 @@
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
 		"postinstall": "pnpm gen:types",
 		"tail": "wrangler tail",
-		"db:generate": "drizzle-kit generate",
-		"db:migrate": "wrangler d1 migrations apply CONTRACTS-DB --local",
-		"db:migrate:remote": "wrangler d1 migrations apply CONTRACTS-DB --remote",
 		"db:studio": "drizzle-kit studio --config='drizzle.config.ts'",
-		"db:push": "drizzle-kit push --config='drizzle.config.ts'"
+		"db:push": "CLOUDFLARE_D1_ENVIRONMENT='remote' drizzle-kit push --config='drizzle.config.ts'"
 	},
 	"dependencies": {
 		"@cloudflare/containers": "^0.0.31",
