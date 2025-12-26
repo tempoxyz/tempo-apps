@@ -5,22 +5,13 @@ import { cors } from 'hono/cors'
 import { Handler } from 'tempo.ts/server'
 import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { type Chain, tempoDevnet, tempoTestnet } from 'viem/chains'
+import type { Chain } from 'viem/chains'
 import * as z from 'zod'
-import { alphaUsd } from './lib/consts.js'
+import { tempoChain } from './lib/chain.js'
 import { rateLimitMiddleware } from './lib/rate-limit.js'
 import { getUsage } from './lib/usage.js'
 
 const app = new Hono()
-
-const tempoChain =
-	env.TEMPO_ENV === 'devnet'
-		? tempoDevnet.extend({
-				feeToken: alphaUsd,
-			})
-		: tempoTestnet.extend({
-				feeToken: alphaUsd,
-			})
 
 app.use(
 	'*',
