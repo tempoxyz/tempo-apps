@@ -1,0 +1,54 @@
+name: Notify Slack on Failure
+description: Sends a Slack notification when a workflow fails
+
+inputs:
+  webhook-key:
+    description: Slack webhook key
+    required: true
+  workflow:
+    description: Workflow name
+    required: true
+  repository:
+    description: Repository name
+    required: true
+  ref-name:
+    description: Branch name
+    required: true
+  actor:
+    description: Actor who triggered the workflow
+    required: true
+  run-url:
+    description: URL to the workflow run
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Send Slack notification
+      shell: bash
+      env:
+        SLACK_WEBHOOK_URL: https://hooks.slack.com/services/${{ inputs.webhook-key }}
+      run: |
+        curl --request POST \
+          --url="$SLACK_WEBHOOK_URL" \
+          --header "Content-Type: application/json" \
+          --data '{
+            "text": "*`${{ inputs.workflow }}` Workflow failed* in `${{ inputs.repository }}`",
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "🚨 Workflow Failed",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "*Workflow:* `${{ inputs.workflow }}`\n*Branch:* `${{ inputs.ref-name }}`\n*Author:* `${{ inputs.actor }}`\n*Status:* `failure`\n${{ inputs.run-url }}\n\n_Click the URL to view detailed error logs_"
+                }
+              }
+            ]
+          }'
