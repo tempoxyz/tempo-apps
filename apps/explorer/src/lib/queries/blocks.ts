@@ -32,6 +32,7 @@ export function blocksQueryOptions(page: number) {
 				if (blockNum >= 0n) blockNumbers.push(blockNum)
 			}
 
+			// TODO: investigate & consider batch/multicall
 			const blocks = await Promise.all(
 				blockNumbers.map((blockNumber) =>
 					getBlock(config, { blockNumber }).catch(() => null),
@@ -91,6 +92,7 @@ async function fetchKnownEventsForTransactions(
 	transactions: BlockTransaction[],
 	wagmiConfig: WagmiConfig,
 ): Promise<Record<Hex.Hex, KnownEvent[]>> {
+	// TODO: investigate & consider batch/multicall
 	const entries = await Promise.all(
 		transactions.map(async (transaction) => {
 			if (!transaction?.hash)

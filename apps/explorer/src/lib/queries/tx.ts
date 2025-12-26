@@ -18,6 +18,7 @@ async function fetchTxData(params: { hash: Hex.Hex }) {
 
 	const receipt = await getTransactionReceipt(config, { hash: params.hash })
 
+	// TODO: investigate & consider batch/multicall
 	const [block, transaction, getTokenMetadata] = await Promise.all([
 		getBlock(config, { blockHash: receipt.blockHash }),
 		getTransaction(config, { hash: receipt.transactionHash }),

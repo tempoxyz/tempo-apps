@@ -39,6 +39,7 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	const receipt = await client.getTransactionReceipt({
 		hash: params.hash,
 	})
+	// TODO: investigate & consider batch/multicall
 	const [block, transaction, getTokenMetadata] = await Promise.all([
 		getBlock(client, { blockHash: receipt.blockHash }),
 		getTransaction(client, { hash: receipt.transactionHash }),

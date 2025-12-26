@@ -70,6 +70,7 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 					const publicClient = getPublicClient(config)
 
 					const decimals =
+						// TODO: investigate & consider batch/multicall
 						(await Promise.all(
 							tokensToFetch.map(
 								(row) =>

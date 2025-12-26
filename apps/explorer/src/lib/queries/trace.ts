@@ -37,6 +37,7 @@ export async function fetchTraceData(hash: Hex.Hex): Promise<TraceData> {
 	const config = getWagmiConfig()
 	const client = config.getClient()
 
+	// TODO: investigate & consider batch/multicall
 	const [trace, prestate] = await Promise.all([
 		(
 			client.request({

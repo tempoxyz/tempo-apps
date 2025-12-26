@@ -95,6 +95,7 @@ async function getTokenMetadata(
 	client: ReturnType<ReturnType<typeof getWagmiConfig>['getClient']>,
 	token: Address.Address,
 ) {
+	// TODO: investigate & consider batch/multicall
 	const [decimals, symbol] = await Promise.all([
 		readContract(client, {
 			address: token,

@@ -120,6 +120,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				.catch(() => undefined)
 
 			if (tab === 'transfers') {
+				// TODO: investigate & consider batch/multicall
 				const [metadata, transfers, holdersData, currency] = await Promise.all([
 					Actions.token.getMetadata(config, { token: address }),
 					context.queryClient.ensureQueryData(
@@ -131,6 +132,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				return { metadata, transfers, holdersData, currency }
 			}
 
+			// TODO: investigate & consider batch/multicall
 			const [metadata, holdersData, currency] = await Promise.all([
 				Actions.token.getMetadata(config, { token: address }),
 				holdersPromise,
