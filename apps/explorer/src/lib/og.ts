@@ -383,6 +383,7 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 			hash: hash as `0x${string}`,
 		})
 
+		// TODO: investigate & consider batch/multicall
 		const [block, transaction, getTokenMetadata] = await Promise.all([
 			getBlock(config, { blockHash: receipt.blockHash }),
 			getTransaction(config, { hash: receipt.transactionHash }),
@@ -419,6 +420,7 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 			}
 
 			if (tokensMissingSymbols.size > 0) {
+				// TODO: investigate & consider batch/multicall
 				const missingMetadata = await Promise.all(
 					Array.from(tokensMissingSymbols).map(async (token) => {
 						try {
@@ -587,6 +589,7 @@ async function fetchTokenData(address: string): Promise<TokenData | null> {
 		const config = getWagmiConfig()
 		const tokenAddress = address as Address.Address
 
+		// TODO: investigate & consider batch/multicall
 		const [tokenData, indexerData] = await Promise.all([
 			Promise.all([
 				readContract(config, {
@@ -834,6 +837,7 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			.map(([addr]) => addr)
 
 		const tokensHeld: string[] = []
+		// TODO: investigate & consider batch/multicall
 		const symbolResults = await Promise.all(
 			tokensWithBalance.slice(0, 12).map(async (tokenAddr) => {
 				try {
@@ -899,9 +903,11 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 		const PRICE_PER_TOKEN = 1
 		const knownTokensHeld: string[] = []
 
+		// TODO: investigate & consider batch/multicall
 		const knownTokenResults = await Promise.all(
 			KNOWN_TOKENS.map(async (tokenAddr) => {
 				try {
+					// TODO: investigate & consider batch/multicall
 					const [balance, decimals, symbol] = await Promise.all([
 						readContract(config, {
 							address: tokenAddr,

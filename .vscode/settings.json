@@ -60,6 +60,9 @@
 		"**/*.wrangler": true,
 		"**/.pnpm-store/**": true
 	},
+	"markdownlint.config": {
+		"no-inline-html": false
+	},
 	"tailwindCSS.showPixelEquivalents": true,
 	"tailwindCSS.lint.cssConflict": "warning",
 	"tailwindCSS.lint.suggestCanonicalClasses": "warning",
@@ -67,7 +70,9 @@
 		"cx\\(([^)]+)\\)",
 		"twMerge\\(([^)]+)\\)"
 	],
-	"markdownlint.config": {
-		"no-inline-html": false
+	"yaml.schemaStore.enable": true,
+	"redhat.telemetry.enabled": false,
+	"yaml.schemas": {
+		"https://esm.sh/gh/SchemaStore/schemastore/src/schemas/json/pnpm-workspace.json": "pnpm-workspace.yaml"
 	}
 }

@@ -103,7 +103,6 @@ function useBatchTransactionData(
 		[transactions],
 	)
 
-	// const config = useConfig()
 	const chainId = useChainId()
 	const client = usePublicClient({ chainId })
 
@@ -112,6 +111,7 @@ function useBatchTransactionData(
 			queryKey: ['tx-data-batch', viewer, hash],
 			queryFn: async (): Promise<TransactionData | null> => {
 				const receipt = await client.getTransactionReceipt({ hash })
+				// TODO: investigate & consider batch/multicall
 				const [block, transaction, getTokenMetadata] = await Promise.all([
 					client.getBlock({ blockHash: receipt.blockHash }),
 					client.getTransaction({ hash: receipt.transactionHash }),
@@ -423,9 +423,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 			const config = getWagmiConfig()
 			const tokenResults = await timeout(
+				// TODO: investigate & consider batch/multicall
 				Promise.all(
 					assets.map(async (tokenAddress) => {
 						try {
+							// TODO: investigate & consider batch/multicall
 							const [balance, decimals] = await Promise.all([
 								readContract(config, {
 									address: tokenAddress,

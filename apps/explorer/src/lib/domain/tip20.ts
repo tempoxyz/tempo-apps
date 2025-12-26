@@ -29,6 +29,7 @@ export async function metadataFromLogs(
 
 	const config = getWagmiConfig()
 
+	// TODO: investigate & consider batch/multicall
 	const metadataResults = await Promise.all(
 		tip20Addresses.map((token) => Actions.token.getMetadata(config, { token })),
 	)
