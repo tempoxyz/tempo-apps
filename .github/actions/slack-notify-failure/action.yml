@@ -30,7 +30,7 @@ runs:
         SLACK_WEBHOOK_URL: https://hooks.slack.com/services/${{ inputs.webhook-key }}
       run: |
         curl --request POST \
-          --url="$SLACK_WEBHOOK_URL" \
+          --url "$SLACK_WEBHOOK_URL" \
           --header "Content-Type: application/json" \
           --data '{
             "text": "*`${{ inputs.workflow }}` Workflow failed* in `${{ inputs.repository }}`",

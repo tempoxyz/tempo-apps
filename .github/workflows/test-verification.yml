@@ -10,7 +10,7 @@ on:
       verifier-url:
         description: 'Verifier URL'
         required: false
-        default: 'https://contracts.porto.workers.dev'
+        default: 'https://contracts.tempo.xyz'
   schedule:
     - cron: '0 */6 * * *'
 
@@ -22,7 +22,7 @@ defaults:
 env:
   ACTIONS_RUNNER_DEBUG: true
   TEMPO_RPC_URL: ${{ github.event.inputs.rpc-url || 'https://rpc.testnet.tempo.xyz' }}
-  VERIFIER_URL: ${{ github.event.inputs.verifier-url || 'https://contracts.porto.workers.dev' }}
+  VERIFIER_URL: ${{ github.event.inputs.verifier-url || 'https://contracts.tempo.xyz' }}
 
 jobs:
   verify-vyper:

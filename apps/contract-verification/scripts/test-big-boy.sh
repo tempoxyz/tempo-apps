@@ -4,7 +4,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPO_RPC_URL="https://rpc.testnet.tempo.xyz"
-VERIFIER_URL=${VERIFIER_URL:-"https://contracts.porto.workers.dev"}
+VERIFIER_URL=${VERIFIER_URL:-"https://contracts.tempo.xyz"}
 
 echo -e "\n=== VERSIONS ==="
 CAST_VERSION=$(cast --version)
