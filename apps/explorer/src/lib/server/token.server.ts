@@ -2,9 +2,10 @@ import { createServerFn } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import type { Address, Hex } from 'ox'
 import { zeroAddress } from 'viem'
+import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { zAddress } from '#lib/zod'
-import { config } from '#wagmi.config.ts'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -56,7 +57,8 @@ export type TokenHoldersApiResponse = {
 export const fetchHolders = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokenHoldersInputSchema.parse(input))
 	.handler(async ({ data }) => {
-		const chainId = config.getClient().chain.id
+		const config = getWagmiConfig()
+		const chainId = getChainId(config)
 		const cacheKey = `${chainId}-${data.address}`
 
 		const cached = holdersCache.get(cacheKey)
@@ -214,7 +216,8 @@ export type TokenTransfersApiResponse = {
 export const fetchTransfers = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokenTransfersInputSchema.parse(input))
 	.handler(async ({ data }) => {
-		const chainId = config.getClient().chain.id
+		const config = getWagmiConfig()
+		const chainId = getChainId(config)
 		const [transfers, total] = await Promise.all([
 			fetchTransfersData(
 				data.address,

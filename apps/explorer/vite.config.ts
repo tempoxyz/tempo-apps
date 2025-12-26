@@ -19,6 +19,8 @@ export default defineConfig((config) => {
 	})()
 	const port = Number(lastPort ?? env.PORT ?? 3_000)
 
+	const allowedHosts = env.ALLOWED_HOSTS.split(',') ?? []
+
 	return {
 		define: {
 			__BASE_URL__: JSON.stringify(
@@ -62,7 +64,10 @@ export default defineConfig((config) => {
 		server: {
 			port,
 			cors: config.mode === 'development' ? false : undefined,
-			allowedHosts: config.mode === 'development' ? true : undefined,
+			allowedHosts: config.mode === 'development' ? allowedHosts : [],
+		},
+		preview: {
+			allowedHosts: config.mode === 'preview' ? allowedHosts : [],
 		},
 		build: {
 			rolldownOptions: {

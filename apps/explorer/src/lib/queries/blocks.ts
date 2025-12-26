@@ -4,7 +4,7 @@ import type { Block } from 'viem'
 import { getBlock, getTransactionReceipt } from 'wagmi/actions'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20.ts'
-import { config } from '#wagmi.config.ts'
+import { getWagmiConfig, type WagmiConfig } from '#wagmi.config.ts'
 
 export const BLOCKS_PER_PAGE = 12
 
@@ -19,6 +19,7 @@ export function blocksQueryOptions(page: number) {
 	return queryOptions({
 		queryKey: ['blocks-loader', page],
 		queryFn: async () => {
+			const config = getWagmiConfig()
 			const latestBlock = await getBlock(config)
 			const latestBlockNumber = latestBlock.number
 
@@ -55,6 +56,7 @@ export function blockDetailQueryOptions(
 	return queryOptions({
 		queryKey: ['block-detail', blockRef, page],
 		queryFn: async () => {
+			const config = getWagmiConfig()
 			const block = await getBlock(config, {
 				includeTransactions: true,
 				...(blockRef.kind === 'hash'
@@ -87,7 +89,7 @@ export function blockDetailQueryOptions(
 
 async function fetchKnownEventsForTransactions(
 	transactions: BlockTransaction[],
-	wagmiConfig: typeof config,
+	wagmiConfig: WagmiConfig,
 ): Promise<Record<Hex.Hex, KnownEvent[]>> {
 	const entries = await Promise.all(
 		transactions.map(async (transaction) => {

@@ -2,7 +2,7 @@ import type { Address } from 'ox'
 import { Actions } from 'tempo.ts/wagmi'
 import { type Log, parseEventLogs } from 'viem'
 import { Abis } from 'viem/tempo'
-import { config } from '#wagmi.config'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 const abi = Object.values(Abis).flat()
 
@@ -26,6 +26,8 @@ export async function metadataFromLogs(
 	const tip20Addresses = events
 		.map(({ address }) => address)
 		.filter(isTip20Address)
+
+	const config = getWagmiConfig()
 
 	const metadataResults = await Promise.all(
 		tip20Addresses.map((token) => Actions.token.getMetadata(config, { token })),

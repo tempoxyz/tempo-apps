@@ -13,7 +13,7 @@
 		"gen:tokens-index": "node --experimental-strip-types --env-file=.env scripts/generate-tokens-index.ts",
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
 		"postinstall": "pnpm gen:types && pnpm build",
-		"preview": "vite preview",
+		"preview": "vite preview --mode='preview'",
 		"test": "vitest"
 	},
 	"dependencies": {

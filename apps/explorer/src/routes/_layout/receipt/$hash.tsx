@@ -4,7 +4,8 @@ import { queryOptions, useQuery } from '@tanstack/react-query'
 import { createFileRoute, notFound, rootRouteId } from '@tanstack/react-router'
 import { Hex, Json, Value } from 'ox'
 import { createPublicClient, http } from 'viem'
-import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
+import { getBlock, getTransaction } from 'viem/actions'
+import { getPublicClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'
 import { Receipt } from '#comps/Receipt'
@@ -18,7 +19,7 @@ import {
 	formatEventForOgServer,
 	OG_BASE_URL,
 } from '#lib/og'
-import { config } from '#wagmi.config'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	return queryOptions({
@@ -28,13 +29,14 @@ function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 }
 
 async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
+	const config = getWagmiConfig()
 	const client = params.rpcUrl
 		? createPublicClient({
 				chain: config.chains[0],
 				transport: http(params.rpcUrl),
 			})
-		: config.getClient()
-	const receipt = await getTransactionReceipt(client, {
+		: getPublicClient(config)
+	const receipt = await client.getTransactionReceipt({
 		hash: params.hash,
 	})
 	const [block, transaction, getTokenMetadata] = await Promise.all([
