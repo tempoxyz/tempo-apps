@@ -2,50 +2,71 @@ name: Test Contract Verification
 
 on:
   workflow_dispatch:
+    inputs:
+      rpc-url:
+        description: 'RPC URL'
+        required: false
+        default: 'https://rpc.testnet.tempo.xyz'
+      verifier-url:
+        description: 'Verifier URL'
+        required: false
+        default: 'https://contracts.porto.workers.dev'
   schedule:
-    - cron: "0 */5 * * *"
+    - cron: '0 */6 * * *'
 
 defaults:
   run:
     shell: bash
+    working-directory: apps/contract-verification
 
 env:
   ACTIONS_RUNNER_DEBUG: true
+  TEMPO_RPC_URL: ${{ github.event.inputs.rpc-url || 'https://rpc.testnet.tempo.xyz' }}
+  VERIFIER_URL: ${{ github.event.inputs.verifier-url || 'https://contracts.porto.workers.dev' }}
 
 jobs:
-  verify:
+  verify-vyper:
     env:
       GH_TOKEN: ${{ github.token }}
-    name: Run verification script
     runs-on: ubuntu-latest
-
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@master
         with:
           version: nightly
           network: tempo
 
-      - name: Execute verification script
-        shell: bash
-        run: |
-          set -euo pipefail
+      - name: Install uv
+        uses: astral-sh/setup-uv@main
+        with:
+          version: latest
+          python-version: '3.14'
 
-          TEMP_DIR=$(mktemp -d)
-          cd "$TEMP_DIR"
+      - name: Install vyper Compiler
+        run: uv tool install vyper
 
-          gh repo clone grandizzy/oz-dummy-token
-          cd oz-dummy-token
+      - name: Test Vyper (small counter)
+        run: ./scripts/test-vyper.sh
 
-          export VERIFIER_URL="https://contracts.tempo.xyz"
-          export TEMPO_RPC_URL="https://rpc.testnet.tempo.xyz"
-          export PRIVATE_KEY="0xa4b3490c35582d544451fbbfd7a0e4c5fa4d0ded06563ccc199057c7a5e6c9de"
+  verify-solidity:
+    env:
+      GH_TOKEN: ${{ github.token }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/contract-verification
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
 
-          forge build
-          forge script script/DeployMyToken.s.sol \
-            --rpc-url='https://rpc.testnet.tempo.xyz' \
-            --private-key='0xa4b3490c35582d544451fbbfd7a0e4c5fa4d0ded06563ccc199057c7a5e6c9de' \
-            --broadcast \
-            --verify \
-            --verifier sourcify \
-            --verifier-url='https://contracts.tempo.xyz'
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@master
+        with:
+          version: nightly
+          network: tempo
+
+      - name: Test Solidity
+        run: ./scripts/test-big-boy.sh

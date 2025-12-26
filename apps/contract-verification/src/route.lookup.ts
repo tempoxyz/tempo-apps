@@ -41,7 +41,7 @@ lookupRoute.get('/all-chains/:address', async (context) => {
 			)
 
 		const db = drizzle(context.env.CONTRACTS_DB)
-		const addressBytes = Hex.toBytes(address as `0x${string}`)
+		const addressBytes = Hex.toBytes(address)
 
 		// Query all verified contracts at this address across all chains
 		const results = await db
@@ -329,7 +329,7 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 			const hash32Bytes = new Uint8Array(sig.signatureHash32 as ArrayBuffer)
 			const signatureHash32 = Hex.fromBytes(hash32Bytes)
 			const signatureHash4 = Hex.fromBytes(hash32Bytes.slice(0, 4))
-			const type = sig.signatureType as 'function' | 'event' | 'error'
+			const type = sig.signatureType
 
 			signatures[type].push({
 				signature: sig.signature,
