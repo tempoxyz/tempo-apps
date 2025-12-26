@@ -8,9 +8,9 @@ import {
 	toFunctionSelector,
 } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
-import { getPublicClient } from 'wagmi/actions'
+import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
-import { config } from '#wagmi.config.ts'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 /**
  * Registry of known contract addresses to their ABIs and metadata.
@@ -552,6 +552,7 @@ export function formatOutputValue(value: unknown, _type: string): string {
 export async function getContractBytecode(
 	address: Address.Address,
 ): Promise<Hex.Hex | undefined> {
+	const config = getWagmiConfig()
 	const client = getPublicClient(config)
 	const code = await client.getCode({ address })
 	if (!code || code === '0x') return undefined
@@ -687,6 +688,8 @@ export async function autoloadAbi(
 	options: AutoloadAbiOptions = {},
 ): Promise<Abi | null> {
 	const { followProxies = true, includeSourceVerified = true } = options
+	const config = getWagmiConfig()
+	const chainId = getChainId(config)
 	const client = getPublicClient(config)
 
 	try {
@@ -695,7 +698,7 @@ export async function autoloadAbi(
 			followProxies,
 			abiLoader: includeSourceVerified
 				? new loaders.MultiABILoader([
-						new loaders.SourcifyABILoader({ chainId: client.chain?.id }),
+						new loaders.SourcifyABILoader({ chainId }),
 					])
 				: false,
 			signatureLookup: defaultSignatureLookup,

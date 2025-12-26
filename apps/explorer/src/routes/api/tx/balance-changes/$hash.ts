@@ -5,32 +5,12 @@ import { getAbiItem, parseEventLogs, zeroAddress } from 'viem'
 import { getTransactionReceipt, readContract } from 'viem/actions'
 import { Abis } from 'viem/tempo'
 import * as z from 'zod/mini'
-
+import { mapWithConcurrency } from '#lib/network.ts'
 import { zHash } from '#lib/zod'
-import { config } from '#wagmi.config'
+import { getWagmiConfig, type WagmiConfig } from '#wagmi.config.ts'
 
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
-const RPC_CONCURRENCY = 5
-
-async function mapWithConcurrency<T, R>(
-	items: T[],
-	fn: (item: T) => Promise<R>,
-	concurrency: number,
-): Promise<R[]> {
-	const results: R[] = []
-	let index = 0
-
-	async function worker() {
-		while (index < items.length) {
-			const currentIndex = index++
-			results[currentIndex] = await fn(items[currentIndex])
-		}
-	}
-
-	await Promise.all(Array.from({ length: concurrency }, () => worker()))
-	return results
-}
 
 export interface TokenBalanceChange {
 	address: Address.Address
@@ -93,7 +73,7 @@ function computeBalanceChanges(logs: Log[]) {
 }
 
 async function getBalanceAtBlock(
-	client: ReturnType<typeof config.getClient>,
+	client: ReturnType<WagmiConfig['getClient']>,
 	token: Address.Address,
 	account: Address.Address,
 	blockNumber: bigint,
@@ -112,7 +92,7 @@ async function getBalanceAtBlock(
 }
 
 async function getTokenMetadata(
-	client: ReturnType<typeof config.getClient>,
+	client: ReturnType<ReturnType<typeof getWagmiConfig>['getClient']>,
 	token: Address.Address,
 ) {
 	const [decimals, symbol] = await Promise.all([
@@ -137,7 +117,7 @@ export async function fetchBalanceChanges(params: {
 	offset: number
 }): Promise<BalanceChangesData> {
 	const { hash, limit, offset } = params
-	const client = config.getClient()
+	const client = getWagmiConfig().getClient()
 
 	const receipt = await getTransactionReceipt(client, { hash })
 
@@ -152,7 +132,6 @@ export async function fetchBalanceChanges(params: {
 	const tokenMetadataEntries = await mapWithConcurrency(
 		uniqueTokens,
 		async (token) => [token, await getTokenMetadata(client, token)] as const,
-		RPC_CONCURRENCY,
 	)
 
 	const balanceAfterResults = await mapWithConcurrency(
@@ -166,7 +145,6 @@ export async function fetchBalanceChanges(params: {
 				receipt.blockNumber,
 			),
 		}),
-		RPC_CONCURRENCY,
 	)
 
 	const tokenMetadata = Object.fromEntries(

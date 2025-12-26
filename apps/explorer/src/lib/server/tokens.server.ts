@@ -1,8 +1,9 @@
 import { createServerFn } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
+import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { config } from '#wagmi.config.ts'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -38,7 +39,8 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 	.handler(async ({ data }): Promise<TokensApiResponse> => {
 		const { offset, limit } = data
 
-		const chainId = config.getClient().chain.id
+		const config = getWagmiConfig()
+		const chainId = getChainId(config)
 
 		const [tokensResult, countResult] = await Promise.all([
 			QB.withSignatures([EVENT_SIGNATURE])

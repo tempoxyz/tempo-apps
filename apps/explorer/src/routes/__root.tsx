@@ -5,15 +5,14 @@ import {
 	createRootRouteWithContext,
 	HeadContent,
 	Scripts,
-	useRouteContext,
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
-import { WagmiProvider } from 'wagmi'
+import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { ProgressLine } from '#comps/ProgressLine'
-import { config } from '#wagmi.config.ts'
+import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
 export const Route = createRootRouteWithContext<{
@@ -130,13 +129,17 @@ export const Route = createRootRouteWithContext<{
 			<ErrorBoundary {...props} />
 		</RootDocument>
 	),
+	loader: () => getWagmiStateSSR(),
 	shellComponent: RootDocument,
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	useDevTools()
 
-	const { queryClient } = useRouteContext({ from: '__root__' })
+	const { queryClient } = Route.useRouteContext()
+	const [config] = React.useState(() => getWagmiConfig())
+	const wagmiState = Route.useLoaderData({ select: deserialize<State> })
+
 	const isLoading = useRouterState({
 		select: (state) => state.status === 'pending',
 	})
@@ -152,7 +155,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					start={800}
 					className="fixed top-0 left-0 right-0 z-1"
 				/>
-				<WagmiProvider config={config}>
+				<WagmiProvider config={config} initialState={wagmiState}>
 					<QueryClientProvider client={queryClient}>
 						{children}
 						{import.meta.env.DEV && (

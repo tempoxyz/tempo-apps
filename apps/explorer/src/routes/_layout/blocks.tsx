@@ -1,9 +1,8 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Block } from 'viem'
 import { useBlock, useWatchBlockNumber } from 'wagmi'
-import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { Midcut } from '#comps/Midcut'
 import { Pagination } from '#comps/Pagination'
@@ -11,7 +10,6 @@ import { FormattedTimestamp, useTimeFormat } from '#comps/TimeFormat'
 import { cx } from '#cva.config.ts'
 import { useIsMounted } from '#lib/hooks'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
-import { config } from '#wagmi.config.ts'
 import Play from '~icons/lucide/play'
 
 // Track which block numbers are "new" for animation purposes
@@ -109,53 +107,52 @@ function RouteComponent() {
 	}, [page, live, queryData.blocks])
 
 	// Calculate which blocks to show for this page
-	const startBlock = currentLatest
-		? currentLatest - BigInt((page - 1) * BLOCKS_PER_PAGE)
-		: undefined
+	// const _startBlock = currentLatest
+	// 	? currentLatest - BigInt((page - 1) * BLOCKS_PER_PAGE)
+	// 	: undefined
 
 	// Fetch blocks for non-page-1 or when live is off
-	const { data: fetchedBlocks, isLoading: isFetching } = useQuery({
-		queryKey: ['blocks', page, startBlock?.toString()],
-		queryFn: async () => {
-			if (!startBlock || !currentLatest) return []
+	// const { data: fetchedBlocks, isLoading: isFetching } = useQuery({
+	// 	queryKey: ['blocks', page, startBlock?.toString()],
+	// 	queryFn: async () => {
+	// 		if (!startBlock || !currentLatest) return []
 
-			const blockNumbers: bigint[] = []
-			for (let i = 0n; i < BigInt(BLOCKS_PER_PAGE); i++) {
-				const blockNum = startBlock - i
-				if (blockNum >= 0n) blockNumbers.push(blockNum)
-			}
+	// 		const blockNumbers: bigint[] = []
+	// 		for (let index = 0n; index < BigInt(BLOCKS_PER_PAGE); index++) {
+	// 			const blockNum = startBlock - index
+	// 			if (blockNum >= 0n) blockNumbers.push(blockNum)
+	// 		}
 
-			const results = await Promise.all(
-				blockNumbers.map((blockNumber) =>
-					getBlock(config, { blockNumber }).catch(() => null),
-				),
-			)
+	// 		const config = getWagmiConfig()
 
-			return results.filter(Boolean) as Block[]
-		},
-		enabled:
-			!!startBlock &&
-			!!currentLatest &&
-			(page !== 1 || !live || liveBlocks.length === 0),
-		staleTime: page === 1 && live ? 0 : 60_000,
-		placeholderData: keepPreviousData,
-	})
+	// 		const results = await Promise.all(
+	// 			blockNumbers.map((blockNumber) =>
+	// 				getBlock(config, { blockNumber }).catch(() => null),
+	// 			),
+	// 		)
 
-	// Use live blocks on page 1 when live, otherwise use fetched/loader data
+	// 		return results.filter(Boolean) as Block[]
+	// 	},
+	// 	enabled:
+	// 		!!startBlock &&
+	// 		!!currentLatest &&
+	// 		(page !== 1 || !live || liveBlocks.length === 0),
+	// 	staleTime: page === 1 && live ? 0 : 60_000,
+	// 	placeholderData: keepPreviousData,
+	// })
+	// Use live blocks on page 1 when live, otherwise use loader data
 	const blocks = React.useMemo(() => {
-		if (page === 1 && live && liveBlocks.length > 0) {
-			return liveBlocks
-		}
-		return fetchedBlocks ?? (page === 1 ? queryData.blocks : undefined)
-	}, [page, live, liveBlocks, fetchedBlocks, queryData.blocks])
+		if (page === 1 && live && liveBlocks.length > 0) return liveBlocks
+		return queryData.blocks
+	}, [page, live, liveBlocks, queryData.blocks])
 
-	const isLoading = !blocks && isFetching
+	const isLoading = !blocks || blocks.length === 0
 
 	const totalBlocks = currentLatest ? Number(currentLatest) + 1 : 0
 	const totalPages = Math.ceil(totalBlocks / BLOCKS_PER_PAGE)
 
 	return (
-		<div className="flex flex-col gap-6 px-6 py-8 max-w-[1200px] mx-auto w-full">
+		<div className="flex flex-col gap-6 px-6 py-8 max-w-300 mx-auto w-full">
 			<section
 				className={cx(
 					'flex flex-col font-mono w-full overflow-hidden',
@@ -165,10 +162,10 @@ function RouteComponent() {
 			>
 				<div className="overflow-x-auto">
 					{/* Header */}
-					<div className="grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 border-b border-card-border bg-card-header text-[12px] text-tertiary uppercase min-w-[500px]">
+					<div className="grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 border-b border-card-border bg-card-header text-[12px] text-tertiary uppercase min-w-125">
 						<div>Block</div>
 						<div>Hash</div>
-						<div className="text-right min-w-[120px]">
+						<div className="text-right min-w-30">
 							<button
 								type="button"
 								onClick={cycleTimeFormat}
@@ -182,7 +179,7 @@ function RouteComponent() {
 					</div>
 
 					{/* Blocks list */}
-					<div className="flex flex-col min-w-[500px]">
+					<div className="flex flex-col min-w-125">
 						{isLoading ? (
 							<div className="px-4 py-8 text-center text-tertiary">
 								Loading blocks…
@@ -207,32 +204,33 @@ function RouteComponent() {
 					</div>
 				</div>
 
-				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
+				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-dashed border-card-border px-4 py-3 text-[12px] text-tertiary">
 					<Pagination.Simple page={page} totalPages={totalPages} />
-					<div className="flex items-center justify-center sm:justify-end gap-[12px]">
+					<div className="flex items-center justify-center sm:justify-end gap-3">
 						<Link
 							to="."
 							resetScroll={false}
 							search={(prev) => ({ ...prev, live: !live })}
 							className={cx(
-								'flex items-center gap-[6px] px-[10px] py-[5px] rounded-[6px] text-[12px] font-medium transition-colors',
-								live
-									? 'bg-positive/10 text-positive hover:bg-positive/20'
-									: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
+								'flex items-center gap-1.5 px-2.5 py-1.25 rounded-md text-[12px] font-medium transition-colors',
+								{
+									'bg-positive/10 text-positive hover:bg-positive/20': live,
+									'bg-base-alt text-tertiary hover:bg-base-alt/80': !live,
+								},
 							)}
 							title={live ? 'Pause live updates' : 'Resume live updates'}
 						>
 							{live ? (
 								<>
-									<span className="relative flex size-[8px]">
+									<span className="relative flex size-2">
 										<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-positive opacity-75" />
-										<span className="relative inline-flex rounded-full size-[8px] bg-positive" />
+										<span className="relative inline-flex rounded-full size-2 bg-positive" />
 									</span>
 									<span>Live</span>
 								</>
 							) : (
 								<>
-									<Play className="size-[12px]" />
+									<Play className="size-3" />
 									<span>Paused</span>
 								</>
 							)}
@@ -286,7 +284,7 @@ function BlockRow({
 					<Midcut value={blockHash} prefix="0x" />
 				</Link>
 			</div>
-			<div className="text-right text-secondary tabular-nums min-w-[120px]">
+			<div className="text-right text-secondary tabular-nums min-w-30">
 				{isLatest ? (
 					'now'
 				) : (

@@ -1,10 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as IDX from 'idxs'
 import { Address } from 'ox'
+import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-
 import { zAddress } from '#lib/zod.ts'
-import { config } from '#wagmi.config.ts'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -12,7 +12,7 @@ const IS = IDX.IndexSupply.create({
 
 const QB = IDX.QueryBuilder.from(IS)
 
-const chainId = config.getClient().chain.id
+const chainId = getChainId(getWagmiConfig())
 
 const RequestSchema = z.object({
 	chainId: z.prefault(z.coerce.number(), chainId),

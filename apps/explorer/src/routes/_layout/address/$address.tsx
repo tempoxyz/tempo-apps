@@ -15,12 +15,11 @@ import * as React from 'react'
 import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { Abis } from 'viem/tempo'
-import { useBlock } from 'wagmi'
+import { useBlock, useChainId, usePublicClient } from 'wagmi'
 import {
+	type GetBlockReturnType,
 	getBlock,
 	getChainId,
-	getTransaction,
-	getTransactionReceipt,
 	readContract,
 } from 'wagmi/actions'
 import * as z from 'zod/mini'
@@ -67,7 +66,7 @@ import {
 	type TransactionsData,
 	transactionsQueryOptions,
 } from '#lib/queries/account'
-import { config } from '#wagmi.config'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 async function fetchAddressTotalValue(address: Address.Address) {
 	const response = await fetch(
@@ -104,14 +103,18 @@ function useBatchTransactionData(
 		[transactions],
 	)
 
+	// const config = useConfig()
+	const chainId = useChainId()
+	const client = usePublicClient({ chainId })
+
 	const queries = useQueries({
 		queries: hashes.map((hash) => ({
 			queryKey: ['tx-data-batch', viewer, hash],
 			queryFn: async (): Promise<TransactionData | null> => {
-				const receipt = await getTransactionReceipt(config, { hash })
+				const receipt = await client.getTransactionReceipt({ hash })
 				const [block, transaction, getTokenMetadata] = await Promise.all([
-					getBlock(config, { blockHash: receipt.blockHash }),
-					getTransaction(config, { hash: receipt.transactionHash }),
+					client.getBlock({ blockHash: receipt.blockHash }),
+					client.getTransaction({ hash: receipt.transactionHash }),
 					Tip20.metadataFromLogs(receipt.logs),
 				])
 				const knownEvents = parseKnownEvents(receipt, {
@@ -119,7 +122,7 @@ function useBatchTransactionData(
 					getTokenMetadata,
 					viewer,
 				})
-				return { receipt, block, knownEvents }
+				return { receipt, block: block as GetBlockReturnType, knownEvents }
 			},
 			staleTime: 60_000,
 			enabled: hashes.length > 0,
@@ -277,6 +280,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 
 		const offset = (page - 1) * limit
+		const config = getWagmiConfig()
 		const chainId = getChainId(config)
 
 		// Get bytecode to determine account type
@@ -416,6 +420,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		try {
 			// Fetch holdings by directly reading balances from known tokens
 			const accountAddress = params.address as Address.Address
+
+			const config = getWagmiConfig()
 			const tokenResults = await timeout(
 				Promise.all(
 					assets.map(async (tokenAddress) => {
@@ -461,6 +467,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		}
 
 		try {
+			const config = getWagmiConfig()
 			// Get the most recent transaction for lastActive (already in loaderData)
 			const recentTx = loaderData?.transactionsData?.transactions?.at(0)
 			if (recentTx?.blockNumber) {
