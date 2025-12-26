@@ -12,74 +12,26 @@ on:
         required: false
         default: 'https://contracts.porto.workers.dev'
   schedule:
-    - cron: '0 */5 * * *'
+    - cron: '0 */6 * * *'
 
 defaults:
   run:
     shell: bash
+    working-directory: apps/contract-verification
 
 env:
   ACTIONS_RUNNER_DEBUG: true
+  TEMPO_RPC_URL: ${{ github.event.inputs.rpc-url || 'https://rpc.testnet.tempo.xyz' }}
+  VERIFIER_URL: ${{ github.event.inputs.verifier-url || 'https://contracts.porto.workers.dev' }}
 
 jobs:
-  verify:
-    env:
-      GH_TOKEN: ${{ github.token }}
-    name: Run verification script
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@master
-        with:
-          version: nightly
-          network: tempo
-
-      - name: Execute verification script
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          TEMP_DIR=$(mktemp -d)
-
-          gh repo clone grandizzy/oz-dummy-token "$TEMP_DIR"/oz-dummy-token -- --depth 1
-          cd "$TEMP_DIR"/oz-dummy-token
-
-          VERIFIER_URL="${{ github.event.inputs.verifier-url }}"
-          TEMPO_RPC_URL="${{ github.event.inputs.rpc-url }}"
-
-          NEW_WALLET=$(cast wallet new --json | jq --raw-output '.[0]')
-          TEST_ADDRESS=$(echo "$NEW_WALLET" | jq --raw-output '.address')
-          TEST_PRIVATE_KEY=$(echo "$NEW_WALLET" | jq --raw-output '.private_key')
-
-          echo -e "\nDeployer Address: $TEST_ADDRESS\n"
-
-          for _ in {1..10}; do
-            cast rpc tempo_fundAddress "$TEST_ADDRESS" --rpc-url "$TEMPO_RPC_URL" > /dev/null 2>&1
-          done
-
-          WALLET_BALANCE=$(cast balance "$TEST_ADDRESS" --rpc-url "$TEMPO_RPC_URL")
-          echo "WALLET BALANCE: $WALLET_BALANCE"
-
-          forge build
-          forge script script/DeployMyToken.s.sol \
-            --rpc-url="$TEMPO_RPC_URL" \
-            --private-key="$TEST_PRIVATE_KEY" \
-            --broadcast \
-            --verify \
-            --verifier sourcify \
-            --verifier-url="$VERIFIER_URL"
-
   verify-vyper:
     env:
       GH_TOKEN: ${{ github.token }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: 'apps/contract-verification'
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@master
@@ -87,39 +39,28 @@ jobs:
           version: nightly
           network: tempo
 
-      - name: Install `uv`
+      - name: Install uv
         uses: astral-sh/setup-uv@main
         with:
-          version: 'latest'
+          version: latest
           python-version: '3.14'
-      
-      - name: Install `vyper` Compiler
+
+      - name: Install vyper Compiler
         run: uv tool install vyper
 
       - name: Test Vyper (small counter)
-        shell: bash
-        env:
-          TEMPO_RPC_URL: ${{ github.event.inputs.rpc-url }}
-          VERIFIER_URL: ${{ github.event.inputs.verifier-url }}
-        run: |
-          #!/usr/bin/env bash
-          
-          set -eou pipefail
-          
-          bash ./scripts/test-vyper.sh
+        run: ./scripts/test-vyper.sh
 
-  verify-solidity-stress:
+  verify-solidity:
     env:
       GH_TOKEN: ${{ github.token }}
-    name: Runs test-big-boy.sh - only if workflow_dispatch
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
     defaults:
       run:
-        working-directory: 'apps/contract-verification'
+        working-directory: apps/contract-verification
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@master
@@ -128,14 +69,4 @@ jobs:
           network: tempo
 
       - name: Test Solidity
-        shell: bash
-        env:
-          TEMPO_RPC_URL: ${{ github.event.inputs.rpc-url }}
-          VERIFIER_URL: ${{ github.event.inputs.verifier-url }}
-        # copied from tempoxyz/tempo-foundry/.github/scripts/tempo-check.yml
-        run: |
-          #!/usr/bin/env bash
-          
-          set -eou pipefail
-          
-          bash ./scripts/test-big-boy.sh
+        run: ./scripts/test-big-boy.sh
