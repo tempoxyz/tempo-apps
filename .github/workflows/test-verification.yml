@@ -51,13 +51,39 @@ jobs:
       - name: Test Vyper (small counter)
         run: ./scripts/test-vyper.sh
 
+      - name: Notify Slack on Failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: https://hooks.slack.com/services/${{ secrets.SLACK_WEBHOOK_KEY }}
+        run: |
+          curl --request POST \
+            --url="$SLACK_WEBHOOK_URL" \
+            --header "Content-Type: application/json" \
+            --data '{
+              "text": "*`${{ github.workflow }}` Workflow failed* in `${{ github.repository }}`",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🚨 Workflow Failed",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Workflow:* `${{ github.workflow }}`\n*Branch:* `${{ github.ref_name }}`\n*Author:* `${{ github.actor }}`\n*Status:* `failure`\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n_Click the URL to view detailed error logs_"
+                  }
+                }
+              ]
+            }'
+
   verify-solidity:
     env:
       GH_TOKEN: ${{ github.token }}
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/contract-verification
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -70,3 +96,32 @@ jobs:
 
       - name: Test Solidity
         run: ./scripts/test-big-boy.sh
+
+      - name: Notify Slack on Failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: https://hooks.slack.com/services/${{ secrets.SLACK_WEBHOOK_KEY }}
+        run: |
+          curl --request POST \
+            --url="$SLACK_WEBHOOK_URL" \
+            --header "Content-Type: application/json" \
+            --data '{
+              "text": "*`${{ github.workflow }}` Workflow failed* in `${{ github.repository }}`",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "🚨 Workflow Failed",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Workflow:* `${{ github.workflow }}`\n*Branch:* `${{ github.ref_name }}`\n*Author:* `${{ github.actor }}`\n*Status:* `failure`\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\n\n_Click the URL to view detailed error logs_"
+                  }
+                }
+              ]
+            }'
