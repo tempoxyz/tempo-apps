@@ -60,6 +60,9 @@
 		"**/*.wrangler": true,
 		"**/.pnpm-store/**": true
 	},
+	"tailwindCSS.showPixelEquivalents": true,
+	"tailwindCSS.lint.cssConflict": "warning",
+	"tailwindCSS.lint.suggestCanonicalClasses": "warning",
 	"tailwindCSS.experimental.classRegex": [
 		"cx\\(([^)]+)\\)",
 		"twMerge\\(([^)]+)\\)"
