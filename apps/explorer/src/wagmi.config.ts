@@ -51,13 +51,24 @@ export function getWagmiConfig() {
 	return createConfig({
 		chains: [getChain()],
 		ssr: true,
-		batch: { multicall: false },
 		storage: createStorage({ storage: cookieStorage }),
 		transports: {
-			[tempoTestnet.id]: fallback([
-				webSocket(rpcUrl.websocket),
-				http(rpcUrl.http),
-			]),
+			[tempoTestnet.id]: fallback(
+				[
+					webSocket(rpcUrl.websocket, {
+						retryCount: 5, // default 3
+						retryDelay: 400, // default 150
+						keepAlive: { interval: 50_000 }, // default true
+					}),
+					http(rpcUrl.http, {
+						retryDelay: 500, // default 150
+					}),
+				],
+				{
+					rank: true,
+					retryDelay: 600, // default 150
+				},
+			),
 			[tempoLocalnet.id]: http(undefined, { batch: true }),
 		},
 	})
