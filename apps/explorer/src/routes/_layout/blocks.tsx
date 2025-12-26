@@ -64,6 +64,7 @@ function RouteComponent() {
 				if (page === 1) {
 					recentlyAddedBlocks.add(blockNumber.toString())
 					// Clear the animation flag after animation completes
+					// TODO: is cleanup necessary?
 					setTimeout(() => {
 						recentlyAddedBlocks.delete(blockNumber.toString())
 					}, 400)
@@ -106,40 +107,6 @@ function RouteComponent() {
 		}
 	}, [page, live, queryData.blocks])
 
-	// Calculate which blocks to show for this page
-	// const _startBlock = currentLatest
-	// 	? currentLatest - BigInt((page - 1) * BLOCKS_PER_PAGE)
-	// 	: undefined
-
-	// Fetch blocks for non-page-1 or when live is off
-	// const { data: fetchedBlocks, isLoading: isFetching } = useQuery({
-	// 	queryKey: ['blocks', page, startBlock?.toString()],
-	// 	queryFn: async () => {
-	// 		if (!startBlock || !currentLatest) return []
-
-	// 		const blockNumbers: bigint[] = []
-	// 		for (let index = 0n; index < BigInt(BLOCKS_PER_PAGE); index++) {
-	// 			const blockNum = startBlock - index
-	// 			if (blockNum >= 0n) blockNumbers.push(blockNum)
-	// 		}
-
-	// 		const config = getWagmiConfig()
-
-	// 		const results = await Promise.all(
-	// 			blockNumbers.map((blockNumber) =>
-	// 				getBlock(config, { blockNumber }).catch(() => null),
-	// 			),
-	// 		)
-
-	// 		return results.filter(Boolean) as Block[]
-	// 	},
-	// 	enabled:
-	// 		!!startBlock &&
-	// 		!!currentLatest &&
-	// 		(page !== 1 || !live || liveBlocks.length === 0),
-	// 	staleTime: page === 1 && live ? 0 : 60_000,
-	// 	placeholderData: keepPreviousData,
-	// })
 	// Use live blocks on page 1 when live, otherwise use loader data
 	const blocks = React.useMemo(() => {
 		if (page === 1 && live && liveBlocks.length > 0) return liveBlocks

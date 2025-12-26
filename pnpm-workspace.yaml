@@ -28,11 +28,11 @@ catalog:
   '@tanstack/react-query': ^5.90.12
   '@tanstack/react-query-devtools': ^5.91.1
   '@tanstack/react-query-persist-client': ^5.90.14
-  '@tanstack/react-router': ^1.143.6
-  '@tanstack/react-router-devtools': ^1.143.6
-  '@tanstack/react-router-ssr-query': ^1.143.6
-  '@tanstack/react-start': ^1.143.7
-  '@tanstack/router-plugin': ^1.143.6
+  '@tanstack/react-router': ^1.143.11
+  '@tanstack/react-router-devtools': ^1.143.11
+  '@tanstack/react-router-ssr-query': ^1.143.11
+  '@tanstack/react-start': ^1.143.11
+  '@tanstack/router-plugin': ^1.143.11
   '@total-typescript/ts-reset': ^0.6.1
   '@types/node': ^25.0.3
   '@types/react': ^19.2.7
