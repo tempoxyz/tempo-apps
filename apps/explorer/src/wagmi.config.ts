@@ -6,6 +6,7 @@ import {
 	cookieToInitialState,
 	createConfig,
 	createStorage,
+	fallback,
 	http,
 	serialize,
 	webSocket,
@@ -46,13 +47,17 @@ export const getChainId = createIsomorphicFn()
 
 export function getWagmiConfig() {
 	const rpcUrl = getTempoRpcUrl()
+
 	return createConfig({
 		chains: [getChain()],
 		ssr: true,
 		batch: { multicall: false },
 		storage: createStorage({ storage: cookieStorage }),
 		transports: {
-			[tempoTestnet.id]: webSocket(rpcUrl.websocket),
+			[tempoTestnet.id]: fallback([
+				webSocket(rpcUrl.websocket),
+				http(rpcUrl.http),
+			]),
 			[tempoLocalnet.id]: http(undefined, { batch: true }),
 		},
 	})
@@ -61,5 +66,5 @@ export function getWagmiConfig() {
 export const getWagmiStateSSR = createServerFn().handler(() => {
 	const cookie = getRequestHeader('cookie')
 	const initialState = cookieToInitialState(getWagmiConfig(), cookie)
-	return serialize(initialState)
+	return serialize(initialState || {})
 })
