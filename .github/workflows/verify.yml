@@ -3,6 +3,9 @@ on:
   workflow_call:
   workflow_dispatch:
 
+env:
+  NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
+
 jobs:
   checks:
     name: Checks

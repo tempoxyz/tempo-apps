@@ -54,6 +54,13 @@ jobs:
 
           echo -e "\nDeployer Address: $TEST_ADDRESS\n"
 
+          for _ in {1..10}; do
+            cast rpc tempo_fundAddress "$TEST_ADDRESS" --rpc-url "$TEMPO_RPC_URL" > /dev/null 2>&1
+          done
+
+          WALLET_BALANCE=$(cast balance "$TEST_ADDRESS" --rpc-url "$TEMPO_RPC_URL")
+          echo "WALLET BALANCE: $WALLET_BALANCE"
+
           forge build
           forge script script/DeployMyToken.s.sol \
             --rpc-url="$TEMPO_RPC_URL" \
@@ -71,8 +78,11 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     defaults:
       run:
-        working-directory: './apps/contract-verification'
+        working-directory: 'apps/contract-verification'
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@master
         with:
@@ -84,7 +94,12 @@ jobs:
         env:
           TEMPO_RPC_URL: ${{ github.event.inputs.rpc-url }}
           VERIFIER_URL: ${{ github.event.inputs.verifier-url }}
-        run: ./scripts/test-vyper.sh
+        run: |
+          #!/usr/bin/env bash
+          
+          set -eou pipefail
+          
+          bash ./scripts/test-vyper.sh
 
       - name: Test Solidity
         shell: bash
@@ -92,4 +107,9 @@ jobs:
           TEMPO_RPC_URL: ${{ github.event.inputs.rpc-url }}
           VERIFIER_URL: ${{ github.event.inputs.verifier-url }}
         # copied from tempoxyz/tempo-foundry/.github/scripts/tempo-check.yml
-        run: ./scripts/test-big-boy.sh
+        run: |
+          #!/usr/bin/env bash
+          
+          set -eou pipefail
+          
+          bash ./scripts/test-big-boy.sh
