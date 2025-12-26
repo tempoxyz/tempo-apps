@@ -13,7 +13,7 @@ import * as React from 'react'
 import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
-import { readContract } from 'wagmi/actions'
+import { getPublicClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
@@ -34,7 +34,7 @@ import { PriceFormatter } from '#lib/formatting'
 import { useCopy, useIsMounted, useMediaQuery } from '#lib/hooks'
 import { buildTokenDescription, buildTokenOgImageUrl } from '#lib/og'
 import { holdersQueryOptions, transfersQueryOptions } from '#lib/queries'
-import { config } from '#wagmi.config'
+import { getWagmiConfig } from '#wagmi.config.ts'
 import CopyIcon from '~icons/lucide/copy'
 import XIcon from '~icons/lucide/x'
 
@@ -107,12 +107,17 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				)
 			}
 
+			const config = getWagmiConfig()
+			const publicClient = getPublicClient(config)
+
 			// Fetch currency from contract (TIP-20 tokens have a currency() function)
-			const currencyPromise = readContract(config, {
-				address: address,
-				abi: Abis.tip20,
-				functionName: 'currency',
-			}).catch(() => undefined)
+			const currencyPromise = publicClient
+				.readContract({
+					address: address,
+					abi: Abis.tip20,
+					functionName: 'currency',
+				})
+				.catch(() => undefined)
 
 			if (tab === 'transfers') {
 				const [metadata, transfers, holdersData, currency] = await Promise.all([
@@ -271,7 +276,7 @@ function RouteComponent() {
 		<div
 			className={cx(
 				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
+				'grid w-full pt-20 pb-16 px-4 gap-3.5 min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-270',
 			)}
 		>
 			<TokenCard
@@ -322,7 +327,7 @@ function TokenCard(props: {
 	return (
 		<InfoCard
 			title={
-				<div className="flex items-center justify-between px-[18px] pt-[10px] pb-[8px]">
+				<div className="flex items-center justify-between px-4.5 pt-2.5 pb-2">
 					<h1 className="text-[13px] uppercase text-tertiary select-none">
 						Token
 					</h1>
@@ -347,18 +352,18 @@ function TokenCard(props: {
 					className="w-full text-left cursor-pointer press-down text-tertiary"
 					title={address}
 				>
-					<div className="flex items-center gap-[8px] mb-[8px]">
+					<div className="flex items-center gap-2 mb-2">
 						<span className="text-[13px] font-normal capitalize">Address</span>
 						<div className="relative flex items-center">
-							<CopyIcon className="w-[12px] h-[12px]" />
+							<CopyIcon className="w-3 h-3" />
 							{notifying && (
-								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px]">
+								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-4">
 									copied
 								</span>
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[22ch]">
+					<p className="text-[14px] font-normal leading-4.25 tracking-[0.02em] text-primary break-all max-w-[22ch]">
 						{address}
 					</p>
 				</button>,
@@ -662,7 +667,7 @@ function FilterIndicator(props: {
 }) {
 	const { account, tokenAddress } = props
 	return (
-		<div className="flex items-center gap-[8px] text-[12px]">
+		<div className="flex items-center gap-2 text-[12px]">
 			<span className="text-tertiary">Filtered:</span>
 			<Link
 				to="/address/$address"
@@ -678,7 +683,7 @@ function FilterIndicator(props: {
 				className="text-tertiary press-down"
 				title="Clear filter"
 			>
-				<XIcon className="w-[14px] h-[14px] translate-y-px" />
+				<XIcon className="size-3.5 translate-y-px" />
 			</Link>
 		</div>
 	)

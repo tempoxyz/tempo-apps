@@ -7,6 +7,7 @@ import { Abis } from 'viem/tempo'
 import {
 	getBlock,
 	getBytecode,
+	getChainId,
 	getTransaction,
 	getTransactionReceipt,
 	readContract,
@@ -30,7 +31,7 @@ import {
 	type TxOgParams,
 } from '#lib/og-params'
 import type { TxData as TxDataQuery } from '#lib/queries'
-import { config } from '#wagmi.config'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 // ============ Constants ============
 
@@ -356,8 +357,6 @@ export function buildAddressOgImageUrl(params: {
 	return buildAddressOgUrl(OG_BASE_URL, ogParams)
 }
 
-const CHAIN_ID = config.getClient().chain.id
-
 // Indexer setup for token holder queries
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -379,6 +378,7 @@ interface TxData {
 
 async function fetchTxData(hash: string): Promise<TxData | null> {
 	try {
+		const config = getWagmiConfig()
 		const receipt = await getTransactionReceipt(config, {
 			hash: hash as `0x${string}`,
 		})
@@ -520,13 +520,15 @@ async function fetchTokenIndexerData(
 		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 		const tokenAddress = address.toLowerCase() as Address.Address
 
+		const chainId = getChainId(getWagmiConfig())
+
 		const incoming = await qb
 			.selectFrom('transfer')
 			.select((eb) => [
 				eb.ref('to').as('holder'),
 				eb.fn.sum('tokens').as('received'),
 			])
-			.where('chain', '=', CHAIN_ID)
+			.where('chain', '=', chainId)
 			.where('address', '=', tokenAddress)
 			.groupBy('to')
 			.execute()
@@ -537,7 +539,7 @@ async function fetchTokenIndexerData(
 				eb.ref('from').as('holder'),
 				eb.fn.sum('tokens').as('sent'),
 			])
-			.where('chain', '=', CHAIN_ID)
+			.where('chain', '=', chainId)
 			.where('address', '=', tokenAddress)
 			.where('from', '<>', zeroAddress)
 			.groupBy('from')
@@ -557,7 +559,7 @@ async function fetchTokenIndexerData(
 		const firstTransfer = await qb
 			.selectFrom('transfer')
 			.select(['block_timestamp'])
-			.where('chain', '=', CHAIN_ID)
+			.where('chain', '=', chainId)
 			.where('address', '=', tokenAddress)
 			.orderBy('block_num', 'asc')
 			.limit(1)
@@ -582,6 +584,7 @@ async function fetchTokenIndexerData(
 
 async function fetchTokenData(address: string): Promise<TokenData | null> {
 	try {
+		const config = getWagmiConfig()
 		const tokenAddress = address as Address.Address
 
 		const [tokenData, indexerData] = await Promise.all([
@@ -664,6 +667,8 @@ async function hasFeeAmmLiquidity(tokenAddress: string): Promise<boolean> {
 			},
 		] as const
 
+		const config = getWagmiConfig()
+
 		const result = await readContract(config, {
 			address: FEE_MANAGER,
 			abi: getPoolAbi,
@@ -725,6 +730,9 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 	try {
 		const tokenAddress = address.toLowerCase() as Address.Address
 		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
+
+		const config = getWagmiConfig()
+		const chainId = getChainId(config)
 
 		let accountType: AccountType = 'empty'
 		try {
@@ -798,14 +806,14 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			qb
 				.selectFrom('transfer')
 				.select(['tokens', 'address', 'block_timestamp'])
-				.where('chain', '=', CHAIN_ID)
+				.where('chain', '=', chainId)
 				.where('to', '=', tokenAddress)
 				.orderBy('block_timestamp', 'desc')
 				.execute(),
 			qb
 				.selectFrom('transfer')
 				.select(['tokens', 'address', 'block_timestamp'])
-				.where('chain', '=', CHAIN_ID)
+				.where('chain', '=', chainId)
 				.where('from', '=', tokenAddress)
 				.orderBy('block_timestamp', 'desc')
 				.execute(),
@@ -850,13 +858,13 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 					.selectFrom('txs')
 					.select((eb) => eb.fn.count('hash').as('cnt'))
 					.where('from', '=', tokenAddress)
-					.where('chain', '=', CHAIN_ID)
+					.where('chain', '=', chainId)
 					.executeTakeFirst(),
 				qb
 					.selectFrom('txs')
 					.select((eb) => eb.fn.count('hash').as('cnt'))
 					.where('to', '=', tokenAddress)
-					.where('chain', '=', CHAIN_ID)
+					.where('chain', '=', chainId)
 					.executeTakeFirst(),
 			])
 			txCount = Number(txSent?.cnt ?? 0) + Number(txReceived?.cnt ?? 0)

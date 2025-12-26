@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as IDX from 'idxs'
 import { Address, Hex } from 'ox'
+import { getChainId } from 'wagmi/actions'
 import tokensIndex from '#data/tokens-index.json' with { type: 'json' }
 import { isTip20Address } from '#lib/domain/tip20'
-import { config } from '#wagmi.config.ts'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -133,7 +134,7 @@ export const Route = createFileRoute('/api/search')({
 				// hash
 				if (isHash) {
 					try {
-						const chainId = config.getClient().chain.id
+						const chainId = getChainId(getWagmiConfig())
 						const result = await QB.selectFrom('txs')
 							.select(['block_timestamp'])
 							.where('chain', '=', chainId)
