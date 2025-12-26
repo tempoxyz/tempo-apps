@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Block } from 'viem'
-import { useBlock, useWatchBlockNumber, useWatchBlocks } from 'wagmi'
+import { useBlock, useWatchBlockNumber } from 'wagmi'
 import * as z from 'zod/mini'
 import { Midcut } from '#comps/Midcut'
 import { Pagination } from '#comps/Pagination'
@@ -140,20 +140,13 @@ function RouteComponent() {
 	// 	staleTime: page === 1 && live ? 0 : 60_000,
 	// 	placeholderData: keepPreviousData,
 	// })
-	const [fetchedBlocks, setFetchedBlocks] = React.useState<Array<Block>>([])
-	useWatchBlocks({
-		onBlock: (block, _previousBlock) =>
-			setFetchedBlocks((prev) => [...prev, block]),
-	})
-
-	// Use live blocks on page 1 when live, otherwise use fetched/loader data
+	// Use live blocks on page 1 when live, otherwise use loader data
 	const blocks = React.useMemo(() => {
 		if (page === 1 && live && liveBlocks.length > 0) return liveBlocks
+		return queryData.blocks
+	}, [page, live, liveBlocks, queryData.blocks])
 
-		return fetchedBlocks ?? (page === 1 ? queryData.blocks : undefined)
-	}, [page, live, liveBlocks, fetchedBlocks, queryData.blocks])
-
-	const isLoading = !blocks && fetchedBlocks.length === 0
+	const isLoading = !blocks || blocks.length === 0
 
 	const totalBlocks = currentLatest ? Number(currentLatest) + 1 : 0
 	const totalPages = Math.ceil(totalBlocks / BLOCKS_PER_PAGE)
