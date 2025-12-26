@@ -2,8 +2,17 @@ name: Test Contract Verification
 
 on:
   workflow_dispatch:
+    inputs:
+      rpc-url:
+        description: 'RPC URL'
+        required: false
+        default: 'https://rpc.testnet.tempo.xyz'
+      verifier-url:
+        description: 'Verifier URL'
+        required: false
+        default: 'https://contracts.porto.workers.dev'
   schedule:
-    - cron: "0 */5 * * *"
+    - cron: '0 */5 * * *'
 
 defaults:
   run:
@@ -32,20 +41,55 @@ jobs:
           set -euo pipefail
 
           TEMP_DIR=$(mktemp -d)
-          cd "$TEMP_DIR"
 
-          gh repo clone grandizzy/oz-dummy-token
-          cd oz-dummy-token
+          gh repo clone grandizzy/oz-dummy-token "$TEMP_DIR"/oz-dummy-token -- --depth 1
+          cd "$TEMP_DIR"/oz-dummy-token
 
-          export VERIFIER_URL="https://contracts.tempo.xyz"
-          export TEMPO_RPC_URL="https://rpc.testnet.tempo.xyz"
-          export PRIVATE_KEY="0xa4b3490c35582d544451fbbfd7a0e4c5fa4d0ded06563ccc199057c7a5e6c9de"
+          VERIFIER_URL="${{ github.event.inputs.verifier-url }}"
+          TEMPO_RPC_URL="${{ github.event.inputs.rpc-url }}"
+
+          NEW_WALLET=$(cast wallet new --json | jq --raw-output '.[0]')
+          TEST_ADDRESS=$(echo "$NEW_WALLET" | jq --raw-output '.address')
+          TEST_PRIVATE_KEY=$(echo "$NEW_WALLET" | jq --raw-output '.private_key')
+
+          echo -e "\nDeployer Address: $TEST_ADDRESS\n"
 
           forge build
           forge script script/DeployMyToken.s.sol \
-            --rpc-url='https://rpc.testnet.tempo.xyz' \
-            --private-key='0xa4b3490c35582d544451fbbfd7a0e4c5fa4d0ded06563ccc199057c7a5e6c9de' \
+            --rpc-url="$TEMPO_RPC_URL" \
+            --private-key="$TEST_PRIVATE_KEY" \
             --broadcast \
             --verify \
             --verifier sourcify \
-            --verifier-url='https://contracts.tempo.xyz'
+            --verifier-url="$VERIFIER_URL"
+
+  stress-verify:
+    env:
+      GH_TOKEN: ${{ github.token }}
+    name: Runs test-big-boy.sh and test-vyper.sh - only if workflow_dispatch
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    defaults:
+      run:
+        working-directory: './apps/contract-verification'
+    steps:
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@master
+        with:
+          version: nightly
+          network: tempo
+
+      - name: Test Vyper (small counter)
+        shell: bash
+        env:
+          TEMPO_RPC_URL: ${{ github.event.inputs.rpc-url }}
+          VERIFIER_URL: ${{ github.event.inputs.verifier-url }}
+        run: ./scripts/test-vyper.sh
+
+      - name: Test Solidity
+        shell: bash
+        env:
+          TEMPO_RPC_URL: ${{ github.event.inputs.rpc-url }}
+          VERIFIER_URL: ${{ github.event.inputs.verifier-url }}
+        # copied from tempoxyz/tempo-foundry/.github/scripts/tempo-check.yml
+        run: ./scripts/test-big-boy.sh

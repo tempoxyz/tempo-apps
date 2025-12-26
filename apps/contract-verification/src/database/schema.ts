@@ -1,17 +1,17 @@
 import { sql } from 'drizzle-orm'
-import { index, sqliteTable, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import * as p from 'drizzle-orm/sqlite-core'
 
 // ============================================================================
 // Helper for common audit columns
 // ============================================================================
 
-const auditColumns = (s: Parameters<Parameters<typeof sqliteTable>[1]>[0]) => ({
-	createdAt: s.text('created_at').notNull().default(sql`(datetime('now'))`),
-	updatedAt: s.text('updated_at').notNull().default(sql`(datetime('now'))`),
+const auditColumns = () => ({
+	createdAt: p.text('created_at').notNull().default(sql`(datetime('now'))`),
+	updatedAt: p.text('updated_at').notNull().default(sql`(datetime('now'))`),
 	/** SQLite lacks CURRENT_USER - set from application context */
-	createdBy: s.text('created_by').notNull(),
+	createdBy: p.text('created_by').notNull(),
 	/** SQLite lacks CURRENT_USER - set from application context */
-	updatedBy: s.text('updated_by').notNull(),
+	updatedBy: p.text('updated_by').notNull(),
 })
 
 // ============================================================================
@@ -23,18 +23,18 @@ const auditColumns = (s: Parameters<Parameters<typeof sqliteTable>[1]>[0]) => ({
  *   (code IS NOT NULL AND code_hash = digest(code, 'sha256')) OR
  *   (code IS NULL AND code_hash = '\x')
  */
-export const codeTable = sqliteTable(
+export const codeTable = p.sqliteTable(
 	'code',
 	(s) => ({
 		/** SHA-256 hash of the code (primary key) */
 		codeHash: s.blob('code_hash').primaryKey(),
-		...auditColumns(s),
+		...auditColumns(),
 		/** Keccak-256 hash of the code */
 		codeHashKeccak: s.blob('code_hash_keccak').notNull(),
 		/** Contract bytecode (nullable - can be pruned) */
 		code: s.blob('code'),
 	}),
-	(table) => [index('code_code_hash_keccak').on(table.codeHashKeccak)],
+	(table) => [p.index('code_code_hash_keccak').on(table.codeHashKeccak)],
 )
 
 // ============================================================================
@@ -45,26 +45,26 @@ export const codeTable = sqliteTable(
  * PostgreSQL CHECK constraint (validate at app level):
  *   source_hash = digest(content, 'sha256')
  */
-export const sourcesTable = sqliteTable('sources', (s) => ({
+export const sourcesTable = p.sqliteTable('sources', (s) => ({
 	/** SHA-256 hash of the source content (primary key) */
 	sourceHash: s.blob('source_hash').primaryKey(),
 	/** Keccak-256 hash of the source content */
 	sourceHashKeccak: s.blob('source_hash_keccak').notNull(),
 	/** Source code content */
 	content: s.text('content').notNull(),
-	...auditColumns(s),
+	...auditColumns(),
 }))
 
 // ============================================================================
 // contracts - Represents a contract by its creation/runtime code hashes
 // ============================================================================
 
-export const contractsTable = sqliteTable(
+export const contractsTable = p.sqliteTable(
 	'contracts',
 	(s) => ({
 		/** UUID primary key (generate with crypto.randomUUID()) */
 		id: s.text('id').primaryKey(),
-		...auditColumns(s),
+		...auditColumns(),
 		/** FK to code.code_hash (creation bytecode) */
 		creationCodeHash: s
 			.blob('creation_code_hash')
@@ -76,12 +76,11 @@ export const contractsTable = sqliteTable(
 			.references(() => codeTable.codeHash),
 	}),
 	(table) => [
-		index('contracts_creation_code_hash').on(table.creationCodeHash),
-		index('contracts_runtime_code_hash').on(table.runtimeCodeHash),
-		uniqueIndex('contracts_pseudo_pkey').on(
-			table.creationCodeHash,
-			table.runtimeCodeHash,
-		),
+		p.index('contracts_creation_code_hash').on(table.creationCodeHash),
+		p.index('contracts_runtime_code_hash').on(table.runtimeCodeHash),
+		p
+			.uniqueIndex('contracts_pseudo_pkey')
+			.on(table.creationCodeHash, table.runtimeCodeHash),
 	],
 )
 
@@ -89,12 +88,12 @@ export const contractsTable = sqliteTable(
 // contract_deployments - Links contracts to on-chain deployments
 // ============================================================================
 
-export const contractDeploymentsTable = sqliteTable(
+export const contractDeploymentsTable = p.sqliteTable(
 	'contract_deployments',
 	(s) => ({
 		/** UUID primary key */
 		id: s.text('id').primaryKey(),
-		...auditColumns(s),
+		...auditColumns(),
 		/** Chain ID (e.g., 1 for mainnet) */
 		chainId: s.integer('chain_id').notNull(),
 		/** Contract address (20 bytes) */
@@ -114,14 +113,16 @@ export const contractDeploymentsTable = sqliteTable(
 			.references(() => contractsTable.id),
 	}),
 	(table) => [
-		index('contract_deployments_address').on(table.address),
-		index('contract_deployments_contract_id').on(table.contractId),
-		uniqueIndex('contract_deployments_pseudo_pkey').on(
-			table.chainId,
-			table.address,
-			table.transactionHash,
-			table.contractId,
-		),
+		p.index('contract_deployments_address').on(table.address),
+		p.index('contract_deployments_contract_id').on(table.contractId),
+		p
+			.uniqueIndex('contract_deployments_pseudo_pkey')
+			.on(
+				table.chainId,
+				table.address,
+				table.transactionHash,
+				table.contractId,
+			),
 	],
 )
 
@@ -129,12 +130,12 @@ export const contractDeploymentsTable = sqliteTable(
 // compiled_contracts - Stores compilation results
 // ============================================================================
 
-export const compiledContractsTable = sqliteTable(
+export const compiledContractsTable = p.sqliteTable(
 	'compiled_contracts',
 	(s) => ({
 		/** UUID primary key */
 		id: s.text('id').primaryKey(),
-		...auditColumns(s),
+		...auditColumns(),
 		/** Compiler name (e.g., "solc") */
 		compiler: s.text('compiler').notNull(),
 		/** Compiler version (e.g., "0.8.19") */
@@ -165,15 +166,21 @@ export const compiledContractsTable = sqliteTable(
 		runtimeCodeArtifacts: s.text('runtime_code_artifacts').notNull(),
 	}),
 	(table) => [
-		index('compiled_contracts_creation_code_hash').on(table.creationCodeHash),
-		index('compiled_contracts_runtime_code_hash').on(table.runtimeCodeHash),
-		uniqueIndex('compiled_contracts_pseudo_pkey').on(
-			table.compiler,
-			table.version,
-			table.language,
-			table.creationCodeHash,
-			table.runtimeCodeHash,
-		),
+		p
+			.index('compiled_contracts_creation_code_hash')
+			.on(table.creationCodeHash),
+		p
+			.index('compiled_contracts_runtime_code_hash')
+			.on(table.runtimeCodeHash),
+		p
+			.uniqueIndex('compiled_contracts_pseudo_pkey')
+			.on(
+				table.compiler,
+				table.version,
+				table.language,
+				table.creationCodeHash,
+				table.runtimeCodeHash,
+			),
 	],
 )
 
@@ -181,7 +188,7 @@ export const compiledContractsTable = sqliteTable(
 // compiled_contracts_sources - Links compilations to source files
 // ============================================================================
 
-export const compiledContractsSourcesTable = sqliteTable(
+export const compiledContractsSourcesTable = p.sqliteTable(
 	'compiled_contracts_sources',
 	(s) => ({
 		/** UUID primary key */
@@ -200,12 +207,13 @@ export const compiledContractsSourcesTable = sqliteTable(
 		path: s.text('path').notNull(),
 	}),
 	(table) => [
-		index('compiled_contracts_sources_compilation_id').on(table.compilationId),
-		index('compiled_contracts_sources_source_hash').on(table.sourceHash),
-		uniqueIndex('compiled_contracts_sources_pseudo_pkey').on(
-			table.compilationId,
-			table.path,
-		),
+		p
+			.index('compiled_contracts_sources_compilation_id')
+			.on(table.compilationId),
+		p.index('compiled_contracts_sources_source_hash').on(table.sourceHash),
+		p
+			.uniqueIndex('compiled_contracts_sources_pseudo_pkey')
+			.on(table.compilationId, table.path),
 	],
 )
 
@@ -213,7 +221,7 @@ export const compiledContractsSourcesTable = sqliteTable(
 // signatures - Stores function/event/error signatures
 // ============================================================================
 
-export const signaturesTable = sqliteTable(
+export const signaturesTable = p.sqliteTable(
 	'signatures',
 	(s) => ({
 		/** Full 32-byte signature hash (primary key) */
@@ -224,7 +232,7 @@ export const signaturesTable = sqliteTable(
 		signature: s.text('signature').notNull(),
 		createdAt: s.text('created_at').notNull().default(sql`(datetime('now'))`),
 	}),
-	(table) => [index('signatures_signature_idx').on(table.signature)],
+	(table) => [p.index('signatures_signature_idx').on(table.signature)],
 )
 
 // ============================================================================
@@ -234,7 +242,7 @@ export const signaturesTable = sqliteTable(
 /** Signature type enum values */
 export type SignatureType = 'function' | 'event' | 'error'
 
-export const compiledContractsSignaturesTable = sqliteTable(
+export const compiledContractsSignaturesTable = p.sqliteTable(
 	'compiled_contracts_signatures',
 	(s) => ({
 		/** UUID primary key */
@@ -254,18 +262,15 @@ export const compiledContractsSignaturesTable = sqliteTable(
 		createdAt: s.text('created_at').notNull().default(sql`(datetime('now'))`),
 	}),
 	(table) => [
-		index('compiled_contracts_signatures_signature_idx').on(
-			table.signatureHash32,
-		),
-		index('compiled_contracts_signatures_type_signature_idx').on(
-			table.signatureType,
-			table.signatureHash32,
-		),
-		uniqueIndex('compiled_contracts_signatures_pseudo_pkey').on(
-			table.compilationId,
-			table.signatureHash32,
-			table.signatureType,
-		),
+		p
+			.index('compiled_contracts_signatures_signature_idx')
+			.on(table.signatureHash32),
+		p
+			.index('compiled_contracts_signatures_type_signature_idx')
+			.on(table.signatureType, table.signatureHash32),
+		p
+			.uniqueIndex('compiled_contracts_signatures_pseudo_pkey')
+			.on(table.compilationId, table.signatureHash32, table.signatureType),
 	],
 )
 
@@ -273,12 +278,12 @@ export const compiledContractsSignaturesTable = sqliteTable(
 // verified_contracts - Links deployments to compilations with match info
 // ============================================================================
 
-export const verifiedContractsTable = sqliteTable(
+export const verifiedContractsTable = p.sqliteTable(
 	'verified_contracts',
 	(s) => ({
 		/** Auto-increment primary key */
 		id: s.integer('id').primaryKey({ autoIncrement: true }),
-		...auditColumns(s),
+		...auditColumns(),
 		/** FK to contract_deployments.id */
 		deploymentId: s
 			.text('deployment_id')
@@ -311,12 +316,11 @@ export const verifiedContractsTable = sqliteTable(
 		}),
 	}),
 	(table) => [
-		index('verified_contracts_deployment_id').on(table.deploymentId),
-		index('verified_contracts_compilation_id').on(table.compilationId),
-		uniqueIndex('verified_contracts_pseudo_pkey').on(
-			table.compilationId,
-			table.deploymentId,
-		),
+		p.index('verified_contracts_deployment_id').on(table.deploymentId),
+		p.index('verified_contracts_compilation_id').on(table.compilationId),
+		p
+			.uniqueIndex('verified_contracts_pseudo_pkey')
+			.on(table.compilationId, table.deploymentId),
 	],
 )
 
@@ -324,7 +328,7 @@ export const verifiedContractsTable = sqliteTable(
 // verification_jobs - Tracks verification job status
 // ============================================================================
 
-export const verificationJobsTable = sqliteTable(
+export const verificationJobsTable = p.sqliteTable(
 	'verification_jobs',
 	(s) => ({
 		/** UUID primary key */
@@ -357,10 +361,9 @@ export const verificationJobsTable = sqliteTable(
 		externalVerification: s.text('external_verification'),
 	}),
 	(table) => [
-		index('verification_jobs_chain_id_address_idx').on(
-			table.chainId,
-			table.contractAddress,
-		),
+		p
+			.index('verification_jobs_chain_id_address_idx')
+			.on(table.chainId, table.contractAddress),
 	],
 )
 
@@ -368,7 +371,7 @@ export const verificationJobsTable = sqliteTable(
 // verification_jobs_ephemeral - Temporary data for verification jobs
 // ============================================================================
 
-export const verificationJobsEphemeralTable = sqliteTable(
+export const verificationJobsEphemeralTable = p.sqliteTable(
 	'verification_jobs_ephemeral',
 	(s) => ({
 		/** FK to verification_jobs.id (also primary key) */
