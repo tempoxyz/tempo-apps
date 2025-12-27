@@ -13,7 +13,8 @@
 		"format": "biome format --write .",
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
 		"postinstall": "pnpm gen:types",
-		"tail": "wrangler tail"
+		"tail": "wrangler tail",
+		"test": "vitest"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
@@ -26,9 +27,11 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "^0.8.0",
 		"@cloudflare/workers-types": "catalog:",
 		"@types/node": "catalog:",
 		"typescript": "catalog:",
+		"vitest": "~3.2.0",
 		"wrangler": "catalog:"
 	}
 }
