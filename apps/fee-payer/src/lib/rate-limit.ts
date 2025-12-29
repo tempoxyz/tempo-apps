@@ -10,32 +10,26 @@ import { Transaction } from 'viem/tempo'
  * Returns 429 if rate limit is exceeded.
  */
 export async function rateLimitMiddleware(c: Context, next: Next) {
-	// Skip rate limiting if AddressRateLimiter is not available (e.g., in tests)
 	if (!env.AddressRateLimiter) {
 		return next()
 	}
 
 	try {
-		// Clone the request to read the body without consuming the original
 		const clonedRequest = await cloneRawRequest(c.req)
 		// biome-ignore lint/suspicious/noExplicitAny: _
 		const request = RpcRequest.from((await clonedRequest.json()) as any)
 		const serialized = request.params?.[0] as `0x76${string}`
 
-		// Only rate limit if we have a valid serialized transaction
-		if (serialized && typeof serialized === 'string' && serialized.startsWith('0x76')) {
+		if (serialized?.startsWith('0x76')) {
 			const transaction = Transaction.deserialize(serialized)
 			// biome-ignore lint/suspicious/noExplicitAny: _
 			const from = (transaction as any).from
 
-			const { success } = await env.AddressRateLimiter.limit({
-				key: from,
-			})
-
+			const { success } = await env.AddressRateLimiter.limit({ key: from })
 			if (!success) return c.json({ error: 'Rate limit exceeded' }, 429)
 		}
 	} catch {
-		// If we can't parse the request, let it through - the handler will return appropriate error
+		// Let unparseable requests through - handler will return appropriate error
 	}
 
 	await next()
