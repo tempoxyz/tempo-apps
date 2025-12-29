@@ -17,8 +17,8 @@ concurrency:
 
 env:
   NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
-  VITE_TEMPO_ENV: localnet
-  VITE_TEMPO_TAG: latest
+  TEMPO_ENV: localnet
+  TEMPO_TAG: latest
 
 jobs:
   test:
