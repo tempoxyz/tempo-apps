@@ -11,9 +11,8 @@ const sponsorPrivateKey = Mnemonic.toPrivateKey(testMnemonic, {
 	path: Mnemonic.path({ account: 0 }),
 })
 
-const rpcUrl = (() => {
-	if (tempoEnv === 'testnet') return 'https://rpc.testnet.tempo.xyz'
-	if (tempoEnv === 'devnet') return 'https://rpc.devnet.tempoxyz.dev'
+// Only needed for localnet (dynamic port per test pool)
+const localnetRpcUrl = (() => {
 	const poolId = Number(process.env.VITEST_POOL_ID ?? 1)
 	return `http://localhost:9545/${poolId}`
 })()
@@ -29,9 +28,10 @@ export default defineWorkersConfig({
 					bindings: {
 						ALLOWED_ORIGINS: '*',
 						SPONSOR_PRIVATE_KEY: sponsorPrivateKey,
-						TEMPO_RPC_URL: rpcUrl,
 						TEMPO_ENV: tempoEnv,
 						INDEXSUPPLY_API_KEY: 'test-key',
+						// Only needed for localnet (dynamic port per test pool)
+						...(tempoEnv === 'localnet' && { TEMPO_RPC_URL: localnetRpcUrl }),
 					},
 				},
 			},

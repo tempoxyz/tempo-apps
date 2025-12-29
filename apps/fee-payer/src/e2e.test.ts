@@ -2,9 +2,22 @@ import { env, SELF } from 'cloudflare:test'
 import { Mnemonic } from 'ox'
 import { createClient, custom } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
-import { tempoLocalnet } from 'viem/chains'
+import { tempoDevnet, tempoLocalnet, tempoTestnet } from 'viem/chains'
 import { Account, withFeePayer } from 'viem/tempo'
 import { describe, expect, it } from 'vitest'
+
+const tempoChain =
+	env.TEMPO_ENV === 'devnet'
+		? tempoDevnet
+		: env.TEMPO_ENV === 'testnet'
+			? tempoTestnet
+			: tempoLocalnet
+
+// For localnet, use env var (dynamic port per pool), otherwise use chain definition
+const tempoRpcUrl =
+	env.TEMPO_ENV === 'localnet'
+		? env.TEMPO_RPC_URL
+		: tempoChain.rpcUrls.default.http[0]
 
 const testMnemonic =
 	'test test test test test test test test test test test junk'
@@ -52,7 +65,7 @@ function createFeePayerTransportWithSpy() {
 function createTempoTransport() {
 	return custom({
 		async request({ method, params }) {
-			const response = await fetch(env.TEMPO_RPC_URL, {
+			const response = await fetch(tempoRpcUrl, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
