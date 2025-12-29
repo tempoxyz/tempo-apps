@@ -33,7 +33,11 @@ import { getContractInfo } from '#lib/domain/contracts'
 import { PriceFormatter } from '#lib/formatting'
 import { useCopy, useIsMounted, useMediaQuery } from '#lib/hooks'
 import { buildTokenDescription, buildTokenOgImageUrl } from '#lib/og'
-import { holdersQueryOptions, transfersQueryOptions } from '#lib/queries'
+import {
+	firstTransferQueryOptions,
+	holdersQueryOptions,
+	transfersQueryOptions,
+} from '#lib/queries'
 import { getWagmiConfig } from '#wagmi.config.ts'
 import CopyIcon from '~icons/lucide/copy'
 import XIcon from '~icons/lucide/x'
@@ -95,55 +99,78 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const account = a && Address.validate(a) ? a : undefined
 		const offset = (page - 1) * limit
 
+		const config = getWagmiConfig()
+		const publicClient = getPublicClient(config)
+
+		// Validate the token exists by fetching metadata (required)
+		let metadata: Awaited<ReturnType<typeof Actions.token.getMetadata>>
 		try {
-			// Fetch holders data for OG image (also used by the page)
-			const holdersPromise = context.queryClient.ensureQueryData(
-				holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
-			)
-
-			if (page !== 1 || limit !== 10) {
-				context.queryClient.prefetchQuery(
-					holdersQueryOptions({ address, page, limit, offset }),
-				)
-			}
-
-			const config = getWagmiConfig()
-			const publicClient = getPublicClient(config)
-
-			// Fetch currency from contract (TIP-20 tokens have a currency() function)
-			const currencyPromise = publicClient
-				.readContract({
-					address: address,
-					abi: Abis.tip20,
-					functionName: 'currency',
-				})
-				.catch(() => undefined)
-
-			if (tab === 'transfers') {
-				// TODO: investigate & consider batch/multicall
-				const [metadata, transfers, holdersData, currency] = await Promise.all([
-					Actions.token.getMetadata(config, { token: address }),
-					context.queryClient.ensureQueryData(
-						transfersQueryOptions({ address, page, limit, offset, account }),
-					),
-					holdersPromise,
-					currencyPromise,
-				])
-				return { metadata, transfers, holdersData, currency }
-			}
-
-			// TODO: investigate & consider batch/multicall
-			const [metadata, holdersData, currency] = await Promise.all([
-				Actions.token.getMetadata(config, { token: address }),
-				holdersPromise,
-				currencyPromise,
-			])
-			return { metadata, transfers: undefined, holdersData, currency }
+			metadata = await Actions.token.getMetadata(config, { token: address })
 		} catch (error) {
-			console.error(error)
-			// Not a valid token - show 404 instead of redirecting to avoid potential loops
+			console.error('Failed to fetch token metadata:', error)
 			throw notFound()
 		}
+
+		// Fetch currency from contract (TIP-20 tokens have a currency() function)
+		const currencyPromise = publicClient
+			.readContract({
+				address: address,
+				abi: Abis.tip20,
+				functionName: 'currency',
+			})
+			.catch(() => undefined)
+
+		// Fetch holders data - optional, page still works if indexer fails
+		const holdersPromise = context.queryClient
+			.ensureQueryData(
+				holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
+			)
+			.catch((error) => {
+				console.error('Failed to fetch holders data:', error)
+				return undefined
+			})
+
+		// Fetch first transfer (created date) - optional
+		const firstTransferPromise = context.queryClient
+			.ensureQueryData(firstTransferQueryOptions({ address }))
+			.catch((error) => {
+				console.error('Failed to fetch first transfer data:', error)
+				return undefined
+			})
+
+		if (page !== 1 || limit !== 10) {
+			context.queryClient.prefetchQuery(
+				holdersQueryOptions({ address, page, limit, offset }),
+			)
+		}
+
+		if (tab === 'transfers') {
+			// Fetch transfers data - optional, page still works if indexer fails
+			const transfersPromise = context.queryClient
+				.ensureQueryData(
+					transfersQueryOptions({ address, page, limit, offset, account }),
+				)
+				.catch((error) => {
+					console.error('Failed to fetch transfers data:', error)
+					return undefined
+				})
+
+			const [transfers, holdersData, firstTransferData, currency] =
+				await Promise.all([
+					transfersPromise,
+					holdersPromise,
+					firstTransferPromise,
+					currencyPromise,
+				])
+			return { metadata, transfers, holdersData, firstTransferData, currency }
+		}
+
+		const [holdersData, firstTransferData, currency] = await Promise.all([
+			holdersPromise,
+			firstTransferPromise,
+			currencyPromise,
+		])
+		return { metadata, transfers: undefined, holdersData, firstTransferData, currency }
 	},
 	params: {
 		parse: z.object({
@@ -160,11 +187,12 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const title = `Token ${params.address.slice(0, 6)}…${params.address.slice(-4)} ⋅ Tempo Explorer`
 		const metadata = loaderData?.metadata
 		const holdersData = loaderData?.holdersData
+		const firstTransferData = loaderData?.firstTransferData
 		const currency = loaderData?.currency
 
 		// Format supply for OG image
-		const formatSupply = (totalSupply: string, decimals: number): string => {
-			const value = Number(formatUnits(BigInt(totalSupply), decimals))
+		const formatSupply = (totalSupply: bigint, decimals: number): string => {
+			const value = Number(formatUnits(totalSupply, decimals))
 			if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`
 			if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`
 			if (value >= 1e3)
@@ -173,8 +201,8 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		}
 
 		const supply =
-			holdersData?.totalSupply && metadata?.decimals !== undefined
-				? formatSupply(holdersData.totalSupply, metadata.decimals)
+			metadata?.totalSupply !== undefined && metadata?.decimals !== undefined
+				? formatSupply(metadata.totalSupply, metadata.decimals)
 				: undefined
 
 		const description = buildTokenDescription(
@@ -194,7 +222,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			currency,
 			holders: holdersData?.total,
 			supply,
-			created: holdersData?.created ?? undefined,
+			created: firstTransferData?.created ?? undefined,
 		})
 
 		return {
@@ -319,12 +347,16 @@ function TokenCard(props: {
 		holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
 	)
 
+	// Fetch first transfer (created date) asynchronously (was prefetched in loader)
+	const { data: firstTransferData } = useQuery(
+		firstTransferQueryOptions({ address }),
+	)
+
 	const { copy, notifying } = useCopy()
 
-	const totalSupply = holdersSummary?.totalSupply
-		? BigInt(holdersSummary.totalSupply)
-		: undefined
+	const totalSupply = metadata?.totalSupply
 	const totalHolders = holdersSummary?.total
+	const holdersCapped = holdersSummary?.totalCapped
 
 	return (
 		<InfoCard
@@ -377,9 +409,9 @@ function TokenCard(props: {
 								<span className="text-tertiary text-[13px]">{ellipsis}</span>
 							}
 						>
-							{holdersSummary?.created ? (
+							{firstTransferData?.created ? (
 								<span className="text-[13px] text-primary">
-									{holdersSummary.created}
+									{firstTransferData.created}
 								</span>
 							) : (
 								<span className="text-tertiary text-[13px]">{ellipsis}</span>
@@ -434,7 +466,9 @@ function TokenCard(props: {
 							}
 						>
 							{totalHolders !== undefined ? (
-								<span className="text-[13px] text-primary">{totalHolders}</span>
+								<span className="text-[13px] text-primary">
+									{holdersCapped ? '100k+' : totalHolders}
+								</span>
 							) : (
 								<span className="text-tertiary text-[13px]">{ellipsis}</span>
 							)}
@@ -514,9 +548,17 @@ function SectionsWrapper(props: {
 	const { data: holdersData, isPlaceholderData: isHoldersPlaceholder } =
 		useQuery(holdersOptions)
 
-	const { transfers = [], total: transfersTotal = 0 } = transfersData ?? {}
+	const {
+		transfers = [],
+		total: transfersTotal = 0,
+		totalCapped: transfersTotalCapped = false,
+	} = transfersData ?? {}
 
-	const { holders = [], total: holdersTotal = 0 } = holdersData ?? {}
+	const {
+		holders = [],
+		total: holdersTotal = 0,
+		totalCapped: holdersTotalCapped = false,
+	} = holdersData ?? {}
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 
@@ -551,7 +593,8 @@ function SectionsWrapper(props: {
 			sections={[
 				{
 					title: 'Transfers',
-					totalItems: transfersData && transfersTotal,
+					totalItems:
+						transfersData && (transfersTotalCapped ? '100k+' : transfersTotal),
 					itemsLabel: 'transfers',
 					contextual: account && (
 						<FilterIndicator account={account} tokenAddress={address} />
@@ -600,6 +643,8 @@ function SectionsWrapper(props: {
 								}))
 							}}
 							totalItems={transfersTotal}
+							displayCount={transfersTotal}
+							displayCountCapped={transfersTotalCapped}
 							page={page}
 							fetching={isTransfersPlaceholder}
 							loading={!transfersData}
@@ -612,7 +657,8 @@ function SectionsWrapper(props: {
 				},
 				{
 					title: 'Holders',
-					totalItems: holdersData && holdersTotal,
+					totalItems:
+						holdersData && (holdersTotalCapped ? '100k+' : holdersTotal),
 					itemsLabel: 'holders',
 					content: (
 						<DataGrid
@@ -621,25 +667,36 @@ function SectionsWrapper(props: {
 								tabs: holdersColumns,
 							}}
 							items={() =>
-								holders.map((holder) => ({
-									cells: [
-										<AddressCell key="address" address={holder.address} />,
-										<BalanceCell
-											key="balance"
-											balance={holder.balance}
-											decimals={metadata?.decimals}
-										/>,
-										<span key="percentage" className="text-[12px] text-primary">
-											{holder.percentage.toFixed(2)}%
-										</span>,
-									],
-									link: {
-										href: `/token/${address}?a=${holder.address}`,
-										title: `View transfers for ${holder.address}`,
-									},
-								}))
+								holders.map((holder) => {
+									const percentage =
+										metadata?.totalSupply && metadata.totalSupply > 0n
+											? Number(
+													(BigInt(holder.balance) * 10_000n) /
+														metadata.totalSupply,
+												) / 100
+											: 0
+									return {
+										cells: [
+											<AddressCell key="address" address={holder.address} />,
+											<BalanceCell
+												key="balance"
+												balance={holder.balance}
+												decimals={metadata?.decimals}
+											/>,
+											<span key="percentage" className="text-[12px] text-primary">
+												{percentage.toFixed(2)}%
+											</span>,
+										],
+										link: {
+											href: `/token/${address}?a=${holder.address}`,
+											title: `View transfers for ${holder.address}`,
+										},
+									}
+								})
 							}
 							totalItems={holdersTotal}
+							displayCount={holdersTotal}
+							displayCountCapped={holdersTotalCapped}
 							page={page}
 							fetching={isHoldersPlaceholder}
 							loading={!holdersData}

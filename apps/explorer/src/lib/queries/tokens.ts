@@ -1,6 +1,10 @@
 import { keepPreviousData, queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
-import { fetchHolders, fetchTransfers } from '#lib/server/token.server.ts'
+import {
+	fetchFirstTransfer,
+	fetchHolders,
+	fetchTransfers,
+} from '#lib/server/token.server.ts'
 import { fetchTokens } from '#lib/server/tokens.server.ts'
 
 export const TOKENS_PER_PAGE = 12
@@ -60,6 +64,19 @@ export function holdersQueryOptions(params: HoldersQueryParams) {
 			return data
 		},
 		placeholderData: keepPreviousData,
+	})
+}
+
+export function firstTransferQueryOptions(params: { address: Address.Address }) {
+	return queryOptions({
+		queryKey: ['token-first-transfer', params.address],
+		queryFn: async () => {
+			const data = await fetchFirstTransfer({
+				data: { address: params.address },
+			})
+			return data
+		},
+		staleTime: 60_000,
 	})
 }
 

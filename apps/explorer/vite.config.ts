@@ -19,7 +19,7 @@ export default defineConfig((config) => {
 	})()
 	const port = Number(lastPort ?? env.PORT ?? 3_000)
 
-	const allowedHosts = env.ALLOWED_HOSTS.split(',') ?? []
+	const allowedHosts = env.ALLOWED_HOSTS?.split(',') ?? []
 
 	return {
 		define: {
