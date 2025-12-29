@@ -18,9 +18,13 @@ const userAccount = Account.fromSecp256k1(
 	}),
 )
 
-function createFeePayerTransport() {
-	return custom({
+function createFeePayerTransportWithSpy() {
+	const requests: Array<{ method: string; params: unknown }> = []
+
+	const transport = custom({
 		async request({ method, params }) {
+			requests.push({ method, params })
+
 			const response = await SELF.fetch('https://fee-payer.test/', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -41,6 +45,8 @@ function createFeePayerTransport() {
 			return data.result
 		},
 	})
+
+	return { transport, requests }
 }
 
 function createTempoTransport() {
@@ -112,14 +118,15 @@ describe('fee-payer integration', () => {
 
 	describe('transaction sponsorship', () => {
 		it('sponsors transaction (sign-only via eth_signRawTransaction)', async () => {
+			const { transport: feePayerTransport, requests: feePayerRequests } =
+				createFeePayerTransportWithSpy()
+
 			const client = createClient({
 				account: userAccount,
 				chain: tempoLocalnet,
-				transport: withFeePayer(
-					createTempoTransport(),
-					createFeePayerTransport(),
-					{ policy: 'sign-only' },
-				),
+				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
+					policy: 'sign-only',
+				}),
 			})
 
 			const receipt = await sendTransactionSync(client, {
@@ -133,17 +140,23 @@ describe('fee-payer integration', () => {
 			expect(receipt.transactionHash).toBeDefined()
 			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
 			expect(receipt.feePayer.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+
+			// Assert RPC methods sent to fee-payer service
+			expect(feePayerRequests).toHaveLength(1)
+			expect(feePayerRequests[0].method).toBe('eth_signRawTransaction')
+			expect(feePayerRequests[0].params).toBeDefined()
 		})
 
 		it('sponsors and broadcasts transaction (sign-and-broadcast)', async () => {
+			const { transport: feePayerTransport, requests: feePayerRequests } =
+				createFeePayerTransportWithSpy()
+
 			const client = createClient({
 				account: userAccount,
 				chain: tempoLocalnet,
-				transport: withFeePayer(
-					createTempoTransport(),
-					createFeePayerTransport(),
-					{ policy: 'sign-and-broadcast' },
-				),
+				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
+					policy: 'sign-and-broadcast',
+				}),
 			})
 
 			const receipt = await sendTransactionSync(client, {
@@ -159,6 +172,11 @@ describe('fee-payer integration', () => {
 			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
 			expect(receipt.feePayer.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 			expect(receipt.status).toBe('success')
+
+			// Assert RPC methods sent to fee-payer service
+			expect(feePayerRequests).toHaveLength(1)
+			expect(feePayerRequests[0].method).toBe('eth_sendRawTransactionSync')
+			expect(feePayerRequests[0].params).toBeDefined()
 		})
 	})
 })
