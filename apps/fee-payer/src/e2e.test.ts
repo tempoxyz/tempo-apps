@@ -68,13 +68,6 @@ function createTempoTransport() {
 	})
 }
 
-function getExplorerUrl(txHash: string): string {
-	if (env.VITE_TEMPO_ENV === 'testnet') {
-		return `https://explore.tempo.xyz/tx/${txHash}`
-	}
-	return `http://localhost:9545/tx/${txHash}`
-}
-
 describe('fee-payer integration', () => {
 	describe('request handling', () => {
 		it('returns error for unsupported method', async () => {
@@ -135,7 +128,7 @@ describe('fee-payer integration', () => {
 				value: 0n,
 			})
 
-			console.log(`Transaction: ${getExplorerUrl(receipt.transactionHash)}`)
+			console.log(`Transaction hash: ${receipt.transactionHash}`)
 
 			expect(receipt.transactionHash).toBeDefined()
 			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
@@ -159,7 +152,7 @@ describe('fee-payer integration', () => {
 				value: 0n,
 			})
 
-			console.log(`Transaction: ${getExplorerUrl(receipt.transactionHash)}`)
+			console.log(`Transaction hash: ${receipt.transactionHash}`)
 
 			expect(receipt.transactionHash).toBeDefined()
 			expect(receipt.blockNumber).toBeGreaterThan(0n)
