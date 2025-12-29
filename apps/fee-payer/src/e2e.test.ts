@@ -4,9 +4,8 @@ import { createClient, custom } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
 import { tempoLocalnet } from 'viem/chains'
 import { Account, withFeePayer } from 'viem/tempo'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-// Test accounts (same mnemonic as viem tests)
 const testMnemonic =
 	'test test test test test test test test test test test junk'
 
@@ -32,7 +31,7 @@ function createFeePayerTransport() {
 			})
 			const data = (await response.json()) as {
 				result?: unknown
-				error?: { code: number; message: string }
+				error?: { code: number; message: string; data?: unknown }
 			}
 			if (data.error) {
 				throw new Error(data.error.message || 'RPC Error')
@@ -67,26 +66,12 @@ function createTempoTransport() {
 	})
 }
 
-// Check if local Tempo is available (Docker must be running)
-async function isTempoAvailable(): Promise<boolean> {
-	try {
-		const response = await fetch(env.TEMPO_RPC_URL, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				jsonrpc: '2.0',
-				id: 1,
-				method: 'web3_clientVersion',
-			}),
-		})
-		return response.ok
-	} catch {
-		return false
+function getExplorerUrl(txHash: string): string {
+	if (env.VITE_TEMPO_ENV === 'testnet') {
+		return `https://explore.tempo.xyz/tx/${txHash}`
 	}
+	return `http://localhost:9545/tx/${txHash}`
 }
-
-// Track Tempo availability for conditional test execution
-let tempoAvailable = false
 
 describe('fee-payer integration', () => {
 	describe('request handling', () => {
@@ -118,7 +103,6 @@ describe('fee-payer integration', () => {
 				},
 			})
 
-			// Should return 204 or 200 for preflight
 			expect([200, 204]).toContain(response.status)
 		})
 
@@ -127,20 +111,12 @@ describe('fee-payer integration', () => {
 				method: 'GET',
 			})
 
-			// GET without JSON body should return some response
 			expect(response.status).toBeLessThan(500)
 		})
 	})
 
-	// Transaction sponsorship tests require local Tempo Docker
-	// Run with: docker run -d -p 9545:9545 ghcr.io/tempoxyz/tempo:latest
-	describe('transaction sponsorship (requires Docker)', () => {
-		beforeAll(async () => {
-			tempoAvailable = await isTempoAvailable()
-		})
-
-		it('sponsors transaction (sign-only via eth_signRawTransaction)', async (ctx) => {
-			if (!tempoAvailable) ctx.skip()
+	describe('transaction sponsorship', () => {
+		it('sponsors transaction (sign-only via eth_signRawTransaction)', async () => {
 			const client = createClient({
 				account: userAccount,
 				chain: tempoLocalnet,
@@ -157,12 +133,13 @@ describe('fee-payer integration', () => {
 				value: 0n,
 			})
 
+			console.log(`Transaction: ${getExplorerUrl(receipt.transactionHash)}`)
+
 			expect(receipt).toBeDefined()
 			expect(receipt.feePayer).toBeDefined()
 		})
 
-		it('sponsors and broadcasts transaction (sign-and-broadcast)', async (ctx) => {
-			if (!tempoAvailable) ctx.skip()
+		it('sponsors and broadcasts transaction (sign-and-broadcast)', async () => {
 			const client = createClient({
 				account: userAccount,
 				chain: tempoLocalnet,
@@ -178,6 +155,8 @@ describe('fee-payer integration', () => {
 				to: '0x0000000000000000000000000000000000000000',
 				value: 0n,
 			})
+
+			console.log(`Transaction: ${getExplorerUrl(receipt.transactionHash)}`)
 
 			expect(receipt).toBeDefined()
 			expect(receipt.feePayer).toBeDefined()

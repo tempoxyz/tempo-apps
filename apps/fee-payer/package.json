@@ -14,7 +14,9 @@
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
 		"postinstall": "pnpm gen:types",
 		"tail": "wrangler tail",
-		"test": "vitest"
+		"test": "vitest --run",
+		"test:watch": "vitest",
+		"test:e2e": "VITE_TEMPO_ENV=testnet vitest --run"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
@@ -30,6 +32,7 @@
 		"@cloudflare/vitest-pool-workers": "^0.8.0",
 		"@cloudflare/workers-types": "catalog:",
 		"@types/node": "catalog:",
+		"prool": "~0.2.1",
 		"typescript": "catalog:",
 		"vitest": "~3.2.0",
 		"wrangler": "catalog:"
