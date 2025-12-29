@@ -9,6 +9,8 @@ import { describe, expect, it } from 'vitest'
 const testMnemonic =
 	'test test test test test test test test test test test junk'
 
+const sponsorAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
+
 const userAccount = Account.fromSecp256k1(
 	Mnemonic.toPrivateKey(testMnemonic, {
 		as: 'Hex',
@@ -135,8 +137,9 @@ describe('fee-payer integration', () => {
 
 			console.log(`Transaction: ${getExplorerUrl(receipt.transactionHash)}`)
 
-			expect(receipt).toBeDefined()
-			expect(receipt.feePayer).toBeDefined()
+			expect(receipt.transactionHash).toBeDefined()
+			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
+			expect(receipt.feePayer.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 		})
 
 		it('sponsors and broadcasts transaction (sign-and-broadcast)', async () => {
@@ -158,8 +161,10 @@ describe('fee-payer integration', () => {
 
 			console.log(`Transaction: ${getExplorerUrl(receipt.transactionHash)}`)
 
-			expect(receipt).toBeDefined()
-			expect(receipt.feePayer).toBeDefined()
+			expect(receipt.transactionHash).toBeDefined()
+			expect(receipt.blockNumber).toBeGreaterThan(0n)
+			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
+			expect(receipt.feePayer.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 			expect(receipt.status).toBe('success')
 		})
 	})
