@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config'
 import { Mnemonic } from 'ox'
 
-const tempoEnv = process.env.VITE_TEMPO_ENV ?? 'localnet'
+const tempoEnv = process.env.TEMPO_ENV ?? 'localnet'
 
 const testMnemonic =
 	'test test test test test test test test test test test junk'

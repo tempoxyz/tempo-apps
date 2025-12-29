@@ -16,7 +16,7 @@
 		"tail": "wrangler tail",
 		"test": "vitest --run",
 		"test:watch": "vitest",
-		"test:e2e": "VITE_TEMPO_ENV=testnet vitest --run"
+		"test:e2e": "TEMPO_ENV=testnet vitest --run"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
