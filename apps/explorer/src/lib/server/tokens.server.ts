@@ -47,14 +47,22 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				.selectFrom('tokencreated')
 				.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
 				.where('chain', '=', chainId)
-				.orderBy('block_timestamp', 'desc')
+				.orderBy('block_num', 'desc')
 				.limit(limit)
 				.offset(offset)
 				.execute(),
-			QB.withSignatures([EVENT_SIGNATURE])
-				.selectFrom('tokencreated')
-				.select((eb) => eb.fn.count('token').as('count'))
-				.where('chain', '=', chainId)
+				
+			// count is an expensive, columnar-based query. we will count up 
+			// to the first 100k rows
+			QB.selectFrom(
+				QB.withSignatures([EVENT_SIGNATURE])
+					.selectFrom('tokencreated')
+					.select((eb) => eb.lit(1).as('x'))
+					.where('chain', '=', chainId)
+					.limit(100_000)
+					.as('subquery'),
+			)
+				.select((eb) => eb.fn.count('x').as('count'))
 				.executeTakeFirst(),
 		])
 
