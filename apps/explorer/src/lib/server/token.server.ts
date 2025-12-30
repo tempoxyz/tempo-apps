@@ -390,7 +390,6 @@ const FetchOgStatsInputSchema = z.object({
 })
 
 export type OgStatsApiResponse = {
-	transfersThreshold: number | null
 	holders: { count: number; isExact: boolean } | null
 	created: string | null
 }
@@ -413,60 +412,37 @@ export const fetchOgStats = createServerFn({ method: 'POST' })
 
 			const cached = ogStatsCache.get(cacheKey)
 			const now = Date.now()
+
 			if (cached && now - cached.timestamp < OG_CACHE_TTL) {
-				return cached.data
+				let result = cached.data
+
+				// There might be holders data now so check that
+				if (!result.holders) {
+					const holders = await findHoldersThreshold(data.address, chainId)
+					if (holders) {
+						result = { ...result, holders }
+						ogStatsCache.set(cacheKey, { data: result, timestamp: now })
+					}
+				}
+
+				return result
 			}
 
-			const [transfersThreshold, holders, created] = await Promise.all([
-				findTransfersThreshold(data.address, chainId),
+			const [holders, created] = await Promise.all([
 				findHoldersThreshold(data.address, chainId),
 				fetchFirstTransferData(data.address, chainId),
 			])
 
-			const result = { transfersThreshold, holders, created }
+			const result = { holders, created }
 
 			ogStatsCache.set(cacheKey, { data: result, timestamp: now })
 
 			return result
 		} catch (error) {
 			console.error('Failed to fetch OG stats:', error)
-			return { transfersThreshold: null, holders: null, created: null }
+			return { holders: null, created: null }
 		}
 	})
-
-async function findTransfersThreshold(
-	address: Address.Address,
-	chainId: number,
-): Promise<number | null> {
-	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
-
-	const results = await Promise.all(
-		OG_THRESHOLDS.map(async (threshold) => {
-			const result = await QB.selectFrom(
-				qb
-					.selectFrom('transfer')
-					.select((eb) => eb.lit(1).as('x'))
-					.where('chain', '=', chainId)
-					.where('address', '=', address)
-					.limit(threshold + 1)
-					.as('sub'),
-			)
-				.select((eb) => eb.fn.count('x').as('c'))
-				.executeTakeFirst()
-
-			const count = Number(result?.c ?? 0)
-			return { threshold, exceeded: count > threshold }
-		}),
-	)
-
-	let lastExceeded: number | null = null
-	for (const { threshold, exceeded } of results) {
-		if (exceeded) {
-			lastExceeded = threshold
-		}
-	}
-	return lastExceeded
-}
 
 async function findHoldersThreshold(
 	address: Address.Address,
