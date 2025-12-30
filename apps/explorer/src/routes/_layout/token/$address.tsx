@@ -102,7 +102,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const config = getWagmiConfig()
 		const publicClient = getPublicClient(config)
 
-		// Validate the token exists by fetching metadata (required)
+		// Validate the token exists by fetching metadata
 		let metadata: Awaited<ReturnType<typeof Actions.token.getMetadata>>
 		try {
 			metadata = await Actions.token.getMetadata(config, { token: address })
@@ -111,7 +111,6 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			throw notFound()
 		}
 
-		// Fetch currency from contract (TIP-20 tokens have a currency() function)
 		const currencyPromise = publicClient
 			.readContract({
 				address: address,
@@ -120,7 +119,6 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			})
 			.catch(() => undefined)
 
-		// Fetch holders data - optional, page still works if indexer fails
 		const holdersPromise = context.queryClient
 			.ensureQueryData(
 				holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
@@ -130,7 +128,6 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				return undefined
 			})
 
-		// Fetch first transfer (created date) - optional
 		const firstTransferPromise = context.queryClient
 			.ensureQueryData(firstTransferQueryOptions({ address }))
 			.catch((error) => {
@@ -145,7 +142,6 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		}
 
 		if (tab === 'transfers') {
-			// Fetch transfers data - optional, page still works if indexer fails
 			const transfersPromise = context.queryClient
 				.ensureQueryData(
 					transfersQueryOptions({ address, page, limit, offset, account }),
@@ -170,7 +166,13 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			firstTransferPromise,
 			currencyPromise,
 		])
-		return { metadata, transfers: undefined, holdersData, firstTransferData, currency }
+		return {
+			metadata,
+			transfers: undefined,
+			holdersData,
+			firstTransferData,
+			currency,
+		}
 	},
 	params: {
 		parse: z.object({
@@ -683,7 +685,10 @@ function SectionsWrapper(props: {
 												balance={holder.balance}
 												decimals={metadata?.decimals}
 											/>,
-											<span key="percentage" className="text-[12px] text-primary">
+											<span
+												key="percentage"
+												className="text-[12px] text-primary"
+											>
 												{percentage.toFixed(2)}%
 											</span>,
 										],
