@@ -1,6 +1,6 @@
 import { createServer, port } from './prool.js'
 
-const tempoEnv = process.env.TEMPO_ENV ?? 'localnet'
+const tempoEnv = (process.env.TEMPO_ENV ?? 'localnet') as string
 
 async function waitForTempo(maxRetries = 10, delayMs = 500): Promise<void> {
 	const url = `http://localhost:${port}/1`

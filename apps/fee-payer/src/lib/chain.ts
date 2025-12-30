@@ -2,10 +2,14 @@ import { env } from 'cloudflare:workers'
 import { tempoDevnet, tempoLocalnet, tempoTestnet } from 'viem/chains'
 import { alphaUsd } from './consts.js'
 
-export const tempoChain = (() => {
-	if (env.TEMPO_ENV === 'devnet')
-		return tempoDevnet.extend({ feeToken: alphaUsd })
-	if (env.TEMPO_ENV === 'localnet')
-		return tempoLocalnet.extend({ feeToken: alphaUsd })
-	return tempoTestnet.extend({ feeToken: alphaUsd })
-})()
+const chains = {
+	devnet: tempoDevnet,
+	localnet: tempoLocalnet,
+	testnet: tempoTestnet,
+}
+
+type TempoEnv = keyof typeof chains
+
+export const tempoChain = (
+	chains[env.TEMPO_ENV as TempoEnv] ?? tempoTestnet
+).extend({ feeToken: alphaUsd })
