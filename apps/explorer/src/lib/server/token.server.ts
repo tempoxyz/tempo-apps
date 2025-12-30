@@ -391,7 +391,7 @@ const FetchOgStatsInputSchema = z.object({
 
 export type OgStatsApiResponse = {
 	transfersThreshold: number | null
-	holdersThreshold: number | null
+	holders: { count: number; isExact: boolean } | null
 	created: string | null
 }
 
@@ -417,22 +417,20 @@ export const fetchOgStats = createServerFn({ method: 'POST' })
 				return cached.data
 			}
 
-			const [transfersThreshold, holdersThreshold, created] = await Promise.all(
-				[
-					findTransfersThreshold(data.address, chainId),
-					findHoldersThreshold(data.address, chainId),
-					fetchFirstTransferData(data.address, chainId),
-				],
-			)
+			const [transfersThreshold, holders, created] = await Promise.all([
+				findTransfersThreshold(data.address, chainId),
+				findHoldersThreshold(data.address, chainId),
+				fetchFirstTransferData(data.address, chainId),
+			])
 
-			const result = { transfersThreshold, holdersThreshold, created }
+			const result = { transfersThreshold, holders, created }
 
 			ogStatsCache.set(cacheKey, { data: result, timestamp: now })
 
 			return result
 		} catch (error) {
 			console.error('Failed to fetch OG stats:', error)
-			return { transfersThreshold: null, holdersThreshold: null, created: null }
+			return { transfersThreshold: null, holders: null, created: null }
 		}
 	})
 
@@ -473,14 +471,18 @@ async function findTransfersThreshold(
 async function findHoldersThreshold(
 	address: Address.Address,
 	chainId: number,
-): Promise<number | null> {
+): Promise<{ count: number; isExact: boolean } | null> {
 	const cacheKey = `${chainId}-${address}`
 	const cached = holdersCache.get(cacheKey)
 	const now = Date.now()
 
-	// Use hour long TTL for holders data
 	if (cached && now - cached.timestamp < OG_CACHE_TTL) {
 		const count = cached.data.allHolders.length
+
+		if (count < OG_THRESHOLDS[0]) {
+			return { count, isExact: true }
+		}
+
 		let lastExceeded: number | null = null
 		for (const threshold of OG_THRESHOLDS) {
 			if (count > threshold) {
@@ -489,7 +491,7 @@ async function findHoldersThreshold(
 				break
 			}
 		}
-		return lastExceeded
+		return lastExceeded ? { count: lastExceeded, isExact: false } : null
 	}
 
 	// Skip expensive holder count query for OG images - it times out on high-volume tokens

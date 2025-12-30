@@ -150,9 +150,15 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				? formatSupply(metadata.totalSupply, metadata.decimals)
 				: undefined
 
-		// Format threshold as range (e.g., "> 10,000")
-		const formatThreshold = (threshold: number | null | undefined) =>
-			threshold ? `> ${threshold.toLocaleString()}` : undefined
+		// Format holders count (exact for small counts, threshold for large)
+		const formatHolders = (
+			holders: { count: number; isExact: boolean } | null | undefined,
+		) => {
+			if (!holders) return undefined
+			return holders.isExact
+				? holders.count.toLocaleString()
+				: `> ${holders.count.toLocaleString()}`
+		}
 
 		const description = buildTokenDescription(
 			metadata
@@ -169,7 +175,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			name: metadata?.name,
 			symbol: metadata?.symbol,
 			currency,
-			holders: formatThreshold(ogStats?.holdersThreshold),
+			holders: formatHolders(ogStats?.holders),
 			supply,
 			created: ogStats?.created ?? undefined,
 		})
