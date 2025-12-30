@@ -434,7 +434,6 @@ export const fetchOgStats = createServerFn({ method: 'POST' })
 			])
 
 			const result = { holders, created }
-
 			ogStatsCache.set(cacheKey, { data: result, timestamp: now })
 
 			return result
@@ -455,7 +454,7 @@ async function findHoldersThreshold(
 	if (cached && now - cached.timestamp < OG_CACHE_TTL) {
 		const count = cached.data.allHolders.length
 
-		if (count < OG_THRESHOLDS[0]) {
+		if (count <= OG_THRESHOLDS[0]) {
 			return { count, isExact: true }
 		}
 
