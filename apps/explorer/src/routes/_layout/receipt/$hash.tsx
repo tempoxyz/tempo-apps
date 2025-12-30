@@ -1,7 +1,12 @@
 import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { createFileRoute, notFound, rootRouteId } from '@tanstack/react-router'
+import {
+	createFileRoute,
+	notFound,
+	rootRouteId,
+	useNavigate,
+} from '@tanstack/react-router'
 import { Hex, Json, Value } from 'ox'
 import { createPublicClient, http } from 'viem'
 import { getBlock, getTransaction } from 'viem/actions'
@@ -14,6 +19,7 @@ import { parseKnownEvents } from '#lib/domain/known-events'
 import { LineItems } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import { useKeyboardShortcut } from '#lib/hooks'
 import {
 	buildTxDescription,
 	formatEventForOgServer,
@@ -296,6 +302,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 
 function Component() {
 	const { hash } = Route.useParams()
+	const navigate = useNavigate()
 	const loaderData = Route.useLoaderData() as Awaited<
 		ReturnType<typeof fetchReceiptData>
 	>
@@ -304,6 +311,10 @@ function Component() {
 		...receiptDetailQueryOptions({ hash }),
 		initialData: loaderData,
 	})
+
+	useKeyboardShortcut('t', () =>
+		navigate({ to: '/tx/$hash', params: { hash } }),
+	)
 
 	const { block, knownEvents, lineItems, receipt } = data
 

@@ -33,7 +33,7 @@ import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
-import { useCopy, useMediaQuery } from '#lib/hooks'
+import { useCopy, useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription } from '#lib/og'
 import {
 	autoloadAbiQueryOptions,
@@ -162,6 +162,13 @@ function RouteComponent() {
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
+
+	useKeyboardShortcut('t', () =>
+		navigate({
+			to: '/receipt/$hash',
+			params: { hash: receipt.transactionHash },
+		}),
+	)
 
 	const calls = 'calls' in transaction ? transaction.calls : undefined
 	const hasCalls = Boolean(calls && calls.length > 0)
