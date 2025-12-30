@@ -14,7 +14,7 @@ const IS = IDX.IndexSupply.create({
 const QB = IDX.QueryBuilder.from(IS)
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
-const HOLDERS_CACHING = 60_000
+const CACHE_TTL = 60_000
 const COUNT_CAP = 100_000
 
 const holdersCache = new Map<
@@ -80,7 +80,7 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 
 			let allHolders: Array<{ address: string; balance: bigint }>
 
-			if (cached && now - cached.timestamp < HOLDERS_CACHING) {
+			if (cached && now - cached.timestamp < CACHE_TTL) {
 				allHolders = cached.data.allHolders
 			} else {
 				allHolders = await fetchHoldersData(data.address, chainId)
@@ -176,7 +176,7 @@ async function fetchFirstTransferData(
 	const cached = firstTransferCache.get(cacheKey)
 	const now = Date.now()
 
-	if (cached && now - cached.timestamp < HOLDERS_CACHING) {
+	if (cached && now - cached.timestamp < CACHE_TTL) {
 		return cached.data
 	}
 
