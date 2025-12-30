@@ -20,9 +20,9 @@ export const fetchLatestBlock = createServerFn({ method: 'GET' }).handler(
 				.where('chain', '=', chainId)
 				.orderBy('num', 'desc')
 				.limit(1)
-				.executeTakeFirst()
+				.executeTakeFirstOrThrow()
 
-			return result ? BigInt(result.num) : undefined
+			return BigInt(result.num)
 		} catch (error) {
 			console.error('Failed to fetch latest block:', error)
 			return undefined
