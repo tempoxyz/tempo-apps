@@ -18,6 +18,7 @@ concurrency:
 env:
   NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
   TEMPO_ENV: localnet
+  TEMPO_TAG: latest
 
 jobs:
   test:
@@ -26,7 +27,7 @@ jobs:
 
     steps:
       - name: Clone repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v5
         with:
           submodules: 'recursive'
 

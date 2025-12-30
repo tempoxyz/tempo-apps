@@ -1,7 +1,6 @@
 import { join } from 'node:path'
 import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config'
 import { Mnemonic } from 'ox'
-import 'dotenv/config'
 
 const tempoEnv = process.env.TEMPO_ENV ?? 'localnet'
 
@@ -13,8 +12,6 @@ const sponsorPrivateKey = Mnemonic.toPrivateKey(testMnemonic, {
 })
 
 const rpcUrl = (() => {
-	if (tempoEnv === 'mainnet')
-		return 'https://eng:zealous-mayer@rpc.mainnet.tempo.xyz'
 	if (tempoEnv === 'testnet') return 'https://rpc.testnet.tempo.xyz'
 	if (tempoEnv === 'devnet') return 'https://rpc.devnet.tempoxyz.dev'
 	const poolId = Number(process.env.VITEST_POOL_ID ?? 1)
@@ -23,8 +20,8 @@ const rpcUrl = (() => {
 
 export default defineWorkersConfig({
 	test: {
-		include: ['**/e2e.test.ts', '**/*.test.ts'],
-		globalSetup: [join(__dirname, './test/setup.global.ts')],
+		include: ['src/**/e2e.test.ts'],
+		globalSetup: [join(__dirname, './src/test/setup.global.ts')],
 		poolOptions: {
 			workers: {
 				wrangler: { configPath: './wrangler.jsonc' },
