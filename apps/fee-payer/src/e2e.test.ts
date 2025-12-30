@@ -5,6 +5,7 @@ import { sendTransactionSync } from 'viem/actions'
 import { tempoDevnet, tempoLocalnet, tempoTestnet } from 'viem/chains'
 import { Account, withFeePayer } from 'viem/tempo'
 import { describe, expect, it } from 'vitest'
+import { port } from './test/prool.js'
 
 const tempoChain =
 	env.TEMPO_ENV === 'devnet'
@@ -13,10 +14,10 @@ const tempoChain =
 			? tempoTestnet
 			: tempoLocalnet
 
-// For localnet, use env var (dynamic port per pool), otherwise use chain definition
+// For localnet, construct URL from pool ID (dynamic port), otherwise use chain definition
 const tempoRpcUrl =
 	env.TEMPO_ENV === 'localnet'
-		? env.TEMPO_RPC_URL
+		? `http://localhost:${port}/${env.VITEST_POOL_ID ?? 1}`
 		: tempoChain.rpcUrls.default.http[0]
 
 const testMnemonic =
