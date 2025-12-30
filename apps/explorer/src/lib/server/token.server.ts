@@ -15,6 +15,7 @@ const QB = IDX.QueryBuilder.from(IS)
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const CACHE_TTL = 60_000
+const OG_CACHE_TTL = 3_600_000 // 1 hour
 const COUNT_CAP = 100_000
 
 const holdersCache = new Map<
@@ -380,6 +381,121 @@ async function fetchTotalCount(
 	const capped = count >= COUNT_CAP
 
 	return { count, capped }
+}
+
+const OG_THRESHOLDS = [100, 1_000, 10_000, 100_000] as const
+
+const FetchOgStatsInputSchema = z.object({
+	address: zAddress({ lowercase: true }),
+})
+
+export type OgStatsApiResponse = {
+	transfersThreshold: number | null
+	holdersThreshold: number | null
+	created: string | null
+}
+
+const ogStatsCache = new Map<
+	string,
+	{
+		data: OgStatsApiResponse
+		timestamp: number
+	}
+>()
+
+export const fetchOgStats = createServerFn({ method: 'POST' })
+	.inputValidator((input) => FetchOgStatsInputSchema.parse(input))
+	.handler(async ({ data }) => {
+		try {
+			const config = getWagmiConfig()
+			const chainId = getChainId(config)
+			const cacheKey = `${chainId}-${data.address}`
+
+			const cached = ogStatsCache.get(cacheKey)
+			const now = Date.now()
+			if (cached && now - cached.timestamp < OG_CACHE_TTL) {
+				return cached.data
+			}
+
+			const [transfersThreshold, holdersThreshold, created] = await Promise.all(
+				[
+					findTransfersThreshold(data.address, chainId),
+					findHoldersThreshold(data.address, chainId),
+					fetchFirstTransferData(data.address, chainId),
+				],
+			)
+
+			const result = { transfersThreshold, holdersThreshold, created }
+
+			ogStatsCache.set(cacheKey, { data: result, timestamp: now })
+
+			return result
+		} catch (error) {
+			console.error('Failed to fetch OG stats:', error)
+			return { transfersThreshold: null, holdersThreshold: null, created: null }
+		}
+	})
+
+async function findTransfersThreshold(
+	address: Address.Address,
+	chainId: number,
+): Promise<number | null> {
+	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
+
+	const results = await Promise.all(
+		OG_THRESHOLDS.map(async (threshold) => {
+			const result = await QB.selectFrom(
+				qb
+					.selectFrom('transfer')
+					.select((eb) => eb.lit(1).as('x'))
+					.where('chain', '=', chainId)
+					.where('address', '=', address)
+					.limit(threshold + 1)
+					.as('sub'),
+			)
+				.select((eb) => eb.fn.count('x').as('c'))
+				.executeTakeFirst()
+
+			const count = Number(result?.c ?? 0)
+			return { threshold, exceeded: count > threshold }
+		}),
+	)
+
+	let lastExceeded: number | null = null
+	for (const { threshold, exceeded } of results) {
+		if (exceeded) {
+			lastExceeded = threshold
+		}
+	}
+	return lastExceeded
+}
+
+async function findHoldersThreshold(
+	address: Address.Address,
+	chainId: number,
+): Promise<number | null> {
+	const cacheKey = `${chainId}-${address}`
+	const cached = holdersCache.get(cacheKey)
+	const now = Date.now()
+
+	// Use hour long TTL for holders data
+	if (cached && now - cached.timestamp < OG_CACHE_TTL) {
+		const count = cached.data.allHolders.length
+		let lastExceeded: number | null = null
+		for (const threshold of OG_THRESHOLDS) {
+			if (count > threshold) {
+				lastExceeded = threshold
+			} else {
+				break
+			}
+		}
+		return lastExceeded
+	}
+
+	// Skip expensive holder count query for OG images - it times out on high-volume tokens
+	// (GROUP BY has to scan all rows before LIMIT can be applied)
+	// The actual holder count will be fetched client-side where it can stream in
+	return null
 }
 
 export { MAX_LIMIT, DEFAULT_LIMIT }
