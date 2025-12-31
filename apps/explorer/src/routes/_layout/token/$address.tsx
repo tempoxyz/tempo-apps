@@ -38,10 +38,7 @@ import {
 	holdersQueryOptions,
 	transfersQueryOptions,
 } from '#lib/queries'
-<<<<<<< HEAD
 import { fetchOgStats } from '#lib/server/token.server.ts'
-=======
->>>>>>> main
 import { getWagmiConfig } from '#wagmi.config.ts'
 import CopyIcon from '~icons/lucide/copy'
 import XIcon from '~icons/lucide/x'
@@ -97,14 +94,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		const config = getWagmiConfig()
 		const publicClient = getPublicClient(config)
 
-<<<<<<< HEAD
 		// Validate the token exists by fetching metadata (required - blocks render)
-=======
-		const config = getWagmiConfig()
-		const publicClient = getPublicClient(config)
-
-		// Validate the token exists by fetching metadata
->>>>>>> main
 		let metadata: Awaited<ReturnType<typeof Actions.token.getMetadata>>
 		try {
 			metadata = await Actions.token.getMetadata(config, { token: address })
@@ -112,7 +102,6 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			console.error('Failed to fetch token metadata:', error)
 			throw notFound()
 		}
-<<<<<<< HEAD
 
 		// Fast OG stats (threshold-based, not full counts) + currency for OG image
 		const [ogStats, currency] = await Promise.all([
@@ -128,71 +117,6 @@ export const Route = createFileRoute('/_layout/token/$address')({
 
 		// All other data (transfers, holders, firstTransfer) fetched client-side
 		return { metadata, ogStats, currency }
-=======
-
-		const currencyPromise = publicClient
-			.readContract({
-				address: address,
-				abi: Abis.tip20,
-				functionName: 'currency',
-			})
-			.catch(() => undefined)
-
-		const holdersPromise = context.queryClient
-			.ensureQueryData(
-				holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
-			)
-			.catch((error) => {
-				console.error('Failed to fetch holders data:', error)
-				return undefined
-			})
-
-		const firstTransferPromise = context.queryClient
-			.ensureQueryData(firstTransferQueryOptions({ address }))
-			.catch((error) => {
-				console.error('Failed to fetch first transfer data:', error)
-				return undefined
-			})
-
-		if (page !== 1 || limit !== 10) {
-			context.queryClient.prefetchQuery(
-				holdersQueryOptions({ address, page, limit, offset }),
-			)
-		}
-
-		if (tab === 'transfers') {
-			const transfersPromise = context.queryClient
-				.ensureQueryData(
-					transfersQueryOptions({ address, page, limit, offset, account }),
-				)
-				.catch((error) => {
-					console.error('Failed to fetch transfers data:', error)
-					return undefined
-				})
-
-			const [transfers, holdersData, firstTransferData, currency] =
-				await Promise.all([
-					transfersPromise,
-					holdersPromise,
-					firstTransferPromise,
-					currencyPromise,
-				])
-			return { metadata, transfers, holdersData, firstTransferData, currency }
-		}
-
-		const [holdersData, firstTransferData, currency] = await Promise.all([
-			holdersPromise,
-			firstTransferPromise,
-			currencyPromise,
-		])
-		return {
-			metadata,
-			transfers: undefined,
-			holdersData,
-			firstTransferData,
-			currency,
-		}
->>>>>>> main
 	},
 	params: {
 		parse: z.object({
@@ -208,12 +132,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 	head: ({ params, loaderData }) => {
 		const title = `Token ${params.address.slice(0, 6)}…${params.address.slice(-4)} ⋅ Tempo Explorer`
 		const metadata = loaderData?.metadata
-<<<<<<< HEAD
 		const ogStats = loaderData?.ogStats
-=======
-		const holdersData = loaderData?.holdersData
-		const firstTransferData = loaderData?.firstTransferData
->>>>>>> main
 		const currency = loaderData?.currency
 
 		// Format supply for OG image
@@ -258,11 +177,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			currency,
 			holders: formatHolders(ogStats?.holders),
 			supply,
-<<<<<<< HEAD
 			created: ogStats?.created ?? undefined,
-=======
-			created: firstTransferData?.created ?? undefined,
->>>>>>> main
 		})
 
 		return {
