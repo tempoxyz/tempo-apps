@@ -14,16 +14,23 @@ const IS = IDX.IndexSupply.create({
 const QB = IDX.QueryBuilder.from(IS)
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
-const HOLDERS_CACHING = 60_000
+const CACHE_TTL = 60_000
+const COUNT_CAP = 100_000
 
 const holdersCache = new Map<
 	string,
 	{
 		data: {
 			allHolders: Array<{ address: string; balance: bigint }>
-			totalSupply: bigint
-			created: string | null
 		}
+		timestamp: number
+	}
+>()
+
+const firstTransferCache = new Map<
+	string,
+	{
+		data: string | null
 		timestamp: number
 	}
 >()
@@ -45,69 +52,70 @@ export type TokenHoldersApiResponse = {
 	holders: Array<{
 		address: Address.Address
 		balance: string
-		percentage: number
 	}>
 	total: number
-	totalSupply: string
+	totalCapped: boolean
 	offset: number
 	limit: number
-	created: string | null
+}
+
+const EMPTY_HOLDERS_RESPONSE: TokenHoldersApiResponse = {
+	holders: [],
+	total: 0,
+	totalCapped: false,
+	offset: 0,
+	limit: 0,
 }
 
 export const fetchHolders = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokenHoldersInputSchema.parse(input))
 	.handler(async ({ data }) => {
-		const config = getWagmiConfig()
-		const chainId = getChainId(config)
-		const cacheKey = `${chainId}-${data.address}`
+		try {
+			const config = getWagmiConfig()
+			const chainId = getChainId(config)
+			const cacheKey = `${chainId}-${data.address}`
 
-		const cached = holdersCache.get(cacheKey)
-		const now = Date.now()
+			const cached = holdersCache.get(cacheKey)
+			const now = Date.now()
 
-		let allHolders: Array<{ address: string; balance: bigint }>
-		let totalSupply: bigint
-		let created: string | null = null
+			let allHolders: Array<{ address: string; balance: bigint }>
 
-		if (cached && now - cached.timestamp < HOLDERS_CACHING) {
-			allHolders = cached.data.allHolders
-			totalSupply = cached.data.totalSupply
-			created = cached.data.created
-		} else {
-			const result = await fetchHoldersData(data.address, chainId)
-			allHolders = result.allHolders
-			totalSupply = result.totalSupply
-			created = result.created
+			if (cached && now - cached.timestamp < CACHE_TTL) {
+				allHolders = cached.data.allHolders
+			} else {
+				allHolders = await fetchHoldersData(data.address, chainId)
 
-			holdersCache.set(cacheKey, {
-				data: { allHolders, totalSupply, created },
-				timestamp: now,
-			})
-		}
+				holdersCache.set(cacheKey, {
+					data: { allHolders },
+					timestamp: now,
+				})
+			}
 
-		const paginatedHolders = allHolders.slice(
-			data.offset,
-			data.offset + data.limit,
-		)
+			const paginatedHolders = allHolders.slice(
+				data.offset,
+				data.offset + data.limit,
+			)
 
-		const holders = paginatedHolders.map((holder) => ({
-			address: holder.address as Address.Address,
-			balance: holder.balance.toString(),
-			percentage:
-				totalSupply > 0n
-					? Number((holder.balance * 10_000n) / totalSupply) / 100
-					: 0,
-		}))
+			const holders = paginatedHolders.map((holder) => ({
+				address: holder.address as Address.Address,
+				balance: holder.balance.toString(),
+			}))
 
-		const total = allHolders.length
-		const nextOffset = data.offset + holders.length
+			const rawTotal = allHolders.length
+			const totalCapped = rawTotal >= COUNT_CAP
+			const total = totalCapped ? COUNT_CAP : rawTotal
+			const nextOffset = data.offset + holders.length
 
-		return {
-			holders,
-			total,
-			totalSupply: totalSupply.toString(),
-			offset: nextOffset,
-			limit: holders.length,
-			created,
+			return {
+				holders,
+				total,
+				totalCapped,
+				offset: nextOffset,
+				limit: holders.length,
+			}
+		} catch (error) {
+			console.error('Failed to fetch holders:', error)
+			return EMPTY_HOLDERS_RESPONSE
 		}
 	})
 
@@ -140,7 +148,40 @@ async function fetchHoldersData(address: Address.Address, chainId: number) {
 		.groupBy('to')
 		.execute()
 
-	// Fetch the first transfer to get the created date
+	const balances = new Map<string, bigint>()
+
+	for (const row of incoming) {
+		const holder = row.holder
+		const received = BigInt(row.received)
+		balances.set(holder, (balances.get(holder) ?? 0n) + received)
+	}
+
+	for (const row of outgoing) {
+		const holder = row.holder
+		const sent = BigInt(row.sent)
+		balances.set(holder, (balances.get(holder) ?? 0n) - sent)
+	}
+
+	return Array.from(balances.entries())
+		.filter(([, balance]) => balance > 0n)
+		.map(([holder, balance]) => ({ address: holder, balance }))
+		.sort((a, b) => (b.balance > a.balance ? 1 : -1))
+}
+
+async function fetchFirstTransferData(
+	address: Address.Address,
+	chainId: number,
+): Promise<string | null> {
+	const cacheKey = `${chainId}-${address}`
+	const cached = firstTransferCache.get(cacheKey)
+	const now = Date.now()
+
+	if (cached && now - cached.timestamp < CACHE_TTL) {
+		return cached.data
+	}
+
+	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
+
 	const firstTransfer = await qb
 		.selectFrom('transfer')
 		.select(['block_timestamp'])
@@ -160,32 +201,39 @@ async function fetchHoldersData(address: Address.Address, chainId: number) {
 		})
 	}
 
-	const balances = new Map<string, bigint>()
+	firstTransferCache.set(cacheKey, {
+		data: created,
+		timestamp: now,
+	})
 
-	for (const row of incoming) {
-		const holder = row.holder
-		const received = BigInt(row.received)
-		balances.set(holder, (balances.get(holder) ?? 0n) + received)
-	}
-
-	for (const row of outgoing) {
-		const holder = row.holder
-		const sent = BigInt(row.sent)
-		balances.set(holder, (balances.get(holder) ?? 0n) - sent)
-	}
-
-	const allHolders = Array.from(balances.entries())
-		.filter(([, balance]) => balance > 0n)
-		.map(([holder, balance]) => ({ address: holder, balance }))
-		.sort((a, b) => (b.balance > a.balance ? 1 : -1))
-
-	const totalSupply = allHolders.reduce(
-		(sum, holder) => sum + holder.balance,
-		0n,
-	)
-
-	return { allHolders, totalSupply, created }
+	return created
 }
+
+const FetchFirstTransferInputSchema = z.object({
+	address: zAddress({ lowercase: true }),
+})
+
+export type FetchFirstTransferInput = z.infer<
+	typeof FetchFirstTransferInputSchema
+>
+
+export type FirstTransferApiResponse = {
+	created: string | null
+}
+
+export const fetchFirstTransfer = createServerFn({ method: 'POST' })
+	.inputValidator((input) => FetchFirstTransferInputSchema.parse(input))
+	.handler(async ({ data }) => {
+		try {
+			const config = getWagmiConfig()
+			const chainId = getChainId(config)
+			const created = await fetchFirstTransferData(data.address, chainId)
+			return { created }
+		} catch (error) {
+			console.error('Failed to fetch first transfer:', error)
+			return { created: null }
+		}
+	})
 
 const FetchTokenTransfersInputSchema = z.object({
 	address: zAddress({ lowercase: true }),
@@ -209,33 +257,55 @@ export type TokenTransfersApiResponse = {
 		timestamp: string | null
 	}>
 	total: number
+	totalCapped: boolean
 	offset: number
 	limit: number
+}
+
+const EMPTY_TRANSFERS_RESPONSE: TokenTransfersApiResponse = {
+	transfers: [],
+	total: 0,
+	totalCapped: false,
+	offset: 0,
+	limit: 0,
 }
 
 export const fetchTransfers = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokenTransfersInputSchema.parse(input))
 	.handler(async ({ data }) => {
-		const config = getWagmiConfig()
-		const chainId = getChainId(config)
-		const [transfers, total] = await Promise.all([
-			fetchTransfersData(
-				data.address,
-				data.limit,
-				data.offset,
-				chainId,
-				data.account,
-			),
-			fetchTotalCount(data.address, chainId, data.account),
-		])
+		try {
+			const config = getWagmiConfig()
+			const chainId = getChainId(config)
 
-		const nextOffset = data.offset + (transfers?.length ?? 0)
+			const [transfers, countResult] = await Promise.all([
+				fetchTransfersData(
+					data.address,
+					data.limit,
+					data.offset,
+					chainId,
+					data.account,
+				).catch((error) => {
+					console.error('Failed to fetch transfers data:', error)
+					return []
+				}),
+				fetchTotalCount(data.address, chainId, data.account).catch((error) => {
+					console.error('Failed to fetch transfers count:', error)
+					return { count: 0, capped: false }
+				}),
+			])
 
-		return {
-			transfers,
-			total,
-			offset: nextOffset,
-			limit: transfers?.length,
+			const nextOffset = data.offset + (transfers?.length ?? 0)
+
+			return {
+				transfers,
+				total: countResult.count,
+				totalCapped: countResult.capped,
+				offset: nextOffset,
+				limit: transfers?.length ?? 0,
+			}
+		} catch (error) {
+			console.error('Failed to fetch transfers:', error)
+			return EMPTY_TRANSFERS_RESPONSE
 		}
 	})
 
@@ -288,22 +358,28 @@ async function fetchTotalCount(
 	address: Address.Address,
 	chainId: number,
 	account?: Address.Address,
-) {
-	let query = QB.withSignatures([TRANSFER_SIGNATURE])
+): Promise<{ count: number; capped: boolean }> {
+	// Count is expensive - limit to first 100k rows using subquery pattern
+	let subquery = QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
-		.select((eb) => eb.fn.count('tx_hash').as('count'))
+		.select((eb) => eb.lit(1).as('x'))
 		.where('chain', '=', chainId)
 		.where('address', '=', address)
 
 	if (account) {
-		query = query.where((eb) =>
+		subquery = subquery.where((eb) =>
 			eb.or([eb('from', '=', account), eb('to', '=', account)]),
 		)
 	}
 
-	const result = await query.executeTakeFirstOrThrow()
+	const result = await QB.selectFrom(subquery.limit(COUNT_CAP).as('subquery'))
+		.select((eb) => eb.fn.count('x').as('count'))
+		.executeTakeFirst()
 
-	return Number(result.count)
+	const count = Number(result?.count ?? 0)
+	const capped = count >= COUNT_CAP
+
+	return { count, capped }
 }
 
 export { MAX_LIMIT, DEFAULT_LIMIT }

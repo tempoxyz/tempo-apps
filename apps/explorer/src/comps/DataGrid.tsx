@@ -10,6 +10,7 @@ export function DataGrid(props: DataGrid.Props) {
 		items,
 		totalItems,
 		displayCount,
+		displayCountCapped = false,
 		page,
 		fetching = false,
 		loading = false,
@@ -170,6 +171,7 @@ export function DataGrid(props: DataGrid.Props) {
 							totalItems={displayCount ?? 0}
 							itemsLabel={itemsLabel}
 							loading={loading || displayCount == null}
+							capped={displayCountCapped}
 						/>
 					</div>
 				) : (
@@ -219,6 +221,8 @@ export namespace DataGrid {
 		totalItems: number
 		/** Optional separate count for display (e.g., exact transaction count) */
 		displayCount?: number
+		/** Whether the display count is capped (shows "> X" prefix) */
+		displayCountCapped?: boolean
 		page: number
 		fetching?: boolean
 		loading?: boolean
