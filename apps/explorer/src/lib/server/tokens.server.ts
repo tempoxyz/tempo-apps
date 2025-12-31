@@ -51,8 +51,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				.limit(limit)
 				.offset(offset)
 				.execute(),
-				
-			// count is an expensive, columnar-based query. we will count up 
+			// count is an expensive, columnar-based query. we will count up
 			// to the first 100k rows
 			QB.selectFrom(
 				QB.withSignatures([EVENT_SIGNATURE])
