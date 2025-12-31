@@ -67,7 +67,9 @@ export function holdersQueryOptions(params: HoldersQueryParams) {
 	})
 }
 
-export function firstTransferQueryOptions(params: { address: Address.Address }) {
+export function firstTransferQueryOptions(params: {
+	address: Address.Address
+}) {
 	return queryOptions({
 		queryKey: ['token-first-transfer', params.address],
 		queryFn: async () => {

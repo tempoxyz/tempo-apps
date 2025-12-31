@@ -13,12 +13,12 @@ function shouldShowAnimation(): boolean {
 	const navEntries = performance.getEntriesByType('navigation')
 	const navEntry = navEntries[0] as PerformanceNavigationTiming | undefined
 	const isReload = navEntry?.type === 'reload'
-	
+
 	// Show animation on hard refresh
 	if (isReload) {
 		return true
 	}
-	
+
 	// Check if we've seen the intro in this session
 	const hasSeenIntro = sessionStorage.getItem(INTRO_SEEN_KEY)
 	return !hasSeenIntro
@@ -28,9 +28,10 @@ export function Intro({ onPhaseChange }: IntroProps) {
 	const [visibleWords, setVisibleWords] = useState<number>(0)
 	const [shouldAnimate, setShouldAnimate] = useState<boolean | null>(null)
 
+	// biome-ignore lint/correctness/useExhaustiveDependencies: This is intentional
 	useEffect(() => {
 		const animate = shouldShowAnimation()
-		
+
 		if (animate) {
 			// First visit or hard refresh - animate
 			setShouldAnimate(true)
@@ -59,7 +60,7 @@ export function Intro({ onPhaseChange }: IntroProps) {
 			setTimeout(() => {
 				setVisibleWords(word)
 				onPhaseChange?.(p)
-			}, delay)
+			}, delay),
 		)
 
 		return () => timeouts.forEach(clearTimeout)
@@ -101,7 +102,8 @@ export function Intro({ onPhaseChange }: IntroProps) {
 					className="transition-all duration-500 ease-out"
 					style={{
 						opacity: visibleWords > index ? word.opacity : 0,
-						transform: visibleWords > index ? 'translateY(0)' : 'translateY(12px)',
+						transform:
+							visibleWords > index ? 'translateY(0)' : 'translateY(12px)',
 						fontSize: word.size,
 						fontWeight: 600,
 						letterSpacing: '-0.02em',
