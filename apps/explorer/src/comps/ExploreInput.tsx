@@ -21,6 +21,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		onChange,
 		size = 'medium',
 		disabled,
+		className,
 	} = props
 	const formRef = React.useRef<HTMLFormElement>(null)
 	const resultsRef = React.useRef<HTMLDivElement>(null)
@@ -194,8 +195,9 @@ export function ExploreInput(props: ExploreInput.Props) {
 				value={value}
 				disabled={disabled}
 				className={cx(
-					'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50',
+					'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300',
 					size === 'large' ? 'h-[52px] text-[17px]' : 'h-[42px] text-[15px]',
+					className,
 				)}
 				data-1p-ignore
 				name="value"
@@ -362,6 +364,7 @@ export namespace ExploreInput {
 		onChange: (value: string) => void
 		size?: 'large' | 'medium'
 		disabled?: boolean
+		className?: string
 	}
 
 	export type SuggestionGroup = {
