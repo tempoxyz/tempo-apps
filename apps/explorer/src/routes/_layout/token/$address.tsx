@@ -31,13 +31,14 @@ import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
 import { PriceFormatter } from '#lib/formatting'
-import { useCopy, useIsMounted, useMediaQuery } from '#lib/hooks'
+import { useCopy, useMediaQuery } from '#lib/hooks'
 import { buildTokenDescription, buildTokenOgImageUrl } from '#lib/og'
 import {
 	firstTransferQueryOptions,
 	holdersQueryOptions,
 	transfersQueryOptions,
 } from '#lib/queries'
+import { fetchOgStats } from '#lib/server/token.server.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 import CopyIcon from '~icons/lucide/copy'
 import XIcon from '~icons/lucide/x'
@@ -86,23 +87,14 @@ export const Route = createFileRoute('/_layout/token/$address')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page, limit, tab, a } }) => ({
-		page,
-		limit,
-		tab,
-		a,
-	}),
-	loader: async ({ deps: { page, limit, tab, a }, params, context }) => {
+	loader: async ({ params }) => {
 		const { address } = params
 		if (!Address.validate(address)) throw notFound()
-
-		const account = a && Address.validate(a) ? a : undefined
-		const offset = (page - 1) * limit
 
 		const config = getWagmiConfig()
 		const publicClient = getPublicClient(config)
 
-		// Validate the token exists by fetching metadata
+		// Validate the token exists by fetching metadata (required - blocks render)
 		let metadata: Awaited<ReturnType<typeof Actions.token.getMetadata>>
 		try {
 			metadata = await Actions.token.getMetadata(config, { token: address })
@@ -111,68 +103,20 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			throw notFound()
 		}
 
-		const currencyPromise = publicClient
-			.readContract({
-				address: address,
-				abi: Abis.tip20,
-				functionName: 'currency',
-			})
-			.catch(() => undefined)
-
-		const holdersPromise = context.queryClient
-			.ensureQueryData(
-				holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
-			)
-			.catch((error) => {
-				console.error('Failed to fetch holders data:', error)
-				return undefined
-			})
-
-		const firstTransferPromise = context.queryClient
-			.ensureQueryData(firstTransferQueryOptions({ address }))
-			.catch((error) => {
-				console.error('Failed to fetch first transfer data:', error)
-				return undefined
-			})
-
-		if (page !== 1 || limit !== 10) {
-			context.queryClient.prefetchQuery(
-				holdersQueryOptions({ address, page, limit, offset }),
-			)
-		}
-
-		if (tab === 'transfers') {
-			const transfersPromise = context.queryClient
-				.ensureQueryData(
-					transfersQueryOptions({ address, page, limit, offset, account }),
-				)
-				.catch((error) => {
-					console.error('Failed to fetch transfers data:', error)
-					return undefined
+		// Fast OG stats (threshold-based, not full counts) + currency for OG image
+		const [ogStats, currency] = await Promise.all([
+			fetchOgStats({ data: { address } }).catch(() => null),
+			publicClient
+				.readContract({
+					address: address,
+					abi: Abis.tip20,
+					functionName: 'currency',
 				})
-
-			const [transfers, holdersData, firstTransferData, currency] =
-				await Promise.all([
-					transfersPromise,
-					holdersPromise,
-					firstTransferPromise,
-					currencyPromise,
-				])
-			return { metadata, transfers, holdersData, firstTransferData, currency }
-		}
-
-		const [holdersData, firstTransferData, currency] = await Promise.all([
-			holdersPromise,
-			firstTransferPromise,
-			currencyPromise,
+				.catch(() => undefined),
 		])
-		return {
-			metadata,
-			transfers: undefined,
-			holdersData,
-			firstTransferData,
-			currency,
-		}
+
+		// All other data (transfers, holders, firstTransfer) fetched client-side
+		return { metadata, ogStats, currency }
 	},
 	params: {
 		parse: z.object({
@@ -188,8 +132,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 	head: ({ params, loaderData }) => {
 		const title = `Token ${params.address.slice(0, 6)}…${params.address.slice(-4)} ⋅ Tempo Explorer`
 		const metadata = loaderData?.metadata
-		const holdersData = loaderData?.holdersData
-		const firstTransferData = loaderData?.firstTransferData
+		const ogStats = loaderData?.ogStats
 		const currency = loaderData?.currency
 
 		// Format supply for OG image
@@ -207,6 +150,16 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				? formatSupply(metadata.totalSupply, metadata.decimals)
 				: undefined
 
+		// Format holders count (exact for small counts, threshold for large)
+		const formatHolders = (
+			holders: { count: number; isExact: boolean } | null | undefined,
+		) => {
+			if (!holders) return undefined
+			return holders.isExact
+				? holders.count.toLocaleString()
+				: `> ${holders.count.toLocaleString()}`
+		}
+
 		const description = buildTokenDescription(
 			metadata
 				? {
@@ -222,9 +175,9 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			name: metadata?.name,
 			symbol: metadata?.symbol,
 			currency,
-			holders: holdersData?.total,
+			holders: formatHolders(ogStats?.holders),
 			supply,
-			created: firstTransferData?.created ?? undefined,
+			created: ogStats?.created ?? undefined,
 		})
 
 		return {
@@ -503,9 +456,6 @@ function SectionsWrapper(props: {
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const loaderData = Route.useLoaderData()
 
-	// Track hydration to avoid SSR/client mismatch with query data
-	const isMounted = useIsMounted()
-
 	const { data: metadata } = Hooks.token.useGetMetadata({
 		token: address,
 		query: {
@@ -523,21 +473,8 @@ function SectionsWrapper(props: {
 		account,
 	})
 
-	const hasTransfersInitialData =
-		activeSection === 0 && transfersQueryPage === page && loaderData.transfers
-	const {
-		data: transfersQueryData,
-		isPlaceholderData: isTransfersPlaceholder,
-	} = useQuery({
-		...transfersOptions,
-		...(hasTransfersInitialData ? { initialData: loaderData.transfers } : {}),
-	})
-	// Use initialData until mounted to avoid hydration mismatch
-	const transfersData = isMounted
-		? transfersQueryData
-		: hasTransfersInitialData
-			? loaderData.transfers
-			: transfersQueryData
+	const { data: transfersData, isPlaceholderData: isTransfersPlaceholder } =
+		useQuery(transfersOptions)
 
 	const holdersQueryPage = activeSection === 1 ? page : 1
 	const holdersOptions = holdersQueryOptions({

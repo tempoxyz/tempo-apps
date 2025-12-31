@@ -15,6 +15,7 @@ const QB = IDX.QueryBuilder.from(IS)
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const CACHE_TTL = 60_000
+const OG_CACHE_TTL = 3_600_000 // 1 hour
 const COUNT_CAP = 100_000
 
 const holdersCache = new Map<
@@ -380,6 +381,98 @@ async function fetchTotalCount(
 	const capped = count >= COUNT_CAP
 
 	return { count, capped }
+}
+
+const OG_THRESHOLDS = [100, 1_000, 10_000, 100_000] as const
+
+const FetchOgStatsInputSchema = z.object({
+	address: zAddress({ lowercase: true }),
+})
+
+export type OgStatsApiResponse = {
+	holders: { count: number; isExact: boolean } | null
+	created: string | null
+}
+
+const ogStatsCache = new Map<
+	string,
+	{
+		data: OgStatsApiResponse
+		timestamp: number
+	}
+>()
+
+export const fetchOgStats = createServerFn({ method: 'POST' })
+	.inputValidator((input) => FetchOgStatsInputSchema.parse(input))
+	.handler(async ({ data }) => {
+		try {
+			const config = getWagmiConfig()
+			const chainId = getChainId(config)
+			const cacheKey = `${chainId}-${data.address}`
+
+			const cached = ogStatsCache.get(cacheKey)
+			const now = Date.now()
+
+			if (cached && now - cached.timestamp < OG_CACHE_TTL) {
+				let result = cached.data
+
+				// There might be holders data now so check that
+				if (!result.holders) {
+					const holders = await findHoldersThreshold(data.address, chainId)
+					if (holders) {
+						result = { ...result, holders }
+						ogStatsCache.set(cacheKey, { data: result, timestamp: now })
+					}
+				}
+
+				return result
+			}
+
+			const [holders, created] = await Promise.all([
+				findHoldersThreshold(data.address, chainId),
+				fetchFirstTransferData(data.address, chainId),
+			])
+
+			const result = { holders, created }
+			ogStatsCache.set(cacheKey, { data: result, timestamp: now })
+
+			return result
+		} catch (error) {
+			console.error('Failed to fetch OG stats:', error)
+			return { holders: null, created: null }
+		}
+	})
+
+async function findHoldersThreshold(
+	address: Address.Address,
+	chainId: number,
+): Promise<{ count: number; isExact: boolean } | null> {
+	const cacheKey = `${chainId}-${address}`
+	const cached = holdersCache.get(cacheKey)
+	const now = Date.now()
+
+	if (cached && now - cached.timestamp < OG_CACHE_TTL) {
+		const count = cached.data.allHolders.length
+
+		if (count <= OG_THRESHOLDS[0]) {
+			return { count, isExact: true }
+		}
+
+		let lastExceeded: number | null = null
+		for (const threshold of OG_THRESHOLDS) {
+			if (count > threshold) {
+				lastExceeded = threshold
+			} else {
+				break
+			}
+		}
+		return lastExceeded ? { count: lastExceeded, isExact: false } : null
+	}
+
+	// Skip expensive holder count query for OG images - it times out on high-volume tokens
+	// (GROUP BY has to scan all rows before LIMIT can be applied)
+	// The actual holder count will be fetched client-side where it can stream in
+	return null
 }
 
 export { MAX_LIMIT, DEFAULT_LIMIT }

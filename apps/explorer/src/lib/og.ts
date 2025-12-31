@@ -308,7 +308,7 @@ export function buildTokenOgImageUrl(params: {
 	name?: string
 	symbol?: string
 	currency?: string
-	holders?: number
+	holders?: number | string
 	supply?: string
 	created?: string
 	isFeeToken?: boolean
@@ -321,7 +321,7 @@ export function buildTokenOgImageUrl(params: {
 		holders:
 			typeof params.holders === 'number'
 				? params.holders.toString()
-				: undefined,
+				: params.holders,
 		supply: params.supply,
 		created: params.created,
 		isFeeToken: params.isFeeToken,
