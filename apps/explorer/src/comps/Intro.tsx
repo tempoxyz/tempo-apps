@@ -74,7 +74,7 @@ export function Intro({ onPhaseChange }: IntroProps) {
 	// Don't render until we know whether to animate
 	if (shouldAnimate === null) {
 		return (
-			<div className="flex flex-col items-center">
+			<div className="flex flex-col items-center gap-1">
 				{words.map((word) => (
 					<span
 						key={word.text}
@@ -94,7 +94,7 @@ export function Intro({ onPhaseChange }: IntroProps) {
 	}
 
 	return (
-		<div className="flex flex-col items-center">
+		<div className="flex flex-col items-center gap-1">
 			{words.map((word, index) => (
 				<span
 					key={word.text}
