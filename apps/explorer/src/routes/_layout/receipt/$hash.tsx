@@ -312,9 +312,9 @@ function Component() {
 		initialData: loaderData,
 	})
 
-	useKeyboardShortcut('t', () =>
-		navigate({ to: '/tx/$hash', params: { hash } }),
-	)
+	useKeyboardShortcut({
+		t: () => navigate({ to: '/tx/$hash', params: { hash } }),
+	})
 
 	const { block, knownEvents, lineItems, receipt } = data
 

@@ -124,7 +124,7 @@ export declare namespace useDownload {
 	}
 }
 
-export function useKeyboardShortcut(key: string, callback: () => void) {
+export function useKeyboardShortcut(shortcuts: Record<string, () => void>) {
 	React.useEffect(() => {
 		const handleKeyDown = (event: KeyboardEvent) => {
 			const target = event.target as HTMLElement
@@ -135,17 +135,18 @@ export function useKeyboardShortcut(key: string, callback: () => void) {
 			) {
 				return
 			}
+			const key = event.key.toLowerCase()
 			if (
-				event.key.toLowerCase() === key.toLowerCase() &&
 				!event.metaKey &&
 				!event.ctrlKey &&
-				!event.altKey
+				!event.altKey &&
+				key in shortcuts
 			) {
 				event.preventDefault()
-				callback()
+				shortcuts[key]()
 			}
 		}
 		window.addEventListener('keydown', handleKeyDown)
 		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [key, callback])
+	}, [shortcuts])
 }

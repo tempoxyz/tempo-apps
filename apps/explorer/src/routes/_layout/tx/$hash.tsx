@@ -163,12 +163,13 @@ function RouteComponent() {
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
-	useKeyboardShortcut('t', () =>
-		navigate({
-			to: '/receipt/$hash',
-			params: { hash: receipt.transactionHash },
-		}),
-	)
+	useKeyboardShortcut({
+		t: () =>
+			navigate({
+				to: '/receipt/$hash',
+				params: { hash: receipt.transactionHash },
+			}),
+	})
 
 	const calls = 'calls' in transaction ? transaction.calls : undefined
 	const hasCalls = Boolean(calls && calls.length > 0)
