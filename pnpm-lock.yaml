@@ -548,19 +548,6 @@ importers:
         specifier: 'catalog:'
         version: 4.56.0(@cloudflare/workers-types@4.20251231.0)
 
-  apps/service-proxy:
-    dependencies:
-      hono:
-        specifier: 'catalog:'
-        version: 4.11.3
-    devDependencies:
-      '@cloudflare/workers-types':
-        specifier: 'catalog:'
-        version: 4.20251231.0
-      wrangler:
-        specifier: 'catalog:'
-        version: 4.56.0(@cloudflare/workers-types@4.20251231.0)
-
   apps/tokenlist:
     dependencies:
       hono:

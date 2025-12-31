@@ -27,7 +27,6 @@ jobs:
           - app: fee-payer # devnet
             env: devnet
           - app: og
-          - app: service-proxy
           - app: tokenlist
           - app: contract-verification
 
