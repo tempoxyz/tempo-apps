@@ -27,6 +27,7 @@ function Component() {
 	const [inputValue, setInputValue] = useState('')
 	const [isMounted, setIsMounted] = useState(false)
 	const [introPhase, setIntroPhase] = useState<IntroPhase>('initial')
+	const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 	const isNavigating = useRouterState({
 		select: (state) => state.status === 'pending',
 	})
@@ -62,6 +63,7 @@ function Component() {
 						onChange={setInputValue}
 						disabled={isMounted && isNavigating}
 						className={introPhase === 'search' ? 'border-accent/50' : undefined}
+						onDropdownVisibilityChange={setIsDropdownOpen}
 						onActivate={(data) => {
 							if (data.type === 'hash') {
 								navigate({
@@ -87,13 +89,19 @@ function Component() {
 						}}
 					/>
 				</div>
-				<SpotlightLinks introPhase={introPhase} />
+				<SpotlightLinks introPhase={introPhase} hidden={isDropdownOpen} />
 			</div>
 		</div>
 	)
 }
 
-function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
+function SpotlightLinks({
+	introPhase,
+	hidden,
+}: {
+	introPhase: IntroPhase
+	hidden?: boolean
+}) {
 	const navigate = useNavigate()
 	const [actionOpen, setActionOpen] = useState(false)
 	const dropdownRef = useRef<HTMLDivElement>(null)
@@ -146,7 +154,10 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 	const showDiscover = ['discover', 'done'].includes(introPhase)
 
 	return (
-		<section className="text-center max-w-[500px] px-4">
+		<section
+			className="text-center max-w-[500px] px-4 transition-opacity duration-150"
+			style={{ opacity: hidden ? 0 : 1 }}
+		>
 			<div className="group/pills flex items-center gap-2 text-[13px] flex-wrap justify-center">
 				{/* Explore pills - animate in with "Explore" */}
 				<div

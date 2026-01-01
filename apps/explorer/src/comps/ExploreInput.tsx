@@ -22,6 +22,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		size = 'medium',
 		disabled,
 		className,
+		onDropdownVisibilityChange,
 	} = props
 	const formRef = React.useRef<HTMLFormElement>(null)
 	const resultsRef = React.useRef<HTMLDivElement>(null)
@@ -87,6 +88,10 @@ export function ExploreInput(props: ExploreInput.Props) {
 	React.useEffect(() => {
 		setShowResults(disabled ? false : query.length > 0)
 	}, [query, disabled])
+
+	React.useEffect(() => {
+		onDropdownVisibilityChange?.(showResults)
+	}, [showResults, onDropdownVisibilityChange])
 
 	const lastResultsKey = React.useRef('')
 	const resultsKey = JSON.stringify(flatSuggestions)
@@ -365,6 +370,7 @@ export namespace ExploreInput {
 		size?: 'large' | 'medium'
 		disabled?: boolean
 		className?: string
+		onDropdownVisibilityChange?: (visible: boolean) => void
 	}
 
 	export type SuggestionGroup = {
