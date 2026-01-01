@@ -70,6 +70,7 @@ export default defineConfig((config) => {
 			allowedHosts: config.mode === 'preview' ? allowedHosts : [],
 		},
 		build: {
+			minify: 'oxc',
 			rolldownOptions: {
 				output: {
 					minify: {
