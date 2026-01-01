@@ -20,8 +20,8 @@ const rpcUrl = (() => {
 
 export default defineWorkersConfig({
 	test: {
-		include: ['src/**/e2e.test.ts'],
-		globalSetup: [join(__dirname, './src/test/setup.global.ts')],
+		include: ['src/**/e2e.test.ts', 'test/**/*.test.ts'],
+		globalSetup: [join(__dirname, './test/setup.global.ts')],
 		poolOptions: {
 			workers: {
 				wrangler: { configPath: './wrangler.jsonc' },

@@ -16,6 +16,6 @@
 		"checkJs": false
 	},
 	"files": ["worker-configuration.d.ts"],
-	"include": ["src/**/*.ts"],
+	"include": ["src/**/*.ts", "test/prool.ts", "test/setup.global.ts", "test/e2e.test.ts"],
 	"exclude": ["node_modules", "dist", "src/**/*.test.ts"]
 }

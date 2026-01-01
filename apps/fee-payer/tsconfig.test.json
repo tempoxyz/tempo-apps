@@ -1,0 +1,15 @@
+{
+	"extends": "./tsconfig.json",
+	"include": ["**/*.test.ts", "**/*.test.tsx", "./test/**"],
+	"compilerOptions": {
+		"types": [
+			"@cloudflare/vitest-pool-workers",
+			"node",
+			"vite/client",
+			"typed-query-selector/strict"
+		]
+	},
+	"files": [
+		"@cloudflare/vitest-pool-workers" // provides `cloudflare:test` types
+	]
+}
