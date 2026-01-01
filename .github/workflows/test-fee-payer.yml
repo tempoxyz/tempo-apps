@@ -35,5 +35,6 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: Run tests
-        run: pnpm test
+        # TODO(struong): use prool instance once Moderato hardfork lands
+        run: pnpm test:testnet
         working-directory: apps/fee-payer
