@@ -20,7 +20,7 @@ const rpcUrl = (() => {
 
 export default defineWorkersConfig({
 	test: {
-		include: ['src/**/e2e.test.ts', 'test/**/*.test.ts'],
+		include: ['**/e2e.test.ts', '**/*.test.ts'],
 		globalSetup: [join(__dirname, './test/setup.global.ts')],
 		poolOptions: {
 			workers: {

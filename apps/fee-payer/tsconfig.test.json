@@ -9,7 +9,5 @@
 			"typed-query-selector/strict"
 		]
 	},
-	"files": [
-		"@cloudflare/vitest-pool-workers" // provides `cloudflare:test` types
-	]
+	"files": ["./test/env.d.ts"]
 }
