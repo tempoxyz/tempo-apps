@@ -12,13 +12,13 @@ import {
 	webSocket,
 } from 'wagmi'
 
-export const DEFAULT_TESTNET_RPC_URL = 'https://rpc.testnet.tempo.xyz'
-export const DEFAULT_TESTNET_WS_URL = 'wss://rpc.testnet.tempo.xyz'
+export const DEFAULT_TESTNET_RPC_URL = 'https://proxy.tempo.xyz/rpc'
+export const DEFAULT_TESTNET_WS_URL = 'wss://proxy.tempo.xyz/rpc'
 
 const getTempoRpcUrl = createIsomorphicFn()
 	.server(() => ({
-		http: `${DEFAULT_TESTNET_RPC_URL}/${process.env.TEMPO_RPC_KEY}`,
-		websocket: `${DEFAULT_TESTNET_WS_URL}/${process.env.TEMPO_RPC_KEY}`,
+		http: DEFAULT_TESTNET_RPC_URL,
+		websocket: DEFAULT_TESTNET_WS_URL,
 	}))
 	.client(() => ({
 		http: DEFAULT_TESTNET_RPC_URL,
