@@ -69,5 +69,18 @@ export default defineConfig((config) => {
 		preview: {
 			allowedHosts: config.mode === 'preview' ? allowedHosts : [],
 		},
+		build: {
+			minify: 'oxc',
+			rolldownOptions: {
+				output: {
+					minify: {
+						compress:
+							config.mode === 'production'
+								? { dropConsole: true, dropDebugger: true }
+								: undefined,
+					},
+				},
+			},
+		},
 	}
 })
