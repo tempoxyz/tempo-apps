@@ -184,7 +184,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 					return
 				}
 			}}
-			className="relative z-1 w-full max-w-[448px]"
+			className="relative z-10 w-full max-w-md"
 		>
 			<input
 				ref={inputRef}
@@ -284,7 +284,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 					role="listbox"
 					aria-label="Search suggestions"
 					className={cx(
-						'absolute left-0 right-0 mt-[8px]',
+						'absolute left-0 right-0 mt-2 z-50',
 						'bg-surface border border-base-border rounded-[10px] overflow-hidden',
 						'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 					)}

@@ -31,6 +31,7 @@ function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	return queryOptions({
 		queryKey: ['receipt-detail', params.hash, params.rpcUrl],
 		queryFn: () => fetchReceiptData(params),
+		staleTime: 1000 * 60 * 5, // 5 minutes - receipt data is immutable
 	})
 }
 

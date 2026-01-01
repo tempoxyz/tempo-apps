@@ -70,16 +70,7 @@ export default defineConfig((config) => {
 			allowedHosts: config.mode === 'preview' ? allowedHosts : [],
 		},
 		build: {
-			rolldownOptions: {
-				output: {
-					minify: {
-						compress:
-							config.mode === 'production'
-								? { dropConsole: true, dropDebugger: true }
-								: undefined,
-					},
-				},
-			},
+			minify: false,
 		},
 	}
 })

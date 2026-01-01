@@ -7,6 +7,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NODE_ENV: production
+
 jobs:
   verify:
     name: Verify
@@ -58,4 +61,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/${{ matrix.app }}
-          command: ${{ matrix.env == 'privy' && 'deploy --env privy' || 'deploy --env=""' }}
+          packageManager: pnpm
+          command: NODE_ENV=production ${{ matrix.env == 'privy' && 'deploy --env privy' || 'deploy --env=""' }}

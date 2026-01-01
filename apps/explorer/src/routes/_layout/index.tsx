@@ -45,10 +45,10 @@ function Component() {
 
 	return (
 		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
-			<div className="grid place-items-center relative grid-flow-row gap-[20px] select-none w-full pt-[60px] pb-[40px] z-1">
+			<div className="grid place-items-center relative grid-flow-row gap-5 select-none w-full pt-15 pb-10 z-1">
 				<Intro onPhaseChange={handlePhaseChange} />
 				<div
-					className="px-[16px] w-full flex justify-center transition-all duration-500 ease-out"
+					className="px-4 w-full flex justify-center transition-all duration-500 ease-out relative z-20"
 					style={{
 						opacity: introPhase !== 'initial' ? 1 : 0,
 						transform:
