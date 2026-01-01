@@ -317,23 +317,32 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				}
 			}
 
+			const queryOptions = contractSourceQueryOptions({
+				address,
+				chainId,
+			})
 			// Try to fetch verified contract source if there's bytecode on chain
 			// Fetch directly from upstream API (bypasses __BASE_URL__ issues during SSR)
 			// Then seed the query cache for client-side hydration
-			contractSource = await fetchContractSourceDirect({
-				address,
-				chainId,
-			}).catch((error) => {
-				console.error('[loader] Failed to load contract source:', error)
-				return undefined
-			})
-			// Seed the query cache so client hydrates with data already available
-			if (contractSource) {
-				context.queryClient.setQueryData(
-					contractSourceQueryOptions({ address, chainId }).queryKey,
-					contractSource,
-				)
-			}
+			// Only seed if no data exists - avoid overwriting highlighted data from client refetch
+			const existingData = context.queryClient.getQueryData(
+				queryOptions.queryKey,
+			)
+			if (!existingData) {
+				contractSource = await fetchContractSourceDirect({
+					address,
+					chainId,
+				}).catch((error) => {
+					console.error('[loader] Failed to load contract source:', error)
+					return undefined
+				})
+				// Seed the query cache so client hydrates with data already available
+				if (contractSource)
+					context.queryClient.setQueryData(
+						queryOptions.queryKey,
+						contractSource,
+					)
+			} else contractSource = existingData
 		}
 
 		// Add timeout to prevent SSR from hanging on slow queries
@@ -630,6 +639,7 @@ function RouteComponent() {
 				initialData={transactionsData}
 				assetsData={assetsData}
 				live={live}
+				isContract={accountType === 'contract'}
 			/>
 		</div>
 	)
@@ -714,6 +724,7 @@ function SectionsWrapper(props: {
 	initialData: TransactionsData | undefined
 	assetsData: AssetData[]
 	live: boolean
+	isContract: boolean
 }) {
 	const {
 		address,
@@ -726,6 +737,7 @@ function SectionsWrapper(props: {
 		initialData,
 		assetsData,
 		live,
+		isContract,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
@@ -734,9 +746,11 @@ function SectionsWrapper(props: {
 
 	// Contract source query - uses cache populated by SSR loader via ensureQueryData
 	// The query will immediately return cached data without flashing
+	// Only enabled for contracts to avoid unnecessary requests for EOAs
 	const contractSourceQuery = useQuery({
 		...useContractSourceQueryOptions({ address }),
 		initialData: contractSource,
+		enabled: isContract,
 	})
 	// Use SSR data until mounted to avoid hydration mismatch, then use query data
 	const resolvedContractSource = isMounted
