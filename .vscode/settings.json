@@ -51,11 +51,11 @@
 	"sqlfluff.dialect": "sqlite",
 	"sqlfluff.format.enabled": true,
 	"files.associations": {
+		"*.sql": "sql",
 		"*.svg": "html",
 		".env.*": "dotenv",
 		"biome.json": "jsonc",
-		"*.css": "tailwindcss",
-		"*.sql": "sql"
+		"*.css": "tailwindcss"
 	},
 	"files.exclude": {
 		"**/.tanstack": true,
