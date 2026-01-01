@@ -139,7 +139,7 @@ describe('fee-payer integration', () => {
 
 			expect(receipt.transactionHash).toBeDefined()
 			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
-			expect(receipt.feePayer.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 
 			// Assert RPC methods sent to fee-payer service
 			expect(feePayerRequests).toHaveLength(1)
@@ -170,7 +170,7 @@ describe('fee-payer integration', () => {
 			expect(receipt.transactionHash).toBeDefined()
 			expect(receipt.blockNumber).toBeGreaterThan(0n)
 			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
-			expect(receipt.feePayer.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 			expect(receipt.status).toBe('success')
 
 			// Assert RPC methods sent to fee-payer service

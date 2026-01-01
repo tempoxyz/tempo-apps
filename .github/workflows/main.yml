@@ -27,12 +27,11 @@ jobs:
           - app: fee-payer # devnet
             env: devnet
           - app: og
-          - app: service-proxy
           - app: tokenlist
           - app: contract-verification
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: "recursive"
           fetch-depth: 0
