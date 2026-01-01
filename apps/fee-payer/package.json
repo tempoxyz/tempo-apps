@@ -33,7 +33,7 @@
 		"@cloudflare/workers-types": "catalog:",
 		"@types/node": "catalog:",
 		"prool": "catalog:",
-		"testcontainers": "^11.11.0",
+		"testcontainers": "catalog:",
 		"typescript": "catalog:",
 		"vitest": "catalog:",
 		"wrangler": "catalog:"
