@@ -69,8 +69,5 @@ export default defineConfig((config) => {
 		preview: {
 			allowedHosts: config.mode === 'preview' ? allowedHosts : [],
 		},
-		build: {
-			minify: false,
-		},
 	}
 })
