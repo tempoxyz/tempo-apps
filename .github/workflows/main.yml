@@ -56,10 +56,12 @@ jobs:
 
       - name: Build & Deploy Workers
         if: steps.changes.outputs.relevant == 'true'
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@main
+        env:
+          NODE_ENV: production
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/${{ matrix.app }}
           packageManager: pnpm
-          command: NODE_ENV=production ${{ matrix.env == 'privy' && 'deploy --env privy' || 'deploy --env=""' }}
+          command: ${{ matrix.env == 'privy' && 'deploy --env privy' || 'deploy --env=""' }}
