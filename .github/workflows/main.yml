@@ -1,5 +1,6 @@
 name: Main
 on:
+  workflow_dispatch:
   push:
     branches: [main]
 
@@ -44,6 +45,11 @@ jobs:
       - name: Check for relevant changes
         id: changes
         run: |
+          # if workflow_dispatch, always deploy all
+          #
+          if [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
+            echo "relevant=true" >> $GITHUB_OUTPUT
+
           if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE "^(apps/${{ matrix.app }}/|pnpm-lock.yaml)"; then
             echo "relevant=true" >> $GITHUB_OUTPUT
           else
