@@ -34,6 +34,7 @@ jobs:
           - app: og
           - app: tokenlist
           - app: contract-verification
+          - app: o11y
 
     steps:
       - uses: actions/checkout@v6
