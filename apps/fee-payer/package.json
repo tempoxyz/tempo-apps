@@ -32,6 +32,7 @@
 		"@cloudflare/vitest-pool-workers": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
 		"@types/node": "catalog:",
+		"dotenv": "catalog:",
 		"prool": "catalog:",
 		"testcontainers": "catalog:",
 		"typescript": "catalog:",
