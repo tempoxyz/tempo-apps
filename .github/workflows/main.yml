@@ -61,7 +61,7 @@ jobs:
 
       - name: Build & Deploy Workers
         if: steps.changes.outputs.relevant == 'true'
-        uses: cloudflare/wrangler-action@main
+        uses: cloudflare/wrangler-action@v3
         env:
           NODE_ENV: production
         with:
