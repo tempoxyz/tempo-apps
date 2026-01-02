@@ -1,6 +1,7 @@
 import { createServer, port } from './prool.js'
 
-const tempoEnv = (process.env.TEMPO_ENV ?? 'localnet') as string
+const tempoEnv = (import.meta.env.TEMPO_ENV ?? 'localnet') as string
+const tempoTag = (import.meta.env.TEMPO_TAG ?? 'latest') as string
 
 async function waitForTempo(maxRetries = 10, delayMs = 500): Promise<void> {
 	const url = `http://localhost:${port}/1`
@@ -32,9 +33,12 @@ async function waitForTempo(maxRetries = 10, delayMs = 500): Promise<void> {
 export default async function globalSetup() {
 	if (tempoEnv !== 'localnet') return
 
-	console.log('[globalSetup] Starting local Tempo via Prool...')
+	console.log('[globalSetup] Starting local Tempo via Prool...', {
+		tempoEnv,
+		tempoTag,
+	})
 	try {
-		const server = await createServer()
+		const server = await createServer(tempoTag)
 		console.log('[globalSetup] Server created, starting...')
 		const teardown = await server.start()
 		console.log(
