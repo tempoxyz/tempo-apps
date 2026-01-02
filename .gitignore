@@ -25,3 +25,4 @@ _artifacts
 _tmp
 _verify
 .pnpm-store
+.localflare
