@@ -18,7 +18,6 @@ concurrency:
 env:
   NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
   TEMPO_ENV: localnet
-  TEMPO_TAG: latest
 
 jobs:
   test:
@@ -35,6 +34,5 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: Run tests
-        # TODO(struong): use prool instance once Moderato hardfork lands
-        run: pnpm test:testnet
+        run: pnpm test
         working-directory: apps/fee-payer

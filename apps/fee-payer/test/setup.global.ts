@@ -1,7 +1,17 @@
+import { createPublicClient, http } from 'viem'
+import { tempoTestnet } from 'viem/chains'
 import { createServer, port } from './prool.js'
 
-const tempoEnv = (import.meta.env.TEMPO_ENV ?? 'localnet') as string
-const tempoTag = (import.meta.env.TEMPO_TAG ?? 'latest') as string
+async function getCurrentTempoTestnetTag(): Promise<string> {
+	const client = createPublicClient({
+		chain: tempoTestnet,
+		transport: http(),
+	})
+	const clientVersion = await client.request({ method: 'web3_clientVersion' })
+	// clientVersion format: "tempo/v0.8.0-6318f1a/x86_64-unknown-linux-gnu"
+	const sha = clientVersion.split('/')[1].split('-').pop()
+	return `sha-${sha}`
+}
 
 async function waitForTempo(maxRetries = 10, delayMs = 500): Promise<void> {
 	const url = `http://localhost:${port}/1`
@@ -31,10 +41,12 @@ async function waitForTempo(maxRetries = 10, delayMs = 500): Promise<void> {
 }
 
 export default async function globalSetup() {
-	if (tempoEnv !== 'localnet') return
+	if ((import.meta.env.TEMPO_ENV ?? 'localnet') !== 'localnet') return
+
+	const tempoTag = (import.meta.env.TEMPO_TAG ??
+		(await getCurrentTempoTestnetTag())) as string
 
 	console.log('[globalSetup] Starting local Tempo via Prool...', {
-		tempoEnv,
 		tempoTag,
 	})
 	try {
