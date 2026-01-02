@@ -49,6 +49,7 @@ jobs:
           #
           if [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
             echo "relevant=true" >> $GITHUB_OUTPUT
+          fi
 
           if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE "^(apps/${{ matrix.app }}/|pnpm-lock.yaml)"; then
             echo "relevant=true" >> $GITHUB_OUTPUT
