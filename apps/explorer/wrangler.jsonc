@@ -1,6 +1,5 @@
 {
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
-	"name": "explorer",
 	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.server.ts",
@@ -12,23 +11,37 @@
 	},
 	"env": {
 		"testnet": {
-			"route": "explore.tempo.xyz",
-			"build": { "command": "pnpm vite build --mode='production'" },
+			"name": "testnet-explorer",
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.tempo.xyz"
+				}
+			],
+			"build": { "command": "pnpm vite build --mode='testnet'" },
 			"vars": {
-        "VITE_TEMPO_ENV": "testnet",
+				"VITE_TEMPO_ENV": "testnet",
 				"VITE_TEMPO_RPC_WS": "wss://proxy.tempo.xyz/rpc",
 				"VITE_TEMPO_RPC_HTTP": "https://proxy.tempo.xyz/rpc"
 			},
-      "workers_dev": true,
+			"workers_dev": true,
 			"browser": { "binding": "BROWSER" }
 		},
 		"devnet": {
-			"route": "devnet.explore.tempo.xyz",
-			"build": { "command": "pnpm vite build --mode='production'" },
+			"name": "devnet-explorer",
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "devnet.explore.tempo.xyz"
+				}
+			],
+			"build": { "command": "pnpm vite build --mode='devnet'" },
 			"vars": {
 				"VITE_TEMPO_ENV": "devnet",
-				"VITE_TEMPO_RPC_HTTP": "https://rpc.devnet.tempoxyz.dev",
-				"VITE_TEMPO_RPC_WS": "wss://rpc.devnet.tempoxyz.dev"
+				"VITE_TEMPO_RPC_WS": "wss://rpc.devnet.tempoxyz.dev",
+				"VITE_TEMPO_RPC_HTTP": "https://rpc.devnet.tempoxyz.dev"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" }
