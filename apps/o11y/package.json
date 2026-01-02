@@ -9,7 +9,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"preview": "vite preview",
-		"build": "vite build && node ./scripts/postbuild.ts",
+		"build": "vite build",
 		"check": "biome check . --write --unsafe",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
