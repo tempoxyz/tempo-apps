@@ -22,13 +22,22 @@ jobs:
     name: Deploy Preview (${{ matrix.app }})
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       issues: write
+      contents: read
       pull-requests: write
     strategy:
       matrix:
-        app: [explorer, fee-payer, og, tokenlist]
-
+        include:
+          - app: og
+          - app: fee-payer
+          - app: tokenlist
+          - app: explorer
+            env:
+              - devnet
+              - testnet
+    env:
+      NODE_ENV: production
+      CLOUDFLARE_ENV: ${{ matrix.env }}
     steps:
       - name: Clone repository
         uses: actions/checkout@v6
@@ -53,7 +62,7 @@ jobs:
 
       - name: Build
         if: steps.changes.outputs.relevant == 'true'
-        run: pnpm build
+        run: pnpm build -- --mode=${{ matrix.env }}
         working-directory: apps/${{ matrix.app }}
 
       - name: Upload Worker Version
@@ -63,8 +72,9 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: versions upload
           workingDirectory: apps/${{ matrix.app }}
+          environment: ${{ matrix.env }}
+          command: versions upload
 
       - name: Comment Preview URL on PR
         if: steps.changes.outputs.relevant == 'true'
