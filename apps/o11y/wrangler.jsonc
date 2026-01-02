@@ -1,0 +1,23 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "o11y",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.tsx",
+	"keep_vars": true,
+	"workers_dev": true,
+	"preview_urls": true,
+	"vars": {
+		"POSTHOG_HOST": "https://us.i.posthog.com",
+		"POSTHOG_API_KEY": "phc_KsvGuZjulJQcdaa72wu9i02DZPxaSuKfbLm7ySBqNGW"
+	},
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"persist": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true
+		}
+	}
+}

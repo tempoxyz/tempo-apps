@@ -17,6 +17,9 @@
 		"test": "vitest"
 	},
 	"dependencies": {
+		"posthog-js": "^1.312.0",
+		"posthog-node": "^5.18.1",
+		"@posthog/react": "^1.5.2",
 		"@shazow/whatsabi": "catalog:",
 		"@shikijs/langs": "catalog:",
 		"@shikijs/themes": "catalog:",
@@ -43,6 +46,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/puppeteer": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
 		"@cloudflare/vite-plugin": "catalog:",
 		"@cloudflare/vitest-pool-workers": "catalog:",
 		"@iconify/json": "catalog:",
