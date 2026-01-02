@@ -37,7 +37,7 @@ jobs:
               - testnet
     env:
       NODE_ENV: production
-      CLOUDFLARE_ENV: ${{ matrix.env }}
+      CLOUDFLARE_ENV: ${{ matrix.env || 'production' }}
     steps:
       - name: Clone repository
         uses: actions/checkout@v6
@@ -62,7 +62,7 @@ jobs:
 
       - name: Build
         if: steps.changes.outputs.relevant == 'true'
-        run: pnpm build -- --mode=${{ matrix.env }}
+        run: pnpm build -- --mode=${{ matrix.env || 'production' }}
         working-directory: apps/${{ matrix.app }}
 
       - name: Upload Worker Version
@@ -73,7 +73,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/${{ matrix.app }}
-          environment: ${{ matrix.env }}
+          environment: ${{ matrix.env || 'production' }} 
           command: versions upload
 
       - name: Comment Preview URL on PR

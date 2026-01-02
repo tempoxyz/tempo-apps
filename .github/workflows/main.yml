@@ -68,7 +68,7 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         env:
           NODE_ENV: production
-          CLOUDFLARE_ENV: ${{ matrix.env }}
+          CLOUDFLARE_ENV: ${{ matrix.env || 'production' }}
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
