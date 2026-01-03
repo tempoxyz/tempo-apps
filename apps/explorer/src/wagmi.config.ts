@@ -1,6 +1,6 @@
-import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
+import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
-import { tempoLocalnet, tempoTestnet } from 'viem/chains'
+import { tempoDevnet, tempoLocalnet, tempoTestnet } from 'viem/chains'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -12,18 +12,18 @@ import {
 	webSocket,
 } from 'wagmi'
 
-export const DEFAULT_TESTNET_RPC_URL = 'https://proxy.tempo.xyz/rpc'
-export const DEFAULT_TESTNET_WS_URL = 'wss://proxy.tempo.xyz/rpc'
+const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
-const getTempoRpcUrl = createIsomorphicFn()
-	.server(() => ({
-		http: DEFAULT_TESTNET_RPC_URL,
-		websocket: DEFAULT_TESTNET_WS_URL,
-	}))
-	.client(() => ({
-		http: DEFAULT_TESTNET_RPC_URL,
-		websocket: DEFAULT_TESTNET_WS_URL,
-	}))
+export const TESTNET_WS_URL = 'wss://proxy.tempo.xyz/rpc'
+export const TESTNET_RPC_URL = 'https://proxy.tempo.xyz/rpc'
+
+export const DEVNET_WS_URL = 'wss://rpc.devnet.tempoxyz.dev'
+export const DEVNET_RPC_URL = 'https://rpc.devnet.tempoxyz.dev'
+
+export const TEMPO_WS_URL =
+	TEMPO_ENV === 'devnet' ? DEVNET_WS_URL : TESTNET_WS_URL
+export const TEMPO_RPC_URL =
+	TEMPO_ENV === 'devnet' ? DEVNET_RPC_URL : TESTNET_RPC_URL
 
 declare module 'wagmi' {
 	interface Register {
@@ -33,30 +33,20 @@ declare module 'wagmi' {
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 
-export const getChain = createIsomorphicFn()
-	.client(() =>
-		import.meta.env.VITE_LOCALNET === 'true' ? tempoLocalnet : tempoTestnet,
-	)
-	.server(() =>
-		import.meta.env.VITE_LOCALNET === 'true' ? tempoLocalnet : tempoTestnet,
-	)
-
-export const getChainId = createIsomorphicFn()
-	.client(() => getChain().id)
-	.server(() => getChain().id)
-
 export function getWagmiConfig() {
-	const rpcUrl = getTempoRpcUrl()
-
 	return createConfig({
-		chains: [getChain()],
 		ssr: true,
+		chains: [tempoTestnet, tempoDevnet, tempoLocalnet],
 		batch: { multicall: false },
 		storage: createStorage({ storage: cookieStorage }),
 		transports: {
 			[tempoTestnet.id]: fallback([
-				webSocket(rpcUrl.websocket),
-				http(rpcUrl.http),
+				webSocket(TESTNET_WS_URL),
+				http(TESTNET_RPC_URL),
+			]),
+			[tempoDevnet.id]: fallback([
+				webSocket(DEVNET_WS_URL),
+				http(DEVNET_RPC_URL),
 			]),
 			[tempoLocalnet.id]: http(undefined, { batch: true }),
 		},

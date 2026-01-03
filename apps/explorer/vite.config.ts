@@ -10,7 +10,7 @@ import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 const [, , , ...args] = process.argv
 
 export default defineConfig((config) => {
-  if (config.mode === 'devnet') process.env.CLOUDFLARE_ENV = 'devnet'
+	if (config.mode === 'devnet') process.env.CLOUDFLARE_ENV = 'devnet'
 	if (config.mode === 'testnet') process.env.CLOUDFLARE_ENV = 'testnet'
 
 	const env = loadEnv(config.mode, process.cwd(), '')
