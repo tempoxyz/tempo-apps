@@ -27,7 +27,7 @@ export const TEMPO_WS_URL =
 export const TEMPO_RPC_URL =
 	TEMPO_ENV === 'devnet' ? DEVNET_RPC_URL : TESTNET_RPC_URL
 
-const getTempoChain = createIsomorphicFn()
+export const getTempoChain = createIsomorphicFn()
 	.client(() => (TEMPO_ENV === 'devnet' ? tempoDevnet : tempoTestnet))
 	.server(() => (TEMPO_ENV === 'devnet' ? tempoDevnet : tempoTestnet))
 

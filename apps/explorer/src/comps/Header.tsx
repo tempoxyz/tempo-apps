@@ -8,6 +8,7 @@ import * as React from 'react'
 import { useChains, useWatchBlockNumber } from 'wagmi'
 import { ExploreInput } from '#comps/ExploreInput'
 import { useIsMounted } from '#lib/hooks'
+import { getTempoChain } from '#wagmi.config.ts'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
 
@@ -139,9 +140,12 @@ export namespace Header {
 
 	export function NetworkBadge(props: NetworkBadge.Props) {
 		const { className } = props
-		const [chain] = useChains()
-		const network = chain.name.match(/Tempo (.+)/)?.[1]
+		const network = React.useMemo(() => {
+			return getTempoChain()?.name?.split(' ')?.at(-1)
+		}, [])
+
 		if (!network) return null
+
 		return (
 			<div
 				className={`flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium ${className ?? ''}`}
