@@ -97,8 +97,8 @@ catalogs:
       specifier: ^5.1.2
       version: 5.1.2
     '@wagmi/core':
-      specifier: ^3.0.2
-      version: 3.0.2
+      specifier: https://pkg.pr.new/wagmi@4922
+      version: 0.0.0-tmm_tempo.5b7715c
     abitype:
       specifier: ^1.2.3
       version: 1.2.3
