@@ -73,6 +73,7 @@ function TokensPage() {
 	const tokens = data?.tokens ?? []
 	const exactCount = isMounted ? countQuery.data?.data : undefined
 	const paginationTotal = exactCount ?? 100_000
+	const displayTotal = exactCount ?? '...'
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -103,7 +104,7 @@ function TokensPage() {
 				sections={[
 					{
 						title: 'Tokens',
-						totalItems: exactCount,
+						totalItems: displayTotal,
 						itemsLabel: 'tokens',
 						autoCollapse: false,
 						content: (
