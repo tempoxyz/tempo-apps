@@ -97,8 +97,8 @@ catalogs:
       specifier: ^5.1.2
       version: 5.1.2
     '@wagmi/core':
-      specifier: ^3.0.2
-      version: 3.0.2
+      specifier: https://pkg.pr.new/wagmi@4922
+      version: 0.0.0-tmm_tempo.5b7715c
     abitype:
       specifier: ^1.2.3
       version: 1.2.3
@@ -175,8 +175,8 @@ catalogs:
       specifier: 3.2.4
       version: 3.2.4
     wagmi:
-      specifier: ^3.1.4
-      version: 3.1.4
+      specifier: https://pkg.pr.new/wagmi@4922
+      version: 0.0.0-tmm_tempo.5b7715c
     wrangler:
       specifier: ^4.56.0
       version: 4.56.0
@@ -317,7 +317,7 @@ importers:
         version: 1.145.2(@tanstack/react-router@1.144.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.3.0(@types/node@25.0.3)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@wagmi/core':
         specifier: 'catalog:'
-        version: 3.0.2(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))
+        version: wagmi@https://pkg.pr.new/wagmi@4922(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))
       abitype:
         specifier: 'catalog:'
         version: 1.2.3(typescript@5.9.3)(zod@4.3.4)
@@ -344,13 +344,13 @@ importers:
         version: 4.1.18
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.12.1(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@wagmi/core@3.0.2(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(prool@0.2.2(testcontainers@11.11.0))(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))(wagmi@3.1.4(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(zod@4.3.4)
+        version: 0.12.1(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@wagmi/core@3.0.2(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(prool@0.2.2(testcontainers@11.11.0))(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))(wagmi@https://pkg.pr.new/wagmi@4922(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(zod@4.3.4)
       viem:
         specifier: 'catalog:'
         version: https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)
       wagmi:
         specifier: 'catalog:'
-        version: 3.1.4(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))
+        version: https://pkg.pr.new/wagmi@4922(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))
       zod:
         specifier: 'catalog:'
         version: 4.3.4
@@ -493,13 +493,13 @@ importers:
         version: 19.2.3(react@19.2.3)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.12.1(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@wagmi/core@3.0.2(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(prool@0.2.2(testcontainers@11.11.0))(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))(wagmi@3.1.4(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(zod@4.3.4)
+        version: 0.12.1(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@wagmi/core@3.0.2(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(prool@0.2.2(testcontainers@11.11.0))(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))(wagmi@https://pkg.pr.new/wagmi@4922(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(zod@4.3.4)
       viem:
         specifier: 'catalog:'
         version: https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)
       wagmi:
         specifier: 'catalog:'
-        version: 3.1.4(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))
+        version: https://pkg.pr.new/wagmi@4922(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -3086,6 +3086,41 @@ packages:
       typescript:
         optional: true
 
+  '@wagmi/connectors@https://pkg.pr.new/wevm/wagmi/@wagmi/connectors@b7bbd8b':
+    resolution: {integrity: sha512-q0y6mML+6Q7NpskzAIPLkDRSPqWYMPdiX/xs63nCtJ2pSCdxHTXgNBUG1W0sFvGAftuDOBPqk0sqLRR6ZB6Vyg==, tarball: https://pkg.pr.new/wevm/wagmi/@wagmi/connectors@b7bbd8b}
+    version: 0.0.0-tmm_tempo.5b7715c
+    peerDependencies:
+      '@base-org/account': ~2.4.0
+      '@coinbase/wallet-sdk': ~4.3.6
+      '@gemini-wallet/core': ~0.3.1
+      '@metamask/sdk': ~0.33.1
+      '@safe-global/safe-apps-provider': ~0.18.6
+      '@safe-global/safe-apps-sdk': ~9.1.0
+      '@wagmi/core': 0.0.0-tmm_tempo.5b7715c
+      '@walletconnect/ethereum-provider': ~2.21.1
+      porto: ~0.2.35
+      typescript: '>=5.7.3'
+      viem: 2.x
+    peerDependenciesMeta:
+      '@base-org/account':
+        optional: true
+      '@coinbase/wallet-sdk':
+        optional: true
+      '@gemini-wallet/core':
+        optional: true
+      '@metamask/sdk':
+        optional: true
+      '@safe-global/safe-apps-provider':
+        optional: true
+      '@safe-global/safe-apps-sdk':
+        optional: true
+      '@walletconnect/ethereum-provider':
+        optional: true
+      porto:
+        optional: true
+      typescript:
+        optional: true
+
   '@wagmi/core@3.0.2':
     resolution: {integrity: sha512-Aj5AI3M7XXRQZ9eAO6WWZ/A1yZoNAj46ZcPAwZSsKGa84LpX3Ff30s73RJhi8hSSVvaot9+yCeneLXMLRh63hw==}
     version: 3.0.2
@@ -3095,6 +3130,22 @@ packages:
       viem: 2.x
     peerDependenciesMeta:
       '@tanstack/query-core':
+        optional: true
+      typescript:
+        optional: true
+
+  '@wagmi/core@https://pkg.pr.new/wevm/wagmi/@wagmi/core@b7bbd8b':
+    resolution: {integrity: sha512-CMEcxS3DDclrjf0j7MrrLLYZM/wtfam9fa9f8lQv0jnj0nrXlqYFM42seSU9USQ+xn/JaQTXN1FgR5EhKTepIQ==, tarball: https://pkg.pr.new/wevm/wagmi/@wagmi/core@b7bbd8b}
+    version: 0.0.0-tmm_tempo.5b7715c
+    peerDependencies:
+      '@tanstack/query-core': '>=5.0.0'
+      ox: '>=0.11.1'
+      typescript: '>=5.7.3'
+      viem: 2.x
+    peerDependenciesMeta:
+      '@tanstack/query-core':
+        optional: true
+      ox:
         optional: true
       typescript:
         optional: true
@@ -5606,6 +5657,18 @@ packages:
   wagmi@3.1.4:
     resolution: {integrity: sha512-fBHInuby622mCHUJqRF/gOb0ZD4dZ0VQvKh2yXdkayo/7och7B9GavXs5XBPUgwb8fIjQZYeo8VlNtA7jjeu+Q==}
     version: 3.1.4
+    peerDependencies:
+      '@tanstack/react-query': '>=5.0.0'
+      react: '>=18'
+      typescript: '>=5.7.3'
+      viem: 2.x
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  wagmi@https://pkg.pr.new/wagmi@4922:
+    resolution: {integrity: sha512-IQ2Gv85A988rgMCAKheZiTUopbrHTKWo58PVJGd8DtZeA/WXHiFw5l/yyJ/JDKQUBJaq/rIg8DL4e8CUepPPFg==, tarball: https://pkg.pr.new/wagmi@4922}
+    version: 0.0.0-tmm_tempo.5b7715c
     peerDependencies:
       '@tanstack/react-query': '>=5.0.0'
       react: '>=18'
@@ -8277,6 +8340,14 @@ snapshots:
       viem: https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)
     optionalDependencies:
       typescript: 5.9.3
+    optional: true
+
+  '@wagmi/connectors@https://pkg.pr.new/wevm/wagmi/@wagmi/connectors@b7bbd8b(@wagmi/core@https://pkg.pr.new/wevm/wagmi/@wagmi/core@b7bbd8b(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))':
+    dependencies:
+      '@wagmi/core': https://pkg.pr.new/wevm/wagmi/@wagmi/core@b7bbd8b(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))
+      viem: https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)
+    optionalDependencies:
+      typescript: 5.9.3
 
   '@wagmi/core@3.0.2(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))':
     dependencies:
@@ -8292,6 +8363,7 @@ snapshots:
       - immer
       - react
       - use-sync-external-store
+    optional: true
 
   '@wagmi/core@3.0.2(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))':
     dependencies:
@@ -8301,6 +8373,23 @@ snapshots:
       zustand: 5.0.0(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))
     optionalDependencies:
       '@tanstack/query-core': 5.90.16
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@types/react'
+      - immer
+      - react
+      - use-sync-external-store
+    optional: true
+
+  '@wagmi/core@https://pkg.pr.new/wevm/wagmi/@wagmi/core@b7bbd8b(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))':
+    dependencies:
+      eventemitter3: 5.0.1
+      mipd: 0.0.7(typescript@5.9.3)
+      viem: https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)
+      zustand: 5.0.0(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.4.0(react@19.2.3))
+    optionalDependencies:
+      '@tanstack/query-core': 5.90.16
+      ox: 0.11.1(typescript@5.9.3)(zod@4.3.4)
       typescript: 5.9.3
     transitivePeerDependencies:
       - '@types/react'
@@ -10714,6 +10803,25 @@ snapshots:
       - typescript
       - zod
 
+  tempo.ts@0.12.1(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@wagmi/core@3.0.2(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(prool@0.2.2(testcontainers@11.11.0))(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))(wagmi@https://pkg.pr.new/wagmi@4922(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(zod@4.3.4):
+    dependencies:
+      '@remix-run/fetch-router': 0.12.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)
+      idb-keyval: 6.2.2
+      ox: 0.11.1(typescript@5.9.3)(zod@4.3.4)
+    optionalDependencies:
+      '@tanstack/query-core': 5.90.16
+      '@tanstack/react-query': 5.90.16(react@19.2.3)
+      '@wagmi/core': 3.0.2(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))
+      prool: 0.2.2(testcontainers@11.11.0)
+      viem: https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)
+      wagmi: https://pkg.pr.new/wagmi@4922(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))
+    transitivePeerDependencies:
+      - '@remix-run/headers'
+      - '@remix-run/route-pattern'
+      - '@remix-run/session'
+      - typescript
+      - zod
+
   testcontainers@11.11.0:
     dependencies:
       '@balena/dockerignore': 1.0.2
@@ -11074,6 +11182,31 @@ snapshots:
       - '@walletconnect/ethereum-provider'
       - immer
       - porto
+    optional: true
+
+  wagmi@https://pkg.pr.new/wagmi@4922(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)):
+    dependencies:
+      '@tanstack/react-query': 5.90.16(react@19.2.3)
+      '@wagmi/connectors': https://pkg.pr.new/wevm/wagmi/@wagmi/connectors@b7bbd8b(@wagmi/core@https://pkg.pr.new/wevm/wagmi/@wagmi/core@b7bbd8b(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)))(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))
+      '@wagmi/core': https://pkg.pr.new/wevm/wagmi/@wagmi/core@b7bbd8b(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.1(typescript@5.9.3)(zod@4.3.4))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4))
+      react: 19.2.3
+      use-sync-external-store: 1.4.0(react@19.2.3)
+      viem: https://pkg.pr.new/viem@4203(typescript@5.9.3)(zod@4.3.4)
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@base-org/account'
+      - '@coinbase/wallet-sdk'
+      - '@gemini-wallet/core'
+      - '@metamask/sdk'
+      - '@safe-global/safe-apps-provider'
+      - '@safe-global/safe-apps-sdk'
+      - '@tanstack/query-core'
+      - '@types/react'
+      - '@walletconnect/ethereum-provider'
+      - immer
+      - ox
+      - porto
 
   web-namespaces@2.0.1: {}
 
@@ -11211,5 +11344,6 @@ snapshots:
       '@types/react': 19.2.7
       react: 19.2.3
       use-sync-external-store: 1.6.0(react@19.2.3)
+    optional: true
 
   zwitch@2.0.4: {}

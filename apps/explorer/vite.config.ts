@@ -73,6 +73,11 @@ export default defineConfig((config) => {
 			__BUILD_VERSION__: JSON.stringify(
 				env.CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? Date.now().toString(),
 			),
+			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
+				config.mode === 'devnet' || config.mode === 'testnet'
+					? config.mode
+					: env.VITE_TEMPO_ENV,
+			),
 		},
 	}
 })

@@ -38,7 +38,7 @@ catalog:
   '@types/react': ^19.2.7
   '@types/react-dom': ^19.2.3
   '@vitejs/plugin-react': ^5.1.2
-  '@wagmi/core': ^3.0.2
+  '@wagmi/core': https://pkg.pr.new/wagmi@4922
   abitype: ^1.2.3
   cva: ^1.0.0-beta.4
   eruda: ^3.4.3
@@ -65,7 +65,7 @@ catalog:
   vite: npm:rolldown-vite@latest
   vite-plugin-devtools-json: ^1.0.0
   vitest: 3.2.4
-  wagmi: ^3.1.4
+  wagmi: https://pkg.pr.new/wagmi@4922
   wrangler: ^4.56.0
   zod: ^4.3.4
 
