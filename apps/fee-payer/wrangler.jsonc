@@ -10,6 +10,15 @@
 		"ALLOWED_ORIGINS": "*",
 		"TEMPO_ENV": "testnet"
 	},
+	// this binding is not inheritable to environments
+	// it's being added at top-level solely for the type generation script
+	"ratelimits": [
+		{
+			"name": "AddressRateLimiter",
+			"namespace_id": "888",
+			"simple": { "limit": 1000, "period": 60 }
+		}
+	],
 	"preview_urls": true,
 	"keep_vars": true,
 	"observability": {
