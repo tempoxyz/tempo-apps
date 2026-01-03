@@ -32,9 +32,9 @@ jobs:
           - app: fee-payer
           - app: tokenlist
           - app: explorer
-            env:
-              - devnet
-              - testnet
+            env: devnet
+          - app: explorer
+            env: testnet
     env:
       NODE_ENV: production
       CLOUDFLARE_ENV: ${{ matrix.env || 'production' }}
@@ -73,7 +73,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/${{ matrix.app }}
-          environment: ${{ matrix.env || 'production' }} 
+          environment: ${{ matrix.env || 'production' }}
           command: versions upload
 
       - name: Comment Preview URL on PR

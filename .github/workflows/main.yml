@@ -29,14 +29,15 @@ jobs:
           - app: tokenlist
           - app: contract-verification
           - app: explorer
-            env:
-              - devnet
-              - testnet
+            env: devnet
+          - app: explorer
+            env: testnet
           - app: fee-payer
-            env:
-              - privy
-              - devnet
-              - testnet
+            env: privy
+          - app: fee-payer
+            env: devnet
+          - app: fee-payer
+            env: testnet
 
     steps:
       - uses: actions/checkout@v6
@@ -74,4 +75,4 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/${{ matrix.app }}
           packageManager: pnpm
-          command: deploy
+          command: deploy ${{ matrix.env && format('--env {0}', matrix.env) || '' }}
