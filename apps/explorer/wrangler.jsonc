@@ -27,7 +27,16 @@
 				"VITE_TEMPO_RPC_HTTP": "https://proxy.tempo.xyz/rpc"
 			},
 			"workers_dev": true,
-			"browser": { "binding": "BROWSER" }
+			"browser": { "binding": "BROWSER" },
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
 		},
 		"devnet": {
 			"name": "devnet-explorer",
@@ -45,7 +54,16 @@
 				"VITE_TEMPO_RPC_HTTP": "https://rpc.devnet.tempoxyz.dev"
 			},
 			"workers_dev": true,
-			"browser": { "binding": "BROWSER" }
+			"browser": { "binding": "BROWSER" },
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
 		}
 	},
 	"observability": {
