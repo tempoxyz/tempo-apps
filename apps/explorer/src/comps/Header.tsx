@@ -5,7 +5,7 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useChains, useWatchBlockNumber } from 'wagmi'
+import { useWatchBlockNumber } from 'wagmi'
 import { ExploreInput } from '#comps/ExploreInput'
 import { useIsMounted } from '#lib/hooks'
 import { getTempoChain } from '#wagmi.config.ts'

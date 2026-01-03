@@ -76,10 +76,10 @@ export default defineConfig((config) => {
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
 				config.mode === 'devnet' || config.mode === 'testnet'
 					? config.mode
-					: (process.env.CLOUDFLARE_ENV === 'devnet' ||
-								process.env.CLOUDFLARE_ENV === 'testnet'
-							? process.env.CLOUDFLARE_ENV
-							: env.VITE_TEMPO_ENV),
+					: process.env.CLOUDFLARE_ENV === 'devnet' ||
+							process.env.CLOUDFLARE_ENV === 'testnet'
+						? process.env.CLOUDFLARE_ENV
+						: env.VITE_TEMPO_ENV,
 			),
 		},
 	}
