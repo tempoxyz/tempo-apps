@@ -4,6 +4,7 @@ import type { Address, Hex } from 'ox'
 import { zeroAddress } from 'viem'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { COUNT_CAP } from '#lib/constants'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
@@ -16,7 +17,6 @@ const QB = IDX.QueryBuilder.from(IS)
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const CACHE_TTL = 60_000
 const OG_CACHE_TTL = 3_600_000 // 1 hour
-const COUNT_CAP = 100_000
 
 const holdersCache = new Map<
 	string,
