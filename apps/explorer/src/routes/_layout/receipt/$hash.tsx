@@ -8,8 +8,6 @@ import {
 	useNavigate,
 } from '@tanstack/react-router'
 import { Hex, Json, Value } from 'ox'
-import { createPublicClient, http } from 'viem'
-import { getBlock, getTransaction } from 'viem/actions'
 import { getPublicClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'
@@ -37,19 +35,14 @@ function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 
 async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	const config = getWagmiConfig()
-	const client = params.rpcUrl
-		? createPublicClient({
-				chain: config.chains[0],
-				transport: http(params.rpcUrl),
-			})
-		: getPublicClient(config)
+	const client = getPublicClient(config)
 	const receipt = await client.getTransactionReceipt({
 		hash: params.hash,
 	})
 	// TODO: investigate & consider batch/multicall
 	const [block, transaction, getTokenMetadata] = await Promise.all([
-		getBlock(client, { blockHash: receipt.blockHash }),
-		getTransaction(client, { hash: receipt.transactionHash }),
+		client.getBlock({ blockHash: receipt.blockHash }),
+		client.getTransaction({ hash: receipt.transactionHash }),
 		Tip20.metadataFromLogs(receipt.logs),
 	])
 	const timestampFormatted = DateFormatter.format(block.timestamp)
