@@ -3,7 +3,7 @@ import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { COUNT_CAP } from '#lib/constants'
+import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
@@ -44,7 +44,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 			offset,
 			limit,
 			includeCount = false,
-			countLimit = COUNT_CAP,
+			countLimit = TOKEN_COUNT_MAX,
 		} = data
 
 		const config = getWagmiConfig()
@@ -61,7 +61,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				.execute(),
 			includeCount
 				? // count is an expensive, columnar-based query. we will count up
-					// to the first countLimit rows (default: COUNT_CAP)
+					// to the first countLimit rows (default: TOKEN_COUNT_MAX)
 					QB.selectFrom(
 						QB.withSignatures([EVENT_SIGNATURE])
 							.selectFrom('tokencreated')

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as IDX from 'idxs'
 import { getChainId } from 'wagmi/actions'
-import { COUNT_CAP } from '#lib/constants'
+import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
@@ -26,7 +26,7 @@ export const Route = createFileRoute('/api/tokens/count')({
 							.selectFrom('tokencreated')
 							.select((eb) => eb.lit(1).as('x'))
 							.where('chain', '=', chainId)
-							.limit(COUNT_CAP)
+							.limit(TOKEN_COUNT_MAX)
 							.as('subquery'),
 					)
 						.select((eb) => eb.fn.count('x').as('count'))

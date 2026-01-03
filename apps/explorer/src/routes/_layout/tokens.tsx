@@ -10,6 +10,7 @@ import {
 	useTimeFormat,
 } from '#comps/TimeFormat'
 import { TokenIcon } from '#comps/TokenIcon'
+import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { useMediaQuery, useIsMounted } from '#lib/hooks'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens.server'
@@ -72,7 +73,7 @@ function TokensPage() {
 
 	const tokens = data?.tokens ?? []
 	const exactCount = isMounted ? countQuery.data?.data : undefined
-	const paginationTotal = exactCount ?? 100_000
+	const paginationTotal = exactCount ?? TOKEN_COUNT_MAX
 	const displayTotal = exactCount ?? '...'
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
