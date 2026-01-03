@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config'
 import { Mnemonic } from 'ox'
+import 'dotenv/config'
 
 const tempoEnv = process.env.TEMPO_ENV ?? 'localnet'
 
