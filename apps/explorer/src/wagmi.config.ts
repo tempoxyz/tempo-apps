@@ -40,7 +40,7 @@ const getTempoTransport = createIsomorphicFn()
 	.server(() => {
 		if (TEMPO_ENV === 'devnet')
 			return fallback([webSocket(DEVNET_WS_URL), http(DEVNET_RPC_URL)])
-		return fallback([webSocket(TEMPO_WS_URL), http(TEMPO_RPC_URL)])
+		return fallback([webSocket(TESTNET_WS_URL), http(TESTNET_RPC_URL)])
 	})
 
 export function getWagmiConfig() {

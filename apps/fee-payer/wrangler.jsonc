@@ -77,7 +77,11 @@
 		"devnet": {
 			"name": "fee-payer-devnet",
 			"routes": [
-				{ "pattern": "sponsor.devnet.tempo.xyz", "custom_domain": true }
+				{
+					"pattern": "sponsor.devnet.tempo.xyz",
+					"zone_name": "tempo.xyz",
+					"custom_domain": true
+				}
 			],
 			"workers_dev": false,
 			"vars": {
