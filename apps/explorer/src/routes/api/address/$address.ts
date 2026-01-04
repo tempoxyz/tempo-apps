@@ -25,10 +25,14 @@ export const RequestParametersSchema = z.object({
 	include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
 })
 
+const isTestnet = process.env.VITE_TEMPO_ENV === 'testnet'
+
 export const Route = createFileRoute('/api/address/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params, request }) => {
+				if (isTestnet) return Response.json({ totalValue: 0 })
+
 				try {
 					// fallback base needed for dev SSR where request.url may be relative
 					const url = new URL(request.url, __BASE_URL__ || 'http://localhost')

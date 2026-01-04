@@ -159,7 +159,7 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 					}}
 				>
 					<SpotlightPill
-						className={cx(isTestnet && 'hidden')}
+						className={cx({ hidden: !isTestnet })}
 						to="/address/$address"
 						params={{ address: '0x5bc1473610754a5ca10749552b119df90c1a1877' }}
 						icon={<UserIcon className="size-[14px] text-accent" />}
@@ -170,7 +170,7 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 						Account
 					</SpotlightPill>
 					<SpotlightPill
-						className={cx(isTestnet && 'hidden')}
+						className={cx({ hidden: !isTestnet })}
 						to="/address/$address"
 						params={{ address: '0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d' }}
 						search={{ tab: 'contract' }}
@@ -183,7 +183,7 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 						Contract
 					</SpotlightPill>
 					<SpotlightPill
-						className={cx(isTestnet && 'hidden')}
+						className={cx({ hidden: !isTestnet })}
 						to="/receipt/$hash"
 						params={{
 							hash: '0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd',
@@ -199,7 +199,7 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 					<div
 						className={cx(
 							'relative group-hover/pills:opacity-40 hover:opacity-100! transition-all duration-500 ease-out',
-							{ hidden: isTestnet },
+							{ hidden: !isTestnet },
 						)}
 						ref={dropdownRef}
 						onMouseEnter={handleMouseEnter}
@@ -263,7 +263,7 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 					Blocks
 				</SpotlightPill>
 				<SpotlightPill
-					className={cx(isTestnet && 'hidden')}
+					className={cx({ hidden: !isTestnet })}
 					to="/tokens"
 					icon={<CoinsIcon className="size-[14px] text-accent" />}
 					pulse={isDiscoverPulse}

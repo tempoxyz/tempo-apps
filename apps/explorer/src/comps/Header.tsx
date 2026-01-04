@@ -29,10 +29,7 @@ export function Header(props: Header.Props) {
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden">
-					<Header.BlockNumber
-						initial={initialBlockNumber}
-						className={cx({ hidden: isTestnet })}
-					/>
+					<Header.BlockNumber initial={initialBlockNumber} />
 				</div>
 			</div>
 		</header>
@@ -121,11 +118,12 @@ export namespace Header {
 
 		return (
 			<Link
+				disabled={!isTestnet}
 				to="/block/$id"
 				params={{ id: 'latest' }}
 				className={cx(
-					'flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down',
 					className,
+					'flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down',
 				)}
 				title="View latest block"
 			>
