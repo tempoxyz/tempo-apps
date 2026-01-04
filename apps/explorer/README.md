@@ -2,11 +2,17 @@
 
 ## Getting Started
 
-To run this application:
+To run this application (defaults to `testnet` chain):
 
 ```bash
 pnpm install
 pnpm dev
+```
+
+To run `devnet` chain:
+
+```sh
+pnpm vite dev --mode devnet
 ```
 
 ### Styling
