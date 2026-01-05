@@ -50,7 +50,7 @@ export const Route = createRootRouteWithContext<{
 			},
 			{
 				name: 'og:image',
-				content: '/og-explorer.png',
+				content: 'https://explore.tempo.xyz/og-explorer.png',
 			},
 			{
 				name: 'og:image:type',
@@ -63,6 +63,14 @@ export const Route = createRootRouteWithContext<{
 			{
 				name: 'og:image:height',
 				content: '630',
+			},
+			{
+				name: 'twitter:card',
+				content: 'summary_large_image',
+			},
+			{
+				name: 'twitter:image',
+				content: 'https://explore.tempo.xyz/og-explorer.png',
 			},
 		],
 		links: [
