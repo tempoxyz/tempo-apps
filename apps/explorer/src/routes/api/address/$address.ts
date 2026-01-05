@@ -31,7 +31,15 @@ export const Route = createFileRoute('/api/address/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params, request }) => {
-				if (isTestnet) return Response.json({ totalValue: 0 })
+				if (isTestnet)
+					return Response.json({
+						limit: 0,
+						total: 0,
+						offset: 0,
+						hasMore: false,
+						transactions: [],
+						error: null,
+					})
 
 				try {
 					// fallback base needed for dev SSR where request.url may be relative

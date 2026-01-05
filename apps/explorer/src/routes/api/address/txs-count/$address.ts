@@ -24,7 +24,7 @@ export const Route = createFileRoute('/api/address/txs-count/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				if (isTestnet) return Response.json({ totalValue: 0 })
+				if (isTestnet) return Response.json({ data: 0, error: null })
 
 				try {
 					const address = zAddress().parse(params.address)
