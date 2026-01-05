@@ -1,5 +1,6 @@
+import { usePostHog } from '@posthog/react'
 import { createFileRoute } from '@tanstack/react-router'
-import posthog from 'posthog-js'
+
 import * as React from 'react'
 import * as z from 'zod/mini'
 
@@ -12,16 +13,21 @@ export const Route = createFileRoute('/_layout/debug')({
 
 function RouteComponent() {
 	const search = Route.useSearch()
+	const posthog = usePostHog()
 
 	React.useEffect(() => {
 		console.info(search)
-
-		posthog.capture('_explorer_test_event', {
+		posthog?.identify('user_id', {
 			url: window.location.href,
 			query: search.query,
 			timestamp: new Date(),
 		})
-	}, [search])
+		posthog?.capture('_explorer_test_event', {
+			url: window.location.href,
+			query: search.query,
+			timestamp: new Date(),
+		})
+	}, [search, posthog])
 
 	return (
 		<main>
@@ -29,7 +35,7 @@ function RouteComponent() {
 			<button
 				type="button"
 				onClick={() =>
-					posthog.capture('_explorer_test_event', {
+					posthog?.capture('button_clicked', {
 						url: window.location.href,
 						query: search.query,
 						timestamp: new Date(),

@@ -5,8 +5,8 @@ interface EnvironmentVariables {
 	readonly VITE_OG_URL: string
 	readonly VITE_CONTRACT_VERIFY_URL: string
 
-	readonly VITE_POSTHOG_HOST: string
-	readonly VITE_POSTHOG_API_KEY: string
+	readonly VITE_PUBLIC_POSTHOG_HOST: string
+	readonly VITE_PUBLIC_POSTHOG_API_KEY: string
 }
 
 interface ImportMetaEnv extends EnvironmentVariables {}
