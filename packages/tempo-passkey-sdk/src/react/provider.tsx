@@ -7,11 +7,10 @@ import {
 	useMemo,
 	useState,
 } from 'react'
-import { KeyManager, webAuthn } from 'tempo.ts/wagmi'
+import { KeyManager } from 'tempo.ts/wagmi'
 import type { Chain } from 'viem'
 import { tempoTestnet } from 'viem/chains'
 import { withFeePayer } from 'viem/tempo'
-import type { Config } from 'wagmi'
 import {
 	createConfig,
 	http,
@@ -20,6 +19,7 @@ import {
 	useDisconnect,
 	WagmiProvider,
 } from 'wagmi'
+import { tempoPasskeyConnector } from '../core/connector'
 
 export interface TempoWalletConfig {
 	rpcUrl: string
@@ -46,8 +46,6 @@ const TempoWalletContext = createContext<{
 // Default internal query client if none provided
 const defaultQueryClient = new QueryClient()
 
-let globalWagmiConfig: Config | null = null
-
 const TempoWalletInner: React.FC<{ children: React.ReactNode }> = ({
 	children,
 }) => {
@@ -59,11 +57,14 @@ const TempoWalletInner: React.FC<{ children: React.ReactNode }> = ({
 	const handleConnect = useCallback(
 		async (args?: { signUp?: boolean }) => {
 			setError(null)
-			const connector = connectors.find((c) => c.id === 'webAuthn')
+			// Fixed: Look for our custom connector with matching ID 'tempo-passkey'
+			const connector = connectors.find((c) => c.id === 'tempo-passkey')
 			if (!connector) {
 				setError(new Error('Passkey connector not found'))
 				return
 			}
+
+			console.log('Connecting with connector:', connector.id)
 
 			const capabilities = {
 				type: args?.signUp ? 'sign-up' : 'sign-in',
@@ -125,17 +126,17 @@ export const TempoWalletProvider: React.FC<TempoWalletProviderProps> = ({
 		return KeyManager.localStorage()
 	}, [config.keyManagerUrl])
 
+	// Config is now purely derived from props, no global state
 	const wagmiConfig = useMemo(() => {
-		if (globalWagmiConfig) return globalWagmiConfig
-
 		const transport = config.feePayerUrl
 			? withFeePayer(http(config.rpcUrl), http(config.feePayerUrl))
 			: http(config.rpcUrl)
 
-		globalWagmiConfig = createConfig({
+		return createConfig({
 			chains: [chain],
 			connectors: [
-				webAuthn({
+				// Fixed: Use tempoPasskeyConnector instead of webAuthn direct call
+				tempoPasskeyConnector({
 					keyManager,
 				}),
 			],
@@ -143,7 +144,6 @@ export const TempoWalletProvider: React.FC<TempoWalletProviderProps> = ({
 				[chain.id]: transport,
 			},
 		})
-		return globalWagmiConfig
 	}, [chain, keyManager, config.rpcUrl, config.feePayerUrl])
 
 	return (
