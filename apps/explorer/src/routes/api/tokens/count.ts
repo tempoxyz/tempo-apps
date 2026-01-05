@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as IDX from 'idxs'
 import { getChainId } from 'wagmi/actions'
-import * as ABIS from '#lib/abis'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
@@ -11,6 +10,9 @@ const IS = IDX.IndexSupply.create({
 
 const QB = IDX.QueryBuilder.from(IS)
 
+const EVENT_SIGNATURE =
+	'event TokenCreated(address indexed token, uint256 indexed tokenId, string name, string symbol, string currency, address quoteToken, address admin)'
+
 export const Route = createFileRoute('/api/tokens/count')({
 	server: {
 		handlers: {
@@ -18,13 +20,12 @@ export const Route = createFileRoute('/api/tokens/count')({
 				try {
 					const config = getWagmiConfig()
 					const chainId = getChainId(config)
-					const eventSignature = ABIS.getTokenCreatedEvent(chainId)
 
 					const countResult = await QB.selectFrom(
-						QB.withSignatures([eventSignature])
+						QB.withSignatures([EVENT_SIGNATURE])
 							.selectFrom('tokencreated')
 							.select((eb) => eb.lit(1).as('x'))
-							.where('chain', '=', chainId as never)
+							.where('chain', '=', chainId)
 							.limit(TOKEN_COUNT_MAX)
 							.as('subquery'),
 					)

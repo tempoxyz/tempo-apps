@@ -3,6 +3,7 @@ import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
@@ -22,11 +23,13 @@ export type Token = {
 const FetchTokensInputSchema = z.object({
 	offset: z.coerce.number().check(z.gte(0)),
 	limit: z.coerce.number().check(z.gte(1), z.lte(100)),
+	includeCount: z.optional(z.boolean()),
+	countLimit: z.optional(z.coerce.number().check(z.gte(1))),
 })
 
 export type TokensApiResponse = {
 	tokens: Token[]
-	total: number
+	total: number | null
 	offset: number
 	limit: number
 }
@@ -37,7 +40,12 @@ const EVENT_SIGNATURE =
 export const fetchTokens = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokensInputSchema.parse(input))
 	.handler(async ({ data }): Promise<TokensApiResponse> => {
-		const { offset, limit } = data
+		const {
+			offset,
+			limit,
+			includeCount = false,
+			countLimit = TOKEN_COUNT_MAX,
+		} = data
 
 		const config = getWagmiConfig()
 		const chainId = getChainId(config)
@@ -51,26 +59,28 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				.limit(limit)
 				.offset(offset)
 				.execute(),
-			// count is an expensive, columnar-based query. we will count up
-			// to the first 100k rows
-			QB.selectFrom(
-				QB.withSignatures([EVENT_SIGNATURE])
-					.selectFrom('tokencreated')
-					.select((eb) => eb.lit(1).as('x'))
-					.where('chain', '=', chainId)
-					.limit(100_000)
-					.as('subquery'),
-			)
-				.select((eb) => eb.fn.count('x').as('count'))
-				.executeTakeFirst(),
+			includeCount
+				? // count is an expensive, columnar-based query. we will count up
+					// to the first countLimit rows (default: TOKEN_COUNT_MAX)
+					QB.selectFrom(
+						QB.withSignatures([EVENT_SIGNATURE])
+							.selectFrom('tokencreated')
+							.select((eb) => eb.lit(1).as('x'))
+							.where('chain', '=', chainId)
+							.limit(countLimit)
+							.as('subquery'),
+					)
+						.select((eb) => eb.fn.count('x').as('count'))
+						.executeTakeFirst()
+				: Promise.resolve(null),
 		])
 
-		const count = countResult?.count ?? 0
+		const count = countResult?.count ?? null
 
 		return {
 			offset,
 			limit,
-			total: Number(count),
+			total: count !== null ? Number(count) : null,
 			tokens: tokensResult.map(
 				({ token: address, block_timestamp, ...rest }) => ({
 					...rest,
