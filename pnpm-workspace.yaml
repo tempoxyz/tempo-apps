@@ -1,5 +1,6 @@
 packages:
   - apps/**
+  - packages/**
   - '!**/_/**'
 
 catalog:
@@ -60,6 +61,7 @@ catalog:
   vite: npm:rolldown-vite@latest
   vite-plugin-devtools-json: ^1.0.0
   vitest: 3.2.4
+  '@wagmi/core': ^3.0.2
   wagmi: ^3.1.4
   wrangler: ^4.56.0
   zod: ^4.3.4
