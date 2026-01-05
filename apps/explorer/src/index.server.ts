@@ -1,15 +1,14 @@
-import { env } from 'cloudflare:workers'
-import type { ExecutionContext } from '@cloudflare/workers-types'
-// import { BaseContext } from '@tanstack/react-start'
-import handler, {
-	createServerEntry,
-	type ServerEntry,
-} from '@tanstack/react-start/server-entry'
+import { env, waitUntil } from 'cloudflare:workers'
+import {
+	createStartHandler,
+	defaultStreamHandler,
+	defineHandlerCallback,
+} from '@tanstack/react-start/server'
+import { createServerEntry } from '@tanstack/react-start/server-entry'
+
 import { createPostHogClient } from '#lib/posthog.ts'
 
-type BaseContext = NonNullable<Parameters<ServerEntry['fetch']>[1]>['context']
-
-export const redirects: Array<{
+const redirects: Array<{
 	from: RegExp
 	to: (match: RegExpMatchArray) => string
 }> = [
@@ -18,43 +17,42 @@ export const redirects: Array<{
 	{ from: /^\/tokens\/(.+)$/, to: (m) => `/token/${m[1]}` },
 ]
 
-export default createServerEntry({
-	// @ts-expect-error - opts is not typed correctly
-  fetch: async (
-		request,
-		opts: { context?: BaseContext & ExecutionContext },
-	) => {
-		const url = new URL(request.url)
+const entryHandler = defineHandlerCallback((context) => {
+	const url = new URL(context.request.url)
 
-		for (const { from, to } of redirects) {
-			const match = url.pathname.match(from)
-			if (match) {
-				url.pathname = to(match)
-				return Response.redirect(url, 301)
-			}
-		}
+	for (const { from, to } of redirects) {
+		const match = url.pathname.match(from)
+		if (!match) continue
+		url.pathname = to(match)
+		return Response.redirect(url, 301)
+	}
+	return defaultStreamHandler(context)
+})
+
+const startFetch = createStartHandler(entryHandler)
+
+export default createServerEntry({
+	fetch: async (request, options) => {
+		if (!options) return startFetch(request, options)
 
 		const posthog = createPostHogClient({
-			apiKey: env.VITE_POSTHOG_API_KEY,
 			host: env.VITE_POSTHOG_HOST,
+			apiKey: env.VITE_POSTHOG_KEY,
 		})
-		const distinctId = 'ian@posthog.com' // replace with actual user ID
+		const distinctId = 'explorer@tempo.xyz' // TODO: ~~temp~~ - remove me
 
-		opts?.context?.waitUntil(
+		waitUntil(
 			posthog.captureImmediate({
-				distinctId: distinctId,
-				event: 'hello_world_request',
+				distinctId,
+				event: '_explorer_test_event',
 				properties: {
 					$current_url: request.url,
 				},
 			}),
 		)
 
-		const flag = await posthog.isFeatureEnabled('test_flag', distinctId)
-		console.info('flag', flag || false)
+		waitUntil(posthog.shutdown())
 
-		opts?.context?.waitUntil(posthog.shutdown())
-
-		return handler.fetch(request, opts)
+		return startFetch(request, options)
 	},
 })

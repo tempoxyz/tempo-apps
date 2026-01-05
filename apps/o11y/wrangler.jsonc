@@ -3,13 +3,13 @@
 	"name": "o11y",
 	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
-	"main": "./src/index.tsx",
+	"main": "./src/index.ts",
 	"keep_vars": true,
 	"workers_dev": true,
 	"preview_urls": true,
 	"vars": {
 		"POSTHOG_HOST": "https://us.i.posthog.com",
-		"POSTHOG_API_KEY": "phc_KsvGuZjulJQcdaa72wu9i02DZPxaSuKfbLm7ySBqNGW"
+		"POSTHOG_API_KEY": "phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR"
 	},
 	"observability": {
 		"enabled": true,

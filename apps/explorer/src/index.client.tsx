@@ -4,9 +4,10 @@ import posthog from 'posthog-js'
 import * as React from 'react'
 import { hydrateRoot } from 'react-dom/client'
 
-posthog.init(import.meta.env.VITE_PUBLIC_POSTHOG_KEY, {
+posthog.init(import.meta.env.VITE_POSTHOG_API_KEY, {
+	ui_host: 'https://us.posthog.com',
 	api_host: 'https://o11y.tempo.xyz',
-	defaults: '2025-11-30',
+	enable_recording_console_log: true,
 })
 
 hydrateRoot(

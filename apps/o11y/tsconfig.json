@@ -5,10 +5,9 @@
 		"noEmit": true,
 		"allowJs": true,
 		"checkJs": true,
-		"lib": ["DOM", "ESNext"],
+		"lib": ["ESNext"],
 		"target": "ESNext",
 		"module": "ESNext",
-		"jsx": "react-jsx",
 		"skipLibCheck": true,
 		"alwaysStrict": true,
 		"esModuleInterop": true,
@@ -16,7 +15,6 @@
 		"strictNullChecks": true,
 		"resolveJsonModule": true,
 		"verbatimModuleSyntax": true,
-		"jsxImportSource": "hono/jsx",
 		"moduleResolution": "Bundler",
 		"useDefineForClassFields": true,
 		"allowArbitraryExtensions": true,
@@ -34,11 +32,10 @@
 		},
 		"types": ["node", "@cloudflare/workers-types"]
 	},
-	"include": ["src/**/*", "scripts/**/*"],
+	"include": ["src/**/*"],
 	"files": [
 		"env.d.ts",
 		"reset.d.ts",
-		"svgo.config.ts",
 		"vite.config.ts",
 		"worker-configuration.d.ts"
 	],

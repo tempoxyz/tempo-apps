@@ -16,6 +16,7 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
+import { Route as LayoutDebugRouteRouteImport } from './routes/_layout/debug/route'
 import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
 import { Route as ApiTokensCountRouteImport } from './routes/api/tokens/count'
 import { Route as ApiAddressAddressRouteImport } from './routes/api/address/$address'
@@ -65,6 +66,11 @@ const LayoutTokensRoute = LayoutTokensRouteImport.update({
 const LayoutBlocksRoute = LayoutBlocksRouteImport.update({
   id: '/blocks',
   path: '/blocks',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDebugRouteRoute = LayoutDebugRouteRouteImport.update({
+  id: '/debug',
+  path: '/debug',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutDemoIndexRoute = LayoutDemoIndexRouteImport.update({
@@ -151,6 +157,7 @@ const ApiAddressTotalValueAddressRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/debug': typeof LayoutDebugRouteRoute
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -175,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/api/tx/trace/$hash': typeof ApiTxTraceHashRoute
 }
 export interface FileRoutesByTo {
+  '/debug': typeof LayoutDebugRouteRoute
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -201,6 +209,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
+  '/_layout/debug': typeof LayoutDebugRouteRoute
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -227,6 +236,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/debug'
     | '/blocks'
     | '/tokens'
     | '/api/code'
@@ -251,6 +261,7 @@ export interface FileRouteTypes {
     | '/api/tx/trace/$hash'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/debug'
     | '/blocks'
     | '/tokens'
     | '/api/code'
@@ -276,6 +287,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_layout'
+    | '/_layout/debug'
     | '/_layout/blocks'
     | '/_layout/tokens'
     | '/api/code'
@@ -362,6 +374,13 @@ declare module '@tanstack/react-router' {
       path: '/blocks'
       fullPath: '/blocks'
       preLoaderRoute: typeof LayoutBlocksRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/debug': {
+      id: '/_layout/debug'
+      path: '/debug'
+      fullPath: '/debug'
+      preLoaderRoute: typeof LayoutDebugRouteRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/demo/': {
@@ -480,6 +499,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface LayoutRouteChildren {
+  LayoutDebugRouteRoute: typeof LayoutDebugRouteRoute
   LayoutBlocksRoute: typeof LayoutBlocksRoute
   LayoutTokensRoute: typeof LayoutTokensRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
@@ -496,6 +516,7 @@ interface LayoutRouteChildren {
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutDebugRouteRoute: LayoutDebugRouteRoute,
   LayoutBlocksRoute: LayoutBlocksRoute,
   LayoutTokensRoute: LayoutTokensRoute,
   LayoutIndexRoute: LayoutIndexRoute,

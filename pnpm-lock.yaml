@@ -284,7 +284,7 @@ importers:
     dependencies:
       '@posthog/react':
         specifier: ^1.5.2
-        version: 1.5.2(@types/react@19.2.7)(posthog-js@1.312.0)(react@19.2.3)
+        version: 1.5.2(@types/react@19.2.7)(posthog-js@1.313.0)(react@19.2.3)
       '@shazow/whatsabi':
         specifier: 'catalog:'
         version: 0.25.0(@noble/hashes@1.8.0)(typescript@5.9.3)(zod@4.3.4)
@@ -331,8 +331,8 @@ importers:
         specifier: 'catalog:'
         version: 0.11.1(typescript@5.9.3)(zod@4.3.4)
       posthog-js:
-        specifier: ^1.312.0
-        version: 1.312.0
+        specifier: ^1.313.0
+        version: 1.313.0
       posthog-node:
         specifier: ^5.18.1
         version: 5.18.1
@@ -4870,6 +4870,9 @@ packages:
   posthog-js@1.312.0:
     resolution: {integrity: sha512-rdXprhuRzhutU8powMJpIfC0uRtI3OyuYktmLhZRMsD4DQaO3fnudKNq4zxtNmqMPFCSTfmlBH8ByLNOppm2tg==}
 
+  posthog-js@1.313.0:
+    resolution: {integrity: sha512-CL8RkC7m9BTZrix86w0fdnSCVqC/gxrfs6c4Wfkz/CldFD7f2912S2KqnWFmwRVDGIwm9IR82YhublQ88gdDKw==}
+
   posthog-node@5.18.1:
     resolution: {integrity: sha512-Hi7cRqAlvuEitdiurXJFdMip+BxcwYoX66at5RErMVP91V+Ph9BspGiawC3mJx/4znjwUjF29kAhf8oZQ2uJ5Q==}
     engines: {node: '>=20'}
@@ -6922,9 +6925,9 @@ snapshots:
     dependencies:
       cross-spawn: 7.0.6
 
-  '@posthog/react@1.5.2(@types/react@19.2.7)(posthog-js@1.312.0)(react@19.2.3)':
+  '@posthog/react@1.5.2(@types/react@19.2.7)(posthog-js@1.313.0)(react@19.2.3)':
     dependencies:
-      posthog-js: 1.312.0
+      posthog-js: 1.313.0
       react: 19.2.3
     optionalDependencies:
       '@types/react': 19.2.7
@@ -10216,6 +10219,14 @@ snapshots:
       source-map-js: 1.2.1
 
   posthog-js@1.312.0:
+    dependencies:
+      '@posthog/core': 1.9.0
+      core-js: 3.47.0
+      fflate: 0.4.8
+      preact: 10.28.1
+      web-vitals: 4.2.4
+
+  posthog-js@1.313.0:
     dependencies:
       '@posthog/core': 1.9.0
       core-js: 3.47.0

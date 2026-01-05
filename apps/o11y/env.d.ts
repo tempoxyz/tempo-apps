@@ -1,6 +1,6 @@
 interface Env {
 	readonly PORT: string
-	readonly ENVIRONMENT: 'development' | 'production'
+	readonly NODE_ENV: 'development' | 'production' | 'test'
 
 	readonly LOGGING?: 'verbose' | 'normal' | 'silent' | undefined
 }

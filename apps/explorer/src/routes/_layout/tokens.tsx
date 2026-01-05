@@ -11,7 +11,7 @@ import {
 } from '#comps/TimeFormat'
 import { TokenIcon } from '#comps/TokenIcon'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
-import { useMediaQuery, useIsMounted } from '#lib/hooks'
+import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens.server'
 
@@ -20,7 +20,11 @@ async function fetchTokensCount() {
 		headers: { 'Content-Type': 'application/json' },
 	})
 	if (!response.ok) throw new Error('Failed to fetch total token count')
-	const { data: safeData, success, error } = z.safeParse(
+	const {
+		data: safeData,
+		success,
+		error,
+	} = z.safeParse(
 		z.object({ data: z.number(), error: z.nullable(z.string()) }),
 		await response.json(),
 	)

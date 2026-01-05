@@ -16,6 +16,7 @@
 		"**/routeTree.gen.ts": true
 	},
 	"search.exclude": {
+    "**/dist/**": true,
 		"**/routeTree.gen.ts": true
 	},
 	"files.readonlyInclude": {
