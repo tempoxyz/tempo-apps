@@ -230,7 +230,7 @@ function BlockRow({
 	return (
 		<div
 			className={cx(
-				'grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 border-b border-dashed border-card-border last:border-b-0',
+				'grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 border-b border-dashed border-card-border last:border-b-0 font-mono',
 				isNew && 'bg-positive/5',
 			)}
 		>
@@ -238,7 +238,7 @@ function BlockRow({
 				<Link
 					to="/block/$id"
 					params={{ id: blockNumber }}
-					className="text-accent press-down font-medium"
+					className="text-accent press-down font-medium font-mono"
 				>
 					{blockNumber}
 				</Link>
@@ -247,20 +247,24 @@ function BlockRow({
 				<Link
 					to="/block/$id"
 					params={{ id: blockHash }}
-					className="text-secondary hover:text-accent transition-colors"
+					className="text-secondary hover:text-accent transition-colors font-mono"
 					title={blockHash}
 				>
 					<Midcut value={blockHash} prefix="0x" />
 				</Link>
 			</div>
-			<div className="text-right text-secondary tabular-nums min-w-30">
+			<div className="text-right text-secondary tabular-nums min-w-30 font-mono">
 				{isLatest ? (
 					'now'
 				) : (
-					<FormattedTimestamp timestamp={block.timestamp} format={timeFormat} />
+					<span className="font-mono">
+						<FormattedTimestamp timestamp={block.timestamp} format={timeFormat} />
+					</span>
 				)}
 			</div>
-			<div className="text-right text-secondary tabular-nums">{txCount}</div>
+			<div className="text-right text-secondary tabular-nums font-mono">
+				{txCount}
+			</div>
 		</div>
 	)
 }
