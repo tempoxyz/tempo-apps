@@ -47,7 +47,7 @@ export class ErrorBoundary extends React.Component<
 						onClick={() => window.history.back()}
 						className="text-accent rounded-[8px] press-down"
 					>
-						Go Back
+						Return home ⏎
 					</button>
 				</section>
 				<Footer />
