@@ -48,7 +48,7 @@ function Component() {
 			<div className="grid place-items-center relative grid-flow-row gap-5 select-none w-full pt-15 pb-10 z-1">
 				<Intro onPhaseChange={handlePhaseChange} />
 				<div
-					className="px-4 w-full flex justify-center transition-all duration-500 ease-out relative z-20"
+					className="px-4 w-full flex justify-center transition-all duration-500 ease-out relative z-20 my-5"
 					style={{
 						opacity: introPhase !== 'initial' ? 1 : 0,
 						transform:
