@@ -7,3 +7,5 @@ set -euo pipefail
 
 # remove all dist, recursively
 /usr/bin/find . -name "dist" -type d -exec rm -rf {} +
+
+rm pnpm-lock.yaml
