@@ -474,7 +474,7 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 					Balance Updates
 				</span>
 				<div className="flex flex-col gap-[4px] flex-1 min-w-0">
-					<div className="flex flex-col gap-[12px] max-h-[360px] overflow-y-auto pb-[8px]">
+					<div className="flex flex-col gap-[12px] max-h-[360px] overflow-y-auto pb-[8px] font-mono">
 						{Array.from(groupedByAccount.entries()).map(
 							([address, changes]) => (
 								<div
@@ -509,7 +509,7 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 												>
 													<span
 														className={cx(
-															'shrink-0 font-mono tabular-nums',
+															'shrink-0 tabular-nums',
 															isPositive
 																? 'text-base-content-positive'
 																: 'text-secondary',
@@ -519,7 +519,7 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 														{formatted}
 													</span>
 													<Link
-														className="inline-flex items-center gap-[4px] text-base-content-positive press-down shrink-0 font-mono"
+														className="inline-flex items-center gap-[4px] text-base-content-positive press-down shrink-0"
 														params={{ address: change.token }}
 														to={
 															isTip20 ? '/token/$address' : '/address/$address'
