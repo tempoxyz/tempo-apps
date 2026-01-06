@@ -136,10 +136,13 @@ function RouteComponent() {
 							<button
 								type="button"
 								onClick={cycleTimeFormat}
-								className="text-secondary hover:text-accent cursor-pointer transition-colors"
+								className="text-tertiary hover:text-accent cursor-pointer transition-colors flex items-center justify-end gap-2"
 								title={`Showing ${formatLabel} time - click to change`}
 							>
-								Time
+								<span>Time</span>
+								<span className="bg-base-alt text-tertiary px-2 py-[3px] rounded-[8px] text-[11px] font-sans capitalize">
+									{formatLabel}
+								</span>
 							</button>
 						</div>
 						<div className="text-right">Count</div>
@@ -179,11 +182,10 @@ function RouteComponent() {
 							resetScroll={false}
 							search={(prev) => ({ ...prev, live: !live })}
 							className={cx(
-								'flex items-center gap-1.5 px-2.5 py-1.25 rounded-md text-[12px] font-medium font-sans transition-colors',
-								{
-									'bg-positive/10 text-positive hover:bg-positive/20': live,
-									'bg-base-alt text-tertiary hover:bg-base-alt/80': !live,
-								},
+								'flex items-center gap-1.5 px-2.5 py-1.25 rounded-md text-[12px] font-medium font-sans transition-colors text-primary',
+								live
+									? 'bg-positive/10 hover:bg-positive/20'
+									: 'bg-base-alt hover:bg-base-alt/80',
 							)}
 							title={live ? 'Pause live updates' : 'Resume live updates'}
 						>
