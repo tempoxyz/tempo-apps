@@ -139,7 +139,7 @@ export function BlockCard(props: BlockCard.Props) {
 						<Link
 							to="/block/$id"
 							params={{ id: parentHash }}
-							className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end font-mono"
+							className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end font-mono max-w-[18ch]"
 							title={parentHash}
 						>
 							<Midcut value={parentHash} prefix="0x" align="end" min={4} />
@@ -165,7 +165,10 @@ export function BlockCard(props: BlockCard.Props) {
 						)}
 					</BlockCard.InfoRow>
 					<BlockCard.InfoRow label="Confirmations">
-						<span ref={confirmationsRef} className="text-primary font-mono tabular-nums">
+						<span
+							ref={confirmationsRef}
+							className="text-primary font-mono tabular-nums"
+						>
 							<span className="text-secondary">—</span>
 						</span>
 					</BlockCard.InfoRow>
@@ -190,7 +193,7 @@ export function BlockCard(props: BlockCard.Props) {
 
 						{showAdvanced && (
 							<div className="mt-[14px] space-y-[14px]">
-								<div className="space-y-[6px]">
+								<div className="space-y-[12px]">
 									<div className="flex items-center justify-between">
 										<span className="text-secondary">Gas Usage</span>
 										<span className="text-primary font-mono tabular-nums">
@@ -214,7 +217,7 @@ export function BlockCard(props: BlockCard.Props) {
 								</div>
 
 								<div className="space-y-[8px]">
-									<div>Roots</div>
+									<div className="text-secondary">Roots</div>
 									{roots.map((root) => (
 										<BlockCard.RootRow
 											key={root.label}
@@ -244,7 +247,9 @@ export namespace BlockCard {
 				<span className="text-[11px] uppercase text-tertiary bg-base-alt/65 px-[4px] py-[2px]">
 					{label}
 				</span>
-				<span className="text-right text-base-content-secondary font-mono">{value}</span>
+				<span className="text-right text-base-content-secondary font-mono">
+					{value}
+				</span>
 			</div>
 		)
 	}
