@@ -146,11 +146,12 @@ export function DataGrid(props: DataGrid.Props) {
 															isFirstColumn && 'pl-[16px]',
 															isLastColumn && 'pr-[16px]',
 															column?.align === 'end'
-																? 'justify-end'
+																? 'justify-end text-right'
 																: 'justify-start',
 															item.link &&
 																'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-1 [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-1',
-															mode === 'tabs' && 'min-w-0 overflow-hidden',
+															mode === 'tabs' &&
+																'min-w-0 *:overflow-hidden *:text-ellipsis *:whitespace-nowrap',
 														)}
 													>
 														{content}
