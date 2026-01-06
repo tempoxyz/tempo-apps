@@ -1,9 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import * as React from 'react'
-import ChevronDownIcon from '~icons/lucide/chevron-down'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
 import { cx } from '#cva.config'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
 
 export function DataGrid(props: DataGrid.Props) {
 	const {
@@ -66,8 +66,7 @@ export function DataGrid(props: DataGrid.Props) {
 							const hasSort = sortDir === 'asc' || sortDir === 'desc'
 							const label =
 								typeof column.label === 'string'
-									? column.label.charAt(0) +
-										column.label.slice(1).toLowerCase()
+									? column.label.charAt(0) + column.label.slice(1).toLowerCase()
 									: column.label
 							return (
 								<div

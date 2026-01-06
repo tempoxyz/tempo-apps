@@ -119,7 +119,7 @@ function RouteComponent() {
 	const totalPages = Math.ceil(totalBlocks / BLOCKS_PER_PAGE)
 
 	return (
-		<div className="flex flex-col gap-6 px-6 py-8 max-w-300 mx-auto w-full min-[1200px]:min-h-[80vh] min-[1200px]:justify-center">
+		<div className="flex flex-col gap-6 px-6 py-8 max-w-300 mx-auto w-full mt-12">
 			<section
 				className={cx(
 					'flex flex-col w-full overflow-hidden',
@@ -136,11 +136,11 @@ function RouteComponent() {
 							<button
 								type="button"
 								onClick={cycleTimeFormat}
-								className="text-tertiary hover:text-accent cursor-pointer transition-colors inline-flex items-center justify-end gap-2 text-right w-full"
+								className="text-tertiary cursor-pointer inline-flex items-center justify-end gap-2 text-right w-full group"
 								title={`Showing ${formatLabel} time - click to change`}
 							>
 								<span>Time</span>
-								<span className="bg-base-alt text-tertiary px-2 py-[3px] rounded-[8px] text-[11px] font-sans capitalize">
+								<span className="bg-base-alt text-primary px-2 py-[3px] rounded-[8px] text-[11px] font-sans capitalize transition-colors group-hover:bg-base-alt/80">
 									{formatLabel}
 								</span>
 							</button>
