@@ -1,7 +1,6 @@
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { Value } from 'ox'
-import { Actions } from 'tempo.ts/wagmi'
 import { zeroAddress } from 'viem'
 import { Abis } from 'viem/tempo'
 import {
@@ -12,6 +11,7 @@ import {
 	getTransactionReceipt,
 	readContract,
 } from 'wagmi/actions'
+import { Actions } from 'wagmi/tempo'
 import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type KnownEvent,

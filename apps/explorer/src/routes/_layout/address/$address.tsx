@@ -12,7 +12,6 @@ import {
 } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
-import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { Abis } from 'viem/tempo'
 import { useBlock, useChainId, usePublicClient } from 'wagmi'
@@ -22,6 +21,7 @@ import {
 	getChainId,
 	readContract,
 } from 'wagmi/actions'
+import { Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'

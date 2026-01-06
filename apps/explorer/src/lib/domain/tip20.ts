@@ -1,7 +1,7 @@
 import type { Address } from 'ox'
-import { Actions } from 'tempo.ts/wagmi'
 import { type Log, parseEventLogs } from 'viem'
 import { Abis } from 'viem/tempo'
+import { Actions } from 'wagmi/tempo'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 const abi = Object.values(Abis).flat()
