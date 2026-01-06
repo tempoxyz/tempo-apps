@@ -6,7 +6,7 @@ import * as z from 'zod/mini'
 
 export const Route = createFileRoute('/_layout/debug')({
 	validateSearch: z.object({
-		query: z.string(),
+		query: z.prefault(z.string(), 'foo'),
 	}),
 	component: RouteComponent,
 })
@@ -30,17 +30,19 @@ function RouteComponent() {
 	}, [search, posthog])
 
 	return (
-		<main>
+		<main className="flex flex-col items-center justify-center h-screen">
 			<pre>{JSON.stringify(search, undefined, 2)}</pre>
 			<button
 				type="button"
-				onClick={() =>
-					posthog?.capture('button_clicked', {
+				className="cursor-pointer bg-accent text-white m-2 p-1"
+				onClick={() => {
+					const result = posthog?.capture('button_clicked', {
 						url: window.location.href,
 						query: search.query,
 						timestamp: new Date(),
 					})
-				}
+					console.info(result)
+				}}
 			>
 				re-capture event
 			</button>
