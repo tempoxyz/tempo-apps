@@ -13,7 +13,7 @@ export const Route = createFileRoute('/_layout/debug')({
 	loaderDeps: ({ search: { query, plain } }) => ({ query, plain }),
 	server: {
 		handlers: {
-			GET: async ({ request }) => {
+			GET: async ({ request, next }) => {
 				const url = new URL(request.url)
 				const query = url.searchParams.get('query')
 				const plain = url.searchParams.get('plain')
@@ -30,7 +30,7 @@ export const Route = createFileRoute('/_layout/debug')({
 
 				waitUntil(posthog.shutdown())
 
-				return new Response('OK')
+				return next()
 			},
 		},
 	},
