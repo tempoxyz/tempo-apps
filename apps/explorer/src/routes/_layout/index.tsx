@@ -5,7 +5,7 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { Intro, type IntroPhase } from '#comps/Intro'
 import BoxIcon from '~icons/lucide/box'
@@ -24,22 +24,22 @@ export const Route = createFileRoute('/_layout/')({
 function Component() {
 	const router = useRouter()
 	const navigate = useNavigate()
-	const [inputValue, setInputValue] = useState('')
-	const [isMounted, setIsMounted] = useState(false)
-	const [introPhase, setIntroPhase] = useState<IntroPhase>('initial')
+	const [inputValue, setInputValue] = React.useState('')
+	const [isMounted, setIsMounted] = React.useState(false)
+	const [introPhase, setIntroPhase] = React.useState<IntroPhase>('initial')
 	const isNavigating = useRouterState({
 		select: (state) => state.status === 'pending',
 	})
 
-	useEffect(() => setIsMounted(true), [])
+	React.useEffect(() => setIsMounted(true), [])
 
-	useEffect(() => {
+	React.useEffect(() => {
 		return router.subscribe('onResolved', ({ hrefChanged }) => {
 			if (hrefChanged) setInputValue('')
 		})
 	}, [router])
 
-	const handlePhaseChange = useCallback((phase: IntroPhase) => {
+	const handlePhaseChange = React.useCallback((phase: IntroPhase) => {
 		setIntroPhase(phase)
 	}, [])
 
@@ -95,16 +95,18 @@ function Component() {
 
 function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 	const navigate = useNavigate()
-	const [actionOpen, setActionOpen] = useState(false)
-	const dropdownRef = useRef<HTMLDivElement>(null)
-	const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+	const [actionOpen, setActionOpen] = React.useState(false)
+	const dropdownRef = React.useRef<HTMLDivElement>(null)
+	const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	)
 
 	// Explore = random/specific views: Account, Receipt, Action, Contract
 	// Discover = list views: Blocks, Tokens
 	const isExplorePulse = introPhase === 'explore'
 	const isDiscoverPulse = introPhase === 'discover'
 
-	useEffect(() => {
+	React.useEffect(() => {
 		function handleClickOutside(event: MouseEvent) {
 			if (
 				dropdownRef.current &&
