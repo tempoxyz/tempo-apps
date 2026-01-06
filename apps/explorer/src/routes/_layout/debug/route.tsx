@@ -1,9 +1,7 @@
-// biome-ignore assist/source/organizeImports: _ */
-import { isomorphicPosthog } from '#lib/posthog.ts'
-
 import { waitUntil } from 'cloudflare:workers'
 import { usePostHog } from '@posthog/react'
 import { createFileRoute } from '@tanstack/react-router'
+import { PostHog } from 'posthog-node'
 import * as React from 'react'
 import * as z from 'zod/mini'
 
@@ -19,7 +17,15 @@ export const Route = createFileRoute('/_layout/debug')({
 				const query = url.searchParams.get('query')
 				const plain = url.searchParams.get('plain')
 
-				const posthog = isomorphicPosthog()
+				const posthog = new PostHog(
+					'phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',
+					{
+						disabled: process.env.NODE_ENV !== 'production',
+						host: 'https://us.i.posthog.com',
+						flushAt: 1, // Send events immediately in edge environment
+						flushInterval: 0, // Don't wait for interval
+					},
+				)
 				if (!posthog) return next()
 
 				waitUntil(

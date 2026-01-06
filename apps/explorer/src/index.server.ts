@@ -1,5 +1,5 @@
 /** biome-ignore-all assist/source/organizeImports: _ */
-import { isomorphicPosthog } from '#lib/posthog.ts'
+import { PostHog } from 'posthog-node'
 
 import {
 	createStartHandler,
@@ -17,8 +17,15 @@ const entryHandler = defineHandlerCallback(async (context) => {
 	const leaf = matches[matches.length - 1]
 	const routeId = leaf.routeId ?? url.pathname
 
-	const posthog = isomorphicPosthog()
-	if (!posthog) return defaultStreamHandler(context)
+	const posthog = new PostHog(
+		'phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',
+		{
+			disabled: process.env.NODE_ENV !== 'production',
+			host: 'https://us.i.posthog.com',
+			flushAt: 1, // Send events immediately in edge environment
+			flushInterval: 0, // Don't wait for interval
+		},
+	)
 
 	waitUntil(
 		posthog?.captureImmediate({
