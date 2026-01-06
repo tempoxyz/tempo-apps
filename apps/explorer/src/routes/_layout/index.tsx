@@ -130,15 +130,15 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 	const actionTypes = [
 		{
 			label: 'Payment',
-			hash: '0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd' as const,
+			hash: '0x33cdfc39dcda535aac88e7fe3a79954e0740ec26a2fe54eb5481a4cfc0cb8024' as const,
 		},
 		{
 			label: 'Swap',
-			hash: '0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd' as const,
+			hash: '0x8b6cdb1f6193c17a3733aec315441ab92bca3078b462b27863509a279a5ea6e0' as const,
 		},
 		{
 			label: 'Mint',
-			hash: '0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd' as const,
+			hash: '0xe5c909ef42674965a8b805118f08b58f215a98661838ae187737841531097b70' as const,
 		},
 	]
 
