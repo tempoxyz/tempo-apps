@@ -11,7 +11,8 @@ export function Address(props: Address.Props) {
 				to="/address/$address"
 				params={{ address }}
 				className={cx(
-					'text-accent press-down hover:underline font-mono',
+					'text-accent press-down hover:underline font-mono inline-flex',
+					align === 'end' && 'w-full justify-end',
 					className,
 				)}
 			>

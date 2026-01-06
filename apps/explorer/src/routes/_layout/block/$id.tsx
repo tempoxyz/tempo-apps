@@ -250,7 +250,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 								knownEvents={knownEvents}
 							/>,
 							txType.type === 'system' ? (
-								<span key="from" className="text-tertiary whitespace-nowrap w-full text-right">
+								<span key="from" className="text-tertiary whitespace-nowrap w-full flex justify-end">
 									{txType.label}
 								</span>
 							) : (
@@ -259,7 +259,6 @@ function TransactionsSection(props: TransactionsSectionProps) {
 									address={transaction.from}
 									chars={4}
 									align="end"
-									className="text-accent press-down w-full"
 								/>
 							),
 							transaction.hash ? (
