@@ -35,8 +35,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 	const query = value.trim()
 	const isValidInput =
 		query.length > 0 &&
-		(Address.validate(query) ||
-			(Hex.validate(query) && Hex.size(query) === 32))
+		(Address.validate(query) || (Hex.validate(query) && Hex.size(query) === 32))
 	const { data: searchResults, isFetching } = useQuery(
 		queryOptions({
 			queryKey: ['search', query],

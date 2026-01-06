@@ -79,7 +79,9 @@ export namespace TxRawTransaction {
 		const entries = Object.entries(data).sort(([a], [b]) => a.localeCompare(b))
 
 		return (
-			<div className={showBorder ? 'pt-[24px] border-t border-card-border' : ''}>
+			<div
+				className={showBorder ? 'pt-[24px] border-t border-card-border' : ''}
+			>
 				<div className="flex items-center justify-between mb-[12px]">
 					<div className="text-primary font-sans text-[13px]">{title}</div>
 					<button
@@ -202,7 +204,7 @@ export namespace TxRawTransaction {
 		}
 
 		const formattedValue = TxRawTransaction.formatValue(value)
-		const linkTo = linkableFields[label]
+		const linkTo = label in linkableFields ? linkableFields[label] : null
 		const isLinkable = linkTo && formattedValue && formattedValue !== ''
 
 		return (

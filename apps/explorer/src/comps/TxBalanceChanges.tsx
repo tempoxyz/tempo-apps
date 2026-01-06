@@ -4,6 +4,7 @@ import { Value } from 'ox'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
 import { TokenIcon } from '#comps/TokenIcon'
+import { cx } from '#cva.config'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
 import {
@@ -11,7 +12,6 @@ import {
 	LIMIT,
 	type TokenMetadata,
 } from '#lib/queries/balance-changes'
-import { cx } from '#cva.config'
 
 export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 	const { data, page } = props

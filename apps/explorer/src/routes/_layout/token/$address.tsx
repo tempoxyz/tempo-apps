@@ -317,9 +317,7 @@ function TokenCard(props: {
 		<InfoCard
 			title={
 				<div className="flex items-center justify-between px-4.5 pt-2.5 pb-2">
-					<h1 className="text-[13px] text-tertiary select-none">
-						Token
-					</h1>
+					<h1 className="text-[13px] text-tertiary select-none">Token</h1>
 					{metadata?.symbol && (
 						<h2 className="text-[13px] inline-flex items-center gap-1.5">
 							<TokenIcon

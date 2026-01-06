@@ -67,7 +67,7 @@ export function InfoCard(props: InfoCard.Props) {
 export declare namespace InfoCard {
 	export type Props = {
 		title: ReactNode
-		sections: Array<ReactNode | { label: string; value: ReactNode }>
+		sections: Array<ReactNode | { label: ReactNode; value: ReactNode }>
 		titlePosition?: 'inside' | 'outside'
 		className?: string
 	}

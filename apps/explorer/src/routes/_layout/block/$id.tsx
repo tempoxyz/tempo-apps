@@ -250,7 +250,10 @@ function TransactionsSection(props: TransactionsSectionProps) {
 								knownEvents={knownEvents}
 							/>,
 							txType.type === 'system' ? (
-								<span key="from" className="text-tertiary whitespace-nowrap w-full flex justify-end">
+								<span
+									key="from"
+									className="text-tertiary whitespace-nowrap w-full flex justify-end"
+								>
 									{txType.label}
 								</span>
 							) : (
