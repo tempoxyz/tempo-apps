@@ -71,7 +71,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						<Link
 							to="/address/$address"
 							params={{ address: from }}
-							className="text-[13px] text-accent hover:underline press-down w-full"
+							className="text-[13px] text-accent hover:underline press-down w-full font-mono max-w-[18ch]"
 							title={from}
 						>
 							<Midcut value={from} prefix="0x" min={4} align="end" />
@@ -85,7 +85,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 								<Link
 									to="/address/$address"
 									params={{ address: to }}
-									className="text-[13px] text-accent hover:underline press-down w-full"
+									className="text-[13px] text-accent hover:underline press-down w-full font-mono max-w-[18ch]"
 									title={to}
 								>
 									<Midcut value={to} prefix="0x" min={4} align="end" />
