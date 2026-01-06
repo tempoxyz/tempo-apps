@@ -22,6 +22,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		size = 'medium',
 		disabled,
 		className,
+		wide,
 	} = props
 	const formRef = React.useRef<HTMLFormElement>(null)
 	const resultsRef = React.useRef<HTMLDivElement>(null)
@@ -184,7 +185,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 					return
 				}
 			}}
-			className="relative z-10 w-full max-w-md"
+			className={cx('relative z-10 w-full', !wide && 'max-w-md')}
 		>
 			<input
 				ref={inputRef}
@@ -365,6 +366,7 @@ export namespace ExploreInput {
 		size?: 'large' | 'medium'
 		disabled?: boolean
 		className?: string
+		wide?: boolean
 	}
 
 	export type SuggestionGroup = {
