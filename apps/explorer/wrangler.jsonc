@@ -15,10 +15,6 @@
 	"build": {
 		"command": "pnpm vite build --mode='production'"
 	},
-	"vars": {
-		"VITE_POSTHOG_HOST": "https://us.i.posthog.com",
-		"VITE_POSTHOG_KEY": "phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR"
-	},
 	"keep_vars": true,
 	"observability": {
 		"enabled": true,

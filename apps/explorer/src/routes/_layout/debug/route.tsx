@@ -59,7 +59,10 @@ function RouteComponent() {
 			<button
 				type="button"
 				className="cursor-pointer bg-accent text-white m-2 p-1"
-				onClick={() => {
+				onClick={(event) => {
+					event.preventDefault()
+					console.info('re-capture event')
+
 					const result = posthog?.capture('button_clicked', {
 						query: search.query,
 						timestamp: new Date(),
