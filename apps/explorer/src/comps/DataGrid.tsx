@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import * as React from 'react'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
 import { cx } from '#cva.config'
@@ -61,16 +62,33 @@ export function DataGrid(props: DataGrid.Props) {
 					<div className="grid col-span-full border-b border-dashed border-distinct grid-cols-subgrid">
 						{activeColumns.map((column, index) => {
 							const key = `header-${index}`
+							const sortDir = column.sortDirection
+							const hasSort = sortDir === 'asc' || sortDir === 'desc'
+							const label =
+								typeof column.label === 'string'
+									? column.label.charAt(0) +
+										column.label.slice(1).toLowerCase()
+									: column.label
 							return (
 								<div
 									key={key}
 									className={cx(
-										'px-[10px] first:pl-[16px] last:pr-[16px] h-[40px] flex items-center',
-										'text-[13px] text-tertiary font-normal whitespace-nowrap',
+										'px-[10px] first:pl-[16px] last:pr-[16px] h-[40px] flex items-center gap-[6px]',
+										'text-[13px] text-tertiary font-normal whitespace-nowrap font-sans',
 										column.align === 'end' ? 'justify-end' : 'justify-start',
 									)}
 								>
-									{column.label}
+									<span className="inline-flex items-center gap-[4px]">
+										{label}
+										{hasSort && (
+											<ChevronDownIcon
+												className={cx(
+													'size-[12px] text-tertiary',
+													sortDir === 'asc' && 'rotate-180',
+												)}
+											/>
+										)}
+									</span>
 								</div>
 							)
 						})}
@@ -195,6 +213,7 @@ export namespace DataGrid {
 		align?: 'start' | 'end'
 		minWidth?: number
 		width?: number | `${number}fr`
+		sortDirection?: 'asc' | 'desc'
 	}
 
 	export interface RowLink {
