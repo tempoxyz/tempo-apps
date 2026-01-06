@@ -10,9 +10,23 @@ import {
 	useTimeFormat,
 } from '#comps/TimeFormat'
 import { TokenIcon } from '#comps/TokenIcon'
-import { useMediaQuery } from '#lib/hooks'
+import { TOKEN_COUNT_MAX } from '#lib/constants'
+import { useMediaQuery, useIsMounted } from '#lib/hooks'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens.server'
+
+async function fetchTokensCount() {
+	const response = await fetch(`${__BASE_URL__}/api/tokens/count`, {
+		headers: { 'Content-Type': 'application/json' },
+	})
+	if (!response.ok) throw new Error('Failed to fetch total token count')
+	const { data: safeData, success, error } = z.safeParse(
+		z.object({ data: z.number(), error: z.nullable(z.string()) }),
+		await response.json(),
+	)
+	if (!success) throw new Error(z.prettifyError(error))
+	return safeData
+}
 
 export const Route = createFileRoute('/_layout/tokens')({
 	component: TokensPage,
@@ -24,7 +38,11 @@ export const Route = createFileRoute('/_layout/tokens')({
 	}).parse,
 	loader: async ({ context }) => {
 		return context.queryClient.ensureQueryData(
-			tokensListQueryOptions({ page: 1, limit: TOKENS_PER_PAGE }),
+			tokensListQueryOptions({
+				page: 1,
+				limit: TOKENS_PER_PAGE,
+				includeCount: false,
+			}),
 		)
 	},
 })
@@ -33,14 +51,30 @@ function TokensPage() {
 	const { page = 1 } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
+	const isMounted = useIsMounted()
 
 	const { data, isPlaceholderData, isPending } = useQuery({
-		...tokensListQueryOptions({ page, limit: TOKENS_PER_PAGE }),
+		...tokensListQueryOptions({
+			page,
+			limit: TOKENS_PER_PAGE,
+			includeCount: false,
+		}),
 		initialData: page === 1 ? loaderData : undefined,
 	})
 
+	// Fetch count separately in the background
+	const countQuery = useQuery({
+		queryKey: ['tokens-count'],
+		queryFn: fetchTokensCount,
+		staleTime: 60_000,
+		refetchInterval: false,
+		refetchOnWindowFocus: false,
+	})
+
 	const tokens = data?.tokens ?? []
-	const total = data?.total ?? 0
+	const exactCount = isMounted ? countQuery.data?.data : undefined
+	const paginationTotal = exactCount ?? TOKEN_COUNT_MAX
+	const displayTotal = exactCount ?? '...'
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -71,7 +105,7 @@ function TokensPage() {
 				sections={[
 					{
 						title: 'Tokens',
-						totalItems: isPending ? undefined : total,
+						totalItems: displayTotal,
 						itemsLabel: 'tokens',
 						autoCollapse: false,
 						content: (
@@ -110,10 +144,12 @@ function TokensPage() {
 										},
 									}))
 								}
-								totalItems={total}
+								totalItems={paginationTotal}
+								displayCount={exactCount}
 								page={page}
 								fetching={isPlaceholderData}
 								loading={isPending}
+								countLoading={!exactCount}
 								itemsLabel="tokens"
 								itemsPerPage={TOKENS_PER_PAGE}
 								pagination="simple"
