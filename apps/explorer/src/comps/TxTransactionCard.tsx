@@ -120,7 +120,7 @@ function StatusBadge(props: { status: 'success' | 'reverted' }) {
 	return (
 		<span
 			className={cx(
-				'text-[11px] uppercase font-normal px-[6px] py-[2px] rounded-[4px]',
+				'text-[11px] uppercase font-mono font-normal px-[6px] py-[2px] rounded-[4px]',
 				isSuccess
 					? 'text-base-content-positive bg-base-content-positive/10'
 					: 'text-base-content-negative bg-base-content-negative/10',
