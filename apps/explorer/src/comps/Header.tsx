@@ -122,7 +122,7 @@ export namespace Header {
 				<div className="text-nowrap">
 					<span
 						ref={ref}
-						className="text-primary font-medium tabular-nums min-w-[6ch] inline-block"
+						className="text-primary font-medium tabular-nums font-mono min-w-[6ch] inline-block"
 					>
 						{initial ? String(initial) : '…'}
 					</span>
