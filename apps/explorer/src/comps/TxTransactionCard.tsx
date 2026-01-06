@@ -3,7 +3,7 @@ import type { Address, Hex } from 'ox'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
-import { FormattedTimestamp } from '#comps/TimeFormat'
+import { FormattedTimestamp, useTimeFormat } from '#comps/TimeFormat'
 import { cx } from '#cva.config.ts'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
@@ -11,6 +11,7 @@ import CopyIcon from '~icons/lucide/copy'
 export function TxTransactionCard(props: TxTransactionCard.Props) {
 	const { hash, status, blockNumber, timestamp, from, to, className } = props
 	const { copy, notifying } = useCopy()
+	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	return (
 		<InfoCard
 			title={
@@ -39,7 +40,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[23ch] font-mono">
+					<p className="text-[14px] font-normal leading-[17px] text-primary break-all max-w-[23ch] font-mono">
 						{hash}
 					</p>
 				</button>,
@@ -49,19 +50,31 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 						<Link
 							to="/block/$id"
 							params={{ id: String(blockNumber) }}
-							className="text-[13px] text-accent hover:underline press-down"
+							className="text-[13px] text-accent hover:underline press-down font-mono tabular-nums"
 						>
 							{blockNumber}
 						</Link>
 					),
 				},
 				{
-					label: 'Time',
+					label: (
+						<button
+							type="button"
+							onClick={cycleTimeFormat}
+							className="text-tertiary cursor-pointer inline-flex items-center gap-2 group"
+							title={`Showing ${formatLabel} time - click to change`}
+						>
+							<span>Time</span>
+							<span className="bg-base-alt text-primary px-2 py-[2px] rounded-[6px] text-[11px] font-sans capitalize transition-colors group-hover:bg-base-alt/80">
+								{formatLabel}
+							</span>
+						</button>
+					),
 					value: (
 						<FormattedTimestamp
 							timestamp={timestamp}
-							format="relative"
-							className="text-[13px] text-primary"
+							format={timeFormat}
+							className="text-[13px] text-primary font-mono"
 						/>
 					),
 				},

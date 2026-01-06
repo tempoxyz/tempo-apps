@@ -509,15 +509,17 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 												>
 													<span
 														className={cx(
-															'shrink-0',
-															isPositive ? '' : 'text-secondary',
+															'shrink-0 font-mono tabular-nums',
+															isPositive
+																? 'text-base-content-positive'
+																: 'text-secondary',
 														)}
 													>
 														{isPositive ? '+' : ''}
 														{formatted}
 													</span>
 													<Link
-														className="inline-flex items-center gap-[4px] text-base-content-positive press-down shrink-0"
+														className="inline-flex items-center gap-[4px] text-base-content-positive press-down shrink-0 font-mono"
 														params={{ address: change.token }}
 														to={
 															isTip20 ? '/token/$address' : '/address/$address'
