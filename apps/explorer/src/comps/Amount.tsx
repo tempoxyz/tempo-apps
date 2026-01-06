@@ -122,12 +122,13 @@ export namespace Amount {
 		const formatted = short
 			? PriceFormatter.formatAmountShort(rawFormatted)
 			: fullFormatted
+		const isSmall = formatted.startsWith('<')
 
 		return (
 			<span className="inline-flex items-center gap-1 min-w-0">
 				{before}
 				<span
-					className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+					className={`overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${isSmall ? 'text-tertiary' : ''}`}
 					style={{ maxWidth: `${maxWidth}ch` }}
 					title={`${prefix ?? ''}${fullFormatted}${suffix ?? ''}`}
 				>
