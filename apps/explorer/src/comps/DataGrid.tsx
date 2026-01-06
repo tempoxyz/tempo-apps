@@ -125,7 +125,7 @@ export function DataGrid(props: DataGrid.Props) {
 														key={key}
 														className={cx(
 															'px-[10px] py-[12px] flex items-start min-h-[48px]',
-															'text-primary',
+															'text-primary font-mono',
 															isFirstColumn && 'pl-[16px]',
 															isLastColumn && 'pr-[16px]',
 															column?.align === 'end'

@@ -24,10 +24,10 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 
 	const cols: DataGrid.Column[] = [
 		{ label: 'Address', align: 'start', width: '2fr' },
-		{ label: 'Token', align: 'start', width: '1fr' },
-		{ label: 'Before', align: 'end', width: '1.5fr' },
-		{ label: 'After', align: 'end', width: '1.5fr' },
-		{ label: 'Change', align: 'end', width: '1.5fr' },
+		{ label: 'Token', align: 'start', width: '1fr', minWidth: 120 },
+		{ label: 'Before', align: 'end', width: '2fr', minWidth: 160 },
+		{ label: 'After', align: 'end', width: '2fr', minWidth: 160 },
+		{ label: 'Change', align: 'end', width: '2fr', minWidth: 160 },
 	]
 
 	return (
@@ -89,7 +89,7 @@ export namespace TxBalanceChanges {
 
 		return (
 			<Link
-				className="text-base-content-positive press-down inline-flex items-center gap-1"
+				className="text-base-content-positive press-down inline-flex items-center gap-1 font-mono"
 				params={{ address: token }}
 				title={token}
 				to={isTip20 ? '/token/$address' : '/address/$address'}
@@ -122,7 +122,7 @@ export namespace TxBalanceChanges {
 		const raw = Value.format(value, metadata.decimals)
 		const formatted = PriceFormatter.formatAmount(raw)
 
-		return <span className="text-secondary">{formatted}</span>
+		return <span className="text-secondary font-mono">{formatted}</span>
 	}
 
 	export namespace BalanceCell {
@@ -149,7 +149,12 @@ export namespace TxBalanceChanges {
 		const formatted = PriceFormatter.formatAmount(raw)
 
 		return (
-			<span className={isPositive ? 'text-base-content-positive' : undefined}>
+			<span
+				className={cx(
+					'font-mono',
+					isPositive ? 'text-base-content-positive' : undefined,
+				)}
+			>
 				{formatted}
 			</span>
 		)
