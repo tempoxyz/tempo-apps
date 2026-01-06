@@ -228,7 +228,7 @@ export namespace TxEventDescription {
 									<button
 										type="button"
 										onClick={() => setExpanded(true)}
-										className="text-base-content-secondary cursor-pointer press-down shrink-0"
+										className="text-tertiary cursor-pointer press-down shrink-0"
 									>
 										and {remainingCount} more
 									</button>
