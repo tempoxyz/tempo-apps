@@ -173,35 +173,38 @@ export function DataGrid(props: DataGrid.Props) {
 					})}
 				</div>
 			</div>
-			<div className="mt-auto">
-				{pagination === 'simple' ? (
-					<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
-						<Pagination.Simple
+			{/* Hide pagination when no items and not loading */}
+			{(totalItems > 0 || loading) && (
+				<div className="mt-auto">
+					{pagination === 'simple' ? (
+						<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
+							<Pagination.Simple
+								page={page}
+								totalPages={totalPages}
+								fetching={fetching && !loading}
+								countLoading={countLoading}
+								disableLastPage={disableLastPage}
+							/>
+							{/* Show transaction count - loading state shown while fetching */}
+							<Pagination.Count
+								totalItems={displayCount ?? 0}
+								itemsLabel={itemsLabel}
+								loading={loading || displayCount == null}
+								capped={displayCountCapped}
+							/>
+						</div>
+					) : (
+						<Pagination
 							page={page}
 							totalPages={totalPages}
-							fetching={fetching && !loading}
-							countLoading={countLoading}
-							disableLastPage={disableLastPage}
-						/>
-						{/* Show transaction count - loading state shown while fetching */}
-						<Pagination.Count
-							totalItems={displayCount ?? 0}
+							totalItems={totalItems}
 							itemsLabel={itemsLabel}
-							loading={loading || displayCount == null}
-							capped={displayCountCapped}
+							isPending={fetching}
+							compact={mode === 'stacked'}
 						/>
-					</div>
-				) : (
-					<Pagination
-						page={page}
-						totalPages={totalPages}
-						totalItems={totalItems}
-						itemsLabel={itemsLabel}
-						isPending={fetching}
-						compact={mode === 'stacked'}
-					/>
-				)}
-			</div>
+					)}
+				</div>
+			)}
 		</div>
 	)
 }
