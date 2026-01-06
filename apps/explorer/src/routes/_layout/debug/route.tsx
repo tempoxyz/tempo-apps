@@ -1,16 +1,17 @@
+// biome-ignore assist/source/organizeImports: _ */
+import { serverSidePosthog } from '#lib/posthog.ts'
+
 import { waitUntil } from 'cloudflare:workers'
 import { usePostHog } from '@posthog/react'
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import * as z from 'zod/mini'
-import { serverSidePosthog } from '#lib/posthog.ts'
 
 export const Route = createFileRoute('/_layout/debug')({
 	validateSearch: z.object({
 		query: z.prefault(z.string(), 'foo'),
 	}),
 	component: RouteComponent,
-	loaderDeps: ({ search: { query, plain } }) => ({ query, plain }),
 	server: {
 		handlers: {
 			GET: async ({ request, next }) => {
@@ -40,6 +41,8 @@ function RouteComponent() {
 	const search = Route.useSearch()
 	const posthog = usePostHog()
 
+	const [result, setResult] = React.useState('')
+
 	React.useEffect(() => {
 		posthog?.identify('user_id', {
 			url: window.location.href,
@@ -56,23 +59,23 @@ function RouteComponent() {
 	return (
 		<main className="flex flex-col items-center justify-center h-screen">
 			<pre>{JSON.stringify(search, undefined, 2)}</pre>
+			{/** biome-ignore lint/correctness/useUniqueElementIds: _ */}
 			<button
 				type="button"
+				id="cta"
 				className="cursor-pointer bg-accent text-white m-2 p-1"
 				onClick={(event) => {
 					event.preventDefault()
 					console.info('re-capture event')
 
-					const result = posthog?.capture('button_clicked', {
-						query: search.query,
-						timestamp: new Date(),
-						cta_name: 're-capture event',
-					})
-					console.info(result)
+					const result = posthog?.capture('button_clicked')
+					setResult(JSON.stringify(result, undefined, 2))
 				}}
 			>
 				re-capture event
 			</button>
+			<br />
+			<pre>{result}</pre>
 		</main>
 	)
 }

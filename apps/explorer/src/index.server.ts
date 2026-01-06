@@ -1,55 +1,46 @@
-import { waitUntil } from 'cloudflare:workers'
+/** biome-ignore-all assist/source/organizeImports: _ */
+import { serverSidePosthog } from '#lib/posthog.ts'
+
 import {
 	createStartHandler,
 	defaultStreamHandler,
 	defineHandlerCallback,
 } from '@tanstack/react-start/server'
+import { waitUntil } from 'cloudflare:workers'
 import { createServerEntry } from '@tanstack/react-start/server-entry'
 
-import { serverSidePosthog } from '#lib/posthog.ts'
-
-const redirects: Array<{
-	from: RegExp
-	to: (match: RegExpMatchArray) => string
-}> = [
-	{ from: /^\/blocks\/(latest|\d+)$/, to: (m) => `/block/${m[1]}` },
-	{ from: /^\/transaction\/(.+)$/, to: (m) => `/tx/${m[1]}` },
-	{ from: /^\/tokens\/(.+)$/, to: (m) => `/token/${m[1]}` },
-]
-
-const entryHandler = defineHandlerCallback((context) => {
+const entryHandler = defineHandlerCallback(async (context) => {
 	const url = new URL(context.request.url)
 
-	for (const { from, to } of redirects) {
-		const match = url.pathname.match(from)
-		if (!match) continue
-		url.pathname = to(match)
-		return Response.redirect(url, 301)
-	}
+	// We do this so that transactions are grouped under the route ID instead of unique URLs
+	const matches = context.router.state.matches ?? []
+	const leaf = matches[matches.length - 1]
+	const routeId = leaf.routeId ?? url.pathname
+
+	const posthog = serverSidePosthog()
+
+	waitUntil(
+		posthog.captureImmediate({
+			distinctId: routeId,
+			event: 'server_request',
+			properties: {
+				'route.id': routeId,
+				'http.path': url.pathname,
+				'http.method': context.request.method,
+				'http.full_url': url.toString(),
+			},
+		}),
+	)
+
+	waitUntil(posthog.shutdown())
+
 	return defaultStreamHandler(context)
 })
 
-const startFetch = createStartHandler(entryHandler)
-
 export default createServerEntry({
 	fetch: async (request, options) => {
-		if (!options) return startFetch(request, options)
+		const handler = createStartHandler(entryHandler)
 
-		const posthog = serverSidePosthog()
-		const distinctId = 'explorer@tempo.xyz' // TODO: ~~temp~~ - remove me
-
-		waitUntil(
-			posthog.captureImmediate({
-				distinctId,
-				event: '_explorer_test_event',
-				properties: {
-					$current_url: request.url,
-				},
-			}),
-		)
-
-		waitUntil(posthog.shutdown())
-
-		return startFetch(request, options)
+		return handler(request, options)
 	},
 })
