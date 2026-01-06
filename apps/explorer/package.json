@@ -29,6 +29,7 @@
 		"@tanstack/react-start": "catalog:",
 		"@tanstack/router-plugin": "catalog:",
 		"abitype": "catalog:",
+		"animejs": "catalog:",
 		"cva": "catalog:",
 		"idxs": "catalog:",
 		"ox": "catalog:",

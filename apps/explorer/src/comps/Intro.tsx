@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { waapi, stagger } from 'animejs'
+import { useEffect, useRef, useState } from 'react'
+import { springSmooth } from '#lib/animation'
 
 type IntroPhase = 'initial' | 'search' | 'explore' | 'discover' | 'done'
 
@@ -9,71 +11,49 @@ interface IntroProps {
 }
 
 function shouldShowAnimation(): boolean {
-	// Check if this is a hard refresh (reload)
-	const navEntries = performance.getEntriesByType('navigation')
-	const navEntry = navEntries[0] as PerformanceNavigationTiming | undefined
-	const isReload = navEntry?.type === 'reload'
-
-	// Show animation on hard refresh
-	if (isReload) {
-		return true
-	}
-
-	// Check if we've seen the intro in this session
-	const hasSeenIntro = sessionStorage.getItem(INTRO_SEEN_KEY)
-	return !hasSeenIntro
+	const navEntry = performance.getEntriesByType('navigation')[0] as
+		| PerformanceNavigationTiming
+		| undefined
+	return navEntry?.type === 'reload' || !sessionStorage.getItem(INTRO_SEEN_KEY)
 }
 
+const words = [
+	{ text: 'Search', size: '32px', opacity: 0.5, phase: 'search' },
+	{ text: 'Explore', size: '40px', opacity: 0.7, phase: 'explore' },
+	{ text: 'Discover', size: '52px', opacity: 1, phase: 'discover' },
+] as const
+
 export function Intro({ onPhaseChange }: IntroProps) {
-	const [visibleWords, setVisibleWords] = useState<number>(0)
 	const [shouldAnimate, setShouldAnimate] = useState<boolean | null>(null)
+	const containerRef = useRef<HTMLDivElement>(null)
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: This is intentional
 	useEffect(() => {
-		const animate = shouldShowAnimation()
-
-		if (animate) {
-			// First visit or hard refresh - animate
+		if (shouldShowAnimation()) {
 			setShouldAnimate(true)
-			// Mark as seen for this session
 			sessionStorage.setItem(INTRO_SEEN_KEY, 'true')
 		} else {
-			// Skip animation - show everything immediately
 			setShouldAnimate(false)
-			setVisibleWords(3)
 			onPhaseChange?.('done')
 		}
-	}, []) // Only run once on mount
+	}, [onPhaseChange])
 
 	useEffect(() => {
-		if (shouldAnimate !== true) return
+		if (shouldAnimate !== true || !containerRef.current) return
 
-		// Smoother, more gradual timings
-		const timings = [
-			{ delay: 200, word: 1, phase: 'search' as const },
-			{ delay: 900, word: 2, phase: 'explore' as const },
-			{ delay: 1600, word: 3, phase: 'discover' as const },
-			{ delay: 2600, word: 3, phase: 'done' as const },
-		]
-
-		const timeouts = timings.map(({ delay, word, phase: p }) =>
-			setTimeout(() => {
-				setVisibleWords(word)
-				onPhaseChange?.(p)
-			}, delay),
-		)
-
-		return () => timeouts.forEach(clearTimeout)
+		onPhaseChange?.('search')
+		const children = containerRef.current.querySelectorAll('span')
+		waapi
+			.animate(children, {
+				opacity: [0, 1],
+				translate: ['0 12px', '0 0'],
+				scale: [0.96, 1],
+				ease: springSmooth,
+				delay: stagger(60),
+			})
+			.then(() => onPhaseChange?.('done'))
 	}, [shouldAnimate, onPhaseChange])
 
-	const words = [
-		{ text: 'Search', size: '32px', opacity: 0.5 },
-		{ text: 'Explore', size: '40px', opacity: 0.7 },
-		{ text: 'Discover', size: '52px', opacity: 1 },
-	]
-
-	// Don't render until we know whether to animate
-	if (shouldAnimate === null) {
+	if (shouldAnimate === null)
 		return (
 			<div className="flex flex-col items-center gap-1">
 				{words.map((word) => (
@@ -92,18 +72,14 @@ export function Intro({ onPhaseChange }: IntroProps) {
 				))}
 			</div>
 		)
-	}
 
 	return (
-		<div className="flex flex-col items-center gap-1">
-			{words.map((word, index) => (
+		<div ref={containerRef} className="flex flex-col items-center gap-1">
+			{words.map((word) => (
 				<span
 					key={word.text}
-					className="transition-all duration-500 ease-out"
 					style={{
-						opacity: visibleWords > index ? word.opacity : 0,
-						transform:
-							visibleWords > index ? 'translateY(0)' : 'translateY(12px)',
+						opacity: shouldAnimate ? 0 : word.opacity,
 						fontSize: word.size,
 						fontWeight: 600,
 						letterSpacing: '-0.02em',

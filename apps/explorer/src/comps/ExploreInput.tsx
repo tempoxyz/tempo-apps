@@ -16,17 +16,19 @@ import ArrowRight from '~icons/lucide/arrow-right'
 export function ExploreInput(props: ExploreInput.Props) {
 	const {
 		onActivate,
-		autoFocus,
+		inputRef: externalInputRef,
 		value,
 		onChange,
 		size = 'medium',
 		disabled,
 		className,
+		tabIndex,
 	} = props
 	const formRef = React.useRef<HTMLFormElement>(null)
 	const resultsRef = React.useRef<HTMLDivElement>(null)
 
-	const inputRef = React.useRef<HTMLInputElement>(null)
+	const internalInputRef = React.useRef<HTMLInputElement>(null)
+	const inputRef = externalInputRef ?? internalInputRef
 
 	const [showResults, setShowResults] = React.useState(false)
 	const [selectedIndex, setSelectedIndex] = React.useState(-1)
@@ -125,14 +127,6 @@ export function ExploreInput(props: ExploreInput.Props) {
 		return () => window.removeEventListener('keydown', handleKeyDown)
 	}, [])
 
-	// the route transition appears to sometimes steal the focus,
-	// so we need to re-focus in case it happens
-	React.useEffect(() => {
-		const timer = setTimeout(() => {
-			if (autoFocus) inputRef.current?.focus()
-		}, 100)
-		return () => clearTimeout(timer)
-	}, [autoFocus])
 
 	const handleSelect = React.useCallback(
 		(result: SearchResult) => {
@@ -191,11 +185,11 @@ export function ExploreInput(props: ExploreInput.Props) {
 				autoCapitalize="none"
 				autoComplete="off"
 				autoCorrect="off"
-				autoFocus={autoFocus}
+				tabIndex={tabIndex}
 				value={value}
 				disabled={disabled}
 				className={cx(
-					'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300',
+					'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50',
 					size === 'large' ? 'h-[52px] text-[17px]' : 'h-[42px] text-[15px]',
 					className,
 				)}
@@ -359,12 +353,13 @@ export namespace ExploreInput {
 				| { value: Address.Address; type: 'token' }
 				| { value: Hex.Hex; type: 'hash' },
 		) => void
-		autoFocus?: boolean
+		inputRef?: React.RefObject<HTMLInputElement | null>
 		value: string
 		onChange: (value: string) => void
 		size?: 'large' | 'medium'
 		disabled?: boolean
 		className?: string
+		tabIndex?: number
 	}
 
 	export type SuggestionGroup = {

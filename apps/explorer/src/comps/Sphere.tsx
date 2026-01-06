@@ -1,22 +1,32 @@
+import { animate as animateEl } from 'animejs'
+import { useEffect, useRef } from 'react'
+import { springLazy } from '#lib/animation'
+
 export function Sphere(props: Sphere.Props) {
 	const { animate } = props
+	const containerRef = useRef<HTMLDivElement>(null)
+
+	useEffect(() => {
+		if (!containerRef.current) return
+		if (animate) {
+			animateEl(containerRef.current, {
+				opacity: [0, 1],
+				scale: [0.7, 1],
+				ease: springLazy,
+				delay: 300,
+			})
+		} else {
+			containerRef.current.style.opacity = '1'
+			containerRef.current.style.transform = 'translateY(0) scale(1)'
+		}
+	}, [animate])
+
 	return (
 		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[280px] z-0 print:hidden">
 			<div
-				ref={(el) => {
-					if (!el) return
-					el.style.opacity = '1'
-					el.style.transform = 'translate3d(0, 0, 0) scale3d(1, 1, 1)'
-				}}
-				className="absolute top-0 z-0 w-full flex justify-center pointer-events-none transition-[transform,opacity] duration-1000 ease-out"
-				style={
-					animate
-						? {
-								opacity: 0,
-								transform: 'translate3d(0, 20px, 0) scale3d(1.03, 1.03, 1)',
-							}
-						: undefined
-				}
+				ref={containerRef}
+				className="absolute top-0 z-0 w-full flex justify-center pointer-events-none"
+				style={{ opacity: 0 }}
 			>
 				<Sphere.Svg />
 			</div>
