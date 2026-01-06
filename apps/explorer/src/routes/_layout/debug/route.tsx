@@ -37,9 +37,9 @@ function RouteComponent() {
 				className="cursor-pointer bg-accent text-white m-2 p-1"
 				onClick={() => {
 					const result = posthog?.capture('button_clicked', {
-						url: window.location.href,
 						query: search.query,
 						timestamp: new Date(),
+						cta_name: 're-capture event',
 					})
 					console.info(result)
 				}}

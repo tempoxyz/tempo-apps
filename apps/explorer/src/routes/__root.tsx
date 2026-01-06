@@ -8,6 +8,7 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
+import { PostHogProvider } from 'posthog-js/react'
 import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
@@ -155,28 +156,35 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					start={800}
 					className="fixed top-0 left-0 right-0 z-1"
 				/>
-				<WagmiProvider config={config} initialState={wagmiState}>
-					<QueryClientProvider client={queryClient}>
-						{children}
-						{import.meta.env.DEV && (
-							<TanStackDevtools
-								config={{
-									position: 'bottom-right',
-								}}
-								plugins={[
-									{
-										name: 'Tanstack Query',
-										render: <ReactQueryDevtools />,
-									},
-									{
-										name: 'Tanstack Router',
-										render: <TanStackRouterDevtoolsPanel />,
-									},
-								]}
-							/>
-						)}
-					</QueryClientProvider>
-				</WagmiProvider>
+				<PostHogProvider
+					apiKey={import.meta.env.VITE_POSTHOG_KEY}
+					options={{
+						api_host: '/api/ph',
+					}}
+				>
+					<WagmiProvider config={config} initialState={wagmiState}>
+						<QueryClientProvider client={queryClient}>
+							{children}
+							{import.meta.env.DEV && (
+								<TanStackDevtools
+									config={{
+										position: 'bottom-right',
+									}}
+									plugins={[
+										{
+											name: 'Tanstack Query',
+											render: <ReactQueryDevtools />,
+										},
+										{
+											name: 'Tanstack Router',
+											render: <TanStackRouterDevtoolsPanel />,
+										},
+									]}
+								/>
+							)}
+						</QueryClientProvider>
+					</WagmiProvider>
+				</PostHogProvider>
 				<Scripts />
 			</body>
 		</html>

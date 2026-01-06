@@ -7,7 +7,7 @@ interface EnvironmentVariables {
 
 	readonly VITE_POSTHOG_HOST: string
 	readonly VITE_POSTHOG_KEY: string
-} 
+}
 
 interface ImportMetaEnv extends EnvironmentVariables {}
 

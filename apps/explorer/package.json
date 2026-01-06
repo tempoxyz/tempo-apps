@@ -41,6 +41,7 @@
 		"tailwindcss": "catalog:",
 		"tempo.ts": "catalog:",
 		"viem": "catalog:",
+		"hono": "catalog:",
 		"wagmi": "catalog:",
 		"zod": "catalog:"
 	},
