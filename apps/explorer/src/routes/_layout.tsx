@@ -1,5 +1,6 @@
 import { PostHogErrorBoundary } from '@posthog/react'
 import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
+import { PostHogProvider } from 'posthog-js/react'
 import * as z from 'zod/mini'
 import { Footer } from '#comps/Footer.tsx'
 import { Header } from '#comps/Header.tsx'
@@ -8,6 +9,7 @@ import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
 
 export const Route = createFileRoute('/_layout')({
 	component: RouteComponent,
+	ssr: false,
 	validateSearch: z.object({
 		plain: z.optional(z.string()),
 	}).parse,
@@ -33,20 +35,27 @@ export function Layout(props: Layout.Props) {
 	const matchRoute = useMatchRoute()
 	const isReceipt = Boolean(matchRoute({ to: '/receipt/$hash', fuzzy: true }))
 	return (
-		<PostHogErrorBoundary>
-			<div className="flex min-h-dvh flex-col print:block print:min-h-0">
-				<div className={`relative z-2 ${isReceipt ? 'print:hidden' : ''}`}>
-					<Header initialBlockNumber={blockNumber} />
+		<PostHogProvider
+			apiKey={import.meta.env.VITE_POSTHOG_KEY}
+			options={{
+				api_host: '/api/ph',
+			}}
+		>
+			<PostHogErrorBoundary>
+				<div className="flex min-h-dvh flex-col print:block print:min-h-0">
+					<div className={`relative z-2 ${isReceipt ? 'print:hidden' : ''}`}>
+						<Header initialBlockNumber={blockNumber} />
+					</div>
+					<main className="flex flex-1 size-full flex-col items-center relative z-1 print:block print:flex-none">
+						{children}
+					</main>
+					<div className="w-full mt-40 relative z-1 print:hidden">
+						<Footer />
+					</div>
+					<Sphere animate={Boolean(matchRoute({ to: '/' }))} />
 				</div>
-				<main className="flex flex-1 size-full flex-col items-center relative z-1 print:block print:flex-none">
-					{children}
-				</main>
-				<div className="w-full mt-40 relative z-1 print:hidden">
-					<Footer />
-				</div>
-				<Sphere animate={Boolean(matchRoute({ to: '/' }))} />
-			</div>
-		</PostHogErrorBoundary>
+			</PostHogErrorBoundary>
+		</PostHogProvider>
 	)
 }
 

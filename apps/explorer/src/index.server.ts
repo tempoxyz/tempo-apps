@@ -1,4 +1,4 @@
-import { env, waitUntil } from 'cloudflare:workers'
+import { waitUntil } from 'cloudflare:workers'
 import {
 	createStartHandler,
 	defaultStreamHandler,
@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-start/server'
 import { createServerEntry } from '@tanstack/react-start/server-entry'
 
-import { posthogClient } from '#lib/posthog.ts'
+import { serverSidePosthog } from '#lib/posthog.ts'
 
 const redirects: Array<{
 	from: RegExp
@@ -35,10 +35,7 @@ export default createServerEntry({
 	fetch: async (request, options) => {
 		if (!options) return startFetch(request, options)
 
-		const posthog = posthogClient({
-			host: env.VITE_POSTHOG_HOST,
-			apiKey: env.VITE_POSTHOG_KEY,
-		})
+		const posthog = serverSidePosthog()
 		const distinctId = 'explorer@tempo.xyz' // TODO: ~~temp~~ - remove me
 
 		waitUntil(

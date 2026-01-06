@@ -3,7 +3,7 @@ import { usePostHog } from '@posthog/react'
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import * as z from 'zod/mini'
-import { posthogClient } from '#lib/posthog.ts'
+import { serverSidePosthog } from '#lib/posthog.ts'
 
 export const Route = createFileRoute('/_layout/debug')({
 	validateSearch: z.object({
@@ -18,7 +18,7 @@ export const Route = createFileRoute('/_layout/debug')({
 				const query = url.searchParams.get('query')
 				const plain = url.searchParams.get('plain')
 
-				const posthog = posthogClient()
+				const posthog = serverSidePosthog()
 
 				waitUntil(
 					posthog?.captureImmediate({
