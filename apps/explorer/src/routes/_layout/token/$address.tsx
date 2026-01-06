@@ -317,7 +317,7 @@ function TokenCard(props: {
 		<InfoCard
 			title={
 				<div className="flex items-center justify-between px-4.5 pt-2.5 pb-2">
-					<h1 className="text-[13px] uppercase text-tertiary select-none">
+					<h1 className="text-[13px] text-tertiary select-none">
 						Token
 					</h1>
 					{metadata?.symbol && (
@@ -352,7 +352,7 @@ function TokenCard(props: {
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-normal leading-4.25 tracking-[0.02em] text-primary break-all max-w-[22ch]">
+					<p className="text-[14px] font-mono font-normal leading-4.25 text-primary break-all max-w-[22ch]">
 						{address}
 					</p>
 				</button>,
@@ -673,7 +673,7 @@ function FilterIndicator(props: {
 			<Link
 				to="/address/$address"
 				params={{ address: account }}
-				className="text-accent press-down"
+				className="text-accent press-down font-mono"
 				title={account}
 			>
 				<Midcut value={account} prefix="0x" />
