@@ -833,7 +833,7 @@ function EventGroupCell(props: {
 				<button
 					type="button"
 					onClick={onToggle}
-					className="text-[11px] text-accent hover:underline text-left cursor-pointer press-down-mini"
+					className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down cursor-pointer"
 				>
 					{expanded
 						? eventCount > 1
