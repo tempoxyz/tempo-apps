@@ -5,28 +5,24 @@ import { springLazy } from '#lib/animation'
 export function Sphere(props: Sphere.Props) {
 	const { animate } = props
 	const containerRef = useRef<HTMLDivElement>(null)
+	const animateOnMount = useRef(animate)
 
 	useEffect(() => {
-		if (!containerRef.current) return
-		if (animate) {
-			animateEl(containerRef.current, {
-				opacity: [0, 1],
-				scale: [0.7, 1],
-				ease: springLazy,
-				delay: 300,
-			})
-		} else {
-			containerRef.current.style.opacity = '1'
-			containerRef.current.style.transform = 'translateY(0) scale(1)'
-		}
-	}, [animate])
+		if (!containerRef.current || !animateOnMount.current) return
+		animateEl(containerRef.current, {
+			opacity: [0, 1],
+			scale: [0.7, 1],
+			ease: springLazy,
+			delay: 300,
+		})
+	}, [])
 
 	return (
 		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[280px] z-0 print:hidden">
 			<div
 				ref={containerRef}
 				className="absolute top-0 z-0 w-full flex justify-center pointer-events-none"
-				style={{ opacity: 0 }}
+				style={{ opacity: animateOnMount.current ? 0 : 1 }}
 			>
 				<Sphere.Svg />
 			</div>

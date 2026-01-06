@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
 import * as z from 'zod/mini'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
+import { useIntroSeen } from '#comps/Intro'
 import { Sphere } from '#comps/Sphere'
 import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
 
@@ -30,7 +31,9 @@ function RouteComponent() {
 export function Layout(props: Layout.Props) {
 	const { children, blockNumber } = props
 	const matchRoute = useMatchRoute()
+	const introSeen = useIntroSeen()
 	const isReceipt = Boolean(matchRoute({ to: '/receipt/$hash', fuzzy: true }))
+	const isHome = Boolean(matchRoute({ to: '/' }))
 	return (
 		<div className="flex min-h-dvh flex-col print:block print:min-h-0">
 			<div className={`relative z-2 ${isReceipt ? 'print:hidden' : ''}`}>
@@ -42,7 +45,7 @@ export function Layout(props: Layout.Props) {
 			<div className="w-full mt-40 relative z-1 print:hidden">
 				<Footer />
 			</div>
-			<Sphere animate={Boolean(matchRoute({ to: '/' }))} />
+			<Sphere animate={isHome && !introSeen} />
 		</div>
 	)
 }

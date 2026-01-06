@@ -1,47 +1,61 @@
 import { waapi, stagger } from 'animejs'
-import { useEffect, useRef, useState } from 'react'
-import { springSmooth } from '#lib/animation'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { springInstant, springSmooth } from '#lib/animation'
 
-type IntroPhase = 'initial' | 'search' | 'explore' | 'discover' | 'done'
-
-const INTRO_SEEN_KEY = 'tempo-explorer-intro-seen'
+type IntroPhase = 'start' | 'end'
 
 interface IntroProps {
 	onPhaseChange?: (phase: IntroPhase) => void
 }
 
-function shouldShowAnimation(): boolean {
-	const navEntry = performance.getEntriesByType('navigation')[0] as
-		| PerformanceNavigationTiming
-		| undefined
-	return navEntry?.type === 'reload' || !sessionStorage.getItem(INTRO_SEEN_KEY)
+const IntroSeenContext = createContext(false)
+const IntroSeenSetContext = createContext<(() => void) | null>(null)
+
+export function IntroSeenProvider({ children }: { children: React.ReactNode }) {
+	const [seen, setSeen] = useState(false)
+	return (
+		<IntroSeenContext.Provider value={seen}>
+			<IntroSeenSetContext.Provider value={() => setSeen(true)}>
+				{children}
+			</IntroSeenSetContext.Provider>
+		</IntroSeenContext.Provider>
+	)
 }
 
 const words = [
-	{ text: 'Search', size: '32px', opacity: 0.5, phase: 'search' },
-	{ text: 'Explore', size: '40px', opacity: 0.7, phase: 'explore' },
-	{ text: 'Discover', size: '52px', opacity: 1, phase: 'discover' },
+	{ text: 'Search', size: '32px', opacity: 0.5 },
+	{ text: 'Explore', size: '40px', opacity: 0.7 },
+	{ text: 'Discover', size: '52px', opacity: 1 },
 ] as const
 
 export function Intro({ onPhaseChange }: IntroProps) {
-	const [shouldAnimate, setShouldAnimate] = useState<boolean | null>(null)
 	const containerRef = useRef<HTMLDivElement>(null)
+	const animatedRef = useRef(false)
+	const seen = useContext(IntroSeenContext)
+	const setSeen = useContext(IntroSeenSetContext)
 
 	useEffect(() => {
-		if (shouldShowAnimation()) {
-			setShouldAnimate(true)
-			sessionStorage.setItem(INTRO_SEEN_KEY, 'true')
-		} else {
-			setShouldAnimate(false)
-			onPhaseChange?.('done')
+		if (animatedRef.current || !containerRef.current) return
+		animatedRef.current = true
+
+		if (seen) {
+			onPhaseChange?.('start')
+			for (const child of containerRef.current.querySelectorAll('[data-word]')) {
+				;(child as HTMLElement).style.opacity = '1'
+			}
+			waapi
+				.animate(containerRef.current, {
+					opacity: [0, 1],
+					scale: [0.97, 1],
+					ease: springInstant,
+				})
+				.then(() => onPhaseChange?.('end'))
+			return
 		}
-	}, [onPhaseChange])
 
-	useEffect(() => {
-		if (shouldAnimate !== true || !containerRef.current) return
-
-		onPhaseChange?.('search')
-		const children = containerRef.current.querySelectorAll('span')
+		setSeen?.()
+		onPhaseChange?.('start')
+		const children = containerRef.current.querySelectorAll('[data-word]')
 		waapi
 			.animate(children, {
 				opacity: [0, 1],
@@ -50,47 +64,32 @@ export function Intro({ onPhaseChange }: IntroProps) {
 				ease: springSmooth,
 				delay: stagger(60),
 			})
-			.then(() => onPhaseChange?.('done'))
-	}, [shouldAnimate, onPhaseChange])
-
-	if (shouldAnimate === null)
-		return (
-			<div className="flex flex-col items-center gap-1">
-				{words.map((word) => (
-					<span
-						key={word.text}
-						style={{
-							opacity: 0,
-							fontSize: word.size,
-							fontWeight: 600,
-							letterSpacing: '-0.02em',
-							lineHeight: '0.95',
-						}}
-					>
-						{word.text}
-					</span>
-				))}
-			</div>
-		)
+			.then(() => onPhaseChange?.('end'))
+	}, [onPhaseChange, seen, setSeen])
 
 	return (
 		<div ref={containerRef} className="flex flex-col items-center gap-1">
 			{words.map((word) => (
 				<span
 					key={word.text}
+					data-word
 					style={{
-						opacity: shouldAnimate ? 0 : word.opacity,
+						opacity: 0,
 						fontSize: word.size,
 						fontWeight: 600,
 						letterSpacing: '-0.02em',
 						lineHeight: '0.95',
 					}}
 				>
-					{word.text}
+					<span style={{ opacity: word.opacity }}>{word.text}</span>
 				</span>
 			))}
 		</div>
 	)
+}
+
+export function useIntroSeen() {
+	return useContext(IntroSeenContext)
 }
 
 export type { IntroPhase }

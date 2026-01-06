@@ -16,7 +16,7 @@ import {
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#cva.config'
 import { springInstant, springBouncy, springSmooth } from '#lib/animation'
-import { Intro, type IntroPhase } from '#comps/Intro'
+import { Intro, type IntroPhase, useIntroSeen } from '#comps/Intro'
 import BoxIcon from '~icons/lucide/box'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CoinsIcon from '~icons/lucide/coins'
@@ -33,9 +33,10 @@ export const Route = createFileRoute('/_layout/')({
 function Component() {
 	const router = useRouter()
 	const navigate = useNavigate()
+	const introSeen = useIntroSeen()
+	const introSeenOnMount = useRef(introSeen)
 	const [inputValue, setInputValue] = useState('')
 	const [isMounted, setIsMounted] = useState(false)
-	const [introPhase, setIntroPhase] = useState<IntroPhase>('initial')
 	const inputWrapperRef = useRef<HTMLDivElement>(null)
 	const exploreInputRef = useRef<HTMLInputElement>(null)
 	const isNavigating = useRouterState({
@@ -50,19 +51,17 @@ function Component() {
 		})
 	}, [router])
 
-	useEffect(() => {
-		if (introPhase === 'search' && inputWrapperRef.current)
+	const handlePhaseChange = useCallback((phase: IntroPhase) => {
+		if (phase === 'start' && inputWrapperRef.current) {
+			const seen = introSeenOnMount.current
 			animate(inputWrapperRef.current, {
 				opacity: [0, 1],
-				scale: [0.94, 1],
-				ease: springBouncy,
-				delay: 240,
+				scale: [seen ? 0.97 : 0.94, 1],
+				ease: seen ? springInstant : springBouncy,
+				delay: seen ? 0 : 240,
 				onBegin: () => exploreInputRef.current?.focus(),
 			})
-	}, [introPhase])
-
-	const handlePhaseChange = useCallback((phase: IntroPhase) => {
-		setIntroPhase(phase)
+		}
 	}, [])
 
 	return (
@@ -107,14 +106,15 @@ function Component() {
 						/>
 					</div>
 				</div>
-				<SpotlightLinks introPhase={introPhase} />
+				<SpotlightLinks />
 			</div>
 		</div>
 	)
 }
 
-function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
+function SpotlightLinks() {
 	const navigate = useNavigate()
+	const introSeen = useIntroSeen()
 	const [actionOpen, setActionOpen] = useState(false)
 	const [menuMounted, setMenuMounted] = useState(false)
 	const dropdownRef = useRef<HTMLDivElement>(null)
@@ -122,7 +122,7 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 	const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 	const closingRef = useRef(false)
 	const pillsRef = useRef<HTMLDivElement>(null)
-	const animatedRef = useRef(false)
+	const introSeenOnMount = useRef(introSeen)
 
 	const closeMenu = useCallback(() => {
 		setActionOpen(false)
@@ -156,28 +156,26 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 	}, [closeMenu])
 
 	useEffect(() => {
-		if (introPhase === 'search' && !animatedRef.current && pillsRef.current) {
-			animatedRef.current = true
-			const children = Array.from(pillsRef.current.children)
-			for (const child of children) {
-				;(child as HTMLElement).style.pointerEvents = 'auto'
-			}
-			animate(children, {
-				opacity: [0, 1],
-				translateY: [4, 0],
-				ease: springSmooth,
-				delay: stagger(20, {
-					start: 320,
-					from: 'random',
-				}),
-			}).then(() => {
-				// clear transform, otherwise .press-down would not work
-				for (const child of children) {
-					;(child as HTMLElement).style.transform = ''
-				}
-			})
+		if (!pillsRef.current) return
+		const seen = introSeenOnMount.current
+		const children = [...pillsRef.current.children]
+		for (const child of children) {
+			;(child as HTMLElement).style.pointerEvents = 'auto'
 		}
-	}, [introPhase])
+		const anim = animate(children, {
+			opacity: [0, 1],
+			translateY: [seen ? 2 : 4, 0],
+			ease: seen ? springInstant : springSmooth,
+			delay: seen ? stagger(10) : stagger(20, { start: 320, from: 'random' }),
+		})
+		anim.then(() => {
+			// clear transform, otherwise .press-down would not work
+			for (const child of children) {
+				;(child as HTMLElement).style.transform = ''
+			}
+		})
+		return () => anim.cancel()
+	}, [])
 
 	useEffect(() => {
 		if (actionOpen) setMenuMounted(true)
