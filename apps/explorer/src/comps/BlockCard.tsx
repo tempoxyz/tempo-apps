@@ -126,7 +126,7 @@ export function BlockCard(props: BlockCard.Props) {
 									)}
 								</div>
 							</div>
-							<div className="text-[14px] font-mono font-normal leading-[18px] tracking-[1px] text-primary break-all max-w-[calc(22ch+22px)]">
+							<div className="text-[14px] font-mono font-normal leading-[18px] text-primary break-all max-w-[calc(22ch+22px)]">
 								{hash}
 							</div>
 						</button>
@@ -139,10 +139,10 @@ export function BlockCard(props: BlockCard.Props) {
 						<Link
 							to="/block/$id"
 							params={{ id: parentHash }}
-							className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end"
+							className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end font-mono"
 							title={parentHash}
 						>
-							<Midcut value={parentHash} prefix="0x" align="end" />
+							<Midcut value={parentHash} prefix="0x" align="end" min={4} />
 						</Link>
 					</div>
 				</div>,
@@ -155,10 +155,10 @@ export function BlockCard(props: BlockCard.Props) {
 							<Link
 								to="/address/$address"
 								params={{ address: miner }}
-								className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end"
+								className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end font-mono"
 								title={miner}
 							>
-								<Midcut value={miner} prefix="0x" align="end" />
+								<Midcut value={miner} prefix="0x" align="end" min={4} />
 							</Link>
 						) : (
 							<span className="text-tertiary">—</span>
@@ -191,9 +191,9 @@ export function BlockCard(props: BlockCard.Props) {
 						{showAdvanced && (
 							<div className="mt-[14px] space-y-[14px]">
 								<div className="space-y-[6px]">
-									<div className="flex items-center justify-between text-primary">
-										<span>Gas Usage</span>
-										<span className="text-primary">
+									<div className="flex items-center justify-between">
+										<span className="text-secondary">Gas Usage</span>
+										<span className="text-primary font-mono tabular-nums">
 											{gasUsage !== undefined
 												? `${gasUsage.toFixed(2)}%`
 												: '0.00%'}
@@ -348,7 +348,7 @@ export namespace BlockCard {
 					{notifying ? 'copied' : label}
 				</span>
 				<div className="flex items-center gap-[8px] min-w-0 flex-1 justify-end font-mono">
-					<Midcut value={hash} prefix="0x" align="end" />
+					<Midcut value={hash} prefix="0x" align="end" min={4} />
 					<CopyIcon className="w-[12px] h-[12px] text-content-dimmed shrink-0" />
 				</div>
 			</button>
