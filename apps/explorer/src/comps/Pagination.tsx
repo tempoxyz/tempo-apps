@@ -70,9 +70,12 @@ export function Pagination(props: Pagination.Props) {
 						<ChevronLeft className="size-[14px]" />
 					</Link>
 
-					<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
-						Page {Pagination.numFormat.format(page)} of{' '}
-						{Pagination.numFormat.format(totalPages)}
+					<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+						Page{' '}
+						<span className="text-primary">
+							{Pagination.numFormat.format(page)}
+						</span>{' '}
+						of {Pagination.numFormat.format(totalPages)}
 					</span>
 
 					<Link
@@ -263,9 +266,9 @@ export namespace Pagination {
 				>
 					<ChevronLeft className="size-[14px]" />
 				</Link>
-				<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
+				<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
 					Page{' '}
-					<span className={fetching ? 'opacity-50' : undefined}>
+					<span className={cx('text-primary', fetching && 'opacity-50')}>
 						{Pagination.numFormat.format(page)}
 					</span>{' '}
 					of{' '}

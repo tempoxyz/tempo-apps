@@ -46,6 +46,7 @@ import type { BalanceChangesData } from '#lib/queries/balance-changes'
 import { traceQueryOptions } from '#lib/queries/trace'
 import { zHash } from '#lib/zod'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 
 const defaultSearchValues = {
@@ -537,15 +538,14 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 							),
 						)}
 					</div>
-					<div>
-						<Link
-							to="."
-							search={{ tab: 'balances' }}
-							className="text-[12px] text-accent hover:underline press-down!"
-						>
-							See all balance updates
-						</Link>
-					</div>
+					<Link
+						to="."
+						search={{ tab: 'balances' }}
+						className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down w-fit"
+					>
+						See all ({data.total})
+						<ChevronDownIcon className="size-[12px]" />
+					</Link>
 				</div>
 			</div>
 		</div>
