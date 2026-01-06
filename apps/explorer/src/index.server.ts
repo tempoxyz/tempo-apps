@@ -1,5 +1,5 @@
 /** biome-ignore-all assist/source/organizeImports: _ */
-import { serverSidePosthog } from '#lib/posthog.ts'
+import { isomorphicPosthog } from '#lib/posthog.ts'
 
 import {
 	createStartHandler,
@@ -17,10 +17,11 @@ const entryHandler = defineHandlerCallback(async (context) => {
 	const leaf = matches[matches.length - 1]
 	const routeId = leaf.routeId ?? url.pathname
 
-	const posthog = serverSidePosthog()
+	const posthog = isomorphicPosthog()
+	if (!posthog) return defaultStreamHandler(context)
 
 	waitUntil(
-		posthog.captureImmediate({
+		posthog?.captureImmediate({
 			distinctId: routeId,
 			event: 'server_request',
 			properties: {

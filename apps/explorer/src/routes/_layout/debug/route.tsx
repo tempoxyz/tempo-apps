@@ -1,5 +1,5 @@
 // biome-ignore assist/source/organizeImports: _ */
-import { serverSidePosthog } from '#lib/posthog.ts'
+import { isomorphicPosthog } from '#lib/posthog.ts'
 
 import { waitUntil } from 'cloudflare:workers'
 import { usePostHog } from '@posthog/react'
@@ -19,11 +19,12 @@ export const Route = createFileRoute('/_layout/debug')({
 				const query = url.searchParams.get('query')
 				const plain = url.searchParams.get('plain')
 
-				const posthog = serverSidePosthog()
+				const posthog = isomorphicPosthog()
+				if (!posthog) return next()
 
 				waitUntil(
 					posthog?.captureImmediate({
-						event: '_explorer_test_event',
+						event: '____explorer_test_event',
 						distinctId: 'explorer@tempo.xyz',
 						properties: { query, plain },
 					}),
