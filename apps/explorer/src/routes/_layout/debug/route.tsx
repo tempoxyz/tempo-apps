@@ -1,14 +1,29 @@
+import { waitUntil } from 'cloudflare:workers'
 import { usePostHog } from '@posthog/react'
 import { createFileRoute } from '@tanstack/react-router'
-
 import * as React from 'react'
 import * as z from 'zod/mini'
+import { createPostHogClient } from '#lib/posthog.ts'
 
 export const Route = createFileRoute('/_layout/debug')({
 	validateSearch: z.object({
 		query: z.prefault(z.string(), 'foo'),
 	}),
 	component: RouteComponent,
+	loaderDeps: ({ search: { query, plain } }) => ({ query, plain }),
+	loader: ({ deps: { query, plain } }) => {
+		const posthog = createPostHogClient()
+
+		waitUntil(
+			posthog?.captureImmediate({
+				event: '_explorer_test_event',
+				distinctId: 'explorer@tempo.xyz',
+				properties: { query, plain },
+			}),
+		)
+
+		waitUntil(posthog.shutdown())
+	},
 })
 
 function RouteComponent() {
@@ -16,7 +31,6 @@ function RouteComponent() {
 	const posthog = usePostHog()
 
 	React.useEffect(() => {
-		console.info(search)
 		posthog?.identify('user_id', {
 			url: window.location.href,
 			query: search.query,

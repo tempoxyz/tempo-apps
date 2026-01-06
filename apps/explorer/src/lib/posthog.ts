@@ -8,7 +8,7 @@ export function createPostHogClient(
 	},
 ) {
 	const posthog = new PostHog(options.apiKey, {
-		host: 'https://us.i.posthog.com',
+		host: options.host,
 		flushAt: 1, // Send events immediately in edge environment
 		flushInterval: 0, // Don't wait for interval
 	})
