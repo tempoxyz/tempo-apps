@@ -29,14 +29,15 @@ export const Route = createFileRoute('/_layout/debug')({
 				if (!posthog) return next()
 
 				waitUntil(
-					posthog?.captureImmediate({
-						event: '____explorer_test_event',
-						distinctId: 'explorer@tempo.xyz',
-						properties: { query, plain },
-					}),
+					(async () => {
+						await posthog.capture({
+							event: '____explorer_test_event',
+							distinctId: 'explorer@tempo.xyz',
+							properties: { query, plain },
+						})
+						await posthog.shutdown()
+					})(),
 				)
-
-				waitUntil(posthog.shutdown())
 
 				return next()
 			},

@@ -1,54 +1,26 @@
-/** biome-ignore-all assist/source/organizeImports: _ */
-import { PostHog } from 'posthog-node'
+import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
 
-import {
-	createStartHandler,
-	defaultStreamHandler,
-	defineHandlerCallback,
-} from '@tanstack/react-start/server'
-import { waitUntil } from 'cloudflare:workers'
-import { createServerEntry } from '@tanstack/react-start/server-entry'
-
-const entryHandler = defineHandlerCallback(async (context) => {
-	const url = new URL(context.request.url)
-
-	// We do this so that transactions are grouped under the route ID instead of unique URLs
-	const matches = context.router.state.matches ?? []
-	const leaf = matches[matches.length - 1]
-	const routeId = leaf.routeId ?? url.pathname
-
-	const posthog = new PostHog(
-		'phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',
-		{
-			disabled: process.env.NODE_ENV !== 'production',
-			host: 'https://us.i.posthog.com',
-			flushAt: 1, // Send events immediately in edge environment
-			flushInterval: 0, // Don't wait for interval
-		},
-	)
-
-	waitUntil(
-		posthog?.captureImmediate({
-			distinctId: routeId,
-			event: 'server_request',
-			properties: {
-				'route.id': routeId,
-				'http.path': url.pathname,
-				'http.method': context.request.method,
-				'http.full_url': url.toString(),
-			},
-		}),
-	)
-
-	waitUntil(posthog.shutdown())
-
-	return defaultStreamHandler(context)
-})
+export const redirects: Array<{
+	from: RegExp
+	to: (match: RegExpMatchArray) => string
+}> = [
+	{ from: /^\/blocks\/(latest|\d+)$/, to: (m) => `/block/${m[1]}` },
+	{ from: /^\/transaction\/(.+)$/, to: (m) => `/tx/${m[1]}` },
+	{ from: /^\/tokens\/(.+)$/, to: (m) => `/token/${m[1]}` },
+]
 
 export default createServerEntry({
-	fetch: async (request, options) => {
-		const handler = createStartHandler(entryHandler)
+	fetch: async (request, opts) => {
+		const url = new URL(request.url)
 
-		return handler(request, options)
+		for (const { from, to } of redirects) {
+			const match = url.pathname.match(from)
+			if (match) {
+				url.pathname = to(match)
+				return Response.redirect(url, 301)
+			}
+		}
+
+		return handler.fetch(request, opts)
 	},
 })
