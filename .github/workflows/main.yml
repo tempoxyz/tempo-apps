@@ -25,19 +25,24 @@ jobs:
     strategy:
       matrix:
         include:
-          - app: og
-          - app: tokenlist
-          - app: contract-verification
-          - app: explorer
-            env: devnet
+          #### explorer
           - app: explorer
             env: testnet
+          - app: explorer
+            env: moderato
+          - app: explorer
+            env: devnet
+          #### fee-payer
           - app: fee-payer
             env: privy
           - app: fee-payer
             env: devnet
           - app: fee-payer
             env: testnet
+          #### other (single-env-apps)
+          - app: og
+          - app: tokenlist
+          - app: contract-verification
 
     steps:
       - uses: actions/checkout@v6

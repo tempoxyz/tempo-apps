@@ -23,7 +23,7 @@ import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#cva.config.ts'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { preferredEventsFilter } from '#lib/domain/known-events'
-import { DateFormatter, PriceFormatter } from '#lib/formatting.ts'
+import { PriceFormatter } from '#lib/formatting.ts'
 import { useMediaQuery } from '#lib/hooks'
 import {
 	type BlockIdentifier,
@@ -336,24 +336,6 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 			return {
 				title: selector ?? 'Call',
 				subtitle: undefined,
-			}
-
-		if (decodedCall.functionName === 'finalizeStreams') {
-			const ts = decodedCall.args?.[0]
-			const asBigInt = typeof ts === 'bigint' ? ts : undefined
-			return {
-				title: 'Finalize reward streams',
-				subtitle:
-					asBigInt !== undefined
-						? `at ${DateFormatter.format(asBigInt)} (unix ${asBigInt})`
-						: undefined,
-			}
-		}
-
-		if (decodedCall.functionName === 'executeBlock')
-			return {
-				title: 'Execute orderbook block',
-				subtitle: 'Settle stablecoin exchange batch',
 			}
 
 		return {

@@ -1,6 +1,16 @@
-import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
+import {
+	createIsomorphicFn,
+	createServerFn,
+	createServerOnlyFn,
+} from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
-import { tempoDevnet, tempoLocalnet, tempoTestnet } from 'viem/chains'
+import { env } from 'cloudflare:workers'
+import {
+	tempoDevnet,
+	tempoLocalnet,
+	tempoAndantino,
+	tempoModerato,
+} from 'viem/chains'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -16,31 +26,88 @@ const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 
-export const TESTNET_WS_URL = 'wss://proxy.tempo.xyz/rpc'
-export const TESTNET_RPC_URL = 'https://proxy.tempo.xyz/rpc'
+export const ANDANTINO_WS_URLs = [
+	'wss://proxy.tempo.xyz/rpc/42429',
+	'wss://rpc.testnet.tempo.xyz',
+]
+export const ANDANTINO_RPC_URLs = [
+	'https://proxy.tempo.xyz/rpc/42429',
+	'https://rpc.testnet.tempo.xyz',
+]
 
-export const DEVNET_WS_URL = 'wss://rpc.devnet.tempoxyz.dev'
-export const DEVNET_RPC_URL = 'https://rpc.devnet.tempoxyz.dev'
+export const DEVNET_WS_URLs = [
+	'wss://proxy.tempo.xyz/rpc/31318',
+	'wss://rpc.devnet.tempoxyz.dev',
+]
+export const DEVNET_RPC_URLs = [
+	'https://proxy.tempo.xyz/rpc/31318',
+	'https://rpc.devnet.tempoxyz.dev',
+]
 
-export const TEMPO_WS_URL =
-	TEMPO_ENV === 'devnet' ? DEVNET_WS_URL : TESTNET_WS_URL
-export const TEMPO_RPC_URL =
-	TEMPO_ENV === 'devnet' ? DEVNET_RPC_URL : TESTNET_RPC_URL
+export const MODERATO_WS_URLs = [
+	'wss://proxy.tempo.xyz/rpc/42431',
+	'wss://rpc.moderato.tempo.xyz',
+]
+export const MODERATO_RPC_URLs = [
+	'https://proxy.tempo.xyz/rpc/42431',
+	'https://rpc.moderato.tempo.xyz',
+]
+
+const getTempoRpcKey = createServerOnlyFn(() =>
+	TEMPO_ENV === 'devnet'
+		? env.TEMPO_RPC_KEY_DEVNET
+		: TEMPO_ENV === 'moderato'
+			? env.TEMPO_RPC_KEY_MODERATO
+			: env.TEMPO_RPC_KEY_TESTNET,
+)
 
 export const getTempoChain = createIsomorphicFn()
-	.client(() => (TEMPO_ENV === 'devnet' ? tempoDevnet : tempoTestnet))
-	.server(() => (TEMPO_ENV === 'devnet' ? tempoDevnet : tempoTestnet))
+	.client(() =>
+		TEMPO_ENV === 'devnet'
+			? tempoDevnet
+			: TEMPO_ENV === 'moderato'
+				? tempoModerato
+				: tempoAndantino,
+	)
+	.server(() =>
+		TEMPO_ENV === 'devnet'
+			? tempoDevnet
+			: TEMPO_ENV === 'moderato'
+				? tempoModerato
+				: tempoAndantino,
+	)
 
 const getTempoTransport = createIsomorphicFn()
-	.client(() => {
-		if (TEMPO_ENV === 'devnet')
-			return fallback([webSocket(DEVNET_WS_URL), http(DEVNET_RPC_URL)])
-		return fallback([webSocket(TESTNET_WS_URL), http(TESTNET_RPC_URL)])
-	})
+	.client(() =>
+		fallback(
+			TEMPO_ENV === 'devnet'
+				? [
+						...DEVNET_WS_URLs.map((u) => webSocket(u)),
+						...DEVNET_RPC_URLs.map((u) => http(u)),
+					]
+				: TEMPO_ENV === 'moderato'
+					? [
+							...MODERATO_WS_URLs.map((u) => webSocket(u)),
+							...MODERATO_RPC_URLs.map((u) => http(u)),
+						]
+					: [
+							...ANDANTINO_WS_URLs.map((u) => webSocket(u)),
+							...ANDANTINO_RPC_URLs.map((u) => http(u)),
+						],
+		),
+	)
 	.server(() => {
-		if (TEMPO_ENV === 'devnet')
-			return fallback([webSocket(DEVNET_WS_URL), http(DEVNET_RPC_URL)])
-		return fallback([webSocket(TESTNET_WS_URL), http(TESTNET_RPC_URL)])
+		const rpcKey = getTempoRpcKey()
+		const [wsUrls, httpUrls] =
+			TEMPO_ENV === 'devnet'
+				? [DEVNET_WS_URLs, DEVNET_RPC_URLs]
+				: TEMPO_ENV === 'moderato'
+					? [MODERATO_WS_URLs, MODERATO_RPC_URLs]
+					: [ANDANTINO_WS_URLs, ANDANTINO_RPC_URLs]
+		return fallback([
+			...wsUrls.map((wsUrl) => webSocket(`${wsUrl}/${rpcKey}`)),
+			...httpUrls.map((httpUrl) => http(`${httpUrl}/${rpcKey}`)),
+		])
 	})
 
 export function getWagmiConfig() {
@@ -52,11 +119,10 @@ export function getWagmiConfig() {
 		batch: { multicall: false },
 		chains: [chain, tempoLocalnet],
 		storage: createStorage({ storage: cookieStorage }),
-		// @ts-expect-error - dynamic chain selection causes type mismatch
 		transports: {
 			[chain.id]: transport,
 			[tempoLocalnet.id]: http(undefined, { batch: true }),
-		},
+		} as never,
 	})
 }
 

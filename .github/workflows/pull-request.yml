@@ -28,13 +28,23 @@ jobs:
     strategy:
       matrix:
         include:
-          - app: og
-          - app: fee-payer
-          - app: tokenlist
-          - app: explorer
-            env: devnet
+          #### explorer
           - app: explorer
             env: testnet
+          - app: explorer
+            env: moderato
+          - app: explorer
+            env: devnet
+          #### fee-payer
+          - app: fee-payer
+            env: privy
+          - app: fee-payer
+            env: devnet
+          - app: fee-payer
+            env: testnet
+          #### other (single-env-apps)
+          - app: og
+          - app: tokenlist
     env:
       NODE_ENV: production
       CLOUDFLARE_ENV: ${{ matrix.env || '' }}

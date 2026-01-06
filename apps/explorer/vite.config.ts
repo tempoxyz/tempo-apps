@@ -10,8 +10,14 @@ import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 const [, , , ...args] = process.argv
 
 export default defineConfig((config) => {
-	if (config.mode === 'devnet') process.env.CLOUDFLARE_ENV = 'devnet'
-	if (config.mode === 'testnet') process.env.CLOUDFLARE_ENV = 'testnet'
+	const tempoEnv =
+		config.mode === 'devnet' ||
+		config.mode === 'moderato' ||
+		config.mode === 'testnet'
+			? config.mode
+			: undefined
+
+	if (tempoEnv) process.env.CLOUDFLARE_ENV = tempoEnv
 
 	const env = loadEnv(config.mode, process.cwd(), '')
 
@@ -51,7 +57,7 @@ export default defineConfig((config) => {
 		},
 		build: {
 			minify: 'oxc',
-			rolldownOptions: {
+			rollupOptions: {
 				output: {
 					minify: {
 						compress:
@@ -73,13 +79,9 @@ export default defineConfig((config) => {
 			__BUILD_VERSION__: JSON.stringify(
 				env.CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? Date.now().toString(),
 			),
+
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
-				config.mode === 'devnet' || config.mode === 'testnet'
-					? config.mode
-					: process.env.CLOUDFLARE_ENV === 'devnet' ||
-							process.env.CLOUDFLARE_ENV === 'testnet'
-						? process.env.CLOUDFLARE_ENV
-						: env.VITE_TEMPO_ENV,
+				tempoEnv ?? env.VITE_TEMPO_ENV,
 			),
 		},
 	}

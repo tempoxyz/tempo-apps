@@ -17,6 +17,7 @@ import { Route as ApiCodeRouteImport } from './routes/api/code'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
+import { Route as ApiXSplatRouteImport } from './routes/api/x.$'
 import { Route as ApiTokensCountRouteImport } from './routes/api/tokens/count'
 import { Route as ApiAddressAddressRouteImport } from './routes/api/address/$address'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
@@ -71,6 +72,11 @@ const LayoutDemoIndexRoute = LayoutDemoIndexRouteImport.update({
   id: '/demo/',
   path: '/demo/',
   getParentRoute: () => LayoutRoute,
+} as any)
+const ApiXSplatRoute = ApiXSplatRouteImport.update({
+  id: '/api/x/$',
+  path: '/api/x/$',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTokensCountRoute = ApiTokensCountRouteImport.update({
   id: '/api/tokens/count',
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
+  '/api/x/$': typeof ApiXSplatRoute
   '/demo': typeof LayoutDemoIndexRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
@@ -192,6 +199,7 @@ export interface FileRoutesByTo {
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
+  '/api/x/$': typeof ApiXSplatRoute
   '/demo': typeof LayoutDemoIndexRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
@@ -218,6 +226,7 @@ export interface FileRoutesById {
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
+  '/api/x/$': typeof ApiXSplatRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
@@ -244,6 +253,7 @@ export interface FileRouteTypes {
     | '/tx/$hash'
     | '/api/address/$address'
     | '/api/tokens/count'
+    | '/api/x/$'
     | '/demo'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
     | '/tx/$hash'
     | '/api/address/$address'
     | '/api/tokens/count'
+    | '/api/x/$'
     | '/demo'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
@@ -293,6 +304,7 @@ export interface FileRouteTypes {
     | '/_layout/tx/$hash'
     | '/api/address/$address'
     | '/api/tokens/count'
+    | '/api/x/$'
     | '/_layout/demo/'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
@@ -307,6 +319,7 @@ export interface RootRouteChildren {
   ApiSearchRoute: typeof ApiSearchRoute
   ApiAddressAddressRoute: typeof ApiAddressAddressRoute
   ApiTokensCountRoute: typeof ApiTokensCountRoute
+  ApiXSplatRoute: typeof ApiXSplatRoute
   ApiAddressTotalValueAddressRoute: typeof ApiAddressTotalValueAddressRoute
   ApiAddressTxsCountAddressRoute: typeof ApiAddressTxsCountAddressRoute
   ApiTxBalanceChangesHashRoute: typeof ApiTxBalanceChangesHashRoute
@@ -370,6 +383,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/demo'
       preLoaderRoute: typeof LayoutDemoIndexRouteImport
       parentRoute: typeof LayoutRoute
+    }
+    '/api/x/$': {
+      id: '/api/x/$'
+      path: '/api/x/$'
+      fullPath: '/api/x/$'
+      preLoaderRoute: typeof ApiXSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/tokens/count': {
       id: '/api/tokens/count'
@@ -521,6 +541,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSearchRoute: ApiSearchRoute,
   ApiAddressAddressRoute: ApiAddressAddressRoute,
   ApiTokensCountRoute: ApiTokensCountRoute,
+  ApiXSplatRoute: ApiXSplatRoute,
   ApiAddressTotalValueAddressRoute: ApiAddressTotalValueAddressRoute,
   ApiAddressTxsCountAddressRoute: ApiAddressTxsCountAddressRoute,
   ApiTxBalanceChangesHashRoute: ApiTxBalanceChangesHashRoute,

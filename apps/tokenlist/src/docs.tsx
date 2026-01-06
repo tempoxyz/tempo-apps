@@ -1,8 +1,12 @@
+import type { createApiReference } from '@scalar/api-reference'
 import { html, raw } from 'hono/html'
 
 const scalarConfig = {
 	slug: 'tokenlist',
 	hideModels: true,
+	sources: [
+		{ url: '/schema/openapi.json', default: true },
+	],
 	hideClientButton: true,
 	url: '/schema/openapi.json',
 	showDeveloperTools: 'never',
@@ -11,7 +15,7 @@ const scalarConfig = {
 	title: 'Tokenlist API Reference',
 	proxyUrl: 'https://proxy.scalar.com',
 	favicon: 'https://explore.tempo.xyz/favicon.ico',
-}
+} satisfies Parameters<typeof createApiReference>[1]
 
 export const Docs = () => {
 	return (

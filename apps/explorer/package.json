@@ -2,6 +2,10 @@
 	"name": "explorer",
 	"private": true,
 	"type": "module",
+	"imports": {
+		"#*": "./src/*",
+		"#wrangler.json": "./wrangler.jsonc"
+	},
 	"scripts": {
 		"build": "vite build",
 		"check": "pnpm check:biome && pnpm check:types",
@@ -12,12 +16,13 @@
 		"deploy": "wrangler deploy",
 		"dev": "VITE_ENABLE_DEMO=true vite dev --port 3000",
 		"gen:tokens-index": "node --experimental-strip-types --env-file=.env scripts/generate-tokens-index.ts",
-		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
-		"postinstall": "pnpm gen:types && pnpm build",
+		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
+		"postinstall": "pnpm gen:types && CLOUDFLARE_ENV= pnpm build",
 		"preview": "vite preview --mode='preview'",
 		"test": "vitest"
 	},
 	"dependencies": {
+		"hono": "^4.11.3",
 		"@shazow/whatsabi": "catalog:",
 		"@shikijs/langs": "catalog:",
 		"@shikijs/themes": "catalog:",
