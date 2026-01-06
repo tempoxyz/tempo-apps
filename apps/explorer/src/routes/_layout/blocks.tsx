@@ -122,14 +122,14 @@ function RouteComponent() {
 		<div className="flex flex-col gap-6 px-6 py-8 max-w-300 mx-auto w-full">
 			<section
 				className={cx(
-					'flex flex-col font-mono w-full overflow-hidden',
+					'flex flex-col w-full overflow-hidden',
 					'rounded-[10px] border border-card-border bg-card',
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 				)}
 			>
 				<div className="overflow-x-auto">
 					{/* Header */}
-					<div className="grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 border-b border-card-border bg-card-header text-[12px] text-tertiary uppercase min-w-125">
+					<div className="grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 border-b border-card-border bg-card-header text-[13px] text-tertiary font-sans font-normal min-w-125">
 						<div>Block</div>
 						<div>Hash</div>
 						<div className="text-right min-w-30">
@@ -142,7 +142,7 @@ function RouteComponent() {
 								Time
 							</button>
 						</div>
-						<div className="text-right">Txns</div>
+						<div className="text-right">Count</div>
 					</div>
 
 					{/* Blocks list */}
@@ -179,7 +179,7 @@ function RouteComponent() {
 							resetScroll={false}
 							search={(prev) => ({ ...prev, live: !live })}
 							className={cx(
-								'flex items-center gap-1.5 px-2.5 py-1.25 rounded-md text-[12px] font-medium transition-colors',
+								'flex items-center gap-1.5 px-2.5 py-1.25 rounded-md text-[12px] font-medium font-sans transition-colors',
 								{
 									'bg-positive/10 text-positive hover:bg-positive/20': live,
 									'bg-base-alt text-tertiary hover:bg-base-alt/80': !live,
@@ -238,7 +238,7 @@ function BlockRow({
 					params={{ id: blockNumber }}
 					className="text-accent press-down font-medium"
 				>
-					#{blockNumber}
+					{blockNumber}
 				</Link>
 			</div>
 			<div className="min-w-0">
