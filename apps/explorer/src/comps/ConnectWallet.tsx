@@ -10,7 +10,7 @@ import {
 	useSwitchChain,
 } from 'wagmi'
 import { Address } from '#comps/Address'
-import { cva } from '#cva.config.ts'
+import { cva, cx } from '#cva.config.ts'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
@@ -78,7 +78,9 @@ function ConnectWalletInner({
 						className={cx(
 							'flex gap-[8px] items-center text-[12px] bg-base-alt rounded text-primary py-[6px] px-[10px] cursor-pointer press-down border border-card-border',
 							'hover:bg-base',
-							pendingId === connector.id && connect.isPending && 'animate-pulse',
+							pendingId === connector.id &&
+								connect.isPending &&
+								'animate-pulse',
 						)}
 					>
 						{connector.icon ? (
