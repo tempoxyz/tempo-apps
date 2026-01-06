@@ -14,10 +14,8 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 	return (
 		<InfoCard
 			title={
-				<div className="flex items-center justify-between px-[18px] h-[36px]">
-					<h1 className="text-[13px] uppercase text-tertiary select-none">
-						Transaction
-					</h1>
+				<div className="flex items-center justify-between px-[18px] h-[36px] font-sans">
+					<h1 className="text-[13px] text-tertiary select-none">Transaction</h1>
 					<StatusBadge status={status} />
 				</div>
 			}
@@ -30,7 +28,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 					className="w-full text-left cursor-pointer press-down text-tertiary"
 					title={hash}
 				>
-					<div className="flex items-center gap-[8px] mb-[8px]">
+					<div className="flex items-center gap-[8px] mb-[8px] font-sans">
 						<span className="text-[13px] font-normal capitalize">Hash</span>
 						<div className="relative flex items-center">
 							<CopyIcon className="w-[12px] h-[12px]" />
@@ -41,7 +39,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[23ch]">
+					<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[23ch] font-mono">
 						{hash}
 					</p>
 				</button>,
@@ -106,9 +104,9 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 					key="receipt"
 					to="/receipt/$hash"
 					params={{ hash }}
-					className="press-down flex items-end justify-between w-full print:hidden"
+					className="press-down flex items-end justify-between w-full print:hidden py-[6px]"
 				>
-					<span className="text-[13px] text-tertiary">View</span>
+					<span className="text-[13px] text-tertiary">Receipt</span>
 					<ReceiptMark />
 				</Link>,
 			]}
@@ -122,8 +120,10 @@ function StatusBadge(props: { status: 'success' | 'reverted' }) {
 	return (
 		<span
 			className={cx(
-				'text-[11px] uppercase font-normal',
-				isSuccess ? 'text-base-content-positive' : 'text-base-content-negative',
+				'text-[11px] uppercase font-normal px-[6px] py-[2px] rounded-[4px]',
+				isSuccess
+					? 'text-base-content-positive bg-base-content-positive/10'
+					: 'text-base-content-negative bg-base-content-negative/10',
 			)}
 		>
 			{isSuccess ? 'Success' : 'Failed'}

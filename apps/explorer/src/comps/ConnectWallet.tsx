@@ -40,6 +40,7 @@ function ConnectWalletInner({
 }) {
 	const { address, chain, connector } = useConnection()
 	const connect = useConnect()
+	const [pendingId, setPendingId] = React.useState<string | null>(null)
 	const connectors = useConnectors()
 	const injectedConnectors = React.useMemo(
 		() => filterSupportedInjectedConnectors(connectors),
@@ -57,13 +58,28 @@ function ConnectWalletInner({
 		)
 	if (!address || connector?.id === 'webAuthn')
 		return (
-			<div className="flex gap-2">
+			<div className="flex items-center gap-1.5">
+				<span className="text-[12px] text-tertiary whitespace-nowrap font-sans">
+					Connect
+				</span>
 				{injectedConnectors.map((connector) => (
-					<Button
-						variant="default"
-						className="flex gap-[8px] items-center"
+					<button
+						type="button"
 						key={connector.id}
-						onClick={() => connect.mutate({ connector })}
+						onClick={() => {
+							setPendingId(connector.id)
+							connect.mutate(
+								{ connector },
+								{
+									onSettled: () => setPendingId(null),
+								},
+							)
+						}}
+						className={cx(
+							'flex gap-[8px] items-center text-[12px] bg-base-alt rounded text-primary py-[6px] px-[10px] cursor-pointer press-down border border-card-border',
+							'hover:bg-base',
+							pendingId === connector.id && connect.isPending && 'animate-pulse',
+						)}
 					>
 						{connector.icon ? (
 							<img
@@ -74,8 +90,8 @@ function ConnectWalletInner({
 						) : (
 							<LucideWalletCards className="size-[12px]" />
 						)}
-						Connect {connector.name}
-					</Button>
+						{connector.name}
+					</button>
 				))}
 			</div>
 		)
