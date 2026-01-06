@@ -3,7 +3,7 @@ import { usePostHog } from '@posthog/react'
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import * as z from 'zod/mini'
-import { createPostHogClient } from '#lib/posthog.ts'
+import { posthogClient } from '#lib/posthog.ts'
 
 export const Route = createFileRoute('/_layout/debug')({
 	validateSearch: z.object({
@@ -11,18 +11,28 @@ export const Route = createFileRoute('/_layout/debug')({
 	}),
 	component: RouteComponent,
 	loaderDeps: ({ search: { query, plain } }) => ({ query, plain }),
-	loader: ({ deps: { query, plain } }) => {
-		const posthog = createPostHogClient()
+	server: {
+		handlers: {
+			GET: async ({ request }) => {
+				const url = new URL(request.url)
+				const query = url.searchParams.get('query')
+				const plain = url.searchParams.get('plain')
 
-		waitUntil(
-			posthog?.captureImmediate({
-				event: '_explorer_test_event',
-				distinctId: 'explorer@tempo.xyz',
-				properties: { query, plain },
-			}),
-		)
+				const posthog = posthogClient()
 
-		waitUntil(posthog.shutdown())
+				waitUntil(
+					posthog?.captureImmediate({
+						event: '_explorer_test_event',
+						distinctId: 'explorer@tempo.xyz',
+						properties: { query, plain },
+					}),
+				)
+
+				waitUntil(posthog.shutdown())
+
+				return new Response('OK')
+			},
+		},
 	},
 })
 

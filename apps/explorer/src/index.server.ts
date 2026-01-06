@@ -6,7 +6,7 @@ import {
 } from '@tanstack/react-start/server'
 import { createServerEntry } from '@tanstack/react-start/server-entry'
 
-import { createPostHogClient } from '#lib/posthog.ts'
+import { posthogClient } from '#lib/posthog.ts'
 
 const redirects: Array<{
 	from: RegExp
@@ -35,7 +35,7 @@ export default createServerEntry({
 	fetch: async (request, options) => {
 		if (!options) return startFetch(request, options)
 
-		const posthog = createPostHogClient({
+		const posthog = posthogClient({
 			host: env.VITE_POSTHOG_HOST,
 			apiKey: env.VITE_POSTHOG_KEY,
 		})
