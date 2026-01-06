@@ -11,7 +11,7 @@ import {
 	LIMIT,
 	type TokenMetadata,
 } from '#lib/queries/balance-changes'
-import { cx } from '#cva.config.ts'
+import { cx } from '#cva.config'
 
 export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 	const { data, page } = props
