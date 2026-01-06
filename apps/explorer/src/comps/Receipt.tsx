@@ -40,7 +40,7 @@ export function Receipt(props: Receipt.Props) {
 		<>
 			<div
 				data-receipt
-				className="flex flex-col w-[360px] bg-base-plane border border-base-border shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] text-base-content"
+				className="flex flex-col w-[360px] bg-base-plane border border-base-border shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
 			>
 				<div className="flex gap-[40px] px-[20px] pt-[24px] pb-[16px]">
 					<div className="shrink-0">
@@ -154,7 +154,7 @@ export function Receipt(props: Receipt.Props) {
 													<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 leading-[24px] min-w-[20px]"></div>
 													<TxEventDescription event={event} />
 												</div>
-												<div className="flex items-start justify-end shrink-1 leading-[24px]">
+												<div className="flex items-start justify-end shrink leading-[24px]">
 													{totalAmountBigInt > 0n && (
 														<Amount.Base
 															decimals={decimals}
@@ -287,14 +287,15 @@ export function Receipt(props: Receipt.Props) {
 				)}
 			</div>
 
-			<div className="flex flex-col items-center -mt-5 w-full print:hidden">
-				<div className="max-w-[360px] w-full flex">
+			<div className="flex flex-col items-center -mt-8 w-full print:hidden border border-base-border border-t-0 rounded-bl-[10px] rounded-br-[10px] bg-base-plane">
+				<div className="max-w-[360px] w-full">
 					<Link
 						to="/tx/$hash"
 						params={{ hash }}
-						className="press-down text-[11px] px-[4px] flex"
+						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-background-primary border-t-0 rounded-bl-[10px] rounded-br-[10px] hover:bg-background-alt transition-all text-tertiary hover:text-primary"
 					>
-						View transaction
+						<span>View transaction</span>
+						<span aria-hidden="true">→</span>
 					</Link>
 				</div>
 			</div>
