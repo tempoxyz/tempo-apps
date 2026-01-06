@@ -192,7 +192,7 @@ export function BlockCard(props: BlockCard.Props) {
 						</button>
 
 						{showAdvanced && (
-							<div className="mt-[14px] space-y-[14px]">
+							<div className="mt-[14px] space-y-[20px] pb-4">
 								<div className="space-y-[12px]">
 									<div className="flex items-center justify-between">
 										<span className="text-secondary">Gas Usage</span>
@@ -202,7 +202,7 @@ export function BlockCard(props: BlockCard.Props) {
 												: '0.00%'}
 										</span>
 									</div>
-									<div className="flex items-center h-[2px] px-px bg-card-border">
+									<div className="flex items-center h-[6px] px-px bg-card-border">
 										<div
 											className="h-full bg-accent"
 											style={{
