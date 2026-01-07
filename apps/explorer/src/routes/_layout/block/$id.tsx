@@ -25,7 +25,7 @@ import {
 	type KnownEvent,
 	preferredEventsFilter,
 } from '#lib/domain/known-events'
-import { PriceFormatter } from '#lib/formatting.ts'
+import { DateFormatter, PriceFormatter } from '#lib/formatting.ts'
 import { useMediaQuery } from '#lib/hooks'
 import {
 	type BlockIdentifier,
