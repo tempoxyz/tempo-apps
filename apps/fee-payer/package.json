@@ -12,7 +12,6 @@
 		"deploy:privy": "wrangler deploy --env privy",
 		"format": "biome format --write .",
 		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
-		"postinstall": "pnpm gen:types",
 		"tail": "wrangler tail",
 		"test": "vitest --run",
 		"test:watch": "vitest",

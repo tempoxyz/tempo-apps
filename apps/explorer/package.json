@@ -17,7 +17,6 @@
 		"dev": "VITE_ENABLE_DEMO=true vite dev --port 3000",
 		"gen:tokens-index": "node --experimental-strip-types --env-file=.env scripts/generate-tokens-index.ts",
 		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
-		"postinstall": "pnpm gen:types && CLOUDFLARE_ENV= pnpm build",
 		"preview": "vite preview --mode='preview'",
 		"test": "vitest"
 	},
