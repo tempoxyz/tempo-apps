@@ -10,6 +10,8 @@ import {
 	tempoAndantino,
 	tempoModerato,
 } from 'viem/chains'
+import { createPublicClient, http as viemHttp } from 'viem'
+import { tempoActions } from 'viem/tempo'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -124,6 +126,14 @@ export function getWagmiConfig() {
 		} as never,
 	})
 }
+
+// Batched HTTP client for bulk RPC operations
+export function getBatchedClient() {
+	const rpcUrl = getTempoRpcUrl()
+	return createPublicClient({
+		chain: getChain(),
+		transport: viemHttp(rpcUrl.http, { batch: true }),
+	}).extend(tempoActions())
 
 export const getWagmiStateSSR = createServerFn().handler(() => {
 	const cookie = getRequestHeader('cookie')
