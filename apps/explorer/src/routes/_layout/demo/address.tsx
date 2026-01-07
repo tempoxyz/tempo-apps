@@ -2,7 +2,7 @@ import { ClientOnly, createFileRoute, notFound } from '@tanstack/react-router'
 import { Hex } from 'ox'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
-import { encodeAbiParameters, encodeEventTopics } from 'viem'
+import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
 import { Abis } from 'viem/tempo'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
@@ -208,14 +208,14 @@ function createMockTransactions(): MockTransactionData[] {
 						abi: Abis.feeAmm,
 						eventName: 'Mint',
 						args: {
-							sender: accountAddress,
+							to: accountAddress,
 							userToken: userTokenAddress,
 							validatorToken: validatorTokenAddress,
 						},
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters(
-						[{ type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }],
-						[1000000000n, 500000000n, 707106781n],
+						[{ type: 'address' }, { type: 'uint256' }, { type: 'uint256' }],
+						[accountAddress, 500000000n, 707106781n],
 					),
 				},
 				hash,
@@ -487,7 +487,6 @@ function createMockTransactions(): MockTransactionData[] {
 						eventName: 'TokenCreated',
 						args: {
 							token: tokenAddress,
-							tokenId: 1n,
 						},
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters(
@@ -497,8 +496,16 @@ function createMockTransactions(): MockTransactionData[] {
 							{ type: 'string' },
 							{ type: 'address' },
 							{ type: 'address' },
+							{ type: 'bytes32' },
 						],
-						['Test Token 2', 'TEST2', 'USD', userTokenAddress, accountAddress],
+						[
+							'Test Token 2',
+							'TEST2',
+							'USD',
+							userTokenAddress,
+							accountAddress,
+							zeroHash,
+						],
 					),
 				},
 				hash,

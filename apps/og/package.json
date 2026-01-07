@@ -6,8 +6,7 @@
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
 		"check:types": "tsgo --project tsconfig.json",
-		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
-		"postinstall": "pnpm gen:types"
+		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",

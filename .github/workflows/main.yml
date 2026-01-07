@@ -25,12 +25,21 @@ jobs:
     strategy:
       matrix:
         include:
+          #### explorer
           - app: explorer
-          - app: fee-payer # testnet
-          - app: fee-payer # privy
-            env: privy
-          - app: fee-payer # devnet
+            env: testnet
+          - app: explorer
+            env: moderato
+          - app: explorer
             env: devnet
+          #### fee-payer
+          - app: fee-payer
+            env: privy
+          - app: fee-payer
+            env: devnet
+          - app: fee-payer
+            env: testnet
+          #### other (single-env-apps)
           - app: og
           - app: tokenlist
           - app: contract-verification
@@ -65,9 +74,10 @@ jobs:
         uses: cloudflare/wrangler-action@v3
         env:
           NODE_ENV: production
+          CLOUDFLARE_ENV: ${{ matrix.env || '' }}
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/${{ matrix.app }}
           packageManager: pnpm
-          command: ${{ matrix.env == 'privy' && 'deploy --env privy' || 'deploy --env=""' }}
+          command: deploy ${{ matrix.env && format('--env {0}', matrix.env) || '' }}

@@ -348,24 +348,6 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 				subtitle: undefined,
 			}
 
-		if (decodedCall.functionName === 'finalizeStreams') {
-			const ts = decodedCall.args?.[0]
-			const asBigInt = typeof ts === 'bigint' ? ts : undefined
-			return {
-				title: 'Finalize reward streams',
-				subtitle:
-					asBigInt !== undefined
-						? `at ${DateFormatter.format(asBigInt)} (unix ${asBigInt})`
-						: undefined,
-			}
-		}
-
-		if (decodedCall.functionName === 'executeBlock')
-			return {
-				title: 'Execute orderbook block',
-				subtitle: 'Settle stablecoin exchange batch',
-			}
-
 		return {
 			title: decodedCall.functionName
 				? `${decodedCall.functionName}()`

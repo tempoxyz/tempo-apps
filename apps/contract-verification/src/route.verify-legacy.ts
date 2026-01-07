@@ -11,7 +11,7 @@ import {
 	type LinkReferences,
 	matchBytecode,
 } from '#bytecode-matching.ts'
-import { chains, DEVNET_CHAIN_ID, TESTNET_CHAIN_ID } from '#chains.ts'
+import { chains, CHAIN_IDS } from '#chains.ts'
 
 import {
 	codeTable,
@@ -65,7 +65,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		} = body
 
 		const chainId = Number(chain)
-		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(chainId)) {
+		if (!CHAIN_IDS.includes(chainId)) {
 			return sourcifyError(
 				context,
 				400,
@@ -131,11 +131,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		const chainConfig = chains[chainId as keyof typeof chains]
 		const client = createPublicClient({
 			chain: chainConfig,
-			transport: http(
-				chainConfig.id === TESTNET_CHAIN_ID
-					? `https://rpc.testnet.tempo.xyz/${context.env.TEMPO_RPC_KEY}`
-					: `https://rpc.devnet.tempo.xyz`,
-			),
+			transport: http(chainConfig.rpcUrls.default.http.at(0)),
 		})
 
 		const onchainBytecode = await client.getCode({ address })

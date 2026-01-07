@@ -1,21 +1,123 @@
 {
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
-	"name": "explorer",
 	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.server.ts",
-	"browser": {
-		"binding": "BROWSER"
-	},
+	"keep_vars": true,
 	"workers_dev": true,
 	"preview_urls": true,
-	"placement": {
-		"mode": "smart"
+	"placement": { "mode": "smart" },
+	// this binding is not inheritable to environments
+	// it's being added at top-level solely for the type generation script
+	"browser": { "binding": "BROWSER" },
+	"env": {
+		"testnet": {
+			"name": "explorer",
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.42429.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.testnet.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.andantino.tempo.xyz"
+				}
+			],
+			"vars": {
+				"VITE_TEMPO_ENV": "testnet",
+				"VITE_TEMPO_CHAIN_ID": 42429,
+				"VITE_TEMPO_RPC_WS": "wss://proxy.tempo.xyz/rpc/42429",
+				"VITE_TEMPO_RPC_HTTP": "https://proxy.tempo.xyz/rpc/42429"
+			},
+			"workers_dev": true,
+			"browser": { "binding": "BROWSER" },
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
+		},
+		"moderato": {
+			"name": "explorer-moderato",
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.42431.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.moderato.tempo.xyz"
+				}
+			],
+			"vars": {
+				"VITE_TEMPO_ENV": "moderato",
+				"VITE_TEMPO_CHAIN_ID": 42431,
+				"VITE_TEMPO_RPC_WS": "wss://proxy.tempo.xyz/rpc/42431",
+				"VITE_TEMPO_RPC_HTTP": "https://proxy.tempo.xyz/rpc/42431"
+			},
+			"workers_dev": true,
+			"browser": { "binding": "BROWSER" },
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
+		},
+		"devnet": {
+			"name": "explorer-devnet",
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.31318.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.devnet.tempo.xyz"
+				}
+			],
+			"vars": {
+				"VITE_TEMPO_ENV": "devnet",
+				"VITE_TEMPO_CHAIN_ID": 31318,
+				"VITE_TEMPO_RPC_WS": "wss://proxy.tempo.xyz/rpc/31318",
+				"VITE_TEMPO_RPC_HTTP": "https://proxy.tempo.xyz/rpc/31318"
+			},
+			"workers_dev": true,
+			"browser": { "binding": "BROWSER" },
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
+		}
 	},
-	"build": {
-		"command": "pnpm vite build --mode='production'"
-	},
-	"keep_vars": true,
 	"observability": {
 		"enabled": true,
 		"logs": {

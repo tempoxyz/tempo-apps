@@ -1,6 +1,11 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Hex } from 'ox'
-import { encodeAbiParameters, encodeEventTopics, zeroAddress } from 'viem'
+import {
+	encodeAbiParameters,
+	encodeEventTopics,
+	zeroAddress,
+	zeroHash,
+} from 'viem'
 import { Abis } from 'viem/tempo'
 import { Receipt } from '#comps/Receipt'
 import {
@@ -69,21 +74,20 @@ function loader() {
 					},
 				}) as [Hex.Hex, ...Hex.Hex[]],
 			}),
-			mockLog({
-				address: tokenAddress,
-				topics: encodeEventTopics({
-					abi: Abis.tip20,
-					eventName: 'RewardScheduled',
-					args: {
-						funder: updaterAddress,
-						id: 123n,
-					},
-				}) as [Hex.Hex, ...Hex.Hex[]],
-				data: encodeAbiParameters(
-					[{ type: 'uint256' }, { type: 'uint32' }],
-					[5000000n, 604800],
-				),
-			}),
+			// 	address: tokenAddress,
+			// 	topics: encodeEventTopics({
+			// 		abi: Abis.tip20,
+			// 		eventName: 'RewardScheduled',
+			// 		args: {
+			// 			funder: updaterAddress,
+			// 			id: 123n,
+			// 		},
+			// 	}) as [Hex.Hex, ...Hex.Hex[]],
+			// 	data: encodeAbiParameters(
+			// 		[{ type: 'uint256' }, { type: 'uint32' }],
+			// 		[5000000n, 604800],
+			// 	),
+			// }),
 			mockLog({
 				address: zeroAddress,
 				topics: encodeEventTopics({
@@ -95,17 +99,6 @@ function loader() {
 					},
 				}) as [Hex.Hex, ...Hex.Hex[]],
 				data: encodeAbiParameters([{ type: 'uint64' }], [7n]),
-			}),
-			mockLog({
-				address: zeroAddress,
-				topics: encodeEventTopics({
-					abi: Abis.nonce,
-					eventName: 'ActiveKeyCountChanged',
-					args: {
-						account: accountAddress,
-					},
-				}) as [Hex.Hex, ...Hex.Hex[]],
-				data: encodeAbiParameters([{ type: 'uint256' }], [3n]),
 			}),
 			mockLog({
 				address: tokenAddress,
@@ -167,18 +160,6 @@ function loader() {
 				address: tokenAddress,
 				topics: encodeEventTopics({
 					abi: Abis.tip20,
-					eventName: 'RewardCanceled',
-					args: {
-						funder: updaterAddress,
-						id: 99n,
-					},
-				}) as [Hex.Hex, ...Hex.Hex[]],
-				data: encodeAbiParameters([{ type: 'uint256' }], [2500000n]),
-			}),
-			mockLog({
-				address: tokenAddress,
-				topics: encodeEventTopics({
-					abi: Abis.tip20,
 					eventName: 'RewardRecipientSet',
 					args: {
 						holder: updaterAddress,
@@ -204,14 +185,14 @@ function loader() {
 					abi: Abis.feeAmm,
 					eventName: 'Mint',
 					args: {
-						sender: updaterAddress,
+						to: updaterAddress,
 						userToken: userTokenAddress,
 						validatorToken: validatorTokenAddress,
 					},
 				}) as [Hex.Hex, ...Hex.Hex[]],
 				data: encodeAbiParameters(
-					[{ type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }],
-					[1000000000n, 500000000n, 707106781n],
+					[{ type: 'address' }, { type: 'uint256' }, { type: 'uint256' }],
+					[updaterAddress, 500000000n, 707106781n],
 				),
 			}),
 			mockLog({
@@ -409,7 +390,6 @@ function loader() {
 					eventName: 'TokenCreated',
 					args: {
 						token: tokenAddress,
-						tokenId: 1n,
 					},
 				}) as [Hex.Hex, ...Hex.Hex[]],
 				data: encodeAbiParameters(
@@ -419,8 +399,16 @@ function loader() {
 						{ type: 'string' },
 						{ type: 'address' },
 						{ type: 'address' },
+						{ type: 'bytes32' },
 					],
-					['Test Token 2', 'TEST2', 'USD', userTokenAddress, adminAddress],
+					[
+						'Test Token 2',
+						'TEST2',
+						'USD',
+						userTokenAddress,
+						adminAddress,
+						zeroHash,
+					],
 				),
 			}),
 			mockLog({
