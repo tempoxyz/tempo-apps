@@ -19,7 +19,7 @@ jobs:
     secrets: inherit
 
   deploy-preview:
-    name: Deploy Preview (${{ matrix.app }})
+    name: Deploy Preview (${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }})
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -72,7 +72,7 @@ jobs:
 
       - name: Build
         if: steps.changes.outputs.relevant == 'true'
-        run: pnpm build -- --mode=${{ matrix.env || 'production' }}
+        run: pnpm build
         working-directory: apps/${{ matrix.app }}
 
       - name: Upload Worker Version

@@ -10,16 +10,12 @@ import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 const [, , , ...args] = process.argv
 
 export default defineConfig((config) => {
-	const tempoEnv =
-		config.mode === 'devnet' ||
-		config.mode === 'moderato' ||
-		config.mode === 'testnet'
-			? config.mode
-			: undefined
-
-	if (tempoEnv) process.env.CLOUDFLARE_ENV = tempoEnv
-
 	const env = loadEnv(config.mode, process.cwd(), '')
+
+	// CLOUDFLARE_ENV is set by CI from matrix.env, or can be set locally
+	// This selects the wrangler environment (testnet, moderato, devnet)
+	// which provides VITE_TEMPO_ENV and other vars
+	const cloudflareEnv = process.env.CLOUDFLARE_ENV || env.CLOUDFLARE_ENV
 
 	const showDevtools = env.VITE_ENABLE_DEVTOOLS !== 'false'
 
@@ -81,7 +77,7 @@ export default defineConfig((config) => {
 			),
 
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
-				tempoEnv ?? env.VITE_TEMPO_ENV,
+				cloudflareEnv || env.VITE_TEMPO_ENV,
 			),
 		},
 	}
