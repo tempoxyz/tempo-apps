@@ -1,189 +1,248 @@
+import { useMutation } from '@tanstack/react-query'
 import { ClientOnly } from '@tanstack/react-router'
-import type { VariantProps } from 'cva'
+import type { Address as OxAddress } from 'ox'
 import * as React from 'react'
+import { Actions, Hooks } from 'wagmi/tempo'
 import {
 	useChains,
+	useConfig,
 	useConnect,
 	useConnection,
 	useConnectors,
 	useDisconnect,
 	useSwitchChain,
+	useWatchBlockNumber,
 } from 'wagmi'
 import { Address } from '#comps/Address'
-import { cva } from '#cva.config.ts'
-import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
+import { cx } from '#cva.config'
+import { ellipsis } from '#lib/chars'
+import { filterSupportedInjectedConnectors } from '#lib/wallets'
+import LucideDownload from '~icons/lucide/download'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
 
-export function ConnectWallet({
-	showAddChain = true,
-}: {
-	showAddChain?: boolean
-}) {
+export function ConnectWallet(props: ConnectWallet.Props) {
+	const { showAddChain = true } = props
 	return (
 		<ClientOnly
 			fallback={
-				<div className="text-[12px] flex items-center text-secondary whitespace-nowrap">
-					Detecting wallet…
+				<div className="text-[12px] flex items-center text-secondary">
+					Detecting wallet{ellipsis}
 				</div>
 			}
 		>
-			<ConnectWalletInner showAddChain={showAddChain} />
+			<ConnectWallet.Content showAddChain={showAddChain} />
 		</ClientOnly>
 	)
 }
 
-function ConnectWalletInner({
-	showAddChain = true,
-}: {
-	showAddChain?: boolean
-}) {
-	const { address, chain, connector } = useConnection()
-	const connect = useConnect()
-	const connectors = useConnectors()
-	const injectedConnectors = React.useMemo(
-		() => filterSupportedInjectedConnectors(connectors),
-		[connectors],
-	)
-	const switchChain = useSwitchChain()
-	const chains = useChains()
-	const isSupported = chains.some((c) => c.id === chain?.id)
+export namespace ConnectWallet {
+	export interface Props {
+		showAddChain?: boolean
+	}
 
-	if (!injectedConnectors.length)
-		return (
-			<div className="text-[12px] -tracking-[2%] flex items-center whitespace-nowrap select-none">
-				No wallet found.
-			</div>
+	export function Passkey() {
+		const config = useConfig()
+		const connect = useConnect()
+
+		const connection = useConnection()
+		const connectors = useConnectors()
+
+		const connector = React.useMemo(
+			() => connectors.find((connector) => connector.id === 'webAuthn'),
+			[connectors],
 		)
-	if (!address || connector?.id === 'webAuthn')
-		return (
-			<div className="flex gap-2">
-				{injectedConnectors.map((connector) => (
-					<Button
-						variant="default"
-						className="flex gap-[8px] items-center"
-						key={connector.id}
-						onClick={() => connect.mutate({ connector })}
-					>
-						{connector.icon ? (
-							<img
-								className="size-[12px]"
-								src={connector.icon}
-								alt={connector.name}
-							/>
+
+		const balance = Hooks.token.useGetBalance({
+			account: connection.address,
+			token: '0x20c0000000000000000000000000000000000001',
+		})
+
+		const fund = useMutation({
+			mutationFn: async (account: OxAddress.Address) => {
+				await Actions.faucet.fund(config, { account })
+				await balance.refetch()
+			},
+		})
+
+		const prevHasFunds = React.useRef<boolean | null>(null)
+		const hasFunds = Boolean(balance.data && balance.data > 0n)
+		React.useEffect(() => {
+			if (prevHasFunds.current === true && !hasFunds) fund.reset()
+			prevHasFunds.current = hasFunds
+		}, [hasFunds, fund])
+
+		useWatchBlockNumber({
+			onBlockNumber: () => [balance.refetch()],
+		})
+
+		if (!connector || connector.id !== 'webAuthn')
+			return (
+				<span className="text-[12px] text-negative">no passkey connector</span>
+			)
+
+		if (connect.status === 'pending')
+			return (
+				<span className="text-[12px] text-secondary">Connecting{ellipsis}</span>
+			)
+
+		if (connection.isConnected && connection.address) {
+			const showFundButton =
+				!hasFunds && (fund.status === 'idle' || fund.status === 'pending')
+			return (
+				<div className="flex items-center gap-2">
+					{showFundButton &&
+						(fund.isPending ? (
+							<span className="text-[12px] text-secondary">
+								Funding{ellipsis}
+							</span>
 						) : (
-							<LucideWalletCards className="size-[12px]" />
+							<button
+								type="button"
+								className="text-[12px] inline-flex items-center gap-1 text-positive hover:underline cursor-pointer press-down"
+								// biome-ignore lint/style/noNonNullAssertion: is ok
+								onClick={() => fund.mutate(connection.address!)}
+							>
+								Fund
+								<LucideDownload className="size-[12px]" />
+							</button>
+						))}
+					<Address
+						chars={6}
+						align="end"
+						address={connection.address}
+						className="text-accent text-[12px] hover:underline"
+					/>
+					<SignOut />
+				</div>
+			)
+		}
+
+		return (
+			<button
+				type="button"
+				className={cx(
+					'inline-flex gap-[6px] items-center whitespace-nowrap',
+					'cursor-pointer press-down text-[12px] hover:underline text-accent',
+				)}
+				onClick={() =>
+					connect
+						.mutateAsync({
+							connector,
+							capabilities: { type: 'sign-in' },
+						})
+						.catch(() =>
+							connect.mutateAsync({
+								connector,
+								capabilities: { type: 'sign-up' },
+							}),
+						)
+				}
+			>
+				Connect
+			</button>
+		)
+	}
+
+	export function Content(props: Props) {
+		const { showAddChain = true } = props
+		const { address, chain, connector } = useConnection()
+		const connect = useConnect()
+		const connectors = useConnectors()
+		const injectedConnectors = React.useMemo(
+			() => filterSupportedInjectedConnectors(connectors),
+			[connectors],
+		)
+		const switchChain = useSwitchChain()
+		const chains = useChains()
+		const isSupported = chains.some((c) => c.id === chain?.id)
+
+		if (!injectedConnectors.length)
+			return (
+				<div className="text-[12px] flex items-center">No wallet found.</div>
+			)
+
+		if (!address || connector?.id === 'webAuthn')
+			return (
+				<div className="flex gap-2">
+					{injectedConnectors.map((connector) => (
+						<button
+							type="button"
+							key={connector.id}
+							className="inline-flex gap-[8px] items-center whitespace-nowrap cursor-pointer press-down text-[12px] hover:underline text-secondary"
+							onClick={() => connect.mutate({ connector })}
+						>
+							{connector.icon ? (
+								<img
+									className="size-[12px]"
+									src={connector.icon}
+									alt={connector.name}
+								/>
+							) : (
+								<LucideWalletCards className="size-[12px]" />
+							)}
+							Connect {connector.name}
+						</button>
+					))}
+				</div>
+			)
+		return (
+			<div className="flex items-stretch gap-2 justify-end">
+				<ConnectedAddress />
+				{showAddChain && !isSupported && (
+					<button
+						type="button"
+						className={cx(
+							'inline-flex gap-[6px] items-center whitespace-nowrap w-fit',
+							'cursor-pointer press-down text-[12px] hover:underline text-accent',
 						)}
-						Connect {connector.name}
-					</Button>
-				))}
+						onClick={() =>
+							switchChain.mutate({
+								chainId: chains[0].id,
+								addEthereumChainParameter: {
+									blockExplorerUrls: ['https://explore.tempo.xyz'],
+									nativeCurrency: { name: 'USD', decimals: 18, symbol: 'USD' },
+								},
+							})
+						}
+					>
+						Add Tempo to {connector?.name ?? 'Wallet'}
+					</button>
+				)}
+				{switchChain.isSuccess && (
+					<span className="text-[12px] font-normal text-tertiary">
+						Added Tempo to {connector?.name ?? 'Wallet'}!
+					</span>
+				)}
+				<SignOut />
 			</div>
 		)
-	return (
-		<div className="flex items-stretch gap-2 justify-end">
-			<ConnectedAddress />
-			{showAddChain && !isSupported && (
-				<Button
-					className="w-fit"
-					variant="accent"
-					onClick={() =>
-						switchChain.mutate({
-							chainId: chains[0].id,
-							addEthereumChainParameter: {
-								blockExplorerUrls: ['https://explore.tempo.xyz'],
-								nativeCurrency: { name: 'USD', decimals: 18, symbol: 'USD' },
-							},
-						})
-					}
-				>
-					Add Tempo to {connector?.name ?? 'Wallet'}
-				</Button>
-			)}
-			{switchChain.isSuccess && (
-				<span className="text-[12px] font-normal text-tertiary whitespace-nowrap">
-					Added Tempo to {connector?.name ?? 'Wallet'}!
-				</span>
-			)}
-			<SignOut />
-		</div>
-	)
+	}
+
+	export function ConnectedAddress() {
+		const { address } = useConnection()
+		return (
+			address && (
+				<div className="text-[12px] text-secondary whitespace-nowrap flex items-center gap-[4px]">
+					<span className="hidden sm:inline">Connected as</span>
+					<Address address={address} align="end" />
+				</div>
+			)
+		)
+	}
+
+	export function SignOut() {
+		const disconnect = useDisconnect()
+		const { connector } = useConnection()
+		return (
+			<button
+				type="button"
+				title="Disconnect"
+				className="h-full text-secondary hover:text-primary cursor-pointer press-down"
+				onClick={() => disconnect.mutate({ connector })}
+			>
+				<LucideLogOut className="size-[12px] translate-y-px" />
+			</button>
+		)
+	}
 }
-
-function ConnectedAddress() {
-	const { address } = useConnection()
-
-	if (!address) return null
-
-	return (
-		<div className="text-[12px] text-secondary whitespace-nowrap flex items-center gap-[4px]">
-			<span className="hidden sm:inline">Connected as</span>
-			<Address address={address} align="end" />
-		</div>
-	)
-}
-
-function SignOut() {
-	const disconnect = useDisconnect()
-	const { connector } = useConnection()
-
-	return (
-		<button
-			type="button"
-			title="Disconnect"
-			className="h-full text-secondary hover:text-primary cursor-pointer press-down"
-			onClick={() => disconnect.mutate({ connector })}
-		>
-			<LucideLogOut className="size-[12px] translate-y-px" />
-		</button>
-	)
-}
-
-export function Button(
-	props: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'> &
-		VariantProps<typeof buttonClassName> & {
-			render?: React.ReactElement
-		},
-) {
-	const {
-		className,
-		disabled,
-		render,
-		static: static_,
-		variant,
-		...rest
-	} = props
-	const Element = render
-		? (p: typeof props) => React.cloneElement(render, p)
-		: 'button'
-	return (
-		<Element
-			className={buttonClassName({
-				className,
-				disabled,
-				static: static_,
-				variant,
-			})}
-			{...rest}
-		/>
-	)
-}
-
-const buttonClassName = cva({
-	base: 'inline-flex gap-[6px] items-center whitespace-nowrap font-medium focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer press-down text-[12px] hover:underline',
-	defaultVariants: {
-		variant: 'default',
-	},
-	variants: {
-		disabled: {
-			true: 'pointer-events-none opacity-50',
-		},
-		static: {
-			true: 'pointer-events-none',
-		},
-		variant: {
-			accent: 'text-accent',
-			default: 'text-secondary',
-			destructive: 'text-negative',
-		},
-	},
-})

@@ -1,5 +1,6 @@
 import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
+import { KeyManager, webAuthn } from 'wagmi/tempo'
 import { tempoLocalnet, tempoTestnet } from 'viem/chains'
 import {
 	cookieStorage,
@@ -53,6 +54,11 @@ export function getWagmiConfig() {
 		ssr: true,
 		batch: { multicall: false },
 		storage: createStorage({ storage: cookieStorage }),
+		connectors: [
+			webAuthn({
+				keyManager: KeyManager.http(`${__BASE_URL__}/api/webauthn`),
+			}),
+		],
 		transports: {
 			[tempoTestnet.id]: fallback([
 				webSocket(rpcUrl.websocket),

@@ -2,16 +2,16 @@ import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi } from 'viem'
 import { useBytecode } from 'wagmi'
-import { ConnectWallet } from '#comps/ConnectWallet.tsx'
-import { AbiViewer } from '#comps/ContractAbi.tsx'
-import { ContractReader } from '#comps/ContractReader.tsx'
-import { SourceSection } from '#comps/ContractSource.tsx'
-import { ContractWriter } from '#comps/ContractWriter.tsx'
-import { cx } from '#cva.config.ts'
-import { ellipsis } from '#lib/chars.ts'
-import type { ContractSource } from '#lib/domain/contract-source.ts'
-import { getContractAbi } from '#lib/domain/contracts.ts'
-import { useCopy, useDownload } from '#lib/hooks.ts'
+import { ConnectWallet } from '#comps/ConnectWallet'
+import { AbiViewer } from '#comps/ContractAbi'
+import { ContractReader } from '#comps/ContractReader'
+import { SourceSection } from '#comps/ContractSource'
+import { ContractWriter } from '#comps/ContractWriter'
+import { cx } from '#cva.config'
+import { ellipsis } from '#lib/chars'
+import type { ContractSource } from '#lib/domain/contract-source'
+import { getContractAbi } from '#lib/domain/contracts'
+import { useCopy, useDownload } from '#lib/hooks'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 import DownloadIcon from '~icons/lucide/download'
@@ -129,8 +129,8 @@ export function CollapsibleSection(props: {
 					type="button"
 					onClick={onToggle}
 					className={cx(
-						'flex items-center gap-[6px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2!',
-						actions ? 'pr-[12px]' : 'flex-1 pr-[16px]',
+						'flex-1 flex items-center gap-[6px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2!',
+						actions ? 'pr-[12px]' : 'pr-[16px]',
 						first && 'focus-visible:rounded-tl-[8px]!',
 						first && !actions && 'focus-visible:rounded-tr-[8px]!',
 					)}
@@ -146,7 +146,7 @@ export function CollapsibleSection(props: {
 					</span>
 				</button>
 				{actions && (
-					<div className="flex-1 flex items-stretch justify-end gap-[8px] text-tertiary px-[12px]">
+					<div className="flex items-stretch gap-[8px] text-tertiary px-[12px]">
 						{actions}
 					</div>
 				)}
@@ -247,7 +247,7 @@ export function InteractTabContent(props: {
 				title="Write contract"
 				expanded={writeExpanded}
 				onToggle={() => setWriteExpanded(!writeExpanded)}
-				actions={<ConnectWallet />}
+				actions={<ConnectWallet.Passkey />}
 			>
 				<div className="px-[10px] pb-[10px]">
 					<ContractWriter address={address} abi={abi} />
