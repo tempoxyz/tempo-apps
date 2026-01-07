@@ -374,7 +374,7 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 	if (loading && !knownEvents) {
 		return (
-			<span className="text-tertiary animate-pulse">Loading description...</span>
+			<span className="text-tertiary animate-pulse">Loading...</span>
 		)
 	}
 
