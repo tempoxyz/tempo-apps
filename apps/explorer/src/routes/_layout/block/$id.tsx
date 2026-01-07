@@ -95,7 +95,6 @@ function RouteComponent() {
 	const { page } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 
-	// Block data from loader (fast - single RPC call)
 	const { data: blockData } = useQuery({
 		...blockDetailQueryOptions(loaderData.blockRef),
 		initialData: loaderData,
