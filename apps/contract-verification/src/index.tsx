@@ -8,6 +8,7 @@ import { prettyJSON } from 'hono/pretty-json'
 import { requestId } from 'hono/request-id'
 import { timeout } from 'hono/timeout'
 import { rateLimiter } from 'hono-rate-limiter'
+
 import { sourcifyChains } from '#chains.ts'
 import { VerificationContainer } from '#container.ts'
 import OpenApiSpec from '#openapi.json' with { type: 'json' }
@@ -16,7 +17,7 @@ import { docsRoute } from '#route.docs.tsx'
 import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
 import { verifyRoute } from '#route.verify.ts'
 import { legacyVerifyRoute } from '#route.verify-legacy.ts'
-import { originMatches } from '#utilities.ts'
+import { originMatches, sourcifyError } from '#utilities.ts'
 
 export { VerificationContainer }
 
@@ -31,52 +32,59 @@ const factory = createFactory<AppEnv>()
 const app = factory.createApp()
 
 // @note: order matters
-app
-	.use('*', requestId({ headerName: 'X-Tempo-Request-Id' }))
-	.use(
-		cors({
-			allowMethods: ['GET', 'POST', 'OPTIONS', 'HEAD'],
-			origin: (origin, _) => {
-				return WHITELISTED_ORIGINS.some((p) =>
-					originMatches({ origin, pattern: p }),
-				)
-					? origin
-					: null
-			},
-		}),
-	)
-	.use(
-		rateLimiter<AppEnv>({
-			binding: (context) => context.env.RATE_LIMITER,
-			keyGenerator: (context) =>
-				(context.req.header('X-Real-IP') ??
-					context.req.header('CF-Connecting-IP') ??
-					context.req.header('X-Forwarded-For')) ||
-				'',
-			skip: (context) =>
-				WHITELISTED_ORIGINS.some((p) =>
-					originMatches({
-						origin: new URL(context.req.url).hostname,
-						pattern: p,
-					}),
-				),
-			message: { error: 'Rate limit exceeded', retryAfter: '60s' },
-		}),
-	)
-	.use(bodyLimit({ maxSize: 1024 * 1024 })) // 1mb
-	.use('*', timeout(30_000)) // 30 seconds
-	.use(prettyJSON())
-	.use(async (context, next) => {
-		if (context.env.NODE_ENV !== 'development') return await next()
-		const baseLogMessage = `${context.get('requestId')}-[${context.req.method}] ${context.req.path}`
-		if (context.req.method === 'GET') {
-			console.info(`${baseLogMessage}\n`)
-			return await next()
-		}
-		const body = await context.req.text()
-		console.info(`${baseLogMessage} \n${body}\n`)
+app.use('*', requestId({ headerName: 'X-Tempo-Request-Id' }))
+app.use(
+	cors({
+		allowMethods: ['GET', 'POST', 'OPTIONS', 'HEAD'],
+		origin: (origin, _) => {
+			return WHITELISTED_ORIGINS.some((p) =>
+				originMatches({ origin, pattern: p }),
+			)
+				? origin
+				: null
+		},
+	}),
+)
+app.use(
+	rateLimiter<AppEnv>({
+		binding: (context) => context.env.RATE_LIMITER,
+		keyGenerator: (context) =>
+			(context.req.header('X-Real-IP') ??
+				context.req.header('CF-Connecting-IP') ??
+				context.req.header('X-Forwarded-For')) ||
+			'',
+		skip: (context) =>
+			WHITELISTED_ORIGINS.some((p) =>
+				originMatches({
+					origin: new URL(context.req.url).hostname,
+					pattern: p,
+				}),
+			),
+		message: { error: 'Rate limit exceeded', retryAfter: '60s' },
+	}),
+)
+app.use(
+	bodyLimit({
+		maxSize: 2 * 1024 * 1024, // 2mb
+		onError: (context) => {
+			const message = `[requestId: ${context.req.header('X-Tempo-Request-Id')}] Body limit exceeded`
+			console.error(message)
+			return sourcifyError(context, 413, 'body_too_large', message)
+		},
+	}),
+)
+app.use('*', timeout(30_000)) // 30 seconds
+app.use(prettyJSON())
+app.use(async (context, next) => {
+	if (context.env.NODE_ENV !== 'development') return await next()
+	const baseLogMessage = `${context.get('requestId')}-[${context.req.method}] ${context.req.path}`
+	if (context.req.method === 'GET') {
+		console.info(`${baseLogMessage}\n`)
 		return await next()
-	})
+	}
+	console.info(`${baseLogMessage} \n${await context.req.text()}\n`)
+	return await next()
+})
 
 app.route('/docs', docsRoute)
 app.route('/verify', legacyVerifyRoute)

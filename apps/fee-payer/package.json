@@ -13,22 +13,30 @@
 		"format": "biome format --write .",
 		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
 		"postinstall": "pnpm gen:types",
-		"tail": "wrangler tail"
+		"tail": "wrangler tail",
+		"test": "vitest --run",
+		"test:watch": "vitest",
+		"test:testnet": "TEMPO_ENV=testnet vitest --run"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
 		"hono": "catalog:",
 		"idxs": "catalog:",
 		"kysely": "catalog:",
-		"ox": "^0.11.1",
+		"ox": "catalog:",
 		"tempo.ts": "catalog:",
-		"viem": "^2.43.3",
+		"viem": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
 		"@types/node": "catalog:",
+		"dotenv": "catalog:",
+		"prool": "catalog:",
+		"testcontainers": "catalog:",
 		"typescript": "catalog:",
+		"vitest": "catalog:",
 		"wrangler": "catalog:"
 	}
 }

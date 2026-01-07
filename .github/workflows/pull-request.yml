@@ -8,6 +8,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+env:
+  NODE_ENV: production
+  WRANGLER_SEND_METRICS: false
+
 jobs:
   verify:
     name: Verify
@@ -27,7 +31,7 @@ jobs:
 
     steps:
       - name: Clone repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: "recursive"
           fetch-depth: 0

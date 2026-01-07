@@ -4,7 +4,7 @@ import type { Block } from 'viem'
 import { getBlock, getTransactionReceipt } from 'wagmi/actions'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20.ts'
-import { config as wagmiConfig } from '#wagmi.config.ts'
+import { getWagmiConfig, type WagmiConfig } from '#wagmi.config.ts'
 
 export const BLOCKS_PER_PAGE = 12
 
@@ -19,7 +19,8 @@ export function blocksQueryOptions(page: number) {
 	return queryOptions({
 		queryKey: ['blocks-loader', page],
 		queryFn: async () => {
-			const latestBlock = await getBlock(wagmiConfig)
+			const config = getWagmiConfig()
+			const latestBlock = await getBlock(config)
 			const latestBlockNumber = latestBlock.number
 
 			const startBlock =
@@ -31,9 +32,10 @@ export function blocksQueryOptions(page: number) {
 				if (blockNum >= 0n) blockNumbers.push(blockNum)
 			}
 
+			// TODO: investigate & consider batch/multicall
 			const blocks = await Promise.all(
 				blockNumbers.map((blockNumber) =>
-					getBlock(wagmiConfig, { blockNumber }).catch(() => null),
+					getBlock(config, { blockNumber }).catch(() => null),
 				),
 			)
 
@@ -55,7 +57,8 @@ export function blockDetailQueryOptions(
 	return queryOptions({
 		queryKey: ['block-detail', blockRef, page],
 		queryFn: async () => {
-			const block = await getBlock(wagmiConfig, {
+			const config = getWagmiConfig()
+			const block = await getBlock(config, {
 				includeTransactions: true,
 				...(blockRef.kind === 'hash'
 					? { blockHash: blockRef.blockHash }
@@ -69,8 +72,10 @@ export function blockDetailQueryOptions(
 				startIndex + TRANSACTIONS_PER_PAGE,
 			)
 
-			const knownEventsByHash =
-				await fetchKnownEventsForTransactions(pageTransactions)
+			const knownEventsByHash = await fetchKnownEventsForTransactions(
+				pageTransactions,
+				config,
+			)
 
 			return {
 				blockRef,
@@ -85,7 +90,9 @@ export function blockDetailQueryOptions(
 
 async function fetchKnownEventsForTransactions(
 	transactions: BlockTransaction[],
+	wagmiConfig: WagmiConfig,
 ): Promise<Record<Hex.Hex, KnownEvent[]>> {
+	// TODO: investigate & consider batch/multicall
 	const entries = await Promise.all(
 		transactions.map(async (transaction) => {
 			if (!transaction?.hash)

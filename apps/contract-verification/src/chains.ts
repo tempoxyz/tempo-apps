@@ -4,12 +4,15 @@ export const DEVNET_CHAIN_ID = tempoDevnet.id
 export const TESTNET_CHAIN_ID = tempoTestnet.id
 
 export const chains = {
-	[tempoDevnet.id]: tempoDevnet,
+	// [tempoDevnet.id]: tempoDevnet,
 	[tempoTestnet.id]: tempoTestnet,
 }
 
 // matches https://sourcify.dev/server/chains format
-export const sourcifyChains = [tempoDevnet, tempoTestnet].map((chain) => {
+export const sourcifyChains = [
+	// tempoDevnet,
+	tempoTestnet,
+].map((chain) => {
 	const returnValue = {
 		name: chain.name,
 		title: chain.name,

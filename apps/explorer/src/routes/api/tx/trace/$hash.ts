@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-import { fetchTraceData, type TraceData } from '#lib/queries/trace'
+import { fetchTraceData } from '#lib/queries/trace'
 import { zHash } from '#lib/zod'
 
 export type {
@@ -17,10 +16,13 @@ export const Route = createFileRoute('/api/tx/trace/$hash')({
 				try {
 					const hash = zHash().parse(params.hash)
 					const traceData = await fetchTraceData(hash)
-					return json<TraceData>(traceData)
+					return Response.json(traceData)
 				} catch (error) {
 					console.error('Trace error:', error)
-					return json({ error: 'Failed to fetch trace' }, { status: 500 })
+					return Response.json(
+						{ error: 'Failed to fetch trace' },
+						{ status: 500 },
+					)
 				}
 			},
 		},

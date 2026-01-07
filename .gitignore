@@ -24,3 +24,4 @@ _sourcify
 _artifacts
 _tmp
 _verify
+.pnpm-store

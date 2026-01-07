@@ -1,8 +1,6 @@
-import * as Sentry from '@sentry/tanstackstart-react'
 import { TanStackDevtools } from '@tanstack/react-devtools'
-import type { QueryClient } from '@tanstack/react-query'
+import { type QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
-import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import {
 	createRootRouteWithContext,
 	HeadContent,
@@ -11,10 +9,10 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
-import { WagmiProvider } from 'wagmi'
-import { SentryWrappedErrorBoundary } from '#comps/ErrorBoundary'
+import { deserialize, type State, WagmiProvider } from 'wagmi'
+import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { ProgressLine } from '#comps/ProgressLine'
-import { config, persister, queryClient } from '#wagmi.config'
+import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
 export const Route = createRootRouteWithContext<{
@@ -126,22 +124,21 @@ export const Route = createRootRouteWithContext<{
 			},
 		],
 	}),
-	errorComponent: (props) => {
-		React.useEffect(() => {
-			Sentry.captureException(props.error)
-		}, [props.error])
-
-		return (
-			<RootDocument>
-				<SentryWrappedErrorBoundary {...props} />
-			</RootDocument>
-		)
-	},
+	errorComponent: (props) => (
+		<RootDocument>
+			<ErrorBoundary {...props} />
+		</RootDocument>
+	),
+	loader: () => getWagmiStateSSR(),
 	shellComponent: RootDocument,
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	useDevTools()
+
+	const { queryClient } = Route.useRouteContext()
+	const [config] = React.useState(() => getWagmiConfig())
+	const wagmiState = Route.useLoaderData({ select: deserialize<State> })
 
 	const isLoading = useRouterState({
 		select: (state) => state.status === 'pending',
@@ -158,11 +155,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					start={800}
 					className="fixed top-0 left-0 right-0 z-1"
 				/>
-				<WagmiProvider config={config}>
-					<PersistQueryClientProvider
-						client={queryClient}
-						persistOptions={{ persister }}
-					>
+				<WagmiProvider config={config} initialState={wagmiState}>
+					<QueryClientProvider client={queryClient}>
 						{children}
 						{import.meta.env.DEV && (
 							<TanStackDevtools
@@ -181,7 +175,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 								]}
 							/>
 						)}
-					</PersistQueryClientProvider>
+					</QueryClientProvider>
 				</WagmiProvider>
 				<Scripts />
 			</body>
@@ -226,7 +220,12 @@ function useDevTools() {
 			import.meta.env.MODE === 'development' &&
 			import.meta.env.VITE_ENABLE_DEVTOOLS === 'true'
 		) {
-			void import('eruda').then(({ default: eruda }) => eruda.init())
+			let eruda: typeof import('eruda').default
+			void import('eruda').then(({ default: _eruda }) => {
+				eruda = _eruda
+				eruda.init()
+			})
+			return () => eruda?.destroy()
 		}
 	}, [])
 }

@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { Address, Hex, Value } from 'ox'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
-import type { getBlock } from 'wagmi/actions'
+import type { GetBlockReturnType } from 'wagmi/actions'
 import { Amount } from '#comps/Amount'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 import { TxEventDescription } from '#comps/TxEventDescription'
@@ -15,7 +15,7 @@ import { PriceFormatter } from '#lib/formatting'
 
 export type TransactionData = {
 	receipt: TransactionReceipt
-	block: Awaited<ReturnType<typeof getBlock>>
+	block: GetBlockReturnType
 	knownEvents: KnownEvent[]
 }
 

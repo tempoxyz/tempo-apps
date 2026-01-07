@@ -1,9 +1,16 @@
 import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { createFileRoute, notFound, rootRouteId } from '@tanstack/react-router'
+import {
+	createFileRoute,
+	notFound,
+	rootRouteId,
+	useNavigate,
+} from '@tanstack/react-router'
 import { Hex, Json, Value } from 'ox'
-import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
+import { createPublicClient, http } from 'viem'
+import { getBlock, getTransaction } from 'viem/actions'
+import { getPublicClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'
 import { Receipt } from '#comps/Receipt'
@@ -12,27 +19,37 @@ import { parseKnownEvents } from '#lib/domain/known-events'
 import { LineItems } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import { useKeyboardShortcut } from '#lib/hooks'
 import {
 	buildTxDescription,
 	formatEventForOgServer,
 	OG_BASE_URL,
 } from '#lib/og'
-import { config } from '#wagmi.config'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
-function receiptDetailQueryOptions(params: { hash: Hex.Hex }) {
+function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	return queryOptions({
-		queryKey: ['receipt-detail', params.hash],
+		queryKey: ['receipt-detail', params.hash, params.rpcUrl],
 		queryFn: () => fetchReceiptData(params),
+		staleTime: 1000 * 60 * 5, // 5 minutes - receipt data is immutable
 	})
 }
 
-async function fetchReceiptData(params: { hash: Hex.Hex }) {
-	const receipt = await getTransactionReceipt(config, {
+async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
+	const config = getWagmiConfig()
+	const client = params.rpcUrl
+		? createPublicClient({
+				chain: config.chains[0],
+				transport: http(params.rpcUrl),
+			})
+		: getPublicClient(config)
+	const receipt = await client.getTransactionReceipt({
 		hash: params.hash,
 	})
+	// TODO: investigate & consider batch/multicall
 	const [block, transaction, getTokenMetadata] = await Promise.all([
-		getBlock(config, { blockHash: receipt.blockHash }),
-		getTransaction(config, { hash: receipt.transactionHash }),
+		getBlock(client, { blockHash: receipt.blockHash }),
+		getTransaction(client, { hash: receipt.transactionHash }),
 		Tip20.metadataFromLogs(receipt.logs),
 	])
 	const timestampFormatted = DateFormatter.format(block.timestamp)
@@ -141,11 +158,12 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 						return 'text/plain'
 				})()
 
+				const rpcUrl = url.searchParams.get('r') ?? undefined
 				const hash = parseHashFromParams(params)
 
 				if (type === 'text/plain') {
 					if (!hash) return new Response('Not found', { status: 404 })
-					const data = await fetchReceiptData({ hash })
+					const data = await fetchReceiptData({ hash, rpcUrl })
 					const text = TextRenderer.render(data)
 					return new Response(text, {
 						headers: {
@@ -164,7 +182,10 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				if (type === 'application/json') {
 					if (!hash)
 						return Response.json({ error: 'Not found' }, { status: 404 })
-					const { lineItems, receipt } = await fetchReceiptData({ hash })
+					const { lineItems, receipt } = await fetchReceiptData({
+						hash,
+						rpcUrl,
+					})
 					return Response.json(
 						JSON.parse(Json.stringify({ lineItems, receipt })),
 					)
@@ -282,6 +303,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 
 function Component() {
 	const { hash } = Route.useParams()
+	const navigate = useNavigate()
 	const loaderData = Route.useLoaderData() as Awaited<
 		ReturnType<typeof fetchReceiptData>
 	>
@@ -289,6 +311,10 @@ function Component() {
 	const { data } = useQuery({
 		...receiptDetailQueryOptions({ hash }),
 		initialData: loaderData,
+	})
+
+	useKeyboardShortcut({
+		t: () => navigate({ to: '/tx/$hash', params: { hash } }),
 	})
 
 	const { block, knownEvents, lineItems, receipt } = data

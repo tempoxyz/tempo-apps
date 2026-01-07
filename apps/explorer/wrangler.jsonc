@@ -1,7 +1,7 @@
 {
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
 	"name": "explorer",
-	"compatibility_date": "2025-10-11",
+	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.server.ts",
 	"browser": {
@@ -11,6 +11,9 @@
 	"preview_urls": true,
 	"placement": {
 		"mode": "smart"
+	},
+	"build": {
+		"command": "pnpm vite build --mode='production'"
 	},
 	"keep_vars": true,
 	"kv_namespaces": [
@@ -28,8 +31,5 @@
 			"invocation_logs": true,
 			"persist": true
 		}
-	},
-	"version_metadata": {
-		"binding": "CF_VERSION_METADATA"
 	}
 }

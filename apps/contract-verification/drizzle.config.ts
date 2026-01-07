@@ -15,10 +15,9 @@ const dbCredentials = (
 				accountId: process.env.CLOUDFLARE_ACCOUNT_ID,
 				databaseId: process.env.CLOUDFLARE_DATABASE_ID,
 			}
-) satisfies SqliteDbCredentials | D1HttpDbCredentials
+) satisfies DbCredentials
 
 export default defineConfig({
-	out: './drizzle',
 	schema: './src/database/schema.ts',
 	// Use local SQLite for migrations, d1-http for remote
 	...(isLocal
@@ -26,11 +25,6 @@ export default defineConfig({
 		: { dbCredentials, dialect: 'sqlite', driver: 'd1-http' }),
 })
 
-type SqliteDbCredentials = Extract<
-	Config,
-	{ dialect: 'turso'; driver?: never }
->['dbCredentials']
-type D1HttpDbCredentials = Extract<
-	Config,
-	{ dialect: 'sqlite'; driver: 'd1-http' }
->['dbCredentials']
+type DbCredentials =
+	| Extract<Config, { dialect: 'turso'; driver?: never }>['dbCredentials']
+	| Extract<Config, { dialect: 'sqlite'; driver: 'd1-http' }>['dbCredentials']

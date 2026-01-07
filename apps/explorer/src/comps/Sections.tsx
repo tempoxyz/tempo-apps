@@ -187,7 +187,7 @@ export namespace Sections {
 		contextual?: React.ReactNode
 		itemsLabel?: string
 		title: string
-		totalItems?: number
+		totalItems?: number | string
 		visible?: boolean
 	}
 

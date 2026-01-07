@@ -41,9 +41,10 @@ export function transactionsQueryOptions(
 			params.offset,
 			params._key,
 		],
-		queryFn: async (): Promise<TransactionsApiResponse> => {
+		queryFn: async ({ signal }): Promise<TransactionsApiResponse> => {
 			const response = await fetch(
 				`${__BASE_URL__}/api/address/${params.address}?${searchParams}`,
+				{ signal },
 			)
 			const data = await response.json()
 			return data as TransactionsApiResponse

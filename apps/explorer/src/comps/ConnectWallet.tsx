@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query'
 import { ClientOnly } from '@tanstack/react-router'
 import type { Address as OxAddress } from 'ox'
 import * as React from 'react'
-import { Actions, Hooks } from 'tempo.ts/wagmi'
+import { Actions, Hooks } from 'wagmi/tempo'
 import {
 	useChains,
 	useConfig,

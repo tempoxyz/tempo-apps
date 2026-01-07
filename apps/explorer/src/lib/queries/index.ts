@@ -1,3 +1,4 @@
+export * from './abi'
 export * from './account'
 export * from './balance-changes'
 export * from './blocks'

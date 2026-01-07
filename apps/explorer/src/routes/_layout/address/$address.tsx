@@ -12,17 +12,16 @@ import {
 } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
-import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { Abis } from 'viem/tempo'
-import { useBlock } from 'wagmi'
+import { useBlock, useChainId, usePublicClient } from 'wagmi'
 import {
+	type GetBlockReturnType,
 	getBlock,
 	getChainId,
-	getTransaction,
-	getTransactionReceipt,
 	readContract,
 } from 'wagmi/actions'
+import { Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
@@ -66,8 +65,8 @@ import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
 import {
 	type TransactionsData,
 	transactionsQueryOptions,
-} from '#lib/queries/account.ts'
-import { config } from '#wagmi.config.ts'
+} from '#lib/queries/account'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 async function fetchAddressTotalValue(address: Address.Address) {
 	const response = await fetch(
@@ -104,14 +103,18 @@ function useBatchTransactionData(
 		[transactions],
 	)
 
+	const chainId = useChainId()
+	const client = usePublicClient({ chainId })
+
 	const queries = useQueries({
 		queries: hashes.map((hash) => ({
 			queryKey: ['tx-data-batch', viewer, hash],
 			queryFn: async (): Promise<TransactionData | null> => {
-				const receipt = await getTransactionReceipt(config, { hash })
+				const receipt = await client.getTransactionReceipt({ hash })
+				// TODO: investigate & consider batch/multicall
 				const [block, transaction, getTokenMetadata] = await Promise.all([
-					getBlock(config, { blockHash: receipt.blockHash }),
-					getTransaction(config, { hash: receipt.transactionHash }),
+					client.getBlock({ blockHash: receipt.blockHash }),
+					client.getTransaction({ hash: receipt.transactionHash }),
 					Tip20.metadataFromLogs(receipt.logs),
 				])
 				const knownEvents = parseKnownEvents(receipt, {
@@ -119,9 +122,10 @@ function useBatchTransactionData(
 					getTokenMetadata,
 					viewer,
 				})
-				return { receipt, block, knownEvents }
+				return { receipt, block: block as GetBlockReturnType, knownEvents }
 			},
 			staleTime: 60_000,
+			enabled: hashes.length > 0,
 		})),
 	})
 
@@ -276,6 +280,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			})
 
 		const offset = (page - 1) * limit
+		const config = getWagmiConfig()
 		const chainId = getChainId(config)
 
 		// Get bytecode to determine account type
@@ -312,23 +317,32 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				}
 			}
 
+			const queryOptions = contractSourceQueryOptions({
+				address,
+				chainId,
+			})
 			// Try to fetch verified contract source if there's bytecode on chain
 			// Fetch directly from upstream API (bypasses __BASE_URL__ issues during SSR)
 			// Then seed the query cache for client-side hydration
-			contractSource = await fetchContractSourceDirect({
-				address,
-				chainId,
-			}).catch((error) => {
-				console.error('[loader] Failed to load contract source:', error)
-				return undefined
-			})
-			// Seed the query cache so client hydrates with data already available
-			if (contractSource) {
-				context.queryClient.setQueryData(
-					contractSourceQueryOptions({ address, chainId }).queryKey,
-					contractSource,
-				)
-			}
+			// Only seed if no data exists - avoid overwriting highlighted data from client refetch
+			const existingData = context.queryClient.getQueryData(
+				queryOptions.queryKey,
+			)
+			if (!existingData) {
+				contractSource = await fetchContractSourceDirect({
+					address,
+					chainId,
+				}).catch((error) => {
+					console.error('[loader] Failed to load contract source:', error)
+					return undefined
+				})
+				// Seed the query cache so client hydrates with data already available
+				if (contractSource)
+					context.queryClient.setQueryData(
+						queryOptions.queryKey,
+						contractSource,
+					)
+			} else contractSource = existingData
 		}
 
 		// Add timeout to prevent SSR from hanging on slow queries
@@ -415,10 +429,14 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		try {
 			// Fetch holdings by directly reading balances from known tokens
 			const accountAddress = params.address as Address.Address
+
+			const config = getWagmiConfig()
 			const tokenResults = await timeout(
+				// TODO: investigate & consider batch/multicall
 				Promise.all(
 					assets.map(async (tokenAddress) => {
 						try {
+							// TODO: investigate & consider batch/multicall
 							const [balance, decimals] = await Promise.all([
 								readContract(config, {
 									address: tokenAddress,
@@ -460,6 +478,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		}
 
 		try {
+			const config = getWagmiConfig()
 			// Get the most recent transaction for lastActive (already in loaderData)
 			const recentTx = loaderData?.transactionsData?.transactions?.at(0)
 			if (recentTx?.blockNumber) {
@@ -620,6 +639,7 @@ function RouteComponent() {
 				initialData={transactionsData}
 				assetsData={assetsData}
 				live={live}
+				isContract={accountType === 'contract'}
 			/>
 		</div>
 	)
@@ -704,6 +724,7 @@ function SectionsWrapper(props: {
 	initialData: TransactionsData | undefined
 	assetsData: AssetData[]
 	live: boolean
+	isContract: boolean
 }) {
 	const {
 		address,
@@ -716,6 +737,7 @@ function SectionsWrapper(props: {
 		initialData,
 		assetsData,
 		live,
+		isContract,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
@@ -724,9 +746,11 @@ function SectionsWrapper(props: {
 
 	// Contract source query - uses cache populated by SSR loader via ensureQueryData
 	// The query will immediately return cached data without flashing
+	// Only enabled for contracts to avoid unnecessary requests for EOAs
 	const contractSourceQuery = useQuery({
 		...useContractSourceQueryOptions({ address }),
 		initialData: contractSource,
+		enabled: isContract,
 	})
 	// Use SSR data until mounted to avoid hydration mismatch, then use query data
 	const resolvedContractSource = isMounted
@@ -932,7 +956,8 @@ function SectionsWrapper(props: {
 														<AssetValue key="value" asset={asset} />,
 													],
 										link: {
-											href: `/token/${asset.address}?a=${address}`,
+											href: `/token/${asset.address}` as const,
+											search: { a: address },
 											title: `View token ${asset.address}`,
 										},
 									}))

@@ -1,12 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import { Address, Hex } from 'ox'
 import type { RpcTransaction } from 'viem'
+import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-
 import { zAddress } from '#lib/zod.ts'
-import { config } from '#wagmi.config.ts'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -40,13 +39,14 @@ export const Route = createFileRoute('/api/address/$address')({
 						Object.fromEntries(url.searchParams),
 					)
 					if (!parseParams.success)
-						return json(
+						return Response.json(
 							{ error: z.prettifyError(parseParams.error) },
 							{ status: 400 },
 						)
 
 					const searchParams = parseParams.data
-					const chainId = config.getClient().chain.id
+					const config = getWagmiConfig()
+					const chainId = getChainId(config)
 					const chainIdHex = Hex.fromNumber(chainId)
 
 					const include =
@@ -222,7 +222,7 @@ export const Route = createFileRoute('/api/address/$address')({
 
 					const nextOffset = offset + transactions.length
 
-					return json({
+					return Response.json({
 						transactions,
 						total: hasMore ? nextOffset + 1 : nextOffset,
 						offset: nextOffset,
@@ -233,7 +233,10 @@ export const Route = createFileRoute('/api/address/$address')({
 				} catch (error) {
 					const errorMessage = error instanceof Error ? error.message : error
 					console.error(errorMessage)
-					return json({ data: null, error: errorMessage }, { status: 500 })
+					return Response.json(
+						{ data: null, error: errorMessage },
+						{ status: 500 },
+					)
 				}
 			},
 		},

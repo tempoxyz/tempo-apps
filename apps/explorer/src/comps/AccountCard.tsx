@@ -32,8 +32,7 @@ export function AccountCard(props: AccountCard.Props) {
 						Address
 					</h1>
 					<div
-						className="text-[11px] bg-base-alt rounded text-secondary lowercase select-none"
-						style={{ padding: '2px 6px', marginRight: -10 }}
+						className="text-[11px] bg-base-alt rounded text-secondary lowercase select-none py-0.5 px-1.5 -mr-2.5 flex items-center"
 						title={
 							tag
 								? tag.id.startsWith('system:')
@@ -46,7 +45,7 @@ export function AccountCard(props: AccountCard.Props) {
 									: undefined
 						}
 					>
-						<div className="translate-y-[-1px]">
+						<span>
 							{isSystem
 								? 'system'
 								: accountType === 'contract'
@@ -54,7 +53,7 @@ export function AccountCard(props: AccountCard.Props) {
 									: accountType === 'account'
 										? 'account'
 										: 'empty'}
-						</div>
+						</span>
 					</div>
 				</div>
 			}

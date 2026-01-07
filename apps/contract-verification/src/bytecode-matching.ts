@@ -1,4 +1,4 @@
-import * as CBOR from 'cbor-x'
+import * as CBOR from 'cbor-x/decode'
 import { Hex } from 'ox'
 import semver from 'semver'
 import {
@@ -108,15 +108,11 @@ export function getVyperAuxdataStyle(
 	| AuxdataStyle.VYPER_LT_0_3_10
 	| AuxdataStyle.VYPER_LT_0_3_5 {
 	const version = semver.valid(semver.coerce(compilerVersion))
-	if (!version) {
-		return AuxdataStyle.VYPER
-	}
-	if (semver.lt(version, '0.3.5')) {
-		return AuxdataStyle.VYPER_LT_0_3_5
-	}
-	if (semver.lt(version, '0.3.10')) {
-		return AuxdataStyle.VYPER_LT_0_3_10
-	}
+
+	if (!version) return AuxdataStyle.VYPER
+	if (semver.lt(version, '0.3.5')) return AuxdataStyle.VYPER_LT_0_3_5
+	if (semver.lt(version, '0.3.10')) return AuxdataStyle.VYPER_LT_0_3_10
+
 	return AuxdataStyle.VYPER
 }
 
@@ -257,18 +253,14 @@ export function decodeVyperAuxdata(
 	auxdataStyle: AuxdataStyle,
 ): VyperDecodedAuxdata {
 	const { auxdata } = splitAuxdata(bytecode, auxdataStyle)
-	if (!auxdata) {
-		throw new Error('Auxdata is not in the bytecode')
-	}
+	if (!auxdata) throw new Error('Auxdata is not in the bytecode')
 
 	const cborDecodedObject = CBOR.decode(Hex.toBytes(`0x${auxdata}`)) as unknown
 
 	if (auxdataStyle === AuxdataStyle.VYPER) {
 		// Vyper >= 0.3.10 stores auxdata as an array
 		if (Array.isArray(cborDecodedObject)) {
-			const lastElement = cborDecodedObject[cborDecodedObject.length - 1] as {
-				vyper: number[]
-			}
+			const lastElement = cborDecodedObject.at(-1) as { vyper: number[] }
 			const compilerVersion = lastElement.vyper.join('.')
 
 			if (semver.gte(compilerVersion, '0.4.1')) {
@@ -294,11 +286,7 @@ export function decodeVyperAuxdata(
 
 	// Vyper < 0.3.10: just {vyper: [0, 3, 8]}
 	const decoded = cborDecodedObject as { vyper?: number[] } | null
-	if (decoded?.vyper) {
-		return {
-			vyperVersion: decoded.vyper.join('.'),
-		}
-	}
+	if (decoded?.vyper) return { vyperVersion: decoded.vyper.join('.') }
 
 	throw new Error('Invalid Vyper auxdata format')
 }
@@ -315,9 +303,7 @@ export function getVyperImmutableReferences(
 	const auxdataStyle = getVyperAuxdataStyle(compilerVersion)
 
 	// Only Vyper >= 0.3.10 has immutable size in auxdata
-	if (auxdataStyle !== AuxdataStyle.VYPER) {
-		return {}
-	}
+	if (auxdataStyle !== AuxdataStyle.VYPER) return {}
 
 	try {
 		const decoded = decodeVyperAuxdata(creationBytecode, auxdataStyle)
@@ -658,7 +644,7 @@ export function extractConstructorArgumentsTransformation(
 	const argsHex = onchainCreationBytecode.slice(
 		recompiledCreationBytecode.length,
 	)
-	const constructorArguments = `0x${argsHex}` as `0x${string}`
+	const constructorArguments = `0x${argsHex}` as const
 
 	// Find constructor in ABI
 	const constructorAbi = abi.find((item) => item.type === 'constructor')

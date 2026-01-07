@@ -319,8 +319,15 @@ export namespace Pagination {
 	}
 
 	export function Count(props: Count.Props) {
-		const { page, totalPages, totalItems, itemsLabel, loading, className } =
-			props
+		const {
+			page,
+			totalPages,
+			totalItems,
+			itemsLabel,
+			loading,
+			capped,
+			className,
+		} = props
 		return (
 			<div
 				className={cx(
@@ -338,7 +345,9 @@ export namespace Pagination {
 					</>
 				)}
 				<span className="text-primary tabular-nums">
-					{loading ? '…' : Pagination.numFormat.format(totalItems)}
+					{loading
+						? '…'
+						: `${capped ? '> ' : ''}${Pagination.numFormat.format(totalItems)}`}
 				</span>
 				<span className="text-tertiary">{itemsLabel}</span>
 			</div>
@@ -352,6 +361,7 @@ export namespace Pagination {
 			totalItems: number
 			itemsLabel: string
 			loading?: boolean
+			capped?: boolean
 			className?: string
 		}
 	}

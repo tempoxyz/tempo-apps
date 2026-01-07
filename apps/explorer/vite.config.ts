@@ -1,5 +1,4 @@
 import { cloudflare } from '@cloudflare/vite-plugin'
-import { sentryVitePlugin } from '@sentry/vite-plugin'
 import tailwind from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
@@ -9,8 +8,6 @@ import { defineConfig, loadEnv } from 'vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 
 const [, , , ...args] = process.argv
-
-const SENTRY_OFF_TEMPORARILY = true
 
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
@@ -22,12 +19,16 @@ export default defineConfig((config) => {
 	})()
 	const port = Number(lastPort ?? env.PORT ?? 3_000)
 
+	const allowedHosts = env.ALLOWED_HOSTS?.split(',') ?? []
+
 	return {
 		define: {
 			__BASE_URL__: JSON.stringify(
-				config.mode === 'development'
-					? `http://localhost:${port}`
-					: (env.VITE_BASE_URL ?? ''),
+				env.VITE_BASE_URL
+					? env.VITE_BASE_URL
+					: config.mode === 'development'
+						? `http://localhost:${port}`
+						: (env.VITE_BASE_URL ?? ''),
 			),
 			__BUILD_VERSION__: JSON.stringify(
 				env.CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? Date.now().toString(),
@@ -46,14 +47,6 @@ export default defineConfig((config) => {
 			},
 			showDevtools && devtools(),
 			showDevtools && vitePluginChromiumDevTools(),
-			config.mode === 'production' &&
-				!SENTRY_OFF_TEMPORARILY &&
-				sentryVitePlugin({
-					org: 'tempoxyz',
-					telemetry: false,
-					project: 'tempo-explorer',
-					authToken: env.SENTRY_AUTH_TOKEN,
-				}),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tailwind(),
 			Icons({
@@ -70,10 +63,14 @@ export default defineConfig((config) => {
 		],
 		server: {
 			port,
-			cors: config.mode === 'development' ? true : undefined,
-			allowedHosts: config.mode === 'development' ? true : undefined,
+			cors: config.mode === 'development' ? false : undefined,
+			allowedHosts: config.mode === 'development' ? allowedHosts : [],
+		},
+		preview: {
+			allowedHosts: config.mode === 'preview' ? allowedHosts : [],
 		},
 		build: {
+			minify: 'oxc',
 			rolldownOptions: {
 				output: {
 					minify: {

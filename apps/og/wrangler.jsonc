@@ -2,7 +2,7 @@
 	"$schema": "./node_modules/wrangler/config-schema.json",
 	"name": "og",
 	"main": "src/index.tsx",
-	"compatibility_date": "2025-12-02",
+	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
 	"vars": {
 		"EXPLORER_URL": "https://explorer.tempo.xyz"

@@ -1,10 +1,12 @@
 {
 	"recommendations": [
 		"biomejs.biome",
+		"redhat.vscode-yaml",
 		"timonwong.shellcheck",
 		"dorzey.vscode-sqlfluff",
 		"bradlc.vscode-tailwindcss",
-		"wayou.vscode-todo-highlight"
+		"wayou.vscode-todo-highlight",
+		"github.vscode-github-actions"
 	],
 	"unwantedRecommendations": [
 		"esbenp.prettier-vscode",

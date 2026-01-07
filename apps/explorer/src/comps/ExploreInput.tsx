@@ -21,6 +21,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		onChange,
 		size = 'medium',
 		disabled,
+		className,
 	} = props
 	const formRef = React.useRef<HTMLFormElement>(null)
 	const resultsRef = React.useRef<HTMLDivElement>(null)
@@ -35,8 +36,10 @@ export function ExploreInput(props: ExploreInput.Props) {
 	const { data: searchResults, isFetching } = useQuery(
 		queryOptions({
 			queryKey: ['search', query],
-			queryFn: async (): Promise<SearchApiResponse> => {
-				const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+			queryFn: async ({ signal }): Promise<SearchApiResponse> => {
+				const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
+					signal,
+				})
 				if (!res.ok) throw new Error('Search failed')
 				return res.json()
 			},
@@ -181,7 +184,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 					return
 				}
 			}}
-			className="relative z-1 w-full max-w-[448px]"
+			className="relative z-10 w-full max-w-md"
 		>
 			<input
 				ref={inputRef}
@@ -192,8 +195,9 @@ export function ExploreInput(props: ExploreInput.Props) {
 				value={value}
 				disabled={disabled}
 				className={cx(
-					'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50',
+					'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-300',
 					size === 'large' ? 'h-[52px] text-[17px]' : 'h-[42px] text-[15px]',
+					className,
 				)}
 				data-1p-ignore
 				name="value"
@@ -280,7 +284,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 					role="listbox"
 					aria-label="Search suggestions"
 					className={cx(
-						'absolute left-0 right-0 mt-[8px]',
+						'absolute left-0 right-0 mt-2 z-50',
 						'bg-surface border border-base-border rounded-[10px] overflow-hidden',
 						'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 					)}
@@ -360,6 +364,7 @@ export namespace ExploreInput {
 		onChange: (value: string) => void
 		size?: 'large' | 'medium'
 		disabled?: boolean
+		className?: string
 	}
 
 	export type SuggestionGroup = {

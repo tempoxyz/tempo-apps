@@ -1,11 +1,16 @@
 name: Main
 on:
+  workflow_dispatch:
   push:
     branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  NODE_ENV: production
+  WRANGLER_SEND_METRICS: false
 
 jobs:
   verify:
@@ -27,12 +32,11 @@ jobs:
           - app: fee-payer # devnet
             env: devnet
           - app: og
-          - app: service-proxy
           - app: tokenlist
           - app: contract-verification
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           submodules: "recursive"
           fetch-depth: 0
@@ -42,7 +46,11 @@ jobs:
       - name: Check for relevant changes
         id: changes
         run: |
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE "^(apps/${{ matrix.app }}/|pnpm-lock.yaml)"; then
+          # if workflow_dispatch, always deploy all
+          #
+          if [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
+            echo "relevant=true" >> $GITHUB_OUTPUT
+          elif git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE "^(apps/${{ matrix.app }}/|pnpm-lock.yaml)"; then
             echo "relevant=true" >> $GITHUB_OUTPUT
           else
             echo "relevant=false" >> $GITHUB_OUTPUT
@@ -55,8 +63,11 @@ jobs:
       - name: Build & Deploy Workers
         if: steps.changes.outputs.relevant == 'true'
         uses: cloudflare/wrangler-action@v3
+        env:
+          NODE_ENV: production
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/${{ matrix.app }}
+          packageManager: pnpm
           command: ${{ matrix.env == 'privy' && 'deploy --env privy' || 'deploy --env=""' }}

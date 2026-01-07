@@ -1,5 +1,4 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import { createHighlighterCore, type HighlighterCore } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
 import * as z from 'zod/mini'
@@ -99,7 +98,7 @@ export const Route = createFileRoute('/api/code')({
 				)
 
 				if (!parsedSearchParamsSuccess)
-					return json(
+					return Response.json(
 						{ error: z.prettifyError(parsedSearchParamsError) },
 						{ status: 400 },
 					)
@@ -111,7 +110,7 @@ export const Route = createFileRoute('/api/code')({
 				const response = await fetch(apiUrl.toString())
 
 				if (!response.ok)
-					return json(
+					return Response.json(
 						{ error: 'Failed to fetch contract code' },
 						{ status: response.status },
 					)
@@ -123,7 +122,10 @@ export const Route = createFileRoute('/api/code')({
 					responseData,
 				)
 				if (!success)
-					return json({ error: z.prettifyError(error) }, { status: 500 })
+					return Response.json(
+						{ error: z.prettifyError(error) },
+						{ status: 500 },
+					)
 
 				// Cache for 1 day - verified contract source code doesn't change
 				const cacheHeaders = {
@@ -132,7 +134,7 @@ export const Route = createFileRoute('/api/code')({
 				}
 
 				if (!parsedSearchParams.highlight)
-					return json(data, { headers: cacheHeaders })
+					return Response.json(data, { headers: cacheHeaders })
 
 				const highlighter = await getHighlighter()
 				const highlightedSources: Record<
@@ -160,7 +162,7 @@ export const Route = createFileRoute('/api/code')({
 					}
 				}
 
-				return json(
+				return Response.json(
 					{
 						...data,
 						stdJsonInput: {

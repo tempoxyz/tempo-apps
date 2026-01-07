@@ -1,70 +1,76 @@
-import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
-import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
-import { Json } from 'ox'
-import { KeyManager, webAuthn } from 'tempo.ts/wagmi'
-import { createConfig, deserialize, http, serialize } from 'wagmi'
-import { tempoLocalnet, tempoTestnet } from 'wagmi/chains'
-
-const browser = typeof window !== 'undefined'
-
-export const DEFAULT_TESTNET_RPC_URL = 'https://rpc.testnet.tempo.xyz'
-export const DEFAULT_TESTNET_WS_URL = 'wss://rpc.testnet.tempo.xyz'
-
-export const queryClient: QueryClient = new QueryClient({
-	defaultOptions: {
-		queries: {
-			gcTime: 1_000 * 60 * 60 * 24, // 24 hours
-			queryKeyHashFn: Json.stringify,
-			refetchOnReconnect: () => !queryClient.isMutating(),
-			retry: 0,
-		},
-	},
-	mutationCache: new MutationCache({
-		onError: (error) => {
-			if (import.meta.env.MODE !== 'development') return
-			console.error(error)
-		},
-	}),
-	queryCache: new QueryCache({
-		onError: (error, query) => {
-			if (import.meta.env.MODE !== 'development') return
-			if (query.state.data !== undefined) console.error('[tsq]', error)
-		},
-	}),
-})
-
-export const persister = createAsyncStoragePersister({
-	// Cache key includes build version - automatically invalidates on new deploys
+import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
+import { getRequestHeader } from '@tanstack/react-start/server'
+import { KeyManager, webAuthn } from 'wagmi/tempo'
+import { tempoLocalnet, tempoTestnet } from 'viem/chains'
+import {
+	cookieStorage,
+	cookieToInitialState,
+	createConfig,
+	createStorage,
+	fallback,
+	http,
 	serialize,
-	deserialize,
-	key: `tempo-query-cache-${__BUILD_VERSION__}`,
-	storage: browser ? window.localStorage : undefined,
-})
+	webSocket,
+} from 'wagmi'
 
-export const config = createConfig({
-	ssr: true,
-	chains: [
-		import.meta.env.VITE_LOCALNET === 'true'
-			? tempoLocalnet
-			: tempoTestnet.extend({
-					feeToken: '0x20c0000000000000000000000000000000000001',
-				}),
-	],
-	connectors: [
-		webAuthn({
-			keyManager: KeyManager.http(`${__BASE_URL__}/api/webauthn`),
-		}),
-	],
-	batch: { multicall: false },
-	multiInjectedProviderDiscovery: false,
-	transports: {
-		[tempoTestnet.id]: http(DEFAULT_TESTNET_RPC_URL, { batch: true }),
-		[tempoLocalnet.id]: http(undefined, { batch: true }),
-	},
-})
+export const DEFAULT_TESTNET_RPC_URL = 'https://proxy.tempo.xyz/rpc'
+export const DEFAULT_TESTNET_WS_URL = 'wss://proxy.tempo.xyz/rpc'
+
+const getTempoRpcUrl = createIsomorphicFn()
+	.server(() => ({
+		http: DEFAULT_TESTNET_RPC_URL,
+		websocket: DEFAULT_TESTNET_WS_URL,
+	}))
+	.client(() => ({
+		http: DEFAULT_TESTNET_RPC_URL,
+		websocket: DEFAULT_TESTNET_WS_URL,
+	}))
 
 declare module 'wagmi' {
 	interface Register {
-		config: typeof config
+		config: ReturnType<typeof getWagmiConfig>
 	}
 }
+
+export type WagmiConfig = ReturnType<typeof getWagmiConfig>
+
+export const getChain = createIsomorphicFn()
+	.client(() =>
+		import.meta.env.VITE_LOCALNET === 'true' ? tempoLocalnet : tempoTestnet,
+	)
+	.server(() =>
+		import.meta.env.VITE_LOCALNET === 'true' ? tempoLocalnet : tempoTestnet,
+	)
+
+export const getChainId = createIsomorphicFn()
+	.client(() => getChain().id)
+	.server(() => getChain().id)
+
+export function getWagmiConfig() {
+	const rpcUrl = getTempoRpcUrl()
+
+	return createConfig({
+		chains: [getChain()],
+		ssr: true,
+		batch: { multicall: false },
+		storage: createStorage({ storage: cookieStorage }),
+		connectors: [
+			webAuthn({
+				keyManager: KeyManager.http(`${__BASE_URL__}/api/webauthn`),
+			}),
+		],
+		transports: {
+			[tempoTestnet.id]: fallback([
+				webSocket(rpcUrl.websocket),
+				http(rpcUrl.http),
+			]),
+			[tempoLocalnet.id]: http(undefined, { batch: true }),
+		},
+	})
+}
+
+export const getWagmiStateSSR = createServerFn().handler(() => {
+	const cookie = getRequestHeader('cookie')
+	const initialState = cookieToInitialState(getWagmiConfig(), cookie)
+	return serialize(initialState || {})
+})

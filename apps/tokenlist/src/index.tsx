@@ -1,10 +1,13 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { tempoDevnet, tempoTestnet } from '#chains.ts'
 import { Docs } from '#docs.tsx'
 import { OpenAPISpec, TokenList } from '#schema.ts'
 import type { TokenListSchema } from '#tokenlist.types.ts'
 
 const app = new Hono<{ Bindings: Cloudflare.Env }>()
+
+app.use('*', cors())
 
 const CHAIN_IDS = [tempoDevnet.id, tempoTestnet.id]
 

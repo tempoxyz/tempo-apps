@@ -8,13 +8,9 @@ import {
 	parseAbiItem,
 	slice,
 } from 'viem'
-import {
-	formatAbiValue,
-	getAbiItem,
-	useAutoloadAbi,
-	useLookupSignature,
-} from '#lib/abi'
+import { formatAbiValue, getAbiItem } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
+import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
 import CopyIcon from '~icons/lucide/copy'
 
 export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {

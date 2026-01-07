@@ -46,6 +46,7 @@ export function ContractReader(props: {
 	React.useEffect(() => {
 		const hash = location.hash
 		if (hash && typeof window !== 'undefined') {
+			let highlightTimer: ReturnType<typeof setTimeout> | undefined
 			// Small delay to ensure DOM is rendered
 			const timer = setTimeout(() => {
 				// Strip the leading '#' since getElementById expects just the ID
@@ -54,12 +55,15 @@ export function ContractReader(props: {
 					element.scrollIntoView({ behavior: 'smooth', block: 'center' })
 					// Add a brief highlight effect
 					element.classList.add('ring-1', 'ring-accent', 'ring-offset-1')
-					setTimeout(() => {
+					highlightTimer = setTimeout(() => {
 						element.classList.remove('ring-1', 'ring-accent', 'ring-offset-1')
 					}, 2_000)
 				}
 			}, 100)
-			return () => clearTimeout(timer)
+			return () => {
+				clearTimeout(timer)
+				clearTimeout(highlightTimer)
+			}
 		}
 	}, [location.hash])
 
