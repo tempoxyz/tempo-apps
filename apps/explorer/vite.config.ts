@@ -79,6 +79,9 @@ export default defineConfig((config) => {
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
 				cloudflareEnv || env.VITE_TEMPO_ENV,
 			),
+			'import.meta.env.VITE_ENABLE_DEMO': JSON.stringify(
+				env.VITE_ENABLE_DEMO ?? 'true',
+			),
 		},
 	}
 })
