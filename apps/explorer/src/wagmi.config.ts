@@ -4,7 +4,6 @@ import {
 	createServerOnlyFn,
 } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
-import { env } from 'cloudflare:workers'
 import {
 	tempoDevnet,
 	tempoLocalnet,
@@ -55,10 +54,10 @@ export const MODERATO_RPC_URLs = [
 
 const getTempoRpcKey = createServerOnlyFn(() =>
 	TEMPO_ENV === 'devnet'
-		? env.TEMPO_RPC_KEY_DEVNET
+		? process.env.TEMPO_RPC_KEY_DEVNET
 		: TEMPO_ENV === 'moderato'
-			? env.TEMPO_RPC_KEY_MODERATO
-			: env.TEMPO_RPC_KEY_TESTNET,
+			? process.env.TEMPO_RPC_KEY_MODERATO
+			: process.env.TEMPO_RPC_KEY_TESTNET,
 )
 
 export const getTempoChain = createIsomorphicFn()
