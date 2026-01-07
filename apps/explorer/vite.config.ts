@@ -58,6 +58,18 @@ export default defineConfig((config) => {
 				start: { entry: './src/index.start.ts' },
 				server: { entry: './src/index.server.ts' },
 				client: { entry: './src/index.client.tsx' },
+				pages: [{ path: '/' }, { path: '/blocks' }, { path: '/tokens' }],
+				prerender: {
+					enabled: true,
+					// Keep prerender predictable: only prerender the explicit `pages` above.
+					// (Link crawling can explode into unbounded dynamic routes like tx/address pages.)
+					autoStaticPathsDiscovery: false,
+					crawlLinks: false,
+				},
+				sitemap: {
+					enabled: true,
+					host: 'https://explore.tempo.xyz',
+				},
 			}),
 			react(),
 		],

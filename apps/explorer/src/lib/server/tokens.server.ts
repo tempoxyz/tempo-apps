@@ -46,47 +46,51 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 			includeCount = false,
 			countLimit = TOKEN_COUNT_MAX,
 		} = data
+		try {
+			const config = getWagmiConfig()
+			const chainId = getChainId(config)
 
-		const config = getWagmiConfig()
-		const chainId = getChainId(config)
+			const [tokensResult, countResult] = await Promise.all([
+				QB.withSignatures([EVENT_SIGNATURE])
+					.selectFrom('tokencreated')
+					.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
+					.where('chain', '=', chainId)
+					.orderBy('block_num', 'desc')
+					.limit(limit)
+					.offset(offset)
+					.execute(),
+				includeCount
+					? // count is an expensive, columnar-based query. we will count up
+						// to the first countLimit rows (default: TOKEN_COUNT_MAX)
+						QB.selectFrom(
+							QB.withSignatures([EVENT_SIGNATURE])
+								.selectFrom('tokencreated')
+								.select((eb) => eb.lit(1).as('x'))
+								.where('chain', '=', chainId)
+								.limit(countLimit)
+								.as('subquery'),
+						)
+							.select((eb) => eb.fn.count('x').as('count'))
+							.executeTakeFirst()
+					: Promise.resolve(null),
+			])
 
-		const [tokensResult, countResult] = await Promise.all([
-			QB.withSignatures([EVENT_SIGNATURE])
-				.selectFrom('tokencreated')
-				.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
-				.where('chain', '=', chainId)
-				.orderBy('block_num', 'desc')
-				.limit(limit)
-				.offset(offset)
-				.execute(),
-			includeCount
-				? // count is an expensive, columnar-based query. we will count up
-					// to the first countLimit rows (default: TOKEN_COUNT_MAX)
-					QB.selectFrom(
-						QB.withSignatures([EVENT_SIGNATURE])
-							.selectFrom('tokencreated')
-							.select((eb) => eb.lit(1).as('x'))
-							.where('chain', '=', chainId)
-							.limit(countLimit)
-							.as('subquery'),
-					)
-						.select((eb) => eb.fn.count('x').as('count'))
-						.executeTakeFirst()
-				: Promise.resolve(null),
-		])
+			const count = countResult?.count ?? null
 
-		const count = countResult?.count ?? null
-
-		return {
-			offset,
-			limit,
-			total: count !== null ? Number(count) : null,
-			tokens: tokensResult.map(
-				({ token: address, block_timestamp, ...rest }) => ({
-					...rest,
-					address,
-					createdAt: Number(block_timestamp),
-				}),
-			),
+			return {
+				offset,
+				limit,
+				total: count !== null ? Number(count) : null,
+				tokens: tokensResult.map(
+					({ token: address, block_timestamp, ...rest }) => ({
+						...rest,
+						address,
+						createdAt: Number(block_timestamp),
+					}),
+				),
+			}
+		} catch (error) {
+			console.error('Failed to fetch tokens:', error)
+			return { offset, limit, total: null, tokens: [] }
 		}
 	})

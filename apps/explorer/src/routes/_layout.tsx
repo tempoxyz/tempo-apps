@@ -10,7 +10,14 @@ export const Route = createFileRoute('/_layout')({
 	validateSearch: z.object({
 		plain: z.optional(z.string()),
 	}).parse,
-	loader: () => fetchLatestBlock(),
+	loader: async () => {
+		try {
+			return await fetchLatestBlock()
+		} catch (error) {
+			console.error('Failed to load latest block (loader):', error)
+			return undefined
+		}
+	},
 })
 
 function RouteComponent() {

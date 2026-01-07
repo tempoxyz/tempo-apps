@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
-import { deserialize, type State, WagmiProvider } from 'wagmi'
+import { deserialize, type State, serialize, WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { ProgressLine } from '#comps/ProgressLine'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
@@ -27,6 +27,7 @@ export const Route = createRootRouteWithContext<{
 				name: 'viewport',
 				content: 'width=device-width, initial-scale=1',
 			},
+			{ name: 'robots', content: 'index, follow' },
 			{
 				title: 'Explorer ⋅ Tempo',
 			},
@@ -129,7 +130,14 @@ export const Route = createRootRouteWithContext<{
 			<ErrorBoundary {...props} />
 		</RootDocument>
 	),
-	loader: () => getWagmiStateSSR(),
+	loader: async () => {
+		try {
+			return await getWagmiStateSSR()
+		} catch (error) {
+			console.error('Failed to load wagmi SSR state:', error)
+			return serialize({})
+		}
+	},
 	shellComponent: RootDocument,
 })
 

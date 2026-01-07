@@ -9,6 +9,9 @@ interface IntroProps {
 }
 
 function shouldShowAnimation(): boolean {
+	// SSR / prerender guard
+	if (typeof window === 'undefined') return false
+
 	// Check if this is a hard refresh (reload)
 	const navEntries = performance.getEntriesByType('navigation')
 	const navEntry = navEntries[0] as PerformanceNavigationTiming | undefined

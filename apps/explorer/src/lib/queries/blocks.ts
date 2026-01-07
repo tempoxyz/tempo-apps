@@ -20,28 +20,37 @@ export function blocksQueryOptions(page: number) {
 		queryKey: ['blocks-loader', page],
 		queryFn: async () => {
 			const config = getWagmiConfig()
-			const latestBlock = await getBlock(config)
-			const latestBlockNumber = latestBlock.number
 
-			const startBlock =
-				latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
+			try {
+				const latestBlock = await getBlock(config)
+				const latestBlockNumber = latestBlock.number
 
-			const blockNumbers: bigint[] = []
-			for (let i = 0n; i < BigInt(BLOCKS_PER_PAGE); i++) {
-				const blockNum = startBlock - i
-				if (blockNum >= 0n) blockNumbers.push(blockNum)
-			}
+				const startBlock =
+					latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
 
-			// TODO: investigate & consider batch/multicall
-			const blocks = await Promise.all(
-				blockNumbers.map((blockNumber) =>
-					getBlock(config, { blockNumber }).catch(() => null),
-				),
-			)
+				const blockNumbers: bigint[] = []
+				for (let i = 0n; i < BigInt(BLOCKS_PER_PAGE); i++) {
+					const blockNum = startBlock - i
+					if (blockNum >= 0n) blockNumbers.push(blockNum)
+				}
 
-			return {
-				latestBlockNumber,
-				blocks: blocks.filter(Boolean) as Block[],
+				// TODO: investigate & consider batch/multicall
+				const blocks = await Promise.all(
+					blockNumbers.map((blockNumber) =>
+						getBlock(config, { blockNumber }).catch(() => null),
+					),
+				)
+
+				return {
+					latestBlockNumber,
+					blocks: blocks.filter(Boolean) as Block[],
+				}
+			} catch (error) {
+				console.error('Failed to fetch blocks for /blocks', { page, error })
+				return {
+					latestBlockNumber: 0n,
+					blocks: [],
+				}
 			}
 		},
 		placeholderData: keepPreviousData,

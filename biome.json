@@ -129,6 +129,15 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["**/google6bae3dfb1e9772fa.html"],
+			"linter": { "enabled": false },
+			"formatter": { "enabled": false },
+			"html": {
+				"linter": { "enabled": false },
+				"formatter": { "enabled": false }
+			}
 		}
 	]
 }
