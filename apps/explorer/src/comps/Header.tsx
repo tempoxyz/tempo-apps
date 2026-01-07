@@ -155,8 +155,8 @@ export namespace Header {
 			<div
 				className={`flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium ${className ?? ''}`}
 			>
-				<Music4 width={14} height={14} className="text-accent capitalize" />
-				{network}
+				<Music4 width={14} height={14} className="text-accent" />
+				<span className="capitalize">{network}</span>
 			</div>
 		)
 	}

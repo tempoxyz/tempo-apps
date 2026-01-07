@@ -21,8 +21,11 @@ import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#cva.config.ts'
-import { type KnownEvent, preferredEventsFilter } from '#lib/domain/known-events'
-import { DateFormatter, PriceFormatter } from '#lib/formatting.ts'
+import {
+	type KnownEvent,
+	preferredEventsFilter,
+} from '#lib/domain/known-events'
+import { PriceFormatter } from '#lib/formatting.ts'
 import { useMediaQuery } from '#lib/hooks'
 import {
 	type BlockIdentifier,
@@ -118,7 +121,8 @@ function RouteComponent() {
 		...blockKnownEventsQueryOptions(block.number ?? 0n, transactions, page),
 		enabled: !!block.number && transactions.length > 0,
 	})
-	const { data: knownEventsByHash, isLoading: knownEventsLoading } = knownEventsQuery
+	const { data: knownEventsByHash, isLoading: knownEventsLoading } =
+		knownEventsQuery
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -355,7 +359,9 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 	if (loading && !knownEvents) {
 		return (
-			<span className="text-tertiary" title="Loading…">…</span>
+			<span className="text-tertiary" title="Loading…">
+				…
+			</span>
 		)
 	}
 
