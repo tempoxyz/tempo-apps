@@ -1,6 +1,8 @@
 import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
+import { createPublicClient, http as viemHttp } from 'viem'
 import { tempoLocalnet, tempoTestnet } from 'viem/chains'
+import { tempoActions } from 'viem/tempo'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -68,3 +70,12 @@ export const getWagmiStateSSR = createServerFn().handler(() => {
 	const initialState = cookieToInitialState(getWagmiConfig(), cookie)
 	return serialize(initialState || {})
 })
+
+// Batched HTTP client for bulk RPC operations
+export function getBatchedClient() {
+	const rpcUrl = getTempoRpcUrl()
+	return createPublicClient({
+		chain: getChain(),
+		transport: viemHttp(rpcUrl.http, { batch: true }),
+	}).extend(tempoActions())
+}
