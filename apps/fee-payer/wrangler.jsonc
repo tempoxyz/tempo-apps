@@ -4,13 +4,16 @@
 	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.ts",
-	"routes": [{ "pattern": "sponsor.testnet.tempo.xyz", "custom_domain": true }],
 	"workers_dev": false,
-	"vars": {
-		"TEMPO_RPC_URL": "https://rpc.testnet.tempo.xyz",
-		"ALLOWED_ORIGINS": "*",
-		"TEMPO_ENV": "testnet"
-	},
+	// this binding is not inheritable to environments
+	// it's being added at top-level solely for the type generation script
+	"ratelimits": [
+		{
+			"name": "AddressRateLimiter",
+			"namespace_id": "888",
+			"simple": { "limit": 1000, "period": 60 }
+		}
+	],
 	"preview_urls": true,
 	"keep_vars": true,
 	"observability": {
@@ -22,21 +25,37 @@
 			"persist": true
 		}
 	},
-	"ratelimits": [
-		{
-			"name": "AddressRateLimiter",
-			"namespace_id": "888",
-			"simple": {
-				"limit": 1000,
-				"period": 60
-			}
-		}
-	],
 	"env": {
+		"testnet": {
+			"name": "fee-payer",
+			"routes": [
+				{
+					"pattern": "sponsor.testnet.tempo.xyz",
+					"zone_name": "tempo.xyz",
+					"custom_domain": true
+				}
+			],
+			"vars": {
+				"TEMPO_RPC_URL": "https://rpc.testnet.tempo.xyz",
+				"ALLOWED_ORIGINS": "*",
+				"TEMPO_ENV": "testnet"
+			},
+			"ratelimits": [
+				{
+					"name": "AddressRateLimiter",
+					"namespace_id": "888",
+					"simple": { "limit": 1000, "period": 60 }
+				}
+			]
+		},
 		"privy": {
 			"name": "fee-payer-privy",
 			"routes": [
-				{ "pattern": "privy-sponsor.testnet.tempo.xyz", "custom_domain": true }
+				{
+					"pattern": "privy-sponsor.testnet.tempo.xyz",
+					"zone_name": "tempo.xyz",
+					"custom_domain": true
+				}
 			],
 			"workers_dev": false,
 			"vars": {
@@ -58,7 +77,11 @@
 		"devnet": {
 			"name": "fee-payer-devnet",
 			"routes": [
-				{ "pattern": "sponsor.devnet.tempo.xyz", "custom_domain": true }
+				{
+					"pattern": "sponsor.devnet.tempo.xyz",
+					"zone_name": "tempo.xyz",
+					"custom_domain": true
+				}
 			],
 			"workers_dev": false,
 			"vars": {

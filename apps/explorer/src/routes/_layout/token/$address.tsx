@@ -10,10 +10,11 @@ import {
 } from '@tanstack/react-router'
 import { Address } from 'ox'
 import * as React from 'react'
-import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
+import type { Config } from 'wagmi'
 import { getPublicClient } from 'wagmi/actions'
+import { Actions, Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
@@ -97,7 +98,9 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		// Validate the token exists by fetching metadata (required - blocks render)
 		let metadata: Awaited<ReturnType<typeof Actions.token.getMetadata>>
 		try {
-			metadata = await Actions.token.getMetadata(config, { token: address })
+			metadata = await Actions.token.getMetadata(config as Config, {
+				token: address,
+			})
 		} catch (error) {
 			console.error('Failed to fetch token metadata:', error)
 			throw notFound()

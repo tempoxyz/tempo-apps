@@ -8,6 +8,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { Intro, type IntroPhase } from '#comps/Intro'
+import { cx } from '#cva.config.ts'
 import BoxIcon from '~icons/lucide/box'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CoinsIcon from '~icons/lucide/coins'
@@ -20,6 +21,8 @@ import ZapIcon from '~icons/lucide/zap'
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
 })
+
+const isTestnet = import.meta.env.VITE_TEMPO_ENV === 'testnet'
 
 function Component() {
 	const router = useRouter()
@@ -156,6 +159,7 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 					}}
 				>
 					<SpotlightPill
+						className={cx({ hidden: !isTestnet })}
 						to="/address/$address"
 						params={{ address: '0x5bc1473610754a5ca10749552b119df90c1a1877' }}
 						icon={<UserIcon className="size-[14px] text-accent" />}
@@ -166,6 +170,7 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 						Account
 					</SpotlightPill>
 					<SpotlightPill
+						className={cx({ hidden: !isTestnet })}
 						to="/address/$address"
 						params={{ address: '0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d' }}
 						search={{ tab: 'contract' }}
@@ -178,6 +183,7 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 						Contract
 					</SpotlightPill>
 					<SpotlightPill
+						className={cx({ hidden: !isTestnet })}
 						to="/receipt/$hash"
 						params={{
 							hash: '0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd',
@@ -191,7 +197,10 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 					</SpotlightPill>
 					{/** biome-ignore lint/a11y/noStaticElementInteractions: _ */}
 					<div
-						className="relative group-hover/pills:opacity-40 hover:opacity-100! transition-all duration-500 ease-out"
+						className={cx(
+							'relative group-hover/pills:opacity-40 hover:opacity-100! transition-all duration-500 ease-out',
+							{ hidden: !isTestnet },
+						)}
 						ref={dropdownRef}
 						onMouseEnter={handleMouseEnter}
 						onMouseLeave={handleMouseLeave}
@@ -254,6 +263,7 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 					Blocks
 				</SpotlightPill>
 				<SpotlightPill
+					className={cx({ hidden: !isTestnet })}
 					to="/tokens"
 					icon={<CoinsIcon className="size-[14px] text-accent" />}
 					pulse={isDiscoverPulse}
@@ -270,6 +280,7 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 const PULSE_COLOR = 'rgba(59, 130, 246, 0.5)' // accent blue
 
 function SpotlightPill(props: {
+	className?: string
 	to: string
 	params?: Record<string, string>
 	search?: Record<string, string>
@@ -290,15 +301,18 @@ function SpotlightPill(props: {
 		visible = true,
 		delay = 0,
 		children,
+		className,
 	} = props
 	return (
 		<Link
 			to={to}
 			{...(params ? { params } : {})}
 			{...(search ? { search } : {})}
-			className={`relative flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus:border-accent py-1 rounded-full transition-all duration-500 ease-out press-down group-hover/pills:opacity-40 hover:opacity-100! bg-surface ${
-				badge ? 'pl-2.5 pr-4' : 'px-2.5'
-			} border-base-border`}
+			className={cx(
+				`relative flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus:border-accent py-1 rounded-full transition-all duration-500 ease-out press-down group-hover/pills:opacity-40 hover:opacity-100! bg-surface border-base-border`,
+				badge ? 'pl-2.5 pr-4' : 'px-2.5',
+				className,
+			)}
 			style={{
 				...(pulse ? { borderColor: PULSE_COLOR } : {}),
 				opacity: visible ? 1 : 0,

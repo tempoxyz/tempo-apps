@@ -5,14 +5,18 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useChains, useWatchBlockNumber } from 'wagmi'
+import { useWatchBlockNumber } from 'wagmi'
 import { ExploreInput } from '#comps/ExploreInput'
+import { cx } from '#cva.config.ts'
 import { useIsMounted } from '#lib/hooks'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
 
+const isTestnet = import.meta.env.VITE_TEMPO_ENV === 'testnet'
+
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
+
 	return (
 		<header className="@container relative z-1">
 			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1 print:justify-center">
@@ -100,7 +104,7 @@ export namespace Header {
 	}
 
 	export function BlockNumber(props: BlockNumber.Props) {
-		const { initial } = props
+		const { initial, className } = props
 
 		const ref = React.useRef<HTMLSpanElement>(null)
 
@@ -113,9 +117,13 @@ export namespace Header {
 
 		return (
 			<Link
+				disabled={!isTestnet}
 				to="/block/$id"
 				params={{ id: 'latest' }}
-				className="flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down"
+				className={cx(
+					className,
+					'flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down',
+				)}
 				title="View latest block"
 			>
 				<SquareSquare className="size-[18px] text-accent" />
@@ -134,20 +142,21 @@ export namespace Header {
 	export namespace BlockNumber {
 		export interface Props {
 			initial?: bigint
+			className?: string | undefined
 		}
 	}
 
 	export function NetworkBadge(props: NetworkBadge.Props) {
 		const { className } = props
-		const [chain] = useChains()
-		const network = chain.name.match(/Tempo (.+)/)?.[1]
+		const network = import.meta.env.VITE_TEMPO_ENV
 		if (!network) return null
+
 		return (
 			<div
 				className={`flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium ${className ?? ''}`}
 			>
 				<Music4 width={14} height={14} className="text-accent" />
-				{network}
+				<span className="capitalize">{network}</span>
 			</div>
 		)
 	}

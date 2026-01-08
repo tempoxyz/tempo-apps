@@ -21,14 +21,17 @@ import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#cva.config.ts'
-import type { KnownEvent } from '#lib/domain/known-events'
-import { preferredEventsFilter } from '#lib/domain/known-events'
+import {
+	type KnownEvent,
+	preferredEventsFilter,
+} from '#lib/domain/known-events'
 import { DateFormatter, PriceFormatter } from '#lib/formatting.ts'
 import { useMediaQuery } from '#lib/hooks'
 import {
 	type BlockIdentifier,
 	type BlockTransaction,
 	blockDetailQueryOptions,
+	blockKnownEventsQueryOptions,
 	TRANSACTIONS_PER_PAGE,
 } from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
@@ -57,8 +60,7 @@ export const Route = createFileRoute('/_layout/block/$id')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page } }) => ({ page }),
-	loader: async ({ params, deps: { page }, context }) => {
+	loader: async ({ params, context }) => {
 		const { id } = params
 
 		if (id === 'latest') {
@@ -78,7 +80,7 @@ export const Route = createFileRoute('/_layout/block/$id')({
 			}
 
 			return await context.queryClient.ensureQueryData(
-				blockDetailQueryOptions(blockRef, page),
+				blockDetailQueryOptions(blockRef),
 			)
 		} catch (error) {
 			console.error(error)
@@ -96,12 +98,12 @@ function RouteComponent() {
 	const { page } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 
-	const { data, isPlaceholderData } = useQuery({
-		...blockDetailQueryOptions(loaderData.blockRef, page),
-		initialData: page === 1 ? loaderData : undefined,
+	const { data: blockData } = useQuery({
+		...blockDetailQueryOptions(loaderData.blockRef),
+		initialData: loaderData,
 	})
 
-	const { block, knownEventsByHash } = data ?? loaderData
+	const { block } = blockData ?? loaderData
 
 	const [chain] = useChains()
 	const decimals = chain?.nativeCurrency.decimals ?? 18
@@ -113,6 +115,14 @@ function RouteComponent() {
 		startIndex,
 		startIndex + TRANSACTIONS_PER_PAGE,
 	)
+
+	// Batch fetch known events for current page only
+	const knownEventsQuery = useQuery({
+		...blockKnownEventsQueryOptions(block.number ?? 0n, transactions, page),
+		enabled: !!block.number && transactions.length > 0,
+	})
+	const { data: knownEventsByHash, isLoading: knownEventsLoading } =
+		knownEventsQuery
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -138,13 +148,13 @@ function RouteComponent() {
 						content: (
 							<TransactionsSection
 								transactions={transactions}
-								knownEventsByHash={knownEventsByHash}
+								knownEventsByHash={knownEventsByHash ?? {}}
+								knownEventsLoading={knownEventsLoading}
 								decimals={decimals}
 								symbol={symbol}
 								page={page}
 								totalItems={allTransactions.length}
 								startIndex={startIndex}
-								fetching={isPlaceholderData}
 							/>
 						),
 					},
@@ -190,12 +200,12 @@ function TransactionsSection(props: TransactionsSectionProps) {
 	const {
 		transactions,
 		knownEventsByHash,
+		knownEventsLoading,
 		decimals,
 		symbol,
 		page,
 		totalItems,
 		startIndex,
-		fetching,
 	} = props
 
 	const cols = [
@@ -248,6 +258,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 								transaction={transaction}
 								amountDisplay={amountDisplay}
 								knownEvents={knownEvents}
+								loading={knownEventsLoading}
 							/>,
 							txType.type === 'system' ? (
 								<span
@@ -300,7 +311,6 @@ function TransactionsSection(props: TransactionsSectionProps) {
 			}
 			totalItems={totalItems}
 			page={page}
-			fetching={fetching}
 			itemsLabel="transactions"
 			itemsPerPage={TRANSACTIONS_PER_PAGE}
 			emptyState="No transactions were included in this block."
@@ -310,17 +320,17 @@ function TransactionsSection(props: TransactionsSectionProps) {
 
 interface TransactionsSectionProps {
 	transactions: BlockTransaction[]
-	knownEventsByHash: Record<Hex.Hex, KnownEvent[]>
+	knownEventsByHash: Record<string, KnownEvent[]>
+	knownEventsLoading: boolean
 	decimals: number
 	symbol: string
 	page: number
 	totalItems: number
 	startIndex: number
-	fetching: boolean
 }
 
 function TransactionDescription(props: TransactionDescriptionProps) {
-	const { transaction, amountDisplay, knownEvents } = props
+	const { transaction, amountDisplay, knownEvents, loading } = props
 
 	const decodedCall = React.useMemo(() => {
 		const data = transaction.input
@@ -341,24 +351,6 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 				subtitle: undefined,
 			}
 
-		if (decodedCall.functionName === 'finalizeStreams') {
-			const ts = decodedCall.args?.[0]
-			const asBigInt = typeof ts === 'bigint' ? ts : undefined
-			return {
-				title: 'Finalize reward streams',
-				subtitle:
-					asBigInt !== undefined
-						? `at ${DateFormatter.format(asBigInt)} (unix ${asBigInt})`
-						: undefined,
-			}
-		}
-
-		if (decodedCall.functionName === 'executeBlock')
-			return {
-				title: 'Execute orderbook block',
-				subtitle: 'Settle stablecoin exchange batch',
-			}
-
 		return {
 			title: decodedCall.functionName
 				? `${decodedCall.functionName}()`
@@ -367,6 +359,14 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [decodedCall?.functionName, decodedCall?.args, selector, decodedCall])
+
+	if (loading && !knownEvents) {
+		return (
+			<span className="text-tertiary" title="Loading…">
+				…
+			</span>
+		)
+	}
 
 	// Contract creation takes priority - check before known events
 	// (contract constructors often emit Transfer events that would otherwise show)
@@ -430,6 +430,7 @@ interface TransactionDescriptionProps {
 	transaction: BlockTransaction
 	amountDisplay: string
 	knownEvents?: KnownEvent[]
+	loading?: boolean
 }
 
 function getEstimatedFee(transaction: BlockTransaction) {

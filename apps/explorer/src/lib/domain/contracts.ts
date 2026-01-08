@@ -140,19 +140,6 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			address: Addresses.tip403Registry,
 		},
 	],
-
-	// Account Abstraction
-	[
-		Addresses.accountImplementation,
-		{
-			name: 'IthacaAccount',
-			code: '0xef',
-			description: 'Reference account implementation',
-			abi: Abis.tipAccountRegistrar,
-			category: 'account',
-			address: Addresses.accountImplementation,
-		},
-	],
 ])
 
 /**
