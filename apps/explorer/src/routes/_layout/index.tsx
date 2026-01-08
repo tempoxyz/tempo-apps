@@ -22,7 +22,7 @@ export const Route = createFileRoute('/_layout/')({
 	component: Component,
 })
 
-const isTestnet = ['testnet', 'moderato'].includes(import.meta.env.VITE_TEMPO_ENV)
+const isTestnet = import.meta.env.VITE_TEMPO_ENV === 'testnet'
 
 function Component() {
 	const router = useRouter()
@@ -263,7 +263,6 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 					Blocks
 				</SpotlightPill>
 				<SpotlightPill
-					className={cx({ hidden: !isTestnet })}
 					to="/tokens"
 					icon={<CoinsIcon className="size-[14px] text-accent" />}
 					pulse={isDiscoverPulse}
