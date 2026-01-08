@@ -37,25 +37,21 @@ export function Layout(props: Layout.Props) {
 			<div className="bg-warning-background border-warning px-[32px] py-[8px] text-sm text-warning text-center">
 				<TriangleAlert className="size-4 inline mr-[4px] relative top-[-1px]" />
 				<span className="">
-					The new <strong className="font-medium">Moderato</strong> testnet
-					launched on{' '}
-					<time dateTime="2026-01-08" title="January 8th, 2026">
-						Jan 8th
-					</time>
-					, Andantino will be deprecated on{' '}
+					<strong>Testnet migration:</strong> We've launched a new testnet (Moderato).
+						The old testnet (Andantino) will be deprecated on{' '}
 					<time dateTime="2026-03-08" title="March 8th, 2026">
 						March 8th
 					</time>
-					. See new{' '}
+					.{' '}
 					<a
-						href="https://docs.tempo.xyz/quickstart/connection-details#direct-connection-details"
+						href="https://docs.tempo.xyz/testnet-migration"
 						className="underline press-down-inline"
 						target="_blank"
 						rel="noopener noreferrer"
 					>
-						configuration details
-					</a>
-					.
+						Checkout our docs 
+					</a>{' '}
+					for more details.
 				</span>
 			</div>
 			<div className={`relative z-2 ${isReceipt ? 'print:hidden' : ''}`}>
