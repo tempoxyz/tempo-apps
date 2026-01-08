@@ -18,9 +18,9 @@
 	"keep_vars": true,
 	"kv_namespaces": [
 		{
-			"remote": true,
 			"binding": "EXPLORER_PASSKEY_STORE",
-			"id": "9d662ec25881455da0d3766e9d38e15d"
+			"id": "9d662ec25881455da0d3766e9d38e15d",
+			"preview_id": "9d662ec25881455da0d3766e9d38e15d"
 		}
 	],
 	"observability": {
