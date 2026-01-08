@@ -2,7 +2,6 @@ import { useMutation } from '@tanstack/react-query'
 import { ClientOnly } from '@tanstack/react-router'
 import type { Address as OxAddress } from 'ox'
 import * as React from 'react'
-import { Actions, Hooks } from 'wagmi/tempo'
 import {
 	useChains,
 	useConfig,
@@ -13,6 +12,7 @@ import {
 	useSwitchChain,
 	useWatchBlockNumber,
 } from 'wagmi'
+import { Actions, Hooks } from 'wagmi/tempo'
 import { Address } from '#comps/Address'
 import { cx } from '#cva.config'
 import { ellipsis } from '#lib/chars'
@@ -20,6 +20,20 @@ import { filterSupportedInjectedConnectors } from '#lib/wallets'
 import LucideDownload from '~icons/lucide/download'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
+
+// survive component remounts during WebAuthn flow
+const passkeyStore = {
+	error: null as Error | null,
+	pending: false,
+	listeners: new Set<() => void>(),
+	subscribe(cb: () => void) {
+		this.listeners.add(cb)
+		return () => this.listeners.delete(cb)
+	},
+	notify() {
+		for (const cb of this.listeners) cb()
+	},
+}
 
 export function ConnectWallet(props: ConnectWallet.Props) {
 	const { showAddChain = true } = props
@@ -43,8 +57,31 @@ export namespace ConnectWallet {
 
 	export function Passkey() {
 		const config = useConfig()
-		const connect = useConnect()
+		const error = React.useSyncExternalStore(
+			(cb) => passkeyStore.subscribe(cb),
+			() => passkeyStore.error,
+			() => null,
+		)
+		const isPending = React.useSyncExternalStore(
+			(cb) => passkeyStore.subscribe(cb),
+			() => passkeyStore.pending,
+			() => false,
+		)
 
+		const connect = useConnect({
+			mutation: {
+				onError: (err) => {
+					passkeyStore.pending = false
+					passkeyStore.error = err
+					passkeyStore.notify()
+				},
+				onSuccess: () => {
+					passkeyStore.pending = false
+					passkeyStore.error = null
+					passkeyStore.notify()
+				},
+			},
+		})
 		const connection = useConnection()
 		const connectors = useConnectors()
 
@@ -81,7 +118,7 @@ export namespace ConnectWallet {
 				<span className="text-[12px] text-negative">no passkey connector</span>
 			)
 
-		if (connect.status === 'pending')
+		if (isPending)
 			return (
 				<span className="text-[12px] text-secondary">Connecting{ellipsis}</span>
 			)
@@ -107,6 +144,9 @@ export namespace ConnectWallet {
 								<LucideDownload className="size-[12px]" />
 							</button>
 						))}
+					{fund.error && (
+						<span className="text-[12px] text-negative">Fund failed</span>
+					)}
 					<Address
 						chars={6}
 						align="end"
@@ -118,29 +158,55 @@ export namespace ConnectWallet {
 			)
 		}
 
+		const handleSignIn = () => {
+			passkeyStore.error = null
+			passkeyStore.pending = true
+			passkeyStore.notify()
+			connect.mutate({ connector, capabilities: { type: 'sign-in' } })
+		}
+
+		const handleSignUp = () => {
+			passkeyStore.error = null
+			passkeyStore.pending = true
+			passkeyStore.notify()
+			connect.mutate({ connector, capabilities: { type: 'sign-up' } })
+		}
+
+		if (error)
+			return (
+				<div className="flex items-center gap-2 text-[12px] whitespace-nowrap">
+					<span className="text-negative">Failed</span>
+					<button
+						type="button"
+						className="text-accent hover:underline cursor-pointer press-down"
+						onClick={() => {
+							passkeyStore.error = null
+							passkeyStore.notify()
+						}}
+					>
+						Try again
+					</button>
+				</div>
+			)
+
 		return (
-			<button
-				type="button"
-				className={cx(
-					'inline-flex gap-[6px] items-center whitespace-nowrap',
-					'cursor-pointer press-down text-[12px] hover:underline text-accent',
-				)}
-				onClick={() =>
-					connect
-						.mutateAsync({
-							connector,
-							capabilities: { type: 'sign-in' },
-						})
-						.catch(() =>
-							connect.mutateAsync({
-								connector,
-								capabilities: { type: 'sign-up' },
-							}),
-						)
-				}
-			>
-				Connect
-			</button>
+			<div className="flex items-center gap-2 text-[12px] text-tertiary whitespace-nowrap">
+				<button
+					type="button"
+					className="cursor-pointer press-down text-[12px] hover:underline text-accent"
+					onClick={handleSignIn}
+				>
+					Sign in
+				</button>
+				or
+				<button
+					type="button"
+					className="cursor-pointer press-down text-[12px] hover:underline text-accent"
+					onClick={handleSignUp}
+				>
+					Create account
+				</button>
+			</div>
 		)
 	}
 

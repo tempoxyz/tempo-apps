@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useLocation } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
@@ -291,9 +291,13 @@ function WriteContractFunction(props: {
 
 					{writeContract.isSuccess && writeContract.data && (
 						<div className="p-2.5 rounded-md bg-green-500/10 border border-green-500/20">
-							<p className="text-[12px] text-green-400 font-mono break-all">
+							<Link
+								to="/receipt/$hash"
+								params={{ hash: writeContract.data }}
+								className="text-[12px] text-green-400 font-mono break-all hover:underline"
+							>
 								tx: {writeContract.data}
-							</p>
+							</Link>
 						</div>
 					)}
 				</div>
