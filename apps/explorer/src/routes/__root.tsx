@@ -14,6 +14,11 @@ import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
 import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
+import {
+	captureEvent,
+	normalizePathPattern,
+	ProfileEvents,
+} from '#lib/profiling'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
@@ -150,8 +155,50 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 	shellComponent: RootDocument,
 })
 
+function useFirstDrawTiming() {
+	const navigationStartRef = React.useRef<number | null>(null)
+	const previousPathRef = React.useRef<string | null>(null)
+
+	const routerState = useRouterState({
+		select: (state) => ({
+			status: state.status,
+			pathname: state.location.pathname,
+		}),
+	})
+
+	React.useEffect(() => {
+		// Navigation started
+		if (routerState.status === 'pending' && !navigationStartRef.current) {
+			navigationStartRef.current = performance.now()
+			previousPathRef.current = routerState.pathname
+		}
+
+		// Navigation completed
+		if (routerState.status === 'idle' && navigationStartRef.current) {
+			const duration = performance.now() - navigationStartRef.current
+			const fromPath = previousPathRef.current
+			const toPath = routerState.pathname
+
+			// Double rAF ensures the browser has actually painted
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					captureEvent(ProfileEvents.PAGE_FIRST_DRAW, {
+						duration_ms: Math.round(duration),
+						from_path: fromPath,
+						to_path: toPath,
+						route_pattern: normalizePathPattern(toPath),
+					})
+
+					navigationStartRef.current = null
+				})
+			})
+		}
+	}, [routerState.status, routerState.pathname])
+}
+
 function RootDocument({ children }: { children: React.ReactNode }) {
 	useDevTools()
+	useFirstDrawTiming()
 
 	const { queryClient } = Route.useRouteContext()
 	const [config] = React.useState(() => getWagmiConfig())
