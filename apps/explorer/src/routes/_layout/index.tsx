@@ -22,7 +22,7 @@ export const Route = createFileRoute('/_layout/')({
 	component: Component,
 })
 
-const isTestnet = import.meta.env.VITE_TEMPO_ENV === 'testnet'
+const isTestnet = ['testnet', 'moderato'].includes(import.meta.env.VITE_TEMPO_ENV)
 
 function Component() {
 	const router = useRouter()
