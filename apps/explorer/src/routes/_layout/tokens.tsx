@@ -73,8 +73,12 @@ function TokensPage() {
 
 	const tokens = data?.tokens ?? []
 	const exactCount = isMounted ? countQuery.data?.data : undefined
+	const isCapped = exactCount !== undefined && exactCount >= TOKEN_COUNT_MAX
 	const paginationTotal = exactCount ?? TOKEN_COUNT_MAX
-	const displayTotal = exactCount ?? '...'
+	const displayTotal =
+		exactCount === undefined
+			? '...'
+			: `${isCapped ? '> ' : ''}${isCapped ? TOKEN_COUNT_MAX : exactCount}`
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -145,7 +149,8 @@ function TokensPage() {
 									}))
 								}
 								totalItems={paginationTotal}
-								displayCount={exactCount}
+								displayCount={isCapped ? TOKEN_COUNT_MAX : exactCount}
+								displayCountCapped={isCapped}
 								page={page}
 								fetching={isPlaceholderData}
 								loading={isPending}
