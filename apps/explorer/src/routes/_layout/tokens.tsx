@@ -77,7 +77,7 @@ function TokensPage() {
 	const paginationTotal = exactCount ?? TOKEN_COUNT_MAX
 	const displayTotal =
 		exactCount === undefined
-			? '...'
+			? '…'
 			: `${isCapped ? '> ' : ''}${isCapped ? TOKEN_COUNT_MAX : exactCount}`
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
