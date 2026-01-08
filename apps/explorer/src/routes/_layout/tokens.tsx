@@ -20,12 +20,16 @@ async function fetchTokensCount() {
 		headers: { 'Content-Type': 'application/json' },
 	})
 	if (!response.ok) throw new Error('Failed to fetch total token count')
-	const { data, success, error } = z.safeParse(
+	const {
+		data: safeData,
+		success,
+		error,
+	} = z.safeParse(
 		z.object({ data: z.number(), error: z.nullable(z.string()) }),
 		await response.json(),
 	)
 	if (!success) throw new Error(z.prettifyError(error))
-	return data
+	return safeData
 }
 
 export const Route = createFileRoute('/_layout/tokens')({

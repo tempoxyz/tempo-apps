@@ -4,6 +4,7 @@ import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import { Sphere } from '#comps/Sphere'
 import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
+import TriangleAlert from '~icons/lucide/triangle-alert'
 
 export const Route = createFileRoute('/_layout')({
 	component: RouteComponent,
@@ -33,6 +34,25 @@ export function Layout(props: Layout.Props) {
 	const isReceipt = Boolean(matchRoute({ to: '/receipt/$hash', fuzzy: true }))
 	return (
 		<div className="flex min-h-dvh flex-col print:block print:min-h-0">
+			<div className="bg-[#fefbe9] dark:bg-[#1d180f] border-b border-[#f3d673] dark:border-[#5c3d05] px-4 py-3 text-center text-sm">
+				<div className="flex items-center justify-center gap-2">
+					<TriangleAlert className="size-4 text-[#ab6400] dark:text-[#ffca16] shrink-0" />
+					<span className="text-[#4f3422] dark:text-[#ffe7b3]">
+						<strong>Andantino testnet deprecation:</strong> We launched our new
+						<strong> Moderato</strong> testnet on Jan 8th, Andantino will be
+						deprecated on March 8th. See{' '}
+						<a
+							href="https://docs.tempo.xyz/quickstart/connection-details#direct-connection-details"
+							className="underline hover:no-underline"
+							target="_blank"
+							rel="noopener noreferrer"
+						>
+							Connection Details
+						</a>{' '}
+						for the new configuration.
+					</span>
+				</div>
+			</div>
 			<div className={`relative z-2 ${isReceipt ? 'print:hidden' : ''}`}>
 				<Header initialBlockNumber={blockNumber} />
 			</div>
