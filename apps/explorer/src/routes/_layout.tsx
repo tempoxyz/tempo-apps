@@ -37,19 +37,19 @@ export function Layout(props: Layout.Props) {
 			<div className="bg-warning-background border-warning px-[32px] py-[8px] text-sm text-warning text-center">
 				<TriangleAlert className="size-4 inline mr-[4px] relative top-[-1px]" />
 				<span className="">
-					<strong>Testnet migration:</strong> We've launched a new testnet (Moderato).
-						The old testnet (Andantino) will be deprecated on{' '}
+					<strong>Testnet migration:</strong> We've launched a new testnet
+					(Moderato). The old testnet (Andantino) will be deprecated on{' '}
 					<time dateTime="2026-03-08" title="March 8th, 2026">
 						March 8th
 					</time>
 					.{' '}
 					<a
-						href="https://docs.tempo.xyz/testnet-migration"
+						href="https://docs.tempo.xyz/#testnet-migration"
 						className="underline press-down-inline"
 						target="_blank"
 						rel="noopener noreferrer"
 					>
-						Checkout our docs 
+						Checkout our docs
 					</a>{' '}
 					for more details.
 				</span>
