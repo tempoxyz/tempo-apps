@@ -5,6 +5,7 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
+import { Address, Hex } from 'ox'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { Intro, type IntroPhase } from '#comps/Intro'
@@ -18,11 +19,49 @@ import ShuffleIcon from '~icons/lucide/shuffle'
 import UserIcon from '~icons/lucide/user'
 import ZapIcon from '~icons/lucide/zap'
 
+const SPOTLIGHT_DATA: Record<
+	number,
+	{
+		accountAddress: Address.Address
+		contractAddress: Address.Address
+		receiptHash: Hex.Hex
+		paymentHash: Hex.Hex
+		swapHash: Hex.Hex
+		mintHash: Hex.Hex
+	}
+> = {
+	42429: {
+		accountAddress: '0x5bc1473610754a5ca10749552b119df90c1a1877',
+		contractAddress: '0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d',
+		receiptHash:
+			'0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd',
+		paymentHash:
+			'0x33cdfc39dcda535aac88e7fe3a79954e0740ec26a2fe54eb5481a4cfc0cb8024',
+		swapHash:
+			'0x8b6cdb1f6193c17a3733aec315441ab92bca3078b462b27863509a279a5ea6e0',
+		mintHash:
+			'0xe5c909ef42674965a8b805118f08b58f215a98661838ae187737841531097b70',
+	},
+	// 42431: {
+	// 	accountAddress: '0x0000000000000000000000000000000000000000',
+	// 	contractAddress: '0x0000000000000000000000000000000000000000',
+	// 	receiptHash:
+	// 		'0x0000000000000000000000000000000000000000000000000000000000000000',
+	// 	paymentHash:
+	// 		'0x0000000000000000000000000000000000000000000000000000000000000000',
+	// 	swapHash:
+	// 		'0x0000000000000000000000000000000000000000000000000000000000000000',
+	// 	mintHash:
+	// 		'0x0000000000000000000000000000000000000000000000000000000000000000',
+	// },
+}
+
+const chainId = Number(import.meta.env.VITE_TEMPO_CHAIN_ID)
+const spotlightData = SPOTLIGHT_DATA[chainId]
+
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
 })
-
-const isTestnet = import.meta.env.VITE_TEMPO_ENV === 'testnet'
 
 function Component() {
 	const router = useRouter()
@@ -129,22 +168,6 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 		hoverTimeoutRef.current = setTimeout(() => setActionOpen(false), 150)
 	}
 
-	// Real transactions from Tempo testnet
-	const actionTypes = [
-		{
-			label: 'Payment',
-			hash: '0x33cdfc39dcda535aac88e7fe3a79954e0740ec26a2fe54eb5481a4cfc0cb8024' as const,
-		},
-		{
-			label: 'Swap',
-			hash: '0x8b6cdb1f6193c17a3733aec315441ab92bca3078b462b27863509a279a5ea6e0' as const,
-		},
-		{
-			label: 'Mint',
-			hash: '0xe5c909ef42674965a8b805118f08b58f215a98661838ae187737841531097b70' as const,
-		},
-	]
-
 	const showExplore = ['explore', 'discover', 'done'].includes(introPhase)
 	const showDiscover = ['discover', 'done'].includes(introPhase)
 
@@ -158,49 +181,43 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 						opacity: showExplore ? 1 : 0,
 					}}
 				>
-					<SpotlightPill
-						className={cx({ hidden: !isTestnet })}
-						to="/address/$address"
-						params={{ address: '0x5bc1473610754a5ca10749552b119df90c1a1877' }}
-						icon={<UserIcon className="size-[14px] text-accent" />}
-						badge={<ShuffleIcon className="size-[10px] text-secondary" />}
-						pulse={isExplorePulse}
-						visible={showExplore}
-					>
-						Account
-					</SpotlightPill>
-					<SpotlightPill
-						className={cx({ hidden: !isTestnet })}
-						to="/address/$address"
-						params={{ address: '0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d' }}
-						search={{ tab: 'contract' }}
-						icon={<FileIcon className="size-[14px] text-accent" />}
-						badge={<ShuffleIcon className="size-[10px] text-secondary" />}
-						pulse={isExplorePulse}
-						visible={showExplore}
-						delay={50}
-					>
-						Contract
-					</SpotlightPill>
-					<SpotlightPill
-						className={cx({ hidden: !isTestnet })}
-						to="/receipt/$hash"
-						params={{
-							hash: '0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd',
-						}}
-						icon={<ReceiptIcon className="size-[14px] text-accent" />}
-						pulse={isExplorePulse}
-						visible={showExplore}
-						delay={100}
-					>
-						Receipt
-					</SpotlightPill>
-					{/** biome-ignore lint/a11y/noStaticElementInteractions: _ */}
-					<div
-						className={cx(
-							'relative group-hover/pills:opacity-40 hover:opacity-100! transition-all duration-500 ease-out',
-							{ hidden: !isTestnet },
-						)}
+					{spotlightData && (
+					<>
+						<SpotlightPill
+							to="/address/$address"
+							params={{ address: spotlightData.accountAddress }}
+							icon={<UserIcon className="size-[14px] text-accent" />}
+							badge={<ShuffleIcon className="size-[10px] text-secondary" />}
+							pulse={isExplorePulse}
+							visible={showExplore}
+						>
+							Account
+						</SpotlightPill>
+						<SpotlightPill
+							to="/address/$address"
+							params={{ address: spotlightData.contractAddress }}
+							search={{ tab: 'contract' }}
+							icon={<FileIcon className="size-[14px] text-accent" />}
+							badge={<ShuffleIcon className="size-[10px] text-secondary" />}
+							pulse={isExplorePulse}
+							visible={showExplore}
+							delay={50}
+						>
+							Contract
+						</SpotlightPill>
+						<SpotlightPill
+							to="/receipt/$hash"
+							params={{ hash: spotlightData.receiptHash }}
+							icon={<ReceiptIcon className="size-[14px] text-accent" />}
+							pulse={isExplorePulse}
+							visible={showExplore}
+							delay={100}
+						>
+							Receipt
+						</SpotlightPill>
+						{/** biome-ignore lint/a11y/noStaticElementInteractions: _ */}
+						<div
+							className="relative group-hover/pills:opacity-40 hover:opacity-100! transition-all duration-500 ease-out"
 						ref={dropdownRef}
 						onMouseEnter={handleMouseEnter}
 						onMouseLeave={handleMouseLeave}
@@ -232,7 +249,11 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 						{actionOpen && (
 							<div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
 								<div className="bg-base-plane rounded-full p-1 border border-base-border shadow-xl flex items-center gap-1 relative z-60">
-									{actionTypes.map((action) => (
+									{[
+										{ label: 'Payment', hash: spotlightData.paymentHash },
+										{ label: 'Swap', hash: spotlightData.swapHash },
+										{ label: 'Mint', hash: spotlightData.mintHash },
+									].map((action) => (
 										<button
 											key={action.label}
 											type="button"
@@ -251,7 +272,9 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 								</div>
 							</div>
 						)}
-					</div>
+						</div>
+					</>
+				)}
 				</div>
 				{/* Discover pills - animate in with "Discover" */}
 				<SpotlightPill
