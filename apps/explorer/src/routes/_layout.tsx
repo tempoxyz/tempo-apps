@@ -34,24 +34,29 @@ export function Layout(props: Layout.Props) {
 	const isReceipt = Boolean(matchRoute({ to: '/receipt/$hash', fuzzy: true }))
 	return (
 		<div className="flex min-h-dvh flex-col print:block print:min-h-0">
-			<div className="bg-[#fefbe9] dark:bg-[#1d180f] border-b border-[#f3d673] dark:border-[#5c3d05] px-4 py-3 text-center text-sm">
-				<div className="flex items-center justify-center gap-2">
-					<TriangleAlert className="size-4 text-[#ab6400] dark:text-[#ffca16] shrink-0" />
-					<span className="text-[#4f3422] dark:text-[#ffe7b3]">
-						<strong>Andantino testnet deprecation:</strong> We launched our new
-						<strong> Moderato</strong> testnet on Jan 8th, Andantino will be
-						deprecated on March 8th. See{' '}
-						<a
-							href="https://docs.tempo.xyz/quickstart/connection-details#direct-connection-details"
-							className="underline hover:no-underline"
-							target="_blank"
-							rel="noopener noreferrer"
-						>
-							Connection Details
-						</a>{' '}
-						for the new configuration.
-					</span>
-				</div>
+			<div className="bg-warning-background border-warning px-[32px] py-[8px] text-sm text-warning text-center">
+				<TriangleAlert className="size-4 inline mr-[4px] relative top-[-1px]" />
+				<span className="">
+					The new <strong className="font-medium">Moderato</strong> testnet
+					launched on{' '}
+					<time dateTime="2026-01-08" title="January 8th, 2026">
+						Jan 8th
+					</time>
+					, Andantino will be deprecated on{' '}
+					<time dateTime="2026-03-08" title="March 8th, 2026">
+						March 8th
+					</time>
+					. See new{' '}
+					<a
+						href="https://docs.tempo.xyz/quickstart/connection-details#direct-connection-details"
+						className="underline press-down-inline"
+						target="_blank"
+						rel="noopener noreferrer"
+					>
+						configuration details
+					</a>
+					.
+				</span>
 			</div>
 			<div className={`relative z-2 ${isReceipt ? 'print:hidden' : ''}`}>
 				<Header initialBlockNumber={blockNumber} />
