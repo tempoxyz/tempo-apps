@@ -3,6 +3,7 @@ import type { Address } from 'ox'
 import { Value } from 'ox'
 import { zeroAddress } from 'viem'
 import { Abis } from 'viem/tempo'
+import type { Config } from 'wagmi'
 import {
 	getBlock,
 	getBytecode,
@@ -37,7 +38,7 @@ import { getWagmiConfig } from '#wagmi.config.ts'
 
 export const OG_BASE_URL = import.meta.env?.VITE_OG_URL
 	? import.meta.env.VITE_OG_URL
-	: 'https://og.porto.workers.dev'
+	: 'https://og.tempo.xyz'
 
 function truncateOgText(text: string, maxLength: number): string {
 	if (text.length <= maxLength) return text
@@ -424,9 +425,10 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 				const missingMetadata = await Promise.all(
 					Array.from(tokensMissingSymbols).map(async (token) => {
 						try {
-							const metadata = await Actions.token.getMetadata(config, {
-								token,
-							})
+							const metadata = await Actions.token.getMetadata(
+								config as Config,
+								{ token },
+							)
 							return { token, metadata }
 						} catch {
 							return { token, metadata: null }

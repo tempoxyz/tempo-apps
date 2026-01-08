@@ -324,6 +324,9 @@ export namespace Pagination {
 			capped,
 			className,
 		} = props
+
+		const formattedCount = `${capped ? '> ' : ''}${Pagination.numFormat.format(totalItems)}`
+
 		return (
 			<div
 				className={cx(
@@ -341,9 +344,7 @@ export namespace Pagination {
 					</>
 				)}
 				<span className="text-primary tabular-nums">
-					{loading
-						? '…'
-						: `${capped ? '> ' : ''}${Pagination.numFormat.format(totalItems)}`}
+					{loading ? '…' : formattedCount}
 				</span>
 				<span className="text-tertiary">{itemsLabel}</span>
 			</div>
