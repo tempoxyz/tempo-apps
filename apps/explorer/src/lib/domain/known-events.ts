@@ -12,7 +12,7 @@ import type * as Tip20 from './tip20'
 
 const abi = Object.values(Abis).flat()
 const FEE_MANAGER = Addresses.feeManager
-const STABLECOIN_EXCHANGE = Addresses.stablecoinExchange
+const STABLECOIN_EXCHANGE = Addresses.stablecoinDex
 
 type FeeTransferEvent = {
 	amount: bigint
@@ -354,14 +354,20 @@ function createDetectors(
 			return null
 		},
 
-		stablecoinExchange(event: ParsedEvent) {
+		stablecoinDex(event: ParsedEvent) {
 			const { eventName, args } = event
 
-			if (eventName === 'OrderPlaced')
+			if (eventName === 'OrderPlaced') {
+				// OrderPlaced now includes flip orders (isFlipOrder field)
+				const isFlip = 'isFlipOrder' in args && args.isFlipOrder
+				const actionPrefix = isFlip ? 'Flip' : 'Limit'
 				return {
-					type: 'order placed',
+					type: isFlip ? 'flip order placed' : 'order placed',
 					parts: [
-						{ type: 'action', value: `Limit ${args.isBid ? 'Buy' : 'Sell'}` },
+						{
+							type: 'action',
+							value: `${actionPrefix} ${args.isBid ? 'Buy' : 'Sell'}`,
+						},
 						{
 							type: 'amount',
 							value: createAmount(args.amount, args.token),
@@ -370,20 +376,7 @@ function createDetectors(
 						{ type: 'tick', value: args.tick },
 					],
 				}
-
-			if (eventName === 'FlipOrderPlaced')
-				return {
-					type: 'flip order placed',
-					parts: [
-						{ type: 'action', value: `Flip ${args.isBid ? 'Buy' : 'Sell'}` },
-						{
-							type: 'amount',
-							value: createAmount(args.amount, args.token),
-						},
-						{ type: 'text', value: 'at tick' },
-						{ type: 'tick', value: args.tick },
-					],
-				}
+			}
 
 			if (eventName === 'OrderFilled')
 				return {
@@ -587,23 +580,6 @@ function createDetectors(
 					],
 				}
 
-			if (eventName === 'FeeSwap')
-				return {
-					type: 'fee swap',
-					parts: [
-						{ type: 'action', value: 'Fee Swap' },
-						{
-							type: 'amount',
-							value: createAmount(args.amountIn, args.userToken),
-						},
-						{ type: 'text', value: 'for' },
-						{
-							type: 'amount',
-							value: createAmount(args.amountOut, args.validatorToken),
-						},
-					],
-				}
-
 			return null
 		},
 
@@ -760,7 +736,7 @@ export function parseKnownEvent(
 	const detected =
 		detectors.tip20(event) ||
 		detectors.tip20Factory(event) ||
-		detectors.stablecoinExchange(event) ||
+		detectors.stablecoinDex(event) ||
 		detectors.tip403Registry(event) ||
 		detectors.feeManager(event) ||
 		detectors.nonce(event) ||
@@ -1123,7 +1099,7 @@ export function parseKnownEvents(
 			detectors.feePayer(event) ||
 			detectors.tip20(event) ||
 			detectors.tip20Factory(event) ||
-			detectors.stablecoinExchange(event) ||
+			detectors.stablecoinDex(event) ||
 			detectors.tip403Registry(event) ||
 			detectors.feeManager(event) ||
 			detectors.nonce(event) ||
