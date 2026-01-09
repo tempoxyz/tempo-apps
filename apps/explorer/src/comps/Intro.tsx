@@ -40,7 +40,9 @@ export function Intro({ onPhaseChange }: IntroProps) {
 
 		if (seen) {
 			onPhaseChange?.('start')
-			for (const child of containerRef.current.querySelectorAll('[data-word]')) {
+			for (const child of containerRef.current.querySelectorAll(
+				'[data-word]',
+			)) {
 				;(child as HTMLElement).style.opacity = '1'
 			}
 			waapi

@@ -6,7 +6,7 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { animate, stagger } from 'animejs'
-import { Address, Hex } from 'ox'
+import type { Address, Hex } from 'ox'
 import {
 	useCallback,
 	useEffect,
@@ -109,7 +109,7 @@ function Component() {
 		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
 			<div className="grid place-items-center relative grid-flow-row gap-5 select-none w-full pt-15 pb-10 z-1">
 				<Intro onPhaseChange={handlePhaseChange} />
-				<div className="w-full overflow-hidden my-3">
+				<div className="w-full my-3">
 					<div
 						ref={inputWrapperRef}
 						className="px-4 w-full flex justify-center relative z-20"
