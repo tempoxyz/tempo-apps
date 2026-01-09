@@ -11,7 +11,7 @@ import {
 } from '#comps/TimeFormat'
 import { TokenIcon } from '#comps/TokenIcon'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
-import { useMediaQuery, useIsMounted } from '#lib/hooks'
+import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens.server'
 
@@ -20,12 +20,12 @@ async function fetchTokensCount() {
 		headers: { 'Content-Type': 'application/json' },
 	})
 	if (!response.ok) throw new Error('Failed to fetch total token count')
-	const { data: safeData, success, error } = z.safeParse(
+	const { data, success, error } = z.safeParse(
 		z.object({ data: z.number(), error: z.nullable(z.string()) }),
 		await response.json(),
 	)
 	if (!success) throw new Error(z.prettifyError(error))
-	return safeData
+	return data
 }
 
 export const Route = createFileRoute('/_layout/tokens')({
@@ -73,8 +73,12 @@ function TokensPage() {
 
 	const tokens = data?.tokens ?? []
 	const exactCount = isMounted ? countQuery.data?.data : undefined
+	const isCapped = exactCount !== undefined && exactCount >= TOKEN_COUNT_MAX
 	const paginationTotal = exactCount ?? TOKEN_COUNT_MAX
-	const displayTotal = exactCount ?? '...'
+	const displayTotal =
+		exactCount === undefined
+			? '…'
+			: `${isCapped ? '> ' : ''}${isCapped ? TOKEN_COUNT_MAX : exactCount}`
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -145,7 +149,8 @@ function TokensPage() {
 									}))
 								}
 								totalItems={paginationTotal}
-								displayCount={exactCount}
+								displayCount={isCapped ? TOKEN_COUNT_MAX : exactCount}
+								displayCountCapped={isCapped}
 								page={page}
 								fetching={isPlaceholderData}
 								loading={isPending}
