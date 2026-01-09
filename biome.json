@@ -37,7 +37,7 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**", "!**/routeTree.gen.ts", "!**/tokens-index.json", "!**/_"]
+		"includes": ["**", "!**/routeTree.gen.ts", "!**/tokens-index-*.json", "!**/_"]
 	},
 	"formatter": {
 		"enabled": true,
