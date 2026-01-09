@@ -117,15 +117,15 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 		},
 	],
 	[
-		Addresses.stablecoinExchange,
+		Addresses.stablecoinDex,
 		{
 			name: 'Stablecoin Exchange',
 			code: '0xef',
 			description: 'Enshrined DEX for stablecoin swaps',
-			abi: Abis.stablecoinExchange,
+			abi: Abis.stablecoinDex,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/exchange',
-			address: Addresses.stablecoinExchange,
+			address: Addresses.stablecoinDex,
 		},
 	],
 	[
