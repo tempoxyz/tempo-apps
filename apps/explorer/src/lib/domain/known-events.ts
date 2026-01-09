@@ -357,11 +357,17 @@ function createDetectors(
 		stablecoinDex(event: ParsedEvent) {
 			const { eventName, args } = event
 
-			if (eventName === 'OrderPlaced')
+			if (eventName === 'OrderPlaced') {
+				// OrderPlaced now includes flip orders (isFlipOrder field)
+				const isFlip = 'isFlipOrder' in args && args.isFlipOrder
+				const actionPrefix = isFlip ? 'Flip' : 'Limit'
 				return {
-					type: 'order placed',
+					type: isFlip ? 'flip order placed' : 'order placed',
 					parts: [
-						{ type: 'action', value: `Limit ${args.isBid ? 'Buy' : 'Sell'}` },
+						{
+							type: 'action',
+							value: `${actionPrefix} ${args.isBid ? 'Buy' : 'Sell'}`,
+						},
 						{
 							type: 'amount',
 							value: createAmount(args.amount, args.token),
@@ -370,6 +376,7 @@ function createDetectors(
 						{ type: 'tick', value: args.tick },
 					],
 				}
+			}
 
 			if (eventName === 'OrderFilled')
 				return {
