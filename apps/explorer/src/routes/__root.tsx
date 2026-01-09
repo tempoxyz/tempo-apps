@@ -11,6 +11,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
+import { IntroSeenProvider } from '#comps/Intro'
 import { ProgressLine } from '#comps/ProgressLine'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
@@ -164,7 +165,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				/>
 				<WagmiProvider config={config} initialState={wagmiState}>
 					<QueryClientProvider client={queryClient}>
-						{children}
+						<IntroSeenProvider>{children}</IntroSeenProvider>
 						{import.meta.env.DEV && (
 							<TanStackDevtools
 								config={{
