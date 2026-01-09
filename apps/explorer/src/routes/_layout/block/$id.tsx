@@ -263,7 +263,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 							txType.type === 'system' ? (
 								<span
 									key="from"
-									className="text-tertiary whitespace-nowrap w-full flex justify-end"
+									className="text-tertiary w-full truncate text-right"
 								>
 									{txType.label}
 								</span>
@@ -271,7 +271,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 								<AddressLink
 									key="from"
 									address={transaction.from}
-									chars={4}
+									chars={1}
 									align="end"
 								/>
 							),
