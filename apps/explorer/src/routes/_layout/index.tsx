@@ -176,7 +176,9 @@ function SpotlightLinks() {
 				;(child as HTMLElement).style.transform = ''
 			}
 		})
-		return () => anim.cancel()
+		return () => {
+			anim.cancel()
+		}
 	}, [])
 
 	useEffect(() => {
