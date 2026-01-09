@@ -41,7 +41,8 @@ export function Layout(props: Layout.Props) {
 				<TriangleAlert className="size-4 inline mr-[4px] relative top-[-1px]" />
 				<span className="">
 					<strong>Testnet migration:</strong> Tempo launched a new testnet
-					(Moderato) on January 8th. The old testnet (Andantino) will be deprecated on{' '}
+					(Moderato) on January 8th. The old testnet (Andantino) will be
+					deprecated on{' '}
 					<time dateTime="2026-03-08" title="March 8th, 2026">
 						March 8th
 					</time>

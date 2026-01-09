@@ -99,10 +99,7 @@ export function Pagination(props: Pagination.Props) {
 						to="."
 						type="button"
 						resetScroll={false}
-						search={(previous) => ({
-							...previous,
-							page: totalPages,
-						})}
+						search={(previous) => ({ ...previous, page: totalPages })}
 						disabled={page >= totalPages || isPending}
 						className={cx(
 							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
@@ -242,7 +239,7 @@ export namespace Pagination {
 				<Link
 					to="."
 					resetScroll={false}
-					search={(prev) => ({ ...prev, page: 1, live: true })}
+					search={(prev) => ({ ...prev, page: 1 })}
 					disabled={page <= 1}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
@@ -254,10 +251,10 @@ export namespace Pagination {
 				<Link
 					to="."
 					resetScroll={false}
-					search={(prev) => {
-						const newPage = (prev?.page ?? 1) - 1
-						return { ...prev, page: newPage, live: newPage === 1 }
-					}}
+					search={(prev) => ({
+						...prev,
+						page: (prev?.page ?? 1) - 1,
+					})}
 					disabled={page <= 1}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
@@ -283,7 +280,6 @@ export namespace Pagination {
 					search={(prev) => ({
 						...prev,
 						page: (prev?.page ?? 1) + 1,
-						live: false,
 					})}
 					disabled={page >= totalPages}
 					className={cx(
@@ -296,7 +292,7 @@ export namespace Pagination {
 				<Link
 					to="."
 					resetScroll={false}
-					search={(prev) => ({ ...prev, page: totalPages, live: false })}
+					search={(prev) => ({ ...prev, page: totalPages })}
 					disabled={page >= totalPages || disableLastPage}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',

@@ -176,7 +176,9 @@ export function DataGrid(props: DataGrid.Props) {
 			{/* Hide pagination when no items and not loading */}
 			{(totalItems > 0 || loading) && (
 				<div className="mt-auto">
-					{pagination === 'simple' ? (
+					{pagination !== 'default' && pagination !== 'simple' ? (
+						pagination
+					) : pagination === 'simple' ? (
 						<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
 							<Pagination.Simple
 								page={page}
@@ -252,7 +254,7 @@ export namespace DataGrid {
 		disableLastPage?: boolean
 		itemsLabel?: string
 		itemsPerPage?: number
-		pagination?: 'default' | 'simple'
+		pagination?: 'default' | 'simple' | React.ReactNode
 		emptyState?: React.ReactNode
 		flexible?: boolean
 	}
