@@ -21,8 +21,11 @@ import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#cva.config.ts'
-import { type KnownEvent, preferredEventsFilter } from '#lib/domain/known-events'
-import { DateFormatter, PriceFormatter } from '#lib/formatting.ts'
+import {
+	type KnownEvent,
+	preferredEventsFilter,
+} from '#lib/domain/known-events'
+import { PriceFormatter } from '#lib/formatting.ts'
 import { useMediaQuery } from '#lib/hooks'
 import {
 	type BlockIdentifier,
@@ -118,7 +121,8 @@ function RouteComponent() {
 		...blockKnownEventsQueryOptions(block.number ?? 0n, transactions, page),
 		enabled: !!block.number && transactions.length > 0,
 	})
-	const { data: knownEventsByHash, isLoading: knownEventsLoading } = knownEventsQuery
+	const { data: knownEventsByHash, isLoading: knownEventsLoading } =
+		knownEventsQuery
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -257,15 +261,18 @@ function TransactionsSection(props: TransactionsSectionProps) {
 								loading={knownEventsLoading}
 							/>,
 							txType.type === 'system' ? (
-								<span key="from" className="text-tertiary whitespace-nowrap">
+								<span
+									key="from"
+									className="text-tertiary w-full truncate text-right"
+								>
 									{txType.label}
 								</span>
 							) : (
 								<AddressLink
 									key="from"
 									address={transaction.from}
-									chars={4}
-									className="text-accent press-down"
+									chars={1}
+									align="end"
 								/>
 							),
 							transaction.hash ? (
@@ -344,24 +351,6 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 				subtitle: undefined,
 			}
 
-		if (decodedCall.functionName === 'finalizeStreams') {
-			const ts = decodedCall.args?.[0]
-			const asBigInt = typeof ts === 'bigint' ? ts : undefined
-			return {
-				title: 'Finalize reward streams',
-				subtitle:
-					asBigInt !== undefined
-						? `at ${DateFormatter.format(asBigInt)} (unix ${asBigInt})`
-						: undefined,
-			}
-		}
-
-		if (decodedCall.functionName === 'executeBlock')
-			return {
-				title: 'Execute orderbook block',
-				subtitle: 'Settle stablecoin exchange batch',
-			}
-
 		return {
 			title: decodedCall.functionName
 				? `${decodedCall.functionName}()`
@@ -373,7 +362,9 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 
 	if (loading && !knownEvents) {
 		return (
-			<span className="text-tertiary" title="Loading…">…</span>
+			<span className="text-tertiary" title="Loading…">
+				…
+			</span>
 		)
 	}
 

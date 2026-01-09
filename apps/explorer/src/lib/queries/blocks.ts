@@ -2,7 +2,7 @@ import { keepPreviousData, queryOptions } from '@tanstack/react-query'
 import type { Hex } from 'ox'
 import type { Block, Log, TransactionReceipt } from 'viem'
 import { getBlock } from 'wagmi/actions'
-import { Actions } from 'wagmi/tempo'
+import type { Actions } from 'wagmi/tempo'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { parseKnownEvents } from '#lib/domain/known-events'
 import { isTip20Address } from '#lib/domain/tip20.ts'
@@ -110,12 +110,13 @@ export function blockKnownEventsQueryOptions(
 
 			const tip20Array = Array.from(allTip20Addresses) as Hex.Hex[]
 			const metadataResults = await Promise.all(
-				tip20Array.map((token) =>
-					client.token.getMetadata({token})
-				),
+				tip20Array.map((token) => client.token.getMetadata({ token })),
 			)
 
-			const tokenMetadataMap = new Map<string, Actions.token.getMetadata.ReturnValue>()
+			const tokenMetadataMap = new Map<
+				string,
+				Actions.token.getMetadata.ReturnValue
+			>()
 			for (const [index, address] of tip20Array.entries()) {
 				const metadata = metadataResults[index]
 				if (metadata) tokenMetadataMap.set(address.toLowerCase(), metadata)

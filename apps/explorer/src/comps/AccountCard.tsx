@@ -27,34 +27,29 @@ export function AccountCard(props: AccountCard.Props) {
 	return (
 		<InfoCard
 			title={
-				<div className="flex items-center justify-between px-[18px] h-[36px]">
-					<h1 className="text-[13px] uppercase text-tertiary select-none">
-						Address
+				<div className="flex items-center justify-between px-[18px] h-[36px] font-sans">
+					<h1 className="text-[13px] text-tertiary select-none">
+						{accountType === 'contract' ? 'Contract' : 'Address'}
 					</h1>
-					<div
-						className="text-[11px] bg-base-alt rounded text-secondary lowercase select-none py-0.5 px-1.5 -mr-2.5 flex items-center"
-						title={
-							tag
-								? tag.id.startsWith('system:')
-									? `System: ${tag.label}`
-									: tag.id.startsWith('genesis-token:')
-										? `Genesis Token: ${tag.label}`
-										: tag.label
-								: accountType === 'empty'
-									? 'Uninitialized account'
-									: undefined
-						}
-					>
-						<span>
-							{isSystem
-								? 'system'
-								: accountType === 'contract'
-									? 'contract'
-									: accountType === 'account'
-										? 'account'
-										: 'empty'}
-						</span>
-					</div>
+					{/* Only show chip when it provides additional info (system, empty) */}
+					{(isSystem || accountType === 'empty') && (
+						<div
+							className="text-[11px] bg-base-alt rounded text-secondary lowercase select-none py-0.5 px-1.5 -mr-2.5 flex items-center"
+							title={
+								tag
+									? tag.id.startsWith('system:')
+										? `System: ${tag.label}`
+										: tag.id.startsWith('genesis-token:')
+											? `Genesis Token: ${tag.label}`
+											: tag.label
+									: accountType === 'empty'
+										? 'Uninitialized account'
+										: undefined
+							}
+						>
+							<span>{isSystem ? 'system' : 'empty'}</span>
+						</div>
+					)}
 				</div>
 			}
 			className={className}
@@ -77,7 +72,7 @@ export function AccountCard(props: AccountCard.Props) {
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[22ch]">
+					<p className="text-[14px] font-normal leading-[17px] text-primary break-all max-w-[22ch] font-mono">
 						{address}
 					</p>
 				</button>,

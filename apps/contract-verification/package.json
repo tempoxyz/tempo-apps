@@ -13,8 +13,7 @@
 		"build": "vite build",
 		"check": "biome check . --write --unsafe",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
-		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
-		"postinstall": "pnpm gen:types",
+		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
 		"tail": "wrangler tail",
 		"db:studio": "drizzle-kit studio --config='drizzle.config.ts'",
 		"db:push": "CLOUDFLARE_D1_ENVIRONMENT='remote' drizzle-kit push --config='drizzle.config.ts'"

@@ -1,6 +1,13 @@
-import { tempoDevnet, tempoTestnet } from 'viem/chains'
+import { tempoDevnet, tempoModerato, tempoAndantino } from 'viem/chains'
 
-export const DEVNET_CHAIN_ID = tempoDevnet.id
-export const TESTNET_CHAIN_ID = tempoTestnet.id
+export const CHAIN_IDS = [
+	tempoDevnet.id,
+	tempoAndantino.id,
+	tempoModerato.id,
+] as const
 
-export { tempoTestnet, tempoDevnet }
+export const chains = {
+	[tempoDevnet.id]: tempoDevnet,
+	[tempoModerato.id]: tempoModerato,
+	[tempoAndantino.id]: tempoAndantino,
+}

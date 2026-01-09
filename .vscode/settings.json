@@ -16,7 +16,9 @@
 		"**/routeTree.gen.ts": true
 	},
 	"search.exclude": {
-		"**/routeTree.gen.ts": true
+    "**/_/**": true,
+    "**/dist/**": true,
+    "**/routeTree.gen.ts": true
 	},
 	"files.readonlyInclude": {
 		"**/routeTree.gen.ts": true
@@ -62,6 +64,7 @@
 		"**/*.wrangler": true,
 		"**/.pnpm-store/**": true
 	},
+
 	"markdownlint.config": {
 		"no-inline-html": false
 	},

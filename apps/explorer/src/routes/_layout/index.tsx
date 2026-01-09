@@ -30,6 +30,8 @@ export const Route = createFileRoute('/_layout/')({
 	component: Component,
 })
 
+const isTestnet = import.meta.env.VITE_TEMPO_ENV === 'testnet'
+
 function Component() {
 	const router = useRouter()
 	const navigate = useNavigate()
@@ -68,7 +70,7 @@ function Component() {
 		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
 			<div className="grid place-items-center relative grid-flow-row gap-5 select-none w-full pt-15 pb-10 z-1">
 				<Intro onPhaseChange={handlePhaseChange} />
-				<div className="w-full overflow-hidden">
+				<div className="w-full overflow-hidden my-3">
 					<div
 						ref={inputWrapperRef}
 						className="px-4 w-full flex justify-center relative z-20"
@@ -323,6 +325,7 @@ function SpotlightLinks() {
 					Blocks
 				</SpotlightPill>
 				<SpotlightPill
+					className={cx({ hidden: !isTestnet })}
 					to="/tokens"
 					icon={<CoinsIcon className="size-[14px] text-accent" />}
 				>
@@ -334,6 +337,7 @@ function SpotlightLinks() {
 }
 
 function SpotlightPill(props: {
+	className?: string
 	to: string
 	params?: Record<string, string>
 	search?: Record<string, string>
@@ -341,7 +345,7 @@ function SpotlightPill(props: {
 	badge?: React.ReactNode
 	children: React.ReactNode
 }) {
-	const { to, params, search, icon, badge, children } = props
+	const { className, to, params, search, icon, badge, children } = props
 	return (
 		<Link
 			to={to}
@@ -350,6 +354,7 @@ function SpotlightPill(props: {
 			className={cx(
 				'relative flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus-visible:border-accent py-1 rounded-full! press-down group-hover/pills:opacity-40 hover:opacity-100 bg-surface focus-visible:outline-none border-base-border transition-colors duration-300 ease-out focus-visible:duration-0',
 				badge ? 'pl-2.5 pr-4' : 'px-2.5',
+				className,
 			)}
 			style={{ opacity: 0, pointerEvents: 'none' }}
 		>
