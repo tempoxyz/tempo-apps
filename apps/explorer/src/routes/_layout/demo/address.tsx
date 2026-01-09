@@ -330,47 +330,7 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinExchange,
-						eventName: 'OrderPlaced',
-						args: {
-							orderId: 123n,
-							maker: accountAddress,
-							token: baseTokenAddress,
-						},
-					}) as [Hex.Hex, ...Hex.Hex[]],
-					data: encodeAbiParameters(
-						[{ type: 'uint128' }, { type: 'bool' }, { type: 'int16' }],
-						[1000000n, true, 100],
-					),
-				},
-				hash,
-			),
-		]
-		const receipt = mockReceipt(logs, accountAddress, hash)
-		const transaction = mockTransaction(
-			hash,
-			accountAddress,
-			exchangeAddress,
-			blockNumber - 70n,
-		)
-		transactions.push({
-			hash,
-			transaction,
-			receipt,
-			block: { timestamp: baseTimestamp - 28800n },
-			knownEvents: parseKnownEvents(receipt, { transaction, getTokenMetadata }),
-		})
-	}
-
-	// Tx 9: Order Filled
-	{
-		const hash = `0x${'3'.repeat(63)}0` as const
-		const logs = [
-			mockLog(
-				{
-					address: exchangeAddress,
-					topics: encodeEventTopics({
-						abi: Abis.stablecoinExchange,
+						abi: Abis.stablecoinDex,
 						eventName: 'OrderFilled',
 						args: {
 							orderId: 123n,
@@ -786,7 +746,7 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinExchange,
+						abi: Abis.stablecoinDex,
 						eventName: 'OrderPlaced',
 						args: {
 							orderId: 456n,
@@ -805,7 +765,7 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinExchange,
+						abi: Abis.stablecoinDex,
 						eventName: 'OrderFilled',
 						args: {
 							orderId: 456n,
@@ -846,24 +806,6 @@ function createMockTransactions(): MockTransactionData[] {
 						},
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters([{ type: 'uint256' }], [2525000n]),
-				},
-				hash,
-			),
-			mockLog(
-				{
-					address: feeAmmAddress,
-					topics: encodeEventTopics({
-						abi: Abis.feeAmm,
-						eventName: 'FeeSwap',
-						args: {
-							userToken: userTokenAddress,
-							validatorToken: validatorTokenAddress,
-						},
-					}) as [Hex.Hex, ...Hex.Hex[]],
-					data: encodeAbiParameters(
-						[{ type: 'uint256' }, { type: 'uint256' }],
-						[25000n, 24500n],
-					),
 				},
 				hash,
 			),
