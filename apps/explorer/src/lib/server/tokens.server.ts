@@ -3,6 +3,7 @@ import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import * as ABIS from '#lib/abis'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
@@ -34,9 +35,6 @@ export type TokensApiResponse = {
 	limit: number
 }
 
-const EVENT_SIGNATURE =
-	'event TokenCreated(address indexed token, uint256 indexed tokenId, string name, string symbol, string currency, address quoteToken, address admin)'
-
 export const fetchTokens = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokensInputSchema.parse(input))
 	.handler(async ({ data }): Promise<TokensApiResponse> => {
@@ -50,8 +48,10 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 		const config = getWagmiConfig()
 		const chainId = getChainId(config)
 
+		const eventSignature = ABIS.getTokenCreatedEvent(chainId)
+
 		const [tokensResult, countResult] = await Promise.all([
-			QB.withSignatures([EVENT_SIGNATURE])
+			QB.withSignatures([eventSignature])
 				.selectFrom('tokencreated')
 				.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
 				.where('chain', '=', chainId)
@@ -63,7 +63,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				? // count is an expensive, columnar-based query. we will count up
 					// to the first countLimit rows (default: TOKEN_COUNT_MAX)
 					QB.selectFrom(
-						QB.withSignatures([EVENT_SIGNATURE])
+						QB.withSignatures([eventSignature])
 							.selectFrom('tokencreated')
 							.select((eb) => eb.lit(1).as('x'))
 							.where('chain', '=', chainId)

@@ -1,11 +1,11 @@
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
+import * as ABIS from '../src/lib/abis'
 
 const indexSupplyEndpoint = 'https://api.tempo.xyz/indexer/query'
 const chainId = 42429
 
-const eventSignature =
-	'TokenCreated(address indexed token, uint256 indexed tokenId, string name, string symbol, string currency, address quoteToken, address admin)'
+const eventSignature = ABIS.getTokenCreatedEvent(chainId).replace(/^event /, '')
 
 const query =
 	`SELECT token, symbol, name FROM tokencreated ` +
