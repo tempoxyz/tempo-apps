@@ -232,21 +232,7 @@ function loader() {
 					[100000000n, 95000000n],
 				),
 			}),
-			mockLog({
-				address: feeAmmAddress,
-				topics: encodeEventTopics({
-					abi: Abis.feeAmm,
-					eventName: 'FeeSwap',
-					args: {
-						userToken: userTokenAddress,
-						validatorToken: validatorTokenAddress,
-					},
-				}) as [Hex.Hex, ...Hex.Hex[]],
-				data: encodeAbiParameters(
-					[{ type: 'uint256' }, { type: 'uint256' }],
-					[50000000n, 48500000n],
-				),
-			}),
+
 			mockLog({
 				address: tokenAddress,
 				topics: encodeEventTopics({
@@ -414,7 +400,7 @@ function loader() {
 			mockLog({
 				address: exchangeAddress,
 				topics: encodeEventTopics({
-					abi: Abis.stablecoinExchange,
+					abi: Abis.stablecoinDex,
 					eventName: 'PairCreated',
 					args: {
 						key: Hex.padLeft('0xabc', 32),
@@ -426,7 +412,7 @@ function loader() {
 			mockLog({
 				address: exchangeAddress,
 				topics: encodeEventTopics({
-					abi: Abis.stablecoinExchange,
+					abi: Abis.stablecoinDex,
 					eventName: 'OrderPlaced',
 					args: {
 						orderId: 123n,
@@ -439,31 +425,11 @@ function loader() {
 					[1000000n, true, 100],
 				),
 			}),
+
 			mockLog({
 				address: exchangeAddress,
 				topics: encodeEventTopics({
-					abi: Abis.stablecoinExchange,
-					eventName: 'FlipOrderPlaced',
-					args: {
-						orderId: 124n,
-						maker: makerAddress,
-						token: baseTokenAddress,
-					},
-				}) as [Hex.Hex, ...Hex.Hex[]],
-				data: encodeAbiParameters(
-					[
-						{ type: 'uint128' },
-						{ type: 'bool' },
-						{ type: 'int16' },
-						{ type: 'int16' },
-					],
-					[2000000n, false, 105, 95],
-				),
-			}),
-			mockLog({
-				address: exchangeAddress,
-				topics: encodeEventTopics({
-					abi: Abis.stablecoinExchange,
+					abi: Abis.stablecoinDex,
 					eventName: 'OrderFilled',
 					args: {
 						orderId: 123n,
@@ -478,7 +444,7 @@ function loader() {
 			mockLog({
 				address: exchangeAddress,
 				topics: encodeEventTopics({
-					abi: Abis.stablecoinExchange,
+					abi: Abis.stablecoinDex,
 					eventName: 'OrderCancelled',
 					args: {
 						orderId: 124n,

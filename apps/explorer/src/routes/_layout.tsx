@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
 import * as z from 'zod/mini'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
+import { useIntroSeen } from '#comps/Intro'
 import { Sphere } from '#comps/Sphere'
 import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
 import TriangleAlert from '~icons/lucide/triangle-alert'
@@ -31,7 +32,9 @@ function RouteComponent() {
 export function Layout(props: Layout.Props) {
 	const { children, blockNumber } = props
 	const matchRoute = useMatchRoute()
+	const introSeen = useIntroSeen()
 	const isReceipt = Boolean(matchRoute({ to: '/receipt/$hash', fuzzy: true }))
+	const isHome = Boolean(matchRoute({ to: '/' }))
 	return (
 		<div className="flex min-h-dvh flex-col print:block print:min-h-0">
 			<div className="bg-warning-background border-warning px-[32px] py-[8px] text-sm text-warning text-center">
@@ -60,10 +63,10 @@ export function Layout(props: Layout.Props) {
 			<main className="flex flex-1 size-full flex-col items-center relative z-1 print:block print:flex-none">
 				{children}
 			</main>
-			<div className="w-full mt-40 relative z-1 print:hidden">
+			<div className="w-full mt-6 relative z-1 print:hidden">
 				<Footer />
 			</div>
-			<Sphere animate={Boolean(matchRoute({ to: '/' }))} />
+			<Sphere animate={isHome && !introSeen} />
 		</div>
 	)
 }

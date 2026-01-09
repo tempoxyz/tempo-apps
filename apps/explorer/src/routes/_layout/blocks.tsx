@@ -119,30 +119,33 @@ function RouteComponent() {
 	const totalPages = Math.ceil(totalBlocks / BLOCKS_PER_PAGE)
 
 	return (
-		<div className="flex flex-col gap-6 px-6 py-8 max-w-300 mx-auto w-full">
+		<div className="flex flex-col gap-6 px-6 py-8 max-w-300 mx-auto w-full mt-12">
 			<section
 				className={cx(
-					'flex flex-col font-mono w-full overflow-hidden',
+					'flex flex-col w-full overflow-hidden',
 					'rounded-[10px] border border-card-border bg-card',
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 				)}
 			>
 				<div className="overflow-x-auto">
 					{/* Header */}
-					<div className="grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 border-b border-card-border bg-card-header text-[12px] text-tertiary uppercase min-w-125">
+					<div className="grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 border-b border-card-border bg-card-header text-[13px] text-tertiary font-sans font-normal min-w-125">
 						<div>Block</div>
 						<div>Hash</div>
 						<div className="text-right min-w-30">
 							<button
 								type="button"
 								onClick={cycleTimeFormat}
-								className="text-secondary hover:text-accent cursor-pointer transition-colors"
+								className="text-tertiary cursor-pointer inline-flex items-center justify-end gap-2 text-right w-full group"
 								title={`Showing ${formatLabel} time - click to change`}
 							>
-								Time
+								<span>Time</span>
+								<span className="bg-base-alt text-primary px-2 py-[3px] rounded-[8px] text-[11px] font-sans capitalize transition-colors group-hover:bg-base-alt/80">
+									{formatLabel}
+								</span>
 							</button>
 						</div>
-						<div className="text-right">Txns</div>
+						<div className="text-right">Count</div>
 					</div>
 
 					{/* Blocks list */}
@@ -179,11 +182,10 @@ function RouteComponent() {
 							resetScroll={false}
 							search={(prev) => ({ ...prev, live: !live })}
 							className={cx(
-								'flex items-center gap-1.5 px-2.5 py-1.25 rounded-md text-[12px] font-medium transition-colors',
-								{
-									'bg-positive/10 text-positive hover:bg-positive/20': live,
-									'bg-base-alt text-tertiary hover:bg-base-alt/80': !live,
-								},
+								'flex items-center gap-1.5 px-2.5 py-1.25 rounded-md text-[12px] font-medium font-sans transition-colors text-primary',
+								live
+									? 'bg-positive/10 hover:bg-positive/20'
+									: 'bg-base-alt hover:bg-base-alt/80',
 							)}
 							title={live ? 'Pause live updates' : 'Resume live updates'}
 						>
@@ -228,7 +230,7 @@ function BlockRow({
 	return (
 		<div
 			className={cx(
-				'grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 border-b border-dashed border-card-border last:border-b-0',
+				'grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 border-b border-dashed border-card-border last:border-b-0 font-mono',
 				isNew && 'bg-positive/5',
 			)}
 		>
@@ -236,29 +238,36 @@ function BlockRow({
 				<Link
 					to="/block/$id"
 					params={{ id: blockNumber }}
-					className="text-accent press-down font-medium"
+					className="text-accent press-down font-medium font-mono"
 				>
-					#{blockNumber}
+					{blockNumber}
 				</Link>
 			</div>
 			<div className="min-w-0">
 				<Link
 					to="/block/$id"
 					params={{ id: blockHash }}
-					className="text-secondary hover:text-accent transition-colors"
+					className="text-secondary hover:text-accent transition-colors font-mono"
 					title={blockHash}
 				>
 					<Midcut value={blockHash} prefix="0x" />
 				</Link>
 			</div>
-			<div className="text-right text-secondary tabular-nums min-w-30">
+			<div className="text-right text-secondary tabular-nums min-w-30 font-mono">
 				{isLatest ? (
 					'now'
 				) : (
-					<FormattedTimestamp timestamp={block.timestamp} format={timeFormat} />
+					<span className="font-mono">
+						<FormattedTimestamp
+							timestamp={block.timestamp}
+							format={timeFormat}
+						/>
+					</span>
 				)}
 			</div>
-			<div className="text-right text-secondary tabular-nums">{txCount}</div>
+			<div className="text-right text-secondary tabular-nums font-mono">
+				{txCount}
+			</div>
 		</div>
 	)
 }
