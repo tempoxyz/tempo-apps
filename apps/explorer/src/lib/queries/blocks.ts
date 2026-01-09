@@ -84,10 +84,10 @@ export function blockKnownEventsQueryOptions(
 		queryFn: async () => {
 			const client = getBatchedClient()
 
-			const txsWithHash = transactions.filter((tx) => tx.hash)
+			const txsWithHash = transactions.filter(({ hash }) => hash)
 			const receipts = await Promise.all(
-				txsWithHash.map((tx) =>
-					client.getTransactionReceipt({ hash: tx.hash! }).catch(() => null),
+				txsWithHash.map(({ hash }) =>
+					client.getTransactionReceipt({ hash }).catch(() => null),
 				),
 			)
 
