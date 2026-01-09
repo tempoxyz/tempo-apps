@@ -58,7 +58,7 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 			},
 			{
 				name: 'og:image',
-				content: '/og-explorer.png',
+				content: 'https://explore.tempo.xyz/og-explorer.png',
 			},
 			{
 				name: 'og:image:type',
@@ -71,6 +71,14 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 			{
 				name: 'og:image:height',
 				content: '630',
+			},
+			{
+				name: 'twitter:card',
+				content: 'summary_large_image',
+			},
+			{
+				name: 'twitter:image',
+				content: 'https://explore.tempo.xyz/og-explorer.png',
 			},
 		],
 		links: [
