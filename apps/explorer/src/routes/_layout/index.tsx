@@ -50,6 +50,18 @@ const SPOTLIGHT_DATA: Record<
 		mintHash:
 			'0xe5c909ef42674965a8b805118f08b58f215a98661838ae187737841531097b70',
 	},
+	42431: {
+		accountAddress: '0xa726a1CD723409074DF9108A2187cfA19899aCF8',
+		contractAddress: '0x0cb37634841784a6ef44aeba9bd6cf82c7143f86',
+		receiptHash:
+			'0x429eb0d8a4565138aec97fe11c8f2f4e56f26725e3a428881bbeba6c4e8ecdc9',
+		paymentHash:
+			'0x429eb0d8a4565138aec97fe11c8f2f4e56f26725e3a428881bbeba6c4e8ecdc9',
+		swapHash:
+			'0xc61b40cfc6714a893e3d758f2db3e19cd54f175369e17c48591654b294332cf9',
+		mintHash:
+			'0x58fcdd78477f7ee402320984e990e7a1623d80b768afb03f9b27fd2eac395032',
+	},
 }
 
 const chainId = Number(import.meta.env.VITE_TEMPO_CHAIN_ID)
