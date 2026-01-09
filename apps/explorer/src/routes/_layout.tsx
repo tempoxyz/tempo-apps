@@ -37,7 +37,7 @@ export function Layout(props: Layout.Props) {
 	const isHome = Boolean(matchRoute({ to: '/' }))
 	return (
 		<div className="flex min-h-dvh flex-col print:block print:min-h-0">
-			<div className="bg-gray-100 border-gray-300 px-[32px] py-[8px] text-sm text-black text-center">
+			<div className="bg-base-alt px-[32px] py-[8px] text-sm text-primary text-center">
 				<TriangleAlert className="size-4 inline mr-[4px] relative top-[-1px]" />
 				<span className="">
 					<strong>Testnet migration:</strong> Tempo launched a new testnet
