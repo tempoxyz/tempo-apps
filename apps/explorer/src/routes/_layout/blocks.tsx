@@ -4,12 +4,20 @@ import * as React from 'react'
 import type { Block } from 'viem'
 import { useBlock, useWatchBlockNumber } from 'wagmi'
 import * as z from 'zod/mini'
+import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
-import { Pagination } from '#comps/Pagination'
-import { FormattedTimestamp, useTimeFormat } from '#comps/TimeFormat'
-import { cx } from '#cva.config.ts'
-import { useIsMounted } from '#lib/hooks'
+import { Sections } from '#comps/Sections'
+import {
+	FormattedTimestamp,
+	TimeColumnHeader,
+	useTimeFormat,
+} from '#comps/TimeFormat'
+import { cx } from '#cva.config'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
+import ChevronFirst from '~icons/lucide/chevron-first'
+import ChevronLast from '~icons/lucide/chevron-last'
+import ChevronLeft from '~icons/lucide/chevron-left'
+import ChevronRight from '~icons/lucide/chevron-right'
 import Play from '~icons/lucide/play'
 
 // Track which block numbers are "new" for animation purposes
@@ -18,256 +26,319 @@ const recentlyAddedBlocks = new Set<string>()
 export const Route = createFileRoute('/_layout/blocks')({
 	component: RouteComponent,
 	validateSearch: z.object({
-		page: z.optional(z.coerce.number()),
-		live: z.prefault(z.coerce.boolean(), true),
+		from: z.optional(z.coerce.number()),
+		live: z.optional(z.coerce.boolean()),
 	}),
-	loaderDeps: ({ search: { page, live } }) => ({
-		page: page ?? 1,
-		live: live ?? (page ?? 1) === 1,
+	loaderDeps: ({ search: { from, live } }) => ({
+		from,
+		live: live ?? from == null,
 	}),
 	loader: async ({ deps, context }) =>
-		context.queryClient.ensureQueryData(blocksQueryOptions(deps.page)),
+		context.queryClient.ensureQueryData(blocksQueryOptions(deps.from)),
 })
 
 function RouteComponent() {
 	const search = Route.useSearch()
-	const page = search.page ?? 1
-	const live = search.live ?? page === 1
+	const from = search.from
+	const isAtLatest = from == null
+	const live = search.live ?? isAtLatest
 	const loaderData = Route.useLoaderData()
 
 	const { data: queryData } = useQuery({
-		...blocksQueryOptions(page),
+		...blocksQueryOptions(from),
 		initialData: loaderData,
 	})
 
 	const [latestBlockNumber, setLatestBlockNumber] = React.useState<
 		bigint | undefined
 	>()
+	const currentLatest = latestBlockNumber ?? queryData.latestBlockNumber
+
 	// Initialize with loader data to prevent layout shift
 	const [liveBlocks, setLiveBlocks] = React.useState<Block[]>(() =>
 		queryData.blocks.slice(0, BLOCKS_PER_PAGE),
 	)
-	const isMounted = useIsMounted()
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
+	const [paused, setPaused] = React.useState(false)
 
-	// Use loader data for initial render, then live updates
-	const currentLatest = latestBlockNumber ?? queryData.latestBlockNumber
-
-	// Watch for new blocks (only on page 1 when live)
+	// Watch for new blocks
 	useWatchBlockNumber({
-		enabled: isMounted && live && page === 1,
 		onBlockNumber: (blockNumber) => {
-			// Only update if this is actually a new block
 			if (latestBlockNumber === undefined || blockNumber > latestBlockNumber) {
 				setLatestBlockNumber(blockNumber)
-				// Only mark as recently added for animation on page 1
-				if (page === 1) {
-					recentlyAddedBlocks.add(blockNumber.toString())
-					// Clear the animation flag after animation completes
-					// TODO: is cleanup necessary?
-					setTimeout(() => {
-						recentlyAddedBlocks.delete(blockNumber.toString())
-					}, 400)
-				}
 			}
 		},
+		poll: true,
 	})
 
-	// Fetch the latest block when block number changes (for live updates on page 1)
+	// Fetch the latest block when block number changes (for live updates)
 	const { data: latestBlock } = useBlock({
 		blockNumber: latestBlockNumber,
 		query: {
-			enabled: live && page === 1 && latestBlockNumber !== undefined,
+			enabled: live && isAtLatest && latestBlockNumber !== undefined,
 			staleTime: Number.POSITIVE_INFINITY, // Block data never changes
 		},
 	})
 
 	// Add new blocks as they arrive
 	React.useEffect(() => {
-		if (!live || page !== 1 || !latestBlock) return
+		if (!live || !isAtLatest || !latestBlock || paused) return
 
 		setLiveBlocks((prev) => {
-			// Don't add if already exists
 			if (prev.some((b) => b.number === latestBlock.number)) return prev
-			// Prepend new block and keep only BLOCKS_PER_PAGE
+
+			// Mark as new for animation
+			const blockNum = latestBlock.number?.toString()
+			if (blockNum) {
+				recentlyAddedBlocks.add(blockNum)
+				setTimeout(() => recentlyAddedBlocks.delete(blockNum), 400)
+			}
+
 			return [latestBlock, ...prev].slice(0, BLOCKS_PER_PAGE)
 		})
-	}, [latestBlock, live, page])
+	}, [latestBlock, live, isAtLatest, paused])
 
-	// Re-initialize when navigating back to page 1 with live mode
+	// Re-initialize when navigating back to latest with live mode
 	React.useEffect(() => {
-		if (page === 1 && live && queryData.blocks) {
+		if (isAtLatest && live && queryData.blocks) {
 			setLiveBlocks((prev) => {
-				// Only reinitialize if we have no blocks or stale data
 				if (prev.length === 0) {
 					return queryData.blocks.slice(0, BLOCKS_PER_PAGE)
 				}
 				return prev
 			})
 		}
-	}, [page, live, queryData.blocks])
+	}, [isAtLatest, live, queryData.blocks])
 
-	// Use live blocks on page 1 when live, otherwise use loader data
+	// Use live blocks when at latest and live, otherwise use loader data
 	const blocks = React.useMemo(() => {
-		if (page === 1 && live && liveBlocks.length > 0) return liveBlocks
+		if (isAtLatest && live && liveBlocks.length > 0) return liveBlocks
 		return queryData.blocks
-	}, [page, live, liveBlocks, queryData.blocks])
+	}, [isAtLatest, live, liveBlocks, queryData.blocks])
 
 	const isLoading = !blocks || blocks.length === 0
-
 	const totalBlocks = currentLatest ? Number(currentLatest) + 1 : 0
-	const totalPages = Math.ceil(totalBlocks / BLOCKS_PER_PAGE)
+	const displayedFrom = blocks[0]?.number ?? undefined
+	const displayedEnd = blocks[blocks.length - 1]?.number ?? undefined
+
+	const columns: DataGrid.Column[] = [
+		{ label: 'Block', width: '1fr', minWidth: 100 },
+		{ label: 'Hash', width: '8fr' },
+		{
+			align: 'end',
+			label: (
+				<TimeColumnHeader
+					label="Time"
+					formatLabel={formatLabel}
+					onCycle={cycleTimeFormat}
+				/>
+			),
+			width: '1fr',
+			minWidth: 80,
+		},
+		{ align: 'end', label: 'Txns', width: '1fr' },
+	]
 
 	return (
-		<div className="flex flex-col gap-6 px-6 py-8 max-w-300 mx-auto w-full mt-12">
-			<section
-				className={cx(
-					'flex flex-col w-full overflow-hidden',
-					'rounded-[10px] border border-card-border bg-card',
-					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
-				)}
-			>
-				<div className="overflow-x-auto">
-					{/* Header */}
-					<div className="grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 border-b border-card-border bg-card-header text-[13px] text-tertiary font-sans font-normal min-w-125">
-						<div>Block</div>
-						<div>Hash</div>
-						<div className="text-right min-w-30">
-							<button
-								type="button"
-								onClick={cycleTimeFormat}
-								className="text-tertiary cursor-pointer inline-flex items-center justify-end gap-2 text-right w-full group"
-								title={`Showing ${formatLabel} time - click to change`}
+		<div className="flex flex-col gap-6 px-4 pt-20 pb-16 max-w-300 mx-auto w-full">
+			<Sections
+				mode="tabs"
+				sections={[
+					{
+						title: 'Blocks',
+						totalItems: totalBlocks || undefined,
+						autoCollapse: false,
+						contextual: (
+							<Link
+								to="."
+								resetScroll={false}
+								search={(prev) => ({
+									...prev,
+									// at latest defaults to live, otherwise defaults to not live
+									live: isAtLatest
+										? !live
+											? undefined
+											: false
+										: !live
+											? true
+											: undefined,
+								})}
+								className={cx(
+									'flex items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] text-[11px] font-medium press-down',
+									{
+										'bg-positive/10 text-positive hover:bg-positive/20':
+											live && !paused,
+										'bg-base-alt text-tertiary hover:bg-base-alt/80':
+											!live || paused,
+									},
+								)}
+								title={live ? 'Pause live updates' : 'Resume live updates'}
 							>
-								<span>Time</span>
-								<span className="bg-base-alt text-primary px-2 py-[3px] rounded-[8px] text-[11px] font-sans capitalize transition-colors group-hover:bg-base-alt/80">
-									{formatLabel}
-								</span>
-							</button>
-						</div>
-						<div className="text-right">Count</div>
-					</div>
+								{live && !paused ? (
+									<>
+										<span className="relative flex size-2">
+											<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-positive opacity-75" />
+											<span className="relative inline-flex rounded-full size-2 bg-positive" />
+										</span>
+										<span>Live</span>
+									</>
+								) : (
+									<>
+										<Play className="size-3" />
+										<span>Paused</span>
+									</>
+								)}
+							</Link>
+						),
+						content: (
+							// biome-ignore lint/a11y/noStaticElementInteractions: pause on hover
+							<div
+								onMouseEnter={() => setPaused(true)}
+								onMouseLeave={() => setPaused(false)}
+								onFocusCapture={() => setPaused(true)}
+								onBlurCapture={(e) => {
+									if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+										setPaused(false)
+									}
+								}}
+							>
+								<DataGrid
+									columns={{ stacked: columns, tabs: columns }}
+									items={() =>
+										blocks.map((block) => {
+											const blockNumber = block.number?.toString() ?? '0'
+											const blockHash = block.hash ?? '0x'
+											const txCount = block.transactions?.length ?? 0
+											const isNew = recentlyAddedBlocks.has(blockNumber)
 
-					{/* Blocks list */}
-					<div className="flex flex-col min-w-125">
-						{isLoading ? (
-							<div className="px-4 py-8 text-center text-tertiary">
-								Loading blocks…
-							</div>
-						) : blocks && blocks.length > 0 ? (
-							blocks.map((block, index) => (
-								<BlockRow
-									key={block.number?.toString()}
-									block={block}
-									isNew={recentlyAddedBlocks.has(
-										block.number?.toString() ?? '',
-									)}
-									isLatest={live && page === 1 && index === 0}
-									timeFormat={timeFormat}
+											return {
+												cells: [
+													<span
+														key="number"
+														className="tabular-nums text-accent font-medium"
+													>
+														#{blockNumber}
+													</span>,
+													<Midcut key="hash" value={blockHash} prefix="0x" />,
+													<span
+														key="time"
+														className="text-secondary tabular-nums whitespace-nowrap"
+													>
+														<FormattedTimestamp
+															timestamp={block.timestamp}
+															format={timeFormat}
+														/>
+													</span>,
+													<span
+														key="txns"
+														className="text-secondary tabular-nums"
+													>
+														{txCount}
+													</span>,
+												],
+												link: {
+													href: `/block/${blockNumber}`,
+													title: `View block #${blockNumber}`,
+												},
+												className: isNew ? 'bg-positive/5' : undefined,
+											}
+										})
+									}
+									totalItems={totalBlocks}
+									page={1}
+									loading={isLoading}
+									itemsLabel="blocks"
+									itemsPerPage={BLOCKS_PER_PAGE}
+									emptyState="No blocks found."
+									pagination={
+										<BlocksPagination
+											displayedFrom={displayedFrom}
+											displayedEnd={displayedEnd}
+											latestBlockNumber={currentLatest}
+											isAtLatest={isAtLatest}
+										/>
+									}
 								/>
-							))
-						) : (
-							<div className="px-4 py-8 text-center text-tertiary">
-								No blocks found
 							</div>
-						)}
-					</div>
-				</div>
-
-				<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-t border-dashed border-card-border px-4 py-3 text-[12px] text-tertiary">
-					<Pagination.Simple page={page} totalPages={totalPages} />
-					<div className="flex items-center justify-center sm:justify-end gap-3">
-						<Link
-							to="."
-							resetScroll={false}
-							search={(prev) => ({ ...prev, live: !live })}
-							className={cx(
-								'flex items-center gap-1.5 px-2.5 py-1.25 rounded-md text-[12px] font-medium font-sans transition-colors text-primary',
-								live
-									? 'bg-positive/10 hover:bg-positive/20'
-									: 'bg-base-alt hover:bg-base-alt/80',
-							)}
-							title={live ? 'Pause live updates' : 'Resume live updates'}
-						>
-							{live ? (
-								<>
-									<span className="relative flex size-2">
-										<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-positive opacity-75" />
-										<span className="relative inline-flex rounded-full size-2 bg-positive" />
-									</span>
-									<span>Live</span>
-								</>
-							) : (
-								<>
-									<Play className="size-3" />
-									<span>Paused</span>
-								</>
-							)}
-						</Link>
-						<Pagination.Count totalItems={totalBlocks} itemsLabel="blocks" />
-					</div>
-				</div>
-			</section>
+						),
+					},
+				]}
+				activeSection={0}
+			/>
 		</div>
 	)
 }
 
-function BlockRow({
-	block,
-	isNew,
-	isLatest,
-	timeFormat,
+function BlocksPagination({
+	displayedFrom,
+	displayedEnd,
+	latestBlockNumber,
+	isAtLatest,
 }: {
-	block: Block
-	isNew?: boolean
-	isLatest?: boolean
-	timeFormat: 'relative' | 'local' | 'utc' | 'unix'
+	displayedFrom: bigint | undefined
+	displayedEnd: bigint | undefined
+	latestBlockNumber: bigint | undefined
+	isAtLatest: boolean
 }) {
-	const txCount = block.transactions?.length ?? 0
-	const blockNumber = block.number?.toString() ?? '0'
-	const blockHash = block.hash ?? '0x'
+	const canGoNewer = !isAtLatest
+	const canGoOlder = displayedEnd != null && displayedEnd > 0n
+
+	const newerFrom =
+		displayedFrom != null ? Number(displayedFrom) + BLOCKS_PER_PAGE : undefined
+	const olderFrom = displayedEnd != null ? Number(displayedEnd) - 1 : undefined
 
 	return (
-		<div
-			className={cx(
-				'grid grid-cols-[100px_minmax(150px,1fr)_auto_50px] gap-4 px-4 py-3 text-[13px] hover:bg-base-alt/50 border-b border-dashed border-card-border last:border-b-0 font-mono',
-				isNew && 'bg-positive/5',
-			)}
-		>
-			<div className="tabular-nums">
+		<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
+			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
 				<Link
-					to="/block/$id"
-					params={{ id: blockNumber }}
-					className="text-accent press-down font-medium font-mono"
+					to="."
+					resetScroll={false}
+					search={{ from: undefined, live: undefined }}
+					disabled={!canGoNewer}
+					className="rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					title="Latest blocks"
 				>
-					{blockNumber}
+					<ChevronFirst className="size-[14px]" />
+				</Link>
+				<Link
+					to="."
+					resetScroll={false}
+					search={{ from: newerFrom, live: undefined }}
+					disabled={!canGoNewer}
+					className="rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					title="Newer blocks"
+				>
+					<ChevronLeft className="size-[14px]" />
+				</Link>
+				<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
+					{displayedFrom != null ? `#${displayedFrom}-#${displayedEnd}` : '…'}
+				</span>
+				<Link
+					to="."
+					resetScroll={false}
+					search={{ from: olderFrom, live: false }}
+					disabled={!canGoOlder}
+					className="rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					title="Older blocks"
+				>
+					<ChevronRight className="size-[14px]" />
+				</Link>
+				<Link
+					to="."
+					resetScroll={false}
+					search={{ from: BLOCKS_PER_PAGE - 1, live: false }}
+					disabled={displayedEnd === 0n}
+					className="rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
+					title="Oldest blocks"
+				>
+					<ChevronLast className="size-[14px]" />
 				</Link>
 			</div>
-			<div className="min-w-0">
-				<Link
-					to="/block/$id"
-					params={{ id: blockHash }}
-					className="text-secondary hover:text-accent transition-colors font-mono"
-					title={blockHash}
-				>
-					<Midcut value={blockHash} prefix="0x" />
-				</Link>
-			</div>
-			<div className="text-right text-secondary tabular-nums min-w-30 font-mono">
-				{isLatest ? (
-					'now'
-				) : (
-					<span className="font-mono">
-						<FormattedTimestamp
-							timestamp={block.timestamp}
-							format={timeFormat}
-						/>
-					</span>
-				)}
-			</div>
-			<div className="text-right text-secondary tabular-nums font-mono">
-				{txCount}
-			</div>
+			<span className="tabular-nums">
+				{latestBlockNumber != null
+					? `${(Number(latestBlockNumber) + 1).toLocaleString()} blocks`
+					: '…'}
+			</span>
 		</div>
 	)
 }

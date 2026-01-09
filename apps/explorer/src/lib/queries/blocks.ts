@@ -17,16 +17,15 @@ export type BlockIdentifier =
 export type BlockWithTransactions = Block<bigint, true>
 export type BlockTransaction = BlockWithTransactions['transactions'][number]
 
-export function blocksQueryOptions(page: number) {
+export function blocksQueryOptions(start?: number) {
 	return queryOptions({
-		queryKey: ['blocks-loader', page],
+		queryKey: ['blocks-loader', start],
 		queryFn: async () => {
 			const config = getWagmiConfig()
 			const latestBlock = await getBlock(config)
 			const latestBlockNumber = latestBlock.number
 
-			const startBlock =
-				latestBlockNumber - BigInt((page - 1) * BLOCKS_PER_PAGE)
+			const startBlock = start != null ? BigInt(start) : latestBlockNumber
 
 			const blockNumbers: bigint[] = []
 			for (let i = 0n; i < BigInt(BLOCKS_PER_PAGE); i++) {

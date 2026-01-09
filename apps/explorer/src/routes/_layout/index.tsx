@@ -7,13 +7,7 @@ import {
 } from '@tanstack/react-router'
 import { animate, stagger } from 'animejs'
 import type { Address, Hex } from 'ox'
-import {
-	useCallback,
-	useEffect,
-	useLayoutEffect,
-	useRef,
-	useState,
-} from 'react'
+import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#cva.config'
 import { springInstant, springBouncy, springSmooth } from '#lib/animation'
@@ -75,24 +69,24 @@ function Component() {
 	const router = useRouter()
 	const navigate = useNavigate()
 	const introSeen = useIntroSeen()
-	const introSeenOnMount = useRef(introSeen)
-	const [inputValue, setInputValue] = useState('')
-	const [isMounted, setIsMounted] = useState(false)
-	const inputWrapperRef = useRef<HTMLDivElement>(null)
-	const exploreInputRef = useRef<HTMLInputElement>(null)
+	const introSeenOnMount = React.useRef(introSeen)
+	const [inputValue, setInputValue] = React.useState('')
+	const [isMounted, setIsMounted] = React.useState(false)
+	const inputWrapperRef = React.useRef<HTMLDivElement>(null)
+	const exploreInputRef = React.useRef<HTMLInputElement>(null)
 	const isNavigating = useRouterState({
 		select: (state) => state.status === 'pending',
 	})
 
-	useEffect(() => setIsMounted(true), [])
+	React.useEffect(() => setIsMounted(true), [])
 
-	useEffect(() => {
+	React.useEffect(() => {
 		return router.subscribe('onResolved', ({ hrefChanged }) => {
 			if (hrefChanged) setInputValue('')
 		})
 	}, [router])
 
-	const handlePhaseChange = useCallback((phase: IntroPhase) => {
+	const handlePhaseChange = React.useCallback((phase: IntroPhase) => {
 		if (phase === 'start' && inputWrapperRef.current) {
 			const seen = introSeenOnMount.current
 			animate(inputWrapperRef.current, {
@@ -156,16 +150,18 @@ function Component() {
 function SpotlightLinks() {
 	const navigate = useNavigate()
 	const introSeen = useIntroSeen()
-	const [actionOpen, setActionOpen] = useState(false)
-	const [menuMounted, setMenuMounted] = useState(false)
-	const dropdownRef = useRef<HTMLDivElement>(null)
-	const dropdownMenuRef = useRef<HTMLDivElement>(null)
-	const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-	const closingRef = useRef(false)
-	const pillsRef = useRef<HTMLDivElement>(null)
-	const introSeenOnMount = useRef(introSeen)
+	const [actionOpen, setActionOpen] = React.useState(false)
+	const [menuMounted, setMenuMounted] = React.useState(false)
+	const dropdownRef = React.useRef<HTMLDivElement>(null)
+	const dropdownMenuRef = React.useRef<HTMLDivElement>(null)
+	const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	)
+	const closingRef = React.useRef(false)
+	const pillsRef = React.useRef<HTMLDivElement>(null)
+	const introSeenOnMount = React.useRef(introSeen)
 
-	const closeMenu = useCallback(() => {
+	const closeMenu = React.useCallback(() => {
 		setActionOpen(false)
 		if (dropdownMenuRef.current) {
 			closingRef.current = true
@@ -183,7 +179,7 @@ function SpotlightLinks() {
 		}
 	}, [])
 
-	useEffect(() => {
+	React.useEffect(() => {
 		function handleClickOutside(event: MouseEvent) {
 			if (
 				dropdownRef.current &&
@@ -196,7 +192,7 @@ function SpotlightLinks() {
 		return () => document.removeEventListener('mousedown', handleClickOutside)
 	}, [closeMenu])
 
-	useEffect(() => {
+	React.useEffect(() => {
 		if (!pillsRef.current) return
 		const seen = introSeenOnMount.current
 		const children = [...pillsRef.current.children]
@@ -219,11 +215,11 @@ function SpotlightLinks() {
 		}
 	}, [])
 
-	useEffect(() => {
+	React.useEffect(() => {
 		if (actionOpen) setMenuMounted(true)
 	}, [actionOpen])
 
-	useLayoutEffect(() => {
+	React.useLayoutEffect(() => {
 		if (!dropdownMenuRef.current) return
 		if (actionOpen && menuMounted) {
 			animate(dropdownMenuRef.current, {
