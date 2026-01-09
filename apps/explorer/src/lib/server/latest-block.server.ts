@@ -9,8 +9,11 @@ const IS = IDX.IndexSupply.create({
 
 const QB = IDX.QueryBuilder.from(IS)
 
+const isTestnet = process.env.VITE_TEMPO_ENV === 'testnet'
+
 export const fetchLatestBlock = createServerFn({ method: 'GET' }).handler(
 	async () => {
+		if (!isTestnet) return
 		try {
 			const config = getWagmiConfig()
 			const chainId = getChainId(config)

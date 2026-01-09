@@ -2,7 +2,7 @@
 
 [contracts.tempo.xyz/docs](https://contracts.tempo.xyz/docs)
 
-Sourcify-compatible smart contract verification service. Currently supports Tempo Testnet and Devnet.
+Sourcify-compatible smart contract verification service. Currently supports Tempo Testnets and Devnets.
 
 ## Architecture
 

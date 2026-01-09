@@ -13,4 +13,4 @@ openapi.json linguist-generated=true
 *.schema.json linguist-generated=true
 
 # explorer
-./apps/explorer/src/data/tokens-index.json linguist-generated=true
+./apps/explorer/src/data/tokens-index-*.json linguist-generated=true

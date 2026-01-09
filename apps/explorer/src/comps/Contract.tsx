@@ -124,26 +124,26 @@ export function CollapsibleSection(props: {
 
 	return (
 		<div className="flex flex-col border-b border-dashed border-distinct">
-			<div className="flex items-center h-[36px] shrink-0">
+			<div className="flex items-center h-auto py-[6px] shrink-0">
 				<button
 					type="button"
 					onClick={onToggle}
 					className={cx(
-						'flex items-center gap-[6px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2!',
+						'flex items-center gap-[8px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2! py-[6px]',
 						actions ? 'pr-[12px]' : 'flex-1 pr-[16px]',
 						first && 'focus-visible:rounded-tl-[8px]!',
 						first && !actions && 'focus-visible:rounded-tr-[8px]!',
 					)}
 				>
+					<span className="text-[14px] text-tertiary whitespace-nowrap font-sans">
+						{title}
+					</span>
 					<ChevronDownIcon
 						className={cx(
 							'size-[14px] text-tertiary',
 							!expanded && '-rotate-90',
 						)}
 					/>
-					<span className="text-[13px] text-tertiary whitespace-nowrap">
-						{title}
-					</span>
 				</button>
 				{actions && (
 					<div className="flex-1 flex items-stretch justify-end gap-[8px] text-tertiary px-[12px]">
@@ -244,7 +244,7 @@ export function InteractTabContent(props: {
 			{/* Write Contract Section */}
 			<CollapsibleSection
 				first
-				title="Write contract"
+				title="Write"
 				expanded={writeExpanded}
 				onToggle={() => setWriteExpanded(!writeExpanded)}
 				actions={<ConnectWallet />}
@@ -256,7 +256,7 @@ export function InteractTabContent(props: {
 
 			{/* Read Contract Section */}
 			<CollapsibleSection
-				title="Read contract"
+				title="Read"
 				expanded={readExpanded}
 				onToggle={() => setReadExpanded(!readExpanded)}
 			>
@@ -316,15 +316,15 @@ export function ContractFeatureCard(props: {
 							actions ? 'pr-[12px]' : 'pr-[16px]',
 						)}
 					>
+						<span className="text-[13px] text-tertiary whitespace-nowrap">
+							{title}
+						</span>
 						<ChevronDownIcon
 							className={cx(
 								'size-[14px] text-tertiary',
 								isCollapsed && '-rotate-90',
 							)}
 						/>
-						<span className="text-[13px] text-tertiary whitespace-nowrap">
-							{title}
-						</span>
 					</button>
 					{actions && (
 						<div className="flex items-center gap-[8px] text-tertiary px-[12px]">

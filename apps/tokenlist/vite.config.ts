@@ -1,5 +1,7 @@
 import NodeFS from 'node:fs/promises'
 import NodePath from 'node:path'
+import NodeChildProcess from 'node:child_process'
+import NodeProcess from 'node:process'
 import { cloudflare } from '@cloudflare/vite-plugin'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 
@@ -7,6 +9,28 @@ const exists = async (path: string) =>
 	NodeFS.stat(path)
 		.then(() => true)
 		.catch(() => false)
+
+const commitSha =
+	NodeChildProcess.execSync('git rev-parse --short HEAD').toString().trim() ||
+	NodeProcess.env.CF_PAGES_COMMIT_SHA?.slice(0, 7)
+
+export default defineConfig((config) => {
+	const env = loadEnv(config.mode, process.cwd(), '')
+
+	return {
+		plugins: [cloudflare(), copyAssetsPlugin()],
+		define: {
+			__BUILD_VERSION__: JSON.stringify(commitSha ?? Date.now().toString()),
+		},
+		// Serve files from 'data' directory as static assets in dev mode
+		// This matches wrangler.jsonc's assets.directory setting
+		publicDir: 'data',
+		server: {
+			port: Number(env.PORT ?? 3_000),
+			allowedHosts: config.mode === 'development' ? true : undefined,
+		},
+	}
+})
 
 function copyAssetsPlugin(): Plugin {
 	return {
@@ -51,18 +75,3 @@ function copyAssetsPlugin(): Plugin {
 		},
 	}
 }
-
-export default defineConfig((config) => {
-	const env = loadEnv(config.mode, process.cwd(), '')
-
-	return {
-		plugins: [cloudflare(), copyAssetsPlugin()],
-		// Serve files from 'data' directory as static assets in dev mode
-		// This matches wrangler.jsonc's assets.directory setting
-		publicDir: 'data',
-		server: {
-			port: Number(env.PORT ?? 3_000),
-			allowedHosts: config.mode === 'development' ? true : undefined,
-		},
-	}
-})

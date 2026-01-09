@@ -22,10 +22,10 @@ export function InfoCard(props: InfoCard.Props) {
 			>
 				{isSectionEntry ? (
 					<div className="flex items-center gap-[8px] justify-between w-full">
-						<span className="text-[13px] font-normal capitalize text-tertiary shrink-0">
+						<span className="text-[13px] font-normal capitalize text-tertiary shrink-0 font-sans">
 							{section.label}
 						</span>
-						<div className="min-w-0 flex-1 flex justify-end">
+						<div className="min-w-0 flex-1 flex justify-end font-mono text-primary">
 							{section.value}
 						</div>
 					</div>
@@ -39,7 +39,7 @@ export function InfoCard(props: InfoCard.Props) {
 	return (
 		<section
 			className={cx(
-				'font-mono',
+				'font-sans',
 				'w-full min-[1240px]:w-fit',
 				'rounded-[10px] border border-card-border bg-card-header overflow-hidden',
 				isInside
@@ -67,7 +67,7 @@ export function InfoCard(props: InfoCard.Props) {
 export declare namespace InfoCard {
 	export type Props = {
 		title: ReactNode
-		sections: Array<ReactNode | { label: string; value: ReactNode }>
+		sections: Array<ReactNode | { label: ReactNode; value: ReactNode }>
 		titlePosition?: 'inside' | 'outside'
 		className?: string
 	}

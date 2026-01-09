@@ -1,9 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import { type Address, Value } from 'ox'
-import { Hooks } from 'tempo.ts/wagmi'
 import { maxUint256 } from 'viem'
 import { Abis } from 'viem/tempo'
 import { useReadContracts } from 'wagmi'
+import { Hooks } from 'wagmi/tempo'
 import { TokenIcon } from '#comps/TokenIcon.tsx'
 import { ellipsis } from '#lib/chars'
 import { isTip20Address } from '#lib/domain/tip20.ts'
@@ -122,12 +122,13 @@ export namespace Amount {
 		const formatted = short
 			? PriceFormatter.formatAmountShort(rawFormatted)
 			: fullFormatted
+		const isSmall = formatted.startsWith('<')
 
 		return (
 			<span className="inline-flex items-center gap-1 min-w-0">
 				{before}
 				<span
-					className="overflow-hidden text-ellipsis whitespace-nowrap min-w-0"
+					className={`overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${isSmall ? 'text-tertiary' : ''}`}
 					style={{ maxWidth: `${maxWidth}ch` }}
 					title={`${prefix ?? ''}${fullFormatted}${suffix ?? ''}`}
 				>

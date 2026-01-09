@@ -70,9 +70,12 @@ export function Pagination(props: Pagination.Props) {
 						<ChevronLeft className="size-[14px]" />
 					</Link>
 
-					<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
-						Page {Pagination.numFormat.format(page)} of{' '}
-						{Pagination.numFormat.format(totalPages)}
+					<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+						Page{' '}
+						<span className="text-primary">
+							{Pagination.numFormat.format(page)}
+						</span>{' '}
+						of {Pagination.numFormat.format(totalPages)}
 					</span>
 
 					<Link
@@ -260,12 +263,11 @@ export namespace Pagination {
 				>
 					<ChevronLeft className="size-[14px]" />
 				</Link>
-				<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
-					Page{' '}
-					<span className={fetching ? 'opacity-50' : undefined}>
+				<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+					<span className={cx('text-primary', fetching && 'opacity-50')}>
 						{Pagination.numFormat.format(page)}
-					</span>{' '}
-					of{' '}
+					</span>
+					{' of '}
 					{countLoading
 						? '…'
 						: totalPages > 0
@@ -324,6 +326,7 @@ export namespace Pagination {
 			capped,
 			className,
 		} = props
+
 		return (
 			<div
 				className={cx(
@@ -333,10 +336,13 @@ export namespace Pagination {
 			>
 				{page != null && totalPages != null && (
 					<>
-						<span className="text-tertiary">Page</span>
-						<span className="text-primary">{page}</span>
+						<span className="text-primary tabular-nums">
+							{Pagination.numFormat.format(page)}
+						</span>
 						<span className="text-tertiary">of</span>
-						<span className="text-primary">{totalPages}</span>
+						<span className="text-primary tabular-nums">
+							{Pagination.numFormat.format(totalPages)}
+						</span>
 						<span className="text-tertiary">•</span>
 					</>
 				)}
@@ -345,7 +351,7 @@ export namespace Pagination {
 						? '…'
 						: `${capped ? '> ' : ''}${Pagination.numFormat.format(totalItems)}`}
 				</span>
-				<span className="text-tertiary">{itemsLabel}</span>
+				<span className="text-tertiary font-sans">{itemsLabel}</span>
 			</div>
 		)
 	}

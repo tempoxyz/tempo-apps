@@ -191,6 +191,7 @@ function RouteComponent() {
 							</Link>
 						),
 						content: (
+							// biome-ignore lint/a11y/noStaticElementInteractions: pause on hover
 							<div
 								onMouseEnter={() => setPaused(true)}
 								onMouseLeave={() => setPaused(false)}

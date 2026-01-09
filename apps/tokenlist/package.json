@@ -2,6 +2,11 @@
 	"name": "tokenlist",
 	"version": "1.0.0",
 	"type": "module",
+	"repository": {
+		"type": "git",
+		"directory": "apps/tokenlist",
+		"url": "https://github.com/tempoxyz/tempo-apps"
+	},
 	"imports": {
 		"#*": "./src/*",
 		"#data/*": "./data/*",
@@ -16,7 +21,7 @@
 		"check": "biome check . --write --unsafe",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"process-icons": "node ./scripts/svg2g.ts",
-		"gen:types": "test -f .env || cp .env.example .env; wrangler types",
+		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
 		"tail": "wrangler tail"
 	},
 	"dependencies": {

@@ -18,10 +18,14 @@ const RequestSchema = z.object({
 	chainId: z.prefault(z.coerce.number(), chainId),
 })
 
+const isTestnet = process.env.VITE_TEMPO_ENV === 'testnet'
+
 export const Route = createFileRoute('/api/address/txs-count/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
+				if (isTestnet) return Response.json({ data: 0, error: null })
+
 				try {
 					const address = zAddress().parse(params.address)
 					Address.assert(address)
