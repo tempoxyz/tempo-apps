@@ -24,7 +24,7 @@ export const Route = createFileRoute('/api/tokens/count')({
 						QB.withSignatures([eventSignature])
 							.selectFrom('tokencreated')
 							.select((eb) => eb.lit(1).as('x'))
-							.where('chain', '=', chainId)
+							.where('chain', '=', chainId as never)
 							.limit(TOKEN_COUNT_MAX)
 							.as('subquery'),
 					)

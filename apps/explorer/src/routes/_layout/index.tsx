@@ -6,7 +6,7 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { animate, stagger } from 'animejs'
-import { Address, Hex } from 'ox'
+import type { Address, Hex } from 'ox'
 import {
 	useCallback,
 	useEffect,

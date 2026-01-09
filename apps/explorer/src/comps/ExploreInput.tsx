@@ -116,7 +116,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		}
 		document.addEventListener('mousedown', onMouseDown)
 		return () => document.removeEventListener('mousedown', onMouseDown)
-	}, [showResults])
+	}, [showResults, inputRef])
 
 	// cmd+k shortcut
 	React.useEffect(() => {
@@ -128,8 +128,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		}
 		window.addEventListener('keydown', handleKeyDown)
 		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [])
-
+	}, [inputRef])
 
 	const handleSelect = React.useCallback(
 		(result: SearchResult) => {
