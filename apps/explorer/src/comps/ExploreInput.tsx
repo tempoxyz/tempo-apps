@@ -33,6 +33,9 @@ export function ExploreInput(props: ExploreInput.Props) {
 	const resultsId = React.useId()
 
 	const query = value.trim()
+	const isValidInput =
+		query.length > 0 &&
+		(Address.validate(query) || (Hex.validate(query) && Hex.size(query) === 32))
 	const { data: searchResults, isFetching } = useQuery(
 		queryOptions({
 			queryKey: ['search', query],
@@ -264,11 +267,14 @@ export function ExploreInput(props: ExploreInput.Props) {
 			>
 				<button
 					type="submit"
-					disabled={disabled}
+					disabled={disabled || !isValidInput}
 					aria-label="Search"
 					className={cx(
-						'rounded-full! bg-accent text-base-plane flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50',
+						'rounded-full! flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed transition-colors',
 						size === 'large' ? 'size-[28px]' : 'size-[24px]',
+						isValidInput
+							? 'bg-accent text-base-plane cursor-pointer'
+							: 'bg-base-alt text-tertiary cursor-default',
 					)}
 				>
 					<ArrowRight

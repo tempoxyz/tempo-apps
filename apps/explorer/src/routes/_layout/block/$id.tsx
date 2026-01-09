@@ -261,15 +261,18 @@ function TransactionsSection(props: TransactionsSectionProps) {
 								loading={knownEventsLoading}
 							/>,
 							txType.type === 'system' ? (
-								<span key="from" className="text-tertiary whitespace-nowrap">
+								<span
+									key="from"
+									className="text-tertiary w-full truncate text-right"
+								>
 									{txType.label}
 								</span>
 							) : (
 								<AddressLink
 									key="from"
 									address={transaction.from}
-									chars={4}
-									className="text-accent press-down"
+									chars={1}
+									align="end"
 								/>
 							),
 							transaction.hash ? (

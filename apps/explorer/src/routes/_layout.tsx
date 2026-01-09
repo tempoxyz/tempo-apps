@@ -60,7 +60,7 @@ export function Layout(props: Layout.Props) {
 			<main className="flex flex-1 size-full flex-col items-center relative z-1 print:block print:flex-none">
 				{children}
 			</main>
-			<div className="w-full mt-40 relative z-1 print:hidden">
+			<div className="w-full mt-6 relative z-1 print:hidden">
 				<Footer />
 			</div>
 			<Sphere animate={Boolean(matchRoute({ to: '/' }))} />

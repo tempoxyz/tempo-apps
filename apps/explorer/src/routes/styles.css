@@ -11,7 +11,7 @@
 	--background-color-primary: var(--color-background-primary);
 	--color-background-surface: light-dark(#ffffff, #1a1a1a);
 	--background-color-surface: var(--color-background-surface);
-	--color-background-alt: light-dark(#fcfcfc, #222222);
+	--color-background-alt: light-dark(#fcfcfc, #161616);
 	--background-alt: var(--color-background-alt);
 	--color-frame-background: light-dark(#ffffff, #1a1a1a);
 	--frame-background: var(--color-frame-background);

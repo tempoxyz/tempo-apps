@@ -781,7 +781,7 @@ function detectContractCall(
 	return {
 		type: 'contract call',
 		parts: [
-			{ type: 'action', value: 'Call To' },
+			{ type: 'action', value: 'Call to' },
 			{
 				type: 'contractCall',
 				value: { address: contractAddress, input: callInput },
