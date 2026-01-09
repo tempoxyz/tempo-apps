@@ -98,6 +98,7 @@
 	--color-base-background: light-dark(#fcfcfc, #191919);
 	--color-base-plane: light-dark(#fcfcfc, #222222);
 	--color-base-plane-background: light-dark(#f9f9f9, #222222);
+	--color-base-plane-interactive: light-dark(#f8f8f8, #1c1c1c);
 	--color-base-alt: light-dark(#e5e5e5, #2a2a2a);
 	--color-base-border: light-dark(#e0e0e0, #2a2a2a);
 	--color-base-content: light-dark(#202020, #eeeeee);

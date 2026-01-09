@@ -102,6 +102,9 @@ catalogs:
     abitype:
       specifier: ^1.2.3
       version: 1.2.3
+    animejs:
+      specifier: ^4.2.2
+      version: 4.2.2
     cva:
       specifier: ^1.0.0-beta.4
       version: 1.0.0-beta.4
@@ -324,6 +327,9 @@ importers:
       abitype:
         specifier: 'catalog:'
         version: 1.2.3(typescript@5.9.3)(zod@4.3.5)
+      animejs:
+        specifier: 'catalog:'
+        version: 4.2.2
       cva:
         specifier: 'catalog:'
         version: 1.0.0-beta.4(typescript@5.9.3)
@@ -3175,6 +3181,9 @@ packages:
 
   ajv@8.17.1:
     resolution: {integrity: sha512-B/gBuNg5SiMTrPkC+A2+cW0RszwxYmn6VYxB/inlBStS5nx6xHIt/ehKRhIMhqusl7a8LjQoZnjCs5vhwxOQ1g==}
+
+  animejs@4.2.2:
+    resolution: {integrity: sha512-Ys3RuvLdAeI14fsdKCQy7ytu4057QX6Bb7m4jwmfd6iKmUmLquTwk1ut0e4NtRQgCeq/s2Lv5+oMBjz6c7ZuIg==}
 
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
@@ -8369,6 +8378,8 @@ snapshots:
       fast-uri: 3.1.0
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
+
+  animejs@4.2.2: {}
 
   ansi-regex@5.0.1: {}
 
