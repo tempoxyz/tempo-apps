@@ -22,7 +22,7 @@ import UserIcon from '~icons/lucide/user'
 import ZapIcon from '~icons/lucide/zap'
 
 const SPOTLIGHT_DATA: Record<
-	number,
+	string,
 	{
 		accountAddress: Address.Address
 		contractAddress: Address.Address
@@ -32,7 +32,7 @@ const SPOTLIGHT_DATA: Record<
 		mintHash: Hex.Hex
 	}
 > = {
-	42429: {
+	testnet: {
 		accountAddress: '0x5bc1473610754a5ca10749552b119df90c1a1877',
 		contractAddress: '0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d',
 		receiptHash:
@@ -44,7 +44,7 @@ const SPOTLIGHT_DATA: Record<
 		mintHash:
 			'0xe5c909ef42674965a8b805118f08b58f215a98661838ae187737841531097b70',
 	},
-	42431: {
+	moderato: {
 		accountAddress: '0xa726a1CD723409074DF9108A2187cfA19899aCF8',
 		contractAddress: '0x0cb37634841784a6ef44aeba9bd6cf82c7143f86',
 		receiptHash:
@@ -58,8 +58,7 @@ const SPOTLIGHT_DATA: Record<
 	},
 }
 
-const chainId = Number(import.meta.env.VITE_TEMPO_CHAIN_ID)
-const spotlightData = SPOTLIGHT_DATA[chainId]
+const spotlightData = SPOTLIGHT_DATA[import.meta.env.VITE_TEMPO_ENV]
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
