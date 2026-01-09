@@ -1,0 +1,44 @@
+{
+    "name": "@tempo/passkey-sdk",
+    "version": "0.1.0",
+    "type": "module",
+    "sideEffects": false,
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "files": [
+        "src"
+    ],
+    "scripts": {
+        "check": "pnpm check:biome && pnpm check:types",
+        "check:biome": "biome check --write .",
+        "check:types": "tsc --noEmit",
+        "test": "vitest run"
+    },
+    "dependencies": {
+        "tempo.ts": "catalog:",
+        "viem": "catalog:",
+        "wagmi": "catalog:",
+        "@wagmi/core": "catalog:",
+        "@tanstack/react-query": "catalog:"
+    },
+    "peerDependencies": {
+        "react": "catalog:",
+        "react-dom": "catalog:"
+    },
+    "peerDependenciesMeta": {
+        "react": {
+            "optional": true
+        },
+        "react-dom": {
+            "optional": true
+        }
+    },
+    "devDependencies": {
+        "@biomejs/biome": "catalog:",
+        "@types/react": "catalog:",
+        "@types/react-dom": "catalog:",
+        "typescript": "catalog:",
+        "vitest": "catalog:"
+    }
+}
