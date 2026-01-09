@@ -31,6 +31,7 @@ export function Header(props: Header.Props) {
 					<Header.BlockNumber initial={initialBlockNumber} />
 				</div>
 			</div>
+			<Header.Search compact />
 		</header>
 	)
 }
@@ -40,7 +41,8 @@ export namespace Header {
 		initialBlockNumber?: bigint
 	}
 
-	export function Search() {
+	export function Search(props: { compact?: boolean }) {
+		const { compact = false } = props
 		const router = useRouter()
 		const navigate = useNavigate()
 		const [inputValue, setInputValue] = React.useState('')
@@ -73,10 +75,38 @@ export namespace Header {
 			return () => clearTimeout(timer)
 		}, [isNavigating])
 
-		return (
-			showSearch && (
-				<div className="absolute left-0 right-0 justify-center hidden @min-[1240px]:flex z-1 h-0 items-center">
+		if (!showSearch) return null
+
+		const exploreInput = (
+			<ExploreInput
+				value={inputValue}
+				onChange={setInputValue}
+				disabled={isMounted && delayedNavigating}
+				onActivate={({ value, type }) => {
+					if (type === 'hash') {
+						navigate({ to: '/receipt/$hash', params: { hash: value } })
+						return
+					}
+					if (type === 'token') {
+						navigate({ to: '/token/$address', params: { address: value } })
+						return
+					}
+					if (type === 'address') {
+						navigate({
+							to: '/address/$address',
+							params: { address: value },
+						})
+						return
+					}
+				}}
+			/>
+		)
+
+		if (compact)
+			return (
+				<div className="@min-[800px]:hidden sticky top-0 z-10 px-[24px] pt-[16px] pb-[12px] print:hidden">
 					<ExploreInput
+						wide
 						value={inputValue}
 						onChange={setInputValue}
 						disabled={isMounted && delayedNavigating}
@@ -100,6 +130,38 @@ export namespace Header {
 					/>
 				</div>
 			)
+
+		return (
+			<>
+				<div className="absolute left-0 right-0 justify-center flex z-1 h-0 items-center @max-[1239px]:hidden print:hidden">
+					{exploreInput}
+				</div>
+				<div className="flex-1 flex justify-center px-[24px] @max-[799px]:hidden @min-[1240px]:hidden print:hidden">
+					<ExploreInput
+						wide
+						value={inputValue}
+						onChange={setInputValue}
+						disabled={isMounted && delayedNavigating}
+						onActivate={({ value, type }) => {
+							if (type === 'hash') {
+								navigate({ to: '/receipt/$hash', params: { hash: value } })
+								return
+							}
+							if (type === 'token') {
+								navigate({ to: '/token/$address', params: { address: value } })
+								return
+							}
+							if (type === 'address') {
+								navigate({
+									to: '/address/$address',
+									params: { address: value },
+								})
+								return
+							}
+						}}
+					/>
+				</div>
+			</>
 		)
 	}
 

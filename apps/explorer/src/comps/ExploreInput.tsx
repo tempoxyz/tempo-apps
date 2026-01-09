@@ -22,6 +22,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		size = 'medium',
 		disabled,
 		className,
+		wide,
 		tabIndex,
 	} = props
 	const formRef = React.useRef<HTMLFormElement>(null)
@@ -180,7 +181,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 					return
 				}
 			}}
-			className="relative z-10 w-full max-w-md"
+			className={cx('relative z-10 w-full', !wide && 'max-w-md')}
 		>
 			<input
 				ref={inputRef}
@@ -364,6 +365,7 @@ export namespace ExploreInput {
 		size?: 'large' | 'medium'
 		disabled?: boolean
 		className?: string
+		wide?: boolean
 		tabIndex?: number
 	}
 
