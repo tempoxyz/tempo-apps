@@ -330,6 +330,7 @@ export namespace Pagination {
 			capped,
 			className,
 		} = props
+
 		return (
 			<div
 				className={cx(
@@ -349,7 +350,7 @@ export namespace Pagination {
 						<span className="text-tertiary">•</span>
 					</>
 				)}
-				<span className="text-primary tabular-nums font-mono">
+				<span className="text-primary tabular-nums">
 					{loading
 						? '…'
 						: `${capped ? '> ' : ''}${Pagination.numFormat.format(totalItems)}`}

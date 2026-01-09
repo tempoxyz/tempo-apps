@@ -105,6 +105,8 @@
 	--color-base-content-positive: light-dark(#30a46c, #30a46c);
 	--color-base-content-negative: light-dark(#e5484d, #e5484d);
 	--color-distinct: light-dark(#e8e8e8, #313131);
+	--color-warning: light-dark(#e2a336, #8f6424);
+	--color-warning-background: light-dark(#fdf5c2, #252018);
 
 	--font-display: system-ui, sans-serif;
 	--font-mono: ui-monospace, monospace;
@@ -214,6 +216,13 @@ input[type="number"] {
 @utility press-down {
 	&:active:not([aria-disabled="true"]) {
 		transform: translateY(0.5px);
+	}
+}
+
+@utility press-down-inline {
+	&:active:not([aria-disabled="true"]) {
+		position: relative;
+		top: 0.5px;
 	}
 }
 

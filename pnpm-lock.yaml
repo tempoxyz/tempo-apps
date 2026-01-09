@@ -166,8 +166,8 @@ catalogs:
       specifier: ^22.5.0
       version: 22.5.0
     viem:
-      specifier: https://pkg.pr.new/viem@4201
-      version: 2.43.6
+      specifier: ^2.44.0
+      version: 2.44.0
     vite:
       specifier: npm:rolldown-vite@latest
       version: 7.3.0
@@ -229,10 +229,10 @@ importers:
         version: 7.7.3
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
+        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
       viem:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)
+        version: 2.44.0(typescript@5.9.3)(zod@4.3.5)
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'
@@ -320,7 +320,7 @@ importers:
         version: 1.145.7(@tanstack/react-router@1.145.7(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.3.0(@types/node@25.0.3)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@wagmi/core':
         specifier: 'catalog:'
-        version: 3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))
+        version: 3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))
       abitype:
         specifier: 'catalog:'
         version: 1.2.3(typescript@5.9.3)(zod@4.3.5)
@@ -350,13 +350,13 @@ importers:
         version: 4.1.18
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
+        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
       viem:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)
+        version: 2.44.0(typescript@5.9.3)(zod@4.3.5)
       wagmi:
         specifier: 'catalog:'
-        version: 3.2.0(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))
+        version: 3.2.0(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))
       zod:
         specifier: 'catalog:'
         version: 4.3.5
@@ -453,10 +453,10 @@ importers:
         version: 0.11.3(typescript@5.9.3)(zod@4.3.5)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
+        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
       viem:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)
+        version: 2.44.0(typescript@5.9.3)(zod@4.3.5)
       zod:
         specifier: 'catalog:'
         version: 4.3.5
@@ -502,13 +502,13 @@ importers:
         version: 19.2.3(react@19.2.3)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
+        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
       viem:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)
+        version: 2.44.0(typescript@5.9.3)(zod@4.3.5)
       wagmi:
         specifier: 'catalog:'
-        version: 3.2.0(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))
+        version: 3.2.0(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -551,10 +551,10 @@ importers:
         version: 0.11.3(typescript@5.9.3)(zod@4.3.5)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
+        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
       viem:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)
+        version: 2.44.0(typescript@5.9.3)(zod@4.3.5)
       zod:
         specifier: 'catalog:'
         version: 4.3.5
@@ -579,10 +579,10 @@ importers:
         version: 4.0.0
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
+        version: 0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5)
       viem:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)
+        version: 2.44.0(typescript@5.9.3)(zod@4.3.5)
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'
@@ -3077,7 +3077,6 @@ packages:
 
   '@wagmi/connectors@7.0.7':
     resolution: {integrity: sha512-aJ+Ktjm31htgeIUXWjsomn0KyZUNF3MUT1WSaNKE6h0GZA3zwhiFwk3IbhuYi4qaBnaqEuHkWw6TgRtVqSfCfw==}
-    version: 7.0.7
     peerDependencies:
       '@base-org/account': ^2.5.1
       '@coinbase/wallet-sdk': ^4.3.6
@@ -3112,7 +3111,6 @@ packages:
 
   '@wagmi/core@3.1.0':
     resolution: {integrity: sha512-+lp2NO3pTP7Rk2y7ZsVZTOAo03ohtdg7epmAtlSMw+MGi83Ylss+6sNMfVetKTyhAh7QofcHxlHP1VgKCev8MA==}
-    version: 3.1.0
     peerDependencies:
       '@tanstack/query-core': '>=5.0.0'
       ox: '>=0.11.1'
@@ -5279,7 +5277,6 @@ packages:
 
   tempo.ts@0.13.0:
     resolution: {integrity: sha512-Y61NOIL/qS6kgwoLz5NlDRU5mPx9OPCIUuvBeb5XbQYhtzh1AWiKws3jlK6dOIrqWDBo3imHjtgKO8qAjcb15A==}
-    version: 0.13.0
     peerDependencies:
       viem: '>=2.43.3'
     peerDependenciesMeta:
@@ -5488,9 +5485,8 @@ packages:
   vfile@6.0.3:
     resolution: {integrity: sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q==}
 
-  viem@https://pkg.pr.new/viem@4201:
-    resolution: {tarball: https://pkg.pr.new/viem@4201}
-    version: 2.43.6
+  viem@2.44.0:
+    resolution: {integrity: sha512-ERvl+N/mPIUck9OSVZGnt1Ex1pMTwKdtOMIbUXLlGJP3KlxdA+1F+Q1hO21qQToaM/ysjTD50ZPQuKyj4Dk3FA==}
     peerDependencies:
       typescript: '>=5.0.4'
     peerDependenciesMeta:
@@ -5618,7 +5614,6 @@ packages:
 
   wagmi@3.2.0:
     resolution: {integrity: sha512-rSaMjiSc9zmBEt2CrTnhhbCJZOf+5c4hkDFlChAq8xUEHb4Av13nQ5/cCLVh2WtvFS1H2OK1FcZ64T6+J4bgHQ==}
-    version: 3.2.0
     peerDependencies:
       '@tanstack/react-query': '>=5.0.0'
       react: '>=18'
@@ -8304,18 +8299,18 @@ snapshots:
     dependencies:
       vue: 3.5.26(typescript@5.9.3)
 
-  '@wagmi/connectors@7.0.7(@wagmi/core@3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)))(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))':
+  '@wagmi/connectors@7.0.7(@wagmi/core@3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.44.0(typescript@5.9.3)(zod@4.3.5)))(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))':
     dependencies:
-      '@wagmi/core': 3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))
-      viem: https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)
+      '@wagmi/core': 3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))
+      viem: 2.44.0(typescript@5.9.3)(zod@4.3.5)
     optionalDependencies:
       typescript: 5.9.3
 
-  '@wagmi/core@3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))':
+  '@wagmi/core@3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))':
     dependencies:
       eventemitter3: 5.0.1
       mipd: 0.0.7(typescript@5.9.3)
-      viem: https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)
+      viem: 2.44.0(typescript@5.9.3)(zod@4.3.5)
       zustand: 5.0.0(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.4.0(react@19.2.3))
     optionalDependencies:
       '@tanstack/query-core': 5.90.16
@@ -8327,11 +8322,11 @@ snapshots:
       - react
       - use-sync-external-store
 
-  '@wagmi/core@3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))':
+  '@wagmi/core@3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))':
     dependencies:
       eventemitter3: 5.0.1
       mipd: 0.0.7(typescript@5.9.3)
-      viem: https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)
+      viem: 2.44.0(typescript@5.9.3)(zod@4.3.5)
       zustand: 5.0.0(@types/react@19.2.7)(react@19.2.3)(use-sync-external-store@1.6.0(react@19.2.3))
     optionalDependencies:
       '@tanstack/query-core': 5.90.16
@@ -10733,12 +10728,12 @@ snapshots:
       mkdirp: 3.0.1
       yallist: 5.0.0
 
-  tempo.ts@0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5):
+  tempo.ts@0.13.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))(zod@4.3.5):
     dependencies:
       '@remix-run/fetch-router': 0.12.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)
       ox: 0.11.3(typescript@5.9.3)(zod@4.3.5)
     optionalDependencies:
-      viem: https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)
+      viem: 2.44.0(typescript@5.9.3)(zod@4.3.5)
     transitivePeerDependencies:
       - '@remix-run/headers'
       - '@remix-run/route-pattern'
@@ -10954,7 +10949,7 @@ snapshots:
       '@types/unist': 3.0.3
       vfile-message: 4.0.3
 
-  viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5):
+  viem@2.44.0(typescript@5.9.3)(zod@4.3.5):
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
@@ -11084,14 +11079,14 @@ snapshots:
 
   w3c-keyname@2.2.8: {}
 
-  wagmi@3.2.0(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)):
+  wagmi@3.2.0(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5)):
     dependencies:
       '@tanstack/react-query': 5.90.16(react@19.2.3)
-      '@wagmi/connectors': 7.0.7(@wagmi/core@3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)))(typescript@5.9.3)(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))
-      '@wagmi/core': 3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5))
+      '@wagmi/connectors': 7.0.7(@wagmi/core@3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(viem@2.44.0(typescript@5.9.3)(zod@4.3.5)))(typescript@5.9.3)(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))
+      '@wagmi/core': 3.1.0(@tanstack/query-core@5.90.16)(@types/react@19.2.7)(ox@0.11.3(typescript@5.9.3)(zod@4.3.5))(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.3))(viem@2.44.0(typescript@5.9.3)(zod@4.3.5))
       react: 19.2.3
       use-sync-external-store: 1.4.0(react@19.2.3)
-      viem: https://pkg.pr.new/viem@4201(typescript@5.9.3)(zod@4.3.5)
+      viem: 2.44.0(typescript@5.9.3)(zod@4.3.5)
     optionalDependencies:
       typescript: 5.9.3
     transitivePeerDependencies:

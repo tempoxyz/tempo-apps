@@ -18,17 +18,7 @@
 				{
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
-					"pattern": "explore.tempo.xyz"
-				},
-				{
-					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.42429.tempo.xyz"
-				},
-				{
-					"custom_domain": true,
-					"zone_name": "tempo.xyz",
-					"pattern": "explore.testnet.tempo.xyz"
 				},
 				{
 					"custom_domain": true,
@@ -61,12 +51,32 @@
 				{
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
+					"pattern": "explore.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "www.explore.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explorer.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
 					"pattern": "explore.42431.tempo.xyz"
 				},
 				{
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
 					"pattern": "explore.moderato.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.testnet.tempo.xyz"
 				}
 			],
 			"vars": {
