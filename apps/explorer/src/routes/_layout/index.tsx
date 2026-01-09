@@ -43,16 +43,12 @@ const SPOTLIGHT_DATA: Record<
 			'0xe5c909ef42674965a8b805118f08b58f215a98661838ae187737841531097b70',
 	},
 	// 42431: {
-	// 	accountAddress: '0x0000000000000000000000000000000000000000',
-	// 	contractAddress: '0x0000000000000000000000000000000000000000',
-	// 	receiptHash:
-	// 		'0x0000000000000000000000000000000000000000000000000000000000000000',
-	// 	paymentHash:
-	// 		'0x0000000000000000000000000000000000000000000000000000000000000000',
-	// 	swapHash:
-	// 		'0x0000000000000000000000000000000000000000000000000000000000000000',
-	// 	mintHash:
-	// 		'0x0000000000000000000000000000000000000000000000000000000000000000',
+	// 	accountAddress: '0x',
+	// 	contractAddress: '0x',
+	// 	receiptHash: '0x',
+	// 	paymentHash: '0x',
+	// 	swapHash: '0x',
+	// 	mintHash: '0x',
 	// },
 }
 
@@ -182,99 +178,99 @@ function SpotlightLinks({ introPhase }: { introPhase: IntroPhase }) {
 					}}
 				>
 					{spotlightData && (
-					<>
-						<SpotlightPill
-							to="/address/$address"
-							params={{ address: spotlightData.accountAddress }}
-							icon={<UserIcon className="size-[14px] text-accent" />}
-							badge={<ShuffleIcon className="size-[10px] text-secondary" />}
-							pulse={isExplorePulse}
-							visible={showExplore}
-						>
-							Account
-						</SpotlightPill>
-						<SpotlightPill
-							to="/address/$address"
-							params={{ address: spotlightData.contractAddress }}
-							search={{ tab: 'contract' }}
-							icon={<FileIcon className="size-[14px] text-accent" />}
-							badge={<ShuffleIcon className="size-[10px] text-secondary" />}
-							pulse={isExplorePulse}
-							visible={showExplore}
-							delay={50}
-						>
-							Contract
-						</SpotlightPill>
-						<SpotlightPill
-							to="/receipt/$hash"
-							params={{ hash: spotlightData.receiptHash }}
-							icon={<ReceiptIcon className="size-[14px] text-accent" />}
-							pulse={isExplorePulse}
-							visible={showExplore}
-							delay={100}
-						>
-							Receipt
-						</SpotlightPill>
-						{/** biome-ignore lint/a11y/noStaticElementInteractions: _ */}
-						<div
-							className="relative group-hover/pills:opacity-40 hover:opacity-100! transition-all duration-500 ease-out"
-						ref={dropdownRef}
-						onMouseEnter={handleMouseEnter}
-						onMouseLeave={handleMouseLeave}
-						style={{
-							opacity: showExplore ? 1 : 0,
-							transform: showExplore ? 'translateY(0)' : 'translateY(12px)',
-							transitionDelay: '150ms',
-							zIndex: actionOpen ? 100 : 'auto',
-						}}
-					>
-						<button
-							type="button"
-							onClick={() => setActionOpen(!actionOpen)}
-							className="flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border border-base-border hover:border-accent focus:border-accent px-2.5 py-1 rounded-full transition-all press-down bg-surface"
-							style={
-								isExplorePulse
-									? { borderColor: 'rgba(59, 130, 246, 0.5)' }
-									: undefined
-							}
-						>
-							<ZapIcon className="size-[14px] text-accent" />
-							<span>Action</span>
-							<ChevronDownIcon
-								className={`size-[12px] transition-transform ${
-									actionOpen ? 'rotate-180' : ''
-								}`}
-							/>
-						</button>
-						{actionOpen && (
-							<div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
-								<div className="bg-base-plane rounded-full p-1 border border-base-border shadow-xl flex items-center gap-1 relative z-60">
-									{[
-										{ label: 'Payment', hash: spotlightData.paymentHash },
-										{ label: 'Swap', hash: spotlightData.swapHash },
-										{ label: 'Mint', hash: spotlightData.mintHash },
-									].map((action) => (
-										<button
-											key={action.label}
-											type="button"
-											onClick={() => {
-												navigate({
-													to: '/tx/$hash',
-													params: { hash: action.hash },
-												})
-												setActionOpen(false)
-											}}
-											className="px-2.5 py-1 text-[12px] text-base-content-secondary hover:text-base-content hover:bg-base-border/40 rounded-full transition-colors whitespace-nowrap"
-										>
-											{action.label}
-										</button>
-									))}
-								</div>
+						<>
+							<SpotlightPill
+								to="/address/$address"
+								params={{ address: spotlightData.accountAddress }}
+								icon={<UserIcon className="size-[14px] text-accent" />}
+								badge={<ShuffleIcon className="size-[10px] text-secondary" />}
+								pulse={isExplorePulse}
+								visible={showExplore}
+							>
+								Account
+							</SpotlightPill>
+							<SpotlightPill
+								to="/address/$address"
+								params={{ address: spotlightData.contractAddress }}
+								search={{ tab: 'contract' }}
+								icon={<FileIcon className="size-[14px] text-accent" />}
+								badge={<ShuffleIcon className="size-[10px] text-secondary" />}
+								pulse={isExplorePulse}
+								visible={showExplore}
+								delay={50}
+							>
+								Contract
+							</SpotlightPill>
+							<SpotlightPill
+								to="/receipt/$hash"
+								params={{ hash: spotlightData.receiptHash }}
+								icon={<ReceiptIcon className="size-[14px] text-accent" />}
+								pulse={isExplorePulse}
+								visible={showExplore}
+								delay={100}
+							>
+								Receipt
+							</SpotlightPill>
+							{/** biome-ignore lint/a11y/noStaticElementInteractions: _ */}
+							<div
+								className="relative group-hover/pills:opacity-40 hover:opacity-100! transition-all duration-500 ease-out"
+								ref={dropdownRef}
+								onMouseEnter={handleMouseEnter}
+								onMouseLeave={handleMouseLeave}
+								style={{
+									opacity: showExplore ? 1 : 0,
+									transform: showExplore ? 'translateY(0)' : 'translateY(12px)',
+									transitionDelay: '150ms',
+									zIndex: actionOpen ? 100 : 'auto',
+								}}
+							>
+								<button
+									type="button"
+									onClick={() => setActionOpen(!actionOpen)}
+									className="flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border border-base-border hover:border-accent focus:border-accent px-2.5 py-1 rounded-full transition-all press-down bg-surface"
+									style={
+										isExplorePulse
+											? { borderColor: 'rgba(59, 130, 246, 0.5)' }
+											: undefined
+									}
+								>
+									<ZapIcon className="size-[14px] text-accent" />
+									<span>Action</span>
+									<ChevronDownIcon
+										className={`size-[12px] transition-transform ${
+											actionOpen ? 'rotate-180' : ''
+										}`}
+									/>
+								</button>
+								{actionOpen && (
+									<div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
+										<div className="bg-base-plane rounded-full p-1 border border-base-border shadow-xl flex items-center gap-1 relative z-60">
+											{[
+												{ label: 'Payment', hash: spotlightData.paymentHash },
+												{ label: 'Swap', hash: spotlightData.swapHash },
+												{ label: 'Mint', hash: spotlightData.mintHash },
+											].map((action) => (
+												<button
+													key={action.label}
+													type="button"
+													onClick={() => {
+														navigate({
+															to: '/tx/$hash',
+															params: { hash: action.hash },
+														})
+														setActionOpen(false)
+													}}
+													className="px-2.5 py-1 text-[12px] text-base-content-secondary hover:text-base-content hover:bg-base-border/40 rounded-full transition-colors whitespace-nowrap"
+												>
+													{action.label}
+												</button>
+											))}
+										</div>
+									</div>
+								)}
 							</div>
-						)}
-						</div>
-					</>
-				)}
+						</>
+					)}
 				</div>
 				{/* Discover pills - animate in with "Discover" */}
 				<SpotlightPill
