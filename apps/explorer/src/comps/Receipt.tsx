@@ -292,7 +292,7 @@ export function Receipt(props: Receipt.Props) {
 					<Link
 						to="/tx/$hash"
 						params={{ hash }}
-						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-background-primary border border-base-border rounded-bl-[10px]! rounded-br-[10px]! hover:bg-background-alt text-tertiary hover:text-primary transition-[background-color,color] duration-100 -mt-px focus-visible:-outline-offset-2!"
+						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-base-plane-interactive border border-base-border rounded-bl-[10px]! rounded-br-[10px]! hover:bg-base-plane text-tertiary hover:text-primary transition-[background-color,color] duration-100 -mt-px focus-visible:-outline-offset-2!"
 					>
 						<span>View transaction</span>
 						<span aria-hidden="true">→</span>
