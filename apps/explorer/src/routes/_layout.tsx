@@ -47,7 +47,7 @@ export function Layout(props: Layout.Props) {
 					</time>
 					.{' '}
 					<a
-						href="https://docs.tempo.xyz/#testnet-migration"
+						href="https://docs.tempo.xyz/network-upgrades"
 						className="underline press-down-inline"
 						target="_blank"
 						rel="noopener noreferrer"
