@@ -6,6 +6,7 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { animate, stagger } from 'animejs'
+import { Address, Hex } from 'ox'
 import {
 	useCallback,
 	useEffect,
@@ -26,11 +27,37 @@ import ShuffleIcon from '~icons/lucide/shuffle'
 import UserIcon from '~icons/lucide/user'
 import ZapIcon from '~icons/lucide/zap'
 
+const SPOTLIGHT_DATA: Record<
+	number,
+	{
+		accountAddress: Address.Address
+		contractAddress: Address.Address
+		receiptHash: Hex.Hex
+		paymentHash: Hex.Hex
+		swapHash: Hex.Hex
+		mintHash: Hex.Hex
+	}
+> = {
+	42429: {
+		accountAddress: '0x5bc1473610754a5ca10749552b119df90c1a1877',
+		contractAddress: '0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d',
+		receiptHash:
+			'0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd',
+		paymentHash:
+			'0x33cdfc39dcda535aac88e7fe3a79954e0740ec26a2fe54eb5481a4cfc0cb8024',
+		swapHash:
+			'0x8b6cdb1f6193c17a3733aec315441ab92bca3078b462b27863509a279a5ea6e0',
+		mintHash:
+			'0xe5c909ef42674965a8b805118f08b58f215a98661838ae187737841531097b70',
+	},
+}
+
+const chainId = Number(import.meta.env.VITE_TEMPO_CHAIN_ID)
+const spotlightData = SPOTLIGHT_DATA[chainId]
+
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
 })
-
-const isTestnet = import.meta.env.VITE_TEMPO_ENV === 'testnet'
 
 function Component() {
 	const router = useRouter()
@@ -171,7 +198,6 @@ function SpotlightLinks() {
 			delay: seen ? stagger(10) : stagger(20, { start: 320, from: 'random' }),
 		})
 		anim.then(() => {
-			// clear transform, otherwise .press-down would not work
 			for (const child of children) {
 				;(child as HTMLElement).style.transform = ''
 			}
@@ -214,20 +240,13 @@ function SpotlightLinks() {
 		hoverTimeoutRef.current = setTimeout(() => closeMenu(), 150)
 	}
 
-	const actionTypes = [
-		{
-			label: 'Payment',
-			hash: '0x33cdfc39dcda535aac88e7fe3a79954e0740ec26a2fe54eb5481a4cfc0cb8024' as const,
-		},
-		{
-			label: 'Swap',
-			hash: '0x8b6cdb1f6193c17a3733aec315441ab92bca3078b462b27863509a279a5ea6e0' as const,
-		},
-		{
-			label: 'Mint',
-			hash: '0xe5c909ef42674965a8b805118f08b58f215a98661838ae187737841531097b70' as const,
-		},
-	]
+	const actionTypes = spotlightData
+		? [
+				{ label: 'Payment', hash: spotlightData.paymentHash },
+				{ label: 'Swap', hash: spotlightData.swapHash },
+				{ label: 'Mint', hash: spotlightData.mintHash },
+			]
+		: []
 
 	return (
 		<section className="text-center max-w-[500px] px-4">
@@ -235,91 +254,93 @@ function SpotlightLinks() {
 				ref={pillsRef}
 				className="group/pills flex items-center gap-2 text-[13px] flex-wrap justify-center"
 			>
-				<SpotlightPill
-					to="/address/$address"
-					params={{ address: '0x5bc1473610754a5ca10749552b119df90c1a1877' }}
-					icon={<UserIcon className="size-[14px] text-accent" />}
-					badge={<ShuffleIcon className="size-[10px] text-secondary" />}
-				>
-					Account
-				</SpotlightPill>
-				<SpotlightPill
-					to="/address/$address"
-					params={{ address: '0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d' }}
-					search={{ tab: 'contract' }}
-					icon={<FileIcon className="size-[14px] text-accent" />}
-					badge={<ShuffleIcon className="size-[10px] text-secondary" />}
-				>
-					Contract
-				</SpotlightPill>
-				<SpotlightPill
-					to="/receipt/$hash"
-					params={{
-						hash: '0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd',
-					}}
-					icon={<ReceiptIcon className="size-[14px] text-accent" />}
-				>
-					Receipt
-				</SpotlightPill>
-				{/** biome-ignore lint/a11y/noStaticElementInteractions: _ */}
-				<div
-					className="relative group-hover/pills:opacity-40 hover:opacity-100"
-					ref={dropdownRef}
-					onMouseEnter={handleMouseEnter}
-					onMouseLeave={handleMouseLeave}
-					style={{
-						opacity: 0,
-						pointerEvents: 'none',
-						zIndex: actionOpen ? 100 : 'auto',
-					}}
-				>
-					<button
-						type="button"
-						onClick={() => (actionOpen ? closeMenu() : setActionOpen(true))}
-						className="flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border border-base-border hover:border-accent focus-visible:border-accent px-2.5 py-1 rounded-full! press-down bg-surface focus-visible:outline-none cursor-pointer"
-					>
-						<ZapIcon className="size-[14px] text-accent" />
-						<span>Action</span>
-						<ChevronDownIcon
-							className={`size-[12px] transition-transform ${
-								actionOpen ? 'rotate-180' : ''
-							}`}
-						/>
-					</button>
-					{menuMounted && (
-						<div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
-							<div
-								ref={dropdownMenuRef}
-								className="bg-base-plane rounded-full p-1 border border-base-border shadow-xl flex items-center relative z-60"
-								style={{ opacity: 0 }}
+				{spotlightData && (
+					<>
+						<SpotlightPill
+							to="/address/$address"
+							params={{ address: spotlightData.accountAddress }}
+							icon={<UserIcon className="size-[14px] text-accent" />}
+							badge={<ShuffleIcon className="size-[10px] text-secondary" />}
+						>
+							Account
+						</SpotlightPill>
+						<SpotlightPill
+							to="/address/$address"
+							params={{ address: spotlightData.contractAddress }}
+							search={{ tab: 'contract' }}
+							icon={<FileIcon className="size-[14px] text-accent" />}
+							badge={<ShuffleIcon className="size-[10px] text-secondary" />}
+						>
+							Contract
+						</SpotlightPill>
+						<SpotlightPill
+							to="/receipt/$hash"
+							params={{ hash: spotlightData.receiptHash }}
+							icon={<ReceiptIcon className="size-[14px] text-accent" />}
+						>
+							Receipt
+						</SpotlightPill>
+						{/** biome-ignore lint/a11y/noStaticElementInteractions: _ */}
+						<div
+							className="relative group-hover/pills:opacity-40 hover:opacity-100"
+							ref={dropdownRef}
+							onMouseEnter={handleMouseEnter}
+							onMouseLeave={handleMouseLeave}
+							style={{
+								opacity: 0,
+								pointerEvents: 'none',
+								zIndex: actionOpen ? 100 : 'auto',
+							}}
+						>
+							<button
+								type="button"
+								onClick={() => (actionOpen ? closeMenu() : setActionOpen(true))}
+								className="flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border border-base-border hover:border-accent focus-visible:border-accent px-2.5 py-1 rounded-full! press-down bg-surface focus-visible:outline-none cursor-pointer"
 							>
-								{actionTypes.map((action, i) => (
-									<button
-										key={action.label}
-										type="button"
-										onClick={() => {
-											navigate({
-												to: '/tx/$hash',
-												params: { hash: action.hash },
-											})
-											setMenuMounted(false)
-											setActionOpen(false)
-										}}
-										className={`px-2.5 py-1 text-[12px] text-base-content-secondary hover:text-base-content hover:bg-base-border/40 whitespace-nowrap focus-visible:outline-offset-0 press-down cursor-pointer ${
-											i === 0
-												? 'rounded-l-[14px]! rounded-r-[2px]!'
-												: i === actionTypes.length - 1
-													? 'rounded-r-[14px]! rounded-l-[2px]!'
-													: 'rounded-[2px]!'
-										}`}
+								<ZapIcon className="size-[14px] text-accent" />
+								<span>Action</span>
+								<ChevronDownIcon
+									className={`size-[12px] transition-transform ${
+										actionOpen ? 'rotate-180' : ''
+									}`}
+								/>
+							</button>
+							{menuMounted && (
+								<div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
+									<div
+										ref={dropdownMenuRef}
+										className="bg-base-plane rounded-full p-1 border border-base-border shadow-xl flex items-center relative z-60"
+										style={{ opacity: 0 }}
 									>
-										{action.label}
-									</button>
-								))}
-							</div>
+										{actionTypes.map((action, i) => (
+											<button
+												key={action.label}
+												type="button"
+												onClick={() => {
+													navigate({
+														to: '/tx/$hash',
+														params: { hash: action.hash },
+													})
+													setMenuMounted(false)
+													setActionOpen(false)
+												}}
+												className={`px-2.5 py-1 text-[12px] text-base-content-secondary hover:text-base-content hover:bg-base-border/40 whitespace-nowrap focus-visible:outline-offset-0 press-down cursor-pointer ${
+													i === 0
+														? 'rounded-l-[14px]! rounded-r-[2px]!'
+														: i === actionTypes.length - 1
+															? 'rounded-r-[14px]! rounded-l-[2px]!'
+															: 'rounded-[2px]!'
+												}`}
+											>
+												{action.label}
+											</button>
+										))}
+									</div>
+								</div>
+							)}
 						</div>
-					)}
-				</div>
+					</>
+				)}
 				<SpotlightPill
 					to="/blocks"
 					icon={<BoxIcon className="size-[14px] text-accent" />}
@@ -327,7 +348,6 @@ function SpotlightLinks() {
 					Blocks
 				</SpotlightPill>
 				<SpotlightPill
-					className={cx({ hidden: !isTestnet })}
 					to="/tokens"
 					icon={<CoinsIcon className="size-[14px] text-accent" />}
 				>

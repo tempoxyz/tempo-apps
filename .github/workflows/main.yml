@@ -71,7 +71,15 @@ jobs:
         if: steps.changes.outputs.relevant == 'true'
         uses: ./.github/actions/install-dependencies
 
-      - name: Build & Deploy Workers
+      - name: Build
+        if: steps.changes.outputs.relevant == 'true'
+        working-directory: apps/${{ matrix.app }}
+        env:
+          NODE_ENV: production
+          CLOUDFLARE_ENV: ${{ matrix.env || '' }}
+        run: pnpm build
+
+      - name: Deploy Workers
         if: steps.changes.outputs.relevant == 'true'
         uses: cloudflare/wrangler-action@v3
         env:
