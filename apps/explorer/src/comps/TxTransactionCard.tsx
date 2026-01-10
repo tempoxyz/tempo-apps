@@ -40,7 +40,8 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-normal leading-[17px] text-primary break-all max-w-[23ch] font-mono">
+					{/* 66 chars / 3 lines = 22ch */}
+					<p className="text-[14px] font-normal leading-[17px] text-primary break-all max-w-[22ch] font-mono">
 						{hash}
 					</p>
 				</button>,

@@ -107,7 +107,7 @@ export function BlockCard(props: BlockCard.Props) {
 					/>
 					<BlockCard.TimeRow label="UNIX" value={String(timestamp)} />
 				</div>,
-				<div key="hash-parent" className="w-full flex flex-col gap-[8px]">
+				<div key="hash-parent" className="w-full flex flex-col gap-[12px]">
 					{hash && (
 						<button
 							type="button"
@@ -126,7 +126,9 @@ export function BlockCard(props: BlockCard.Props) {
 									)}
 								</div>
 							</div>
-							<div className="text-[14px] font-mono font-normal leading-[18px] text-primary break-all max-w-[calc(22ch+22px)]">
+							{/* the 15px font size needs to match the block number wrapper font size to make sure they align */}
+							{/* 22 chars/line * (1ch + 1px tracking) */}
+							<div className="text-[15px] font-mono font-normal leading-[18px] tracking-[1px] text-primary break-all max-w-[calc(22ch+22px)]">
 								{hash}
 							</div>
 						</button>
@@ -263,11 +265,11 @@ export namespace BlockCard {
 
 	export function BlockNumber(props: BlockNumber.Props) {
 		const { value } = props
-		const str = String(value).padStart(14, '0')
+		const str = String(value).padStart(15, '0')
 		const zerosEnd = str.match(/^0*/)?.[0].length ?? 0
 		return (
-			// the 14px font size is used to set the same width as the block hash
-			<div className="text-[14px] max-w-[calc(22ch+22px)] font-mono">
+			// the 15px font size is used to set the same width as the block hash
+			<div className="text-[15px] max-w-[calc(22ch+22px)] font-mono">
 				<span className="flex justify-between gap-px text-[22px] text-tertiary">
 					{str.split('').map((char, index) => (
 						<span

@@ -72,7 +72,8 @@ export function AccountCard(props: AccountCard.Props) {
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-normal leading-[17px] text-primary break-all max-w-[22ch] font-mono">
+					{/* 42 chars / 2 lines = 21ch */}
+					<p className="text-[14px] font-normal leading-[17px] text-primary break-all max-w-[21ch] font-mono">
 						{address}
 					</p>
 				</button>,
