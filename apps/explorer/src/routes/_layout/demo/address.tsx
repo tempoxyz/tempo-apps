@@ -896,7 +896,7 @@ function Component() {
 								)}
 							</div>
 						</div>
-						<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[22ch]">
+						<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[21ch]">
 							{accountAddress}
 						</p>
 					</button>,

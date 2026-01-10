@@ -353,7 +353,7 @@ function TokenCard(props: {
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-mono font-normal leading-4.25 text-primary break-all max-w-[22ch]">
+					<p className="text-[14px] font-mono font-normal leading-4.25 text-primary break-all max-w-[21ch]">
 						{address}
 					</p>
 				</button>,
