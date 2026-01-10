@@ -1084,7 +1084,7 @@ function TransactionFeeCellInner(props: { hash: Hex.Hex }) {
 		<span className="text-tertiary">
 			{PriceFormatter.format(
 				batchData.receipt.effectiveGasPrice *
-					batchData.receipt.cumulativeGasUsed,
+					batchData.receipt.gasUsed,
 				{ decimals: 18, format: 'short' },
 			)}
 		</span>
