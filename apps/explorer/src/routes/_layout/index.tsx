@@ -71,8 +71,9 @@ function Component() {
 	const introSeenOnMount = React.useRef(introSeen)
 	const [inputValue, setInputValue] = React.useState('')
 	const [isMounted, setIsMounted] = React.useState(false)
-	const inputWrapperRef = React.useRef<HTMLDivElement>(null)
+	const [inputReady, setInputReady] = React.useState(false)
 	const exploreInputRef = React.useRef<HTMLInputElement>(null)
+	const exploreWrapperRef = React.useRef<HTMLDivElement>(null)
 	const isNavigating = useRouterState({
 		select: (state) => state.status === 'pending',
 	})
@@ -86,14 +87,20 @@ function Component() {
 	}, [router])
 
 	const handlePhaseChange = React.useCallback((phase: IntroPhase) => {
-		if (phase === 'start' && inputWrapperRef.current) {
+		if (phase === 'start' && exploreWrapperRef.current) {
 			const seen = introSeenOnMount.current
-			animate(inputWrapperRef.current, {
+			animate(exploreWrapperRef.current, {
 				opacity: [0, 1],
 				scale: [seen ? 0.97 : 0.94, 1],
 				ease: seen ? springInstant : springBouncy,
 				delay: seen ? 0 : 240,
-				onBegin: () => exploreInputRef.current?.focus(),
+				onBegin: () => {
+					setInputReady(true)
+					if (exploreWrapperRef.current) {
+						exploreWrapperRef.current.style.pointerEvents = 'auto'
+					}
+					exploreInputRef.current?.focus()
+				},
 			})
 		}
 	}, [])
@@ -102,43 +109,39 @@ function Component() {
 		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
 			<div className="grid place-items-center relative grid-flow-row gap-5 select-none w-full pt-15 pb-10 z-1">
 				<Intro onPhaseChange={handlePhaseChange} />
-				<div className="w-full my-3">
-					<div
-						ref={inputWrapperRef}
-						className="px-4 w-full flex justify-center relative z-20"
-						style={{ opacity: 0 }}
-					>
-						<ExploreInput
-							inputRef={exploreInputRef}
-							size="large"
-							value={inputValue}
-							onChange={setInputValue}
-							disabled={isMounted && isNavigating}
-							onActivate={(data) => {
-								if (data.type === 'hash') {
-									navigate({
-										to: '/receipt/$hash',
-										params: { hash: data.value },
-									})
-									return
-								}
-								if (data.type === 'token') {
-									navigate({
-										to: '/token/$address',
-										params: { address: data.value },
-									})
-									return
-								}
-								if (data.type === 'address') {
-									navigate({
-										to: '/address/$address',
-										params: { address: data.value },
-									})
-									return
-								}
-							}}
-						/>
-					</div>
+				<div className="w-full my-3 px-4 flex justify-center relative z-20">
+					<ExploreInput
+						inputRef={exploreInputRef}
+						wrapperRef={exploreWrapperRef}
+						size="large"
+						value={inputValue}
+						onChange={setInputValue}
+						disabled={isMounted && isNavigating}
+						tabIndex={inputReady ? 0 : -1}
+						onActivate={(data) => {
+							if (data.type === 'hash') {
+								navigate({
+									to: '/receipt/$hash',
+									params: { hash: data.value },
+								})
+								return
+							}
+							if (data.type === 'token') {
+								navigate({
+									to: '/token/$address',
+									params: { address: data.value },
+								})
+								return
+							}
+							if (data.type === 'address') {
+								navigate({
+									to: '/address/$address',
+									params: { address: data.value },
+								})
+								return
+							}
+						}}
+					/>
 				</div>
 				<SpotlightLinks />
 			</div>
@@ -195,14 +198,16 @@ function SpotlightLinks() {
 		if (!pillsRef.current) return
 		const seen = introSeenOnMount.current
 		const children = [...pillsRef.current.children]
-		for (const child of children) {
-			;(child as HTMLElement).style.pointerEvents = 'auto'
-		}
 		const anim = animate(children, {
 			opacity: [0, 1],
 			translateY: [seen ? 2 : 4, 0],
 			ease: seen ? springInstant : springSmooth,
 			delay: seen ? stagger(10) : stagger(20, { start: 320, from: 'random' }),
+			onBegin: () => {
+				for (const child of children) {
+					;(child as HTMLElement).style.pointerEvents = 'auto'
+				}
+			},
 		})
 		anim.then(() => {
 			for (const child of children) {
