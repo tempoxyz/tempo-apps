@@ -784,14 +784,10 @@ function SectionsWrapper(props: {
 	 */
 	const data = isMounted ? queryData : page === 1 ? initialData : queryData
 	const {
-		transactions,
-		total: approximateTotal,
-		hasMore,
-	} = data ?? {
-		transactions: [],
-		total: 0,
-		hasMore: false,
-	}
+		transactions = [],
+		total: approximateTotal = 0,
+		hasMore = false,
+	} = data ?? {}
 
 	// Fetch exact total count in the background (only when on history tab)
 	// Don't cache across tabs/pages - always show "..." until loaded each time
