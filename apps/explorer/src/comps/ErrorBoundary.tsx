@@ -28,7 +28,7 @@ export class ErrorBoundary extends React.Component<
 				<section className="flex flex-1 flex-col size-full items-center justify-center px-[16px] max-w-[600px] gap-[16px] m-auto">
 					<div className="flex flex-col items-center gap-[8px]">
 						<h1 className="text-[24px] lg:text-[40px] font-medium text-base-content">
-							Something Went Wrong
+							Something went wrong
 						</h1>
 						<p className="text-base-content-secondary text-[15px] lg:text-[18px] text-center">
 							An unexpected error occurred while loading this page.
@@ -47,7 +47,7 @@ export class ErrorBoundary extends React.Component<
 						onClick={() => window.history.back()}
 						className="text-accent rounded-[8px] press-down"
 					>
-						Go Back
+						Return home ⏎
 					</button>
 				</section>
 				<Footer />

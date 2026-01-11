@@ -23,7 +23,7 @@ export function NotFound({
 				)}
 				<div className="flex gap-[12px] items-center">
 					<Link to="/" className="text-accent rounded-[8px] press-down">
-						Go back
+						Return home ⏎
 					</Link>
 				</div>
 			</div>

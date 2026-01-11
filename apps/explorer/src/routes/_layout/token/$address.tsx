@@ -10,10 +10,11 @@ import {
 } from '@tanstack/react-router'
 import { Address } from 'ox'
 import * as React from 'react'
-import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
+import type { Config } from 'wagmi'
 import { getPublicClient } from 'wagmi/actions'
+import { Actions, Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
@@ -97,7 +98,9 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		// Validate the token exists by fetching metadata (required - blocks render)
 		let metadata: Awaited<ReturnType<typeof Actions.token.getMetadata>>
 		try {
-			metadata = await Actions.token.getMetadata(config, { token: address })
+			metadata = await Actions.token.getMetadata(config as Config, {
+				token: address,
+			})
 		} catch (error) {
 			console.error('Failed to fetch token metadata:', error)
 			throw notFound()
@@ -317,9 +320,7 @@ function TokenCard(props: {
 		<InfoCard
 			title={
 				<div className="flex items-center justify-between px-4.5 pt-2.5 pb-2">
-					<h1 className="text-[13px] uppercase text-tertiary select-none">
-						Token
-					</h1>
+					<h1 className="text-[13px] text-tertiary select-none">Token</h1>
 					{metadata?.symbol && (
 						<h2 className="text-[13px] inline-flex items-center gap-1.5">
 							<TokenIcon
@@ -352,7 +353,7 @@ function TokenCard(props: {
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-normal leading-4.25 tracking-[0.02em] text-primary break-all max-w-[22ch]">
+					<p className="text-[14px] font-mono font-normal leading-4.25 text-primary break-all max-w-[21ch]">
 						{address}
 					</p>
 				</button>,
@@ -673,7 +674,7 @@ function FilterIndicator(props: {
 			<Link
 				to="/address/$address"
 				params={{ address: account }}
-				className="text-accent press-down"
+				className="text-accent press-down font-mono"
 				title={account}
 			>
 				<Midcut value={account} prefix="0x" />

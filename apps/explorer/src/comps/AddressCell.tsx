@@ -12,7 +12,7 @@ export function AddressCell(props: {
 
 	if (!asLink)
 		return (
-			<span className="text-[13px] text-accent w-full" title={title}>
+			<span className="text-[13px] text-accent w-full font-mono" title={title}>
 				<Midcut value={address} prefix="0x" />
 			</span>
 		)
@@ -21,7 +21,7 @@ export function AddressCell(props: {
 		<Link
 			to="/address/$address"
 			params={{ address }}
-			className="text-[13px] text-accent hover:text-accent/80 transition-colors press-down w-full"
+			className="text-[13px] text-accent hover:text-accent/80 transition-colors press-down w-full font-mono"
 			title={title}
 		>
 			<Midcut value={address} prefix="0x" />

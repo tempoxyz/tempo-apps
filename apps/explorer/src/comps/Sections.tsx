@@ -37,7 +37,7 @@ export function Sections(props: Sections.Props) {
 							<section
 								key={section.title}
 								className={cx(
-									'flex flex-col font-mono w-full overflow-hidden',
+									'flex flex-col font-sans w-full overflow-hidden',
 									'rounded-[10px] border border-card-border bg-card-header',
 									'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 								)}
@@ -51,7 +51,7 @@ export function Sections(props: Sections.Props) {
 											isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
 										)}
 									>
-										<h1 className="text-[13px] font-medium uppercase text-primary">
+										<h1 className="text-[13px] font-medium text-primary font-sans">
 											{section.title}
 										</h1>
 										<div className="flex items-center gap-[12px]">
@@ -72,7 +72,7 @@ export function Sections(props: Sections.Props) {
 									</button>
 								) : (
 									<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-[10px]">
-										<h1 className="text-[13px] font-medium uppercase text-primary">
+										<h1 className="text-[13px] font-medium text-primary font-sans">
 											{section.title}
 										</h1>
 									</div>
@@ -99,16 +99,16 @@ export function Sections(props: Sections.Props) {
 		<Sections.Context.Provider value={{ mode }}>
 			<section
 				className={cx(
-					'flex flex-col font-mono w-full overflow-hidden min-h-0 self-start',
+					'flex flex-col font-sans w-full overflow-hidden min-h-0 self-start',
 					'rounded-[10px] border border-card-border bg-card-header',
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 					className,
 				)}
 			>
 				<div className="h-[36px] flex items-center justify-between">
-					<div className="flex items-center h-full">
+					<div className="flex items-center h-full font-sans">
 						{sections.length === 1 ? (
-							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px]">
+							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px] font-sans">
 								<span className="text-primary">{sections[0].title}</span>
 								{Boolean(sections[0].totalItems) && (
 									<span className="text-tertiary">
@@ -126,7 +126,7 @@ export function Sections(props: Sections.Props) {
 										onSectionChange?.(index)
 									}}
 									className={cx(
-										'h-full flex items-center text-[13px] font-medium',
+										'h-full flex items-center text-[13px] font-medium font-sans',
 										'focus-visible:-outline-offset-2! cursor-pointer',
 										index === 0
 											? 'pl-[18px] pr-[12px] rounded-tl-[10px]!'

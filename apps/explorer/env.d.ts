@@ -4,6 +4,15 @@ interface EnvironmentVariables {
 
 	readonly VITE_OG_URL: string
 	readonly VITE_CONTRACT_VERIFY_URL: string
+
+	readonly VITE_TEMPO_RPC_WS: string
+	readonly VITE_TEMPO_RPC_HTTP: string
+	readonly VITE_TEMPO_CHAIN_ID: number
+	readonly VITE_TEMPO_ENV: 'testnet' | 'moderato' | 'devnet'
+
+	readonly TEMPO_RPC_KEY_DEVNET: string
+	readonly TEMPO_RPC_KEY_TESTNET: string
+	readonly TEMPO_RPC_KEY_MODERATO: string
 }
 
 interface ImportMetaEnv extends EnvironmentVariables {}

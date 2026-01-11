@@ -12,7 +12,6 @@ import {
 } from '@tanstack/react-router'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
-import { Hooks } from 'tempo.ts/wagmi'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
 import { Abis } from 'viem/tempo'
 import { useBlock, useChainId, usePublicClient } from 'wagmi'
@@ -22,6 +21,7 @@ import {
 	getChainId,
 	readContract,
 } from 'wagmi/actions'
+import { Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
@@ -784,14 +784,10 @@ function SectionsWrapper(props: {
 	 */
 	const data = isMounted ? queryData : page === 1 ? initialData : queryData
 	const {
-		transactions,
-		total: approximateTotal,
-		hasMore,
-	} = data ?? {
-		transactions: [],
-		total: 0,
-		hasMore: false,
-	}
+		transactions = [],
+		total: approximateTotal = 0,
+		hasMore = false,
+	} = data ?? {}
 
 	// Fetch exact total count in the background (only when on history tab)
 	// Don't cache across tabs/pages - always show "..." until loaded each time
@@ -1084,7 +1080,7 @@ function TransactionFeeCellInner(props: { hash: Hex.Hex }) {
 		<span className="text-tertiary">
 			{PriceFormatter.format(
 				batchData.receipt.effectiveGasPrice *
-					batchData.receipt.cumulativeGasUsed,
+					batchData.receipt.gasUsed,
 				{ decimals: 18, format: 'short' },
 			)}
 		</span>
