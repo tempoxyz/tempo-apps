@@ -17,8 +17,6 @@ import { ProgressLine } from '#comps/ProgressLine'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
 
-const ogImageUrl = `${OG_BASE_URL}/explorer`
-
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient
 }>()({
@@ -61,7 +59,7 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 			},
 			{
 				name: 'og:image',
-				content: ogImageUrl,
+				content: `${OG_BASE_URL}/explorer`,
 			},
 			{
 				name: 'og:image:type',
@@ -81,7 +79,7 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 			},
 			{
 				name: 'twitter:image',
-				content: ogImageUrl,
+				content: `${OG_BASE_URL}/explorer`,
 			},
 		],
 		links: [
