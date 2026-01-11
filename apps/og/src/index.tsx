@@ -69,11 +69,15 @@ app.get('/favicon.ico', (context) =>
 app
 	.get('/', (context) => context.text('OK'))
 	.get('/health', (context) => context.text('OK'))
+	.get('/explorer', (context) =>
+		context.env.ASSETS.fetch(new URL('/og-explorer.webp', context.req.url)),
+	)
 
 // Apply rate limiting and caching (cache only in prod) to OG image routes
 app.use('/tx/*', rateLimiter)
 app.use('/token/*', rateLimiter)
 app.use('/address/*', rateLimiter)
+app.use('/explorer', rateLimiter)
 app.use('*', except(isNotProd, cacheMiddleware))
 
 /**
