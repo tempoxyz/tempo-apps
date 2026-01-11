@@ -12,9 +12,12 @@ import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
+import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
+
+const ogImageUrl = `${OG_BASE_URL}/explorer`
 
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient
@@ -58,7 +61,7 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 			},
 			{
 				name: 'og:image',
-				content: 'https://explore.tempo.xyz/og-explorer.png',
+				content: ogImageUrl,
 			},
 			{
 				name: 'og:image:type',
@@ -78,7 +81,7 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 			},
 			{
 				name: 'twitter:image',
-				content: 'https://explore.tempo.xyz/og-explorer.png',
+				content: ogImageUrl,
 			},
 		],
 		links: [
