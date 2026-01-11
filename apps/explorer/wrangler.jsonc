@@ -24,6 +24,26 @@
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
 					"pattern": "explore.andantino.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "faucet.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "faucet.42429.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "faucet.testnet.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "faucet.andantino.tempo.xyz"
 				}
 			],
 			"vars": {
@@ -76,7 +96,17 @@
 				{
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
+<<<<<<< Updated upstream
 					"pattern": "explore.testnet.tempo.xyz"
+||||||| Stash base
+=======
+					"pattern": "faucet.42431.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "faucet.moderato.tempo.xyz"
+>>>>>>> Stashed changes
 				}
 			],
 			"vars": {
@@ -110,6 +140,16 @@
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
 					"pattern": "explore.devnet.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "faucet.31318.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "faucet.devnet.tempo.xyz"
 				}
 			],
 			"vars": {

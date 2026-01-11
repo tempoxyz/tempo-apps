@@ -8,26 +8,46 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
+import { getRequestHeader } from '@tanstack/react-start/server'
 import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
 import { ProgressLine } from '#comps/ProgressLine'
+import { AppMode } from '#lib/app-context.tsx'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
+
+function detectAppModeFromHost(host: string | undefined): AppMode {
+	if (!host) return AppMode.Explorer
+	if (host.startsWith('faucet.') || host.includes('faucet')) {
+		return AppMode.Faucet
+	}
+	return AppMode.Explorer
+}
 
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient
 }>()({
-	head: () => ({
-		scripts: [
-			{
-				children: `!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+	head: ({ loaderData }) => {
+		const appMode = loaderData?.appMode ?? AppMode.Explorer
+		const isFaucet = appMode === AppMode.Faucet
+
+		const title = isFaucet ? 'Faucet ⋅ Tempo' : 'Explorer ⋅ Tempo'
+		const description = isFaucet
+			? 'Get test stablecoins on Tempo testnet.'
+			: 'Explore and analyze blocks, transactions, contracts and more on Tempo.'
+		const ogImage = isFaucet ? '/og-faucet.png' : '/og-explorer.png'
+
+		return {
+			scripts: [
+				{
+					children: `!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
 posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https://us.i.posthog.com', defaults:'2025-11-30'})`,
-				type: 'text/javascript',
-			},
-		],
-		meta: [
+					type: 'text/javascript',
+				},
+			],
+			meta: [
 			{
 				charSet: 'utf-8',
 			},
@@ -36,11 +56,11 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 				content: 'width=device-width, initial-scale=1',
 			},
 			{
-				title: 'Explorer ⋅ Tempo',
+				title,
 			},
 			{
 				name: 'og:title',
-				content: 'Explorer ⋅ Tempo',
+				content: title,
 			},
 			{
 				name: 'viewport',
@@ -48,17 +68,15 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 			},
 			{
 				name: 'description',
-				content:
-					'Explore and analyze blocks, transactions, contracts and more on Tempo.',
+				content: description,
 			},
 			{
 				name: 'og:description',
-				content:
-					'Explore and analyze blocks, transactions, contracts and more on Tempo.',
+				content: description,
 			},
 			{
 				name: 'og:image',
-				content: '/og-explorer.png',
+				content: ogImage,
 			},
 			{
 				name: 'og:image:type',
@@ -131,13 +149,19 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 				media: '(prefers-color-scheme: dark)',
 			},
 		],
-	}),
+		}
+	},
 	errorComponent: (props) => (
 		<RootDocument>
 			<ErrorBoundary {...props} />
 		</RootDocument>
 	),
-	loader: () => getWagmiStateSSR(),
+	loader: async () => {
+		const host = getRequestHeader('host')
+		const appMode = detectAppModeFromHost(host)
+		const wagmiState = await getWagmiStateSSR()
+		return { wagmiState, appMode }
+	},
 	shellComponent: RootDocument,
 })
 
@@ -146,7 +170,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
 	const { queryClient } = Route.useRouteContext()
 	const [config] = React.useState(() => getWagmiConfig())
-	const wagmiState = Route.useLoaderData({ select: deserialize<State> })
+	const loaderData = Route.useLoaderData()
+	const wagmiState = loaderData?.wagmiState
+		? deserialize<State>(loaderData.wagmiState)
+		: undefined
 
 	const isLoading = useRouterState({
 		select: (state) => state.status === 'pending',

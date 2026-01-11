@@ -8,6 +8,7 @@ import * as React from 'react'
 import { useWatchBlockNumber } from 'wagmi'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#cva.config.ts'
+import { AppMode } from '#lib/app-context.tsx'
 import { useIsMounted } from '#lib/hooks'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
@@ -15,7 +16,8 @@ import SquareSquare from '~icons/lucide/square-square'
 const isTestnet = import.meta.env.VITE_TEMPO_ENV === 'testnet'
 
 export function Header(props: Header.Props) {
-	const { initialBlockNumber } = props
+	const { initialBlockNumber, appMode = AppMode.Explorer } = props
+	const isFaucet = appMode === AppMode.Faucet
 
 	return (
 		<header className="@container relative z-1">
@@ -24,11 +26,12 @@ export function Header(props: Header.Props) {
 					<Link to="/" className="flex items-center press-down py-[4px]">
 						<Header.TempoWordmark />
 					</Link>
-					<Header.NetworkBadge />
+					{isFaucet && <Header.FaucetBadge />}
+					{!isFaucet && <Header.NetworkBadge />}
 				</div>
-				<Header.Search />
+				{!isFaucet && <Header.Search />}
 				<div className="relative z-1 print:hidden">
-					<Header.BlockNumber initial={initialBlockNumber} />
+					{!isFaucet && <Header.BlockNumber initial={initialBlockNumber} />}
 				</div>
 			</div>
 			<Header.Search compact />
@@ -39,6 +42,7 @@ export function Header(props: Header.Props) {
 export namespace Header {
 	export interface Props {
 		initialBlockNumber?: bigint
+		appMode?: AppMode
 	}
 
 	export function Search(props: { compact?: boolean }) {
@@ -232,6 +236,30 @@ export namespace Header {
 	}
 
 	export namespace NetworkBadge {
+		export interface Props {
+			className?: string
+		}
+	}
+
+	export function FaucetBadge(props: FaucetBadge.Props) {
+		const { className } = props
+		const network = import.meta.env.VITE_TEMPO_ENV
+
+		return (
+			<div
+				className={`flex items-center gap-[6px] px-[10px] h-[28px] border border-distinct bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium ${className ?? ''}`}
+			>
+				<span>Faucet</span>
+				{network && (
+					<span className="text-base-content-secondary capitalize">
+						· {network}
+					</span>
+				)}
+			</div>
+		)
+	}
+
+	export namespace FaucetBadge {
 		export interface Props {
 			className?: string
 		}

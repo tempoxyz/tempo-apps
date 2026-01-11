@@ -1,9 +1,16 @@
 import { createFileRoute, Outlet, useMatchRoute } from '@tanstack/react-router'
+import * as React from 'react'
 import * as z from 'zod/mini'
+import { FaucetCard } from '#comps/FaucetCard'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import { useIntroSeen } from '#comps/Intro'
 import { Sphere } from '#comps/Sphere'
+import {
+	AppMode,
+	AppModeProvider,
+	detectAppMode,
+} from '#lib/app-context.tsx'
 import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
 import TriangleAlert from '~icons/lucide/triangle-alert'
 
@@ -19,18 +26,35 @@ function RouteComponent() {
 	const search = Route.useSearch()
 	const isPlain = 'plain' in search
 	const blockNumber = Route.useLoaderData()
+	const [appMode, setAppMode] = React.useState<AppMode>(AppMode.Explorer)
+
+	React.useEffect(() => {
+		setAppMode(detectAppMode())
+	}, [])
 
 	if (isPlain) return <Outlet />
 
 	return (
-		<Layout blockNumber={blockNumber}>
-			<Outlet />
-		</Layout>
+		<AppModeProvider mode={appMode}>
+			<Layout blockNumber={blockNumber} appMode={appMode}>
+				{appMode === AppMode.Faucet ? <FaucetPage /> : <Outlet />}
+			</Layout>
+		</AppModeProvider>
+	)
+}
+
+function FaucetPage() {
+	return (
+		<div className="flex flex-1 size-full items-center justify-center px-4">
+			<div className="w-full max-w-[560px]">
+				<FaucetCard />
+			</div>
+		</div>
 	)
 }
 
 export function Layout(props: Layout.Props) {
-	const { children, blockNumber } = props
+	const { children, blockNumber, appMode = AppMode.Explorer } = props
 	const matchRoute = useMatchRoute()
 	const introSeen = useIntroSeen()
 	const isReceipt = Boolean(matchRoute({ to: '/receipt/$hash', fuzzy: true }))
@@ -59,15 +83,29 @@ export function Layout(props: Layout.Props) {
 				</span>
 			</div>
 			<div className={`relative z-2 ${isReceipt ? 'print:hidden' : ''}`}>
-				<Header initialBlockNumber={blockNumber} />
+				<Header initialBlockNumber={blockNumber} appMode={appMode} />
 			</div>
 			<main className="flex flex-1 size-full flex-col items-center relative z-1 print:block print:flex-none">
 				{children}
 			</main>
+<<<<<<< Updated upstream
 			<div className="w-full mt-6 relative z-1 print:hidden">
 				<Footer />
+||||||| Stash base
+			<div className="w-full mt-40 relative z-1 print:hidden">
+				<Footer />
+=======
+			<div className="w-full mt-40 relative z-1 print:hidden">
+				<Footer appMode={appMode} />
+>>>>>>> Stashed changes
 			</div>
+<<<<<<< Updated upstream
 			<Sphere animate={isHome && !introSeen} />
+||||||| Stash base
+			<Sphere animate={Boolean(matchRoute({ to: '/' }))} />
+=======
+			<Sphere animate={isHome || appMode === AppMode.Faucet} />
+>>>>>>> Stashed changes
 		</div>
 	)
 }
@@ -76,5 +114,6 @@ export namespace Layout {
 	export interface Props {
 		children: React.ReactNode
 		blockNumber?: bigint
+		appMode?: AppMode
 	}
 }
