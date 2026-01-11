@@ -12,6 +12,7 @@ import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
+import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
 import css from './styles.css?url'
@@ -58,7 +59,7 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 			},
 			{
 				name: 'og:image',
-				content: '/og-explorer.png',
+				content: `${OG_BASE_URL}/explorer`,
 			},
 			{
 				name: 'og:image:type',
@@ -71,6 +72,14 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 			{
 				name: 'og:image:height',
 				content: '630',
+			},
+			{
+				name: 'twitter:card',
+				content: 'summary_large_image',
+			},
+			{
+				name: 'twitter:image',
+				content: `${OG_BASE_URL}/explorer`,
 			},
 		],
 		links: [
