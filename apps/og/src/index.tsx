@@ -28,7 +28,6 @@ import {
 	toBase64DataUrl,
 } from '#utilities.ts'
 
-const DEVICE_PIXEL_RATIO = 1.0
 const CACHE_TTL = 3600
 
 const factory = createFactory<{ Bindings: Cloudflare.Env }>()
@@ -137,8 +136,8 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 			</div>
 		</div>,
 		{
-			width: 1200 * DEVICE_PIXEL_RATIO,
-			height: 630 * DEVICE_PIXEL_RATIO,
+			width: 1200,
+			height: 630,
 			format: 'webp',
 			module,
 			fonts: [
@@ -190,8 +189,8 @@ app.get(
 				</div>
 			</div>,
 			{
-				width: 1200 * DEVICE_PIXEL_RATIO,
-				height: 630 * DEVICE_PIXEL_RATIO,
+				width: 1200,
+				height: 630,
 				format: 'webp',
 				module,
 				fonts: [
@@ -256,8 +255,8 @@ app.get(
 				</div>
 			</div>,
 			{
-				width: 1200 * DEVICE_PIXEL_RATIO,
-				height: 630 * DEVICE_PIXEL_RATIO,
+				width: 1200,
+				height: 630,
 				format: 'webp',
 				module,
 				fonts: [
