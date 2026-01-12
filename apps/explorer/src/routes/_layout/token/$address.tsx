@@ -195,12 +195,16 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				{ property: 'og:title', content: title },
 				{ property: 'og:description', content: description },
 				{ name: 'twitter:description', content: description },
-				{ property: 'og:image', content: ogImageUrl },
-				{ property: 'og:image:type', content: 'image/png' },
-				{ property: 'og:image:width', content: '1200' },
-				{ property: 'og:image:height', content: '630' },
-				{ name: 'twitter:card', content: 'summary_large_image' },
-				{ name: 'twitter:image', content: ogImageUrl },
+				...(ogImageUrl
+					? [
+							{ property: 'og:image', content: ogImageUrl },
+							{ property: 'og:image:type', content: 'image/webp' },
+							{ property: 'og:image:width', content: '1200' },
+							{ property: 'og:image:height', content: '630' },
+							{ name: 'twitter:card', content: 'summary_large_image' },
+							{ name: 'twitter:image', content: ogImageUrl },
+						]
+					: []),
 			],
 		}
 	},
