@@ -3,11 +3,24 @@ import tailwind from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
+import { readFileSync } from 'node:fs'
+import { parse } from 'jsonc-parser'
 import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 
 const [, , , ...args] = process.argv
+
+function getWranglerEnvVars(envName: string | undefined): Record<string, string> {
+	if (!envName) return {}
+	try {
+		const content = readFileSync('wrangler.jsonc', 'utf-8')
+		const wranglerConfig = parse(content) as { env?: Record<string, { vars?: Record<string, string> }> }
+		return wranglerConfig?.env?.[envName]?.vars ?? {}
+	} catch {
+		return {}
+	}
+}
 
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
@@ -16,6 +29,7 @@ export default defineConfig((config) => {
 	// This selects the wrangler environment (testnet, moderato, devnet)
 	// which provides VITE_TEMPO_ENV and other vars
 	const cloudflareEnv = process.env.CLOUDFLARE_ENV || env.CLOUDFLARE_ENV
+	const wranglerVars = getWranglerEnvVars(cloudflareEnv)
 
 	const showDevtools = env.VITE_ENABLE_DEVTOOLS !== 'false'
 
@@ -77,7 +91,19 @@ export default defineConfig((config) => {
 			),
 
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
-				cloudflareEnv || env.VITE_TEMPO_ENV,
+				wranglerVars.VITE_TEMPO_ENV || cloudflareEnv || env.VITE_TEMPO_ENV,
+			),
+			'import.meta.env.VITE_TEMPO_RPC_WS': JSON.stringify(
+				wranglerVars.VITE_TEMPO_RPC_WS || env.VITE_TEMPO_RPC_WS || '',
+			),
+			'import.meta.env.VITE_TEMPO_RPC_WS_FALLBACK': JSON.stringify(
+				wranglerVars.VITE_TEMPO_RPC_WS_FALLBACK || env.VITE_TEMPO_RPC_WS_FALLBACK || '',
+			),
+			'import.meta.env.VITE_TEMPO_RPC_HTTP': JSON.stringify(
+				wranglerVars.VITE_TEMPO_RPC_HTTP || env.VITE_TEMPO_RPC_HTTP || '',
+			),
+			'import.meta.env.VITE_TEMPO_RPC_HTTP_FALLBACK': JSON.stringify(
+				wranglerVars.VITE_TEMPO_RPC_HTTP_FALLBACK || env.VITE_TEMPO_RPC_HTTP_FALLBACK || '',
 			),
 			'import.meta.env.VITE_ENABLE_DEMO': JSON.stringify(
 				env.VITE_ENABLE_DEMO ?? 'true',

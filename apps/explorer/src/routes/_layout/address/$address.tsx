@@ -19,7 +19,7 @@ import {
 	type GetBlockReturnType,
 	getBlock,
 	getChainId,
-	readContract,
+	multicall,
 } from 'wagmi/actions'
 import { Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
@@ -433,33 +433,45 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const accountAddress = params.address as Address.Address
 
 			const config = getWagmiConfig()
-			const tokenResults = await timeout(
-				// TODO: investigate & consider batch/multicall
-				Promise.all(
-					assets.map(async (tokenAddress) => {
-						try {
-							// TODO: investigate & consider batch/multicall
-							const [balance, decimals] = await Promise.all([
-								readContract(config, {
-									address: tokenAddress,
-									abi: Abis.tip20,
-									functionName: 'balanceOf',
-									args: [accountAddress],
-								}),
-								readContract(config, {
-									address: tokenAddress,
-									abi: Abis.tip20,
-									functionName: 'decimals',
-								}),
-							])
-							return { balance, decimals }
-						} catch {
-							return null
-						}
-					}),
-				),
+
+			// Use multicall to batch all token balance + decimals calls into a single RPC request
+			const multicallResults = await timeout(
+				multicall(config, {
+					contracts: assets.flatMap((tokenAddress) => [
+						{
+							address: tokenAddress,
+							abi: Abis.tip20,
+							functionName: 'balanceOf',
+							args: [accountAddress],
+						},
+						{
+							address: tokenAddress,
+							abi: Abis.tip20,
+							functionName: 'decimals',
+						},
+					]),
+					allowFailure: true,
+				}),
 				TIMEOUT_MS,
 			)
+
+			// Parse multicall results: each token has 2 results (balance, decimals)
+			const tokenResults = multicallResults
+				? assets.map((_, i) => {
+						const balanceResult = multicallResults[i * 2]
+						const decimalsResult = multicallResults[i * 2 + 1]
+						if (
+							balanceResult?.status === 'success' &&
+							decimalsResult?.status === 'success'
+						) {
+							return {
+								balance: balanceResult.result as bigint,
+								decimals: decimalsResult.result as number,
+							}
+						}
+						return null
+					})
+				: null
 
 			if (tokenResults) {
 				const PRICE_PER_TOKEN = 1
