@@ -32,6 +32,8 @@ jobs:
             env: moderato
           - app: explorer
             env: devnet
+          - app: explorer
+            env: presto
           #### fee-payer
           - app: fee-payer
             env: privy
