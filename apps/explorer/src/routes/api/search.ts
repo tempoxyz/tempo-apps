@@ -11,6 +11,7 @@ import tokensIndex42429 from '#data/tokens-index-42429.json' with {
 import tokensIndex42431 from '#data/tokens-index-42431.json' with {
 	type: 'json',
 }
+import tokensIndex4217 from '#data/tokens-index-4217.json' with { type: 'json' }
 import { isTip20Address } from '#lib/domain/tip20'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
@@ -73,6 +74,7 @@ const INDEXED_TOKENS: Record<number, IndexedToken[]> = {
 	31318: indexTokens(tokensIndex31318 as Token[]),
 	42429: indexTokens(tokensIndex42429 as Token[]),
 	42431: indexTokens(tokensIndex42431 as Token[]),
+	4217: indexTokens(tokensIndex4217 as Token[]),
 }
 
 function searchTokens(query: string, chainId: number): TokenSearchResult[] {

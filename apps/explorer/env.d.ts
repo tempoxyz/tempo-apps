@@ -1,12 +1,10 @@
 interface EnvironmentVariables {
-	readonly BASIC_AUTH: string | undefined
 	readonly INDEXER_API_KEY: string | undefined
 
 	readonly VITE_OG_URL: string
 	readonly VITE_CONTRACT_VERIFY_URL: string
 
-	// stricter than wrangler-generated `string`
-	readonly VITE_TEMPO_ENV: 'testnet' | 'moderato' | 'devnet'
+	readonly VITE_TEMPO_ENV: 'testnet' | 'moderato' | 'devnet' | 'presto'
 
 	readonly TEMPO_RPC_KEY: string
 }
