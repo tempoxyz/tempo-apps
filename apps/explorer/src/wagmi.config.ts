@@ -28,15 +28,33 @@ const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 
-const WS_URLS = [
-	import.meta.env.VITE_TEMPO_RPC_WS,
-	import.meta.env.VITE_TEMPO_RPC_WS_FALLBACK,
-].filter(Boolean)
+const getWsUrls = createIsomorphicFn()
+	.client(() =>
+		[
+			import.meta.env.VITE_TEMPO_RPC_WS,
+			import.meta.env.VITE_TEMPO_RPC_WS_FALLBACK,
+		].filter(Boolean),
+	)
+	.server(() =>
+		[
+			process.env.VITE_TEMPO_RPC_WS,
+			process.env.VITE_TEMPO_RPC_WS_FALLBACK,
+		].filter(Boolean),
+	)
 
-const HTTP_URLS = [
-	import.meta.env.VITE_TEMPO_RPC_HTTP,
-	import.meta.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
-].filter(Boolean)
+const getHttpUrls = createIsomorphicFn()
+	.client(() =>
+		[
+			import.meta.env.VITE_TEMPO_RPC_HTTP,
+			import.meta.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
+		].filter(Boolean),
+	)
+	.server(() =>
+		[
+			process.env.VITE_TEMPO_RPC_HTTP,
+			process.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
+		].filter(Boolean),
+	)
 
 const getTempoRpcKey = createServerOnlyFn(() => process.env.TEMPO_RPC_KEY)
 
@@ -63,8 +81,8 @@ export const getTempoChain = createIsomorphicFn()
 const getTempoTransport = createIsomorphicFn()
 	.client(() =>
 		fallback([
-			...WS_URLS.map((u) => webSocket(u)),
-			...HTTP_URLS.map((u) => http(u)),
+			...getWsUrls().map((u) => webSocket(u)),
+			...getHttpUrls().map((u) => http(u)),
 		]),
 	)
 	.server(() => {
@@ -72,8 +90,8 @@ const getTempoTransport = createIsomorphicFn()
 		if (rpcKey === '__FORWARD__') {
 			const authHeader = getRequestHeader('authorization')
 			return fallback([
-				...WS_URLS.map((url) => webSocket(url)),
-				...HTTP_URLS.map((url) =>
+				...getWsUrls().map((url) => webSocket(url)),
+				...getHttpUrls().map((url) =>
 					http(url, {
 						fetchOptions: { headers: { Authorization: authHeader ?? '' } },
 					})
@@ -81,8 +99,8 @@ const getTempoTransport = createIsomorphicFn()
 			])
 		}
 		return fallback([
-			...WS_URLS.map((url) => webSocket(`${url}/${rpcKey}`)),
-			...HTTP_URLS.map((url) => http(`${url}/${rpcKey}`)),
+			...getWsUrls().map((url) => webSocket(`${url}/${rpcKey}`)),
+			...getHttpUrls().map((url) => http(`${url}/${rpcKey}`)),
 		])
 	})
 
