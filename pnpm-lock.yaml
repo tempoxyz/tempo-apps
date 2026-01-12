@@ -76,8 +76,8 @@ catalogs:
       specifier: ^1.147.3
       version: 1.147.3
     '@tanstack/react-start':
-      specifier: ^1.149.1
-      version: 1.149.1
+      specifier: ^1.149.2
+      version: 1.149.2
     '@tanstack/router-plugin':
       specifier: ^1.149.0
       version: 1.149.0
@@ -271,8 +271,8 @@ importers:
         specifier: ^7.7.1
         version: 7.7.1
       dbmate:
-        specifier: ^2.29.2
-        version: 2.29.2
+        specifier: ^2.29.3
+        version: 2.29.3
       drizzle-kit:
         specifier: ^0.31.8
         version: 0.31.8
@@ -323,7 +323,7 @@ importers:
         version: 1.147.3(@tanstack/query-core@5.90.16)(@tanstack/react-query@5.90.16(react@19.2.3))(@tanstack/react-router@1.147.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(@tanstack/router-core@1.147.1)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tanstack/react-start':
         specifier: 'catalog:'
-        version: 1.149.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(rolldown-vite@7.3.1(@types/node@25.0.6)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 1.149.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(rolldown-vite@7.3.1(@types/node@25.0.6)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@tanstack/router-plugin':
         specifier: 'catalog:'
         version: 1.149.0(@tanstack/react-router@1.147.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.3.1(@types/node@25.0.6)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
@@ -936,38 +936,38 @@ packages:
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
     engines: {node: '>=12'}
 
-  '@dbmate/darwin-arm64@2.29.2':
-    resolution: {integrity: sha512-AGUaJFZppZ35s1cd0Q1QhUrb4YexMqTno1BaOI+ByDrSo7ySgqOeVAqvzdHHy2Y77N1hrTwvY0+g7tq1KLeIyw==}
+  '@dbmate/darwin-arm64@2.29.3':
+    resolution: {integrity: sha512-kdtKZqT/NhapBqYKwp42eYA2AQam2FeZLwpWJyrZtGDpWGYL7A1Zrgef44efg/xNTH90LlMQaKQCG+FFKZxi5g==}
     cpu: [arm64]
     os: [darwin]
 
-  '@dbmate/darwin-x64@2.29.2':
-    resolution: {integrity: sha512-TFPQV/1Hkq/MFkDhW6Nh9U0F3MhVhwx1k6nZqFqrC4DBRnCz1s5pwfgib2flGiBo6IJYQtPsROstmrcVU9kP5A==}
+  '@dbmate/darwin-x64@2.29.3':
+    resolution: {integrity: sha512-IL3PvKl7Sf5OUapCrsgTvqObFloacc66ANyus8zOr8fp8wtreSrlu/S4MaGavmun0JFIfot8N33x1Nx2PjB9pA==}
     cpu: [x64]
     os: [darwin]
 
-  '@dbmate/linux-arm64@2.29.2':
-    resolution: {integrity: sha512-kNx2rH93wnK770kj2ztRDdcRMSqwxqPujX1GLBt6y8w/ZAS68OT3SWSiDm2NldNDcwolNtcPQSWGj94OzD/D8Q==}
+  '@dbmate/linux-arm64@2.29.3':
+    resolution: {integrity: sha512-M/UTLq0NIDCmr3gcEdpwG5wdECaoy9C+HO4FIqjh337Gs71kHE+NAR55KK9VJm5fBlMQ6f24etAIsYTXki53nw==}
     cpu: [arm64]
     os: [linux]
 
-  '@dbmate/linux-arm@2.29.2':
-    resolution: {integrity: sha512-p4ePFqurqE2MPgSZh7vs+g/xRC9jyAZMdSFUHdy3pSS8sdQIEu3eoBtMfUg11Gex6QAOO5VlC4rZx8Ln+kzaeg==}
+  '@dbmate/linux-arm@2.29.3':
+    resolution: {integrity: sha512-RcOmoI8Nr//8a2dYgWymHhZs/PNU1oGbXOictjWKri12qkoWhYFEg/GpZiaErhHVW0tt/6V6udwhDBqlCQ7C/w==}
     cpu: [arm]
     os: [linux]
 
-  '@dbmate/linux-ia32@2.29.2':
-    resolution: {integrity: sha512-ltSV16ya9BAWPF4vh1IW5acSbN3OlydSfIz3pFRNIXGgw4pcfgOuoQyHk3bnwBaC8Vikc79kBM7eO3vkpTLDYA==}
+  '@dbmate/linux-ia32@2.29.3':
+    resolution: {integrity: sha512-byDXnz/E6utja1AEc279CiwOEEwmpZlFQujKRBbwTL6kasp1J2QLqhC9o9P2SusEIuuaur7QsDfzLj7i/+HAng==}
     cpu: [ia32]
     os: [linux]
 
-  '@dbmate/linux-x64@2.29.2':
-    resolution: {integrity: sha512-ZBa3XO4uSyTgbHOw/HtsdwcVeTca65ZmHuqw2MMRjOFOeeHL9xQI8zWyRS/v4F3Nc1FRkJ4aqQFBk+Zd7nzQiA==}
+  '@dbmate/linux-x64@2.29.3':
+    resolution: {integrity: sha512-+pxAnwK1sfj3pyAlk+LYzmt8hCf/ldcxHZi/LtN5Y0yZBy8QXhdcQsEcguE7fQ/stHlWA7ELoa+4AeiO+q9KbQ==}
     cpu: [x64]
     os: [linux]
 
-  '@dbmate/win32-x64@2.29.2':
-    resolution: {integrity: sha512-BLU9Xd/puKMumZ7l3mjkCOGCDVhztNiN/zR5Id8sjqU6hXWDG0QEC4i7FbF0aZ1HxxvUqnzuqfqOzurjc+scYA==}
+  '@dbmate/win32-x64@2.29.3':
+    resolution: {integrity: sha512-VAmZP9hUzZMAJFnhmSe/6TGBu8vjuOnmcyy79Dg41z/0v9HsIjniC/e6hTY8d6OQel+76OvQxYJEKIT7UMjwMw==}
     cpu: [x64]
     os: [win32]
 
@@ -2722,8 +2722,8 @@ packages:
       react: '>=18.0.0 || >=19.0.0'
       react-dom: '>=18.0.0 || >=19.0.0'
 
-  '@tanstack/react-start@1.149.1':
-    resolution: {integrity: sha512-MfBY08FaQqhJuzZSI01rJYdS9w8vVhmhczZt+bTDrvBg/ZAC1NO4Erlejyyk3NyLQyUj9DlO5bYTRxYM3jUBag==}
+  '@tanstack/react-start@1.149.2':
+    resolution: {integrity: sha512-aNZVnlv79OB0izGVGWfPF+CNc5Kb8PEFHjsolzAV3ef7xxnoMHtv415JUAoYyddlkZnws/onO7eKQ/pZ7nr1JA==}
     engines: {node: '>=22.12.0'}
     peerDependencies:
       react: '>=18.0.0 || >=19.0.0'
@@ -2794,8 +2794,8 @@ packages:
     resolution: {integrity: sha512-2IKUPh/TlxwzwHMiHNeFw95+L2sD4M03Es27SxMR0A60Qc4WclpaD6gpC8FsbuNASM2jBxk2UyeYClJxW1GOAQ==}
     engines: {node: '>=22.12.0'}
 
-  '@tanstack/start-plugin-core@1.149.1':
-    resolution: {integrity: sha512-scdWMWXpbH29psG993VMNdcfSwM1Crrn2DNvimxbioJCC5SZ6sl97mnUXLTeNpfSp7bKPRG5e1n4kzOxPBLUMw==}
+  '@tanstack/start-plugin-core@1.149.2':
+    resolution: {integrity: sha512-EjMSX5nW27g7gzCO48Rj35m3aHoPWdaGO39j1ChtWc1zyLIgJS/jmmDovFszDosvsO0khDfAGut1V3Jhu5LJVA==}
     engines: {node: '>=22.12.0'}
     peerDependencies:
       vite: '>=7.0.0'
@@ -3640,8 +3640,8 @@ packages:
     resolution: {integrity: sha512-7hvf7/GW8e86rW0ptuwS3OcBGDjIi6SZva7hCyWC0yYry2cOPmLIjXAUHI6DK2HsnwJd9ifmt57i8eV2n4YNpw==}
     engines: {node: '>= 14'}
 
-  dbmate@2.29.2:
-    resolution: {integrity: sha512-SeQSIzSBiG9lUzFdTXY2LYajopnuBjGRbAWgb1Bcx9ZaytEDF2k62qbpLxHeomZd8q3OZB6zsP67h5pv4liW0g==}
+  dbmate@2.29.3:
+    resolution: {integrity: sha512-BpbIVLdFlVhRMMZF15h6+4pzNAHIZaT+whSlGm1KhgvrUtBUf/SFC2cMj7KA4MqOuEMiM0wv1zDJciQl3CswUQ==}
     hasBin: true
 
   debug@4.4.3:
@@ -6351,25 +6351,25 @@ snapshots:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
 
-  '@dbmate/darwin-arm64@2.29.2':
+  '@dbmate/darwin-arm64@2.29.3':
     optional: true
 
-  '@dbmate/darwin-x64@2.29.2':
+  '@dbmate/darwin-x64@2.29.3':
     optional: true
 
-  '@dbmate/linux-arm64@2.29.2':
+  '@dbmate/linux-arm64@2.29.3':
     optional: true
 
-  '@dbmate/linux-arm@2.29.2':
+  '@dbmate/linux-arm@2.29.3':
     optional: true
 
-  '@dbmate/linux-ia32@2.29.2':
+  '@dbmate/linux-ia32@2.29.3':
     optional: true
 
-  '@dbmate/linux-x64@2.29.2':
+  '@dbmate/linux-x64@2.29.3':
     optional: true
 
-  '@dbmate/win32-x64@2.29.2':
+  '@dbmate/win32-x64@2.29.3':
     optional: true
 
   '@drizzle-team/brocli@0.10.2': {}
@@ -8009,14 +8009,14 @@ snapshots:
     transitivePeerDependencies:
       - crossws
 
-  '@tanstack/react-start@1.149.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(rolldown-vite@7.3.1(@types/node@25.0.6)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+  '@tanstack/react-start@1.149.2(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(rolldown-vite@7.3.1(@types/node@25.0.6)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
     dependencies:
       '@tanstack/react-router': 1.147.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tanstack/react-start-client': 1.149.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tanstack/react-start-server': 1.149.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       '@tanstack/router-utils': 1.143.11
       '@tanstack/start-client-core': 1.149.1
-      '@tanstack/start-plugin-core': 1.149.1(@tanstack/react-router@1.147.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.3.1(@types/node@25.0.6)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@tanstack/start-plugin-core': 1.149.2(@tanstack/react-router@1.147.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.3.1(@types/node@25.0.6)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@tanstack/start-server-core': 1.149.1
       pathe: 2.0.3
       react: 19.2.3
@@ -8118,7 +8118,7 @@ snapshots:
 
   '@tanstack/start-fn-stubs@1.143.8': {}
 
-  '@tanstack/start-plugin-core@1.149.1(@tanstack/react-router@1.147.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.3.1(@types/node@25.0.6)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
+  '@tanstack/start-plugin-core@1.149.2(@tanstack/react-router@1.147.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3))(rolldown-vite@7.3.1(@types/node@25.0.6)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))':
     dependencies:
       '@babel/code-frame': 7.27.1
       '@babel/core': 7.28.6
@@ -9019,15 +9019,15 @@ snapshots:
 
   data-uri-to-buffer@6.0.2: {}
 
-  dbmate@2.29.2:
+  dbmate@2.29.3:
     optionalDependencies:
-      '@dbmate/darwin-arm64': 2.29.2
-      '@dbmate/darwin-x64': 2.29.2
-      '@dbmate/linux-arm': 2.29.2
-      '@dbmate/linux-arm64': 2.29.2
-      '@dbmate/linux-ia32': 2.29.2
-      '@dbmate/linux-x64': 2.29.2
-      '@dbmate/win32-x64': 2.29.2
+      '@dbmate/darwin-arm64': 2.29.3
+      '@dbmate/darwin-x64': 2.29.3
+      '@dbmate/linux-arm': 2.29.3
+      '@dbmate/linux-arm64': 2.29.3
+      '@dbmate/linux-ia32': 2.29.3
+      '@dbmate/linux-x64': 2.29.3
+      '@dbmate/win32-x64': 2.29.3
 
   debug@4.4.3:
     dependencies:
