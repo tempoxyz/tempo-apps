@@ -11,8 +11,13 @@ import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#cva.config'
 import { springInstant, springBouncy, springSmooth } from '#lib/animation'
-import { Intro, type IntroPhase, useIntroSeen } from '#comps/Intro'
+import { type IntroPhase, useIntroSeen } from '#comps/Intro'
 import BoxIcon from '~icons/lucide/box'
+
+// Lazy load Intro component to defer animation library loading
+const Intro = React.lazy(() =>
+	import('#comps/Intro').then((m) => ({ default: m.Intro })),
+)
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CoinsIcon from '~icons/lucide/coins'
 import FileIcon from '~icons/lucide/file'
@@ -108,7 +113,15 @@ function Component() {
 	return (
 		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
 			<div className="grid place-items-center relative grid-flow-row gap-5 select-none w-full pt-15 pb-10 z-1">
-				<Intro onPhaseChange={handlePhaseChange} />
+				<React.Suspense
+					fallback={
+						<div className="flex flex-col items-center gap-1 opacity-0">
+							<span style={{ fontSize: '52px', height: '52px' }} />
+						</div>
+					}
+				>
+					<Intro onPhaseChange={handlePhaseChange} />
+				</React.Suspense>
 				<div className="w-full my-3 px-4 flex justify-center relative z-20">
 					<ExploreInput
 						inputRef={exploreInputRef}
