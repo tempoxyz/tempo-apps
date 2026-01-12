@@ -26,6 +26,7 @@ import {
 	preferredEventsFilter,
 } from '#lib/domain/known-events'
 import { PriceFormatter } from '#lib/formatting.ts'
+import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
 import {
 	type BlockIdentifier,
@@ -60,38 +61,42 @@ export const Route = createFileRoute('/_layout/block/$id')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loader: async ({ params, context }) => {
-		const { id } = params
+	loader: ({ params, context }) =>
+		withLoaderTiming('/_layout/block/$id', async () => {
+			const { id } = params
 
-		if (id === 'latest') {
-			const blockNumber = await fetchLatestBlock()
-			throw redirect({ to: '/block/$id', params: { id: String(blockNumber) } })
-		}
-
-		try {
-			let blockRef: BlockIdentifier
-			if (isHex(id)) {
-				Hex.assert(id)
-				blockRef = { kind: 'hash', blockHash: id }
-			} else {
-				const parsedNumber = Number(id)
-				if (!Number.isSafeInteger(parsedNumber)) throw notFound()
-				blockRef = { kind: 'number', blockNumber: BigInt(parsedNumber) }
+			if (id === 'latest') {
+				const blockNumber = await fetchLatestBlock()
+				throw redirect({
+					to: '/block/$id',
+					params: { id: String(blockNumber) },
+				})
 			}
 
-			return await context.queryClient.ensureQueryData(
-				blockDetailQueryOptions(blockRef),
-			)
-		} catch (error) {
-			console.error(error)
-			throw notFound({
-				routeId: rootRouteId,
-				data: {
-					error: error instanceof Error ? error.message : 'Invalid block ID',
-				},
-			})
-		}
-	},
+			try {
+				let blockRef: BlockIdentifier
+				if (isHex(id)) {
+					Hex.assert(id)
+					blockRef = { kind: 'hash', blockHash: id }
+				} else {
+					const parsedNumber = Number(id)
+					if (!Number.isSafeInteger(parsedNumber)) throw notFound()
+					blockRef = { kind: 'number', blockNumber: BigInt(parsedNumber) }
+				}
+
+				return await context.queryClient.ensureQueryData(
+					blockDetailQueryOptions(blockRef),
+				)
+			} catch (error) {
+				console.error(error)
+				throw notFound({
+					routeId: rootRouteId,
+					data: {
+						error: error instanceof Error ? error.message : 'Invalid block ID',
+					},
+				})
+			}
+		}),
 })
 
 function RouteComponent() {
