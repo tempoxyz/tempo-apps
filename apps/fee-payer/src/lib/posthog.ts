@@ -44,7 +44,9 @@ export async function captureEvent({
 		})
 
 		if (!response.ok) {
-			console.error(`PostHog capture failed: ${response.status}`)
+			const body = await response.text().catch(() => 'Unable to read response body')
+			console.error(`PostHog capture failed: ${response.status} - ${body}`)
+		}
 		}
 	} catch (error) {
 		console.error('PostHog capture error:', error)
