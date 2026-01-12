@@ -28,10 +28,10 @@ export async function captureEvent({
 	const payload = {
 		api_key: env.POSTHOG_API_KEY,
 		event,
+		timestamp: new Date().toISOString(),
 		properties: {
 			distinct_id: distinctId,
 			environment: env.TEMPO_ENV,
-			timestamp: Date.now(),
 			...properties,
 		},
 	}
