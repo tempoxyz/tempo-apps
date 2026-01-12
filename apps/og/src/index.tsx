@@ -35,6 +35,8 @@ const factory = createFactory<{ Bindings: Cloudflare.Env }>()
 
 const rateLimiter = createMiddleware<{ Bindings: Cloudflare.Env }>(
 	async (context, next) => {
+		if (!context.env.REQUESTS_RATE_LIMITER) return next()
+
 		const { success } = await context.env.REQUESTS_RATE_LIMITER.limit({
 			key: 'global',
 		})
@@ -137,7 +139,7 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 		{
 			width: 1200 * DEVICE_PIXEL_RATIO,
 			height: 630 * DEVICE_PIXEL_RATIO,
-			format: 'png',
+			format: 'webp',
 			module,
 			fonts: [
 				{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
@@ -147,7 +149,7 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 	)
 
 	return new Response(imageResponse.body, {
-		headers: { 'Content-Type': 'image/png' },
+		headers: { 'Content-Type': 'image/webp' },
 	})
 })
 
@@ -190,7 +192,7 @@ app.get(
 			{
 				width: 1200 * DEVICE_PIXEL_RATIO,
 				height: 630 * DEVICE_PIXEL_RATIO,
-				format: 'png',
+				format: 'webp',
 				module,
 				fonts: [
 					{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
@@ -199,8 +201,9 @@ app.get(
 			},
 		)
 
-		return new Response(imageResponse.body, {
-			headers: { 'Content-Type': 'image/png' },
+		const body = await imageResponse.arrayBuffer()
+		return new Response(body, {
+			headers: { 'Content-Type': 'image/webp' },
 		})
 	},
 )
@@ -255,7 +258,7 @@ app.get(
 			{
 				width: 1200 * DEVICE_PIXEL_RATIO,
 				height: 630 * DEVICE_PIXEL_RATIO,
-				format: 'png',
+				format: 'webp',
 				module,
 				fonts: [
 					{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
@@ -265,7 +268,7 @@ app.get(
 		)
 
 		return new Response(imageResponse.body, {
-			headers: { 'Content-Type': 'image/png' },
+			headers: { 'Content-Type': 'image/webp' },
 		})
 	},
 )
