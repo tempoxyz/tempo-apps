@@ -5,7 +5,6 @@ const FONT_MONO_URL =
 const FONT_INTER_URL =
 	'https://unpkg.com/@fontsource/inter/files/inter-latin-500-normal.woff2'
 const TOKENLIST_ICON_URL = 'https://tokenlist.tempo.xyz/icon'
-const TESTNET_CHAIN_ID = 42429
 
 interface ImageCache {
 	bgTx: ArrayBuffer
@@ -85,10 +84,13 @@ export async function loadImages(env: Cloudflare.Env): Promise<ImageCache> {
 	return imagesInFlight
 }
 
-export async function fetchTokenIcon(address: string): Promise<string | null> {
+export async function fetchTokenIcon(
+	address: string,
+	chainId: number,
+): Promise<string | null> {
 	try {
 		const response = await fetch(
-			`${TOKENLIST_ICON_URL}/${TESTNET_CHAIN_ID}/${address}`,
+			`${TOKENLIST_ICON_URL}/${chainId}/${address}`,
 			{ cf: { cacheTtl: 3600 } },
 		)
 		if (!response.ok) return null
