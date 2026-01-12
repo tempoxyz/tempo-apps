@@ -163,7 +163,7 @@
 				"VITE_TEMPO_ENV": "presto",
 				"VITE_TEMPO_RPC_WS": "wss://proxy.tempo.xyz/rpc/4217",
 				"VITE_TEMPO_RPC_WS_FALLBACK": "wss://rpc.presto.tempo.xyz",
-				"VITE_TEMPO_RPC_HTTP": "https://proxy.tempo.xyz/rpc/4217"
+				"VITE_TEMPO_RPC_HTTP": "https://proxy.tempo.xyz/rpc/4217",
 				"VITE_TEMPO_RPC_HTTP_FALLBACK": "https://rpc.presto.tempo.xyz",
 				"VITE_CONTRACT_VERIFY_URL": "https://contracts.tempo.xyz/v2/contract",
 				"VITE_OG_URL": "https://og.tempo.xyz"
