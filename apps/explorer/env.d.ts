@@ -1,4 +1,5 @@
 interface EnvironmentVariables {
+	readonly BASIC_AUTH: string | undefined
 	readonly INDEXER_API_KEY: string | undefined
 	readonly VITE_LOG_LEVEL: 'info' | 'warn' | 'silent'
 
