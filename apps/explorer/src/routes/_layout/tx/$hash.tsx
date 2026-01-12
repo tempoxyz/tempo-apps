@@ -24,9 +24,15 @@ import { TxDecodedCalldata } from '#comps/TxDecodedCalldata'
 import { TxDecodedTopics } from '#comps/TxDecodedTopics'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
-import { TxStateDiff } from '#comps/TxStateDiff'
-import { TxTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
+
+// Lazy load heavy trace/state components
+const TxTraceTree = React.lazy(() =>
+	import('#comps/TxTraceTree').then((m) => ({ default: m.TxTraceTree })),
+)
+const TxStateDiff = React.lazy(() =>
+	import('#comps/TxStateDiff').then((m) => ({ default: m.TxStateDiff })),
+)
 import { cx } from '#cva.config.ts'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
@@ -240,8 +246,16 @@ function RouteComponent() {
 			itemsLabel: 'views',
 			content: (
 				<div className="flex flex-col">
-					<TxTraceTree trace={traceData.trace} />
-					<TxStateDiff prestate={traceData.prestate} />
+					<React.Suspense
+						fallback={
+							<div className="rounded-[10px] bg-card-header p-4 text-sm text-secondary">
+								Loading trace data...
+							</div>
+						}
+					>
+						<TxTraceTree trace={traceData.trace} />
+						<TxStateDiff prestate={traceData.prestate} />
+					</React.Suspense>
 				</div>
 			),
 		})

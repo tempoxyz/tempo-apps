@@ -3,11 +3,27 @@ import * as React from 'react'
 import type { Abi } from 'viem'
 import { useBytecode } from 'wagmi'
 import { ConnectWallet } from '#comps/ConnectWallet.tsx'
-import { AbiViewer } from '#comps/ContractAbi.tsx'
-import { ContractReader } from '#comps/ContractReader.tsx'
-import { SourceSection } from '#comps/ContractSource.tsx'
-import { ContractWriter } from '#comps/ContractWriter.tsx'
 import { cx } from '#cva.config.ts'
+
+// Lazy load heavy contract interaction components
+const AbiViewer = React.lazy(() =>
+	import('#comps/ContractAbi.tsx').then((m) => ({ default: m.AbiViewer })),
+)
+const ContractReader = React.lazy(() =>
+	import('#comps/ContractReader.tsx').then((m) => ({
+		default: m.ContractReader,
+	})),
+)
+const SourceSection = React.lazy(() =>
+	import('#comps/ContractSource.tsx').then((m) => ({
+		default: m.SourceSection,
+	})),
+)
+const ContractWriter = React.lazy(() =>
+	import('#comps/ContractWriter.tsx').then((m) => ({
+		default: m.ContractWriter,
+	})),
+)
 import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { getContractAbi } from '#lib/domain/contracts.ts'
@@ -57,7 +73,17 @@ export function ContractTabContent(props: {
 	return (
 		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
 			{/* Source Section */}
-			{source && <SourceSection {...source} />}
+			{source && (
+				<React.Suspense
+					fallback={
+						<div className="p-4 text-sm text-secondary">
+							Loading source code...
+						</div>
+					}
+				>
+					<SourceSection {...source} />
+				</React.Suspense>
+			)}
 
 			{/* ABI Section */}
 			<CollapsibleSection
@@ -100,7 +126,13 @@ export function ContractTabContent(props: {
 					</>
 				}
 			>
-				<AbiViewer abi={abi} />
+				<React.Suspense
+					fallback={
+						<div className="p-4 text-sm text-secondary">Loading ABI...</div>
+					}
+				>
+					<AbiViewer abi={abi} />
+				</React.Suspense>
 			</CollapsibleSection>
 
 			{/* Bytecode Section */}
@@ -250,7 +282,15 @@ export function InteractTabContent(props: {
 				actions={<ConnectWallet />}
 			>
 				<div className="px-[10px] pb-[10px]">
-					<ContractWriter address={address} abi={abi} />
+					<React.Suspense
+						fallback={
+							<div className="p-4 text-sm text-secondary">
+								Loading contract writer...
+							</div>
+						}
+					>
+						<ContractWriter address={address} abi={abi} />
+					</React.Suspense>
 				</div>
 			</CollapsibleSection>
 
@@ -261,7 +301,15 @@ export function InteractTabContent(props: {
 				onToggle={() => setReadExpanded(!readExpanded)}
 			>
 				<div className="px-[10px] pb-[10px]">
-					<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
+					<React.Suspense
+						fallback={
+							<div className="p-4 text-sm text-secondary">
+								Loading contract reader...
+							</div>
+						}
+					>
+						<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
+					</React.Suspense>
 				</div>
 			</CollapsibleSection>
 		</div>
