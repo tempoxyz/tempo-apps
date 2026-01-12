@@ -41,6 +41,7 @@ export interface TxOgParams {
 
 export interface TokenOgParams {
 	address: string
+	chainId: number
 	name?: string
 	symbol?: string
 	currency?: string
@@ -135,6 +136,7 @@ export function buildTokenOgUrl(
 	if (params.quoteToken)
 		search.set('quoteToken', truncateText(params.quoteToken, 24))
 	if (params.isFeeToken) search.set('isFeeToken', 'true')
+	search.set('chainId', String(params.chainId))
 
 	return `${baseUrl}/token/${params.address}?${search.toString()}`
 }
