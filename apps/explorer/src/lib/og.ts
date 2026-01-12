@@ -306,6 +306,7 @@ export function buildAddressDescription(
 
 export function buildTokenOgImageUrl(params: {
 	address: string
+	chainId: number
 	name?: string
 	symbol?: string
 	currency?: string
@@ -316,6 +317,7 @@ export function buildTokenOgImageUrl(params: {
 }): string {
 	const ogParams: TokenOgParams = {
 		address: params.address,
+		chainId: params.chainId,
 		name: params.name,
 		symbol: params.symbol,
 		currency: params.currency,

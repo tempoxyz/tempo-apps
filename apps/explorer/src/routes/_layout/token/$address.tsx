@@ -13,7 +13,7 @@ import * as React from 'react'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
 import type { Config } from 'wagmi'
-import { getPublicClient } from 'wagmi/actions'
+import { getChainId, getPublicClient } from 'wagmi/actions'
 import { Actions, Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
@@ -51,6 +51,8 @@ const defaultSearchValues = {
 } as const
 
 const tabOrder = ['transfers', 'holders', 'contract'] as const
+
+const chainId = getChainId(getWagmiConfig())
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
@@ -173,15 +175,18 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				: null,
 		)
 
-		const ogImageUrl = buildTokenOgImageUrl({
-			address: params.address,
-			name: metadata?.name,
-			symbol: metadata?.symbol,
-			currency,
-			holders: formatHolders(ogStats?.holders),
-			supply,
-			created: ogStats?.created ?? undefined,
-		})
+		const ogImageUrl = loaderData
+			? buildTokenOgImageUrl({
+					address: params.address,
+					chainId,
+					name: metadata?.name,
+					symbol: metadata?.symbol,
+					currency,
+					holders: formatHolders(ogStats?.holders),
+					supply,
+					created: ogStats?.created ?? undefined,
+				})
+			: undefined
 
 		return {
 			title,
@@ -190,12 +195,16 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				{ property: 'og:title', content: title },
 				{ property: 'og:description', content: description },
 				{ name: 'twitter:description', content: description },
-				{ property: 'og:image', content: ogImageUrl },
-				{ property: 'og:image:type', content: 'image/png' },
-				{ property: 'og:image:width', content: '1200' },
-				{ property: 'og:image:height', content: '630' },
-				{ name: 'twitter:card', content: 'summary_large_image' },
-				{ name: 'twitter:image', content: ogImageUrl },
+				...(ogImageUrl
+					? [
+							{ property: 'og:image', content: ogImageUrl },
+							{ property: 'og:image:type', content: 'image/webp' },
+							{ property: 'og:image:width', content: '1200' },
+							{ property: 'og:image:height', content: '630' },
+							{ name: 'twitter:card', content: 'summary_large_image' },
+							{ name: 'twitter:image', content: ogImageUrl },
+						]
+					: []),
 			],
 		}
 	},
