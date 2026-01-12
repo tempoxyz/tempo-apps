@@ -1,4 +1,4 @@
-import { animate as animateEl } from 'animejs'
+import { waapi } from 'animejs'
 import { useEffect, useRef } from 'react'
 import { springLazy } from '#lib/animation'
 
@@ -9,12 +9,17 @@ export function Sphere(props: Sphere.Props) {
 
 	useEffect(() => {
 		if (!containerRef.current || !animateOnMount.current) return
-		animateEl(containerRef.current, {
+		const anim = waapi.animate(containerRef.current, {
 			opacity: [0, 1],
 			scale: [0.7, 1],
 			ease: springLazy,
 			delay: 300,
 		})
+		return () => {
+			try {
+				anim.cancel()
+			} catch {}
+		}
 	}, [])
 
 	return (
