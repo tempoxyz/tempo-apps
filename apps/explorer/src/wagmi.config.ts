@@ -10,6 +10,7 @@ import {
 	tempoAndantino,
 	tempoModerato,
 } from 'viem/chains'
+import { tempoPresto } from './lib/chains'
 import { createPublicClient } from 'viem'
 import { tempoActions } from 'viem/tempo'
 import {
@@ -27,46 +28,79 @@ const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 
-const WS_URLS = [
-	import.meta.env.VITE_TEMPO_RPC_WS,
-	import.meta.env.VITE_TEMPO_RPC_WS_FALLBACK,
-].filter(Boolean)
+const getWsUrls = createIsomorphicFn()
+	.client(() =>
+		[
+			import.meta.env.VITE_TEMPO_RPC_WS,
+			import.meta.env.VITE_TEMPO_RPC_WS_FALLBACK,
+		].filter(Boolean),
+	)
+	.server(() =>
+		[
+			process.env.VITE_TEMPO_RPC_WS,
+			process.env.VITE_TEMPO_RPC_WS_FALLBACK,
+		].filter(Boolean),
+	)
 
-const HTTP_URLS = [
-	import.meta.env.VITE_TEMPO_RPC_HTTP,
-	import.meta.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
-].filter(Boolean)
+const getHttpUrls = createIsomorphicFn()
+	.client(() =>
+		[
+			import.meta.env.VITE_TEMPO_RPC_HTTP,
+			import.meta.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
+		].filter(Boolean),
+	)
+	.server(() =>
+		[
+			process.env.VITE_TEMPO_RPC_HTTP,
+			process.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
+		].filter(Boolean),
+	)
 
 const getTempoRpcKey = createServerOnlyFn(() => process.env.TEMPO_RPC_KEY)
 
 export const getTempoChain = createIsomorphicFn()
 	.client(() =>
-		TEMPO_ENV === 'devnet'
-			? tempoDevnet
-			: TEMPO_ENV === 'moderato'
-				? tempoModerato
-				: tempoAndantino,
+		TEMPO_ENV === 'presto'
+			? tempoPresto
+			: TEMPO_ENV === 'devnet'
+				? tempoDevnet
+				: TEMPO_ENV === 'moderato'
+					? tempoModerato
+					: tempoAndantino,
 	)
 	.server(() =>
-		TEMPO_ENV === 'devnet'
-			? tempoDevnet
-			: TEMPO_ENV === 'moderato'
-				? tempoModerato
-				: tempoAndantino,
+		TEMPO_ENV === 'presto'
+			? tempoPresto
+			: TEMPO_ENV === 'devnet'
+				? tempoDevnet
+				: TEMPO_ENV === 'moderato'
+					? tempoModerato
+					: tempoAndantino,
 	)
 
 const getTempoTransport = createIsomorphicFn()
 	.client(() =>
 		fallback([
-			...WS_URLS.map((u) => webSocket(u)),
-			...HTTP_URLS.map((u) => http(u)),
+			...getWsUrls().map((u) => webSocket(u)),
+			...getHttpUrls().map((u) => http(u)),
 		]),
 	)
 	.server(() => {
 		const rpcKey = getTempoRpcKey()
+		if (rpcKey === '__FORWARD__') {
+			const authHeader = getRequestHeader('authorization')
+			return fallback([
+				...getWsUrls().map((url) => webSocket(url)),
+				...getHttpUrls().map((url) =>
+					http(url, {
+						fetchOptions: { headers: { Authorization: authHeader ?? '' } },
+					})
+				),
+			])
+		}
 		return fallback([
-			...WS_URLS.map((url) => webSocket(`${url}/${rpcKey}`)),
-			...HTTP_URLS.map((url) => http(`${url}/${rpcKey}`)),
+			...getWsUrls().map((url) => webSocket(`${url}/${rpcKey}`)),
+			...getHttpUrls().map((url) => http(`${url}/${rpcKey}`)),
 		])
 	})
 

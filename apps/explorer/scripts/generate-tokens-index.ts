@@ -4,7 +4,7 @@ import * as ABIS from '../src/lib/abis.ts'
 
 const indexSupplyEndpoint = 'https://api.tempo.xyz/indexer/query'
 
-const SUPPORTED_CHAINS = [31318, 42429, 42431] as const
+const SUPPORTED_CHAINS = [31318, 42429, 42431, 4217] as const
 type SupportedChain = (typeof SUPPORTED_CHAINS)[number]
 
 type Token = [address: string, symbol: string, name: string]
