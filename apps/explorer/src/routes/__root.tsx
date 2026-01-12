@@ -89,6 +89,19 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 			},
 		],
 		links: [
+			// Preconnect to critical origins for faster resource loading
+			{
+				rel: 'preconnect',
+				href: 'https://proxy.tempo.xyz',
+			},
+			{
+				rel: 'preconnect',
+				href: 'https://contracts.tempo.xyz',
+			},
+			{
+				rel: 'dns-prefetch',
+				href: 'https://us-assets.i.posthog.com',
+			},
 			{
 				rel: 'stylesheet',
 				href: css,
