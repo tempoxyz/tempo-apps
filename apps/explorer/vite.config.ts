@@ -116,6 +116,14 @@ export default defineConfig((config) => {
 			'import.meta.env.VITE_ENABLE_DEMO': JSON.stringify(
 				env.VITE_ENABLE_DEMO ?? 'true',
 			),
+			'import.meta.env.VITE_CONTRACT_VERIFY_URL': JSON.stringify(
+				wranglerVars.VITE_CONTRACT_VERIFY_URL ||
+					env.VITE_CONTRACT_VERIFY_URL ||
+					'',
+			),
+			'import.meta.env.VITE_OG_URL': JSON.stringify(
+				wranglerVars.VITE_OG_URL || env.VITE_OG_URL || '',
+			),
 		},
 	}
 })

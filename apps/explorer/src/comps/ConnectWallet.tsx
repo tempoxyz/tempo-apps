@@ -184,7 +184,7 @@ export namespace ConnectWallet {
 							passkeyStore.notify()
 						}}
 					>
-						Try again
+						Retry
 					</button>
 				</div>
 			)

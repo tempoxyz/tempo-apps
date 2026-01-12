@@ -5,8 +5,7 @@ import * as z from 'zod/mini'
 import { ContractVerificationLookupSchema } from '#lib/domain/contract-source.ts'
 import { zAddress } from '#lib/zod.ts'
 
-const CONTRACT_VERIFICATION_API_BASE_URL = import.meta.env
-	.VITE_CONTRACT_VERIFY_URL
+const CONTRACT_VERIFY_URL = import.meta.env.VITE_CONTRACT_VERIFY_URL
 
 const SHIKI_THEMES = {
 	light: 'github-light',
@@ -104,7 +103,7 @@ export const Route = createFileRoute('/api/code')({
 					)
 
 				const apiUrl = new URL(
-					`${CONTRACT_VERIFICATION_API_BASE_URL}/${parsedSearchParams.chainid}/${parsedSearchParams.address.toLowerCase()}`,
+					`${CONTRACT_VERIFY_URL}/${parsedSearchParams.chainid}/${parsedSearchParams.address.toLowerCase()}`,
 				)
 				apiUrl.searchParams.set('fields', 'stdJsonInput,abi,compilation')
 				const response = await fetch(apiUrl.toString())
