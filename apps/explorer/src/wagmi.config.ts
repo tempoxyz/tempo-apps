@@ -94,7 +94,7 @@ const getTempoTransport = createIsomorphicFn()
 				...getHttpUrls().map((url) =>
 					http(url, {
 						fetchOptions: { headers: { Authorization: authHeader ?? '' } },
-					})
+					}),
 				),
 			])
 		}
