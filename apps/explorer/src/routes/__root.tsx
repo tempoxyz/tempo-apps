@@ -63,7 +63,7 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 			},
 			{
 				name: 'og:image:type',
-				content: 'image/png',
+				content: 'image/webp',
 			},
 			{
 				name: 'og:image:width',
