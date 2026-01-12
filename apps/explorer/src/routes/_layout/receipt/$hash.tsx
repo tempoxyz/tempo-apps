@@ -23,6 +23,7 @@ import {
 	formatEventForOgServer,
 	OG_BASE_URL,
 } from '#lib/og'
+import { withLoaderTiming } from '#lib/profiling'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
@@ -100,26 +101,27 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			: {}),
 	}),
 	// @ts-expect-error - TODO: fix
-	loader: async ({ params, context }) => {
-		const hash = parseHashFromParams(params)
-		if (!hash)
-			throw notFound({
-				routeId: rootRouteId,
-				data: { type: 'hash', value: params.hash },
-			})
+	loader: ({ params, context }) =>
+		withLoaderTiming('/_layout/receipt/$hash', async () => {
+			const hash = parseHashFromParams(params)
+			if (!hash)
+				throw notFound({
+					routeId: rootRouteId,
+					data: { type: 'hash', value: params.hash },
+				})
 
-		try {
-			return await context.queryClient.ensureQueryData(
-				receiptDetailQueryOptions({ hash }),
-			)
-		} catch (error) {
-			console.error(error)
-			throw notFound({
-				routeId: rootRouteId,
-				data: { type: 'hash', value: hash },
-			})
-		}
-	},
+			try {
+				return await context.queryClient.ensureQueryData(
+					receiptDetailQueryOptions({ hash }),
+				)
+			} catch (error) {
+				console.error(error)
+				throw notFound({
+					routeId: rootRouteId,
+					data: { type: 'hash', value: hash },
+				})
+			}
+		}),
 	server: {
 		handlers: {
 			async GET({ params, request, next }) {
