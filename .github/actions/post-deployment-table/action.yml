@@ -1,0 +1,120 @@
+name: 'Post Deployment Table'
+description: 'Posts a consolidated table of all Cloudflare deployments to a PR'
+
+inputs:
+  github-token:
+    description: 'GitHub token for posting comments'
+    required: true
+  deployments-path:
+    description: 'Path to directory containing deployment JSON files'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate and Post Deployment Table
+      uses: actions/github-script@v7
+      env:
+        DEPLOYMENTS_PATH: ${{ inputs.deployments-path }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+
+          // Read all deployment files
+          const deploymentsPath = process.env.DEPLOYMENTS_PATH;
+          const deployments = [];
+
+          try {
+            const files = fs.readdirSync(deploymentsPath);
+            for (const file of files) {
+              if (file.endsWith('.json')) {
+                const content = fs.readFileSync(path.join(deploymentsPath, file), 'utf8');
+                const deployment = JSON.parse(content);
+                deployments.push(deployment);
+              }
+            }
+          } catch (error) {
+            console.log('No deployment files found or error reading them:', error.message);
+          }
+
+          // Sort deployments by app name, then environment
+          deployments.sort((a, b) => {
+            if (a.app !== b.app) return a.app.localeCompare(b.app);
+            const envA = a.env || '';
+            const envB = b.env || '';
+            return envA.localeCompare(envB);
+          });
+
+          // Generate markdown table
+          const statusEmoji = {
+            'success': '✅',
+            'skipped': '⏭️',
+            'failed': '❌'
+          };
+
+          const statusText = {
+            'success': 'Deployed',
+            'skipped': 'Skipped',
+            'failed': 'Failed'
+          };
+
+          let tableRows = [];
+          for (const deployment of deployments) {
+            const app = deployment.app;
+            const env = deployment.env || '-';
+            const status = `${statusEmoji[deployment.status] || '❓'} ${statusText[deployment.status] || 'Unknown'}`;
+
+            let preview = '-';
+            if (deployment.status === 'success') {
+              // Prefer alias URL over deployment URL
+              const url = deployment.deployment_alias_url || deployment.deployment_url;
+              if (url) {
+                preview = `[View Preview](${url})`;
+              }
+            } else if (deployment.status === 'skipped') {
+              preview = 'No changes';
+            }
+
+            tableRows.push(`| ${app} | ${env} | ${status} | ${preview} |`);
+          }
+
+          const commentBody = `<!-- cloudflare-deployments -->
+## 🚀 Cloudflare Deployments
+
+| App | Environment | Status | Preview |
+|-----|-------------|--------|---------|
+${tableRows.join('\n')}
+
+${deployments.length === 0 ? '_No deployments found._' : ''}`;
+
+          // Find existing comment
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const existingComment = comments.find(comment =>
+            comment.body.includes('<!-- cloudflare-deployments -->')
+          );
+
+          // Create or update comment
+          if (existingComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: commentBody
+            });
+            console.log('Updated existing deployment comment');
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: commentBody
+            });
+            console.log('Created new deployment comment');
+          }
