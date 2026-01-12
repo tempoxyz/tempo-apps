@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
 	ClientOnly,
 	createFileRoute,
@@ -107,39 +107,71 @@ function useBatchTransactionData(
 	const chainId = useChainId()
 	const client = usePublicClient({ chainId })
 
-	const queries = useQueries({
-		queries: hashes.map((hash) => ({
-			queryKey: ['tx-data-batch', viewer, hash],
-			queryFn: async (): Promise<TransactionData | null> => {
-				const receipt = await client.getTransactionReceipt({ hash })
-				// TODO: investigate & consider batch/multicall
-				const [block, transaction, getTokenMetadata] = await Promise.all([
-					client.getBlock({ blockHash: receipt.blockHash }),
-					client.getTransaction({ hash: receipt.transactionHash }),
-					Tip20.metadataFromLogs(receipt.logs),
-				])
-				const knownEvents = parseKnownEvents(receipt, {
-					transaction,
-					getTokenMetadata,
-					viewer,
-				})
-				return { receipt, block: block as GetBlockReturnType, knownEvents }
-			},
-			staleTime: 60_000,
-			enabled: hashes.length > 0,
-		})),
+	// Single query that batches all RPC calls instead of N separate queries
+	const query = useQuery({
+		queryKey: ['tx-data-batch', viewer, ...hashes],
+		queryFn: async (): Promise<Map<Hex.Hex, TransactionData>> => {
+			if (hashes.length === 0) return new Map()
+
+			// Step 1: Fetch all receipts in parallel (unavoidable - need one call per tx)
+			const receipts = await Promise.all(
+				hashes.map((hash) => client.getTransactionReceipt({ hash })),
+			)
+
+			// Step 2: Deduplicate blocks and fetch unique blocks
+			const uniqueBlockHashes = [
+				...new Set(receipts.map((r) => r.blockHash)),
+			].filter(Boolean) as Hex.Hex[]
+			const blocksPromise = Promise.all(
+				uniqueBlockHashes.map((blockHash) =>
+					client.getBlock({ blockHash }).then((block) => ({
+						blockHash,
+						block: block as GetBlockReturnType,
+					})),
+				),
+			)
+
+			// Step 3: Fetch transactions in parallel
+			const transactionsPromise = Promise.all(
+				hashes.map((hash) => client.getTransaction({ hash })),
+			)
+
+			const [blockResults, fetchedTransactions] = await Promise.all([
+				blocksPromise,
+				transactionsPromise,
+			])
+
+			// Create lookup map for blocks
+			const blockMap = new Map(
+				blockResults.map((r) => [r.blockHash, r.block]),
+			)
+
+			// Step 4: Process all receipts and build result map
+			const resultMap = new Map<Hex.Hex, TransactionData>()
+			for (let i = 0; i < receipts.length; i++) {
+				const receipt = receipts[i]
+				const transaction = fetchedTransactions[i]
+				const block = blockMap.get(receipt.blockHash)
+
+				if (receipt && transaction && block) {
+					const getTokenMetadata = await Tip20.metadataFromLogs(receipt.logs)
+					const knownEvents = parseKnownEvents(receipt, {
+						transaction,
+						getTokenMetadata,
+						viewer,
+					})
+					resultMap.set(hashes[i], { receipt, block, knownEvents })
+				}
+			}
+
+			return resultMap
+		},
+		staleTime: 60_000,
+		enabled: hashes.length > 0,
 	})
 
-	const transactionDataMap = React.useMemo(() => {
-		const map = new Map<Hex.Hex, TransactionData>()
-		for (let index = 0; index < hashes.length; index++) {
-			const data = queries[index]?.data
-			if (data) map.set(hashes[index], data)
-		}
-		return map
-	}, [hashes, queries])
-
-	const isLoading = queries.some((q) => q.isLoading)
+	const transactionDataMap = query.data ?? new Map<Hex.Hex, TransactionData>()
+	const isLoading = query.isLoading
 
 	return { transactionDataMap, isLoading }
 }
