@@ -11,6 +11,7 @@
 		"dev:devnet": "CLOUDFLARE_ENV='devnet' vite dev --port 3000",
 		"dev:andantino": "CLOUDFLARE_ENV='testnet' vite dev --port 3000",
 		"dev:moderato": "CLOUDFLARE_ENV='moderato' vite dev --port 3000",
+		"dev:presto": "CLOUDFLARE_ENV='presto' vite dev --port 3000",
 		"build": "vite build",
 		"check": "pnpm check:biome && pnpm check:types",
 		"check:biome": "biome check --write --unsafe",

@@ -125,6 +125,32 @@
 					}
 				}
 			]
+		},
+		"presto": {
+			"name": "fee-payer-presto",
+			"routes": [
+				{
+					"pattern": "sponsor.presto.tempo.xyz",
+					"zone_name": "tempo.xyz",
+					"custom_domain": true
+				}
+			],
+			"workers_dev": false,
+			"vars": {
+				"TEMPO_RPC_URL": "https://proxy.tempo.xyz/rpc/4217",
+				"ALLOWED_ORIGINS": "*",
+				"TEMPO_ENV": "presto"
+			},
+			"ratelimits": [
+				{
+					"name": "AddressRateLimiter",
+					"namespace_id": "888",
+					"simple": {
+						"limit": 1000,
+						"period": 60
+					}
+				}
+			]
 		}
 	}
 }

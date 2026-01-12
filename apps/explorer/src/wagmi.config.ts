@@ -10,6 +10,7 @@ import {
 	tempoAndantino,
 	tempoModerato,
 } from 'viem/chains'
+import { tempoPresto } from './lib/chains'
 import { createPublicClient } from 'viem'
 import { tempoActions } from 'viem/tempo'
 import {
@@ -54,57 +55,79 @@ export const MODERATO_RPC_URLs = [
 	'https://rpc.moderato.tempo.xyz',
 ]
 
+export const PRESTO_WS_URLs = [
+	'wss://proxy.tempo.xyz/rpc/4217',
+	'wss://rpc.presto.tempo.xyz',
+]
+export const PRESTO_RPC_URLs = [
+	'https://proxy.tempo.xyz/rpc/4217',
+	'https://rpc.presto.tempo.xyz',
+]
+
 const getTempoRpcKey = createServerOnlyFn(() =>
-	TEMPO_ENV === 'devnet'
-		? process.env.TEMPO_RPC_KEY_DEVNET
-		: TEMPO_ENV === 'moderato'
-			? process.env.TEMPO_RPC_KEY_MODERATO
-			: process.env.TEMPO_RPC_KEY_TESTNET,
+	TEMPO_ENV === 'presto'
+		? process.env.TEMPO_RPC_KEY_PRESTO
+		: TEMPO_ENV === 'devnet'
+			? process.env.TEMPO_RPC_KEY_DEVNET
+			: TEMPO_ENV === 'moderato'
+				? process.env.TEMPO_RPC_KEY_MODERATO
+				: process.env.TEMPO_RPC_KEY_TESTNET,
 )
 
 export const getTempoChain = createIsomorphicFn()
 	.client(() =>
-		TEMPO_ENV === 'devnet'
-			? tempoDevnet
-			: TEMPO_ENV === 'moderato'
-				? tempoModerato
-				: tempoAndantino,
+		TEMPO_ENV === 'presto'
+			? tempoPresto
+			: TEMPO_ENV === 'devnet'
+				? tempoDevnet
+				: TEMPO_ENV === 'moderato'
+					? tempoModerato
+					: tempoAndantino,
 	)
 	.server(() =>
-		TEMPO_ENV === 'devnet'
-			? tempoDevnet
-			: TEMPO_ENV === 'moderato'
-				? tempoModerato
-				: tempoAndantino,
+		TEMPO_ENV === 'presto'
+			? tempoPresto
+			: TEMPO_ENV === 'devnet'
+				? tempoDevnet
+				: TEMPO_ENV === 'moderato'
+					? tempoModerato
+					: tempoAndantino,
 	)
 
 const getTempoTransport = createIsomorphicFn()
 	.client(() =>
 		fallback(
-			TEMPO_ENV === 'devnet'
+			TEMPO_ENV === 'presto'
 				? [
-						...DEVNET_WS_URLs.map((u) => webSocket(u)),
-						...DEVNET_RPC_URLs.map((u) => http(u)),
+						...PRESTO_WS_URLs.map((u) => webSocket(u)),
+						...PRESTO_RPC_URLs.map((u) => http(u)),
 					]
-				: TEMPO_ENV === 'moderato'
+				: TEMPO_ENV === 'devnet'
 					? [
-							...MODERATO_WS_URLs.map((u) => webSocket(u)),
-							...MODERATO_RPC_URLs.map((u) => http(u)),
+							...DEVNET_WS_URLs.map((u) => webSocket(u)),
+							...DEVNET_RPC_URLs.map((u) => http(u)),
 						]
-					: [
-							...ANDANTINO_WS_URLs.map((u) => webSocket(u)),
-							...ANDANTINO_RPC_URLs.map((u) => http(u)),
-						],
+					: TEMPO_ENV === 'moderato'
+						? [
+								...MODERATO_WS_URLs.map((u) => webSocket(u)),
+								...MODERATO_RPC_URLs.map((u) => http(u)),
+							]
+						: [
+								...ANDANTINO_WS_URLs.map((u) => webSocket(u)),
+								...ANDANTINO_RPC_URLs.map((u) => http(u)),
+							],
 		),
 	)
 	.server(() => {
 		const rpcKey = getTempoRpcKey()
 		const [wsUrls, httpUrls] =
-			TEMPO_ENV === 'devnet'
-				? [DEVNET_WS_URLs, DEVNET_RPC_URLs]
-				: TEMPO_ENV === 'moderato'
-					? [MODERATO_WS_URLs, MODERATO_RPC_URLs]
-					: [ANDANTINO_WS_URLs, ANDANTINO_RPC_URLs]
+			TEMPO_ENV === 'presto'
+				? [PRESTO_WS_URLs, PRESTO_RPC_URLs]
+				: TEMPO_ENV === 'devnet'
+					? [DEVNET_WS_URLs, DEVNET_RPC_URLs]
+					: TEMPO_ENV === 'moderato'
+						? [MODERATO_WS_URLs, MODERATO_RPC_URLs]
+						: [ANDANTINO_WS_URLs, ANDANTINO_RPC_URLs]
 		return fallback([
 			...wsUrls.map((wsUrl) => webSocket(`${wsUrl}/${rpcKey}`)),
 			...httpUrls.map((httpUrl) => http(`${httpUrl}/${rpcKey}`)),
