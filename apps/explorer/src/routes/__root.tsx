@@ -185,7 +185,6 @@ function useLoaderTiming() {
 			const timing = loaderData?.__loaderTiming
 			if (!timing) continue
 
-			// Create unique key for this route + navigation
 			const key = `${timing.route_id}-${timing.duration_ms}`
 			if (reportedRef.current.has(key)) continue
 			reportedRef.current.add(key)

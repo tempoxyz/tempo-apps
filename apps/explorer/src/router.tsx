@@ -10,7 +10,6 @@ import {
 } from '#lib/profiling'
 import { routeTree } from '#routeTree.gen.ts'
 
-// Track query start times for latency measurement
 const queryStartTimes = new WeakMap<object, number>()
 
 export const getRouter = () => {
