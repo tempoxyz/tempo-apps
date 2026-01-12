@@ -37,7 +37,7 @@ export async function captureEvent({
 	}
 
 	try {
-		const response = await fetch(`${POSTHOG_HOST}/capture`, {
+		const response = await fetch(`${POSTHOG_HOST}/capture/`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(payload),
