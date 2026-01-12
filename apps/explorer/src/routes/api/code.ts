@@ -6,7 +6,7 @@ import { ContractVerificationLookupSchema } from '#lib/domain/contract-source.ts
 import { zAddress } from '#lib/zod.ts'
 
 const CONTRACT_VERIFICATION_API_BASE_URL =
-	'https://contracts.tempo.xyz/v2/contract'
+	import.meta.env.VITE_CONTRACT_VERIFY_URL
 
 const SHIKI_THEMES = {
 	light: 'github-light',
