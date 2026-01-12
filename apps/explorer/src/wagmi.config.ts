@@ -38,37 +38,7 @@ const HTTP_URLS = [
 	import.meta.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
 ].filter(Boolean)
 
-<<<<<<< HEAD
-export const MODERATO_WS_URLs = [
-	'wss://proxy.tempo.xyz/rpc/42431',
-	'wss://rpc.moderato.tempo.xyz',
-]
-export const MODERATO_RPC_URLs = [
-	'https://proxy.tempo.xyz/rpc/42431',
-	'https://rpc.moderato.tempo.xyz',
-]
-
-export const PRESTO_WS_URLs = [
-	'wss://proxy.tempo.xyz/rpc/4217',
-	'wss://rpc.presto.tempo.xyz',
-]
-export const PRESTO_RPC_URLs = [
-	'https://proxy.tempo.xyz/rpc/4217',
-	'https://rpc.presto.tempo.xyz',
-]
-
-const getTempoRpcKey = createServerOnlyFn(() =>
-	TEMPO_ENV === 'presto'
-		? process.env.TEMPO_RPC_KEY_PRESTO
-		: TEMPO_ENV === 'devnet'
-			? process.env.TEMPO_RPC_KEY_DEVNET
-			: TEMPO_ENV === 'moderato'
-				? process.env.TEMPO_RPC_KEY_MODERATO
-				: process.env.TEMPO_RPC_KEY_TESTNET,
-)
-=======
 const getTempoRpcKey = createServerOnlyFn(() => process.env.TEMPO_RPC_KEY)
->>>>>>> main
 
 export const getTempoChain = createIsomorphicFn()
 	.client(() =>
@@ -92,40 +62,6 @@ export const getTempoChain = createIsomorphicFn()
 
 const getTempoTransport = createIsomorphicFn()
 	.client(() =>
-<<<<<<< HEAD
-		fallback(
-			TEMPO_ENV === 'presto'
-				? [
-						...PRESTO_WS_URLs.map((u) => webSocket(u)),
-						...PRESTO_RPC_URLs.map((u) => http(u)),
-					]
-				: TEMPO_ENV === 'devnet'
-					? [
-							...DEVNET_WS_URLs.map((u) => webSocket(u)),
-							...DEVNET_RPC_URLs.map((u) => http(u)),
-						]
-					: TEMPO_ENV === 'moderato'
-						? [
-								...MODERATO_WS_URLs.map((u) => webSocket(u)),
-								...MODERATO_RPC_URLs.map((u) => http(u)),
-							]
-						: [
-								...ANDANTINO_WS_URLs.map((u) => webSocket(u)),
-								...ANDANTINO_RPC_URLs.map((u) => http(u)),
-							],
-		),
-	)
-	.server(() => {
-		const rpcKey = getTempoRpcKey()
-		const [wsUrls, httpUrls] =
-			TEMPO_ENV === 'presto'
-				? [PRESTO_WS_URLs, PRESTO_RPC_URLs]
-				: TEMPO_ENV === 'devnet'
-					? [DEVNET_WS_URLs, DEVNET_RPC_URLs]
-					: TEMPO_ENV === 'moderato'
-						? [MODERATO_WS_URLs, MODERATO_RPC_URLs]
-						: [ANDANTINO_WS_URLs, ANDANTINO_RPC_URLs]
-=======
 		fallback([
 			...WS_URLS.map((u) => webSocket(u)),
 			...HTTP_URLS.map((u) => http(u)),
@@ -133,7 +69,17 @@ const getTempoTransport = createIsomorphicFn()
 	)
 	.server(() => {
 		const rpcKey = getTempoRpcKey()
->>>>>>> main
+		if (rpcKey === '__FORWARD__') {
+			const authHeader = getRequestHeader('authorization')
+			return fallback([
+				...WS_URLS.map((url) => webSocket(url)),
+				...HTTP_URLS.map((url) =>
+					http(url, {
+						fetchOptions: { headers: { Authorization: authHeader ?? '' } },
+					})
+				),
+			])
+		}
 		return fallback([
 			...WS_URLS.map((url) => webSocket(`${url}/${rpcKey}`)),
 			...HTTP_URLS.map((url) => http(`${url}/${rpcKey}`)),
