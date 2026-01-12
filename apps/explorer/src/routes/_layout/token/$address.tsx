@@ -39,6 +39,7 @@ import {
 	holdersQueryOptions,
 	transfersQueryOptions,
 } from '#lib/queries'
+import { withLoaderTiming } from '#lib/profiling'
 import { fetchOgStats } from '#lib/server/token.server.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 import CopyIcon from '~icons/lucide/copy'
@@ -90,39 +91,40 @@ export const Route = createFileRoute('/_layout/token/$address')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loader: async ({ params }) => {
-		const { address } = params
-		if (!Address.validate(address)) throw notFound()
+	loader: ({ params }) =>
+		withLoaderTiming('/_layout/token/$address', async () => {
+			const { address } = params
+			if (!Address.validate(address)) throw notFound()
 
-		const config = getWagmiConfig()
-		const publicClient = getPublicClient(config)
+			const config = getWagmiConfig()
+			const publicClient = getPublicClient(config)
 
-		// Validate the token exists by fetching metadata (required - blocks render)
-		let metadata: Awaited<ReturnType<typeof Actions.token.getMetadata>>
-		try {
-			metadata = await Actions.token.getMetadata(config as Config, {
-				token: address,
-			})
-		} catch (error) {
-			console.error('Failed to fetch token metadata:', error)
-			throw notFound()
-		}
-
-		// Fast OG stats (threshold-based, not full counts) + currency for OG image
-		const [ogStats, currency] = await Promise.all([
-			fetchOgStats({ data: { address } }).catch(() => null),
-			publicClient
-				.readContract({
-					address: address,
-					abi: Abis.tip20,
-					functionName: 'currency',
+			// Validate the token exists by fetching metadata (required - blocks render)
+			let metadata: Awaited<ReturnType<typeof Actions.token.getMetadata>>
+			try {
+				metadata = await Actions.token.getMetadata(config as Config, {
+					token: address,
 				})
-				.catch(() => undefined),
-		])
+			} catch (error) {
+				console.error('Failed to fetch token metadata:', error)
+				throw notFound()
+			}
 
-		// All other data (transfers, holders, firstTransfer) fetched client-side
-		return { metadata, ogStats, currency }
-	},
+			// Fast OG stats (threshold-based, not full counts) + currency for OG image
+			const [ogStats, currency] = await Promise.all([
+				fetchOgStats({ data: { address } }).catch(() => null),
+				publicClient
+					.readContract({
+						address: address,
+						abi: Abis.tip20,
+						functionName: 'currency',
+					})
+					.catch(() => undefined),
+			])
+
+			// All other data (transfers, holders, firstTransfer) fetched client-side
+			return { metadata, ogStats, currency }
+		}),
 	params: {
 		parse: z.object({
 			address: z.pipe(

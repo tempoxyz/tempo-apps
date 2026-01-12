@@ -5,6 +5,7 @@ import {
 	createRootRouteWithContext,
 	HeadContent,
 	Scripts,
+	useMatches,
 	useRouterState,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
@@ -155,6 +156,50 @@ posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https:
 	shellComponent: RootDocument,
 })
 
+function useTTFBTiming() {
+	React.useEffect(() => {
+		const navigation = performance.getEntriesByType('navigation')[0] as
+			| PerformanceNavigationTiming
+			| undefined
+		if (!navigation) return
+
+		captureEvent(ProfileEvents.TTFB, {
+			ttfb_ms: Math.round(navigation.responseStart - navigation.requestStart),
+			path: window.location.pathname,
+			route_pattern: normalizePathPattern(window.location.pathname),
+		})
+	}, [])
+}
+
+type LoaderTiming = { duration_ms: number; route_id: string }
+
+function useLoaderTiming() {
+	const matches = useMatches()
+	const reportedRef = React.useRef<Set<string>>(new Set())
+
+	React.useEffect(() => {
+		for (const match of matches) {
+			const loaderData = match.loaderData as
+				| { __loaderTiming?: LoaderTiming }
+				| undefined
+			const timing = loaderData?.__loaderTiming
+			if (!timing) continue
+
+			// Create unique key for this route + navigation
+			const key = `${timing.route_id}-${timing.duration_ms}`
+			if (reportedRef.current.has(key)) continue
+			reportedRef.current.add(key)
+
+			captureEvent(ProfileEvents.LOADER_DURATION, {
+				duration_ms: timing.duration_ms,
+				route_id: timing.route_id,
+				path: window.location.pathname,
+				route_pattern: normalizePathPattern(window.location.pathname),
+			})
+		}
+	}, [matches])
+}
+
 function useFirstDrawTiming() {
 	const navigationStartRef = React.useRef<number | null>(null)
 	const previousPathRef = React.useRef<string | null>(null)
@@ -198,6 +243,8 @@ function useFirstDrawTiming() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	useDevTools()
+	useTTFBTiming()
+	useLoaderTiming()
 	useFirstDrawTiming()
 
 	const { queryClient } = Route.useRouteContext()

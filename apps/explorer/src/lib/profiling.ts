@@ -40,10 +40,10 @@ function processQueue() {
 
 	const checkAndProcess = () => {
 		if (window.posthog?.capture && eventQueue.length > 0) {
-			while (eventQueue.length > 0) {
-				const event = eventQueue.shift()!
+			for (const event of eventQueue) {
 				window.posthog.capture(event.name, event.properties)
 			}
+			eventQueue.length = 0
 			isProcessingQueue = false
 		} else if (eventQueue.length > 0) {
 			setTimeout(checkAndProcess, 100)
@@ -56,9 +56,10 @@ function processQueue() {
 }
 
 export const ProfileEvents = {
-	PAGE_HYDRATION: 'page_hydration',
-	PAGE_FIRST_DRAW: 'page_first_draw',
-	API_LATENCY: 'api_latency',
+	PAGE_FIRST_DRAW: 'explorer.profiling.page_first_draw',
+	API_LATENCY: 'explorer.profiling.api_latency',
+	LOADER_DURATION: 'explorer.profiling.loader_duration',
+	TTFB: 'explorer.profiling.ttfb',
 } as const
 
 /**
@@ -66,7 +67,26 @@ export const ProfileEvents = {
  * e.g., /tx/0x123... → /tx/:hash
  */
 export function normalizePathPattern(path: string): string {
-	return path
-		.replace(/\/0x[a-fA-F0-9]+/g, '/:hash')
-		.replace(/\/\d+/g, '/:id')
+	return path.replace(/\/0x[a-fA-F0-9]+/g, '/:hash').replace(/\/\d+/g, '/:id')
+}
+
+/**
+ * Wrap a loader function to measure its execution time.
+ * Returns the original data plus `__loaderTiming` metadata.
+ */
+export async function withLoaderTiming<T>(
+	routeId: string,
+	loaderFn: () => Promise<T>,
+): Promise<T & { __loaderTiming: { duration_ms: number; route_id: string } }> {
+	const start = Date.now()
+	const data = await loaderFn()
+	const duration = Date.now() - start
+
+	return {
+		...data,
+		__loaderTiming: {
+			duration_ms: duration,
+			route_id: routeId,
+		},
+	}
 }

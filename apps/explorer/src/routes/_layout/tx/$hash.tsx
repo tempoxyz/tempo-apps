@@ -44,6 +44,7 @@ import {
 } from '#lib/queries'
 import type { BalanceChangesData } from '#lib/queries/balance-changes'
 import { traceQueryOptions } from '#lib/queries/trace'
+import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
@@ -82,33 +83,34 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
 	loaderDeps: ({ search: { page } }) => ({ page }),
-	loader: async ({ params, context, deps: { page } }) => {
-		const { hash } = params
+	loader: ({ params, context, deps: { page } }) =>
+		withLoaderTiming('/_layout/tx/$hash', async () => {
+			const { hash } = params
 
-		try {
-			const offset = (page - 1) * LIMIT
+			try {
+				const offset = (page - 1) * LIMIT
 
-			const [txData, balanceChangesData, traceData] = await Promise.all([
-				context.queryClient.ensureQueryData(txQueryOptions({ hash })),
-				fetchBalanceChanges({ hash, limit: LIMIT, offset }).catch(() => ({
-					changes: [],
-					tokenMetadata: {},
-					total: 0,
-				})),
-				context.queryClient
-					.ensureQueryData(traceQueryOptions({ hash }))
-					.catch(() => ({ trace: null, prestate: null })),
-			])
+				const [txData, balanceChangesData, traceData] = await Promise.all([
+					context.queryClient.ensureQueryData(txQueryOptions({ hash })),
+					fetchBalanceChanges({ hash, limit: LIMIT, offset }).catch(() => ({
+						changes: [],
+						tokenMetadata: {},
+						total: 0,
+					})),
+					context.queryClient
+						.ensureQueryData(traceQueryOptions({ hash }))
+						.catch(() => ({ trace: null, prestate: null })),
+				])
 
-			return { ...txData, balanceChangesData, traceData }
-		} catch (error) {
-			console.error(error)
-			throw notFound({
-				routeId: rootRouteId,
-				data: { type: 'hash', value: hash },
-			})
-		}
-	},
+				return { ...txData, balanceChangesData, traceData }
+			} catch (error) {
+				console.error(error)
+				throw notFound({
+					routeId: rootRouteId,
+					data: { type: 'hash', value: hash },
+				})
+			}
+		}),
 	params: z.object({
 		hash: zHash(),
 	}),

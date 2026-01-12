@@ -13,6 +13,7 @@ import {
 	useTimeFormat,
 } from '#comps/TimeFormat'
 import { cx } from '#cva.config'
+import { withLoaderTiming } from '#lib/profiling'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
 import ChevronFirst from '~icons/lucide/chevron-first'
 import ChevronLast from '~icons/lucide/chevron-last'
@@ -33,8 +34,10 @@ export const Route = createFileRoute('/_layout/blocks')({
 		from,
 		live: live ?? from == null,
 	}),
-	loader: async ({ deps, context }) =>
-		context.queryClient.ensureQueryData(blocksQueryOptions(deps.from)),
+	loader: ({ deps, context }) =>
+		withLoaderTiming('/_layout/blocks', async () =>
+			context.queryClient.ensureQueryData(blocksQueryOptions(deps.from)),
+		),
 })
 
 function RouteComponent() {

@@ -3,7 +3,11 @@ import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { hashFn } from 'wagmi/query'
 import { NotFound } from '#comps/NotFound'
-import { captureEvent, ProfileEvents } from '#lib/profiling'
+import {
+	captureEvent,
+	normalizePathPattern,
+	ProfileEvents,
+} from '#lib/profiling'
 import { routeTree } from '#routeTree.gen.ts'
 
 // Track query start times for latency measurement
@@ -41,13 +45,17 @@ export const getRouter = () => {
 					queryStartTimes.delete(query)
 
 					const queryKey = query.queryKey
-					const queryName = Array.isArray(queryKey) ? String(queryKey[0]) : 'unknown'
+					const queryName = Array.isArray(queryKey)
+						? String(queryKey[0])
+						: 'unknown'
 
 					captureEvent(ProfileEvents.API_LATENCY, {
 						query_name: queryName,
 						duration_ms: Math.round(duration),
 						from_cache: query.state.dataUpdateCount > 1,
 						status: 'success',
+						path: window.location.pathname,
+						route_pattern: normalizePathPattern(window.location.pathname),
 					})
 				}
 			},
@@ -61,14 +69,19 @@ export const getRouter = () => {
 					queryStartTimes.delete(query)
 
 					const queryKey = query.queryKey
-					const queryName = Array.isArray(queryKey) ? String(queryKey[0]) : 'unknown'
+					const queryName = Array.isArray(queryKey)
+						? String(queryKey[0])
+						: 'unknown'
 
 					captureEvent(ProfileEvents.API_LATENCY, {
 						query_name: queryName,
 						duration_ms: Math.round(duration),
 						from_cache: false,
 						status: 'error',
-						error_message: error instanceof Error ? error.message : String(error),
+						error_message:
+							error instanceof Error ? error.message : String(error),
+						path: window.location.pathname,
+						route_pattern: normalizePathPattern(window.location.pathname),
 					})
 				}
 			},
