@@ -138,6 +138,44 @@
 					"invocation_logs": true
 				}
 			}
+		},
+		"presto": {
+			"name": "explorer-presto",
+			"main": "./src/index.server.ts",
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.4217.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.presto.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.mainnet.tempo.xyz"
+				}
+			],
+			"vars": {
+				"VITE_TEMPO_ENV": "presto",
+				"VITE_TEMPO_CHAIN_ID": 4217,
+				"VITE_TEMPO_RPC_WS": "wss://proxy.tempo.xyz/rpc/4217",
+				"VITE_TEMPO_RPC_HTTP": "https://proxy.tempo.xyz/rpc/4217"
+			},
+			"workers_dev": true,
+			"browser": { "binding": "BROWSER" },
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
 		}
 	},
 	"observability": {
