@@ -143,6 +143,11 @@
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
 					"pattern": "explore.presto.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.mainnet.tempo.xyz"
 				}
 			],
 			"vars": {
