@@ -7,6 +7,7 @@
 		"#wrangler.json": "./wrangler.jsonc"
 	},
 	"scripts": {
+		"postinstall": "pnpm gen:types",
 		"dev": "pnpm dev:moderato",
 		"dev:devnet": "CLOUDFLARE_ENV='devnet' vite dev --port 3000",
 		"dev:andantino": "CLOUDFLARE_ENV='testnet' vite dev --port 3000",
