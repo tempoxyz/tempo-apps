@@ -16,10 +16,14 @@ const QB = IDX.QueryBuilder.from(IS)
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
+const isTestnet = process.env.VITE_TEMPO_ENV === 'testnet'
+
 export const Route = createFileRoute('/api/address/total-value/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
+				if (isTestnet) return Response.json({ totalValue: 0 })
+
 				try {
 					const address = zAddress().parse(params.address)
 					const chainId = getChainId(getWagmiConfig())

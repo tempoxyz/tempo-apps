@@ -2,11 +2,8 @@
 	"openapi": "3.1.1",
 	"info": {
 		"title": "Tokenlist API",
-		"description": "API for serving token lists and icons for various blockchain networks. Provides endpoints to fetch token icons, chain icons, and token list data for multiple chains.",
+		"description": "API for serving token lists and icons for Tempo Devnets, Testnets, & soon Mainnet. Provides endpoints to fetch token icons, chain icons, and token list data for multiple chains.",
 		"version": "1.0.0",
-		"contact": {
-			"name": "API Support"
-		},
 		"license": {
 			"name": "MIT",
 			"url": "https://opensource.org/licenses/MIT"
@@ -18,8 +15,27 @@
 			"description": "Production"
 		},
 		{
-			"url": "http://localhost:6969",
-			"description": "local"
+			"url": "https://tokenlist.porto.workers.dev",
+			"description": "Service base workers.dev domain (CACHE DISABLED!)"
+		},
+		{
+			"url": "{CUSTOM_URL}",
+			"description": "Custom Sourcify-compatible API base URL",
+			"variables": {
+				"CUSTOM_URL": {
+					"description": "The URL of the custom Sourcify-compatible API base URL"
+				}
+			}
+		},
+		{
+			"url": "http://localhost:{port}",
+			"description": "local",
+			"variables": {
+				"port": {
+					"default": "6969",
+					"description": "localhost port number"
+				}
+			}
 		}
 	],
 	"paths": {
@@ -258,6 +274,46 @@
 									"maxLength": 10,
 									"pattern": "^[a-z]+$",
 									"example": "ok"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/version": {
+			"get": {
+				"tags": ["System"],
+				"summary": "Get build version",
+				"description": "Retrieve the build version of the API service",
+				"operationId": "get_build_version",
+				"responses": {
+					"200": {
+						"description": "Successful response with build version",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"chains": {
+											"type": "array",
+											"items": {
+												"type": "string"
+											}
+										},
+										"timestamp": {
+											"type": "string",
+											"format": "date-time"
+										},
+										"rev": {
+											"type": "string"
+										}
+									}
+								},
+								"example": {
+									"chains": ["42429"],
+									"timestamp": "2023-04-10T12:34:56Z",
+									"rev": "1.0.0"
 								}
 							}
 						}

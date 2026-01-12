@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
 import { Address, Hex } from 'ox'
 
-import { DEVNET_CHAIN_ID, TESTNET_CHAIN_ID } from '#chains.ts'
+import { CHAIN_IDS } from '#chains.ts'
 
 import {
 	codeTable,
@@ -105,7 +105,7 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 		const { chainId, address } = context.req.param()
 		const { fields, omit } = context.req.query()
 
-		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(Number(chainId)))
+		if (!CHAIN_IDS.includes(Number(chainId)))
 			return sourcifyError(
 				context,
 				400,
@@ -520,7 +520,7 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 		const { chainId } = context.req.param()
 		const { sort, limit, afterMatchId } = context.req.query()
 
-		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(Number(chainId)))
+		if (!CHAIN_IDS.includes(Number(chainId)))
 			return sourcifyError(
 				context,
 				400,

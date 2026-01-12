@@ -162,14 +162,14 @@ export namespace TxDecodedTopics {
 
 		return (
 			<div className="px-[10px] py-[8px]">
-				<div className="text-[11px] text-tertiary mb-[6px]">
-					Arguments{' '}
+				<div className="text-[11px] text-tertiary mb-[6px] flex items-center gap-[6px]">
+					<span>Arguments</span>
 					<button
 						type="button"
 						onClick={() => setShowRaw(!showRaw)}
-						className="text-accent hover:underline cursor-pointer press-down"
+						className="text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[8px] py-[2px] cursor-pointer press-down"
 					>
-						({showRaw ? 'raw' : 'decoded'})
+						{showRaw ? 'raw' : 'decoded'}
 					</button>
 				</div>
 				{showRaw ? (

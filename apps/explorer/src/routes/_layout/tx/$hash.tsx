@@ -44,8 +44,10 @@ import {
 } from '#lib/queries'
 import type { BalanceChangesData } from '#lib/queries/balance-changes'
 import { traceQueryOptions } from '#lib/queries/trace'
+import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 
 const defaultSearchValues = {
@@ -81,33 +83,34 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
 	loaderDeps: ({ search: { page } }) => ({ page }),
-	loader: async ({ params, context, deps: { page } }) => {
-		const { hash } = params
+	loader: ({ params, context, deps: { page } }) =>
+		withLoaderTiming('/_layout/tx/$hash', async () => {
+			const { hash } = params
 
-		try {
-			const offset = (page - 1) * LIMIT
+			try {
+				const offset = (page - 1) * LIMIT
 
-			const [txData, balanceChangesData, traceData] = await Promise.all([
-				context.queryClient.ensureQueryData(txQueryOptions({ hash })),
-				fetchBalanceChanges({ hash, limit: LIMIT, offset }).catch(() => ({
-					changes: [],
-					tokenMetadata: {},
-					total: 0,
-				})),
-				context.queryClient
-					.ensureQueryData(traceQueryOptions({ hash }))
-					.catch(() => ({ trace: null, prestate: null })),
-			])
+				const [txData, balanceChangesData, traceData] = await Promise.all([
+					context.queryClient.ensureQueryData(txQueryOptions({ hash })),
+					fetchBalanceChanges({ hash, limit: LIMIT, offset }).catch(() => ({
+						changes: [],
+						tokenMetadata: {},
+						total: 0,
+					})),
+					context.queryClient
+						.ensureQueryData(traceQueryOptions({ hash }))
+						.catch(() => ({ trace: null, prestate: null })),
+				])
 
-			return { ...txData, balanceChangesData, traceData }
-		} catch (error) {
-			console.error(error)
-			throw notFound({
-				routeId: rootRouteId,
-				data: { type: 'hash', value: hash },
-			})
-		}
-	},
+				return { ...txData, balanceChangesData, traceData }
+			} catch (error) {
+				console.error(error)
+				throw notFound({
+					routeId: rootRouteId,
+					data: { type: 'hash', value: hash },
+				})
+			}
+		}),
 	params: z.object({
 		hash: zHash(),
 	}),
@@ -134,7 +137,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 				...(ogImageUrl
 					? [
 							{ property: 'og:image', content: ogImageUrl },
-							{ property: 'og:image:type', content: 'image/png' },
+							{ property: 'og:image:type', content: 'image/webp' },
 							{ property: 'og:image:width', content: '1200' },
 							{ property: 'og:image:height', content: '630' },
 							{ name: 'twitter:card', content: 'summary_large_image' },
@@ -473,7 +476,7 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 					Balance Updates
 				</span>
 				<div className="flex flex-col gap-[4px] flex-1 min-w-0">
-					<div className="flex flex-col gap-[12px] max-h-[360px] overflow-y-auto pb-[8px]">
+					<div className="flex flex-col gap-[12px] max-h-[360px] overflow-y-auto pb-[8px] font-mono">
 						{Array.from(groupedByAccount.entries()).map(
 							([address, changes]) => (
 								<div
@@ -508,8 +511,10 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 												>
 													<span
 														className={cx(
-															'shrink-0',
-															isPositive ? '' : 'text-secondary',
+															'shrink-0 tabular-nums',
+															isPositive
+																? 'text-base-content-positive'
+																: 'text-secondary',
 														)}
 													>
 														{isPositive ? '+' : ''}
@@ -537,15 +542,14 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 							),
 						)}
 					</div>
-					<div>
-						<Link
-							to="."
-							search={{ tab: 'balances' }}
-							className="text-[12px] text-accent hover:underline press-down!"
-						>
-							See all balance updates
-						</Link>
-					</div>
+					<Link
+						to="."
+						search={{ tab: 'balances' }}
+						className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down w-fit"
+					>
+						See all ({data.total})
+						<ChevronDownIcon className="size-[12px]" />
+					</Link>
 				</div>
 			</div>
 		</div>
@@ -831,7 +835,7 @@ function EventGroupCell(props: {
 				<button
 					type="button"
 					onClick={onToggle}
-					className="text-[11px] text-accent hover:underline text-left cursor-pointer press-down-mini"
+					className="inline-flex items-center gap-[4px] text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] press-down cursor-pointer"
 				>
 					{expanded
 						? eventCount > 1

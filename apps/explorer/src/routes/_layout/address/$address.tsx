@@ -19,7 +19,7 @@ import {
 	type GetBlockReturnType,
 	getBlock,
 	getChainId,
-	readContract,
+	multicall,
 } from 'wagmi/actions'
 import { Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
@@ -62,6 +62,7 @@ import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
+import { withLoaderTiming } from '#lib/profiling'
 import {
 	type TransactionsData,
 	transactionsQueryOptions,
@@ -270,139 +271,140 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
 	loaderDeps: ({ search: { page, limit, live } }) => ({ page, limit, live }),
-	loader: async ({ deps: { page, limit, live }, params, context }) => {
-		const { address } = params
-		// Only throw notFound for truly invalid addresses
-		if (!Address.validate(address))
-			throw notFound({
-				routeId: rootRouteId,
-				data: { error: 'Invalid address format' },
-			})
+	loader: ({ deps: { page, limit, live }, params, context }) =>
+		withLoaderTiming('/_layout/address/$address', async () => {
+			const { address } = params
+			// Only throw notFound for truly invalid addresses
+			if (!Address.validate(address))
+				throw notFound({
+					routeId: rootRouteId,
+					data: { error: 'Invalid address format' },
+				})
 
-		const offset = (page - 1) * limit
-		const config = getWagmiConfig()
-		const chainId = getChainId(config)
+			const offset = (page - 1) * limit
+			const config = getWagmiConfig()
+			const chainId = getChainId(config)
 
-		// Get bytecode to determine account type
-		const contractBytecode = await getContractBytecode(address).catch(
-			(error) => {
-				console.error('[loader] Failed to get bytecode:', error)
-				return undefined
-			},
-		)
+			// Get bytecode to determine account type
+			const contractBytecode = await getContractBytecode(address).catch(
+				(error) => {
+					console.error('[loader] Failed to get bytecode:', error)
+					return undefined
+				},
+			)
 
-		const accountType = getAccountType(contractBytecode)
+			const accountType = getAccountType(contractBytecode)
 
-		// check if it's a known contract from our registry
-		let contractInfo = getContractInfo(address)
+			// check if it's a known contract from our registry
+			let contractInfo = getContractInfo(address)
 
-		// Only try to extract ABI/fetch source for actual contracts
-		let contractSource: ContractSource | undefined
-		if (accountType === 'contract') {
-			// if not in registry, try to extract ABI from bytecode using whatsabi
-			if (!contractInfo && contractBytecode) {
-				const contractAbi = await extractContractAbi(address).catch(
-					() => undefined,
-				)
+			// Only try to extract ABI/fetch source for actual contracts
+			let contractSource: ContractSource | undefined
+			if (accountType === 'contract') {
+				// if not in registry, try to extract ABI from bytecode using whatsabi
+				if (!contractInfo && contractBytecode) {
+					const contractAbi = await extractContractAbi(address).catch(
+						() => undefined,
+					)
 
-				if (contractAbi) {
-					contractInfo = {
-						name: 'Unknown Contract',
-						description: 'ABI extracted from bytecode',
-						code: contractBytecode,
-						abi: contractAbi,
-						category: 'utility',
-						address,
+					if (contractAbi) {
+						contractInfo = {
+							name: 'Unknown Contract',
+							description: 'ABI extracted from bytecode',
+							code: contractBytecode,
+							abi: contractAbi,
+							category: 'utility',
+							address,
+						}
 					}
 				}
-			}
 
-			const queryOptions = contractSourceQueryOptions({
-				address,
-				chainId,
-			})
-			// Try to fetch verified contract source if there's bytecode on chain
-			// Fetch directly from upstream API (bypasses __BASE_URL__ issues during SSR)
-			// Then seed the query cache for client-side hydration
-			// Only seed if no data exists - avoid overwriting highlighted data from client refetch
-			const existingData = context.queryClient.getQueryData(
-				queryOptions.queryKey,
-			)
-			if (!existingData) {
-				contractSource = await fetchContractSourceDirect({
+				const queryOptions = contractSourceQueryOptions({
 					address,
 					chainId,
-				}).catch((error) => {
-					console.error('[loader] Failed to load contract source:', error)
-					return undefined
 				})
-				// Seed the query cache so client hydrates with data already available
-				if (contractSource)
-					context.queryClient.setQueryData(
-						queryOptions.queryKey,
-						contractSource,
-					)
-			} else contractSource = existingData
-		}
-
-		// Add timeout to prevent SSR from hanging on slow queries
-		const QUERY_TIMEOUT_MS = 3_000
-		const timeout = <T,>(
-			promise: Promise<T>,
-			ms: number,
-		): Promise<T | undefined> =>
-			Promise.race([
-				promise,
-				new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
-			])
-
-		const transactionsData = await timeout(
-			context.queryClient
-				.ensureQueryData(
-					transactionsQueryOptions({
-						address,
-						page,
-						limit,
-						offset,
-					}),
+				// Try to fetch verified contract source if there's bytecode on chain
+				// Fetch directly from upstream API (bypasses __BASE_URL__ issues during SSR)
+				// Then seed the query cache for client-side hydration
+				// Only seed if no data exists - avoid overwriting highlighted data from client refetch
+				const existingData = context.queryClient.getQueryData(
+					queryOptions.queryKey,
 				)
+				if (!existingData) {
+					contractSource = await fetchContractSourceDirect({
+						address,
+						chainId,
+					}).catch((error) => {
+						console.error('[loader] Failed to load contract source:', error)
+						return undefined
+					})
+					// Seed the query cache so client hydrates with data already available
+					if (contractSource)
+						context.queryClient.setQueryData(
+							queryOptions.queryKey,
+							contractSource,
+						)
+				} else contractSource = existingData
+			}
+
+			// Add timeout to prevent SSR from hanging on slow queries
+			const QUERY_TIMEOUT_MS = 3_000
+			const timeout = <T,>(
+				promise: Promise<T>,
+				ms: number,
+			): Promise<T | undefined> =>
+				Promise.race([
+					promise,
+					new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
+				])
+
+			const transactionsData = await timeout(
+				context.queryClient
+					.ensureQueryData(
+						transactionsQueryOptions({
+							address,
+							page,
+							limit,
+							offset,
+						}),
+					)
+					.catch((error) => {
+						console.error('Fetch transactions error:', error)
+						return undefined
+					}),
+				QUERY_TIMEOUT_MS,
+			)
+
+			// Fire off optional loaders without blocking page render
+			// These will populate the cache if successful but won't delay the page load
+			context.queryClient
+				.ensureQueryData({
+					queryKey: ['account-total-value', address],
+					queryFn: () => fetchAddressTotalValue(address),
+					staleTime: 60_000,
+				})
 				.catch((error) => {
-					console.error('Fetch transactions error:', error)
-					return undefined
-				}),
-			QUERY_TIMEOUT_MS,
-		)
+					console.error('Fetch total-value error (non-blocking):', error)
+				})
 
-		// Fire off optional loaders without blocking page render
-		// These will populate the cache if successful but won't delay the page load
-		context.queryClient
-			.ensureQueryData({
-				queryKey: ['account-total-value', address],
-				queryFn: () => fetchAddressTotalValue(address),
-				staleTime: 60_000,
-			})
-			.catch((error) => {
-				console.error('Fetch total-value error (non-blocking):', error)
-			})
+			// For SSR, provide placeholder values - client will fetch real data
+			const txCountResponse = undefined
+			const totalValueResponse = undefined
 
-		// For SSR, provide placeholder values - client will fetch real data
-		const txCountResponse = undefined
-		const totalValueResponse = undefined
-
-		return {
-			live,
-			address,
-			page,
-			limit,
-			offset,
-			accountType,
-			contractInfo,
-			contractSource,
-			transactionsData,
-			txCountResponse,
-			totalValueResponse,
-		}
-	},
+			return {
+				live,
+				address,
+				page,
+				limit,
+				offset,
+				accountType,
+				contractInfo,
+				contractSource,
+				transactionsData,
+				txCountResponse,
+				totalValueResponse,
+			}
+		}),
 	head: async ({ params, loaderData }) => {
 		const accountType = loaderData?.accountType ?? 'empty'
 		const label =
@@ -431,33 +433,45 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const accountAddress = params.address as Address.Address
 
 			const config = getWagmiConfig()
-			const tokenResults = await timeout(
-				// TODO: investigate & consider batch/multicall
-				Promise.all(
-					assets.map(async (tokenAddress) => {
-						try {
-							// TODO: investigate & consider batch/multicall
-							const [balance, decimals] = await Promise.all([
-								readContract(config, {
-									address: tokenAddress,
-									abi: Abis.tip20,
-									functionName: 'balanceOf',
-									args: [accountAddress],
-								}),
-								readContract(config, {
-									address: tokenAddress,
-									abi: Abis.tip20,
-									functionName: 'decimals',
-								}),
-							])
-							return { balance, decimals }
-						} catch {
-							return null
-						}
-					}),
-				),
+
+			// Use multicall to batch all token balance + decimals calls into a single RPC request
+			const multicallResults = await timeout(
+				multicall(config, {
+					contracts: assets.flatMap((tokenAddress) => [
+						{
+							address: tokenAddress,
+							abi: Abis.tip20,
+							functionName: 'balanceOf',
+							args: [accountAddress],
+						},
+						{
+							address: tokenAddress,
+							abi: Abis.tip20,
+							functionName: 'decimals',
+						},
+					]),
+					allowFailure: true,
+				}),
 				TIMEOUT_MS,
 			)
+
+			// Parse multicall results: each token has 2 results (balance, decimals)
+			const tokenResults = multicallResults
+				? assets.map((_, i) => {
+						const balanceResult = multicallResults[i * 2]
+						const decimalsResult = multicallResults[i * 2 + 1]
+						if (
+							balanceResult?.status === 'success' &&
+							decimalsResult?.status === 'success'
+						) {
+							return {
+								balance: balanceResult.result as bigint,
+								decimals: decimalsResult.result as number,
+							}
+						}
+						return null
+					})
+				: null
 
 			if (tokenResults) {
 				const PRICE_PER_TOKEN = 1
@@ -517,7 +531,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				{ property: 'og:description', content: description },
 				{ name: 'twitter:description', content: description },
 				{ property: 'og:image', content: ogImageUrl },
-				{ property: 'og:image:type', content: 'image/png' },
+				{ property: 'og:image:type', content: 'image/webp' },
 				{ property: 'og:image:width', content: '1200' },
 				{ property: 'og:image:height', content: '630' },
 				{ name: 'twitter:card', content: 'summary_large_image' },
@@ -784,14 +798,10 @@ function SectionsWrapper(props: {
 	 */
 	const data = isMounted ? queryData : page === 1 ? initialData : queryData
 	const {
-		transactions,
-		total: approximateTotal,
-		hasMore,
-	} = data ?? {
-		transactions: [],
-		total: 0,
-		hasMore: false,
-	}
+		transactions = [],
+		total: approximateTotal = 0,
+		hasMore = false,
+	} = data ?? {}
 
 	// Fetch exact total count in the background (only when on history tab)
 	// Don't cache across tabs/pages - always show "..." until loaded each time
@@ -1083,8 +1093,7 @@ function TransactionFeeCellInner(props: { hash: Hex.Hex }) {
 	return (
 		<span className="text-tertiary">
 			{PriceFormatter.format(
-				batchData.receipt.effectiveGasPrice *
-					batchData.receipt.cumulativeGasUsed,
+				batchData.receipt.effectiveGasPrice * batchData.receipt.gasUsed,
 				{ decimals: 18, format: 'short' },
 			)}
 		</span>

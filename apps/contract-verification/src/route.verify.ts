@@ -13,7 +13,7 @@ import {
 	type LinkReferences,
 	matchBytecode,
 } from '#bytecode-matching.ts'
-import { chains, DEVNET_CHAIN_ID, TESTNET_CHAIN_ID } from '#chains.ts'
+import { chains, CHAIN_IDS } from '#chains.ts'
 
 import {
 	codeTable,
@@ -92,7 +92,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		}
 
 		const chainId = Number(_chainId)
-		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(chainId)) {
+		if (!CHAIN_IDS.includes(chainId)) {
 			return sourcifyError(
 				context,
 				400,
@@ -176,11 +176,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 		const chain = chains[chainId as keyof typeof chains]
 		const client = createPublicClient({
 			chain,
-			transport: http(
-				chain.id === TESTNET_CHAIN_ID
-					? `https://rpc.testnet.tempo.xyz/${context.env.TEMPO_RPC_KEY}`
-					: 'https://rpc.devnet.tempoxyz.dev',
-			),
+			transport: http(chain.rpcUrls.default.http.at(0)),
 		})
 
 		const onchainBytecode = await client.getCode({ address: address })

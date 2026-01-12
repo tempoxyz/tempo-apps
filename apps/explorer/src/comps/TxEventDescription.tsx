@@ -129,9 +129,10 @@ export namespace TxEventDescription {
 						? Value.format(...part.value)
 						: Value.format(BigInt(part.value)),
 				)
+				const isSmall = formatted.startsWith('<')
 				return (
 					<span
-						className="items-end overflow-hidden text-ellipsis whitespace-nowrap"
+						className={`items-end overflow-hidden text-ellipsis whitespace-nowrap ${isSmall ? 'text-tertiary' : ''}`}
 						title={formatted}
 					>
 						{formatted}
@@ -146,7 +147,7 @@ export namespace TxEventDescription {
 					</span>
 				)
 			case 'text':
-				return <span>{part.value}</span>
+				return <span className="text-tertiary">{part.value}</span>
 			case 'tick':
 				return <span className="items-end">{part.value}</span>
 			case 'token':
@@ -227,7 +228,7 @@ export namespace TxEventDescription {
 									<button
 										type="button"
 										onClick={() => setExpanded(true)}
-										className="text-base-content-secondary cursor-pointer press-down shrink-0"
+										className="text-tertiary cursor-pointer press-down shrink-0"
 									>
 										and {remainingCount} more
 									</button>

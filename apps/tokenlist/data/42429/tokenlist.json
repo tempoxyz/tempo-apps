@@ -1,6 +1,6 @@
 {
 	"$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
-	"name": "Tempo Testnet",
+	"name": "Tempo Testnet (Andantino)",
 	"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icon.svg",
 	"timestamp": "2025-12-06T00:00:00Z",
 	"version": {
@@ -22,7 +22,7 @@
 		},
 		{
 			"name": "AlphaUSD",
-			"symbol": "AlphaUSD",
+			"symbol": "alphaUSD",
 			"decimals": 6,
 			"chainId": 42429,
 			"address": "0x20c0000000000000000000000000000000000001",
@@ -33,7 +33,7 @@
 		},
 		{
 			"name": "BetaUSD",
-			"symbol": "BetaUSD",
+			"symbol": "betaUSD",
 			"decimals": 6,
 			"chainId": 42429,
 			"address": "0x20c0000000000000000000000000000000000002",
@@ -44,7 +44,7 @@
 		},
 		{
 			"name": "ThetaUSD",
-			"symbol": "ThetaUSD",
+			"symbol": "thetaUSD",
 			"decimals": 6,
 			"chainId": 42429,
 			"address": "0x20c0000000000000000000000000000000000003",

@@ -23,7 +23,9 @@
 		"strict": true,
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
+		"allowArbitraryExtensions": true,
 		"noFallthroughCasesInSwitch": true,
+		"resolvePackageJsonImports": true,
 		"noUncheckedSideEffectImports": true,
 		"resolveJsonModule": true,
 		"paths": {

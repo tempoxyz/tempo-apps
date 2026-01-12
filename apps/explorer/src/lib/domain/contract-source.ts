@@ -4,8 +4,8 @@ import { isAddress } from 'viem'
 import { useChainId } from 'wagmi'
 import * as z from 'zod/mini'
 
-const CONTRACT_VERIFICATION_API_BASE_URL =
-	'https://contracts.tempo.xyz/v2/contract'
+const CONTRACT_VERIFICATION_API_BASE_URL = import.meta.env
+	.VITE_CONTRACT_VERIFY_URL
 
 const SoliditySettingsSchema = z.object({
 	remappings: z.optional(z.array(z.string())),

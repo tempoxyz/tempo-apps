@@ -15,7 +15,7 @@
 		"allowJs": true,
 		"checkJs": false
 	},
-	"files": ["worker-configuration.d.ts"],
+	"files": ["env.d.ts", "worker-configuration.d.ts"],
 	"include": ["src/**/*.ts"],
 	"exclude": ["node_modules", "dist", "**/*.test.ts"]
 }

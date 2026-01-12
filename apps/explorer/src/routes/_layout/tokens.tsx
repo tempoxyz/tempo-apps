@@ -12,6 +12,7 @@ import {
 import { TokenIcon } from '#comps/TokenIcon'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
+import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens.server'
 
@@ -36,15 +37,16 @@ export const Route = createFileRoute('/_layout/tokens')({
 	validateSearch: z.object({
 		page: z.optional(z.number()),
 	}).parse,
-	loader: async ({ context }) => {
-		return context.queryClient.ensureQueryData(
-			tokensListQueryOptions({
-				page: 1,
-				limit: TOKENS_PER_PAGE,
-				includeCount: false,
-			}),
-		)
-	},
+	loader: ({ context }) =>
+		withLoaderTiming('/_layout/tokens', async () =>
+			context.queryClient.ensureQueryData(
+				tokensListQueryOptions({
+					page: 1,
+					limit: TOKENS_PER_PAGE,
+					includeCount: false,
+				}),
+			),
+		),
 })
 
 function TokensPage() {
@@ -73,8 +75,12 @@ function TokensPage() {
 
 	const tokens = data?.tokens ?? []
 	const exactCount = isMounted ? countQuery.data?.data : undefined
+	const isCapped = exactCount !== undefined && exactCount >= TOKEN_COUNT_MAX
 	const paginationTotal = exactCount ?? TOKEN_COUNT_MAX
-	const displayTotal = exactCount ?? '...'
+	const displayTotal =
+		exactCount === undefined
+			? '…'
+			: `${isCapped ? '> ' : ''}${isCapped ? TOKEN_COUNT_MAX : exactCount}`
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -145,7 +151,8 @@ function TokensPage() {
 									}))
 								}
 								totalItems={paginationTotal}
-								displayCount={exactCount}
+								displayCount={isCapped ? TOKEN_COUNT_MAX : exactCount}
+								displayCountCapped={isCapped}
 								page={page}
 								fetching={isPlaceholderData}
 								loading={isPending}

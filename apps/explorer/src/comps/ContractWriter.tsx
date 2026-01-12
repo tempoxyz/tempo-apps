@@ -199,7 +199,12 @@ function WriteContractFunction(props: {
 							void handleCopyPermalink()
 						}}
 						title={linkNotifying ? 'Copied!' : 'Copy permalink'}
-						className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] px-[4px] focus-visible:-outline-offset-2!"
+						className={cx(
+							'cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
+							connection.status !== 'connected' && !hasInputs
+								? 'pr-[12px]'
+								: 'pr-[4px]',
+						)}
 					>
 						{linkNotifying ? (
 							<CheckIcon className="w-[12px] h-[12px]" />

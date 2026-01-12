@@ -8,8 +8,6 @@ import {
 	useNavigate,
 } from '@tanstack/react-router'
 import { Hex, Json, Value } from 'ox'
-import { createPublicClient, http } from 'viem'
-import { getBlock, getTransaction } from 'viem/actions'
 import { getPublicClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'
@@ -25,6 +23,7 @@ import {
 	formatEventForOgServer,
 	OG_BASE_URL,
 } from '#lib/og'
+import { withLoaderTiming } from '#lib/profiling'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
@@ -37,19 +36,14 @@ function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 
 async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	const config = getWagmiConfig()
-	const client = params.rpcUrl
-		? createPublicClient({
-				chain: config.chains[0],
-				transport: http(params.rpcUrl),
-			})
-		: getPublicClient(config)
+	const client = getPublicClient(config)
 	const receipt = await client.getTransactionReceipt({
 		hash: params.hash,
 	})
 	// TODO: investigate & consider batch/multicall
 	const [block, transaction, getTokenMetadata] = await Promise.all([
-		getBlock(client, { blockHash: receipt.blockHash }),
-		getTransaction(client, { hash: receipt.transactionHash }),
+		client.getBlock({ blockHash: receipt.blockHash }),
+		client.getTransaction({ hash: receipt.transactionHash }),
 		Tip20.metadataFromLogs(receipt.logs),
 	])
 	const timestampFormatted = DateFormatter.format(block.timestamp)
@@ -107,26 +101,27 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			: {}),
 	}),
 	// @ts-expect-error - TODO: fix
-	loader: async ({ params, context }) => {
-		const hash = parseHashFromParams(params)
-		if (!hash)
-			throw notFound({
-				routeId: rootRouteId,
-				data: { type: 'hash', value: params.hash },
-			})
+	loader: ({ params, context }) =>
+		withLoaderTiming('/_layout/receipt/$hash', async () => {
+			const hash = parseHashFromParams(params)
+			if (!hash)
+				throw notFound({
+					routeId: rootRouteId,
+					data: { type: 'hash', value: params.hash },
+				})
 
-		try {
-			return await context.queryClient.ensureQueryData(
-				receiptDetailQueryOptions({ hash }),
-			)
-		} catch (error) {
-			console.error(error)
-			throw notFound({
-				routeId: rootRouteId,
-				data: { type: 'hash', value: hash },
-			})
-		}
-	},
+			try {
+				return await context.queryClient.ensureQueryData(
+					receiptDetailQueryOptions({ hash }),
+				)
+			} catch (error) {
+				console.error(error)
+				throw notFound({
+					routeId: rootRouteId,
+					data: { type: 'hash', value: hash },
+				})
+			}
+		}),
 	server: {
 		handlers: {
 			async GET({ params, request, next }) {
@@ -291,7 +286,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				{ property: 'og:description', content: description },
 				{ name: 'twitter:description', content: description },
 				{ property: 'og:image', content: ogImageUrl },
-				{ property: 'og:image:type', content: 'image/png' },
+				{ property: 'og:image:type', content: 'image/webp' },
 				{ property: 'og:image:width', content: '1200' },
 				{ property: 'og:image:height', content: '630' },
 				{ name: 'twitter:card', content: 'summary_large_image' },

@@ -1,6 +1,12 @@
 export function ReceiptMark() {
 	return (
-		<svg xmlns="http://www.w3.org/2000/svg" width={92} height={36} fill="none">
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width={69}
+			height={27}
+			viewBox="0 0 92 36"
+			fill="none"
+		>
 			<title>Tempo Receipt</title>
 			<path
 				className="fill-background-inverse"

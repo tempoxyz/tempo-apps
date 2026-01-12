@@ -28,13 +28,14 @@ import {
 	toBase64DataUrl,
 } from '#utilities.ts'
 
-const DEVICE_PIXEL_RATIO = 1.0
 const CACHE_TTL = 3600
 
 const factory = createFactory<{ Bindings: Cloudflare.Env }>()
 
 const rateLimiter = createMiddleware<{ Bindings: Cloudflare.Env }>(
 	async (context, next) => {
+		if (!context.env.REQUESTS_RATE_LIMITER) return next()
+
 		const { success } = await context.env.REQUESTS_RATE_LIMITER.limit({
 			key: 'global',
 		})
@@ -69,11 +70,15 @@ app.get('/favicon.ico', (context) =>
 app
 	.get('/', (context) => context.text('OK'))
 	.get('/health', (context) => context.text('OK'))
+	.get('/explorer', (context) =>
+		context.env.ASSETS.fetch(new URL('/og-explorer.webp', context.req.url)),
+	)
 
 // Apply rate limiting and caching (cache only in prod) to OG image routes
 app.use('/tx/*', rateLimiter)
 app.use('/token/*', rateLimiter)
 app.use('/address/*', rateLimiter)
+app.use('/explorer', rateLimiter)
 app.use('*', except(isNotProd, cacheMiddleware))
 
 /**
@@ -131,9 +136,9 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 			</div>
 		</div>,
 		{
-			width: 1200 * DEVICE_PIXEL_RATIO,
-			height: 630 * DEVICE_PIXEL_RATIO,
-			format: 'png',
+			width: 1200,
+			height: 630,
+			format: 'webp',
 			module,
 			fonts: [
 				{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
@@ -143,7 +148,7 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 	)
 
 	return new Response(imageResponse.body, {
-		headers: { 'Content-Type': 'image/png' },
+		headers: { 'Content-Type': 'image/webp' },
 	})
 })
 
@@ -165,7 +170,9 @@ app.get(
 		const [fonts, images, tokenIcon] = await Promise.all([
 			loadFonts(),
 			loadImages(context.env),
-			fetchTokenIcon(address),
+			tokenParams.chainId
+				? fetchTokenIcon(address, tokenParams.chainId)
+				: null,
 		])
 
 		const imageResponse = new ImageResponse(
@@ -184,9 +191,9 @@ app.get(
 				</div>
 			</div>,
 			{
-				width: 1200 * DEVICE_PIXEL_RATIO,
-				height: 630 * DEVICE_PIXEL_RATIO,
-				format: 'png',
+				width: 1200,
+				height: 630,
+				format: 'webp',
 				module,
 				fonts: [
 					{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
@@ -195,8 +202,9 @@ app.get(
 			},
 		)
 
-		return new Response(imageResponse.body, {
-			headers: { 'Content-Type': 'image/png' },
+		const body = await imageResponse.arrayBuffer()
+		return new Response(body, {
+			headers: { 'Content-Type': 'image/webp' },
 		})
 	},
 )
@@ -249,9 +257,9 @@ app.get(
 				</div>
 			</div>,
 			{
-				width: 1200 * DEVICE_PIXEL_RATIO,
-				height: 630 * DEVICE_PIXEL_RATIO,
-				format: 'png',
+				width: 1200,
+				height: 630,
+				format: 'webp',
 				module,
 				fonts: [
 					{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
@@ -261,7 +269,7 @@ app.get(
 		)
 
 		return new Response(imageResponse.body, {
-			headers: { 'Content-Type': 'image/png' },
+			headers: { 'Content-Type': 'image/webp' },
 		})
 	},
 )

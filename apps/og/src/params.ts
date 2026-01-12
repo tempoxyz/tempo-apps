@@ -155,6 +155,7 @@ export const tokenOgQuerySchema = z.pipe(
 		created: sanitizedWithDefault(32),
 		quoteToken: sanitized(24),
 		isFeeToken: booleanString,
+		chainId: z.optional(z.coerce.number()),
 	}),
 	z.transform((data) => ({
 		name: data.name,
@@ -165,6 +166,7 @@ export const tokenOgQuerySchema = z.pipe(
 		created: data.created,
 		quoteToken: data.quoteToken,
 		isFeeToken: data.isFeeToken,
+		chainId: data.chainId,
 	})),
 )
 

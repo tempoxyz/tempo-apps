@@ -12,7 +12,8 @@ import { Address } from 'ox'
 import * as React from 'react'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
-import { getPublicClient } from 'wagmi/actions'
+import type { Config } from 'wagmi'
+import { getChainId, getPublicClient } from 'wagmi/actions'
 import { Actions, Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
@@ -38,6 +39,7 @@ import {
 	holdersQueryOptions,
 	transfersQueryOptions,
 } from '#lib/queries'
+import { withLoaderTiming } from '#lib/profiling'
 import { fetchOgStats } from '#lib/server/token.server.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 import CopyIcon from '~icons/lucide/copy'
@@ -50,6 +52,8 @@ const defaultSearchValues = {
 } as const
 
 const tabOrder = ['transfers', 'holders', 'contract'] as const
+
+const chainId = getChainId(getWagmiConfig())
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
@@ -87,37 +91,40 @@ export const Route = createFileRoute('/_layout/token/$address')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loader: async ({ params }) => {
-		const { address } = params
-		if (!Address.validate(address)) throw notFound()
+	loader: ({ params }) =>
+		withLoaderTiming('/_layout/token/$address', async () => {
+			const { address } = params
+			if (!Address.validate(address)) throw notFound()
 
-		const config = getWagmiConfig()
-		const publicClient = getPublicClient(config)
+			const config = getWagmiConfig()
+			const publicClient = getPublicClient(config)
 
-		// Validate the token exists by fetching metadata (required - blocks render)
-		let metadata: Awaited<ReturnType<typeof Actions.token.getMetadata>>
-		try {
-			metadata = await Actions.token.getMetadata(config, { token: address })
-		} catch (error) {
-			console.error('Failed to fetch token metadata:', error)
-			throw notFound()
-		}
-
-		// Fast OG stats (threshold-based, not full counts) + currency for OG image
-		const [ogStats, currency] = await Promise.all([
-			fetchOgStats({ data: { address } }).catch(() => null),
-			publicClient
-				.readContract({
-					address: address,
-					abi: Abis.tip20,
-					functionName: 'currency',
+			// Validate the token exists by fetching metadata (required - blocks render)
+			let metadata: Awaited<ReturnType<typeof Actions.token.getMetadata>>
+			try {
+				metadata = await Actions.token.getMetadata(config as Config, {
+					token: address,
 				})
-				.catch(() => undefined),
-		])
+			} catch (error) {
+				console.error('Failed to fetch token metadata:', error)
+				throw notFound()
+			}
 
-		// All other data (transfers, holders, firstTransfer) fetched client-side
-		return { metadata, ogStats, currency }
-	},
+			// Fast OG stats (threshold-based, not full counts) + currency for OG image
+			const [ogStats, currency] = await Promise.all([
+				fetchOgStats({ data: { address } }).catch(() => null),
+				publicClient
+					.readContract({
+						address: address,
+						abi: Abis.tip20,
+						functionName: 'currency',
+					})
+					.catch(() => undefined),
+			])
+
+			// All other data (transfers, holders, firstTransfer) fetched client-side
+			return { metadata, ogStats, currency }
+		}),
 	params: {
 		parse: z.object({
 			address: z.pipe(
@@ -170,15 +177,18 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				: null,
 		)
 
-		const ogImageUrl = buildTokenOgImageUrl({
-			address: params.address,
-			name: metadata?.name,
-			symbol: metadata?.symbol,
-			currency,
-			holders: formatHolders(ogStats?.holders),
-			supply,
-			created: ogStats?.created ?? undefined,
-		})
+		const ogImageUrl = loaderData
+			? buildTokenOgImageUrl({
+					address: params.address,
+					chainId,
+					name: metadata?.name,
+					symbol: metadata?.symbol,
+					currency,
+					holders: formatHolders(ogStats?.holders),
+					supply,
+					created: ogStats?.created ?? undefined,
+				})
+			: undefined
 
 		return {
 			title,
@@ -187,12 +197,16 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				{ property: 'og:title', content: title },
 				{ property: 'og:description', content: description },
 				{ name: 'twitter:description', content: description },
-				{ property: 'og:image', content: ogImageUrl },
-				{ property: 'og:image:type', content: 'image/png' },
-				{ property: 'og:image:width', content: '1200' },
-				{ property: 'og:image:height', content: '630' },
-				{ name: 'twitter:card', content: 'summary_large_image' },
-				{ name: 'twitter:image', content: ogImageUrl },
+				...(ogImageUrl
+					? [
+							{ property: 'og:image', content: ogImageUrl },
+							{ property: 'og:image:type', content: 'image/webp' },
+							{ property: 'og:image:width', content: '1200' },
+							{ property: 'og:image:height', content: '630' },
+							{ name: 'twitter:card', content: 'summary_large_image' },
+							{ name: 'twitter:image', content: ogImageUrl },
+						]
+					: []),
 			],
 		}
 	},
@@ -317,9 +331,7 @@ function TokenCard(props: {
 		<InfoCard
 			title={
 				<div className="flex items-center justify-between px-4.5 pt-2.5 pb-2">
-					<h1 className="text-[13px] uppercase text-tertiary select-none">
-						Token
-					</h1>
+					<h1 className="text-[13px] text-tertiary select-none">Token</h1>
 					{metadata?.symbol && (
 						<h2 className="text-[13px] inline-flex items-center gap-1.5">
 							<TokenIcon
@@ -352,7 +364,7 @@ function TokenCard(props: {
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-normal leading-4.25 tracking-[0.02em] text-primary break-all max-w-[22ch]">
+					<p className="text-[14px] font-mono font-normal leading-4.25 text-primary break-all max-w-[21ch]">
 						{address}
 					</p>
 				</button>,
@@ -673,7 +685,7 @@ function FilterIndicator(props: {
 			<Link
 				to="/address/$address"
 				params={{ address: account }}
-				className="text-accent press-down"
+				className="text-accent press-down font-mono"
 				title={account}
 			>
 				<Midcut value={account} prefix="0x" />

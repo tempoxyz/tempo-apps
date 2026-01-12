@@ -11,7 +11,7 @@
 	--background-color-primary: var(--color-background-primary);
 	--color-background-surface: light-dark(#ffffff, #1a1a1a);
 	--background-color-surface: var(--color-background-surface);
-	--color-background-alt: light-dark(#fcfcfc, #222222);
+	--color-background-alt: light-dark(#fcfcfc, #161616);
 	--background-alt: var(--color-background-alt);
 	--color-frame-background: light-dark(#ffffff, #1a1a1a);
 	--frame-background: var(--color-frame-background);
@@ -98,6 +98,7 @@
 	--color-base-background: light-dark(#fcfcfc, #191919);
 	--color-base-plane: light-dark(#fcfcfc, #222222);
 	--color-base-plane-background: light-dark(#f9f9f9, #222222);
+	--color-base-plane-interactive: light-dark(#f8f8f8, #1c1c1c);
 	--color-base-alt: light-dark(#e5e5e5, #2a2a2a);
 	--color-base-border: light-dark(#e0e0e0, #2a2a2a);
 	--color-base-content: light-dark(#202020, #eeeeee);
@@ -105,6 +106,8 @@
 	--color-base-content-positive: light-dark(#30a46c, #30a46c);
 	--color-base-content-negative: light-dark(#e5484d, #e5484d);
 	--color-distinct: light-dark(#e8e8e8, #313131);
+	--color-warning: light-dark(#e2a336, #8f6424);
+	--color-warning-background: light-dark(#fdf5c2, #252018);
 
 	--font-display: system-ui, sans-serif;
 	--font-mono: ui-monospace, monospace;
@@ -214,6 +217,13 @@ input[type="number"] {
 @utility press-down {
 	&:active:not([aria-disabled="true"]) {
 		transform: translateY(0.5px);
+	}
+}
+
+@utility press-down-inline {
+	&:active:not([aria-disabled="true"]) {
+		position: relative;
+		top: 0.5px;
 	}
 }
 

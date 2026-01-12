@@ -1,7 +1,19 @@
-import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
+import {
+	createIsomorphicFn,
+	createServerFn,
+	createServerOnlyFn,
+} from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
+import { createPublicClient } from 'viem'
+import {
+	tempoDevnet,
+	tempoLocalnet,
+	tempoAndantino,
+	tempoModerato,
+} from 'viem/chains'
+import { tempoActions } from 'viem/tempo'
 import { KeyManager, webAuthn } from 'wagmi/tempo'
-import { tempoLocalnet, tempoTestnet } from 'viem/chains'
+import { tempoPresto } from './lib/chains'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -13,46 +25,94 @@ import {
 	webSocket,
 } from 'wagmi'
 
-export const DEFAULT_TESTNET_RPC_URL = 'https://proxy.tempo.xyz/rpc'
-export const DEFAULT_TESTNET_WS_URL = 'wss://proxy.tempo.xyz/rpc'
-
-const getTempoRpcUrl = createIsomorphicFn()
-	.server(() => ({
-		http: DEFAULT_TESTNET_RPC_URL,
-		websocket: DEFAULT_TESTNET_WS_URL,
-	}))
-	.client(() => ({
-		http: DEFAULT_TESTNET_RPC_URL,
-		websocket: DEFAULT_TESTNET_WS_URL,
-	}))
-
-declare module 'wagmi' {
-	interface Register {
-		config: ReturnType<typeof getWagmiConfig>
-	}
-}
+const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 
-export const getChain = createIsomorphicFn()
+const getWsUrls = createIsomorphicFn()
 	.client(() =>
-		import.meta.env.VITE_LOCALNET === 'true' ? tempoLocalnet : tempoTestnet,
+		[
+			import.meta.env.VITE_TEMPO_RPC_WS,
+			import.meta.env.VITE_TEMPO_RPC_WS_FALLBACK,
+		].filter(Boolean),
 	)
 	.server(() =>
-		import.meta.env.VITE_LOCALNET === 'true' ? tempoLocalnet : tempoTestnet,
+		[
+			process.env.VITE_TEMPO_RPC_WS,
+			process.env.VITE_TEMPO_RPC_WS_FALLBACK,
+		].filter(Boolean),
 	)
 
-export const getChainId = createIsomorphicFn()
-	.client(() => getChain().id)
-	.server(() => getChain().id)
+const getHttpUrls = createIsomorphicFn()
+	.client(() =>
+		[
+			import.meta.env.VITE_TEMPO_RPC_HTTP,
+			import.meta.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
+		].filter(Boolean),
+	)
+	.server(() =>
+		[
+			process.env.VITE_TEMPO_RPC_HTTP,
+			process.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
+		].filter(Boolean),
+	)
+
+const getTempoRpcKey = createServerOnlyFn(() => process.env.TEMPO_RPC_KEY)
+
+export const getTempoChain = createIsomorphicFn()
+	.client(() =>
+		TEMPO_ENV === 'presto'
+			? tempoPresto
+			: TEMPO_ENV === 'devnet'
+				? tempoDevnet
+				: TEMPO_ENV === 'moderato'
+					? tempoModerato
+					: tempoAndantino,
+	)
+	.server(() =>
+		TEMPO_ENV === 'presto'
+			? tempoPresto
+			: TEMPO_ENV === 'devnet'
+				? tempoDevnet
+				: TEMPO_ENV === 'moderato'
+					? tempoModerato
+					: tempoAndantino,
+	)
+
+const getTempoTransport = createIsomorphicFn()
+	.client(() =>
+		fallback([
+			...getWsUrls().map((u) => webSocket(u)),
+			...getHttpUrls().map((u) => http(u)),
+		]),
+	)
+	.server(() => {
+		const rpcKey = getTempoRpcKey()
+		if (rpcKey === '__FORWARD__') {
+			const authHeader = getRequestHeader('authorization')
+			return fallback([
+				...getWsUrls().map((url) => webSocket(url)),
+				...getHttpUrls().map((url) =>
+					http(url, {
+						fetchOptions: { headers: { Authorization: authHeader ?? '' } },
+					}),
+				),
+			])
+		}
+		return fallback([
+			...getWsUrls().map((url) => webSocket(`${url}/${rpcKey}`)),
+			...getHttpUrls().map((url) => http(`${url}/${rpcKey}`)),
+		])
+	})
 
 export function getWagmiConfig() {
-	const rpcUrl = getTempoRpcUrl()
+	const chain = getTempoChain()
+	const transport = getTempoTransport()
 
 	return createConfig({
-		chains: [getChain()],
 		ssr: true,
 		batch: { multicall: false },
+		chains: [chain, tempoLocalnet],
 		storage: createStorage({ storage: cookieStorage }),
 		connectors: [
 			webAuthn({
@@ -60,12 +120,9 @@ export function getWagmiConfig() {
 			}),
 		],
 		transports: {
-			[tempoTestnet.id]: fallback([
-				webSocket(rpcUrl.websocket),
-				http(rpcUrl.http),
-			]),
+			[chain.id]: transport,
 			[tempoLocalnet.id]: http(undefined, { batch: true }),
-		},
+		} as never,
 	})
 }
 
@@ -74,3 +131,17 @@ export const getWagmiStateSSR = createServerFn().handler(() => {
 	const initialState = cookieToInitialState(getWagmiConfig(), cookie)
 	return serialize(initialState || {})
 })
+
+// Batched HTTP client for bulk RPC operations
+export function getBatchedClient() {
+	const chain = getTempoChain()
+	const transport = getTempoTransport()
+
+	return createPublicClient({ chain, transport }).extend(tempoActions())
+}
+
+declare module 'wagmi' {
+	interface Register {
+		config: ReturnType<typeof getWagmiConfig>
+	}
+}
