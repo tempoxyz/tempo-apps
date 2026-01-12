@@ -13,19 +13,20 @@ function checkBasicAuth(request: Request): Response | null {
 	const basicAuth = process.env.BASIC_AUTH
 	if (!basicAuth) return null
 
+	const unauthorized = new Response('Unauthorized', {
+		status: 401,
+		headers: { 'WWW-Authenticate': 'Basic realm="Explorer"' },
+	})
+
 	const authHeader = request.headers.get('Authorization')
-	if (!authHeader?.startsWith('Basic '))
-		return new Response('Unauthorized', {
-			status: 401,
-			headers: { 'WWW-Authenticate': 'Basic realm="Explorer"' },
-		})
+	if (!authHeader?.startsWith('Basic ')) return unauthorized
 
 	// 6 = 'Basic '
-	if (atob(authHeader.slice(6)) !== basicAuth)
-		return new Response('Unauthorized', {
-			status: 401,
-			headers: { 'WWW-Authenticate': 'Basic realm="Explorer"' },
-		})
+	try {
+		if (atob(authHeader.slice(6)) !== basicAuth) return unauthorized
+	} catch {
+		return unauthorized
+	}
 
 	return null
 }
