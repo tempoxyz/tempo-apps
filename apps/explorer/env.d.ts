@@ -7,6 +7,7 @@ interface EnvironmentVariables {
 	readonly VITE_TEMPO_ENV: 'testnet' | 'moderato' | 'devnet' | 'presto'
 
 	readonly TEMPO_RPC_KEY: string
+	readonly FORWARD_RPC_AUTH: string | undefined
 }
 
 interface ImportMetaEnv extends EnvironmentVariables {}
