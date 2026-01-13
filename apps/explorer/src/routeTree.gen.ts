@@ -19,6 +19,7 @@ import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
 import { Route as ApiTokensCountRouteImport } from './routes/api/tokens/count'
 import { Route as ApiAddressAddressRouteImport } from './routes/api/address/$address'
+import { Route as ApiAbiBatchRouteImport } from './routes/api/abi/batch'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutReceiptHashRouteImport } from './routes/_layout/receipt/$hash'
@@ -80,6 +81,11 @@ const ApiTokensCountRoute = ApiTokensCountRouteImport.update({
 const ApiAddressAddressRoute = ApiAddressAddressRouteImport.update({
   id: '/api/address/$address',
   path: '/api/address/$address',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAbiBatchRoute = ApiAbiBatchRouteImport.update({
+  id: '/api/abi/batch',
+  path: '/api/abi/batch',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LayoutTxHashRoute = LayoutTxHashRouteImport.update({
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
+  '/api/abi/batch': typeof ApiAbiBatchRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/demo': typeof LayoutDemoIndexRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
+  '/api/abi/batch': typeof ApiAbiBatchRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/demo': typeof LayoutDemoIndexRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/_layout/receipt/$hash': typeof LayoutReceiptHashRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
+  '/api/abi/batch': typeof ApiAbiBatchRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/receipt/$hash'
     | '/token/$address'
     | '/tx/$hash'
+    | '/api/abi/batch'
     | '/api/address/$address'
     | '/api/tokens/count'
     | '/demo'
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/receipt/$hash'
     | '/token/$address'
     | '/tx/$hash'
+    | '/api/abi/batch'
     | '/api/address/$address'
     | '/api/tokens/count'
     | '/demo'
@@ -291,6 +302,7 @@ export interface FileRouteTypes {
     | '/_layout/receipt/$hash'
     | '/_layout/token/$address'
     | '/_layout/tx/$hash'
+    | '/api/abi/batch'
     | '/api/address/$address'
     | '/api/tokens/count'
     | '/_layout/demo/'
@@ -305,6 +317,7 @@ export interface RootRouteChildren {
   ApiCodeRoute: typeof ApiCodeRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
+  ApiAbiBatchRoute: typeof ApiAbiBatchRoute
   ApiAddressAddressRoute: typeof ApiAddressAddressRoute
   ApiTokensCountRoute: typeof ApiTokensCountRoute
   ApiAddressTotalValueAddressRoute: typeof ApiAddressTotalValueAddressRoute
@@ -383,6 +396,13 @@ declare module '@tanstack/react-router' {
       path: '/api/address/$address'
       fullPath: '/api/address/$address'
       preLoaderRoute: typeof ApiAddressAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/abi/batch': {
+      id: '/api/abi/batch'
+      path: '/api/abi/batch'
+      fullPath: '/api/abi/batch'
+      preLoaderRoute: typeof ApiAbiBatchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_layout/tx/$hash': {
@@ -519,6 +539,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCodeRoute: ApiCodeRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
+  ApiAbiBatchRoute: ApiAbiBatchRoute,
   ApiAddressAddressRoute: ApiAddressAddressRoute,
   ApiTokensCountRoute: ApiTokensCountRoute,
   ApiAddressTotalValueAddressRoute: ApiAddressTotalValueAddressRoute,
