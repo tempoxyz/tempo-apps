@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-TEMPO_RPC_URL="https://rpc.moderato.tempo.xyz"
-VERIFIER_URL=${VERIFIER_URL:-"https://contracts.porto.workers.dev"}
+TEMPO_RPC_URL=${TEMPO_RPC_URL:-"https://rpc.presto.tempo.xyz"}
+VERIFIER_URL=${VERIFIER_URL:-"https://contracts.tempo.xyz"}
 
 echo -e "\n=== VERSIONS ==="
 CAST_VERSION=$(cast --version)
