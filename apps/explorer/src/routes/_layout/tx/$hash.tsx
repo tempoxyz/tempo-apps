@@ -33,7 +33,7 @@ import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
-import { useCopy, useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
+import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
 import { buildOgImageUrl, buildTxDescription } from '#lib/og'
 import {
 	autoloadAbiQueryOptions,
@@ -48,7 +48,6 @@ import { withLoaderTiming } from '#lib/profiling'
 import { zHash } from '#lib/zod'
 import { fetchBalanceChanges } from '#routes/api/tx/balance-changes/$hash'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
-import CopyIcon from '~icons/lucide/copy'
 
 const defaultSearchValues = {
 	tab: 'overview',
@@ -855,23 +854,11 @@ function RawSection(props: {
 	receipt: TransactionReceipt
 }) {
 	const { transaction, receipt } = props
-	const { copy, notifying } = useCopy()
 
 	const rawData = Json.stringify({ tx: transaction, receipt }, null, 2)
 
 	return (
-		<div className="relative px-[18px] py-[12px] text-[13px] break-all">
-			<div className="absolute top-[12px] right-[18px] flex items-center gap-[4px] text-tertiary">
-				{notifying && <span className="text-[11px] select-none">copied</span>}
-				<button
-					type="button"
-					className="press-down cursor-pointer hover:text-secondary p-[4px]"
-					onClick={() => copy(rawData)}
-					title="Copy"
-				>
-					<CopyIcon className="size-[14px]" />
-				</button>
-			</div>
+		<div className="px-[18px] py-[12px] text-[13px] break-all">
 			<TxRawTransaction data={rawData} />
 		</div>
 	)
