@@ -135,7 +135,7 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 
 			if (precompileInfo) {
 				const decoded = decodePrecompile(
-					trace.to,
+					trace.to!,
 					trace.input || '0x',
 					trace.output,
 				)
