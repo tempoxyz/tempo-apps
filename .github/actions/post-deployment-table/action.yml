@@ -76,14 +76,12 @@ runs:
             tableRows.push(`| ${app} | ${env} | ${status} | ${preview} |`);
           }
 
-          const commentBody = `<!-- cloudflare-deployments -->
-## 🚀 Cloudflare Deployments
-
-| App | Environment | Status | Preview |
-|-----|-------------|--------|---------|
-${tableRows.join('\n')}
-
-${deployments.length === 0 ? '_No deployments found._' : ''}`;
+          let commentBody = '<!-- cloudflare-deployments -->\n';
+          commentBody += '## 🚀 Cloudflare Deployments\n\n';
+          commentBody += '| App | Environment | Status | Preview |\n';
+          commentBody += '|-----|-------------|--------|---------|\n';
+          commentBody += tableRows.join('\n') + '\n\n';
+          commentBody += deployments.length === 0 ? '_No deployments found._' : '';
 
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
