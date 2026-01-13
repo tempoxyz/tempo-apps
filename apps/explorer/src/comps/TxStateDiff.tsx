@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Hex } from 'viem'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import { getContractInfo } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import type { PrestateDiff } from '#lib/queries'

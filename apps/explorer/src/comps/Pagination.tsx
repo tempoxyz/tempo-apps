@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { cx } from '#cva.config.ts'
+import { cx } from '#lib/css'
 import ChevronFirst from '~icons/lucide/chevron-first'
 import ChevronLast from '~icons/lucide/chevron-last'
 import ChevronLeft from '~icons/lucide/chevron-left'

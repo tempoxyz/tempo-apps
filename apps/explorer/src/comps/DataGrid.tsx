@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router'
 import * as React from 'react'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 
 export function DataGrid(props: DataGrid.Props) {

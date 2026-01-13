@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import type { Hex } from 'viem'
 import { type Abi, decodeAbiParameters, erc20Abi, slice } from 'viem'
-import { cx } from '#cva.config.ts'
+import { cx } from '#lib/css'
 import {
 	formatAbiValue,
 	getAbiItem,

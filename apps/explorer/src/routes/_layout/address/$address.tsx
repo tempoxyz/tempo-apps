@@ -43,7 +43,7 @@ import {
 	TransactionTotal,
 	useTransactionDataFromBatch,
 } from '#comps/TxTransactionRow'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type ContractSource,
@@ -1108,7 +1108,7 @@ function AssetName(props: { asset: AssetData }) {
 			<TokenIcon
 				address={asset.address}
 				name={asset.metadata?.name}
-				className="size-5"
+				className="size-5!"
 			/>
 			<span className="truncate">{asset.metadata.name}</span>
 		</span>

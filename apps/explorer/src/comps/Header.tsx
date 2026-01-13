@@ -7,7 +7,7 @@ import {
 import * as React from 'react'
 import { useWatchBlockNumber } from 'wagmi'
 import { ExploreInput } from '#comps/ExploreInput'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import { isTestnet } from '#lib/env'
 import { useIsMounted } from '#lib/hooks'
 import Music4 from '~icons/lucide/music-4'

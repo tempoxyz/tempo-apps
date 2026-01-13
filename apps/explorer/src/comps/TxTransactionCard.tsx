@@ -4,7 +4,7 @@ import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { FormattedTimestamp, useTimeFormat } from '#comps/TimeFormat'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 

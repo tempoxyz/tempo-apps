@@ -27,7 +27,7 @@ import { TxRawTransaction } from '#comps/TxRawTransaction'
 import { TxStateDiff } from '#comps/TxStateDiff'
 import { TxTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
-import { cx } from '#cva.config.ts'
+import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
@@ -529,7 +529,7 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 														<TokenIcon
 															address={change.token}
 															name={metadata?.symbol}
-															className="size-[16px]"
+															className="size-[16px]!"
 														/>
 														<span>{metadata?.symbol ?? '…'}</span>
 													</Link>

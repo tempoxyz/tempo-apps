@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Address as AddressType } from 'ox'
 import { Midcut } from '#comps/Midcut'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 
 export function Address(props: Address.Props) {
 	const { address, align, chars = 3, className, self } = props

@@ -1,4 +1,4 @@
-import { cx } from '#cva.config.ts'
+import { cx } from '#lib/css'
 
 export function ExperimentalBadge(props: ExperimentalBadge.Props) {
 	const { className } = props
