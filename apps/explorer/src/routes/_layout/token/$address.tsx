@@ -40,7 +40,7 @@ import {
 	transfersQueryOptions,
 } from '#lib/queries'
 import { withLoaderTiming } from '#lib/profiling'
-import { fetchOgStats } from '#lib/server/token.server.ts'
+import { fetchOgStats } from '#lib/server/token.functions.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 import CopyIcon from '~icons/lucide/copy'
 import XIcon from '~icons/lucide/x'

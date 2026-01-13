@@ -1,15 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import * as IDX from 'idxs'
 import { getChainId } from 'wagmi/actions'
 import * as ABIS from '#lib/abis'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
+import { getQueryBuilder } from '#lib/server/idx.server.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
 
 export const Route = createFileRoute('/api/tokens/count')({
 	server: {
@@ -20,6 +14,7 @@ export const Route = createFileRoute('/api/tokens/count')({
 					const chainId = getChainId(config)
 					const eventSignature = ABIS.getTokenCreatedEvent(chainId)
 
+					const QB = await getQueryBuilder()
 					const countResult = await QB.selectFrom(
 						QB.withSignatures([eventSignature])
 							.selectFrom('tokencreated')

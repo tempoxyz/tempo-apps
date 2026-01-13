@@ -1,18 +1,12 @@
 import { createServerFn } from '@tanstack/react-start'
-import * as IDX from 'idxs'
 import type { Address, Hex } from 'ox'
 import { zeroAddress } from 'viem'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
+import { getQueryBuilder } from '#lib/server/idx.server.ts'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config.ts'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const CACHE_TTL = 60_000
@@ -123,6 +117,7 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 
 async function fetchHoldersData(address: Address.Address, chainId: number) {
 	// Aggregate balances directly in the indexer instead of streaming every transfer.
+	const QB = await getQueryBuilder()
 	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
 	// Sum outgoing per holder (exclude mints from zero)
@@ -182,6 +177,7 @@ async function fetchFirstTransferData(
 		return cached.data
 	}
 
+	const QB = await getQueryBuilder()
 	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
 	const firstTransfer = await qb
@@ -318,6 +314,7 @@ async function fetchTransfersData(
 	chainId: number,
 	account?: Address.Address,
 ) {
+	const QB = await getQueryBuilder()
 	let query = QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select([
@@ -362,6 +359,7 @@ async function fetchTotalCount(
 	account?: Address.Address,
 ): Promise<{ count: number; capped: boolean }> {
 	// Count is expensive - limit to first 100k rows using subquery pattern
+	const QB = await getQueryBuilder()
 	let subquery = QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select((eb) => eb.lit(1).as('x'))
@@ -386,10 +384,6 @@ async function fetchTotalCount(
 
 const OG_THRESHOLDS = [100, 1_000, 10_000, 100_000] as const
 
-const FetchOgStatsInputSchema = z.object({
-	address: zAddress({ lowercase: true }),
-})
-
 export type OgStatsApiResponse = {
 	holders: { count: number; isExact: boolean } | null
 	created: string | null
@@ -403,46 +397,46 @@ const ogStatsCache = new Map<
 	}
 >()
 
-export const fetchOgStats = createServerFn({ method: 'POST' })
-	.inputValidator((input) => FetchOgStatsInputSchema.parse(input))
-	.handler(async ({ data }) => {
-		try {
-			const config = getWagmiConfig()
-			const chainId = getChainId(config)
-			const cacheKey = `${chainId}-${data.address}`
+export async function fetchOgStatsImpl(
+	address: Address.Address,
+): Promise<OgStatsApiResponse> {
+	try {
+		const config = getWagmiConfig()
+		const chainId = getChainId(config)
+		const cacheKey = `${chainId}-${address}`
 
-			const cached = ogStatsCache.get(cacheKey)
-			const now = Date.now()
+		const cached = ogStatsCache.get(cacheKey)
+		const now = Date.now()
 
-			if (cached && now - cached.timestamp < OG_CACHE_TTL) {
-				let result = cached.data
+		if (cached && now - cached.timestamp < OG_CACHE_TTL) {
+			let result = cached.data
 
-				// There might be holders data now so check that
-				if (!result.holders) {
-					const holders = await findHoldersThreshold(data.address, chainId)
-					if (holders) {
-						result = { ...result, holders }
-						ogStatsCache.set(cacheKey, { data: result, timestamp: now })
-					}
+			// There might be holders data now so check that
+			if (!result.holders) {
+				const holders = await findHoldersThreshold(address, chainId)
+				if (holders) {
+					result = { ...result, holders }
+					ogStatsCache.set(cacheKey, { data: result, timestamp: now })
 				}
-
-				return result
 			}
 
-			const [holders, created] = await Promise.all([
-				findHoldersThreshold(data.address, chainId),
-				fetchFirstTransferData(data.address, chainId),
-			])
-
-			const result = { holders, created }
-			ogStatsCache.set(cacheKey, { data: result, timestamp: now })
-
 			return result
-		} catch (error) {
-			console.error('Failed to fetch OG stats:', error)
-			return { holders: null, created: null }
 		}
-	})
+
+		const [holders, created] = await Promise.all([
+			findHoldersThreshold(address, chainId),
+			fetchFirstTransferData(address, chainId),
+		])
+
+		const result = { holders, created }
+		ogStatsCache.set(cacheKey, { data: result, timestamp: now })
+
+		return result
+	} catch (error) {
+		console.error('Failed to fetch OG stats:', error)
+		return { holders: null, created: null }
+	}
+}
 
 async function findHoldersThreshold(
 	address: Address.Address,

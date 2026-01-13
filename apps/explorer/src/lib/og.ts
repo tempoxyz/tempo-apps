@@ -1,4 +1,3 @@
-import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { Value } from 'ox'
 import { zeroAddress } from 'viem'
@@ -360,11 +359,8 @@ export function buildAddressOgImageUrl(params: {
 	return buildAddressOgUrl(OG_BASE_URL, ogParams)
 }
 
-// Indexer setup for token holder queries
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-const QB = IDX.QueryBuilder.from(IS)
+import { getQueryBuilder } from '#lib/server/idx.server.ts'
+
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
@@ -523,6 +519,7 @@ async function fetchTokenIndexerData(
 	address: string,
 ): Promise<{ holders: number; created: string }> {
 	try {
+		const QB = await getQueryBuilder()
 		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 		const tokenAddress = address.toLowerCase() as Address.Address
 
@@ -736,6 +733,7 @@ interface AddressData {
 async function fetchAddressData(address: string): Promise<AddressData | null> {
 	try {
 		const tokenAddress = address.toLowerCase() as Address.Address
+		const QB = await getQueryBuilder()
 		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
 		const config = getWagmiConfig()

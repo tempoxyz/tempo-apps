@@ -1,17 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
-import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import * as ABIS from '#lib/abis'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
+import { getQueryBuilder } from '#lib/server/idx.server.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
 
 export type Token = {
 	address: Address.Address
@@ -50,6 +44,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 
 		const eventSignature = ABIS.getTokenCreatedEvent(chainId)
 
+		const QB = await getQueryBuilder()
 		const [tokensResult, countResult] = await Promise.all([
 			QB.withSignatures([eventSignature])
 				.selectFrom('tokencreated')

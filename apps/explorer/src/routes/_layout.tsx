@@ -4,7 +4,7 @@ import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import { useIntroSeen } from '#comps/Intro'
 import { Sphere } from '#comps/Sphere'
-import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
+import { fetchLatestBlock } from '#lib/server/latest-block.functions.ts'
 import TriangleAlert from '~icons/lucide/triangle-alert'
 
 export const Route = createFileRoute('/_layout')({

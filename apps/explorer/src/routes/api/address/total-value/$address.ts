@@ -1,17 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
 import { getChainId, getPublicClient } from 'wagmi/actions'
+import { getQueryBuilder } from '#lib/server/idx.server.ts'
 import { zAddress } from '#lib/zod.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
 
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
@@ -32,6 +26,7 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 					// Limit to prevent timeouts on addresses with many transfer events
 					const MAX_TRANSFERS = 10000
 
+					const QB = await getQueryBuilder()
 					const result = await QB.withSignatures([TRANSFER_SIGNATURE])
 						.selectFrom('transfer')
 						.select(['address', 'from', 'to', 'tokens'])

@@ -1,21 +1,13 @@
 import { createFileRoute } from '@tanstack/react-router'
-import * as IDX from 'idxs'
 import { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { getQueryBuilder } from '#lib/server/idx.server.ts'
 import { zAddress } from '#lib/zod.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
-
-const chainId = getChainId(getWagmiConfig())
-
 const RequestSchema = z.object({
-	chainId: z.prefault(z.coerce.number(), chainId),
+	chainId: z.coerce.number().optional(),
 })
 
 const isTestnet = process.env.VITE_TEMPO_ENV === 'testnet'
@@ -37,8 +29,10 @@ export const Route = createFileRoute('/api/address/txs-count/$address')({
 							{ status: 400 },
 						)
 
-					const { chainId } = parseResult.data
+					const chainId =
+						parseResult.data.chainId ?? getChainId(getWagmiConfig())
 
+					const QB = await getQueryBuilder()
 					const [txSentResult, txReceivedResult] = await Promise.all([
 						QB.selectFrom('txs')
 							.select((eb) => eb.fn.count('hash').as('cnt'))

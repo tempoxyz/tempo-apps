@@ -35,7 +35,7 @@ import {
 	blockKnownEventsQueryOptions,
 	TRANSACTIONS_PER_PAGE,
 } from '#lib/queries'
-import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
+import { fetchLatestBlock } from '#lib/server/latest-block.functions.ts'
 
 const defaultSearchValues = { page: 1 } as const
 

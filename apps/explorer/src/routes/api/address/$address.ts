@@ -1,17 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
-import * as IDX from 'idxs'
 import { Address, Hex } from 'ox'
 import type { RpcTransaction } from 'viem'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { getQueryBuilder } from '#lib/server/idx.server.ts'
 import { zAddress } from '#lib/zod.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 
@@ -88,6 +82,8 @@ export const Route = createFileRoute('/api/address/$address')({
 					const includeReceived = include === 'all' || include === 'received'
 
 					const fetchSize = limit + 1
+
+					const QB = await getQueryBuilder()
 
 					// Build direct transactions query - only fetch hashes first for efficiency
 					let directTxsQuery = QB.selectFrom('txs')
