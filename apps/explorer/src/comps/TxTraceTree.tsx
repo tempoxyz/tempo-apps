@@ -139,8 +139,8 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 					trace.input || '0x',
 					trace.output,
 				)
+				functionName = 'run'
 				if (decoded) {
-					functionName = decoded.functionName
 					params = decoded.params
 					decodedOutput = decoded.decodedOutput
 				}

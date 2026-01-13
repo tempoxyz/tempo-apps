@@ -1,7 +1,6 @@
 import type { Hex } from 'viem'
 
 export type DecodedPrecompile = {
-	functionName: string
 	params?: string
 	decodedOutput?: string
 }
@@ -22,38 +21,32 @@ function formatU256(value: bigint): string {
 }
 
 function formatBytes(data: Hex): string {
-	if (data.length <= 66) return data
-	return `${data.slice(0, 10)}...${data.slice(-8)} (${(data.length - 2) / 2} bytes)`
+	return data
 }
 
 function decodeEcRecover(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
-	try {
-		if (input.length < 2 + 128 * 2) {
-			return { params: formatBytes(input) }
-		}
-		const hash = sliceBytes(input, 0, 32)
-		const v = bytesToBigInt(input, 32, 32)
-		const r = sliceBytes(input, 64, 96)
-		const s = sliceBytes(input, 96, 128)
-		const params = `hash: ${hash}, v: ${v}, r: ${r}, s: ${s}`
-		let decodedOutput: string | undefined
-		if (output && output.length >= 66) {
-			const addr = sliceBytes(output, 12, 32)
-			decodedOutput = addr
-		}
-		return { params, decodedOutput }
-	} catch {
+): DecodedPrecompile {
+	if (input.length < 2 + 128 * 2) {
 		return { params: formatBytes(input) }
 	}
+	const hash = sliceBytes(input, 0, 32)
+	const v = bytesToBigInt(input, 32, 32)
+	const r = sliceBytes(input, 64, 96)
+	const s = sliceBytes(input, 96, 128)
+	const params = `hash: ${hash}, v: ${v}, r: ${r}, s: ${s}`
+	let decodedOutput: string | undefined
+	if (output && output.length >= 66) {
+		decodedOutput = sliceBytes(output, 12, 32)
+	}
+	return { params, decodedOutput }
 }
 
 function decodeSha256(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
+): DecodedPrecompile {
 	return {
 		params: `data: ${formatBytes(input)}`,
 		decodedOutput: output && output !== '0x' ? output : undefined,
@@ -63,7 +56,7 @@ function decodeSha256(
 function decodeRipemd160(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
+): DecodedPrecompile {
 	return {
 		params: `data: ${formatBytes(input)}`,
 		decodedOutput:
@@ -74,88 +67,91 @@ function decodeRipemd160(
 function decodeIdentity(
 	input: Hex,
 	_output: Hex | undefined,
-): Partial<DecodedPrecompile> {
+): DecodedPrecompile {
 	return { params: `data: ${formatBytes(input)}` }
 }
 
 function decodeModexp(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
-	try {
-		if (input.length < 2 + 96 * 2) {
-			return { params: formatBytes(input) }
-		}
-		const bSize = Number(bytesToBigInt(input, 0, 32))
-		const eSize = Number(bytesToBigInt(input, 32, 32))
-		const mSize = Number(bytesToBigInt(input, 64, 32))
-		const params = `Bsize: ${bSize}, Esize: ${eSize}, Msize: ${mSize}`
-		return {
-			params,
-			decodedOutput:
-				output && output !== '0x' ? formatBytes(output) : undefined,
-		}
-	} catch {
+): DecodedPrecompile {
+	if (input.length < 2 + 96 * 2) {
 		return { params: formatBytes(input) }
+	}
+	const bSize = Number(bytesToBigInt(input, 0, 32))
+	const eSize = Number(bytesToBigInt(input, 32, 32))
+	const mSize = Number(bytesToBigInt(input, 64, 32))
+	const params = `Bsize: ${bSize}, Esize: ${eSize}, Msize: ${mSize}`
+	return {
+		params,
+		decodedOutput: output && output !== '0x' ? formatBytes(output) : undefined,
 	}
 }
 
 function decodeEcAdd(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
-	try {
-		if (input.length < 2 + 128 * 2) {
-			return { params: formatBytes(input) }
-		}
-		const x1 = formatU256(bytesToBigInt(input, 0, 32))
-		const y1 = formatU256(bytesToBigInt(input, 32, 32))
-		const x2 = formatU256(bytesToBigInt(input, 64, 32))
-		const y2 = formatU256(bytesToBigInt(input, 96, 32))
-		const params = `x1: ${x1}, y1: ${y1}, x2: ${x2}, y2: ${y2}`
-		let decodedOutput: string | undefined
-		if (output && output.length >= 2 + 64 * 2) {
-			const xOut = formatU256(bytesToBigInt(output, 0, 32))
-			const yOut = formatU256(bytesToBigInt(output, 32, 32))
-			decodedOutput = `x: ${xOut}, y: ${yOut}`
-		}
-		return { params, decodedOutput }
-	} catch {
+): DecodedPrecompile {
+	if (input.length < 2 + 128 * 2) {
 		return { params: formatBytes(input) }
 	}
+	const x1 = formatU256(bytesToBigInt(input, 0, 32))
+	const y1 = formatU256(bytesToBigInt(input, 32, 32))
+	const x2 = formatU256(bytesToBigInt(input, 64, 32))
+	const y2 = formatU256(bytesToBigInt(input, 96, 32))
+	const params = `x1: ${x1}, y1: ${y1}, x2: ${x2}, y2: ${y2}`
+	let decodedOutput: string | undefined
+	if (output && output.length >= 2 + 64 * 2) {
+		const xOut = formatU256(bytesToBigInt(output, 0, 32))
+		const yOut = formatU256(bytesToBigInt(output, 32, 32))
+		decodedOutput = `x: ${xOut}, y: ${yOut}`
+	}
+	return { params, decodedOutput }
 }
 
 function decodeEcMul(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
-	try {
-		if (input.length < 2 + 96 * 2) {
-			return { params: formatBytes(input) }
-		}
-		const x1 = formatU256(bytesToBigInt(input, 0, 32))
-		const y1 = formatU256(bytesToBigInt(input, 32, 32))
-		const s = formatU256(bytesToBigInt(input, 64, 32))
-		const params = `x1: ${x1}, y1: ${y1}, s: ${s}`
-		let decodedOutput: string | undefined
-		if (output && output.length >= 2 + 64 * 2) {
-			const xOut = formatU256(bytesToBigInt(output, 0, 32))
-			const yOut = formatU256(bytesToBigInt(output, 32, 32))
-			decodedOutput = `x: ${xOut}, y: ${yOut}`
-		}
-		return { params, decodedOutput }
-	} catch {
+): DecodedPrecompile {
+	if (input.length < 2 + 96 * 2) {
 		return { params: formatBytes(input) }
 	}
+	const x1 = formatU256(bytesToBigInt(input, 0, 32))
+	const y1 = formatU256(bytesToBigInt(input, 32, 32))
+	const s = formatU256(bytesToBigInt(input, 64, 32))
+	const params = `x1: ${x1}, y1: ${y1}, s: ${s}`
+	let decodedOutput: string | undefined
+	if (output && output.length >= 2 + 64 * 2) {
+		const xOut = formatU256(bytesToBigInt(output, 0, 32))
+		const yOut = formatU256(bytesToBigInt(output, 32, 32))
+		decodedOutput = `x: ${xOut}, y: ${yOut}`
+	}
+	return { params, decodedOutput }
 }
 
 function decodeEcPairing(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
+): DecodedPrecompile {
 	const inputLen = (input.length - 2) / 2
-	const numPairs = Math.floor(inputLen / 192)
-	const params = numPairs > 0 ? `${numPairs} pair(s)` : 'empty'
+	if (inputLen % 192 !== 0) {
+		return { params: formatBytes(input) }
+	}
+	const numPairs = inputLen / 192
+	const pairs: string[] = []
+	for (let i = 0; i < numPairs; i++) {
+		const offset = i * 192
+		const x1 = formatU256(bytesToBigInt(input, offset, 32))
+		const y1 = formatU256(bytesToBigInt(input, offset + 32, 32))
+		const x2_c0 = formatU256(bytesToBigInt(input, offset + 64, 32))
+		const x2_c1 = formatU256(bytesToBigInt(input, offset + 96, 32))
+		const y2_c0 = formatU256(bytesToBigInt(input, offset + 128, 32))
+		const y2_c1 = formatU256(bytesToBigInt(input, offset + 160, 32))
+		pairs.push(
+			`G1(${x1}, ${y1}), G2((${x2_c0}, ${x2_c1}), (${y2_c0}, ${y2_c1}))`,
+		)
+	}
+	const params = pairs.length > 0 ? pairs.join('; ') : 'empty'
 	let decodedOutput: string | undefined
 	if (output && output.length >= 66) {
 		const success = bytesToBigInt(output, 0, 32) === 1n
@@ -167,44 +163,34 @@ function decodeEcPairing(
 function decodeBlake2f(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
-	try {
-		if (input.length < 2 + 213 * 2) {
-			return { params: formatBytes(input) }
-		}
-		const roundsHex = sliceBytes(input, 0, 4)
-		const rounds = Number(BigInt(roundsHex))
-		const f = input.slice(2 + 212 * 2, 2 + 213 * 2) === '01'
-		const params = `rounds: ${rounds}, f: ${f}`
-		return {
-			params,
-			decodedOutput:
-				output && output !== '0x' ? formatBytes(output) : undefined,
-		}
-	} catch {
+): DecodedPrecompile {
+	if (input.length < 2 + 213 * 2) {
 		return { params: formatBytes(input) }
+	}
+	const roundsHex = sliceBytes(input, 0, 4)
+	const rounds = Number(BigInt(roundsHex))
+	const f = input.slice(2 + 212 * 2, 2 + 213 * 2) === '01'
+	const params = `rounds: ${rounds}, f: ${f}`
+	return {
+		params,
+		decodedOutput: output && output !== '0x' ? formatBytes(output) : undefined,
 	}
 }
 
 function decodePointEvaluation(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
-	try {
-		if (input.length < 2 + 192 * 2) {
-			return { params: formatBytes(input) }
-		}
-		const versionedHash = sliceBytes(input, 0, 32)
-		const z = sliceBytes(input, 32, 64)
-		const y = sliceBytes(input, 64, 96)
-		const params = `versionedHash: ${versionedHash}, z: ${z}, y: ${y}`
-		return {
-			params,
-			decodedOutput:
-				output && output !== '0x' ? formatBytes(output) : undefined,
-		}
-	} catch {
+): DecodedPrecompile {
+	if (input.length < 2 + 192 * 2) {
 		return { params: formatBytes(input) }
+	}
+	const versionedHash = sliceBytes(input, 0, 32)
+	const z = sliceBytes(input, 32, 64)
+	const y = sliceBytes(input, 64, 96)
+	const params = `versionedHash: ${versionedHash}, z: ${z}, y: ${y}`
+	return {
+		params,
+		decodedOutput: output && output !== '0x' ? formatBytes(output) : undefined,
 	}
 }
 
@@ -214,71 +200,141 @@ function decodePointEvaluation(
 function decodeBls12G1Add(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
+): DecodedPrecompile {
 	const inputLen = (input.length - 2) / 2
-	const params =
-		inputLen >= 256 ? '2 G1 points (256 bytes)' : formatBytes(input)
-	const outputLen = output ? (output.length - 2) / 2 : 0
-	return {
-		params,
-		decodedOutput: outputLen === 128 ? 'G1 point (128 bytes)' : undefined,
+	if (inputLen !== 256) {
+		return { params: formatBytes(input) }
 	}
+	const x1 = sliceBytes(input, 0, 64)
+	const y1 = sliceBytes(input, 64, 128)
+	const x2 = sliceBytes(input, 128, 192)
+	const y2 = sliceBytes(input, 192, 256)
+	const params = `p1: (${x1}, ${y1}), p2: (${x2}, ${y2})`
+	let decodedOutput: string | undefined
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	if (output && outputLen === 128) {
+		const xOut = sliceBytes(output, 0, 64)
+		const yOut = sliceBytes(output, 64, 128)
+		decodedOutput = `(${xOut}, ${yOut})`
+	}
+	return { params, decodedOutput }
 }
 
 function decodeBls12G1Msm(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
+): DecodedPrecompile {
 	const inputLen = (input.length - 2) / 2
-	// Each element is 160 bytes (32-byte scalar + 128-byte G1 point)
-	const numElements = Math.floor(inputLen / 160)
-	const params =
-		numElements > 0 ? `${numElements} element(s)` : formatBytes(input)
-	const outputLen = output ? (output.length - 2) / 2 : 0
-	return {
-		params,
-		decodedOutput: outputLen === 128 ? 'G1 point (128 bytes)' : undefined,
+	// Each element is 160 bytes (128-byte G1 point + 32-byte scalar).
+	if (inputLen === 0 || inputLen % 160 !== 0) {
+		return { params: formatBytes(input) }
 	}
+	const numElements = inputLen / 160
+	const elements: string[] = []
+	for (let i = 0; i < numElements; i++) {
+		const offset = i * 160
+		const x = sliceBytes(input, offset, offset + 64)
+		const y = sliceBytes(input, offset + 64, offset + 128)
+		const scalar = sliceBytes(input, offset + 128, offset + 160)
+		elements.push(`(${x}, ${y}) * ${scalar}`)
+	}
+	const params = elements.join('; ')
+	let decodedOutput: string | undefined
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	if (output && outputLen === 128) {
+		const xOut = sliceBytes(output, 0, 64)
+		const yOut = sliceBytes(output, 64, 128)
+		decodedOutput = `(${xOut}, ${yOut})`
+	}
+	return { params, decodedOutput }
 }
 
 function decodeBls12G2Add(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
+): DecodedPrecompile {
 	const inputLen = (input.length - 2) / 2
-	const params =
-		inputLen >= 512 ? '2 G2 points (512 bytes)' : formatBytes(input)
-	const outputLen = output ? (output.length - 2) / 2 : 0
-	return {
-		params,
-		decodedOutput: outputLen === 256 ? 'G2 point (256 bytes)' : undefined,
+	if (inputLen !== 512) {
+		return { params: formatBytes(input) }
 	}
+	const x1_c0 = sliceBytes(input, 0, 64)
+	const x1_c1 = sliceBytes(input, 64, 128)
+	const y1_c0 = sliceBytes(input, 128, 192)
+	const y1_c1 = sliceBytes(input, 192, 256)
+	const x2_c0 = sliceBytes(input, 256, 320)
+	const x2_c1 = sliceBytes(input, 320, 384)
+	const y2_c0 = sliceBytes(input, 384, 448)
+	const y2_c1 = sliceBytes(input, 448, 512)
+	const params = `p1: ((${x1_c0}, ${x1_c1}), (${y1_c0}, ${y1_c1})), p2: ((${x2_c0}, ${x2_c1}), (${y2_c0}, ${y2_c1}))`
+	let decodedOutput: string | undefined
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	if (output && outputLen === 256) {
+		const xOut_c0 = sliceBytes(output, 0, 64)
+		const xOut_c1 = sliceBytes(output, 64, 128)
+		const yOut_c0 = sliceBytes(output, 128, 192)
+		const yOut_c1 = sliceBytes(output, 192, 256)
+		decodedOutput = `((${xOut_c0}, ${xOut_c1}), (${yOut_c0}, ${yOut_c1}))`
+	}
+	return { params, decodedOutput }
 }
 
 function decodeBls12G2Msm(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
+): DecodedPrecompile {
 	const inputLen = (input.length - 2) / 2
-	// Each element is 288 bytes (32-byte scalar + 256-byte G2 point)
-	const numElements = Math.floor(inputLen / 288)
-	const params =
-		numElements > 0 ? `${numElements} element(s)` : formatBytes(input)
-	const outputLen = output ? (output.length - 2) / 2 : 0
-	return {
-		params,
-		decodedOutput: outputLen === 256 ? 'G2 point (256 bytes)' : undefined,
+	// Each element is 288 bytes (256-byte G2 point + 32-byte scalar).
+	if (inputLen === 0 || inputLen % 288 !== 0) {
+		return { params: formatBytes(input) }
 	}
+	const numElements = inputLen / 288
+	const elements: string[] = []
+	for (let i = 0; i < numElements; i++) {
+		const offset = i * 288
+		const x_c0 = sliceBytes(input, offset, offset + 64)
+		const x_c1 = sliceBytes(input, offset + 64, offset + 128)
+		const y_c0 = sliceBytes(input, offset + 128, offset + 192)
+		const y_c1 = sliceBytes(input, offset + 192, offset + 256)
+		const scalar = sliceBytes(input, offset + 256, offset + 288)
+		elements.push(`((${x_c0}, ${x_c1}), (${y_c0}, ${y_c1})) * ${scalar}`)
+	}
+	const params = elements.join('; ')
+	let decodedOutput: string | undefined
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	if (output && outputLen === 256) {
+		const xOut_c0 = sliceBytes(output, 0, 64)
+		const xOut_c1 = sliceBytes(output, 64, 128)
+		const yOut_c0 = sliceBytes(output, 128, 192)
+		const yOut_c1 = sliceBytes(output, 192, 256)
+		decodedOutput = `((${xOut_c0}, ${xOut_c1}), (${yOut_c0}, ${yOut_c1}))`
+	}
+	return { params, decodedOutput }
 }
 
 function decodeBls12PairingCheck(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
+): DecodedPrecompile {
 	const inputLen = (input.length - 2) / 2
-	// Each pair is 384 bytes (128-byte G1 point + 256-byte G2 point)
-	const numPairs = Math.floor(inputLen / 384)
-	const params = numPairs > 0 ? `${numPairs} pair(s)` : 'empty'
+	// Each pair is 384 bytes (128-byte G1 point + 256-byte G2 point).
+	if (inputLen % 384 !== 0) {
+		return { params: formatBytes(input) }
+	}
+	const numPairs = inputLen / 384
+	const pairs: string[] = []
+	for (let i = 0; i < numPairs; i++) {
+		const offset = i * 384
+		const g1_x = sliceBytes(input, offset, offset + 64)
+		const g1_y = sliceBytes(input, offset + 64, offset + 128)
+		const g2_x_c0 = sliceBytes(input, offset + 128, offset + 192)
+		const g2_x_c1 = sliceBytes(input, offset + 192, offset + 256)
+		const g2_y_c0 = sliceBytes(input, offset + 256, offset + 320)
+		const g2_y_c1 = sliceBytes(input, offset + 320, offset + 384)
+		pairs.push(
+			`G1(${g1_x}, ${g1_y}), G2((${g2_x_c0}, ${g2_x_c1}), (${g2_y_c0}, ${g2_y_c1}))`,
+		)
+	}
+	const params = pairs.length > 0 ? pairs.join('; ') : 'empty'
 	let decodedOutput: string | undefined
 	if (output && output.length >= 66) {
 		const success = bytesToBigInt(output, 0, 32) === 1n
@@ -290,58 +346,69 @@ function decodeBls12PairingCheck(
 function decodeBls12MapFpToG1(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
+): DecodedPrecompile {
 	const inputLen = (input.length - 2) / 2
-	const params = inputLen >= 64 ? 'Fp element (64 bytes)' : formatBytes(input)
-	const outputLen = output ? (output.length - 2) / 2 : 0
-	return {
-		params,
-		decodedOutput: outputLen === 128 ? 'G1 point (128 bytes)' : undefined,
+	if (inputLen !== 64) {
+		return { params: formatBytes(input) }
 	}
+	const params = sliceBytes(input, 0, 64)
+	let decodedOutput: string | undefined
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	if (output && outputLen === 128) {
+		const xOut = sliceBytes(output, 0, 64)
+		const yOut = sliceBytes(output, 64, 128)
+		decodedOutput = `(${xOut}, ${yOut})`
+	}
+	return { params, decodedOutput }
 }
 
 function decodeBls12MapFp2ToG2(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
+): DecodedPrecompile {
 	const inputLen = (input.length - 2) / 2
-	const params =
-		inputLen >= 128 ? 'Fp2 element (128 bytes)' : formatBytes(input)
-	const outputLen = output ? (output.length - 2) / 2 : 0
-	return {
-		params,
-		decodedOutput: outputLen === 256 ? 'G2 point (256 bytes)' : undefined,
+	if (inputLen !== 128) {
+		return { params: formatBytes(input) }
 	}
+	const c0 = sliceBytes(input, 0, 64)
+	const c1 = sliceBytes(input, 64, 128)
+	const params = `(${c0}, ${c1})`
+	let decodedOutput: string | undefined
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	if (output && outputLen === 256) {
+		const xOut_c0 = sliceBytes(output, 0, 64)
+		const xOut_c1 = sliceBytes(output, 64, 128)
+		const yOut_c0 = sliceBytes(output, 128, 192)
+		const yOut_c1 = sliceBytes(output, 192, 256)
+		decodedOutput = `((${xOut_c0}, ${xOut_c1}), (${yOut_c0}, ${yOut_c1}))`
+	}
+	return { params, decodedOutput }
 }
 
 function decodeP256Verify(
 	input: Hex,
 	output: Hex | undefined,
-): Partial<DecodedPrecompile> {
-	try {
-		// Input: hash (32) + r (32) + s (32) + qx (32) + qy (32) = 160 bytes
-		if (input.length < 2 + 160 * 2) {
-			return { params: formatBytes(input) }
-		}
-		const hash = sliceBytes(input, 0, 32)
-		const r = sliceBytes(input, 32, 64)
-		const s = sliceBytes(input, 64, 96)
-		const params = `hash: ${hash}, r: ${r}, s: ${s}`
-		let decodedOutput: string | undefined
-		if (output && output.length >= 66) {
-			const success = bytesToBigInt(output, 0, 32) === 1n
-			decodedOutput = success ? 'true' : 'false'
-		}
-		return { params, decodedOutput }
-	} catch {
+): DecodedPrecompile {
+	// Input: hash (32) + r (32) + s (32) + qx (32) + qy (32) = 160 bytes.
+	if (input.length < 2 + 160 * 2) {
 		return { params: formatBytes(input) }
 	}
+	const hash = sliceBytes(input, 0, 32)
+	const r = sliceBytes(input, 32, 64)
+	const s = sliceBytes(input, 64, 96)
+	const params = `hash: ${hash}, r: ${r}, s: ${s}`
+	let decodedOutput: string | undefined
+	if (output && output.length >= 66) {
+		const success = bytesToBigInt(output, 0, 32) === 1n
+		decodedOutput = success ? 'true' : 'false'
+	}
+	return { params, decodedOutput }
 }
 
 type PrecompileDecoder = (
 	input: Hex,
 	output: Hex | undefined,
-) => Partial<DecodedPrecompile>
+) => DecodedPrecompile
 
 const precompileDecoders: Record<string, PrecompileDecoder> = {
 	'0x0000000000000000000000000000000000000001': decodeEcRecover,
@@ -377,10 +444,17 @@ export function decodePrecompile(
 	const decoder = precompileDecoders[address.toLowerCase()]
 	if (!decoder) return undefined
 
-	const decoded = decoder(input, output)
-	return {
-		functionName: 'run',
-		params: decoded.params,
-		decodedOutput: decoded.decodedOutput,
+	const rawOutput = output && output !== '0x' ? output : undefined
+	try {
+		const decoded = decoder(input, output)
+		return {
+			params: decoded.params,
+			decodedOutput: decoded.decodedOutput ?? rawOutput,
+		}
+	} catch {
+		return {
+			params: formatBytes(input),
+			decodedOutput: rawOutput,
+		}
 	}
 }
