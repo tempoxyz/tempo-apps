@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+.wrangler/
+
+# Environment
+.env
+.dev.vars
+
+# Worker types
+worker-configuration.d.ts
+
+# Logs
+*.log
+
+# OS
+.DS_Store
