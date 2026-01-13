@@ -9,8 +9,8 @@ const tempoPresto = {
 	},
 	rpcUrls: {
 		default: {
-			http: ['https://rpc.presto.tempo.xyz'],
-			webSocket: ['wss://rpc.presto.tempo.xyz'],
+			http: [`https://rpc.presto.tempo.xyz/${process.env.TEMPO_RPC_KEY}`],
+			webSocket: [`wss://rpc.presto.tempo.xyz/${process.env.TEMPO_RPC_KEY}`],
 		},
 	},
 } as const
