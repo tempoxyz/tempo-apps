@@ -1,10 +1,5 @@
-import {
-	createIsomorphicFn,
-	createServerFn,
-	createServerOnlyFn,
-} from '@tanstack/react-start'
+import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
-import { RPC_AUTH_COOKIE } from './index.server'
 import {
 	tempoDevnet,
 	tempoLocalnet,
@@ -29,36 +24,6 @@ const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 
-const getWsUrls = createIsomorphicFn()
-	.client(() =>
-		[
-			import.meta.env.VITE_TEMPO_RPC_WS,
-			import.meta.env.VITE_TEMPO_RPC_WS_FALLBACK,
-		].filter(Boolean),
-	)
-	.server(() =>
-		[
-			process.env.VITE_TEMPO_RPC_WS,
-			process.env.VITE_TEMPO_RPC_WS_FALLBACK,
-		].filter(Boolean),
-	)
-
-const getHttpUrls = createIsomorphicFn()
-	.client(() =>
-		[
-			import.meta.env.VITE_TEMPO_RPC_HTTP,
-			import.meta.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
-		].filter(Boolean),
-	)
-	.server(() =>
-		[
-			process.env.VITE_TEMPO_RPC_HTTP,
-			process.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
-		].filter(Boolean),
-	)
-
-const getTempoRpcKey = createServerOnlyFn(() => process.env.TEMPO_RPC_KEY)
-
 export const getTempoChain = createIsomorphicFn()
 	.client(() =>
 		TEMPO_ENV === 'presto'
@@ -79,61 +44,51 @@ export const getTempoChain = createIsomorphicFn()
 					: tempoAndantino,
 	)
 
-const getTempoTransport = createIsomorphicFn()
-	.client(() =>
-		fallback([
-			...getWsUrls().map((u) => webSocket(u)),
-			...getHttpUrls().map((u) => http(u)),
-		]),
-	)
-	.server(() => {
-		const rpcKey = getTempoRpcKey()
-		const forwardAuth = process.env.FORWARD_RPC_AUTH === '1'
-		const withKey = (url: string) => (rpcKey ? `${url}/${rpcKey}` : url)
-		const sanitize = (str: string) =>
-			rpcKey ? str.replaceAll(rpcKey, '[REDACTED]') : str
-		const safeHttp = (
-			url: string,
-			opts?: Parameters<typeof http>[1],
-		): ReturnType<typeof http> => {
-			const transport = http(url, opts)
-			return (args) => {
-				const result = transport(args)
-				return {
-					...result,
-					async request(params) {
-						try {
-							return await result.request(params)
-						} catch (error) {
-							if (error instanceof Error)
-								error.message = sanitize(error.message)
-							throw error
-						}
-					},
-				}
-			}
+const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
+
+const getRpcProxyUrl = createIsomorphicFn()
+	.client(() => {
+		const chain = getTempoChain()
+		return {
+			http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}`,
+			webSocket: `wss://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}`,
 		}
-		if (forwardAuth) {
-			let authHeader = getRequestHeader('authorization')
-			if (!authHeader) {
-				const cookies = getRequestHeader('cookie')
-				const prefix = `${RPC_AUTH_COOKIE}=`
-				const cookie = cookies?.split('; ').find((c) => c.startsWith(prefix))
-				if (cookie) authHeader = `Basic ${cookie.slice(prefix.length)}`
-			}
-			return fallback(
-				getHttpUrls().map((url) =>
-					safeHttp(withKey(url), {
-						fetchOptions: { headers: { Authorization: authHeader ?? '' } },
-					}),
-				),
-			)
-		}
-		return fallback([
-			...getWsUrls().map((url) => webSocket(withKey(url))),
-			...getHttpUrls().map((url) => safeHttp(withKey(url))),
-		])
 	})
+	.server(() => {
+		const chain = getTempoChain()
+		return {
+			http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}?key=${process.env.TEMPO_RPC_KEY}`,
+			webSocket: `wss://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}?key=${process.env.TEMPO_RPC_KEY}`,
+		}
+	})
+
+const getFallbackUrls = createIsomorphicFn()
+	.client(() => {
+		const chain = getTempoChain()
+		return chain.rpcUrls.default
+	})
+	.server(() => {
+		const chain = getTempoChain()
+		return {
+			webSocket: chain.rpcUrls.default.webSocket.map(
+				(url) => `${url}/${process.env.TEMPO_RPC_KEY}`,
+			),
+			http: chain.rpcUrls.default.http.map(
+				(url) => `${url}/${process.env.TEMPO_RPC_KEY}`,
+			),
+		}
+	})
+
+function getTempoTransport() {
+	const proxy = getRpcProxyUrl()
+	const fallbackUrls = getFallbackUrls()
+	return fallback([
+		webSocket(proxy.webSocket),
+		http(proxy.http),
+		...fallbackUrls.webSocket.map(webSocket),
+		...fallbackUrls.http.map(http),
+	])
+}
 
 export function getWagmiConfig() {
 	const chain = getTempoChain()

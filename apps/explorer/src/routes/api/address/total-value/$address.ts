@@ -4,9 +4,9 @@ import type { Address } from 'ox'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
 import { getChainId, getPublicClient } from 'wagmi/actions'
-import { isTestnet } from '#lib/env.ts'
-import { zAddress } from '#lib/zod.ts'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { hasIndexSupply } from '#lib/env'
+import { zAddress } from '#lib/zod'
+import { getWagmiConfig } from '#wagmi.config'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -21,7 +21,7 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				if (isTestnet()) return Response.json({ totalValue: 0 })
+				if (!hasIndexSupply()) return Response.json({ totalValue: 0 })
 
 				try {
 					const address = zAddress().parse(params.address)

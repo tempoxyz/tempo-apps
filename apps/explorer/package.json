@@ -21,7 +21,7 @@
 		"predeploy": "pnpm build",
 		"deploy": "wrangler deploy",
 		"gen:tokens-index": "node --experimental-strip-types --env-file=.env scripts/generate-tokens-index.ts",
-		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
+		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV='presto' wrangler types",
 		"preview": "vite preview --mode='preview'",
 		"test": "vitest"
 	},
