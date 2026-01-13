@@ -4,8 +4,9 @@ import { Address, Hex } from 'ox'
 import type { RpcTransaction } from 'viem'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { zAddress } from '#lib/zod.ts'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { isTestnet } from '#lib/env'
+import { zAddress } from '#lib/zod'
+import { getWagmiConfig } from '#wagmi.config'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -25,13 +26,11 @@ export const RequestParametersSchema = z.object({
 	include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
 })
 
-const isTestnet = process.env.VITE_TEMPO_ENV === 'testnet'
-
 export const Route = createFileRoute('/api/address/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params, request }) => {
-				if (isTestnet)
+				if (isTestnet())
 					return Response.json({
 						limit: 0,
 						total: 0,
