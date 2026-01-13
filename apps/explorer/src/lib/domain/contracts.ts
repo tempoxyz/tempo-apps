@@ -31,7 +31,7 @@ export type ContractInfo = {
 
 /**
  * Ethereum precompile addresses (0x01-0x0a) with their metadata.
- * These are native EVM precompiles available on all Ethereum-compatible chains.
+ * These are native EVM precompiles available on most Ethereum-compatible chains.
  */
 export const ethereumPrecompileRegistry = new Map<
 	Address.Address,
@@ -273,9 +273,9 @@ export const ethereumPrecompileRegistry = new Map<
 ])
 
 /**
- * Check if an address is an Ethereum precompile (0x01-0x0a).
+ * Check if an address is a precompile.
  */
-export function isEthereumPrecompile(address: Address.Address): boolean {
+export function isPrecompile(address: Address.Address): boolean {
 	return ethereumPrecompileRegistry.has(
 		address.toLowerCase() as Address.Address,
 	)
@@ -398,6 +398,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
  * Known contract registry mapping addresses to their metadata and ABIs.
  */
 export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
+	...ethereumPrecompileRegistry.entries(),
 	...systemContractRegistry.entries(),
 	...tip20ContractRegistry.entries(),
 ])
@@ -410,8 +411,8 @@ export function systemAddress(address: Address.Address): boolean {
 }
 
 /**
- * Get contract info by address (case-insensitive)
- * Also handles TIP-20 tokens that aren't explicitly registered and Ethereum precompiles.
+ * Get contract info by address (case-insensitive).
+ * Also handles TIP-20 tokens that aren't explicitly registered.
  */
 export function getContractInfo(
 	address: Address.Address,
@@ -420,10 +421,6 @@ export function getContractInfo(
 
 	const registered = contractRegistry.get(lowerAddress)
 	if (registered) return registered
-
-	// Ethereum precompiles
-	const precompile = ethereumPrecompileRegistry.get(lowerAddress)
-	if (precompile) return precompile
 
 	// Dynamic TIP-20 token detection
 	if (isTip20Address(address))
@@ -447,15 +444,11 @@ export function getContractAbi(address: Address.Address): Abi | undefined {
 }
 
 /**
- * Check if an address is a known contract (includes TIP-20 tokens and Ethereum precompiles)
+ * Check if an address is a known contract (includes TIP-20 tokens and Ethereum precompiles).
  */
 export function isKnownContract(address: Address.Address): boolean {
 	const lowerAddress = address.toLowerCase() as Address.Address
-	return (
-		contractRegistry.has(lowerAddress) ||
-		ethereumPrecompileRegistry.has(lowerAddress) ||
-		isTip20Address(address)
-	)
+	return contractRegistry.has(lowerAddress) || isTip20Address(address)
 }
 
 // ============================================================================

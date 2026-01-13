@@ -8,7 +8,7 @@ import {
 	formatAbiValue,
 	getAbiItem,
 	getContractInfo,
-	isEthereumPrecompile,
+	isPrecompile,
 } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
@@ -124,15 +124,13 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 			const hasSelector = trace.input && trace.input.length >= 10
 			const selector = hasSelector ? slice(trace.input, 0, 4) : undefined
 			const contractInfo = trace.to ? getContractInfo(trace.to) : undefined
-			const isPrecompile = trace.to
-				? isEthereumPrecompile(trace.to as `0x${string}`)
-				: false
+			const isPrecompile_ = !!trace.to && isPrecompile(trace.to)
 
 			let functionName: string | undefined
 			let params: string | undefined
 			let decodedOutput: string | undefined
 
-			if (isPrecompile && contractInfo) {
+			if (isPrecompile_ && contractInfo) {
 				const abiItem = contractInfo.abi[0]
 				if (abiItem && 'name' in abiItem) {
 					functionName = abiItem.name
