@@ -68,18 +68,21 @@ import {
 	transactionsQueryOptions,
 } from '#lib/queries/account'
 import { getWagmiConfig } from '#wagmi.config.ts'
+import { getRequestURL } from '#lib/env.ts'
 
 async function fetchAddressTotalValue(address: Address.Address) {
+	const requestUrl = getRequestURL()
 	const response = await fetch(
-		`${__BASE_URL__}/api/address/total-value/${address}`,
+		`${requestUrl.origin}/api/address/total-value/${address}`,
 		{ headers: { 'Content-Type': 'application/json' } },
 	)
 	return response.json() as Promise<{ totalValue: number }>
 }
 
 async function fetchAddressTotalCount(address: Address.Address) {
+	const requestUrl = getRequestURL()
 	const response = await fetch(
-		`${__BASE_URL__}/api/address/txs-count/${address}`,
+		`${requestUrl.origin}/api/address/txs-count/${address}`,
 		{ headers: { 'Content-Type': 'application/json' } },
 	)
 	if (!response.ok) throw new Error('Failed to fetch total transaction count')

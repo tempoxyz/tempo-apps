@@ -7,13 +7,19 @@
 	"workers_dev": true,
 	"preview_urls": true,
 	"placement": { "mode": "smart" },
+	"services": [
+		{
+			"service": "api",
+			"remote": true,
+			"binding": "RPC_PROXY"
+		}
+	],
 	// this binding is not inheritable to environments
 	// it's being added at top-level solely for the type generation script
 	"browser": { "binding": "BROWSER" },
 	"env": {
 		"testnet": {
 			"name": "explorer",
-			"main": "./src/index.server.ts",
 			"routes": [
 				{
 					"custom_domain": true,
@@ -27,16 +33,17 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "testnet",
-				"VITE_TEMPO_RPC_WS": "wss://proxy.tempo.xyz/rpc/42429",
-				"VITE_TEMPO_RPC_WS_FALLBACK": "wss://rpc.testnet.tempo.xyz",
-				"VITE_TEMPO_RPC_HTTP": "https://proxy.tempo.xyz/rpc/42429",
-				"VITE_TEMPO_RPC_HTTP_FALLBACK": "https://rpc.testnet.tempo.xyz",
-				"VITE_CONTRACT_VERIFY_URL": "https://contracts.tempo.xyz/v2/contract",
-				"VITE_OG_URL": "https://og.tempo.xyz"
+				"VITE_TEMPO_ENV": "testnet"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
+			"services": [
+				{
+					"service": "api",
+					"remote": true,
+					"binding": "RPC_PROXY"
+				}
+			],
 			"observability": {
 				"enabled": true,
 				"logs": {
@@ -49,17 +56,11 @@
 		},
 		"moderato": {
 			"name": "explorer-moderato",
-			"main": "./src/index.server.ts",
 			"routes": [
 				{
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
 					"pattern": "explore.tempo.xyz"
-				},
-				{
-					"custom_domain": true,
-					"zone_name": "tempo.xyz",
-					"pattern": "www.explore.tempo.xyz"
 				},
 				{
 					"custom_domain": true,
@@ -83,16 +84,17 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "moderato",
-				"VITE_TEMPO_RPC_WS": "wss://proxy.tempo.xyz/rpc/42431",
-				"VITE_TEMPO_RPC_WS_FALLBACK": "wss://rpc.moderato.tempo.xyz",
-				"VITE_TEMPO_RPC_HTTP": "https://proxy.tempo.xyz/rpc/42431",
-				"VITE_TEMPO_RPC_HTTP_FALLBACK": "https://rpc.moderato.tempo.xyz",
-				"VITE_CONTRACT_VERIFY_URL": "https://contracts.tempo.xyz/v2/contract",
-				"VITE_OG_URL": "https://og.tempo.xyz"
+				"VITE_TEMPO_ENV": "moderato"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
+			"services": [
+				{
+					"service": "api",
+					"remote": true,
+					"binding": "RPC_PROXY"
+				}
+			],
 			"observability": {
 				"enabled": true,
 				"logs": {
@@ -105,7 +107,6 @@
 		},
 		"devnet": {
 			"name": "explorer-devnet",
-			"main": "./src/index.server.ts",
 			"routes": [
 				{
 					"custom_domain": true,
@@ -119,16 +120,17 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "devnet",
-				"VITE_TEMPO_RPC_WS": "wss://proxy.tempo.xyz/rpc/31318",
-				"VITE_TEMPO_RPC_WS_FALLBACK": "wss://rpc.devnet.tempoxyz.dev",
-				"VITE_TEMPO_RPC_HTTP": "https://proxy.tempo.xyz/rpc/31318",
-				"VITE_TEMPO_RPC_HTTP_FALLBACK": "https://rpc.devnet.tempoxyz.dev",
-				"VITE_CONTRACT_VERIFY_URL": "https://contracts.tempo.xyz/v2/contract",
-				"VITE_OG_URL": "https://og.tempo.xyz"
+				"VITE_TEMPO_ENV": "devnet"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
+			"services": [
+				{
+					"service": "api",
+					"remote": true,
+					"binding": "RPC_PROXY"
+				}
+			],
 			"observability": {
 				"enabled": true,
 				"logs": {
@@ -141,7 +143,6 @@
 		},
 		"presto": {
 			"name": "explorer-presto",
-			"main": "./src/index.server.ts",
 			"routes": [
 				{
 					"custom_domain": true,
@@ -160,16 +161,17 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "presto",
-				"VITE_TEMPO_RPC_WS": "wss://rpc.mainnet.tempo.xyz",
-				"VITE_TEMPO_RPC_WS_FALLBACK": "wss://rpc.presto.tempo.xyz",
-				"VITE_TEMPO_RPC_HTTP": "https://rpc.mainnet.tempo.xyz",
-				"VITE_TEMPO_RPC_HTTP_FALLBACK": "https://rpc.presto.tempo.xyz",
-				"VITE_CONTRACT_VERIFY_URL": "https://contracts.tempo.xyz/v2/contract",
-				"VITE_OG_URL": "https://og.tempo.xyz"
+				"VITE_TEMPO_ENV": "presto"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
+			"services": [
+				{
+					"service": "api",
+					"remote": true,
+					"binding": "RPC_PROXY"
+				}
+			],
 			"observability": {
 				"enabled": true,
 				"logs": {

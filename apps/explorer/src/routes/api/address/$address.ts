@@ -4,7 +4,7 @@ import { Address, Hex } from 'ox'
 import type { RpcTransaction } from 'viem'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { isTestnet } from '#lib/env'
+import { getRequestURL, isTestnet } from '#lib/env'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
@@ -29,7 +29,7 @@ export const RequestParametersSchema = z.object({
 export const Route = createFileRoute('/api/address/$address')({
 	server: {
 		handlers: {
-			GET: async ({ params, request }) => {
+			GET: async ({ params }) => {
 				if (isTestnet())
 					return Response.json({
 						limit: 0,
@@ -41,8 +41,7 @@ export const Route = createFileRoute('/api/address/$address')({
 					})
 
 				try {
-					// fallback base needed for dev SSR where request.url may be relative
-					const url = new URL(request.url, __BASE_URL__ || 'http://localhost')
+					const url = getRequestURL()
 					const address = zAddress().parse(params.address)
 					Address.assert(address)
 
