@@ -7,6 +7,7 @@ import {
 	rootRouteId,
 	useNavigate,
 } from '@tanstack/react-router'
+import { all } from 'better-all'
 import { Hex, Json, Value } from 'ox'
 import { getPublicClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
@@ -37,15 +38,23 @@ function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	const config = getWagmiConfig()
 	const client = getPublicClient(config)
-	const receipt = await client.getTransactionReceipt({
-		hash: params.hash,
+
+	const { receipt, block, transaction, getTokenMetadata } = await all({
+		async receipt() {
+			return client.getTransactionReceipt({ hash: params.hash })
+		},
+		async block() {
+			return client.getBlock({ blockHash: (await this.$.receipt).blockHash })
+		},
+		async transaction() {
+			return client.getTransaction({
+				hash: (await this.$.receipt).transactionHash,
+			})
+		},
+		async getTokenMetadata() {
+			return Tip20.metadataFromLogs((await this.$.receipt).logs)
+		},
 	})
-	// TODO: investigate & consider batch/multicall
-	const [block, transaction, getTokenMetadata] = await Promise.all([
-		client.getBlock({ blockHash: receipt.blockHash }),
-		client.getTransaction({ hash: receipt.transactionHash }),
-		Tip20.metadataFromLogs(receipt.logs),
-	])
 	const timestampFormatted = DateFormatter.format(block.timestamp)
 
 	const lineItems = LineItems.fromReceipt(receipt, { getTokenMetadata })

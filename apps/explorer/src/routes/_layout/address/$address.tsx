@@ -10,6 +10,7 @@ import {
 	useNavigate,
 	useRouter,
 } from '@tanstack/react-router'
+import { all } from 'better-all'
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
@@ -115,13 +116,24 @@ function useBatchTransactionData(
 		queries: hashes.map((hash) => ({
 			queryKey: ['tx-data-batch', viewer, hash],
 			queryFn: async (): Promise<TransactionData | null> => {
-				const receipt = await client.getTransactionReceipt({ hash })
-				// TODO: investigate & consider batch/multicall
-				const [block, transaction, getTokenMetadata] = await Promise.all([
-					client.getBlock({ blockHash: receipt.blockHash }),
-					client.getTransaction({ hash: receipt.transactionHash }),
-					Tip20.metadataFromLogs(receipt.logs),
-				])
+				const { receipt, block, transaction, getTokenMetadata } = await all({
+					async receipt() {
+						return client.getTransactionReceipt({ hash })
+					},
+					async block() {
+						return client.getBlock({
+							blockHash: (await this.$.receipt).blockHash,
+						})
+					},
+					async transaction() {
+						return client.getTransaction({
+							hash: (await this.$.receipt).transactionHash,
+						})
+					},
+					async getTokenMetadata() {
+						return Tip20.metadataFromLogs((await this.$.receipt).logs)
+					},
+				})
 				const knownEvents = parseKnownEvents(receipt, {
 					transaction,
 					getTokenMetadata,

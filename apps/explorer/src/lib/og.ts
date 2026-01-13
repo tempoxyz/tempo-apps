@@ -1,9 +1,9 @@
+import { all } from 'better-all'
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { Value } from 'ox'
 import { zeroAddress } from 'viem'
 import { Abis } from 'viem/tempo'
-import type { Config } from 'wagmi'
 import {
 	getBlock,
 	getBytecode,
@@ -380,16 +380,23 @@ interface TxData {
 async function fetchTxData(hash: string): Promise<TxData | null> {
 	try {
 		const config = getWagmiConfig()
-		const receipt = await getTransactionReceipt(config, {
-			hash: hash as `0x${string}`,
-		})
 
-		// TODO: investigate & consider batch/multicall
-		const [block, transaction, getTokenMetadata] = await Promise.all([
-			getBlock(config, { blockHash: receipt.blockHash }),
-			getTransaction(config, { hash: receipt.transactionHash }),
-			Tip20.metadataFromLogs(receipt.logs),
-		])
+		const { receipt, block, transaction, getTokenMetadata } = await all({
+			async receipt() {
+				return getTransactionReceipt(config, { hash: hash as `0x${string}` })
+			},
+			async block() {
+				return getBlock(config, { blockHash: (await this.$.receipt).blockHash })
+			},
+			async transaction() {
+				return getTransaction(config, {
+					hash: (await this.$.receipt).transactionHash,
+				})
+			},
+			async getTokenMetadata() {
+				return Tip20.metadataFromLogs((await this.$.receipt).logs)
+			},
+		})
 
 		const gasUsed = receipt.gasUsed ?? 0n
 		const gasPrice = receipt.effectiveGasPrice ?? transaction.gasPrice ?? 0n
@@ -425,10 +432,9 @@ async function fetchTxData(hash: string): Promise<TxData | null> {
 				const missingMetadata = await Promise.all(
 					Array.from(tokensMissingSymbols).map(async (token) => {
 						try {
-							const metadata = await Actions.token.getMetadata(
-								config as Config,
-								{ token },
-							)
+							const metadata = await Actions.token.getMetadata(config, {
+								token,
+							})
 							return { token, metadata }
 						} catch {
 							return { token, metadata: null }

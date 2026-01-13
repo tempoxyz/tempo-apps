@@ -122,33 +122,31 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 	})
 
 async function fetchHoldersData(address: Address.Address, chainId: number) {
-	// Aggregate balances directly in the indexer instead of streaming every transfer.
 	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
-	// Sum outgoing per holder (exclude mints from zero)
-	const outgoing = await qb
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('from').as('holder'),
-			eb.fn.sum('tokens').as('sent'),
-		])
-		.where('chain', '=', chainId)
-		.where('address', '=', address)
-		.where('from', '<>', zeroAddress)
-		.groupBy('from')
-		.execute()
-
-	// Sum incoming per holder
-	const incoming = await qb
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('to').as('holder'),
-			eb.fn.sum('tokens').as('received'),
-		])
-		.where('chain', '=', chainId)
-		.where('address', '=', address)
-		.groupBy('to')
-		.execute()
+	const [outgoing, incoming] = await Promise.all([
+		qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('from').as('holder'),
+				eb.fn.sum('tokens').as('sent'),
+			])
+			.where('chain', '=', chainId)
+			.where('address', '=', address)
+			.where('from', '<>', zeroAddress)
+			.groupBy('from')
+			.execute(),
+		qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('to').as('holder'),
+				eb.fn.sum('tokens').as('received'),
+			])
+			.where('chain', '=', chainId)
+			.where('address', '=', address)
+			.groupBy('to')
+			.execute(),
+	])
 
 	const balances = new Map<string, bigint>()
 

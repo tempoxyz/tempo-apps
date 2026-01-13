@@ -41,6 +41,8 @@
 		"@wagmi/core": "catalog:",
 		"abitype": "catalog:",
 		"animejs": "catalog:",
+		"better-all": "catalog:",
+		"cva": "catalog:",
 		"hono": "catalog:",
 		"idxs": "catalog:",
 		"ox": "catalog:",

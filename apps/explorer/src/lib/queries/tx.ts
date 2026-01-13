@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/react-query'
+import { all } from 'better-all'
 import type { Hex } from 'ox'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import { parseKnownEvent, parseKnownEvents } from '#lib/domain/known-events'
@@ -16,14 +17,22 @@ export function txQueryOptions(params: { hash: Hex.Hex }) {
 async function fetchTxData(params: { hash: Hex.Hex }) {
 	const config = getWagmiConfig()
 
-	const receipt = await getTransactionReceipt(config, { hash: params.hash })
-
-	// TODO: investigate & consider batch/multicall
-	const [block, transaction, getTokenMetadata] = await Promise.all([
-		getBlock(config, { blockHash: receipt.blockHash }),
-		getTransaction(config, { hash: receipt.transactionHash }),
-		Tip20.metadataFromLogs(receipt.logs),
-	])
+	const { receipt, block, transaction, getTokenMetadata } = await all({
+		async receipt() {
+			return getTransactionReceipt(config, { hash: params.hash })
+		},
+		async block() {
+			return getBlock(config, { blockHash: (await this.$.receipt).blockHash })
+		},
+		async transaction() {
+			return getTransaction(config, {
+				hash: (await this.$.receipt).transactionHash,
+			})
+		},
+		async getTokenMetadata() {
+			return Tip20.metadataFromLogs((await this.$.receipt).logs)
+		},
+	})
 
 	const knownEvents = parseKnownEvents(receipt, {
 		transaction,
