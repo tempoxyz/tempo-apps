@@ -72,7 +72,7 @@
 		"@vitejs/plugin-react": "catalog:",
 		"eruda": "catalog:",
 		"jsonc-parser": "catalog:",
-		"shiki": "^3.20.0",
+		"shiki": "^3.21.0",
 		"tw-animate-css": "catalog:",
 		"typed-query-selector": "catalog:",
 		"unplugin-icons": "catalog:",
