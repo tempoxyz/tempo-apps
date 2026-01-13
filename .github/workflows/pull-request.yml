@@ -86,9 +86,68 @@ jobs:
           environment: ${{ env.CLOUDFLARE_ENV }}
           command: versions upload
 
-      - name: Comment Preview URL on PR
-        if: steps.changes.outputs.relevant == 'true'
-        uses: moojing/cf-preview-bot@v1
+      - name: Save Deployment Info
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p deployment-info
+
+          if [[ "${{ steps.changes.outputs.relevant }}" != "true" ]]; then
+            STATUS="skipped"
+            DEPLOYMENT_URL=""
+            ALIAS_URL=""
+          elif [[ "${{ steps.deploy.outcome }}" == "success" ]]; then
+            STATUS="success"
+            DEPLOYMENT_URL="${{ steps.deploy.outputs.deployment-url }}"
+            ALIAS_URL="${{ steps.deploy.outputs.pages-deployment-alias-url }}"
+          else
+            STATUS="failed"
+            DEPLOYMENT_URL=""
+            ALIAS_URL=""
+          fi
+
+          FILENAME="deployment-info/${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}.json"
+          cat > "$FILENAME" << EOF
+          {
+            "app": "${{ matrix.app }}",
+            "env": "${{ matrix.env }}",
+            "status": "$STATUS",
+            "deployment_url": "$DEPLOYMENT_URL",
+            "deployment_alias_url": "$ALIAS_URL"
+          }
+          EOF
+
+          cat "$FILENAME"
+
+      - name: Upload Deployment Info
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          deployment_url: ${{ steps.deploy.outputs.deployment-url }}
-          branch_preview_url: ${{ steps.deploy.outputs.pages-deployment-alias-url }}
+          name: deployment-${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
+          path: deployment-info/${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}.json
+          retention-days: 1
+
+  comment-deployments:
+    name: Post Deployment Table
+    runs-on: ubuntu-latest
+    needs: deploy-preview
+    if: always()
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download All Deployment Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: deployment-*
+          path: deployments
+          merge-multiple: true
+
+      - name: Post Deployment Table
+        uses: ./.github/actions/post-deployment-table
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deployments-path: deployments
