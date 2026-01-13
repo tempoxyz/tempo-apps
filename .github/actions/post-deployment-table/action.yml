@@ -29,9 +29,13 @@ runs:
             const files = fs.readdirSync(deploymentsPath);
             for (const file of files) {
               if (file.endsWith('.json')) {
-                const content = fs.readFileSync(path.join(deploymentsPath, file), 'utf8');
-                const deployment = JSON.parse(content);
-                deployments.push(deployment);
+                try {
+                  const content = fs.readFileSync(path.join(deploymentsPath, file), 'utf8');
+                  const deployment = JSON.parse(content);
+                  deployments.push(deployment);
+                } catch (parseError) {
+                  console.log(`Failed to parse ${file}:`, parseError.message);
+                }
               }
             }
           } catch (error) {
@@ -39,16 +43,18 @@ runs:
           }
 
           deployments.sort((a, b) => {
-            if (a.app !== b.app) return a.app.localeCompare(b.app);
+            const appA = a.app || '';
+            const appB = b.app || '';
+            if (appA !== appB) return appA.localeCompare(appB);
             const envA = a.env || '';
             const envB = b.env || '';
             return envA.localeCompare(envB);
           });
 
           const statusEmoji = {
-            'success': '✅',
-            'skipped': '⏭️',
-            'failed': '❌'
+            'success': '[OK]',
+            'skipped': '[>>]',
+            'failed': '[X]'
           };
 
           const statusText = {
@@ -61,7 +67,7 @@ runs:
           for (const deployment of deployments) {
             const app = deployment.app;
             const env = deployment.env || '-';
-            const status = `${statusEmoji[deployment.status] || '❓'} ${statusText[deployment.status] || 'Unknown'}`;
+            const status = `${statusEmoji[deployment.status] || '[?]'} ${statusText[deployment.status] || 'Unknown'}`;
 
             let preview = '-';
             if (deployment.status === 'success') {
@@ -77,7 +83,7 @@ runs:
           }
 
           let commentBody = '<!-- cloudflare-deployments -->\n';
-          commentBody += '## 🚀 Cloudflare Deployments\n\n';
+          commentBody += '## Cloudflare Deployments\n\n';
           commentBody += '| App | Environment | Status | Preview |\n';
           commentBody += '|-----|-------------|--------|---------|\n';
           commentBody += tableRows.join('\n') + '\n\n';
