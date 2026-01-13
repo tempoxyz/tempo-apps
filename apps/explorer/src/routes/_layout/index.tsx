@@ -89,15 +89,18 @@ function Component() {
 	const handlePhaseChange = React.useCallback((phase: IntroPhase) => {
 		if (phase === 'start' && exploreWrapperRef.current) {
 			const seen = introSeenOnMount.current
-			setInputReady(true)
-			exploreWrapperRef.current.style.pointerEvents = 'auto'
-			exploreInputRef.current?.focus()
-			waapi.animate(exploreWrapperRef.current, {
-				opacity: [0, 1],
-				scale: [seen ? 0.97 : 0.94, 1],
-				ease: seen ? springInstant : springBouncy,
-				delay: seen ? 0 : 240,
-			})
+			setTimeout(() => {
+				setInputReady(true)
+				if (exploreWrapperRef.current) {
+					exploreWrapperRef.current.style.pointerEvents = 'auto'
+					waapi.animate(exploreWrapperRef.current, {
+						opacity: [0, 1],
+						scale: [seen ? 0.97 : 0.94, 1],
+						ease: seen ? springInstant : springBouncy,
+					})
+				}
+				exploreInputRef.current?.focus()
+			}, seen ? 0 : 240)
 		}
 	}, [])
 
@@ -196,14 +199,17 @@ function SpotlightLinks() {
 		if (!pillsRef.current) return
 		const seen = introSeenOnMount.current
 		const children = [...pillsRef.current.children]
-		for (const child of children) {
-			;(child as HTMLElement).style.pointerEvents = 'auto'
-		}
+		const delay = seen ? 0 : 320
+		setTimeout(() => {
+			for (const child of children) {
+				;(child as HTMLElement).style.pointerEvents = 'auto'
+			}
+		}, delay)
 		const anim = waapi.animate(children as HTMLElement[], {
 			opacity: [0, 1],
 			translateY: [seen ? 2 : 4, 0],
 			ease: seen ? springInstant : springSmooth,
-			delay: seen ? stagger(10) : stagger(20, { start: 320, from: 'random' }),
+			delay: seen ? stagger(10) : stagger(20, { start: delay, from: 'random' }),
 		})
 		anim.then(() => {
 			for (const child of children) {
