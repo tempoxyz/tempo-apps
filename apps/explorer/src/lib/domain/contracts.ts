@@ -30,34 +30,29 @@ export type ContractInfo = {
 }
 
 /**
- * Ethereum precompile addresses (0x01-0x0a) with their metadata.
- * These are native EVM precompiles available on most Ethereum-compatible chains.
+ * Precompile metadata (without ABI since precompiles use custom encoding).
  */
-export const ethereumPrecompileRegistry = new Map<
-	Address.Address,
-	ContractInfo
->(<const>[
+export type PrecompileInfo = {
+	name: string
+	description: string
+	signature: string
+	docsUrl: string
+	address: Address.Address
+}
+
+/**
+ * Ethereum precompile addresses (0x01-0x0a) with their metadata.
+ * Precompiles don't use standard ABI encoding - they have custom input/output formats.
+ */
+export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
+	const
+>[
 	[
 		'0x0000000000000000000000000000000000000001',
 		{
 			name: 'ecRecover',
 			description: 'Elliptic curve digital signature recovery',
-			code: '0x',
-			abi: [
-				{
-					type: 'function',
-					name: 'ecRecover',
-					inputs: [
-						{ name: 'hash', type: 'bytes32' },
-						{ name: 'v', type: 'uint8' },
-						{ name: 'r', type: 'bytes32' },
-						{ name: 's', type: 'bytes32' },
-					],
-					outputs: [{ name: 'publicAddress', type: 'address' }],
-					stateMutability: 'pure',
-				},
-			] as Abi,
-			category: 'precompile',
+			signature: 'ecRecover(bytes32 hash, uint8 v, bytes32 r, bytes32 s)',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x01',
 			address: '0x0000000000000000000000000000000000000001',
 		},
@@ -67,17 +62,7 @@ export const ethereumPrecompileRegistry = new Map<
 		{
 			name: 'SHA2-256',
 			description: 'SHA-256 hash function',
-			code: '0x',
-			abi: [
-				{
-					type: 'function',
-					name: 'sha256',
-					inputs: [{ name: 'data', type: 'bytes' }],
-					outputs: [{ name: 'hash', type: 'bytes32' }],
-					stateMutability: 'pure',
-				},
-			] as Abi,
-			category: 'precompile',
+			signature: 'sha256(bytes data)',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x02',
 			address: '0x0000000000000000000000000000000000000002',
 		},
@@ -87,17 +72,7 @@ export const ethereumPrecompileRegistry = new Map<
 		{
 			name: 'RIPEMD-160',
 			description: 'RIPEMD-160 hash function',
-			code: '0x',
-			abi: [
-				{
-					type: 'function',
-					name: 'ripemd160',
-					inputs: [{ name: 'data', type: 'bytes' }],
-					outputs: [{ name: 'hash', type: 'bytes20' }],
-					stateMutability: 'pure',
-				},
-			] as Abi,
-			category: 'precompile',
+			signature: 'ripemd160(bytes data)',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x03',
 			address: '0x0000000000000000000000000000000000000003',
 		},
@@ -107,17 +82,7 @@ export const ethereumPrecompileRegistry = new Map<
 		{
 			name: 'identity',
 			description: 'Identity (data copy) function',
-			code: '0x',
-			abi: [
-				{
-					type: 'function',
-					name: 'identity',
-					inputs: [{ name: 'data', type: 'bytes' }],
-					outputs: [{ name: 'data', type: 'bytes' }],
-					stateMutability: 'pure',
-				},
-			] as Abi,
-			category: 'precompile',
+			signature: 'identity(bytes data)',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x04',
 			address: '0x0000000000000000000000000000000000000004',
 		},
@@ -127,24 +92,8 @@ export const ethereumPrecompileRegistry = new Map<
 		{
 			name: 'modexp',
 			description: 'Modular exponentiation',
-			code: '0x',
-			abi: [
-				{
-					type: 'function',
-					name: 'modexp',
-					inputs: [
-						{ name: 'Bsize', type: 'uint256' },
-						{ name: 'Esize', type: 'uint256' },
-						{ name: 'Msize', type: 'uint256' },
-						{ name: 'B', type: 'bytes' },
-						{ name: 'E', type: 'bytes' },
-						{ name: 'M', type: 'bytes' },
-					],
-					outputs: [{ name: 'value', type: 'bytes' }],
-					stateMutability: 'pure',
-				},
-			] as Abi,
-			category: 'precompile',
+			signature:
+				'modexp(uint256 Bsize, uint256 Esize, uint256 Msize, bytes B, bytes E, bytes M)',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x05',
 			address: '0x0000000000000000000000000000000000000005',
 		},
@@ -154,25 +103,7 @@ export const ethereumPrecompileRegistry = new Map<
 		{
 			name: 'ecAdd',
 			description: 'Point addition on elliptic curve alt_bn128',
-			code: '0x',
-			abi: [
-				{
-					type: 'function',
-					name: 'ecAdd',
-					inputs: [
-						{ name: 'x1', type: 'uint256' },
-						{ name: 'y1', type: 'uint256' },
-						{ name: 'x2', type: 'uint256' },
-						{ name: 'y2', type: 'uint256' },
-					],
-					outputs: [
-						{ name: 'x', type: 'uint256' },
-						{ name: 'y', type: 'uint256' },
-					],
-					stateMutability: 'pure',
-				},
-			] as Abi,
-			category: 'precompile',
+			signature: 'ecAdd(uint256 x1, uint256 y1, uint256 x2, uint256 y2)',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x06',
 			address: '0x0000000000000000000000000000000000000006',
 		},
@@ -182,24 +113,7 @@ export const ethereumPrecompileRegistry = new Map<
 		{
 			name: 'ecMul',
 			description: 'Scalar multiplication on elliptic curve alt_bn128',
-			code: '0x',
-			abi: [
-				{
-					type: 'function',
-					name: 'ecMul',
-					inputs: [
-						{ name: 'x1', type: 'uint256' },
-						{ name: 'y1', type: 'uint256' },
-						{ name: 's', type: 'uint256' },
-					],
-					outputs: [
-						{ name: 'x', type: 'uint256' },
-						{ name: 'y', type: 'uint256' },
-					],
-					stateMutability: 'pure',
-				},
-			] as Abi,
-			category: 'precompile',
+			signature: 'ecMul(uint256 x1, uint256 y1, uint256 s)',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x07',
 			address: '0x0000000000000000000000000000000000000007',
 		},
@@ -209,17 +123,7 @@ export const ethereumPrecompileRegistry = new Map<
 		{
 			name: 'ecPairing',
 			description: 'Bilinear function on groups on elliptic curve alt_bn128',
-			code: '0x',
-			abi: [
-				{
-					type: 'function',
-					name: 'ecPairing',
-					inputs: [{ name: 'input', type: 'bytes' }],
-					outputs: [{ name: 'success', type: 'bool' }],
-					stateMutability: 'pure',
-				},
-			] as Abi,
-			category: 'precompile',
+			signature: 'ecPairing(uint256[k*6] input)',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x08',
 			address: '0x0000000000000000000000000000000000000008',
 		},
@@ -229,23 +133,8 @@ export const ethereumPrecompileRegistry = new Map<
 		{
 			name: 'blake2f',
 			description: 'BLAKE2 compression function F',
-			code: '0x',
-			abi: [
-				{
-					type: 'function',
-					name: 'blake2f',
-					inputs: [
-						{ name: 'rounds', type: 'uint32' },
-						{ name: 'h', type: 'bytes64' },
-						{ name: 'm', type: 'bytes128' },
-						{ name: 't', type: 'bytes16' },
-						{ name: 'f', type: 'bool' },
-					],
-					outputs: [{ name: 'h', type: 'bytes64' }],
-					stateMutability: 'pure',
-				},
-			] as Abi,
-			category: 'precompile',
+			signature:
+				'blake2f(uint32 rounds, bytes64 h, bytes128 m, bytes16 t, bool f)',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x09',
 			address: '0x0000000000000000000000000000000000000009',
 		},
@@ -255,17 +144,8 @@ export const ethereumPrecompileRegistry = new Map<
 		{
 			name: 'pointEvaluation',
 			description: 'KZG point evaluation for EIP-4844 blob verification',
-			code: '0x',
-			abi: [
-				{
-					type: 'function',
-					name: 'pointEvaluation',
-					inputs: [{ name: 'input', type: 'bytes' }],
-					outputs: [{ name: 'output', type: 'bytes' }],
-					stateMutability: 'pure',
-				},
-			] as Abi,
-			category: 'precompile',
+			signature:
+				'pointEvaluation(bytes32 versionedHash, bytes32 z, bytes32 y, bytes48 commitment, bytes48 proof)',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x0a',
 			address: '0x000000000000000000000000000000000000000a',
 		},
@@ -273,12 +153,19 @@ export const ethereumPrecompileRegistry = new Map<
 ])
 
 /**
- * Check if an address is a precompile.
+ * Check if an address is an Ethereum precompile (0x01-0x0a).
  */
 export function isPrecompile(address: Address.Address): boolean {
-	return ethereumPrecompileRegistry.has(
-		address.toLowerCase() as Address.Address,
-	)
+	return precompileRegistry.has(address.toLowerCase() as Address.Address)
+}
+
+/**
+ * Get precompile info by address.
+ */
+export function getPrecompileInfo(
+	address: Address.Address,
+): PrecompileInfo | undefined {
+	return precompileRegistry.get(address.toLowerCase() as Address.Address)
 }
 
 /**
@@ -398,7 +285,6 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
  * Known contract registry mapping addresses to their metadata and ABIs.
  */
 export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
-	...ethereumPrecompileRegistry.entries(),
 	...systemContractRegistry.entries(),
 	...tip20ContractRegistry.entries(),
 ])
