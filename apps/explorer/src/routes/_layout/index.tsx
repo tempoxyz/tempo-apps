@@ -34,7 +34,7 @@ const SPOTLIGHT_DATA: Record<
 > = {
 	testnet: {
 		accountAddress: '0x5bc1473610754a5ca10749552b119df90c1a1877',
-		contractAddress: '0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d',
+		contractAddress: '0x9b400b4c962463E840cCdbE2493Dc6Ab78768266',
 		receiptHash:
 			'0x6d6d8c102064e6dee44abad2024a8b1d37959230baab80e70efbf9b0c739c4fd',
 		paymentHash:
@@ -46,7 +46,7 @@ const SPOTLIGHT_DATA: Record<
 	},
 	moderato: {
 		accountAddress: '0xa726a1CD723409074DF9108A2187cfA19899aCF8',
-		contractAddress: '0x0cb37634841784a6ef44aeba9bd6cf82c7143f86',
+		contractAddress: '0x52db6B29F1032b55F1C28354055539b1931CB26e',
 		receiptHash:
 			'0x429eb0d8a4565138aec97fe11c8f2f4e56f26725e3a428881bbeba6c4e8ecdc9',
 		paymentHash:
