@@ -1,9 +1,14 @@
 import { env } from 'cloudflare:workers'
 import puppeteer from '@cloudflare/puppeteer'
 import { queryOptions, useQuery } from '@tanstack/react-query'
-import { createFileRoute, notFound, rootRouteId } from '@tanstack/react-router'
+import {
+	createFileRoute,
+	notFound,
+	rootRouteId,
+	useNavigate,
+} from '@tanstack/react-router'
 import { Hex, Json, Value } from 'ox'
-import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
+import { getPublicClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'
 import { Receipt } from '#comps/Receipt'
@@ -12,28 +17,33 @@ import { parseKnownEvents } from '#lib/domain/known-events'
 import { LineItems } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import { useKeyboardShortcut } from '#lib/hooks'
 import {
 	buildTxDescription,
 	formatEventForOgServer,
 	OG_BASE_URL,
 } from '#lib/og'
-import { getConfig } from '#wagmi.config'
+import { withLoaderTiming } from '#lib/profiling'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	return queryOptions({
 		queryKey: ['receipt-detail', params.hash, params.rpcUrl],
 		queryFn: () => fetchReceiptData(params),
+		staleTime: 1000 * 60 * 5, // 5 minutes - receipt data is immutable
 	})
 }
 
 async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
-	const config = getConfig({ rpcUrl: params.rpcUrl })
-	const receipt = await getTransactionReceipt(config, {
+	const config = getWagmiConfig()
+	const client = getPublicClient(config)
+	const receipt = await client.getTransactionReceipt({
 		hash: params.hash,
 	})
+	// TODO: investigate & consider batch/multicall
 	const [block, transaction, getTokenMetadata] = await Promise.all([
-		getBlock(config, { blockHash: receipt.blockHash }),
-		getTransaction(config, { hash: receipt.transactionHash }),
+		client.getBlock({ blockHash: receipt.blockHash }),
+		client.getTransaction({ hash: receipt.transactionHash }),
 		Tip20.metadataFromLogs(receipt.logs),
 	])
 	const timestampFormatted = DateFormatter.format(block.timestamp)
@@ -91,26 +101,27 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			: {}),
 	}),
 	// @ts-expect-error - TODO: fix
-	loader: async ({ params, context }) => {
-		const hash = parseHashFromParams(params)
-		if (!hash)
-			throw notFound({
-				routeId: rootRouteId,
-				data: { type: 'hash', value: params.hash },
-			})
+	loader: ({ params, context }) =>
+		withLoaderTiming('/_layout/receipt/$hash', async () => {
+			const hash = parseHashFromParams(params)
+			if (!hash)
+				throw notFound({
+					routeId: rootRouteId,
+					data: { type: 'hash', value: params.hash },
+				})
 
-		try {
-			return await context.queryClient.ensureQueryData(
-				receiptDetailQueryOptions({ hash }),
-			)
-		} catch (error) {
-			console.error(error)
-			throw notFound({
-				routeId: rootRouteId,
-				data: { type: 'hash', value: hash },
-			})
-		}
-	},
+			try {
+				return await context.queryClient.ensureQueryData(
+					receiptDetailQueryOptions({ hash }),
+				)
+			} catch (error) {
+				console.error(error)
+				throw notFound({
+					routeId: rootRouteId,
+					data: { type: 'hash', value: hash },
+				})
+			}
+		}),
 	server: {
 		handlers: {
 			async GET({ params, request, next }) {
@@ -275,7 +286,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				{ property: 'og:description', content: description },
 				{ name: 'twitter:description', content: description },
 				{ property: 'og:image', content: ogImageUrl },
-				{ property: 'og:image:type', content: 'image/png' },
+				{ property: 'og:image:type', content: 'image/webp' },
 				{ property: 'og:image:width', content: '1200' },
 				{ property: 'og:image:height', content: '630' },
 				{ name: 'twitter:card', content: 'summary_large_image' },
@@ -287,6 +298,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 
 function Component() {
 	const { hash } = Route.useParams()
+	const navigate = useNavigate()
 	const loaderData = Route.useLoaderData() as Awaited<
 		ReturnType<typeof fetchReceiptData>
 	>
@@ -294,6 +306,10 @@ function Component() {
 	const { data } = useQuery({
 		...receiptDetailQueryOptions({ hash }),
 		initialData: loaderData,
+	})
+
+	useKeyboardShortcut({
+		t: () => navigate({ to: '/tx/$hash', params: { hash } }),
 	})
 
 	const { block, knownEvents, lineItems, receipt } = data

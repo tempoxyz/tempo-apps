@@ -21,7 +21,7 @@ export function Midcut({
 		<span
 			id={id}
 			title={value}
-			className={`inline-flex w-full select-none ${align === 'end' ? 'justify-end' : ''}`}
+			className={`inline-flex w-full select-none [text-decoration:inherit] ${align === 'end' ? 'justify-end' : ''}`}
 			style={{
 				containerType: 'inline-size',
 				containerName: id,

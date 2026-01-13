@@ -1,11 +1,16 @@
-import { whatsabi } from '@shazow/whatsabi'
+import { loaders, whatsabi } from '@shazow/whatsabi'
 import type { Address, Hex } from 'ox'
-import type { Abi, AbiFunction, AbiParameter } from 'viem'
-import { toFunctionSelector } from 'viem'
+import type { Abi, AbiEvent, AbiFunction, AbiParameter } from 'viem'
+import {
+	decodeEventLog,
+	getAbiItem as getAbiItem_viem,
+	stringify,
+	toFunctionSelector,
+} from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
-import { getPublicClient } from 'wagmi/actions'
+import { getChainId, getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
-import { config } from '#wagmi.config.ts'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 /**
  * Registry of known contract addresses to their ABIs and metadata.
@@ -112,15 +117,15 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 		},
 	],
 	[
-		Addresses.stablecoinExchange,
+		Addresses.stablecoinDex,
 		{
 			name: 'Stablecoin Exchange',
 			code: '0xef',
 			description: 'Enshrined DEX for stablecoin swaps',
-			abi: Abis.stablecoinExchange,
+			abi: Abis.stablecoinDex,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/exchange',
-			address: Addresses.stablecoinExchange,
+			address: Addresses.stablecoinDex,
 		},
 	],
 	[
@@ -133,19 +138,6 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/tip403/spec',
 			address: Addresses.tip403Registry,
-		},
-	],
-
-	// Account Abstraction
-	[
-		Addresses.accountImplementation,
-		{
-			name: 'IthacaAccount',
-			code: '0xef',
-			description: 'Reference account implementation',
-			abi: Abis.tipAccountRegistrar,
-			category: 'account',
-			address: Addresses.accountImplementation,
 		},
 	],
 ])
@@ -547,6 +539,7 @@ export function formatOutputValue(value: unknown, _type: string): string {
 export async function getContractBytecode(
 	address: Address.Address,
 ): Promise<Hex.Hex | undefined> {
+	const config = getWagmiConfig()
 	const client = getPublicClient(config)
 	const code = await client.getCode({ address })
 	if (!code || code === '0x') return undefined
@@ -554,35 +547,173 @@ export async function getContractBytecode(
 }
 
 // ============================================================================
-// Whatsabi - ABI extraction from bytecode
+// ABI Item Utilities
 // ============================================================================
 
 /**
- * Attempts to extract an ABI from contract bytecode using whatsabi.autoload.
- * Returns undefined if the address has no code or extraction fails.
+ * Get an ABI item by selector (function selector or event topic)
+ */
+export function getAbiItem({
+	abi,
+	selector,
+}: {
+	abi: Abi
+	selector: Hex.Hex
+}): AbiFunction | undefined {
+	const abiItem =
+		(getAbiItem_viem({
+			abi: abi.map((x) => ({
+				...x,
+				inputs: (x as AbiFunction).inputs || [],
+				outputs: (x as AbiFunction).outputs || [],
+			})),
+			name: selector,
+		}) as AbiFunction) ||
+		abi.find((x) => (x as AbiFunction).name === selector) ||
+		abi.find((x) => (x as { selector?: string }).selector === selector)
+
+	if (!abiItem) return
+
+	return {
+		...abiItem,
+		outputs: abiItem.outputs || [],
+		inputs: abiItem.inputs || [],
+		name: abiItem.name || (abiItem as { selector?: string }).selector || '',
+	} as AbiFunction
+}
+
+/**
+ * Format an ABI value for display
+ */
+export function formatAbiValue(value: unknown): string {
+	if (typeof value === 'bigint') {
+		return value.toString()
+	}
+	if (Array.isArray(value)) {
+		return `[${value.map(formatAbiValue).join(', ')}]`
+	}
+	if (typeof value === 'object' && value !== null) {
+		return stringify(value)
+	}
+	return String(value ?? '')
+}
+
+/**
+ * Decode event log with guessed indexed parameters.
+ * Useful when the ABI doesn't correctly specify which parameters are indexed.
+ * @see https://github.com/paradigmxyz/rivet/blob/fd94089ba4bec65bbf3fa288efbeab7306cb1537/src/utils/abi.ts#L13
+ */
+export function decodeEventLog_guessed(args: {
+	abiItem: AbiEvent
+	data: Hex.Hex
+	topics: readonly Hex.Hex[]
+}) {
+	const { abiItem, data, topics } = args
+	const indexedValues = topics.slice(1)
+
+	for (let i = 0; i < indexedValues.length; i++) {
+		const offset = indexedValues.length - i
+		for (
+			let j = 0;
+			j < abiItem.inputs.length - indexedValues.length + 1 - i;
+			j++
+		) {
+			const inputs = abiItem.inputs.map((input, index) => ({
+				...input,
+				indexed:
+					index < offset - 1 ||
+					index === i + j + offset - 1 ||
+					index >= abiItem.inputs.length - (indexedValues.length - offset),
+			}))
+			const abi = [{ ...abiItem, inputs }]
+			try {
+				return decodeEventLog({
+					abi,
+					topics: topics as [Hex.Hex, ...Hex.Hex[]],
+					data,
+				})
+			} catch {}
+		}
+	}
+}
+
+// ============================================================================
+// Whatsabi - ABI extraction from bytecode
+// ============================================================================
+
+const defaultSignatureLookup = new loaders.MultiSignatureLookup([
+	new loaders.OpenChainSignatureLookup(),
+	new loaders.FourByteSignatureLookup(),
+	new loaders.SamczunSignatureLookup(),
+])
+
+/**
+ * Lookup a function or event signature by selector/topic hash.
+ * Returns the first matching signature string or null.
+ */
+export async function lookupSignature(
+	selector: Hex.Hex,
+): Promise<string | null> {
+	const signatures =
+		selector.length === 10
+			? await defaultSignatureLookup.loadFunctions(selector)
+			: await defaultSignatureLookup.loadEvents(selector)
+	return signatures[0] ?? null
+}
+
+export type AutoloadAbiOptions = {
+	followProxies?: boolean
+	includeSourceVerified?: boolean
+}
+
+/**
+ * Autoload ABI for a contract address using whatsabi.
+ * Attempts to fetch verified source from Sourcify, falls back to bytecode extraction.
+ */
+export async function autoloadAbi(
+	address: Address.Address,
+	options: AutoloadAbiOptions = {},
+): Promise<Abi | null> {
+	const { followProxies = true, includeSourceVerified = true } = options
+	const config = getWagmiConfig()
+	const chainId = getChainId(config)
+	const client = getPublicClient(config)
+
+	try {
+		const result = await whatsabi.autoload(address, {
+			provider: client,
+			followProxies,
+			abiLoader: includeSourceVerified
+				? new loaders.MultiABILoader([
+						new loaders.SourcifyABILoader({ chainId }),
+					])
+				: false,
+			signatureLookup: defaultSignatureLookup,
+			onError: () => false,
+		})
+
+		if (!result.abi || result.abi.length === 0) return null
+
+		const hasNames = result.abi.some((item) => (item as { name?: string }).name)
+		if (!hasNames) return null
+
+		return result.abi.map((abiItem) => ({
+			...abiItem,
+			inputs: ('inputs' in abiItem && abiItem.inputs) || [],
+			outputs: ('outputs' in abiItem && abiItem.outputs) || [],
+		})) as Abi
+	} catch {
+		return null
+	}
+}
+
+/**
+ * Extract ABI from bytecode only (no source verification).
+ * Use this when you specifically want bytecode-extracted ABI.
  */
 export async function extractContractAbi(
 	address: Address.Address,
 ): Promise<Abi | undefined> {
-	try {
-		const client = getPublicClient(config)
-
-		const result = await whatsabi.autoload(address, {
-			provider: client,
-			followProxies: true,
-			// Disable ABI loader (requires Etherscan API key)
-			abiLoader: false,
-			signatureLookup: new whatsabi.loaders.MultiSignatureLookup([
-				new whatsabi.loaders.OpenChainSignatureLookup(),
-				new whatsabi.loaders.SamczunSignatureLookup(),
-			]),
-		})
-
-		if (!result.abi || result.abi.length === 0) return undefined
-
-		return result.abi as Abi
-	} catch (error) {
-		console.error('Failed to extract ABI:', error)
-		return undefined
-	}
+	const result = await autoloadAbi(address, { includeSourceVerified: false })
+	return result ?? undefined
 }

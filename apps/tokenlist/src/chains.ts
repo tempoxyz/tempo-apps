@@ -1,6 +1,30 @@
-import { tempoDevnet, tempoTestnet } from 'tempo.ts/chains'
+import { tempoDevnet, tempoModerato, tempoAndantino } from 'viem/chains'
 
-export const DEVNET_CHAIN_ID = tempoDevnet.id
-export const TESTNET_CHAIN_ID = tempoTestnet.id
+const tempoPresto = {
+	...tempoModerato,
+	id: 4217,
+	name: 'Tempo Mainnet',
+	blockExplorers: {
+		default: { name: 'Tempo Explorer', url: 'https://explore.tempo.xyz' },
+	},
+	rpcUrls: {
+		default: {
+			http: ['https://rpc.presto.tempo.xyz'],
+			webSocket: ['wss://rpc.presto.tempo.xyz'],
+		},
+	},
+} as const
 
-export { tempoTestnet, tempoDevnet }
+export const CHAIN_IDS = [
+	tempoDevnet.id,
+	tempoAndantino.id,
+	tempoModerato.id,
+	tempoPresto.id,
+] as const
+
+export const chains = {
+	[tempoDevnet.id]: tempoDevnet,
+	[tempoModerato.id]: tempoModerato,
+	[tempoAndantino.id]: tempoAndantino,
+	[tempoPresto.id]: tempoPresto,
+}

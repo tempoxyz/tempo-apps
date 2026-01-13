@@ -10,7 +10,7 @@ import {
 	useSwitchChain,
 } from 'wagmi'
 import { Address } from '#comps/Address'
-import { cva } from '#cva.config.ts'
+import { cva, cx } from '#cva.config.ts'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
@@ -23,7 +23,7 @@ export function ConnectWallet({
 	return (
 		<ClientOnly
 			fallback={
-				<div className="text-[12px] flex items-center text-secondary">
+				<div className="text-[12px] flex items-center text-secondary whitespace-nowrap">
 					Detecting wallet…
 				</div>
 			}
@@ -40,6 +40,7 @@ function ConnectWalletInner({
 }) {
 	const { address, chain, connector } = useConnection()
 	const connect = useConnect()
+	const [pendingId, setPendingId] = React.useState<string | null>(null)
 	const connectors = useConnectors()
 	const injectedConnectors = React.useMemo(
 		() => filterSupportedInjectedConnectors(connectors),
@@ -51,19 +52,36 @@ function ConnectWalletInner({
 
 	if (!injectedConnectors.length)
 		return (
-			<div className="text-[14px] -tracking-[2%] flex items-center">
-				No browser wallets found.
+			<div className="text-[12px] -tracking-[2%] flex items-center whitespace-nowrap select-none">
+				No wallet found.
 			</div>
 		)
 	if (!address || connector?.id === 'webAuthn')
 		return (
-			<div className="flex gap-2">
+			<div className="flex items-center gap-1.5">
+				<span className="text-[12px] text-tertiary whitespace-nowrap font-sans">
+					Connect
+				</span>
 				{injectedConnectors.map((connector) => (
-					<Button
-						variant="default"
-						className="flex gap-[8px] items-center"
+					<button
+						type="button"
 						key={connector.id}
-						onClick={() => connect.mutate({ connector })}
+						onClick={() => {
+							setPendingId(connector.id)
+							connect.mutate(
+								{ connector },
+								{
+									onSettled: () => setPendingId(null),
+								},
+							)
+						}}
+						className={cx(
+							'flex gap-[8px] items-center text-[12px] bg-base-alt rounded text-primary py-[6px] px-[10px] cursor-pointer press-down border border-card-border transition-colors',
+							'hover:bg-base-alt/80',
+							pendingId === connector.id &&
+								connect.isPending &&
+								'animate-pulse',
+						)}
 					>
 						{connector.icon ? (
 							<img
@@ -74,8 +92,8 @@ function ConnectWalletInner({
 						) : (
 							<LucideWalletCards className="size-[12px]" />
 						)}
-						Connect {connector.name}
-					</Button>
+						{connector.name}
+					</button>
 				))}
 			</div>
 		)
@@ -100,7 +118,7 @@ function ConnectWalletInner({
 				</Button>
 			)}
 			{switchChain.isSuccess && (
-				<span className="text-[12px] font-normal text-tertiary">
+				<span className="text-[12px] font-normal text-tertiary whitespace-nowrap">
 					Added Tempo to {connector?.name ?? 'Wallet'}!
 				</span>
 			)}

@@ -8,13 +8,9 @@ import {
 	parseAbiItem,
 	slice,
 } from 'viem'
-import {
-	formatAbiValue,
-	getAbiItem,
-	useAutoloadAbi,
-	useLookupSignature,
-} from '#lib/abi'
+import { formatAbiValue, getAbiItem } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
+import { useAutoloadAbi, useLookupSignature } from '#lib/queries'
 import CopyIcon from '~icons/lucide/copy'
 
 export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
@@ -154,7 +150,7 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 			<button
 				type="button"
 				onClick={() => setShowRaw(!showRaw)}
-				className="text-[11px] text-accent hover:underline text-left cursor-pointer press-down"
+				className="text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] cursor-pointer press-down w-fit"
 			>
 				{showRaw ? 'Hide' : 'Show'} raw
 			</button>

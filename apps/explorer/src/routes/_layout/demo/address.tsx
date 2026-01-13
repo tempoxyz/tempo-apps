@@ -2,7 +2,7 @@ import { ClientOnly, createFileRoute, notFound } from '@tanstack/react-router'
 import { Hex } from 'ox'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
-import { encodeAbiParameters, encodeEventTopics } from 'viem'
+import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
 import { Abis } from 'viem/tempo'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
@@ -208,14 +208,14 @@ function createMockTransactions(): MockTransactionData[] {
 						abi: Abis.feeAmm,
 						eventName: 'Mint',
 						args: {
-							sender: accountAddress,
+							to: accountAddress,
 							userToken: userTokenAddress,
 							validatorToken: validatorTokenAddress,
 						},
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters(
-						[{ type: 'uint256' }, { type: 'uint256' }, { type: 'uint256' }],
-						[1000000000n, 500000000n, 707106781n],
+						[{ type: 'address' }, { type: 'uint256' }, { type: 'uint256' }],
+						[accountAddress, 500000000n, 707106781n],
 					),
 				},
 				hash,
@@ -330,47 +330,7 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinExchange,
-						eventName: 'OrderPlaced',
-						args: {
-							orderId: 123n,
-							maker: accountAddress,
-							token: baseTokenAddress,
-						},
-					}) as [Hex.Hex, ...Hex.Hex[]],
-					data: encodeAbiParameters(
-						[{ type: 'uint128' }, { type: 'bool' }, { type: 'int16' }],
-						[1000000n, true, 100],
-					),
-				},
-				hash,
-			),
-		]
-		const receipt = mockReceipt(logs, accountAddress, hash)
-		const transaction = mockTransaction(
-			hash,
-			accountAddress,
-			exchangeAddress,
-			blockNumber - 70n,
-		)
-		transactions.push({
-			hash,
-			transaction,
-			receipt,
-			block: { timestamp: baseTimestamp - 28800n },
-			knownEvents: parseKnownEvents(receipt, { transaction, getTokenMetadata }),
-		})
-	}
-
-	// Tx 9: Order Filled
-	{
-		const hash = `0x${'3'.repeat(63)}0` as const
-		const logs = [
-			mockLog(
-				{
-					address: exchangeAddress,
-					topics: encodeEventTopics({
-						abi: Abis.stablecoinExchange,
+						abi: Abis.stablecoinDex,
 						eventName: 'OrderFilled',
 						args: {
 							orderId: 123n,
@@ -487,7 +447,6 @@ function createMockTransactions(): MockTransactionData[] {
 						eventName: 'TokenCreated',
 						args: {
 							token: tokenAddress,
-							tokenId: 1n,
 						},
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters(
@@ -497,8 +456,16 @@ function createMockTransactions(): MockTransactionData[] {
 							{ type: 'string' },
 							{ type: 'address' },
 							{ type: 'address' },
+							{ type: 'bytes32' },
 						],
-						['Test Token 2', 'TEST2', 'USD', userTokenAddress, accountAddress],
+						[
+							'Test Token 2',
+							'TEST2',
+							'USD',
+							userTokenAddress,
+							accountAddress,
+							zeroHash,
+						],
 					),
 				},
 				hash,
@@ -779,7 +746,7 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinExchange,
+						abi: Abis.stablecoinDex,
 						eventName: 'OrderPlaced',
 						args: {
 							orderId: 456n,
@@ -798,7 +765,7 @@ function createMockTransactions(): MockTransactionData[] {
 				{
 					address: exchangeAddress,
 					topics: encodeEventTopics({
-						abi: Abis.stablecoinExchange,
+						abi: Abis.stablecoinDex,
 						eventName: 'OrderFilled',
 						args: {
 							orderId: 456n,
@@ -839,24 +806,6 @@ function createMockTransactions(): MockTransactionData[] {
 						},
 					}) as [Hex.Hex, ...Hex.Hex[]],
 					data: encodeAbiParameters([{ type: 'uint256' }], [2525000n]),
-				},
-				hash,
-			),
-			mockLog(
-				{
-					address: feeAmmAddress,
-					topics: encodeEventTopics({
-						abi: Abis.feeAmm,
-						eventName: 'FeeSwap',
-						args: {
-							userToken: userTokenAddress,
-							validatorToken: validatorTokenAddress,
-						},
-					}) as [Hex.Hex, ...Hex.Hex[]],
-					data: encodeAbiParameters(
-						[{ type: 'uint256' }, { type: 'uint256' }],
-						[25000n, 24500n],
-					),
 				},
 				hash,
 			),
@@ -947,7 +896,7 @@ function Component() {
 								)}
 							</div>
 						</div>
-						<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[22ch]">
+						<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[21ch]">
 							{accountAddress}
 						</p>
 					</button>,

@@ -6,7 +6,7 @@ import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
 import { cx } from '#cva.config'
 import { DateFormatter } from '#lib/formatting'
-import { useCopy } from '#lib/hooks'
+import { useCopy, useIsMounted } from '#lib/hooks'
 import type { BlockWithTransactions } from '#lib/queries'
 import ArrowUp10 from '~icons/lucide/arrow-up-1-0'
 import ChevronDown from '~icons/lucide/chevron-down'
@@ -34,6 +34,7 @@ export function BlockCard(props: BlockCard.Props) {
 
 	const confirmationsRef = React.useRef<HTMLSpanElement>(null)
 	const latestBlockRef = React.useRef(blockNumber ?? 0n)
+	const isMounted = useIsMounted()
 
 	const getConfirmations = (latest?: bigint) => {
 		if (!blockNumber || !latest || latest < blockNumber) return undefined
@@ -41,6 +42,7 @@ export function BlockCard(props: BlockCard.Props) {
 	}
 
 	useWatchBlockNumber({
+		enabled: isMounted,
 		onBlockNumber: (newBlockNumber) => {
 			if (newBlockNumber > (latestBlockRef.current ?? 0n)) {
 				latestBlockRef.current = newBlockNumber
@@ -79,7 +81,7 @@ export function BlockCard(props: BlockCard.Props) {
 					title={String(blockNumber ?? 0n)}
 				>
 					<div className="flex items-center gap-[8px] mb-[4px]">
-						<span className="uppercase">Block</span>
+						<span>Block</span>
 						<div className="relative flex items-center">
 							<CopyIcon className="w-[12px] h-[12px] text-content-dimmed" />
 							{copyBlock.notifying && (
@@ -105,7 +107,7 @@ export function BlockCard(props: BlockCard.Props) {
 					/>
 					<BlockCard.TimeRow label="UNIX" value={String(timestamp)} />
 				</div>,
-				<div key="hash-parent" className="w-full flex flex-col gap-[8px]">
+				<div key="hash-parent" className="w-full flex flex-col gap-[12px]">
 					{hash && (
 						<button
 							type="button"
@@ -124,7 +126,9 @@ export function BlockCard(props: BlockCard.Props) {
 									)}
 								</div>
 							</div>
-							<div className="text-[14px] font-normal leading-[18px] tracking-[1px] text-primary break-all max-w-[calc(22ch+22px)]">
+							{/* the 15px font size needs to match the block number wrapper font size to make sure they align */}
+							{/* 22 chars/line * (1ch + 1px tracking) */}
+							<div className="text-[15px] font-mono font-normal leading-[18px] tracking-[1px] text-primary break-all max-w-[calc(22ch+22px)]">
 								{hash}
 							</div>
 						</button>
@@ -137,10 +141,10 @@ export function BlockCard(props: BlockCard.Props) {
 						<Link
 							to="/block/$id"
 							params={{ id: parentHash }}
-							className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end"
+							className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end font-mono max-w-[18ch]"
 							title={parentHash}
 						>
-							<Midcut value={parentHash} prefix="0x" align="end" />
+							<Midcut value={parentHash} prefix="0x" align="end" min={4} />
 						</Link>
 					</div>
 				</div>,
@@ -153,17 +157,20 @@ export function BlockCard(props: BlockCard.Props) {
 							<Link
 								to="/address/$address"
 								params={{ address: miner }}
-								className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end"
+								className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end font-mono"
 								title={miner}
 							>
-								<Midcut value={miner} prefix="0x" align="end" />
+								<Midcut value={miner} prefix="0x" align="end" min={4} />
 							</Link>
 						) : (
 							<span className="text-tertiary">—</span>
 						)}
 					</BlockCard.InfoRow>
 					<BlockCard.InfoRow label="Confirmations">
-						<span ref={confirmationsRef} className="text-primary">
+						<span
+							ref={confirmationsRef}
+							className="text-primary font-mono tabular-nums"
+						>
 							<span className="text-secondary">—</span>
 						</span>
 					</BlockCard.InfoRow>
@@ -178,7 +185,7 @@ export function BlockCard(props: BlockCard.Props) {
 							className="flex w-full items-center justify-between text-tertiary cursor-pointer press-down"
 							onClick={() => setShowAdvanced((prev) => !prev)}
 						>
-							<span className="text-[14px]">Advanced</span>
+							<span className="text-[13px]">Advanced</span>
 							<ChevronDown
 								className={cx('size-[14px] text-content-dimmed', {
 									'rotate-180': showAdvanced,
@@ -187,17 +194,17 @@ export function BlockCard(props: BlockCard.Props) {
 						</button>
 
 						{showAdvanced && (
-							<div className="mt-[14px] space-y-[14px]">
-								<div className="space-y-[6px]">
-									<div className="flex items-center justify-between text-primary">
-										<span>Gas Usage</span>
-										<span className="text-primary">
+							<div className="mt-[14px] space-y-[20px] pb-4">
+								<div className="space-y-[12px]">
+									<div className="flex items-center justify-between">
+										<span className="text-secondary">Gas Usage</span>
+										<span className="text-primary font-mono tabular-nums">
 											{gasUsage !== undefined
 												? `${gasUsage.toFixed(2)}%`
 												: '0.00%'}
 										</span>
 									</div>
-									<div className="flex items-center h-[2px] px-[1px] bg-card-border">
+									<div className="flex items-center h-[6px] px-px bg-card-border">
 										<div
 											className="h-full bg-accent"
 											style={{
@@ -205,14 +212,14 @@ export function BlockCard(props: BlockCard.Props) {
 											}}
 										/>
 									</div>
-									<div className="flex items-center justify-between text-tertiary">
+									<div className="flex items-center justify-between text-tertiary font-mono tabular-nums">
 										<BlockCard.GasValue value={gasUsed} />
 										<BlockCard.GasValue value={gasLimit} highlight={false} />
 									</div>
 								</div>
 
 								<div className="space-y-[8px]">
-									<div>Roots</div>
+									<div className="text-secondary">Roots</div>
 									{roots.map((root) => (
 										<BlockCard.RootRow
 											key={root.label}
@@ -242,7 +249,9 @@ export namespace BlockCard {
 				<span className="text-[11px] uppercase text-tertiary bg-base-alt/65 px-[4px] py-[2px]">
 					{label}
 				</span>
-				<span className="text-right text-base-content-secondary">{value}</span>
+				<span className="text-right text-base-content-secondary font-mono">
+					{value}
+				</span>
 			</div>
 		)
 	}
@@ -256,12 +265,12 @@ export namespace BlockCard {
 
 	export function BlockNumber(props: BlockNumber.Props) {
 		const { value } = props
-		const str = String(value).padStart(14, '0')
+		const str = String(value).padStart(15, '0')
 		const zerosEnd = str.match(/^0*/)?.[0].length ?? 0
 		return (
-			// the 14px font size is used to set the same width as the block hash
-			<div className="text-[14px] max-w-[calc(22ch+22px)]">
-				<span className="flex justify-between gap-[1px] text-[22px] text-tertiary">
+			// the 15px font size is used to set the same width as the block hash
+			<div className="text-[15px] max-w-[calc(22ch+22px)] font-mono">
+				<span className="flex justify-between gap-px text-[22px] text-tertiary">
 					{str.split('').map((char, index) => (
 						<span
 							key={`${index}-${char}`}
@@ -342,11 +351,11 @@ export namespace BlockCard {
 				className="w-full flex items-center justify-between gap-[8px] text-primary lowercase cursor-pointer press-down"
 				title={hash}
 			>
-				<span className="text-[12px] text-tertiary shrink-0">
+				<span className="text-[12px] text-tertiary shrink-0 font-sans">
 					{notifying ? 'copied' : label}
 				</span>
-				<div className="flex items-center gap-[8px] min-w-0 flex-1 justify-end">
-					<Midcut value={hash} prefix="0x" align="end" />
+				<div className="flex items-center gap-[8px] min-w-0 flex-1 justify-end font-mono">
+					<Midcut value={hash} prefix="0x" align="end" min={4} />
 					<CopyIcon className="w-[12px] h-[12px] text-content-dimmed shrink-0" />
 				</div>
 			</button>

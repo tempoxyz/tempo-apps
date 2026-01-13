@@ -70,9 +70,12 @@ export function Pagination(props: Pagination.Props) {
 						<ChevronLeft className="size-[14px]" />
 					</Link>
 
-					<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
-						Page {Pagination.numFormat.format(page)} of{' '}
-						{Pagination.numFormat.format(totalPages)}
+					<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+						Page{' '}
+						<span className="text-primary">
+							{Pagination.numFormat.format(page)}
+						</span>{' '}
+						of {Pagination.numFormat.format(totalPages)}
 					</span>
 
 					<Link
@@ -96,10 +99,7 @@ export function Pagination(props: Pagination.Props) {
 						to="."
 						type="button"
 						resetScroll={false}
-						search={(previous) => ({
-							...previous,
-							page: totalPages,
-						})}
+						search={(previous) => ({ ...previous, page: totalPages })}
 						disabled={page >= totalPages || isPending}
 						className={cx(
 							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
@@ -239,7 +239,7 @@ export namespace Pagination {
 				<Link
 					to="."
 					resetScroll={false}
-					search={(prev) => ({ ...prev, page: 1, live: true })}
+					search={(prev) => ({ ...prev, page: 1 })}
 					disabled={page <= 1}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
@@ -251,10 +251,10 @@ export namespace Pagination {
 				<Link
 					to="."
 					resetScroll={false}
-					search={(prev) => {
-						const newPage = (prev?.page ?? 1) - 1
-						return { ...prev, page: newPage, live: newPage === 1 }
-					}}
+					search={(prev) => ({
+						...prev,
+						page: (prev?.page ?? 1) - 1,
+					})}
 					disabled={page <= 1}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
@@ -263,12 +263,11 @@ export namespace Pagination {
 				>
 					<ChevronLeft className="size-[14px]" />
 				</Link>
-				<span className="text-primary font-medium tabular-nums px-[4px] whitespace-nowrap">
-					Page{' '}
-					<span className={fetching ? 'opacity-50' : undefined}>
+				<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+					<span className={cx('text-primary', fetching && 'opacity-50')}>
 						{Pagination.numFormat.format(page)}
-					</span>{' '}
-					of{' '}
+					</span>
+					{' of '}
 					{countLoading
 						? '…'
 						: totalPages > 0
@@ -281,7 +280,6 @@ export namespace Pagination {
 					search={(prev) => ({
 						...prev,
 						page: (prev?.page ?? 1) + 1,
-						live: false,
 					})}
 					disabled={page >= totalPages}
 					className={cx(
@@ -294,7 +292,7 @@ export namespace Pagination {
 				<Link
 					to="."
 					resetScroll={false}
-					search={(prev) => ({ ...prev, page: totalPages, live: false })}
+					search={(prev) => ({ ...prev, page: totalPages })}
 					disabled={page >= totalPages || disableLastPage}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
@@ -319,8 +317,16 @@ export namespace Pagination {
 	}
 
 	export function Count(props: Count.Props) {
-		const { page, totalPages, totalItems, itemsLabel, loading, className } =
-			props
+		const {
+			page,
+			totalPages,
+			totalItems,
+			itemsLabel,
+			loading,
+			capped,
+			className,
+		} = props
+
 		return (
 			<div
 				className={cx(
@@ -330,17 +336,22 @@ export namespace Pagination {
 			>
 				{page != null && totalPages != null && (
 					<>
-						<span className="text-tertiary">Page</span>
-						<span className="text-primary">{page}</span>
+						<span className="text-primary tabular-nums">
+							{Pagination.numFormat.format(page)}
+						</span>
 						<span className="text-tertiary">of</span>
-						<span className="text-primary">{totalPages}</span>
+						<span className="text-primary tabular-nums">
+							{Pagination.numFormat.format(totalPages)}
+						</span>
 						<span className="text-tertiary">•</span>
 					</>
 				)}
 				<span className="text-primary tabular-nums">
-					{loading ? '…' : Pagination.numFormat.format(totalItems)}
+					{loading
+						? '…'
+						: `${capped ? '> ' : ''}${Pagination.numFormat.format(totalItems)}`}
 				</span>
-				<span className="text-tertiary">{itemsLabel}</span>
+				<span className="text-tertiary font-sans">{itemsLabel}</span>
 			</div>
 		)
 	}
@@ -352,6 +363,7 @@ export namespace Pagination {
 			totalItems: number
 			itemsLabel: string
 			loading?: boolean
+			capped?: boolean
 			className?: string
 		}
 	}

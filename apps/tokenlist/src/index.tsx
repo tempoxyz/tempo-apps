@@ -1,12 +1,14 @@
 import { Hono } from 'hono'
-import { tempoDevnet, tempoTestnet } from '#chains.ts'
+import { cors } from 'hono/cors'
 import { Docs } from '#docs.tsx'
+
+import { CHAIN_IDS } from '#chains.ts'
 import { OpenAPISpec, TokenList } from '#schema.ts'
 import type { TokenListSchema } from '#tokenlist.types.ts'
 
 const app = new Hono<{ Bindings: Cloudflare.Env }>()
 
-const CHAIN_IDS = [tempoDevnet.id, tempoTestnet.id]
+app.use('*', cors())
 
 const staticAssetBindingError =
 	'Static assets binding "ASSETS" is not configured.'
@@ -15,6 +17,14 @@ app
 	.get('/', (context) => context.redirect('/docs'))
 	.get('/health', (_context) => new Response('ok'))
 	.get('/docs', async (context) => context.html(<Docs />))
+	.get('/version', async (context) =>
+		context.json({
+			timestamp: Date.now(),
+			source: 'https://github.com/tempoxyz/tempo-apps',
+			rev: __BUILD_VERSION__,
+			chains: CHAIN_IDS,
+		}),
+	)
 
 app
 	.get('/schema/openapi', async (context) => context.json(OpenAPISpec))
@@ -24,8 +34,7 @@ app
 
 app.get('/icon/:chain_id', async (context) => {
 	const chainId = context.req.param('chain_id')
-	if (![tempoDevnet.id, tempoTestnet.id].includes(Number(chainId)))
-		return context.notFound()
+	if (!CHAIN_IDS.includes(Number(chainId))) return context.notFound()
 
 	const assets = context.env.ASSETS
 	if (!assets)
@@ -52,8 +61,7 @@ app.get('/icon/:chain_id/:address', async (context) => {
 	const address = context.req.param('address')
 	const chainId = context.req.param('chain_id')
 
-	if (![tempoDevnet.id, tempoTestnet.id].includes(Number(chainId)))
-		return context.notFound()
+	if (!CHAIN_IDS.includes(Number(chainId))) return context.notFound()
 
 	const assets = context.env.ASSETS
 	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
@@ -81,8 +89,7 @@ app.get('/icon/:chain_id/:address', async (context) => {
 
 app.get('/list/:chain_id', async (context) => {
 	const chainId = context.req.param('chain_id')
-	if (![tempoDevnet.id, tempoTestnet.id].includes(Number(chainId)))
-		return context.notFound()
+	if (!CHAIN_IDS.includes(Number(chainId))) return context.notFound()
 
 	const assets = context.env.ASSETS
 	if (!assets) return new Response(staticAssetBindingError, { status: 500 })
@@ -103,8 +110,7 @@ app.get('/asset/:chain_id/:id', async (context) => {
 	const id = context.req.param('id')
 	const chainId = context.req.param('chain_id')
 
-	if (![tempoDevnet.id, tempoTestnet.id].includes(Number(chainId)))
-		return context.notFound()
+	if (!CHAIN_IDS.includes(Number(chainId))) return context.notFound()
 
 	const assets = context.env.ASSETS
 	if (!assets) return new Response(staticAssetBindingError, { status: 500 })

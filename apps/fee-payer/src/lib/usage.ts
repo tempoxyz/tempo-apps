@@ -2,9 +2,9 @@ import { env } from 'cloudflare:workers'
 import * as IDX from 'idxs'
 import { sql } from 'kysely'
 import type { Address } from 'ox'
-import { tempo, tempoTestnet } from 'tempo.ts/chains'
 import { createPublicClient, formatUnits, http } from 'viem'
 import { Actions, Addresses } from 'viem/tempo'
+import { tempoChain } from './chain.js'
 import { alphaUsd } from './consts.js'
 
 const IS = IDX.IndexSupply.create({
@@ -39,7 +39,7 @@ export async function getUsage(
 			sql<number>`min(transfer.block_timestamp)`.as('starting_at'),
 			eb.fn.count('tx_hash').as('n_transactions'),
 		])
-		.where('chain', '=', tempo.id)
+		.where('chain', '=', tempoChain.id)
 		.where('from', '=', feePayerAddress)
 		.where('to', '=', Addresses.feeManager)
 		.$if(blockTimestampFrom !== undefined, (eb) =>
@@ -62,7 +62,7 @@ export async function getUsage(
 	const feesPaid = result?.total_spent ? BigInt(result.total_spent) : 0n
 	const feeTokenMetadata = await Actions.token.getMetadata(
 		createPublicClient({
-			chain: tempoTestnet({}),
+			chain: tempoChain,
 			transport: http(),
 		}),
 		{ token: alphaUsd },

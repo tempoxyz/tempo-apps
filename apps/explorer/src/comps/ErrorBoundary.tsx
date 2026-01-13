@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/tanstackstart-react'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 import * as React from 'react'
 import { Footer } from '#comps/Footer'
@@ -6,7 +5,7 @@ import { Header } from '#comps/Header'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 
-class ErrorBoundary extends React.Component<
+export class ErrorBoundary extends React.Component<
 	ErrorComponentProps,
 	{ error: Error | null }
 > {
@@ -20,7 +19,6 @@ class ErrorBoundary extends React.Component<
 	componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
 		this.setState({ error })
 		console.error(error, errorInfo)
-		Sentry.captureException(error)
 	}
 
 	render() {
@@ -30,7 +28,7 @@ class ErrorBoundary extends React.Component<
 				<section className="flex flex-1 flex-col size-full items-center justify-center px-[16px] max-w-[600px] gap-[16px] m-auto">
 					<div className="flex flex-col items-center gap-[8px]">
 						<h1 className="text-[24px] lg:text-[40px] font-medium text-base-content">
-							Something Went Wrong
+							Something went wrong
 						</h1>
 						<p className="text-base-content-secondary text-[15px] lg:text-[18px] text-center">
 							An unexpected error occurred while loading this page.
@@ -49,7 +47,7 @@ class ErrorBoundary extends React.Component<
 						onClick={() => window.history.back()}
 						className="text-accent rounded-[8px] press-down"
 					>
-						Go Back
+						Return home ⏎
 					</button>
 				</section>
 				<Footer />
@@ -77,21 +75,3 @@ function CopyButton({ text }: { text: string }) {
 		</>
 	)
 }
-
-export const SentryWrappedErrorBoundary = Sentry.withErrorBoundary(
-	ErrorBoundary,
-	{
-		onError: (_error) => {
-			const error =
-				_error instanceof Error ? _error : (new Error(String(_error)) as Error)
-			Sentry.captureException(error)
-			return (
-				<ErrorBoundary
-					error={error}
-					// TODO: reset the error boundary
-					reset={() => {}}
-				/>
-			)
-		},
-	},
-)

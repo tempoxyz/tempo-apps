@@ -1,17 +1,14 @@
-import { env } from 'cloudflare:workers'
 import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
-import { readContract } from 'wagmi/actions'
-
+import { getChainId, getPublicClient } from 'wagmi/actions'
 import { zAddress } from '#lib/zod.ts'
-import { config, getConfig } from '#wagmi.config.ts'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
-	apiKey: env.INDEXER_API_KEY,
+	apiKey: process.env.INDEXER_API_KEY,
 })
 
 const QB = IDX.QueryBuilder.from(IS)
@@ -19,13 +16,17 @@ const QB = IDX.QueryBuilder.from(IS)
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
+const isTestnet = process.env.VITE_TEMPO_ENV === 'testnet'
+
 export const Route = createFileRoute('/api/address/total-value/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
+				if (isTestnet) return Response.json({ totalValue: 0 })
+
 				try {
 					const address = zAddress().parse(params.address)
-					const chainId = config.getClient().chain.id
+					const chainId = getChainId(getWagmiConfig())
 					const addressLower = address.toLowerCase()
 
 					// Limit to prevent timeouts on addresses with many transfer events
@@ -69,15 +70,21 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 					const MAX_TOKENS = 20
 					const tokensToFetch = rowsWithBalance.slice(0, MAX_TOKENS)
 
+					const config = getWagmiConfig()
+					const publicClient = getPublicClient(config)
+
 					const decimals =
+						// TODO: investigate & consider batch/multicall
 						(await Promise.all(
 							tokensToFetch.map(
 								(row) =>
-									readContract(getConfig(), {
-										address: row.token_address as Address.Address,
-										abi: Abis.tip20,
-										functionName: 'decimals',
-									}).catch(() => 18), // Fallback to 18 decimals on error
+									publicClient
+										.readContract({
+											address: row.token_address as Address.Address,
+											abi: Abis.tip20,
+											functionName: 'decimals',
+										})
+										.catch(() => 18), // Fallback to 18 decimals on error
 							),
 						)) ?? []
 
@@ -98,11 +105,14 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 						})
 						.reduce((acc, balance) => acc + balance * PRICE_PER_TOKEN, 0)
 
-					return json({ totalValue })
+					return Response.json({ totalValue })
 				} catch (error) {
 					console.error(error)
 					const errorMessage = error instanceof Error ? error.message : error
-					return json({ data: null, error: errorMessage }, { status: 500 })
+					return Response.json(
+						{ data: null, error: errorMessage },
+						{ status: 500 },
+					)
 				}
 			},
 		},

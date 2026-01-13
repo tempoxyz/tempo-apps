@@ -1,57 +1,141 @@
-import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister'
-import { QueryClient } from '@tanstack/react-query'
-import type { OneOf } from 'viem'
-import { tempoLocalnet, tempoTestnet } from 'viem/chains'
-import { createConfig, deserialize, http, serialize, webSocket } from 'wagmi'
-import { hashFn } from 'wagmi/query'
-
-// biome-ignore lint/suspicious/noExplicitAny: TODO
-type TODO = any
-
-const browser = typeof window !== 'undefined'
-
-export const DEFAULT_TESTNET_RPC_URL = 'https://rpc-orchestra.testnet.tempo.xyz'
-export const DEFAULT_TESTNET_WS_URL = 'wss://rpc-orchestra.testnet.tempo.xyz'
-
-export const queryClient = new QueryClient({
-	defaultOptions: {
-		queries: {
-			staleTime: 60 * 1_000, // needed for SSR
-			queryKeyHashFn: hashFn,
-			refetchOnWindowFocus: false,
-			gcTime: 1_000 * 60 * 60 * 24, // 24 hours
-		},
-	},
-})
-
-export const persister = createAsyncStoragePersister({
-	// Cache key includes build version - automatically invalidates on new deploys
-	key: `tempo-query-cache-${__BUILD_VERSION__}`,
+import {
+	createIsomorphicFn,
+	createServerFn,
+	createServerOnlyFn,
+} from '@tanstack/react-start'
+import { getRequestHeader } from '@tanstack/react-start/server'
+import {
+	tempoDevnet,
+	tempoLocalnet,
+	tempoAndantino,
+	tempoModerato,
+} from 'viem/chains'
+import { tempoPresto } from './lib/chains'
+import { createPublicClient } from 'viem'
+import { tempoActions } from 'viem/tempo'
+import {
+	cookieStorage,
+	cookieToInitialState,
+	createConfig,
+	createStorage,
+	fallback,
+	http,
 	serialize,
-	storage: browser ? window.localStorage : undefined,
-	deserialize,
-})
+	webSocket,
+} from 'wagmi'
 
-const chain =
-	import.meta.env.VITE_LOCALNET === 'true' ? tempoLocalnet : tempoTestnet
+const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
-export function getConfig(
-	parameters: OneOf<{ rpcUrl?: string | undefined }> = {},
-) {
-	const { rpcUrl } = parameters
+export type WagmiConfig = ReturnType<typeof getWagmiConfig>
+
+const getWsUrls = createIsomorphicFn()
+	.client(() =>
+		[
+			import.meta.env.VITE_TEMPO_RPC_WS,
+			import.meta.env.VITE_TEMPO_RPC_WS_FALLBACK,
+		].filter(Boolean),
+	)
+	.server(() =>
+		[
+			process.env.VITE_TEMPO_RPC_WS,
+			process.env.VITE_TEMPO_RPC_WS_FALLBACK,
+		].filter(Boolean),
+	)
+
+const getHttpUrls = createIsomorphicFn()
+	.client(() =>
+		[
+			import.meta.env.VITE_TEMPO_RPC_HTTP,
+			import.meta.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
+		].filter(Boolean),
+	)
+	.server(() =>
+		[
+			process.env.VITE_TEMPO_RPC_HTTP,
+			process.env.VITE_TEMPO_RPC_HTTP_FALLBACK,
+		].filter(Boolean),
+	)
+
+const getTempoRpcKey = createServerOnlyFn(() => process.env.TEMPO_RPC_KEY)
+
+export const getTempoChain = createIsomorphicFn()
+	.client(() =>
+		TEMPO_ENV === 'presto'
+			? tempoPresto
+			: TEMPO_ENV === 'devnet'
+				? tempoDevnet
+				: TEMPO_ENV === 'moderato'
+					? tempoModerato
+					: tempoAndantino,
+	)
+	.server(() =>
+		TEMPO_ENV === 'presto'
+			? tempoPresto
+			: TEMPO_ENV === 'devnet'
+				? tempoDevnet
+				: TEMPO_ENV === 'moderato'
+					? tempoModerato
+					: tempoAndantino,
+	)
+
+const getTempoTransport = createIsomorphicFn()
+	.client(() =>
+		fallback([
+			...getWsUrls().map((u) => webSocket(u)),
+			...getHttpUrls().map((u) => http(u)),
+		]),
+	)
+	.server(() => {
+		const rpcKey = getTempoRpcKey()
+		if (rpcKey === '__FORWARD__') {
+			const authHeader = getRequestHeader('authorization')
+			return fallback([
+				...getWsUrls().map((url) => webSocket(url)),
+				...getHttpUrls().map((url) =>
+					http(url, {
+						fetchOptions: { headers: { Authorization: authHeader ?? '' } },
+					}),
+				),
+			])
+		}
+		return fallback([
+			...getWsUrls().map((url) => webSocket(`${url}/${rpcKey}`)),
+			...getHttpUrls().map((url) => http(`${url}/${rpcKey}`)),
+		])
+	})
+
+export function getWagmiConfig() {
+	const chain = getTempoChain()
+	const transport = getTempoTransport()
+
 	return createConfig({
-		chains: [chain],
 		ssr: true,
 		batch: { multicall: false },
+		chains: [chain, tempoLocalnet],
+		storage: createStorage({ storage: cookieStorage }),
 		transports: {
-			[tempoTestnet.id]: browser
-				? webSocket(DEFAULT_TESTNET_WS_URL)
-				: http(rpcUrl ?? DEFAULT_TESTNET_RPC_URL),
-			[tempoLocalnet.id]: http(undefined, {
-				batch: true,
-			}),
-		},
+			[chain.id]: transport,
+			[tempoLocalnet.id]: http(undefined, { batch: true }),
+		} as never,
 	})
 }
 
-export const config = getConfig() as TODO
+export const getWagmiStateSSR = createServerFn().handler(() => {
+	const cookie = getRequestHeader('cookie')
+	const initialState = cookieToInitialState(getWagmiConfig(), cookie)
+	return serialize(initialState || {})
+})
+
+// Batched HTTP client for bulk RPC operations
+export function getBatchedClient() {
+	const chain = getTempoChain()
+	const transport = getTempoTransport()
+
+	return createPublicClient({ chain, transport }).extend(tempoActions())
+}
+
+declare module 'wagmi' {
+	interface Register {
+		config: ReturnType<typeof getWagmiConfig>
+	}
+}

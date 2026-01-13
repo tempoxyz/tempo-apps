@@ -3,6 +3,7 @@ import * as React from 'react'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
 import { cx } from '#cva.config'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
 
 export function DataGrid(props: DataGrid.Props) {
 	const {
@@ -10,6 +11,7 @@ export function DataGrid(props: DataGrid.Props) {
 		items,
 		totalItems,
 		displayCount,
+		displayCountCapped = false,
 		page,
 		fetching = false,
 		loading = false,
@@ -42,7 +44,7 @@ export function DataGrid(props: DataGrid.Props) {
 					? `minmax(${col.minWidth}px, ${col.width})`
 					: col.width
 			if (col.minWidth) return `minmax(${col.minWidth}px, auto)`
-			return 'auto'
+			return mode === 'tabs' ? 'minmax(0, auto)' : 'auto'
 		})
 		.join(' ')
 
@@ -51,24 +53,41 @@ export function DataGrid(props: DataGrid.Props) {
 			<div className="relative w-full">
 				<div
 					className={cx(
-						'w-full text-[14px] rounded-t-[2px] grid',
+						'w-full text-[13px] rounded-t-[2px] grid',
 						flexible && 'min-w-max',
+						mode === 'tabs' && 'max-w-full',
 					)}
 					style={{ gridTemplateColumns }}
 				>
 					<div className="grid col-span-full border-b border-dashed border-distinct grid-cols-subgrid">
 						{activeColumns.map((column, index) => {
 							const key = `header-${index}`
+							const sortDir = column.sortDirection
+							const hasSort = sortDir === 'asc' || sortDir === 'desc'
+							const label =
+								typeof column.label === 'string'
+									? column.label.charAt(0) + column.label.slice(1).toLowerCase()
+									: column.label
 							return (
 								<div
 									key={key}
 									className={cx(
-										'px-[10px] first:pl-[16px] last:pr-[16px] h-[40px] flex items-center',
-										'text-[13px] text-tertiary font-normal whitespace-nowrap',
+										'px-[10px] first:pl-[16px] last:pr-[16px] h-[40px] flex items-center gap-[6px]',
+										'text-[13px] text-tertiary font-normal whitespace-nowrap font-sans',
 										column.align === 'end' ? 'justify-end' : 'justify-start',
 									)}
 								>
-									{column.label}
+									<span className="inline-flex items-center gap-[4px]">
+										{label}
+										{hasSort && (
+											<ChevronDownIcon
+												className={cx(
+													'size-[12px] text-tertiary',
+													sortDir === 'asc' && 'rotate-180',
+												)}
+											/>
+										)}
+									</span>
 								</div>
 							)
 						})}
@@ -101,6 +120,7 @@ export function DataGrid(props: DataGrid.Props) {
 								{item.link && (
 									<Link
 										to={item.link.href}
+										search={item.link.search}
 										title={item.link.title}
 										className="absolute inset-0 -left-[3px] z-0 [&:active~div]:translate-y-[0.5px] -outline-offset-2!"
 									/>
@@ -122,14 +142,15 @@ export function DataGrid(props: DataGrid.Props) {
 														key={key}
 														className={cx(
 															'px-[10px] py-[12px] flex items-start min-h-[48px]',
-															'text-primary',
+															'text-primary font-mono',
 															isFirstColumn && 'pl-[16px]',
 															isLastColumn && 'pr-[16px]',
 															column?.align === 'end'
-																? 'justify-end'
+																? 'justify-end text-right'
 																: 'justify-start',
 															item.link &&
 																'pointer-events-none [&_a]:pointer-events-auto [&_a]:relative [&_a]:z-1 [&_button]:pointer-events-auto [&_button]:relative [&_button]:z-1',
+															mode === 'tabs' && 'min-w-0 overflow-hidden',
 														)}
 													>
 														{content}
@@ -152,34 +173,40 @@ export function DataGrid(props: DataGrid.Props) {
 					})}
 				</div>
 			</div>
-			<div className="mt-auto">
-				{pagination === 'simple' ? (
-					<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
-						<Pagination.Simple
+			{/* Hide pagination when no items and not loading */}
+			{(totalItems > 0 || loading) && (
+				<div className="mt-auto">
+					{pagination !== 'default' && pagination !== 'simple' ? (
+						pagination
+					) : pagination === 'simple' ? (
+						<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
+							<Pagination.Simple
+								page={page}
+								totalPages={totalPages}
+								fetching={fetching && !loading}
+								countLoading={countLoading}
+								disableLastPage={disableLastPage}
+							/>
+							{/* Show transaction count - loading state shown while fetching */}
+							<Pagination.Count
+								totalItems={displayCount ?? 0}
+								itemsLabel={itemsLabel}
+								loading={loading || displayCount == null}
+								capped={displayCountCapped}
+							/>
+						</div>
+					) : (
+						<Pagination
 							page={page}
 							totalPages={totalPages}
-							fetching={fetching && !loading}
-							countLoading={countLoading}
-							disableLastPage={disableLastPage}
-						/>
-						{/* Show transaction count - loading state shown while fetching */}
-						<Pagination.Count
-							totalItems={displayCount ?? 0}
+							totalItems={totalItems}
 							itemsLabel={itemsLabel}
-							loading={loading || displayCount == null}
+							isPending={fetching}
+							compact={mode === 'stacked'}
 						/>
-					</div>
-				) : (
-					<Pagination
-						page={page}
-						totalPages={totalPages}
-						totalItems={totalItems}
-						itemsLabel={itemsLabel}
-						isPending={fetching}
-						compact={mode === 'stacked'}
-					/>
-				)}
-			</div>
+					)}
+				</div>
+			)}
 		</div>
 	)
 }
@@ -190,10 +217,12 @@ export namespace DataGrid {
 		align?: 'start' | 'end'
 		minWidth?: number
 		width?: number | `${number}fr`
+		sortDirection?: 'asc' | 'desc'
 	}
 
 	export interface RowLink {
 		href: string
+		search?: Record<string, unknown>
 		title: string
 	}
 
@@ -215,6 +244,8 @@ export namespace DataGrid {
 		totalItems: number
 		/** Optional separate count for display (e.g., exact transaction count) */
 		displayCount?: number
+		/** Whether the display count is capped (shows "> X" prefix) */
+		displayCountCapped?: boolean
 		page: number
 		fetching?: boolean
 		loading?: boolean
@@ -223,7 +254,7 @@ export namespace DataGrid {
 		disableLastPage?: boolean
 		itemsLabel?: string
 		itemsPerPage?: number
-		pagination?: 'default' | 'simple'
+		pagination?: 'default' | 'simple' | React.ReactNode
 		emptyState?: React.ReactNode
 		flexible?: boolean
 	}

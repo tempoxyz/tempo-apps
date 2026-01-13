@@ -1,9 +1,19 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as IDX from 'idxs'
 import { Address, Hex } from 'ox'
-import tokensIndex from '#data/tokens-index.json' with { type: 'json' }
+import { getChainId } from 'wagmi/actions'
+import tokensIndex31318 from '#data/tokens-index-31318.json' with {
+	type: 'json',
+}
+import tokensIndex42429 from '#data/tokens-index-42429.json' with {
+	type: 'json',
+}
+import tokensIndex42431 from '#data/tokens-index-42431.json' with {
+	type: 'json',
+}
+import tokensIndex4217 from '#data/tokens-index-4217.json' with { type: 'json' }
 import { isTip20Address } from '#lib/domain/tip20'
-import { config } from '#wagmi.config.ts'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -51,18 +61,25 @@ type IndexedToken = {
 	searchKey: string
 }
 
-// prepare search keys
-const indexedTokens: IndexedToken[] = (tokensIndex as Token[]).map(
-	([address, symbol, name]) => ({
+function indexTokens(tokens: Token[]): IndexedToken[] {
+	return tokens.map(([address, symbol, name]) => ({
 		address,
 		symbol,
 		name,
 		searchKey: `${symbol.toLowerCase()}|${name.toLowerCase()}|${address}`,
-	}),
-)
+	}))
+}
 
-function searchTokens(query: string): TokenSearchResult[] {
+const INDEXED_TOKENS: Record<number, IndexedToken[]> = {
+	31318: indexTokens(tokensIndex31318 as Token[]),
+	42429: indexTokens(tokensIndex42429 as Token[]),
+	42431: indexTokens(tokensIndex42431 as Token[]),
+	4217: indexTokens(tokensIndex4217 as Token[]),
+}
+
+function searchTokens(query: string, chainId: number): TokenSearchResult[] {
 	query = query.toLowerCase()
+	const indexedTokens = INDEXED_TOKENS[chainId] ?? []
 
 	// filter using search keys
 	const matches = indexedTokens.filter((token) => {
@@ -118,6 +135,7 @@ export const Route = createFileRoute('/api/search')({
 						query,
 					} satisfies SearchApiResponse)
 
+				const chainId = getChainId(getWagmiConfig())
 				const results: SearchResult[] = []
 
 				// address
@@ -133,7 +151,6 @@ export const Route = createFileRoute('/api/search')({
 				// hash
 				if (isHash) {
 					try {
-						const chainId = config.getClient().chain.id
 						const result = await QB.selectFrom('txs')
 							.select(['block_timestamp'])
 							.where('chain', '=', chainId)
@@ -157,7 +174,7 @@ export const Route = createFileRoute('/api/search')({
 					}
 				} else {
 					// search for token matches (even if an address was found)
-					results.push(...searchTokens(query))
+					results.push(...searchTokens(query, chainId))
 				}
 
 				return Response.json({ results, query } satisfies SearchApiResponse, {

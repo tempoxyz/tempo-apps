@@ -2,11 +2,17 @@ import { env } from 'cloudflare:workers'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { tempo } from 'tempo.ts/chains'
 import { Handler } from 'tempo.ts/server'
 import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
+import type { Chain } from 'viem/chains'
 import * as z from 'zod'
+import { tempoChain } from './lib/chain.js'
+import {
+	FeePayerEvents,
+	captureEvent,
+	getRequestContext,
+} from './lib/posthog.js'
 import { rateLimitMiddleware } from './lib/rate-limit.js'
 import { getUsage } from './lib/usage.js'
 
@@ -40,6 +46,16 @@ app.get(
 		const account = privateKeyToAccount(
 			env.SPONSOR_PRIVATE_KEY as `0x${string}`,
 		)
+
+		const requestContext = getRequestContext(c.req.raw)
+		c.executionCtx.waitUntil(
+			captureEvent({
+				distinctId: requestContext.origin ?? 'unknown',
+				event: FeePayerEvents.USAGE_QUERY,
+				properties: requestContext,
+			}),
+		)
+
 		const data = await getUsage(
 			account.address,
 			blockTimestampFrom,
@@ -51,12 +67,24 @@ app.get(
 )
 
 app.all('*', rateLimitMiddleware, async (c) => {
+	const requestContext = getRequestContext(c.req.raw)
+
 	const handler = Handler.feePayer({
 		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
-		chain: tempo({ feeToken: '0x20c0000000000000000000000000000000000001' }),
-		transport: http(env.TEMPO_RPC_URL),
+		chain: tempoChain as Chain,
+		transport: http(env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0]),
 		async onRequest(request) {
 			console.log(`Sponsoring transaction: ${request.method}`)
+			c.executionCtx.waitUntil(
+				captureEvent({
+					distinctId: requestContext.origin ?? 'unknown',
+					event: FeePayerEvents.SPONSORSHIP_REQUEST,
+					properties: {
+						...requestContext,
+						rpcMethod: request.method,
+					},
+				}),
+			)
 		},
 	})
 	return handler.fetch(c.req.raw)

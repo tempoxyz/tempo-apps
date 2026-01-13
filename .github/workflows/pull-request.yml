@@ -8,6 +8,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
 
+env:
+  NODE_ENV: production
+  WRANGLER_SEND_METRICS: false
+
 jobs:
   verify:
     name: Verify
@@ -15,19 +19,38 @@ jobs:
     secrets: inherit
 
   deploy-preview:
-    name: Deploy Preview (${{ matrix.app }})
+    name: Deploy Preview (${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }})
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       issues: write
+      contents: read
       pull-requests: write
     strategy:
       matrix:
-        app: [explorer, fee-payer, og, tokenlist]
-
+        include:
+          #### explorer
+          - app: explorer
+            env: testnet
+          - app: explorer
+            env: moderato
+          - app: explorer
+            env: devnet
+          #### fee-payer
+          - app: fee-payer
+            env: privy
+          - app: fee-payer
+            env: devnet
+          - app: fee-payer
+            env: testnet
+          #### other (single-env-apps)
+          - app: og
+          - app: tokenlist
+    env:
+      NODE_ENV: production
+      CLOUDFLARE_ENV: ${{ matrix.env || '' }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           submodules: "recursive"
           fetch-depth: 0
@@ -59,8 +82,9 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: versions upload
           workingDirectory: apps/${{ matrix.app }}
+          environment: ${{ env.CLOUDFLARE_ENV }}
+          command: versions upload
 
       - name: Comment Preview URL on PR
         if: steps.changes.outputs.relevant == 'true'

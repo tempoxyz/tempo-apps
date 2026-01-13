@@ -1,13 +1,11 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import { isAddress } from 'viem'
-import { getChainId } from 'wagmi/actions'
+import { useChainId } from 'wagmi'
 import * as z from 'zod/mini'
 
-import { config } from '#wagmi.config.ts'
-
 const CONTRACT_VERIFICATION_API_BASE_URL =
-	'https://contracts.tempo.xyz/v2/contract'
+	import.meta.env.VITE_CONTRACT_VERIFY_URL ?? 'https://contracts.tempo.xyz'
 
 const SoliditySettingsSchema = z.object({
 	remappings: z.optional(z.array(z.string())),
@@ -157,6 +155,11 @@ export function useContractSourceQueryOptions(params: {
 	address: Address.Address
 	chainId?: number
 }) {
-	const { address, chainId = getChainId(config) } = params
-	return contractSourceQueryOptions({ address, chainId })
+	const { address, chainId } = params
+	const defaultChainId = useChainId()
+
+	return contractSourceQueryOptions({
+		address,
+		chainId: chainId ?? defaultChainId,
+	})
 }

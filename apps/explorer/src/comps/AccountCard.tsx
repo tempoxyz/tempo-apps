@@ -2,6 +2,7 @@ import { ClientOnly, getRouteApi } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { InfoCard } from '#comps/InfoCard'
 import { RelativeTime } from '#comps/RelativeTime'
+import { type AccountType, getAccountTag, isSystemAddress } from '#lib/account'
 import { PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
@@ -16,17 +17,39 @@ export function AccountCard(props: AccountCard.Props) {
 		createdTimestamp,
 		lastActivityTimestamp,
 		totalValue,
+		accountType,
 	} = props
 
 	const { copy, notifying } = useCopy()
+	const tag = getAccountTag(address as Address.Address)
+	const isSystem = isSystemAddress(address as Address.Address)
 
 	return (
 		<InfoCard
 			title={
-				<div className="flex items-center justify-between px-[18px] h-[36px]">
-					<h1 className="text-[13px] uppercase text-tertiary select-none">
-						Account
+				<div className="flex items-center justify-between px-[18px] h-[36px] font-sans">
+					<h1 className="text-[13px] text-tertiary select-none">
+						{accountType === 'contract' ? 'Contract' : 'Address'}
 					</h1>
+					{/* Only show chip when it provides additional info (system, empty) */}
+					{(isSystem || accountType === 'empty') && (
+						<div
+							className="text-[11px] bg-base-alt rounded text-secondary lowercase select-none py-0.5 px-1.5 -mr-2.5 flex items-center"
+							title={
+								tag
+									? tag.id.startsWith('system:')
+										? `System: ${tag.label}`
+										: tag.id.startsWith('genesis-token:')
+											? `Genesis Token: ${tag.label}`
+											: tag.label
+									: accountType === 'empty'
+										? 'Uninitialized account'
+										: undefined
+							}
+						>
+							<span>{isSystem ? 'system' : 'empty'}</span>
+						</div>
+					)}
 				</div>
 			}
 			className={className}
@@ -49,7 +72,8 @@ export function AccountCard(props: AccountCard.Props) {
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[22ch]">
+					{/* 42 chars / 2 lines = 21ch */}
+					<p className="text-[14px] font-normal leading-[17px] text-primary break-all max-w-[21ch] font-mono">
 						{address}
 					</p>
 				</button>,
@@ -118,5 +142,6 @@ export declare namespace AccountCard {
 		lastActivityTimestamp?: bigint | undefined
 		createdTimestamp?: bigint | undefined
 		totalValue?: number | undefined
+		accountType?: AccountType | undefined
 	}
 }

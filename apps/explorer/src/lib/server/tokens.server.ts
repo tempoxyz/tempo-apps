@@ -1,8 +1,11 @@
 import { createServerFn } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
+import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { config } from '#wagmi.config.ts'
+import * as ABIS from '#lib/abis'
+import { TOKEN_COUNT_MAX } from '#lib/constants'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -21,44 +24,63 @@ export type Token = {
 const FetchTokensInputSchema = z.object({
 	offset: z.coerce.number().check(z.gte(0)),
 	limit: z.coerce.number().check(z.gte(1), z.lte(100)),
+	includeCount: z.optional(z.boolean()),
+	countLimit: z.optional(z.coerce.number().check(z.gte(1))),
 })
 
 export type TokensApiResponse = {
 	tokens: Token[]
-	total: number
+	total: number | null
 	offset: number
 	limit: number
 }
 
-const EVENT_SIGNATURE =
-	'event TokenCreated(address indexed token, uint256 indexed tokenId, string name, string symbol, string currency, address quoteToken, address admin)'
-
 export const fetchTokens = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokensInputSchema.parse(input))
 	.handler(async ({ data }): Promise<TokensApiResponse> => {
-		const { offset, limit } = data
+		const {
+			offset,
+			limit,
+			includeCount = false,
+			countLimit = TOKEN_COUNT_MAX,
+		} = data
 
-		const chainId = config.getClient().chain.id
+		const config = getWagmiConfig()
+		const chainId = getChainId(config)
 
-		const tokensResult = await QB.withSignatures([EVENT_SIGNATURE])
-			.selectFrom('tokencreated')
-			.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
-			.where('chain', '=', chainId)
-			.orderBy('block_timestamp', 'desc')
-			.limit(limit)
-			.offset(offset)
-			.execute()
+		const eventSignature = ABIS.getTokenCreatedEvent(chainId)
 
-		const { count } = await QB.withSignatures([EVENT_SIGNATURE])
-			.selectFrom('tokencreated')
-			.select((eb) => eb.fn.count('token').as('count'))
-			.where('chain', '=', chainId)
-			.executeTakeFirstOrThrow()
+		const [tokensResult, countResult] = await Promise.all([
+			QB.withSignatures([eventSignature])
+				.selectFrom('tokencreated')
+				.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
+				.where('chain', '=', chainId as never)
+				.orderBy('block_num', 'desc')
+				.limit(limit)
+				.offset(offset)
+				.execute(),
+			includeCount
+				? // count is an expensive, columnar-based query. we will count up
+					// to the first countLimit rows (default: TOKEN_COUNT_MAX)
+					QB.selectFrom(
+						QB.withSignatures([eventSignature])
+							.selectFrom('tokencreated')
+							.select((eb) => eb.lit(1).as('x'))
+							.where('chain', '=', chainId as never)
+							.limit(countLimit)
+							.as('subquery'),
+					)
+						.select((eb) => eb.fn.count('x').as('count'))
+						.executeTakeFirst()
+				: Promise.resolve(null),
+		])
+
+		const count = countResult?.count ?? null
 
 		return {
 			offset,
 			limit,
-			total: Number(count),
+			total: count !== null ? Number(count) : null,
 			tokens: tokensResult.map(
 				({ token: address, block_timestamp, ...rest }) => ({
 					...rest,

@@ -4,17 +4,17 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
-	redirect,
 	stripSearchParams,
 	useNavigate,
 	useRouter,
 } from '@tanstack/react-router'
 import { Address } from 'ox'
 import * as React from 'react'
-import { Actions, Hooks } from 'tempo.ts/wagmi'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
-import { readContract } from 'wagmi/actions'
+import type { Config } from 'wagmi'
+import { getChainId, getPublicClient } from 'wagmi/actions'
+import { Actions, Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
@@ -32,10 +32,16 @@ import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
 import { PriceFormatter } from '#lib/formatting'
-import { useCopy, useIsMounted, useMediaQuery } from '#lib/hooks'
+import { useCopy, useMediaQuery } from '#lib/hooks'
 import { buildTokenDescription, buildTokenOgImageUrl } from '#lib/og'
-import { holdersQueryOptions, transfersQueryOptions } from '#lib/queries'
-import { config } from '#wagmi.config'
+import {
+	firstTransferQueryOptions,
+	holdersQueryOptions,
+	transfersQueryOptions,
+} from '#lib/queries'
+import { withLoaderTiming } from '#lib/profiling'
+import { fetchOgStats } from '#lib/server/token.server.ts'
+import { getWagmiConfig } from '#wagmi.config.ts'
 import CopyIcon from '~icons/lucide/copy'
 import XIcon from '~icons/lucide/x'
 
@@ -46,6 +52,8 @@ const defaultSearchValues = {
 } as const
 
 const tabOrder = ['transfers', 'holders', 'contract'] as const
+
+const chainId = getChainId(getWagmiConfig())
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
@@ -83,62 +91,40 @@ export const Route = createFileRoute('/_layout/token/$address')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page, limit, tab, a } }) => ({
-		page,
-		limit,
-		tab,
-		a,
-	}),
-	loader: async ({ deps: { page, limit, tab, a }, params, context }) => {
-		const { address } = params
-		if (!Address.validate(address)) throw notFound()
+	loader: ({ params }) =>
+		withLoaderTiming('/_layout/token/$address', async () => {
+			const { address } = params
+			if (!Address.validate(address)) throw notFound()
 
-		const account = a && Address.validate(a) ? a : undefined
-		const offset = (page - 1) * limit
+			const config = getWagmiConfig()
+			const publicClient = getPublicClient(config)
 
-		try {
-			// Fetch holders data for OG image (also used by the page)
-			const holdersPromise = context.queryClient.ensureQueryData(
-				holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
-			)
-
-			if (page !== 1 || limit !== 10) {
-				context.queryClient.prefetchQuery(
-					holdersQueryOptions({ address, page, limit, offset }),
-				)
+			// Validate the token exists by fetching metadata (required - blocks render)
+			let metadata: Awaited<ReturnType<typeof Actions.token.getMetadata>>
+			try {
+				metadata = await Actions.token.getMetadata(config as Config, {
+					token: address,
+				})
+			} catch (error) {
+				console.error('Failed to fetch token metadata:', error)
+				throw notFound()
 			}
 
-			// Fetch currency from contract (TIP-20 tokens have a currency() function)
-			const currencyPromise = readContract(config, {
-				address: address,
-				abi: Abis.tip20,
-				functionName: 'currency',
-			}).catch(() => undefined)
-
-			if (tab === 'transfers') {
-				const [metadata, transfers, holdersData, currency] = await Promise.all([
-					Actions.token.getMetadata(config, { token: address }),
-					context.queryClient.ensureQueryData(
-						transfersQueryOptions({ address, page, limit, offset, account }),
-					),
-					holdersPromise,
-					currencyPromise,
-				])
-				return { metadata, transfers, holdersData, currency }
-			}
-
-			const [metadata, holdersData, currency] = await Promise.all([
-				Actions.token.getMetadata(config, { token: address }),
-				holdersPromise,
-				currencyPromise,
+			// Fast OG stats (threshold-based, not full counts) + currency for OG image
+			const [ogStats, currency] = await Promise.all([
+				fetchOgStats({ data: { address } }).catch(() => null),
+				publicClient
+					.readContract({
+						address: address,
+						abi: Abis.tip20,
+						functionName: 'currency',
+					})
+					.catch(() => undefined),
 			])
-			return { metadata, transfers: undefined, holdersData, currency }
-		} catch (error) {
-			console.error(error)
-			// redirect to `/address/$address` and if it's not an address, that route will throw a notFound
-			throw redirect({ to: '/address/$address', params: { address } })
-		}
-	},
+
+			// All other data (transfers, holders, firstTransfer) fetched client-side
+			return { metadata, ogStats, currency }
+		}),
 	params: {
 		parse: z.object({
 			address: z.pipe(
@@ -153,12 +139,12 @@ export const Route = createFileRoute('/_layout/token/$address')({
 	head: ({ params, loaderData }) => {
 		const title = `Token ${params.address.slice(0, 6)}…${params.address.slice(-4)} ⋅ Tempo Explorer`
 		const metadata = loaderData?.metadata
-		const holdersData = loaderData?.holdersData
+		const ogStats = loaderData?.ogStats
 		const currency = loaderData?.currency
 
 		// Format supply for OG image
-		const formatSupply = (totalSupply: string, decimals: number): string => {
-			const value = Number(formatUnits(BigInt(totalSupply), decimals))
+		const formatSupply = (totalSupply: bigint, decimals: number): string => {
+			const value = Number(formatUnits(totalSupply, decimals))
 			if (value >= 1e9) return `${(value / 1e9).toFixed(2)}B`
 			if (value >= 1e6) return `${(value / 1e6).toFixed(2)}M`
 			if (value >= 1e3)
@@ -167,9 +153,19 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		}
 
 		const supply =
-			holdersData?.totalSupply && metadata?.decimals !== undefined
-				? formatSupply(holdersData.totalSupply, metadata.decimals)
+			metadata?.totalSupply !== undefined && metadata?.decimals !== undefined
+				? formatSupply(metadata.totalSupply, metadata.decimals)
 				: undefined
+
+		// Format holders count (exact for small counts, threshold for large)
+		const formatHolders = (
+			holders: { count: number; isExact: boolean } | null | undefined,
+		) => {
+			if (!holders) return undefined
+			return holders.isExact
+				? holders.count.toLocaleString()
+				: `> ${holders.count.toLocaleString()}`
+		}
 
 		const description = buildTokenDescription(
 			metadata
@@ -181,15 +177,18 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				: null,
 		)
 
-		const ogImageUrl = buildTokenOgImageUrl({
-			address: params.address,
-			name: metadata?.name,
-			symbol: metadata?.symbol,
-			currency,
-			holders: holdersData?.total,
-			supply,
-			created: holdersData?.created ?? undefined,
-		})
+		const ogImageUrl = loaderData
+			? buildTokenOgImageUrl({
+					address: params.address,
+					chainId,
+					name: metadata?.name,
+					symbol: metadata?.symbol,
+					currency,
+					holders: formatHolders(ogStats?.holders),
+					supply,
+					created: ogStats?.created ?? undefined,
+				})
+			: undefined
 
 		return {
 			title,
@@ -198,12 +197,16 @@ export const Route = createFileRoute('/_layout/token/$address')({
 				{ property: 'og:title', content: title },
 				{ property: 'og:description', content: description },
 				{ name: 'twitter:description', content: description },
-				{ property: 'og:image', content: ogImageUrl },
-				{ property: 'og:image:type', content: 'image/png' },
-				{ property: 'og:image:width', content: '1200' },
-				{ property: 'og:image:height', content: '630' },
-				{ name: 'twitter:card', content: 'summary_large_image' },
-				{ name: 'twitter:image', content: ogImageUrl },
+				...(ogImageUrl
+					? [
+							{ property: 'og:image', content: ogImageUrl },
+							{ property: 'og:image:type', content: 'image/webp' },
+							{ property: 'og:image:width', content: '1200' },
+							{ property: 'og:image:height', content: '630' },
+							{ name: 'twitter:card', content: 'summary_large_image' },
+							{ name: 'twitter:image', content: ogImageUrl },
+						]
+					: []),
 			],
 		}
 	},
@@ -272,7 +275,7 @@ function RouteComponent() {
 		<div
 			className={cx(
 				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
+				'grid w-full pt-20 pb-16 px-4 gap-3.5 min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-270',
 			)}
 		>
 			<TokenCard
@@ -313,20 +316,22 @@ function TokenCard(props: {
 		holdersQueryOptions({ address, page: 1, limit: 10, offset: 0 }),
 	)
 
+	// Fetch first transfer (created date) asynchronously (was prefetched in loader)
+	const { data: firstTransferData } = useQuery(
+		firstTransferQueryOptions({ address }),
+	)
+
 	const { copy, notifying } = useCopy()
 
-	const totalSupply = holdersSummary?.totalSupply
-		? BigInt(holdersSummary.totalSupply)
-		: undefined
+	const totalSupply = metadata?.totalSupply
 	const totalHolders = holdersSummary?.total
+	const holdersCapped = holdersSummary?.totalCapped
 
 	return (
 		<InfoCard
 			title={
-				<div className="flex items-center justify-between px-[18px] pt-[10px] pb-[8px]">
-					<h1 className="text-[13px] uppercase text-tertiary select-none">
-						Token
-					</h1>
+				<div className="flex items-center justify-between px-4.5 pt-2.5 pb-2">
+					<h1 className="text-[13px] text-tertiary select-none">Token</h1>
 					{metadata?.symbol && (
 						<h2 className="text-[13px] inline-flex items-center gap-1.5">
 							<TokenIcon
@@ -348,18 +353,18 @@ function TokenCard(props: {
 					className="w-full text-left cursor-pointer press-down text-tertiary"
 					title={address}
 				>
-					<div className="flex items-center gap-[8px] mb-[8px]">
+					<div className="flex items-center gap-2 mb-2">
 						<span className="text-[13px] font-normal capitalize">Address</span>
 						<div className="relative flex items-center">
-							<CopyIcon className="w-[12px] h-[12px]" />
+							<CopyIcon className="w-3 h-3" />
 							{notifying && (
-								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px]">
+								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-4">
 									copied
 								</span>
 							)}
 						</div>
 					</div>
-					<p className="text-[14px] font-normal leading-[17px] tracking-[0.02em] text-primary break-all max-w-[22ch]">
+					<p className="text-[14px] font-mono font-normal leading-4.25 text-primary break-all max-w-[21ch]">
 						{address}
 					</p>
 				</button>,
@@ -371,9 +376,9 @@ function TokenCard(props: {
 								<span className="text-tertiary text-[13px]">{ellipsis}</span>
 							}
 						>
-							{holdersSummary?.created ? (
+							{firstTransferData?.created ? (
 								<span className="text-[13px] text-primary">
-									{holdersSummary.created}
+									{firstTransferData.created}
 								</span>
 							) : (
 								<span className="text-tertiary text-[13px]">{ellipsis}</span>
@@ -428,7 +433,9 @@ function TokenCard(props: {
 							}
 						>
 							{totalHolders !== undefined ? (
-								<span className="text-[13px] text-primary">{totalHolders}</span>
+								<span className="text-[13px] text-primary">
+									{holdersCapped ? '100k+' : totalHolders}
+								</span>
 							) : (
 								<span className="text-tertiary text-[13px]">{ellipsis}</span>
 							)}
@@ -461,9 +468,6 @@ function SectionsWrapper(props: {
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const loaderData = Route.useLoaderData()
 
-	// Track hydration to avoid SSR/client mismatch with query data
-	const isMounted = useIsMounted()
-
 	const { data: metadata } = Hooks.token.useGetMetadata({
 		token: address,
 		query: {
@@ -481,21 +485,8 @@ function SectionsWrapper(props: {
 		account,
 	})
 
-	const hasTransfersInitialData =
-		activeSection === 0 && transfersQueryPage === page && loaderData.transfers
-	const {
-		data: transfersQueryData,
-		isPlaceholderData: isTransfersPlaceholder,
-	} = useQuery({
-		...transfersOptions,
-		...(hasTransfersInitialData ? { initialData: loaderData.transfers } : {}),
-	})
-	// Use initialData until mounted to avoid hydration mismatch
-	const transfersData = isMounted
-		? transfersQueryData
-		: hasTransfersInitialData
-			? loaderData.transfers
-			: transfersQueryData
+	const { data: transfersData, isPlaceholderData: isTransfersPlaceholder } =
+		useQuery(transfersOptions)
 
 	const holdersQueryPage = activeSection === 1 ? page : 1
 	const holdersOptions = holdersQueryOptions({
@@ -508,9 +499,17 @@ function SectionsWrapper(props: {
 	const { data: holdersData, isPlaceholderData: isHoldersPlaceholder } =
 		useQuery(holdersOptions)
 
-	const { transfers = [], total: transfersTotal = 0 } = transfersData ?? {}
+	const {
+		transfers = [],
+		total: transfersTotal = 0,
+		totalCapped: transfersTotalCapped = false,
+	} = transfersData ?? {}
 
-	const { holders = [], total: holdersTotal = 0 } = holdersData ?? {}
+	const {
+		holders = [],
+		total: holdersTotal = 0,
+		totalCapped: holdersTotalCapped = false,
+	} = holdersData ?? {}
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 
@@ -545,7 +544,8 @@ function SectionsWrapper(props: {
 			sections={[
 				{
 					title: 'Transfers',
-					totalItems: transfersData && transfersTotal,
+					totalItems:
+						transfersData && (transfersTotalCapped ? '100k+' : transfersTotal),
 					itemsLabel: 'transfers',
 					contextual: account && (
 						<FilterIndicator account={account} tokenAddress={address} />
@@ -594,6 +594,8 @@ function SectionsWrapper(props: {
 								}))
 							}}
 							totalItems={transfersTotal}
+							displayCount={transfersTotal}
+							displayCountCapped={transfersTotalCapped}
 							page={page}
 							fetching={isTransfersPlaceholder}
 							loading={!transfersData}
@@ -606,7 +608,8 @@ function SectionsWrapper(props: {
 				},
 				{
 					title: 'Holders',
-					totalItems: holdersData && holdersTotal,
+					totalItems:
+						holdersData && (holdersTotalCapped ? '100k+' : holdersTotal),
 					itemsLabel: 'holders',
 					content: (
 						<DataGrid
@@ -615,25 +618,39 @@ function SectionsWrapper(props: {
 								tabs: holdersColumns,
 							}}
 							items={() =>
-								holders.map((holder) => ({
-									cells: [
-										<AddressCell key="address" address={holder.address} />,
-										<BalanceCell
-											key="balance"
-											balance={holder.balance}
-											decimals={metadata?.decimals}
-										/>,
-										<span key="percentage" className="text-[12px] text-primary">
-											{holder.percentage.toFixed(2)}%
-										</span>,
-									],
-									link: {
-										href: `/token/${address}?a=${holder.address}`,
-										title: `View transfers for ${holder.address}`,
-									},
-								}))
+								holders.map((holder) => {
+									const percentage =
+										metadata?.totalSupply && metadata.totalSupply > 0n
+											? Number(
+													(BigInt(holder.balance) * 10_000n) /
+														metadata.totalSupply,
+												) / 100
+											: 0
+									return {
+										cells: [
+											<AddressCell key="address" address={holder.address} />,
+											<BalanceCell
+												key="balance"
+												balance={holder.balance}
+												decimals={metadata?.decimals}
+											/>,
+											<span
+												key="percentage"
+												className="text-[12px] text-primary"
+											>
+												{percentage.toFixed(2)}%
+											</span>,
+										],
+										link: {
+											href: `/token/${address}?a=${holder.address}`,
+											title: `View transfers for ${holder.address}`,
+										},
+									}
+								})
 							}
 							totalItems={holdersTotal}
+							displayCount={holdersTotal}
+							displayCountCapped={holdersTotalCapped}
 							page={page}
 							fetching={isHoldersPlaceholder}
 							loading={!holdersData}
@@ -663,12 +680,12 @@ function FilterIndicator(props: {
 }) {
 	const { account, tokenAddress } = props
 	return (
-		<div className="flex items-center gap-[8px] text-[12px]">
+		<div className="flex items-center gap-2 text-[12px]">
 			<span className="text-tertiary">Filtered:</span>
 			<Link
 				to="/address/$address"
 				params={{ address: account }}
-				className="text-accent press-down"
+				className="text-accent press-down font-mono"
 				title={account}
 			>
 				<Midcut value={account} prefix="0x" />
@@ -679,7 +696,7 @@ function FilterIndicator(props: {
 				className="text-tertiary press-down"
 				title="Clear filter"
 			>
-				<XIcon className="w-[14px] h-[14px] translate-y-px" />
+				<XIcon className="size-3.5 translate-y-px" />
 			</Link>
 		</div>
 	)

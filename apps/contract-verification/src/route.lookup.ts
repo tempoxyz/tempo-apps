@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
 import { Address, Hex } from 'ox'
 
-import { DEVNET_CHAIN_ID, TESTNET_CHAIN_ID } from '#chains.ts'
+import { CHAIN_IDS } from '#chains.ts'
 
 import {
 	codeTable,
@@ -41,7 +41,7 @@ lookupRoute.get('/all-chains/:address', async (context) => {
 			)
 
 		const db = drizzle(context.env.CONTRACTS_DB)
-		const addressBytes = Hex.toBytes(address as `0x${string}`)
+		const addressBytes = Hex.toBytes(address)
 
 		// Query all verified contracts at this address across all chains
 		const results = await db
@@ -105,7 +105,7 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 		const { chainId, address } = context.req.param()
 		const { fields, omit } = context.req.query()
 
-		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(Number(chainId)))
+		if (!CHAIN_IDS.includes(Number(chainId)))
 			return sourcifyError(
 				context,
 				400,
@@ -329,7 +329,7 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 			const hash32Bytes = new Uint8Array(sig.signatureHash32 as ArrayBuffer)
 			const signatureHash32 = Hex.fromBytes(hash32Bytes)
 			const signatureHash4 = Hex.fromBytes(hash32Bytes.slice(0, 4))
-			const type = sig.signatureType as 'function' | 'event' | 'error'
+			const type = sig.signatureType
 
 			signatures[type].push({
 				signature: sig.signature,
@@ -520,7 +520,7 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 		const { chainId } = context.req.param()
 		const { sort, limit, afterMatchId } = context.req.query()
 
-		if (![DEVNET_CHAIN_ID, TESTNET_CHAIN_ID].includes(Number(chainId)))
+		if (!CHAIN_IDS.includes(Number(chainId)))
 			return sourcifyError(
 				context,
 				400,

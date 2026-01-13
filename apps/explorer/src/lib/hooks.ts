@@ -123,3 +123,30 @@ export declare namespace useDownload {
 			| 'application/pdf'
 	}
 }
+
+export function useKeyboardShortcut(shortcuts: Record<string, () => void>) {
+	React.useEffect(() => {
+		const handleKeyDown = (event: KeyboardEvent) => {
+			const target = event.target as HTMLElement
+			if (
+				target.tagName === 'INPUT' ||
+				target.tagName === 'TEXTAREA' ||
+				target.isContentEditable
+			) {
+				return
+			}
+			const key = event.key.toLowerCase()
+			if (
+				!event.metaKey &&
+				!event.ctrlKey &&
+				!event.altKey &&
+				key in shortcuts
+			) {
+				event.preventDefault()
+				shortcuts[key]()
+			}
+		}
+		window.addEventListener('keydown', handleKeyDown)
+		return () => window.removeEventListener('keydown', handleKeyDown)
+	}, [shortcuts])
+}

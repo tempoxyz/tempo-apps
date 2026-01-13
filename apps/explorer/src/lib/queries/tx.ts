@@ -4,7 +4,7 @@ import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import { parseKnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { getFeeBreakdown } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
-import { getConfig } from '#wagmi.config'
+import { getWagmiConfig } from '#wagmi.config.ts'
 
 export function txQueryOptions(params: { hash: Hex.Hex }) {
 	return queryOptions({
@@ -14,9 +14,11 @@ export function txQueryOptions(params: { hash: Hex.Hex }) {
 }
 
 async function fetchTxData(params: { hash: Hex.Hex }) {
-	const config = getConfig()
+	const config = getWagmiConfig()
+
 	const receipt = await getTransactionReceipt(config, { hash: params.hash })
 
+	// TODO: investigate & consider batch/multicall
 	const [block, transaction, getTokenMetadata] = await Promise.all([
 		getBlock(config, { blockHash: receipt.blockHash }),
 		getTransaction(config, { hash: receipt.transactionHash }),
