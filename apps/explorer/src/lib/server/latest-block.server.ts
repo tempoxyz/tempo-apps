@@ -13,7 +13,6 @@ const QB = IDX.QueryBuilder.from(IS)
 export const fetchLatestBlock = createServerFn({ method: 'GET' }).handler(
 	async () => {
 		if (!hasIndexSupply()) return
-		const start = performance.now()
 		try {
 			const config = getWagmiConfig()
 			const chainId = getChainId(config)
