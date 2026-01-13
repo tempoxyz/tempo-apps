@@ -4,7 +4,7 @@ import { Address, Hex } from 'ox'
 import type { RpcTransaction } from 'viem'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { getRequestURL, isTestnet } from '#lib/env'
+import { getRequestURL, hasIndexSupply } from '#lib/env'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
@@ -30,7 +30,7 @@ export const Route = createFileRoute('/api/address/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				if (isTestnet())
+				if (!hasIndexSupply())
 					return Response.json({
 						limit: 0,
 						total: 0,
