@@ -87,19 +87,9 @@ const getTempoTransport = createIsomorphicFn()
 	)
 	.server(() => {
 		const rpcKey = getTempoRpcKey()
-		if (rpcKey === '__FORWARD__') {
-			const authHeader = getRequestHeader('authorization')
-			return fallback([
-				...getWsUrls().map((url) => webSocket(url)),
-				...getHttpUrls().map((url) =>
-					http(url, {
-						fetchOptions: { headers: { Authorization: authHeader ?? '' } },
-					}),
-				),
-			])
-		}
+		const forwardAuth = process.env.FORWARD_RPC_AUTH === '1'
 		return fallback([
-			...getWsUrls().map((url) => webSocket(`${url}/${rpcKey}`)),
+			...(forwardAuth ? [] : getWsUrls().map((url) => webSocket(`${url}/${rpcKey}`))),
 			...getHttpUrls().map((url) => http(`${url}/${rpcKey}`)),
 		])
 	})
