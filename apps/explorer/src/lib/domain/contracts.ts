@@ -30,7 +30,9 @@ export type ContractInfo = {
 }
 
 /**
- * Ethereum precompile addresses (0x01-0x0a) with their metadata.
+ * Ethereum precompile addresses with their metadata.
+ * Includes: Frontier (0x01), Homestead (0x02-0x04), Byzantium (0x05-0x08),
+ * Istanbul (0x09), Cancun (0x0a), Prague BLS12-381 (0x0b-0x11).
  * Precompiles don't use standard ABI encoding - decoding is handled separately.
  */
 export const precompileRegistry = new Map<Address.Address, ContractInfo>(<
@@ -156,10 +158,95 @@ export const precompileRegistry = new Map<Address.Address, ContractInfo>(<
 			address: '0x000000000000000000000000000000000000000a',
 		},
 	],
+	// Prague BLS12-381 precompiles (EIP-2537)
+	[
+		'0x000000000000000000000000000000000000000b',
+		{
+			name: 'bls12G1Add',
+			description: 'BLS12-381 G1 point addition',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
+			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x0b',
+			address: '0x000000000000000000000000000000000000000b',
+		},
+	],
+	[
+		'0x000000000000000000000000000000000000000c',
+		{
+			name: 'bls12G1Msm',
+			description: 'BLS12-381 G1 multi-scalar multiplication',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
+			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x0c',
+			address: '0x000000000000000000000000000000000000000c',
+		},
+	],
+	[
+		'0x000000000000000000000000000000000000000d',
+		{
+			name: 'bls12G2Add',
+			description: 'BLS12-381 G2 point addition',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
+			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x0d',
+			address: '0x000000000000000000000000000000000000000d',
+		},
+	],
+	[
+		'0x000000000000000000000000000000000000000e',
+		{
+			name: 'bls12G2Msm',
+			description: 'BLS12-381 G2 multi-scalar multiplication',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
+			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x0e',
+			address: '0x000000000000000000000000000000000000000e',
+		},
+	],
+	[
+		'0x000000000000000000000000000000000000000f',
+		{
+			name: 'bls12PairingCheck',
+			description: 'BLS12-381 pairing check',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
+			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x0f',
+			address: '0x000000000000000000000000000000000000000f',
+		},
+	],
+	[
+		'0x0000000000000000000000000000000000000010',
+		{
+			name: 'bls12MapFpToG1',
+			description: 'BLS12-381 map field element to G1 point',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
+			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x10',
+			address: '0x0000000000000000000000000000000000000010',
+		},
+	],
+	[
+		'0x0000000000000000000000000000000000000011',
+		{
+			name: 'bls12MapFp2ToG2',
+			description: 'BLS12-381 map Fp2 element to G2 point',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
+			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x11',
+			address: '0x0000000000000000000000000000000000000011',
+		},
+	],
 ])
 
 /**
- * Check if an address is an Ethereum precompile (0x01-0x0a).
+ * Check if an address is an Ethereum precompile.
  */
 export function isPrecompile(address: Address.Address): boolean {
 	return precompileRegistry.has(address.toLowerCase() as Address.Address)

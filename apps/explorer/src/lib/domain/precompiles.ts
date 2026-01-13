@@ -208,6 +208,112 @@ function decodePointEvaluation(
 	}
 }
 
+// BLS12-381 G1 point: 128 bytes (x: 64 bytes, y: 64 bytes)
+// BLS12-381 G2 point: 256 bytes (x: 128 bytes as c0+c1, y: 128 bytes as c0+c1)
+
+function decodeBls12G1Add(
+	input: Hex,
+	output: Hex | undefined,
+): Partial<DecodedPrecompile> {
+	const inputLen = (input.length - 2) / 2
+	const params =
+		inputLen >= 256 ? '2 G1 points (256 bytes)' : formatBytes(input)
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	return {
+		params,
+		decodedOutput: outputLen === 128 ? 'G1 point (128 bytes)' : undefined,
+	}
+}
+
+function decodeBls12G1Msm(
+	input: Hex,
+	output: Hex | undefined,
+): Partial<DecodedPrecompile> {
+	const inputLen = (input.length - 2) / 2
+	// Each element is 160 bytes (32-byte scalar + 128-byte G1 point)
+	const numElements = Math.floor(inputLen / 160)
+	const params =
+		numElements > 0 ? `${numElements} element(s)` : formatBytes(input)
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	return {
+		params,
+		decodedOutput: outputLen === 128 ? 'G1 point (128 bytes)' : undefined,
+	}
+}
+
+function decodeBls12G2Add(
+	input: Hex,
+	output: Hex | undefined,
+): Partial<DecodedPrecompile> {
+	const inputLen = (input.length - 2) / 2
+	const params =
+		inputLen >= 512 ? '2 G2 points (512 bytes)' : formatBytes(input)
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	return {
+		params,
+		decodedOutput: outputLen === 256 ? 'G2 point (256 bytes)' : undefined,
+	}
+}
+
+function decodeBls12G2Msm(
+	input: Hex,
+	output: Hex | undefined,
+): Partial<DecodedPrecompile> {
+	const inputLen = (input.length - 2) / 2
+	// Each element is 288 bytes (32-byte scalar + 256-byte G2 point)
+	const numElements = Math.floor(inputLen / 288)
+	const params =
+		numElements > 0 ? `${numElements} element(s)` : formatBytes(input)
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	return {
+		params,
+		decodedOutput: outputLen === 256 ? 'G2 point (256 bytes)' : undefined,
+	}
+}
+
+function decodeBls12PairingCheck(
+	input: Hex,
+	output: Hex | undefined,
+): Partial<DecodedPrecompile> {
+	const inputLen = (input.length - 2) / 2
+	// Each pair is 384 bytes (128-byte G1 point + 256-byte G2 point)
+	const numPairs = Math.floor(inputLen / 384)
+	const params = numPairs > 0 ? `${numPairs} pair(s)` : 'empty'
+	let decodedOutput: string | undefined
+	if (output && output.length >= 66) {
+		const success = bytesToBigInt(output, 0, 32) === 1n
+		decodedOutput = success ? 'true' : 'false'
+	}
+	return { params, decodedOutput }
+}
+
+function decodeBls12MapFpToG1(
+	input: Hex,
+	output: Hex | undefined,
+): Partial<DecodedPrecompile> {
+	const inputLen = (input.length - 2) / 2
+	const params = inputLen >= 64 ? 'Fp element (64 bytes)' : formatBytes(input)
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	return {
+		params,
+		decodedOutput: outputLen === 128 ? 'G1 point (128 bytes)' : undefined,
+	}
+}
+
+function decodeBls12MapFp2ToG2(
+	input: Hex,
+	output: Hex | undefined,
+): Partial<DecodedPrecompile> {
+	const inputLen = (input.length - 2) / 2
+	const params =
+		inputLen >= 128 ? 'Fp2 element (128 bytes)' : formatBytes(input)
+	const outputLen = output ? (output.length - 2) / 2 : 0
+	return {
+		params,
+		decodedOutput: outputLen === 256 ? 'G2 point (256 bytes)' : undefined,
+	}
+}
+
 type PrecompileDecoder = {
 	name: string
 	decode: (input: Hex, output: Hex | undefined) => Partial<DecodedPrecompile>
@@ -253,6 +359,35 @@ const precompileDecoders: Record<string, PrecompileDecoder> = {
 	'0x000000000000000000000000000000000000000a': {
 		name: 'pointEvaluation',
 		decode: decodePointEvaluation,
+	},
+	// Prague BLS12-381 precompiles (EIP-2537)
+	'0x000000000000000000000000000000000000000b': {
+		name: 'bls12G1Add',
+		decode: decodeBls12G1Add,
+	},
+	'0x000000000000000000000000000000000000000c': {
+		name: 'bls12G1Msm',
+		decode: decodeBls12G1Msm,
+	},
+	'0x000000000000000000000000000000000000000d': {
+		name: 'bls12G2Add',
+		decode: decodeBls12G2Add,
+	},
+	'0x000000000000000000000000000000000000000e': {
+		name: 'bls12G2Msm',
+		decode: decodeBls12G2Msm,
+	},
+	'0x000000000000000000000000000000000000000f': {
+		name: 'bls12PairingCheck',
+		decode: decodeBls12PairingCheck,
+	},
+	'0x0000000000000000000000000000000000000010': {
+		name: 'bls12MapFpToG1',
+		decode: decodeBls12MapFpToG1,
+	},
+	'0x0000000000000000000000000000000000000011': {
+		name: 'bls12MapFp2ToG2',
+		decode: decodeBls12MapFp2ToG2,
 	},
 }
 
