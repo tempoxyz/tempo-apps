@@ -3,8 +3,9 @@ import * as IDX from 'idxs'
 import { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { zAddress } from '#lib/zod.ts'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { isTestnet } from '#lib/env'
+import { zAddress } from '#lib/zod'
+import { getWagmiConfig } from '#wagmi.config'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -18,13 +19,11 @@ const RequestSchema = z.object({
 	chainId: z.prefault(z.coerce.number(), chainId),
 })
 
-const isTestnet = process.env.VITE_TEMPO_ENV === 'testnet'
-
 export const Route = createFileRoute('/api/address/txs-count/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				if (isTestnet) return Response.json({ data: 0, error: null })
+				if (isTestnet()) return Response.json({ data: 0, error: null })
 
 				try {
 					const address = zAddress().parse(params.address)
