@@ -314,6 +314,30 @@ function decodeBls12MapFp2ToG2(
 	}
 }
 
+function decodeP256Verify(
+	input: Hex,
+	output: Hex | undefined,
+): Partial<DecodedPrecompile> {
+	try {
+		// Input: hash (32) + r (32) + s (32) + qx (32) + qy (32) = 160 bytes
+		if (input.length < 2 + 160 * 2) {
+			return { params: formatBytes(input) }
+		}
+		const hash = sliceBytes(input, 0, 32)
+		const r = sliceBytes(input, 32, 64)
+		const s = sliceBytes(input, 64, 96)
+		const params = `hash: ${hash}, r: ${r}, s: ${s}`
+		let decodedOutput: string | undefined
+		if (output && output.length >= 66) {
+			const success = bytesToBigInt(output, 0, 32) === 1n
+			decodedOutput = success ? 'true' : 'false'
+		}
+		return { params, decodedOutput }
+	} catch {
+		return { params: formatBytes(input) }
+	}
+}
+
 type PrecompileDecoder = {
 	name: string
 	decode: (input: Hex, output: Hex | undefined) => Partial<DecodedPrecompile>
@@ -388,6 +412,11 @@ const precompileDecoders: Record<string, PrecompileDecoder> = {
 	'0x0000000000000000000000000000000000000011': {
 		name: 'bls12MapFp2ToG2',
 		decode: decodeBls12MapFp2ToG2,
+	},
+	// P256 ECDSA verification (RIP-7212)
+	'0x0000000000000000000000000000000000000100': {
+		name: 'p256Verify',
+		decode: decodeP256Verify,
 	},
 }
 

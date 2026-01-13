@@ -243,6 +243,19 @@ export const precompileRegistry = new Map<Address.Address, ContractInfo>(<
 			address: '0x0000000000000000000000000000000000000011',
 		},
 	],
+	// P256 ECDSA verification (RIP-7212)
+	[
+		'0x0000000000000000000000000000000000000100',
+		{
+			name: 'p256Verify',
+			description: 'ECDSA signature verification on secp256r1 (P-256)',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
+			docsUrl: 'https://www.evm.codes/precompiled#0x100',
+			address: '0x0000000000000000000000000000000000000100',
+		},
+	],
 ])
 
 /**
