@@ -1,37 +1,33 @@
 import { env } from 'cloudflare:workers'
 import {
+	tempo,
 	tempoDevnet,
 	tempoLocalnet,
 	tempoModerato,
 	tempoTestnet,
 } from 'viem/chains'
-import { alphaUsd } from './consts.js'
-
-const tempoPresto = {
-	...tempoModerato,
-	id: 4217,
-	name: 'Tempo Mainnet',
-	blockExplorers: {
-		default: { name: 'Tempo Explorer', url: 'https://explore.tempo.xyz' },
-	},
-	rpcUrls: {
-		default: {
-			http: ['https://rpc.presto.tempo.xyz'],
-			webSocket: ['wss://rpc.presto.tempo.xyz'],
-		},
-	},
-} as const
+import { alphaUsd, doNotUseUsd } from './consts.js'
 
 const chains = {
 	devnet: tempoDevnet,
 	localnet: tempoLocalnet,
+	mainnet: tempo,
 	moderato: tempoModerato,
 	testnet: tempoTestnet,
-	presto: tempoPresto,
 }
 
 type TempoEnv = keyof typeof chains
 
-export const tempoChain = (
-	chains[env.TEMPO_ENV as TempoEnv] ?? tempoTestnet
-).extend({ feeToken: alphaUsd })
+const feeTokens = {
+	devnet: alphaUsd,
+	localnet: alphaUsd,
+	mainnet: doNotUseUsd,
+	moderato: alphaUsd,
+	testnet: alphaUsd,
+} as const
+
+const tempoEnv = (env.TEMPO_ENV as TempoEnv) ?? 'testnet'
+
+export const tempoChain = (chains[tempoEnv] ?? tempoTestnet).extend({
+	feeToken: feeTokens[tempoEnv] ?? alphaUsd,
+})
