@@ -1,5 +1,7 @@
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
 
+export const RPC_AUTH_COOKIE = 'rpc_auth'
+
 export const redirects: Array<{
 	from: RegExp
 	to: (match: RegExpMatchArray) => string
@@ -8,6 +10,30 @@ export const redirects: Array<{
 	{ from: /^\/transaction\/(.+)$/, to: (m) => `/tx/${m[1]}` },
 	{ from: /^\/tokens\/(.+)$/, to: (m) => `/token/${m[1]}` },
 ]
+
+function getRpcAuthFromCookie(request: Request): string | null {
+	const cookies = request.headers.get('cookie')
+	if (!cookies) return null
+	const prefix = `${RPC_AUTH_COOKIE}=`
+	const cookie = cookies.split('; ').find((c) => c.startsWith(prefix))
+	if (!cookie) return null
+	return `Basic ${cookie.slice(prefix.length)}`
+}
+
+function handleAuthParam(request: Request): Response | null {
+	const url = new URL(request.url)
+	const auth = url.searchParams.get('auth')
+	if (!auth) return null
+
+	url.searchParams.delete('auth')
+	return new Response(null, {
+		status: 302,
+		headers: {
+			Location: url.toString(),
+			'Set-Cookie': `${RPC_AUTH_COOKIE}=${auth.includes(':') ? btoa(auth) : auth}; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000`,
+		},
+	})
+}
 
 async function checkRpcAuth(request: Request): Promise<Response | null> {
 	if (process.env.FORWARD_RPC_AUTH !== '1') return null
@@ -20,7 +46,8 @@ async function checkRpcAuth(request: Request): Promise<Response | null> {
 		headers: { 'WWW-Authenticate': 'Basic realm="Explorer"' },
 	})
 
-	const authHeader = request.headers.get('Authorization')
+	const authHeader =
+		request.headers.get('Authorization') ?? getRpcAuthFromCookie(request)
 	if (!authHeader) return unauthorized
 
 	try {
@@ -47,6 +74,9 @@ async function checkRpcAuth(request: Request): Promise<Response | null> {
 
 export default createServerEntry({
 	fetch: async (request, opts) => {
+		const authParamResponse = handleAuthParam(request)
+		if (authParamResponse) return authParamResponse
+
 		const authResponse = await checkRpcAuth(request)
 		if (authResponse) return authResponse
 
