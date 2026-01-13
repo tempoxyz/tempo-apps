@@ -10,7 +10,7 @@ export const redirects: Array<{
 ]
 
 async function checkRpcAuth(request: Request): Promise<Response | null> {
-	if (process.env.TEMPO_RPC_KEY !== '__FORWARD__') return null
+	if (process.env.FORWARD_RPC_AUTH !== '1') return null
 
 	const rpcUrl = process.env.VITE_TEMPO_RPC_HTTP
 	if (!rpcUrl) return null
