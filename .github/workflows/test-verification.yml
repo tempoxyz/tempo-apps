@@ -80,13 +80,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        network: [presto, moderato, devnet]
+        network: [testnet, moderato, devnet]
     name: verify-solidity (${{ matrix.network }})
     steps:
       - name: Check if network is selected
         id: check
         run: |
-          NETWORKS="${{ github.event.inputs.networks || 'presto,moderato,devnet' }}"
+          NETWORKS="${{ github.event.inputs.networks || 'testnet,moderato,devnet' }}"
           if [[ "$NETWORKS" == *"${{ matrix.network }}"* ]]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
           else
