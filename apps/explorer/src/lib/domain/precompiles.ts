@@ -338,86 +338,32 @@ function decodeP256Verify(
 	}
 }
 
-type PrecompileDecoder = {
-	name: string
-	decode: (input: Hex, output: Hex | undefined) => Partial<DecodedPrecompile>
-}
+type PrecompileDecoder = (
+	input: Hex,
+	output: Hex | undefined,
+) => Partial<DecodedPrecompile>
 
 const precompileDecoders: Record<string, PrecompileDecoder> = {
-	'0x0000000000000000000000000000000000000001': {
-		name: 'ecRecover',
-		decode: decodeEcRecover,
-	},
-	'0x0000000000000000000000000000000000000002': {
-		name: 'SHA2-256',
-		decode: decodeSha256,
-	},
-	'0x0000000000000000000000000000000000000003': {
-		name: 'RIPEMD-160',
-		decode: decodeRipemd160,
-	},
-	'0x0000000000000000000000000000000000000004': {
-		name: 'identity',
-		decode: decodeIdentity,
-	},
-	'0x0000000000000000000000000000000000000005': {
-		name: 'modexp',
-		decode: decodeModexp,
-	},
-	'0x0000000000000000000000000000000000000006': {
-		name: 'ecAdd',
-		decode: decodeEcAdd,
-	},
-	'0x0000000000000000000000000000000000000007': {
-		name: 'ecMul',
-		decode: decodeEcMul,
-	},
-	'0x0000000000000000000000000000000000000008': {
-		name: 'ecPairing',
-		decode: decodeEcPairing,
-	},
-	'0x0000000000000000000000000000000000000009': {
-		name: 'blake2f',
-		decode: decodeBlake2f,
-	},
-	'0x000000000000000000000000000000000000000a': {
-		name: 'pointEvaluation',
-		decode: decodePointEvaluation,
-	},
+	'0x0000000000000000000000000000000000000001': decodeEcRecover,
+	'0x0000000000000000000000000000000000000002': decodeSha256,
+	'0x0000000000000000000000000000000000000003': decodeRipemd160,
+	'0x0000000000000000000000000000000000000004': decodeIdentity,
+	'0x0000000000000000000000000000000000000005': decodeModexp,
+	'0x0000000000000000000000000000000000000006': decodeEcAdd,
+	'0x0000000000000000000000000000000000000007': decodeEcMul,
+	'0x0000000000000000000000000000000000000008': decodeEcPairing,
+	'0x0000000000000000000000000000000000000009': decodeBlake2f,
+	'0x000000000000000000000000000000000000000a': decodePointEvaluation,
 	// Prague BLS12-381 precompiles (EIP-2537)
-	'0x000000000000000000000000000000000000000b': {
-		name: 'bls12G1Add',
-		decode: decodeBls12G1Add,
-	},
-	'0x000000000000000000000000000000000000000c': {
-		name: 'bls12G1Msm',
-		decode: decodeBls12G1Msm,
-	},
-	'0x000000000000000000000000000000000000000d': {
-		name: 'bls12G2Add',
-		decode: decodeBls12G2Add,
-	},
-	'0x000000000000000000000000000000000000000e': {
-		name: 'bls12G2Msm',
-		decode: decodeBls12G2Msm,
-	},
-	'0x000000000000000000000000000000000000000f': {
-		name: 'bls12PairingCheck',
-		decode: decodeBls12PairingCheck,
-	},
-	'0x0000000000000000000000000000000000000010': {
-		name: 'bls12MapFpToG1',
-		decode: decodeBls12MapFpToG1,
-	},
-	'0x0000000000000000000000000000000000000011': {
-		name: 'bls12MapFp2ToG2',
-		decode: decodeBls12MapFp2ToG2,
-	},
+	'0x000000000000000000000000000000000000000b': decodeBls12G1Add,
+	'0x000000000000000000000000000000000000000c': decodeBls12G1Msm,
+	'0x000000000000000000000000000000000000000d': decodeBls12G2Add,
+	'0x000000000000000000000000000000000000000e': decodeBls12G2Msm,
+	'0x000000000000000000000000000000000000000f': decodeBls12PairingCheck,
+	'0x0000000000000000000000000000000000000010': decodeBls12MapFpToG1,
+	'0x0000000000000000000000000000000000000011': decodeBls12MapFp2ToG2,
 	// P256 ECDSA verification (RIP-7212)
-	'0x0000000000000000000000000000000000000100': {
-		name: 'p256Verify',
-		decode: decodeP256Verify,
-	},
+	'0x0000000000000000000000000000000000000100': decodeP256Verify,
 }
 
 /**
@@ -431,9 +377,9 @@ export function decodePrecompile(
 	const decoder = precompileDecoders[address.toLowerCase()]
 	if (!decoder) return undefined
 
-	const decoded = decoder.decode(input, output)
+	const decoded = decoder(input, output)
 	return {
-		functionName: decoder.name,
+		functionName: 'run',
 		params: decoded.params,
 		decodedOutput: decoded.decodedOutput,
 	}
