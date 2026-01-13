@@ -1,7 +1,8 @@
 import { createServerFn } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import { getChainId } from 'wagmi/actions'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { hasIndexSupply } from '#lib/env'
+import { getWagmiConfig } from '#wagmi.config'
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -9,11 +10,9 @@ const IS = IDX.IndexSupply.create({
 
 const QB = IDX.QueryBuilder.from(IS)
 
-const isTestnet = process.env.VITE_TEMPO_ENV === 'testnet'
-
 export const fetchLatestBlock = createServerFn({ method: 'GET' }).handler(
 	async () => {
-		if (!isTestnet) return
+		if (!hasIndexSupply()) return
 		try {
 			const config = getWagmiConfig()
 			const chainId = getChainId(config)

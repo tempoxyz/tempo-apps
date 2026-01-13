@@ -4,6 +4,7 @@ import {
 	createServerOnlyFn,
 } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
+import { RPC_AUTH_COOKIE } from './index.server'
 import {
 	tempoDevnet,
 	tempoLocalnet,
@@ -87,20 +88,50 @@ const getTempoTransport = createIsomorphicFn()
 	)
 	.server(() => {
 		const rpcKey = getTempoRpcKey()
-		if (rpcKey === '__FORWARD__') {
-			const authHeader = getRequestHeader('authorization')
-			return fallback([
-				...getWsUrls().map((url) => webSocket(url)),
-				...getHttpUrls().map((url) =>
-					http(url, {
+		const forwardAuth = process.env.FORWARD_RPC_AUTH === '1'
+		const withKey = (url: string) => (rpcKey ? `${url}/${rpcKey}` : url)
+		const sanitize = (str: string) =>
+			rpcKey ? str.replaceAll(rpcKey, '[REDACTED]') : str
+		const safeHttp = (
+			url: string,
+			opts?: Parameters<typeof http>[1],
+		): ReturnType<typeof http> => {
+			const transport = http(url, opts)
+			return (args) => {
+				const result = transport(args)
+				return {
+					...result,
+					async request(params) {
+						try {
+							return await result.request(params)
+						} catch (error) {
+							if (error instanceof Error)
+								error.message = sanitize(error.message)
+							throw error
+						}
+					},
+				}
+			}
+		}
+		if (forwardAuth) {
+			let authHeader = getRequestHeader('authorization')
+			if (!authHeader) {
+				const cookies = getRequestHeader('cookie')
+				const prefix = `${RPC_AUTH_COOKIE}=`
+				const cookie = cookies?.split('; ').find((c) => c.startsWith(prefix))
+				if (cookie) authHeader = `Basic ${cookie.slice(prefix.length)}`
+			}
+			return fallback(
+				getHttpUrls().map((url) =>
+					safeHttp(withKey(url), {
 						fetchOptions: { headers: { Authorization: authHeader ?? '' } },
 					}),
 				),
-			])
+			)
 		}
 		return fallback([
-			...getWsUrls().map((url) => webSocket(`${url}/${rpcKey}`)),
-			...getHttpUrls().map((url) => http(`${url}/${rpcKey}`)),
+			...getWsUrls().map((url) => webSocket(withKey(url))),
+			...getHttpUrls().map((url) => safeHttp(withKey(url))),
 		])
 	})
 

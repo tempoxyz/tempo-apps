@@ -8,7 +8,9 @@ import {
 	formatAbiValue,
 	getAbiItem,
 	getContractInfo,
+	precompileRegistry,
 } from '#lib/domain/contracts'
+import { decodePrecompile } from '#lib/domain/precompiles'
 import { useCopy } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
 import {
@@ -123,13 +125,26 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 			const hasSelector = trace.input && trace.input.length >= 10
 			const selector = hasSelector ? slice(trace.input, 0, 4) : undefined
 			const contractInfo = trace.to ? getContractInfo(trace.to) : undefined
+			const precompileInfo = trace.to
+				? precompileRegistry.get(trace.to.toLowerCase() as `0x${string}`)
+				: undefined
 
-			// try to decode function call
 			let functionName: string | undefined
 			let params: string | undefined
 			let decodedOutput: string | undefined
 
-			if (selector) {
+			if (precompileInfo) {
+				const decoded = decodePrecompile(
+					trace.to!,
+					trace.input || '0x',
+					trace.output,
+				)
+				functionName = 'run'
+				if (decoded) {
+					params = decoded.params
+					decodedOutput = decoded.decodedOutput
+				}
+			} else if (selector) {
 				const autoloadAbi = abiMap.get(trace.to ?? '')
 				const autoloadAbiItem =
 					autoloadAbi && getAbiItem({ abi: autoloadAbi as Abi, selector })
@@ -194,7 +209,7 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 				hasInput: hasSelector,
 				hasOutput: Boolean(trace.output && trace.output !== '0x'),
 				hasError: Boolean(trace.error || trace.revertReason),
-				contractName: contractInfo?.name,
+				contractName: precompileInfo?.name ?? contractInfo?.name,
 				functionName,
 				params,
 				decodedOutput,
