@@ -175,7 +175,7 @@ catalogs:
       specifier: ^22.5.0
       version: 22.5.0
     viem:
-      specifier: ^2.44.1
+      specifier: ^2.44.2
       version: 2.44.2
     vite:
       specifier: npm:rolldown-vite@latest
