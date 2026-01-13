@@ -63,7 +63,7 @@ export async function getUsage(
 	const feeTokenMetadata = await Actions.token.getMetadata(
 		createPublicClient({
 			chain: tempoChain,
-			transport: http(),
+			transport: http(env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0]),
 		}),
 		{ token: alphaUsd },
 	)
