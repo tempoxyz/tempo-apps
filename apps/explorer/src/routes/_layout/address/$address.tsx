@@ -797,11 +797,7 @@ function SectionsWrapper(props: {
 	 * (tanstack query may have fresher cached data that differs from SSR)
 	 */
 	const data = isMounted ? queryData : page === 1 ? initialData : queryData
-	const {
-		transactions = [],
-		total: approximateTotal = 0,
-		hasMore = false,
-	} = data ?? {}
+	const { transactions = [], hasMore = false } = data ?? {}
 
 	// Fetch exact total count in the background (only when on history tab)
 	// Don't cache across tabs/pages - always show "..." until loaded each time
@@ -824,14 +820,6 @@ function SectionsWrapper(props: {
 	// so we can't use exactCount for page calculation - most pages would be empty
 	// Only use after mount to avoid SSR/client hydration mismatch
 	const exactCount = isMounted ? totalCountQuery.data?.data : undefined
-
-	// For pagination: always use hasMore-based estimate
-	// This ensures we only show pages that have data
-	const paginationTotal = hasMore
-		? Math.max(approximateTotal + limit, (page + 1) * limit)
-		: approximateTotal > 0
-			? approximateTotal
-			: transactions.length
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -876,7 +864,7 @@ function SectionsWrapper(props: {
 				sections={[
 					{
 						title: 'History',
-						totalItems: data && (exactCount ?? paginationTotal),
+						totalItems: data && exactCount,
 						itemsLabel: 'transactions',
 						content: historyError ?? (
 							<DataGrid
@@ -915,12 +903,13 @@ function SectionsWrapper(props: {
 										},
 									}))
 								}
-								totalItems={paginationTotal}
+								totalItems={exactCount ?? transactions.length}
+								pages={exactCount === undefined ? { hasMore } : undefined}
 								displayCount={exactCount}
 								page={page}
 								fetching={isPlaceholderData}
 								loading={!data}
-								countLoading
+								countLoading={exactCount === undefined}
 								itemsLabel="transactions"
 								itemsPerPage={limit}
 								pagination="simple"
