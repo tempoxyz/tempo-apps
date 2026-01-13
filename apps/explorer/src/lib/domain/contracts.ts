@@ -53,7 +53,7 @@ export const precompileRegistry = new Map<Address.Address, ContractInfo>(<
 	[
 		'0x0000000000000000000000000000000000000002',
 		{
-			name: 'SHA2-256',
+			name: 'sha256',
 			description: 'SHA-256 hash function',
 			code: '0x' as Hex.Hex,
 			abi: [] as Abi,
@@ -65,7 +65,7 @@ export const precompileRegistry = new Map<Address.Address, ContractInfo>(<
 	[
 		'0x0000000000000000000000000000000000000003',
 		{
-			name: 'RIPEMD-160',
+			name: 'ripemd160',
 			description: 'RIPEMD-160 hash function',
 			code: '0x' as Hex.Hex,
 			abi: [] as Abi,
