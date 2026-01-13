@@ -1,4 +1,4 @@
-name: 'Post Deployment Table'
+name: 'Cloudflare Post Deployment'
 description: 'Posts a consolidated table of all Cloudflare deployments to a PR'
 
 inputs:
@@ -22,7 +22,6 @@ runs:
           const fs = require('fs');
           const path = require('path');
 
-          // Read all deployment files
           const deploymentsPath = process.env.DEPLOYMENTS_PATH;
           const deployments = [];
 
@@ -39,7 +38,6 @@ runs:
             console.log('No deployment files found or error reading them:', error.message);
           }
 
-          // Sort deployments by app name, then environment
           deployments.sort((a, b) => {
             if (a.app !== b.app) return a.app.localeCompare(b.app);
             const envA = a.env || '';
@@ -47,7 +45,6 @@ runs:
             return envA.localeCompare(envB);
           });
 
-          // Generate markdown table
           const statusEmoji = {
             'success': '✅',
             'skipped': '⏭️',
@@ -68,7 +65,6 @@ runs:
 
             let preview = '-';
             if (deployment.status === 'success') {
-              // Prefer alias URL over deployment URL
               const url = deployment.deployment_alias_url || deployment.deployment_url;
               if (url) {
                 preview = `[View Preview](${url})`;
@@ -89,7 +85,6 @@ ${tableRows.join('\n')}
 
 ${deployments.length === 0 ? '_No deployments found._' : ''}`;
 
-          // Find existing comment
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
@@ -100,7 +95,6 @@ ${deployments.length === 0 ? '_No deployments found._' : ''}`;
             comment.body.includes('<!-- cloudflare-deployments -->')
           );
 
-          // Create or update comment
           if (existingComment) {
             await github.rest.issues.updateComment({
               owner: context.repo.owner,
