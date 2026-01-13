@@ -7,12 +7,11 @@ import {
 import * as React from 'react'
 import { useWatchBlockNumber } from 'wagmi'
 import { ExploreInput } from '#comps/ExploreInput'
-import { cx } from '#cva.config.ts'
+import { cx } from '#cva.config'
+import { isTestnet } from '#lib/env'
 import { useIsMounted } from '#lib/hooks'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
-
-const isTestnet = import.meta.env.VITE_TEMPO_ENV === 'testnet'
 
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
@@ -179,7 +178,7 @@ export namespace Header {
 
 		return (
 			<Link
-				disabled={!isTestnet}
+				disabled={!isTestnet()}
 				to="/block/$id"
 				params={{ id: 'latest' }}
 				className={cx(
