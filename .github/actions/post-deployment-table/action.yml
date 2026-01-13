@@ -1,0 +1,118 @@
+name: 'Cloudflare Post Deployment'
+description: 'Posts a consolidated table of all Cloudflare deployments to a PR'
+
+inputs:
+  github-token:
+    description: 'GitHub token for posting comments'
+    required: true
+  deployments-path:
+    description: 'Path to directory containing deployment JSON files'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Generate and Post Deployment Table
+      uses: actions/github-script@v7
+      env:
+        DEPLOYMENTS_PATH: ${{ inputs.deployments-path }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+
+          const deploymentsPath = process.env.DEPLOYMENTS_PATH;
+          const deployments = [];
+
+          try {
+            const files = fs.readdirSync(deploymentsPath);
+            for (const file of files) {
+              if (file.endsWith('.json')) {
+                try {
+                  const content = fs.readFileSync(path.join(deploymentsPath, file), 'utf8');
+                  const deployment = JSON.parse(content);
+                  deployments.push(deployment);
+                } catch (parseError) {
+                  console.log(`Failed to parse ${file}:`, parseError.message);
+                }
+              }
+            }
+          } catch (error) {
+            console.log('No deployment files found or error reading them:', error.message);
+          }
+
+          deployments.sort((a, b) => {
+            const appA = a.app || '';
+            const appB = b.app || '';
+            if (appA !== appB) return appA.localeCompare(appB);
+            const envA = a.env || '';
+            const envB = b.env || '';
+            return envA.localeCompare(envB);
+          });
+
+          const statusEmoji = {
+            'success': '[OK]',
+            'skipped': '[>>]',
+            'failed': '[X]'
+          };
+
+          const statusText = {
+            'success': 'Deployed',
+            'skipped': 'Skipped',
+            'failed': 'Failed'
+          };
+
+          let tableRows = [];
+          for (const deployment of deployments) {
+            const app = deployment.app;
+            const env = deployment.env || '-';
+            const status = `${statusEmoji[deployment.status] || '[?]'} ${statusText[deployment.status] || 'Unknown'}`;
+
+            let preview = '-';
+            if (deployment.status === 'success') {
+              const url = deployment.deployment_alias_url || deployment.deployment_url;
+              if (url) {
+                preview = `[View Preview](${url})`;
+              }
+            } else if (deployment.status === 'skipped') {
+              preview = 'No changes';
+            }
+
+            tableRows.push(`| ${app} | ${env} | ${status} | ${preview} |`);
+          }
+
+          let commentBody = '<!-- cloudflare-deployments -->\n';
+          commentBody += '## Cloudflare Deployments\n\n';
+          commentBody += '| App | Environment | Status | Preview |\n';
+          commentBody += '|-----|-------------|--------|---------|\n';
+          commentBody += tableRows.join('\n') + '\n\n';
+          commentBody += deployments.length === 0 ? '_No deployments found._' : '';
+
+          const { data: comments } = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const existingComment = comments.find(comment =>
+            comment.body.includes('<!-- cloudflare-deployments -->')
+          );
+
+          if (existingComment) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existingComment.id,
+              body: commentBody
+            });
+            console.log('Updated existing deployment comment');
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: commentBody
+            });
+            console.log('Created new deployment comment');
+          }

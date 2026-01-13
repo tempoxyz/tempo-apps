@@ -5,8 +5,8 @@ import * as z from 'zod/mini'
 import { ContractVerificationLookupSchema } from '#lib/domain/contract-source.ts'
 import { zAddress } from '#lib/zod.ts'
 
-const CONTRACT_VERIFICATION_API_BASE_URL = import.meta.env
-	.VITE_CONTRACT_VERIFY_URL
+const CONTRACT_VERIFICATION_API_BASE_URL =
+	process.env.VITE_CONTRACT_VERIFY_URL ?? 'https://contracts.tempo.xyz'
 
 const SHIKI_THEMES = {
 	light: 'github-light',
