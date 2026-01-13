@@ -143,7 +143,7 @@ function decodeEcPairing(
 		const y2_c0 = formatU256(bytesToBigInt(input, offset + 128, 32))
 		const y2_c1 = formatU256(bytesToBigInt(input, offset + 160, 32))
 		pairs.push(
-			`G1(${x1}, ${y1}), G2((${x2_c0}, ${x2_c1}), (${y2_c0}, ${y2_c1}))`,
+			`(x1: ${x1}, y1: ${y1}, x2: (${x2_c0}, ${x2_c1}), y2: (${y2_c0}, ${y2_c1}))`,
 		)
 	}
 	const params = pairs.length > 0 ? pairs.join('; ') : 'empty'
@@ -201,13 +201,13 @@ function decodeBls12G1Add(
 	const y1 = sliceBytes(input, 64, 128)
 	const x2 = sliceBytes(input, 128, 192)
 	const y2 = sliceBytes(input, 192, 256)
-	const params = `p1: (${x1}, ${y1}), p2: (${x2}, ${y2})`
+	const params = `x1: ${x1}, y1: ${y1}, x2: ${x2}, y2: ${y2}`
 	let decodedOutput: string | undefined
 	const outputLen = output ? (output.length - 2) / 2 : 0
 	if (output && outputLen === 128) {
 		const xOut = sliceBytes(output, 0, 64)
 		const yOut = sliceBytes(output, 64, 128)
-		decodedOutput = `(${xOut}, ${yOut})`
+		decodedOutput = `x: ${xOut}, y: ${yOut}`
 	}
 	return { params, decodedOutput }
 }
@@ -228,7 +228,7 @@ function decodeBls12G1Msm(
 		const scalar = sliceBytes(input, offset, offset + 32)
 		const x = sliceBytes(input, offset + 32, offset + 96)
 		const y = sliceBytes(input, offset + 96, offset + 160)
-		elements.push(`${scalar} * (${x}, ${y})`)
+		elements.push(`(k: ${scalar}, x: ${x}, y: ${y})`)
 	}
 	const params = elements.join('; ')
 	let decodedOutput: string | undefined
@@ -236,7 +236,7 @@ function decodeBls12G1Msm(
 	if (output && outputLen === 128) {
 		const xOut = sliceBytes(output, 0, 64)
 		const yOut = sliceBytes(output, 64, 128)
-		decodedOutput = `(${xOut}, ${yOut})`
+		decodedOutput = `x: ${xOut}, y: ${yOut}`
 	}
 	return { params, decodedOutput }
 }
@@ -257,7 +257,7 @@ function decodeBls12G2Add(
 	const x2_c1 = sliceBytes(input, 320, 384)
 	const y2_c0 = sliceBytes(input, 384, 448)
 	const y2_c1 = sliceBytes(input, 448, 512)
-	const params = `p1: ((${x1_c0}, ${x1_c1}), (${y1_c0}, ${y1_c1})), p2: ((${x2_c0}, ${x2_c1}), (${y2_c0}, ${y2_c1}))`
+	const params = `x1: (${x1_c0}, ${x1_c1}), y1: (${y1_c0}, ${y1_c1}), x2: (${x2_c0}, ${x2_c1}), y2: (${y2_c0}, ${y2_c1})`
 	let decodedOutput: string | undefined
 	const outputLen = output ? (output.length - 2) / 2 : 0
 	if (output && outputLen === 256) {
@@ -265,7 +265,7 @@ function decodeBls12G2Add(
 		const xOut_c1 = sliceBytes(output, 64, 128)
 		const yOut_c0 = sliceBytes(output, 128, 192)
 		const yOut_c1 = sliceBytes(output, 192, 256)
-		decodedOutput = `((${xOut_c0}, ${xOut_c1}), (${yOut_c0}, ${yOut_c1}))`
+		decodedOutput = `x: (${xOut_c0}, ${xOut_c1}), y: (${yOut_c0}, ${yOut_c1})`
 	}
 	return { params, decodedOutput }
 }
@@ -288,7 +288,9 @@ function decodeBls12G2Msm(
 		const x_c1 = sliceBytes(input, offset + 96, offset + 160)
 		const y_c0 = sliceBytes(input, offset + 160, offset + 224)
 		const y_c1 = sliceBytes(input, offset + 224, offset + 288)
-		elements.push(`${scalar} * ((${x_c0}, ${x_c1}), (${y_c0}, ${y_c1}))`)
+		elements.push(
+			`(k: ${scalar}, x: (${x_c0}, ${x_c1}), y: (${y_c0}, ${y_c1}))`,
+		)
 	}
 	const params = elements.join('; ')
 	let decodedOutput: string | undefined
@@ -298,7 +300,7 @@ function decodeBls12G2Msm(
 		const xOut_c1 = sliceBytes(output, 64, 128)
 		const yOut_c0 = sliceBytes(output, 128, 192)
 		const yOut_c1 = sliceBytes(output, 192, 256)
-		decodedOutput = `((${xOut_c0}, ${xOut_c1}), (${yOut_c0}, ${yOut_c1}))`
+		decodedOutput = `x: (${xOut_c0}, ${xOut_c1}), y: (${yOut_c0}, ${yOut_c1})`
 	}
 	return { params, decodedOutput }
 }
@@ -323,7 +325,7 @@ function decodeBls12PairingCheck(
 		const g2_y_c0 = sliceBytes(input, offset + 256, offset + 320)
 		const g2_y_c1 = sliceBytes(input, offset + 320, offset + 384)
 		pairs.push(
-			`G1(${g1_x}, ${g1_y}), G2((${g2_x_c0}, ${g2_x_c1}), (${g2_y_c0}, ${g2_y_c1}))`,
+			`(g1_x: ${g1_x}, g1_y: ${g1_y}, g2_x: (${g2_x_c0}, ${g2_x_c1}), g2_y: (${g2_y_c0}, ${g2_y_c1}))`,
 		)
 	}
 	const params = pairs.length > 0 ? pairs.join('; ') : 'empty'
@@ -349,7 +351,7 @@ function decodeBls12MapFpToG1(
 	if (output && outputLen === 128) {
 		const xOut = sliceBytes(output, 0, 64)
 		const yOut = sliceBytes(output, 64, 128)
-		decodedOutput = `(${xOut}, ${yOut})`
+		decodedOutput = `x: ${xOut}, y: ${yOut}`
 	}
 	return { params, decodedOutput }
 }
@@ -364,7 +366,7 @@ function decodeBls12MapFp2ToG2(
 	}
 	const c0 = sliceBytes(input, 0, 64)
 	const c1 = sliceBytes(input, 64, 128)
-	const params = `(${c0}, ${c1})`
+	const params = `c0: ${c0}, c1: ${c1}`
 	let decodedOutput: string | undefined
 	const outputLen = output ? (output.length - 2) / 2 : 0
 	if (output && outputLen === 256) {
@@ -372,7 +374,7 @@ function decodeBls12MapFp2ToG2(
 		const xOut_c1 = sliceBytes(output, 64, 128)
 		const yOut_c0 = sliceBytes(output, 128, 192)
 		const yOut_c1 = sliceBytes(output, 192, 256)
-		decodedOutput = `((${xOut_c0}, ${xOut_c1}), (${yOut_c0}, ${yOut_c1}))`
+		decodedOutput = `x: (${xOut_c0}, ${xOut_c1}), y: (${yOut_c0}, ${yOut_c1})`
 	}
 	return { params, decodedOutput }
 }
