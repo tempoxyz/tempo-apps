@@ -11,6 +11,16 @@ FORGE_VERSION=$(forge --version)
 echo -e "\nCAST_VERSION: $CAST_VERSION"
 echo -e "FORGE_VERSION: $FORGE_VERSION"
 
+# Fee token address, defaults to native fee token
+FEE_TOKEN="${TEMPO_FEE_TOKEN:-0x20c0000000000000000000000000000000000002}"
+
+# Build fee token args if not using native token (array for safe expansion)
+FEE_TOKEN_ARG=()
+if [[ "$FEE_TOKEN" != "0x20c0000000000000000000000000000000000002" ]]; then
+  FEE_TOKEN_ARG=(--fee-token "$FEE_TOKEN")
+fi
+echo -e "\n=== USING FEE TOKEN: $FEE_TOKEN ==="
+
 TEMP_DIR=$(mktemp -d)
 echo -e "\nCreating temporary directory $TEMP_DIR\n"
 cd "$TEMP_DIR"
@@ -40,7 +50,7 @@ echo -e "\n=== FORGE CREATE DEPLOY ==="
 
 echo -e "\nDEPLOYER: $TEST_ADDRESS\n"
 
-forge create src/Counter.sol:Counter \
+forge create ${FEE_TOKEN_ARG[@]+"${FEE_TOKEN_ARG[@]}"} src/Counter.sol:Counter \
   --private-key "$TEST_PRIVATE_KEY" \
   --rpc-url "$TEMPO_RPC_URL" \
   --broadcast \

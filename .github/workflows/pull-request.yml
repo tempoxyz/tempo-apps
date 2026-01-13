@@ -35,6 +35,8 @@ jobs:
             env: moderato
           - app: explorer
             env: devnet
+          - app: explorer
+            env: presto
           #### fee-payer
           - app: fee-payer
             env: privy
@@ -121,7 +123,7 @@ jobs:
 
       - name: Upload Deployment Info
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: deployment-${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
           path: deployment-info/${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}.json
@@ -140,7 +142,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Download All Deployment Artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: deployment-*
           path: deployments
