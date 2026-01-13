@@ -87,9 +87,11 @@ function Component() {
 	}, [router])
 
 	const handlePhaseChange = React.useCallback((phase: IntroPhase) => {
-		if (phase === 'start' && exploreWrapperRef.current) {
-			const seen = introSeenOnMount.current
-			setTimeout(() => {
+		if (phase !== 'start' || !exploreWrapperRef.current) return
+
+		const seen = introSeenOnMount.current
+		setTimeout(
+			() => {
 				setInputReady(true)
 				if (exploreWrapperRef.current) {
 					exploreWrapperRef.current.style.pointerEvents = 'auto'
@@ -100,8 +102,9 @@ function Component() {
 					})
 				}
 				exploreInputRef.current?.focus()
-			}, seen ? 0 : 240)
-		}
+			},
+			seen ? 0 : 240,
+		)
 	}, [])
 
 	return (
@@ -207,9 +210,10 @@ function SpotlightLinks() {
 		}, delay)
 		const anim = waapi.animate(children as HTMLElement[], {
 			opacity: [0, 1],
-			translateY: [seen ? 2 : 4, 0],
+			translateY: [seen ? 4 : 8, 0],
+			scale: [0.97, 1],
 			ease: seen ? springInstant : springSmooth,
-			delay: seen ? stagger(10) : stagger(20, { start: delay, from: 'random' }),
+			delay: seen ? stagger(10) : stagger(20, { start: delay, from: 'first' }),
 		})
 		anim.then(() => {
 			for (const child of children) {
