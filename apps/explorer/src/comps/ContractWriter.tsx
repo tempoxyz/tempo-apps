@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useLocation } from '@tanstack/react-router'
+
 import type { Address } from 'ox'
 import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
@@ -15,7 +15,7 @@ import {
 	parseInputValue,
 	type WriteFunction,
 } from '#lib/domain/contracts'
-import { useCopy, useCopyPermalink } from '#lib/hooks'
+import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
@@ -26,28 +26,6 @@ export function ContractWriter(props: ContractWriter.Props) {
 	const { address, abi } = props
 
 	const key = React.useId()
-	const location = useLocation()
-
-	React.useEffect(() => {
-		const hash = location.hash
-		if (hash && typeof window !== 'undefined') {
-			let highlightTimer: ReturnType<typeof setTimeout> | undefined
-			const timer = setTimeout(() => {
-				const element = document.getElementById(hash.slice(1))
-				if (element) {
-					element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-					element.classList.add('ring-1', 'ring-accent', 'ring-offset-1')
-					highlightTimer = setTimeout(() => {
-						element.classList.remove('ring-1', 'ring-accent', 'ring-offset-1')
-					}, 2_000)
-				}
-			}, 100)
-			return () => {
-				clearTimeout(timer)
-				clearTimeout(highlightTimer)
-			}
-		}
-	}, [location.hash])
 
 	const writeFunctions = getWriteFunctions(abi)
 
@@ -97,12 +75,18 @@ function WriteContractFunction(props: {
 	fn: WriteFunction
 }) {
 	const { fn } = props
-	const [isExpanded, setIsExpanded] = React.useState(false)
 	const [inputs, setInputs] = React.useState<Record<string, string>>({})
 	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
 
 	const selector = getFunctionSelector(fn)
 	const fnId = `write-${fn.name || selector}`
+
+	const [isExpanded, setIsExpanded] = React.useState(false)
+	const handleTargetChange = React.useCallback(
+		(isTarget: boolean) => isTarget && setIsExpanded(true),
+		[],
+	)
+	usePermalinkHighlight({ elementId: fnId, onTargetChange: handleTargetChange })
 
 	const handleInputChange = (name: string, value: string) => {
 		setInputs((prev) => ({ ...prev, [name]: value }))
