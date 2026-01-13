@@ -92,7 +92,6 @@ jobs:
         run: |
           mkdir -p deployment-info
 
-          # Determine status
           if [[ "${{ steps.changes.outputs.relevant }}" != "true" ]]; then
             STATUS="skipped"
             DEPLOYMENT_URL=""
@@ -107,8 +106,8 @@ jobs:
             ALIAS_URL=""
           fi
 
-          # Create JSON file with deployment info
-          cat > deployment-info/deployment.json << EOF
+          FILENAME="deployment-info/${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}.json"
+          cat > "$FILENAME" << EOF
           {
             "app": "${{ matrix.app }}",
             "env": "${{ matrix.env }}",
@@ -118,14 +117,14 @@ jobs:
           }
           EOF
 
-          cat deployment-info/deployment.json
+          cat "$FILENAME"
 
       - name: Upload Deployment Info
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: deployment-${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
-          path: deployment-info/deployment.json
+          path: deployment-info/${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}.json
           retention-days: 1
 
   comment-deployments:
