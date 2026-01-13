@@ -30,21 +30,10 @@ export type ContractInfo = {
 }
 
 /**
- * Precompile metadata (without ABI since precompiles use custom encoding).
- */
-export type PrecompileInfo = {
-	name: string
-	description: string
-	signature: string
-	docsUrl: string
-	address: Address.Address
-}
-
-/**
  * Ethereum precompile addresses (0x01-0x0a) with their metadata.
- * Precompiles don't use standard ABI encoding - they have custom input/output formats.
+ * Precompiles don't use standard ABI encoding - decoding is handled separately.
  */
-export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
+export const precompileRegistry = new Map<Address.Address, ContractInfo>(<
 	const
 >[
 	[
@@ -52,7 +41,9 @@ export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
 		{
 			name: 'ecRecover',
 			description: 'Elliptic curve digital signature recovery',
-			signature: 'ecRecover(bytes32 hash, uint8 v, bytes32 r, bytes32 s)',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x01',
 			address: '0x0000000000000000000000000000000000000001',
 		},
@@ -62,7 +53,9 @@ export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
 		{
 			name: 'SHA2-256',
 			description: 'SHA-256 hash function',
-			signature: 'sha256(bytes data)',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x02',
 			address: '0x0000000000000000000000000000000000000002',
 		},
@@ -72,7 +65,9 @@ export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
 		{
 			name: 'RIPEMD-160',
 			description: 'RIPEMD-160 hash function',
-			signature: 'ripemd160(bytes data)',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x03',
 			address: '0x0000000000000000000000000000000000000003',
 		},
@@ -82,7 +77,9 @@ export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
 		{
 			name: 'identity',
 			description: 'Identity (data copy) function',
-			signature: 'identity(bytes data)',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x04',
 			address: '0x0000000000000000000000000000000000000004',
 		},
@@ -92,8 +89,9 @@ export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
 		{
 			name: 'modexp',
 			description: 'Modular exponentiation',
-			signature:
-				'modexp(uint256 Bsize, uint256 Esize, uint256 Msize, bytes B, bytes E, bytes M)',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x05',
 			address: '0x0000000000000000000000000000000000000005',
 		},
@@ -103,7 +101,9 @@ export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
 		{
 			name: 'ecAdd',
 			description: 'Point addition on elliptic curve alt_bn128',
-			signature: 'ecAdd(uint256 x1, uint256 y1, uint256 x2, uint256 y2)',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x06',
 			address: '0x0000000000000000000000000000000000000006',
 		},
@@ -113,7 +113,9 @@ export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
 		{
 			name: 'ecMul',
 			description: 'Scalar multiplication on elliptic curve alt_bn128',
-			signature: 'ecMul(uint256 x1, uint256 y1, uint256 s)',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x07',
 			address: '0x0000000000000000000000000000000000000007',
 		},
@@ -123,7 +125,9 @@ export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
 		{
 			name: 'ecPairing',
 			description: 'Bilinear function on groups on elliptic curve alt_bn128',
-			signature: 'ecPairing(uint256[k*6] input)',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x08',
 			address: '0x0000000000000000000000000000000000000008',
 		},
@@ -133,8 +137,9 @@ export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
 		{
 			name: 'blake2f',
 			description: 'BLAKE2 compression function F',
-			signature:
-				'blake2f(uint32 rounds, bytes64 h, bytes128 m, bytes16 t, bool f)',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x09',
 			address: '0x0000000000000000000000000000000000000009',
 		},
@@ -144,8 +149,9 @@ export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
 		{
 			name: 'pointEvaluation',
 			description: 'KZG point evaluation for EIP-4844 blob verification',
-			signature:
-				'pointEvaluation(bytes32 versionedHash, bytes32 z, bytes32 y, bytes48 commitment, bytes48 proof)',
+			code: '0x' as Hex.Hex,
+			abi: [] as Abi,
+			category: 'precompile',
 			docsUrl: 'https://www.evm.codes/precompiled?fork=prague#0x0a',
 			address: '0x000000000000000000000000000000000000000a',
 		},
@@ -157,15 +163,6 @@ export const precompileRegistry = new Map<Address.Address, PrecompileInfo>(<
  */
 export function isPrecompile(address: Address.Address): boolean {
 	return precompileRegistry.has(address.toLowerCase() as Address.Address)
-}
-
-/**
- * Get precompile info by address.
- */
-export function getPrecompileInfo(
-	address: Address.Address,
-): PrecompileInfo | undefined {
-	return precompileRegistry.get(address.toLowerCase() as Address.Address)
 }
 
 /**

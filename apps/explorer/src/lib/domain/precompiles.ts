@@ -1,8 +1,6 @@
 import type { Hex } from 'viem'
-import { type PrecompileInfo, precompileRegistry } from './contracts'
 
 export type DecodedPrecompile = {
-	name: string
 	functionName: string
 	params?: string
 	decodedOutput?: string
@@ -210,20 +208,52 @@ function decodePointEvaluation(
 	}
 }
 
-const decoders: Record<
-	string,
-	(input: Hex, output: Hex | undefined) => Partial<DecodedPrecompile>
-> = {
-	'0x0000000000000000000000000000000000000001': decodeEcRecover,
-	'0x0000000000000000000000000000000000000002': decodeSha256,
-	'0x0000000000000000000000000000000000000003': decodeRipemd160,
-	'0x0000000000000000000000000000000000000004': decodeIdentity,
-	'0x0000000000000000000000000000000000000005': decodeModexp,
-	'0x0000000000000000000000000000000000000006': decodeEcAdd,
-	'0x0000000000000000000000000000000000000007': decodeEcMul,
-	'0x0000000000000000000000000000000000000008': decodeEcPairing,
-	'0x0000000000000000000000000000000000000009': decodeBlake2f,
-	'0x000000000000000000000000000000000000000a': decodePointEvaluation,
+type PrecompileDecoder = {
+	name: string
+	decode: (input: Hex, output: Hex | undefined) => Partial<DecodedPrecompile>
+}
+
+const precompileDecoders: Record<string, PrecompileDecoder> = {
+	'0x0000000000000000000000000000000000000001': {
+		name: 'ecRecover',
+		decode: decodeEcRecover,
+	},
+	'0x0000000000000000000000000000000000000002': {
+		name: 'sha256',
+		decode: decodeSha256,
+	},
+	'0x0000000000000000000000000000000000000003': {
+		name: 'ripemd160',
+		decode: decodeRipemd160,
+	},
+	'0x0000000000000000000000000000000000000004': {
+		name: 'identity',
+		decode: decodeIdentity,
+	},
+	'0x0000000000000000000000000000000000000005': {
+		name: 'modexp',
+		decode: decodeModexp,
+	},
+	'0x0000000000000000000000000000000000000006': {
+		name: 'ecAdd',
+		decode: decodeEcAdd,
+	},
+	'0x0000000000000000000000000000000000000007': {
+		name: 'ecMul',
+		decode: decodeEcMul,
+	},
+	'0x0000000000000000000000000000000000000008': {
+		name: 'ecPairing',
+		decode: decodeEcPairing,
+	},
+	'0x0000000000000000000000000000000000000009': {
+		name: 'blake2f',
+		decode: decodeBlake2f,
+	},
+	'0x000000000000000000000000000000000000000a': {
+		name: 'pointEvaluation',
+		decode: decodePointEvaluation,
+	},
 }
 
 /**
@@ -234,24 +264,13 @@ export function decodePrecompile(
 	input: Hex,
 	output: Hex | undefined,
 ): DecodedPrecompile | undefined {
-	const lowerAddress = address.toLowerCase()
-	const info = precompileRegistry.get(lowerAddress as `0x${string}`)
-	if (!info) return undefined
+	const decoder = precompileDecoders[address.toLowerCase()]
+	if (!decoder) return undefined
 
-	const decoder = decoders[lowerAddress]
-	const decoded = decoder?.(input, output) ?? {}
-
+	const decoded = decoder.decode(input, output)
 	return {
-		name: info.name,
-		functionName: info.name,
+		functionName: decoder.name,
 		params: decoded.params,
 		decodedOutput: decoded.decodedOutput,
 	}
-}
-
-/**
- * Get precompile info without decoding.
- */
-export function getPrecompile(address: string): PrecompileInfo | undefined {
-	return precompileRegistry.get(address.toLowerCase() as `0x${string}`)
 }
