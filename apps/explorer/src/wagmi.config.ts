@@ -4,6 +4,7 @@ import {
 	createServerOnlyFn,
 } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
+import { RPC_AUTH_COOKIE } from './index.server'
 import {
 	tempoDevnet,
 	tempoLocalnet,
@@ -113,7 +114,13 @@ const getTempoTransport = createIsomorphicFn()
 			}
 		}
 		if (forwardAuth) {
-			const authHeader = getRequestHeader('authorization')
+			let authHeader = getRequestHeader('authorization')
+			if (!authHeader) {
+				const cookies = getRequestHeader('cookie')
+				const prefix = `${RPC_AUTH_COOKIE}=`
+				const cookie = cookies?.split('; ').find((c) => c.startsWith(prefix))
+				if (cookie) authHeader = `Basic ${cookie.slice(prefix.length)}`
+			}
 			return fallback(
 				getHttpUrls().map((url) =>
 					safeHttp(withKey(url), {
