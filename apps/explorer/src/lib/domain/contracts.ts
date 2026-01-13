@@ -29,231 +29,130 @@ export type ContractInfo = {
 	address: Address.Address
 }
 
+function makePrecompile(
+	data: Omit<ContractInfo, 'code' | 'abi' | 'category'>,
+): [Address.Address, ContractInfo] {
+	return [
+		data.address,
+		{ ...data, code: '0x' as Hex.Hex, abi: [] as Abi, category: 'precompile' },
+	]
+}
+
 /**
  * Ethereum precompile addresses with their metadata.
  * Precompiles don't use standard ABI encoding - decoding is handled separately.
  */
-export const precompileRegistry = new Map<Address.Address, ContractInfo>(<
-	const
->[
-	[
-		'0x0000000000000000000000000000000000000001',
-		{
-			name: 'ecRecover',
-			description: 'Elliptic curve digital signature recovery',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x01',
-			address: '0x0000000000000000000000000000000000000001',
-		},
-	],
-	[
-		'0x0000000000000000000000000000000000000002',
-		{
-			name: 'sha256',
-			description: 'SHA-256 hash function',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x02',
-			address: '0x0000000000000000000000000000000000000002',
-		},
-	],
-	[
-		'0x0000000000000000000000000000000000000003',
-		{
-			name: 'ripemd160',
-			description: 'RIPEMD-160 hash function',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x03',
-			address: '0x0000000000000000000000000000000000000003',
-		},
-	],
-	[
-		'0x0000000000000000000000000000000000000004',
-		{
-			name: 'identity',
-			description: 'Identity (data copy) function',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x04',
-			address: '0x0000000000000000000000000000000000000004',
-		},
-	],
-	[
-		'0x0000000000000000000000000000000000000005',
-		{
-			name: 'modexp',
-			description: 'Modular exponentiation',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x05',
-			address: '0x0000000000000000000000000000000000000005',
-		},
-	],
-	[
-		'0x0000000000000000000000000000000000000006',
-		{
-			name: 'ecAdd',
-			description: 'Point addition on elliptic curve alt_bn128',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x06',
-			address: '0x0000000000000000000000000000000000000006',
-		},
-	],
-	[
-		'0x0000000000000000000000000000000000000007',
-		{
-			name: 'ecMul',
-			description: 'Scalar multiplication on elliptic curve alt_bn128',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x07',
-			address: '0x0000000000000000000000000000000000000007',
-		},
-	],
-	[
-		'0x0000000000000000000000000000000000000008',
-		{
-			name: 'ecPairing',
-			description: 'Bilinear function on groups on elliptic curve alt_bn128',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x08',
-			address: '0x0000000000000000000000000000000000000008',
-		},
-	],
-	[
-		'0x0000000000000000000000000000000000000009',
-		{
-			name: 'blake2f',
-			description: 'BLAKE2 compression function F',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x09',
-			address: '0x0000000000000000000000000000000000000009',
-		},
-	],
-	[
-		'0x000000000000000000000000000000000000000a',
-		{
-			name: 'pointEvaluation',
-			description: 'KZG point evaluation for EIP-4844 blob verification',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0a',
-			address: '0x000000000000000000000000000000000000000a',
-		},
-	],
-	// Prague BLS12-381 precompiles (EIP-2537)
-	[
-		'0x000000000000000000000000000000000000000b',
-		{
-			name: 'bls12G1Add',
-			description: 'BLS12-381 G1 point addition',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0b',
-			address: '0x000000000000000000000000000000000000000b',
-		},
-	],
-	[
-		'0x000000000000000000000000000000000000000c',
-		{
-			name: 'bls12G1Msm',
-			description: 'BLS12-381 G1 multi-scalar multiplication',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0c',
-			address: '0x000000000000000000000000000000000000000c',
-		},
-	],
-	[
-		'0x000000000000000000000000000000000000000d',
-		{
-			name: 'bls12G2Add',
-			description: 'BLS12-381 G2 point addition',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0d',
-			address: '0x000000000000000000000000000000000000000d',
-		},
-	],
-	[
-		'0x000000000000000000000000000000000000000e',
-		{
-			name: 'bls12G2Msm',
-			description: 'BLS12-381 G2 multi-scalar multiplication',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0e',
-			address: '0x000000000000000000000000000000000000000e',
-		},
-	],
-	[
-		'0x000000000000000000000000000000000000000f',
-		{
-			name: 'bls12PairingCheck',
-			description: 'BLS12-381 pairing check',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0f',
-			address: '0x000000000000000000000000000000000000000f',
-		},
-	],
-	[
-		'0x0000000000000000000000000000000000000010',
-		{
-			name: 'bls12MapFpToG1',
-			description: 'BLS12-381 map field element to G1 point',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x10',
-			address: '0x0000000000000000000000000000000000000010',
-		},
-	],
-	[
-		'0x0000000000000000000000000000000000000011',
-		{
-			name: 'bls12MapFp2ToG2',
-			description: 'BLS12-381 map Fp2 element to G2 point',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x11',
-			address: '0x0000000000000000000000000000000000000011',
-		},
-	],
-	// P256 ECDSA verification (RIP-7212)
-	[
-		'0x0000000000000000000000000000000000000100',
-		{
-			name: 'p256Verify',
-			description: 'ECDSA signature verification on secp256r1 (P-256)',
-			code: '0x' as Hex.Hex,
-			abi: [] as Abi,
-			category: 'precompile',
-			docsUrl: 'https://www.evm.codes/precompiled#0x100',
-			address: '0x0000000000000000000000000000000000000100',
-		},
-	],
+export const precompileRegistry = new Map<Address.Address, ContractInfo>([
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000001',
+		name: 'ecRecover',
+		description: 'Elliptic curve digital signature recovery',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x01',
+	}),
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000002',
+		name: 'sha256',
+		description: 'SHA-256 hash function',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x02',
+	}),
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000003',
+		name: 'ripemd160',
+		description: 'RIPEMD-160 hash function',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x03',
+	}),
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000004',
+		name: 'identity',
+		description: 'Identity (data copy) function',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x04',
+	}),
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000005',
+		name: 'modexp',
+		description: 'Modular exponentiation',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x05',
+	}),
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000006',
+		name: 'ecAdd',
+		description: 'Point addition on elliptic curve alt_bn128',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x06',
+	}),
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000007',
+		name: 'ecMul',
+		description: 'Scalar multiplication on elliptic curve alt_bn128',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x07',
+	}),
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000008',
+		name: 'ecPairing',
+		description: 'Bilinear function on groups on elliptic curve alt_bn128',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x08',
+	}),
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000009',
+		name: 'blake2f',
+		description: 'BLAKE2 compression function F',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x09',
+	}),
+	makePrecompile({
+		address: '0x000000000000000000000000000000000000000a',
+		name: 'pointEvaluation',
+		description: 'KZG point evaluation for EIP-4844 blob verification',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0a',
+	}),
+	// Prague BLS12-381 precompiles (EIP-2537).
+	makePrecompile({
+		address: '0x000000000000000000000000000000000000000b',
+		name: 'bls12G1Add',
+		description: 'BLS12-381 G1 point addition',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0b',
+	}),
+	makePrecompile({
+		address: '0x000000000000000000000000000000000000000c',
+		name: 'bls12G1Msm',
+		description: 'BLS12-381 G1 multi-scalar multiplication',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0c',
+	}),
+	makePrecompile({
+		address: '0x000000000000000000000000000000000000000d',
+		name: 'bls12G2Add',
+		description: 'BLS12-381 G2 point addition',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0d',
+	}),
+	makePrecompile({
+		address: '0x000000000000000000000000000000000000000e',
+		name: 'bls12G2Msm',
+		description: 'BLS12-381 G2 multi-scalar multiplication',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0e',
+	}),
+	makePrecompile({
+		address: '0x000000000000000000000000000000000000000f',
+		name: 'bls12PairingCheck',
+		description: 'BLS12-381 pairing check',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x0f',
+	}),
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000010',
+		name: 'bls12MapFpToG1',
+		description: 'BLS12-381 map field element to G1 point',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x10',
+	}),
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000011',
+		name: 'bls12MapFp2ToG2',
+		description: 'BLS12-381 map Fp2 element to G2 point',
+		docsUrl: 'https://www.evm.codes/precompiled?fork=osaka#0x11',
+	}),
+	// P256 ECDSA verification (RIP-7212).
+	makePrecompile({
+		address: '0x0000000000000000000000000000000000000100',
+		name: 'p256Verify',
+		description: 'ECDSA signature verification on secp256r1 (P-256)',
+		docsUrl: 'https://www.evm.codes/precompiled#0x100',
+	}),
 ])
 
 /**
@@ -380,7 +279,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
  * Known contract registry mapping addresses to their metadata and ABIs.
  */
 export const contractRegistry = new Map<Address.Address, ContractInfo>(<const>[
-  ...precompileRegistry.entries(),
+	...precompileRegistry.entries(),
 	...systemContractRegistry.entries(),
 	...tip20ContractRegistry.entries(),
 ])
@@ -400,7 +299,6 @@ export function getContractInfo(
 	address: Address.Address,
 ): ContractInfo | undefined {
 	const lowerAddress = address.toLowerCase() as Address.Address
-
 	const registered = contractRegistry.get(lowerAddress)
 	if (registered) return registered
 
