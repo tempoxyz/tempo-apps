@@ -349,11 +349,11 @@ const precompileDecoders: Record<string, PrecompileDecoder> = {
 		decode: decodeEcRecover,
 	},
 	'0x0000000000000000000000000000000000000002': {
-		name: 'sha256',
+		name: 'SHA2-256',
 		decode: decodeSha256,
 	},
 	'0x0000000000000000000000000000000000000003': {
-		name: 'ripemd160',
+		name: 'RIPEMD-160',
 		decode: decodeRipemd160,
 	},
 	'0x0000000000000000000000000000000000000004': {

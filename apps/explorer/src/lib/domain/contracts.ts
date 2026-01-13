@@ -426,18 +426,6 @@ export function getContractAbi(address: Address.Address): Abi | undefined {
 	return getContractInfo(address)?.abi
 }
 
-/**
- * Check if an address is a known contract (includes TIP-20 tokens and Ethereum precompiles).
- */
-export function isKnownContract(address: Address.Address): boolean {
-	const lowerAddress = address.toLowerCase() as Address.Address
-	return (
-		contractRegistry.has(lowerAddress) ||
-		precompileRegistry.has(lowerAddress) ||
-		isTip20Address(address)
-	)
-}
-
 // ============================================================================
 // ABI Utilities
 // ============================================================================
