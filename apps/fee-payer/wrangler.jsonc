@@ -134,7 +134,7 @@
 			"name": "fee-payer-mainnet",
 			"routes": [
 				{
-					"pattern": "sponsor.mainnet.tempo.xyz",
+					"pattern": "sponsor.tempo.xyz",
 					"zone_name": "tempo.xyz",
 					"custom_domain": true
 				}
