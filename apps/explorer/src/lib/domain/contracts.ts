@@ -431,7 +431,11 @@ export function getContractAbi(address: Address.Address): Abi | undefined {
  */
 export function isKnownContract(address: Address.Address): boolean {
 	const lowerAddress = address.toLowerCase() as Address.Address
-	return contractRegistry.has(lowerAddress) || isTip20Address(address)
+	return (
+		contractRegistry.has(lowerAddress) ||
+		precompileRegistry.has(lowerAddress) ||
+		isTip20Address(address)
+	)
 }
 
 // ============================================================================
