@@ -1,6 +1,11 @@
 import { createIsomorphicFn } from '@tanstack/react-start'
+import { getRequestUrl } from '@tanstack/react-start/server'
 
 export type TempoEnv = 'testnet' | 'moderato' | 'devnet' | 'presto'
+
+export const getRequestURL = createIsomorphicFn()
+	.client(() => new URL(__BASE_URL__ || window.location.origin))
+	.server(() => getRequestUrl())
 
 export const getTempoEnv = createIsomorphicFn()
 	.client(() => import.meta.env.VITE_TEMPO_ENV as TempoEnv)

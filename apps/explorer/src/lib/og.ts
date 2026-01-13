@@ -36,9 +36,7 @@ import { getWagmiConfig } from '#wagmi.config.ts'
 
 // ============ Constants ============
 
-export const OG_BASE_URL = import.meta.env?.VITE_OG_URL
-	? import.meta.env.VITE_OG_URL
-	: 'https://og.tempo.xyz'
+export const OG_BASE_URL = 'https://og.tempo.xyz'
 
 function truncateOgText(text: string, maxLength: number): string {
 	if (text.length <= maxLength) return text
