@@ -217,7 +217,7 @@ function decodeBls12G1Msm(
 	output: Hex | undefined,
 ): DecodedPrecompile {
 	const inputLen = (input.length - 2) / 2
-	// Each element is 160 bytes (128-byte G1 point + 32-byte scalar).
+	// Each element is 160 bytes (32-byte scalar + 128-byte G1 point).
 	if (inputLen === 0 || inputLen % 160 !== 0) {
 		return { params: formatBytes(input) }
 	}
@@ -225,10 +225,10 @@ function decodeBls12G1Msm(
 	const elements: string[] = []
 	for (let i = 0; i < numElements; i++) {
 		const offset = i * 160
-		const x = sliceBytes(input, offset, offset + 64)
-		const y = sliceBytes(input, offset + 64, offset + 128)
-		const scalar = sliceBytes(input, offset + 128, offset + 160)
-		elements.push(`(${x}, ${y}) * ${scalar}`)
+		const scalar = sliceBytes(input, offset, offset + 32)
+		const x = sliceBytes(input, offset + 32, offset + 96)
+		const y = sliceBytes(input, offset + 96, offset + 160)
+		elements.push(`${scalar} * (${x}, ${y})`)
 	}
 	const params = elements.join('; ')
 	let decodedOutput: string | undefined
@@ -275,7 +275,7 @@ function decodeBls12G2Msm(
 	output: Hex | undefined,
 ): DecodedPrecompile {
 	const inputLen = (input.length - 2) / 2
-	// Each element is 288 bytes (256-byte G2 point + 32-byte scalar).
+	// Each element is 288 bytes (32-byte scalar + 256-byte G2 point).
 	if (inputLen === 0 || inputLen % 288 !== 0) {
 		return { params: formatBytes(input) }
 	}
@@ -283,12 +283,12 @@ function decodeBls12G2Msm(
 	const elements: string[] = []
 	for (let i = 0; i < numElements; i++) {
 		const offset = i * 288
-		const x_c0 = sliceBytes(input, offset, offset + 64)
-		const x_c1 = sliceBytes(input, offset + 64, offset + 128)
-		const y_c0 = sliceBytes(input, offset + 128, offset + 192)
-		const y_c1 = sliceBytes(input, offset + 192, offset + 256)
-		const scalar = sliceBytes(input, offset + 256, offset + 288)
-		elements.push(`((${x_c0}, ${x_c1}), (${y_c0}, ${y_c1})) * ${scalar}`)
+		const scalar = sliceBytes(input, offset, offset + 32)
+		const x_c0 = sliceBytes(input, offset + 32, offset + 96)
+		const x_c1 = sliceBytes(input, offset + 96, offset + 160)
+		const y_c0 = sliceBytes(input, offset + 160, offset + 224)
+		const y_c1 = sliceBytes(input, offset + 224, offset + 288)
+		elements.push(`${scalar} * ((${x_c0}, ${x_c1}), (${y_c0}, ${y_c1}))`)
 	}
 	const params = elements.join('; ')
 	let decodedOutput: string | undefined
