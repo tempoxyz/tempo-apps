@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-TEMPO_RPC_URL="https://rpc.testnet.tempo.xyz"
+TEMPO_RPC_URL="https://rpc.moderato.tempo.xyz"
 VERIFIER_URL=${VERIFIER_URL:-"https://contracts.porto.workers.dev"}
 
 echo -e "\n=== VERSIONS ==="
@@ -42,7 +42,7 @@ echo -e "\nDEPLOYER: $TEST_ADDRESS\n"
 
 forge create src/Counter.sol:Counter \
   --private-key "$TEST_PRIVATE_KEY" \
-  --rpc-url $TEMPO_RPC_URL \
+  --rpc-url "$TEMPO_RPC_URL" \
   --broadcast \
   --verify \
   --verifier sourcify \

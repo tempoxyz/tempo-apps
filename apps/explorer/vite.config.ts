@@ -11,11 +11,15 @@ import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 
 const [, , , ...args] = process.argv
 
-function getWranglerEnvVars(envName: string | undefined): Record<string, string> {
+function getWranglerEnvVars(
+	envName: string | undefined,
+): Record<string, string> {
 	if (!envName) return {}
 	try {
 		const content = readFileSync('wrangler.jsonc', 'utf-8')
-		const wranglerConfig = parse(content) as { env?: Record<string, { vars?: Record<string, string> }> }
+		const wranglerConfig = parse(content) as {
+			env?: Record<string, { vars?: Record<string, string> }>
+		}
 		return wranglerConfig?.env?.[envName]?.vars ?? {}
 	} catch {
 		return {}
@@ -97,13 +101,17 @@ export default defineConfig((config) => {
 				wranglerVars.VITE_TEMPO_RPC_WS || env.VITE_TEMPO_RPC_WS || '',
 			),
 			'import.meta.env.VITE_TEMPO_RPC_WS_FALLBACK': JSON.stringify(
-				wranglerVars.VITE_TEMPO_RPC_WS_FALLBACK || env.VITE_TEMPO_RPC_WS_FALLBACK || '',
+				wranglerVars.VITE_TEMPO_RPC_WS_FALLBACK ||
+					env.VITE_TEMPO_RPC_WS_FALLBACK ||
+					'',
 			),
 			'import.meta.env.VITE_TEMPO_RPC_HTTP': JSON.stringify(
 				wranglerVars.VITE_TEMPO_RPC_HTTP || env.VITE_TEMPO_RPC_HTTP || '',
 			),
 			'import.meta.env.VITE_TEMPO_RPC_HTTP_FALLBACK': JSON.stringify(
-				wranglerVars.VITE_TEMPO_RPC_HTTP_FALLBACK || env.VITE_TEMPO_RPC_HTTP_FALLBACK || '',
+				wranglerVars.VITE_TEMPO_RPC_HTTP_FALLBACK ||
+					env.VITE_TEMPO_RPC_HTTP_FALLBACK ||
+					'',
 			),
 			'import.meta.env.VITE_ENABLE_DEMO': JSON.stringify(
 				env.VITE_ENABLE_DEMO ?? 'true',
