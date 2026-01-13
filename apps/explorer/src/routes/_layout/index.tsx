@@ -58,7 +58,7 @@ const SPOTLIGHT_DATA: Record<
 	},
 	presto: {
 		accountAddress: '0x85269497F0b602a718b85DB5ce490A6c88d01c0E',
-		contractAddress: '0x5822bb22E17937bbf16058A16B343B51f19887e1',
+		contractAddress: '0x4027a3f47d9a421c381bf5d88e22dad5afd4b1a2',
 		receiptHash:
 			'0x009293cd8195b5f088729e8839c3ccb7e9d10d98798a1cb11c06e62d77d1dbef',
 		paymentHash:
