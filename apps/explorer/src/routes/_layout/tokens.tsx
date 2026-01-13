@@ -15,9 +15,11 @@ import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens.server'
+import { getRequestURL } from '#lib/env.ts'
 
 async function fetchTokensCount() {
-	const response = await fetch(`${__BASE_URL__}/api/tokens/count`, {
+	const requestUrl = getRequestURL()
+	const response = await fetch(`${requestUrl.origin}/api/tokens/count`, {
 		headers: { 'Content-Type': 'application/json' },
 	})
 	if (!response.ok) throw new Error('Failed to fetch total token count')

@@ -1,13 +1,9 @@
 interface EnvironmentVariables {
 	readonly INDEXER_API_KEY: string | undefined
 
-	readonly VITE_OG_URL: string
-	readonly VITE_CONTRACT_VERIFY_URL: string
-
 	readonly VITE_TEMPO_ENV: 'testnet' | 'moderato' | 'devnet' | 'presto'
 
 	readonly TEMPO_RPC_KEY: string
-	readonly FORWARD_RPC_AUTH: string | undefined
 }
 
 interface ImportMetaEnv extends EnvironmentVariables {}

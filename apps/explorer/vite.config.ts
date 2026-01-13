@@ -97,22 +97,6 @@ export default defineConfig((config) => {
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
 				wranglerVars.VITE_TEMPO_ENV || cloudflareEnv || env.VITE_TEMPO_ENV,
 			),
-			'import.meta.env.VITE_TEMPO_RPC_WS': JSON.stringify(
-				wranglerVars.VITE_TEMPO_RPC_WS || env.VITE_TEMPO_RPC_WS || '',
-			),
-			'import.meta.env.VITE_TEMPO_RPC_WS_FALLBACK': JSON.stringify(
-				wranglerVars.VITE_TEMPO_RPC_WS_FALLBACK ||
-					env.VITE_TEMPO_RPC_WS_FALLBACK ||
-					'',
-			),
-			'import.meta.env.VITE_TEMPO_RPC_HTTP': JSON.stringify(
-				wranglerVars.VITE_TEMPO_RPC_HTTP || env.VITE_TEMPO_RPC_HTTP || '',
-			),
-			'import.meta.env.VITE_TEMPO_RPC_HTTP_FALLBACK': JSON.stringify(
-				wranglerVars.VITE_TEMPO_RPC_HTTP_FALLBACK ||
-					env.VITE_TEMPO_RPC_HTTP_FALLBACK ||
-					'',
-			),
 			'import.meta.env.VITE_ENABLE_DEMO': JSON.stringify(
 				env.VITE_ENABLE_DEMO ?? 'true',
 			),
