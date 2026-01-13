@@ -2,7 +2,8 @@
 
 set -euo pipefail
 
-TEMPO_RPC_URL="https://rpc.moderato.tempo.xyz"
+TEMPO_RPC_URL=${TEMPO_RPC_URL:-"https://rpc.mainnet.tempo.xyz"}
+echo "${TEMPO_RPC_URL}"
 VERIFIER_URL=${VERIFIER_URL:-"https://contracts.porto.workers.dev"}
 
 echo -e "\n=== VERSIONS ==="
@@ -24,13 +25,13 @@ forge script script/Mail.s.sol --sig "run(string)" "$(date +%s%N)"
 echo -e "\n=== START TEMPO FORK TESTS ==="
 
 echo -e "\n=== TEMPO VERSION ==="
-cast client --rpc-url $TEMPO_RPC_URL
+cast client --rpc-url "$TEMPO_RPC_URL"
 
 echo -e "\n=== FORGE TEST (FORK) ==="
-forge test --rpc-url $TEMPO_RPC_URL
+forge test --rpc-url "$TEMPO_RPC_URL"
 
 echo -e "\n=== FORGE SCRIPT (FORK) ==="
-forge script script/Mail.s.sol --rpc-url $TEMPO_RPC_URL --sig "run(string)" "$(date +%s%N)"
+forge script script/Mail.s.sol --rpc-url "$TEMPO_RPC_URL" --sig "run(string)" "$(date +%s%N)"
 
 echo -e "\n=== CREATE & FUND NEW WALLET ===\n"
 
@@ -50,15 +51,15 @@ echo "WALLET BALANCE: $WALLET_BALANCE"
 VERIFY_ARGS=(--verify --verifier sourcify --verifier-url "$VERIFIER_URL")
 
 echo -e "\n=== FORGE SCRIPT DEPLOY ==="
-forge script script/Mail.s.sol --private-key "$TEST_PRIVATE_KEY" --rpc-url $TEMPO_RPC_URL --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --sig "run(string)" "$(date +%s%N)"
+forge script script/Mail.s.sol --private-key "$TEST_PRIVATE_KEY" --rpc-url "$TEMPO_RPC_URL" --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --sig "run(string)" "$(date +%s%N)"
 
 echo -e "\n=== FORGE SCRIPT DEPLOY WITH FEE TOKEN ==="
-forge script --fee-token 2 script/Mail.s.sol --private-key "$TEST_PRIVATE_KEY" --rpc-url $TEMPO_RPC_URL --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --sig "run(string)" "$(date +%s%N)"
-forge script --fee-token 3 script/Mail.s.sol --private-key "$TEST_PRIVATE_KEY" --rpc-url $TEMPO_RPC_URL --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --sig "run(string)" "$(date +%s%N)"
+forge script --fee-token 2 script/Mail.s.sol --private-key "$TEST_PRIVATE_KEY" --rpc-url "$TEMPO_RPC_URL" --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --sig "run(string)" "$(date +%s%N)"
+forge script --fee-token 3 script/Mail.s.sol --private-key "$TEST_PRIVATE_KEY" --rpc-url "$TEMPO_RPC_URL" --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --sig "run(string)" "$(date +%s%N)"
 
 echo -e "\n=== FORGE CREATE DEPLOY ==="
-forge create src/Mail.sol:Mail --private-key "$TEST_PRIVATE_KEY" --rpc-url $TEMPO_RPC_URL --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --constructor-args 0x20c0000000000000000000000000000000000000
+forge create src/Mail.sol:Mail --private-key "$TEST_PRIVATE_KEY" --rpc-url "$TEMPO_RPC_URL" --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --constructor-args 0x20c0000000000000000000000000000000000000
 
 echo -e "\n=== FORGE CREATE DEPLOY WITH FEE TOKEN ==="
-forge create --fee-token 2 src/Mail.sol:Mail --private-key "$TEST_PRIVATE_KEY" --rpc-url $TEMPO_RPC_URL --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --constructor-args 0x20c0000000000000000000000000000000000000
-forge create --fee-token 3 src/Mail.sol:Mail --private-key "$TEST_PRIVATE_KEY" --rpc-url $TEMPO_RPC_URL --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --constructor-args 0x20c0000000000000000000000000000000000000
+forge create --fee-token 2 src/Mail.sol:Mail --private-key "$TEST_PRIVATE_KEY" --rpc-url "$TEMPO_RPC_URL" --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --constructor-args 0x20c0000000000000000000000000000000000000
+forge create --fee-token 3 src/Mail.sol:Mail --private-key "$TEST_PRIVATE_KEY" --rpc-url "$TEMPO_RPC_URL" --broadcast ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} --constructor-args 0x20c0000000000000000000000000000000000000
