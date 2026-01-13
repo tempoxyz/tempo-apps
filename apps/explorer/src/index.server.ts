@@ -30,7 +30,7 @@ function handleAuthParam(request: Request): Response | null {
 		status: 302,
 		headers: {
 			Location: url.toString(),
-			'Set-Cookie': `${RPC_AUTH_COOKIE}=${auth.includes(':') ? btoa(auth) : auth}; Path=/; HttpOnly; SameSite=Strict; Max-Age=31536000`,
+			'Set-Cookie': `${RPC_AUTH_COOKIE}=${auth.includes(':') ? btoa(auth) : auth}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`,
 		},
 	})
 }
