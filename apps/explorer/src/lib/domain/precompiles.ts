@@ -43,10 +43,7 @@ function decodeEcRecover(
 	return { params, decodedOutput }
 }
 
-function decodeSha256(
-	input: Hex,
-	output: Hex | undefined,
-): DecodedPrecompile {
+function decodeSha256(input: Hex, output: Hex | undefined): DecodedPrecompile {
 	return {
 		params: `data: ${formatBytes(input)}`,
 		decodedOutput: output && output !== '0x' ? output : undefined,
@@ -71,27 +68,28 @@ function decodeIdentity(
 	return { params: `data: ${formatBytes(input)}` }
 }
 
-function decodeModexp(
-	input: Hex,
-	output: Hex | undefined,
-): DecodedPrecompile {
+function decodeModexp(input: Hex, output: Hex | undefined): DecodedPrecompile {
 	if (input.length < 2 + 96 * 2) {
 		return { params: formatBytes(input) }
 	}
 	const bSize = Number(bytesToBigInt(input, 0, 32))
 	const eSize = Number(bytesToBigInt(input, 32, 32))
 	const mSize = Number(bytesToBigInt(input, 64, 32))
-	const params = `Bsize: ${bSize}, Esize: ${eSize}, Msize: ${mSize}`
+	const expectedLen = 96 + bSize + eSize + mSize
+	if (input.length < 2 + expectedLen * 2) {
+		return { params: formatBytes(input) }
+	}
+	const b = sliceBytes(input, 96, 96 + bSize)
+	const e = sliceBytes(input, 96 + bSize, 96 + bSize + eSize)
+	const m = sliceBytes(input, 96 + bSize + eSize, 96 + bSize + eSize + mSize)
+	const params = `B: ${b}, E: ${e}, M: ${m}`
 	return {
 		params,
 		decodedOutput: output && output !== '0x' ? formatBytes(output) : undefined,
 	}
 }
 
-function decodeEcAdd(
-	input: Hex,
-	output: Hex | undefined,
-): DecodedPrecompile {
+function decodeEcAdd(input: Hex, output: Hex | undefined): DecodedPrecompile {
 	if (input.length < 2 + 128 * 2) {
 		return { params: formatBytes(input) }
 	}
@@ -109,10 +107,7 @@ function decodeEcAdd(
 	return { params, decodedOutput }
 }
 
-function decodeEcMul(
-	input: Hex,
-	output: Hex | undefined,
-): DecodedPrecompile {
+function decodeEcMul(input: Hex, output: Hex | undefined): DecodedPrecompile {
 	if (input.length < 2 + 96 * 2) {
 		return { params: formatBytes(input) }
 	}
@@ -160,10 +155,7 @@ function decodeEcPairing(
 	return { params, decodedOutput }
 }
 
-function decodeBlake2f(
-	input: Hex,
-	output: Hex | undefined,
-): DecodedPrecompile {
+function decodeBlake2f(input: Hex, output: Hex | undefined): DecodedPrecompile {
 	if (input.length < 2 + 213 * 2) {
 		return { params: formatBytes(input) }
 	}
