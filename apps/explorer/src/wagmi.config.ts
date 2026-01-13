@@ -4,15 +4,16 @@ import {
 	createServerOnlyFn,
 } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
+import { createPublicClient } from 'viem'
 import {
 	tempoDevnet,
 	tempoLocalnet,
 	tempoAndantino,
 	tempoModerato,
 } from 'viem/chains'
-import { tempoPresto } from './lib/chains'
-import { createPublicClient } from 'viem'
 import { tempoActions } from 'viem/tempo'
+import { KeyManager, webAuthn } from 'wagmi/tempo'
+import { tempoPresto } from './lib/chains'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -113,6 +114,11 @@ export function getWagmiConfig() {
 		batch: { multicall: false },
 		chains: [chain, tempoLocalnet],
 		storage: createStorage({ storage: cookieStorage }),
+		connectors: [
+			webAuthn({
+				keyManager: KeyManager.http(`${__BASE_URL__}/api/webauthn`),
+			}),
+		],
 		transports: {
 			[chain.id]: transport,
 			[tempoLocalnet.id]: http(undefined, { batch: true }),

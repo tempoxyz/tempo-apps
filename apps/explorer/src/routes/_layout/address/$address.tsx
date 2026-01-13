@@ -334,10 +334,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					contractSource = await fetchContractSourceDirect({
 						address,
 						chainId,
-					}).catch((error) => {
-						console.error('[loader] Failed to load contract source:', error)
-						return undefined
-					})
+					}).catch(() => undefined)
 					// Seed the query cache so client hydrates with data already available
 					if (contractSource)
 						context.queryClient.setQueryData(

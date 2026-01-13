@@ -4,9 +4,6 @@ import { isAddress } from 'viem'
 import { useChainId } from 'wagmi'
 import * as z from 'zod/mini'
 
-const CONTRACT_VERIFICATION_API_BASE_URL = import.meta.env
-	.VITE_CONTRACT_VERIFY_URL
-
 const SoliditySettingsSchema = z.object({
 	remappings: z.optional(z.array(z.string())),
 	optimizer: z.optional(
@@ -74,13 +71,18 @@ export async function fetchContractSourceDirect(params: {
 	const { address, chainId, signal } = params
 
 	const apiUrl = new URL(
-		`${CONTRACT_VERIFICATION_API_BASE_URL}/${chainId}/${address.toLowerCase()}`,
+		`${import.meta.env.VITE_CONTRACT_VERIFY_URL}/${chainId}/${address.toLowerCase()}`,
 	)
 	apiUrl.searchParams.set('fields', 'stdJsonInput,abi,compilation')
 
 	const response = await fetch(apiUrl.toString(), { signal })
 
 	if (!response.ok) {
+		console.error(
+			'Failed to fetch contract sources:',
+			response.status,
+			await response.text(),
+		)
 		throw new Error('Failed to fetch contract sources')
 	}
 
