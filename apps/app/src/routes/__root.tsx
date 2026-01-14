@@ -10,7 +10,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
-import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config.ts'
+import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config'
 import css from './styles.css?url'
 
 export const Route = createRootRouteWithContext<{

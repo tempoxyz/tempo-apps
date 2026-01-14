@@ -41,9 +41,9 @@ function Landing() {
 		<>
 			<Layout.Header left="Search" right={null} />
 			<div className="flex flex-1 flex-col items-center justify-center">
-				<div className="grid place-items-center relative grid-flow-row gap-2 select-none w-full py-5 z-1">
-					<h1 className="text-[24px] font-semibold text-primary tracking-tight">
-						View any account
+				<div className="grid place-items-center relative grid-flow-row gap-2 select-none w-full max-w-sm py-5 z-1">
+					<h1 className="text-[24px] font-semibold text-primary tracking-tight text-center">
+						Tempo account
 					</h1>
 					<form onSubmit={handleSubmit} className="w-full relative">
 						<input
@@ -52,7 +52,7 @@ function Landing() {
 							name="value"
 							value={address}
 							onChange={(e) => setAddress(e.target.value)}
-							placeholder="Enter an address…"
+							placeholder="Enter a tempo address…"
 							className="bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 h-[52px] text-[17px]"
 							spellCheck={false}
 							autoComplete="off"
@@ -66,7 +66,7 @@ function Landing() {
 								disabled={!isValidAddress}
 								aria-label="Search"
 								className={cx(
-									'rounded-full! flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed transition-colors size-[28px]',
+									'rounded-full! flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed size-[28px]',
 									isValidAddress
 										? 'bg-accent text-base-plane cursor-pointer'
 										: 'bg-base-alt text-tertiary cursor-default',
@@ -86,7 +86,7 @@ function Landing() {
 									'flex items-center gap-0.75 text-base-content-secondary hover:text-base-content',
 									'border border-base-border hover:border-accent focus-visible:border-accent',
 									'px-1.25 py-0.5 rounded-full! press-down bg-surface focus-visible:outline-none',
-									'transition-colors duration-300 ease-out focus-visible:duration-0 font-mono',
+									'focus-visible:duration-0 font-mono',
 								)}
 							>
 								<UserIcon className="size-[14px] text-accent" />
