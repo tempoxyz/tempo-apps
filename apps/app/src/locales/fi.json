@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Nopein tapa tutkia tilejä, saldoja ja toimintaa Tempossa.",
+		"website": "Verkkosivu",
+		"docs": "Dokumentaatio"
+	},
+	"settings": {
+		"title": "Asetukset",
+		"feeToken": "Maksutunnus",
+		"feeTokenDescription": "Valitse tunnus transaktiomaksujen maksamiseen.",
+		"language": "Kieli",
+		"languageDescription": "Valitse haluamasi kieli."
+	},
+	"common": {
+		"active": "Aktiivinen",
+		"set": "Aseta",
+		"back": "Takaisin",
+		"noTokensForFees": "Ei tunnuksia maksuihin.",
+		"send": "Lähetä",
+		"recipient": "Vastaanottaja 0x...",
+		"amount": "Määrä",
+		"max": "MAX",
+		"cancel": "Peruuta"
+	},
+	"portfolio": {
+		"title": "Salkku",
+		"assets": "Varat",
+		"activity": "Toiminta",
+		"assetCount": "vara",
+		"assetCount_plural": "varaa",
+		"hideZeroBalances": "Piilota nollasaldot",
+		"showZeroBalances": "Näytä nollasaldot",
+		"noActivityYet": "Ei vielä toimintaa"
+	}
+}

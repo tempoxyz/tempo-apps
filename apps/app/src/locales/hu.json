@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "A leggyorsabb módja a fiókok, egyenlegek és tevékenységek felfedezésének a Tempo-n.",
+		"website": "Weboldal",
+		"docs": "Dokumentáció"
+	},
+	"settings": {
+		"title": "Beállítások",
+		"feeToken": "Díj token",
+		"feeTokenDescription": "Válassza ki a tranzakciós díjak fizetéséhez használt tokent.",
+		"language": "Nyelv",
+		"languageDescription": "Válassza ki a kívánt nyelvet."
+	},
+	"common": {
+		"active": "Aktív",
+		"set": "Beállít",
+		"back": "Vissza",
+		"noTokensForFees": "Nincs elérhető token a díjakhoz.",
+		"send": "Küldés",
+		"recipient": "Címzett 0x...",
+		"amount": "Összeg",
+		"max": "MAX",
+		"cancel": "Mégse"
+	},
+	"portfolio": {
+		"title": "Portfólió",
+		"assets": "Eszközök",
+		"activity": "Tevékenység",
+		"assetCount": "eszköz",
+		"assetCount_plural": "eszköz",
+		"hideZeroBalances": "Nulla egyenlegek elrejtése",
+		"showZeroBalances": "Nulla egyenlegek megjelenítése",
+		"noActivityYet": "Még nincs tevékenység"
+	}
+}

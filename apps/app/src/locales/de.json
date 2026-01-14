@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Der schnellste Weg, Konten, Guthaben und Aktivitäten auf Tempo zu erkunden.",
+		"website": "Webseite",
+		"docs": "Dokumentation"
+	},
+	"settings": {
+		"title": "Einstellungen",
+		"feeToken": "Gebühren-Token",
+		"feeTokenDescription": "Wählen Sie, welchen Token Sie für Transaktionsgebühren verwenden möchten.",
+		"language": "Sprache",
+		"languageDescription": "Wählen Sie Ihre bevorzugte Sprache."
+	},
+	"common": {
+		"active": "Aktiv",
+		"set": "Festlegen",
+		"back": "Zurück",
+		"noTokensForFees": "Keine Token für Gebühren verfügbar.",
+		"send": "Senden",
+		"recipient": "Empfänger 0x...",
+		"amount": "Betrag",
+		"max": "MAX",
+		"cancel": "Abbrechen"
+	},
+	"portfolio": {
+		"title": "Portfolio",
+		"assets": "Vermögenswerte",
+		"activity": "Aktivität",
+		"assetCount": "Vermögenswert",
+		"assetCount_plural": "Vermögenswerte",
+		"hideZeroBalances": "Nullguthaben ausblenden",
+		"showZeroBalances": "Nullguthaben anzeigen",
+		"noActivityYet": "Noch keine Aktivität"
+	}
+}

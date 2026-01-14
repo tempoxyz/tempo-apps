@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Cel mai rapid mod de a explora conturi, solduri și activitate pe Tempo.",
+		"website": "Site web",
+		"docs": "Documentație"
+	},
+	"settings": {
+		"title": "Setări",
+		"feeToken": "Token taxă",
+		"feeTokenDescription": "Selectați tokenul pentru plata taxelor de tranzacție.",
+		"language": "Limbă",
+		"languageDescription": "Alegeți limba preferată."
+	},
+	"common": {
+		"active": "Activ",
+		"set": "Setează",
+		"back": "Înapoi",
+		"noTokensForFees": "Nu există tokeni disponibili pentru taxe.",
+		"send": "Trimite",
+		"recipient": "Destinatar 0x...",
+		"amount": "Sumă",
+		"max": "MAX",
+		"cancel": "Anulează"
+	},
+	"portfolio": {
+		"title": "Portofoliu",
+		"assets": "Active",
+		"activity": "Activitate",
+		"assetCount": "activ",
+		"assetCount_plural": "active",
+		"hideZeroBalances": "Ascunde solduri zero",
+		"showZeroBalances": "Afișează solduri zero",
+		"noActivityYet": "Nicio activitate încă"
+	}
+}

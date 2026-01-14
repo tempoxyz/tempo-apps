@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Le moyen le plus rapide d'explorer les comptes, les soldes et l'activité sur Tempo.",
+		"website": "Site web",
+		"docs": "Documentation"
+	},
+	"settings": {
+		"title": "Paramètres",
+		"feeToken": "Jeton de frais",
+		"feeTokenDescription": "Sélectionnez le jeton à utiliser pour payer les frais de transaction.",
+		"language": "Langue",
+		"languageDescription": "Choisissez votre langue préférée."
+	},
+	"common": {
+		"active": "Actif",
+		"set": "Définir",
+		"back": "Retour",
+		"noTokensForFees": "Aucun jeton disponible pour les frais.",
+		"send": "Envoyer",
+		"recipient": "Destinataire 0x...",
+		"amount": "Montant",
+		"max": "MAX",
+		"cancel": "Annuler"
+	},
+	"portfolio": {
+		"title": "Portefeuille",
+		"assets": "Actifs",
+		"activity": "Activité",
+		"assetCount": "actif",
+		"assetCount_plural": "actifs",
+		"hideZeroBalances": "Masquer les soldes nuls",
+		"showZeroBalances": "Afficher les soldes nuls",
+		"noActivityYet": "Pas encore d'activité"
+	}
+}

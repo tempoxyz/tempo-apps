@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "วิธีที่เร็วที่สุดในการสำรวจบัญชี ยอดเงิน และกิจกรรมบน Tempo",
+		"website": "เว็บไซต์",
+		"docs": "เอกสาร"
+	},
+	"settings": {
+		"title": "การตั้งค่า",
+		"feeToken": "โทเค็นค่าธรรมเนียม",
+		"feeTokenDescription": "เลือกโทเค็นที่จะใช้จ่ายค่าธรรมเนียมการทำธุรกรรม",
+		"language": "ภาษา",
+		"languageDescription": "เลือกภาษาที่คุณต้องการ"
+	},
+	"common": {
+		"active": "ใช้งานอยู่",
+		"set": "ตั้งค่า",
+		"back": "กลับ",
+		"noTokensForFees": "ไม่มีโทเค็นสำหรับค่าธรรมเนียม",
+		"send": "ส่ง",
+		"recipient": "ผู้รับ 0x...",
+		"amount": "จำนวน",
+		"max": "สูงสุด",
+		"cancel": "ยกเลิก"
+	},
+	"portfolio": {
+		"title": "พอร์ตโฟลิโอ",
+		"assets": "สินทรัพย์",
+		"activity": "กิจกรรม",
+		"assetCount": "สินทรัพย์",
+		"assetCount_plural": "สินทรัพย์",
+		"hideZeroBalances": "ซ่อนยอดเงินศูนย์",
+		"showZeroBalances": "แสดงยอดเงินศูนย์",
+		"noActivityYet": "ยังไม่มีกิจกรรม"
+	}
+}

@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "De snelste manier om accounts, saldi en activiteit op Tempo te verkennen.",
+		"website": "Website",
+		"docs": "Documentatie"
+	},
+	"settings": {
+		"title": "Instellingen",
+		"feeToken": "Vergoedingstoken",
+		"feeTokenDescription": "Selecteer welke token te gebruiken voor transactiekosten.",
+		"language": "Taal",
+		"languageDescription": "Kies je voorkeurstaal."
+	},
+	"common": {
+		"active": "Actief",
+		"set": "Instellen",
+		"back": "Terug",
+		"noTokensForFees": "Geen tokens beschikbaar voor kosten.",
+		"send": "Verzenden",
+		"recipient": "Ontvanger 0x...",
+		"amount": "Bedrag",
+		"max": "MAX",
+		"cancel": "Annuleren"
+	},
+	"portfolio": {
+		"title": "Portfolio",
+		"assets": "Activa",
+		"activity": "Activiteit",
+		"assetCount": "activum",
+		"assetCount_plural": "activa",
+		"hideZeroBalances": "Verberg nulsaldi",
+		"showZeroBalances": "Toon nulsaldi",
+		"noActivityYet": "Nog geen activiteit"
+	}
+}

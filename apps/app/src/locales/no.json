@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Den raskeste måten å utforske kontoer, saldoer og aktivitet på Tempo.",
+		"website": "Nettsted",
+		"docs": "Dokumentasjon"
+	},
+	"settings": {
+		"title": "Innstillinger",
+		"feeToken": "Gebyrtoken",
+		"feeTokenDescription": "Velg hvilket token som skal brukes til å betale transaksjonsgebyrer.",
+		"language": "Språk",
+		"languageDescription": "Velg ditt foretrukne språk."
+	},
+	"common": {
+		"active": "Aktiv",
+		"set": "Angi",
+		"back": "Tilbake",
+		"noTokensForFees": "Ingen tokens tilgjengelig for gebyrer.",
+		"send": "Send",
+		"recipient": "Mottaker 0x...",
+		"amount": "Beløp",
+		"max": "MAKS",
+		"cancel": "Avbryt"
+	},
+	"portfolio": {
+		"title": "Portefølje",
+		"assets": "Eiendeler",
+		"activity": "Aktivitet",
+		"assetCount": "eiendel",
+		"assetCount_plural": "eiendeler",
+		"hideZeroBalances": "Skjul nullsaldoer",
+		"showZeroBalances": "Vis nullsaldoer",
+		"noActivityYet": "Ingen aktivitet ennå"
+	}
+}

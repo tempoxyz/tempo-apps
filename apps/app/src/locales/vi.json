@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Cách nhanh nhất để khám phá tài khoản, số dư và hoạt động trên Tempo.",
+		"website": "Trang web",
+		"docs": "Tài liệu"
+	},
+	"settings": {
+		"title": "Cài đặt",
+		"feeToken": "Token phí",
+		"feeTokenDescription": "Chọn token để sử dụng thanh toán phí giao dịch.",
+		"language": "Ngôn ngữ",
+		"languageDescription": "Chọn ngôn ngữ ưa thích của bạn."
+	},
+	"common": {
+		"active": "Đang hoạt động",
+		"set": "Đặt",
+		"back": "Quay lại",
+		"noTokensForFees": "Không có token nào để trả phí.",
+		"send": "Gửi",
+		"recipient": "Người nhận 0x...",
+		"amount": "Số lượng",
+		"max": "TỐI ĐA",
+		"cancel": "Hủy"
+	},
+	"portfolio": {
+		"title": "Danh mục",
+		"assets": "Tài sản",
+		"activity": "Hoạt động",
+		"assetCount": "tài sản",
+		"assetCount_plural": "tài sản",
+		"hideZeroBalances": "Ẩn số dư bằng không",
+		"showZeroBalances": "Hiển thị số dư bằng không",
+		"noActivityYet": "Chưa có hoạt động"
+	}
+}
