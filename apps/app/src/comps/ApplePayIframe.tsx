@@ -54,6 +54,8 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 				src={iframeSrc ?? ''}
 				title="Apple Pay Checkout"
 				allow="payment"
+				sandbox="allow-scripts allow-same-origin"
+				referrerPolicy="no-referrer"
 				className="w-full h-[500px] border-0 rounded-lg"
 			/>
 		</div>
