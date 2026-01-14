@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Tempo'da hesapları, bakiyeleri ve aktiviteleri keşfetmenin en hızlı yolu.",
+		"website": "Web sitesi",
+		"docs": "Dokümantasyon"
+	},
+	"settings": {
+		"title": "Ayarlar",
+		"feeToken": "Ücret Tokeni",
+		"feeTokenDescription": "İşlem ücretlerini ödemek için kullanılacak tokeni seçin.",
+		"language": "Dil",
+		"languageDescription": "Tercih ettiğiniz dili seçin."
+	},
+	"common": {
+		"active": "Aktif",
+		"set": "Ayarla",
+		"back": "Geri",
+		"noTokensForFees": "Ücretler için token mevcut değil.",
+		"send": "Gönder",
+		"recipient": "Alıcı 0x...",
+		"amount": "Miktar",
+		"max": "MAKS",
+		"cancel": "İptal"
+	},
+	"portfolio": {
+		"title": "Portföy",
+		"assets": "Varlıklar",
+		"activity": "Aktivite",
+		"assetCount": "varlık",
+		"assetCount_plural": "varlık",
+		"hideZeroBalances": "Sıfır bakiyeleri gizle",
+		"showZeroBalances": "Sıfır bakiyeleri göster",
+		"noActivityYet": "Henüz aktivite yok"
+	}
+}

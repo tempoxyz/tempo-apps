@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#lib/css'
 import ChevronRightIcon from '~icons/lucide/chevron-right'
-import ArrowLeftIcon from '~icons/lucide/arrow-left'
 
 type AssetData = {
 	address: Address.Address
@@ -21,9 +20,17 @@ type SettingsProps = {
 	onFeeTokenChange: (address: string) => void
 	currentLanguage: string
 	onLanguageChange: (lang: string) => void
+	onViewChange?: (view: SettingsView) => void
+	externalNavigateBack?: boolean
 }
 
-type SettingsView = 'main' | 'feeToken' | 'language'
+export type SettingsView = 'main' | 'feeToken' | 'language'
+
+export const SETTINGS_VIEW_TITLES: Record<SettingsView, string> = {
+	main: 'Settings',
+	feeToken: 'settings.feeToken',
+	language: 'settings.language',
+}
 
 const LANGUAGES = [
 	{ code: 'en', name: 'English', set: 'Set', active: 'Active' },
@@ -44,6 +51,8 @@ export function Settings({
 	onFeeTokenChange,
 	currentLanguage,
 	onLanguageChange,
+	onViewChange,
+	externalNavigateBack,
 }: SettingsProps) {
 	const { t } = useTranslation()
 	const [currentView, setCurrentView] = React.useState<SettingsView>('main')
@@ -60,12 +69,20 @@ export function Settings({
 	const navigateTo = (view: SettingsView) => {
 		setSlideDirection('forward')
 		setCurrentView(view)
+		onViewChange?.(view)
 	}
 
-	const navigateBack = () => {
+	const navigateBack = React.useCallback(() => {
 		setSlideDirection('backward')
 		setCurrentView('main')
-	}
+		onViewChange?.('main')
+	}, [onViewChange])
+
+	React.useEffect(() => {
+		if (externalNavigateBack && currentView !== 'main') {
+			navigateBack()
+		}
+	}, [externalNavigateBack, currentView, navigateBack])
 
 	return (
 		<div className="relative overflow-hidden">
@@ -131,15 +148,7 @@ export function Settings({
 				)}
 			>
 				<div className="flex flex-col -mx-2">
-					<button
-						type="button"
-						onClick={navigateBack}
-						className="flex items-center gap-2 px-3 h-[40px] text-[13px] text-accent cursor-pointer hover:text-accent/80 transition-colors"
-					>
-						<ArrowLeftIcon className="size-[14px]" />
-						<span>{t('common.back')}</span>
-					</button>
-					<p className="text-[13px] text-secondary px-3 pb-1">
+					<p className="text-[13px] text-secondary px-3 py-2">
 						{t('settings.feeTokenDescription')}
 					</p>
 					{assetsWithBalance.length === 0 ? (
@@ -197,15 +206,7 @@ export function Settings({
 				)}
 			>
 				<div className="flex flex-col -mx-2">
-					<button
-						type="button"
-						onClick={navigateBack}
-						className="flex items-center gap-2 px-3 h-[40px] text-[13px] text-accent cursor-pointer hover:text-accent/80 transition-colors"
-					>
-						<ArrowLeftIcon className="size-[14px]" />
-						<span>{t('common.back')}</span>
-					</button>
-					<p className="text-[13px] text-secondary px-3 pb-1">
+					<p className="text-[13px] text-secondary px-3 py-2">
 						{t('settings.languageDescription')}
 					</p>
 					{LANGUAGES.map((lang) => {

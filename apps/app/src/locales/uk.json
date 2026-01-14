@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Найшвидший спосіб досліджувати акаунти, баланси та активність на Tempo.",
+		"website": "Веб-сайт",
+		"docs": "Документація"
+	},
+	"settings": {
+		"title": "Налаштування",
+		"feeToken": "Токен комісії",
+		"feeTokenDescription": "Оберіть токен для оплати комісій за транзакції.",
+		"language": "Мова",
+		"languageDescription": "Оберіть бажану мову."
+	},
+	"common": {
+		"active": "Активний",
+		"set": "Встановити",
+		"back": "Назад",
+		"noTokensForFees": "Немає доступних токенів для комісій.",
+		"send": "Надіслати",
+		"recipient": "Отримувач 0x...",
+		"amount": "Сума",
+		"max": "МАКС",
+		"cancel": "Скасувати"
+	},
+	"portfolio": {
+		"title": "Портфель",
+		"assets": "Активи",
+		"activity": "Активність",
+		"assetCount": "актив",
+		"assetCount_plural": "активів",
+		"hideZeroBalances": "Приховати нульові баланси",
+		"showZeroBalances": "Показати нульові баланси",
+		"noActivityYet": "Ще немає активності"
+	}
+}

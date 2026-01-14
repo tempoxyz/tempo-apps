@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "La plej rapida maniero esplori kontojn, bilancojn kaj agadon sur Tempo.",
+		"website": "Retejo",
+		"docs": "Dokumentaro"
+	},
+	"settings": {
+		"title": "Agordoj",
+		"feeToken": "Kotizoĵetono",
+		"feeTokenDescription": "Elektu kiun ĵetonon uzi por pagi transakciajn kotizojn.",
+		"language": "Lingvo",
+		"languageDescription": "Elektu vian preferatan lingvon."
+	},
+	"common": {
+		"active": "Aktiva",
+		"set": "Agordi",
+		"back": "Reen",
+		"noTokensForFees": "Neniuj ĵetonoj disponeblaj por kotizoj.",
+		"send": "Sendi",
+		"recipient": "Ricevanto 0x...",
+		"amount": "Kvanto",
+		"max": "MAKS",
+		"cancel": "Nuligi"
+	},
+	"portfolio": {
+		"title": "Biletujo",
+		"assets": "Aktivaĵoj",
+		"activity": "Agado",
+		"assetCount": "aktivaĵo",
+		"assetCount_plural": "aktivaĵoj",
+		"hideZeroBalances": "Kaŝi nulajn bilancojn",
+		"showZeroBalances": "Montri nulajn bilancojn",
+		"noActivityYet": "Ankoraŭ neniu agado"
+	}
+}

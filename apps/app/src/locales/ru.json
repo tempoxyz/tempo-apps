@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Самый быстрый способ исследовать аккаунты, балансы и активность на Tempo.",
+		"website": "Сайт",
+		"docs": "Документация"
+	},
+	"settings": {
+		"title": "Настройки",
+		"feeToken": "Токен комиссии",
+		"feeTokenDescription": "Выберите токен для оплаты комиссий за транзакции.",
+		"language": "Язык",
+		"languageDescription": "Выберите предпочитаемый язык."
+	},
+	"common": {
+		"active": "Активен",
+		"set": "Установить",
+		"back": "Назад",
+		"noTokensForFees": "Нет доступных токенов для комиссий.",
+		"send": "Отправить",
+		"recipient": "Получатель 0x...",
+		"amount": "Сумма",
+		"max": "МАКС",
+		"cancel": "Отмена"
+	},
+	"portfolio": {
+		"title": "Портфель",
+		"assets": "Активы",
+		"activity": "Активность",
+		"assetCount": "актив",
+		"assetCount_plural": "активов",
+		"hideZeroBalances": "Скрыть нулевые балансы",
+		"showZeroBalances": "Показать нулевые балансы",
+		"noActivityYet": "Пока нет активности"
+	}
+}

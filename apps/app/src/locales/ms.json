@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Cara terpantas untuk meneroka akaun, baki dan aktiviti di Tempo.",
+		"website": "Laman web",
+		"docs": "Dokumentasi"
+	},
+	"settings": {
+		"title": "Tetapan",
+		"feeToken": "Token Yuran",
+		"feeTokenDescription": "Pilih token untuk membayar yuran transaksi.",
+		"language": "Bahasa",
+		"languageDescription": "Pilih bahasa pilihan anda."
+	},
+	"common": {
+		"active": "Aktif",
+		"set": "Tetapkan",
+		"back": "Kembali",
+		"noTokensForFees": "Tiada token tersedia untuk yuran.",
+		"send": "Hantar",
+		"recipient": "Penerima 0x...",
+		"amount": "Jumlah",
+		"max": "MAKS",
+		"cancel": "Batal"
+	},
+	"portfolio": {
+		"title": "Portfolio",
+		"assets": "Aset",
+		"activity": "Aktiviti",
+		"assetCount": "aset",
+		"assetCount_plural": "aset",
+		"hideZeroBalances": "Sembunyikan baki sifar",
+		"showZeroBalances": "Tunjukkan baki sifar",
+		"noActivityYet": "Tiada aktiviti lagi"
+	}
+}

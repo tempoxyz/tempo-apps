@@ -31,7 +31,7 @@ import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
 import { useActivitySummary, type ActivityType } from '#lib/activity-context'
 import { LottoNumber } from '#comps/LottoNumber'
-import { Settings } from '#comps/Settings'
+import { Settings, SETTINGS_VIEW_TITLES, type SettingsView } from '#comps/Settings'
 import CopyIcon from '~icons/lucide/copy'
 import ExternalLinkIcon from '~icons/lucide/external-link'
 import GlobeIcon from '~icons/lucide/globe'
@@ -859,6 +859,10 @@ function Section(props: {
 	defaultOpen?: boolean
 	headerRight?: React.ReactNode
 	children: React.ReactNode
+	backButton?: {
+		label: string
+		onClick: () => void
+	}
 }) {
 	const {
 		title,
@@ -867,6 +871,7 @@ function Section(props: {
 		defaultOpen = false,
 		headerRight,
 		children,
+		backButton,
 	} = props
 	const [open, setOpen] = React.useState(defaultOpen)
 	const contentRef = React.useRef<HTMLDivElement>(null)
@@ -940,13 +945,31 @@ function Section(props: {
 					)}
 				>
 					<span className="flex items-center gap-2">
-						{title}
-						{subtitle && (
+						{backButton ? (
 							<>
-								<span className="w-px h-4 bg-card-border" />
-								<span className="text-[12px] text-tertiary font-normal">
-									{subtitle}
-								</span>
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation()
+										backButton.onClick()
+									}}
+									className="flex items-center gap-1.5 text-accent hover:text-accent/80 transition-colors cursor-pointer"
+								>
+									<ArrowLeftIcon className="size-[14px]" />
+									<span>{backButton.label}</span>
+								</button>
+							</>
+						) : (
+							<>
+								{title}
+								{subtitle && (
+									<>
+										<span className="w-px h-4 bg-card-border" />
+										<span className="text-[12px] text-tertiary font-normal">
+											{subtitle}
+										</span>
+									</>
+								)}
 							</>
 						)}
 					</span>
@@ -1083,6 +1106,7 @@ function QRCode({
 }
 
 function SettingsSection({ assets }: { assets: AssetData[] }) {
+	const { t } = useTranslation()
 	const assetsWithBalance = assets.filter((a) => a.balance && a.balance !== '0')
 	const [currentFeeToken, setCurrentFeeToken] = React.useState<string>(
 		assetsWithBalance[0]?.address ?? '',
@@ -1097,6 +1121,8 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 		}
 		return 'en'
 	})
+	const [currentView, setCurrentView] = React.useState<SettingsView>('main')
+	const [triggerBack, setTriggerBack] = React.useState(false)
 
 	const handleLanguageChange = React.useCallback((lang: string) => {
 		setCurrentLanguage(lang)
@@ -1106,14 +1132,26 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 		}
 	}, [])
 
+	const handleBack = React.useCallback(() => {
+		setTriggerBack(true)
+		setTimeout(() => setTriggerBack(false), 50)
+	}, [])
+
+	const submenuTitle = currentView !== 'main' ? t(SETTINGS_VIEW_TITLES[currentView]) : undefined
+
 	return (
-		<Section title="Settings">
+		<Section
+			title="Settings"
+			backButton={submenuTitle ? { label: submenuTitle, onClick: handleBack } : undefined}
+		>
 			<Settings
 				assets={assets}
 				currentFeeToken={currentFeeToken}
 				onFeeTokenChange={setCurrentFeeToken}
 				currentLanguage={currentLanguage}
 				onLanguageChange={handleLanguageChange}
+				onViewChange={setCurrentView}
+				externalNavigateBack={triggerBack}
 			/>
 		</Section>
 	)

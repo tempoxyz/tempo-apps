@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Il modo più veloce per esplorare account, saldi e attività su Tempo.",
+		"website": "Sito web",
+		"docs": "Documentazione"
+	},
+	"settings": {
+		"title": "Impostazioni",
+		"feeToken": "Token commissione",
+		"feeTokenDescription": "Seleziona quale token utilizzare per pagare le commissioni di transazione.",
+		"language": "Lingua",
+		"languageDescription": "Scegli la tua lingua preferita."
+	},
+	"common": {
+		"active": "Attivo",
+		"set": "Imposta",
+		"back": "Indietro",
+		"noTokensForFees": "Nessun token disponibile per le commissioni.",
+		"send": "Invia",
+		"recipient": "Destinatario 0x...",
+		"amount": "Importo",
+		"max": "MAX",
+		"cancel": "Annulla"
+	},
+	"portfolio": {
+		"title": "Portafoglio",
+		"assets": "Asset",
+		"activity": "Attività",
+		"assetCount": "asset",
+		"assetCount_plural": "asset",
+		"hideZeroBalances": "Nascondi saldi zero",
+		"showZeroBalances": "Mostra saldi zero",
+		"noActivityYet": "Nessuna attività ancora"
+	}
+}

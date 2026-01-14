@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "A maneira mais rápida de explorar contas, saldos e atividades no Tempo.",
+		"website": "Site",
+		"docs": "Documentação"
+	},
+	"settings": {
+		"title": "Configurações",
+		"feeToken": "Token de Taxa",
+		"feeTokenDescription": "Selecione qual token usar para pagar taxas de transação.",
+		"language": "Idioma",
+		"languageDescription": "Escolha seu idioma preferido."
+	},
+	"common": {
+		"active": "Ativo",
+		"set": "Definir",
+		"back": "Voltar",
+		"noTokensForFees": "Nenhum token disponível para taxas.",
+		"send": "Enviar",
+		"recipient": "Destinatário 0x...",
+		"amount": "Quantia",
+		"max": "MÁX",
+		"cancel": "Cancelar"
+	},
+	"portfolio": {
+		"title": "Portfólio",
+		"assets": "Ativos",
+		"activity": "Atividade",
+		"assetCount": "ativo",
+		"assetCount_plural": "ativos",
+		"hideZeroBalances": "Ocultar saldos zerados",
+		"showZeroBalances": "Mostrar saldos zerados",
+		"noActivityYet": "Nenhuma atividade ainda"
+	}
+}

@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "أسرع طريقة لاستكشاف الحسابات والأرصدة والنشاط على Tempo.",
+		"website": "الموقع",
+		"docs": "التوثيق"
+	},
+	"settings": {
+		"title": "الإعدادات",
+		"feeToken": "رمز الرسوم",
+		"feeTokenDescription": "اختر الرمز المستخدم لدفع رسوم المعاملات.",
+		"language": "اللغة",
+		"languageDescription": "اختر لغتك المفضلة."
+	},
+	"common": {
+		"active": "نشط",
+		"set": "تعيين",
+		"back": "رجوع",
+		"noTokensForFees": "لا توجد رموز متاحة للرسوم.",
+		"send": "إرسال",
+		"recipient": "المستلم 0x...",
+		"amount": "المبلغ",
+		"max": "الحد الأقصى",
+		"cancel": "إلغاء"
+	},
+	"portfolio": {
+		"title": "المحفظة",
+		"assets": "الأصول",
+		"activity": "النشاط",
+		"assetCount": "أصل",
+		"assetCount_plural": "أصول",
+		"hideZeroBalances": "إخفاء الأرصدة الصفرية",
+		"showZeroBalances": "إظهار الأرصدة الصفرية",
+		"noActivityYet": "لا يوجد نشاط بعد"
+	}
+}
