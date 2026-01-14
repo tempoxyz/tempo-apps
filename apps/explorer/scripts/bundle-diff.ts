@@ -106,11 +106,8 @@ function formatDelta(current: number, baseline: number): string {
 function parseStats(statsPath: string): BundleStats {
   const raw = JSON.parse(readFileSync(statsPath, "utf-8")) as VisualizerData;
 
-  // Build chunk-level aggregates from the tree and nodeParts
   const chunks: ChunkInfo[] = [];
   const nodeParts = raw.nodeParts || {};
-
-  // Get chunk names from the tree (first level children of root)
   const chunkNodes = raw.tree?.children || [];
 
   for (const chunkNode of chunkNodes) {
@@ -119,7 +116,6 @@ function parseStats(statsPath: string): BundleStats {
     let chunkGzip = 0;
     let chunkBrotli = 0;
 
-    // Recursively collect all uids in this chunk's subtree
     const uids = collectUids(chunkNode);
     for (const uid of uids) {
       const part = nodeParts[uid];
@@ -140,7 +136,6 @@ function parseStats(statsPath: string): BundleStats {
     }
   }
 
-  // Calculate totals from all nodeParts
   let totalSize = 0;
   let totalGzip = 0;
   let totalBrotli = 0;
@@ -150,7 +145,6 @@ function parseStats(statsPath: string): BundleStats {
     totalBrotli += part.brotliLength || 0;
   }
 
-  // Sort by size descending
   chunks.sort((a, b) => b.size - a.size);
 
   return {
@@ -176,7 +170,6 @@ function collectUids(node: TreeNode): string[] {
 // Strip content hash from chunk names for comparison
 // e.g., "assets/main-CHVKdefL.js" -> "assets/main.js"
 function normalizeChunkName(name: string): string {
-  // Match patterns like "-CHVKdefL" or "_CHVKdefL" before .js/.css extension
   return name.replace(/[-_][A-Za-z0-9_-]{6,12}(\.(js|css))$/, "$1");
 }
 
@@ -225,7 +218,6 @@ function printStats(stats: BundleStats, baseline?: BundleStats): void {
       `  Brotli:  ${formatDelta(stats.total.brotli, baseline.total.brotli)}`
     );
 
-    // Find significant changes by comparing normalized chunk names
     const changes: {
       name: string;
       delta: number;
@@ -233,11 +225,9 @@ function printStats(stats: BundleStats, baseline?: BundleStats): void {
       baseline: number;
     }[] = [];
 
-    // Build maps using normalized names
     const baselineMap = new Map<string, ChunkInfo>();
     for (const chunk of baseline.chunks) {
       const normalName = normalizeChunkName(chunk.label);
-      // If multiple chunks normalize to same name, sum them
       const existing = baselineMap.get(normalName);
       if (existing) {
         existing.size += chunk.size;
@@ -266,7 +256,6 @@ function printStats(stats: BundleStats, baseline?: BundleStats): void {
       if (baseChunk) {
         const delta = chunk.size - baseChunk.size;
         if (Math.abs(delta) > 1024) {
-          // Only show changes > 1KB
           changes.push({
             name: normalName,
             delta,
@@ -274,23 +263,18 @@ function printStats(stats: BundleStats, baseline?: BundleStats): void {
             baseline: baseChunk.size,
           });
         }
-      } else {
-        // New chunk
-        if (chunk.size > 1024) {
-          changes.push({
-            name: `${normalName} (new)`,
-            delta: chunk.size,
-            current: chunk.size,
-            baseline: 0,
-          });
-        }
+      } else if (chunk.size > 1024) {
+        changes.push({
+          name: `${normalName} (new)`,
+          delta: chunk.size,
+          current: chunk.size,
+          baseline: 0,
+        });
       }
     }
 
     for (const [normalName, baseChunk] of baselineMap) {
-      if (!currentMap.has(normalName)) {
-        // Removed chunk
-        if (baseChunk.size > 1024) {
+      if (!currentMap.has(normalName) && baseChunk.size > 1024) {
           changes.push({
             name: `${normalName} (removed)`,
             delta: -baseChunk.size,
@@ -331,7 +315,6 @@ function printStats(stats: BundleStats, baseline?: BundleStats): void {
   console.log(`\n${"=".repeat(60)}\n`);
 }
 
-// Format delta for markdown table
 function formatDeltaMd(current: number, baseline: number): string {
   const delta = current - baseline;
   const percent = baseline > 0 ? ((delta / baseline) * 100).toFixed(1) : "0.0";
@@ -339,14 +322,12 @@ function formatDeltaMd(current: number, baseline: number): string {
   return `${sign}${formatBytes(delta)} (${sign}${percent}%)`;
 }
 
-// Generate markdown output for CI PR comments
 function generateMarkdown(stats: BundleStats, baseline?: BundleStats): string {
   const lines: string[] = [];
 
   lines.push("## Bundle Size Report\n");
 
   if (baseline) {
-    // Show comparison table
     lines.push("| Metric | Size | Δ Change |");
     lines.push("|--------|------|----------|");
     lines.push(
@@ -368,7 +349,6 @@ function generateMarkdown(stats: BundleStats, baseline?: BundleStats): string {
       )} |`
     );
 
-    // Find chunk changes
     const changes: { name: string; delta: number }[] = [];
 
     const baselineMap = new Map<string, ChunkInfo>();
@@ -438,7 +418,6 @@ function generateMarkdown(stats: BundleStats, baseline?: BundleStats): string {
       ).toLocaleString()})*`
     );
   } else {
-    // No baseline available
     lines.push(
       "No baseline available to compare against. Bundle stats will be cached when this PR is merged to main.\n"
     );
@@ -460,7 +439,6 @@ async function main(): Promise<void> {
   const statsPath = resolve(rootDir, STATS_FILE);
   const defaultBaselinePath = resolve(rootDir, BASELINE_FILE);
 
-  // Run the build with JSON output (unless skipped)
   if (!options.skipBuild) {
     if (!options.ci) {
       console.log("Building with bundle analysis...\n");
@@ -469,15 +447,13 @@ async function main(): Promise<void> {
       execSync("pnpm bundle:analyze:json", {
         cwd: rootDir,
         stdio: options.ci ? "pipe" : "inherit",
-        env: { ...process.env },
       });
-    } catch {
-      console.error("Build failed!");
+    } catch (err) {
+      console.error("Build failed!", err);
       process.exit(1);
     }
   }
 
-  // Check if stats file was generated
   if (!existsSync(statsPath)) {
     console.error(
       `\nError: ${STATS_FILE} was not generated. Check the build output.`
@@ -485,10 +461,8 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  // Parse the stats
   const stats = parseStats(statsPath);
 
-  // Load baseline from specified path or default
   let baseline: BundleStats | undefined;
   const baselinePathToUse = options.baselinePath || defaultBaselinePath;
   if (existsSync(baselinePathToUse)) {
@@ -496,23 +470,19 @@ async function main(): Promise<void> {
       baseline = JSON.parse(
         readFileSync(baselinePathToUse, "utf-8")
       ) as BundleStats;
-    } catch {
+    } catch (err) {
       if (!options.ci) {
-        console.warn("Warning: Could not parse baseline file, ignoring.");
+        console.warn("Warning: Could not parse baseline file, ignoring.", err);
       }
     }
   }
 
-  // Output results
   if (options.ci) {
-    // CI mode: output markdown
     console.log(generateMarkdown(stats, baseline));
   } else {
-    // Interactive mode: print formatted stats
     printStats(stats, baseline);
   }
 
-  // Save stats to output file if specified
   if (options.outputPath) {
     writeFileSync(options.outputPath, JSON.stringify(stats, null, 2));
     if (!options.ci) {
@@ -520,7 +490,6 @@ async function main(): Promise<void> {
     }
   }
 
-  // Save as baseline if requested (legacy --save flag)
   if (options.save) {
     writeFileSync(defaultBaselinePath, JSON.stringify(stats, null, 2));
     if (!options.ci) {
@@ -529,7 +498,6 @@ async function main(): Promise<void> {
     }
   }
 
-  // Clean up stats file (it's in gitignore anyway)
   try {
     unlinkSync(statsPath);
   } catch {
