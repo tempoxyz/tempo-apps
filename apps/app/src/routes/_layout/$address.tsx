@@ -43,7 +43,7 @@ const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
 
 const faucetFundAddress = createServerFn({ method: 'POST' })
-	.inputValidator((data: { address: string }) => data)
+	.validator((data: { address: string }) => data)
 	.handler(async ({ data }) => {
 		const auth = process.env.PRESTO_RPC_AUTH
 		const headers: Record<string, string> = {
@@ -250,7 +250,7 @@ type ApiTransaction = {
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
 const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
-	.inputValidator((data: { address: string }) => data)
+	.validator((data: { address: string }) => data)
 	.handler(async ({ data }) => {
 		const { address } = data
 		const explorerUrl =
