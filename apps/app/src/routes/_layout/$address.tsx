@@ -46,6 +46,7 @@ import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
 import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
+import i18n from '#lib/i18n'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
@@ -978,9 +979,7 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 
 	const handleLanguageChange = React.useCallback((lang: string) => {
 		setCurrentLanguage(lang)
-		import('#lib/i18n').then((mod) => {
-			mod.default.changeLanguage(lang)
-		})
+		i18n.changeLanguage(lang)
 	}, [])
 
 	return (
