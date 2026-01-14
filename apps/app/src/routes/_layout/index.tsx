@@ -9,6 +9,7 @@ import UserIcon from '~icons/lucide/user'
 import KeyIcon from '~icons/lucide/key-round'
 import FingerprintIcon from '~icons/lucide/fingerprint'
 import ClockIcon from '~icons/lucide/clock'
+import ShieldIcon from '~icons/lucide/shield'
 
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
@@ -269,6 +270,29 @@ function Landing() {
 							</p>
 						</div>
 					)}
+
+					<div className="w-full flex items-center gap-3 mt-6">
+						<div className="flex-1 h-px bg-base-border" />
+						<span className="text-tertiary text-[12px]">or</span>
+						<div className="flex-1 h-px bg-base-border" />
+					</div>
+
+					<Link
+						to="/multisig"
+						className={cx(
+							'flex items-center gap-2 px-4 py-3 rounded-xl w-full mt-3',
+							'glass-thin hover:glass transition-all press-down',
+							'text-secondary hover:text-primary',
+						)}
+					>
+						<ShieldIcon className="size-5 text-accent" />
+						<div className="flex flex-col">
+							<span className="text-[14px] font-medium">Multisig</span>
+							<span className="text-[12px] text-tertiary">
+								Manage multi-signature wallets
+							</span>
+						</div>
+					</Link>
 				</div>
 			</div>
 		</>
