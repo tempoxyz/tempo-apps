@@ -150,20 +150,19 @@ function Landing() {
 							</button>
 						</div>
 					</form>
-					<div className="flex items-center gap-1.5 text-[13px] flex-wrap justify-center mt-1 max-w-full">
+					<div className="flex items-center gap-1 text-[11px] justify-center mt-1">
 						{getExampleAccounts().map((addr) => (
 							<Link
 								key={addr}
 								to="/$address"
 								params={{ address: addr }}
 								className={cx(
-									'flex items-center gap-1 text-secondary hover:text-primary',
-									'glass-pill hover:ring-glass focus-visible:ring-glass',
-									'px-3 py-2 rounded-full press-down focus-visible:outline-none',
-									'transition-all font-mono text-[12px] shrink-0',
+									'flex items-center gap-0.5 text-tertiary hover:text-secondary',
+									'px-1.5 py-0.5 rounded press-down focus-visible:outline-none',
+									'transition-all font-mono text-[10px]',
 								)}
 							>
-								<UserIcon className="size-[14px] text-accent" />
+								<UserIcon className="size-[10px] text-accent/70" />
 								<span>{truncateAddress(addr)}</span>
 							</Link>
 						))}
