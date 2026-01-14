@@ -154,7 +154,10 @@ function SourceFile(props: {
 				</button>
 				<div className="flex items-center gap-2 shrink-0">
 					<span
-						className={cx('text-[11px]', isCollapsed ? 'text-tertiary' : 'text-tertiary/50')}
+						className={cx(
+							'text-[11px]',
+							isCollapsed ? 'text-tertiary' : 'text-tertiary/50',
+						)}
 					>
 						{lineCount} lines
 					</span>

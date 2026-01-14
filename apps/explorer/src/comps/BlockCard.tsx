@@ -187,7 +187,10 @@ export function BlockCard(props: BlockCard.Props) {
 						>
 							<span className="text-[13px]">Advanced</span>
 							<ChevronDown
-								className={cx('size-[14px] text-content-dimmed', showAdvanced && 'rotate-180')}
+								className={cx(
+									'size-[14px] text-content-dimmed',
+									showAdvanced && 'rotate-180',
+								)}
 							/>
 						</button>
 

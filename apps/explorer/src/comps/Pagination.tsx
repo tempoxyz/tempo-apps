@@ -212,15 +212,10 @@ export namespace Pagination {
 	})
 
 	export function getPagination(page: number, pages: number): number[] {
-		if (pages <= 7)
-			return Array.from({ length: pages }, (_, i) => i + 1)
+		if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1)
 
 		if (page <= 4)
-			return [
-				...Array.from({ length: 5 }, (_, i) => i + 1),
-				Ellipsis,
-				pages,
-			]
+			return [...Array.from({ length: 5 }, (_, i) => i + 1), Ellipsis, pages]
 
 		if (page >= pages - 3)
 			return [
@@ -324,15 +319,8 @@ export namespace Pagination {
 	}
 
 	export function Count(props: Count.Props) {
-		const {
-			page,
-			pages,
-			totalItems,
-			itemsLabel,
-			loading,
-			capped,
-			className,
-		} = props
+		const { page, pages, totalItems, itemsLabel, loading, capped, className } =
+			props
 
 		return (
 			<div
