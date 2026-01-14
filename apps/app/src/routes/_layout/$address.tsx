@@ -1332,7 +1332,7 @@ function AssetRow({
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
 						placeholder="Recipient 0x..."
-						className="flex-1 min-w-0 h-[32px] px-2.5 rounded-full border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="flex-1 min-w-0 h-[28px] px-3 rounded-full border border-base-border bg-surface text-[12px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
 				</div>
 				<div className="flex items-center gap-1.5 pl-9 sm:pl-0">
@@ -1343,7 +1343,7 @@ function AssetRow({
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
 							placeholder="Amount"
-							className="w-full h-[32px] pl-2.5 pr-12 rounded-full border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
+							className="w-full h-[28px] pl-3 pr-12 rounded-full border border-base-border bg-surface text-[12px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
 						/>
 						<button
 							type="button"
@@ -1356,7 +1356,7 @@ function AssetRow({
 					<button
 						type="submit"
 						className={cx(
-							'h-[32px] px-3 rounded-full press-down transition-colors flex items-center justify-center gap-1.5 shrink-0 text-[12px] font-medium',
+							'h-[28px] px-3 rounded-full press-down transition-colors flex items-center justify-center gap-1 shrink-0 text-[11px] font-medium',
 							sendState === 'sent'
 								? 'bg-positive text-white cursor-default'
 								: isValidSend
@@ -1379,7 +1379,7 @@ function AssetRow({
 					<button
 						type="button"
 						onClick={handleToggle}
-						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-full transition-colors shrink-0"
+						className="size-[28px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-full transition-colors shrink-0"
 						title="Cancel"
 					>
 						<XIcon className="size-[14px]" />
