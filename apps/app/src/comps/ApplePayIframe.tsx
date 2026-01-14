@@ -10,6 +10,7 @@ type IframeMessage = {
 		| 'onramp_api.polling_success'
 		| 'onramp_api.polling_failure'
 		| 'onramp_api.apple_pay_session_cancelled'
+		| 'onramp_api.cancel'
 	data?: unknown
 }
 
@@ -82,6 +83,7 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 				case 'onramp_api.polling_success':
 				case 'onramp_api.polling_failure':
 				case 'onramp_api.apple_pay_session_cancelled':
+				case 'onramp_api.cancel':
 					setIsExpanded(false)
 					break
 			}
