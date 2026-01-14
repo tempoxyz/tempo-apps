@@ -17,7 +17,6 @@ import {
 	useWriteContract,
 	useWaitForTransactionReceipt,
 } from 'wagmi'
-import { getTransactionReceipt } from 'wagmi/actions'
 import {
 	TxDescription,
 	parseKnownEvents,
@@ -31,7 +30,6 @@ import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
 import { useActivitySummary, type ActivityType } from '#lib/activity-context'
-import { getWagmiConfig } from '#wagmi.config'
 import { LottoNumber } from '#comps/LottoNumber'
 import { Settings } from '#comps/Settings'
 import CopyIcon from '~icons/lucide/copy'
@@ -253,6 +251,77 @@ type ApiTransaction = {
 
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
+type RpcLog = {
+	address: `0x${string}`
+	topics: `0x${string}`[]
+	data: `0x${string}`
+	blockNumber: string
+	transactionHash: string
+	transactionIndex: string
+	blockHash: string
+	logIndex: string
+	removed: boolean
+}
+
+type RpcTransactionReceipt = {
+	transactionHash: string
+	from: `0x${string}`
+	to: `0x${string}` | null
+	logs: RpcLog[]
+	status: string
+	blockNumber: string
+	blockHash: string
+	gasUsed: string
+	effectiveGasPrice: string
+	cumulativeGasUsed: string
+	type: string
+	contractAddress: `0x${string}` | null
+}
+
+const fetchTransactionReceipts = createServerFn({ method: 'POST' })
+	.inputValidator((data: { hashes: string[] }) => data)
+	.handler(async ({ data }) => {
+		const { hashes } = data
+		const rpcUrl =
+			TEMPO_ENV === 'presto'
+				? 'https://rpc.presto.tempo.xyz'
+				: 'https://rpc.tempo.xyz'
+
+		const { env } = await import('cloudflare:workers')
+		const auth = env.PRESTO_RPC_AUTH as string | undefined
+		const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+		if (auth && TEMPO_ENV === 'presto') {
+			headers.Authorization = `Basic ${btoa(auth)}`
+		}
+
+		const receipts: Array<{ hash: string; receipt: RpcTransactionReceipt | null }> = []
+
+		for (const hash of hashes) {
+			try {
+				const response = await fetch(rpcUrl, {
+					method: 'POST',
+					headers,
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'eth_getTransactionReceipt',
+						params: [hash],
+					}),
+				})
+				if (response.ok) {
+					const json = (await response.json()) as { result?: RpcTransactionReceipt }
+					receipts.push({ hash, receipt: json.result ?? null })
+				} else {
+					receipts.push({ hash, receipt: null })
+				}
+			} catch {
+				receipts.push({ hash, receipt: null })
+			}
+		}
+
+		return { receipts }
+	})
+
 const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 	.inputValidator((data: { address: string }) => data)
 	.handler(async ({ data }) => {
@@ -411,13 +480,45 @@ function generateMockActivity(
 	return mockItems
 }
 
+function convertRpcReceiptToViemReceipt(
+	rpcReceipt: RpcTransactionReceipt,
+): import('viem').TransactionReceipt {
+	return {
+		transactionHash: rpcReceipt.transactionHash as `0x${string}`,
+		from: rpcReceipt.from,
+		to: rpcReceipt.to,
+		logs: rpcReceipt.logs.map((log) => ({
+			address: log.address,
+			topics: log.topics.length > 0
+				? (log.topics as [`0x${string}`, ...`0x${string}`[]])
+				: ([] as unknown as [`0x${string}`, ...`0x${string}`[]]),
+			data: log.data,
+			blockNumber: BigInt(log.blockNumber),
+			transactionHash: log.transactionHash as `0x${string}`,
+			transactionIndex: Number.parseInt(log.transactionIndex, 16),
+			blockHash: log.blockHash as `0x${string}`,
+			logIndex: Number.parseInt(log.logIndex, 16),
+			removed: log.removed,
+		})),
+		status: rpcReceipt.status === '0x1' ? 'success' : 'reverted',
+		blockNumber: BigInt(rpcReceipt.blockNumber),
+		blockHash: rpcReceipt.blockHash as `0x${string}`,
+		gasUsed: BigInt(rpcReceipt.gasUsed),
+		effectiveGasPrice: BigInt(rpcReceipt.effectiveGasPrice),
+		cumulativeGasUsed: BigInt(rpcReceipt.cumulativeGasUsed),
+		type: rpcReceipt.type as '0x0' | '0x1' | '0x2',
+		contractAddress: rpcReceipt.contractAddress,
+		transactionIndex: 0,
+		logsBloom: '0x' as `0x${string}`,
+		root: undefined,
+	}
+}
+
 async function fetchTransactions(
 	address: Address.Address,
 	tokenMetadataMap: Map<Address.Address, { decimals: number; symbol: string }>,
 	assets: AssetData[],
 ): Promise<ActivityItem[]> {
-	const config = getWagmiConfig()
-
 	try {
 		const result = await fetchTransactionsFromExplorer({ data: { address } })
 
@@ -425,30 +526,34 @@ async function fetchTransactions(
 			return generateMockActivity(address, assets)
 		}
 
-		const txData = result.transactions
-			.slice(0, 10)
-			.map((tx: { hash: string; timestamp?: string }) => ({
-				hash: tx.hash,
-				timestamp: tx.timestamp ? new Date(tx.timestamp).getTime() : Date.now(),
-			}))
+		const txData = result.transactions.slice(0, 10) as Array<{
+			hash: string
+			timestamp?: string
+		}>
+		const hashes = txData.map((tx) => tx.hash)
+
+		const receiptsResult = await fetchTransactionReceipts({ data: { hashes } })
 
 		const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) => {
 			return tokenMetadataMap.get(tokenAddress)
 		}
 
 		const items: ActivityItem[] = []
-		for (const { hash, timestamp } of txData) {
+		for (const { hash, receipt: rpcReceipt } of receiptsResult.receipts) {
+			if (!rpcReceipt) continue
 			try {
-				const receipt = await getTransactionReceipt(config, {
-					hash: hash as `0x${string}`,
-				})
+				const receipt = convertRpcReceiptToViemReceipt(rpcReceipt)
 				const events = parseKnownEvents(receipt, {
 					getTokenMetadata,
 					viewer: address,
 				})
+				const txInfo = txData.find((tx) => tx.hash === hash)
+				const timestamp = txInfo?.timestamp
+					? new Date(txInfo.timestamp).getTime()
+					: Date.now()
 				items.push({ hash, events, timestamp })
 			} catch {
-				// Skip failed receipts
+				// Skip failed parsing
 			}
 		}
 
@@ -1648,6 +1753,7 @@ function ActivityList({
 	address: string
 }) {
 	const viewer = address as Address.Address
+	const { t } = useTranslation()
 
 	if (activity.length === 0) {
 		return (
@@ -1655,7 +1761,7 @@ function ActivityList({
 				<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
 					<ReceiptIcon className="size-5 text-tertiary" />
 				</div>
-				<p className="text-[13px] text-secondary">No activity yet</p>
+				<p className="text-[13px] text-secondary">{t('portfolio.noActivityYet')}</p>
 			</div>
 		)
 	}

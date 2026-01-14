@@ -26,11 +26,12 @@ type SettingsProps = {
 type SettingsView = 'main' | 'feeToken' | 'language'
 
 const LANGUAGES = [
-	{ code: 'en', name: 'English' },
-	{ code: 'es', name: 'Español' },
-	{ code: 'zh', name: '中文' },
-	{ code: 'ja', name: '日本語' },
-	{ code: 'ko', name: '한국어' },
+	{ code: 'en', name: 'English', set: 'Set', active: 'Active' },
+	{ code: 'el', name: 'Ελληνικά', set: 'Ορισμός', active: 'Ενεργό' },
+	{ code: 'es', name: 'Español', set: 'Establecer', active: 'Activo' },
+	{ code: 'zh', name: '中文', set: '设置', active: '活跃' },
+	{ code: 'ja', name: '日本語', set: '設定', active: 'アクティブ' },
+	{ code: 'ko', name: '한국어', set: '설정', active: '활성' },
 ]
 
 function shortenAddress(address: string, chars = 4): string {
@@ -221,7 +222,7 @@ export function Settings({
 								</span>
 								{isCurrent ? (
 									<span className="text-[11px] font-medium bg-positive/10 text-positive rounded px-1.5 py-0.5 text-center">
-										{t('common.active')}
+										{lang.active}
 									</span>
 								) : (
 									<button
@@ -229,7 +230,7 @@ export function Settings({
 										onClick={() => onLanguageChange(lang.code)}
 										className="text-[11px] font-medium bg-accent/10 text-accent rounded px-1.5 py-0.5 text-center cursor-pointer press-down hover:bg-accent/20 transition-colors"
 									>
-										{t('common.set')}
+										{lang.set}
 									</button>
 								)}
 							</div>

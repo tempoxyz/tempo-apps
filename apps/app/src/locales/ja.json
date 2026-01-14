@@ -29,6 +29,7 @@
 		"assetCount": "件の資産",
 		"assetCount_plural": "件の資産",
 		"hideZeroBalances": "ゼロ残高を非表示",
-		"showZeroBalances": "ゼロ残高を表示"
+		"showZeroBalances": "ゼロ残高を表示",
+		"noActivityYet": "アクティビティはまだありません"
 	}
 }
