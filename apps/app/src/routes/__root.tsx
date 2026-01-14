@@ -86,7 +86,10 @@ function RootComponent() {
 									<TanStackDevtools
 										config={{ position: 'bottom-right' }}
 										plugins={[
-											{ name: 'Tanstack Query', render: <ReactQueryDevtools /> },
+											{
+												name: 'Tanstack Query',
+												render: <ReactQueryDevtools />,
+											},
 											{
 												name: 'Tanstack Router',
 												render: <TanStackRouterDevtoolsPanel />,
