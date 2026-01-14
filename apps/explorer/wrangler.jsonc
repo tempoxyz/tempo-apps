@@ -10,8 +10,6 @@
 	// this binding is not inheritable to environments
 	// it's being added at top-level solely for the type generation script
 	"browser": { "binding": "BROWSER" },
-	// RPC_PROXY is only defined in named environments for production deploys
-	// local dev falls back to direct fetch in /api/rpc/$id.ts
 	"env": {
 		"testnet": {
 			"name": "explorer",
@@ -32,13 +30,6 @@
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
-			"services": [
-				{
-					"service": "api",
-					"remote": true,
-					"binding": "RPC_PROXY"
-				}
-			],
 			"observability": {
 				"enabled": true,
 				"logs": {
@@ -83,13 +74,6 @@
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
-			"services": [
-				{
-					"service": "api",
-					"remote": true,
-					"binding": "RPC_PROXY"
-				}
-			],
 			"observability": {
 				"enabled": true,
 				"logs": {
@@ -119,13 +103,6 @@
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
-			"services": [
-				{
-					"service": "api",
-					"remote": true,
-					"binding": "RPC_PROXY"
-				}
-			],
 			"observability": {
 				"enabled": true,
 				"logs": {
@@ -160,13 +137,6 @@
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
-			"services": [
-				{
-					"service": "api",
-					"remote": true,
-					"binding": "RPC_PROXY"
-				}
-			],
 			"observability": {
 				"enabled": true,
 				"logs": {

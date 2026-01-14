@@ -343,9 +343,7 @@ export function ContractFeatureCard(props: {
 	}
 
 	return (
-		<section
-			className="rounded-[10px] bg-card-header overflow-hidden"
-		>
+		<section className="rounded-[10px] bg-card-header overflow-hidden">
 			<div className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between w-full">
 				<div className="w-full">
 					<div className="flex items-center w-full gap-2 justify-between">

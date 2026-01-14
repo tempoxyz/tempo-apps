@@ -80,7 +80,8 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 
 function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 	const { addresses, selectors } = useMemo(() => {
-		if (!trace) return { addresses: [] as `0x${string}`[], selectors: [] as Hex[] }
+		if (!trace)
+			return { addresses: [] as `0x${string}`[], selectors: [] as Hex[] }
 		const addresses = new Set<`0x${string}`>()
 		const selectors = new Set<Hex>()
 		const stack = [trace]
