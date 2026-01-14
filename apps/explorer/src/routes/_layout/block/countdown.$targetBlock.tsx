@@ -230,15 +230,6 @@ function CountdownUnit(props: { value: number; label: string }) {
 
 function EstimatedTargetDateValue(props: { date: Date }) {
 	const { date } = props
-	const [isNarrow, setIsNarrow] = React.useState(
-		() => typeof window !== 'undefined' && window.innerWidth < 800,
-	)
-
-	React.useEffect(() => {
-		const handleResize = () => setIsNarrow(window.innerWidth < 800)
-		window.addEventListener('resize', handleResize)
-		return () => window.removeEventListener('resize', handleResize)
-	}, [])
 
 	const fullDate = date.toLocaleString('en-US', {
 		weekday: 'short',
@@ -261,7 +252,8 @@ function EstimatedTargetDateValue(props: { date: Date }) {
 
 	return (
 		<span className="text-primary whitespace-nowrap" title={fullDate}>
-			{isNarrow ? shortDate : fullDate}
+			<span className="hidden min-[620px]:inline">{fullDate}</span>
+			<span className="min-[620px]:hidden">{shortDate}</span>
 		</span>
 	)
 }
