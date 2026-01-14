@@ -20,6 +20,10 @@
 	"portfolio": {
 		"title": "포트폴리오",
 		"assets": "자산",
-		"activity": "활동"
+		"activity": "활동",
+		"assetCount": "개 자산",
+		"assetCount_plural": "개 자산",
+		"hideZeroBalances": "잔액 0 숨기기",
+		"showZeroBalances": "잔액 0 표시"
 	}
 }

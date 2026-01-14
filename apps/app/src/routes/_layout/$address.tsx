@@ -51,6 +51,7 @@ import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
 import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
+import { useTranslation } from 'react-i18next'
 import i18n from '#lib/i18n'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
@@ -523,6 +524,7 @@ function AddressView() {
 	const [searchFocused, setSearchFocused] = React.useState(false)
 	const account = useAccount()
 	const { sendTo, token: initialToken } = Route.useSearch()
+	const { t } = useTranslation()
 
 	const isOwnProfile = account.address?.toLowerCase() === address.toLowerCase()
 
@@ -632,10 +634,10 @@ function AddressView() {
 						<button
 							type="button"
 							onClick={() => navigate({ to: '/' })}
-							className="flex items-center justify-center size-[36px] rounded-full bg-base-alt hover:bg-base-alt/80 active:bg-base-alt/60 transition-colors cursor-pointer"
+							className="flex items-center justify-center size-[36px] rounded-full bg-accent hover:bg-accent/90 active:bg-accent/80 transition-colors cursor-pointer"
 							title="Sign in"
 						>
-							<LogInIcon className="size-[14px] text-secondary" />
+							<LogInIcon className="size-[14px] text-white" />
 						</button>
 					)}
 				</div>
@@ -687,15 +689,15 @@ function AddressView() {
 
 				<div className="flex flex-col gap-2.5">
 					<Section
-						title="Assets"
-						subtitle={`${assetsWithBalance.length} asset${assetsWithBalance.length !== 1 ? 's' : ''}`}
+						title={t('portfolio.assets')}
+						subtitle={`${assetsWithBalance.length} ${t('portfolio.assetCount', { count: assetsWithBalance.length })}`}
 						headerRight={
 							<button
 								type="button"
 								onClick={() => setShowZeroBalances(!showZeroBalances)}
 								className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer"
 								title={
-									showZeroBalances ? 'Hide zero balances' : 'Show zero balances'
+									showZeroBalances ? t('portfolio.hideZeroBalances') : t('portfolio.showZeroBalances')
 								}
 							>
 								{showZeroBalances ? (
@@ -718,7 +720,7 @@ function AddressView() {
 					</Section>
 
 					<Section
-						title="Activity"
+						title={t('portfolio.activity')}
 						externalLink={`https://explore.mainnet.tempo.xyz/address/${address}`}
 						defaultOpen
 					>
@@ -1414,8 +1416,7 @@ function AssetRow({
 	}, [isExpanded, onToggleSend])
 
 	const handleSend = () => {
-		if (!isValidSend || !asset.metadata?.decimals) return
-		const parsedAmount = parseUnits(amount, asset.metadata.decimals)
+		if (!isValidSend || parsedAmount === 0n) return
 		writeContract({
 			address: asset.address as `0x${string}`,
 			abi: erc20Abi,
@@ -1434,8 +1435,21 @@ function AssetRow({
 		}
 	}
 	const isValidRecipient = /^0x[a-fA-F0-9]{40}$/.test(recipient)
+	const parsedAmount = React.useMemo(() => {
+		if (!amount || !asset.metadata?.decimals) return 0n
+		try {
+			return parseUnits(amount, asset.metadata.decimals)
+		} catch {
+			return 0n
+		}
+	}, [amount, asset.metadata?.decimals])
 	const isValidAmount =
-		amount.length > 0 && !Number.isNaN(Number(amount)) && Number(amount) > 0
+		amount.length > 0 &&
+		!Number.isNaN(Number(amount)) &&
+		Number(amount) > 0 &&
+		parsedAmount > 0n &&
+		asset.balance !== undefined &&
+		parsedAmount <= BigInt(asset.balance)
 	const isValidSend = isValidRecipient && isValidAmount
 
 	const ROW_HEIGHT = 48
@@ -1461,7 +1475,7 @@ function AssetRow({
 					/>
 				</div>
 				<div className="flex items-center gap-1.5 pl-9 sm:pl-0">
-					<div className="relative flex-1 sm:w-[110px]">
+					<div className="relative w-[120px] shrink-0">
 						<input
 							ref={amountInputRef}
 							type="text"
@@ -1469,12 +1483,12 @@ function AssetRow({
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
 							placeholder="Amount"
-							className="w-full h-[28px] pl-3 pr-12 rounded-full border border-base-border bg-surface text-[12px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
+							className="w-full h-[28px] pl-3 pr-11 rounded-full border border-base-border bg-surface text-[12px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
 						/>
 						<button
 							type="button"
 							onClick={handleMax}
-							className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors"
+							className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors"
 						>
 							MAX
 						</button>
