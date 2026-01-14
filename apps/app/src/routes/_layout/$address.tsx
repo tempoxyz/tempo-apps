@@ -1,4 +1,9 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import {
+	Link,
+	createFileRoute,
+	useNavigate,
+} from '@tanstack/react-router'
+import { createServerFn } from '@tanstack/react-start'
 import { waapi, spring } from 'animejs'
 import type { Address } from 'ox'
 import * as React from 'react'
@@ -40,6 +45,33 @@ import LogOutIcon from '~icons/lucide/log-out'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
+
+const faucetFundAddress = createServerFn()
+	.validator((data: { address: string }) => data)
+	.handler(async ({ data }) => {
+		const auth = process.env.PRESTO_RPC_AUTH
+		const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+		if (auth) {
+			headers['Authorization'] = `Basic ${Buffer.from(auth).toString('base64')}`
+		}
+
+		const res = await fetch('https://rpc.presto.tempo.xyz', {
+			method: 'POST',
+			headers,
+			body: JSON.stringify({
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'tempo_fundAddress',
+				params: [data.address],
+			}),
+		})
+
+		const result = (await res.json()) as { result?: unknown; error?: { message: string } }
+		if (result.error) {
+			return { success: false, error: result.error.message }
+		}
+		return { success: true }
+	})
 
 const FAUCET_TOKENS: AssetData[] = [
 	{
@@ -214,6 +246,37 @@ type ApiTransaction = {
 	timestamp?: string
 }
 
+const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
+
+const fetchTransactionsFromExplorer = createServerFn()
+	.handler(async ({ data }: { data: { address: string } }) => {
+		const { address } = data
+		const explorerUrl =
+			TEMPO_ENV === 'presto'
+				? 'https://explore.presto.tempo.xyz'
+				: 'https://explore.mainnet.tempo.xyz'
+
+		const auth = process.env.PRESTO_RPC_AUTH
+		const headers: Record<string, string> = {}
+		if (auth) {
+			headers.Authorization = `Basic ${Buffer.from(auth).toString('base64')}`
+		}
+
+		try {
+			const response = await fetch(
+				`${explorerUrl}/api/v2/addresses/${address}/transactions`,
+				{ headers },
+			)
+			if (!response.ok) {
+				return { transactions: [], error: `HTTP ${response.status}` }
+			}
+			const data = await response.json()
+			return { transactions: data.items ?? [], error: null }
+		} catch (e) {
+			return { transactions: [], error: String(e) }
+		}
+	})
+
 type TransactionsResponse = {
 	transactions: ApiTransaction[]
 	hasMore: boolean
@@ -340,18 +403,15 @@ async function fetchTransactions(
 	const config = getWagmiConfig()
 
 	try {
-		const response = await fetch(
-			`https://explore.mainnet.tempo.xyz/api/address/${address}?limit=10`,
-		)
-		if (!response.ok) {
-			return generateMockActivity(address, assets)
-		}
-		const data = (await response.json()) as TransactionsResponse
-		const txHashes = data.transactions?.map((tx) => tx.hash) ?? []
+		const result = await fetchTransactionsFromExplorer({ data: { address } })
 
-		if (txHashes.length === 0) {
+		if (result.error || result.transactions.length === 0) {
 			return generateMockActivity(address, assets)
 		}
+
+		const txHashes = result.transactions
+			.slice(0, 10)
+			.map((tx: { hash: string }) => tx.hash)
 
 		const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) => {
 			return tokenMetadataMap.get(tokenAddress)
@@ -426,7 +486,8 @@ function eventTypeToActivityType(eventType: string): ActivityType {
 
 function AddressView() {
 	const { address } = Route.useParams()
-	const { test: showFaucet } = Route.useSearch()
+	// Always show faucet for now (test mode)
+	const showFaucet = true
 	const { assets: assetsData, activity } = Route.useLoaderData()
 	const { copy, notifying } = useCopy()
 	const [showZeroBalances, setShowZeroBalances] = React.useState(false)
@@ -560,8 +621,10 @@ function AddressView() {
 							/>
 						</div>
 						<div className="flex items-center gap-2 max-w-full">
-							<code className="text-[12px] sm:text-[13px] font-mono text-secondary leading-tight truncate min-w-0">
-								{address}
+							<code className="text-[12px] sm:text-[13px] font-mono text-secondary leading-tight min-w-0">
+								{address.slice(0, 21)}
+								<br />
+								{address.slice(21)}
 							</code>
 							<button
 								type="button"
@@ -1197,19 +1260,14 @@ function AssetRow({
 	const handleFaucet = async () => {
 		setFaucetState('loading')
 		try {
-			await fetch('https://rpc.testnet.tempo.xyz', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					id: 1,
-					method: 'tempo_fundAddress',
-					params: [address],
-				}),
-			})
+			const result = await faucetFundAddress({ data: { address } })
+			if (!result.success) {
+				console.error('Faucet error:', result.error)
+			}
 			setFaucetState('done')
 			setTimeout(() => setFaucetState('idle'), 2000)
-		} catch {
+		} catch (err) {
+			console.error('Faucet error:', err)
 			setFaucetState('idle')
 		}
 	}
