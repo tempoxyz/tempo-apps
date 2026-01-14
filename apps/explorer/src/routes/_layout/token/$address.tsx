@@ -28,7 +28,7 @@ import { TimeColumnHeader, useTimeFormat } from '#comps/TimeFormat'
 import { TimestampCell } from '#comps/TimestampCell'
 import { TokenIcon } from '#comps/TokenIcon'
 import { TransactionCell } from '#comps/TransactionCell'
-import { cx } from '#cva.config.ts'
+import { cx } from '#lib/css'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
 import { PriceFormatter } from '#lib/formatting'
@@ -337,7 +337,7 @@ function TokenCard(props: {
 							<TokenIcon
 								address={address}
 								name={metadata?.symbol}
-								className="size-5"
+								className="size-5!"
 							/>
 							{metadata.symbol}
 						</h2>

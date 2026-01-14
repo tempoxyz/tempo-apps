@@ -3,7 +3,7 @@ import * as IDX from 'idxs'
 import { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import { isTestnet } from '#lib/env'
+import { hasIndexSupply } from '#lib/env'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
@@ -23,7 +23,7 @@ export const Route = createFileRoute('/api/address/txs-count/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				if (isTestnet()) return Response.json({ data: 0, error: null })
+				if (!hasIndexSupply()) return Response.json({ data: 0, error: null })
 
 				try {
 					const address = zAddress().parse(params.address)

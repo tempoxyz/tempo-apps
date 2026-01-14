@@ -4,9 +4,10 @@ import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
 import * as z from 'zod/mini'
 import { ContractVerificationLookupSchema } from '#lib/domain/contract-source.ts'
 import { zAddress } from '#lib/zod.ts'
+import { getRequestURL } from '#lib/env.ts'
 
 const CONTRACT_VERIFICATION_API_BASE_URL =
-	process.env.VITE_CONTRACT_VERIFY_URL ?? 'https://contracts.tempo.xyz'
+	'https://contracts.tempo.xyz/v2/contract'
 
 const SHIKI_THEMES = {
 	light: 'github-light',
@@ -75,8 +76,8 @@ async function processHighlightedHtml(html: string): Promise<string> {
 export const Route = createFileRoute('/api/code')({
 	server: {
 		handlers: {
-			GET: async (context) => {
-				const url = new URL(context.request.url)
+			GET: async () => {
+				const url = getRequestURL()
 
 				const normalizedParams = Object.fromEntries(
 					Array.from(url.searchParams.entries()).map(([k, v]) => [

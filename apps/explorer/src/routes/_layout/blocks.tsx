@@ -12,7 +12,7 @@ import {
 	TimeColumnHeader,
 	useTimeFormat,
 } from '#comps/TimeFormat'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import { withLoaderTiming } from '#lib/profiling'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
 import ChevronFirst from '~icons/lucide/chevron-first'
@@ -168,12 +168,9 @@ function RouteComponent() {
 								})}
 								className={cx(
 									'flex items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] text-[11px] font-medium press-down',
-									{
-										'bg-positive/10 text-positive hover:bg-positive/20':
-											live && !paused,
-										'bg-base-alt text-tertiary hover:bg-base-alt/80':
-											!live || paused,
-									},
+									live && !paused
+										? 'bg-positive/10 text-positive hover:bg-positive/20'
+										: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
 								)}
 								title={live ? 'Pause live updates' : 'Resume live updates'}
 							>

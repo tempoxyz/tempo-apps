@@ -1,3 +1,4 @@
+import { getRequestURL } from '#lib/env.ts'
 import { queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import { isAddress } from 'viem'
@@ -5,7 +6,7 @@ import { useChainId } from 'wagmi'
 import * as z from 'zod/mini'
 
 const CONTRACT_VERIFICATION_API_BASE_URL =
-	import.meta.env.VITE_CONTRACT_VERIFY_URL ?? 'https://contracts.tempo.xyz'
+	'https://contracts.tempo.xyz/v2/contract'
 
 const SoliditySettingsSchema = z.object({
 	remappings: z.optional(z.array(z.string())),
@@ -108,7 +109,8 @@ export async function fetchContractSource(params: {
 	const { address, chainId, highlight = true, signal } = params
 
 	try {
-		const url = `${__BASE_URL__}/api/code?address=${address.toLowerCase()}&chainId=${chainId}&highlight=${highlight}`
+		const requestUrl = getRequestURL()
+		const url = `${requestUrl.origin}/api/code?address=${address.toLowerCase()}&chainId=${chainId}&highlight=${highlight}`
 
 		const response = await fetch(url, { signal })
 

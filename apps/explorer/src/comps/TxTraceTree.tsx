@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useMemo, useState } from 'react'
 import type { Hex } from 'viem'
 import { type Abi, decodeAbiParameters, erc20Abi, slice } from 'viem'
-import { cx } from '#cva.config.ts'
+import { cx } from '#lib/css'
 import {
 	formatAbiValue,
 	getAbiItem,
@@ -130,9 +130,9 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 			let params: string | undefined
 			let decodedOutput: string | undefined
 
-			if (precompileInfo) {
+			if (precompileInfo && trace.to) {
 				const decoded = decodePrecompile(
-					trace.to!,
+					trace.to,
 					trace.input || '0x',
 					trace.output,
 				)

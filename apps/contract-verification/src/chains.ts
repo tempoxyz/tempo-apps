@@ -1,16 +1,19 @@
 import { tempoDevnet, tempoAndantino, tempoModerato } from 'viem/chains'
 
+const tempoRpcKey = process.env.TEMPO_RPC_KEY
+if (!tempoRpcKey) throw new Error('TEMPO_RPC_KEY is not set')
+
 const tempoPresto = {
 	...tempoModerato,
 	id: 4217,
 	name: 'Tempo Mainnet',
 	blockExplorers: {
-		default: { name: 'Tempo Explorer', url: 'https://explore.tempo.xyz' },
+		default: { name: 'Tempo Explorer', url: 'https://explore.mainnet.tempo.xyz' },
 	},
 	rpcUrls: {
 		default: {
-			http: ['https://rpc.presto.tempo.xyz'],
-			webSocket: ['wss://rpc.presto.tempo.xyz'],
+			http: [`https://rpc.presto.tempo.xyz/${tempoRpcKey}`],
+			webSocket: [`wss://rpc.presto.tempo.xyz/${tempoRpcKey}`],
 		},
 	},
 } as const

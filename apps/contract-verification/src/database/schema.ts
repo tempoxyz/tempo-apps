@@ -166,12 +166,8 @@ export const compiledContractsTable = p.sqliteTable(
 		runtimeCodeArtifacts: s.text('runtime_code_artifacts').notNull(),
 	}),
 	(table) => [
-		p
-			.index('compiled_contracts_creation_code_hash')
-			.on(table.creationCodeHash),
-		p
-			.index('compiled_contracts_runtime_code_hash')
-			.on(table.runtimeCodeHash),
+		p.index('compiled_contracts_creation_code_hash').on(table.creationCodeHash),
+		p.index('compiled_contracts_runtime_code_hash').on(table.runtimeCodeHash),
 		p
 			.uniqueIndex('compiled_contracts_pseudo_pkey')
 			.on(

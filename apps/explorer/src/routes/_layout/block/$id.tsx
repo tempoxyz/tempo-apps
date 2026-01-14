@@ -20,7 +20,7 @@ import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TxEventDescription } from '#comps/TxEventDescription'
-import { cx } from '#cva.config.ts'
+import { cx } from '#lib/css'
 import {
 	type KnownEvent,
 	preferredEventsFilter,

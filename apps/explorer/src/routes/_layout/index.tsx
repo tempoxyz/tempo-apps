@@ -5,11 +5,11 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { animate, stagger } from 'animejs'
+import { waapi, stagger } from 'animejs'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import { springInstant, springBouncy, springSmooth } from '#lib/animation'
 import { Intro, type IntroPhase, useIntroSeen } from '#comps/Intro'
 import BoxIcon from '~icons/lucide/box'
@@ -26,10 +26,10 @@ const SPOTLIGHT_DATA: Record<
 	{
 		accountAddress: Address.Address
 		contractAddress: Address.Address
-		receiptHash: Hex.Hex
-		paymentHash: Hex.Hex
-		swapHash: Hex.Hex
-		mintHash: Hex.Hex
+		receiptHash: Hex.Hex | null
+		paymentHash: Hex.Hex | null
+		swapHash: Hex.Hex | null
+		mintHash: Hex.Hex | null
 	}
 > = {
 	testnet: {
@@ -55,6 +55,17 @@ const SPOTLIGHT_DATA: Record<
 			'0xc61b40cfc6714a893e3d758f2db3e19cd54f175369e17c48591654b294332cf9',
 		mintHash:
 			'0x58fcdd78477f7ee402320984e990e7a1623d80b768afb03f9b27fd2eac395032',
+	},
+	presto: {
+		accountAddress: '0x85269497F0b602a718b85DB5ce490A6c88d01c0E',
+		contractAddress: '0x4027a3f47d9a421c381bf5d88e22dad5afd4b1a2',
+		receiptHash:
+			'0x009293cd8195b5f088729e8839c3ccb7e9d10d98798a1cb11c06e62d77d1dbef',
+		paymentHash:
+			'0xc13dbcf74b99ddc7645b1752a031b4bd479e4514b77569e1a4e69ecbf88e7290',
+		swapHash: null,
+		mintHash:
+			'0x3dcdfda1c8689a0fab003174e7a0bc3c5df8c325e566df42cae8fe1a41ac48fb',
 	},
 }
 
@@ -87,22 +98,24 @@ function Component() {
 	}, [router])
 
 	const handlePhaseChange = React.useCallback((phase: IntroPhase) => {
-		if (phase === 'start' && exploreWrapperRef.current) {
-			const seen = introSeenOnMount.current
-			animate(exploreWrapperRef.current, {
-				opacity: [0, 1],
-				scale: [seen ? 0.97 : 0.94, 1],
-				ease: seen ? springInstant : springBouncy,
-				delay: seen ? 0 : 240,
-				onBegin: () => {
-					setInputReady(true)
-					if (exploreWrapperRef.current) {
-						exploreWrapperRef.current.style.pointerEvents = 'auto'
-					}
-					exploreInputRef.current?.focus()
-				},
-			})
-		}
+		if (phase !== 'start' || !exploreWrapperRef.current) return
+
+		const seen = introSeenOnMount.current
+		setTimeout(
+			() => {
+				setInputReady(true)
+				if (exploreWrapperRef.current) {
+					exploreWrapperRef.current.style.pointerEvents = 'auto'
+					waapi.animate(exploreWrapperRef.current, {
+						opacity: [0, 1],
+						scale: [seen ? 0.97 : 0.94, 1],
+						ease: seen ? springInstant : springBouncy,
+					})
+				}
+				exploreInputRef.current?.focus()
+			},
+			seen ? 0 : 240,
+		)
 	}, [])
 
 	return (
@@ -150,7 +163,6 @@ function Component() {
 }
 
 function SpotlightLinks() {
-	const navigate = useNavigate()
 	const introSeen = useIntroSeen()
 	const [actionOpen, setActionOpen] = React.useState(false)
 	const [menuMounted, setMenuMounted] = React.useState(false)
@@ -167,15 +179,17 @@ function SpotlightLinks() {
 		setActionOpen(false)
 		if (dropdownMenuRef.current) {
 			closingRef.current = true
-			animate(dropdownMenuRef.current, {
-				opacity: [1, 0],
-				scale: [1, 0.97],
-				translateY: [0, -4],
-				ease: springInstant,
-			}).then(() => {
-				if (!closingRef.current) return
-				setMenuMounted(false)
-			})
+			waapi
+				.animate(dropdownMenuRef.current, {
+					opacity: [1, 0],
+					scale: [1, 0.97],
+					translateY: [0, -4],
+					ease: springInstant,
+				})
+				.then(() => {
+					if (!closingRef.current) return
+					setMenuMounted(false)
+				})
 		} else {
 			setMenuMounted(false)
 		}
@@ -198,16 +212,18 @@ function SpotlightLinks() {
 		if (!pillsRef.current) return
 		const seen = introSeenOnMount.current
 		const children = [...pillsRef.current.children]
-		const anim = animate(children, {
+		const delay = seen ? 0 : 320
+		setTimeout(() => {
+			for (const child of children) {
+				;(child as HTMLElement).style.pointerEvents = 'auto'
+			}
+		}, delay)
+		const anim = waapi.animate(children as HTMLElement[], {
 			opacity: [0, 1],
-			translateY: [seen ? 2 : 4, 0],
+			translateY: [seen ? 4 : 8, 0],
+			scale: [0.97, 1],
 			ease: seen ? springInstant : springSmooth,
-			delay: seen ? stagger(10) : stagger(20, { start: 320, from: 'random' }),
-			onBegin: () => {
-				for (const child of children) {
-					;(child as HTMLElement).style.pointerEvents = 'auto'
-				}
-			},
+			delay: seen ? stagger(10) : stagger(20, { start: delay, from: 'first' }),
 		})
 		anim.then(() => {
 			for (const child of children) {
@@ -215,7 +231,9 @@ function SpotlightLinks() {
 			}
 		})
 		return () => {
-			anim.cancel()
+			try {
+				anim.cancel()
+			} catch {}
 		}
 	}, [])
 
@@ -226,7 +244,7 @@ function SpotlightLinks() {
 	React.useLayoutEffect(() => {
 		if (!dropdownMenuRef.current) return
 		if (actionOpen && menuMounted) {
-			animate(dropdownMenuRef.current, {
+			waapi.animate(dropdownMenuRef.current, {
 				opacity: [0, 1],
 				scale: [0.97, 1],
 				translateY: [-4, 0],
@@ -239,7 +257,7 @@ function SpotlightLinks() {
 		if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
 		if (closingRef.current && dropdownMenuRef.current) {
 			closingRef.current = false
-			animate(dropdownMenuRef.current, {
+			waapi.animate(dropdownMenuRef.current, {
 				opacity: 1,
 				scale: 1,
 				ease: springInstant,
@@ -257,7 +275,7 @@ function SpotlightLinks() {
 				{ label: 'Payment', hash: spotlightData.paymentHash },
 				{ label: 'Swap', hash: spotlightData.swapHash },
 				{ label: 'Mint', hash: spotlightData.mintHash },
-			]
+			].filter((a): a is { label: string; hash: Hex.Hex } => a.hash !== null)
 		: []
 
 	return (
@@ -285,13 +303,15 @@ function SpotlightLinks() {
 						>
 							Contract
 						</SpotlightPill>
-						<SpotlightPill
-							to="/receipt/$hash"
-							params={{ hash: spotlightData.receiptHash }}
-							icon={<ReceiptIcon className="size-[14px] text-accent" />}
-						>
-							Receipt
-						</SpotlightPill>
+						{spotlightData.receiptHash && (
+							<SpotlightPill
+								to="/receipt/$hash"
+								params={{ hash: spotlightData.receiptHash }}
+								icon={<ReceiptIcon className="size-[14px] text-accent" />}
+							>
+								Receipt
+							</SpotlightPill>
+						)}
 						{/** biome-ignore lint/a11y/noStaticElementInteractions: _ */}
 						<div
 							className="relative group-hover/pills:opacity-40 hover:opacity-100"
@@ -325,17 +345,10 @@ function SpotlightLinks() {
 										style={{ opacity: 0 }}
 									>
 										{actionTypes.map((action, i) => (
-											<button
+											<Link
 												key={action.label}
-												type="button"
-												onClick={() => {
-													navigate({
-														to: '/tx/$hash',
-														params: { hash: action.hash },
-													})
-													setMenuMounted(false)
-													setActionOpen(false)
-												}}
+												to="/tx/$hash"
+												params={{ hash: action.hash }}
 												className={`px-2.5 py-1 text-[12px] text-base-content-secondary hover:text-base-content hover:bg-base-border/40 whitespace-nowrap focus-visible:outline-offset-0 press-down cursor-pointer ${
 													i === 0
 														? 'rounded-l-[14px]! rounded-r-[2px]!'
@@ -345,7 +358,7 @@ function SpotlightLinks() {
 												}`}
 											>
 												{action.label}
-											</button>
+											</Link>
 										))}
 									</div>
 								</div>

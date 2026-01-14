@@ -1,5 +1,5 @@
 import type * as React from 'react'
-import { cx } from '#cva.config.ts'
+import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks.ts'
 import CheckIcon from '~icons/lucide/check'
 import CopyIcon from '~icons/lucide/copy'

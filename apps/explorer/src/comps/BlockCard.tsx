@@ -4,7 +4,7 @@ import * as React from 'react'
 import { useWatchBlockNumber } from 'wagmi'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import { DateFormatter } from '#lib/formatting'
 import { useCopy, useIsMounted } from '#lib/hooks'
 import type { BlockWithTransactions } from '#lib/queries'
@@ -187,9 +187,7 @@ export function BlockCard(props: BlockCard.Props) {
 						>
 							<span className="text-[13px]">Advanced</span>
 							<ChevronDown
-								className={cx('size-[14px] text-content-dimmed', {
-									'rotate-180': showAdvanced,
-								})}
+								className={cx('size-[14px] text-content-dimmed', showAdvanced && 'rotate-180')}
 							/>
 						</button>
 
