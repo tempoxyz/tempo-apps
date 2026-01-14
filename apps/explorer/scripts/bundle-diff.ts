@@ -275,13 +275,12 @@ function printStats(stats: BundleStats, baseline?: BundleStats): void {
 
     for (const [normalName, baseChunk] of baselineMap) {
       if (!currentMap.has(normalName) && baseChunk.size > 1024) {
-          changes.push({
-            name: `${normalName} (removed)`,
-            delta: -baseChunk.size,
-            current: 0,
-            baseline: baseChunk.size,
-          });
-        }
+        changes.push({
+          name: `${normalName} (removed)`,
+          delta: -baseChunk.size,
+          current: 0,
+          baseline: baseChunk.size,
+        });
       }
     }
 
