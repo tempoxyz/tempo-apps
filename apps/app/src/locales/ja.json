@@ -1,4 +1,9 @@
 {
+	"intro": {
+		"tagline": "Tempoでアカウント、残高、アクティビティを探索する最速の方法。",
+		"website": "ウェブサイト",
+		"docs": "ドキュメント"
+	},
 	"settings": {
 		"title": "設定",
 		"feeToken": "手数料トークン",

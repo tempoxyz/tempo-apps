@@ -1,4 +1,9 @@
 {
+	"intro": {
+		"tagline": "Tempo에서 계정, 잔액, 활동을 탐색하는 가장 빠른 방법.",
+		"website": "웹사이트",
+		"docs": "문서"
+	},
 	"settings": {
 		"title": "설정",
 		"feeToken": "수수료 토큰",
