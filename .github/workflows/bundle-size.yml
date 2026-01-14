@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
-      contents: read
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -117,3 +117,19 @@ jobs:
           issue-number: ${{ github.event.pull_request.number }}
           body-path: apps/explorer/bundle-report.md
           edit-mode: replace
+
+      - name: Upload Sonda report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sonda-bundle-report-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('main-{0}', github.sha) }}
+          path: apps/explorer/.sonda/
+          retention-days: 90
+
+      - name: Deploy to GitHub Pages (main only)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./apps/explorer/.sonda
+          destination_dir: explorer-bundle-stats
+          keep_files: false
