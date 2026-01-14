@@ -20,6 +20,10 @@
 	"portfolio": {
 		"title": "Portfolio",
 		"assets": "Assets",
-		"activity": "Activity"
+		"activity": "Activity",
+		"assetCount": "asset",
+		"assetCount_plural": "assets",
+		"hideZeroBalances": "Hide zero balances",
+		"showZeroBalances": "Show zero balances"
 	}
 }
