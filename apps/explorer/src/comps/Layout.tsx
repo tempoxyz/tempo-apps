@@ -1,13 +1,20 @@
+import { useSuspenseQuery } from '@tanstack/react-query'
 import { useMatchRoute } from '@tanstack/react-router'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import { useIntroSeen } from '#comps/Intro'
-import { Sphere } from '#comps/Sphere'
 import { isTestnet } from '#lib/env'
+import { fetchLatestBlock } from '#lib/server/latest-block.server'
+import { Sphere } from '#comps/Sphere'
 import TriangleAlert from '~icons/lucide/triangle-alert'
 
 export function Layout(props: Layout.Props) {
-	const { children, blockNumber } = props
+	const { children, blockNumber: blockNumberProp } = props
+	const { data: blockNumberQuery } = useSuspenseQuery({
+		queryKey: ['latestBlock'],
+		queryFn: () => fetchLatestBlock(),
+	})
+	const blockNumber = blockNumberProp ?? blockNumberQuery
 	const matchRoute = useMatchRoute()
 	const introSeen = useIntroSeen()
 	const isReceipt = Boolean(matchRoute({ to: '/receipt/$hash', fuzzy: true }))
