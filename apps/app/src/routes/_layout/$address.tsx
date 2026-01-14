@@ -6,7 +6,7 @@ import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { encode } from 'uqr'
 import { formatUnits } from 'viem'
-import { useDisconnect } from 'wagmi'
+import { useAccount, useDisconnect } from 'wagmi'
 import { getTransactionReceipt } from 'wagmi/actions'
 import {
 	TxDescription,
@@ -38,6 +38,7 @@ import ReceiptIcon from '~icons/lucide/receipt'
 import XIcon from '~icons/lucide/x'
 import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
+import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
@@ -258,8 +259,9 @@ const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 		}
 
 		try {
+			// Use explorer's internal API which includes Mint/Burn events
 			const response = await fetch(
-				`${explorerUrl}/api/v2/addresses/${address}/transactions`,
+				`${explorerUrl}/api/address/${address}?include=all&limit=50`,
 				{ headers },
 			)
 			if (!response.ok) {
@@ -268,8 +270,11 @@ const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 					error: `HTTP ${response.status}`,
 				}
 			}
-			const json = (await response.json()) as { items?: ApiTransaction[] }
-			return { transactions: json.items ?? [], error: null }
+			const json = (await response.json()) as {
+				transactions?: ApiTransaction[]
+				error?: string | null
+			}
+			return { transactions: json.transactions ?? [], error: json.error ?? null }
 		} catch (e) {
 			return { transactions: [] as ApiTransaction[], error: String(e) }
 		}
@@ -435,10 +440,18 @@ async function fetchTransactions(
 	}
 }
 
+type AddressSearchParams = {
+	test?: boolean
+	sendTo?: string
+	token?: string
+}
+
 export const Route = createFileRoute('/_layout/$address')({
 	component: AddressView,
-	validateSearch: (search: Record<string, unknown>): { test?: boolean } => ({
+	validateSearch: (search: Record<string, unknown>): AddressSearchParams => ({
 		test: 'test' in search ? true : undefined,
+		sendTo: typeof search.sendTo === 'string' ? search.sendTo : undefined,
+		token: typeof search.token === 'string' ? search.token : undefined,
 	}),
 	loader: async ({ params }) => {
 		const assets = await fetchAssets(params.address as Address.Address)
@@ -487,6 +500,11 @@ function AddressView() {
 	const router = useRouter()
 	const [searchValue, setSearchValue] = React.useState('')
 	const [searchFocused, setSearchFocused] = React.useState(false)
+	const account = useAccount()
+	const { sendTo, token: initialToken } = Route.useSearch()
+
+	const isOwnProfile =
+		account.address?.toLowerCase() === address.toLowerCase()
 
 	const handleFaucetSuccess = React.useCallback(() => {
 		router.invalidate()
@@ -576,17 +594,28 @@ function AddressView() {
 							className="bg-transparent outline-none text-[13px] text-primary placeholder:text-secondary w-[100px] focus:w-[180px] transition-all"
 						/>
 					</form>
-					<button
-						type="button"
-						onClick={() => {
-							disconnect()
-							navigate({ to: '/' })
-						}}
-						className="flex items-center justify-center size-[36px] rounded-full bg-base-alt hover:bg-base-alt/80 active:bg-base-alt/60 transition-colors cursor-pointer"
-						title="Log out"
-					>
-						<LogOutIcon className="size-[14px] text-secondary" />
-					</button>
+					{isOwnProfile ? (
+						<button
+							type="button"
+							onClick={() => {
+								disconnect()
+								navigate({ to: '/' })
+							}}
+							className="flex items-center justify-center size-[36px] rounded-full bg-base-alt hover:bg-base-alt/80 active:bg-base-alt/60 transition-colors cursor-pointer"
+							title="Log out"
+						>
+							<LogOutIcon className="size-[14px] text-secondary" />
+						</button>
+					) : (
+						<button
+							type="button"
+							onClick={() => navigate({ to: '/' })}
+							className="flex items-center justify-center size-[36px] rounded-full bg-base-alt hover:bg-base-alt/80 active:bg-base-alt/60 transition-colors cursor-pointer"
+							title="Sign in"
+						>
+							<LogInIcon className="size-[14px] text-secondary" />
+						</button>
+					)}
 				</div>
 				<div className="flex flex-row items-start justify-between gap-4 mb-5">
 					<div className="flex-1 min-w-0 flex flex-col gap-2">
@@ -655,7 +684,15 @@ function AddressView() {
 							</button>
 						}
 					>
-						<HoldingsTable assets={displayedAssets} address={address} onFaucetSuccess={handleFaucetSuccess} />
+						<HoldingsTable
+							assets={displayedAssets}
+							address={address}
+							onFaucetSuccess={handleFaucetSuccess}
+							isOwnProfile={isOwnProfile}
+							connectedAddress={account.address}
+							initialSendTo={sendTo}
+							initialToken={initialToken}
+						/>
 					</Section>
 
 					<Section
@@ -1124,12 +1161,23 @@ function HoldingsTable({
 	assets,
 	address,
 	onFaucetSuccess,
+	isOwnProfile,
+	connectedAddress,
+	initialSendTo,
+	initialToken,
 }: {
 	assets: AssetData[]
 	address: string
 	onFaucetSuccess?: () => void
+	isOwnProfile: boolean
+	connectedAddress?: string
+	initialSendTo?: string
+	initialToken?: string
 }) {
-	const [sendingToken, setSendingToken] = React.useState<string | null>(null)
+	const navigate = useNavigate()
+	const [sendingToken, setSendingToken] = React.useState<string | null>(
+		initialToken ?? null,
+	)
 	const [toastMessage, setToastMessage] = React.useState<string | null>(null)
 
 	React.useEffect(() => {
@@ -1180,16 +1228,35 @@ function HoldingsTable({
 							asset.address.toLowerCase(),
 						)}
 						isExpanded={sendingToken === asset.address}
-						onToggleSend={() =>
+						onToggleSend={() => {
+							if (!isOwnProfile) {
+								if (connectedAddress) {
+									navigate({
+										to: '/$address',
+										params: { address: connectedAddress },
+										search: {
+											sendTo: address,
+											token: asset.address,
+										},
+									})
+								} else {
+									navigate({ to: '/' })
+								}
+								return
+							}
 							setSendingToken(
 								sendingToken === asset.address ? null : asset.address,
 							)
-						}
+						}}
 						onSendComplete={(symbol) => {
 							setToastMessage(`Sent ${symbol} successfully`)
 							setSendingToken(null)
 						}}
 						onFaucetSuccess={onFaucetSuccess}
+						isOwnProfile={isOwnProfile}
+						initialRecipient={
+							asset.address === initialToken ? initialSendTo : undefined
+						}
 					/>
 				))}
 			</div>
@@ -1231,6 +1298,8 @@ function AssetRow({
 	onToggleSend,
 	onSendComplete,
 	onFaucetSuccess,
+	isOwnProfile,
+	initialRecipient,
 }: {
 	asset: AssetData
 	address: string
@@ -1239,8 +1308,10 @@ function AssetRow({
 	onToggleSend: () => void
 	onSendComplete: (symbol: string) => void
 	onFaucetSuccess?: () => void
+	isOwnProfile: boolean
+	initialRecipient?: string
 }) {
-	const [recipient, setRecipient] = React.useState('')
+	const [recipient, setRecipient] = React.useState(initialRecipient ?? '')
 	const [amount, setAmount] = React.useState('')
 	const [sendState, setSendState] = React.useState<'idle' | 'sending' | 'sent'>(
 		'idle',
@@ -1249,6 +1320,7 @@ function AssetRow({
 		'idle' | 'loading' | 'done'
 	>('idle')
 	const recipientInputRef = React.useRef<HTMLInputElement>(null)
+	const amountInputRef = React.useRef<HTMLInputElement>(null)
 
 	const handleFaucet = async () => {
 		setFaucetState('loading')
@@ -1272,10 +1344,14 @@ function AssetRow({
 	}
 
 	React.useEffect(() => {
-		if (isExpanded && recipientInputRef.current) {
-			recipientInputRef.current.focus()
+		if (isExpanded) {
+			if (initialRecipient && amountInputRef.current) {
+				amountInputRef.current.focus()
+			} else if (recipientInputRef.current) {
+				recipientInputRef.current.focus()
+			}
 		}
-	}, [isExpanded])
+	}, [isExpanded, initialRecipient])
 
 	React.useEffect(() => {
 		if (!isExpanded) return
@@ -1338,6 +1414,7 @@ function AssetRow({
 				<div className="flex items-center gap-1.5 pl-9 sm:pl-0">
 					<div className="relative flex-1 sm:w-[110px]">
 						<input
+							ref={amountInputRef}
 							type="text"
 							inputMode="decimal"
 							value={amount}
@@ -1449,30 +1526,32 @@ function AssetRow({
 				</span>
 			</span>
 			<span className="pr-2 flex items-center justify-end gap-0.5 relative z-10">
-				<button
-					type="button"
-					onClick={(e) => {
-						e.stopPropagation()
-						if (isFaucetToken) handleFaucet()
-					}}
-					disabled={faucetState === 'loading' || !isFaucetToken}
-					className={cx(
-						'flex items-center justify-center size-[24px] rounded-md transition-colors',
-						isFaucetToken
-							? 'hover:bg-accent/10 cursor-pointer'
-							: 'opacity-0 pointer-events-none',
-					)}
-					title={isFaucetToken ? 'Request tokens' : undefined}
-					aria-hidden={!isFaucetToken}
-				>
-					{faucetState === 'loading' ? (
-						<BouncingDots />
-					) : faucetState === 'done' ? (
-						<CheckIcon className="size-[14px] text-positive" />
-					) : (
-						<DropletIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
-					)}
-				</button>
+				{isOwnProfile && (
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation()
+							if (isFaucetToken) handleFaucet()
+						}}
+						disabled={faucetState === 'loading' || !isFaucetToken}
+						className={cx(
+							'flex items-center justify-center size-[24px] rounded-md transition-colors',
+							isFaucetToken
+								? 'hover:bg-accent/10 cursor-pointer'
+								: 'opacity-0 pointer-events-none',
+						)}
+						title={isFaucetToken ? 'Request tokens' : undefined}
+						aria-hidden={!isFaucetToken}
+					>
+						{faucetState === 'loading' ? (
+							<BouncingDots />
+						) : faucetState === 'done' ? (
+							<CheckIcon className="size-[14px] text-positive" />
+						) : (
+							<DropletIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
+						)}
+					</button>
+				)}
 				<button
 					type="button"
 					onClick={(e) => {
