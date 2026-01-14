@@ -113,7 +113,7 @@ function AmbientGradient() {
 
 export function Intro() {
 	return (
-		<div className="relative flex min-h-full flex-col items-start justify-end rounded-[10px] bg-card border border-card-border px-4 sm:px-5 py-4 shadow-[0px_4px_44px_rgba(0,0,0,0.05)] overflow-hidden">
+		<div className="relative flex min-h-full flex-col items-start justify-end rounded-[20px] liquid-glass-premium px-5 sm:px-6 py-5 overflow-hidden">
 			<AmbientGradient />
 			<StretchingWordmark className="absolute inset-0" />
 			<div className="relative flex flex-col items-start gap-y-2">
@@ -125,7 +125,7 @@ export function Intro() {
 				</p>
 				<div className="flex gap-1.5 flex-wrap">
 					<a
-						className="flex items-center gap-1 px-2 py-1 text-[13px] font-medium text-secondary bg-surface border border-base-border rounded-full hover:bg-base-alt hover:text-primary hover:border-base-alt transition-all"
+						className="flex items-center gap-1 px-3 py-1.5 text-[13px] font-medium text-secondary glass-pill rounded-full hover:text-primary transition-all"
 						href="https://tempo.xyz"
 						rel="noreferrer"
 						target="_blank"
@@ -134,7 +134,7 @@ export function Intro() {
 						Website
 					</a>
 					<a
-						className="flex items-center gap-1 px-2 py-1 text-[13px] font-medium text-secondary bg-surface border border-base-border rounded-full hover:bg-base-alt hover:text-primary hover:border-base-alt transition-all"
+						className="flex items-center gap-1 px-3 py-1.5 text-[13px] font-medium text-secondary glass-pill rounded-full hover:text-primary transition-all"
 						href="https://docs.tempo.xyz"
 						rel="noreferrer"
 						target="_blank"
