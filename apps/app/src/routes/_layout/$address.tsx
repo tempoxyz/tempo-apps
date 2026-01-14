@@ -10,8 +10,8 @@ import type { Address } from 'ox'
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { encode } from 'uqr'
-import { formatUnits } from 'viem'
-import { useAccount, useDisconnect } from 'wagmi'
+import { erc20Abi, formatUnits, parseUnits } from 'viem'
+import { useAccount, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { getTransactionReceipt } from 'wagmi/actions'
 import {
 	TxDescription,
@@ -67,7 +67,6 @@ const faucetFundAddress = createServerFn({ method: 'POST' })
 		}
 
 		try {
-			console.log('[faucet] Calling RPC with auth length:', auth.length)
 			const res = await fetch('https://rpc.presto.tempo.xyz', {
 				method: 'POST',
 				headers: {
@@ -82,11 +81,8 @@ const faucetFundAddress = createServerFn({ method: 'POST' })
 				}),
 			})
 
-			console.log('[faucet] RPC response status:', res.status)
 			if (!res.ok) {
-				const text = await res.text()
-				console.log('[faucet] RPC error body:', text)
-				return { success: false as const, error: `HTTP ${res.status}: ${text}` }
+				return { success: false as const, error: `HTTP ${res.status}` }
 			}
 
 			const result = (await res.json()) as {
@@ -332,7 +328,9 @@ function generateMockActivity(
 
 		const decimals = asset.metadata?.decimals ?? 6
 		const symbol = asset.metadata?.symbol ?? 'TOKEN'
-		const amount = BigInt(Math.floor(Math.random() * 100 * 10 ** decimals))
+		// Use deterministic amount based on hash and index
+		const amountSeed = ((hash * 31 + i * 17) % 100) + 1
+		const amount = BigInt(Math.floor(amountSeed * 10 ** decimals))
 
 		let events: KnownEvent[] = []
 
@@ -340,8 +338,10 @@ function generateMockActivity(
 			const otherAsset = assetsWithBalance[(i + 1) % assetsWithBalance.length]
 			const otherDecimals = otherAsset.metadata?.decimals ?? 6
 			const otherSymbol = otherAsset.metadata?.symbol ?? 'TOKEN'
+			// Use deterministic amount based on hash and index
+			const otherAmountSeed = ((hash * 13 + i * 23) % 50) + 1
 			const otherAmount = BigInt(
-				Math.floor(Math.random() * 100 * 10 ** otherDecimals),
+				Math.floor(otherAmountSeed * 10 ** otherDecimals),
 			)
 
 			events = [
@@ -1299,14 +1299,55 @@ function AssetRow({
 }) {
 	const [recipient, setRecipient] = React.useState(initialRecipient ?? '')
 	const [amount, setAmount] = React.useState('')
-	const [sendState, setSendState] = React.useState<'idle' | 'sending' | 'sent'>(
+	const [sendState, setSendState] = React.useState<'idle' | 'sending' | 'sent' | 'error'>(
 		'idle',
 	)
+	const [_sendError, setSendError] = React.useState<string | null>(null)
 	const [faucetState, setFaucetState] = React.useState<
 		'idle' | 'loading' | 'done'
 	>('idle')
 	const recipientInputRef = React.useRef<HTMLInputElement>(null)
 	const amountInputRef = React.useRef<HTMLInputElement>(null)
+
+	const { writeContract, data: txHash, isPending, error: writeError, reset: resetWrite } = useWriteContract()
+	const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+		hash: txHash,
+	})
+
+	// Handle transaction confirmation
+	React.useEffect(() => {
+		if (isConfirmed) {
+			setSendState('sent')
+			setTimeout(() => {
+				setSendState('idle')
+				setRecipient('')
+				setAmount('')
+				resetWrite()
+				onSendComplete(asset.metadata?.symbol || shortenAddress(asset.address, 3))
+			}, 1500)
+		}
+	}, [isConfirmed, asset.metadata?.symbol, asset.address, onSendComplete, resetWrite])
+
+	// Handle write errors
+	React.useEffect(() => {
+		if (writeError) {
+			setSendState('error')
+			const shortMessage = 'shortMessage' in writeError ? (writeError.shortMessage as string) : writeError.message
+			setSendError(shortMessage || 'Transaction failed')
+			setTimeout(() => {
+				setSendState('idle')
+				setSendError(null)
+				resetWrite()
+			}, 3000)
+		}
+	}, [writeError, resetWrite])
+
+	// Update send state based on pending/confirming
+	React.useEffect(() => {
+		if (isPending || isConfirming) {
+			setSendState('sending')
+		}
+	}, [isPending, isConfirming])
 
 	const handleFaucet = async () => {
 		setFaucetState('loading')
@@ -1351,14 +1392,14 @@ function AssetRow({
 	}, [isExpanded, onToggleSend])
 
 	const handleSend = () => {
-		if (!isValidSend) return
-		setSendState('sending')
-		setTimeout(() => {
-			setSendState('idle')
-			setRecipient('')
-			setAmount('')
-			onSendComplete(asset.metadata?.symbol || shortenAddress(asset.address, 3))
-		}, 800)
+		if (!isValidSend || !asset.metadata?.decimals) return
+		const parsedAmount = parseUnits(amount, asset.metadata.decimals)
+		writeContract({
+			address: asset.address as `0x${string}`,
+			abi: erc20Abi,
+			functionName: 'transfer',
+			args: [recipient as `0x${string}`, parsedAmount],
+		})
 	}
 
 	const handleToggle = () => {
@@ -1422,9 +1463,11 @@ function AssetRow({
 							'h-[28px] px-3 rounded-full press-down transition-colors flex items-center justify-center gap-1 shrink-0 text-[11px] font-medium',
 							sendState === 'sent'
 								? 'bg-positive text-white cursor-default'
-								: isValidSend
-									? 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
-									: 'bg-base-alt text-tertiary cursor-not-allowed',
+								: sendState === 'error'
+									? 'bg-negative text-white cursor-default'
+									: isValidSend && sendState === 'idle'
+										? 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
+										: 'bg-base-alt text-tertiary cursor-not-allowed',
 						)}
 						disabled={!isValidSend || sendState !== 'idle'}
 					>
@@ -1432,6 +1475,8 @@ function AssetRow({
 							<BouncingDots />
 						) : sendState === 'sent' ? (
 							<CheckIcon className="size-[12px]" />
+						) : sendState === 'error' ? (
+							<XIcon className="size-[12px]" />
 						) : (
 							<>
 								<SendIcon className="size-[12px]" />
@@ -1448,6 +1493,11 @@ function AssetRow({
 						<XIcon className="size-[14px]" />
 					</button>
 				</div>
+				{sendError && (
+					<div className="col-span-full pl-9 sm:pl-0 text-[11px] text-negative truncate">
+						{sendError}
+					</div>
+				)}
 			</form>
 		)
 	}
