@@ -5,7 +5,7 @@ import ChevronRight from '~icons/lucide/chevron-right'
 import Home from '~icons/lucide/home'
 import X from '~icons/lucide/x'
 
-const MAX_CRUMBS = 10
+const MAX_CRUMBS = 3
 
 export interface Crumb {
 	path: string
@@ -137,7 +137,7 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 		>
 			<Link
 				to="/"
-				className="flex items-center gap-1 text-tertiary hover:text-accent press-down shrink-0"
+				className="flex items-center gap-1 text-tertiary hover:text-accent press-down shrink-0 outline-none focus-visible:text-accent"
 				title="Home"
 			>
 				<Home className="size-3.5" />
@@ -155,7 +155,7 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 						) : (
 							<Link
 								to={crumb.path}
-								className="text-secondary hover:text-accent press-down truncate max-w-[120px]"
+								className="text-secondary hover:text-accent press-down truncate max-w-[120px] outline-none focus-visible:text-accent"
 								title={crumb.path}
 							>
 								{crumb.label}
@@ -169,7 +169,7 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 				<button
 					type="button"
 					onClick={clearCrumbs}
-					className="ml-2 p-1 text-tertiary hover:text-primary hover:bg-base-alt rounded press-down shrink-0"
+					className="ml-2 p-1 text-tertiary hover:text-primary hover:bg-base-alt rounded press-down shrink-0 outline-none focus-visible:text-accent"
 					title="Clear navigation history"
 				>
 					<X className="size-3" />
