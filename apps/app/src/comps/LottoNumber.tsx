@@ -11,12 +11,20 @@ export function LottoNumber({
 	duration = 1000,
 	className,
 }: LottoNumberProps) {
+	// Skip animation for zero values
+	const isZeroValue = /^\$?0(\.0+)?$/.test(value)
 	const [chars, setChars] = React.useState<
 		{ char: string; settled: boolean }[]
-	>(value.split('').map((char) => ({ char, settled: false })))
+	>(value.split('').map((char) => ({ char, settled: isZeroValue })))
 	const prevValueRef = React.useRef(value)
 
 	React.useEffect(() => {
+		// Skip animation for zero values
+		if (isZeroValue) {
+			setChars(value.split('').map((char) => ({ char, settled: true })))
+			return
+		}
+
 		prevValueRef.current = value
 		const startTime = Date.now()
 
@@ -53,7 +61,7 @@ export function LottoNumber({
 		}
 
 		requestAnimationFrame(animate)
-	}, [value, duration])
+	}, [value, duration, isZeroValue])
 
 	// Find decimal position from the value prop (stable reference)
 	const decimalIndex = value.indexOf('.')

@@ -21,13 +21,29 @@ export const Route = createRootRouteWithContext<{
 		meta: [
 			{ charSet: 'utf-8' },
 			{ name: 'viewport', content: 'width=device-width, initial-scale=1' },
-			{ title: 'App ⋅ Tempo' },
-			{ name: 'og:title', content: 'App ⋅ Tempo' },
-			{ name: 'description', content: 'Tempo App' },
-			{ name: 'og:description', content: 'Tempo App' },
-			{ name: 'og:image', content: '/og-image.png' },
+			{ title: 'Tempo' },
+			{ property: 'og:title', content: 'Tempo' },
+			{
+				name: 'description',
+				content:
+					'View your balances, send tokens, and track activity on Tempo – the fastest Ethereum L2.',
+			},
+			{
+				property: 'og:description',
+				content:
+					'View your balances, send tokens, and track activity on Tempo – the fastest Ethereum L2.',
+			},
+			{
+				property: 'og:image',
+				content: 'https://app.devnet.tempo.xyz/og-image.png',
+			},
+			{ property: 'og:image:width', content: '1200' },
+			{ property: 'og:image:height', content: '630' },
 			{ name: 'twitter:card', content: 'summary_large_image' },
-			{ name: 'twitter:image', content: '/og-image.png' },
+			{
+				name: 'twitter:image',
+				content: 'https://app.devnet.tempo.xyz/og-image.png',
+			},
 		],
 		links: [
 			{ rel: 'stylesheet', href: css },
