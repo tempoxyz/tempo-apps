@@ -1,4 +1,9 @@
 {
+	"intro": {
+		"tagline": "La forma más rápida de explorar cuentas, saldos y actividad en Tempo.",
+		"website": "Sitio web",
+		"docs": "Documentación"
+	},
 	"settings": {
 		"title": "Configuración",
 		"feeToken": "Token de Comisión",

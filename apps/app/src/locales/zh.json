@@ -1,4 +1,9 @@
 {
+	"intro": {
+		"tagline": "探索Tempo上账户、余额和活动的最快方式。",
+		"website": "网站",
+		"docs": "文档"
+	},
 	"settings": {
 		"title": "设置",
 		"feeToken": "手续费代币",
