@@ -68,18 +68,21 @@ import {
 	transactionsQueryOptions,
 } from '#lib/queries/account'
 import { getWagmiConfig } from '#wagmi.config.ts'
+import { getRequestURL } from '#lib/env.ts'
 
 async function fetchAddressTotalValue(address: Address.Address) {
+	const requestUrl = getRequestURL()
 	const response = await fetch(
-		`${__BASE_URL__}/api/address/total-value/${address}`,
+		`${requestUrl.origin}/api/address/total-value/${address}`,
 		{ headers: { 'Content-Type': 'application/json' } },
 	)
 	return response.json() as Promise<{ totalValue: number }>
 }
 
 async function fetchAddressTotalCount(address: Address.Address) {
+	const requestUrl = getRequestURL()
 	const response = await fetch(
-		`${__BASE_URL__}/api/address/txs-count/${address}`,
+		`${requestUrl.origin}/api/address/txs-count/${address}`,
 		{ headers: { 'Content-Type': 'application/json' } },
 	)
 	if (!response.ok) throw new Error('Failed to fetch total transaction count')
@@ -565,23 +568,25 @@ function RouteComponent() {
 		// Only redirect if:
 		// 1. We have a hash
 		// 2. Address is a contract
-		// 3. Not already on interact tab
-		// 4. Haven't already redirected for this specific hash
-		if (
-			hash &&
-			isContract &&
-			tab !== 'interact' &&
-			redirectedForHashRef.current !== hash
-		) {
-			redirectedForHashRef.current = hash
-			navigate({
-				to: '.',
-				search: { page: 1, tab: 'interact', limit },
-				hash,
-				replace: true,
-				resetScroll: false,
-			})
-		}
+		// 3. Haven't already redirected for this specific hash
+		if (!hash || !isContract || redirectedForHashRef.current === hash) return
+
+		// Determine which tab the hash should navigate to
+		// TanStack Router's location.hash doesn't include the '#' prefix
+		const isSourceFileHash = hash.startsWith('source-file-')
+		const targetTab = isSourceFileHash ? 'contract' : 'interact'
+
+		// Only redirect if we're not already on the target tab
+		if (tab === targetTab) return
+
+		redirectedForHashRef.current = hash
+		navigate({
+			to: '.',
+			search: { page: 1, tab: targetTab, limit },
+			hash,
+			replace: true,
+			resetScroll: false,
+		})
 	}, [hash, isContract, tab, navigate, limit])
 
 	React.useEffect(() => {
