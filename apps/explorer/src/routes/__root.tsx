@@ -11,6 +11,7 @@ import {
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
+import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
 import { OG_BASE_URL } from '#lib/og'
@@ -271,7 +272,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				/>
 				<WagmiProvider config={config} initialState={wagmiState}>
 					<QueryClientProvider client={queryClient}>
-						<IntroSeenProvider>{children}</IntroSeenProvider>
+						<BreadcrumbsProvider>
+							<IntroSeenProvider>{children}</IntroSeenProvider>
+						</BreadcrumbsProvider>
 						{import.meta.env.DEV && (
 							<TanStackDevtools
 								config={{

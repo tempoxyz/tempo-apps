@@ -15,6 +15,7 @@ import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
 import { Address as AddressLink } from '#comps/Address'
 import { BlockCard } from '#comps/BlockCard'
+import { Breadcrumbs } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
@@ -139,6 +140,7 @@ function RouteComponent() {
 				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1280px]',
 			)}
 		>
+			<Breadcrumbs className="col-span-full" />
 			<div className="self-start max-[800px]:self-stretch">
 				<BlockCard block={block} />
 			</div>

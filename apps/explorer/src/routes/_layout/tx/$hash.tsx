@@ -13,6 +13,7 @@ import { type Log, type TransactionReceipt, toEventSelector } from 'viem'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
+import { Breadcrumbs } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoRow } from '#comps/InfoRow'
 import { Midcut } from '#comps/Midcut'
@@ -264,6 +265,7 @@ function RouteComponent() {
 				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
 			)}
 		>
+			<Breadcrumbs className="col-span-full" />
 			<TxTransactionCard
 				hash={receipt.transactionHash}
 				status={receipt.status}
