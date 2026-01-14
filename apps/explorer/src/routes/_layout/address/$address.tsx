@@ -13,14 +13,8 @@ import {
 import { Address, Hex } from 'ox'
 import * as React from 'react'
 import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
-import { Abis } from 'viem/tempo'
 import { useBlock, useChainId, usePublicClient } from 'wagmi'
-import {
-	type GetBlockReturnType,
-	getBlock,
-	getChainId,
-	multicall,
-} from 'wagmi/actions'
+import { type GetBlockReturnType, getBlock, getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { Breadcrumbs } from '#comps/Breadcrumbs'
@@ -164,13 +158,6 @@ function useBatchTransactionData(
 
 	return { transactionDataMap, isLoading }
 }
-
-const knownTokens = [
-	'0x20c0000000000000000000000000000000000000',
-	'0x20c0000000000000000000000000000000000001',
-	'0x20c0000000000000000000000000000000000002',
-	'0x20c0000000000000000000000000000000000003',
-] as const
 
 type AssetData = {
 	address: Address.Address
@@ -439,67 +426,21 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				new Promise<null>((r) => setTimeout(() => r(null), ms)),
 			])
 
-		try {
-			// Fetch holdings by directly reading balances from known tokens
-			const accountAddress = params.address as Address.Address
-
-			const config = getWagmiConfig()
-
-			// Use multicall to batch all token balance + decimals calls into a single RPC request
-			const multicallResults = await timeout(
-				multicall(config, {
-					contracts: knownTokens.flatMap((tokenAddress) => [
-						{
-							address: tokenAddress,
-							abi: Abis.tip20,
-							functionName: 'balanceOf',
-							args: [accountAddress],
-						},
-						{
-							address: tokenAddress,
-							abi: Abis.tip20,
-							functionName: 'decimals',
-						},
-					]),
-					allowFailure: true,
-				}),
-				TIMEOUT_MS,
+		// Calculate holdings from prefetched balances data
+		if (loaderData?.balancesData?.balances) {
+			const totalValue = calculateTotalHoldings(
+				loaderData.balancesData.balances.map((b) => ({
+					address: b.token,
+					metadata: {
+						decimals: b.decimals,
+						currency: b.currency,
+					},
+					balance: BigInt(b.balance),
+				})),
 			)
-
-			// Parse multicall results: each token has 2 results (balance, decimals)
-			const tokenResults = multicallResults
-				? knownTokens.map((_, i) => {
-						const balanceResult = multicallResults[i * 2]
-						const decimalsResult = multicallResults[i * 2 + 1]
-						if (
-							balanceResult?.status === 'success' &&
-							decimalsResult?.status === 'success'
-						) {
-							return {
-								balance: balanceResult.result as bigint,
-								decimals: decimalsResult.result as number,
-							}
-						}
-						return null
-					})
-				: null
-
-			if (tokenResults) {
-				const PRICE_PER_TOKEN = 1
-				let totalValue = 0
-				for (const result of tokenResults) {
-					if (result && result.balance > 0n) {
-						totalValue +=
-							Number(formatUnits(result.balance, result.decimals)) *
-							PRICE_PER_TOKEN
-					}
-				}
-				if (totalValue > 0) {
-					holdings = PriceFormatter.format(totalValue, { format: 'short' })
-				}
+			if (totalValue && totalValue > 0) {
+				holdings = PriceFormatter.format(totalValue, { format: 'short' })
 			}
-		} catch {
-			// Ignore errors, holdings will be '—'
 		}
 
 		try {
