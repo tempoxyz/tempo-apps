@@ -12,6 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as LayoutAddressRouteImport } from './routes/_layout/$address'
+import { Route as LayoutMultisigIndexRouteImport } from './routes/_layout/multisig/index'
+import { Route as LayoutMultisigTestRouteImport } from './routes/_layout/multisig/test'
+import { Route as LayoutMultisigAddressRouteImport } from './routes/_layout/multisig/$address'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -27,27 +30,63 @@ const LayoutAddressRoute = LayoutAddressRouteImport.update({
   path: '/$address',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutMultisigIndexRoute = LayoutMultisigIndexRouteImport.update({
+  id: '/multisig/',
+  path: '/multisig/',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutMultisigTestRoute = LayoutMultisigTestRouteImport.update({
+  id: '/multisig/test',
+  path: '/multisig/test',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutMultisigAddressRoute = LayoutMultisigAddressRouteImport.update({
+  id: '/multisig/$address',
+  path: '/multisig/$address',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/$address': typeof LayoutAddressRoute
   '/': typeof LayoutIndexRoute
+  '/multisig/$address': typeof LayoutMultisigAddressRoute
+  '/multisig/test': typeof LayoutMultisigTestRoute
+  '/multisig': typeof LayoutMultisigIndexRoute
 }
 export interface FileRoutesByTo {
   '/$address': typeof LayoutAddressRoute
   '/': typeof LayoutIndexRoute
+  '/multisig/$address': typeof LayoutMultisigAddressRoute
+  '/multisig/test': typeof LayoutMultisigTestRoute
+  '/multisig': typeof LayoutMultisigIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
   '/_layout/$address': typeof LayoutAddressRoute
   '/_layout/': typeof LayoutIndexRoute
+  '/_layout/multisig/$address': typeof LayoutMultisigAddressRoute
+  '/_layout/multisig/test': typeof LayoutMultisigTestRoute
+  '/_layout/multisig/': typeof LayoutMultisigIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/$address' | '/'
+  fullPaths:
+    | '/$address'
+    | '/'
+    | '/multisig/$address'
+    | '/multisig/test'
+    | '/multisig'
   fileRoutesByTo: FileRoutesByTo
-  to: '/$address' | '/'
-  id: '__root__' | '/_layout' | '/_layout/$address' | '/_layout/'
+  to: '/$address' | '/' | '/multisig/$address' | '/multisig/test' | '/multisig'
+  id:
+    | '__root__'
+    | '/_layout'
+    | '/_layout/$address'
+    | '/_layout/'
+    | '/_layout/multisig/$address'
+    | '/_layout/multisig/test'
+    | '/_layout/multisig/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,17 +116,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutAddressRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/multisig/': {
+      id: '/_layout/multisig/'
+      path: '/multisig'
+      fullPath: '/multisig'
+      preLoaderRoute: typeof LayoutMultisigIndexRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/multisig/test': {
+      id: '/_layout/multisig/test'
+      path: '/multisig/test'
+      fullPath: '/multisig/test'
+      preLoaderRoute: typeof LayoutMultisigTestRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/multisig/$address': {
+      id: '/_layout/multisig/$address'
+      path: '/multisig/$address'
+      fullPath: '/multisig/$address'
+      preLoaderRoute: typeof LayoutMultisigAddressRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
 interface LayoutRouteChildren {
   LayoutAddressRoute: typeof LayoutAddressRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutMultisigAddressRoute: typeof LayoutMultisigAddressRoute
+  LayoutMultisigTestRoute: typeof LayoutMultisigTestRoute
+  LayoutMultisigIndexRoute: typeof LayoutMultisigIndexRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutAddressRoute: LayoutAddressRoute,
   LayoutIndexRoute: LayoutIndexRoute,
+  LayoutMultisigAddressRoute: LayoutMultisigAddressRoute,
+  LayoutMultisigTestRoute: LayoutMultisigTestRoute,
+  LayoutMultisigIndexRoute: LayoutMultisigIndexRoute,
 }
 
 const LayoutRouteWithChildren =
