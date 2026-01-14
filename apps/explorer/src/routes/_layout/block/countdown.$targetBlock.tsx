@@ -16,7 +16,7 @@ import CalendarIcon from '~icons/lucide/calendar'
 import CheckCircleIcon from '~icons/lucide/check-circle'
 import ClockIcon from '~icons/lucide/clock'
 
-const AVERAGE_BLOCK_TIME_SECONDS = 2
+const AVERAGE_BLOCK_TIME_SECONDS = 0.5
 const MAX_ESTIMATED_SECONDS = 60 * 60 * 24 * 365 * 5 // 5 years cap
 
 export const Route = createFileRoute('/_layout/block/countdown/$targetBlock')({
@@ -241,8 +241,8 @@ function CountdownCard(props: {
 					</>
 				) : (
 					<>
-						Estimated time calculated using an average block time of{' '}
-						{AVERAGE_BLOCK_TIME_SECONDS} seconds. Actual time may vary.
+						Estimated time calculated using an average block time of 500ms.
+						Actual time may vary.
 					</>
 				)}
 			</p>
