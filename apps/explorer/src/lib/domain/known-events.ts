@@ -755,8 +755,8 @@ export function preferredEventsFilter(event: KnownEvent): boolean {
 }
 
 /**
- * Detects a contract call when viewing a transaction from the called contract's perspective.
- * Returns a KnownEvent if the viewer is the contract being called, otherwise null.
+ * Detects a contract call when viewing a transaction.
+ * Returns a KnownEvent describing the contract interaction.
  */
 function detectContractCall(
 	receipt: TransactionReceipt,
@@ -768,15 +768,25 @@ function detectContractCall(
 	const { viewer } = options ?? {}
 	const contractAddress = receipt.to
 
-	// Only show contract call when viewing as the called contract
-	if (!contractAddress || !viewer || !Address.isEqual(contractAddress, viewer))
-		return null
+	if (!contractAddress) return null
 
 	const transaction = options?.transaction
 	const callInput = transaction?.input ?? transaction?.data
 
-	// Need input data to show a contract call
 	if (!callInput || callInput === '0x') return null
+
+	if (viewer && Address.isEqual(contractAddress, viewer)) {
+		return {
+			type: 'contract call',
+			parts: [
+				{ type: 'action', value: 'Call To' },
+				{
+					type: 'contractCall',
+					value: { address: contractAddress, input: callInput },
+				},
+			],
+		}
+	}
 
 	return {
 		type: 'contract call',
@@ -786,6 +796,8 @@ function detectContractCall(
 				type: 'contractCall',
 				value: { address: contractAddress, input: callInput },
 			},
+			{ type: 'text', value: 'at' },
+			{ type: 'account', value: contractAddress },
 		],
 	}
 }
@@ -1128,26 +1140,23 @@ export function parseKnownEvents(
 		const contractCallEvent = detectContractCall(receipt, options)
 		if (contractCallEvent) {
 			knownEvents.push(contractCallEvent)
-		}
-	}
+		} else if (feeTransferEvents.length > 0) {
+			// Only show "Pay Fee" if there's no contract call to display
+			const parts: KnownEventPart[] = [{ type: 'action', value: 'Pay Fee' }]
 
-	// If no known events were parsed but there was a fee transfer,
-	// show it as a fee payment event
-	if (knownEvents.length === 0 && feeTransferEvents.length > 0) {
-		const parts: KnownEventPart[] = [{ type: 'action', value: 'Pay Fee' }]
+			for (const [index, fee] of feeTransferEvents.entries()) {
+				if (index > 0) parts.push({ type: 'text', value: 'and' })
+				parts.push({
+					type: 'amount',
+					value: createAmount(fee.amount, fee.token),
+				})
+			}
 
-		for (const [index, fee] of feeTransferEvents.entries()) {
-			if (index > 0) parts.push({ type: 'text', value: 'and' })
-			parts.push({
-				type: 'amount',
-				value: createAmount(fee.amount, fee.token),
+			knownEvents.push({
+				type: 'fee',
+				parts,
 			})
 		}
-
-		knownEvents.push({
-			type: 'fee',
-			parts,
-		})
 	}
 
 	return knownEvents
