@@ -8,7 +8,7 @@
 	},
 	"scripts": {
 		"postinstall": "pnpm gen:types",
-		"dev": "pnpm dev:moderato",
+		"dev": "pnpm dev:presto",
 		"dev:devnet": "CLOUDFLARE_ENV='devnet' vite dev --port 3001",
 		"dev:moderato": "CLOUDFLARE_ENV='moderato' vite dev --port 3001",
 		"dev:presto": "CLOUDFLARE_ENV='presto' vite dev --port 3001",
