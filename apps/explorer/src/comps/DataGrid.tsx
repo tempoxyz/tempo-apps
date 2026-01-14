@@ -10,6 +10,7 @@ export function DataGrid(props: DataGrid.Props) {
 		columns,
 		items,
 		totalItems,
+		pages: pagesProp,
 		displayCount,
 		displayCountCapped = false,
 		page,
@@ -34,7 +35,7 @@ export function DataGrid(props: DataGrid.Props) {
 				}),
 			}))
 		: items(mode)
-	const totalPages = Math.ceil(totalItems / itemsPerPage)
+	const pages = pagesProp ?? Math.ceil(totalItems / itemsPerPage)
 
 	const gridTemplateColumns = activeColumns
 		.map((col) => {
@@ -182,7 +183,7 @@ export function DataGrid(props: DataGrid.Props) {
 						<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
 							<Pagination.Simple
 								page={page}
-								totalPages={totalPages}
+								pages={pages}
 								fetching={fetching && !loading}
 								countLoading={countLoading}
 								disableLastPage={disableLastPage}
@@ -198,7 +199,7 @@ export function DataGrid(props: DataGrid.Props) {
 					) : (
 						<Pagination
 							page={page}
-							totalPages={totalPages}
+							pages={typeof pages === 'number' ? pages : 1}
 							totalItems={totalItems}
 							itemsLabel={itemsLabel}
 							isPending={fetching}
@@ -242,6 +243,8 @@ export namespace DataGrid {
 		}
 		items: (mode: Sections.Mode) => Row[]
 		totalItems: number
+		/** Total pages (number) or indefinite pagination ({ hasMore: boolean }) */
+		pages?: number | { hasMore: boolean }
 		/** Optional separate count for display (e.g., exact transaction count) */
 		displayCount?: number
 		/** Whether the display count is capped (shows "> X" prefix) */

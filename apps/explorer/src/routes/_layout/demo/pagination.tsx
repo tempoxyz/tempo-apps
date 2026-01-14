@@ -13,25 +13,25 @@ export const Route = createFileRoute('/_layout/demo/pagination')({
 
 const examples = [
 	{
-		totalPages: 1,
+		pages: 1,
 		page: 1,
 		totalItems: 0,
 		label: '0 items, hideOnSinglePage',
 		hideOnSinglePage: true,
 	},
 	{
-		totalPages: 1,
+		pages: 1,
 		page: 1,
 		totalItems: 1,
 		label: '1 item, hideOnSinglePage',
 		hideOnSinglePage: true,
 	},
-	{ totalPages: 1, page: 1, label: '1 page', hideOnSinglePage: false },
-	{ totalPages: 2, page: 1, label: '2 pages' },
-	{ totalPages: 7, page: 4, label: '7 pages' },
-	{ totalPages: 999, page: 500, label: '999 pages (max before compact)' },
-	{ totalPages: 1000, page: 1, label: '1,000 pages (compact: start)' },
-	{ totalPages: 1000000, page: 500000, label: '1,000,000 pages (compact)' },
+	{ pages: 1, page: 1, label: '1 page', hideOnSinglePage: false },
+	{ pages: 2, page: 1, label: '2 pages' },
+	{ pages: 7, page: 4, label: '7 pages' },
+	{ pages: 999, page: 500, label: '999 pages (max before compact)' },
+	{ pages: 1000, page: 1, label: '1,000 pages (compact: start)' },
+	{ pages: 1000000, page: 500000, label: '1,000,000 pages (compact)' },
 ]
 
 function Component() {
@@ -50,8 +50,8 @@ function Component() {
 						<div className="bg-card">
 							<Pagination
 								page={example.page}
-								totalPages={example.totalPages}
-								totalItems={example.totalItems ?? example.totalPages * 10}
+								pages={example.pages}
+								totalItems={example.totalItems ?? example.pages * 10}
 								itemsLabel="items"
 								isPending={false}
 								hideOnSinglePage={example.hideOnSinglePage}
