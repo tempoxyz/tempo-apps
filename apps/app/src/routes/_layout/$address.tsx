@@ -41,6 +41,33 @@ import LogOutIcon from '~icons/lucide/log-out'
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
 
+const FAUCET_TOKENS: AssetData[] = [
+	{
+		address: '0x20c0000000000000000000000000000000000000' as Address.Address,
+		metadata: { name: 'pathUSD', symbol: 'pathUSD', decimals: 6, priceUsd: 1 },
+		balance: '0',
+		valueUsd: 0,
+	},
+	{
+		address: '0x20c0000000000000000000000000000000000001' as Address.Address,
+		metadata: { name: 'AlphaUSD', symbol: 'αUSD', decimals: 6, priceUsd: 1 },
+		balance: '0',
+		valueUsd: 0,
+	},
+	{
+		address: '0x20c0000000000000000000000000000000000002' as Address.Address,
+		metadata: { name: 'BetaUSD', symbol: 'βUSD', decimals: 6, priceUsd: 1 },
+		balance: '0',
+		valueUsd: 0,
+	},
+	{
+		address: '0x20c0000000000000000000000000000000000003' as Address.Address,
+		metadata: { name: 'ThetaUSD', symbol: 'θUSD', decimals: 6, priceUsd: 1 },
+		balance: '0',
+		valueUsd: 0,
+	},
+]
+
 type TokenMetadata = {
 	address: string
 	name: string
@@ -439,7 +466,25 @@ function AddressView() {
 	const assetsWithBalance = dedupedAssets.filter(
 		(a) => a.balance && a.balance !== '0',
 	)
-	const displayedAssets = showZeroBalances ? dedupedAssets : assetsWithBalance
+
+	// When faucet mode is enabled, show faucet tokens (merged with any existing balances)
+	const displayedAssets = (() => {
+		if (showFaucet) {
+			const existingAddresses = new Set(dedupedAssets.map((a) => a.address.toLowerCase()))
+			const faucetAssetsToAdd = FAUCET_TOKENS.filter(
+				(ft) => !existingAddresses.has(ft.address.toLowerCase()),
+			)
+			const merged = [...dedupedAssets, ...faucetAssetsToAdd]
+			// Update faucet tokens with actual balances if they exist
+			return merged.map((asset) => {
+				const existing = dedupedAssets.find(
+					(a) => a.address.toLowerCase() === asset.address.toLowerCase(),
+				)
+				return existing ?? asset
+			})
+		}
+		return showZeroBalances ? dedupedAssets : assetsWithBalance
+	})()
 
 	return (
 		<>
