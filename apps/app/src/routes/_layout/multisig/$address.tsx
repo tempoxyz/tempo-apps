@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
-import { formatUnits, type Address, type Hex } from 'viem'
+import { formatUnits, parseUnits, type Address, type Hex } from 'viem'
+import { createPortal } from 'react-dom'
 import { useReadContract, useReadContracts, useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
 import { Layout } from '#comps/Layout'
 import { cx } from '#lib/css'
@@ -26,6 +27,7 @@ import UploadIcon from '~icons/lucide/upload'
 import PlusCircleIcon from '~icons/lucide/plus-circle'
 import SettingsIcon from '~icons/lucide/settings'
 import CodeIcon from '~icons/lucide/code'
+import XIcon from '~icons/lucide/x'
 
 export const Route = createFileRoute('/_layout/multisig/$address')({
 	component: MultisigDashboard,
@@ -147,6 +149,8 @@ function MultisigDashboard() {
 		return owners.some((o) => o.toLowerCase() === account.address?.toLowerCase())
 	}, [owners, account.address])
 
+	const [showSubmitModal, setShowSubmitModal] = React.useState(false)
+
 	return (
 		<>
 			<Layout.Header
@@ -244,6 +248,16 @@ function MultisigDashboard() {
 				<div className="flex flex-col gap-3">
 					<div className="flex items-center justify-between">
 						<h2 className="text-secondary text-[13px] uppercase tracking-wide">Transactions</h2>
+						{isOwner && (
+							<button
+								type="button"
+								onClick={() => setShowSubmitModal(true)}
+								className="flex items-center gap-1 px-2.5 py-1 rounded-lg glass-button-accent text-[11px] font-medium press-down"
+							>
+								<PlusIcon className="size-3" />
+								New
+							</button>
+						)}
 					</div>
 					{transactions.length === 0 ? (
 						<div className="flex flex-col items-center justify-center py-12 gap-3 glass-thin rounded-xl">
@@ -266,7 +280,180 @@ function MultisigDashboard() {
 					)}
 				</div>
 			</div>
+			{showSubmitModal &&
+				createPortal(
+					<SubmitTransactionModal
+						multisigAddress={address as Address}
+						onClose={() => setShowSubmitModal(false)}
+					/>,
+					document.body,
+				)}
 		</>
+	)
+}
+
+function SubmitTransactionModal({
+	multisigAddress,
+	onClose,
+}: {
+	multisigAddress: Address
+	onClose: () => void
+}) {
+	const [isVisible, setIsVisible] = React.useState(false)
+	const [to, setTo] = React.useState('')
+	const [value, setValue] = React.useState('')
+	const [data, setData] = React.useState('0x')
+	const [gasLimit, setGasLimit] = React.useState('100000')
+	const [expiryHours, setExpiryHours] = React.useState('24')
+
+	const { writeContract: submit, isPending, data: submitHash, error } = useWriteContract()
+	const { isLoading: isWaiting, isSuccess } = useWaitForTransactionReceipt({ hash: submitHash })
+
+	const handleClose = React.useCallback(() => {
+		setIsVisible(false)
+		setTimeout(onClose, 200)
+	}, [onClose])
+
+	React.useEffect(() => {
+		requestAnimationFrame(() => setIsVisible(true))
+	}, [])
+
+	React.useEffect(() => {
+		if (isSuccess) handleClose()
+	}, [isSuccess, handleClose])
+
+	React.useEffect(() => {
+		const handleEscape = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') handleClose()
+		}
+		document.addEventListener('keydown', handleEscape)
+		return () => document.removeEventListener('keydown', handleEscape)
+	}, [handleClose])
+
+	const isValidTo = to.startsWith('0x') && to.length === 42
+	const isValidData = data.startsWith('0x')
+
+	const handleSubmit = (e: React.FormEvent) => {
+		e.preventDefault()
+		if (!isValidTo || !isValidData) return
+
+		const expirySeconds = BigInt(Number(expiryHours) * 3600)
+		const expiresAt = BigInt(Math.floor(Date.now() / 1000)) + expirySeconds
+
+		submit({
+			address: multisigAddress,
+			abi: MULTISIG_ABI,
+			functionName: 'submit',
+			args: [
+				to as Address,
+				parseUnits(value || '0', 18),
+				data as Hex,
+				BigInt(gasLimit),
+				expiresAt,
+			],
+		})
+	}
+
+	return (
+		<div
+			className={cx(
+				'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200',
+				isVisible ? 'opacity-100' : 'opacity-0',
+			)}
+			onClick={handleClose}
+		>
+			<div
+				className={cx(
+					'w-full max-w-md mx-4 glass rounded-2xl transition-all duration-200',
+					isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4',
+				)}
+				onClick={(e) => e.stopPropagation()}
+			>
+				<div className="flex items-center justify-between p-4 border-b border-base-border">
+					<h2 className="text-primary font-semibold text-[16px]">Submit Transaction</h2>
+					<button
+						type="button"
+						onClick={handleClose}
+						className="p-1 rounded-lg hover:bg-base-alt transition-colors"
+					>
+						<XIcon className="size-5 text-tertiary" />
+					</button>
+				</div>
+				<form onSubmit={handleSubmit} className="flex flex-col gap-4 p-4">
+					<div className="flex flex-col gap-1.5">
+						<label className="text-[12px] text-tertiary">To Address</label>
+						<input
+							type="text"
+							value={to}
+							onChange={(e) => setTo(e.target.value)}
+							placeholder="0x..."
+							className="glass-input px-3 py-2 rounded-lg text-[14px] font-mono"
+							spellCheck={false}
+						/>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<label className="text-[12px] text-tertiary">Value (ETH)</label>
+						<input
+							type="text"
+							value={value}
+							onChange={(e) => setValue(e.target.value)}
+							placeholder="0"
+							className="glass-input px-3 py-2 rounded-lg text-[14px] font-mono"
+						/>
+					</div>
+					<div className="flex flex-col gap-1.5">
+						<label className="text-[12px] text-tertiary">Calldata</label>
+						<textarea
+							value={data}
+							onChange={(e) => setData(e.target.value)}
+							placeholder="0x"
+							rows={3}
+							className="glass-input px-3 py-2 rounded-lg text-[14px] font-mono resize-none"
+							spellCheck={false}
+						/>
+					</div>
+					<div className="grid grid-cols-2 gap-3">
+						<div className="flex flex-col gap-1.5">
+							<label className="text-[12px] text-tertiary">Gas Limit</label>
+							<input
+								type="text"
+								value={gasLimit}
+								onChange={(e) => setGasLimit(e.target.value)}
+								className="glass-input px-3 py-2 rounded-lg text-[14px] font-mono"
+							/>
+						</div>
+						<div className="flex flex-col gap-1.5">
+							<label className="text-[12px] text-tertiary">Expiry (hours)</label>
+							<input
+								type="text"
+								value={expiryHours}
+								onChange={(e) => setExpiryHours(e.target.value)}
+								className="glass-input px-3 py-2 rounded-lg text-[14px] font-mono"
+							/>
+						</div>
+					</div>
+					{error && (
+						<div className="px-3 py-2 rounded-lg bg-negative/10 border border-negative/30">
+							<p className="text-negative text-[12px]">{error.message}</p>
+						</div>
+					)}
+					<button
+						type="submit"
+						disabled={!isValidTo || !isValidData || isPending || isWaiting}
+						className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg glass-button-accent font-medium text-[14px] press-down disabled:opacity-50"
+					>
+						{isPending || isWaiting ? (
+							<span className="size-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+						) : (
+							<>
+								<SendIcon className="size-4" />
+								Submit
+							</>
+						)}
+					</button>
+				</form>
+			</div>
+		</div>
 	)
 }
 
