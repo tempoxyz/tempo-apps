@@ -5,6 +5,7 @@ const COINBASE_PAY_ORIGIN = 'https://pay.coinbase.com'
 
 type IframeMessage = {
 	eventName:
+		| 'onramp_api.load_success'
 		| 'onramp_api.apple_pay_button_pressed'
 		| 'onramp_api.polling_start'
 		| 'onramp_api.polling_success'
@@ -25,6 +26,7 @@ function isMobileSafari(): boolean {
 export function ApplePayIframe(props: ApplePayIframe.Props) {
 	const { url, className } = props
 	const iframeRef = React.useRef<HTMLIFrameElement>(null)
+	const [isLoaded, setIsLoaded] = React.useState(false)
 	const [isExpanded, setIsExpanded] = React.useState(false)
 
 	const parsedUrl = React.useMemo(() => {
@@ -76,6 +78,9 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 			)
 
 			switch (message.eventName) {
+				case 'onramp_api.load_success':
+					setIsLoaded(true)
+					break
 				case 'onramp_api.apple_pay_button_pressed':
 				case 'onramp_api.polling_start':
 					setIsExpanded(true)
@@ -113,11 +118,13 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 			referrerPolicy="no-referrer"
 			className={cx(
 				'border-0',
-				isExpanded
-					? isMobileSafariBrowser
-						? 'sr-only'
-						: 'fixed inset-0 z-100 h-full! w-full'
-					: 'h-12.5 w-full',
+				!isLoaded
+					? 'sr-only'
+					: isExpanded
+						? isMobileSafariBrowser
+							? 'sr-only'
+							: 'fixed inset-0 z-100 h-full! w-full'
+						: 'h-12.5 w-full',
 				className,
 			)}
 		/>
