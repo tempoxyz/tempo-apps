@@ -84,7 +84,7 @@ export default defineConfig((config) => {
 		},
 		build: {
 			minify: 'oxc',
-			sourcemap: true, // Required for Sonda
+			sourcemap: process.env.ANALYZE === 'true', // Required for Sonda
 			rollupOptions: {
 				output: {
 					minify: {
