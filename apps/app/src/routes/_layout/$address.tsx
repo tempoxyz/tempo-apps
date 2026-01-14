@@ -67,6 +67,7 @@ const faucetFundAddress = createServerFn({ method: 'POST' })
 		}
 
 		try {
+			console.log('[faucet] Calling RPC with auth length:', auth.length)
 			const res = await fetch('https://rpc.presto.tempo.xyz', {
 				method: 'POST',
 				headers: {
@@ -81,8 +82,11 @@ const faucetFundAddress = createServerFn({ method: 'POST' })
 				}),
 			})
 
+			console.log('[faucet] RPC response status:', res.status)
 			if (!res.ok) {
-				return { success: false as const, error: `HTTP ${res.status}` }
+				const text = await res.text()
+				console.log('[faucet] RPC error body:', text)
+				return { success: false as const, error: `HTTP ${res.status}: ${text}` }
 			}
 
 			const result = (await res.json()) as {

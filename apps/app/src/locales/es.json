@@ -2,9 +2,9 @@
 	"settings": {
 		"title": "Configuración",
 		"feeToken": "Token de Comisión",
-		"feeToken.description": "Selecciona qué token usar para pagar las comisiones de transacción.",
+		"feeTokenDescription": "Selecciona qué token usar para pagar las comisiones de transacción.",
 		"language": "Idioma",
-		"language.description": "Elige tu idioma preferido."
+		"languageDescription": "Elige tu idioma preferido."
 	},
 	"common": {
 		"active": "Activo",
