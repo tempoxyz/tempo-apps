@@ -117,16 +117,19 @@ function CountdownCard(props: {
 	const { targetBlockNumber, currentBlockNumber, remainingBlocks, estimatedTargetDate } =
 		props
 
-	const [countdown, setCountdown] = React.useState(() =>
-		calculateCountdown(estimatedTargetDate),
-	)
+	const [now, setNow] = React.useState(() => Date.now())
 
 	React.useEffect(() => {
 		const interval = setInterval(() => {
-			setCountdown(calculateCountdown(estimatedTargetDate))
+			setNow(Date.now())
 		}, 1000)
 		return () => clearInterval(interval)
-	}, [estimatedTargetDate])
+	}, [])
+
+	const countdown = React.useMemo(
+		() => calculateCountdown(estimatedTargetDate, now),
+		[estimatedTargetDate, now],
+	)
 
 	return (
 		<div className="flex flex-col items-center gap-6 w-full max-w-[600px]">
@@ -199,20 +202,7 @@ function CountdownCard(props: {
 								Estimated Target Date
 							</span>
 						),
-						value: (
-							<span className="text-primary">
-								{estimatedTargetDate.toLocaleString('en-US', {
-									weekday: 'short',
-									year: 'numeric',
-									month: 'short',
-									day: 'numeric',
-									hour: '2-digit',
-									minute: '2-digit',
-									second: '2-digit',
-									timeZoneName: 'short',
-								})}
-							</span>
-						),
+						value: <EstimatedTargetDateValue date={estimatedTargetDate} />,
 					},
 				]}
 			/>
@@ -236,8 +226,45 @@ function CountdownUnit(props: { value: number; label: string }) {
 	)
 }
 
-function calculateCountdown(targetDate: Date) {
-	const now = Date.now()
+function EstimatedTargetDateValue(props: { date: Date }) {
+	const { date } = props
+	const [isNarrow, setIsNarrow] = React.useState(
+		() => typeof window !== 'undefined' && window.innerWidth < 800,
+	)
+
+	React.useEffect(() => {
+		const handleResize = () => setIsNarrow(window.innerWidth < 800)
+		window.addEventListener('resize', handleResize)
+		return () => window.removeEventListener('resize', handleResize)
+	}, [])
+
+	const fullDate = date.toLocaleString('en-US', {
+		weekday: 'short',
+		year: 'numeric',
+		month: 'short',
+		day: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		timeZoneName: 'short',
+	})
+
+	const shortDate = date.toLocaleString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+	})
+
+	return (
+		<span className="text-primary whitespace-nowrap" title={fullDate}>
+			{isNarrow ? shortDate : fullDate}
+		</span>
+	)
+}
+
+function calculateCountdown(targetDate: Date, now: number) {
 	const target = targetDate.getTime()
 	const diff = Math.max(0, target - now)
 
