@@ -1,3 +1,4 @@
+import { Link } from '@tanstack/react-router'
 import { type Address as AddressType, Value } from 'ox'
 import * as React from 'react'
 import { isAddressEqual } from 'viem'
@@ -53,14 +54,13 @@ export namespace TxDescription {
 				const isSelf = seenAs ? isAddressEqual(part.value, seenAs) : false
 				return (
 					<>
-						<a
-							href={`${EXPLORER_URL}/address/${part.value}`}
-							target="_blank"
-							rel="noopener noreferrer"
+						<Link
+							to="/$address"
+							params={{ address: part.value }}
 							className="text-accent press-down whitespace-nowrap font-mono"
 						>
 							{shortenAddress(part.value)}
-						</a>
+						</Link>
 						{isSelf && <span className="text-tertiary">(self)</span>}
 					</>
 				)
