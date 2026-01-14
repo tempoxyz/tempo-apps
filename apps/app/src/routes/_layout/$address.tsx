@@ -1,4 +1,9 @@
-import { Link, createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
+import {
+	Link,
+	createFileRoute,
+	useNavigate,
+	useRouter,
+} from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { waapi, spring } from 'animejs'
 import type { Address } from 'ox'
@@ -23,6 +28,7 @@ import { useCopy } from '#lib/hooks'
 import { useActivitySummary, type ActivityType } from '#lib/activity-context'
 import { getWagmiConfig } from '#wagmi.config'
 import { LottoNumber } from '#comps/LottoNumber'
+import { Settings } from '#comps/Settings'
 import CopyIcon from '~icons/lucide/copy'
 import ExternalLinkIcon from '~icons/lucide/external-link'
 import GlobeIcon from '~icons/lucide/globe'
@@ -90,8 +96,7 @@ const faucetFundAddress = createServerFn({ method: 'POST' })
 		} catch (e) {
 			return { success: false as const, error: String(e) }
 		}
-	},
-)
+	})
 
 type TokenMetadata = {
 	address: string
@@ -274,7 +279,10 @@ const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 				transactions?: ApiTransaction[]
 				error?: string | null
 			}
-			return { transactions: json.transactions ?? [], error: json.error ?? null }
+			return {
+				transactions: json.transactions ?? [],
+				error: json.error ?? null,
+			}
 		} catch (e) {
 			return { transactions: [] as ApiTransaction[], error: String(e) }
 		}
@@ -503,8 +511,7 @@ function AddressView() {
 	const account = useAccount()
 	const { sendTo, token: initialToken } = Route.useSearch()
 
-	const isOwnProfile =
-		account.address?.toLowerCase() === address.toLowerCase()
+	const isOwnProfile = account.address?.toLowerCase() === address.toLowerCase()
 
 	const handleFaucetSuccess = React.useCallback(() => {
 		router.invalidate()
@@ -704,7 +711,7 @@ function AddressView() {
 						<ActivityList activity={activity} address={address} />
 					</Section>
 
-					<FeeTokenSection assets={assetsData} />
+					<SettingsSection assets={assetsData} />
 				</div>
 			</div>
 		</>
@@ -953,69 +960,22 @@ function QRCode({
 	)
 }
 
-function FeeTokenSection({ assets }: { assets: AssetData[] }) {
+function SettingsSection({ assets }: { assets: AssetData[] }) {
 	const assetsWithBalance = assets.filter((a) => a.balance && a.balance !== '0')
-	const [currentToken, setCurrentToken] = React.useState<Address.Address>(
-		assetsWithBalance[0]?.address ?? ('' as Address.Address),
+	const [currentFeeToken, setCurrentFeeToken] = React.useState<string>(
+		assetsWithBalance[0]?.address ?? '',
 	)
-
-	const currentAsset = assetsWithBalance.find((a) => a.address === currentToken)
-
-	const headerPill = currentAsset ? (
-		<span className="flex items-center gap-1 px-1 h-[24px] bg-base-alt rounded-md text-[11px] text-secondary">
-			<TokenIcon address={currentAsset.address} className="size-[14px]" />
-			<span className="font-mono font-medium">
-				{currentAsset.metadata?.symbol ||
-					shortenAddress(currentAsset.address, 3)}
-			</span>
-		</span>
-	) : null
+	const [currentLanguage, setCurrentLanguage] = React.useState('en')
 
 	return (
-		<Section title="Fee Token" headerRight={headerPill}>
-			{assetsWithBalance.length === 0 ? (
-				<div className="text-[13px] text-secondary py-4 text-center">
-					<p>No tokens available for fees.</p>
-				</div>
-			) : (
-				<div className="flex flex-col -mx-2">
-					<p className="text-[13px] text-secondary px-2 pt-2 pb-1">
-						Select which token to use for paying transaction fees.
-					</p>
-					{assetsWithBalance.map((asset) => {
-						const isCurrent = currentToken === asset.address
-						return (
-							<div
-								key={asset.address}
-								className="flex items-center gap-2.5 px-3 h-[48px] rounded-xl hover:glass-thin transition-all"
-							>
-								<TokenIcon address={asset.address} className="size-[28px]" />
-								<span className="flex flex-col flex-1 min-w-0">
-									<span className="text-[13px] text-primary font-medium truncate">
-										{asset.metadata?.name || shortenAddress(asset.address)}
-									</span>
-									<span className="text-[11px] text-tertiary font-mono">
-										{asset.metadata?.symbol || shortenAddress(asset.address, 3)}
-									</span>
-								</span>
-								{isCurrent ? (
-									<span className="text-[11px] font-medium bg-positive/10 text-positive rounded px-1.5 py-0.5 text-center">
-										Active
-									</span>
-								) : (
-									<button
-										type="button"
-										onClick={() => setCurrentToken(asset.address)}
-										className="text-[11px] font-medium bg-accent/10 text-accent rounded px-1.5 py-0.5 text-center cursor-pointer press-down hover:bg-accent/20 transition-colors"
-									>
-										Set
-									</button>
-								)}
-							</div>
-						)
-					})}
-				</div>
-			)}
+		<Section title="Settings">
+			<Settings
+				assets={assets}
+				currentFeeToken={currentFeeToken}
+				onFeeTokenChange={setCurrentFeeToken}
+				currentLanguage={currentLanguage}
+				onLanguageChange={setCurrentLanguage}
+			/>
 		</Section>
 	)
 }
@@ -1038,6 +998,22 @@ function formatUsd(value: number): string {
 	})}`
 }
 
+function formatUsdCompact(value: number): string {
+	if (value === 0) return '$0'
+	const absValue = Math.abs(value)
+	const sign = value < 0 ? '-' : ''
+	if (absValue >= 1_000_000_000) {
+		return `${sign}$${(absValue / 1_000_000_000).toFixed(1)}b`
+	}
+	if (absValue >= 1_000_000) {
+		return `${sign}$${(absValue / 1_000_000).toFixed(1)}m`
+	}
+	if (absValue >= 1_000) {
+		return `${sign}$${(absValue / 1_000).toFixed(1)}k`
+	}
+	return `${sign}$${absValue.toFixed(2)}`
+}
+
 function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 	const weeks = 52
 	const days = 7
@@ -1048,15 +1024,9 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 
 		for (let i = 0; i < activity.length; i++) {
 			const item = activity[i]
-			let ts = item.timestamp
-			if (!ts) {
-				const hashSeed = item.hash
-					.toLowerCase()
-					.split('')
-					.reduce((a, c) => a + c.charCodeAt(0), 0)
-				ts = now - ((hashSeed + i * 17) % 365) * 24 * 60 * 60 * 1000
-			}
-			const date = new Date(ts).toISOString().split('T')[0]
+			// Only count transactions with actual timestamps
+			if (!item.timestamp) continue
+			const date = new Date(item.timestamp).toISOString().split('T')[0]
 			counts.set(date, (counts.get(date) ?? 0) + 1)
 		}
 		return counts
@@ -1504,7 +1474,7 @@ function AssetRow({
 					</span>
 					<span className="text-secondary text-[11px] md:hidden whitespace-nowrap">
 						{asset.valueUsd !== undefined ? (
-							formatUsd(asset.valueUsd)
+							formatUsdCompact(asset.valueUsd)
 						) : (
 							<span className="text-tertiary">…</span>
 						)}
@@ -1519,7 +1489,7 @@ function AssetRow({
 			<span className="px-2 text-secondary hidden md:flex items-center justify-end">
 				<span className="font-sans tabular-nums whitespace-nowrap">
 					{asset.valueUsd !== undefined ? (
-						formatUsd(asset.valueUsd)
+						formatUsdCompact(asset.valueUsd)
 					) : (
 						<span className="text-tertiary">…</span>
 					)}
