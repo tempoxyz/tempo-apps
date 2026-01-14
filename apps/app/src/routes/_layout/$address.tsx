@@ -33,43 +33,50 @@ import MinusIcon from '~icons/lucide/minus'
 import SendIcon from '~icons/lucide/send'
 import EyeIcon from '~icons/lucide/eye'
 import EyeOffIcon from '~icons/lucide/eye-off'
-import DropletIcon from '~icons/lucide/droplet'
+
 import ReceiptIcon from '~icons/lucide/receipt'
 import XIcon from '~icons/lucide/x'
 import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
+import DropletIcon from '~icons/lucide/droplet'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
 
+// Tokens that can be funded via the faucet
+const FAUCET_TOKEN_ADDRESSES = new Set([
+	'0x20c0000000000000000000000000000000000000', // pathUSD
+	'0x20c0000000000000000000000000000000000001', // αUSD
+	'0x20c0000000000000000000000000000000000002', // βUSD
+	'0x20c0000000000000000000000000000000000003', // θUSD
+])
+
 const faucetFundAddress = createServerFn({ method: 'POST' })
 	.inputValidator((data: { address: string }) => data)
 	.handler(async ({ data }) => {
+		const { address } = data
 		const auth = process.env.PRESTO_RPC_AUTH
 		if (!auth) {
-			return { success: false as const, error: 'PRESTO_RPC_AUTH not configured' }
-		}
-
-		const headers: Record<string, string> = {
-			'Content-Type': 'application/json',
-			Authorization: `Basic ${Buffer.from(auth).toString('base64')}`,
+			return { success: false as const, error: 'Auth not configured' }
 		}
 
 		try {
 			const res = await fetch('https://rpc.presto.tempo.xyz', {
 				method: 'POST',
-				headers,
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Basic ${Buffer.from(auth).toString('base64')}`,
+				},
 				body: JSON.stringify({
 					jsonrpc: '2.0',
 					id: 1,
 					method: 'tempo_fundAddress',
-					params: [data.address],
+					params: [address],
 				}),
 			})
 
 			if (!res.ok) {
-				const text = await res.text()
-				return { success: false as const, error: `HTTP ${res.status}: ${text}` }
+				return { success: false as const, error: `HTTP ${res.status}` }
 			}
 
 			const result = (await res.json()) as {
@@ -83,34 +90,8 @@ const faucetFundAddress = createServerFn({ method: 'POST' })
 		} catch (e) {
 			return { success: false as const, error: String(e) }
 		}
-	})
-
-const FAUCET_TOKENS: AssetData[] = [
-	{
-		address: '0x20c0000000000000000000000000000000000000' as Address.Address,
-		metadata: { name: 'pathUSD', symbol: 'pathUSD', decimals: 6, priceUsd: 1 },
-		balance: '0',
-		valueUsd: 0,
 	},
-	{
-		address: '0x20c0000000000000000000000000000000000001' as Address.Address,
-		metadata: { name: 'AlphaUSD', symbol: 'αUSD', decimals: 6, priceUsd: 1 },
-		balance: '0',
-		valueUsd: 0,
-	},
-	{
-		address: '0x20c0000000000000000000000000000000000002' as Address.Address,
-		metadata: { name: 'BetaUSD', symbol: 'βUSD', decimals: 6, priceUsd: 1 },
-		balance: '0',
-		valueUsd: 0,
-	},
-	{
-		address: '0x20c0000000000000000000000000000000000003' as Address.Address,
-		metadata: { name: 'ThetaUSD', symbol: 'θUSD', decimals: 6, priceUsd: 1 },
-		balance: '0',
-		valueUsd: 0,
-	},
-]
+)
 
 type TokenMetadata = {
 	address: string
@@ -496,8 +477,6 @@ function eventTypeToActivityType(eventType: string): ActivityType {
 
 function AddressView() {
 	const { address } = Route.useParams()
-	// Always show faucet for now (test mode)
-	const showFaucet = true
 	const { assets: assetsData, activity } = Route.useLoaderData()
 	const { copy, notifying } = useCopy()
 	const [showZeroBalances, setShowZeroBalances] = React.useState(false)
@@ -537,27 +516,7 @@ function AddressView() {
 	const assetsWithBalance = dedupedAssets.filter(
 		(a) => a.balance && a.balance !== '0',
 	)
-
-	// When faucet mode is enabled, show faucet tokens (merged with any existing balances)
-	const displayedAssets = (() => {
-		if (showFaucet) {
-			const existingAddresses = new Set(
-				dedupedAssets.map((a) => a.address.toLowerCase()),
-			)
-			const faucetAssetsToAdd = FAUCET_TOKENS.filter(
-				(ft) => !existingAddresses.has(ft.address.toLowerCase()),
-			)
-			const merged = [...dedupedAssets, ...faucetAssetsToAdd]
-			// Update faucet tokens with actual balances if they exist
-			return merged.map((asset) => {
-				const existing = dedupedAssets.find(
-					(a) => a.address.toLowerCase() === asset.address.toLowerCase(),
-				)
-				return existing ?? asset
-			})
-		}
-		return showZeroBalances ? dedupedAssets : assetsWithBalance
-	})()
+	const displayedAssets = showZeroBalances ? dedupedAssets : assetsWithBalance
 
 	return (
 		<>
@@ -690,11 +649,7 @@ function AddressView() {
 							</button>
 						}
 					>
-						<HoldingsTable
-							assets={displayedAssets}
-							address={address}
-							showFaucet={showFaucet}
-						/>
+						<HoldingsTable assets={displayedAssets} address={address} />
 					</Section>
 
 					<Section
@@ -1162,11 +1117,9 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 function HoldingsTable({
 	assets,
 	address,
-	showFaucet,
 }: {
 	assets: AssetData[]
 	address: string
-	showFaucet?: boolean
 }) {
 	const [sendingToken, setSendingToken] = React.useState<string | null>(null)
 	const [toastMessage, setToastMessage] = React.useState<string | null>(null)
@@ -1198,9 +1151,14 @@ function HoldingsTable({
 		)
 	}
 
-	const sortedAssets = assets.toSorted(
-		(a, b) => (b.valueUsd ?? 0) - (a.valueUsd ?? 0),
-	)
+	// Sort: faucet tokens first, then by value
+	const sortedAssets = assets.toSorted((a, b) => {
+		const aIsFaucet = FAUCET_TOKEN_ADDRESSES.has(a.address.toLowerCase())
+		const bIsFaucet = FAUCET_TOKEN_ADDRESSES.has(b.address.toLowerCase())
+		if (aIsFaucet && !bIsFaucet) return -1
+		if (!aIsFaucet && bIsFaucet) return 1
+		return (b.valueUsd ?? 0) - (a.valueUsd ?? 0)
+	})
 
 	return (
 		<>
@@ -1210,7 +1168,9 @@ function HoldingsTable({
 						key={asset.address}
 						asset={asset}
 						address={address}
-						showFaucet={showFaucet}
+						isFaucetToken={FAUCET_TOKEN_ADDRESSES.has(
+							asset.address.toLowerCase(),
+						)}
 						isExpanded={sendingToken === asset.address}
 						onToggleSend={() =>
 							setSendingToken(
@@ -1244,17 +1204,27 @@ function HoldingsTable({
 	)
 }
 
+function BouncingDots() {
+	return (
+		<span className="inline-flex gap-[2px]">
+			<span className="size-[4px] bg-current rounded-full animate-[bounce_0.6s_ease-in-out_infinite]" />
+			<span className="size-[4px] bg-current rounded-full animate-[bounce_0.6s_ease-in-out_0.1s_infinite]" />
+			<span className="size-[4px] bg-current rounded-full animate-[bounce_0.6s_ease-in-out_0.2s_infinite]" />
+		</span>
+	)
+}
+
 function AssetRow({
 	asset,
 	address,
-	showFaucet,
+	isFaucetToken,
 	isExpanded,
 	onToggleSend,
 	onSendComplete,
 }: {
 	asset: AssetData
 	address: string
-	showFaucet?: boolean
+	isFaucetToken: boolean
 	isExpanded: boolean
 	onToggleSend: () => void
 	onSendComplete: (symbol: string) => void
@@ -1279,10 +1249,7 @@ function AssetRow({
 				return
 			}
 			setFaucetState('done')
-			// Reload page after short delay to fetch updated balances
-			setTimeout(() => {
-				window.location.reload()
-			}, 1500)
+			setTimeout(() => setFaucetState('idle'), 2000)
 		} catch (err) {
 			console.error('Faucet error:', err)
 			setFaucetState('idle')
@@ -1384,7 +1351,7 @@ function AssetRow({
 						disabled={!isValidSend || sendState !== 'idle'}
 					>
 						{sendState === 'sending' ? (
-							<span className="size-[12px] border-2 border-white/30 border-t-white rounded-full animate-spin" />
+							<BouncingDots />
 						) : sendState === 'sent' ? (
 							<CheckIcon className="size-[12px]" />
 						) : (
@@ -1467,7 +1434,7 @@ function AssetRow({
 				</span>
 			</span>
 			<span className="pr-2 flex items-center justify-end gap-0.5 relative z-10">
-				{showFaucet && (
+				{isFaucetToken && (
 					<button
 						type="button"
 						onClick={(e) => {
@@ -1475,15 +1442,15 @@ function AssetRow({
 							handleFaucet()
 						}}
 						disabled={faucetState === 'loading'}
-						className="flex items-center justify-center size-[24px] rounded-md hover:bg-accent/10 cursor-pointer transition-colors group"
+						className="flex items-center justify-center size-[24px] rounded-md hover:bg-accent/10 cursor-pointer transition-colors"
 						title="Request tokens"
 					>
 						{faucetState === 'loading' ? (
-							<span className="size-[12px] border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+							<BouncingDots />
 						) : faucetState === 'done' ? (
 							<CheckIcon className="size-[14px] text-positive" />
 						) : (
-							<DropletIcon className="size-[14px] text-tertiary group-hover:text-accent transition-colors" />
+							<DropletIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
 						)}
 					</button>
 				)}
