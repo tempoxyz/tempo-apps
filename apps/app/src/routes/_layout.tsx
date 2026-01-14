@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { Intro } from '#comps/Intro'
 import { Layout } from '#comps/Layout'
+import { ActivityProvider } from '#lib/activity-context'
 
 export const Route = createFileRoute('/_layout')({
 	component: RouteComponent,
@@ -8,13 +9,15 @@ export const Route = createFileRoute('/_layout')({
 
 function RouteComponent() {
 	return (
-		<Layout>
-			<Layout.Hero>
-				<Intro />
-			</Layout.Hero>
-			<Layout.Content>
-				<Outlet />
-			</Layout.Content>
-		</Layout>
+		<ActivityProvider>
+			<Layout>
+				<Layout.Hero>
+					<Intro />
+				</Layout.Hero>
+				<Layout.Content>
+					<Outlet />
+				</Layout.Content>
+			</Layout>
+		</ActivityProvider>
 	)
 }

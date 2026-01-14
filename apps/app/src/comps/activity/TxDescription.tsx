@@ -11,7 +11,7 @@ import {
 	RoleFormatter,
 } from './formatting'
 
-const EXPLORER_URL = 'https://explore.tempo.xyz'
+const EXPLORER_URL = 'https://explore.mainnet.tempo.xyz'
 
 function shortenAddress(address: string, chars = 4): string {
 	return `${address.slice(0, chars + 2)}…${address.slice(-chars)}`
@@ -67,14 +67,14 @@ export namespace TxDescription {
 			}
 			case 'action':
 				return (
-					<span className="inline-flex items-center h-[24px] px-[5px] bg-base-alt text-base-content capitalize">
+					<span className="inline-flex items-center h-[24px] px-[5px] bg-base-alt text-base-content capitalize rounded-[4px]">
 						{part.value}
 					</span>
 				)
 			case 'amount': {
 				const { value, decimals, symbol, token } = part.value
-				if (decimals === undefined) return <span>…</span>
-				const rawFormatted = Value.format(value, decimals)
+				const effectiveDecimals = decimals ?? 6
+				const rawFormatted = Value.format(value, effectiveDecimals)
 				const formatted = PriceFormatter.formatAmount(rawFormatted)
 				const isSmall = formatted.startsWith('<')
 				return (
@@ -88,14 +88,14 @@ export namespace TxDescription {
 						>
 							{formatted}
 						</span>
-						<TokenIcon address={token} className="shrink-0" />
+						<TokenIcon address={token} className="shrink-0 size-[18px]" />
 						<a
 							href={`${EXPLORER_URL}/token/${token}`}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="text-base-content-positive press-down shrink-0"
+							className="text-base-content-positive press-down shrink-0 font-medium font-mono"
 						>
-							{symbol}
+							{symbol || shortenAddress(token)}
 						</a>
 					</span>
 				)
@@ -150,8 +150,8 @@ export namespace TxDescription {
 							!symbol && 'min-w-0 flex-1',
 						)}
 					>
-						<TokenIcon address={address} />
-						<span className="text-base-content-positive items-end">
+						<TokenIcon address={address} className="size-[18px]" />
+						<span className="text-base-content-positive items-end font-mono">
 							{symbol || shortenAddress(address)}
 						</span>
 					</a>
