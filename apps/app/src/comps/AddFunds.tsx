@@ -161,7 +161,7 @@ export function AddFunds(props: AddFunds.Props) {
 			{isModalOpen &&
 				ReactDOM.createPortal(
 					<div
-						className="fixed inset-y-0 left-1/2 right-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-200"
+						className="fixed inset-y-0 left-1/2 right-0 z-50 flex items-center justify-center transition-opacity duration-200"
 						onClick={reset}
 					>
 						<div
