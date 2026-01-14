@@ -19,7 +19,7 @@ import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
 import { Breadcrumbs } from '#comps/Breadcrumbs'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
-import { ContractTabContent } from '#comps/Contract.tsx'
+import { ContractTabContent, InteractTabContent } from '#comps/Contract.tsx'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
@@ -52,7 +52,7 @@ const defaultSearchValues = {
 	tab: 'transfers',
 } as const
 
-const tabOrder = ['transfers', 'holders', 'contract'] as const
+const tabOrder = ['transfers', 'holders', 'contract', 'interact'] as const
 
 const chainId = getChainId(getWagmiConfig())
 
@@ -80,7 +80,12 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			z.pipe(
 				z.string(),
 				z.transform((val) => {
-					if (val === 'transfers' || val === 'holders' || val === 'contract')
+					if (
+						val === 'transfers' ||
+						val === 'holders' ||
+						val === 'contract' ||
+						val === 'interact'
+					)
 						return val
 					return 'transfers'
 				}),
@@ -270,7 +275,8 @@ function RouteComponent() {
 		[navigate, limit, a],
 	)
 
-	const activeSection = tab === 'holders' ? 1 : tab === 'contract' ? 2 : 0
+	const activeSection =
+		tab === 'holders' ? 1 : tab === 'contract' ? 2 : tab === 'interact' ? 3 : 0
 
 	return (
 		<div
@@ -669,6 +675,12 @@ function SectionsWrapper(props: {
 					itemsLabel: 'functions',
 					content: <ContractSection address={address} />,
 				},
+				{
+					title: 'Interact',
+					totalItems: 0,
+					itemsLabel: 'functions',
+					content: <InteractSection address={address} />,
+				},
 			]}
 			activeSection={activeSection}
 			onSectionChange={onSectionChange}
@@ -710,6 +722,19 @@ function ContractSection(props: { address: Address.Address }) {
 
 	return (
 		<ContractTabContent
+			address={address}
+			abi={contractInfo?.abi}
+			docsUrl={contractInfo?.docsUrl}
+		/>
+	)
+}
+
+function InteractSection(props: { address: Address.Address }) {
+	const { address } = props
+	const contractInfo = getContractInfo(address)
+
+	return (
+		<InteractTabContent
 			address={address}
 			abi={contractInfo?.abi}
 			docsUrl={contractInfo?.docsUrl}

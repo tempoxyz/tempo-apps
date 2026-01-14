@@ -18,7 +18,10 @@ function truncateHash(hash: string, prefixLen = 6, suffixLen = 4): string {
 	return `${hash.slice(0, prefixLen)}…${hash.slice(-suffixLen)}`
 }
 
-function getLabelForPath(pathname: string): { label: string; type: Crumb['type'] } {
+function getLabelForPath(pathname: string): {
+	label: string
+	type: Crumb['type']
+} {
 	if (pathname === '/') {
 		return { label: 'Home', type: 'home' }
 	}
@@ -30,7 +33,10 @@ function getLabelForPath(pathname: string): { label: string; type: Crumb['type']
 
 	const receiptMatch = pathname.match(/^\/receipt\/(0x[a-fA-F0-9]+)$/)
 	if (receiptMatch) {
-		return { label: `Receipt ${truncateHash(receiptMatch[1])}`, type: 'receipt' }
+		return {
+			label: `Receipt ${truncateHash(receiptMatch[1])}`,
+			type: 'receipt',
+		}
 	}
 
 	const addressMatch = pathname.match(/^\/address\/(0x[a-fA-F0-9]+)$/)
@@ -64,7 +70,9 @@ interface BreadcrumbsContextValue {
 	clearCrumbs: () => void
 }
 
-const BreadcrumbsContext = React.createContext<BreadcrumbsContextValue | null>(null)
+const BreadcrumbsContext = React.createContext<BreadcrumbsContextValue | null>(
+	null,
+)
 
 export function BreadcrumbsProvider(props: { children: React.ReactNode }) {
 	const { children } = props
@@ -98,7 +106,10 @@ export function BreadcrumbsProvider(props: { children: React.ReactNode }) {
 		setCrumbs([])
 	}, [])
 
-	const value = React.useMemo(() => ({ crumbs, clearCrumbs }), [crumbs, clearCrumbs])
+	const value = React.useMemo(
+		() => ({ crumbs, clearCrumbs }),
+		[crumbs, clearCrumbs],
+	)
 
 	return (
 		<BreadcrumbsContext.Provider value={value}>
@@ -149,7 +160,10 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 					<React.Fragment key={crumb.path}>
 						<ChevronRight className="size-3 text-tertiary shrink-0" />
 						{isLast ? (
-							<span className="text-primary font-medium truncate max-w-[120px]" title={crumb.path}>
+							<span
+								className="text-primary font-medium truncate max-w-[120px]"
+								title={crumb.path}
+							>
 								{crumb.label}
 							</span>
 						) : (
