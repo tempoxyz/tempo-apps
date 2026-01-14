@@ -45,8 +45,8 @@ export namespace DateFormatter {
 
 export namespace PriceFormatter {
 	const amountFormatter = new Intl.NumberFormat('en-US', {
-		minimumFractionDigits: 0,
-		maximumFractionDigits: 18,
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
 	})
 
 	export function formatAmount(value: string): string {

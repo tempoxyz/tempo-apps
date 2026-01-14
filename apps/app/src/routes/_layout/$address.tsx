@@ -17,13 +17,25 @@ import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
+import { useActivitySummary, type ActivityType } from '#lib/activity-context'
 import { getWagmiConfig } from '#wagmi.config'
+import { LottoNumber } from '#comps/LottoNumber'
 import CopyIcon from '~icons/lucide/copy'
 import ExternalLinkIcon from '~icons/lucide/external-link'
+import GlobeIcon from '~icons/lucide/globe'
 import ArrowLeftIcon from '~icons/lucide/arrow-left'
 import CheckIcon from '~icons/lucide/check'
+import PlusIcon from '~icons/lucide/plus'
+import MinusIcon from '~icons/lucide/minus'
+import SendIcon from '~icons/lucide/send'
+import EyeIcon from '~icons/lucide/eye'
+import EyeOffIcon from '~icons/lucide/eye-off'
+import ReceiptIcon from '~icons/lucide/receipt'
+import XIcon from '~icons/lucide/x'
+import SearchIcon from '~icons/lucide/search'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
+const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
 
 type TokenMetadata = {
 	address: string
@@ -49,42 +61,117 @@ type AssetData = {
 	valueUsd: number | undefined
 }
 
+type TokenListToken = {
+	name: string
+	symbol: string
+	decimals: number
+	chainId: number
+	address: string
+	logoURI?: string
+}
+
+type TokenListResponse = {
+	tokens: TokenListToken[]
+}
+
+function generateMockBalance(
+	address: string,
+	decimals: number,
+): { balance: string; valueUsd: number } {
+	const hash = address
+		.toLowerCase()
+		.split('')
+		.reduce((acc, char) => acc + char.charCodeAt(0), 0)
+	const rand = (hash % 100) / 100
+
+	if (rand < 0.3) {
+		return { balance: '0', valueUsd: 0 }
+	}
+
+	const multiplier = 10 ** decimals
+	const amounts = [
+		0.5 * multiplier,
+		1.25 * multiplier,
+		10 * multiplier,
+		25 * multiplier,
+		100 * multiplier,
+		500 * multiplier,
+		1250 * multiplier,
+		5000 * multiplier,
+	]
+	const amount = amounts[hash % amounts.length]
+	const balance = Math.floor(amount + rand * amount * 0.5).toString()
+	const valueUsd = (Number(balance) / multiplier) * 1
+
+	return { balance, valueUsd }
+}
+
 async function fetchAssets(
 	accountAddress: Address.Address,
 ): Promise<AssetData[]> {
-	if (!BALANCES_API_URL) return []
+	if (BALANCES_API_URL) {
+		const [tokensRes, balancesRes] = await Promise.all([
+			fetch(`${BALANCES_API_URL}tokens`).catch(() => null),
+			fetch(`${BALANCES_API_URL}balances/${accountAddress}`).catch(() => null),
+		])
 
-	const [tokensRes, balancesRes] = await Promise.all([
-		fetch(`${BALANCES_API_URL}tokens`).catch(() => null),
-		fetch(`${BALANCES_API_URL}balances/${accountAddress}`).catch(() => null),
-	])
+		if (tokensRes?.ok && balancesRes?.ok) {
+			const tokens = (await tokensRes.json()) as TokenMetadata[]
+			const balances = (await balancesRes.json()) as BalanceEntry[]
 
-	if (!tokensRes?.ok || !balancesRes?.ok) return []
+			const balanceMap = new Map(
+				balances.map((b) => [
+					b.token.toLowerCase(),
+					{ balance: b.balance, valueUsd: b.valueUsd },
+				]),
+			)
 
-	const tokens = (await tokensRes.json()) as TokenMetadata[]
-	const balances = (await balancesRes.json()) as BalanceEntry[]
-
-	const balanceMap = new Map(
-		balances.map((b) => [
-			b.token.toLowerCase(),
-			{ balance: b.balance, valueUsd: b.valueUsd },
-		]),
-	)
-
-	return tokens.map((token) => {
-		const balanceData = balanceMap.get(token.address.toLowerCase())
-		return {
-			address: token.address as Address.Address,
-			metadata: {
-				name: token.name,
-				symbol: token.symbol,
-				decimals: token.decimals,
-				priceUsd: token.priceUsd,
-			},
-			balance: balanceData?.balance ?? '0',
-			valueUsd: balanceData?.valueUsd ?? 0,
+			return tokens.map((token) => {
+				const balanceData = balanceMap.get(token.address.toLowerCase())
+				return {
+					address: token.address as Address.Address,
+					metadata: {
+						name: token.name,
+						symbol: token.symbol,
+						decimals: token.decimals,
+						priceUsd: token.priceUsd,
+					},
+					balance: balanceData?.balance ?? '0',
+					valueUsd: balanceData?.valueUsd ?? 0,
+				}
+			})
 		}
-	})
+	}
+
+	try {
+		const tokenlistRes = await fetch(`${TOKENLIST_API_URL}/list/42429`).catch(
+			() => null,
+		)
+		if (!tokenlistRes?.ok) return []
+
+		const tokenlist = (await tokenlistRes.json()) as TokenListResponse
+		const tokens = tokenlist.tokens ?? []
+
+		return tokens.map((token) => {
+			const mockData = generateMockBalance(
+				`${accountAddress}${token.address}`,
+				token.decimals,
+			)
+			return {
+				address: token.address as Address.Address,
+				metadata: {
+					name: token.name,
+					symbol: token.symbol,
+					decimals: token.decimals,
+					priceUsd: 1,
+				},
+				balance: mockData.balance,
+				valueUsd: mockData.valueUsd,
+			}
+		})
+	} catch {
+		return []
+	}
 }
 
 type ApiTransaction = {
@@ -93,6 +180,7 @@ type ApiTransaction = {
 	to: string | null
 	value: string
 	blockNumber: string
+	timestamp?: string
 }
 
 type TransactionsResponse = {
@@ -104,21 +192,135 @@ type TransactionsResponse = {
 type ActivityItem = {
 	hash: string
 	events: KnownEvent[]
+	timestamp?: number
+}
+
+function generateMockActivity(
+	address: Address.Address,
+	assets: AssetData[],
+): ActivityItem[] {
+	const hash = address
+		.toLowerCase()
+		.split('')
+		.reduce((acc, char) => acc + char.charCodeAt(0), 0)
+	const assetsWithBalance = assets.filter((a) => a.balance && a.balance !== '0')
+
+	if (assetsWithBalance.length === 0) return []
+
+	const mockItems: ActivityItem[] = []
+	const mockAddresses = [
+		'0x1234567890abcdef1234567890abcdef12345678',
+		'0xabcdef1234567890abcdef1234567890abcdef12',
+		'0x9876543210fedcba9876543210fedcba98765432',
+		'0xfedcba9876543210fedcba9876543210fedcba98',
+	]
+
+	const activityTypes = ['send', 'received', 'swap'] as const
+	const numActivities = 3 + (hash % 5)
+
+	for (let i = 0; i < numActivities; i++) {
+		const asset = assetsWithBalance[i % assetsWithBalance.length]
+		const activityType = activityTypes[(hash + i) % activityTypes.length]
+		const mockAddr = mockAddresses[
+			(hash + i) % mockAddresses.length
+		] as Address.Address
+		const mockHash =
+			`0x${(hash + i).toString(16).padStart(64, '0')}` as `0x${string}`
+
+		const decimals = asset.metadata?.decimals ?? 6
+		const symbol = asset.metadata?.symbol ?? 'TOKEN'
+		const amount = BigInt(Math.floor(Math.random() * 100 * 10 ** decimals))
+
+		let events: KnownEvent[] = []
+
+		if (activityType === 'swap') {
+			const otherAsset = assetsWithBalance[(i + 1) % assetsWithBalance.length]
+			const otherDecimals = otherAsset.metadata?.decimals ?? 6
+			const otherSymbol = otherAsset.metadata?.symbol ?? 'TOKEN'
+			const otherAmount = BigInt(
+				Math.floor(Math.random() * 100 * 10 ** otherDecimals),
+			)
+
+			events = [
+				{
+					type: 'swap',
+					parts: [
+						{ type: 'action', value: 'Swap' },
+						{
+							type: 'amount',
+							value: { value: amount, decimals, symbol, token: asset.address },
+						},
+						{ type: 'text', value: 'for' },
+						{
+							type: 'amount',
+							value: {
+								value: otherAmount,
+								decimals: otherDecimals,
+								symbol: otherSymbol,
+								token: otherAsset.address,
+							},
+						},
+					],
+				},
+			]
+		} else if (activityType === 'received') {
+			events = [
+				{
+					type: 'received',
+					parts: [
+						{ type: 'action', value: 'Received' },
+						{
+							type: 'amount',
+							value: { value: amount, decimals, symbol, token: asset.address },
+						},
+						{ type: 'text', value: 'from' },
+						{ type: 'account', value: mockAddr },
+					],
+				},
+			]
+		} else {
+			events = [
+				{
+					type: 'send',
+					parts: [
+						{ type: 'action', value: 'Send' },
+						{
+							type: 'amount',
+							value: { value: amount, decimals, symbol, token: asset.address },
+						},
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: mockAddr },
+					],
+				},
+			]
+		}
+
+		mockItems.push({ hash: mockHash, events })
+	}
+
+	return mockItems
 }
 
 async function fetchTransactions(
 	address: Address.Address,
 	tokenMetadataMap: Map<Address.Address, { decimals: number; symbol: string }>,
+	assets: AssetData[],
 ): Promise<ActivityItem[]> {
 	const config = getWagmiConfig()
 
 	try {
 		const response = await fetch(
-			`https://explore.tempo.xyz/api/address/${address}?limit=10`,
+			`https://explore.mainnet.tempo.xyz/api/address/${address}?limit=10`,
 		)
-		if (!response.ok) return []
+		if (!response.ok) {
+			return generateMockActivity(address, assets)
+		}
 		const data = (await response.json()) as TransactionsResponse
 		const txHashes = data.transactions?.map((tx) => tx.hash) ?? []
+
+		if (txHashes.length === 0) {
+			return generateMockActivity(address, assets)
+		}
 
 		const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) => {
 			return tokenMetadataMap.get(tokenAddress)
@@ -140,9 +342,13 @@ async function fetchTransactions(
 			}
 		}
 
+		if (items.length === 0) {
+			return generateMockActivity(address, assets)
+		}
+
 		return items
 	} catch {
-		return []
+		return generateMockActivity(address, assets)
 	}
 }
 
@@ -167,15 +373,69 @@ export const Route = createFileRoute('/_layout/$address')({
 		const activity = await fetchTransactions(
 			params.address as Address.Address,
 			tokenMetadataMap,
+			assets,
 		)
 		return { assets, activity }
 	},
 })
 
+function formatAddressLines(addr: string): string[] {
+	// Split into 2 even lines (21 chars each for 42-char address)
+	const mid = Math.ceil(addr.length / 2)
+	return [addr.slice(0, mid), addr.slice(mid)]
+}
+
+function eventTypeToActivityType(eventType: string): ActivityType {
+	const type = eventType.toLowerCase()
+	if (type.includes('send') || type.includes('transfer')) return 'send'
+	if (type.includes('receive')) return 'received'
+	if (type.includes('swap') || type.includes('exchange')) return 'swap'
+	if (type.includes('mint')) return 'mint'
+	if (type.includes('burn')) return 'burn'
+	if (type.includes('approve') || type.includes('approval')) return 'approve'
+	return 'unknown'
+}
+
 function AddressView() {
 	const { address } = Route.useParams()
 	const { assets: assetsData, activity } = Route.useLoaderData()
 	const { copy, notifying } = useCopy()
+	const [showZeroBalances, setShowZeroBalances] = React.useState(false)
+	const { setSummary } = useActivitySummary()
+
+	React.useEffect(() => {
+		if (activity.length > 0) {
+			const types = [
+				...new Set(
+					activity.flatMap((item) =>
+						item.events.map((e) => eventTypeToActivityType(e.type)),
+					),
+				),
+			]
+			setSummary({
+				types,
+				count: activity.length,
+				recentTimestamp: Date.now(),
+			})
+		} else {
+			setSummary(null)
+		}
+		return () => setSummary(null)
+	}, [activity, setSummary])
+
+	const addressLines = formatAddressLines(address)
+
+	const totalValue = assetsData.reduce(
+		(sum, asset) => sum + (asset.valueUsd ?? 0),
+		0,
+	)
+	const dedupedAssets = assetsData.filter(
+		(a, i, arr) => arr.findIndex((b) => b.address === a.address) === i,
+	)
+	const assetsWithBalance = dedupedAssets.filter(
+		(a) => a.balance && a.balance !== '0',
+	)
+	const displayedAssets = showZeroBalances ? dedupedAssets : assetsWithBalance
 
 	return (
 		<>
@@ -183,7 +443,7 @@ function AddressView() {
 				left={
 					<Link
 						to="/"
-						className="flex items-center gap-1 text-secondary hover:text-primary"
+						className="flex items-center gap-1 text-secondary hover:text-primary transition-colors"
 					>
 						<ArrowLeftIcon className="size-2" />
 						<span className="text-sm">Back</span>
@@ -192,60 +452,106 @@ function AddressView() {
 				right={null}
 			/>
 
-			<div className="py-3">
-				<div className="flex items-start justify-between gap-2 mb-4">
-					<div>
-						<h1 className="text-2xl font-semibold text-primary mb-1">
-							Tempo Account
-						</h1>
-						<div className="flex items-center gap-1">
-							<code className="text-sm font-mono text-secondary break-all">
-								{address}
-							</code>
+			<div className="pb-3 -mt-3 max-md:-mt-2">
+				<div className="flex items-center justify-between mb-4">
+					<Link to="/" className="flex items-center gap-2 press-down">
+						<div className="size-[24px] bg-black rounded-[2px] flex items-center justify-center">
+							<svg width="20" height="20" viewBox="0 0 269 269" fill="none">
+								<path
+									d="M123.273 190.794H93.445L121.09 105.318H85.7334L93.445 80.2642H191.95L184.238 105.318H150.773L123.273 190.794Z"
+									fill="white"
+								/>
+							</svg>
+						</div>
+					</Link>
+					<Link
+						to="/"
+						className="flex items-center gap-1 pl-1.5 pr-2 h-[28px] rounded-full bg-base-alt hover:bg-base-alt/80 active:bg-base-alt/60 transition-colors text-[12px] text-secondary font-medium"
+					>
+						<SearchIcon className="size-[12px]" />
+						<span>Search</span>
+					</Link>
+				</div>
+				<div className="flex items-stretch justify-between gap-3 mb-4">
+					<div className="flex-1 min-w-0 flex flex-col justify-between">
+						<div className="flex items-baseline gap-2">
+							<LottoNumber
+								value={formatUsd(totalValue)}
+								duration={1200}
+								className="text-[56px] font-sans font-semibold text-primary -tracking-[0.02em]"
+							/>
+						</div>
+						<div className="flex items-center gap-1.5">
+							<div className="flex flex-col">
+								{addressLines.map((line, i) => (
+									<code
+										key={i}
+										className="text-[13px] font-mono text-secondary leading-tight"
+									>
+										{line}
+									</code>
+								))}
+							</div>
 							<button
 								type="button"
 								onClick={() => copy(address)}
-								className="p-0.75 rounded-md hover:bg-base-alt cursor-pointer press-down"
+								className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 cursor-pointer press-down transition-colors"
 								title="Copy address"
 							>
 								{notifying ? (
-									<CheckIcon className="size-2 text-positive" />
+									<CheckIcon className="size-[14px] text-positive" />
 								) : (
-									<CopyIcon className="size-2 text-secondary" />
+									<CopyIcon className="size-[14px] text-tertiary" />
 								)}
 							</button>
 							<a
-								href={`https://explore.tempo.xyz/address/${address}`}
+								href={`https://explore.mainnet.tempo.xyz/address/${address}`}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="p-0.75 rounded-md hover:bg-base-alt press-down"
+								className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 press-down transition-colors"
 								title="View on Explorer"
 							>
-								<ExternalLinkIcon className="size-2 text-secondary" />
+								<ExternalLinkIcon className="size-[14px] text-tertiary" />
 							</a>
 						</div>
 					</div>
-					<div className="flex-shrink-0">
-						<QRCode value={address} />
-					</div>
+					<QRCode value={address} size={120} />
 				</div>
 
-				<div className="flex flex-col gap-2">
-					<Section title="Assets" defaultOpen>
-						<HoldingsTable assets={assetsData} />
+				<div className="flex flex-col gap-2.5">
+					<Section
+						title="Assets"
+						subtitle={`${assetsWithBalance.length} asset${assetsWithBalance.length !== 1 ? 's' : ''}`}
+						headerRight={
+							<button
+								type="button"
+								onClick={() => setShowZeroBalances(!showZeroBalances)}
+								className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer"
+								title={
+									showZeroBalances ? 'Hide zero balances' : 'Show zero balances'
+								}
+							>
+								{showZeroBalances ? (
+									<EyeOffIcon className="size-[14px] text-tertiary" />
+								) : (
+									<EyeIcon className="size-[14px] text-tertiary" />
+								)}
+							</button>
+						}
+					>
+						<HoldingsTable assets={displayedAssets} />
 					</Section>
 
-					<Section title="Activity">
+					<Section
+						title="Activity"
+						externalLink={`https://explore.mainnet.tempo.xyz/address/${address}`}
+						defaultOpen
+					>
+						<ActivityHeatmap activity={activity} />
 						<ActivityList activity={activity} address={address} />
 					</Section>
 
-					<Section title="Receive">
-						<ReceiveContent address={address} />
-					</Section>
-
-					<Section title="Fee Token">
-						<ConfigureContent assets={assetsData} />
-					</Section>
+					<FeeTokenSection assets={assetsData} />
 				</div>
 			</div>
 		</>
@@ -266,10 +572,20 @@ const springSlower = spring({
 
 function Section(props: {
 	title: string
+	subtitle?: string
+	externalLink?: string
 	defaultOpen?: boolean
+	headerRight?: React.ReactNode
 	children: React.ReactNode
 }) {
-	const { title, defaultOpen = false, children } = props
+	const {
+		title,
+		subtitle,
+		externalLink,
+		defaultOpen = false,
+		headerRight,
+		children,
+	} = props
 	const [open, setOpen] = React.useState(defaultOpen)
 	const contentRef = React.useRef<HTMLDivElement>(null)
 	const wrapperRef = React.useRef<HTMLDivElement>(null)
@@ -330,35 +646,64 @@ function Section(props: {
 	}
 
 	return (
-		<div className="rounded-lg border border-card-border bg-card-header">
-			<button
-				type="button"
-				onClick={handleClick}
-				className={cx(
-					'flex w-full items-center justify-between h-[40px] px-2 cursor-pointer select-none press-down',
-					'text-[13px] font-medium text-primary',
-					'rounded-lg! focus-visible:outline-2! focus-visible:outline-accent! focus-visible:outline-offset-0!',
-				)}
-			>
-				{title}
-				<span
+		<div className="rounded-xl border border-card-border bg-card-header">
+			<div className="flex items-center h-[44px] pl-2 pr-2.5">
+				<button
+					type="button"
+					onClick={handleClick}
 					className={cx(
-						'text-[16px] font-mono',
-						open ? 'text-tertiary' : 'text-accent',
+						'flex flex-1 items-center justify-between cursor-pointer select-none press-down transition-colors',
+						'text-[14px] font-medium text-primary hover:text-accent',
+						'rounded-xl! focus-visible:outline-2! focus-visible:outline-accent! focus-visible:outline-offset-0!',
 					)}
 				>
-					[{open ? '–' : <span className="relative top-px">+</span>}]
+					<span className="flex items-center gap-2">
+						{title}
+						{subtitle && (
+							<>
+								<span className="w-px h-4 bg-card-border" />
+								<span className="text-[12px] text-tertiary font-normal">
+									{subtitle}
+								</span>
+							</>
+						)}
+					</span>
+				</button>
+				<span className="flex items-center gap-1.5">
+					{headerRight}
+					{externalLink && (
+						<a
+							href={externalLink}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<GlobeIcon className="size-[14px] text-tertiary" />
+						</a>
+					)}
+					<button
+						type="button"
+						onClick={handleClick}
+						className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer"
+					>
+						{open ? (
+							<MinusIcon className="size-[14px] text-tertiary" />
+						) : (
+							<PlusIcon className="size-[14px] text-tertiary" />
+						)}
+					</button>
 				</span>
-			</button>
+			</div>
 			<div
 				ref={contentRef}
-				className="overflow-hidden rounded-b-lg"
+				className="overflow-hidden rounded-b-xl"
 				style={{ height: open ? 'auto' : 0 }}
 				inert={!open ? true : undefined}
 			>
 				<div
 					ref={wrapperRef}
-					className="bg-card border-t border-card-border px-2 py-2 rounded-b-lg overflow-hidden"
+					className="bg-card border-t border-card-border px-2 rounded-b-xl overflow-hidden"
 				>
 					<div ref={innerRef} className="origin-top">
 						{children}
@@ -381,102 +726,141 @@ function QRCode({ value, size = 100 }: { value: string; size?: number }) {
 		}
 	}
 
+	const { copy, notifying } = useCopy({ timeout: 1500 })
+	const [mousePos, setMousePos] = React.useState<{
+		x: number
+		y: number
+	} | null>(null)
+	const svgRef = React.useRef<SVGSVGElement>(null)
+
+	const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+		const svg = svgRef.current
+		if (!svg) return
+		const rect = svg.getBoundingClientRect()
+		const x = ((e.clientX - rect.left) / rect.width) * 100
+		const y = ((e.clientY - rect.top) / rect.height) * 100
+		setMousePos({ x, y })
+	}
+
 	return (
 		<svg
-			aria-label="QR Code"
-			className="rounded-lg border border-base-border bg-white p-1.5"
+			ref={svgRef}
+			aria-label="QR Code - Click to copy address"
+			className="rounded-lg bg-surface p-1.5 cursor-pointer outline-none border border-base-border"
 			width={size}
 			height={size}
 			viewBox="0 0 100 100"
-			role="img"
+			onClick={() => copy(value)}
+			onKeyDown={(e) => {
+				if (e.key === 'Enter' || e.key === ' ') copy(value)
+			}}
+			onMouseMove={handleMouseMove}
+			onMouseLeave={() => setMousePos(null)}
 		>
-			{cells.map(({ x, y }) => (
-				<rect
-					key={`${x}-${y}`}
-					x={x * cellSize}
-					y={y * cellSize}
-					width={cellSize}
-					height={cellSize}
-					fill="black"
-				/>
-			))}
+			{cells.map(({ x, y }) => {
+				let opacity = 1
+				if (mousePos && !notifying) {
+					const cellCenterX = x * cellSize + cellSize / 2
+					const cellCenterY = y * cellSize + cellSize / 2
+					const distance = Math.sqrt(
+						(cellCenterX - mousePos.x) ** 2 + (cellCenterY - mousePos.y) ** 2,
+					)
+					const maxFadeRadius = 25
+					opacity = Math.min(1, distance / maxFadeRadius)
+					opacity = 0.15 + opacity * 0.85
+				}
+				return (
+					<rect
+						key={`${x}-${y}`}
+						x={x * cellSize}
+						y={y * cellSize}
+						width={cellSize}
+						height={cellSize}
+						fill={notifying ? '#22c55e' : 'currentColor'}
+						className="text-secondary"
+						style={{
+							opacity: opacity * 0.85,
+							transition: 'fill 0.2s ease-out, opacity 0.1s ease-out',
+						}}
+					/>
+				)
+			})}
 		</svg>
 	)
 }
 
-function ReceiveContent({ address }: { address: string }) {
-	const { copy, notifying } = useCopy()
-
-	return (
-		<div className="flex flex-col items-center gap-2 py-2">
-			<QRCode value={address} size={140} />
-			<button
-				type="button"
-				onClick={() => copy(address)}
-				className="flex items-center gap-1 text-[13px] text-secondary hover:text-primary cursor-pointer press-down mt-1"
-			>
-				<code className="font-mono text-[12px]">
-					{address.slice(0, 8)}…{address.slice(-6)}
-				</code>
-				{notifying ? (
-					<CheckIcon className="size-1.5 text-positive" />
-				) : (
-					<CopyIcon className="size-1.5 text-tertiary" />
-				)}
-			</button>
-		</div>
-	)
-}
-
-function ConfigureContent({ assets }: { assets: AssetData[] }) {
+function FeeTokenSection({ assets }: { assets: AssetData[] }) {
+	const assetsWithBalance = assets.filter((a) => a.balance && a.balance !== '0')
 	const [currentToken, setCurrentToken] = React.useState<Address.Address>(
-		assets[0]?.address ?? ('' as Address.Address),
+		assetsWithBalance[0]?.address ?? ('' as Address.Address),
 	)
 
+	const currentAsset = assetsWithBalance.find((a) => a.address === currentToken)
+
+	const headerPill = currentAsset ? (
+		<span className="flex items-center gap-1 px-1 h-[24px] bg-base-alt rounded-md text-[11px] text-secondary">
+			<TokenIcon address={currentAsset.address} className="size-[14px]" />
+			<span className="font-mono font-medium">
+				{currentAsset.metadata?.symbol ?? '...'}
+			</span>
+		</span>
+	) : null
+
 	return (
-		<div className="flex flex-col gap-2">
-			<div className="flex flex-col gap-1">
-				<p className="text-[12px] text-tertiary">
-					Select which token to use for paying transaction fees.
-				</p>
-			</div>
-			<div className="flex flex-col gap-1">
-				{assets.map((asset) => {
-					const isCurrent = currentToken === asset.address
-					return (
-						<div key={asset.address} className="flex items-center gap-2 py-1">
-							<TokenIcon address={asset.address} />
-							<span className="flex-1 text-[13px] text-primary">
-								{asset.metadata?.name ?? (
-									<span className="text-tertiary">…</span>
-								)}
-							</span>
-							{isCurrent ? (
-								<span className="text-[11px] font-normal bg-base-alt text-tertiary rounded-md px-[6px] py-[2px]">
-									Current
+		<Section title="Fee Token" headerRight={headerPill}>
+			{assetsWithBalance.length === 0 ? (
+				<div className="text-[13px] text-secondary py-4 text-center">
+					<p>No tokens available for fees.</p>
+				</div>
+			) : (
+				<div className="flex flex-col -mx-2">
+					<p className="text-[13px] text-secondary px-2 pt-2 pb-1">
+						Select which token to use for paying transaction fees.
+					</p>
+					{assetsWithBalance.map((asset) => {
+						const isCurrent = currentToken === asset.address
+						return (
+							<div
+								key={asset.address}
+								className="flex items-center gap-2.5 px-2 h-[48px] transition-colors hover:bg-base-alt/50"
+							>
+								<TokenIcon address={asset.address} className="size-[28px]" />
+								<span className="flex flex-col flex-1 min-w-0">
+									<span className="text-[13px] text-primary font-medium truncate">
+										{asset.metadata?.name ?? (
+											<span className="text-tertiary">…</span>
+										)}
+									</span>
+									<span className="text-[11px] text-tertiary font-mono">
+										{asset.metadata?.symbol ?? ''}
+									</span>
 								</span>
-							) : (
-								<button
-									type="button"
-									onClick={() => setCurrentToken(asset.address)}
-									className="text-[11px] font-medium bg-accent text-white rounded-md px-[8px] py-[3px] cursor-pointer press-down hover:bg-accent/90"
-								>
-									Set
-								</button>
-							)}
-						</div>
-					)
-				})}
-			</div>
-		</div>
+								{isCurrent ? (
+									<span className="text-[11px] font-medium bg-positive/10 text-positive rounded px-1.5 py-0.5 text-center">
+										Active
+									</span>
+								) : (
+									<button
+										type="button"
+										onClick={() => setCurrentToken(asset.address)}
+										className="text-[11px] font-medium bg-accent/10 text-accent rounded px-1.5 py-0.5 text-center cursor-pointer press-down hover:bg-accent/20 transition-colors"
+									>
+										Set
+									</button>
+								)}
+							</div>
+						)
+					})}
+				</div>
+			)}
+		</Section>
 	)
 }
 
 function formatAmount(value: string, decimals: number): string {
 	const formatted = formatUnits(BigInt(value), decimals)
 	const num = Number(formatted)
-	if (num === 0) return '0'
-	if (num < 0.01) return '<0.01'
+	if (num < 0.01 && num > 0) return '<0.01'
 	return num.toLocaleString('en-US', {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2,
@@ -491,132 +875,355 @@ function formatUsd(value: number): string {
 	})}`
 }
 
+function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
+	const weeks = 52
+	const days = 7
+
+	const activityByDay = React.useMemo(() => {
+		const counts = new Map<string, number>()
+		const now = Date.now()
+
+		for (let i = 0; i < activity.length; i++) {
+			const item = activity[i]
+			let ts = item.timestamp
+			if (!ts) {
+				const hashSeed = item.hash
+					.toLowerCase()
+					.split('')
+					.reduce((a, c) => a + c.charCodeAt(0), 0)
+				ts = now - ((hashSeed + i * 17) % 365) * 24 * 60 * 60 * 1000
+			}
+			const date = new Date(ts).toISOString().split('T')[0]
+			counts.set(date, (counts.get(date) ?? 0) + 1)
+		}
+		return counts
+	}, [activity])
+
+	const grid = React.useMemo(() => {
+		const data: { level: number; count: number; date: string }[][] = []
+		const now = new Date()
+		const startDate = new Date(now)
+		startDate.setDate(startDate.getDate() - weeks * 7)
+
+		const maxCount = Math.max(1, ...activityByDay.values())
+
+		for (let w = 0; w < weeks; w++) {
+			const week: { level: number; count: number; date: string }[] = []
+			for (let d = 0; d < days; d++) {
+				const date = new Date(startDate)
+				date.setDate(startDate.getDate() + w * 7 + d)
+				const key = date.toISOString().split('T')[0]
+				const count = activityByDay.get(key) ?? 0
+				const level =
+					count === 0 ? 0 : Math.min(4, Math.ceil((count / maxCount) * 4))
+				week.push({ level, count, date: key })
+			}
+			data.push(week)
+		}
+		return data
+	}, [activityByDay])
+
+	const getColor = (level: number) => {
+		const colors = [
+			'bg-base-alt/40',
+			'bg-green-300/70 dark:bg-green-900',
+			'bg-green-400 dark:bg-green-700',
+			'bg-green-500 dark:bg-green-500',
+			'bg-green-600 dark:bg-green-400',
+		]
+		return colors[level] ?? colors[0]
+	}
+
+	const formatDate = (dateStr: string) => {
+		const date = new Date(dateStr)
+		return date.toLocaleDateString('en-US', {
+			month: 'long',
+			day: 'numeric',
+		})
+	}
+
+	const [hoveredCell, setHoveredCell] = React.useState<{
+		count: number
+		date: string
+		x: number
+		y: number
+	} | null>(null)
+
+	return (
+		<div className="relative">
+			<div className="flex gap-[3px] w-full py-2">
+				{grid.map((week, wi) => (
+					<div key={`w-${wi}`} className="flex flex-col gap-[3px] flex-1">
+						{week.map((cell, di) => (
+							<div
+								key={`d-${wi}-${di}`}
+								className={cx(
+									'w-full aspect-square rounded-[2px] cursor-default',
+									getColor(cell.level),
+								)}
+								onMouseEnter={(e) => {
+									const rect = e.currentTarget.getBoundingClientRect()
+									setHoveredCell({
+										count: cell.count,
+										date: cell.date,
+										x: rect.left + rect.width / 2,
+										y: rect.top,
+									})
+								}}
+								onMouseLeave={() => setHoveredCell(null)}
+							/>
+						))}
+					</div>
+				))}
+			</div>
+			{hoveredCell && (
+				<div
+					className="fixed z-[100] px-1.5 py-0.5 text-[12px] text-white bg-gray-900 rounded shadow-lg whitespace-nowrap pointer-events-none"
+					style={{
+						left: hoveredCell.x,
+						top: hoveredCell.y,
+						transform: 'translate(-50%, -100%)',
+					}}
+				>
+					{hoveredCell.count} transaction{hoveredCell.count !== 1 ? 's' : ''} on{' '}
+					{formatDate(hoveredCell.date)}
+				</div>
+			)}
+		</div>
+	)
+}
+
 function HoldingsTable({ assets }: { assets: AssetData[] }) {
-	const [hideZero, setHideZero] = React.useState(true)
+	const [sendingToken, setSendingToken] = React.useState<string | null>(null)
 
 	if (assets.length === 0) {
 		return (
-			<div className="text-sm text-secondary">
+			<div className="text-[13px] text-secondary py-4 text-center">
 				<p>No assets found.</p>
 			</div>
 		)
 	}
 
-	const filteredAssets = (
-		hideZero
-			? assets.filter((a) => a.balance !== '0' && a.balance !== undefined)
-			: assets
-	).toSorted((a, b) => (b.valueUsd ?? 0) - (a.valueUsd ?? 0))
+	const sortedAssets = assets.toSorted(
+		(a, b) => (b.valueUsd ?? 0) - (a.valueUsd ?? 0),
+	)
 
-	const zeroCount = assets.filter(
-		(a) => a.balance === '0' || a.balance === undefined,
-	).length
+	return (
+		<div className="text-[13px] -mx-2 flex flex-col">
+			{sortedAssets.map((asset) => (
+				<AssetRow
+					key={asset.address}
+					asset={asset}
+					isExpanded={sendingToken === asset.address}
+					onToggleSend={() =>
+						setSendingToken(
+							sendingToken === asset.address ? null : asset.address,
+						)
+					}
+				/>
+			))}
+		</div>
+	)
+}
+
+function AssetRow({
+	asset,
+	isExpanded,
+	onToggleSend,
+}: {
+	asset: AssetData
+	isExpanded: boolean
+	onToggleSend: () => void
+}) {
+	const [recipient, setRecipient] = React.useState('')
+	const [amount, setAmount] = React.useState('')
+	const [sendState, setSendState] = React.useState<'idle' | 'sending' | 'sent'>(
+		'idle',
+	)
+	const recipientInputRef = React.useRef<HTMLInputElement>(null)
+
+	React.useEffect(() => {
+		if (isExpanded && recipientInputRef.current) {
+			recipientInputRef.current.focus()
+		}
+	}, [isExpanded])
+
+	const handleSend = () => {
+		if (!isValidSend) return
+		setSendState('sending')
+		setTimeout(() => {
+			setSendState('sent')
+			setShowToast(true)
+			setTimeout(() => {
+				setShowToast(false)
+				setSendState('idle')
+				setRecipient('')
+				setAmount('')
+				onToggleSend()
+			}, 2000)
+		}, 800)
+	}
+
+	const handleToggle = () => {
+		onToggleSend()
+	}
+
+	const handleMax = () => {
+		if (asset.balance && asset.metadata?.decimals !== undefined) {
+			setAmount(formatAmount(asset.balance, asset.metadata.decimals))
+		}
+	}
+
+	const [showToast, setShowToast] = React.useState(false)
+	const isValidRecipient = /^0x[a-fA-F0-9]{40}$/.test(recipient)
+	const isValidAmount =
+		amount.length > 0 && !Number.isNaN(Number(amount)) && Number(amount) > 0
+	const isValidSend = isValidRecipient && isValidAmount
 
 	const ROW_HEIGHT = 48
 
-	return (
-		<div className="text-[13px] -mx-2 grid grid-cols-[2fr_1fr_auto] md:grid-cols-[2fr_1fr_1fr_auto]">
-			<div
-				className="grid grid-cols-subgrid col-span-3 md:col-span-4 border-b border-dashed border-card-border"
-				style={{ height: ROW_HEIGHT }}
-			>
-				<span className="px-2 flex items-center text-tertiary">Asset</span>
-				<span className="px-2 flex items-center justify-end text-tertiary">
-					Amount
-				</span>
-				<span className="px-2 hidden md:flex items-center justify-end text-tertiary">
-					Value
-				</span>
-				<span className="px-2 flex items-center justify-end">
-					{zeroCount > 0 && (
+	if (isExpanded) {
+		return (
+			<>
+				<div
+					className="flex items-center gap-1.5 px-2 hover:bg-base-alt/50 transition-colors"
+					style={{ height: ROW_HEIGHT }}
+				>
+					<TokenIcon address={asset.address} className="size-[28px] shrink-0" />
+					<input
+						ref={recipientInputRef}
+						type="text"
+						value={recipient}
+						onChange={(e) => setRecipient(e.target.value)}
+						placeholder="0x..."
+						className="flex-[3] min-w-0 h-[32px] px-1.5 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
+					/>
+					<div className="relative flex-1 min-w-[80px]">
+						<input
+							type="text"
+							value={amount}
+							onChange={(e) => setAmount(e.target.value)}
+							placeholder="0.00"
+							className="w-full h-[32px] px-1.5 pr-10 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent text-right"
+						/>
 						<button
 							type="button"
-							onClick={() => setHideZero(!hideZero)}
-							className={cx(
-								'text-[11px] px-1.5 py-0.5 rounded cursor-pointer',
-								hideZero
-									? 'bg-accent/10 text-accent'
-									: 'bg-base-alt text-tertiary hover:text-secondary',
-							)}
+							onClick={handleMax}
+							className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors"
 						>
-							{hideZero ? 'Show zero' : 'Hide zero'}
+							MAX
 						</button>
+					</div>
+					<button
+						type="button"
+						onClick={handleSend}
+						className={cx(
+							'size-[24px] rounded-md press-down transition-colors flex items-center justify-center shrink-0',
+							sendState === 'sent'
+								? 'bg-positive text-white cursor-default'
+								: isValidSend
+									? 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
+									: 'bg-base-alt text-tertiary cursor-not-allowed',
+						)}
+						disabled={!isValidSend || sendState !== 'idle'}
+					>
+						{sendState === 'sending' ? (
+							<span className="size-[12px] border-2 border-white/30 border-t-white rounded-full animate-spin" />
+						) : sendState === 'sent' ? (
+							<CheckIcon className="size-[12px]" />
+						) : (
+							<SendIcon className="size-[12px]" />
+						)}
+					</button>
+					<button
+						type="button"
+						onClick={handleToggle}
+						className="size-[24px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary transition-colors shrink-0"
+						title="Cancel"
+					>
+						<XIcon className="size-[14px]" />
+					</button>
+				</div>
+				{showToast && (
+					<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-base-border rounded-lg px-4 py-3 shadow-lg text-[13px] text-secondary">
+						Demo mode: Send triggered but balances will not update
+					</div>
+				)}
+			</>
+		)
+	}
+
+	return (
+		<div
+			className="grid grid-cols-[1fr_100px_80px_auto] md:grid-cols-[1fr_100px_80px_80px_auto] hover:bg-base-alt/50 transition-colors"
+			style={{ height: ROW_HEIGHT }}
+		>
+			<span className="px-2 text-primary flex items-center gap-2">
+				<TokenIcon address={asset.address} className="size-[28px]" />
+				<span className="flex flex-col min-w-0">
+					<span className="truncate font-medium">
+						{asset.metadata?.name ?? <span className="text-tertiary">…</span>}
+					</span>
+					<span className="text-[11px] text-tertiary font-mono truncate">
+						{asset.metadata?.symbol ?? ''}
+					</span>
+				</span>
+			</span>
+			<span
+				className="px-2 flex items-center justify-end overflow-hidden"
+				title={
+					asset.balance !== undefined && asset.metadata?.decimals !== undefined
+						? formatAmount(asset.balance, asset.metadata.decimals)
+						: undefined
+				}
+			>
+				<span className="flex flex-col items-end">
+					<span className="text-primary font-sans text-[14px] tabular-nums text-right whitespace-nowrap">
+						{asset.balance !== undefined &&
+						asset.metadata?.decimals !== undefined ? (
+							formatAmount(asset.balance, asset.metadata.decimals)
+						) : (
+							<span className="text-tertiary">…</span>
+						)}
+					</span>
+					<span className="text-secondary text-[11px] md:hidden whitespace-nowrap">
+						{asset.valueUsd !== undefined ? (
+							formatUsd(asset.valueUsd)
+						) : (
+							<span className="text-tertiary">…</span>
+						)}
+					</span>
+				</span>
+			</span>
+			<span className="px-2 flex items-center justify-start overflow-hidden">
+				{asset.metadata?.symbol && (
+					<span className="text-[10px] font-medium text-tertiary bg-base-alt px-1 py-0.5 rounded font-mono truncate max-w-full">
+						{asset.metadata.symbol}
+					</span>
+				)}
+			</span>
+			<span className="px-2 text-secondary hidden md:flex items-center justify-end">
+				<span className="font-sans tabular-nums whitespace-nowrap">
+					{asset.valueUsd !== undefined ? (
+						formatUsd(asset.valueUsd)
+					) : (
+						<span className="text-tertiary">…</span>
 					)}
 				</span>
-			</div>
-			<div
-				className="grid grid-cols-subgrid col-span-3 md:col-span-4 overflow-y-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px] rounded"
-				style={{ maxHeight: 'calc(100vh - 80px)' }}
-				tabIndex={0}
-			>
-				{filteredAssets.map((asset, index) => (
-					<div
-						key={asset.address}
-						className={cx(
-							'grid grid-cols-subgrid col-span-3 md:col-span-4',
-							index < filteredAssets.length - 1 &&
-								'border-b border-dashed border-card-border',
-						)}
-						style={{ height: ROW_HEIGHT }}
-					>
-						<span className="px-2 text-primary flex items-center gap-1.5">
-							<TokenIcon address={asset.address} />
-							{asset.metadata?.name ?? (
-								<span className="text-tertiary">…</span>
-							)}
-						</span>
-						<span
-							className="px-2 flex flex-col items-end justify-center overflow-hidden md:flex-row md:items-center"
-							title={
-								asset.balance !== undefined &&
-								asset.metadata?.decimals !== undefined
-									? formatAmount(asset.balance, asset.metadata.decimals)
-									: undefined
-							}
-						>
-							<span className="truncate text-primary font-mono">
-								{asset.balance !== undefined &&
-								asset.metadata?.decimals !== undefined ? (
-									formatAmount(asset.balance, asset.metadata.decimals)
-								) : (
-									<span className="text-tertiary">…</span>
-								)}
-							</span>
-							<span className="truncate text-secondary text-[11px] md:hidden">
-								{asset.valueUsd !== undefined ? (
-									formatUsd(asset.valueUsd)
-								) : (
-									<span className="text-tertiary">…</span>
-								)}
-							</span>
-						</span>
-						<span
-							className="px-2 text-secondary hidden md:flex items-center justify-end overflow-hidden"
-							title={
-								asset.valueUsd !== undefined
-									? formatUsd(asset.valueUsd)
-									: undefined
-							}
-						>
-							<span className="truncate">
-								{asset.valueUsd !== undefined ? (
-									formatUsd(asset.valueUsd)
-								) : (
-									<span className="text-tertiary">…</span>
-								)}
-							</span>
-						</span>
-						<span className="px-2 flex items-center justify-end">
-							<button
-								type="button"
-								className="text-[11px] font-medium text-accent rounded-md px-[8px] py-[3px] cursor-pointer press-down hover:bg-accent/10"
-							>
-								Send
-							</button>
-						</span>
-					</div>
-				))}
-			</div>
+			</span>
+			<span className="pr-2 flex items-center justify-end relative z-10">
+				<button
+					type="button"
+					onClick={(e) => {
+						e.stopPropagation()
+						handleToggle()
+					}}
+					className="flex items-center justify-center size-[24px] rounded-md hover:bg-accent/10 cursor-pointer transition-colors group"
+					title="Send"
+				>
+					<SendIcon className="size-[14px] text-tertiary group-hover:text-accent transition-colors" />
+				</button>
+			</span>
 		</div>
 	)
 }
@@ -632,7 +1239,7 @@ function ActivityList({
 
 	if (activity.length === 0) {
 		return (
-			<div className="text-sm text-secondary">
+			<div className="text-[13px] text-secondary py-4 text-center">
 				<p>No activity yet.</p>
 			</div>
 		)
@@ -643,37 +1250,256 @@ function ActivityList({
 
 	return (
 		<div className="text-[13px] -mx-2">
-			{activity.map((item, index) => (
-				<a
+			{activity.map((item) => (
+				<ActivityRow
 					key={item.hash}
-					href={`https://explore.tempo.xyz/tx/${item.hash}`}
+					item={item}
+					viewer={viewer}
+					transformEvent={transformEvent}
+				/>
+			))}
+		</div>
+	)
+}
+
+function ActivityRow({
+	item,
+	viewer,
+	transformEvent,
+}: {
+	item: ActivityItem
+	viewer: Address.Address
+	transformEvent: (event: KnownEvent) => KnownEvent
+}) {
+	const [showModal, setShowModal] = React.useState(false)
+
+	return (
+		<>
+			<div className="flex items-center gap-2 px-2 h-[44px] hover:bg-base-alt/50 transition-colors">
+				<TxDescription.ExpandGroup
+					events={item.events}
+					seenAs={viewer}
+					transformEvent={transformEvent}
+					limitFilter={preferredEventsFilter}
+					emptyContent="Transaction"
+				/>
+				<a
+					href={`https://explore.mainnet.tempo.xyz/tx/${item.hash}`}
 					target="_blank"
 					rel="noopener noreferrer"
-					className={cx(
-						'flex items-center gap-2 px-2 py-1.5 hover:bg-base-alt transition-colors',
-						index < activity.length - 1 &&
-							'border-b border-dashed border-card-border',
-					)}
+					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 transition-colors"
+					title="View on Explorer"
 				>
-					<TxDescription.ExpandGroup
-						events={item.events}
-						seenAs={viewer}
-						transformEvent={transformEvent}
-						limitFilter={preferredEventsFilter}
-						emptyContent="Transaction"
-					/>
-					<ExternalLinkIcon className="size-1.5 text-tertiary shrink-0" />
+					<ExternalLinkIcon className="size-[14px] text-tertiary" />
 				</a>
-			))}
-			<a
-				href={`https://explore.tempo.xyz/address/${address}`}
-				target="_blank"
-				rel="noopener noreferrer"
-				className="flex items-center justify-center gap-1 px-2 py-1.5 text-accent hover:text-accent/80 transition-colors"
+				<button
+					type="button"
+					onClick={() => setShowModal(true)}
+					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 cursor-pointer transition-colors"
+					title="View receipt"
+				>
+					<ReceiptIcon className="size-[14px] text-tertiary" />
+				</button>
+			</div>
+			{showModal && (
+				<TransactionModal
+					hash={item.hash}
+					events={item.events}
+					viewer={viewer}
+					transformEvent={transformEvent}
+					onClose={() => setShowModal(false)}
+				/>
+			)}
+		</>
+	)
+}
+
+function ReceiptMark() {
+	return (
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width={69}
+			height={27}
+			viewBox="0 0 92 36"
+			fill="none"
+		>
+			<title>Tempo Receipt</title>
+			<path
+				className="fill-primary"
+				d="M83.722 19.168c2.086 0 4.01-1.495 4.01-4.451s-1.924-4.45-4.01-4.45-4.01 1.494-4.01 4.45 1.925 4.45 4.01 4.45m0-12.747C88.438 6.42 92 9.885 92 14.716s-3.56 8.296-8.278 8.296c-4.717 0-8.277-3.497-8.277-8.296 0-4.8 3.56-8.296 8.277-8.296M62.376 29.098h-4.267v-22.2h4.139v1.908c.706-1.207 2.47-2.258 4.844-2.258 4.62 0 7.282 3.497 7.282 8.138 0 4.64-2.983 8.233-7.442 8.233-2.182 0-3.786-.86-4.556-1.908zm7.796-14.381c0-2.765-1.732-4.386-3.914-4.386s-3.945 1.621-3.945 4.386 1.765 4.418 3.945 4.418 3.914-1.622 3.914-4.418M36.74 22.539h-4.268V6.898h4.074v1.907c.867-1.526 2.887-2.352 4.62-2.352 2.15 0 3.883.922 4.685 2.606 1.252-1.907 2.919-2.606 5.004-2.606 2.919 0 5.71 1.749 5.71 5.944v10.14h-4.138v-9.281c0-1.685-.834-2.956-2.792-2.956-1.829 0-2.919 1.398-2.919 3.083v9.154H42.48v-9.281c0-1.685-.866-2.956-2.79-2.956s-2.95 1.367-2.95 3.083zm-16.964-9.601h7.058c-.064-1.557-1.09-3.083-3.53-3.083-2.213 0-3.432 1.653-3.528 3.083m7.476 4.068 3.56 1.049c-.802 2.702-3.304 4.958-7.186 4.958-4.33 0-8.15-3.084-8.15-8.36 0-4.991 3.723-8.233 7.765-8.233 4.876 0 7.796 3.083 7.796 8.106 0 .604-.065 1.24-.065 1.303H19.68c.097 2.066 1.86 3.56 3.979 3.56 1.989 0 3.08-.986 3.594-2.383"
+			/>
+			<path
+				className="fill-primary"
+				d="M18.833 4.164h-7.186v18.373h-4.46V4.164H0V0h18.833zm72.781 30.141v1.158h-33.81v-1.158zm0-3.182v1.157h-33.81v-1.157zm0-3.183v1.158H64.446V27.94zm-81.497 4.668H8.395v3.22H7.188v-8.253h2.894c1.721 0 2.784.96 2.784 2.522 0 1.075-.601 1.968-1.547 2.288l1.704 3.443h-1.365zm-1.722-4.021v3.06h1.518c1.103 0 1.727-.555 1.727-1.527s-.619-1.533-1.686-1.533zM19.58 34.77v1.058h-5.065v-8.253h5.065v1.058h-3.846v2.5h3.63v.995h-3.63v2.642zm4.555.138c1.05 0 1.715-.641 1.739-1.682h1.225c0 1.67-1.184 2.774-2.958 2.774-2.008 0-3.18-1.298-3.18-3.535v-1.527c0-2.237 1.172-3.535 3.18-3.535 1.82 0 2.935 1.081 2.958 2.894h-1.225c-.035-1.08-.735-1.802-1.745-1.802-1.26 0-1.92.841-1.92 2.443v1.527c0 1.602.66 2.442 1.926 2.442m9.503-.137v1.058h-5.065v-8.253h5.065v1.058h-3.845v2.5h3.63v.995h-3.63v2.642zm6.692 1.058h-4.646v-1.035H37.4V28.61h-1.716v-1.035h4.645v1.035h-1.715v6.183h1.715zm2.08-8.253h2.883c1.675 0 2.766 1.058 2.766 2.694 0 1.63-1.109 2.688-2.801 2.688H43.63v2.871h-1.22zm1.22 1.018v3.352h1.365c1.185 0 1.827-.59 1.827-1.676 0-1.093-.642-1.676-1.827-1.676zm9.042 7.235H51.46v-7.195h-2.504v-1.058h6.22v1.058h-2.503z"
+			/>
+		</svg>
+	)
+}
+
+function shortenAddress(address: string, chars = 4): string {
+	return `${address.slice(0, chars + 2)}…${address.slice(-chars)}`
+}
+
+function TransactionModal({
+	hash,
+	events,
+	viewer,
+	transformEvent,
+	onClose,
+}: {
+	hash: string
+	events: KnownEvent[]
+	viewer: Address.Address
+	transformEvent: (event: KnownEvent) => KnownEvent
+	onClose: () => void
+}) {
+	const [isVisible, setIsVisible] = React.useState(false)
+	const overlayRef = React.useRef<HTMLDivElement>(null)
+	const contentRef = React.useRef<HTMLDivElement>(null)
+
+	const handleClose = React.useCallback(() => {
+		setIsVisible(false)
+		setTimeout(onClose, 200)
+	}, [onClose])
+
+	React.useEffect(() => {
+		requestAnimationFrame(() => setIsVisible(true))
+	}, [])
+
+	React.useEffect(() => {
+		const handleEscape = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') handleClose()
+		}
+		document.addEventListener('keydown', handleEscape)
+		return () => document.removeEventListener('keydown', handleEscape)
+	}, [handleClose])
+
+	const blockNumber = React.useMemo(
+		() => Math.floor(Math.random() * 1000000 + 5000000),
+		[],
+	)
+
+	const timestamp = React.useMemo(() => new Date(), [])
+	const formattedDate = timestamp.toLocaleDateString('en-US', {
+		year: 'numeric',
+		month: '2-digit',
+		day: '2-digit',
+	})
+	const formattedTime = timestamp.toLocaleTimeString('en-US', {
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		hour12: false,
+	})
+
+	const filteredEvents = React.useMemo(
+		() => events.filter(preferredEventsFilter).map(transformEvent),
+		[events, transformEvent],
+	)
+
+	return (
+		<div
+			ref={overlayRef}
+			className={cx(
+				'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200',
+				isVisible ? 'opacity-100' : 'opacity-0',
+			)}
+			onClick={handleClose}
+		>
+			<div
+				ref={contentRef}
+				className={cx(
+					'flex flex-col items-center transition-all duration-200',
+					isVisible
+						? 'opacity-100 scale-100 translate-y-0'
+						: 'opacity-0 scale-95 translate-y-4',
+				)}
+				onClick={(e) => e.stopPropagation()}
 			>
-				<span>View all on Explorer</span>
-				<ExternalLinkIcon className="size-1.5" />
-			</a>
+				<div
+					data-receipt
+					className="flex flex-col w-[360px] bg-surface border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
+				>
+					<div className="flex gap-[40px] px-[20px] pt-[24px] pb-[16px]">
+						<div className="shrink-0">
+							<ReceiptMark />
+						</div>
+						<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
+							<div className="flex justify-between items-end">
+								<span className="text-tertiary">Block</span>
+								<a
+									href={`https://explore.mainnet.tempo.xyz/block/${blockNumber}`}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-accent text-right before:content-['#'] press-down"
+								>
+									{blockNumber}
+								</a>
+							</div>
+							<div className="flex justify-between items-end gap-4">
+								<span className="text-tertiary shrink-0">Sender</span>
+								<a
+									href={`https://explore.mainnet.tempo.xyz/address/${viewer}`}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-accent text-right press-down min-w-0 flex-1 flex justify-end"
+								>
+									{shortenAddress(viewer)}
+								</a>
+							</div>
+							<div className="flex justify-between items-end">
+								<span className="text-tertiary shrink-0">Hash</span>
+								<span className="text-right">{shortenAddress(hash, 6)}</span>
+							</div>
+							<div className="flex justify-between items-end">
+								<span className="text-tertiary">Date</span>
+								<span className="text-right">{formattedDate}</span>
+							</div>
+							<div className="flex justify-between items-end">
+								<span className="text-tertiary">Time</span>
+								<span className="text-right">{formattedTime}</span>
+							</div>
+						</div>
+					</div>
+
+					{filteredEvents.length > 0 && (
+						<>
+							<div className="border-t border-dashed border-base-border" />
+							<div className="flex flex-col gap-3 px-[20px] py-[16px] font-mono text-[13px] leading-4 [counter-reset:event]">
+								{filteredEvents.map((event, index) => (
+									<div
+										key={`${event.type}-${index}`}
+										className="[counter-increment:event]"
+									>
+										<div className="flex flex-col gap-[8px]">
+											<div className="flex flex-row items-start gap-[4px] grow min-w-0 text-tertiary">
+												<div className="flex items-center text-tertiary before:content-[counter(event)_'.'] shrink-0 leading-[24px] min-w-[20px]" />
+												<TxDescription
+													event={event}
+													seenAs={viewer}
+													className="flex flex-row items-center gap-[6px] leading-[24px]"
+												/>
+											</div>
+										</div>
+									</div>
+								))}
+							</div>
+						</>
+					)}
+				</div>
+
+				<div className="w-[360px]">
+					<a
+						href={`https://explore.mainnet.tempo.xyz/tx/${hash}`}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-surface border border-base-border rounded-bl-[10px] rounded-br-[10px] hover:bg-base-alt text-tertiary hover:text-primary transition-[background-color,color] duration-100 -mt-px"
+					>
+						<span>View transaction</span>
+						<span aria-hidden="true">→</span>
+					</a>
+				</div>
+			</div>
 		</div>
 	)
 }
