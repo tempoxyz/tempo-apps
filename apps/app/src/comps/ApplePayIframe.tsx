@@ -3,9 +3,28 @@ import { cx } from '#lib/css'
 
 const COINBASE_PAY_ORIGIN = 'https://pay.coinbase.com'
 
+type IframeMessage = {
+	eventName:
+		| 'onramp_api.apple_pay_button_pressed'
+		| 'onramp_api.polling_start'
+		| 'onramp_api.polling_success'
+		| 'onramp_api.polling_failure'
+		| 'onramp_api.apple_pay_session_cancelled'
+	data?: unknown
+}
+
+function isMobileSafari(): boolean {
+	if (typeof navigator === 'undefined') return false
+	const ua = navigator.userAgent
+	return (
+		/iPhone|iPad|iPod/.test(ua) && /Safari/.test(ua) && !/CriOS|FxiOS/.test(ua)
+	)
+}
+
 export function ApplePayIframe(props: ApplePayIframe.Props) {
 	const { url, className } = props
 	const iframeRef = React.useRef<HTMLIFrameElement>(null)
+	const [isExpanded, setIsExpanded] = React.useState(false)
 
 	const parsedUrl = React.useMemo(() => {
 		try {
@@ -33,6 +52,45 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 		return urlObj.toString()
 	}, [parsedUrl])
 
+	React.useEffect(() => {
+		function handleMessage(event: MessageEvent) {
+			if (event.origin !== COINBASE_PAY_ORIGIN) return
+
+			console.log('[ApplePayIframe] raw message:', event.data)
+
+			let message: IframeMessage
+			try {
+				message =
+					typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+			} catch {
+				return
+			}
+
+			if (!message?.eventName) return
+
+			console.log(
+				'[ApplePayIframe] received event:',
+				message.eventName,
+				message.data,
+			)
+
+			switch (message.eventName) {
+				case 'onramp_api.apple_pay_button_pressed':
+				case 'onramp_api.polling_start':
+					setIsExpanded(true)
+					break
+				case 'onramp_api.polling_success':
+				case 'onramp_api.polling_failure':
+				case 'onramp_api.apple_pay_session_cancelled':
+					setIsExpanded(false)
+					break
+			}
+		}
+
+		window.addEventListener('message', handleMessage)
+		return () => window.removeEventListener('message', handleMessage)
+	}, [])
+
 	if (!parsedUrl) {
 		return (
 			<div className={cx('flex items-center justify-center p-4', className)}>
@@ -41,18 +99,26 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 		)
 	}
 
+	const isMobileSafariBrowser = isMobileSafari()
+
 	return (
-		<div className={cx('relative w-full', className)}>
-			<iframe
-				ref={iframeRef}
-				src={iframeSrc ?? ''}
-				title="Apple Pay Checkout"
-				allow="payment"
-				sandbox="allow-scripts allow-same-origin"
-				referrerPolicy="no-referrer"
-				className="w-full h-[500px] border-0 rounded-lg"
-			/>
-		</div>
+		<iframe
+			ref={iframeRef}
+			src={iframeSrc ?? ''}
+			title="Apple Pay Checkout"
+			allow="payment"
+			sandbox="allow-scripts allow-same-origin"
+			referrerPolicy="no-referrer"
+			className={cx(
+				'border-0',
+				isExpanded
+					? isMobileSafariBrowser
+						? 'sr-only'
+						: 'fixed inset-0 z-100 h-full! w-full'
+					: 'h-12.5 w-full',
+				className,
+			)}
+		/>
 	)
 }
 
