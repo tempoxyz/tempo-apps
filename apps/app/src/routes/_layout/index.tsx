@@ -54,10 +54,13 @@ function Landing() {
 		<>
 			<Layout.Header left="Search" right={null} />
 			<div className="flex flex-1 flex-col items-center justify-center">
-				<div className="grid place-items-center relative grid-flow-row gap-2 select-none w-full max-w-sm py-5 z-1">
-					<h1 className="text-[24px] font-semibold text-primary tracking-tight text-center">
-						Tempo account
+				<div className="grid place-items-center relative grid-flow-row gap-3 select-none w-full max-w-md py-6 z-1">
+					<h1 className="font-sans font-semibold text-[36px] text-primary text-center -tracking-[0.03em]">
+						Get started
 					</h1>
+					<p className="text-secondary text-[15px] text-center -mt-1 mb-2 max-w-[280px]">
+						Explore accounts, token balances, and transaction history on Tempo
+					</p>
 					<form onSubmit={handleSubmit} className="w-full relative">
 						<input
 							ref={inputRef}
@@ -65,41 +68,41 @@ function Landing() {
 							name="value"
 							value={address}
 							onChange={(e) => setAddress(e.target.value)}
-							placeholder="Enter a tempo address…"
-							className="bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 h-[52px] text-[17px]"
+							placeholder="Paste an address or try an example"
+							className="bg-surface border-base-border border-2 pl-[18px] pr-[64px] w-full placeholder:text-tertiary text-base-content rounded-xl focus-visible:border-accent outline-0 h-[56px] text-[16px] transition-colors"
 							spellCheck={false}
 							autoComplete="off"
 							autoCapitalize="none"
 							autoCorrect="off"
 							data-1p-ignore
 						/>
-						<div className="absolute top-[50%] -translate-y-[50%] right-[16px]">
+						<div className="absolute top-[50%] -translate-y-[50%] right-[14px]">
 							<button
 								type="submit"
 								disabled={!isValidAddress}
 								aria-label="Search"
 								className={cx(
-									'rounded-full! flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed size-[28px]',
+									'rounded-full flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed size-[32px] transition-all',
 									isValidAddress
-										? 'bg-accent text-base-plane cursor-pointer'
+										? 'bg-accent text-white cursor-pointer hover:scale-105'
 										: 'bg-base-alt text-tertiary cursor-default',
 								)}
 							>
-								<ArrowRight className="size-[16px]" />
+								<ArrowRight className="size-[18px]" />
 							</button>
 						</div>
 					</form>
-					<div className="flex items-center gap-1 text-[13px] flex-wrap justify-center">
+					<div className="flex items-center gap-1.5 text-[13px] flex-wrap justify-center mt-1">
 						{getExampleAccounts().map((addr) => (
 							<Link
 								key={addr}
 								to="/$address"
 								params={{ address: addr }}
 								className={cx(
-									'flex items-center gap-0.75 text-base-content-secondary hover:text-base-content',
+									'flex items-center gap-1 text-secondary hover:text-primary',
 									'border border-base-border hover:border-accent focus-visible:border-accent',
-									'px-1.25 py-0.5 rounded-full! press-down bg-surface focus-visible:outline-none',
-									'focus-visible:duration-0 font-mono',
+									'px-2 py-1 rounded-full press-down bg-surface focus-visible:outline-none',
+									'transition-all font-mono text-[12px]',
 								)}
 							>
 								<UserIcon className="size-[14px] text-accent" />

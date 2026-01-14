@@ -1,5 +1,41 @@
 @import "tailwindcss";
 
+/* HB Set placeholder - Source Serif 4 Light (similar transitional serif) */
+@font-face {
+	font-family: "HB Set";
+	src:
+		url("/fonts/SourceSerif4-Light.otf") format("opentype"),
+		url("/fonts/SourceSerif4-Light.woff2") format("woff2");
+	font-weight: 300;
+	font-style: normal;
+	font-display: swap;
+}
+
+/* Pilat - Body copy (sans-serif) - Test fonts from General Type Studio */
+@font-face {
+	font-family: "Pilat";
+	src: url("/fonts/PilatTest-Regular.otf") format("opentype");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Pilat";
+	src: url("/fonts/PilatTest-Book.otf") format("opentype");
+	font-weight: 450;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "Pilat";
+	src: url("/fonts/PilatTest-Demi.otf") format("opentype");
+	font-weight: 600;
+	font-style: normal;
+	font-display: swap;
+}
+
 @custom-variant dark (&:is(.scheme-light-dark *));
 
 @theme {
@@ -112,8 +148,12 @@
 	--color-warning: light-dark(#e2a336, #8f6424);
 	--color-warning-background: light-dark(#fdf5c2, #252018);
 
-	--font-display: system-ui, sans-serif;
-	--font-mono: ui-monospace, monospace;
+	/* Typography - Brand Fonts */
+	--font-sans: "Pilat", system-ui, sans-serif;
+	--font-serif: "HB Set", Georgia, serif;
+	--font-mono: "SF Mono", "Berkeley Mono", ui-monospace, monospace;
+	--font-display: var(--font-sans);
+	--font-headline: var(--font-serif);
 }
 
 html,
@@ -182,4 +222,26 @@ input[type="number"] {
 
 @utility scrollbar-gutter-stable {
 	scrollbar-gutter: stable;
+}
+
+@utility font-headline {
+	font-family: var(--font-headline);
+	font-weight: 300;
+	line-height: 0.9;
+	letter-spacing: -0.04em;
+}
+
+@utility font-body {
+	font-family: var(--font-sans);
+	font-weight: 400;
+}
+
+@utility font-body-book {
+	font-family: var(--font-sans);
+	font-weight: 450;
+}
+
+@utility font-body-demi {
+	font-family: var(--font-sans);
+	font-weight: 600;
 }

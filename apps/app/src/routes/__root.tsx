@@ -25,6 +25,9 @@ export const Route = createRootRouteWithContext<{
 			{ name: 'og:title', content: 'App ⋅ Tempo' },
 			{ name: 'description', content: 'Tempo App' },
 			{ name: 'og:description', content: 'Tempo App' },
+			{ name: 'og:image', content: '/og-image.png' },
+			{ name: 'twitter:card', content: 'summary_large_image' },
+			{ name: 'twitter:image', content: '/og-image.png' },
 		],
 		links: [
 			{ rel: 'stylesheet', href: css },
