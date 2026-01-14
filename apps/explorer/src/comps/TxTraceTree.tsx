@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Hex } from 'viem'
 import { type Abi, decodeAbiParameters, erc20Abi, slice } from 'viem'
 import { cx } from '#lib/css'
@@ -13,7 +13,7 @@ import {
 import { decodePrecompile } from '#lib/domain/precompiles'
 import { useCopy } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
-import { batchAbiQueryOptions } from '#lib/queries'
+import { batchAbiQueryOptions, populateCacheFromBatch } from '#lib/queries'
 import ArrowRightIcon from '~icons/lucide/arrow-right'
 import CopyIcon from '~icons/lucide/copy'
 import WrapIcon from '~icons/lucide/corner-down-left'
@@ -96,10 +96,17 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 		}
 	}, [trace])
 
+	const queryClient = useQueryClient()
+
 	// Single batch query instead of N+1 individual queries
 	const { data: batchData } = useQuery(
 		batchAbiQueryOptions({ addresses, selectors }),
 	)
+
+	// Populate individual caches for other components
+	useEffect(() => {
+		if (batchData) populateCacheFromBatch(queryClient, batchData)
+	}, [queryClient, batchData])
 
 	return useMemo(() => {
 		if (!trace) return null

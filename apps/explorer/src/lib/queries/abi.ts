@@ -10,7 +10,7 @@ export function autoloadAbiQueryOptions(args: { address?: Address | null }) {
 		enabled: Boolean(address),
 		gcTime: Number.POSITIVE_INFINITY,
 		staleTime: Number.POSITIVE_INFINITY,
-		queryKey: ['autoload-abi', address],
+		queryKey: ['autoload-abi', address?.toLowerCase()],
 		queryFn: () => autoloadAbi(address as Address),
 	})
 }
@@ -65,7 +65,7 @@ export function populateCacheFromBatch(
 ) {
 	// Populate individual ABI cache entries
 	for (const [address, abi] of Object.entries(batchData.abis)) {
-		queryClient.setQueryData(['autoload-abi', address], abi)
+		queryClient.setQueryData(['autoload-abi', address.toLowerCase()], abi)
 	}
 
 	// Populate individual signature cache entries
