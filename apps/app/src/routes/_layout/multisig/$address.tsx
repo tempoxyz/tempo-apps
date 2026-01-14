@@ -2,7 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import { formatUnits, parseUnits, type Address, type Hex } from 'viem'
 import { createPortal } from 'react-dom'
-import { useReadContract, useReadContracts, useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useReadContract, useReadContracts, useAccount, useWriteContract, useWaitForTransactionReceipt, useBalance } from 'wagmi'
 import { Layout } from '#comps/Layout'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
@@ -28,6 +28,7 @@ import PlusCircleIcon from '~icons/lucide/plus-circle'
 import SettingsIcon from '~icons/lucide/settings'
 import CodeIcon from '~icons/lucide/code'
 import XIcon from '~icons/lucide/x'
+import WalletIcon from '~icons/lucide/wallet'
 
 export const Route = createFileRoute('/_layout/multisig/$address')({
 	component: MultisigDashboard,
@@ -91,6 +92,10 @@ function MultisigDashboard() {
 		address: address as Address,
 		abi: MULTISIG_ABI,
 		functionName: 'getTxCount',
+	})
+
+	const { data: nativeBalance } = useBalance({
+		address: address as Address,
 	})
 
 	const txIds = React.useMemo(() => {
@@ -188,6 +193,19 @@ function MultisigDashboard() {
 							</button>
 						</div>
 					</div>
+
+					{/* Balance */}
+					{nativeBalance && nativeBalance.value > 0n && (
+						<div className="flex items-center gap-3 p-4 rounded-xl glass-thin">
+							<WalletIcon className="size-5 text-accent" />
+							<div className="flex flex-col">
+								<span className="text-tertiary text-[11px] uppercase tracking-wide">Balance</span>
+								<span className="text-primary font-semibold text-[18px] font-mono">
+									{formatUnits(nativeBalance.value, nativeBalance.decimals)} {nativeBalance.symbol}
+								</span>
+							</div>
+						</div>
+					)}
 
 					{/* Stats */}
 					<div className="grid grid-cols-3 gap-3">
