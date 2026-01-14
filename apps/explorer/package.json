@@ -14,6 +14,7 @@
 		"dev:moderato": "CLOUDFLARE_ENV='moderato' vite dev --port 3000",
 		"dev:presto": "CLOUDFLARE_ENV='presto' vite dev --port 3000",
 		"build": "vite build",
+		"bundle-size": "gzip -c dist/client/assets/main-*.js | wc -c | awk '{print int($1/1024)\"KB\"}'",
 		"check": "pnpm check:biome && pnpm check:types",
 		"check:biome": "biome check --write --unsafe",
 		"check:types": "tsgo --project tsconfig.json --noEmit",

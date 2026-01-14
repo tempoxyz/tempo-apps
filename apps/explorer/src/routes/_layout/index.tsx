@@ -5,7 +5,7 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { animate, stagger } from 'animejs'
+import { waapi, stagger } from 'animejs'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
@@ -98,22 +98,24 @@ function Component() {
 	}, [router])
 
 	const handlePhaseChange = React.useCallback((phase: IntroPhase) => {
-		if (phase === 'start' && exploreWrapperRef.current) {
-			const seen = introSeenOnMount.current
-			animate(exploreWrapperRef.current, {
-				opacity: [0, 1],
-				scale: [seen ? 0.97 : 0.94, 1],
-				ease: seen ? springInstant : springBouncy,
-				delay: seen ? 0 : 240,
-				onBegin: () => {
-					setInputReady(true)
-					if (exploreWrapperRef.current) {
-						exploreWrapperRef.current.style.pointerEvents = 'auto'
-					}
-					exploreInputRef.current?.focus()
-				},
-			})
-		}
+		if (phase !== 'start' || !exploreWrapperRef.current) return
+
+		const seen = introSeenOnMount.current
+		setTimeout(
+			() => {
+				setInputReady(true)
+				if (exploreWrapperRef.current) {
+					exploreWrapperRef.current.style.pointerEvents = 'auto'
+					waapi.animate(exploreWrapperRef.current, {
+						opacity: [0, 1],
+						scale: [seen ? 0.97 : 0.94, 1],
+						ease: seen ? springInstant : springBouncy,
+					})
+				}
+				exploreInputRef.current?.focus()
+			},
+			seen ? 0 : 240,
+		)
 	}, [])
 
 	return (
@@ -177,15 +179,17 @@ function SpotlightLinks() {
 		setActionOpen(false)
 		if (dropdownMenuRef.current) {
 			closingRef.current = true
-			animate(dropdownMenuRef.current, {
-				opacity: [1, 0],
-				scale: [1, 0.97],
-				translateY: [0, -4],
-				ease: springInstant,
-			}).then(() => {
-				if (!closingRef.current) return
-				setMenuMounted(false)
-			})
+			waapi
+				.animate(dropdownMenuRef.current, {
+					opacity: [1, 0],
+					scale: [1, 0.97],
+					translateY: [0, -4],
+					ease: springInstant,
+				})
+				.then(() => {
+					if (!closingRef.current) return
+					setMenuMounted(false)
+				})
 		} else {
 			setMenuMounted(false)
 		}
@@ -208,16 +212,18 @@ function SpotlightLinks() {
 		if (!pillsRef.current) return
 		const seen = introSeenOnMount.current
 		const children = [...pillsRef.current.children]
-		const anim = animate(children, {
+		const delay = seen ? 0 : 320
+		setTimeout(() => {
+			for (const child of children) {
+				;(child as HTMLElement).style.pointerEvents = 'auto'
+			}
+		}, delay)
+		const anim = waapi.animate(children as HTMLElement[], {
 			opacity: [0, 1],
-			translateY: [seen ? 2 : 4, 0],
+			translateY: [seen ? 4 : 8, 0],
+			scale: [0.97, 1],
 			ease: seen ? springInstant : springSmooth,
-			delay: seen ? stagger(10) : stagger(20, { start: 320, from: 'random' }),
-			onBegin: () => {
-				for (const child of children) {
-					;(child as HTMLElement).style.pointerEvents = 'auto'
-				}
-			},
+			delay: seen ? stagger(10) : stagger(20, { start: delay, from: 'first' }),
 		})
 		anim.then(() => {
 			for (const child of children) {
@@ -225,7 +231,9 @@ function SpotlightLinks() {
 			}
 		})
 		return () => {
-			anim.cancel()
+			try {
+				anim.cancel()
+			} catch {}
 		}
 	}, [])
 
@@ -236,7 +244,7 @@ function SpotlightLinks() {
 	React.useLayoutEffect(() => {
 		if (!dropdownMenuRef.current) return
 		if (actionOpen && menuMounted) {
-			animate(dropdownMenuRef.current, {
+			waapi.animate(dropdownMenuRef.current, {
 				opacity: [0, 1],
 				scale: [0.97, 1],
 				translateY: [-4, 0],
@@ -249,7 +257,7 @@ function SpotlightLinks() {
 		if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
 		if (closingRef.current && dropdownMenuRef.current) {
 			closingRef.current = false
-			animate(dropdownMenuRef.current, {
+			waapi.animate(dropdownMenuRef.current, {
 				opacity: 1,
 				scale: 1,
 				ease: springInstant,
