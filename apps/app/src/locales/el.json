@@ -29,6 +29,7 @@
 		"assetCount": "στοιχείο",
 		"assetCount_plural": "στοιχεία",
 		"hideZeroBalances": "Απόκρυψη μηδενικών υπολοίπων",
-		"showZeroBalances": "Εμφάνιση μηδενικών υπολοίπων"
+		"showZeroBalances": "Εμφάνιση μηδενικών υπολοίπων",
+		"noActivityYet": "Δεν υπάρχει δραστηριότητα ακόμα"
 	}
 }

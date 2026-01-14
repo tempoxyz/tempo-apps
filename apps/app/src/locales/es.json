@@ -29,6 +29,7 @@
 		"assetCount": "activo",
 		"assetCount_plural": "activos",
 		"hideZeroBalances": "Ocultar saldos cero",
-		"showZeroBalances": "Mostrar saldos cero"
+		"showZeroBalances": "Mostrar saldos cero",
+		"noActivityYet": "Sin actividad aún"
 	}
 }
