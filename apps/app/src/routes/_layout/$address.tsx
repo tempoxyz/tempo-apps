@@ -494,6 +494,14 @@ function formatUsd(value: number): string {
 function HoldingsTable({ assets }: { assets: AssetData[] }) {
 	const [hideZero, setHideZero] = React.useState(true)
 
+	if (assets.length === 0) {
+		return (
+			<div className="text-sm text-secondary">
+				<p>No assets found.</p>
+			</div>
+		)
+	}
+
 	const filteredAssets = (
 		hideZero
 			? assets.filter((a) => a.balance !== '0' && a.balance !== undefined)
@@ -507,16 +515,16 @@ function HoldingsTable({ assets }: { assets: AssetData[] }) {
 	const ROW_HEIGHT = 48
 
 	return (
-		<div className="text-[13px] -mx-2">
+		<div className="text-[13px] -mx-2 grid grid-cols-[2fr_1fr_auto] md:grid-cols-[2fr_1fr_1fr_auto]">
 			<div
-				className="grid grid-cols-[1fr_5rem_5rem_auto] border-b border-dashed border-card-border"
+				className="grid grid-cols-subgrid col-span-3 md:col-span-4 border-b border-dashed border-card-border"
 				style={{ height: ROW_HEIGHT }}
 			>
 				<span className="px-2 flex items-center text-tertiary">Asset</span>
 				<span className="px-2 flex items-center justify-end text-tertiary">
 					Amount
 				</span>
-				<span className="px-2 flex items-center justify-end text-tertiary">
+				<span className="px-2 hidden md:flex items-center justify-end text-tertiary">
 					Value
 				</span>
 				<span className="px-2 flex items-center justify-end">
@@ -537,14 +545,15 @@ function HoldingsTable({ assets }: { assets: AssetData[] }) {
 				</span>
 			</div>
 			<div
-				className="overflow-y-auto"
+				className="grid grid-cols-subgrid col-span-3 md:col-span-4 overflow-y-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px] rounded"
 				style={{ maxHeight: 'calc(100vh - 80px)' }}
+				tabIndex={0}
 			>
 				{filteredAssets.map((asset, index) => (
 					<div
 						key={asset.address}
 						className={cx(
-							'grid grid-cols-[1fr_5rem_5rem_auto]',
+							'grid grid-cols-subgrid col-span-3 md:col-span-4',
 							index < filteredAssets.length - 1 &&
 								'border-b border-dashed border-card-border',
 						)}
@@ -556,20 +565,46 @@ function HoldingsTable({ assets }: { assets: AssetData[] }) {
 								<span className="text-tertiary">…</span>
 							)}
 						</span>
-						<span className="px-2 text-primary font-mono flex items-center justify-end">
-							{asset.balance !== undefined &&
-							asset.metadata?.decimals !== undefined ? (
-								formatAmount(asset.balance, asset.metadata.decimals)
-							) : (
-								<span className="text-tertiary">…</span>
-							)}
+						<span
+							className="px-2 flex flex-col items-end justify-center overflow-hidden md:flex-row md:items-center"
+							title={
+								asset.balance !== undefined &&
+								asset.metadata?.decimals !== undefined
+									? formatAmount(asset.balance, asset.metadata.decimals)
+									: undefined
+							}
+						>
+							<span className="truncate text-primary font-mono">
+								{asset.balance !== undefined &&
+								asset.metadata?.decimals !== undefined ? (
+									formatAmount(asset.balance, asset.metadata.decimals)
+								) : (
+									<span className="text-tertiary">…</span>
+								)}
+							</span>
+							<span className="truncate text-secondary text-[11px] md:hidden">
+								{asset.valueUsd !== undefined ? (
+									formatUsd(asset.valueUsd)
+								) : (
+									<span className="text-tertiary">…</span>
+								)}
+							</span>
 						</span>
-						<span className="px-2 text-secondary flex items-center justify-end">
-							{asset.valueUsd !== undefined ? (
-								formatUsd(asset.valueUsd)
-							) : (
-								<span className="text-tertiary">…</span>
-							)}
+						<span
+							className="px-2 text-secondary hidden md:flex items-center justify-end overflow-hidden"
+							title={
+								asset.valueUsd !== undefined
+									? formatUsd(asset.valueUsd)
+									: undefined
+							}
+						>
+							<span className="truncate">
+								{asset.valueUsd !== undefined ? (
+									formatUsd(asset.valueUsd)
+								) : (
+									<span className="text-tertiary">…</span>
+								)}
+							</span>
 						</span>
 						<span className="px-2 flex items-center justify-end">
 							<button
