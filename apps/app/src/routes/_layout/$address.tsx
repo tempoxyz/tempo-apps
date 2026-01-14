@@ -1,8 +1,4 @@
-import {
-	Link,
-	createFileRoute,
-	useNavigate,
-} from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { waapi, spring } from 'animejs'
 import type { Address } from 'ox'
@@ -46,13 +42,15 @@ import LogOutIcon from '~icons/lucide/log-out'
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
 
-const faucetFundAddress = createServerFn()
-	.validator((data: { address: string }) => data)
+const faucetFundAddress = createServerFn({ method: 'POST' })
+	.inputValidator((data: { address: string }) => data)
 	.handler(async ({ data }) => {
 		const auth = process.env.PRESTO_RPC_AUTH
-		const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		}
 		if (auth) {
-			headers['Authorization'] = `Basic ${Buffer.from(auth).toString('base64')}`
+			headers.Authorization = `Basic ${Buffer.from(auth).toString('base64')}`
 		}
 
 		const res = await fetch('https://rpc.presto.tempo.xyz', {
@@ -66,11 +64,14 @@ const faucetFundAddress = createServerFn()
 			}),
 		})
 
-		const result = (await res.json()) as { result?: unknown; error?: { message: string } }
-		if (result.error) {
-			return { success: false, error: result.error.message }
+		const result = (await res.json()) as {
+			result?: unknown
+			error?: { message: string }
 		}
-		return { success: true }
+		if (result.error) {
+			return { success: false as const, error: result.error.message }
+		}
+		return { success: true as const }
 	})
 
 const FAUCET_TOKENS: AssetData[] = [
@@ -248,8 +249,9 @@ type ApiTransaction = {
 
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
-const fetchTransactionsFromExplorer = createServerFn()
-	.handler(async ({ data }: { data: { address: string } }) => {
+const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
+	.inputValidator((data: { address: string }) => data)
+	.handler(async ({ data }) => {
 		const { address } = data
 		const explorerUrl =
 			TEMPO_ENV === 'presto'
@@ -268,20 +270,17 @@ const fetchTransactionsFromExplorer = createServerFn()
 				{ headers },
 			)
 			if (!response.ok) {
-				return { transactions: [], error: `HTTP ${response.status}` }
+				return {
+					transactions: [] as ApiTransaction[],
+					error: `HTTP ${response.status}`,
+				}
 			}
-			const data = await response.json()
-			return { transactions: data.items ?? [], error: null }
+			const json = (await response.json()) as { items?: ApiTransaction[] }
+			return { transactions: json.items ?? [], error: null }
 		} catch (e) {
-			return { transactions: [], error: String(e) }
+			return { transactions: [] as ApiTransaction[], error: String(e) }
 		}
 	})
-
-type TransactionsResponse = {
-	transactions: ApiTransaction[]
-	hasMore: boolean
-	error: string | null
-}
 
 type ActivityItem = {
 	hash: string
@@ -531,7 +530,9 @@ function AddressView() {
 	// When faucet mode is enabled, show faucet tokens (merged with any existing balances)
 	const displayedAssets = (() => {
 		if (showFaucet) {
-			const existingAddresses = new Set(dedupedAssets.map((a) => a.address.toLowerCase()))
+			const existingAddresses = new Set(
+				dedupedAssets.map((a) => a.address.toLowerCase()),
+			)
 			const faucetAssetsToAdd = FAUCET_TOKENS.filter(
 				(ft) => !existingAddresses.has(ft.address.toLowerCase()),
 			)
@@ -553,7 +554,7 @@ function AddressView() {
 				left={
 					<Link
 						to="/"
-						className="flex items-center gap-1 text-secondary hover:text-primary transition-colors"
+						className="glass-pill hover:ring-glass flex items-center gap-1 text-secondary hover:text-primary transition-colors"
 					>
 						<ArrowLeftIcon className="size-2" />
 						<span className="text-sm">Back</span>
@@ -977,7 +978,7 @@ function FeeTokenSection({ assets }: { assets: AssetData[] }) {
 						return (
 							<div
 								key={asset.address}
-								className="flex items-center gap-2.5 px-2 h-[48px] transition-colors hover:bg-base-alt/50"
+								className="flex items-center gap-2.5 px-3 h-[48px] rounded-xl hover:glass-thin transition-all"
 							>
 								<TokenIcon address={asset.address} className="size-[28px]" />
 								<span className="flex flex-col flex-1 min-w-0">
@@ -1323,7 +1324,7 @@ function AssetRow({
 					e.preventDefault()
 					handleSend()
 				}}
-				className="flex flex-col sm:flex-row sm:items-center gap-1.5 px-2 py-2 sm:py-0 hover:bg-base-alt/50 transition-colors sm:h-[48px]"
+				className="flex flex-col sm:flex-row sm:items-center gap-1.5 px-3 py-2 sm:py-0 rounded-xl hover:glass-thin transition-all sm:h-[48px]"
 			>
 				<div className="flex items-center gap-1.5 flex-1 min-w-0">
 					<TokenIcon address={asset.address} className="size-[28px] shrink-0" />
@@ -1392,7 +1393,7 @@ function AssetRow({
 
 	return (
 		<div
-			className="group grid grid-cols-[1fr_auto_60px_auto] md:grid-cols-[1fr_auto_60px_90px_auto] gap-1 hover:bg-base-alt/50 transition-colors"
+			className="group grid grid-cols-[1fr_auto_60px_auto] md:grid-cols-[1fr_auto_60px_90px_auto] gap-1 rounded-xl hover:glass-thin transition-all"
 			style={{ height: ROW_HEIGHT }}
 		>
 			<span className="px-2 text-primary flex items-center gap-2">
@@ -1536,7 +1537,7 @@ function ActivityRow({
 
 	return (
 		<>
-			<div className="group flex items-center gap-2 px-2 h-[44px] hover:bg-base-alt/50 transition-colors">
+			<div className="group flex items-center gap-2 px-3 h-[48px] rounded-xl hover:glass-thin transition-all">
 				<TxDescription.ExpandGroup
 					events={item.events}
 					seenAs={viewer}
@@ -1681,7 +1682,7 @@ function TransactionModal({
 			>
 				<div
 					data-receipt
-					className="flex flex-col w-[360px] bg-surface border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
+					className="flex flex-col w-[360px] liquid-glass-premium border-b-0 rounded-[16px] rounded-br-none rounded-bl-none text-base-content"
 				>
 					<div className="flex gap-[40px] px-[20px] pt-[24px] pb-[16px]">
 						<div className="shrink-0">
@@ -1756,7 +1757,7 @@ function TransactionModal({
 						href={`https://explore.mainnet.tempo.xyz/tx/${hash}`}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-surface border border-base-border rounded-bl-[10px] rounded-br-[10px] hover:bg-base-alt text-tertiary hover:text-primary transition-[background-color,color] duration-100 -mt-px"
+						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] glass-button rounded-bl-[16px] rounded-br-[16px] text-tertiary hover:text-primary -mt-px"
 					>
 						<span>View transaction</span>
 						<span aria-hidden="true">→</span>

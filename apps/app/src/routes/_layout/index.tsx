@@ -127,7 +127,7 @@ function Landing() {
 							value={address}
 							onChange={(e) => setAddress(e.target.value)}
 							placeholder="Enter address"
-							className="bg-surface border-base-border border-2 pl-4 pr-14 w-full placeholder:text-tertiary text-base-content rounded-xl focus-visible:border-accent outline-0 h-[52px] text-[16px] transition-colors"
+							className="glass-input pl-4 pr-14 w-full placeholder:text-tertiary text-base-content rounded-2xl outline-0 h-[56px] text-[16px]"
 							spellCheck={false}
 							autoComplete="off"
 							autoCapitalize="none"
@@ -142,8 +142,8 @@ function Landing() {
 								className={cx(
 									'rounded-full flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed size-[32px] transition-all',
 									isValidAddress
-										? 'bg-accent text-white cursor-pointer hover:scale-105'
-										: 'bg-base-alt text-tertiary cursor-default',
+										? 'glass-button-accent cursor-pointer'
+										: 'bg-base-alt/50 text-tertiary cursor-default backdrop-blur-sm',
 								)}
 							>
 								<ArrowRight className="size-[18px]" />
@@ -158,8 +158,8 @@ function Landing() {
 								params={{ address: addr }}
 								className={cx(
 									'flex items-center gap-1 text-secondary hover:text-primary',
-									'border border-base-border hover:border-accent focus-visible:border-accent',
-									'px-2.5 py-1.5 rounded-full press-down bg-surface focus-visible:outline-none',
+									'glass-pill hover:ring-glass focus-visible:ring-glass',
+									'px-3 py-2 rounded-full press-down focus-visible:outline-none',
 									'transition-all font-mono text-[12px] shrink-0',
 								)}
 							>
@@ -180,9 +180,9 @@ function Landing() {
 							}}
 							disabled={connect.isPending}
 							className={cx(
-								'flex items-center gap-2 px-4 py-2.5 rounded-xl w-full max-w-xs mt-4',
-								'bg-accent/10 border border-accent/20 text-primary',
-								'hover:bg-accent/20 cursor-pointer press-down transition-colors',
+								'flex items-center gap-2 px-4 py-3 rounded-2xl w-full max-w-xs mt-4',
+								'glass-card text-primary',
+								'hover:glow-accent cursor-pointer press-down',
 								'disabled:opacity-70 disabled:cursor-not-allowed',
 							)}
 						>
@@ -226,9 +226,9 @@ function Landing() {
 							}}
 							disabled={connect.isPending}
 							className={cx(
-								'flex items-center gap-1.5 px-3 py-1.5 rounded-full justify-center',
-								'bg-accent text-white font-medium text-[13px]',
-								'hover:bg-accent/90 cursor-pointer press-down transition-colors',
+								'flex items-center gap-1.5 px-4 py-2 rounded-full justify-center',
+								'glass-button-accent font-medium text-[13px]',
+								'cursor-pointer press-down',
 								'disabled:opacity-70 disabled:cursor-not-allowed',
 							)}
 						>
@@ -249,9 +249,9 @@ function Landing() {
 							}}
 							disabled={connect.isPending}
 							className={cx(
-								'flex items-center gap-1.5 px-3 py-1.5 rounded-full justify-center',
-								'bg-surface border border-base-border text-primary font-medium text-[13px]',
-								'hover:bg-base-alt hover:border-accent cursor-pointer press-down transition-colors',
+								'flex items-center gap-1.5 px-4 py-2 rounded-full justify-center',
+								'glass-button text-primary font-medium text-[13px]',
+								'cursor-pointer press-down',
 								'disabled:opacity-70 disabled:cursor-not-allowed',
 							)}
 						>
@@ -265,7 +265,7 @@ function Landing() {
 					</div>
 
 					{connect.error && (
-						<div className="mt-3 px-3 py-2 rounded-lg bg-negative/10 border border-negative/20">
+						<div className="mt-3 px-4 py-3 rounded-xl glass-thin border border-negative/30 glow-negative">
 							<p className="text-negative text-[13px] text-center">
 								{connect.error.message}
 							</p>
