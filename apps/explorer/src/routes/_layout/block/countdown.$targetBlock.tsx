@@ -114,8 +114,12 @@ function CountdownCard(props: {
 	remainingBlocks: bigint
 	estimatedTargetDate: Date
 }) {
-	const { targetBlockNumber, currentBlockNumber, remainingBlocks, estimatedTargetDate } =
-		props
+	const {
+		targetBlockNumber,
+		currentBlockNumber,
+		remainingBlocks,
+		estimatedTargetDate,
+	} = props
 
 	const [now, setNow] = React.useState(() => Date.now())
 
@@ -206,8 +210,6 @@ function CountdownCard(props: {
 					},
 				]}
 			/>
-
-
 		</div>
 	)
 }
