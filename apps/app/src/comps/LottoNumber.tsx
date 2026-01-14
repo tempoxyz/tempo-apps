@@ -31,15 +31,14 @@ export function LottoNumber({
 		const prevValue = prevValueRef.current
 		prevValueRef.current = value
 
-		// On initial mount, animate all characters
+		// On initial mount, show immediately without animation
 		// On updates, only animate characters that changed
 		const changedIndices = new Set<number>()
 		if (isInitialMount.current) {
-			// Mark all digit positions as changed for initial animation
-			value.split('').forEach((char, i) => {
-				if (/\d/.test(char)) changedIndices.add(i)
-			})
+			// Skip animation on initial mount - show value immediately
+			setChars(value.split('').map((char) => ({ char, settled: true })))
 			isInitialMount.current = false
+			return
 		} else {
 			// Find which characters actually changed
 			const maxLen = Math.max(value.length, prevValue.length)

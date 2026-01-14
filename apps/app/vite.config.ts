@@ -56,6 +56,7 @@ export default defineConfig((config) => {
 			}),
 			react(),
 		],
+
 		server: {
 			port,
 			cors: config.mode === 'development' ? false : undefined,
