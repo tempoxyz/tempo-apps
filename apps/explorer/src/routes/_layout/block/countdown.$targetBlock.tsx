@@ -17,7 +17,6 @@ import CheckCircleIcon from '~icons/lucide/check-circle'
 import ClockIcon from '~icons/lucide/clock'
 
 const AVERAGE_BLOCK_TIME_SECONDS = 0.5
-const MAX_ESTIMATED_SECONDS = 60 * 60 * 24 * 365 * 5 // 5 years cap
 
 export const Route = createFileRoute('/_layout/block/countdown/$targetBlock')({
 	component: RouteComponent,
@@ -82,10 +81,7 @@ function RouteComponent() {
 		? 0n
 		: targetBlockNumber - currentBlockNumber
 
-	const rawEstimatedSeconds =
-		Number(remainingBlocks) * AVERAGE_BLOCK_TIME_SECONDS
-	const estimatedSeconds = Math.min(rawEstimatedSeconds, MAX_ESTIMATED_SECONDS)
-	const isCapped = rawEstimatedSeconds > MAX_ESTIMATED_SECONDS
+	const estimatedSeconds = Number(remainingBlocks) * AVERAGE_BLOCK_TIME_SECONDS
 
 	const estimatedTargetDate = React.useMemo(() => {
 		return new Date(Date.now() + estimatedSeconds * 1000)
@@ -111,7 +107,6 @@ function RouteComponent() {
 					currentBlockNumber={currentBlockNumber}
 					remainingBlocks={remainingBlocks}
 					estimatedTargetDate={estimatedTargetDate}
-					isCapped={isCapped}
 				/>
 			)}
 		</div>
@@ -123,15 +118,9 @@ function CountdownCard(props: {
 	currentBlockNumber: bigint
 	remainingBlocks: bigint
 	estimatedTargetDate: Date
-	isCapped: boolean
 }) {
-	const {
-		targetBlockNumber,
-		currentBlockNumber,
-		remainingBlocks,
-		estimatedTargetDate,
-		isCapped,
-	} = props
+	const { targetBlockNumber, currentBlockNumber, remainingBlocks, estimatedTargetDate } =
+		props
 
 	const [countdown, setCountdown] = React.useState(() =>
 		calculateCountdown(estimatedTargetDate),
@@ -233,12 +222,7 @@ function CountdownCard(props: {
 				]}
 			/>
 
-			{isCapped && (
-				<p className="text-tertiary text-xs text-center max-w-[400px]">
-					Target block is very far in the future; date estimate capped at 5
-					years.
-				</p>
-			)}
+
 		</div>
 	)
 }
