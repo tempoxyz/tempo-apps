@@ -14,7 +14,6 @@ import { cx } from '#lib/css'
 import { withLoaderTiming } from '#lib/profiling'
 import { blocksQueryOptions } from '#lib/queries'
 import CalendarIcon from '~icons/lucide/calendar'
-import CheckCircleIcon from '~icons/lucide/check-circle'
 import ClockIcon from '~icons/lucide/clock'
 
 const AVERAGE_BLOCK_TIME_SECONDS = 0.5
@@ -82,10 +81,7 @@ function RouteComponent() {
 		poll: true,
 	})
 
-	const isReached = currentBlockNumber >= targetBlockNumber
-	const remainingBlocks = isReached
-		? 0n
-		: targetBlockNumber - currentBlockNumber
+	const remainingBlocks = targetBlockNumber - currentBlockNumber
 
 	const estimatedSeconds = Number(remainingBlocks) * AVERAGE_BLOCK_TIME_SECONDS
 
@@ -102,19 +98,12 @@ function RouteComponent() {
 		>
 			<Breadcrumbs className="w-full max-w-[600px]" />
 
-			{isReached ? (
-				<BlockReachedCard
-					targetBlockNumber={targetBlockNumber}
-					currentBlockNumber={currentBlockNumber}
-				/>
-			) : (
-				<CountdownCard
-					targetBlockNumber={targetBlockNumber}
-					currentBlockNumber={currentBlockNumber}
-					remainingBlocks={remainingBlocks}
-					estimatedTargetDate={estimatedTargetDate}
-				/>
-			)}
+			<CountdownCard
+				targetBlockNumber={targetBlockNumber}
+				currentBlockNumber={currentBlockNumber}
+				remainingBlocks={remainingBlocks}
+				estimatedTargetDate={estimatedTargetDate}
+			/>
 		</div>
 	)
 }
@@ -229,87 +218,6 @@ function CountdownCard(props: {
 			/>
 
 
-		</div>
-	)
-}
-
-function BlockReachedCard(props: {
-	targetBlockNumber: bigint
-	currentBlockNumber: bigint
-}) {
-	const { targetBlockNumber, currentBlockNumber } = props
-
-	return (
-		<div className="flex flex-col items-center gap-6 w-full max-w-[600px]">
-			<div className="flex items-center justify-center size-20 rounded-full bg-positive/10">
-				<CheckCircleIcon className="size-10 text-positive" />
-			</div>
-
-			<div className="text-center">
-				<h1 className="text-2xl font-semibold text-primary mb-2">
-					Block Created!
-				</h1>
-				<p className="text-secondary text-sm">
-					Block{' '}
-					<span className="text-accent font-mono">
-						#{targetBlockNumber.toLocaleString()}
-					</span>{' '}
-					has been created and added to the blockchain.
-				</p>
-			</div>
-
-			<InfoCard
-				titlePosition="outside"
-				className="w-full"
-				title={
-					<div className="px-[18px] py-[12px] flex items-center gap-2 text-tertiary">
-						<CheckCircleIcon className="size-4 text-positive" />
-						<span className="text-[13px]">Block Details</span>
-					</div>
-				}
-				sections={[
-					{
-						label: 'Target Block',
-						value: (
-							<Link
-								to="/block/$id"
-								params={{ id: String(targetBlockNumber) }}
-								className="text-accent hover:underline press-down tabular-nums"
-							>
-								#{targetBlockNumber.toLocaleString()}
-							</Link>
-						),
-					},
-					{
-						label: 'Current Block',
-						value: (
-							<Link
-								to="/block/$id"
-								params={{ id: String(currentBlockNumber) }}
-								className="text-accent hover:underline press-down tabular-nums"
-							>
-								#{currentBlockNumber.toLocaleString()}
-							</Link>
-						),
-					},
-					{
-						label: 'Blocks Since',
-						value: (
-							<span className="text-positive tabular-nums">
-								+{(currentBlockNumber - targetBlockNumber).toLocaleString()}
-							</span>
-						),
-					},
-				]}
-			/>
-
-			<Link
-				to="/block/$id"
-				params={{ id: String(targetBlockNumber) }}
-				className="px-4 py-2 bg-accent text-inverse rounded-lg hover:bg-accent/90 press-down transition-colors"
-			>
-				View Block Details
-			</Link>
 		</div>
 	)
 }
