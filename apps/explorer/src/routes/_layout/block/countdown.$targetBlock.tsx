@@ -85,8 +85,11 @@ function RouteComponent() {
 	const rawEstimatedSeconds =
 		Number(remainingBlocks) * AVERAGE_BLOCK_TIME_SECONDS
 	const estimatedSeconds = Math.min(rawEstimatedSeconds, MAX_ESTIMATED_SECONDS)
-	const estimatedTargetDate = new Date(Date.now() + estimatedSeconds * 1000)
 	const isCapped = rawEstimatedSeconds > MAX_ESTIMATED_SECONDS
+
+	const estimatedTargetDate = React.useMemo(() => {
+		return new Date(Date.now() + estimatedSeconds * 1000)
+	}, [estimatedSeconds])
 
 	return (
 		<div
