@@ -20,51 +20,8 @@ env:
   NODE_ENV: production
 
 jobs:
-  # On main push: build and cache the bundle stats
-  cache-baseline:
-    name: Cache Bundle Stats
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          submodules: "recursive"
-
-      - name: Install dependencies
-        uses: ./.github/actions/install-dependencies
-
-      - name: Build with bundle analysis
-        working-directory: apps/explorer
-        env:
-          ANALYZE: "true"
-          ANALYZE_JSON: "true"
-        run: pnpm build
-
-      - name: Parse bundle stats
-        working-directory: apps/explorer
-        run: |
-          node --experimental-strip-types scripts/bundle-diff.ts \
-            --skip-build \
-            --output bundle-stats.json
-
-      - name: Save bundle stats to cache
-        uses: actions/cache/save@v4
-        with:
-          path: apps/explorer/bundle-stats.json
-          key: bundle-stats-explorer-main-${{ github.sha }}
-
-      # Also save with a stable key that PRs can restore
-      - name: Save bundle stats with stable key
-        uses: actions/cache/save@v4
-        with:
-          path: apps/explorer/bundle-stats.json
-          key: bundle-stats-explorer-main-latest
-
-  # On PR: compare bundle size against cached baseline
-  compare:
-    name: Compare Bundle Size
-    if: github.event_name == 'pull_request'
+  bundle-size:
+    name: Bundle Size
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
@@ -79,6 +36,7 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       - name: Restore baseline from cache
+        if: github.event_name == 'pull_request'
         id: cache-restore
         uses: actions/cache/restore@v4
         with:
@@ -88,7 +46,7 @@ jobs:
             bundle-stats-explorer-main-
 
       - name: Move baseline if exists
-        if: steps.cache-restore.outputs.cache-hit == 'true'
+        if: github.event_name == 'pull_request' && steps.cache-restore.outputs.cache-hit == 'true'
         run: mv apps/explorer/bundle-stats.json apps/explorer/baseline-stats.json
 
       - name: Build with bundle analysis
@@ -98,7 +56,30 @@ jobs:
           ANALYZE_JSON: "true"
         run: pnpm build
 
-      - name: Generate bundle report
+      - name: Parse bundle stats (main branch)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: apps/explorer
+        run: |
+          node --experimental-strip-types scripts/bundle-diff.ts \
+            --skip-build \
+            --output bundle-stats.json
+
+      - name: Save bundle stats to cache (main branch)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: apps/explorer/bundle-stats.json
+          key: bundle-stats-explorer-main-${{ github.sha }}
+
+      - name: Save bundle stats with stable key (main branch)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@v4
+        with:
+          path: apps/explorer/bundle-stats.json
+          key: bundle-stats-explorer-main-latest
+
+      - name: Generate bundle report (PR)
+        if: github.event_name == 'pull_request'
         id: bundle-report
         working-directory: apps/explorer
         run: |
@@ -120,6 +101,7 @@ jobs:
           echo "$REPORT"
 
       - name: Find existing comment
+        if: github.event_name == 'pull_request'
         uses: peter-evans/find-comment@v3
         id: find-comment
         with:
@@ -128,6 +110,7 @@ jobs:
           body-includes: "Bundle Size Report"
 
       - name: Post or update PR comment
+        if: github.event_name == 'pull_request'
         uses: peter-evans/create-or-update-comment@v4
         with:
           comment-id: ${{ steps.find-comment.outputs.comment-id }}
