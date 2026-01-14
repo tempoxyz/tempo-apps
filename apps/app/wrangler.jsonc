@@ -1,0 +1,103 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.server.ts",
+	"keep_vars": true,
+	"workers_dev": true,
+	"preview_urls": true,
+	"placement": { "mode": "smart" },
+	"env": {
+		"devnet": {
+			"name": "app-devnet",
+			"main": "./src/index.server.ts",
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "app.devnet.tempo.xyz"
+				}
+			],
+			"vars": {
+				"VITE_TEMPO_ENV": "devnet"
+			},
+			"workers_dev": true,
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
+		},
+		"moderato": {
+			"name": "app-moderato",
+			"main": "./src/index.server.ts",
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "app.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "app.moderato.tempo.xyz"
+				}
+			],
+			"vars": {
+				"VITE_TEMPO_ENV": "moderato"
+			},
+			"workers_dev": true,
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
+		},
+		"presto": {
+			"name": "app-presto",
+			"main": "./src/index.server.ts",
+			"routes": [
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "app.presto.tempo.xyz"
+				},
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "app.mainnet.tempo.xyz"
+				}
+			],
+			"vars": {
+				"VITE_TEMPO_ENV": "presto"
+			},
+			"workers_dev": true,
+			"observability": {
+				"enabled": true,
+				"logs": {
+					"persist": true,
+					"enabled": true,
+					"head_sampling_rate": 1,
+					"invocation_logs": true
+				}
+			}
+		}
+	},
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		}
+	}
+}
