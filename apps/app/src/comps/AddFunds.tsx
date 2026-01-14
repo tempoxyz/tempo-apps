@@ -1,8 +1,10 @@
 import * as React from 'react'
+import * as ReactDOM from 'react-dom'
 import { cx } from '#lib/css'
 import { useOnrampOrder, useShowApplePay } from '#lib/onramp'
 import { ApplePayIframe } from '#comps/ApplePayIframe'
 import LoaderIcon from '~icons/lucide/loader-2'
+import XIcon from '~icons/lucide/x'
 
 const PRESET_AMOUNTS = [25, 50, 100, 250]
 const MIN_AMOUNT = 5
@@ -30,10 +32,12 @@ export function AddFunds(props: AddFunds.Props) {
 	const isValidAmount =
 		effectiveAmount >= MIN_AMOUNT && effectiveAmount <= MAX_AMOUNT
 
+	const [isInputFocused, setIsInputFocused] = React.useState(false)
+
 	const handlePresetClick = (value: number) => {
 		setAmount(value)
-		setIsCustom(false)
-		setCustomAmount('')
+		setCustomAmount(String(value))
+		setIsCustom(!isInputFocused)
 	}
 
 	const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -42,10 +46,21 @@ export function AddFunds(props: AddFunds.Props) {
 		setIsCustom(true)
 	}
 
+	const handleInputFocus = () => {
+		setIsInputFocused(true)
+		setIsCustom(true)
+	}
+
+	const handleInputBlur = () => {
+		setIsInputFocused(false)
+	}
+
 	const handleSubmit = () => {
 		if (!isValidAmount) return
 		createOrder.mutate({ amount: effectiveAmount })
 	}
+
+	const isModalOpen = !!iframeUrl
 
 	if (!showApplePay) {
 		return (
@@ -55,100 +70,130 @@ export function AddFunds(props: AddFunds.Props) {
 		)
 	}
 
-	if (iframeUrl) {
-		return (
-			<div className="flex flex-col gap-2">
-				<ApplePayIframe url={iframeUrl} onClose={reset} />
-				{lastOrderEvent && (
-					<div className="text-[11px] text-tertiary font-mono">
-						Status: {lastOrderEvent.eventName.replace('onramp_api.', '')}
-					</div>
-				)}
-			</div>
-		)
-	}
-
 	return (
-		<div className="flex flex-col gap-3 py-2.5">
-			<div className="flex flex-col gap-1">
-				<p className="text-[12px] text-tertiary">
-					Add funds to your account using Apple Pay. USDC will arrive on Base.
-				</p>
-			</div>
-
-			<div className="flex flex-col gap-2">
-				<div className="flex gap-1.5">
-					{PRESET_AMOUNTS.map((value) => (
-						<button
-							key={value}
-							type="button"
-							onClick={() => handlePresetClick(value)}
-							className={cx(
-								'flex-1 py-1.5 text-[13px] font-medium rounded-md cursor-pointer press-down transition-colors',
-								!isCustom && amount === value
-									? 'bg-accent text-white'
-									: 'bg-base-alt text-secondary hover:text-primary',
-							)}
-						>
-							${value}
-						</button>
-					))}
-				</div>
-
-				<div className="relative">
-					<span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-tertiary">
-						$
-					</span>
-					<input
-						type="text"
-						inputMode="decimal"
-						placeholder="Custom amount"
-						value={customAmount}
-						onChange={handleCustomChange}
-						onFocus={() => setIsCustom(true)}
-						className={cx(
-							'w-full pl-5 pr-3 py-2 text-[13px] rounded-md border transition-colors',
-							'bg-base placeholder:text-tertiary',
-							isCustom
-								? 'border-accent text-primary'
-								: 'border-card-border text-secondary hover:border-accent/50',
-						)}
-					/>
-				</div>
-
-				{isCustom && customAmount && !isValidAmount && (
-					<p className="text-[11px] text-negative">
-						Amount must be between ${MIN_AMOUNT} and $
-						{MAX_AMOUNT.toLocaleString()}
+		<>
+			<div className="flex flex-col gap-3 py-2.5">
+				<div className="flex flex-col gap-1">
+					<p className="text-[12px] text-tertiary">
+						Add funds to your account using Apple Pay. USDC will arrive on Base.
 					</p>
+				</div>
+
+				<div className="flex flex-col gap-2">
+					<div className="flex gap-1.5">
+						{PRESET_AMOUNTS.map((value) => (
+							<button
+								key={value}
+								type="button"
+								onClick={() => handlePresetClick(value)}
+								disabled={isModalOpen}
+								className={cx(
+									'flex-1 py-1.5 text-[13px] font-medium rounded-md cursor-pointer press-down transition-colors',
+									!isCustom && amount === value
+										? 'bg-accent text-white'
+										: 'bg-base-alt text-secondary hover:text-primary',
+									isModalOpen && 'opacity-50 cursor-not-allowed',
+								)}
+							>
+								${value}
+							</button>
+						))}
+					</div>
+
+					<div className="relative">
+						<span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[13px] text-tertiary">
+							$
+						</span>
+						<input
+							type="text"
+							inputMode="decimal"
+							placeholder="Custom amount"
+							value={customAmount}
+							onChange={handleCustomChange}
+							onFocus={handleInputFocus}
+							onBlur={handleInputBlur}
+							disabled={isModalOpen}
+							className={cx(
+								'w-full pl-5 pr-3 py-2 text-[13px] rounded-md border transition-colors',
+								'bg-base placeholder:text-tertiary',
+								isCustom
+									? 'border-accent text-primary'
+									: 'border-card-border text-secondary hover:border-accent/50',
+								isModalOpen && 'opacity-50 cursor-not-allowed',
+							)}
+						/>
+					</div>
+
+					{isCustom && customAmount && !isValidAmount && (
+						<p className="text-[11px] text-negative">
+							Amount must be between ${MIN_AMOUNT} and $
+							{MAX_AMOUNT.toLocaleString()}
+						</p>
+					)}
+				</div>
+
+				<button
+					type="button"
+					onClick={handleSubmit}
+					disabled={!isValidAmount || isLoading || isModalOpen}
+					className={cx(
+						'flex items-center justify-center gap-2 w-full py-2.5 text-[13px] font-medium rounded-md cursor-pointer press-down transition-colors',
+						isValidAmount && !isLoading && !isModalOpen
+							? 'bg-[#000] text-white hover:bg-[#1a1a1a]'
+							: 'bg-base-alt text-tertiary cursor-not-allowed',
+					)}
+				>
+					{isLoading || isModalOpen ? (
+						<>
+							<LoaderIcon className="size-3 animate-spin" />
+							<span>Processing...</span>
+						</>
+					) : (
+						<span>Pay ${effectiveAmount || 0}</span>
+					)}
+				</button>
+
+				{createOrder.error && (
+					<p className="text-[11px] text-negative">{createOrder.error.message}</p>
 				)}
 			</div>
 
-			<button
-				type="button"
-				onClick={handleSubmit}
-				disabled={!isValidAmount || isLoading}
-				className={cx(
-					'flex items-center justify-center gap-2 w-full py-2.5 text-[13px] font-medium rounded-md cursor-pointer press-down transition-colors',
-					isValidAmount && !isLoading
-						? 'bg-[#000] text-white hover:bg-[#1a1a1a]'
-						: 'bg-base-alt text-tertiary cursor-not-allowed',
+			{isModalOpen &&
+				ReactDOM.createPortal(
+					<div
+						className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm transition-opacity duration-200"
+						onClick={reset}
+					>
+						<div
+							className="relative w-full max-w-[420px] h-full bg-surface border-l border-base-border shadow-xl animate-in slide-in-from-right duration-200"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<div className="flex items-center justify-between px-4 py-3 border-b border-base-border">
+								<span className="text-[13px] font-medium text-primary">
+									Complete Payment
+								</span>
+								<button
+									type="button"
+									onClick={reset}
+									className="size-[28px] flex items-center justify-center rounded-md cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt transition-colors"
+									title="Close"
+								>
+									<XIcon className="size-[16px]" />
+								</button>
+							</div>
+							<div className="p-4">
+								<ApplePayIframe url={iframeUrl} />
+								{lastOrderEvent && (
+									<div className="mt-2 text-[11px] text-tertiary font-mono">
+										Status: {lastOrderEvent.eventName.replace('onramp_api.', '')}
+									</div>
+								)}
+							</div>
+						</div>
+					</div>,
+					document.body,
 				)}
-			>
-				{isLoading ? (
-					<>
-						<LoaderIcon className="size-2 animate-spin" />
-						<span>Processing...</span>
-					</>
-				) : (
-					<span>Pay ${effectiveAmount || 0}</span>
-				)}
-			</button>
-
-			{createOrder.error && (
-				<p className="text-[11px] text-negative">{createOrder.error.message}</p>
-			)}
-		</div>
+		</>
 	)
 }
 
