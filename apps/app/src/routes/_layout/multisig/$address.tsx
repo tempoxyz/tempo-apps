@@ -29,6 +29,7 @@ import SettingsIcon from '~icons/lucide/settings'
 import CodeIcon from '~icons/lucide/code'
 import XIcon from '~icons/lucide/x'
 import WalletIcon from '~icons/lucide/wallet'
+import ExternalLinkIcon from '~icons/lucide/external-link'
 
 export const Route = createFileRoute('/_layout/multisig/$address')({
 	component: MultisigDashboard,
@@ -173,25 +174,36 @@ function MultisigDashboard() {
 			<div className="flex flex-col flex-1 w-full max-w-2xl mx-auto px-4 py-6 gap-6">
 				{/* Header */}
 				<div className="flex flex-col gap-4">
-					<div className="flex items-center gap-3">
-						<div className="flex items-center justify-center size-12 rounded-xl glass-thin">
-							<ShieldIcon className="size-6 text-accent" />
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-3">
+							<div className="flex items-center justify-center size-12 rounded-xl glass-thin">
+								<ShieldIcon className="size-6 text-accent" />
+							</div>
+							<div className="flex flex-col gap-0.5 min-w-0">
+								<h1 className="font-semibold text-[18px] text-primary">Multisig</h1>
+								<button
+									type="button"
+									onClick={() => copy(address)}
+									className="flex items-center gap-1 text-secondary hover:text-primary transition-colors text-left"
+								>
+									<span className="font-mono text-[13px]">{shortenAddress(address, 6)}</span>
+									{copied ? (
+										<CheckIcon className="size-3 text-positive" />
+									) : (
+										<CopyIcon className="size-3" />
+									)}
+								</button>
+							</div>
 						</div>
-						<div className="flex flex-col gap-0.5 min-w-0">
-							<h1 className="font-semibold text-[18px] text-primary">Multisig</h1>
-							<button
-								type="button"
-								onClick={() => copy(address)}
-								className="flex items-center gap-1 text-secondary hover:text-primary transition-colors text-left"
-							>
-								<span className="font-mono text-[13px]">{shortenAddress(address, 6)}</span>
-								{copied ? (
-									<CheckIcon className="size-3 text-positive" />
-								) : (
-									<CopyIcon className="size-3" />
-								)}
-							</button>
-						</div>
+						<a
+							href={`https://explore.mainnet.tempo.xyz/address/${address}`}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg glass-thin text-secondary hover:text-primary text-[12px] press-down transition-colors"
+						>
+							<ExternalLinkIcon className="size-3.5" />
+							Explorer
+						</a>
 					</div>
 
 					{/* Balance */}
