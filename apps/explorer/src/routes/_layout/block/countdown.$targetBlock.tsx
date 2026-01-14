@@ -201,9 +201,15 @@ function CountdownCard(props: {
 					},
 					{
 						label: (
-							<span className="flex items-center gap-1.5">
+							<span
+								className="flex items-center gap-1.5"
+								title="Estimated Target Date"
+							>
 								<CalendarIcon className="size-3.5 text-content-dimmed" />
-								Estimated Target Date
+								<span className="hidden min-[480px]:inline">
+									Estimated Target Date
+								</span>
+								<span className="min-[480px]:hidden">Est. Target</span>
 							</span>
 						),
 						value: <EstimatedTargetDateValue date={estimatedTargetDate} />,
