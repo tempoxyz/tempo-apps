@@ -802,7 +802,7 @@ function FeeTokenSection({ assets }: { assets: AssetData[] }) {
 		<span className="flex items-center gap-1 px-1 h-[24px] bg-base-alt rounded-md text-[11px] text-secondary">
 			<TokenIcon address={currentAsset.address} className="size-[14px]" />
 			<span className="font-mono font-medium">
-				{currentAsset.metadata?.symbol ?? '...'}
+				{currentAsset.metadata?.symbol || shortenAddress(currentAsset.address, 3)}
 			</span>
 		</span>
 	) : null
@@ -828,12 +828,10 @@ function FeeTokenSection({ assets }: { assets: AssetData[] }) {
 								<TokenIcon address={asset.address} className="size-[28px]" />
 								<span className="flex flex-col flex-1 min-w-0">
 									<span className="text-[13px] text-primary font-medium truncate">
-										{asset.metadata?.name ?? (
-											<span className="text-tertiary">…</span>
-										)}
+										{asset.metadata?.name || shortenAddress(asset.address)}
 									</span>
 									<span className="text-[11px] text-tertiary font-mono">
-										{asset.metadata?.symbol ?? ''}
+										{asset.metadata?.symbol || shortenAddress(asset.address, 3)}
 									</span>
 								</span>
 								{isCurrent ? (
@@ -996,6 +994,14 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 
 function HoldingsTable({ assets }: { assets: AssetData[] }) {
 	const [sendingToken, setSendingToken] = React.useState<string | null>(null)
+	const [toastMessage, setToastMessage] = React.useState<string | null>(null)
+
+	React.useEffect(() => {
+		if (toastMessage) {
+			const timeout = setTimeout(() => setToastMessage(null), 3000)
+			return () => clearTimeout(timeout)
+		}
+	}, [toastMessage])
 
 	if (assets.length === 0) {
 		return (
@@ -1010,20 +1016,36 @@ function HoldingsTable({ assets }: { assets: AssetData[] }) {
 	)
 
 	return (
-		<div className="text-[13px] -mx-2 flex flex-col">
-			{sortedAssets.map((asset) => (
-				<AssetRow
-					key={asset.address}
-					asset={asset}
-					isExpanded={sendingToken === asset.address}
-					onToggleSend={() =>
-						setSendingToken(
-							sendingToken === asset.address ? null : asset.address,
-						)
-					}
-				/>
-			))}
-		</div>
+		<>
+			<div className="text-[13px] -mx-2 flex flex-col">
+				{sortedAssets.map((asset) => (
+					<AssetRow
+						key={asset.address}
+						asset={asset}
+						isExpanded={sendingToken === asset.address}
+						onToggleSend={() =>
+							setSendingToken(
+								sendingToken === asset.address ? null : asset.address,
+							)
+						}
+						onSendComplete={(symbol) => {
+							setToastMessage(`Sent ${symbol} successfully`)
+							setSendingToken(null)
+						}}
+					/>
+				))}
+			</div>
+			{toastMessage && (
+				<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-base-border rounded-xl px-4 py-3 shadow-lg flex flex-col gap-0.5">
+					<span className="text-[13px] text-primary font-medium">
+						{toastMessage}
+					</span>
+					<span className="text-[12px] text-tertiary">
+						This is a demo so balances do not update
+					</span>
+				</div>
+			)}
+		</>
 	)
 }
 
@@ -1031,10 +1053,12 @@ function AssetRow({
 	asset,
 	isExpanded,
 	onToggleSend,
+	onSendComplete,
 }: {
 	asset: AssetData
 	isExpanded: boolean
 	onToggleSend: () => void
+	onSendComplete: (symbol: string) => void
 }) {
 	const [recipient, setRecipient] = React.useState('')
 	const [amount, setAmount] = React.useState('')
@@ -1053,15 +1077,10 @@ function AssetRow({
 		if (!isValidSend) return
 		setSendState('sending')
 		setTimeout(() => {
-			setSendState('sent')
-			setShowToast(true)
-			setTimeout(() => {
-				setShowToast(false)
-				setSendState('idle')
-				setRecipient('')
-				setAmount('')
-				onToggleSend()
-			}, 3000)
+			setSendState('idle')
+			setRecipient('')
+			setAmount('')
+			onSendComplete(asset.metadata?.symbol || shortenAddress(asset.address, 3))
 		}, 800)
 	}
 
@@ -1074,8 +1093,6 @@ function AssetRow({
 			setAmount(formatAmount(asset.balance, asset.metadata.decimals))
 		}
 	}
-
-	const [showToast, setShowToast] = React.useState(false)
 	const isValidRecipient = /^0x[a-fA-F0-9]{40}$/.test(recipient)
 	const isValidAmount =
 		amount.length > 0 && !Number.isNaN(Number(amount)) && Number(amount) > 0
@@ -1179,10 +1196,10 @@ function AssetRow({
 					<TokenIcon address={asset.address} className="size-[28px]" />
 					<span className="flex flex-col min-w-0">
 						<span className="truncate font-medium">
-							{asset.metadata?.name ?? <span className="text-tertiary">…</span>}
+							{asset.metadata?.name || shortenAddress(asset.address)}
 						</span>
 						<span className="text-[11px] text-tertiary font-mono truncate">
-							{asset.metadata?.symbol ?? ''}
+							{asset.metadata?.symbol || shortenAddress(asset.address, 3)}
 						</span>
 					</span>
 				</span>
@@ -1214,11 +1231,9 @@ function AssetRow({
 					</span>
 				</span>
 				<span className="px-2 flex items-center justify-start overflow-hidden">
-					{asset.metadata?.symbol && (
-						<span className="text-[10px] font-medium text-tertiary bg-base-alt px-1 py-0.5 rounded font-mono truncate max-w-full">
-							{asset.metadata.symbol}
-						</span>
-					)}
+					<span className="text-[10px] font-medium text-tertiary bg-base-alt px-1 py-0.5 rounded font-mono truncate max-w-full">
+						{asset.metadata?.symbol || shortenAddress(asset.address, 3)}
+					</span>
 				</span>
 				<span className="px-2 text-secondary hidden md:flex items-center justify-end">
 					<span className="font-sans tabular-nums whitespace-nowrap">
