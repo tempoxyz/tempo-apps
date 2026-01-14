@@ -6,10 +6,12 @@ import {
 } from '@tanstack/react-router'
 import * as React from 'react'
 import { useWatchBlockNumber } from 'wagmi'
+import { CopyButton } from '#comps/CopyButton'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#lib/css'
 import { isTestnet } from '#lib/env'
 import { useIsMounted } from '#lib/hooks'
+import { ThemeToggle } from '#comps/ThemeToggle'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
 
@@ -26,7 +28,8 @@ export function Header(props: Header.Props) {
 					<Header.NetworkBadge />
 				</div>
 				<Header.Search />
-				<div className="relative z-1 print:hidden">
+				<div className="relative z-1 print:hidden flex items-center gap-[12px]">
+					<ThemeToggle />
 					<Header.BlockNumber initial={initialBlockNumber} />
 				</div>
 			</div>
@@ -216,16 +219,19 @@ export namespace Header {
 				? 'Andantino'
 				: network.charAt(0).toUpperCase() + network.slice(1)
 		return (
-			<div
-				title={`${name} Network`}
-				className={cx(
-					'flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct',
-					'bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium',
-					className,
-				)}
-			>
-				<Music4 width={14} height={14} className="text-accent" />
-				<span>{name}</span>
+			<div className="flex items-center gap-[6px]">
+				<div
+					title={`${name} Network`}
+					className={cx(
+						'flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct',
+						'bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium',
+						className,
+					)}
+				>
+					<Music4 width={14} height={14} className="text-accent" />
+					<span>{name}</span>
+				</div>
+				<CopyButton value={name} ariaLabel={`Copy network name: ${name}`} />
 			</div>
 		)
 	}
