@@ -34,6 +34,9 @@ jobs:
         network: [testnet, moderato, devnet]
     name: verify-vyper (${{ matrix.network }})
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Check if network is selected
         id: check
         run: |
@@ -43,10 +46,6 @@ jobs:
           else
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Checkout
-        if: steps.check.outputs.skip != 'true'
-        uses: actions/checkout@v6
 
       - name: Install Foundry
         if: steps.check.outputs.skip != 'true'
@@ -83,6 +82,9 @@ jobs:
         network: [testnet, moderato, devnet]
     name: verify-solidity (${{ matrix.network }})
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Check if network is selected
         id: check
         run: |
@@ -92,10 +94,6 @@ jobs:
           else
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Checkout
-        if: steps.check.outputs.skip != 'true'
-        uses: actions/checkout@v6
 
       - name: Install Foundry
         if: steps.check.outputs.skip != 'true'
