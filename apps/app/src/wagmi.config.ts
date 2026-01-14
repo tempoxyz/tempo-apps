@@ -141,13 +141,18 @@ const getRpcUrls = createIsomorphicFn()
 		}
 	})
 
-const getPrestoAuth = createIsomorphicFn()
-	.client(() => undefined)
-	.server(() => {
-		const auth = process.env.PRESTO_RPC_AUTH
+async function getPrestoAuth(): Promise<string | undefined> {
+	// Only available on the server - client returns undefined
+	if (typeof window !== 'undefined') return undefined
+	try {
+		const { env } = await import('cloudflare:workers')
+		const auth = env.PRESTO_RPC_AUTH as string | undefined
 		if (!auth) return undefined
-		return `Basic ${Buffer.from(auth).toString('base64')}`
-	})
+		return `Basic ${btoa(auth)}`
+	} catch {
+		return undefined
+	}
+}
 
 function getTempoTransport() {
 	const rpcUrls = getRpcUrls()
@@ -155,10 +160,10 @@ function getTempoTransport() {
 
 	// Presto: no WebSocket, use HTTP Basic Auth via custom transport
 	if (isPresto) {
-		const auth = getPrestoAuth()
 		const rpcUrl = rpcUrls.http[0]
 		return custom({
 			async request({ method, params }) {
+				const auth = await getPrestoAuth()
 				const response = await fetch(rpcUrl, {
 					method: 'POST',
 					headers: {
