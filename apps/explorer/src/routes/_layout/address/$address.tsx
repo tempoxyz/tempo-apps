@@ -21,7 +21,6 @@ import {
 	getChainId,
 	multicall,
 } from 'wagmi/actions'
-import { Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { Breadcrumbs } from '#comps/Breadcrumbs'
@@ -78,6 +77,24 @@ async function fetchAddressTotalValue(address: Address.Address) {
 		{ headers: { 'Content-Type': 'application/json' } },
 	)
 	return response.json() as Promise<{ totalValue: number }>
+}
+
+type TokenBalance = {
+	token: Address.Address
+	balance: string
+	name?: string
+	symbol?: string
+	decimals?: number
+	currency?: string
+}
+
+async function fetchAddressBalances(address: Address.Address) {
+	const requestUrl = getRequestURL()
+	const response = await fetch(
+		`${requestUrl.origin}/api/address/balances/${address}`,
+		{ headers: { 'Content-Type': 'application/json' } },
+	)
+	return response.json() as Promise<{ balances: TokenBalance[]; error?: string }>
 }
 
 async function fetchAddressTotalCount(address: Address.Address) {
@@ -148,7 +165,7 @@ function useBatchTransactionData(
 	return { transactionDataMap, isLoading }
 }
 
-const assets = [
+const knownTokens = [
 	'0x20c0000000000000000000000000000000000000',
 	'0x20c0000000000000000000000000000000000001',
 	'0x20c0000000000000000000000000000000000002',
@@ -157,77 +174,54 @@ const assets = [
 
 type AssetData = {
 	address: Address.Address
-	metadata: { name?: string; symbol?: string; decimals?: number } | undefined
+	metadata:
+		| { name?: string; symbol?: string; decimals?: number; currency?: string }
+		| undefined
 	balance: bigint | undefined
 }
 
-function useAssetsData(accountAddress: Address.Address): AssetData[] {
-	// Track hydration to avoid SSR/client mismatch with cached query data
-	const isMounted = useIsMounted()
+function balancesQueryOptions(address: Address.Address) {
+	return {
+		queryKey: ['address-balances', address],
+		queryFn: () => fetchAddressBalances(address),
+		staleTime: 60_000,
+	}
+}
 
-	const meta0 = Hooks.token.useGetMetadata({ token: assets[0] })
-	const meta1 = Hooks.token.useGetMetadata({ token: assets[1] })
-	const meta2 = Hooks.token.useGetMetadata({ token: assets[2] })
-	const meta3 = Hooks.token.useGetMetadata({ token: assets[3] })
-
-	const bal0 = Hooks.token.useGetBalance({
-		token: assets[0],
-		account: accountAddress,
-	})
-	const bal1 = Hooks.token.useGetBalance({
-		token: assets[1],
-		account: accountAddress,
-	})
-	const bal2 = Hooks.token.useGetBalance({
-		token: assets[2],
-		account: accountAddress,
-	})
-	const bal3 = Hooks.token.useGetBalance({
-		token: assets[3],
-		account: accountAddress,
+function useBalancesData(
+	accountAddress: Address.Address,
+	initialData?: { balances: TokenBalance[] },
+): {
+	data: AssetData[]
+	isLoading: boolean
+} {
+	const { data, isLoading } = useQuery({
+		...balancesQueryOptions(accountAddress),
+		initialData,
 	})
 
-	return React.useMemo(
-		() => [
-			{
-				address: assets[0],
-				metadata: isMounted ? meta0.data : undefined,
-				balance: isMounted ? bal0.data : undefined,
+	const assetsData = React.useMemo(() => {
+		if (!data?.balances) return []
+		return data.balances.map((token) => ({
+			address: token.token,
+			metadata: {
+				name: token.name,
+				symbol: token.symbol,
+				decimals: token.decimals,
+				currency: token.currency,
 			},
-			{
-				address: assets[1],
-				metadata: isMounted ? meta1.data : undefined,
-				balance: isMounted ? bal1.data : undefined,
-			},
-			{
-				address: assets[2],
-				metadata: isMounted ? meta2.data : undefined,
-				balance: isMounted ? bal2.data : undefined,
-			},
-			{
-				address: assets[3],
-				metadata: isMounted ? meta3.data : undefined,
-				balance: isMounted ? bal3.data : undefined,
-			},
-		],
-		[
-			isMounted,
-			meta0.data,
-			meta1.data,
-			meta2.data,
-			meta3.data,
-			bal0.data,
-			bal1.data,
-			bal2.data,
-			bal3.data,
-		],
-	)
+			balance: BigInt(token.balance),
+		}))
+	}, [data])
+
+	return { data: assetsData, isLoading }
 }
 
 function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
 	const PRICE_PER_TOKEN = 1
 	let total: number | undefined
 	for (const asset of assetsData) {
+		if (asset.metadata?.currency !== 'USD') continue
 		const decimals = asset.metadata?.decimals
 		const balance = asset.balance
 		if (decimals === undefined || balance === undefined) continue
@@ -242,6 +236,8 @@ const defaultSearchValues = {
 	limit: 10,
 	tab: 'history',
 } as const
+
+const ASSETS_PER_PAGE = 10
 
 const TabSchema = z.prefault(
 	z.enum(['history', 'assets', 'contract', 'interact']),
@@ -391,6 +387,16 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					console.error('Fetch total-value error (non-blocking):', error)
 				})
 
+			const balancesData = await timeout(
+				context.queryClient
+					.ensureQueryData(balancesQueryOptions(address))
+					.catch((error) => {
+						console.error('Fetch balances error:', error)
+						return undefined
+					}),
+				QUERY_TIMEOUT_MS,
+			)
+
 			// For SSR, provide placeholder values - client will fetch real data
 			const txCountResponse = undefined
 			const totalValueResponse = undefined
@@ -405,6 +411,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				contractInfo,
 				contractSource,
 				transactionsData,
+				balancesData,
 				txCountResponse,
 				totalValueResponse,
 			}
@@ -441,7 +448,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			// Use multicall to batch all token balance + decimals calls into a single RPC request
 			const multicallResults = await timeout(
 				multicall(config, {
-					contracts: assets.flatMap((tokenAddress) => [
+					contracts: knownTokens.flatMap((tokenAddress) => [
 						{
 							address: tokenAddress,
 							abi: Abis.tip20,
@@ -461,7 +468,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 			// Parse multicall results: each token has 2 results (balance, decimals)
 			const tokenResults = multicallResults
-				? assets.map((_, i) => {
+				? knownTokens.map((_, i) => {
 						const balanceResult = multicallResults[i * 2]
 						const decimalsResult = multicallResults[i * 2 + 1]
 						if (
@@ -551,8 +558,13 @@ function RouteComponent() {
 	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, live, limit } = Route.useSearch()
-	const { accountType, contractInfo, contractSource, transactionsData } =
-		Route.useLoaderData()
+	const {
+		accountType,
+		contractInfo,
+		contractSource,
+		transactionsData,
+		balancesData,
+	} = Route.useLoaderData()
 
 	Address.assert(address)
 
@@ -634,7 +646,7 @@ function RouteComponent() {
 						? 3
 						: 0
 
-	const assetsData = useAssetsData(address)
+	const { data: assetsData } = useBalancesData(address, balancesData)
 
 	return (
 		<div
@@ -926,7 +938,7 @@ function SectionsWrapper(props: {
 					},
 					{
 						title: 'Assets',
-						totalItems: assets.length,
+						totalItems: assetsData.length,
 						itemsLabel: 'assets',
 						content: (
 							<DataGrid
@@ -945,33 +957,39 @@ function SectionsWrapper(props: {
 									],
 								}}
 								items={(mode) =>
-									assetsData.map((asset) => ({
-										className: 'text-[13px]',
-										cells:
-											mode === 'stacked'
-												? [
-														<AssetName key="name" asset={asset} />,
-														<AssetContract key="contract" asset={asset} />,
-														<AssetAmount key="amount" asset={asset} />,
-													]
-												: [
-														<AssetName key="name" asset={asset} />,
-														<AssetSymbol key="symbol" asset={asset} />,
-														<span key="currency">USD</span>,
-														<AssetAmount key="amount" asset={asset} />,
-														<AssetValue key="value" asset={asset} />,
-													],
-										link: {
-											href: `/token/${asset.address}` as const,
-											search: { a: address },
-											title: `View token ${asset.address}`,
-										},
-									}))
+									assetsData
+										.slice(
+											(page - 1) * ASSETS_PER_PAGE,
+											page * ASSETS_PER_PAGE,
+										)
+										.map((asset) => ({
+											className: 'text-[13px]',
+											cells:
+												mode === 'stacked'
+													? [
+															<AssetName key="name" asset={asset} />,
+															<AssetContract key="contract" asset={asset} />,
+															<AssetAmount key="amount" asset={asset} />,
+														]
+													: [
+															<AssetName key="name" asset={asset} />,
+															<AssetSymbol key="symbol" asset={asset} />,
+															<AssetCurrency key="currency" asset={asset} />,
+															<AssetAmount key="amount" asset={asset} />,
+															<AssetValue key="value" asset={asset} />,
+														],
+											link: {
+												href: `/token/${asset.address}` as const,
+												search: { a: address },
+												title: `View token ${asset.address}`,
+											},
+										}))
 								}
-								totalItems={assets.length}
-								page={1}
+								totalItems={assetsData.length}
+								page={page}
 								itemsLabel="assets"
-								itemsPerPage={assets.length}
+								itemsPerPage={ASSETS_PER_PAGE}
+								pagination="simple"
 								emptyState="No assets found."
 							/>
 						),
@@ -1133,6 +1151,12 @@ function AssetContract(props: { asset: AssetData }) {
 	)
 }
 
+function AssetCurrency(props: { asset: AssetData }) {
+	const { asset } = props
+	if (!asset.metadata?.currency) return <span className="text-tertiary">—</span>
+	return <span>{asset.metadata.currency}</span>
+}
+
 function AssetAmount(props: { asset: AssetData }) {
 	const { asset } = props
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
@@ -1143,6 +1167,7 @@ function AssetAmount(props: { asset: AssetData }) {
 
 function AssetValue(props: { asset: AssetData }) {
 	const { asset } = props
+	if (asset.metadata?.currency !== 'USD') return <span className="text-tertiary">—</span>
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
 		return <span className="text-tertiary">…</span>
 	return (
