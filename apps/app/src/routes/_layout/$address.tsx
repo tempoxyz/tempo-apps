@@ -1,10 +1,11 @@
-import { Link, createFileRoute } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { waapi, spring } from 'animejs'
 import type { Address } from 'ox'
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { encode } from 'uqr'
 import { formatUnits } from 'viem'
+import { useDisconnect } from 'wagmi'
 import { getTransactionReceipt } from 'wagmi/actions'
 import {
 	TxDescription,
@@ -31,9 +32,11 @@ import MinusIcon from '~icons/lucide/minus'
 import SendIcon from '~icons/lucide/send'
 import EyeIcon from '~icons/lucide/eye'
 import EyeOffIcon from '~icons/lucide/eye-off'
+import DropletIcon from '~icons/lucide/droplet'
 import ReceiptIcon from '~icons/lucide/receipt'
 import XIcon from '~icons/lucide/x'
 import SearchIcon from '~icons/lucide/search'
+import LogOutIcon from '~icons/lucide/log-out'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
@@ -355,6 +358,9 @@ async function fetchTransactions(
 
 export const Route = createFileRoute('/_layout/$address')({
 	component: AddressView,
+	validateSearch: (search: Record<string, unknown>): { test?: boolean } => ({
+		test: 'test' in search ? true : undefined,
+	}),
 	loader: async ({ params }) => {
 		const assets = await fetchAssets(params.address as Address.Address)
 
@@ -380,12 +386,6 @@ export const Route = createFileRoute('/_layout/$address')({
 	},
 })
 
-function formatAddressLines(addr: string): string[] {
-	// Split into 2 even lines (21 chars each for 42-char address)
-	const mid = Math.ceil(addr.length / 2)
-	return [addr.slice(0, mid), addr.slice(mid)]
-}
-
 function eventTypeToActivityType(eventType: string): ActivityType {
 	const type = eventType.toLowerCase()
 	if (type.includes('send') || type.includes('transfer')) return 'send'
@@ -399,10 +399,15 @@ function eventTypeToActivityType(eventType: string): ActivityType {
 
 function AddressView() {
 	const { address } = Route.useParams()
+	const { test: showFaucet } = Route.useSearch()
 	const { assets: assetsData, activity } = Route.useLoaderData()
 	const { copy, notifying } = useCopy()
 	const [showZeroBalances, setShowZeroBalances] = React.useState(false)
 	const { setSummary } = useActivitySummary()
+	const { disconnect } = useDisconnect()
+	const navigate = useNavigate()
+	const [searchValue, setSearchValue] = React.useState('')
+	const [searchFocused, setSearchFocused] = React.useState(false)
 
 	React.useEffect(() => {
 		if (activity.length > 0) {
@@ -423,8 +428,6 @@ function AddressView() {
 		}
 		return () => setSummary(null)
 	}, [activity, setSummary])
-
-	const addressLines = formatAddressLines(address)
 
 	const totalValue = assetsData.reduce(
 		(sum, asset) => sum + (asset.valueUsd ?? 0),
@@ -453,11 +456,11 @@ function AddressView() {
 				right={null}
 			/>
 
-			<div className="pb-3 -mt-3 max-md:-mt-2">
-				<div className="flex items-center justify-between mb-4">
+			<div className="pb-3">
+				<div className="flex items-center justify-between mb-5">
 					<Link to="/" className="flex items-center gap-2 press-down">
-						<div className="size-[24px] bg-black dark:bg-white rounded-[2px] flex items-center justify-center">
-							<svg width="20" height="20" viewBox="0 0 269 269" fill="none">
+						<div className="size-[28px] bg-black dark:bg-white rounded-[3px] flex items-center justify-center">
+							<svg width="22" height="22" viewBox="0 0 269 269" fill="none">
 								<path
 									d="M123.273 190.794H93.445L121.09 105.318H85.7334L93.445 80.2642H191.95L184.238 105.318H150.773L123.273 190.794Z"
 									className="fill-white dark:fill-black"
@@ -465,38 +468,60 @@ function AddressView() {
 							</svg>
 						</div>
 					</Link>
-					<Link
-						to="/"
-						className="flex items-center gap-1 pl-1.5 pr-2 h-[28px] rounded-full bg-base-alt hover:bg-base-alt/80 active:bg-base-alt/60 transition-colors text-[12px] text-secondary font-medium"
+					<form
+						onSubmit={(e) => {
+							e.preventDefault()
+							const trimmed = searchValue.trim()
+							if (trimmed.match(/^0x[a-fA-F0-9]{40}$/)) {
+								navigate({ to: '/$address', params: { address: trimmed } })
+								setSearchValue('')
+							}
+						}}
+						className={cx(
+							'flex items-center gap-1.5 pl-2.5 pr-3 h-[36px] rounded-full bg-base-alt transition-colors',
+							searchFocused ? 'ring-1 ring-accent/50' : '',
+						)}
 					>
-						<SearchIcon className="size-[12px]" />
-						<span>Search</span>
-					</Link>
+						<SearchIcon className="size-[14px] text-secondary" />
+						<input
+							type="text"
+							value={searchValue}
+							onChange={(e) => setSearchValue(e.target.value)}
+							onFocus={() => setSearchFocused(true)}
+							onBlur={() => setSearchFocused(false)}
+							placeholder="Search"
+							className="bg-transparent outline-none text-[13px] text-primary placeholder:text-secondary w-[100px] focus:w-[180px] transition-all"
+						/>
+					</form>
+					<button
+						type="button"
+						onClick={() => {
+							disconnect()
+							navigate({ to: '/' })
+						}}
+						className="flex items-center justify-center size-[36px] rounded-full bg-base-alt hover:bg-base-alt/80 active:bg-base-alt/60 transition-colors cursor-pointer"
+						title="Log out"
+					>
+						<LogOutIcon className="size-[14px] text-secondary" />
+					</button>
 				</div>
-				<div className="flex items-stretch justify-between gap-3 mb-4">
-					<div className="flex-1 min-w-0 flex flex-col justify-between">
+				<div className="flex flex-row items-start justify-between gap-4 mb-5">
+					<div className="flex-1 min-w-0 flex flex-col gap-2">
 						<div className="flex items-baseline gap-2">
 							<LottoNumber
 								value={formatUsd(totalValue)}
 								duration={1200}
-								className="text-[56px] font-sans font-semibold text-primary -tracking-[0.02em]"
+								className="text-[32px] sm:text-[40px] md:text-[56px] font-sans font-semibold text-primary -tracking-[0.02em]"
 							/>
 						</div>
-						<div className="flex items-center gap-1.5">
-							<div className="flex flex-col">
-								{addressLines.map((line, i) => (
-									<code
-										key={i}
-										className="text-[13px] font-mono text-secondary leading-tight"
-									>
-										{line}
-									</code>
-								))}
-							</div>
+						<div className="flex items-center gap-2 max-w-full">
+							<code className="text-[12px] sm:text-[13px] font-mono text-secondary leading-tight truncate min-w-0">
+								{address}
+							</code>
 							<button
 								type="button"
 								onClick={() => copy(address)}
-								className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 cursor-pointer press-down transition-colors"
+								className="flex items-center justify-center size-[28px] rounded-md bg-base-alt hover:bg-base-alt/70 cursor-pointer press-down transition-colors shrink-0"
 								title="Copy address"
 							>
 								{notifying ? (
@@ -509,14 +534,19 @@ function AddressView() {
 								href={`https://explore.mainnet.tempo.xyz/address/${address}`}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 press-down transition-colors"
+								className="flex items-center justify-center size-[28px] rounded-md bg-base-alt hover:bg-base-alt/70 press-down transition-colors shrink-0"
 								title="View on Explorer"
 							>
 								<ExternalLinkIcon className="size-[14px] text-tertiary" />
 							</a>
 						</div>
 					</div>
-					<QRCode value={address} size={120} />
+					<QRCode value={address} size={72} className="md:hidden shrink-0" />
+					<QRCode
+						value={address}
+						size={100}
+						className="hidden md:block shrink-0"
+					/>
 				</div>
 
 				<div className="flex flex-col gap-2.5">
@@ -540,7 +570,11 @@ function AddressView() {
 							</button>
 						}
 					>
-						<HoldingsTable assets={displayedAssets} />
+						<HoldingsTable
+							assets={displayedAssets}
+							address={address}
+							showFaucet={showFaucet}
+						/>
 					</Section>
 
 					<Section
@@ -715,7 +749,15 @@ function Section(props: {
 	)
 }
 
-function QRCode({ value, size = 100 }: { value: string; size?: number }) {
+function QRCode({
+	value,
+	size = 100,
+	className,
+}: {
+	value: string
+	size?: number
+	className?: string
+}) {
 	const { data } = encode(value)
 	const gridSize = data.length
 	const cellSize = 100 / gridSize
@@ -747,7 +789,10 @@ function QRCode({ value, size = 100 }: { value: string; size?: number }) {
 		<svg
 			ref={svgRef}
 			aria-label="QR Code - Click to copy address"
-			className="rounded-lg bg-surface p-1.5 cursor-pointer outline-none border border-base-border"
+			className={cx(
+				'rounded-lg bg-surface p-1.5 cursor-pointer outline-none border border-base-border hover:border-accent/50 transition-colors',
+				className,
+			)}
 			width={size}
 			height={size}
 			viewBox="0 0 100 100"
@@ -802,7 +847,8 @@ function FeeTokenSection({ assets }: { assets: AssetData[] }) {
 		<span className="flex items-center gap-1 px-1 h-[24px] bg-base-alt rounded-md text-[11px] text-secondary">
 			<TokenIcon address={currentAsset.address} className="size-[14px]" />
 			<span className="font-mono font-medium">
-				{currentAsset.metadata?.symbol || shortenAddress(currentAsset.address, 3)}
+				{currentAsset.metadata?.symbol ||
+					shortenAddress(currentAsset.address, 3)}
 			</span>
 		</span>
 	) : null
@@ -957,7 +1003,7 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 							<div
 								key={`d-${wi}-${di}`}
 								className={cx(
-									'w-full aspect-square rounded-[2px] cursor-default',
+									'w-full aspect-square rounded-[2px] cursor-default transition-transform hover:scale-125 hover:z-10',
 									getColor(cell.level),
 								)}
 								onMouseEnter={(e) => {
@@ -977,22 +1023,31 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 			</div>
 			{hoveredCell && (
 				<div
-					className="fixed z-[100] px-1.5 py-0.5 text-[12px] text-white bg-gray-900 rounded shadow-lg whitespace-nowrap pointer-events-none"
+					className="fixed z-[100] px-2 py-1 text-[11px] text-white bg-gray-900 rounded-md shadow-lg whitespace-nowrap pointer-events-none border border-gray-700"
 					style={{
 						left: hoveredCell.x,
-						top: hoveredCell.y,
+						top: hoveredCell.y - 6,
 						transform: 'translate(-50%, -100%)',
 					}}
 				>
-					{hoveredCell.count} transaction{hoveredCell.count !== 1 ? 's' : ''} on{' '}
-					{formatDate(hoveredCell.date)}
+					<span className="font-medium">{hoveredCell.count}</span> transaction
+					{hoveredCell.count !== 1 ? 's' : ''} on{' '}
+					<span className="text-gray-300">{formatDate(hoveredCell.date)}</span>
 				</div>
 			)}
 		</div>
 	)
 }
 
-function HoldingsTable({ assets }: { assets: AssetData[] }) {
+function HoldingsTable({
+	assets,
+	address,
+	showFaucet,
+}: {
+	assets: AssetData[]
+	address: string
+	showFaucet?: boolean
+}) {
 	const [sendingToken, setSendingToken] = React.useState<string | null>(null)
 	const [toastMessage, setToastMessage] = React.useState<string | null>(null)
 
@@ -1005,8 +1060,20 @@ function HoldingsTable({ assets }: { assets: AssetData[] }) {
 
 	if (assets.length === 0) {
 		return (
-			<div className="text-[13px] text-secondary py-4 text-center">
-				<p>No assets found.</p>
+			<div className="flex flex-col items-center justify-center py-6 gap-2">
+				<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
+					<svg
+						className="size-5 text-tertiary"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						strokeWidth="2"
+					>
+						<circle cx="12" cy="12" r="10" />
+						<path d="M12 6v12M6 12h12" strokeLinecap="round" />
+					</svg>
+				</div>
+				<p className="text-[13px] text-secondary">No assets found</p>
 			</div>
 		)
 	}
@@ -1022,6 +1089,8 @@ function HoldingsTable({ assets }: { assets: AssetData[] }) {
 					<AssetRow
 						key={asset.address}
 						asset={asset}
+						address={address}
+						showFaucet={showFaucet}
 						isExpanded={sendingToken === asset.address}
 						onToggleSend={() =>
 							setSendingToken(
@@ -1035,27 +1104,37 @@ function HoldingsTable({ assets }: { assets: AssetData[] }) {
 					/>
 				))}
 			</div>
-			{toastMessage && (
-				<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-base-border rounded-xl px-4 py-3 shadow-lg flex flex-col gap-0.5">
-					<span className="text-[13px] text-primary font-medium">
-						{toastMessage}
-					</span>
-					<span className="text-[12px] text-tertiary">
-						This is a demo so balances do not update
-					</span>
-				</div>
-			)}
+			{toastMessage &&
+				createPortal(
+					<div className="fixed bottom-4 right-4 z-50 bg-surface rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12)] overflow-hidden flex">
+						<div className="w-1 bg-positive shrink-0" />
+						<div className="flex flex-col gap-0.5 px-3 py-2 items-start">
+							<span className="flex items-center gap-1.5 text-[13px] text-primary font-medium">
+								<CheckIcon className="size-[14px] text-positive" />
+								{toastMessage}
+							</span>
+							<span className="text-[11px] text-tertiary leading-snug">
+								This is a demo so balances do not update.
+							</span>
+						</div>
+					</div>,
+					document.body,
+				)}
 		</>
 	)
 }
 
 function AssetRow({
 	asset,
+	address,
+	showFaucet,
 	isExpanded,
 	onToggleSend,
 	onSendComplete,
 }: {
 	asset: AssetData
+	address: string
+	showFaucet?: boolean
 	isExpanded: boolean
 	onToggleSend: () => void
 	onSendComplete: (symbol: string) => void
@@ -1065,13 +1144,47 @@ function AssetRow({
 	const [sendState, setSendState] = React.useState<'idle' | 'sending' | 'sent'>(
 		'idle',
 	)
+	const [faucetState, setFaucetState] = React.useState<
+		'idle' | 'loading' | 'done'
+	>('idle')
 	const recipientInputRef = React.useRef<HTMLInputElement>(null)
+
+	const handleFaucet = async () => {
+		setFaucetState('loading')
+		try {
+			await fetch('https://rpc.testnet.tempo.xyz', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'tempo_fundAddress',
+					params: [address],
+				}),
+			})
+			setFaucetState('done')
+			setTimeout(() => setFaucetState('idle'), 2000)
+		} catch {
+			setFaucetState('idle')
+		}
+	}
 
 	React.useEffect(() => {
 		if (isExpanded && recipientInputRef.current) {
 			recipientInputRef.current.focus()
 		}
 	}, [isExpanded])
+
+	React.useEffect(() => {
+		if (!isExpanded) return
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				onToggleSend()
+			}
+		}
+		document.addEventListener('keydown', handleKeyDown)
+		return () => document.removeEventListener('keydown', handleKeyDown)
+	}, [isExpanded, onToggleSend])
 
 	const handleSend = () => {
 		if (!isValidSend) return
@@ -1102,41 +1215,46 @@ function AssetRow({
 
 	if (isExpanded) {
 		return (
-			<>
-				<div
-					className="flex items-center gap-1.5 px-2 hover:bg-base-alt/50 transition-colors"
-					style={{ height: ROW_HEIGHT }}
-				>
+			<form
+				onSubmit={(e) => {
+					e.preventDefault()
+					handleSend()
+				}}
+				className="flex flex-col sm:flex-row sm:items-center gap-1.5 px-2 py-2 sm:py-0 hover:bg-base-alt/50 transition-colors sm:h-[48px]"
+			>
+				<div className="flex items-center gap-1.5 flex-1 min-w-0">
 					<TokenIcon address={asset.address} className="size-[28px] shrink-0" />
 					<input
 						ref={recipientInputRef}
 						type="text"
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
-						placeholder="0x..."
-						className="flex-[2] min-w-0 h-[32px] px-1.5 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
+						placeholder="Recipient 0x..."
+						className="flex-1 min-w-0 h-[32px] px-2 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
-					<div className="relative flex-1 min-w-[120px]">
+				</div>
+				<div className="flex items-center gap-1.5 pl-9 sm:pl-0">
+					<div className="relative flex-1 sm:w-[110px]">
 						<input
 							type="text"
+							inputMode="decimal"
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
-							placeholder="0.00"
-							className="w-full h-[32px] pl-0.5 pr-12 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent text-right"
+							placeholder="Amount"
+							className="w-full h-[32px] pl-2 pr-12 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
 						/>
 						<button
 							type="button"
 							onClick={handleMax}
-							className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors"
+							className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors px-1"
 						>
 							MAX
 						</button>
 					</div>
 					<button
-						type="button"
-						onClick={handleSend}
+						type="submit"
 						className={cx(
-							'size-[24px] rounded-md press-down transition-colors flex items-center justify-center shrink-0',
+							'h-[32px] px-3 rounded-md press-down transition-colors flex items-center justify-center gap-1.5 shrink-0 text-[12px] font-medium',
 							sendState === 'sent'
 								? 'bg-positive text-white cursor-default'
 								: isValidSend
@@ -1150,93 +1268,62 @@ function AssetRow({
 						) : sendState === 'sent' ? (
 							<CheckIcon className="size-[12px]" />
 						) : (
-							<SendIcon className="size-[12px]" />
+							<>
+								<SendIcon className="size-[12px]" />
+								<span className="hidden sm:inline">Send</span>
+							</>
 						)}
 					</button>
 					<button
 						type="button"
 						onClick={handleToggle}
-						className="size-[24px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary transition-colors shrink-0"
+						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-md transition-colors shrink-0"
 						title="Cancel"
 					>
 						<XIcon className="size-[14px]" />
 					</button>
 				</div>
-				{showToast && (
-					<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-base-border rounded-xl px-4 py-3 shadow-lg flex flex-col gap-0.5">
-						<span className="text-[13px] text-primary font-medium">
-							Sent successfully
-						</span>
-						<span className="text-[12px] text-tertiary">
-							This is a demo so balances do not update
-						</span>
-					</div>
-				)}
-			</>
+			</form>
 		)
 	}
 
 	return (
-		<>
-			{showToast && (
-				<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-base-border rounded-xl px-4 py-3 shadow-lg flex flex-col gap-0.5">
-					<span className="text-[13px] text-primary font-medium">
-						Sent successfully
+		<div
+			className="group grid grid-cols-[1fr_auto_60px_auto] md:grid-cols-[1fr_auto_60px_90px_auto] gap-1 hover:bg-base-alt/50 transition-colors"
+			style={{ height: ROW_HEIGHT }}
+		>
+			<span className="px-2 text-primary flex items-center gap-2">
+				<TokenIcon
+					address={asset.address}
+					className="size-[28px] transition-transform group-hover:scale-105"
+				/>
+				<span className="flex flex-col min-w-0">
+					<span className="truncate font-medium">
+						{asset.metadata?.name || shortenAddress(asset.address)}
 					</span>
-					<span className="text-[12px] text-tertiary">
-						This is a demo so balances do not update
-					</span>
-				</div>
-			)}
-			<div
-				className="grid grid-cols-[1fr_100px_80px_auto] md:grid-cols-[1fr_100px_80px_80px_auto] hover:bg-base-alt/50 transition-colors"
-				style={{ height: ROW_HEIGHT }}
-			>
-				<span className="px-2 text-primary flex items-center gap-2">
-					<TokenIcon address={asset.address} className="size-[28px]" />
-					<span className="flex flex-col min-w-0">
-						<span className="truncate font-medium">
-							{asset.metadata?.name || shortenAddress(asset.address)}
-						</span>
-						<span className="text-[11px] text-tertiary font-mono truncate">
-							{asset.metadata?.symbol || shortenAddress(asset.address, 3)}
-						</span>
-					</span>
-				</span>
-				<span
-					className="px-2 flex items-center justify-end overflow-hidden"
-					title={
-						asset.balance !== undefined &&
-						asset.metadata?.decimals !== undefined
-							? formatAmount(asset.balance, asset.metadata.decimals)
-							: undefined
-					}
-				>
-					<span className="flex flex-col items-end">
-						<span className="text-primary font-sans text-[14px] tabular-nums text-right whitespace-nowrap">
-							{asset.balance !== undefined &&
-							asset.metadata?.decimals !== undefined ? (
-								formatAmount(asset.balance, asset.metadata.decimals)
-							) : (
-								<span className="text-tertiary">…</span>
-							)}
-						</span>
-						<span className="text-secondary text-[11px] md:hidden whitespace-nowrap">
-							{asset.valueUsd !== undefined ? (
-								formatUsd(asset.valueUsd)
-							) : (
-								<span className="text-tertiary">…</span>
-							)}
-						</span>
-					</span>
-				</span>
-				<span className="px-2 flex items-center justify-start overflow-hidden">
-					<span className="text-[10px] font-medium text-tertiary bg-base-alt px-1 py-0.5 rounded font-mono truncate max-w-full">
+					<span className="text-[11px] text-tertiary font-mono truncate">
 						{asset.metadata?.symbol || shortenAddress(asset.address, 3)}
 					</span>
 				</span>
-				<span className="px-2 text-secondary hidden md:flex items-center justify-end">
-					<span className="font-sans tabular-nums whitespace-nowrap">
+			</span>
+			<span
+				className="px-2 flex items-center justify-end overflow-hidden"
+				title={
+					asset.balance !== undefined && asset.metadata?.decimals !== undefined
+						? formatAmount(asset.balance, asset.metadata.decimals)
+						: undefined
+				}
+			>
+				<span className="flex flex-col items-end">
+					<span className="text-primary font-sans text-[14px] tabular-nums text-right whitespace-nowrap">
+						{asset.balance !== undefined &&
+						asset.metadata?.decimals !== undefined ? (
+							formatAmount(asset.balance, asset.metadata.decimals)
+						) : (
+							<span className="text-tertiary">…</span>
+						)}
+					</span>
+					<span className="text-secondary text-[11px] md:hidden whitespace-nowrap">
 						{asset.valueUsd !== undefined ? (
 							formatUsd(asset.valueUsd)
 						) : (
@@ -1244,31 +1331,55 @@ function AssetRow({
 						)}
 					</span>
 				</span>
-				<span className="pr-2 flex items-center justify-end relative z-10">
+			</span>
+			<span className="pl-1 flex items-center justify-start">
+				<span className="text-[9px] font-medium text-tertiary bg-base-alt px-1 py-0.5 rounded font-mono whitespace-nowrap">
+					{asset.metadata?.symbol || shortenAddress(asset.address, 3)}
+				</span>
+			</span>
+			<span className="px-2 text-secondary hidden md:flex items-center justify-end">
+				<span className="font-sans tabular-nums whitespace-nowrap">
+					{asset.valueUsd !== undefined ? (
+						formatUsd(asset.valueUsd)
+					) : (
+						<span className="text-tertiary">…</span>
+					)}
+				</span>
+			</span>
+			<span className="pr-2 flex items-center justify-end gap-0.5 relative z-10">
+				{showFaucet && (
 					<button
 						type="button"
 						onClick={(e) => {
 							e.stopPropagation()
-							handleToggle()
+							handleFaucet()
 						}}
+						disabled={faucetState === 'loading'}
 						className="flex items-center justify-center size-[24px] rounded-md hover:bg-accent/10 cursor-pointer transition-colors group"
-						title="Send"
+						title="Request tokens"
 					>
-						<SendIcon className="size-[14px] text-tertiary group-hover:text-accent transition-colors" />
+						{faucetState === 'loading' ? (
+							<span className="size-[12px] border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+						) : faucetState === 'done' ? (
+							<CheckIcon className="size-[14px] text-positive" />
+						) : (
+							<DropletIcon className="size-[14px] text-tertiary group-hover:text-accent transition-colors" />
+						)}
 					</button>
-				</span>
-			</div>
-			{showToast && (
-				<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-base-border rounded-xl px-4 py-3 shadow-lg flex flex-col gap-0.5">
-					<span className="text-[13px] text-primary font-medium">
-						Sent successfully
-					</span>
-					<span className="text-[12px] text-tertiary">
-						This is a demo so balances do not update
-					</span>
-				</div>
-			)}
-		</>
+				)}
+				<button
+					type="button"
+					onClick={(e) => {
+						e.stopPropagation()
+						handleToggle()
+					}}
+					className="flex items-center justify-center size-[28px] rounded-md hover:bg-accent/10 cursor-pointer transition-all opacity-60 group-hover:opacity-100"
+					title="Send"
+				>
+					<SendIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
+				</button>
+			</span>
+		</div>
 	)
 }
 
@@ -1283,8 +1394,11 @@ function ActivityList({
 
 	if (activity.length === 0) {
 		return (
-			<div className="text-[13px] text-secondary py-4 text-center">
-				<p>No activity yet.</p>
+			<div className="flex flex-col items-center justify-center py-6 gap-2">
+				<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
+					<ReceiptIcon className="size-5 text-tertiary" />
+				</div>
+				<p className="text-[13px] text-secondary">No activity yet</p>
 			</div>
 		)
 	}
@@ -1319,7 +1433,7 @@ function ActivityRow({
 
 	return (
 		<>
-			<div className="flex items-center gap-2 px-2 h-[44px] hover:bg-base-alt/50 transition-colors">
+			<div className="group flex items-center gap-2 px-2 h-[44px] hover:bg-base-alt/50 transition-colors">
 				<TxDescription.ExpandGroup
 					events={item.events}
 					seenAs={viewer}
@@ -1331,18 +1445,18 @@ function ActivityRow({
 					href={`https://explore.mainnet.tempo.xyz/tx/${item.hash}`}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 transition-colors"
+					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 transition-all opacity-60 group-hover:opacity-100"
 					title="View on Explorer"
 				>
-					<ExternalLinkIcon className="size-[14px] text-tertiary" />
+					<ExternalLinkIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
 				</a>
 				<button
 					type="button"
 					onClick={() => setShowModal(true)}
-					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 cursor-pointer transition-colors"
+					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 cursor-pointer transition-all opacity-60 group-hover:opacity-100"
 					title="View receipt"
 				>
-					<ReceiptIcon className="size-[14px] text-tertiary" />
+					<ReceiptIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
 				</button>
 			</div>
 			{showModal &&
