@@ -54,7 +54,9 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "moderato"
+				"VITE_TEMPO_ENV": "moderato",
+				"VITE_BALANCES_API_URL": "https://balances-presto.hi-8fc.workers.dev/",
+				"PRESTO_RPC_AUTH": "REMOVED_SECRET"
 			},
 			"workers_dev": true,
 			"observability": {
@@ -84,7 +86,8 @@
 			],
 			"vars": {
 				"VITE_TEMPO_ENV": "presto",
-				"VITE_BALANCES_API_URL": "https://balances-presto.hi-8fc.workers.dev/"
+				"VITE_BALANCES_API_URL": "https://balances-presto.hi-8fc.workers.dev/",
+				"PRESTO_RPC_AUTH": "REMOVED_SECRET"
 			},
 			"workers_dev": true,
 			"observability": {

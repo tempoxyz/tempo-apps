@@ -116,14 +116,14 @@ export function Intro() {
 		<div className="relative flex min-h-full flex-col items-start justify-end rounded-[20px] liquid-glass-premium px-5 sm:px-6 py-5 overflow-hidden">
 			<AmbientGradient />
 			<StretchingWordmark className="absolute inset-0" />
-			<div className="relative flex flex-col items-start gap-y-2">
+			<div className="relative flex flex-col items-start gap-y-2 z-10">
 				<TempoWordmark />
 				<p className="text-[15px] sm:text-[17px] leading-[22px] sm:leading-[24px] text-secondary">
 					The fastest way to explore accounts,
 					<br />
 					balances, and activity on Tempo.
 				</p>
-				<div className="flex gap-1.5 flex-wrap">
+				<div className="flex gap-1.5 flex-wrap isolate">
 					<a
 						className="flex items-center gap-1 px-3 py-1.5 text-[13px] font-medium text-secondary glass-pill rounded-full hover:text-primary transition-all"
 						href="https://tempo.xyz"
