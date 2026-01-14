@@ -20,7 +20,7 @@ export namespace Layout {
 				className="ml-[calc(45vw+8px)] flex w-full flex-1 flex-col py-3 max-md:py-2 max-lg:ml-0"
 				{...props}
 			>
-				<div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-3 max-sm:px-2">
+				<div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 max-sm:px-4">
 					{props.children}
 				</div>
 			</div>

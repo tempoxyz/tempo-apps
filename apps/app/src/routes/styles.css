@@ -176,7 +176,7 @@ html,
 body {
 	font-family: var(--font-display);
 	@apply text-base;
-	min-width: 400px;
+	min-width: 320px;
 	user-select: none;
 }
 

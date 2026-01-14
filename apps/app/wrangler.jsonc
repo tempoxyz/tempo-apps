@@ -1,5 +1,6 @@
 {
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "app-presto",
 	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.server.ts",
@@ -7,6 +8,10 @@
 	"workers_dev": true,
 	"preview_urls": true,
 	"placement": { "mode": "smart" },
+	"vars": {
+		"VITE_TEMPO_ENV": "presto",
+		"VITE_BALANCES_API_URL": "https://balances-presto.hi-8fc.workers.dev/"
+	},
 	"env": {
 		"devnet": {
 			"name": "app-devnet",
@@ -19,7 +24,8 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "devnet"
+				"VITE_TEMPO_ENV": "devnet",
+				"VITE_BALANCES_API_URL": "https://balances-presto.hi-8fc.workers.dev/"
 			},
 			"workers_dev": true,
 			"observability": {
@@ -77,7 +83,8 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "presto"
+				"VITE_TEMPO_ENV": "presto",
+				"VITE_BALANCES_API_URL": "https://balances-presto.hi-8fc.workers.dev/"
 			},
 			"workers_dev": true,
 			"observability": {
