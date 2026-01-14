@@ -2,9 +2,9 @@
 	"settings": {
 		"title": "Settings",
 		"feeToken": "Fee Token",
-		"feeToken.description": "Select which token to use for paying transaction fees.",
+		"feeTokenDescription": "Select which token to use for paying transaction fees.",
 		"language": "Language",
-		"language.description": "Choose your preferred language."
+		"languageDescription": "Choose your preferred language."
 	},
 	"common": {
 		"active": "Active",

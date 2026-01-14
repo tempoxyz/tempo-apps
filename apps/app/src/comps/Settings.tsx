@@ -1,5 +1,6 @@
 import type { Address } from 'ox'
 import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#lib/css'
 import ChevronRightIcon from '~icons/lucide/chevron-right'
@@ -43,6 +44,7 @@ export function Settings({
 	currentLanguage,
 	onLanguageChange,
 }: SettingsProps) {
+	const { t } = useTranslation()
 	const [currentView, setCurrentView] = React.useState<SettingsView>('main')
 	const [slideDirection, setSlideDirection] = React.useState<
 		'forward' | 'backward'
@@ -86,7 +88,7 @@ export function Settings({
 					>
 						<span className="flex flex-col flex-1 min-w-0 text-left">
 							<span className="text-[13px] text-primary font-medium">
-								Fee Token
+								{t('settings.feeToken')}
 							</span>
 							<span className="text-[11px] text-tertiary">
 								{currentFeeAsset?.metadata?.symbol ||
@@ -104,7 +106,7 @@ export function Settings({
 					>
 						<span className="flex flex-col flex-1 min-w-0 text-left">
 							<span className="text-[13px] text-primary font-medium">
-								Language
+								{t('settings.language')}
 							</span>
 							<span className="text-[11px] text-tertiary">
 								{currentLangObj?.name || 'English'}
@@ -134,14 +136,14 @@ export function Settings({
 						className="flex items-center gap-2 px-3 h-[40px] text-[13px] text-accent cursor-pointer hover:text-accent/80 transition-colors"
 					>
 						<ArrowLeftIcon className="size-[14px]" />
-						<span>Back</span>
+						<span>{t('common.back')}</span>
 					</button>
 					<p className="text-[13px] text-secondary px-3 pb-1">
-						Select which token to use for paying transaction fees.
+						{t('settings.feeTokenDescription')}
 					</p>
 					{assetsWithBalance.length === 0 ? (
 						<div className="text-[13px] text-secondary py-4 text-center">
-							<p>No tokens available for fees.</p>
+							<p>{t('common.noTokensForFees')}</p>
 						</div>
 					) : (
 						assetsWithBalance.map((asset) => {
@@ -163,7 +165,7 @@ export function Settings({
 									</span>
 									{isCurrent ? (
 										<span className="text-[11px] font-medium bg-positive/10 text-positive rounded px-1.5 py-0.5 text-center">
-											Active
+											{t('common.active')}
 										</span>
 									) : (
 										<button
@@ -171,7 +173,7 @@ export function Settings({
 											onClick={() => onFeeTokenChange(asset.address)}
 											className="text-[11px] font-medium bg-accent/10 text-accent rounded px-1.5 py-0.5 text-center cursor-pointer press-down hover:bg-accent/20 transition-colors"
 										>
-											Set
+											{t('common.set')}
 										</button>
 									)}
 								</div>
@@ -200,10 +202,10 @@ export function Settings({
 						className="flex items-center gap-2 px-3 h-[40px] text-[13px] text-accent cursor-pointer hover:text-accent/80 transition-colors"
 					>
 						<ArrowLeftIcon className="size-[14px]" />
-						<span>Back</span>
+						<span>{t('common.back')}</span>
 					</button>
 					<p className="text-[13px] text-secondary px-3 pb-1">
-						Select your preferred language.
+						{t('settings.languageDescription')}
 					</p>
 					{LANGUAGES.map((lang) => {
 						const isCurrent = currentLanguage === lang.code
@@ -219,7 +221,7 @@ export function Settings({
 								</span>
 								{isCurrent ? (
 									<span className="text-[11px] font-medium bg-positive/10 text-positive rounded px-1.5 py-0.5 text-center">
-										Active
+										{t('common.active')}
 									</span>
 								) : (
 									<button
@@ -227,7 +229,7 @@ export function Settings({
 										onClick={() => onLanguageChange(lang.code)}
 										className="text-[11px] font-medium bg-accent/10 text-accent rounded px-1.5 py-0.5 text-center cursor-pointer press-down hover:bg-accent/20 transition-colors"
 									>
-										Set
+										{t('common.set')}
 									</button>
 								)}
 							</div>

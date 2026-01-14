@@ -2,9 +2,9 @@
 	"settings": {
 		"title": "設定",
 		"feeToken": "手数料トークン",
-		"feeToken.description": "取引手数料の支払いに使用するトークンを選択してください。",
+		"feeTokenDescription": "取引手数料の支払いに使用するトークンを選択してください。",
 		"language": "言語",
-		"language.description": "ご希望の言語を選択してください。"
+		"languageDescription": "ご希望の言語を選択してください。"
 	},
 	"common": {
 		"active": "アクティブ",

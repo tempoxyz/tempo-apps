@@ -2,9 +2,9 @@
 	"settings": {
 		"title": "设置",
 		"feeToken": "手续费代币",
-		"feeToken.description": "选择用于支付交易手续费的代币。",
+		"feeTokenDescription": "选择用于支付交易手续费的代币。",
 		"language": "语言",
-		"language.description": "选择您的首选语言。"
+		"languageDescription": "选择您的首选语言。"
 	},
 	"common": {
 		"active": "活跃",
