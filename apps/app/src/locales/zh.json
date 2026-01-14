@@ -20,6 +20,10 @@
 	"portfolio": {
 		"title": "投资组合",
 		"assets": "资产",
-		"activity": "活动"
+		"activity": "活动",
+		"assetCount": "个资产",
+		"assetCount_plural": "个资产",
+		"hideZeroBalances": "隐藏零余额",
+		"showZeroBalances": "显示零余额"
 	}
 }
