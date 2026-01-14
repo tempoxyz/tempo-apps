@@ -1,5 +1,7 @@
 import { tempoModerato } from 'viem/chains'
 
+const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
+
 export const tempoPresto = {
 	...tempoModerato,
 	id: 4217,
@@ -12,8 +14,8 @@ export const tempoPresto = {
 	},
 	rpcUrls: {
 		default: {
-			http: ['https://rpc.presto.tempo.xyz'],
-			webSocket: ['wss://rpc.presto.tempo.xyz'],
+			http: [`https://${RPC_PROXY_HOSTNAME}/rpc/4217`],
+			webSocket: [`wss://${RPC_PROXY_HOSTNAME}/rpc/4217`],
 		},
 	},
 } as const

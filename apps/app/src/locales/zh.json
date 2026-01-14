@@ -1,0 +1,25 @@
+{
+	"settings": {
+		"title": "设置",
+		"feeToken": "手续费代币",
+		"feeToken.description": "选择用于支付交易手续费的代币。",
+		"language": "语言",
+		"language.description": "选择您的首选语言。"
+	},
+	"common": {
+		"active": "活跃",
+		"set": "设置",
+		"back": "返回",
+		"noTokensForFees": "没有可用于手续费的代币。",
+		"send": "发送",
+		"recipient": "收款人 0x...",
+		"amount": "金额",
+		"max": "最大",
+		"cancel": "取消"
+	},
+	"portfolio": {
+		"title": "投资组合",
+		"assets": "资产",
+		"activity": "活动"
+	}
+}
