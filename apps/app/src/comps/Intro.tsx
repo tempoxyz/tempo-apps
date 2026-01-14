@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import { StretchingWordmark } from './StretchingWordmark'
 import { useActivitySummary, type ActivityType } from '#lib/activity-context'
 import GlobeIcon from '~icons/lucide/globe'
@@ -112,6 +113,8 @@ function AmbientGradient() {
 }
 
 export function Intro() {
+	const { t } = useTranslation()
+
 	return (
 		<div className="relative flex min-h-full flex-col items-start justify-end rounded-[20px] liquid-glass-premium px-5 sm:px-6 py-5 overflow-hidden">
 			<AmbientGradient />
@@ -119,9 +122,7 @@ export function Intro() {
 			<div className="relative flex flex-col items-start gap-y-2 z-10">
 				<TempoWordmark />
 				<p className="text-[15px] sm:text-[17px] leading-[22px] sm:leading-[24px] text-secondary">
-					The fastest way to explore accounts,
-					<br />
-					balances, and activity on Tempo.
+					{t('intro.tagline')}
 				</p>
 				<div className="flex gap-1.5 flex-wrap isolate">
 					<a
@@ -131,7 +132,7 @@ export function Intro() {
 						target="_blank"
 					>
 						<GlobeIcon className="size-[12px]" />
-						Website
+						{t('intro.website')}
 					</a>
 					<a
 						className="flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-white/90 bg-white/10 border border-white/15 rounded-full hover:text-white hover:border-white/30 hover:bg-white/15 transition-all"
@@ -140,7 +141,7 @@ export function Intro() {
 						target="_blank"
 					>
 						<BookOpenIcon className="size-[12px]" />
-						Docs
+						{t('intro.docs')}
 					</a>
 				</div>
 			</div>

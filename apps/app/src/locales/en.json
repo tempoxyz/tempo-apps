@@ -1,4 +1,9 @@
 {
+	"intro": {
+		"tagline": "The fastest way to explore accounts, balances, and activity on Tempo.",
+		"website": "Website",
+		"docs": "Docs"
+	},
 	"settings": {
 		"title": "Settings",
 		"feeToken": "Fee Token",
