@@ -5,11 +5,24 @@ import { cx } from '#lib/css'
 import ArrowRight from '~icons/lucide/arrow-right'
 import UserIcon from '~icons/lucide/user'
 
-const EXAMPLE_ACCOUNTS = [
-	'0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
-	'0x849151d7D0bF1F34b70d5caD5149D28CC2308bf1',
-	'0x50EC05ADe8280758E2077fcBC08D878D4aef79C3',
-] as const
+const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
+
+const EXAMPLE_ACCOUNTS: Record<string, readonly string[]> = {
+	presto: [
+		'0x195d45da04bd0a8c35800ab322ff9b50ac43e31d',
+		'0xe2172991faf09bb280cd138717652d8f71ae2fd6',
+		'0xf9711617a58f50cae39b24e919955b70971b3ff2',
+	],
+	default: [
+		'0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+		'0x849151d7D0bF1F34b70d5caD5149D28CC2308bf1',
+		'0x50EC05ADe8280758E2077fcBC08D878D4aef79C3',
+	],
+}
+
+function getExampleAccounts() {
+	return EXAMPLE_ACCOUNTS[TEMPO_ENV] ?? EXAMPLE_ACCOUNTS.default
+}
 
 function truncateAddress(address: string) {
 	return `${address.slice(0, 5)}…${address.slice(-3)}`
@@ -77,7 +90,7 @@ function Landing() {
 						</div>
 					</form>
 					<div className="flex items-center gap-1 text-[13px] flex-wrap justify-center">
-						{EXAMPLE_ACCOUNTS.map((addr) => (
+						{getExampleAccounts().map((addr) => (
 							<Link
 								key={addr}
 								to="/$address"
