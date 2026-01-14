@@ -225,16 +225,16 @@ function Landing() {
 							}}
 							disabled={connect.isPending}
 							className={cx(
-								'flex items-center gap-1.5 px-4 py-2 rounded-full justify-center',
-								'glass-button-accent font-medium text-[13px]',
-								'cursor-pointer press-down',
-								'disabled:opacity-70 disabled:cursor-not-allowed',
+								'flex items-center gap-1 px-3 py-1.5 rounded-full justify-center',
+								'glass-button-accent font-medium text-[12px]',
+								'cursor-pointer press-down border border-transparent hover:border-white/30',
+								'disabled:opacity-70 disabled:cursor-not-allowed transition-all',
 							)}
 						>
 							{pendingAction === 'signup' ? (
-								<span className="size-[14px] border-2 border-white/30 border-t-white rounded-full animate-spin" />
+								<span className="size-[12px] border-2 border-white/30 border-t-white rounded-full animate-spin" />
 							) : (
-								<KeyIcon className="size-[14px]" />
+								<KeyIcon className="size-[12px]" />
 							)}
 							<span>Sign up</span>
 						</button>
@@ -248,16 +248,16 @@ function Landing() {
 							}}
 							disabled={connect.isPending}
 							className={cx(
-								'flex items-center gap-1.5 px-4 py-2 rounded-full justify-center',
-								'glass-button text-primary font-medium text-[13px]',
-								'cursor-pointer press-down',
-								'disabled:opacity-70 disabled:cursor-not-allowed',
+								'flex items-center gap-1 px-3 py-1.5 rounded-full justify-center',
+								'glass-button text-primary font-medium text-[12px]',
+								'cursor-pointer press-down border border-transparent hover:border-white/20',
+								'disabled:opacity-70 disabled:cursor-not-allowed transition-all',
 							)}
 						>
 							{pendingAction === 'signin' ? (
-								<span className="size-[14px] border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+								<span className="size-[12px] border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
 							) : (
-								<FingerprintIcon className="size-[14px]" />
+								<FingerprintIcon className="size-[12px]" />
 							)}
 							<span>Sign in</span>
 						</button>

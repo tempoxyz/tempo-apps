@@ -125,21 +125,21 @@ export function Intro() {
 				</p>
 				<div className="flex gap-1.5 flex-wrap isolate">
 					<a
-						className="flex items-center gap-1 px-3 py-1.5 text-[13px] font-medium text-secondary glass-pill rounded-full hover:text-primary transition-all"
+						className="flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-white/90 bg-white/10 border border-white/15 rounded-full hover:text-white hover:border-white/30 hover:bg-white/15 transition-all"
 						href="https://tempo.xyz"
 						rel="noreferrer"
 						target="_blank"
 					>
-						<GlobeIcon className="size-[14px]" />
+						<GlobeIcon className="size-[12px]" />
 						Website
 					</a>
 					<a
-						className="flex items-center gap-1 px-3 py-1.5 text-[13px] font-medium text-secondary glass-pill rounded-full hover:text-primary transition-all"
+						className="flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-white/90 bg-white/10 border border-white/15 rounded-full hover:text-white hover:border-white/30 hover:bg-white/15 transition-all"
 						href="https://docs.tempo.xyz"
 						rel="noreferrer"
 						target="_blank"
 					>
-						<BookOpenIcon className="size-[14px]" />
+						<BookOpenIcon className="size-[12px]" />
 						Docs
 					</a>
 				</div>
