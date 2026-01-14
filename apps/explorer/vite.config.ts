@@ -8,6 +8,7 @@ import { parse } from 'jsonc-parser'
 import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
+import { visualizer } from 'rollup-plugin-visualizer'
 
 const [, , , ...args] = process.argv
 
@@ -48,8 +49,10 @@ export default defineConfig((config) => {
 	return {
 		plugins: [
 			vitePluginAlias(),
-			showDevtools && devtools(),
-			showDevtools && vitePluginChromiumDevTools(),
+			config.mode === 'development' && showDevtools && devtools(),
+			config.mode === 'development' &&
+				showDevtools &&
+				vitePluginChromiumDevTools(),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tailwind(),
 			Icons({ compiler: 'jsx', jsx: 'react' }),
@@ -60,7 +63,16 @@ export default defineConfig((config) => {
 				client: { entry: './src/index.client.tsx' },
 			}),
 			react(),
-		],
+			process.env.ANALYZE === 'true' &&
+				visualizer({
+					filename:
+						process.env.ANALYZE_JSON === 'true' ? 'stats.json' : 'stats.html',
+					template:
+						process.env.ANALYZE_JSON === 'true' ? 'raw-data' : 'treemap',
+					gzipSize: true,
+					brotliSize: true,
+				}),
+		].filter(Boolean),
 		server: {
 			port,
 			cors: config.mode === 'development' ? false : undefined,

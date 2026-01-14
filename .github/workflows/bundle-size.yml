@@ -1,0 +1,136 @@
+name: Bundle Size
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/explorer/**"
+      - "pnpm-lock.yaml"
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - "apps/explorer/**"
+      - "pnpm-lock.yaml"
+
+concurrency:
+  group: bundle-size-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_ENV: production
+
+jobs:
+  # On main push: build and cache the bundle stats
+  cache-baseline:
+    name: Cache Bundle Stats
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: "recursive"
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Build with bundle analysis
+        working-directory: apps/explorer
+        env:
+          ANALYZE: "true"
+          ANALYZE_JSON: "true"
+        run: pnpm build
+
+      - name: Parse bundle stats
+        working-directory: apps/explorer
+        run: |
+          node --experimental-strip-types scripts/bundle-diff.ts \
+            --skip-build \
+            --output bundle-stats.json
+
+      - name: Save bundle stats to cache
+        uses: actions/cache/save@v4
+        with:
+          path: apps/explorer/bundle-stats.json
+          key: bundle-stats-explorer-main-${{ github.sha }}
+
+      # Also save with a stable key that PRs can restore
+      - name: Save bundle stats with stable key
+        uses: actions/cache/save@v4
+        with:
+          path: apps/explorer/bundle-stats.json
+          key: bundle-stats-explorer-main-latest
+
+  # On PR: compare bundle size against cached baseline
+  compare:
+    name: Compare Bundle Size
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: "recursive"
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Restore baseline from cache
+        id: cache-restore
+        uses: actions/cache/restore@v4
+        with:
+          path: apps/explorer/bundle-stats.json
+          key: bundle-stats-explorer-main-latest
+          restore-keys: |
+            bundle-stats-explorer-main-
+
+      - name: Move baseline if exists
+        if: steps.cache-restore.outputs.cache-hit == 'true'
+        run: mv apps/explorer/bundle-stats.json apps/explorer/baseline-stats.json
+
+      - name: Build with bundle analysis
+        working-directory: apps/explorer
+        env:
+          ANALYZE: "true"
+          ANALYZE_JSON: "true"
+        run: pnpm build
+
+      - name: Generate bundle report
+        id: bundle-report
+        working-directory: apps/explorer
+        run: |
+          if [ -f baseline-stats.json ]; then
+            REPORT=$(node --experimental-strip-types scripts/bundle-diff.ts \
+              --ci \
+              --skip-build \
+              --baseline baseline-stats.json)
+          else
+            REPORT=$(node --experimental-strip-types scripts/bundle-diff.ts \
+              --ci \
+              --skip-build)
+          fi
+
+          # Write to file for the comment action
+          echo "$REPORT" > bundle-report.md
+
+          # Also output for debugging
+          echo "$REPORT"
+
+      - name: Find existing comment
+        uses: peter-evans/find-comment@v3
+        id: find-comment
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: "github-actions[bot]"
+          body-includes: "Bundle Size Report"
+
+      - name: Post or update PR comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          comment-id: ${{ steps.find-comment.outputs.comment-id }}
+          issue-number: ${{ github.event.pull_request.number }}
+          body-path: apps/explorer/bundle-report.md
+          edit-mode: replace
