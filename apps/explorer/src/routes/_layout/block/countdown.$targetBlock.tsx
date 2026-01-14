@@ -233,19 +233,12 @@ function CountdownCard(props: {
 				]}
 			/>
 
-			<p className="text-tertiary text-xs text-center max-w-[400px]">
-				{isCapped ? (
-					<>
-						Target block is very far in the future; date estimate capped at 5
-						years.
-					</>
-				) : (
-					<>
-						Estimated time calculated using an average block time of 500ms.
-						Actual time may vary.
-					</>
-				)}
-			</p>
+			{isCapped && (
+				<p className="text-tertiary text-xs text-center max-w-[400px]">
+					Target block is very far in the future; date estimate capped at 5
+					years.
+				</p>
+			)}
 		</div>
 	)
 }
