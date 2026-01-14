@@ -9,8 +9,10 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
+import { I18nextProvider } from 'react-i18next'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config'
+import i18n from '#lib/i18n'
 import css from './styles.css?url'
 
 export const Route = createRootRouteWithContext<{
@@ -75,24 +77,26 @@ function RootComponent() {
 				<HeadContent />
 			</head>
 			<body className="antialiased">
-				<WagmiProvider config={config} initialState={wagmiState}>
-					<QueryClientProvider client={queryClient}>
-						<Outlet />
-						{import.meta.env.MODE === 'development' &&
-							import.meta.env.VITE_ENABLE_DEVTOOLS === 'true' && (
-								<TanStackDevtools
-									config={{ position: 'bottom-right' }}
-									plugins={[
-										{ name: 'Tanstack Query', render: <ReactQueryDevtools /> },
-										{
-											name: 'Tanstack Router',
-											render: <TanStackRouterDevtoolsPanel />,
-										},
-									]}
-								/>
-							)}
-					</QueryClientProvider>
-				</WagmiProvider>
+				<I18nextProvider i18n={i18n}>
+					<WagmiProvider config={config} initialState={wagmiState}>
+						<QueryClientProvider client={queryClient}>
+							<Outlet />
+							{import.meta.env.MODE === 'development' &&
+								import.meta.env.VITE_ENABLE_DEVTOOLS === 'true' && (
+									<TanStackDevtools
+										config={{ position: 'bottom-right' }}
+										plugins={[
+											{ name: 'Tanstack Query', render: <ReactQueryDevtools /> },
+											{
+												name: 'Tanstack Router',
+												render: <TanStackRouterDevtoolsPanel />,
+											},
+										]}
+									/>
+								)}
+						</QueryClientProvider>
+					</WagmiProvider>
+				</I18nextProvider>
 				<Scripts />
 			</body>
 		</html>
