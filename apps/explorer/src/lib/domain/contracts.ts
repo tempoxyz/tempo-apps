@@ -273,6 +273,17 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			address: Addresses.tip403Registry,
 		},
 	],
+	[
+		'0xcccccccc00000000000000000000000000000000',
+		{
+			name: 'Validator Config',
+			code: '0xef',
+			description: 'Manage validator set and configuration',
+			abi: Abis.validatorConfig,
+			category: 'system',
+			address: '0xcccccccc00000000000000000000000000000000',
+		},
+	],
 ])
 
 /**

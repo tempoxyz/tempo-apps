@@ -43,6 +43,10 @@ const taggedAccounts: Record<Address.Address, AccountTag> = {
 		id: 'system:default-account',
 		label: 'Default Account',
 	},
+	'0xcccccccc00000000000000000000000000000000': {
+		id: 'system:validator-config',
+		label: 'Validator Config',
+	},
 	// genesis tip20 tokens
 	'0x20c0000000000000000000000000000000000000': {
 		id: 'genesis-token:pathusd',
