@@ -11,7 +11,12 @@ import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { encode } from 'uqr'
 import { erc20Abi, formatUnits, parseUnits } from 'viem'
-import { useAccount, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import {
+	useAccount,
+	useDisconnect,
+	useWriteContract,
+	useWaitForTransactionReceipt,
+} from 'wagmi'
 import { getTransactionReceipt } from 'wagmi/actions'
 import {
 	TxDescription,
@@ -1298,9 +1303,9 @@ function AssetRow({
 }) {
 	const [recipient, setRecipient] = React.useState(initialRecipient ?? '')
 	const [amount, setAmount] = React.useState('')
-	const [sendState, setSendState] = React.useState<'idle' | 'sending' | 'sent' | 'error'>(
-		'idle',
-	)
+	const [sendState, setSendState] = React.useState<
+		'idle' | 'sending' | 'sent' | 'error'
+	>('idle')
 	const [sendError, setSendError] = React.useState<string | null>(null)
 	const [faucetState, setFaucetState] = React.useState<
 		'idle' | 'loading' | 'done'
@@ -1308,10 +1313,17 @@ function AssetRow({
 	const recipientInputRef = React.useRef<HTMLInputElement>(null)
 	const amountInputRef = React.useRef<HTMLInputElement>(null)
 
-	const { writeContract, data: txHash, isPending, error: writeError, reset: resetWrite } = useWriteContract()
-	const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
-		hash: txHash,
-	})
+	const {
+		writeContract,
+		data: txHash,
+		isPending,
+		error: writeError,
+		reset: resetWrite,
+	} = useWriteContract()
+	const { isLoading: isConfirming, isSuccess: isConfirmed } =
+		useWaitForTransactionReceipt({
+			hash: txHash,
+		})
 
 	// Handle transaction confirmation
 	React.useEffect(() => {
@@ -1322,16 +1334,27 @@ function AssetRow({
 				setRecipient('')
 				setAmount('')
 				resetWrite()
-				onSendComplete(asset.metadata?.symbol || shortenAddress(asset.address, 3))
+				onSendComplete(
+					asset.metadata?.symbol || shortenAddress(asset.address, 3),
+				)
 			}, 1500)
 		}
-	}, [isConfirmed, asset.metadata?.symbol, asset.address, onSendComplete, resetWrite])
+	}, [
+		isConfirmed,
+		asset.metadata?.symbol,
+		asset.address,
+		onSendComplete,
+		resetWrite,
+	])
 
 	// Handle write errors
 	React.useEffect(() => {
 		if (writeError) {
 			setSendState('error')
-			const shortMessage = 'shortMessage' in writeError ? (writeError.shortMessage as string) : writeError.message
+			const shortMessage =
+				'shortMessage' in writeError
+					? (writeError.shortMessage as string)
+					: writeError.message
 			setSendError(shortMessage || 'Transaction failed')
 			setTimeout(() => {
 				setSendState('idle')
