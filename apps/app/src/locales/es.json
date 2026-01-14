@@ -1,0 +1,25 @@
+{
+	"settings": {
+		"title": "Configuración",
+		"feeToken": "Token de Comisión",
+		"feeToken.description": "Selecciona qué token usar para pagar las comisiones de transacción.",
+		"language": "Idioma",
+		"language.description": "Elige tu idioma preferido."
+	},
+	"common": {
+		"active": "Activo",
+		"set": "Establecer",
+		"back": "Volver",
+		"noTokensForFees": "No hay tokens disponibles para comisiones.",
+		"send": "Enviar",
+		"recipient": "Destinatario 0x...",
+		"amount": "Cantidad",
+		"max": "MÁX",
+		"cancel": "Cancelar"
+	},
+	"portfolio": {
+		"title": "Portafolio",
+		"assets": "Activos",
+		"activity": "Actividad"
+	}
+}
