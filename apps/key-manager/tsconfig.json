@@ -1,0 +1,17 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"lib": ["ESNext"],
+		"types": ["@cloudflare/workers-types/2025-12-17", "node"],
+		"strict": true,
+		"skipLibCheck": true,
+		"noEmit": true,
+		"esModuleInterop": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true
+	},
+	"include": ["src/**/*.ts", "env.d.ts"],
+	"exclude": ["node_modules"]
+}

@@ -1275,9 +1275,14 @@ function AssetRow({
 			const result = await faucetFundAddress({ data: { address } })
 			if (!result.success) {
 				console.error('Faucet error:', result.error)
+				setFaucetState('idle')
+				return
 			}
 			setFaucetState('done')
-			setTimeout(() => setFaucetState('idle'), 2000)
+			// Reload page after short delay to fetch updated balances
+			setTimeout(() => {
+				window.location.reload()
+			}, 1500)
 		} catch (err) {
 			console.error('Faucet error:', err)
 			setFaucetState('idle')

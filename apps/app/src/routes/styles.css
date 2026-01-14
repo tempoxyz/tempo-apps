@@ -485,14 +485,15 @@ input[type="number"] {
 
 /* Glass pill/chip */
 @utility glass-pill {
-	background: light-dark(rgba(255, 255, 255, 0.7), rgba(60, 60, 65, 0.7));
-	backdrop-filter: blur(12px) saturate(160%);
-	-webkit-backdrop-filter: blur(12px) saturate(160%);
-	border: 1px solid
-		light-dark(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.1));
-	box-shadow:
-		0 2px 8px rgba(0, 0, 0, 0.06),
-		inset 0 1px 0 light-dark(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.1));
+	background: rgba(40, 40, 45, 0.5);
+	backdrop-filter: blur(20px);
+	-webkit-backdrop-filter: blur(20px);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+:root.light .glass-pill {
+	background: rgba(255, 255, 255, 0.6);
+	border-color: rgba(0, 0, 0, 0.08);
 }
 
 /* Glass navigation bar */
