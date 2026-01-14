@@ -2,6 +2,7 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
+	redirect,
 	rootRouteId,
 } from '@tanstack/react-router'
 import * as React from 'react'
@@ -54,8 +55,13 @@ export const Route = createFileRoute('/_layout/block/countdown/$targetBlock')({
 			() => context.queryClient.ensureQueryData(blocksQueryOptions()),
 		)
 
+		const targetBlockNumber = BigInt(parsedNumber)
+		if (data.latestBlockNumber >= targetBlockNumber) {
+			throw redirect({ to: '/block/$id', params: { id: targetBlock } })
+		}
+
 		return {
-			targetBlockNumber: BigInt(parsedNumber),
+			targetBlockNumber,
 			currentBlockNumber: data.latestBlockNumber,
 		}
 	},
