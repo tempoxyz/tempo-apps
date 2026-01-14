@@ -9,6 +9,7 @@ import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 import { visualizer } from 'rollup-plugin-visualizer'
+import Sonda from 'sonda/vite'
 
 const [, , , ...args] = process.argv
 
@@ -63,12 +64,12 @@ export default defineConfig((config) => {
 				client: { entry: './src/index.client.tsx' },
 			}),
 			react(),
-			process.env.ANALYZE === 'true' &&
+			// Bundle analysis - Sonda for visualization, stats.json for diffs
+			process.env.ANALYZE === 'true' && Sonda(),
+			process.env.ANALYZE_JSON === 'true' &&
 				visualizer({
-					filename:
-						process.env.ANALYZE_JSON === 'true' ? 'stats.json' : 'stats.html',
-					template:
-						process.env.ANALYZE_JSON === 'true' ? 'raw-data' : 'treemap',
+					filename: 'stats.json',
+					template: 'raw-data',
 					gzipSize: true,
 					brotliSize: true,
 				}),
@@ -83,6 +84,7 @@ export default defineConfig((config) => {
 		},
 		build: {
 			minify: 'oxc',
+			sourcemap: true, // Required for Sonda
 			rollupOptions: {
 				output: {
 					minify: {
