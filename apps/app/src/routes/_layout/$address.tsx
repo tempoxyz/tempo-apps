@@ -414,16 +414,19 @@ async function fetchTransactions(
 			return generateMockActivity(address, assets)
 		}
 
-		const txHashes = result.transactions
+		const txData = result.transactions
 			.slice(0, 10)
-			.map((tx: { hash: string }) => tx.hash)
+			.map((tx: { hash: string; timestamp?: string }) => ({
+				hash: tx.hash,
+				timestamp: tx.timestamp ? new Date(tx.timestamp).getTime() : Date.now(),
+			}))
 
 		const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) => {
 			return tokenMetadataMap.get(tokenAddress)
 		}
 
 		const items: ActivityItem[] = []
-		for (const hash of txHashes) {
+		for (const { hash, timestamp } of txData) {
 			try {
 				const receipt = await getTransactionReceipt(config, {
 					hash: hash as `0x${string}`,
@@ -432,7 +435,7 @@ async function fetchTransactions(
 					getTokenMetadata,
 					viewer: address,
 				})
-				items.push({ hash, events })
+				items.push({ hash, events, timestamp })
 			} catch {
 				// Skip failed receipts
 			}
@@ -545,7 +548,9 @@ function AddressView() {
 		(a, i, arr) => arr.findIndex((b) => b.address === a.address) === i,
 	)
 	const assetsWithBalance = dedupedAssets.filter(
-		(a) => a.balance && a.balance !== '0',
+		(a) =>
+			(a.balance && a.balance !== '0') ||
+			FAUCET_TOKEN_ADDRESSES.has(a.address.toLowerCase()),
 	)
 	const displayedAssets = showZeroBalances ? dedupedAssets : assetsWithBalance
 
@@ -967,6 +972,13 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 	)
 	const [currentLanguage, setCurrentLanguage] = React.useState('en')
 
+	const handleLanguageChange = React.useCallback((lang: string) => {
+		setCurrentLanguage(lang)
+		import('#lib/i18n').then((mod) => {
+			mod.default.changeLanguage(lang)
+		})
+	}, [])
+
 	return (
 		<Section title="Settings">
 			<Settings
@@ -974,7 +986,7 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 				currentFeeToken={currentFeeToken}
 				onFeeTokenChange={setCurrentFeeToken}
 				currentLanguage={currentLanguage}
-				onLanguageChange={setCurrentLanguage}
+				onLanguageChange={handleLanguageChange}
 			/>
 		</Section>
 	)
@@ -1020,7 +1032,6 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 
 	const activityByDay = React.useMemo(() => {
 		const counts = new Map<string, number>()
-		const now = Date.now()
 
 		for (let i = 0; i < activity.length; i++) {
 			const item = activity[i]
@@ -1036,7 +1047,8 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 		const data: { level: number; count: number; date: string }[][] = []
 		const now = new Date()
 		const startDate = new Date(now)
-		startDate.setDate(startDate.getDate() - weeks * 7)
+		// Start from (weeks * 7 - 1) days ago so we end on today
+		startDate.setDate(startDate.getDate() - (weeks * 7 - 1))
 
 		const maxCount = Math.max(1, ...activityByDay.values())
 
