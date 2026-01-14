@@ -1,4 +1,4 @@
-import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { waapi, spring } from 'animejs'
 import type { Address } from 'ox'
@@ -45,17 +45,16 @@ const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
 
 // Tokens that can be funded via the faucet
 const FAUCET_TOKEN_ADDRESSES = new Set([
-	'0x20c0000000000000000000000000000000000000', // pathUSD
-	'0x20c0000000000000000000000000000000000001', // αUSD
-	'0x20c0000000000000000000000000000000000002', // βUSD
-	'0x20c0000000000000000000000000000000000003', // θUSD
+	'0x20c000000000000000000000033abb6ac7d235e5', // DONOTUSE
 ])
 
 const faucetFundAddress = createServerFn({ method: 'POST' })
 	.inputValidator((data: { address: string }) => data)
 	.handler(async ({ data }) => {
 		const { address } = data
-		const auth = process.env.PRESTO_RPC_AUTH
+		// Use cloudflare:workers env for Cloudflare Workers runtime
+		const { env } = await import('cloudflare:workers')
+		const auth = env.PRESTO_RPC_AUTH as string | undefined
 		if (!auth) {
 			return { success: false as const, error: 'Auth not configured' }
 		}
@@ -65,7 +64,7 @@ const faucetFundAddress = createServerFn({ method: 'POST' })
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					Authorization: `Basic ${Buffer.from(auth).toString('base64')}`,
+					Authorization: `Basic ${btoa(auth)}`,
 				},
 				body: JSON.stringify({
 					jsonrpc: '2.0',
@@ -250,10 +249,12 @@ const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 				? 'https://explore.presto.tempo.xyz'
 				: 'https://explore.mainnet.tempo.xyz'
 
-		const auth = process.env.PRESTO_RPC_AUTH
+		// Use cloudflare:workers env for Cloudflare Workers runtime
+		const { env } = await import('cloudflare:workers')
+		const auth = env.PRESTO_RPC_AUTH as string | undefined
 		const headers: Record<string, string> = {}
 		if (auth) {
-			headers.Authorization = `Basic ${Buffer.from(auth).toString('base64')}`
+			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
 		try {
@@ -483,8 +484,13 @@ function AddressView() {
 	const { setSummary } = useActivitySummary()
 	const { disconnect } = useDisconnect()
 	const navigate = useNavigate()
+	const router = useRouter()
 	const [searchValue, setSearchValue] = React.useState('')
 	const [searchFocused, setSearchFocused] = React.useState(false)
+
+	const handleFaucetSuccess = React.useCallback(() => {
+		router.invalidate()
+	}, [router])
 
 	React.useEffect(() => {
 		if (activity.length > 0) {
@@ -588,7 +594,7 @@ function AddressView() {
 							<LottoNumber
 								value={formatUsd(totalValue)}
 								duration={1200}
-								className="text-[32px] sm:text-[40px] md:text-[56px] font-sans font-semibold text-primary -tracking-[0.02em]"
+								className="text-[32px] sm:text-[40px] md:text-[56px] font-sans font-semibold text-primary -tracking-[0.02em] tabular-nums"
 							/>
 						</div>
 						<div className="flex items-center gap-2 max-w-full">
@@ -649,7 +655,7 @@ function AddressView() {
 							</button>
 						}
 					>
-						<HoldingsTable assets={displayedAssets} address={address} />
+						<HoldingsTable assets={displayedAssets} address={address} onFaucetSuccess={handleFaucetSuccess} />
 					</Section>
 
 					<Section
@@ -1117,9 +1123,11 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 function HoldingsTable({
 	assets,
 	address,
+	onFaucetSuccess,
 }: {
 	assets: AssetData[]
 	address: string
+	onFaucetSuccess?: () => void
 }) {
 	const [sendingToken, setSendingToken] = React.useState<string | null>(null)
 	const [toastMessage, setToastMessage] = React.useState<string | null>(null)
@@ -1181,6 +1189,7 @@ function HoldingsTable({
 							setToastMessage(`Sent ${symbol} successfully`)
 							setSendingToken(null)
 						}}
+						onFaucetSuccess={onFaucetSuccess}
 					/>
 				))}
 			</div>
@@ -1221,6 +1230,7 @@ function AssetRow({
 	isExpanded,
 	onToggleSend,
 	onSendComplete,
+	onFaucetSuccess,
 }: {
 	asset: AssetData
 	address: string
@@ -1228,6 +1238,7 @@ function AssetRow({
 	isExpanded: boolean
 	onToggleSend: () => void
 	onSendComplete: (symbol: string) => void
+	onFaucetSuccess?: () => void
 }) {
 	const [recipient, setRecipient] = React.useState('')
 	const [amount, setAmount] = React.useState('')
@@ -1249,7 +1260,11 @@ function AssetRow({
 				return
 			}
 			setFaucetState('done')
-			setTimeout(() => setFaucetState('idle'), 2000)
+			// Delay refresh to let the transaction propagate
+			setTimeout(() => {
+				setFaucetState('idle')
+				onFaucetSuccess?.()
+			}, 2000)
 		} catch (err) {
 			console.error('Faucet error:', err)
 			setFaucetState('idle')
@@ -1317,7 +1332,7 @@ function AssetRow({
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
 						placeholder="Recipient 0x..."
-						className="flex-1 min-w-0 h-[32px] px-2 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="flex-1 min-w-0 h-[32px] px-2.5 rounded-full border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
 				</div>
 				<div className="flex items-center gap-1.5 pl-9 sm:pl-0">
@@ -1328,12 +1343,12 @@ function AssetRow({
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
 							placeholder="Amount"
-							className="w-full h-[32px] pl-2 pr-12 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
+							className="w-full h-[32px] pl-2.5 pr-12 rounded-full border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
 						/>
 						<button
 							type="button"
 							onClick={handleMax}
-							className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors px-1"
+							className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors"
 						>
 							MAX
 						</button>
@@ -1341,7 +1356,7 @@ function AssetRow({
 					<button
 						type="submit"
 						className={cx(
-							'h-[32px] px-3 rounded-md press-down transition-colors flex items-center justify-center gap-1.5 shrink-0 text-[12px] font-medium',
+							'h-[32px] px-3 rounded-full press-down transition-colors flex items-center justify-center gap-1.5 shrink-0 text-[12px] font-medium',
 							sendState === 'sent'
 								? 'bg-positive text-white cursor-default'
 								: isValidSend
@@ -1364,7 +1379,7 @@ function AssetRow({
 					<button
 						type="button"
 						onClick={handleToggle}
-						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-md transition-colors shrink-0"
+						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-full transition-colors shrink-0"
 						title="Cancel"
 					>
 						<XIcon className="size-[14px]" />
@@ -1394,15 +1409,15 @@ function AssetRow({
 				</span>
 			</span>
 			<span
-				className="px-2 flex items-center justify-end overflow-hidden"
+				className="px-2 flex items-center justify-end overflow-hidden min-w-0"
 				title={
 					asset.balance !== undefined && asset.metadata?.decimals !== undefined
 						? formatAmount(asset.balance, asset.metadata.decimals)
 						: undefined
 				}
 			>
-				<span className="flex flex-col items-end">
-					<span className="text-primary font-sans text-[14px] tabular-nums text-right whitespace-nowrap">
+				<span className="flex flex-col items-end min-w-0">
+					<span className="text-primary font-sans text-[14px] tabular-nums text-right truncate max-w-full">
 						{asset.balance !== undefined &&
 						asset.metadata?.decimals !== undefined ? (
 							formatAmount(asset.balance, asset.metadata.decimals)
@@ -1434,26 +1449,30 @@ function AssetRow({
 				</span>
 			</span>
 			<span className="pr-2 flex items-center justify-end gap-0.5 relative z-10">
-				{isFaucetToken && (
-					<button
-						type="button"
-						onClick={(e) => {
-							e.stopPropagation()
-							handleFaucet()
-						}}
-						disabled={faucetState === 'loading'}
-						className="flex items-center justify-center size-[24px] rounded-md hover:bg-accent/10 cursor-pointer transition-colors"
-						title="Request tokens"
-					>
-						{faucetState === 'loading' ? (
-							<BouncingDots />
-						) : faucetState === 'done' ? (
-							<CheckIcon className="size-[14px] text-positive" />
-						) : (
-							<DropletIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
-						)}
-					</button>
-				)}
+				<button
+					type="button"
+					onClick={(e) => {
+						e.stopPropagation()
+						if (isFaucetToken) handleFaucet()
+					}}
+					disabled={faucetState === 'loading' || !isFaucetToken}
+					className={cx(
+						'flex items-center justify-center size-[24px] rounded-md transition-colors',
+						isFaucetToken
+							? 'hover:bg-accent/10 cursor-pointer'
+							: 'opacity-0 pointer-events-none',
+					)}
+					title={isFaucetToken ? 'Request tokens' : undefined}
+					aria-hidden={!isFaucetToken}
+				>
+					{faucetState === 'loading' ? (
+						<BouncingDots />
+					) : faucetState === 'done' ? (
+						<CheckIcon className="size-[14px] text-positive" />
+					) : (
+						<DropletIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
+					)}
+				</button>
 				<button
 					type="button"
 					onClick={(e) => {
