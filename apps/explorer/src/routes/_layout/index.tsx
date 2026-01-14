@@ -17,6 +17,7 @@ import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CoinsIcon from '~icons/lucide/coins'
 import FileIcon from '~icons/lucide/file'
 import ReceiptIcon from '~icons/lucide/receipt'
+import ShieldCheckIcon from '~icons/lucide/shield-check'
 import ShuffleIcon from '~icons/lucide/shuffle'
 import UserIcon from '~icons/lucide/user'
 import ZapIcon from '~icons/lucide/zap'
@@ -377,6 +378,12 @@ function SpotlightLinks() {
 					icon={<CoinsIcon className="size-[14px] text-accent" />}
 				>
 					Tokens
+				</SpotlightPill>
+				<SpotlightPill
+					to="/validators"
+					icon={<ShieldCheckIcon className="size-[14px] text-accent" />}
+				>
+					Validators
 				</SpotlightPill>
 			</div>
 		</section>
