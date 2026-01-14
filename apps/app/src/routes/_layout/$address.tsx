@@ -33,6 +33,7 @@ import {
 	type KnownEvent,
 	type GetTokenMetadataFn,
 } from '#comps/activity'
+import { AddFunds } from '#comps/AddFunds'
 import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
 import { Section } from '#comps/Section'
@@ -1185,6 +1186,10 @@ function AddressView() {
 				</div>
 
 				<div className="flex flex-col gap-2.5">
+					<Section title="Add Funds">
+						<AddFunds address={address} />
+					</Section>
+
 					<Section
 						title={t('portfolio.assets')}
 						subtitle={`${assetsWithBalance.length} ${t('portfolio.assetCount', { count: assetsWithBalance.length })}`}
@@ -1409,6 +1414,16 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 
 	const submenuTitle =
 		currentView !== 'main' ? t(SETTINGS_VIEW_TITLES[currentView]) : undefined
+
+	const headerPill = currentAsset ? (
+		<span className="flex items-center gap-1 px-1 h-[24px] bg-base-alt rounded-md text-[11px] text-secondary">
+			<TokenIcon address={currentAsset.address} className="size-[14px]" />
+			<span className="font-mono font-medium">
+				{currentAsset.metadata?.symbol ||
+					shortenAddress(currentAsset.address, 3)}
+			</span>
+		</span>
+	) : null
 
 	return (
 		<Section
@@ -2838,6 +2853,14 @@ function AssetRow({
 		document.addEventListener('keydown', handleKeyDown)
 		return () => document.removeEventListener('keydown', handleKeyDown)
 	}, [isExpanded, onToggleSend])
+
+	React.useEffect(() => {
+		if (sendState === 'sent') {
+			setShowToast(true)
+			const timeout = setTimeout(() => setShowToast(false), 2000)
+			return () => clearTimeout(timeout)
+		}
+	}, [sendState])
 
 	const handleSend = async () => {
 		if (!isValidSend || parsedAmount === 0n) return

@@ -1,0 +1,37 @@
+{
+	"name": "onramp-service",
+	"private": true,
+	"scripts": {
+		"build": "echo 'noop'",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write .",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"deploy:moderato": "wrangler deploy --env moderato",
+		"deploy:mainnet": "wrangler deploy --env mainnet",
+		"format": "biome format --write .",
+		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
+		"tail": "wrangler tail",
+		"test": "vitest --run",
+		"test:watch": "vitest"
+	},
+	"dependencies": {
+		"@hono/zod-validator": "catalog:",
+		"hono": "catalog:",
+		"jose": "^6.1.0",
+		"onramp-service": "link:",
+		"ox": "catalog:",
+		"viem": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/vitest-pool-workers": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"dotenv": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:",
+		"wrangler": "catalog:"
+	}
+}
