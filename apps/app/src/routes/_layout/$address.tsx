@@ -1302,7 +1302,7 @@ function AssetRow({
 	const [sendState, setSendState] = React.useState<'idle' | 'sending' | 'sent' | 'error'>(
 		'idle',
 	)
-	const [_sendError, setSendError] = React.useState<string | null>(null)
+	const [sendError, setSendError] = React.useState<string | null>(null)
 	const [faucetState, setFaucetState] = React.useState<
 		'idle' | 'loading' | 'done'
 	>('idle')
