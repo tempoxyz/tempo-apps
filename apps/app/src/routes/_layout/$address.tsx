@@ -2,6 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router'
 import { waapi, spring } from 'animejs'
 import type { Address } from 'ox'
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import { encode } from 'uqr'
 import { formatUnits } from 'viem'
 import { getTransactionReceipt } from 'wagmi/actions'
@@ -455,11 +456,11 @@ function AddressView() {
 			<div className="pb-3 -mt-3 max-md:-mt-2">
 				<div className="flex items-center justify-between mb-4">
 					<Link to="/" className="flex items-center gap-2 press-down">
-						<div className="size-[24px] bg-black rounded-[2px] flex items-center justify-center">
+						<div className="size-[24px] bg-black dark:bg-white rounded-[2px] flex items-center justify-center">
 							<svg width="20" height="20" viewBox="0 0 269 269" fill="none">
 								<path
 									d="M123.273 190.794H93.445L121.09 105.318H85.7334L93.445 80.2642H191.95L184.238 105.318H150.773L123.273 190.794Z"
-									fill="white"
+									className="fill-white dark:fill-black"
 								/>
 							</svg>
 						</div>
@@ -1060,7 +1061,7 @@ function AssetRow({
 				setRecipient('')
 				setAmount('')
 				onToggleSend()
-			}, 2000)
+			}, 3000)
 		}, 800)
 	}
 
@@ -1096,15 +1097,15 @@ function AssetRow({
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
 						placeholder="0x..."
-						className="flex-[3] min-w-0 h-[32px] px-1.5 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="flex-[2] min-w-0 h-[32px] px-1.5 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
-					<div className="relative flex-1 min-w-[80px]">
+					<div className="relative flex-1 min-w-[120px]">
 						<input
 							type="text"
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
 							placeholder="0.00"
-							className="w-full h-[32px] px-1.5 pr-10 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent text-right"
+							className="w-full h-[32px] pl-0.5 pr-12 rounded-md border border-base-border bg-surface text-[13px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent text-right"
 						/>
 						<button
 							type="button"
@@ -1145,8 +1146,13 @@ function AssetRow({
 					</button>
 				</div>
 				{showToast && (
-					<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-base-border rounded-lg px-4 py-3 shadow-lg text-[13px] text-secondary">
-						Demo mode: Send triggered but balances will not update
+					<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-base-border rounded-xl px-4 py-3 shadow-lg flex flex-col gap-0.5">
+						<span className="text-[13px] text-primary font-medium">
+							Sent successfully
+						</span>
+						<span className="text-[12px] text-tertiary">
+							This is a demo so balances do not update
+						</span>
 					</div>
 				)}
 			</>
@@ -1154,39 +1160,68 @@ function AssetRow({
 	}
 
 	return (
-		<div
-			className="grid grid-cols-[1fr_100px_80px_auto] md:grid-cols-[1fr_100px_80px_80px_auto] hover:bg-base-alt/50 transition-colors"
-			style={{ height: ROW_HEIGHT }}
-		>
-			<span className="px-2 text-primary flex items-center gap-2">
-				<TokenIcon address={asset.address} className="size-[28px]" />
-				<span className="flex flex-col min-w-0">
-					<span className="truncate font-medium">
-						{asset.metadata?.name ?? <span className="text-tertiary">…</span>}
+		<>
+			{showToast && (
+				<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-base-border rounded-xl px-4 py-3 shadow-lg flex flex-col gap-0.5">
+					<span className="text-[13px] text-primary font-medium">
+						Sent successfully
 					</span>
-					<span className="text-[11px] text-tertiary font-mono truncate">
-						{asset.metadata?.symbol ?? ''}
+					<span className="text-[12px] text-tertiary">
+						This is a demo so balances do not update
+					</span>
+				</div>
+			)}
+			<div
+				className="grid grid-cols-[1fr_100px_80px_auto] md:grid-cols-[1fr_100px_80px_80px_auto] hover:bg-base-alt/50 transition-colors"
+				style={{ height: ROW_HEIGHT }}
+			>
+				<span className="px-2 text-primary flex items-center gap-2">
+					<TokenIcon address={asset.address} className="size-[28px]" />
+					<span className="flex flex-col min-w-0">
+						<span className="truncate font-medium">
+							{asset.metadata?.name ?? <span className="text-tertiary">…</span>}
+						</span>
+						<span className="text-[11px] text-tertiary font-mono truncate">
+							{asset.metadata?.symbol ?? ''}
+						</span>
 					</span>
 				</span>
-			</span>
-			<span
-				className="px-2 flex items-center justify-end overflow-hidden"
-				title={
-					asset.balance !== undefined && asset.metadata?.decimals !== undefined
-						? formatAmount(asset.balance, asset.metadata.decimals)
-						: undefined
-				}
-			>
-				<span className="flex flex-col items-end">
-					<span className="text-primary font-sans text-[14px] tabular-nums text-right whitespace-nowrap">
-						{asset.balance !== undefined &&
-						asset.metadata?.decimals !== undefined ? (
-							formatAmount(asset.balance, asset.metadata.decimals)
-						) : (
-							<span className="text-tertiary">…</span>
-						)}
+				<span
+					className="px-2 flex items-center justify-end overflow-hidden"
+					title={
+						asset.balance !== undefined &&
+						asset.metadata?.decimals !== undefined
+							? formatAmount(asset.balance, asset.metadata.decimals)
+							: undefined
+					}
+				>
+					<span className="flex flex-col items-end">
+						<span className="text-primary font-sans text-[14px] tabular-nums text-right whitespace-nowrap">
+							{asset.balance !== undefined &&
+							asset.metadata?.decimals !== undefined ? (
+								formatAmount(asset.balance, asset.metadata.decimals)
+							) : (
+								<span className="text-tertiary">…</span>
+							)}
+						</span>
+						<span className="text-secondary text-[11px] md:hidden whitespace-nowrap">
+							{asset.valueUsd !== undefined ? (
+								formatUsd(asset.valueUsd)
+							) : (
+								<span className="text-tertiary">…</span>
+							)}
+						</span>
 					</span>
-					<span className="text-secondary text-[11px] md:hidden whitespace-nowrap">
+				</span>
+				<span className="px-2 flex items-center justify-start overflow-hidden">
+					{asset.metadata?.symbol && (
+						<span className="text-[10px] font-medium text-tertiary bg-base-alt px-1 py-0.5 rounded font-mono truncate max-w-full">
+							{asset.metadata.symbol}
+						</span>
+					)}
+				</span>
+				<span className="px-2 text-secondary hidden md:flex items-center justify-end">
+					<span className="font-sans tabular-nums whitespace-nowrap">
 						{asset.valueUsd !== undefined ? (
 							formatUsd(asset.valueUsd)
 						) : (
@@ -1194,37 +1229,31 @@ function AssetRow({
 						)}
 					</span>
 				</span>
-			</span>
-			<span className="px-2 flex items-center justify-start overflow-hidden">
-				{asset.metadata?.symbol && (
-					<span className="text-[10px] font-medium text-tertiary bg-base-alt px-1 py-0.5 rounded font-mono truncate max-w-full">
-						{asset.metadata.symbol}
-					</span>
-				)}
-			</span>
-			<span className="px-2 text-secondary hidden md:flex items-center justify-end">
-				<span className="font-sans tabular-nums whitespace-nowrap">
-					{asset.valueUsd !== undefined ? (
-						formatUsd(asset.valueUsd)
-					) : (
-						<span className="text-tertiary">…</span>
-					)}
+				<span className="pr-2 flex items-center justify-end relative z-10">
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation()
+							handleToggle()
+						}}
+						className="flex items-center justify-center size-[24px] rounded-md hover:bg-accent/10 cursor-pointer transition-colors group"
+						title="Send"
+					>
+						<SendIcon className="size-[14px] text-tertiary group-hover:text-accent transition-colors" />
+					</button>
 				</span>
-			</span>
-			<span className="pr-2 flex items-center justify-end relative z-10">
-				<button
-					type="button"
-					onClick={(e) => {
-						e.stopPropagation()
-						handleToggle()
-					}}
-					className="flex items-center justify-center size-[24px] rounded-md hover:bg-accent/10 cursor-pointer transition-colors group"
-					title="Send"
-				>
-					<SendIcon className="size-[14px] text-tertiary group-hover:text-accent transition-colors" />
-				</button>
-			</span>
-		</div>
+			</div>
+			{showToast && (
+				<div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-surface border border-base-border rounded-xl px-4 py-3 shadow-lg flex flex-col gap-0.5">
+					<span className="text-[13px] text-primary font-medium">
+						Sent successfully
+					</span>
+					<span className="text-[12px] text-tertiary">
+						This is a demo so balances do not update
+					</span>
+				</div>
+			)}
+		</>
 	)
 }
 
@@ -1301,15 +1330,17 @@ function ActivityRow({
 					<ReceiptIcon className="size-[14px] text-tertiary" />
 				</button>
 			</div>
-			{showModal && (
-				<TransactionModal
-					hash={item.hash}
-					events={item.events}
-					viewer={viewer}
-					transformEvent={transformEvent}
-					onClose={() => setShowModal(false)}
-				/>
-			)}
+			{showModal &&
+				createPortal(
+					<TransactionModal
+						hash={item.hash}
+						events={item.events}
+						viewer={viewer}
+						transformEvent={transformEvent}
+						onClose={() => setShowModal(false)}
+					/>,
+					document.body,
+				)}
 		</>
 	)
 }
