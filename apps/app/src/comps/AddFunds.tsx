@@ -161,26 +161,21 @@ export function AddFunds(props: AddFunds.Props) {
 			{isModalOpen &&
 				ReactDOM.createPortal(
 					<div
-						className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm transition-opacity duration-200"
+						className="fixed inset-y-0 left-1/2 right-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-[2px] transition-opacity duration-200"
 						onClick={reset}
 					>
 						<div
-							className="relative w-full max-w-[420px] h-full bg-surface border-l border-base-border shadow-xl animate-in slide-in-from-right duration-200"
+							className="relative w-full max-w-[400px] bg-surface border border-base-border rounded-xl shadow-xl animate-in fade-in zoom-in-95 duration-200"
 							onClick={(e) => e.stopPropagation()}
 						>
-							<div className="flex items-center justify-between px-4 py-3 border-b border-base-border">
-								<span className="text-[13px] font-medium text-primary">
-									Complete Payment
-								</span>
-								<button
-									type="button"
-									onClick={reset}
-									className="size-[28px] flex items-center justify-center rounded-md cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt transition-colors"
-									title="Close"
-								>
-									<XIcon className="size-[16px]" />
-								</button>
-							</div>
+							<button
+								type="button"
+								onClick={reset}
+								className="absolute top-3 right-3 z-10 size-[28px] flex items-center justify-center rounded-md cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt transition-colors"
+								title="Close"
+							>
+								<XIcon className="size-[16px]" />
+							</button>
 							<div className="p-4">
 								<ApplePayIframe url={iframeUrl} />
 								{lastOrderEvent && (
