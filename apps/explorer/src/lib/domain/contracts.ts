@@ -284,6 +284,17 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			address: '0xcccccccc00000000000000000000000000000000',
 		},
 	],
+	[
+		Addresses.nonceManager,
+		{
+			name: 'Nonce Manager',
+			code: '0xef',
+			description: 'Manage account nonces',
+			abi: [],
+			category: 'system',
+			address: Addresses.nonceManager,
+		},
+	],
 ])
 
 /**

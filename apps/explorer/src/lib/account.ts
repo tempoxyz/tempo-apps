@@ -47,6 +47,10 @@ const taggedAccounts: Record<Address.Address, AccountTag> = {
 		id: 'system:validator-config',
 		label: 'Validator Config',
 	},
+	'0x4e4f4e4345000000000000000000000000000000': {
+		id: 'system:nonce-manager',
+		label: 'Nonce Manager',
+	},
 	// genesis tip20 tokens
 	'0x20c0000000000000000000000000000000000000': {
 		id: 'genesis-token:pathusd',
