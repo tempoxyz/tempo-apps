@@ -145,10 +145,8 @@ async function getPrestoAuth(): Promise<string | undefined> {
 	// Only available on the server - client returns undefined
 	if (typeof window !== 'undefined') return undefined
 	try {
-		const { env } = await import('cloudflare:workers')
-		const auth = env.PRESTO_RPC_AUTH as string | undefined
-		if (!auth) return undefined
-		return `Basic ${btoa(auth)}`
+		const { getPrestoAuthSync } = await import('./lib/presto-auth.server')
+		return getPrestoAuthSync()
 	} catch {
 		return undefined
 	}
