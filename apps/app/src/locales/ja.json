@@ -1,0 +1,25 @@
+{
+	"settings": {
+		"title": "設定",
+		"feeToken": "手数料トークン",
+		"feeToken.description": "取引手数料の支払いに使用するトークンを選択してください。",
+		"language": "言語",
+		"language.description": "ご希望の言語を選択してください。"
+	},
+	"common": {
+		"active": "アクティブ",
+		"set": "設定",
+		"back": "戻る",
+		"noTokensForFees": "手数料に使用できるトークンがありません。",
+		"send": "送信",
+		"recipient": "受取人 0x...",
+		"amount": "金額",
+		"max": "最大",
+		"cancel": "キャンセル"
+	},
+	"portfolio": {
+		"title": "ポートフォリオ",
+		"assets": "資産",
+		"activity": "アクティビティ"
+	}
+}

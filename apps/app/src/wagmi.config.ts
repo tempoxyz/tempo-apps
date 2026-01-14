@@ -2,7 +2,6 @@ import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
 import { tempoDevnet, tempoLocalnet, tempoModerato } from 'viem/chains'
 import { tempoPresto } from './lib/chains'
-import { custom } from 'viem'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -141,44 +140,8 @@ const getRpcUrls = createIsomorphicFn()
 		}
 	})
 
-async function getPrestoAuth(): Promise<string | undefined> {
-	// Only available on the server - client returns undefined
-	if (typeof window !== 'undefined') return undefined
-	try {
-		const { getPrestoAuthSync } = await import('./lib/presto-auth.server')
-		return getPrestoAuthSync()
-	} catch {
-		return undefined
-	}
-}
-
 function getTempoTransport() {
 	const rpcUrls = getRpcUrls()
-	const isPresto = TEMPO_ENV === 'presto'
-
-	// Presto: no WebSocket, use HTTP Basic Auth via custom transport
-	if (isPresto) {
-		const rpcUrl = rpcUrls.http[0]
-		return custom({
-			async request({ method, params }) {
-				const auth = await getPrestoAuth()
-				const response = await fetch(rpcUrl, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						...(auth ? { Authorization: auth } : {}),
-					},
-					body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-				})
-				const data = (await response.json()) as {
-					result?: unknown
-					error?: { message: string }
-				}
-				if (data.error) throw new Error(data.error.message)
-				return data.result
-			},
-		})
-	}
 
 	return fallback([
 		...rpcUrls.http.map((url: string) => http(url, { batch: true })),
