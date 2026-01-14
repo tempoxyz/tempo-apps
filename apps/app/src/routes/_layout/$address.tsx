@@ -43,35 +43,46 @@ const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
 
 const faucetFundAddress = createServerFn({ method: 'POST' })
-	.validator((data: { address: string }) => data)
+	.inputValidator((data: { address: string }) => data)
 	.handler(async ({ data }) => {
 		const auth = process.env.PRESTO_RPC_AUTH
+		if (!auth) {
+			return { success: false as const, error: 'PRESTO_RPC_AUTH not configured' }
+		}
+
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
-		}
-		if (auth) {
-			headers.Authorization = `Basic ${Buffer.from(auth).toString('base64')}`
+			Authorization: `Basic ${Buffer.from(auth).toString('base64')}`,
 		}
 
-		const res = await fetch('https://rpc.presto.tempo.xyz', {
-			method: 'POST',
-			headers,
-			body: JSON.stringify({
-				jsonrpc: '2.0',
-				id: 1,
-				method: 'tempo_fundAddress',
-				params: [data.address],
-			}),
-		})
+		try {
+			const res = await fetch('https://rpc.presto.tempo.xyz', {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'tempo_fundAddress',
+					params: [data.address],
+				}),
+			})
 
-		const result = (await res.json()) as {
-			result?: unknown
-			error?: { message: string }
+			if (!res.ok) {
+				const text = await res.text()
+				return { success: false as const, error: `HTTP ${res.status}: ${text}` }
+			}
+
+			const result = (await res.json()) as {
+				result?: unknown
+				error?: { message: string }
+			}
+			if (result.error) {
+				return { success: false as const, error: result.error.message }
+			}
+			return { success: true as const }
+		} catch (e) {
+			return { success: false as const, error: String(e) }
 		}
-		if (result.error) {
-			return { success: false as const, error: result.error.message }
-		}
-		return { success: true as const }
 	})
 
 const FAUCET_TOKENS: AssetData[] = [
@@ -250,7 +261,7 @@ type ApiTransaction = {
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
 const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
-	.validator((data: { address: string }) => data)
+	.inputValidator((data: { address: string }) => data)
 	.handler(async ({ data }) => {
 		const { address } = data
 		const explorerUrl =
