@@ -168,39 +168,6 @@ function Landing() {
 						))}
 					</div>
 
-					{recentAddress && (
-						<button
-							type="button"
-							onClick={() => {
-								if (connector) {
-									setPendingAction('reconnect')
-									connect.connect({ connector })
-								}
-							}}
-							disabled={connect.isPending}
-							className={cx(
-								'flex items-center gap-2 px-4 py-3 rounded-2xl w-full max-w-xs mt-4',
-								'glass-card text-primary',
-								'hover:glow-accent cursor-pointer press-down',
-								'disabled:opacity-70 disabled:cursor-not-allowed',
-							)}
-						>
-							<div className="flex items-center justify-center size-[32px] rounded-full bg-accent/20">
-								{pendingAction === 'reconnect' ? (
-									<span className="size-[14px] border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
-								) : (
-									<ClockIcon className="size-[14px] text-accent" />
-								)}
-							</div>
-							<div className="flex flex-col items-start">
-								<span className="text-[13px] font-medium">Continue as</span>
-								<code className="text-[11px] text-secondary font-mono">
-									{truncateAddress(recentAddress)}
-								</code>
-							</div>
-						</button>
-					)}
-
 					<div className="w-full flex items-center gap-3 mt-4">
 						<div className="flex-1 h-px bg-base-border" />
 						<span className="text-tertiary text-[12px]">
@@ -211,7 +178,7 @@ function Landing() {
 						<div className="flex-1 h-px bg-base-border" />
 					</div>
 
-					<div className="flex items-center gap-2 mt-3">
+					<div className="flex flex-wrap items-center justify-center gap-2 mt-3">
 						<button
 							type="button"
 							onClick={() => {
@@ -261,6 +228,36 @@ function Landing() {
 							)}
 							<span>Sign in</span>
 						</button>
+						{recentAddress && (
+							<button
+								type="button"
+								onClick={() => {
+									if (connector) {
+										setPendingAction('reconnect')
+										connect.connect({ connector })
+									}
+								}}
+								disabled={connect.isPending}
+								className={cx(
+									'flex items-center gap-1.5 px-3 py-1.5 rounded-full justify-center',
+									'glass-button text-primary font-medium text-[12px]',
+									'cursor-pointer press-down border border-transparent hover:border-accent/30',
+									'disabled:opacity-70 disabled:cursor-not-allowed transition-all',
+								)}
+							>
+								{pendingAction === 'reconnect' ? (
+									<span className="size-[12px] border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+								) : (
+									<ClockIcon className="size-[12px] text-accent" />
+								)}
+								<span>
+									Continue{' '}
+									<span className="font-mono text-secondary">
+										{truncateAddress(recentAddress)}
+									</span>
+								</span>
+							</button>
+						)}
 					</div>
 
 					{connect.error && (
