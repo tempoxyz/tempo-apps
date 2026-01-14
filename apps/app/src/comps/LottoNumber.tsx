@@ -17,15 +17,45 @@ export function LottoNumber({
 		{ char: string; settled: boolean }[]
 	>(value.split('').map((char) => ({ char, settled: isZeroValue })))
 	const prevValueRef = React.useRef(value)
+	const isInitialMount = React.useRef(true)
 
 	React.useEffect(() => {
 		// Skip animation for zero values
 		if (isZeroValue) {
 			setChars(value.split('').map((char) => ({ char, settled: true })))
+			prevValueRef.current = value
+			isInitialMount.current = false
 			return
 		}
 
+		const prevValue = prevValueRef.current
 		prevValueRef.current = value
+
+		// On initial mount, animate all characters
+		// On updates, only animate characters that changed
+		const changedIndices = new Set<number>()
+		if (isInitialMount.current) {
+			// Mark all digit positions as changed for initial animation
+			value.split('').forEach((char, i) => {
+				if (/\d/.test(char)) changedIndices.add(i)
+			})
+			isInitialMount.current = false
+		} else {
+			// Find which characters actually changed
+			const maxLen = Math.max(value.length, prevValue.length)
+			for (let i = 0; i < maxLen; i++) {
+				if (value[i] !== prevValue[i]) {
+					changedIndices.add(i)
+				}
+			}
+		}
+
+		// If nothing changed, just update state without animation
+		if (changedIndices.size === 0) {
+			setChars(value.split('').map((char) => ({ char, settled: true })))
+			return
+		}
+
 		const startTime = Date.now()
 
 		const animate = () => {
@@ -33,7 +63,12 @@ export function LottoNumber({
 			const progress = Math.min((now - startTime) / duration, 1)
 
 			const newChars = value.split('').map((char, i) => {
-				// Gradually settle from left to right
+				// If this character didn't change, keep it settled
+				if (!changedIndices.has(i)) {
+					return { char, settled: true }
+				}
+
+				// Gradually settle from left to right (only for changed chars)
 				const settlePoint = progress * 1.3 - i * 0.08
 				const isSettled = settlePoint >= 1
 
