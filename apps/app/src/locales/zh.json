@@ -29,6 +29,7 @@
 		"assetCount": "个资产",
 		"assetCount_plural": "个资产",
 		"hideZeroBalances": "隐藏零余额",
-		"showZeroBalances": "显示零余额"
+		"showZeroBalances": "显示零余额",
+		"noActivityYet": "暂无活动"
 	}
 }

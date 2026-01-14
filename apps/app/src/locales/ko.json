@@ -29,6 +29,7 @@
 		"assetCount": "개 자산",
 		"assetCount_plural": "개 자산",
 		"hideZeroBalances": "잔액 0 숨기기",
-		"showZeroBalances": "잔액 0 표시"
+		"showZeroBalances": "잔액 0 표시",
+		"noActivityYet": "아직 활동이 없습니다"
 	}
 }
