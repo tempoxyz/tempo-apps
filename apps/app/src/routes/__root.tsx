@@ -48,6 +48,28 @@ export const Route = createRootRouteWithContext<{
 			},
 		],
 		links: [
+			// Preload critical fonts to prevent FOUC
+			{
+				rel: 'preload',
+				href: '/fonts/PilatTest-Regular.otf',
+				as: 'font',
+				type: 'font/otf',
+				crossOrigin: 'anonymous',
+			},
+			{
+				rel: 'preload',
+				href: '/fonts/PilatTest-Demi.otf',
+				as: 'font',
+				type: 'font/otf',
+				crossOrigin: 'anonymous',
+			},
+			{
+				rel: 'preload',
+				href: '/fonts/SourceSerif4-Light.woff2',
+				as: 'font',
+				type: 'font/woff2',
+				crossOrigin: 'anonymous',
+			},
 			{ rel: 'stylesheet', href: css },
 			{
 				rel: 'icon',

@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Den hurtigste måde at udforske konti, saldi og aktivitet på Tempo.",
+		"website": "Hjemmeside",
+		"docs": "Dokumentation"
+	},
+	"settings": {
+		"title": "Indstillinger",
+		"feeToken": "Gebyr-token",
+		"feeTokenDescription": "Vælg hvilket token der skal bruges til at betale transaktionsgebyrer.",
+		"language": "Sprog",
+		"languageDescription": "Vælg dit foretrukne sprog."
+	},
+	"common": {
+		"active": "Aktiv",
+		"set": "Indstil",
+		"back": "Tilbage",
+		"noTokensForFees": "Ingen tokens tilgængelige for gebyrer.",
+		"send": "Send",
+		"recipient": "Modtager 0x...",
+		"amount": "Beløb",
+		"max": "MAKS",
+		"cancel": "Annuller"
+	},
+	"portfolio": {
+		"title": "Portefølje",
+		"assets": "Aktiver",
+		"activity": "Aktivitet",
+		"assetCount": "aktiv",
+		"assetCount_plural": "aktiver",
+		"hideZeroBalances": "Skjul nulsaldi",
+		"showZeroBalances": "Vis nulsaldi",
+		"noActivityYet": "Ingen aktivitet endnu"
+	}
+}

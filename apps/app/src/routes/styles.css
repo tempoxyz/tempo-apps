@@ -17,7 +17,7 @@
 	src: url("/fonts/PilatTest-Regular.otf") format("opentype");
 	font-weight: 400;
 	font-style: normal;
-	font-display: swap;
+	font-display: block;
 }
 
 @font-face {
@@ -25,7 +25,7 @@
 	src: url("/fonts/PilatTest-Book.otf") format("opentype");
 	font-weight: 450;
 	font-style: normal;
-	font-display: swap;
+	font-display: optional;
 }
 
 @font-face {
@@ -33,7 +33,7 @@
 	src: url("/fonts/PilatTest-Demi.otf") format("opentype");
 	font-weight: 600;
 	font-style: normal;
-	font-display: swap;
+	font-display: block;
 }
 
 @custom-variant dark (&:is(.scheme-light-dark *));

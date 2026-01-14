@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "הדרך המהירה ביותר לחקור חשבונות, יתרות ופעילות ב-Tempo.",
+		"website": "אתר",
+		"docs": "תיעוד"
+	},
+	"settings": {
+		"title": "הגדרות",
+		"feeToken": "אסימון עמלה",
+		"feeTokenDescription": "בחר באיזה אסימון להשתמש לתשלום עמלות עסקה.",
+		"language": "שפה",
+		"languageDescription": "בחר את השפה המועדפת עליך."
+	},
+	"common": {
+		"active": "פעיל",
+		"set": "הגדר",
+		"back": "חזרה",
+		"noTokensForFees": "אין אסימונים זמינים לעמלות.",
+		"send": "שלח",
+		"recipient": "נמען 0x...",
+		"amount": "סכום",
+		"max": "מקסימום",
+		"cancel": "ביטול"
+	},
+	"portfolio": {
+		"title": "תיק",
+		"assets": "נכסים",
+		"activity": "פעילות",
+		"assetCount": "נכס",
+		"assetCount_plural": "נכסים",
+		"hideZeroBalances": "הסתר יתרות אפס",
+		"showZeroBalances": "הצג יתרות אפס",
+		"noActivityYet": "אין עדיין פעילות"
+	}
+}

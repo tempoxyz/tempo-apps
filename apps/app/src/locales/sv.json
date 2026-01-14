@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Det snabbaste sättet att utforska konton, saldon och aktivitet på Tempo.",
+		"website": "Webbplats",
+		"docs": "Dokumentation"
+	},
+	"settings": {
+		"title": "Inställningar",
+		"feeToken": "Avgiftstoken",
+		"feeTokenDescription": "Välj vilken token som ska användas för att betala transaktionsavgifter.",
+		"language": "Språk",
+		"languageDescription": "Välj ditt föredragna språk."
+	},
+	"common": {
+		"active": "Aktiv",
+		"set": "Ställ in",
+		"back": "Tillbaka",
+		"noTokensForFees": "Inga tokens tillgängliga för avgifter.",
+		"send": "Skicka",
+		"recipient": "Mottagare 0x...",
+		"amount": "Belopp",
+		"max": "MAX",
+		"cancel": "Avbryt"
+	},
+	"portfolio": {
+		"title": "Portfölj",
+		"assets": "Tillgångar",
+		"activity": "Aktivitet",
+		"assetCount": "tillgång",
+		"assetCount_plural": "tillgångar",
+		"hideZeroBalances": "Dölj nollsaldon",
+		"showZeroBalances": "Visa nollsaldon",
+		"noActivityYet": "Ingen aktivitet ännu"
+	}
+}

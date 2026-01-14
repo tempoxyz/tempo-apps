@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Cara tercepat untuk menjelajahi akun, saldo, dan aktivitas di Tempo.",
+		"website": "Situs web",
+		"docs": "Dokumentasi"
+	},
+	"settings": {
+		"title": "Pengaturan",
+		"feeToken": "Token Biaya",
+		"feeTokenDescription": "Pilih token yang akan digunakan untuk membayar biaya transaksi.",
+		"language": "Bahasa",
+		"languageDescription": "Pilih bahasa pilihan Anda."
+	},
+	"common": {
+		"active": "Aktif",
+		"set": "Atur",
+		"back": "Kembali",
+		"noTokensForFees": "Tidak ada token tersedia untuk biaya.",
+		"send": "Kirim",
+		"recipient": "Penerima 0x...",
+		"amount": "Jumlah",
+		"max": "MAKS",
+		"cancel": "Batal"
+	},
+	"portfolio": {
+		"title": "Portofolio",
+		"assets": "Aset",
+		"activity": "Aktivitas",
+		"assetCount": "aset",
+		"assetCount_plural": "aset",
+		"hideZeroBalances": "Sembunyikan saldo nol",
+		"showZeroBalances": "Tampilkan saldo nol",
+		"noActivityYet": "Belum ada aktivitas"
+	}
+}

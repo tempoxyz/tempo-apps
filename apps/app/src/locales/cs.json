@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Nejrychlejší způsob, jak prozkoumat účty, zůstatky a aktivitu na Tempo.",
+		"website": "Webová stránka",
+		"docs": "Dokumentace"
+	},
+	"settings": {
+		"title": "Nastavení",
+		"feeToken": "Token poplatku",
+		"feeTokenDescription": "Vyberte token pro platbu transakčních poplatků.",
+		"language": "Jazyk",
+		"languageDescription": "Vyberte preferovaný jazyk."
+	},
+	"common": {
+		"active": "Aktivní",
+		"set": "Nastavit",
+		"back": "Zpět",
+		"noTokensForFees": "Žádné tokeny pro poplatky.",
+		"send": "Odeslat",
+		"recipient": "Příjemce 0x...",
+		"amount": "Částka",
+		"max": "MAX",
+		"cancel": "Zrušit"
+	},
+	"portfolio": {
+		"title": "Portfolio",
+		"assets": "Aktiva",
+		"activity": "Aktivita",
+		"assetCount": "aktivum",
+		"assetCount_plural": "aktiv",
+		"hideZeroBalances": "Skrýt nulové zůstatky",
+		"showZeroBalances": "Zobrazit nulové zůstatky",
+		"noActivityYet": "Zatím žádná aktivita"
+	}
+}

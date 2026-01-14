@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Najszybszy sposób na eksplorację kont, sald i aktywności na Tempo.",
+		"website": "Strona",
+		"docs": "Dokumentacja"
+	},
+	"settings": {
+		"title": "Ustawienia",
+		"feeToken": "Token opłaty",
+		"feeTokenDescription": "Wybierz token do płacenia opłat transakcyjnych.",
+		"language": "Język",
+		"languageDescription": "Wybierz preferowany język."
+	},
+	"common": {
+		"active": "Aktywny",
+		"set": "Ustaw",
+		"back": "Wstecz",
+		"noTokensForFees": "Brak tokenów dostępnych na opłaty.",
+		"send": "Wyślij",
+		"recipient": "Odbiorca 0x...",
+		"amount": "Kwota",
+		"max": "MAX",
+		"cancel": "Anuluj"
+	},
+	"portfolio": {
+		"title": "Portfolio",
+		"assets": "Aktywa",
+		"activity": "Aktywność",
+		"assetCount": "aktywo",
+		"assetCount_plural": "aktywów",
+		"hideZeroBalances": "Ukryj zerowe salda",
+		"showZeroBalances": "Pokaż zerowe salda",
+		"noActivityYet": "Brak aktywności"
+	}
+}
