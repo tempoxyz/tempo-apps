@@ -6,7 +6,7 @@ export const Route = createFileRoute('/api/rpc/$id')({
 		handlers: {
 			ANY: async ({ request, params }) => {
 				const chainId = params.id
-				const url = new URL(`/rpc/${chainId}`, request.url)
+				const url = new URL(`/rpc/${chainId}`, 'https://proxy.tempo.xyz')
 
 				const proxyRequest = new Request(url, {
 					body: request.body,
@@ -14,8 +14,11 @@ export const Route = createFileRoute('/api/rpc/$id')({
 					headers: request.headers,
 				})
 
-				const response = await env.RPC_PROXY.fetch(proxyRequest)
-				return response
+				if (env.RPC_PROXY) {
+					return env.RPC_PROXY.fetch(proxyRequest)
+				}
+
+				return fetch(proxyRequest)
 			},
 		},
 	},

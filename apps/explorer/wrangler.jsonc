@@ -7,16 +7,11 @@
 	"workers_dev": true,
 	"preview_urls": true,
 	"placement": { "mode": "smart" },
-	"services": [
-		{
-			"service": "api",
-			"remote": true,
-			"binding": "RPC_PROXY"
-		}
-	],
 	// this binding is not inheritable to environments
 	// it's being added at top-level solely for the type generation script
 	"browser": { "binding": "BROWSER" },
+	// RPC_PROXY is only defined in named environments for production deploys
+	// local dev falls back to direct fetch in /api/rpc/$id.ts
 	"env": {
 		"testnet": {
 			"name": "explorer",
