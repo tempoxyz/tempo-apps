@@ -1087,11 +1087,23 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 	const [currentFeeToken, setCurrentFeeToken] = React.useState<string>(
 		assetsWithBalance[0]?.address ?? '',
 	)
-	const [currentLanguage, setCurrentLanguage] = React.useState('en')
+	const [currentLanguage, setCurrentLanguage] = React.useState(() => {
+		if (typeof window !== 'undefined') {
+			const saved = localStorage.getItem('tempo-language')
+			if (saved) {
+				i18n.changeLanguage(saved)
+				return saved
+			}
+		}
+		return 'en'
+	})
 
 	const handleLanguageChange = React.useCallback((lang: string) => {
 		setCurrentLanguage(lang)
 		i18n.changeLanguage(lang)
+		if (typeof window !== 'undefined') {
+			localStorage.setItem('tempo-language', lang)
+		}
 	}, [])
 
 	return (
