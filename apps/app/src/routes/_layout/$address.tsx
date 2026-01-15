@@ -59,6 +59,7 @@ import CheckIcon from '~icons/lucide/check'
 import SendIcon from '~icons/lucide/send'
 import EyeIcon from '~icons/lucide/eye'
 import EyeOffIcon from '~icons/lucide/eye-off'
+import KeyIcon from '~icons/lucide/key-round'
 
 import ReceiptIcon from '~icons/lucide/receipt'
 import XIcon from '~icons/lucide/x'
@@ -2203,6 +2204,139 @@ function FillingDroplet() {
 	)
 }
 
+function SignWithSelector({
+	accessKeys,
+	selectedKey,
+	onSelect,
+	asset,
+}: {
+	accessKeys: AccessKeyData[]
+	selectedKey: string | null
+	onSelect: (keyId: string | null) => void
+	asset: AssetData
+}) {
+	const [isOpen, setIsOpen] = React.useState(false)
+	const containerRef = React.useRef<HTMLDivElement>(null)
+
+	React.useEffect(() => {
+		function handleClickOutside(e: MouseEvent) {
+			if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+				setIsOpen(false)
+			}
+		}
+		if (isOpen) {
+			document.addEventListener('mousedown', handleClickOutside)
+			return () => document.removeEventListener('mousedown', handleClickOutside)
+		}
+	}, [isOpen])
+
+	const getKeyName = (keyId: string): string => {
+		try {
+			const stored = localStorage.getItem(`accessKey:${keyId.toLowerCase()}`)
+			if (stored) {
+				const data = JSON.parse(stored) as { name?: string }
+				if (data.name) return data.name
+			}
+		} catch { /* ignore */ }
+		return `${keyId.slice(0, 6)}...${keyId.slice(-4)}`
+	}
+
+	const getKeyLimit = (key: AccessKeyData): string | null => {
+		const tokenAddr = asset.address.toLowerCase()
+		const remainingLimit = key.spendingLimits.get(tokenAddr)
+		if (remainingLimit === undefined) return null
+		if (remainingLimit <= 0n) return 'Exhausted'
+		const decimals = asset.metadata?.decimals ?? 6
+		const formatted = formatUnits(remainingLimit, decimals)
+		return `$${Number(formatted).toFixed(0)}`
+	}
+
+	const selectedKeyData = selectedKey ? accessKeys.find(k => k.keyId === selectedKey) : null
+
+	return (
+		<div ref={containerRef} className="relative pl-[30px]">
+			<button
+				type="button"
+				onClick={() => setIsOpen(!isOpen)}
+				className={cx(
+					'h-[26px] px-2.5 rounded-md text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer',
+					selectedKey ? 'bg-accent/10 text-accent' : 'bg-base-alt text-secondary hover:text-primary',
+				)}
+			>
+				<KeyIcon className="size-3" />
+				<span>{selectedKey ? getKeyName(selectedKey) : 'Wallet'}</span>
+				{selectedKeyData && getKeyLimit(selectedKeyData) && (
+					<span className="text-accent/70">· {getKeyLimit(selectedKeyData)}</span>
+				)}
+				<svg
+					className={cx('size-3 text-tertiary transition-transform', isOpen && 'rotate-180')}
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
+					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+				</svg>
+			</button>
+			{isOpen && (
+				<div className="absolute top-full left-[30px] mt-1 min-w-[160px] bg-surface border border-card-border rounded-lg shadow-lg z-50 overflow-hidden">
+					<button
+						type="button"
+						onClick={() => {
+							onSelect(null)
+							setIsOpen(false)
+						}}
+						className={cx(
+							'w-full px-3 py-2 text-[11px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-2',
+							!selectedKey ? 'text-accent bg-accent/5' : 'text-primary',
+						)}
+					>
+						<span className="size-4 flex items-center justify-center rounded-full bg-base-alt">
+							<svg className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
+							</svg>
+						</span>
+						<span>Wallet (passkey)</span>
+					</button>
+					{accessKeys.map((key) => {
+						const limit = getKeyLimit(key)
+						const isExhausted = limit === 'Exhausted'
+						return (
+							<button
+								key={key.keyId}
+								type="button"
+								onClick={() => {
+									if (!isExhausted) {
+										onSelect(key.keyId)
+										setIsOpen(false)
+									}
+								}}
+								disabled={isExhausted}
+								className={cx(
+									'w-full px-3 py-2 text-[11px] text-left transition-colors flex items-center gap-2',
+									isExhausted
+										? 'text-tertiary cursor-not-allowed'
+										: 'hover:bg-base-alt cursor-pointer',
+									selectedKey === key.keyId ? 'text-accent bg-accent/5' : 'text-primary',
+								)}
+							>
+								<span className="size-4 flex items-center justify-center rounded-full bg-accent/10">
+									<KeyIcon className="size-2.5 text-accent" />
+								</span>
+								<span className="flex-1 truncate">{getKeyName(key.keyId)}</span>
+								{limit && (
+									<span className={cx('text-[10px]', isExhausted ? 'text-negative' : 'text-secondary')}>
+										{limit}
+									</span>
+								)}
+							</button>
+						)
+					})}
+				</div>
+			)}
+		</div>
+	)
+}
+
 function AssetRow({
 	asset,
 	address,
@@ -2614,49 +2748,12 @@ function AssetRow({
 					</div>
 				</div>
 				{accessKeys.length > 0 && (
-					<div className="flex items-center gap-2 pl-[30px]">
-						<span className="text-[11px] text-tertiary whitespace-nowrap">
-							Sign with
-						</span>
-						<select
-							value={selectedAccessKey ?? ''}
-							onChange={(e) => setSelectedAccessKey(e.target.value || null)}
-							className="h-[26px] px-2.5 rounded-full bg-base-alt border border-white/5 text-[11px] text-primary focus:outline-none focus:border-accent/50 cursor-pointer transition-colors"
-						>
-							<option value="">Wallet</option>
-							{accessKeys.map((key) => {
-								const tokenAddr = asset.address.toLowerCase()
-								const remainingLimit = key.spendingLimits.get(tokenAddr)
-								const decimals = asset.metadata?.decimals ?? 6
-								let limitText = ''
-								if (remainingLimit !== undefined) {
-									if (remainingLimit > 0n) {
-										const formatted = formatUnits(remainingLimit, decimals)
-										limitText = ` · $${Number(formatted).toFixed(0)}`
-									} else {
-										limitText = ' · Exhausted'
-									}
-								}
-								// Get stored name for this key
-								const storedName = (() => {
-									try {
-										const stored = localStorage.getItem(`accessKey:${key.keyId.toLowerCase()}`)
-										if (stored) {
-											const data = JSON.parse(stored) as { name?: string }
-											return data.name
-										}
-									} catch { /* ignore */ }
-									return null
-								})()
-								const displayName = storedName || `${key.keyId.slice(0, 6)}...${key.keyId.slice(-4)}`
-								return (
-									<option key={key.keyId} value={key.keyId}>
-										{displayName}{limitText}
-									</option>
-								)
-							})}
-						</select>
-					</div>
+					<SignWithSelector
+						accessKeys={accessKeys}
+						selectedKey={selectedAccessKey}
+						onSelect={setSelectedAccessKey}
+						asset={asset}
+					/>
 				)}
 				{sendError && (
 					<div className="pl-[30px] text-[12px] text-negative truncate">
