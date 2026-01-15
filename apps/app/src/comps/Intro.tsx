@@ -79,7 +79,7 @@ export function Intro() {
 	const { colors, intensity } = useAmbientColors()
 
 	return (
-		<div className="relative flex min-h-full flex-col items-start justify-end rounded-[20px] px-5 sm:px-6 py-5 overflow-hidden max-md:min-h-[120px] max-md:rounded-none max-md:py-3">
+		<div className="relative flex min-h-full flex-col items-start justify-end px-7 sm:px-8 py-7 max-md:min-h-[120px] max-md:py-4 max-md:px-5">
 			<ShaderCard
 				className="max-md:hidden pointer-events-none"
 				ambientColors={colors}

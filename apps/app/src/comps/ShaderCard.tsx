@@ -4,14 +4,14 @@ import * as React from 'react'
 // AMBIENT GRADIENT SETTINGS
 // =============================================================================
 
-const AMBIENT_ROTATION_SPEED = 0.3
+const AMBIENT_ROTATION_SPEED = 0.2
 const AMBIENT_DRIFT_AMPLITUDE_X = 20
 const AMBIENT_DRIFT_AMPLITUDE_Y = 15
-const AMBIENT_DRIFT_SPEED_X = 0.008
-const AMBIENT_DRIFT_SPEED_Y = 0.006
+const AMBIENT_DRIFT_SPEED_X = 0.005
+const AMBIENT_DRIFT_SPEED_Y = 0.004
 const AMBIENT_BASE_POS_X = 30
 const AMBIENT_BASE_POS_Y = 70
-const AMBIENT_PULSE_BASE = 0.25
+const AMBIENT_PULSE_BASE = 0.18
 const AMBIENT_PULSE_AMPLITUDE = 0.08
 const AMBIENT_PULSE_SPEED = 0.02
 
@@ -25,7 +25,7 @@ const WORDMARK_ROW_GAP = 30
 const WORDMARK_PATTERN_LENGTH = 15
 const WORDMARK_STRETCH_MIN = 1.0
 const WORDMARK_STRETCH_MAX = 4.0
-const WORDMARK_OPACITY = 0.25
+const WORDMARK_OPACITY = 0.1
 const WORDMARK_STROKE_WIDTH = 0.6
 const WORDMARK_TEXTURE_SCALE = 4
 const WORDMARK_FLOW_DIRECTION = -1
@@ -42,6 +42,22 @@ const DEFAULT_AMBIENT_COLORS: Array<[number, number, number]> = [
 	[0.545, 0.361, 0.965], // purple (#8b5cf6)
 ]
 const DEFAULT_AMBIENT_INTENSITY = 0.7
+
+// =============================================================================
+// LIQUIDGLASS SETTINGS
+// =============================================================================
+
+const LIQUIDGLASS_POWER = 6.0
+const LIQUIDGLASS_BORDER_WIDTH = 0.15
+const LIQUIDGLASS_REFRACT_A = 0.992
+const LIQUIDGLASS_REFRACT_B = 2.332
+const LIQUIDGLASS_REFRACT_C = 4.544
+const LIQUIDGLASS_REFRACT_D = 6.923
+const LIQUIDGLASS_REFRACT_POWER = 1.779
+const LIQUIDGLASS_GLOW_WEIGHT = 0.2
+const LIQUIDGLASS_GLOW_SPEED = 0.5
+const LIQUIDGLASS_NOISE = 0.02
+const LIQUIDGLASS_CANVAS_EXTEND = 0 // px to extend canvas beyond container
 
 // =============================================================================
 // TEMPO PATH DATA
@@ -267,6 +283,87 @@ void main() {
 }
 `
 
+// LiquidGlass effect shader - edge refraction and animated glow
+const LIQUIDGLASS_SHADER = `#version 300 es
+precision highp float;
+
+in vec2 v_uv;
+out vec4 fragColor;
+
+uniform sampler2D u_texture;
+uniform vec2 u_resolution;
+uniform float u_time;
+uniform float u_power;
+uniform float u_borderWidth;
+uniform float u_extend;  // canvas extension in pixels
+uniform float u_refractA, u_refractB, u_refractC, u_refractD;
+uniform float u_refractPower;
+uniform float u_glowWeight;
+uniform float u_glowSpeed;
+uniform float u_noise;
+
+float sdSuperellipse(vec2 p, float n, float r) {
+	vec2 pa = abs(p) + 0.0001;  // Prevent pow(0, x) which causes NaN
+	float num = pow(pa.x, n) + pow(pa.y, n) - pow(r, n);
+	float den = n * sqrt(pow(pa.x, 2.0 * n - 2.0) + pow(pa.y, 2.0 * n - 2.0)) + 0.0001;
+	return num / den;
+}
+
+float refractFunc(float x, float a, float b, float c, float d) {
+	float expVal = exp(-d * x - a);  // Use exp() instead of pow(e, x) for stability
+	return max(0.001, 1.0 - b * c * expVal);  // Ensure always positive for pow()
+}
+
+void main() {
+	vec2 p = (v_uv - 0.5) * 2.0;  // -1 to 1
+	float d = sdSuperellipse(p, u_power, 1.0);
+
+	if (d > 0.0) {
+		fragColor = vec4(0.0);
+		return;
+	}
+
+	float dist = max(-d, 0.001);  // Clamp to avoid precision issues at center
+	float edgeFactor = 1.0 - smoothstep(0.0, u_borderWidth, dist);
+
+	// Refraction - warp UVs near edges
+	float refractAmount = refractFunc(dist, u_refractA, u_refractB, u_refractC, u_refractD);
+	refractAmount = clamp(refractAmount, 0.0, 2.0);  // Clamp to sane range
+	float refract = mix(1.0, pow(refractAmount, u_refractPower), edgeFactor);
+
+	vec2 warpedP = p * refract;
+	vec2 warpedUV = warpedP * 0.5 + 0.5;
+	warpedUV = clamp(warpedUV, 0.0, 1.0);
+
+	vec4 color = texture(u_texture, warpedUV);
+
+	// Optional glow effects (disabled to match reference - pure refraction only)
+	if (u_glowWeight > 0.0) {
+		// Fresnel-like edge brightening
+		float fresnel = edgeFactor * edgeFactor * 0.08;
+		color.rgb += fresnel;
+
+		// Animated glow that rotates around the frame edge
+		float boundedTime = mod(u_time * u_glowSpeed * 0.01, 6.28318);
+		vec2 edgeDir = normalize(p + 0.0001);
+		float angle = atan(edgeDir.y, edgeDir.x);
+		float angleDiff = angle - boundedTime;
+		float glowWave = cos(angleDiff) * 0.5 + 0.5;
+		glowWave = pow(glowWave, 2.0);
+		float glow = glowWave * u_glowWeight * edgeFactor;
+		color.rgb += glow;
+
+		// Subtle specular highlight at top-left
+		vec2 lightDir = normalize(vec2(-0.5, 0.5));
+		float specular = max(0.0, dot(edgeDir, lightDir));
+		specular = pow(specular, 3.0) * edgeFactor * 0.06;
+		color.rgb += specular;
+	}
+
+	fragColor = color;
+}
+`
+
 function createShader(
 	gl: WebGL2RenderingContext,
 	type: number,
@@ -397,7 +494,8 @@ export function ShaderCard({
 		const gradientProgram = createProgram(gl, vertexShader, gradientShaderSource)
 		const blurProgram = createProgram(gl, vertexShader, BLUR_SHADER)
 		const compositeProgram = createProgram(gl, vertexShader, COMPOSITE_SHADER)
-		if (!gradientProgram || !blurProgram || !compositeProgram) return
+		const liquidglassProgram = createProgram(gl, vertexShader, LIQUIDGLASS_SHADER)
+		if (!gradientProgram || !blurProgram || !compositeProgram || !liquidglassProgram) return
 
 		// Create quad buffer
 		const positionBuffer = gl.createBuffer()
@@ -554,13 +652,11 @@ export function ShaderCard({
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
-			// Pass 6: Composite blurred gradient with wordmark to screen
-			gl.bindFramebuffer(gl.FRAMEBUFFER, null)
-			gl.viewport(0, 0, canvas.width, canvas.height)
+			// Pass 6: Composite blurred gradient with wordmark to fb2
+			gl.bindFramebuffer(gl.FRAMEBUFFER, fb2.framebuffer)
+			gl.viewport(0, 0, currentWidth, currentHeight)
 			gl.clearColor(0, 0, 0, 0)
 			gl.clear(gl.COLOR_BUFFER_BIT)
-
-			gl.disable(gl.BLEND)
 
 			gl.useProgram(compositeProgram)
 			setupPositionAttrib(compositeProgram)
@@ -573,7 +669,7 @@ export function ShaderCard({
 			gl.bindTexture(gl.TEXTURE_2D, wordmarkTexture)
 			gl.uniform1i(gl.getUniformLocation(compositeProgram, 'u_wordmarkTexture'), 1)
 
-			gl.uniform2f(gl.getUniformLocation(compositeProgram, 'u_resolution'), canvas.width, canvas.height)
+			gl.uniform2f(gl.getUniformLocation(compositeProgram, 'u_resolution'), currentWidth, currentHeight)
 			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_fadeIn'), fadeIn)
 			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_rowHeight'), WORDMARK_ROW_HEIGHT)
 			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_rowGap'), WORDMARK_ROW_GAP)
@@ -583,6 +679,37 @@ export function ShaderCard({
 			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_opacity'), WORDMARK_OPACITY)
 			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_flowDirection'), WORDMARK_FLOW_DIRECTION)
 			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_time'), wordmarkTime)
+
+			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+			// Pass 7: LiquidGlass effect to screen
+			gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+			gl.viewport(0, 0, canvas.width, canvas.height)
+			gl.clearColor(0, 0, 0, 0)
+			gl.clear(gl.COLOR_BUFFER_BIT)
+
+			gl.disable(gl.BLEND)
+
+			gl.useProgram(liquidglassProgram)
+			setupPositionAttrib(liquidglassProgram)
+
+			gl.activeTexture(gl.TEXTURE0)
+			gl.bindTexture(gl.TEXTURE_2D, fb2.texture)
+			gl.uniform1i(gl.getUniformLocation(liquidglassProgram, 'u_texture'), 0)
+
+			gl.uniform2f(gl.getUniformLocation(liquidglassProgram, 'u_resolution'), canvas.width, canvas.height)
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_time'), time)
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_power'), LIQUIDGLASS_POWER)
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_borderWidth'), LIQUIDGLASS_BORDER_WIDTH)
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_extend'), LIQUIDGLASS_CANVAS_EXTEND * (window.devicePixelRatio || 1))
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_refractA'), LIQUIDGLASS_REFRACT_A)
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_refractB'), LIQUIDGLASS_REFRACT_B)
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_refractC'), LIQUIDGLASS_REFRACT_C)
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_refractD'), LIQUIDGLASS_REFRACT_D)
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_refractPower'), LIQUIDGLASS_REFRACT_POWER)
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_glowWeight'), LIQUIDGLASS_GLOW_WEIGHT)
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_glowSpeed'), LIQUIDGLASS_GLOW_SPEED)
+			gl.uniform1f(gl.getUniformLocation(liquidglassProgram, 'u_noise'), LIQUIDGLASS_NOISE)
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
@@ -602,9 +729,9 @@ export function ShaderCard({
 			className={className}
 			style={{
 				position: 'absolute',
-				inset: 0,
-				width: '100%',
-				height: '100%',
+				inset: -LIQUIDGLASS_CANVAS_EXTEND,
+				width: `calc(100% + ${LIQUIDGLASS_CANVAS_EXTEND * 2}px)`,
+				height: `calc(100% + ${LIQUIDGLASS_CANVAS_EXTEND * 2}px)`,
 			}}
 		/>
 	)
