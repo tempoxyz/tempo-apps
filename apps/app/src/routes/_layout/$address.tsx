@@ -1,6 +1,5 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { waapi, spring } from 'animejs'
 import type { Address } from 'ox'
 import * as React from 'react'
 import { createPortal } from 'react-dom'
@@ -35,7 +34,11 @@ import {
 } from '#comps/activity'
 import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
-import { AccessKeysSection } from '#comps/AccessKeysSection'
+import { Section } from '#comps/Section'
+import {
+	AccessKeysSection,
+	useOnChainAccessKeys,
+} from '#comps/AccessKeysSection'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
 import { fetchAssets, type AssetData } from '#lib/server/assets.server'
@@ -48,11 +51,8 @@ import {
 } from '#comps/Settings'
 import CopyIcon from '~icons/lucide/copy'
 import ExternalLinkIcon from '~icons/lucide/external-link'
-import GlobeIcon from '~icons/lucide/globe'
 import ArrowLeftIcon from '~icons/lucide/arrow-left'
 import CheckIcon from '~icons/lucide/check'
-import PlusIcon from '~icons/lucide/plus'
-import MinusIcon from '~icons/lucide/minus'
 import SendIcon from '~icons/lucide/send'
 import EyeIcon from '~icons/lucide/eye'
 import EyeOffIcon from '~icons/lucide/eye-off'
@@ -1033,195 +1033,6 @@ function AddressView() {
 	)
 }
 
-const springFast = spring({
-	mass: 1,
-	stiffness: 2600,
-	damping: 100,
-})
-
-const springSlower = spring({
-	mass: 1,
-	stiffness: 1200,
-	damping: 80,
-})
-
-function Section(props: {
-	title: string
-	subtitle?: string
-	titleRight?: React.ReactNode
-	externalLink?: string
-	defaultOpen?: boolean
-	headerRight?: React.ReactNode
-	children: React.ReactNode
-	backButton?: {
-		label: string
-		onClick: () => void
-	}
-}) {
-	const {
-		title,
-		subtitle,
-		titleRight,
-		externalLink,
-		defaultOpen = false,
-		headerRight,
-		children,
-		backButton,
-	} = props
-	const [open, setOpen] = React.useState(defaultOpen)
-	const contentRef = React.useRef<HTMLDivElement>(null)
-	const wrapperRef = React.useRef<HTMLDivElement>(null)
-	const innerRef = React.useRef<HTMLDivElement>(null)
-	const animationRef = React.useRef<ReturnType<typeof waapi.animate> | null>(
-		null,
-	)
-
-	const handleClick = () => {
-		const content = contentRef.current
-		const wrapper = wrapperRef.current
-		const inner = innerRef.current
-		if (!content || !wrapper || !inner) return
-
-		// Cancel any running animation
-		if (animationRef.current) {
-			animationRef.current.cancel()
-			animationRef.current = null
-		}
-
-		const nextOpen = !open
-		setOpen(nextOpen)
-
-		if (nextOpen) {
-			const targetHeight = wrapper.getBoundingClientRect().height
-			content.style.height = '0px'
-			animationRef.current = waapi.animate(content, {
-				height: [0, targetHeight],
-				ease: springFast,
-			})
-			waapi.animate(inner, {
-				translateY: ['-40%', '0%'],
-				opacity: [0, 1],
-				ease: springSlower,
-			})
-			animationRef.current.then(() => {
-				requestAnimationFrame(() => {
-					content.style.height = 'auto'
-				})
-				animationRef.current = null
-			})
-		} else {
-			const currentHeight = content.offsetHeight
-			content.style.height = `${currentHeight}px`
-			animationRef.current = waapi.animate(content, {
-				height: [currentHeight, 0],
-				ease: springFast,
-			})
-			waapi.animate(inner, {
-				scale: [1, 1],
-				opacity: [1, 0],
-				ease: springFast,
-			})
-			animationRef.current.then(() => {
-				animationRef.current = null
-			})
-		}
-	}
-
-	return (
-		<div className="rounded-xl border border-card-border bg-card-header">
-			<div className="flex items-center h-[44px] pl-2 pr-2.5">
-				<button
-					type="button"
-					onClick={handleClick}
-					aria-expanded={open}
-					className={cx(
-						'flex flex-1 items-center justify-between cursor-pointer select-none press-down transition-colors',
-						'text-[14px] font-medium text-primary hover:text-accent',
-						'rounded-xl! focus-visible:outline-2! focus-visible:outline-accent! focus-visible:outline-offset-0!',
-					)}
-				>
-					<span className="flex items-center gap-2">
-						{backButton ? (
-							<button
-								type="button"
-								onClick={(e) => {
-									e.stopPropagation()
-									backButton.onClick()
-								}}
-								className="flex items-center gap-1.5 text-accent hover:text-accent/80 transition-colors cursor-pointer"
-							>
-								<ArrowLeftIcon className="size-[14px]" />
-								<span>{backButton.label}</span>
-							</button>
-						) : (
-							<>
-								{title}
-								{subtitle && (
-									<>
-										<span className="w-px h-4 bg-card-border" />
-										<span className="text-[12px] text-tertiary font-normal">
-											{subtitle}
-										</span>
-									</>
-								)}
-								{titleRight && (
-									<>
-										<span className="w-px h-4 bg-card-border" />
-										{titleRight}
-									</>
-								)}
-							</>
-						)}
-					</span>
-				</button>
-				<span className="flex items-center gap-1.5">
-					{headerRight}
-					{externalLink && (
-						<a
-							href={externalLink}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors focus-ring"
-							onClick={(e) => e.stopPropagation()}
-							aria-label="View on external site"
-						>
-							<GlobeIcon className="size-[14px] text-tertiary" />
-						</a>
-					)}
-					<button
-						type="button"
-						onClick={handleClick}
-						aria-expanded={open}
-						aria-label={open ? 'Collapse section' : 'Expand section'}
-						className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer focus-ring"
-					>
-						{open ? (
-							<MinusIcon className="size-[14px] text-tertiary" />
-						) : (
-							<PlusIcon className="size-[14px] text-tertiary" />
-						)}
-					</button>
-				</span>
-			</div>
-			<div
-				ref={contentRef}
-				className="overflow-hidden rounded-b-xl"
-				style={{ height: open ? 'auto' : 0 }}
-				inert={!open ? true : undefined}
-			>
-				<div
-					ref={wrapperRef}
-					className="bg-card border-t border-card-border px-2 rounded-b-xl overflow-hidden"
-				>
-					<div ref={innerRef} className="origin-top">
-						{children}
-					</div>
-				</div>
-			</div>
-		</div>
-	)
-}
-
 function QRCode({
 	value,
 	size = 100,
@@ -1834,6 +1645,7 @@ function BlockTimeline({
 			currentBlock,
 			onSelectBlock,
 			prefetchAdjacentBlocks,
+			handleBlockClick,
 		],
 	)
 
@@ -2341,26 +2153,23 @@ function AssetRow({
 	const [selectedAccessKey, setSelectedAccessKey] = React.useState<
 		string | null
 	>(null)
-	const [availableAccessKeys, setAvailableAccessKeys] = React.useState<
-		string[]
-	>([])
 	const recipientInputRef = React.useRef<HTMLInputElement>(null)
 	const amountInputRef = React.useRef<HTMLInputElement>(null)
 	const { data: connectorClient } = useConnectorClient()
 
-	// Scan localStorage for available access keys
-	React.useEffect(() => {
-		if (typeof window === 'undefined') return
-		const keys: string[] = []
-		for (let i = 0; i < localStorage.length; i++) {
-			const key = localStorage.key(i)
-			if (key?.startsWith('accessKey:')) {
-				const keyAddress = key.replace('accessKey:', '')
-				keys.push(keyAddress)
-			}
-		}
-		setAvailableAccessKeys(keys)
-	}, [isExpanded])
+	// Fetch on-chain access keys for this account
+	const { keys: onChainKeys } = useOnChainAccessKeys(address, isExpanded, [
+		asset.address,
+	])
+
+	// Filter to only keys that have private keys in localStorage (can be used for signing)
+	const availableAccessKeys = React.useMemo(() => {
+		if (typeof window === 'undefined') return []
+		return onChainKeys.filter((key) => {
+			const storageKey = `accessKey:${key.keyId.toLowerCase()}`
+			return localStorage.getItem(storageKey) !== null
+		})
+	}, [onChainKeys])
 
 	const {
 		writeContract,
@@ -2654,7 +2463,10 @@ function AssetRow({
 			>
 				<div className="flex flex-col sm:flex-row sm:items-center gap-2">
 					<div className="flex items-center gap-1.5 flex-1 min-w-0">
-						<TokenIcon address={asset.address} className="size-[24px] shrink-0" />
+						<TokenIcon
+							address={asset.address}
+							className="size-[24px] shrink-0"
+						/>
 						<input
 							ref={recipientInputRef}
 							type="text"
@@ -2719,16 +2531,18 @@ function AssetRow({
 				</div>
 				{availableAccessKeys.length > 0 && (
 					<div className="flex items-center gap-2 pl-[30px]">
-						<span className="text-[12px] text-tertiary whitespace-nowrap">Sign with:</span>
+						<span className="text-[12px] text-tertiary whitespace-nowrap">
+							Sign with:
+						</span>
 						<select
 							value={selectedAccessKey ?? ''}
 							onChange={(e) => setSelectedAccessKey(e.target.value || null)}
 							className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary focus:outline-none focus:border-accent cursor-pointer"
 						>
 							<option value="">Wallet (default)</option>
-							{availableAccessKeys.map((keyAddress) => (
-								<option key={keyAddress} value={keyAddress}>
-									{shortenAddress(keyAddress, 4)}
+							{availableAccessKeys.map((key) => (
+								<option key={key.keyId} value={key.keyId}>
+									{shortenAddress(key.keyId, 4)}
 								</option>
 							))}
 						</select>
