@@ -55,6 +55,16 @@ function shortenAddress(addr: string, chars = 4): string {
 	return `${addr.slice(0, chars + 2)}…${addr.slice(-chars)}`
 }
 
+function formatRelativeTime(timestamp: bigint): string {
+	const now = Math.floor(Date.now() / 1000)
+	const diff = now - Number(timestamp)
+	if (diff < 60) return 'just now'
+	if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+	if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+	if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
+	return new Date(Number(timestamp) * 1000).toLocaleDateString()
+}
+
 function getIconComponent(iconName: string) {
 	const icons: Record<string, React.ComponentType<{ className?: string }>> = {
 		send: SendIcon,
@@ -570,7 +580,7 @@ function TransactionCard({
 							{decoded?.description ?? 'Unknown Call'}
 						</span>
 						<span className="text-tertiary text-[12px]">
-							#{tx.id.toString()} · {decoded?.targetName ?? shortenAddress(tx.to)}
+							#{tx.id.toString()} · {decoded?.targetName ?? shortenAddress(tx.to)} · {formatRelativeTime(tx.submitTime)}
 						</span>
 					</div>
 				</div>
