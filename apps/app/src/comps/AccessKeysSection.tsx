@@ -651,34 +651,30 @@ function CreateKeyForm({
 	}
 
 	const inputClass =
-		'h-[24px] px-2 text-[11px] rounded bg-base-alt border border-base-border focus:border-accent/50 focus:outline-none transition-colors'
+		'h-[28px] px-3 text-[11px] rounded-full bg-base-alt border border-white/5 focus:border-accent/50 focus:outline-none transition-colors'
 
 	return (
-		<div className="flex flex-col gap-2 px-3 py-2 bg-base-alt/30 rounded-lg mx-2">
-			{/* All fields in one row */}
-			<div className="flex items-end gap-2 flex-wrap">
-				<div className="flex flex-col gap-0.5">
-					<label className="text-[9px] text-tertiary uppercase tracking-wide">
-						Name
-					</label>
+		<div className="flex flex-col gap-3 p-3 glass-thin rounded-xl mx-2 mt-2">
+			{/* All fields in a grid - full width */}
+			<div className="grid grid-cols-4 gap-2">
+				<div className="flex flex-col gap-1">
+					<label className="text-[10px] text-tertiary">Name</label>
 					<input
 						type="text"
 						value={keyName}
 						onChange={(e) => setKeyName(e.target.value)}
 						placeholder="Optional"
-						className={cx(inputClass, 'w-[90px]')}
+						className={cx(inputClass, 'w-full')}
 					/>
 				</div>
-				<div className="flex flex-col gap-0.5">
-					<label className="text-[9px] text-tertiary uppercase tracking-wide">
-						Token
-					</label>
+				<div className="flex flex-col gap-1">
+					<label className="text-[10px] text-tertiary">Token</label>
 					<select
 						value={selectedToken}
 						onChange={(e) =>
 							setSelectedToken(e.target.value as Address.Address)
 						}
-						className={cx(inputClass, 'min-w-[80px] cursor-pointer')}
+						className={cx(inputClass, 'w-full cursor-pointer')}
 					>
 						{assets.map((a) => (
 							<option key={a.address} value={a.address}>
@@ -687,11 +683,9 @@ function CreateKeyForm({
 						))}
 					</select>
 				</div>
-				<div className="flex flex-col gap-0.5">
-					<label className="text-[9px] text-tertiary uppercase tracking-wide">
-						Limit
-					</label>
-					<div className={cx(inputClass, 'flex items-center w-[70px]')}>
+				<div className="flex flex-col gap-1">
+					<label className="text-[10px] text-tertiary">Limit</label>
+					<div className={cx(inputClass, 'flex items-center w-full')}>
 						<span className={limitUsd ? 'text-primary' : 'text-tertiary'}>
 							$
 						</span>
@@ -705,19 +699,17 @@ function CreateKeyForm({
 						/>
 					</div>
 				</div>
-				<div className="flex flex-col gap-0.5">
-					<label className="text-[9px] text-tertiary uppercase tracking-wide">
-						Expires
-					</label>
-					<div className="flex items-center gap-1">
+				<div className="flex flex-col gap-1">
+					<label className="text-[10px] text-tertiary">Expires</label>
+					<div className="flex items-center gap-1.5">
 						<input
 							type="number"
 							value={expDays}
 							onChange={(e) => setExpDays(e.target.value)}
 							placeholder="7"
-							className={cx(inputClass, 'w-[40px] text-center')}
+							className={cx(inputClass, 'flex-1 text-center')}
 						/>
-						<span className="text-[9px] text-tertiary">days</span>
+						<span className="text-[10px] text-tertiary shrink-0">days</span>
 					</div>
 				</div>
 			</div>
@@ -737,14 +729,14 @@ function CreateKeyForm({
 						)
 					}
 					disabled={isPending}
-					className="h-[22px] px-2 text-[11px] font-medium bg-accent text-white rounded cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50"
+					className="h-[28px] px-4 text-[11px] font-medium bg-accent text-white rounded-full cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50"
 				>
 					{isPending ? '...' : 'Create'}
 				</button>
 				<button
 					type="button"
 					onClick={onCancel}
-					className="text-[11px] text-secondary hover:text-primary transition-colors cursor-pointer"
+					className="h-[28px] px-4 text-[11px] text-secondary hover:text-primary transition-colors cursor-pointer rounded-full hover:bg-white/5"
 				>
 					Cancel
 				</button>

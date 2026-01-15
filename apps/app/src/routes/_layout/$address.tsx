@@ -36,7 +36,7 @@ import {
 import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
 import { Section } from '#comps/Section'
-import { AccessKeysSection, formatCreatedAt } from '#comps/AccessKeysSection'
+import { AccessKeysSection } from '#comps/AccessKeysSection'
 import {
 	AccessKeysProvider,
 	useSignableAccessKeys,
@@ -2614,39 +2614,44 @@ function AssetRow({
 					</div>
 				</div>
 				{accessKeys.length > 0 && (
-					<div className="flex flex-col gap-1 pl-[30px]">
-						<span className="text-[12px] text-tertiary whitespace-nowrap">
-							Sign with:
+					<div className="flex items-center gap-2 pl-[30px]">
+						<span className="text-[11px] text-tertiary whitespace-nowrap">
+							Sign with
 						</span>
 						<select
 							value={selectedAccessKey ?? ''}
 							onChange={(e) => setSelectedAccessKey(e.target.value || null)}
-							className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary focus:outline-none focus:border-accent cursor-pointer"
+							className="h-[26px] px-2.5 rounded-full bg-base-alt border border-white/5 text-[11px] text-primary focus:outline-none focus:border-accent/50 cursor-pointer transition-colors"
 						>
-							<option value="">Wallet (default)</option>
+							<option value="">Wallet</option>
 							{accessKeys.map((key) => {
 								const tokenAddr = asset.address.toLowerCase()
 								const remainingLimit = key.spendingLimits.get(tokenAddr)
 								const decimals = asset.metadata?.decimals ?? 6
-								let limitText = 'Unlimited'
+								let limitText = ''
 								if (remainingLimit !== undefined) {
 									if (remainingLimit > 0n) {
 										const formatted = formatUnits(remainingLimit, decimals)
-										limitText = `${Number(formatted).toFixed(2)} remaining`
+										limitText = ` · $${Number(formatted).toFixed(0)}`
 									} else {
-										limitText = 'Limit exhausted'
+										limitText = ' · Exhausted'
 									}
-								} else if (key.enforceLimits) {
-									// Key enforces limits but none set for this token - cannot spend
-									limitText = 'No limit set'
 								}
-								const createdText = key.createdAt
-									? formatCreatedAt(key.createdAt)
-									: ''
+								// Get stored name for this key
+								const storedName = (() => {
+									try {
+										const stored = localStorage.getItem(`accessKey:${key.keyId.toLowerCase()}`)
+										if (stored) {
+											const data = JSON.parse(stored) as { name?: string }
+											return data.name
+										}
+									} catch { /* ignore */ }
+									return null
+								})()
+								const displayName = storedName || `${key.keyId.slice(0, 6)}...${key.keyId.slice(-4)}`
 								return (
 									<option key={key.keyId} value={key.keyId}>
-										{key.keyId} · {limitText}
-										{createdText ? ` · ${createdText}` : ''}
+										{displayName}{limitText}
 									</option>
 								)
 							})}
