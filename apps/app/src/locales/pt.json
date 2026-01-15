@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Data",
 		"time": "Hora"
+	},
+	"activity": {
+		"send": "Enviar",
+		"received": "Recebido",
+		"mint": "Cunhar",
+		"burn": "Queimar",
+		"swap": "Trocar",
+		"approve": "Aprovar",
+		"grantRole": "Conceder função",
+		"revokeRole": "Revogar função",
+		"pauseTransfers": "Pausar transferências",
+		"resumeTransfers": "Retomar transferências",
+		"createToken": "Criar token",
+		"partialFill": "Preenchimento parcial",
+		"completeFill": "Preenchimento completo",
+		"cancelOrder": "Cancelar pedido",
+		"setFeeToken": "Definir token de taxa",
+		"payFee": "Pagar taxa",
+		"to": "para",
+		"from": "de",
+		"self": "próprio",
+		"andMore": "e mais {{count}}"
 	}
 }

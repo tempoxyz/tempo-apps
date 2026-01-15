@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Datum",
 		"time": "Tid"
+	},
+	"activity": {
+		"send": "Skicka",
+		"received": "Mottaget",
+		"mint": "Prägling",
+		"burn": "Bränning",
+		"swap": "Byt",
+		"approve": "Godkänn",
+		"grantRole": "Tilldela roll",
+		"revokeRole": "Återkalla roll",
+		"pauseTransfers": "Pausa överföringar",
+		"resumeTransfers": "Återuppta överföringar",
+		"createToken": "Skapa token",
+		"partialFill": "Delvis fyllning",
+		"completeFill": "Fullständig fyllning",
+		"cancelOrder": "Avbryt order",
+		"setFeeToken": "Ställ in avgiftstoken",
+		"payFee": "Betala avgift",
+		"to": "till",
+		"from": "från",
+		"self": "själv",
+		"andMore": "och {{count}} till"
 	}
 }

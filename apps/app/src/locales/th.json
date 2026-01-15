@@ -64,5 +64,27 @@
 		"hash": "แฮช",
 		"date": "วันที่",
 		"time": "เวลา"
+	},
+	"activity": {
+		"send": "ส่ง",
+		"received": "ได้รับ",
+		"mint": "สร้าง",
+		"burn": "เผา",
+		"swap": "แลกเปลี่ยน",
+		"approve": "อนุมัติ",
+		"grantRole": "มอบบทบาท",
+		"revokeRole": "เพิกถอนบทบาท",
+		"pauseTransfers": "หยุดการโอนชั่วคราว",
+		"resumeTransfers": "ดำเนินการโอนต่อ",
+		"createToken": "สร้างโทเค็น",
+		"partialFill": "เติมบางส่วน",
+		"completeFill": "เติมเต็ม",
+		"cancelOrder": "ยกเลิกคำสั่ง",
+		"setFeeToken": "ตั้งค่าโทเค็นค่าธรรมเนียม",
+		"payFee": "ชำระค่าธรรมเนียม",
+		"to": "ถึง",
+		"from": "จาก",
+		"self": "ตัวเอง",
+		"andMore": "และอีก {{count}}"
 	}
 }
