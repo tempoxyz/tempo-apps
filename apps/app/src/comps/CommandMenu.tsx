@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useAccount, useConnect, useConnectors, useDisconnect } from 'wagmi'
 import i18n from '#lib/i18n'
 import { cx } from '#lib/css'
+import { useAnnounce } from '#lib/a11y'
 
 import SearchIcon from '~icons/lucide/search'
 import KeyIcon from '~icons/lucide/key-round'
@@ -101,6 +102,7 @@ function CommandMenuPortal({
 	onOpenChange: (open: boolean) => void
 }) {
 	const { t } = useTranslation()
+	const { announce } = useAnnounce()
 	const [view, setView] = React.useState<MenuView>('main')
 	const [query, setQuery] = React.useState('')
 	const [selectedIndex, setSelectedIndex] = React.useState(0)
@@ -118,6 +120,7 @@ function CommandMenuPortal({
 
 	const close = React.useCallback(() => {
 		setVisible(false)
+		announce(t('commandMenu.closed'))
 		setTimeout(() => {
 			onOpenChange(false)
 			setView('main')
@@ -125,14 +128,15 @@ function CommandMenuPortal({
 			setSendAddress('')
 			setSelectedIndex(0)
 		}, 120)
-	}, [onOpenChange])
+	}, [onOpenChange, announce, t])
 
 	React.useEffect(() => {
 		if (open) {
 			setVisible(true)
+			announce(t('commandMenu.opened'))
 			setTimeout(() => inputRef.current?.focus(), 10)
 		}
-	}, [open])
+	}, [open, announce, t])
 
 	React.useEffect(() => {
 		setSelectedIndex(0)
@@ -445,7 +449,8 @@ function CommandMenuPortal({
 								setQuery('')
 								setSendAddress('')
 							}}
-							className="p-1 -ml-1 rounded-md hover:bg-white/10 transition-colors"
+							aria-label={t('commandMenu.back')}
+							className="p-1 -ml-1 rounded-md hover:bg-white/10 transition-colors focus-ring"
 						>
 							<ArrowLeftIcon className="size-4 text-[#98989f]" />
 						</button>
@@ -489,6 +494,8 @@ function CommandMenuPortal({
 				{/* Content */}
 				<div
 					ref={listRef}
+					role="menu"
+					aria-label={t('commandMenu.title')}
 					className="max-h-[320px] overflow-y-auto overflow-x-hidden"
 				>
 					{view === 'main' &&
@@ -498,7 +505,12 @@ function CommandMenuPortal({
 							</div>
 						) : (
 							filteredGroups.map((group) => (
-								<div key={group.label} className="pt-1 pb-0.5">
+								<div
+									key={group.label}
+									role="group"
+									aria-label={group.label}
+									className="pt-1 pb-0.5"
+								>
 									<div className="px-3 py-1 text-[10px] font-medium text-[#6e6e73] uppercase tracking-wider">
 										{group.label}
 									</div>
@@ -510,11 +522,13 @@ function CommandMenuPortal({
 											<button
 												key={cmd.id}
 												type="button"
+												role="menuitem"
+												aria-label={cmd.label}
 												data-selected={isSelected}
 												onClick={cmd.onSelect}
 												onMouseEnter={() => setSelectedIndex(idx)}
 												className={cx(
-													'w-full flex items-center gap-2 px-2.5 h-7 text-left transition-colors rounded mx-1',
+													'w-full flex items-center gap-2 px-2.5 h-7 text-left transition-colors rounded mx-1 focus-ring',
 													isSelected ? 'bg-[#0a84ff]' : 'hover:bg-[#3a3a3c]',
 												)}
 												style={{ width: 'calc(100% - 8px)' }}
@@ -568,11 +582,17 @@ function CommandMenuPortal({
 						))}
 
 					{view === 'send' && (
-						<div className="p-2">
+						<div
+							className="p-2"
+							role="menu"
+							aria-label={t('commandMenu.sendSubmenu.title')}
+						>
 							<button
 								type="button"
+								role="menuitem"
 								onClick={pasteFromClipboard}
-								className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-[#2c2c2e] transition-colors"
+								aria-label={t('commandMenu.sendSubmenu.pasteFromClipboard')}
+								className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-[#2c2c2e] transition-colors focus-ring"
 							>
 								<span className="flex items-center justify-center size-7 rounded-md bg-[#3a3a3c] text-[#98989f]">
 									<ClipboardIcon className="size-4" />
@@ -587,6 +607,7 @@ function CommandMenuPortal({
 									account.address ? (
 										<button
 											type="button"
+											role="menuitem"
 											onClick={() => {
 												if (!account.address) return
 												navigate({
@@ -596,7 +617,8 @@ function CommandMenuPortal({
 												})
 												close()
 											}}
-											className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-[#0a84ff]/20 hover:bg-[#0a84ff]/30 border border-[#0a84ff]/30 transition-colors"
+											aria-label={`${t('commandMenu.sendSubmenu.sendTo')} ${sendAddress}`}
+											className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-[#0a84ff]/20 hover:bg-[#0a84ff]/30 border border-[#0a84ff]/30 transition-colors focus-ring"
 										>
 											<span className="flex items-center justify-center size-7 rounded-md bg-[#0a84ff] text-white">
 												<SendIcon className="size-4" />
@@ -610,7 +632,10 @@ function CommandMenuPortal({
 										</button>
 									) : sendAddress &&
 										!sendAddress.match(/^0x[a-fA-F0-9]{40}$/) ? (
-										<div className="px-3 py-2.5 rounded-lg bg-[#ff453a]/10 border border-[#ff453a]/20">
+										<div
+											role="alert"
+											className="px-3 py-2.5 rounded-lg bg-[#ff453a]/10 border border-[#ff453a]/20"
+										>
 											<span className="text-[13px] text-[#ff453a]">
 												{t('commandMenu.sendSubmenu.invalidAddress')}
 											</span>
@@ -622,7 +647,11 @@ function CommandMenuPortal({
 					)}
 
 					{view === 'language' && (
-						<div className="py-1">
+						<div
+							className="py-1"
+							role="menu"
+							aria-label={t('commandMenu.languageSubmenu.title')}
+						>
 							{LANGUAGES.map((lang, i) => {
 								const isActive = i18n.language === lang.code
 								const isSelected = i === selectedIndex
@@ -630,6 +659,9 @@ function CommandMenuPortal({
 									<button
 										key={lang.code}
 										type="button"
+										role="menuitemradio"
+										aria-checked={isActive}
+										aria-label={lang.name}
 										data-selected={isSelected}
 										onClick={() => {
 											i18n.changeLanguage(lang.code)
@@ -638,7 +670,7 @@ function CommandMenuPortal({
 										}}
 										onMouseEnter={() => setSelectedIndex(i)}
 										className={cx(
-											'w-full flex items-center justify-between px-2.5 h-7 transition-colors rounded mx-1',
+											'w-full flex items-center justify-between px-2.5 h-7 transition-colors rounded mx-1 focus-ring',
 											isSelected ? 'bg-[#0a84ff]' : 'hover:bg-[#3a3a3c]',
 										)}
 										style={{ width: 'calc(100% - 8px)' }}
