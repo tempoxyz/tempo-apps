@@ -544,7 +544,8 @@ async function refetchBalances(
 
 function AddressView() {
 	const { address } = Route.useParams()
-	const { assets: initialAssets, activity: initialActivity } = Route.useLoaderData()
+	const { assets: initialAssets, activity: initialActivity } =
+		Route.useLoaderData()
 	const { copy, notifying } = useCopy()
 	const [showZeroBalances, setShowZeroBalances] = React.useState(false)
 	const { setSummary } = useActivitySummary()
