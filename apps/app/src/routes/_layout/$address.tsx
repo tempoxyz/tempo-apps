@@ -1073,7 +1073,10 @@ function AddressView() {
 						headerRight={
 							<button
 								type="button"
-								onClick={() => setShowZeroBalances(!showZeroBalances)}
+								onClick={(e) => {
+									e.stopPropagation()
+									setShowZeroBalances(!showZeroBalances)
+								}}
 								className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer focus-ring"
 								aria-label={
 									showZeroBalances
