@@ -2021,7 +2021,7 @@ function BlockTimeline({
 			<div className="flex items-center justify-center">
 				<div
 					className={cx(
-						'flex items-center gap-1.5 h-6 pl-0.5 pr-2.5 rounded-full border transition-colors',
+						'flex items-center gap-1 h-5 pl-0.5 pr-2 rounded-full border transition-colors',
 						selectedBlock !== undefined
 							? 'bg-accent/20 border-accent/30'
 							: 'bg-white/5 border-white/10',
@@ -2044,7 +2044,7 @@ function BlockTimeline({
 							}
 						}}
 						className={cx(
-							'flex items-center justify-center size-5 rounded-full transition-colors cursor-pointer',
+							'flex items-center justify-center size-4 rounded-full transition-colors cursor-pointer',
 							isPaused
 								? 'bg-amber-500/30 hover:bg-amber-500/40'
 								: 'bg-white/10 hover:bg-white/20',
@@ -2052,9 +2052,9 @@ function BlockTimeline({
 						aria-label={isPaused ? 'Resume live updates' : 'Pause live updates'}
 					>
 						{isPaused ? (
-							<PlayIcon className="size-[10px] text-amber-500" />
+							<PlayIcon className="size-2 text-amber-500 fill-amber-500" />
 						) : (
-							<PauseIcon className="size-[10px] text-tertiary" />
+							<PauseIcon className="size-2 text-tertiary fill-tertiary" />
 						)}
 					</button>
 					<span className="text-[11px] text-tertiary">Block</span>
