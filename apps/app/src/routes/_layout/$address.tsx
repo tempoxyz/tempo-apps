@@ -59,8 +59,7 @@ import CheckIcon from '~icons/lucide/check'
 import SendIcon from '~icons/lucide/send'
 import EyeIcon from '~icons/lucide/eye'
 import EyeOffIcon from '~icons/lucide/eye-off'
-import KeyIcon from '~icons/lucide/key-round'
-import UserIcon from '~icons/lucide/user'
+
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 
 import ReceiptIcon from '~icons/lucide/receipt'
@@ -2299,29 +2298,14 @@ function SignWithSelector({
 				type="button"
 				onClick={() => (isOpen ? setIsOpen(false) : openDropdown())}
 				className={cx(
-					'h-[32px] px-2 rounded-lg border bg-base text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer',
-					isOpen ? 'border-accent' : 'border-card-border',
-					selectedKey ? 'text-accent' : 'text-secondary hover:text-primary',
+					'h-[32px] px-2.5 rounded-lg border bg-base text-[12px] flex items-center gap-1.5 transition-colors cursor-pointer',
+					isOpen ? 'border-accent' : 'border-card-border hover:border-accent/50',
+					selectedKey ? 'text-accent' : 'text-primary',
 				)}
 			>
-				{selectedKey ? (
-					(() => {
-						const emoji = getAccessKeyEmoji(selectedKey)
-						return (
-							<div className="size-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
-								{emoji ? (
-									<span className="text-[11px]">{emoji}</span>
-								) : (
-									<KeyIcon className="size-3" />
-								)}
-							</div>
-						)
-					})()
-				) : (
-					<div className="size-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
-						<UserIcon className="size-3" />
-					</div>
-				)}
+				<span className="text-[13px] shrink-0">
+					{selectedKey ? (getAccessKeyEmoji(selectedKey) || '🔑') : '👤'}
+				</span>
 				<span className="truncate">
 					{selectedKey ? getKeyName(selectedKey) : 'Wallet'}
 				</span>
@@ -2337,11 +2321,11 @@ function SignWithSelector({
 				createPortal(
 					<div
 						ref={dropdownRef}
-						className="fixed bg-surface border border-card-border rounded-xl shadow-xl overflow-hidden"
+						className="fixed bg-surface border border-card-border rounded-lg shadow-xl overflow-hidden py-1"
 						style={{
 							top: dropdownPos.top,
 							left: dropdownPos.left,
-							minWidth: dropdownPos.width,
+							minWidth: Math.max(dropdownPos.width, 180),
 							zIndex: 99999,
 						}}
 					>
@@ -2352,19 +2336,17 @@ function SignWithSelector({
 								setIsOpen(false)
 							}}
 							className={cx(
-								'w-full px-2.5 py-2 text-[11px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-1.5',
-								!selectedKey ? 'text-accent bg-accent/5' : 'text-primary',
+								'w-full px-3 py-2 text-[12px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-2',
+								!selectedKey ? 'text-accent' : 'text-primary',
 							)}
 						>
-							<div className="size-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
-								<UserIcon className="size-3 text-accent" />
-							</div>
+							<span className="text-[13px]">👤</span>
 							<span>Wallet</span>
 						</button>
 						{accessKeys.map((key) => {
 							const limit = getKeyLimit(key)
 							const isExhausted = limit === 'Exhausted'
-							const keyEmoji = getAccessKeyEmoji(key.keyId)
+							const keyEmoji = getAccessKeyEmoji(key.keyId) || '🔑'
 							return (
 								<button
 									key={key.keyId}
@@ -2377,29 +2359,23 @@ function SignWithSelector({
 									}}
 									disabled={isExhausted}
 									className={cx(
-										'w-full px-2.5 py-2 text-[11px] text-left transition-colors flex items-center gap-1.5',
+										'w-full px-3 py-2 text-[12px] text-left transition-colors flex items-center gap-2',
 										isExhausted
-											? 'text-tertiary cursor-not-allowed'
+											? 'text-tertiary cursor-not-allowed opacity-50'
 											: 'hover:bg-base-alt cursor-pointer',
 										selectedKey === key.keyId
-											? 'text-accent bg-accent/5'
+											? 'text-accent'
 											: 'text-primary',
 									)}
 								>
-									<div className="size-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
-										{keyEmoji ? (
-											<span className="text-[11px]">{keyEmoji}</span>
-										) : (
-											<KeyIcon className="size-3 text-accent" />
-										)}
-									</div>
+									<span className="text-[13px]">{keyEmoji}</span>
 									<span className="flex-1 truncate">
 										{getKeyName(key.keyId)}
 									</span>
 									{limit && (
 										<span
 											className={cx(
-												'text-[10px]',
+												'text-[11px] tabular-nums',
 												isExhausted ? 'text-negative' : 'text-secondary',
 											)}
 										>
@@ -2759,7 +2735,7 @@ function AssetRow({
 				className="flex flex-col gap-2 px-1 py-2 rounded-xl hover:glass-thin transition-all"
 			>
 				{/* Row 1: Address input + cancel */}
-				<div className="flex items-center gap-1.5 pl-[36px]">
+				<div className="flex items-center gap-1.5 px-2">
 					<input
 						ref={recipientInputRef}
 						type="text"
@@ -2778,7 +2754,7 @@ function AssetRow({
 					</button>
 				</div>
 				{/* Row 2: Amount + MAX + signing key + send button */}
-				<div className="flex items-center gap-1.5 pl-[36px]">
+				<div className="flex items-center gap-1.5 px-2">
 					{/* Compound amount input with token icon, symbol, and MAX */}
 					<div className="flex items-center flex-1 min-w-[120px] h-[32px] rounded-lg border border-card-border bg-base focus-within:border-accent">
 						<TokenIcon address={asset.address} className="size-[16px] shrink-0 ml-2" />
@@ -2849,10 +2825,10 @@ function AssetRow({
 			className="group grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_auto_60px_auto] md:grid-cols-[1fr_auto_60px_90px_auto] gap-1 rounded-xl hover:glass-thin transition-all"
 			style={{ height: ROW_HEIGHT }}
 		>
-			<span className="px-2 text-primary flex items-center gap-2">
+			<span className="pl-1 pr-2 text-primary flex items-center gap-1.5">
 				<TokenIcon
 					address={asset.address}
-					className="size-[28px] transition-transform group-hover:scale-105"
+					className="size-[36px] transition-transform group-hover:scale-105"
 				/>
 				<span className="flex flex-col min-w-0">
 					<span className="truncate font-medium">
