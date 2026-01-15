@@ -1,8 +1,9 @@
 import { tempoModerato } from 'viem/chains'
+import { defineChain } from 'viem'
 
 const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
 
-export const tempoPresto = {
+export const tempoPresto = defineChain({
 	...tempoModerato,
 	id: 4217,
 	name: 'Tempo Mainnet',
@@ -18,4 +19,4 @@ export const tempoPresto = {
 			webSocket: [`wss://${RPC_PROXY_HOSTNAME}/rpc/4217`],
 		},
 	},
-} as const
+})
