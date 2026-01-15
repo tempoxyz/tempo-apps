@@ -544,7 +544,7 @@ async function refetchBalances(
 
 function AddressView() {
 	const { address } = Route.useParams()
-	const { assets: initialAssets, activity } = Route.useLoaderData()
+	const { assets: initialAssets, activity: initialActivity } = Route.useLoaderData()
 	const { copy, notifying } = useCopy()
 	const [showZeroBalances, setShowZeroBalances] = React.useState(false)
 	const { setSummary } = useActivitySummary()
@@ -558,11 +558,14 @@ function AddressView() {
 
 	// Assets state - starts from loader, can be refetched without page refresh
 	const [assetsData, setAssetsData] = React.useState(initialAssets)
+	// Activity state - starts from loader, can be refetched
+	const [activity, setActivity] = React.useState(initialActivity)
 
 	// Sync with loader data when address changes
 	React.useEffect(() => {
 		setAssetsData(initialAssets)
-	}, [initialAssets])
+		setActivity(initialActivity)
+	}, [initialAssets, initialActivity])
 
 	// Refetch balances without full page refresh
 	const refetchAssetsBalances = React.useCallback(async () => {
@@ -580,6 +583,27 @@ function AddressView() {
 			}),
 		)
 	}, [address])
+
+	// Refetch activity without full page refresh
+	const refetchActivity = React.useCallback(async () => {
+		const tokenMetadataMap = new Map<
+			Address.Address,
+			{ decimals: number; symbol: string }
+		>()
+		for (const asset of assetsData) {
+			if (asset.metadata?.decimals !== undefined && asset.metadata?.symbol) {
+				tokenMetadataMap.set(asset.address, {
+					decimals: asset.metadata.decimals,
+					symbol: asset.metadata.symbol,
+				})
+			}
+		}
+		const newActivity = await fetchTransactions(
+			address as Address.Address,
+			tokenMetadataMap,
+		)
+		setActivity(newActivity)
+	}, [address, assetsData])
 
 	// Optimistic balance adjustments: Map<tokenAddress, amountToSubtract>
 	const [optimisticAdjustments, setOptimisticAdjustments] = React.useState<
@@ -611,12 +635,18 @@ function AddressView() {
 	const handleFaucetSuccess = React.useCallback(() => {
 		// Refetch balances without page refresh
 		refetchAssetsBalances()
-	}, [])
+	}, [
+		// Refetch balances without page refresh
+		refetchAssetsBalances,
+	])
 
 	const handleSendSuccess = React.useCallback(() => {
 		// For sends, we rely on optimistic updates and delayed refresh
-		setTimeout(() => refetchAssetsBalances(), 2000)
-	}, [])
+		setTimeout(() => {
+			refetchAssetsBalances()
+			refetchActivity()
+		}, 2000)
+	}, [refetchAssetsBalances, refetchActivity])
 
 	React.useEffect(() => {
 		if (activity.length > 0) {
@@ -815,6 +845,7 @@ function AddressView() {
 					<Section
 						title={t('portfolio.assets')}
 						subtitle={`${assetsWithBalance.length} ${t('portfolio.assetCount', { count: assetsWithBalance.length })}`}
+						defaultOpen
 						headerRight={
 							<button
 								type="button"
@@ -1481,6 +1512,7 @@ function BouncingDots() {
 }
 
 function FillingDroplet() {
+	const id = React.useId()
 	return (
 		<svg
 			width="14"
@@ -1489,9 +1521,11 @@ function FillingDroplet() {
 			fill="none"
 			xmlns="http://www.w3.org/2000/svg"
 			className="text-accent"
+			aria-hidden="true"
 		>
+			<title>Loading</title>
 			<defs>
-				<clipPath id="droplet-clip">
+				<clipPath id={`droplet-clip-${id}`}>
 					<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
 				</clipPath>
 			</defs>
@@ -1503,7 +1537,7 @@ function FillingDroplet() {
 				strokeLinejoin="round"
 				fill="none"
 			/>
-			<g clipPath="url(#droplet-clip)">
+			<g clipPath={`url(#droplet-clip-${id})`}>
 				<rect
 					x="0"
 					y="24"
