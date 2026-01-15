@@ -57,7 +57,8 @@
 			"vars": {
 				"VITE_TEMPO_ENV": "moderato",
 				"PRESTO_RPC_AUTH": "eng:aphex-twin-jeff-mills",
-				"INDEXER_API_KEY": "cd29fb4677918420e8c47d395f6d0874"
+				"INDEXER_API_KEY": "cd29fb4677918420e8c47d395f6d0874",
+				"BASIC_AUTH": "eng:aphex-twin-jeff-mills"
 			},
 			"workers_dev": true,
 			"observability": {
