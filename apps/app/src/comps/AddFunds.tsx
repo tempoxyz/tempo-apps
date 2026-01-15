@@ -15,7 +15,7 @@ export function AddFunds(props: AddFunds.Props) {
 	const [customAmount, setCustomAmount] = React.useState<string>('')
 	const [isCustom, setIsCustom] = React.useState(false)
 
-	const { createOrder, iframeUrl, isLoading } = useOnrampOrder({
+	const { createOrder, iframeUrl, isLoading, reset } = useOnrampOrder({
 			address,
 			onSuccess: () => {
 				console.log('Onramp success!')
@@ -166,6 +166,7 @@ export function AddFunds(props: AddFunds.Props) {
 				<ApplePayIframe
 					url={iframeUrl}
 					onLoad={() => setIsIframeLoaded(true)}
+					onCancel={reset}
 				/>
 			)}
 		</>

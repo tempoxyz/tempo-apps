@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { cx } from '#lib/css'
+import XIcon from '~icons/lucide/x'
 
 const COINBASE_PAY_ORIGIN = 'https://pay.coinbase.com'
 
@@ -25,7 +26,7 @@ function isMobileSafari(): boolean {
 }
 
 export function ApplePayIframe(props: ApplePayIframe.Props) {
-	const { url, className, onLoad } = props
+	const { url, className, onLoad, onCancel } = props
 	const iframeRef = React.useRef<HTMLIFrameElement>(null)
 	const placeholderRef = React.useRef<HTMLDivElement>(null)
 	const [isLoaded, setIsLoaded] = React.useState(false)
@@ -138,7 +139,7 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 			<div
 				ref={placeholderRef}
 				className={cx(
-					'h-12.5',
+					'h-20 mb-3',
 					!isLoaded && 'sr-only',
 					shouldExpandFullscreen && 'invisible',
 				)}
@@ -150,7 +151,7 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 					className={cx(
 						shouldExpandFullscreen
 							? 'fixed inset-0 z-100'
-							: 'fixed z-100 pointer-events-auto',
+							: 'fixed z-100 pointer-events-auto bg-base-alt rounded-md p-3',
 						!isLoaded && 'sr-only',
 					)}
 					style={
@@ -164,6 +165,16 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 							: undefined
 					}
 				>
+					{!shouldExpandFullscreen && onCancel && (
+						<button
+							type="button"
+							onClick={onCancel}
+							className="absolute top-1 right-1 size-4 flex items-center justify-center rounded-full text-tertiary hover:text-primary cursor-pointer transition-colors"
+							title="Cancel"
+						>
+							<XIcon className="size-3" />
+						</button>
+					)}
 					<iframe
 						ref={iframeRef}
 						src={iframeSrc ?? ''}
@@ -171,7 +182,7 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 						allow="payment"
 						sandbox="allow-scripts allow-same-origin"
 						referrerPolicy="no-referrer"
-						className={cx('border-0 h-full w-full', className)}
+						className={cx('border-0 h-full w-full rounded-md', className)}
 					/>
 				</div>,
 				document.body,
@@ -185,5 +196,6 @@ export declare namespace ApplePayIframe {
 		url: string
 		className?: string | undefined
 		onLoad?: () => void
+		onCancel?: () => void
 	}
 }
