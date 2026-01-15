@@ -519,6 +519,47 @@ function createDetectors(
 			return null
 		},
 
+		accountKeychain(event: ParsedEvent) {
+			const { eventName, args } = event
+
+			if (eventName === 'KeyAuthorized')
+				return {
+					type: 'key authorized',
+					parts: [
+						{ type: 'action', value: 'Authorize Key' },
+						{ type: 'account', value: args.publicKey },
+						{ type: 'text', value: 'for' },
+						{ type: 'account', value: args.account },
+					],
+				}
+
+			if (eventName === 'KeyRevoked')
+				return {
+					type: 'key revoked',
+					parts: [
+						{ type: 'action', value: 'Revoke Key' },
+						{ type: 'account', value: args.publicKey },
+						{ type: 'text', value: 'for' },
+						{ type: 'account', value: args.account },
+					],
+				}
+
+			if (eventName === 'SpendingLimitUpdated')
+				return {
+					type: 'spending limit updated',
+					parts: [
+						{ type: 'action', value: 'Update Spending Limit' },
+						{ type: 'account', value: args.publicKey },
+					],
+					note: [
+						['Token', { type: 'token', value: { address: args.token } }],
+						['New Limit', { type: 'number', value: args.newLimit }],
+					],
+				}
+
+			return null
+		},
+
 		feeAmm(event: ParsedEvent) {
 			const { eventName, args, address } = event
 
@@ -740,6 +781,7 @@ export function parseKnownEvent(
 		detectors.tip403Registry(event) ||
 		detectors.feeManager(event) ||
 		detectors.nonce(event) ||
+		detectors.accountKeychain(event) ||
 		detectors.feeAmm(event)
 
 	if (!detected || isFeeTransferEvent(detected)) return null
@@ -749,7 +791,8 @@ export function parseKnownEvent(
 // e.g. for TxEventDescription.ExpandGroup's limitFilter
 export function preferredEventsFilter(event: KnownEvent): boolean {
 	return (
-		event.type !== 'active key count changed' &&
+		event.type !== 'key authorized' &&
+		event.type !== 'key revoked' &&
 		event.type !== 'nonce incremented'
 	)
 }
@@ -1103,6 +1146,7 @@ export function parseKnownEvents(
 			detectors.tip403Registry(event) ||
 			detectors.feeManager(event) ||
 			detectors.nonce(event) ||
+			detectors.accountKeychain(event) ||
 			detectors.feeAmm(event)
 
 		if (!detected) continue
@@ -1151,4 +1195,153 @@ export function parseKnownEvents(
 	}
 
 	return knownEvents
+}
+
+// ============================================================================
+// Call Decoding (for contracts that emit no events, e.g., validator precompile)
+// ============================================================================
+
+// Validator config address (use Addresses.validator when viem exports it)
+const VALIDATOR_CONFIG = '0xcccccccc00000000000000000000000000000000'
+
+type CallDecoder = (
+	functionName: string,
+	args: readonly unknown[],
+) => KnownEvent | null
+
+function decodeValidatorConfigCall(
+	functionName: string,
+	args: readonly unknown[],
+): KnownEvent | null {
+	switch (functionName) {
+		case 'addValidator': {
+			const [newValidatorAddress, _publicKey, active] = args as [
+				Address.Address,
+				Hex.Hex,
+				boolean,
+			]
+			return {
+				type: 'add validator',
+				parts: [
+					{ type: 'action', value: 'Add Validator' },
+					{ type: 'account', value: newValidatorAddress },
+					{
+						type: 'text',
+						value: active ? '(active)' : '(inactive)',
+					},
+				],
+			}
+		}
+		case 'updateValidator': {
+			const [newValidatorAddress] = args as [Address.Address]
+			return {
+				type: 'update validator',
+				parts: [
+					{ type: 'action', value: 'Update Validator' },
+					{ type: 'account', value: newValidatorAddress },
+				],
+			}
+		}
+		case 'changeValidatorStatus': {
+			const [validator, active] = args as [Address.Address, boolean]
+			return {
+				type: 'change validator status',
+				parts: [
+					{
+						type: 'action',
+						value: active ? 'Activate Validator' : 'Deactivate Validator',
+					},
+					{ type: 'account', value: validator },
+				],
+			}
+		}
+		case 'changeOwner': {
+			const [newOwner] = args as [Address.Address]
+			return {
+				type: 'change owner',
+				parts: [
+					{ type: 'action', value: 'Change Owner' },
+					{ type: 'text', value: 'to' },
+					{ type: 'account', value: newOwner },
+				],
+			}
+		}
+		case 'setNextFullDkgCeremony': {
+			const [epoch] = args as [bigint]
+			return {
+				type: 'set dkg ceremony',
+				parts: [
+					{ type: 'action', value: 'Schedule DKG Ceremony' },
+					{ type: 'text', value: `at epoch ${epoch.toString()}` },
+				],
+			}
+		}
+		case 'getValidators':
+			return {
+				type: 'get validators',
+				parts: [{ type: 'action', value: 'Get Validators' }],
+			}
+		case 'owner':
+			return {
+				type: 'get owner',
+				parts: [{ type: 'action', value: 'Get Owner' }],
+			}
+		case 'validatorCount':
+			return {
+				type: 'get validator count',
+				parts: [{ type: 'action', value: 'Get Validator Count' }],
+			}
+		case 'getNextFullDkgCeremony':
+			return {
+				type: 'get dkg ceremony',
+				parts: [{ type: 'action', value: 'Get Next DKG Ceremony' }],
+			}
+		case 'validators': {
+			const [validator] = args as [Address.Address]
+			return {
+				type: 'get validator',
+				parts: [
+					{ type: 'action', value: 'Get Validator' },
+					{ type: 'account', value: validator },
+				],
+			}
+		}
+		default:
+			return null
+	}
+}
+
+const callDecoders: Record<
+	string,
+	{ abi: readonly unknown[]; decoder: CallDecoder }
+> = {
+	[VALIDATOR_CONFIG.toLowerCase()]: {
+		abi: Abis.validatorConfig,
+		decoder: decodeValidatorConfigCall,
+	},
+}
+
+/**
+ * Decode a contract call to a human-readable KnownEvent.
+ * Returns null if the call cannot be decoded or the target is not a known contract.
+ * Use for contracts that emit no events (e.g., validator precompile).
+ */
+export function decodeKnownCall(
+	to: Address.Address,
+	input: Hex.Hex,
+): KnownEvent | null {
+	if (!input || input === '0x') return null
+
+	const entry = callDecoders[to.toLowerCase()]
+	if (!entry) return null
+
+	try {
+		const decoded = decodeFunctionData({
+			abi: entry.abi as readonly unknown[],
+			data: input,
+		})
+		return entry.decoder(decoded.functionName, decoded.args ?? [])
+	} catch {
+		return null
+	}
 }

@@ -397,6 +397,7 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 		return <span className="text-primary">Deploy contract</span>
 	}
 
+	// knownEvents already has decoded calls prepended (from the loader)
 	if (knownEvents && knownEvents.length > 0)
 		return (
 			<TxEventDescription.ExpandGroup
