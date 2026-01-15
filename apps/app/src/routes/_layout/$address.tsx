@@ -1529,28 +1529,27 @@ function AssetRow({
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
 						placeholder="0x..."
-						className="flex-1 min-w-0 h-[32px] px-3 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="flex-1 min-w-0 h-[32px] px-3 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
 				</div>
 				<div className="flex items-center gap-1 pl-7 sm:pl-0">
-					<div className="relative shrink-0">
-						<input
-							ref={amountInputRef}
-							type="text"
-							inputMode="decimal"
-							value={amount}
-							onChange={(e) => setAmount(e.target.value)}
-							placeholder="0.00"
-							className="w-[80px] h-[32px] pl-2.5 pr-10 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
-						/>
-						<button
-							type="button"
-							onClick={handleMax}
-							className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors"
-						>
-							MAX
-						</button>
-					</div>
+					<input
+						ref={amountInputRef}
+						type="text"
+						inputMode="decimal"
+						value={amount}
+						onChange={(e) => setAmount(e.target.value)}
+						placeholder="0.00"
+						style={{ width: `${Math.max(6, (amount || '0.00').length) + 1}ch` }}
+						className="min-w-[7ch] max-w-[14ch] h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
+					/>
+					<button
+						type="button"
+						onClick={handleMax}
+						className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[10px] font-medium text-accent hover:bg-base-alt cursor-pointer transition-colors"
+					>
+						MAX
+					</button>
 					<button
 						type="submit"
 						className={cx(
