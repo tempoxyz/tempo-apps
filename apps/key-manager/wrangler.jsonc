@@ -6,7 +6,7 @@
 	"main": "./src/index.ts",
 	"workers_dev": true,
 	"preview_urls": true,
-	"keep_vars": true,
+	"keep_vars": false,
 	"vars": {
 		"ALLOWED_ORIGINS": "*"
 	},
