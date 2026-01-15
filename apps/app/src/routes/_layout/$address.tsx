@@ -55,7 +55,7 @@ import LogOutIcon from '~icons/lucide/log-out'
 import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
 import { useTranslation } from 'react-i18next'
-import i18n from '#lib/i18n'
+import i18n, { isRtl } from '#lib/i18n'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
@@ -526,7 +526,32 @@ function AddressView() {
 	const { sendTo, token: initialToken } = Route.useSearch()
 	const { t } = useTranslation()
 
+	// Optimistic balance adjustments: Map<tokenAddress, amountToSubtract>
+	const [optimisticAdjustments, setOptimisticAdjustments] = React.useState<
+		Map<string, bigint>
+	>(new Map())
+
 	const isOwnProfile = account.address?.toLowerCase() === address.toLowerCase()
+
+	const applyOptimisticUpdate = React.useCallback(
+		(tokenAddress: string, amount: bigint) => {
+			setOptimisticAdjustments((prev) => {
+				const next = new Map(prev)
+				const current = next.get(tokenAddress.toLowerCase()) ?? 0n
+				next.set(tokenAddress.toLowerCase(), current + amount)
+				return next
+			})
+		},
+		[],
+	)
+
+	const clearOptimisticUpdate = React.useCallback((tokenAddress: string) => {
+		setOptimisticAdjustments((prev) => {
+			const next = new Map(prev)
+			next.delete(tokenAddress.toLowerCase())
+			return next
+		})
+	}, [])
 
 	const handleFaucetSuccess = React.useCallback(() => {
 		router.invalidate()
@@ -555,16 +580,41 @@ function AddressView() {
 	const dedupedAssets = assetsData.filter(
 		(a, i, arr) => arr.findIndex((b) => b.address === a.address) === i,
 	)
-	const totalValue = dedupedAssets.reduce(
+
+	// Apply optimistic adjustments to assets
+	const adjustedAssets = React.useMemo(() => {
+		return dedupedAssets.map((asset) => {
+			const adjustment = optimisticAdjustments.get(asset.address.toLowerCase())
+			if (!adjustment || !asset.balance) return asset
+
+			const currentBalance = BigInt(asset.balance)
+			const newBalance = currentBalance - adjustment
+			const newBalanceStr = newBalance > 0n ? newBalance.toString() : '0'
+
+			// Recalculate USD value
+			const decimals = asset.metadata?.decimals ?? 18
+			const priceUsd = asset.metadata?.priceUsd ?? 0
+			const newValueUsd =
+				(Number(newBalance) / 10 ** decimals) * priceUsd
+
+			return {
+				...asset,
+				balance: newBalanceStr,
+				valueUsd: newValueUsd > 0 ? newValueUsd : 0,
+			}
+		})
+	}, [dedupedAssets, optimisticAdjustments])
+
+	const totalValue = adjustedAssets.reduce(
 		(sum, asset) => sum + (asset.valueUsd ?? 0),
 		0,
 	)
-	const assetsWithBalance = dedupedAssets.filter(
+	const assetsWithBalance = adjustedAssets.filter(
 		(a) =>
 			(a.balance && a.balance !== '0') ||
 			FAUCET_TOKEN_ADDRESSES.has(a.address.toLowerCase()),
 	)
-	const displayedAssets = showZeroBalances ? dedupedAssets : assetsWithBalance
+	const displayedAssets = showZeroBalances ? adjustedAssets : assetsWithBalance
 
 	return (
 		<>
@@ -715,6 +765,8 @@ function AddressView() {
 							address={address}
 							onFaucetSuccess={handleFaucetSuccess}
 							onSendSuccess={handleFaucetSuccess}
+							onOptimisticSend={applyOptimisticUpdate}
+							onOptimisticClear={clearOptimisticUpdate}
 							isOwnProfile={isOwnProfile}
 							connectedAddress={account.address}
 							initialSendTo={sendTo}
@@ -1012,6 +1064,7 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 			const saved = localStorage.getItem('tempo-language')
 			if (saved) {
 				i18n.changeLanguage(saved)
+				document.documentElement.dir = isRtl(saved) ? 'rtl' : 'ltr'
 				return saved
 			}
 		}
@@ -1025,6 +1078,7 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 		i18n.changeLanguage(lang)
 		if (typeof window !== 'undefined') {
 			localStorage.setItem('tempo-language', lang)
+			document.documentElement.dir = isRtl(lang) ? 'rtl' : 'ltr'
 		}
 	}, [])
 
@@ -1208,6 +1262,8 @@ function HoldingsTable({
 	address,
 	onFaucetSuccess,
 	onSendSuccess,
+	onOptimisticSend,
+	onOptimisticClear,
 	isOwnProfile,
 	connectedAddress,
 	initialSendTo,
@@ -1217,6 +1273,8 @@ function HoldingsTable({
 	address: string
 	onFaucetSuccess?: () => void
 	onSendSuccess?: () => void
+	onOptimisticSend?: (tokenAddress: string, amount: bigint) => void
+	onOptimisticClear?: (tokenAddress: string) => void
 	isOwnProfile: boolean
 	connectedAddress?: string
 	initialSendTo?: string
@@ -1300,8 +1358,13 @@ function HoldingsTable({
 						onSendComplete={(symbol) => {
 							setToastMessage(`Sent ${symbol} successfully`)
 							setSendingToken(null)
+							onOptimisticClear?.(asset.address)
 							onSendSuccess?.()
 						}}
+						onSendError={() => {
+							onOptimisticClear?.(asset.address)
+						}}
+						onOptimisticSend={onOptimisticSend}
 						onFaucetSuccess={onFaucetSuccess}
 						isOwnProfile={isOwnProfile}
 						initialRecipient={
@@ -1344,6 +1407,8 @@ function AssetRow({
 	isExpanded,
 	onToggleSend,
 	onSendComplete,
+	onSendError,
+	onOptimisticSend,
 	onFaucetSuccess,
 	isOwnProfile,
 	initialRecipient,
@@ -1354,6 +1419,8 @@ function AssetRow({
 	isExpanded: boolean
 	onToggleSend: () => void
 	onSendComplete: (symbol: string) => void
+	onSendError?: () => void
+	onOptimisticSend?: (tokenAddress: string, amount: bigint) => void
 	onFaucetSuccess?: () => void
 	isOwnProfile: boolean
 	initialRecipient?: string
@@ -1415,13 +1482,15 @@ function AssetRow({
 					? (writeError.shortMessage as string)
 					: writeError.message
 			setSendError(shortMessage || 'Transaction failed')
+			// Revert optimistic update on error
+			onSendError?.()
 			setTimeout(() => {
 				setSendState('idle')
 				setSendError(null)
 				resetWrite()
 			}, 3000)
 		}
-	}, [writeError, resetWrite])
+	}, [writeError, resetWrite, onSendError])
 
 	// Update send state based on pending/confirming
 	React.useEffect(() => {
@@ -1478,6 +1547,8 @@ function AssetRow({
 
 	const handleSend = () => {
 		if (!isValidSend || parsedAmount === 0n) return
+		// Apply optimistic update immediately
+		onOptimisticSend?.(asset.address, parsedAmount)
 		writeContract({
 			address: asset.address as `0x${string}`,
 			abi: erc20Abi,
@@ -1615,14 +1686,19 @@ function AssetRow({
 				</span>
 			</span>
 			<span
-				className="px-2 flex items-center justify-end overflow-hidden min-w-0"
+				className="px-2 flex items-center justify-end overflow-hidden min-w-0 relative"
 				title={
 					asset.balance !== undefined && asset.metadata?.decimals !== undefined
 						? formatAmount(asset.balance, asset.metadata.decimals)
 						: undefined
 				}
 			>
-				<span className="flex flex-col items-end min-w-0">
+				<span
+					className={cx(
+						'flex flex-col items-end min-w-0 transition-opacity duration-200',
+						faucetState === 'loading' && 'opacity-30',
+					)}
+				>
 					<span className="text-primary font-sans text-[14px] tabular-nums text-right truncate max-w-full">
 						{asset.balance !== undefined &&
 						asset.metadata?.decimals !== undefined ? (
@@ -1639,6 +1715,11 @@ function AssetRow({
 						)}
 					</span>
 				</span>
+				{faucetState === 'loading' && (
+					<span className="absolute inset-0 flex items-center justify-end pr-2">
+						<BouncingDots />
+					</span>
+				)}
 			</span>
 			<span className="pl-1 flex items-center justify-start">
 				<span className="text-[9px] font-medium text-tertiary bg-base-alt px-1 py-0.5 rounded font-mono whitespace-nowrap">
@@ -1914,7 +1995,7 @@ function TransactionModal({
 		<div
 			ref={overlayRef}
 			className={cx(
-				'fixed inset-0 left-[calc(45vw+8px)] max-lg:left-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200',
+				'fixed inset-0 left-[calc(45vw+8px)] max-lg:left-0 z-50 flex items-center justify-center bg-base/80 backdrop-blur-md transition-opacity duration-200',
 				isVisible ? 'opacity-100' : 'opacity-0',
 			)}
 			onClick={handleClose}
@@ -2006,7 +2087,7 @@ function TransactionModal({
 						href={`https://explore.mainnet.tempo.xyz/tx/${hash}`}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] glass-button rounded-bl-[16px] rounded-br-[16px] text-tertiary hover:text-primary -mt-px"
+						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] liquid-glass-premium rounded-bl-[16px] rounded-br-[16px] text-tertiary hover:text-primary border-t border-base-border"
 					>
 						<span>{t('common.viewTransaction')}</span>
 						<span aria-hidden="true">→</span>
