@@ -1877,11 +1877,12 @@ function BlockTimeline({
 					)}
 					aria-label={selectedBlock !== undefined ? 'Clear block selection' : undefined}
 				>
-					<span className="text-[9px] text-tertiary font-mono tabular-nums">
+					<span className="text-[9px] text-tertiary">Block</span>
+					<span className="text-[9px] text-primary font-mono tabular-nums">
 						{selectedBlock !== undefined ? selectedBlock.toString() : shownBlock?.toString() ?? '...'}
 					</span>
 					{selectedBlock !== undefined && (
-						<XIcon className="size-2.5 text-accent" />
+						<XIcon className="size-[8px] text-accent/70" />
 					)}
 				</button>
 			</div>
