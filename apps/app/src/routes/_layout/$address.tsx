@@ -1646,8 +1646,8 @@ function BlockTimeline({
 		return blocks
 	}, [activity])
 
-	const blocksBeforeCurrent = 30
-	const blocksAfterCurrent = 30
+	const blocksBeforeCurrent = 20
+	const blocksAfterCurrent = 20
 
 	// Initialize displayBlock
 	React.useEffect(() => {
@@ -1797,13 +1797,15 @@ function BlockTimeline({
 		if (hasUserActivity) return 'bg-green-500'
 		if (txCount === 0) return 'bg-base-alt/40'
 
-		// Gray scale based on tx count (0-50 scale)
-		const intensity = Math.min(txCount / 50, 1)
-		if (intensity < 0.1) return 'bg-base-alt/60'
-		if (intensity < 0.2) return 'bg-base-alt/80'
-		if (intensity < 0.4) return 'bg-emerald-800/70'
-		if (intensity < 0.6) return 'bg-emerald-600/80'
-		if (intensity < 0.8) return 'bg-yellow-500/80'
+		// Use relative scale if chain has low activity, otherwise absolute scale
+		const scale = maxTxCount < 10 ? Math.max(maxTxCount, 1) : 50
+		const intensity = Math.min(txCount / scale, 1)
+
+		if (intensity < 0.15) return 'bg-base-alt/60'
+		if (intensity < 0.3) return 'bg-base-alt/80'
+		if (intensity < 0.5) return 'bg-emerald-800/70'
+		if (intensity < 0.7) return 'bg-emerald-600/80'
+		if (intensity < 0.85) return 'bg-yellow-500/80'
 		return 'bg-orange-500'
 	}
 
@@ -1837,7 +1839,7 @@ function BlockTimeline({
 							}
 							disabled={block.isPlaceholder}
 							className={cx(
-								'shrink-0 size-[8px] rounded-[1px] transition-all duration-150',
+								'shrink-0 size-3 rounded-sm transition-all duration-150',
 								getBlockStyle(
 									block.txCount,
 									isSelected,
