@@ -11,8 +11,61 @@ import {
 	PriceFormatter,
 	RoleFormatter,
 } from './formatting'
+import ArrowUpRightIcon from '~icons/lucide/arrow-up-right'
+import ArrowDownLeftIcon from '~icons/lucide/arrow-down-left'
+import SparklesIcon from '~icons/lucide/sparkles'
+import FlameIcon from '~icons/lucide/flame'
+import ShieldCheckIcon from '~icons/lucide/shield-check'
+import ShieldOffIcon from '~icons/lucide/shield-off'
+import PauseIcon from '~icons/lucide/pause'
+import PlayIcon from '~icons/lucide/play'
+import CheckCircleIcon from '~icons/lucide/check-circle'
+import PlusCircleIcon from '~icons/lucide/plus-circle'
+import ShoppingCartIcon from '~icons/lucide/shopping-cart'
+import TagIcon from '~icons/lucide/tag'
+import CheckIcon from '~icons/lucide/check'
+import XIcon from '~icons/lucide/x'
+import SettingsIcon from '~icons/lucide/settings'
+import CoinsIcon from '~icons/lucide/coins'
+import ArrowLeftRightIcon from '~icons/lucide/arrow-left-right'
+import RefreshCwIcon from '~icons/lucide/refresh-cw'
 
 const EXPLORER_URL = 'https://explore.mainnet.tempo.xyz'
+
+function getActionIcon(action: string): React.ReactNode {
+	const normalized = action.toLowerCase()
+	if (normalized === 'send') return <ArrowUpRightIcon className="size-[12px]" />
+	if (normalized === 'received')
+		return <ArrowDownLeftIcon className="size-[12px]" />
+	if (normalized === 'mint') return <SparklesIcon className="size-[12px]" />
+	if (normalized === 'burn') return <FlameIcon className="size-[12px]" />
+	if (normalized === 'grant role')
+		return <ShieldCheckIcon className="size-[12px]" />
+	if (normalized === 'revoke role')
+		return <ShieldOffIcon className="size-[12px]" />
+	if (normalized === 'pause transfers')
+		return <PauseIcon className="size-[12px]" />
+	if (normalized === 'resume transfers')
+		return <PlayIcon className="size-[12px]" />
+	if (normalized === 'approve')
+		return <CheckCircleIcon className="size-[12px]" />
+	if (normalized === 'create token')
+		return <PlusCircleIcon className="size-[12px]" />
+	if (normalized.includes('buy'))
+		return <ShoppingCartIcon className="size-[12px]" />
+	if (normalized.includes('sell')) return <TagIcon className="size-[12px]" />
+	if (normalized === 'partial fill' || normalized === 'complete fill')
+		return <CheckIcon className="size-[12px]" />
+	if (normalized === 'cancel order') return <XIcon className="size-[12px]" />
+	if (normalized === 'set fee token')
+		return <SettingsIcon className="size-[12px]" />
+	if (normalized === 'pay fee') return <CoinsIcon className="size-[12px]" />
+	if (normalized === 'swap')
+		return <ArrowLeftRightIcon className="size-[12px]" />
+	if (normalized.includes('flip'))
+		return <RefreshCwIcon className="size-[12px]" />
+	return null
+}
 
 function shortenAddress(address: string, chars = 4): string {
 	return `${address.slice(0, chars + 2)}…${address.slice(-chars)}`
@@ -65,12 +118,15 @@ export namespace TxDescription {
 					</>
 				)
 			}
-			case 'action':
+			case 'action': {
+				const icon = getActionIcon(part.value)
 				return (
-					<span className="inline-flex items-center h-[24px] px-[5px] bg-base-alt text-base-content capitalize rounded-[4px]">
+					<span className="inline-flex items-center gap-1 h-[24px] px-[6px] bg-base-alt text-base-content capitalize rounded-[4px]">
+						{icon}
 						{part.value}
 					</span>
 				)
+			}
 			case 'amount': {
 				const { value, decimals, symbol, token } = part.value
 				const effectiveDecimals = decimals ?? 6

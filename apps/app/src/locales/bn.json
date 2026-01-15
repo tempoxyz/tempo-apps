@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Tempo-তে অ্যাকাউন্ট, ব্যালেন্স এবং কার্যকলাপ অন্বেষণ করার দ্রুততম উপায়।",
+		"website": "ওয়েবসাইট",
+		"docs": "ডকুমেন্টেশন"
+	},
+	"settings": {
+		"title": "সেটিংস",
+		"feeToken": "ফি টোকেন",
+		"feeTokenDescription": "লেনদেনের ফি দিতে কোন টোকেন ব্যবহার করবেন তা নির্বাচন করুন।",
+		"language": "ভাষা",
+		"languageDescription": "আপনার পছন্দের ভাষা নির্বাচন করুন।"
+	},
+	"common": {
+		"active": "সক্রিয়",
+		"set": "সেট করুন",
+		"back": "পেছনে",
+		"noTokensForFees": "ফি-র জন্য কোনো টোকেন নেই।",
+		"send": "পাঠান",
+		"recipient": "প্রাপক 0x...",
+		"amount": "পরিমাণ",
+		"max": "সর্বোচ্চ",
+		"cancel": "বাতিল"
+	},
+	"portfolio": {
+		"title": "পোর্টফোলিও",
+		"assets": "সম্পদ",
+		"activity": "কার্যকলাপ",
+		"assetCount": "সম্পদ",
+		"assetCount_plural": "সম্পদ",
+		"hideZeroBalances": "শূন্য ব্যালেন্স লুকান",
+		"showZeroBalances": "শূন্য ব্যালেন্স দেখান",
+		"noActivityYet": "এখনও কোনো কার্যকলাপ নেই"
+	}
+}

@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "سریع‌ترین راه برای کاوش حساب‌ها، موجودی‌ها و فعالیت در Tempo.",
+		"website": "وب‌سایت",
+		"docs": "مستندات"
+	},
+	"settings": {
+		"title": "تنظیمات",
+		"feeToken": "توکن کارمزد",
+		"feeTokenDescription": "توکن مورد استفاده برای پرداخت کارمزد تراکنش را انتخاب کنید.",
+		"language": "زبان",
+		"languageDescription": "زبان مورد نظر خود را انتخاب کنید."
+	},
+	"common": {
+		"active": "فعال",
+		"set": "تنظیم",
+		"back": "بازگشت",
+		"noTokensForFees": "توکنی برای کارمزد موجود نیست.",
+		"send": "ارسال",
+		"recipient": "گیرنده 0x...",
+		"amount": "مقدار",
+		"max": "حداکثر",
+		"cancel": "لغو"
+	},
+	"portfolio": {
+		"title": "پورتفولیو",
+		"assets": "دارایی‌ها",
+		"activity": "فعالیت",
+		"assetCount": "دارایی",
+		"assetCount_plural": "دارایی",
+		"hideZeroBalances": "پنهان کردن موجودی صفر",
+		"showZeroBalances": "نمایش موجودی صفر",
+		"noActivityYet": "هنوز فعالیتی نیست"
+	}
+}

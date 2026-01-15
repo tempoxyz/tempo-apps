@@ -1,0 +1,35 @@
+{
+	"intro": {
+		"tagline": "Ang pinakamabilis na paraan upang galugarin ang mga account, balanse, at aktibidad sa Tempo.",
+		"website": "Website",
+		"docs": "Dokumentasyon"
+	},
+	"settings": {
+		"title": "Mga Setting",
+		"feeToken": "Fee Token",
+		"feeTokenDescription": "Piliin kung aling token ang gagamitin para sa mga bayarin sa transaksyon.",
+		"language": "Wika",
+		"languageDescription": "Piliin ang iyong gustong wika."
+	},
+	"common": {
+		"active": "Aktibo",
+		"set": "Itakda",
+		"back": "Bumalik",
+		"noTokensForFees": "Walang token na magagamit para sa mga bayarin.",
+		"send": "Ipadala",
+		"recipient": "Tatanggap 0x...",
+		"amount": "Halaga",
+		"max": "MAX",
+		"cancel": "Kanselahin"
+	},
+	"portfolio": {
+		"title": "Portfolio",
+		"assets": "Mga Asset",
+		"activity": "Aktibidad",
+		"assetCount": "asset",
+		"assetCount_plural": "mga asset",
+		"hideZeroBalances": "Itago ang zero balanse",
+		"showZeroBalances": "Ipakita ang zero balanse",
+		"noActivityYet": "Wala pang aktibidad"
+	}
+}
