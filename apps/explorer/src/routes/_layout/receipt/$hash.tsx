@@ -13,8 +13,8 @@ import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'
 import { Receipt } from '#comps/Receipt'
 import { apostrophe } from '#lib/chars'
-import { parseKnownEvents } from '#lib/domain/known-events'
-import { LineItems } from '#lib/domain/receipt'
+import { decodeKnownCall, parseKnownEvents } from '#lib/domain/known-events'
+import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut } from '#lib/hooks'
@@ -49,13 +49,26 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	const timestampFormatted = DateFormatter.format(block.timestamp)
 
 	const lineItems = LineItems.fromReceipt(receipt, { getTokenMetadata })
-	const knownEvents = parseKnownEvents(receipt, {
+	const parsedEvents = parseKnownEvents(receipt, {
 		transaction,
 		getTokenMetadata,
 	})
+	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
+
+	// Try to decode known contract calls (e.g., validator precompile)
+	// Prioritize decoded calls over fee-only events since they're more descriptive
+	const knownCall =
+		transaction.to && transaction.input && transaction.input !== '0x'
+			? decodeKnownCall(transaction.to, transaction.input)
+			: null
+
+	const knownEvents = knownCall
+		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
+		: parsedEvents
 
 	return {
 		block,
+		feeBreakdown,
 		knownEvents,
 		lineItems,
 		receipt,
@@ -312,7 +325,7 @@ function Component() {
 		t: () => navigate({ to: '/tx/$hash', params: { hash } }),
 	})
 
-	const { block, knownEvents, lineItems, receipt } = data
+	const { block, feeBreakdown, knownEvents, lineItems, receipt } = data
 
 	const feePrice = lineItems.feeTotals?.[0]?.price
 	const previousFee = feePrice
@@ -343,7 +356,7 @@ function Component() {
 				blockNumber={receipt.blockNumber}
 				events={knownEvents}
 				fee={fee}
-				feeBreakdown={lineItems.feeBreakdown}
+				feeBreakdown={feeBreakdown}
 				feeDisplay={feeDisplay}
 				hash={receipt.transactionHash}
 				sender={receipt.from}

@@ -322,6 +322,8 @@ function OverviewSection(props: {
 		.map((event) => event.note)
 		.filter((note): note is string => typeof note === 'string' && !!note.trim())
 
+	// knownEvents already has decoded calls prepended (from the loader)
+
 	return (
 		<div className="flex flex-col">
 			{knownEvents.length > 0 && (
