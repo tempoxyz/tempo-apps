@@ -1646,8 +1646,8 @@ function BlockTimeline({
 		return blocks
 	}, [activity])
 
-	const blocksBeforeCurrent = 20
-	const blocksAfterCurrent = 20
+	const blocksBeforeCurrent = 30
+	const blocksAfterCurrent = 30
 
 	// Initialize displayBlock
 	React.useEffect(() => {
