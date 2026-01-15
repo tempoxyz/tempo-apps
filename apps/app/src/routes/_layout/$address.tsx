@@ -1521,32 +1521,32 @@ function AssetRow({
 				}}
 				className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-2.5 sm:py-0 rounded-xl hover:glass-thin transition-all sm:h-[52px]"
 			>
-				<div className="flex items-center gap-2 flex-1 min-w-0">
-					<TokenIcon address={asset.address} className="size-[28px] shrink-0" />
+				<div className="flex items-center gap-1.5 flex-1 min-w-0">
+					<TokenIcon address={asset.address} className="size-[24px] shrink-0" />
 					<input
 						ref={recipientInputRef}
 						type="text"
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
-						placeholder="Recipient 0x..."
-						className="flex-1 min-w-0 h-[36px] px-4 rounded-full border border-card-border bg-base text-[13px] text-primary font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
+						placeholder="0x..."
+						className="flex-1 min-w-0 h-[32px] px-3 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
 				</div>
-				<div className="flex items-center gap-2 pl-9 sm:pl-0">
-					<div className="relative w-[140px] shrink-0">
+				<div className="flex items-center gap-1 pl-7 sm:pl-0">
+					<div className="relative shrink-0">
 						<input
 							ref={amountInputRef}
 							type="text"
 							inputMode="decimal"
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
-							placeholder="Amount"
-							className="w-full h-[36px] pl-4 pr-14 rounded-full border border-card-border bg-base text-[13px] text-primary font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
+							placeholder="0.00"
+							className="w-[80px] h-[32px] pl-2.5 pr-10 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
 						/>
 						<button
 							type="button"
 							onClick={handleMax}
-							className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors"
+							className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors"
 						>
 							MAX
 						</button>
@@ -1554,7 +1554,7 @@ function AssetRow({
 					<button
 						type="submit"
 						className={cx(
-							'h-[32px] px-4 rounded-full press-down transition-colors flex items-center justify-center gap-1.5 shrink-0 text-[12px] font-medium',
+							'size-[32px] rounded-lg press-down transition-colors flex items-center justify-center shrink-0',
 							sendState === 'sent'
 								? 'bg-positive text-white cursor-default'
 								: sendState === 'error'
@@ -1572,19 +1572,16 @@ function AssetRow({
 						) : sendState === 'error' ? (
 							<XIcon className="size-[14px]" />
 						) : (
-							<>
-								<SendIcon className="size-[14px]" />
-								<span className="hidden sm:inline">Send</span>
-							</>
+							<SendIcon className="size-[14px]" />
 						)}
 					</button>
 					<button
 						type="button"
 						onClick={handleToggle}
-						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-full transition-colors shrink-0"
+						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-lg transition-colors shrink-0"
 						title="Cancel"
 					>
-						<XIcon className="size-[16px]" />
+						<XIcon className="size-[14px]" />
 					</button>
 				</div>
 				{sendError && (
