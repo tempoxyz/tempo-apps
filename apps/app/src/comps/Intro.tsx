@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { ShaderWordmark } from './ShaderWordmark'
+import { ShaderGradient } from './ShaderGradient'
 import { useActivitySummary, type ActivityType } from '#lib/activity-context'
 import GlobeIcon from '~icons/lucide/globe'
 import BookOpenIcon from '~icons/lucide/book-open'
@@ -22,48 +23,42 @@ function TempoWordmark() {
 	)
 }
 
-const activityColors: Record<ActivityType, string> = {
-	send: '#3b82f6', // blue
-	received: '#22c55e', // green
-	swap: '#8b5cf6', // purple
-	mint: '#f97316', // orange
-	burn: '#ef4444', // red
-	approve: '#06b6d4', // cyan
-	unknown: '#6b7280', // gray
+// Activity colors as RGB (0-1 range) for the shader
+const activityColorsRGB: Record<ActivityType, [number, number, number]> = {
+	send: [0.231, 0.510, 0.965], // #3b82f6
+	received: [0.133, 0.773, 0.369], // #22c55e
+	swap: [0.545, 0.361, 0.965], // #8b5cf6
+	mint: [0.976, 0.451, 0.086], // #f97316
+	burn: [0.937, 0.267, 0.267], // #ef4444
+	approve: [0.024, 0.714, 0.831], // #06b6d4
+	unknown: [0.420, 0.451, 0.498], // #6b7280
 }
 
 function AmbientGradient() {
 	const { summary } = useActivitySummary()
-	const [time, setTime] = React.useState(0)
 
 	const hasActivity = summary && summary.types.length > 0
 
-	const colors = React.useMemo(() => {
+	const colors = React.useMemo((): Array<[number, number, number]> => {
 		if (!hasActivity || !summary.typeCounts) return []
-		// Build colors array proportional to type counts
 		const totalCount = Object.values(summary.typeCounts).reduce(
-			(a, b) => a + b,
+			(a, b) => (a as number) + (b as number),
 			0,
-		)
+		) as number
 		if (totalCount === 0) return []
 
-		const proportionalColors: string[] = []
+		const proportionalColors: Array<[number, number, number]> = []
 		for (const type of summary.types) {
 			const count = summary.typeCounts[type] ?? 0
 			const proportion = count / totalCount
-			// Add color multiple times based on proportion (min 1, max 5)
 			const repetitions = Math.max(1, Math.round(proportion * 5))
 			for (let i = 0; i < repetitions; i++) {
-				proportionalColors.push(activityColors[type])
+				proportionalColors.push(activityColorsRGB[type])
 			}
 		}
 
 		if (proportionalColors.length === 1) {
-			return [
-				proportionalColors[0],
-				proportionalColors[0],
-				proportionalColors[0],
-			]
+			return [proportionalColors[0], proportionalColors[0], proportionalColors[0]]
 		}
 		return proportionalColors
 	}, [hasActivity, summary?.types, summary?.typeCounts])
@@ -77,40 +72,13 @@ function AmbientGradient() {
 		return 0.3
 	}, [summary])
 
-	React.useEffect(() => {
-		if (!hasActivity) return
-		let frame: number
-		const animate = () => {
-			setTime((t) => t + 1)
-			frame = requestAnimationFrame(animate)
-		}
-		frame = requestAnimationFrame(animate)
-		return () => cancelAnimationFrame(frame)
-	}, [hasActivity])
-
-	const gradientStops = React.useMemo(() => {
-		if (colors.length === 0) return ''
-		const step = 360 / colors.length
-		return colors.map((color, i) => `${color} ${i * step}deg`).join(', ')
-	}, [colors])
-
-	if (!hasActivity) return null
-
-	const rotation = (time * 0.3 * (0.5 + intensity * 0.5)) % 360
-	const posX = 30 + Math.sin(time * 0.008) * 20 * intensity
-	const posY = 70 + Math.cos(time * 0.006) * 15 * intensity
-	const pulse = 0.12 + Math.sin(time * 0.02) * 0.08 * intensity
-	const scale = 1 + Math.sin(time * 0.01) * 0.15 * intensity
+	if (!hasActivity || colors.length === 0) return null
 
 	return (
-		<div
-			className="absolute inset-6 pointer-events-none transition-opacity duration-700 rounded-2xl"
-			style={{
-				opacity: pulse + intensity * 0.1,
-				background: `conic-gradient(from ${rotation}deg at ${posX}% ${posY}%, ${gradientStops}, ${colors[0]} 360deg)`,
-				filter: 'blur(80px)',
-				transform: `scale(${scale})`,
-			}}
+		<ShaderGradient
+			className="absolute inset-0 pointer-events-none"
+			colors={colors}
+			intensity={intensity}
 		/>
 	)
 }

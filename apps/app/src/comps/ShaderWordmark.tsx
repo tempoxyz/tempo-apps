@@ -23,7 +23,7 @@ const STRETCH_MIN = 1.0
 const STRETCH_MAX = 4.0
 
 // Opacity of the text (0.0 to 1.0)
-const OPACITY = 0.2
+const OPACITY = 0.12
 
 // Stroke width for the text outline
 const STROKE_WIDTH = 0.6
