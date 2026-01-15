@@ -1822,7 +1822,7 @@ function BlockTimeline({
 			<div
 				ref={scrollRef}
 				onScroll={handleScroll}
-				className="flex items-center gap-[2px] w-full overflow-x-auto no-scrollbar py-1"
+				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar py-1"
 			>
 				{blocks.map((block) => {
 					const isSelected = selectedBlock === block.blockNumber
