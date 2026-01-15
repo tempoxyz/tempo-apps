@@ -64,5 +64,27 @@
 		"hash": "ハッシュ",
 		"date": "日付",
 		"time": "時間"
+	},
+	"activity": {
+		"send": "送信",
+		"received": "受信",
+		"mint": "ミント",
+		"burn": "バーン",
+		"swap": "スワップ",
+		"approve": "承認",
+		"grantRole": "ロール付与",
+		"revokeRole": "ロール取消",
+		"pauseTransfers": "転送を一時停止",
+		"resumeTransfers": "転送を再開",
+		"createToken": "トークン作成",
+		"partialFill": "部分約定",
+		"completeFill": "全約定",
+		"cancelOrder": "注文キャンセル",
+		"setFeeToken": "手数料トークン設定",
+		"payFee": "手数料支払い",
+		"to": "宛先",
+		"from": "送信元",
+		"self": "自分",
+		"andMore": "他 {{count}} 件"
 	}
 }

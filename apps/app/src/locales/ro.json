@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Data",
 		"time": "Ora"
+	},
+	"activity": {
+		"send": "Trimite",
+		"received": "Primit",
+		"mint": "Emitere",
+		"burn": "Ardere",
+		"swap": "Schimb",
+		"approve": "Aprobă",
+		"grantRole": "Acordă rol",
+		"revokeRole": "Revocă rol",
+		"pauseTransfers": "Pauză transferuri",
+		"resumeTransfers": "Reia transferuri",
+		"createToken": "Creează token",
+		"partialFill": "Completare parțială",
+		"completeFill": "Completare totală",
+		"cancelOrder": "Anulează comanda",
+		"setFeeToken": "Setează token taxă",
+		"payFee": "Plătește taxa",
+		"to": "către",
+		"from": "de la",
+		"self": "sine",
+		"andMore": "și încă {{count}}"
 	}
 }

@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Tarikh",
 		"time": "Masa"
+	},
+	"activity": {
+		"send": "Hantar",
+		"received": "Diterima",
+		"mint": "Cetak",
+		"burn": "Bakar",
+		"swap": "Tukar",
+		"approve": "Luluskan",
+		"grantRole": "Berikan peranan",
+		"revokeRole": "Batalkan peranan",
+		"pauseTransfers": "Jeda pemindahan",
+		"resumeTransfers": "Sambung pemindahan",
+		"createToken": "Cipta token",
+		"partialFill": "Pengisian separa",
+		"completeFill": "Pengisian lengkap",
+		"cancelOrder": "Batalkan pesanan",
+		"setFeeToken": "Tetapkan token yuran",
+		"payFee": "Bayar yuran",
+		"to": "kepada",
+		"from": "daripada",
+		"self": "sendiri",
+		"andMore": "dan {{count}} lagi"
 	}
 }

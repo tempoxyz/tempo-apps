@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Dato",
 		"time": "Tid"
+	},
+	"activity": {
+		"send": "Send",
+		"received": "Mottatt",
+		"mint": "Preg",
+		"burn": "Brenn",
+		"swap": "Bytt",
+		"approve": "Godkjenn",
+		"grantRole": "Tildel rolle",
+		"revokeRole": "Tilbakekall rolle",
+		"pauseTransfers": "Pause overføringer",
+		"resumeTransfers": "Gjenoppta overføringer",
+		"createToken": "Opprett token",
+		"partialFill": "Delvis utfylling",
+		"completeFill": "Fullstendig utfylling",
+		"cancelOrder": "Avbryt ordre",
+		"setFeeToken": "Angi gebyrtoken",
+		"payFee": "Betal gebyr",
+		"to": "til",
+		"from": "fra",
+		"self": "selv",
+		"andMore": "og {{count}} til"
 	}
 }

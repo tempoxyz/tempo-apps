@@ -328,6 +328,46 @@ const fetchTransactionReceipts = createServerFn({ method: 'POST' })
 		return { receipts }
 	})
 
+const fetchCurrentBlockNumber = createServerFn({ method: 'GET' }).handler(
+	async () => {
+		const rpcUrl =
+			TEMPO_ENV === 'presto'
+				? 'https://rpc.presto.tempo.xyz'
+				: 'https://rpc.tempo.xyz'
+
+		const { env } = await import('cloudflare:workers')
+		const auth = env.PRESTO_RPC_AUTH as string | undefined
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		}
+		if (auth && TEMPO_ENV === 'presto') {
+			headers.Authorization = `Basic ${btoa(auth)}`
+		}
+
+		try {
+			const response = await fetch(rpcUrl, {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'eth_blockNumber',
+					params: [],
+				}),
+			})
+			if (response.ok) {
+				const json = (await response.json()) as { result?: string }
+				if (json.result) {
+					return { blockNumber: json.result }
+				}
+			}
+			return { blockNumber: null }
+		} catch {
+			return { blockNumber: null }
+		}
+	},
+)
+
 const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 	.inputValidator((data: { address: string }) => data)
 	.handler(async ({ data }) => {
@@ -372,6 +412,7 @@ type ActivityItem = {
 	hash: string
 	events: KnownEvent[]
 	timestamp?: number
+	blockNumber?: bigint
 }
 
 function convertRpcReceiptToViemReceipt(
@@ -456,7 +497,8 @@ async function fetchTransactions(
 				const timestamp = txInfo?.timestamp
 					? new Date(txInfo.timestamp).getTime()
 					: Date.now()
-				items.push({ hash, events, timestamp })
+				const blockNumber = BigInt(rpcReceipt.blockNumber)
+				items.push({ hash, events, timestamp, blockNumber })
 			} catch (e) {
 				console.log('[Activity] Failed to parse receipt:', hash, e)
 			}
@@ -633,12 +675,13 @@ function AddressView() {
 	}, [])
 
 	const handleFaucetSuccess = React.useCallback(() => {
-		// Refetch balances without page refresh
+		// Refetch balances and activity without page refresh
 		refetchAssetsBalances()
-	}, [
-		// Refetch balances without page refresh
-		refetchAssetsBalances,
-	])
+		// Delay activity refetch slightly to allow transaction to be indexed
+		setTimeout(() => {
+			refetchActivity()
+		}, 1500)
+	}, [refetchAssetsBalances, refetchActivity])
 
 	const handleSendSuccess = React.useCallback(() => {
 		// For sends, we rely on optimistic updates and delayed refresh

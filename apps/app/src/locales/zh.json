@@ -64,5 +64,27 @@
 		"hash": "哈希",
 		"date": "日期",
 		"time": "时间"
+	},
+	"activity": {
+		"send": "发送",
+		"received": "已收到",
+		"mint": "铸造",
+		"burn": "销毁",
+		"swap": "兑换",
+		"approve": "授权",
+		"grantRole": "授予角色",
+		"revokeRole": "撤销角色",
+		"pauseTransfers": "暂停转账",
+		"resumeTransfers": "恢复转账",
+		"createToken": "创建代币",
+		"partialFill": "部分成交",
+		"completeFill": "完全成交",
+		"cancelOrder": "取消订单",
+		"setFeeToken": "设置手续费代币",
+		"payFee": "支付手续费",
+		"to": "至",
+		"from": "来自",
+		"self": "自己",
+		"andMore": "还有 {{count}} 个"
 	}
 }

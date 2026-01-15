@@ -64,5 +64,27 @@
 		"hash": "해시",
 		"date": "날짜",
 		"time": "시간"
+	},
+	"activity": {
+		"send": "보내기",
+		"received": "받음",
+		"mint": "발행",
+		"burn": "소각",
+		"swap": "스왑",
+		"approve": "승인",
+		"grantRole": "역할 부여",
+		"revokeRole": "역할 취소",
+		"pauseTransfers": "전송 일시정지",
+		"resumeTransfers": "전송 재개",
+		"createToken": "토큰 생성",
+		"partialFill": "부분 체결",
+		"completeFill": "완전 체결",
+		"cancelOrder": "주문 취소",
+		"setFeeToken": "수수료 토큰 설정",
+		"payFee": "수수료 지불",
+		"to": "수신",
+		"from": "발신",
+		"self": "본인",
+		"andMore": "외 {{count}}개"
 	}
 }

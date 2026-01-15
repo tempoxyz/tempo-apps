@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Datum",
 		"time": "Tijd"
+	},
+	"activity": {
+		"send": "Verzenden",
+		"received": "Ontvangen",
+		"mint": "Aanmaken",
+		"burn": "Verbranden",
+		"swap": "Ruilen",
+		"approve": "Goedkeuren",
+		"grantRole": "Rol toekennen",
+		"revokeRole": "Rol intrekken",
+		"pauseTransfers": "Overdrachten pauzeren",
+		"resumeTransfers": "Overdrachten hervatten",
+		"createToken": "Token aanmaken",
+		"partialFill": "Gedeeltelijke uitvoering",
+		"completeFill": "Volledige uitvoering",
+		"cancelOrder": "Bestelling annuleren",
+		"setFeeToken": "Vergoedingstoken instellen",
+		"payFee": "Vergoeding betalen",
+		"to": "naar",
+		"from": "van",
+		"self": "zelf",
+		"andMore": "en {{count}} meer"
 	}
 }
