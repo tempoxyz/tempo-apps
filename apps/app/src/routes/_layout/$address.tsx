@@ -342,16 +342,18 @@ const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 				? 'https://explore.presto.tempo.xyz'
 				: 'https://explore.mainnet.tempo.xyz'
 
-		// Use cloudflare:workers env for Cloudflare Workers runtime
-		const { env } = await import('cloudflare:workers')
-		const auth = env.PRESTO_RPC_AUTH as string | undefined
 		const headers: Record<string, string> = {}
-		if (auth) {
-			headers.Authorization = `Basic ${btoa(auth)}`
+		try {
+			const { env } = await import('cloudflare:workers')
+			const auth = env.PRESTO_RPC_AUTH as string | undefined
+			if (auth) {
+				headers.Authorization = `Basic ${btoa(auth)}`
+			}
+		} catch {
+			// Dev mode - cloudflare:workers not available
 		}
 
 		try {
-			// Use explorer's internal API which includes Mint/Burn events
 			const response = await fetch(
 				`${explorerUrl}/api/address/${address}?include=all&limit=50`,
 				{ headers },
@@ -1519,7 +1521,7 @@ function AssetRow({
 				}}
 				className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-2.5 sm:py-0 rounded-xl hover:glass-thin transition-all sm:h-[52px]"
 			>
-				<div className="flex items-center gap-1.5 flex-1 min-w-0">
+				<div className="flex items-center gap-2 flex-1 min-w-0">
 					<TokenIcon address={asset.address} className="size-[28px] shrink-0" />
 					<input
 						ref={recipientInputRef}
@@ -1527,11 +1529,11 @@ function AssetRow({
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
 						placeholder="Recipient 0x..."
-						className="flex-1 min-w-0 h-[32px] px-3 rounded-full border border-card-border bg-base text-[13px] text-primary font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
+						className="flex-1 min-w-0 h-[36px] px-4 rounded-full border border-card-border bg-base text-[13px] text-primary font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
 					/>
 				</div>
-				<div className="flex items-center gap-1.5 pl-9 sm:pl-0">
-					<div className="relative w-[120px] shrink-0">
+				<div className="flex items-center gap-2 pl-9 sm:pl-0">
+					<div className="relative w-[140px] shrink-0">
 						<input
 							ref={amountInputRef}
 							type="text"
@@ -1539,12 +1541,12 @@ function AssetRow({
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
 							placeholder="Amount"
-							className="w-full h-[32px] pl-3 pr-12 rounded-full border border-card-border bg-base text-[13px] text-primary font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
+							className="w-full h-[36px] pl-4 pr-14 rounded-full border border-card-border bg-base text-[13px] text-primary font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
 						/>
 						<button
 							type="button"
 							onClick={handleMax}
-							className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors"
+							className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-medium text-accent hover:text-accent/70 cursor-pointer transition-colors"
 						>
 							MAX
 						</button>
