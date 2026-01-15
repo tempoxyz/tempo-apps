@@ -780,12 +780,12 @@ function AccessKeyRow({
 						copy(accessKey.keyId)
 					}}
 					title={`Copy address: ${accessKey.keyId}`}
-					className="size-4 flex items-center justify-center rounded text-tertiary hover:text-primary transition-colors cursor-pointer"
+					className="size-3.5 flex items-center justify-center rounded text-tertiary hover:text-primary transition-colors cursor-pointer"
 				>
 					{copied ? (
-						<CheckIcon className="size-2.5 text-positive" />
+						<CheckIcon className="size-2 text-positive" />
 					) : (
-						<CopyIcon className="size-2.5" />
+						<CopyIcon className="size-2" />
 					)}
 				</button>
 				{isOwner && !isPending && !isRevoking && (
@@ -793,9 +793,9 @@ function AccessKeyRow({
 						type="button"
 						onClick={onRevoke}
 						title={t('common.revokeAccessKey')}
-						className="size-4 flex items-center justify-center rounded text-negative/70 hover:text-negative transition-colors cursor-pointer"
+						className="size-3.5 flex items-center justify-center rounded text-negative/70 hover:text-negative transition-colors cursor-pointer"
 					>
-						<XIcon className="size-2.5" />
+						<XIcon className="size-2" />
 					</button>
 				)}
 			</div>

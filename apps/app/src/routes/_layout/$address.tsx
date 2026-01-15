@@ -2237,7 +2237,10 @@ function BlockTimeline({
 						{isPaused || selectedBlock !== undefined ? (
 							<PlayIcon className="size-2 text-accent fill-accent" />
 						) : (
-							<PauseIcon className="size-2 text-tertiary fill-tertiary" />
+							<svg className="size-2" viewBox="0 0 24 24" fill="currentColor">
+								<rect x="6" y="4" width="4" height="16" rx="1" />
+								<rect x="14" y="4" width="4" height="16" rx="1" />
+							</svg>
 						)}
 					</button>
 					<span className="text-[11px] text-tertiary">{t('common.block')}</span>
