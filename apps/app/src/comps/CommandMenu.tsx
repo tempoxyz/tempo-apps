@@ -61,7 +61,7 @@ export function CommandMenuProvider({
 		<CommandMenuContext.Provider value={{ open, setOpen }}>
 			{children}
 			{isMounted && <CommandTrigger onClick={() => setOpen(true)} />}
-			{open && <CommandMenu onClose={() => setOpen(false)} />}
+			{isMounted && open && <CommandMenu onClose={() => setOpen(false)} />}
 		</CommandMenuContext.Provider>
 	)
 }

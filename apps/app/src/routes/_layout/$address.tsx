@@ -381,116 +381,6 @@ type ActivityItem = {
 	timestamp?: number
 }
 
-function generateMockActivity(
-	address: Address.Address,
-	assets: AssetData[],
-): ActivityItem[] {
-	const hash = address
-		.toLowerCase()
-		.split('')
-		.reduce((acc, char) => acc + char.charCodeAt(0), 0)
-	const assetsWithBalance = assets.filter((a) => a.balance && a.balance !== '0')
-
-	if (assetsWithBalance.length === 0) return []
-
-	const mockItems: ActivityItem[] = []
-	const mockAddresses = [
-		'0x1234567890abcdef1234567890abcdef12345678',
-		'0xabcdef1234567890abcdef1234567890abcdef12',
-		'0x9876543210fedcba9876543210fedcba98765432',
-		'0xfedcba9876543210fedcba9876543210fedcba98',
-	]
-
-	const activityTypes = ['send', 'received', 'swap'] as const
-	const numActivities = 3 + (hash % 5)
-
-	for (let i = 0; i < numActivities; i++) {
-		const asset = assetsWithBalance[i % assetsWithBalance.length]
-		const activityType = activityTypes[(hash + i) % activityTypes.length]
-		const mockAddr = mockAddresses[
-			(hash + i) % mockAddresses.length
-		] as Address.Address
-		const mockHash =
-			`0x${(hash + i).toString(16).padStart(64, '0')}` as `0x${string}`
-
-		const decimals = asset.metadata?.decimals ?? 6
-		const symbol = asset.metadata?.symbol ?? 'TOKEN'
-		// Use deterministic amount based on hash and index
-		const amountSeed = ((hash * 31 + i * 17) % 100) + 1
-		const amount = BigInt(Math.floor(amountSeed * 10 ** decimals))
-
-		let events: KnownEvent[] = []
-
-		if (activityType === 'swap') {
-			const otherAsset = assetsWithBalance[(i + 1) % assetsWithBalance.length]
-			const otherDecimals = otherAsset.metadata?.decimals ?? 6
-			const otherSymbol = otherAsset.metadata?.symbol ?? 'TOKEN'
-			// Use deterministic amount based on hash and index
-			const otherAmountSeed = ((hash * 13 + i * 23) % 50) + 1
-			const otherAmount = BigInt(
-				Math.floor(otherAmountSeed * 10 ** otherDecimals),
-			)
-
-			events = [
-				{
-					type: 'swap',
-					parts: [
-						{ type: 'action', value: 'Swap' },
-						{
-							type: 'amount',
-							value: { value: amount, decimals, symbol, token: asset.address },
-						},
-						{ type: 'text', value: 'for' },
-						{
-							type: 'amount',
-							value: {
-								value: otherAmount,
-								decimals: otherDecimals,
-								symbol: otherSymbol,
-								token: otherAsset.address,
-							},
-						},
-					],
-				},
-			]
-		} else if (activityType === 'received') {
-			events = [
-				{
-					type: 'received',
-					parts: [
-						{ type: 'action', value: 'Received' },
-						{
-							type: 'amount',
-							value: { value: amount, decimals, symbol, token: asset.address },
-						},
-						{ type: 'text', value: 'from' },
-						{ type: 'account', value: mockAddr },
-					],
-				},
-			]
-		} else {
-			events = [
-				{
-					type: 'send',
-					parts: [
-						{ type: 'action', value: 'Send' },
-						{
-							type: 'amount',
-							value: { value: amount, decimals, symbol, token: asset.address },
-						},
-						{ type: 'text', value: 'to' },
-						{ type: 'account', value: mockAddr },
-					],
-				},
-			]
-		}
-
-		mockItems.push({ hash: mockHash, events })
-	}
-
-	return mockItems
-}
-
 function convertRpcReceiptToViemReceipt(
 	rpcReceipt: RpcTransactionReceipt,
 ): import('viem').TransactionReceipt {
@@ -529,13 +419,12 @@ function convertRpcReceiptToViemReceipt(
 async function fetchTransactions(
 	address: Address.Address,
 	tokenMetadataMap: Map<Address.Address, { decimals: number; symbol: string }>,
-	assets: AssetData[],
 ): Promise<ActivityItem[]> {
 	try {
 		const result = await fetchTransactionsFromExplorer({ data: { address } })
 
 		if (result.error || result.transactions.length === 0) {
-			return generateMockActivity(address, assets)
+			return []
 		}
 
 		const txData = result.transactions.slice(0, 10) as Array<{
@@ -569,13 +458,9 @@ async function fetchTransactions(
 			}
 		}
 
-		if (items.length === 0) {
-			return generateMockActivity(address, assets)
-		}
-
 		return items
 	} catch {
-		return generateMockActivity(address, assets)
+		return []
 	}
 }
 
@@ -611,7 +496,6 @@ export const Route = createFileRoute('/_layout/$address')({
 		const activity = await fetchTransactions(
 			params.address as Address.Address,
 			tokenMetadataMap,
-			assets,
 		)
 		return { assets, activity }
 	},

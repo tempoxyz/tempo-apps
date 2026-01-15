@@ -9,7 +9,8 @@
 		"feeToken": "Ücret Tokeni",
 		"feeTokenDescription": "İşlem ücretlerini ödemek için kullanılacak tokeni seçin.",
 		"language": "Dil",
-		"languageDescription": "Tercih ettiğiniz dili seçin."
+		"languageDescription": "Tercih ettiğiniz dili seçin.",
+		"notSet": "Ayarlanmadı"
 	},
 	"common": {
 		"active": "Aktif",
@@ -20,7 +21,24 @@
 		"recipient": "Alıcı 0x...",
 		"amount": "Miktar",
 		"max": "MAKS",
-		"cancel": "İptal"
+		"cancel": "İptal",
+		"search": "Ara",
+		"signUp": "Kayıt ol",
+		"signIn": "Giriş yap",
+		"continue": "Devam et",
+		"logOut": "Çıkış yap",
+		"copyAddress": "Adresi kopyala",
+		"viewOnExplorer": "Explorer'da görüntüle",
+		"viewReceipt": "Makbuzu görüntüle",
+		"viewTransaction": "İşlemi görüntüle",
+		"requestTokens": "Token iste",
+		"transaction": "İşlem",
+		"transactions": "işlem",
+		"transactionOn": "tarihinde",
+		"self": "kendine",
+		"andMore": "ve {{count}} daha",
+		"sentSuccessfully": "{{symbol}} başarıyla gönderildi",
+		"demoNote": "Bu bir demodur, bakiyeler güncellenmez."
 	},
 	"portfolio": {
 		"title": "Portföy",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "varlık",
 		"hideZeroBalances": "Sıfır bakiyeleri gizle",
 		"showZeroBalances": "Sıfır bakiyeleri göster",
-		"noActivityYet": "Henüz aktivite yok"
+		"noActivityYet": "Henüz aktivite yok",
+		"noAssetsFound": "Varlık bulunamadı"
+	},
+	"landing": {
+		"getStarted": "Başla",
+		"exploreDescription": "Tempo'da hesapları, token bakiyelerini ve işlem geçmişini keşfedin",
+		"enterAddress": "Adres girin",
+		"orUsePasskey": "veya başka bir geçiş anahtarı kullan",
+		"orSignInWithPasskey": "veya geçiş anahtarıyla giriş yap"
+	},
+	"receipt": {
+		"block": "Blok",
+		"sender": "Gönderen",
+		"hash": "Hash",
+		"date": "Tarih",
+		"time": "Saat"
 	}
 }

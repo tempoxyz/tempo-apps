@@ -9,7 +9,8 @@
 		"feeToken": "โทเค็นค่าธรรมเนียม",
 		"feeTokenDescription": "เลือกโทเค็นที่จะใช้จ่ายค่าธรรมเนียมการทำธุรกรรม",
 		"language": "ภาษา",
-		"languageDescription": "เลือกภาษาที่คุณต้องการ"
+		"languageDescription": "เลือกภาษาที่คุณต้องการ",
+		"notSet": "ยังไม่ได้ตั้งค่า"
 	},
 	"common": {
 		"active": "ใช้งานอยู่",
@@ -20,7 +21,24 @@
 		"recipient": "ผู้รับ 0x...",
 		"amount": "จำนวน",
 		"max": "สูงสุด",
-		"cancel": "ยกเลิก"
+		"cancel": "ยกเลิก",
+		"search": "ค้นหา",
+		"signUp": "สมัคร",
+		"signIn": "เข้าสู่ระบบ",
+		"continue": "ดำเนินการต่อ",
+		"logOut": "ออกจากระบบ",
+		"copyAddress": "คัดลอกที่อยู่",
+		"viewOnExplorer": "ดูบน Explorer",
+		"viewReceipt": "ดูใบเสร็จ",
+		"viewTransaction": "ดูธุรกรรม",
+		"requestTokens": "ขอโทเค็น",
+		"transaction": "ธุรกรรม",
+		"transactions": "ธุรกรรม",
+		"transactionOn": "เมื่อ",
+		"self": "ตัวเอง",
+		"andMore": "และอีก {{count}}",
+		"sentSuccessfully": "ส่ง {{symbol}} สำเร็จ",
+		"demoNote": "นี่คือเดโม ยอดเงินจะไม่อัปเดต"
 	},
 	"portfolio": {
 		"title": "พอร์ตโฟลิโอ",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "สินทรัพย์",
 		"hideZeroBalances": "ซ่อนยอดเงินศูนย์",
 		"showZeroBalances": "แสดงยอดเงินศูนย์",
-		"noActivityYet": "ยังไม่มีกิจกรรม"
+		"noActivityYet": "ยังไม่มีกิจกรรม",
+		"noAssetsFound": "ไม่พบสินทรัพย์"
+	},
+	"landing": {
+		"getStarted": "เริ่มต้น",
+		"exploreDescription": "สำรวจบัญชี ยอดโทเค็น และประวัติธุรกรรมบน Tempo",
+		"enterAddress": "ป้อนที่อยู่",
+		"orUsePasskey": "หรือใช้พาสคีย์อื่น",
+		"orSignInWithPasskey": "หรือเข้าสู่ระบบด้วยพาสคีย์"
+	},
+	"receipt": {
+		"block": "บล็อก",
+		"sender": "ผู้ส่ง",
+		"hash": "แฮช",
+		"date": "วันที่",
+		"time": "เวลา"
 	}
 }
