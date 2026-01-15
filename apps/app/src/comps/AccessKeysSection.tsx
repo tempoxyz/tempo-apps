@@ -108,6 +108,82 @@ function shortenAddress(address: string, chars = 4): string {
 	return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`
 }
 
+// Emoji utilities
+const DEFAULT_EMOJIS = ['🔑', '🗝️', '🔐', '🔒', '⚡', '🚀', '💎', '🌟', '🎯', '🛡️', '🔥', '💫', '🎨', '🌈', '🍀', '🎪']
+
+function getAccessKeyEmoji(keyId: string): string | null {
+	if (typeof window === 'undefined') return null
+	return localStorage.getItem(`accessKeyEmoji:${keyId.toLowerCase()}`)
+}
+
+function setAccessKeyEmoji(keyId: string, emoji: string): void {
+	if (typeof window === 'undefined') return
+	localStorage.setItem(`accessKeyEmoji:${keyId.toLowerCase()}`, emoji)
+}
+
+function getEmojiColor(emoji: string): string {
+	// Generate a consistent color from emoji
+	let hash = 0
+	for (let i = 0; i < emoji.length; i++) {
+		hash = emoji.charCodeAt(i) + ((hash << 5) - hash)
+	}
+	const hue = Math.abs(hash % 360)
+	return `hsl(${hue}, 60%, 50%)`
+}
+
+function EmojiPicker({
+	selectedEmoji,
+	onSelect,
+	onClose,
+}: {
+	selectedEmoji: string | null
+	onSelect: (emoji: string) => void
+	onClose: () => void
+}) {
+	const inputRef = React.useRef<HTMLInputElement>(null)
+
+	return (
+		<div className="absolute left-0 top-full mt-1 z-50 bg-surface border border-card-border rounded-lg shadow-xl p-2 w-[200px]">
+			<div className="grid grid-cols-8 gap-1 mb-2">
+				{DEFAULT_EMOJIS.map((emoji) => (
+					<button
+						key={emoji}
+						type="button"
+						onClick={() => onSelect(emoji)}
+						className={cx(
+							'size-6 flex items-center justify-center rounded hover:bg-white/10 text-sm cursor-pointer transition-colors',
+							selectedEmoji === emoji && 'bg-accent/20 ring-1 ring-accent',
+						)}
+					>
+						{emoji}
+					</button>
+				))}
+			</div>
+			<div className="flex gap-1">
+				<input
+					ref={inputRef}
+					type="text"
+					placeholder="Custom emoji"
+					maxLength={2}
+					className="flex-1 bg-base-alt rounded px-2 py-1 text-[12px] text-primary placeholder:text-tertiary outline-none focus:ring-1 focus:ring-accent"
+					onKeyDown={(e) => {
+						if (e.key === 'Enter' && inputRef.current?.value) {
+							onSelect(inputRef.current.value)
+						}
+					}}
+				/>
+				<button
+					type="button"
+					onClick={onClose}
+					className="px-2 py-1 text-[11px] text-tertiary hover:text-primary transition-colors"
+				>
+					Done
+				</button>
+			</div>
+		</div>
+	)
+}
+
 export function formatCreatedAt(timestamp: number): string {
 	const now = Date.now()
 	const diff = now - timestamp
@@ -479,6 +555,8 @@ function AccessKeyRow({
 	// Check if private key is available in localStorage
 	const [hasPrivateKey, setHasPrivateKey] = React.useState<boolean | null>(null)
 	const [keyName, setKeyName] = React.useState<string | null>(null)
+	const [emoji, setEmoji] = React.useState<string | null>(null)
+	const [showEmojiPicker, setShowEmojiPicker] = React.useState(false)
 
 	React.useEffect(() => {
 		if (typeof window === 'undefined') return
@@ -487,7 +565,14 @@ function AccessKeyRow({
 		)
 		setHasPrivateKey(stored !== null)
 		setKeyName(getAccessKeyName(accessKey.keyId))
+		setEmoji(getAccessKeyEmoji(accessKey.keyId))
 	}, [accessKey.keyId])
+
+	const handleEmojiSelect = (selectedEmoji: string) => {
+		setAccessKeyEmoji(accessKey.keyId, selectedEmoji)
+		setEmoji(selectedEmoji)
+		setShowEmojiPicker(false)
+	}
 
 	const explorerUrl = txHash
 		? `https://explore.mainnet.tempo.xyz/tx/${txHash}`
@@ -499,11 +584,42 @@ function AccessKeyRow({
 	// Display name or shortened address
 	const displayName = keyName || shortenAddress(accessKey.keyId, 6)
 
+	const emojiColor = emoji ? getEmojiColor(emoji) : null
+
 	const rowContent = (
 		<>
-			{/* Key icon */}
-			<div className="flex items-center justify-center size-8 rounded-lg bg-accent/10 shrink-0">
-				<KeyIcon className="size-4 text-accent" />
+			{/* Key icon / Emoji */}
+			<div className="relative shrink-0">
+				<button
+					type="button"
+					onClick={(e) => {
+						e.preventDefault()
+						e.stopPropagation()
+						if (isOwner) setShowEmojiPicker(!showEmojiPicker)
+					}}
+					className={cx(
+						'flex items-center justify-center size-8 rounded-lg transition-colors',
+						isOwner && 'cursor-pointer hover:ring-2 hover:ring-accent/30',
+						emoji ? 'text-lg' : '',
+					)}
+					style={emoji && emojiColor ? { backgroundColor: `${emojiColor}20` } : undefined}
+					title={isOwner ? 'Click to change emoji' : undefined}
+				>
+					{emoji ? (
+						<span>{emoji}</span>
+					) : (
+						<div className="flex items-center justify-center size-full rounded-lg bg-accent/10">
+							<KeyIcon className="size-4 text-accent" />
+						</div>
+					)}
+				</button>
+				{showEmojiPicker && (
+					<EmojiPicker
+						selectedEmoji={emoji}
+						onSelect={handleEmojiSelect}
+						onClose={() => setShowEmojiPicker(false)}
+					/>
+				)}
 			</div>
 			<div className="flex flex-col flex-1 min-w-0 gap-0.5">
 				<span className="text-[14px] text-primary font-medium flex items-center gap-1">
