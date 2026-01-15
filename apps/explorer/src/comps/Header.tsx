@@ -12,6 +12,7 @@ import { isTestnet } from '#lib/env'
 import { useIsMounted } from '#lib/hooks'
 import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
+import { ThemeToggle } from '#comps/ThemeToggle'
 
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
@@ -24,6 +25,7 @@ export function Header(props: Header.Props) {
 						<Header.TempoWordmark />
 					</Link>
 					<Header.NetworkBadge />
+					<ThemeToggle />
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden">
