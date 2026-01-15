@@ -60,6 +60,8 @@ import SendIcon from '~icons/lucide/send'
 import EyeIcon from '~icons/lucide/eye'
 import EyeOffIcon from '~icons/lucide/eye-off'
 import KeyIcon from '~icons/lucide/key-round'
+import UserIcon from '~icons/lucide/user'
+import ChevronDownIcon from '~icons/lucide/chevron-down'
 
 import ReceiptIcon from '~icons/lucide/receipt'
 import XIcon from '~icons/lucide/x'
@@ -2272,55 +2274,61 @@ function SignWithSelector({
 		return `$${Number(formatted).toFixed(0)}`
 	}
 
-	const selectedKeyData = selectedKey
-		? accessKeys.find((k) => k.keyId === selectedKey)
-		: null
-	const buttonRect = buttonRef.current?.getBoundingClientRect()
+	const [dropdownPos, setDropdownPos] = React.useState<{
+		top: number
+		left: number
+		width: number
+	} | null>(null)
+
+	const openDropdown = () => {
+		if (buttonRef.current) {
+			const rect = buttonRef.current.getBoundingClientRect()
+			setDropdownPos({
+				top: rect.bottom + 4,
+				left: rect.left,
+				width: Math.max(rect.width, 160),
+			})
+			setIsOpen(true)
+		}
+	}
 
 	return (
 		<>
 			<button
 				ref={buttonRef}
 				type="button"
-				onClick={() => setIsOpen(!isOpen)}
+				onClick={() => (isOpen ? setIsOpen(false) : openDropdown())}
 				className={cx(
-					'h-[20px] px-1.5 rounded text-[9px] flex items-center gap-1 transition-colors cursor-pointer',
-					selectedKey ? 'text-accent' : 'text-tertiary hover:text-secondary',
+					'h-[32px] px-3 rounded-lg border bg-base text-[12px] flex items-center gap-2 transition-colors cursor-pointer',
+					isOpen ? 'border-accent' : 'border-card-border',
+					selectedKey ? 'text-accent' : 'text-secondary hover:text-primary',
 				)}
 			>
-				<KeyIcon className="size-[10px]" />
-				<span>{selectedKey ? getKeyName(selectedKey) : 'Wallet'}</span>
-				{selectedKeyData && getKeyLimit(selectedKeyData) && (
-					<span className="text-accent/70">
-						· {getKeyLimit(selectedKeyData)}
-					</span>
+				{selectedKey ? (
+					<KeyIcon className="size-4 shrink-0" />
+				) : (
+					<UserIcon className="size-4 shrink-0" />
 				)}
-				<svg
+				<span className="truncate">
+					{selectedKey ? getKeyName(selectedKey) : 'Wallet'}
+				</span>
+				<ChevronDownIcon
 					className={cx(
-						'size-[8px] transition-transform',
+						'size-4 text-tertiary transition-transform shrink-0 ml-auto',
 						isOpen && 'rotate-180',
 					)}
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-						d="M19 9l-7 7-7-7"
-					/>
-				</svg>
+				/>
 			</button>
 			{isOpen &&
-				buttonRect &&
+				dropdownPos &&
 				createPortal(
 					<div
 						ref={dropdownRef}
-						className="fixed min-w-[120px] bg-surface border border-card-border rounded-md shadow-xl overflow-hidden"
+						className="fixed bg-surface border border-card-border rounded-xl shadow-xl overflow-hidden"
 						style={{
-							top: buttonRect.bottom + 4,
-							left: buttonRect.left,
+							top: dropdownPos.top,
+							left: dropdownPos.left,
+							minWidth: dropdownPos.width,
 							zIndex: 99999,
 						}}
 					>
@@ -2331,23 +2339,11 @@ function SignWithSelector({
 								setIsOpen(false)
 							}}
 							className={cx(
-								'w-full px-3 py-2 text-[13px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-2',
-								!selectedKey ? 'text-accent' : 'text-primary',
+								'w-full px-3 py-2.5 text-[12px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-2',
+								!selectedKey ? 'text-accent bg-accent/5' : 'text-primary',
 							)}
 						>
-							<svg
-								className="size-4"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z"
-								/>
-							</svg>
+							<UserIcon className="size-4" />
 							<span>Wallet</span>
 						</button>
 						{accessKeys.map((key) => {
@@ -2365,21 +2361,23 @@ function SignWithSelector({
 									}}
 									disabled={isExhausted}
 									className={cx(
-										'w-full px-3 py-2 text-[13px] text-left transition-colors flex items-center gap-2',
+										'w-full px-3 py-2.5 text-[12px] text-left transition-colors flex items-center gap-2',
 										isExhausted
 											? 'text-tertiary cursor-not-allowed'
 											: 'hover:bg-base-alt cursor-pointer',
-										selectedKey === key.keyId ? 'text-accent' : 'text-primary',
+										selectedKey === key.keyId
+											? 'text-accent bg-accent/5'
+											: 'text-primary',
 									)}
 								>
-									<KeyIcon className="size-4 text-accent" />
+									<KeyIcon className="size-4" />
 									<span className="flex-1 truncate">
 										{getKeyName(key.keyId)}
 									</span>
 									{limit && (
 										<span
 											className={cx(
-												'text-[11px]',
+												'text-[10px]',
 												isExhausted ? 'text-negative' : 'text-secondary',
 											)}
 										>
