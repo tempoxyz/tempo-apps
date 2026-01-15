@@ -50,7 +50,9 @@
 		"showZeroBalances": "Mostrar saldos cero",
 		"noActivityYet": "Sin actividad aún",
 		"noActivityInBlock": "Sin actividad en este bloque",
-		"noAssetsFound": "No se encontraron activos"
+		"noAssetsFound": "No se encontraron activos",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "Comenzar",
