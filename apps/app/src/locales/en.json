@@ -93,5 +93,27 @@
 		"hash": "Hash",
 		"date": "Date",
 		"time": "Time"
+	},
+	"activity": {
+		"send": "Send",
+		"received": "Received",
+		"mint": "Mint",
+		"burn": "Burn",
+		"swap": "Swap",
+		"approve": "Approve",
+		"grantRole": "Grant role",
+		"revokeRole": "Revoke role",
+		"pauseTransfers": "Pause transfers",
+		"resumeTransfers": "Resume transfers",
+		"createToken": "Create token",
+		"partialFill": "Partial fill",
+		"completeFill": "Complete fill",
+		"cancelOrder": "Cancel order",
+		"setFeeToken": "Set fee token",
+		"payFee": "Pay fee",
+		"to": "to",
+		"from": "from",
+		"self": "self",
+		"andMore": "and {{count}} more"
 	}
 }

@@ -1470,9 +1470,10 @@ function HoldingsTable({
 						}}
 						onSendComplete={(symbol) => {
 							setToastMessage(`Sent ${symbol} successfully`)
-							setSendingToken(null)
 							onOptimisticClear?.(asset.address)
 							onSendSuccess?.()
+							// Delay collapsing form to show success state
+							setTimeout(() => setSendingToken(null), 1500)
 						}}
 						onSendError={() => {
 							onOptimisticClear?.(asset.address)

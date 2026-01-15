@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { type Address as AddressType, Value } from 'ox'
 import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import { isAddressEqual } from 'viem'
 import { cx } from '#lib/css'
 import { TokenIcon } from '#comps/TokenIcon'
