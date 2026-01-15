@@ -6,7 +6,7 @@
 	"main": "./src/index.ts",
 	"workers_dev": true,
 	"preview_urls": true,
-	"keep_vars": true,
+	"keep_vars": false,
 	"vars": {
 		"ALLOWED_ORIGINS": "*"
 	},
@@ -36,8 +36,7 @@
 				}
 			],
 			"vars": {
-				"ALLOWED_ORIGINS": "*",
-				"RP_ID": "tempo.xyz"
+				"ALLOWED_ORIGINS": "*"
 			},
 			"kv_namespaces": [
 				{

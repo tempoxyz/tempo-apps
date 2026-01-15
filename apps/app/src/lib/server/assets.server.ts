@@ -2,12 +2,16 @@ import { createServerFn } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { decodeAbiParameters } from 'viem'
-import { getChainId } from 'wagmi/actions'
 import { TOKEN_CREATED_EVENT } from '#lib/abis'
-import { getWagmiConfig } from '#wagmi.config'
 
 const TIP20_DECIMALS = 6
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
+
+// TODO: Remove this hardcoded USD assumption once proper price oracle is implemented
+// DONOTUSE is a test faucet token that we treat as USD-denominated for demo purposes
+const HARDCODED_USD_TOKENS = new Set([
+	'0x20c000000000000000000000033abb6ac7d235e5', // DONOTUSE (presto faucet token)
+])
 
 async function fetchTokenMetadataViaRpc(
 	token: string,
@@ -103,8 +107,16 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 	.handler(async ({ data }): Promise<AssetData[] | null> => {
 		try {
 			const address = data.address as Address.Address
-			const config = getWagmiConfig()
-			const chainId = getChainId(config)
+			// Get chain ID from runtime env for server functions
+			let chainId: number
+			try {
+				const { env } = await import('cloudflare:workers')
+				const tempoEnv = env.VITE_TEMPO_ENV as string | undefined
+				chainId = tempoEnv === 'presto' ? 4217 : tempoEnv === 'devnet' ? 42430 : 42431
+			} catch {
+				// Local dev fallback
+				chainId = TEMPO_ENV === 'presto' ? 4217 : TEMPO_ENV === 'devnet' ? 42430 : 42431
+			}
 
 			const { QB } = await getIndexSupply()
 			const qb = QB.withSignatures([TRANSFER_SIGNATURE])
@@ -207,7 +219,10 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 				.slice(0, MAX_TOKENS)
 				.map((row) => {
 					const metadata = tokenMetadata.get(row.token)
-					const isUsd = metadata?.currency === 'USD'
+					// TODO: Replace hardcoded USD check with proper price oracle
+					const isUsd =
+						metadata?.currency === 'USD' ||
+						HARDCODED_USD_TOKENS.has(row.token.toLowerCase())
 					const valueUsd = isUsd
 						? Number(row.balance) / 10 ** TIP20_DECIMALS
 						: undefined
