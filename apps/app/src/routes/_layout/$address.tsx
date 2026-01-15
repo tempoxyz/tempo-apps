@@ -1,17 +1,30 @@
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
-import { waapi, spring } from 'animejs'
 import type { Address } from 'ox'
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { encode } from 'uqr'
-import { decodeAbiParameters, erc20Abi, formatUnits, parseUnits } from 'viem'
+import {
+	createClient,
+	createPublicClient,
+	decodeAbiParameters,
+	erc20Abi,
+	encodeFunctionData,
+	formatUnits,
+	http,
+	parseUnits,
+} from 'viem'
+import { sendTransaction } from 'viem/actions'
+import { Account as TempoAccount } from 'viem/tempo'
+import { PublicKey } from 'ox'
 import {
 	useAccount,
+	useConnectorClient,
 	useDisconnect,
 	useWriteContract,
 	useWaitForTransactionReceipt,
 } from 'wagmi'
+import { getTempoChain } from '#wagmi.config'
 import {
 	TxDescription,
 	parseKnownEvents,
@@ -22,6 +35,13 @@ import {
 } from '#comps/activity'
 import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
+import { Section } from '#comps/Section'
+import { AccessKeysSection, formatCreatedAt } from '#comps/AccessKeysSection'
+import {
+	AccessKeysProvider,
+	useSignableAccessKeys,
+	type AccessKeyData,
+} from '#lib/access-keys-context'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
 import { fetchAssets, type AssetData } from '#lib/server/assets.server'
@@ -34,11 +54,8 @@ import {
 } from '#comps/Settings'
 import CopyIcon from '~icons/lucide/copy'
 import ExternalLinkIcon from '~icons/lucide/external-link'
-import GlobeIcon from '~icons/lucide/globe'
 import ArrowLeftIcon from '~icons/lucide/arrow-left'
 import CheckIcon from '~icons/lucide/check'
-import PlusIcon from '~icons/lucide/plus'
-import MinusIcon from '~icons/lucide/minus'
 import SendIcon from '~icons/lucide/send'
 import EyeIcon from '~icons/lucide/eye'
 import EyeOffIcon from '~icons/lucide/eye-off'
@@ -891,8 +908,17 @@ function AddressView() {
 	)
 	const displayedAssets = showZeroBalances ? adjustedAssets : assetsWithBalance
 
+	// Get token addresses for access key spending limit queries
+	const tokenAddresses = React.useMemo(
+		() => dedupedAssets.map((a) => a.address),
+		[dedupedAssets],
+	)
+
 	return (
-		<>
+		<AccessKeysProvider
+			accountAddress={address}
+			tokenAddresses={tokenAddresses}
+		>
 			<Layout.Header
 				left={
 					<Link
@@ -1081,199 +1107,12 @@ function AddressView() {
 						tokenMetadataMap={tokenMetadataMap}
 					/>
 
+					<AccessKeysSection assets={assetsData} accountAddress={address} />
+
 					<SettingsSection assets={assetsData} />
 				</div>
 			</div>
-		</>
-	)
-}
-
-const springFast = spring({
-	mass: 1,
-	stiffness: 2600,
-	damping: 100,
-})
-
-const springSlower = spring({
-	mass: 1,
-	stiffness: 1200,
-	damping: 80,
-})
-
-function Section(props: {
-	title: string
-	subtitle?: string
-	titleRight?: React.ReactNode
-	externalLink?: string
-	defaultOpen?: boolean
-	headerRight?: React.ReactNode
-	children: React.ReactNode
-	backButton?: {
-		label: string
-		onClick: () => void
-	}
-}) {
-	const {
-		title,
-		subtitle,
-		titleRight,
-		externalLink,
-		defaultOpen = false,
-		headerRight,
-		children,
-		backButton,
-	} = props
-	const [open, setOpen] = React.useState(defaultOpen)
-	const contentRef = React.useRef<HTMLDivElement>(null)
-	const wrapperRef = React.useRef<HTMLDivElement>(null)
-	const innerRef = React.useRef<HTMLDivElement>(null)
-	const animationRef = React.useRef<ReturnType<typeof waapi.animate> | null>(
-		null,
-	)
-
-	const handleClick = () => {
-		const content = contentRef.current
-		const wrapper = wrapperRef.current
-		const inner = innerRef.current
-		if (!content || !wrapper || !inner) return
-
-		// Cancel any running animation
-		if (animationRef.current) {
-			animationRef.current.cancel()
-			animationRef.current = null
-		}
-
-		const nextOpen = !open
-		setOpen(nextOpen)
-
-		if (nextOpen) {
-			const targetHeight = wrapper.getBoundingClientRect().height
-			content.style.height = '0px'
-			animationRef.current = waapi.animate(content, {
-				height: [0, targetHeight],
-				ease: springFast,
-			})
-			waapi.animate(inner, {
-				translateY: ['-40%', '0%'],
-				opacity: [0, 1],
-				ease: springSlower,
-			})
-			animationRef.current.then(() => {
-				requestAnimationFrame(() => {
-					content.style.height = 'auto'
-				})
-				animationRef.current = null
-			})
-		} else {
-			const currentHeight = content.offsetHeight
-			content.style.height = `${currentHeight}px`
-			animationRef.current = waapi.animate(content, {
-				height: [currentHeight, 0],
-				ease: springFast,
-			})
-			waapi.animate(inner, {
-				scale: [1, 1],
-				opacity: [1, 0],
-				ease: springFast,
-			})
-			animationRef.current.then(() => {
-				animationRef.current = null
-			})
-		}
-	}
-
-	return (
-		<div className="rounded-xl border border-card-border bg-card-header">
-			<div className="flex items-center h-[44px] pl-2 pr-2.5">
-				<button
-					type="button"
-					onClick={handleClick}
-					aria-expanded={open}
-					className={cx(
-						'flex flex-1 items-center justify-between cursor-pointer select-none press-down transition-colors',
-						'text-[14px] font-medium text-primary hover:text-accent',
-						'rounded-xl! focus-visible:outline-2! focus-visible:outline-accent! focus-visible:outline-offset-0!',
-					)}
-				>
-					<span className="flex items-center gap-2">
-						{backButton ? (
-							<button
-								type="button"
-								onClick={(e) => {
-									e.stopPropagation()
-									backButton.onClick()
-								}}
-								className="flex items-center gap-1.5 text-accent hover:text-accent/80 transition-colors cursor-pointer"
-							>
-								<ArrowLeftIcon className="size-[14px]" />
-								<span>{backButton.label}</span>
-							</button>
-						) : (
-							<>
-								{title}
-								{subtitle && (
-									<>
-										<span className="w-px h-4 bg-card-border" />
-										<span className="text-[12px] text-tertiary font-normal">
-											{subtitle}
-										</span>
-									</>
-								)}
-								{titleRight && (
-									<>
-										<span className="w-px h-4 bg-card-border" />
-										{titleRight}
-									</>
-								)}
-							</>
-						)}
-					</span>
-				</button>
-				<span className="flex items-center gap-1.5">
-					{headerRight}
-					{externalLink && (
-						<a
-							href={externalLink}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors focus-ring"
-							onClick={(e) => e.stopPropagation()}
-							aria-label="View on external site"
-						>
-							<GlobeIcon className="size-[14px] text-tertiary" />
-						</a>
-					)}
-					<button
-						type="button"
-						onClick={handleClick}
-						aria-expanded={open}
-						aria-label={open ? 'Collapse section' : 'Expand section'}
-						className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer focus-ring"
-					>
-						{open ? (
-							<MinusIcon className="size-[14px] text-tertiary" />
-						) : (
-							<PlusIcon className="size-[14px] text-tertiary" />
-						)}
-					</button>
-				</span>
-			</div>
-			<div
-				ref={contentRef}
-				className="overflow-hidden rounded-b-xl"
-				style={{ height: open ? 'auto' : 0 }}
-				inert={!open ? true : undefined}
-			>
-				<div
-					ref={wrapperRef}
-					className="bg-card border-t border-card-border px-2 rounded-b-xl overflow-hidden"
-				>
-					<div ref={innerRef} className="origin-top">
-						{children}
-					</div>
-				</div>
-			</div>
-		</div>
+		</AccessKeysProvider>
 	)
 }
 
@@ -1889,6 +1728,7 @@ function BlockTimeline({
 			currentBlock,
 			onSelectBlock,
 			prefetchAdjacentBlocks,
+			handleBlockClick,
 		],
 	)
 
@@ -2186,6 +2026,9 @@ function HoldingsTable({
 	)
 	const [toastMessage, setToastMessage] = React.useState<string | null>(null)
 
+	// Use global access keys from context
+	const { keys: signableAccessKeys } = useSignableAccessKeys()
+
 	React.useEffect(() => {
 		if (toastMessage) {
 			const timeout = setTimeout(() => setToastMessage(null), 3000)
@@ -2275,6 +2118,7 @@ function HoldingsTable({
 							asset.address === initialToken ? initialSendTo : undefined
 						}
 						announce={announce}
+						accessKeys={signableAccessKeys}
 					/>
 				))}
 			</div>
@@ -2361,6 +2205,7 @@ function AssetRow({
 	isOwnProfile,
 	initialRecipient,
 	announce,
+	accessKeys,
 }: {
 	asset: AssetData
 	address: string
@@ -2374,6 +2219,7 @@ function AssetRow({
 	isOwnProfile: boolean
 	initialRecipient?: string
 	announce: (message: string) => void
+	accessKeys: AccessKeyData[]
 }) {
 	const { t } = useTranslation()
 	const [recipient, setRecipient] = React.useState(initialRecipient ?? '')
@@ -2391,8 +2237,12 @@ function AssetRow({
 	const [pendingSendAmount, setPendingSendAmount] = React.useState<
 		bigint | null
 	>(null)
+	const [selectedAccessKey, setSelectedAccessKey] = React.useState<
+		string | null
+	>(null)
 	const recipientInputRef = React.useRef<HTMLInputElement>(null)
 	const amountInputRef = React.useRef<HTMLInputElement>(null)
+	const { data: connectorClient } = useConnectorClient()
 
 	const {
 		writeContract,
@@ -2529,9 +2379,114 @@ function AssetRow({
 		return () => document.removeEventListener('keydown', handleKeyDown)
 	}, [isExpanded, onToggleSend])
 
-	const handleSend = () => {
+	const handleSend = async () => {
 		if (!isValidSend || parsedAmount === 0n) return
-		// Store pending amount - optimistic update will apply after wallet signature
+
+		// If an access key is selected, use it to sign the transaction
+		if (selectedAccessKey && connectorClient?.chain) {
+			setSendState('sending')
+			try {
+				// Get the access key from localStorage (stored when created)
+				const storedKey = localStorage.getItem(
+					`accessKey:${selectedAccessKey.toLowerCase()}`,
+				)
+				if (!storedKey) {
+					setSendError(
+						'Access key not found in local storage. Keys created on another device cannot be used here.',
+					)
+					setSendState('error')
+					setTimeout(() => {
+						setSendState('idle')
+						setSendError(null)
+					}, 3000)
+					return
+				}
+
+				const keyData = JSON.parse(storedKey) as { privateKey: string }
+				const privateKeyBytes = Uint8Array.from(atob(keyData.privateKey), (c) =>
+					c.charCodeAt(0),
+				)
+
+				// Import the private key
+				const privateKey = await crypto.subtle.importKey(
+					'pkcs8',
+					privateKeyBytes,
+					{ name: 'ECDSA', namedCurve: 'P-256' },
+					true,
+					['sign'],
+				)
+
+				// Derive the public key from private key via JWK
+				const jwk = await crypto.subtle.exportKey('jwk', privateKey)
+				// Remove private key 'd' and key_ops so we can import as public key with 'verify'
+				const publicJwk = { ...jwk, d: undefined, key_ops: undefined }
+				const cryptoPublicKey = await crypto.subtle.importKey(
+					'jwk',
+					publicJwk,
+					{ name: 'ECDSA', namedCurve: 'P-256' },
+					true,
+					['verify'],
+				)
+
+				// Export to raw format and convert to ox PublicKey format
+				const publicKeyRaw = await crypto.subtle.exportKey(
+					'raw',
+					cryptoPublicKey,
+				)
+				const publicKey = PublicKey.from(new Uint8Array(publicKeyRaw))
+
+				// Create the access key account with reconstructed key pair
+				const accessKeyAccount = TempoAccount.fromWebCryptoP256(
+					{ privateKey, publicKey },
+					{ access: connectorClient.account },
+				)
+
+				// Create a client with the access key
+				const accessKeyClient = createClient({
+					account: accessKeyAccount,
+					chain: connectorClient.chain,
+					transport: http(),
+				})
+
+				// Send transfer using the access key
+				const hash = await sendTransaction(accessKeyClient, {
+					to: asset.address as `0x${string}`,
+					data: encodeFunctionData({
+						abi: erc20Abi,
+						functionName: 'transfer',
+						args: [recipient as `0x${string}`, parsedAmount],
+					}),
+					feeToken: '0x20c000000000000000000000033abb6ac7d235e5',
+				})
+
+				// Wait for confirmation manually since we're not using wagmi's writeContract
+				const chain = getTempoChain()
+				const publicClient = createPublicClient({ chain, transport: http() })
+				await publicClient.waitForTransactionReceipt({ hash })
+
+				setSendState('sent')
+				setTimeout(() => {
+					setSendState('idle')
+					setRecipient('')
+					setAmount('')
+					setSelectedAccessKey(null)
+					onSendComplete(
+						asset.metadata?.symbol || shortenAddress(asset.address, 3),
+					)
+				}, 1500)
+			} catch (e) {
+				console.error('[AssetRow] Access key send error:', e)
+				setSendError(e instanceof Error ? e.message : 'Transaction failed')
+				setSendState('error')
+				setTimeout(() => {
+					setSendState('idle')
+					setSendError(null)
+				}, 3000)
+			}
+			return
+		}
+
+		// Default: use wallet to sign
 		setPendingSendAmount(parsedAmount)
 		writeContract({
 			address: asset.address as `0x${string}`,
@@ -2577,73 +2532,118 @@ function AssetRow({
 					e.preventDefault()
 					handleSend()
 				}}
-				className="flex flex-col sm:flex-row sm:items-center gap-2 px-1 py-2.5 sm:py-0 rounded-xl hover:glass-thin transition-all sm:h-[52px]"
+				className="flex flex-col gap-2 px-1 py-2.5 rounded-xl hover:glass-thin transition-all"
 			>
-				<div className="flex items-center gap-1.5 flex-1 min-w-0">
-					<TokenIcon address={asset.address} className="size-[24px] shrink-0" />
-					<input
-						ref={recipientInputRef}
-						type="text"
-						value={recipient}
-						onChange={(e) => setRecipient(e.target.value)}
-						placeholder="0x..."
-						className="flex-1 min-w-0 h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
-					/>
-				</div>
-				<div className="flex items-center gap-1">
-					<input
-						ref={amountInputRef}
-						type="text"
-						inputMode="decimal"
-						value={amount}
-						onChange={(e) => setAmount(e.target.value)}
-						placeholder="0.00"
-						className="w-[10ch] h-[32px] pl-1 pr-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
-					/>
-					<button
-						type="button"
-						onClick={handleMax}
-						className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[10px] font-medium text-accent hover:bg-base-alt cursor-pointer transition-colors"
-					>
-						MAX
-					</button>
-					<button
-						type="submit"
-						aria-label={t('common.send')}
-						aria-busy={sendState === 'sending'}
-						className={cx(
-							'size-[32px] rounded-lg press-down transition-colors flex items-center justify-center shrink-0 focus-ring',
-							sendState === 'sent'
-								? 'bg-positive text-white cursor-default'
-								: sendState === 'error'
-									? 'bg-negative text-white cursor-default'
-									: isValidSend && sendState === 'idle'
-										? 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
-										: 'bg-base-alt text-tertiary cursor-not-allowed',
-						)}
-						disabled={!isValidSend || sendState !== 'idle'}
-					>
-						{sendState === 'sending' ? (
-							<BouncingDots />
-						) : sendState === 'sent' ? (
-							<CheckIcon className="size-[14px]" />
-						) : sendState === 'error' ? (
+				<div className="flex flex-col sm:flex-row sm:items-center gap-2">
+					<div className="flex items-center gap-1.5 flex-1 min-w-0">
+						<TokenIcon
+							address={asset.address}
+							className="size-[24px] shrink-0"
+						/>
+						<input
+							ref={recipientInputRef}
+							type="text"
+							value={recipient}
+							onChange={(e) => setRecipient(e.target.value)}
+							placeholder="0x..."
+							className="flex-1 min-w-0 h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
+						/>
+					</div>
+					<div className="flex items-center gap-1">
+						<input
+							ref={amountInputRef}
+							type="text"
+							inputMode="decimal"
+							value={amount}
+							onChange={(e) => setAmount(e.target.value)}
+							placeholder="0.00"
+							className="w-[10ch] h-[32px] pl-1 pr-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
+						/>
+						<button
+							type="button"
+							onClick={handleMax}
+							className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[10px] font-medium text-accent hover:bg-base-alt cursor-pointer transition-colors"
+						>
+							MAX
+						</button>
+						<button
+							type="submit"
+							aria-label={t('common.send')}
+							aria-busy={sendState === 'sending'}
+							className={cx(
+								'size-[32px] rounded-lg press-down transition-colors flex items-center justify-center shrink-0 focus-ring',
+								sendState === 'sent'
+									? 'bg-positive text-white cursor-default'
+									: sendState === 'error'
+										? 'bg-negative text-white cursor-default'
+										: isValidSend && sendState === 'idle'
+											? 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
+											: 'bg-base-alt text-tertiary cursor-not-allowed',
+							)}
+							disabled={!isValidSend || sendState !== 'idle'}
+						>
+							{sendState === 'sending' ? (
+								<BouncingDots />
+							) : sendState === 'sent' ? (
+								<CheckIcon className="size-[14px]" />
+							) : sendState === 'error' ? (
+								<XIcon className="size-[14px]" />
+							) : (
+								<SendIcon className="size-[14px]" />
+							)}
+						</button>
+						<button
+							type="button"
+							onClick={handleToggle}
+							aria-label={t('common.cancel')}
+							className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-lg transition-colors shrink-0 focus-ring"
+						>
 							<XIcon className="size-[14px]" />
-						) : (
-							<SendIcon className="size-[14px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={handleToggle}
-						aria-label={t('common.cancel')}
-						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-lg transition-colors shrink-0 focus-ring"
-					>
-						<XIcon className="size-[14px]" />
-					</button>
+						</button>
+					</div>
 				</div>
+				{accessKeys.length > 0 && (
+					<div className="flex flex-col gap-1 pl-[30px]">
+						<span className="text-[12px] text-tertiary whitespace-nowrap">
+							Sign with:
+						</span>
+						<select
+							value={selectedAccessKey ?? ''}
+							onChange={(e) => setSelectedAccessKey(e.target.value || null)}
+							className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary focus:outline-none focus:border-accent cursor-pointer"
+						>
+							<option value="">Wallet (default)</option>
+							{accessKeys.map((key) => {
+								const tokenAddr = asset.address.toLowerCase()
+								const remainingLimit = key.spendingLimits.get(tokenAddr)
+								const decimals = asset.metadata?.decimals ?? 6
+								let limitText = 'Unlimited'
+								if (remainingLimit !== undefined) {
+									if (remainingLimit > 0n) {
+										const formatted = formatUnits(remainingLimit, decimals)
+										limitText = `${Number(formatted).toFixed(2)} remaining`
+									} else {
+										limitText = 'Limit exhausted'
+									}
+								} else if (key.enforceLimits) {
+									// Key enforces limits but none set for this token - cannot spend
+									limitText = 'No limit set'
+								}
+								const createdText = key.createdAt
+									? formatCreatedAt(key.createdAt)
+									: ''
+								return (
+									<option key={key.keyId} value={key.keyId}>
+										{key.keyId} · {limitText}
+										{createdText ? ` · ${createdText}` : ''}
+									</option>
+								)
+							})}
+						</select>
+					</div>
+				)}
 				{sendError && (
-					<div className="col-span-full pl-9 sm:pl-0 text-[11px] text-negative truncate">
+					<div className="pl-[30px] text-[12px] text-negative truncate">
 						{sendError}
 					</div>
 				)}
@@ -2919,36 +2919,50 @@ function ActivitySection({
 
 	const tabButtons = (
 		<div className="flex items-center gap-3">
-			<button
-				type="button"
+			<span
+				role="button"
+				tabIndex={0}
 				onClick={(e) => {
 					e.stopPropagation()
 					setActiveTab('mine')
 				}}
+				onKeyDown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.stopPropagation()
+						setActiveTab('mine')
+					}
+				}}
 				className={cx(
-					'text-[12px] font-medium transition-all pb-0.5 border-b-2',
+					'text-[12px] font-medium transition-all pb-0.5 border-b-2 cursor-pointer',
 					activeTab === 'mine'
 						? 'text-primary border-accent'
 						: 'text-tertiary hover:text-primary border-transparent',
 				)}
 			>
 				{t('portfolio.mine')}
-			</button>
-			<button
-				type="button"
+			</span>
+			<span
+				role="button"
+				tabIndex={0}
 				onClick={(e) => {
 					e.stopPropagation()
 					setActiveTab('everyone')
 				}}
+				onKeyDown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.stopPropagation()
+						setActiveTab('everyone')
+					}
+				}}
 				className={cx(
-					'text-[12px] font-medium transition-all pb-0.5 border-b-2',
+					'text-[12px] font-medium transition-all pb-0.5 border-b-2 cursor-pointer',
 					activeTab === 'everyone'
 						? 'text-primary border-accent'
 						: 'text-tertiary hover:text-primary border-transparent',
 				)}
 			>
 				{t('portfolio.everyone')}
-			</button>
+			</span>
 		</div>
 	)
 
