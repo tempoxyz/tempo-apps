@@ -24,6 +24,7 @@ import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
+import { fetchAssets, type AssetData } from '#lib/server/assets.server'
 import { useActivitySummary, type ActivityType } from '#lib/activity-context'
 import { LottoNumber } from '#comps/LottoNumber'
 import {
@@ -54,9 +55,6 @@ import RefreshCwIcon from '~icons/lucide/refresh-cw'
 import { useTranslation } from 'react-i18next'
 import i18n, { isRtl } from '#lib/i18n'
 import { useAnnounce, LiveRegion, useFocusTrap, useEscapeKey } from '#lib/a11y'
-
-const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
-const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
 
 // Tokens that can be funded via the faucet
 const FAUCET_TOKEN_ADDRESSES = new Set([
@@ -105,143 +103,6 @@ const faucetFundAddress = createServerFn({ method: 'POST' })
 			return { success: false as const, error: String(e) }
 		}
 	})
-
-type TokenMetadata = {
-	address: string
-	name: string
-	symbol: string
-	decimals: number
-	currency: string
-	priceUsd: number
-}
-
-type BalanceEntry = {
-	token: string
-	balance: string
-	valueUsd: number
-}
-
-type AssetData = {
-	address: Address.Address
-	metadata:
-		| { name?: string; symbol?: string; decimals?: number; priceUsd?: number }
-		| undefined
-	balance: string | undefined
-	valueUsd: number | undefined
-}
-
-type TokenListToken = {
-	name: string
-	symbol: string
-	decimals: number
-	chainId: number
-	address: string
-	logoURI?: string
-}
-
-type TokenListResponse = {
-	tokens: TokenListToken[]
-}
-
-function generateMockBalance(
-	address: string,
-	decimals: number,
-): { balance: string; valueUsd: number } {
-	const hash = address
-		.toLowerCase()
-		.split('')
-		.reduce((acc, char) => acc + char.charCodeAt(0), 0)
-	const rand = (hash % 100) / 100
-
-	if (rand < 0.3) {
-		return { balance: '0', valueUsd: 0 }
-	}
-
-	const multiplier = 10 ** decimals
-	const amounts = [
-		0.5 * multiplier,
-		1.25 * multiplier,
-		10 * multiplier,
-		25 * multiplier,
-		100 * multiplier,
-		500 * multiplier,
-		1250 * multiplier,
-		5000 * multiplier,
-	]
-	const amount = amounts[hash % amounts.length]
-	const balance = Math.floor(amount + rand * amount * 0.5).toString()
-	const valueUsd = (Number(balance) / multiplier) * 1
-
-	return { balance, valueUsd }
-}
-
-async function fetchAssets(
-	accountAddress: Address.Address,
-): Promise<AssetData[]> {
-	if (BALANCES_API_URL) {
-		const [tokensRes, balancesRes] = await Promise.all([
-			fetch(`${BALANCES_API_URL}tokens`).catch(() => null),
-			fetch(`${BALANCES_API_URL}balances/${accountAddress}`).catch(() => null),
-		])
-
-		if (tokensRes?.ok && balancesRes?.ok) {
-			const tokens = (await tokensRes.json()) as TokenMetadata[]
-			const balances = (await balancesRes.json()) as BalanceEntry[]
-
-			const balanceMap = new Map(
-				balances.map((b) => [
-					b.token.toLowerCase(),
-					{ balance: b.balance, valueUsd: b.valueUsd },
-				]),
-			)
-
-			return tokens.map((token) => {
-				const balanceData = balanceMap.get(token.address.toLowerCase())
-				return {
-					address: token.address as Address.Address,
-					metadata: {
-						name: token.name,
-						symbol: token.symbol,
-						decimals: token.decimals,
-						priceUsd: token.priceUsd,
-					},
-					balance: balanceData?.balance ?? '0',
-					valueUsd: balanceData?.valueUsd ?? 0,
-				}
-			})
-		}
-	}
-
-	try {
-		const tokenlistRes = await fetch(`${TOKENLIST_API_URL}/list/42429`).catch(
-			() => null,
-		)
-		if (!tokenlistRes?.ok) return []
-
-		const tokenlist = (await tokenlistRes.json()) as TokenListResponse
-		const tokens = tokenlist.tokens ?? []
-
-		return tokens.map((token) => {
-			const mockData = generateMockBalance(
-				`${accountAddress}${token.address}`,
-				token.decimals,
-			)
-			return {
-				address: token.address as Address.Address,
-				metadata: {
-					name: token.name,
-					symbol: token.symbol,
-					decimals: token.decimals,
-					priceUsd: 1,
-				},
-				balance: mockData.balance,
-				valueUsd: mockData.valueUsd,
-			}
-		})
-	} catch {
-		return []
-	}
-}
 
 type ApiTransaction = {
 	hash: string
@@ -686,13 +547,13 @@ export const Route = createFileRoute('/_layout/$address')({
 		token: typeof search.token === 'string' ? search.token : undefined,
 	}),
 	loader: async ({ params }) => {
-		const assets = await fetchAssets(params.address as Address.Address)
+		const assets = await fetchAssets({ data: { address: params.address } })
 
 		const tokenMetadataMap = new Map<
 			Address.Address,
 			{ decimals: number; symbol: string }
 		>()
-		for (const asset of assets) {
+		for (const asset of assets ?? []) {
 			if (asset.metadata?.decimals !== undefined && asset.metadata?.symbol) {
 				tokenMetadataMap.set(asset.address, {
 					decimals: asset.metadata.decimals,
@@ -705,7 +566,7 @@ export const Route = createFileRoute('/_layout/$address')({
 			params.address as Address.Address,
 			tokenMetadataMap,
 		)
-		return { assets, activity }
+		return { assets: assets ?? [], activity }
 	},
 })
 
@@ -723,19 +584,13 @@ function eventTypeToActivityType(eventType: string): ActivityType {
 async function refetchBalances(
 	accountAddress: string,
 ): Promise<Map<string, { balance: string; valueUsd: number }>> {
-	if (!BALANCES_API_URL) return new Map()
 	try {
-		const res = await fetch(`${BALANCES_API_URL}balances/${accountAddress}`)
-		if (!res.ok) return new Map()
-		const balances = (await res.json()) as Array<{
-			token: string
-			balance: string
-			valueUsd: number
-		}>
+		const assets = await fetchAssets({ data: { address: accountAddress } })
+		if (!assets) return new Map()
 		return new Map(
-			balances.map((b) => [
-				b.token.toLowerCase(),
-				{ balance: b.balance, valueUsd: b.valueUsd },
+			assets.map((a) => [
+				a.address.toLowerCase(),
+				{ balance: a.balance ?? '0', valueUsd: a.valueUsd ?? 0 },
 			]),
 		)
 	} catch {
