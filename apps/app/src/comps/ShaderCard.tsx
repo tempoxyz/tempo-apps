@@ -11,7 +11,7 @@ const AMBIENT_DRIFT_SPEED_X = 0.008
 const AMBIENT_DRIFT_SPEED_Y = 0.006
 const AMBIENT_BASE_POS_X = 30
 const AMBIENT_BASE_POS_Y = 70
-const AMBIENT_PULSE_BASE = 0.12
+const AMBIENT_PULSE_BASE = 0.5
 const AMBIENT_PULSE_AMPLITUDE = 0.08
 const AMBIENT_PULSE_SPEED = 0.02
 
@@ -95,18 +95,23 @@ uniform int u_colorCount;
 const float PI = 3.14159265359;
 
 vec3 getGradientColor(float angle) {
-	// Hard color bands - blur is applied via CSS filter on the canvas
 	float normalizedAngle = angle / (2.0 * PI);
-	int idx = int(floor(normalizedAngle * float(u_colorCount))) % u_colorCount;
-	return u_colors[idx];
+
+	// Hardcoded 3 colors - will use uniforms later
+	vec3 c0 = vec3(0.231, 0.510, 0.965); // blue
+	vec3 c1 = vec3(0.133, 0.773, 0.369); // green
+	vec3 c2 = vec3(0.545, 0.361, 0.965); // purple
+
+	int idx = int(floor(normalizedAngle * 3.0));
+	idx = idx - (idx / 3) * 3;
+	if (idx < 0) idx += 3;
+
+	if (idx == 0) return c0;
+	if (idx == 1) return c1;
+	return c2;
 }
 
 void main() {
-	if (u_colorCount == 0) {
-		fragColor = vec4(0.0);
-		return;
-	}
-
 	vec2 uv = v_uv;
 	float intensity = u_intensity;
 
@@ -131,7 +136,7 @@ void main() {
 }
 `
 
-// Blur shader - single pass box blur for efficiency
+// Blur shader - Gaussian weighted blur with 21 samples
 const BLUR_SHADER = `#version 300 es
 precision highp float;
 
@@ -143,20 +148,38 @@ uniform vec2 u_resolution;
 uniform vec2 u_direction;
 uniform float u_radius;
 
+vec4 sampleClamped(vec2 uv) {
+	return texture(u_texture, clamp(uv, 0.0, 1.0));
+}
+
 void main() {
 	vec2 texelSize = 1.0 / u_resolution;
-	vec4 result = vec4(0.0);
-	float samples = 0.0;
+	vec2 off = u_direction * u_radius * texelSize;
 
-	// Sample at multiple points along the blur direction
-	for (float i = -3.0; i <= 3.0; i += 1.0) {
-		float offset = i * u_radius / 3.0;
-		vec2 sampleUV = v_uv + u_direction * offset * texelSize;
-		result += texture(u_texture, sampleUV);
-		samples += 1.0;
-	}
+	// 21 samples with Gaussian weights
+	vec4 sum = sampleClamped(v_uv) * 0.0954;
+	sum += sampleClamped(v_uv + off * 0.1) * 0.0915;
+	sum += sampleClamped(v_uv - off * 0.1) * 0.0915;
+	sum += sampleClamped(v_uv + off * 0.2) * 0.0837;
+	sum += sampleClamped(v_uv - off * 0.2) * 0.0837;
+	sum += sampleClamped(v_uv + off * 0.3) * 0.0728;
+	sum += sampleClamped(v_uv - off * 0.3) * 0.0728;
+	sum += sampleClamped(v_uv + off * 0.4) * 0.0604;
+	sum += sampleClamped(v_uv - off * 0.4) * 0.0604;
+	sum += sampleClamped(v_uv + off * 0.5) * 0.0476;
+	sum += sampleClamped(v_uv - off * 0.5) * 0.0476;
+	sum += sampleClamped(v_uv + off * 0.6) * 0.0358;
+	sum += sampleClamped(v_uv - off * 0.6) * 0.0358;
+	sum += sampleClamped(v_uv + off * 0.7) * 0.0256;
+	sum += sampleClamped(v_uv - off * 0.7) * 0.0256;
+	sum += sampleClamped(v_uv + off * 0.8) * 0.0174;
+	sum += sampleClamped(v_uv - off * 0.8) * 0.0174;
+	sum += sampleClamped(v_uv + off * 0.9) * 0.0113;
+	sum += sampleClamped(v_uv - off * 0.9) * 0.0113;
+	sum += sampleClamped(v_uv + off) * 0.0070;
+	sum += sampleClamped(v_uv - off) * 0.0070;
 
-	fragColor = result / samples;
+	fragColor = sum;
 }
 `
 
@@ -408,25 +431,20 @@ export function ShaderCard({
 
 			if (frameCount === 3) fadeStartTime = timestamp
 
-			// Ensure framebuffers are ready
-			if (!fb1 || !fb2) {
-				animationId = requestAnimationFrame(render)
-				return
-			}
-
 			const elapsed = timestamp - startTimeRef.current
 			const time = elapsed / 16.67
 			const wordmarkTime = (elapsed % WORDMARK_ANIMATION_DURATION) / WORDMARK_ANIMATION_DURATION
 			const fadeElapsed = fadeStartTime ? timestamp - fadeStartTime : 0
 			const fadeIn = Math.min(1, fadeElapsed / FADE_IN_DURATION)
 
-			// Bind the position buffer before rendering
+			if (!fb1 || !fb2) {
+				animationId = requestAnimationFrame(render)
+				return
+			}
+
 			gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
 
-			// Disable blending for framebuffer passes
-			gl.disable(gl.BLEND)
-
-			// Pass 1: Render gradient to framebuffer
+			// Pass 1: Render gradient to fb1
 			gl.bindFramebuffer(gl.FRAMEBUFFER, fb1.framebuffer)
 			gl.viewport(0, 0, currentWidth, currentHeight)
 			gl.clearColor(0, 0, 0, 0)
@@ -456,7 +474,7 @@ export function ShaderCard({
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
-			// Pass 2: Horizontal blur (fb1 -> fb2)
+			// Pass 2: Horizontal blur from fb1 to fb2
 			gl.bindFramebuffer(gl.FRAMEBUFFER, fb2.framebuffer)
 			gl.viewport(0, 0, currentWidth, currentHeight)
 			gl.clearColor(0, 0, 0, 0)
@@ -469,11 +487,11 @@ export function ShaderCard({
 			gl.uniform1i(gl.getUniformLocation(blurProgram, 'u_texture'), 0)
 			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_resolution'), currentWidth, currentHeight)
 			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_direction'), 1.0, 0.0)
-			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 120.0)
+			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 250.0)
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
-			// Pass 3: Vertical blur (fb2 -> fb1)
+			// Pass 3: Vertical blur from fb2 to fb1
 			gl.bindFramebuffer(gl.FRAMEBUFFER, fb1.framebuffer)
 			gl.viewport(0, 0, currentWidth, currentHeight)
 			gl.clearColor(0, 0, 0, 0)
@@ -481,41 +499,42 @@ export function ShaderCard({
 
 			gl.activeTexture(gl.TEXTURE0)
 			gl.bindTexture(gl.TEXTURE_2D, fb2.texture)
+			gl.uniform1i(gl.getUniformLocation(blurProgram, 'u_texture'), 0)
+			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_resolution'), currentWidth, currentHeight)
 			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_direction'), 0.0, 1.0)
+			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 250.0)
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
-			// Pass 4: Composite to screen
+			// Pass 4: Second horizontal blur from fb1 to fb2
+			gl.bindFramebuffer(gl.FRAMEBUFFER, fb2.framebuffer)
+			gl.viewport(0, 0, currentWidth, currentHeight)
+			gl.clearColor(0, 0, 0, 0)
+			gl.clear(gl.COLOR_BUFFER_BIT)
+
+			gl.activeTexture(gl.TEXTURE0)
+			gl.bindTexture(gl.TEXTURE_2D, fb1.texture)
+			gl.uniform1i(gl.getUniformLocation(blurProgram, 'u_texture'), 0)
+			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_resolution'), currentWidth, currentHeight)
+			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_direction'), 1.0, 0.0)
+			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 250.0)
+
+			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+			// Pass 5: Second vertical blur from fb2 to screen
 			gl.bindFramebuffer(gl.FRAMEBUFFER, null)
 			gl.viewport(0, 0, canvas.width, canvas.height)
 			gl.clearColor(0, 0, 0, 0)
 			gl.clear(gl.COLOR_BUFFER_BIT)
 
-			// Re-enable blending for final output
-			gl.enable(gl.BLEND)
-			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
-
-			gl.useProgram(compositeProgram)
-			setupPositionAttrib(compositeProgram)
+			gl.disable(gl.BLEND)
 
 			gl.activeTexture(gl.TEXTURE0)
-			gl.bindTexture(gl.TEXTURE_2D, fb1.texture)
-			gl.uniform1i(gl.getUniformLocation(compositeProgram, 'u_gradientTexture'), 0)
-
-			gl.activeTexture(gl.TEXTURE1)
-			gl.bindTexture(gl.TEXTURE_2D, wordmarkTexture)
-			gl.uniform1i(gl.getUniformLocation(compositeProgram, 'u_wordmarkTexture'), 1)
-
-			gl.uniform2f(gl.getUniformLocation(compositeProgram, 'u_resolution'), canvas.width, canvas.height)
-			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_fadeIn'), fadeIn)
-			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_rowHeight'), WORDMARK_ROW_HEIGHT)
-			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_rowGap'), WORDMARK_ROW_GAP)
-			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_patternLength'), WORDMARK_PATTERN_LENGTH)
-			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_stretchMin'), WORDMARK_STRETCH_MIN)
-			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_stretchMax'), WORDMARK_STRETCH_MAX)
-			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_opacity'), WORDMARK_OPACITY)
-			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_flowDirection'), WORDMARK_FLOW_DIRECTION)
-			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_time'), wordmarkTime)
+			gl.bindTexture(gl.TEXTURE_2D, fb2.texture)
+			gl.uniform1i(gl.getUniformLocation(blurProgram, 'u_texture'), 0)
+			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_resolution'), canvas.width, canvas.height)
+			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_direction'), 0.0, 1.0)
+			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 250.0)
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
