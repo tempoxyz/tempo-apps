@@ -301,7 +301,16 @@ function CommandMenuPortal({
 		groups.push({ label: t('commandMenu.links'), commands: links })
 
 		return groups
-	}, [account.address, navigate, close, disconnect, connect, connector, router, t])
+	}, [
+		account.address,
+		navigate,
+		close,
+		disconnect,
+		connect,
+		connector,
+		router,
+		t,
+	])
 
 	const filteredGroups = React.useMemo((): CommandGroup[] => {
 		if (!query) return commandGroups
@@ -569,7 +578,7 @@ function CommandMenuPortal({
 									<ClipboardIcon className="size-4" />
 								</span>
 								<span className="text-[14px] text-[#f5f5f7]">
-									Paste from clipboard
+									{t('commandMenu.sendSubmenu.pasteFromClipboard')}
 								</span>
 							</button>
 							{sendAddress && (
@@ -593,7 +602,7 @@ function CommandMenuPortal({
 												<SendIcon className="size-4" />
 											</span>
 											<span className="text-[14px] text-[#f5f5f7]">
-												Send to{' '}
+												{t('commandMenu.sendSubmenu.sendTo')}{' '}
 												<span className="font-mono text-[#0a84ff]">
 													{sendAddress.slice(0, 6)}...{sendAddress.slice(-4)}
 												</span>
@@ -603,7 +612,7 @@ function CommandMenuPortal({
 										!sendAddress.match(/^0x[a-fA-F0-9]{40}$/) ? (
 										<div className="px-3 py-2.5 rounded-lg bg-[#ff453a]/10 border border-[#ff453a]/20">
 											<span className="text-[13px] text-[#ff453a]">
-												Invalid address format
+												{t('commandMenu.sendSubmenu.invalidAddress')}
 											</span>
 										</div>
 									) : null}
