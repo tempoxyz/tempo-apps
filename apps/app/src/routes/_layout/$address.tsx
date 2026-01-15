@@ -1415,16 +1415,6 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 	const submenuTitle =
 		currentView !== 'main' ? t(SETTINGS_VIEW_TITLES[currentView]) : undefined
 
-	const headerPill = currentAsset ? (
-		<span className="flex items-center gap-1 px-1 h-[24px] bg-base-alt rounded-md text-[11px] text-secondary">
-			<TokenIcon address={currentAsset.address} className="size-[14px]" />
-			<span className="font-mono font-medium">
-				{currentAsset.metadata?.symbol ||
-					shortenAddress(currentAsset.address, 3)}
-			</span>
-		</span>
-	) : null
-
 	return (
 		<Section
 			title={t('settings.title')}
