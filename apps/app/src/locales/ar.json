@@ -9,7 +9,8 @@
 		"feeToken": "رمز الرسوم",
 		"feeTokenDescription": "اختر الرمز المستخدم لدفع رسوم المعاملات.",
 		"language": "اللغة",
-		"languageDescription": "اختر لغتك المفضلة."
+		"languageDescription": "اختر لغتك المفضلة.",
+		"notSet": "غير محدد"
 	},
 	"common": {
 		"active": "نشط",
@@ -20,7 +21,24 @@
 		"recipient": "المستلم 0x...",
 		"amount": "المبلغ",
 		"max": "الحد الأقصى",
-		"cancel": "إلغاء"
+		"cancel": "إلغاء",
+		"search": "بحث",
+		"signUp": "تسجيل",
+		"signIn": "تسجيل الدخول",
+		"continue": "متابعة",
+		"logOut": "تسجيل الخروج",
+		"copyAddress": "نسخ العنوان",
+		"viewOnExplorer": "عرض في المستكشف",
+		"viewReceipt": "عرض الإيصال",
+		"viewTransaction": "عرض المعاملة",
+		"requestTokens": "طلب الرموز",
+		"transaction": "معاملة",
+		"transactions": "معاملات",
+		"transactionOn": "في",
+		"self": "ذاتي",
+		"andMore": "و {{count}} أكثر",
+		"sentSuccessfully": "تم إرسال {{symbol}} بنجاح",
+		"demoNote": "هذا عرض توضيحي، لا يتم تحديث الأرصدة."
 	},
 	"portfolio": {
 		"title": "المحفظة",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "أصول",
 		"hideZeroBalances": "إخفاء الأرصدة الصفرية",
 		"showZeroBalances": "إظهار الأرصدة الصفرية",
-		"noActivityYet": "لا يوجد نشاط بعد"
+		"noActivityYet": "لا يوجد نشاط بعد",
+		"noAssetsFound": "لم يتم العثور على أصول"
+	},
+	"landing": {
+		"getStarted": "ابدأ",
+		"exploreDescription": "استكشف الحسابات وأرصدة الرموز وسجل المعاملات على Tempo",
+		"enterAddress": "أدخل العنوان",
+		"orUsePasskey": "أو استخدم مفتاح مرور آخر",
+		"orSignInWithPasskey": "أو سجل الدخول بمفتاح المرور"
+	},
+	"receipt": {
+		"block": "كتلة",
+		"sender": "المرسل",
+		"hash": "تجزئة",
+		"date": "التاريخ",
+		"time": "الوقت"
 	}
 }
