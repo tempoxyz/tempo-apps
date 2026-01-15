@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Json } from 'ox'
+import * as Json from 'ox/Json'
 import { useMemo } from 'react'
 import * as z from 'zod/mini'
 import { useCopy } from '#lib/hooks'

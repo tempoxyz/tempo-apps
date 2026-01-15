@@ -1,4 +1,5 @@
-import { Address, Hex } from 'ox'
+import * as Address from 'ox/Address'
+import * as Hex from 'ox/Hex'
 import { z } from 'zod/mini'
 
 export const zAddress = (opts?: { lowercase?: boolean }) =>

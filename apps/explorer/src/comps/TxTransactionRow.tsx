@@ -1,5 +1,7 @@
 import { Link } from '@tanstack/react-router'
-import { Address, Hex, Value } from 'ox'
+import * as Address from 'ox/Address'
+import * as Hex from 'ox/Hex'
+import * as Value from 'ox/Value'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import type { GetBlockReturnType } from 'wagmi/actions'

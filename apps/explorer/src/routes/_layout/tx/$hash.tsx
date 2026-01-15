@@ -7,9 +7,12 @@ import {
 	stripSearchParams,
 	useNavigate,
 } from '@tanstack/react-router'
-import { type Hex, Json, type Address as OxAddress, Value } from 'ox'
+import type { Address as OxAddress, Hex } from 'ox'
+import * as Json from 'ox/Json'
+import * as Value from 'ox/Value'
 import * as React from 'react'
-import { type Log, type TransactionReceipt, toEventSelector } from 'viem'
+import type { Log, TransactionReceipt } from 'viem'
+import { toEventSelector } from 'viem'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
 import { Address } from '#comps/Address'

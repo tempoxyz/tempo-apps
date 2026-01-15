@@ -1,13 +1,7 @@
 import type { AbiFunction } from 'abitype'
 import { useMemo, useState } from 'react'
-import {
-	type Abi,
-	type Address,
-	decodeAbiParameters,
-	type Hex,
-	parseAbiItem,
-	slice,
-} from 'viem'
+import { decodeAbiParameters, parseAbiItem, slice } from 'viem'
+import type { Abi, Address, Hex } from 'viem'
 import { formatAbiValue, getAbiItem } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'
 import { useAutoloadAbi, useLookupSignature } from '#lib/queries'

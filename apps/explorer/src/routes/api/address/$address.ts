@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as IDX from 'idxs'
-import { Address, Hex } from 'ox'
+import * as Address from 'ox/Address'
+import * as Hex from 'ox/Hex'
 import type { RpcTransaction } from 'viem'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'

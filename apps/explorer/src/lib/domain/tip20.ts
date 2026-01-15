@@ -1,5 +1,6 @@
 import type { Address } from 'ox'
-import { type Log, parseEventLogs } from 'viem'
+import type { Log } from 'viem'
+import { parseEventLogs } from 'viem'
 import { Abis } from 'viem/tempo'
 import { Actions } from 'wagmi/tempo'
 import type { Config } from 'wagmi'

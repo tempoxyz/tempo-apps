@@ -1,5 +1,5 @@
 import { ClientOnly, createFileRoute, notFound } from '@tanstack/react-router'
-import { Hex } from 'ox'
+import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import { encodeAbiParameters, encodeEventTopics, zeroHash } from 'viem'
