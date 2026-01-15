@@ -20,7 +20,7 @@ import { sendTransaction, getLogs } from 'viem/actions'
 import { Account as TempoAccount, Abis } from 'viem/tempo'
 import { useAccount, useConnectorClient } from 'wagmi'
 import { getTempoChain } from '#wagmi.config'
-import { TokenIcon } from '#comps/TokenIcon'
+
 import { Section } from '#comps/Section'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
@@ -28,6 +28,7 @@ import KeyIcon from '~icons/lucide/key-round'
 import PlusIcon from '~icons/lucide/plus'
 import CopyIcon from '~icons/lucide/copy'
 import CheckIcon from '~icons/lucide/check'
+import XIcon from '~icons/lucide/x'
 
 const ACCOUNT_KEYCHAIN_ADDRESS =
 	'0xaAAAaaAA00000000000000000000000000000000' as const
@@ -421,6 +422,19 @@ export function useOnChainAccessKeys(
 }
 
 // Sub-components
+// Get stored name for an access key
+function getAccessKeyName(keyId: string): string | null {
+	if (typeof window === 'undefined') return null
+	const stored = localStorage.getItem(`accessKey:${keyId.toLowerCase()}`)
+	if (!stored) return null
+	try {
+		const data = JSON.parse(stored) as { name?: string }
+		return data.name || null
+	} catch {
+		return null
+	}
+}
+
 function AccessKeyRow({
 	accessKey,
 	asset,
@@ -446,7 +460,6 @@ function AccessKeyRow({
 	const originalLimit = asset
 		? accessKey.originalLimits.get(asset.address.toLowerCase())
 		: undefined
-	// Use remaining limit if available, otherwise check if enforceLimits is true
 	const hasLimit =
 		remainingLimit !== undefined ||
 		accessKey.enforceLimits ||
@@ -454,12 +467,15 @@ function AccessKeyRow({
 
 	// Check if private key is available in localStorage
 	const [hasPrivateKey, setHasPrivateKey] = React.useState<boolean | null>(null)
+	const [keyName, setKeyName] = React.useState<string | null>(null)
+
 	React.useEffect(() => {
 		if (typeof window === 'undefined') return
 		const stored = localStorage.getItem(
 			`accessKey:${accessKey.keyId.toLowerCase()}`,
 		)
 		setHasPrivateKey(stored !== null)
+		setKeyName(getAccessKeyName(accessKey.keyId))
 	}, [accessKey.keyId])
 
 	const explorerUrl = txHash
@@ -469,57 +485,57 @@ function AccessKeyRow({
 
 	const { copy, notifying: copied } = useCopy({ timeout: 1500 })
 
+	// Display name or shortened address
+	const displayName = keyName || shortenAddress(accessKey.keyId, 6)
+
 	const rowContent = (
 		<>
-			{asset && <TokenIcon address={asset.address} className="size-[24px]" />}
-			<div className="flex flex-col flex-1 min-w-0">
-				<span className="text-[12px] text-primary font-mono break-all flex items-center gap-1">
+			{/* Key icon */}
+			<div className="flex items-center justify-center size-4 rounded-full bg-base-alt shrink-0">
+				<KeyIcon className="size-2.5 text-secondary" />
+			</div>
+			<div className="flex flex-col flex-1 min-w-0 gap-0.5">
+				<span className="text-[13px] text-primary font-medium flex items-center gap-1.5">
 					<button
 						type="button"
 						onClick={(e) => {
 							e.stopPropagation()
 							copy(accessKey.keyId)
 						}}
-						className="hover:text-accent transition-colors cursor-pointer text-left"
-						title="Click to copy"
+						className="hover:text-accent transition-colors cursor-pointer text-left truncate"
+						title={`Click to copy: ${accessKey.keyId}`}
 					>
-						{accessKey.keyId}
+						{displayName}
 					</button>
 					{copied && (
-						<CheckIcon className="size-[12px] text-positive shrink-0" />
+						<CheckIcon className="size-3.5 text-positive shrink-0" />
 					)}
 					{!copied && (
-						<CopyIcon className="size-[12px] text-tertiary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+						<CopyIcon className="size-3.5 text-tertiary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
 					)}
 					{isPending && (
-						<span className="ml-1 text-[10px] text-accent underline">
-							(confirming...)
-						</span>
+						<span className="text-[11px] text-accent">(confirming...)</span>
 					)}
 					{isRevoking && (
-						<span className="ml-1 text-[10px] text-accent underline">
-							(revoking...)
-						</span>
+						<span className="text-[11px] text-accent">(revoking...)</span>
 					)}
 				</span>
-				<span className="text-[10px] text-tertiary flex items-center gap-1.5 flex-wrap">
+				<span className="text-[11px] text-secondary flex items-center gap-1.5 flex-wrap">
 					{asset?.metadata?.symbol && (
 						<>
 							{isClickable ? (
-								<span className="text-secondary font-medium">
-									{asset.metadata.symbol}
-								</span>
+								<span className="font-medium">{asset.metadata.symbol}</span>
 							) : (
 								<a
 									href={`https://explore.mainnet.tempo.xyz/token/${asset.address}`}
 									target="_blank"
 									rel="noopener noreferrer"
-									className="text-secondary font-medium hover:text-accent transition-colors"
+									className="font-medium hover:text-accent transition-colors"
 								>
 									{asset.metadata.symbol}
 								</a>
 							)}
-							<span>·</span>
+							<span className="text-tertiary">·</span>
 						</>
 					)}
 					{remainingLimit !== undefined && remainingLimit > 0n ? (
@@ -532,17 +548,17 @@ function AccessKeyRow({
 								)}{' '}
 								remaining
 							</span>
-							<span>·</span>
+							<span className="text-tertiary">·</span>
 						</>
 					) : hasLimit ? (
 						<>
 							<span className="text-negative">Limit exhausted</span>
-							<span>·</span>
+							<span className="text-tertiary">·</span>
 						</>
 					) : (
 						<>
 							<span>Unlimited</span>
-							<span>·</span>
+							<span className="text-tertiary">·</span>
 						</>
 					)}
 					<span className={isExpired ? 'text-negative' : ''}>
@@ -552,19 +568,13 @@ function AccessKeyRow({
 								? 'Expired'
 								: `${formatExpiry(expiryMs)} left`}
 					</span>
-					{accessKey.createdAt && (
-						<>
-							<span>·</span>
-							<span>Created {formatCreatedAt(accessKey.createdAt)}</span>
-						</>
-					)}
 					{hasPrivateKey !== null && (
 						<>
-							<span>·</span>
+							<span className="text-tertiary">·</span>
 							{hasPrivateKey ? (
 								<span className="text-positive">Available</span>
 							) : (
-								<span className="text-negative">Key not in localStorage</span>
+								<span className="text-tertiary">Not on device</span>
 							)}
 						</>
 					)}
@@ -575,16 +585,16 @@ function AccessKeyRow({
 					type="button"
 					onClick={onRevoke}
 					title="Revoke this access key (requires passkey signature)"
-					className="text-[11px] font-medium bg-negative/10 text-negative rounded px-1.5 py-0.5 cursor-pointer press-down hover:bg-negative/20 transition-colors"
+					className="size-4 flex items-center justify-center rounded-full bg-negative/10 text-negative hover:bg-negative/20 transition-colors cursor-pointer press-down shrink-0"
 				>
-					Revoke
+					<XIcon className="size-2.5" />
 				</button>
 			)}
 		</>
 	)
 
 	const rowClassName = cx(
-		'group flex items-center gap-2.5 px-3 h-[48px] rounded-xl hover:glass-thin transition-all',
+		'group flex items-center gap-3 px-3 py-3 min-h-[56px] rounded-xl hover:glass-thin transition-all',
 		(isPending || isRevoking) && 'opacity-50',
 		isClickable && 'cursor-pointer',
 	)
@@ -620,8 +630,10 @@ function CreateKeyForm({
 		limitUsd: string,
 		expDays: number,
 		priceUsd: number,
+		keyName: string,
 	) => void
 }) {
+	const [keyName, setKeyName] = React.useState('')
 	const [selectedToken, setSelectedToken] = React.useState<Address.Address>(
 		assets[0]?.address ?? ('' as Address.Address),
 	)
@@ -638,10 +650,26 @@ function CreateKeyForm({
 		setLimitUsd(raw)
 	}
 
+	const inputClass =
+		'h-[24px] px-2 text-[11px] rounded bg-base-alt border border-base-border focus:border-accent/50 focus:outline-none transition-colors'
+
 	return (
-		<div className="flex flex-col gap-3 px-3 py-3 bg-base-alt/30 rounded-lg mx-2">
-			<div className="flex items-center gap-3">
-				<div className="flex flex-col gap-1">
+		<div className="flex flex-col gap-2 px-3 py-2 bg-base-alt/30 rounded-lg mx-2">
+			{/* All fields in one row */}
+			<div className="flex items-end gap-2 flex-wrap">
+				<div className="flex flex-col gap-0.5">
+					<label className="text-[9px] text-tertiary uppercase tracking-wide">
+						Name
+					</label>
+					<input
+						type="text"
+						value={keyName}
+						onChange={(e) => setKeyName(e.target.value)}
+						placeholder="Optional"
+						className={cx(inputClass, 'w-[90px]')}
+					/>
+				</div>
+				<div className="flex flex-col gap-0.5">
 					<label className="text-[9px] text-tertiary uppercase tracking-wide">
 						Token
 					</label>
@@ -650,7 +678,7 @@ function CreateKeyForm({
 						onChange={(e) =>
 							setSelectedToken(e.target.value as Address.Address)
 						}
-						className="h-[28px] px-2 text-[11px] rounded border border-base-border bg-surface min-w-[80px]"
+						className={cx(inputClass, 'min-w-[80px] cursor-pointer')}
 					>
 						{assets.map((a) => (
 							<option key={a.address} value={a.address}>
@@ -659,11 +687,11 @@ function CreateKeyForm({
 						))}
 					</select>
 				</div>
-				<div className="flex flex-col gap-1">
+				<div className="flex flex-col gap-0.5">
 					<label className="text-[9px] text-tertiary uppercase tracking-wide">
 						Limit
 					</label>
-					<div className="h-[28px] px-2 text-[11px] rounded border border-base-border bg-surface flex items-center w-[80px]">
+					<div className={cx(inputClass, 'flex items-center w-[70px]')}>
 						<span className={limitUsd ? 'text-primary' : 'text-tertiary'}>
 							$
 						</span>
@@ -673,11 +701,11 @@ function CreateKeyForm({
 							value={limitUsd}
 							onChange={handleLimitChange}
 							placeholder="0.00"
-							className="bg-transparent outline-none w-full placeholder:text-tertiary"
+							className="bg-transparent outline-none w-full placeholder:text-tertiary text-[11px]"
 						/>
 					</div>
 				</div>
-				<div className="flex flex-col gap-1">
+				<div className="flex flex-col gap-0.5">
 					<label className="text-[9px] text-tertiary uppercase tracking-wide">
 						Expires
 					</label>
@@ -687,12 +715,14 @@ function CreateKeyForm({
 							value={expDays}
 							onChange={(e) => setExpDays(e.target.value)}
 							placeholder="7"
-							className="h-[28px] w-[50px] px-2 text-[11px] rounded border border-base-border bg-surface"
+							className={cx(inputClass, 'w-[40px] text-center')}
 						/>
-						<span className="text-[10px] text-tertiary">days</span>
+						<span className="text-[9px] text-tertiary">days</span>
 					</div>
 				</div>
 			</div>
+
+			{/* Actions */}
 			<div className="flex items-center gap-2">
 				<button
 					type="button"
@@ -703,10 +733,11 @@ function CreateKeyForm({
 							limitUsd,
 							Number(expDays),
 							asset?.metadata?.priceUsd ?? 1,
+							keyName,
 						)
 					}
 					disabled={isPending}
-					className="text-[11px] font-medium bg-accent text-white rounded px-2 py-1 cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50"
+					className="h-[22px] px-2 text-[11px] font-medium bg-accent text-white rounded cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50"
 				>
 					{isPending ? '...' : 'Create'}
 				</button>
@@ -793,6 +824,7 @@ export function AccessKeysSection({
 		limitUsd: string,
 		expDays: number,
 		priceUsd: number,
+		keyName: string,
 	) => {
 		if (!isOwner || !account.address || !connectorClient?.account) return
 
@@ -817,7 +849,7 @@ export function AccessKeysSection({
 				keyPair.publicKey,
 			).toLowerCase()
 
-			// Store the private key in localStorage so it can be used for signing later
+			// Store the private key and optional name in localStorage
 			try {
 				const privateKeyBytes = await crypto.subtle.exportKey(
 					'pkcs8',
@@ -827,10 +859,13 @@ export function AccessKeysSection({
 					String.fromCharCode(...new Uint8Array(privateKeyBytes)),
 				)
 				const storageKey = `accessKey:${accessKeyAddress}`
-				localStorage.setItem(
-					storageKey,
-					JSON.stringify({ privateKey: privateKeyBase64 }),
-				)
+				const storageData: { privateKey: string; name?: string } = {
+					privateKey: privateKeyBase64,
+				}
+				if (keyName.trim()) {
+					storageData.name = keyName.trim()
+				}
+				localStorage.setItem(storageKey, JSON.stringify(storageData))
 			} catch {
 				// Ignore storage errors
 			}
