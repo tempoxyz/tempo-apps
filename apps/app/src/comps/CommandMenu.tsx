@@ -20,6 +20,7 @@ import ArrowLeftIcon from '~icons/lucide/arrow-left'
 import ClipboardIcon from '~icons/lucide/clipboard-paste'
 import LanguagesIcon from '~icons/lucide/languages'
 import CheckIcon from '~icons/lucide/check'
+import ChevronRightIcon from '~icons/lucide/chevron-right'
 
 const LANGUAGES = [
 	{ code: 'en', name: 'English' },
@@ -71,6 +72,21 @@ export function useCommandMenu() {
 	return ctx
 }
 
+type Command = {
+	id: string
+	label: string
+	icon: React.ReactNode
+	onSelect: () => void
+	shortcut?: string
+	keywords?: string[]
+	hasSubmenu?: boolean
+}
+
+type CommandGroup = {
+	label: string
+	commands: Command[]
+}
+
 function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
 	const [view, setView] = React.useState<MenuView>('main')
 	const [query, setQuery] = React.useState('')
@@ -78,6 +94,7 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 	const [sendAddress, setSendAddress] = React.useState('')
 	const [visible, setVisible] = React.useState(false)
 	const inputRef = React.useRef<HTMLInputElement>(null)
+	const listRef = React.useRef<HTMLDivElement>(null)
 
 	const navigate = useNavigate()
 	const router = useRouter()
@@ -94,13 +111,13 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 			setQuery('')
 			setSendAddress('')
 			setSelectedIndex(0)
-		}, 150)
+		}, 120)
 	}, [onOpenChange])
 
 	React.useEffect(() => {
 		if (open) {
 			setVisible(true)
-			setTimeout(() => inputRef.current?.focus(), 50)
+			setTimeout(() => inputRef.current?.focus(), 10)
 		}
 	}, [open])
 
@@ -108,129 +125,166 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 		setSelectedIndex(0)
 	}, [query, view])
 
-	const mainCommands = React.useMemo(() => {
-		const cmds: Array<{
-			id: string
-			label: string
-			icon: React.ReactNode
-			onSelect: () => void
-			keywords?: string[]
-		}> = []
+	// Scroll selected into view
+	React.useEffect(() => {
+		const el = listRef.current?.querySelector('[data-selected="true"]')
+		el?.scrollIntoView({ block: 'nearest' })
+	}, [selectedIndex])
 
-		cmds.push({
-			id: 'home',
-			label: 'Go Home',
-			icon: <HomeIcon className="size-4" />,
-			onSelect: () => { navigate({ to: '/' }); close() },
-			keywords: ['home', 'start'],
-		})
+	const commandGroups = React.useMemo((): CommandGroup[] => {
+		const groups: CommandGroup[] = []
+
+		// Navigation
+		const nav: Command[] = [
+			{
+				id: 'home',
+				label: 'Go Home',
+				icon: <HomeIcon />,
+				shortcut: 'G H',
+				onSelect: () => { navigate({ to: '/' }); close() },
+				keywords: ['home', 'start', 'back'],
+			},
+		]
 
 		if (account.address) {
-			cmds.push({
+			nav.push({
 				id: 'account',
 				label: 'My Account',
-				icon: <WalletIcon className="size-4" />,
+				icon: <WalletIcon />,
+				shortcut: 'G A',
 				onSelect: () => { navigate({ to: '/$address', params: { address: account.address! } }); close() },
-				keywords: ['account', 'wallet', 'portfolio'],
-			})
-
-			cmds.push({
-				id: 'send',
-				label: 'Send Tokens →',
-				icon: <SendIcon className="size-4" />,
-				onSelect: () => setView('send'),
-				keywords: ['send', 'transfer', 'pay'],
-			})
-
-			cmds.push({
-				id: 'refresh',
-				label: 'Refresh',
-				icon: <RefreshCwIcon className="size-4" />,
-				onSelect: () => { router.invalidate(); close() },
-				keywords: ['refresh', 'reload'],
-			})
-
-			cmds.push({
-				id: 'explorer',
-				label: 'View on Explorer',
-				icon: <ExternalLinkIcon className="size-4" />,
-				onSelect: () => { window.open(`https://explore.mainnet.tempo.xyz/address/${account.address}`, '_blank'); close() },
-				keywords: ['explorer', 'block'],
-			})
-
-			cmds.push({
-				id: 'signout',
-				label: 'Sign Out',
-				icon: <LogOutIcon className="size-4" />,
-				onSelect: () => { disconnect(); navigate({ to: '/' }); close() },
-				keywords: ['logout', 'disconnect', 'signout'],
-			})
-		} else {
-			cmds.push({
-				id: 'signup',
-				label: 'Create Account',
-				icon: <KeyIcon className="size-4" />,
-				onSelect: () => { if (connector) connect({ connector, capabilities: { type: 'sign-up' } } as Parameters<typeof connect>[0]); close() },
-				keywords: ['signup', 'register', 'create'],
-			})
-
-			cmds.push({
-				id: 'signin',
-				label: 'Sign In',
-				icon: <FingerprintIcon className="size-4" />,
-				onSelect: () => { if (connector) connect({ connector }); close() },
-				keywords: ['signin', 'login'],
+				keywords: ['account', 'wallet', 'portfolio', 'balance'],
 			})
 		}
 
-		cmds.push({
-			id: 'language',
-			label: 'Change Language →',
-			icon: <LanguagesIcon className="size-4" />,
-			onSelect: () => setView('language'),
-			keywords: ['language', 'locale', 'translate'],
-		})
+		groups.push({ label: 'Navigation', commands: nav })
 
-		cmds.push({
-			id: 'website',
-			label: 'Tempo Website',
-			icon: <GlobeIcon className="size-4" />,
-			onSelect: () => { window.open('https://tempo.xyz', '_blank'); close() },
-			keywords: ['website', 'tempo'],
-		})
+		// Actions
+		if (account.address) {
+			const actions: Command[] = [
+				{
+					id: 'send',
+					label: 'Send Tokens',
+					icon: <SendIcon />,
+					onSelect: () => setView('send'),
+					keywords: ['send', 'transfer', 'pay'],
+					hasSubmenu: true,
+				},
+				{
+					id: 'refresh',
+					label: 'Refresh Data',
+					icon: <RefreshCwIcon />,
+					shortcut: 'R',
+					onSelect: () => { router.invalidate(); close() },
+					keywords: ['refresh', 'reload', 'sync'],
+				},
+			]
+			groups.push({ label: 'Actions', commands: actions })
+		}
 
-		cmds.push({
-			id: 'docs',
-			label: 'Documentation',
-			icon: <BookOpenIcon className="size-4" />,
-			onSelect: () => { window.open('https://docs.tempo.xyz', '_blank'); close() },
-			keywords: ['docs', 'help', 'guide'],
-		})
+		// Account
+		const acct: Command[] = []
+		if (account.address) {
+			acct.push({
+				id: 'signout',
+				label: 'Sign Out',
+				icon: <LogOutIcon />,
+				onSelect: () => { disconnect(); navigate({ to: '/' }); close() },
+				keywords: ['logout', 'disconnect', 'signout', 'exit'],
+			})
+		} else {
+			acct.push({
+				id: 'signup',
+				label: 'Create Account',
+				icon: <KeyIcon />,
+				onSelect: () => { if (connector) connect({ connector, capabilities: { type: 'sign-up' } } as Parameters<typeof connect>[0]); close() },
+				keywords: ['signup', 'register', 'create', 'new'],
+			})
+			acct.push({
+				id: 'signin',
+				label: 'Sign In',
+				icon: <FingerprintIcon />,
+				onSelect: () => { if (connector) connect({ connector }); close() },
+				keywords: ['signin', 'login', 'connect'],
+			})
+		}
+		groups.push({ label: 'Account', commands: acct })
 
-		return cmds
+		// Settings
+		const settings: Command[] = [
+			{
+				id: 'language',
+				label: 'Change Language',
+				icon: <LanguagesIcon />,
+				onSelect: () => setView('language'),
+				keywords: ['language', 'locale', 'translate', 'i18n'],
+				hasSubmenu: true,
+			},
+		]
+		groups.push({ label: 'Settings', commands: settings })
+
+		// Links
+		const links: Command[] = [
+			{
+				id: 'website',
+				label: 'Tempo Website',
+				icon: <GlobeIcon />,
+				onSelect: () => { window.open('https://tempo.xyz', '_blank'); close() },
+				keywords: ['website', 'tempo', 'home'],
+			},
+			{
+				id: 'docs',
+				label: 'Documentation',
+				icon: <BookOpenIcon />,
+				onSelect: () => { window.open('https://docs.tempo.xyz', '_blank'); close() },
+				keywords: ['docs', 'help', 'guide', 'learn'],
+			},
+		]
+		if (account.address) {
+			links.push({
+				id: 'explorer',
+				label: 'View on Explorer',
+				icon: <ExternalLinkIcon />,
+				onSelect: () => { window.open(`https://explore.mainnet.tempo.xyz/address/${account.address}`, '_blank'); close() },
+				keywords: ['explorer', 'block', 'etherscan'],
+			})
+		}
+		groups.push({ label: 'Links', commands: links })
+
+		return groups
 	}, [account.address, navigate, close, disconnect, connect, connector, router])
 
-	const filteredCommands = React.useMemo(() => {
-		if (!query) return mainCommands
+	const filteredGroups = React.useMemo((): CommandGroup[] => {
+		if (!query) return commandGroups
 		const q = query.toLowerCase()
-		return mainCommands.filter(c => 
-			c.label.toLowerCase().includes(q) || 
-			c.keywords?.some(k => k.includes(q))
-		)
-	}, [mainCommands, query])
+		return commandGroups
+			.map(g => ({
+				...g,
+				commands: g.commands.filter(c =>
+					c.label.toLowerCase().includes(q) ||
+					c.keywords?.some(k => k.includes(q))
+				),
+			}))
+			.filter(g => g.commands.length > 0)
+	}, [commandGroups, query])
+
+	const flatCommands = React.useMemo(() => 
+		filteredGroups.flatMap(g => g.commands),
+	[filteredGroups])
 
 	const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
 		if (e.key === 'Escape') {
 			if (view !== 'main') {
 				setView('main')
 				setQuery('')
+				setSendAddress('')
 			} else {
 				close()
 			}
 		} else if (e.key === 'ArrowDown') {
 			e.preventDefault()
 			if (view === 'main') {
-				setSelectedIndex(i => Math.min(i + 1, filteredCommands.length - 1))
+				setSelectedIndex(i => Math.min(i + 1, flatCommands.length - 1))
 			} else if (view === 'language') {
 				setSelectedIndex(i => Math.min(i + 1, LANGUAGES.length - 1))
 			}
@@ -239,8 +293,8 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 			setSelectedIndex(i => Math.max(i - 1, 0))
 		} else if (e.key === 'Enter') {
 			e.preventDefault()
-			if (view === 'main' && filteredCommands[selectedIndex]) {
-				filteredCommands[selectedIndex].onSelect()
+			if (view === 'main' && flatCommands[selectedIndex]) {
+				flatCommands[selectedIndex].onSelect()
 			} else if (view === 'send' && sendAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
 				navigate({ to: '/$address', params: { address: account.address! }, search: { sendTo: sendAddress } })
 				close()
@@ -253,7 +307,7 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 		} else if (e.key === 'Backspace' && view !== 'main' && !query && !sendAddress) {
 			setView('main')
 		}
-	}, [view, filteredCommands, selectedIndex, close, sendAddress, navigate, account.address, query])
+	}, [view, flatCommands, selectedIndex, close, sendAddress, navigate, account.address, query])
 
 	const pasteFromClipboard = async () => {
 		try {
@@ -267,50 +321,53 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 	if (!open) return null
 
 	const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
+	let globalIndex = -1
 
 	return createPortal(
+		// biome-ignore lint/a11y/useKeyWithClickEvents: keyboard handled via onKeyDown
 		<div
 			className={cx(
-				'fixed inset-0 z-[9999] flex items-start justify-center pt-[12vh] px-4',
-				'transition-all duration-150',
-				visible ? 'bg-black/60 backdrop-blur-sm' : 'bg-transparent',
+				'fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] px-4',
+				'transition-opacity duration-100',
+				visible ? 'bg-black/50' : 'bg-transparent opacity-0',
 			)}
 			onClick={close}
 			onKeyDown={handleKeyDown}
 		>
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents: container only stops propagation */}
 			<div
 				className={cx(
-					'w-full max-w-lg rounded-2xl overflow-hidden',
-					'bg-[#1a1a1a] border border-white/10',
-					'shadow-2xl',
-					'transition-all duration-150',
-					visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
+					'w-full max-w-[520px] rounded-xl overflow-hidden',
+					'bg-[#232326] border border-[#3a3a3c]',
+					'shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]',
+					'transition-all duration-100',
+					visible ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]',
 				)}
 				onClick={e => e.stopPropagation()}
 			>
-				{/* Header */}
-				<div className="flex items-center gap-3 px-4 h-14 border-b border-white/10">
-					{view !== 'main' && (
+				{/* Search Input */}
+				<div className="flex items-center gap-2.5 px-3.5 h-12 border-b border-[#3a3a3c]">
+					{view !== 'main' ? (
 						<button
 							type="button"
 							onClick={() => { setView('main'); setQuery(''); setSendAddress('') }}
-							className="p-1 -ml-1 rounded hover:bg-white/10"
+							className="p-1 -ml-1 rounded-md hover:bg-white/10 transition-colors"
 						>
-							<ArrowLeftIcon className="size-4 text-white/60" />
+							<ArrowLeftIcon className="size-4 text-[#98989f]" />
 						</button>
+					) : (
+						<SearchIcon className="size-4 text-[#98989f] shrink-0" />
 					)}
-					{view === 'main' && <SearchIcon className="size-4 text-white/40" />}
-					{view === 'send' && <SendIcon className="size-4 text-white/40" />}
-					{view === 'language' && <LanguagesIcon className="size-4 text-white/40" />}
-					
+
 					{view === 'main' && (
 						<input
 							ref={inputRef}
 							value={query}
 							onChange={e => setQuery(e.target.value)}
-							placeholder="Type a command..."
-							className="flex-1 bg-transparent text-white placeholder:text-white/40 outline-none text-sm"
+							placeholder="Search commands..."
+							className="flex-1 bg-transparent text-[#f5f5f7] placeholder:text-[#6e6e73] outline-none text-[15px]"
 							autoComplete="off"
+							spellCheck={false}
 						/>
 					)}
 					{view === 'send' && (
@@ -318,92 +375,131 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 							ref={inputRef}
 							value={sendAddress}
 							onChange={e => setSendAddress(e.target.value)}
-							placeholder="Enter recipient address (0x...)"
-							className="flex-1 bg-transparent text-white placeholder:text-white/40 outline-none text-sm font-mono"
+							placeholder="Recipient address (0x...)"
+							className="flex-1 bg-transparent text-[#f5f5f7] placeholder:text-[#6e6e73] outline-none text-[14px] font-mono"
 							autoComplete="off"
+							spellCheck={false}
 						/>
 					)}
 					{view === 'language' && (
-						<span className="text-white/60 text-sm">Select Language</span>
+						<span className="flex-1 text-[#6e6e73] text-[15px]">Select language</span>
 					)}
 
-					<kbd className="hidden sm:block px-2 py-1 text-[10px] text-white/40 bg-white/5 rounded border border-white/10">
-						{isMac ? '⌘' : 'Ctrl'}K
+					<kbd className="px-1.5 py-0.5 text-[11px] text-[#6e6e73] bg-[#1c1c1e] rounded border border-[#3a3a3c] font-sans">
+						{isMac ? '⌘K' : 'Ctrl+K'}
 					</kbd>
 				</div>
 
 				{/* Content */}
-				<div className="max-h-80 overflow-y-auto">
+				<div ref={listRef} className="max-h-[320px] overflow-y-auto overflow-x-hidden">
 					{view === 'main' && (
-						<div className="py-2">
-							{filteredCommands.length === 0 ? (
-								<div className="px-4 py-8 text-center text-white/40 text-sm">No results</div>
+						<>
+							{filteredGroups.length === 0 ? (
+								<div className="px-3.5 py-6 text-center text-[#6e6e73] text-[13px]">
+									No results found
+								</div>
 							) : (
-								filteredCommands.map((cmd, i) => (
-									<button
-										key={cmd.id}
-										type="button"
-										onClick={cmd.onSelect}
-										onMouseEnter={() => setSelectedIndex(i)}
-										className={cx(
-											'w-full flex items-center gap-3 px-4 py-2.5 text-left',
-											i === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5',
-										)}
-									>
-										<span className={cx(
-											'flex items-center justify-center size-8 rounded-lg',
-											i === selectedIndex ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/60',
-										)}>
-											{cmd.icon}
-										</span>
-										<span className={cx('text-sm', i === selectedIndex ? 'text-white' : 'text-white/80')}>
-											{cmd.label}
-										</span>
-									</button>
+								filteredGroups.map((group) => (
+									<div key={group.label} className="py-1">
+										<div className="px-3.5 py-1.5 text-[11px] font-medium text-[#6e6e73] uppercase tracking-wide">
+											{group.label}
+										</div>
+										{group.commands.map((cmd) => {
+											globalIndex++
+											const idx = globalIndex
+											const isSelected = idx === selectedIndex
+											return (
+												<button
+													key={cmd.id}
+													type="button"
+													data-selected={isSelected}
+													onClick={cmd.onSelect}
+													onMouseEnter={() => setSelectedIndex(idx)}
+													className={cx(
+														'w-full flex items-center gap-2.5 px-3.5 py-2 text-left transition-colors',
+														isSelected ? 'bg-[#3a3a3c]' : 'hover:bg-[#2c2c2e]',
+													)}
+												>
+													<span className={cx(
+														'flex items-center justify-center size-7 rounded-md [&>svg]:size-4',
+														isSelected ? 'bg-[#0a84ff] text-white' : 'bg-[#3a3a3c] text-[#98989f]',
+													)}>
+														{cmd.icon}
+													</span>
+													<span className="flex-1 text-[14px] text-[#f5f5f7]">
+														{cmd.label}
+													</span>
+													{cmd.shortcut && (
+														<span className="flex items-center gap-0.5">
+															{cmd.shortcut.split(' ').map((k) => (
+																<kbd key={k} className="px-1.5 py-0.5 text-[11px] text-[#6e6e73] bg-[#1c1c1e] rounded border border-[#3a3a3c]">
+																	{k}
+																</kbd>
+															))}
+														</span>
+													)}
+													{cmd.hasSubmenu && (
+														<ChevronRightIcon className="size-4 text-[#6e6e73]" />
+													)}
+												</button>
+											)
+										})}
+									</div>
 								))
 							)}
-						</div>
+						</>
 					)}
 
 					{view === 'send' && (
-						<div className="p-4 space-y-3">
+						<div className="p-2">
 							<button
 								type="button"
 								onClick={pasteFromClipboard}
-								className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+								className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-[#2c2c2e] transition-colors"
 							>
-								<ClipboardIcon className="size-4 text-white/60" />
-								<span className="text-sm text-white/80">Paste from clipboard</span>
+								<span className="flex items-center justify-center size-7 rounded-md bg-[#3a3a3c] text-[#98989f]">
+									<ClipboardIcon className="size-4" />
+								</span>
+								<span className="text-[14px] text-[#f5f5f7]">Paste from clipboard</span>
 							</button>
-							{sendAddress && sendAddress.match(/^0x[a-fA-F0-9]{40}$/) && (
-								<button
-									type="button"
-									onClick={() => {
-										navigate({ to: '/$address', params: { address: account.address! }, search: { sendTo: sendAddress } })
-										close()
-									}}
-									className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 transition-colors"
-								>
-									<SendIcon className="size-4 text-blue-400" />
-									<span className="text-sm text-white">Send to {sendAddress.slice(0, 6)}...{sendAddress.slice(-4)}</span>
-								</button>
-							)}
-							{sendAddress && !sendAddress.match(/^0x[a-fA-F0-9]{40}$/) && sendAddress.length > 0 && (
-								<div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
-									<span className="text-sm text-red-400">Invalid address format</span>
+							{sendAddress && (
+								<div className="mt-2">
+									{sendAddress.match(/^0x[a-fA-F0-9]{40}$/) ? (
+										<button
+											type="button"
+											onClick={() => {
+												navigate({ to: '/$address', params: { address: account.address! }, search: { sendTo: sendAddress } })
+												close()
+											}}
+											className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-[#0a84ff]/20 hover:bg-[#0a84ff]/30 border border-[#0a84ff]/30 transition-colors"
+										>
+											<span className="flex items-center justify-center size-7 rounded-md bg-[#0a84ff] text-white">
+												<SendIcon className="size-4" />
+											</span>
+											<span className="text-[14px] text-[#f5f5f7]">
+												Send to <span className="font-mono text-[#0a84ff]">{sendAddress.slice(0, 6)}...{sendAddress.slice(-4)}</span>
+											</span>
+										</button>
+									) : (
+										<div className="px-3 py-2.5 rounded-lg bg-[#ff453a]/10 border border-[#ff453a]/20">
+											<span className="text-[13px] text-[#ff453a]">Invalid address format</span>
+										</div>
+									)}
 								</div>
 							)}
 						</div>
 					)}
 
 					{view === 'language' && (
-						<div className="py-2">
+						<div className="py-1">
 							{LANGUAGES.map((lang, i) => {
 								const isActive = i18n.language === lang.code
+								const isSelected = i === selectedIndex
 								return (
 									<button
 										key={lang.code}
 										type="button"
+										data-selected={isSelected}
 										onClick={() => {
 											i18n.changeLanguage(lang.code)
 											localStorage.setItem('tempo-language', lang.code)
@@ -411,14 +507,12 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 										}}
 										onMouseEnter={() => setSelectedIndex(i)}
 										className={cx(
-											'w-full flex items-center justify-between px-4 py-2.5',
-											i === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5',
+											'w-full flex items-center justify-between px-3.5 py-2 transition-colors',
+											isSelected ? 'bg-[#3a3a3c]' : 'hover:bg-[#2c2c2e]',
 										)}
 									>
-										<span className={cx('text-sm', i === selectedIndex ? 'text-white' : 'text-white/80')}>
-											{lang.name}
-										</span>
-										{isActive && <CheckIcon className="size-4 text-green-400" />}
+										<span className="text-[14px] text-[#f5f5f7]">{lang.name}</span>
+										{isActive && <CheckIcon className="size-4 text-[#30d158]" />}
 									</button>
 								)
 							})}
@@ -427,12 +521,20 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 				</div>
 
 				{/* Footer */}
-				<div className="flex items-center justify-between px-4 py-2 border-t border-white/10 bg-white/5">
-					<div className="flex items-center gap-4 text-[11px] text-white/40">
-						<span>↑↓ Navigate</span>
-						<span>↵ Select</span>
-						<span>Esc {view !== 'main' ? 'Back' : 'Close'}</span>
-					</div>
+				<div className="flex items-center gap-4 px-3.5 py-2 border-t border-[#3a3a3c] bg-[#1c1c1e]">
+					<span className="flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
+						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">↑</kbd>
+						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">↓</kbd>
+						<span>Navigate</span>
+					</span>
+					<span className="flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
+						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">↵</kbd>
+						<span>Open</span>
+					</span>
+					<span className="flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
+						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">esc</kbd>
+						<span>{view !== 'main' ? 'Back' : 'Close'}</span>
+					</span>
 				</div>
 			</div>
 		</div>,
