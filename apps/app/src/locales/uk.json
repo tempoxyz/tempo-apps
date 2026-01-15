@@ -9,7 +9,8 @@
 		"feeToken": "Токен комісії",
 		"feeTokenDescription": "Оберіть токен для оплати комісій за транзакції.",
 		"language": "Мова",
-		"languageDescription": "Оберіть бажану мову."
+		"languageDescription": "Оберіть бажану мову.",
+		"notSet": "Не встановлено"
 	},
 	"common": {
 		"active": "Активний",
@@ -20,7 +21,24 @@
 		"recipient": "Отримувач 0x...",
 		"amount": "Сума",
 		"max": "МАКС",
-		"cancel": "Скасувати"
+		"cancel": "Скасувати",
+		"search": "Пошук",
+		"signUp": "Реєстрація",
+		"signIn": "Увійти",
+		"continue": "Продовжити",
+		"logOut": "Вийти",
+		"copyAddress": "Копіювати адресу",
+		"viewOnExplorer": "Переглянути в оглядачі",
+		"viewReceipt": "Переглянути квитанцію",
+		"viewTransaction": "Переглянути транзакцію",
+		"requestTokens": "Запросити токени",
+		"transaction": "Транзакція",
+		"transactions": "транзакцій",
+		"transactionOn": "",
+		"self": "собі",
+		"andMore": "і ще {{count}}",
+		"sentSuccessfully": "{{symbol}} успішно надіслано",
+		"demoNote": "Це демо, баланси не оновлюються."
 	},
 	"portfolio": {
 		"title": "Портфель",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "активів",
 		"hideZeroBalances": "Приховати нульові баланси",
 		"showZeroBalances": "Показати нульові баланси",
-		"noActivityYet": "Ще немає активності"
+		"noActivityYet": "Ще немає активності",
+		"noAssetsFound": "Активи не знайдено"
+	},
+	"landing": {
+		"getStarted": "Почати",
+		"exploreDescription": "Досліджуйте акаунти, баланси токенів та історію транзакцій на Tempo",
+		"enterAddress": "Введіть адресу",
+		"orUsePasskey": "або використайте інший ключ доступу",
+		"orSignInWithPasskey": "або увійдіть з ключем доступу"
+	},
+	"receipt": {
+		"block": "Блок",
+		"sender": "Відправник",
+		"hash": "Хеш",
+		"date": "Дата",
+		"time": "Час"
 	}
 }

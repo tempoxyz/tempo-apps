@@ -9,7 +9,8 @@
 		"feeToken": "Token taxă",
 		"feeTokenDescription": "Selectați tokenul pentru plata taxelor de tranzacție.",
 		"language": "Limbă",
-		"languageDescription": "Alegeți limba preferată."
+		"languageDescription": "Alegeți limba preferată.",
+		"notSet": "Nesetat"
 	},
 	"common": {
 		"active": "Activ",
@@ -20,7 +21,24 @@
 		"recipient": "Destinatar 0x...",
 		"amount": "Sumă",
 		"max": "MAX",
-		"cancel": "Anulează"
+		"cancel": "Anulează",
+		"search": "Caută",
+		"signUp": "Înregistrare",
+		"signIn": "Autentificare",
+		"continue": "Continuă",
+		"logOut": "Deconectare",
+		"copyAddress": "Copiază adresa",
+		"viewOnExplorer": "Vezi în Explorer",
+		"viewReceipt": "Vezi chitanța",
+		"viewTransaction": "Vezi tranzacția",
+		"requestTokens": "Solicită tokeni",
+		"transaction": "Tranzacție",
+		"transactions": "tranzacții",
+		"transactionOn": "pe",
+		"self": "sine",
+		"andMore": "și încă {{count}}",
+		"sentSuccessfully": "{{symbol}} trimis cu succes",
+		"demoNote": "Aceasta este o demonstrație, soldurile nu se actualizează."
 	},
 	"portfolio": {
 		"title": "Portofoliu",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "active",
 		"hideZeroBalances": "Ascunde solduri zero",
 		"showZeroBalances": "Afișează solduri zero",
-		"noActivityYet": "Nicio activitate încă"
+		"noActivityYet": "Nicio activitate încă",
+		"noAssetsFound": "Nu s-au găsit active"
+	},
+	"landing": {
+		"getStarted": "Începe",
+		"exploreDescription": "Explorează conturi, solduri de tokeni și istoricul tranzacțiilor pe Tempo",
+		"enterAddress": "Introdu adresa",
+		"orUsePasskey": "sau folosește o altă cheie de acces",
+		"orSignInWithPasskey": "sau autentifică-te cu cheia de acces"
+	},
+	"receipt": {
+		"block": "Bloc",
+		"sender": "Expeditor",
+		"hash": "Hash",
+		"date": "Data",
+		"time": "Ora"
 	}
 }

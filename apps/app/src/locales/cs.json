@@ -9,7 +9,8 @@
 		"feeToken": "Token poplatku",
 		"feeTokenDescription": "Vyberte token pro platbu transakčních poplatků.",
 		"language": "Jazyk",
-		"languageDescription": "Vyberte preferovaný jazyk."
+		"languageDescription": "Vyberte preferovaný jazyk.",
+		"notSet": "Nenastaveno"
 	},
 	"common": {
 		"active": "Aktivní",
@@ -20,7 +21,24 @@
 		"recipient": "Příjemce 0x...",
 		"amount": "Částka",
 		"max": "MAX",
-		"cancel": "Zrušit"
+		"cancel": "Zrušit",
+		"search": "Hledat",
+		"signUp": "Registrovat",
+		"signIn": "Přihlásit",
+		"continue": "Pokračovat",
+		"logOut": "Odhlásit",
+		"copyAddress": "Kopírovat adresu",
+		"viewOnExplorer": "Zobrazit v Exploreru",
+		"viewReceipt": "Zobrazit účtenku",
+		"viewTransaction": "Zobrazit transakci",
+		"requestTokens": "Požádat o tokeny",
+		"transaction": "Transakce",
+		"transactions": "transakcí",
+		"transactionOn": "",
+		"self": "sobě",
+		"andMore": "a {{count}} dalších",
+		"sentSuccessfully": "{{symbol}} úspěšně odesláno",
+		"demoNote": "Toto je demo, zůstatky se neaktualizují."
 	},
 	"portfolio": {
 		"title": "Portfolio",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "aktiv",
 		"hideZeroBalances": "Skrýt nulové zůstatky",
 		"showZeroBalances": "Zobrazit nulové zůstatky",
-		"noActivityYet": "Zatím žádná aktivita"
+		"noActivityYet": "Zatím žádná aktivita",
+		"noAssetsFound": "Žádná aktiva nenalezena"
+	},
+	"landing": {
+		"getStarted": "Začít",
+		"exploreDescription": "Prozkoumejte účty, zůstatky tokenů a historii transakcí na Tempo",
+		"enterAddress": "Zadejte adresu",
+		"orUsePasskey": "nebo použijte jiný přístupový klíč",
+		"orSignInWithPasskey": "nebo se přihlaste přístupovým klíčem"
+	},
+	"receipt": {
+		"block": "Blok",
+		"sender": "Odesílatel",
+		"hash": "Hash",
+		"date": "Datum",
+		"time": "Čas"
 	}
 }

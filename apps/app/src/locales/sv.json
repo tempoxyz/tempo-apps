@@ -9,7 +9,8 @@
 		"feeToken": "Avgiftstoken",
 		"feeTokenDescription": "Välj vilken token som ska användas för att betala transaktionsavgifter.",
 		"language": "Språk",
-		"languageDescription": "Välj ditt föredragna språk."
+		"languageDescription": "Välj ditt föredragna språk.",
+		"notSet": "Ej inställd"
 	},
 	"common": {
 		"active": "Aktiv",
@@ -20,7 +21,24 @@
 		"recipient": "Mottagare 0x...",
 		"amount": "Belopp",
 		"max": "MAX",
-		"cancel": "Avbryt"
+		"cancel": "Avbryt",
+		"search": "Sök",
+		"signUp": "Registrera",
+		"signIn": "Logga in",
+		"continue": "Fortsätt",
+		"logOut": "Logga ut",
+		"copyAddress": "Kopiera adress",
+		"viewOnExplorer": "Visa i Explorer",
+		"viewReceipt": "Visa kvitto",
+		"viewTransaction": "Visa transaktion",
+		"requestTokens": "Begär tokens",
+		"transaction": "Transaktion",
+		"transactions": "transaktioner",
+		"transactionOn": "den",
+		"self": "själv",
+		"andMore": "och {{count}} till",
+		"sentSuccessfully": "{{symbol}} skickades framgångsrikt",
+		"demoNote": "Detta är en demo, saldon uppdateras inte."
 	},
 	"portfolio": {
 		"title": "Portfölj",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "tillgångar",
 		"hideZeroBalances": "Dölj nollsaldon",
 		"showZeroBalances": "Visa nollsaldon",
-		"noActivityYet": "Ingen aktivitet ännu"
+		"noActivityYet": "Ingen aktivitet ännu",
+		"noAssetsFound": "Inga tillgångar hittades"
+	},
+	"landing": {
+		"getStarted": "Kom igång",
+		"exploreDescription": "Utforska konton, tokensaldon och transaktionshistorik på Tempo",
+		"enterAddress": "Ange adress",
+		"orUsePasskey": "eller använd en annan passkey",
+		"orSignInWithPasskey": "eller logga in med passkey"
+	},
+	"receipt": {
+		"block": "Block",
+		"sender": "Avsändare",
+		"hash": "Hash",
+		"date": "Datum",
+		"time": "Tid"
 	}
 }

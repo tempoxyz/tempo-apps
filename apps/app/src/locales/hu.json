@@ -9,7 +9,8 @@
 		"feeToken": "Díj token",
 		"feeTokenDescription": "Válassza ki a tranzakciós díjak fizetéséhez használt tokent.",
 		"language": "Nyelv",
-		"languageDescription": "Válassza ki a kívánt nyelvet."
+		"languageDescription": "Válassza ki a kívánt nyelvet.",
+		"notSet": "Nincs beállítva"
 	},
 	"common": {
 		"active": "Aktív",
@@ -20,7 +21,24 @@
 		"recipient": "Címzett 0x...",
 		"amount": "Összeg",
 		"max": "MAX",
-		"cancel": "Mégse"
+		"cancel": "Mégse",
+		"search": "Keresés",
+		"signUp": "Regisztráció",
+		"signIn": "Bejelentkezés",
+		"continue": "Folytatás",
+		"logOut": "Kijelentkezés",
+		"copyAddress": "Cím másolása",
+		"viewOnExplorer": "Megtekintés az Explorerben",
+		"viewReceipt": "Nyugta megtekintése",
+		"viewTransaction": "Tranzakció megtekintése",
+		"requestTokens": "Tokenek kérése",
+		"transaction": "Tranzakció",
+		"transactions": "tranzakció",
+		"transactionOn": "",
+		"self": "saját",
+		"andMore": "és még {{count}}",
+		"sentSuccessfully": "{{symbol}} sikeresen elküldve",
+		"demoNote": "Ez egy bemutató, az egyenlegek nem frissülnek."
 	},
 	"portfolio": {
 		"title": "Portfólió",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "eszköz",
 		"hideZeroBalances": "Nulla egyenlegek elrejtése",
 		"showZeroBalances": "Nulla egyenlegek megjelenítése",
-		"noActivityYet": "Még nincs tevékenység"
+		"noActivityYet": "Még nincs tevékenység",
+		"noAssetsFound": "Nem található eszköz"
+	},
+	"landing": {
+		"getStarted": "Kezdés",
+		"exploreDescription": "Fedezze fel a fiókokat, token egyenlegeket és tranzakciós előzményeket a Tempo-n",
+		"enterAddress": "Adja meg a címet",
+		"orUsePasskey": "vagy használjon másik hozzáférési kulcsot",
+		"orSignInWithPasskey": "vagy jelentkezzen be hozzáférési kulccsal"
+	},
+	"receipt": {
+		"block": "Blokk",
+		"sender": "Feladó",
+		"hash": "Hash",
+		"date": "Dátum",
+		"time": "Idő"
 	}
 }
