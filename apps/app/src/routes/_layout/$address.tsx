@@ -62,6 +62,16 @@ const FAUCET_TOKEN_ADDRESSES = new Set([
 	'0x20c000000000000000000000033abb6ac7d235e5', // DONOTUSE
 ])
 
+// Default faucet token data to inject when user has no assets
+const FAUCET_TOKEN_DEFAULTS: AssetData[] = [
+	{
+		address: '0x20c000000000000000000000033abb6ac7d235e5' as `0x${string}`,
+		metadata: { name: 'DONOTUSE', symbol: 'DONOTUSE', decimals: 6 },
+		balance: '0',
+		valueUsd: 0,
+	},
+]
+
 const faucetFundAddress = createServerFn({ method: 'POST' })
 	.inputValidator((data: { address: string }) => data)
 	.handler(async ({ data }) => {
@@ -853,7 +863,16 @@ function AddressView() {
 		return () => setSummary(null)
 	}, [activity, setSummary])
 
-	const dedupedAssets = assetsData.filter(
+	// Ensure faucet tokens are always in the list
+	const assetsWithFaucet = React.useMemo(() => {
+		const existing = new Set(assetsData.map((a) => a.address.toLowerCase()))
+		const missing = FAUCET_TOKEN_DEFAULTS.filter(
+			(f) => !existing.has(f.address.toLowerCase()),
+		)
+		return [...assetsData, ...missing]
+	}, [assetsData])
+
+	const dedupedAssets = assetsWithFaucet.filter(
 		(a, i, arr) => arr.findIndex((b) => b.address === a.address) === i,
 	)
 

@@ -36,8 +36,7 @@
 				}
 			],
 			"vars": {
-				"ALLOWED_ORIGINS": "*",
-				"RP_ID": "tempo.xyz"
+				"ALLOWED_ORIGINS": "*"
 			},
 			"kv_namespaces": [
 				{

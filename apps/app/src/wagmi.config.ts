@@ -14,13 +14,6 @@ import {
 } from 'wagmi'
 import { KeyManager, webAuthn } from 'wagmi/tempo'
 
-const isLocalhost =
-	typeof window !== 'undefined' && window.location.hostname === 'localhost'
-
-const isWorkersDevPreview =
-	typeof window !== 'undefined' &&
-	window.location.hostname.endsWith('.workers.dev')
-
 // Helper to convert ArrayBuffer to base64
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
 	const bytes = new Uint8Array(buffer)
@@ -54,12 +47,17 @@ function serializeCredential(credential: PublicKeyCredential) {
 }
 
 function getKeyManager() {
-	const baseUrl =
-		isLocalhost || isWorkersDevPreview
-			? 'https://key-manager.porto.workers.dev/keys'
-			: TEMPO_ENV === 'presto'
-				? 'https://keys.tempo.xyz/keys'
-				: 'https://key-manager-mainnet.porto.workers.dev/keys'
+	// Determine preview status dynamically at call time, not module load time
+	const isPreview =
+		typeof window !== 'undefined' &&
+		(window.location.hostname === 'localhost' ||
+			window.location.hostname.endsWith('.workers.dev'))
+
+	const baseUrl = isPreview
+		? 'https://key-manager.porto.workers.dev/keys'
+		: TEMPO_ENV === 'presto'
+			? 'https://keys.tempo.xyz/keys'
+			: 'https://key-manager-mainnet.porto.workers.dev/keys'
 
 	const httpKeyManager = KeyManager.http(baseUrl)
 
@@ -177,6 +175,14 @@ export function getWagmiConfig() {
 							rpId: hostname,
 							createOptions: { rpId: hostname },
 							getOptions: { rpId: hostname },
+						}
+					}
+					// Production: use tempo.xyz as rpId for all subdomains
+					if (hostname.endsWith('.tempo.xyz') || hostname === 'tempo.xyz') {
+						return {
+							rpId: 'tempo.xyz',
+							createOptions: { rpId: 'tempo.xyz' },
+							getOptions: { rpId: 'tempo.xyz' },
 						}
 					}
 					return {}
