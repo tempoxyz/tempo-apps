@@ -72,7 +72,12 @@ const FAUCET_TOKEN_ADDRESSES = new Set([
 const FAUCET_TOKEN_DEFAULTS: AssetData[] = [
 	{
 		address: '0x20c000000000000000000000033abb6ac7d235e5' as `0x${string}`,
-		metadata: { name: 'DONOTUSE', symbol: 'DONOTUSE', decimals: 6, priceUsd: 1 },
+		metadata: {
+			name: 'DONOTUSE',
+			symbol: 'DONOTUSE',
+			decimals: 6,
+			priceUsd: 1,
+		},
 		balance: '0',
 		valueUsd: 0,
 	},
@@ -696,8 +701,6 @@ function eventTypeToActivityType(eventType: string): ActivityType {
 	if (type.includes('approve') || type.includes('approval')) return 'approve'
 	return 'unknown'
 }
-
-
 
 function AddressView() {
 	const { address } = Route.useParams()
@@ -1902,9 +1905,15 @@ function BlockTimeline({
 											block.isPlaceholder,
 										),
 								// Current block gets a prominent white ring
-								isCurrent && !isSelected && 'ring-2 ring-white ring-offset-1 ring-offset-black',
-								isSelected && 'ring-2 ring-accent ring-offset-1 ring-offset-black',
-								isFocused && !isSelected && !isCurrent && 'ring-2 ring-accent/50',
+								isCurrent &&
+									!isSelected &&
+									'ring-2 ring-white ring-offset-1 ring-offset-black',
+								isSelected &&
+									'ring-2 ring-accent ring-offset-1 ring-offset-black',
+								isFocused &&
+									!isSelected &&
+									!isCurrent &&
+									'ring-2 ring-accent/50',
 								block.hasUserActivity &&
 									!isSelected &&
 									!isCurrent &&
@@ -2069,7 +2078,11 @@ function HoldingsTable({
 	// Use global access keys from context
 	const { keys: signableAccessKeys } = useSignableAccessKeys()
 
-	console.log('[PortfolioSection] signableAccessKeys:', signableAccessKeys.length, signableAccessKeys.map(k => k.keyId.slice(0, 10)))
+	console.log(
+		'[PortfolioSection] signableAccessKeys:',
+		signableAccessKeys.length,
+		signableAccessKeys.map((k) => k.keyId.slice(0, 10)),
+	)
 
 	React.useEffect(() => {
 		if (toastMessage) {
@@ -2247,10 +2260,17 @@ function SignWithSelector({
 }) {
 	const [isOpen, setIsOpen] = React.useState(false)
 	const buttonRef = React.useRef<HTMLButtonElement>(null)
+	const dropdownRef = React.useRef<HTMLDivElement>(null)
 
 	React.useEffect(() => {
 		function handleClickOutside(e: MouseEvent) {
-			if (buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
+			const target = e.target as Node
+			if (
+				buttonRef.current &&
+				!buttonRef.current.contains(target) &&
+				dropdownRef.current &&
+				!dropdownRef.current.contains(target)
+			) {
 				setIsOpen(false)
 			}
 		}
@@ -2267,7 +2287,9 @@ function SignWithSelector({
 				const data = JSON.parse(stored) as { name?: string }
 				if (data.name) return data.name
 			}
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 		return `${keyId.slice(0, 6)}...${keyId.slice(-4)}`
 	}
 
@@ -2281,7 +2303,9 @@ function SignWithSelector({
 		return `$${Number(formatted).toFixed(0)}`
 	}
 
-	const selectedKeyData = selectedKey ? accessKeys.find(k => k.keyId === selectedKey) : null
+	const selectedKeyData = selectedKey
+		? accessKeys.find((k) => k.keyId === selectedKey)
+		: null
 	const buttonRect = buttonRef.current?.getBoundingClientRect()
 
 	return (
@@ -2298,72 +2322,107 @@ function SignWithSelector({
 				<KeyIcon className="size-[10px]" />
 				<span>{selectedKey ? getKeyName(selectedKey) : 'Wallet'}</span>
 				{selectedKeyData && getKeyLimit(selectedKeyData) && (
-					<span className="text-accent/70">· {getKeyLimit(selectedKeyData)}</span>
+					<span className="text-accent/70">
+						· {getKeyLimit(selectedKeyData)}
+					</span>
 				)}
 				<svg
-					className={cx('size-[8px] transition-transform', isOpen && 'rotate-180')}
+					className={cx(
+						'size-[8px] transition-transform',
+						isOpen && 'rotate-180',
+					)}
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke="currentColor"
 				>
-					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+					<path
+						strokeLinecap="round"
+						strokeLinejoin="round"
+						strokeWidth={2}
+						d="M19 9l-7 7-7-7"
+					/>
 				</svg>
 			</button>
-			{isOpen && buttonRect && (
-				<div
-					className="fixed min-w-[120px] bg-surface border border-card-border rounded-md shadow-xl overflow-hidden"
-					style={{ top: buttonRect.bottom + 4, left: buttonRect.left, zIndex: 9999 }}
-				>
-					<button
-						type="button"
-						onClick={() => {
-							onSelect(null)
-							setIsOpen(false)
+			{isOpen &&
+				buttonRect &&
+				createPortal(
+					<div
+						ref={dropdownRef}
+						className="fixed min-w-[120px] bg-surface border border-card-border rounded-md shadow-xl overflow-hidden"
+						style={{
+							top: buttonRect.bottom + 4,
+							left: buttonRect.left,
+							zIndex: 99999,
 						}}
-						className={cx(
-							'w-full px-2 py-1.5 text-[9px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-1.5',
-							!selectedKey ? 'text-accent' : 'text-primary',
-						)}
 					>
-						<svg className="size-[10px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
-						</svg>
-						<span>Wallet</span>
-					</button>
-					{accessKeys.map((key) => {
-						const limit = getKeyLimit(key)
-						const isExhausted = limit === 'Exhausted'
-						return (
-							<button
-								key={key.keyId}
-								type="button"
-								onClick={() => {
-									if (!isExhausted) {
-										onSelect(key.keyId)
-										setIsOpen(false)
-									}
-								}}
-								disabled={isExhausted}
-								className={cx(
-									'w-full px-2 py-1.5 text-[9px] text-left transition-colors flex items-center gap-1.5',
-									isExhausted
-										? 'text-tertiary cursor-not-allowed'
-										: 'hover:bg-base-alt cursor-pointer',
-									selectedKey === key.keyId ? 'text-accent' : 'text-primary',
-								)}
+						<button
+							type="button"
+							onClick={() => {
+								onSelect(null)
+								setIsOpen(false)
+							}}
+							className={cx(
+								'w-full px-3 py-2 text-[13px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-2',
+								!selectedKey ? 'text-accent' : 'text-primary',
+							)}
+						>
+							<svg
+								className="size-4"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
 							>
-								<KeyIcon className="size-[10px] text-accent" />
-								<span className="flex-1 truncate">{getKeyName(key.keyId)}</span>
-								{limit && (
-									<span className={cx('text-[8px]', isExhausted ? 'text-negative' : 'text-secondary')}>
-										{limit}
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z"
+								/>
+							</svg>
+							<span>Wallet</span>
+						</button>
+						{accessKeys.map((key) => {
+							const limit = getKeyLimit(key)
+							const isExhausted = limit === 'Exhausted'
+							return (
+								<button
+									key={key.keyId}
+									type="button"
+									onClick={() => {
+										if (!isExhausted) {
+											onSelect(key.keyId)
+											setIsOpen(false)
+										}
+									}}
+									disabled={isExhausted}
+									className={cx(
+										'w-full px-3 py-2 text-[13px] text-left transition-colors flex items-center gap-2',
+										isExhausted
+											? 'text-tertiary cursor-not-allowed'
+											: 'hover:bg-base-alt cursor-pointer',
+										selectedKey === key.keyId ? 'text-accent' : 'text-primary',
+									)}
+								>
+									<KeyIcon className="size-4 text-accent" />
+									<span className="flex-1 truncate">
+										{getKeyName(key.keyId)}
 									</span>
-								)}
-							</button>
-						)
-					})}
-				</div>
-			)}
+									{limit && (
+										<span
+											className={cx(
+												'text-[11px]',
+												isExhausted ? 'text-negative' : 'text-secondary',
+											)}
+										>
+											{limit}
+										</span>
+									)}
+								</button>
+							)
+						})}
+					</div>,
+					document.body,
+				)}
 		</>
 	)
 }
@@ -2708,84 +2767,81 @@ function AssetRow({
 					e.preventDefault()
 					handleSend()
 				}}
-				className="flex flex-col gap-2 px-1 py-2.5 rounded-xl hover:glass-thin transition-all"
+				className="flex flex-col gap-2 px-1 py-2 rounded-xl hover:glass-thin transition-all"
 			>
-				<div className="flex flex-col sm:flex-row sm:items-center gap-2">
-					<div className="flex items-center gap-1.5 flex-1 min-w-0">
-						<TokenIcon
-							address={asset.address}
-							className="size-[24px] shrink-0"
-						/>
-						<input
-							ref={recipientInputRef}
-							type="text"
-							value={recipient}
-							onChange={(e) => setRecipient(e.target.value)}
-							placeholder="0x..."
-							className="flex-1 min-w-0 h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
-						/>
-					</div>
-					<div className="flex items-center gap-1">
-						<input
-							ref={amountInputRef}
-							type="text"
-							inputMode="decimal"
-							value={amount}
-							onChange={(e) => setAmount(e.target.value)}
-							placeholder="0.00"
-							className="w-[10ch] h-[32px] pl-1 pr-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
-						/>
-						<button
-							type="button"
-							onClick={handleMax}
-							className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[10px] font-medium text-accent hover:bg-base-alt cursor-pointer transition-colors"
-						>
-							MAX
-						</button>
-						<button
-							type="submit"
-							aria-label={t('common.send')}
-							aria-busy={sendState === 'sending'}
-							className={cx(
-								'size-[32px] rounded-lg press-down transition-colors flex items-center justify-center shrink-0 focus-ring',
-								sendState === 'sent'
-									? 'bg-positive text-white cursor-default'
-									: sendState === 'error'
-										? 'bg-negative text-white cursor-default'
-										: isValidSend && sendState === 'idle'
-											? 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
-											: 'bg-base-alt text-tertiary cursor-not-allowed',
-							)}
-							disabled={!isValidSend || sendState !== 'idle'}
-						>
-							{sendState === 'sending' ? (
-								<BouncingDots />
-							) : sendState === 'sent' ? (
-								<CheckIcon className="size-[14px]" />
-							) : sendState === 'error' ? (
-								<XIcon className="size-[14px]" />
-							) : (
-								<SendIcon className="size-[14px]" />
-							)}
-						</button>
-						<button
-							type="button"
-							onClick={handleToggle}
-							aria-label={t('common.cancel')}
-							className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-lg transition-colors shrink-0 focus-ring"
-						>
-							<XIcon className="size-[14px]" />
-						</button>
-					</div>
+				{/* Row 1: Token icon + address input + cancel */}
+				<div className="flex items-center gap-1.5">
+					<TokenIcon address={asset.address} className="size-[24px] shrink-0" />
+					<input
+						ref={recipientInputRef}
+						type="text"
+						value={recipient}
+						onChange={(e) => setRecipient(e.target.value)}
+						placeholder="0x..."
+						className="flex-1 min-w-0 h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
+					/>
+					<button
+						type="button"
+						onClick={handleToggle}
+						aria-label={t('common.cancel')}
+						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-lg transition-colors shrink-0 focus-ring"
+					>
+						<XIcon className="size-[14px]" />
+					</button>
 				</div>
-				<SignWithSelector
-					accessKeys={accessKeys}
-					selectedKey={selectedAccessKey}
-					onSelect={setSelectedAccessKey}
-					asset={asset}
-				/>
+				{/* Row 2: Amount + MAX + signing key + send button */}
+				<div className="flex items-center gap-1.5 pl-[30px]">
+					<input
+						ref={amountInputRef}
+						type="text"
+						inputMode="decimal"
+						value={amount}
+						onChange={(e) => setAmount(e.target.value)}
+						placeholder="0.00"
+						className="flex-1 min-w-[80px] h-[32px] px-3 rounded-lg border border-card-border bg-base text-[14px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
+					/>
+					<button
+						type="button"
+						onClick={handleMax}
+						className="h-[32px] px-3 rounded-lg border border-card-border bg-base text-[11px] font-medium text-accent hover:bg-base-alt cursor-pointer transition-colors"
+					>
+						MAX
+					</button>
+					<SignWithSelector
+						accessKeys={accessKeys}
+						selectedKey={selectedAccessKey}
+						onSelect={setSelectedAccessKey}
+						asset={asset}
+					/>
+					<button
+						type="submit"
+						aria-label={t('common.send')}
+						aria-busy={sendState === 'sending'}
+						className={cx(
+							'size-[32px] rounded-lg press-down transition-colors flex items-center justify-center shrink-0 focus-ring',
+							sendState === 'sent'
+								? 'bg-positive text-white cursor-default'
+								: sendState === 'error'
+									? 'bg-negative text-white cursor-default'
+									: isValidSend && sendState === 'idle'
+										? 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
+										: 'bg-base-alt text-tertiary cursor-not-allowed',
+						)}
+						disabled={!isValidSend || sendState !== 'idle'}
+					>
+						{sendState === 'sending' ? (
+							<BouncingDots />
+						) : sendState === 'sent' ? (
+							<CheckIcon className="size-[14px]" />
+						) : sendState === 'error' ? (
+							<XIcon className="size-[14px]" />
+						) : (
+							<SendIcon className="size-[14px]" />
+						)}
+					</button>
+				</div>
 				{sendError && (
-					<div className="pl-[30px] text-[12px] text-negative truncate">
+					<div className="pl-[30px] text-[10px] text-negative truncate">
 						{sendError}
 					</div>
 				)}
