@@ -476,36 +476,57 @@ const fetchBlockTransactions = createServerFn({ method: 'GET' })
 	.inputValidator((data: { blockNumber: string }) => data)
 	.handler(async ({ data }) => {
 		const { blockNumber } = data
-		const explorerUrl =
+		const rpcUrl =
 			TEMPO_ENV === 'presto'
-				? 'https://explore.presto.tempo.xyz'
-				: 'https://explore.mainnet.tempo.xyz'
+				? 'https://rpc.presto.tempo.xyz'
+				: 'https://rpc.tempo.xyz'
 
 		const { env } = await import('cloudflare:workers')
 		const auth = env.PRESTO_RPC_AUTH as string | undefined
-		const headers: Record<string, string> = {}
-		if (auth) {
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		}
+		if (auth && TEMPO_ENV === 'presto') {
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
 		try {
-			const response = await fetch(
-				`${explorerUrl}/api/block/${blockNumber}?include=transactions`,
-				{ headers },
-			)
+			// Fetch block with full transaction objects
+			const blockHex = `0x${BigInt(blockNumber).toString(16)}`
+			const response = await fetch(rpcUrl, {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'eth_getBlockByNumber',
+					params: [blockHex, true], // true = include full tx objects
+				}),
+			})
 			if (!response.ok) {
-				return { transactions: [] as ApiTransaction[], error: `HTTP ${response.status}` }
+				return { transactions: [] as string[], error: `HTTP ${response.status}` }
 			}
 			const json = (await response.json()) as {
-				transactions?: ApiTransaction[]
-				error?: string | null
+				result?: {
+					transactions?: Array<{ hash: string; from: string; to: string | null }>
+					timestamp?: string
+				}
+				error?: { message: string }
 			}
+			if (json.error) {
+				return { transactions: [] as string[], error: json.error.message }
+			}
+			const txHashes = json.result?.transactions?.map((tx) => tx.hash) ?? []
+			const timestamp = json.result?.timestamp
+				? Number.parseInt(json.result.timestamp, 16)
+				: undefined
 			return {
-				transactions: json.transactions ?? [],
-				error: json.error ?? null,
+				transactions: txHashes,
+				timestamp,
+				error: null,
 			}
 		} catch (e) {
-			return { transactions: [] as ApiTransaction[], error: String(e) }
+			return { transactions: [] as string[], error: String(e) }
 		}
 	})
 
@@ -1870,7 +1891,7 @@ function BlockTimeline({
 			<div
 				ref={scrollRef}
 				onScroll={handleScroll}
-				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar py-1.5"
+				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar py-1.5 -mx-2 px-2"
 			>
 				{blocks.map((block) => {
 					const isSelected = selectedBlock === block.blockNumber
@@ -2610,7 +2631,7 @@ function ActivityList({
 					data: { blockNumber: filterBlockNumber.toString() },
 				})
 				if (result.transactions.length > 0) {
-					const hashes = result.transactions.map((tx) => tx.hash)
+					const hashes = result.transactions // Already array of hashes
 					const receiptsResult = await fetchTransactionReceipts({
 						data: { hashes },
 					})
@@ -2624,11 +2645,10 @@ function ActivityList({
 						try {
 							const viemReceipt = convertRpcReceiptToViemReceipt(receipt)
 							const events = parseKnownEvents(viemReceipt.logs, getTokenMetadata)
-							const tx = result.transactions.find((t) => t.hash === hash)
 							items.push({
 								hash,
 								events,
-								timestamp: tx?.timestamp ? Number.parseInt(tx.timestamp, 10) : undefined,
+								timestamp: result.timestamp,
 								blockNumber: filterBlockNumber,
 							})
 						} catch {
