@@ -176,6 +176,7 @@ function MultisigDashboard() {
 	}, [owners, account.address])
 
 	const [showSubmitModal, setShowSubmitModal] = React.useState(false)
+	const [filter, setFilter] = React.useState<'all' | 'pending' | 'executed'>('all')
 
 	return (
 		<>
@@ -297,7 +298,26 @@ function MultisigDashboard() {
 				{/* Transactions */}
 				<div className="flex flex-col gap-3">
 					<div className="flex items-center justify-between">
-						<h2 className="text-secondary text-[13px] uppercase tracking-wide">Transactions</h2>
+						<div className="flex items-center gap-2">
+							<h2 className="text-secondary text-[13px] uppercase tracking-wide">Transactions</h2>
+							<div className="flex items-center gap-0.5 p-0.5 rounded-lg glass-thin">
+								{(['all', 'pending', 'executed'] as const).map((f) => (
+									<button
+										key={f}
+										type="button"
+										onClick={() => setFilter(f)}
+										className={cx(
+											'px-2 py-0.5 rounded text-[10px] font-medium transition-all',
+											filter === f
+												? 'glass text-primary'
+												: 'text-tertiary hover:text-secondary',
+										)}
+									>
+										{f.charAt(0).toUpperCase() + f.slice(1)}
+									</button>
+								))}
+							</div>
+						</div>
 						{isOwner && (
 							<button
 								type="button"
@@ -309,25 +329,41 @@ function MultisigDashboard() {
 							</button>
 						)}
 					</div>
-					{transactions.length === 0 ? (
-						<div className="flex flex-col items-center justify-center py-12 gap-3 glass-thin rounded-xl">
-							<ShieldIcon className="size-8 text-tertiary" />
-							<span className="text-tertiary text-[14px]">No transactions yet</span>
-						</div>
-					) : (
-						<div className="flex flex-col gap-2">
-							{transactions.map((tx) => (
-								<TransactionCard
-									key={tx.id.toString()}
-									tx={tx}
-									threshold={threshold ?? 0n}
-									multisigAddress={address as Address}
-									isOwner={isOwner}
-									userAddress={account.address}
-								/>
-							))}
-						</div>
-					)}
+					{(() => {
+						const now = BigInt(Math.floor(Date.now() / 1000))
+						const filtered = transactions.filter((tx) => {
+							if (filter === 'pending') {
+								const isExpired = tx.expiresAt > 0n && now > tx.expiresAt
+								return !tx.executed && !tx.cancelled && !isExpired
+							}
+							if (filter === 'executed') return tx.executed
+							return true
+						})
+						if (filtered.length === 0) {
+							return (
+								<div className="flex flex-col items-center justify-center py-12 gap-3 glass-thin rounded-xl">
+									<ShieldIcon className="size-8 text-tertiary" />
+									<span className="text-tertiary text-[14px]">
+										{transactions.length === 0 ? 'No transactions yet' : 'No matching transactions'}
+									</span>
+								</div>
+							)
+						}
+						return (
+							<div className="flex flex-col gap-2">
+								{filtered.map((tx) => (
+									<TransactionCard
+										key={tx.id.toString()}
+										tx={tx}
+										threshold={threshold ?? 0n}
+										multisigAddress={address as Address}
+										isOwner={isOwner}
+										userAddress={account.address}
+									/>
+								))}
+							</div>
+						)
+					})()}
 				</div>
 			</div>
 			{showSubmitModal &&
