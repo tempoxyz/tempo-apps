@@ -50,7 +50,7 @@ import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
 import { useTranslation } from 'react-i18next'
 import i18n, { isRtl } from '#lib/i18n'
-import { useAnnounce } from '#lib/a11y'
+import { useAnnounce, LiveRegion, useFocusTrap, useEscapeKey } from '#lib/a11y'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
@@ -327,6 +327,66 @@ const fetchTransactionReceipts = createServerFn({ method: 'POST' })
 		}
 
 		return { receipts }
+	})
+
+const fetchBlockData = createServerFn({ method: 'GET' })
+	.inputValidator((data: { fromBlock: string; count: number }) => data)
+	.handler(async ({ data }) => {
+		const { fromBlock, count } = data
+		const rpcUrl =
+			TEMPO_ENV === 'presto'
+				? 'https://rpc.presto.tempo.xyz'
+				: 'https://rpc.tempo.xyz'
+
+		const { env } = await import('cloudflare:workers')
+		const auth = env.PRESTO_RPC_AUTH as string | undefined
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		}
+		if (auth && TEMPO_ENV === 'presto') {
+			headers.Authorization = `Basic ${btoa(auth)}`
+		}
+
+		const startBlock = BigInt(fromBlock)
+		const requests = []
+		for (let i = 0; i < count; i++) {
+			const blockNum = startBlock - BigInt(i)
+			if (blockNum > 0n) {
+				requests.push({
+					jsonrpc: '2.0',
+					id: i + 1,
+					method: 'eth_getBlockByNumber',
+					params: [`0x${blockNum.toString(16)}`, false],
+				})
+			}
+		}
+
+		try {
+			const response = await fetch(rpcUrl, {
+				method: 'POST',
+				headers,
+				body: JSON.stringify(requests),
+			})
+			if (response.ok) {
+				const results = (await response.json()) as Array<{
+					id: number
+					result?: { number: string; transactions: string[] }
+				}>
+				const blocks: Array<{ blockNumber: string; txCount: number }> = []
+				for (const r of results) {
+					if (r.result) {
+						blocks.push({
+							blockNumber: r.result.number,
+							txCount: r.result.transactions?.length ?? 0,
+						})
+					}
+				}
+				return { blocks }
+			}
+			return { blocks: [] }
+		} catch {
+			return { blocks: [] }
+		}
 	})
 
 const fetchCurrentBlockNumber = createServerFn({ method: 'GET' }).handler(
@@ -1475,9 +1535,11 @@ function BlockTimeline({
 	selectedBlock: bigint | undefined
 	onSelectBlock: (block: bigint | undefined) => void
 }) {
-	const containerRef = React.useRef<HTMLDivElement>(null)
-	const [offset, setOffset] = React.useState(0)
-	const prevBlockRef = React.useRef<bigint | null>(null)
+	const [blockTxCounts, setBlockTxCounts] = React.useState<Map<string, number>>(
+		new Map(),
+	)
+	const [displayBlock, setDisplayBlock] = React.useState<bigint | null>(null)
+	const lastFetchedBlockRef = React.useRef<bigint | null>(null)
 
 	const userBlockNumbers = React.useMemo(() => {
 		const blocks = new Set<bigint>()
@@ -1489,62 +1551,80 @@ function BlockTimeline({
 		return blocks
 	}, [activity])
 
-	const blockSize = 8
-	const gap = 3
-	const blockUnit = blockSize + gap
-	const visibleBlocks = 60
-	const futureBlocks = 8
+	const visibleBlocks = 40
 
 	React.useEffect(() => {
 		if (!currentBlock) return
-		if (prevBlockRef.current === null) {
-			prevBlockRef.current = currentBlock
-			return
-		}
-		const diff = Number(currentBlock - prevBlockRef.current)
-		if (diff > 0 && diff < 10) {
-			setOffset(diff * blockUnit)
-			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					setOffset(0)
+
+		const fetchNewBlocks = async () => {
+			const lastFetched = lastFetchedBlockRef.current
+			if (lastFetched && currentBlock <= lastFetched) {
+				setDisplayBlock(currentBlock)
+				return
+			}
+
+			const blocksToFetch = lastFetched
+				? Math.min(Number(currentBlock - lastFetched), 10)
+				: visibleBlocks
+
+			try {
+				const result = await fetchBlockData({
+					data: {
+						fromBlock: `0x${currentBlock.toString(16)}`,
+						count: blocksToFetch,
+					},
 				})
-			})
+				if (result.blocks.length > 0) {
+					setBlockTxCounts((prev) => {
+						const next = new Map(prev)
+						for (const b of result.blocks) {
+							next.set(BigInt(b.blockNumber).toString(), b.txCount)
+						}
+						return next
+					})
+					lastFetchedBlockRef.current = currentBlock
+				}
+			} catch {
+				// Ignore errors
+			}
+			setDisplayBlock(currentBlock)
 		}
-		prevBlockRef.current = currentBlock
-	}, [currentBlock, blockUnit])
+
+		fetchNewBlocks()
+	}, [currentBlock])
+
+	const maxTxCount = React.useMemo(() => {
+		let max = 1
+		for (const count of blockTxCounts.values()) {
+			if (count > max) max = count
+		}
+		return max
+	}, [blockTxCounts])
 
 	const blocks = React.useMemo(() => {
-		if (!currentBlock) return []
+		const blockToShow = displayBlock ?? currentBlock
+		if (!blockToShow) return []
 		const result: {
 			blockNumber: bigint
-			hasActivity: boolean
-			isFuture: boolean
+			hasUserActivity: boolean
+			txCount: number
 		}[] = []
 
 		for (let i = visibleBlocks - 1; i >= 0; i--) {
-			const blockNum = currentBlock - BigInt(i)
+			const blockNum = blockToShow - BigInt(i)
 			if (blockNum > 0n) {
 				result.push({
 					blockNumber: blockNum,
-					hasActivity: userBlockNumbers.has(blockNum),
-					isFuture: false,
+					hasUserActivity: userBlockNumbers.has(blockNum),
+					txCount: blockTxCounts.get(blockNum.toString()) ?? 0,
 				})
 			}
 		}
 
-		for (let i = 1; i <= futureBlocks; i++) {
-			result.push({
-				blockNumber: currentBlock + BigInt(i),
-				hasActivity: false,
-				isFuture: true,
-			})
-		}
-
 		return result
-	}, [currentBlock, userBlockNumbers])
+	}, [displayBlock, currentBlock, userBlockNumbers, blockTxCounts])
 
-	const handleBlockClick = (blockNumber: bigint, isFuture: boolean) => {
-		if (isFuture) return
+	const handleBlockClick = (blockNumber: bigint) => {
 		if (selectedBlock === blockNumber) {
 			onSelectBlock(undefined)
 		} else {
@@ -1552,83 +1632,78 @@ function BlockTimeline({
 		}
 	}
 
-	const getBlockColor = (
-		hasActivity: boolean,
-		isFuture: boolean,
+	const getBlockStyle = (
+		txCount: number,
 		isSelected: boolean,
 		isCurrent: boolean,
+		hasUserActivity: boolean,
 	) => {
-		if (isFuture) return 'bg-base-alt/20'
 		if (isSelected) return 'bg-accent'
 		if (isCurrent) return 'bg-white'
-		if (hasActivity) return 'bg-green-500'
-		return 'bg-base-alt/50'
+		if (hasUserActivity) return 'bg-green-500'
+		if (txCount === 0) return 'bg-base-alt/40'
+		const intensity = Math.min(txCount / Math.max(maxTxCount, 5), 1)
+		if (intensity < 0.25) return 'bg-base-alt/50'
+		if (intensity < 0.5) return 'bg-base-alt/60'
+		if (intensity < 0.75) return 'bg-base-alt/70'
+		return 'bg-base-alt/80'
 	}
 
 	if (!currentBlock) {
 		return (
-			<div className="py-3 -mx-2 px-2">
-				<div className="h-[24px] flex items-center justify-center">
-					<div className="text-[10px] text-tertiary">Loading blocks...</div>
-				</div>
+			<div className="h-[40px] flex items-center justify-end mt-2 mb-3">
+				<div className="text-[10px] text-tertiary">Loading...</div>
 			</div>
 		)
 	}
 
+	const shownBlock = displayBlock ?? currentBlock
+
 	return (
-		<div className="py-2 -mx-2 overflow-hidden">
-			<div
-				ref={containerRef}
-				className="flex items-end justify-center gap-[3px] px-2"
-				style={{
-					transform: `translateX(${offset}px)`,
-					transition: offset === 0 ? 'transform 150ms ease-out' : 'none',
-				}}
-			>
+		<div className="flex flex-col gap-1.5 mt-2 mb-3">
+			<div className="flex items-center gap-[3px] w-full">
 				{blocks.map((block) => {
 					const isSelected = selectedBlock === block.blockNumber
-					const isCurrent = block.blockNumber === currentBlock
+					const isCurrent = block.blockNumber === shownBlock
 					return (
-						<div
+						<button
 							key={block.blockNumber.toString()}
-							className="flex flex-col items-center shrink-0"
-						>
-							<button
-								type="button"
-								onClick={() => handleBlockClick(block.blockNumber, block.isFuture)}
-								disabled={block.isFuture}
-								className={cx(
-									'rounded-[2px] transition-all duration-150',
-									getBlockColor(block.hasActivity, block.isFuture, isSelected, isCurrent),
-									block.hasActivity && !isSelected && !isCurrent && 'scale-[1.2]',
-									isSelected && 'scale-[1.4] ring-1 ring-accent/50',
-									isCurrent && 'scale-[1.3]',
-									!block.isFuture && 'hover:scale-[1.4] cursor-pointer',
-									block.isFuture && 'cursor-default opacity-40',
-								)}
-								style={{ width: blockSize, height: blockSize }}
-								title={block.isFuture ? undefined : `Block ${block.blockNumber.toString()}`}
-							/>
-							{isCurrent && (
-								<div className="text-[9px] text-secondary font-mono mt-1.5 tabular-nums">
-									{currentBlock.toString()}
-								</div>
+							type="button"
+							onClick={() => handleBlockClick(block.blockNumber)}
+							className={cx(
+								'h-[10px] flex-1 min-w-[6px] max-w-[12px] rounded-[2px] transition-colors duration-300',
+								getBlockStyle(
+									block.txCount,
+									isSelected,
+									isCurrent,
+									block.hasUserActivity,
+								),
+								isSelected && 'ring-1 ring-accent',
+								block.hasUserActivity &&
+									!isSelected &&
+									!isCurrent &&
+									'ring-1 ring-green-500/60',
+								'hover:opacity-80 cursor-pointer',
 							)}
-						</div>
+							title={`Block ${block.blockNumber.toString()}${block.txCount > 0 ? ` • ${block.txCount} tx${block.txCount > 1 ? 's' : ''}` : ''}`}
+						/>
 					)
 				})}
 			</div>
-			{selectedBlock !== undefined && (
-				<div className="flex justify-center mt-2">
+			<div className="flex items-center justify-end gap-2">
+				<span className="text-[10px] text-tertiary font-mono tabular-nums">
+					{shownBlock?.toString() ?? '...'}
+				</span>
+				{selectedBlock !== undefined && (
 					<button
 						type="button"
 						onClick={() => onSelectBlock(undefined)}
-						className="text-[10px] text-secondary hover:text-primary cursor-pointer px-2 py-0.5 rounded hover:bg-base-alt/50 transition-colors"
+						className="text-[10px] text-secondary hover:text-primary cursor-pointer"
 					>
-						Clear block filter
+						Clear
 					</button>
-				</div>
-			)}
+				)}
+			</div>
 		</div>
 	)
 }
@@ -2420,7 +2495,7 @@ function TransactionModal({
 	const { t } = useTranslation()
 	const [isVisible, setIsVisible] = React.useState(false)
 	const overlayRef = React.useRef<HTMLDivElement>(null)
-	const _focusTrapRef = useFocusTrap(isVisible)
+	const focusTrapRef = useFocusTrap(isVisible)
 
 	const handleClose = React.useCallback(() => {
 		setIsVisible(false)
@@ -2462,7 +2537,7 @@ function TransactionModal({
 			ref={overlayRef}
 			role="presentation"
 			className={cx(
-				'fixed inset-0 left-[calc(45vw+8px)] max-lg:left-0 z-50 flex items-center justify-center bg-base/80 backdrop-blur-md transition-opacity duration-200',
+				'fixed inset-0 left-[calc(45vw+16px)] max-lg:left-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200',
 				isVisible ? 'opacity-100' : 'opacity-0',
 			)}
 			onClick={handleClose}
