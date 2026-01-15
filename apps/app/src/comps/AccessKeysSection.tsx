@@ -87,6 +87,22 @@ export function formatBigIntAmount(amount: bigint, decimals: number): string {
 	return num.toPrecision(3)
 }
 
+export function formatBigIntAsUsd(
+	amount: bigint,
+	decimals: number,
+	priceUsd: number,
+): string {
+	const formatted = formatUnits(amount, decimals)
+	const tokenAmount = Number.parseFloat(formatted)
+	const usdValue = tokenAmount * priceUsd
+	if (usdValue >= 1000000) return `$${(usdValue / 1000000).toFixed(1)}M`
+	if (usdValue >= 1000) return `$${(usdValue / 1000).toFixed(1)}K`
+	if (usdValue >= 1) return `$${usdValue.toFixed(2)}`
+	if (usdValue >= 0.01) return `$${usdValue.toFixed(2)}`
+	if (usdValue > 0) return `<$0.01`
+	return '$0.00'
+}
+
 function shortenAddress(address: string, chars = 4): string {
 	return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`
 }
@@ -509,9 +525,10 @@ function AccessKeyRow({
 					{remainingLimit !== undefined && remainingLimit > 0n ? (
 						<>
 							<span>
-								{formatBigIntAmount(
+								{formatBigIntAsUsd(
 									remainingLimit,
 									asset?.metadata?.decimals ?? 6,
+									asset?.metadata?.priceUsd ?? 1,
 								)}{' '}
 								remaining
 							</span>
@@ -728,10 +745,14 @@ export function AccessKeysSection({
 		account.address?.toLowerCase() === accountAddress.toLowerCase()
 	const assetsWithBalance = assets.filter((a) => a.balance && a.balance !== '0')
 
-	// Get token addresses for querying spending limits
+	// Get token addresses for querying spending limits (stable reference)
+	const tokenAddressesKey = assetsWithBalance
+		.map((a) => a.address.toLowerCase())
+		.sort()
+		.join(',')
 	const tokenAddresses = React.useMemo(
-		() => assetsWithBalance.map((a) => a.address),
-		[assetsWithBalance],
+		() => (tokenAddressesKey ? tokenAddressesKey.split(',') : []),
+		[tokenAddressesKey],
 	)
 
 	// Only poll when there are pending or revoking keys
@@ -747,9 +768,12 @@ export function AccessKeysSection({
 		const onChainKeyIds = new Set(onChainKeys.map((k) => k.keyId.toLowerCase()))
 
 		// Remove pending keys that are now confirmed on-chain
-		setPendingKeys((prev) =>
-			prev.filter((pk) => !onChainKeyIds.has(pk.keyId.toLowerCase())),
-		)
+		setPendingKeys((prev) => {
+			const filtered = prev.filter(
+				(pk) => !onChainKeyIds.has(pk.keyId.toLowerCase()),
+			)
+			return filtered.length !== prev.length ? filtered : prev
+		})
 
 		// Remove revoking keys that are no longer on-chain (revocation confirmed)
 		setRevokingKeys((prev) => {
