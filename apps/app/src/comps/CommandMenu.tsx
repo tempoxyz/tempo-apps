@@ -161,13 +161,14 @@ function CommandMenuPortal({
 		]
 
 		if (account.address) {
+			const addr = account.address
 			nav.push({
 				id: 'account',
 				label: 'My Account',
 				icon: <WalletIcon />,
 				shortcut: 'G A',
 				onSelect: () => {
-					navigate({ to: '/$address', params: { address: account.address! } })
+					navigate({ to: '/$address', params: { address: addr } })
 					close()
 				},
 				keywords: ['account', 'wallet', 'portfolio', 'balance'],
@@ -346,11 +347,12 @@ function CommandMenuPortal({
 					flatCommands[selectedIndex].onSelect()
 				} else if (
 					view === 'send' &&
-					sendAddress.match(/^0x[a-fA-F0-9]{40}$/)
+					sendAddress.match(/^0x[a-fA-F0-9]{40}$/) &&
+					account.address
 				) {
 					navigate({
 						to: '/$address',
-						params: { address: account.address! },
+						params: { address: account.address },
 						search: { sendTo: sendAddress },
 					})
 					close()
@@ -397,8 +399,9 @@ function CommandMenuPortal({
 	let globalIndex = -1
 
 	return createPortal(
-		// biome-ignore lint/a11y/useKeyWithClickEvents: keyboard handled via onKeyDown
+		// biome-ignore lint/a11y/noStaticElementInteractions: modal backdrop overlay
 		<div
+			role="presentation"
 			className={cx(
 				'fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] px-4',
 				'transition-opacity duration-100',
@@ -407,8 +410,11 @@ function CommandMenuPortal({
 			onClick={close}
 			onKeyDown={handleKeyDown}
 		>
-			{/* biome-ignore lint/a11y/useKeyWithClickEvents: container only stops propagation */}
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation only, keyboard handled on parent */}
 			<div
+				role="dialog"
+				aria-modal="true"
+				aria-label="Command menu"
 				className={cx(
 					'w-full max-w-[520px] rounded-xl overflow-hidden',
 					'bg-[#232326] border border-[#3a3a3c]',
@@ -552,13 +558,15 @@ function CommandMenuPortal({
 							</button>
 							{sendAddress && (
 								<div className="mt-2">
-									{sendAddress.match(/^0x[a-fA-F0-9]{40}$/) ? (
+									{sendAddress.match(/^0x[a-fA-F0-9]{40}$/) &&
+									account.address ? (
 										<button
 											type="button"
 											onClick={() => {
+												if (!account.address) return
 												navigate({
 													to: '/$address',
-													params: { address: account.address! },
+													params: { address: account.address },
 													search: { sendTo: sendAddress },
 												})
 												close()
@@ -575,13 +583,14 @@ function CommandMenuPortal({
 												</span>
 											</span>
 										</button>
-									) : (
+									) : sendAddress &&
+										!sendAddress.match(/^0x[a-fA-F0-9]{40}$/) ? (
 										<div className="px-3 py-2.5 rounded-lg bg-[#ff453a]/10 border border-[#ff453a]/20">
 											<span className="text-[13px] text-[#ff453a]">
 												Invalid address format
 											</span>
 										</div>
-									)}
+									) : null}
 								</div>
 							)}
 						</div>

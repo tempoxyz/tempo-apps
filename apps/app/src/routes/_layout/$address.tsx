@@ -1,9 +1,4 @@
-import {
-	Link,
-	createFileRoute,
-	useNavigate,
-	useRouter,
-} from '@tanstack/react-router'
+import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { createServerFn } from '@tanstack/react-start'
 import { waapi, spring } from 'animejs'
 import type { Address } from 'ox'
@@ -524,20 +519,67 @@ function eventTypeToActivityType(eventType: string): ActivityType {
 	return 'unknown'
 }
 
+async function refetchBalances(
+	accountAddress: string,
+): Promise<Map<string, { balance: string; valueUsd: number }>> {
+	if (!BALANCES_API_URL) return new Map()
+	try {
+		const res = await fetch(`${BALANCES_API_URL}balances/${accountAddress}`)
+		if (!res.ok) return new Map()
+		const balances = (await res.json()) as Array<{
+			token: string
+			balance: string
+			valueUsd: number
+		}>
+		return new Map(
+			balances.map((b) => [
+				b.token.toLowerCase(),
+				{ balance: b.balance, valueUsd: b.valueUsd },
+			]),
+		)
+	} catch {
+		return new Map()
+	}
+}
+
 function AddressView() {
 	const { address } = Route.useParams()
-	const { assets: assetsData, activity } = Route.useLoaderData()
+	const { assets: initialAssets, activity } = Route.useLoaderData()
 	const { copy, notifying } = useCopy()
 	const [showZeroBalances, setShowZeroBalances] = React.useState(false)
 	const { setSummary } = useActivitySummary()
 	const { disconnect } = useDisconnect()
 	const navigate = useNavigate()
-	const router = useRouter()
 	const [searchValue, setSearchValue] = React.useState('')
 	const [searchFocused, setSearchFocused] = React.useState(false)
 	const account = useAccount()
 	const { sendTo, token: initialToken } = Route.useSearch()
 	const { t } = useTranslation()
+
+	// Assets state - starts from loader, can be refetched without page refresh
+	const [assetsData, setAssetsData] = React.useState(initialAssets)
+
+	// Sync with loader data when address changes
+	React.useEffect(() => {
+		setAssetsData(initialAssets)
+	}, [initialAssets])
+
+	// Refetch balances without full page refresh
+	const refetchAssetsBalances = React.useCallback(async () => {
+		const newBalances = await refetchBalances(address)
+		if (newBalances.size === 0) return
+		setAssetsData((prev) =>
+			prev.map((asset) => {
+				const newData = newBalances.get(asset.address.toLowerCase())
+				if (!newData) return asset
+				return {
+					...asset,
+					balance: newData.balance,
+					valueUsd: newData.valueUsd,
+				}
+			}),
+		)
+	}, [address])
 
 	// Optimistic balance adjustments: Map<tokenAddress, amountToSubtract>
 	const [optimisticAdjustments, setOptimisticAdjustments] = React.useState<
@@ -567,15 +609,14 @@ function AddressView() {
 	}, [])
 
 	const handleFaucetSuccess = React.useCallback(() => {
-		// Delay the invalidation to allow UI to show success state
-		setTimeout(() => router.invalidate(), 2000)
-	}, [router])
+		// Refetch balances without page refresh
+		refetchAssetsBalances()
+	}, [])
 
 	const handleSendSuccess = React.useCallback(() => {
 		// For sends, we rely on optimistic updates and delayed refresh
-		// Don't invalidate immediately as it disrupts the success UI
-		setTimeout(() => router.invalidate(), 3000)
-	}, [router])
+		setTimeout(() => refetchAssetsBalances(), 2000)
+	}, [])
 
 	React.useEffect(() => {
 		if (activity.length > 0) {
@@ -661,7 +702,14 @@ function AddressView() {
 				<div className="flex items-center justify-between mb-5">
 					<Link to="/" className="flex items-center gap-2 press-down">
 						<div className="size-[28px] bg-black dark:bg-white rounded-[3px] flex items-center justify-center">
-							<svg width="22" height="22" viewBox="0 0 269 269" fill="none">
+							<svg
+								width="22"
+								height="22"
+								viewBox="0 0 269 269"
+								fill="none"
+								aria-hidden="true"
+							>
+								<title>Tempo logo</title>
 								<path
 									d="M123.273 190.794H93.445L121.09 105.318H85.7334L93.445 80.2642H191.95L184.238 105.318H150.773L123.273 190.794Z"
 									className="fill-white dark:fill-black"
@@ -1032,6 +1080,7 @@ function QRCode({
 	return (
 		<svg
 			ref={svgRef}
+			role="img"
 			aria-label="QR Code - Click to copy address"
 			className={cx(
 				'rounded-lg bg-surface p-1.5 cursor-pointer outline-none border border-base-border hover:border-accent/50 transition-colors',
@@ -1047,6 +1096,7 @@ function QRCode({
 			onMouseMove={handleMouseMove}
 			onMouseLeave={() => setMousePos(null)}
 		>
+			<title>QR Code</title>
 			{cells.map(({ x, y }) => {
 				let opacity = 1
 				if (mousePos && !notifying) {
@@ -1170,44 +1220,9 @@ function formatUsdCompact(value: number): string {
 	return `${sign}$${absValue.toFixed(2)}`
 }
 
-const activityTypeColors: Record<string, string> = {
-	send: '#3b82f6', // blue
-	received: '#22c55e', // green
-	swap: '#8b5cf6', // purple
-	mint: '#f97316', // orange
-	burn: '#ef4444', // red
-	approve: '#06b6d4', // cyan
-	unknown: '#6b7280', // gray
-}
-
 function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 	const weeks = 52
 	const days = 7
-
-	// Count activity types for the proportional bar
-	const typeCounts = React.useMemo(() => {
-		const counts: Record<string, number> = {}
-		for (const item of activity) {
-			for (const event of item.events) {
-				const type = eventTypeToActivityType(event.type)
-				counts[type] = (counts[type] ?? 0) + 1
-			}
-		}
-		return counts
-	}, [activity])
-
-	const typeSegments = React.useMemo(() => {
-		const total = Object.values(typeCounts).reduce((a, b) => a + b, 0)
-		if (total === 0) return []
-		return Object.entries(typeCounts)
-			.sort((a, b) => b[1] - a[1])
-			.map(([type, count]) => ({
-				type,
-				count,
-				percentage: (count / total) * 100,
-				color: activityTypeColors[type] ?? activityTypeColors.unknown,
-			}))
-	}, [typeCounts])
 
 	const activityByDay = React.useMemo(() => {
 		const counts = new Map<string, number>()
@@ -1275,21 +1290,6 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 
 	return (
 		<div className="relative">
-			{typeSegments.length > 0 && (
-				<div className="flex h-[6px] w-full rounded-full overflow-hidden mb-2">
-					{typeSegments.map((segment) => (
-						<div
-							key={segment.type}
-							className="h-full transition-all"
-							style={{
-								width: `${segment.percentage}%`,
-								backgroundColor: segment.color,
-							}}
-							title={`${segment.type}: ${segment.count}`}
-						/>
-					))}
-				</div>
-			)}
 			<div className="flex gap-[3px] w-full py-2">
 				{grid.map((week, wi) => (
 					<div key={`w-${wi}`} className="flex flex-col gap-[3px] flex-1">
@@ -1380,7 +1380,9 @@ function HoldingsTable({
 						fill="none"
 						stroke="currentColor"
 						strokeWidth="2"
+						aria-hidden="true"
 					>
+						<title>No assets icon</title>
 						<circle cx="12" cy="12" r="10" />
 						<path d="M12 6v12M6 12h12" strokeLinecap="round" />
 					</svg>
@@ -1640,16 +1642,18 @@ function AssetRow({
 		}
 	}, [asset.balance, faucetState, faucetInitialBalance])
 
-	// Poll for balance updates while faucet is loading
+	// Poll for balance updates while faucet is loading (but not during send)
 	React.useEffect(() => {
 		if (faucetState !== 'loading') return
+		if (sendState === 'sending') return
 		const interval = setInterval(() => {
 			onFaucetSuccess?.()
 		}, 1500)
 		return () => clearInterval(interval)
-	}, [faucetState, onFaucetSuccess])
+	}, [faucetState, sendState, onFaucetSuccess])
 
 	const handleFaucet = async () => {
+		if (faucetState !== 'idle') return
 		setFaucetInitialBalance(asset.balance ?? null)
 		setFaucetState('loading')
 		try {
@@ -1888,7 +1892,7 @@ function AssetRow({
 							e.stopPropagation()
 							if (isFaucetToken) handleFaucet()
 						}}
-						disabled={faucetState === 'loading' || !isFaucetToken}
+						disabled={faucetState !== 'idle' || !isFaucetToken}
 						className={cx(
 							'flex items-center justify-center size-[24px] rounded-md transition-colors',
 							isFaucetToken
