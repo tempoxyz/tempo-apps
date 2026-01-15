@@ -140,14 +140,12 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 				.select(['token', 'name', 'symbol', 'currency'])
 				.where('chain', '=', chainId as never)
 
-			console.log('fetchAssets: chainId=', chainId, 'address=', address)
 			const [incomingResult, outgoingResult, tokenCreatedResult] =
 				await Promise.all([
 					incomingQuery.execute(),
 					outgoingQuery.execute(),
 					tokenCreatedQuery.execute(),
 				])
-			console.log('fetchAssets results:', { incoming: incomingResult.length, outgoing: outgoingResult.length, tokenCreated: tokenCreatedResult.length })
 
 			const tokenMetadata = new Map<
 				string,
