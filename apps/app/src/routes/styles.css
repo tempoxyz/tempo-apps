@@ -609,16 +609,16 @@ input[type="number"] {
 		0 0 0 4px light-dark(rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.25));
 }
 
-/* Fill up animation for faucet droplet */
-@keyframes fill-up {
+/* Fill up animation for faucet droplet SVG rect */
+@keyframes fill-up-rect {
 	0% {
-		height: 0%;
+		transform: translateY(0);
 	}
 	100% {
-		height: 100%;
+		transform: translateY(-24px);
 	}
 }
 
-.animate-fill-up {
-	animation: fill-up 1.5s ease-in-out infinite;
+.animate-fill-up-rect {
+	animation: fill-up-rect 1.5s ease-in-out infinite;
 }
