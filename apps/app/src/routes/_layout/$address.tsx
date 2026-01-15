@@ -1864,23 +1864,25 @@ function BlockTimeline({
 				})}
 			</div>
 			<div className="flex items-center justify-center">
-				{selectedBlock !== undefined ? (
-					<button
-						type="button"
-						onClick={() => onSelectBlock(undefined)}
-						className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/20 border border-accent/30 hover:bg-accent/30 transition-colors cursor-pointer focus-ring"
-						aria-label="Clear block selection"
-					>
-						<span className="text-[10px] text-primary font-mono tabular-nums">
-							{selectedBlock.toString()}
-						</span>
-						<XCircleIcon className="size-3 text-accent" />
-					</button>
-				) : (
-					<div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
-						<LottoBlockNumber value={shownBlock} />
-					</div>
-				)}
+				<button
+					type="button"
+					onClick={selectedBlock !== undefined ? () => onSelectBlock(undefined) : undefined}
+					disabled={selectedBlock === undefined}
+					className={cx(
+						'flex items-center gap-1 h-5 px-2 rounded-full border transition-colors focus-ring',
+						selectedBlock !== undefined
+							? 'bg-accent/20 border-accent/30 hover:bg-accent/30 cursor-pointer'
+							: 'bg-white/5 border-white/10 cursor-default',
+					)}
+					aria-label={selectedBlock !== undefined ? 'Clear block selection' : undefined}
+				>
+					<span className="text-[10px] text-primary font-mono tabular-nums">
+						{selectedBlock !== undefined ? selectedBlock.toString() : shownBlock?.toString() ?? '...'}
+					</span>
+					{selectedBlock !== undefined && (
+						<XIcon className="size-3 text-accent" />
+					)}
+				</button>
 			</div>
 			{isPaused && (
 				<div className="flex items-center justify-end">
