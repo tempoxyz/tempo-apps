@@ -7,6 +7,12 @@ import { TOKEN_CREATED_EVENT } from '#lib/abis'
 const TIP20_DECIMALS = 6
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
+// TODO: Remove this hardcoded USD assumption once proper price oracle is implemented
+// DONOTUSE is a test faucet token that we treat as USD-denominated for demo purposes
+const HARDCODED_USD_TOKENS = new Set([
+	'0x20c000000000000000000000033abb6ac7d235e5', // DONOTUSE (presto faucet token)
+])
+
 async function fetchTokenMetadataViaRpc(
 	token: string,
 ): Promise<{ name: string; symbol: string } | null> {
@@ -213,7 +219,10 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 				.slice(0, MAX_TOKENS)
 				.map((row) => {
 					const metadata = tokenMetadata.get(row.token)
-					const isUsd = metadata?.currency === 'USD'
+					// TODO: Replace hardcoded USD check with proper price oracle
+					const isUsd =
+						metadata?.currency === 'USD' ||
+						HARDCODED_USD_TOKENS.has(row.token.toLowerCase())
 					const valueUsd = isUsd
 						? Number(row.balance) / 10 ** TIP20_DECIMALS
 						: undefined
