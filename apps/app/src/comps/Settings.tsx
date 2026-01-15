@@ -2,6 +2,7 @@ import type { Address } from 'ox'
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
 import { TokenIcon } from '#comps/TokenIcon'
+import { supportedLanguages } from '#lib/i18n'
 import { cx } from '#lib/css'
 import ChevronRightIcon from '~icons/lucide/chevron-right'
 
@@ -32,14 +33,7 @@ export const SETTINGS_VIEW_TITLES: Record<SettingsView, string> = {
 	language: 'settings.language',
 }
 
-const LANGUAGES = [
-	{ code: 'en', name: 'English', set: 'Set', active: 'Active' },
-	{ code: 'el', name: 'Ελληνικά', set: 'Ορισμός', active: 'Ενεργό' },
-	{ code: 'es', name: 'Español', set: 'Establecer', active: 'Activo' },
-	{ code: 'zh', name: '中文', set: '设置', active: '活跃' },
-	{ code: 'ja', name: '日本語', set: '設定', active: 'アクティブ' },
-	{ code: 'ko', name: '한국어', set: '설정', active: '활성' },
-]
+const LANGUAGES = supportedLanguages
 
 function shortenAddress(address: string, chars = 4): string {
 	return `${address.slice(0, chars + 2)}…${address.slice(-chars)}`
