@@ -84,8 +84,9 @@ async function getIndexSupply() {
 		const { env } = await import('cloudflare:workers')
 		apiKey = env.INDEXER_API_KEY as string | undefined
 	} catch {
-		apiKey = process.env.INDEXER_API_KEY
+		apiKey = process.env.INDEXER_API_KEY ?? import.meta.env.INDEXER_API_KEY
 	}
+	console.log('[getIndexSupply] apiKey present:', !!apiKey, 'length:', apiKey?.length)
 	const IS = IDX.IndexSupply.create({ apiKey })
 	return { IS, QB: IDX.QueryBuilder.from(IS) }
 }
@@ -127,6 +128,8 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 			const { QB } = await getIndexSupply()
 			const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
+			console.log('[fetchAssets] chainId:', chainId, 'address:', address)
+
 			const incomingQuery = qb
 				.selectFrom('transfer')
 				.select((eb: any) => [
@@ -158,6 +161,8 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 					outgoingQuery.execute(),
 					tokenCreatedQuery.execute(),
 				])
+			
+			console.log('[fetchAssets] incoming:', incomingResult.length, 'outgoing:', outgoingResult.length, 'tokens:', tokenCreatedResult.length)
 
 			const tokenMetadata = new Map<
 				string,

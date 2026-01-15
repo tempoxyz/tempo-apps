@@ -94,10 +94,11 @@ export function AccessKeysProvider({
 	)
 
 	// Stabilize tokenAddresses to prevent infinite re-renders
-	const _tokenAddressesKey = tokenAddresses.join(',')
+	const tokenAddressesKey = tokenAddresses.join(',')
 	const stableTokenAddresses = React.useMemo(
 		() => tokenAddresses,
-		[tokenAddresses],
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[tokenAddressesKey],
 	)
 
 	const fetchKeys = React.useCallback(async () => {
