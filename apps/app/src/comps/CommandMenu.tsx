@@ -38,7 +38,11 @@ const CommandMenuContext = React.createContext<{
 	setOpen: React.Dispatch<React.SetStateAction<boolean>>
 } | null>(null)
 
-export function CommandMenuProvider({ children }: { children: React.ReactNode }) {
+export function CommandMenuProvider({
+	children,
+}: {
+	children: React.ReactNode
+}) {
 	const [open, setOpen] = React.useState(false)
 	const [mounted, setMounted] = React.useState(false)
 
@@ -68,7 +72,8 @@ export function CommandMenuProvider({ children }: { children: React.ReactNode })
 
 export function useCommandMenu() {
 	const ctx = React.useContext(CommandMenuContext)
-	if (!ctx) throw new Error('useCommandMenu must be used within CommandMenuProvider')
+	if (!ctx)
+		throw new Error('useCommandMenu must be used within CommandMenuProvider')
 	return ctx
 }
 
@@ -87,7 +92,13 @@ type CommandGroup = {
 	commands: Command[]
 }
 
-function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+function CommandMenuPortal({
+	open,
+	onOpenChange,
+}: {
+	open: boolean
+	onOpenChange: (open: boolean) => void
+}) {
 	const [view, setView] = React.useState<MenuView>('main')
 	const [query, setQuery] = React.useState('')
 	const [selectedIndex, setSelectedIndex] = React.useState(0)
@@ -123,13 +134,13 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 
 	React.useEffect(() => {
 		setSelectedIndex(0)
-	}, [query, view])
+	}, [])
 
 	// Scroll selected into view
 	React.useEffect(() => {
 		const el = listRef.current?.querySelector('[data-selected="true"]')
 		el?.scrollIntoView({ block: 'nearest' })
-	}, [selectedIndex])
+	}, [])
 
 	const commandGroups = React.useMemo((): CommandGroup[] => {
 		const groups: CommandGroup[] = []
@@ -141,7 +152,10 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 				label: 'Go Home',
 				icon: <HomeIcon />,
 				shortcut: 'G H',
-				onSelect: () => { navigate({ to: '/' }); close() },
+				onSelect: () => {
+					navigate({ to: '/' })
+					close()
+				},
 				keywords: ['home', 'start', 'back'],
 			},
 		]
@@ -152,7 +166,10 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 				label: 'My Account',
 				icon: <WalletIcon />,
 				shortcut: 'G A',
-				onSelect: () => { navigate({ to: '/$address', params: { address: account.address! } }); close() },
+				onSelect: () => {
+					navigate({ to: '/$address', params: { address: account.address! } })
+					close()
+				},
 				keywords: ['account', 'wallet', 'portfolio', 'balance'],
 			})
 		}
@@ -175,7 +192,10 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 					label: 'Refresh Data',
 					icon: <RefreshCwIcon />,
 					shortcut: 'R',
-					onSelect: () => { router.invalidate(); close() },
+					onSelect: () => {
+						router.invalidate()
+						close()
+					},
 					keywords: ['refresh', 'reload', 'sync'],
 				},
 			]
@@ -189,7 +209,11 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 				id: 'signout',
 				label: 'Sign Out',
 				icon: <LogOutIcon />,
-				onSelect: () => { disconnect(); navigate({ to: '/' }); close() },
+				onSelect: () => {
+					disconnect()
+					navigate({ to: '/' })
+					close()
+				},
 				keywords: ['logout', 'disconnect', 'signout', 'exit'],
 			})
 		} else {
@@ -197,14 +221,24 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 				id: 'signup',
 				label: 'Create Account',
 				icon: <KeyIcon />,
-				onSelect: () => { if (connector) connect({ connector, capabilities: { type: 'sign-up' } } as Parameters<typeof connect>[0]); close() },
+				onSelect: () => {
+					if (connector)
+						connect({
+							connector,
+							capabilities: { type: 'sign-up' },
+						} as Parameters<typeof connect>[0])
+					close()
+				},
 				keywords: ['signup', 'register', 'create', 'new'],
 			})
 			acct.push({
 				id: 'signin',
 				label: 'Sign In',
 				icon: <FingerprintIcon />,
-				onSelect: () => { if (connector) connect({ connector }); close() },
+				onSelect: () => {
+					if (connector) connect({ connector })
+					close()
+				},
 				keywords: ['signin', 'login', 'connect'],
 			})
 		}
@@ -229,14 +263,20 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 				id: 'website',
 				label: 'Tempo Website',
 				icon: <GlobeIcon />,
-				onSelect: () => { window.open('https://tempo.xyz', '_blank'); close() },
+				onSelect: () => {
+					window.open('https://tempo.xyz', '_blank')
+					close()
+				},
 				keywords: ['website', 'tempo', 'home'],
 			},
 			{
 				id: 'docs',
 				label: 'Documentation',
 				icon: <BookOpenIcon />,
-				onSelect: () => { window.open('https://docs.tempo.xyz', '_blank'); close() },
+				onSelect: () => {
+					window.open('https://docs.tempo.xyz', '_blank')
+					close()
+				},
 				keywords: ['docs', 'help', 'guide', 'learn'],
 			},
 		]
@@ -245,7 +285,13 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 				id: 'explorer',
 				label: 'View on Explorer',
 				icon: <ExternalLinkIcon />,
-				onSelect: () => { window.open(`https://explore.mainnet.tempo.xyz/address/${account.address}`, '_blank'); close() },
+				onSelect: () => {
+					window.open(
+						`https://explore.mainnet.tempo.xyz/address/${account.address}`,
+						'_blank',
+					)
+					close()
+				},
 				keywords: ['explorer', 'block', 'etherscan'],
 			})
 		}
@@ -258,56 +304,82 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 		if (!query) return commandGroups
 		const q = query.toLowerCase()
 		return commandGroups
-			.map(g => ({
+			.map((g) => ({
 				...g,
-				commands: g.commands.filter(c =>
-					c.label.toLowerCase().includes(q) ||
-					c.keywords?.some(k => k.includes(q))
+				commands: g.commands.filter(
+					(c) =>
+						c.label.toLowerCase().includes(q) ||
+						c.keywords?.some((k) => k.includes(q)),
 				),
 			}))
-			.filter(g => g.commands.length > 0)
+			.filter((g) => g.commands.length > 0)
 	}, [commandGroups, query])
 
-	const flatCommands = React.useMemo(() => 
-		filteredGroups.flatMap(g => g.commands),
-	[filteredGroups])
+	const flatCommands = React.useMemo(
+		() => filteredGroups.flatMap((g) => g.commands),
+		[filteredGroups],
+	)
 
-	const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
-		if (e.key === 'Escape') {
-			if (view !== 'main') {
+	const handleKeyDown = React.useCallback(
+		(e: React.KeyboardEvent) => {
+			if (e.key === 'Escape') {
+				if (view !== 'main') {
+					setView('main')
+					setQuery('')
+					setSendAddress('')
+				} else {
+					close()
+				}
+			} else if (e.key === 'ArrowDown') {
+				e.preventDefault()
+				if (view === 'main') {
+					setSelectedIndex((i) => Math.min(i + 1, flatCommands.length - 1))
+				} else if (view === 'language') {
+					setSelectedIndex((i) => Math.min(i + 1, LANGUAGES.length - 1))
+				}
+			} else if (e.key === 'ArrowUp') {
+				e.preventDefault()
+				setSelectedIndex((i) => Math.max(i - 1, 0))
+			} else if (e.key === 'Enter') {
+				e.preventDefault()
+				if (view === 'main' && flatCommands[selectedIndex]) {
+					flatCommands[selectedIndex].onSelect()
+				} else if (
+					view === 'send' &&
+					sendAddress.match(/^0x[a-fA-F0-9]{40}$/)
+				) {
+					navigate({
+						to: '/$address',
+						params: { address: account.address! },
+						search: { sendTo: sendAddress },
+					})
+					close()
+				} else if (view === 'language' && LANGUAGES[selectedIndex]) {
+					const lang = LANGUAGES[selectedIndex].code
+					i18n.changeLanguage(lang)
+					localStorage.setItem('tempo-language', lang)
+					close()
+				}
+			} else if (
+				e.key === 'Backspace' &&
+				view !== 'main' &&
+				!query &&
+				!sendAddress
+			) {
 				setView('main')
-				setQuery('')
-				setSendAddress('')
-			} else {
-				close()
 			}
-		} else if (e.key === 'ArrowDown') {
-			e.preventDefault()
-			if (view === 'main') {
-				setSelectedIndex(i => Math.min(i + 1, flatCommands.length - 1))
-			} else if (view === 'language') {
-				setSelectedIndex(i => Math.min(i + 1, LANGUAGES.length - 1))
-			}
-		} else if (e.key === 'ArrowUp') {
-			e.preventDefault()
-			setSelectedIndex(i => Math.max(i - 1, 0))
-		} else if (e.key === 'Enter') {
-			e.preventDefault()
-			if (view === 'main' && flatCommands[selectedIndex]) {
-				flatCommands[selectedIndex].onSelect()
-			} else if (view === 'send' && sendAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
-				navigate({ to: '/$address', params: { address: account.address! }, search: { sendTo: sendAddress } })
-				close()
-			} else if (view === 'language' && LANGUAGES[selectedIndex]) {
-				const lang = LANGUAGES[selectedIndex].code
-				i18n.changeLanguage(lang)
-				localStorage.setItem('tempo-language', lang)
-				close()
-			}
-		} else if (e.key === 'Backspace' && view !== 'main' && !query && !sendAddress) {
-			setView('main')
-		}
-	}, [view, flatCommands, selectedIndex, close, sendAddress, navigate, account.address, query])
+		},
+		[
+			view,
+			flatCommands,
+			selectedIndex,
+			close,
+			sendAddress,
+			navigate,
+			account.address,
+			query,
+		],
+	)
 
 	const pasteFromClipboard = async () => {
 		try {
@@ -320,7 +392,8 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 
 	if (!open) return null
 
-	const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
+	const isMac =
+		typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
 	let globalIndex = -1
 
 	return createPortal(
@@ -343,14 +416,18 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 					'transition-all duration-100',
 					visible ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]',
 				)}
-				onClick={e => e.stopPropagation()}
+				onClick={(e) => e.stopPropagation()}
 			>
 				{/* Search Input */}
 				<div className="flex items-center gap-2.5 px-3.5 h-12 border-b border-[#3a3a3c]">
 					{view !== 'main' ? (
 						<button
 							type="button"
-							onClick={() => { setView('main'); setQuery(''); setSendAddress('') }}
+							onClick={() => {
+								setView('main')
+								setQuery('')
+								setSendAddress('')
+							}}
 							className="p-1 -ml-1 rounded-md hover:bg-white/10 transition-colors"
 						>
 							<ArrowLeftIcon className="size-4 text-[#98989f]" />
@@ -363,7 +440,7 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 						<input
 							ref={inputRef}
 							value={query}
-							onChange={e => setQuery(e.target.value)}
+							onChange={(e) => setQuery(e.target.value)}
 							placeholder="Search commands..."
 							className="flex-1 bg-transparent text-[#f5f5f7] placeholder:text-[#6e6e73] outline-none text-[15px]"
 							autoComplete="off"
@@ -374,7 +451,7 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 						<input
 							ref={inputRef}
 							value={sendAddress}
-							onChange={e => setSendAddress(e.target.value)}
+							onChange={(e) => setSendAddress(e.target.value)}
 							placeholder="Recipient address (0x...)"
 							className="flex-1 bg-transparent text-[#f5f5f7] placeholder:text-[#6e6e73] outline-none text-[14px] font-mono"
 							autoComplete="off"
@@ -382,7 +459,9 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 						/>
 					)}
 					{view === 'language' && (
-						<span className="flex-1 text-[#6e6e73] text-[15px]">Select language</span>
+						<span className="flex-1 text-[#6e6e73] text-[15px]">
+							Select language
+						</span>
 					)}
 
 					<kbd className="px-1.5 py-0.5 text-[11px] text-[#6e6e73] bg-[#1c1c1e] rounded border border-[#3a3a3c] font-sans">
@@ -391,64 +470,71 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 				</div>
 
 				{/* Content */}
-				<div ref={listRef} className="max-h-[320px] overflow-y-auto overflow-x-hidden">
-					{view === 'main' && (
-						<>
-							{filteredGroups.length === 0 ? (
-								<div className="px-3.5 py-6 text-center text-[#6e6e73] text-[13px]">
-									No results found
-								</div>
-							) : (
-								filteredGroups.map((group) => (
-									<div key={group.label} className="py-1">
-										<div className="px-3.5 py-1.5 text-[11px] font-medium text-[#6e6e73] uppercase tracking-wide">
-											{group.label}
-										</div>
-										{group.commands.map((cmd) => {
-											globalIndex++
-											const idx = globalIndex
-											const isSelected = idx === selectedIndex
-											return (
-												<button
-													key={cmd.id}
-													type="button"
-													data-selected={isSelected}
-													onClick={cmd.onSelect}
-													onMouseEnter={() => setSelectedIndex(idx)}
+				<div
+					ref={listRef}
+					className="max-h-[320px] overflow-y-auto overflow-x-hidden"
+				>
+					{view === 'main' &&
+						(filteredGroups.length === 0 ? (
+							<div className="px-3.5 py-6 text-center text-[#6e6e73] text-[13px]">
+								No results found
+							</div>
+						) : (
+							filteredGroups.map((group) => (
+								<div key={group.label} className="py-1">
+									<div className="px-3.5 py-1.5 text-[11px] font-medium text-[#6e6e73] uppercase tracking-wide">
+										{group.label}
+									</div>
+									{group.commands.map((cmd) => {
+										globalIndex++
+										const idx = globalIndex
+										const isSelected = idx === selectedIndex
+										return (
+											<button
+												key={cmd.id}
+												type="button"
+												data-selected={isSelected}
+												onClick={cmd.onSelect}
+												onMouseEnter={() => setSelectedIndex(idx)}
+												className={cx(
+													'w-full flex items-center gap-2.5 px-3.5 py-2 text-left transition-colors',
+													isSelected ? 'bg-[#3a3a3c]' : 'hover:bg-[#2c2c2e]',
+												)}
+											>
+												<span
 													className={cx(
-														'w-full flex items-center gap-2.5 px-3.5 py-2 text-left transition-colors',
-														isSelected ? 'bg-[#3a3a3c]' : 'hover:bg-[#2c2c2e]',
+														'flex items-center justify-center size-7 rounded-md [&>svg]:size-4',
+														isSelected
+															? 'bg-[#0a84ff] text-white'
+															: 'bg-[#3a3a3c] text-[#98989f]',
 													)}
 												>
-													<span className={cx(
-														'flex items-center justify-center size-7 rounded-md [&>svg]:size-4',
-														isSelected ? 'bg-[#0a84ff] text-white' : 'bg-[#3a3a3c] text-[#98989f]',
-													)}>
-														{cmd.icon}
+													{cmd.icon}
+												</span>
+												<span className="flex-1 text-[14px] text-[#f5f5f7]">
+													{cmd.label}
+												</span>
+												{cmd.shortcut && (
+													<span className="flex items-center gap-0.5">
+														{cmd.shortcut.split(' ').map((k) => (
+															<kbd
+																key={k}
+																className="px-1.5 py-0.5 text-[11px] text-[#6e6e73] bg-[#1c1c1e] rounded border border-[#3a3a3c]"
+															>
+																{k}
+															</kbd>
+														))}
 													</span>
-													<span className="flex-1 text-[14px] text-[#f5f5f7]">
-														{cmd.label}
-													</span>
-													{cmd.shortcut && (
-														<span className="flex items-center gap-0.5">
-															{cmd.shortcut.split(' ').map((k) => (
-																<kbd key={k} className="px-1.5 py-0.5 text-[11px] text-[#6e6e73] bg-[#1c1c1e] rounded border border-[#3a3a3c]">
-																	{k}
-																</kbd>
-															))}
-														</span>
-													)}
-													{cmd.hasSubmenu && (
-														<ChevronRightIcon className="size-4 text-[#6e6e73]" />
-													)}
-												</button>
-											)
-										})}
-									</div>
-								))
-							)}
-						</>
-					)}
+												)}
+												{cmd.hasSubmenu && (
+													<ChevronRightIcon className="size-4 text-[#6e6e73]" />
+												)}
+											</button>
+										)
+									})}
+								</div>
+							))
+						))}
 
 					{view === 'send' && (
 						<div className="p-2">
@@ -460,7 +546,9 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 								<span className="flex items-center justify-center size-7 rounded-md bg-[#3a3a3c] text-[#98989f]">
 									<ClipboardIcon className="size-4" />
 								</span>
-								<span className="text-[14px] text-[#f5f5f7]">Paste from clipboard</span>
+								<span className="text-[14px] text-[#f5f5f7]">
+									Paste from clipboard
+								</span>
 							</button>
 							{sendAddress && (
 								<div className="mt-2">
@@ -468,7 +556,11 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 										<button
 											type="button"
 											onClick={() => {
-												navigate({ to: '/$address', params: { address: account.address! }, search: { sendTo: sendAddress } })
+												navigate({
+													to: '/$address',
+													params: { address: account.address! },
+													search: { sendTo: sendAddress },
+												})
 												close()
 											}}
 											className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-[#0a84ff]/20 hover:bg-[#0a84ff]/30 border border-[#0a84ff]/30 transition-colors"
@@ -477,12 +569,17 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 												<SendIcon className="size-4" />
 											</span>
 											<span className="text-[14px] text-[#f5f5f7]">
-												Send to <span className="font-mono text-[#0a84ff]">{sendAddress.slice(0, 6)}...{sendAddress.slice(-4)}</span>
+												Send to{' '}
+												<span className="font-mono text-[#0a84ff]">
+													{sendAddress.slice(0, 6)}...{sendAddress.slice(-4)}
+												</span>
 											</span>
 										</button>
 									) : (
 										<div className="px-3 py-2.5 rounded-lg bg-[#ff453a]/10 border border-[#ff453a]/20">
-											<span className="text-[13px] text-[#ff453a]">Invalid address format</span>
+											<span className="text-[13px] text-[#ff453a]">
+												Invalid address format
+											</span>
 										</div>
 									)}
 								</div>
@@ -511,8 +608,12 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 											isSelected ? 'bg-[#3a3a3c]' : 'hover:bg-[#2c2c2e]',
 										)}
 									>
-										<span className="text-[14px] text-[#f5f5f7]">{lang.name}</span>
-										{isActive && <CheckIcon className="size-4 text-[#30d158]" />}
+										<span className="text-[14px] text-[#f5f5f7]">
+											{lang.name}
+										</span>
+										{isActive && (
+											<CheckIcon className="size-4 text-[#30d158]" />
+										)}
 									</button>
 								)
 							})}
@@ -523,16 +624,24 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 				{/* Footer */}
 				<div className="flex items-center gap-4 px-3.5 py-2 border-t border-[#3a3a3c] bg-[#1c1c1e]">
 					<span className="flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
-						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">↑</kbd>
-						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">↓</kbd>
+						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
+							↑
+						</kbd>
+						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
+							↓
+						</kbd>
 						<span>Navigate</span>
 					</span>
 					<span className="flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
-						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">↵</kbd>
+						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
+							↵
+						</kbd>
 						<span>Open</span>
 					</span>
 					<span className="flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
-						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">esc</kbd>
+						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
+							esc
+						</kbd>
 						<span>{view !== 'main' ? 'Back' : 'Close'}</span>
 					</span>
 				</div>
