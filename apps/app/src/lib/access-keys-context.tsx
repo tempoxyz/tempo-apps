@@ -55,9 +55,11 @@ export function useSignableAccessKeys() {
 
 export function AccessKeysProvider({
 	accountAddress,
+	tokenAddresses = [],
 	children,
 }: {
 	accountAddress: string
+	tokenAddresses?: string[]
 	children: React.ReactNode
 }) {
 	const [keys, setKeys] = React.useState<AccessKeyData[]>([])
@@ -67,6 +69,13 @@ export function AccessKeysProvider({
 	const checksummedAddress = React.useMemo(
 		() => Address.checksum(accountAddress as Address.Address),
 		[accountAddress],
+	)
+
+	// Stabilize tokenAddresses to prevent infinite re-renders
+	const tokenAddressesKey = tokenAddresses.join(',')
+	const stableTokenAddresses = React.useMemo(
+		() => tokenAddresses,
+		[tokenAddressesKey],
 	)
 
 	const fetchKeys = React.useCallback(async () => {
@@ -189,42 +198,84 @@ export function AccessKeysProvider({
 				}),
 			)
 
-			// Fetch current spending limits
+			// Fetch current spending limits using getKey and getRemainingLimit
 			const keysWithLimits: AccessKeyData[] = await Promise.all(
 				basicKeys.map(async (k) => {
 					const spendingLimits = new Map<string, bigint>()
 					const originalLimits = originalLimitsMap.get(k.keyId.toLowerCase())
 					let enforceLimits = false
 
-					if (originalLimits && originalLimits.size > 0) {
-						enforceLimits = true
-						for (const [token, _originalLimit] of originalLimits) {
+					// Query the contract for enforceLimits status
+					try {
+						const keyData = (await client.readContract({
+							address: ACCOUNT_KEYCHAIN_ADDRESS,
+							abi: [
+								{
+									name: 'getKey',
+									type: 'function',
+									stateMutability: 'view',
+									inputs: [
+										{ type: 'address', name: 'account' },
+										{ type: 'address', name: 'keyId' },
+									],
+									outputs: [
+										{
+											type: 'tuple',
+											components: [
+												{ type: 'uint8', name: 'signatureType' },
+												{ type: 'address', name: 'keyId' },
+												{ type: 'uint64', name: 'expiry' },
+												{ type: 'bool', name: 'enforceLimits' },
+												{ type: 'bool', name: 'isRevoked' },
+											],
+										},
+									],
+								},
+							],
+							functionName: 'getKey',
+							args: [
+								checksummedAddress as `0x${string}`,
+								k.keyId as `0x${string}`,
+							],
+						})) as { enforceLimits: boolean }
+						enforceLimits = keyData.enforceLimits
+					} catch {
+						// Fall back to checking if originalLimits exist
+						enforceLimits = (originalLimits?.size ?? 0) > 0
+					}
+
+					// Fetch remaining limits for all tokens if enforceLimits is true
+					if (enforceLimits && stableTokenAddresses.length > 0) {
+						for (const tokenAddress of stableTokenAddresses) {
 							try {
 								const remaining = (await client.readContract({
 									address: ACCOUNT_KEYCHAIN_ADDRESS,
 									abi: [
 										{
+											name: 'getRemainingLimit',
 											type: 'function',
-											name: 'spendingLimit',
-											inputs: [
-												{ name: 'account', type: 'address' },
-												{ name: 'publicKey', type: 'address' },
-												{ name: 'token', type: 'address' },
-											],
-											outputs: [{ name: '', type: 'uint256' }],
 											stateMutability: 'view',
+											inputs: [
+												{ type: 'address', name: 'account' },
+												{ type: 'address', name: 'keyId' },
+												{ type: 'address', name: 'token' },
+											],
+											outputs: [{ type: 'uint256' }],
 										},
 									],
-									functionName: 'spendingLimit',
+									functionName: 'getRemainingLimit',
 									args: [
 										checksummedAddress as `0x${string}`,
 										k.keyId as `0x${string}`,
-										token as `0x${string}`,
+										tokenAddress as `0x${string}`,
 									],
 								})) as bigint
-								spendingLimits.set(token, remaining)
+								// Only add if there's a limit set
+								if (remaining > 0n) {
+									spendingLimits.set(tokenAddress.toLowerCase(), remaining)
+								}
 							} catch {
-								spendingLimits.set(token, 0n)
+								// Skip if limit fetch fails
 							}
 						}
 					}
@@ -259,7 +310,7 @@ export function AccessKeysProvider({
 		} finally {
 			setIsLoading(false)
 		}
-	}, [checksummedAddress])
+	}, [checksummedAddress, stableTokenAddresses])
 
 	React.useEffect(() => {
 		fetchKeys()
