@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Datum",
 		"time": "Zeit"
+	},
+	"activity": {
+		"send": "Senden",
+		"received": "Empfangen",
+		"mint": "Prägen",
+		"burn": "Verbrennen",
+		"swap": "Tauschen",
+		"approve": "Genehmigen",
+		"grantRole": "Rolle erteilen",
+		"revokeRole": "Rolle entziehen",
+		"pauseTransfers": "Überweisungen pausieren",
+		"resumeTransfers": "Überweisungen fortsetzen",
+		"createToken": "Token erstellen",
+		"partialFill": "Teilweise Ausführung",
+		"completeFill": "Vollständige Ausführung",
+		"cancelOrder": "Auftrag stornieren",
+		"setFeeToken": "Gebühren-Token festlegen",
+		"payFee": "Gebühr zahlen",
+		"to": "an",
+		"from": "von",
+		"self": "selbst",
+		"andMore": "und {{count}} mehr"
 	}
 }

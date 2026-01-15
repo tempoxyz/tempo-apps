@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Ημερομηνία",
 		"time": "Ώρα"
+	},
+	"activity": {
+		"send": "Αποστολή",
+		"received": "Ελήφθη",
+		"mint": "Κοπή",
+		"burn": "Καύση",
+		"swap": "Ανταλλαγή",
+		"approve": "Έγκριση",
+		"grantRole": "Χορήγηση ρόλου",
+		"revokeRole": "Ανάκληση ρόλου",
+		"pauseTransfers": "Παύση μεταφορών",
+		"resumeTransfers": "Συνέχιση μεταφορών",
+		"createToken": "Δημιουργία token",
+		"partialFill": "Μερική εκπλήρωση",
+		"completeFill": "Πλήρης εκπλήρωση",
+		"cancelOrder": "Ακύρωση εντολής",
+		"setFeeToken": "Ορισμός token προμήθειας",
+		"payFee": "Πληρωμή προμήθειας",
+		"to": "προς",
+		"from": "από",
+		"self": "εαυτό",
+		"andMore": "και {{count}} ακόμα"
 	}
 }

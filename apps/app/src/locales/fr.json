@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Date",
 		"time": "Heure"
+	},
+	"activity": {
+		"send": "Envoyer",
+		"received": "Reçu",
+		"mint": "Frapper",
+		"burn": "Brûler",
+		"swap": "Échanger",
+		"approve": "Approuver",
+		"grantRole": "Accorder un rôle",
+		"revokeRole": "Révoquer un rôle",
+		"pauseTransfers": "Suspendre les transferts",
+		"resumeTransfers": "Reprendre les transferts",
+		"createToken": "Créer un jeton",
+		"partialFill": "Exécution partielle",
+		"completeFill": "Exécution complète",
+		"cancelOrder": "Annuler l'ordre",
+		"setFeeToken": "Définir le jeton de frais",
+		"payFee": "Payer les frais",
+		"to": "à",
+		"from": "de",
+		"self": "soi",
+		"andMore": "et {{count}} de plus"
 	}
 }
