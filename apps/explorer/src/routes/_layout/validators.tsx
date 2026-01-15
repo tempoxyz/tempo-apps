@@ -7,8 +7,19 @@ import { Sections } from '#comps/Sections'
 import { useMediaQuery } from '#lib/hooks'
 import { withLoaderTiming } from '#lib/profiling'
 import { validatorsQueryOptions } from '#lib/queries'
+import { getValidatorLabel } from '#lib/validators'
 import Check from '~icons/lucide/check'
 import X from '~icons/lucide/x'
+
+function ValidatorName({ address }: { address: `0x${string}` }) {
+	const name = getValidatorLabel(address)
+	if (!name) return <span className="text-tertiary">—</span>
+	return (
+		<span className="text-[11px] px-[6px] py-[2px] rounded bg-base-alt/65 text-primary whitespace-nowrap">
+			{name}
+		</span>
+	)
+}
 
 export const Route = createFileRoute('/_layout/validators')({
 	component: ValidatorsPage,
@@ -37,6 +48,7 @@ function ValidatorsPage() {
 
 	const columns: DataGrid.Column[] = [
 		{ label: 'Index', align: 'start', minWidth: 60 },
+		{ label: 'Name', align: 'start', minWidth: 100 },
 		{ label: 'Address', align: 'start', minWidth: 120 },
 		{ label: 'Status', align: 'start', minWidth: 80 },
 		{ label: 'Public Key', align: 'start', minWidth: 120 },
@@ -44,7 +56,7 @@ function ValidatorsPage() {
 
 	const stackedColumns: DataGrid.Column[] = [
 		{ label: 'Index', align: 'start', minWidth: 50 },
-		{ label: 'Address', align: 'start', minWidth: 100 },
+		{ label: 'Name', align: 'start', minWidth: 80 },
 		{ label: 'Status', align: 'start', minWidth: 60 },
 	]
 
@@ -70,6 +82,10 @@ function ValidatorsPage() {
 											>
 												#{String(validator.index)}
 											</span>,
+											<ValidatorName
+												key="name"
+												address={validator.validatorAddress}
+											/>,
 											<Address
 												key="address"
 												address={validator.validatorAddress}

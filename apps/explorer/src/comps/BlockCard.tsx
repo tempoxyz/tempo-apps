@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useWatchBlockNumber } from 'wagmi'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
+import { ValidatorTag } from '#comps/ValidatorTag'
 import { cx } from '#lib/css'
 import { DateFormatter } from '#lib/formatting'
 import { useCopy, useIsMounted } from '#lib/hooks'
@@ -154,14 +155,7 @@ export function BlockCard(props: BlockCard.Props) {
 				>
 					<BlockCard.InfoRow label="Miner">
 						{miner ? (
-							<Link
-								to="/address/$address"
-								params={{ address: miner }}
-								className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end font-mono"
-								title={miner}
-							>
-								<Midcut value={miner} prefix="0x" align="end" min={4} />
-							</Link>
+							<ValidatorTag address={miner} />
 						) : (
 							<span className="text-tertiary">—</span>
 						)}
