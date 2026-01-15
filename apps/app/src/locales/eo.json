@@ -39,7 +39,21 @@
 		"self": "mem",
 		"andMore": "kaj {{count}} pli",
 		"sentSuccessfully": "{{symbol}} sendita sukcese",
-		"demoNote": "Ĉi tio estas demo, bilancoj ne ĝisdatiĝas."
+		"demoNote": "Ĉi tio estas demo, bilancoj ne ĝisdatiĝas.",
+		"block": "Bloko",
+		"exhausted": "Elĉerpita",
+		"transactionFailed": "Transakcio malsukcesis",
+		"expired": "Eksvalidiĝis",
+		"exp": "Eks",
+		"unlimited": "Senlima",
+		"now": "nun",
+		"addKey": "Aldoni ŝlosilon",
+		"keyName": "Ŝlosilnomo",
+		"days": "t",
+		"confirming": "konfirmante...",
+		"revoking": "revokante...",
+		"clickToChangeEmoji": "Klaku por ŝanĝi emoji",
+		"revokeAccessKey": "Revoki ĉi tiun alirŝlosilon"
 	},
 	"portfolio": {
 		"title": "Biletujo",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Ankoraŭ neniu agado",
 		"noActivityInBlock": "Neniu agado en ĉi tiu bloko",
 		"noAssetsFound": "Neniuj aktivaĵoj trovitaj",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Vidi blokon en esplorilo",
+		"blockTimeline": "Bloka tempolinio",
+		"resumeLiveUpdates": "Daŭrigi vivajn ĝisdatigojn",
+		"pauseLiveUpdates": "Paŭzigi vivajn ĝisdatigojn",
+		"selectBlockToViewTxs": "Elektu blokon por vidi transakciojn",
+		"loadingAccessKeys": "Ŝargante alirŝlosilojn...",
+		"noAccessKeysConfigured": "Neniuj alirŝlosiloj agordataj.",
+		"createKey": "Krei ŝlosilon",
+		"accessKeys": "Alirŝlosiloj"
 	},
 	"landing": {
 		"getStarted": "Komenci",
@@ -90,5 +111,8 @@
 		"from": "de",
 		"self": "mem",
 		"andMore": "kaj {{count}} pli"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Alirŝlosilo ne trovita en loka stokado. Ŝlosiloj kreitaj sur alia aparato ne povas esti uzataj ĉi tie."
 	}
 }

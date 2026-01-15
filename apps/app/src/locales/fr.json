@@ -39,7 +39,21 @@
 		"self": "soi",
 		"andMore": "et {{count}} de plus",
 		"sentSuccessfully": "{{symbol}} envoyé avec succès",
-		"demoNote": "Ceci est une démo, les soldes ne sont pas mis à jour."
+		"demoNote": "Ceci est une démo, les soldes ne sont pas mis à jour.",
+		"block": "Bloc",
+		"exhausted": "Épuisé",
+		"transactionFailed": "La transaction a échoué",
+		"expired": "Expiré",
+		"exp": "Exp",
+		"unlimited": "Illimité",
+		"now": "maintenant",
+		"addKey": "Ajouter une clé",
+		"keyName": "Nom de la clé",
+		"days": "j",
+		"confirming": "confirmation...",
+		"revoking": "révocation...",
+		"clickToChangeEmoji": "Cliquez pour changer l'emoji",
+		"revokeAccessKey": "Révoquer cette clé d'accès"
 	},
 	"portfolio": {
 		"title": "Portefeuille",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Pas encore d'activité",
 		"noActivityInBlock": "Pas d'activité dans ce bloc",
 		"noAssetsFound": "Aucun actif trouvé",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Voir le bloc dans l'explorateur",
+		"blockTimeline": "Chronologie des blocs",
+		"resumeLiveUpdates": "Reprendre les mises à jour en direct",
+		"pauseLiveUpdates": "Suspendre les mises à jour en direct",
+		"selectBlockToViewTxs": "Sélectionnez un bloc pour voir les transactions",
+		"loadingAccessKeys": "Chargement des clés d'accès...",
+		"noAccessKeysConfigured": "Aucune clé d'accès configurée.",
+		"createKey": "Créer une clé",
+		"accessKeys": "Clés d'accès"
 	},
 	"landing": {
 		"getStarted": "Commencer",
@@ -90,5 +111,8 @@
 		"from": "de",
 		"self": "soi",
 		"andMore": "et {{count}} de plus"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Clé d'accès introuvable dans le stockage local. Les clés créées sur un autre appareil ne peuvent pas être utilisées ici."
 	}
 }

@@ -100,7 +100,14 @@
 		"noActivityInBlock": "No activity in this block",
 		"noAssetsFound": "No assets found",
 		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"blockTimeline": "Block timeline",
+		"resumeLiveUpdates": "Resume live updates",
+		"pauseLiveUpdates": "Pause live updates",
+		"selectBlockToViewTxs": "Select a block to view transactions",
+		"loadingAccessKeys": "Loading access keys...",
+		"noAccessKeysConfigured": "No access keys configured.",
+		"createKey": "Create Key",
+		"accessKeys": "Access Keys"
 	},
 	"landing": {
 		"getStarted": "Get started",
@@ -159,6 +166,7 @@
 		"expandSection": "Expand {{section}}",
 		"collapseSection": "Collapse {{section}}",
 		"page": "Page {{current}} of {{total}}",
-		"goToPage": "Go to page {{page}}"
+		"goToPage": "Go to page {{page}}",
+		"accessKeyNotFound": "Access key not found in local storage. Keys created on another device cannot be used here."
 	}
 }

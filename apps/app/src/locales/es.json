@@ -39,7 +39,21 @@
 		"self": "propio",
 		"andMore": "y {{count}} más",
 		"sentSuccessfully": "{{symbol}} enviado con éxito",
-		"demoNote": "Esta es una demo, los saldos no se actualizan."
+		"demoNote": "Esta es una demo, los saldos no se actualizan.",
+		"block": "Bloque",
+		"exhausted": "Agotado",
+		"transactionFailed": "Transacción fallida",
+		"expired": "Expirado",
+		"exp": "Exp",
+		"unlimited": "Ilimitado",
+		"now": "ahora",
+		"addKey": "Añadir clave",
+		"keyName": "Nombre de clave",
+		"days": "d",
+		"confirming": "confirmando...",
+		"revoking": "revocando...",
+		"clickToChangeEmoji": "Haz clic para cambiar el emoji",
+		"revokeAccessKey": "Revocar esta clave de acceso"
 	},
 	"portfolio": {
 		"title": "Portafolio",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Sin actividad aún",
 		"noActivityInBlock": "Sin actividad en este bloque",
 		"noAssetsFound": "No se encontraron activos",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Ver bloque en explorador",
+		"blockTimeline": "Línea de tiempo de bloques",
+		"resumeLiveUpdates": "Reanudar actualizaciones en vivo",
+		"pauseLiveUpdates": "Pausar actualizaciones en vivo",
+		"selectBlockToViewTxs": "Selecciona un bloque para ver transacciones",
+		"loadingAccessKeys": "Cargando claves de acceso...",
+		"noAccessKeysConfigured": "No hay claves de acceso configuradas.",
+		"createKey": "Crear clave",
+		"accessKeys": "Claves de acceso"
 	},
 	"landing": {
 		"getStarted": "Comenzar",
@@ -90,5 +111,8 @@
 		"from": "de",
 		"self": "propio",
 		"andMore": "y {{count}} más"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Clave de acceso no encontrada en el almacenamiento local. Las claves creadas en otro dispositivo no se pueden usar aquí."
 	}
 }

@@ -39,7 +39,21 @@
 		"self": "sarili",
 		"andMore": "at {{count}} pa",
 		"sentSuccessfully": "Matagumpay na naipadala ang {{symbol}}",
-		"demoNote": "Ito ay isang demo, hindi na-update ang mga balanse."
+		"demoNote": "Ito ay isang demo, hindi na-update ang mga balanse.",
+		"block": "Block",
+		"exhausted": "Naubos",
+		"transactionFailed": "Nabigo ang transaksyon",
+		"expired": "Nag-expire",
+		"exp": "Exp",
+		"unlimited": "Walang limitasyon",
+		"now": "ngayon",
+		"addKey": "Magdagdag ng susi",
+		"keyName": "Pangalan ng susi",
+		"days": "a",
+		"confirming": "kinukumpirma...",
+		"revoking": "binabawi...",
+		"clickToChangeEmoji": "I-click para baguhin ang emoji",
+		"revokeAccessKey": "Bawiin ang access key na ito"
 	},
 	"portfolio": {
 		"title": "Portfolio",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Wala pang aktibidad",
 		"noActivityInBlock": "Walang aktibidad sa block na ito",
 		"noAssetsFound": "Walang nahanap na asset",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Tingnan ang block sa explorer",
+		"blockTimeline": "Timeline ng block",
+		"resumeLiveUpdates": "Ipagpatuloy ang mga live update",
+		"pauseLiveUpdates": "I-pause ang mga live update",
+		"selectBlockToViewTxs": "Pumili ng block para makita ang mga transaksyon",
+		"loadingAccessKeys": "Naglo-load ng mga access key...",
+		"noAccessKeysConfigured": "Walang naka-configure na access key.",
+		"createKey": "Gumawa ng Susi",
+		"accessKeys": "Mga Access Key"
 	},
 	"landing": {
 		"getStarted": "Magsimula",
@@ -90,5 +111,8 @@
 		"from": "mula sa",
 		"self": "sarili",
 		"andMore": "at {{count}} pa"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Hindi natagpuan ang access key sa local storage. Hindi magagamit dito ang mga key na ginawa sa ibang device."
 	}
 }

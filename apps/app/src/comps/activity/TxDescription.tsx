@@ -183,7 +183,7 @@ export function TxDescription(props: TxDescription.Props) {
 	return (
 		<div
 			className={cx(
-				'flex flex-row items-center gap-[6px] leading-[24px] min-w-0 flex-1 overflow-hidden',
+				'flex flex-row flex-wrap items-center gap-x-[6px] gap-y-[4px] leading-[24px] min-w-0 flex-1',
 				className,
 			)}
 		>

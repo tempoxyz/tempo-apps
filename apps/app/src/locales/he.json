@@ -39,7 +39,21 @@
 		"self": "עצמי",
 		"andMore": "ועוד {{count}}",
 		"sentSuccessfully": "{{symbol}} נשלח בהצלחה",
-		"demoNote": "זו הדגמה, יתרות לא מתעדכנות."
+		"demoNote": "זו הדגמה, יתרות לא מתעדכנות.",
+		"block": "בלוק",
+		"exhausted": "מוצה",
+		"transactionFailed": "העסקה נכשלה",
+		"expired": "פג תוקף",
+		"exp": "תוקף",
+		"unlimited": "ללא הגבלה",
+		"now": "עכשיו",
+		"addKey": "הוסף מפתח",
+		"keyName": "שם מפתח",
+		"days": "י",
+		"confirming": "מאשר...",
+		"revoking": "מבטל...",
+		"clickToChangeEmoji": "לחץ לשינוי אימוג'י",
+		"revokeAccessKey": "בטל מפתח גישה זה"
 	},
 	"portfolio": {
 		"title": "תיק",
@@ -52,8 +66,15 @@
 		"noActivityYet": "אין עדיין פעילות",
 		"noActivityInBlock": "אין פעילות בבלוק הזה",
 		"noAssetsFound": "לא נמצאו נכסים",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "צפה בבלוק בסייר",
+		"blockTimeline": "ציר זמן של בלוקים",
+		"resumeLiveUpdates": "המשך עדכונים חיים",
+		"pauseLiveUpdates": "השהה עדכונים חיים",
+		"selectBlockToViewTxs": "בחר בלוק לצפייה בעסקאות",
+		"loadingAccessKeys": "טוען מפתחות גישה...",
+		"noAccessKeysConfigured": "לא הוגדרו מפתחות גישה.",
+		"createKey": "צור מפתח",
+		"accessKeys": "מפתחות גישה"
 	},
 	"landing": {
 		"getStarted": "התחל",
@@ -90,5 +111,8 @@
 		"from": "מ",
 		"self": "עצמי",
 		"andMore": "ועוד {{count}}"
+	},
+	"a11y": {
+		"accessKeyNotFound": "מפתח הגישה לא נמצא באחסון המקומי. לא ניתן להשתמש כאן במפתחות שנוצרו במכשיר אחר."
 	}
 }

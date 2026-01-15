@@ -39,7 +39,21 @@
 		"self": "saját",
 		"andMore": "és még {{count}}",
 		"sentSuccessfully": "{{symbol}} sikeresen elküldve",
-		"demoNote": "Ez egy bemutató, az egyenlegek nem frissülnek."
+		"demoNote": "Ez egy bemutató, az egyenlegek nem frissülnek.",
+		"block": "Blokk",
+		"exhausted": "Kimerült",
+		"transactionFailed": "A tranzakció sikertelen",
+		"expired": "Lejárt",
+		"exp": "Lej",
+		"unlimited": "Korlátlan",
+		"now": "most",
+		"addKey": "Kulcs hozzáadása",
+		"keyName": "Kulcs neve",
+		"days": "n",
+		"confirming": "megerősítés...",
+		"revoking": "visszavonás...",
+		"clickToChangeEmoji": "Kattintson az emoji megváltoztatásához",
+		"revokeAccessKey": "Hozzáférési kulcs visszavonása"
 	},
 	"portfolio": {
 		"title": "Portfólió",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Még nincs tevékenység",
 		"noActivityInBlock": "Nincs tevékenység ebben a blokkban",
 		"noAssetsFound": "Nem található eszköz",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Blokk megtekintése az explorerben",
+		"blockTimeline": "Blokk idővonal",
+		"resumeLiveUpdates": "Élő frissítések folytatása",
+		"pauseLiveUpdates": "Élő frissítések szüneteltetése",
+		"selectBlockToViewTxs": "Válasszon blokkot a tranzakciók megtekintéséhez",
+		"loadingAccessKeys": "Hozzáférési kulcsok betöltése...",
+		"noAccessKeysConfigured": "Nincsenek hozzáférési kulcsok beállítva.",
+		"createKey": "Kulcs létrehozása",
+		"accessKeys": "Hozzáférési kulcsok"
 	},
 	"landing": {
 		"getStarted": "Kezdés",
@@ -90,5 +111,8 @@
 		"from": "feladó",
 		"self": "saját",
 		"andMore": "és még {{count}}"
+	},
+	"a11y": {
+		"accessKeyNotFound": "A hozzáférési kulcs nem található a helyi tárolóban. A másik eszközön létrehozott kulcsok itt nem használhatók."
 	}
 }

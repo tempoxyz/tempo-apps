@@ -39,7 +39,21 @@
 		"self": "chính mình",
 		"andMore": "và {{count}} nữa",
 		"sentSuccessfully": "Đã gửi {{symbol}} thành công",
-		"demoNote": "Đây là bản demo, số dư không được cập nhật."
+		"demoNote": "Đây là bản demo, số dư không được cập nhật.",
+		"block": "Khối",
+		"exhausted": "Đã hết",
+		"transactionFailed": "Giao dịch thất bại",
+		"expired": "Đã hết hạn",
+		"exp": "HH",
+		"unlimited": "Không giới hạn",
+		"now": "bây giờ",
+		"addKey": "Thêm khóa",
+		"keyName": "Tên khóa",
+		"days": "n",
+		"confirming": "đang xác nhận...",
+		"revoking": "đang thu hồi...",
+		"clickToChangeEmoji": "Nhấp để thay đổi emoji",
+		"revokeAccessKey": "Thu hồi khóa truy cập này"
 	},
 	"portfolio": {
 		"title": "Danh mục",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Chưa có hoạt động",
 		"noActivityInBlock": "Không có hoạt động trong khối này",
 		"noAssetsFound": "Không tìm thấy tài sản",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Xem khối trong explorer",
+		"blockTimeline": "Dòng thời gian khối",
+		"resumeLiveUpdates": "Tiếp tục cập nhật trực tiếp",
+		"pauseLiveUpdates": "Tạm dừng cập nhật trực tiếp",
+		"selectBlockToViewTxs": "Chọn khối để xem giao dịch",
+		"loadingAccessKeys": "Đang tải khóa truy cập...",
+		"noAccessKeysConfigured": "Chưa cấu hình khóa truy cập.",
+		"createKey": "Tạo khóa",
+		"accessKeys": "Khóa truy cập"
 	},
 	"landing": {
 		"getStarted": "Bắt đầu",
@@ -90,5 +111,8 @@
 		"from": "từ",
 		"self": "chính mình",
 		"andMore": "và {{count}} nữa"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Không tìm thấy khóa truy cập trong bộ nhớ cục bộ. Các khóa được tạo trên thiết bị khác không thể sử dụng ở đây."
 	}
 }

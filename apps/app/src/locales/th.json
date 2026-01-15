@@ -39,7 +39,21 @@
 		"self": "ตัวเอง",
 		"andMore": "และอีก {{count}}",
 		"sentSuccessfully": "ส่ง {{symbol}} สำเร็จ",
-		"demoNote": "นี่คือเดโม ยอดเงินจะไม่อัปเดต"
+		"demoNote": "นี่คือเดโม ยอดเงินจะไม่อัปเดต",
+		"block": "บล็อก",
+		"exhausted": "หมด",
+		"transactionFailed": "ธุรกรรมล้มเหลว",
+		"expired": "หมดอายุ",
+		"exp": "หมด",
+		"unlimited": "ไม่จำกัด",
+		"now": "ตอนนี้",
+		"addKey": "เพิ่มคีย์",
+		"keyName": "ชื่อคีย์",
+		"days": "ว",
+		"confirming": "กำลังยืนยัน...",
+		"revoking": "กำลังเพิกถอน...",
+		"clickToChangeEmoji": "คลิกเพื่อเปลี่ยนอิโมจิ",
+		"revokeAccessKey": "เพิกถอนคีย์การเข้าถึงนี้"
 	},
 	"portfolio": {
 		"title": "พอร์ตโฟลิโอ",
@@ -52,8 +66,15 @@
 		"noActivityYet": "ยังไม่มีกิจกรรม",
 		"noActivityInBlock": "ไม่มีกิจกรรมในบล็อกนี้",
 		"noAssetsFound": "ไม่พบสินทรัพย์",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "ดูบล็อกใน explorer",
+		"blockTimeline": "ไทม์ไลน์บล็อก",
+		"resumeLiveUpdates": "ดำเนินการอัปเดตแบบเรียลไทม์ต่อ",
+		"pauseLiveUpdates": "หยุดการอัปเดตแบบเรียลไทม์ชั่วคราว",
+		"selectBlockToViewTxs": "เลือกบล็อกเพื่อดูธุรกรรม",
+		"loadingAccessKeys": "กำลังโหลดคีย์การเข้าถึง...",
+		"noAccessKeysConfigured": "ไม่มีคีย์การเข้าถึงที่กำหนดค่า",
+		"createKey": "สร้างคีย์",
+		"accessKeys": "คีย์การเข้าถึง"
 	},
 	"landing": {
 		"getStarted": "เริ่มต้น",
@@ -90,5 +111,8 @@
 		"from": "จาก",
 		"self": "ตัวเอง",
 		"andMore": "และอีก {{count}}"
+	},
+	"a11y": {
+		"accessKeyNotFound": "ไม่พบคีย์การเข้าถึงในที่เก็บข้อมูลในเครื่อง คีย์ที่สร้างบนอุปกรณ์อื่นไม่สามารถใช้ที่นี่ได้"
 	}
 }

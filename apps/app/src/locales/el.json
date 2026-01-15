@@ -39,7 +39,21 @@
 		"self": "εαυτό",
 		"andMore": "και {{count}} ακόμα",
 		"sentSuccessfully": "{{symbol}} εστάλη επιτυχώς",
-		"demoNote": "Αυτό είναι demo, τα υπόλοιπα δεν ενημερώνονται."
+		"demoNote": "Αυτό είναι demo, τα υπόλοιπα δεν ενημερώνονται.",
+		"block": "Μπλοκ",
+		"exhausted": "Εξαντλημένο",
+		"transactionFailed": "Η συναλλαγή απέτυχε",
+		"expired": "Έληξε",
+		"exp": "Λήξ",
+		"unlimited": "Απεριόριστο",
+		"now": "τώρα",
+		"addKey": "Προσθήκη κλειδιού",
+		"keyName": "Όνομα κλειδιού",
+		"days": "μ",
+		"confirming": "επιβεβαίωση...",
+		"revoking": "ανάκληση...",
+		"clickToChangeEmoji": "Κάντε κλικ για αλλαγή emoji",
+		"revokeAccessKey": "Ανάκληση αυτού του κλειδιού πρόσβασης"
 	},
 	"portfolio": {
 		"title": "Χαρτοφυλάκιο",
@@ -53,7 +67,14 @@
 		"noActivityInBlock": "Δεν υπάρχει δραστηριότητα σε αυτό το μπλοκ",
 		"noAssetsFound": "Δεν βρέθηκαν περιουσιακά στοιχεία",
 		"viewBlockInExplorer": "Προβολή μπλοκ στον εξερευνητή",
-		"blockTimeline": "Block timeline"
+		"blockTimeline": "Χρονοδιάγραμμα μπλοκ",
+		"resumeLiveUpdates": "Συνέχιση ζωντανών ενημερώσεων",
+		"pauseLiveUpdates": "Παύση ζωντανών ενημερώσεων",
+		"selectBlockToViewTxs": "Επιλέξτε μπλοκ για προβολή συναλλαγών",
+		"loadingAccessKeys": "Φόρτωση κλειδιών πρόσβασης...",
+		"noAccessKeysConfigured": "Δεν έχουν διαμορφωθεί κλειδιά πρόσβασης.",
+		"createKey": "Δημιουργία κλειδιού",
+		"accessKeys": "Κλειδιά πρόσβασης"
 	},
 	"landing": {
 		"getStarted": "Ξεκινήστε",
@@ -90,5 +111,8 @@
 		"from": "από",
 		"self": "εαυτό",
 		"andMore": "και {{count}} ακόμα"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Το κλειδί πρόσβασης δεν βρέθηκε στην τοπική αποθήκευση. Τα κλειδιά που δημιουργήθηκαν σε άλλη συσκευή δεν μπορούν να χρησιμοποιηθούν εδώ."
 	}
 }

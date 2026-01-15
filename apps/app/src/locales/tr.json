@@ -39,7 +39,21 @@
 		"self": "kendine",
 		"andMore": "ve {{count}} daha",
 		"sentSuccessfully": "{{symbol}} başarıyla gönderildi",
-		"demoNote": "Bu bir demodur, bakiyeler güncellenmez."
+		"demoNote": "Bu bir demodur, bakiyeler güncellenmez.",
+		"block": "Blok",
+		"exhausted": "Tükendi",
+		"transactionFailed": "İşlem başarısız",
+		"expired": "Süresi doldu",
+		"exp": "Sür",
+		"unlimited": "Sınırsız",
+		"now": "şimdi",
+		"addKey": "Anahtar ekle",
+		"keyName": "Anahtar adı",
+		"days": "g",
+		"confirming": "onaylanıyor...",
+		"revoking": "iptal ediliyor...",
+		"clickToChangeEmoji": "Emoji değiştirmek için tıklayın",
+		"revokeAccessKey": "Bu erişim anahtarını iptal et"
 	},
 	"portfolio": {
 		"title": "Portföy",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Henüz aktivite yok",
 		"noActivityInBlock": "Bu blokta aktivite yok",
 		"noAssetsFound": "Varlık bulunamadı",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Bloku explorer'da görüntüle",
+		"blockTimeline": "Blok zaman çizelgesi",
+		"resumeLiveUpdates": "Canlı güncellemeleri sürdür",
+		"pauseLiveUpdates": "Canlı güncellemeleri duraklat",
+		"selectBlockToViewTxs": "İşlemleri görüntülemek için bir blok seçin",
+		"loadingAccessKeys": "Erişim anahtarları yükleniyor...",
+		"noAccessKeysConfigured": "Yapılandırılmış erişim anahtarı yok.",
+		"createKey": "Anahtar oluştur",
+		"accessKeys": "Erişim Anahtarları"
 	},
 	"landing": {
 		"getStarted": "Başla",
@@ -90,5 +111,8 @@
 		"from": "kimden",
 		"self": "kendine",
 		"andMore": "ve {{count}} daha"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Erişim anahtarı yerel depolamada bulunamadı. Başka bir cihazda oluşturulan anahtarlar burada kullanılamaz."
 	}
 }

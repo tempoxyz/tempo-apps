@@ -39,7 +39,21 @@
 		"self": "itse",
 		"andMore": "ja {{count}} lisää",
 		"sentSuccessfully": "{{symbol}} lähetetty onnistuneesti",
-		"demoNote": "Tämä on demo, saldot eivät päivity."
+		"demoNote": "Tämä on demo, saldot eivät päivity.",
+		"block": "Lohko",
+		"exhausted": "Käytetty",
+		"transactionFailed": "Tapahtuma epäonnistui",
+		"expired": "Vanhentunut",
+		"exp": "Van",
+		"unlimited": "Rajoittamaton",
+		"now": "nyt",
+		"addKey": "Lisää avain",
+		"keyName": "Avaimen nimi",
+		"days": "pv",
+		"confirming": "vahvistetaan...",
+		"revoking": "peruutetaan...",
+		"clickToChangeEmoji": "Napsauta vaihtaaksesi emojia",
+		"revokeAccessKey": "Peruuta tämä käyttöoikeusavain"
 	},
 	"portfolio": {
 		"title": "Salkku",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Ei vielä toimintaa",
 		"noActivityInBlock": "Ei toimintaa tässä lohkossa",
 		"noAssetsFound": "Varoja ei löytynyt",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Näytä lohko explorerissa",
+		"blockTimeline": "Lohkon aikajana",
+		"resumeLiveUpdates": "Jatka reaaliaikaisia päivityksiä",
+		"pauseLiveUpdates": "Keskeytä reaaliaikaiset päivitykset",
+		"selectBlockToViewTxs": "Valitse lohko nähdäksesi tapahtumat",
+		"loadingAccessKeys": "Ladataan käyttöoikeusavaimia...",
+		"noAccessKeysConfigured": "Ei käyttöoikeusavaimia määritetty.",
+		"createKey": "Luo avain",
+		"accessKeys": "Pääsyavaimet"
 	},
 	"landing": {
 		"getStarted": "Aloita",
@@ -90,5 +111,8 @@
 		"from": "lähettäjältä",
 		"self": "itse",
 		"andMore": "ja {{count}} lisää"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Käyttöoikeusavainta ei löydy paikallisesta tallennustilasta. Toisella laitteella luotuja avaimia ei voi käyttää täällä."
 	}
 }

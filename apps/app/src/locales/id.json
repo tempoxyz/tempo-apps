@@ -39,7 +39,21 @@
 		"self": "sendiri",
 		"andMore": "dan {{count}} lagi",
 		"sentSuccessfully": "{{symbol}} berhasil dikirim",
-		"demoNote": "Ini adalah demo, saldo tidak diperbarui."
+		"demoNote": "Ini adalah demo, saldo tidak diperbarui.",
+		"block": "Blok",
+		"exhausted": "Habis",
+		"transactionFailed": "Transaksi gagal",
+		"expired": "Kedaluwarsa",
+		"exp": "Exp",
+		"unlimited": "Tidak terbatas",
+		"now": "sekarang",
+		"addKey": "Tambah kunci",
+		"keyName": "Nama kunci",
+		"days": "h",
+		"confirming": "mengonfirmasi...",
+		"revoking": "mencabut...",
+		"clickToChangeEmoji": "Klik untuk mengubah emoji",
+		"revokeAccessKey": "Cabut kunci akses ini"
 	},
 	"portfolio": {
 		"title": "Portofolio",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Belum ada aktivitas",
 		"noActivityInBlock": "Tidak ada aktivitas di blok ini",
 		"noAssetsFound": "Aset tidak ditemukan",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Lihat blok di explorer",
+		"blockTimeline": "Garis waktu blok",
+		"resumeLiveUpdates": "Lanjutkan pembaruan langsung",
+		"pauseLiveUpdates": "Jeda pembaruan langsung",
+		"selectBlockToViewTxs": "Pilih blok untuk melihat transaksi",
+		"loadingAccessKeys": "Memuat kunci akses...",
+		"noAccessKeysConfigured": "Tidak ada kunci akses yang dikonfigurasi.",
+		"createKey": "Buat Kunci",
+		"accessKeys": "Kunci Akses"
 	},
 	"landing": {
 		"getStarted": "Mulai",
@@ -90,5 +111,8 @@
 		"from": "dari",
 		"self": "sendiri",
 		"andMore": "dan {{count}} lagi"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Kunci akses tidak ditemukan di penyimpanan lokal. Kunci yang dibuat di perangkat lain tidak dapat digunakan di sini."
 	}
 }

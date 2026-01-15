@@ -39,7 +39,21 @@
 		"self": "sine",
 		"andMore": "și încă {{count}}",
 		"sentSuccessfully": "{{symbol}} trimis cu succes",
-		"demoNote": "Aceasta este o demonstrație, soldurile nu se actualizează."
+		"demoNote": "Aceasta este o demonstrație, soldurile nu se actualizează.",
+		"block": "Bloc",
+		"exhausted": "Epuizat",
+		"transactionFailed": "Tranzacția a eșuat",
+		"expired": "Expirat",
+		"exp": "Exp",
+		"unlimited": "Nelimitat",
+		"now": "acum",
+		"addKey": "Adaugă cheie",
+		"keyName": "Nume cheie",
+		"days": "z",
+		"confirming": "se confirmă...",
+		"revoking": "se revocă...",
+		"clickToChangeEmoji": "Click pentru a schimba emoji",
+		"revokeAccessKey": "Revocă această cheie de acces"
 	},
 	"portfolio": {
 		"title": "Portofoliu",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Nicio activitate încă",
 		"noActivityInBlock": "Nicio activitate în acest bloc",
 		"noAssetsFound": "Nu s-au găsit active",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Vezi blocul în explorer",
+		"blockTimeline": "Cronologie blocuri",
+		"resumeLiveUpdates": "Reia actualizările în timp real",
+		"pauseLiveUpdates": "Întrerupe actualizările în timp real",
+		"selectBlockToViewTxs": "Selectează un bloc pentru a vedea tranzacțiile",
+		"loadingAccessKeys": "Se încarcă cheile de acces...",
+		"noAccessKeysConfigured": "Nicio cheie de acces configurată.",
+		"createKey": "Creează cheie",
+		"accessKeys": "Chei de acces"
 	},
 	"landing": {
 		"getStarted": "Începe",
@@ -90,5 +111,8 @@
 		"from": "de la",
 		"self": "sine",
 		"andMore": "și încă {{count}}"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Cheia de acces nu a fost găsită în stocarea locală. Cheile create pe alt dispozitiv nu pot fi folosite aici."
 	}
 }

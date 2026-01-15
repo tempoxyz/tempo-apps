@@ -39,7 +39,21 @@
 		"self": "zelf",
 		"andMore": "en {{count}} meer",
 		"sentSuccessfully": "{{symbol}} succesvol verzonden",
-		"demoNote": "Dit is een demo, saldi worden niet bijgewerkt."
+		"demoNote": "Dit is een demo, saldi worden niet bijgewerkt.",
+		"block": "Blok",
+		"exhausted": "Uitgeput",
+		"transactionFailed": "Transactie mislukt",
+		"expired": "Verlopen",
+		"exp": "Verl",
+		"unlimited": "Onbeperkt",
+		"now": "nu",
+		"addKey": "Sleutel toevoegen",
+		"keyName": "Sleutelnaam",
+		"days": "d",
+		"confirming": "bevestigen...",
+		"revoking": "intrekken...",
+		"clickToChangeEmoji": "Klik om emoji te wijzigen",
+		"revokeAccessKey": "Deze toegangssleutel intrekken"
 	},
 	"portfolio": {
 		"title": "Portfolio",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Nog geen activiteit",
 		"noActivityInBlock": "Geen activiteit in dit blok",
 		"noAssetsFound": "Geen activa gevonden",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Bekijk blok in explorer",
+		"blockTimeline": "Bloktijdlijn",
+		"resumeLiveUpdates": "Live updates hervatten",
+		"pauseLiveUpdates": "Live updates pauzeren",
+		"selectBlockToViewTxs": "Selecteer een blok om transacties te bekijken",
+		"loadingAccessKeys": "Toegangssleutels laden...",
+		"noAccessKeysConfigured": "Geen toegangssleutels geconfigureerd.",
+		"createKey": "Sleutel aanmaken",
+		"accessKeys": "Toegangssleutels"
 	},
 	"landing": {
 		"getStarted": "Aan de slag",
@@ -90,5 +111,8 @@
 		"from": "van",
 		"self": "zelf",
 		"andMore": "en {{count}} meer"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Toegangssleutel niet gevonden in lokale opslag. Sleutels die op een ander apparaat zijn gemaakt, kunnen hier niet worden gebruikt."
 	}
 }

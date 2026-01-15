@@ -39,7 +39,21 @@
 		"self": "본인",
 		"andMore": "외 {{count}}개",
 		"sentSuccessfully": "{{symbol}} 전송 완료",
-		"demoNote": "이것은 데모이므로 잔액이 업데이트되지 않습니다."
+		"demoNote": "이것은 데모이므로 잔액이 업데이트되지 않습니다.",
+		"block": "블록",
+		"exhausted": "소진됨",
+		"transactionFailed": "거래 실패",
+		"expired": "만료됨",
+		"exp": "만료",
+		"unlimited": "무제한",
+		"now": "지금",
+		"addKey": "키 추가",
+		"keyName": "키 이름",
+		"days": "일",
+		"confirming": "확인 중...",
+		"revoking": "취소 중...",
+		"clickToChangeEmoji": "클릭하여 이모지 변경",
+		"revokeAccessKey": "이 액세스 키 취소"
 	},
 	"portfolio": {
 		"title": "포트폴리오",
@@ -52,8 +66,15 @@
 		"noActivityYet": "아직 활동이 없습니다",
 		"noActivityInBlock": "이 블록에 활동이 없습니다",
 		"noAssetsFound": "자산을 찾을 수 없음",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "탐색기에서 블록 보기",
+		"blockTimeline": "블록 타임라인",
+		"resumeLiveUpdates": "실시간 업데이트 재개",
+		"pauseLiveUpdates": "실시간 업데이트 일시 중지",
+		"selectBlockToViewTxs": "거래를 보려면 블록 선택",
+		"loadingAccessKeys": "액세스 키 로드 중...",
+		"noAccessKeysConfigured": "구성된 액세스 키가 없습니다.",
+		"createKey": "키 생성",
+		"accessKeys": "액세스 키"
 	},
 	"landing": {
 		"getStarted": "시작하기",
@@ -90,5 +111,8 @@
 		"from": "발신",
 		"self": "본인",
 		"andMore": "외 {{count}}개"
+	},
+	"a11y": {
+		"accessKeyNotFound": "로컬 스토리지에서 액세스 키를 찾을 수 없습니다. 다른 기기에서 생성된 키는 여기서 사용할 수 없습니다."
 	}
 }

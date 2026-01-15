@@ -39,7 +39,21 @@
 		"self": "sobě",
 		"andMore": "a {{count}} dalších",
 		"sentSuccessfully": "{{symbol}} úspěšně odesláno",
-		"demoNote": "Toto je demo, zůstatky se neaktualizují."
+		"demoNote": "Toto je demo, zůstatky se neaktualizují.",
+		"block": "Blok",
+		"exhausted": "Vyčerpáno",
+		"transactionFailed": "Transakce selhala",
+		"expired": "Vypršelo",
+		"exp": "Exp",
+		"unlimited": "Neomezeno",
+		"now": "nyní",
+		"addKey": "Přidat klíč",
+		"keyName": "Název klíče",
+		"days": "d",
+		"confirming": "potvrzování...",
+		"revoking": "odvolávání...",
+		"clickToChangeEmoji": "Klikněte pro změnu emoji",
+		"revokeAccessKey": "Odvolat tento přístupový klíč"
 	},
 	"portfolio": {
 		"title": "Portfolio",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Zatím žádná aktivita",
 		"noActivityInBlock": "Žádná aktivita v tomto bloku",
 		"noAssetsFound": "Žádná aktiva nenalezena",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Zobrazit blok v exploreru",
+		"blockTimeline": "Časová osa bloků",
+		"resumeLiveUpdates": "Obnovit živé aktualizace",
+		"pauseLiveUpdates": "Pozastavit živé aktualizace",
+		"selectBlockToViewTxs": "Vyberte blok pro zobrazení transakcí",
+		"loadingAccessKeys": "Načítání přístupových klíčů...",
+		"noAccessKeysConfigured": "Žádné přístupové klíče nakonfigurovány.",
+		"createKey": "Vytvořit klíč",
+		"accessKeys": "Přístupové klíče"
 	},
 	"landing": {
 		"getStarted": "Začít",
@@ -90,5 +111,8 @@
 		"from": "od",
 		"self": "sobě",
 		"andMore": "a {{count}} dalších"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Přístupový klíč nebyl nalezen v místním úložišti. Klíče vytvořené na jiném zařízení zde nelze použít."
 	}
 }

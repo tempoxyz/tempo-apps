@@ -39,7 +39,21 @@
 		"self": "নিজে",
 		"andMore": "এবং আরও {{count}}",
 		"sentSuccessfully": "{{symbol}} সফলভাবে পাঠানো হয়েছে",
-		"demoNote": "এটি একটি ডেমো, ব্যালেন্স আপডেট হয় না।"
+		"demoNote": "এটি একটি ডেমো, ব্যালেন্স আপডেট হয় না।",
+		"block": "ব্লক",
+		"exhausted": "শেষ",
+		"transactionFailed": "লেনদেন ব্যর্থ",
+		"expired": "মেয়াদ শেষ",
+		"exp": "মেয়াদ",
+		"unlimited": "সীমাহীন",
+		"now": "এখন",
+		"addKey": "কী যোগ করুন",
+		"keyName": "কী-এর নাম",
+		"days": "দি",
+		"confirming": "নিশ্চিত করা হচ্ছে...",
+		"revoking": "বাতিল করা হচ্ছে...",
+		"clickToChangeEmoji": "ইমোজি পরিবর্তন করতে ক্লিক করুন",
+		"revokeAccessKey": "এই অ্যাক্সেস কী বাতিল করুন"
 	},
 	"portfolio": {
 		"title": "পোর্টফোলিও",
@@ -52,8 +66,15 @@
 		"noActivityYet": "এখনও কোনো কার্যকলাপ নেই",
 		"noActivityInBlock": "এই ব্লকে কোনো কার্যকলাপ নেই",
 		"noAssetsFound": "কোনো সম্পদ পাওয়া যায়নি",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "এক্সপ্লোরারে ব্লক দেখুন",
+		"blockTimeline": "ব্লক টাইমলাইন",
+		"resumeLiveUpdates": "লাইভ আপডেট পুনরায় শুরু করুন",
+		"pauseLiveUpdates": "লাইভ আপডেট বিরতি দিন",
+		"selectBlockToViewTxs": "লেনদেন দেখতে একটি ব্লক নির্বাচন করুন",
+		"loadingAccessKeys": "অ্যাক্সেস কী লোড হচ্ছে...",
+		"noAccessKeysConfigured": "কোনো অ্যাক্সেস কী কনফিগার করা হয়নি।",
+		"createKey": "কী তৈরি করুন",
+		"accessKeys": "অ্যাক্সেস কী"
 	},
 	"landing": {
 		"getStarted": "শুরু করুন",
@@ -90,5 +111,8 @@
 		"from": "থেকে",
 		"self": "নিজে",
 		"andMore": "এবং আরও {{count}}"
+	},
+	"a11y": {
+		"accessKeyNotFound": "স্থানীয় স্টোরেজে অ্যাক্সেস কী পাওয়া যায়নি। অন্য ডিভাইসে তৈরি কী এখানে ব্যবহার করা যাবে না।"
 	}
 }

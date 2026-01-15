@@ -39,7 +39,21 @@
 		"self": "ذاتي",
 		"andMore": "و {{count}} أكثر",
 		"sentSuccessfully": "تم إرسال {{symbol}} بنجاح",
-		"demoNote": "هذا عرض توضيحي، لا يتم تحديث الأرصدة."
+		"demoNote": "هذا عرض توضيحي، لا يتم تحديث الأرصدة.",
+		"block": "كتلة",
+		"exhausted": "منتهي",
+		"transactionFailed": "فشلت المعاملة",
+		"expired": "منتهي الصلاحية",
+		"exp": "انتهاء",
+		"unlimited": "غير محدود",
+		"now": "الآن",
+		"addKey": "إضافة مفتاح",
+		"keyName": "اسم المفتاح",
+		"days": "ي",
+		"confirming": "جاري التأكيد...",
+		"revoking": "جاري الإلغاء...",
+		"clickToChangeEmoji": "انقر لتغيير الرمز التعبيري",
+		"revokeAccessKey": "إلغاء مفتاح الوصول هذا"
 	},
 	"portfolio": {
 		"title": "المحفظة",
@@ -52,8 +66,15 @@
 		"noActivityYet": "لا يوجد نشاط بعد",
 		"noActivityInBlock": "لا يوجد نشاط في هذا البلوك",
 		"noAssetsFound": "لم يتم العثور على أصول",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "عرض الكتلة في المستكشف",
+		"blockTimeline": "الجدول الزمني للكتل",
+		"resumeLiveUpdates": "استئناف التحديثات المباشرة",
+		"pauseLiveUpdates": "إيقاف التحديثات المباشرة",
+		"selectBlockToViewTxs": "اختر كتلة لعرض المعاملات",
+		"loadingAccessKeys": "جاري تحميل مفاتيح الوصول...",
+		"noAccessKeysConfigured": "لم يتم تكوين مفاتيح وصول.",
+		"createKey": "إنشاء مفتاح",
+		"accessKeys": "مفاتيح الوصول"
 	},
 	"landing": {
 		"getStarted": "ابدأ",
@@ -90,5 +111,8 @@
 		"from": "من",
 		"self": "ذاتي",
 		"andMore": "و {{count}} أكثر"
+	},
+	"a11y": {
+		"accessKeyNotFound": "مفتاح الوصول غير موجود في التخزين المحلي. لا يمكن استخدام المفاتيح التي تم إنشاؤها على جهاز آخر هنا."
 	}
 }

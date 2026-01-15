@@ -39,7 +39,21 @@
 		"self": "себе",
 		"andMore": "и ещё {{count}}",
 		"sentSuccessfully": "{{symbol}} успешно отправлено",
-		"demoNote": "Это демо, балансы не обновляются."
+		"demoNote": "Это демо, балансы не обновляются.",
+		"block": "Блок",
+		"exhausted": "Исчерпано",
+		"transactionFailed": "Транзакция не удалась",
+		"expired": "Истёк",
+		"exp": "Ист",
+		"unlimited": "Без ограничений",
+		"now": "сейчас",
+		"addKey": "Добавить ключ",
+		"keyName": "Имя ключа",
+		"days": "д",
+		"confirming": "подтверждение...",
+		"revoking": "отзыв...",
+		"clickToChangeEmoji": "Нажмите, чтобы изменить эмодзи",
+		"revokeAccessKey": "Отозвать этот ключ доступа"
 	},
 	"portfolio": {
 		"title": "Портфель",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Пока нет активности",
 		"noActivityInBlock": "Нет активности в этом блоке",
 		"noAssetsFound": "Активы не найдены",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Посмотреть блок в обозревателе",
+		"blockTimeline": "Хронология блоков",
+		"resumeLiveUpdates": "Возобновить обновления в реальном времени",
+		"pauseLiveUpdates": "Приостановить обновления в реальном времени",
+		"selectBlockToViewTxs": "Выберите блок для просмотра транзакций",
+		"loadingAccessKeys": "Загрузка ключей доступа...",
+		"noAccessKeysConfigured": "Ключи доступа не настроены.",
+		"createKey": "Создать ключ",
+		"accessKeys": "Ключи доступа"
 	},
 	"landing": {
 		"getStarted": "Начать",
@@ -90,5 +111,8 @@
 		"from": "от",
 		"self": "себе",
 		"andMore": "и ещё {{count}}"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Ключ доступа не найден в локальном хранилище. Ключи, созданные на другом устройстве, нельзя использовать здесь."
 	}
 }

@@ -39,7 +39,21 @@
 		"self": "собі",
 		"andMore": "і ще {{count}}",
 		"sentSuccessfully": "{{symbol}} успішно надіслано",
-		"demoNote": "Це демо, баланси не оновлюються."
+		"demoNote": "Це демо, баланси не оновлюються.",
+		"block": "Блок",
+		"exhausted": "Вичерпано",
+		"transactionFailed": "Транзакція не вдалася",
+		"expired": "Закінчився",
+		"exp": "Закін",
+		"unlimited": "Необмежено",
+		"now": "зараз",
+		"addKey": "Додати ключ",
+		"keyName": "Назва ключа",
+		"days": "д",
+		"confirming": "підтвердження...",
+		"revoking": "відкликання...",
+		"clickToChangeEmoji": "Натисніть, щоб змінити емодзі",
+		"revokeAccessKey": "Відкликати цей ключ доступу"
 	},
 	"portfolio": {
 		"title": "Портфель",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Ще немає активності",
 		"noActivityInBlock": "Немає активності в цьому блоці",
 		"noAssetsFound": "Активи не знайдено",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Переглянути блок в оглядачі",
+		"blockTimeline": "Хронологія блоків",
+		"resumeLiveUpdates": "Відновити оновлення в реальному часі",
+		"pauseLiveUpdates": "Призупинити оновлення в реальному часі",
+		"selectBlockToViewTxs": "Виберіть блок для перегляду транзакцій",
+		"loadingAccessKeys": "Завантаження ключів доступу...",
+		"noAccessKeysConfigured": "Ключі доступу не налаштовані.",
+		"createKey": "Створити ключ",
+		"accessKeys": "Ключі доступу"
 	},
 	"landing": {
 		"getStarted": "Почати",
@@ -90,5 +111,8 @@
 		"from": "від",
 		"self": "собі",
 		"andMore": "і ще {{count}}"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Ключ доступу не знайдено в локальному сховищі. Ключі, створені на іншому пристрої, не можна використовувати тут."
 	}
 }

@@ -236,6 +236,58 @@ const fetchTransactionReceipts = createServerFn({ method: 'POST' })
 		}
 	})
 
+const fetchBlockTimestamps = createServerFn({ method: 'POST' })
+	.inputValidator((data: { blockNumbers: string[] }) => data)
+	.handler(async ({ data }) => {
+		const { blockNumbers } = data
+		if (blockNumbers.length === 0) return { timestamps: {} }
+
+		const tempoEnv = await getTempoEnv()
+		const rpcUrl = getRpcUrl(tempoEnv)
+
+		const { env } = await import('cloudflare:workers')
+		const auth = env.PRESTO_RPC_AUTH as string | undefined
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		}
+		if (auth && shouldUseAuth(tempoEnv)) {
+			headers.Authorization = `Basic ${btoa(auth)}`
+		}
+
+		try {
+			const batchRequest = blockNumbers.map((blockNum, i) => ({
+				jsonrpc: '2.0',
+				id: i + 1,
+				method: 'eth_getBlockByNumber',
+				params: [blockNum, false],
+			}))
+
+			const response = await fetch(rpcUrl, {
+				method: 'POST',
+				headers,
+				body: JSON.stringify(batchRequest),
+			})
+
+			if (!response.ok) return { timestamps: {} }
+
+			const results = (await response.json()) as Array<{
+				id: number
+				result?: { timestamp?: string }
+			}>
+
+			const timestamps: Record<string, number> = {}
+			for (let i = 0; i < blockNumbers.length; i++) {
+				const result = results.find((r) => r.id === i + 1)
+				if (result?.result?.timestamp) {
+					timestamps[blockNumbers[i]] = Number.parseInt(result.result.timestamp, 16) * 1000
+				}
+			}
+			return { timestamps }
+		} catch {
+			return { timestamps: {} }
+		}
+	})
+
 const fetchBlockData = createServerFn({ method: 'GET' })
 	.inputValidator((data: { fromBlock: string; count: number }) => data)
 	.handler(async ({ data }) => {
@@ -626,6 +678,27 @@ async function fetchTransactions(
 			return tokenMetadataMap.get(tokenAddress)
 		}
 
+		// Collect unique block numbers to fetch timestamps
+		const blockNumbers = new Set<string>()
+		for (const { receipt } of receiptsResult.receipts) {
+			if (receipt) blockNumbers.add(receipt.blockNumber)
+		}
+
+		// Fetch block timestamps
+		const blockTimestamps = new Map<string, number>()
+		if (blockNumbers.size > 0) {
+			try {
+				const timestampsResult = await fetchBlockTimestamps({
+					data: { blockNumbers: Array.from(blockNumbers) },
+				})
+				for (const [blockNum, ts] of Object.entries(timestampsResult.timestamps)) {
+					blockTimestamps.set(blockNum, ts)
+				}
+			} catch {
+				// Continue without timestamps if fetch fails
+			}
+		}
+
 		const items: ActivityItem[] = []
 		for (const { hash, receipt: rpcReceipt } of receiptsResult.receipts) {
 			if (!rpcReceipt) continue
@@ -636,11 +709,10 @@ async function fetchTransactions(
 					viewer: address,
 				})
 				const txInfo = txData.find((tx) => tx.hash === hash)
-				// Timestamp from explorer API is Unix seconds (number or numeric string)
-				// If missing, use undefined so heatmap can exclude items without real timestamps
+				// Timestamp from explorer API (Unix seconds) or block timestamp
 				const timestamp = txInfo?.timestamp
 					? Number(txInfo.timestamp) * 1000
-					: undefined
+					: blockTimestamps.get(rpcReceipt.blockNumber)
 				const blockNumber = BigInt(rpcReceipt.blockNumber)
 				items.push({ hash, events, timestamp, blockNumber })
 			} catch (e) {
@@ -1960,7 +2032,7 @@ function BlockTimeline({
 				</div>
 				<div className="flex items-center justify-center">
 					<div className="flex items-center gap-1 h-5 px-2 rounded-full bg-white/5 border border-white/10">
-						<span className="text-[11px] text-tertiary">Block</span>
+						<span className="text-[11px] text-tertiary">{t('common.block')}</span>
 						<span className="text-[11px] text-tertiary font-mono">...</span>
 					</div>
 				</div>
@@ -2158,8 +2230,8 @@ function BlockTimeline({
 						)}
 						aria-label={
 							isPaused || selectedBlock !== undefined
-								? 'Resume live updates'
-								: 'Pause live updates'
+								? t('portfolio.resumeLiveUpdates')
+								: t('portfolio.pauseLiveUpdates')
 						}
 					>
 						{isPaused || selectedBlock !== undefined ? (
@@ -2168,7 +2240,7 @@ function BlockTimeline({
 							<PauseIcon className="size-2 text-tertiary fill-tertiary" />
 						)}
 					</button>
-					<span className="text-[11px] text-tertiary">Block</span>
+					<span className="text-[11px] text-tertiary">{t('common.block')}</span>
 					<span className="text-[11px] text-primary font-mono tabular-nums">
 						{selectedBlock !== undefined
 							? selectedBlock.toString()
@@ -2437,7 +2509,7 @@ function SignWithSelector({
 		const tokenAddr = asset.address.toLowerCase()
 		const remainingLimit = key.spendingLimits.get(tokenAddr)
 		if (remainingLimit === undefined) return null
-		if (remainingLimit <= 0n) return 'Exhausted'
+		if (remainingLimit <= 0n) return t('common.exhausted')
 		const decimals = asset.metadata?.decimals ?? 6
 		const formatted = formatUnits(remainingLimit, decimals)
 		return `$${Number(formatted).toFixed(0)}`
@@ -2541,7 +2613,7 @@ function SignWithSelector({
 						</button>
 						{accessKeys.map((key) => {
 							const limit = getKeyLimit(key)
-							const isExhausted = limit === 'Exhausted'
+							const isExhausted = limit === t('common.exhausted')
 							const keyEmoji = getAccessKeyEmoji(key.keyId) || '🔑'
 							const now = Date.now()
 							const isExpired = key.expiry > 0 && key.expiry * 1000 < now
@@ -2701,7 +2773,7 @@ function AssetRow({
 				'shortMessage' in writeError
 					? (writeError.shortMessage as string)
 					: writeError.message
-			setSendError(shortMessage || 'Transaction failed')
+			setSendError(shortMessage || t('common.transactionFailed'))
 			// Revert optimistic update on error
 			onSendError?.()
 			setTimeout(() => {
@@ -2795,7 +2867,7 @@ function AssetRow({
 				)
 				if (!storedKey) {
 					setSendError(
-						'Access key not found in local storage. Keys created on another device cannot be used here.',
+						t('a11y.accessKeyNotFound'),
 					)
 					setSendState('error')
 					setTimeout(() => {
@@ -2879,7 +2951,7 @@ function AssetRow({
 				}, 1500)
 			} catch (e) {
 				console.error('[AssetRow] Access key send error:', e)
-				setSendError(e instanceof Error ? e.message : 'Transaction failed')
+				setSendError(e instanceof Error ? e.message : t('common.transactionFailed'))
 				setSendState('error')
 				setTimeout(() => {
 					setSendState('idle')
@@ -3365,7 +3437,7 @@ function ActivitySection({
 							</div>
 							<p className="text-[13px] text-secondary">
 								{t('portfolio.selectBlockToView') ||
-									'Select a block to view transactions'}
+									t('portfolio.selectBlockToViewTxs')}
 							</p>
 						</div>
 					) : (
@@ -3455,7 +3527,7 @@ function BlockActivityList({
 							className={cx(
 								'size-[28px] rounded-full text-[12px] cursor-pointer transition-all',
 								page === i
-									? 'bg-accent text-white'
+									? 'bg-accent/15 text-accent'
 									: 'hover:bg-base-alt text-tertiary',
 							)}
 						>
@@ -3547,7 +3619,7 @@ function ActivityList({
 							className={cx(
 								'size-[28px] rounded-full text-[12px] cursor-pointer transition-all',
 								page === i
-									? 'bg-accent text-white'
+									? 'bg-accent/15 text-accent'
 									: 'hover:bg-base-alt text-tertiary',
 							)}
 						>
@@ -3601,7 +3673,12 @@ function ActivityRow({
 						</span>
 					}
 				/>
-				<div className="flex items-center gap-1 shrink-0">
+				<div className="flex items-center gap-2 shrink-0">
+					{item.timestamp && (
+						<span className="text-[11px] text-tertiary font-mono tabular-nums">
+							{formatActivityTime(item.timestamp)}
+						</span>
+					)}
 					<a
 						href={`https://explore.mainnet.tempo.xyz/tx/${item.hash}`}
 						target="_blank"
@@ -3662,6 +3739,26 @@ function shortenAddress(address: string, chars = 4): string {
 	return `${address.slice(0, chars + 2)}…${address.slice(-chars)}`
 }
 
+function formatActivityTime(timestamp: number): string {
+	const now = Date.now()
+	const diff = now - timestamp
+	
+	const seconds = Math.floor(diff / 1000)
+	const minutes = Math.floor(diff / 60000)
+	const hours = Math.floor(diff / 3600000)
+	const days = Math.floor(diff / 86400000)
+	
+	if (seconds < 60) return `${seconds}s`
+	if (minutes < 60) return `${minutes}m`
+	if (hours < 24) return `${hours}h`
+	if (days < 7) return `${days}d`
+	
+	return new Date(timestamp).toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+	})
+}
+
 function TransactionModal({
 	hash,
 	events,
@@ -3720,7 +3817,7 @@ function TransactionModal({
 			ref={overlayRef}
 			role="presentation"
 			className={cx(
-				'fixed inset-0 lg:left-[calc(45vw+16px)] z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200 p-4',
+				'fixed inset-0 lg:left-[calc(45vw+16px)] z-50 flex items-center justify-center bg-base-background/95 backdrop-blur-md transition-opacity duration-200 p-4',
 				isVisible ? 'opacity-100' : 'opacity-0',
 			)}
 			onClick={handleClose}
@@ -3741,7 +3838,7 @@ function TransactionModal({
 			>
 				<div
 					data-receipt
-					className="flex flex-col w-full max-w-[360px] liquid-glass-premium border-b-0 rounded-[16px] rounded-br-none rounded-bl-none text-base-content"
+					className="flex flex-col w-full max-w-[360px] bg-white/5 border-b-0 rounded-[16px] rounded-br-none rounded-bl-none text-base-content"
 				>
 					<div className="flex flex-col sm:flex-row gap-4 sm:gap-[40px] px-4 sm:px-[20px] pt-5 sm:pt-[24px] pb-4 sm:pb-[16px]">
 						<div className="shrink-0 self-center sm:self-start">

@@ -39,7 +39,21 @@
 		"self": "själv",
 		"andMore": "och {{count}} till",
 		"sentSuccessfully": "{{symbol}} skickades framgångsrikt",
-		"demoNote": "Detta är en demo, saldon uppdateras inte."
+		"demoNote": "Detta är en demo, saldon uppdateras inte.",
+		"block": "Block",
+		"exhausted": "Förbrukad",
+		"transactionFailed": "Transaktionen misslyckades",
+		"expired": "Utgången",
+		"exp": "Utg",
+		"unlimited": "Obegränsad",
+		"now": "nu",
+		"addKey": "Lägg till nyckel",
+		"keyName": "Nyckelnamn",
+		"days": "d",
+		"confirming": "bekräftar...",
+		"revoking": "återkallar...",
+		"clickToChangeEmoji": "Klicka för att ändra emoji",
+		"revokeAccessKey": "Återkalla denna åtkomstnyckel"
 	},
 	"portfolio": {
 		"title": "Portfölj",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Ingen aktivitet ännu",
 		"noActivityInBlock": "Ingen aktivitet i detta block",
 		"noAssetsFound": "Inga tillgångar hittades",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Visa block i explorer",
+		"blockTimeline": "Blocktidslinje",
+		"resumeLiveUpdates": "Återuppta liveuppdateringar",
+		"pauseLiveUpdates": "Pausa liveuppdateringar",
+		"selectBlockToViewTxs": "Välj ett block för att visa transaktioner",
+		"loadingAccessKeys": "Laddar åtkomstnycklar...",
+		"noAccessKeysConfigured": "Inga åtkomstnycklar konfigurerade.",
+		"createKey": "Skapa nyckel",
+		"accessKeys": "Åtkomstnycklar"
 	},
 	"landing": {
 		"getStarted": "Kom igång",
@@ -90,5 +111,8 @@
 		"from": "från",
 		"self": "själv",
 		"andMore": "och {{count}} till"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Åtkomstnyckel hittades inte i lokal lagring. Nycklar skapade på en annan enhet kan inte användas här."
 	}
 }

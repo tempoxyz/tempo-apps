@@ -39,7 +39,21 @@
 		"self": "خود",
 		"andMore": "و {{count}} بیشتر",
 		"sentSuccessfully": "{{symbol}} با موفقیت ارسال شد",
-		"demoNote": "این یک دمو است، موجودی‌ها به‌روز نمی‌شوند."
+		"demoNote": "این یک دمو است، موجودی‌ها به‌روز نمی‌شوند.",
+		"block": "بلاک",
+		"exhausted": "تمام شده",
+		"transactionFailed": "تراکنش ناموفق",
+		"expired": "منقضی شده",
+		"exp": "انق",
+		"unlimited": "نامحدود",
+		"now": "اکنون",
+		"addKey": "افزودن کلید",
+		"keyName": "نام کلید",
+		"days": "ر",
+		"confirming": "در حال تأیید...",
+		"revoking": "در حال لغو...",
+		"clickToChangeEmoji": "برای تغییر ایموجی کلیک کنید",
+		"revokeAccessKey": "لغو این کلید دسترسی"
 	},
 	"portfolio": {
 		"title": "پورتفولیو",
@@ -52,8 +66,15 @@
 		"noActivityYet": "هنوز فعالیتی نیست",
 		"noActivityInBlock": "فعالیتی در این بلوک نیست",
 		"noAssetsFound": "دارایی یافت نشد",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "مشاهده بلوک در کاوشگر",
+		"blockTimeline": "خط زمانی بلوک‌ها",
+		"resumeLiveUpdates": "ازسرگیری به‌روزرسانی زنده",
+		"pauseLiveUpdates": "توقف به‌روزرسانی زنده",
+		"selectBlockToViewTxs": "یک بلوک برای مشاهده تراکنش‌ها انتخاب کنید",
+		"loadingAccessKeys": "در حال بارگذاری کلیدهای دسترسی...",
+		"noAccessKeysConfigured": "هیچ کلید دسترسی پیکربندی نشده است.",
+		"createKey": "ایجاد کلید",
+		"accessKeys": "کلیدهای دسترسی"
 	},
 	"landing": {
 		"getStarted": "شروع",
@@ -90,5 +111,8 @@
 		"from": "از",
 		"self": "خود",
 		"andMore": "و {{count}} بیشتر"
+	},
+	"a11y": {
+		"accessKeyNotFound": "کلید دسترسی در حافظه محلی یافت نشد. کلیدهای ایجاد شده در دستگاه دیگر قابل استفاده در اینجا نیستند."
 	}
 }

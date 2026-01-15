@@ -39,7 +39,21 @@
 		"self": "स्वयं",
 		"andMore": "और {{count}} अधिक",
 		"sentSuccessfully": "{{symbol}} सफलतापूर्वक भेजा गया",
-		"demoNote": "यह एक डेमो है, शेष अपडेट नहीं होते।"
+		"demoNote": "यह एक डेमो है, शेष अपडेट नहीं होते।",
+		"block": "ब्लॉक",
+		"exhausted": "समाप्त",
+		"transactionFailed": "लेनदेन विफल",
+		"expired": "समाप्त हो गया",
+		"exp": "समा",
+		"unlimited": "असीमित",
+		"now": "अभी",
+		"addKey": "कुंजी जोड़ें",
+		"keyName": "कुंजी का नाम",
+		"days": "दि",
+		"confirming": "पुष्टि हो रही है...",
+		"revoking": "रद्द हो रहा है...",
+		"clickToChangeEmoji": "इमोजी बदलने के लिए क्लिक करें",
+		"revokeAccessKey": "इस एक्सेस कुंजी को रद्द करें"
 	},
 	"portfolio": {
 		"title": "पोर्टफोलियो",
@@ -52,8 +66,15 @@
 		"noActivityYet": "अभी तक कोई गतिविधि नहीं",
 		"noActivityInBlock": "इस ब्लॉक में कोई गतिविधि नहीं",
 		"noAssetsFound": "कोई संपत्ति नहीं मिली",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "एक्सप्लोरर में ब्लॉक देखें",
+		"blockTimeline": "ब्लॉक टाइमलाइन",
+		"resumeLiveUpdates": "लाइव अपडेट फिर से शुरू करें",
+		"pauseLiveUpdates": "लाइव अपडेट रोकें",
+		"selectBlockToViewTxs": "लेनदेन देखने के लिए ब्लॉक चुनें",
+		"loadingAccessKeys": "एक्सेस कुंजियाँ लोड हो रही हैं...",
+		"noAccessKeysConfigured": "कोई एक्सेस कुंजी कॉन्फ़िगर नहीं की गई।",
+		"createKey": "कुंजी बनाएं",
+		"accessKeys": "एक्सेस कीज़"
 	},
 	"landing": {
 		"getStarted": "शुरू करें",
@@ -90,5 +111,8 @@
 		"from": "से",
 		"self": "स्वयं",
 		"andMore": "और {{count}} अधिक"
+	},
+	"a11y": {
+		"accessKeyNotFound": "स्थानीय स्टोरेज में एक्सेस कुंजी नहीं मिली। दूसरे डिवाइस पर बनाई गई कुंजियाँ यहाँ उपयोग नहीं की जा सकतीं।"
 	}
 }

@@ -202,19 +202,38 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 				balances.set(token, (balances.get(token) ?? 0n) - sent)
 			}
 
-			const nonZeroBalances = [...balances.entries()]
-				.filter(([_, balance]) => balance !== 0n)
-				.map(([token, balance]) => ({
-					token: token as Address.Address,
-					balance,
-					metadata: tokenMetadata.get(token),
-				}))
+			// Include all tokens from user's balance, plus all created tokens (with 0 balance if not held)
+			const allTokens = new Map<string, { token: Address.Address; balance: bigint; metadata: ReturnType<typeof tokenMetadata.get> }>()
+			
+			// Add user's balances
+			for (const [token, balance] of balances.entries()) {
+				if (balance !== 0n) {
+					allTokens.set(token, {
+						token: token as Address.Address,
+						balance,
+						metadata: tokenMetadata.get(token),
+					})
+				}
+			}
+			
+			// Add all created tokens with 0 balance if not already in user's assets
+			for (const [token, metadata] of tokenMetadata.entries()) {
+				if (!allTokens.has(token)) {
+					allTokens.set(token, {
+						token: token as Address.Address,
+						balance: 0n,
+						metadata,
+					})
+				}
+			}
+			
+			const tokensArray = [...allTokens.values()]
 
-			if (nonZeroBalances.length === 0) return []
+			if (tokensArray.length === 0) return []
 
 			const MAX_TOKENS = 50
 
-			const tokensMissingMetadata = nonZeroBalances
+			const tokensMissingMetadata = tokensArray
 				.slice(0, MAX_TOKENS)
 				.filter((t) => !t.metadata)
 				.map((t) => t.token)
@@ -238,10 +257,10 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 				}
 			}
 
-			const assets: AssetData[] = nonZeroBalances
+			const assets: AssetData[] = tokensArray
 				.slice(0, MAX_TOKENS)
 				.map((row) => {
-					const metadata = tokenMetadata.get(row.token)
+					const metadata = row.metadata ?? tokenMetadata.get(row.token)
 					// TODO: Replace hardcoded USD check with proper price oracle
 					const isUsd =
 						metadata?.currency === 'USD' ||
@@ -264,6 +283,12 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 					}
 				})
 				.sort((a, b) => {
+					// Sort by balance first (non-zero balances first)
+					const aHasBalance = a.balance && a.balance !== '0'
+					const bHasBalance = b.balance && b.balance !== '0'
+					if (aHasBalance && !bHasBalance) return -1
+					if (!aHasBalance && bHasBalance) return 1
+					
 					const aIsUsd = a.valueUsd !== undefined
 					const bIsUsd = b.valueUsd !== undefined
 

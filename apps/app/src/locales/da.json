@@ -39,7 +39,21 @@
 		"self": "selv",
 		"andMore": "og {{count}} mere",
 		"sentSuccessfully": "{{symbol}} sendt succesfuldt",
-		"demoNote": "Dette er en demo, saldi opdateres ikke."
+		"demoNote": "Dette er en demo, saldi opdateres ikke.",
+		"block": "Blok",
+		"exhausted": "Opbrugt",
+		"transactionFailed": "Transaktion mislykkedes",
+		"expired": "Udløbet",
+		"exp": "Udl",
+		"unlimited": "Ubegrænset",
+		"now": "nu",
+		"addKey": "Tilføj nøgle",
+		"keyName": "Nøglenavn",
+		"days": "d",
+		"confirming": "bekræfter...",
+		"revoking": "tilbagekalder...",
+		"clickToChangeEmoji": "Klik for at ændre emoji",
+		"revokeAccessKey": "Tilbagekald denne adgangsnøgle"
 	},
 	"portfolio": {
 		"title": "Portefølje",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Ingen aktivitet endnu",
 		"noActivityInBlock": "Ingen aktivitet i denne blok",
 		"noAssetsFound": "Ingen aktiver fundet",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Se blok i explorer",
+		"blockTimeline": "Bloktidslinje",
+		"resumeLiveUpdates": "Genoptag liveopdateringer",
+		"pauseLiveUpdates": "Pause liveopdateringer",
+		"selectBlockToViewTxs": "Vælg en blok for at se transaktioner",
+		"loadingAccessKeys": "Indlæser adgangsnøgler...",
+		"noAccessKeysConfigured": "Ingen adgangsnøgler konfigureret.",
+		"createKey": "Opret nøgle",
+		"accessKeys": "Adgangsnøgler"
 	},
 	"landing": {
 		"getStarted": "Kom i gang",
@@ -90,5 +111,8 @@
 		"from": "fra",
 		"self": "selv",
 		"andMore": "og {{count}} mere"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Adgangsnøgle ikke fundet i lokal lagring. Nøgler oprettet på en anden enhed kan ikke bruges her."
 	}
 }

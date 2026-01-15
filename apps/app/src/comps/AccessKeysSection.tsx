@@ -24,6 +24,7 @@ import { sendTransaction, getLogs } from 'viem/actions'
 import { Account as TempoAccount, Abis } from 'viem/tempo'
 import { useAccount, useConnectorClient } from 'wagmi'
 import { getTempoChain } from '#wagmi.config'
+import { useTranslation } from 'react-i18next'
 
 import { Section } from '#comps/Section'
 import { cx } from '#lib/css'
@@ -657,6 +658,7 @@ function AccessKeyRow({
 	onRevoke: () => void
 	txHash?: `0x${string}`
 }) {
+	const { t } = useTranslation()
 	const expiryMs = accessKey.expiry * 1000
 	const isExpired = accessKey.expiry > 0 && expiryMs <= Date.now()
 	const remainingLimit = asset
@@ -711,11 +713,11 @@ function AccessKeyRow({
 						if (isOwner) setShowEmojiPicker(!showEmojiPicker)
 					}}
 					className={cx(
-						'flex items-center justify-center size-5 rounded-full text-[11px] transition-all',
+						'flex items-center justify-center size-5 rounded-full text-[14px] transition-all',
 						isOwner && 'cursor-pointer hover:scale-110',
 					)}
 					style={{ backgroundColor: getEmojiBackgroundColor(emoji) }}
-					title={isOwner ? 'Click to change emoji' : undefined}
+					title={isOwner ? t('common.clickToChangeEmoji') : undefined}
 				>
 					{displayEmoji}
 				</button>
@@ -733,18 +735,19 @@ function AccessKeyRow({
 					{displayName}
 					{isPending && (
 						<span className="text-[10px] text-accent ml-1">
-							(confirming...)
+							({t('common.confirming')})
 						</span>
 					)}
 					{isRevoking && (
-						<span className="text-[10px] text-accent ml-1">(revoking...)</span>
+						<span className="text-[10px] text-accent ml-1">({t('common.revoking')})</span>
 					)}
 				</span>
-				<span className="text-[11px] text-secondary flex items-center gap-1 shrink-0">
+				<span className="text-[12px] text-secondary flex items-center gap-1.5 shrink-0">
 					{asset?.metadata?.symbol && (
-						<span className="font-medium">{asset.metadata.symbol}</span>
+						<span className="text-[9px] font-medium text-tertiary bg-base-alt px-1 py-0.5 rounded font-mono whitespace-nowrap">
+							{asset.metadata.symbol}
+						</span>
 					)}
-					<span className="text-tertiary">·</span>
 					{remainingLimit !== undefined && remainingLimit > 0n ? (
 						<span>
 							{formatBigIntAsUsd(
@@ -756,14 +759,14 @@ function AccessKeyRow({
 					) : hasLimit ? (
 						<span className="text-negative">$0</span>
 					) : (
-						<span>$∞</span>
+						<span className="text-tertiary">{t('common.unlimited')}</span>
 					)}
 					<span className="text-tertiary">·</span>
 					<span className={isExpired ? 'text-negative' : ''}>
 						{accessKey.expiry === 0
 							? '∞'
 							: isExpired
-								? 'Exp'
+								? t('common.exp')
 								: formatExpiry(expiryMs)}
 					</span>
 				</span>
@@ -789,7 +792,7 @@ function AccessKeyRow({
 					<button
 						type="button"
 						onClick={onRevoke}
-						title="Revoke this access key"
+						title={t('common.revokeAccessKey')}
 						className="size-4 flex items-center justify-center rounded text-negative/70 hover:text-negative transition-colors cursor-pointer"
 					>
 						<XIcon className="size-2.5" />
@@ -840,6 +843,7 @@ function CreateKeyForm({
 		emoji: string,
 	) => void
 }) {
+	const { t } = useTranslation()
 	const [keyName, setKeyName] = React.useState('')
 	const [selectedToken, setSelectedToken] = React.useState<Address.Address>(
 		assets[0]?.address ?? ('' as Address.Address),
@@ -870,9 +874,9 @@ function CreateKeyForm({
 					ref={emojiButtonRef}
 					type="button"
 					onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-					className="flex items-center justify-center size-5 rounded-full text-[11px] transition-all cursor-pointer hover:scale-110"
+					className="flex items-center justify-center size-5 rounded-full text-[14px] transition-all cursor-pointer hover:scale-110"
 					style={{ backgroundColor: getEmojiBackgroundColor(selectedEmoji) }}
-					title="Click to change emoji"
+					title={t('common.clickToChangeEmoji')}
 				>
 					{selectedEmoji}
 				</button>
@@ -893,7 +897,7 @@ function CreateKeyForm({
 					type="text"
 					value={keyName}
 					onChange={(e) => setKeyName(e.target.value)}
-					placeholder="Key name"
+					placeholder={t('common.keyName')}
 					className="flex-1 min-w-0 bg-transparent text-[15px] sm:text-[16px] text-primary font-medium placeholder:text-tertiary focus:outline-none"
 					autoFocus
 				/>
@@ -903,7 +907,7 @@ function CreateKeyForm({
 						onChange={(e) =>
 							setSelectedToken(e.target.value as Address.Address)
 						}
-						className="h-[26px] px-2 rounded-full border border-white/10 bg-white/5 text-secondary hover:text-primary hover:border-white/20 cursor-pointer focus:outline-none focus:border-accent appearance-none"
+						className="h-5 px-1.5 rounded-full border border-white/10 bg-white/5 text-secondary hover:text-primary hover:border-white/20 cursor-pointer focus:outline-none focus:border-accent appearance-none"
 					>
 						{assets.map((a) => (
 							<option key={a.address} value={a.address}>
@@ -911,7 +915,7 @@ function CreateKeyForm({
 							</option>
 						))}
 					</select>
-					<span className="h-[26px] px-2 rounded-full border border-white/10 bg-white/5 flex items-center focus-within:border-accent">
+					<span className="h-5 px-1.5 rounded-full border border-white/10 bg-white/5 flex items-center focus-within:border-accent">
 						<span className="text-tertiary">$</span>
 						<input
 							type="text"
@@ -919,18 +923,18 @@ function CreateKeyForm({
 							value={limitUsd}
 							onChange={handleLimitChange}
 							placeholder="∞"
-							className="bg-transparent w-[24px] placeholder:text-tertiary focus:outline-none"
+							className="bg-transparent w-5 placeholder:text-tertiary focus:outline-none"
 						/>
 					</span>
-					<span className="h-[26px] px-2 rounded-full border border-white/10 bg-white/5 flex items-center gap-0.5 focus-within:border-accent">
+					<span className="h-5 px-1.5 rounded-full border border-white/10 bg-white/5 flex items-center gap-0.5 focus-within:border-accent">
 						<input
 							type="number"
 							value={expDays}
 							onChange={(e) => setExpDays(e.target.value)}
 							placeholder="7"
-							className="bg-transparent w-[16px] text-center placeholder:text-tertiary focus:outline-none"
+							className="bg-transparent w-3.5 text-center placeholder:text-tertiary focus:outline-none"
 						/>
-						<span>d</span>
+						<span>{t('common.days')}</span>
 					</span>
 				</span>
 			</div>
@@ -948,22 +952,22 @@ function CreateKeyForm({
 					)
 				}
 				disabled={isPending}
-				title="Create key"
-				className="size-4 flex items-center justify-center rounded-full bg-accent text-white cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50 shrink-0"
+				title={t('portfolio.createKey')}
+				className="size-5 flex items-center justify-center rounded-full bg-accent text-white cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50 shrink-0"
 			>
 				{isPending ? (
-					<span className="size-2 border border-white/30 border-t-white rounded-full animate-spin" />
+					<span className="size-2.5 border border-white/30 border-t-white rounded-full animate-spin" />
 				) : (
-					<CheckIcon className="size-2" />
+					<CheckIcon className="size-2.5" />
 				)}
 			</button>
 			<button
 				type="button"
 				onClick={onCancel}
-				title="Cancel"
-				className="size-4 flex items-center justify-center rounded text-tertiary hover:bg-white/10 hover:text-primary transition-colors cursor-pointer shrink-0"
+				title={t('common.cancel')}
+				className="size-5 flex items-center justify-center rounded-full text-tertiary hover:bg-white/10 hover:text-primary transition-colors cursor-pointer shrink-0"
 			>
-				<XIcon className="size-2" />
+				<XIcon className="size-2.5" />
 			</button>
 		</div>
 	)
@@ -977,6 +981,7 @@ export function AccessKeysSection({
 	assets: AssetData[]
 	accountAddress: string
 }) {
+	const { t } = useTranslation()
 	const account = useAccount()
 	const { data: connectorClient } = useConnectorClient()
 
@@ -1256,15 +1261,15 @@ export function AccessKeysSection({
 		) : null
 
 	return (
-		<Section title="Access Keys" headerRight={headerPill} defaultOpen={false}>
+		<Section title={t('portfolio.accessKeys')} headerRight={headerPill} defaultOpen={false}>
 			{isLoadingKeys ? (
 				<div className="flex flex-col items-center py-4 gap-2">
-					<p className="text-[13px] text-secondary">Loading access keys...</p>
+					<p className="text-[13px] text-secondary">{t('portfolio.loadingAccessKeys')}</p>
 				</div>
 			) : allKeys.length === 0 && !showCreate ? (
 				<div className="flex items-center justify-center py-4 gap-2">
 					<p className="text-[13px] text-secondary">
-						No access keys configured.
+						{t('portfolio.noAccessKeysConfigured')}
 					</p>
 					{isOwner && (
 						<button
@@ -1273,7 +1278,7 @@ export function AccessKeysSection({
 							disabled={isPending || assetsWithBalance.length === 0}
 							className="text-[11px] font-medium bg-accent/10 text-accent rounded-full px-3 py-1 cursor-pointer press-down hover:bg-accent/20 transition-colors"
 						>
-							Create Key
+							{t('portfolio.createKey')}
 						</button>
 					)}
 				</div>
@@ -1311,7 +1316,7 @@ export function AccessKeysSection({
 							className="flex items-center gap-1 px-3 h-[36px] text-[11px] text-secondary hover:text-accent transition-colors cursor-pointer"
 						>
 							<PlusIcon className="size-[12px]" />
-							<span>Add key</span>
+							<span>{t('common.addKey')}</span>
 						</button>
 					)}
 				</div>

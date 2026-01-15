@@ -39,7 +39,21 @@
 		"self": "selbst",
 		"andMore": "und {{count}} mehr",
 		"sentSuccessfully": "{{symbol}} erfolgreich gesendet",
-		"demoNote": "Dies ist eine Demo, Guthaben werden nicht aktualisiert."
+		"demoNote": "Dies ist eine Demo, Guthaben werden nicht aktualisiert.",
+		"block": "Block",
+		"exhausted": "Erschöpft",
+		"transactionFailed": "Transaktion fehlgeschlagen",
+		"expired": "Abgelaufen",
+		"exp": "Abl",
+		"unlimited": "Unbegrenzt",
+		"now": "jetzt",
+		"addKey": "Schlüssel hinzufügen",
+		"keyName": "Schlüsselname",
+		"days": "T",
+		"confirming": "bestätige...",
+		"revoking": "widerrufe...",
+		"clickToChangeEmoji": "Klicken zum Ändern des Emoji",
+		"revokeAccessKey": "Diesen Zugriffsschlüssel widerrufen"
 	},
 	"portfolio": {
 		"title": "Portfolio",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Noch keine Aktivität",
 		"noActivityInBlock": "Keine Aktivität in diesem Block",
 		"noAssetsFound": "Keine Vermögenswerte gefunden",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Block im Explorer anzeigen",
+		"blockTimeline": "Block-Zeitleiste",
+		"resumeLiveUpdates": "Live-Updates fortsetzen",
+		"pauseLiveUpdates": "Live-Updates pausieren",
+		"selectBlockToViewTxs": "Block auswählen, um Transaktionen anzuzeigen",
+		"loadingAccessKeys": "Zugriffsschlüssel werden geladen...",
+		"noAccessKeysConfigured": "Keine Zugriffsschlüssel konfiguriert.",
+		"createKey": "Schlüssel erstellen",
+		"accessKeys": "Zugriffsschlüssel"
 	},
 	"landing": {
 		"getStarted": "Loslegen",
@@ -90,5 +111,8 @@
 		"from": "von",
 		"self": "selbst",
 		"andMore": "und {{count}} mehr"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Zugriffsschlüssel nicht im lokalen Speicher gefunden. Auf einem anderen Gerät erstellte Schlüssel können hier nicht verwendet werden."
 	}
 }

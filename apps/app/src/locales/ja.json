@@ -39,7 +39,21 @@
 		"self": "自分",
 		"andMore": "他 {{count}} 件",
 		"sentSuccessfully": "{{symbol}} を送信しました",
-		"demoNote": "これはデモです。残高は更新されません。"
+		"demoNote": "これはデモです。残高は更新されません。",
+		"block": "ブロック",
+		"exhausted": "使い切り",
+		"transactionFailed": "取引に失敗しました",
+		"expired": "期限切れ",
+		"exp": "期限",
+		"unlimited": "無制限",
+		"now": "今",
+		"addKey": "キーを追加",
+		"keyName": "キー名",
+		"days": "日",
+		"confirming": "確認中...",
+		"revoking": "取り消し中...",
+		"clickToChangeEmoji": "クリックして絵文字を変更",
+		"revokeAccessKey": "このアクセスキーを取り消す"
 	},
 	"portfolio": {
 		"title": "ポートフォリオ",
@@ -52,8 +66,15 @@
 		"noActivityYet": "アクティビティはまだありません",
 		"noActivityInBlock": "このブロックにはアクティビティがありません",
 		"noAssetsFound": "資産が見つかりません",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "エクスプローラーでブロックを表示",
+		"blockTimeline": "ブロックタイムライン",
+		"resumeLiveUpdates": "ライブ更新を再開",
+		"pauseLiveUpdates": "ライブ更新を一時停止",
+		"selectBlockToViewTxs": "ブロックを選択して取引を表示",
+		"loadingAccessKeys": "アクセスキーを読み込み中...",
+		"noAccessKeysConfigured": "アクセスキーが設定されていません。",
+		"createKey": "キーを作成",
+		"accessKeys": "アクセスキー"
 	},
 	"landing": {
 		"getStarted": "始める",
@@ -90,5 +111,8 @@
 		"from": "送信元",
 		"self": "自分",
 		"andMore": "他 {{count}} 件"
+	},
+	"a11y": {
+		"accessKeyNotFound": "ローカルストレージにアクセスキーが見つかりません。別のデバイスで作成されたキーはここでは使用できません。"
 	}
 }

@@ -39,7 +39,21 @@
 		"self": "自己",
 		"andMore": "还有 {{count}} 个",
 		"sentSuccessfully": "{{symbol}} 发送成功",
-		"demoNote": "这是演示，余额不会更新。"
+		"demoNote": "这是演示，余额不会更新。",
+		"block": "区块",
+		"exhausted": "已耗尽",
+		"transactionFailed": "交易失败",
+		"expired": "已过期",
+		"exp": "到期",
+		"unlimited": "无限",
+		"now": "现在",
+		"addKey": "添加密钥",
+		"keyName": "密钥名称",
+		"days": "天",
+		"confirming": "确认中...",
+		"revoking": "撤销中...",
+		"clickToChangeEmoji": "点击更改表情",
+		"revokeAccessKey": "撤销此访问密钥"
 	},
 	"portfolio": {
 		"title": "投资组合",
@@ -52,8 +66,15 @@
 		"noActivityYet": "暂无活动",
 		"noActivityInBlock": "此区块无活动",
 		"noAssetsFound": "未找到资产",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "在浏览器中查看区块",
+		"blockTimeline": "区块时间线",
+		"resumeLiveUpdates": "恢复实时更新",
+		"pauseLiveUpdates": "暂停实时更新",
+		"selectBlockToViewTxs": "选择区块查看交易",
+		"loadingAccessKeys": "正在加载访问密钥...",
+		"noAccessKeysConfigured": "未配置访问密钥。",
+		"createKey": "创建密钥",
+		"accessKeys": "访问密钥"
 	},
 	"landing": {
 		"getStarted": "开始使用",
@@ -90,5 +111,8 @@
 		"from": "来自",
 		"self": "自己",
 		"andMore": "还有 {{count}} 个"
+	},
+	"a11y": {
+		"accessKeyNotFound": "在本地存储中未找到访问密钥。在其他设备上创建的密钥无法在此使用。"
 	}
 }

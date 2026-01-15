@@ -39,7 +39,21 @@
 		"self": "selv",
 		"andMore": "og {{count}} til",
 		"sentSuccessfully": "{{symbol}} sendt vellykket",
-		"demoNote": "Dette er en demo, saldoer oppdateres ikke."
+		"demoNote": "Dette er en demo, saldoer oppdateres ikke.",
+		"block": "Blokk",
+		"exhausted": "Oppbrukt",
+		"transactionFailed": "Transaksjon mislyktes",
+		"expired": "Utløpt",
+		"exp": "Utl",
+		"unlimited": "Ubegrenset",
+		"now": "nå",
+		"addKey": "Legg til nøkkel",
+		"keyName": "Nøkkelnavn",
+		"days": "d",
+		"confirming": "bekrefter...",
+		"revoking": "tilbakekaller...",
+		"clickToChangeEmoji": "Klikk for å endre emoji",
+		"revokeAccessKey": "Tilbakekall denne tilgangsnøkkelen"
 	},
 	"portfolio": {
 		"title": "Portefølje",
@@ -52,8 +66,15 @@
 		"noActivityYet": "Ingen aktivitet ennå",
 		"noActivityInBlock": "Ingen aktivitet i denne blokken",
 		"noAssetsFound": "Ingen eiendeler funnet",
-		"viewBlockInExplorer": "View block in explorer",
-		"blockTimeline": "Block timeline"
+		"viewBlockInExplorer": "Se blokk i explorer",
+		"blockTimeline": "Blokktidslinje",
+		"resumeLiveUpdates": "Gjenoppta sanntidsoppdateringer",
+		"pauseLiveUpdates": "Pause sanntidsoppdateringer",
+		"selectBlockToViewTxs": "Velg en blokk for å se transaksjoner",
+		"loadingAccessKeys": "Laster tilgangsnøkler...",
+		"noAccessKeysConfigured": "Ingen tilgangsnøkler konfigurert.",
+		"createKey": "Opprett nøkkel",
+		"accessKeys": "Tilgangsnøkler"
 	},
 	"landing": {
 		"getStarted": "Kom i gang",
@@ -90,5 +111,8 @@
 		"from": "fra",
 		"self": "selv",
 		"andMore": "og {{count}} til"
+	},
+	"a11y": {
+		"accessKeyNotFound": "Tilgangsnøkkel ikke funnet i lokal lagring. Nøkler opprettet på en annen enhet kan ikke brukes her."
 	}
 }
