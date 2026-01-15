@@ -1786,10 +1786,10 @@ function AssetRow({
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
 						placeholder="0x..."
-						className="flex-1 min-w-0 h-[32px] pl-1 pr-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="flex-1 min-w-0 h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
 				</div>
-				<div className="flex items-center gap-1 pl-7 sm:pl-0">
+				<div className="flex items-center gap-1">
 					<input
 						ref={amountInputRef}
 						type="text"
@@ -1797,8 +1797,7 @@ function AssetRow({
 						value={amount}
 						onChange={(e) => setAmount(e.target.value)}
 						placeholder="0.00"
-						style={{ width: `${Math.max(6, (amount || '0.00').length) + 1}ch` }}
-						className="min-w-[7ch] max-w-[14ch] h-[32px] pl-1 pr-1 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="w-[7ch] h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
 					<button
 						type="button"
