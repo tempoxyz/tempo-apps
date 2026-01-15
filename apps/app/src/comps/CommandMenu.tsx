@@ -1,6 +1,7 @@
 import { useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { useTranslation } from 'react-i18next'
 import { useAccount, useConnect, useConnectors, useDisconnect } from 'wagmi'
 import i18n from '#lib/i18n'
 import { cx } from '#lib/css'
@@ -99,6 +100,7 @@ function CommandMenuPortal({
 	open: boolean
 	onOpenChange: (open: boolean) => void
 }) {
+	const { t } = useTranslation()
 	const [view, setView] = React.useState<MenuView>('main')
 	const [query, setQuery] = React.useState('')
 	const [selectedIndex, setSelectedIndex] = React.useState(0)
@@ -149,7 +151,7 @@ function CommandMenuPortal({
 		const nav: Command[] = [
 			{
 				id: 'home',
-				label: 'Go Home',
+				label: t('commandMenu.home'),
 				icon: <HomeIcon />,
 				shortcut: 'G H',
 				onSelect: () => {
@@ -164,7 +166,7 @@ function CommandMenuPortal({
 			const addr = account.address
 			nav.push({
 				id: 'account',
-				label: 'My Account',
+				label: t('commandMenu.myAccount'),
 				icon: <WalletIcon />,
 				shortcut: 'G A',
 				onSelect: () => {
@@ -175,14 +177,14 @@ function CommandMenuPortal({
 			})
 		}
 
-		groups.push({ label: 'Navigation', commands: nav })
+		groups.push({ label: t('commandMenu.navigation'), commands: nav })
 
 		// Actions
 		if (account.address) {
 			const actions: Command[] = [
 				{
 					id: 'send',
-					label: 'Send Tokens',
+					label: t('commandMenu.sendTokens'),
 					icon: <SendIcon />,
 					onSelect: () => setView('send'),
 					keywords: ['send', 'transfer', 'pay'],
@@ -190,7 +192,7 @@ function CommandMenuPortal({
 				},
 				{
 					id: 'refresh',
-					label: 'Refresh Data',
+					label: t('commandMenu.refreshData'),
 					icon: <RefreshCwIcon />,
 					shortcut: 'R',
 					onSelect: () => {
@@ -200,7 +202,7 @@ function CommandMenuPortal({
 					keywords: ['refresh', 'reload', 'sync'],
 				},
 			]
-			groups.push({ label: 'Actions', commands: actions })
+			groups.push({ label: t('commandMenu.actions'), commands: actions })
 		}
 
 		// Account
@@ -208,7 +210,7 @@ function CommandMenuPortal({
 		if (account.address) {
 			acct.push({
 				id: 'signout',
-				label: 'Sign Out',
+				label: t('commandMenu.signOut'),
 				icon: <LogOutIcon />,
 				onSelect: () => {
 					disconnect()
@@ -220,7 +222,7 @@ function CommandMenuPortal({
 		} else {
 			acct.push({
 				id: 'signup',
-				label: 'Create Account',
+				label: t('commandMenu.createAccount'),
 				icon: <KeyIcon />,
 				onSelect: () => {
 					if (connector)
@@ -234,7 +236,7 @@ function CommandMenuPortal({
 			})
 			acct.push({
 				id: 'signin',
-				label: 'Sign In',
+				label: t('commandMenu.signIn'),
 				icon: <FingerprintIcon />,
 				onSelect: () => {
 					if (connector) connect({ connector })
@@ -243,26 +245,26 @@ function CommandMenuPortal({
 				keywords: ['signin', 'login', 'connect'],
 			})
 		}
-		groups.push({ label: 'Account', commands: acct })
+		groups.push({ label: t('commandMenu.account'), commands: acct })
 
 		// Settings
 		const settings: Command[] = [
 			{
 				id: 'language',
-				label: 'Change Language',
+				label: t('commandMenu.changeLanguage'),
 				icon: <LanguagesIcon />,
 				onSelect: () => setView('language'),
 				keywords: ['language', 'locale', 'translate', 'i18n'],
 				hasSubmenu: true,
 			},
 		]
-		groups.push({ label: 'Settings', commands: settings })
+		groups.push({ label: t('commandMenu.settings'), commands: settings })
 
 		// Links
 		const links: Command[] = [
 			{
 				id: 'website',
-				label: 'Tempo Website',
+				label: t('commandMenu.tempoWebsite'),
 				icon: <GlobeIcon />,
 				onSelect: () => {
 					window.open('https://tempo.xyz', '_blank')
@@ -272,7 +274,7 @@ function CommandMenuPortal({
 			},
 			{
 				id: 'docs',
-				label: 'Documentation',
+				label: t('commandMenu.documentation'),
 				icon: <BookOpenIcon />,
 				onSelect: () => {
 					window.open('https://docs.tempo.xyz', '_blank')
@@ -284,7 +286,7 @@ function CommandMenuPortal({
 		if (account.address) {
 			links.push({
 				id: 'explorer',
-				label: 'View on Explorer',
+				label: t('commandMenu.viewOnExplorer'),
 				icon: <ExternalLinkIcon />,
 				onSelect: () => {
 					window.open(
@@ -296,10 +298,10 @@ function CommandMenuPortal({
 				keywords: ['explorer', 'block', 'etherscan'],
 			})
 		}
-		groups.push({ label: 'Links', commands: links })
+		groups.push({ label: t('commandMenu.links'), commands: links })
 
 		return groups
-	}, [account.address, navigate, close, disconnect, connect, connector, router])
+	}, [account.address, navigate, close, disconnect, connect, connector, router, t])
 
 	const filteredGroups = React.useMemo((): CommandGroup[] => {
 		if (!query) return commandGroups
@@ -487,8 +489,8 @@ function CommandMenuPortal({
 							</div>
 						) : (
 							filteredGroups.map((group) => (
-								<div key={group.label} className="py-1">
-									<div className="px-3.5 py-1.5 text-[11px] font-medium text-[#6e6e73] uppercase tracking-wide">
+								<div key={group.label} className="pt-1 pb-0.5">
+									<div className="px-4 py-1 text-[11px] font-medium text-[#6e6e73] uppercase tracking-wider">
 										{group.label}
 									</div>
 									{group.commands.map((cmd) => {
@@ -503,21 +505,25 @@ function CommandMenuPortal({
 												onClick={cmd.onSelect}
 												onMouseEnter={() => setSelectedIndex(idx)}
 												className={cx(
-													'w-full flex items-center gap-2.5 px-3.5 py-2 text-left transition-colors',
-													isSelected ? 'bg-[#3a3a3c]' : 'hover:bg-[#2c2c2e]',
+													'w-full flex items-center gap-2.5 px-3 h-8 text-left transition-colors rounded-md mx-1',
+													isSelected ? 'bg-[#0a84ff]' : 'hover:bg-[#3a3a3c]',
 												)}
+												style={{ width: 'calc(100% - 8px)' }}
 											>
 												<span
 													className={cx(
-														'flex items-center justify-center size-7 rounded-md [&>svg]:size-4',
-														isSelected
-															? 'bg-[#0a84ff] text-white'
-															: 'bg-[#3a3a3c] text-[#98989f]',
+														'[&>svg]:size-4',
+														isSelected ? 'text-white' : 'text-[#98989f]',
 													)}
 												>
 													{cmd.icon}
 												</span>
-												<span className="flex-1 text-[14px] text-[#f5f5f7]">
+												<span
+													className={cx(
+														'flex-1 text-[13px]',
+														isSelected ? 'text-white' : 'text-[#f5f5f7]',
+													)}
+												>
 													{cmd.label}
 												</span>
 												{cmd.shortcut && (
@@ -525,7 +531,12 @@ function CommandMenuPortal({
 														{cmd.shortcut.split(' ').map((k) => (
 															<kbd
 																key={k}
-																className="px-1.5 py-0.5 text-[11px] text-[#6e6e73] bg-[#1c1c1e] rounded border border-[#3a3a3c]"
+																className={cx(
+																	'min-w-[20px] h-5 flex items-center justify-center text-[11px] rounded border',
+																	isSelected
+																		? 'text-white/70 bg-white/10 border-white/20'
+																		: 'text-[#6e6e73] bg-[#1c1c1e] border-[#3a3a3c]',
+																)}
 															>
 																{k}
 															</kbd>
@@ -533,7 +544,12 @@ function CommandMenuPortal({
 													</span>
 												)}
 												{cmd.hasSubmenu && (
-													<ChevronRightIcon className="size-4 text-[#6e6e73]" />
+													<ChevronRightIcon
+														className={cx(
+															'size-3.5',
+															isSelected ? 'text-white/70' : 'text-[#6e6e73]',
+														)}
+													/>
 												)}
 											</button>
 										)
@@ -613,15 +629,26 @@ function CommandMenuPortal({
 										}}
 										onMouseEnter={() => setSelectedIndex(i)}
 										className={cx(
-											'w-full flex items-center justify-between px-3.5 py-2 transition-colors',
-											isSelected ? 'bg-[#3a3a3c]' : 'hover:bg-[#2c2c2e]',
+											'w-full flex items-center justify-between px-3 h-8 transition-colors rounded-md mx-1',
+											isSelected ? 'bg-[#0a84ff]' : 'hover:bg-[#3a3a3c]',
 										)}
+										style={{ width: 'calc(100% - 8px)' }}
 									>
-										<span className="text-[14px] text-[#f5f5f7]">
+										<span
+											className={cx(
+												'text-[13px]',
+												isSelected ? 'text-white' : 'text-[#f5f5f7]',
+											)}
+										>
 											{lang.name}
 										</span>
 										{isActive && (
-											<CheckIcon className="size-4 text-[#30d158]" />
+											<CheckIcon
+												className={cx(
+													'size-4',
+													isSelected ? 'text-white' : 'text-[#30d158]',
+												)}
+											/>
 										)}
 									</button>
 								)
