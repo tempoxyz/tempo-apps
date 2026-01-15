@@ -65,6 +65,16 @@ function formatRelativeTime(timestamp: bigint): string {
 	return new Date(Number(timestamp) * 1000).toLocaleDateString()
 }
 
+function formatExpiryCountdown(expiresAt: bigint): string | null {
+	if (expiresAt === 0n) return null
+	const now = Math.floor(Date.now() / 1000)
+	const remaining = Number(expiresAt) - now
+	if (remaining <= 0) return null
+	if (remaining < 3600) return `${Math.ceil(remaining / 60)}m left`
+	if (remaining < 86400) return `${Math.ceil(remaining / 3600)}h left`
+	return `${Math.ceil(remaining / 86400)}d left`
+}
+
 function getIconComponent(iconName: string) {
 	const icons: Record<string, React.ComponentType<{ className?: string }>> = {
 		send: SendIcon,
@@ -603,7 +613,7 @@ function TransactionCard({
 					) : (
 						<span className="flex items-center gap-1 px-2 py-0.5 rounded-full glass-thin text-secondary text-[11px]">
 							<ClockIcon className="size-3" />
-							Pending
+							{formatExpiryCountdown(tx.expiresAt) ?? 'Pending'}
 						</span>
 					)}
 				</div>
