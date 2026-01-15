@@ -50,7 +50,9 @@
 		"showZeroBalances": "显示零余额",
 		"noActivityYet": "暂无活动",
 		"noActivityInBlock": "此区块无活动",
-		"noAssetsFound": "未找到资产"
+		"noAssetsFound": "未找到资产",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "开始使用",

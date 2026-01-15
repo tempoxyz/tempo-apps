@@ -50,7 +50,9 @@
 		"showZeroBalances": "शून्य शेष दिखाएं",
 		"noActivityYet": "अभी तक कोई गतिविधि नहीं",
 		"noActivityInBlock": "इस ब्लॉक में कोई गतिविधि नहीं",
-		"noAssetsFound": "कोई संपत्ति नहीं मिली"
+		"noAssetsFound": "कोई संपत्ति नहीं मिली",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "शुरू करें",

@@ -50,7 +50,9 @@
 		"showZeroBalances": "แสดงยอดเงินศูนย์",
 		"noActivityYet": "ยังไม่มีกิจกรรม",
 		"noActivityInBlock": "ไม่มีกิจกรรมในบล็อกนี้",
-		"noAssetsFound": "ไม่พบสินทรัพย์"
+		"noAssetsFound": "ไม่พบสินทรัพย์",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "เริ่มต้น",

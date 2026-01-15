@@ -50,7 +50,9 @@
 		"showZeroBalances": "Zobrazit nulové zůstatky",
 		"noActivityYet": "Zatím žádná aktivita",
 		"noActivityInBlock": "Žádná aktivita v tomto bloku",
-		"noAssetsFound": "Žádná aktiva nenalezena"
+		"noAssetsFound": "Žádná aktiva nenalezena",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "Začít",

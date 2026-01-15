@@ -50,7 +50,9 @@
 		"showZeroBalances": "Vis nullsaldoer",
 		"noActivityYet": "Ingen aktivitet ennå",
 		"noActivityInBlock": "Ingen aktivitet i denne blokken",
-		"noAssetsFound": "Ingen eiendeler funnet"
+		"noAssetsFound": "Ingen eiendeler funnet",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "Kom i gang",

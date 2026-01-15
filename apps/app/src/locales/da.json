@@ -50,7 +50,9 @@
 		"showZeroBalances": "Vis nulsaldi",
 		"noActivityYet": "Ingen aktivitet endnu",
 		"noActivityInBlock": "Ingen aktivitet i denne blok",
-		"noAssetsFound": "Ingen aktiver fundet"
+		"noAssetsFound": "Ingen aktiver fundet",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "Kom i gang",

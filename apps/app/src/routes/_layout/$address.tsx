@@ -2868,21 +2868,22 @@ function ActivitySection({
 
 					const items: ActivityItem[] = []
 					for (const receipt of result.receipts) {
+						let events: KnownEvent[] = []
 						try {
 							const viemReceipt = convertRpcReceiptToViemReceipt(receipt)
-							const events = parseKnownEvents(viemReceipt, {
+							events = parseKnownEvents(viemReceipt, {
 								getTokenMetadata,
 								viewer: receipt.from,
 							})
-							items.push({
-								hash: receipt.transactionHash,
-								events,
-								timestamp: result.timestamp,
-								blockNumber: selectedBlock,
-							})
 						} catch {
-							// skip
+							// parsing failed, show tx with empty events
 						}
+						items.push({
+							hash: receipt.transactionHash,
+							events,
+							timestamp: result.timestamp,
+							blockNumber: selectedBlock,
+						})
 					}
 					setBlockActivity(items)
 				} else {
@@ -2968,7 +2969,7 @@ function ActivitySection({
 					<div className="border-b border-border-tertiary -mx-4 mt-2 mb-3" />
 
 					{selectedBlock === undefined ? (
-						<div className="flex flex-col items-center justify-center py-6 gap-2">
+						<div className="flex flex-col items-center justify-center min-h-[80px] py-6 gap-2">
 							<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
 								<ReceiptIcon className="size-5 text-tertiary" />
 							</div>
@@ -2978,14 +2979,10 @@ function ActivitySection({
 							</p>
 						</div>
 					) : isLoadingBlock ? (
-						<div className="flex flex-col items-center justify-center py-6 gap-2">
-							<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
-								<RefreshCwIcon className="size-5 text-tertiary animate-spin" />
+						<div className="flex flex-col items-center justify-center min-h-[80px] py-6 gap-2">
+							<div className="size-8 rounded-full bg-base-alt/50 flex items-center justify-center">
+								<RefreshCwIcon className="size-4 text-tertiary animate-spin" />
 							</div>
-							<p className="text-[13px] text-secondary">
-								{t('portfolio.loadingBlockTxs') ||
-									'Loading block transactions...'}
-							</p>
 						</div>
 					) : blockActivity.length === 0 ? (
 						<div className="flex flex-col items-center justify-center py-6 gap-2">
@@ -3203,7 +3200,14 @@ function ActivityRow({
 					seenAs={viewer}
 					transformEvent={transformEvent}
 					limitFilter={preferredEventsFilter}
-					emptyContent={t('common.transaction')}
+					emptyContent={
+						<span className="flex items-center gap-1.5">
+							<span className="text-secondary">{t('common.transaction')}</span>
+							<span className="text-tertiary font-mono text-[11px]">
+								{item.hash.slice(0, 10)}...
+							</span>
+						</span>
+					}
 				/>
 				<a
 					href={`https://explore.mainnet.tempo.xyz/tx/${item.hash}`}

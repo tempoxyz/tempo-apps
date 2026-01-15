@@ -50,7 +50,9 @@
 		"showZeroBalances": "Tunjukkan baki sifar",
 		"noActivityYet": "Tiada aktiviti lagi",
 		"noActivityInBlock": "Tiada aktiviti dalam blok ini",
-		"noAssetsFound": "Tiada aset dijumpai"
+		"noAssetsFound": "Tiada aset dijumpai",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "Mula",

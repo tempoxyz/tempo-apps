@@ -50,7 +50,9 @@
 		"showZeroBalances": "Montri nulajn bilancojn",
 		"noActivityYet": "Ankoraŭ neniu agado",
 		"noActivityInBlock": "Neniu agado en ĉi tiu bloko",
-		"noAssetsFound": "Neniuj aktivaĵoj trovitaj"
+		"noAssetsFound": "Neniuj aktivaĵoj trovitaj",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "Komenci",

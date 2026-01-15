@@ -50,7 +50,9 @@
 		"showZeroBalances": "Näytä nollasaldot",
 		"noActivityYet": "Ei vielä toimintaa",
 		"noActivityInBlock": "Ei toimintaa tässä lohkossa",
-		"noAssetsFound": "Varoja ei löytynyt"
+		"noAssetsFound": "Varoja ei löytynyt",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "Aloita",

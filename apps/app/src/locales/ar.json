@@ -50,7 +50,9 @@
 		"showZeroBalances": "إظهار الأرصدة الصفرية",
 		"noActivityYet": "لا يوجد نشاط بعد",
 		"noActivityInBlock": "لا يوجد نشاط في هذا البلوك",
-		"noAssetsFound": "لم يتم العثور على أصول"
+		"noAssetsFound": "لم يتم العثور على أصول",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "ابدأ",
