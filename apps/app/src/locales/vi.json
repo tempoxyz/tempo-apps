@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Ngày",
 		"time": "Thời gian"
+	},
+	"activity": {
+		"send": "Gửi",
+		"received": "Đã nhận",
+		"mint": "Đúc",
+		"burn": "Đốt",
+		"swap": "Hoán đổi",
+		"approve": "Phê duyệt",
+		"grantRole": "Cấp vai trò",
+		"revokeRole": "Thu hồi vai trò",
+		"pauseTransfers": "Tạm dừng chuyển",
+		"resumeTransfers": "Tiếp tục chuyển",
+		"createToken": "Tạo token",
+		"partialFill": "Khớp một phần",
+		"completeFill": "Khớp hoàn toàn",
+		"cancelOrder": "Hủy lệnh",
+		"setFeeToken": "Đặt token phí",
+		"payFee": "Trả phí",
+		"to": "đến",
+		"from": "từ",
+		"self": "chính mình",
+		"andMore": "và {{count}} nữa"
 	}
 }

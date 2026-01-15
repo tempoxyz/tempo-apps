@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Data",
 		"time": "Ora"
+	},
+	"activity": {
+		"send": "Invia",
+		"received": "Ricevuto",
+		"mint": "Conio",
+		"burn": "Brucia",
+		"swap": "Scambia",
+		"approve": "Approva",
+		"grantRole": "Concedi ruolo",
+		"revokeRole": "Revoca ruolo",
+		"pauseTransfers": "Sospendi trasferimenti",
+		"resumeTransfers": "Riprendi trasferimenti",
+		"createToken": "Crea token",
+		"partialFill": "Esecuzione parziale",
+		"completeFill": "Esecuzione completa",
+		"cancelOrder": "Annulla ordine",
+		"setFeeToken": "Imposta token commissione",
+		"payFee": "Paga commissione",
+		"to": "a",
+		"from": "da",
+		"self": "stesso",
+		"andMore": "e altri {{count}}"
 	}
 }

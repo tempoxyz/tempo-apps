@@ -64,5 +64,27 @@
 		"hash": "Хеш",
 		"date": "Дата",
 		"time": "Время"
+	},
+	"activity": {
+		"send": "Отправить",
+		"received": "Получено",
+		"mint": "Выпуск",
+		"burn": "Сжигание",
+		"swap": "Обмен",
+		"approve": "Одобрить",
+		"grantRole": "Предоставить роль",
+		"revokeRole": "Отозвать роль",
+		"pauseTransfers": "Приостановить переводы",
+		"resumeTransfers": "Возобновить переводы",
+		"createToken": "Создать токен",
+		"partialFill": "Частичное исполнение",
+		"completeFill": "Полное исполнение",
+		"cancelOrder": "Отменить заказ",
+		"setFeeToken": "Установить токен комиссии",
+		"payFee": "Оплатить комиссию",
+		"to": "кому",
+		"from": "от",
+		"self": "себе",
+		"andMore": "и ещё {{count}}"
 	}
 }
