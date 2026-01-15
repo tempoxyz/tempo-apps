@@ -17,7 +17,6 @@ import {
 	parseKnownEvents,
 	preferredEventsFilter,
 	getPerspectiveEvent,
-	expandSelfSends,
 	type KnownEvent,
 	type GetTokenMetadataFn,
 } from '#comps/activity'
@@ -2041,17 +2040,13 @@ function ActivityRow({
 	const { t } = useTranslation()
 	const [showModal, setShowModal] = React.useState(false)
 
-	// Expand self-sends to show both Send and Received
-	const expandedEvents = React.useMemo(
-		() => expandSelfSends(item.events, viewer),
-		[item.events, viewer],
-	)
+
 
 	return (
 		<>
 			<div className="group flex items-center gap-2 px-3 h-[48px] rounded-xl hover:glass-thin transition-all">
 				<TxDescription.ExpandGroup
-					events={expandedEvents}
+					events={item.events}
 					seenAs={viewer}
 					transformEvent={transformEvent}
 					limitFilter={preferredEventsFilter}

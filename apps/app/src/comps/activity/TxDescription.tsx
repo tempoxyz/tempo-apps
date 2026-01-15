@@ -154,6 +154,30 @@ function shortenAddress(address: string, chars = 4): string {
 	return `${address.slice(0, chars + 2)}…${address.slice(-chars)}`
 }
 
+const actionTranslationKeys: Record<string, string> = {
+	send: 'activity.send',
+	received: 'activity.received',
+	mint: 'activity.mint',
+	burn: 'activity.burn',
+	swap: 'activity.swap',
+	approve: 'activity.approve',
+	'grant role': 'activity.grantRole',
+	'revoke role': 'activity.revokeRole',
+	'pause transfers': 'activity.pauseTransfers',
+	'resume transfers': 'activity.resumeTransfers',
+	'create token': 'activity.createToken',
+	'partial fill': 'activity.partialFill',
+	'complete fill': 'activity.completeFill',
+	'cancel order': 'activity.cancelOrder',
+	'set fee token': 'activity.setFeeToken',
+	'pay fee': 'activity.payFee',
+}
+
+const textTranslationKeys: Record<string, string> = {
+	to: 'activity.to',
+	from: 'activity.from',
+}
+
 export function TxDescription(props: TxDescription.Props) {
 	const { event, seenAs, className, suffix } = props
 	return (
@@ -185,6 +209,7 @@ export namespace TxDescription {
 
 	export function Part(props: Part.Props) {
 		const { part, seenAs } = props
+		const { t } = useTranslation()
 		switch (part.type) {
 			case 'account': {
 				const isSelf = seenAs ? isAddressEqual(part.value, seenAs) : false
@@ -197,19 +222,24 @@ export namespace TxDescription {
 						>
 							{shortenAddress(part.value)}
 						</Link>
-						{isSelf && <span className="text-tertiary">(self)</span>}
+						{isSelf && (
+							<span className="text-tertiary">({t('activity.self')})</span>
+						)}
 					</>
 				)
 			}
 			case 'action': {
 				const { icon, color, bg } = getActionStyle(part.value)
+				const translationKey =
+					actionTranslationKeys[part.value.toLowerCase()] ?? null
+				const displayText = translationKey ? t(translationKey) : part.value
 				return (
 					<span
 						className="inline-flex items-center gap-1 h-[24px] px-[6px] capitalize rounded-[4px]"
 						style={{ color, backgroundColor: bg }}
 					>
 						{icon}
-						{part.value}
+						{displayText}
 					</span>
 				)
 			}
@@ -276,8 +306,11 @@ export namespace TxDescription {
 							HexFormatter.shortenHex(part.value)}
 					</span>
 				)
-			case 'text':
-				return <span className="text-tertiary">{part.value}</span>
+			case 'text': {
+				const textKey = textTranslationKeys[part.value.toLowerCase()] ?? null
+				const displayText = textKey ? t(textKey) : part.value
+				return <span className="text-tertiary">{displayText}</span>
+			}
 			case 'tick':
 				return <span className="items-end">{part.value}</span>
 			case 'token': {
@@ -320,6 +353,7 @@ export namespace TxDescription {
 			limit = 1,
 			limitFilter,
 		} = props
+		const { t } = useTranslation()
 		const [expanded, setExpanded] = React.useState(false)
 
 		if (!events || events.length === 0)
@@ -358,7 +392,7 @@ export namespace TxDescription {
 										onClick={() => setExpanded(true)}
 										className="text-tertiary cursor-pointer press-down shrink-0"
 									>
-										and {remainingCount} more
+										{t('activity.andMore', { count: remainingCount })}
 									</button>
 								)
 							}
