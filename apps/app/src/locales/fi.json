@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Piilota nollasaldot",
 		"showZeroBalances": "Näytä nollasaldot",
 		"noActivityYet": "Ei vielä toimintaa",
+		"noActivityInBlock": "Ei toimintaa tässä lohkossa",
 		"noAssetsFound": "Varoja ei löytynyt"
 	},
 	"landing": {

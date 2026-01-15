@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Skrýt nulové zůstatky",
 		"showZeroBalances": "Zobrazit nulové zůstatky",
 		"noActivityYet": "Zatím žádná aktivita",
+		"noActivityInBlock": "Žádná aktivita v tomto bloku",
 		"noAssetsFound": "Žádná aktiva nenalezena"
 	},
 	"landing": {

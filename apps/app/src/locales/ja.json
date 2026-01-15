@@ -49,6 +49,7 @@
 		"hideZeroBalances": "ゼロ残高を非表示",
 		"showZeroBalances": "ゼロ残高を表示",
 		"noActivityYet": "アクティビティはまだありません",
+		"noActivityInBlock": "このブロックにはアクティビティがありません",
 		"noAssetsFound": "資産が見つかりません"
 	},
 	"landing": {

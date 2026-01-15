@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Itago ang zero balanse",
 		"showZeroBalances": "Ipakita ang zero balanse",
 		"noActivityYet": "Wala pang aktibidad",
+		"noActivityInBlock": "Walang aktibidad sa block na ito",
 		"noAssetsFound": "Walang nahanap na asset"
 	},
 	"landing": {
