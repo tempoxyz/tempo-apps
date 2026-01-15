@@ -113,7 +113,18 @@ type ApiTransaction = {
 	timestamp?: string
 }
 
+// Client-side env (for non-server code)
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
+
+// Helper to get tempo env from Cloudflare Workers env (for server functions)
+async function getTempoEnv(): Promise<string | undefined> {
+	try {
+		const { env } = await import('cloudflare:workers')
+		return env.VITE_TEMPO_ENV as string | undefined
+	} catch {
+		return TEMPO_ENV
+	}
+}
 
 type RpcLog = {
 	address: `0x${string}`
@@ -146,8 +157,9 @@ const fetchTransactionReceipts = createServerFn({ method: 'POST' })
 	.inputValidator((data: { hashes: string[] }) => data)
 	.handler(async ({ data }) => {
 		const { hashes } = data
+		const tempoEnv = await getTempoEnv()
 		const rpcUrl =
-			TEMPO_ENV === 'presto'
+			tempoEnv === 'presto'
 				? 'https://rpc.presto.tempo.xyz'
 				: 'https://rpc.tempo.xyz'
 
@@ -156,7 +168,7 @@ const fetchTransactionReceipts = createServerFn({ method: 'POST' })
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
-		if (auth && TEMPO_ENV === 'presto') {
+		if (auth && tempoEnv === 'presto') {
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
@@ -197,8 +209,9 @@ const fetchBlockData = createServerFn({ method: 'GET' })
 	.inputValidator((data: { fromBlock: string; count: number }) => data)
 	.handler(async ({ data }) => {
 		const { fromBlock, count } = data
+		const tempoEnv = await getTempoEnv()
 		const rpcUrl =
-			TEMPO_ENV === 'presto'
+			tempoEnv === 'presto'
 				? 'https://rpc.presto.tempo.xyz'
 				: 'https://rpc.tempo.xyz'
 
@@ -207,7 +220,7 @@ const fetchBlockData = createServerFn({ method: 'GET' })
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
-		if (auth && TEMPO_ENV === 'presto') {
+		if (auth && tempoEnv === 'presto') {
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
@@ -255,8 +268,9 @@ const fetchBlockData = createServerFn({ method: 'GET' })
 
 const fetchCurrentBlockNumber = createServerFn({ method: 'GET' }).handler(
 	async () => {
+		const tempoEnv = await getTempoEnv()
 		const rpcUrl =
-			TEMPO_ENV === 'presto'
+			tempoEnv === 'presto'
 				? 'https://rpc.presto.tempo.xyz'
 				: 'https://rpc.tempo.xyz'
 
@@ -265,7 +279,7 @@ const fetchCurrentBlockNumber = createServerFn({ method: 'GET' }).handler(
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
-		if (auth && TEMPO_ENV === 'presto') {
+		if (auth && tempoEnv === 'presto') {
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
@@ -297,8 +311,9 @@ const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 	.inputValidator((data: { address: string }) => data)
 	.handler(async ({ data }) => {
 		const { address } = data
+		const tempoEnv = await getTempoEnv()
 		const explorerUrl =
-			TEMPO_ENV === 'presto'
+			tempoEnv === 'presto'
 				? 'https://explore.presto.tempo.xyz'
 				: 'https://explore.mainnet.tempo.xyz'
 
@@ -337,8 +352,9 @@ const fetchBlockWithReceipts = createServerFn({ method: 'GET' })
 	.inputValidator((data: { blockNumber: string }) => data)
 	.handler(async ({ data }) => {
 		const { blockNumber } = data
+		const tempoEnv = await getTempoEnv()
 		const rpcUrl =
-			TEMPO_ENV === 'presto'
+			tempoEnv === 'presto'
 				? 'https://rpc.presto.tempo.xyz'
 				: 'https://rpc.tempo.xyz'
 
@@ -353,7 +369,7 @@ const fetchBlockWithReceipts = createServerFn({ method: 'GET' })
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
-		if (auth && TEMPO_ENV === 'presto') {
+		if (auth && tempoEnv === 'presto') {
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
@@ -2695,7 +2711,6 @@ function ActivitySection({
 	const [activeTab, setActiveTab] = React.useState<ActivityTab>('mine')
 	const [selectedBlock, setSelectedBlock] = React.useState<bigint | undefined>()
 	const [blockActivity, setBlockActivity] = React.useState<ActivityItem[]>([])
-	const [isLoadingBlock, setIsLoadingBlock] = React.useState(false)
 
 	const userTxHashes = React.useMemo(
 		() => new Set(activity.map((a) => a.hash.toLowerCase())),
@@ -2717,7 +2732,6 @@ function ActivitySection({
 
 		let cancelled = false
 		const loadBlockTxs = async () => {
-			setIsLoadingBlock(true)
 			try {
 				const result = await fetchBlockWithReceipts({
 					data: { blockNumber: selectedBlock.toString() },
@@ -2771,10 +2785,6 @@ function ActivitySection({
 				if (!cancelled) {
 					setBlockActivity([])
 					setLoadedBlock(selectedBlock)
-				}
-			} finally {
-				if (!cancelled) {
-					setIsLoadingBlock(false)
 				}
 			}
 		}
@@ -2865,12 +2875,7 @@ function ActivitySection({
 							</p>
 						</div>
 					) : (
-						<div className="relative">
-							{isLoadingBlock && (
-								<div className="absolute inset-0 bg-card-header/80 flex items-center justify-center z-10">
-									<RefreshCwIcon className="size-5 text-tertiary animate-spin" />
-								</div>
-							)}
+						<div>
 							{blockActivity.length === 0 && loadedBlock === selectedBlock ? (
 								<div className="flex flex-col items-center justify-center py-6 gap-2">
 									<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
