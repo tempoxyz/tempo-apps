@@ -67,10 +67,11 @@ const FAUCET_TOKEN_ADDRESSES = new Set([
 ])
 
 // Default faucet token data to inject when user has no assets
+// TODO: Remove priceUsd: 1 assumption once proper price oracle is implemented
 const FAUCET_TOKEN_DEFAULTS: AssetData[] = [
 	{
 		address: '0x20c000000000000000000000033abb6ac7d235e5' as `0x${string}`,
-		metadata: { name: 'DONOTUSE', symbol: 'DONOTUSE', decimals: 6 },
+		metadata: { name: 'DONOTUSE', symbol: 'DONOTUSE', decimals: 6, priceUsd: 1 },
 		balance: '0',
 		valueUsd: 0,
 	},

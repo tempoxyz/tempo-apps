@@ -14,6 +14,8 @@ import {
 } from 'wagmi'
 import { KeyManager, webAuthn } from 'wagmi/tempo'
 
+const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
+
 // Helper to convert ArrayBuffer to base64
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
 	const bytes = new Uint8Array(buffer)
@@ -51,11 +53,16 @@ function serializeCredential(credential: PublicKeyCredential) {
 function getKeyManagerBaseUrl() {
 	if (typeof window !== 'undefined') {
 		const hostname = window.location.hostname
+		// Local dev or workers.dev preview
 		if (hostname === 'localhost' || hostname.endsWith('.workers.dev')) {
 			return 'https://key-manager.porto.workers.dev/keys'
 		}
+		// Production presto/mainnet domains
+		if (hostname.includes('presto') || hostname.includes('mainnet')) {
+			return 'https://keys.tempo.xyz/keys'
+		}
 	}
-	// Production or SSR fallback
+	// SSR fallback based on env
 	return TEMPO_ENV === 'presto'
 		? 'https://keys.tempo.xyz/keys'
 		: 'https://key-manager-mainnet.porto.workers.dev/keys'
@@ -106,8 +113,6 @@ function getKeyManager() {
 		},
 	} as ReturnType<typeof KeyManager.http>
 }
-
-const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 
