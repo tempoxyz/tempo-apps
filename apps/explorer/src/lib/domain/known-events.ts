@@ -519,6 +519,47 @@ function createDetectors(
 			return null
 		},
 
+		accountKeychain(event: ParsedEvent) {
+			const { eventName, args } = event
+
+			if (eventName === 'KeyAuthorized')
+				return {
+					type: 'key authorized',
+					parts: [
+						{ type: 'action', value: 'Authorize Key' },
+						{ type: 'account', value: args.publicKey },
+						{ type: 'text', value: 'for' },
+						{ type: 'account', value: args.account },
+					],
+				}
+
+			if (eventName === 'KeyRevoked')
+				return {
+					type: 'key revoked',
+					parts: [
+						{ type: 'action', value: 'Revoke Key' },
+						{ type: 'account', value: args.publicKey },
+						{ type: 'text', value: 'for' },
+						{ type: 'account', value: args.account },
+					],
+				}
+
+			if (eventName === 'SpendingLimitUpdated')
+				return {
+					type: 'spending limit updated',
+					parts: [
+						{ type: 'action', value: 'Update Spending Limit' },
+						{ type: 'account', value: args.publicKey },
+					],
+					note: [
+						['Token', { type: 'token', value: { address: args.token } }],
+						['New Limit', { type: 'number', value: args.newLimit }],
+					],
+				}
+
+			return null
+		},
+
 		feeAmm(event: ParsedEvent) {
 			const { eventName, args, address } = event
 
@@ -740,6 +781,7 @@ export function parseKnownEvent(
 		detectors.tip403Registry(event) ||
 		detectors.feeManager(event) ||
 		detectors.nonce(event) ||
+		detectors.accountKeychain(event) ||
 		detectors.feeAmm(event)
 
 	if (!detected || isFeeTransferEvent(detected)) return null
@@ -749,7 +791,8 @@ export function parseKnownEvent(
 // e.g. for TxEventDescription.ExpandGroup's limitFilter
 export function preferredEventsFilter(event: KnownEvent): boolean {
 	return (
-		event.type !== 'active key count changed' &&
+		event.type !== 'key authorized' &&
+		event.type !== 'key revoked' &&
 		event.type !== 'nonce incremented'
 	)
 }
@@ -1103,6 +1146,7 @@ export function parseKnownEvents(
 			detectors.tip403Registry(event) ||
 			detectors.feeManager(event) ||
 			detectors.nonce(event) ||
+			detectors.accountKeychain(event) ||
 			detectors.feeAmm(event)
 
 		if (!detected) continue
