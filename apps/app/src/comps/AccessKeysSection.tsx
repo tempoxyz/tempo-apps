@@ -21,6 +21,7 @@ import { Account as TempoAccount, Abis } from 'viem/tempo'
 import { useAccount, useConnectorClient } from 'wagmi'
 import { getTempoChain } from '#wagmi.config'
 import { TokenIcon } from '#comps/TokenIcon'
+import { Section } from '#comps/Section'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
 import KeyIcon from '~icons/lucide/key-round'
@@ -43,7 +44,7 @@ export type AssetData = {
 	valueUsd: number | undefined
 }
 
-type AccessKeyData = {
+export type AccessKeyData = {
 	keyId: string
 	signatureType: SignatureType
 	expiry: number
@@ -77,7 +78,7 @@ function formatExpiry(expiryMs: number): string {
 	return `${minutes}m`
 }
 
-function formatBigIntAmount(amount: bigint, decimals: number): string {
+export function formatBigIntAmount(amount: bigint, decimals: number): string {
 	const formatted = formatUnits(amount, decimals)
 	const num = Number.parseFloat(formatted)
 	if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`
@@ -90,7 +91,7 @@ function shortenAddress(address: string, chars = 4): string {
 	return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`
 }
 
-function formatCreatedAt(timestamp: number): string {
+export function formatCreatedAt(timestamp: number): string {
 	const now = Date.now()
 	const diff = now - timestamp
 
@@ -108,7 +109,7 @@ function formatCreatedAt(timestamp: number): string {
 }
 
 // Hook for fetching on-chain access keys
-function useOnChainAccessKeys(
+export function useOnChainAccessKeys(
 	accountAddress: string,
 	shouldPoll: boolean,
 	tokenAddresses: string[],
@@ -430,7 +431,10 @@ function AccessKeyRow({
 		? accessKey.originalLimits.get(asset.address.toLowerCase())
 		: undefined
 	// Use remaining limit if available, otherwise check if enforceLimits is true
-	const hasLimit = remainingLimit !== undefined || accessKey.enforceLimits || originalLimit !== undefined
+	const hasLimit =
+		remainingLimit !== undefined ||
+		accessKey.enforceLimits ||
+		originalLimit !== undefined
 
 	// Check if private key is available in localStorage
 	const [hasPrivateKey, setHasPrivateKey] = React.useState<boolean | null>(null)
@@ -697,28 +701,6 @@ function CreateKeyForm({
 					Cancel
 				</button>
 			</div>
-		</div>
-	)
-}
-
-function Section({
-	title,
-	headerRight,
-	children,
-}: {
-	title: string
-	headerRight?: React.ReactNode
-	children: React.ReactNode
-}) {
-	return (
-		<div className="flex flex-col gap-2">
-			<div className="flex items-center gap-2 px-1">
-				<h3 className="text-[11px] text-tertiary uppercase tracking-wide font-medium">
-					{title}
-				</h3>
-				{headerRight}
-			</div>
-			{children}
 		</div>
 	)
 }
@@ -990,7 +972,7 @@ export function AccessKeysSection({
 		) : null
 
 	return (
-		<Section title="Access Keys" headerRight={headerPill}>
+		<Section title="Access Keys" headerRight={headerPill} defaultOpen={false}>
 			{isLoadingKeys ? (
 				<div className="flex flex-col items-center py-4 gap-2">
 					<p className="text-[13px] text-secondary">Loading access keys...</p>
