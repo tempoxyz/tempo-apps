@@ -119,11 +119,11 @@ function AmbientGradient() {
 
 	return (
 		<div
-			className="absolute inset-0 pointer-events-none transition-opacity duration-700"
+			className="absolute inset-6 pointer-events-none transition-opacity duration-700 rounded-2xl"
 			style={{
 				opacity: pulse + intensity * 0.1,
 				background: `conic-gradient(from ${rotation}deg at ${posX}% ${posY}%, ${gradientStops}, ${colors[0]} 360deg)`,
-				filter: 'blur(50px)',
+				filter: 'blur(80px)',
 				transform: `scale(${scale})`,
 			}}
 		/>
