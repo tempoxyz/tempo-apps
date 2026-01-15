@@ -2447,7 +2447,7 @@ function AssetRow({
 						{asset.valueUsd !== undefined ? (
 							formatUsdCompact(asset.valueUsd)
 						) : (
-							<span className="text-tertiary">…</span>
+							<span className="text-tertiary">−</span>
 						)}
 					</span>
 				</span>
@@ -2467,7 +2467,7 @@ function AssetRow({
 					{asset.valueUsd !== undefined ? (
 						formatUsdCompact(asset.valueUsd)
 					) : (
-						<span className="text-tertiary">…</span>
+						<span className="text-tertiary">−</span>
 					)}
 				</span>
 			</span>
