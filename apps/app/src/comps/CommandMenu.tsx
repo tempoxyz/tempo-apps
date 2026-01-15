@@ -124,7 +124,8 @@ function CommandMenuPortal({
 	const [connector] = useConnectors()
 
 	const isMac =
-		typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
+		typeof navigator !== 'undefined' &&
+		/Mac|iPhone|iPad/.test(navigator.userAgent)
 
 	const close = React.useCallback(() => {
 		setVisible(false)
@@ -148,12 +149,12 @@ function CommandMenuPortal({
 
 	React.useEffect(() => {
 		setSelectedIndex(0)
-	}, [query, view])
+	}, [])
 
 	React.useEffect(() => {
 		const el = listRef.current?.querySelector('[data-selected="true"]')
 		el?.scrollIntoView({ block: 'nearest' })
-	}, [selectedIndex])
+	}, [])
 
 	const commandGroups = React.useMemo((): CommandGroup[] => {
 		const groups: CommandGroup[] = []
@@ -324,7 +325,16 @@ function CommandMenuPortal({
 		groups.push({ label: t('commandMenu.links'), commands: links })
 
 		return groups
-	}, [t, account.address, navigate, close, router, disconnect, connect, connector])
+	}, [
+		t,
+		account.address,
+		navigate,
+		close,
+		router,
+		disconnect,
+		connect,
+		connector,
+	])
 
 	const filteredGroups = React.useMemo(() => {
 		if (!query.trim()) return commandGroups
@@ -502,9 +512,7 @@ function CommandMenuPortal({
 												onMouseEnter={() => setSelectedIndex(idx)}
 												className={cx(
 													'w-full flex items-center gap-4 px-4 py-3 mx-2 rounded-xl transition-all focus-ring',
-													isSelected
-														? 'bg-[#0a84ff]'
-														: 'hover:bg-white/5',
+													isSelected ? 'bg-[#0a84ff]' : 'hover:bg-white/5',
 												)}
 												style={{ width: 'calc(100% - 16px)' }}
 											>
@@ -638,9 +646,7 @@ function CommandMenuPortal({
 										onMouseEnter={() => setSelectedIndex(i)}
 										className={cx(
 											'w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all focus-ring',
-											isSelected
-												? 'bg-[#0a84ff]'
-												: 'hover:bg-white/5',
+											isSelected ? 'bg-[#0a84ff]' : 'hover:bg-white/5',
 										)}
 									>
 										<span
