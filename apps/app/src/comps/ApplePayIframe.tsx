@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import { cx } from '#lib/css'
 
 const COINBASE_PAY_ORIGIN = 'https://pay.coinbase.com'
@@ -26,8 +27,30 @@ function isMobileSafari(): boolean {
 export function ApplePayIframe(props: ApplePayIframe.Props) {
 	const { url, className, onLoad } = props
 	const iframeRef = React.useRef<HTMLIFrameElement>(null)
+	const placeholderRef = React.useRef<HTMLDivElement>(null)
 	const [isLoaded, setIsLoaded] = React.useState(false)
 	const [isExpanded, setIsExpanded] = React.useState(false)
+	const [placeholderRect, setPlaceholderRect] = React.useState<DOMRect | null>(
+		null,
+	)
+
+	React.useEffect(() => {
+		if (!placeholderRef.current) return
+
+		const updateRect = () => {
+			if (placeholderRef.current) {
+				setPlaceholderRect(placeholderRef.current.getBoundingClientRect())
+			}
+		}
+
+		updateRect()
+		window.addEventListener('resize', updateRect)
+		window.addEventListener('scroll', updateRect)
+		return () => {
+			window.removeEventListener('resize', updateRect)
+			window.removeEventListener('scroll', updateRect)
+		}
+	}, [isLoaded])
 
 	const parsedUrl = React.useMemo(() => {
 		try {
@@ -49,7 +72,6 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 		if (!parsedUrl) return null
 		const urlObj = new URL(parsedUrl)
 		if (import.meta.env.DEV) {
-			// urlObj.searchParams.set('useApplePaySandbox', 'true')
 			console.log('[debug] not setting useApplePaySandbox')
 		}
 		return urlObj.toString()
@@ -97,7 +119,7 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 
 		window.addEventListener('message', handleMessage)
 		return () => window.removeEventListener('message', handleMessage)
-	}, [])
+	}, [onLoad])
 
 	if (!parsedUrl) {
 		return (
@@ -108,27 +130,53 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 	}
 
 	const isMobileSafariBrowser = isMobileSafari()
+	const shouldExpandFullscreen = isExpanded && !isMobileSafariBrowser
 
 	return (
-		<iframe
-			ref={iframeRef}
-			src={iframeSrc ?? ''}
-			title="Apple Pay Checkout"
-			allow="payment"
-			sandbox="allow-scripts allow-same-origin"
-			referrerPolicy="no-referrer"
-			className={cx(
-				'border-0',
-				!isLoaded
-					? 'sr-only'
-					: isExpanded
-						? isMobileSafariBrowser
-							? 'sr-only'
-							: 'fixed inset-0 z-100 h-full! w-full'
-						: 'h-12.5 w-full',
-				className,
+		<>
+			{/* Placeholder to reserve space and measure position */}
+			<div
+				ref={placeholderRef}
+				className={cx(
+					'h-12.5',
+					!isLoaded && 'sr-only',
+					shouldExpandFullscreen && 'invisible',
+				)}
+			/>
+
+			{/* Always portal to body - position via CSS */}
+			{createPortal(
+				<div
+					className={cx(
+						shouldExpandFullscreen
+							? 'fixed inset-0 z-100'
+							: 'fixed z-100 pointer-events-auto',
+						!isLoaded && 'sr-only',
+					)}
+					style={
+						!shouldExpandFullscreen && placeholderRect
+							? {
+									top: placeholderRect.top,
+									left: placeholderRect.left,
+									width: placeholderRect.width,
+									height: placeholderRect.height,
+								}
+							: undefined
+					}
+				>
+					<iframe
+						ref={iframeRef}
+						src={iframeSrc ?? ''}
+						title="Apple Pay Checkout"
+						allow="payment"
+						sandbox="allow-scripts allow-same-origin"
+						referrerPolicy="no-referrer"
+						className={cx('border-0 h-full w-full', className)}
+					/>
+				</div>,
+				document.body,
 			)}
-		/>
+		</>
 	)
 }
 

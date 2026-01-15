@@ -1,10 +1,8 @@
 import * as React from 'react'
-import * as ReactDOM from 'react-dom'
 import { cx } from '#lib/css'
 import { useOnrampOrder, useShowApplePay } from '#lib/onramp'
 import { ApplePayIframe } from '#comps/ApplePayIframe'
 import LoaderIcon from '~icons/lucide/loader-2'
-import XIcon from '~icons/lucide/x'
 
 const PRESET_AMOUNTS = [25, 50, 100, 250]
 const MIN_AMOUNT = 5
@@ -17,8 +15,7 @@ export function AddFunds(props: AddFunds.Props) {
 	const [customAmount, setCustomAmount] = React.useState<string>('')
 	const [isCustom, setIsCustom] = React.useState(false)
 
-	const { createOrder, iframeUrl, reset, isLoading, lastOrderEvent } =
-		useOnrampOrder({
+	const { createOrder, iframeUrl, isLoading } = useOnrampOrder({
 			address,
 			onSuccess: () => {
 				console.log('Onramp success!')
@@ -168,42 +165,9 @@ export function AddFunds(props: AddFunds.Props) {
 			{isModalOpen && (
 				<ApplePayIframe
 					url={iframeUrl}
-					className="sr-only"
 					onLoad={() => setIsIframeLoaded(true)}
 				/>
 			)}
-
-			{isModalOpen &&
-				isIframeLoaded &&
-				ReactDOM.createPortal(
-					<div
-						className="fixed inset-y-0 left-1/2 right-0 z-50 flex items-center justify-center transition-opacity duration-200"
-						onClick={reset}
-					>
-						<div
-							className="relative w-full max-w-[400px] bg-surface border border-base-border rounded-xl shadow-xl animate-in fade-in zoom-in-95 duration-200"
-							onClick={(e) => e.stopPropagation()}
-						>
-							<button
-								type="button"
-								onClick={reset}
-								className="absolute top-3 right-3 z-10 size-[28px] flex items-center justify-center rounded-md cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt transition-colors"
-								title="Close"
-							>
-								<XIcon className="size-[16px]" />
-							</button>
-							<div className="p-4">
-								<ApplePayIframe url={iframeUrl} />
-								{lastOrderEvent && (
-									<div className="mt-2 text-[11px] text-tertiary font-mono">
-										Status: {lastOrderEvent.eventName.replace('onramp_api.', '')}
-									</div>
-								)}
-							</div>
-						</div>
-					</div>,
-					document.body,
-				)}
 		</>
 	)
 }
