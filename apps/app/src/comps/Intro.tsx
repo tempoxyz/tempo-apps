@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useTranslation } from 'react-i18next'
-import { StretchingWordmark } from './StretchingWordmark'
+import { ShaderWordmark } from './ShaderWordmark'
 import { useActivitySummary, type ActivityType } from '#lib/activity-context'
 import GlobeIcon from '~icons/lucide/globe'
 import BookOpenIcon from '~icons/lucide/book-open'
@@ -121,7 +121,7 @@ export function Intro() {
 	return (
 		<div className="relative flex min-h-full flex-col items-start justify-end rounded-[20px] liquid-glass-premium px-5 sm:px-6 py-5 overflow-hidden max-md:min-h-[120px] max-md:rounded-none max-md:py-3">
 			<AmbientGradient />
-			<StretchingWordmark className="absolute inset-0 max-md:hidden" />
+			<ShaderWordmark className="absolute inset-0 max-md:hidden" />
 			<div className="relative flex flex-col items-start gap-y-2 z-10 max-md:gap-y-1.5">
 				<TempoWordmark />
 				<p className="text-[15px] sm:text-[17px] leading-[22px] sm:leading-[24px] text-secondary max-md:text-[13px] max-md:leading-[18px] max-w-[280px] sm:max-w-none">
