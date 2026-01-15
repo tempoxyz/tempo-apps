@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Kaŝi nulajn bilancojn",
 		"showZeroBalances": "Montri nulajn bilancojn",
 		"noActivityYet": "Ankoraŭ neniu agado",
+		"noActivityInBlock": "Neniu agado en ĉi tiu bloko",
 		"noAssetsFound": "Neniuj aktivaĵoj trovitaj"
 	},
 	"landing": {

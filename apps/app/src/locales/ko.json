@@ -49,6 +49,7 @@
 		"hideZeroBalances": "잔액 0 숨기기",
 		"showZeroBalances": "잔액 0 표시",
 		"noActivityYet": "아직 활동이 없습니다",
+		"noActivityInBlock": "이 블록에 활동이 없습니다",
 		"noAssetsFound": "자산을 찾을 수 없음"
 	},
 	"landing": {

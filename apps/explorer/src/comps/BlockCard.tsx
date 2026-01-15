@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Hex } from 'ox'
 import * as React from 'react'
-import { useWatchBlockNumber } from 'wagmi'
+import { useWatchBlocks } from 'wagmi'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
 import { cx } from '#cva.config'
@@ -41,10 +41,14 @@ export function BlockCard(props: BlockCard.Props) {
 		return Number(latest - blockNumber) + 1
 	}
 
-	useWatchBlockNumber({
+	useWatchBlocks({
 		enabled: isMounted,
-		onBlockNumber: (newBlockNumber) => {
-			if (newBlockNumber > (latestBlockRef.current ?? 0n)) {
+		onBlock: (block) => {
+			const newBlockNumber = block.number
+			if (
+				newBlockNumber != null &&
+				newBlockNumber > (latestBlockRef.current ?? 0n)
+			) {
 				latestBlockRef.current = newBlockNumber
 				const confirmations = getConfirmations(newBlockNumber)
 				if (confirmationsRef.current) {

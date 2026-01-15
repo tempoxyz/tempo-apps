@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Skjul nullsaldoer",
 		"showZeroBalances": "Vis nullsaldoer",
 		"noActivityYet": "Ingen aktivitet ennå",
+		"noActivityInBlock": "Ingen aktivitet i denne blokken",
 		"noAssetsFound": "Ingen eiendeler funnet"
 	},
 	"landing": {

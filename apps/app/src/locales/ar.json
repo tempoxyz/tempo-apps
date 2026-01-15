@@ -49,6 +49,7 @@
 		"hideZeroBalances": "إخفاء الأرصدة الصفرية",
 		"showZeroBalances": "إظهار الأرصدة الصفرية",
 		"noActivityYet": "لا يوجد نشاط بعد",
+		"noActivityInBlock": "لا يوجد نشاط في هذا البلوك",
 		"noAssetsFound": "لم يتم العثور على أصول"
 	},
 	"landing": {

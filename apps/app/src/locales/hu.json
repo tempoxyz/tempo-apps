@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Nulla egyenlegek elrejtése",
 		"showZeroBalances": "Nulla egyenlegek megjelenítése",
 		"noActivityYet": "Még nincs tevékenység",
+		"noActivityInBlock": "Nincs tevékenység ebben a blokkban",
 		"noAssetsFound": "Nem található eszköz"
 	},
 	"landing": {

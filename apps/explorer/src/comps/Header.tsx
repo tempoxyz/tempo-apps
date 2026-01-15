@@ -5,7 +5,7 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useWatchBlockNumber } from 'wagmi'
+import { useWatchBlocks } from 'wagmi'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#cva.config'
 import { isTestnet } from '#lib/env'
@@ -24,11 +24,9 @@ export function Header(props: Header.Props) {
 						<Header.TempoWordmark />
 					</Link>
 					<Header.NetworkBadge />
-				</div>
-				<Header.Search />
-				<div className="relative z-1 print:hidden">
 					<Header.BlockNumber initial={initialBlockNumber} />
 				</div>
+				<Header.Search />
 			</div>
 			<Header.Search compact />
 		</header>
@@ -169,11 +167,12 @@ export namespace Header {
 
 		const ref = React.useRef<HTMLSpanElement>(null)
 
-		useWatchBlockNumber({
-			onBlockNumber: (blockNumber) => {
-				if (ref.current) ref.current.textContent = String(blockNumber)
+		useWatchBlocks({
+			onBlock: (block) => {
+				if (ref.current && block.number != null) {
+					ref.current.textContent = String(block.number)
+				}
 			},
-			poll: true,
 		})
 
 		return (
@@ -188,14 +187,12 @@ export namespace Header {
 				title="View latest block"
 			>
 				<SquareSquare className="size-[18px] text-accent" />
-				<div className="text-nowrap">
-					<span
-						ref={ref}
-						className="text-primary font-medium tabular-nums font-mono min-w-[6ch] inline-block"
-					>
-						{initial ? String(initial) : '…'}
-					</span>
-				</div>
+				<span
+					ref={ref}
+					className="text-primary font-medium tabular-nums font-mono min-w-[6ch] text-nowrap"
+				>
+					{initial ? String(initial) : '…'}
+				</span>
 			</Link>
 		)
 	}
