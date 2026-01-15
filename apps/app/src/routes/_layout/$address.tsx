@@ -472,7 +472,7 @@ const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 		}
 	})
 
-const fetchBlockTransactions = createServerFn({ method: 'GET' })
+const fetchBlockWithReceipts = createServerFn({ method: 'GET' })
 	.inputValidator((data: { blockNumber: string }) => data)
 	.handler(async ({ data }) => {
 		const { blockNumber } = data
@@ -498,7 +498,9 @@ const fetchBlockTransactions = createServerFn({ method: 'GET' })
 
 		try {
 			const blockHex = `0x${BigInt(blockNumber).toString(16)}`
-			const response = await fetch(rpcUrl, {
+
+			// First get block to get tx hashes
+			const blockRes = await fetch(rpcUrl, {
 				method: 'POST',
 				headers,
 				body: JSON.stringify({
@@ -508,26 +510,52 @@ const fetchBlockTransactions = createServerFn({ method: 'GET' })
 					params: [blockHex, true],
 				}),
 			})
-			if (!response.ok) {
-				return { transactions: [] as string[], timestamp: undefined, error: `HTTP ${response.status}` }
+			if (!blockRes.ok) {
+				return { receipts: [] as RpcTransactionReceipt[], timestamp: undefined, error: `HTTP ${blockRes.status}` }
 			}
-			const json = (await response.json()) as {
+			const blockJson = (await blockRes.json()) as {
 				result?: {
 					transactions?: Array<{ hash: string }>
 					timestamp?: string
 				}
-				error?: { message: string }
 			}
-			if (json.error) {
-				return { transactions: [] as string[], timestamp: undefined, error: json.error.message }
-			}
-			const txHashes = json.result?.transactions?.map((tx) => tx.hash) ?? []
-			const timestamp = json.result?.timestamp
-				? Number.parseInt(json.result.timestamp, 16) * 1000
+			const txHashes = blockJson.result?.transactions?.map((tx) => tx.hash) ?? []
+			const timestamp = blockJson.result?.timestamp
+				? Number.parseInt(blockJson.result.timestamp, 16) * 1000
 				: undefined
-			return { transactions: txHashes, timestamp, error: null }
+
+			if (txHashes.length === 0) {
+				return { receipts: [], timestamp, error: null }
+			}
+
+			// Batch fetch all receipts in single request
+			const batchRequest = txHashes.map((hash, i) => ({
+				jsonrpc: '2.0',
+				id: i + 1,
+				method: 'eth_getTransactionReceipt',
+				params: [hash],
+			}))
+
+			const receiptsRes = await fetch(rpcUrl, {
+				method: 'POST',
+				headers,
+				body: JSON.stringify(batchRequest),
+			})
+			if (!receiptsRes.ok) {
+				return { receipts: [], timestamp, error: `HTTP ${receiptsRes.status}` }
+			}
+			const receiptsJson = (await receiptsRes.json()) as Array<{
+				id: number
+				result?: RpcTransactionReceipt
+			}>
+
+			const receipts = txHashes
+				.map((_, i) => receiptsJson.find((r) => r.id === i + 1)?.result)
+				.filter((r): r is RpcTransactionReceipt => r !== undefined)
+
+			return { receipts, timestamp, error: null }
 		} catch (e) {
-			return { transactions: [] as string[], timestamp: undefined, error: String(e) }
+			return { receipts: [] as RpcTransactionReceipt[], timestamp: undefined, error: String(e) }
 		}
 	})
 
@@ -2551,30 +2579,25 @@ function ActivitySection({
 		const loadBlockTxs = async () => {
 			setIsLoadingBlock(true)
 			try {
-				const result = await fetchBlockTransactions({
+				// Single batched RPC call for block + all receipts
+				const result = await fetchBlockWithReceipts({
 					data: { blockNumber: selectedBlock.toString() },
 				})
-				if (result.transactions.length > 0) {
-					const hashes = result.transactions
-					const receiptsResult = await fetchTransactionReceipts({
-						data: { hashes },
-					})
 
+				if (result.receipts.length > 0) {
 					const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) =>
 						tokenMetadataMap.get(tokenAddress)
 
 					const items: ActivityItem[] = []
-					for (const { hash, receipt } of receiptsResult.receipts) {
-						if (!receipt) continue
+					for (const receipt of result.receipts) {
 						try {
 							const viemReceipt = convertRpcReceiptToViemReceipt(receipt)
-							// Use tx sender as viewer for proper perspective
 							const events = parseKnownEvents(viemReceipt, {
 								getTokenMetadata,
 								viewer: receipt.from,
 							})
 							items.push({
-								hash,
+								hash: receipt.transactionHash,
 								events,
 								timestamp: result.timestamp,
 								blockNumber: selectedBlock,
@@ -2888,10 +2911,13 @@ function ActivityRow({
 		<>
 			<div
 				className={cx(
-					'group flex items-center gap-2 px-3 h-[48px] rounded-xl transition-all',
-					isHighlighted ? 'bg-accent/10' : 'hover:glass-thin',
+					'group flex items-center gap-2 px-3 h-[48px] transition-all',
+					isHighlighted ? 'bg-accent/10 -mx-3 px-6' : 'rounded-xl hover:glass-thin',
 				)}
 			>
+				{isHighlighted && (
+					<span className="size-2 rounded-full bg-accent shrink-0" />
+				)}
 				<TxDescription.ExpandGroup
 					events={item.events}
 					seenAs={viewer}
