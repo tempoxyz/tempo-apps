@@ -2,9 +2,8 @@ import { createServerFn } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { decodeAbiParameters } from 'viem'
-import { getChainId } from 'wagmi/actions'
 import { TOKEN_CREATED_EVENT } from '#lib/abis'
-import { getWagmiConfig } from '#wagmi.config'
+import { getTempoChain } from '#wagmi.config'
 
 const TIP20_DECIMALS = 6
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
@@ -103,8 +102,9 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 	.handler(async ({ data }): Promise<AssetData[] | null> => {
 		try {
 			const address = data.address as Address.Address
-			const config = getWagmiConfig()
-			const chainId = getChainId(config)
+			// Use chain from config directly since getChainId may not work on server
+			const chain = getTempoChain()
+			const chainId = chain.id
 
 			const { QB } = await getIndexSupply()
 			const qb = QB.withSignatures([TRANSFER_SIGNATURE])
