@@ -1039,7 +1039,7 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 
 	return (
 		<Section
-			title="Settings"
+			title={t('settings.title')}
 			backButton={
 				submenuTitle ? { label: submenuTitle, onClick: handleBack } : undefined
 			}
