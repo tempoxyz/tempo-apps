@@ -2,7 +2,6 @@ interface EnvironmentVariables {
 	readonly MODE: 'development' | 'production'
 	readonly VITE_TEMPO_ENV: 'moderato' | 'devnet' | 'presto'
 	readonly VITE_ENABLE_DEVTOOLS: string | undefined
-	readonly VITE_BALANCES_API_URL: string | undefined
 }
 
 interface ImportMetaEnv extends EnvironmentVariables {}
@@ -16,6 +15,7 @@ declare namespace NodeJS {
 		readonly NODE_ENV: 'development' | 'production' | 'test'
 		readonly TEMPO_RPC_KEY: string | undefined
 		readonly PRESTO_RPC_AUTH: string | undefined
+		readonly INDEXER_API_KEY: string | undefined
 	}
 }
 
