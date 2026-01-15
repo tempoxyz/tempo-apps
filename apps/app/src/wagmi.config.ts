@@ -14,12 +14,7 @@ import {
 } from 'wagmi'
 import { KeyManager, webAuthn } from 'wagmi/tempo'
 
-const isLocalhost =
-	typeof window !== 'undefined' && window.location.hostname === 'localhost'
-
-const isWorkersDevPreview =
-	typeof window !== 'undefined' &&
-	window.location.hostname.endsWith('.workers.dev')
+const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
 // Helper to convert ArrayBuffer to base64
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
@@ -53,42 +48,55 @@ function serializeCredential(credential: PublicKeyCredential) {
 	}
 }
 
+// Determine the key-manager URL at runtime (when methods are called, not at config time)
+// This avoids SSR/client hydration mismatches
+function getKeyManagerBaseUrl() {
+	if (typeof window !== 'undefined') {
+		const hostname = window.location.hostname
+		// Local dev or workers.dev preview
+		if (hostname === 'localhost' || hostname.endsWith('.workers.dev')) {
+			return 'https://key-manager.porto.workers.dev/keys'
+		}
+		// Production presto/mainnet domains
+		if (hostname.includes('presto') || hostname.includes('mainnet')) {
+			return 'https://keys.tempo.xyz/keys'
+		}
+	}
+	// SSR fallback based on env
+	return TEMPO_ENV === 'presto'
+		? 'https://keys.tempo.xyz/keys'
+		: 'https://key-manager-mainnet.porto.workers.dev/keys'
+}
+
 function getKeyManager() {
-	const baseUrl =
-		isLocalhost || isWorkersDevPreview
-			? 'https://key-manager.porto.workers.dev/keys'
-			: TEMPO_ENV === 'presto'
-				? 'https://keys.tempo.xyz/keys'
-				: 'https://key-manager-mainnet.porto.workers.dev/keys'
-
-	const httpKeyManager = KeyManager.http(baseUrl)
-
-	// Override setPublicKey to properly serialize the credential
+	// Create a lazy key manager that determines the URL at method call time
+	// This ensures SSR and client use the same config structure
 	return {
-		...httpKeyManager,
 		async getChallenge() {
 			console.log('[KM] getChallenge')
-			const result = await httpKeyManager.getChallenge?.()
+			const baseUrl = getKeyManagerBaseUrl()
+			const response = await fetch(`${baseUrl}/challenge`)
+			if (!response.ok)
+				throw new Error(`Failed to get challenge: ${response.statusText}`)
+			const result = (await response.json()) as {
+				challenge: `0x${string}`
+				rp?: { id: string; name: string }
+			}
 			console.log('[KM] getChallenge =>', result)
 			return result
 		},
-		async getPublicKey(params: { credential: { id: string } }) {
-			console.log('[KM] getPublicKey', params.credential.id)
-			const result = await httpKeyManager.getPublicKey(params)
-			console.log('[KM] getPublicKey =>', `${result?.slice(0, 20)}...`)
-			return result
+		async getPublicKey(parameters: { credential: { id: string } }) {
+			console.log('[KM] getPublicKey', parameters.credential.id)
+			const baseUrl = getKeyManagerBaseUrl()
+			const response = await fetch(`${baseUrl}/${parameters.credential.id}`)
+			if (!response.ok)
+				throw new Error(`Failed to get public key: ${response.statusText}`)
+			const data = (await response.json()) as { publicKey: `0x${string}` }
+			console.log('[KM] getPublicKey =>', `${data.publicKey?.slice(0, 20)}...`)
+			return data.publicKey
 		},
 		async setPublicKey(parameters: {
-			credential: {
-				id: string
-				rawId: ArrayBuffer
-				type: string
-				response: {
-					attestationObject: ArrayBuffer
-					clientDataJSON: ArrayBuffer
-					getAuthenticatorData?: () => ArrayBuffer
-				}
-			}
+			credential: PublicKeyCredential
 			publicKey: `0x${string}`
 		}) {
 			console.log(
@@ -96,9 +104,8 @@ function getKeyManager() {
 				parameters.credential.id,
 				`${parameters.publicKey.slice(0, 20)}...`,
 			)
-			const serializedCredential = serializeCredential(
-				parameters.credential as unknown as PublicKeyCredential,
-			)
+			const baseUrl = getKeyManagerBaseUrl()
+			const serializedCredential = serializeCredential(parameters.credential)
 			const response = await fetch(`${baseUrl}/${parameters.credential.id}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -114,10 +121,8 @@ function getKeyManager() {
 			}
 			console.log('[KM] setPublicKey ok')
 		},
-	} as unknown as ReturnType<typeof KeyManager.http>
+	} as ReturnType<typeof KeyManager.http>
 }
-
-const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 
@@ -214,30 +219,12 @@ export function getWagmiConfig() {
 		batch: { multicall: false },
 		chains: [chain, tempoLocalnet],
 		connectors: [
+			// rpId is determined dynamically: the key-manager's challenge response
+			// may include an rp.id which takes precedence, otherwise the browser
+			// uses the current origin's effective domain
 			webAuthn({
 				keyManager: getKeyManager(),
-				// For localhost/workers.dev preview, override rpId to match origin
-				...(() => {
-					if (typeof window === 'undefined') return {}
-					const hostname = window.location.hostname
-					if (hostname === 'localhost') {
-						return {
-							rpId: 'localhost',
-							createOptions: { rpId: 'localhost' },
-							getOptions: { rpId: 'localhost' },
-						}
-					}
-					if (hostname.endsWith('.workers.dev')) {
-						// Use the full hostname as rpId for workers.dev previews
-						return {
-							rpId: hostname,
-							createOptions: { rpId: hostname },
-							getOptions: { rpId: hostname },
-						}
-					}
-					return {}
-				})(),
-			} as Parameters<typeof webAuthn>[0]),
+			}),
 		],
 		multiInjectedProviderDiscovery: false,
 		storage: createStorage({ storage: cookieStorage }),
