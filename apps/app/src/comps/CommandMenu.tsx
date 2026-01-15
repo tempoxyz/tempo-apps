@@ -2,6 +2,8 @@ import { useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount, useConnect, useConnectors, useDisconnect } from 'wagmi'
+import { useTranslation } from 'react-i18next'
+import i18n from '#lib/i18n'
 import { cx } from '#lib/css'
 
 import SearchIcon from '~icons/lucide/search'
@@ -15,100 +17,68 @@ import SendIcon from '~icons/lucide/send'
 import WalletIcon from '~icons/lucide/wallet'
 import RefreshCwIcon from '~icons/lucide/refresh-cw'
 import ExternalLinkIcon from '~icons/lucide/external-link'
-import CommandIcon from '~icons/lucide/command'
-import ArrowRightIcon from '~icons/lucide/arrow-right'
+import ArrowLeftIcon from '~icons/lucide/arrow-left'
+import ClipboardIcon from '~icons/lucide/clipboard-paste'
+import LanguagesIcon from '~icons/lucide/languages'
+import CheckIcon from '~icons/lucide/check'
 
-type CommandItem = {
-	id: string
-	label: string
-	description?: string
-	icon: React.ReactNode
-	shortcut?: string[]
-	action: () => void
-	keywords?: string[]
-	group: 'navigation' | 'account' | 'actions' | 'links'
-}
+const LANGUAGES = [
+	{ code: 'en', name: 'English' },
+	{ code: 'es', name: 'Español' },
+	{ code: 'zh', name: '中文' },
+	{ code: 'ja', name: '日本語' },
+	{ code: 'ko', name: '한국어' },
+	{ code: 'el', name: 'Ελληνικά' },
+]
+
+type MenuView = 'main' | 'send' | 'language'
 
 const CommandMenuContext = React.createContext<{
 	open: boolean
 	setOpen: React.Dispatch<React.SetStateAction<boolean>>
 } | null>(null)
 
-export function CommandMenuProvider({
-	children,
-}: {
-	children: React.ReactNode
-}) {
+export function CommandMenuProvider({ children }: { children: React.ReactNode }) {
 	const [open, setOpen] = React.useState(false)
-	const [isMounted, setIsMounted] = React.useState(false)
+	const [mounted, setMounted] = React.useState(false)
 
 	React.useEffect(() => {
-		setIsMounted(true)
+		setMounted(true)
 	}, [])
 
 	React.useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
+		const down = (e: KeyboardEvent) => {
 			if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
 				e.preventDefault()
-				setOpen((prev) => !prev)
+				e.stopPropagation()
+				setOpen((o) => !o)
 			}
 		}
-		document.addEventListener('keydown', handleKeyDown)
-		return () => document.removeEventListener('keydown', handleKeyDown)
+		window.addEventListener('keydown', down)
+		return () => window.removeEventListener('keydown', down)
 	}, [])
 
 	return (
 		<CommandMenuContext.Provider value={{ open, setOpen }}>
 			{children}
-			{isMounted && <CommandTrigger onClick={() => setOpen(true)} />}
-			{isMounted && open && <CommandMenu onClose={() => setOpen(false)} />}
+			{mounted && <CommandMenuPortal open={open} onOpenChange={setOpen} />}
 		</CommandMenuContext.Provider>
 	)
 }
 
-function CommandTrigger({ onClick }: { onClick: () => void }) {
-	const isMac =
-		typeof navigator !== 'undefined' &&
-		navigator.platform?.toLowerCase().includes('mac')
-
-	return createPortal(
-		<button
-			type="button"
-			onClick={onClick}
-			className={cx(
-				'fixed bottom-4 right-4 z-50',
-				'flex items-center gap-2 px-3 py-2 rounded-full',
-				'glass-button hover:ring-glass',
-				'text-[13px] text-secondary hover:text-primary',
-				'cursor-pointer press-down transition-all',
-				'shadow-lg shadow-black/10',
-			)}
-			title="Open command menu"
-		>
-			<CommandIcon className="size-[14px]" />
-			<span className="hidden sm:inline">Command</span>
-			<kbd className="hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-white/10 rounded border border-white/10">
-				{isMac ? '⌘' : 'Ctrl'}K
-			</kbd>
-		</button>,
-		document.body,
-	)
-}
-
 export function useCommandMenu() {
-	const context = React.useContext(CommandMenuContext)
-	if (!context) {
-		throw new Error('useCommandMenu must be used within CommandMenuProvider')
-	}
-	return context
+	const ctx = React.useContext(CommandMenuContext)
+	if (!ctx) throw new Error('useCommandMenu must be used within CommandMenuProvider')
+	return ctx
 }
 
-function CommandMenu({ onClose }: { onClose: () => void }) {
+function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+	const [view, setView] = React.useState<MenuView>('main')
 	const [query, setQuery] = React.useState('')
 	const [selectedIndex, setSelectedIndex] = React.useState(0)
-	const [isVisible, setIsVisible] = React.useState(false)
+	const [sendAddress, setSendAddress] = React.useState('')
+	const [visible, setVisible] = React.useState(false)
 	const inputRef = React.useRef<HTMLInputElement>(null)
-	const listRef = React.useRef<HTMLDivElement>(null)
 
 	const navigate = useNavigate()
 	const router = useRouter()
@@ -116,436 +86,354 @@ function CommandMenu({ onClose }: { onClose: () => void }) {
 	const { disconnect } = useDisconnect()
 	const { connect } = useConnect()
 	const [connector] = useConnectors()
+	const { t } = useTranslation()
 
-	const commands = React.useMemo<CommandItem[]>(() => {
-		const items: CommandItem[] = []
+	const close = React.useCallback(() => {
+		setVisible(false)
+		setTimeout(() => {
+			onOpenChange(false)
+			setView('main')
+			setQuery('')
+			setSendAddress('')
+			setSelectedIndex(0)
+		}, 150)
+	}, [onOpenChange])
 
-		// Navigation
-		items.push({
-			id: 'home',
-			label: 'Go Home',
-			description: 'Return to the home page',
-			icon: <HomeIcon className="size-[18px]" />,
-			shortcut: ['G', 'H'],
-			action: () => {
-				navigate({ to: '/' })
-				onClose()
-			},
-			keywords: ['home', 'start', 'landing', 'main'],
-			group: 'navigation',
-		})
-
-		if (account.address) {
-			const address = account.address
-			items.push({
-				id: 'my-account',
-				label: 'My Account',
-				description: `View your portfolio`,
-				icon: <WalletIcon className="size-[18px]" />,
-				shortcut: ['G', 'A'],
-				action: () => {
-					navigate({ to: '/$address', params: { address } })
-					onClose()
-				},
-				keywords: ['account', 'portfolio', 'wallet', 'balance', 'my'],
-				group: 'navigation',
-			})
+	React.useEffect(() => {
+		if (open) {
+			setVisible(true)
+			setTimeout(() => inputRef.current?.focus(), 50)
 		}
-
-		items.push({
-			id: 'search-address',
-			label: 'Search Address',
-			description: 'Look up any wallet address',
-			icon: <SearchIcon className="size-[18px]" />,
-			shortcut: ['/'],
-			action: () => {
-				navigate({ to: '/' })
-				onClose()
-				setTimeout(() => {
-					const input = document.querySelector(
-						'input[name="value"]',
-					) as HTMLInputElement
-					input?.focus()
-				}, 100)
-			},
-			keywords: ['search', 'find', 'lookup', 'address', 'wallet'],
-			group: 'navigation',
-		})
-
-		// Account actions
-		if (account.address) {
-			const addr = account.address
-			items.push({
-				id: 'send-tokens',
-				label: 'Send Tokens',
-				description: 'Transfer tokens to another address',
-				icon: <SendIcon className="size-[18px]" />,
-				shortcut: ['S'],
-				action: () => {
-					navigate({ to: '/$address', params: { address: addr } })
-					onClose()
-				},
-				keywords: ['send', 'transfer', 'pay', 'tokens'],
-				group: 'actions',
-			})
-
-			items.push({
-				id: 'refresh',
-				label: 'Refresh Data',
-				description: 'Reload your account data',
-				icon: <RefreshCwIcon className="size-[18px]" />,
-				shortcut: ['R'],
-				action: () => {
-					router.invalidate()
-					onClose()
-				},
-				keywords: ['refresh', 'reload', 'update', 'sync'],
-				group: 'actions',
-			})
-
-			items.push({
-				id: 'sign-out',
-				label: 'Sign Out',
-				description: 'Disconnect your wallet',
-				icon: <LogOutIcon className="size-[18px]" />,
-				action: () => {
-					disconnect()
-					navigate({ to: '/' })
-					onClose()
-				},
-				keywords: ['sign out', 'logout', 'disconnect', 'exit'],
-				group: 'account',
-			})
-		} else {
-			items.push({
-				id: 'sign-up',
-				label: 'Create Account',
-				description: 'Sign up with a new passkey',
-				icon: <KeyIcon className="size-[18px]" />,
-				action: () => {
-					if (connector) {
-						connect({
-							connector,
-							capabilities: { type: 'sign-up' },
-						} as Parameters<typeof connect>[0])
-					}
-					onClose()
-				},
-				keywords: ['sign up', 'register', 'create', 'new', 'passkey'],
-				group: 'account',
-			})
-
-			items.push({
-				id: 'sign-in',
-				label: 'Sign In',
-				description: 'Use an existing passkey',
-				icon: <FingerprintIcon className="size-[18px]" />,
-				action: () => {
-					if (connector) {
-						connect({ connector })
-					}
-					onClose()
-				},
-				keywords: ['sign in', 'login', 'connect', 'passkey'],
-				group: 'account',
-			})
-		}
-
-		// External links
-		items.push({
-			id: 'website',
-			label: 'Tempo Website',
-			description: 'Visit tempo.xyz',
-			icon: <GlobeIcon className="size-[18px]" />,
-			action: () => {
-				window.open('https://tempo.xyz', '_blank')
-				onClose()
-			},
-			keywords: ['website', 'tempo', 'home'],
-			group: 'links',
-		})
-
-		items.push({
-			id: 'docs',
-			label: 'Documentation',
-			description: 'Read the docs',
-			icon: <BookOpenIcon className="size-[18px]" />,
-			action: () => {
-				window.open('https://docs.tempo.xyz', '_blank')
-				onClose()
-			},
-			keywords: ['docs', 'documentation', 'help', 'guide', 'learn'],
-			group: 'links',
-		})
-
-		if (account.address) {
-			items.push({
-				id: 'explorer',
-				label: 'View on Explorer',
-				description: 'See your account on the block explorer',
-				icon: <ExternalLinkIcon className="size-[18px]" />,
-				action: () => {
-					window.open(
-						`https://explore.mainnet.tempo.xyz/address/${account.address}`,
-						'_blank',
-					)
-					onClose()
-				},
-				keywords: ['explorer', 'block', 'transactions', 'history'],
-				group: 'links',
-			})
-		}
-
-		return items
-	}, [
-		account.address,
-		navigate,
-		onClose,
-		disconnect,
-		connect,
-		connector,
-		router,
-	])
-
-	const filteredCommands = React.useMemo(() => {
-		if (!query.trim()) return commands
-
-		const lowerQuery = query.toLowerCase()
-		return commands.filter((cmd) => {
-			const matchLabel = cmd.label.toLowerCase().includes(lowerQuery)
-			const matchDescription = cmd.description
-				?.toLowerCase()
-				.includes(lowerQuery)
-			const matchKeywords = cmd.keywords?.some((kw) => kw.includes(lowerQuery))
-			return matchLabel || matchDescription || matchKeywords
-		})
-	}, [commands, query])
-
-	const groupedCommands = React.useMemo(() => {
-		const groups: Record<string, CommandItem[]> = {
-			navigation: [],
-			actions: [],
-			account: [],
-			links: [],
-		}
-		for (const cmd of filteredCommands) {
-			groups[cmd.group].push(cmd)
-		}
-		return groups
-	}, [filteredCommands])
-
-	const flatCommands = React.useMemo(() => {
-		return [
-			...groupedCommands.navigation,
-			...groupedCommands.actions,
-			...groupedCommands.account,
-			...groupedCommands.links,
-		]
-	}, [groupedCommands])
+	}, [open])
 
 	React.useEffect(() => {
 		setSelectedIndex(0)
-	}, [])
+	}, [query, view])
 
-	React.useEffect(() => {
-		requestAnimationFrame(() => setIsVisible(true))
-		inputRef.current?.focus()
-	}, [])
+	const mainCommands = React.useMemo(() => {
+		const cmds: Array<{
+			id: string
+			label: string
+			icon: React.ReactNode
+			onSelect: () => void
+			keywords?: string[]
+		}> = []
 
-	React.useEffect(() => {
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') {
-				setIsVisible(false)
-				setTimeout(onClose, 150)
-			} else if (e.key === 'ArrowDown') {
-				e.preventDefault()
-				setSelectedIndex((i) => Math.min(i + 1, flatCommands.length - 1))
-			} else if (e.key === 'ArrowUp') {
-				e.preventDefault()
-				setSelectedIndex((i) => Math.max(i - 1, 0))
-			} else if (e.key === 'Enter') {
-				e.preventDefault()
-				flatCommands[selectedIndex]?.action()
-			}
+		cmds.push({
+			id: 'home',
+			label: 'Go Home',
+			icon: <HomeIcon className="size-4" />,
+			onSelect: () => { navigate({ to: '/' }); close() },
+			keywords: ['home', 'start'],
+		})
+
+		if (account.address) {
+			cmds.push({
+				id: 'account',
+				label: 'My Account',
+				icon: <WalletIcon className="size-4" />,
+				onSelect: () => { navigate({ to: '/$address', params: { address: account.address! } }); close() },
+				keywords: ['account', 'wallet', 'portfolio'],
+			})
+
+			cmds.push({
+				id: 'send',
+				label: 'Send Tokens →',
+				icon: <SendIcon className="size-4" />,
+				onSelect: () => setView('send'),
+				keywords: ['send', 'transfer', 'pay'],
+			})
+
+			cmds.push({
+				id: 'refresh',
+				label: 'Refresh',
+				icon: <RefreshCwIcon className="size-4" />,
+				onSelect: () => { router.invalidate(); close() },
+				keywords: ['refresh', 'reload'],
+			})
+
+			cmds.push({
+				id: 'explorer',
+				label: 'View on Explorer',
+				icon: <ExternalLinkIcon className="size-4" />,
+				onSelect: () => { window.open(`https://explore.mainnet.tempo.xyz/address/${account.address}`, '_blank'); close() },
+				keywords: ['explorer', 'block'],
+			})
+
+			cmds.push({
+				id: 'signout',
+				label: 'Sign Out',
+				icon: <LogOutIcon className="size-4" />,
+				onSelect: () => { disconnect(); navigate({ to: '/' }); close() },
+				keywords: ['logout', 'disconnect', 'signout'],
+			})
+		} else {
+			cmds.push({
+				id: 'signup',
+				label: 'Create Account',
+				icon: <KeyIcon className="size-4" />,
+				onSelect: () => { if (connector) connect({ connector, capabilities: { type: 'sign-up' } } as Parameters<typeof connect>[0]); close() },
+				keywords: ['signup', 'register', 'create'],
+			})
+
+			cmds.push({
+				id: 'signin',
+				label: 'Sign In',
+				icon: <FingerprintIcon className="size-4" />,
+				onSelect: () => { if (connector) connect({ connector }); close() },
+				keywords: ['signin', 'login'],
+			})
 		}
-		document.addEventListener('keydown', handleKeyDown)
-		return () => document.removeEventListener('keydown', handleKeyDown)
-	}, [flatCommands, selectedIndex, onClose])
 
-	React.useEffect(() => {
-		const selected = listRef.current?.querySelector('[data-selected="true"]')
-		selected?.scrollIntoView({ block: 'nearest' })
-	}, [])
+		cmds.push({
+			id: 'language',
+			label: 'Change Language →',
+			icon: <LanguagesIcon className="size-4" />,
+			onSelect: () => setView('language'),
+			keywords: ['language', 'locale', 'translate'],
+		})
 
-	const handleClose = () => {
-		setIsVisible(false)
-		setTimeout(onClose, 150)
+		cmds.push({
+			id: 'website',
+			label: 'Tempo Website',
+			icon: <GlobeIcon className="size-4" />,
+			onSelect: () => { window.open('https://tempo.xyz', '_blank'); close() },
+			keywords: ['website', 'tempo'],
+		})
+
+		cmds.push({
+			id: 'docs',
+			label: 'Documentation',
+			icon: <BookOpenIcon className="size-4" />,
+			onSelect: () => { window.open('https://docs.tempo.xyz', '_blank'); close() },
+			keywords: ['docs', 'help', 'guide'],
+		})
+
+		return cmds
+	}, [account.address, navigate, close, disconnect, connect, connector, router])
+
+	const filteredCommands = React.useMemo(() => {
+		if (!query) return mainCommands
+		const q = query.toLowerCase()
+		return mainCommands.filter(c => 
+			c.label.toLowerCase().includes(q) || 
+			c.keywords?.some(k => k.includes(q))
+		)
+	}, [mainCommands, query])
+
+	const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
+		if (e.key === 'Escape') {
+			if (view !== 'main') {
+				setView('main')
+				setQuery('')
+			} else {
+				close()
+			}
+		} else if (e.key === 'ArrowDown') {
+			e.preventDefault()
+			if (view === 'main') {
+				setSelectedIndex(i => Math.min(i + 1, filteredCommands.length - 1))
+			} else if (view === 'language') {
+				setSelectedIndex(i => Math.min(i + 1, LANGUAGES.length - 1))
+			}
+		} else if (e.key === 'ArrowUp') {
+			e.preventDefault()
+			setSelectedIndex(i => Math.max(i - 1, 0))
+		} else if (e.key === 'Enter') {
+			e.preventDefault()
+			if (view === 'main' && filteredCommands[selectedIndex]) {
+				filteredCommands[selectedIndex].onSelect()
+			} else if (view === 'send' && sendAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+				navigate({ to: '/$address', params: { address: account.address! }, search: { sendTo: sendAddress } })
+				close()
+			} else if (view === 'language' && LANGUAGES[selectedIndex]) {
+				const lang = LANGUAGES[selectedIndex].code
+				i18n.changeLanguage(lang)
+				localStorage.setItem('tempo-language', lang)
+				close()
+			}
+		} else if (e.key === 'Backspace' && view !== 'main' && !query && !sendAddress) {
+			setView('main')
+		}
+	}, [view, filteredCommands, selectedIndex, close, sendAddress, navigate, account.address, query])
+
+	const pasteFromClipboard = async () => {
+		try {
+			const text = await navigator.clipboard.readText()
+			if (text.match(/^0x[a-fA-F0-9]{40}$/)) {
+				setSendAddress(text)
+			}
+		} catch {}
 	}
 
-	const groupLabels: Record<string, string> = {
-		navigation: 'Navigation',
-		actions: 'Actions',
-		account: 'Account',
-		links: 'Links',
-	}
+	if (!open) return null
 
-	let itemIndex = -1
+	const isMac = typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
 
 	return createPortal(
-		// biome-ignore lint/a11y/useKeyWithClickEvents: Escape key handled in useEffect
-		// biome-ignore lint/a11y/noStaticElementInteractions: Modal backdrop
 		<div
 			className={cx(
-				'fixed inset-0 z-[100] flex items-start justify-center pt-[15vh] px-4',
-				'bg-black/50 backdrop-blur-sm transition-opacity duration-150',
-				isVisible ? 'opacity-100' : 'opacity-0',
+				'fixed inset-0 z-[9999] flex items-start justify-center pt-[12vh] px-4',
+				'transition-all duration-150',
+				visible ? 'bg-black/60 backdrop-blur-sm' : 'bg-transparent',
 			)}
-			onClick={handleClose}
+			onClick={close}
+			onKeyDown={handleKeyDown}
 		>
-			{/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation only */}
-			{/* biome-ignore lint/a11y/noStaticElementInteractions: Modal content container */}
 			<div
 				className={cx(
-					'w-full max-w-[560px] overflow-hidden rounded-2xl',
-					'liquid-glass-premium border border-white/10',
-					'shadow-2xl shadow-black/30',
+					'w-full max-w-lg rounded-2xl overflow-hidden',
+					'bg-[#1a1a1a] border border-white/10',
+					'shadow-2xl',
 					'transition-all duration-150',
-					isVisible
-						? 'opacity-100 scale-100 translate-y-0'
-						: 'opacity-0 scale-95 -translate-y-4',
+					visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95',
 				)}
-				onClick={(e) => e.stopPropagation()}
+				onClick={e => e.stopPropagation()}
 			>
-				{/* Search input */}
-				<div className="flex items-center gap-3 px-4 h-[56px] border-b border-white/10">
-					<SearchIcon className="size-[18px] text-secondary shrink-0" />
-					<input
-						ref={inputRef}
-						type="text"
-						value={query}
-						onChange={(e) => setQuery(e.target.value)}
-						placeholder="Search commands..."
-						className="flex-1 bg-transparent text-[15px] text-primary placeholder:text-tertiary outline-none"
-						autoComplete="off"
-						autoCorrect="off"
-						autoCapitalize="off"
-						spellCheck={false}
-					/>
-					<kbd className="hidden sm:flex items-center gap-1 px-2 py-1 text-[11px] text-tertiary bg-white/5 rounded-md border border-white/10">
-						<span>esc</span>
+				{/* Header */}
+				<div className="flex items-center gap-3 px-4 h-14 border-b border-white/10">
+					{view !== 'main' && (
+						<button
+							type="button"
+							onClick={() => { setView('main'); setQuery(''); setSendAddress('') }}
+							className="p-1 -ml-1 rounded hover:bg-white/10"
+						>
+							<ArrowLeftIcon className="size-4 text-white/60" />
+						</button>
+					)}
+					{view === 'main' && <SearchIcon className="size-4 text-white/40" />}
+					{view === 'send' && <SendIcon className="size-4 text-white/40" />}
+					{view === 'language' && <LanguagesIcon className="size-4 text-white/40" />}
+					
+					{view === 'main' && (
+						<input
+							ref={inputRef}
+							value={query}
+							onChange={e => setQuery(e.target.value)}
+							placeholder="Type a command..."
+							className="flex-1 bg-transparent text-white placeholder:text-white/40 outline-none text-sm"
+							autoComplete="off"
+						/>
+					)}
+					{view === 'send' && (
+						<input
+							ref={inputRef}
+							value={sendAddress}
+							onChange={e => setSendAddress(e.target.value)}
+							placeholder="Enter recipient address (0x...)"
+							className="flex-1 bg-transparent text-white placeholder:text-white/40 outline-none text-sm font-mono"
+							autoComplete="off"
+						/>
+					)}
+					{view === 'language' && (
+						<span className="text-white/60 text-sm">Select Language</span>
+					)}
+
+					<kbd className="hidden sm:block px-2 py-1 text-[10px] text-white/40 bg-white/5 rounded border border-white/10">
+						{isMac ? '⌘' : 'Ctrl'}K
 					</kbd>
 				</div>
 
-				{/* Results */}
-				<div
-					ref={listRef}
-					className="max-h-[400px] overflow-y-auto overflow-x-hidden py-2"
-				>
-					{flatCommands.length === 0 ? (
-						<div className="px-4 py-8 text-center">
-							<p className="text-[14px] text-tertiary">No results found</p>
-							<p className="text-[12px] text-tertiary/60 mt-1">
-								Try a different search term
-							</p>
-						</div>
-					) : (
-						Object.entries(groupedCommands).map(([group, items]) => {
-							if (items.length === 0) return null
-							return (
-								<div key={group} className="mb-2 last:mb-0">
-									<div className="px-4 py-1.5">
-										<span className="text-[11px] font-medium text-tertiary uppercase tracking-wider">
-											{groupLabels[group]}
+				{/* Content */}
+				<div className="max-h-80 overflow-y-auto">
+					{view === 'main' && (
+						<div className="py-2">
+							{filteredCommands.length === 0 ? (
+								<div className="px-4 py-8 text-center text-white/40 text-sm">No results</div>
+							) : (
+								filteredCommands.map((cmd, i) => (
+									<button
+										key={cmd.id}
+										type="button"
+										onClick={cmd.onSelect}
+										onMouseEnter={() => setSelectedIndex(i)}
+										className={cx(
+											'w-full flex items-center gap-3 px-4 py-2.5 text-left',
+											i === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5',
+										)}
+									>
+										<span className={cx(
+											'flex items-center justify-center size-8 rounded-lg',
+											i === selectedIndex ? 'bg-blue-500 text-white' : 'bg-white/10 text-white/60',
+										)}>
+											{cmd.icon}
 										</span>
-									</div>
-									{items.map((cmd) => {
-										itemIndex++
-										const isSelected = itemIndex === selectedIndex
-										const currentIndex = itemIndex
-										return (
-											<button
-												key={cmd.id}
-												type="button"
-												data-selected={isSelected}
-												onClick={() => cmd.action()}
-												onMouseEnter={() => setSelectedIndex(currentIndex)}
-												className={cx(
-													'w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors',
-													'cursor-pointer outline-none',
-													isSelected ? 'bg-accent/15' : 'hover:bg-white/5',
-												)}
-											>
-												<div
-													className={cx(
-														'flex items-center justify-center size-[32px] rounded-lg shrink-0',
-														isSelected
-															? 'bg-accent text-white'
-															: 'bg-white/10 text-secondary',
-													)}
-												>
-													{cmd.icon}
-												</div>
-												<div className="flex-1 min-w-0">
-													<div
-														className={cx(
-															'text-[14px] font-medium',
-															isSelected ? 'text-primary' : 'text-primary',
-														)}
-													>
-														{cmd.label}
-													</div>
-													{cmd.description && (
-														<div className="text-[12px] text-tertiary truncate">
-															{cmd.description}
-														</div>
-													)}
-												</div>
-												{cmd.shortcut && (
-													<div className="hidden sm:flex items-center gap-1 shrink-0">
-														{cmd.shortcut.map((key) => (
-															<kbd
-																key={key}
-																className="flex items-center justify-center min-w-[22px] h-[22px] px-1.5 text-[11px] text-tertiary bg-white/5 rounded border border-white/10"
-															>
-																{key}
-															</kbd>
-														))}
-													</div>
-												)}
-												{isSelected && (
-													<ArrowRightIcon className="size-[14px] text-accent shrink-0 sm:hidden" />
-												)}
-											</button>
-										)
-									})}
+										<span className={cx('text-sm', i === selectedIndex ? 'text-white' : 'text-white/80')}>
+											{cmd.label}
+										</span>
+									</button>
+								))
+							)}
+						</div>
+					)}
+
+					{view === 'send' && (
+						<div className="p-4 space-y-3">
+							<button
+								type="button"
+								onClick={pasteFromClipboard}
+								className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
+							>
+								<ClipboardIcon className="size-4 text-white/60" />
+								<span className="text-sm text-white/80">Paste from clipboard</span>
+							</button>
+							{sendAddress && sendAddress.match(/^0x[a-fA-F0-9]{40}$/) && (
+								<button
+									type="button"
+									onClick={() => {
+										navigate({ to: '/$address', params: { address: account.address! }, search: { sendTo: sendAddress } })
+										close()
+									}}
+									className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 transition-colors"
+								>
+									<SendIcon className="size-4 text-blue-400" />
+									<span className="text-sm text-white">Send to {sendAddress.slice(0, 6)}...{sendAddress.slice(-4)}</span>
+								</button>
+							)}
+							{sendAddress && !sendAddress.match(/^0x[a-fA-F0-9]{40}$/) && sendAddress.length > 0 && (
+								<div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20">
+									<span className="text-sm text-red-400">Invalid address format</span>
 								</div>
-							)
-						})
+							)}
+						</div>
+					)}
+
+					{view === 'language' && (
+						<div className="py-2">
+							{LANGUAGES.map((lang, i) => {
+								const isActive = i18n.language === lang.code
+								return (
+									<button
+										key={lang.code}
+										type="button"
+										onClick={() => {
+											i18n.changeLanguage(lang.code)
+											localStorage.setItem('tempo-language', lang.code)
+											close()
+										}}
+										onMouseEnter={() => setSelectedIndex(i)}
+										className={cx(
+											'w-full flex items-center justify-between px-4 py-2.5',
+											i === selectedIndex ? 'bg-white/10' : 'hover:bg-white/5',
+										)}
+									>
+										<span className={cx('text-sm', i === selectedIndex ? 'text-white' : 'text-white/80')}>
+											{lang.name}
+										</span>
+										{isActive && <CheckIcon className="size-4 text-green-400" />}
+									</button>
+								)
+							})}
+						</div>
 					)}
 				</div>
 
 				{/* Footer */}
-				<div className="flex items-center justify-between px-4 py-2.5 border-t border-white/10 bg-white/5">
-					<div className="flex items-center gap-3 text-[11px] text-tertiary">
-						<span className="flex items-center gap-1">
-							<kbd className="flex items-center justify-center size-[18px] bg-white/5 rounded border border-white/10">
-								↑
-							</kbd>
-							<kbd className="flex items-center justify-center size-[18px] bg-white/5 rounded border border-white/10">
-								↓
-							</kbd>
-							<span className="ml-1">Navigate</span>
-						</span>
-						<span className="flex items-center gap-1">
-							<kbd className="flex items-center justify-center h-[18px] px-1.5 bg-white/5 rounded border border-white/10 text-[10px]">
-								↵
-							</kbd>
-							<span className="ml-1">Select</span>
-						</span>
-					</div>
-					<div className="flex items-center gap-1.5 text-[11px] text-tertiary">
-						<CommandIcon className="size-[12px]" />
-						<span>K to toggle</span>
+				<div className="flex items-center justify-between px-4 py-2 border-t border-white/10 bg-white/5">
+					<div className="flex items-center gap-4 text-[11px] text-white/40">
+						<span>↑↓ Navigate</span>
+						<span>↵ Select</span>
+						<span>Esc {view !== 'main' ? 'Back' : 'Close'}</span>
 					</div>
 				</div>
 			</div>
