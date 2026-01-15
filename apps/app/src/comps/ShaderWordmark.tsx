@@ -34,6 +34,9 @@ const TEXTURE_SCALE = 4
 // Wave flow direction: 1 = downward, -1 = upward
 const FLOW_DIRECTION = -1
 
+// Fade-in duration in milliseconds
+const FADE_IN_DURATION = 150
+
 // =============================================================================
 // TEMPO PATH DATA
 // =============================================================================
@@ -77,6 +80,7 @@ uniform float u_stretchMin;
 uniform float u_stretchMax;
 uniform float u_opacity;
 uniform float u_flowDirection;
+uniform float u_fadeIn;
 
 const float TEMPO_WIDTH = 227.0;
 const float TEMPO_HEIGHT = 18.25;
@@ -126,8 +130,8 @@ void main() {
 	// Sample the texture (flip Y for WebGL coordinate system)
 	vec4 texColor = texture(u_texture, vec2(texX, 1.0 - texY));
 
-	// Apply opacity
-	fragColor = vec4(texColor.rgb, texColor.a * u_opacity);
+	// Apply opacity with fade-in
+	fragColor = vec4(texColor.rgb, texColor.a * u_opacity * u_fadeIn);
 }
 `
 
@@ -258,19 +262,30 @@ export function ShaderWordmark({ className }: { className?: string }) {
 		window.addEventListener('resize', resize)
 
 		let animationId: number
+		let frameCount = 0
+		let fadeStartTime: number | null = null
 		const render = (timestamp: number) => {
 			if (!startTimeRef.current) startTimeRef.current = timestamp
+			frameCount++
+
+			// Wait a few frames before starting fade to ensure canvas is visible
+			if (frameCount === 3) fadeStartTime = timestamp
+
 			const elapsed = timestamp - startTimeRef.current
 			const time = (elapsed % ANIMATION_DURATION) / ANIMATION_DURATION
+			const fadeElapsed = fadeStartTime ? timestamp - fadeStartTime : 0
+			const fadeIn = Math.min(1, fadeElapsed / FADE_IN_DURATION)
 
 			gl.clearColor(0, 0, 0, 0)
 			gl.clear(gl.COLOR_BUFFER_BIT)
 
 			const timeLocation = gl.getUniformLocation(program, 'u_time')
 			const resolutionLocation = gl.getUniformLocation(program, 'u_resolution')
+			const fadeInLocation = gl.getUniformLocation(program, 'u_fadeIn')
 
 			gl.uniform1f(timeLocation, time)
 			gl.uniform2f(resolutionLocation, canvas.width, canvas.height)
+			gl.uniform1f(fadeInLocation, fadeIn)
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
