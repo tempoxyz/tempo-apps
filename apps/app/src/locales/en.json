@@ -84,7 +84,8 @@
 		"noActivityYet": "No activity yet",
 		"noActivityInBlock": "No activity in this block",
 		"noAssetsFound": "No assets found",
-		"viewBlockInExplorer": "View block in explorer"
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "Get started",
