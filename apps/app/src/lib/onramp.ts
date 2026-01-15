@@ -63,8 +63,14 @@ export type UseOnrampOrderProps = {
 }
 
 export function useOnrampOrder(props: UseOnrampOrderProps) {
-	const { address, email, phoneNumber, phoneNumberVerifiedAt, onSuccess, onError } =
-		props
+	const {
+		address,
+		email,
+		phoneNumber,
+		phoneNumberVerifiedAt,
+		onSuccess,
+		onError,
+	} = props
 	const queryClient = useQueryClient()
 	const [orderEvents, setOrderEvents] = React.useState<OnrampEvent[]>([])
 	const [iframeUrl, setIframeUrl] = React.useState<string | null>(null)
@@ -122,7 +128,8 @@ export function useOnrampOrder(props: UseOnrampOrderProps) {
 			}
 			if (email) body.email = email
 			if (phoneNumber) body.phoneNumber = phoneNumber
-			if (phoneNumberVerifiedAt) body.phoneNumberVerifiedAt = phoneNumberVerifiedAt
+			if (phoneNumberVerifiedAt)
+				body.phoneNumberVerifiedAt = phoneNumberVerifiedAt
 
 			const response = await fetch(`${ONRAMP_API_URL}/orders`, {
 				method: 'POST',

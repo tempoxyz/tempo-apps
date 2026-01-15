@@ -16,14 +16,14 @@ export function AddFunds(props: AddFunds.Props) {
 	const [isCustom, setIsCustom] = React.useState(false)
 
 	const { createOrder, iframeUrl, isLoading, reset } = useOnrampOrder({
-			address,
-			onSuccess: () => {
-				console.log('Onramp success!')
-			},
-			onError: (error) => {
-				console.error('Onramp error:', error)
-			},
-		})
+		address,
+		onSuccess: () => {
+			console.log('Onramp success!')
+		},
+		onError: (error) => {
+			console.error('Onramp error:', error)
+		},
+	})
 
 	const effectiveAmount = isCustom ? Number(customAmount) || 0 : amount
 	const isValidAmount =
@@ -158,7 +158,9 @@ export function AddFunds(props: AddFunds.Props) {
 				</button>
 
 				{createOrder.error && (
-					<p className="text-[11px] text-negative">{createOrder.error.message}</p>
+					<p className="text-[11px] text-negative">
+						{createOrder.error.message}
+					</p>
 				)}
 			</div>
 

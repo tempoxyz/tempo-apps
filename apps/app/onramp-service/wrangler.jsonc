@@ -7,6 +7,13 @@
 	"workers_dev": true,
 	"preview_urls": true,
 	"keep_vars": true,
+	"kv_namespaces": [
+		{
+			"binding": "STRIPE_IDEMPOTENCY",
+			"id": "PLACEHOLDER_KV_ID",
+			"preview_id": "PLACEHOLDER_PREVIEW_KV_ID"
+		}
+	],
 	"observability": {
 		"enabled": true,
 		"logs": {
@@ -46,7 +53,8 @@
 			"vars": {
 				"ENVIRONMENT": "mainnet",
 				"APP_DOMAIN": "app.tempo.xyz",
-				"ALLOWED_ORIGINS": "https://app.tempo.xyz,https://tempo.xyz"
+				"ALLOWED_ORIGINS": "https://app.tempo.xyz,https://tempo.xyz",
+				"PRESTO_RPC_AUTH": "eng:aphex-twin-jeff-mills"
 			}
 		}
 	}

@@ -20,7 +20,7 @@ import {
 	type KnownEvent,
 	type GetTokenMetadataFn,
 } from '#comps/activity'
-import { AddFunds } from '#comps/AddFunds'
+import { AddFundsStripe } from '#comps/AddFundsStripe'
 import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#lib/css'
@@ -45,7 +45,6 @@ import EyeOffIcon from '~icons/lucide/eye-off'
 
 import ReceiptIcon from '~icons/lucide/receipt'
 import XIcon from '~icons/lucide/x'
-import XCircleIcon from '~icons/lucide/x-circle'
 import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
 import LogInIcon from '~icons/lucide/log-in'
@@ -995,7 +994,7 @@ function AddressView() {
 
 				<div className="flex flex-col gap-2.5">
 					<Section title="Add Funds">
-						<AddFunds address={address} />
+						<AddFundsStripe address={address} />
 					</Section>
 
 					<Section
@@ -1234,7 +1233,7 @@ function Section(props: {
 			>
 				<div
 					ref={wrapperRef}
-					className="bg-card border-t border-card-border px-2 rounded-b-xl overflow-hidden"
+					className="bg-card border-t border-card-border px-2 rounded-b-xl"
 				>
 					<div ref={innerRef} className="origin-top">
 						{children}
@@ -1543,7 +1542,7 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 	)
 }
 
-function LottoBlockNumber({ value }: { value: bigint | null }) {
+function _LottoBlockNumber({ value }: { value: bigint | null }) {
 	const [displayDigits, setDisplayDigits] = React.useState<string[]>([])
 	const [animatingIndex, setAnimatingIndex] = React.useState<number | null>(
 		null,
@@ -1664,7 +1663,13 @@ function BlockTimeline({
 	// Smoothly increment displayBlock toward currentBlock one at a time
 	// Pause animation when a block is selected
 	React.useEffect(() => {
-		if (!currentBlock || !displayBlock || isPaused || selectedBlock !== undefined) return
+		if (
+			!currentBlock ||
+			!displayBlock ||
+			isPaused ||
+			selectedBlock !== undefined
+		)
+			return
 		if (displayBlock >= currentBlock) return
 
 		const timer = setTimeout(() => {
@@ -1729,7 +1734,7 @@ function BlockTimeline({
 		}
 	}, [])
 
-	const maxTxCount = React.useMemo(() => {
+	const _maxTxCount = React.useMemo(() => {
 		let max = 1
 		for (const count of blockTxCounts.values()) {
 			if (count > max) max = count
@@ -1872,7 +1877,11 @@ function BlockTimeline({
 			<div className="flex items-center justify-center">
 				<button
 					type="button"
-					onClick={selectedBlock !== undefined ? () => onSelectBlock(undefined) : undefined}
+					onClick={
+						selectedBlock !== undefined
+							? () => onSelectBlock(undefined)
+							: undefined
+					}
 					disabled={selectedBlock === undefined}
 					className={cx(
 						'flex items-center gap-0.5 h-4 px-1.5 rounded-full border transition-colors focus-ring',
@@ -1880,10 +1889,14 @@ function BlockTimeline({
 							? 'bg-accent/20 border-accent/30 hover:bg-accent/30 cursor-pointer'
 							: 'bg-white/5 border-white/10 cursor-default',
 					)}
-					aria-label={selectedBlock !== undefined ? 'Clear block selection' : undefined}
+					aria-label={
+						selectedBlock !== undefined ? 'Clear block selection' : undefined
+					}
 				>
 					<span className="text-[9px] text-tertiary font-mono tabular-nums">
-						{selectedBlock !== undefined ? selectedBlock.toString() : shownBlock?.toString() ?? '...'}
+						{selectedBlock !== undefined
+							? selectedBlock.toString()
+							: (shownBlock?.toString() ?? '...')}
 					</span>
 					{selectedBlock !== undefined && (
 						<XIcon className="size-2.5 text-accent" />

@@ -51,7 +51,7 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 			window.removeEventListener('resize', updateRect)
 			window.removeEventListener('scroll', updateRect)
 		}
-	}, [isLoaded])
+	}, [])
 
 	const parsedUrl = React.useMemo(() => {
 		try {

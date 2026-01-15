@@ -72,7 +72,11 @@ export async function createOnrampOrder(
 	// Only include domain for production (HTTPS) domains
 	// Localhost testing skips domain to avoid "not allowlisted" errors
 	// Domain must be allowlisted in CDP Portal for production
-	if (domain && !domain.includes('localhost') && !domain.includes('127.0.0.1')) {
+	if (
+		domain &&
+		!domain.includes('localhost') &&
+		!domain.includes('127.0.0.1')
+	) {
 		body.domain = domain
 	}
 
