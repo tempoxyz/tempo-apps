@@ -522,7 +522,10 @@ const fetchTokenMetadata = createServerFn({ method: 'POST' })
 				}
 			}
 
-			const tokens: Record<string, { name: string; symbol: string; decimals: number }> = {}
+			const tokens: Record<
+				string,
+				{ name: string; symbol: string; decimals: number }
+			> = {}
 			for (let i = 0; i < addresses.length; i++) {
 				const nameResult = results.find((r) => r.id === i * 2 + 1)?.result
 				const symbolResult = results.find((r) => r.id === i * 2 + 2)?.result
@@ -678,22 +681,7 @@ function eventTypeToActivityType(eventType: string): ActivityType {
 	return 'unknown'
 }
 
-async function refetchBalances(
-	accountAddress: string,
-): Promise<Map<string, { balance: string; valueUsd: number }>> {
-	try {
-		const assets = await fetchAssets({ data: { address: accountAddress } })
-		if (!assets) return new Map()
-		return new Map(
-			assets.map((a) => [
-				a.address.toLowerCase(),
-				{ balance: a.balance ?? '0', valueUsd: a.valueUsd ?? 0 },
-			]),
-		)
-	} catch {
-		return new Map()
-	}
-}
+
 
 function AddressView() {
 	const { address } = Route.useParams()
@@ -754,19 +742,16 @@ function AddressView() {
 
 	// Refetch balances without full page refresh
 	const refetchAssetsBalances = React.useCallback(async () => {
-		const newBalances = await refetchBalances(address)
-		if (newBalances.size === 0) return
-		setAssetsData((prev) =>
-			prev.map((asset) => {
-				const newData = newBalances.get(asset.address.toLowerCase())
-				if (!newData) return asset
-				return {
-					...asset,
-					balance: newData.balance,
-					valueUsd: newData.valueUsd,
-				}
-			}),
-		)
+		const newAssets = await fetchAssets({ data: { address } })
+		if (!newAssets) return
+		setAssetsData((prev) => {
+			// Merge: update existing, add new
+			const prevMap = new Map(prev.map((a) => [a.address.toLowerCase(), a]))
+			for (const asset of newAssets) {
+				prevMap.set(asset.address.toLowerCase(), asset)
+			}
+			return Array.from(prevMap.values())
+		})
 	}, [address])
 
 	// Build token metadata map for activity parsing
@@ -1908,6 +1893,7 @@ function BlockTimeline({
 			currentBlock,
 			onSelectBlock,
 			prefetchAdjacentBlocks,
+			handleBlockClick,
 		],
 	)
 
@@ -2074,9 +2060,7 @@ function BlockTimeline({
 											block.hasUserActivity,
 											block.isPlaceholder,
 										),
-								isCurrent &&
-									!isSelected &&
-									'ring-2 ring-white/50',
+								isCurrent && !isSelected && 'ring-2 ring-white/50',
 								isSelected && 'ring-2 ring-accent',
 								isFocused && !isSelected && 'ring-2 ring-accent/50',
 								block.hasUserActivity &&
@@ -2153,7 +2137,11 @@ function BlockTimeline({
 								? 'bg-accent/30 hover:bg-accent/40'
 								: 'bg-white/10 hover:bg-white/20',
 						)}
-						aria-label={isPaused || selectedBlock !== undefined ? 'Resume live updates' : 'Pause live updates'}
+						aria-label={
+							isPaused || selectedBlock !== undefined
+								? 'Resume live updates'
+								: 'Pause live updates'
+						}
 					>
 						{isPaused || selectedBlock !== undefined ? (
 							<PlayIcon className="size-2 text-accent fill-accent" />
@@ -2858,7 +2846,9 @@ function ActivitySection({
 							const metadataResult = await fetchTokenMetadata({
 								data: { addresses: Array.from(unknownTokens) },
 							})
-							for (const [addr, meta] of Object.entries(metadataResult.tokens)) {
+							for (const [addr, meta] of Object.entries(
+								metadataResult.tokens,
+							)) {
 								fetchedTokenMetadataRef.current.set(addr, meta)
 							}
 						} catch {
@@ -2926,7 +2916,7 @@ function ActivitySection({
 		return () => {
 			cancelled = true
 		}
-	}, [activeTab, selectedBlock])
+	}, [activeTab, selectedBlock, loadedBlock])
 
 	// Clear selection when switching tabs
 	React.useEffect(() => {
