@@ -77,17 +77,10 @@ function Landing() {
 	}, [])
 
 	React.useEffect(() => {
-		if (!connect.isPending && !connect.isSuccess) {
+		if (!connect.isPending) {
 			setPendingAction(null)
 		}
-	}, [connect.isPending, connect.isSuccess])
-
-	// Reset pending action on error
-	React.useEffect(() => {
-		if (connect.error) {
-			setPendingAction(null)
-		}
-	}, [connect.error])
+	}, [connect.isPending])
 
 	const isValidAddress = address.startsWith('0x') && address.length === 42
 
