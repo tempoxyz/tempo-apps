@@ -1795,18 +1795,12 @@ function BlockTimeline({
 		if (isPlaceholder) return 'bg-base-alt/20'
 		if (isCurrent) return 'bg-white'
 		if (hasUserActivity) return 'bg-green-500'
+
+		// Simple discrete scale: 0=dim, 1=grey, 2=slight color, 3+=bright
 		if (txCount === 0) return 'bg-base-alt/40'
-
-		// Use relative scale if chain has low activity, otherwise absolute scale
-		const scale = maxTxCount < 10 ? Math.max(maxTxCount, 1) : 50
-		const intensity = Math.min(txCount / scale, 1)
-
-		if (intensity < 0.15) return 'bg-base-alt/60'
-		if (intensity < 0.3) return 'bg-base-alt/80'
-		if (intensity < 0.5) return 'bg-emerald-800/70'
-		if (intensity < 0.7) return 'bg-emerald-600/80'
-		if (intensity < 0.85) return 'bg-yellow-500/80'
-		return 'bg-orange-500'
+		if (txCount === 1) return 'bg-base-alt/70'
+		if (txCount === 2) return 'bg-emerald-800/70'
+		return 'bg-emerald-500'
 	}
 
 	if (!currentBlock) {
@@ -1824,7 +1818,7 @@ function BlockTimeline({
 			<div
 				ref={scrollRef}
 				onScroll={handleScroll}
-				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar py-1"
+				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar p-1"
 			>
 				{blocks.map((block) => {
 					const isSelected = selectedBlock === block.blockNumber
@@ -1872,15 +1866,15 @@ function BlockTimeline({
 					onClick={selectedBlock !== undefined ? () => onSelectBlock(undefined) : undefined}
 					disabled={selectedBlock === undefined}
 					className={cx(
-						'flex items-center gap-0.5 h-4 px-1.5 rounded-full border transition-colors focus-ring',
+						'flex items-center gap-1 h-5 px-2 rounded-full border transition-colors focus-ring',
 						selectedBlock !== undefined
 							? 'bg-accent/20 border-accent/30 hover:bg-accent/30 cursor-pointer'
 							: 'bg-white/5 border-white/10 cursor-default',
 					)}
 					aria-label={selectedBlock !== undefined ? 'Clear block selection' : undefined}
 				>
-					<span className="text-[9px] text-tertiary">Block</span>
-					<span className="text-[9px] text-primary font-mono tabular-nums">
+					<span className="text-[11px] text-tertiary">Block</span>
+					<span className="text-[11px] text-primary font-mono tabular-nums">
 						{selectedBlock !== undefined ? selectedBlock.toString() : shownBlock?.toString() ?? '...'}
 					</span>
 					{selectedBlock !== undefined && (
@@ -2572,6 +2566,7 @@ function ActivityList({
 					item={item}
 					viewer={viewer}
 					transformEvent={transformEvent}
+					isHighlighted={filterBlockNumber !== undefined && item.blockNumber === filterBlockNumber}
 				/>
 			))}
 			{totalPages > 1 && (
@@ -2601,17 +2596,24 @@ function ActivityRow({
 	item,
 	viewer,
 	transformEvent,
+	isHighlighted,
 }: {
 	item: ActivityItem
 	viewer: Address.Address
 	transformEvent: (event: KnownEvent) => KnownEvent
+	isHighlighted?: boolean
 }) {
 	const { t } = useTranslation()
 	const [showModal, setShowModal] = React.useState(false)
 
 	return (
 		<>
-			<div className="group flex items-center gap-2 px-3 h-[48px] rounded-xl hover:glass-thin transition-all">
+			<div
+				className={cx(
+					'group flex items-center gap-2 px-3 h-[48px] rounded-xl transition-all',
+					isHighlighted ? 'bg-accent/10' : 'hover:glass-thin',
+				)}
+			>
 				<TxDescription.ExpandGroup
 					events={item.events}
 					seenAs={viewer}
