@@ -322,15 +322,22 @@ function OverviewSection(props: {
 		.map((event) => event.note)
 		.filter((note): note is string => typeof note === 'string' && !!note.trim())
 
-	// Try to decode known contract calls when no events exist (e.g., validator precompile)
+	// Try to decode known contract calls (e.g., validator precompile)
+	// Prioritize decoded calls over fee-only events since they're more descriptive
 	const knownCall = React.useMemo(() => {
-		if (knownEvents.length > 0) return null
 		if (!transaction.to || !input || input === '0x') return null
 		return decodeKnownCall(transaction.to, input)
-	}, [knownEvents.length, transaction.to, input])
+	}, [transaction.to, input])
 
-	const displayEvents =
-		knownEvents.length > 0 ? knownEvents : knownCall ? [knownCall] : []
+	// If we have a decoded call, prepend it to events (or use it alone if only fee events)
+	const displayEvents = React.useMemo(() => {
+		if (knownCall) {
+			// Filter out fee-only events when we have a more descriptive call
+			const nonFeeEvents = knownEvents.filter((e) => e.type !== 'fee')
+			return [knownCall, ...nonFeeEvents]
+		}
+		return knownEvents
+	}, [knownCall, knownEvents])
 
 	return (
 		<div className="flex flex-col">
