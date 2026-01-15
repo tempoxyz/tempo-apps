@@ -31,6 +31,10 @@ const LANGUAGES = [
 	{ code: 'ja', name: '日本語' },
 	{ code: 'ko', name: '한국어' },
 	{ code: 'el', name: 'Ελληνικά' },
+	{ code: 'de', name: 'Deutsch' },
+	{ code: 'fr', name: 'Français' },
+	{ code: 'pt', name: 'Português' },
+	{ code: 'ru', name: 'Русский' },
 ]
 
 type MenuView = 'main' | 'send' | 'language'
@@ -83,6 +87,7 @@ type Command = {
 	id: string
 	label: string
 	icon: React.ReactNode
+	iconBg?: string
 	onSelect: () => void
 	shortcut?: string
 	keywords?: string[]
@@ -118,6 +123,9 @@ function CommandMenuPortal({
 	const { connect } = useConnect()
 	const [connector] = useConnectors()
 
+	const isMac =
+		typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent)
+
 	const close = React.useCallback(() => {
 		setVisible(false)
 		announce(t('commandMenu.closed'))
@@ -127,7 +135,7 @@ function CommandMenuPortal({
 			setQuery('')
 			setSendAddress('')
 			setSelectedIndex(0)
-		}, 120)
+		}, 150)
 	}, [onOpenChange, announce, t])
 
 	React.useEffect(() => {
@@ -140,13 +148,12 @@ function CommandMenuPortal({
 
 	React.useEffect(() => {
 		setSelectedIndex(0)
-	}, [])
+	}, [query, view])
 
-	// Scroll selected into view
 	React.useEffect(() => {
 		const el = listRef.current?.querySelector('[data-selected="true"]')
 		el?.scrollIntoView({ block: 'nearest' })
-	}, [])
+	}, [selectedIndex])
 
 	const commandGroups = React.useMemo((): CommandGroup[] => {
 		const groups: CommandGroup[] = []
@@ -157,6 +164,7 @@ function CommandMenuPortal({
 				id: 'home',
 				label: t('commandMenu.home'),
 				icon: <HomeIcon />,
+				iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
 				shortcut: 'G H',
 				onSelect: () => {
 					navigate({ to: '/' })
@@ -172,6 +180,7 @@ function CommandMenuPortal({
 				id: 'account',
 				label: t('commandMenu.myAccount'),
 				icon: <WalletIcon />,
+				iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600',
 				shortcut: 'G A',
 				onSelect: () => {
 					navigate({ to: '/$address', params: { address: addr } })
@@ -190,6 +199,7 @@ function CommandMenuPortal({
 					id: 'send',
 					label: t('commandMenu.sendTokens'),
 					icon: <SendIcon />,
+					iconBg: 'bg-gradient-to-br from-cyan-500 to-cyan-600',
 					onSelect: () => setView('send'),
 					keywords: ['send', 'transfer', 'pay'],
 					hasSubmenu: true,
@@ -198,6 +208,7 @@ function CommandMenuPortal({
 					id: 'refresh',
 					label: t('commandMenu.refreshData'),
 					icon: <RefreshCwIcon />,
+					iconBg: 'bg-gradient-to-br from-green-500 to-green-600',
 					shortcut: 'R',
 					onSelect: () => {
 						router.invalidate()
@@ -216,6 +227,7 @@ function CommandMenuPortal({
 				id: 'signout',
 				label: t('commandMenu.signOut'),
 				icon: <LogOutIcon />,
+				iconBg: 'bg-gradient-to-br from-red-500 to-red-600',
 				onSelect: () => {
 					disconnect()
 					navigate({ to: '/' })
@@ -228,6 +240,7 @@ function CommandMenuPortal({
 				id: 'signup',
 				label: t('commandMenu.createAccount'),
 				icon: <KeyIcon />,
+				iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
 				onSelect: () => {
 					if (connector)
 						connect({
@@ -242,6 +255,7 @@ function CommandMenuPortal({
 				id: 'signin',
 				label: t('commandMenu.signIn'),
 				icon: <FingerprintIcon />,
+				iconBg: 'bg-gradient-to-br from-indigo-500 to-indigo-600',
 				onSelect: () => {
 					if (connector) connect({ connector })
 					close()
@@ -257,8 +271,9 @@ function CommandMenuPortal({
 				id: 'language',
 				label: t('commandMenu.changeLanguage'),
 				icon: <LanguagesIcon />,
+				iconBg: 'bg-gradient-to-br from-pink-500 to-pink-600',
 				onSelect: () => setView('language'),
-				keywords: ['language', 'locale', 'translate', 'i18n'],
+				keywords: ['language', 'translate', 'locale', 'i18n'],
 				hasSubmenu: true,
 			},
 		]
@@ -270,28 +285,32 @@ function CommandMenuPortal({
 				id: 'website',
 				label: t('commandMenu.tempoWebsite'),
 				icon: <GlobeIcon />,
+				iconBg: 'bg-gradient-to-br from-slate-500 to-slate-600',
 				onSelect: () => {
 					window.open('https://tempo.xyz', '_blank')
 					close()
 				},
-				keywords: ['website', 'tempo', 'home'],
+				keywords: ['website', 'tempo', 'main'],
 			},
 			{
 				id: 'docs',
 				label: t('commandMenu.documentation'),
 				icon: <BookOpenIcon />,
+				iconBg: 'bg-gradient-to-br from-orange-500 to-orange-600',
 				onSelect: () => {
 					window.open('https://docs.tempo.xyz', '_blank')
 					close()
 				},
-				keywords: ['docs', 'help', 'guide', 'learn'],
+				keywords: ['docs', 'documentation', 'help', 'guide'],
 			},
 		]
+
 		if (account.address) {
 			links.push({
 				id: 'explorer',
 				label: t('commandMenu.viewOnExplorer'),
 				icon: <ExternalLinkIcon />,
+				iconBg: 'bg-gradient-to-br from-teal-500 to-teal-600',
 				onSelect: () => {
 					window.open(
 						`https://explore.mainnet.tempo.xyz/address/${account.address}`,
@@ -299,25 +318,17 @@ function CommandMenuPortal({
 					)
 					close()
 				},
-				keywords: ['explorer', 'block', 'etherscan'],
+				keywords: ['explorer', 'block', 'transactions'],
 			})
 		}
 		groups.push({ label: t('commandMenu.links'), commands: links })
 
 		return groups
-	}, [
-		account.address,
-		navigate,
-		close,
-		disconnect,
-		connect,
-		connector,
-		router,
-		t,
-	])
+	}, [t, account.address, navigate, close, router, disconnect, connect, connector])
 
-	const filteredGroups = React.useMemo((): CommandGroup[] => {
-		if (!query) return commandGroups
+	const filteredGroups = React.useMemo(() => {
+		if (!query.trim()) return commandGroups
+
 		const q = query.toLowerCase()
 		return commandGroups
 			.map((g) => ({
@@ -331,162 +342,129 @@ function CommandMenuPortal({
 			.filter((g) => g.commands.length > 0)
 	}, [commandGroups, query])
 
-	const flatCommands = React.useMemo(
-		() => filteredGroups.flatMap((g) => g.commands),
-		[filteredGroups],
-	)
+	const flatItems = React.useMemo(() => {
+		if (view === 'language') return LANGUAGES
+		return filteredGroups.flatMap((g) => g.commands)
+	}, [view, filteredGroups])
 
 	const handleKeyDown = React.useCallback(
 		(e: React.KeyboardEvent) => {
-			if (e.key === 'Escape') {
-				if (view !== 'main') {
-					setView('main')
-					setQuery('')
-					setSendAddress('')
-				} else {
-					close()
-				}
-			} else if (e.key === 'ArrowDown') {
+			if (e.key === 'ArrowDown') {
 				e.preventDefault()
-				if (view === 'main') {
-					setSelectedIndex((i) => Math.min(i + 1, flatCommands.length - 1))
-				} else if (view === 'language') {
-					setSelectedIndex((i) => Math.min(i + 1, LANGUAGES.length - 1))
-				}
+				setSelectedIndex((i) => Math.min(i + 1, flatItems.length - 1))
 			} else if (e.key === 'ArrowUp') {
 				e.preventDefault()
 				setSelectedIndex((i) => Math.max(i - 1, 0))
 			} else if (e.key === 'Enter') {
 				e.preventDefault()
-				if (view === 'main' && flatCommands[selectedIndex]) {
-					flatCommands[selectedIndex].onSelect()
-				} else if (
-					view === 'send' &&
-					sendAddress.match(/^0x[a-fA-F0-9]{40}$/) &&
-					account.address
-				) {
-					navigate({
-						to: '/$address',
-						params: { address: account.address },
-						search: { sendTo: sendAddress },
-					})
+				const item = flatItems[selectedIndex]
+				if (view === 'language' && 'code' in item) {
+					i18n.changeLanguage(item.code)
+					localStorage.setItem('tempo-language', item.code)
 					close()
-				} else if (view === 'language' && LANGUAGES[selectedIndex]) {
-					const lang = LANGUAGES[selectedIndex].code
-					i18n.changeLanguage(lang)
-					localStorage.setItem('tempo-language', lang)
+				} else if ('onSelect' in item) {
+					item.onSelect()
+				}
+			} else if (e.key === 'Escape') {
+				e.preventDefault()
+				if (view !== 'main') {
+					setView('main')
+					setQuery('')
+					setSendAddress('')
+					setSelectedIndex(0)
+				} else {
 					close()
 				}
-			} else if (
-				e.key === 'Backspace' &&
-				view !== 'main' &&
-				!query &&
-				!sendAddress
-			) {
+			} else if (e.key === 'Backspace' && !query && view !== 'main') {
 				setView('main')
+				setSendAddress('')
+				setSelectedIndex(0)
 			}
 		},
-		[
-			view,
-			flatCommands,
-			selectedIndex,
-			close,
-			sendAddress,
-			navigate,
-			account.address,
-			query,
-		],
+		[flatItems, selectedIndex, view, query, close],
 	)
 
 	const pasteFromClipboard = async () => {
 		try {
 			const text = await navigator.clipboard.readText()
-			if (text.match(/^0x[a-fA-F0-9]{40}$/)) {
-				setSendAddress(text)
-			}
-		} catch {}
+			setSendAddress(text.trim())
+		} catch {
+			// ignore
+		}
 	}
 
 	if (!open) return null
 
-	const isMac =
-		typeof navigator !== 'undefined' && /Mac/.test(navigator.platform)
 	let globalIndex = -1
 
 	return createPortal(
-		// biome-ignore lint/a11y/noStaticElementInteractions: modal backdrop overlay
 		<div
-			role="presentation"
 			className={cx(
-				'fixed inset-0 z-[9999] flex items-start justify-center pt-[15vh] px-4',
-				'transition-opacity duration-100',
-				visible ? 'bg-black/50' : 'bg-transparent opacity-0',
+				'fixed inset-0 z-50 flex items-start justify-center pt-[15vh] bg-black/60 backdrop-blur-sm transition-opacity duration-150',
+				visible ? 'opacity-100' : 'opacity-0',
 			)}
 			onClick={close}
 			onKeyDown={handleKeyDown}
 		>
-			{/* biome-ignore lint/a11y/useKeyWithClickEvents: stopPropagation only, keyboard handled on parent */}
 			<div
-				role="dialog"
-				aria-modal="true"
-				aria-label="Command menu"
 				className={cx(
-					'w-full max-w-[520px] rounded-xl overflow-hidden',
-					'bg-[#232326] border border-[#3a3a3c]',
-					'shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)]',
-					'transition-all duration-100',
-					visible ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.98]',
+					'w-[640px] max-w-[90vw] rounded-2xl overflow-hidden shadow-2xl transition-all duration-150',
+					'bg-[#1c1c1e]/95 backdrop-blur-xl border border-white/10',
+					visible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
 				)}
 				onClick={(e) => e.stopPropagation()}
 			>
-				{/* Search Input */}
-				<div className="flex items-center gap-2 px-3 h-10 border-b border-[#3a3a3c]">
+				{/* Search Header */}
+				<div className="flex items-center gap-4 px-5 h-16 border-b border-white/10">
 					{view !== 'main' ? (
 						<button
 							type="button"
 							onClick={() => {
 								setView('main')
-								setQuery('')
 								setSendAddress('')
+								setSelectedIndex(0)
 							}}
-							aria-label={t('commandMenu.back')}
-							className="p-1 -ml-1 rounded-md hover:bg-white/10 transition-colors focus-ring"
+							className="flex items-center justify-center size-10 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
 						>
-							<ArrowLeftIcon className="size-4 text-[#98989f]" />
+							<ArrowLeftIcon className="size-5 text-white/60" />
 						</button>
 					) : (
-						<SearchIcon className="size-3.5 text-[#6e6e73] shrink-0" />
+						<SearchIcon className="size-6 text-white/40 shrink-0" />
 					)}
 
 					{view === 'main' && (
 						<input
 							ref={inputRef}
+							type="text"
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
 							placeholder={t('commandMenu.searchPlaceholder')}
-							className="flex-1 bg-transparent text-[#f5f5f7] placeholder:text-[#6e6e73] outline-none text-[13px]"
+							className="flex-1 bg-transparent text-[17px] text-white placeholder:text-white/40 outline-none"
 							autoComplete="off"
+							autoCorrect="off"
 							spellCheck={false}
 						/>
 					)}
 					{view === 'send' && (
 						<input
 							ref={inputRef}
+							type="text"
 							value={sendAddress}
 							onChange={(e) => setSendAddress(e.target.value)}
 							placeholder={t('commandMenu.sendSubmenu.enterAddress')}
-							className="flex-1 bg-transparent text-[#f5f5f7] placeholder:text-[#6e6e73] outline-none text-[14px] font-mono"
+							className="flex-1 bg-transparent text-[17px] text-white placeholder:text-white/40 outline-none font-mono"
 							autoComplete="off"
+							autoCorrect="off"
 							spellCheck={false}
 						/>
 					)}
 					{view === 'language' && (
-						<span className="flex-1 text-[#6e6e73] text-[15px]">
+						<span className="flex-1 text-[17px] text-white/60">
 							{t('commandMenu.languageSubmenu.title')}
 						</span>
 					)}
 
-					<kbd className="px-1.5 py-0.5 text-[10px] text-[#6e6e73] bg-[#1c1c1e] rounded border border-[#3a3a3c] font-sans">
+					<kbd className="px-2.5 py-1.5 text-[12px] text-white/50 bg-white/5 rounded-lg border border-white/10 font-sans">
 						{isMac ? '⌘K' : 'Ctrl+K'}
 					</kbd>
 				</div>
@@ -496,22 +474,17 @@ function CommandMenuPortal({
 					ref={listRef}
 					role="menu"
 					aria-label={t('commandMenu.title')}
-					className="max-h-[320px] overflow-y-auto overflow-x-hidden"
+					className="max-h-[400px] overflow-y-auto overflow-x-hidden py-2"
 				>
 					{view === 'main' &&
 						(filteredGroups.length === 0 ? (
-							<div className="px-3.5 py-6 text-center text-[#6e6e73] text-[13px]">
+							<div className="px-5 py-10 text-center text-white/40 text-[15px]">
 								No results found
 							</div>
 						) : (
 							filteredGroups.map((group) => (
-								<div
-									key={group.label}
-									role="group"
-									aria-label={group.label}
-									className="pt-1 pb-0.5"
-								>
-									<div className="px-3 py-1 text-[10px] font-medium text-[#6e6e73] uppercase tracking-wider">
+								<div key={group.label} role="group" aria-label={group.label}>
+									<div className="px-5 py-2 text-[11px] font-semibold text-white/40 uppercase tracking-wider">
 										{group.label}
 									</div>
 									{group.commands.map((cmd) => {
@@ -528,37 +501,39 @@ function CommandMenuPortal({
 												onClick={cmd.onSelect}
 												onMouseEnter={() => setSelectedIndex(idx)}
 												className={cx(
-													'w-full flex items-center gap-2 px-2.5 h-7 text-left transition-colors rounded mx-1 focus-ring',
-													isSelected ? 'bg-[#0a84ff]' : 'hover:bg-[#3a3a3c]',
+													'w-full flex items-center gap-4 px-4 py-3 mx-2 rounded-xl transition-all focus-ring',
+													isSelected
+														? 'bg-[#0a84ff]'
+														: 'hover:bg-white/5',
 												)}
-												style={{ width: 'calc(100% - 8px)' }}
+												style={{ width: 'calc(100% - 16px)' }}
 											>
 												<span
 													className={cx(
-														'[&>svg]:size-3.5',
-														isSelected ? 'text-white' : 'text-[#98989f]',
+														'flex items-center justify-center size-10 rounded-xl text-white shrink-0',
+														isSelected ? 'bg-white/20' : cmd.iconBg,
 													)}
 												>
-													{cmd.icon}
+													<span className="[&>svg]:size-5">{cmd.icon}</span>
 												</span>
 												<span
 													className={cx(
-														'flex-1 text-[12px]',
-														isSelected ? 'text-white' : 'text-[#f5f5f7]',
+														'flex-1 text-[15px] font-medium text-left',
+														isSelected ? 'text-white' : 'text-white/90',
 													)}
 												>
 													{cmd.label}
 												</span>
 												{cmd.shortcut && (
-													<span className="flex items-center gap-0.5">
+													<span className="flex items-center gap-1">
 														{cmd.shortcut.split(' ').map((k) => (
 															<kbd
 																key={k}
 																className={cx(
-																	'min-w-[16px] h-4 flex items-center justify-center text-[10px] rounded border px-1',
+																	'min-w-[24px] h-6 flex items-center justify-center text-[12px] font-medium rounded-md px-1.5',
 																	isSelected
-																		? 'text-white/60 bg-white/10 border-white/20'
-																		: 'text-[#6e6e73] bg-[#1c1c1e] border-[#3a3a3c]',
+																		? 'text-white/70 bg-white/20'
+																		: 'text-white/50 bg-white/10',
 																)}
 															>
 																{k}
@@ -569,8 +544,8 @@ function CommandMenuPortal({
 												{cmd.hasSubmenu && (
 													<ChevronRightIcon
 														className={cx(
-															'size-3.5',
-															isSelected ? 'text-white/70' : 'text-[#6e6e73]',
+															'size-5',
+															isSelected ? 'text-white/70' : 'text-white/40',
 														)}
 													/>
 												)}
@@ -582,22 +557,18 @@ function CommandMenuPortal({
 						))}
 
 					{view === 'send' && (
-						<div
-							className="p-2"
-							role="menu"
-							aria-label={t('commandMenu.sendSubmenu.title')}
-						>
+						<div className="px-2 py-2">
 							<button
 								type="button"
 								role="menuitem"
 								onClick={pasteFromClipboard}
 								aria-label={t('commandMenu.sendSubmenu.pasteFromClipboard')}
-								className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-[#2c2c2e] transition-colors focus-ring"
+								className="w-full flex items-center gap-4 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors focus-ring"
 							>
-								<span className="flex items-center justify-center size-7 rounded-md bg-[#3a3a3c] text-[#98989f]">
-									<ClipboardIcon className="size-4" />
+								<span className="flex items-center justify-center size-10 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 text-white">
+									<ClipboardIcon className="size-5" />
 								</span>
-								<span className="text-[14px] text-[#f5f5f7]">
+								<span className="text-[15px] font-medium text-white/90">
 									{t('commandMenu.sendSubmenu.pasteFromClipboard')}
 								</span>
 							</button>
@@ -618,15 +589,15 @@ function CommandMenuPortal({
 												close()
 											}}
 											aria-label={`${t('commandMenu.sendSubmenu.sendTo')} ${sendAddress}`}
-											className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-[#0a84ff]/20 hover:bg-[#0a84ff]/30 border border-[#0a84ff]/30 transition-colors focus-ring"
+											className="w-full flex items-center gap-4 px-4 py-3 rounded-xl bg-[#0a84ff] hover:bg-[#0a84ff]/90 transition-colors focus-ring"
 										>
-											<span className="flex items-center justify-center size-7 rounded-md bg-[#0a84ff] text-white">
-												<SendIcon className="size-4" />
+											<span className="flex items-center justify-center size-10 rounded-xl bg-white/20 text-white">
+												<SendIcon className="size-5" />
 											</span>
-											<span className="text-[14px] text-[#f5f5f7]">
+											<span className="text-[15px] font-medium text-white">
 												{t('commandMenu.sendSubmenu.sendTo')}{' '}
-												<span className="font-mono text-[#0a84ff]">
-													{sendAddress.slice(0, 6)}...{sendAddress.slice(-4)}
+												<span className="font-mono opacity-80">
+													{sendAddress.slice(0, 8)}...{sendAddress.slice(-6)}
 												</span>
 											</span>
 										</button>
@@ -634,9 +605,9 @@ function CommandMenuPortal({
 										!sendAddress.match(/^0x[a-fA-F0-9]{40}$/) ? (
 										<div
 											role="alert"
-											className="px-3 py-2.5 rounded-lg bg-[#ff453a]/10 border border-[#ff453a]/20"
+											className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/20"
 										>
-											<span className="text-[13px] text-[#ff453a]">
+											<span className="text-[14px] text-red-400">
 												{t('commandMenu.sendSubmenu.invalidAddress')}
 											</span>
 										</div>
@@ -647,11 +618,7 @@ function CommandMenuPortal({
 					)}
 
 					{view === 'language' && (
-						<div
-							className="py-1"
-							role="menu"
-							aria-label={t('commandMenu.languageSubmenu.title')}
-						>
+						<div className="px-2 py-1">
 							{LANGUAGES.map((lang, i) => {
 								const isActive = i18n.language === lang.code
 								const isSelected = i === selectedIndex
@@ -670,15 +637,16 @@ function CommandMenuPortal({
 										}}
 										onMouseEnter={() => setSelectedIndex(i)}
 										className={cx(
-											'w-full flex items-center justify-between px-2.5 h-7 transition-colors rounded mx-1 focus-ring',
-											isSelected ? 'bg-[#0a84ff]' : 'hover:bg-[#3a3a3c]',
+											'w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all focus-ring',
+											isSelected
+												? 'bg-[#0a84ff]'
+												: 'hover:bg-white/5',
 										)}
-										style={{ width: 'calc(100% - 8px)' }}
 									>
 										<span
 											className={cx(
-												'text-[12px]',
-												isSelected ? 'text-white' : 'text-[#f5f5f7]',
+												'text-[15px] font-medium',
+												isSelected ? 'text-white' : 'text-white/90',
 											)}
 										>
 											{lang.name}
@@ -686,8 +654,8 @@ function CommandMenuPortal({
 										{isActive && (
 											<CheckIcon
 												className={cx(
-													'size-4',
-													isSelected ? 'text-white' : 'text-[#30d158]',
+													'size-5',
+													isSelected ? 'text-white' : 'text-green-400',
 												)}
 											/>
 										)}
@@ -699,27 +667,27 @@ function CommandMenuPortal({
 				</div>
 
 				{/* Footer */}
-				<div className="flex items-center gap-3 px-3 h-7 border-t border-[#3a3a3c] bg-[#1c1c1e] text-[10px] text-[#6e6e73]">
-					<span className="flex items-center gap-1">
-						<kbd className="px-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
+				<div className="flex items-center gap-6 px-5 h-12 border-t border-white/10 bg-white/5 text-[12px] text-white/40">
+					<span className="flex items-center gap-2">
+						<kbd className="px-1.5 py-0.5 bg-white/10 rounded-md border border-white/10">
 							↑
 						</kbd>
-						<kbd className="px-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
+						<kbd className="px-1.5 py-0.5 bg-white/10 rounded-md border border-white/10">
 							↓
 						</kbd>
-						Navigate
+						<span>Navigate</span>
 					</span>
-					<span className="flex items-center gap-1">
-						<kbd className="px-1 bg-[#232326] rounded border border-[#3a3a3c]">
+					<span className="flex items-center gap-2">
+						<kbd className="px-2 py-0.5 bg-white/10 rounded-md border border-white/10">
 							↵
 						</kbd>
-						Open
+						<span>Open</span>
 					</span>
-					<span className="flex items-center gap-1">
-						<kbd className="px-1 bg-[#232326] rounded border border-[#3a3a3c]">
+					<span className="flex items-center gap-2">
+						<kbd className="px-2 py-0.5 bg-white/10 rounded-md border border-white/10">
 							esc
 						</kbd>
-						{view !== 'main' ? 'Back' : 'Close'}
+						<span>{view !== 'main' ? 'Back' : 'Close'}</span>
 					</span>
 				</div>
 			</div>
