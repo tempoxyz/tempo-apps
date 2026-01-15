@@ -7,7 +7,7 @@ import { AbiViewer } from '#comps/ContractAbi.tsx'
 import { ContractReader } from '#comps/ContractReader.tsx'
 import { SourceSection } from '#comps/ContractSource.tsx'
 import { ContractWriter } from '#comps/ContractWriter.tsx'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { getContractAbi } from '#lib/domain/contracts.ts'
@@ -270,6 +270,7 @@ export function InteractTabContent(props: {
 
 export function ContractFeatureCard(props: {
 	title: string
+	className?: string
 	rightSideTitle?: string
 	actions?: React.ReactNode
 	children: React.ReactNode
@@ -287,6 +288,7 @@ export function ContractFeatureCard(props: {
 		rightSideDescription,
 		rightSideTitle,
 		textGrid,
+		className,
 		collapsible,
 		defaultCollapsed,
 	} = props
@@ -302,6 +304,7 @@ export function ContractFeatureCard(props: {
 					'flex flex-col w-full overflow-hidden',
 					'rounded-[10px] border border-card-border bg-card-header',
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
+					className,
 				)}
 			>
 				<div className="flex items-center h-[36px] shrink-0">
@@ -343,7 +346,9 @@ export function ContractFeatureCard(props: {
 	}
 
 	return (
-		<section className="rounded-[10px] bg-card-header overflow-hidden">
+		<section
+			className={cx('rounded-[10px] bg-card-header overflow-hidden', className)}
+		>
 			<div className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between w-full">
 				<div className="w-full">
 					<div className="flex items-center w-full gap-2 justify-between">

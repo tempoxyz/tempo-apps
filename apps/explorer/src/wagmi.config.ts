@@ -56,11 +56,9 @@ const getRpcProxyUrl = createIsomorphicFn()
 	})
 	.server(() => {
 		const chain = getTempoChain()
-		const key = process.env.TEMPO_RPC_KEY
-		const keyParam = key ? `?key=${key}` : ''
 		return {
-			http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}${keyParam}`,
-			webSocket: `wss://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}${keyParam}`,
+			http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}?key=${process.env.TEMPO_RPC_KEY}`,
+			webSocket: `wss://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}?key=${process.env.TEMPO_RPC_KEY}`,
 		}
 	})
 
@@ -71,13 +69,12 @@ const getFallbackUrls = createIsomorphicFn()
 	})
 	.server(() => {
 		const chain = getTempoChain()
-		const key = process.env.TEMPO_RPC_KEY
 		return {
-			webSocket: chain.rpcUrls.default.webSocket.map((url) =>
-				key ? `${url}/${key}` : url,
+			webSocket: chain.rpcUrls.default.webSocket.map(
+				(url) => `${url}/${process.env.TEMPO_RPC_KEY}`,
 			),
-			http: chain.rpcUrls.default.http.map((url) =>
-				key ? `${url}/${key}` : url,
+			http: chain.rpcUrls.default.http.map(
+				(url) => `${url}/${process.env.TEMPO_RPC_KEY}`,
 			),
 		}
 	})

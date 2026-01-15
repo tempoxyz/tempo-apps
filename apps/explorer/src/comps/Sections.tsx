@@ -1,11 +1,12 @@
 import * as React from 'react'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config.ts'
 
 export function Sections(props: Sections.Props) {
 	const {
 		sections: sections_,
 		activeSection = 0,
 		onSectionChange,
+		className,
 		mode = Sections.defaultMode,
 	} = props
 
@@ -24,7 +25,7 @@ export function Sections(props: Sections.Props) {
 	if (mode === 'stacked')
 		return (
 			<Sections.Context.Provider value={{ mode }}>
-				<div className="flex flex-col gap-[14px]">
+				<div className={cx('flex flex-col gap-[14px]', className)}>
 					{sections.map((section, index) => {
 						const itemsLabel = section.itemsLabel ?? 'items'
 						const isCollapsed =
@@ -101,6 +102,7 @@ export function Sections(props: Sections.Props) {
 					'flex flex-col font-sans w-full overflow-hidden min-h-0 self-start',
 					'rounded-[10px] border border-card-border bg-card-header',
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
+					className,
 				)}
 			>
 				<div className="h-[36px] flex items-center justify-between">
@@ -171,6 +173,7 @@ export function Sections(props: Sections.Props) {
 export namespace Sections {
 	export interface Props {
 		activeSection?: number
+		className?: string
 		mode?: Mode
 		onSectionChange?: (index: number) => void
 		sections: Section[]

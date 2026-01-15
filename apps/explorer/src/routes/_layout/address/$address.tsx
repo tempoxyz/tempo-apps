@@ -24,7 +24,6 @@ import {
 import { Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
-import { Breadcrumbs } from '#comps/Breadcrumbs'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
@@ -44,7 +43,7 @@ import {
 	TransactionTotal,
 	useTransactionDataFromBatch,
 } from '#comps/TxTransactionRow'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config'
 import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type ContractSource,
@@ -569,25 +568,23 @@ function RouteComponent() {
 		// Only redirect if:
 		// 1. We have a hash
 		// 2. Address is a contract
-		// 3. Haven't already redirected for this specific hash
-		if (!hash || !isContract || redirectedForHashRef.current === hash) return
-
-		// Determine which tab the hash should navigate to
-		// TanStack Router's location.hash doesn't include the '#' prefix
-		const isSourceFileHash = hash.startsWith('source-file-')
-		const targetTab = isSourceFileHash ? 'contract' : 'interact'
-
-		// Only redirect if we're not already on the target tab
-		if (tab === targetTab) return
-
-		redirectedForHashRef.current = hash
-		navigate({
-			to: '.',
-			search: { page: 1, tab: targetTab, limit },
-			hash,
-			replace: true,
-			resetScroll: false,
-		})
+		// 3. Not already on interact tab
+		// 4. Haven't already redirected for this specific hash
+		if (
+			hash &&
+			isContract &&
+			tab !== 'interact' &&
+			redirectedForHashRef.current !== hash
+		) {
+			redirectedForHashRef.current = hash
+			navigate({
+				to: '.',
+				search: { page: 1, tab: 'interact', limit },
+				hash,
+				replace: true,
+				resetScroll: false,
+			})
+		}
 	}, [hash, isContract, tab, navigate, limit])
 
 	React.useEffect(() => {
@@ -643,7 +640,6 @@ function RouteComponent() {
 				'grid w-full pt-20 pb-16 px-4 gap-3.5 min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-7xl',
 			)}
 		>
-			<Breadcrumbs className="col-span-full" />
 			<AccountCardWithTimestamps
 				address={address}
 				assetsData={assetsData}
@@ -804,7 +800,11 @@ function SectionsWrapper(props: {
 	 * (tanstack query may have fresher cached data that differs from SSR)
 	 */
 	const data = isMounted ? queryData : page === 1 ? initialData : queryData
-	const { transactions = [], hasMore = false } = data ?? {}
+	const {
+		transactions = [],
+		total: approximateTotal = 0,
+		hasMore = false,
+	} = data ?? {}
 
 	// Fetch exact total count in the background (only when on history tab)
 	// Don't cache across tabs/pages - always show "..." until loaded each time
@@ -827,6 +827,14 @@ function SectionsWrapper(props: {
 	// so we can't use exactCount for page calculation - most pages would be empty
 	// Only use after mount to avoid SSR/client hydration mismatch
 	const exactCount = isMounted ? totalCountQuery.data?.data : undefined
+
+	// For pagination: always use hasMore-based estimate
+	// This ensures we only show pages that have data
+	const paginationTotal = hasMore
+		? Math.max(approximateTotal + limit, (page + 1) * limit)
+		: approximateTotal > 0
+			? approximateTotal
+			: transactions.length
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -871,7 +879,7 @@ function SectionsWrapper(props: {
 				sections={[
 					{
 						title: 'History',
-						totalItems: data && exactCount,
+						totalItems: data && (exactCount ?? paginationTotal),
 						itemsLabel: 'transactions',
 						content: historyError ?? (
 							<DataGrid
@@ -910,13 +918,12 @@ function SectionsWrapper(props: {
 										},
 									}))
 								}
-								totalItems={exactCount ?? transactions.length}
-								pages={exactCount === undefined ? { hasMore } : undefined}
+								totalItems={paginationTotal}
 								displayCount={exactCount}
 								page={page}
 								fetching={isPlaceholderData}
 								loading={!data}
-								countLoading={exactCount === undefined}
+								countLoading
 								itemsLabel="transactions"
 								itemsPerPage={limit}
 								pagination="simple"
@@ -1104,7 +1111,7 @@ function AssetName(props: { asset: AssetData }) {
 			<TokenIcon
 				address={asset.address}
 				name={asset.metadata?.name}
-				className="size-5!"
+				className="size-5"
 			/>
 			<span className="truncate">{asset.metadata.name}</span>
 		</span>

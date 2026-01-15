@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config.ts'
 
 export function InfoCard(props: InfoCard.Props) {
 	const { title, sections, titlePosition = 'outside', className } = props

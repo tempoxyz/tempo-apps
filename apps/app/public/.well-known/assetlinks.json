@@ -1,0 +1,15 @@
+[
+	{
+		"relation": [
+			"delegate_permission/common.handle_all_urls",
+			"delegate_permission/common.get_login_creds"
+		],
+		"target": {
+			"namespace": "android_app",
+			"package_name": "xyz.tempo.mobile",
+			"sha256_cert_fingerprints": [
+				"DEBUG_FINGERPRINT_PLACEHOLDER:REPLACE_WITH_REAL_SHA256_FROM_EAS_BUILD"
+			]
+		}
+	}
+]

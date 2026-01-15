@@ -1,11 +1,7 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { Hex } from 'ox'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
-import {
-	decodeKnownCall,
-	parseKnownEvent,
-	parseKnownEvents,
-} from '#lib/domain/known-events'
+import { parseKnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { getFeeBreakdown } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { getWagmiConfig } from '#wagmi.config.ts'
@@ -29,21 +25,10 @@ async function fetchTxData(params: { hash: Hex.Hex }) {
 		Tip20.metadataFromLogs(receipt.logs),
 	])
 
-	const parsedEvents = parseKnownEvents(receipt, {
+	const knownEvents = parseKnownEvents(receipt, {
 		transaction,
 		getTokenMetadata,
 	})
-
-	// Try to decode known contract calls (e.g., validator precompile)
-	// Prioritize decoded calls over fee-only events since they're more descriptive
-	const knownCall =
-		transaction.to && transaction.input && transaction.input !== '0x'
-			? decodeKnownCall(transaction.to, transaction.input)
-			: null
-
-	const knownEvents = knownCall
-		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
-		: parsedEvents
 
 	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
 

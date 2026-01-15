@@ -13,7 +13,6 @@ import { type Log, type TransactionReceipt, toEventSelector } from 'viem'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
-import { Breadcrumbs } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoRow } from '#comps/InfoRow'
 import { Midcut } from '#comps/Midcut'
@@ -28,7 +27,7 @@ import { TxRawTransaction } from '#comps/TxRawTransaction'
 import { TxStateDiff } from '#comps/TxStateDiff'
 import { TxTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config.ts'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
@@ -265,7 +264,6 @@ function RouteComponent() {
 				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
 			)}
 		>
-			<Breadcrumbs className="col-span-full" />
 			<TxTransactionCard
 				hash={receipt.transactionHash}
 				status={receipt.status}
@@ -321,8 +319,6 @@ function OverviewSection(props: {
 	const memos = knownEvents
 		.map((event) => event.note)
 		.filter((note): note is string => typeof note === 'string' && !!note.trim())
-
-	// knownEvents already has decoded calls prepended (from the loader)
 
 	return (
 		<div className="flex flex-col">
@@ -533,7 +529,7 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 														<TokenIcon
 															address={change.token}
 															name={metadata?.symbol}
-															className="size-[16px]!"
+															className="size-[16px]"
 														/>
 														<span>{metadata?.symbol ?? '…'}</span>
 													</Link>

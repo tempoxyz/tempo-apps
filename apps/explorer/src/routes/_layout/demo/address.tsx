@@ -16,7 +16,7 @@ import {
 	TransactionTimestamp,
 	TransactionTotal,
 } from '#comps/TxTransactionRow'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config.ts'
 import {
 	accountAddress,
 	adminAddress,

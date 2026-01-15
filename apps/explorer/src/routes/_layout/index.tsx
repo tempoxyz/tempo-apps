@@ -5,11 +5,11 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { waapi, stagger } from 'animejs'
+import { animate, stagger } from 'animejs'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config'
 import { springInstant, springBouncy, springSmooth } from '#lib/animation'
 import { Intro, type IntroPhase, useIntroSeen } from '#comps/Intro'
 import BoxIcon from '~icons/lucide/box'
@@ -17,7 +17,6 @@ import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CoinsIcon from '~icons/lucide/coins'
 import FileIcon from '~icons/lucide/file'
 import ReceiptIcon from '~icons/lucide/receipt'
-import ShieldCheckIcon from '~icons/lucide/shield-check'
 import ShuffleIcon from '~icons/lucide/shuffle'
 import UserIcon from '~icons/lucide/user'
 import ZapIcon from '~icons/lucide/zap'
@@ -99,24 +98,22 @@ function Component() {
 	}, [router])
 
 	const handlePhaseChange = React.useCallback((phase: IntroPhase) => {
-		if (phase !== 'start' || !exploreWrapperRef.current) return
-
-		const seen = introSeenOnMount.current
-		setTimeout(
-			() => {
-				setInputReady(true)
-				if (exploreWrapperRef.current) {
-					exploreWrapperRef.current.style.pointerEvents = 'auto'
-					waapi.animate(exploreWrapperRef.current, {
-						opacity: [0, 1],
-						scale: [seen ? 0.97 : 0.94, 1],
-						ease: seen ? springInstant : springBouncy,
-					})
-				}
-				exploreInputRef.current?.focus()
-			},
-			seen ? 0 : 240,
-		)
+		if (phase === 'start' && exploreWrapperRef.current) {
+			const seen = introSeenOnMount.current
+			animate(exploreWrapperRef.current, {
+				opacity: [0, 1],
+				scale: [seen ? 0.97 : 0.94, 1],
+				ease: seen ? springInstant : springBouncy,
+				delay: seen ? 0 : 240,
+				onBegin: () => {
+					setInputReady(true)
+					if (exploreWrapperRef.current) {
+						exploreWrapperRef.current.style.pointerEvents = 'auto'
+					}
+					exploreInputRef.current?.focus()
+				},
+			})
+		}
 	}, [])
 
 	return (
@@ -180,17 +177,15 @@ function SpotlightLinks() {
 		setActionOpen(false)
 		if (dropdownMenuRef.current) {
 			closingRef.current = true
-			waapi
-				.animate(dropdownMenuRef.current, {
-					opacity: [1, 0],
-					scale: [1, 0.97],
-					translateY: [0, -4],
-					ease: springInstant,
-				})
-				.then(() => {
-					if (!closingRef.current) return
-					setMenuMounted(false)
-				})
+			animate(dropdownMenuRef.current, {
+				opacity: [1, 0],
+				scale: [1, 0.97],
+				translateY: [0, -4],
+				ease: springInstant,
+			}).then(() => {
+				if (!closingRef.current) return
+				setMenuMounted(false)
+			})
 		} else {
 			setMenuMounted(false)
 		}
@@ -213,18 +208,16 @@ function SpotlightLinks() {
 		if (!pillsRef.current) return
 		const seen = introSeenOnMount.current
 		const children = [...pillsRef.current.children]
-		const delay = seen ? 0 : 320
-		setTimeout(() => {
-			for (const child of children) {
-				;(child as HTMLElement).style.pointerEvents = 'auto'
-			}
-		}, delay)
-		const anim = waapi.animate(children as HTMLElement[], {
+		const anim = animate(children, {
 			opacity: [0, 1],
-			translateY: [seen ? 4 : 8, 0],
-			scale: [0.97, 1],
+			translateY: [seen ? 2 : 4, 0],
 			ease: seen ? springInstant : springSmooth,
-			delay: seen ? stagger(10) : stagger(20, { start: delay, from: 'first' }),
+			delay: seen ? stagger(10) : stagger(20, { start: 320, from: 'random' }),
+			onBegin: () => {
+				for (const child of children) {
+					;(child as HTMLElement).style.pointerEvents = 'auto'
+				}
+			},
 		})
 		anim.then(() => {
 			for (const child of children) {
@@ -232,9 +225,7 @@ function SpotlightLinks() {
 			}
 		})
 		return () => {
-			try {
-				anim.cancel()
-			} catch {}
+			anim.cancel()
 		}
 	}, [])
 
@@ -245,7 +236,7 @@ function SpotlightLinks() {
 	React.useLayoutEffect(() => {
 		if (!dropdownMenuRef.current) return
 		if (actionOpen && menuMounted) {
-			waapi.animate(dropdownMenuRef.current, {
+			animate(dropdownMenuRef.current, {
 				opacity: [0, 1],
 				scale: [0.97, 1],
 				translateY: [-4, 0],
@@ -258,7 +249,7 @@ function SpotlightLinks() {
 		if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
 		if (closingRef.current && dropdownMenuRef.current) {
 			closingRef.current = false
-			waapi.animate(dropdownMenuRef.current, {
+			animate(dropdownMenuRef.current, {
 				opacity: 1,
 				scale: 1,
 				ease: springInstant,
@@ -378,12 +369,6 @@ function SpotlightLinks() {
 					icon={<CoinsIcon className="size-[14px] text-accent" />}
 				>
 					Tokens
-				</SpotlightPill>
-				<SpotlightPill
-					to="/validators"
-					icon={<ShieldCheckIcon className="size-[14px] text-accent" />}
-				>
-					Validators
 				</SpotlightPill>
 			</div>
 		</section>
