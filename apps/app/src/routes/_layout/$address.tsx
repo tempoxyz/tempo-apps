@@ -610,14 +610,12 @@ function AddressView() {
 	const [selectedBlockFilter, setSelectedBlockFilter] = React.useState<
 		bigint | undefined
 	>(undefined)
-	const [isBlockPollingPaused, setIsBlockPollingPaused] = React.useState(false)
 
 	// Poll for current block number
 	React.useEffect(() => {
 		let mounted = true
 
 		const pollBlock = async () => {
-			if (isBlockPollingPaused) return
 			try {
 				const result = await fetchCurrentBlockNumber()
 				if (mounted && result.blockNumber) {
@@ -635,7 +633,7 @@ function AddressView() {
 			mounted = false
 			clearInterval(interval)
 		}
-	}, [isBlockPollingPaused])
+	}, [])
 
 	// Sync with loader data when address changes
 	React.useEffect(() => {
@@ -971,10 +969,7 @@ function AddressView() {
 							currentBlock={currentBlock}
 							selectedBlock={selectedBlockFilter}
 							onSelectBlock={setSelectedBlockFilter}
-							isPaused={isBlockPollingPaused}
-							onPauseChange={setIsBlockPollingPaused}
 						/>
-						<div className="w-full h-px bg-card-border my-2" />
 						<ActivityHeatmap activity={activity} />
 						<ActivityList
 							activity={activity}
@@ -1474,21 +1469,15 @@ function BlockTimeline({
 	currentBlock,
 	selectedBlock,
 	onSelectBlock,
-	isPaused,
-	onPauseChange,
 }: {
 	activity: ActivityItem[]
 	currentBlock: bigint | null
 	selectedBlock: bigint | undefined
 	onSelectBlock: (block: bigint | undefined) => void
-	isPaused: boolean
-	onPauseChange: (paused: boolean) => void
 }) {
-	const scrollRef = React.useRef<HTMLDivElement>(null)
-	const [isUserScrolling, setIsUserScrolling] = React.useState(false)
-	const scrollTimeoutRef = React.useRef<
-		ReturnType<typeof setTimeout> | undefined
-	>(undefined)
+	const containerRef = React.useRef<HTMLDivElement>(null)
+	const [offset, setOffset] = React.useState(0)
+	const prevBlockRef = React.useRef<bigint | null>(null)
 
 	const userBlockNumbers = React.useMemo(() => {
 		const blocks = new Set<bigint>()
@@ -1500,73 +1489,62 @@ function BlockTimeline({
 		return blocks
 	}, [activity])
 
-	const blocksToShow = 80
-	const emptyBlocksOnRight = 10
+	const blockSize = 8
+	const gap = 3
+	const blockUnit = blockSize + gap
+	const visibleBlocks = 60
+	const futureBlocks = 8
+
+	React.useEffect(() => {
+		if (!currentBlock) return
+		if (prevBlockRef.current === null) {
+			prevBlockRef.current = currentBlock
+			return
+		}
+		const diff = Number(currentBlock - prevBlockRef.current)
+		if (diff > 0 && diff < 10) {
+			setOffset(diff * blockUnit)
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					setOffset(0)
+				})
+			})
+		}
+		prevBlockRef.current = currentBlock
+	}, [currentBlock, blockUnit])
 
 	const blocks = React.useMemo(() => {
 		if (!currentBlock) return []
 		const result: {
 			blockNumber: bigint
 			hasActivity: boolean
-			isEmpty: boolean
+			isFuture: boolean
 		}[] = []
 
-		for (let i = blocksToShow - 1; i >= 0; i--) {
+		for (let i = visibleBlocks - 1; i >= 0; i--) {
 			const blockNum = currentBlock - BigInt(i)
 			if (blockNum > 0n) {
 				result.push({
 					blockNumber: blockNum,
 					hasActivity: userBlockNumbers.has(blockNum),
-					isEmpty: false,
+					isFuture: false,
 				})
 			}
 		}
 
-		for (let i = 1; i <= emptyBlocksOnRight; i++) {
+		for (let i = 1; i <= futureBlocks; i++) {
 			result.push({
 				blockNumber: currentBlock + BigInt(i),
 				hasActivity: false,
-				isEmpty: true,
+				isFuture: true,
 			})
 		}
 
 		return result
 	}, [currentBlock, userBlockNumbers])
 
-	React.useEffect(() => {
-		if (!scrollRef.current || isUserScrolling || isPaused) return
-		const container = scrollRef.current
-		const currentBlockIndex = blocksToShow - 1
-		const blockWidth = 10
-		const gap = 3
-		const scrollPosition =
-			currentBlockIndex * (blockWidth + gap) -
-			container.clientWidth / 2 +
-			blockWidth / 2
-		container.scrollTo({ left: scrollPosition, behavior: 'smooth' })
-	}, [isUserScrolling, isPaused])
-
-	const handleScroll = React.useCallback(() => {
-		setIsUserScrolling(true)
-		onPauseChange(true)
-
-		if (scrollTimeoutRef.current) {
-			clearTimeout(scrollTimeoutRef.current)
-		}
-		scrollTimeoutRef.current = setTimeout(() => {
-			setIsUserScrolling(false)
-		}, 2000)
-	}, [onPauseChange])
-
-	const handleWheel = React.useCallback((e: React.WheelEvent) => {
-		if (scrollRef.current && e.deltaY !== 0) {
-			e.preventDefault()
-			scrollRef.current.scrollLeft += e.deltaY
-		}
-	}, [])
-
-	const handleBlockClick = (blockNumber: bigint, isEmpty: boolean) => {
-		if (isEmpty) return
+	const handleBlockClick = (blockNumber: bigint, isFuture: boolean) => {
+		if (isFuture) return
 		if (selectedBlock === blockNumber) {
 			onSelectBlock(undefined)
 		} else {
@@ -1576,25 +1554,36 @@ function BlockTimeline({
 
 	const getBlockColor = (
 		hasActivity: boolean,
-		isEmpty: boolean,
+		isFuture: boolean,
 		isSelected: boolean,
 		isCurrent: boolean,
 	) => {
-		if (isEmpty) return 'bg-base-alt/20'
+		if (isFuture) return 'bg-base-alt/20'
 		if (isSelected) return 'bg-accent'
-		if (isCurrent) return 'bg-white dark:bg-white'
-		if (hasActivity) return 'bg-green-500 dark:bg-green-500'
-		return 'bg-base-alt/40'
+		if (isCurrent) return 'bg-white'
+		if (hasActivity) return 'bg-green-500'
+		return 'bg-base-alt/50'
+	}
+
+	if (!currentBlock) {
+		return (
+			<div className="py-3 -mx-2 px-2">
+				<div className="h-[24px] flex items-center justify-center">
+					<div className="text-[10px] text-tertiary">Loading blocks...</div>
+				</div>
+			</div>
+		)
 	}
 
 	return (
-		<div className="relative py-2 -mx-2">
+		<div className="py-2 -mx-2 overflow-hidden">
 			<div
-				ref={scrollRef}
-				onScroll={handleScroll}
-				onWheel={handleWheel}
-				className="flex gap-[3px] overflow-x-auto scrollbar-hide px-2"
-				style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+				ref={containerRef}
+				className="flex items-end justify-center gap-[3px] px-2"
+				style={{
+					transform: `translateX(${offset}px)`,
+					transition: offset === 0 ? 'transform 150ms ease-out' : 'none',
+				}}
 			>
 				{blocks.map((block) => {
 					const isSelected = selectedBlock === block.blockNumber
@@ -1602,64 +1591,44 @@ function BlockTimeline({
 					return (
 						<div
 							key={block.blockNumber.toString()}
-							className="flex flex-col items-center"
+							className="flex flex-col items-center shrink-0"
 						>
 							<button
 								type="button"
-								onClick={() =>
-									handleBlockClick(block.blockNumber, block.isEmpty)
-								}
-								disabled={block.isEmpty}
+								onClick={() => handleBlockClick(block.blockNumber, block.isFuture)}
+								disabled={block.isFuture}
 								className={cx(
-									'shrink-0 rounded-[2px] transition-all',
-									getBlockColor(
-										block.hasActivity,
-										block.isEmpty,
-										isSelected,
-										isCurrent,
-									),
-									block.hasActivity && !isSelected && !isCurrent && 'scale-110',
-									isSelected && 'scale-125 z-10 ring-1 ring-accent/50',
-									isCurrent && 'scale-125 z-10',
-									!block.isEmpty && 'hover:scale-125 hover:z-10 cursor-pointer',
-									block.isEmpty && 'cursor-default opacity-50',
+									'rounded-[2px] transition-all duration-150',
+									getBlockColor(block.hasActivity, block.isFuture, isSelected, isCurrent),
+									block.hasActivity && !isSelected && !isCurrent && 'scale-[1.2]',
+									isSelected && 'scale-[1.4] ring-1 ring-accent/50',
+									isCurrent && 'scale-[1.3]',
+									!block.isFuture && 'hover:scale-[1.4] cursor-pointer',
+									block.isFuture && 'cursor-default opacity-40',
 								)}
-								style={{ width: 10, height: 10 }}
-								title={
-									block.isEmpty
-										? undefined
-										: `Block ${block.blockNumber.toString()}`
-								}
+								style={{ width: blockSize, height: blockSize }}
+								title={block.isFuture ? undefined : `Block ${block.blockNumber.toString()}`}
 							/>
 							{isCurrent && (
-								<div className="text-[8px] text-tertiary font-mono mt-1 whitespace-nowrap">
-									{currentBlock?.toString()}
+								<div className="text-[9px] text-secondary font-mono mt-1.5 tabular-nums">
+									{currentBlock.toString()}
 								</div>
 							)}
 						</div>
 					)
 				})}
 			</div>
-			<div className="flex items-center justify-end gap-2 mt-1 px-2">
-				{isPaused && (
-					<button
-						type="button"
-						onClick={() => onPauseChange(false)}
-						className="text-[10px] text-accent hover:text-accent/80 cursor-pointer"
-					>
-						Resume
-					</button>
-				)}
-				{selectedBlock !== undefined && (
+			{selectedBlock !== undefined && (
+				<div className="flex justify-center mt-2">
 					<button
 						type="button"
 						onClick={() => onSelectBlock(undefined)}
-						className="text-[10px] text-secondary hover:text-primary cursor-pointer"
+						className="text-[10px] text-secondary hover:text-primary cursor-pointer px-2 py-0.5 rounded hover:bg-base-alt/50 transition-colors"
 					>
-						Clear filter
+						Clear block filter
 					</button>
-				)}
-			</div>
+				</div>
+			)}
 		</div>
 	)
 }
