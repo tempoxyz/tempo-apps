@@ -24,6 +24,7 @@ jobs:
     name: Bundle Size
     runs-on: ubuntu-latest
     permissions:
+      actions: write
       pull-requests: write
       contents: write
     steps:
@@ -70,6 +71,13 @@ jobs:
         with:
           path: apps/explorer/bundle-stats.json
           key: bundle-stats-explorer-main-${{ github.sha }}
+
+      - name: Delete old latest cache (main branch)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh cache delete bundle-stats-explorer-main-latest --repo ${{ github.repository }}
 
       - name: Save bundle stats with stable key (main branch)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
