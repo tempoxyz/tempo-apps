@@ -1864,26 +1864,27 @@ function BlockTimeline({
 				})}
 			</div>
 			<div className="flex items-center justify-center">
-				<div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10">
-					<span className="text-[11px] text-tertiary">Block</span>
-					<LottoBlockNumber value={shownBlock} />
-				</div>
+				{selectedBlock !== undefined ? (
+					<button
+						type="button"
+						onClick={() => onSelectBlock(undefined)}
+						className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-accent/20 border border-accent/30 hover:bg-accent/30 transition-colors cursor-pointer focus-ring"
+						aria-label="Clear block selection"
+					>
+						<span className="text-[10px] text-primary font-mono tabular-nums">
+							{selectedBlock.toString()}
+						</span>
+						<XCircleIcon className="size-3 text-accent" />
+					</button>
+				) : (
+					<div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+						<LottoBlockNumber value={shownBlock} />
+					</div>
+				)}
 			</div>
-			{(isPaused || selectedBlock !== undefined) && (
-				<div className="flex items-center justify-end gap-2">
-					{isPaused && (
-						<span className="text-[10px] text-amber-500/80">Paused</span>
-					)}
-					{selectedBlock !== undefined && (
-						<button
-							type="button"
-							onClick={() => onSelectBlock(undefined)}
-							aria-label="Clear selection"
-							className="flex items-center justify-center size-5 text-tertiary hover:text-primary cursor-pointer transition-colors focus-ring rounded-full"
-						>
-							<XCircleIcon className="size-4" />
-						</button>
-					)}
+			{isPaused && (
+				<div className="flex items-center justify-end">
+					<span className="text-[10px] text-amber-500/80">Paused</span>
 				</div>
 			)}
 		</div>
