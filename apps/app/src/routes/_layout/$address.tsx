@@ -2641,7 +2641,7 @@ function AssetRow({
 									limitText = 'No limit set'
 								}
 								const createdText = key.createdAt
-									? formatCreatedAt(key.createdAt)
+									? formatCreatedAt(key.createdAt, t)
 									: ''
 								return (
 									<option key={key.keyId} value={key.keyId}>

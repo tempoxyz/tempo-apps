@@ -123,6 +123,40 @@
 		"self": "self",
 		"andMore": "and {{count}} more"
 	},
+	"accessKeys": {
+		"title": "Access Keys",
+		"loading": "Loading access keys...",
+		"noKeys": "No access keys configured.",
+		"createKey": "Create Key",
+		"addKey": "Add key",
+		"confirming": "confirming...",
+		"revoking": "revoking...",
+		"remaining": "remaining",
+		"limitExhausted": "Limit exhausted",
+		"unlimited": "Unlimited",
+		"noExpiry": "No expiry",
+		"expired": "Expired",
+		"timeLeft": "{{time}} left",
+		"available": "Available",
+		"notOnDevice": "Not on device",
+		"revokeTitle": "Revoke this access key (requires passkey signature)",
+		"form": {
+			"name": "Name",
+			"namePlaceholder": "Optional",
+			"token": "Token",
+			"limit": "Limit",
+			"expires": "Expires",
+			"days": "days",
+			"create": "Create",
+			"cancel": "Cancel"
+		},
+		"time": {
+			"justNow": "just now",
+			"minutesAgo": "{{count}}m ago",
+			"hoursAgo": "{{count}}h ago",
+			"daysAgo": "{{count}}d ago"
+		}
+	},
 	"a11y": {
 		"skipToMain": "Skip to main content",
 		"loading": "Loading",

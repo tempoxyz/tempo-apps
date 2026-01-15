@@ -7,6 +7,7 @@
  * - Revocation requires Root Key signature (will trigger passkey prompt)
  */
 import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import { Address } from 'ox'
 import { WebCryptoP256 } from 'ox'
 import {
@@ -108,7 +109,10 @@ function shortenAddress(address: string, chars = 4): string {
 	return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`
 }
 
-export function formatCreatedAt(timestamp: number): string {
+export function formatCreatedAt(
+	timestamp: number,
+	t: (key: string, options?: Record<string, unknown>) => string,
+): string {
 	const now = Date.now()
 	const diff = now - timestamp
 
@@ -116,10 +120,10 @@ export function formatCreatedAt(timestamp: number): string {
 	const hours = Math.floor(diff / 3600000)
 	const days = Math.floor(diff / 86400000)
 
-	if (minutes < 1) return 'just now'
-	if (minutes < 60) return `${minutes}m ago`
-	if (hours < 24) return `${hours}h ago`
-	if (days < 7) return `${days}d ago`
+	if (minutes < 1) return t('accessKeys.time.justNow')
+	if (minutes < 60) return t('accessKeys.time.minutesAgo', { count: minutes })
+	if (hours < 24) return t('accessKeys.time.hoursAgo', { count: hours })
+	if (days < 7) return t('accessKeys.time.daysAgo', { count: days })
 
 	// For older dates, show the actual date
 	return new Date(timestamp).toLocaleDateString()
@@ -443,6 +447,7 @@ function AccessKeyRow({
 	isOwner,
 	onRevoke,
 	txHash,
+	t,
 }: {
 	accessKey: AccessKeyData
 	asset: AssetData | undefined
@@ -451,6 +456,7 @@ function AccessKeyRow({
 	isOwner: boolean
 	onRevoke: () => void
 	txHash?: `0x${string}`
+	t: (key: string, options?: Record<string, unknown>) => string
 }) {
 	const expiryMs = accessKey.expiry * 1000
 	const isExpired = accessKey.expiry > 0 && expiryMs <= Date.now()
@@ -514,10 +520,14 @@ function AccessKeyRow({
 						<CopyIcon className="size-3.5 text-tertiary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
 					)}
 					{isPending && (
-						<span className="text-[11px] text-accent">(confirming...)</span>
+						<span className="text-[11px] text-accent">
+							({t('accessKeys.confirming')})
+						</span>
 					)}
 					{isRevoking && (
-						<span className="text-[11px] text-accent">(revoking...)</span>
+						<span className="text-[11px] text-accent">
+							({t('accessKeys.revoking')})
+						</span>
 					)}
 				</span>
 				<span className="text-[11px] text-secondary flex items-center gap-1.5 flex-wrap">
@@ -546,35 +556,41 @@ function AccessKeyRow({
 									asset?.metadata?.decimals ?? 6,
 									asset?.metadata?.priceUsd ?? 1,
 								)}{' '}
-								remaining
+								{t('accessKeys.remaining')}
 							</span>
 							<span className="text-tertiary">·</span>
 						</>
 					) : hasLimit ? (
 						<>
-							<span className="text-negative">Limit exhausted</span>
+							<span className="text-negative">
+								{t('accessKeys.limitExhausted')}
+							</span>
 							<span className="text-tertiary">·</span>
 						</>
 					) : (
 						<>
-							<span>Unlimited</span>
+							<span>{t('accessKeys.unlimited')}</span>
 							<span className="text-tertiary">·</span>
 						</>
 					)}
 					<span className={isExpired ? 'text-negative' : ''}>
 						{accessKey.expiry === 0
-							? 'No expiry'
+							? t('accessKeys.noExpiry')
 							: isExpired
-								? 'Expired'
-								: `${formatExpiry(expiryMs)} left`}
+								? t('accessKeys.expired')
+								: t('accessKeys.timeLeft', { time: formatExpiry(expiryMs) })}
 					</span>
 					{hasPrivateKey !== null && (
 						<>
 							<span className="text-tertiary">·</span>
 							{hasPrivateKey ? (
-								<span className="text-positive">Available</span>
+								<span className="text-positive">
+									{t('accessKeys.available')}
+								</span>
 							) : (
-								<span className="text-tertiary">Not on device</span>
+								<span className="text-tertiary">
+									{t('accessKeys.notOnDevice')}
+								</span>
 							)}
 						</>
 					)}
@@ -584,7 +600,7 @@ function AccessKeyRow({
 				<button
 					type="button"
 					onClick={onRevoke}
-					title="Revoke this access key (requires passkey signature)"
+					title={t('accessKeys.revokeTitle')}
 					className="size-4 flex items-center justify-center rounded-full bg-negative/10 text-negative hover:bg-negative/20 transition-colors cursor-pointer press-down shrink-0"
 				>
 					<XIcon className="size-2.5" />
@@ -620,6 +636,7 @@ function CreateKeyForm({
 	isPending,
 	onCancel,
 	onCreate,
+	t,
 }: {
 	assets: AssetData[]
 	isPending: boolean
@@ -632,6 +649,7 @@ function CreateKeyForm({
 		priceUsd: number,
 		keyName: string,
 	) => void
+	t: (key: string, options?: Record<string, unknown>) => string
 }) {
 	const [keyName, setKeyName] = React.useState('')
 	const [selectedToken, setSelectedToken] = React.useState<Address.Address>(
@@ -659,19 +677,19 @@ function CreateKeyForm({
 			<div className="flex items-end gap-2 flex-wrap">
 				<div className="flex flex-col gap-0.5">
 					<label className="text-[9px] text-tertiary uppercase tracking-wide">
-						Name
+						{t('accessKeys.form.name')}
 					</label>
 					<input
 						type="text"
 						value={keyName}
 						onChange={(e) => setKeyName(e.target.value)}
-						placeholder="Optional"
+						placeholder={t('accessKeys.form.namePlaceholder')}
 						className={cx(inputClass, 'w-[90px]')}
 					/>
 				</div>
 				<div className="flex flex-col gap-0.5">
 					<label className="text-[9px] text-tertiary uppercase tracking-wide">
-						Token
+						{t('accessKeys.form.token')}
 					</label>
 					<select
 						value={selectedToken}
@@ -689,7 +707,7 @@ function CreateKeyForm({
 				</div>
 				<div className="flex flex-col gap-0.5">
 					<label className="text-[9px] text-tertiary uppercase tracking-wide">
-						Limit
+						{t('accessKeys.form.limit')}
 					</label>
 					<div className={cx(inputClass, 'flex items-center w-[70px]')}>
 						<span className={limitUsd ? 'text-primary' : 'text-tertiary'}>
@@ -707,7 +725,7 @@ function CreateKeyForm({
 				</div>
 				<div className="flex flex-col gap-0.5">
 					<label className="text-[9px] text-tertiary uppercase tracking-wide">
-						Expires
+						{t('accessKeys.form.expires')}
 					</label>
 					<div className="flex items-center gap-1">
 						<input
@@ -717,7 +735,9 @@ function CreateKeyForm({
 							placeholder="7"
 							className={cx(inputClass, 'w-[40px] text-center')}
 						/>
-						<span className="text-[9px] text-tertiary">days</span>
+						<span className="text-[9px] text-tertiary">
+							{t('accessKeys.form.days')}
+						</span>
 					</div>
 				</div>
 			</div>
@@ -739,14 +759,14 @@ function CreateKeyForm({
 					disabled={isPending}
 					className="h-[22px] px-2 text-[11px] font-medium bg-accent text-white rounded cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50"
 				>
-					{isPending ? '...' : 'Create'}
+					{isPending ? '...' : t('accessKeys.form.create')}
 				</button>
 				<button
 					type="button"
 					onClick={onCancel}
 					className="text-[11px] text-secondary hover:text-primary transition-colors cursor-pointer"
 				>
-					Cancel
+					{t('accessKeys.form.cancel')}
 				</button>
 			</div>
 		</div>
@@ -761,6 +781,7 @@ export function AccessKeysSection({
 	assets: AssetData[]
 	accountAddress: string
 }) {
+	const { t } = useTranslation()
 	const account = useAccount()
 	const { data: connectorClient } = useConnectorClient()
 
@@ -1031,16 +1052,18 @@ export function AccessKeysSection({
 		) : null
 
 	return (
-		<Section title="Access Keys" headerRight={headerPill} defaultOpen={false}>
+		<Section
+			title={t('accessKeys.title')}
+			headerRight={headerPill}
+			defaultOpen={false}
+		>
 			{isLoadingKeys ? (
 				<div className="flex flex-col items-center py-4 gap-2">
-					<p className="text-[13px] text-secondary">Loading access keys...</p>
+					<p className="text-[13px] text-secondary">{t('accessKeys.loading')}</p>
 				</div>
 			) : allKeys.length === 0 && !showCreate ? (
 				<div className="flex flex-col items-center py-4 gap-2">
-					<p className="text-[13px] text-secondary">
-						No access keys configured.
-					</p>
+					<p className="text-[13px] text-secondary">{t('accessKeys.noKeys')}</p>
 					{isOwner && (
 						<button
 							type="button"
@@ -1048,7 +1071,7 @@ export function AccessKeysSection({
 							disabled={isPending || assetsWithBalance.length === 0}
 							className="text-[11px] font-medium bg-accent/10 text-accent rounded px-2 py-1 cursor-pointer press-down hover:bg-accent/20 transition-colors"
 						>
-							Create Key
+							{t('accessKeys.createKey')}
 						</button>
 					)}
 				</div>
@@ -1065,6 +1088,7 @@ export function AccessKeysSection({
 								isOwner={isOwner}
 								onRevoke={() => handleRevoke(key.keyId)}
 								txHash={keyTxHash}
+								t={t}
 							/>
 						),
 					)}
@@ -1075,6 +1099,7 @@ export function AccessKeysSection({
 							isPending={isPending}
 							onCancel={() => setShowCreate(false)}
 							onCreate={handleCreate}
+							t={t}
 						/>
 					)}
 
@@ -1086,7 +1111,7 @@ export function AccessKeysSection({
 							className="flex items-center gap-1 px-3 h-[36px] text-[11px] text-secondary hover:text-accent transition-colors cursor-pointer"
 						>
 							<PlusIcon className="size-[12px]" />
-							<span>Add key</span>
+							<span>{t('accessKeys.addKey')}</span>
 						</button>
 					)}
 				</div>
