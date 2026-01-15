@@ -1130,16 +1130,16 @@ function QRCode({
 		>
 			<title>QR Code</title>
 			{cells.map(({ x, y }) => {
-				let opacity = 1
+				let opacity = 0.6
 				if (mousePos && !notifying) {
 					const cellCenterX = x * cellSize + cellSize / 2
 					const cellCenterY = y * cellSize + cellSize / 2
 					const distance = Math.sqrt(
 						(cellCenterX - mousePos.x) ** 2 + (cellCenterY - mousePos.y) ** 2,
 					)
-					const maxFadeRadius = 25
-					opacity = Math.min(1, distance / maxFadeRadius)
-					opacity = 0.15 + opacity * 0.85
+					const maxBrightRadius = 40
+					const brightness = 1 - Math.min(1, distance / maxBrightRadius)
+					opacity = 0.5 + brightness * 0.5
 				}
 				return (
 					<rect
@@ -1149,10 +1149,11 @@ function QRCode({
 						width={cellSize}
 						height={cellSize}
 						fill={notifying ? '#22c55e' : 'currentColor'}
-						className="text-secondary"
+						className="text-primary"
 						style={{
-							opacity: opacity * 0.85,
-							transition: 'fill 0.2s ease-out, opacity 0.1s ease-out',
+							opacity,
+							transition: 'fill 0.2s ease-out, opacity 0.15s ease-out',
+							filter: mousePos && !notifying ? `blur(${Math.max(0, (1 - opacity) * 0.3)}px)` : undefined,
 						}}
 					/>
 				)
@@ -1620,15 +1621,14 @@ function AssetRow({
 		if (isConfirmed) {
 			setSendState('sent')
 			setPendingSendAmount(null)
-			// Trigger balance refresh immediately
+			// Trigger balance refresh and close form immediately via onSendComplete
 			onSendComplete(asset.metadata?.symbol || shortenAddress(asset.address, 3))
-			// Reset UI state and collapse form after animation
+			// Reset UI state after animation (form already closed by onSendComplete)
 			setTimeout(() => {
 				setSendState('idle')
 				setRecipient('')
 				setAmount('')
 				resetWrite()
-				onToggleSend()
 			}, 1500)
 		}
 	}, [
@@ -1637,7 +1637,6 @@ function AssetRow({
 		asset.address,
 		onSendComplete,
 		resetWrite,
-		onToggleSend,
 	])
 
 	// Handle write errors
