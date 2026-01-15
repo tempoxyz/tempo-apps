@@ -4,6 +4,35 @@
 		"website": "Website",
 		"docs": "Docs"
 	},
+	"commandMenu": {
+		"searchPlaceholder": "Search commands...",
+		"navigation": "Navigation",
+		"actions": "Actions",
+		"account": "Account",
+		"settings": "Settings",
+		"links": "Links",
+		"home": "Home",
+		"myAccount": "My Account",
+		"sendTokens": "Send Tokens",
+		"refreshData": "Refresh Data",
+		"signOut": "Sign Out",
+		"createAccount": "Create Account",
+		"signIn": "Sign In",
+		"changeLanguage": "Change Language",
+		"tempoWebsite": "Tempo Website",
+		"documentation": "Documentation",
+		"viewOnExplorer": "View on Explorer",
+		"sendSubmenu": {
+			"title": "Send Tokens",
+			"enterAddress": "Enter recipient address",
+			"pasteFromClipboard": "Paste from clipboard",
+			"sendTo": "Send to",
+			"invalidAddress": "Invalid address format"
+		},
+		"languageSubmenu": {
+			"title": "Change Language"
+		}
+	},
 	"settings": {
 		"title": "Settings",
 		"feeToken": "Fee Token",
