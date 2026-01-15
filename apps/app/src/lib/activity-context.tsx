@@ -11,6 +11,7 @@ export type ActivityType =
 
 export interface ActivitySummary {
 	types: ActivityType[]
+	typeCounts: Record<ActivityType, number>
 	count: number
 	recentTimestamp?: number
 }
