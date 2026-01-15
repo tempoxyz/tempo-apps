@@ -5,7 +5,7 @@ import type { Address } from 'ox'
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { encode } from 'uqr'
-import { erc20Abi, formatUnits, parseUnits } from 'viem'
+import { decodeAbiParameters, erc20Abi, formatUnits, parseUnits } from 'viem'
 import {
 	useAccount,
 	useDisconnect,
@@ -443,6 +443,89 @@ const fetchBlockWithReceipts = createServerFn({ method: 'GET' })
 				timestamp: undefined,
 				error: String(e),
 			}
+		}
+	})
+
+const fetchTokenMetadata = createServerFn({ method: 'POST' })
+	.inputValidator((data: { addresses: string[] }) => data)
+	.handler(async ({ data }) => {
+		const { addresses } = data
+		if (addresses.length === 0) return { tokens: {} }
+
+		const tempoEnv = await getTempoEnv()
+		const rpcUrl =
+			tempoEnv === 'presto'
+				? 'https://rpc.presto.tempo.xyz'
+				: 'https://rpc.tempo.xyz'
+
+		let auth: string | undefined
+		try {
+			const { env } = await import('cloudflare:workers')
+			auth = env.PRESTO_RPC_AUTH as string | undefined
+		} catch {
+			// Not in Cloudflare Workers environment
+		}
+
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		}
+		if (auth && tempoEnv === 'presto') {
+			headers.Authorization = `Basic ${btoa(auth)}`
+		}
+
+		try {
+			// Batch call for name() and symbol() for each token
+			const batchRequest = addresses.flatMap((addr, i) => [
+				{
+					jsonrpc: '2.0',
+					id: i * 2 + 1,
+					method: 'eth_call',
+					params: [{ to: addr, data: '0x06fdde03' }, 'latest'], // name()
+				},
+				{
+					jsonrpc: '2.0',
+					id: i * 2 + 2,
+					method: 'eth_call',
+					params: [{ to: addr, data: '0x95d89b41' }, 'latest'], // symbol()
+				},
+			])
+
+			const res = await fetch(rpcUrl, {
+				method: 'POST',
+				headers,
+				body: JSON.stringify(batchRequest),
+			})
+			if (!res.ok) return { tokens: {} }
+
+			const results = (await res.json()) as Array<{
+				id: number
+				result?: `0x${string}`
+			}>
+
+			const decodeString = (hex: `0x${string}` | undefined): string => {
+				if (!hex || hex === '0x') return ''
+				try {
+					const [value] = decodeAbiParameters([{ type: 'string' }], hex)
+					return value
+				} catch {
+					return ''
+				}
+			}
+
+			const tokens: Record<string, { name: string; symbol: string; decimals: number }> = {}
+			for (let i = 0; i < addresses.length; i++) {
+				const nameResult = results.find((r) => r.id === i * 2 + 1)?.result
+				const symbolResult = results.find((r) => r.id === i * 2 + 2)?.result
+				const name = decodeString(nameResult)
+				const symbol = decodeString(symbolResult)
+				if (symbol) {
+					tokens[addresses[i].toLowerCase()] = { name, symbol, decimals: 6 }
+				}
+			}
+
+			return { tokens }
+		} catch {
+			return { tokens: {} }
 		}
 	})
 
@@ -2710,6 +2793,11 @@ function ActivitySection({
 	// Track which block we're currently showing to avoid flicker
 	const [loadedBlock, setLoadedBlock] = React.useState<bigint | undefined>()
 
+	// Cache for fetched token metadata
+	const fetchedTokenMetadataRef = React.useRef<
+		Map<string, { name: string; symbol: string; decimals: number }>
+	>(new Map())
+
 	// Fetch block transactions when a block is selected in "Everyone" tab
 	React.useEffect(() => {
 		if (activeTab !== 'everyone' || selectedBlock === undefined) {
@@ -2731,8 +2819,43 @@ function ActivitySection({
 				if (cancelled) return
 
 				if (result.receipts.length > 0) {
-					const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) =>
-						tokenMetadataMapRef.current.get(tokenAddress)
+					// Collect all token addresses from logs that we don't have metadata for
+					const unknownTokens = new Set<string>()
+					for (const receipt of result.receipts) {
+						for (const log of receipt.logs) {
+							const addr = log.address.toLowerCase()
+							if (
+								!tokenMetadataMapRef.current.has(addr as Address.Address) &&
+								!fetchedTokenMetadataRef.current.has(addr)
+							) {
+								unknownTokens.add(addr)
+							}
+						}
+					}
+
+					// Fetch metadata for unknown tokens
+					if (unknownTokens.size > 0 && !cancelled) {
+						try {
+							const metadataResult = await fetchTokenMetadata({
+								data: { addresses: Array.from(unknownTokens) },
+							})
+							for (const [addr, meta] of Object.entries(metadataResult.tokens)) {
+								fetchedTokenMetadataRef.current.set(addr, meta)
+							}
+						} catch {
+							// Ignore metadata fetch errors
+						}
+					}
+
+					if (cancelled) return
+
+					const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) => {
+						const addr = tokenAddress.toLowerCase()
+						return (
+							tokenMetadataMapRef.current.get(tokenAddress) ||
+							fetchedTokenMetadataRef.current.get(addr)
+						)
+					}
 
 					const items: ActivityItem[] = []
 					for (const receipt of result.receipts) {
