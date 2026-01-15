@@ -49,6 +49,8 @@ import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
 import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
+import PauseIcon from '~icons/lucide/pause'
+import PlayIcon from '~icons/lucide/play'
 import { useTranslation } from 'react-i18next'
 import i18n, { isRtl } from '#lib/i18n'
 import { useAnnounce, LiveRegion, useFocusTrap, useEscapeKey } from '#lib/a11y'
@@ -456,6 +458,43 @@ const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 					transactions: [] as ApiTransaction[],
 					error: `HTTP ${response.status}`,
 				}
+			}
+			const json = (await response.json()) as {
+				transactions?: ApiTransaction[]
+				error?: string | null
+			}
+			return {
+				transactions: json.transactions ?? [],
+				error: json.error ?? null,
+			}
+		} catch (e) {
+			return { transactions: [] as ApiTransaction[], error: String(e) }
+		}
+	})
+
+const fetchBlockTransactions = createServerFn({ method: 'GET' })
+	.inputValidator((data: { blockNumber: string }) => data)
+	.handler(async ({ data }) => {
+		const { blockNumber } = data
+		const explorerUrl =
+			TEMPO_ENV === 'presto'
+				? 'https://explore.presto.tempo.xyz'
+				: 'https://explore.mainnet.tempo.xyz'
+
+		const { env } = await import('cloudflare:workers')
+		const auth = env.PRESTO_RPC_AUTH as string | undefined
+		const headers: Record<string, string> = {}
+		if (auth) {
+			headers.Authorization = `Basic ${btoa(auth)}`
+		}
+
+		try {
+			const response = await fetch(
+				`${explorerUrl}/api/block/${blockNumber}?include=transactions`,
+				{ headers },
+			)
+			if (!response.ok) {
+				return { transactions: [] as ApiTransaction[], error: `HTTP ${response.status}` }
 			}
 			const json = (await response.json()) as {
 				transactions?: ApiTransaction[]
@@ -1828,7 +1867,7 @@ function BlockTimeline({
 			<div
 				ref={scrollRef}
 				onScroll={handleScroll}
-				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar p-1"
+				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar px-1 py-1.5"
 			>
 				{blocks.map((block) => {
 					const isSelected = selectedBlock === block.blockNumber
@@ -1843,7 +1882,7 @@ function BlockTimeline({
 							}
 							disabled={block.isPlaceholder}
 							className={cx(
-								'shrink-0 size-3 rounded-sm transition-all duration-150',
+								'shrink-0 size-3 rounded-sm transition-colors duration-75',
 								getBlockStyle(
 									block.txCount,
 									isSelected,
@@ -1870,7 +1909,34 @@ function BlockTimeline({
 					)
 				})}
 			</div>
-			<div className="flex items-center justify-center">
+			<div className="flex items-center justify-center gap-1">
+				<button
+					type="button"
+					onClick={() => {
+						if (isPaused) {
+							if (pauseTimeoutRef.current) {
+								clearTimeout(pauseTimeoutRef.current)
+								pauseTimeoutRef.current = null
+							}
+							setDisplayBlock(currentBlock)
+							setIsPaused(false)
+						} else {
+							if (pauseTimeoutRef.current) {
+								clearTimeout(pauseTimeoutRef.current)
+								pauseTimeoutRef.current = null
+							}
+							setIsPaused(true)
+						}
+					}}
+					className="flex items-center justify-center size-5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer focus-ring"
+					aria-label={isPaused ? 'Resume live updates' : 'Pause live updates'}
+				>
+					{isPaused ? (
+						<PlayIcon className="size-[10px] text-primary" />
+					) : (
+						<PauseIcon className="size-[10px] text-tertiary" />
+					)}
+				</button>
 				<button
 					type="button"
 					onClick={selectedBlock !== undefined ? () => onSelectBlock(undefined) : undefined}
@@ -1892,11 +1958,6 @@ function BlockTimeline({
 					)}
 				</button>
 			</div>
-			{isPaused && (
-				<div className="flex items-center justify-end">
-					<span className="text-[10px] text-amber-500/80">Paused</span>
-				</div>
-			)}
 		</div>
 	)
 }
@@ -2516,25 +2577,93 @@ function ActivityList({
 	activity,
 	address,
 	filterBlockNumber,
+	tokenMetadataMap,
 }: {
 	activity: ActivityItem[]
 	address: string
 	filterBlockNumber?: bigint
+	tokenMetadataMap: Map<Address.Address, { decimals: number; symbol: string }>
 }) {
 	const viewer = address as Address.Address
 	const { t } = useTranslation()
 	const [page, setPage] = React.useState(0)
+	const [blockActivity, setBlockActivity] = React.useState<ActivityItem[]>([])
+	const [isLoadingBlock, setIsLoadingBlock] = React.useState(false)
+	const userTxHashes = React.useMemo(
+		() => new Set(activity.map((a) => a.hash.toLowerCase())),
+		[activity],
+	)
 
-	const filteredActivity = React.useMemo(() => {
-		if (filterBlockNumber === undefined) return activity
-		return activity.filter((item) => item.blockNumber === filterBlockNumber)
-	}, [activity, filterBlockNumber])
+	React.useEffect(() => {
+		if (filterBlockNumber === undefined) {
+			setBlockActivity([])
+			return
+		}
+
+		const loadBlockTxs = async () => {
+			setIsLoadingBlock(true)
+			try {
+				const result = await fetchBlockTransactions({
+					data: { blockNumber: filterBlockNumber.toString() },
+				})
+				if (result.transactions.length > 0) {
+					const hashes = result.transactions.map((tx) => tx.hash)
+					const receiptsResult = await fetchTransactionReceipts({
+						data: { hashes },
+					})
+
+					const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) =>
+						tokenMetadataMap.get(tokenAddress)
+
+					const items: ActivityItem[] = []
+					for (const { hash, receipt } of receiptsResult.receipts) {
+						if (!receipt) continue
+						try {
+							const viemReceipt = convertRpcReceiptToViemReceipt(receipt)
+							const events = parseKnownEvents(viemReceipt.logs, getTokenMetadata)
+							const tx = result.transactions.find((t) => t.hash === hash)
+							items.push({
+								hash,
+								events,
+								timestamp: tx?.timestamp ? Number.parseInt(tx.timestamp, 10) : undefined,
+								blockNumber: filterBlockNumber,
+							})
+						} catch {
+							// skip
+						}
+					}
+					setBlockActivity(items)
+				} else {
+					setBlockActivity([])
+				}
+			} catch {
+				setBlockActivity([])
+			} finally {
+				setIsLoadingBlock(false)
+			}
+		}
+
+		loadBlockTxs()
+	}, [filterBlockNumber, tokenMetadataMap])
+
+	const displayActivity = filterBlockNumber !== undefined ? blockActivity : activity
 
 	React.useEffect(() => {
 		setPage(0)
-	}, [])
+	}, [filterBlockNumber])
 
-	if (filteredActivity.length === 0) {
+	if (isLoadingBlock && filterBlockNumber !== undefined) {
+		return (
+			<div className="flex flex-col items-center justify-center py-6 gap-2">
+				<div className="size-10 rounded-full bg-base-alt flex items-center justify-center animate-pulse">
+					<ReceiptIcon className="size-5 text-tertiary" />
+				</div>
+				<p className="text-[13px] text-secondary">Loading block transactions...</p>
+			</div>
+		)
+	}
+
+	if (displayActivity.length === 0) {
 		return (
 			<div className="flex flex-col items-center justify-center py-6 gap-2">
 				<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
@@ -2559,8 +2688,8 @@ function ActivityList({
 		)
 	}
 
-	const totalPages = Math.ceil(filteredActivity.length / ACTIVITY_PAGE_SIZE)
-	const paginatedActivity = filteredActivity.slice(
+	const totalPages = Math.ceil(displayActivity.length / ACTIVITY_PAGE_SIZE)
+	const paginatedActivity = displayActivity.slice(
 		page * ACTIVITY_PAGE_SIZE,
 		(page + 1) * ACTIVITY_PAGE_SIZE,
 	)
@@ -2576,7 +2705,7 @@ function ActivityList({
 					item={item}
 					viewer={viewer}
 					transformEvent={transformEvent}
-					isHighlighted={filterBlockNumber !== undefined && item.blockNumber === filterBlockNumber}
+					isHighlighted={filterBlockNumber !== undefined && userTxHashes.has(item.hash.toLowerCase())}
 				/>
 			))}
 			{totalPages > 1 && (
