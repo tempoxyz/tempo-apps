@@ -622,3 +622,199 @@ input[type="number"] {
 .animate-fill-up-rect {
 	animation: fill-up-rect 1.5s ease-in-out infinite;
 }
+
+/* ============================================
+   Accessibility Primitives
+   ============================================ */
+
+/* Screen reader only - visually hidden but accessible */
+@utility sr-only {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border-width: 0;
+}
+
+/* Not screen reader only - makes visible again */
+@utility not-sr-only {
+	position: static;
+	width: auto;
+	height: auto;
+	padding: 0;
+	margin: 0;
+	overflow: visible;
+	clip: auto;
+	white-space: normal;
+}
+
+/* Focus ring styles - visible only on keyboard focus */
+@utility focus-ring {
+	&:focus {
+		outline: none;
+	}
+	&:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+}
+
+/* Focus ring inset variant */
+@utility focus-ring-inset {
+	&:focus {
+		outline: none;
+	}
+	&:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: -2px;
+	}
+}
+
+/* Focus ring with glass effect */
+@utility focus-ring-glass {
+	&:focus {
+		outline: none;
+	}
+	&:focus-visible {
+		box-shadow:
+			0 0 0 2px var(--color-background-surface),
+			0 0 0 4px var(--color-accent);
+	}
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+	position: absolute;
+	top: -40px;
+	left: 0;
+	background: var(--color-accent);
+	color: white;
+	padding: 8px 16px;
+	z-index: 100;
+	text-decoration: none;
+	font-weight: 500;
+	border-radius: 0 0 8px 0;
+	transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+	top: 0;
+}
+
+/* Reduced motion - respect user preferences */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+}
+
+/* High contrast mode adjustments */
+@media (prefers-contrast: high) {
+	:root {
+		--color-border-primary: light-dark(#000000, #ffffff);
+		--color-content-secondary: light-dark(#404040, #c0c0c0);
+		--color-content-tertiary: light-dark(#505050, #b0b0b0);
+	}
+	
+	.glass-thin,
+	.glass-regular,
+	.glass-thick,
+	.liquid-glass,
+	.liquid-glass-premium {
+		background: light-dark(rgba(255, 255, 255, 0.95), rgba(30, 30, 30, 0.95));
+		border: 2px solid light-dark(#000000, #ffffff);
+	}
+}
+
+/* Ensure minimum touch target size (44x44px) */
+@utility touch-target {
+	min-width: 44px;
+	min-height: 44px;
+}
+
+/* Interactive element base - ensures consistent focus behavior */
+@utility interactive {
+	cursor: pointer;
+	user-select: none;
+	-webkit-tap-highlight-color: transparent;
+	
+	&:focus {
+		outline: none;
+	}
+	&:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+	&:disabled,
+	&[aria-disabled="true"] {
+		cursor: not-allowed;
+		opacity: 0.5;
+	}
+}
+
+/* Announce changes to screen readers */
+.announcer {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* Loading spinner with aria-busy support */
+[aria-busy="true"] {
+	cursor: wait;
+}
+
+/* Skeleton loading animation */
+.skeleton {
+	background: linear-gradient(
+		90deg,
+		var(--color-background-alt) 25%,
+		var(--color-background-surface) 50%,
+		var(--color-background-alt) 75%
+	);
+	background-size: 200% 100%;
+	animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+	0% {
+		background-position: 200% 0;
+	}
+	100% {
+		background-position: -200% 0;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.skeleton {
+		animation: none;
+		background: var(--color-background-alt);
+	}
+}
+
+/* Error state styling */
+@utility error-state {
+	background-color: light-dark(rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.1));
+	border-color: var(--color-negative);
+}
+
+/* Success state styling */
+@utility success-state {
+	background-color: light-dark(rgba(34, 197, 94, 0.05), rgba(34, 197, 94, 0.1));
+	border-color: var(--color-positive);
+}

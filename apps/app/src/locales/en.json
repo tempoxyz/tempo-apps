@@ -78,6 +78,7 @@
 		"hideZeroBalances": "Hide zero balances",
 		"showZeroBalances": "Show zero balances",
 		"noActivityYet": "No activity yet",
+		"noActivityInBlock": "No activity in this block",
 		"noAssetsFound": "No assets found"
 	},
 	"landing": {
