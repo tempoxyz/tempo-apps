@@ -24,7 +24,7 @@ import {
 import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
 import { Section } from '#comps/Section'
-import { AccessKeysSection } from '#comps/AccessKeysSection'
+import { AccessKeysSection, getAccessKeyEmoji } from '#comps/AccessKeysSection'
 import {
 	AccessKeysProvider,
 	useSignableAccessKeys,
@@ -2370,16 +2370,19 @@ function SignWithSelector({
 								setIsOpen(false)
 							}}
 							className={cx(
-								'w-full px-3 py-2.5 text-[12px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-2',
+								'w-full px-2.5 py-2 text-[11px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-1.5',
 								!selectedKey ? 'text-accent bg-accent/5' : 'text-primary',
 							)}
 						>
-							<UserIcon className="size-4" />
+							<div className="size-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+								<UserIcon className="size-3 text-accent" />
+							</div>
 							<span>Wallet</span>
 						</button>
 						{accessKeys.map((key) => {
 							const limit = getKeyLimit(key)
 							const isExhausted = limit === 'Exhausted'
+							const keyEmoji = getAccessKeyEmoji(key.keyId)
 							return (
 								<button
 									key={key.keyId}
@@ -2392,7 +2395,7 @@ function SignWithSelector({
 									}}
 									disabled={isExhausted}
 									className={cx(
-										'w-full px-3 py-2.5 text-[12px] text-left transition-colors flex items-center gap-2',
+										'w-full px-2.5 py-2 text-[11px] text-left transition-colors flex items-center gap-1.5',
 										isExhausted
 											? 'text-tertiary cursor-not-allowed'
 											: 'hover:bg-base-alt cursor-pointer',
@@ -2401,7 +2404,13 @@ function SignWithSelector({
 											: 'text-primary',
 									)}
 								>
-									<KeyIcon className="size-4" />
+									<div className="size-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+										{keyEmoji ? (
+											<span className="text-[11px]">{keyEmoji}</span>
+										) : (
+											<KeyIcon className="size-3 text-accent" />
+										)}
+									</div>
 									<span className="flex-1 truncate">
 										{getKeyName(key.keyId)}
 									</span>
@@ -2767,16 +2776,15 @@ function AssetRow({
 				}}
 				className="flex flex-col gap-2 px-1 py-2 rounded-xl hover:glass-thin transition-all"
 			>
-				{/* Row 1: Token icon + address input + cancel */}
-				<div className="flex items-center gap-1.5">
-					<TokenIcon address={asset.address} className="size-[24px] shrink-0" />
+				{/* Row 1: Address input + cancel */}
+				<div className="flex items-center gap-1.5 pl-[36px]">
 					<input
 						ref={recipientInputRef}
 						type="text"
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
 						placeholder="0x..."
-						className="flex-1 min-w-0 h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="flex-1 min-w-0 h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
 					<button
 						type="button"
@@ -2788,23 +2796,30 @@ function AssetRow({
 					</button>
 				</div>
 				{/* Row 2: Amount + MAX + signing key + send button */}
-				<div className="flex items-center gap-1.5 pl-[30px]">
-					<input
-						ref={amountInputRef}
-						type="text"
-						inputMode="decimal"
-						value={amount}
-						onChange={(e) => setAmount(e.target.value)}
-						placeholder="0.00"
-						className="flex-1 min-w-[80px] h-[32px] px-3 rounded-lg border border-card-border bg-base text-[14px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
-					/>
-					<button
-						type="button"
-						onClick={handleMax}
-						className="h-[32px] px-3 rounded-lg border border-card-border bg-base text-[11px] font-medium text-accent hover:bg-base-alt cursor-pointer transition-colors"
-					>
-						MAX
-					</button>
+				<div className="flex items-center gap-1.5 pl-[36px]">
+					{/* Compound amount input with token icon, symbol, and MAX */}
+					<div className="flex items-center flex-1 min-w-[120px] h-[32px] rounded-lg border border-card-border bg-base focus-within:border-accent">
+						<TokenIcon address={asset.address} className="size-[16px] shrink-0 ml-2" />
+						<input
+							ref={amountInputRef}
+							type="text"
+							inputMode="decimal"
+							value={amount}
+							onChange={(e) => setAmount(e.target.value)}
+							placeholder="0.00"
+							className="flex-1 min-w-[40px] h-full px-2 bg-transparent text-[14px] text-primary font-mono placeholder:text-tertiary focus:outline-none"
+						/>
+						<span className="text-[11px] text-tertiary font-medium shrink-0 pr-1">
+							{asset.metadata?.symbol || '???'}
+						</span>
+						<button
+							type="button"
+							onClick={handleMax}
+							className="h-full px-2 border-l border-card-border text-[10px] font-medium text-accent hover:bg-base-alt cursor-pointer transition-colors shrink-0"
+						>
+							MAX
+						</button>
+					</div>
 					<SignWithSelector
 						accessKeys={accessKeys}
 						selectedKey={selectedAccessKey}

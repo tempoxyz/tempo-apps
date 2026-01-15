@@ -7,6 +7,7 @@
  * - Revocation requires Root Key signature (will trigger passkey prompt)
  */
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import { Address } from 'ox'
 import { WebCryptoP256 } from 'ox'
 import {
@@ -111,7 +112,7 @@ function shortenAddress(address: string, chars = 4): string {
 // Emoji utilities
 const DEFAULT_EMOJIS = ['🔑', '🗝️', '🔐', '🔒', '⚡', '🚀', '💎', '🌟', '🎯', '🛡️', '🔥', '💫', '🎨', '🌈', '🍀', '🎪']
 
-function getAccessKeyEmoji(keyId: string): string | null {
+export function getAccessKeyEmoji(keyId: string): string | null {
 	if (typeof window === 'undefined') return null
 	return localStorage.getItem(`accessKeyEmoji:${keyId.toLowerCase()}`)
 }
@@ -134,51 +135,26 @@ function getEmojiColor(emoji: string): string {
 function EmojiPicker({
 	selectedEmoji,
 	onSelect,
-	onClose,
 }: {
 	selectedEmoji: string | null
 	onSelect: (emoji: string) => void
-	onClose: () => void
 }) {
-	const inputRef = React.useRef<HTMLInputElement>(null)
-
 	return (
-		<div className="absolute left-0 top-full mt-1 z-50 bg-surface border border-card-border rounded-lg shadow-xl p-2 w-[200px]">
-			<div className="grid grid-cols-8 gap-1 mb-2">
+		<div className="absolute left-0 top-full mt-1 z-50 bg-surface border border-card-border rounded-md shadow-lg p-1.5">
+			<div className="grid grid-cols-4 gap-0.5">
 				{DEFAULT_EMOJIS.map((emoji) => (
 					<button
 						key={emoji}
 						type="button"
 						onClick={() => onSelect(emoji)}
 						className={cx(
-							'size-6 flex items-center justify-center rounded hover:bg-white/10 text-sm cursor-pointer transition-colors',
-							selectedEmoji === emoji && 'bg-accent/20 ring-1 ring-accent',
+							'size-7 flex items-center justify-center rounded-md hover:bg-white/10 text-[14px] cursor-pointer transition-colors',
+							selectedEmoji === emoji && 'bg-accent/20',
 						)}
 					>
 						{emoji}
 					</button>
 				))}
-			</div>
-			<div className="flex gap-1">
-				<input
-					ref={inputRef}
-					type="text"
-					placeholder="Custom emoji"
-					maxLength={2}
-					className="flex-1 bg-base-alt rounded px-2 py-1 text-[12px] text-primary placeholder:text-tertiary outline-none focus:ring-1 focus:ring-accent"
-					onKeyDown={(e) => {
-						if (e.key === 'Enter' && inputRef.current?.value) {
-							onSelect(inputRef.current.value)
-						}
-					}}
-				/>
-				<button
-					type="button"
-					onClick={onClose}
-					className="px-2 py-1 text-[11px] text-tertiary hover:text-primary transition-colors"
-				>
-					Done
-				</button>
 			</div>
 		</div>
 	)
@@ -598,26 +574,22 @@ function AccessKeyRow({
 						if (isOwner) setShowEmojiPicker(!showEmojiPicker)
 					}}
 					className={cx(
-						'flex items-center justify-center size-8 rounded-lg transition-colors',
+						'flex items-center justify-center size-6 rounded-full transition-colors',
 						isOwner && 'cursor-pointer hover:ring-2 hover:ring-accent/30',
-						emoji ? 'text-lg' : '',
 					)}
-					style={emoji && emojiColor ? { backgroundColor: `${emojiColor}20` } : undefined}
+					style={emoji && emojiColor ? { backgroundColor: `${emojiColor}20` } : { backgroundColor: 'rgba(59, 130, 246, 0.1)' }}
 					title={isOwner ? 'Click to change emoji' : undefined}
 				>
 					{emoji ? (
-						<span>{emoji}</span>
+						<span className="text-[14px]">{emoji}</span>
 					) : (
-						<div className="flex items-center justify-center size-full rounded-lg bg-accent/10">
-							<KeyIcon className="size-4 text-accent" />
-						</div>
+						<KeyIcon className="size-3 text-accent" />
 					)}
 				</button>
 				{showEmojiPicker && (
 					<EmojiPicker
 						selectedEmoji={emoji}
 						onSelect={handleEmojiSelect}
-						onClose={() => setShowEmojiPicker(false)}
 					/>
 				)}
 			</div>
