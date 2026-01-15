@@ -2568,9 +2568,10 @@ function ActivitySection({
 						if (!receipt) continue
 						try {
 							const viemReceipt = convertRpcReceiptToViemReceipt(receipt)
+							// Use tx sender as viewer for proper perspective
 							const events = parseKnownEvents(viemReceipt, {
 								getTokenMetadata,
-								viewer: address as Address.Address,
+								viewer: receipt.from,
 							})
 							items.push({
 								hash,
