@@ -44,7 +44,7 @@ import EyeOffIcon from '~icons/lucide/eye-off'
 
 import ReceiptIcon from '~icons/lucide/receipt'
 import XIcon from '~icons/lucide/x'
-import XCircleIcon from '~icons/lucide/x-circle'
+
 import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
 import LogInIcon from '~icons/lucide/log-in'
@@ -1601,82 +1601,6 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 	)
 }
 
-function LottoBlockNumber({ value }: { value: bigint | null }) {
-	const [displayDigits, setDisplayDigits] = React.useState<string[]>([])
-	const [animatingIndex, setAnimatingIndex] = React.useState<number | null>(
-		null,
-	)
-	const prevValueRef = React.useRef<string>('')
-
-	React.useEffect(() => {
-		if (value === null) return
-
-		const newStr = value.toString()
-		const oldStr = prevValueRef.current
-
-		if (oldStr === '') {
-			setDisplayDigits(newStr.split(''))
-			prevValueRef.current = newStr
-			return
-		}
-
-		const newDigits = newStr.split('')
-		const oldDigits = oldStr.split('')
-
-		// Find the rightmost digit that changed
-		let changedIndex = -1
-		const maxLen = Math.max(newDigits.length, oldDigits.length)
-		for (let i = maxLen - 1; i >= 0; i--) {
-			if (newDigits[i] !== oldDigits[i]) {
-				changedIndex = i
-				break
-			}
-		}
-
-		if (changedIndex >= 0) {
-			setAnimatingIndex(changedIndex)
-			setTimeout(() => {
-				setDisplayDigits(newDigits)
-				setTimeout(() => setAnimatingIndex(null), 150)
-			}, 150)
-		} else {
-			setDisplayDigits(newDigits)
-		}
-
-		prevValueRef.current = newStr
-	}, [value])
-
-	if (value === null) {
-		return (
-			<span className="text-[10px] text-primary font-mono tabular-nums">
-				...
-			</span>
-		)
-	}
-
-	return (
-		<span className="text-[10px] text-primary font-mono tabular-nums flex">
-			{displayDigits.map((digit, i) => (
-				<span
-					key={i}
-					className="inline-block overflow-hidden"
-					style={{ width: '0.6em' }}
-				>
-					<span
-						className="inline-block transition-transform duration-150 ease-out"
-						style={{
-							transform:
-								animatingIndex === i ? 'translateY(-100%)' : 'translateY(0)',
-						}}
-					>
-						{digit}
-					</span>
-				</span>
-			))}
-		</span>
-	)
-}
-
 function BlockTimeline({
 	activity,
 	currentBlock,
@@ -1786,14 +1710,6 @@ function BlockTimeline({
 			}
 		}
 	}, [])
-
-	const maxTxCount = React.useMemo(() => {
-		let max = 1
-		for (const count of blockTxCounts.values()) {
-			if (count > max) max = count
-		}
-		return max
-	}, [blockTxCounts])
 
 	const blocks = React.useMemo(() => {
 		const blockToShow = displayBlock ?? currentBlock
@@ -1937,18 +1853,16 @@ function BlockTimeline({
 				<button
 					type="button"
 					onClick={() => {
+						if (pauseTimeoutRef.current) {
+							clearTimeout(pauseTimeoutRef.current)
+							pauseTimeoutRef.current = null
+						}
 						if (isPaused) {
-							if (pauseTimeoutRef.current) {
-								clearTimeout(pauseTimeoutRef.current)
-								pauseTimeoutRef.current = null
-							}
-							setDisplayBlock(currentBlock)
 							setIsPaused(false)
-						} else {
-							if (pauseTimeoutRef.current) {
-								clearTimeout(pauseTimeoutRef.current)
-								pauseTimeoutRef.current = null
+							if (currentBlock) {
+								setDisplayBlock(currentBlock)
 							}
+						} else {
 							setIsPaused(true)
 						}
 					}}
@@ -2613,11 +2527,13 @@ function ActivityList({
 	const [page, setPage] = React.useState(0)
 	const [blockActivity, setBlockActivity] = React.useState<ActivityItem[]>([])
 	const [isLoadingBlock, setIsLoadingBlock] = React.useState(false)
+
 	const userTxHashes = React.useMemo(
 		() => new Set(activity.map((a) => a.hash.toLowerCase())),
 		[activity],
 	)
 
+	// Fetch all transactions from selected block
 	React.useEffect(() => {
 		if (filterBlockNumber === undefined) {
 			setBlockActivity([])
@@ -2630,11 +2546,13 @@ function ActivityList({
 				const result = await fetchBlockTransactions({
 					data: { blockNumber: filterBlockNumber.toString() },
 				})
+				console.log('[BlockTx] Fetched:', result)
 				if (result.transactions.length > 0) {
-					const hashes = result.transactions // Already array of hashes
+					const hashes = result.transactions
 					const receiptsResult = await fetchTransactionReceipts({
 						data: { hashes },
 					})
+					console.log('[BlockTx] Receipts:', receiptsResult)
 
 					const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) =>
 						tokenMetadataMap.get(tokenAddress)
@@ -2651,15 +2569,17 @@ function ActivityList({
 								timestamp: result.timestamp,
 								blockNumber: filterBlockNumber,
 							})
-						} catch {
-							// skip
+						} catch (err) {
+							console.error('[BlockTx] Parse error:', err)
 						}
 					}
+					console.log('[BlockTx] Items:', items)
 					setBlockActivity(items)
 				} else {
 					setBlockActivity([])
 				}
-			} catch {
+			} catch (err) {
+				console.error('[BlockTx] Fetch error:', err)
 				setBlockActivity([])
 			} finally {
 				setIsLoadingBlock(false)
