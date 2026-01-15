@@ -44,6 +44,7 @@
 		"title": "Portfolio",
 		"assets": "Assets",
 		"activity": "Activity",
+		"pendingActions": "Pending Actions",
 		"assetCount": "asset",
 		"assetCount_plural": "assets",
 		"hideZeroBalances": "Hide zero balances",

@@ -210,15 +210,20 @@ function MultisigTestPage() {
 			/>
 			<div className="flex flex-col flex-1 w-full max-w-2xl mx-auto px-4 py-6 gap-6">
 				<div className="flex flex-col gap-2">
-					<h1 className="text-primary text-[24px] font-semibold">Decoder Test</h1>
+					<h1 className="text-primary text-[24px] font-semibold">
+						Decoder Test
+					</h1>
 					<p className="text-secondary text-[14px]">
-						Test page showing decoded transaction previews for various Tempo precompile calls.
+						Test page showing decoded transaction previews for various Tempo
+						precompile calls.
 					</p>
 				</div>
 
 				{categories.map((category) => (
 					<div key={category} className="flex flex-col gap-3">
-						<h2 className="text-tertiary text-[12px] uppercase tracking-wide">{category}</h2>
+						<h2 className="text-tertiary text-[12px] uppercase tracking-wide">
+							{category}
+						</h2>
 						<div className="flex flex-col gap-2">
 							{testCases
 								.filter((t) => t.category === category)
@@ -238,7 +243,9 @@ function TestCaseCard({ testCase }: { testCase: TestCase }) {
 		() => decodeMultisigCall(testCase.to, testCase.value, testCase.data),
 		[testCase],
 	)
-	const IconComponent = decoded ? getIconComponent(getCallIcon(decoded)) : CodeIcon
+	const IconComponent = decoded
+		? getIconComponent(getCallIcon(decoded))
+		: CodeIcon
 
 	return (
 		<div className="flex flex-col gap-3 p-4 rounded-xl glass-thin">
@@ -261,7 +268,9 @@ function TestCaseCard({ testCase }: { testCase: TestCase }) {
 					{decoded.args.map((arg) => (
 						<div key={arg.name} className="flex items-center gap-2 text-[11px]">
 							<span className="text-tertiary min-w-[80px]">{arg.name}:</span>
-							<span className="text-secondary font-mono truncate">{arg.displayValue}</span>
+							<span className="text-secondary font-mono truncate">
+								{arg.displayValue}
+							</span>
 						</div>
 					))}
 				</div>

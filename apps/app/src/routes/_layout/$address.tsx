@@ -10,10 +10,14 @@ import type { Address } from 'ox'
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { encode } from 'uqr'
-import { erc20Abi, formatUnits, parseUnits } from 'viem'
+import { erc20Abi, encodeFunctionData, formatUnits, parseUnits } from 'viem'
+import { Abis, Addresses } from 'viem/tempo'
 import {
 	useAccount,
+	useBytecode,
 	useDisconnect,
+	useReadContract,
+	useReadContracts,
 	useWriteContract,
 	useWaitForTransactionReceipt,
 } from 'wagmi'
@@ -54,10 +58,26 @@ import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
 import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
+import ClockIcon from '~icons/lucide/clock'
+import PlayIcon from '~icons/lucide/play'
+import UndoIcon from '~icons/lucide/undo'
+import CheckCircleIcon from '~icons/lucide/check-circle'
+import XCircleIcon from '~icons/lucide/x-circle'
+import CodeIcon from '~icons/lucide/code'
+import RepeatIcon from '~icons/lucide/repeat'
+import UploadIcon from '~icons/lucide/upload'
+import DownloadIcon from '~icons/lucide/download'
+import PlusCircleIcon from '~icons/lucide/plus-circle'
+import SettingsIcon from '~icons/lucide/settings'
 import { useTranslation } from 'react-i18next'
 import i18n, { isRtl } from '#lib/i18n'
+import { MULTISIG_ABI, decodeMultisigCall, getCallIcon } from '#lib/multisig'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
+
+// MiniMultisig deployed bytecode prefix for detection
+const MULTISIG_BYTECODE_PREFIX =
+	'0x608060405260043610610184575f3560e01c80637ce1ffeb116100d0578063b5dc40c311610089578063cc63604a11610063'
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
 
 // Tokens that can be funded via the faucet
@@ -465,6 +485,7 @@ async function fetchTransactions(
 
 type AddressSearchParams = {
 	test?: boolean
+	testMultisig?: boolean
 	sendTo?: string
 	token?: string
 }
@@ -473,6 +494,7 @@ export const Route = createFileRoute('/_layout/$address')({
 	component: AddressView,
 	validateSearch: (search: Record<string, unknown>): AddressSearchParams => ({
 		test: 'test' in search ? true : undefined,
+		testMultisig: 'testMultisig' in search ? true : undefined,
 		sendTo: typeof search.sendTo === 'string' ? search.sendTo : undefined,
 		token: typeof search.token === 'string' ? search.token : undefined,
 	}),
@@ -523,8 +545,22 @@ function AddressView() {
 	const [searchValue, setSearchValue] = React.useState('')
 	const [searchFocused, setSearchFocused] = React.useState(false)
 	const account = useAccount()
-	const { sendTo, token: initialToken } = Route.useSearch()
+	const { sendTo, token: initialToken, testMultisig } = Route.useSearch()
 	const { t } = useTranslation()
+
+	const isTestMode =
+		testMultisig || import.meta.env.DEV === true ? testMultisig === true : false
+
+	const { data: bytecode } = useBytecode({
+		address: address as `0x${string}`,
+		query: { enabled: !isTestMode },
+	})
+	const isMultisig =
+		isTestMode ||
+		(bytecode
+			?.toLowerCase()
+			.startsWith(MULTISIG_BYTECODE_PREFIX.toLowerCase()) ??
+			false)
 
 	// Optimistic balance adjustments: Map<tokenAddress, amountToSubtract>
 	const [optimisticAdjustments, setOptimisticAdjustments] = React.useState<
@@ -751,6 +787,14 @@ function AddressView() {
 				</div>
 
 				<div className="flex flex-col gap-2.5">
+					{isMultisig && (
+						<PendingActionsSection
+							address={address}
+							connectedAddress={account.address}
+							testMode={isTestMode}
+						/>
+					)}
+
 					<Section
 						title={t('portfolio.assets')}
 						subtitle={`${assetsWithBalance.length} ${t('portfolio.assetCount', { count: assetsWithBalance.length })}`}
@@ -790,7 +834,7 @@ function AddressView() {
 					<Section
 						title={t('portfolio.activity')}
 						externalLink={`https://explore.mainnet.tempo.xyz/address/${address}`}
-						defaultOpen
+						defaultOpen={!isMultisig}
 					>
 						<ActivityHeatmap activity={activity} />
 						<ActivityList activity={activity} address={address} />
@@ -2180,6 +2224,553 @@ function TransactionModal({
 					</a>
 				</div>
 			</div>
+		</div>
+	)
+}
+
+type MultisigTx = {
+	id: bigint
+	to: `0x${string}`
+	value: bigint
+	data: `0x${string}`
+	executed: boolean
+	cancelled: boolean
+	confirmations: bigint
+	cancelConfirmations: bigint
+	submitTime: bigint
+	expiresAt: bigint
+	gasLimit: bigint
+	submitter: `0x${string}`
+	confirmedBy: `0x${string}`[]
+}
+
+function formatRelativeTime(timestamp: bigint): string {
+	const now = Math.floor(Date.now() / 1000)
+	const diff = now - Number(timestamp)
+	if (diff < 60) return 'just now'
+	if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
+	if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
+	if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`
+	return new Date(Number(timestamp) * 1000).toLocaleDateString()
+}
+
+function formatExpiryCountdown(expiresAt: bigint): string | null {
+	if (expiresAt === 0n) return null
+	const now = Math.floor(Date.now() / 1000)
+	const remaining = Number(expiresAt) - now
+	if (remaining <= 0) return null
+	if (remaining < 3600) return `${Math.ceil(remaining / 60)}m left`
+	if (remaining < 86400) return `${Math.ceil(remaining / 3600)}h left`
+	return `${Math.ceil(remaining / 86400)}d left`
+}
+
+function getIconComponent(iconName: string) {
+	const icons: Record<string, React.ComponentType<{ className?: string }>> = {
+		send: SendIcon,
+		plus: PlusIcon,
+		minus: MinusIcon,
+		'check-circle': CheckCircleIcon,
+		repeat: RepeatIcon,
+		download: DownloadIcon,
+		upload: UploadIcon,
+		'plus-circle': PlusCircleIcon,
+		'x-circle': XCircleIcon,
+		settings: SettingsIcon,
+		code: CodeIcon,
+	}
+	return icons[iconName] || CodeIcon
+}
+
+const MOCK_OWNERS: `0x${string}`[] = [
+	'0x1111111111111111111111111111111111111111',
+	'0x2222222222222222222222222222222222222222',
+]
+
+const MOCK_TOKENS = {
+	pathUSD: '0x20c0000000000000000000000000000000000000' as `0x${string}`,
+	alphaUSD: '0x20c0000000000000000000000000000000000001' as `0x${string}`,
+}
+
+function generateMockMultisigTransactions(
+	connectedAddress?: `0x${string}`,
+): MultisigTx[] {
+	const now = BigInt(Math.floor(Date.now() / 1000))
+	const hourAgo = now - 3600n
+	const dayAgo = now - 86400n
+	const weekFromNow = now + 604800n
+
+	const txs: MultisigTx[] = [
+		{
+			id: 5n,
+			to: MOCK_TOKENS.pathUSD,
+			value: 0n,
+			data: encodeFunctionData({
+				abi: Abis.tip20,
+				functionName: 'transfer',
+				args: [
+					'0x3333333333333333333333333333333333333333',
+					parseUnits('1000', 6),
+				],
+			}),
+			executed: false,
+			cancelled: false,
+			confirmations: 1n,
+			cancelConfirmations: 0n,
+			submitTime: hourAgo,
+			expiresAt: weekFromNow,
+			gasLimit: 100000n,
+			submitter: MOCK_OWNERS[0],
+			confirmedBy: [MOCK_OWNERS[0]],
+		},
+		{
+			id: 4n,
+			to: MOCK_TOKENS.alphaUSD,
+			value: 0n,
+			data: encodeFunctionData({
+				abi: Abis.tip20,
+				functionName: 'transfer',
+				args: [
+					'0x4444444444444444444444444444444444444444',
+					parseUnits('500', 6),
+				],
+			}),
+			executed: false,
+			cancelled: false,
+			confirmations: 2n,
+			cancelConfirmations: 0n,
+			submitTime: dayAgo,
+			expiresAt: weekFromNow,
+			gasLimit: 100000n,
+			submitter: MOCK_OWNERS[1],
+			confirmedBy: [...MOCK_OWNERS],
+		},
+		{
+			id: 3n,
+			to: Addresses.stablecoinDex,
+			value: 0n,
+			data: encodeFunctionData({
+				abi: Abis.stablecoinDex,
+				functionName: 'place',
+				args: [MOCK_TOKENS.pathUSD, parseUnits('250', 6), true, 0],
+			}),
+			executed: false,
+			cancelled: false,
+			confirmations: 1n,
+			cancelConfirmations: 0n,
+			submitTime: dayAgo - 3600n,
+			expiresAt: weekFromNow,
+			gasLimit: 150000n,
+			submitter: MOCK_OWNERS[0],
+			confirmedBy: [MOCK_OWNERS[0]],
+		},
+		{
+			id: 2n,
+			to: MOCK_TOKENS.pathUSD,
+			value: 0n,
+			data: encodeFunctionData({
+				abi: Abis.tip20,
+				functionName: 'mint',
+				args: [
+					'0x5555555555555555555555555555555555555555',
+					parseUnits('10000', 6),
+				],
+			}),
+			executed: false,
+			cancelled: false,
+			confirmations: 1n,
+			cancelConfirmations: 0n,
+			submitTime: dayAgo - 7200n,
+			expiresAt: now + 3600n,
+			gasLimit: 100000n,
+			submitter: MOCK_OWNERS[1],
+			confirmedBy: [MOCK_OWNERS[1]],
+		},
+		{
+			id: 1n,
+			to: Addresses.feeManager,
+			value: 0n,
+			data: encodeFunctionData({
+				abi: Abis.feeManager,
+				functionName: 'setUserToken',
+				args: [MOCK_TOKENS.pathUSD],
+			}),
+			executed: false,
+			cancelled: false,
+			confirmations: 2n,
+			cancelConfirmations: 0n,
+			submitTime: dayAgo - 10800n,
+			expiresAt: 0n,
+			gasLimit: 50000n,
+			submitter: MOCK_OWNERS[0],
+			confirmedBy: [...MOCK_OWNERS],
+		},
+	]
+
+	if (connectedAddress) {
+		const addrLower = connectedAddress.toLowerCase()
+		for (const tx of txs) {
+			if (
+				MOCK_OWNERS.some((o) => o.toLowerCase() === addrLower) &&
+				!tx.confirmedBy.some((c) => c.toLowerCase() === addrLower)
+			) {
+				tx.confirmedBy = [
+					...tx.confirmedBy.filter(
+						(c) => c.toLowerCase() !== MOCK_OWNERS[0].toLowerCase(),
+					),
+					connectedAddress,
+				]
+			}
+		}
+	}
+
+	return txs
+}
+
+function PendingActionsSection({
+	address,
+	connectedAddress,
+	testMode = false,
+}: {
+	address: string
+	connectedAddress?: `0x${string}`
+	testMode?: boolean
+}) {
+	const { t } = useTranslation()
+
+	const { data: threshold } = useReadContract({
+		address: address as `0x${string}`,
+		abi: MULTISIG_ABI,
+		functionName: 'threshold',
+		query: { enabled: !testMode },
+	})
+
+	const { data: owners } = useReadContract({
+		address: address as `0x${string}`,
+		abi: MULTISIG_ABI,
+		functionName: 'getOwners',
+		query: { enabled: !testMode },
+	})
+
+	const { data: txCount } = useReadContract({
+		address: address as `0x${string}`,
+		abi: MULTISIG_ABI,
+		functionName: 'getTxCount',
+		query: { enabled: !testMode },
+	})
+
+	const txIds = React.useMemo(() => {
+		if (testMode || !txCount) return []
+		const count = Number(txCount)
+		return Array.from({ length: Math.min(count, 20) }, (_, i) =>
+			BigInt(count - 1 - i),
+		)
+	}, [testMode, txCount])
+
+	const txQueries = useReadContracts({
+		contracts: txIds.flatMap((id) => [
+			{
+				address: address as `0x${string}`,
+				abi: MULTISIG_ABI,
+				functionName: 'getTx',
+				args: [id],
+			},
+			{
+				address: address as `0x${string}`,
+				abi: MULTISIG_ABI,
+				functionName: 'getConfirmations',
+				args: [id],
+			},
+		]),
+		query: { enabled: !testMode && txIds.length > 0 },
+	})
+
+	const transactions: MultisigTx[] = React.useMemo(() => {
+		if (testMode) {
+			return generateMockMultisigTransactions(connectedAddress)
+		}
+		if (!txQueries.data) return []
+		const txs: MultisigTx[] = []
+		for (let i = 0; i < txIds.length; i++) {
+			const txResult = txQueries.data[i * 2]
+			const confirmResult = txQueries.data[i * 2 + 1]
+			if (txResult?.result && confirmResult?.result) {
+				const [
+					to,
+					value,
+					data,
+					executed,
+					cancelled,
+					confirmations,
+					cancelConfirmations,
+					submitTime,
+					expiresAt,
+					gasLimit,
+					submitter,
+				] = txResult.result as [
+					`0x${string}`,
+					bigint,
+					`0x${string}`,
+					boolean,
+					boolean,
+					bigint,
+					bigint,
+					bigint,
+					bigint,
+					bigint,
+					`0x${string}`,
+				]
+				txs.push({
+					id: txIds[i],
+					to,
+					value,
+					data,
+					executed,
+					cancelled,
+					confirmations,
+					cancelConfirmations,
+					submitTime,
+					expiresAt,
+					gasLimit,
+					submitter,
+					confirmedBy: confirmResult.result as `0x${string}`[],
+				})
+			}
+		}
+		return txs
+	}, [testMode, connectedAddress, txIds, txQueries.data])
+
+	const effectiveThreshold = testMode ? 2n : threshold
+	const effectiveOwners = testMode ? MOCK_OWNERS : owners
+
+	const isOwner = React.useMemo(() => {
+		if (!effectiveOwners || !connectedAddress) return testMode
+		return effectiveOwners.some(
+			(o) => o.toLowerCase() === connectedAddress?.toLowerCase(),
+		)
+	}, [effectiveOwners, connectedAddress, testMode])
+
+	const now = BigInt(Math.floor(Date.now() / 1000))
+	const pendingTxs = transactions.filter((tx) => {
+		const isExpired = tx.expiresAt > 0n && now > tx.expiresAt
+		return !tx.executed && !tx.cancelled && !isExpired
+	})
+
+	if (!effectiveThreshold || pendingTxs.length === 0) {
+		return null
+	}
+
+	return (
+		<Section title={t('portfolio.pendingActions')} defaultOpen>
+			<div className="flex flex-col text-[13px] -mx-2">
+				{pendingTxs.map((tx) => (
+					<PendingActionRow
+						key={tx.id.toString()}
+						tx={tx}
+						threshold={effectiveThreshold}
+						multisigAddress={address as `0x${string}`}
+						isOwner={isOwner}
+						userAddress={connectedAddress}
+						testMode={testMode}
+					/>
+				))}
+			</div>
+		</Section>
+	)
+}
+
+function PendingActionRow({
+	tx,
+	threshold,
+	multisigAddress,
+	isOwner,
+	userAddress,
+	testMode = false,
+}: {
+	tx: MultisigTx
+	threshold: bigint
+	multisigAddress: `0x${string}`
+	isOwner: boolean
+	userAddress?: `0x${string}`
+	testMode?: boolean
+}) {
+	const decoded = React.useMemo(
+		() => decodeMultisigCall(tx.to, tx.value, tx.data),
+		[tx.to, tx.value, tx.data],
+	)
+	const IconComponent = decoded
+		? getIconComponent(getCallIcon(decoded))
+		: CodeIcon
+
+	const isExpired =
+		tx.expiresAt > 0n && BigInt(Math.floor(Date.now() / 1000)) > tx.expiresAt
+	const canExecute =
+		tx.confirmations >= threshold && !tx.executed && !tx.cancelled && !isExpired
+	const hasConfirmed =
+		userAddress &&
+		tx.confirmedBy.some((a) => a.toLowerCase() === userAddress.toLowerCase())
+
+	const {
+		writeContract: confirm,
+		isPending: isConfirming,
+		data: confirmHash,
+	} = useWriteContract()
+	const {
+		writeContract: revoke,
+		isPending: isRevoking,
+		data: revokeHash,
+	} = useWriteContract()
+	const {
+		writeContract: execute,
+		isPending: isExecuting,
+		data: executeHash,
+	} = useWriteContract()
+
+	const { isLoading: isConfirmWaiting } = useWaitForTransactionReceipt({
+		hash: confirmHash,
+	})
+	const { isLoading: isRevokeWaiting } = useWaitForTransactionReceipt({
+		hash: revokeHash,
+	})
+	const { isLoading: isExecuteWaiting } = useWaitForTransactionReceipt({
+		hash: executeHash,
+	})
+
+	const handleConfirm = () => {
+		if (testMode) {
+			console.log('[Test Mode] Would confirm tx', tx.id.toString())
+			return
+		}
+		confirm({
+			address: multisigAddress,
+			abi: MULTISIG_ABI,
+			functionName: 'confirm',
+			args: [tx.id],
+		})
+	}
+
+	const handleRevoke = () => {
+		if (testMode) {
+			console.log('[Test Mode] Would revoke tx', tx.id.toString())
+			return
+		}
+		revoke({
+			address: multisigAddress,
+			abi: MULTISIG_ABI,
+			functionName: 'revoke',
+			args: [tx.id],
+		})
+	}
+
+	const handleExecute = () => {
+		if (testMode) {
+			console.log('[Test Mode] Would execute tx', tx.id.toString())
+			return
+		}
+		execute({
+			address: multisigAddress,
+			abi: MULTISIG_ABI,
+			functionName: 'execute',
+			args: [tx.id],
+		})
+	}
+
+	return (
+		<div className="group flex flex-col gap-2 px-3 py-2.5 rounded-xl hover:glass-thin transition-all">
+			<div className="flex items-start justify-between gap-3">
+				<div className="flex items-center gap-2 min-w-0">
+					<div className="flex items-center justify-center size-8 rounded-md shrink-0 bg-base-alt text-accent">
+						<IconComponent className="size-3.5" />
+					</div>
+					<div className="flex flex-col gap-0.5 min-w-0">
+						<span className="text-primary text-[13px] font-medium truncate">
+							{decoded?.description ?? 'Unknown Call'}
+						</span>
+						<span className="text-tertiary text-[11px]">
+							#{tx.id.toString()} ·{' '}
+							{decoded?.targetName ?? shortenAddress(tx.to)} ·{' '}
+							{formatRelativeTime(tx.submitTime)}
+						</span>
+					</div>
+				</div>
+				<div className="shrink-0">
+					<span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-base-alt text-secondary text-[10px]">
+						<ClockIcon className="size-2.5" />
+						{formatExpiryCountdown(tx.expiresAt) ?? 'Pending'}
+					</span>
+				</div>
+			</div>
+
+			<div className="flex items-center gap-2">
+				<div className="flex-1 h-1.5 rounded-full bg-base-alt overflow-hidden">
+					<div
+						className="h-full bg-accent rounded-full transition-all"
+						style={{
+							width: `${Math.min(100, (Number(tx.confirmations) / Number(threshold)) * 100)}%`,
+						}}
+					/>
+				</div>
+				<span className="text-[10px] text-secondary shrink-0">
+					{tx.confirmations.toString()}/{threshold.toString()}
+				</span>
+			</div>
+
+			{tx.value > 0n && (
+				<div className="flex items-center gap-1 text-[11px]">
+					<span className="text-tertiary">Value:</span>
+					<span className="text-primary font-mono">
+						{formatUnits(tx.value, 18)} ETH
+					</span>
+				</div>
+			)}
+
+			{isOwner && !isExpired && (
+				<div className="flex items-center gap-2 pt-1">
+					{!hasConfirmed ? (
+						<button
+							type="button"
+							onClick={handleConfirm}
+							disabled={isConfirming || isConfirmWaiting}
+							className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-accent hover:bg-accent/90 text-white text-[11px] font-medium press-down disabled:opacity-50 cursor-pointer"
+						>
+							{isConfirming || isConfirmWaiting ? (
+								<span className="size-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+							) : (
+								<CheckIcon className="size-3" />
+							)}
+							Confirm
+						</button>
+					) : (
+						<button
+							type="button"
+							onClick={handleRevoke}
+							disabled={isRevoking || isRevokeWaiting}
+							className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-base-alt hover:bg-base-alt/70 text-secondary text-[11px] font-medium press-down disabled:opacity-50 cursor-pointer"
+						>
+							{isRevoking || isRevokeWaiting ? (
+								<span className="size-3 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+							) : (
+								<UndoIcon className="size-3" />
+							)}
+							Revoke
+						</button>
+					)}
+					{canExecute && (
+						<button
+							type="button"
+							onClick={handleExecute}
+							disabled={isExecuting || isExecuteWaiting}
+							className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-positive hover:bg-positive/90 text-white text-[11px] font-medium press-down disabled:opacity-50 cursor-pointer"
+						>
+							{isExecuting || isExecuteWaiting ? (
+								<span className="size-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+							) : (
+								<PlayIcon className="size-3" />
+							)}
+							Execute
+						</button>
+					)}
+				</div>
+			)}
 		</div>
 	)
 }

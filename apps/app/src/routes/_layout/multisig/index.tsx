@@ -11,9 +11,7 @@ export const Route = createFileRoute('/_layout/multisig/')({
 	component: MultisigLanding,
 })
 
-const EXAMPLE_MULTISIGS = [
-	'0x018910dDe46CD95F87B955f807B903cF156E2EC2',
-]
+const EXAMPLE_MULTISIGS = ['0x018910dDe46CD95F87B955f807B903cF156E2EC2']
 
 function truncateAddress(address: string) {
 	return `${address.slice(0, 6)}…${address.slice(-4)}`

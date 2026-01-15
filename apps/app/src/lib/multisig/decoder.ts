@@ -19,11 +19,31 @@ export type DecodedArg = {
 
 const TIP20_ADDRESS_PREFIX = '0x20c0'
 
-const SYSTEM_CONTRACTS: Record<string, { name: string; abi: readonly unknown[] }> = {
-	[Addresses.tip20Factory.toLowerCase()]: { name: 'TIP-20 Factory', abi: Abis.tip20Factory },
-	[Addresses.feeManager.toLowerCase()]: { name: 'Fee Manager', abi: Abis.feeManager },
-	[Addresses.stablecoinDex.toLowerCase()]: { name: 'Stablecoin DEX', abi: Abis.stablecoinDex },
-	[Addresses.tip403Registry.toLowerCase()]: { name: 'TIP-403 Registry', abi: Abis.tip403Registry },
+const SYSTEM_CONTRACTS: Record<
+	string,
+	{ name: string; abi: readonly unknown[] }
+> = {
+	[Addresses.tip20Factory.toLowerCase()]: {
+		name: 'TIP-20 Factory',
+		abi: Abis.tip20Factory,
+	},
+	[Addresses.feeManager.toLowerCase()]: {
+		name: 'Fee Manager',
+		abi: Abis.feeManager,
+	},
+	[Addresses.stablecoinDex.toLowerCase()]: {
+		name: 'Stablecoin DEX',
+		abi: Abis.stablecoinDex,
+	},
+	[Addresses.tip403Registry.toLowerCase()]: {
+		name: 'TIP-403 Registry',
+		abi: Abis.tip403Registry,
+	},
+	// Validator Config precompile (Addresses.validator available in viem >=2.44.3)
+	['0xcccccccc00000000000000000000000000000000']: {
+		name: 'Validator Config',
+		abi: Abis.validatorConfig,
+	},
 }
 
 const KNOWN_TOKENS: Record<string, string> = {
@@ -68,7 +88,11 @@ function formatArgValue(_name: string, type: string, value: unknown): string {
 	return String(value)
 }
 
-function getFunctionDescription(targetName: string, functionName: string, args: DecodedArg[]): string {
+function getFunctionDescription(
+	targetName: string,
+	functionName: string,
+	args: DecodedArg[],
+): string {
 	if (functionName === 'transfer' || functionName === 'transferWithMemo') {
 		const to = args.find((a) => a.name === 'to')?.value as string
 		const amount = args.find((a) => a.name === 'amount')?.value as bigint
@@ -97,7 +121,10 @@ function getFunctionDescription(targetName: string, functionName: string, args: 
 		const symbol = args.find((a) => a.name === 'symbol')?.value as string
 		return `Create new TIP-20 token: ${symbol}`
 	}
-	if (functionName === 'swapExactAmountIn' || functionName === 'swapExactAmountOut') {
+	if (
+		functionName === 'swapExactAmountIn' ||
+		functionName === 'swapExactAmountOut'
+	) {
 		return 'Swap tokens on Stablecoin DEX'
 	}
 	if (functionName === 'place' || functionName === 'placeFlip') {
@@ -119,14 +146,44 @@ function getFunctionDescription(targetName: string, functionName: string, args: 
 	}
 	if (functionName === 'setUserToken') {
 		const token = args.find((a) => a.name === 'token')?.value as string
-		const tokenName = KNOWN_TOKENS[token?.toLowerCase() ?? ''] ?? shortenAddress(token ?? '')
+		const tokenName =
+			KNOWN_TOKENS[token?.toLowerCase() ?? ''] ?? shortenAddress(token ?? '')
 		return `Set fee token to ${tokenName}`
 	}
 	if (functionName === 'setPolicy') return 'Update transfer policy'
+	// Validator Config functions
+	if (functionName === 'addValidator') {
+		const address = args.find((a) => a.name === 'newValidatorAddress')
+			?.value as string
+		const active = args.find((a) => a.name === 'active')?.value as boolean
+		return `Add validator ${shortenAddress(address ?? '')} (${active ? 'active' : 'inactive'})`
+	}
+	if (functionName === 'updateValidator') {
+		const address = args.find((a) => a.name === 'newValidatorAddress')
+			?.value as string
+		return `Update validator ${shortenAddress(address ?? '')}`
+	}
+	if (functionName === 'changeValidatorStatus') {
+		const address = args.find((a) => a.name === 'validator')?.value as string
+		const active = args.find((a) => a.name === 'active')?.value as boolean
+		return `${active ? 'Activate' : 'Deactivate'} validator ${shortenAddress(address ?? '')}`
+	}
+	if (functionName === 'changeOwner') {
+		const newOwner = args.find((a) => a.name === 'newOwner')?.value as string
+		return `Change owner to ${shortenAddress(newOwner ?? '')}`
+	}
+	if (functionName === 'setNextFullDkgCeremony') {
+		const epoch = args.find((a) => a.name === 'epoch')?.value as bigint
+		return `Schedule DKG ceremony at epoch ${epoch?.toString() ?? '?'}`
+	}
 	return `Call ${functionName} on ${targetName}`
 }
 
-export function decodeMultisigCall(to: Address, value: bigint, data: Hex): DecodedCall | null {
+export function decodeMultisigCall(
+	to: Address,
+	value: bigint,
+	data: Hex,
+): DecodedCall | null {
 	if (!data || data === '0x') {
 		const targetName = getTargetName(to)
 		return {
@@ -134,7 +191,9 @@ export function decodeMultisigCall(to: Address, value: bigint, data: Hex): Decod
 			targetName,
 			functionName: 'rawCall',
 			description: 'Raw call with no data',
-			args: [{ name: 'to', type: 'address', value: to, displayValue: targetName }],
+			args: [
+				{ name: 'to', type: 'address', value: to, displayValue: targetName },
+			],
 			value,
 		}
 	}
@@ -148,28 +207,48 @@ export function decodeMultisigCall(to: Address, value: bigint, data: Hex): Decod
 			targetName,
 			functionName: 'unknown',
 			description: `Call to ${targetName}`,
-			args: [{ name: 'data', type: 'bytes', value: data, displayValue: data.length > 20 ? `${data.slice(0, 20)}…` : data }],
+			args: [
+				{
+					name: 'data',
+					type: 'bytes',
+					value: data,
+					displayValue: data.length > 20 ? `${data.slice(0, 20)}…` : data,
+				},
+			],
 			value,
 		}
 	}
 
 	try {
 		const decoded = decodeFunctionData({ abi: abi as readonly unknown[], data })
-		const functionAbi = (abi as readonly { name?: string; inputs?: readonly { name: string; type: string }[] }[])
-			.find((item) => 'name' in item && item.name === decoded.functionName)
+		const functionAbi = (
+			abi as readonly {
+				name?: string
+				inputs?: readonly { name: string; type: string }[]
+			}[]
+		).find((item) => 'name' in item && item.name === decoded.functionName)
 
 		const args: DecodedArg[] = (decoded.args ?? []).map((val, i) => {
 			const input = functionAbi?.inputs?.[i]
 			const name = input?.name ?? `arg${i}`
 			const type = input?.type ?? 'unknown'
-			return { name, type, value: val, displayValue: formatArgValue(name, type, val) }
+			return {
+				name,
+				type,
+				value: val,
+				displayValue: formatArgValue(name, type, val),
+			}
 		})
 
 		return {
 			target: to,
 			targetName,
 			functionName: decoded.functionName,
-			description: getFunctionDescription(targetName, decoded.functionName, args),
+			description: getFunctionDescription(
+				targetName,
+				decoded.functionName,
+				args,
+			),
 			args,
 			value,
 		}
@@ -179,7 +258,14 @@ export function decodeMultisigCall(to: Address, value: bigint, data: Hex): Decod
 			targetName,
 			functionName: 'unknown',
 			description: `Call to ${targetName}`,
-			args: [{ name: 'data', type: 'bytes', value: data, displayValue: data.length > 20 ? `${data.slice(0, 20)}…` : data }],
+			args: [
+				{
+					name: 'data',
+					type: 'bytes',
+					value: data,
+					displayValue: data.length > 20 ? `${data.slice(0, 20)}…` : data,
+				},
+			],
 			value,
 		}
 	}
@@ -212,6 +298,8 @@ export function getCallIcon(decoded: DecodedCall): string {
 	if (fn.includes('withdraw')) return 'upload'
 	if (fn.includes('create')) return 'plus-circle'
 	if (fn === 'cancel' || fn.includes('cancel')) return 'x-circle'
+	if (fn.includes('validator') || fn === 'changeowner') return 'users'
+	if (fn.includes('dkg')) return 'key'
 	if (fn.includes('set') || fn.includes('update')) return 'settings'
 	return 'code'
 }
