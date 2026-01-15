@@ -388,7 +388,7 @@ export function getPerspectiveEvent(
 	if (!event.meta?.to) return event
 	if (!isAddressEqual(event.meta.to, viewer)) return event
 
-	// Self-send: keep as Send (you initiated it)
+	// Self-send: keep as Send (handled separately via expandSelfSends)
 	if (event.meta.from && isAddressEqual(event.meta.from, viewer)) {
 		return event
 	}
@@ -407,4 +407,34 @@ export function getPerspectiveEvent(
 	})
 
 	return { ...event, type: 'received', parts: newParts }
+}
+
+export function expandSelfSends(
+	events: KnownEvent[],
+	viewer: AddressType.Address,
+): KnownEvent[] {
+	const result: KnownEvent[] = []
+	for (const event of events) {
+		result.push(event)
+		// For self-sends, also add a Received version
+		if (
+			event.type === 'send' &&
+			event.meta?.from &&
+			event.meta?.to &&
+			isAddressEqual(event.meta.from, viewer) &&
+			isAddressEqual(event.meta.to, viewer)
+		) {
+			const receivedParts = event.parts.map((part) => {
+				if (part.type === 'action' && part.value === 'Send') {
+					return { ...part, value: 'Received' }
+				}
+				if (part.type === 'text' && part.value === 'to') {
+					return { ...part, value: 'from' }
+				}
+				return part
+			})
+			result.push({ ...event, type: 'received', parts: receivedParts })
+		}
+	}
+	return result
 }

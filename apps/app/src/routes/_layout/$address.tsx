@@ -22,6 +22,7 @@ import {
 	parseKnownEvents,
 	preferredEventsFilter,
 	getPerspectiveEvent,
+	expandSelfSends,
 	type KnownEvent,
 	type GetTokenMetadataFn,
 } from '#comps/activity'
@@ -1529,7 +1530,7 @@ function AssetRow({
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
 						placeholder="0x..."
-						className="flex-1 min-w-0 h-[32px] px-3 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="flex-1 min-w-0 h-[32px] pl-1 pr-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
 				</div>
 				<div className="flex items-center gap-1 pl-7 sm:pl-0">
@@ -1541,7 +1542,7 @@ function AssetRow({
 						onChange={(e) => setAmount(e.target.value)}
 						placeholder="0.00"
 						style={{ width: `${Math.max(6, (amount || '0.00').length) + 1}ch` }}
-						className="min-w-[7ch] max-w-[14ch] h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="min-w-[7ch] max-w-[14ch] h-[32px] pl-1 pr-1 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
 					<button
 						type="button"
@@ -1774,11 +1775,17 @@ function ActivityRow({
 	const { t } = useTranslation()
 	const [showModal, setShowModal] = React.useState(false)
 
+	// Expand self-sends to show both Send and Received
+	const expandedEvents = React.useMemo(
+		() => expandSelfSends(item.events, viewer),
+		[item.events, viewer],
+	)
+
 	return (
 		<>
 			<div className="group flex items-center gap-2 px-3 h-[48px] rounded-xl hover:glass-thin transition-all">
 				<TxDescription.ExpandGroup
-					events={item.events}
+					events={expandedEvents}
 					seenAs={viewer}
 					transformEvent={transformEvent}
 					limitFilter={preferredEventsFilter}
