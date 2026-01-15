@@ -594,8 +594,7 @@ function AddressView() {
 			// Recalculate USD value
 			const decimals = asset.metadata?.decimals ?? 18
 			const priceUsd = asset.metadata?.priceUsd ?? 0
-			const newValueUsd =
-				(Number(newBalance) / 10 ** decimals) * priceUsd
+			const newValueUsd = (Number(newBalance) / 10 ** decimals) * priceUsd
 
 			return {
 				...asset,
@@ -1309,7 +1308,9 @@ function HoldingsTable({
 						<path d="M12 6v12M6 12h12" strokeLinecap="round" />
 					</svg>
 				</div>
-				<p className="text-[13px] text-secondary">{t('portfolio.noAssetsFound')}</p>
+				<p className="text-[13px] text-secondary">
+					{t('portfolio.noAssetsFound')}
+				</p>
 			</div>
 		)
 	}
@@ -1434,6 +1435,12 @@ function AssetRow({
 	const [faucetState, setFaucetState] = React.useState<
 		'idle' | 'loading' | 'done'
 	>('idle')
+	const [faucetInitialBalance, setFaucetInitialBalance] = React.useState<
+		string | null
+	>(null)
+	const [pendingSendAmount, setPendingSendAmount] = React.useState<
+		bigint | null
+	>(null)
 	const recipientInputRef = React.useRef<HTMLInputElement>(null)
 	const amountInputRef = React.useRef<HTMLInputElement>(null)
 
@@ -1449,14 +1456,20 @@ function AssetRow({
 			hash: txHash,
 		})
 
+	// Apply optimistic update when txHash appears (wallet signed)
+	React.useEffect(() => {
+		if (txHash && pendingSendAmount) {
+			onOptimisticSend?.(asset.address, pendingSendAmount)
+		}
+	}, [txHash, pendingSendAmount, asset.address, onOptimisticSend])
+
 	// Handle transaction confirmation
 	React.useEffect(() => {
 		if (isConfirmed) {
 			setSendState('sent')
+			setPendingSendAmount(null)
 			// Trigger balance refresh immediately
-			onSendComplete(
-				asset.metadata?.symbol || shortenAddress(asset.address, 3),
-			)
+			onSendComplete(asset.metadata?.symbol || shortenAddress(asset.address, 3))
 			// Reset UI state after animation
 			setTimeout(() => {
 				setSendState('idle')
@@ -1477,6 +1490,7 @@ function AssetRow({
 	React.useEffect(() => {
 		if (writeError) {
 			setSendState('error')
+			setPendingSendAmount(null)
 			const shortMessage =
 				'shortMessage' in writeError
 					? (writeError.shortMessage as string)
@@ -1499,28 +1513,42 @@ function AssetRow({
 		}
 	}, [isPending, isConfirming])
 
+	// Watch for balance changes while faucet is loading
+	React.useEffect(() => {
+		if (faucetState !== 'loading' || faucetInitialBalance === null) return
+		if (asset.balance !== faucetInitialBalance) {
+			setFaucetState('done')
+			setFaucetInitialBalance(null)
+			setTimeout(() => setFaucetState('idle'), 1500)
+		}
+	}, [asset.balance, faucetState, faucetInitialBalance])
+
+	// Poll for balance updates while faucet is loading
+	React.useEffect(() => {
+		if (faucetState !== 'loading') return
+		const interval = setInterval(() => {
+			onFaucetSuccess?.()
+		}, 1500)
+		return () => clearInterval(interval)
+	}, [faucetState, onFaucetSuccess])
+
 	const handleFaucet = async () => {
+		setFaucetInitialBalance(asset.balance ?? null)
 		setFaucetState('loading')
 		try {
 			const result = await faucetFundAddress({ data: { address } })
 			if (!result.success) {
 				console.error('Faucet error:', result.error)
 				setFaucetState('idle')
+				setFaucetInitialBalance(null)
 				return
 			}
-			setFaucetState('done')
-			// Delay refresh to let the transaction propagate
-			setTimeout(() => {
-				setFaucetState('idle')
-				onFaucetSuccess?.()
-			}, 3000)
-			// Also trigger a second refresh after more time for slower propagation
-			setTimeout(() => {
-				onFaucetSuccess?.()
-			}, 6000)
+			// Trigger first refresh
+			onFaucetSuccess?.()
 		} catch (err) {
 			console.error('Faucet error:', err)
 			setFaucetState('idle')
+			setFaucetInitialBalance(null)
 		}
 	}
 
@@ -1547,8 +1575,8 @@ function AssetRow({
 
 	const handleSend = () => {
 		if (!isValidSend || parsedAmount === 0n) return
-		// Apply optimistic update immediately
-		onOptimisticSend?.(asset.address, parsedAmount)
+		// Store pending amount - optimistic update will apply after wallet signature
+		setPendingSendAmount(parsedAmount)
 		writeContract({
 			address: asset.address as `0x${string}`,
 			abi: erc20Abi,
@@ -1753,12 +1781,24 @@ function AssetRow({
 						title={isFaucetToken ? 'Request tokens' : undefined}
 						aria-hidden={!isFaucetToken}
 					>
-						{faucetState === 'loading' ? (
-							<BouncingDots />
-						) : faucetState === 'done' ? (
+						{faucetState === 'done' ? (
 							<CheckIcon className="size-[14px] text-positive" />
 						) : (
-							<DropletIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
+							<span className="relative">
+								<DropletIcon
+									className={cx(
+										'size-[14px] transition-colors',
+										faucetState === 'loading'
+											? 'text-accent animate-pulse'
+											: 'text-tertiary hover:text-accent',
+									)}
+								/>
+								{faucetState === 'loading' && (
+									<span className="absolute inset-0 flex items-end justify-center overflow-hidden">
+										<span className="w-full bg-accent/40 animate-fill-up" />
+									</span>
+								)}
+							</span>
 						)}
 					</button>
 				)}
@@ -2031,7 +2071,9 @@ function TransactionModal({
 								</a>
 							</div>
 							<div className="flex justify-between items-end gap-4">
-								<span className="text-tertiary shrink-0">{t('receipt.sender')}</span>
+								<span className="text-tertiary shrink-0">
+									{t('receipt.sender')}
+								</span>
 								<a
 									href={`https://explore.mainnet.tempo.xyz/address/${viewer}`}
 									target="_blank"
@@ -2042,7 +2084,9 @@ function TransactionModal({
 								</a>
 							</div>
 							<div className="flex justify-between items-end">
-								<span className="text-tertiary shrink-0">{t('receipt.hash')}</span>
+								<span className="text-tertiary shrink-0">
+									{t('receipt.hash')}
+								</span>
 								<span className="text-right">{shortenAddress(hash, 6)}</span>
 							</div>
 							<div className="flex justify-between items-end">
