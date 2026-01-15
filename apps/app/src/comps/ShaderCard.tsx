@@ -11,7 +11,8 @@ const AMBIENT_DRIFT_SPEED_X = 0.005
 const AMBIENT_DRIFT_SPEED_Y = 0.004
 const AMBIENT_BASE_POS_X = 30
 const AMBIENT_BASE_POS_Y = 70
-const AMBIENT_PULSE_BASE = 0.18
+const AMBIENT_PULSE_BASE_DARK = 0.18
+const AMBIENT_PULSE_BASE_LIGHT = 0.07
 const AMBIENT_PULSE_AMPLITUDE = 0.08
 const AMBIENT_PULSE_SPEED = 0.02
 
@@ -47,14 +48,14 @@ const DEFAULT_AMBIENT_INTENSITY = 0.7
 // LIQUIDGLASS SETTINGS
 // =============================================================================
 
-const LIQUIDGLASS_POWER = 6.0
+const LIQUIDGLASS_POWER = 12.0
 const LIQUIDGLASS_BORDER_WIDTH = 0.15
 const LIQUIDGLASS_REFRACT_A = 0.992
 const LIQUIDGLASS_REFRACT_B = 2.332
 const LIQUIDGLASS_REFRACT_C = 4.544
 const LIQUIDGLASS_REFRACT_D = 6.923
 const LIQUIDGLASS_REFRACT_POWER = 1.779
-const LIQUIDGLASS_GLOW_WEIGHT = 0.2
+const LIQUIDGLASS_GLOW_WEIGHT = 0.08
 const LIQUIDGLASS_GLOW_SPEED = 0.5
 const LIQUIDGLASS_NOISE = 0.02
 const LIQUIDGLASS_CANVAS_EXTEND = 0 // px to extend canvas beyond container
@@ -581,10 +582,10 @@ export function ShaderCard({
 			gl.uniform2f(gl.getUniformLocation(gradientProgram, 'u_driftAmplitude'), AMBIENT_DRIFT_AMPLITUDE_X, AMBIENT_DRIFT_AMPLITUDE_Y)
 			gl.uniform2f(gl.getUniformLocation(gradientProgram, 'u_driftSpeed'), AMBIENT_DRIFT_SPEED_X, AMBIENT_DRIFT_SPEED_Y)
 			gl.uniform2f(gl.getUniformLocation(gradientProgram, 'u_basePos'), AMBIENT_BASE_POS_X, AMBIENT_BASE_POS_Y)
-			gl.uniform1f(gl.getUniformLocation(gradientProgram, 'u_pulseBase'), AMBIENT_PULSE_BASE)
+			const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+			gl.uniform1f(gl.getUniformLocation(gradientProgram, 'u_pulseBase'), isDark ? AMBIENT_PULSE_BASE_DARK : AMBIENT_PULSE_BASE_LIGHT)
 			gl.uniform1f(gl.getUniformLocation(gradientProgram, 'u_pulseAmplitude'), AMBIENT_PULSE_AMPLITUDE)
 			gl.uniform1f(gl.getUniformLocation(gradientProgram, 'u_pulseSpeed'), AMBIENT_PULSE_SPEED)
-			const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
 			const baseColor = isDark ? [0.098, 0.098, 0.098] : [0.988, 0.988, 0.988] // #191919 / #fcfcfc
 			gl.uniform3f(gl.getUniformLocation(gradientProgram, 'u_baseColor'), baseColor[0], baseColor[1], baseColor[2])
 
@@ -726,7 +727,7 @@ export function ShaderCard({
 	return (
 		<canvas
 			ref={canvasRef}
-			className={className}
+			className={`${className} dark:drop-shadow-[0_8px_32px_rgba(0,0,0,0.3)] drop-shadow-[0_8px_32px_rgba(0,0,0,0.12)]`}
 			style={{
 				position: 'absolute',
 				inset: -LIQUIDGLASS_CANVAS_EXTEND,
