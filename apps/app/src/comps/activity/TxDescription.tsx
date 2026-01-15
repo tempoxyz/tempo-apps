@@ -260,7 +260,7 @@ export namespace TxDescription {
 						>
 							{formatted}
 						</span>
-						<TokenIcon address={token} className="shrink-0 size-[18px]" />
+						<TokenIcon address={token} className="shrink-0 size-[14px]" />
 						<a
 							href={`${EXPLORER_URL}/token/${token}`}
 							target="_blank"
