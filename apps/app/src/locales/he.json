@@ -9,7 +9,8 @@
 		"feeToken": "אסימון עמלה",
 		"feeTokenDescription": "בחר באיזה אסימון להשתמש לתשלום עמלות עסקה.",
 		"language": "שפה",
-		"languageDescription": "בחר את השפה המועדפת עליך."
+		"languageDescription": "בחר את השפה המועדפת עליך.",
+		"notSet": "לא מוגדר"
 	},
 	"common": {
 		"active": "פעיל",
@@ -20,7 +21,24 @@
 		"recipient": "נמען 0x...",
 		"amount": "סכום",
 		"max": "מקסימום",
-		"cancel": "ביטול"
+		"cancel": "ביטול",
+		"search": "חיפוש",
+		"signUp": "הרשמה",
+		"signIn": "התחברות",
+		"continue": "המשך",
+		"logOut": "התנתק",
+		"copyAddress": "העתק כתובת",
+		"viewOnExplorer": "צפה בסייר",
+		"viewReceipt": "צפה בקבלה",
+		"viewTransaction": "צפה בעסקה",
+		"requestTokens": "בקש אסימונים",
+		"transaction": "עסקה",
+		"transactions": "עסקאות",
+		"transactionOn": "ב",
+		"self": "עצמי",
+		"andMore": "ועוד {{count}}",
+		"sentSuccessfully": "{{symbol}} נשלח בהצלחה",
+		"demoNote": "זו הדגמה, יתרות לא מתעדכנות."
 	},
 	"portfolio": {
 		"title": "תיק",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "נכסים",
 		"hideZeroBalances": "הסתר יתרות אפס",
 		"showZeroBalances": "הצג יתרות אפס",
-		"noActivityYet": "אין עדיין פעילות"
+		"noActivityYet": "אין עדיין פעילות",
+		"noAssetsFound": "לא נמצאו נכסים"
+	},
+	"landing": {
+		"getStarted": "התחל",
+		"exploreDescription": "חקור חשבונות, יתרות אסימונים והיסטוריית עסקאות ב-Tempo",
+		"enterAddress": "הזן כתובת",
+		"orUsePasskey": "או השתמש במפתח גישה אחר",
+		"orSignInWithPasskey": "או התחבר עם מפתח גישה"
+	},
+	"receipt": {
+		"block": "בלוק",
+		"sender": "שולח",
+		"hash": "גיבוב",
+		"date": "תאריך",
+		"time": "שעה"
 	}
 }

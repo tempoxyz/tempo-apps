@@ -9,7 +9,8 @@
 		"feeToken": "Maksutunnus",
 		"feeTokenDescription": "Valitse tunnus transaktiomaksujen maksamiseen.",
 		"language": "Kieli",
-		"languageDescription": "Valitse haluamasi kieli."
+		"languageDescription": "Valitse haluamasi kieli.",
+		"notSet": "Ei asetettu"
 	},
 	"common": {
 		"active": "Aktiivinen",
@@ -20,7 +21,24 @@
 		"recipient": "Vastaanottaja 0x...",
 		"amount": "Määrä",
 		"max": "MAX",
-		"cancel": "Peruuta"
+		"cancel": "Peruuta",
+		"search": "Hae",
+		"signUp": "Rekisteröidy",
+		"signIn": "Kirjaudu",
+		"continue": "Jatka",
+		"logOut": "Kirjaudu ulos",
+		"copyAddress": "Kopioi osoite",
+		"viewOnExplorer": "Katso Explorerissa",
+		"viewReceipt": "Katso kuitti",
+		"viewTransaction": "Katso tapahtuma",
+		"requestTokens": "Pyydä tokeneita",
+		"transaction": "Tapahtuma",
+		"transactions": "tapahtumaa",
+		"transactionOn": "",
+		"self": "itse",
+		"andMore": "ja {{count}} lisää",
+		"sentSuccessfully": "{{symbol}} lähetetty onnistuneesti",
+		"demoNote": "Tämä on demo, saldot eivät päivity."
 	},
 	"portfolio": {
 		"title": "Salkku",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "varaa",
 		"hideZeroBalances": "Piilota nollasaldot",
 		"showZeroBalances": "Näytä nollasaldot",
-		"noActivityYet": "Ei vielä toimintaa"
+		"noActivityYet": "Ei vielä toimintaa",
+		"noAssetsFound": "Varoja ei löytynyt"
+	},
+	"landing": {
+		"getStarted": "Aloita",
+		"exploreDescription": "Tutustu tileihin, tokensaldoihin ja tapahtumahistoriaan Tempossa",
+		"enterAddress": "Syötä osoite",
+		"orUsePasskey": "tai käytä toista pääsyavainta",
+		"orSignInWithPasskey": "tai kirjaudu pääsyavaimella"
+	},
+	"receipt": {
+		"block": "Lohko",
+		"sender": "Lähettäjä",
+		"hash": "Tiiviste",
+		"date": "Päivämäärä",
+		"time": "Aika"
 	}
 }

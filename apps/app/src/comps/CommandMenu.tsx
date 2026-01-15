@@ -71,7 +71,7 @@ function CommandTrigger({ onClick }: { onClick: () => void }) {
 		typeof navigator !== 'undefined' &&
 		navigator.platform?.toLowerCase().includes('mac')
 
-	return (
+	return createPortal(
 		<button
 			type="button"
 			onClick={onClick}
@@ -90,7 +90,8 @@ function CommandTrigger({ onClick }: { onClick: () => void }) {
 			<kbd className="hidden sm:flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] bg-white/10 rounded border border-white/10">
 				{isMac ? '⌘' : 'Ctrl'}K
 			</kbd>
-		</button>
+		</button>,
+		document.body,
 	)
 }
 
