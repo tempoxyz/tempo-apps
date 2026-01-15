@@ -2413,9 +2413,26 @@ function AssetRow({
 	const [selectedAccessKey, setSelectedAccessKey] = React.useState<
 		string | null
 	>(null)
+	const [availableAccessKeys, setAvailableAccessKeys] = React.useState<
+		string[]
+	>([])
 	const recipientInputRef = React.useRef<HTMLInputElement>(null)
 	const amountInputRef = React.useRef<HTMLInputElement>(null)
 	const { data: connectorClient } = useConnectorClient()
+
+	// Scan localStorage for available access keys
+	React.useEffect(() => {
+		if (typeof window === 'undefined') return
+		const keys: string[] = []
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i)
+			if (key?.startsWith('accessKey:')) {
+				const keyAddress = key.replace('accessKey:', '')
+				keys.push(keyAddress)
+			}
+		}
+		setAvailableAccessKeys(keys)
+	}, [isExpanded])
 
 	const {
 		writeContract,
@@ -2770,6 +2787,23 @@ function AssetRow({
 						<XIcon className="size-[14px]" />
 					</button>
 				</div>
+				{availableAccessKeys.length > 0 && (
+					<div className="flex items-center gap-2 pl-[30px] sm:pl-0">
+						<span className="text-[11px] text-tertiary whitespace-nowrap">Sign with:</span>
+						<select
+							value={selectedAccessKey ?? ''}
+							onChange={(e) => setSelectedAccessKey(e.target.value || null)}
+							className="h-[24px] px-2 rounded-md border border-base-border bg-surface text-[11px] focus:outline-none focus:border-accent cursor-pointer min-w-0"
+						>
+							<option value="">Wallet (default)</option>
+							{availableAccessKeys.map((keyAddress) => (
+								<option key={keyAddress} value={keyAddress}>
+									{shortenAddress(keyAddress, 4)}
+								</option>
+							))}
+						</select>
+					</div>
+				)}
 				{sendError && (
 					<div className="col-span-full pl-9 sm:pl-0 text-[11px] text-negative truncate">
 						{sendError}
