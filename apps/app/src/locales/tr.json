@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Tarih",
 		"time": "Saat"
+	},
+	"activity": {
+		"send": "Gönder",
+		"received": "Alındı",
+		"mint": "Basım",
+		"burn": "Yakma",
+		"swap": "Takas",
+		"approve": "Onayla",
+		"grantRole": "Rol ver",
+		"revokeRole": "Rol iptal et",
+		"pauseTransfers": "Transferleri duraklat",
+		"resumeTransfers": "Transferleri sürdür",
+		"createToken": "Token oluştur",
+		"partialFill": "Kısmi doldurma",
+		"completeFill": "Tam doldurma",
+		"cancelOrder": "Siparişi iptal et",
+		"setFeeToken": "Ücret tokeni ayarla",
+		"payFee": "Ücret öde",
+		"to": "kime",
+		"from": "kimden",
+		"self": "kendine",
+		"andMore": "ve {{count}} daha"
 	}
 }

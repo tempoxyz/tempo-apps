@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Tanggal",
 		"time": "Waktu"
+	},
+	"activity": {
+		"send": "Kirim",
+		"received": "Diterima",
+		"mint": "Cetak",
+		"burn": "Bakar",
+		"swap": "Tukar",
+		"approve": "Setujui",
+		"grantRole": "Berikan peran",
+		"revokeRole": "Cabut peran",
+		"pauseTransfers": "Jeda transfer",
+		"resumeTransfers": "Lanjutkan transfer",
+		"createToken": "Buat token",
+		"partialFill": "Pengisian sebagian",
+		"completeFill": "Pengisian lengkap",
+		"cancelOrder": "Batalkan pesanan",
+		"setFeeToken": "Atur token biaya",
+		"payFee": "Bayar biaya",
+		"to": "ke",
+		"from": "dari",
+		"self": "sendiri",
+		"andMore": "dan {{count}} lagi"
 	}
 }

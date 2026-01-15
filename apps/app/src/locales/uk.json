@@ -64,5 +64,27 @@
 		"hash": "Хеш",
 		"date": "Дата",
 		"time": "Час"
+	},
+	"activity": {
+		"send": "Надіслати",
+		"received": "Отримано",
+		"mint": "Випуск",
+		"burn": "Спалення",
+		"swap": "Обмін",
+		"approve": "Схвалити",
+		"grantRole": "Надати роль",
+		"revokeRole": "Відкликати роль",
+		"pauseTransfers": "Призупинити перекази",
+		"resumeTransfers": "Відновити перекази",
+		"createToken": "Створити токен",
+		"partialFill": "Часткове виконання",
+		"completeFill": "Повне виконання",
+		"cancelOrder": "Скасувати замовлення",
+		"setFeeToken": "Встановити токен комісії",
+		"payFee": "Сплатити комісію",
+		"to": "кому",
+		"from": "від",
+		"self": "собі",
+		"andMore": "і ще {{count}}"
 	}
 }
