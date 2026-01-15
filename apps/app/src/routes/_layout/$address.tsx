@@ -44,6 +44,7 @@ import EyeOffIcon from '~icons/lucide/eye-off'
 
 import ReceiptIcon from '~icons/lucide/receipt'
 import XIcon from '~icons/lucide/x'
+import XCircleIcon from '~icons/lucide/x-circle'
 import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
 import LogInIcon from '~icons/lucide/log-in'
@@ -1030,6 +1031,7 @@ function AddressView() {
 							selectedBlock={selectedBlockFilter}
 							onSelectBlock={setSelectedBlockFilter}
 						/>
+						<div className="border-b border-border-tertiary -mx-4 mt-2 mb-1" />
 						<ActivityHeatmap activity={activity} />
 						<ActivityList
 							activity={activity}
@@ -1660,7 +1662,7 @@ function BlockTimeline({
 	const shownBlock = displayBlock ?? currentBlock
 
 	return (
-		<div className="flex flex-col gap-1.5 mt-2 mb-3">
+		<div className="flex flex-col gap-1.5 mt-2 mb-3 pr-4">
 			<div className="flex items-center gap-[3px] w-full">
 				{blocks.map((block) => {
 					const isSelected = selectedBlock === block.blockNumber
@@ -1698,9 +1700,10 @@ function BlockTimeline({
 					<button
 						type="button"
 						onClick={() => onSelectBlock(undefined)}
-						className="text-[10px] text-secondary hover:text-primary cursor-pointer"
+						aria-label="Clear selection"
+						className="flex items-center justify-center size-5 text-tertiary hover:text-primary cursor-pointer transition-colors focus-ring rounded-full"
 					>
-						Clear
+						<XCircleIcon className="size-4" />
 					</button>
 				)}
 			</div>
