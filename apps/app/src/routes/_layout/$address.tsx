@@ -559,15 +559,22 @@ function AddressView() {
 
 	React.useEffect(() => {
 		if (activity.length > 0) {
-			const types = [
-				...new Set(
-					activity.flatMap((item) =>
-						item.events.map((e) => eventTypeToActivityType(e.type)),
-					),
-				),
-			]
+			const typeCounts: Record<string, number> = {}
+			for (const item of activity) {
+				for (const e of item.events) {
+					const type = eventTypeToActivityType(e.type)
+					typeCounts[type] = (typeCounts[type] ?? 0) + 1
+				}
+			}
+			const types = Object.keys(typeCounts) as Array<
+				ReturnType<typeof eventTypeToActivityType>
+			>
 			setSummary({
 				types,
+				typeCounts: typeCounts as Record<
+					ReturnType<typeof eventTypeToActivityType>,
+					number
+				>,
 				count: activity.length,
 				recentTimestamp: Date.now(),
 			})
