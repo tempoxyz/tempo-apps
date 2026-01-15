@@ -23,6 +23,7 @@ import { Sections } from '#comps/Sections'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#lib/css'
 import {
+	decodeKnownCall,
 	type KnownEvent,
 	preferredEventsFilter,
 } from '#lib/domain/known-events'
@@ -404,6 +405,14 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 				limitFilter={preferredEventsFilter}
 			/>
 		)
+
+	// Try to decode known contract calls (e.g., validator precompile)
+	if (transaction.to && transaction.input && transaction.input !== '0x') {
+		const knownCall = decodeKnownCall(transaction.to, transaction.input)
+		if (knownCall) {
+			return <TxEventDescription event={knownCall} />
+		}
+	}
 
 	if (transaction.value === 0n)
 		return (

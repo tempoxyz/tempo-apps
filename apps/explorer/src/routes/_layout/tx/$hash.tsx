@@ -30,7 +30,7 @@ import { TxTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
-import type { KnownEvent } from '#lib/domain/known-events'
+import { decodeKnownCall, type KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
@@ -322,13 +322,23 @@ function OverviewSection(props: {
 		.map((event) => event.note)
 		.filter((note): note is string => typeof note === 'string' && !!note.trim())
 
+	// Try to decode known contract calls when no events exist (e.g., validator precompile)
+	const knownCall = React.useMemo(() => {
+		if (knownEvents.length > 0) return null
+		if (!transaction.to || !input || input === '0x') return null
+		return decodeKnownCall(transaction.to, input)
+	}, [knownEvents.length, transaction.to, input])
+
+	const displayEvents =
+		knownEvents.length > 0 ? knownEvents : knownCall ? [knownCall] : []
+
 	return (
 		<div className="flex flex-col">
-			{knownEvents.length > 0 && (
+			{displayEvents.length > 0 && (
 				<InfoRow label="Description">
 					<div className="flex flex-col gap-[6px]">
 						<TxEventDescription.ExpandGroup
-							events={knownEvents}
+							events={displayEvents}
 							limit={5}
 							limitFilter={(event) =>
 								event.type !== 'active key count changed' &&
