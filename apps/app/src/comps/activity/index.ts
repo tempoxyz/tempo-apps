@@ -1,4 +1,8 @@
-export { TxDescription, getPerspectiveEvent } from './TxDescription'
+export {
+	TxDescription,
+	getPerspectiveEvent,
+	expandSelfSends,
+} from './TxDescription'
 export {
 	parseKnownEvents,
 	preferredEventsFilter,
