@@ -51,7 +51,8 @@
 		"noActivityYet": "Δεν υπάρχει δραστηριότητα ακόμα",
 		"noActivityInBlock": "Δεν υπάρχει δραστηριότητα σε αυτό το μπλοκ",
 		"noAssetsFound": "Δεν βρέθηκαν περιουσιακά στοιχεία",
-		"viewBlockInExplorer": "Προβολή μπλοκ στον εξερευνητή"
+		"viewBlockInExplorer": "Προβολή μπλοκ στον εξερευνητή",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "Ξεκινήστε",
