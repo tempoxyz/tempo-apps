@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Block } from 'viem'
-import { useBlock, useWatchBlockNumber } from 'wagmi'
+import { useWatchBlocks } from 'wagmi'
 import * as z from 'zod/mini'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
@@ -52,11 +52,6 @@ function RouteComponent() {
 		initialData: loaderData,
 	})
 
-	const [latestBlockNumber, setLatestBlockNumber] = React.useState<
-		bigint | undefined
-	>()
-	const currentLatest = latestBlockNumber ?? queryData.latestBlockNumber
-
 	// Initialize with loader data to prevent layout shift
 	const [liveBlocks, setLiveBlocks] = React.useState<Block[]>(() =>
 		queryData.blocks.slice(0, BLOCKS_PER_PAGE),
@@ -64,42 +59,35 @@ function RouteComponent() {
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const [paused, setPaused] = React.useState(false)
 
-	// Watch for new blocks
-	useWatchBlockNumber({
-		onBlockNumber: (blockNumber) => {
-			if (latestBlockNumber === undefined || blockNumber > latestBlockNumber) {
-				setLatestBlockNumber(blockNumber)
+	// Track latest block number from live blocks
+	const currentLatest =
+		React.useMemo(() => {
+			if (liveBlocks.length > 0 && liveBlocks[0]?.number != null) {
+				return liveBlocks[0].number
 			}
+			return queryData.latestBlockNumber
+		}, [liveBlocks, queryData.latestBlockNumber]) ?? undefined
+
+	// Watch for new blocks via websocket subscription - streams full block data directly
+	useWatchBlocks({
+		onBlock: (block) => {
+			if (!live || !isAtLatest || paused) return
+
+			setLiveBlocks((prev) => {
+				if (prev.some((b) => b.number === block.number)) return prev
+
+				// Mark as new for animation
+				const blockNum = block.number?.toString()
+				if (blockNum) {
+					recentlyAddedBlocks.add(blockNum)
+					setTimeout(() => recentlyAddedBlocks.delete(blockNum), 400)
+				}
+
+				return [block, ...prev].slice(0, BLOCKS_PER_PAGE)
+			})
 		},
-		poll: true,
+		emitOnBegin: false,
 	})
-
-	// Fetch the latest block when block number changes (for live updates)
-	const { data: latestBlock } = useBlock({
-		blockNumber: latestBlockNumber,
-		query: {
-			enabled: live && isAtLatest && latestBlockNumber !== undefined,
-			staleTime: Number.POSITIVE_INFINITY, // Block data never changes
-		},
-	})
-
-	// Add new blocks as they arrive
-	React.useEffect(() => {
-		if (!live || !isAtLatest || !latestBlock || paused) return
-
-		setLiveBlocks((prev) => {
-			if (prev.some((b) => b.number === latestBlock.number)) return prev
-
-			// Mark as new for animation
-			const blockNum = latestBlock.number?.toString()
-			if (blockNum) {
-				recentlyAddedBlocks.add(blockNum)
-				setTimeout(() => recentlyAddedBlocks.delete(blockNum), 400)
-			}
-
-			return [latestBlock, ...prev].slice(0, BLOCKS_PER_PAGE)
-		})
-	}, [latestBlock, live, isAtLatest, paused])
 
 	// Re-initialize when navigating back to latest with live mode
 	React.useEffect(() => {

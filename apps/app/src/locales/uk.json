@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Приховати нульові баланси",
 		"showZeroBalances": "Показати нульові баланси",
 		"noActivityYet": "Ще немає активності",
+		"noActivityInBlock": "Немає активності в цьому блоці",
 		"noAssetsFound": "Активи не знайдено"
 	},
 	"landing": {

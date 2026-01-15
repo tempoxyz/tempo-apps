@@ -672,7 +672,7 @@ function AddressView() {
 		bigint | undefined
 	>(undefined)
 
-	// Poll for current block number
+	// Poll for current block number (500ms for smooth single-block transitions)
 	React.useEffect(() => {
 		let mounted = true
 
@@ -688,7 +688,7 @@ function AddressView() {
 		}
 
 		pollBlock()
-		const interval = setInterval(pollBlock, 1500)
+		const interval = setInterval(pollBlock, 500)
 
 		return () => {
 			mounted = false
@@ -1526,6 +1526,75 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 	)
 }
 
+function LottoBlockNumber({ value }: { value: bigint | null }) {
+	const [displayDigits, setDisplayDigits] = React.useState<string[]>([])
+	const [animatingIndex, setAnimatingIndex] = React.useState<number | null>(null)
+	const prevValueRef = React.useRef<string>('')
+
+	React.useEffect(() => {
+		if (value === null) return
+
+		const newStr = value.toString()
+		const oldStr = prevValueRef.current
+
+		if (oldStr === '') {
+			setDisplayDigits(newStr.split(''))
+			prevValueRef.current = newStr
+			return
+		}
+
+		const newDigits = newStr.split('')
+		const oldDigits = oldStr.split('')
+
+		// Find the rightmost digit that changed
+		let changedIndex = -1
+		const maxLen = Math.max(newDigits.length, oldDigits.length)
+		for (let i = maxLen - 1; i >= 0; i--) {
+			if (newDigits[i] !== oldDigits[i]) {
+				changedIndex = i
+				break
+			}
+		}
+
+		if (changedIndex >= 0) {
+			setAnimatingIndex(changedIndex)
+			setTimeout(() => {
+				setDisplayDigits(newDigits)
+				setTimeout(() => setAnimatingIndex(null), 150)
+			}, 150)
+		} else {
+			setDisplayDigits(newDigits)
+		}
+
+		prevValueRef.current = newStr
+	}, [value])
+
+	if (value === null) {
+		return <span className="text-[10px] text-tertiary font-mono tabular-nums">...</span>
+	}
+
+	return (
+		<span className="text-[10px] text-tertiary font-mono tabular-nums flex">
+			{displayDigits.map((digit, i) => (
+				<span
+					key={i}
+					className="inline-block overflow-hidden"
+					style={{ width: '0.6em' }}
+				>
+					<span
+						className="inline-block transition-transform duration-150 ease-out"
+						style={{
+							transform: animatingIndex === i ? 'translateY(-100%)' : 'translateY(0)',
+						}}
+					>
+						{digit}
+					</span>
+				</span>
+			))}
+		</span>
+	)
+}
+
 function BlockTimeline({
 	activity,
 	currentBlock,
@@ -1537,11 +1606,19 @@ function BlockTimeline({
 	selectedBlock: bigint | undefined
 	onSelectBlock: (block: bigint | undefined) => void
 }) {
+	const scrollRef = React.useRef<HTMLDivElement>(null)
 	const [blockTxCounts, setBlockTxCounts] = React.useState<Map<string, number>>(
 		new Map(),
 	)
 	const [displayBlock, setDisplayBlock] = React.useState<bigint | null>(null)
+	const [isTransitioning, setIsTransitioning] = React.useState(false)
+	const [isPaused, setIsPaused] = React.useState(false)
 	const lastFetchedBlockRef = React.useRef<bigint | null>(null)
+	const pauseTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	)
+	const transitionQueueRef = React.useRef<bigint[]>([])
+	const isProcessingRef = React.useRef(false)
 
 	const userBlockNumbers = React.useMemo(() => {
 		const blocks = new Set<bigint>()
@@ -1553,17 +1630,68 @@ function BlockTimeline({
 		return blocks
 	}, [activity])
 
-	const visibleBlocks = 40
+	const visibleBlocks = 30
+	const placeholderBlocks = 10
+
+	const processNextBlock = React.useCallback(() => {
+		if (isProcessingRef.current || isPaused) return
+
+		const queue = transitionQueueRef.current
+		if (queue.length === 0) return
+
+		isProcessingRef.current = true
+		const nextBlock = queue.shift()
+
+		if (nextBlock !== undefined) {
+			setIsTransitioning(true)
+			requestAnimationFrame(() => {
+				setTimeout(() => {
+					setDisplayBlock(nextBlock)
+					setTimeout(() => {
+						setIsTransitioning(false)
+						isProcessingRef.current = false
+						if (transitionQueueRef.current.length > 0) {
+							requestAnimationFrame(() => processNextBlock())
+						}
+					}, 120)
+				}, 80)
+			})
+		} else {
+			isProcessingRef.current = false
+		}
+	}, [isPaused])
 
 	React.useEffect(() => {
-		if (!currentBlock) return
+		if (!currentBlock || isPaused) return
 
-		const fetchNewBlocks = async () => {
-			const lastFetched = lastFetchedBlockRef.current
-			if (lastFetched && currentBlock <= lastFetched) {
+		const init = async () => {
+			if (displayBlock === null) {
 				setDisplayBlock(currentBlock)
+				lastFetchedBlockRef.current = currentBlock
+				try {
+					const result = await fetchBlockData({
+						data: {
+							fromBlock: `0x${currentBlock.toString(16)}`,
+							count: visibleBlocks,
+						},
+					})
+					if (result.blocks.length > 0) {
+						setBlockTxCounts((prev) => {
+							const next = new Map(prev)
+							for (const b of result.blocks) {
+								next.set(BigInt(b.blockNumber).toString(), b.txCount)
+							}
+							return next
+						})
+					}
+				} catch {
+					// Ignore
+				}
 				return
 			}
+
+			const lastFetched = lastFetchedBlockRef.current
+			if (lastFetched && currentBlock <= lastFetched) return
 
 			const blocksToFetch = lastFetched
 				? Math.min(Number(currentBlock - lastFetched), 10)
@@ -1587,13 +1715,39 @@ function BlockTimeline({
 					lastFetchedBlockRef.current = currentBlock
 				}
 			} catch {
-				// Ignore errors
+				// Ignore
 			}
-			setDisplayBlock(currentBlock)
+
+			if (displayBlock !== null && currentBlock > displayBlock) {
+				for (let b = displayBlock + 1n; b <= currentBlock; b++) {
+					if (!transitionQueueRef.current.includes(b)) {
+						transitionQueueRef.current.push(b)
+					}
+				}
+				processNextBlock()
+			}
 		}
 
-		fetchNewBlocks()
-	}, [currentBlock])
+		init()
+	}, [currentBlock, isPaused, displayBlock, processNextBlock])
+
+	const handleScroll = React.useCallback(() => {
+		setIsPaused(true)
+		if (pauseTimeoutRef.current) {
+			clearTimeout(pauseTimeoutRef.current)
+		}
+		pauseTimeoutRef.current = setTimeout(() => {
+			setIsPaused(false)
+		}, 3000)
+	}, [])
+
+	React.useEffect(() => {
+		return () => {
+			if (pauseTimeoutRef.current) {
+				clearTimeout(pauseTimeoutRef.current)
+			}
+		}
+	}, [])
 
 	const maxTxCount = React.useMemo(() => {
 		let max = 1
@@ -1610,6 +1764,7 @@ function BlockTimeline({
 			blockNumber: bigint
 			hasUserActivity: boolean
 			txCount: number
+			isPlaceholder: boolean
 		}[] = []
 
 		for (let i = visibleBlocks - 1; i >= 0; i--) {
@@ -1619,14 +1774,25 @@ function BlockTimeline({
 					blockNumber: blockNum,
 					hasUserActivity: userBlockNumbers.has(blockNum),
 					txCount: blockTxCounts.get(blockNum.toString()) ?? 0,
+					isPlaceholder: false,
 				})
 			}
+		}
+
+		for (let i = 1; i <= placeholderBlocks; i++) {
+			result.push({
+				blockNumber: blockToShow + BigInt(i),
+				hasUserActivity: false,
+				txCount: 0,
+				isPlaceholder: true,
+			})
 		}
 
 		return result
 	}, [displayBlock, currentBlock, userBlockNumbers, blockTxCounts])
 
-	const handleBlockClick = (blockNumber: bigint) => {
+	const handleBlockClick = (blockNumber: bigint, isPlaceholder: boolean) => {
+		if (isPlaceholder) return
 		if (selectedBlock === blockNumber) {
 			onSelectBlock(undefined)
 		} else {
@@ -1639,16 +1805,23 @@ function BlockTimeline({
 		isSelected: boolean,
 		isCurrent: boolean,
 		hasUserActivity: boolean,
-	) => {
+		isPlaceholder: boolean,
+	): string => {
+		if (isPlaceholder) return 'bg-base-alt/20'
 		if (isSelected) return 'bg-accent'
 		if (isCurrent) return 'bg-white'
 		if (hasUserActivity) return 'bg-green-500'
-		if (txCount === 0) return 'bg-base-alt/40'
+		if (txCount === 0) return 'bg-zinc-800'
+		
+		// Heatmap color scale from cool (low tx) to hot (high tx)
 		const intensity = Math.min(txCount / Math.max(maxTxCount, 5), 1)
-		if (intensity < 0.25) return 'bg-base-alt/50'
-		if (intensity < 0.5) return 'bg-base-alt/60'
-		if (intensity < 0.75) return 'bg-base-alt/70'
-		return 'bg-base-alt/80'
+		if (intensity < 0.15) return 'bg-blue-900/70'
+		if (intensity < 0.3) return 'bg-blue-700/80'
+		if (intensity < 0.45) return 'bg-cyan-600/80'
+		if (intensity < 0.6) return 'bg-yellow-500/80'
+		if (intensity < 0.75) return 'bg-orange-500/90'
+		if (intensity < 0.9) return 'bg-orange-600'
+		return 'bg-red-500'
 	}
 
 	if (!currentBlock) {
@@ -1662,51 +1835,91 @@ function BlockTimeline({
 	const shownBlock = displayBlock ?? currentBlock
 
 	return (
-		<div className="flex flex-col gap-1.5 mt-2 mb-3 pr-4">
-			<div className="flex items-center gap-[3px] w-full">
+		<div className="flex flex-col gap-1.5 mt-2 mb-3">
+			<div
+				ref={scrollRef}
+				onScroll={handleScroll}
+				className="flex items-start gap-[3px] w-full overflow-x-auto no-scrollbar pb-1"
+			>
 				{blocks.map((block) => {
 					const isSelected = selectedBlock === block.blockNumber
-					const isCurrent = block.blockNumber === shownBlock
+					const isCurrent =
+						block.blockNumber === shownBlock && !block.isPlaceholder
+					const isNextCurrent =
+						block.blockNumber === shownBlock + 1n && !block.isPlaceholder
 					return (
-						<button
+						<div
 							key={block.blockNumber.toString()}
-							type="button"
-							onClick={() => handleBlockClick(block.blockNumber)}
 							className={cx(
-								'h-[10px] flex-1 min-w-[6px] max-w-[12px] rounded-[2px] transition-colors duration-300',
-								getBlockStyle(
-									block.txCount,
-									isSelected,
-									isCurrent,
-									block.hasUserActivity,
-								),
-								isSelected && 'ring-1 ring-accent',
-								block.hasUserActivity &&
-									!isSelected &&
-									!isCurrent &&
-									'ring-1 ring-green-500/60',
-								'hover:opacity-80 cursor-pointer',
+								'flex flex-col items-center shrink-0 transition-all duration-150',
+								isCurrent ? 'w-[14px]' : 'w-[8px]',
 							)}
-							title={`Block ${block.blockNumber.toString()}${block.txCount > 0 ? ` • ${block.txCount} tx${block.txCount > 1 ? 's' : ''}` : ''}`}
-						/>
+							style={{
+								opacity:
+									isCurrent && isTransitioning
+										? 0.4
+										: isNextCurrent && isTransitioning
+											? 1
+											: undefined,
+							}}
+						>
+							<button
+								type="button"
+								onClick={() =>
+									handleBlockClick(block.blockNumber, block.isPlaceholder)
+								}
+								disabled={block.isPlaceholder}
+								className={cx(
+									'w-full rounded-[2px] transition-all duration-150',
+									isCurrent ? 'h-[14px]' : 'h-[10px]',
+									getBlockStyle(
+										block.txCount,
+										isSelected,
+										isCurrent,
+										block.hasUserActivity,
+										block.isPlaceholder,
+									),
+									isSelected && 'ring-1 ring-accent',
+									block.hasUserActivity &&
+										!isSelected &&
+										!isCurrent &&
+										'ring-1 ring-green-500/60',
+									block.isPlaceholder
+										? 'cursor-default'
+										: 'hover:opacity-80 cursor-pointer',
+								)}
+								title={
+									block.isPlaceholder
+										? undefined
+										: `Block ${block.blockNumber.toString()}${block.txCount > 0 ? ` • ${block.txCount} tx${block.txCount > 1 ? 's' : ''}` : ''}`
+								}
+							/>
+						</div>
 					)
 				})}
 			</div>
-			<div className="flex items-center justify-end gap-2">
-				<span className="text-[10px] text-tertiary font-mono tabular-nums">
-					{shownBlock?.toString() ?? '...'}
-				</span>
-				{selectedBlock !== undefined && (
-					<button
-						type="button"
-						onClick={() => onSelectBlock(undefined)}
-						aria-label="Clear selection"
-						className="flex items-center justify-center size-5 text-tertiary hover:text-primary cursor-pointer transition-colors focus-ring rounded-full"
-					>
-						<XCircleIcon className="size-4" />
-					</button>
-				)}
+			<div className="flex items-center justify-center">
+				<div className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10">
+					<LottoBlockNumber value={shownBlock} />
+				</div>
 			</div>
+			{(isPaused || selectedBlock !== undefined) && (
+				<div className="flex items-center justify-end gap-2">
+					{isPaused && (
+						<span className="text-[10px] text-amber-500/80">Paused</span>
+					)}
+					{selectedBlock !== undefined && (
+						<button
+							type="button"
+							onClick={() => onSelectBlock(undefined)}
+							aria-label="Clear selection"
+							className="flex items-center justify-center size-5 text-tertiary hover:text-primary cursor-pointer transition-colors focus-ring rounded-full"
+						>
+							<XCircleIcon className="size-4" />
+						</button>
+					)}
+				</div>
+			)}
 		</div>
 	)
 }
@@ -2134,7 +2347,7 @@ function AssetRow({
 					e.preventDefault()
 					handleSend()
 				}}
-				className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-2.5 sm:py-0 rounded-xl hover:glass-thin transition-all sm:h-[52px]"
+				className="flex flex-col sm:flex-row sm:items-center gap-2 px-1 py-2.5 sm:py-0 rounded-xl hover:glass-thin transition-all sm:h-[52px]"
 			>
 				<div className="flex items-center gap-1.5 flex-1 min-w-0">
 					<TokenIcon address={asset.address} className="size-[24px] shrink-0" />
@@ -2155,7 +2368,7 @@ function AssetRow({
 						value={amount}
 						onChange={(e) => setAmount(e.target.value)}
 						placeholder="0.00"
-						className="w-[7ch] h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="w-[10ch] h-[32px] pl-1 pr-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
 					<button
 						type="button"

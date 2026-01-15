@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Sembunyikan saldo nol",
 		"showZeroBalances": "Tampilkan saldo nol",
 		"noActivityYet": "Belum ada aktivitas",
+		"noActivityInBlock": "Tidak ada aktivitas di blok ini",
 		"noAssetsFound": "Aset tidak ditemukan"
 	},
 	"landing": {
