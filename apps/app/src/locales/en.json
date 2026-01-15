@@ -9,7 +9,8 @@
 		"feeToken": "Fee Token",
 		"feeTokenDescription": "Select which token to use for paying transaction fees.",
 		"language": "Language",
-		"languageDescription": "Choose your preferred language."
+		"languageDescription": "Choose your preferred language.",
+		"notSet": "Not set"
 	},
 	"common": {
 		"active": "Active",
@@ -20,7 +21,24 @@
 		"recipient": "Recipient 0x...",
 		"amount": "Amount",
 		"max": "MAX",
-		"cancel": "Cancel"
+		"cancel": "Cancel",
+		"search": "Search",
+		"signUp": "Sign up",
+		"signIn": "Sign in",
+		"continue": "Continue",
+		"logOut": "Log out",
+		"copyAddress": "Copy address",
+		"viewOnExplorer": "View on Explorer",
+		"viewReceipt": "View receipt",
+		"viewTransaction": "View transaction",
+		"requestTokens": "Request tokens",
+		"transaction": "Transaction",
+		"transactions": "transactions",
+		"transactionOn": "on",
+		"self": "self",
+		"andMore": "and {{count}} more",
+		"sentSuccessfully": "Sent {{symbol}} successfully",
+		"demoNote": "This is a demo so balances do not update."
 	},
 	"portfolio": {
 		"title": "Portfolio",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "assets",
 		"hideZeroBalances": "Hide zero balances",
 		"showZeroBalances": "Show zero balances",
-		"noActivityYet": "No activity yet"
+		"noActivityYet": "No activity yet",
+		"noAssetsFound": "No assets found"
+	},
+	"landing": {
+		"getStarted": "Get started",
+		"exploreDescription": "Explore accounts, token balances, and transaction history on Tempo",
+		"enterAddress": "Enter address",
+		"orUsePasskey": "or use another passkey",
+		"orSignInWithPasskey": "or sign in with passkey"
+	},
+	"receipt": {
+		"block": "Block",
+		"sender": "Sender",
+		"hash": "Hash",
+		"date": "Date",
+		"time": "Time"
 	}
 }
