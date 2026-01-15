@@ -9,7 +9,8 @@
 		"feeToken": "Token phí",
 		"feeTokenDescription": "Chọn token để sử dụng thanh toán phí giao dịch.",
 		"language": "Ngôn ngữ",
-		"languageDescription": "Chọn ngôn ngữ ưa thích của bạn."
+		"languageDescription": "Chọn ngôn ngữ ưa thích của bạn.",
+		"notSet": "Chưa đặt"
 	},
 	"common": {
 		"active": "Đang hoạt động",
@@ -20,7 +21,24 @@
 		"recipient": "Người nhận 0x...",
 		"amount": "Số lượng",
 		"max": "TỐI ĐA",
-		"cancel": "Hủy"
+		"cancel": "Hủy",
+		"search": "Tìm kiếm",
+		"signUp": "Đăng ký",
+		"signIn": "Đăng nhập",
+		"continue": "Tiếp tục",
+		"logOut": "Đăng xuất",
+		"copyAddress": "Sao chép địa chỉ",
+		"viewOnExplorer": "Xem trên Explorer",
+		"viewReceipt": "Xem biên lai",
+		"viewTransaction": "Xem giao dịch",
+		"requestTokens": "Yêu cầu token",
+		"transaction": "Giao dịch",
+		"transactions": "giao dịch",
+		"transactionOn": "vào",
+		"self": "chính mình",
+		"andMore": "và {{count}} nữa",
+		"sentSuccessfully": "Đã gửi {{symbol}} thành công",
+		"demoNote": "Đây là bản demo, số dư không được cập nhật."
 	},
 	"portfolio": {
 		"title": "Danh mục",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "tài sản",
 		"hideZeroBalances": "Ẩn số dư bằng không",
 		"showZeroBalances": "Hiển thị số dư bằng không",
-		"noActivityYet": "Chưa có hoạt động"
+		"noActivityYet": "Chưa có hoạt động",
+		"noAssetsFound": "Không tìm thấy tài sản"
+	},
+	"landing": {
+		"getStarted": "Bắt đầu",
+		"exploreDescription": "Khám phá tài khoản, số dư token và lịch sử giao dịch trên Tempo",
+		"enterAddress": "Nhập địa chỉ",
+		"orUsePasskey": "hoặc sử dụng passkey khác",
+		"orSignInWithPasskey": "hoặc đăng nhập bằng passkey"
+	},
+	"receipt": {
+		"block": "Khối",
+		"sender": "Người gửi",
+		"hash": "Hash",
+		"date": "Ngày",
+		"time": "Thời gian"
 	}
 }

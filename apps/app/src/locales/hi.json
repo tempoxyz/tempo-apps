@@ -9,7 +9,8 @@
 		"feeToken": "शुल्क टोकन",
 		"feeTokenDescription": "लेनदेन शुल्क का भुगतान करने के लिए उपयोग किए जाने वाले टोकन का चयन करें।",
 		"language": "भाषा",
-		"languageDescription": "अपनी पसंदीदा भाषा चुनें।"
+		"languageDescription": "अपनी पसंदीदा भाषा चुनें।",
+		"notSet": "सेट नहीं"
 	},
 	"common": {
 		"active": "सक्रिय",
@@ -20,7 +21,24 @@
 		"recipient": "प्राप्तकर्ता 0x...",
 		"amount": "राशि",
 		"max": "अधिकतम",
-		"cancel": "रद्द करें"
+		"cancel": "रद्द करें",
+		"search": "खोजें",
+		"signUp": "साइन अप",
+		"signIn": "साइन इन",
+		"continue": "जारी रखें",
+		"logOut": "लॉग आउट",
+		"copyAddress": "पता कॉपी करें",
+		"viewOnExplorer": "एक्सप्लोरर पर देखें",
+		"viewReceipt": "रसीद देखें",
+		"viewTransaction": "लेनदेन देखें",
+		"requestTokens": "टोकन का अनुरोध करें",
+		"transaction": "लेनदेन",
+		"transactions": "लेनदेन",
+		"transactionOn": "को",
+		"self": "स्वयं",
+		"andMore": "और {{count}} अधिक",
+		"sentSuccessfully": "{{symbol}} सफलतापूर्वक भेजा गया",
+		"demoNote": "यह एक डेमो है, शेष अपडेट नहीं होते।"
 	},
 	"portfolio": {
 		"title": "पोर्टफोलियो",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "संपत्तियां",
 		"hideZeroBalances": "शून्य शेष छुपाएं",
 		"showZeroBalances": "शून्य शेष दिखाएं",
-		"noActivityYet": "अभी तक कोई गतिविधि नहीं"
+		"noActivityYet": "अभी तक कोई गतिविधि नहीं",
+		"noAssetsFound": "कोई संपत्ति नहीं मिली"
+	},
+	"landing": {
+		"getStarted": "शुरू करें",
+		"exploreDescription": "Tempo पर खातों, टोकन शेष और लेनदेन इतिहास का अन्वेषण करें",
+		"enterAddress": "पता दर्ज करें",
+		"orUsePasskey": "या अन्य पासकी का उपयोग करें",
+		"orSignInWithPasskey": "या पासकी से साइन इन करें"
+	},
+	"receipt": {
+		"block": "ब्लॉक",
+		"sender": "प्रेषक",
+		"hash": "हैश",
+		"date": "तारीख",
+		"time": "समय"
 	}
 }
