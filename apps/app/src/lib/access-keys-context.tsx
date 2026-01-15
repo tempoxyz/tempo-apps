@@ -44,14 +44,27 @@ export function useSignableAccessKeys() {
 
 	const signableKeys = React.useMemo(() => {
 		if (typeof window === 'undefined') return []
-		console.log('[useSignableAccessKeys] Filtering', keys.length, 'keys for local private keys')
+		console.log(
+			'[useSignableAccessKeys] Filtering',
+			keys.length,
+			'keys for local private keys',
+		)
 		const filtered = keys.filter((key) => {
 			const storageKey = `accessKey:${key.keyId.toLowerCase()}`
 			const hasKey = localStorage.getItem(storageKey) !== null
-			console.log('[useSignableAccessKeys] Key', key.keyId.slice(0, 10), 'hasPrivateKey:', hasKey)
+			console.log(
+				'[useSignableAccessKeys] Key',
+				key.keyId.slice(0, 10),
+				'hasPrivateKey:',
+				hasKey,
+			)
 			return hasKey
 		})
-		console.log('[useSignableAccessKeys] Found', filtered.length, 'signable keys')
+		console.log(
+			'[useSignableAccessKeys] Found',
+			filtered.length,
+			'signable keys',
+		)
 		return filtered
 	}, [keys])
 
@@ -81,10 +94,10 @@ export function AccessKeysProvider({
 	)
 
 	// Stabilize tokenAddresses to prevent infinite re-renders
-	const tokenAddressesKey = tokenAddresses.join(',')
+	const _tokenAddressesKey = tokenAddresses.join(',')
 	const stableTokenAddresses = React.useMemo(
 		() => tokenAddresses,
-		[tokenAddressesKey],
+		[tokenAddresses],
 	)
 
 	const fetchKeys = React.useCallback(async () => {

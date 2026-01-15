@@ -12,7 +12,7 @@ import {
 	serialize,
 	webSocket,
 } from 'wagmi'
-import { KeyManager, webAuthn } from 'wagmi/tempo'
+import { type KeyManager, webAuthn } from 'wagmi/tempo'
 
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 

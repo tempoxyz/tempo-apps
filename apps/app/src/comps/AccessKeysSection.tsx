@@ -7,6 +7,7 @@
  * - Revocation requires Root Key signature (will trigger passkey prompt)
  */
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 
 import { Address } from 'ox'
 import { WebCryptoP256 } from 'ox'
@@ -110,7 +111,24 @@ function shortenAddress(address: string, chars = 4): string {
 }
 
 // Emoji utilities
-const DEFAULT_EMOJIS = ['🔑', '🗝️', '🔐', '🔒', '⚡', '🚀', '💎', '🌟', '🎯', '🛡️', '🔥', '💫', '🎨', '🌈', '🍀', '🎪']
+const DEFAULT_EMOJIS = [
+	'🔑',
+	'🗝️',
+	'🔐',
+	'🔒',
+	'⚡',
+	'🚀',
+	'💎',
+	'🌟',
+	'🎯',
+	'🛡️',
+	'🔥',
+	'💫',
+	'🎨',
+	'🌈',
+	'🍀',
+	'🎪',
+]
 
 export function getAccessKeyEmoji(keyId: string): string | null {
 	if (typeof window === 'undefined') return null
@@ -125,12 +143,29 @@ function setAccessKeyEmoji(keyId: string, emoji: string): void {
 function EmojiPicker({
 	selectedEmoji,
 	onSelect,
+	anchorRef,
 }: {
 	selectedEmoji: string | null
 	onSelect: (emoji: string) => void
+	anchorRef: React.RefObject<HTMLButtonElement | null>
 }) {
-	return (
-		<div className="absolute left-0 top-full mt-1 z-50 bg-surface border border-card-border rounded-md shadow-lg p-1.5">
+	const [position, setPosition] = React.useState({ top: 0, left: 0 })
+
+	React.useLayoutEffect(() => {
+		if (anchorRef.current) {
+			const rect = anchorRef.current.getBoundingClientRect()
+			setPosition({
+				top: rect.bottom + 4,
+				left: rect.left,
+			})
+		}
+	}, [anchorRef])
+
+	return createPortal(
+		<div
+			className="fixed z-[9999] bg-surface border border-card-border rounded-md shadow-lg p-1.5"
+			style={{ top: position.top, left: position.left }}
+		>
 			<div className="grid grid-cols-4 gap-0.5">
 				{DEFAULT_EMOJIS.map((emoji) => (
 					<button
@@ -146,7 +181,8 @@ function EmojiPicker({
 					</button>
 				))}
 			</div>
-		</div>
+		</div>,
+		document.body,
 	)
 }
 
@@ -202,7 +238,12 @@ export function useOnChainAccessKeys(
 				const blockNumber = await client.getBlockNumber()
 				const fromBlock = blockNumber > 99000n ? blockNumber - 99000n : 0n
 
-				console.log('[AccessKeysSection] Fetching keys for', checksummedAddress, 'from block', fromBlock.toString())
+				console.log(
+					'[AccessKeysSection] Fetching keys for',
+					checksummedAddress,
+					'from block',
+					fromBlock.toString(),
+				)
 
 				// Fetch all relevant events in parallel
 				const [authorizedLogs, revokedLogs, spendingLimitLogs] =
@@ -272,7 +313,13 @@ export function useOnChainAccessKeys(
 					}
 				}
 
-				console.log('[AccessKeysSection] Found', authorizedLogs.length, 'authorized,', revokedLogs.length, 'revoked logs')
+				console.log(
+					'[AccessKeysSection] Found',
+					authorizedLogs.length,
+					'authorized,',
+					revokedLogs.length,
+					'revoked logs',
+				)
 
 				// Build revoked set
 				const revokedKeyIds = new Set<string>(
@@ -295,13 +342,28 @@ export function useOnChainAccessKeys(
 						blockNumber: log.blockNumber,
 					}))
 
-				console.log('[AccessKeysSection] All parsed keys (before expiry filter):', allParsedKeys.length, allParsedKeys.map(k => ({ keyId: k.keyId.slice(0, 10), expiry: k.expiry, expiryDate: k.expiry ? new Date(k.expiry * 1000).toISOString() : 'never' })))
+				console.log(
+					'[AccessKeysSection] All parsed keys (before expiry filter):',
+					allParsedKeys.length,
+					allParsedKeys.map((k) => ({
+						keyId: k.keyId.slice(0, 10),
+						expiry: k.expiry,
+						expiryDate: k.expiry
+							? new Date(k.expiry * 1000).toISOString()
+							: 'never',
+					})),
+				)
 
 				const basicKeys = allParsedKeys.filter(
 					(k) => k.expiry === 0 || k.expiry > Math.floor(Date.now() / 1000),
 				)
 
-				console.log('[AccessKeysSection] After expiry filter:', basicKeys.length, 'now:', Math.floor(Date.now() / 1000))
+				console.log(
+					'[AccessKeysSection] After expiry filter:',
+					basicKeys.length,
+					'now:',
+					Math.floor(Date.now() / 1000),
+				)
 
 				// Fetch block timestamps for creation times
 				const uniqueBlockNumbers = [
@@ -425,7 +487,11 @@ export function useOnChainAccessKeys(
 					}),
 				)
 
-				console.log('[AccessKeysSection] Processed', keysWithLimits.length, 'active keys')
+				console.log(
+					'[AccessKeysSection] Processed',
+					keysWithLimits.length,
+					'active keys',
+				)
 
 				if (!cancelled) {
 					// Only update state if keys actually changed (compare by keyId set)
@@ -523,6 +589,7 @@ function AccessKeyRow({
 	const [keyName, setKeyName] = React.useState<string | null>(null)
 	const [emoji, setEmoji] = React.useState<string | null>(null)
 	const [showEmojiPicker, setShowEmojiPicker] = React.useState(false)
+	const emojiButtonRef = React.useRef<HTMLButtonElement>(null)
 
 	React.useEffect(() => {
 		if (typeof window === 'undefined') return
@@ -554,8 +621,9 @@ function AccessKeyRow({
 	const rowContent = (
 		<>
 			{/* Emoji */}
-			<div className="relative shrink-0">
+			<div className="shrink-0">
 				<button
+					ref={emojiButtonRef}
 					type="button"
 					onClick={(e) => {
 						e.preventDefault()
@@ -563,8 +631,8 @@ function AccessKeyRow({
 						if (isOwner) setShowEmojiPicker(!showEmojiPicker)
 					}}
 					className={cx(
-						'flex items-center justify-center text-[16px] transition-colors',
-						isOwner && 'cursor-pointer hover:scale-110',
+						'flex items-center justify-center w-5 h-5 rounded-full bg-white/10 text-[14px] transition-colors',
+						isOwner && 'cursor-pointer hover:bg-white/20',
 					)}
 					title={isOwner ? 'Click to change emoji' : undefined}
 				>
@@ -574,6 +642,7 @@ function AccessKeyRow({
 					<EmojiPicker
 						selectedEmoji={emoji}
 						onSelect={handleEmojiSelect}
+						anchorRef={emojiButtonRef}
 					/>
 				)}
 			</div>
@@ -590,11 +659,9 @@ function AccessKeyRow({
 					>
 						{displayName}
 					</button>
-					{copied && (
-						<CheckIcon className="size-2.5 text-positive shrink-0" />
-					)}
+					{copied && <CheckIcon className="size-3 text-positive shrink-0" />}
 					{!copied && (
-						<CopyIcon className="size-2.5 text-tertiary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+						<CopyIcon className="size-2 text-tertiary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
 					)}
 					{isPending && (
 						<span className="text-[11px] text-accent">(confirming...)</span>
@@ -670,14 +737,14 @@ function AccessKeyRow({
 					title="Revoke this access key (requires passkey signature)"
 					className="size-4 flex items-center justify-center rounded-full bg-negative/10 text-negative hover:bg-negative/20 transition-colors cursor-pointer press-down shrink-0"
 				>
-					<XIcon className="size-2.5" />
+					<XIcon className="size-2" />
 				</button>
 			)}
 		</>
 	)
 
 	const rowClassName = cx(
-		'group flex items-center gap-3 px-3 py-3.5 min-h-[60px] rounded-xl hover:glass-thin transition-all',
+		'group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:glass-thin transition-all',
 		(isPending || isRevoking) && 'opacity-50',
 		isClickable && 'cursor-pointer',
 	)
@@ -714,6 +781,7 @@ function CreateKeyForm({
 		expDays: number,
 		priceUsd: number,
 		keyName: string,
+		emoji: string,
 	) => void
 }) {
 	const [keyName, setKeyName] = React.useState('')
@@ -722,6 +790,9 @@ function CreateKeyForm({
 	)
 	const [limitUsd, setLimitUsd] = React.useState('')
 	const [expDays, setExpDays] = React.useState('7')
+	const [selectedEmoji] = React.useState(
+		() => DEFAULT_EMOJIS[Math.floor(Math.random() * DEFAULT_EMOJIS.length)],
+	)
 
 	const asset = assets.find((a) => a.address === selectedToken)
 
@@ -734,11 +805,11 @@ function CreateKeyForm({
 	}
 
 	return (
-		<div className="flex items-center gap-3 px-3 py-3.5 min-h-[60px] rounded-xl hover:glass-thin transition-all mx-0">
-			<div className="flex items-center justify-center size-5 rounded-full bg-accent/20 shrink-0">
-				<KeyIcon className="size-3 text-accent" />
+		<div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:glass-thin transition-all mx-0">
+			<div className="flex items-center justify-center size-5 rounded-full bg-white/10 text-[14px] shrink-0">
+				{selectedEmoji}
 			</div>
-			<div className="flex flex-col flex-1 min-w-0 gap-1">
+			<div className="flex flex-col flex-1 min-w-0 gap-0.5">
 				<div className="flex items-center gap-2">
 					<input
 						type="text"
@@ -752,7 +823,9 @@ function CreateKeyForm({
 				<div className="flex items-center gap-2 text-[12px] text-secondary">
 					<select
 						value={selectedToken}
-						onChange={(e) => setSelectedToken(e.target.value as Address.Address)}
+						onChange={(e) =>
+							setSelectedToken(e.target.value as Address.Address)
+						}
 						className="bg-transparent text-secondary hover:text-primary cursor-pointer focus:outline-none appearance-none pr-1"
 					>
 						{assets.map((a) => (
@@ -796,6 +869,7 @@ function CreateKeyForm({
 						Number(expDays),
 						asset?.metadata?.priceUsd ?? 1,
 						keyName,
+						selectedEmoji,
 					)
 				}
 				disabled={isPending}
@@ -892,6 +966,7 @@ export function AccessKeysSection({
 		expDays: number,
 		priceUsd: number,
 		keyName: string,
+		emoji: string,
 	) => {
 		if (!isOwner || !account.address || !connectorClient?.account) return
 
@@ -933,6 +1008,7 @@ export function AccessKeysSection({
 					storageData.name = keyName.trim()
 				}
 				localStorage.setItem(storageKey, JSON.stringify(storageData))
+				setAccessKeyEmoji(accessKeyAddress, emoji)
 			} catch {
 				// Ignore storage errors
 			}
@@ -975,7 +1051,12 @@ export function AccessKeysSection({
 				keyAuthorization,
 			})
 
-			console.log('[AccessKeysSection] Key created, tx hash:', hash, 'keyId:', accessKeyAddress)
+			console.log(
+				'[AccessKeysSection] Key created, tx hash:',
+				hash,
+				'keyId:',
+				accessKeyAddress,
+			)
 
 			// Optimistically show pending key (use derived accessKeyAddress, not accessKey.address which is root account)
 			setPendingKeys((prev) => [
@@ -1122,7 +1203,7 @@ export function AccessKeysSection({
 					)}
 				</div>
 			) : (
-				<div className="flex flex-col -mx-2">
+				<div className="flex flex-col -mx-2 divide-y divide-card-border">
 					{allKeys.map(
 						({ key, asset, isPending: isKeyPending, txHash: keyTxHash }) => (
 							<AccessKeyRow

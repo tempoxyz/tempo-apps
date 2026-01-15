@@ -112,10 +112,16 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 			try {
 				const { env } = await import('cloudflare:workers')
 				const tempoEnv = env.VITE_TEMPO_ENV as string | undefined
-				chainId = tempoEnv === 'moderato' ? 42431 : tempoEnv === 'devnet' ? 42430 : 4217
+				chainId =
+					tempoEnv === 'moderato' ? 42431 : tempoEnv === 'devnet' ? 42430 : 4217
 			} catch {
 				// Local dev fallback - default to mainnet (presto)
-				chainId = TEMPO_ENV === 'moderato' ? 42431 : TEMPO_ENV === 'devnet' ? 42430 : 4217
+				chainId =
+					TEMPO_ENV === 'moderato'
+						? 42431
+						: TEMPO_ENV === 'devnet'
+							? 42430
+							: 4217
 			}
 
 			const { QB } = await getIndexSupply()

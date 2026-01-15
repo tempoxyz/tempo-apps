@@ -34,11 +34,7 @@ async function getChainIdFromEnv(): Promise<number> {
 	try {
 		const { env } = await import('cloudflare:workers')
 		const tempoEnv = env.VITE_TEMPO_ENV as string | undefined
-		return tempoEnv === 'presto'
-			? 4217
-			: tempoEnv === 'devnet'
-				? 42430
-				: 42431
+		return tempoEnv === 'presto' ? 4217 : tempoEnv === 'devnet' ? 42430 : 42431
 	} catch {
 		return getChainId()
 	}
