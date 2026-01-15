@@ -552,12 +552,12 @@ function AddressView() {
 		return () => setSummary(null)
 	}, [activity, setSummary])
 
-	const totalValue = assetsData.reduce(
-		(sum, asset) => sum + (asset.valueUsd ?? 0),
-		0,
-	)
 	const dedupedAssets = assetsData.filter(
 		(a, i, arr) => arr.findIndex((b) => b.address === a.address) === i,
+	)
+	const totalValue = dedupedAssets.reduce(
+		(sum, asset) => sum + (asset.valueUsd ?? 0),
+		0,
 	)
 	const assetsWithBalance = dedupedAssets.filter(
 		(a) =>
@@ -1386,14 +1386,16 @@ function AssetRow({
 	React.useEffect(() => {
 		if (isConfirmed) {
 			setSendState('sent')
+			// Trigger balance refresh immediately
+			onSendComplete(
+				asset.metadata?.symbol || shortenAddress(asset.address, 3),
+			)
+			// Reset UI state after animation
 			setTimeout(() => {
 				setSendState('idle')
 				setRecipient('')
 				setAmount('')
 				resetWrite()
-				onSendComplete(
-					asset.metadata?.symbol || shortenAddress(asset.address, 3),
-				)
 			}, 1500)
 		}
 	}, [
