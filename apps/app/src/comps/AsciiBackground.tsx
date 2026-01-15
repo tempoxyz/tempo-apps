@@ -99,7 +99,9 @@ export function AsciiBackground() {
 				width={dimensions.width}
 				height={dimensions.height}
 				className="absolute inset-0"
+				aria-hidden="true"
 			>
+				<title>Background decoration</title>
 				{lines.map((line) => (
 					<line
 						key={line.id}
