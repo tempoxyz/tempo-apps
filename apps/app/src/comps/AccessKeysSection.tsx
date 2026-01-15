@@ -230,6 +230,8 @@ export function useOnChainAccessKeys(
 					}
 				}
 
+				console.log('[AccessKeysSection] Found', authorizedLogs.length, 'authorized,', revokedLogs.length, 'revoked logs')
+
 				// Build revoked set
 				const revokedKeyIds = new Set<string>(
 					revokedLogs
@@ -238,7 +240,7 @@ export function useOnChainAccessKeys(
 				)
 
 				// Build active keys list
-				const basicKeys = authorizedLogs
+				const allParsedKeys = authorizedLogs
 					.filter(
 						(log) =>
 							log.args.publicKey &&
@@ -250,9 +252,14 @@ export function useOnChainAccessKeys(
 						expiry: Number(log.args.expiry ?? 0),
 						blockNumber: log.blockNumber,
 					}))
-					.filter(
-						(k) => k.expiry === 0 || k.expiry > Math.floor(Date.now() / 1000),
-					)
+
+				console.log('[AccessKeysSection] All parsed keys (before expiry filter):', allParsedKeys.length, allParsedKeys.map(k => ({ keyId: k.keyId.slice(0, 10), expiry: k.expiry, expiryDate: k.expiry ? new Date(k.expiry * 1000).toISOString() : 'never' })))
+
+				const basicKeys = allParsedKeys.filter(
+					(k) => k.expiry === 0 || k.expiry > Math.floor(Date.now() / 1000),
+				)
+
+				console.log('[AccessKeysSection] After expiry filter:', basicKeys.length, 'now:', Math.floor(Date.now() / 1000))
 
 				// Fetch block timestamps for creation times
 				const uniqueBlockNumbers = [
@@ -376,6 +383,8 @@ export function useOnChainAccessKeys(
 					}),
 				)
 
+				console.log('[AccessKeysSection] Processed', keysWithLimits.length, 'active keys')
+
 				if (!cancelled) {
 					// Only update state if keys actually changed (compare by keyId set)
 					setKeys((prevKeys) => {
@@ -396,8 +405,8 @@ export function useOnChainAccessKeys(
 						return prevKeys
 					})
 				}
-			} catch {
-				// Failed to fetch keys
+			} catch (e) {
+				console.error('[AccessKeysSection] Failed to fetch keys:', e)
 			} finally {
 				if (!cancelled && !hasLoadedOnce.current) {
 					setIsLoading(false)
@@ -894,6 +903,8 @@ export function AccessKeysSection({
 				keyAuthorization,
 			})
 
+			console.log('[AccessKeysSection] Key created, tx hash:', hash, 'keyId:', accessKeyAddress)
+
 			// Optimistically show pending key (use derived accessKeyAddress, not accessKey.address which is root account)
 			setPendingKeys((prev) => [
 				...prev,
@@ -908,8 +919,8 @@ export function AccessKeysSection({
 					txHash: hash,
 				},
 			])
-		} catch {
-			// Key creation failed
+		} catch (e) {
+			console.error('[AccessKeysSection] Key creation failed:', e)
 		} finally {
 			setIsPending(false)
 			setShowCreate(false)
