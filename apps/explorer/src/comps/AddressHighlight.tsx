@@ -1,5 +1,6 @@
-import * as React from 'react'
 import type { Address } from 'ox'
+import * as React from 'react'
+import { isAddressEqual } from 'viem'
 
 interface AddressHighlightContextValue {
 	highlightedAddress: Address.Address | null
@@ -37,8 +38,7 @@ export function useAddressHighlight(address: Address.Address) {
 
 	const { highlightedAddress, setHighlightedAddress } = context
 	const isHighlighted =
-		highlightedAddress !== null &&
-		highlightedAddress.toLowerCase() === address.toLowerCase()
+		highlightedAddress !== null && isAddressEqual(highlightedAddress, address)
 
 	const handlers = React.useMemo(
 		() => ({
