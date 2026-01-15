@@ -64,5 +64,27 @@
 		"hash": "هش",
 		"date": "تاریخ",
 		"time": "زمان"
+	},
+	"activity": {
+		"send": "ارسال",
+		"received": "دریافت شده",
+		"mint": "ضرب",
+		"burn": "سوزاندن",
+		"swap": "مبادله",
+		"approve": "تأیید",
+		"grantRole": "اعطای نقش",
+		"revokeRole": "لغو نقش",
+		"pauseTransfers": "توقف انتقال‌ها",
+		"resumeTransfers": "ازسرگیری انتقال‌ها",
+		"createToken": "ایجاد توکن",
+		"partialFill": "تکمیل جزئی",
+		"completeFill": "تکمیل کامل",
+		"cancelOrder": "لغو سفارش",
+		"setFeeToken": "تنظیم توکن کارمزد",
+		"payFee": "پرداخت کارمزد",
+		"to": "به",
+		"from": "از",
+		"self": "خود",
+		"andMore": "و {{count}} بیشتر"
 	}
 }

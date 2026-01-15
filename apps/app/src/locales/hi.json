@@ -64,5 +64,27 @@
 		"hash": "हैश",
 		"date": "तारीख",
 		"time": "समय"
+	},
+	"activity": {
+		"send": "भेजें",
+		"received": "प्राप्त",
+		"mint": "मिंट",
+		"burn": "बर्न",
+		"swap": "स्वैप",
+		"approve": "स्वीकृति",
+		"grantRole": "भूमिका प्रदान करें",
+		"revokeRole": "भूमिका रद्द करें",
+		"pauseTransfers": "स्थानांतरण रोकें",
+		"resumeTransfers": "स्थानांतरण फिर से शुरू करें",
+		"createToken": "टोकन बनाएं",
+		"partialFill": "आंशिक भरण",
+		"completeFill": "पूर्ण भरण",
+		"cancelOrder": "आदेश रद्द करें",
+		"setFeeToken": "शुल्क टोकन सेट करें",
+		"payFee": "शुल्क भुगतान करें",
+		"to": "को",
+		"from": "से",
+		"self": "स्वयं",
+		"andMore": "और {{count}} अधिक"
 	}
 }

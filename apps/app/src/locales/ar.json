@@ -64,5 +64,27 @@
 		"hash": "تجزئة",
 		"date": "التاريخ",
 		"time": "الوقت"
+	},
+	"activity": {
+		"send": "إرسال",
+		"received": "تم الاستلام",
+		"mint": "سك",
+		"burn": "حرق",
+		"swap": "مبادلة",
+		"approve": "موافقة",
+		"grantRole": "منح دور",
+		"revokeRole": "إلغاء دور",
+		"pauseTransfers": "إيقاف التحويلات",
+		"resumeTransfers": "استئناف التحويلات",
+		"createToken": "إنشاء رمز",
+		"partialFill": "تعبئة جزئية",
+		"completeFill": "تعبئة كاملة",
+		"cancelOrder": "إلغاء الطلب",
+		"setFeeToken": "تعيين رمز الرسوم",
+		"payFee": "دفع الرسوم",
+		"to": "إلى",
+		"from": "من",
+		"self": "ذاتي",
+		"andMore": "و {{count}} أكثر"
 	}
 }

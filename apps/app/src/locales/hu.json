@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Dátum",
 		"time": "Idő"
+	},
+	"activity": {
+		"send": "Küldés",
+		"received": "Fogadva",
+		"mint": "Kibocsátás",
+		"burn": "Égetés",
+		"swap": "Csere",
+		"approve": "Jóváhagyás",
+		"grantRole": "Szerep megadása",
+		"revokeRole": "Szerep visszavonása",
+		"pauseTransfers": "Átutalások szüneteltetése",
+		"resumeTransfers": "Átutalások folytatása",
+		"createToken": "Token létrehozása",
+		"partialFill": "Részleges teljesítés",
+		"completeFill": "Teljes teljesítés",
+		"cancelOrder": "Megrendelés törlése",
+		"setFeeToken": "Díj token beállítása",
+		"payFee": "Díj fizetése",
+		"to": "címzett",
+		"from": "feladó",
+		"self": "saját",
+		"andMore": "és még {{count}}"
 	}
 }

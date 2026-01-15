@@ -64,5 +64,27 @@
 		"hash": "Haŝo",
 		"date": "Dato",
 		"time": "Tempo"
+	},
+	"activity": {
+		"send": "Sendi",
+		"received": "Ricevita",
+		"mint": "Frapi",
+		"burn": "Bruligi",
+		"swap": "Interŝanĝi",
+		"approve": "Aprobi",
+		"grantRole": "Doni rolon",
+		"revokeRole": "Revoki rolon",
+		"pauseTransfers": "Paŭzi transigojn",
+		"resumeTransfers": "Daŭrigi transigojn",
+		"createToken": "Krei ĵetonon",
+		"partialFill": "Parta plenumo",
+		"completeFill": "Kompleta plenumo",
+		"cancelOrder": "Nuligi mendon",
+		"setFeeToken": "Agordi kotizoĵetonon",
+		"payFee": "Pagi kotizon",
+		"to": "al",
+		"from": "de",
+		"self": "mem",
+		"andMore": "kaj {{count}} pli"
 	}
 }

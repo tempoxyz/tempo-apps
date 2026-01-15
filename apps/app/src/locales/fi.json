@@ -64,5 +64,27 @@
 		"hash": "Tiiviste",
 		"date": "Päivämäärä",
 		"time": "Aika"
+	},
+	"activity": {
+		"send": "Lähetä",
+		"received": "Vastaanotettu",
+		"mint": "Lyö",
+		"burn": "Polta",
+		"swap": "Vaihda",
+		"approve": "Hyväksy",
+		"grantRole": "Myönnä rooli",
+		"revokeRole": "Peru rooli",
+		"pauseTransfers": "Keskeytä siirrot",
+		"resumeTransfers": "Jatka siirtoja",
+		"createToken": "Luo token",
+		"partialFill": "Osittainen täyttö",
+		"completeFill": "Täydellinen täyttö",
+		"cancelOrder": "Peruuta tilaus",
+		"setFeeToken": "Aseta maksutunnus",
+		"payFee": "Maksa maksu",
+		"to": "vastaanottajalle",
+		"from": "lähettäjältä",
+		"self": "itse",
+		"andMore": "ja {{count}} lisää"
 	}
 }

@@ -64,5 +64,27 @@
 		"hash": "হ্যাশ",
 		"date": "তারিখ",
 		"time": "সময়"
+	},
+	"activity": {
+		"send": "পাঠান",
+		"received": "প্রাপ্ত",
+		"mint": "মিন্ট",
+		"burn": "বার্ন",
+		"swap": "সোয়াপ",
+		"approve": "অনুমোদন",
+		"grantRole": "ভূমিকা প্রদান",
+		"revokeRole": "ভূমিকা প্রত্যাহার",
+		"pauseTransfers": "স্থানান্তর বিরতি",
+		"resumeTransfers": "স্থানান্তর পুনরায় শুরু",
+		"createToken": "টোকেন তৈরি",
+		"partialFill": "আংশিক পূরণ",
+		"completeFill": "সম্পূর্ণ পূরণ",
+		"cancelOrder": "অর্ডার বাতিল",
+		"setFeeToken": "ফি টোকেন সেট",
+		"payFee": "ফি পরিশোধ",
+		"to": "প্রতি",
+		"from": "থেকে",
+		"self": "নিজে",
+		"andMore": "এবং আরও {{count}}"
 	}
 }

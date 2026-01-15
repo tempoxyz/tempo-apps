@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Dato",
 		"time": "Tid"
+	},
+	"activity": {
+		"send": "Send",
+		"received": "Modtaget",
+		"mint": "Præg",
+		"burn": "Brænd",
+		"swap": "Byt",
+		"approve": "Godkend",
+		"grantRole": "Tildel rolle",
+		"revokeRole": "Fjern rolle",
+		"pauseTransfers": "Pause overførsler",
+		"resumeTransfers": "Genoptag overførsler",
+		"createToken": "Opret token",
+		"partialFill": "Delvis udfyldning",
+		"completeFill": "Komplet udfyldning",
+		"cancelOrder": "Annuller ordre",
+		"setFeeToken": "Indstil gebyrtoken",
+		"payFee": "Betal gebyr",
+		"to": "til",
+		"from": "fra",
+		"self": "selv",
+		"andMore": "og {{count}} mere"
 	}
 }
