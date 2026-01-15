@@ -576,7 +576,7 @@ function AddressView() {
 						className="glass-pill hover:ring-glass flex items-center gap-1 text-secondary hover:text-primary transition-colors"
 					>
 						<ArrowLeftIcon className="size-2" />
-						<span className="text-sm">Back</span>
+						<span className="text-sm">{t('common.back')}</span>
 					</Link>
 				}
 				right={null}
@@ -615,7 +615,7 @@ function AddressView() {
 							onChange={(e) => setSearchValue(e.target.value)}
 							onFocus={() => setSearchFocused(true)}
 							onBlur={() => setSearchFocused(false)}
-							placeholder="Search"
+							placeholder={t('common.search')}
 							className="bg-transparent outline-none text-[13px] text-primary placeholder:text-secondary w-[100px] focus:w-[180px] transition-all"
 						/>
 					</form>
@@ -627,7 +627,7 @@ function AddressView() {
 								navigate({ to: '/' })
 							}}
 							className="flex items-center justify-center size-[36px] rounded-full bg-base-alt hover:bg-base-alt/80 active:bg-base-alt/60 transition-colors cursor-pointer"
-							title="Log out"
+							title={t('common.logOut')}
 						>
 							<LogOutIcon className="size-[14px] text-secondary" />
 						</button>
@@ -636,7 +636,7 @@ function AddressView() {
 							type="button"
 							onClick={() => navigate({ to: '/' })}
 							className="flex items-center justify-center size-[36px] rounded-full bg-accent hover:bg-accent/90 active:bg-accent/80 transition-colors cursor-pointer"
-							title="Sign in"
+							title={t('common.signIn')}
 						>
 							<LogInIcon className="size-[14px] text-white" />
 						</button>
@@ -674,7 +674,7 @@ function AddressView() {
 								target="_blank"
 								rel="noopener noreferrer"
 								className="flex items-center justify-center size-[28px] rounded-md bg-base-alt hover:bg-base-alt/70 press-down transition-colors shrink-0"
-								title="View on Explorer"
+								title={t('common.viewOnExplorer')}
 							>
 								<ExternalLinkIcon className="size-[14px] text-tertiary" />
 							</a>
