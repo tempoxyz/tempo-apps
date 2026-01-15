@@ -2330,22 +2330,35 @@ function SignWithSelector({
 				type="button"
 				onClick={() => (isOpen ? setIsOpen(false) : openDropdown())}
 				className={cx(
-					'h-[32px] px-3 rounded-lg border bg-base text-[12px] flex items-center gap-2 transition-colors cursor-pointer',
+					'h-[32px] px-2 rounded-lg border bg-base text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer',
 					isOpen ? 'border-accent' : 'border-card-border',
 					selectedKey ? 'text-accent' : 'text-secondary hover:text-primary',
 				)}
 			>
 				{selectedKey ? (
-					<KeyIcon className="size-4 shrink-0" />
+					(() => {
+						const emoji = getAccessKeyEmoji(selectedKey)
+						return (
+							<div className="size-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+								{emoji ? (
+									<span className="text-[11px]">{emoji}</span>
+								) : (
+									<KeyIcon className="size-3" />
+								)}
+							</div>
+						)
+					})()
 				) : (
-					<UserIcon className="size-4 shrink-0" />
+					<div className="size-5 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
+						<UserIcon className="size-3" />
+					</div>
 				)}
 				<span className="truncate">
 					{selectedKey ? getKeyName(selectedKey) : 'Wallet'}
 				</span>
 				<ChevronDownIcon
 					className={cx(
-						'size-4 text-tertiary transition-transform shrink-0 ml-auto',
+						'size-3 text-tertiary transition-transform shrink-0',
 						isOpen && 'rotate-180',
 					)}
 				/>

@@ -135,12 +135,50 @@ function getEmojiColor(emoji: string): string {
 function EmojiPicker({
 	selectedEmoji,
 	onSelect,
+	onClose,
+	anchorRef,
 }: {
 	selectedEmoji: string | null
 	onSelect: (emoji: string) => void
+	onClose: () => void
+	anchorRef: React.RefObject<HTMLButtonElement | null>
 }) {
-	return (
-		<div className="absolute left-0 top-full mt-1 z-50 bg-surface border border-card-border rounded-md shadow-lg p-1.5">
+	const [position, setPosition] = React.useState({ top: 0, left: 0 })
+	const pickerRef = React.useRef<HTMLDivElement>(null)
+
+	React.useLayoutEffect(() => {
+		if (anchorRef.current) {
+			const rect = anchorRef.current.getBoundingClientRect()
+			setPosition({
+				top: rect.bottom + 4,
+				left: rect.left,
+			})
+		}
+	}, [anchorRef])
+
+	React.useEffect(() => {
+		const handleClickOutside = (e: MouseEvent) => {
+			if (
+				pickerRef.current &&
+				!pickerRef.current.contains(e.target as Node) &&
+				anchorRef.current &&
+				!anchorRef.current.contains(e.target as Node)
+			) {
+				onClose()
+			}
+		}
+		document.addEventListener('mousedown', handleClickOutside)
+		return () => document.removeEventListener('mousedown', handleClickOutside)
+	}, [onClose, anchorRef])
+
+	if (typeof document === 'undefined') return null
+
+	return createPortal(
+		<div
+			ref={pickerRef}
+			className="fixed z-[100] bg-surface border border-card-border rounded-md shadow-lg p-1.5"
+			style={{ top: position.top, left: position.left }}
+		>
 			<div className="grid grid-cols-4 gap-0.5">
 				{DEFAULT_EMOJIS.map((emoji) => (
 					<button
@@ -156,7 +194,8 @@ function EmojiPicker({
 					</button>
 				))}
 			</div>
-		</div>
+		</div>,
+		document.body,
 	)
 }
 
@@ -533,6 +572,7 @@ function AccessKeyRow({
 	const [keyName, setKeyName] = React.useState<string | null>(null)
 	const [emoji, setEmoji] = React.useState<string | null>(null)
 	const [showEmojiPicker, setShowEmojiPicker] = React.useState(false)
+	const emojiButtonRef = React.useRef<HTMLButtonElement>(null)
 
 	React.useEffect(() => {
 		if (typeof window === 'undefined') return
@@ -567,6 +607,7 @@ function AccessKeyRow({
 			{/* Key icon / Emoji */}
 			<div className="relative shrink-0">
 				<button
+					ref={emojiButtonRef}
 					type="button"
 					onClick={(e) => {
 						e.preventDefault()
@@ -590,6 +631,7 @@ function AccessKeyRow({
 					<EmojiPicker
 						selectedEmoji={emoji}
 						onSelect={handleEmojiSelect}
+						anchorRef={emojiButtonRef}
 					/>
 				)}
 			</div>
