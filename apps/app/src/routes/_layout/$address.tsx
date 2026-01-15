@@ -143,6 +143,18 @@ async function getTempoEnv(): Promise<string | undefined> {
 	}
 }
 
+function getRpcUrl(tempoEnv: string | undefined): string {
+	// Default to mainnet (presto) RPC, only use moderato RPC for explicit moderato env
+	return tempoEnv === 'moderato'
+		? 'https://rpc.tempo.xyz'
+		: 'https://rpc.presto.tempo.xyz'
+}
+
+function shouldUseAuth(tempoEnv: string | undefined): boolean {
+	// Use auth for mainnet (presto) and devnet, not for moderato
+	return tempoEnv !== 'moderato'
+}
+
 type RpcLog = {
 	address: `0x${string}`
 	topics: `0x${string}`[]
@@ -175,17 +187,14 @@ const fetchTransactionReceipts = createServerFn({ method: 'POST' })
 	.handler(async ({ data }) => {
 		const { hashes } = data
 		const tempoEnv = await getTempoEnv()
-		const rpcUrl =
-			tempoEnv === 'presto'
-				? 'https://rpc.presto.tempo.xyz'
-				: 'https://rpc.tempo.xyz'
+		const rpcUrl = getRpcUrl(tempoEnv)
 
 		const { env } = await import('cloudflare:workers')
 		const auth = env.PRESTO_RPC_AUTH as string | undefined
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
-		if (auth && tempoEnv === 'presto') {
+		if (auth && shouldUseAuth(tempoEnv)) {
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
@@ -227,17 +236,14 @@ const fetchBlockData = createServerFn({ method: 'GET' })
 	.handler(async ({ data }) => {
 		const { fromBlock, count } = data
 		const tempoEnv = await getTempoEnv()
-		const rpcUrl =
-			tempoEnv === 'presto'
-				? 'https://rpc.presto.tempo.xyz'
-				: 'https://rpc.tempo.xyz'
+		const rpcUrl = getRpcUrl(tempoEnv)
 
 		const { env } = await import('cloudflare:workers')
 		const auth = env.PRESTO_RPC_AUTH as string | undefined
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
-		if (auth && tempoEnv === 'presto') {
+		if (auth && shouldUseAuth(tempoEnv)) {
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
@@ -286,17 +292,14 @@ const fetchBlockData = createServerFn({ method: 'GET' })
 const fetchCurrentBlockNumber = createServerFn({ method: 'GET' }).handler(
 	async () => {
 		const tempoEnv = await getTempoEnv()
-		const rpcUrl =
-			tempoEnv === 'presto'
-				? 'https://rpc.presto.tempo.xyz'
-				: 'https://rpc.tempo.xyz'
+		const rpcUrl = getRpcUrl(tempoEnv)
 
 		const { env } = await import('cloudflare:workers')
 		const auth = env.PRESTO_RPC_AUTH as string | undefined
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
-		if (auth && tempoEnv === 'presto') {
+		if (auth && shouldUseAuth(tempoEnv)) {
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
@@ -370,10 +373,7 @@ const fetchBlockWithReceipts = createServerFn({ method: 'GET' })
 	.handler(async ({ data }) => {
 		const { blockNumber } = data
 		const tempoEnv = await getTempoEnv()
-		const rpcUrl =
-			tempoEnv === 'presto'
-				? 'https://rpc.presto.tempo.xyz'
-				: 'https://rpc.tempo.xyz'
+		const rpcUrl = getRpcUrl(tempoEnv)
 
 		let auth: string | undefined
 		try {
@@ -386,7 +386,7 @@ const fetchBlockWithReceipts = createServerFn({ method: 'GET' })
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
-		if (auth && tempoEnv === 'presto') {
+		if (auth && shouldUseAuth(tempoEnv)) {
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
@@ -469,10 +469,7 @@ const fetchTokenMetadata = createServerFn({ method: 'POST' })
 		if (addresses.length === 0) return { tokens: {} }
 
 		const tempoEnv = await getTempoEnv()
-		const rpcUrl =
-			tempoEnv === 'presto'
-				? 'https://rpc.presto.tempo.xyz'
-				: 'https://rpc.tempo.xyz'
+		const rpcUrl = getRpcUrl(tempoEnv)
 
 		let auth: string | undefined
 		try {
@@ -485,7 +482,7 @@ const fetchTokenMetadata = createServerFn({ method: 'POST' })
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
-		if (auth && tempoEnv === 'presto') {
+		if (auth && shouldUseAuth(tempoEnv)) {
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
@@ -745,7 +742,7 @@ function AddressView() {
 		}
 
 		pollBlock()
-		const interval = setInterval(pollBlock, 500)
+		const interval = setInterval(pollBlock, 2000)
 
 		return () => {
 			mounted = false
@@ -2072,6 +2069,8 @@ function HoldingsTable({
 	// Use global access keys from context
 	const { keys: signableAccessKeys } = useSignableAccessKeys()
 
+	console.log('[PortfolioSection] signableAccessKeys:', signableAccessKeys.length, signableAccessKeys.map(k => k.keyId.slice(0, 10)))
+
 	React.useEffect(() => {
 		if (toastMessage) {
 			const timeout = setTimeout(() => setToastMessage(null), 3000)
@@ -2247,11 +2246,11 @@ function SignWithSelector({
 	asset: AssetData
 }) {
 	const [isOpen, setIsOpen] = React.useState(false)
-	const containerRef = React.useRef<HTMLDivElement>(null)
+	const buttonRef = React.useRef<HTMLButtonElement>(null)
 
 	React.useEffect(() => {
 		function handleClickOutside(e: MouseEvent) {
-			if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+			if (buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
 				setIsOpen(false)
 			}
 		}
@@ -2283,24 +2282,26 @@ function SignWithSelector({
 	}
 
 	const selectedKeyData = selectedKey ? accessKeys.find(k => k.keyId === selectedKey) : null
+	const buttonRect = buttonRef.current?.getBoundingClientRect()
 
 	return (
-		<div ref={containerRef} className="relative pl-[30px]">
+		<>
 			<button
+				ref={buttonRef}
 				type="button"
 				onClick={() => setIsOpen(!isOpen)}
 				className={cx(
-					'h-[26px] px-2.5 rounded-md text-[11px] flex items-center gap-1.5 transition-colors cursor-pointer',
-					selectedKey ? 'bg-accent/10 text-accent' : 'bg-base-alt text-secondary hover:text-primary',
+					'h-[20px] px-1.5 rounded text-[9px] flex items-center gap-1 transition-colors cursor-pointer',
+					selectedKey ? 'text-accent' : 'text-tertiary hover:text-secondary',
 				)}
 			>
-				<KeyIcon className="size-3" />
+				<KeyIcon className="size-[10px]" />
 				<span>{selectedKey ? getKeyName(selectedKey) : 'Wallet'}</span>
 				{selectedKeyData && getKeyLimit(selectedKeyData) && (
 					<span className="text-accent/70">· {getKeyLimit(selectedKeyData)}</span>
 				)}
 				<svg
-					className={cx('size-3 text-tertiary transition-transform', isOpen && 'rotate-180')}
+					className={cx('size-[8px] transition-transform', isOpen && 'rotate-180')}
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke="currentColor"
@@ -2308,8 +2309,11 @@ function SignWithSelector({
 					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
 				</svg>
 			</button>
-			{isOpen && (
-				<div className="absolute top-full left-[30px] mt-1 min-w-[160px] bg-surface border border-card-border rounded-lg shadow-lg z-50 overflow-hidden">
+			{isOpen && buttonRect && (
+				<div
+					className="fixed min-w-[120px] bg-surface border border-card-border rounded-md shadow-xl overflow-hidden"
+					style={{ top: buttonRect.bottom + 4, left: buttonRect.left, zIndex: 9999 }}
+				>
 					<button
 						type="button"
 						onClick={() => {
@@ -2317,16 +2321,14 @@ function SignWithSelector({
 							setIsOpen(false)
 						}}
 						className={cx(
-							'w-full px-3 py-2 text-[11px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-2',
-							!selectedKey ? 'text-accent bg-accent/5' : 'text-primary',
+							'w-full px-2 py-1.5 text-[9px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-1.5',
+							!selectedKey ? 'text-accent' : 'text-primary',
 						)}
 					>
-						<span className="size-4 flex items-center justify-center rounded-full bg-base-alt">
-							<svg className="size-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
-							</svg>
-						</span>
-						<span>Wallet (passkey)</span>
+						<svg className="size-[10px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0z" />
+						</svg>
+						<span>Wallet</span>
 					</button>
 					{accessKeys.map((key) => {
 						const limit = getKeyLimit(key)
@@ -2343,19 +2345,17 @@ function SignWithSelector({
 								}}
 								disabled={isExhausted}
 								className={cx(
-									'w-full px-3 py-2 text-[11px] text-left transition-colors flex items-center gap-2',
+									'w-full px-2 py-1.5 text-[9px] text-left transition-colors flex items-center gap-1.5',
 									isExhausted
 										? 'text-tertiary cursor-not-allowed'
 										: 'hover:bg-base-alt cursor-pointer',
-									selectedKey === key.keyId ? 'text-accent bg-accent/5' : 'text-primary',
+									selectedKey === key.keyId ? 'text-accent' : 'text-primary',
 								)}
 							>
-								<span className="size-4 flex items-center justify-center rounded-full bg-accent/10">
-									<KeyIcon className="size-2.5 text-accent" />
-								</span>
+								<KeyIcon className="size-[10px] text-accent" />
 								<span className="flex-1 truncate">{getKeyName(key.keyId)}</span>
 								{limit && (
-									<span className={cx('text-[10px]', isExhausted ? 'text-negative' : 'text-secondary')}>
+									<span className={cx('text-[8px]', isExhausted ? 'text-negative' : 'text-secondary')}>
 										{limit}
 									</span>
 								)}
@@ -2364,7 +2364,7 @@ function SignWithSelector({
 					})}
 				</div>
 			)}
-		</div>
+		</>
 	)
 }
 
@@ -2778,14 +2778,12 @@ function AssetRow({
 						</button>
 					</div>
 				</div>
-				{accessKeys.length > 0 && (
-					<SignWithSelector
-						accessKeys={accessKeys}
-						selectedKey={selectedAccessKey}
-						onSelect={setSelectedAccessKey}
-						asset={asset}
-					/>
-				)}
+				<SignWithSelector
+					accessKeys={accessKeys}
+					selectedKey={selectedAccessKey}
+					onSelect={setSelectedAccessKey}
+					asset={asset}
+				/>
 				{sendError && (
 					<div className="pl-[30px] text-[12px] text-negative truncate">
 						{sendError}
@@ -3360,7 +3358,7 @@ function ActivityRow({
 				)}
 			>
 				{isHighlighted && (
-					<span className="size-2 rounded-full bg-accent shrink-0" />
+					<span className="size-1.5 rounded-full bg-accent shrink-0" />
 				)}
 				<TxDescription.ExpandGroup
 					events={item.events}

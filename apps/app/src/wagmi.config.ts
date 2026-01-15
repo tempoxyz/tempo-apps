@@ -118,18 +118,18 @@ export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 
 export const getTempoChain = createIsomorphicFn()
 	.client(() =>
-		TEMPO_ENV === 'presto'
-			? tempoPresto
+		TEMPO_ENV === 'moderato'
+			? tempoModerato
 			: TEMPO_ENV === 'devnet'
 				? tempoDevnet
-				: tempoModerato,
+				: tempoPresto,
 	)
 	.server(() =>
-		TEMPO_ENV === 'presto'
-			? tempoPresto
+		TEMPO_ENV === 'moderato'
+			? tempoModerato
 			: TEMPO_ENV === 'devnet'
 				? tempoDevnet
-				: tempoModerato,
+				: tempoPresto,
 	)
 
 const getRpcUrls = createIsomorphicFn()
@@ -139,19 +139,19 @@ const getRpcUrls = createIsomorphicFn()
 	})
 	.server(() => {
 		const chain = getTempoChain()
-		const isPresto = TEMPO_ENV === 'presto'
-		// Presto uses HTTP Basic Auth (not path-based key), so don't append key to URL
-		if (isPresto) {
-			return chain.rpcUrls.default
+		const isModerato = TEMPO_ENV === 'moderato'
+		// Moderato uses path-based key, mainnet (presto) uses HTTP Basic Auth
+		if (isModerato) {
+			return {
+				webSocket: chain.rpcUrls.default.webSocket.map(
+					(url: string) => `${url}/${process.env.TEMPO_RPC_KEY}`,
+				),
+				http: chain.rpcUrls.default.http.map(
+					(url: string) => `${url}/${process.env.TEMPO_RPC_KEY}`,
+				),
+			}
 		}
-		return {
-			webSocket: chain.rpcUrls.default.webSocket.map(
-				(url: string) => `${url}/${process.env.TEMPO_RPC_KEY}`,
-			),
-			http: chain.rpcUrls.default.http.map(
-				(url: string) => `${url}/${process.env.TEMPO_RPC_KEY}`,
-			),
-		}
+		return chain.rpcUrls.default
 	})
 
 function getTempoTransport() {

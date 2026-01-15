@@ -17,9 +17,9 @@ async function fetchTokenMetadataViaRpc(
 	token: string,
 ): Promise<{ name: string; symbol: string } | null> {
 	const rpcUrl =
-		TEMPO_ENV === 'presto'
-			? 'https://rpc.presto.tempo.xyz'
-			: 'https://rpc.tempo.xyz'
+		TEMPO_ENV === 'moderato'
+			? 'https://rpc.tempo.xyz'
+			: 'https://rpc.presto.tempo.xyz'
 
 	const { env } = await import('cloudflare:workers')
 	const auth = env.PRESTO_RPC_AUTH as string | undefined
@@ -112,10 +112,10 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 			try {
 				const { env } = await import('cloudflare:workers')
 				const tempoEnv = env.VITE_TEMPO_ENV as string | undefined
-				chainId = tempoEnv === 'presto' ? 4217 : tempoEnv === 'devnet' ? 42430 : 42431
+				chainId = tempoEnv === 'moderato' ? 42431 : tempoEnv === 'devnet' ? 42430 : 4217
 			} catch {
-				// Local dev fallback
-				chainId = TEMPO_ENV === 'presto' ? 4217 : TEMPO_ENV === 'devnet' ? 42430 : 42431
+				// Local dev fallback - default to mainnet (presto)
+				chainId = TEMPO_ENV === 'moderato' ? 42431 : TEMPO_ENV === 'devnet' ? 42430 : 4217
 			}
 
 			const { QB } = await getIndexSupply()
