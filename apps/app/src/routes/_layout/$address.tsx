@@ -1695,6 +1695,8 @@ function AssetRow({
 	)
 }
 
+const ACTIVITY_PAGE_SIZE = 5
+
 function ActivityList({
 	activity,
 	address,
@@ -1704,6 +1706,7 @@ function ActivityList({
 }) {
 	const viewer = address as Address.Address
 	const { t } = useTranslation()
+	const [page, setPage] = React.useState(0)
 
 	if (activity.length === 0) {
 		return (
@@ -1718,12 +1721,18 @@ function ActivityList({
 		)
 	}
 
+	const totalPages = Math.ceil(activity.length / ACTIVITY_PAGE_SIZE)
+	const paginatedActivity = activity.slice(
+		page * ACTIVITY_PAGE_SIZE,
+		(page + 1) * ACTIVITY_PAGE_SIZE,
+	)
+
 	const transformEvent = (event: KnownEvent) =>
 		getPerspectiveEvent(event, viewer)
 
 	return (
 		<div className="text-[13px] -mx-2">
-			{activity.map((item) => (
+			{paginatedActivity.map((item) => (
 				<ActivityRow
 					key={item.hash}
 					item={item}
@@ -1731,6 +1740,25 @@ function ActivityList({
 					transformEvent={transformEvent}
 				/>
 			))}
+			{totalPages > 1 && (
+				<div className="flex items-center justify-center gap-1 pt-3 pb-1">
+					{Array.from({ length: totalPages }, (_, i) => (
+						<button
+							key={i}
+							type="button"
+							onClick={() => setPage(i)}
+							className={cx(
+								'size-[28px] rounded-full text-[12px] cursor-pointer transition-all',
+								page === i
+									? 'bg-accent text-white'
+									: 'hover:bg-base-alt text-tertiary',
+							)}
+						>
+							{i + 1}
+						</button>
+					))}
+				</div>
+			)}
 		</div>
 	)
 }

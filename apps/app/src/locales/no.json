@@ -9,7 +9,8 @@
 		"feeToken": "Gebyrtoken",
 		"feeTokenDescription": "Velg hvilket token som skal brukes til å betale transaksjonsgebyrer.",
 		"language": "Språk",
-		"languageDescription": "Velg ditt foretrukne språk."
+		"languageDescription": "Velg ditt foretrukne språk.",
+		"notSet": "Ikke satt"
 	},
 	"common": {
 		"active": "Aktiv",
@@ -20,7 +21,24 @@
 		"recipient": "Mottaker 0x...",
 		"amount": "Beløp",
 		"max": "MAKS",
-		"cancel": "Avbryt"
+		"cancel": "Avbryt",
+		"search": "Søk",
+		"signUp": "Registrer",
+		"signIn": "Logg inn",
+		"continue": "Fortsett",
+		"logOut": "Logg ut",
+		"copyAddress": "Kopier adresse",
+		"viewOnExplorer": "Se på Explorer",
+		"viewReceipt": "Se kvittering",
+		"viewTransaction": "Se transaksjon",
+		"requestTokens": "Be om tokens",
+		"transaction": "Transaksjon",
+		"transactions": "transaksjoner",
+		"transactionOn": "den",
+		"self": "selv",
+		"andMore": "og {{count}} til",
+		"sentSuccessfully": "{{symbol}} sendt vellykket",
+		"demoNote": "Dette er en demo, saldoer oppdateres ikke."
 	},
 	"portfolio": {
 		"title": "Portefølje",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "eiendeler",
 		"hideZeroBalances": "Skjul nullsaldoer",
 		"showZeroBalances": "Vis nullsaldoer",
-		"noActivityYet": "Ingen aktivitet ennå"
+		"noActivityYet": "Ingen aktivitet ennå",
+		"noAssetsFound": "Ingen eiendeler funnet"
+	},
+	"landing": {
+		"getStarted": "Kom i gang",
+		"exploreDescription": "Utforsk kontoer, tokensaldoer og transaksjonshistorikk på Tempo",
+		"enterAddress": "Skriv inn adresse",
+		"orUsePasskey": "eller bruk en annen passkey",
+		"orSignInWithPasskey": "eller logg inn med passkey"
+	},
+	"receipt": {
+		"block": "Blokk",
+		"sender": "Avsender",
+		"hash": "Hash",
+		"date": "Dato",
+		"time": "Tid"
 	}
 }
