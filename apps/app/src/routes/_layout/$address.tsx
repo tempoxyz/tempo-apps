@@ -35,10 +35,7 @@ import {
 import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
 import { Section } from '#comps/Section'
-import {
-	AccessKeysSection,
-	useOnChainAccessKeys,
-} from '#comps/AccessKeysSection'
+import { AccessKeysSection } from '#comps/AccessKeysSection'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
 import { fetchAssets, type AssetData } from '#lib/server/assets.server'
@@ -2153,23 +2150,27 @@ function AssetRow({
 	const [selectedAccessKey, setSelectedAccessKey] = React.useState<
 		string | null
 	>(null)
+	const [availableAccessKeys, setAvailableAccessKeys] = React.useState<
+		string[]
+	>([])
 	const recipientInputRef = React.useRef<HTMLInputElement>(null)
 	const amountInputRef = React.useRef<HTMLInputElement>(null)
 	const { data: connectorClient } = useConnectorClient()
 
-	// Fetch on-chain access keys for this account
-	const { keys: onChainKeys } = useOnChainAccessKeys(address, isExpanded, [
-		asset.address,
-	])
-
-	// Filter to only keys that have private keys in localStorage (can be used for signing)
-	const availableAccessKeys = React.useMemo(() => {
-		if (typeof window === 'undefined') return []
-		return onChainKeys.filter((key) => {
-			const storageKey = `accessKey:${key.keyId.toLowerCase()}`
-			return localStorage.getItem(storageKey) !== null
-		})
-	}, [onChainKeys])
+	// Scan localStorage for available access keys when form expands
+	React.useEffect(() => {
+		if (!isExpanded) return
+		if (typeof window === 'undefined') return
+		const keys: string[] = []
+		for (let i = 0; i < localStorage.length; i++) {
+			const key = localStorage.key(i)
+			if (key?.startsWith('accessKey:')) {
+				const keyAddress = key.replace('accessKey:', '')
+				keys.push(keyAddress)
+			}
+		}
+		setAvailableAccessKeys(keys)
+	}, [isExpanded])
 
 	const {
 		writeContract,
@@ -2530,7 +2531,7 @@ function AssetRow({
 					</div>
 				</div>
 				{availableAccessKeys.length > 0 && (
-					<div className="flex items-center gap-2 pl-[30px]">
+					<div className="flex flex-col gap-1 pl-[30px]">
 						<span className="text-[12px] text-tertiary whitespace-nowrap">
 							Sign with:
 						</span>
@@ -2540,9 +2541,9 @@ function AssetRow({
 							className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary focus:outline-none focus:border-accent cursor-pointer"
 						>
 							<option value="">Wallet (default)</option>
-							{availableAccessKeys.map((key) => (
-								<option key={key.keyId} value={key.keyId}>
-									{shortenAddress(key.keyId, 4)}
+							{availableAccessKeys.map((keyAddress) => (
+								<option key={keyAddress} value={keyAddress}>
+									{shortenAddress(keyAddress, 4)}
 								</option>
 							))}
 						</select>
