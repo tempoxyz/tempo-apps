@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAccount, useConnect, useConnectors } from 'wagmi'
 import { Layout } from '#comps/Layout'
 import { cx } from '#lib/css'
@@ -37,6 +38,7 @@ export const Route = createFileRoute('/_layout/')({
 })
 
 function Landing() {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const [address, setAddress] = React.useState('')
 	const inputRef = React.useRef<HTMLInputElement>(null)
@@ -110,14 +112,14 @@ function Landing() {
 
 	return (
 		<>
-			<Layout.Header left="Search" right={null} />
+			<Layout.Header left={t('common.search')} right={null} />
 			<div className="flex flex-1 flex-col items-center justify-center">
 				<div className="grid place-items-center relative grid-flow-row gap-3 select-none w-full max-w-md px-4 py-6 z-1">
 					<h1 className="font-sans font-semibold text-[32px] sm:text-[36px] text-primary text-center -tracking-[0.03em]">
-						Get started
+						{t('landing.getStarted')}
 					</h1>
 					<p className="text-secondary text-[14px] sm:text-[15px] text-center -mt-1 mb-2 max-w-[280px]">
-						Explore accounts, token balances, and transaction history on Tempo
+						{t('landing.exploreDescription')}
 					</p>
 					<form onSubmit={handleSubmit} className="w-full relative">
 						<input
@@ -126,7 +128,7 @@ function Landing() {
 							name="value"
 							value={address}
 							onChange={(e) => setAddress(e.target.value)}
-							placeholder="Enter address"
+							placeholder={t('landing.enterAddress')}
 							className="glass-input pl-4 pr-14 w-full placeholder:text-tertiary text-base-content rounded-2xl outline-0 h-[56px] text-[16px]"
 							spellCheck={false}
 							autoComplete="off"
@@ -172,8 +174,8 @@ function Landing() {
 						<div className="flex-1 h-px bg-base-border" />
 						<span className="text-tertiary text-[12px]">
 							{recentAddress
-								? 'or use another passkey'
-								: 'or sign in with passkey'}
+								? t('landing.orUsePasskey')
+								: t('landing.orSignInWithPasskey')}
 						</span>
 						<div className="flex-1 h-px bg-base-border" />
 					</div>
@@ -203,7 +205,7 @@ function Landing() {
 							) : (
 								<KeyIcon className="size-[12px]" />
 							)}
-							<span>Sign up</span>
+							<span>{t('common.signUp')}</span>
 						</button>
 						<button
 							type="button"
@@ -226,7 +228,7 @@ function Landing() {
 							) : (
 								<FingerprintIcon className="size-[12px]" />
 							)}
-							<span>Sign in</span>
+							<span>{t('common.signIn')}</span>
 						</button>
 						{recentAddress && (
 							<button
@@ -251,7 +253,7 @@ function Landing() {
 									<ClockIcon className="size-[12px] text-accent" />
 								)}
 								<span>
-									Continue{' '}
+									{t('common.continue')}{' '}
 									<span className="font-mono text-secondary">
 										{truncateAddress(recentAddress)}
 									</span>
