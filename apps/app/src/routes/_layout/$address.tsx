@@ -507,11 +507,6 @@ async function fetchTransactions(
 
 		const receiptsResult = await fetchTransactionReceipts({ data: { hashes } })
 
-		console.log('[Activity] Receipts result:', {
-			count: receiptsResult.receipts.length,
-			withReceipt: receiptsResult.receipts.filter((r) => r.receipt).length,
-		})
-
 		const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) => {
 			return tokenMetadataMap.get(tokenAddress)
 		}
@@ -531,15 +526,13 @@ async function fetchTransactions(
 					: Date.now()
 				const blockNumber = BigInt(rpcReceipt.blockNumber)
 				items.push({ hash, events, timestamp, blockNumber })
-			} catch (e) {
-				console.log('[Activity] Failed to parse receipt:', hash, e)
+			} catch {
+				// Skip malformed receipts
 			}
 		}
 
-		console.log('[Activity] Final items:', items.length)
 		return items
-	} catch (e) {
-		console.error('[Activity] Fetch error:', e)
+	} catch {
 		return []
 	}
 }
@@ -3325,7 +3318,7 @@ function TransactionModal({
 						href={`https://explore.mainnet.tempo.xyz/tx/${hash}`}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] liquid-glass-premium rounded-bl-[16px] rounded-br-[16px] text-tertiary hover:text-primary"
+						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-white/5 hover:bg-white/10 rounded-bl-[16px] rounded-br-[16px] text-tertiary hover:text-primary transition-colors"
 					>
 						<span>{t('common.viewTransaction')}</span>
 						<span aria-hidden="true">→</span>
