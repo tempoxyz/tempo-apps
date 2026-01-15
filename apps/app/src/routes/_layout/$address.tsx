@@ -328,45 +328,46 @@ const fetchTransactionReceipts = createServerFn({ method: 'POST' })
 		return { receipts }
 	})
 
-const fetchCurrentBlockNumber = createServerFn({ method: 'GET' }).handler(
-	async () => {
-		const rpcUrl =
-			TEMPO_ENV === 'presto'
-				? 'https://rpc.presto.tempo.xyz'
-				: 'https://rpc.tempo.xyz'
-
-		const { env } = await import('cloudflare:workers')
-		const auth = env.PRESTO_RPC_AUTH as string | undefined
-		const headers: Record<string, string> = {
-			'Content-Type': 'application/json',
-		}
-		if (auth && TEMPO_ENV === 'presto') {
-			headers.Authorization = `Basic ${btoa(auth)}`
-		}
-
-		try {
-			const response = await fetch(rpcUrl, {
-				method: 'POST',
-				headers,
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					id: 1,
-					method: 'eth_blockNumber',
-					params: [],
-				}),
-			})
-			if (response.ok) {
-				const json = (await response.json()) as { result?: string }
-				if (json.result) {
-					return { blockNumber: json.result }
-				}
-			}
-			return { blockNumber: null }
-		} catch {
-			return { blockNumber: null }
-		}
-	},
-)
+// Unused - keeping for future block timeline feature
+// const fetchCurrentBlockNumber = createServerFn({ method: 'GET' }).handler(
+// 	async () => {
+// 		const rpcUrl =
+// 			TEMPO_ENV === 'presto'
+// 				? 'https://rpc.presto.tempo.xyz'
+// 				: 'https://rpc.tempo.xyz'
+//
+// 		const { env } = await import('cloudflare:workers')
+// 		const auth = env.PRESTO_RPC_AUTH as string | undefined
+// 		const headers: Record<string, string> = {
+// 			'Content-Type': 'application/json',
+// 		}
+// 		if (auth && TEMPO_ENV === 'presto') {
+// 			headers.Authorization = `Basic ${btoa(auth)}`
+// 		}
+//
+// 		try {
+// 			const response = await fetch(rpcUrl, {
+// 				method: 'POST',
+// 				headers,
+// 				body: JSON.stringify({
+// 					jsonrpc: '2.0',
+// 					id: 1,
+// 					method: 'eth_blockNumber',
+// 					params: [],
+// 				}),
+// 			})
+// 			if (response.ok) {
+// 				const json = (await response.json()) as { result?: string }
+// 				if (json.result) {
+// 					return { blockNumber: json.result }
+// 				}
+// 			}
+// 			return { blockNumber: null }
+// 		} catch {
+// 			return { blockNumber: null }
+// 		}
+// 	},
+// )
 
 const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 	.inputValidator((data: { address: string }) => data)
@@ -1195,7 +1196,10 @@ function QRCode({
 						style={{
 							opacity,
 							transition: 'fill 0.2s ease-out, opacity 0.15s ease-out',
-							filter: mousePos && !notifying ? `blur(${Math.max(0, (1 - opacity) * 0.3)}px)` : undefined,
+							filter:
+								mousePos && !notifying
+									? `blur(${Math.max(0, (1 - opacity) * 0.3)}px)`
+									: undefined,
 						}}
 					/>
 				)
@@ -1367,10 +1371,12 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 		<div className="relative">
 			<div className="flex gap-[3px] w-full py-2">
 				{grid.map((week, wi) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: grid is static and doesn't reorder
 					<div key={`w-${wi}`} className="flex flex-col gap-[3px] flex-1">
 						{week.map((cell, di) => (
+							// biome-ignore lint/a11y/noStaticElementInteractions: hover tooltip only
 							<div
-								key={`d-${wi}-${di}`}
+								key={cell.date || `d-${wi}-${di}`}
 								className={cx(
 									'w-full aspect-square rounded-[2px] cursor-default transition-transform hover:scale-125 hover:z-10',
 									getColor(cell.level),
@@ -1404,6 +1410,184 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 					<span className="text-gray-300">{formatDate(hoveredCell.date)}</span>
 				</div>
 			)}
+		</div>
+	)
+}
+
+function _BlockTimeline({
+	activity,
+	currentBlock,
+	selectedBlock,
+	onSelectBlock,
+	isPaused,
+	onPauseChange,
+}: {
+	activity: ActivityItem[]
+	currentBlock: bigint | null
+	selectedBlock: bigint | undefined
+	onSelectBlock: (block: bigint | undefined) => void
+	isPaused: boolean
+	onPauseChange: (paused: boolean) => void
+}) {
+	const scrollRef = React.useRef<HTMLDivElement>(null)
+	const [isUserScrolling, setIsUserScrolling] = React.useState(false)
+	const scrollTimeoutRef = React.useRef<ReturnType<typeof setTimeout>>()
+
+	const userBlockNumbers = React.useMemo(() => {
+		const blocks = new Set<bigint>()
+		for (const item of activity) {
+			if (item.blockNumber !== undefined) {
+				blocks.add(item.blockNumber)
+			}
+		}
+		return blocks
+	}, [activity])
+
+	const blocksToShow = 80
+	const emptyBlocksOnRight = 10
+
+	const blocks = React.useMemo(() => {
+		if (!currentBlock) return []
+		const result: {
+			blockNumber: bigint
+			hasActivity: boolean
+			isEmpty: boolean
+		}[] = []
+
+		for (let i = blocksToShow - 1; i >= 0; i--) {
+			const blockNum = currentBlock - BigInt(i)
+			if (blockNum > 0n) {
+				result.push({
+					blockNumber: blockNum,
+					hasActivity: userBlockNumbers.has(blockNum),
+					isEmpty: false,
+				})
+			}
+		}
+
+		for (let i = 1; i <= emptyBlocksOnRight; i++) {
+			result.push({
+				blockNumber: currentBlock + BigInt(i),
+				hasActivity: false,
+				isEmpty: true,
+			})
+		}
+
+		return result
+	}, [currentBlock, userBlockNumbers])
+
+	React.useEffect(() => {
+		if (!scrollRef.current || isUserScrolling || isPaused) return
+		const container = scrollRef.current
+		const currentBlockIndex = blocksToShow - 1
+		const blockWidth = 10
+		const gap = 3
+		const scrollPosition =
+			currentBlockIndex * (blockWidth + gap) -
+			container.clientWidth / 2 +
+			blockWidth / 2
+		container.scrollTo({ left: scrollPosition, behavior: 'smooth' })
+	}, [isUserScrolling, isPaused])
+
+	const handleScroll = React.useCallback(() => {
+		setIsUserScrolling(true)
+		onPauseChange(true)
+
+		if (scrollTimeoutRef.current) {
+			clearTimeout(scrollTimeoutRef.current)
+		}
+		scrollTimeoutRef.current = setTimeout(() => {
+			setIsUserScrolling(false)
+		}, 2000)
+	}, [onPauseChange])
+
+	const handleWheel = React.useCallback((e: React.WheelEvent) => {
+		if (scrollRef.current && e.deltaY !== 0) {
+			e.preventDefault()
+			scrollRef.current.scrollLeft += e.deltaY
+		}
+	}, [])
+
+	const handleBlockClick = (blockNumber: bigint, isEmpty: boolean) => {
+		if (isEmpty) return
+		if (selectedBlock === blockNumber) {
+			onSelectBlock(undefined)
+		} else {
+			onSelectBlock(blockNumber)
+		}
+	}
+
+	const getBlockColor = (
+		hasActivity: boolean,
+		isEmpty: boolean,
+		isSelected: boolean,
+	) => {
+		if (isEmpty) return 'bg-base-alt/20'
+		if (isSelected) return 'bg-accent'
+		if (hasActivity) return 'bg-green-500 dark:bg-green-500'
+		return 'bg-base-alt/40'
+	}
+
+	return (
+		<div className="relative py-2">
+			<div
+				ref={scrollRef}
+				onScroll={handleScroll}
+				onWheel={handleWheel}
+				className="flex gap-[3px] overflow-x-auto scrollbar-hide"
+				style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+			>
+				{blocks.map((block) => {
+					const isSelected = selectedBlock === block.blockNumber
+					const isCurrent = block.blockNumber === currentBlock
+					return (
+						<button
+							key={block.blockNumber.toString()}
+							type="button"
+							onClick={() => handleBlockClick(block.blockNumber, block.isEmpty)}
+							disabled={block.isEmpty}
+							className={cx(
+								'shrink-0 rounded-[2px] transition-all',
+								getBlockColor(block.hasActivity, block.isEmpty, isSelected),
+								block.hasActivity && !isSelected && 'scale-110',
+								isSelected && 'scale-125 z-10 ring-1 ring-accent/50',
+								isCurrent && !block.isEmpty && 'ring-1 ring-white/30',
+								!block.isEmpty && 'hover:scale-125 hover:z-10 cursor-pointer',
+								block.isEmpty && 'cursor-default opacity-50',
+							)}
+							style={{ width: 10, height: 10 }}
+							title={
+								block.isEmpty
+									? undefined
+									: `Block ${block.blockNumber.toString()}`
+							}
+						/>
+					)
+				})}
+			</div>
+			<div className="flex items-center justify-between mt-2">
+				<div className="text-[10px] text-tertiary font-mono">
+					{currentBlock ? `Block ${currentBlock.toString()}` : 'Loading...'}
+				</div>
+				{isPaused && (
+					<button
+						type="button"
+						onClick={() => onPauseChange(false)}
+						className="text-[10px] text-accent hover:text-accent/80 cursor-pointer"
+					>
+						Resume
+					</button>
+				)}
+				{selectedBlock !== undefined && (
+					<button
+						type="button"
+						onClick={() => onSelectBlock(undefined)}
+						className="text-[10px] text-secondary hover:text-primary cursor-pointer"
+					>
+						Clear filter
+					</button>
+				)}
+			</div>
 		</div>
 	)
 }
@@ -2051,8 +2235,9 @@ function ActivityList({
 			{totalPages > 1 && (
 				<div className="flex items-center justify-center gap-1 pt-3 pb-1">
 					{Array.from({ length: totalPages }, (_, i) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: pagination buttons are static
 						<button
-							key={i}
+							key={`page-${i}`}
 							type="button"
 							onClick={() => setPage(i)}
 							className={cx(
@@ -2082,8 +2267,6 @@ function ActivityRow({
 }) {
 	const { t } = useTranslation()
 	const [showModal, setShowModal] = React.useState(false)
-
-
 
 	return (
 		<>
@@ -2213,16 +2396,23 @@ function TransactionModal({
 	)
 
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: modal backdrop overlay
 		<div
 			ref={overlayRef}
+			role="presentation"
 			className={cx(
 				'fixed inset-0 left-[calc(45vw+8px)] max-lg:left-0 z-50 flex items-center justify-center bg-base/80 backdrop-blur-md transition-opacity duration-200',
 				isVisible ? 'opacity-100' : 'opacity-0',
 			)}
 			onClick={handleClose}
+			onKeyDown={(e) => {
+				if (e.key === 'Escape') handleClose()
+			}}
 		>
+			{/* biome-ignore lint/a11y/noStaticElementInteractions: stops click propagation */}
 			<div
 				ref={contentRef}
+				role="presentation"
 				className={cx(
 					'flex flex-col items-center transition-all duration-200',
 					isVisible
@@ -2230,6 +2420,7 @@ function TransactionModal({
 						: 'opacity-0 scale-95 translate-y-4',
 				)}
 				onClick={(e) => e.stopPropagation()}
+				onKeyDown={(e) => e.stopPropagation()}
 			>
 				<div
 					data-receipt

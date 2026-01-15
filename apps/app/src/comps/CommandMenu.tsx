@@ -669,16 +669,24 @@ function CommandMenuPortal({
 				{/* Footer */}
 				<div className="flex items-center gap-3 px-3 h-7 border-t border-[#3a3a3c] bg-[#1c1c1e] text-[10px] text-[#6e6e73]">
 					<span className="flex items-center gap-1">
-						<kbd className="px-0.5 bg-[#232326] rounded border border-[#3a3a3c]">↑</kbd>
-						<kbd className="px-0.5 bg-[#232326] rounded border border-[#3a3a3c]">↓</kbd>
+						<kbd className="px-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
+							↑
+						</kbd>
+						<kbd className="px-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
+							↓
+						</kbd>
 						Navigate
 					</span>
 					<span className="flex items-center gap-1">
-						<kbd className="px-1 bg-[#232326] rounded border border-[#3a3a3c]">↵</kbd>
+						<kbd className="px-1 bg-[#232326] rounded border border-[#3a3a3c]">
+							↵
+						</kbd>
 						Open
 					</span>
 					<span className="flex items-center gap-1">
-						<kbd className="px-1 bg-[#232326] rounded border border-[#3a3a3c]">esc</kbd>
+						<kbd className="px-1 bg-[#232326] rounded border border-[#3a3a3c]">
+							esc
+						</kbd>
 						{view !== 'main' ? 'Back' : 'Close'}
 					</span>
 				</div>
