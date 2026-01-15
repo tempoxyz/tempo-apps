@@ -1805,8 +1805,18 @@ function BlockTimeline({
 
 	if (!currentBlock) {
 		return (
-			<div className="h-[40px] flex items-center justify-end mt-2 mb-3">
-				<div className="text-[10px] text-tertiary">Loading...</div>
+			<div className="flex flex-col gap-1.5 mt-2 mb-3">
+				<div className="flex items-center justify-center gap-[2px] w-full p-1">
+					{Array.from({ length: 30 }).map((_, i) => (
+						<div key={i} className="shrink-0 size-[8px] rounded-[1px] bg-base-alt/20 animate-pulse" />
+					))}
+				</div>
+				<div className="flex items-center justify-center">
+					<div className="flex items-center gap-1 h-5 px-2 rounded-full bg-white/5 border border-white/10">
+						<span className="text-[11px] text-tertiary">Block</span>
+						<span className="text-[11px] text-tertiary font-mono">...</span>
+					</div>
+				</div>
 			</div>
 		)
 	}
