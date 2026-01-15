@@ -661,7 +661,7 @@ function AddressView() {
 								type="button"
 								onClick={() => copy(address)}
 								className="flex items-center justify-center size-[28px] rounded-md bg-base-alt hover:bg-base-alt/70 cursor-pointer press-down transition-colors shrink-0"
-								title="Copy address"
+								title={t('common.copyAddress')}
 							>
 								{notifying ? (
 									<CheckIcon className="size-[14px] text-positive" />
