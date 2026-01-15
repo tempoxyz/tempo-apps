@@ -13,7 +13,7 @@ import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'
 import { Receipt } from '#comps/Receipt'
 import { apostrophe } from '#lib/chars'
-import { parseKnownEvents } from '#lib/domain/known-events'
+import { decodeKnownCall, parseKnownEvents } from '#lib/domain/known-events'
 import { LineItems } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
@@ -49,10 +49,21 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	const timestampFormatted = DateFormatter.format(block.timestamp)
 
 	const lineItems = LineItems.fromReceipt(receipt, { getTokenMetadata })
-	const knownEvents = parseKnownEvents(receipt, {
+	const parsedEvents = parseKnownEvents(receipt, {
 		transaction,
 		getTokenMetadata,
 	})
+
+	// Try to decode known contract calls (e.g., validator precompile)
+	// Prioritize decoded calls over fee-only events since they're more descriptive
+	const knownCall =
+		transaction.to && transaction.input && transaction.input !== '0x'
+			? decodeKnownCall(transaction.to, transaction.input)
+			: null
+
+	const knownEvents = knownCall
+		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
+		: parsedEvents
 
 	return {
 		block,
