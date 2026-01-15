@@ -1,5 +1,5 @@
 import type { Address } from 'ox'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config.ts'
 
 const TOKENLIST_BASE_URL = 'https://tokenlist.tempo.xyz/icon/42429'
 

@@ -7,7 +7,7 @@ import { Address } from '#comps/Address'
 import { Amount } from '#comps/Amount'
 import { Midcut } from '#comps/Midcut'
 import { TokenIcon } from '#comps/TokenIcon'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config.ts'
 import { extractContractAbi, getContractAbi } from '#lib/domain/contracts.ts'
 import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events.ts'
 import {

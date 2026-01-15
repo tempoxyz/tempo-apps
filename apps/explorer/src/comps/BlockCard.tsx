@@ -1,11 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import type { Hex } from 'ox'
 import * as React from 'react'
-import { useWatchBlockNumber } from 'wagmi'
+import { useWatchBlocks } from 'wagmi'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
-import { ValidatorTag } from '#comps/ValidatorTag'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config'
 import { DateFormatter } from '#lib/formatting'
 import { useCopy, useIsMounted } from '#lib/hooks'
 import type { BlockWithTransactions } from '#lib/queries'
@@ -42,10 +41,14 @@ export function BlockCard(props: BlockCard.Props) {
 		return Number(latest - blockNumber) + 1
 	}
 
-	useWatchBlockNumber({
+	useWatchBlocks({
 		enabled: isMounted,
-		onBlockNumber: (newBlockNumber) => {
-			if (newBlockNumber > (latestBlockRef.current ?? 0n)) {
+		onBlock: (block) => {
+			const newBlockNumber = block.number
+			if (
+				newBlockNumber != null &&
+				newBlockNumber > (latestBlockRef.current ?? 0n)
+			) {
 				latestBlockRef.current = newBlockNumber
 				const confirmations = getConfirmations(newBlockNumber)
 				if (confirmationsRef.current) {
@@ -155,7 +158,14 @@ export function BlockCard(props: BlockCard.Props) {
 				>
 					<BlockCard.InfoRow label="Miner">
 						{miner ? (
-							<ValidatorTag address={miner} />
+							<Link
+								to="/address/$address"
+								params={{ address: miner }}
+								className="text-accent hover:underline press-down min-w-0 flex-1 flex justify-end font-mono"
+								title={miner}
+							>
+								<Midcut value={miner} prefix="0x" align="end" min={4} />
+							</Link>
 						) : (
 							<span className="text-tertiary">—</span>
 						)}
@@ -181,10 +191,9 @@ export function BlockCard(props: BlockCard.Props) {
 						>
 							<span className="text-[13px]">Advanced</span>
 							<ChevronDown
-								className={cx(
-									'size-[14px] text-content-dimmed',
-									showAdvanced && 'rotate-180',
-								)}
+								className={cx('size-[14px] text-content-dimmed', {
+									'rotate-180': showAdvanced,
+								})}
 							/>
 						</button>
 

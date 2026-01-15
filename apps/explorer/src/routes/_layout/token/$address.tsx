@@ -17,9 +17,8 @@ import { getChainId, getPublicClient } from 'wagmi/actions'
 import { Actions, Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
-import { Breadcrumbs } from '#comps/Breadcrumbs'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
-import { ContractTabContent, InteractTabContent } from '#comps/Contract.tsx'
+import { ContractTabContent } from '#comps/Contract.tsx'
 import { DataGrid } from '#comps/DataGrid'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
@@ -29,7 +28,7 @@ import { TimeColumnHeader, useTimeFormat } from '#comps/TimeFormat'
 import { TimestampCell } from '#comps/TimestampCell'
 import { TokenIcon } from '#comps/TokenIcon'
 import { TransactionCell } from '#comps/TransactionCell'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config.ts'
 import { ellipsis } from '#lib/chars'
 import { getContractInfo } from '#lib/domain/contracts'
 import { PriceFormatter } from '#lib/formatting'
@@ -52,7 +51,7 @@ const defaultSearchValues = {
 	tab: 'transfers',
 } as const
 
-const tabOrder = ['transfers', 'holders', 'contract', 'interact'] as const
+const tabOrder = ['transfers', 'holders', 'contract'] as const
 
 const chainId = getChainId(getWagmiConfig())
 
@@ -80,12 +79,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 			z.pipe(
 				z.string(),
 				z.transform((val) => {
-					if (
-						val === 'transfers' ||
-						val === 'holders' ||
-						val === 'contract' ||
-						val === 'interact'
-					)
+					if (val === 'transfers' || val === 'holders' || val === 'contract')
 						return val
 					return 'transfers'
 				}),
@@ -275,8 +269,7 @@ function RouteComponent() {
 		[navigate, limit, a],
 	)
 
-	const activeSection =
-		tab === 'holders' ? 1 : tab === 'contract' ? 2 : tab === 'interact' ? 3 : 0
+	const activeSection = tab === 'holders' ? 1 : tab === 'contract' ? 2 : 0
 
 	return (
 		<div
@@ -285,7 +278,6 @@ function RouteComponent() {
 				'grid w-full pt-20 pb-16 px-4 gap-3.5 min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-270',
 			)}
 		>
-			<Breadcrumbs className="col-span-full" />
 			<TokenCard
 				address={address}
 				className="self-start"
@@ -345,7 +337,7 @@ function TokenCard(props: {
 							<TokenIcon
 								address={address}
 								name={metadata?.symbol}
-								className="size-5!"
+								className="size-5"
 							/>
 							{metadata.symbol}
 						</h2>
@@ -675,12 +667,6 @@ function SectionsWrapper(props: {
 					itemsLabel: 'functions',
 					content: <ContractSection address={address} />,
 				},
-				{
-					title: 'Interact',
-					totalItems: 0,
-					itemsLabel: 'functions',
-					content: <InteractSection address={address} />,
-				},
 			]}
 			activeSection={activeSection}
 			onSectionChange={onSectionChange}
@@ -722,19 +708,6 @@ function ContractSection(props: { address: Address.Address }) {
 
 	return (
 		<ContractTabContent
-			address={address}
-			abi={contractInfo?.abi}
-			docsUrl={contractInfo?.docsUrl}
-		/>
-	)
-}
-
-function InteractSection(props: { address: Address.Address }) {
-	const { address } = props
-	const contractInfo = getContractInfo(address)
-
-	return (
-		<InteractTabContent
 			address={address}
 			abi={contractInfo?.abi}
 			docsUrl={contractInfo?.docsUrl}

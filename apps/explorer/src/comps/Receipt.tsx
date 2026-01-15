@@ -5,7 +5,10 @@ import { Amount } from '#comps/Amount'
 import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
 import { TxEventDescription } from '#comps/TxEventDescription'
-import type { KnownEvent } from '#lib/domain/known-events'
+import {
+	type KnownEvent,
+	preferredEventsFilter,
+} from '#lib/domain/known-events'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
 
@@ -31,11 +34,7 @@ export function Receipt(props: Receipt.Props) {
 	const hasTotal =
 		totalDisplay !== undefined || (total !== undefined && total !== null)
 	const showFeeBreakdown = feeBreakdown.length > 0
-	const filteredEvents = events.filter(
-		(event) =>
-			event.type !== 'active key count changed' &&
-			event.type !== 'nonce incremented',
-	)
+	const filteredEvents = events.filter(preferredEventsFilter)
 
 	return (
 		<>

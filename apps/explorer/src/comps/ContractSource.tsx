@@ -1,9 +1,8 @@
 import * as React from 'react'
 import { ContractFeatureCard } from '#comps/Contract.tsx'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
-import { useCopy, useCopyPermalink } from '#lib/hooks'
-import CheckIcon from '~icons/lucide/check'
+import { useCopy } from '#lib/hooks'
 import CopyIcon from '~icons/lucide/copy'
 import LinkIcon from '~icons/lucide/link'
 import SolidityIcon from '~icons/vscode-icons/file-type-solidity'
@@ -99,11 +98,6 @@ function SourceFile(props: {
 	const { copy, notifying } = useCopy({ timeout: 2_000 })
 	const [isCollapsed, setIsCollapsed] = React.useState(false)
 
-	const sourceFragment = `source-file-${fileName.replace('.', '-').toLowerCase()}`
-	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
-		fragment: sourceFragment,
-	})
-
 	const language = React.useMemo(
 		() => getLanguageFromFileName(fileName),
 		[fileName],
@@ -142,22 +136,20 @@ function SourceFile(props: {
 				</button>
 				<button
 					type="button"
-					title={linkNotifying ? 'Copied!' : 'Copy permalink'}
+					title="Copy permalink"
 					className="press-down text-tertiary/70 hover:text-primary hover:bg-base-alt/50 p-1 transition-colors mr-auto cursor-pointer"
-					onClick={handleCopyPermalink}
+					onClick={() => {
+						const permaLink = `${window.location.href}#${fileName.replace('.', '-').toLowerCase()}`
+						console.info(permaLink)
+					}}
 				>
-					{linkNotifying ? (
-						<CheckIcon className="size-3.5" />
-					) : (
-						<LinkIcon className="size-3.5" />
-					)}
+					<LinkIcon className="size-3.5" />
 				</button>
 				<div className="flex items-center gap-2 shrink-0">
 					<span
-						className={cx(
-							'text-[11px]',
-							isCollapsed ? 'text-tertiary' : 'text-tertiary/50',
-						)}
+						className={cx('text-[11px] text-tertiary', {
+							'text-tertiary/50': !isCollapsed,
+						})}
 					>
 						{lineCount} lines
 					</span>

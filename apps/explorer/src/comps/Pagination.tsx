@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { cx } from '#lib/css'
+import { cx } from '#cva.config.ts'
 import ChevronFirst from '~icons/lucide/chevron-first'
 import ChevronLast from '~icons/lucide/chevron-last'
 import ChevronLeft from '~icons/lucide/chevron-left'
@@ -13,7 +13,7 @@ import ChevronRight from '~icons/lucide/chevron-right'
 export function Pagination(props: Pagination.Props) {
 	const {
 		page,
-		pages,
+		totalPages,
 		totalItems,
 		itemsLabel: itemsLabel_,
 		isPending,
@@ -21,13 +21,13 @@ export function Pagination(props: Pagination.Props) {
 		hideOnSinglePage = true,
 	} = props
 
-	const compact = compact_ || pages > 999
+	const compact = compact_ || totalPages > 999
 
 	// TODO: better pluralization
 	const itemsLabel =
 		totalItems === 1 ? itemsLabel_.replace(/s$/, '') : itemsLabel_
 
-	if (hideOnSinglePage && pages <= 1)
+	if (hideOnSinglePage && totalPages <= 1)
 		return (
 			<div className="flex items-center justify-end px-[16px] py-[12px] text-[12px] text-tertiary">
 				<span className="text-primary tabular-nums">
@@ -75,7 +75,7 @@ export function Pagination(props: Pagination.Props) {
 						<span className="text-primary">
 							{Pagination.numFormat.format(page)}
 						</span>{' '}
-						of {Pagination.numFormat.format(pages)}
+						of {Pagination.numFormat.format(totalPages)}
 					</span>
 
 					<Link
@@ -86,7 +86,7 @@ export function Pagination(props: Pagination.Props) {
 							...previous,
 							page: (previous?.page ?? 1) + 1,
 						})}
-						disabled={page >= pages || isPending}
+						disabled={page >= totalPages || isPending}
 						className={cx(
 							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
@@ -99,8 +99,8 @@ export function Pagination(props: Pagination.Props) {
 						to="."
 						type="button"
 						resetScroll={false}
-						search={(previous) => ({ ...previous, page: pages })}
-						disabled={page >= pages || isPending}
+						search={(previous) => ({ ...previous, page: totalPages })}
+						disabled={page >= totalPages || isPending}
 						className={cx(
 							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
@@ -135,10 +135,10 @@ export function Pagination(props: Pagination.Props) {
 
 				<div className="flex items-center gap-[6px]">
 					{(() => {
-						const pageNumbers = Pagination.getPagination(page, pages)
+						const pages = Pagination.getPagination(page, totalPages)
 						let ellipsisCount = 0
 
-						return pageNumbers.map((p) =>
+						return pages.map((p) =>
 							p === Pagination.Ellipsis ? (
 								<span
 									key={`ellipsis-${ellipsisCount++}`}
@@ -173,7 +173,7 @@ export function Pagination(props: Pagination.Props) {
 						...previous,
 						page: (previous?.page ?? 1) + 1,
 					})}
-					disabled={page >= pages || isPending}
+					disabled={page >= totalPages || isPending}
 					className={cx(
 						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
 					)}
@@ -185,7 +185,7 @@ export function Pagination(props: Pagination.Props) {
 
 			<Pagination.Count
 				page={page}
-				pages={pages}
+				totalPages={totalPages}
 				totalItems={totalItems}
 				itemsLabel={itemsLabel}
 			/>
@@ -196,7 +196,7 @@ export function Pagination(props: Pagination.Props) {
 export namespace Pagination {
 	export interface Props {
 		page: number
-		pages: number
+		totalPages: number
 		totalItems: number
 		itemsLabel: string
 		isPending: boolean
@@ -211,28 +211,29 @@ export namespace Pagination {
 		maximumFractionDigits: 0,
 	})
 
-	export function getPagination(page: number, pages: number): number[] {
-		if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1)
+	export function getPagination(page: number, totalPages: number): number[] {
+		if (totalPages <= 7)
+			return Array.from({ length: totalPages }, (_, i) => i + 1)
 
 		if (page <= 4)
-			return [...Array.from({ length: 5 }, (_, i) => i + 1), Ellipsis, pages]
+			return [
+				...Array.from({ length: 5 }, (_, i) => i + 1),
+				Ellipsis,
+				totalPages,
+			]
 
-		if (page >= pages - 3)
+		if (page >= totalPages - 3)
 			return [
 				1,
 				Ellipsis,
-				...Array.from({ length: 5 }, (_, i) => pages - 4 + i),
+				...Array.from({ length: 5 }, (_, i) => totalPages - 4 + i),
 			]
 
-		return [1, Ellipsis, page - 1, page, page + 1, Ellipsis, pages]
+		return [1, Ellipsis, page - 1, page, page + 1, Ellipsis, totalPages]
 	}
 
 	export function Simple(props: Simple.Props) {
-		const { page, pages, fetching, countLoading, disableLastPage } = props
-		const isIndefinite = typeof pages !== 'number'
-		const disableNext = isIndefinite
-			? !(pages as { hasMore: boolean } | undefined)?.hasMore
-			: page >= pages
+		const { page, totalPages, fetching, countLoading, disableLastPage } = props
 		return (
 			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
 				<Link
@@ -267,10 +268,10 @@ export namespace Pagination {
 						{Pagination.numFormat.format(page)}
 					</span>
 					{' of '}
-					{isIndefinite || countLoading
+					{countLoading
 						? '…'
-						: typeof pages === 'number' && pages > 0
-							? Pagination.numFormat.format(pages)
+						: totalPages > 0
+							? Pagination.numFormat.format(totalPages)
 							: '…'}
 				</span>
 				<Link
@@ -280,7 +281,7 @@ export namespace Pagination {
 						...prev,
 						page: (prev?.page ?? 1) + 1,
 					})}
-					disabled={disableNext}
+					disabled={page >= totalPages}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
@@ -288,20 +289,18 @@ export namespace Pagination {
 				>
 					<ChevronRight className="size-[14px]" />
 				</Link>
-				{typeof pages === 'number' && (
-					<Link
-						to="."
-						resetScroll={false}
-						search={(prev) => ({ ...prev, page: pages })}
-						disabled={page >= pages || disableLastPage}
-						className={cx(
-							'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
-						)}
-						title="Last page"
-					>
-						<ChevronLast className="size-[14px]" />
-					</Link>
-				)}
+				<Link
+					to="."
+					resetScroll={false}
+					search={(prev) => ({ ...prev, page: totalPages })}
+					disabled={page >= totalPages || disableLastPage}
+					className={cx(
+						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+					)}
+					title="Last page"
+				>
+					<ChevronLast className="size-[14px]" />
+				</Link>
 			</div>
 		)
 	}
@@ -309,8 +308,7 @@ export namespace Pagination {
 	export namespace Simple {
 		export interface Props {
 			page: number
-			/** Total pages (number) or indefinite pagination ({ hasMore: boolean }) */
-			pages?: number | { hasMore: boolean }
+			totalPages: number
 			fetching?: boolean
 			countLoading?: boolean
 			/** Disable "Last page" button when we can't reliably navigate there */
@@ -319,8 +317,15 @@ export namespace Pagination {
 	}
 
 	export function Count(props: Count.Props) {
-		const { page, pages, totalItems, itemsLabel, loading, capped, className } =
-			props
+		const {
+			page,
+			totalPages,
+			totalItems,
+			itemsLabel,
+			loading,
+			capped,
+			className,
+		} = props
 
 		return (
 			<div
@@ -329,14 +334,14 @@ export namespace Pagination {
 					className,
 				)}
 			>
-				{page != null && pages != null && (
+				{page != null && totalPages != null && (
 					<>
 						<span className="text-primary tabular-nums">
 							{Pagination.numFormat.format(page)}
 						</span>
 						<span className="text-tertiary">of</span>
 						<span className="text-primary tabular-nums">
-							{Pagination.numFormat.format(pages)}
+							{Pagination.numFormat.format(totalPages)}
 						</span>
 						<span className="text-tertiary">•</span>
 					</>
@@ -354,7 +359,7 @@ export namespace Pagination {
 	export namespace Count {
 		export interface Props {
 			page?: number
-			pages?: number
+			totalPages?: number
 			totalItems: number
 			itemsLabel: string
 			loading?: boolean

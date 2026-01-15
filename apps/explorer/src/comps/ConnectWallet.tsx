@@ -1,4 +1,5 @@
 import { ClientOnly } from '@tanstack/react-router'
+import type { VariantProps } from 'cva'
 import * as React from 'react'
 import {
 	useChains,
@@ -9,7 +10,7 @@ import {
 	useSwitchChain,
 } from 'wagmi'
 import { Address } from '#comps/Address'
-import { cx } from '#lib/css'
+import { cva, cx } from '#cva.config.ts'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
@@ -156,13 +157,10 @@ function SignOut() {
 }
 
 export function Button(
-	props: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'> & {
-		className?: string
-		disabled?: boolean
-		static?: boolean
-		variant?: 'accent' | 'default' | 'destructive'
-		render?: React.ReactElement
-	},
+	props: Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'disabled'> &
+		VariantProps<typeof buttonClassName> & {
+			render?: React.ReactElement
+		},
 ) {
 	const {
 		className,
@@ -188,20 +186,22 @@ export function Button(
 	)
 }
 
-function buttonClassName(opts: {
-	className?: string
-	disabled?: boolean
-	static?: boolean
-	variant?: 'accent' | 'default' | 'destructive'
-}) {
-	const { className, disabled, static: static_, variant = 'default' } = opts
-	return cx(
-		'inline-flex gap-[6px] items-center whitespace-nowrap font-medium focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer press-down text-[12px] hover:underline',
-		disabled && 'pointer-events-none opacity-50',
-		static_ && 'pointer-events-none',
-		variant === 'accent' && 'text-accent',
-		variant === 'default' && 'text-secondary',
-		variant === 'destructive' && 'text-negative',
-		className,
-	)
-}
+const buttonClassName = cva({
+	base: 'inline-flex gap-[6px] items-center whitespace-nowrap font-medium focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 cursor-pointer press-down text-[12px] hover:underline',
+	defaultVariants: {
+		variant: 'default',
+	},
+	variants: {
+		disabled: {
+			true: 'pointer-events-none opacity-50',
+		},
+		static: {
+			true: 'pointer-events-none',
+		},
+		variant: {
+			accent: 'text-accent',
+			default: 'text-secondary',
+			destructive: 'text-negative',
+		},
+	},
+})
