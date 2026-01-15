@@ -46,40 +46,49 @@ function serializeCredential(credential: PublicKeyCredential) {
 	}
 }
 
+// Determine the key-manager URL at runtime (when methods are called, not at config time)
+// This avoids SSR/client hydration mismatches
+function getKeyManagerBaseUrl() {
+	if (typeof window !== 'undefined') {
+		const hostname = window.location.hostname
+		if (hostname === 'localhost' || hostname.endsWith('.workers.dev')) {
+			return 'https://key-manager.porto.workers.dev/keys'
+		}
+	}
+	// Production or SSR fallback
+	return TEMPO_ENV === 'presto'
+		? 'https://keys.tempo.xyz/keys'
+		: 'https://key-manager-mainnet.porto.workers.dev/keys'
+}
+
 function getKeyManager() {
-	// Determine preview status dynamically at call time, not module load time
-	const isPreview =
-		typeof window !== 'undefined' &&
-		(window.location.hostname === 'localhost' ||
-			window.location.hostname.endsWith('.workers.dev'))
-
-	const baseUrl = isPreview
-		? 'https://key-manager.porto.workers.dev/keys'
-		: TEMPO_ENV === 'presto'
-			? 'https://keys.tempo.xyz/keys'
-			: 'https://key-manager-mainnet.porto.workers.dev/keys'
-
-	const httpKeyManager = KeyManager.http(baseUrl)
-
-	// Override setPublicKey to properly serialize the credential
+	// Create a lazy key manager that determines the URL at method call time
+	// This ensures SSR and client use the same config structure
 	return {
-		...httpKeyManager,
-		async setPublicKey(parameters: {
-			credential: {
-				id: string
-				rawId: ArrayBuffer
-				type: string
-				response: {
-					attestationObject: ArrayBuffer
-					clientDataJSON: ArrayBuffer
-					getAuthenticatorData?: () => ArrayBuffer
-				}
+		async getChallenge() {
+			const baseUrl = getKeyManagerBaseUrl()
+			const response = await fetch(`${baseUrl}/challenge`)
+			if (!response.ok)
+				throw new Error(`Failed to get challenge: ${response.statusText}`)
+			return (await response.json()) as {
+				challenge: `0x${string}`
+				rp?: { id: string; name: string }
 			}
+		},
+		async getPublicKey(parameters: { credential: { id: string } }) {
+			const baseUrl = getKeyManagerBaseUrl()
+			const response = await fetch(`${baseUrl}/${parameters.credential.id}`)
+			if (!response.ok)
+				throw new Error(`Failed to get public key: ${response.statusText}`)
+			const data = (await response.json()) as { publicKey: `0x${string}` }
+			return data.publicKey
+		},
+		async setPublicKey(parameters: {
+			credential: PublicKeyCredential
 			publicKey: `0x${string}`
 		}) {
-			const serializedCredential = serializeCredential(
-				parameters.credential as unknown as PublicKeyCredential,
-			)
+			const baseUrl = getKeyManagerBaseUrl()
+			const serializedCredential = serializeCredential(parameters.credential)
 			const response = await fetch(`${baseUrl}/${parameters.credential.id}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -93,7 +102,7 @@ function getKeyManager() {
 				throw new Error(`Failed to set public key: ${error}`)
 			}
 		},
-	} as unknown as ReturnType<typeof KeyManager.http>
+	} as ReturnType<typeof KeyManager.http>
 }
 
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
@@ -156,38 +165,12 @@ export function getWagmiConfig() {
 		batch: { multicall: false },
 		chains: [chain, tempoLocalnet],
 		connectors: [
+			// rpId is determined dynamically: the key-manager's challenge response
+			// may include an rp.id which takes precedence, otherwise the browser
+			// uses the current origin's effective domain
 			webAuthn({
 				keyManager: getKeyManager(),
-				// For localhost/workers.dev preview, override rpId to match origin
-				...(() => {
-					if (typeof window === 'undefined') return {}
-					const hostname = window.location.hostname
-					if (hostname === 'localhost') {
-						return {
-							rpId: 'localhost',
-							createOptions: { rpId: 'localhost' },
-							getOptions: { rpId: 'localhost' },
-						}
-					}
-					if (hostname.endsWith('.workers.dev')) {
-						// Use the full hostname as rpId for workers.dev previews
-						return {
-							rpId: hostname,
-							createOptions: { rpId: hostname },
-							getOptions: { rpId: hostname },
-						}
-					}
-					// Production: use tempo.xyz as rpId for all subdomains
-					if (hostname.endsWith('.tempo.xyz') || hostname === 'tempo.xyz') {
-						return {
-							rpId: 'tempo.xyz',
-							createOptions: { rpId: 'tempo.xyz' },
-							getOptions: { rpId: 'tempo.xyz' },
-						}
-					}
-					return {}
-				})(),
-			} as Parameters<typeof webAuthn>[0]),
+			}),
 		],
 		multiInjectedProviderDiscovery: false,
 		storage: createStorage({ storage: cookieStorage }),
