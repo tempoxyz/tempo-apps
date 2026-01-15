@@ -9,7 +9,8 @@
 		"feeToken": "手续费代币",
 		"feeTokenDescription": "选择用于支付交易手续费的代币。",
 		"language": "语言",
-		"languageDescription": "选择您的首选语言。"
+		"languageDescription": "选择您的首选语言。",
+		"notSet": "未设置"
 	},
 	"common": {
 		"active": "活跃",
@@ -20,7 +21,24 @@
 		"recipient": "收款人 0x...",
 		"amount": "金额",
 		"max": "最大",
-		"cancel": "取消"
+		"cancel": "取消",
+		"search": "搜索",
+		"signUp": "注册",
+		"signIn": "登录",
+		"continue": "继续",
+		"logOut": "退出",
+		"copyAddress": "复制地址",
+		"viewOnExplorer": "在浏览器中查看",
+		"viewReceipt": "查看收据",
+		"viewTransaction": "查看交易",
+		"requestTokens": "请求代币",
+		"transaction": "交易",
+		"transactions": "笔交易",
+		"transactionOn": "于",
+		"self": "自己",
+		"andMore": "还有 {{count}} 个",
+		"sentSuccessfully": "{{symbol}} 发送成功",
+		"demoNote": "这是演示，余额不会更新。"
 	},
 	"portfolio": {
 		"title": "投资组合",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "个资产",
 		"hideZeroBalances": "隐藏零余额",
 		"showZeroBalances": "显示零余额",
-		"noActivityYet": "暂无活动"
+		"noActivityYet": "暂无活动",
+		"noAssetsFound": "未找到资产"
+	},
+	"landing": {
+		"getStarted": "开始使用",
+		"exploreDescription": "在 Tempo 上探索账户、代币余额和交易历史",
+		"enterAddress": "输入地址",
+		"orUsePasskey": "或使用其他通行密钥",
+		"orSignInWithPasskey": "或使用通行密钥登录"
+	},
+	"receipt": {
+		"block": "区块",
+		"sender": "发送者",
+		"hash": "哈希",
+		"date": "日期",
+		"time": "时间"
 	}
 }

@@ -9,11 +9,11 @@ import {
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
-import { I18nextProvider } from 'react-i18next'
+import { I18nextProvider, useTranslation } from 'react-i18next'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
 import { getWagmiConfig, getWagmiStateSSR } from '#wagmi.config'
 import { CommandMenuProvider } from '#comps/CommandMenu'
-import i18n from '#lib/i18n'
+import i18n, { isRtl } from '#lib/i18n'
 import css from './styles.css?url'
 
 export const Route = createRootRouteWithContext<{
@@ -95,36 +95,62 @@ function RootComponent() {
 	const wagmiState = Route.useLoaderData({ select: deserialize<State> })
 
 	return (
-		<html lang="en" className="scheme-light-dark scrollbar-gutter-stable">
+		<I18nextProvider i18n={i18n}>
+			<RootDocument
+				queryClient={queryClient}
+				config={config}
+				wagmiState={wagmiState}
+			/>
+		</I18nextProvider>
+	)
+}
+
+function RootDocument({
+	queryClient,
+	config,
+	wagmiState,
+}: {
+	queryClient: QueryClient
+	config: ReturnType<typeof getWagmiConfig>
+	wagmiState: State | undefined
+}) {
+	const { i18n: i18nInstance } = useTranslation()
+	const lang = i18nInstance.language
+	const dir = isRtl(lang) ? 'rtl' : 'ltr'
+
+	return (
+		<html
+			lang={lang}
+			dir={dir}
+			className="scheme-light-dark scrollbar-gutter-stable"
+		>
 			<head>
 				<HeadContent />
 			</head>
 			<body className="antialiased">
-				<I18nextProvider i18n={i18n}>
-					<WagmiProvider config={config} initialState={wagmiState}>
-						<QueryClientProvider client={queryClient}>
-							<CommandMenuProvider>
-								<Outlet />
-							</CommandMenuProvider>
-							{import.meta.env.MODE === 'development' &&
-								import.meta.env.VITE_ENABLE_DEVTOOLS === 'true' && (
-									<TanStackDevtools
-										config={{ position: 'bottom-right' }}
-										plugins={[
-											{
-												name: 'Tanstack Query',
-												render: <ReactQueryDevtools />,
-											},
-											{
-												name: 'Tanstack Router',
-												render: <TanStackRouterDevtoolsPanel />,
-											},
-										]}
-									/>
-								)}
-						</QueryClientProvider>
-					</WagmiProvider>
-				</I18nextProvider>
+				<WagmiProvider config={config} initialState={wagmiState}>
+					<QueryClientProvider client={queryClient}>
+						<CommandMenuProvider>
+							<Outlet />
+						</CommandMenuProvider>
+						{import.meta.env.MODE === 'development' &&
+							import.meta.env.VITE_ENABLE_DEVTOOLS === 'true' && (
+								<TanStackDevtools
+									config={{ position: 'bottom-right' }}
+									plugins={[
+										{
+											name: 'Tanstack Query',
+											render: <ReactQueryDevtools />,
+										},
+										{
+											name: 'Tanstack Router',
+											render: <TanStackRouterDevtoolsPanel />,
+										},
+									]}
+								/>
+							)}
+					</QueryClientProvider>
+				</WagmiProvider>
 				<Scripts />
 			</body>
 		</html>

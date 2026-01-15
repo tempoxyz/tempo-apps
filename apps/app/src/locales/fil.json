@@ -9,7 +9,8 @@
 		"feeToken": "Fee Token",
 		"feeTokenDescription": "Piliin kung aling token ang gagamitin para sa mga bayarin sa transaksyon.",
 		"language": "Wika",
-		"languageDescription": "Piliin ang iyong gustong wika."
+		"languageDescription": "Piliin ang iyong gustong wika.",
+		"notSet": "Hindi naitakda"
 	},
 	"common": {
 		"active": "Aktibo",
@@ -20,7 +21,24 @@
 		"recipient": "Tatanggap 0x...",
 		"amount": "Halaga",
 		"max": "MAX",
-		"cancel": "Kanselahin"
+		"cancel": "Kanselahin",
+		"search": "Maghanap",
+		"signUp": "Mag-sign up",
+		"signIn": "Mag-sign in",
+		"continue": "Magpatuloy",
+		"logOut": "Mag-log out",
+		"copyAddress": "Kopyahin ang address",
+		"viewOnExplorer": "Tingnan sa Explorer",
+		"viewReceipt": "Tingnan ang resibo",
+		"viewTransaction": "Tingnan ang transaksyon",
+		"requestTokens": "Humiling ng tokens",
+		"transaction": "Transaksyon",
+		"transactions": "mga transaksyon",
+		"transactionOn": "noong",
+		"self": "sarili",
+		"andMore": "at {{count}} pa",
+		"sentSuccessfully": "Matagumpay na naipadala ang {{symbol}}",
+		"demoNote": "Ito ay isang demo, hindi na-update ang mga balanse."
 	},
 	"portfolio": {
 		"title": "Portfolio",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "mga asset",
 		"hideZeroBalances": "Itago ang zero balanse",
 		"showZeroBalances": "Ipakita ang zero balanse",
-		"noActivityYet": "Wala pang aktibidad"
+		"noActivityYet": "Wala pang aktibidad",
+		"noAssetsFound": "Walang nahanap na asset"
+	},
+	"landing": {
+		"getStarted": "Magsimula",
+		"exploreDescription": "Galugarin ang mga account, token balance, at transaction history sa Tempo",
+		"enterAddress": "Ilagay ang address",
+		"orUsePasskey": "o gumamit ng ibang passkey",
+		"orSignInWithPasskey": "o mag-sign in gamit ang passkey"
+	},
+	"receipt": {
+		"block": "Block",
+		"sender": "Nagpadala",
+		"hash": "Hash",
+		"date": "Petsa",
+		"time": "Oras"
 	}
 }
