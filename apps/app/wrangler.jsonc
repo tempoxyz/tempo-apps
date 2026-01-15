@@ -10,7 +10,8 @@
 	"placement": { "mode": "smart" },
 	"vars": {
 		"VITE_TEMPO_ENV": "presto",
-		"PRESTO_RPC_AUTH": ""
+		"PRESTO_RPC_AUTH": "",
+		"INDEXER_API_KEY": ""
 	},
 	"env": {
 		"devnet": {
@@ -24,7 +25,8 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "devnet"
+				"VITE_TEMPO_ENV": "devnet",
+				"INDEXER_API_KEY": ""
 			},
 			"workers_dev": true,
 			"observability": {
@@ -54,7 +56,8 @@
 			],
 			"vars": {
 				"VITE_TEMPO_ENV": "moderato",
-				"PRESTO_RPC_AUTH": ""
+				"PRESTO_RPC_AUTH": "",
+				"INDEXER_API_KEY": ""
 			},
 			"workers_dev": true,
 			"observability": {
@@ -84,7 +87,8 @@
 			],
 			"vars": {
 				"VITE_TEMPO_ENV": "presto",
-				"PRESTO_RPC_AUTH": ""
+				"PRESTO_RPC_AUTH": "",
+				"INDEXER_API_KEY": ""
 			},
 			"workers_dev": true,
 			"observability": {

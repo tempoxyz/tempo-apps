@@ -74,10 +74,17 @@ async function fetchTokenMetadataViaRpc(
 	}
 }
 
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-const QB = IDX.QueryBuilder.from(IS)
+async function getIndexSupply() {
+	let apiKey: string | undefined
+	try {
+		const { env } = await import('cloudflare:workers')
+		apiKey = env.INDEXER_API_KEY as string | undefined
+	} catch {
+		apiKey = process.env.INDEXER_API_KEY
+	}
+	const IS = IDX.IndexSupply.create({ apiKey })
+	return { IS, QB: IDX.QueryBuilder.from(IS) }
+}
 
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 amount)'
@@ -99,11 +106,12 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 			const config = getWagmiConfig()
 			const chainId = getChainId(config)
 
+			const { QB } = await getIndexSupply()
 			const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
 			const incomingQuery = qb
 				.selectFrom('transfer')
-				.select((eb) => [
+				.select((eb: any) => [
 					eb.ref('address').as('token'),
 					eb.fn.sum('amount').as('received'),
 				])
@@ -113,7 +121,7 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 
 			const outgoingQuery = qb
 				.selectFrom('transfer')
-				.select((eb) => [
+				.select((eb: any) => [
 					eb.ref('address').as('token'),
 					eb.fn.sum('amount').as('sent'),
 				])
