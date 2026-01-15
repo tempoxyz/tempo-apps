@@ -2220,12 +2220,583 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 	)
 }
 
-// Access key info for send UI
-type AccessKeyForSend = {
-	keyId: string
-	spendingLimit: bigint
-	originalLimit: bigint
-	createdAt?: number // Unix timestamp in ms
+function BlockTimeline({
+	activity,
+	currentBlock,
+	selectedBlock,
+	onSelectBlock,
+}: {
+	activity: ActivityItem[]
+	currentBlock: bigint | null
+	selectedBlock: bigint | undefined
+	onSelectBlock: (block: bigint | undefined) => void
+}) {
+	const { t } = useTranslation()
+	const scrollRef = React.useRef<HTMLDivElement>(null)
+	const containerRef = React.useRef<HTMLDivElement>(null)
+	const [blockTxCounts, setBlockTxCounts] = React.useState<Map<string, number>>(
+		new Map(),
+	)
+	const [displayBlock, setDisplayBlock] = React.useState<bigint | null>(null)
+	const [isPaused, setIsPaused] = React.useState(false)
+	const [focusedBlockIndex, setFocusedBlockIndex] = React.useState<
+		number | null
+	>(null)
+	const [hoveredBlock, setHoveredBlock] = React.useState<{
+		blockNumber: bigint
+		txCount: number
+		x: number
+		y: number
+	} | null>(null)
+	const [dragState, setDragState] = React.useState<{
+		startBlock: bigint
+		endBlock: bigint
+	} | null>(null)
+	const lastFetchedBlockRef = React.useRef<bigint | null>(null)
+	const pauseTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	)
+	const prefetchedBlocksRef = React.useRef<Set<string>>(new Set())
+
+	const userBlockNumbers = React.useMemo(() => {
+		const blocks = new Set<bigint>()
+		for (const item of activity) {
+			if (item.blockNumber !== undefined) {
+				blocks.add(item.blockNumber)
+			}
+		}
+		return blocks
+	}, [activity])
+
+	const blocksBeforeCurrent = 20
+	const blocksAfterCurrent = 20
+
+	// Initialize displayBlock
+	React.useEffect(() => {
+		if (currentBlock && displayBlock === null) {
+			setDisplayBlock(currentBlock)
+		}
+	}, [currentBlock, displayBlock])
+
+	// Smoothly increment displayBlock toward currentBlock one at a time
+	// Pause animation when a block is selected
+	React.useEffect(() => {
+		if (
+			!currentBlock ||
+			!displayBlock ||
+			isPaused ||
+			selectedBlock !== undefined
+		)
+			return
+		if (displayBlock >= currentBlock) return
+
+		const timer = setTimeout(() => {
+			setDisplayBlock((prev) => (prev ? prev + 1n : currentBlock))
+		}, 200)
+
+		return () => clearTimeout(timer)
+	}, [currentBlock, displayBlock, isPaused, selectedBlock])
+
+	// Fetch block data when currentBlock changes
+	React.useEffect(() => {
+		if (!currentBlock) return
+
+		const fetchBlocks = async () => {
+			const lastFetched = lastFetchedBlockRef.current
+			if (lastFetched && currentBlock <= lastFetched) return
+
+			const blocksToFetch = lastFetched
+				? Math.min(Number(currentBlock - lastFetched), 10)
+				: blocksBeforeCurrent + 1
+
+			try {
+				const result = await fetchBlockData({
+					data: {
+						fromBlock: `0x${currentBlock.toString(16)}`,
+						count: blocksToFetch,
+					},
+				})
+				if (result.blocks.length > 0) {
+					setBlockTxCounts((prev) => {
+						const next = new Map(prev)
+						for (const b of result.blocks) {
+							next.set(BigInt(b.blockNumber).toString(), b.txCount)
+						}
+						return next
+					})
+					lastFetchedBlockRef.current = currentBlock
+				}
+			} catch {
+				// Ignore
+			}
+		}
+
+		fetchBlocks()
+	}, [currentBlock])
+
+	// Pre-fetch adjacent blocks on hover
+	const prefetchAdjacentBlocks = React.useCallback(
+		async (blockNumber: bigint) => {
+			const blocksToCheck = [
+				blockNumber - 2n,
+				blockNumber - 1n,
+				blockNumber + 1n,
+				blockNumber + 2n,
+			]
+			const missingBlocks = blocksToCheck.filter(
+				(b) =>
+					b > 0n &&
+					!blockTxCounts.has(b.toString()) &&
+					!prefetchedBlocksRef.current.has(b.toString()),
+			)
+
+			if (missingBlocks.length === 0) return
+
+			for (const b of missingBlocks) {
+				prefetchedBlocksRef.current.add(b.toString())
+			}
+
+			try {
+				const maxBlock = missingBlocks.reduce((a, b) => (a > b ? a : b))
+				const result = await fetchBlockData({
+					data: {
+						fromBlock: `0x${maxBlock.toString(16)}`,
+						count: 5,
+					},
+				})
+				if (result.blocks.length > 0) {
+					setBlockTxCounts((prev) => {
+						const next = new Map(prev)
+						for (const b of result.blocks) {
+							next.set(BigInt(b.blockNumber).toString(), b.txCount)
+						}
+						return next
+					})
+				}
+			} catch {
+				// Ignore prefetch errors
+			}
+		},
+		[blockTxCounts],
+	)
+
+	const handleScroll = React.useCallback(() => {
+		setIsPaused(true)
+		if (pauseTimeoutRef.current) {
+			clearTimeout(pauseTimeoutRef.current)
+		}
+		pauseTimeoutRef.current = setTimeout(() => {
+			setIsPaused(false)
+		}, 3000)
+	}, [])
+
+	React.useEffect(() => {
+		return () => {
+			if (pauseTimeoutRef.current) {
+				clearTimeout(pauseTimeoutRef.current)
+			}
+		}
+	}, [])
+
+	const blocks = React.useMemo(() => {
+		const blockToShow = displayBlock ?? currentBlock
+		if (!blockToShow) return []
+		const result: {
+			blockNumber: bigint
+			hasUserActivity: boolean
+			txCount: number
+			isPlaceholder: boolean
+		}[] = []
+
+		// Blocks before current
+		for (let i = blocksBeforeCurrent; i >= 1; i--) {
+			const blockNum = blockToShow - BigInt(i)
+			if (blockNum > 0n) {
+				result.push({
+					blockNumber: blockNum,
+					hasUserActivity: userBlockNumbers.has(blockNum),
+					txCount: blockTxCounts.get(blockNum.toString()) ?? 0,
+					isPlaceholder: false,
+				})
+			}
+		}
+
+		// Current block
+		result.push({
+			blockNumber: blockToShow,
+			hasUserActivity: userBlockNumbers.has(blockToShow),
+			txCount: blockTxCounts.get(blockToShow.toString()) ?? 0,
+			isPlaceholder: false,
+		})
+
+		// Placeholder blocks after current
+		for (let i = 1; i <= blocksAfterCurrent; i++) {
+			result.push({
+				blockNumber: blockToShow + BigInt(i),
+				hasUserActivity: false,
+				txCount: 0,
+				isPlaceholder: true,
+			})
+		}
+
+		return result
+	}, [displayBlock, currentBlock, userBlockNumbers, blockTxCounts])
+
+	const handleBlockClick = (blockNumber: bigint, isPlaceholder: boolean) => {
+		if (isPlaceholder) return
+		if (selectedBlock === blockNumber) {
+			onSelectBlock(undefined)
+		} else {
+			onSelectBlock(blockNumber)
+		}
+	}
+
+	// Keyboard navigation
+	const handleKeyDown = React.useCallback(
+		(e: React.KeyboardEvent) => {
+			if (blocks.length === 0) return
+
+			const currentIndex =
+				focusedBlockIndex ??
+				blocks.findIndex((b) => b.blockNumber === selectedBlock) ??
+				blocks.findIndex(
+					(b) =>
+						!b.isPlaceholder &&
+						b.blockNumber === (displayBlock ?? currentBlock),
+				)
+
+			let newIndex =
+				currentIndex === -1 ? Math.floor(blocks.length / 2) : currentIndex
+
+			switch (e.key) {
+				case 'ArrowLeft':
+					e.preventDefault()
+					newIndex = Math.max(0, newIndex - 1)
+					while (newIndex > 0 && blocks[newIndex]?.isPlaceholder) {
+						newIndex--
+					}
+					break
+				case 'ArrowRight':
+					e.preventDefault()
+					newIndex = Math.min(blocks.length - 1, newIndex + 1)
+					while (
+						newIndex < blocks.length - 1 &&
+						blocks[newIndex]?.isPlaceholder
+					) {
+						newIndex++
+					}
+					if (blocks[newIndex]?.isPlaceholder) {
+						newIndex = currentIndex
+					}
+					break
+				case 'Enter':
+				case ' ':
+					e.preventDefault()
+					if (focusedBlockIndex !== null && blocks[focusedBlockIndex]) {
+						const block = blocks[focusedBlockIndex]
+						if (!block.isPlaceholder) {
+							handleBlockClick(block.blockNumber, block.isPlaceholder)
+						}
+					}
+					return
+				case 'Escape':
+					e.preventDefault()
+					onSelectBlock(undefined)
+					setFocusedBlockIndex(null)
+					return
+				case 'Home':
+					e.preventDefault()
+					newIndex = 0
+					break
+				case 'End':
+					e.preventDefault()
+					newIndex = blocks.findLastIndex((b) => !b.isPlaceholder)
+					break
+				default:
+					return
+			}
+
+			if (
+				newIndex !== currentIndex &&
+				blocks[newIndex] &&
+				!blocks[newIndex].isPlaceholder
+			) {
+				setFocusedBlockIndex(newIndex)
+				// Pre-fetch when navigating
+				prefetchAdjacentBlocks(blocks[newIndex].blockNumber)
+			}
+		},
+		[
+			blocks,
+			focusedBlockIndex,
+			selectedBlock,
+			displayBlock,
+			currentBlock,
+			onSelectBlock,
+			prefetchAdjacentBlocks,
+		],
+	)
+
+	// Drag selection handlers
+	const handleMouseDown = (blockNumber: bigint, isPlaceholder: boolean) => {
+		if (isPlaceholder) return
+		setDragState({ startBlock: blockNumber, endBlock: blockNumber })
+	}
+
+	const handleMouseEnter = (
+		blockNumber: bigint,
+		isPlaceholder: boolean,
+		e: React.MouseEvent,
+	) => {
+		if (!isPlaceholder) {
+			const rect = e.currentTarget.getBoundingClientRect()
+			setHoveredBlock({
+				blockNumber,
+				txCount: blockTxCounts.get(blockNumber.toString()) ?? 0,
+				x: rect.left + rect.width / 2,
+				y: rect.top,
+			})
+			// Pre-fetch adjacent blocks
+			prefetchAdjacentBlocks(blockNumber)
+		}
+
+		if (dragState && !isPlaceholder) {
+			setDragState((prev) => (prev ? { ...prev, endBlock: blockNumber } : null))
+		}
+	}
+
+	const handleMouseUp = () => {
+		if (dragState) {
+			const start =
+				dragState.startBlock < dragState.endBlock
+					? dragState.startBlock
+					: dragState.endBlock
+			const end =
+				dragState.startBlock < dragState.endBlock
+					? dragState.endBlock
+					: dragState.startBlock
+
+			if (start === end) {
+				// Single block click
+				handleBlockClick(start, false)
+			} else {
+				// Range selection - select the start block for now
+				// Could extend to support range in the future
+				onSelectBlock(start)
+			}
+			setDragState(null)
+		}
+	}
+
+	const isInDragRange = (blockNumber: bigint) => {
+		if (!dragState) return false
+		const start =
+			dragState.startBlock < dragState.endBlock
+				? dragState.startBlock
+				: dragState.endBlock
+		const end =
+			dragState.startBlock < dragState.endBlock
+				? dragState.endBlock
+				: dragState.startBlock
+		return blockNumber >= start && blockNumber <= end
+	}
+
+	const getBlockStyle = (
+		txCount: number,
+		_isSelected: boolean,
+		isCurrent: boolean,
+		hasUserActivity: boolean,
+		isPlaceholder: boolean,
+	): string => {
+		if (isPlaceholder) return 'bg-base-alt/20'
+		if (isCurrent) return 'bg-white'
+		if (hasUserActivity) return 'bg-green-500'
+
+		// Simple discrete scale: 0=dim, 1=grey, 2=slight color, 3+=bright
+		if (txCount === 0) return 'bg-base-alt/40'
+		if (txCount === 1) return 'bg-base-alt/70'
+		if (txCount === 2) return 'bg-emerald-800/70'
+		return 'bg-emerald-500'
+	}
+
+	if (!currentBlock) {
+		return (
+			<div className="flex flex-col gap-1.5 mt-2 mb-3">
+				<div className="flex items-center justify-center gap-[2px] w-full p-1">
+					{Array.from({ length: 30 }).map((_, i) => (
+						<div
+							key={i}
+							className="shrink-0 size-[8px] rounded-[1px] bg-base-alt/20 animate-pulse"
+						/>
+					))}
+				</div>
+				<div className="flex items-center justify-center">
+					<div className="flex items-center gap-1 h-5 px-2 rounded-full bg-white/5 border border-white/10">
+						<span className="text-[11px] text-tertiary">Block</span>
+						<span className="text-[11px] text-tertiary font-mono">...</span>
+					</div>
+				</div>
+			</div>
+		)
+	}
+
+	const shownBlock = displayBlock ?? currentBlock
+
+	return (
+		<div
+			ref={containerRef}
+			className="flex flex-col gap-1.5 mt-2 mb-3"
+			onMouseUp={handleMouseUp}
+			onMouseLeave={() => {
+				setHoveredBlock(null)
+				if (dragState) {
+					handleMouseUp()
+				}
+			}}
+		>
+			<div
+				ref={scrollRef}
+				onScroll={handleScroll}
+				onKeyDown={handleKeyDown}
+				tabIndex={0}
+				role="listbox"
+				aria-label={t('portfolio.blockTimeline') || 'Block timeline'}
+				aria-activedescendant={
+					focusedBlockIndex !== null
+						? `block-${blocks[focusedBlockIndex]?.blockNumber.toString()}`
+						: undefined
+				}
+				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar py-1.5 -mx-2 px-2 focus-ring rounded-sm"
+			>
+				{blocks.map((block, index) => {
+					const isSelected = selectedBlock === block.blockNumber
+					const isCurrent =
+						block.blockNumber === shownBlock && !block.isPlaceholder
+					const isFocused = focusedBlockIndex === index
+					const inDragRange = isInDragRange(block.blockNumber)
+					return (
+						<button
+							key={block.blockNumber.toString()}
+							id={`block-${block.blockNumber.toString()}`}
+							type="button"
+							role="option"
+							aria-selected={isSelected}
+							onMouseDown={() =>
+								handleMouseDown(block.blockNumber, block.isPlaceholder)
+							}
+							onMouseEnter={(e) =>
+								handleMouseEnter(block.blockNumber, block.isPlaceholder, e)
+							}
+							onMouseLeave={() => setHoveredBlock(null)}
+							disabled={block.isPlaceholder}
+							className={cx(
+								'shrink-0 size-3 rounded-sm transition-colors duration-75',
+								inDragRange && !block.isPlaceholder
+									? 'block-range-selected'
+									: getBlockStyle(
+											block.txCount,
+											isSelected,
+											isCurrent,
+											block.hasUserActivity,
+											block.isPlaceholder,
+										),
+								isCurrent &&
+									!isSelected &&
+									'ring-2 ring-white/50',
+								isSelected && 'ring-2 ring-accent',
+								isFocused && !isSelected && 'ring-2 ring-accent/50',
+								block.hasUserActivity &&
+									!isSelected &&
+									!isCurrent &&
+									!isFocused &&
+									'ring-1 ring-green-500/60',
+								block.isPlaceholder
+									? 'cursor-default'
+									: 'hover:opacity-80 cursor-pointer',
+							)}
+						/>
+					)
+				})}
+			</div>
+
+			{/* Hover tooltip */}
+			{hoveredBlock &&
+				createPortal(
+					<div
+						className="fixed z-[100] px-2 py-1 text-[11px] text-white bg-gray-900 rounded-md shadow-lg whitespace-nowrap pointer-events-none border border-gray-700"
+						style={{
+							left: hoveredBlock.x,
+							top: hoveredBlock.y - 6,
+							transform: 'translate(-50%, -100%)',
+						}}
+					>
+						<span className="font-medium font-mono">
+							#{hoveredBlock.blockNumber.toString()}
+						</span>
+						{hoveredBlock.txCount > 0 && (
+							<>
+								{' • '}
+								<span className="text-emerald-400">
+									{hoveredBlock.txCount} tx
+									{hoveredBlock.txCount !== 1 ? 's' : ''}
+								</span>
+							</>
+						)}
+					</div>,
+					document.body,
+				)}
+
+			<div className="flex items-center justify-center">
+				<div
+					className={cx(
+						'flex items-center gap-1.5 h-5 pl-0.5 pr-2 rounded-full border transition-colors',
+						selectedBlock !== undefined
+							? 'bg-accent/20 border-accent/30'
+							: 'bg-white/5 border-white/10',
+					)}
+				>
+					<button
+						type="button"
+						onClick={(e) => {
+							e.stopPropagation()
+							if (pauseTimeoutRef.current) {
+								clearTimeout(pauseTimeoutRef.current)
+								pauseTimeoutRef.current = null
+							}
+							if (isPaused || selectedBlock !== undefined) {
+								setIsPaused(false)
+								onSelectBlock(undefined)
+								if (currentBlock) {
+									setDisplayBlock(currentBlock)
+								}
+							} else {
+								setIsPaused(true)
+							}
+						}}
+						className={cx(
+							'flex items-center justify-center size-4 rounded-full transition-colors cursor-pointer',
+							isPaused || selectedBlock !== undefined
+								? 'bg-accent/30 hover:bg-accent/40'
+								: 'bg-white/10 hover:bg-white/20',
+						)}
+						aria-label={isPaused || selectedBlock !== undefined ? 'Resume live updates' : 'Pause live updates'}
+					>
+						{isPaused || selectedBlock !== undefined ? (
+							<PlayIcon className="size-2 text-accent fill-accent" />
+						) : (
+							<PauseIcon className="size-2 text-tertiary fill-tertiary" />
+						)}
+					</button>
+					<span className="text-[11px] text-tertiary">Block</span>
+					<span className="text-[11px] text-primary font-mono tabular-nums">
+						{selectedBlock !== undefined
+							? selectedBlock.toString()
+							: (shownBlock?.toString() ?? '...')}
+					</span>
+				</div>
+			</div>
+		</div>
+	)
 }
 
 function HoldingsTable({
@@ -3098,6 +3669,293 @@ function AssetRow({
 		</div>
 	)
 }
+
+type ActivityTab = 'mine' | 'everyone'
+
+function ActivitySection({
+	activity,
+	address,
+	currentBlock,
+	tokenMetadataMap,
+}: {
+	activity: ActivityItem[]
+	address: string
+	currentBlock: bigint | null
+	tokenMetadataMap: Map<Address.Address, { decimals: number; symbol: string }>
+}) {
+	const { t } = useTranslation()
+	const [activeTab, setActiveTab] = React.useState<ActivityTab>('mine')
+	const [selectedBlock, setSelectedBlock] = React.useState<bigint | undefined>()
+	const [blockActivity, setBlockActivity] = React.useState<ActivityItem[]>([])
+
+	const userTxHashes = React.useMemo(
+		() => new Set(activity.map((a) => a.hash.toLowerCase())),
+		[activity],
+	)
+
+	// Store tokenMetadataMap in a ref to avoid triggering effect on map changes
+	const tokenMetadataMapRef = React.useRef(tokenMetadataMap)
+	tokenMetadataMapRef.current = tokenMetadataMap
+
+	// Track which block we're currently showing to avoid flicker
+	const [loadedBlock, setLoadedBlock] = React.useState<bigint | undefined>()
+
+	// Fetch block transactions when a block is selected in "Everyone" tab
+	React.useEffect(() => {
+		if (activeTab !== 'everyone' || selectedBlock === undefined) {
+			return
+		}
+
+		// Clear previous block's activity immediately when selecting a new block
+		if (loadedBlock !== selectedBlock) {
+			setBlockActivity([])
+		}
+
+		let cancelled = false
+		const loadBlockTxs = async () => {
+			try {
+				const result = await fetchBlockWithReceipts({
+					data: { blockNumber: selectedBlock.toString() },
+				})
+
+				if (cancelled) return
+
+				if (result.receipts.length > 0) {
+					const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) =>
+						tokenMetadataMapRef.current.get(tokenAddress)
+
+					const items: ActivityItem[] = []
+					for (const receipt of result.receipts) {
+						let events: KnownEvent[] = []
+						try {
+							const viemReceipt = convertRpcReceiptToViemReceipt(receipt)
+							events = parseKnownEvents(viemReceipt, {
+								getTokenMetadata,
+								viewer: receipt.from,
+							})
+						} catch {
+							// parsing failed, show tx with empty events
+						}
+
+						// Detect system transactions if no events were parsed
+						if (events.length === 0 && receipt.to) {
+							const to = receipt.to.toLowerCase()
+							if (to === '0x0000000000000000000000000000000000000000') {
+								events = [
+									{
+										type: 'system',
+										parts: [{ type: 'action', value: 'Subblock Metadata' }],
+									},
+								]
+							}
+						}
+
+						items.push({
+							hash: receipt.transactionHash,
+							events,
+							timestamp: result.timestamp,
+							blockNumber: selectedBlock,
+						})
+					}
+					setBlockActivity(items)
+				} else {
+					setBlockActivity([])
+				}
+				setLoadedBlock(selectedBlock)
+			} catch {
+				if (!cancelled) {
+					setBlockActivity([])
+					setLoadedBlock(selectedBlock)
+				}
+			}
+		}
+
+		loadBlockTxs()
+		return () => {
+			cancelled = true
+		}
+	}, [activeTab, selectedBlock])
+
+	// Clear selection when switching tabs
+	React.useEffect(() => {
+		if (activeTab === 'mine') {
+			setSelectedBlock(undefined)
+			setBlockActivity([])
+		}
+	}, [activeTab])
+
+	const tabButtons = (
+		<div className="flex items-center gap-3">
+			<button
+				type="button"
+				onClick={(e) => {
+					e.stopPropagation()
+					setActiveTab('mine')
+				}}
+				className={cx(
+					'text-[12px] font-medium transition-all pb-0.5 border-b-2',
+					activeTab === 'mine'
+						? 'text-primary border-accent'
+						: 'text-tertiary hover:text-primary border-transparent',
+				)}
+			>
+				{t('portfolio.mine')}
+			</button>
+			<button
+				type="button"
+				onClick={(e) => {
+					e.stopPropagation()
+					setActiveTab('everyone')
+				}}
+				className={cx(
+					'text-[12px] font-medium transition-all pb-0.5 border-b-2',
+					activeTab === 'everyone'
+						? 'text-primary border-accent'
+						: 'text-tertiary hover:text-primary border-transparent',
+				)}
+			>
+				{t('portfolio.everyone')}
+			</button>
+		</div>
+	)
+
+	return (
+		<Section
+			title={t('portfolio.activity')}
+			externalLink={`https://explore.mainnet.tempo.xyz/address/${address}`}
+			defaultOpen
+			titleRight={tabButtons}
+		>
+			{activeTab === 'mine' ? (
+				<>
+					<ActivityHeatmap activity={activity} />
+					<ActivityList
+						activity={activity}
+						address={address}
+						filterBlockNumber={undefined}
+					/>
+				</>
+			) : (
+				<>
+					<BlockTimeline
+						activity={activity}
+						currentBlock={currentBlock}
+						selectedBlock={selectedBlock}
+						onSelectBlock={setSelectedBlock}
+					/>
+					<div className="border-b border-border-tertiary -mx-4 mt-2 mb-3" />
+
+					{selectedBlock === undefined ? (
+						<div className="flex flex-col items-center justify-center min-h-[80px] py-6 gap-2">
+							<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
+								<ReceiptIcon className="size-5 text-tertiary" />
+							</div>
+							<p className="text-[13px] text-secondary">
+								{t('portfolio.selectBlockToView') ||
+									'Select a block to view transactions'}
+							</p>
+						</div>
+					) : (
+						<div>
+							{blockActivity.length === 0 && loadedBlock === selectedBlock ? (
+								<div className="flex flex-col items-center justify-center py-6 gap-2">
+									<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
+										<ReceiptIcon className="size-5 text-tertiary" />
+									</div>
+									<p className="text-[13px] text-secondary">
+										{t('portfolio.noActivityInBlock')}
+									</p>
+									<a
+										href={`https://explore.mainnet.tempo.xyz/block/${selectedBlock}`}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-[12px] text-accent hover:underline"
+									>
+										{t('portfolio.viewBlockInExplorer')}
+									</a>
+								</div>
+							) : blockActivity.length > 0 ? (
+								<BlockActivityList
+									activity={blockActivity}
+									address={address}
+									userTxHashes={userTxHashes}
+									blockNumber={loadedBlock ?? selectedBlock}
+								/>
+							) : (
+								<div className="flex items-center justify-center min-h-[80px]">
+									<RefreshCwIcon className="size-5 text-tertiary animate-spin" />
+								</div>
+							)}
+						</div>
+					)}
+				</>
+			)}
+		</Section>
+	)
+}
+
+function BlockActivityList({
+	activity,
+	address,
+	userTxHashes,
+	blockNumber,
+}: {
+	activity: ActivityItem[]
+	address: string
+	userTxHashes: Set<string>
+	blockNumber: bigint
+}) {
+	const viewer = address as Address.Address
+	const [page, setPage] = React.useState(0)
+
+	const totalPages = Math.ceil(activity.length / ACTIVITY_PAGE_SIZE)
+	const paginatedActivity = activity.slice(
+		page * ACTIVITY_PAGE_SIZE,
+		(page + 1) * ACTIVITY_PAGE_SIZE,
+	)
+
+	const transformEvent = (event: KnownEvent) =>
+		getPerspectiveEvent(event, viewer)
+
+	return (
+		<div className="text-[13px] -mx-2">
+			<div className="px-3 py-2 text-[11px] text-tertiary">
+				Block {blockNumber.toString()} • {activity.length} transaction
+				{activity.length !== 1 ? 's' : ''}
+			</div>
+			{paginatedActivity.map((item) => (
+				<ActivityRow
+					key={item.hash}
+					item={item}
+					viewer={viewer}
+					transformEvent={transformEvent}
+					isHighlighted={userTxHashes.has(item.hash.toLowerCase())}
+				/>
+			))}
+			{totalPages > 1 && (
+				<div className="flex items-center justify-center gap-1 pt-3 pb-1">
+					{Array.from({ length: totalPages }, (_, i) => (
+						<button
+							key={`block-activity-page-${i}`}
+							type="button"
+							onClick={() => setPage(i)}
+							className={cx(
+								'size-[28px] rounded-full text-[12px] cursor-pointer transition-all',
+								page === i
+									? 'bg-accent text-white'
+									: 'hover:bg-base-alt text-tertiary',
+							)}
+						>
+							{i + 1}
+						</button>
+					))}
+				</div>
+			)}
+		</div>
+	)
+}
+
+const ACTIVITY_PAGE_SIZE = 10
 
 function ActivityList({
 	activity,
