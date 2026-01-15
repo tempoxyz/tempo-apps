@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Verberg nulsaldi",
 		"showZeroBalances": "Toon nulsaldi",
 		"noActivityYet": "Nog geen activiteit",
+		"noActivityInBlock": "Geen activiteit in dit blok",
 		"noAssetsFound": "Geen activa gevonden"
 	},
 	"landing": {

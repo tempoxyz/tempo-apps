@@ -49,6 +49,7 @@
 		"hideZeroBalances": "ซ่อนยอดเงินศูนย์",
 		"showZeroBalances": "แสดงยอดเงินศูนย์",
 		"noActivityYet": "ยังไม่มีกิจกรรม",
+		"noActivityInBlock": "ไม่มีกิจกรรมในบล็อกนี้",
 		"noAssetsFound": "ไม่พบสินทรัพย์"
 	},
 	"landing": {

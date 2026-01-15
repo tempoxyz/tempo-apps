@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Masquer les soldes nuls",
 		"showZeroBalances": "Afficher les soldes nuls",
 		"noActivityYet": "Pas encore d'activité",
+		"noActivityInBlock": "Pas d'activité dans ce bloc",
 		"noAssetsFound": "Aucun actif trouvé"
 	},
 	"landing": {

@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Ascunde solduri zero",
 		"showZeroBalances": "Afișează solduri zero",
 		"noActivityYet": "Nicio activitate încă",
+		"noActivityInBlock": "Nicio activitate în acest bloc",
 		"noAssetsFound": "Nu s-au găsit active"
 	},
 	"landing": {

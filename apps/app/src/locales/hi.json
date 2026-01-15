@@ -49,6 +49,7 @@
 		"hideZeroBalances": "शून्य शेष छुपाएं",
 		"showZeroBalances": "शून्य शेष दिखाएं",
 		"noActivityYet": "अभी तक कोई गतिविधि नहीं",
+		"noActivityInBlock": "इस ब्लॉक में कोई गतिविधि नहीं",
 		"noAssetsFound": "कोई संपत्ति नहीं मिली"
 	},
 	"landing": {

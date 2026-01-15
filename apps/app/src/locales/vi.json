@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Ẩn số dư bằng không",
 		"showZeroBalances": "Hiển thị số dư bằng không",
 		"noActivityYet": "Chưa có hoạt động",
+		"noActivityInBlock": "Không có hoạt động trong khối này",
 		"noAssetsFound": "Không tìm thấy tài sản"
 	},
 	"landing": {

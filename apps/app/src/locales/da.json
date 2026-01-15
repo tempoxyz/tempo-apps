@@ -49,6 +49,7 @@
 		"hideZeroBalances": "Skjul nulsaldi",
 		"showZeroBalances": "Vis nulsaldi",
 		"noActivityYet": "Ingen aktivitet endnu",
+		"noActivityInBlock": "Ingen aktivitet i denne blok",
 		"noAssetsFound": "Ingen aktiver fundet"
 	},
 	"landing": {

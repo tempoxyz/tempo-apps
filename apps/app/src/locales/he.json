@@ -49,6 +49,7 @@
 		"hideZeroBalances": "הסתר יתרות אפס",
 		"showZeroBalances": "הצג יתרות אפס",
 		"noActivityYet": "אין עדיין פעילות",
+		"noActivityInBlock": "אין פעילות בבלוק הזה",
 		"noAssetsFound": "לא נמצאו נכסים"
 	},
 	"landing": {

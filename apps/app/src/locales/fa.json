@@ -49,6 +49,7 @@
 		"hideZeroBalances": "پنهان کردن موجودی صفر",
 		"showZeroBalances": "نمایش موجودی صفر",
 		"noActivityYet": "هنوز فعالیتی نیست",
+		"noActivityInBlock": "فعالیتی در این بلوک نیست",
 		"noAssetsFound": "دارایی یافت نشد"
 	},
 	"landing": {
