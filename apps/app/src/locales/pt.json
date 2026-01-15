@@ -9,7 +9,8 @@
 		"feeToken": "Token de Taxa",
 		"feeTokenDescription": "Selecione qual token usar para pagar taxas de transação.",
 		"language": "Idioma",
-		"languageDescription": "Escolha seu idioma preferido."
+		"languageDescription": "Escolha seu idioma preferido.",
+		"notSet": "Não definido"
 	},
 	"common": {
 		"active": "Ativo",
@@ -20,7 +21,24 @@
 		"recipient": "Destinatário 0x...",
 		"amount": "Quantia",
 		"max": "MÁX",
-		"cancel": "Cancelar"
+		"cancel": "Cancelar",
+		"search": "Pesquisar",
+		"signUp": "Cadastrar",
+		"signIn": "Entrar",
+		"continue": "Continuar",
+		"logOut": "Sair",
+		"copyAddress": "Copiar endereço",
+		"viewOnExplorer": "Ver no Explorador",
+		"viewReceipt": "Ver recibo",
+		"viewTransaction": "Ver transação",
+		"requestTokens": "Solicitar tokens",
+		"transaction": "Transação",
+		"transactions": "transações",
+		"transactionOn": "em",
+		"self": "próprio",
+		"andMore": "e mais {{count}}",
+		"sentSuccessfully": "{{symbol}} enviado com sucesso",
+		"demoNote": "Esta é uma demo, os saldos não são atualizados."
 	},
 	"portfolio": {
 		"title": "Portfólio",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "ativos",
 		"hideZeroBalances": "Ocultar saldos zerados",
 		"showZeroBalances": "Mostrar saldos zerados",
-		"noActivityYet": "Nenhuma atividade ainda"
+		"noActivityYet": "Nenhuma atividade ainda",
+		"noAssetsFound": "Nenhum ativo encontrado"
+	},
+	"landing": {
+		"getStarted": "Começar",
+		"exploreDescription": "Explore contas, saldos de tokens e histórico de transações no Tempo",
+		"enterAddress": "Digite o endereço",
+		"orUsePasskey": "ou use outra chave de acesso",
+		"orSignInWithPasskey": "ou entre com chave de acesso"
+	},
+	"receipt": {
+		"block": "Bloco",
+		"sender": "Remetente",
+		"hash": "Hash",
+		"date": "Data",
+		"time": "Hora"
 	}
 }

@@ -9,7 +9,8 @@
 		"feeToken": "Vergoedingstoken",
 		"feeTokenDescription": "Selecteer welke token te gebruiken voor transactiekosten.",
 		"language": "Taal",
-		"languageDescription": "Kies je voorkeurstaal."
+		"languageDescription": "Kies je voorkeurstaal.",
+		"notSet": "Niet ingesteld"
 	},
 	"common": {
 		"active": "Actief",
@@ -20,7 +21,24 @@
 		"recipient": "Ontvanger 0x...",
 		"amount": "Bedrag",
 		"max": "MAX",
-		"cancel": "Annuleren"
+		"cancel": "Annuleren",
+		"search": "Zoeken",
+		"signUp": "Registreren",
+		"signIn": "Inloggen",
+		"continue": "Doorgaan",
+		"logOut": "Uitloggen",
+		"copyAddress": "Kopieer adres",
+		"viewOnExplorer": "Bekijk op Explorer",
+		"viewReceipt": "Bekijk ontvangstbewijs",
+		"viewTransaction": "Bekijk transactie",
+		"requestTokens": "Tokens aanvragen",
+		"transaction": "Transactie",
+		"transactions": "transacties",
+		"transactionOn": "op",
+		"self": "zelf",
+		"andMore": "en {{count}} meer",
+		"sentSuccessfully": "{{symbol}} succesvol verzonden",
+		"demoNote": "Dit is een demo, saldi worden niet bijgewerkt."
 	},
 	"portfolio": {
 		"title": "Portfolio",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "activa",
 		"hideZeroBalances": "Verberg nulsaldi",
 		"showZeroBalances": "Toon nulsaldi",
-		"noActivityYet": "Nog geen activiteit"
+		"noActivityYet": "Nog geen activiteit",
+		"noAssetsFound": "Geen activa gevonden"
+	},
+	"landing": {
+		"getStarted": "Aan de slag",
+		"exploreDescription": "Verken accounts, tokensaldi en transactiegeschiedenis op Tempo",
+		"enterAddress": "Voer adres in",
+		"orUsePasskey": "of gebruik een andere passkey",
+		"orSignInWithPasskey": "of log in met passkey"
+	},
+	"receipt": {
+		"block": "Blok",
+		"sender": "Afzender",
+		"hash": "Hash",
+		"date": "Datum",
+		"time": "Tijd"
 	}
 }

@@ -9,7 +9,8 @@
 		"feeToken": "Token commissione",
 		"feeTokenDescription": "Seleziona quale token utilizzare per pagare le commissioni di transazione.",
 		"language": "Lingua",
-		"languageDescription": "Scegli la tua lingua preferita."
+		"languageDescription": "Scegli la tua lingua preferita.",
+		"notSet": "Non impostato"
 	},
 	"common": {
 		"active": "Attivo",
@@ -20,7 +21,24 @@
 		"recipient": "Destinatario 0x...",
 		"amount": "Importo",
 		"max": "MAX",
-		"cancel": "Annulla"
+		"cancel": "Annulla",
+		"search": "Cerca",
+		"signUp": "Registrati",
+		"signIn": "Accedi",
+		"continue": "Continua",
+		"logOut": "Esci",
+		"copyAddress": "Copia indirizzo",
+		"viewOnExplorer": "Vedi su Explorer",
+		"viewReceipt": "Vedi ricevuta",
+		"viewTransaction": "Vedi transazione",
+		"requestTokens": "Richiedi token",
+		"transaction": "Transazione",
+		"transactions": "transazioni",
+		"transactionOn": "il",
+		"self": "stesso",
+		"andMore": "e altri {{count}}",
+		"sentSuccessfully": "{{symbol}} inviato con successo",
+		"demoNote": "Questa è una demo, i saldi non vengono aggiornati."
 	},
 	"portfolio": {
 		"title": "Portafoglio",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "asset",
 		"hideZeroBalances": "Nascondi saldi zero",
 		"showZeroBalances": "Mostra saldi zero",
-		"noActivityYet": "Nessuna attività ancora"
+		"noActivityYet": "Nessuna attività ancora",
+		"noAssetsFound": "Nessun asset trovato"
+	},
+	"landing": {
+		"getStarted": "Inizia",
+		"exploreDescription": "Esplora account, saldi token e cronologia transazioni su Tempo",
+		"enterAddress": "Inserisci indirizzo",
+		"orUsePasskey": "o usa un'altra passkey",
+		"orSignInWithPasskey": "o accedi con passkey"
+	},
+	"receipt": {
+		"block": "Blocco",
+		"sender": "Mittente",
+		"hash": "Hash",
+		"date": "Data",
+		"time": "Ora"
 	}
 }

@@ -9,7 +9,8 @@
 		"feeToken": "Jeton de frais",
 		"feeTokenDescription": "Sélectionnez le jeton à utiliser pour payer les frais de transaction.",
 		"language": "Langue",
-		"languageDescription": "Choisissez votre langue préférée."
+		"languageDescription": "Choisissez votre langue préférée.",
+		"notSet": "Non défini"
 	},
 	"common": {
 		"active": "Actif",
@@ -20,7 +21,24 @@
 		"recipient": "Destinataire 0x...",
 		"amount": "Montant",
 		"max": "MAX",
-		"cancel": "Annuler"
+		"cancel": "Annuler",
+		"search": "Rechercher",
+		"signUp": "S'inscrire",
+		"signIn": "Se connecter",
+		"continue": "Continuer",
+		"logOut": "Déconnexion",
+		"copyAddress": "Copier l'adresse",
+		"viewOnExplorer": "Voir sur l'explorateur",
+		"viewReceipt": "Voir le reçu",
+		"viewTransaction": "Voir la transaction",
+		"requestTokens": "Demander des jetons",
+		"transaction": "Transaction",
+		"transactions": "transactions",
+		"transactionOn": "le",
+		"self": "soi",
+		"andMore": "et {{count}} de plus",
+		"sentSuccessfully": "{{symbol}} envoyé avec succès",
+		"demoNote": "Ceci est une démo, les soldes ne sont pas mis à jour."
 	},
 	"portfolio": {
 		"title": "Portefeuille",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "actifs",
 		"hideZeroBalances": "Masquer les soldes nuls",
 		"showZeroBalances": "Afficher les soldes nuls",
-		"noActivityYet": "Pas encore d'activité"
+		"noActivityYet": "Pas encore d'activité",
+		"noAssetsFound": "Aucun actif trouvé"
+	},
+	"landing": {
+		"getStarted": "Commencer",
+		"exploreDescription": "Explorez les comptes, les soldes de jetons et l'historique des transactions sur Tempo",
+		"enterAddress": "Entrer l'adresse",
+		"orUsePasskey": "ou utiliser une autre clé d'accès",
+		"orSignInWithPasskey": "ou se connecter avec clé d'accès"
+	},
+	"receipt": {
+		"block": "Bloc",
+		"sender": "Expéditeur",
+		"hash": "Hash",
+		"date": "Date",
+		"time": "Heure"
 	}
 }

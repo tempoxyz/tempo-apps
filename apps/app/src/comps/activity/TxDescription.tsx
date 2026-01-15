@@ -32,39 +32,121 @@ import RefreshCwIcon from '~icons/lucide/refresh-cw'
 
 const EXPLORER_URL = 'https://explore.mainnet.tempo.xyz'
 
-function getActionIcon(action: string): React.ReactNode {
+const ACTION_STYLES: Record<
+	string,
+	{ icon: React.ReactNode; color: string; bg: string }
+> = {
+	send: {
+		icon: <ArrowUpRightIcon className="size-[12px]" />,
+		color: '#3b82f6',
+		bg: 'rgba(59, 130, 246, 0.15)',
+	},
+	received: {
+		icon: <ArrowDownLeftIcon className="size-[12px]" />,
+		color: '#22c55e',
+		bg: 'rgba(34, 197, 94, 0.15)',
+	},
+	mint: {
+		icon: <SparklesIcon className="size-[12px]" />,
+		color: '#f97316',
+		bg: 'rgba(249, 115, 22, 0.15)',
+	},
+	burn: {
+		icon: <FlameIcon className="size-[12px]" />,
+		color: '#ef4444',
+		bg: 'rgba(239, 68, 68, 0.15)',
+	},
+	swap: {
+		icon: <ArrowLeftRightIcon className="size-[12px]" />,
+		color: '#8b5cf6',
+		bg: 'rgba(139, 92, 246, 0.15)',
+	},
+	approve: {
+		icon: <CheckCircleIcon className="size-[12px]" />,
+		color: '#06b6d4',
+		bg: 'rgba(6, 182, 212, 0.15)',
+	},
+	'grant role': {
+		icon: <ShieldCheckIcon className="size-[12px]" />,
+		color: '#22c55e',
+		bg: 'rgba(34, 197, 94, 0.15)',
+	},
+	'revoke role': {
+		icon: <ShieldOffIcon className="size-[12px]" />,
+		color: '#ef4444',
+		bg: 'rgba(239, 68, 68, 0.15)',
+	},
+	'pause transfers': {
+		icon: <PauseIcon className="size-[12px]" />,
+		color: '#f59e0b',
+		bg: 'rgba(245, 158, 11, 0.15)',
+	},
+	'resume transfers': {
+		icon: <PlayIcon className="size-[12px]" />,
+		color: '#22c55e',
+		bg: 'rgba(34, 197, 94, 0.15)',
+	},
+	'create token': {
+		icon: <PlusCircleIcon className="size-[12px]" />,
+		color: '#8b5cf6',
+		bg: 'rgba(139, 92, 246, 0.15)',
+	},
+	'partial fill': {
+		icon: <CheckIcon className="size-[12px]" />,
+		color: '#22c55e',
+		bg: 'rgba(34, 197, 94, 0.15)',
+	},
+	'complete fill': {
+		icon: <CheckIcon className="size-[12px]" />,
+		color: '#22c55e',
+		bg: 'rgba(34, 197, 94, 0.15)',
+	},
+	'cancel order': {
+		icon: <XIcon className="size-[12px]" />,
+		color: '#ef4444',
+		bg: 'rgba(239, 68, 68, 0.15)',
+	},
+	'set fee token': {
+		icon: <SettingsIcon className="size-[12px]" />,
+		color: '#6b7280',
+		bg: 'rgba(107, 114, 128, 0.15)',
+	},
+	'pay fee': {
+		icon: <CoinsIcon className="size-[12px]" />,
+		color: '#f59e0b',
+		bg: 'rgba(245, 158, 11, 0.15)',
+	},
+}
+
+function getActionStyle(action: string): {
+	icon: React.ReactNode
+	color: string
+	bg: string
+} {
 	const normalized = action.toLowerCase()
-	if (normalized === 'send') return <ArrowUpRightIcon className="size-[12px]" />
-	if (normalized === 'received')
-		return <ArrowDownLeftIcon className="size-[12px]" />
-	if (normalized === 'mint') return <SparklesIcon className="size-[12px]" />
-	if (normalized === 'burn') return <FlameIcon className="size-[12px]" />
-	if (normalized === 'grant role')
-		return <ShieldCheckIcon className="size-[12px]" />
-	if (normalized === 'revoke role')
-		return <ShieldOffIcon className="size-[12px]" />
-	if (normalized === 'pause transfers')
-		return <PauseIcon className="size-[12px]" />
-	if (normalized === 'resume transfers')
-		return <PlayIcon className="size-[12px]" />
-	if (normalized === 'approve')
-		return <CheckCircleIcon className="size-[12px]" />
-	if (normalized === 'create token')
-		return <PlusCircleIcon className="size-[12px]" />
+
+	if (ACTION_STYLES[normalized]) return ACTION_STYLES[normalized]
+
 	if (normalized.includes('buy'))
-		return <ShoppingCartIcon className="size-[12px]" />
-	if (normalized.includes('sell')) return <TagIcon className="size-[12px]" />
-	if (normalized === 'partial fill' || normalized === 'complete fill')
-		return <CheckIcon className="size-[12px]" />
-	if (normalized === 'cancel order') return <XIcon className="size-[12px]" />
-	if (normalized === 'set fee token')
-		return <SettingsIcon className="size-[12px]" />
-	if (normalized === 'pay fee') return <CoinsIcon className="size-[12px]" />
-	if (normalized === 'swap')
-		return <ArrowLeftRightIcon className="size-[12px]" />
+		return {
+			icon: <ShoppingCartIcon className="size-[12px]" />,
+			color: '#22c55e',
+			bg: 'rgba(34, 197, 94, 0.15)',
+		}
+	if (normalized.includes('sell'))
+		return {
+			icon: <TagIcon className="size-[12px]" />,
+			color: '#ef4444',
+			bg: 'rgba(239, 68, 68, 0.15)',
+		}
 	if (normalized.includes('flip'))
-		return <RefreshCwIcon className="size-[12px]" />
-	return null
+		return {
+			icon: <RefreshCwIcon className="size-[12px]" />,
+			color: '#8b5cf6',
+			bg: 'rgba(139, 92, 246, 0.15)',
+		}
+
+	return { icon: null, color: '#6b7280', bg: 'rgba(107, 114, 128, 0.15)' }
 }
 
 function shortenAddress(address: string, chars = 4): string {
@@ -119,9 +201,12 @@ export namespace TxDescription {
 				)
 			}
 			case 'action': {
-				const icon = getActionIcon(part.value)
+				const { icon, color, bg } = getActionStyle(part.value)
 				return (
-					<span className="inline-flex items-center gap-1 h-[24px] px-[6px] bg-base-alt text-base-content capitalize rounded-[4px]">
+					<span
+						className="inline-flex items-center gap-1 h-[24px] px-[6px] capitalize rounded-[4px]"
+						style={{ color, backgroundColor: bg }}
+					>
 						{icon}
 						{part.value}
 					</span>
