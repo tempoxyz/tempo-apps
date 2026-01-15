@@ -1974,7 +1974,7 @@ function BlockTimeline({
 										),
 								isCurrent &&
 									!isSelected &&
-									'ring-2 ring-white/50 animate-block-pulse',
+									'ring-2 ring-white/50',
 								isSelected && 'ring-2 ring-accent',
 								isFocused && !isSelected && 'ring-2 ring-accent/50',
 								block.hasUserActivity &&
@@ -2021,7 +2021,7 @@ function BlockTimeline({
 			<div className="flex items-center justify-center">
 				<div
 					className={cx(
-						'flex items-center gap-1 h-5 pl-0.5 pr-2 rounded-full border transition-colors',
+						'flex items-center gap-1.5 h-5 pl-0.5 pr-2 rounded-full border transition-colors',
 						selectedBlock !== undefined
 							? 'bg-accent/20 border-accent/30'
 							: 'bg-white/5 border-white/10',
@@ -2029,13 +2029,15 @@ function BlockTimeline({
 				>
 					<button
 						type="button"
-						onClick={() => {
+						onClick={(e) => {
+							e.stopPropagation()
 							if (pauseTimeoutRef.current) {
 								clearTimeout(pauseTimeoutRef.current)
 								pauseTimeoutRef.current = null
 							}
-							if (isPaused) {
+							if (isPaused || selectedBlock !== undefined) {
 								setIsPaused(false)
+								onSelectBlock(undefined)
 								if (currentBlock) {
 									setDisplayBlock(currentBlock)
 								}
@@ -2045,14 +2047,14 @@ function BlockTimeline({
 						}}
 						className={cx(
 							'flex items-center justify-center size-4 rounded-full transition-colors cursor-pointer',
-							isPaused
-								? 'bg-amber-500/30 hover:bg-amber-500/40'
+							isPaused || selectedBlock !== undefined
+								? 'bg-accent/30 hover:bg-accent/40'
 								: 'bg-white/10 hover:bg-white/20',
 						)}
-						aria-label={isPaused ? 'Resume live updates' : 'Pause live updates'}
+						aria-label={isPaused || selectedBlock !== undefined ? 'Resume live updates' : 'Pause live updates'}
 					>
-						{isPaused ? (
-							<PlayIcon className="size-2 text-amber-500 fill-amber-500" />
+						{isPaused || selectedBlock !== undefined ? (
+							<PlayIcon className="size-2 text-accent fill-accent" />
 						) : (
 							<PauseIcon className="size-2 text-tertiary fill-tertiary" />
 						)}
@@ -2063,16 +2065,6 @@ function BlockTimeline({
 							? selectedBlock.toString()
 							: (shownBlock?.toString() ?? '...')}
 					</span>
-					{selectedBlock !== undefined && (
-						<button
-							type="button"
-							onClick={() => onSelectBlock(undefined)}
-							className="flex items-center justify-center size-4 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
-							aria-label="Clear block selection"
-						>
-							<XIcon className="size-[8px] text-accent/70" />
-						</button>
-					)}
 				</div>
 			</div>
 		</div>
@@ -2722,6 +2714,11 @@ function ActivitySection({
 	React.useEffect(() => {
 		if (activeTab !== 'everyone' || selectedBlock === undefined) {
 			return
+		}
+
+		// Clear previous block's activity immediately when selecting a new block
+		if (loadedBlock !== selectedBlock) {
+			setBlockActivity([])
 		}
 
 		let cancelled = false
