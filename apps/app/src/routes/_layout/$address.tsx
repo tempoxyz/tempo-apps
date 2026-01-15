@@ -2650,78 +2650,80 @@ function AssetRow({
 					e.preventDefault()
 					handleSend()
 				}}
-				className="flex flex-col sm:flex-row sm:items-center gap-2 px-1 py-2.5 sm:py-0 rounded-xl hover:glass-thin transition-all sm:h-[52px]"
+				className="flex flex-col gap-2 px-1 py-2.5 rounded-xl hover:glass-thin transition-all"
 			>
-				<div className="flex items-center gap-1.5 flex-1 min-w-0">
-					<TokenIcon address={asset.address} className="size-[24px] shrink-0" />
-					<input
-						ref={recipientInputRef}
-						type="text"
-						value={recipient}
-						onChange={(e) => setRecipient(e.target.value)}
-						placeholder="0x..."
-						className="flex-1 min-w-0 h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
-					/>
-				</div>
-				<div className="flex items-center gap-1">
-					<input
-						ref={amountInputRef}
-						type="text"
-						inputMode="decimal"
-						value={amount}
-						onChange={(e) => setAmount(e.target.value)}
-						placeholder="0.00"
-						className="w-[10ch] h-[32px] pl-1 pr-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
-					/>
-					<button
-						type="button"
-						onClick={handleMax}
-						className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[10px] font-medium text-accent hover:bg-base-alt cursor-pointer transition-colors"
-					>
-						MAX
-					</button>
-					<button
-						type="submit"
-						aria-label={t('common.send')}
-						aria-busy={sendState === 'sending'}
-						className={cx(
-							'size-[32px] rounded-lg press-down transition-colors flex items-center justify-center shrink-0 focus-ring',
-							sendState === 'sent'
-								? 'bg-positive text-white cursor-default'
-								: sendState === 'error'
-									? 'bg-negative text-white cursor-default'
-									: isValidSend && sendState === 'idle'
-										? 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
-										: 'bg-base-alt text-tertiary cursor-not-allowed',
-						)}
-						disabled={!isValidSend || sendState !== 'idle'}
-					>
-						{sendState === 'sending' ? (
-							<BouncingDots />
-						) : sendState === 'sent' ? (
-							<CheckIcon className="size-[14px]" />
-						) : sendState === 'error' ? (
+				<div className="flex flex-col sm:flex-row sm:items-center gap-2">
+					<div className="flex items-center gap-1.5 flex-1 min-w-0">
+						<TokenIcon address={asset.address} className="size-[24px] shrink-0" />
+						<input
+							ref={recipientInputRef}
+							type="text"
+							value={recipient}
+							onChange={(e) => setRecipient(e.target.value)}
+							placeholder="0x..."
+							className="flex-1 min-w-0 h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-left placeholder:text-tertiary focus:outline-none focus:border-accent"
+						/>
+					</div>
+					<div className="flex items-center gap-1">
+						<input
+							ref={amountInputRef}
+							type="text"
+							inputMode="decimal"
+							value={amount}
+							onChange={(e) => setAmount(e.target.value)}
+							placeholder="0.00"
+							className="w-[10ch] h-[32px] pl-1 pr-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono text-right placeholder:text-tertiary focus:outline-none focus:border-accent"
+						/>
+						<button
+							type="button"
+							onClick={handleMax}
+							className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[10px] font-medium text-accent hover:bg-base-alt cursor-pointer transition-colors"
+						>
+							MAX
+						</button>
+						<button
+							type="submit"
+							aria-label={t('common.send')}
+							aria-busy={sendState === 'sending'}
+							className={cx(
+								'size-[32px] rounded-lg press-down transition-colors flex items-center justify-center shrink-0 focus-ring',
+								sendState === 'sent'
+									? 'bg-positive text-white cursor-default'
+									: sendState === 'error'
+										? 'bg-negative text-white cursor-default'
+										: isValidSend && sendState === 'idle'
+											? 'bg-accent text-white hover:bg-accent/90 cursor-pointer'
+											: 'bg-base-alt text-tertiary cursor-not-allowed',
+							)}
+							disabled={!isValidSend || sendState !== 'idle'}
+						>
+							{sendState === 'sending' ? (
+								<BouncingDots />
+							) : sendState === 'sent' ? (
+								<CheckIcon className="size-[14px]" />
+							) : sendState === 'error' ? (
+								<XIcon className="size-[14px]" />
+							) : (
+								<SendIcon className="size-[14px]" />
+							)}
+						</button>
+						<button
+							type="button"
+							onClick={handleToggle}
+							aria-label={t('common.cancel')}
+							className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-lg transition-colors shrink-0 focus-ring"
+						>
 							<XIcon className="size-[14px]" />
-						) : (
-							<SendIcon className="size-[14px]" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={handleToggle}
-						aria-label={t('common.cancel')}
-						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-lg transition-colors shrink-0 focus-ring"
-					>
-						<XIcon className="size-[14px]" />
-					</button>
+						</button>
+					</div>
 				</div>
 				{availableAccessKeys.length > 0 && (
-					<div className="flex items-center gap-2 pl-[30px] sm:pl-0">
-						<span className="text-[11px] text-tertiary whitespace-nowrap">Sign with:</span>
+					<div className="flex items-center gap-2 pl-[30px]">
+						<span className="text-[12px] text-tertiary whitespace-nowrap">Sign with:</span>
 						<select
 							value={selectedAccessKey ?? ''}
 							onChange={(e) => setSelectedAccessKey(e.target.value || null)}
-							className="h-[24px] px-2 rounded-md border border-base-border bg-surface text-[11px] focus:outline-none focus:border-accent cursor-pointer min-w-0"
+							className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary focus:outline-none focus:border-accent cursor-pointer"
 						>
 							<option value="">Wallet (default)</option>
 							{availableAccessKeys.map((keyAddress) => (
@@ -2733,7 +2735,7 @@ function AssetRow({
 					</div>
 				)}
 				{sendError && (
-					<div className="col-span-full pl-9 sm:pl-0 text-[11px] text-negative truncate">
+					<div className="pl-[30px] text-[12px] text-negative truncate">
 						{sendError}
 					</div>
 				)}
