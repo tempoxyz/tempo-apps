@@ -127,8 +127,8 @@ catalogs:
       specifier: ^0.5.3
       version: 0.5.3
     idxs:
-      specifier: ^0.0.5
-      version: 0.0.5
+      specifier: ^0.0.6
+      version: 0.0.6
     jsonc-parser:
       specifier: ^3.3.1
       version: 3.3.1
@@ -341,7 +341,7 @@ importers:
         version: 4.11.4
       idxs:
         specifier: 'catalog:'
-        version: 0.0.5(typescript@5.9.3)
+        version: 0.0.6(typescript@5.9.3)
       ox:
         specifier: 'catalog:'
         version: 0.11.3(typescript@5.9.3)(zod@4.3.5)
@@ -462,7 +462,7 @@ importers:
         version: 4.11.4
       idxs:
         specifier: 'catalog:'
-        version: 0.0.5(typescript@5.9.3)
+        version: 0.0.6(typescript@5.9.3)
       kysely:
         specifier: 'catalog:'
         version: 0.28.9
@@ -4308,8 +4308,8 @@ packages:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
     engines: {node: '>=0.10.0'}
 
-  idxs@0.0.5:
-    resolution: {integrity: sha512-PI+gllRtlove7942sQUA2y0OM9qgifvGQlPQbXozwY43sRoiGC9Fq7btNB+9WJzw+3tcutneuQeBi5pwTx13GA==}
+  idxs@0.0.6:
+    resolution: {integrity: sha512-CjrtIJQNhABCsa8YFyxLxkVbn5DexSgMxqd31I32PnagUl4cewlm3IZZwo7ARabq3bRlkYXXRFk9b7BZboM0vA==}
 
   ieee754@1.2.1:
     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
@@ -9901,7 +9901,7 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
-  idxs@0.0.5(typescript@5.9.3):
+  idxs@0.0.6(typescript@5.9.3):
     dependencies:
       abitype: 1.2.3(typescript@5.9.3)(zod@4.3.5)
       kysely: 0.28.9
