@@ -2,7 +2,6 @@ import { useNavigate, useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { useAccount, useConnect, useConnectors, useDisconnect } from 'wagmi'
-import { useTranslation } from 'react-i18next'
 import i18n from '#lib/i18n'
 import { cx } from '#lib/css'
 
@@ -86,7 +85,6 @@ function CommandMenuPortal({ open, onOpenChange }: { open: boolean; onOpenChange
 	const { disconnect } = useDisconnect()
 	const { connect } = useConnect()
 	const [connector] = useConnectors()
-	const { t } = useTranslation()
 
 	const close = React.useCallback(() => {
 		setVisible(false)
