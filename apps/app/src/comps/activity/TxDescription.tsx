@@ -388,6 +388,11 @@ export function getPerspectiveEvent(
 	if (!event.meta?.to) return event
 	if (!isAddressEqual(event.meta.to, viewer)) return event
 
+	// Self-send: keep as Send (you initiated it)
+	if (event.meta.from && isAddressEqual(event.meta.from, viewer)) {
+		return event
+	}
+
 	const newParts = event.parts.map((part) => {
 		if (part.type === 'action' && part.value === 'Send') {
 			return { ...part, value: 'Received' }
