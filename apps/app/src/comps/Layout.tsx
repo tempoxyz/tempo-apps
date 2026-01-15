@@ -1,7 +1,13 @@
 import type { PropsWithChildren } from 'react'
 
 export function Layout(props: PropsWithChildren) {
-	return <main className="mx-auto flex min-h-dvh max-lg:flex-col" {...props} />
+	return (
+		<main
+			id="main-content"
+			className="mx-auto flex min-h-dvh max-lg:flex-col"
+			{...props}
+		/>
+	)
 }
 
 export namespace Layout {
