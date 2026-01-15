@@ -299,37 +299,37 @@ const fetchTransactionReceipts = createServerFn({ method: 'POST' })
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
-		const receipts: Array<{
-			hash: string
-			receipt: RpcTransactionReceipt | null
-		}> = []
+		// Batch all receipt requests in a single RPC call
+		const batchRequest = hashes.map((hash, i) => ({
+			jsonrpc: '2.0',
+			id: i + 1,
+			method: 'eth_getTransactionReceipt',
+			params: [hash],
+		}))
 
-		for (const hash of hashes) {
-			try {
-				const response = await fetch(rpcUrl, {
-					method: 'POST',
-					headers,
-					body: JSON.stringify({
-						jsonrpc: '2.0',
-						id: 1,
-						method: 'eth_getTransactionReceipt',
-						params: [hash],
-					}),
-				})
-				if (response.ok) {
-					const json = (await response.json()) as {
-						result?: RpcTransactionReceipt
-					}
-					receipts.push({ hash, receipt: json.result ?? null })
-				} else {
-					receipts.push({ hash, receipt: null })
-				}
-			} catch {
-				receipts.push({ hash, receipt: null })
+		try {
+			const response = await fetch(rpcUrl, {
+				method: 'POST',
+				headers,
+				body: JSON.stringify(batchRequest),
+			})
+			if (!response.ok) {
+				return { receipts: hashes.map((hash) => ({ hash, receipt: null })) }
 			}
-		}
+			const results = (await response.json()) as Array<{
+				id: number
+				result?: RpcTransactionReceipt
+			}>
 
-		return { receipts }
+			// Map results back to hashes by id
+			const receipts = hashes.map((hash, i) => {
+				const result = results.find((r) => r.id === i + 1)
+				return { hash, receipt: result?.result ?? null }
+			})
+			return { receipts }
+		} catch {
+			return { receipts: hashes.map((hash) => ({ hash, receipt: null })) }
+		}
 	})
 
 const fetchBlockData = createServerFn({ method: 'GET' })
