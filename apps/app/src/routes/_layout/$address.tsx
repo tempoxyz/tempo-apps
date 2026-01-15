@@ -426,7 +426,7 @@ async function fetchTransactions(
 			return []
 		}
 
-		const txData = result.transactions.slice(0, 10) as Array<{
+		const txData = result.transactions.slice(0, 50) as Array<{
 			hash: string
 			timestamp?: string
 		}>
@@ -1393,10 +1393,10 @@ function HoldingsTable({
 
 function BouncingDots() {
 	return (
-		<span className="inline-flex gap-[2px]">
-			<span className="size-[4px] bg-current rounded-full animate-[bounce_0.6s_ease-in-out_infinite]" />
-			<span className="size-[4px] bg-current rounded-full animate-[bounce_0.6s_ease-in-out_0.1s_infinite]" />
-			<span className="size-[4px] bg-current rounded-full animate-[bounce_0.6s_ease-in-out_0.2s_infinite]" />
+		<span className="inline-flex gap-[3px] animate-[fadeIn_0.2s_ease-out]">
+			<span className="size-[5px] bg-current rounded-full animate-[pulse_1s_ease-in-out_infinite] opacity-60" />
+			<span className="size-[5px] bg-current rounded-full animate-[pulse_1s_ease-in-out_0.15s_infinite] opacity-60" />
+			<span className="size-[5px] bg-current rounded-full animate-[pulse_1s_ease-in-out_0.3s_infinite] opacity-60" />
 		</span>
 	)
 }
@@ -1470,12 +1470,13 @@ function AssetRow({
 			setPendingSendAmount(null)
 			// Trigger balance refresh immediately
 			onSendComplete(asset.metadata?.symbol || shortenAddress(asset.address, 3))
-			// Reset UI state after animation
+			// Reset UI state and collapse form after animation
 			setTimeout(() => {
 				setSendState('idle')
 				setRecipient('')
 				setAmount('')
 				resetWrite()
+				onToggleSend()
 			}, 1500)
 		}
 	}, [
@@ -1484,6 +1485,7 @@ function AssetRow({
 		asset.address,
 		onSendComplete,
 		resetWrite,
+		onToggleSend,
 	])
 
 	// Handle write errors
@@ -1723,8 +1725,8 @@ function AssetRow({
 			>
 				<span
 					className={cx(
-						'flex flex-col items-end min-w-0 transition-opacity duration-200',
-						faucetState === 'loading' && 'opacity-30',
+						'flex flex-col items-end min-w-0 transition-opacity duration-300',
+						faucetState === 'loading' && 'opacity-15',
 					)}
 				>
 					<span className="text-primary font-sans text-[14px] tabular-nums text-right truncate max-w-full">
@@ -1783,22 +1785,10 @@ function AssetRow({
 					>
 						{faucetState === 'done' ? (
 							<CheckIcon className="size-[14px] text-positive" />
+						) : faucetState === 'loading' ? (
+							<FillingDroplet />
 						) : (
-							<span className="relative">
-								<DropletIcon
-									className={cx(
-										'size-[14px] transition-colors',
-										faucetState === 'loading'
-											? 'text-accent animate-pulse'
-											: 'text-tertiary hover:text-accent',
-									)}
-								/>
-								{faucetState === 'loading' && (
-									<span className="absolute inset-0 flex items-end justify-center overflow-hidden">
-										<span className="w-full bg-accent/40 animate-fill-up" />
-									</span>
-								)}
-							</span>
+							<DropletIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
 						)}
 					</button>
 				)}
