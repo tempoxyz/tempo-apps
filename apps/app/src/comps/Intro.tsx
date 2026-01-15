@@ -54,16 +54,34 @@ function AmbientGradient() {
 	const hasActivity = summary && summary.types.length > 0
 
 	const colors = React.useMemo(() => {
-		if (!hasActivity) return []
-		const typeColors = summary.types.map((t) => activityColors[t])
-		if (typeColors.length === 1) {
-			return [typeColors[0], typeColors[0], typeColors[0]]
+		if (!hasActivity || !summary.typeCounts) return []
+		// Build colors array proportional to type counts
+		const totalCount = Object.values(summary.typeCounts).reduce(
+			(a, b) => a + b,
+			0,
+		)
+		if (totalCount === 0) return []
+
+		const proportionalColors: string[] = []
+		for (const type of summary.types) {
+			const count = summary.typeCounts[type] ?? 0
+			const proportion = count / totalCount
+			// Add color multiple times based on proportion (min 1, max 5)
+			const repetitions = Math.max(1, Math.round(proportion * 5))
+			for (let i = 0; i < repetitions; i++) {
+				proportionalColors.push(activityColors[type])
+			}
 		}
-		if (typeColors.length === 2) {
-			return [typeColors[0], typeColors[1], typeColors[0], typeColors[1]]
+
+		if (proportionalColors.length === 1) {
+			return [
+				proportionalColors[0],
+				proportionalColors[0],
+				proportionalColors[0],
+			]
 		}
-		return typeColors
-	}, [hasActivity, summary?.types])
+		return proportionalColors
+	}, [hasActivity, summary?.types, summary?.typeCounts])
 
 	const intensity = React.useMemo(() => {
 		if (!summary) return 0

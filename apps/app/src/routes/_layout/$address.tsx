@@ -422,7 +422,13 @@ async function fetchTransactions(
 	try {
 		const result = await fetchTransactionsFromExplorer({ data: { address } })
 
+		console.log('[Activity] Explorer result:', {
+			error: result.error,
+			txCount: result.transactions.length,
+		})
+
 		if (result.error || result.transactions.length === 0) {
+			console.log('[Activity] Returning empty - error or no txs')
 			return []
 		}
 
@@ -433,6 +439,11 @@ async function fetchTransactions(
 		const hashes = txData.map((tx) => tx.hash)
 
 		const receiptsResult = await fetchTransactionReceipts({ data: { hashes } })
+
+		console.log('[Activity] Receipts result:', {
+			count: receiptsResult.receipts.length,
+			withReceipt: receiptsResult.receipts.filter((r) => r.receipt).length,
+		})
 
 		const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) => {
 			return tokenMetadataMap.get(tokenAddress)
@@ -452,13 +463,15 @@ async function fetchTransactions(
 					? new Date(txInfo.timestamp).getTime()
 					: Date.now()
 				items.push({ hash, events, timestamp })
-			} catch {
-				// Skip failed parsing
+			} catch (e) {
+				console.log('[Activity] Failed to parse receipt:', hash, e)
 			}
 		}
 
+		console.log('[Activity] Final items:', items.length)
 		return items
-	} catch {
+	} catch (e) {
+		console.error('[Activity] Fetch error:', e)
 		return []
 	}
 }
@@ -1157,9 +1170,44 @@ function formatUsdCompact(value: number): string {
 	return `${sign}$${absValue.toFixed(2)}`
 }
 
+const activityTypeColors: Record<string, string> = {
+	send: '#3b82f6', // blue
+	received: '#22c55e', // green
+	swap: '#8b5cf6', // purple
+	mint: '#f97316', // orange
+	burn: '#ef4444', // red
+	approve: '#06b6d4', // cyan
+	unknown: '#6b7280', // gray
+}
+
 function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 	const weeks = 52
 	const days = 7
+
+	// Count activity types for the proportional bar
+	const typeCounts = React.useMemo(() => {
+		const counts: Record<string, number> = {}
+		for (const item of activity) {
+			for (const event of item.events) {
+				const type = eventTypeToActivityType(event.type)
+				counts[type] = (counts[type] ?? 0) + 1
+			}
+		}
+		return counts
+	}, [activity])
+
+	const typeSegments = React.useMemo(() => {
+		const total = Object.values(typeCounts).reduce((a, b) => a + b, 0)
+		if (total === 0) return []
+		return Object.entries(typeCounts)
+			.sort((a, b) => b[1] - a[1])
+			.map(([type, count]) => ({
+				type,
+				count,
+				percentage: (count / total) * 100,
+				color: activityTypeColors[type] ?? activityTypeColors.unknown,
+			}))
+	}, [typeCounts])
 
 	const activityByDay = React.useMemo(() => {
 		const counts = new Map<string, number>()
@@ -1227,6 +1275,21 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 
 	return (
 		<div className="relative">
+			{typeSegments.length > 0 && (
+				<div className="flex h-[6px] w-full rounded-full overflow-hidden mb-2">
+					{typeSegments.map((segment) => (
+						<div
+							key={segment.type}
+							className="h-full transition-all"
+							style={{
+								width: `${segment.percentage}%`,
+								backgroundColor: segment.color,
+							}}
+							title={`${segment.type}: ${segment.count}`}
+						/>
+					))}
+				</div>
+			)}
 			<div className="flex gap-[3px] w-full py-2">
 				{grid.map((week, wi) => (
 					<div key={`w-${wi}`} className="flex flex-col gap-[3px] flex-1">
