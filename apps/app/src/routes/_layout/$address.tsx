@@ -1401,6 +1401,44 @@ function BouncingDots() {
 	)
 }
 
+function FillingDroplet() {
+	return (
+		<svg
+			width="14"
+			height="14"
+			viewBox="0 0 24 24"
+			fill="none"
+			xmlns="http://www.w3.org/2000/svg"
+			className="text-accent"
+		>
+			<defs>
+				<clipPath id="droplet-clip">
+					<path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+				</clipPath>
+			</defs>
+			<path
+				d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"
+				stroke="currentColor"
+				strokeWidth="2"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				fill="none"
+			/>
+			<g clipPath="url(#droplet-clip)">
+				<rect
+					x="0"
+					y="24"
+					width="24"
+					height="24"
+					fill="currentColor"
+					opacity="0.5"
+					className="animate-fill-up-rect"
+				/>
+			</g>
+		</svg>
+	)
+}
+
 function AssetRow({
 	asset,
 	address,
