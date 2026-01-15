@@ -60,7 +60,14 @@ export function AddFunds(props: AddFunds.Props) {
 		createOrder.mutate({ amount: effectiveAmount })
 	}
 
+	const [isIframeLoaded, setIsIframeLoaded] = React.useState(false)
 	const isModalOpen = !!iframeUrl
+
+	React.useEffect(() => {
+		if (!iframeUrl) {
+			setIsIframeLoaded(false)
+		}
+	}, [iframeUrl])
 
 	if (!showApplePay) {
 		return (
@@ -143,7 +150,7 @@ export function AddFunds(props: AddFunds.Props) {
 							: 'bg-base-alt text-tertiary cursor-not-allowed',
 					)}
 				>
-					{isLoading || isModalOpen ? (
+					{isLoading || (isModalOpen && !isIframeLoaded) ? (
 						<>
 							<LoaderIcon className="size-3 animate-spin" />
 							<span>Processing...</span>
@@ -158,7 +165,16 @@ export function AddFunds(props: AddFunds.Props) {
 				)}
 			</div>
 
+			{isModalOpen && (
+				<ApplePayIframe
+					url={iframeUrl}
+					className="sr-only"
+					onLoad={() => setIsIframeLoaded(true)}
+				/>
+			)}
+
 			{isModalOpen &&
+				isIframeLoaded &&
 				ReactDOM.createPortal(
 					<div
 						className="fixed inset-y-0 left-1/2 right-0 z-50 flex items-center justify-center transition-opacity duration-200"
