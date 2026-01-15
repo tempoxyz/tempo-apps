@@ -9,7 +9,8 @@
 		"feeToken": "توکن کارمزد",
 		"feeTokenDescription": "توکن مورد استفاده برای پرداخت کارمزد تراکنش را انتخاب کنید.",
 		"language": "زبان",
-		"languageDescription": "زبان مورد نظر خود را انتخاب کنید."
+		"languageDescription": "زبان مورد نظر خود را انتخاب کنید.",
+		"notSet": "تنظیم نشده"
 	},
 	"common": {
 		"active": "فعال",
@@ -20,7 +21,24 @@
 		"recipient": "گیرنده 0x...",
 		"amount": "مقدار",
 		"max": "حداکثر",
-		"cancel": "لغو"
+		"cancel": "لغو",
+		"search": "جستجو",
+		"signUp": "ثبت نام",
+		"signIn": "ورود",
+		"continue": "ادامه",
+		"logOut": "خروج",
+		"copyAddress": "کپی آدرس",
+		"viewOnExplorer": "مشاهده در کاوشگر",
+		"viewReceipt": "مشاهده رسید",
+		"viewTransaction": "مشاهده تراکنش",
+		"requestTokens": "درخواست توکن",
+		"transaction": "تراکنش",
+		"transactions": "تراکنش",
+		"transactionOn": "در",
+		"self": "خود",
+		"andMore": "و {{count}} بیشتر",
+		"sentSuccessfully": "{{symbol}} با موفقیت ارسال شد",
+		"demoNote": "این یک دمو است، موجودی‌ها به‌روز نمی‌شوند."
 	},
 	"portfolio": {
 		"title": "پورتفولیو",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "دارایی",
 		"hideZeroBalances": "پنهان کردن موجودی صفر",
 		"showZeroBalances": "نمایش موجودی صفر",
-		"noActivityYet": "هنوز فعالیتی نیست"
+		"noActivityYet": "هنوز فعالیتی نیست",
+		"noAssetsFound": "دارایی یافت نشد"
+	},
+	"landing": {
+		"getStarted": "شروع",
+		"exploreDescription": "حساب‌ها، موجودی توکن‌ها و تاریخچه تراکنش‌ها را در Tempo کاوش کنید",
+		"enterAddress": "آدرس را وارد کنید",
+		"orUsePasskey": "یا از کلید عبور دیگری استفاده کنید",
+		"orSignInWithPasskey": "یا با کلید عبور وارد شوید"
+	},
+	"receipt": {
+		"block": "بلاک",
+		"sender": "فرستنده",
+		"hash": "هش",
+		"date": "تاریخ",
+		"time": "زمان"
 	}
 }

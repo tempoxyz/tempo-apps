@@ -93,6 +93,7 @@ function createDetectors(
 						{ type: 'text', value: 'to' },
 						{ type: 'account', value: to },
 					],
+					meta: { to },
 				}
 			}
 
@@ -115,6 +116,7 @@ function createDetectors(
 						{ type: 'text', value: 'from' },
 						{ type: 'account', value: from },
 					],
+					meta: { from },
 				}
 			}
 

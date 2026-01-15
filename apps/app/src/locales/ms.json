@@ -9,7 +9,8 @@
 		"feeToken": "Token Yuran",
 		"feeTokenDescription": "Pilih token untuk membayar yuran transaksi.",
 		"language": "Bahasa",
-		"languageDescription": "Pilih bahasa pilihan anda."
+		"languageDescription": "Pilih bahasa pilihan anda.",
+		"notSet": "Tidak ditetapkan"
 	},
 	"common": {
 		"active": "Aktif",
@@ -20,7 +21,24 @@
 		"recipient": "Penerima 0x...",
 		"amount": "Jumlah",
 		"max": "MAKS",
-		"cancel": "Batal"
+		"cancel": "Batal",
+		"search": "Cari",
+		"signUp": "Daftar",
+		"signIn": "Log masuk",
+		"continue": "Teruskan",
+		"logOut": "Log keluar",
+		"copyAddress": "Salin alamat",
+		"viewOnExplorer": "Lihat di Explorer",
+		"viewReceipt": "Lihat resit",
+		"viewTransaction": "Lihat transaksi",
+		"requestTokens": "Minta token",
+		"transaction": "Transaksi",
+		"transactions": "transaksi",
+		"transactionOn": "pada",
+		"self": "sendiri",
+		"andMore": "dan {{count}} lagi",
+		"sentSuccessfully": "{{symbol}} berjaya dihantar",
+		"demoNote": "Ini adalah demo, baki tidak dikemas kini."
 	},
 	"portfolio": {
 		"title": "Portfolio",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "aset",
 		"hideZeroBalances": "Sembunyikan baki sifar",
 		"showZeroBalances": "Tunjukkan baki sifar",
-		"noActivityYet": "Tiada aktiviti lagi"
+		"noActivityYet": "Tiada aktiviti lagi",
+		"noAssetsFound": "Tiada aset dijumpai"
+	},
+	"landing": {
+		"getStarted": "Mula",
+		"exploreDescription": "Terokai akaun, baki token dan sejarah transaksi di Tempo",
+		"enterAddress": "Masukkan alamat",
+		"orUsePasskey": "atau gunakan passkey lain",
+		"orSignInWithPasskey": "atau log masuk dengan passkey"
+	},
+	"receipt": {
+		"block": "Blok",
+		"sender": "Penghantar",
+		"hash": "Hash",
+		"date": "Tarikh",
+		"time": "Masa"
 	}
 }

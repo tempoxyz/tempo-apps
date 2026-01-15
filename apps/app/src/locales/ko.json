@@ -9,7 +9,8 @@
 		"feeToken": "수수료 토큰",
 		"feeTokenDescription": "거래 수수료 지불에 사용할 토큰을 선택하세요.",
 		"language": "언어",
-		"languageDescription": "원하는 언어를 선택하세요."
+		"languageDescription": "원하는 언어를 선택하세요.",
+		"notSet": "설정되지 않음"
 	},
 	"common": {
 		"active": "활성",
@@ -20,7 +21,24 @@
 		"recipient": "수신자 0x...",
 		"amount": "금액",
 		"max": "최대",
-		"cancel": "취소"
+		"cancel": "취소",
+		"search": "검색",
+		"signUp": "가입",
+		"signIn": "로그인",
+		"continue": "계속",
+		"logOut": "로그아웃",
+		"copyAddress": "주소 복사",
+		"viewOnExplorer": "탐색기에서 보기",
+		"viewReceipt": "영수증 보기",
+		"viewTransaction": "거래 보기",
+		"requestTokens": "토큰 요청",
+		"transaction": "거래",
+		"transactions": "거래",
+		"transactionOn": "",
+		"self": "본인",
+		"andMore": "외 {{count}}개",
+		"sentSuccessfully": "{{symbol}} 전송 완료",
+		"demoNote": "이것은 데모이므로 잔액이 업데이트되지 않습니다."
 	},
 	"portfolio": {
 		"title": "포트폴리오",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "개 자산",
 		"hideZeroBalances": "잔액 0 숨기기",
 		"showZeroBalances": "잔액 0 표시",
-		"noActivityYet": "아직 활동이 없습니다"
+		"noActivityYet": "아직 활동이 없습니다",
+		"noAssetsFound": "자산을 찾을 수 없음"
+	},
+	"landing": {
+		"getStarted": "시작하기",
+		"exploreDescription": "Tempo에서 계정, 토큰 잔액 및 거래 내역 탐색",
+		"enterAddress": "주소 입력",
+		"orUsePasskey": "또는 다른 패스키 사용",
+		"orSignInWithPasskey": "또는 패스키로 로그인"
+	},
+	"receipt": {
+		"block": "블록",
+		"sender": "발신자",
+		"hash": "해시",
+		"date": "날짜",
+		"time": "시간"
 	}
 }

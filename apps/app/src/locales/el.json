@@ -9,7 +9,8 @@
 		"feeToken": "Token Προμήθειας",
 		"feeTokenDescription": "Επιλέξτε ποιο token θα χρησιμοποιηθεί για την πληρωμή των προμηθειών συναλλαγών.",
 		"language": "Γλώσσα",
-		"languageDescription": "Επιλέξτε την προτιμώμενη γλώσσα σας."
+		"languageDescription": "Επιλέξτε την προτιμώμενη γλώσσα σας.",
+		"notSet": "Δεν έχει οριστεί"
 	},
 	"common": {
 		"active": "Ενεργό",
@@ -20,7 +21,24 @@
 		"recipient": "Παραλήπτης 0x...",
 		"amount": "Ποσό",
 		"max": "ΜΑΧ",
-		"cancel": "Ακύρωση"
+		"cancel": "Ακύρωση",
+		"search": "Αναζήτηση",
+		"signUp": "Εγγραφή",
+		"signIn": "Σύνδεση",
+		"continue": "Συνέχεια",
+		"logOut": "Αποσύνδεση",
+		"copyAddress": "Αντιγραφή διεύθυνσης",
+		"viewOnExplorer": "Προβολή στον Explorer",
+		"viewReceipt": "Προβολή απόδειξης",
+		"viewTransaction": "Προβολή συναλλαγής",
+		"requestTokens": "Αίτημα tokens",
+		"transaction": "Συναλλαγή",
+		"transactions": "συναλλαγές",
+		"transactionOn": "στις",
+		"self": "εαυτό",
+		"andMore": "και {{count}} ακόμα",
+		"sentSuccessfully": "{{symbol}} εστάλη επιτυχώς",
+		"demoNote": "Αυτό είναι demo, τα υπόλοιπα δεν ενημερώνονται."
 	},
 	"portfolio": {
 		"title": "Χαρτοφυλάκιο",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "στοιχεία",
 		"hideZeroBalances": "Απόκρυψη μηδενικών υπολοίπων",
 		"showZeroBalances": "Εμφάνιση μηδενικών υπολοίπων",
-		"noActivityYet": "Δεν υπάρχει δραστηριότητα ακόμα"
+		"noActivityYet": "Δεν υπάρχει δραστηριότητα ακόμα",
+		"noAssetsFound": "Δεν βρέθηκαν περιουσιακά στοιχεία"
+	},
+	"landing": {
+		"getStarted": "Ξεκινήστε",
+		"exploreDescription": "Εξερευνήστε λογαριασμούς, υπόλοιπα token και ιστορικό συναλλαγών στο Tempo",
+		"enterAddress": "Εισάγετε διεύθυνση",
+		"orUsePasskey": "ή χρησιμοποιήστε άλλο passkey",
+		"orSignInWithPasskey": "ή συνδεθείτε με passkey"
+	},
+	"receipt": {
+		"block": "Μπλοκ",
+		"sender": "Αποστολέας",
+		"hash": "Hash",
+		"date": "Ημερομηνία",
+		"time": "Ώρα"
 	}
 }
