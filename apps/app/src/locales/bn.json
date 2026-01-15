@@ -50,7 +50,9 @@
 		"showZeroBalances": "শূন্য ব্যালেন্স দেখান",
 		"noActivityYet": "এখনও কোনো কার্যকলাপ নেই",
 		"noActivityInBlock": "এই ব্লকে কোনো কার্যকলাপ নেই",
-		"noAssetsFound": "কোনো সম্পদ পাওয়া যায়নি"
+		"noAssetsFound": "কোনো সম্পদ পাওয়া যায়নি",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "শুরু করুন",
