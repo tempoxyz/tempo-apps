@@ -16,6 +16,7 @@
 		"active": "Aktiv",
 		"set": "Ställ in",
 		"back": "Tillbaka",
+		"primary": "Primär",
 		"noTokensForFees": "Inga tokens tillgängliga för avgifter.",
 		"send": "Skicka",
 		"recipient": "Mottagare 0x...",

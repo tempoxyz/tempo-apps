@@ -28,7 +28,11 @@ async function getIndexSupply() {
 
 function getChainId(): number {
 	// Default to mainnet (presto), only use moderato if explicitly set
-	return TEMPO_ENV === 'moderato' ? 42431 : TEMPO_ENV === 'devnet' ? 42430 : 4217
+	return TEMPO_ENV === 'moderato'
+		? 42431
+		: TEMPO_ENV === 'devnet'
+			? 42430
+			: 4217
 }
 
 async function getChainIdFromEnv(): Promise<number> {
@@ -36,7 +40,11 @@ async function getChainIdFromEnv(): Promise<number> {
 		const { env } = await import('cloudflare:workers')
 		const tempoEnv = env.VITE_TEMPO_ENV as string | undefined
 		// Default to mainnet (presto), only use moderato if explicitly set
-		return tempoEnv === 'moderato' ? 42431 : tempoEnv === 'devnet' ? 42430 : 4217
+		return tempoEnv === 'moderato'
+			? 42431
+			: tempoEnv === 'devnet'
+				? 42430
+				: 4217
 	} catch {
 		return getChainId()
 	}

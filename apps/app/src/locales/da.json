@@ -16,6 +16,7 @@
 		"active": "Aktiv",
 		"set": "Indstil",
 		"back": "Tilbage",
+		"primary": "Primær",
 		"noTokensForFees": "Ingen tokens tilgængelige for gebyrer.",
 		"send": "Send",
 		"recipient": "Modtager 0x...",

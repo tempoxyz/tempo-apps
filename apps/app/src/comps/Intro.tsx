@@ -144,7 +144,7 @@ export function Intro() {
 				</p>
 				<div className="flex gap-1.5 flex-wrap isolate">
 					<a
-						className="flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-white/90 bg-white/10 border border-white/15 rounded-full hover:text-white hover:border-white/30 hover:bg-white/15 transition-all min-h-[44px] max-md:min-h-[36px]"
+						className="flex items-center gap-1 px-2 py-0.5 text-[12px] font-medium text-white/90 bg-white/10 border border-white/15 rounded-full hover:text-white hover:border-white/30 hover:bg-white/15 transition-all"
 						href="https://tempo.xyz"
 						rel="noreferrer"
 						target="_blank"
@@ -153,7 +153,7 @@ export function Intro() {
 						{t('intro.website')}
 					</a>
 					<a
-						className="flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-white/90 bg-white/10 border border-white/15 rounded-full hover:text-white hover:border-white/30 hover:bg-white/15 transition-all min-h-[44px] max-md:min-h-[36px]"
+						className="flex items-center gap-1 px-2 py-0.5 text-[12px] font-medium text-white/90 bg-white/10 border border-white/15 rounded-full hover:text-white hover:border-white/30 hover:bg-white/15 transition-all"
 						href="https://docs.tempo.xyz"
 						rel="noreferrer"
 						target="_blank"

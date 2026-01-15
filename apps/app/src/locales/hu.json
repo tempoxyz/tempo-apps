@@ -16,6 +16,7 @@
 		"active": "Aktív",
 		"set": "Beállít",
 		"back": "Vissza",
+		"primary": "Elsődleges",
 		"noTokensForFees": "Nincs elérhető token a díjakhoz.",
 		"send": "Küldés",
 		"recipient": "Címzett 0x...",

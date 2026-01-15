@@ -16,6 +16,7 @@
 		"active": "Aktiv",
 		"set": "Angi",
 		"back": "Tilbake",
+		"primary": "Primær",
 		"noTokensForFees": "Ingen tokens tilgjengelig for gebyrer.",
 		"send": "Send",
 		"recipient": "Mottaker 0x...",

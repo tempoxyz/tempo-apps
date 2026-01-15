@@ -16,6 +16,7 @@
 		"active": "Activo",
 		"set": "Establecer",
 		"back": "Volver",
+		"primary": "Principal",
 		"noTokensForFees": "No hay tokens disponibles para comisiones.",
 		"send": "Enviar",
 		"recipient": "Destinatario 0x...",

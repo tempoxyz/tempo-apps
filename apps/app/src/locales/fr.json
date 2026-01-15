@@ -16,6 +16,7 @@
 		"active": "Actif",
 		"set": "Définir",
 		"back": "Retour",
+		"primary": "Principal",
 		"noTokensForFees": "Aucun jeton disponible pour les frais.",
 		"send": "Envoyer",
 		"recipient": "Destinataire 0x...",

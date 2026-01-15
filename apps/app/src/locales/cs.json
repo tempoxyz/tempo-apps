@@ -16,6 +16,7 @@
 		"active": "Aktivní",
 		"set": "Nastavit",
 		"back": "Zpět",
+		"primary": "Primární",
 		"noTokensForFees": "Žádné tokeny pro poplatky.",
 		"send": "Odeslat",
 		"recipient": "Příjemce 0x...",

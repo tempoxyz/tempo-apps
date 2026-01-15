@@ -183,7 +183,7 @@ export function TxDescription(props: TxDescription.Props) {
 	return (
 		<div
 			className={cx(
-				'flex flex-row items-center gap-[6px] leading-[18px] flex-wrap min-w-0 flex-1',
+				'flex flex-row items-center gap-[6px] leading-[24px] min-w-0 flex-1 overflow-hidden',
 				className,
 			)}
 		>
@@ -235,7 +235,7 @@ export namespace TxDescription {
 				const displayText = translationKey ? t(translationKey) : part.value
 				return (
 					<span
-						className="inline-flex items-center gap-1 h-[24px] px-[6px] capitalize rounded-[4px]"
+						className="inline-flex items-center gap-1 h-[24px] px-[8px] capitalize rounded-full shrink-0"
 						style={{ color, backgroundColor: bg }}
 					>
 						{icon}

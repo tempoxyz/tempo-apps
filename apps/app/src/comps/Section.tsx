@@ -109,12 +109,12 @@ export function Section(props: {
 					onClick={handleClick}
 					aria-expanded={open}
 					className={cx(
-						'flex flex-1 items-center justify-between cursor-pointer select-none press-down transition-colors',
-						'text-[14px] font-medium text-primary hover:text-accent',
+						'flex flex-1 min-w-0 items-center justify-between cursor-pointer select-none press-down transition-colors',
+						'text-[15px] font-medium text-primary hover:text-accent',
 						'rounded-xl! focus-visible:outline-2! focus-visible:outline-accent! focus-visible:outline-offset-0!',
 					)}
 				>
-					<span className="flex items-center gap-2">
+					<span className="flex items-center gap-2 min-w-0 overflow-hidden">
 						{backButton ? (
 							<>
 								<button
@@ -123,27 +123,31 @@ export function Section(props: {
 										e.stopPropagation()
 										backButton.onClick()
 									}}
-									className="flex items-center gap-1.5 text-accent hover:text-accent/80 transition-colors cursor-pointer"
+									className="flex items-center gap-1.5 text-accent hover:text-accent/80 transition-colors cursor-pointer shrink-0"
 								>
-									<ArrowLeftIcon className="size-[14px]" />
-									<span>{backButton.label}</span>
+									<ArrowLeftIcon className="size-[14px] shrink-0" />
+									<span className="truncate max-w-[100px] sm:max-w-[150px]">
+										{backButton.label}
+									</span>
 								</button>
-								{backButton.extra}
+								<span className="hidden sm:flex items-center gap-1.5 shrink-0">
+									{backButton.extra}
+								</span>
 							</>
 						) : (
 							<>
-								{title}
+								<span className="shrink-0">{title}</span>
 								{subtitle && (
 									<>
-										<span className="w-px h-4 bg-card-border" />
-										<span className="text-[12px] text-tertiary font-normal">
+										<span className="w-px h-4 bg-card-border shrink-0" />
+										<span className="text-[12px] text-tertiary font-normal truncate">
 											{subtitle}
 										</span>
 									</>
 								)}
 								{titleRight && (
 									<>
-										<span className="w-px h-4 bg-card-border" />
+										<span className="w-px h-4 bg-card-border shrink-0" />
 										{titleRight}
 									</>
 								)}

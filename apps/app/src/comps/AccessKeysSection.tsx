@@ -8,6 +8,8 @@
  */
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import Picker from '@emoji-mart/react'
+import data from '@emoji-mart/data'
 
 import { Address } from 'ox'
 import { WebCryptoP256 } from 'ox'
@@ -110,26 +112,6 @@ function shortenAddress(address: string, chars = 4): string {
 	return `${address.slice(0, chars + 2)}...${address.slice(-chars)}`
 }
 
-// Emoji utilities
-const DEFAULT_EMOJIS = [
-	'🔑',
-	'🗝️',
-	'🔐',
-	'🔒',
-	'⚡',
-	'🚀',
-	'💎',
-	'🌟',
-	'🎯',
-	'🛡️',
-	'🔥',
-	'💫',
-	'🎨',
-	'🌈',
-	'🍀',
-	'🎪',
-]
-
 export function getAccessKeyEmoji(keyId: string): string | null {
 	if (typeof window === 'undefined') return null
 	return localStorage.getItem(`accessKeyEmoji:${keyId.toLowerCase()}`)
@@ -140,47 +122,151 @@ function setAccessKeyEmoji(keyId: string, emoji: string): void {
 	localStorage.setItem(`accessKeyEmoji:${keyId.toLowerCase()}`, emoji)
 }
 
+function getEmojiBackgroundColor(emoji: string | null): string {
+	if (!emoji) return 'rgba(59, 130, 246, 0.15)' // default blue
+
+	const emojiColorMap: Record<string, string> = {
+		// Greens
+		'🐸': 'rgba(34, 197, 94, 0.2)',
+		'🍀': 'rgba(34, 197, 94, 0.2)',
+		'🌿': 'rgba(34, 197, 94, 0.2)',
+		'🌲': 'rgba(34, 197, 94, 0.2)',
+		'🥒': 'rgba(34, 197, 94, 0.2)',
+		'🥦': 'rgba(34, 197, 94, 0.2)',
+		'💚': 'rgba(34, 197, 94, 0.2)',
+		// Blues
+		'💎': 'rgba(59, 130, 246, 0.2)',
+		'💙': 'rgba(59, 130, 246, 0.2)',
+		'🌊': 'rgba(59, 130, 246, 0.2)',
+		'🐳': 'rgba(59, 130, 246, 0.2)',
+		'🦋': 'rgba(59, 130, 246, 0.2)',
+		// Reds/Pinks
+		'❤️': 'rgba(239, 68, 68, 0.2)',
+		'🔥': 'rgba(239, 68, 68, 0.2)',
+		'🌹': 'rgba(239, 68, 68, 0.2)',
+		'🍎': 'rgba(239, 68, 68, 0.2)',
+		'🍓': 'rgba(239, 68, 68, 0.2)',
+		// Oranges
+		'🧡': 'rgba(249, 115, 22, 0.2)',
+		'🦊': 'rgba(249, 115, 22, 0.2)',
+		'🥕': 'rgba(249, 115, 22, 0.2)',
+		'🎃': 'rgba(249, 115, 22, 0.2)',
+		// Yellows
+		'💛': 'rgba(234, 179, 8, 0.2)',
+		'⭐': 'rgba(234, 179, 8, 0.2)',
+		'🌟': 'rgba(234, 179, 8, 0.2)',
+		'☀️': 'rgba(234, 179, 8, 0.2)',
+		'🌙': 'rgba(234, 179, 8, 0.2)',
+		'🍋': 'rgba(234, 179, 8, 0.2)',
+		'🍌': 'rgba(234, 179, 8, 0.2)',
+		// Purples
+		'💜': 'rgba(168, 85, 247, 0.2)',
+		'🍇': 'rgba(168, 85, 247, 0.2)',
+		'🔮': 'rgba(168, 85, 247, 0.2)',
+		'🦄': 'rgba(168, 85, 247, 0.2)',
+		// Grays/Metallics
+		'🔑': 'rgba(156, 163, 175, 0.2)',
+		'🗝️': 'rgba(156, 163, 175, 0.2)',
+		'🔐': 'rgba(156, 163, 175, 0.2)',
+		'🔒': 'rgba(156, 163, 175, 0.2)',
+		'⚡': 'rgba(234, 179, 8, 0.2)',
+		// Browns
+		'🐱': 'rgba(180, 83, 9, 0.2)',
+		'🦁': 'rgba(180, 83, 9, 0.2)',
+		'🐻': 'rgba(180, 83, 9, 0.2)',
+		// Cyans
+		'🚀': 'rgba(6, 182, 212, 0.2)',
+		'✈️': 'rgba(6, 182, 212, 0.2)',
+	}
+
+	return emojiColorMap[emoji] || 'rgba(59, 130, 246, 0.15)'
+}
+
+const DEFAULT_EMOJIS = [
+	'🔑',
+	'🗝️',
+	'🔐',
+	'💎',
+	'⚡',
+	'🚀',
+	'🌟',
+	'🔥',
+	'🎯',
+	'🎨',
+	'🦊',
+	'🐱',
+	'🦁',
+	'🐸',
+	'🌙',
+	'☀️',
+]
+
 function EmojiPicker({
-	selectedEmoji,
 	onSelect,
 	anchorRef,
+	onClose,
 }: {
 	selectedEmoji: string | null
 	onSelect: (emoji: string) => void
 	anchorRef: React.RefObject<HTMLButtonElement | null>
+	onClose: () => void
 }) {
 	const [position, setPosition] = React.useState({ top: 0, left: 0 })
+	const pickerRef = React.useRef<HTMLDivElement>(null)
 
 	React.useLayoutEffect(() => {
 		if (anchorRef.current) {
 			const rect = anchorRef.current.getBoundingClientRect()
-			setPosition({
-				top: rect.bottom + 4,
-				left: rect.left,
-			})
+			const viewportWidth = window.innerWidth
+			const viewportHeight = window.innerHeight
+			const pickerWidth = 352
+			const pickerHeight = 435
+			
+			let left = rect.left
+			if (left + pickerWidth > viewportWidth - 8) {
+				left = viewportWidth - pickerWidth - 8
+			}
+			if (left < 8) left = 8
+			
+			// Position above if not enough space below
+			let top = rect.bottom + 8
+			if (top + pickerHeight > viewportHeight - 8) {
+				top = rect.top - pickerHeight - 8
+			}
+			
+			setPosition({ top, left })
 		}
 	}, [anchorRef])
 
+	// Close on click outside
+	React.useEffect(() => {
+		const handleClick = (e: MouseEvent) => {
+			if (pickerRef.current && !pickerRef.current.contains(e.target as Node) &&
+				anchorRef.current && !anchorRef.current.contains(e.target as Node)) {
+				onClose()
+			}
+		}
+		document.addEventListener('mousedown', handleClick)
+		return () => document.removeEventListener('mousedown', handleClick)
+	}, [anchorRef, onClose])
+
 	return createPortal(
 		<div
-			className="fixed z-[9999] bg-surface border border-card-border rounded-md shadow-lg p-1.5"
+			ref={pickerRef}
+			className="fixed z-[9999]"
 			style={{ top: position.top, left: position.left }}
 		>
-			<div className="grid grid-cols-4 gap-0.5">
-				{DEFAULT_EMOJIS.map((emoji) => (
-					<button
-						key={emoji}
-						type="button"
-						onClick={() => onSelect(emoji)}
-						className={cx(
-							'size-7 flex items-center justify-center rounded-md hover:bg-white/10 text-[14px] cursor-pointer transition-colors',
-							selectedEmoji === emoji && 'bg-accent/20',
-						)}
-					>
-						{emoji}
-					</button>
-				))}
-			</div>
+			<Picker
+				data={data}
+				onEmojiSelect={(emoji: { native: string }) => onSelect(emoji.native)}
+				theme="dark"
+				previewPosition="none"
+				skinTonePosition="none"
+				perLine={9}
+				emojiSize={22}
+				emojiButtonSize={32}
+				maxFrequentRows={2}
+			/>
 		</div>,
 		document.body,
 	)
@@ -584,8 +670,6 @@ function AccessKeyRow({
 		accessKey.enforceLimits ||
 		originalLimit !== undefined
 
-	// Check if private key is available in localStorage
-	const [hasPrivateKey, setHasPrivateKey] = React.useState<boolean | null>(null)
 	const [keyName, setKeyName] = React.useState<string | null>(null)
 	const [emoji, setEmoji] = React.useState<string | null>(null)
 	const [showEmojiPicker, setShowEmojiPicker] = React.useState(false)
@@ -593,10 +677,6 @@ function AccessKeyRow({
 
 	React.useEffect(() => {
 		if (typeof window === 'undefined') return
-		const stored = localStorage.getItem(
-			`accessKey:${accessKey.keyId.toLowerCase()}`,
-		)
-		setHasPrivateKey(stored !== null)
 		setKeyName(getAccessKeyName(accessKey.keyId))
 		setEmoji(getAccessKeyEmoji(accessKey.keyId))
 	}, [accessKey.keyId])
@@ -620,7 +700,7 @@ function AccessKeyRow({
 
 	const rowContent = (
 		<>
-			{/* Emoji */}
+			{/* Emoji with translucent tinted background */}
 			<div className="shrink-0">
 				<button
 					ref={emojiButtonRef}
@@ -631,9 +711,10 @@ function AccessKeyRow({
 						if (isOwner) setShowEmojiPicker(!showEmojiPicker)
 					}}
 					className={cx(
-						'flex items-center justify-center w-5 h-5 rounded-full bg-white/10 text-[14px] transition-colors',
-						isOwner && 'cursor-pointer hover:bg-white/20',
+						'flex items-center justify-center size-5 rounded-full text-[11px] transition-all',
+						isOwner && 'cursor-pointer hover:scale-110',
 					)}
+					style={{ backgroundColor: getEmojiBackgroundColor(emoji) }}
 					title={isOwner ? 'Click to change emoji' : undefined}
 				>
 					{displayEmoji}
@@ -643,108 +724,83 @@ function AccessKeyRow({
 						selectedEmoji={emoji}
 						onSelect={handleEmojiSelect}
 						anchorRef={emojiButtonRef}
+						onClose={() => setShowEmojiPicker(false)}
 					/>
 				)}
 			</div>
-			<div className="flex flex-col flex-1 min-w-0 gap-0.5">
-				<span className="text-[18px] text-primary font-medium flex items-center gap-1">
-					<button
-						type="button"
-						onClick={(e) => {
-							e.stopPropagation()
-							copy(accessKey.keyId)
-						}}
-						className="hover:text-accent transition-colors cursor-pointer text-left truncate"
-						title={`Click to copy: ${accessKey.keyId}`}
-					>
-						{displayName}
-					</button>
-					{copied && <CheckIcon className="size-3 text-positive shrink-0" />}
-					{!copied && (
-						<CopyIcon className="size-2 text-tertiary shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
-					)}
+			<div className="flex flex-1 min-w-0 items-center gap-2">
+				<span className="text-[15px] sm:text-[16px] text-primary font-medium truncate">
+					{displayName}
 					{isPending && (
-						<span className="text-[11px] text-accent">(confirming...)</span>
+						<span className="text-[10px] text-accent ml-1">
+							(confirming...)
+						</span>
 					)}
 					{isRevoking && (
-						<span className="text-[11px] text-accent">(revoking...)</span>
+						<span className="text-[10px] text-accent ml-1">(revoking...)</span>
 					)}
 				</span>
-				<span className="text-[12px] text-secondary flex items-center gap-1.5 flex-wrap">
+				<span className="text-[11px] text-secondary flex items-center gap-1 shrink-0">
 					{asset?.metadata?.symbol && (
-						<>
-							{isClickable ? (
-								<span className="font-medium">{asset.metadata.symbol}</span>
-							) : (
-								<a
-									href={`https://explore.mainnet.tempo.xyz/token/${asset.address}`}
-									target="_blank"
-									rel="noopener noreferrer"
-									className="font-medium hover:text-accent transition-colors"
-								>
-									{asset.metadata.symbol}
-								</a>
-							)}
-							<span className="text-tertiary">·</span>
-						</>
+						<span className="font-medium">{asset.metadata.symbol}</span>
 					)}
+					<span className="text-tertiary">·</span>
 					{remainingLimit !== undefined && remainingLimit > 0n ? (
-						<>
-							<span>
-								{formatBigIntAsUsd(
-									remainingLimit,
-									asset?.metadata?.decimals ?? 6,
-									asset?.metadata?.priceUsd ?? 1,
-								)}{' '}
-								remaining
-							</span>
-							<span className="text-tertiary">·</span>
-						</>
+						<span>
+							{formatBigIntAsUsd(
+								remainingLimit,
+								asset?.metadata?.decimals ?? 6,
+								asset?.metadata?.priceUsd ?? 1,
+							)}
+						</span>
 					) : hasLimit ? (
-						<>
-							<span className="text-negative">Limit exhausted</span>
-							<span className="text-tertiary">·</span>
-						</>
+						<span className="text-negative">$0</span>
 					) : (
-						<>
-							<span>Unlimited</span>
-							<span className="text-tertiary">·</span>
-						</>
+						<span>$∞</span>
 					)}
+					<span className="text-tertiary">·</span>
 					<span className={isExpired ? 'text-negative' : ''}>
 						{accessKey.expiry === 0
-							? 'No expiry'
+							? '∞'
 							: isExpired
-								? 'Expired'
-								: `${formatExpiry(expiryMs)} left`}
+								? 'Exp'
+								: formatExpiry(expiryMs)}
 					</span>
-					{hasPrivateKey !== null && (
-						<>
-							<span className="text-tertiary">·</span>
-							{hasPrivateKey ? (
-								<span className="text-positive">Available</span>
-							) : (
-								<span className="text-tertiary">Not on device</span>
-							)}
-						</>
-					)}
 				</span>
 			</div>
-			{isOwner && !isPending && !isRevoking && (
+			<div className="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
 				<button
 					type="button"
-					onClick={onRevoke}
-					title="Revoke this access key (requires passkey signature)"
-					className="size-4 flex items-center justify-center rounded-full bg-negative/10 text-negative hover:bg-negative/20 transition-colors cursor-pointer press-down shrink-0"
+					onClick={(e) => {
+						e.stopPropagation()
+						e.preventDefault()
+						copy(accessKey.keyId)
+					}}
+					title={`Copy address: ${accessKey.keyId}`}
+					className="size-4 flex items-center justify-center rounded text-tertiary hover:text-primary transition-colors cursor-pointer"
 				>
-					<XIcon className="size-2" />
+					{copied ? (
+						<CheckIcon className="size-2.5 text-positive" />
+					) : (
+						<CopyIcon className="size-2.5" />
+					)}
 				</button>
-			)}
+				{isOwner && !isPending && !isRevoking && (
+					<button
+						type="button"
+						onClick={onRevoke}
+						title="Revoke this access key"
+						className="size-4 flex items-center justify-center rounded text-negative/70 hover:text-negative transition-colors cursor-pointer"
+					>
+						<XIcon className="size-2.5" />
+					</button>
+				)}
+			</div>
 		</>
 	)
 
 	const rowClassName = cx(
-		'group flex items-center gap-3 px-3 py-2.5 rounded-xl hover:glass-thin transition-all',
+		'group flex items-center gap-2 px-2 py-1.5 rounded-lg hover:glass-thin transition-all',
 		(isPending || isRevoking) && 'opacity-50',
 		isClickable && 'cursor-pointer',
 	)
@@ -790,9 +846,11 @@ function CreateKeyForm({
 	)
 	const [limitUsd, setLimitUsd] = React.useState('')
 	const [expDays, setExpDays] = React.useState('7')
-	const [selectedEmoji] = React.useState(
+	const [selectedEmoji, setSelectedEmoji] = React.useState(
 		() => DEFAULT_EMOJIS[Math.floor(Math.random() * DEFAULT_EMOJIS.length)],
 	)
+	const [showEmojiPicker, setShowEmojiPicker] = React.useState(false)
+	const emojiButtonRef = React.useRef<HTMLButtonElement>(null)
 
 	const asset = assets.find((a) => a.address === selectedToken)
 
@@ -805,28 +863,47 @@ function CreateKeyForm({
 	}
 
 	return (
-		<div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:glass-thin transition-all mx-0">
-			<div className="flex items-center justify-center size-5 rounded-full bg-white/10 text-[14px] shrink-0">
-				{selectedEmoji}
-			</div>
-			<div className="flex flex-col flex-1 min-w-0 gap-0.5">
-				<div className="flex items-center gap-2">
-					<input
-						type="text"
-						value={keyName}
-						onChange={(e) => setKeyName(e.target.value)}
-						placeholder="Key name"
-						className="flex-1 min-w-0 bg-transparent text-[16px] text-primary font-medium placeholder:text-tertiary focus:outline-none"
-						autoFocus
+		<div className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all">
+			{/* Emoji button with tinted background */}
+			<div className="shrink-0 relative">
+				<button
+					ref={emojiButtonRef}
+					type="button"
+					onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+					className="flex items-center justify-center size-5 rounded-full text-[11px] transition-all cursor-pointer hover:scale-110"
+					style={{ backgroundColor: getEmojiBackgroundColor(selectedEmoji) }}
+					title="Click to change emoji"
+				>
+					{selectedEmoji}
+				</button>
+				{showEmojiPicker && (
+					<EmojiPicker
+						selectedEmoji={selectedEmoji}
+						onSelect={(emoji) => {
+							setSelectedEmoji(emoji)
+							setShowEmojiPicker(false)
+						}}
+						anchorRef={emojiButtonRef}
+						onClose={() => setShowEmojiPicker(false)}
 					/>
-				</div>
-				<div className="flex items-center gap-2 text-[12px] text-secondary">
+				)}
+			</div>
+			<div className="flex flex-1 min-w-0 items-center gap-2">
+				<input
+					type="text"
+					value={keyName}
+					onChange={(e) => setKeyName(e.target.value)}
+					placeholder="Key name"
+					className="flex-1 min-w-0 bg-transparent text-[15px] sm:text-[16px] text-primary font-medium placeholder:text-tertiary focus:outline-none"
+					autoFocus
+				/>
+				<span className="text-[11px] text-secondary flex items-center gap-1 shrink-0">
 					<select
 						value={selectedToken}
 						onChange={(e) =>
 							setSelectedToken(e.target.value as Address.Address)
 						}
-						className="bg-transparent text-secondary hover:text-primary cursor-pointer focus:outline-none appearance-none pr-1"
+						className="h-[26px] px-2 rounded-full border border-white/10 bg-white/5 text-secondary hover:text-primary hover:border-white/20 cursor-pointer focus:outline-none focus:border-accent appearance-none"
 					>
 						{assets.map((a) => (
 							<option key={a.address} value={a.address}>
@@ -834,8 +911,7 @@ function CreateKeyForm({
 							</option>
 						))}
 					</select>
-					<span className="text-tertiary">·</span>
-					<span className="flex items-center">
+					<span className="h-[26px] px-2 rounded-full border border-white/10 bg-white/5 flex items-center focus-within:border-accent">
 						<span className="text-tertiary">$</span>
 						<input
 							type="text"
@@ -843,21 +919,20 @@ function CreateKeyForm({
 							value={limitUsd}
 							onChange={handleLimitChange}
 							placeholder="∞"
-							className="bg-transparent w-[40px] placeholder:text-tertiary focus:outline-none"
+							className="bg-transparent w-[24px] placeholder:text-tertiary focus:outline-none"
 						/>
 					</span>
-					<span className="text-tertiary">·</span>
-					<span className="flex items-center gap-0.5">
+					<span className="h-[26px] px-2 rounded-full border border-white/10 bg-white/5 flex items-center gap-0.5 focus-within:border-accent">
 						<input
 							type="number"
 							value={expDays}
 							onChange={(e) => setExpDays(e.target.value)}
 							placeholder="7"
-							className="bg-transparent w-[24px] text-center placeholder:text-tertiary focus:outline-none"
+							className="bg-transparent w-[16px] text-center placeholder:text-tertiary focus:outline-none"
 						/>
-						<span>days</span>
+						<span>d</span>
 					</span>
-				</div>
+				</span>
 			</div>
 			<button
 				type="button"
@@ -877,7 +952,7 @@ function CreateKeyForm({
 				className="size-4 flex items-center justify-center rounded-full bg-accent text-white cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50 shrink-0"
 			>
 				{isPending ? (
-					<span className="size-2 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+					<span className="size-2 border border-white/30 border-t-white rounded-full animate-spin" />
 				) : (
 					<CheckIcon className="size-2" />
 				)}
@@ -886,7 +961,7 @@ function CreateKeyForm({
 				type="button"
 				onClick={onCancel}
 				title="Cancel"
-				className="size-4 flex items-center justify-center rounded-full text-tertiary hover:bg-white/10 hover:text-primary transition-colors cursor-pointer shrink-0"
+				className="size-4 flex items-center justify-center rounded text-tertiary hover:bg-white/10 hover:text-primary transition-colors cursor-pointer shrink-0"
 			>
 				<XIcon className="size-2" />
 			</button>

@@ -16,6 +16,7 @@
 		"active": "Attivo",
 		"set": "Imposta",
 		"back": "Indietro",
+		"primary": "Principale",
 		"noTokensForFees": "Nessun token disponibile per le commissioni.",
 		"send": "Invia",
 		"recipient": "Destinatario 0x...",

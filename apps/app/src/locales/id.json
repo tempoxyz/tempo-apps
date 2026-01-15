@@ -16,6 +16,7 @@
 		"active": "Aktif",
 		"set": "Atur",
 		"back": "Kembali",
+		"primary": "Utama",
 		"noTokensForFees": "Tidak ada token tersedia untuk biaya.",
 		"send": "Kirim",
 		"recipient": "Penerima 0x...",

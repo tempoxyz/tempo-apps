@@ -34,8 +34,8 @@ export namespace Layout {
 	}) {
 		const { left, right } = props
 		return (
-			<div className="flex items-center justify-between min-h-[44px]">
-				<div className="min-md:opacity-0">{left}</div>
+			<div className="flex items-center justify-between min-h-[44px] max-md:hidden">
+				<div>{left}</div>
 				{right}
 			</div>
 		)

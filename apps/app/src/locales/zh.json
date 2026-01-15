@@ -16,6 +16,7 @@
 		"active": "活跃",
 		"set": "设置",
 		"back": "返回",
+		"primary": "主要",
 		"noTokensForFees": "没有可用于手续费的代币。",
 		"send": "发送",
 		"recipient": "收款人 0x...",

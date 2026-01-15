@@ -16,6 +16,7 @@
 		"active": "Activ",
 		"set": "Setează",
 		"back": "Înapoi",
+		"primary": "Principal",
 		"noTokensForFees": "Nu există tokeni disponibili pentru taxe.",
 		"send": "Trimite",
 		"recipient": "Destinatar 0x...",

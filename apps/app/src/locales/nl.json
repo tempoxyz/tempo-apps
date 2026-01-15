@@ -16,6 +16,7 @@
 		"active": "Actief",
 		"set": "Instellen",
 		"back": "Terug",
+		"primary": "Primair",
 		"noTokensForFees": "Geen tokens beschikbaar voor kosten.",
 		"send": "Verzenden",
 		"recipient": "Ontvanger 0x...",

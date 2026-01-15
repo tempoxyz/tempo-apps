@@ -16,6 +16,7 @@
 		"active": "Aktiv",
 		"set": "Festlegen",
 		"back": "Zurück",
+		"primary": "Primär",
 		"noTokensForFees": "Keine Token für Gebühren verfügbar.",
 		"send": "Senden",
 		"recipient": "Empfänger 0x...",

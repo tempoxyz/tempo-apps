@@ -16,6 +16,7 @@
 		"active": "Aktibo",
 		"set": "Itakda",
 		"back": "Bumalik",
+		"primary": "Pangunahin",
 		"noTokensForFees": "Walang token na magagamit para sa mga bayarin.",
 		"send": "Ipadala",
 		"recipient": "Tatanggap 0x...",

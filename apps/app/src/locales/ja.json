@@ -16,6 +16,7 @@
 		"active": "アクティブ",
 		"set": "設定",
 		"back": "戻る",
+		"primary": "プライマリ",
 		"noTokensForFees": "手数料に使用できるトークンがありません。",
 		"send": "送信",
 		"recipient": "受取人 0x...",

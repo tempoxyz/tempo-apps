@@ -16,6 +16,7 @@
 		"active": "Aktif",
 		"set": "Ayarla",
 		"back": "Geri",
+		"primary": "Birincil",
 		"noTokensForFees": "Ücretler için token mevcut değil.",
 		"send": "Gönder",
 		"recipient": "Alıcı 0x...",

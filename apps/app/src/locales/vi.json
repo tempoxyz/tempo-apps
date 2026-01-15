@@ -16,6 +16,7 @@
 		"active": "Đang hoạt động",
 		"set": "Đặt",
 		"back": "Quay lại",
+		"primary": "Chính",
 		"noTokensForFees": "Không có token nào để trả phí.",
 		"send": "Gửi",
 		"recipient": "Người nhận 0x...",

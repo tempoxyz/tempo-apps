@@ -16,6 +16,7 @@
 		"active": "Ativo",
 		"set": "Definir",
 		"back": "Voltar",
+		"primary": "Principal",
 		"noTokensForFees": "Nenhum token disponível para taxas.",
 		"send": "Enviar",
 		"recipient": "Destinatário 0x...",

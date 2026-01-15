@@ -42,7 +42,6 @@ import {
 } from '#comps/Settings'
 import CopyIcon from '~icons/lucide/copy'
 import ExternalLinkIcon from '~icons/lucide/external-link'
-import ArrowLeftIcon from '~icons/lucide/arrow-left'
 import CheckIcon from '~icons/lucide/check'
 import SendIcon from '~icons/lucide/send'
 import EyeIcon from '~icons/lucide/eye'
@@ -638,9 +637,10 @@ async function fetchTransactions(
 				})
 				const txInfo = txData.find((tx) => tx.hash === hash)
 				// Timestamp from explorer API is Unix seconds (number or numeric string)
+				// If missing, use undefined so heatmap can exclude items without real timestamps
 				const timestamp = txInfo?.timestamp
 					? Number(txInfo.timestamp) * 1000
-					: Date.now()
+					: undefined
 				const blockNumber = BigInt(rpcReceipt.blockNumber)
 				items.push({ hash, events, timestamp, blockNumber })
 			} catch (e) {
@@ -946,18 +946,7 @@ function AddressView() {
 			accountAddress={address}
 			tokenAddresses={tokenAddresses}
 		>
-			<Layout.Header
-				left={
-					<Link
-						to="/"
-						className="glass-pill hover:ring-glass flex items-center gap-1 text-secondary hover:text-primary transition-colors"
-					>
-						<ArrowLeftIcon className="size-2" />
-						<span className="text-sm">{t('common.back')}</span>
-					</Link>
-				}
-				right={null}
-			/>
+			<Layout.Header left={null} right={null} />
 
 			<div className="pb-3">
 				<div className="flex items-center justify-between mb-5">
@@ -978,31 +967,55 @@ function AddressView() {
 							</svg>
 						</div>
 					</Link>
-					<form
-						onSubmit={(e) => {
-							e.preventDefault()
-							const trimmed = searchValue.trim()
-							if (trimmed.match(/^0x[a-fA-F0-9]{40}$/)) {
-								navigate({ to: '/$address', params: { address: trimmed } })
-								setSearchValue('')
-							}
-						}}
-						className={cx(
-							'flex items-center gap-1.5 pl-2.5 pr-3 h-[36px] rounded-full bg-base-alt transition-colors',
-							searchFocused ? 'ring-1 ring-accent/50' : '',
+					<div className="relative">
+						<form
+							onSubmit={(e) => {
+								e.preventDefault()
+								const trimmed = searchValue.trim()
+								if (trimmed.match(/^0x[a-fA-F0-9]{40}$/)) {
+									navigate({ to: '/$address', params: { address: trimmed } })
+									setSearchValue('')
+									setSearchFocused(false)
+								}
+							}}
+							className={cx(
+								'flex items-center gap-1.5 pl-2.5 pr-3 h-[36px] rounded-full bg-base-alt transition-colors',
+								searchFocused ? 'ring-1 ring-accent/50' : '',
+							)}
+						>
+							<SearchIcon className="size-[14px] text-secondary" />
+							<input
+								type="text"
+								value={searchValue}
+								onChange={(e) => setSearchValue(e.target.value)}
+								onFocus={() => setSearchFocused(true)}
+								onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+								placeholder={t('common.search')}
+								className="bg-transparent outline-none text-[13px] text-primary placeholder:text-secondary w-[80px] sm:w-[100px] focus:w-[140px] sm:focus:w-[180px] transition-all"
+							/>
+						</form>
+						{searchFocused && searchValue.trim().match(/^0x[a-fA-F0-9]{40}$/) && (
+							<div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-card-border rounded-full shadow-xl overflow-hidden z-50">
+								<button
+									type="button"
+									onMouseDown={(e) => {
+										e.preventDefault()
+										navigate({ to: '/$address', params: { address: searchValue.trim() } })
+										setSearchValue('')
+										setSearchFocused(false)
+									}}
+									className="w-full h-[32px] px-3 text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center justify-between"
+								>
+									<div className="flex flex-col min-w-0">
+										<span className="text-[11px] text-primary font-mono truncate">
+											{searchValue.trim().slice(0, 6)}...{searchValue.trim().slice(-4)}
+										</span>
+									</div>
+									<ChevronDownIcon className="size-3 text-tertiary -rotate-90 shrink-0" />
+								</button>
+							</div>
 						)}
-					>
-						<SearchIcon className="size-[14px] text-secondary" />
-						<input
-							type="text"
-							value={searchValue}
-							onChange={(e) => setSearchValue(e.target.value)}
-							onFocus={() => setSearchFocused(true)}
-							onBlur={() => setSearchFocused(false)}
-							placeholder={t('common.search')}
-							className="bg-transparent outline-none text-[13px] text-primary placeholder:text-secondary w-[80px] sm:w-[100px] focus:w-[140px] sm:focus:w-[180px] transition-all"
-						/>
-					</form>
+					</div>
 					{isOwnProfile ? (
 						<button
 							type="button"
@@ -1032,48 +1045,49 @@ function AddressView() {
 							<LottoNumber
 								value={formatUsd(totalValue)}
 								duration={1200}
-								className="text-[28px] sm:text-[40px] md:text-[56px] font-sans font-semibold text-primary -tracking-[0.02em] tabular-nums"
+								className="text-[36px] sm:text-[40px] md:text-[56px] font-sans font-semibold text-primary -tracking-[0.02em] tabular-nums"
 							/>
 						</div>
 						<div className="flex items-center gap-2 max-w-full">
-							<code className="text-[11px] sm:text-[13px] font-mono text-secondary leading-tight min-w-0 break-all sm:break-normal">
-								<span className="sm:hidden">
-									{address.slice(0, 18)}...{address.slice(-6)}
-								</span>
-								<span className="hidden sm:inline">
-									{address.slice(0, 21)}
-									<br />
-									{address.slice(21)}
-								</span>
+							<code className="text-[11px] sm:text-[13px] font-mono text-secondary leading-tight min-w-0">
+								{address.slice(0, 21)}
+								<br />
+								{address.slice(21)}
 							</code>
-							<button
-								type="button"
-								onClick={() => {
-									copy(address)
-									announce(t('a11y.addressCopied'))
-								}}
-								className="flex items-center justify-center size-[28px] rounded-md bg-base-alt hover:bg-base-alt/70 cursor-pointer press-down transition-colors shrink-0 focus-ring"
-								aria-label={t('common.copyAddress')}
-							>
-								{notifying ? (
-									<CheckIcon className="size-[14px] text-positive" />
-								) : (
-									<CopyIcon className="size-[14px] text-tertiary" />
-								)}
-							</button>
-							<a
-								href={`https://explore.mainnet.tempo.xyz/address/${address}`}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="flex items-center justify-center size-[28px] rounded-md bg-base-alt hover:bg-base-alt/70 press-down transition-colors shrink-0 focus-ring"
-								aria-label={t('common.viewOnExplorer')}
-							>
-								<ExternalLinkIcon className="size-[14px] text-tertiary" />
-							</a>
+							<div className="flex items-center gap-1.5">
+								<button
+									type="button"
+									onClick={() => {
+										copy(address)
+										announce(t('a11y.addressCopied'))
+									}}
+									className="flex items-center justify-center size-[32px] sm:size-[28px] rounded-full sm:rounded-md bg-base-alt hover:bg-base-alt/70 cursor-pointer press-down transition-colors shrink-0 focus-ring"
+									aria-label={t('common.copyAddress')}
+								>
+									{notifying ? (
+										<CheckIcon className="size-[14px] text-positive" />
+									) : (
+										<CopyIcon className="size-[14px] text-tertiary" />
+									)}
+								</button>
+								<a
+									href={`https://explore.mainnet.tempo.xyz/address/${address}`}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="flex items-center justify-center size-[32px] sm:size-[28px] rounded-full sm:rounded-md bg-base-alt hover:bg-base-alt/70 press-down transition-colors shrink-0 focus-ring"
+									aria-label={t('common.viewOnExplorer')}
+								>
+									<ExternalLinkIcon className="size-[14px] text-tertiary" />
+								</a>
+							</div>
 						</div>
 					</div>
-					<div className="order-1 sm:order-2 self-center sm:self-start">
-						<QRCode value={address} size={64} className="sm:hidden shrink-0" />
+					<div className="order-1 sm:order-2 self-center sm:self-start w-full sm:w-auto px-8 sm:px-0">
+						<QRCode
+							value={address}
+							size="full"
+							className="sm:hidden shrink-0 max-w-[200px] mx-auto"
+						/>
 						<QRCode
 							value={address}
 							size={72}
@@ -1114,9 +1128,9 @@ function AddressView() {
 														{shortenAddress(selectedSendAsset.address, 4)}
 													</span>
 													{tokenAddressCopied ? (
-														<CheckIcon className="size-2.5 text-positive" />
+														<CheckIcon className="w-[10px] h-[10px] text-positive shrink-0" />
 													) : (
-														<CopyIcon className="size-2.5" />
+														<CopyIcon className="w-[10px] h-[10px] shrink-0" />
 													)}
 												</button>
 											</>
@@ -1125,26 +1139,28 @@ function AddressView() {
 								: undefined
 						}
 						headerRight={
-							<button
-								type="button"
-								onClick={(e) => {
-									e.stopPropagation()
-									setShowZeroBalances(!showZeroBalances)
-								}}
-								className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer focus-ring"
-								aria-label={
-									showZeroBalances
-										? t('portfolio.hideZeroBalances')
-										: t('portfolio.showZeroBalances')
-								}
-								aria-pressed={showZeroBalances}
-							>
-								{showZeroBalances ? (
-									<EyeOffIcon className="size-[14px] text-tertiary" />
-								) : (
-									<EyeIcon className="size-[14px] text-tertiary" />
-								)}
-							</button>
+							selectedSendAsset ? undefined : (
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation()
+										setShowZeroBalances(!showZeroBalances)
+									}}
+									className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer focus-ring"
+									aria-label={
+										showZeroBalances
+											? t('portfolio.hideZeroBalances')
+											: t('portfolio.showZeroBalances')
+									}
+									aria-pressed={showZeroBalances}
+								>
+									{showZeroBalances ? (
+										<EyeOffIcon className="size-[14px] text-tertiary" />
+									) : (
+										<EyeIcon className="size-[14px] text-tertiary" />
+									)}
+								</button>
+							)
 						}
 					>
 						<HoldingsTable
@@ -1185,7 +1201,7 @@ function QRCode({
 	className,
 }: {
 	value: string
-	size?: number
+	size?: number | 'full'
 	className?: string
 }) {
 	const { data } = encode(value)
@@ -1215,6 +1231,8 @@ function QRCode({
 		setMousePos({ x, y })
 	}
 
+	const isFull = size === 'full'
+
 	return (
 		<svg
 			ref={svgRef}
@@ -1222,10 +1240,11 @@ function QRCode({
 			aria-label="QR Code - Click to copy address"
 			className={cx(
 				'rounded-lg bg-surface p-1.5 cursor-pointer outline-none border border-base-border hover:border-accent/50 transition-colors',
+				isFull && 'w-full aspect-square',
 				className,
 			)}
-			width={size}
-			height={size}
+			width={isFull ? undefined : size}
+			height={isFull ? undefined : size}
 			viewBox="0 0 100 100"
 			onClick={() => copy(value)}
 			onKeyDown={(e) => {
@@ -1362,58 +1381,80 @@ function formatUsdCompact(value: number): string {
 	return `${sign}$${absValue.toFixed(2)}`
 }
 
-function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
-	// 7 days displayed as ~48 columns × 7 rows (like GitHub contribution graph)
-	// Each square = 30 min, flowing down then right
-	// Top-left = oldest, bottom-right = now
-	const totalSlots = 336 // 7 days * 24 hours * 2 (30-min slots)
-	const rows = 7
-	const cols = Math.ceil(totalSlots / rows) // 48 columns
+function ActivityHeatmap({
+	activity,
+	currentBlock,
+}: {
+	activity: ActivityItem[]
+	currentBlock: bigint | null
+}) {
+	// Use block numbers for bucketing since timestamps may not be available
+	// Tempo produces ~2 blocks/second, so 7200 blocks ≈ 1 hour
+	// Show last ~24 hours of activity spread across the grid
 
-	const slotMs = 30 * 60 * 1000 // 30 minutes per slot
+	// Desktop: 48 cols × 7 rows = 336 slots
+	// Mobile: 24 cols × 5 rows = 120 slots (bigger squares)
+	const [isMobile, setIsMobile] = React.useState(false)
+
+	React.useEffect(() => {
+		const checkMobile = () => setIsMobile(window.innerWidth < 640)
+		checkMobile()
+		window.addEventListener('resize', checkMobile)
+		return () => window.removeEventListener('resize', checkMobile)
+	}, [])
+
+	const rows = isMobile ? 5 : 7
+	const cols = isMobile ? 24 : 48
+	const totalSlots = rows * cols
+
+	// Blocks per slot - aim for ~24 hours coverage
+	// ~2 blocks/sec × 60 sec × 60 min × 24 hours = 172,800 blocks/day
+	const blocksPerDay = 172800n
+	const blocksPerSlot = blocksPerDay / BigInt(totalSlots)
 
 	const activityBySlot = React.useMemo(() => {
 		const counts = new Map<number, number>()
-		const now = Date.now()
-		const cutoff = now - totalSlots * slotMs
+		if (!currentBlock) return counts
+
+		const oldestBlock = currentBlock - blocksPerDay
 
 		for (let i = 0; i < activity.length; i++) {
 			const item = activity[i]
-			if (!item.timestamp || item.timestamp < cutoff) continue
-			const slotsAgo = Math.floor((now - item.timestamp) / slotMs)
-			const bucket = totalSlots - 1 - slotsAgo
+			if (!item.blockNumber) continue
+			if (item.blockNumber < oldestBlock) continue
+
+			// Calculate which slot this block falls into
+			const blocksFromOldest = item.blockNumber - oldestBlock
+			const bucket = Number(blocksFromOldest / blocksPerSlot)
 			if (bucket >= 0 && bucket < totalSlots) {
 				counts.set(bucket, (counts.get(bucket) ?? 0) + 1)
 			}
 		}
 		return counts
-	}, [activity])
+	}, [activity, currentBlock, totalSlots, blocksPerSlot])
 
 	const grid = React.useMemo(() => {
-		const data: { level: number; count: number; date: Date }[][] = []
-		const now = Date.now()
+		const data: { level: number; count: number; slotIndex: number }[][] = []
 
 		const maxCount = Math.max(1, ...activityBySlot.values())
 
 		for (let c = 0; c < cols; c++) {
-			const column: { level: number; count: number; date: Date }[] = []
+			const column: { level: number; count: number; slotIndex: number }[] = []
 			for (let r = 0; r < rows; r++) {
 				const bucket = c * rows + r
 				if (bucket >= totalSlots) {
-					column.push({ level: 0, count: 0, date: new Date(now) })
+					column.push({ level: 0, count: 0, slotIndex: bucket })
 					continue
 				}
-				const slotsAgo = totalSlots - 1 - bucket
-				const date = new Date(now - slotsAgo * slotMs)
 				const count = activityBySlot.get(bucket) ?? 0
 				const level =
 					count === 0 ? 0 : Math.min(4, Math.ceil((count / maxCount) * 4))
-				column.push({ level, count, date })
+				column.push({ level, count, slotIndex: bucket })
 			}
 			data.push(column)
 		}
 		return data
-	}, [activityBySlot])
+	}, [activityBySlot, cols, rows, totalSlots])
 
 	const getColor = (level: number) => {
 		const colors = [
@@ -1426,39 +1467,49 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 		return colors[level] ?? colors[0]
 	}
 
-	const formatDateTime = (date: Date) => {
-		const hour = date.getHours()
-		const hourStr = hour === 0 ? '12' : hour > 12 ? String(hour - 12) : String(hour)
-		const ampm = hour < 12 ? 'am' : 'pm'
-		return `${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} ${hourStr}${ampm}`
+	const formatSlotTime = (slotIndex: number) => {
+		// Estimate time based on slot position (older = lower index)
+		const hoursAgo = ((totalSlots - 1 - slotIndex) / totalSlots) * 24
+		if (hoursAgo < 1) return 'now'
+		if (hoursAgo < 2) return '~1h ago'
+		return `~${Math.round(hoursAgo)}h ago`
 	}
 
 	const [hoveredCell, setHoveredCell] = React.useState<{
 		count: number
-		date: Date
+		slotIndex: number
 		x: number
 		y: number
 	} | null>(null)
 
 	return (
 		<div className="relative">
-			<div className="flex gap-[3px] w-full py-2">
+			<div
+				className={cx('flex w-full py-2', isMobile ? 'gap-[4px]' : 'gap-[3px]')}
+			>
 				{grid.map((column, hi) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: grid is static and doesn't reorder
-					<div key={`h-${hi}`} className="flex flex-col gap-[3px] flex-1">
+					<div
+						key={`h-${hi}`}
+						className={cx(
+							'flex flex-col flex-1',
+							isMobile ? 'gap-[4px]' : 'gap-[3px]',
+						)}
+					>
 						{column.map((cell, di) => (
 							// biome-ignore lint/a11y/noStaticElementInteractions: hover tooltip only
 							<div
 								key={`${hi}-${di}`}
 								className={cx(
-									'w-full aspect-square rounded-[2px] cursor-default transition-transform hover:scale-125 hover:z-10',
+									'w-full aspect-square cursor-default transition-transform hover:scale-125 hover:z-10',
+									isMobile ? 'rounded-[3px]' : 'rounded-[2px]',
 									getColor(cell.level),
 								)}
 								onMouseEnter={(e) => {
 									const rect = e.currentTarget.getBoundingClientRect()
 									setHoveredCell({
 										count: cell.count,
-										date: cell.date,
+										slotIndex: cell.slotIndex,
 										x: rect.left + rect.width / 2,
 										y: rect.top,
 									})
@@ -1469,20 +1520,24 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 					</div>
 				))}
 			</div>
-			{hoveredCell && (
-				<div
-					className="fixed z-[100] px-2 py-1 text-[11px] text-white bg-gray-900 rounded-md shadow-lg whitespace-nowrap pointer-events-none border border-gray-700"
-					style={{
-						left: hoveredCell.x,
-						top: hoveredCell.y - 6,
-						transform: 'translate(-50%, -100%)',
-					}}
-				>
-					<span className="font-medium">{hoveredCell.count}</span> tx
-					{hoveredCell.count !== 1 ? 's' : ''} ·{' '}
-					<span className="text-gray-300">{formatDateTime(hoveredCell.date)}</span>
-				</div>
-			)}
+			{hoveredCell &&
+				createPortal(
+					<div
+						className="fixed z-[100] px-2 py-1 text-[11px] text-white bg-gray-900 rounded-md shadow-lg whitespace-nowrap pointer-events-none border border-gray-700"
+						style={{
+							left: hoveredCell.x,
+							top: hoveredCell.y - 6,
+							transform: 'translate(-50%, -100%)',
+						}}
+					>
+						<span className="font-medium">{hoveredCell.count}</span> tx
+						{hoveredCell.count !== 1 ? 's' : ''} ·{' '}
+						<span className="text-gray-300">
+							{formatSlotTime(hoveredCell.slotIndex)}
+						</span>
+					</div>,
+					document.body,
+				)}
 		</div>
 	)
 }
@@ -2011,12 +2066,28 @@ function BlockTimeline({
 						<span className="font-medium font-mono">
 							#{hoveredBlock.blockNumber.toString()}
 						</span>
-						{hoveredBlock.txCount > 0 && (
+						{' | '}
+						<span className="text-emerald-400">
+							{hoveredBlock.txCount} event
+							{hoveredBlock.txCount !== 1 ? 's' : ''}
+						</span>
+						{currentBlock && (
 							<>
-								{' • '}
-								<span className="text-emerald-400">
-									{hoveredBlock.txCount} tx
-									{hoveredBlock.txCount !== 1 ? 's' : ''}
+								{' | '}
+								<span className="text-gray-400">
+									{(() => {
+										const blockDiff = Number(
+											currentBlock - hoveredBlock.blockNumber,
+										)
+										const msAgo = blockDiff * 100 // ~100ms per block on Tempo
+										if (blockDiff <= 0) return 'now'
+										if (msAgo < 1000) return `${msAgo}ms ago`
+										if (msAgo < 60000)
+											return `${(msAgo / 1000).toFixed(1)}s ago`
+										if (msAgo < 3600000)
+											return `${Math.floor(msAgo / 60000)}m ago`
+										return `${Math.floor(msAgo / 3600000)}h ago`
+									})()}
 								</span>
 							</>
 						)}
@@ -2326,6 +2397,7 @@ function SignWithSelector({
 	onSelect: (keyId: string | null) => void
 	asset: AssetData
 }) {
+	const { t } = useTranslation()
 	const [isOpen, setIsOpen] = React.useState(false)
 	const buttonRef = React.useRef<HTMLButtonElement>(null)
 	const dropdownRef = React.useRef<HTMLDivElement>(null)
@@ -2374,10 +2446,12 @@ function SignWithSelector({
 	const updatePosition = React.useCallback(() => {
 		if (buttonRef.current) {
 			const rect = buttonRef.current.getBoundingClientRect()
+			// Use button width as minimum, but allow dropdown to be wider for content
+			const dropdownWidth = Math.max(rect.width, 160)
 			return {
 				top: rect.bottom + 4,
 				left: rect.left,
-				width: Math.max(rect.width, 160),
+				width: dropdownWidth,
 			}
 		}
 		return null
@@ -2418,7 +2492,7 @@ function SignWithSelector({
 				type="button"
 				onClick={() => (isOpen ? setIsOpen(false) : openDropdown())}
 				className={cx(
-					'h-[28px] px-1.5 rounded-lg border bg-base text-[11px] flex items-center gap-1 transition-colors cursor-pointer',
+					'h-[34px] px-2 rounded-lg border bg-white/5 text-[12px] flex items-center gap-1.5 transition-colors cursor-pointer',
 					isOpen
 						? 'border-accent'
 						: 'border-card-border hover:border-accent/50',
@@ -2426,10 +2500,10 @@ function SignWithSelector({
 				)}
 			>
 				<span className="text-[13px] shrink-0">
-					{selectedKey ? getAccessKeyEmoji(selectedKey) || '🔑' : '👤'}
+					{selectedKey ? getAccessKeyEmoji(selectedKey) || '🔑' : '✨'}
 				</span>
 				<span className="truncate">
-					{selectedKey ? getKeyName(selectedKey) : 'Wallet'}
+					{selectedKey ? getKeyName(selectedKey) : t('common.primary')}
 				</span>
 				<ChevronDownIcon
 					className={cx(
@@ -2443,11 +2517,11 @@ function SignWithSelector({
 				createPortal(
 					<div
 						ref={dropdownRef}
-						className="fixed bg-surface border border-card-border rounded-xl shadow-xl overflow-hidden py-0.5"
+						className="fixed bg-surface border border-card-border rounded-lg shadow-xl overflow-hidden py-1"
 						style={{
 							top: dropdownPos.top,
 							left: dropdownPos.left,
-							minWidth: Math.max(dropdownPos.width, 180),
+							minWidth: dropdownPos.width,
 							zIndex: 99999,
 						}}
 					>
@@ -2458,12 +2532,12 @@ function SignWithSelector({
 								setIsOpen(false)
 							}}
 							className={cx(
-								'w-full px-3 py-1.5 text-[12px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-2',
+								'w-full px-2 py-1.5 text-[12px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-1.5',
 								!selectedKey ? 'text-accent' : 'text-primary',
 							)}
 						>
-							<span className="text-[13px]">👤</span>
-							<span>Wallet</span>
+							<span className="text-[12px]">✨</span>
+							<span>{t('common.primary')}</span>
 						</button>
 						{accessKeys.map((key) => {
 							const limit = getKeyLimit(key)
@@ -2472,23 +2546,6 @@ function SignWithSelector({
 							const now = Date.now()
 							const isExpired = key.expiry > 0 && key.expiry * 1000 < now
 							const isAvailable = !isExhausted && !isExpired
-							const expiryDate =
-								key.expiry > 0 ? new Date(key.expiry * 1000) : null
-							const formatExpiry = (date: Date) => {
-								const diff = date.getTime() - now
-								if (diff < 0) return 'Expired'
-								const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-								if (days > 30)
-									return date.toLocaleDateString('en-US', {
-										month: 'short',
-										day: 'numeric',
-									})
-								if (days > 0) return `${days}d`
-								const hours = Math.floor(diff / (1000 * 60 * 60))
-								if (hours > 0) return `${hours}h`
-								const mins = Math.floor(diff / (1000 * 60))
-								return `${mins}m`
-							}
 							return (
 								<button
 									key={key.keyId}
@@ -2501,7 +2558,7 @@ function SignWithSelector({
 									}}
 									disabled={!isAvailable}
 									className={cx(
-										'w-full px-3 py-1.5 text-[12px] text-left transition-colors flex items-center gap-2',
+										'w-full px-2 py-1.5 text-[12px] text-left transition-colors flex items-center gap-1.5',
 										!isAvailable
 											? 'text-tertiary cursor-not-allowed opacity-50'
 											: 'hover:bg-base-alt cursor-pointer',
@@ -2510,38 +2567,24 @@ function SignWithSelector({
 								>
 									<span
 										className={cx(
-											'size-[6px] rounded-full shrink-0',
+											'size-[5px] rounded-full shrink-0',
 											isAvailable ? 'bg-green-500' : 'bg-gray-500',
 										)}
 									/>
-									<span className="text-[13px]">{keyEmoji}</span>
-									<span className="flex-1 truncate">
+									<span className="text-[12px]">{keyEmoji}</span>
+									<span className="truncate flex-1 min-w-0">
 										{getKeyName(key.keyId)}
 									</span>
-									<span className="flex items-center gap-1.5">
-										{expiryDate && (
-											<span
-												className={cx(
-													'text-[9px] px-1 py-0.5 rounded',
-													isExpired
-														? 'bg-negative/20 text-negative'
-														: 'bg-base-alt text-tertiary',
-												)}
-											>
-												{formatExpiry(expiryDate)}
-											</span>
-										)}
-										{limit && (
-											<span
-												className={cx(
-													'text-[11px] tabular-nums',
-													isExhausted ? 'text-negative' : 'text-secondary',
-												)}
-											>
-												{limit}
-											</span>
-										)}
-									</span>
+									{limit && (
+										<span
+											className={cx(
+												'text-[10px] tabular-nums shrink-0',
+												isExhausted ? 'text-negative' : 'text-secondary',
+											)}
+										>
+											{limit}
+										</span>
+									)}
 								</button>
 							)
 						})}
@@ -2896,19 +2939,21 @@ function AssetRow({
 			>
 				{/* Row 1: Address input */}
 				<div className="flex items-center gap-1.5 px-1">
-					<input
-						ref={recipientInputRef}
-						type="text"
-						value={recipient}
-						onChange={(e) => setRecipient(e.target.value)}
-						placeholder="0x..."
-						className="flex-1 min-w-0 h-[34px] px-2 rounded-lg border border-card-border bg-white/5 text-[13px] text-primary font-mono placeholder:text-tertiary focus:outline-none focus:border-accent"
-					/>
+					<div className="flex items-center flex-1 h-[34px] rounded-lg border border-card-border bg-white/5 focus-within:border-accent">
+						<input
+							ref={recipientInputRef}
+							type="text"
+							value={recipient}
+							onChange={(e) => setRecipient(e.target.value)}
+							placeholder="0x..."
+							className="flex-1 min-w-0 h-full px-2 bg-transparent text-[13px] text-primary font-mono placeholder:text-tertiary focus:outline-none"
+						/>
+					</div>
 				</div>
-				{/* Row 2: Amount + MAX + signing key + send button */}
+				{/* Row 2: Amount + Key selector + send button */}
 				<div className="flex items-center gap-1.5 px-1">
-					{/* Compound amount input with token icon, symbol, and MAX */}
-					<div className="flex items-center flex-1 min-w-[120px] h-[34px] rounded-lg border border-card-border bg-white/5 focus-within:border-accent">
+					{/* Compound amount input */}
+					<div className="flex items-center flex-1 h-[34px] rounded-lg border border-card-border bg-white/5 focus-within:border-accent">
 						<TokenIcon
 							address={asset.address}
 							className="size-[16px] shrink-0 ml-1.5 brightness-125"
@@ -2944,7 +2989,7 @@ function AssetRow({
 						aria-label={t('common.send')}
 						aria-busy={sendState === 'sending'}
 						className={cx(
-							'size-[32px] rounded-lg press-down transition-colors flex items-center justify-center shrink-0 focus-ring',
+							'size-[34px] rounded-lg press-down transition-colors flex items-center justify-center shrink-0 focus-ring',
 							sendState === 'sent'
 								? 'bg-positive text-white cursor-default'
 								: sendState === 'error'
@@ -3296,7 +3341,7 @@ function ActivitySection({
 		>
 			{activeTab === 'mine' ? (
 				<>
-					<ActivityHeatmap activity={activity} />
+					<ActivityHeatmap activity={activity} currentBlock={currentBlock} />
 					<ActivityList
 						activity={activity}
 						address={address}
@@ -3556,23 +3601,25 @@ function ActivityRow({
 						</span>
 					}
 				/>
-				<a
-					href={`https://explore.mainnet.tempo.xyz/tx/${item.hash}`}
-					target="_blank"
-					rel="noopener noreferrer"
-					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 transition-all opacity-60 group-hover:opacity-100 focus-ring"
-					aria-label={t('common.viewOnExplorer')}
-				>
-					<ExternalLinkIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
-				</a>
-				<button
-					type="button"
-					onClick={() => setShowModal(true)}
-					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 cursor-pointer transition-all opacity-60 group-hover:opacity-100 focus-ring"
-					aria-label={t('common.viewReceipt')}
-				>
-					<ReceiptIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
-				</button>
+				<div className="flex items-center gap-1 shrink-0">
+					<a
+						href={`https://explore.mainnet.tempo.xyz/tx/${item.hash}`}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 transition-all opacity-60 group-hover:opacity-100 focus-ring"
+						aria-label={t('common.viewOnExplorer')}
+					>
+						<ExternalLinkIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
+					</a>
+					<button
+						type="button"
+						onClick={() => setShowModal(true)}
+						className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 cursor-pointer transition-all opacity-60 group-hover:opacity-100 focus-ring"
+						aria-label={t('common.viewReceipt')}
+					>
+						<ReceiptIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
+					</button>
+				</div>
 			</div>
 			{showModal &&
 				createPortal(

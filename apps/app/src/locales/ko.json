@@ -16,6 +16,7 @@
 		"active": "활성",
 		"set": "설정",
 		"back": "뒤로",
+		"primary": "기본",
 		"noTokensForFees": "수수료에 사용할 수 있는 토큰이 없습니다.",
 		"send": "보내기",
 		"recipient": "수신자 0x...",

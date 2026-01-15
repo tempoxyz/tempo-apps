@@ -16,6 +16,7 @@
 		"active": "Aktiivinen",
 		"set": "Aseta",
 		"back": "Takaisin",
+		"primary": "Ensisijainen",
 		"noTokensForFees": "Ei tunnuksia maksuihin.",
 		"send": "Lähetä",
 		"recipient": "Vastaanottaja 0x...",

@@ -16,6 +16,7 @@
 		"active": "פעיל",
 		"set": "הגדר",
 		"back": "חזרה",
+		"primary": "ראשי",
 		"noTokensForFees": "אין אסימונים זמינים לעמלות.",
 		"send": "שלח",
 		"recipient": "נמען 0x...",

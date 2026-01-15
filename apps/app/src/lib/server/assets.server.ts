@@ -86,7 +86,12 @@ async function getIndexSupply() {
 	} catch {
 		apiKey = process.env.INDEXER_API_KEY ?? import.meta.env.INDEXER_API_KEY
 	}
-	console.log('[getIndexSupply] apiKey present:', !!apiKey, 'length:', apiKey?.length)
+	console.log(
+		'[getIndexSupply] apiKey present:',
+		!!apiKey,
+		'length:',
+		apiKey?.length,
+	)
 	const IS = IDX.IndexSupply.create({ apiKey })
 	return { IS, QB: IDX.QueryBuilder.from(IS) }
 }
@@ -161,8 +166,15 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 					outgoingQuery.execute(),
 					tokenCreatedQuery.execute(),
 				])
-			
-			console.log('[fetchAssets] incoming:', incomingResult.length, 'outgoing:', outgoingResult.length, 'tokens:', tokenCreatedResult.length)
+
+			console.log(
+				'[fetchAssets] incoming:',
+				incomingResult.length,
+				'outgoing:',
+				outgoingResult.length,
+				'tokens:',
+				tokenCreatedResult.length,
+			)
 
 			const tokenMetadata = new Map<
 				string,
