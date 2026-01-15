@@ -2847,24 +2847,32 @@ function ActivitySection({
 		[activity],
 	)
 
+	// Store tokenMetadataMap in a ref to avoid triggering effect on map changes
+	const tokenMetadataMapRef = React.useRef(tokenMetadataMap)
+	tokenMetadataMapRef.current = tokenMetadataMap
+
+	// Track which block we're currently showing to avoid flicker
+	const [loadedBlock, setLoadedBlock] = React.useState<bigint | undefined>()
+
 	// Fetch block transactions when a block is selected in "Everyone" tab
 	React.useEffect(() => {
 		if (activeTab !== 'everyone' || selectedBlock === undefined) {
-			setBlockActivity([])
 			return
 		}
 
+		let cancelled = false
 		const loadBlockTxs = async () => {
 			setIsLoadingBlock(true)
 			try {
-				// Single batched RPC call for block + all receipts
 				const result = await fetchBlockWithReceipts({
 					data: { blockNumber: selectedBlock.toString() },
 				})
 
+				if (cancelled) return
+
 				if (result.receipts.length > 0) {
 					const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) =>
-						tokenMetadataMap.get(tokenAddress)
+						tokenMetadataMapRef.current.get(tokenAddress)
 
 					const items: ActivityItem[] = []
 					for (const receipt of result.receipts) {
@@ -2878,6 +2886,20 @@ function ActivitySection({
 						} catch {
 							// parsing failed, show tx with empty events
 						}
+
+						// Detect system transactions if no events were parsed
+						if (events.length === 0 && receipt.to) {
+							const to = receipt.to.toLowerCase()
+							if (to === '0x0000000000000000000000000000000000000000') {
+								events = [
+									{
+										type: 'system',
+										parts: [{ type: 'action', value: 'Subblock Metadata' }],
+									},
+								]
+							}
+						}
+
 						items.push({
 							hash: receipt.transactionHash,
 							events,
@@ -2889,15 +2911,24 @@ function ActivitySection({
 				} else {
 					setBlockActivity([])
 				}
+				setLoadedBlock(selectedBlock)
 			} catch {
-				setBlockActivity([])
+				if (!cancelled) {
+					setBlockActivity([])
+					setLoadedBlock(selectedBlock)
+				}
 			} finally {
-				setIsLoadingBlock(false)
+				if (!cancelled) {
+					setIsLoadingBlock(false)
+				}
 			}
 		}
 
 		loadBlockTxs()
-	}, [activeTab, selectedBlock, tokenMetadataMap])
+		return () => {
+			cancelled = true
+		}
+	}, [activeTab, selectedBlock])
 
 	// Clear selection when switching tabs
 	React.useEffect(() => {
@@ -2978,36 +3009,43 @@ function ActivitySection({
 									'Select a block to view transactions'}
 							</p>
 						</div>
-					) : isLoadingBlock ? (
-						<div className="flex flex-col items-center justify-center min-h-[80px] py-6 gap-2">
-							<div className="size-8 rounded-full bg-base-alt/50 flex items-center justify-center">
-								<RefreshCwIcon className="size-4 text-tertiary animate-spin" />
-							</div>
-						</div>
-					) : blockActivity.length === 0 ? (
-						<div className="flex flex-col items-center justify-center py-6 gap-2">
-							<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
-								<ReceiptIcon className="size-5 text-tertiary" />
-							</div>
-							<p className="text-[13px] text-secondary">
-								{t('portfolio.noActivityInBlock')}
-							</p>
-							<a
-								href={`https://explore.mainnet.tempo.xyz/block/${selectedBlock}`}
-								target="_blank"
-								rel="noopener noreferrer"
-								className="text-[12px] text-accent hover:underline"
-							>
-								{t('portfolio.viewBlockInExplorer')}
-							</a>
-						</div>
 					) : (
-						<BlockActivityList
-							activity={blockActivity}
-							address={address}
-							userTxHashes={userTxHashes}
-							blockNumber={selectedBlock}
-						/>
+						<div className="relative">
+							{isLoadingBlock && (
+								<div className="absolute inset-0 bg-card-header/80 flex items-center justify-center z-10">
+									<RefreshCwIcon className="size-5 text-tertiary animate-spin" />
+								</div>
+							)}
+							{blockActivity.length === 0 && loadedBlock === selectedBlock ? (
+								<div className="flex flex-col items-center justify-center py-6 gap-2">
+									<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
+										<ReceiptIcon className="size-5 text-tertiary" />
+									</div>
+									<p className="text-[13px] text-secondary">
+										{t('portfolio.noActivityInBlock')}
+									</p>
+									<a
+										href={`https://explore.mainnet.tempo.xyz/block/${selectedBlock}`}
+										target="_blank"
+										rel="noopener noreferrer"
+										className="text-[12px] text-accent hover:underline"
+									>
+										{t('portfolio.viewBlockInExplorer')}
+									</a>
+								</div>
+							) : blockActivity.length > 0 ? (
+								<BlockActivityList
+									activity={blockActivity}
+									address={address}
+									userTxHashes={userTxHashes}
+									blockNumber={loadedBlock ?? selectedBlock}
+								/>
+							) : (
+								<div className="flex items-center justify-center min-h-[80px]">
+									<RefreshCwIcon className="size-5 text-tertiary animate-spin" />
+								</div>
+							)}
+						</div>
 					)}
 				</>
 			)}
