@@ -24,7 +24,7 @@ function isMobileSafari(): boolean {
 }
 
 export function ApplePayIframe(props: ApplePayIframe.Props) {
-	const { url, className } = props
+	const { url, className, onLoad } = props
 	const iframeRef = React.useRef<HTMLIFrameElement>(null)
 	const [isLoaded, setIsLoaded] = React.useState(false)
 	const [isExpanded, setIsExpanded] = React.useState(false)
@@ -80,6 +80,7 @@ export function ApplePayIframe(props: ApplePayIframe.Props) {
 			switch (message.eventName) {
 				case 'onramp_api.load_success':
 					setIsLoaded(true)
+					onLoad?.()
 					break
 				case 'onramp_api.apple_pay_button_pressed':
 				case 'onramp_api.polling_start':
@@ -135,5 +136,6 @@ export declare namespace ApplePayIframe {
 	type Props = {
 		url: string
 		className?: string | undefined
+		onLoad?: () => void
 	}
 }
