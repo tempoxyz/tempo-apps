@@ -554,7 +554,14 @@ function AddressView() {
 	}, [])
 
 	const handleFaucetSuccess = React.useCallback(() => {
-		router.invalidate()
+		// Delay the invalidation to allow UI to show success state
+		setTimeout(() => router.invalidate(), 2000)
+	}, [router])
+
+	const handleSendSuccess = React.useCallback(() => {
+		// For sends, we rely on optimistic updates and delayed refresh
+		// Don't invalidate immediately as it disrupts the success UI
+		setTimeout(() => router.invalidate(), 3000)
 	}, [router])
 
 	React.useEffect(() => {
@@ -770,7 +777,7 @@ function AddressView() {
 							assets={displayedAssets}
 							address={address}
 							onFaucetSuccess={handleFaucetSuccess}
-							onSendSuccess={handleFaucetSuccess}
+							onSendSuccess={handleSendSuccess}
 							onOptimisticSend={applyOptimisticUpdate}
 							onOptimisticClear={clearOptimisticUpdate}
 							isOwnProfile={isOwnProfile}
