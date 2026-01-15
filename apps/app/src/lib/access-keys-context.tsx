@@ -1,8 +1,8 @@
 import * as React from 'react'
 import { Address } from 'ox'
 import { createPublicClient, http } from 'viem'
-import { getLogs } from 'viem/actions'
 import { getTempoChain } from '#wagmi.config'
+import { fetchAccessKeyEvents } from './server/access-keys.server'
 
 const ACCOUNT_KEYCHAIN_ADDRESS =
 	'0xaAAAaaAA00000000000000000000000000000000' as const
@@ -53,6 +53,10 @@ export function useSignableAccessKeys() {
 	return { keys: signableKeys, isLoading }
 }
 
+function parseSignatureType(sigType: number): SignatureType {
+	return sigType === 1 ? 'p256' : sigType === 2 ? 'webauthn' : 'secp256k1'
+}
+
 export function AccessKeysProvider({
 	accountAddress,
 	tokenAddresses = [],
@@ -85,106 +89,32 @@ export function AccessKeysProvider({
 		}
 
 		try {
+			// Fetch events from IndexSupply via server function
+			const eventData = await fetchAccessKeyEvents({
+				data: { account: checksummedAddress },
+			})
+
+			if (!eventData) {
+				console.error('[AccessKeysProvider] Failed to fetch events')
+				setIsLoading(false)
+				return
+			}
+
+			// No keys found
+			if (eventData.length === 0) {
+				setKeys([])
+				hasLoadedOnce.current = true
+				setIsLoading(false)
+				return
+			}
+
+			// Create viem client for RPC calls (enforceLimits, remaining limits, block timestamps)
 			const chain = getTempoChain()
 			const client = createPublicClient({ chain, transport: http() })
 
-			const blockNumber = await client.getBlockNumber()
-			const fromBlock = blockNumber > 99000n ? blockNumber - 99000n : 0n
-
-			const [authorizedLogs, revokedLogs, spendingLimitLogs] =
-				await Promise.all([
-					getLogs(client, {
-						address: ACCOUNT_KEYCHAIN_ADDRESS,
-						event: {
-							type: 'event',
-							name: 'KeyAuthorized',
-							inputs: [
-								{ type: 'address', name: 'account', indexed: true },
-								{ type: 'address', name: 'publicKey', indexed: true },
-								{ type: 'uint8', name: 'signatureType' },
-								{ type: 'uint64', name: 'expiry' },
-							],
-						},
-						args: { account: checksummedAddress },
-						fromBlock,
-						toBlock: 'latest',
-					}),
-					getLogs(client, {
-						address: ACCOUNT_KEYCHAIN_ADDRESS,
-						event: {
-							type: 'event',
-							name: 'KeyRevoked',
-							inputs: [
-								{ type: 'address', name: 'account', indexed: true },
-								{ type: 'address', name: 'publicKey', indexed: true },
-							],
-						},
-						args: { account: checksummedAddress },
-						fromBlock,
-						toBlock: 'latest',
-					}),
-					getLogs(client, {
-						address: ACCOUNT_KEYCHAIN_ADDRESS,
-						event: {
-							type: 'event',
-							name: 'SpendingLimitUpdated',
-							inputs: [
-								{ type: 'address', name: 'account', indexed: true },
-								{ type: 'address', name: 'publicKey', indexed: true },
-								{ type: 'address', name: 'token', indexed: true },
-								{ type: 'uint256', name: 'newLimit' },
-							],
-						},
-						args: { account: checksummedAddress },
-						fromBlock,
-						toBlock: 'latest',
-					}),
-				])
-
-			// Build original limits map from events
-			const originalLimitsMap = new Map<string, Map<string, bigint>>()
-			for (const log of spendingLimitLogs) {
-				if (log.args.publicKey && log.args.token && log.args.newLimit) {
-					const keyIdLower = (log.args.publicKey as string).toLowerCase()
-					const tokenLower = (log.args.token as string).toLowerCase()
-					let keyLimits = originalLimitsMap.get(keyIdLower)
-					if (!keyLimits) {
-						keyLimits = new Map()
-						originalLimitsMap.set(keyIdLower, keyLimits)
-					}
-					if (!keyLimits.has(tokenLower)) {
-						keyLimits.set(tokenLower, log.args.newLimit as bigint)
-					}
-				}
-			}
-
-			// Build revoked set
-			const revokedKeyIds = new Set<string>(
-				revokedLogs
-					.filter((log) => log.args.publicKey)
-					.map((log) => (log.args.publicKey as string).toLowerCase()),
-			)
-
-			// Build active keys list
-			const basicKeys = authorizedLogs
-				.filter(
-					(log) =>
-						log.args.publicKey &&
-						!revokedKeyIds.has((log.args.publicKey as string).toLowerCase()),
-				)
-				.map((log) => ({
-					keyId: log.args.publicKey as string,
-					signatureType: Number(log.args.signatureType ?? 0),
-					expiry: Number(log.args.expiry ?? 0),
-					blockNumber: log.blockNumber,
-				}))
-				.filter(
-					(k) => k.expiry === 0 || k.expiry > Math.floor(Date.now() / 1000),
-				)
-
 			// Fetch block timestamps for creation times
 			const uniqueBlockNumbers = [
-				...new Set(basicKeys.map((k) => k.blockNumber)),
+				...new Set(eventData.map((k) => BigInt(k.blockNumber))),
 			]
 			const blockTimestamps = new Map<bigint, number>()
 			await Promise.all(
@@ -198,11 +128,13 @@ export function AccessKeysProvider({
 				}),
 			)
 
-			// Fetch current spending limits using getKey and getRemainingLimit
+			// Fetch current state (enforceLimits, remaining limits) via RPC
 			const keysWithLimits: AccessKeyData[] = await Promise.all(
-				basicKeys.map(async (k) => {
+				eventData.map(async (k) => {
 					const spendingLimits = new Map<string, bigint>()
-					const originalLimits = originalLimitsMap.get(k.keyId.toLowerCase())
+					const originalLimits = new Map<string, bigint>(
+						k.originalLimits.map(([token, limit]) => [token, BigInt(limit)]),
+					)
 					let enforceLimits = false
 
 					// Query the contract for enforceLimits status
@@ -241,7 +173,7 @@ export function AccessKeysProvider({
 						enforceLimits = keyData.enforceLimits
 					} catch {
 						// Fall back to checking if originalLimits exist
-						enforceLimits = (originalLimits?.size ?? 0) > 0
+						enforceLimits = originalLimits.size > 0
 					}
 
 					// Fetch remaining limits for all tokens if enforceLimits is true
@@ -280,22 +212,16 @@ export function AccessKeysProvider({
 						}
 					}
 
-					const sigType: SignatureType =
-						k.signatureType === 1
-							? 'p256'
-							: k.signatureType === 2
-								? 'webauthn'
-								: 'secp256k1'
-
+					const blockNum = BigInt(k.blockNumber)
 					return {
 						keyId: k.keyId,
-						signatureType: sigType,
+						signatureType: parseSignatureType(k.signatureType),
 						expiry: k.expiry * 1000,
 						enforceLimits,
 						spendingLimits,
-						originalLimits: originalLimits ?? new Map(),
-						blockNumber: k.blockNumber,
-						createdAt: blockTimestamps.get(k.blockNumber),
+						originalLimits,
+						blockNumber: blockNum,
+						createdAt: blockTimestamps.get(blockNum),
 					}
 				}),
 			)
