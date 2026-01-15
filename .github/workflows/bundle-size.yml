@@ -3,9 +3,9 @@ name: Bundle Size
 on:
   push:
     branches: [main]
-    paths:
-      - "apps/explorer/**"
-      - "pnpm-lock.yaml"
+    # No path filter on main - we need to generate baseline on every push
+    # so PRs always compare against the latest main, even if main has
+    # commits that don't touch explorer (e.g., workflow changes, other apps)
   pull_request:
     types: [opened, reopened, synchronize]
     paths:
