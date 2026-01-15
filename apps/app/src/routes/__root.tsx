@@ -19,11 +19,11 @@ import css from './styles.css?url'
 
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 const OG_IMAGE_URL =
-	TEMPO_ENV === 'presto'
-		? 'https://app.mainnet.tempo.xyz/og-image.png'
-		: TEMPO_ENV === 'moderato'
-			? 'https://app.tempo.xyz/og-image.png'
-			: 'https://app.devnet.tempo.xyz/og-image.png'
+	TEMPO_ENV === 'moderato'
+		? 'https://app.tempo.xyz/og-image.png'
+		: TEMPO_ENV === 'devnet'
+			? 'https://app.devnet.tempo.xyz/og-image.png'
+			: 'https://app.mainnet.tempo.xyz/og-image.png'
 
 export const Route = createRootRouteWithContext<{
 	queryClient: QueryClient

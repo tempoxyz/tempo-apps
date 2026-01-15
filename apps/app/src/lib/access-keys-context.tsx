@@ -44,10 +44,15 @@ export function useSignableAccessKeys() {
 
 	const signableKeys = React.useMemo(() => {
 		if (typeof window === 'undefined') return []
-		return keys.filter((key) => {
+		console.log('[useSignableAccessKeys] Filtering', keys.length, 'keys for local private keys')
+		const filtered = keys.filter((key) => {
 			const storageKey = `accessKey:${key.keyId.toLowerCase()}`
-			return localStorage.getItem(storageKey) !== null
+			const hasKey = localStorage.getItem(storageKey) !== null
+			console.log('[useSignableAccessKeys] Key', key.keyId.slice(0, 10), 'hasPrivateKey:', hasKey)
+			return hasKey
 		})
+		console.log('[useSignableAccessKeys] Found', filtered.length, 'signable keys')
+		return filtered
 	}, [keys])
 
 	return { keys: signableKeys, isLoading }
