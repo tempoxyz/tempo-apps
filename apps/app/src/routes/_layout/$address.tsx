@@ -31,7 +31,11 @@ import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
 import { useActivitySummary, type ActivityType } from '#lib/activity-context'
 import { LottoNumber } from '#comps/LottoNumber'
-import { Settings, SETTINGS_VIEW_TITLES, type SettingsView } from '#comps/Settings'
+import {
+	Settings,
+	SETTINGS_VIEW_TITLES,
+	type SettingsView,
+} from '#comps/Settings'
 import CopyIcon from '~icons/lucide/copy'
 import ExternalLinkIcon from '~icons/lucide/external-link'
 import GlobeIcon from '~icons/lucide/globe'
@@ -289,12 +293,17 @@ const fetchTransactionReceipts = createServerFn({ method: 'POST' })
 
 		const { env } = await import('cloudflare:workers')
 		const auth = env.PRESTO_RPC_AUTH as string | undefined
-		const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		}
 		if (auth && TEMPO_ENV === 'presto') {
 			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
-		const receipts: Array<{ hash: string; receipt: RpcTransactionReceipt | null }> = []
+		const receipts: Array<{
+			hash: string
+			receipt: RpcTransactionReceipt | null
+		}> = []
 
 		for (const hash of hashes) {
 			try {
@@ -309,7 +318,9 @@ const fetchTransactionReceipts = createServerFn({ method: 'POST' })
 					}),
 				})
 				if (response.ok) {
-					const json = (await response.json()) as { result?: RpcTransactionReceipt }
+					const json = (await response.json()) as {
+						result?: RpcTransactionReceipt
+					}
 					receipts.push({ hash, receipt: json.result ?? null })
 				} else {
 					receipts.push({ hash, receipt: null })
@@ -489,9 +500,10 @@ function convertRpcReceiptToViemReceipt(
 		to: rpcReceipt.to,
 		logs: rpcReceipt.logs.map((log) => ({
 			address: log.address,
-			topics: log.topics.length > 0
-				? (log.topics as [`0x${string}`, ...`0x${string}`[]])
-				: ([] as unknown as [`0x${string}`, ...`0x${string}`[]]),
+			topics:
+				log.topics.length > 0
+					? (log.topics as [`0x${string}`, ...`0x${string}`[]])
+					: ([] as unknown as [`0x${string}`, ...`0x${string}`[]]),
 			data: log.data,
 			blockNumber: BigInt(log.blockNumber),
 			transactionHash: log.transactionHash as `0x${string}`,
@@ -802,7 +814,9 @@ function AddressView() {
 								onClick={() => setShowZeroBalances(!showZeroBalances)}
 								className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer"
 								title={
-									showZeroBalances ? t('portfolio.hideZeroBalances') : t('portfolio.showZeroBalances')
+									showZeroBalances
+										? t('portfolio.hideZeroBalances')
+										: t('portfolio.showZeroBalances')
 								}
 							>
 								{showZeroBalances ? (
@@ -817,6 +831,7 @@ function AddressView() {
 							assets={displayedAssets}
 							address={address}
 							onFaucetSuccess={handleFaucetSuccess}
+							onSendSuccess={handleFaucetSuccess}
 							isOwnProfile={isOwnProfile}
 							connectedAddress={account.address}
 							initialSendTo={sendTo}
@@ -946,19 +961,17 @@ function Section(props: {
 				>
 					<span className="flex items-center gap-2">
 						{backButton ? (
-							<>
-								<button
-									type="button"
-									onClick={(e) => {
-										e.stopPropagation()
-										backButton.onClick()
-									}}
-									className="flex items-center gap-1.5 text-accent hover:text-accent/80 transition-colors cursor-pointer"
-								>
-									<ArrowLeftIcon className="size-[14px]" />
-									<span>{backButton.label}</span>
-								</button>
-							</>
+							<button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation()
+									backButton.onClick()
+								}}
+								className="flex items-center gap-1.5 text-accent hover:text-accent/80 transition-colors cursor-pointer"
+							>
+								<ArrowLeftIcon className="size-[14px]" />
+								<span>{backButton.label}</span>
+							</button>
 						) : (
 							<>
 								{title}
@@ -1137,12 +1150,15 @@ function SettingsSection({ assets }: { assets: AssetData[] }) {
 		setTimeout(() => setTriggerBack(false), 50)
 	}, [])
 
-	const submenuTitle = currentView !== 'main' ? t(SETTINGS_VIEW_TITLES[currentView]) : undefined
+	const submenuTitle =
+		currentView !== 'main' ? t(SETTINGS_VIEW_TITLES[currentView]) : undefined
 
 	return (
 		<Section
 			title="Settings"
-			backButton={submenuTitle ? { label: submenuTitle, onClick: handleBack } : undefined}
+			backButton={
+				submenuTitle ? { label: submenuTitle, onClick: handleBack } : undefined
+			}
 		>
 			<Settings
 				assets={assets}
@@ -1308,6 +1324,7 @@ function HoldingsTable({
 	assets,
 	address,
 	onFaucetSuccess,
+	onSendSuccess,
 	isOwnProfile,
 	connectedAddress,
 	initialSendTo,
@@ -1316,6 +1333,7 @@ function HoldingsTable({
 	assets: AssetData[]
 	address: string
 	onFaucetSuccess?: () => void
+	onSendSuccess?: () => void
 	isOwnProfile: boolean
 	connectedAddress?: string
 	initialSendTo?: string
@@ -1398,6 +1416,7 @@ function HoldingsTable({
 						onSendComplete={(symbol) => {
 							setToastMessage(`Sent ${symbol} successfully`)
 							setSendingToken(null)
+							onSendSuccess?.()
 						}}
 						onFaucetSuccess={onFaucetSuccess}
 						isOwnProfile={isOwnProfile}
@@ -1411,13 +1430,10 @@ function HoldingsTable({
 				createPortal(
 					<div className="fixed bottom-4 right-4 z-50 bg-surface rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12)] overflow-hidden flex">
 						<div className="w-1 bg-positive shrink-0" />
-						<div className="flex flex-col gap-0.5 px-3 py-2 items-start">
-							<span className="flex items-center gap-1.5 text-[13px] text-primary font-medium">
-								<CheckIcon className="size-[14px] text-positive" />
+						<div className="flex items-center gap-1.5 px-3 py-2">
+							<CheckIcon className="size-[14px] text-positive" />
+							<span className="text-[13px] text-primary font-medium">
 								{toastMessage}
-							</span>
-							<span className="text-[11px] text-tertiary leading-snug">
-								This is a demo so balances do not update.
 							</span>
 						</div>
 					</div>,
@@ -1811,7 +1827,9 @@ function ActivityList({
 				<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
 					<ReceiptIcon className="size-5 text-tertiary" />
 				</div>
-				<p className="text-[13px] text-secondary">{t('portfolio.noActivityYet')}</p>
+				<p className="text-[13px] text-secondary">
+					{t('portfolio.noActivityYet')}
+				</p>
 			</div>
 		)
 	}
@@ -1974,7 +1992,7 @@ function TransactionModal({
 		<div
 			ref={overlayRef}
 			className={cx(
-				'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200',
+				'fixed inset-0 left-[calc(45vw+8px)] max-lg:left-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200',
 				isVisible ? 'opacity-100' : 'opacity-0',
 			)}
 			onClick={handleClose}
