@@ -102,6 +102,7 @@ export function LottoNumber({
 
 	return (
 		<span className={className}>
+			{/* biome-ignore lint/suspicious/noArrayIndexKey: static character list */}
 			{chars.map((c, i) => {
 				// Only apply reduced opacity to digits after the decimal point (when settled)
 				const isDecimalPart =
