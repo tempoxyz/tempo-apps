@@ -639,8 +639,9 @@ async function fetchTransactions(
 					viewer: address,
 				})
 				const txInfo = txData.find((tx) => tx.hash === hash)
+				// Timestamp from explorer API is Unix seconds (number or numeric string)
 				const timestamp = txInfo?.timestamp
-					? new Date(txInfo.timestamp).getTime()
+					? Number(txInfo.timestamp) * 1000
 					: Date.now()
 				const blockNumber = BigInt(rpcReceipt.blockNumber)
 				items.push({ hash, events, timestamp, blockNumber })
@@ -718,6 +719,10 @@ function AddressView() {
 	const { sendTo, token: initialToken } = Route.useSearch()
 	const { t } = useTranslation()
 	const { announce } = useAnnounce()
+	const [sendingToken, setSendingToken] = React.useState<string | null>(
+		initialToken ?? null,
+	)
+	const [tokenAddressCopied, setTokenAddressCopied] = React.useState(false)
 
 	// Assets state - starts from loader, can be refetched without page refresh
 	const [assetsData, setAssetsData] = React.useState(initialAssets)
@@ -915,6 +920,21 @@ function AddressView() {
 	)
 	const displayedAssets = showZeroBalances ? adjustedAssets : assetsWithBalance
 
+	// Find selected asset for send form header
+	const selectedSendAsset = sendingToken
+		? displayedAssets.find(
+				(a) => a.address.toLowerCase() === sendingToken.toLowerCase(),
+			)
+		: null
+
+	const copyTokenAddress = React.useCallback(() => {
+		if (selectedSendAsset) {
+			copy(selectedSendAsset.address)
+			setTokenAddressCopied(true)
+			setTimeout(() => setTokenAddressCopied(false), 1500)
+		}
+	}, [selectedSendAsset, copy])
+
 	// Get token addresses for access key spending limit queries
 	const tokenAddresses = React.useMemo(
 		() => dedupedAssets.map((a) => a.address),
@@ -1072,6 +1092,38 @@ function AddressView() {
 						title={t('portfolio.assets')}
 						subtitle={`${assetsWithBalance.length} ${t('portfolio.assetCount', { count: assetsWithBalance.length })}`}
 						defaultOpen
+						backButton={
+							selectedSendAsset
+								? {
+										label:
+											selectedSendAsset.metadata?.symbol ||
+											shortenAddress(selectedSendAsset.address, 3),
+										onClick: () => setSendingToken(null),
+										extra: (
+											<>
+												<span className="w-px h-4 bg-card-border" />
+												<button
+													type="button"
+													onClick={(e) => {
+														e.stopPropagation()
+														copyTokenAddress()
+													}}
+													className="flex items-center gap-1.5 text-[12px] text-tertiary hover:text-primary font-mono transition-colors cursor-pointer"
+												>
+													<span>
+														{shortenAddress(selectedSendAsset.address, 4)}
+													</span>
+													{tokenAddressCopied ? (
+														<CheckIcon className="size-2.5 text-positive" />
+													) : (
+														<CopyIcon className="size-2.5" />
+													)}
+												</button>
+											</>
+										),
+									}
+								: undefined
+						}
 						headerRight={
 							<button
 								type="button"
@@ -1105,7 +1157,8 @@ function AddressView() {
 							isOwnProfile={isOwnProfile}
 							connectedAddress={account.address}
 							initialSendTo={sendTo}
-							initialToken={initialToken}
+							sendingToken={sendingToken}
+							onSendingTokenChange={setSendingToken}
 							announce={announce}
 						/>
 					</Section>
@@ -1310,46 +1363,57 @@ function formatUsdCompact(value: number): string {
 }
 
 function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
-	const weeks = 52
-	const days = 7
+	// 7 days displayed as ~48 columns × 7 rows (like GitHub contribution graph)
+	// Each square = 30 min, flowing down then right
+	// Top-left = oldest, bottom-right = now
+	const totalSlots = 336 // 7 days * 24 hours * 2 (30-min slots)
+	const rows = 7
+	const cols = Math.ceil(totalSlots / rows) // 48 columns
 
-	const activityByDay = React.useMemo(() => {
-		const counts = new Map<string, number>()
+	const slotMs = 30 * 60 * 1000 // 30 minutes per slot
+
+	const activityBySlot = React.useMemo(() => {
+		const counts = new Map<number, number>()
+		const now = Date.now()
+		const cutoff = now - totalSlots * slotMs
 
 		for (let i = 0; i < activity.length; i++) {
 			const item = activity[i]
-			// Only count transactions with actual timestamps
-			if (!item.timestamp) continue
-			const date = new Date(item.timestamp).toISOString().split('T')[0]
-			counts.set(date, (counts.get(date) ?? 0) + 1)
+			if (!item.timestamp || item.timestamp < cutoff) continue
+			const slotsAgo = Math.floor((now - item.timestamp) / slotMs)
+			const bucket = totalSlots - 1 - slotsAgo
+			if (bucket >= 0 && bucket < totalSlots) {
+				counts.set(bucket, (counts.get(bucket) ?? 0) + 1)
+			}
 		}
 		return counts
 	}, [activity])
 
 	const grid = React.useMemo(() => {
-		const data: { level: number; count: number; date: string }[][] = []
-		const now = new Date()
-		const startDate = new Date(now)
-		// Start from (weeks * 7 - 1) days ago so we end on today
-		startDate.setDate(startDate.getDate() - (weeks * 7 - 1))
+		const data: { level: number; count: number; date: Date }[][] = []
+		const now = Date.now()
 
-		const maxCount = Math.max(1, ...activityByDay.values())
+		const maxCount = Math.max(1, ...activityBySlot.values())
 
-		for (let w = 0; w < weeks; w++) {
-			const week: { level: number; count: number; date: string }[] = []
-			for (let d = 0; d < days; d++) {
-				const date = new Date(startDate)
-				date.setDate(startDate.getDate() + w * 7 + d)
-				const key = date.toISOString().split('T')[0]
-				const count = activityByDay.get(key) ?? 0
+		for (let c = 0; c < cols; c++) {
+			const column: { level: number; count: number; date: Date }[] = []
+			for (let r = 0; r < rows; r++) {
+				const bucket = c * rows + r
+				if (bucket >= totalSlots) {
+					column.push({ level: 0, count: 0, date: new Date(now) })
+					continue
+				}
+				const slotsAgo = totalSlots - 1 - bucket
+				const date = new Date(now - slotsAgo * slotMs)
+				const count = activityBySlot.get(bucket) ?? 0
 				const level =
 					count === 0 ? 0 : Math.min(4, Math.ceil((count / maxCount) * 4))
-				week.push({ level, count, date: key })
+				column.push({ level, count, date })
 			}
-			data.push(week)
+			data.push(column)
 		}
 		return data
-	}, [activityByDay])
+	}, [activityBySlot])
 
 	const getColor = (level: number) => {
 		const colors = [
@@ -1362,17 +1426,16 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 		return colors[level] ?? colors[0]
 	}
 
-	const formatDate = (dateStr: string) => {
-		const date = new Date(dateStr)
-		return date.toLocaleDateString('en-US', {
-			month: 'long',
-			day: 'numeric',
-		})
+	const formatDateTime = (date: Date) => {
+		const hour = date.getHours()
+		const hourStr = hour === 0 ? '12' : hour > 12 ? String(hour - 12) : String(hour)
+		const ampm = hour < 12 ? 'am' : 'pm'
+		return `${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} ${hourStr}${ampm}`
 	}
 
 	const [hoveredCell, setHoveredCell] = React.useState<{
 		count: number
-		date: string
+		date: Date
 		x: number
 		y: number
 	} | null>(null)
@@ -1380,13 +1443,13 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 	return (
 		<div className="relative">
 			<div className="flex gap-[3px] w-full py-2">
-				{grid.map((week, wi) => (
+				{grid.map((column, hi) => (
 					// biome-ignore lint/suspicious/noArrayIndexKey: grid is static and doesn't reorder
-					<div key={`w-${wi}`} className="flex flex-col gap-[3px] flex-1">
-						{week.map((cell, di) => (
+					<div key={`h-${hi}`} className="flex flex-col gap-[3px] flex-1">
+						{column.map((cell, di) => (
 							// biome-ignore lint/a11y/noStaticElementInteractions: hover tooltip only
 							<div
-								key={cell.date || `d-${wi}-${di}`}
+								key={`${hi}-${di}`}
 								className={cx(
 									'w-full aspect-square rounded-[2px] cursor-default transition-transform hover:scale-125 hover:z-10',
 									getColor(cell.level),
@@ -1415,9 +1478,9 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 						transform: 'translate(-50%, -100%)',
 					}}
 				>
-					<span className="font-medium">{hoveredCell.count}</span> transaction
-					{hoveredCell.count !== 1 ? 's' : ''} on{' '}
-					<span className="text-gray-300">{formatDate(hoveredCell.date)}</span>
+					<span className="font-medium">{hoveredCell.count}</span> tx
+					{hoveredCell.count !== 1 ? 's' : ''} ·{' '}
+					<span className="text-gray-300">{formatDateTime(hoveredCell.date)}</span>
 				</div>
 			)}
 		</div>
@@ -1494,9 +1557,14 @@ function BlockTimeline({
 			return
 		if (displayBlock >= currentBlock) return
 
+		// Calculate delay based on how far behind we are
+		// Faster catch-up if many blocks behind, slower when close
+		const blocksBehind = Number(currentBlock - displayBlock)
+		const delay = blocksBehind > 5 ? 50 : blocksBehind > 2 ? 100 : 300
+
 		const timer = setTimeout(() => {
 			setDisplayBlock((prev) => (prev ? prev + 1n : currentBlock))
-		}, 200)
+		}, delay)
 
 		return () => clearTimeout(timer)
 	}, [currentBlock, displayBlock, isPaused, selectedBlock])
@@ -1895,7 +1963,7 @@ function BlockTimeline({
 							onMouseLeave={() => setHoveredBlock(null)}
 							disabled={block.isPlaceholder}
 							className={cx(
-								'shrink-0 size-3 rounded-sm transition-all duration-150',
+								'shrink-0 size-3 rounded-sm transition-all duration-300 ease-out',
 								inDragRange && !block.isPlaceholder
 									? 'block-range-selected'
 									: getBlockStyle(
@@ -1905,12 +1973,12 @@ function BlockTimeline({
 											block.hasUserActivity,
 											block.isPlaceholder,
 										),
-								// Current block gets a prominent white ring
+								// Current block gets a prominent white ring with smooth animation
 								isCurrent &&
 									!isSelected &&
-									'ring-2 ring-white ring-offset-1 ring-offset-black',
+									'ring-2 ring-white/90 ring-offset-1 ring-offset-black scale-110',
 								isSelected &&
-									'ring-2 ring-accent ring-offset-1 ring-offset-black',
+									'ring-2 ring-accent ring-offset-1 ring-offset-black scale-110',
 								isFocused &&
 									!isSelected &&
 									!isCurrent &&
@@ -1921,8 +1989,8 @@ function BlockTimeline({
 									!isFocused &&
 									'ring-1 ring-green-500/60',
 								block.isPlaceholder
-									? 'cursor-default opacity-30'
-									: 'hover:opacity-80 cursor-pointer',
+									? 'cursor-default opacity-20'
+									: 'hover:opacity-90 cursor-pointer',
 							)}
 						/>
 					)
@@ -2023,7 +2091,8 @@ function HoldingsTable({
 	isOwnProfile,
 	connectedAddress,
 	initialSendTo,
-	initialToken,
+	sendingToken,
+	onSendingTokenChange,
 	announce,
 }: {
 	assets: AssetData[]
@@ -2035,14 +2104,12 @@ function HoldingsTable({
 	isOwnProfile: boolean
 	connectedAddress?: string
 	initialSendTo?: string
-	initialToken?: string
+	sendingToken: string | null
+	onSendingTokenChange: (token: string | null) => void
 	announce: (message: string) => void
 }) {
 	const { t } = useTranslation()
 	const navigate = useNavigate()
-	const [sendingToken, setSendingToken] = React.useState<string | null>(
-		initialToken ?? null,
-	)
 	const [toastMessage, setToastMessage] = React.useState<string | null>(null)
 
 	// Use global access keys from context
@@ -2122,7 +2189,7 @@ function HoldingsTable({
 								}
 								return
 							}
-							setSendingToken(
+							onSendingTokenChange(
 								sendingToken === asset.address ? null : asset.address,
 							)
 						}}
@@ -2131,7 +2198,7 @@ function HoldingsTable({
 							onOptimisticClear?.(asset.address)
 							onSendSuccess?.()
 							// Delay collapsing form to show success state
-							setTimeout(() => setSendingToken(null), 1500)
+							setTimeout(() => onSendingTokenChange(null), 1500)
 						}}
 						onSendError={() => {
 							onOptimisticClear?.(asset.address)
@@ -2140,7 +2207,7 @@ function HoldingsTable({
 						onFaucetSuccess={onFaucetSuccess}
 						isOwnProfile={isOwnProfile}
 						initialRecipient={
-							asset.address === initialToken ? initialSendTo : undefined
+							asset.address === sendingToken ? initialSendTo : undefined
 						}
 						announce={announce}
 						accessKeys={signableAccessKeys}
@@ -2273,20 +2340,42 @@ function SignWithSelector({
 		return `$${Number(formatted).toFixed(0)}`
 	}
 
+	const updatePosition = React.useCallback(() => {
+		if (buttonRef.current) {
+			const rect = buttonRef.current.getBoundingClientRect()
+			return {
+				top: rect.bottom + 4,
+				left: rect.left,
+				width: Math.max(rect.width, 160),
+			}
+		}
+		return null
+	}, [])
+
 	const [dropdownPos, setDropdownPos] = React.useState<{
 		top: number
 		left: number
 		width: number
 	} | null>(null)
 
+	React.useEffect(() => {
+		if (!isOpen) return
+		const handleScroll = () => {
+			const pos = updatePosition()
+			if (pos) setDropdownPos(pos)
+		}
+		window.addEventListener('scroll', handleScroll, true)
+		window.addEventListener('resize', handleScroll)
+		return () => {
+			window.removeEventListener('scroll', handleScroll, true)
+			window.removeEventListener('resize', handleScroll)
+		}
+	}, [isOpen, updatePosition])
+
 	const openDropdown = () => {
-		if (buttonRef.current) {
-			const rect = buttonRef.current.getBoundingClientRect()
-			setDropdownPos({
-				top: rect.bottom + 4,
-				left: rect.left,
-				width: Math.max(rect.width, 160),
-			})
+		const pos = updatePosition()
+		if (pos) {
+			setDropdownPos(pos)
 			setIsOpen(true)
 		}
 	}
@@ -2298,20 +2387,22 @@ function SignWithSelector({
 				type="button"
 				onClick={() => (isOpen ? setIsOpen(false) : openDropdown())}
 				className={cx(
-					'h-[32px] px-2.5 rounded-lg border bg-base text-[12px] flex items-center gap-1.5 transition-colors cursor-pointer',
-					isOpen ? 'border-accent' : 'border-card-border hover:border-accent/50',
+					'h-[28px] px-1.5 rounded-lg border bg-base text-[11px] flex items-center gap-1 transition-colors cursor-pointer',
+					isOpen
+						? 'border-accent'
+						: 'border-card-border hover:border-accent/50',
 					selectedKey ? 'text-accent' : 'text-primary',
 				)}
 			>
 				<span className="text-[13px] shrink-0">
-					{selectedKey ? (getAccessKeyEmoji(selectedKey) || '🔑') : '👤'}
+					{selectedKey ? getAccessKeyEmoji(selectedKey) || '🔑' : '👤'}
 				</span>
 				<span className="truncate">
 					{selectedKey ? getKeyName(selectedKey) : 'Wallet'}
 				</span>
 				<ChevronDownIcon
 					className={cx(
-						'size-3 text-tertiary transition-transform shrink-0',
+						'size-2 text-tertiary transition-transform shrink-0',
 						isOpen && 'rotate-180',
 					)}
 				/>
@@ -2321,7 +2412,7 @@ function SignWithSelector({
 				createPortal(
 					<div
 						ref={dropdownRef}
-						className="fixed bg-surface border border-card-border rounded-lg shadow-xl overflow-hidden py-1"
+						className="fixed bg-surface border border-card-border rounded-xl shadow-xl overflow-hidden py-0.5"
 						style={{
 							top: dropdownPos.top,
 							left: dropdownPos.left,
@@ -2336,7 +2427,7 @@ function SignWithSelector({
 								setIsOpen(false)
 							}}
 							className={cx(
-								'w-full px-3 py-2 text-[12px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-2',
+								'w-full px-3 py-1.5 text-[12px] text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center gap-2',
 								!selectedKey ? 'text-accent' : 'text-primary',
 							)}
 						>
@@ -2347,41 +2438,79 @@ function SignWithSelector({
 							const limit = getKeyLimit(key)
 							const isExhausted = limit === 'Exhausted'
 							const keyEmoji = getAccessKeyEmoji(key.keyId) || '🔑'
+							const now = Date.now()
+							const isExpired = key.expiry > 0 && key.expiry * 1000 < now
+							const isAvailable = !isExhausted && !isExpired
+							const expiryDate =
+								key.expiry > 0 ? new Date(key.expiry * 1000) : null
+							const formatExpiry = (date: Date) => {
+								const diff = date.getTime() - now
+								if (diff < 0) return 'Expired'
+								const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+								if (days > 30)
+									return date.toLocaleDateString('en-US', {
+										month: 'short',
+										day: 'numeric',
+									})
+								if (days > 0) return `${days}d`
+								const hours = Math.floor(diff / (1000 * 60 * 60))
+								if (hours > 0) return `${hours}h`
+								const mins = Math.floor(diff / (1000 * 60))
+								return `${mins}m`
+							}
 							return (
 								<button
 									key={key.keyId}
 									type="button"
 									onClick={() => {
-										if (!isExhausted) {
+										if (isAvailable) {
 											onSelect(key.keyId)
 											setIsOpen(false)
 										}
 									}}
-									disabled={isExhausted}
+									disabled={!isAvailable}
 									className={cx(
-										'w-full px-3 py-2 text-[12px] text-left transition-colors flex items-center gap-2',
-										isExhausted
+										'w-full px-3 py-1.5 text-[12px] text-left transition-colors flex items-center gap-2',
+										!isAvailable
 											? 'text-tertiary cursor-not-allowed opacity-50'
 											: 'hover:bg-base-alt cursor-pointer',
-										selectedKey === key.keyId
-											? 'text-accent'
-											: 'text-primary',
+										selectedKey === key.keyId ? 'text-accent' : 'text-primary',
 									)}
 								>
+									<span
+										className={cx(
+											'size-[6px] rounded-full shrink-0',
+											isAvailable ? 'bg-green-500' : 'bg-gray-500',
+										)}
+									/>
 									<span className="text-[13px]">{keyEmoji}</span>
 									<span className="flex-1 truncate">
 										{getKeyName(key.keyId)}
 									</span>
-									{limit && (
-										<span
-											className={cx(
-												'text-[11px] tabular-nums',
-												isExhausted ? 'text-negative' : 'text-secondary',
-											)}
-										>
-											{limit}
-										</span>
-									)}
+									<span className="flex items-center gap-1.5">
+										{expiryDate && (
+											<span
+												className={cx(
+													'text-[9px] px-1 py-0.5 rounded',
+													isExpired
+														? 'bg-negative/20 text-negative'
+														: 'bg-base-alt text-tertiary',
+												)}
+											>
+												{formatExpiry(expiryDate)}
+											</span>
+										)}
+										{limit && (
+											<span
+												className={cx(
+													'text-[11px] tabular-nums',
+													isExhausted ? 'text-negative' : 'text-secondary',
+												)}
+											>
+												{limit}
+											</span>
+										)}
+									</span>
 								</button>
 							)
 						})}
@@ -2734,30 +2863,25 @@ function AssetRow({
 				}}
 				className="flex flex-col gap-2 px-1 py-2 rounded-xl hover:glass-thin transition-all"
 			>
-				{/* Row 1: Address input + cancel */}
-				<div className="flex items-center gap-1.5 px-2">
+				{/* Row 1: Address input */}
+				<div className="flex items-center gap-1.5 px-1">
 					<input
 						ref={recipientInputRef}
 						type="text"
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
 						placeholder="0x..."
-						className="flex-1 min-w-0 h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary font-mono placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="flex-1 min-w-0 h-[34px] px-2 rounded-lg border border-card-border bg-white/5 text-[13px] text-primary font-mono placeholder:text-tertiary focus:outline-none focus:border-accent"
 					/>
-					<button
-						type="button"
-						onClick={handleToggle}
-						aria-label={t('common.cancel')}
-						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-lg transition-colors shrink-0 focus-ring"
-					>
-						<XIcon className="size-[14px]" />
-					</button>
 				</div>
 				{/* Row 2: Amount + MAX + signing key + send button */}
-				<div className="flex items-center gap-1.5 px-2">
+				<div className="flex items-center gap-1.5 px-1">
 					{/* Compound amount input with token icon, symbol, and MAX */}
-					<div className="flex items-center flex-1 min-w-[120px] h-[32px] rounded-lg border border-card-border bg-base focus-within:border-accent">
-						<TokenIcon address={asset.address} className="size-[16px] shrink-0 ml-2" />
+					<div className="flex items-center flex-1 min-w-[120px] h-[34px] rounded-lg border border-card-border bg-white/5 focus-within:border-accent">
+						<TokenIcon
+							address={asset.address}
+							className="size-[16px] shrink-0 ml-1.5 brightness-125"
+						/>
 						<input
 							ref={amountInputRef}
 							type="text"
@@ -2765,7 +2889,7 @@ function AssetRow({
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
 							placeholder="0.00"
-							className="flex-1 min-w-[40px] h-full px-2 bg-transparent text-[14px] text-primary font-mono placeholder:text-tertiary focus:outline-none"
+							className="flex-1 min-w-[40px] h-full px-1.5 bg-transparent text-[15px] text-primary font-mono placeholder:text-tertiary focus:outline-none"
 						/>
 						<span className="text-[11px] text-tertiary font-medium shrink-0 pr-1">
 							{asset.metadata?.symbol || '???'}
@@ -2828,7 +2952,7 @@ function AssetRow({
 			<span className="pl-1 pr-2 text-primary flex items-center gap-1.5">
 				<TokenIcon
 					address={asset.address}
-					className="size-[36px] transition-transform group-hover:scale-105"
+					className="size-[36px] transition-transform group-hover:scale-105 mx-0.5"
 				/>
 				<span className="flex flex-col min-w-0">
 					<span className="truncate font-medium">

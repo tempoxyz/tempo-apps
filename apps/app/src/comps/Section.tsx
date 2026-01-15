@@ -29,6 +29,7 @@ export function Section(props: {
 	backButton?: {
 		label: string
 		onClick: () => void
+		extra?: React.ReactNode
 	}
 }) {
 	const {
@@ -115,17 +116,20 @@ export function Section(props: {
 				>
 					<span className="flex items-center gap-2">
 						{backButton ? (
-							<button
-								type="button"
-								onClick={(e) => {
-									e.stopPropagation()
-									backButton.onClick()
-								}}
-								className="flex items-center gap-1.5 text-accent hover:text-accent/80 transition-colors cursor-pointer"
-							>
-								<ArrowLeftIcon className="size-[14px]" />
-								<span>{backButton.label}</span>
-							</button>
+							<>
+								<button
+									type="button"
+									onClick={(e) => {
+										e.stopPropagation()
+										backButton.onClick()
+									}}
+									className="flex items-center gap-1.5 text-accent hover:text-accent/80 transition-colors cursor-pointer"
+								>
+									<ArrowLeftIcon className="size-[14px]" />
+									<span>{backButton.label}</span>
+								</button>
+								{backButton.extra}
+							</>
 						) : (
 							<>
 								{title}
