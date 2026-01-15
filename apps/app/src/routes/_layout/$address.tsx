@@ -49,8 +49,8 @@ import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
 import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
-import PauseIcon from '~icons/lucide/pause'
 import PlayIcon from '~icons/lucide/play'
+import RefreshCwIcon from '~icons/lucide/refresh-cw'
 import { useTranslation } from 'react-i18next'
 import i18n, { isRtl } from '#lib/i18n'
 import { useAnnounce, LiveRegion, useFocusTrap, useEscapeKey } from '#lib/a11y'
@@ -497,7 +497,6 @@ const fetchBlockTransactions = createServerFn({ method: 'GET' })
 		}
 
 		try {
-			// Fetch block with full transaction objects
 			const blockHex = `0x${BigInt(blockNumber).toString(16)}`
 			const response = await fetch(rpcUrl, {
 				method: 'POST',
@@ -506,33 +505,29 @@ const fetchBlockTransactions = createServerFn({ method: 'GET' })
 					jsonrpc: '2.0',
 					id: 1,
 					method: 'eth_getBlockByNumber',
-					params: [blockHex, true], // true = include full tx objects
+					params: [blockHex, true],
 				}),
 			})
 			if (!response.ok) {
-				return { transactions: [] as string[], error: `HTTP ${response.status}` }
+				return { transactions: [] as string[], timestamp: undefined, error: `HTTP ${response.status}` }
 			}
 			const json = (await response.json()) as {
 				result?: {
-					transactions?: Array<{ hash: string; from: string; to: string | null }>
+					transactions?: Array<{ hash: string }>
 					timestamp?: string
 				}
 				error?: { message: string }
 			}
 			if (json.error) {
-				return { transactions: [] as string[], error: json.error.message }
+				return { transactions: [] as string[], timestamp: undefined, error: json.error.message }
 			}
 			const txHashes = json.result?.transactions?.map((tx) => tx.hash) ?? []
 			const timestamp = json.result?.timestamp
-				? Number.parseInt(json.result.timestamp, 16)
+				? Number.parseInt(json.result.timestamp, 16) * 1000
 				: undefined
-			return {
-				transactions: txHashes,
-				timestamp,
-				error: null,
-			}
+			return { transactions: txHashes, timestamp, error: null }
 		} catch (e) {
-			return { transactions: [] as string[], error: String(e) }
+			return { transactions: [] as string[], timestamp: undefined, error: String(e) }
 		}
 	})
 
@@ -734,7 +729,7 @@ function AddressView() {
 
 	// Block timeline state
 	const [currentBlock, setCurrentBlock] = React.useState<bigint | null>(null)
-	const [selectedBlockFilter, setSelectedBlockFilter] = React.useState<
+	const [_selectedBlockFilter, _setSelectedBlockFilter] = React.useState<
 		bigint | undefined
 	>(undefined)
 
@@ -1100,25 +1095,12 @@ function AddressView() {
 						/>
 					</Section>
 
-					<Section
-						title={t('portfolio.activity')}
-						externalLink={`https://explore.mainnet.tempo.xyz/address/${address}`}
-						defaultOpen
-					>
-						<BlockTimeline
-							activity={activity}
-							currentBlock={currentBlock}
-							selectedBlock={selectedBlockFilter}
-							onSelectBlock={setSelectedBlockFilter}
-						/>
-						<div className="border-b border-border-tertiary -mx-4 mt-2 mb-1" />
-						<ActivityHeatmap activity={activity} />
-						<ActivityList
-							activity={activity}
-							address={address}
-							filterBlockNumber={selectedBlockFilter}
-						/>
-					</Section>
+					<ActivitySection
+						activity={activity}
+						address={address}
+						currentBlock={currentBlock}
+						tokenMetadataMap={tokenMetadataMap}
+					/>
 
 					<SettingsSection assets={assetsData} />
 				</div>
@@ -1142,6 +1124,7 @@ const springSlower = spring({
 function Section(props: {
 	title: string
 	subtitle?: string
+	titleRight?: React.ReactNode
 	externalLink?: string
 	defaultOpen?: boolean
 	headerRight?: React.ReactNode
@@ -1154,6 +1137,7 @@ function Section(props: {
 	const {
 		title,
 		subtitle,
+		titleRight,
 		externalLink,
 		defaultOpen = false,
 		headerRight,
@@ -1254,6 +1238,12 @@ function Section(props: {
 										<span className="text-[12px] text-tertiary font-normal">
 											{subtitle}
 										</span>
+									</>
+								)}
+								{titleRight && (
+									<>
+										<span className="w-px h-4 bg-card-border" />
+										{titleRight}
 									</>
 								)}
 							</>
@@ -1651,7 +1641,13 @@ function BlockTimeline({
 	// Smoothly increment displayBlock toward currentBlock one at a time
 	// Pause animation when a block is selected
 	React.useEffect(() => {
-		if (!currentBlock || !displayBlock || isPaused || selectedBlock !== undefined) return
+		if (
+			!currentBlock ||
+			!displayBlock ||
+			isPaused ||
+			selectedBlock !== undefined
+		)
+			return
 		if (displayBlock >= currentBlock) return
 
 		const timer = setTimeout(() => {
@@ -1792,7 +1788,10 @@ function BlockTimeline({
 			<div className="flex flex-col gap-1.5 mt-2 mb-3">
 				<div className="flex items-center justify-center gap-[2px] w-full p-1">
 					{Array.from({ length: 30 }).map((_, i) => (
-						<div key={i} className="shrink-0 size-[8px] rounded-[1px] bg-base-alt/20 animate-pulse" />
+						<div
+							key={i}
+							className="shrink-0 size-[8px] rounded-[1px] bg-base-alt/20 animate-pulse"
+						/>
 					))}
 				</div>
 				<div className="flex items-center justify-center">
@@ -1854,10 +1853,14 @@ function BlockTimeline({
 					)
 				})}
 			</div>
-			<div className="flex items-center justify-center gap-1">
+			<div className="flex items-center justify-center">
 				<button
 					type="button"
 					onClick={() => {
+						if (selectedBlock !== undefined) {
+							onSelectBlock(undefined)
+							return
+						}
 						if (pauseTimeoutRef.current) {
 							clearTimeout(pauseTimeoutRef.current)
 							pauseTimeoutRef.current = null
@@ -1871,30 +1874,30 @@ function BlockTimeline({
 							setIsPaused(true)
 						}
 					}}
-					className="flex items-center justify-center size-5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer focus-ring"
-					aria-label={isPaused ? 'Resume live updates' : 'Pause live updates'}
-				>
-					{isPaused ? (
-						<PlayIcon className="size-[10px] text-primary" />
-					) : (
-						<PauseIcon className="size-[10px] text-tertiary" />
-					)}
-				</button>
-				<button
-					type="button"
-					onClick={selectedBlock !== undefined ? () => onSelectBlock(undefined) : undefined}
-					disabled={selectedBlock === undefined}
 					className={cx(
-						'flex items-center gap-1 h-5 px-2 rounded-full border transition-colors focus-ring',
+						'flex items-center gap-1.5 h-5 px-2 rounded-full border transition-colors focus-ring cursor-pointer',
 						selectedBlock !== undefined
-							? 'bg-accent/20 border-accent/30 hover:bg-accent/30 cursor-pointer'
-							: 'bg-white/5 border-white/10 cursor-default',
+							? 'bg-accent/20 border-accent/30 hover:bg-accent/30'
+							: isPaused
+								? 'bg-amber-500/20 border-amber-500/30 hover:bg-amber-500/30'
+								: 'bg-white/5 border-white/10 hover:bg-white/10',
 					)}
-					aria-label={selectedBlock !== undefined ? 'Clear block selection' : undefined}
+					aria-label={
+						selectedBlock !== undefined
+							? 'Clear block selection'
+							: isPaused
+								? 'Resume live updates'
+								: 'Pause live updates'
+					}
 				>
+					{isPaused && selectedBlock === undefined && (
+						<PlayIcon className="size-[10px] text-amber-500" />
+					)}
 					<span className="text-[11px] text-tertiary">Block</span>
 					<span className="text-[11px] text-primary font-mono tabular-nums">
-						{selectedBlock !== undefined ? selectedBlock.toString() : shownBlock?.toString() ?? '...'}
+						{selectedBlock !== undefined
+							? selectedBlock.toString()
+							: (shownBlock?.toString() ?? '...')}
 					</span>
 					{selectedBlock !== undefined && (
 						<XIcon className="size-[8px] text-accent/70" />
@@ -2514,6 +2517,266 @@ function AssetRow({
 	)
 }
 
+type ActivityTab = 'mine' | 'everyone'
+
+function ActivitySection({
+	activity,
+	address,
+	currentBlock,
+	tokenMetadataMap,
+}: {
+	activity: ActivityItem[]
+	address: string
+	currentBlock: bigint | null
+	tokenMetadataMap: Map<Address.Address, { decimals: number; symbol: string }>
+}) {
+	const { t } = useTranslation()
+	const [activeTab, setActiveTab] = React.useState<ActivityTab>('mine')
+	const [selectedBlock, setSelectedBlock] = React.useState<bigint | undefined>()
+	const [blockActivity, setBlockActivity] = React.useState<ActivityItem[]>([])
+	const [isLoadingBlock, setIsLoadingBlock] = React.useState(false)
+
+	const userTxHashes = React.useMemo(
+		() => new Set(activity.map((a) => a.hash.toLowerCase())),
+		[activity],
+	)
+
+	// Fetch block transactions when a block is selected in "Everyone" tab
+	React.useEffect(() => {
+		if (activeTab !== 'everyone' || selectedBlock === undefined) {
+			setBlockActivity([])
+			return
+		}
+
+		const loadBlockTxs = async () => {
+			setIsLoadingBlock(true)
+			try {
+				const result = await fetchBlockTransactions({
+					data: { blockNumber: selectedBlock.toString() },
+				})
+				if (result.transactions.length > 0) {
+					const hashes = result.transactions
+					const receiptsResult = await fetchTransactionReceipts({
+						data: { hashes },
+					})
+
+					const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) =>
+						tokenMetadataMap.get(tokenAddress)
+
+					const items: ActivityItem[] = []
+					for (const { hash, receipt } of receiptsResult.receipts) {
+						if (!receipt) continue
+						try {
+							const viemReceipt = convertRpcReceiptToViemReceipt(receipt)
+							const events = parseKnownEvents(viemReceipt, {
+								getTokenMetadata,
+								viewer: address as Address.Address,
+							})
+							items.push({
+								hash,
+								events,
+								timestamp: result.timestamp,
+								blockNumber: selectedBlock,
+							})
+						} catch {
+							// skip
+						}
+					}
+					setBlockActivity(items)
+				} else {
+					setBlockActivity([])
+				}
+			} catch {
+				setBlockActivity([])
+			} finally {
+				setIsLoadingBlock(false)
+			}
+		}
+
+		loadBlockTxs()
+	}, [activeTab, selectedBlock, tokenMetadataMap])
+
+	// Clear selection when switching tabs
+	React.useEffect(() => {
+		if (activeTab === 'mine') {
+			setSelectedBlock(undefined)
+			setBlockActivity([])
+		}
+	}, [activeTab])
+
+	const tabButtons = (
+		<div className="flex items-center gap-3">
+			<button
+				type="button"
+				onClick={(e) => {
+					e.stopPropagation()
+					setActiveTab('mine')
+				}}
+				className={cx(
+					'text-[12px] font-medium transition-all pb-0.5 border-b-2',
+					activeTab === 'mine'
+						? 'text-primary border-accent'
+						: 'text-tertiary hover:text-primary border-transparent',
+				)}
+			>
+				{t('portfolio.mine')}
+			</button>
+			<button
+				type="button"
+				onClick={(e) => {
+					e.stopPropagation()
+					setActiveTab('everyone')
+				}}
+				className={cx(
+					'text-[12px] font-medium transition-all pb-0.5 border-b-2',
+					activeTab === 'everyone'
+						? 'text-primary border-accent'
+						: 'text-tertiary hover:text-primary border-transparent',
+				)}
+			>
+				{t('portfolio.everyone')}
+			</button>
+		</div>
+	)
+
+	return (
+		<Section
+			title={t('portfolio.activity')}
+			externalLink={`https://explore.mainnet.tempo.xyz/address/${address}`}
+			defaultOpen
+			titleRight={tabButtons}
+		>
+			{activeTab === 'mine' ? (
+				<>
+					<ActivityHeatmap activity={activity} />
+					<ActivityList
+						activity={activity}
+						address={address}
+						filterBlockNumber={undefined}
+					/>
+				</>
+			) : (
+				<>
+					<BlockTimeline
+						activity={activity}
+						currentBlock={currentBlock}
+						selectedBlock={selectedBlock}
+						onSelectBlock={setSelectedBlock}
+					/>
+					<div className="border-b border-border-tertiary -mx-4 mt-2 mb-3" />
+
+					{selectedBlock === undefined ? (
+						<div className="flex flex-col items-center justify-center py-6 gap-2">
+							<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
+								<ReceiptIcon className="size-5 text-tertiary" />
+							</div>
+							<p className="text-[13px] text-secondary">
+								{t('portfolio.selectBlockToView') ||
+									'Select a block to view transactions'}
+							</p>
+						</div>
+					) : isLoadingBlock ? (
+						<div className="flex flex-col items-center justify-center py-6 gap-2">
+							<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
+								<RefreshCwIcon className="size-5 text-tertiary animate-spin" />
+							</div>
+							<p className="text-[13px] text-secondary">
+								{t('portfolio.loadingBlockTxs') ||
+									'Loading block transactions...'}
+							</p>
+						</div>
+					) : blockActivity.length === 0 ? (
+						<div className="flex flex-col items-center justify-center py-6 gap-2">
+							<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
+								<ReceiptIcon className="size-5 text-tertiary" />
+							</div>
+							<p className="text-[13px] text-secondary">
+								{t('portfolio.noActivityInBlock')}
+							</p>
+							<a
+								href={`https://explore.mainnet.tempo.xyz/block/${selectedBlock}`}
+								target="_blank"
+								rel="noopener noreferrer"
+								className="text-[12px] text-accent hover:underline"
+							>
+								{t('portfolio.viewBlockInExplorer')}
+							</a>
+						</div>
+					) : (
+						<BlockActivityList
+							activity={blockActivity}
+							address={address}
+							userTxHashes={userTxHashes}
+							blockNumber={selectedBlock}
+						/>
+					)}
+				</>
+			)}
+		</Section>
+	)
+}
+
+function BlockActivityList({
+	activity,
+	address,
+	userTxHashes,
+	blockNumber,
+}: {
+	activity: ActivityItem[]
+	address: string
+	userTxHashes: Set<string>
+	blockNumber: bigint
+}) {
+	const viewer = address as Address.Address
+	const [page, setPage] = React.useState(0)
+
+	const totalPages = Math.ceil(activity.length / ACTIVITY_PAGE_SIZE)
+	const paginatedActivity = activity.slice(
+		page * ACTIVITY_PAGE_SIZE,
+		(page + 1) * ACTIVITY_PAGE_SIZE,
+	)
+
+	const transformEvent = (event: KnownEvent) =>
+		getPerspectiveEvent(event, viewer)
+
+	return (
+		<div className="text-[13px] -mx-2">
+			<div className="px-3 py-2 text-[11px] text-tertiary">
+				Block {blockNumber.toString()} • {activity.length} transaction
+				{activity.length !== 1 ? 's' : ''}
+			</div>
+			{paginatedActivity.map((item) => (
+				<ActivityRow
+					key={item.hash}
+					item={item}
+					viewer={viewer}
+					transformEvent={transformEvent}
+					isHighlighted={userTxHashes.has(item.hash.toLowerCase())}
+				/>
+			))}
+			{totalPages > 1 && (
+				<div className="flex items-center justify-center gap-1 pt-3 pb-1">
+					{Array.from({ length: totalPages }, (_, i) => (
+						<button
+							key={`block-activity-page-${i}`}
+							type="button"
+							onClick={() => setPage(i)}
+							className={cx(
+								'size-[28px] rounded-full text-[12px] cursor-pointer transition-all',
+								page === i
+									? 'bg-accent text-white'
+									: 'hover:bg-base-alt text-tertiary',
+							)}
+						>
+							{i + 1}
+						</button>
+					))}
+				</div>
+			)}
+		</div>
+	)
+}
+
 const ACTIVITY_PAGE_SIZE = 10
 
 function ActivityList({
@@ -2536,7 +2799,7 @@ function ActivityList({
 
 	React.useEffect(() => {
 		setPage(0)
-	}, [filterBlockNumber])
+	}, [])
 
 	if (displayActivity.length === 0) {
 		return (
