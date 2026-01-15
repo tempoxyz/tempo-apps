@@ -9,7 +9,8 @@
 		"feeToken": "Kotizoĵetono",
 		"feeTokenDescription": "Elektu kiun ĵetonon uzi por pagi transakciajn kotizojn.",
 		"language": "Lingvo",
-		"languageDescription": "Elektu vian preferatan lingvon."
+		"languageDescription": "Elektu vian preferatan lingvon.",
+		"notSet": "Ne agordita"
 	},
 	"common": {
 		"active": "Aktiva",
@@ -20,7 +21,24 @@
 		"recipient": "Ricevanto 0x...",
 		"amount": "Kvanto",
 		"max": "MAKS",
-		"cancel": "Nuligi"
+		"cancel": "Nuligi",
+		"search": "Serĉi",
+		"signUp": "Registriĝi",
+		"signIn": "Ensaluti",
+		"continue": "Daŭrigi",
+		"logOut": "Elsaluti",
+		"copyAddress": "Kopii adreson",
+		"viewOnExplorer": "Vidi en Esplorilo",
+		"viewReceipt": "Vidi kvitancon",
+		"viewTransaction": "Vidi transakcion",
+		"requestTokens": "Peti ĵetonojn",
+		"transaction": "Transakcio",
+		"transactions": "transakcioj",
+		"transactionOn": "je",
+		"self": "mem",
+		"andMore": "kaj {{count}} pli",
+		"sentSuccessfully": "{{symbol}} sendita sukcese",
+		"demoNote": "Ĉi tio estas demo, bilancoj ne ĝisdatiĝas."
 	},
 	"portfolio": {
 		"title": "Biletujo",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "aktivaĵoj",
 		"hideZeroBalances": "Kaŝi nulajn bilancojn",
 		"showZeroBalances": "Montri nulajn bilancojn",
-		"noActivityYet": "Ankoraŭ neniu agado"
+		"noActivityYet": "Ankoraŭ neniu agado",
+		"noAssetsFound": "Neniuj aktivaĵoj trovitaj"
+	},
+	"landing": {
+		"getStarted": "Komenci",
+		"exploreDescription": "Esploru kontojn, ĵetonajn bilancojn kaj transakcihistorion sur Tempo",
+		"enterAddress": "Enigu adreson",
+		"orUsePasskey": "aŭ uzu alian pasfrazon",
+		"orSignInWithPasskey": "aŭ ensalutu per pasfrazo"
+	},
+	"receipt": {
+		"block": "Bloko",
+		"sender": "Sendanto",
+		"hash": "Haŝo",
+		"date": "Dato",
+		"time": "Tempo"
 	}
 }

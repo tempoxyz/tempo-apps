@@ -1632,7 +1632,7 @@ function AssetRow({
 					e.preventDefault()
 					handleSend()
 				}}
-				className="flex flex-col sm:flex-row sm:items-center gap-1.5 px-3 py-2 sm:py-0 rounded-xl hover:glass-thin transition-all sm:h-[48px]"
+				className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-2.5 sm:py-0 rounded-xl hover:glass-thin transition-all sm:h-[52px]"
 			>
 				<div className="flex items-center gap-1.5 flex-1 min-w-0">
 					<TokenIcon address={asset.address} className="size-[28px] shrink-0" />
@@ -1642,7 +1642,7 @@ function AssetRow({
 						value={recipient}
 						onChange={(e) => setRecipient(e.target.value)}
 						placeholder="Recipient 0x..."
-						className="flex-1 min-w-0 h-[28px] px-3 rounded-full border border-base-border bg-surface text-[12px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
+						className="flex-1 min-w-0 h-[32px] px-3 rounded-full border border-card-border bg-base text-[13px] text-primary font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
 					/>
 				</div>
 				<div className="flex items-center gap-1.5 pl-9 sm:pl-0">
@@ -1654,7 +1654,7 @@ function AssetRow({
 							value={amount}
 							onChange={(e) => setAmount(e.target.value)}
 							placeholder="Amount"
-							className="w-full h-[28px] pl-3 pr-11 rounded-full border border-base-border bg-surface text-[12px] font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent"
+							className="w-full h-[32px] pl-3 pr-12 rounded-full border border-card-border bg-base text-[13px] text-primary font-mono placeholder:font-sans placeholder:text-tertiary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/30"
 						/>
 						<button
 							type="button"
@@ -1667,7 +1667,7 @@ function AssetRow({
 					<button
 						type="submit"
 						className={cx(
-							'h-[28px] px-3 rounded-full press-down transition-colors flex items-center justify-center gap-1 shrink-0 text-[11px] font-medium',
+							'h-[32px] px-4 rounded-full press-down transition-colors flex items-center justify-center gap-1.5 shrink-0 text-[12px] font-medium',
 							sendState === 'sent'
 								? 'bg-positive text-white cursor-default'
 								: sendState === 'error'
@@ -1681,12 +1681,12 @@ function AssetRow({
 						{sendState === 'sending' ? (
 							<BouncingDots />
 						) : sendState === 'sent' ? (
-							<CheckIcon className="size-[12px]" />
+							<CheckIcon className="size-[14px]" />
 						) : sendState === 'error' ? (
-							<XIcon className="size-[12px]" />
+							<XIcon className="size-[14px]" />
 						) : (
 							<>
-								<SendIcon className="size-[12px]" />
+								<SendIcon className="size-[14px]" />
 								<span className="hidden sm:inline">Send</span>
 							</>
 						)}
@@ -1694,10 +1694,10 @@ function AssetRow({
 					<button
 						type="button"
 						onClick={handleToggle}
-						className="size-[28px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-full transition-colors shrink-0"
+						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-full transition-colors shrink-0"
 						title="Cancel"
 					>
-						<XIcon className="size-[14px]" />
+						<XIcon className="size-[16px]" />
 					</button>
 				</div>
 				{sendError && (

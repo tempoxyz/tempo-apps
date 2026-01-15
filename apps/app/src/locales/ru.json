@@ -9,7 +9,8 @@
 		"feeToken": "Токен комиссии",
 		"feeTokenDescription": "Выберите токен для оплаты комиссий за транзакции.",
 		"language": "Язык",
-		"languageDescription": "Выберите предпочитаемый язык."
+		"languageDescription": "Выберите предпочитаемый язык.",
+		"notSet": "Не установлено"
 	},
 	"common": {
 		"active": "Активен",
@@ -20,7 +21,24 @@
 		"recipient": "Получатель 0x...",
 		"amount": "Сумма",
 		"max": "МАКС",
-		"cancel": "Отмена"
+		"cancel": "Отмена",
+		"search": "Поиск",
+		"signUp": "Регистрация",
+		"signIn": "Войти",
+		"continue": "Продолжить",
+		"logOut": "Выйти",
+		"copyAddress": "Копировать адрес",
+		"viewOnExplorer": "Смотреть в обозревателе",
+		"viewReceipt": "Смотреть квитанцию",
+		"viewTransaction": "Смотреть транзакцию",
+		"requestTokens": "Запросить токены",
+		"transaction": "Транзакция",
+		"transactions": "транзакций",
+		"transactionOn": "",
+		"self": "себе",
+		"andMore": "и ещё {{count}}",
+		"sentSuccessfully": "{{symbol}} успешно отправлено",
+		"demoNote": "Это демо, балансы не обновляются."
 	},
 	"portfolio": {
 		"title": "Портфель",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "активов",
 		"hideZeroBalances": "Скрыть нулевые балансы",
 		"showZeroBalances": "Показать нулевые балансы",
-		"noActivityYet": "Пока нет активности"
+		"noActivityYet": "Пока нет активности",
+		"noAssetsFound": "Активы не найдены"
+	},
+	"landing": {
+		"getStarted": "Начать",
+		"exploreDescription": "Исследуйте аккаунты, балансы токенов и историю транзакций на Tempo",
+		"enterAddress": "Введите адрес",
+		"orUsePasskey": "или используйте другой ключ доступа",
+		"orSignInWithPasskey": "или войдите с ключом доступа"
+	},
+	"receipt": {
+		"block": "Блок",
+		"sender": "Отправитель",
+		"hash": "Хеш",
+		"date": "Дата",
+		"time": "Время"
 	}
 }
