@@ -12,7 +12,7 @@ const QB = IDX.QueryBuilder.from(IS)
 
 export const fetchLatestBlock = createServerFn({ method: 'GET' }).handler(
 	async () => {
-		if (!hasIndexSupply()) return
+		if (!hasIndexSupply()) return 0n
 		try {
 			const config = getWagmiConfig()
 			const chainId = getChainId(config)
@@ -27,7 +27,7 @@ export const fetchLatestBlock = createServerFn({ method: 'GET' }).handler(
 			return BigInt(result.num)
 		} catch (error) {
 			console.error('Failed to fetch latest block:', error)
-			return undefined
+			return 0n
 		}
 	},
 )
