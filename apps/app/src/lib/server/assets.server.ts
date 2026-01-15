@@ -1,18 +1,82 @@
 import { createServerFn } from '@tanstack/react-start'
 import * as IDX from 'idxs'
 import type { Address } from 'ox'
-import type { Config } from 'wagmi'
+import { decodeAbiParameters } from 'viem'
 import { getChainId } from 'wagmi/actions'
-import { Actions } from 'wagmi/tempo'
 import { TOKEN_CREATED_EVENT } from '#lib/abis'
 import { getWagmiConfig } from '#wagmi.config'
 
 const TIP20_DECIMALS = 6
+const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
+
+async function fetchTokenMetadataViaRpc(
+	token: string,
+): Promise<{ name: string; symbol: string } | null> {
+	const rpcUrl =
+		TEMPO_ENV === 'presto'
+			? 'https://rpc.presto.tempo.xyz'
+			: 'https://rpc.tempo.xyz'
+
+	const { env } = await import('cloudflare:workers')
+	const auth = env.PRESTO_RPC_AUTH as string | undefined
+	const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+	if (auth) {
+		headers.Authorization = `Basic ${btoa(auth)}`
+	}
+
+	try {
+		const response = await fetch(rpcUrl, {
+			method: 'POST',
+			headers,
+			body: JSON.stringify([
+				{
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'eth_call',
+					params: [{ to: token, data: '0x06fdde03' }, 'latest'],
+				},
+				{
+					jsonrpc: '2.0',
+					id: 2,
+					method: 'eth_call',
+					params: [{ to: token, data: '0x95d89b41' }, 'latest'],
+				},
+			]),
+		})
+		if (!response.ok) return null
+
+		const results = (await response.json()) as Array<{
+			id: number
+			result?: `0x${string}`
+			error?: unknown
+		}>
+
+		const nameResult = results.find((r) => r.id === 1)?.result
+		const symbolResult = results.find((r) => r.id === 2)?.result
+
+		if (!nameResult || !symbolResult) return null
+
+		const decodeString = (hex: `0x${string}`) => {
+			try {
+				const [value] = decodeAbiParameters([{ type: 'string' }], hex)
+				return value
+			} catch {
+				return ''
+			}
+		}
+
+		return {
+			name: decodeString(nameResult),
+			symbol: decodeString(symbolResult),
+		}
+	} catch {
+		return null
+	}
+}
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
 })
-
 const QB = IDX.QueryBuilder.from(IS)
 
 const TRANSFER_SIGNATURE =
@@ -115,23 +179,16 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 			if (tokensMissingMetadata.length > 0) {
 				const rpcMetadataResults = await Promise.all(
 					tokensMissingMetadata.map(async (token) => {
-						try {
-							const metadata = await Actions.token.getMetadata(
-								config as Config,
-								{ token },
-							)
-							return { token, metadata }
-						} catch {
-							return { token, metadata: null }
-						}
+						const metadata = await fetchTokenMetadataViaRpc(token)
+						return { token, metadata }
 					}),
 				)
 
 				for (const { token, metadata } of rpcMetadataResults) {
 					if (metadata) {
 						tokenMetadata.set(token.toLowerCase(), {
-							name: metadata.name ?? '',
-							symbol: metadata.symbol ?? '',
+							name: metadata.name,
+							symbol: metadata.symbol,
 							currency: '',
 						})
 					}
