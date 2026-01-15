@@ -1804,12 +1804,12 @@ function BlockTimeline({
 	const getBlockStyle = (
 		txCount: number,
 		_isSelected: boolean,
-		isCurrent: boolean,
+		_isCurrent: boolean,
 		hasUserActivity: boolean,
 		isPlaceholder: boolean,
 	): string => {
 		if (isPlaceholder) return 'bg-base-alt/20'
-		if (isCurrent) return 'bg-white'
+		// Current block no longer gets special fill - just a ring (applied separately)
 		if (hasUserActivity) return 'bg-green-500'
 
 		// Simple discrete scale: 0=dim, 1=grey, 2=slight color, 3+=bright
@@ -1890,7 +1890,7 @@ function BlockTimeline({
 							onMouseLeave={() => setHoveredBlock(null)}
 							disabled={block.isPlaceholder}
 							className={cx(
-								'shrink-0 size-3 rounded-sm transition-colors duration-75',
+								'shrink-0 size-3 rounded-sm transition-all duration-150',
 								inDragRange && !block.isPlaceholder
 									? 'block-range-selected'
 									: getBlockStyle(
@@ -1900,16 +1900,17 @@ function BlockTimeline({
 											block.hasUserActivity,
 											block.isPlaceholder,
 										),
-								isCurrent && !isSelected && 'ring-2 ring-white/50',
-								isSelected && 'ring-2 ring-accent',
-								isFocused && !isSelected && 'ring-2 ring-accent/50',
+								// Current block gets a prominent white ring
+								isCurrent && !isSelected && 'ring-2 ring-white ring-offset-1 ring-offset-black',
+								isSelected && 'ring-2 ring-accent ring-offset-1 ring-offset-black',
+								isFocused && !isSelected && !isCurrent && 'ring-2 ring-accent/50',
 								block.hasUserActivity &&
 									!isSelected &&
 									!isCurrent &&
 									!isFocused &&
 									'ring-1 ring-green-500/60',
 								block.isPlaceholder
-									? 'cursor-default'
+									? 'cursor-default opacity-30'
 									: 'hover:opacity-80 cursor-pointer',
 							)}
 						/>
