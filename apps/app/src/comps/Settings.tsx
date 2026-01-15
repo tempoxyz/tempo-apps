@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { TokenIcon } from '#comps/TokenIcon'
 import { supportedLanguages } from '#lib/i18n'
 import { cx } from '#lib/css'
+import { useRovingTabIndex } from '#lib/a11y'
 import ChevronRightIcon from '~icons/lucide/chevron-right'
 
 type AssetData = {
@@ -60,6 +61,12 @@ export function Settings({
 	)
 	const currentLangObj = LANGUAGES.find((l) => l.code === currentLanguage)
 
+	const mainMenuRoving = useRovingTabIndex<HTMLButtonElement>(2)
+	const feeTokenRoving = useRovingTabIndex<HTMLButtonElement>(
+		assetsWithBalance.length,
+	)
+	const languageRoving = useRovingTabIndex<HTMLButtonElement>(LANGUAGES.length)
+
 	const navigateTo = (view: SettingsView) => {
 		setSlideDirection('forward')
 		setCurrentView(view)
@@ -91,12 +98,19 @@ export function Settings({
 							: 'translate-x-full',
 					currentView !== 'main' && 'absolute inset-0 pointer-events-none',
 				)}
+				role="menu"
+				aria-label={t('settings.title')}
 			>
 				<div className="flex flex-col -mx-2">
 					<button
 						type="button"
+						role="menuitem"
+						ref={mainMenuRoving.setItemRef(0)}
+						tabIndex={mainMenuRoving.getTabIndex(0)}
 						onClick={() => navigateTo('feeToken')}
-						className="flex items-center gap-2.5 px-3 h-[48px] rounded-xl hover:glass-thin transition-all cursor-pointer"
+						onKeyDown={(e) => mainMenuRoving.handleKeyDown(e, 0)}
+						aria-label={t('settings.feeToken')}
+						className="flex items-center gap-2.5 px-3 h-[48px] rounded-xl hover:glass-thin transition-all cursor-pointer focus-ring"
 					>
 						<span className="flex flex-col flex-1 min-w-0 text-left">
 							<span className="text-[13px] text-primary font-medium">
@@ -113,8 +127,13 @@ export function Settings({
 					</button>
 					<button
 						type="button"
+						role="menuitem"
+						ref={mainMenuRoving.setItemRef(1)}
+						tabIndex={mainMenuRoving.getTabIndex(1)}
 						onClick={() => navigateTo('language')}
-						className="flex items-center gap-2.5 px-3 h-[48px] rounded-xl hover:glass-thin transition-all cursor-pointer"
+						onKeyDown={(e) => mainMenuRoving.handleKeyDown(e, 1)}
+						aria-label={t('settings.language')}
+						className="flex items-center gap-2.5 px-3 h-[48px] rounded-xl hover:glass-thin transition-all cursor-pointer focus-ring"
 					>
 						<span className="flex flex-col flex-1 min-w-0 text-left">
 							<span className="text-[13px] text-primary font-medium">
@@ -140,6 +159,8 @@ export function Settings({
 							: '-translate-x-full',
 					currentView !== 'feeToken' && 'absolute inset-0 pointer-events-none',
 				)}
+				role="menu"
+				aria-label={t('settings.feeToken')}
 			>
 				<div className="flex flex-col -mx-2">
 					<p className="text-[13px] text-secondary px-3 py-2">
@@ -150,11 +171,12 @@ export function Settings({
 							<p>{t('common.noTokensForFees')}</p>
 						</div>
 					) : (
-						assetsWithBalance.map((asset) => {
+						assetsWithBalance.map((asset, index) => {
 							const isCurrent = currentFeeToken === asset.address
 							return (
 								<div
 									key={asset.address}
+									role="menuitem"
 									className="flex items-center gap-2.5 px-3 h-[48px] rounded-xl hover:glass-thin transition-all"
 								>
 									<TokenIcon address={asset.address} className="size-[28px]" />
@@ -174,8 +196,15 @@ export function Settings({
 									) : (
 										<button
 											type="button"
+											ref={feeTokenRoving.setItemRef(index)}
+											tabIndex={feeTokenRoving.getTabIndex(index)}
+											onKeyDown={(e) => feeTokenRoving.handleKeyDown(e, index)}
 											onClick={() => onFeeTokenChange(asset.address)}
-											className="text-[11px] font-medium bg-accent/10 text-accent rounded px-1.5 py-0.5 text-center cursor-pointer press-down hover:bg-accent/20 transition-colors"
+											aria-label={t('common.setToken', {
+												token:
+													asset.metadata?.name || shortenAddress(asset.address),
+											})}
+											className="text-[11px] font-medium bg-accent/10 text-accent rounded px-1.5 py-0.5 text-center cursor-pointer press-down hover:bg-accent/20 transition-colors focus-ring"
 										>
 											{t('common.set')}
 										</button>
@@ -198,16 +227,19 @@ export function Settings({
 							: '-translate-x-full',
 					currentView !== 'language' && 'absolute inset-0 pointer-events-none',
 				)}
+				role="menu"
+				aria-label={t('settings.language')}
 			>
 				<div className="flex flex-col -mx-2">
 					<p className="text-[13px] text-secondary px-3 py-2">
 						{t('settings.languageDescription')}
 					</p>
-					{LANGUAGES.map((lang) => {
+					{LANGUAGES.map((lang, index) => {
 						const isCurrent = currentLanguage === lang.code
 						return (
 							<div
 								key={lang.code}
+								role="menuitem"
 								className="flex items-center gap-2.5 px-3 h-[48px] rounded-xl hover:glass-thin transition-all"
 							>
 								<span className="flex flex-col flex-1 min-w-0">
@@ -222,8 +254,14 @@ export function Settings({
 								) : (
 									<button
 										type="button"
+										ref={languageRoving.setItemRef(index)}
+										tabIndex={languageRoving.getTabIndex(index)}
+										onKeyDown={(e) => languageRoving.handleKeyDown(e, index)}
 										onClick={() => onLanguageChange(lang.code)}
-										className="text-[11px] font-medium bg-accent/10 text-accent rounded px-1.5 py-0.5 text-center cursor-pointer press-down hover:bg-accent/20 transition-colors"
+										aria-label={t('settings.setLanguage', {
+											language: lang.name,
+										})}
+										className="text-[11px] font-medium bg-accent/10 text-accent rounded px-1.5 py-0.5 text-center cursor-pointer press-down hover:bg-accent/20 transition-colors focus-ring"
 									>
 										{lang.set}
 									</button>
