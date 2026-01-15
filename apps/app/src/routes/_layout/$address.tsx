@@ -24,7 +24,7 @@ import {
 import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
 import { Section } from '#comps/Section'
-import { AccessKeysSection } from '#comps/AccessKeysSection'
+import { AccessKeysSection, formatCreatedAt } from '#comps/AccessKeysSection'
 import {
 	AccessKeysProvider,
 	useSignableAccessKeys,
@@ -912,8 +912,17 @@ function AddressView() {
 	)
 	const displayedAssets = showZeroBalances ? adjustedAssets : assetsWithBalance
 
+	// Get token addresses for access key spending limit queries
+	const tokenAddresses = React.useMemo(
+		() => dedupedAssets.map((a) => a.address),
+		[dedupedAssets],
+	)
+
 	return (
-		<AccessKeysProvider accountAddress={address}>
+		<AccessKeysProvider
+			accountAddress={address}
+			tokenAddresses={tokenAddresses}
+		>
 			<Layout.Header
 				left={
 					<Link
@@ -2642,26 +2651,28 @@ function AssetRow({
 						>
 							<option value="">Wallet (default)</option>
 							{accessKeys.map((key) => {
-								const remainingLimit = key.spendingLimits.get(
-									asset.address.toLowerCase(),
-								)
+								const tokenAddr = asset.address.toLowerCase()
+								const remainingLimit = key.spendingLimits.get(tokenAddr)
 								const decimals = asset.metadata?.decimals ?? 6
 								let limitText = 'Unlimited'
-								if (key.enforceLimits) {
-									if (remainingLimit !== undefined && remainingLimit > 0n) {
+								if (remainingLimit !== undefined) {
+									if (remainingLimit > 0n) {
 										const formatted = formatUnits(remainingLimit, decimals)
 										limitText = `${Number(formatted).toFixed(2)} remaining`
 									} else {
 										limitText = 'Limit exhausted'
 									}
+								} else if (key.enforceLimits) {
+									// Key enforces limits but none set for this token - cannot spend
+									limitText = 'No limit set'
 								}
 								const createdText = key.createdAt
-									? new Date(key.createdAt).toLocaleDateString()
+									? formatCreatedAt(key.createdAt)
 									: ''
 								return (
 									<option key={key.keyId} value={key.keyId}>
 										{key.keyId} · {limitText}
-										{createdText ? ` · Created ${createdText}` : ''}
+										{createdText ? ` · ${createdText}` : ''}
 									</option>
 								)
 							})}
