@@ -9,7 +9,8 @@
 		"feeToken": "ফি টোকেন",
 		"feeTokenDescription": "লেনদেনের ফি দিতে কোন টোকেন ব্যবহার করবেন তা নির্বাচন করুন।",
 		"language": "ভাষা",
-		"languageDescription": "আপনার পছন্দের ভাষা নির্বাচন করুন।"
+		"languageDescription": "আপনার পছন্দের ভাষা নির্বাচন করুন।",
+		"notSet": "সেট করা হয়নি"
 	},
 	"common": {
 		"active": "সক্রিয়",
@@ -20,7 +21,24 @@
 		"recipient": "প্রাপক 0x...",
 		"amount": "পরিমাণ",
 		"max": "সর্বোচ্চ",
-		"cancel": "বাতিল"
+		"cancel": "বাতিল",
+		"search": "অনুসন্ধান",
+		"signUp": "সাইন আপ",
+		"signIn": "সাইন ইন",
+		"continue": "চালিয়ে যান",
+		"logOut": "লগ আউট",
+		"copyAddress": "ঠিকানা কপি করুন",
+		"viewOnExplorer": "এক্সপ্লোরারে দেখুন",
+		"viewReceipt": "রসিদ দেখুন",
+		"viewTransaction": "লেনদেন দেখুন",
+		"requestTokens": "টোকেন অনুরোধ করুন",
+		"transaction": "লেনদেন",
+		"transactions": "লেনদেন",
+		"transactionOn": "",
+		"self": "নিজে",
+		"andMore": "এবং আরও {{count}}",
+		"sentSuccessfully": "{{symbol}} সফলভাবে পাঠানো হয়েছে",
+		"demoNote": "এটি একটি ডেমো, ব্যালেন্স আপডেট হয় না।"
 	},
 	"portfolio": {
 		"title": "পোর্টফোলিও",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "সম্পদ",
 		"hideZeroBalances": "শূন্য ব্যালেন্স লুকান",
 		"showZeroBalances": "শূন্য ব্যালেন্স দেখান",
-		"noActivityYet": "এখনও কোনো কার্যকলাপ নেই"
+		"noActivityYet": "এখনও কোনো কার্যকলাপ নেই",
+		"noAssetsFound": "কোনো সম্পদ পাওয়া যায়নি"
+	},
+	"landing": {
+		"getStarted": "শুরু করুন",
+		"exploreDescription": "Tempo-তে অ্যাকাউন্ট, টোকেন ব্যালেন্স এবং লেনদেনের ইতিহাস অন্বেষণ করুন",
+		"enterAddress": "ঠিকানা দিন",
+		"orUsePasskey": "বা অন্য পাসকি ব্যবহার করুন",
+		"orSignInWithPasskey": "বা পাসকি দিয়ে সাইন ইন করুন"
+	},
+	"receipt": {
+		"block": "ব্লক",
+		"sender": "প্রেরক",
+		"hash": "হ্যাশ",
+		"date": "তারিখ",
+		"time": "সময়"
 	}
 }

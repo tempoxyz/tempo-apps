@@ -9,7 +9,8 @@
 		"feeToken": "手数料トークン",
 		"feeTokenDescription": "取引手数料の支払いに使用するトークンを選択してください。",
 		"language": "言語",
-		"languageDescription": "ご希望の言語を選択してください。"
+		"languageDescription": "ご希望の言語を選択してください。",
+		"notSet": "未設定"
 	},
 	"common": {
 		"active": "アクティブ",
@@ -20,7 +21,24 @@
 		"recipient": "受取人 0x...",
 		"amount": "金額",
 		"max": "最大",
-		"cancel": "キャンセル"
+		"cancel": "キャンセル",
+		"search": "検索",
+		"signUp": "サインアップ",
+		"signIn": "サインイン",
+		"continue": "続ける",
+		"logOut": "ログアウト",
+		"copyAddress": "アドレスをコピー",
+		"viewOnExplorer": "エクスプローラーで表示",
+		"viewReceipt": "領収書を表示",
+		"viewTransaction": "取引を表示",
+		"requestTokens": "トークンをリクエスト",
+		"transaction": "取引",
+		"transactions": "件の取引",
+		"transactionOn": "",
+		"self": "自分",
+		"andMore": "他 {{count}} 件",
+		"sentSuccessfully": "{{symbol}} を送信しました",
+		"demoNote": "これはデモです。残高は更新されません。"
 	},
 	"portfolio": {
 		"title": "ポートフォリオ",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "件の資産",
 		"hideZeroBalances": "ゼロ残高を非表示",
 		"showZeroBalances": "ゼロ残高を表示",
-		"noActivityYet": "アクティビティはまだありません"
+		"noActivityYet": "アクティビティはまだありません",
+		"noAssetsFound": "資産が見つかりません"
+	},
+	"landing": {
+		"getStarted": "始める",
+		"exploreDescription": "Tempo でアカウント、トークン残高、取引履歴を探索",
+		"enterAddress": "アドレスを入力",
+		"orUsePasskey": "または別のパスキーを使用",
+		"orSignInWithPasskey": "またはパスキーでサインイン"
+	},
+	"receipt": {
+		"block": "ブロック",
+		"sender": "送信者",
+		"hash": "ハッシュ",
+		"date": "日付",
+		"time": "時間"
 	}
 }
