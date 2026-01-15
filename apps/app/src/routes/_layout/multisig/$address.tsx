@@ -2,7 +2,14 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import * as React from 'react'
 import { formatUnits, parseUnits, type Address, type Hex } from 'viem'
 import { createPortal } from 'react-dom'
-import { useReadContract, useReadContracts, useAccount, useWriteContract, useWaitForTransactionReceipt, useBalance } from 'wagmi'
+import {
+	useReadContract,
+	useReadContracts,
+	useAccount,
+	useWriteContract,
+	useWaitForTransactionReceipt,
+	useBalance,
+} from 'wagmi'
 import { Layout } from '#comps/Layout'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
@@ -124,7 +131,9 @@ function MultisigDashboard() {
 	const txIds = React.useMemo(() => {
 		if (!txCount) return []
 		const count = Number(txCount)
-		return Array.from({ length: Math.min(count, 20) }, (_, i) => BigInt(count - 1 - i))
+		return Array.from({ length: Math.min(count, 20) }, (_, i) =>
+			BigInt(count - 1 - i),
+		)
 	}, [txCount])
 
 	const txQueries = useReadContracts({
@@ -151,7 +160,31 @@ function MultisigDashboard() {
 			const txResult = txQueries.data[i * 2]
 			const confirmResult = txQueries.data[i * 2 + 1]
 			if (txResult?.result && confirmResult?.result) {
-				const [to, value, data, executed, cancelled, confirmations, cancelConfirmations, submitTime, expiresAt, gasLimit, submitter] = txResult.result as [Address, bigint, Hex, boolean, boolean, bigint, bigint, bigint, bigint, bigint, Address]
+				const [
+					to,
+					value,
+					data,
+					executed,
+					cancelled,
+					confirmations,
+					cancelConfirmations,
+					submitTime,
+					expiresAt,
+					gasLimit,
+					submitter,
+				] = txResult.result as [
+					Address,
+					bigint,
+					Hex,
+					boolean,
+					boolean,
+					bigint,
+					bigint,
+					bigint,
+					bigint,
+					bigint,
+					Address,
+				]
 				txs.push({
 					id: txIds[i],
 					to,
@@ -174,11 +207,15 @@ function MultisigDashboard() {
 
 	const isOwner = React.useMemo(() => {
 		if (!owners || !account.address) return false
-		return owners.some((o) => o.toLowerCase() === account.address?.toLowerCase())
+		return owners.some(
+			(o) => o.toLowerCase() === account.address?.toLowerCase(),
+		)
 	}, [owners, account.address])
 
 	const [showSubmitModal, setShowSubmitModal] = React.useState(false)
-	const [filter, setFilter] = React.useState<'all' | 'pending' | 'executed'>('all')
+	const [filter, setFilter] = React.useState<'all' | 'pending' | 'executed'>(
+		'all',
+	)
 
 	return (
 		<>
@@ -207,7 +244,10 @@ function MultisigDashboard() {
 							e.preventDefault()
 							const trimmed = searchValue.trim()
 							if (trimmed.match(/^0x[a-fA-F0-9]{40}$/)) {
-								navigate({ to: '/multisig/$address', params: { address: trimmed } })
+								navigate({
+									to: '/multisig/$address',
+									params: { address: trimmed },
+								})
 								setSearchValue('')
 							}
 						}}
@@ -243,13 +283,16 @@ function MultisigDashboard() {
 					<div className="flex-1 min-w-0 flex flex-col gap-2">
 						<div className="flex items-baseline gap-2">
 							<span className="text-[32px] sm:text-[40px] md:text-[48px] font-sans font-semibold text-primary -tracking-[0.02em] tabular-nums">
-								{threshold !== undefined ? `${threshold}/${owners?.length ?? '?'}` : '—'}
+								{threshold !== undefined
+									? `${threshold}/${owners?.length ?? '?'}`
+									: '—'}
 							</span>
 							<span className="text-secondary text-[14px]">threshold</span>
 						</div>
 						{nativeBalance && nativeBalance.value > 0n && (
 							<span className="text-secondary text-[14px] font-mono">
-								{formatUnits(nativeBalance.value, nativeBalance.decimals)} {nativeBalance.symbol}
+								{formatUnits(nativeBalance.value, nativeBalance.decimals)}{' '}
+								{nativeBalance.symbol}
 							</span>
 						)}
 						<div className="flex items-center gap-2 max-w-full">
@@ -276,11 +319,15 @@ function MultisigDashboard() {
 					<div className="flex flex-col gap-2 text-right">
 						<div className="flex items-center gap-1 justify-end">
 							<UsersIcon className="size-3.5 text-tertiary" />
-							<span className="text-secondary text-[13px]">{owners?.length ?? 0} owners</span>
+							<span className="text-secondary text-[13px]">
+								{owners?.length ?? 0} owners
+							</span>
 						</div>
 						<div className="flex items-center gap-1 justify-end">
 							<ClockIcon className="size-3.5 text-tertiary" />
-							<span className="text-secondary text-[13px]">{txCount?.toString() ?? 0} txs</span>
+							<span className="text-secondary text-[13px]">
+								{txCount?.toString() ?? 0} txs
+							</span>
 						</div>
 					</div>
 				</div>
@@ -289,7 +336,9 @@ function MultisigDashboard() {
 				{owners && owners.length > 0 && (
 					<div className="rounded-xl border border-card-border bg-card-header mb-2.5">
 						<div className="flex items-center h-[44px] px-3">
-							<span className="text-[14px] font-medium text-primary">Owners</span>
+							<span className="text-[14px] font-medium text-primary">
+								Owners
+							</span>
 							<span className="w-px h-4 bg-card-border mx-2" />
 							<span className="text-[12px] text-tertiary">{owners.length}</span>
 						</div>
@@ -324,7 +373,9 @@ function MultisigDashboard() {
 				<div className="rounded-xl border border-card-border bg-card-header">
 					<div className="flex items-center justify-between h-[44px] px-3">
 						<div className="flex items-center gap-2">
-							<span className="text-[14px] font-medium text-primary">Transactions</span>
+							<span className="text-[14px] font-medium text-primary">
+								Transactions
+							</span>
 							<div className="flex items-center gap-0.5 p-0.5 rounded-md bg-base-alt">
 								{(['all', 'pending', 'executed'] as const).map((f) => (
 									<button
@@ -370,7 +421,9 @@ function MultisigDashboard() {
 									<div className="flex flex-col items-center justify-center py-10 gap-2">
 										<ShieldIcon className="size-6 text-tertiary" />
 										<span className="text-tertiary text-[13px]">
-											{transactions.length === 0 ? 'No transactions yet' : 'No matching transactions'}
+											{transactions.length === 0
+												? 'No transactions yet'
+												: 'No matching transactions'}
 										</span>
 									</div>
 								)
@@ -419,8 +472,15 @@ function SubmitTransactionModal({
 	const [gasLimit, setGasLimit] = React.useState('100000')
 	const [expiryHours, setExpiryHours] = React.useState('24')
 
-	const { writeContract: submit, isPending, data: submitHash, error } = useWriteContract()
-	const { isLoading: isWaiting, isSuccess } = useWaitForTransactionReceipt({ hash: submitHash })
+	const {
+		writeContract: submit,
+		isPending,
+		data: submitHash,
+		error,
+	} = useWriteContract()
+	const { isLoading: isWaiting, isSuccess } = useWaitForTransactionReceipt({
+		hash: submitHash,
+	})
 
 	const handleClose = React.useCallback(() => {
 		setIsVisible(false)
@@ -478,12 +538,16 @@ function SubmitTransactionModal({
 			<div
 				className={cx(
 					'w-full max-w-md mx-4 rounded-xl border border-card-border bg-card-header transition-all duration-200',
-					isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4',
+					isVisible
+						? 'opacity-100 scale-100 translate-y-0'
+						: 'opacity-0 scale-95 translate-y-4',
 				)}
 				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex items-center justify-between h-[44px] px-3 border-b border-card-border">
-					<span className="text-[14px] font-medium text-primary">Submit Transaction</span>
+					<span className="text-[14px] font-medium text-primary">
+						Submit Transaction
+					</span>
 					<button
 						type="button"
 						onClick={handleClose}
@@ -494,7 +558,9 @@ function SubmitTransactionModal({
 				</div>
 				<form onSubmit={handleSubmit} className="flex flex-col gap-3 p-3">
 					<div className="flex flex-col gap-1">
-						<label className="text-[11px] text-tertiary uppercase tracking-wide">To Address</label>
+						<label className="text-[11px] text-tertiary uppercase tracking-wide">
+							To Address
+						</label>
 						<input
 							type="text"
 							value={to}
@@ -505,7 +571,9 @@ function SubmitTransactionModal({
 						/>
 					</div>
 					<div className="flex flex-col gap-1">
-						<label className="text-[11px] text-tertiary uppercase tracking-wide">Value (ETH)</label>
+						<label className="text-[11px] text-tertiary uppercase tracking-wide">
+							Value (ETH)
+						</label>
 						<input
 							type="text"
 							value={value}
@@ -515,7 +583,9 @@ function SubmitTransactionModal({
 						/>
 					</div>
 					<div className="flex flex-col gap-1">
-						<label className="text-[11px] text-tertiary uppercase tracking-wide">Calldata</label>
+						<label className="text-[11px] text-tertiary uppercase tracking-wide">
+							Calldata
+						</label>
 						<textarea
 							value={data}
 							onChange={(e) => setData(e.target.value)}
@@ -527,7 +597,9 @@ function SubmitTransactionModal({
 					</div>
 					<div className="grid grid-cols-2 gap-3">
 						<div className="flex flex-col gap-1">
-							<label className="text-[11px] text-tertiary uppercase tracking-wide">Gas Limit</label>
+							<label className="text-[11px] text-tertiary uppercase tracking-wide">
+								Gas Limit
+							</label>
 							<input
 								type="text"
 								value={gasLimit}
@@ -536,7 +608,9 @@ function SubmitTransactionModal({
 							/>
 						</div>
 						<div className="flex flex-col gap-1">
-							<label className="text-[11px] text-tertiary uppercase tracking-wide">Expiry (hours)</label>
+							<label className="text-[11px] text-tertiary uppercase tracking-wide">
+								Expiry (hours)
+							</label>
 							<input
 								type="text"
 								value={expiryHours}
@@ -583,20 +657,47 @@ function TransactionCard({
 	isOwner: boolean
 	userAddress?: Address
 }) {
-	const decoded = React.useMemo(() => decodeMultisigCall(tx.to, tx.value, tx.data), [tx.to, tx.value, tx.data])
-	const IconComponent = decoded ? getIconComponent(getCallIcon(decoded)) : CodeIcon
+	const decoded = React.useMemo(
+		() => decodeMultisigCall(tx.to, tx.value, tx.data),
+		[tx.to, tx.value, tx.data],
+	)
+	const IconComponent = decoded
+		? getIconComponent(getCallIcon(decoded))
+		: CodeIcon
 
-	const isExpired = tx.expiresAt > 0n && BigInt(Math.floor(Date.now() / 1000)) > tx.expiresAt
-	const canExecute = tx.confirmations >= threshold && !tx.executed && !tx.cancelled && !isExpired
-	const hasConfirmed = userAddress && tx.confirmedBy.some((a) => a.toLowerCase() === userAddress.toLowerCase())
+	const isExpired =
+		tx.expiresAt > 0n && BigInt(Math.floor(Date.now() / 1000)) > tx.expiresAt
+	const canExecute =
+		tx.confirmations >= threshold && !tx.executed && !tx.cancelled && !isExpired
+	const hasConfirmed =
+		userAddress &&
+		tx.confirmedBy.some((a) => a.toLowerCase() === userAddress.toLowerCase())
 
-	const { writeContract: confirm, isPending: isConfirming, data: confirmHash } = useWriteContract()
-	const { writeContract: revoke, isPending: isRevoking, data: revokeHash } = useWriteContract()
-	const { writeContract: execute, isPending: isExecuting, data: executeHash } = useWriteContract()
+	const {
+		writeContract: confirm,
+		isPending: isConfirming,
+		data: confirmHash,
+	} = useWriteContract()
+	const {
+		writeContract: revoke,
+		isPending: isRevoking,
+		data: revokeHash,
+	} = useWriteContract()
+	const {
+		writeContract: execute,
+		isPending: isExecuting,
+		data: executeHash,
+	} = useWriteContract()
 
-	const { isLoading: isConfirmWaiting } = useWaitForTransactionReceipt({ hash: confirmHash })
-	const { isLoading: isRevokeWaiting } = useWaitForTransactionReceipt({ hash: revokeHash })
-	const { isLoading: isExecuteWaiting } = useWaitForTransactionReceipt({ hash: executeHash })
+	const { isLoading: isConfirmWaiting } = useWaitForTransactionReceipt({
+		hash: confirmHash,
+	})
+	const { isLoading: isRevokeWaiting } = useWaitForTransactionReceipt({
+		hash: revokeHash,
+	})
+	const { isLoading: isExecuteWaiting } = useWaitForTransactionReceipt({
+		hash: executeHash,
+	})
 
 	const handleConfirm = () => {
 		confirm({
@@ -653,7 +754,9 @@ function TransactionCard({
 							{decoded?.description ?? 'Unknown Call'}
 						</span>
 						<span className="text-tertiary text-[11px]">
-							#{tx.id.toString()} · {decoded?.targetName ?? shortenAddress(tx.to)} · {formatRelativeTime(tx.submitTime)}
+							#{tx.id.toString()} ·{' '}
+							{decoded?.targetName ?? shortenAddress(tx.to)} ·{' '}
+							{formatRelativeTime(tx.submitTime)}
 						</span>
 					</div>
 				</div>
@@ -687,7 +790,9 @@ function TransactionCard({
 				<div className="flex-1 h-1.5 rounded-full bg-base-alt overflow-hidden">
 					<div
 						className="h-full bg-accent rounded-full transition-all"
-						style={{ width: `${Math.min(100, (Number(tx.confirmations) / Number(threshold)) * 100)}%` }}
+						style={{
+							width: `${Math.min(100, (Number(tx.confirmations) / Number(threshold)) * 100)}%`,
+						}}
 					/>
 				</div>
 				<span className="text-[10px] text-secondary shrink-0">
@@ -699,7 +804,9 @@ function TransactionCard({
 			{tx.value > 0n && (
 				<div className="flex items-center gap-1 text-[11px]">
 					<span className="text-tertiary">Value:</span>
-					<span className="text-primary font-mono">{formatUnits(tx.value, 18)} ETH</span>
+					<span className="text-primary font-mono">
+						{formatUnits(tx.value, 18)} ETH
+					</span>
 				</div>
 			)}
 
