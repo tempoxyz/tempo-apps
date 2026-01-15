@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Petsa",
 		"time": "Oras"
+	},
+	"activity": {
+		"send": "Ipadala",
+		"received": "Natanggap",
+		"mint": "Mint",
+		"burn": "Burn",
+		"swap": "Palitan",
+		"approve": "Aprubahan",
+		"grantRole": "Magbigay ng tungkulin",
+		"revokeRole": "Bawiin ang tungkulin",
+		"pauseTransfers": "I-pause ang mga paglipat",
+		"resumeTransfers": "Ipagpatuloy ang mga paglipat",
+		"createToken": "Lumikha ng token",
+		"partialFill": "Bahagyang pagpuno",
+		"completeFill": "Kumpletong pagpuno",
+		"cancelOrder": "Kanselahin ang order",
+		"setFeeToken": "Itakda ang fee token",
+		"payFee": "Magbayad ng bayarin",
+		"to": "sa",
+		"from": "mula sa",
+		"self": "sarili",
+		"andMore": "at {{count}} pa"
 	}
 }

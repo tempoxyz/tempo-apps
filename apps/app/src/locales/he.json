@@ -64,5 +64,27 @@
 		"hash": "גיבוב",
 		"date": "תאריך",
 		"time": "שעה"
+	},
+	"activity": {
+		"send": "שלח",
+		"received": "התקבל",
+		"mint": "טביעה",
+		"burn": "שריפה",
+		"swap": "החלפה",
+		"approve": "אישור",
+		"grantRole": "הענקת תפקיד",
+		"revokeRole": "ביטול תפקיד",
+		"pauseTransfers": "השהיית העברות",
+		"resumeTransfers": "חידוש העברות",
+		"createToken": "יצירת אסימון",
+		"partialFill": "מילוי חלקי",
+		"completeFill": "מילוי מלא",
+		"cancelOrder": "ביטול הזמנה",
+		"setFeeToken": "הגדרת אסימון עמלה",
+		"payFee": "תשלום עמלה",
+		"to": "אל",
+		"from": "מ",
+		"self": "עצמי",
+		"andMore": "ועוד {{count}}"
 	}
 }

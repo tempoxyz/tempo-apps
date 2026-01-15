@@ -64,5 +64,27 @@
 		"hash": "Hash",
 		"date": "Datum",
 		"time": "Čas"
+	},
+	"activity": {
+		"send": "Odeslat",
+		"received": "Přijato",
+		"mint": "Vyražení",
+		"burn": "Spálení",
+		"swap": "Výměna",
+		"approve": "Schválit",
+		"grantRole": "Udělit roli",
+		"revokeRole": "Odebrat roli",
+		"pauseTransfers": "Pozastavit převody",
+		"resumeTransfers": "Obnovit převody",
+		"createToken": "Vytvořit token",
+		"partialFill": "Částečné plnění",
+		"completeFill": "Úplné plnění",
+		"cancelOrder": "Zrušit objednávku",
+		"setFeeToken": "Nastavit token poplatku",
+		"payFee": "Zaplatit poplatek",
+		"to": "komu",
+		"from": "od",
+		"self": "sobě",
+		"andMore": "a {{count}} dalších"
 	}
 }
