@@ -1657,8 +1657,9 @@ function BlockTimeline({
 	}, [currentBlock, displayBlock])
 
 	// Smoothly increment displayBlock toward currentBlock one at a time
+	// Pause animation when a block is selected
 	React.useEffect(() => {
-		if (!currentBlock || !displayBlock || isPaused) return
+		if (!currentBlock || !displayBlock || isPaused || selectedBlock !== undefined) return
 		if (displayBlock >= currentBlock) return
 
 		const timer = setTimeout(() => {
@@ -1666,7 +1667,7 @@ function BlockTimeline({
 		}, 200)
 
 		return () => clearTimeout(timer)
-	}, [currentBlock, displayBlock, isPaused])
+	}, [currentBlock, displayBlock, isPaused, selectedBlock])
 
 	// Fetch block data when currentBlock changes
 	React.useEffect(() => {
@@ -1869,18 +1870,18 @@ function BlockTimeline({
 					onClick={selectedBlock !== undefined ? () => onSelectBlock(undefined) : undefined}
 					disabled={selectedBlock === undefined}
 					className={cx(
-						'flex items-center gap-1 h-5 px-2 rounded-full border transition-colors focus-ring',
+						'flex items-center gap-0.5 h-4 px-1.5 rounded-full border transition-colors focus-ring',
 						selectedBlock !== undefined
 							? 'bg-accent/20 border-accent/30 hover:bg-accent/30 cursor-pointer'
 							: 'bg-white/5 border-white/10 cursor-default',
 					)}
 					aria-label={selectedBlock !== undefined ? 'Clear block selection' : undefined}
 				>
-					<span className="text-[10px] text-primary font-mono tabular-nums">
+					<span className="text-[9px] text-tertiary font-mono tabular-nums">
 						{selectedBlock !== undefined ? selectedBlock.toString() : shownBlock?.toString() ?? '...'}
 					</span>
 					{selectedBlock !== undefined && (
-						<XIcon className="size-3 text-accent" />
+						<XIcon className="size-2.5 text-accent" />
 					)}
 				</button>
 			</div>
