@@ -140,7 +140,9 @@ export function Settings({
 								{t('settings.language')}
 							</span>
 							<span className="text-[11px] text-tertiary">
-								{currentLangObj?.name || LANGUAGES.find(l => l.code === 'en')?.name || 'English'}
+								{currentLangObj?.name ||
+									LANGUAGES.find((l) => l.code === 'en')?.name ||
+									'English'}
 							</span>
 						</span>
 						<ChevronRightIcon className="size-[16px] text-tertiary" />

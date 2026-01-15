@@ -222,19 +222,19 @@ function EmojiPicker({
 			const viewportHeight = window.innerHeight
 			const pickerWidth = 352
 			const pickerHeight = 435
-			
+
 			let left = rect.left
 			if (left + pickerWidth > viewportWidth - 8) {
 				left = viewportWidth - pickerWidth - 8
 			}
 			if (left < 8) left = 8
-			
+
 			// Position above if not enough space below
 			let top = rect.bottom + 8
 			if (top + pickerHeight > viewportHeight - 8) {
 				top = rect.top - pickerHeight - 8
 			}
-			
+
 			setPosition({ top, left })
 		}
 	}, [anchorRef])
@@ -242,8 +242,12 @@ function EmojiPicker({
 	// Close on click outside
 	React.useEffect(() => {
 		const handleClick = (e: MouseEvent) => {
-			if (pickerRef.current && !pickerRef.current.contains(e.target as Node) &&
-				anchorRef.current && !anchorRef.current.contains(e.target as Node)) {
+			if (
+				pickerRef.current &&
+				!pickerRef.current.contains(e.target as Node) &&
+				anchorRef.current &&
+				!anchorRef.current.contains(e.target as Node)
+			) {
 				onClose()
 			}
 		}
@@ -739,7 +743,9 @@ function AccessKeyRow({
 						</span>
 					)}
 					{isRevoking && (
-						<span className="text-[10px] text-accent ml-1">({t('common.revoking')})</span>
+						<span className="text-[10px] text-accent ml-1">
+							({t('common.revoking')})
+						</span>
 					)}
 				</span>
 				<span className="text-[12px] text-secondary flex items-center gap-1.5 shrink-0">
@@ -901,13 +907,13 @@ function CreateKeyForm({
 					className="flex-1 min-w-0 bg-transparent text-[15px] sm:text-[16px] text-primary font-medium placeholder:text-tertiary focus:outline-none"
 					autoFocus
 				/>
-				<span className="text-[11px] text-secondary flex items-center gap-1 shrink-0">
+				<span className="text-[12px] text-secondary flex items-center gap-1.5 shrink-0">
 					<select
 						value={selectedToken}
 						onChange={(e) =>
 							setSelectedToken(e.target.value as Address.Address)
 						}
-						className="h-5 px-1.5 rounded-full border border-white/10 bg-white/5 text-secondary hover:text-primary hover:border-white/20 cursor-pointer focus:outline-none focus:border-accent appearance-none"
+						className="text-secondary hover:text-primary cursor-pointer focus:outline-none appearance-none"
 					>
 						{assets.map((a) => (
 							<option key={a.address} value={a.address}>
@@ -915,7 +921,8 @@ function CreateKeyForm({
 							</option>
 						))}
 					</select>
-					<span className="h-5 px-1.5 rounded-full border border-white/10 bg-white/5 flex items-center focus-within:border-accent">
+					<span className="text-tertiary">·</span>
+					<span className="flex items-center">
 						<span className="text-tertiary">$</span>
 						<input
 							type="text"
@@ -926,13 +933,14 @@ function CreateKeyForm({
 							className="bg-transparent w-5 placeholder:text-tertiary focus:outline-none"
 						/>
 					</span>
-					<span className="h-5 px-1.5 rounded-full border border-white/10 bg-white/5 flex items-center gap-0.5 focus-within:border-accent">
+					<span className="text-tertiary">·</span>
+					<span className="flex items-center gap-0.5">
 						<input
 							type="number"
 							value={expDays}
 							onChange={(e) => setExpDays(e.target.value)}
 							placeholder="7"
-							className="bg-transparent w-3.5 text-center placeholder:text-tertiary focus:outline-none"
+							className="bg-transparent w-4 text-center placeholder:text-tertiary focus:outline-none"
 						/>
 						<span>{t('common.days')}</span>
 					</span>
@@ -1261,10 +1269,16 @@ export function AccessKeysSection({
 		) : null
 
 	return (
-		<Section title={t('portfolio.accessKeys')} headerRight={headerPill} defaultOpen={false}>
+		<Section
+			title={t('portfolio.accessKeys')}
+			headerRight={headerPill}
+			defaultOpen={false}
+		>
 			{isLoadingKeys ? (
 				<div className="flex flex-col items-center py-4 gap-2">
-					<p className="text-[13px] text-secondary">{t('portfolio.loadingAccessKeys')}</p>
+					<p className="text-[13px] text-secondary">
+						{t('portfolio.loadingAccessKeys')}
+					</p>
 				</div>
 			) : allKeys.length === 0 && !showCreate ? (
 				<div className="flex items-center justify-center py-4 gap-2">

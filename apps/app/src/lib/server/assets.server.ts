@@ -203,8 +203,15 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 			}
 
 			// Include all tokens from user's balance, plus all created tokens (with 0 balance if not held)
-			const allTokens = new Map<string, { token: Address.Address; balance: bigint; metadata: ReturnType<typeof tokenMetadata.get> }>()
-			
+			const allTokens = new Map<
+				string,
+				{
+					token: Address.Address
+					balance: bigint
+					metadata: ReturnType<typeof tokenMetadata.get>
+				}
+			>()
+
 			// Add user's balances
 			for (const [token, balance] of balances.entries()) {
 				if (balance !== 0n) {
@@ -215,7 +222,7 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 					})
 				}
 			}
-			
+
 			// Add all created tokens with 0 balance if not already in user's assets
 			for (const [token, metadata] of tokenMetadata.entries()) {
 				if (!allTokens.has(token)) {
@@ -226,7 +233,7 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 					})
 				}
 			}
-			
+
 			const tokensArray = [...allTokens.values()]
 
 			if (tokensArray.length === 0) return []
@@ -288,7 +295,7 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 					const bHasBalance = b.balance && b.balance !== '0'
 					if (aHasBalance && !bHasBalance) return -1
 					if (!aHasBalance && bHasBalance) return 1
-					
+
 					const aIsUsd = a.valueUsd !== undefined
 					const bIsUsd = b.valueUsd !== undefined
 

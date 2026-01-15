@@ -693,7 +693,9 @@ function CommandMenuPortal({
 						<kbd className="px-2 py-0.5 bg-white/10 rounded-md border border-white/10">
 							esc
 						</kbd>
-						<span>{view !== 'main' ? t('common.back') : t('a11y.closeModal')}</span>
+						<span>
+							{view !== 'main' ? t('common.back') : t('a11y.closeModal')}
+						</span>
 					</span>
 				</div>
 			</div>

@@ -68,6 +68,18 @@ function getKeyManagerBaseUrl() {
 		: 'https://key-manager-mainnet.porto.workers.dev/keys'
 }
 
+function fetchWithTimeout(
+	url: string,
+	options: RequestInit = {},
+	timeoutMs = 10000,
+) {
+	const controller = new AbortController()
+	const timeout = setTimeout(() => controller.abort(), timeoutMs)
+	return fetch(url, { ...options, signal: controller.signal }).finally(() =>
+		clearTimeout(timeout),
+	)
+}
+
 function getKeyManager() {
 	// Create a lazy key manager that determines the URL at method call time
 	// This ensures SSR and client use the same config structure
@@ -75,7 +87,7 @@ function getKeyManager() {
 		async getChallenge() {
 			console.log('[KM] getChallenge')
 			const baseUrl = getKeyManagerBaseUrl()
-			const response = await fetch(`${baseUrl}/challenge`)
+			const response = await fetchWithTimeout(`${baseUrl}/challenge`)
 			if (!response.ok)
 				throw new Error(`Failed to get challenge: ${response.statusText}`)
 			const result = (await response.json()) as {
@@ -88,9 +100,17 @@ function getKeyManager() {
 		async getPublicKey(parameters: { credential: { id: string } }) {
 			console.log('[KM] getPublicKey', parameters.credential.id)
 			const baseUrl = getKeyManagerBaseUrl()
-			const response = await fetch(`${baseUrl}/${parameters.credential.id}`)
-			if (!response.ok)
+			const response = await fetchWithTimeout(
+				`${baseUrl}/${parameters.credential.id}`,
+			)
+			if (!response.ok) {
+				if (response.status === 404) {
+					throw new Error(
+						'This passkey is not registered. It may have been created on a different domain or environment. Please sign up to create a new passkey.',
+					)
+				}
 				throw new Error(`Failed to get public key: ${response.statusText}`)
+			}
 			const data = (await response.json()) as { publicKey: `0x${string}` }
 			console.log('[KM] getPublicKey =>', `${data.publicKey?.slice(0, 20)}...`)
 			return data.publicKey
@@ -106,14 +126,17 @@ function getKeyManager() {
 			)
 			const baseUrl = getKeyManagerBaseUrl()
 			const serializedCredential = serializeCredential(parameters.credential)
-			const response = await fetch(`${baseUrl}/${parameters.credential.id}`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					credential: serializedCredential,
-					publicKey: parameters.publicKey,
-				}),
-			})
+			const response = await fetchWithTimeout(
+				`${baseUrl}/${parameters.credential.id}`,
+				{
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						credential: serializedCredential,
+						publicKey: parameters.publicKey,
+					}),
+				},
+			)
 			if (!response.ok) {
 				const error = await response.text()
 				console.error('[KM] setPublicKey err', error)

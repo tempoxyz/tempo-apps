@@ -95,7 +95,7 @@
 	--color-focus: var(--color-accent);
 
 	/* Border Colors */
-	--color-border-primary: light-dark(#f0f0f0, #262626);
+	--color-border-primary: light-dark(#d0d0d0, #262626);
 	--border-primary: var(--color-border-primary);
 	--color-border-secondary: light-dark(#f8f8f8, #1a1a1a);
 	--border-secondary: var(--color-border-secondary);
@@ -131,7 +131,7 @@
 	/* Card */
 	--color-card: light-dark(#f9f9f9, #222222);
 	--color-card-header: light-dark(#f9f9f9, #191919);
-	--color-card-border: light-dark(#e0e0e0, #2a2a2a);
+	--color-card-border: light-dark(#c8c8c8, #2a2a2a);
 
 	/* Other Colors */
 	--color-base-background: light-dark(#fcfcfc, #191919);
@@ -139,7 +139,7 @@
 	--color-base-plane-background: light-dark(#f9f9f9, #222222);
 	--color-base-plane-interactive: light-dark(#f8f8f8, #1c1c1c);
 	--color-base-alt: light-dark(#e5e5e5, #2a2a2a);
-	--color-base-border: light-dark(#e0e0e0, #2a2a2a);
+	--color-base-border: light-dark(#c8c8c8, #2a2a2a);
 	--color-base-content: light-dark(#202020, #eeeeee);
 	--color-base-content-secondary: light-dark(#7b7b7b, #7b7b7b);
 	--color-base-content-positive: light-dark(#30a46c, #30a46c);

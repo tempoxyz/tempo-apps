@@ -105,13 +105,13 @@ function Landing() {
 
 	return (
 		<>
-			<Layout.Header left={t('common.search')} right={null} />
+			<Layout.Header left={null} right={null} />
 			<div className="flex flex-1 flex-col items-center justify-center">
 				<div className="grid place-items-center relative grid-flow-row gap-3 sm:gap-3 select-none w-full max-w-md px-3 sm:px-4 py-6 z-1">
 					<h1 className="font-sans font-semibold text-[28px] sm:text-[32px] md:text-[36px] text-primary text-center -tracking-[0.03em]">
 						{t('landing.getStarted')}
 					</h1>
-					<p className="text-secondary text-[13px] sm:text-[14px] md:text-[15px] text-center -mt-1 mb-2 max-w-[280px]">
+					<p className="text-secondary text-[13px] sm:text-[14px] md:text-[15px] text-center -mt-3 mb-1 max-w-[280px]">
 						{t('landing.exploreDescription')}
 					</p>
 					<form onSubmit={handleSubmit} className="w-full relative">
@@ -206,7 +206,10 @@ function Landing() {
 							onClick={() => {
 								if (connector) {
 									setPendingAction('signin')
-									connect.connect({ connector })
+									connect.connect({
+										connector,
+										capabilities: { type: 'sign-in', selectAccount: true },
+									} as Parameters<typeof connect.connect>[0])
 								}
 							}}
 							disabled={connect.isPending}
@@ -259,11 +262,9 @@ function Landing() {
 					</div>
 
 					{connect.error && (
-						<div className="mt-3 px-4 py-3 rounded-xl glass-thin border border-negative/30 glow-negative">
-							<p className="text-negative text-[13px] text-center">
-								{connect.error.message}
-							</p>
-						</div>
+						<p className="text-negative/70 text-[12px] text-center mt-2">
+							{connect.error.message}
+						</p>
 					)}
 				</div>
 			</div>

@@ -69,7 +69,6 @@ import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
 import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
-import PauseIcon from '~icons/lucide/pause'
 import PlayIcon from '~icons/lucide/play'
 import RefreshCwIcon from '~icons/lucide/refresh-cw'
 import { useTranslation } from 'react-i18next'
@@ -293,7 +292,8 @@ const fetchBlockTimestamps = createServerFn({ method: 'POST' })
 			for (let i = 0; i < blockNumbers.length; i++) {
 				const result = results.find((r) => r.id === i + 1)
 				if (result?.result?.timestamp) {
-					timestamps[blockNumbers[i]] = Number.parseInt(result.result.timestamp, 16) * 1000
+					timestamps[blockNumbers[i]] =
+						Number.parseInt(result.result.timestamp, 16) * 1000
 				}
 			}
 			return { timestamps }
@@ -694,7 +694,9 @@ async function fetchTransactions(
 				const timestampsResult = await fetchBlockTimestamps({
 					data: { blockNumbers: Array.from(blockNumbers) },
 				})
-				for (const [blockNum, ts] of Object.entries(timestampsResult.timestamps)) {
+				for (const [blockNum, ts] of Object.entries(
+					timestampsResult.timestamps,
+				)) {
 					blockTimestamps.set(blockNum, ts)
 				}
 			} catch {
@@ -1070,27 +1072,32 @@ function AddressView() {
 								className="bg-transparent outline-none text-[13px] text-primary placeholder:text-secondary w-[80px] sm:w-[100px] focus:w-[140px] sm:focus:w-[180px] transition-all"
 							/>
 						</form>
-						{searchFocused && searchValue.trim().match(/^0x[a-fA-F0-9]{40}$/) && (
-							<div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-card-border rounded-full shadow-xl overflow-hidden z-50">
-								<button
-									type="button"
-									onMouseDown={(e) => {
-										e.preventDefault()
-										navigate({ to: '/$address', params: { address: searchValue.trim() } })
-										setSearchValue('')
-										setSearchFocused(false)
-									}}
-									className="w-full h-[32px] px-3 text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center justify-between"
-								>
-									<div className="flex flex-col min-w-0">
-										<span className="text-[11px] text-primary font-mono truncate">
-											{searchValue.trim().slice(0, 6)}...{searchValue.trim().slice(-4)}
-										</span>
-									</div>
-									<ChevronDownIcon className="size-3 text-tertiary -rotate-90 shrink-0" />
-								</button>
-							</div>
-						)}
+						{searchFocused &&
+							searchValue.trim().match(/^0x[a-fA-F0-9]{40}$/) && (
+								<div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-card-border rounded-full shadow-xl overflow-hidden z-50">
+									<button
+										type="button"
+										onMouseDown={(e) => {
+											e.preventDefault()
+											navigate({
+												to: '/$address',
+												params: { address: searchValue.trim() },
+											})
+											setSearchValue('')
+											setSearchFocused(false)
+										}}
+										className="w-full h-[32px] px-3 text-left hover:bg-base-alt transition-colors cursor-pointer flex items-center justify-between"
+									>
+										<div className="flex flex-col min-w-0">
+											<span className="text-[11px] text-primary font-mono truncate">
+												{searchValue.trim().slice(0, 6)}...
+												{searchValue.trim().slice(-4)}
+											</span>
+										</div>
+										<ChevronDownIcon className="size-3 text-tertiary -rotate-90 shrink-0" />
+									</button>
+								</div>
+							)}
 					</div>
 					{isOwnProfile ? (
 						<button
@@ -1577,7 +1584,7 @@ function ActivityHeatmap({
 							<div
 								key={`${hi}-${di}`}
 								className={cx(
-									'w-full aspect-square cursor-default transition-transform hover:scale-125 hover:z-10',
+									'w-full aspect-square cursor-default',
 									isMobile ? 'rounded-[3px]' : 'rounded-[2px]',
 									getColor(cell.level),
 								)}
@@ -2036,7 +2043,9 @@ function BlockTimeline({
 				</div>
 				<div className="flex items-center justify-center">
 					<div className="flex items-center gap-1 h-5 px-2 rounded-full bg-white/5 border border-white/10">
-						<span className="text-[11px] text-tertiary">{t('common.block')}</span>
+						<span className="text-[11px] text-tertiary">
+							{t('common.block')}
+						</span>
 						<span className="text-[11px] text-tertiary font-mono">...</span>
 					</div>
 				</div>
@@ -2177,7 +2186,7 @@ function BlockTimeline({
 						'flex items-center gap-1.5 h-5 pl-0.5 pr-2 rounded-full border transition-colors',
 						selectedBlock !== undefined
 							? 'bg-accent/20 border-accent/30'
-							: 'bg-white/5 border-white/10',
+							: 'bg-surface border-card-border',
 					)}
 				>
 					<button
@@ -2202,7 +2211,7 @@ function BlockTimeline({
 							'flex items-center justify-center size-4 rounded-full transition-colors cursor-pointer',
 							isPaused || selectedBlock !== undefined
 								? 'bg-accent/30 hover:bg-accent/40'
-								: 'bg-white/10 hover:bg-white/20',
+								: 'bg-tertiary/20 hover:bg-tertiary/30',
 						)}
 						aria-label={
 							isPaused || selectedBlock !== undefined
@@ -2758,7 +2767,7 @@ function AssetRow({
 				resetWrite()
 			}, 3000)
 		}
-	}, [writeError, resetWrite, onSendError])
+	}, [writeError, resetWrite, onSendError, t])
 
 	// Update send state based on pending/confirming
 	React.useEffect(() => {
@@ -2842,9 +2851,7 @@ function AssetRow({
 					`accessKey:${selectedAccessKey.toLowerCase()}`,
 				)
 				if (!storedKey) {
-					setSendError(
-						t('a11y.accessKeyNotFound'),
-					)
+					setSendError(t('a11y.accessKeyNotFound'))
 					setSendState('error')
 					setTimeout(() => {
 						setSendState('idle')
@@ -2927,7 +2934,9 @@ function AssetRow({
 				}, 1500)
 			} catch (e) {
 				console.error('[AssetRow] Access key send error:', e)
-				setSendError(e instanceof Error ? e.message : t('common.transactionFailed'))
+				setSendError(
+					e instanceof Error ? e.message : t('common.transactionFailed'),
+				)
 				setSendState('error')
 				setTimeout(() => {
 					setSendState('idle')
@@ -3723,17 +3732,17 @@ function shortenAddress(address: string, chars = 4): string {
 function formatActivityTime(timestamp: number): string {
 	const now = Date.now()
 	const diff = now - timestamp
-	
+
 	const seconds = Math.floor(diff / 1000)
 	const minutes = Math.floor(diff / 60000)
 	const hours = Math.floor(diff / 3600000)
 	const days = Math.floor(diff / 86400000)
-	
+
 	if (seconds < 60) return `${seconds}s`
 	if (minutes < 60) return `${minutes}m`
 	if (hours < 24) return `${hours}h`
 	if (days < 7) return `${days}d`
-	
+
 	return new Date(timestamp).toLocaleDateString('en-US', {
 		month: 'short',
 		day: 'numeric',
