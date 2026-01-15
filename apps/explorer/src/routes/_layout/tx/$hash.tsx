@@ -30,7 +30,7 @@ import { TxTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
-import { decodeKnownCall, type KnownEvent } from '#lib/domain/known-events'
+import type { KnownEvent } from '#lib/domain/known-events'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
@@ -322,30 +322,15 @@ function OverviewSection(props: {
 		.map((event) => event.note)
 		.filter((note): note is string => typeof note === 'string' && !!note.trim())
 
-	// Try to decode known contract calls (e.g., validator precompile)
-	// Prioritize decoded calls over fee-only events since they're more descriptive
-	const knownCall = React.useMemo(() => {
-		if (!transaction.to || !input || input === '0x') return null
-		return decodeKnownCall(transaction.to, input)
-	}, [transaction.to, input])
-
-	// If we have a decoded call, prepend it to events (or use it alone if only fee events)
-	const displayEvents = React.useMemo(() => {
-		if (knownCall) {
-			// Filter out fee-only events when we have a more descriptive call
-			const nonFeeEvents = knownEvents.filter((e) => e.type !== 'fee')
-			return [knownCall, ...nonFeeEvents]
-		}
-		return knownEvents
-	}, [knownCall, knownEvents])
+	// knownEvents already has decoded calls prepended (from the loader)
 
 	return (
 		<div className="flex flex-col">
-			{displayEvents.length > 0 && (
+			{knownEvents.length > 0 && (
 				<InfoRow label="Description">
 					<div className="flex flex-col gap-[6px]">
 						<TxEventDescription.ExpandGroup
-							events={displayEvents}
+							events={knownEvents}
 							limit={5}
 							limitFilter={(event) =>
 								event.type !== 'active key count changed' &&

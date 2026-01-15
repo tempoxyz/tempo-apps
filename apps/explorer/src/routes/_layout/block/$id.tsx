@@ -23,7 +23,6 @@ import { Sections } from '#comps/Sections'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#lib/css'
 import {
-	decodeKnownCall,
 	type KnownEvent,
 	preferredEventsFilter,
 } from '#lib/domain/known-events'
@@ -398,25 +397,7 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 		return <span className="text-primary">Deploy contract</span>
 	}
 
-	// Try to decode known contract calls (e.g., validator precompile)
-	// Prioritize decoded calls over fee-only events since they're more descriptive
-	const knownCall =
-		transaction.to && transaction.input && transaction.input !== '0x'
-			? decodeKnownCall(transaction.to, transaction.input)
-			: null
-
-	if (knownCall) {
-		// Filter out fee-only events when we have a more descriptive call
-		const nonFeeEvents = knownEvents?.filter((e) => e.type !== 'fee') ?? []
-		const allEvents = [knownCall, ...nonFeeEvents]
-		return (
-			<TxEventDescription.ExpandGroup
-				events={allEvents}
-				limitFilter={preferredEventsFilter}
-			/>
-		)
-	}
-
+	// knownEvents already has decoded calls prepended (from the loader)
 	if (knownEvents && knownEvents.length > 0)
 		return (
 			<TxEventDescription.ExpandGroup
