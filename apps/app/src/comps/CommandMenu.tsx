@@ -436,7 +436,7 @@ function CommandMenuPortal({
 				onClick={(e) => e.stopPropagation()}
 			>
 				{/* Search Input */}
-				<div className="flex items-center gap-2.5 px-3.5 h-12 border-b border-[#3a3a3c]">
+				<div className="flex items-center gap-2 px-3 h-10 border-b border-[#3a3a3c]">
 					{view !== 'main' ? (
 						<button
 							type="button"
@@ -450,7 +450,7 @@ function CommandMenuPortal({
 							<ArrowLeftIcon className="size-4 text-[#98989f]" />
 						</button>
 					) : (
-						<SearchIcon className="size-4 text-[#98989f] shrink-0" />
+						<SearchIcon className="size-3.5 text-[#6e6e73] shrink-0" />
 					)}
 
 					{view === 'main' && (
@@ -459,7 +459,7 @@ function CommandMenuPortal({
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
 							placeholder={t('commandMenu.searchPlaceholder')}
-							className="flex-1 bg-transparent text-[#f5f5f7] placeholder:text-[#6e6e73] outline-none text-[15px]"
+							className="flex-1 bg-transparent text-[#f5f5f7] placeholder:text-[#6e6e73] outline-none text-[13px]"
 							autoComplete="off"
 							spellCheck={false}
 						/>
@@ -481,7 +481,7 @@ function CommandMenuPortal({
 						</span>
 					)}
 
-					<kbd className="px-1.5 py-0.5 text-[11px] text-[#6e6e73] bg-[#1c1c1e] rounded border border-[#3a3a3c] font-sans">
+					<kbd className="px-1.5 py-0.5 text-[10px] text-[#6e6e73] bg-[#1c1c1e] rounded border border-[#3a3a3c] font-sans">
 						{isMac ? '⌘K' : 'Ctrl+K'}
 					</kbd>
 				</div>
@@ -499,7 +499,7 @@ function CommandMenuPortal({
 						) : (
 							filteredGroups.map((group) => (
 								<div key={group.label} className="pt-1 pb-0.5">
-									<div className="px-4 py-1 text-[11px] font-medium text-[#6e6e73] uppercase tracking-wider">
+									<div className="px-3 py-1 text-[10px] font-medium text-[#6e6e73] uppercase tracking-wider">
 										{group.label}
 									</div>
 									{group.commands.map((cmd) => {
@@ -514,14 +514,14 @@ function CommandMenuPortal({
 												onClick={cmd.onSelect}
 												onMouseEnter={() => setSelectedIndex(idx)}
 												className={cx(
-													'w-full flex items-center gap-2.5 px-3 h-8 text-left transition-colors rounded-md mx-1',
+													'w-full flex items-center gap-2 px-2.5 h-7 text-left transition-colors rounded mx-1',
 													isSelected ? 'bg-[#0a84ff]' : 'hover:bg-[#3a3a3c]',
 												)}
 												style={{ width: 'calc(100% - 8px)' }}
 											>
 												<span
 													className={cx(
-														'[&>svg]:size-4',
+														'[&>svg]:size-3.5',
 														isSelected ? 'text-white' : 'text-[#98989f]',
 													)}
 												>
@@ -529,7 +529,7 @@ function CommandMenuPortal({
 												</span>
 												<span
 													className={cx(
-														'flex-1 text-[13px]',
+														'flex-1 text-[12px]',
 														isSelected ? 'text-white' : 'text-[#f5f5f7]',
 													)}
 												>
@@ -541,9 +541,9 @@ function CommandMenuPortal({
 															<kbd
 																key={k}
 																className={cx(
-																	'min-w-[20px] h-5 flex items-center justify-center text-[11px] rounded border',
+																	'min-w-[16px] h-4 flex items-center justify-center text-[10px] rounded border px-1',
 																	isSelected
-																		? 'text-white/70 bg-white/10 border-white/20'
+																		? 'text-white/60 bg-white/10 border-white/20'
 																		: 'text-[#6e6e73] bg-[#1c1c1e] border-[#3a3a3c]',
 																)}
 															>
@@ -638,14 +638,14 @@ function CommandMenuPortal({
 										}}
 										onMouseEnter={() => setSelectedIndex(i)}
 										className={cx(
-											'w-full flex items-center justify-between px-3 h-8 transition-colors rounded-md mx-1',
+											'w-full flex items-center justify-between px-2.5 h-7 transition-colors rounded mx-1',
 											isSelected ? 'bg-[#0a84ff]' : 'hover:bg-[#3a3a3c]',
 										)}
 										style={{ width: 'calc(100% - 8px)' }}
 									>
 										<span
 											className={cx(
-												'text-[13px]',
+												'text-[12px]',
 												isSelected ? 'text-white' : 'text-[#f5f5f7]',
 											)}
 										>
@@ -667,27 +667,19 @@ function CommandMenuPortal({
 				</div>
 
 				{/* Footer */}
-				<div className="flex items-center gap-4 px-3.5 py-2 border-t border-[#3a3a3c] bg-[#1c1c1e]">
-					<span className="flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
-						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
-							↑
-						</kbd>
-						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
-							↓
-						</kbd>
-						<span>Navigate</span>
+				<div className="flex items-center gap-3 px-3 h-7 border-t border-[#3a3a3c] bg-[#1c1c1e] text-[10px] text-[#6e6e73]">
+					<span className="flex items-center gap-1">
+						<kbd className="px-0.5 bg-[#232326] rounded border border-[#3a3a3c]">↑</kbd>
+						<kbd className="px-0.5 bg-[#232326] rounded border border-[#3a3a3c]">↓</kbd>
+						Navigate
 					</span>
-					<span className="flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
-						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
-							↵
-						</kbd>
-						<span>Open</span>
+					<span className="flex items-center gap-1">
+						<kbd className="px-1 bg-[#232326] rounded border border-[#3a3a3c]">↵</kbd>
+						Open
 					</span>
-					<span className="flex items-center gap-1.5 text-[11px] text-[#6e6e73]">
-						<kbd className="px-1 py-0.5 bg-[#232326] rounded border border-[#3a3a3c]">
-							esc
-						</kbd>
-						<span>{view !== 'main' ? 'Back' : 'Close'}</span>
+					<span className="flex items-center gap-1">
+						<kbd className="px-1 bg-[#232326] rounded border border-[#3a3a3c]">esc</kbd>
+						{view !== 'main' ? 'Back' : 'Close'}
 					</span>
 				</div>
 			</div>
