@@ -50,7 +50,9 @@
 		"showZeroBalances": "הצג יתרות אפס",
 		"noActivityYet": "אין עדיין פעילות",
 		"noActivityInBlock": "אין פעילות בבלוק הזה",
-		"noAssetsFound": "לא נמצאו נכסים"
+		"noAssetsFound": "לא נמצאו נכסים",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "התחל",

@@ -50,7 +50,9 @@
 		"showZeroBalances": "Hiển thị số dư bằng không",
 		"noActivityYet": "Chưa có hoạt động",
 		"noActivityInBlock": "Không có hoạt động trong khối này",
-		"noAssetsFound": "Không tìm thấy tài sản"
+		"noAssetsFound": "Không tìm thấy tài sản",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "Bắt đầu",

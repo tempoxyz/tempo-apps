@@ -50,7 +50,9 @@
 		"showZeroBalances": "Показати нульові баланси",
 		"noActivityYet": "Ще немає активності",
 		"noActivityInBlock": "Немає активності в цьому блоці",
-		"noAssetsFound": "Активи не знайдено"
+		"noAssetsFound": "Активи не знайдено",
+		"viewBlockInExplorer": "View block in explorer",
+		"blockTimeline": "Block timeline"
 	},
 	"landing": {
 		"getStarted": "Почати",
