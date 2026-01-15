@@ -60,7 +60,7 @@ export function Amount(props: Amount.Props) {
 			before={before}
 			after={
 				<>
-					<TokenIcon address={token} name={symbol_} className="shrink-0" />
+					<TokenIcon address={token} name={symbol_} />
 					<Link
 						className="text-base-content-positive press-down inline-flex shrink-0"
 						params={{ address: token }}

@@ -9,7 +9,7 @@ import {
 	encodeFunctionData,
 } from 'viem'
 import { useCall, useReadContract } from 'wagmi'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import { ellipsis } from '#lib/chars'
 import {
 	formatOutputValue,

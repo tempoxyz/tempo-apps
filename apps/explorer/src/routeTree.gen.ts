@@ -14,12 +14,14 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
+import { Route as LayoutValidatorsRouteImport } from './routes/_layout/validators'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
 import { Route as ApiTokensCountRouteImport } from './routes/api/tokens/count'
 import { Route as ApiRpcIdRouteImport } from './routes/api/rpc/$id'
 import { Route as ApiAddressAddressRouteImport } from './routes/api/address/$address'
+import { Route as ApiAbiBatchRouteImport } from './routes/api/abi/batch'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutReceiptHashRouteImport } from './routes/_layout/receipt/$hash'
@@ -33,6 +35,7 @@ import { Route as ApiTxTraceHashRouteImport } from './routes/api/tx/trace/$hash'
 import { Route as ApiTxBalanceChangesHashRouteImport } from './routes/api/tx/balance-changes/$hash'
 import { Route as ApiAddressTxsCountAddressRouteImport } from './routes/api/address/txs-count/$address'
 import { Route as ApiAddressTotalValueAddressRouteImport } from './routes/api/address/total-value/$address'
+import { Route as LayoutBlockCountdownTargetBlockRouteImport } from './routes/_layout/block/countdown.$targetBlock'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -57,6 +60,11 @@ const ApiCodeRoute = ApiCodeRouteImport.update({
   id: '/api/code',
   path: '/api/code',
   getParentRoute: () => rootRouteImport,
+} as any)
+const LayoutValidatorsRoute = LayoutValidatorsRouteImport.update({
+  id: '/validators',
+  path: '/validators',
+  getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutTokensRoute = LayoutTokensRouteImport.update({
   id: '/tokens',
@@ -86,6 +94,11 @@ const ApiRpcIdRoute = ApiRpcIdRouteImport.update({
 const ApiAddressAddressRoute = ApiAddressAddressRouteImport.update({
   id: '/api/address/$address',
   path: '/api/address/$address',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAbiBatchRoute = ApiAbiBatchRouteImport.update({
+  id: '/api/abi/batch',
+  path: '/api/abi/batch',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LayoutTxHashRoute = LayoutTxHashRouteImport.update({
@@ -155,10 +168,17 @@ const ApiAddressTotalValueAddressRoute =
     path: '/api/address/total-value/$address',
     getParentRoute: () => rootRouteImport,
   } as any)
+const LayoutBlockCountdownTargetBlockRoute =
+  LayoutBlockCountdownTargetBlockRouteImport.update({
+    id: '/block/countdown/$targetBlock',
+    path: '/block/countdown/$targetBlock',
+    getParentRoute: () => LayoutRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
+  '/validators': typeof LayoutValidatorsRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
@@ -172,10 +192,12 @@ export interface FileRoutesByFullPath {
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
+  '/api/abi/batch': typeof ApiAbiBatchRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/rpc/$id': typeof ApiRpcIdRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/demo': typeof LayoutDemoIndexRoute
+  '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
@@ -184,6 +206,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
+  '/validators': typeof LayoutValidatorsRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
@@ -197,10 +220,12 @@ export interface FileRoutesByTo {
   '/receipt/$hash': typeof LayoutReceiptHashRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
+  '/api/abi/batch': typeof ApiAbiBatchRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/rpc/$id': typeof ApiRpcIdRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/demo': typeof LayoutDemoIndexRoute
+  '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
@@ -211,6 +236,7 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/tokens': typeof LayoutTokensRoute
+  '/_layout/validators': typeof LayoutValidatorsRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
@@ -224,10 +250,12 @@ export interface FileRoutesById {
   '/_layout/receipt/$hash': typeof LayoutReceiptHashRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
+  '/api/abi/batch': typeof ApiAbiBatchRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/rpc/$id': typeof ApiRpcIdRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
+  '/_layout/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
@@ -238,6 +266,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/blocks'
     | '/tokens'
+    | '/validators'
     | '/api/code'
     | '/api/health'
     | '/api/search'
@@ -251,10 +280,12 @@ export interface FileRouteTypes {
     | '/receipt/$hash'
     | '/token/$address'
     | '/tx/$hash'
+    | '/api/abi/batch'
     | '/api/address/$address'
     | '/api/rpc/$id'
     | '/api/tokens/count'
     | '/demo'
+    | '/block/countdown/$targetBlock'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
@@ -263,6 +294,7 @@ export interface FileRouteTypes {
   to:
     | '/blocks'
     | '/tokens'
+    | '/validators'
     | '/api/code'
     | '/api/health'
     | '/api/search'
@@ -276,10 +308,12 @@ export interface FileRouteTypes {
     | '/receipt/$hash'
     | '/token/$address'
     | '/tx/$hash'
+    | '/api/abi/batch'
     | '/api/address/$address'
     | '/api/rpc/$id'
     | '/api/tokens/count'
     | '/demo'
+    | '/block/countdown/$targetBlock'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
@@ -289,6 +323,7 @@ export interface FileRouteTypes {
     | '/_layout'
     | '/_layout/blocks'
     | '/_layout/tokens'
+    | '/_layout/validators'
     | '/api/code'
     | '/api/health'
     | '/api/search'
@@ -302,10 +337,12 @@ export interface FileRouteTypes {
     | '/_layout/receipt/$hash'
     | '/_layout/token/$address'
     | '/_layout/tx/$hash'
+    | '/api/abi/batch'
     | '/api/address/$address'
     | '/api/rpc/$id'
     | '/api/tokens/count'
     | '/_layout/demo/'
+    | '/_layout/block/countdown/$targetBlock'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
     | '/api/tx/balance-changes/$hash'
@@ -317,6 +354,7 @@ export interface RootRouteChildren {
   ApiCodeRoute: typeof ApiCodeRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
+  ApiAbiBatchRoute: typeof ApiAbiBatchRoute
   ApiAddressAddressRoute: typeof ApiAddressAddressRoute
   ApiRpcIdRoute: typeof ApiRpcIdRoute
   ApiTokensCountRoute: typeof ApiTokensCountRoute
@@ -363,6 +401,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_layout/validators': {
+      id: '/_layout/validators'
+      path: '/validators'
+      fullPath: '/validators'
+      preLoaderRoute: typeof LayoutValidatorsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/tokens': {
       id: '/_layout/tokens'
       path: '/tokens'
@@ -403,6 +448,13 @@ declare module '@tanstack/react-router' {
       path: '/api/address/$address'
       fullPath: '/api/address/$address'
       preLoaderRoute: typeof ApiAddressAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/abi/batch': {
+      id: '/api/abi/batch'
+      path: '/api/abi/batch'
+      fullPath: '/api/abi/batch'
+      preLoaderRoute: typeof ApiAbiBatchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_layout/tx/$hash': {
@@ -496,12 +548,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAddressTotalValueAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_layout/block/countdown/$targetBlock': {
+      id: '/_layout/block/countdown/$targetBlock'
+      path: '/block/countdown/$targetBlock'
+      fullPath: '/block/countdown/$targetBlock'
+      preLoaderRoute: typeof LayoutBlockCountdownTargetBlockRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
 interface LayoutRouteChildren {
   LayoutBlocksRoute: typeof LayoutBlocksRoute
   LayoutTokensRoute: typeof LayoutTokensRoute
+  LayoutValidatorsRoute: typeof LayoutValidatorsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAddressAddressRoute: typeof LayoutAddressAddressRoute
   LayoutBlockIdRoute: typeof LayoutBlockIdRoute
@@ -513,11 +573,13 @@ interface LayoutRouteChildren {
   LayoutTokenAddressRoute: typeof LayoutTokenAddressRoute
   LayoutTxHashRoute: typeof LayoutTxHashRoute
   LayoutDemoIndexRoute: typeof LayoutDemoIndexRoute
+  LayoutBlockCountdownTargetBlockRoute: typeof LayoutBlockCountdownTargetBlockRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBlocksRoute: LayoutBlocksRoute,
   LayoutTokensRoute: LayoutTokensRoute,
+  LayoutValidatorsRoute: LayoutValidatorsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAddressAddressRoute: LayoutAddressAddressRoute,
   LayoutBlockIdRoute: LayoutBlockIdRoute,
@@ -529,6 +591,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutTokenAddressRoute: LayoutTokenAddressRoute,
   LayoutTxHashRoute: LayoutTxHashRoute,
   LayoutDemoIndexRoute: LayoutDemoIndexRoute,
+  LayoutBlockCountdownTargetBlockRoute: LayoutBlockCountdownTargetBlockRoute,
 }
 
 const LayoutRouteWithChildren =
@@ -539,6 +602,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCodeRoute: ApiCodeRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
+  ApiAbiBatchRoute: ApiAbiBatchRoute,
   ApiAddressAddressRoute: ApiAddressAddressRoute,
   ApiRpcIdRoute: ApiRpcIdRoute,
   ApiTokensCountRoute: ApiTokensCountRoute,

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Block } from 'viem'
-import { useWatchBlocks } from 'wagmi'
+import { useBlock, useWatchBlockNumber } from 'wagmi'
 import * as z from 'zod/mini'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
@@ -12,7 +12,7 @@ import {
 	TimeColumnHeader,
 	useTimeFormat,
 } from '#comps/TimeFormat'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import { withLoaderTiming } from '#lib/profiling'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
 import ChevronFirst from '~icons/lucide/chevron-first'
@@ -52,6 +52,11 @@ function RouteComponent() {
 		initialData: loaderData,
 	})
 
+	const [latestBlockNumber, setLatestBlockNumber] = React.useState<
+		bigint | undefined
+	>()
+	const currentLatest = latestBlockNumber ?? queryData.latestBlockNumber
+
 	// Initialize with loader data to prevent layout shift
 	const [liveBlocks, setLiveBlocks] = React.useState<Block[]>(() =>
 		queryData.blocks.slice(0, BLOCKS_PER_PAGE),
@@ -59,35 +64,42 @@ function RouteComponent() {
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const [paused, setPaused] = React.useState(false)
 
-	// Track latest block number from live blocks
-	const currentLatest =
-		React.useMemo(() => {
-			if (liveBlocks.length > 0 && liveBlocks[0]?.number != null) {
-				return liveBlocks[0].number
+	// Watch for new blocks
+	useWatchBlockNumber({
+		onBlockNumber: (blockNumber) => {
+			if (latestBlockNumber === undefined || blockNumber > latestBlockNumber) {
+				setLatestBlockNumber(blockNumber)
 			}
-			return queryData.latestBlockNumber
-		}, [liveBlocks, queryData.latestBlockNumber]) ?? undefined
-
-	// Watch for new blocks via websocket subscription - streams full block data directly
-	useWatchBlocks({
-		onBlock: (block) => {
-			if (!live || !isAtLatest || paused) return
-
-			setLiveBlocks((prev) => {
-				if (prev.some((b) => b.number === block.number)) return prev
-
-				// Mark as new for animation
-				const blockNum = block.number?.toString()
-				if (blockNum) {
-					recentlyAddedBlocks.add(blockNum)
-					setTimeout(() => recentlyAddedBlocks.delete(blockNum), 400)
-				}
-
-				return [block, ...prev].slice(0, BLOCKS_PER_PAGE)
-			})
 		},
-		emitOnBegin: false,
+		poll: true,
 	})
+
+	// Fetch the latest block when block number changes (for live updates)
+	const { data: latestBlock } = useBlock({
+		blockNumber: latestBlockNumber,
+		query: {
+			enabled: live && isAtLatest && latestBlockNumber !== undefined,
+			staleTime: Number.POSITIVE_INFINITY, // Block data never changes
+		},
+	})
+
+	// Add new blocks as they arrive
+	React.useEffect(() => {
+		if (!live || !isAtLatest || !latestBlock || paused) return
+
+		setLiveBlocks((prev) => {
+			if (prev.some((b) => b.number === latestBlock.number)) return prev
+
+			// Mark as new for animation
+			const blockNum = latestBlock.number?.toString()
+			if (blockNum) {
+				recentlyAddedBlocks.add(blockNum)
+				setTimeout(() => recentlyAddedBlocks.delete(blockNum), 400)
+			}
+
+			return [latestBlock, ...prev].slice(0, BLOCKS_PER_PAGE)
+		})
+	}, [latestBlock, live, isAtLatest, paused])
 
 	// Re-initialize when navigating back to latest with live mode
 	React.useEffect(() => {
@@ -156,12 +168,9 @@ function RouteComponent() {
 								})}
 								className={cx(
 									'flex items-center gap-[4px] px-[6px] py-[2px] rounded-[4px] text-[11px] font-medium press-down',
-									{
-										'bg-positive/10 text-positive hover:bg-positive/20':
-											live && !paused,
-										'bg-base-alt text-tertiary hover:bg-base-alt/80':
-											!live || paused,
-									},
+									live && !paused
+										? 'bg-positive/10 text-positive hover:bg-positive/20'
+										: 'bg-base-alt text-tertiary hover:bg-base-alt/80',
 								)}
 								title={live ? 'Pause live updates' : 'Resume live updates'}
 							>

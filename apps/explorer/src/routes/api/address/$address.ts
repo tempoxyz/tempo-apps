@@ -18,8 +18,6 @@ const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
-const MINT_SIGNATURE = 'event Mint(address indexed to, uint256 amount)'
-const BURN_SIGNATURE = 'event Burn(address indexed from, uint256 amount)'
 
 export const RequestParametersSchema = z.object({
 	offset: z.prefault(z.coerce.number(), 0),
@@ -133,58 +131,19 @@ export const Route = createFileRoute('/api/address/$address')({
 						.orderBy('block_num', sortDirection)
 						.orderBy('tx_hash', sortDirection)
 
-					// Build mint hashes query (Mint events have `to` as the recipient)
-					let mintHashesQuery = QB.withSignatures([MINT_SIGNATURE])
-						.selectFrom('mint')
-						.select(['tx_hash', 'block_num'])
-						.distinct()
-						.where('chain', '=', chainId)
-
-					// For mints, the address is always the recipient (`to`)
-					if (includeReceived) {
-						mintHashesQuery = mintHashesQuery.where('to', '=', address)
-					}
-
-					mintHashesQuery = mintHashesQuery
-						.orderBy('block_num', sortDirection)
-						.orderBy('tx_hash', sortDirection)
-
-					// Build burn hashes query (Burn events have `from` as the burner)
-					let burnHashesQuery = QB.withSignatures([BURN_SIGNATURE])
-						.selectFrom('burn')
-						.select(['tx_hash', 'block_num'])
-						.distinct()
-						.where('chain', '=', chainId)
-
-					// For burns, the address is always the sender (`from`)
-					if (includeSent) {
-						burnHashesQuery = burnHashesQuery.where('from', '=', address)
-					}
-
-					burnHashesQuery = burnHashesQuery
-						.orderBy('block_num', sortDirection)
-						.orderBy('tx_hash', sortDirection)
-
 					// bound fetch size to avoid huge offsets on deep pagination
 					const bufferSize = Math.min(
 						Math.max(offset + fetchSize * 5, limit * 3),
 						500,
 					)
 
-					// Run all queries in parallel and merge-sort to get top N hashes
-					const [directResult, transferResult, mintResult, burnResult] =
-						await Promise.all([
-							directTxsQuery.limit(bufferSize).execute(),
-							transferHashesQuery.limit(bufferSize).execute(),
-							includeReceived
-								? mintHashesQuery.limit(bufferSize).execute()
-								: Promise.resolve([]),
-							includeSent
-								? burnHashesQuery.limit(bufferSize).execute()
-								: Promise.resolve([]),
-						])
+					// Run both queries in parallel and merge-sort to get top N hashes
+					const [directResult, transferResult] = await Promise.all([
+						directTxsQuery.limit(bufferSize).execute(),
+						transferHashesQuery.limit(bufferSize).execute(),
+					])
 
-					// Merge all results by block_num, deduplicate, and take top offset+fetchSize
+					// Merge both results by block_num, deduplicate, and take top offset+fetchSize
 					type HashEntry = { hash: Hex.Hex; block_num: bigint }
 					const allHashes = new Map<Hex.Hex, HashEntry>()
 					for (const row of directResult)
@@ -193,18 +152,6 @@ export const Route = createFileRoute('/api/address/$address')({
 							block_num: row.block_num,
 						})
 					for (const row of transferResult)
-						if (!allHashes.has(row.tx_hash))
-							allHashes.set(row.tx_hash, {
-								hash: row.tx_hash,
-								block_num: row.block_num,
-							})
-					for (const row of mintResult)
-						if (!allHashes.has(row.tx_hash))
-							allHashes.set(row.tx_hash, {
-								hash: row.tx_hash,
-								block_num: row.block_num,
-							})
-					for (const row of burnResult)
 						if (!allHashes.has(row.tx_hash))
 							allHashes.set(row.tx_hash, {
 								hash: row.tx_hash,
@@ -229,13 +176,12 @@ export const Route = createFileRoute('/api/address/$address')({
 						: paginatedHashes
 
 					// Fetch full tx data only for the final set of hashes
-					let transactions: (RpcTransaction & { timestamp?: string })[] = []
+					let transactions: RpcTransaction[] = []
 					if (finalHashes.length > 0) {
 						const txDataResult = await QB.selectFrom('txs')
 							.select([
 								'hash',
 								'block_num',
-								'block_timestamp',
 								'from',
 								'to',
 								'value',
@@ -280,8 +226,7 @@ export const Route = createFileRoute('/api/address/$address')({
 									v: '0x0',
 									r: '0x0',
 									s: '0x0',
-									timestamp: row.block_timestamp ? String(row.block_timestamp) : undefined,
-								} as RpcTransaction & { timestamp?: string }
+								} as RpcTransaction
 							})
 					}
 

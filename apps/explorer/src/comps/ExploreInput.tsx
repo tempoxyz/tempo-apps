@@ -5,7 +5,7 @@ import { Midcut } from '#comps/Midcut'
 import { useMountAnim } from '#lib/animation'
 import { ProgressLine } from '#comps/ProgressLine'
 import { RelativeTime } from '#comps/RelativeTime'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import type {
 	AddressSearchResult,
 	SearchApiResponse,

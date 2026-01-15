@@ -1,9 +1,9 @@
-import { useQueries } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Hex } from 'viem'
 import { type Abi, decodeAbiParameters, erc20Abi, slice } from 'viem'
-import { cx } from '#cva.config.ts'
+import { cx } from '#lib/css'
 import {
 	formatAbiValue,
 	getAbiItem,
@@ -13,10 +13,7 @@ import {
 import { decodePrecompile } from '#lib/domain/precompiles'
 import { useCopy } from '#lib/hooks'
 import type { CallTrace } from '#lib/queries'
-import {
-	autoloadAbiQueryOptions,
-	lookupSignatureQueryOptions,
-} from '#lib/queries'
+import { batchAbiQueryOptions, populateCacheFromBatch } from '#lib/queries'
 import ArrowRightIcon from '~icons/lucide/arrow-right'
 import CopyIcon from '~icons/lucide/copy'
 import WrapIcon from '~icons/lucide/corner-down-left'
@@ -83,12 +80,13 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 
 function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 	const { addresses, selectors } = useMemo(() => {
-		if (!trace) return { addresses: [] as string[], selectors: [] as Hex[] }
-		const addresses = new Set<string>()
+		if (!trace)
+			return { addresses: [] as `0x${string}`[], selectors: [] as Hex[] }
+		const addresses = new Set<`0x${string}`>()
 		const selectors = new Set<Hex>()
 		const stack = [trace]
 		for (const trace of stack) {
-			if (trace.to) addresses.add(trace.to)
+			if (trace.to) addresses.add(trace.to as `0x${string}`)
 			const hasSelector = trace.input && trace.input.length >= 10
 			if (hasSelector) selectors.add(slice(trace.input, 0, 4))
 			if (trace.calls) stack.push(...trace.calls)
@@ -99,26 +97,33 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 		}
 	}, [trace])
 
-	const abiQueries = useQueries({
-		queries: addresses.map((address) =>
-			autoloadAbiQueryOptions({ address: address as `0x${string}` }),
-		),
-	})
+	const queryClient = useQueryClient()
 
-	const sigQueries = useQueries({
-		queries: selectors.map((selector) =>
-			lookupSignatureQueryOptions({ selector }),
-		),
-	})
+	// Single batch query instead of N+1 individual queries
+	const { data: batchData } = useQuery(
+		batchAbiQueryOptions({ addresses, selectors }),
+	)
+
+	// Populate individual caches for other components
+	useEffect(() => {
+		if (batchData) populateCacheFromBatch(queryClient, batchData)
+	}, [queryClient, batchData])
 
 	return useMemo(() => {
 		if (!trace) return null
 
+		// Build lookup maps from batch response
 		const abiMap = new Map(
-			addresses.map((addr, i) => [addr, abiQueries[i]?.data]),
+			Object.entries(batchData?.abis ?? {}).map(([addr, abi]) => [
+				addr.toLowerCase(),
+				abi,
+			]),
 		)
 		const sigMap = new Map(
-			selectors.map((sel, i) => [sel, sigQueries[i]?.data]),
+			Object.entries(batchData?.signatures ?? {}).map(([sel, sig]) => [
+				sel.toLowerCase(),
+				sig,
+			]),
 		)
 
 		function buildNode(trace: CallTrace): TxTraceTree.Node {
@@ -218,7 +223,7 @@ function useTraceTree(trace: CallTrace | null): TxTraceTree.Node | null {
 		}
 
 		return buildNode(trace)
-	}, [trace, addresses, selectors, abiQueries, sigQueries])
+	}, [trace, batchData])
 }
 
 export namespace TxTraceTree {

@@ -1,0 +1,8 @@
+# Bundle analysis
+stats.html
+stats.json
+stats-*.json
+.bundle-baseline.json
+bundle-stats.json
+bundle-report.md
+.sonda/

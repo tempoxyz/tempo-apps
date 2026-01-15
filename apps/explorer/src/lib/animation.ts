@@ -1,4 +1,4 @@
-import { animate, spring } from 'animejs'
+import { waapi, spring } from 'animejs'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 // near instant, e.g. for user interactions
@@ -47,8 +47,8 @@ export function useMountAnim(
 	open: boolean,
 	ref: React.RefObject<HTMLElement | null>,
 	options: {
-		enter?: Parameters<typeof animate>[1]
-		exit?: Parameters<typeof animate>[1]
+		enter?: Parameters<typeof waapi.animate>[1]
+		exit?: Parameters<typeof waapi.animate>[1]
 	} = {},
 ) {
 	const [mounted, setMounted] = useState(false)
@@ -66,7 +66,7 @@ export function useMountAnim(
 			if (closingRef.current && ref.current) {
 				// interrupt close animation
 				closingRef.current = false
-				animate(ref.current, enter)
+				waapi.animate(ref.current, enter)
 			} else {
 				setMounted(true)
 			}
@@ -74,7 +74,7 @@ export function useMountAnim(
 		// closing
 		else if (!open && wasOpen && mounted && ref.current) {
 			closingRef.current = true
-			animate(ref.current, exit).then(() => {
+			waapi.animate(ref.current, exit).then(() => {
 				if (closingRef.current) {
 					setMounted(false)
 					closingRef.current = false
@@ -88,7 +88,7 @@ export function useMountAnim(
 		prevMountedRef.current = mounted
 
 		if (open && mounted && !wasMounted && ref.current) {
-			animate(ref.current, enter)
+			waapi.animate(ref.current, enter)
 		}
 	}, [mounted, open, ref, enter])
 

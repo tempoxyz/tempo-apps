@@ -2,6 +2,7 @@ import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { hashFn } from 'wagmi/query'
+import { Layout } from '#comps/Layout'
 import { NotFound } from '#comps/NotFound'
 import {
 	captureEvent,
@@ -102,7 +103,11 @@ export const getRouter = () => {
 		context: { queryClient },
 		defaultPreload: 'intent',
 		defaultPreloadDelay: 150,
-		defaultNotFoundComponent: () => <NotFound />,
+		defaultNotFoundComponent: () => (
+			<Layout>
+				<NotFound />
+			</Layout>
+		),
 	})
 
 	// @see https://tanstack.com/router/latest/docs/integrations/query

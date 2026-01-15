@@ -7,13 +7,6 @@
 	"workers_dev": true,
 	"preview_urls": true,
 	"placement": { "mode": "smart" },
-	"services": [
-		{
-			"service": "api",
-			"remote": true,
-			"binding": "RPC_PROXY"
-		}
-	],
 	// this binding is not inheritable to environments
 	// it's being added at top-level solely for the type generation script
 	"browser": { "binding": "BROWSER" },
@@ -37,13 +30,6 @@
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
-			"services": [
-				{
-					"service": "api",
-					"remote": true,
-					"binding": "RPC_PROXY"
-				}
-			],
 			"observability": {
 				"enabled": true,
 				"logs": {
@@ -88,13 +74,6 @@
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
-			"services": [
-				{
-					"service": "api",
-					"remote": true,
-					"binding": "RPC_PROXY"
-				}
-			],
 			"observability": {
 				"enabled": true,
 				"logs": {
@@ -124,13 +103,6 @@
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
-			"services": [
-				{
-					"service": "api",
-					"remote": true,
-					"binding": "RPC_PROXY"
-				}
-			],
 			"observability": {
 				"enabled": true,
 				"logs": {
@@ -165,13 +137,6 @@
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
-			"services": [
-				{
-					"service": "api",
-					"remote": true,
-					"binding": "RPC_PROXY"
-				}
-			],
 			"observability": {
 				"enabled": true,
 				"logs": {

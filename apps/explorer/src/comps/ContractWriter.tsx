@@ -5,7 +5,7 @@ import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
 import type { Abi, AbiFunction } from 'viem'
 import { useConnection, useWriteContract } from 'wagmi'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 import {
 	getFunctionSelector,
 	getInputType,

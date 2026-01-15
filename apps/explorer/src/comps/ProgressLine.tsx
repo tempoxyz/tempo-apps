@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { cx } from '#cva.config'
+import { cx } from '#lib/css'
 
 interface ProgressLineProps {
 	loading: boolean

@@ -8,6 +8,8 @@ import { parse } from 'jsonc-parser'
 import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
+import { visualizer } from 'rollup-plugin-visualizer'
+import Sonda from 'sonda/vite'
 
 const [, , , ...args] = process.argv
 
@@ -48,8 +50,10 @@ export default defineConfig((config) => {
 	return {
 		plugins: [
 			vitePluginAlias(),
-			showDevtools && devtools(),
-			showDevtools && vitePluginChromiumDevTools(),
+			config.mode === 'development' && showDevtools && devtools(),
+			config.mode === 'development' &&
+				showDevtools &&
+				vitePluginChromiumDevTools(),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tailwind(),
 			Icons({ compiler: 'jsx', jsx: 'react' }),
@@ -60,7 +64,16 @@ export default defineConfig((config) => {
 				client: { entry: './src/index.client.tsx' },
 			}),
 			react(),
-		],
+			// Bundle analysis - Sonda for visualization, stats.json for diffs
+			process.env.ANALYZE === 'true' && Sonda(),
+			process.env.ANALYZE_JSON === 'true' &&
+				visualizer({
+					filename: 'stats.json',
+					template: 'raw-data',
+					gzipSize: true,
+					brotliSize: true,
+				}),
+		].filter(Boolean),
 		server: {
 			port,
 			cors: config.mode === 'development' ? false : undefined,
@@ -71,6 +84,7 @@ export default defineConfig((config) => {
 		},
 		build: {
 			minify: 'oxc',
+			sourcemap: process.env.ANALYZE === 'true', // Required for Sonda
 			rollupOptions: {
 				output: {
 					minify: {
@@ -95,7 +109,10 @@ export default defineConfig((config) => {
 			),
 
 			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
-				wranglerVars.VITE_TEMPO_ENV || cloudflareEnv || env.VITE_TEMPO_ENV,
+				wranglerVars.VITE_TEMPO_ENV ||
+					cloudflareEnv ||
+					process.env.VITE_TEMPO_ENV ||
+					env.VITE_TEMPO_ENV,
 			),
 			'import.meta.env.VITE_ENABLE_DEMO': JSON.stringify(
 				env.VITE_ENABLE_DEMO ?? 'true',

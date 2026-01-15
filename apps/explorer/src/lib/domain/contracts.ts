@@ -273,6 +273,30 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			address: Addresses.tip403Registry,
 		},
 	],
+	[
+		// Addresses.validator - use hardcoded until viem >=2.44.3 is published
+		'0xcccccccc00000000000000000000000000000000',
+		{
+			name: 'Validator Config',
+			code: '0xef',
+			description: 'Manage validator set and configuration',
+			abi: Abis.validatorConfig,
+			category: 'system',
+			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/validators',
+			address: '0xcccccccc00000000000000000000000000000000',
+		},
+	],
+	[
+		Addresses.nonceManager,
+		{
+			name: 'Nonce Manager',
+			code: '0xef',
+			description: 'Manage account nonces',
+			abi: [],
+			category: 'system',
+			address: Addresses.nonceManager,
+		},
+	],
 ])
 
 /**
