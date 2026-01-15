@@ -758,26 +758,28 @@ function AddressView() {
 		)
 	}, [address])
 
-	// Refetch activity without full page refresh
-	const refetchActivity = React.useCallback(async () => {
-		const tokenMetadataMap = new Map<
-			Address.Address,
-			{ decimals: number; symbol: string }
-		>()
+	// Build token metadata map for activity parsing
+	const tokenMetadataMap = React.useMemo(() => {
+		const map = new Map<Address.Address, { decimals: number; symbol: string }>()
 		for (const asset of assetsData) {
 			if (asset.metadata?.decimals !== undefined && asset.metadata?.symbol) {
-				tokenMetadataMap.set(asset.address, {
+				map.set(asset.address, {
 					decimals: asset.metadata.decimals,
 					symbol: asset.metadata.symbol,
 				})
 			}
 		}
+		return map
+	}, [assetsData])
+
+	// Refetch activity without full page refresh
+	const refetchActivity = React.useCallback(async () => {
 		const newActivity = await fetchTransactions(
 			address as Address.Address,
 			tokenMetadataMap,
 		)
 		setActivity(newActivity)
-	}, [address, assetsData])
+	}, [address, tokenMetadataMap])
 
 	// Optimistic balance adjustments: Map<tokenAddress, amountToSubtract>
 	const [optimisticAdjustments, setOptimisticAdjustments] = React.useState<
@@ -1088,6 +1090,7 @@ function AddressView() {
 							activity={activity}
 							address={address}
 							filterBlockNumber={selectedBlockFilter}
+							tokenMetadataMap={tokenMetadataMap}
 						/>
 					</Section>
 
@@ -1867,7 +1870,7 @@ function BlockTimeline({
 			<div
 				ref={scrollRef}
 				onScroll={handleScroll}
-				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar px-1 py-1.5"
+				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar py-1.5"
 			>
 				{blocks.map((block) => {
 					const isSelected = selectedBlock === block.blockNumber
