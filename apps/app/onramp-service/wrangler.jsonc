@@ -1,0 +1,53 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "onramp-service",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.ts",
+	"workers_dev": true,
+	"preview_urls": true,
+	"keep_vars": true,
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		}
+	},
+	"env": {
+		"moderato": {
+			"name": "onramp-service-moderato",
+			"routes": [
+				{
+					"pattern": "onramp.moderato.tempo.xyz",
+					"zone_name": "tempo.xyz",
+					"custom_domain": true
+				}
+			],
+			"workers_dev": false,
+			"vars": {
+				"ENVIRONMENT": "moderato",
+				"APP_DOMAIN": "app.moderato.tempo.xyz",
+				"ALLOWED_ORIGINS": "https://app.moderato.tempo.xyz,https://tempo.xyz"
+			}
+		},
+		"mainnet": {
+			"name": "onramp-service-mainnet",
+			"routes": [
+				{
+					"pattern": "onramp.tempo.xyz",
+					"zone_name": "tempo.xyz",
+					"custom_domain": true
+				}
+			],
+			"workers_dev": false,
+			"vars": {
+				"ENVIRONMENT": "mainnet",
+				"APP_DOMAIN": "app.tempo.xyz",
+				"ALLOWED_ORIGINS": "https://app.tempo.xyz,https://tempo.xyz"
+			}
+		}
+	}
+}

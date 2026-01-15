@@ -33,6 +33,7 @@ import {
 	type KnownEvent,
 	type GetTokenMetadataFn,
 } from '#comps/activity'
+import { AddFunds } from '#comps/AddFunds'
 import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
 import { Section } from '#comps/Section'
@@ -1185,6 +1186,10 @@ function AddressView() {
 				</div>
 
 				<div className="flex flex-col gap-2.5">
+					<Section title="Add Funds">
+						<AddFunds address={address} />
+					</Section>
+
 					<Section
 						title={t('portfolio.assets')}
 						subtitle={`${assetsWithBalance.length} ${t('portfolio.assetCount', { count: assetsWithBalance.length })}`}
@@ -2838,6 +2843,14 @@ function AssetRow({
 		document.addEventListener('keydown', handleKeyDown)
 		return () => document.removeEventListener('keydown', handleKeyDown)
 	}, [isExpanded, onToggleSend])
+
+	React.useEffect(() => {
+		if (sendState === 'sent') {
+			setShowToast(true)
+			const timeout = setTimeout(() => setShowToast(false), 2000)
+			return () => clearTimeout(timeout)
+		}
+	}, [sendState])
 
 	const handleSend = async () => {
 		if (!isValidSend || parsedAmount === 0n) return
