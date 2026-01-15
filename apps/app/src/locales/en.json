@@ -79,7 +79,8 @@
 		"showZeroBalances": "Show zero balances",
 		"noActivityYet": "No activity yet",
 		"noActivityInBlock": "No activity in this block",
-		"noAssetsFound": "No assets found"
+		"noAssetsFound": "No assets found",
+		"viewBlockInExplorer": "View block in explorer"
 	},
 	"landing": {
 		"getStarted": "Get started",

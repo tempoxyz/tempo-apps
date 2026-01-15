@@ -134,17 +134,17 @@ export function Intro() {
 	const { t } = useTranslation()
 
 	return (
-		<div className="relative flex min-h-full flex-col items-start justify-end rounded-[20px] liquid-glass-premium px-5 sm:px-6 py-5 overflow-hidden">
+		<div className="relative flex min-h-full flex-col items-start justify-end rounded-[20px] liquid-glass-premium px-5 sm:px-6 py-5 overflow-hidden max-md:min-h-[120px] max-md:rounded-none max-md:py-3">
 			<AmbientGradient />
-			<StretchingWordmark className="absolute inset-0" />
-			<div className="relative flex flex-col items-start gap-y-2 z-10">
+			<StretchingWordmark className="absolute inset-0 max-md:hidden" />
+			<div className="relative flex flex-col items-start gap-y-2 z-10 max-md:gap-y-1.5">
 				<TempoWordmark />
-				<p className="text-[15px] sm:text-[17px] leading-[22px] sm:leading-[24px] text-secondary">
+				<p className="text-[15px] sm:text-[17px] leading-[22px] sm:leading-[24px] text-secondary max-md:text-[13px] max-md:leading-[18px]">
 					{t('intro.tagline')}
 				</p>
 				<div className="flex gap-1.5 flex-wrap isolate">
 					<a
-						className="flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-white/90 bg-white/10 border border-white/15 rounded-full hover:text-white hover:border-white/30 hover:bg-white/15 transition-all"
+						className="flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-white/90 bg-white/10 border border-white/15 rounded-full hover:text-white hover:border-white/30 hover:bg-white/15 transition-all min-h-[44px] max-md:min-h-[36px]"
 						href="https://tempo.xyz"
 						rel="noreferrer"
 						target="_blank"
@@ -153,7 +153,7 @@ export function Intro() {
 						{t('intro.website')}
 					</a>
 					<a
-						className="flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-white/90 bg-white/10 border border-white/15 rounded-full hover:text-white hover:border-white/30 hover:bg-white/15 transition-all"
+						className="flex items-center gap-1 px-2.5 py-1 text-[12px] font-medium text-white/90 bg-white/10 border border-white/15 rounded-full hover:text-white hover:border-white/30 hover:bg-white/15 transition-all min-h-[44px] max-md:min-h-[36px]"
 						href="https://docs.tempo.xyz"
 						rel="noreferrer"
 						target="_blank"

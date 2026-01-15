@@ -905,7 +905,7 @@ function AddressView() {
 							onFocus={() => setSearchFocused(true)}
 							onBlur={() => setSearchFocused(false)}
 							placeholder={t('common.search')}
-							className="bg-transparent outline-none text-[13px] text-primary placeholder:text-secondary w-[100px] focus:w-[180px] transition-all"
+							className="bg-transparent outline-none text-[13px] text-primary placeholder:text-secondary w-[80px] sm:w-[100px] focus:w-[140px] sm:focus:w-[180px] transition-all"
 						/>
 					</form>
 					{isOwnProfile ? (
@@ -931,20 +931,25 @@ function AddressView() {
 						</button>
 					)}
 				</div>
-				<div className="flex flex-row items-start justify-between gap-4 mb-5">
-					<div className="flex-1 min-w-0 flex flex-col gap-2">
+				<div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 mb-5">
+					<div className="flex-1 min-w-0 flex flex-col gap-2 order-2 sm:order-1">
 						<div className="flex items-baseline gap-2">
 							<LottoNumber
 								value={formatUsd(totalValue)}
 								duration={1200}
-								className="text-[32px] sm:text-[40px] md:text-[56px] font-sans font-semibold text-primary -tracking-[0.02em] tabular-nums"
+								className="text-[28px] sm:text-[40px] md:text-[56px] font-sans font-semibold text-primary -tracking-[0.02em] tabular-nums"
 							/>
 						</div>
 						<div className="flex items-center gap-2 max-w-full">
-							<code className="text-[12px] sm:text-[13px] font-mono text-secondary leading-tight min-w-0">
-								{address.slice(0, 21)}
-								<br />
-								{address.slice(21)}
+							<code className="text-[11px] sm:text-[13px] font-mono text-secondary leading-tight min-w-0 break-all sm:break-normal">
+								<span className="sm:hidden">
+									{address.slice(0, 18)}...{address.slice(-6)}
+								</span>
+								<span className="hidden sm:inline">
+									{address.slice(0, 21)}
+									<br />
+									{address.slice(21)}
+								</span>
 							</code>
 							<button
 								type="button"
@@ -972,12 +977,19 @@ function AddressView() {
 							</a>
 						</div>
 					</div>
-					<QRCode value={address} size={72} className="md:hidden shrink-0" />
-					<QRCode
-						value={address}
-						size={100}
-						className="hidden md:block shrink-0"
-					/>
+					<div className="order-1 sm:order-2 self-center sm:self-start">
+						<QRCode value={address} size={64} className="sm:hidden shrink-0" />
+						<QRCode
+							value={address}
+							size={72}
+							className="hidden sm:block md:hidden shrink-0"
+						/>
+						<QRCode
+							value={address}
+							size={100}
+							className="hidden md:block shrink-0"
+						/>
+					</div>
 				</div>
 
 				<div className="flex flex-col gap-2.5">
@@ -1528,7 +1540,9 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 
 function LottoBlockNumber({ value }: { value: bigint | null }) {
 	const [displayDigits, setDisplayDigits] = React.useState<string[]>([])
-	const [animatingIndex, setAnimatingIndex] = React.useState<number | null>(null)
+	const [animatingIndex, setAnimatingIndex] = React.useState<number | null>(
+		null,
+	)
 	const prevValueRef = React.useRef<string>('')
 
 	React.useEffect(() => {
@@ -1570,7 +1584,11 @@ function LottoBlockNumber({ value }: { value: bigint | null }) {
 	}, [value])
 
 	if (value === null) {
-		return <span className="text-[10px] text-primary font-mono tabular-nums">...</span>
+		return (
+			<span className="text-[10px] text-primary font-mono tabular-nums">
+				...
+			</span>
+		)
 	}
 
 	return (
@@ -1584,7 +1602,8 @@ function LottoBlockNumber({ value }: { value: bigint | null }) {
 					<span
 						className="inline-block transition-transform duration-150 ease-out"
 						style={{
-							transform: animatingIndex === i ? 'translateY(-100%)' : 'translateY(0)',
+							transform:
+								animatingIndex === i ? 'translateY(-100%)' : 'translateY(0)',
 						}}
 					>
 						{digit}
@@ -1627,8 +1646,8 @@ function BlockTimeline({
 		return blocks
 	}, [activity])
 
-	const visibleBlocks = 30
-	const placeholderBlocks = 10
+	const blocksBeforeCurrent = 20
+	const blocksAfterCurrent = 20
 
 	// Initialize displayBlock
 	React.useEffect(() => {
@@ -1659,7 +1678,7 @@ function BlockTimeline({
 
 			const blocksToFetch = lastFetched
 				? Math.min(Number(currentBlock - lastFetched), 10)
-				: visibleBlocks
+				: blocksBeforeCurrent + 1
 
 			try {
 				const result = await fetchBlockData({
@@ -1722,7 +1741,8 @@ function BlockTimeline({
 			isPlaceholder: boolean
 		}[] = []
 
-		for (let i = visibleBlocks - 1; i >= 0; i--) {
+		// Blocks before current
+		for (let i = blocksBeforeCurrent; i >= 1; i--) {
 			const blockNum = blockToShow - BigInt(i)
 			if (blockNum > 0n) {
 				result.push({
@@ -1734,7 +1754,16 @@ function BlockTimeline({
 			}
 		}
 
-		for (let i = 1; i <= placeholderBlocks; i++) {
+		// Current block
+		result.push({
+			blockNumber: blockToShow,
+			hasUserActivity: userBlockNumbers.has(blockToShow),
+			txCount: blockTxCounts.get(blockToShow.toString()) ?? 0,
+			isPlaceholder: false,
+		})
+
+		// Placeholder blocks after current
+		for (let i = 1; i <= blocksAfterCurrent; i++) {
 			result.push({
 				blockNumber: blockToShow + BigInt(i),
 				hasUserActivity: false,
@@ -1757,27 +1786,24 @@ function BlockTimeline({
 
 	const getBlockStyle = (
 		txCount: number,
-		isSelected: boolean,
+		_isSelected: boolean,
 		isCurrent: boolean,
 		hasUserActivity: boolean,
 		isPlaceholder: boolean,
 	): string => {
 		if (isPlaceholder) return 'bg-base-alt/20'
-		if (isSelected) return 'bg-accent'
 		if (isCurrent) return 'bg-white'
 		if (hasUserActivity) return 'bg-green-500'
-		if (txCount === 0) return 'bg-base-alt/30'
+		if (txCount === 0) return 'bg-base-alt/40'
 
-		// Use actual tx count for intensity, not relative to max
-		// Most blocks have 0-10 txs, busy ones have 50+
+		// Gray scale based on tx count (0-50 scale)
 		const intensity = Math.min(txCount / 50, 1)
-		if (intensity < 0.1) return 'bg-base-alt/50'
-		if (intensity < 0.2) return 'bg-base-alt/70'
-		if (intensity < 0.35) return 'bg-cyan-800/70'
-		if (intensity < 0.5) return 'bg-cyan-600/80'
-		if (intensity < 0.65) return 'bg-yellow-500/80'
-		if (intensity < 0.8) return 'bg-orange-500/90'
-		return 'bg-red-500'
+		if (intensity < 0.1) return 'bg-base-alt/60'
+		if (intensity < 0.2) return 'bg-base-alt/80'
+		if (intensity < 0.4) return 'bg-emerald-800/70'
+		if (intensity < 0.6) return 'bg-emerald-600/80'
+		if (intensity < 0.8) return 'bg-yellow-500/80'
+		return 'bg-orange-500'
 	}
 
 	if (!currentBlock) {
@@ -1795,56 +1821,51 @@ function BlockTimeline({
 			<div
 				ref={scrollRef}
 				onScroll={handleScroll}
-				className="flex items-center gap-[3px] w-full overflow-x-auto no-scrollbar pb-1"
+				className="flex items-center gap-[2px] w-full overflow-x-auto no-scrollbar py-1"
 			>
 				{blocks.map((block) => {
 					const isSelected = selectedBlock === block.blockNumber
 					const isCurrent =
 						block.blockNumber === shownBlock && !block.isPlaceholder
 					return (
-						<div
+						<button
 							key={block.blockNumber.toString()}
+							type="button"
+							onClick={() =>
+								handleBlockClick(block.blockNumber, block.isPlaceholder)
+							}
+							disabled={block.isPlaceholder}
 							className={cx(
-								'shrink-0 transition-all duration-200 ease-out',
-								isCurrent ? 'w-[12px]' : 'w-[8px]',
+								'shrink-0 size-[8px] rounded-[1px] transition-all duration-150',
+								getBlockStyle(
+									block.txCount,
+									isSelected,
+									isCurrent,
+									block.hasUserActivity,
+									block.isPlaceholder,
+								),
+								isCurrent && 'ring-2 ring-white/50',
+								isSelected && 'ring-2 ring-accent',
+								block.hasUserActivity &&
+									!isSelected &&
+									!isCurrent &&
+									'ring-1 ring-green-500/60',
+								block.isPlaceholder
+									? 'cursor-default'
+									: 'hover:opacity-80 cursor-pointer',
 							)}
-						>
-							<button
-								type="button"
-								onClick={() =>
-									handleBlockClick(block.blockNumber, block.isPlaceholder)
-								}
-								disabled={block.isPlaceholder}
-								className={cx(
-									'w-full h-[10px] rounded-[2px] transition-all duration-150',
-									getBlockStyle(
-										block.txCount,
-										isSelected,
-										isCurrent,
-										block.hasUserActivity,
-										block.isPlaceholder,
-									),
-									isSelected && 'ring-1 ring-accent',
-									block.hasUserActivity &&
-										!isSelected &&
-										!isCurrent &&
-										'ring-1 ring-green-500/60',
-									block.isPlaceholder
-										? 'cursor-default'
-										: 'hover:opacity-80 cursor-pointer',
-								)}
-								title={
-									block.isPlaceholder
-										? undefined
-										: `Block ${block.blockNumber.toString()}${block.txCount > 0 ? ` • ${block.txCount} tx${block.txCount > 1 ? 's' : ''}` : ''}`
-								}
-							/>
-						</div>
+							title={
+								block.isPlaceholder
+									? undefined
+									: `Block ${block.blockNumber.toString()}${block.txCount > 0 ? ` • ${block.txCount} tx${block.txCount > 1 ? 's' : ''}` : ''}`
+							}
+						/>
 					)
 				})}
 			</div>
 			<div className="flex items-center justify-center">
-				<div className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+				<div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10">
+					<span className="text-[11px] text-tertiary">Block</span>
 					<LottoBlockNumber value={shownBlock} />
 				</div>
 			</div>
@@ -2368,7 +2389,7 @@ function AssetRow({
 
 	return (
 		<div
-			className="group grid grid-cols-[1fr_auto_60px_auto] md:grid-cols-[1fr_auto_60px_90px_auto] gap-1 rounded-xl hover:glass-thin transition-all"
+			className="group grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_auto_60px_auto] md:grid-cols-[1fr_auto_60px_90px_auto] gap-1 rounded-xl hover:glass-thin transition-all"
 			style={{ height: ROW_HEIGHT }}
 		>
 			<span className="px-2 text-primary flex items-center gap-2">
@@ -2421,7 +2442,7 @@ function AssetRow({
 					</span>
 				)}
 			</span>
-			<span className="pl-1 flex items-center justify-start">
+			<span className="pl-1 hidden sm:flex items-center justify-start">
 				<span className="text-[9px] font-medium text-tertiary bg-base-alt px-1 py-0.5 rounded font-mono whitespace-nowrap">
 					{asset.metadata?.symbol || shortenAddress(asset.address, 3)}
 				</span>
@@ -2513,6 +2534,16 @@ function ActivityList({
 						? t('portfolio.noActivityInBlock')
 						: t('portfolio.noActivityYet')}
 				</p>
+				{filterBlockNumber !== undefined && (
+					<a
+						href={`https://explore.mainnet.tempo.xyz/block/${filterBlockNumber}`}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-[12px] text-accent hover:underline"
+					>
+						{t('portfolio.viewBlockInExplorer')}
+					</a>
+				)}
 			</div>
 		)
 	}
@@ -2698,7 +2729,7 @@ function TransactionModal({
 			ref={overlayRef}
 			role="presentation"
 			className={cx(
-				'fixed inset-0 left-[calc(45vw+16px)] max-lg:left-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200',
+				'fixed inset-0 lg:left-[calc(45vw+16px)] z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity duration-200 p-4',
 				isVisible ? 'opacity-100' : 'opacity-0',
 			)}
 			onClick={handleClose}
@@ -2719,13 +2750,13 @@ function TransactionModal({
 			>
 				<div
 					data-receipt
-					className="flex flex-col w-[360px] liquid-glass-premium border-b-0 rounded-[16px] rounded-br-none rounded-bl-none text-base-content"
+					className="flex flex-col w-full max-w-[360px] liquid-glass-premium border-b-0 rounded-[16px] rounded-br-none rounded-bl-none text-base-content"
 				>
-					<div className="flex gap-[40px] px-[20px] pt-[24px] pb-[16px]">
-						<div className="shrink-0">
+					<div className="flex flex-col sm:flex-row gap-4 sm:gap-[40px] px-4 sm:px-[20px] pt-5 sm:pt-[24px] pb-4 sm:pb-[16px]">
+						<div className="shrink-0 self-center sm:self-start">
 							<ReceiptMark />
 						</div>
-						<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
+						<div className="flex flex-col gap-[8px] font-mono text-[12px] sm:text-[13px] leading-[16px] flex-1">
 							<div className="flex justify-between items-end">
 								<span className="text-tertiary">{t('receipt.block')}</span>
 								<a
@@ -2770,7 +2801,7 @@ function TransactionModal({
 					{filteredEvents.length > 0 && (
 						<>
 							<div className="border-t border-dashed border-base-border" />
-							<div className="flex flex-col gap-3 px-[20px] py-[16px] font-mono text-[13px] leading-4 [counter-reset:event]">
+							<div className="flex flex-col gap-3 px-4 sm:px-[20px] py-4 sm:py-[16px] font-mono text-[12px] sm:text-[13px] leading-4 [counter-reset:event]">
 								{filteredEvents.map((event, index) => (
 									<div
 										key={`${event.type}-${index}`}
@@ -2793,7 +2824,7 @@ function TransactionModal({
 					)}
 				</div>
 
-				<div className="w-[360px]">
+				<div className="w-full max-w-[360px]">
 					<a
 						href={`https://explore.mainnet.tempo.xyz/tx/${hash}`}
 						target="_blank"

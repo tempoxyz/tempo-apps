@@ -107,11 +107,11 @@ function Landing() {
 		<>
 			<Layout.Header left={t('common.search')} right={null} />
 			<div className="flex flex-1 flex-col items-center justify-center">
-				<div className="grid place-items-center relative grid-flow-row gap-3 select-none w-full max-w-md px-4 py-6 z-1">
-					<h1 className="font-sans font-semibold text-[32px] sm:text-[36px] text-primary text-center -tracking-[0.03em]">
+				<div className="grid place-items-center relative grid-flow-row gap-3 sm:gap-3 select-none w-full max-w-md px-3 sm:px-4 py-6 z-1">
+					<h1 className="font-sans font-semibold text-[28px] sm:text-[32px] md:text-[36px] text-primary text-center -tracking-[0.03em]">
 						{t('landing.getStarted')}
 					</h1>
-					<p className="text-secondary text-[14px] sm:text-[15px] text-center -mt-1 mb-2 max-w-[280px]">
+					<p className="text-secondary text-[13px] sm:text-[14px] md:text-[15px] text-center -mt-1 mb-2 max-w-[280px]">
 						{t('landing.exploreDescription')}
 					</p>
 					<form onSubmit={handleSubmit} className="w-full relative">
@@ -122,20 +122,20 @@ function Landing() {
 							value={address}
 							onChange={(e) => setAddress(e.target.value)}
 							placeholder={t('landing.enterAddress')}
-							className="glass-input pl-4 pr-14 w-full placeholder:text-tertiary text-base-content rounded-2xl outline-0 h-[56px] text-[16px]"
+							className="glass-input pl-4 pr-14 w-full placeholder:text-tertiary text-base-content rounded-2xl outline-0 h-[48px] sm:h-[56px] text-[16px]"
 							spellCheck={false}
 							autoComplete="off"
 							autoCapitalize="none"
 							autoCorrect="off"
 							data-1p-ignore
 						/>
-						<div className="absolute top-[50%] -translate-y-[50%] right-[14px]">
+						<div className="absolute top-[50%] -translate-y-[50%] right-[12px] sm:right-[14px]">
 							<button
 								type="submit"
 								disabled={!isValidAddress}
 								aria-label="Search"
 								className={cx(
-									'rounded-full flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed size-[32px] transition-all',
+									'rounded-full flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed size-[36px] sm:size-[32px] transition-all',
 									isValidAddress
 										? 'glass-button-accent cursor-pointer'
 										: 'bg-base-alt/50 text-tertiary cursor-default backdrop-blur-sm',
@@ -145,7 +145,7 @@ function Landing() {
 							</button>
 						</div>
 					</form>
-					<div className="flex items-center gap-1 text-[11px] justify-center mt-1">
+					<div className="flex items-center gap-1.5 sm:gap-1 text-[11px] justify-center mt-1 flex-wrap">
 						{getExampleAccounts().map((addr) => (
 							<Link
 								key={addr}
@@ -153,8 +153,8 @@ function Landing() {
 								params={{ address: addr }}
 								className={cx(
 									'flex items-center gap-0.5 text-tertiary hover:text-secondary',
-									'px-1.5 py-0.5 rounded press-down focus-visible:outline-none',
-									'transition-all font-mono text-[10px]',
+									'px-2 py-1 sm:px-1.5 sm:py-0.5 rounded press-down focus-visible:outline-none',
+									'transition-all font-mono text-[11px] sm:text-[10px]',
 								)}
 							>
 								<UserIcon className="size-[10px] text-accent/70" />
@@ -163,9 +163,9 @@ function Landing() {
 						))}
 					</div>
 
-					<div className="w-full flex items-center gap-3 mt-4">
+					<div className="w-full flex items-center gap-2 sm:gap-3 mt-4">
 						<div className="flex-1 h-px bg-base-border" />
-						<span className="text-tertiary text-[12px]">
+						<span className="text-tertiary text-[11px] sm:text-[12px] whitespace-nowrap">
 							{recentAddress
 								? t('landing.orUsePasskey')
 								: t('landing.orSignInWithPasskey')}
@@ -173,7 +173,7 @@ function Landing() {
 						<div className="flex-1 h-px bg-base-border" />
 					</div>
 
-					<div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+					<div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-2 sm:gap-2 mt-3 w-full">
 						<button
 							type="button"
 							onClick={() => {
@@ -187,16 +187,17 @@ function Landing() {
 							}}
 							disabled={connect.isPending}
 							className={cx(
-								'flex items-center gap-1 px-3 py-1.5 rounded-full justify-center',
-								'glass-button-accent font-medium text-[12px]',
+								'flex items-center gap-1.5 sm:gap-1 px-4 sm:px-3 py-2.5 sm:py-1.5 rounded-full justify-center',
+								'glass-button-accent font-medium text-[13px] sm:text-[12px]',
 								'cursor-pointer press-down border border-transparent hover:border-white/30',
 								'disabled:opacity-70 disabled:cursor-not-allowed transition-all',
+								'w-full sm:w-auto min-h-[44px] sm:min-h-0',
 							)}
 						>
 							{pendingAction === 'signup' ? (
-								<span className="size-[12px] border-2 border-white/30 border-t-white rounded-full animate-spin" />
+								<span className="size-[14px] sm:size-[12px] border-2 border-white/30 border-t-white rounded-full animate-spin" />
 							) : (
-								<KeyIcon className="size-[12px]" />
+								<KeyIcon className="size-[14px] sm:size-[12px]" />
 							)}
 							<span>{t('common.signUp')}</span>
 						</button>
@@ -210,16 +211,17 @@ function Landing() {
 							}}
 							disabled={connect.isPending}
 							className={cx(
-								'flex items-center gap-1 px-3 py-1.5 rounded-full justify-center',
-								'glass-button text-primary font-medium text-[12px]',
+								'flex items-center gap-1.5 sm:gap-1 px-4 sm:px-3 py-2.5 sm:py-1.5 rounded-full justify-center',
+								'glass-button text-primary font-medium text-[13px] sm:text-[12px]',
 								'cursor-pointer press-down border border-transparent hover:border-white/20',
 								'disabled:opacity-70 disabled:cursor-not-allowed transition-all',
+								'w-full sm:w-auto min-h-[44px] sm:min-h-0',
 							)}
 						>
 							{pendingAction === 'signin' ? (
-								<span className="size-[12px] border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+								<span className="size-[14px] sm:size-[12px] border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
 							) : (
-								<FingerprintIcon className="size-[12px]" />
+								<FingerprintIcon className="size-[14px] sm:size-[12px]" />
 							)}
 							<span>{t('common.signIn')}</span>
 						</button>
@@ -234,16 +236,17 @@ function Landing() {
 								}}
 								disabled={connect.isPending}
 								className={cx(
-									'flex items-center gap-1.5 px-3 py-1.5 rounded-full justify-center',
-									'glass-button text-primary font-medium text-[12px]',
+									'flex items-center gap-1.5 px-4 sm:px-3 py-2.5 sm:py-1.5 rounded-full justify-center',
+									'glass-button text-primary font-medium text-[13px] sm:text-[12px]',
 									'cursor-pointer press-down border border-transparent hover:border-accent/30',
 									'disabled:opacity-70 disabled:cursor-not-allowed transition-all',
+									'w-full sm:w-auto min-h-[44px] sm:min-h-0',
 								)}
 							>
 								{pendingAction === 'reconnect' ? (
-									<span className="size-[12px] border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
+									<span className="size-[14px] sm:size-[12px] border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
 								) : (
-									<ClockIcon className="size-[12px] text-accent" />
+									<ClockIcon className="size-[14px] sm:size-[12px] text-accent" />
 								)}
 								<span>
 									{t('common.continue')}{' '}
