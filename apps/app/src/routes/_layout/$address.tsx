@@ -25,6 +25,11 @@ import { Layout } from '#comps/Layout'
 import { TokenIcon } from '#comps/TokenIcon'
 import { Section } from '#comps/Section'
 import { AccessKeysSection } from '#comps/AccessKeysSection'
+import {
+	AccessKeysProvider,
+	useSignableAccessKeys,
+	type AccessKeyData,
+} from '#lib/access-keys-context'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
 import { fetchAssets, type AssetData } from '#lib/server/assets.server'
@@ -904,7 +909,7 @@ function AddressView() {
 	const displayedAssets = showZeroBalances ? adjustedAssets : assetsWithBalance
 
 	return (
-		<>
+		<AccessKeysProvider accountAddress={address}>
 			<Layout.Header
 				left={
 					<Link
@@ -1098,7 +1103,7 @@ function AddressView() {
 					<SettingsSection assets={assetsData} />
 				</div>
 			</div>
-		</>
+		</AccessKeysProvider>
 	)
 }
 
@@ -2014,6 +2019,9 @@ function HoldingsTable({
 	)
 	const [toastMessage, setToastMessage] = React.useState<string | null>(null)
 
+	// Use global access keys from context
+	const { keys: signableAccessKeys } = useSignableAccessKeys()
+
 	React.useEffect(() => {
 		if (toastMessage) {
 			const timeout = setTimeout(() => setToastMessage(null), 3000)
@@ -2103,6 +2111,7 @@ function HoldingsTable({
 							asset.address === initialToken ? initialSendTo : undefined
 						}
 						announce={announce}
+						accessKeys={signableAccessKeys}
 					/>
 				))}
 			</div>
@@ -2189,6 +2198,7 @@ function AssetRow({
 	isOwnProfile,
 	initialRecipient,
 	announce,
+	accessKeys,
 }: {
 	asset: AssetData
 	address: string
@@ -2202,6 +2212,7 @@ function AssetRow({
 	isOwnProfile: boolean
 	initialRecipient?: string
 	announce: (message: string) => void
+	accessKeys: AccessKeyData[]
 }) {
 	const { t } = useTranslation()
 	const [recipient, setRecipient] = React.useState(initialRecipient ?? '')
@@ -2222,27 +2233,9 @@ function AssetRow({
 	const [selectedAccessKey, setSelectedAccessKey] = React.useState<
 		string | null
 	>(null)
-	const [availableAccessKeys, setAvailableAccessKeys] = React.useState<
-		string[]
-	>([])
 	const recipientInputRef = React.useRef<HTMLInputElement>(null)
 	const amountInputRef = React.useRef<HTMLInputElement>(null)
 	const { data: connectorClient } = useConnectorClient()
-
-	// Scan localStorage for available access keys when form expands
-	React.useEffect(() => {
-		if (!isExpanded) return
-		if (typeof window === 'undefined') return
-		const keys: string[] = []
-		for (let i = 0; i < localStorage.length; i++) {
-			const key = localStorage.key(i)
-			if (key?.startsWith('accessKey:')) {
-				const keyAddress = key.replace('accessKey:', '')
-				keys.push(keyAddress)
-			}
-		}
-		setAvailableAccessKeys(keys)
-	}, [isExpanded])
 
 	const {
 		writeContract,
@@ -2602,7 +2595,7 @@ function AssetRow({
 						</button>
 					</div>
 				</div>
-				{availableAccessKeys.length > 0 && (
+				{accessKeys.length > 0 && (
 					<div className="flex flex-col gap-1 pl-[30px]">
 						<span className="text-[12px] text-tertiary whitespace-nowrap">
 							Sign with:
@@ -2613,11 +2606,30 @@ function AssetRow({
 							className="h-[32px] px-2 rounded-lg border border-card-border bg-base text-[12px] text-primary focus:outline-none focus:border-accent cursor-pointer"
 						>
 							<option value="">Wallet (default)</option>
-							{availableAccessKeys.map((keyAddress) => (
-								<option key={keyAddress} value={keyAddress}>
-									{shortenAddress(keyAddress, 4)}
-								</option>
-							))}
+							{accessKeys.map((key) => {
+								const remainingLimit = key.spendingLimits.get(
+									asset.address.toLowerCase(),
+								)
+								const decimals = asset.metadata?.decimals ?? 6
+								let limitText = 'Unlimited'
+								if (key.enforceLimits) {
+									if (remainingLimit !== undefined && remainingLimit > 0n) {
+										const formatted = formatUnits(remainingLimit, decimals)
+										limitText = `${Number(formatted).toFixed(2)} remaining`
+									} else {
+										limitText = 'Limit exhausted'
+									}
+								}
+								const createdText = key.createdAt
+									? new Date(key.createdAt).toLocaleDateString()
+									: ''
+								return (
+									<option key={key.keyId} value={key.keyId}>
+										{key.keyId} · {limitText}
+										{createdText ? ` · Created ${createdText}` : ''}
+									</option>
+								)
+							})}
 						</select>
 					</div>
 				)}
@@ -2893,36 +2905,50 @@ function ActivitySection({
 
 	const tabButtons = (
 		<div className="flex items-center gap-3">
-			<button
-				type="button"
+			<span
+				role="button"
+				tabIndex={0}
 				onClick={(e) => {
 					e.stopPropagation()
 					setActiveTab('mine')
 				}}
+				onKeyDown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.stopPropagation()
+						setActiveTab('mine')
+					}
+				}}
 				className={cx(
-					'text-[12px] font-medium transition-all pb-0.5 border-b-2',
+					'text-[12px] font-medium transition-all pb-0.5 border-b-2 cursor-pointer',
 					activeTab === 'mine'
 						? 'text-primary border-accent'
 						: 'text-tertiary hover:text-primary border-transparent',
 				)}
 			>
 				{t('portfolio.mine')}
-			</button>
-			<button
-				type="button"
+			</span>
+			<span
+				role="button"
+				tabIndex={0}
 				onClick={(e) => {
 					e.stopPropagation()
 					setActiveTab('everyone')
 				}}
+				onKeyDown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.stopPropagation()
+						setActiveTab('everyone')
+					}
+				}}
 				className={cx(
-					'text-[12px] font-medium transition-all pb-0.5 border-b-2',
+					'text-[12px] font-medium transition-all pb-0.5 border-b-2 cursor-pointer',
 					activeTab === 'everyone'
 						? 'text-primary border-accent'
 						: 'text-tertiary hover:text-primary border-transparent',
 				)}
 			>
 				{t('portfolio.everyone')}
-			</button>
+			</span>
 		</div>
 	)
 
