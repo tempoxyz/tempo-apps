@@ -449,7 +449,7 @@ function CommandMenuPortal({
 							ref={inputRef}
 							value={query}
 							onChange={(e) => setQuery(e.target.value)}
-							placeholder="Search commands..."
+							placeholder={t('commandMenu.searchPlaceholder')}
 							className="flex-1 bg-transparent text-[#f5f5f7] placeholder:text-[#6e6e73] outline-none text-[15px]"
 							autoComplete="off"
 							spellCheck={false}
@@ -460,7 +460,7 @@ function CommandMenuPortal({
 							ref={inputRef}
 							value={sendAddress}
 							onChange={(e) => setSendAddress(e.target.value)}
-							placeholder="Recipient address (0x...)"
+							placeholder={t('commandMenu.sendSubmenu.enterAddress')}
 							className="flex-1 bg-transparent text-[#f5f5f7] placeholder:text-[#6e6e73] outline-none text-[14px] font-mono"
 							autoComplete="off"
 							spellCheck={false}
@@ -468,7 +468,7 @@ function CommandMenuPortal({
 					)}
 					{view === 'language' && (
 						<span className="flex-1 text-[#6e6e73] text-[15px]">
-							Select language
+							{t('commandMenu.languageSubmenu.title')}
 						</span>
 					)}
 
