@@ -3,7 +3,6 @@ import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { decodeAbiParameters } from 'viem'
 import { TOKEN_CREATED_EVENT } from '#lib/abis'
-import { getTempoChain } from '#wagmi.config'
 
 const TIP20_DECIMALS = 6
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
@@ -102,9 +101,16 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 	.handler(async ({ data }): Promise<AssetData[] | null> => {
 		try {
 			const address = data.address as Address.Address
-			// Use chain from config directly since getChainId may not work on server
-			const chain = getTempoChain()
-			const chainId = chain.id
+			// Get chain ID from runtime env for server functions
+			let chainId: number
+			try {
+				const { env } = await import('cloudflare:workers')
+				const tempoEnv = env.VITE_TEMPO_ENV as string | undefined
+				chainId = tempoEnv === 'presto' ? 4217 : tempoEnv === 'devnet' ? 42430 : 42431
+			} catch {
+				// Local dev fallback
+				chainId = TEMPO_ENV === 'presto' ? 4217 : TEMPO_ENV === 'devnet' ? 42430 : 42431
+			}
 
 			const { QB } = await getIndexSupply()
 			const qb = QB.withSignatures([TRANSFER_SIGNATURE])
@@ -134,12 +140,14 @@ export const fetchAssets = createServerFn({ method: 'GET' })
 				.select(['token', 'name', 'symbol', 'currency'])
 				.where('chain', '=', chainId as never)
 
+			console.log('fetchAssets: chainId=', chainId, 'address=', address)
 			const [incomingResult, outgoingResult, tokenCreatedResult] =
 				await Promise.all([
 					incomingQuery.execute(),
 					outgoingQuery.execute(),
 					tokenCreatedQuery.execute(),
 				])
+			console.log('fetchAssets results:', { incoming: incomingResult.length, outgoing: outgoingResult.length, tokenCreated: tokenCreatedResult.length })
 
 			const tokenMetadata = new Map<
 				string,
