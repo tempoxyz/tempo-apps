@@ -1698,7 +1698,7 @@ function AssetRow({
 	)
 }
 
-const ACTIVITY_PAGE_SIZE = 5
+const ACTIVITY_PAGE_SIZE = 10
 
 function ActivityList({
 	activity,
