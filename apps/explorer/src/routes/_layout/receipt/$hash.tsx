@@ -14,7 +14,7 @@ import { NotFound } from '#comps/NotFound'
 import { Receipt } from '#comps/Receipt'
 import { apostrophe } from '#lib/chars'
 import { parseKnownEvents } from '#lib/domain/known-events'
-import { LineItems } from '#lib/domain/receipt'
+import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut } from '#lib/hooks'
@@ -53,9 +53,11 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 		transaction,
 		getTokenMetadata,
 	})
+	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
 
 	return {
 		block,
+		feeBreakdown,
 		knownEvents,
 		lineItems,
 		receipt,
@@ -312,7 +314,7 @@ function Component() {
 		t: () => navigate({ to: '/tx/$hash', params: { hash } }),
 	})
 
-	const { block, knownEvents, lineItems, receipt } = data
+	const { block, feeBreakdown, knownEvents, lineItems, receipt } = data
 
 	const feePrice = lineItems.feeTotals?.[0]?.price
 	const previousFee = feePrice
@@ -343,7 +345,7 @@ function Component() {
 				blockNumber={receipt.blockNumber}
 				events={knownEvents}
 				fee={fee}
-				feeBreakdown={lineItems.feeBreakdown}
+				feeBreakdown={feeBreakdown}
 				feeDisplay={feeDisplay}
 				hash={receipt.transactionHash}
 				sender={receipt.from}
