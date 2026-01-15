@@ -50,6 +50,7 @@ import SearchIcon from '~icons/lucide/search'
 import LogOutIcon from '~icons/lucide/log-out'
 import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
+import PauseIcon from '~icons/lucide/pause'
 import PlayIcon from '~icons/lucide/play'
 import RefreshCwIcon from '~icons/lucide/refresh-cw'
 import { useTranslation } from 'react-i18next'
@@ -494,13 +495,7 @@ async function fetchTransactions(
 	try {
 		const result = await fetchTransactionsFromExplorer({ data: { address } })
 
-		console.log('[Activity] Explorer result:', {
-			error: result.error,
-			txCount: result.transactions.length,
-		})
-
 		if (result.error || result.transactions.length === 0) {
-			console.log('[Activity] Returning empty - error or no txs')
 			return []
 		}
 
@@ -2031,45 +2026,44 @@ function BlockTimeline({
 				)}
 
 			<div className="flex items-center justify-center">
-				<button
-					type="button"
-					onClick={() => {
-						if (selectedBlock !== undefined) {
-							onSelectBlock(undefined)
-							return
-						}
-						if (pauseTimeoutRef.current) {
-							clearTimeout(pauseTimeoutRef.current)
-							pauseTimeoutRef.current = null
-						}
-						if (isPaused) {
-							setIsPaused(false)
-							if (currentBlock) {
-								setDisplayBlock(currentBlock)
-							}
-						} else {
-							setIsPaused(true)
-						}
-					}}
+				<div
 					className={cx(
-						'flex items-center gap-1.5 h-5 px-2 rounded-full border transition-colors focus-ring cursor-pointer',
+						'flex items-center gap-1.5 h-6 pl-0.5 pr-2.5 rounded-full border transition-colors',
 						selectedBlock !== undefined
-							? 'bg-accent/20 border-accent/30 hover:bg-accent/30'
-							: isPaused
-								? 'bg-amber-500/20 border-amber-500/30 hover:bg-amber-500/30'
-								: 'bg-white/5 border-white/10 hover:bg-white/10',
+							? 'bg-accent/20 border-accent/30'
+							: 'bg-white/5 border-white/10',
 					)}
-					aria-label={
-						selectedBlock !== undefined
-							? 'Clear block selection'
-							: isPaused
-								? 'Resume live updates'
-								: 'Pause live updates'
-					}
 				>
-					{isPaused && selectedBlock === undefined && (
-						<PlayIcon className="size-[10px] text-amber-500" />
-					)}
+					<button
+						type="button"
+						onClick={() => {
+							if (pauseTimeoutRef.current) {
+								clearTimeout(pauseTimeoutRef.current)
+								pauseTimeoutRef.current = null
+							}
+							if (isPaused) {
+								setIsPaused(false)
+								if (currentBlock) {
+									setDisplayBlock(currentBlock)
+								}
+							} else {
+								setIsPaused(true)
+							}
+						}}
+						className={cx(
+							'flex items-center justify-center size-5 rounded-full transition-colors cursor-pointer',
+							isPaused
+								? 'bg-amber-500/30 hover:bg-amber-500/40'
+								: 'bg-white/10 hover:bg-white/20',
+						)}
+						aria-label={isPaused ? 'Resume live updates' : 'Pause live updates'}
+					>
+						{isPaused ? (
+							<PlayIcon className="size-[10px] text-amber-500" />
+						) : (
+							<PauseIcon className="size-[10px] text-tertiary" />
+						)}
+					</button>
 					<span className="text-[11px] text-tertiary">Block</span>
 					<span className="text-[11px] text-primary font-mono tabular-nums">
 						{selectedBlock !== undefined
@@ -2077,9 +2071,16 @@ function BlockTimeline({
 							: (shownBlock?.toString() ?? '...')}
 					</span>
 					{selectedBlock !== undefined && (
-						<XIcon className="size-[8px] text-accent/70" />
+						<button
+							type="button"
+							onClick={() => onSelectBlock(undefined)}
+							className="flex items-center justify-center size-4 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
+							aria-label="Clear block selection"
+						>
+							<XIcon className="size-[8px] text-accent/70" />
+						</button>
 					)}
-				</button>
+				</div>
 			</div>
 		</div>
 	)
@@ -3324,7 +3325,7 @@ function TransactionModal({
 						href={`https://explore.mainnet.tempo.xyz/tx/${hash}`}
 						target="_blank"
 						rel="noopener noreferrer"
-						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] liquid-glass-premium rounded-bl-[16px] rounded-br-[16px] text-tertiary hover:text-primary border-t border-base-border"
+						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] liquid-glass-premium rounded-bl-[16px] rounded-br-[16px] text-tertiary hover:text-primary"
 					>
 						<span>{t('common.viewTransaction')}</span>
 						<span aria-hidden="true">→</span>
