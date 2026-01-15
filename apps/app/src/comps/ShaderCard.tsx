@@ -53,9 +53,9 @@ const LIQUIDGLASS_BORDER_WIDTH = 0.15
 const LIQUIDGLASS_REFRACT_A = 0.992
 const LIQUIDGLASS_REFRACT_B = 2.332
 const LIQUIDGLASS_REFRACT_C = 4.544
-const LIQUIDGLASS_REFRACT_D = 6.923
+const LIQUIDGLASS_REFRACT_D = 8.923
 const LIQUIDGLASS_REFRACT_POWER = 1.779
-const LIQUIDGLASS_GLOW_WEIGHT = 0.08
+const LIQUIDGLASS_GLOW_WEIGHT = 0.2
 const LIQUIDGLASS_GLOW_SPEED = 0.5
 const LIQUIDGLASS_NOISE = 0.02
 const LIQUIDGLASS_CANVAS_EXTEND = 0 // px to extend canvas beyond container
@@ -319,7 +319,11 @@ void main() {
 	vec2 p = (v_uv - 0.5) * 2.0;  // -1 to 1
 	float d = sdSuperellipse(p, u_power, 1.0);
 
-	if (d > 0.0) {
+	// Anti-aliasing: use fwidth for smooth edge
+	float aaWidth = fwidth(d) * 1.5;
+	float alpha = 1.0 - smoothstep(-aaWidth, aaWidth, d);
+
+	if (alpha < 0.001) {
 		fragColor = vec4(0.0);
 		return;
 	}
@@ -361,7 +365,8 @@ void main() {
 		color.rgb += specular;
 	}
 
-	fragColor = color;
+	// Apply anti-aliased alpha
+	fragColor = vec4(color.rgb, color.a * alpha);
 }
 `
 
@@ -689,7 +694,8 @@ export function ShaderCard({
 			gl.clearColor(0, 0, 0, 0)
 			gl.clear(gl.COLOR_BUFFER_BIT)
 
-			gl.disable(gl.BLEND)
+			gl.enable(gl.BLEND)
+			gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
 
 			gl.useProgram(liquidglassProgram)
 			setupPositionAttrib(liquidglassProgram)
@@ -727,7 +733,7 @@ export function ShaderCard({
 	return (
 		<canvas
 			ref={canvasRef}
-			className={`${className} dark:drop-shadow-[0_8px_32px_rgba(0,0,0,0.3)] drop-shadow-[0_8px_32px_rgba(0,0,0,0.12)]`}
+			className={`${className} dark:drop-shadow-[0_12px_40px_rgba(0,0,0,0.4)] drop-shadow-[0_12px_40px_rgba(0,0,0,0.2)]`}
 			style={{
 				position: 'absolute',
 				inset: -LIQUIDGLASS_CANVAS_EXTEND,
