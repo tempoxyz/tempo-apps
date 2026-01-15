@@ -160,6 +160,8 @@ export function useOnChainAccessKeys(
 				const blockNumber = await client.getBlockNumber()
 				const fromBlock = blockNumber > 99000n ? blockNumber - 99000n : 0n
 
+				console.log('[AccessKeysSection] Fetching keys for', checksummedAddress, 'from block', fromBlock.toString())
+
 				// Fetch all relevant events in parallel
 				const [authorizedLogs, revokedLogs, spendingLimitLogs] =
 					await Promise.all([
@@ -491,8 +493,8 @@ function AccessKeyRow({
 	const rowContent = (
 		<>
 			{/* Key icon */}
-			<div className="flex items-center justify-center size-4 rounded-full bg-base-alt shrink-0">
-				<KeyIcon className="size-2.5 text-secondary" />
+			<div className="flex items-center justify-center size-5 rounded-full bg-base-alt shrink-0">
+				<KeyIcon className="size-3 text-secondary" />
 			</div>
 			<div className="flex flex-col flex-1 min-w-0 gap-0.5">
 				<span className="text-[13px] text-primary font-medium flex items-center gap-1.5">
@@ -520,7 +522,7 @@ function AccessKeyRow({
 						<span className="text-[11px] text-accent">(revoking...)</span>
 					)}
 				</span>
-				<span className="text-[11px] text-secondary flex items-center gap-1.5 flex-wrap">
+				<span className="text-[12px] text-secondary flex items-center gap-1.5 flex-wrap">
 					{asset?.metadata?.symbol && (
 						<>
 							{isClickable ? (
@@ -594,7 +596,7 @@ function AccessKeyRow({
 	)
 
 	const rowClassName = cx(
-		'group flex items-center gap-3 px-3 py-3 min-h-[56px] rounded-xl hover:glass-thin transition-all',
+		'group flex items-center gap-3 px-3 py-3.5 min-h-[60px] rounded-xl hover:glass-thin transition-all',
 		(isPending || isRevoking) && 'opacity-50',
 		isClickable && 'cursor-pointer',
 	)
@@ -650,31 +652,27 @@ function CreateKeyForm({
 		setLimitUsd(raw)
 	}
 
-	const inputClass =
-		'h-[28px] px-3 text-[11px] rounded-full bg-base-alt border border-white/5 focus:border-accent/50 focus:outline-none transition-colors'
-
 	return (
-		<div className="flex flex-col gap-3 p-3 glass-thin rounded-xl mx-2 mt-2">
-			{/* All fields in a grid - full width */}
-			<div className="grid grid-cols-4 gap-2">
-				<div className="flex flex-col gap-1">
-					<label className="text-[10px] text-tertiary">Name</label>
+		<div className="flex items-center gap-3 px-3 py-3.5 min-h-[60px] rounded-xl hover:glass-thin transition-all mx-0">
+			<div className="flex items-center justify-center size-5 rounded-full bg-accent/20 shrink-0">
+				<KeyIcon className="size-3 text-accent" />
+			</div>
+			<div className="flex flex-col flex-1 min-w-0 gap-1">
+				<div className="flex items-center gap-2">
 					<input
 						type="text"
 						value={keyName}
 						onChange={(e) => setKeyName(e.target.value)}
-						placeholder="Optional"
-						className={cx(inputClass, 'w-full')}
+						placeholder="Key name"
+						className="flex-1 min-w-0 bg-transparent text-[13px] text-primary font-medium placeholder:text-tertiary focus:outline-none"
+						autoFocus
 					/>
 				</div>
-				<div className="flex flex-col gap-1">
-					<label className="text-[10px] text-tertiary">Token</label>
+				<div className="flex items-center gap-2 text-[12px] text-secondary">
 					<select
 						value={selectedToken}
-						onChange={(e) =>
-							setSelectedToken(e.target.value as Address.Address)
-						}
-						className={cx(inputClass, 'w-full cursor-pointer')}
+						onChange={(e) => setSelectedToken(e.target.value as Address.Address)}
+						className="bg-transparent text-secondary hover:text-primary cursor-pointer focus:outline-none appearance-none pr-1"
 					>
 						{assets.map((a) => (
 							<option key={a.address} value={a.address}>
@@ -682,65 +680,61 @@ function CreateKeyForm({
 							</option>
 						))}
 					</select>
-				</div>
-				<div className="flex flex-col gap-1">
-					<label className="text-[10px] text-tertiary">Limit</label>
-					<div className={cx(inputClass, 'flex items-center w-full')}>
-						<span className={limitUsd ? 'text-primary' : 'text-tertiary'}>
-							$
-						</span>
+					<span className="text-tertiary">·</span>
+					<span className="flex items-center">
+						<span className="text-tertiary">$</span>
 						<input
 							type="text"
 							inputMode="decimal"
 							value={limitUsd}
 							onChange={handleLimitChange}
-							placeholder="0.00"
-							className="bg-transparent outline-none w-full placeholder:text-tertiary text-[11px]"
+							placeholder="∞"
+							className="bg-transparent w-[40px] placeholder:text-tertiary focus:outline-none"
 						/>
-					</div>
-				</div>
-				<div className="flex flex-col gap-1">
-					<label className="text-[10px] text-tertiary">Expires</label>
-					<div className="flex items-center gap-1.5">
+					</span>
+					<span className="text-tertiary">·</span>
+					<span className="flex items-center gap-0.5">
 						<input
 							type="number"
 							value={expDays}
 							onChange={(e) => setExpDays(e.target.value)}
 							placeholder="7"
-							className={cx(inputClass, 'flex-1 text-center')}
+							className="bg-transparent w-[24px] text-center placeholder:text-tertiary focus:outline-none"
 						/>
-						<span className="text-[10px] text-tertiary shrink-0">days</span>
-					</div>
+						<span>days</span>
+					</span>
 				</div>
 			</div>
-
-			{/* Actions */}
-			<div className="flex items-center gap-2">
-				<button
-					type="button"
-					onClick={() =>
-						onCreate(
-							selectedToken,
-							asset?.metadata?.decimals ?? 6,
-							limitUsd,
-							Number(expDays),
-							asset?.metadata?.priceUsd ?? 1,
-							keyName,
-						)
-					}
-					disabled={isPending}
-					className="h-[28px] px-4 text-[11px] font-medium bg-accent text-white rounded-full cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50"
-				>
-					{isPending ? '...' : 'Create'}
-				</button>
-				<button
-					type="button"
-					onClick={onCancel}
-					className="h-[28px] px-4 text-[11px] text-secondary hover:text-primary transition-colors cursor-pointer rounded-full hover:bg-white/5"
-				>
-					Cancel
-				</button>
-			</div>
+			<button
+				type="button"
+				onClick={() =>
+					onCreate(
+						selectedToken,
+						asset?.metadata?.decimals ?? 6,
+						limitUsd,
+						Number(expDays),
+						asset?.metadata?.priceUsd ?? 1,
+						keyName,
+					)
+				}
+				disabled={isPending}
+				title="Create key"
+				className="size-5 flex items-center justify-center rounded-full bg-accent text-white cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50 shrink-0"
+			>
+				{isPending ? (
+					<span className="size-2.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+				) : (
+					<CheckIcon className="size-2.5" />
+				)}
+			</button>
+			<button
+				type="button"
+				onClick={onCancel}
+				title="Cancel"
+				className="size-5 flex items-center justify-center rounded-full bg-base-alt text-secondary hover:text-primary hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+			>
+				<XIcon className="size-2.5" />
+			</button>
 		</div>
 	)
 }
@@ -1029,7 +1023,7 @@ export function AccessKeysSection({
 					<p className="text-[13px] text-secondary">Loading access keys...</p>
 				</div>
 			) : allKeys.length === 0 && !showCreate ? (
-				<div className="flex flex-col items-center py-4 gap-2">
+				<div className="flex items-center justify-center py-4 gap-2">
 					<p className="text-[13px] text-secondary">
 						No access keys configured.
 					</p>
@@ -1038,7 +1032,7 @@ export function AccessKeysSection({
 							type="button"
 							onClick={() => setShowCreate(true)}
 							disabled={isPending || assetsWithBalance.length === 0}
-							className="text-[11px] font-medium bg-accent/10 text-accent rounded px-2 py-1 cursor-pointer press-down hover:bg-accent/20 transition-colors"
+							className="text-[11px] font-medium bg-accent/10 text-accent rounded-full px-3 py-1 cursor-pointer press-down hover:bg-accent/20 transition-colors"
 						>
 							Create Key
 						</button>
