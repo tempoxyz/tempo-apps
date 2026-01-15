@@ -710,10 +710,10 @@ input[type="number"] {
 	*,
 	*::before,
 	*::after {
-		animation-duration: 0.01ms !important;
-		animation-iteration-count: 1 !important;
-		transition-duration: 0.01ms !important;
-		scroll-behavior: auto !important;
+		animation-duration: 0.01ms;
+		animation-iteration-count: 1;
+		transition-duration: 0.01ms;
+		scroll-behavior: auto;
 	}
 }
 
@@ -724,7 +724,7 @@ input[type="number"] {
 		--color-content-secondary: light-dark(#404040, #c0c0c0);
 		--color-content-tertiary: light-dark(#505050, #b0b0b0);
 	}
-	
+
 	.glass-thin,
 	.glass-regular,
 	.glass-thick,
@@ -746,7 +746,7 @@ input[type="number"] {
 	cursor: pointer;
 	user-select: none;
 	-webkit-tap-highlight-color: transparent;
-	
+
 	&:focus {
 		outline: none;
 	}

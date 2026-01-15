@@ -113,9 +113,8 @@ export function StretchingWordmark({ className }: { className?: string }) {
 					const xOffset = (dimensions.width - stretchedWidth) / 2
 
 					return (
-						// biome-ignore lint/suspicious/noArrayIndexKey: static row count
 						<g
-							key={rowIndex}
+							key={`row-${rowIndex}`}
 							transform={`translate(${xOffset}, ${y}) scale(${baseScale * scaleX}, ${baseScale})`}
 						>
 							<path

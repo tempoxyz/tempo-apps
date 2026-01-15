@@ -116,5 +116,28 @@
 		"from": "from",
 		"self": "self",
 		"andMore": "and {{count}} more"
+	},
+	"a11y": {
+		"skipToMain": "Skip to main content",
+		"loading": "Loading",
+		"loadingAssets": "Loading assets",
+		"loadingActivity": "Loading activity",
+		"assetsLoaded": "{{count}} assets loaded",
+		"activityLoaded": "{{count}} transactions loaded",
+		"sendFormOpened": "Send form opened",
+		"sendFormClosed": "Send form closed",
+		"transactionSent": "Transaction sent successfully",
+		"transactionFailed": "Transaction failed",
+		"addressCopied": "Address copied to clipboard",
+		"languageChanged": "Language changed to {{language}}",
+		"faucetRequested": "Faucet tokens requested",
+		"faucetSuccess": "Faucet tokens received",
+		"faucetFailed": "Faucet request failed",
+		"closeModal": "Close modal",
+		"openMenu": "Open menu",
+		"expandSection": "Expand {{section}}",
+		"collapseSection": "Collapse {{section}}",
+		"page": "Page {{current}} of {{total}}",
+		"goToPage": "Go to page {{page}}"
 	}
 }

@@ -50,6 +50,7 @@ import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
 import { useTranslation } from 'react-i18next'
 import i18n, { isRtl } from '#lib/i18n'
+import { useAnnounce, useFocusTrap, useEscapeKey, VisuallyHidden, LiveRegion } from '#lib/a11y'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
@@ -328,46 +329,45 @@ const fetchTransactionReceipts = createServerFn({ method: 'POST' })
 		return { receipts }
 	})
 
-// Unused - keeping for future block timeline feature
-// const fetchCurrentBlockNumber = createServerFn({ method: 'GET' }).handler(
-// 	async () => {
-// 		const rpcUrl =
-// 			TEMPO_ENV === 'presto'
-// 				? 'https://rpc.presto.tempo.xyz'
-// 				: 'https://rpc.tempo.xyz'
-//
-// 		const { env } = await import('cloudflare:workers')
-// 		const auth = env.PRESTO_RPC_AUTH as string | undefined
-// 		const headers: Record<string, string> = {
-// 			'Content-Type': 'application/json',
-// 		}
-// 		if (auth && TEMPO_ENV === 'presto') {
-// 			headers.Authorization = `Basic ${btoa(auth)}`
-// 		}
-//
-// 		try {
-// 			const response = await fetch(rpcUrl, {
-// 				method: 'POST',
-// 				headers,
-// 				body: JSON.stringify({
-// 					jsonrpc: '2.0',
-// 					id: 1,
-// 					method: 'eth_blockNumber',
-// 					params: [],
-// 				}),
-// 			})
-// 			if (response.ok) {
-// 				const json = (await response.json()) as { result?: string }
-// 				if (json.result) {
-// 					return { blockNumber: json.result }
-// 				}
-// 			}
-// 			return { blockNumber: null }
-// 		} catch {
-// 			return { blockNumber: null }
-// 		}
-// 	},
-// )
+const fetchCurrentBlockNumber = createServerFn({ method: 'GET' }).handler(
+	async () => {
+		const rpcUrl =
+			TEMPO_ENV === 'presto'
+				? 'https://rpc.presto.tempo.xyz'
+				: 'https://rpc.tempo.xyz'
+
+		const { env } = await import('cloudflare:workers')
+		const auth = env.PRESTO_RPC_AUTH as string | undefined
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json',
+		}
+		if (auth && TEMPO_ENV === 'presto') {
+			headers.Authorization = `Basic ${btoa(auth)}`
+		}
+
+		try {
+			const response = await fetch(rpcUrl, {
+				method: 'POST',
+				headers,
+				body: JSON.stringify({
+					jsonrpc: '2.0',
+					id: 1,
+					method: 'eth_blockNumber',
+					params: [],
+				}),
+			})
+			if (response.ok) {
+				const json = (await response.json()) as { result?: string }
+				if (json.result) {
+					return { blockNumber: json.result }
+				}
+			}
+			return { blockNumber: null }
+		} catch {
+			return { blockNumber: null }
+		}
+	},
+)
 
 const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 	.inputValidator((data: { address: string }) => data)
@@ -603,6 +603,38 @@ function AddressView() {
 	const [assetsData, setAssetsData] = React.useState(initialAssets)
 	// Activity state - starts from loader, can be refetched
 	const [activity, setActivity] = React.useState(initialActivity)
+
+	// Block timeline state
+	const [_currentBlock, setCurrentBlock] = React.useState<bigint | null>(null)
+	const [_selectedBlockFilter, _setSelectedBlockFilter] = React.useState<
+		bigint | undefined
+	>(undefined)
+	const [isBlockPollingPaused, _setIsBlockPollingPaused] = React.useState(false)
+
+	// Poll for current block number
+	React.useEffect(() => {
+		let mounted = true
+
+		const pollBlock = async () => {
+			if (isBlockPollingPaused) return
+			try {
+				const result = await fetchCurrentBlockNumber()
+				if (mounted && result.blockNumber) {
+					setCurrentBlock(BigInt(result.blockNumber))
+				}
+			} catch {
+				// Ignore errors
+			}
+		}
+
+		pollBlock()
+		const interval = setInterval(pollBlock, 1500)
+
+		return () => {
+			mounted = false
+			clearInterval(interval)
+		}
+	}, [isBlockPollingPaused])
 
 	// Sync with loader data when address changes
 	React.useEffect(() => {
@@ -928,8 +960,20 @@ function AddressView() {
 						externalLink={`https://explore.mainnet.tempo.xyz/address/${address}`}
 						defaultOpen
 					>
+						<BlockTimeline
+							activity={activity}
+							currentBlock={currentBlock}
+							selectedBlock={selectedBlockFilter}
+							onSelectBlock={setSelectedBlockFilter}
+							isPaused={isBlockPollingPaused}
+							onPauseChange={setIsBlockPollingPaused}
+						/>
 						<ActivityHeatmap activity={activity} />
-						<ActivityList activity={activity} address={address} />
+						<ActivityList
+							activity={activity}
+							address={address}
+							filterBlockNumber={selectedBlockFilter}
+						/>
 					</Section>
 
 					<SettingsSection assets={assetsData} />
@@ -1414,7 +1458,7 @@ function ActivityHeatmap({ activity }: { activity: ActivityItem[] }) {
 	)
 }
 
-function _BlockTimeline({
+function BlockTimeline({
 	activity,
 	currentBlock,
 	selectedBlock,
@@ -2192,29 +2236,42 @@ const ACTIVITY_PAGE_SIZE = 10
 function ActivityList({
 	activity,
 	address,
+	filterBlockNumber,
 }: {
 	activity: ActivityItem[]
 	address: string
+	filterBlockNumber?: bigint
 }) {
 	const viewer = address as Address.Address
 	const { t } = useTranslation()
 	const [page, setPage] = React.useState(0)
 
-	if (activity.length === 0) {
+	const filteredActivity = React.useMemo(() => {
+		if (filterBlockNumber === undefined) return activity
+		return activity.filter((item) => item.blockNumber === filterBlockNumber)
+	}, [activity, filterBlockNumber])
+
+	React.useEffect(() => {
+		setPage(0)
+	}, [filterBlockNumber])
+
+	if (filteredActivity.length === 0) {
 		return (
 			<div className="flex flex-col items-center justify-center py-6 gap-2">
 				<div className="size-10 rounded-full bg-base-alt flex items-center justify-center">
 					<ReceiptIcon className="size-5 text-tertiary" />
 				</div>
 				<p className="text-[13px] text-secondary">
-					{t('portfolio.noActivityYet')}
+					{filterBlockNumber !== undefined
+						? t('portfolio.noActivityInBlock')
+						: t('portfolio.noActivityYet')}
 				</p>
 			</div>
 		)
 	}
 
-	const totalPages = Math.ceil(activity.length / ACTIVITY_PAGE_SIZE)
-	const paginatedActivity = activity.slice(
+	const totalPages = Math.ceil(filteredActivity.length / ACTIVITY_PAGE_SIZE)
+	const paginatedActivity = filteredActivity.slice(
 		page * ACTIVITY_PAGE_SIZE,
 		(page + 1) * ACTIVITY_PAGE_SIZE,
 	)
@@ -2235,9 +2292,8 @@ function ActivityList({
 			{totalPages > 1 && (
 				<div className="flex items-center justify-center gap-1 pt-3 pb-1">
 					{Array.from({ length: totalPages }, (_, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: pagination buttons are static
 						<button
-							key={`page-${i}`}
+							key={`activity-page-${i}`}
 							type="button"
 							onClick={() => setPage(i)}
 							className={cx(

@@ -102,7 +102,6 @@ export function LottoNumber({
 
 	return (
 		<span className={className}>
-			{/* biome-ignore lint/suspicious/noArrayIndexKey: static character list */}
 			{chars.map((c, i) => {
 				// Only apply reduced opacity to digits after the decimal point (when settled)
 				const isDecimalPart =
@@ -110,7 +109,7 @@ export function LottoNumber({
 
 				return (
 					<span
-						key={i}
+						key={`${i}-${c.char}`}
 						style={{
 							opacity: isDecimalPart ? 0.35 : 1,
 							transition: 'opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
