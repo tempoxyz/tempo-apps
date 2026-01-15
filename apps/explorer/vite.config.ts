@@ -10,6 +10,7 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 import { visualizer } from 'rollup-plugin-visualizer'
 import Sonda from 'sonda/vite'
+import { getVendorChunk } from './scripts/chunk-config'
 
 const [, , , ...args] = process.argv
 
@@ -93,6 +94,7 @@ export default defineConfig((config) => {
 								? { dropConsole: true, dropDebugger: true }
 								: undefined,
 					},
+					manualChunks: getVendorChunk,
 				},
 			},
 		},
