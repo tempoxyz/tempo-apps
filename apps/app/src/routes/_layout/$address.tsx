@@ -50,7 +50,7 @@ import LogInIcon from '~icons/lucide/log-in'
 import DropletIcon from '~icons/lucide/droplet'
 import { useTranslation } from 'react-i18next'
 import i18n, { isRtl } from '#lib/i18n'
-import { useAnnounce, useFocusTrap, useEscapeKey, VisuallyHidden, LiveRegion } from '#lib/a11y'
+import { useAnnounce } from '#lib/a11y'
 
 const BALANCES_API_URL = import.meta.env.VITE_BALANCES_API_URL
 const TOKENLIST_API_URL = 'https://tokenlist.tempo.xyz'
@@ -598,6 +598,7 @@ function AddressView() {
 	const account = useAccount()
 	const { sendTo, token: initialToken } = Route.useSearch()
 	const { t } = useTranslation()
+	const { announce } = useAnnounce()
 
 	// Assets state - starts from loader, can be refetched without page refresh
 	const [assetsData, setAssetsData] = React.useState(initialAssets)
@@ -605,11 +606,11 @@ function AddressView() {
 	const [activity, setActivity] = React.useState(initialActivity)
 
 	// Block timeline state
-	const [_currentBlock, setCurrentBlock] = React.useState<bigint | null>(null)
-	const [_selectedBlockFilter, _setSelectedBlockFilter] = React.useState<
+	const [currentBlock, setCurrentBlock] = React.useState<bigint | null>(null)
+	const [selectedBlockFilter, setSelectedBlockFilter] = React.useState<
 		bigint | undefined
 	>(undefined)
-	const [isBlockPollingPaused, _setIsBlockPollingPaused] = React.useState(false)
+	const [isBlockPollingPaused, setIsBlockPollingPaused] = React.useState(false)
 
 	// Poll for current block number
 	React.useEffect(() => {
@@ -855,8 +856,8 @@ function AddressView() {
 								disconnect()
 								navigate({ to: '/' })
 							}}
-							className="flex items-center justify-center size-[36px] rounded-full bg-base-alt hover:bg-base-alt/80 active:bg-base-alt/60 transition-colors cursor-pointer"
-							title={t('common.logOut')}
+							className="flex items-center justify-center size-[36px] rounded-full bg-base-alt hover:bg-base-alt/80 active:bg-base-alt/60 transition-colors cursor-pointer focus-ring"
+							aria-label={t('common.logOut')}
 						>
 							<LogOutIcon className="size-[14px] text-secondary" />
 						</button>
@@ -864,8 +865,8 @@ function AddressView() {
 						<button
 							type="button"
 							onClick={() => navigate({ to: '/' })}
-							className="flex items-center justify-center size-[36px] rounded-full bg-accent hover:bg-accent/90 active:bg-accent/80 transition-colors cursor-pointer"
-							title={t('common.signIn')}
+							className="flex items-center justify-center size-[36px] rounded-full bg-accent hover:bg-accent/90 active:bg-accent/80 transition-colors cursor-pointer focus-ring"
+							aria-label={t('common.signIn')}
 						>
 							<LogInIcon className="size-[14px] text-white" />
 						</button>
@@ -888,9 +889,12 @@ function AddressView() {
 							</code>
 							<button
 								type="button"
-								onClick={() => copy(address)}
-								className="flex items-center justify-center size-[28px] rounded-md bg-base-alt hover:bg-base-alt/70 cursor-pointer press-down transition-colors shrink-0"
-								title={t('common.copyAddress')}
+								onClick={() => {
+									copy(address)
+									announce(t('a11y.addressCopied'))
+								}}
+								className="flex items-center justify-center size-[28px] rounded-md bg-base-alt hover:bg-base-alt/70 cursor-pointer press-down transition-colors shrink-0 focus-ring"
+								aria-label={t('common.copyAddress')}
 							>
 								{notifying ? (
 									<CheckIcon className="size-[14px] text-positive" />
@@ -902,8 +906,8 @@ function AddressView() {
 								href={`https://explore.mainnet.tempo.xyz/address/${address}`}
 								target="_blank"
 								rel="noopener noreferrer"
-								className="flex items-center justify-center size-[28px] rounded-md bg-base-alt hover:bg-base-alt/70 press-down transition-colors shrink-0"
-								title={t('common.viewOnExplorer')}
+								className="flex items-center justify-center size-[28px] rounded-md bg-base-alt hover:bg-base-alt/70 press-down transition-colors shrink-0 focus-ring"
+								aria-label={t('common.viewOnExplorer')}
 							>
 								<ExternalLinkIcon className="size-[14px] text-tertiary" />
 							</a>
@@ -926,12 +930,13 @@ function AddressView() {
 							<button
 								type="button"
 								onClick={() => setShowZeroBalances(!showZeroBalances)}
-								className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer"
-								title={
+								className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer focus-ring"
+								aria-label={
 									showZeroBalances
 										? t('portfolio.hideZeroBalances')
 										: t('portfolio.showZeroBalances')
 								}
+								aria-pressed={showZeroBalances}
 							>
 								{showZeroBalances ? (
 									<EyeOffIcon className="size-[14px] text-tertiary" />
@@ -952,6 +957,7 @@ function AddressView() {
 							connectedAddress={account.address}
 							initialSendTo={sendTo}
 							initialToken={initialToken}
+							announce={announce}
 						/>
 					</Section>
 
@@ -968,6 +974,7 @@ function AddressView() {
 							isPaused={isBlockPollingPaused}
 							onPauseChange={setIsBlockPollingPaused}
 						/>
+						<div className="w-full h-px bg-card-border my-2" />
 						<ActivityHeatmap activity={activity} />
 						<ActivityList
 							activity={activity}
@@ -1081,6 +1088,7 @@ function Section(props: {
 				<button
 					type="button"
 					onClick={handleClick}
+					aria-expanded={open}
 					className={cx(
 						'flex flex-1 items-center justify-between cursor-pointer select-none press-down transition-colors',
 						'text-[14px] font-medium text-primary hover:text-accent',
@@ -1122,8 +1130,9 @@ function Section(props: {
 							href={externalLink}
 							target="_blank"
 							rel="noopener noreferrer"
-							className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors"
+							className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors focus-ring"
 							onClick={(e) => e.stopPropagation()}
+							aria-label="View on external site"
 						>
 							<GlobeIcon className="size-[14px] text-tertiary" />
 						</a>
@@ -1131,7 +1140,9 @@ function Section(props: {
 					<button
 						type="button"
 						onClick={handleClick}
-						className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer"
+						aria-expanded={open}
+						aria-label={open ? 'Collapse section' : 'Expand section'}
+						className="flex items-center justify-center size-[24px] rounded-md bg-base-alt hover:bg-base-alt/70 transition-colors cursor-pointer focus-ring"
 					>
 						{open ? (
 							<MinusIcon className="size-[14px] text-tertiary" />
@@ -1475,7 +1486,9 @@ function BlockTimeline({
 }) {
 	const scrollRef = React.useRef<HTMLDivElement>(null)
 	const [isUserScrolling, setIsUserScrolling] = React.useState(false)
-	const scrollTimeoutRef = React.useRef<ReturnType<typeof setTimeout>>()
+	const scrollTimeoutRef = React.useRef<
+		ReturnType<typeof setTimeout> | undefined
+	>(undefined)
 
 	const userBlockNumbers = React.useMemo(() => {
 		const blocks = new Set<bigint>()
@@ -1565,54 +1578,69 @@ function BlockTimeline({
 		hasActivity: boolean,
 		isEmpty: boolean,
 		isSelected: boolean,
+		isCurrent: boolean,
 	) => {
 		if (isEmpty) return 'bg-base-alt/20'
 		if (isSelected) return 'bg-accent'
+		if (isCurrent) return 'bg-white dark:bg-white'
 		if (hasActivity) return 'bg-green-500 dark:bg-green-500'
 		return 'bg-base-alt/40'
 	}
 
 	return (
-		<div className="relative py-2">
+		<div className="relative py-2 -mx-2">
 			<div
 				ref={scrollRef}
 				onScroll={handleScroll}
 				onWheel={handleWheel}
-				className="flex gap-[3px] overflow-x-auto scrollbar-hide"
+				className="flex gap-[3px] overflow-x-auto scrollbar-hide px-2"
 				style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
 			>
 				{blocks.map((block) => {
 					const isSelected = selectedBlock === block.blockNumber
 					const isCurrent = block.blockNumber === currentBlock
 					return (
-						<button
+						<div
 							key={block.blockNumber.toString()}
-							type="button"
-							onClick={() => handleBlockClick(block.blockNumber, block.isEmpty)}
-							disabled={block.isEmpty}
-							className={cx(
-								'shrink-0 rounded-[2px] transition-all',
-								getBlockColor(block.hasActivity, block.isEmpty, isSelected),
-								block.hasActivity && !isSelected && 'scale-110',
-								isSelected && 'scale-125 z-10 ring-1 ring-accent/50',
-								isCurrent && !block.isEmpty && 'ring-1 ring-white/30',
-								!block.isEmpty && 'hover:scale-125 hover:z-10 cursor-pointer',
-								block.isEmpty && 'cursor-default opacity-50',
+							className="flex flex-col items-center"
+						>
+							<button
+								type="button"
+								onClick={() =>
+									handleBlockClick(block.blockNumber, block.isEmpty)
+								}
+								disabled={block.isEmpty}
+								className={cx(
+									'shrink-0 rounded-[2px] transition-all',
+									getBlockColor(
+										block.hasActivity,
+										block.isEmpty,
+										isSelected,
+										isCurrent,
+									),
+									block.hasActivity && !isSelected && !isCurrent && 'scale-110',
+									isSelected && 'scale-125 z-10 ring-1 ring-accent/50',
+									isCurrent && 'scale-125 z-10',
+									!block.isEmpty && 'hover:scale-125 hover:z-10 cursor-pointer',
+									block.isEmpty && 'cursor-default opacity-50',
+								)}
+								style={{ width: 10, height: 10 }}
+								title={
+									block.isEmpty
+										? undefined
+										: `Block ${block.blockNumber.toString()}`
+								}
+							/>
+							{isCurrent && (
+								<div className="text-[8px] text-tertiary font-mono mt-1 whitespace-nowrap">
+									{currentBlock?.toString()}
+								</div>
 							)}
-							style={{ width: 10, height: 10 }}
-							title={
-								block.isEmpty
-									? undefined
-									: `Block ${block.blockNumber.toString()}`
-							}
-						/>
+						</div>
 					)
 				})}
 			</div>
-			<div className="flex items-center justify-between mt-2">
-				<div className="text-[10px] text-tertiary font-mono">
-					{currentBlock ? `Block ${currentBlock.toString()}` : 'Loading...'}
-				</div>
+			<div className="flex items-center justify-end gap-2 mt-1 px-2">
 				{isPaused && (
 					<button
 						type="button"
@@ -1647,6 +1675,7 @@ function HoldingsTable({
 	connectedAddress,
 	initialSendTo,
 	initialToken,
+	announce,
 }: {
 	assets: AssetData[]
 	address: string
@@ -1658,6 +1687,7 @@ function HoldingsTable({
 	connectedAddress?: string
 	initialSendTo?: string
 	initialToken?: string
+	announce: (message: string) => void
 }) {
 	const { t } = useTranslation()
 	const navigate = useNavigate()
@@ -1754,20 +1784,23 @@ function HoldingsTable({
 						initialRecipient={
 							asset.address === initialToken ? initialSendTo : undefined
 						}
+						announce={announce}
 					/>
 				))}
 			</div>
 			{toastMessage &&
 				createPortal(
-					<div className="fixed bottom-4 right-4 z-50 bg-surface rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12)] overflow-hidden flex">
-						<div className="w-1 bg-positive shrink-0" />
-						<div className="flex items-center gap-1.5 px-3 py-2">
-							<CheckIcon className="size-[14px] text-positive" />
-							<span className="text-[13px] text-primary font-medium">
-								{toastMessage}
-							</span>
+					<LiveRegion>
+						<div className="fixed bottom-4 right-4 z-50 bg-surface rounded-lg shadow-[0_4px_24px_rgba(0,0,0,0.12)] overflow-hidden flex">
+							<div className="w-1 bg-positive shrink-0" />
+							<div className="flex items-center gap-1.5 px-3 py-2">
+								<CheckIcon className="size-[14px] text-positive" />
+								<span className="text-[13px] text-primary font-medium">
+									{toastMessage}
+								</span>
+							</div>
 						</div>
-					</div>,
+					</LiveRegion>,
 					document.body,
 				)}
 		</>
@@ -1837,6 +1870,7 @@ function AssetRow({
 	onFaucetSuccess,
 	isOwnProfile,
 	initialRecipient,
+	announce,
 }: {
 	asset: AssetData
 	address: string
@@ -1849,7 +1883,9 @@ function AssetRow({
 	onFaucetSuccess?: () => void
 	isOwnProfile: boolean
 	initialRecipient?: string
+	announce: (message: string) => void
 }) {
+	const { t } = useTranslation()
 	const [recipient, setRecipient] = React.useState(initialRecipient ?? '')
 	const [amount, setAmount] = React.useState('')
 	const [sendState, setSendState] = React.useState<
@@ -1892,6 +1928,7 @@ function AssetRow({
 		if (isConfirmed) {
 			setSendState('sent')
 			setPendingSendAmount(null)
+			announce(t('a11y.transactionSent'))
 			// Trigger balance refresh and close form immediately via onSendComplete
 			onSendComplete(asset.metadata?.symbol || shortenAddress(asset.address, 3))
 			// Reset UI state after animation (form already closed by onSendComplete)
@@ -1908,6 +1945,8 @@ function AssetRow({
 		asset.address,
 		onSendComplete,
 		resetWrite,
+		announce,
+		t,
 	])
 
 	// Handle write errors
@@ -1943,9 +1982,10 @@ function AssetRow({
 		if (asset.balance !== faucetInitialBalance) {
 			setFaucetState('done')
 			setFaucetInitialBalance(null)
+			announce(t('a11y.faucetSuccess'))
 			setTimeout(() => setFaucetState('idle'), 1500)
 		}
-	}, [asset.balance, faucetState, faucetInitialBalance])
+	}, [asset.balance, faucetState, faucetInitialBalance, announce, t])
 
 	// Poll for balance updates while faucet is loading (but not during send)
 	React.useEffect(() => {
@@ -2079,8 +2119,10 @@ function AssetRow({
 					</button>
 					<button
 						type="submit"
+						aria-label={t('common.send')}
+						aria-busy={sendState === 'sending'}
 						className={cx(
-							'size-[32px] rounded-lg press-down transition-colors flex items-center justify-center shrink-0',
+							'size-[32px] rounded-lg press-down transition-colors flex items-center justify-center shrink-0 focus-ring',
 							sendState === 'sent'
 								? 'bg-positive text-white cursor-default'
 								: sendState === 'error'
@@ -2104,8 +2146,8 @@ function AssetRow({
 					<button
 						type="button"
 						onClick={handleToggle}
-						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-lg transition-colors shrink-0"
-						title="Cancel"
+						aria-label={t('common.cancel')}
+						className="size-[32px] flex items-center justify-center cursor-pointer text-tertiary hover:text-primary hover:bg-base-alt rounded-lg transition-colors shrink-0 focus-ring"
 					>
 						<XIcon className="size-[14px]" />
 					</button>
@@ -2198,12 +2240,12 @@ function AssetRow({
 						}}
 						disabled={faucetState !== 'idle' || !isFaucetToken}
 						className={cx(
-							'flex items-center justify-center size-[24px] rounded-md transition-colors',
+							'flex items-center justify-center size-[24px] rounded-md transition-colors focus-ring',
 							isFaucetToken
 								? 'hover:bg-accent/10 cursor-pointer'
 								: 'opacity-0 pointer-events-none',
 						)}
-						title={isFaucetToken ? 'Request tokens' : undefined}
+						aria-label={isFaucetToken ? t('common.requestTokens') : undefined}
 						aria-hidden={!isFaucetToken}
 					>
 						{faucetState === 'done' ? (
@@ -2221,8 +2263,8 @@ function AssetRow({
 						e.stopPropagation()
 						handleToggle()
 					}}
-					className="flex items-center justify-center size-[28px] rounded-md hover:bg-accent/10 cursor-pointer transition-all opacity-60 group-hover:opacity-100"
-					title="Send"
+					className="flex items-center justify-center size-[28px] rounded-md hover:bg-accent/10 cursor-pointer transition-all opacity-60 group-hover:opacity-100 focus-ring"
+					aria-label={t('common.send')}
 				>
 					<SendIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
 				</button>
@@ -2253,7 +2295,7 @@ function ActivityList({
 
 	React.useEffect(() => {
 		setPage(0)
-	}, [filterBlockNumber])
+	}, [])
 
 	if (filteredActivity.length === 0) {
 		return (
@@ -2338,16 +2380,16 @@ function ActivityRow({
 					href={`https://explore.mainnet.tempo.xyz/tx/${item.hash}`}
 					target="_blank"
 					rel="noopener noreferrer"
-					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 transition-all opacity-60 group-hover:opacity-100"
-					title={t('common.viewOnExplorer')}
+					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 transition-all opacity-60 group-hover:opacity-100 focus-ring"
+					aria-label={t('common.viewOnExplorer')}
 				>
 					<ExternalLinkIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
 				</a>
 				<button
 					type="button"
 					onClick={() => setShowModal(true)}
-					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 cursor-pointer transition-all opacity-60 group-hover:opacity-100"
-					title={t('common.viewReceipt')}
+					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 cursor-pointer transition-all opacity-60 group-hover:opacity-100 focus-ring"
+					aria-label={t('common.viewReceipt')}
 				>
 					<ReceiptIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
 				</button>
@@ -2409,24 +2451,18 @@ function TransactionModal({
 	const { t } = useTranslation()
 	const [isVisible, setIsVisible] = React.useState(false)
 	const overlayRef = React.useRef<HTMLDivElement>(null)
-	const contentRef = React.useRef<HTMLDivElement>(null)
+	const _focusTrapRef = useFocusTrap(isVisible)
 
 	const handleClose = React.useCallback(() => {
 		setIsVisible(false)
 		setTimeout(onClose, 200)
 	}, [onClose])
 
+	useEscapeKey(handleClose)
+
 	React.useEffect(() => {
 		requestAnimationFrame(() => setIsVisible(true))
 	}, [])
-
-	React.useEffect(() => {
-		const handleEscape = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') handleClose()
-		}
-		document.addEventListener('keydown', handleEscape)
-		return () => document.removeEventListener('keydown', handleEscape)
-	}, [handleClose])
 
 	const blockNumber = React.useMemo(
 		() => Math.floor(Math.random() * 1000000 + 5000000),
@@ -2461,14 +2497,13 @@ function TransactionModal({
 				isVisible ? 'opacity-100' : 'opacity-0',
 			)}
 			onClick={handleClose}
-			onKeyDown={(e) => {
-				if (e.key === 'Escape') handleClose()
-			}}
 		>
-			{/* biome-ignore lint/a11y/noStaticElementInteractions: stops click propagation */}
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents: dialog handles keyboard via focus trap */}
 			<div
-				ref={contentRef}
-				role="presentation"
+				ref={focusTrapRef}
+				role="dialog"
+				aria-modal="true"
+				aria-label={t('common.transactionReceipt')}
 				className={cx(
 					'flex flex-col items-center transition-all duration-200',
 					isVisible
@@ -2476,7 +2511,6 @@ function TransactionModal({
 						: 'opacity-0 scale-95 translate-y-4',
 				)}
 				onClick={(e) => e.stopPropagation()}
-				onKeyDown={(e) => e.stopPropagation()}
 			>
 				<div
 					data-receipt

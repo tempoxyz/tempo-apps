@@ -373,11 +373,12 @@ export function SkipLink({
 
 export function VisuallyHidden({
 	children,
-	as: Component = 'span',
+	as = 'span',
 }: {
 	children: React.ReactNode
-	as?: keyof JSX.IntrinsicElements
+	as?: 'span' | 'div' | 'p' | 'label' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'
 }) {
+	const Component = as
 	return <Component className="sr-only">{children}</Component>
 }
 
