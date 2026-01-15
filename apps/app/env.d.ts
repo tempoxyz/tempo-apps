@@ -1,7 +1,7 @@
 interface EnvironmentVariables {
-	readonly MODE: 'development' | 'production'
-	readonly VITE_TEMPO_ENV: 'moderato' | 'devnet' | 'presto'
-	readonly VITE_ENABLE_DEVTOOLS: string | undefined
+        readonly MODE: 'development' | 'production'
+        readonly VITE_TEMPO_ENV: 'moderato' | 'devnet' | 'presto'
+        readonly VITE_ENABLE_DEVTOOLS: string | undefined
 }
 
 interface ImportMetaEnv extends EnvironmentVariables {}
