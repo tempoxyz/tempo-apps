@@ -7,7 +7,7 @@
  * - Revocation requires Root Key signature (will trigger passkey prompt)
  */
 import * as React from 'react'
-import { createPortal } from 'react-dom'
+
 import { Address } from 'ox'
 import { WebCryptoP256 } from 'ox'
 import {
@@ -122,63 +122,15 @@ function setAccessKeyEmoji(keyId: string, emoji: string): void {
 	localStorage.setItem(`accessKeyEmoji:${keyId.toLowerCase()}`, emoji)
 }
 
-function getEmojiColor(emoji: string): string {
-	// Generate a consistent color from emoji
-	let hash = 0
-	for (let i = 0; i < emoji.length; i++) {
-		hash = emoji.charCodeAt(i) + ((hash << 5) - hash)
-	}
-	const hue = Math.abs(hash % 360)
-	return `hsl(${hue}, 60%, 50%)`
-}
-
 function EmojiPicker({
 	selectedEmoji,
 	onSelect,
-	onClose,
-	anchorRef,
 }: {
 	selectedEmoji: string | null
 	onSelect: (emoji: string) => void
-	onClose: () => void
-	anchorRef: React.RefObject<HTMLButtonElement | null>
 }) {
-	const [position, setPosition] = React.useState({ top: 0, left: 0 })
-	const pickerRef = React.useRef<HTMLDivElement>(null)
-
-	React.useLayoutEffect(() => {
-		if (anchorRef.current) {
-			const rect = anchorRef.current.getBoundingClientRect()
-			setPosition({
-				top: rect.bottom + 4,
-				left: rect.left,
-			})
-		}
-	}, [anchorRef])
-
-	React.useEffect(() => {
-		const handleClickOutside = (e: MouseEvent) => {
-			if (
-				pickerRef.current &&
-				!pickerRef.current.contains(e.target as Node) &&
-				anchorRef.current &&
-				!anchorRef.current.contains(e.target as Node)
-			) {
-				onClose()
-			}
-		}
-		document.addEventListener('mousedown', handleClickOutside)
-		return () => document.removeEventListener('mousedown', handleClickOutside)
-	}, [onClose, anchorRef])
-
-	if (typeof document === 'undefined') return null
-
-	return createPortal(
-		<div
-			ref={pickerRef}
-			className="fixed z-[100] bg-surface border border-card-border rounded-md shadow-lg p-1.5"
-			style={{ top: position.top, left: position.left }}
-		>
+	return (
+		<div className="absolute left-0 top-full mt-1 z-50 bg-surface border border-card-border rounded-md shadow-lg p-1.5">
 			<div className="grid grid-cols-4 gap-0.5">
 				{DEFAULT_EMOJIS.map((emoji) => (
 					<button
@@ -194,8 +146,7 @@ function EmojiPicker({
 					</button>
 				))}
 			</div>
-		</div>,
-		document.body,
+		</div>
 	)
 }
 
@@ -572,7 +523,6 @@ function AccessKeyRow({
 	const [keyName, setKeyName] = React.useState<string | null>(null)
 	const [emoji, setEmoji] = React.useState<string | null>(null)
 	const [showEmojiPicker, setShowEmojiPicker] = React.useState(false)
-	const emojiButtonRef = React.useRef<HTMLButtonElement>(null)
 
 	React.useEffect(() => {
 		if (typeof window === 'undefined') return
@@ -599,15 +549,13 @@ function AccessKeyRow({
 
 	// Display name or shortened address
 	const displayName = keyName || shortenAddress(accessKey.keyId, 6)
-
-	const emojiColor = emoji ? getEmojiColor(emoji) : null
+	const displayEmoji = emoji || '🔑'
 
 	const rowContent = (
 		<>
-			{/* Key icon / Emoji */}
+			{/* Emoji */}
 			<div className="relative shrink-0">
 				<button
-					ref={emojiButtonRef}
 					type="button"
 					onClick={(e) => {
 						e.preventDefault()
@@ -615,28 +563,22 @@ function AccessKeyRow({
 						if (isOwner) setShowEmojiPicker(!showEmojiPicker)
 					}}
 					className={cx(
-						'flex items-center justify-center size-6 rounded-full transition-colors',
-						isOwner && 'cursor-pointer hover:ring-2 hover:ring-accent/30',
+						'flex items-center justify-center text-[16px] transition-colors',
+						isOwner && 'cursor-pointer hover:scale-110',
 					)}
-					style={emoji && emojiColor ? { backgroundColor: `${emojiColor}20` } : { backgroundColor: 'rgba(59, 130, 246, 0.1)' }}
 					title={isOwner ? 'Click to change emoji' : undefined}
 				>
-					{emoji ? (
-						<span className="text-[14px]">{emoji}</span>
-					) : (
-						<KeyIcon className="size-3 text-accent" />
-					)}
+					{displayEmoji}
 				</button>
 				{showEmojiPicker && (
 					<EmojiPicker
 						selectedEmoji={emoji}
 						onSelect={handleEmojiSelect}
-						anchorRef={emojiButtonRef}
 					/>
 				)}
 			</div>
 			<div className="flex flex-col flex-1 min-w-0 gap-0.5">
-				<span className="text-[14px] text-primary font-medium flex items-center gap-1">
+				<span className="text-[18px] text-primary font-medium flex items-center gap-1">
 					<button
 						type="button"
 						onClick={(e) => {
@@ -803,7 +745,7 @@ function CreateKeyForm({
 						value={keyName}
 						onChange={(e) => setKeyName(e.target.value)}
 						placeholder="Key name"
-						className="flex-1 min-w-0 bg-transparent text-[13px] text-primary font-medium placeholder:text-tertiary focus:outline-none"
+						className="flex-1 min-w-0 bg-transparent text-[16px] text-primary font-medium placeholder:text-tertiary focus:outline-none"
 						autoFocus
 					/>
 				</div>
