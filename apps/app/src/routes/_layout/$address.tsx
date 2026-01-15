@@ -342,15 +342,11 @@ const fetchTransactionsFromExplorer = createServerFn({ method: 'GET' })
 				? 'https://explore.presto.tempo.xyz'
 				: 'https://explore.mainnet.tempo.xyz'
 
+		const { env } = await import('cloudflare:workers')
+		const auth = env.PRESTO_RPC_AUTH as string | undefined
 		const headers: Record<string, string> = {}
-		try {
-			const { env } = await import('cloudflare:workers')
-			const auth = env.PRESTO_RPC_AUTH as string | undefined
-			if (auth) {
-				headers.Authorization = `Basic ${btoa(auth)}`
-			}
-		} catch {
-			// Dev mode - cloudflare:workers not available
+		if (auth) {
+			headers.Authorization = `Basic ${btoa(auth)}`
 		}
 
 		try {
@@ -1445,7 +1441,11 @@ function AssetRow({
 			setTimeout(() => {
 				setFaucetState('idle')
 				onFaucetSuccess?.()
-			}, 2000)
+			}, 3000)
+			// Also trigger a second refresh after more time for slower propagation
+			setTimeout(() => {
+				onFaucetSuccess?.()
+			}, 6000)
 		} catch (err) {
 			console.error('Faucet error:', err)
 			setFaucetState('idle')
