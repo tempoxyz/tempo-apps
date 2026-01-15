@@ -9,7 +9,8 @@
 		"feeToken": "Gebühren-Token",
 		"feeTokenDescription": "Wählen Sie, welchen Token Sie für Transaktionsgebühren verwenden möchten.",
 		"language": "Sprache",
-		"languageDescription": "Wählen Sie Ihre bevorzugte Sprache."
+		"languageDescription": "Wählen Sie Ihre bevorzugte Sprache.",
+		"notSet": "Nicht festgelegt"
 	},
 	"common": {
 		"active": "Aktiv",
@@ -20,7 +21,24 @@
 		"recipient": "Empfänger 0x...",
 		"amount": "Betrag",
 		"max": "MAX",
-		"cancel": "Abbrechen"
+		"cancel": "Abbrechen",
+		"search": "Suchen",
+		"signUp": "Registrieren",
+		"signIn": "Anmelden",
+		"continue": "Fortfahren",
+		"logOut": "Abmelden",
+		"copyAddress": "Adresse kopieren",
+		"viewOnExplorer": "Im Explorer anzeigen",
+		"viewReceipt": "Beleg anzeigen",
+		"viewTransaction": "Transaktion anzeigen",
+		"requestTokens": "Token anfordern",
+		"transaction": "Transaktion",
+		"transactions": "Transaktionen",
+		"transactionOn": "am",
+		"self": "selbst",
+		"andMore": "und {{count}} mehr",
+		"sentSuccessfully": "{{symbol}} erfolgreich gesendet",
+		"demoNote": "Dies ist eine Demo, Guthaben werden nicht aktualisiert."
 	},
 	"portfolio": {
 		"title": "Portfolio",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "Vermögenswerte",
 		"hideZeroBalances": "Nullguthaben ausblenden",
 		"showZeroBalances": "Nullguthaben anzeigen",
-		"noActivityYet": "Noch keine Aktivität"
+		"noActivityYet": "Noch keine Aktivität",
+		"noAssetsFound": "Keine Vermögenswerte gefunden"
+	},
+	"landing": {
+		"getStarted": "Loslegen",
+		"exploreDescription": "Erkunden Sie Konten, Token-Guthaben und Transaktionsverlauf auf Tempo",
+		"enterAddress": "Adresse eingeben",
+		"orUsePasskey": "oder anderen Passkey verwenden",
+		"orSignInWithPasskey": "oder mit Passkey anmelden"
+	},
+	"receipt": {
+		"block": "Block",
+		"sender": "Absender",
+		"hash": "Hash",
+		"date": "Datum",
+		"time": "Zeit"
 	}
 }

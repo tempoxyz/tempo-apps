@@ -9,7 +9,8 @@
 		"feeToken": "Gebyr-token",
 		"feeTokenDescription": "Vælg hvilket token der skal bruges til at betale transaktionsgebyrer.",
 		"language": "Sprog",
-		"languageDescription": "Vælg dit foretrukne sprog."
+		"languageDescription": "Vælg dit foretrukne sprog.",
+		"notSet": "Ikke indstillet"
 	},
 	"common": {
 		"active": "Aktiv",
@@ -20,7 +21,24 @@
 		"recipient": "Modtager 0x...",
 		"amount": "Beløb",
 		"max": "MAKS",
-		"cancel": "Annuller"
+		"cancel": "Annuller",
+		"search": "Søg",
+		"signUp": "Tilmeld",
+		"signIn": "Log ind",
+		"continue": "Fortsæt",
+		"logOut": "Log ud",
+		"copyAddress": "Kopier adresse",
+		"viewOnExplorer": "Se på Explorer",
+		"viewReceipt": "Se kvittering",
+		"viewTransaction": "Se transaktion",
+		"requestTokens": "Anmod om tokens",
+		"transaction": "Transaktion",
+		"transactions": "transaktioner",
+		"transactionOn": "den",
+		"self": "selv",
+		"andMore": "og {{count}} mere",
+		"sentSuccessfully": "{{symbol}} sendt succesfuldt",
+		"demoNote": "Dette er en demo, saldi opdateres ikke."
 	},
 	"portfolio": {
 		"title": "Portefølje",
@@ -30,6 +48,21 @@
 		"assetCount_plural": "aktiver",
 		"hideZeroBalances": "Skjul nulsaldi",
 		"showZeroBalances": "Vis nulsaldi",
-		"noActivityYet": "Ingen aktivitet endnu"
+		"noActivityYet": "Ingen aktivitet endnu",
+		"noAssetsFound": "Ingen aktiver fundet"
+	},
+	"landing": {
+		"getStarted": "Kom i gang",
+		"exploreDescription": "Udforsk konti, token-saldi og transaktionshistorik på Tempo",
+		"enterAddress": "Indtast adresse",
+		"orUsePasskey": "eller brug en anden adgangsnøgle",
+		"orSignInWithPasskey": "eller log ind med adgangsnøgle"
+	},
+	"receipt": {
+		"block": "Blok",
+		"sender": "Afsender",
+		"hash": "Hash",
+		"date": "Dato",
+		"time": "Tid"
 	}
 }
