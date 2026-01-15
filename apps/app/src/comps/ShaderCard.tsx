@@ -11,7 +11,7 @@ const AMBIENT_DRIFT_SPEED_X = 0.008
 const AMBIENT_DRIFT_SPEED_Y = 0.006
 const AMBIENT_BASE_POS_X = 30
 const AMBIENT_BASE_POS_Y = 70
-const AMBIENT_PULSE_BASE = 0.5
+const AMBIENT_PULSE_BASE = 0.25
 const AMBIENT_PULSE_AMPLITUDE = 0.08
 const AMBIENT_PULSE_SPEED = 0.02
 
@@ -72,8 +72,21 @@ void main() {
 }
 `
 
-// Shader for rendering the gradient (pass 1)
-const GRADIENT_SHADER = `#version 300 es
+// Generate gradient shader with colors embedded as constants
+function createGradientShaderSource(colors: Array<[number, number, number]>): string {
+	const n = colors.length
+
+	const colorDecls = colors
+		.map((c, i) => `vec3 c${i} = vec3(${c[0].toFixed(3)}, ${c[1].toFixed(3)}, ${c[2].toFixed(3)});`)
+		.join('\n\t')
+
+	let colorSelect = ''
+	for (let i = 0; i < n - 1; i++) {
+		colorSelect += `if (idx == ${i}) return c${i};\n\t`
+	}
+	colorSelect += `return c${n - 1};`
+
+	return `#version 300 es
 precision highp float;
 
 in vec2 v_uv;
@@ -89,26 +102,20 @@ uniform vec2 u_basePos;
 uniform float u_pulseBase;
 uniform float u_pulseAmplitude;
 uniform float u_pulseSpeed;
-uniform vec3 u_colors[8];
-uniform int u_colorCount;
+uniform vec3 u_baseColor;
 
 const float PI = 3.14159265359;
 
 vec3 getGradientColor(float angle) {
 	float normalizedAngle = angle / (2.0 * PI);
 
-	// Hardcoded 3 colors - will use uniforms later
-	vec3 c0 = vec3(0.231, 0.510, 0.965); // blue
-	vec3 c1 = vec3(0.133, 0.773, 0.369); // green
-	vec3 c2 = vec3(0.545, 0.361, 0.965); // purple
+	${colorDecls}
 
-	int idx = int(floor(normalizedAngle * 3.0));
-	idx = idx - (idx / 3) * 3;
-	if (idx < 0) idx += 3;
+	int idx = int(floor(normalizedAngle * ${n}.0));
+	idx = idx - (idx / ${n}) * ${n};
+	if (idx < 0) idx += ${n};
 
-	if (idx == 0) return c0;
-	if (idx == 1) return c1;
-	return c2;
+	${colorSelect}
 }
 
 void main() {
@@ -130,11 +137,13 @@ void main() {
 	vec3 color = getGradientColor(angle);
 
 	float pulse = u_pulseBase + sin(u_time * u_pulseSpeed) * u_pulseAmplitude * intensity;
-	float opacity = pulse + intensity * 0.1;
+	float blend = pulse + intensity * 0.1;
 
-	fragColor = vec4(color, opacity);
+	vec3 finalColor = mix(u_baseColor, color, blend);
+	fragColor = vec4(finalColor, 1.0);
 }
 `
+}
 
 // Blur shader - Gaussian weighted blur with 21 samples
 const BLUR_SHADER = `#version 300 es
@@ -370,7 +379,22 @@ export function ShaderCard({
 		if (!vertexShader) return
 
 		// Create programs
-		const gradientProgram = createProgram(gl, vertexShader, GRADIENT_SHADER)
+		// Firefox has a shader compiler bug with identical colors in if-else chains.
+		// Only apply variation if there are duplicate colors.
+		const colorKeys = colors.map(c => c.join(','))
+		const hasDuplicates = new Set(colorKeys).size < colors.length
+		const variedColors: Array<[number, number, number]> = hasDuplicates
+			? colors.map((c, i) => {
+				const shift = (i - Math.floor(colors.length / 2)) * 0.08
+				return [
+					Math.max(0, Math.min(1, c[0] + shift)),
+					Math.max(0, Math.min(1, c[1] + shift)),
+					Math.max(0, Math.min(1, c[2] + shift)),
+				]
+			})
+			: colors
+		const gradientShaderSource = createGradientShaderSource(variedColors)
+		const gradientProgram = createProgram(gl, vertexShader, gradientShaderSource)
 		const blurProgram = createProgram(gl, vertexShader, BLUR_SHADER)
 		const compositeProgram = createProgram(gl, vertexShader, COMPOSITE_SHADER)
 		if (!gradientProgram || !blurProgram || !compositeProgram) return
@@ -462,15 +486,9 @@ export function ShaderCard({
 			gl.uniform1f(gl.getUniformLocation(gradientProgram, 'u_pulseBase'), AMBIENT_PULSE_BASE)
 			gl.uniform1f(gl.getUniformLocation(gradientProgram, 'u_pulseAmplitude'), AMBIENT_PULSE_AMPLITUDE)
 			gl.uniform1f(gl.getUniformLocation(gradientProgram, 'u_pulseSpeed'), AMBIENT_PULSE_SPEED)
-			gl.uniform1i(gl.getUniformLocation(gradientProgram, 'u_colorCount'), colors.length)
-
-			const colorsFlat = new Float32Array(24)
-			colors.forEach((color, i) => {
-				colorsFlat[i * 3] = color[0]
-				colorsFlat[i * 3 + 1] = color[1]
-				colorsFlat[i * 3 + 2] = color[2]
-			})
-			gl.uniform3fv(gl.getUniformLocation(gradientProgram, 'u_colors'), colorsFlat)
+			const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+			const baseColor = isDark ? [0.098, 0.098, 0.098] : [0.988, 0.988, 0.988] // #191919 / #fcfcfc
+			gl.uniform3f(gl.getUniformLocation(gradientProgram, 'u_baseColor'), baseColor[0], baseColor[1], baseColor[2])
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
@@ -487,7 +505,7 @@ export function ShaderCard({
 			gl.uniform1i(gl.getUniformLocation(blurProgram, 'u_texture'), 0)
 			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_resolution'), currentWidth, currentHeight)
 			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_direction'), 1.0, 0.0)
-			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 250.0)
+			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 350.0)
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
@@ -502,7 +520,7 @@ export function ShaderCard({
 			gl.uniform1i(gl.getUniformLocation(blurProgram, 'u_texture'), 0)
 			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_resolution'), currentWidth, currentHeight)
 			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_direction'), 0.0, 1.0)
-			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 250.0)
+			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 350.0)
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
@@ -517,11 +535,26 @@ export function ShaderCard({
 			gl.uniform1i(gl.getUniformLocation(blurProgram, 'u_texture'), 0)
 			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_resolution'), currentWidth, currentHeight)
 			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_direction'), 1.0, 0.0)
-			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 250.0)
+			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 350.0)
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
-			// Pass 5: Second vertical blur from fb2 to screen
+			// Pass 5: Second vertical blur from fb2 to fb1
+			gl.bindFramebuffer(gl.FRAMEBUFFER, fb1.framebuffer)
+			gl.viewport(0, 0, currentWidth, currentHeight)
+			gl.clearColor(0, 0, 0, 0)
+			gl.clear(gl.COLOR_BUFFER_BIT)
+
+			gl.activeTexture(gl.TEXTURE0)
+			gl.bindTexture(gl.TEXTURE_2D, fb2.texture)
+			gl.uniform1i(gl.getUniformLocation(blurProgram, 'u_texture'), 0)
+			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_resolution'), currentWidth, currentHeight)
+			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_direction'), 0.0, 1.0)
+			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 350.0)
+
+			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+
+			// Pass 6: Composite blurred gradient with wordmark to screen
 			gl.bindFramebuffer(gl.FRAMEBUFFER, null)
 			gl.viewport(0, 0, canvas.width, canvas.height)
 			gl.clearColor(0, 0, 0, 0)
@@ -529,12 +562,27 @@ export function ShaderCard({
 
 			gl.disable(gl.BLEND)
 
+			gl.useProgram(compositeProgram)
+			setupPositionAttrib(compositeProgram)
+
 			gl.activeTexture(gl.TEXTURE0)
-			gl.bindTexture(gl.TEXTURE_2D, fb2.texture)
-			gl.uniform1i(gl.getUniformLocation(blurProgram, 'u_texture'), 0)
-			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_resolution'), canvas.width, canvas.height)
-			gl.uniform2f(gl.getUniformLocation(blurProgram, 'u_direction'), 0.0, 1.0)
-			gl.uniform1f(gl.getUniformLocation(blurProgram, 'u_radius'), 250.0)
+			gl.bindTexture(gl.TEXTURE_2D, fb1.texture)
+			gl.uniform1i(gl.getUniformLocation(compositeProgram, 'u_gradientTexture'), 0)
+
+			gl.activeTexture(gl.TEXTURE1)
+			gl.bindTexture(gl.TEXTURE_2D, wordmarkTexture)
+			gl.uniform1i(gl.getUniformLocation(compositeProgram, 'u_wordmarkTexture'), 1)
+
+			gl.uniform2f(gl.getUniformLocation(compositeProgram, 'u_resolution'), canvas.width, canvas.height)
+			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_fadeIn'), fadeIn)
+			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_rowHeight'), WORDMARK_ROW_HEIGHT)
+			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_rowGap'), WORDMARK_ROW_GAP)
+			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_patternLength'), WORDMARK_PATTERN_LENGTH)
+			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_stretchMin'), WORDMARK_STRETCH_MIN)
+			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_stretchMax'), WORDMARK_STRETCH_MAX)
+			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_opacity'), WORDMARK_OPACITY)
+			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_flowDirection'), WORDMARK_FLOW_DIRECTION)
+			gl.uniform1f(gl.getUniformLocation(compositeProgram, 'u_time'), wordmarkTime)
 
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
 
