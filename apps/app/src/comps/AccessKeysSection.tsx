@@ -728,21 +728,21 @@ function CreateKeyForm({
 				}
 				disabled={isPending}
 				title="Create key"
-				className="size-5 flex items-center justify-center rounded-full bg-accent text-white cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50 shrink-0"
+				className="size-4 flex items-center justify-center rounded-full bg-accent text-white cursor-pointer press-down hover:bg-accent/90 transition-colors disabled:opacity-50 shrink-0"
 			>
 				{isPending ? (
-					<span className="size-2.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+					<span className="size-2 border-2 border-white/30 border-t-white rounded-full animate-spin" />
 				) : (
-					<CheckIcon className="size-2.5" />
+					<CheckIcon className="size-2" />
 				)}
 			</button>
 			<button
 				type="button"
 				onClick={onCancel}
 				title="Cancel"
-				className="size-5 flex items-center justify-center rounded-full bg-base-alt text-secondary hover:text-primary hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+				className="size-4 flex items-center justify-center rounded-full text-tertiary hover:bg-white/10 hover:text-primary transition-colors cursor-pointer shrink-0"
 			>
-				<XIcon className="size-2.5" />
+				<XIcon className="size-2" />
 			</button>
 		</div>
 	)
