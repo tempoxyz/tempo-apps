@@ -1223,6 +1223,7 @@ function HoldingsTable({
 	initialSendTo?: string
 	initialToken?: string
 }) {
+	const { t } = useTranslation()
 	const navigate = useNavigate()
 	const [sendingToken, setSendingToken] = React.useState<string | null>(
 		initialToken ?? null,
@@ -1251,7 +1252,7 @@ function HoldingsTable({
 						<path d="M12 6v12M6 12h12" strokeLinecap="round" />
 					</svg>
 				</div>
-				<p className="text-[13px] text-secondary">No assets found</p>
+				<p className="text-[13px] text-secondary">{t('portfolio.noAssetsFound')}</p>
 			</div>
 		)
 	}
@@ -1772,6 +1773,7 @@ function ActivityRow({
 	viewer: Address.Address
 	transformEvent: (event: KnownEvent) => KnownEvent
 }) {
+	const { t } = useTranslation()
 	const [showModal, setShowModal] = React.useState(false)
 
 	return (
@@ -1782,14 +1784,14 @@ function ActivityRow({
 					seenAs={viewer}
 					transformEvent={transformEvent}
 					limitFilter={preferredEventsFilter}
-					emptyContent="Transaction"
+					emptyContent={t('common.transaction')}
 				/>
 				<a
 					href={`https://explore.mainnet.tempo.xyz/tx/${item.hash}`}
 					target="_blank"
 					rel="noopener noreferrer"
 					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 transition-all opacity-60 group-hover:opacity-100"
-					title="View on Explorer"
+					title={t('common.viewOnExplorer')}
 				>
 					<ExternalLinkIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
 				</a>
@@ -1797,7 +1799,7 @@ function ActivityRow({
 					type="button"
 					onClick={() => setShowModal(true)}
 					className="flex items-center justify-center size-[24px] rounded-md hover:bg-base-alt shrink-0 cursor-pointer transition-all opacity-60 group-hover:opacity-100"
-					title="View receipt"
+					title={t('common.viewReceipt')}
 				>
 					<ReceiptIcon className="size-[14px] text-tertiary hover:text-accent transition-colors" />
 				</button>
@@ -1856,6 +1858,7 @@ function TransactionModal({
 	transformEvent: (event: KnownEvent) => KnownEvent
 	onClose: () => void
 }) {
+	const { t } = useTranslation()
 	const [isVisible, setIsVisible] = React.useState(false)
 	const overlayRef = React.useRef<HTMLDivElement>(null)
 	const contentRef = React.useRef<HTMLDivElement>(null)
@@ -1929,7 +1932,7 @@ function TransactionModal({
 						</div>
 						<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
 							<div className="flex justify-between items-end">
-								<span className="text-tertiary">Block</span>
+								<span className="text-tertiary">{t('receipt.block')}</span>
 								<a
 									href={`https://explore.mainnet.tempo.xyz/block/${blockNumber}`}
 									target="_blank"
@@ -1940,7 +1943,7 @@ function TransactionModal({
 								</a>
 							</div>
 							<div className="flex justify-between items-end gap-4">
-								<span className="text-tertiary shrink-0">Sender</span>
+								<span className="text-tertiary shrink-0">{t('receipt.sender')}</span>
 								<a
 									href={`https://explore.mainnet.tempo.xyz/address/${viewer}`}
 									target="_blank"
@@ -1951,15 +1954,15 @@ function TransactionModal({
 								</a>
 							</div>
 							<div className="flex justify-between items-end">
-								<span className="text-tertiary shrink-0">Hash</span>
+								<span className="text-tertiary shrink-0">{t('receipt.hash')}</span>
 								<span className="text-right">{shortenAddress(hash, 6)}</span>
 							</div>
 							<div className="flex justify-between items-end">
-								<span className="text-tertiary">Date</span>
+								<span className="text-tertiary">{t('receipt.date')}</span>
 								<span className="text-right">{formattedDate}</span>
 							</div>
 							<div className="flex justify-between items-end">
-								<span className="text-tertiary">Time</span>
+								<span className="text-tertiary">{t('receipt.time')}</span>
 								<span className="text-right">{formattedTime}</span>
 							</div>
 						</div>
@@ -1998,7 +2001,7 @@ function TransactionModal({
 						rel="noopener noreferrer"
 						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] glass-button rounded-bl-[16px] rounded-br-[16px] text-tertiary hover:text-primary -mt-px"
 					>
-						<span>View transaction</span>
+						<span>{t('common.viewTransaction')}</span>
 						<span aria-hidden="true">→</span>
 					</a>
 				</div>
