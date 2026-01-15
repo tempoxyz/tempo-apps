@@ -66,6 +66,18 @@ function getKeyManager() {
 	// Override setPublicKey to properly serialize the credential
 	return {
 		...httpKeyManager,
+		async getChallenge() {
+			console.log('[KM] getChallenge')
+			const result = await httpKeyManager.getChallenge?.()
+			console.log('[KM] getChallenge =>', result)
+			return result
+		},
+		async getPublicKey(params: { credential: { id: string } }) {
+			console.log('[KM] getPublicKey', params.credential.id)
+			const result = await httpKeyManager.getPublicKey(params)
+			console.log('[KM] getPublicKey =>', `${result?.slice(0, 20)}...`)
+			return result
+		},
 		async setPublicKey(parameters: {
 			credential: {
 				id: string
@@ -79,6 +91,11 @@ function getKeyManager() {
 			}
 			publicKey: `0x${string}`
 		}) {
+			console.log(
+				'[KM] setPublicKey',
+				parameters.credential.id,
+				`${parameters.publicKey.slice(0, 20)}...`,
+			)
 			const serializedCredential = serializeCredential(
 				parameters.credential as unknown as PublicKeyCredential,
 			)
@@ -92,8 +109,10 @@ function getKeyManager() {
 			})
 			if (!response.ok) {
 				const error = await response.text()
+				console.error('[KM] setPublicKey err', error)
 				throw new Error(`Failed to set public key: ${error}`)
 			}
+			console.log('[KM] setPublicKey ok')
 		},
 	} as unknown as ReturnType<typeof KeyManager.http>
 }
@@ -143,8 +162,45 @@ const getRpcUrls = createIsomorphicFn()
 function getTempoTransport() {
 	const rpcUrls = getRpcUrls()
 
+	// Log only tx-related RPC calls
+	const debugHttp = (url: string) => {
+		const base = http(url, { batch: true })
+		return (cfg: Parameters<typeof base>[0]) => {
+			const t = base(cfg)
+			return {
+				...t,
+				async request(args: { method: string; params?: unknown[] }) {
+					if (args.method.includes('send') || args.method.includes('sign')) {
+						console.log(
+							'[RPC]',
+							args.method,
+							`${args.params?.[0]?.slice?.(0, 40)}...`,
+						)
+					}
+					try {
+						const res = await t.request(args)
+						if (args.method.includes('send') || args.method.includes('sign')) {
+							console.log(
+								'[RPC]',
+								args.method,
+								'ok',
+								typeof res === 'string' ? `${res.slice(0, 20)}...` : res,
+							)
+						}
+						return res
+					} catch (e: unknown) {
+						if (args.method.includes('send') || args.method.includes('sign')) {
+							console.error('[RPC]', args.method, 'err', (e as Error).message)
+						}
+						throw e
+					}
+				},
+			}
+		}
+	}
+
 	return fallback([
-		...rpcUrls.http.map((url: string) => http(url, { batch: true })),
+		...rpcUrls.http.map((url: string) => debugHttp(url)),
 		...rpcUrls.webSocket.map(webSocket),
 	])
 }
