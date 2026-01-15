@@ -481,8 +481,14 @@ const fetchBlockTransactions = createServerFn({ method: 'GET' })
 				? 'https://rpc.presto.tempo.xyz'
 				: 'https://rpc.tempo.xyz'
 
-		const { env } = await import('cloudflare:workers')
-		const auth = env.PRESTO_RPC_AUTH as string | undefined
+		let auth: string | undefined
+		try {
+			const { env } = await import('cloudflare:workers')
+			auth = env.PRESTO_RPC_AUTH as string | undefined
+		} catch {
+			// Not in Cloudflare Workers environment
+		}
+
 		const headers: Record<string, string> = {
 			'Content-Type': 'application/json',
 		}
@@ -1111,7 +1117,6 @@ function AddressView() {
 							activity={activity}
 							address={address}
 							filterBlockNumber={selectedBlockFilter}
-							tokenMetadataMap={tokenMetadataMap}
 						/>
 					</Section>
 
@@ -2515,96 +2520,23 @@ function ActivityList({
 	activity,
 	address,
 	filterBlockNumber,
-	tokenMetadataMap,
 }: {
 	activity: ActivityItem[]
 	address: string
 	filterBlockNumber?: bigint
-	tokenMetadataMap: Map<Address.Address, { decimals: number; symbol: string }>
 }) {
 	const viewer = address as Address.Address
 	const { t } = useTranslation()
 	const [page, setPage] = React.useState(0)
-	const [blockActivity, setBlockActivity] = React.useState<ActivityItem[]>([])
-	const [isLoadingBlock, setIsLoadingBlock] = React.useState(false)
 
-	const userTxHashes = React.useMemo(
-		() => new Set(activity.map((a) => a.hash.toLowerCase())),
-		[activity],
-	)
-
-	// Fetch all transactions from selected block
-	React.useEffect(() => {
-		if (filterBlockNumber === undefined) {
-			setBlockActivity([])
-			return
-		}
-
-		const loadBlockTxs = async () => {
-			setIsLoadingBlock(true)
-			try {
-				const result = await fetchBlockTransactions({
-					data: { blockNumber: filterBlockNumber.toString() },
-				})
-				console.log('[BlockTx] Fetched:', result)
-				if (result.transactions.length > 0) {
-					const hashes = result.transactions
-					const receiptsResult = await fetchTransactionReceipts({
-						data: { hashes },
-					})
-					console.log('[BlockTx] Receipts:', receiptsResult)
-
-					const getTokenMetadata: GetTokenMetadataFn = (tokenAddress) =>
-						tokenMetadataMap.get(tokenAddress)
-
-					const items: ActivityItem[] = []
-					for (const { hash, receipt } of receiptsResult.receipts) {
-						if (!receipt) continue
-						try {
-							const viemReceipt = convertRpcReceiptToViemReceipt(receipt)
-							const events = parseKnownEvents(viemReceipt.logs, getTokenMetadata)
-							items.push({
-								hash,
-								events,
-								timestamp: result.timestamp,
-								blockNumber: filterBlockNumber,
-							})
-						} catch (err) {
-							console.error('[BlockTx] Parse error:', err)
-						}
-					}
-					console.log('[BlockTx] Items:', items)
-					setBlockActivity(items)
-				} else {
-					setBlockActivity([])
-				}
-			} catch (err) {
-				console.error('[BlockTx] Fetch error:', err)
-				setBlockActivity([])
-			} finally {
-				setIsLoadingBlock(false)
-			}
-		}
-
-		loadBlockTxs()
-	}, [filterBlockNumber, tokenMetadataMap])
-
-	const displayActivity = filterBlockNumber !== undefined ? blockActivity : activity
+	const displayActivity = React.useMemo(() => {
+		if (filterBlockNumber === undefined) return activity
+		return activity.filter((item) => item.blockNumber === filterBlockNumber)
+	}, [activity, filterBlockNumber])
 
 	React.useEffect(() => {
 		setPage(0)
 	}, [filterBlockNumber])
-
-	if (isLoadingBlock && filterBlockNumber !== undefined) {
-		return (
-			<div className="flex flex-col items-center justify-center py-6 gap-2">
-				<div className="size-10 rounded-full bg-base-alt flex items-center justify-center animate-pulse">
-					<ReceiptIcon className="size-5 text-tertiary" />
-				</div>
-				<p className="text-[13px] text-secondary">Loading block transactions...</p>
-			</div>
-		)
-	}
 
 	if (displayActivity.length === 0) {
 		return (
@@ -2648,7 +2580,7 @@ function ActivityList({
 					item={item}
 					viewer={viewer}
 					transformEvent={transformEvent}
-					isHighlighted={filterBlockNumber !== undefined && userTxHashes.has(item.hash.toLowerCase())}
+					isHighlighted={filterBlockNumber !== undefined}
 				/>
 			))}
 			{totalPages > 1 && (
