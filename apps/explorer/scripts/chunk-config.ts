@@ -36,4 +36,3 @@ export function getVendorChunk(id: string): string | undefined {
 	}
 	return undefined
 }
-

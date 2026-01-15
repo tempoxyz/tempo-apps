@@ -12,24 +12,18 @@ describe('extractPackageName', () => {
 	})
 
 	it('extracts regular package names', () => {
-		expect(
-			extractPackageName('/node_modules/react/index.js'),
-		).toBe('react')
-		expect(
-			extractPackageName('/node_modules/viem/dist/index.js'),
-		).toBe('viem')
-		expect(
-			extractPackageName('/app/node_modules/lodash/get.js'),
-		).toBe('lodash')
+		expect(extractPackageName('/node_modules/react/index.js')).toBe('react')
+		expect(extractPackageName('/node_modules/viem/dist/index.js')).toBe('viem')
+		expect(extractPackageName('/app/node_modules/lodash/get.js')).toBe('lodash')
 	})
 
 	it('extracts scoped package names', () => {
 		expect(
 			extractPackageName('/node_modules/@tanstack/react-query/dist/index.js'),
 		).toBe('@tanstack/react-query')
-		expect(
-			extractPackageName('/node_modules/@types/react/index.d.ts'),
-		).toBe('@types/react')
+		expect(extractPackageName('/node_modules/@types/react/index.d.ts')).toBe(
+			'@types/react',
+		)
 	})
 
 	it('handles nested node_modules (hoisted deps)', () => {
@@ -105,4 +99,3 @@ describe('VENDOR_CHUNKS config', () => {
 		expect(VENDOR_CHUNKS.web3).toEqual(['viem', 'wagmi', 'ox', 'abitype'])
 	})
 })
-
