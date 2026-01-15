@@ -511,7 +511,11 @@ const fetchBlockWithReceipts = createServerFn({ method: 'GET' })
 				}),
 			})
 			if (!blockRes.ok) {
-				return { receipts: [] as RpcTransactionReceipt[], timestamp: undefined, error: `HTTP ${blockRes.status}` }
+				return {
+					receipts: [] as RpcTransactionReceipt[],
+					timestamp: undefined,
+					error: `HTTP ${blockRes.status}`,
+				}
 			}
 			const blockJson = (await blockRes.json()) as {
 				result?: {
@@ -519,7 +523,8 @@ const fetchBlockWithReceipts = createServerFn({ method: 'GET' })
 					timestamp?: string
 				}
 			}
-			const txHashes = blockJson.result?.transactions?.map((tx) => tx.hash) ?? []
+			const txHashes =
+				blockJson.result?.transactions?.map((tx) => tx.hash) ?? []
 			const timestamp = blockJson.result?.timestamp
 				? Number.parseInt(blockJson.result.timestamp, 16) * 1000
 				: undefined
@@ -555,7 +560,11 @@ const fetchBlockWithReceipts = createServerFn({ method: 'GET' })
 
 			return { receipts, timestamp, error: null }
 		} catch (e) {
-			return { receipts: [] as RpcTransactionReceipt[], timestamp: undefined, error: String(e) }
+			return {
+				receipts: [] as RpcTransactionReceipt[],
+				timestamp: undefined,
+				error: String(e),
+			}
 		}
 	})
 
@@ -1635,16 +1644,32 @@ function BlockTimeline({
 	selectedBlock: bigint | undefined
 	onSelectBlock: (block: bigint | undefined) => void
 }) {
+	const { t } = useTranslation()
 	const scrollRef = React.useRef<HTMLDivElement>(null)
+	const containerRef = React.useRef<HTMLDivElement>(null)
 	const [blockTxCounts, setBlockTxCounts] = React.useState<Map<string, number>>(
 		new Map(),
 	)
 	const [displayBlock, setDisplayBlock] = React.useState<bigint | null>(null)
 	const [isPaused, setIsPaused] = React.useState(false)
+	const [focusedBlockIndex, setFocusedBlockIndex] = React.useState<
+		number | null
+	>(null)
+	const [hoveredBlock, setHoveredBlock] = React.useState<{
+		blockNumber: bigint
+		txCount: number
+		x: number
+		y: number
+	} | null>(null)
+	const [dragState, setDragState] = React.useState<{
+		startBlock: bigint
+		endBlock: bigint
+	} | null>(null)
 	const lastFetchedBlockRef = React.useRef<bigint | null>(null)
 	const pauseTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
 		null,
 	)
+	const prefetchedBlocksRef = React.useRef<Set<string>>(new Set())
 
 	const userBlockNumbers = React.useMemo(() => {
 		const blocks = new Set<bigint>()
@@ -1722,6 +1747,52 @@ function BlockTimeline({
 		fetchBlocks()
 	}, [currentBlock])
 
+	// Pre-fetch adjacent blocks on hover
+	const prefetchAdjacentBlocks = React.useCallback(
+		async (blockNumber: bigint) => {
+			const blocksToCheck = [
+				blockNumber - 2n,
+				blockNumber - 1n,
+				blockNumber + 1n,
+				blockNumber + 2n,
+			]
+			const missingBlocks = blocksToCheck.filter(
+				(b) =>
+					b > 0n &&
+					!blockTxCounts.has(b.toString()) &&
+					!prefetchedBlocksRef.current.has(b.toString()),
+			)
+
+			if (missingBlocks.length === 0) return
+
+			for (const b of missingBlocks) {
+				prefetchedBlocksRef.current.add(b.toString())
+			}
+
+			try {
+				const maxBlock = missingBlocks.reduce((a, b) => (a > b ? a : b))
+				const result = await fetchBlockData({
+					data: {
+						fromBlock: `0x${maxBlock.toString(16)}`,
+						count: 5,
+					},
+				})
+				if (result.blocks.length > 0) {
+					setBlockTxCounts((prev) => {
+						const next = new Map(prev)
+						for (const b of result.blocks) {
+							next.set(BigInt(b.blockNumber).toString(), b.txCount)
+						}
+						return next
+					})
+				}
+			} catch {
+				// Ignore prefetch errors
+			}
+		},
+		[blockTxCounts],
+	)
+
 	const handleScroll = React.useCallback(() => {
 		setIsPaused(true)
 		if (pauseTimeoutRef.current) {
@@ -1793,6 +1864,156 @@ function BlockTimeline({
 		}
 	}
 
+	// Keyboard navigation
+	const handleKeyDown = React.useCallback(
+		(e: React.KeyboardEvent) => {
+			if (blocks.length === 0) return
+
+			const currentIndex =
+				focusedBlockIndex ??
+				blocks.findIndex((b) => b.blockNumber === selectedBlock) ??
+				blocks.findIndex(
+					(b) =>
+						!b.isPlaceholder &&
+						b.blockNumber === (displayBlock ?? currentBlock),
+				)
+
+			let newIndex =
+				currentIndex === -1 ? Math.floor(blocks.length / 2) : currentIndex
+
+			switch (e.key) {
+				case 'ArrowLeft':
+					e.preventDefault()
+					newIndex = Math.max(0, newIndex - 1)
+					while (newIndex > 0 && blocks[newIndex]?.isPlaceholder) {
+						newIndex--
+					}
+					break
+				case 'ArrowRight':
+					e.preventDefault()
+					newIndex = Math.min(blocks.length - 1, newIndex + 1)
+					while (
+						newIndex < blocks.length - 1 &&
+						blocks[newIndex]?.isPlaceholder
+					) {
+						newIndex++
+					}
+					if (blocks[newIndex]?.isPlaceholder) {
+						newIndex = currentIndex
+					}
+					break
+				case 'Enter':
+				case ' ':
+					e.preventDefault()
+					if (focusedBlockIndex !== null && blocks[focusedBlockIndex]) {
+						const block = blocks[focusedBlockIndex]
+						if (!block.isPlaceholder) {
+							handleBlockClick(block.blockNumber, block.isPlaceholder)
+						}
+					}
+					return
+				case 'Escape':
+					e.preventDefault()
+					onSelectBlock(undefined)
+					setFocusedBlockIndex(null)
+					return
+				case 'Home':
+					e.preventDefault()
+					newIndex = 0
+					break
+				case 'End':
+					e.preventDefault()
+					newIndex = blocks.findLastIndex((b) => !b.isPlaceholder)
+					break
+				default:
+					return
+			}
+
+			if (
+				newIndex !== currentIndex &&
+				blocks[newIndex] &&
+				!blocks[newIndex].isPlaceholder
+			) {
+				setFocusedBlockIndex(newIndex)
+				// Pre-fetch when navigating
+				prefetchAdjacentBlocks(blocks[newIndex].blockNumber)
+			}
+		},
+		[
+			blocks,
+			focusedBlockIndex,
+			selectedBlock,
+			displayBlock,
+			currentBlock,
+			onSelectBlock,
+			prefetchAdjacentBlocks,
+		],
+	)
+
+	// Drag selection handlers
+	const handleMouseDown = (blockNumber: bigint, isPlaceholder: boolean) => {
+		if (isPlaceholder) return
+		setDragState({ startBlock: blockNumber, endBlock: blockNumber })
+	}
+
+	const handleMouseEnter = (
+		blockNumber: bigint,
+		isPlaceholder: boolean,
+		e: React.MouseEvent,
+	) => {
+		if (!isPlaceholder) {
+			const rect = e.currentTarget.getBoundingClientRect()
+			setHoveredBlock({
+				blockNumber,
+				txCount: blockTxCounts.get(blockNumber.toString()) ?? 0,
+				x: rect.left + rect.width / 2,
+				y: rect.top,
+			})
+			// Pre-fetch adjacent blocks
+			prefetchAdjacentBlocks(blockNumber)
+		}
+
+		if (dragState && !isPlaceholder) {
+			setDragState((prev) => (prev ? { ...prev, endBlock: blockNumber } : null))
+		}
+	}
+
+	const handleMouseUp = () => {
+		if (dragState) {
+			const start =
+				dragState.startBlock < dragState.endBlock
+					? dragState.startBlock
+					: dragState.endBlock
+			const end =
+				dragState.startBlock < dragState.endBlock
+					? dragState.endBlock
+					: dragState.startBlock
+
+			if (start === end) {
+				// Single block click
+				handleBlockClick(start, false)
+			} else {
+				// Range selection - select the start block for now
+				// Could extend to support range in the future
+				onSelectBlock(start)
+			}
+			setDragState(null)
+		}
+	}
+
+	const isInDragRange = (blockNumber: bigint) => {
+		if (!dragState) return false
+		const start =
+			dragState.startBlock < dragState.endBlock
+				? dragState.startBlock
+				: dragState.endBlock
+		const end =
+			dragState.startBlock < dragState.endBlock
+				? dragState.endBlock
+				: dragState.startBlock
+		return blockNumber >= start && blockNumber <= end
+	}
+
 	const getBlockStyle = (
 		txCount: number,
 		_isSelected: boolean,
@@ -1835,52 +2056,109 @@ function BlockTimeline({
 	const shownBlock = displayBlock ?? currentBlock
 
 	return (
-		<div className="flex flex-col gap-1.5 mt-2 mb-3">
+		<div
+			ref={containerRef}
+			className="flex flex-col gap-1.5 mt-2 mb-3"
+			onMouseUp={handleMouseUp}
+			onMouseLeave={() => {
+				setHoveredBlock(null)
+				if (dragState) {
+					handleMouseUp()
+				}
+			}}
+		>
 			<div
 				ref={scrollRef}
 				onScroll={handleScroll}
-				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar py-1.5 -mx-2 px-2"
+				onKeyDown={handleKeyDown}
+				tabIndex={0}
+				role="listbox"
+				aria-label={t('portfolio.blockTimeline') || 'Block timeline'}
+				aria-activedescendant={
+					focusedBlockIndex !== null
+						? `block-${blocks[focusedBlockIndex]?.blockNumber.toString()}`
+						: undefined
+				}
+				className="flex items-center justify-center gap-[2px] w-full overflow-x-auto no-scrollbar py-1.5 -mx-2 px-2 focus-ring rounded-sm"
 			>
-				{blocks.map((block) => {
+				{blocks.map((block, index) => {
 					const isSelected = selectedBlock === block.blockNumber
 					const isCurrent =
 						block.blockNumber === shownBlock && !block.isPlaceholder
+					const isFocused = focusedBlockIndex === index
+					const inDragRange = isInDragRange(block.blockNumber)
 					return (
 						<button
 							key={block.blockNumber.toString()}
+							id={`block-${block.blockNumber.toString()}`}
 							type="button"
-							onClick={() =>
-								handleBlockClick(block.blockNumber, block.isPlaceholder)
+							role="option"
+							aria-selected={isSelected}
+							onMouseDown={() =>
+								handleMouseDown(block.blockNumber, block.isPlaceholder)
 							}
+							onMouseEnter={(e) =>
+								handleMouseEnter(block.blockNumber, block.isPlaceholder, e)
+							}
+							onMouseLeave={() => setHoveredBlock(null)}
 							disabled={block.isPlaceholder}
 							className={cx(
 								'shrink-0 size-3 rounded-sm transition-colors duration-75',
-								getBlockStyle(
-									block.txCount,
-									isSelected,
-									isCurrent,
-									block.hasUserActivity,
-									block.isPlaceholder,
-								),
-								isCurrent && 'ring-2 ring-white/50',
+								inDragRange && !block.isPlaceholder
+									? 'block-range-selected'
+									: getBlockStyle(
+											block.txCount,
+											isSelected,
+											isCurrent,
+											block.hasUserActivity,
+											block.isPlaceholder,
+										),
+								isCurrent &&
+									!isSelected &&
+									'ring-2 ring-white/50 animate-block-pulse',
 								isSelected && 'ring-2 ring-accent',
+								isFocused && !isSelected && 'ring-2 ring-accent/50',
 								block.hasUserActivity &&
 									!isSelected &&
 									!isCurrent &&
+									!isFocused &&
 									'ring-1 ring-green-500/60',
 								block.isPlaceholder
 									? 'cursor-default'
 									: 'hover:opacity-80 cursor-pointer',
 							)}
-							title={
-								block.isPlaceholder
-									? undefined
-									: `Block ${block.blockNumber.toString()}${block.txCount > 0 ? ` • ${block.txCount} tx${block.txCount > 1 ? 's' : ''}` : ''}`
-							}
 						/>
 					)
 				})}
 			</div>
+
+			{/* Hover tooltip */}
+			{hoveredBlock &&
+				createPortal(
+					<div
+						className="fixed z-[100] px-2 py-1 text-[11px] text-white bg-gray-900 rounded-md shadow-lg whitespace-nowrap pointer-events-none border border-gray-700"
+						style={{
+							left: hoveredBlock.x,
+							top: hoveredBlock.y - 6,
+							transform: 'translate(-50%, -100%)',
+						}}
+					>
+						<span className="font-medium font-mono">
+							#{hoveredBlock.blockNumber.toString()}
+						</span>
+						{hoveredBlock.txCount > 0 && (
+							<>
+								{' • '}
+								<span className="text-emerald-400">
+									{hoveredBlock.txCount} tx
+									{hoveredBlock.txCount !== 1 ? 's' : ''}
+								</span>
+							</>
+						)}
+					</div>,
+					document.body,
+				)}
+
 			<div className="flex items-center justify-center">
 				<button
 					type="button"
@@ -2912,7 +3190,9 @@ function ActivityRow({
 			<div
 				className={cx(
 					'group flex items-center gap-2 px-3 h-[48px] transition-all',
-					isHighlighted ? 'bg-accent/10 -mx-3 px-6' : 'rounded-xl hover:glass-thin',
+					isHighlighted
+						? 'bg-accent/10 -mx-3 px-6'
+						: 'rounded-xl hover:glass-thin',
 				)}
 			>
 				{isHighlighted && (
