@@ -1,0 +1,20 @@
+{
+	"name": "paymentauth-protocol",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write .",
+		"check:types": "tsgo --project tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"viem": "catalog:"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:",
+		"typescript": "catalog:"
+	}
+}

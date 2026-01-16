@@ -1,0 +1,42 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "paymentauth-tetris",
+	"compatibility_date": "2025-01-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "src/index.ts",
+	"keep_vars": true,
+	"workers_dev": true,
+	"assets": {
+		"directory": "dist"
+	},
+	"kv_namespaces": [
+		{
+			"binding": "GAME_STATE",
+			"id": "PLACEHOLDER_KV_ID",
+			"preview_id": "PLACEHOLDER_KV_ID"
+		},
+		{
+			"binding": "KEY_STORE",
+			"id": "PLACEHOLDER_KEY_STORE_ID",
+			"preview_id": "PLACEHOLDER_KEY_STORE_ID"
+		}
+	],
+	"vars": {
+		// Destination address for payments (test wallet)
+		"DESTINATION_ADDRESS": "0x8b43944C33489Bdf4b7CaD67045741Cd23e2f2c2",
+		// Tempo RPC URL
+		"TEMPO_RPC_URL": "https://rpc.moderato.tempo.xyz",
+		// Fee token address (default: AlphaUSD)
+		"FEE_TOKEN_ADDRESS": "0x20c0000000000000000000000000000000000001",
+		// Payment amount in base units (default: 10000 = 0.01 with 6 decimals)
+		"PAYMENT_AMOUNT": "10000",
+		// Challenge validity in seconds (default: 300 = 5 minutes)
+		"CHALLENGE_VALIDITY_SECONDS": "300",
+		// Number of emulator cycles per move
+		"CYCLES_PER_MOVE": "100"
+	}
+	// Secrets (set via `wrangler secret put`):
+	//   FEE_PAYER_PRIVATE_KEY - Private key for the fee payer wallet (0x-prefixed)
+	//   TEMPO_RPC_USERNAME    - Optional: RPC username for authenticated endpoints
+	//   TEMPO_RPC_PASSWORD    - Optional: RPC password for authenticated endpoints
+}
