@@ -10,6 +10,7 @@ import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 import { visualizer } from 'rollup-plugin-visualizer'
 import Sonda from 'sonda/vite'
+import { getVendorChunk } from './scripts/chunk-config'
 
 const [, , , ...args] = process.argv
 
@@ -92,6 +93,21 @@ export default defineConfig((config) => {
 							config.mode === 'production'
 								? { dropConsole: true, dropDebugger: true }
 								: undefined,
+					},
+					manualChunks: (id, { getModuleInfo }) => {
+						// Only apply vendor chunking to client builds to avoid bundling
+						// browser-specific code (window, document, etc.) into the server bundle
+						const moduleInfo = getModuleInfo(id)
+						const isClientBuild =
+							id.includes('index.client') ||
+							id.includes('/client/') ||
+							moduleInfo?.importers.some(
+								(importer) =>
+									importer.includes('index.client') ||
+									importer.includes('/client/'),
+							)
+
+						return getVendorChunk(id, isClientBuild)
 					},
 				},
 			},
