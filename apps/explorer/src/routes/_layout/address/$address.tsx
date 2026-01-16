@@ -10,9 +10,11 @@ import {
 	useNavigate,
 	useRouter,
 } from '@tanstack/react-router'
-import { Address, Hex } from 'ox'
+import * as Address from 'ox/Address'
+import * as Hex from 'ox/Hex'
 import * as React from 'react'
-import { formatUnits, isHash, type RpcTransaction as Transaction } from 'viem'
+import type { RpcTransaction as Transaction } from 'viem'
+import { formatUnits, isHash } from 'viem'
 import { useBlock, useChainId, usePublicClient } from 'wagmi'
 import { type GetBlockReturnType, getBlock, getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
@@ -88,7 +90,10 @@ async function fetchAddressBalances(address: Address.Address) {
 		`${requestUrl.origin}/api/address/balances/${address}`,
 		{ headers: { 'Content-Type': 'application/json' } },
 	)
-	return response.json() as Promise<{ balances: TokenBalance[]; error?: string }>
+	return response.json() as Promise<{
+		balances: TokenBalance[]
+		error?: string
+	}>
 }
 
 async function fetchAddressTotalCount(address: Address.Address) {
@@ -899,10 +904,7 @@ function SectionsWrapper(props: {
 								}}
 								items={(mode) =>
 									assetsData
-										.slice(
-											(page - 1) * ASSETS_PER_PAGE,
-											page * ASSETS_PER_PAGE,
-										)
+										.slice((page - 1) * ASSETS_PER_PAGE, page * ASSETS_PER_PAGE)
 										.map((asset) => ({
 											className: 'text-[13px]',
 											cells:
@@ -1108,7 +1110,8 @@ function AssetAmount(props: { asset: AssetData }) {
 
 function AssetValue(props: { asset: AssetData }) {
 	const { asset } = props
-	if (asset.metadata?.currency !== 'USD') return <span className="text-tertiary">—</span>
+	if (asset.metadata?.currency !== 'USD')
+		return <span className="text-tertiary">—</span>
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
 		return <span className="text-tertiary">…</span>
 	return (

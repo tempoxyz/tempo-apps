@@ -1,4 +1,6 @@
-import { Hash, Hex, Value } from 'ox'
+import * as Hash from 'ox/Hash'
+import * as Hex from 'ox/Hex'
+import * as Value from 'ox/Value'
 
 export namespace HexFormatter {
 	export function truncate(value: Hex.Hex, chars = 4) {

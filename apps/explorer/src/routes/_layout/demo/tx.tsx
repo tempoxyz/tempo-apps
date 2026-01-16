@@ -1,5 +1,5 @@
 import { createFileRoute, notFound } from '@tanstack/react-router'
-import { Hex } from 'ox'
+import * as Hex from 'ox/Hex'
 import {
 	encodeAbiParameters,
 	encodeEventTopics,

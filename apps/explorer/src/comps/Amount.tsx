@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
-import { type Address, Value } from 'ox'
+import type { Address } from 'ox'
+import * as Value from 'ox/Value'
 import { maxUint256 } from 'viem'
 import { Abis } from 'viem/tempo'
 import { useReadContracts } from 'wagmi'

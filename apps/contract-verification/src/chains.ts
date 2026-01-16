@@ -8,7 +8,10 @@ const tempoPresto = {
 	id: 4217,
 	name: 'Tempo Mainnet',
 	blockExplorers: {
-		default: { name: 'Tempo Explorer', url: 'https://explore.mainnet.tempo.xyz' },
+		default: {
+			name: 'Tempo Explorer',
+			url: 'https://explore.mainnet.tempo.xyz',
+		},
 	},
 	rpcUrls: {
 		default: {

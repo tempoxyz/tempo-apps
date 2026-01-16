@@ -69,7 +69,7 @@ export async function getVyperPath(requestedVersion: string) {
 	await NodeFS.mkdir(VYPER_CACHE_DIR, { recursive: true })
 
 	// Sanitize the version string
-	// Vyper versions can be: 0.3.10, 0.4.0, 0.4.1, v0.3.10, 0.3.10+commit.XXXXXXX
+	// Vyper versions can be: 0.3.10, v0.3.10, 0.3.10+commit.XXXXXXX
 	const cleaned = requestedVersion.replace(/^v/, '')
 	const match = cleaned.match(/^(\d+\.\d+\.\d+)(?:\+commit\.[0-9a-f]+)?$/)
 	if (!match) throw new Error(`Unsupported Vyper version: ${requestedVersion}`)

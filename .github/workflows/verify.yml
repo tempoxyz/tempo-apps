@@ -22,4 +22,3 @@ jobs:
 
       - name: Check code and types
         run: pnpm gen:types && pnpm check
-

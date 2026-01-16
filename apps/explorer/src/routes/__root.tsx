@@ -11,9 +11,11 @@ import {
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import * as React from 'react'
 import { deserialize, type State, WagmiProvider } from 'wagmi'
+import { AddressHighlightProvider } from '#comps/AddressHighlight'
 import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
+import { ThemeProvider } from '#lib/theme'
 import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
 import {
@@ -273,7 +275,11 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<WagmiProvider config={config} initialState={wagmiState}>
 					<QueryClientProvider client={queryClient}>
 						<BreadcrumbsProvider>
-							<IntroSeenProvider>{children}</IntroSeenProvider>
+							<AddressHighlightProvider>
+                <IntroSeenProvider>
+                  <ThemeProvider>{children}</ThemeProvider>
+                </IntroSeenProvider>
+							</AddressHighlightProvider>
 						</BreadcrumbsProvider>
 						{import.meta.env.DEV && (
 							<TanStackDevtools

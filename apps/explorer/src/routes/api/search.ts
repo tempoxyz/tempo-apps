@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as IDX from 'idxs'
-import { Address, Hex } from 'ox'
+import * as Address from 'ox/Address'
+import * as Hex from 'ox/Hex'
 import { getChainId } from 'wagmi/actions'
 import tokensIndex31318 from '#data/tokens-index-31318.json' with {
 	type: 'json',

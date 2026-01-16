@@ -77,11 +77,11 @@ lookupRoute.get('/all-chains/:address', async (context) => {
 					: runtimeMatchStatus || creationMatchStatus
 
 			return {
-				matchId: row.matchId,
+				matchId: String(row.matchId),
 				match: matchStatus,
 				creationMatch: creationMatchStatus,
 				runtimeMatch: runtimeMatchStatus,
-				chainId: row.chainId,
+				chainId: String(row.chainId),
 				address: Hex.fromBytes(new Uint8Array(row.address as ArrayBuffer)),
 				verifiedAt: row.verifiedAt,
 			}
@@ -218,11 +218,11 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 
 		// Minimal response (default)
 		const minimalResponse = {
-			matchId: row.matchId,
+			matchId: String(row.matchId),
 			match: matchStatus,
 			creationMatch: creationMatchStatus,
 			runtimeMatch: runtimeMatchStatus,
-			chainId: row.chainId,
+			chainId: String(row.chainId),
 			address: formattedAddress,
 			verifiedAt: row.verifiedAt,
 		}
@@ -423,7 +423,7 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 			name: row.contractName,
 			fullyQualifiedName: row.fullyQualifiedName,
 			compiler: row.compiler,
-			version: row.version,
+			compilerVersion: row.version,
 			language: row.language,
 			compilerSettings: JSON.parse(row.compilerSettings),
 			runtimeMetadataMatch: row.runtimeMetadataMatch ? 'exact_match' : 'match',
@@ -458,7 +458,7 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 				: null,
 			compilation: {
 				compiler: row.compiler,
-				version: row.version,
+				compilerVersion: row.version,
 				language: row.language,
 				name: row.contractName,
 				fullyQualifiedName: row.fullyQualifiedName,
@@ -579,11 +579,11 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 					: 'match'
 
 			return {
-				matchId: row.matchId,
+				matchId: String(row.matchId),
 				match: matchStatus,
 				creationMatch: creationMatchStatus,
 				runtimeMatch: runtimeMatchStatus,
-				chainId: row.chainId,
+				chainId: String(row.chainId),
 				address: Hex.fromBytes(new Uint8Array(row.address as ArrayBuffer)),
 				verifiedAt: row.verifiedAt,
 			}
