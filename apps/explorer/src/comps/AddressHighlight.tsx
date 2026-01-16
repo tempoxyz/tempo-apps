@@ -10,9 +10,7 @@ interface AddressHighlightContextValue {
 const AddressHighlightContext =
 	React.createContext<AddressHighlightContextValue | null>(null)
 
-export function AddressHighlightProvider(props: {
-	children: React.ReactNode
-}) {
+export function AddressHighlightProvider(props: { children: React.ReactNode }) {
 	const [highlightedAddress, setHighlightedAddress] =
 		React.useState<Address.Address | null>(null)
 
