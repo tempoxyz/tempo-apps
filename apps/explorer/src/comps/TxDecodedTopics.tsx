@@ -1,13 +1,7 @@
 import type { AbiEvent } from 'abitype'
 import { useMemo, useState } from 'react'
-import {
-	type Abi,
-	decodeEventLog,
-	getAbiItem,
-	type Hex,
-	type Log,
-	parseAbiItem,
-} from 'viem'
+import { decodeEventLog, getAbiItem, parseAbiItem } from 'viem'
+import type { Abi, Hex, Log } from 'viem'
 import { Abis } from 'viem/tempo'
 import { decodeEventLog_guessed, formatAbiValue } from '#lib/domain/contracts'
 import { useCopy } from '#lib/hooks'

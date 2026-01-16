@@ -73,7 +73,9 @@ app.use(
 		},
 	}),
 )
-app.use('*', timeout(30_000)) // 30 seconds
+app.use('*', timeout(30_000)) // 30 seconds default
+app.use('/verify/*', timeout(300_000)) // 5 minutes for legacy verify routes
+app.use('/v2/verify/*', timeout(300_000)) // 5 minutes for v2 verify routes
 app.use(prettyJSON())
 app.use(async (context, next) => {
 	if (context.env.NODE_ENV !== 'development') return await next()

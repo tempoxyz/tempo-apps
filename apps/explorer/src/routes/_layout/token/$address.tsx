@@ -8,7 +8,7 @@ import {
 	useNavigate,
 	useRouter,
 } from '@tanstack/react-router'
-import { Address } from 'ox'
+import * as Address from 'ox/Address'
 import * as React from 'react'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'

@@ -1,13 +1,9 @@
 import { Link } from '@tanstack/react-router'
-import { Address } from 'ox'
+import * as Address from 'ox/Address'
 import { getSignature } from 'ox/AbiItem'
 import * as React from 'react'
-import {
-	type Abi,
-	type AbiFunction,
-	decodeFunctionResult,
-	encodeFunctionData,
-} from 'viem'
+import { decodeFunctionResult, encodeFunctionData } from 'viem'
+import type { Abi, AbiFunction } from 'viem'
 import { useCall, useReadContract } from 'wagmi'
 import { cx } from '#lib/css'
 import { ellipsis } from '#lib/chars'

@@ -1,6 +1,6 @@
 import * as IDX from 'idxs'
-import type { Address } from 'ox'
-import { Value } from 'ox'
+import type * as Address from 'ox/Address'
+import * as Value from 'ox/Value'
 import { zeroAddress } from 'viem'
 import { Abis } from 'viem/tempo'
 import type { Config } from 'wagmi'
