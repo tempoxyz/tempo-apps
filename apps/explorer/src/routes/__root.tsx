@@ -276,9 +276,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					<QueryClientProvider client={queryClient}>
 						<BreadcrumbsProvider>
 							<AddressHighlightProvider>
-                <IntroSeenProvider>
-                  <ThemeProvider>{children}</ThemeProvider>
-                </IntroSeenProvider>
+								<IntroSeenProvider>
+									<ThemeProvider>{children}</ThemeProvider>
+								</IntroSeenProvider>
 							</AddressHighlightProvider>
 						</BreadcrumbsProvider>
 						{import.meta.env.DEV && (

@@ -36,49 +36,81 @@ describe('extractPackageName', () => {
 })
 
 describe('getVendorChunk', () => {
-	it('returns undefined for non-vendor modules', () => {
-		expect(getVendorChunk('/src/App.tsx')).toBeUndefined()
-		expect(getVendorChunk('./components/Button.tsx')).toBeUndefined()
+	describe('server builds (isClientBuild = false)', () => {
+		it('returns undefined for all modules to avoid browser code in server', () => {
+			expect(getVendorChunk('/src/App.tsx', false)).toBeUndefined()
+			expect(
+				getVendorChunk('/node_modules/react/index.js', false),
+			).toBeUndefined()
+			expect(
+				getVendorChunk(
+					'/node_modules/@tanstack/react-query/dist/index.js',
+					false,
+				),
+			).toBeUndefined()
+		})
 	})
 
-	it('returns undefined for unlisted vendor packages', () => {
-		expect(getVendorChunk('/node_modules/lodash/index.js')).toBeUndefined()
-		expect(getVendorChunk('/node_modules/zod/index.js')).toBeUndefined()
-	})
+	describe('client builds (isClientBuild = true)', () => {
+		it('returns undefined for non-vendor modules', () => {
+			expect(getVendorChunk('/src/App.tsx', true)).toBeUndefined()
+			expect(getVendorChunk('./components/Button.tsx', true)).toBeUndefined()
+		})
 
-	it('matches react packages', () => {
-		expect(getVendorChunk('/node_modules/react/index.js')).toBe('vendor-react')
-		expect(getVendorChunk('/node_modules/react-dom/client.js')).toBe(
-			'vendor-react',
-		)
-		expect(getVendorChunk('/node_modules/scheduler/index.js')).toBe(
-			'vendor-react',
-		)
-	})
+		it('returns undefined for unlisted vendor packages', () => {
+			expect(
+				getVendorChunk('/node_modules/lodash/index.js', true),
+			).toBeUndefined()
+			expect(getVendorChunk('/node_modules/zod/index.js', true)).toBeUndefined()
+		})
 
-	it('matches tanstack packages by prefix', () => {
-		expect(
-			getVendorChunk('/node_modules/@tanstack/react-query/dist/index.js'),
-		).toBe('vendor-tanstack')
-		expect(
-			getVendorChunk('/node_modules/@tanstack/react-router/dist/index.js'),
-		).toBe('vendor-tanstack')
-		expect(
-			getVendorChunk('/node_modules/@tanstack/query-core/dist/index.js'),
-		).toBe('vendor-tanstack')
-	})
+		it('matches react packages', () => {
+			expect(getVendorChunk('/node_modules/react/index.js', true)).toBe(
+				'vendor-react',
+			)
+			expect(getVendorChunk('/node_modules/react-dom/client.js', true)).toBe(
+				'vendor-react',
+			)
+			expect(getVendorChunk('/node_modules/scheduler/index.js', true)).toBe(
+				'vendor-react',
+			)
+		})
 
-	it('matches web3 packages', () => {
-		expect(getVendorChunk('/node_modules/viem/dist/index.js')).toBe(
-			'vendor-web3',
-		)
-		expect(getVendorChunk('/node_modules/wagmi/dist/index.js')).toBe(
-			'vendor-web3',
-		)
-		expect(getVendorChunk('/node_modules/ox/dist/index.js')).toBe('vendor-web3')
-		expect(getVendorChunk('/node_modules/abitype/dist/index.js')).toBe(
-			'vendor-web3',
-		)
+		it('matches tanstack packages by prefix', () => {
+			expect(
+				getVendorChunk(
+					'/node_modules/@tanstack/react-query/dist/index.js',
+					true,
+				),
+			).toBe('vendor-tanstack')
+			expect(
+				getVendorChunk(
+					'/node_modules/@tanstack/react-router/dist/index.js',
+					true,
+				),
+			).toBe('vendor-tanstack')
+			expect(
+				getVendorChunk(
+					'/node_modules/@tanstack/query-core/dist/index.js',
+					true,
+				),
+			).toBe('vendor-tanstack')
+		})
+
+		it('matches web3 packages', () => {
+			expect(getVendorChunk('/node_modules/viem/dist/index.js', true)).toBe(
+				'vendor-web3',
+			)
+			expect(getVendorChunk('/node_modules/wagmi/dist/index.js', true)).toBe(
+				'vendor-web3',
+			)
+			expect(getVendorChunk('/node_modules/ox/dist/index.js', true)).toBe(
+				'vendor-web3',
+			)
+			expect(getVendorChunk('/node_modules/abitype/dist/index.js', true)).toBe(
+				'vendor-web3',
+			)
+		})
 	})
 })
 

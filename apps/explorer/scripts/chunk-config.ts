@@ -1,6 +1,9 @@
 /**
  * Vendor chunk configuration for Vite/Rolldown builds.
  * Separates vendor dependencies into cacheable chunks.
+ *
+ * IMPORTANT: Only applies to client builds to avoid bundling browser-specific
+ * code (like `window` references) into the server bundle.
  */
 
 // Key = chunk name suffix, value = exact packages or prefix to match
@@ -23,8 +26,18 @@ export function extractPackageName(id: string): string | undefined {
 /**
  * Determine which vendor chunk a module belongs to based on its path.
  * Returns the chunk name (e.g., 'vendor-react') or undefined if not a vendor chunk.
+ *
+ * @param id - Module path
+ * @param isClientBuild - Whether this is a client build (not SSR/server)
  */
-export function getVendorChunk(id: string): string | undefined {
+export function getVendorChunk(
+	id: string,
+	isClientBuild: boolean = false,
+): string | undefined {
+	// Only apply manual chunks to client builds to avoid bundling
+	// browser-specific code into the server bundle
+	if (!isClientBuild) return undefined
+
 	const pkg = extractPackageName(id)
 	if (!pkg) return undefined
 

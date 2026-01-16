@@ -94,7 +94,21 @@ export default defineConfig((config) => {
 								? { dropConsole: true, dropDebugger: true }
 								: undefined,
 					},
-					manualChunks: getVendorChunk,
+					manualChunks: (id, { getModuleInfo }) => {
+						// Only apply vendor chunking to client builds to avoid bundling
+						// browser-specific code (window, document, etc.) into the server bundle
+						const moduleInfo = getModuleInfo(id)
+						const isClientBuild =
+							id.includes('index.client') ||
+							id.includes('/client/') ||
+							moduleInfo?.importers.some(
+								(importer) =>
+									importer.includes('index.client') ||
+									importer.includes('/client/'),
+							)
+
+						return getVendorChunk(id, isClientBuild)
+					},
 				},
 			},
 		},
