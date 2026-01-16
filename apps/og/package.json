@@ -5,7 +5,9 @@
 		"build": "echo 'No build step needed for Cloudflare Worker'",
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
-		"check:types": "tsgo --project tsconfig.json",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write --unsafe",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types"
 	},
 	"dependencies": {
@@ -19,6 +21,7 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"@biomejs/biome": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
 		"@types/node": "catalog:",
 		"wrangler": "catalog:"
