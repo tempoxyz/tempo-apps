@@ -1,5 +1,6 @@
 import { keepPreviousData, queryOptions, useQuery } from '@tanstack/react-query'
-import { Address, Hex } from 'ox'
+import * as Address from 'ox/Address'
+import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import { Midcut } from '#comps/Midcut'
 import { useMountAnim } from '#lib/animation'

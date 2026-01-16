@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { Address as OxAddress } from 'ox'
-import { Value } from 'ox'
+import * as Value from 'ox/Value'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
 import { TokenIcon } from '#comps/TokenIcon'

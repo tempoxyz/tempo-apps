@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as IDX from 'idxs'
-import { Address } from 'ox'
+import * as Address from 'ox/Address'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { hasIndexSupply } from '#lib/env'

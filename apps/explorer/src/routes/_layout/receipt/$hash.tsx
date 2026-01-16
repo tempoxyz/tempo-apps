@@ -7,7 +7,9 @@ import {
 	rootRouteId,
 	useNavigate,
 } from '@tanstack/react-router'
-import { Hex, Json, Value } from 'ox'
+import * as Hex from 'ox/Hex'
+import * as Json from 'ox/Json'
+import * as Value from 'ox/Value'
 import { getPublicClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'

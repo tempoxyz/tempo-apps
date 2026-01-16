@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { useEffect, useMemo, useState } from 'react'
-import type { Hex } from 'viem'
-import { type Abi, decodeAbiParameters, erc20Abi, slice } from 'viem'
+import { decodeAbiParameters, erc20Abi, slice } from 'viem'
+import type { Abi, Hex } from 'viem'
 import { cx } from '#lib/css'
 import {
 	formatAbiValue,

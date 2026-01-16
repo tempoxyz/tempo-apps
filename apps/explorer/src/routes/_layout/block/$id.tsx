@@ -7,7 +7,8 @@ import {
 	rootRouteId,
 	stripSearchParams,
 } from '@tanstack/react-router'
-import { Hex, Value } from 'ox'
+import * as Hex from 'ox/Hex'
+import * as Value from 'ox/Value'
 import * as React from 'react'
 import { decodeFunctionData, isHex, zeroAddress } from 'viem'
 import { Abis } from 'viem/tempo'
