@@ -1,6 +1,11 @@
 # Tempo Apps
 
-Monorepo for Tempo Apps
+Monorepo for Tempo full-stack web applications built on Cloudflare Workers.
+
+## Documentation
+
+- **[AGENTS.md](./AGENTS.md)** - Agent guide for building apps (stack, patterns, deployment)
+- **[SKILLS.md](./SKILLS.md)** - Specialized skills for payments, onramp, subscriptions, UI
 
 ## Apps
 
