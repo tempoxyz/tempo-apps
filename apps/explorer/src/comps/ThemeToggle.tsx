@@ -1,10 +1,20 @@
+import * as React from 'react'
 import { useTheme, type Theme } from '#lib/theme'
 import Sun from '~icons/lucide/sun'
 import Moon from '~icons/lucide/moon'
-import Monitor from '~icons/lucide/monitor'
 
 export function ThemeToggle() {
 	const { theme, setTheme } = useTheme()
+	const [systemPrefersDark, setSystemPrefersDark] = React.useState(false)
+
+	React.useEffect(() => {
+		const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+		setSystemPrefersDark(mediaQuery.matches)
+
+		const handler = (e: MediaQueryListEvent) => setSystemPrefersDark(e.matches)
+		mediaQuery.addEventListener('change', handler)
+		return () => mediaQuery.removeEventListener('change', handler)
+	}, [])
 
 	const nextTheme: Record<Theme, Theme> = {
 		system: 'light',
@@ -12,7 +22,8 @@ export function ThemeToggle() {
 		dark: 'system',
 	}
 
-	const Icon = theme === 'light' ? Sun : theme === 'dark' ? Moon : Monitor
+	const isDark = theme === 'dark' || (theme === 'system' && systemPrefersDark)
+	const Icon = isDark ? Moon : Sun
 
 	return (
 		<button

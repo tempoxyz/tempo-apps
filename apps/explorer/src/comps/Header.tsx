@@ -25,10 +25,10 @@ export function Header(props: Header.Props) {
 						<Header.TempoWordmark />
 					</Link>
 					<Header.NetworkBadge />
-					<ThemeToggle />
 				</div>
 				<Header.Search />
-				<div className="relative z-1 print:hidden">
+				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
+					<ThemeToggle />
 					<Header.BlockNumber initial={initialBlockNumber} />
 				</div>
 			</div>
