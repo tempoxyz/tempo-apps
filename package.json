@@ -6,6 +6,7 @@
 		"apps/*"
 	],
 	"scripts": {
+		"create-app": "node --experimental-strip-types scripts/create-app.ts",
 		"build": "pnpm --recursive --parallel --stream --reporter='append-only' build",
 		"deploy": "pnpm --recursive --parallel --stream --reporter='append-only' deploy",
 		"dev:explorer": "pnpm --filter explorer dev",
