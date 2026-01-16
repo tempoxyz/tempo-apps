@@ -606,12 +606,12 @@ function createDetectors(
 						{ type: 'action', value: 'Rebalance Swap' },
 						{
 							type: 'amount',
-							value: createAmount(args.amountIn, args.userToken),
+							value: createAmount(args.amountIn, args.validatorToken),
 						},
 						{ type: 'text', value: 'for' },
 						{
 							type: 'amount',
-							value: createAmount(args.amountOut, args.validatorToken),
+							value: createAmount(args.amountOut, args.userToken),
 						},
 					],
 				}
