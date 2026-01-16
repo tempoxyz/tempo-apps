@@ -33,7 +33,7 @@ pnpm build                      # Build all apps
 
 ## Code Style Guidelines
 
-## Dependancies
+## Dependencies
 
 * You *must* use wagmi, viem, or ox to interact with tempo
 * You should *never* use tempo.ts - prefer the equivilant implementation in wagmi or viem or ox directly
@@ -118,7 +118,8 @@ apps/my-app/
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "check": "biome check . --write --unsafe",
+    "check": "pnpm check:biome && pnpm check:types",
+    "check:biome": "biome check --write --unsafe",
     "check:types": "tsgo --project tsconfig.json --noEmit",
     "gen:types": "wrangler types"
   }
