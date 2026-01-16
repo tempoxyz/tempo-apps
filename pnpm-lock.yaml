@@ -577,6 +577,9 @@ importers:
         specifier: 'catalog:'
         version: 4.3.5
     devDependencies:
+      '@biomejs/biome':
+        specifier: 'catalog:'
+        version: 2.3.11
       '@cloudflare/workers-types':
         specifier: 'catalog:'
         version: 4.20260113.0
