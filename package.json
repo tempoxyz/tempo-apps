@@ -10,6 +10,8 @@
 		"deploy": "pnpm --recursive --parallel --stream --reporter='append-only' deploy",
 		"dev:explorer": "pnpm --filter explorer dev",
 		"dev:sponsor": "pnpm --filter tempo-sponsor dev",
+		"dev:paymentauth-basic": "pnpm --filter paymentauth-basic dev",
+		"dev:paymentauth-tetris": "pnpm --filter paymentauth-tetris dev",
 		"check": "pnpm --recursive --parallel --stream --reporter='append-only' check:biome",
 		"postcheck": "pnpm check:types",
 		"check:biome": "biome check --write --unsafe",

@@ -1,0 +1,22 @@
+{
+	"name": "paymentauth-x402-compat",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write .",
+		"check:types": "tsgo --project tsconfig.json --noEmit"
+	},
+	"dependencies": {
+		"hono": "catalog:",
+		"paymentauth-protocol": "workspace:*",
+		"viem": "catalog:"
+	},
+	"devDependencies": {
+		"@types/node": "catalog:",
+		"typescript": "catalog:"
+	}
+}

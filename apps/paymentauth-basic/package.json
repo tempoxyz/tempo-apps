@@ -1,0 +1,26 @@
+{
+	"name": "paymentauth-basic",
+	"private": true,
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write .",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"deploy": "wrangler deploy"
+	},
+	"dependencies": {
+		"hono": "catalog:",
+		"paymentauth-protocol": "workspace:*",
+		"tempo.ts": "catalog:",
+		"viem": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

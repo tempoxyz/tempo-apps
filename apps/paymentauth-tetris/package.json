@@ -1,0 +1,32 @@
+{
+	"name": "paymentauth-tetris",
+	"private": true,
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write .",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"deploy": "wrangler deploy"
+	},
+	"dependencies": {
+		"hono": "catalog:",
+		"ox": "catalog:",
+		"paymentauth-protocol": "workspace:*",
+		"react": "catalog:",
+		"react-dom": "catalog:",
+		"tempo.ts": "catalog:",
+		"viem": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"@vitejs/plugin-react": "catalog:",
+		"typescript": "catalog:",
+		"vite": "catalog:",
+		"wrangler": "catalog:"
+	}
+}
