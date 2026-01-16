@@ -1,0 +1,35 @@
+{
+	"name": "_template",
+	"private": true,
+	"type": "module",
+	"imports": {
+		"#*": "./src/*",
+		"#wrangler.json": "./wrangler.jsonc"
+	},
+	"scripts": {
+		"postinstall": "pnpm gen:types",
+		"dev": "vite dev --port 3000",
+		"build": "vite build",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write --unsafe",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"predeploy": "pnpm build",
+		"deploy": "wrangler deploy",
+		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types"
+	},
+	"dependencies": {
+		"@hono/zod-validator": "catalog:",
+		"hono": "catalog:",
+		"idxs": "catalog:",
+		"ox": "catalog:",
+		"tempo.ts": "catalog:",
+		"viem": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"vite": "catalog:",
+		"wrangler": "catalog:"
+	}
+}

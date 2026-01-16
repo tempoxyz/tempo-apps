@@ -1,0 +1,82 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "_template",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.ts",
+	"workers_dev": true,
+	"preview_urls": true,
+	"keep_vars": true,
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		}
+	},
+	// Uncomment to add D1 database
+	// "d1_databases": [
+	// 	{ "binding": "DB", "database_name": "my-db", "database_id": "YOUR_DB_ID" }
+	// ],
+	// Uncomment to add R2 storage
+	// "r2_buckets": [
+	// 	{ "binding": "BUCKET", "bucket_name": "my-bucket" }
+	// ],
+	// Uncomment to add rate limiting
+	// "ratelimits": [
+	// 	{ "name": "RateLimiter", "namespace_id": "123", "simple": { "limit": 100, "period": 60 } }
+	// ],
+	// Uncomment to add cron triggers
+	// "triggers": {
+	// 	"crons": ["0 * * * *"]
+	// },
+	"env": {
+		"moderato": {
+			"name": "_template-moderato",
+			"routes": [
+				{
+					"pattern": "_template.moderato.tempo.xyz",
+					"zone_name": "tempo.xyz",
+					"custom_domain": true
+				}
+			],
+			"vars": {
+				"TEMPO_RPC_URL": "https://proxy.tempo.xyz/rpc/42431",
+				"TEMPO_ENV": "moderato",
+				"ALLOWED_ORIGINS": "*"
+			}
+		},
+		"testnet": {
+			"name": "_template-testnet",
+			"routes": [
+				{
+					"pattern": "_template.testnet.tempo.xyz",
+					"zone_name": "tempo.xyz",
+					"custom_domain": true
+				}
+			],
+			"vars": {
+				"TEMPO_RPC_URL": "https://rpc.testnet.tempo.xyz",
+				"TEMPO_ENV": "testnet",
+				"ALLOWED_ORIGINS": "*"
+			}
+		},
+		"mainnet": {
+			"name": "_template-mainnet",
+			"routes": [
+				{
+					"pattern": "_template.tempo.xyz",
+					"zone_name": "tempo.xyz",
+					"custom_domain": true
+				}
+			],
+			"vars": {
+				"TEMPO_RPC_URL": "https://rpc.tempo.xyz",
+				"TEMPO_ENV": "mainnet",
+				"ALLOWED_ORIGINS": "*"
+			}
+		}
+	}
+}
