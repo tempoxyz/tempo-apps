@@ -10,7 +10,14 @@ import SolidityIcon from '~icons/vscode-icons/file-type-solidity'
 import VyperIcon from '~icons/vscode-icons/file-type-vyper'
 
 function getCompilerVersionUrl(compiler: string, version: string) {
-	return `https://github.com/${compiler.toLowerCase() === 'vyper' ? 'vyperlang/vyper' : 'argotorg/solidity'}/releases/tag/v${version}`
+	const isVyper = compiler.toLowerCase() === "vyper"
+	const repo = isVyper ? "vyperlang/vyper" : "argotorg/solidity"
+
+	const tag = isVyper
+		? version.trim()
+		: version.trim().split("+commit.", 1)[0]
+
+	return `https://github.com/${repo}/releases/tag/v${tag}`
 }
 
 function getOptimizerText(compilation: ContractSource['compilation']) {
