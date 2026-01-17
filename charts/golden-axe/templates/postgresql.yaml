@@ -1,0 +1,70 @@
+{{- if .Values.postgresql.enabled }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: golden-axe-be-db
+  namespace: {{ .Values.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  instances: {{ .Values.postgresql.backend.instances }}
+  
+  imageName: ghcr.io/cloudnative-pg/postgresql:18
+  
+  storage:
+    size: {{ .Values.postgresql.storage.backend }}
+    storageClass: {{ .Values.postgresql.storageClass }}
+  
+  resources:
+    {{- toYaml .Values.postgresql.backend.resources | nindent 4 }}
+  
+  bootstrap:
+    initdb:
+      database: be
+      owner: golden_axe
+      secret:
+        name: golden-axe-secrets
+      postInitSQL:
+        - CREATE ROLE uapi WITH LOGIN PASSWORD current_setting('golden_axe.uapi_password');
+        - GRANT SELECT ON ALL TABLES IN SCHEMA public TO uapi;
+        - ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO uapi;
+        - ALTER ROLE uapi SET statement_timeout = '30s';
+        - ALTER ROLE uapi SET work_mem = '1GB';
+        - ALTER ROLE uapi SET temp_file_limit = '1GB';
+        - ALTER ROLE uapi CONNECTION LIMIT 64;
+  
+  postgresql:
+    parameters:
+      shared_buffers: "2GB"
+      work_mem: "256MB"
+      maintenance_work_mem: "512MB"
+      effective_cache_size: "8GB"
+      random_page_cost: "1.1"
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: golden-axe-fe-db
+  namespace: {{ .Values.namespace }}
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  instances: {{ .Values.postgresql.frontend.instances }}
+  
+  imageName: ghcr.io/cloudnative-pg/postgresql:18
+  
+  storage:
+    size: {{ .Values.postgresql.storage.frontend }}
+    storageClass: {{ .Values.postgresql.storageClass }}
+  
+  resources:
+    {{- toYaml .Values.postgresql.frontend.resources | nindent 4 }}
+  
+  bootstrap:
+    initdb:
+      database: fe
+      owner: golden_axe
+      secret:
+        name: golden-axe-secrets
+{{- end }}

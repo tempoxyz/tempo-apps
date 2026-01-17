@@ -1,0 +1,9 @@
+apiVersion: v2
+name: golden-axe
+description: A Helm chart for self-hosting Golden Axe - SQL API for Ethereum blockchain data
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+maintainers:
+  - name: tempo-infra
+    url: https://www.tempo.xyz

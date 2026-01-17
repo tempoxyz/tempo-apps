@@ -1,0 +1,141 @@
+# Golden Axe Configuration
+# SQL API for Ethereum blockchain data
+#
+# Components:
+# - Backend (be): Rust/Axum API for SQL queries against blockchain data
+# - Frontend (fe): Web application for account management and API keys
+
+namespace: golden-axe
+
+# Chain configuration
+chain:
+  rpcUrl: "http://reth-service:8545"
+  chainId: 1
+
+# Image configuration
+image:
+  repository: ghcr.io/indexsupply/golden-axe
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets:
+  - name: github-access-token-read-packages
+
+# 1Password items for secrets
+# Create this item in 1Password with the following keys:
+# - be-pg-url: Backend PostgreSQL connection string (postgres://user:pass@host:5432/be)
+# - be-pg-url-ro: Read-only PostgreSQL connection for API queries
+# - fe-pg-url: Frontend PostgreSQL connection string
+# - admin-api-secret: Secret for admin endpoints
+# - session-key: Hex-encoded session encryption key (optional, auto-generated if missing)
+# - postmark-key: Postmark email API key (optional)
+# - stripe-key: Stripe secret key (optional)
+# - stripe-pub-key: Stripe publishable key (optional)
+onePasswordItems:
+  - name: golden-axe-secrets
+    path: "vaults/dev-infra/items/golden-axe-secrets"
+
+# Backend configuration
+backend:
+  enabled: true
+  replicas: 1
+  port: 8000
+  
+  # Backend-specific environment
+  sync:
+    enabled: true  # Set to false to run in query-only mode (--no-sync)
+  
+  maxPgConns: 32
+  maxPgFeConns: 4
+  logLevel: "info"
+  
+  # Additional environment variables (for RPC credentials from secrets, etc.)
+  extraEnv: []
+  # Example:
+  # - name: RPC_URL
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: my-secret
+  #       key: rpc-url
+  
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 4000m
+      memory: 8Gi
+
+  service:
+    type: ClusterIP
+    port: 8000
+
+# Frontend configuration
+frontend:
+  enabled: true
+  replicas: 1
+  port: 8001
+  
+  # URLs for frontend
+  beUrl: ""  # Backend URL (defaults to internal service)
+  feUrl: ""  # Public frontend URL (for links in emails)
+  
+  logLevel: "info"
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  service:
+    type: ClusterIP
+    port: 8001
+
+# PostgreSQL settings (using CloudNativePG)
+postgresql:
+  enabled: true
+  storageClass: lvm-nvmevg
+  storage:
+    backend: 100Gi
+    frontend: 10Gi
+  
+  # Backend database configuration
+  backend:
+    instances: 1
+    resources:
+      requests:
+        cpu: 500m
+        memory: 2Gi
+      limits:
+        cpu: 4000m
+        memory: 16Gi
+  
+  # Frontend database configuration
+  frontend:
+    instances: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 1Gi
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: tailscale
+  annotations: {}
+  hosts:
+    backend: api.golden-axe.example.com
+    frontend: golden-axe.example.com
+
+# Prometheus monitoring
+monitoring:
+  enabled: false
+  serviceMonitor:
+    enabled: false
+    interval: 30s

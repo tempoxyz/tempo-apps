@@ -1,0 +1,75 @@
+# Golden Axe Configuration for Tempo Network
+# Example values file for deploying on Tempo devnet
+
+namespace: golden-axe-tempo
+
+chain:
+  rpcUrl: "http://nodes-rpc-service.tempo-devnet-nightly.svc.cluster.local:8545"
+  chainId: 123456789  # Update with actual Tempo chain ID
+
+image:
+  repository: ghcr.io/tempoxyz/golden-axe
+  tag: "latest"
+
+imagePullSecrets:
+  - name: github-access-token-read-packages
+
+onePasswordItems:
+  - name: golden-axe-secrets
+    path: "vaults/dev-infra/items/golden-axe-tempo-secrets"
+
+backend:
+  enabled: true
+  replicas: 1
+  sync:
+    enabled: true
+  maxPgConns: 32
+  logLevel: "info"
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 2Gi
+    limits:
+      cpu: 4000m
+      memory: 16Gi
+
+frontend:
+  enabled: true
+  replicas: 1
+  feUrl: "https://golden-axe.devnet.tempoxyz.dev"
+  logLevel: "info"
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+postgresql:
+  enabled: true
+  storageClass: lvm-nvmevg
+  storage:
+    backend: 200Gi
+    frontend: 10Gi
+  backend:
+    instances: 1
+    resources:
+      requests:
+        cpu: 1000m
+        memory: 4Gi
+      limits:
+        cpu: 4000m
+        memory: 32Gi
+
+ingress:
+  enabled: true
+  className: tailscale
+  hosts:
+    backend: golden-axe-api.devnet.tempoxyz.dev
+    frontend: golden-axe.devnet.tempoxyz.dev
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
