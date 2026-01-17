@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       networks:
-        description: "Networks to test (comma-separated: testnet,moderato,devnet)"
+        description: "Networks to test (comma-separated: devnet,mainnet,testnet)"
         required: false
-        default: "testnet,moderato,devnet"
+        default: "devnet,mainnet,testnet"
       verifier-url:
         description: "Verifier URL"
         required: false
@@ -14,33 +14,29 @@ on:
   schedule:
     - cron: "0 */6 * * *"
 
-defaults:
-  run:
-    shell: bash
-    working-directory: apps/contract-verification
-
 env:
-  ACTIONS_RUNNER_DEBUG: true
   VERIFIER_URL: ${{ github.event.inputs.verifier-url || 'https://contracts.porto.workers.dev' }}
 
 jobs:
-  verify-vyper:
-    env:
-      GH_TOKEN: ${{ github.token }}
+  tempo-check:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        network: [testnet, moderato, devnet]
-    name: verify-vyper (${{ matrix.network }})
+        network: [devnet, mainnet, testnet]
+        include:
+          - network: devnet
+            rpc_url: https://rpc.devnet.tempoxyz.dev
+          - network: mainnet
+            rpc_url: https://rpc.tempo.xyz
+          - network: testnet
+            rpc_url: https://rpc.moderato.tempo.xyz
+    name: tempo-check (${{ matrix.network }})
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
       - name: Check if network is selected
         id: check
         run: |
-          NETWORKS="${{ github.event.inputs.networks || 'testnet,moderato,devnet' }}"
+          NETWORKS="${{ github.event.inputs.networks || 'devnet,mainnet,testnet' }}"
           if [[ "$NETWORKS" == *"${{ matrix.network }}"* ]]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
           else
@@ -54,57 +50,14 @@ jobs:
           version: nightly
           network: tempo
 
-      - name: Install uv
+      - name: Fetch tempo-check.sh
         if: steps.check.outputs.skip != 'true'
-        uses: astral-sh/setup-uv@main
-        with:
-          version: latest
-          python-version: "3.14"
-
-      - name: Install vyper Compiler
-        if: steps.check.outputs.skip != 'true'
-        run: uv tool install vyper
-
-      - name: Test Vyper (small counter)
-        if: steps.check.outputs.skip != 'true'
-        env:
-          TEMPO_RPC_URL: ${{ matrix.network == 'testnet' && 'https://rpc.testnet.tempo.xyz' || matrix.network == 'moderato' && 'https://rpc.moderato.tempo.xyz' || matrix.network == 'devnet' && 'https://rpc.devnet.tempoxyz.dev' }}
-          TEMPO_FEE_TOKEN: ${{ matrix.network == 'testnet' && '0x20c0000000000000000000000000000000000002' || matrix.network == 'moderato' && '0x20c0000000000000000000000000000000000002' || matrix.network == 'devnet' && '0x20c0000000000000000000000000000000000002' }}
-        run: ./scripts/test-vyper.sh
-
-  verify-solidity:
-    env:
-      GH_TOKEN: ${{ github.token }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        network: [testnet, moderato, devnet]
-    name: verify-solidity (${{ matrix.network }})
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Check if network is selected
-        id: check
         run: |
-          NETWORKS="${{ github.event.inputs.networks || 'testnet,moderato,devnet' }}"
-          if [[ "$NETWORKS" == *"${{ matrix.network }}"* ]]; then
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          fi
+          curl -fsSL https://raw.githubusercontent.com/tempoxyz/tempo-foundry/tempo/.github/scripts/tempo-check.sh -o tempo-check.sh
+          chmod +x tempo-check.sh
 
-      - name: Install Foundry
-        if: steps.check.outputs.skip != 'true'
-        uses: foundry-rs/foundry-toolchain@master
-        with:
-          version: nightly
-          network: tempo
-
-      - name: Test Solidity
+      - name: Run tempo-check
         if: steps.check.outputs.skip != 'true'
         env:
-          TEMPO_RPC_URL: ${{ matrix.network == 'testnet' && 'https://rpc.testnet.tempo.xyz' || matrix.network == 'moderato' && 'https://rpc.moderato.tempo.xyz' || matrix.network == 'devnet' && 'https://rpc.devnet.tempoxyz.dev' }}
-          TEMPO_FEE_TOKEN: ${{ matrix.network == 'testnet' && '0x20c0000000000000000000000000000000000002' || matrix.network == 'moderato' && '0x20c0000000000000000000000000000000000002' || matrix.network == 'devnet' && '0x20c0000000000000000000000000000000000002' }}
-        run: ./scripts/test-big-boy.sh
+          ETH_RPC_URL: ${{ matrix.rpc_url }}
+        run: ./tempo-check.sh
