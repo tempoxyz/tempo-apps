@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Block } from 'viem'
-import { useBlock, useWatchBlockNumber } from 'wagmi'
+import { useWatchBlockNumber } from 'wagmi'
+import { getBlock } from 'wagmi/actions'
+import { getWagmiConfig } from '#wagmi.config'
 import * as z from 'zod/mini'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
@@ -63,43 +65,71 @@ function RouteComponent() {
 	)
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const [paused, setPaused] = React.useState(false)
+	const queryClient = useQueryClient()
+	const fetchingBlocksRef = React.useRef(new Set<bigint>())
 
-	// Watch for new blocks
+	// Watch for new blocks and fetch any missing blocks
 	useWatchBlockNumber({
-		onBlockNumber: (blockNumber) => {
-			if (latestBlockNumber === undefined || blockNumber > latestBlockNumber) {
-				setLatestBlockNumber(blockNumber)
+		onBlockNumber: async (blockNumber) => {
+			if (latestBlockNumber !== undefined && blockNumber <= latestBlockNumber)
+				return
+
+			setLatestBlockNumber(blockNumber)
+
+			if (!live || !isAtLatest || paused) return
+
+			// Determine which blocks we need to fetch
+			const currentHighest = liveBlocks[0]?.number
+			const startBlock =
+				currentHighest != null ? currentHighest + 1n : blockNumber
+			const blocksToFetch: bigint[] = []
+
+			for (let bn = startBlock; bn <= blockNumber; bn++) {
+				if (!fetchingBlocksRef.current.has(bn)) {
+					blocksToFetch.push(bn)
+					fetchingBlocksRef.current.add(bn)
+				}
 			}
+
+			if (blocksToFetch.length === 0) return
+
+			const config = getWagmiConfig()
+			const newBlocks = await Promise.all(
+				blocksToFetch.map((bn) =>
+					queryClient.fetchQuery({
+						queryKey: ['block', bn.toString()],
+						queryFn: () => getBlock(config, { blockNumber: bn }),
+						staleTime: Number.POSITIVE_INFINITY,
+					}),
+				),
+			)
+
+			for (const bn of blocksToFetch) {
+				fetchingBlocksRef.current.delete(bn)
+			}
+
+			const validBlocks = newBlocks.filter(Boolean) as Block[]
+			if (validBlocks.length === 0) return
+
+			setLiveBlocks((prev) => {
+				const existingNumbers = new Set(prev.map((b) => b.number))
+				const toAdd = validBlocks.filter((b) => !existingNumbers.has(b.number))
+
+				for (const block of toAdd) {
+					const blockNum = block.number?.toString()
+					if (blockNum) {
+						recentlyAddedBlocks.add(blockNum)
+						setTimeout(() => recentlyAddedBlocks.delete(blockNum), 400)
+					}
+				}
+
+				return [...toAdd, ...prev]
+					.sort((a, b) => Number(b.number) - Number(a.number))
+					.slice(0, BLOCKS_PER_PAGE)
+			})
 		},
 		poll: true,
 	})
-
-	// Fetch the latest block when block number changes (for live updates)
-	const { data: latestBlock } = useBlock({
-		blockNumber: latestBlockNumber,
-		query: {
-			enabled: live && isAtLatest && latestBlockNumber !== undefined,
-			staleTime: Number.POSITIVE_INFINITY, // Block data never changes
-		},
-	})
-
-	// Add new blocks as they arrive
-	React.useEffect(() => {
-		if (!live || !isAtLatest || !latestBlock || paused) return
-
-		setLiveBlocks((prev) => {
-			if (prev.some((b) => b.number === latestBlock.number)) return prev
-
-			// Mark as new for animation
-			const blockNum = latestBlock.number?.toString()
-			if (blockNum) {
-				recentlyAddedBlocks.add(blockNum)
-				setTimeout(() => recentlyAddedBlocks.delete(blockNum), 400)
-			}
-
-			return [latestBlock, ...prev].slice(0, BLOCKS_PER_PAGE)
-		})
-	}, [latestBlock, live, isAtLatest, paused])
 
 	// Re-initialize when navigating back to latest with live mode
 	React.useEffect(() => {
