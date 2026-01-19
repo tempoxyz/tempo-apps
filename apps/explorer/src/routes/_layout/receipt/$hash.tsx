@@ -372,7 +372,7 @@ function Component() {
 }
 
 namespace TextRenderer {
-	const width = 50
+	const width = 76
 	const indent = '  '
 
 	export function render(data: Awaited<ReturnType<typeof fetchReceiptData>>) {
