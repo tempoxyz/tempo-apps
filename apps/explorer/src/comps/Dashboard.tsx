@@ -12,6 +12,7 @@ import {
 	dashboardQueryOptions,
 	networkStatsQueryOptions,
 	tokensListQueryOptions,
+	validatorsQueryOptions,
 	type DashboardBlock,
 	type DashboardTransaction,
 } from '#lib/queries'
@@ -20,9 +21,8 @@ import BoxIcon from '~icons/lucide/box'
 import ArrowRightIcon from '~icons/lucide/arrow-right'
 import ClockIcon from '~icons/lucide/clock'
 import CoinsIcon from '~icons/lucide/coins'
-
+import ShieldCheckIcon from '~icons/lucide/shield-check'
 import ZapIcon from '~icons/lucide/zap'
-import UsersIcon from '~icons/lucide/users'
 import ActivityIcon from '~icons/lucide/activity'
 
 export function Dashboard(props: Dashboard.Props): React.JSX.Element | null {
@@ -41,6 +41,11 @@ export function Dashboard(props: Dashboard.Props): React.JSX.Element | null {
 
 	const { data: tokensData, isLoading: tokensLoading } = useQuery({
 		...tokensListQueryOptions({ page: 1, limit: 5 }),
+		enabled: visible,
+	})
+
+	const { data: validators, isLoading: validatorsLoading } = useQuery({
+		...validatorsQueryOptions(),
 		enabled: visible,
 	})
 
@@ -74,14 +79,15 @@ export function Dashboard(props: Dashboard.Props): React.JSX.Element | null {
 					icon={<ActivityIcon className="size-[16px]" />}
 					loading={statsLoading}
 				/>
-				<StatCard
-					title="Active Addresses (24h)"
-					value={stats?.accounts24h}
-					icon={<UsersIcon className="size-[16px]" />}
-					loading={statsLoading}
-				/>
-				<AvgBlockTimeCard avgBlockTime={avgBlockTime} loading={isLoading} />
 				<TPSCard tps={tps} loading={isLoading} />
+				<AvgBlockTimeCard avgBlockTime={avgBlockTime} loading={isLoading} />
+				<StatCard
+					title="Validators"
+					value={validators?.filter((v) => v.active).length}
+					icon={<ShieldCheckIcon className="size-[16px]" />}
+					loading={validatorsLoading}
+					href="/validators"
+				/>
 			</div>
 			<Card
 				title="Recent Transactions"
@@ -114,7 +120,6 @@ export function Dashboard(props: Dashboard.Props): React.JSX.Element | null {
 					))}
 				</Card>
 			</div>
-			<ValidatorsQuickLink />
 		</div>
 	)
 }
@@ -132,6 +137,7 @@ type StatCardProps = {
 	subtitleLabel?: string
 	icon: React.ReactNode
 	loading?: boolean
+	href?: string
 }
 
 function formatNumber(num: number): string {
@@ -145,13 +151,16 @@ function formatNumber(num: number): string {
 }
 
 function StatCard(props: StatCardProps): React.JSX.Element {
-	const { title, value, subtitle, subtitleLabel, icon, loading } = props
+	const { title, value, subtitle, subtitleLabel, icon, loading, href } = props
 
-	return (
-		<div className="bg-surface border border-base-border rounded-lg p-4">
-			<div className="flex items-center gap-2 text-tertiary text-[12px] mb-2">
-				<span className="text-accent">{icon}</span>
-				{title}
+	const content = (
+		<>
+			<div className="flex items-center justify-between text-tertiary text-[12px] mb-2">
+				<div className="flex items-center gap-2">
+					<span className="text-accent">{icon}</span>
+					{title}
+				</div>
+				{href && <ArrowRightIcon className="size-[12px]" />}
 			</div>
 			{loading ? (
 				<div className="space-y-2">
@@ -170,6 +179,23 @@ function StatCard(props: StatCardProps): React.JSX.Element {
 					)}
 				</>
 			)}
+		</>
+	)
+
+	if (href) {
+		return (
+			<Link
+				to={href}
+				className="bg-surface border border-base-border rounded-lg p-4"
+			>
+				{content}
+			</Link>
+		)
+	}
+
+	return (
+		<div className="bg-surface border border-base-border rounded-lg p-4">
+			{content}
 		</div>
 	)
 }
@@ -422,19 +448,4 @@ function TokenRow(props: { token: Token }): React.JSX.Element {
 	)
 }
 
-function ValidatorsQuickLink(): React.JSX.Element {
-	return (
-		<Link
-			to="/validators"
-			className="bg-surface border border-base-border rounded-lg px-4 py-3 flex items-center justify-between hover:border-accent transition-colors group cursor-pointer"
-		>
-			<div className="flex items-center gap-3">
-				<span className="text-[13px] font-medium text-primary">Validators</span>
-				<span className="text-[12px] text-tertiary">
-					View network validators
-				</span>
-			</div>
-			<ArrowRightIcon className="size-[14px] text-tertiary group-hover:text-accent transition-colors" />
-		</Link>
-	)
-}
+
