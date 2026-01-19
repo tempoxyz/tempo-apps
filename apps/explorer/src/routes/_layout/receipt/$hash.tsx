@@ -385,10 +385,10 @@ namespace TextRenderer {
 		lines.push('')
 
 		// Transaction details
-		lines.push(`Tx Hash: ${HexFormatter.truncate(receipt.transactionHash, 8)}`)
+		lines.push(`Tx Hash: ${receipt.transactionHash}`)
 		lines.push(`Date: ${timestampFormatted}`)
 		lines.push(`Block: ${receipt.blockNumber.toString()}`)
-		lines.push(`Sender: ${HexFormatter.truncate(receipt.from, 6)}`)
+		lines.push(`Sender: ${receipt.from}`)
 		lines.push('')
 		lines.push('-'.repeat(width))
 		lines.push('')
@@ -422,9 +422,7 @@ namespace TextRenderer {
 				})
 				lines.push(leftRight(label.toUpperCase(), amount))
 				if (item.payer)
-					lines.push(
-						`${indent}Paid by: ${HexFormatter.truncate(item.payer, 6)}`,
-					)
+					lines.push(`${indent}Paid by: ${item.payer}`)
 			}
 
 			lines.push('')
