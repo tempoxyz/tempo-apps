@@ -10,12 +10,15 @@ import { cx } from '#lib/css'
 import { springSmooth } from '#lib/animation'
 import {
 	dashboardQueryOptions,
+	networkStatsQueryOptions,
 	type DashboardBlock,
 	type DashboardTransaction,
 } from '#lib/queries'
 import BoxIcon from '~icons/lucide/box'
 import ArrowRightIcon from '~icons/lucide/arrow-right'
 import ZapIcon from '~icons/lucide/zap'
+import UsersIcon from '~icons/lucide/users'
+import ActivityIcon from '~icons/lucide/activity'
 
 export function Dashboard(props: Dashboard.Props): React.JSX.Element | null {
 	const { visible } = props
@@ -23,6 +26,11 @@ export function Dashboard(props: Dashboard.Props): React.JSX.Element | null {
 
 	const { data, isLoading } = useQuery({
 		...dashboardQueryOptions(),
+		enabled: visible,
+	})
+
+	const { data: stats, isLoading: statsLoading } = useQuery({
+		...networkStatsQueryOptions(),
 		enabled: visible,
 	})
 
@@ -42,27 +50,47 @@ export function Dashboard(props: Dashboard.Props): React.JSX.Element | null {
 	return (
 		<div
 			ref={containerRef}
-			className="w-full max-w-[1000px] mx-auto px-4 mt-8 grid grid-cols-1 md:grid-cols-2 gap-4"
+			className="w-full max-w-[1000px] mx-auto px-4 mt-8 flex flex-col gap-4"
 		>
-			<Card
-				title="Recent Blocks"
-				icon={<BoxIcon className="size-[14px]" />}
-				viewAllLink="/blocks"
-				loading={isLoading}
-			>
-				{data?.blocks.map((block) => (
-					<BlockRow key={block.hash} block={block} />
-				))}
-			</Card>
-			<Card
-				title="Recent Transactions"
-				icon={<ZapIcon className="size-[14px]" />}
-				loading={isLoading}
-			>
-				{data?.transactions.map((tx) => (
-					<TransactionRow key={tx.hash} transaction={tx} />
-				))}
-			</Card>
+			<div className="grid grid-cols-2 md:grid-cols-2 gap-4">
+				<StatCard
+					title="Transactions"
+					value={stats?.totalTransactions}
+					subtitle={stats?.transactions24h}
+					subtitleLabel="24h"
+					icon={<ActivityIcon className="size-[16px]" />}
+					loading={statsLoading}
+				/>
+				<StatCard
+					title="Accounts"
+					value={stats?.totalAccounts}
+					subtitle={stats?.accounts24h}
+					subtitleLabel="new 24h"
+					icon={<UsersIcon className="size-[16px]" />}
+					loading={statsLoading}
+				/>
+			</div>
+			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+				<Card
+					title="Recent Blocks"
+					icon={<BoxIcon className="size-[14px]" />}
+					viewAllLink="/blocks"
+					loading={isLoading}
+				>
+					{data?.blocks.map((block) => (
+						<BlockRow key={block.hash} block={block} />
+					))}
+				</Card>
+				<Card
+					title="Recent Transactions"
+					icon={<ZapIcon className="size-[14px]" />}
+					loading={isLoading}
+				>
+					{data?.transactions.map((tx) => (
+						<TransactionRow key={tx.hash} transaction={tx} />
+					))}
+				</Card>
+			</div>
 		</div>
 	)
 }
@@ -71,6 +99,55 @@ export declare namespace Dashboard {
 	type Props = {
 		visible: boolean
 	}
+}
+
+type StatCardProps = {
+	title: string
+	value: number | undefined
+	subtitle: number | undefined
+	subtitleLabel: string
+	icon: React.ReactNode
+	loading?: boolean
+}
+
+function formatNumber(num: number): string {
+	if (num >= 1_000_000) {
+		return `${(num / 1_000_000).toFixed(1)}M`
+	}
+	if (num >= 1_000) {
+		return `${(num / 1_000).toFixed(1)}K`
+	}
+	return num.toLocaleString()
+}
+
+function StatCard(props: StatCardProps): React.JSX.Element {
+	const { title, value, subtitle, subtitleLabel, icon, loading } = props
+
+	return (
+		<div className="bg-surface border border-base-border rounded-lg p-4">
+			<div className="flex items-center gap-2 text-tertiary text-[12px] mb-2">
+				<span className="text-accent">{icon}</span>
+				{title}
+			</div>
+			{loading ? (
+				<div className="space-y-2">
+					<div className="h-7 w-24 bg-base-alt rounded animate-pulse" />
+					<div className="h-4 w-16 bg-base-alt rounded animate-pulse" />
+				</div>
+			) : (
+				<>
+					<div className="text-[24px] font-semibold text-primary tabular-nums">
+						{value !== undefined ? formatNumber(value) : '—'}
+					</div>
+					{subtitle !== undefined && (
+						<div className="text-[12px] text-positive tabular-nums">
+							+{formatNumber(subtitle)} {subtitleLabel}
+						</div>
+					)}
+				</>
+			)}
+		</div>
+	)
 }
 
 function Skeleton(): React.JSX.Element {

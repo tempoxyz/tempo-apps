@@ -6,6 +6,37 @@ import { getWagmiConfig } from '#wagmi.config.ts'
 export const DASHBOARD_BLOCKS_COUNT = 5
 export const DASHBOARD_TRANSACTIONS_COUNT = 8
 
+export type NetworkStats = {
+	totalTransactions: number
+	transactions24h: number
+	totalAccounts: number
+	accounts24h: number
+}
+
+export function networkStatsQueryOptions() {
+	return queryOptions({
+		queryKey: ['network-stats'],
+		queryFn: async (): Promise<NetworkStats> => {
+			const response = await fetch(`${__BASE_URL__}/api/stats`)
+			const json = (await response.json()) as {
+				data: NetworkStats | null
+				error: string | null
+			}
+			if (json.error || !json.data) {
+				return {
+					totalTransactions: 0,
+					transactions24h: 0,
+					totalAccounts: 0,
+					accounts24h: 0,
+				}
+			}
+			return json.data
+		},
+		staleTime: 30_000,
+		refetchInterval: 60_000,
+	})
+}
+
 export type DashboardBlock = Pick<
 	Block,
 	'number' | 'hash' | 'timestamp' | 'transactions'
