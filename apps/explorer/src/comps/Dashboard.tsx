@@ -75,10 +75,8 @@ export function Dashboard(props: Dashboard.Props): React.JSX.Element | null {
 					loading={statsLoading}
 				/>
 				<StatCard
-					title="Accounts"
-					value={stats?.totalAccounts}
-					subtitle={stats?.accounts24h}
-					subtitleLabel="new 24h"
+					title="Active Addresses (24h)"
+					value={stats?.accounts24h}
 					icon={<UsersIcon className="size-[16px]" />}
 					loading={statsLoading}
 				/>
@@ -130,8 +128,8 @@ export declare namespace Dashboard {
 type StatCardProps = {
 	title: string
 	value: number | undefined
-	subtitle: number | undefined
-	subtitleLabel: string
+	subtitle?: number | undefined
+	subtitleLabel?: string
 	icon: React.ReactNode
 	loading?: boolean
 }
@@ -165,7 +163,7 @@ function StatCard(props: StatCardProps): React.JSX.Element {
 					<div className="text-[24px] font-semibold text-primary tabular-nums">
 						{value !== undefined ? formatNumber(value) : '—'}
 					</div>
-					{subtitle !== undefined && (
+					{subtitle !== undefined && subtitle > 0 && (
 						<div className="text-[12px] text-positive tabular-nums">
 							+{formatNumber(subtitle)} {subtitleLabel}
 						</div>
