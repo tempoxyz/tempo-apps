@@ -1,0 +1,218 @@
+import { useQuery } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
+import { waapi, stagger } from 'animejs'
+import type * as React from 'react'
+import { useEffect, useRef } from 'react'
+import { Address } from '#comps/Address'
+import { Midcut } from '#comps/Midcut'
+import { RelativeTime } from '#comps/RelativeTime'
+import { cx } from '#lib/css'
+import { springSmooth } from '#lib/animation'
+import {
+	dashboardQueryOptions,
+	type DashboardBlock,
+	type DashboardTransaction,
+} from '#lib/queries'
+import BoxIcon from '~icons/lucide/box'
+import ArrowRightIcon from '~icons/lucide/arrow-right'
+import ZapIcon from '~icons/lucide/zap'
+
+export function Dashboard(props: Dashboard.Props): React.JSX.Element | null {
+	const { visible } = props
+	const containerRef = useRef<HTMLDivElement>(null)
+
+	const { data, isLoading } = useQuery({
+		...dashboardQueryOptions(),
+		enabled: visible,
+	})
+
+	useEffect(() => {
+		if (!visible || !containerRef.current) return
+		const children = [...containerRef.current.children]
+		waapi.animate(children as HTMLElement[], {
+			opacity: [0, 1],
+			translateY: [12, 0],
+			ease: springSmooth,
+			delay: stagger(40, { start: 100 }),
+		})
+	}, [visible])
+
+	if (!visible) return null
+
+	return (
+		<div
+			ref={containerRef}
+			className="w-full max-w-[1000px] mx-auto px-4 mt-8 grid grid-cols-1 md:grid-cols-2 gap-4"
+		>
+			<Card
+				title="Recent Blocks"
+				icon={<BoxIcon className="size-[14px]" />}
+				viewAllLink="/blocks"
+				loading={isLoading}
+			>
+				{data?.blocks.map((block) => (
+					<BlockRow key={block.hash} block={block} />
+				))}
+			</Card>
+			<Card
+				title="Recent Transactions"
+				icon={<ZapIcon className="size-[14px]" />}
+				loading={isLoading}
+			>
+				{data?.transactions.map((tx) => (
+					<TransactionRow key={tx.hash} transaction={tx} />
+				))}
+			</Card>
+		</div>
+	)
+}
+
+export declare namespace Dashboard {
+	type Props = {
+		visible: boolean
+	}
+}
+
+function Skeleton(): React.JSX.Element {
+	const items = [1, 2, 3, 4, 5]
+	return (
+		<>
+			{items.map((n) => (
+				<div key={n} className="px-4 py-3 flex items-center gap-3">
+					<div className="size-8 bg-base-alt rounded-md animate-pulse" />
+					<div className="flex-1 space-y-2">
+						<div className="h-4 w-24 bg-base-alt rounded animate-pulse" />
+						<div className="h-3 w-32 bg-base-alt rounded animate-pulse" />
+					</div>
+				</div>
+			))}
+		</>
+	)
+}
+
+type CardProps = {
+	title: string
+	icon: React.ReactNode
+	viewAllLink?: string
+	loading?: boolean
+	children: React.ReactNode
+}
+
+function Card(props: CardProps): React.JSX.Element {
+	const { title, icon, viewAllLink, loading, children } = props
+	return (
+		<div className="bg-surface border border-base-border rounded-lg overflow-hidden">
+			<div className="flex items-center justify-between px-4 py-3 border-b border-base-border">
+				<div className="flex items-center gap-2 text-[13px] font-medium text-primary">
+					<span className="text-accent">{icon}</span>
+					{title}
+				</div>
+				{viewAllLink && (
+					<Link
+						to={viewAllLink}
+						className="text-[12px] text-accent hover:underline flex items-center gap-1"
+					>
+						View all
+						<ArrowRightIcon className="size-[12px]" />
+					</Link>
+				)}
+			</div>
+			<div className="divide-y divide-base-border">
+				{loading ? <Skeleton /> : children}
+			</div>
+		</div>
+	)
+}
+
+function BlockRow(props: { block: DashboardBlock }): React.JSX.Element {
+	const { block } = props
+	const blockNumber = block.number?.toString() ?? '0'
+	const txCount = Array.isArray(block.transactions)
+		? block.transactions.length
+		: 0
+
+	return (
+		<Link
+			to="/block/$id"
+			params={{ id: blockNumber }}
+			className={cx(
+				'flex items-center justify-between px-4 py-3 hover:bg-base-alt transition-colors text-[13px]',
+				'group cursor-pointer',
+			)}
+		>
+			<div className="flex items-center gap-3 min-w-0">
+				<div className="flex items-center justify-center size-8 rounded-md bg-accent/10 text-accent shrink-0">
+					<BoxIcon className="size-[14px]" />
+				</div>
+				<div className="flex flex-col min-w-0">
+					<span className="text-accent font-medium tabular-nums">
+						#{blockNumber}
+					</span>
+					<span className="text-tertiary text-[12px]">
+						{txCount} transaction{txCount !== 1 ? 's' : ''}
+					</span>
+				</div>
+			</div>
+			<div className="flex flex-col items-end shrink-0">
+				{block.hash && (
+					<span className="text-secondary font-mono text-[12px]">
+						<Midcut value={block.hash} prefix="0x" min={4} />
+					</span>
+				)}
+				{block.timestamp && (
+					<span className="text-tertiary text-[11px]">
+						<RelativeTime timestamp={block.timestamp} />
+					</span>
+				)}
+			</div>
+		</Link>
+	)
+}
+
+function TransactionRow(props: {
+	transaction: DashboardTransaction
+}): React.JSX.Element {
+	const { transaction } = props
+
+	return (
+		<Link
+			to="/receipt/$hash"
+			params={{ hash: transaction.hash }}
+			className={cx(
+				'flex items-center justify-between px-4 py-3 hover:bg-base-alt transition-colors text-[13px]',
+				'group cursor-pointer',
+			)}
+		>
+			<div className="flex items-center gap-3 min-w-0">
+				<div className="flex items-center justify-center size-8 rounded-md bg-positive/10 text-positive shrink-0">
+					<ZapIcon className="size-[14px]" />
+				</div>
+				<div className="flex flex-col min-w-0">
+					<span className="text-secondary font-mono text-[12px]">
+						<Midcut value={transaction.hash} prefix="0x" min={6} />
+					</span>
+					<div className="flex items-center gap-1 text-tertiary text-[12px]">
+						<span>From</span>
+						<Address address={transaction.from} chars={4} />
+						{transaction.to && (
+							<>
+								<ArrowRightIcon className="size-[10px]" />
+								<Address address={transaction.to} chars={4} />
+							</>
+						)}
+					</div>
+				</div>
+			</div>
+			<div className="flex flex-col items-end shrink-0">
+				<span className="text-tertiary text-[12px] tabular-nums">
+					Block #{transaction.blockNumber.toString()}
+				</span>
+				{transaction.timestamp && (
+					<span className="text-tertiary text-[11px]">
+						<RelativeTime timestamp={transaction.timestamp} />
+					</span>
+				)}
+			</div>
+		</Link>
+	)
+}

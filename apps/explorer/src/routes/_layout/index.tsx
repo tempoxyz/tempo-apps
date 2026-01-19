@@ -8,6 +8,7 @@ import {
 import { waapi, stagger } from 'animejs'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
+import { Dashboard } from '#comps/Dashboard'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#lib/css'
 import { springInstant, springBouncy, springSmooth } from '#lib/animation'
@@ -84,6 +85,7 @@ function Component() {
 	const [inputValue, setInputValue] = React.useState('')
 	const [isMounted, setIsMounted] = React.useState(false)
 	const [inputReady, setInputReady] = React.useState(false)
+	const [dashboardVisible, setDashboardVisible] = React.useState(false)
 	const exploreInputRef = React.useRef<HTMLInputElement>(null)
 	const exploreWrapperRef = React.useRef<HTMLDivElement>(null)
 	const isNavigating = useRouterState({
@@ -105,6 +107,7 @@ function Component() {
 		setTimeout(
 			() => {
 				setInputReady(true)
+				setDashboardVisible(true)
 				if (exploreWrapperRef.current) {
 					exploreWrapperRef.current.style.pointerEvents = 'auto'
 					waapi.animate(exploreWrapperRef.current, {
@@ -120,8 +123,8 @@ function Component() {
 	}, [])
 
 	return (
-		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
-			<div className="grid place-items-center relative grid-flow-row gap-5 select-none w-full pt-15 pb-10 z-1">
+		<div className="flex flex-1 flex-col size-full items-center text-[16px]">
+			<div className="grid place-items-center relative grid-flow-row gap-5 select-none w-full pt-15 pb-6 z-1">
 				<Intro onPhaseChange={handlePhaseChange} />
 				<div className="w-full my-3 px-4 flex justify-center relative z-20">
 					<ExploreInput
@@ -166,6 +169,7 @@ function Component() {
 				</div>
 				<SpotlightLinks />
 			</div>
+			<Dashboard visible={dashboardVisible} />
 		</div>
 	)
 }
