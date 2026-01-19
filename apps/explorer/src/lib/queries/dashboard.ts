@@ -4,7 +4,7 @@ import { getBlock } from 'wagmi/actions'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 export const DASHBOARD_BLOCKS_COUNT = 5
-export const DASHBOARD_TRANSACTIONS_COUNT = 8
+export const DASHBOARD_TRANSACTIONS_COUNT = 5
 
 export type NetworkStats = {
 	totalTransactions: number

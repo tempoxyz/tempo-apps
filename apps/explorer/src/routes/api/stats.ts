@@ -76,7 +76,7 @@ export const Route = createFileRoute('/api/stats')({
 					let txCount24h = 0
 
 					for (const block of blocks) {
-						if (!block || block.timestamp < timestamp24hAgo) continue
+						if (!block || Number(block.timestamp) < timestamp24hAgo) continue
 						txCount24h += block.transactions.length
 						for (const tx of block.transactions) {
 							if (typeof tx !== 'string') {
