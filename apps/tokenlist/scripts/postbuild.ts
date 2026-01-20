@@ -14,7 +14,7 @@ try {
 	}
 
 	await cp(src, dest, { recursive: true })
-	console.log('✓ Copied data/ to dist/tokenlist/data/')
+	console.log('Copied data/ to dist/tokenlist/data/')
 
 	// Patch wrangler.json to include assets config
 	const wranglerPath = resolve(cwd, 'dist/tokenlist/wrangler.json')
@@ -28,7 +28,7 @@ try {
 			run_worker_first: true,
 		}
 		await writeFile(wranglerPath, JSON.stringify(wranglerJson))
-		console.log('✓ Patched wrangler.json with assets config')
+		console.log('Patched wrangler.json with assets config')
 	}
 } catch (error) {
 	const errorMessage = error instanceof Error ? error.message : error
