@@ -14,7 +14,7 @@ export const config = createConfig({
 	},
 	connectors: [
 		webAuthn({
-			keyManager: KeyManager.localStorage(),
+			keyManager: KeyManager.http('https://keystore.tempo.xyz'),
 		}),
 	],
 	chains: [tempoTestnet.extend({ feeToken: alphaUsd })],
