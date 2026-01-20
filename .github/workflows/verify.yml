@@ -22,3 +22,9 @@ jobs:
 
       - name: Check code and types
         run: pnpm gen:types && pnpm check
+
+      - name: Run Tempo Lints
+        uses: tempoxyz/lints@v0
+        with:
+          language: typescript
+          path: "."
