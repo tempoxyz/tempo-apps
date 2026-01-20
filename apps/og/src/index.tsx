@@ -170,9 +170,7 @@ app.get(
 		const [fonts, images, tokenIcon] = await Promise.all([
 			loadFonts(),
 			loadImages(context.env),
-			tokenParams.chainId
-				? fetchTokenIcon(address, tokenParams.chainId)
-				: null,
+			tokenParams.chainId ? fetchTokenIcon(address, tokenParams.chainId) : null,
 		])
 
 		const imageResponse = new ImageResponse(
