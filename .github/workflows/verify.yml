@@ -22,3 +22,6 @@ jobs:
 
       - name: Check code and types
         run: pnpm gen:types && pnpm check
+
+      - name: Run Tempo Lints
+        run: pnpm lint:tempo

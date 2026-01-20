@@ -203,12 +203,18 @@ importers:
       '@biomejs/biome':
         specifier: 'catalog:'
         version: 2.3.11
+      '@tempoxyz/lints':
+        specifier: github:tempoxyz/lints
+        version: https://codeload.github.com/tempoxyz/lints/tar.gz/8c451f192339242ef42dd5801ea67fac3d99666f
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20260113.1
         version: 7.0.0-dev.20260113.1
       node:
         specifier: runtime:24.12.0
         version: runtime:24.12.0
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -659,6 +665,53 @@ packages:
 
   '@antfu/install-pkg@1.1.0':
     resolution: {integrity: sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ==}
+
+  '@ast-grep/cli-darwin-arm64@0.25.7':
+    resolution: {integrity: sha512-dkj8hy32mWuQwCJUEpnKwTS8tLE+e7dhvu6is+v5Q6AumOVlcL6PJWQsyaA4vedDm6XOGK9+WnyFpCnV3b5ouA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@ast-grep/cli-darwin-x64@0.25.7':
+    resolution: {integrity: sha512-FBdv7GH3llH5LI0S2yeqgQM5QEUHeoYMhw1pv+C439UeL5BBFFjI+LYVALciwsYzuq/DQDTnT2cM0JhYGajDLQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@ast-grep/cli-linux-arm64-gnu@0.25.7':
+    resolution: {integrity: sha512-lsE+cSe4rFO8rvLhMM7PM3T83LlmV60H9dOH+1hq8thkWhLCL6vAJijEVWgAQDDvvZf3xnNVgG2GG4jOMfTuTQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@ast-grep/cli-linux-x64-gnu@0.25.7':
+    resolution: {integrity: sha512-uuF5GXgeUZtBrftJJYuQU7PvDT7Q9fJkKKwpIscEfQqLndri1tdYzzT9jKj2taWFlhiCVqLaDEHsdfTeWaVjZQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@ast-grep/cli-win32-arm64-msvc@0.25.7':
+    resolution: {integrity: sha512-GSWRjOnWybzNP5rnvPb6lQ7lSPoEIl64gk4uHE1h+a2nnFhT9REWTKFcmNB2aG8VmKEz1gu0pxpg9HmBe2OUBA==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@ast-grep/cli-win32-ia32-msvc@0.25.7':
+    resolution: {integrity: sha512-5p9PWbTeXaivQYixB+JkkpFKgY7G1Tm6R46Dhq6cHvKksiQ6lWlTOOmhl0QARtY7y3XP0MWuvjDEWCYrvYtO4A==}
+    engines: {node: '>= 10'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@ast-grep/cli-win32-x64-msvc@0.25.7':
+    resolution: {integrity: sha512-WjsRuyKTCeGWpMhvobzU/6HaWbseENPl5mNMZIKs8gsCpkUyTUfvV8/A2W29oHCgbDWRtixYppWtd87Qjpm6cg==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@ast-grep/cli@0.25.7':
+    resolution: {integrity: sha512-vklcPRFHPHkwHq05nb2Fuaj4BYNWxhr8GIdB6la090jWob9FdbM/Jz86vlQp2tRELb2rKzuHeksG8qDrbX4REg==}
+    engines: {node: '>= 12.0.0'}
+    hasBin: true
 
   '@babel/code-frame@7.27.1':
     resolution: {integrity: sha512-cjQ7ZlQ0Mv3b47hABuTevyTuYN4i+loJKGeV9flcCgIK37cCXRh+L1bd3iBHlynerhQ7BhCkn2BPbQUL+rGqFg==}
@@ -2870,6 +2923,12 @@ packages:
     peerDependencies:
       vue: ^2.7.0 || ^3.0.0
 
+  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/8c451f192339242ef42dd5801ea67fac3d99666f':
+    resolution: {tarball: https://codeload.github.com/tempoxyz/lints/tar.gz/8c451f192339242ef42dd5801ea67fac3d99666f}
+    version: 0.1.1
+    engines: {node: '>=18'}
+    hasBin: true
+
   '@testing-library/dom@10.4.1':
     resolution: {integrity: sha512-o4PXJQidqJl82ckFaXUeoAW+XysPLauYI43Abki5hABd853iMhitooc6znOnczgbTYmEP6U6/y1ZyKAIsvMKGg==}
     engines: {node: '>=18'}
@@ -3594,6 +3653,10 @@ packages:
     resolution: {integrity: sha512-yPVavfyCcRhmorC7rWlkHn15b4wDVgVmBA7kV4QVBsF7kv/9TKJAbAXVTxvTnwP8HHKjRCJDClKbciiYS7p0DQ==}
     engines: {node: '>=16'}
 
+  commander@12.1.0:
+    resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
+    engines: {node: '>=18'}
+
   compress-commons@6.0.2:
     resolution: {integrity: sha512-6FqVXeETqWPoGcfzrXb37E50NP0LXT8kAMu5ooZayhWWdgEY4lBEEcbQNXtkuKQsGduxiIcI4gOTsxTmuq/bSg==}
     engines: {node: '>= 14'}
@@ -3743,6 +3806,10 @@ packages:
 
   detect-libc@2.0.2:
     resolution: {integrity: sha512-UX6sGumvvqSaXgdKGUsgZWqcUyIXZ/vZTrlRT/iobiKhGL0zL4d3osHj3uqllWJK+i+sixDS/3COVEOFbupFyw==}
+    engines: {node: '>=8'}
+
+  detect-libc@2.0.3:
+    resolution: {integrity: sha512-bwy0MGW55bG41VqxxypOsdSdGqLwXPI/focwgTYCFMbdUiBAxLg9CFzG08sz2aqzknwiX7Hkl0bQENjg8iLByw==}
     engines: {node: '>=8'}
 
   detect-libc@2.1.2:
@@ -6138,6 +6205,39 @@ snapshots:
       package-manager-detector: 1.6.0
       tinyexec: 1.0.2
 
+  '@ast-grep/cli-darwin-arm64@0.25.7':
+    optional: true
+
+  '@ast-grep/cli-darwin-x64@0.25.7':
+    optional: true
+
+  '@ast-grep/cli-linux-arm64-gnu@0.25.7':
+    optional: true
+
+  '@ast-grep/cli-linux-x64-gnu@0.25.7':
+    optional: true
+
+  '@ast-grep/cli-win32-arm64-msvc@0.25.7':
+    optional: true
+
+  '@ast-grep/cli-win32-ia32-msvc@0.25.7':
+    optional: true
+
+  '@ast-grep/cli-win32-x64-msvc@0.25.7':
+    optional: true
+
+  '@ast-grep/cli@0.25.7':
+    dependencies:
+      detect-libc: 2.0.3
+    optionalDependencies:
+      '@ast-grep/cli-darwin-arm64': 0.25.7
+      '@ast-grep/cli-darwin-x64': 0.25.7
+      '@ast-grep/cli-linux-arm64-gnu': 0.25.7
+      '@ast-grep/cli-linux-x64-gnu': 0.25.7
+      '@ast-grep/cli-win32-arm64-msvc': 0.25.7
+      '@ast-grep/cli-win32-ia32-msvc': 0.25.7
+      '@ast-grep/cli-win32-x64-msvc': 0.25.7
+
   '@babel/code-frame@7.27.1':
     dependencies:
       '@babel/helper-validator-identifier': 7.28.5
@@ -8341,6 +8441,11 @@ snapshots:
       '@tanstack/virtual-core': 3.13.17
       vue: 3.5.26(typescript@5.9.3)
 
+  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/8c451f192339242ef42dd5801ea67fac3d99666f':
+    dependencies:
+      '@ast-grep/cli': 0.25.7
+      commander: 12.1.0
+
   '@testing-library/dom@10.4.1':
     dependencies:
       '@babel/code-frame': 7.27.1
@@ -9103,6 +9208,8 @@ snapshots:
 
   commander@11.1.0: {}
 
+  commander@12.1.0: {}
+
   compress-commons@6.0.2:
     dependencies:
       crc-32: 1.2.2
@@ -9242,6 +9349,8 @@ snapshots:
   dequal@2.0.3: {}
 
   detect-libc@2.0.2: {}
+
+  detect-libc@2.0.3: {}
 
   detect-libc@2.1.2: {}
 
