@@ -10,6 +10,7 @@ This is a **TypeScript monorepo** for applications on the Tempo blockchain appli
 | --------- | ----------- |
 | `apps/explorer` | Chain explorer UI |
 | `apps/fee-payer` | Transaction fee sponsorship service |
+| `apps/key-manager` | WebAuthn key management service |
 | `apps/tokenlist` | Token registry API |
 | `apps/contract-verification` | Smart contract verification |
 | `apps/og` | OpenGraph image generation |

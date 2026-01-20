@@ -1,0 +1,27 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "key-manager",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.ts",
+	"workers_dev": true,
+	"preview_urls": true,
+	"keep_vars": true,
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		}
+	},
+	// KV namespace binding - create via `wrangler kv namespace create KEY_STORE`
+	// For local dev, wrangler will use a local KV emulator
+	"kv_namespaces": [
+		{
+			"binding": "CREDENTIAL_STORE",
+			"id": "9dd0589696c2467ab8b996f991ca5b3e"
+		}
+	]
+}
