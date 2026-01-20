@@ -3,7 +3,8 @@ import type { Block } from 'viem'
 import { getBlock } from 'wagmi/actions'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
-export const DASHBOARD_BLOCKS_COUNT = 5
+export const DASHBOARD_BLOCKS_DISPLAY = 5
+export const DASHBOARD_BLOCKS_STATS = 50
 export const DASHBOARD_TRANSACTIONS_COUNT = 5
 
 export type NetworkStats = {
@@ -59,7 +60,7 @@ export function dashboardQueryOptions() {
 			const latestBlockNumber = latestBlock.number
 
 			const blockNumbers: bigint[] = []
-			for (let i = 0n; i < BigInt(DASHBOARD_BLOCKS_COUNT); i++) {
+			for (let i = 0n; i < BigInt(DASHBOARD_BLOCKS_STATS); i++) {
 				const blockNum = latestBlockNumber - i
 				if (blockNum >= 0n) blockNumbers.push(blockNum)
 			}
@@ -74,7 +75,8 @@ export function dashboardQueryOptions() {
 
 			const validBlocks = blocks.filter(Boolean) as Block<bigint, true>[]
 
-			const recentBlocks: DashboardBlock[] = validBlocks.map((block) => ({
+			const displayBlocks = validBlocks.slice(0, DASHBOARD_BLOCKS_DISPLAY)
+			const recentBlocks: DashboardBlock[] = displayBlocks.map((block) => ({
 				number: block.number,
 				hash: block.hash,
 				timestamp: block.timestamp,
@@ -84,7 +86,7 @@ export function dashboardQueryOptions() {
 			}))
 
 			const allTransactions: DashboardTransaction[] = []
-			for (const block of validBlocks) {
+			for (const block of displayBlocks) {
 				if (block.number === null) continue
 				for (const tx of block.transactions) {
 					if (typeof tx === 'string') continue
@@ -104,6 +106,14 @@ export function dashboardQueryOptions() {
 				latestBlockNumber,
 				blocks: recentBlocks,
 				transactions: allTransactions,
+				statsBlocks: validBlocks.map((block) => ({
+					number: block.number,
+					hash: block.hash,
+					timestamp: block.timestamp,
+					transactions: block.transactions.map((tx) =>
+						typeof tx === 'string' ? tx : tx.hash,
+					),
+				})),
 			}
 		},
 		staleTime: 5_000,
@@ -115,4 +125,5 @@ export type DashboardData = {
 	latestBlockNumber: bigint
 	blocks: DashboardBlock[]
 	transactions: DashboardTransaction[]
+	statsBlocks: DashboardBlock[]
 }
