@@ -23,5 +23,6 @@
 			"binding": "CREDENTIAL_STORE",
 			"id": "9dd0589696c2467ab8b996f991ca5b3e"
 		}
-	]
+	],
+	"routes": [{ "pattern": "keystore.tempo.xyz", "custom_domain": true }]
 }
