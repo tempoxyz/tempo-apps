@@ -70,9 +70,9 @@ export function Dashboard(props: Dashboard.Props): React.JSX.Element | null {
 	return (
 		<div
 			ref={containerRef}
-			className="w-full max-w-[1000px] mx-auto px-4 mt-8 flex flex-col gap-4"
+			className="w-full max-w-[700px] mx-auto px-4 mt-8 flex flex-col gap-4"
 		>
-			<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+			<div className="flex flex-wrap justify-center gap-2">
 				<StatCard
 					title="Transactions"
 					value={stats?.totalTransactions}
@@ -170,60 +170,42 @@ function formatNumber(num: number): string {
 }
 
 function StatCard(props: StatCardProps): React.JSX.Element {
-	const { title, value, subtitle, subtitleLabel, icon, loading, href, tooltip } =
-		props
+	const { title, value, subtitle, icon, loading, href, tooltip } = props
 
-	const titleContent = (
+	const content = (
 		<div className="flex items-center gap-2">
 			<span className="text-accent">{icon}</span>
-			{title}
+			<span className="text-tertiary text-[13px]">{title}</span>
+			{loading ? (
+				<div className="h-4 w-12 bg-base-alt rounded animate-pulse" />
+			) : (
+				<span className="text-primary font-medium text-[13px] tabular-nums">
+					{value !== undefined ? formatNumber(value) : '—'}
+					{subtitle !== undefined && subtitle > 0 && (
+						<span className="text-positive ml-1">
+							+{formatNumber(subtitle)}
+						</span>
+					)}
+				</span>
+			)}
+			{href && <ArrowRightIcon className="size-[12px] text-tertiary" />}
 		</div>
 	)
 
-	const content = (
-		<>
-			<div className="flex items-center justify-between text-tertiary text-[11px] mb-1">
-				{tooltip ? (
-					<Tooltip text={tooltip}>{titleContent}</Tooltip>
-				) : (
-					titleContent
-				)}
-				{href && <ArrowRightIcon className="size-[12px]" />}
-			</div>
-			{loading ? (
-				<div className="space-y-1">
-					<div className="h-6 w-20 bg-base-alt rounded animate-pulse" />
-					<div className="h-3 w-14 bg-base-alt rounded animate-pulse" />
-				</div>
-			) : (
-				<>
-					<div className="text-[20px] font-semibold text-primary tabular-nums">
-						{value !== undefined ? formatNumber(value) : '—'}
-					</div>
-					{subtitle !== undefined && subtitle > 0 && (
-						<div className="text-[11px] text-positive tabular-nums">
-							+{formatNumber(subtitle)} {subtitleLabel}
-						</div>
-					)}
-				</>
-			)}
-		</>
-	)
+	const pillClass =
+		'bg-surface border border-base-border rounded-full px-4 py-2 hover:border-accent transition-colors'
 
 	if (href) {
 		return (
-			<Link
-				to={href}
-				className="bg-surface border border-base-border rounded-lg px-3 py-2"
-			>
-				{content}
+			<Link to={href} className={pillClass}>
+				{tooltip ? <Tooltip text={tooltip}>{content}</Tooltip> : content}
 			</Link>
 		)
 	}
 
 	return (
-		<div className="bg-surface border border-base-border rounded-lg px-3 py-2">
-			{content}
+		<div className={pillClass}>
+			{tooltip ? <Tooltip text={tooltip}>{content}</Tooltip> : content}
 		</div>
 	)
 }
@@ -400,31 +382,27 @@ function AvgBlockTimeCard(props: {
 }): React.JSX.Element {
 	const { avgBlockTime, loading } = props
 
-	const titleContent = (
+	const content = (
 		<div className="flex items-center gap-2">
 			<span className="text-accent">
 				<ClockIcon className="size-[14px]" />
 			</span>
-			Avg Block Time
+			<span className="text-tertiary text-[13px]">Block Time</span>
+			{loading ? (
+				<div className="h-4 w-12 bg-base-alt rounded animate-pulse" />
+			) : (
+				<span className="text-primary font-medium text-[13px] tabular-nums">
+					{avgBlockTime !== null ? `${avgBlockTime.toFixed(1)}s` : '—'}
+				</span>
+			)}
 		</div>
 	)
 
 	return (
-		<div className="bg-surface border border-base-border rounded-lg px-3 py-2">
-			<div className="flex items-center gap-2 text-tertiary text-[11px] mb-1">
-				<Tooltip text="Average time between blocks (last 50 blocks)">
-					{titleContent}
-				</Tooltip>
-			</div>
-			{loading ? (
-				<div className="space-y-1">
-					<div className="h-6 w-20 bg-base-alt rounded animate-pulse" />
-				</div>
-			) : (
-				<div className="text-[20px] font-semibold text-primary tabular-nums">
-					{avgBlockTime !== null ? `${avgBlockTime.toFixed(1)}s` : '—'}
-				</div>
-			)}
+		<div className="bg-surface border border-base-border rounded-full px-4 py-2 hover:border-accent transition-colors">
+			<Tooltip text="Average time between blocks (last 50 blocks)">
+				{content}
+			</Tooltip>
 		</div>
 	)
 }
@@ -435,31 +413,27 @@ function TPSCard(props: {
 }): React.JSX.Element {
 	const { tps, loading } = props
 
-	const titleContent = (
+	const content = (
 		<div className="flex items-center gap-2">
 			<span className="text-accent">
 				<ZapIcon className="size-[14px]" />
 			</span>
-			TPS
+			<span className="text-tertiary text-[13px]">TPS</span>
+			{loading ? (
+				<div className="h-4 w-12 bg-base-alt rounded animate-pulse" />
+			) : (
+				<span className="text-primary font-medium text-[13px] tabular-nums">
+					{tps !== null ? tps.toFixed(2) : '—'}
+				</span>
+			)}
 		</div>
 	)
 
 	return (
-		<div className="bg-surface border border-base-border rounded-lg px-3 py-2">
-			<div className="flex items-center gap-2 text-tertiary text-[11px] mb-1">
-				<Tooltip text="Transactions per second (last 50 blocks)">
-					{titleContent}
-				</Tooltip>
-			</div>
-			{loading ? (
-				<div className="space-y-1">
-					<div className="h-6 w-20 bg-base-alt rounded animate-pulse" />
-				</div>
-			) : (
-				<div className="text-[20px] font-semibold text-primary tabular-nums">
-					{tps !== null ? tps.toFixed(2) : '—'}
-				</div>
-			)}
+		<div className="bg-surface border border-base-border rounded-full px-4 py-2 hover:border-accent transition-colors">
+			<Tooltip text="Transactions per second (last 50 blocks)">
+				{content}
+			</Tooltip>
 		</div>
 	)
 }
