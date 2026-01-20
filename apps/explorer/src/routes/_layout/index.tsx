@@ -61,12 +61,12 @@ const SPOTLIGHT_DATA: Record<
 		accountAddress: '0x85269497F0b602a718b85DB5ce490A6c88d01c0E',
 		contractAddress: '0x4027a3f47d9a421c381bf5d88e22dad5afd4b1a2',
 		receiptHash:
-			'0x009293cd8195b5f088729e8839c3ccb7e9d10d98798a1cb11c06e62d77d1dbef',
+			'0x2e455936243560a540a1cf25203ef6bb70eb5410667922a1d2e3ad69eb891983',
 		paymentHash:
-			'0xc13dbcf74b99ddc7645b1752a031b4bd479e4514b77569e1a4e69ecbf88e7290',
+			'0x2e455936243560a540a1cf25203ef6bb70eb5410667922a1d2e3ad69eb891983',
 		swapHash: null,
 		mintHash:
-			'0x3dcdfda1c8689a0fab003174e7a0bc3c5df8c325e566df42cae8fe1a41ac48fb',
+			'0xc2ecd6749cac0ddce9511cbffe91c2a3de7c2b93d28e35d2d57b7ef4380bc37b',
 	},
 }
 
