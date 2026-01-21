@@ -27,12 +27,14 @@ export function transactionsQueryOptions(
 	params: {
 		page: number
 		include?: 'all' | 'sent' | 'received' | undefined
+		sort?: 'asc' | 'desc' | undefined
 		address: Address.Address
 		_key?: string | undefined
 	} & AccountRequestParameters,
 ) {
 	const searchParams = new URLSearchParams({
 		include: params?.include ?? 'all',
+		sort: params?.sort ?? 'desc',
 		limit: params.limit.toString(),
 		offset: params.offset.toString(),
 	})
@@ -43,6 +45,7 @@ export function transactionsQueryOptions(
 			params.page,
 			params.limit,
 			params.offset,
+			params.sort ?? 'desc',
 			params._key,
 		],
 		queryFn: async ({ signal }): Promise<TransactionsApiResponse> => {
