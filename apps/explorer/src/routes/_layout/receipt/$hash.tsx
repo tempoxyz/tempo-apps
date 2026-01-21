@@ -18,7 +18,7 @@ import { apostrophe } from '#lib/chars'
 import { decodeKnownCall, parseKnownEvents } from '#lib/domain/known-events'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
-import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut } from '#lib/hooks'
 import {
 	buildTxDescription,
@@ -421,8 +421,7 @@ namespace TextRenderer {
 					format: 'short',
 				})
 				lines.push(leftRight(label.toUpperCase(), amount))
-				if (item.payer)
-					lines.push(`${indent}Paid by: ${item.payer}`)
+				if (item.payer) lines.push(`${indent}Paid by: ${item.payer}`)
 			}
 
 			lines.push('')

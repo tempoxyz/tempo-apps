@@ -48,7 +48,7 @@ export function SourceSection(props: ContractSource) {
 	const optimizerText = getOptimizerText(compilation)
 	const compilerVersionUrl = getCompilerVersionUrl(
 		compilation.compiler,
-		compilation.version,
+		compilation.compilerVersion,
 	)
 
 	return (
@@ -73,7 +73,7 @@ export function SourceSection(props: ContractSource) {
 							className="font-medium text-primary/80"
 							href={compilerVersionUrl}
 						>
-							{compilation.version} ({compilation.compiler})
+							{compilation.compilerVersion} ({compilation.compiler})
 						</a>
 					),
 				},

@@ -4,9 +4,7 @@ import { html, raw } from 'hono/html'
 const scalarConfig = {
 	slug: 'tokenlist',
 	hideModels: true,
-	sources: [
-		{ url: '/schema/openapi.json', default: true },
-	],
+	sources: [{ url: '/schema/openapi.json', default: true }],
 	hideClientButton: true,
 	url: '/schema/openapi.json',
 	showDeveloperTools: 'never',
