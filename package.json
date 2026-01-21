@@ -34,6 +34,8 @@
 	},
 	"packageManager": "pnpm@10.28.0",
 	"pnpm": {
-		"onlyBuiltDependencies": ["@ast-grep/cli"]
+		"onlyBuiltDependencies": [
+			"@ast-grep/cli"
+		]
 	}
 }
