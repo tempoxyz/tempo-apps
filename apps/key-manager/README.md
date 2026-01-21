@@ -1,6 +1,6 @@
 # Key Manager
 
-WebAuthn key management service using `Handler.keyManager` from tempo.ts.
+WebAuthn key management service using `Handler.keyManager` from `tempo.ts`.
 
 ## Endpoints
 

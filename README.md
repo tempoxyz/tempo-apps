@@ -10,6 +10,7 @@ Monorepo for Tempo Apps
 | [`apps/fee-payer`](apps/fee-payer) | Fee payer. | [`sponsor.testnet.tempo.xyz`](<https://sponsor.testnet.tempo.xyz>) |
 | [`apps/tokenlist`](apps/tokenlist) | Tempo Tokenlist Registry & API. | [`tokenlist.tempo.xyz`](<https://tokenlist.tempo.xyz>) |
 | [`apps/contract-verification`](apps/contract-verification) | Smart contract verification service. | [`contracts.tempo.xyz`](<https://contracts.tempo.xyz>) |
+| [`apps/key-manager`](apps/key-manager) | WebAuthn key management service. | [`keys.tempo.xyz`](<https://keys.tempo.xyz>) |
 
 ## Contributing
 

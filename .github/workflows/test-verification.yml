@@ -28,9 +28,9 @@ jobs:
           - network: devnet
             rpc_url: https://rpc.devnet.tempoxyz.dev
           - network: mainnet
-            rpc_url: https://rpc.tempo.xyz
+            rpc_url: https://rpc.mainnet.tempo.xyz
           - network: testnet
-            rpc_url: https://rpc.moderato.tempo.xyz
+            rpc_url: https://rpc.testnet.tempo.xyz
     name: tempo-check (${{ matrix.network }})
     steps:
       - name: Check if network is selected
