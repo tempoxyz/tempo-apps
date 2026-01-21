@@ -22,7 +22,7 @@ export function validatorsQueryOptions() {
 			const config = getWagmiConfig()
 			const validators = await readContract(config, {
 				address: VALIDATOR_CONFIG_ADDRESS,
-				abi: Abis.validatorConfig,
+				abi: Abis.validator,
 				functionName: 'getValidators',
 			})
 

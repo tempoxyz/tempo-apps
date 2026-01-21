@@ -1311,7 +1311,7 @@ const callDecoders: Record<
 	{ abi: readonly unknown[]; decoder: CallDecoder }
 > = {
 	[VALIDATOR_CONFIG.toLowerCase()]: {
-		abi: Abis.validatorConfig,
+		abi: Abis.validator,
 		decoder: decodeValidatorConfigCall,
 	},
 }
