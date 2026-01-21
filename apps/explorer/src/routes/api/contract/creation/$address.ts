@@ -4,6 +4,11 @@ import { getChainId, getPublicClient } from 'wagmi/actions'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
+const creationCache = new Map<
+	string,
+	{ blockNumber: bigint; timestamp: bigint }
+>()
+
 export const Route = createFileRoute('/api/contract/creation/$address')({
 	server: {
 		handlers: {
@@ -11,6 +16,18 @@ export const Route = createFileRoute('/api/contract/creation/$address')({
 				try {
 					const address = zAddress().parse(params.address)
 					Address.assert(address)
+					const cacheKey = address.toLowerCase()
+
+					const cached = creationCache.get(cacheKey)
+					if (cached) {
+						return Response.json({
+							creation: {
+								blockNumber: cached.blockNumber.toString(),
+								timestamp: cached.timestamp.toString(),
+							},
+							error: null,
+						})
+					}
 
 					const config = getWagmiConfig()
 					const chainId = getChainId(config)
@@ -32,7 +49,7 @@ export const Route = createFileRoute('/api/contract/creation/$address')({
 					const creationBlock = await binarySearchCreationBlock(
 						client,
 						address,
-						0n,
+						1n,
 						latestBlock,
 					)
 
@@ -41,6 +58,11 @@ export const Route = createFileRoute('/api/contract/creation/$address')({
 					}
 
 					const block = await client.getBlock({ blockNumber: creationBlock })
+
+					creationCache.set(cacheKey, {
+						blockNumber: creationBlock,
+						timestamp: block.timestamp,
+					})
 
 					return Response.json({
 						creation: {
@@ -63,14 +85,14 @@ export const Route = createFileRoute('/api/contract/creation/$address')({
 })
 
 async function binarySearchCreationBlock(
-	client: ReturnType<typeof getPublicClient>,
+	client: NonNullable<ReturnType<typeof getPublicClient>>,
 	address: Address.Address,
 	low: bigint,
 	high: bigint,
 ): Promise<bigint | null> {
-	if (!client) return null
+	const MAX_BATCH_SIZE = 10
 
-	while (low < high) {
+	while (high - low > BigInt(MAX_BATCH_SIZE)) {
 		const mid = (low + high) / 2n
 
 		try {
@@ -89,13 +111,29 @@ async function binarySearchCreationBlock(
 		}
 	}
 
-	const finalCode = await client.getCode({
-		address,
-		blockNumber: low,
-	})
+	const blocksToCheck = []
+	for (let b = low; b <= high; b++) {
+		blocksToCheck.push(b)
+	}
 
-	if (finalCode && finalCode !== '0x') {
-		return low
+	const results = await Promise.all(
+		blocksToCheck.map(async (blockNum) => {
+			try {
+				const code = await client.getCode({
+					address,
+					blockNumber: blockNum,
+				})
+				return { blockNum, hasCode: Boolean(code && code !== '0x') }
+			} catch {
+				return { blockNum, hasCode: false }
+			}
+		}),
+	)
+
+	for (const result of results) {
+		if (result.hasCode) {
+			return result.blockNum
+		}
 	}
 
 	return null

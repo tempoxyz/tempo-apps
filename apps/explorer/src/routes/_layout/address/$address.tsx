@@ -687,6 +687,18 @@ async function fetchAddressMetadata(address: Address.Address) {
 	}>
 }
 
+type ContractCreationResponse = {
+	creation: { blockNumber: string; timestamp: string } | null
+	error: string | null
+}
+
+async function fetchContractCreation(
+	address: Address.Address,
+): Promise<ContractCreationResponse> {
+	const response = await fetch(`/api/contract/creation/${address}`)
+	return response.json() as Promise<ContractCreationResponse>
+}
+
 function AccountCardWithTimestamps(props: {
 	address: Address.Address
 	assetsData: AssetData[]
@@ -704,24 +716,39 @@ function AccountCardWithTimestamps(props: {
 		tokenMetadata,
 	} = props
 
+	const resolvedAccountType = addressMetadata?.accountType ?? initialAccountType
+	const isContract = resolvedAccountType === 'contract'
+	const missingCreated = !addressMetadata?.createdTimestamp
+
+	// For contracts without a createdTimestamp from metadata (0-tx contracts),
+	// fall back to binary-search contract creation lookup
+	const { data: contractCreation } = useQuery({
+		queryKey: ['contract-creation', address],
+		queryFn: () => fetchContractCreation(address),
+		enabled: isContract && missingCreated,
+		staleTime: 60_000,
+	})
+
+	const createdTimestamp = addressMetadata?.createdTimestamp
+		? BigInt(addressMetadata.createdTimestamp)
+		: contractCreation?.creation?.timestamp
+			? BigInt(contractCreation.creation.timestamp)
+			: undefined
+
 	const totalValue = calculateTotalHoldings(assetsData)
 
 	return (
 		<AccountCard
 			address={address}
 			className="self-start"
-			createdTimestamp={
-				addressMetadata?.createdTimestamp
-					? BigInt(addressMetadata.createdTimestamp)
-					: undefined
-			}
+			createdTimestamp={createdTimestamp}
 			lastActivityTimestamp={
 				addressMetadata?.lastActivityTimestamp
 					? BigInt(addressMetadata.lastActivityTimestamp)
 					: undefined
 			}
 			totalValue={totalValue}
-			accountType={addressMetadata?.accountType ?? initialAccountType}
+			accountType={resolvedAccountType}
 			isToken={isToken}
 			tokenName={tokenMetadata?.name}
 		/>
