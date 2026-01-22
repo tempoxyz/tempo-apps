@@ -24,13 +24,6 @@ jobs:
       fail-fast: false
       matrix:
         network: [devnet, mainnet, testnet]
-        include:
-          - network: devnet
-            rpc_url: https://rpc.devnet.tempoxyz.dev
-          - network: mainnet
-            rpc_url: https://rpc.mainnet.tempo.xyz
-          - network: testnet
-            rpc_url: https://rpc.testnet.tempo.xyz
     name: tempo-check (${{ matrix.network }})
     steps:
       - name: Check if network is selected
@@ -59,5 +52,5 @@ jobs:
       - name: Run tempo-check
         if: steps.check.outputs.skip != 'true'
         env:
-          ETH_RPC_URL: ${{ matrix.rpc_url }}
+          ETH_RPC_URL: ${{ matrix.network == 'mainnet' && secrets.TEMPO_MAINNET_RPC_URL || matrix.network == 'testnet' && secrets.TEMPO_TESTNET_RPC_URL || secrets.TEMPO_DEVNET_RPC_URL }}
         run: ./tempo-check.sh
