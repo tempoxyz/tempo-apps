@@ -27,7 +27,7 @@ import {
 	sourcesTable,
 	verifiedContractsTable,
 } from '#database/schema.ts'
-import { normalizeSourcePath, sourcifyError } from '#utilities.ts'
+import { log, normalizeSourcePath, sourcifyError } from '#utilities.ts'
 
 /**
  * TODO:
@@ -614,7 +614,10 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 
 		return context.json({ verificationId }, 202)
 	} catch (error) {
-		console.error(error)
+		const { chainId, address } = context.req.param()
+		log
+			.fromContext(context)
+			.error('verify_contract_failed', error, { chainId, address })
 		return sourcifyError(
 			context,
 			500,
@@ -683,7 +686,10 @@ verifyRoute.get('/:verificationId', async (context) => {
 			},
 		})
 	} catch (error) {
-		console.error(error)
+		const { verificationId } = context.req.param()
+		log
+			.fromContext(context)
+			.error('verification_status_check_failed', error, { verificationId })
 		return context.json(
 			{
 				customCode: 'internal_error',

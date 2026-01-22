@@ -25,7 +25,7 @@ import {
 	sourcesTable,
 	verifiedContractsTable,
 } from '#database/schema.ts'
-import { normalizeSourcePath, sourcifyError } from '#utilities.ts'
+import { log, normalizeSourcePath, sourcifyError } from '#utilities.ts'
 
 /**
  * Legacy Sourcify-compatible routes for Foundry forge verify.
@@ -52,7 +52,12 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 	try {
 		const body = (await context.req.json()) as LegacyVyperRequest
 
-		console.log('[verify/vyper] Request body:', JSON.stringify(body, null, 2))
+		log.fromContext(context).info('vyper_verification_started', {
+			address: body.address,
+			chainId: body.chain,
+			contractName: body.contractName,
+			compilerVersion: body.compilerVersion,
+		})
 
 		const {
 			address,
@@ -530,7 +535,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			],
 		})
 	} catch (error) {
-		console.error(error)
+		log.fromContext(context).error('legacy_vyper_verification_failed', error)
 		return context.json({ error: 'An unexpected error occurred' }, 500)
 	}
 })
