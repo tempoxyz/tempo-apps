@@ -9,6 +9,27 @@ const abi = Object.values(Abis).flat()
 const FEE_MANAGER = Addresses.feeManager
 const STABLECOIN_EXCHANGE = Addresses.stablecoinDex
 
+export type Authorization = {
+	address: Address.Address
+	chainId: number
+	nonce: number
+}
+
+export function parseAuthorizationEvents(
+	authorizationList: readonly Authorization[] | undefined,
+): KnownEvent[] {
+	if (!authorizationList || authorizationList.length === 0) return []
+
+	return authorizationList.map((auth) => ({
+		type: 'delegate account',
+		parts: [
+			{ type: 'action', value: 'Delegate Account' },
+			{ type: 'text', value: 'to' },
+			{ type: 'account', value: auth.address },
+		],
+	}))
+}
+
 type FeeTransferEvent = {
 	amount: bigint
 	token: Address.Address
