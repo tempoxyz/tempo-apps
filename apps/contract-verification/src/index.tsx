@@ -109,6 +109,11 @@ app.route('/v2/verify', verifyRoute)
 app.route('/v2/contract', lookupRoute)
 app.route('/v2/contracts', lookupAllChainContractsRoute)
 
+// permanent redirect to explore.tempo.xyz favicon otherwise it shows in logs
+app.get('/favicon.ico', (context) =>
+	context.redirect('https://explore.tempo.xyz/favicon.ico', 301),
+)
+
 app
 	.get('/health', (context) => context.text('ok'))
 	.get('/', (context) => context.redirect('/docs'))
