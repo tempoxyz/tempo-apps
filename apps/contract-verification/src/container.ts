@@ -26,7 +26,20 @@ export class VerificationContainer extends Container<Cloudflare.Env> {
 	}
 
 	override onError(error: unknown): unknown {
-		log.error('container_error', error)
+		const errorMeta = extractErrorMeta(error)
+		log.error('container_error', error, errorMeta)
 		throw error
 	}
+}
+
+function extractErrorMeta(error: unknown): Record<string, unknown> {
+	if (error && typeof error === 'object') {
+		const e = error as Record<string, unknown>
+		return {
+			remote: e.remote,
+			retryable: e.retryable,
+			overloaded: e.overloaded,
+		}
+	}
+	return {}
 }

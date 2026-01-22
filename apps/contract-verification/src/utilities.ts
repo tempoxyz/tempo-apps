@@ -172,7 +172,8 @@ export function handleError(error: Error, context: Context) {
 		return error.getResponse()
 	}
 
-	log.fromContext(context).error('unhandled_error', error)
+	const doMeta = extractDurableObjectErrorMeta(error)
+	log.fromContext(context).error('unhandled_error', error, doMeta)
 	return context.json(
 		{
 			message: 'An unexpected error occurred',
@@ -181,6 +182,20 @@ export function handleError(error: Error, context: Context) {
 		},
 		500,
 	)
+}
+
+function extractDurableObjectErrorMeta(
+	error: unknown,
+): Record<string, unknown> {
+	if (error && typeof error === 'object') {
+		const e = error as Record<string, unknown>
+		const meta: Record<string, unknown> = {}
+		if ('remote' in e) meta.remote = e.remote
+		if ('retryable' in e) meta.retryable = e.retryable
+		if ('overloaded' in e) meta.overloaded = e.overloaded
+		return meta
+	}
+	return {}
 }
 
 /**
