@@ -22,6 +22,7 @@
 		"@biomejs/biome": "catalog:",
 		"@tempoxyz/lints": "github:tempoxyz/lints",
 		"@typescript/native-preview": "^7.0.0-dev.20260120.1",
+		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
 	},
 	"devEngines": {
