@@ -30,6 +30,23 @@ export class VerificationContainer extends Container<Cloudflare.Env> {
 		log.error('container_error', error, errorMeta)
 		throw error
 	}
+
+	override async alarm(alarmProps: {
+		isRetry: boolean
+		retryCount: number
+	}): Promise<void> {
+		try {
+			await super.alarm(alarmProps)
+		} catch (error) {
+			const errorMeta = extractErrorMeta(error)
+			log.error('container_alarm_error', error, {
+				...errorMeta,
+				isRetry: alarmProps.isRetry,
+				retryCount: alarmProps.retryCount,
+			})
+			throw error
+		}
+	}
 }
 
 function extractErrorMeta(error: unknown): Record<string, unknown> {
