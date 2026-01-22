@@ -33,6 +33,7 @@
 		{
 			"max_instances": 10,
 			"image": "./Dockerfile",
+			"instance_type": "standard-2",
 			"name": "verification-container",
 			"class_name": "VerificationContainer"
 		}
