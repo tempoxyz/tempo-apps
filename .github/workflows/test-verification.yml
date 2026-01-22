@@ -51,7 +51,7 @@ jobs:
             --silent \
             --show-error \
             --request GET \
-            --url https://raw.githubusercontent.com/tempoxyz/tempo-foundry/george/split-tempo-check-scripts/.github/scripts/tempo-deploy.sh \
+            --url https://raw.githubusercontent.com/tempoxyz/tempo-foundry/tempo/.github/scripts/tempo-deploy.sh \
             --output tempo-deploy.sh
           chmod +x tempo-deploy.sh
 
