@@ -1071,6 +1071,18 @@ export function parseKnownEvents(
 
 	const knownEvents: KnownEvent[] = []
 
+	// Detect contract creation (transaction.to is null for deployments)
+	const transaction = options?.transaction
+	if (transaction && transaction.to === null) {
+		knownEvents.push({
+			type: 'contract creation',
+			parts: [
+				{ type: 'action', value: 'Deploy Contract' },
+				{ type: 'account', value: receipt.contractAddress as Address.Address },
+			],
+		})
+	}
+
 	if (feeManagerCall && feeManagerCall.functionName === 'mint') {
 		const validatorToken = feeManagerCall.args[1]
 		const amountValidatorToken = feeManagerCall.args[2]
