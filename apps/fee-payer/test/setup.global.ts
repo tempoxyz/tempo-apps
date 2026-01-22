@@ -13,6 +13,7 @@ async function getCurrentTempoTestnetTag(): Promise<string> {
 	return `sha-${sha}`
 }
 
+// ast-grep-ignore-start
 async function waitForTempo(maxRetries = 10, delayMs = 500): Promise<void> {
 	const url = `http://localhost:${port}/1`
 	for (let i = 0; i < maxRetries; i++) {
@@ -39,7 +40,9 @@ async function waitForTempo(maxRetries = 10, delayMs = 500): Promise<void> {
 		`Tempo not responding at ${url} after ${maxRetries} retries. Is Docker running?`,
 	)
 }
+// ast-grep-ignore-end
 
+// ast-grep-ignore-start
 export default async function globalSetup() {
 	if ((import.meta.env.TEMPO_ENV ?? 'localnet') !== 'localnet') return
 
@@ -63,3 +66,4 @@ export default async function globalSetup() {
 		throw error
 	}
 }
+// ast-grep-ignore-end

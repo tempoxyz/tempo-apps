@@ -16,8 +16,10 @@ if (!selectedChain) {
 	)
 }
 
+// ast-grep-ignore: no-console-log
 console.log(
-	`\n🔗 Testing against ${selectedChain.name} (${selectedChain.chainId})\n`,
+	// ast-grep-ignore: no-leading-whitespace-strings
+	`\nTesting against ${selectedChain.name} (${selectedChain.chainId})\n`,
 )
 
 export default defineWorkersConfig({

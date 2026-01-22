@@ -39,6 +39,7 @@ async function findCreationBlock(
 	while (low <= high) {
 		const mid = (low + high) / 2n
 		try {
+			// ast-grep-ignore: no-await-in-loop
 			const code = await getCode(client, { address, blockNumber: mid })
 			if (code && code !== '0x') {
 				result = mid

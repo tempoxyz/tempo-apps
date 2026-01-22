@@ -74,7 +74,8 @@ app.all('*', rateLimitMiddleware, async (c) => {
 		chain: tempoChain as Chain,
 		transport: http(env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0]),
 		async onRequest(request) {
-			console.log(`Sponsoring transaction: ${request.method}`)
+			// ast-grep-ignore: no-console-log
+			console.info(`Sponsoring transaction: ${request.method}`)
 			c.executionCtx.waitUntil(
 				captureEvent({
 					distinctId: requestContext.origin ?? 'unknown',

@@ -436,6 +436,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			})
 		}
 
+		// ast-grep-ignore-start: Sequential DB operations are intentional
 		// Insert sources
 		for (const [sourcePath, sourceContent] of Object.entries(files)) {
 			const contentBytes = new TextEncoder().encode(sourceContent)
@@ -501,6 +502,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 					.onConflictDoNothing()
 			}
 		}
+		// ast-grep-ignore-end
 
 		// Insert verified contract
 		await db

@@ -16,13 +16,15 @@ export async function rateLimitMiddleware(c: Context, next: Next) {
 
 	try {
 		const clonedRequest = await cloneRawRequest(c.req)
-		// biome-ignore lint/suspicious/noExplicitAny: _
+		// biome-ignore lint/suspicious/noExplicitAny: RpcRequest.from accepts any JSON-RPC payload
+		// ast-grep-ignore: no-explicit-any
 		const request = RpcRequest.from((await clonedRequest.json()) as any)
 		const serialized = request.params?.[0] as `0x76${string}`
 
 		if (serialized?.startsWith('0x76')) {
 			const transaction = Transaction.deserialize(serialized)
-			// biome-ignore lint/suspicious/noExplicitAny: _
+			// biome-ignore lint/suspicious/noExplicitAny: Transaction type doesn't expose `from` property
+			// ast-grep-ignore: no-explicit-any
 			const from = (transaction as any).from
 
 			const { success } = await env.AddressRateLimiter.limit({ key: from })

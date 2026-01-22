@@ -11,6 +11,7 @@ export async function mapWithConcurrency<T, R>(
 	async function worker() {
 		while (index < items.length) {
 			const currentIndex = index++
+			// ast-grep-ignore: no-await-in-loop
 			results[currentIndex] = await fn(items[currentIndex])
 		}
 	}
