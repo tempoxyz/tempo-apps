@@ -53,4 +53,5 @@ jobs:
         if: steps.check.outputs.skip != 'true'
         env:
           ETH_RPC_URL: ${{ matrix.network == 'mainnet' && secrets.TEMPO_MAINNET_RPC_URL || matrix.network == 'testnet' && secrets.TEMPO_TESTNET_RPC_URL || secrets.TEMPO_DEVNET_RPC_URL }}
+          TEMPO_FEE_TOKEN: ${{ matrix.network == 'mainnet' && '0x20c00000000000000000000016c6514b53947fdc' || '' }}
         run: ./tempo-check.sh
