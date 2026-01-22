@@ -248,6 +248,9 @@ importers:
       viem:
         specifier: 'catalog:'
         version: 2.44.4(typescript@5.9.3)(zod@4.3.5)
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.5
     devDependencies:
       '@biomejs/biome':
         specifier: 'catalog:'
@@ -255,6 +258,9 @@ importers:
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
         version: 1.21.2(rolldown-vite@7.3.1(@types/node@25.0.10)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20260120.0)(wrangler@4.60.0(@cloudflare/workers-types@4.20260122.0))
+      '@cloudflare/vitest-pool-workers':
+        specifier: 'catalog:'
+        version: 0.12.6(@cloudflare/workers-types@4.20260122.0)(@vitest/runner@3.2.4)(@vitest/snapshot@3.2.4)(vitest@3.2.4(@types/debug@4.1.12)(@types/node@25.0.10)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2))
       '@cloudflare/workers-types':
         specifier: 'catalog:'
         version: 4.20260122.0
@@ -294,6 +300,9 @@ importers:
       vite-plugin-devtools-json:
         specifier: 'catalog:'
         version: 1.0.0(rolldown-vite@7.3.1(@types/node@25.0.10)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      vitest:
+        specifier: 'catalog:'
+        version: 3.2.4(@types/debug@4.1.12)(@types/node@25.0.10)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.2)
       wrangler:
         specifier: 'catalog:'
         version: 4.60.0(@cloudflare/workers-types@4.20260122.0)
