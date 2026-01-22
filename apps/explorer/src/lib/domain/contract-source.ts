@@ -115,7 +115,7 @@ export async function fetchContractSource(params: {
 		const response = await fetch(url, { signal })
 
 		if (!response.ok) {
-			console.error(' Failed to fetch contract sources:', await response.text())
+			console.error('Failed to fetch contract sources:', await response.text())
 			throw new Error('Failed to fetch contract sources')
 		}
 

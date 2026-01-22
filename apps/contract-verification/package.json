@@ -14,6 +14,8 @@
 		"check": "pnpm check:biome && pnpm check:types",
 		"check:biome": "biome check --write --unsafe",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"test": "vitest --run",
+		"vitest": "vitest",
 		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
 		"tail": "wrangler tail",
 		"db:studio": "drizzle-kit studio --config='drizzle.config.ts'",
@@ -28,14 +30,13 @@
 		"ox": "catalog:",
 		"semver": "^7.7.3",
 		"tempo.ts": "catalog:",
-		"zod": "catalog:",
-		"viem": "catalog:"
+		"viem": "catalog:",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
-		"vitest": "catalog:",
-		"@cloudflare/vitest-pool-workers": "catalog:",
 		"@cloudflare/vite-plugin": "catalog:",
+		"@cloudflare/vitest-pool-workers": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
 		"@libsql/client": "^0.17.0",
 		"@scalar/api-reference": "catalog:",
@@ -43,13 +44,15 @@
 		"@types/bun": "^1.3.6",
 		"@types/node": "catalog:",
 		"@types/semver": "^7.7.1",
-		"ox": "catalog:",
+		"dotenv": "catalog:",
+		"@vitest/ui": "catalog:",
 		"dbmate": "^2.29.3",
 		"drizzle-kit": "^0.31.8",
 		"esbuild": "catalog:",
 		"typescript": "catalog:",
 		"vite": "catalog:",
 		"vite-plugin-devtools-json": "catalog:",
+		"vitest": "catalog:",
 		"wrangler": "catalog:"
 	},
 	"license": "MIT"

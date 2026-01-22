@@ -1,3 +1,5 @@
+import 'dotenv/config'
+import { loadEnv } from 'vite'
 import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config'
 
 // VITEST_ENV controls which chain to test against: devnet | testnet | mainnet
@@ -9,12 +11,11 @@ const chainConfig = {
 	mainnet: { chainId: 4217, name: 'Tempo Mainnet' },
 } as const
 
-const selectedChain = chainConfig[vitestEnv as keyof typeof chainConfig]
-if (!selectedChain) {
+const selectedChain = chainConfig[vitestEnv]
+if (!selectedChain)
 	throw new Error(
 		`Invalid VITEST_ENV="${vitestEnv}". Must be: devnet | testnet | mainnet`,
 	)
-}
 
 // ast-grep-ignore: no-console-log
 console.log(
@@ -22,23 +23,35 @@ console.log(
 	`\nTesting against ${selectedChain.name} (${selectedChain.chainId})\n`,
 )
 
-export default defineWorkersConfig({
-	test: {
-		setupFiles: ['./test/setup.ts'],
-		globalSetup: ['./test/global-setup.ts'],
-		poolOptions: {
-			workers: {
-				wrangler: { configPath: './wrangler.jsonc' },
-				miniflare: {
-					compatibilityDate: '2025-12-17',
-					compatibilityFlags: ['nodejs_compat'],
-					bindings: {
-						TEST_CHAIN_ID: selectedChain.chainId,
-						TEST_CHAIN_NAME: selectedChain.name,
-						VITEST_ENV: vitestEnv,
+export default defineWorkersConfig((config) => {
+	const env = loadEnv(config.mode, process.cwd(), '')
+
+	return {
+		test: {
+			env: { ...env },
+			setupFiles: ['./test/setup.ts'],
+			globalSetup: ['./test/global-setup.ts'],
+			poolOptions: {
+				workers: {
+					isolatedStorage: true,
+					wrangler: { configPath: './wrangler.jsonc' },
+					miniflare: {
+						compatibilityDate: '2026-01-20',
+						compatibilityFlags: [
+							'nodejs_compat',
+							'enable_nodejs_tty_module',
+							'enable_nodejs_fs_module',
+							'enable_nodejs_http_modules',
+							'enable_nodejs_perf_hooks_module',
+						],
+						bindings: {
+							TEST_CHAIN_ID: selectedChain.chainId,
+							TEST_CHAIN_NAME: selectedChain.name,
+							VITEST_ENV: vitestEnv,
+						},
 					},
 				},
 			},
 		},
-	},
+	}
 })

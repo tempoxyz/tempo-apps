@@ -1,5 +1,5 @@
 import { getContainer } from '@cloudflare/containers'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
 import { Address, Hex } from 'ox'
@@ -88,6 +88,25 @@ type VerificationInput = {
 	creationTransactionHash?: string
 }
 
+type PublicClientLike = {
+	getCode: (args: { address: `0x${string}` }) => Promise<`0x${string}`>
+}
+
+type ContainerLike = {
+	fetch: (request: Request) => Promise<Response>
+}
+
+type VerificationDeps = {
+	getContainer?: (
+		binding: Cloudflare.Env['VERIFICATION_CONTAINER'],
+		name: string,
+	) => ContainerLike
+	createPublicClient?: (params: {
+		chain: (typeof chains)[keyof typeof chains]
+		transport: ReturnType<typeof http>
+	}) => PublicClientLike
+}
+
 type CompileOutput = {
 	contracts?: Record<
 		string,
@@ -132,9 +151,11 @@ async function runVerificationJob(
 	chainId: number,
 	address: string,
 	body: VerificationInput,
+	deps?: VerificationDeps,
 ): Promise<void> {
 	const db = drizzle(env.CONTRACTS_DB)
-	const addressBytes = Hex.toBytes(address as `0x${string}`)
+	Hex.assert(address)
+	const addressBytes = Hex.toBytes(address)
 	const startTime = Date.now()
 
 	const { stdJsonInput, compilerVersion, contractIdentifier } = body
@@ -147,14 +168,13 @@ async function runVerificationJob(
 
 	try {
 		const chain = chains[chainId as keyof typeof chains]
-		const client = createPublicClient({
+		const createClient = deps?.createPublicClient ?? createPublicClient
+		const client = createClient({
 			chain,
 			transport: http(chain.rpcUrls.default.http.at(0)),
 		})
 
-		const onchainBytecode = await client.getCode({
-			address: address as `0x${string}`,
-		})
+		const onchainBytecode = await client.getCode({ address })
 		if (!onchainBytecode || onchainBytecode === '0x') {
 			await db
 				.update(verificationJobsTable)
@@ -171,7 +191,8 @@ async function runVerificationJob(
 		}
 
 		// Compile via container
-		const container = getContainer(env.VERIFICATION_CONTAINER, 'singleton')
+		const getContainerFn = deps?.getContainer ?? getContainer
+		const container = getContainerFn(env.VERIFICATION_CONTAINER, 'singleton')
 		const compileEndpoint = isVyper
 			? 'http://container/compile/vyper'
 			: 'http://container/compile'
@@ -311,29 +332,27 @@ async function runVerificationJob(
 		const auditUser = 'verification-api'
 
 		// Compute hashes for runtime bytecode
-		const runtimeBytecodeBytes = Hex.toBytes(compiledBytecode as `0x${string}`)
+		Hex.assert(compiledBytecode)
+		const runtimeBytecodeBytes = Hex.toBytes(compiledBytecode)
 		const runtimeCodeHashSha256 = new Uint8Array(
 			await globalThis.crypto.subtle.digest(
 				'SHA-256',
-				new TextEncoder().encode(compiledBytecode as `0x${string}`),
+				new TextEncoder().encode(compiledBytecode),
 			),
 		)
-		const runtimeCodeHashKeccak = Hex.toBytes(
-			keccak256(compiledBytecode as `0x${string}`),
-		)
+		const runtimeCodeHashKeccak = Hex.toBytes(keccak256(compiledBytecode))
 
 		// Compute hashes for creation bytecode
 		const creationBytecode = creationBytecodeRaw
-		const creationBytecodeBytes = Hex.toBytes(creationBytecode as `0x${string}`)
+		Hex.assert(creationBytecode)
+		const creationBytecodeBytes = Hex.toBytes(creationBytecode)
 		const creationCodeHashSha256 = new Uint8Array(
 			await globalThis.crypto.subtle.digest(
 				'SHA-256',
-				new TextEncoder().encode(creationBytecode as `0x${string}`),
+				new TextEncoder().encode(creationBytecode),
 			),
 		)
-		const creationCodeHashKeccak = Hex.toBytes(
-			keccak256(creationBytecode as `0x${string}`),
-		)
+		const creationCodeHashKeccak = Hex.toBytes(keccak256(creationBytecode))
 
 		// Insert runtime code
 		await db
@@ -679,7 +698,7 @@ verifyRoute.post('/:chainId/:address', async (context) => {
 				and(
 					eq(verificationJobsTable.chainId, chainId),
 					eq(verificationJobsTable.contractAddress, addressBytes),
-					eq(verificationJobsTable.completedAt, ''),
+					isNull(verificationJobsTable.completedAt),
 				),
 			)
 			.limit(1)
@@ -910,4 +929,4 @@ verifyRoute.get('/:verificationId', async (context) => {
 	}
 })
 
-export { verifyRoute }
+export { runVerificationJob, verifyRoute }

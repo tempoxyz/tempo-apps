@@ -13,6 +13,7 @@
 		"check": "pnpm --recursive --parallel --stream --reporter='append-only' check:biome",
 		"postcheck": "pnpm check:types",
 		"check:biome": "biome check --write --unsafe",
+		"test": "pnpm --recursive --parallel --stream --reporter='append-only' test",
 		"check:types": "pnpm --recursive --parallel --stream --reporter='append-only' check:types",
 		"gen:types": "pnpm --recursive --parallel --stream --reporter='append-only' gen:types",
 		"lint:tempo": "lints typescript",

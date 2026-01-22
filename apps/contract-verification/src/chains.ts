@@ -1,7 +1,10 @@
 import { tempoDevnet, tempoAndantino, tempoModerato } from 'viem/chains'
 
-const tempoRpcKey = process.env.TEMPO_RPC_KEY
-if (!tempoRpcKey) throw new Error('TEMPO_RPC_KEY is not set')
+const tempoRpcKey = process.env.TEMPO_RPC_KEY ?? ''
+const requiresRpcKey = process.env.VITEST_ENV === 'mainnet'
+if (requiresRpcKey && tempoRpcKey.length === 0) {
+	throw new Error('TEMPO_RPC_KEY is not set')
+}
 
 const tempoPresto = {
 	...tempoModerato,
