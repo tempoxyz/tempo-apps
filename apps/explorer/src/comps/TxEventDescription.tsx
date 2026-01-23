@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import * as OxAddress from 'ox/Address'
 import type { Address as AddressType } from 'ox'
 import * as Hex from 'ox/Hex'
 import * as Value from 'ox/Value'
@@ -101,7 +102,9 @@ export namespace TxEventDescription {
 	export function Part(props: Part.Props) {
 		const { part, seenAs } = props
 		switch (part.type) {
-			case 'account':
+			case 'account': {
+				if (!OxAddress.validate(part.value))
+					return <span className="text-tertiary">{String(part.value)}</span>
 				return (
 					<Address
 						address={part.value}
@@ -109,6 +112,7 @@ export namespace TxEventDescription {
 						self={seenAs ? isAddressEqual(part.value, seenAs) : false}
 					/>
 				)
+			}
 			case 'action':
 				return (
 					<span className="inline-flex items-center h-[24px] px-[5px] bg-base-alt text-base-content capitalize">

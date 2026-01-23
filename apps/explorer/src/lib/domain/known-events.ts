@@ -1073,12 +1073,12 @@ export function parseKnownEvents(
 
 	// Detect contract creation (transaction.to is null for deployments)
 	const transaction = options?.transaction
-	if (transaction && transaction.to === null) {
+	if (transaction && transaction.to === null && receipt.contractAddress) {
 		knownEvents.push({
 			type: 'contract creation',
 			parts: [
 				{ type: 'action', value: 'Deploy Contract' },
-				{ type: 'account', value: receipt.contractAddress as Address.Address },
+				{ type: 'account', value: receipt.contractAddress },
 			],
 		})
 	}
