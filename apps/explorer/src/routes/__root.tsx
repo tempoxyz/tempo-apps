@@ -146,14 +146,6 @@ export const Route = createRootRouteWithContext<{
 	scripts: async () => {
 		const scripts: Array<{ children: string; type: string }> = []
 
-		// Patch fetch/Request to strip basic auth credentials from URLs
-		// Must run BEFORE any other JS to catch all requests (including TanStack hydration)
-		// Only activates when URL contains credentials (preview/staging environments)
-		scripts.push({
-			children: `(function(){var l=window.location;if(!l.username)return;var o=l.protocol+"//"+l.host;var F=window.fetch;var R=window.Request;window.fetch=function(i,n){try{var u=i instanceof Request?i.url:String(i);var a=new URL(u,o);if(i instanceof Request)return F.call(this,new R(a.href,i),n);return F.call(this,a.href,n)}catch(e){return F.call(this,i,n)}};window.Request=function(i,n){var u=new URL(String(i instanceof Request?i.url:i),o);return new R(u.href,n||i)}})();`,
-			type: 'text/javascript',
-		})
-
 		if (import.meta.env.PROD) {
 			scripts.push({
 				// PostHog analytics - deferred to avoid blocking initial render

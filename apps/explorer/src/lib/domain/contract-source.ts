@@ -1,4 +1,4 @@
-import { getRequestURL } from '#lib/env.ts'
+import { getApiUrl } from '#lib/env.ts'
 import { queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import { isAddress } from 'viem'
@@ -109,8 +109,14 @@ export async function fetchContractSource(params: {
 	const { address, chainId, highlight = true, signal } = params
 
 	try {
-		const requestUrl = getRequestURL()
-		const url = `${requestUrl.origin}/api/code?address=${address.toLowerCase()}&chainId=${chainId}&highlight=${highlight}`
+		const url = getApiUrl(
+			'/api/code',
+			new URLSearchParams({
+				address: address.toLowerCase(),
+				chainId: chainId.toString(),
+				highlight: highlight ? 'true' : 'false',
+			}),
+		)
 
 		const response = await fetch(url, { signal })
 

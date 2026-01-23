@@ -64,12 +64,11 @@ import {
 	transactionsQueryOptions,
 } from '#lib/queries/account'
 import { getWagmiConfig } from '#wagmi.config.ts'
-import { getRequestURL } from '#lib/env.ts'
+import { getApiUrl } from '#lib/env.ts'
 
 async function fetchAddressTotalValue(address: Address.Address) {
-	const requestUrl = getRequestURL()
 	const response = await fetch(
-		`${requestUrl.origin}/api/address/total-value/${address}`,
+		getApiUrl(`/api/address/total-value/${address}`),
 		{ headers: { 'Content-Type': 'application/json' } },
 	)
 	return response.json() as Promise<{ totalValue: number }>
@@ -85,11 +84,9 @@ type TokenBalance = {
 }
 
 async function fetchAddressBalances(address: Address.Address) {
-	const requestUrl = getRequestURL()
-	const response = await fetch(
-		`${requestUrl.origin}/api/address/balances/${address}`,
-		{ headers: { 'Content-Type': 'application/json' } },
-	)
+	const response = await fetch(getApiUrl(`/api/address/balances/${address}`), {
+		headers: { 'Content-Type': 'application/json' },
+	})
 	return response.json() as Promise<{
 		balances: TokenBalance[]
 		error?: string
@@ -97,11 +94,9 @@ async function fetchAddressBalances(address: Address.Address) {
 }
 
 async function fetchAddressTotalCount(address: Address.Address) {
-	const requestUrl = getRequestURL()
-	const response = await fetch(
-		`${requestUrl.origin}/api/address/txs-count/${address}`,
-		{ headers: { 'Content-Type': 'application/json' } },
-	)
+	const response = await fetch(getApiUrl(`/api/address/txs-count/${address}`), {
+		headers: { 'Content-Type': 'application/json' },
+	})
 	if (!response.ok) throw new Error('Failed to fetch total transaction count')
 	const {
 		data: safeData,
