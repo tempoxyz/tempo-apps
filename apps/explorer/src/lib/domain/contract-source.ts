@@ -32,11 +32,11 @@ const SoliditySettingsSchema = z.object({
 })
 
 export const ContractVerificationLookupSchema = z.object({
-	matchId: z.number(),
+	matchId: z.coerce.number(),
 	match: z.string(),
 	creationMatch: z.string(),
 	runtimeMatch: z.string(),
-	chainId: z.number(),
+	chainId: z.coerce.number(),
 	address: z.string(),
 	verifiedAt: z.string(),
 	stdJsonInput: z.object({
@@ -53,7 +53,7 @@ export const ContractVerificationLookupSchema = z.object({
 	abi: z.array(z.any()),
 	compilation: z.object({
 		compiler: z.string(),
-		version: z.string(),
+		compilerVersion: z.string(),
 		language: z.string(),
 		name: z.string(),
 		fullyQualifiedName: z.string(),

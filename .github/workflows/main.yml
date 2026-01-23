@@ -46,9 +46,10 @@ jobs:
           - app: fee-payer
             env: mainnet
           #### other (single-env-apps)
+          - app: contract-verification
+          - app: key-manager
           - app: og
           - app: tokenlist
-          - app: contract-verification
 
     steps:
       - uses: actions/checkout@v6

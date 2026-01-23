@@ -24,13 +24,6 @@ jobs:
       fail-fast: false
       matrix:
         network: [devnet, mainnet, testnet]
-        include:
-          - network: devnet
-            rpc_url: https://rpc.devnet.tempoxyz.dev
-          - network: mainnet
-            rpc_url: https://rpc.tempo.xyz
-          - network: testnet
-            rpc_url: https://rpc.moderato.tempo.xyz
     name: tempo-check (${{ matrix.network }})
     steps:
       - name: Check if network is selected
@@ -50,14 +43,22 @@ jobs:
           version: nightly
           network: tempo
 
-      - name: Fetch tempo-check.sh
+      - name: Fetch tempo-deploy.sh
         if: steps.check.outputs.skip != 'true'
         run: |
-          curl -fsSL https://raw.githubusercontent.com/tempoxyz/tempo-foundry/tempo/.github/scripts/tempo-check.sh -o tempo-check.sh
-          chmod +x tempo-check.sh
+          curl --location \
+            --fail \
+            --silent \
+            --show-error \
+            --request GET \
+            --url https://raw.githubusercontent.com/tempoxyz/tempo-foundry/tempo/.github/scripts/tempo-deploy.sh \
+            --output tempo-deploy.sh
+          chmod +x tempo-deploy.sh
 
-      - name: Run tempo-check
+      - name: Run tempo-deploy
         if: steps.check.outputs.skip != 'true'
         env:
-          ETH_RPC_URL: ${{ matrix.rpc_url }}
-        run: ./tempo-check.sh
+          ETH_RPC_URL: ${{ matrix.network == 'mainnet' && secrets.TEMPO_MAINNET_RPC_URL || matrix.network == 'testnet' && secrets.TEMPO_TESTNET_RPC_URL || secrets.TEMPO_DEVNET_RPC_URL }}
+          TEMPO_FEE_TOKEN: ${{ matrix.network == 'mainnet' && '0x20c00000000000000000000016c6514b53947fdc' || '0x20c0000000000000000000000000000000000002' }}
+          VERIFIER_URL: ${{ matrix.network == 'mainnet' && 'https://contracts.tempo.xyz' || env.VERIFIER_URL }}
+        run: ./tempo-deploy.sh

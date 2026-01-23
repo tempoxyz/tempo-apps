@@ -1,0 +1,21 @@
+{
+	"name": "key-manager",
+	"private": true,
+	"scripts": {
+		"build": "echo 'noop'",
+		"check": "biome check --write .",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"gen:types": "wrangler types"
+	},
+	"dependencies": {
+		"tempo.ts": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "catalog:",
+		"typescript": "catalog:",
+		"wrangler": "catalog:",
+    "@types/node": "catalog:"
+	}
+}

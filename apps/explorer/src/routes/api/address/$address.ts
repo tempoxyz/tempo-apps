@@ -3,6 +3,8 @@ import * as IDX from 'idxs'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import type { RpcTransaction } from 'viem'
+import { zeroAddress } from 'viem'
+import { getBlockNumber, getCode, getTransactionReceipt } from 'viem/actions'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { getRequestURL, hasIndexSupply } from '#lib/env'
@@ -19,6 +21,102 @@ const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
+
+/**
+ * Binary search to find the block where a contract was created.
+ * Uses historical eth_getCode queries to find when code first appeared.
+ */
+async function findCreationBlock(
+	client: ReturnType<ReturnType<typeof getWagmiConfig>['getClient']>,
+	address: Address.Address,
+	latestBlock: bigint,
+): Promise<bigint | null> {
+	let low = 0n
+	let high = latestBlock
+	let result: bigint | null = null
+
+	// Binary search: find the first block where code exists
+	while (low <= high) {
+		const mid = (low + high) / 2n
+		try {
+			const code = await getCode(client, { address, blockNumber: mid })
+			if (code && code !== '0x') {
+				result = mid
+				high = mid - 1n // Look for earlier blocks
+			} else {
+				low = mid + 1n // Code doesn't exist yet, look later
+			}
+		} catch {
+			// If historical query fails, narrow the search
+			low = mid + 1n
+		}
+	}
+
+	return result
+}
+
+/**
+ * Finds the contract creation transaction for a given address.
+ * Works for direct deployments (to=0x0). Factory-deployed contracts are handled
+ * via transfer/event queries in the main handler.
+ *
+ * Strategy:
+ * 1. Check if address has code (is a contract)
+ * 2. Binary search to find the exact creation block using historical eth_getCode
+ * 3. Query IndexSupply for creation txs at that specific block
+ */
+async function findContractCreationTx(
+	address: Address.Address,
+	chainId: number,
+): Promise<{ hash: Hex.Hex; block_num: bigint } | null> {
+	const config = getWagmiConfig()
+	const client = config.getClient()
+
+	// Check if this address has code (is a contract)
+	const code = await getCode(client, { address })
+	if (!code || code === '0x') return null
+
+	// Get current block number for binary search
+	const latestBlock = await getBlockNumber(client)
+
+	// Binary search to find the creation block
+	const creationBlock = await findCreationBlock(client, address, latestBlock)
+	if (!creationBlock) return null
+
+	// Query IndexSupply for contract creation txs at the creation block
+	const creationTxs = await QB.selectFrom('txs')
+		.select(['hash', 'block_num'])
+		.where('chain', '=', chainId)
+		.where('to', '=', zeroAddress)
+		.where('block_num', '=', creationBlock)
+		.execute()
+
+	if (creationTxs.length === 0) return null
+
+	// Check receipts to find the one that created our contract
+	const receipts = await Promise.all(
+		creationTxs.map(async (tx) => {
+			try {
+				const receipt = await getTransactionReceipt(client, { hash: tx.hash })
+				return { tx, receipt }
+			} catch {
+				return { tx, receipt: null }
+			}
+		}),
+	)
+
+	const match = receipts.find(
+		({ receipt }) =>
+			receipt?.contractAddress &&
+			Address.isEqual(receipt.contractAddress, address),
+	)
+
+	if (match) {
+		return { hash: match.tx.hash, block_num: match.tx.block_num }
+	}
+
+	return null
+}
 
 export const RequestParametersSchema = z.object({
 	offset: z.prefault(z.coerce.number(), 0),
@@ -107,7 +205,7 @@ export const Route = createFileRoute('/api/address/$address')({
 						.orderBy('block_num', sortDirection)
 						.orderBy('hash', sortDirection)
 
-					// Build transfer hashes query
+					// Build transfer hashes query - transfers where contract is from/to
 					let transferHashesQuery = QB.withSignatures([TRANSFER_SIGNATURE])
 						.selectFrom('transfer')
 						.select(['tx_hash', 'block_num'])
@@ -132,27 +230,65 @@ export const Route = createFileRoute('/api/address/$address')({
 						.orderBy('block_num', sortDirection)
 						.orderBy('tx_hash', sortDirection)
 
+					// For token contracts: also query transfers EMITTED by this contract
+					// This catches the creation tx for tokens (mint from 0x0)
+					const transferEmittedQuery = QB.withSignatures([TRANSFER_SIGNATURE])
+						.selectFrom('transfer')
+						.select(['tx_hash', 'block_num'])
+						.distinct()
+						.where('chain', '=', chainId)
+						.where('address', '=', address)
+						.orderBy('block_num', sortDirection)
+						.orderBy('tx_hash', sortDirection)
+
 					// bound fetch size to avoid huge offsets on deep pagination
 					const bufferSize = Math.min(
 						Math.max(offset + fetchSize * 5, limit * 3),
 						500,
 					)
 
-					// Run both queries in parallel and merge-sort to get top N hashes
-					const [directResult, transferResult] = await Promise.all([
+					// Run queries in parallel: direct txs, transfers (from/to), transfers (emitted), and contract creation
+					const [
+						directResult,
+						transferResult,
+						transferEmittedResult,
+						creationTx,
+					] = await Promise.all([
 						directTxsQuery.limit(bufferSize).execute(),
 						transferHashesQuery.limit(bufferSize).execute(),
+						transferEmittedQuery
+							.limit(bufferSize)
+							.execute()
+							.catch(() => []),
+						// Find contract creation tx (returns null for EOAs or on error)
+						findContractCreationTx(address, chainId).catch(() => null),
 					])
 
-					// Merge both results by block_num, deduplicate, and take top offset+fetchSize
+					// Merge all results by block_num, deduplicate, and take top offset+fetchSize
 					type HashEntry = { hash: Hex.Hex; block_num: bigint }
 					const allHashes = new Map<Hex.Hex, HashEntry>()
+
+					// Add contract creation tx if found
+					if (creationTx) {
+						allHashes.set(creationTx.hash, {
+							hash: creationTx.hash,
+							block_num: creationTx.block_num,
+						})
+					}
+
 					for (const row of directResult)
 						allHashes.set(row.hash, {
 							hash: row.hash,
 							block_num: row.block_num,
 						})
 					for (const row of transferResult)
+						if (!allHashes.has(row.tx_hash))
+							allHashes.set(row.tx_hash, {
+								hash: row.tx_hash,
+								block_num: row.block_num,
+							})
+					// Add transfers emitted by this contract (for token contracts)
+					for (const row of transferEmittedResult)
 						if (!allHashes.has(row.tx_hash))
 							allHashes.set(row.tx_hash, {
 								hash: row.tx_hash,

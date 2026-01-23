@@ -2,7 +2,9 @@ import { queryOptions } from '@tanstack/react-query'
 import type { Hex } from 'ox'
 import { getBlock, getTransaction, getTransactionReceipt } from 'wagmi/actions'
 import {
+	type Authorization,
 	decodeKnownCall,
+	parseAuthorizationEvents,
 	parseKnownEvent,
 	parseKnownEvents,
 } from '#lib/domain/known-events'
@@ -41,9 +43,19 @@ async function fetchTxData(params: { hash: Hex.Hex }) {
 			? decodeKnownCall(transaction.to, transaction.input)
 			: null
 
-	const knownEvents = knownCall
-		? [knownCall, ...parsedEvents.filter((e) => e.type !== 'fee')]
-		: parsedEvents
+	// Parse EIP-7702 authorization list for delegate account events
+	const authorizationList =
+		'authorizationList' in transaction
+			? (transaction.authorizationList as readonly Authorization[] | undefined)
+			: undefined
+	const authEvents = parseAuthorizationEvents(authorizationList)
+
+	// Build knownEvents: authorization events first, then decoded call, then parsed events
+	const knownEvents = [
+		...authEvents,
+		...(knownCall ? [knownCall] : []),
+		...parsedEvents.filter((e) => (knownCall ? e.type !== 'fee' : true)),
+	]
 
 	const feeBreakdown = getFeeBreakdown(receipt, { getTokenMetadata })
 

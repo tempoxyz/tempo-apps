@@ -1,0 +1,28 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "key-manager",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.ts",
+	"workers_dev": true,
+	"preview_urls": true,
+	"keep_vars": true,
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		}
+	},
+	// KV namespace binding - create via `wrangler kv namespace create KEY_STORE`
+	// For local dev, wrangler will use a local KV emulator
+	"kv_namespaces": [
+		{
+			"binding": "KEY_STORE",
+			"id": "8ec25d40617f49afa5d5b92a366f0b51"
+		}
+	],
+	"routes": [{ "pattern": "keys.tempo.xyz", "custom_domain": true }]
+}

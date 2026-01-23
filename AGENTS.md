@@ -10,6 +10,7 @@ This is a **TypeScript monorepo** for applications on the Tempo blockchain appli
 | --------- | ----------- |
 | `apps/explorer` | Chain explorer UI |
 | `apps/fee-payer` | Transaction fee sponsorship service |
+| `apps/key-manager` | WebAuthn key management service |
 | `apps/tokenlist` | Token registry API |
 | `apps/contract-verification` | Smart contract verification |
 | `apps/og` | OpenGraph image generation |
@@ -89,6 +90,22 @@ export declare namespace MyComponent {
 - [ ] All related tests must pass
 - [ ] No outstanding type or lint errors
 - [ ] No console.log statements left (except in tests)
+
+## Pull Request Guidelines
+
+### UI Changes (apps with visual components)
+
+When creating PRs that include UI changes (e.g., `apps/explorer`), include a before/after comparison table in the PR description:
+
+```markdown
+## Screenshots
+
+| Before | After |
+|--------|-------|
+| ![before](url-to-before-screenshot) | ![after](url-to-after-screenshot) |
+```
+
+Add multiple rows if the change affects different views or states.
 
 ## Adding a New Application
 

@@ -177,13 +177,13 @@ const LayoutBlockCountdownTargetBlockRoute =
   } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof LayoutIndexRoute
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
   '/validators': typeof LayoutValidatorsRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
-  '/': typeof LayoutIndexRoute
   '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
   '/demo/address': typeof LayoutDemoAddressRoute
@@ -196,7 +196,7 @@ export interface FileRoutesByFullPath {
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
-  '/demo': typeof LayoutDemoIndexRoute
+  '/demo/': typeof LayoutDemoIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
@@ -265,13 +265,13 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/blocks'
     | '/tokens'
     | '/validators'
     | '/api/code'
     | '/api/health'
     | '/api/search'
-    | '/'
     | '/address/$address'
     | '/block/$id'
     | '/demo/address'
@@ -284,7 +284,7 @@ export interface FileRouteTypes {
     | '/api/abi/batch'
     | '/api/address/$address'
     | '/api/tokens/count'
-    | '/demo'
+    | '/demo/'
     | '/block/countdown/$targetBlock'
     | '/api/address/balances/$address'
     | '/api/address/total-value/$address'
@@ -370,7 +370,7 @@ declare module '@tanstack/react-router' {
     '/_layout': {
       id: '/_layout'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -426,7 +426,7 @@ declare module '@tanstack/react-router' {
     '/_layout/demo/': {
       id: '/_layout/demo/'
       path: '/demo'
-      fullPath: '/demo'
+      fullPath: '/demo/'
       preLoaderRoute: typeof LayoutDemoIndexRouteImport
       parentRoute: typeof LayoutRoute
     }

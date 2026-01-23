@@ -20,7 +20,7 @@
 		"db:push": "CLOUDFLARE_D1_ENVIRONMENT='remote' drizzle-kit push --config='drizzle.config.ts'"
 	},
 	"dependencies": {
-		"@cloudflare/containers": "^0.0.31",
+		"@cloudflare/containers": "^0.1.0",
 		"cbor-x": "^1.6.0",
 		"drizzle-orm": "^0.45.1",
 		"hono": "catalog:",
@@ -37,7 +37,7 @@
 		"@libsql/client": "^0.17.0",
 		"@scalar/api-reference": "catalog:",
 		"@total-typescript/ts-reset": "catalog:",
-		"@types/bun": "^1.3.5",
+		"@types/bun": "^1.3.6",
 		"@types/node": "catalog:",
 		"@types/semver": "^7.7.1",
 		"dbmate": "^2.29.3",

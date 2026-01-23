@@ -15,7 +15,7 @@ import {
 	sourcesTable,
 	verifiedContractsTable,
 } from '#database/schema.ts'
-import { sourcifyError } from '#utilities.ts'
+import { log, sourcifyError } from '#utilities.ts'
 
 /**
  * GET /v2/contract/{chainId}/{address}
@@ -89,7 +89,10 @@ lookupRoute.get('/all-chains/:address', async (context) => {
 
 		return context.json({ results: contracts })
 	} catch (error) {
-		console.error(error)
+		const { address } = context.req.param()
+		log
+			.fromContext(context)
+			.error('lookup_all_chains_failed', error, { address })
 		return sourcifyError(
 			context,
 			500,
@@ -504,7 +507,10 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 
 		return context.json(minimalResponse)
 	} catch (error) {
-		console.error(error)
+		const { chainId, address } = context.req.param()
+		log
+			.fromContext(context)
+			.error('lookup_contract_failed', error, { chainId, address })
 		return sourcifyError(
 			context,
 			500,
@@ -591,7 +597,8 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 
 		return context.json({ results: contracts })
 	} catch (error) {
-		console.error(error)
+		const { chainId } = context.req.param()
+		log.fromContext(context).error('list_contracts_failed', error, { chainId })
 		return sourcifyError(
 			context,
 			500,

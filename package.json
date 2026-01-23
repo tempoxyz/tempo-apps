@@ -15,11 +15,14 @@
 		"check:biome": "biome check --write --unsafe",
 		"check:types": "pnpm --recursive --parallel --stream --reporter='append-only' check:types",
 		"gen:types": "pnpm --recursive --parallel --stream --reporter='append-only' gen:types",
+		"lint:tempo": "lints typescript",
 		"postinstall": "pnpm --recursive --parallel --stream --reporter='append-only' postinstall"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
-		"@typescript/native-preview": "^7.0.0-dev.20260113.1",
+		"@tempoxyz/lints": "github:tempoxyz/lints",
+		"@typescript/native-preview": "^7.0.0-dev.20260120.1",
+		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
 	},
 	"devEngines": {
@@ -29,5 +32,5 @@
 			"onFail": "download"
 		}
 	},
-	"packageManager": "pnpm@10.28.0"
+	"packageManager": "pnpm@10.28.1"
 }
