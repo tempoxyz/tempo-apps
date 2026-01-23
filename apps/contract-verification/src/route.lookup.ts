@@ -468,7 +468,7 @@ lookupRoute.get('/:chainId/:address', async (context) => {
 				compilerSettings: JSON.parse(row.compilerSettings),
 			},
 			deployment: {
-				chainId: row.chainId,
+				chainId: String(row.chainId),
 				address: formattedAddress,
 				transactionHash: row.transactionHash
 					? Hex.fromBytes(new Uint8Array(row.transactionHash as ArrayBuffer))

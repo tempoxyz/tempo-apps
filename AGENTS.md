@@ -159,3 +159,21 @@ You can find the documentation for common libraries at the following links:
 - [Ox](https://ox.sh/llms.txt)
 - [Hono](https://hono.dev/llms.txt)
 - [Zod](https://zod.dev/llms.txt)
+
+## Recording Browser GIFs with Chrome DevTools MCP
+
+To capture a page load from the very first frame using MCP tools:
+
+1. **Navigate to about:blank first** to reset the page state
+2. **Call `navigate_page` and `take_screenshot` in parallel** - use `timeout=0` on navigate so both execute simultaneously
+3. **Continue taking sequential screenshots** for the remaining frames
+4. **Combine frames with ImageMagick**: `magick -delay 50 -loop 0 /tmp/frame_*.png -resize 650x /tmp/recording.gif`
+5. **Upload to imgbb**: `curl --location --request POST "https://api.imgbb.com/1/upload?key=API_KEY" --form "image=@/tmp/recording.gif"`
+
+Example parallel tool call (first frame captured during navigation start):
+```
+navigate_page(url="https://...", timeout=0)  } parallel
+take_screenshot(filePath="/tmp/frame_01.png") }
+```
+
+Then sequential screenshots for frames 02-10, combine, and upload.

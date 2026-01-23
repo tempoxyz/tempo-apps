@@ -772,30 +772,33 @@ verifyRoute.get('/:verificationId', async (context) => {
 				if (!j.completedAt) {
 					return context.json({
 						isJobCompleted: false,
-						jobId: j.id,
-						chainId: j.chainId,
-						address: Hex.fromBytes(
-							new Uint8Array(j.contractAddress as ArrayBuffer),
-						),
+						verificationId,
+						contract: {
+							match: null,
+							creationMatch: null,
+							runtimeMatch: null,
+							chainId: String(j.chainId),
+							address: Hex.fromBytes(
+								new Uint8Array(j.contractAddress as ArrayBuffer),
+							),
+						},
 					})
 				}
 
-				// Job failed
+				// Job failed - Sourcify returns 200 even for failed jobs
 				if (j.errorCode) {
 					const errorData = j.errorData
 						? (JSON.parse(j.errorData) as { message?: string })
 						: {}
-					return context.json(
-						{
-							isJobCompleted: true,
-							error: {
-								customCode: j.errorCode,
-								message: errorData.message || 'Verification failed',
-								errorId: j.errorId || globalThis.crypto.randomUUID(),
-							},
+					return context.json({
+						isJobCompleted: true,
+						verificationId,
+						error: {
+							customCode: j.errorCode,
+							message: errorData.message || 'Verification failed',
+							errorId: j.errorId || globalThis.crypto.randomUUID(),
 						},
-						400,
-					)
+					})
 				}
 
 				// Job completed successfully - use the verifiedContractId to get details
@@ -838,18 +841,21 @@ verifyRoute.get('/:verificationId', async (context) => {
 							? 'exact_match'
 							: 'match'
 
+						// Sourcify-compatible response format for completed jobs
 						return context.json({
 							isJobCompleted: true,
+							verificationId,
 							contract: {
 								match: runtimeMatchStatus,
 								creationMatch: creationMatchStatus,
 								runtimeMatch: runtimeMatchStatus,
-								chainId: v.chainId,
+								chainId: String(v.chainId),
 								address: Hex.fromBytes(
 									new Uint8Array(v.address as ArrayBuffer),
 								),
-								name: v.contractName,
 								verifiedAt: v.verifiedAt,
+								matchId: String(v.matchId),
+								name: v.contractName,
 							},
 						})
 					}
@@ -890,16 +896,19 @@ verifyRoute.get('/:verificationId', async (context) => {
 					: 'match'
 				const creationMatchStatus = v.creationMatch ? 'exact_match' : 'match'
 
+				// Sourcify-compatible response format for completed jobs
 				return context.json({
 					isJobCompleted: true,
+					verificationId,
 					contract: {
 						match: runtimeMatchStatus,
 						creationMatch: creationMatchStatus,
 						runtimeMatch: runtimeMatchStatus,
-						chainId: v.chainId,
+						chainId: String(v.chainId),
 						address: Hex.fromBytes(new Uint8Array(v.address as ArrayBuffer)),
-						name: v.contractName,
 						verifiedAt: v.verifiedAt,
+						matchId: String(v.matchId),
+						name: v.contractName,
 					},
 				})
 			}
