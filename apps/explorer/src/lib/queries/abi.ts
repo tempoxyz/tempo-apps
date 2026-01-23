@@ -1,6 +1,7 @@
 import { queryOptions, useQuery } from '@tanstack/react-query'
 import type { Address, Hex } from 'viem'
 import { autoloadAbi, lookupSignature } from '#lib/domain/contracts'
+import { getApiUrl } from '#lib/env.ts'
 import type { BatchAbiResponse } from '#routes/api/abi/batch'
 
 export function autoloadAbiQueryOptions(args: { address?: Address | null }) {
@@ -35,7 +36,7 @@ export function batchAbiQueryOptions(args: {
 		staleTime: Number.POSITIVE_INFINITY,
 		queryKey: ['batch-abi', sortedAddresses, sortedSelectors],
 		queryFn: async (): Promise<BatchAbiResponse> => {
-			const response = await fetch('/api/abi/batch', {
+			const response = await fetch(getApiUrl('/api/abi/batch'), {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({

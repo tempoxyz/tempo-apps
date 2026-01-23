@@ -7,6 +7,7 @@ import { useMountAnim } from '#lib/animation'
 import { ProgressLine } from '#comps/ProgressLine'
 import { RelativeTime } from '#comps/RelativeTime'
 import { cx } from '#lib/css'
+import { getApiUrl } from '#lib/env.ts'
 import type {
 	AddressSearchResult,
 	SearchApiResponse,
@@ -51,9 +52,8 @@ export function ExploreInput(props: ExploreInput.Props) {
 		queryOptions({
 			queryKey: ['search', query],
 			queryFn: async ({ signal }): Promise<SearchApiResponse> => {
-				const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
-					signal,
-				})
+				const url = getApiUrl('/api/search', new URLSearchParams({ q: query }))
+				const res = await fetch(url, { signal })
 				if (!res.ok) throw new Error('Search failed')
 				return res.json()
 			},

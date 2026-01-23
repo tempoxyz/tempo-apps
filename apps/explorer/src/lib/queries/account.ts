@@ -3,6 +3,7 @@ import type { Address } from 'ox'
 import type { RpcTransaction } from 'viem'
 import type * as z from 'zod/mini'
 
+import { getApiUrl } from '#lib/env.ts'
 import type { RequestParametersSchema as AccountRequestParametersSchema } from '#routes/api/address/$address.ts'
 
 type AccountRequestParameters = Omit<
@@ -42,10 +43,8 @@ export function transactionsQueryOptions(
 			params._key,
 		],
 		queryFn: async ({ signal }): Promise<TransactionsApiResponse> => {
-			const response = await fetch(
-				`${__BASE_URL__}/api/address/${params.address}?${searchParams}`,
-				{ signal },
-			)
+			const url = getApiUrl(`/api/address/${params.address}`, searchParams)
+			const response = await fetch(url, { signal })
 			const data = await response.json()
 			return data as TransactionsApiResponse
 		},
