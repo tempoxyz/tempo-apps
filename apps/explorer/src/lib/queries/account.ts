@@ -2,7 +2,6 @@ import { keepPreviousData, queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import type { RpcTransaction } from 'viem'
 import type * as z from 'zod/mini'
-import { safeFetch } from '#lib/fetch'
 
 import type { RequestParametersSchema as AccountRequestParametersSchema } from '#routes/api/address/$address.ts'
 
@@ -43,7 +42,7 @@ export function transactionsQueryOptions(
 			params._key,
 		],
 		queryFn: async ({ signal }): Promise<TransactionsApiResponse> => {
-			const response = await safeFetch(
+			const response = await fetch(
 				`${__BASE_URL__}/api/address/${params.address}?${searchParams}`,
 				{ signal },
 			)
