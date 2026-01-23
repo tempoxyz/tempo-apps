@@ -144,15 +144,27 @@ export const Route = createRootRouteWithContext<{
 		],
 	}),
 	scripts: async () => {
-		if (import.meta.env.PROD)
-			return [
-				{
-					// PostHog analytics - deferred to avoid blocking initial render
-					children: `!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+		const scripts: Array<{ children: string; type: string }> = []
+
+		// Patch fetch/Request to strip basic auth credentials from same-origin URLs.
+		// Required for TanStack Start server functions (/_serverFn/...) which use
+		// relative fetches that inherit credentials from the page URL.
+		// Only activates when URL contains credentials (preview/staging environments).
+		scripts.push({
+			children: `(function(){var l=window.location;if(!l.username&&!l.password)return;var o=l.protocol+"//"+l.host;var F=window.fetch;var R=window.Request;var s=function(i){var u=i instanceof Request?i.url:String(i);try{var a=new URL(u,o);if(a.origin===o){a.username="";a.password="";}return a.href}catch(e){return null}};window.fetch=function(i,n){try{var h=s(i);if(h){if(i instanceof Request)return F.call(this,new R(h,i),n);return F.call(this,h,n)}}catch(e){}return F.call(this,i,n)};var W=function(i,n){var h=s(i);if(h)return new R(h,n||i);return new R(i,n)};W.prototype=R.prototype;window.Request=W;})();`,
+			type: 'text/javascript',
+		})
+
+		if (import.meta.env.PROD) {
+			scripts.push({
+				// PostHog analytics - deferred to avoid blocking initial render
+				children: `!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureException loadToolbar get_property getSessionProperty createPersonProfile opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
 (window.requestIdleCallback||function(cb){setTimeout(cb,50)})(function(){posthog.init('phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR',{api_host:'https://us.i.posthog.com',defaults:'2025-11-30',disable_session_recording:true})});`,
-					type: 'text/javascript',
-				},
-			]
+				type: 'text/javascript',
+			})
+		}
+
+		return scripts
 	},
 	errorComponent: (props) => (
 		<RootDocument>
