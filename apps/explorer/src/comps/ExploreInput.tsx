@@ -7,6 +7,7 @@ import { useMountAnim } from '#lib/animation'
 import { ProgressLine } from '#comps/ProgressLine'
 import { RelativeTime } from '#comps/RelativeTime'
 import { cx } from '#lib/css'
+import { safeFetch } from '#lib/fetch'
 import type {
 	AddressSearchResult,
 	SearchApiResponse,
@@ -51,9 +52,12 @@ export function ExploreInput(props: ExploreInput.Props) {
 		queryOptions({
 			queryKey: ['search', query],
 			queryFn: async ({ signal }): Promise<SearchApiResponse> => {
-				const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, {
-					signal,
-				})
+				const res = await safeFetch(
+					`/api/search?q=${encodeURIComponent(query)}`,
+					{
+						signal,
+					},
+				)
 				if (!res.ok) throw new Error('Search failed')
 				return res.json()
 			},

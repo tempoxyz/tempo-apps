@@ -1,5 +1,7 @@
 import { createStart } from '@tanstack/react-start'
+import { stripCredentialsMiddleware } from '#lib/middleware/strip-credentials'
 
 export const startInstance = createStart(() => ({
-	defaultSsr: true, // default is true
+	defaultSsr: true,
+	functionMiddleware: [stripCredentialsMiddleware],
 }))
