@@ -1,5 +1,7 @@
 packages:
   - apps/**
+  - apps/agentic-layer/packages/**
+  - apps/agentic-layer/examples/**
   - '!**/_/**'
 
 catalog:

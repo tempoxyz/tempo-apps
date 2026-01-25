@@ -25,3 +25,10 @@ _artifacts
 _tmp
 _verify
 .pnpm-store
+*.tsbuildinfo
+.vercel
+.next
+.turbo
+.astro
+.kiro
+coverage

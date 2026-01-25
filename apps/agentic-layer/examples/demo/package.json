@@ -1,0 +1,25 @@
+{
+	"name": "402-demo",
+	"version": "0.0.0",
+	"private": true,
+	"scripts": {
+		"start:agent": "ts-node src/agent.ts",
+		"start:server:hono": "ts-node src/server-hono.ts",
+		"start:server:express": "ts-node src/server-express.ts"
+	},
+	"dependencies": {
+		"@tempo/402-sdk": "workspace:*",
+		"@tempo/402-server": "workspace:*",
+		"@types/cors": "^2.8.19",
+		"cors": "^2.8.5",
+		"dotenv": "^16.0.0",
+		"ethers": "^6.10.0",
+		"express": "^4.18.0",
+		"hono": "^4.11.5",
+		"@hono/node-server": "^1.11.1"
+	},
+	"devDependencies": {
+		"ts-node": "^10.9.0",
+		"typescript": "^5.3.0"
+	}
+}

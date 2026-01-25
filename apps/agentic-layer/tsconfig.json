@@ -1,0 +1,11 @@
+{
+	"extends": "./tsconfig.base.json",
+	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"@tempo/402-common": ["packages/common/src/index.ts"],
+			"@tempo/402-sdk": ["packages/sdk/src/index.ts"]
+		}
+	},
+	"include": ["packages/**/*.ts", "tests/**/*.ts", "examples/**/*.ts"]
+}

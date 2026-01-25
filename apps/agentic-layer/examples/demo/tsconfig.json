@@ -1,0 +1,13 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"moduleResolution": "node",
+		"baseUrl": ".",
+		"paths": {
+			"@tempo/402-sdk": ["../../packages/sdk/src"],
+			"@tempo/402-server": ["../../packages/server/src"],
+			"@tempo/402-common": ["../../packages/common/src"]
+		}
+	},
+	"include": ["src/**/*.ts", "../../packages/*/src/**/*.ts"]
+}

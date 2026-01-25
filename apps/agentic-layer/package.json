@@ -1,0 +1,31 @@
+{
+	"name": "@tempo/agentic-layer",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"setup": "npx tsx scripts/doctor.ts",
+		"build": "pnpm run build --workspaces --if-present",
+		"clean": "pnpm run clean --workspaces --if-present",
+		"dev": "pnpm run dev --workspaces --if-present",
+		"test": "vitest",
+		"check:biome": "biome check --write --unsafe",
+		"check:types": "tsc --noEmit",
+		"prepare": "pnpm run build"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"vitest": "catalog:",
+		"express": "^5.0.0",
+		"hono": "catalog:",
+		"cors": "^2.8.5",
+		"@types/express": "^5.0.0",
+		"@types/cors": "^2.8.17",
+		"@types/supertest": "^6.0.2",
+		"supertest": "^7.0.0",
+		"lru-cache": "^11.2.4",
+		"viem": "catalog:",
+		"tsx": "^4.7.1"
+	}
+}
