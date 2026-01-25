@@ -749,6 +749,7 @@ export interface KnownEvent {
 		from?: Address.Address
 		to?: Address.Address
 	}
+	failed?: boolean
 }
 
 type TransactionLike = {
@@ -824,12 +825,9 @@ function detectContractCall(
 		viewer?: Address.Address
 	},
 ): KnownEvent | null {
-	const { viewer } = options ?? {}
 	const contractAddress = receipt.to
 
-	// Only show contract call when viewing as the called contract
-	if (!contractAddress || !viewer || !Address.isEqual(contractAddress, viewer))
-		return null
+	if (!contractAddress) return null
 
 	const transaction = options?.transaction
 	const callInput = transaction?.input ?? transaction?.data
@@ -837,15 +835,18 @@ function detectContractCall(
 	// Need input data to show a contract call
 	if (!callInput || callInput === '0x') return null
 
+	const failed = receipt.status === 'reverted'
+
 	return {
 		type: 'contract call',
 		parts: [
-			{ type: 'action', value: 'Call to' },
+			{ type: 'action', value: failed ? 'Failed' : 'Call' },
 			{
 				type: 'contractCall',
-				value: { address: contractAddress, input: callInput },
+				value: { address: Address.checksum(contractAddress), input: callInput },
 			},
 		],
+		failed,
 	}
 }
 
@@ -1200,6 +1201,25 @@ export function parseKnownEvents(
 		const contractCallEvent = detectContractCall(receipt, options)
 		if (contractCallEvent) {
 			knownEvents.push(contractCallEvent)
+		}
+	}
+
+	// If no known events, check for self-transfer (from === to with empty calldata)
+	if (
+		knownEvents.length === 0 &&
+		transaction?.to &&
+		Address.isEqual(receipt.from, transaction.to)
+	) {
+		const callInput = transaction.input ?? transaction.data
+		const isEmptyCall = !callInput || callInput === '0x'
+		if (isEmptyCall) {
+			knownEvents.push({
+				type: 'self transfer',
+				parts: [
+					{ type: 'action', value: 'Self Transfer' },
+					{ type: 'account', value: receipt.from },
+				],
+			})
 		}
 	}
 

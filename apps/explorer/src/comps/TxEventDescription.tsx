@@ -19,19 +19,23 @@ import {
 	PriceFormatter,
 	RoleFormatter,
 } from '#lib/formatting.ts'
+import { useLookupSignature } from '#lib/queries'
 
 /**
  * Renders a contract call with decoded function name.
  * Fetches ABI from registry or extracts from bytecode using whatsabi.
+ * Falls back to 4byte directory lookup.
  */
 function ContractCallPart(props: {
 	address: AddressType.Address
 	input: Hex.Hex
+	seenAs?: AddressType.Address
 }) {
-	const { address, input } = props
+	const { address, input, seenAs } = props
 	const selector = Hex.slice(input, 0, 4)
+	const isViewingAsContract = seenAs && isAddressEqual(seenAs, address)
 
-	const { data: functionName, isLoading } = useQuery({
+	const { data: functionName, isLoading: isLoadingAbi } = useQuery({
 		queryKey: ['contract-call-function', address, selector],
 		queryFn: async () => {
 			// Try known ABI first
@@ -54,19 +58,42 @@ function ContractCallPart(props: {
 		staleTime: Number.POSITIVE_INFINITY,
 	})
 
-	// Show selector while loading or if we couldn't decode
-	const displayText = isLoading ? selector : (functionName ?? selector)
+	// Fall back to 4byte directory lookup
+	const { data: signature, isFetched: isSignatureFetched } = useLookupSignature(
+		{
+			selector,
+			enabled: !functionName && !isLoadingAbi,
+		},
+	)
+
+	// Extract function name from signature (e.g., "transfer(address,uint256)" -> "transfer")
+	const signatureFnName = signature?.split('(')[0]
+
+	const isLoading = isLoadingAbi || (!functionName && !isSignatureFetched)
+	const fnName = isLoading
+		? selector
+		: (functionName ?? signatureFnName ?? selector)
+
+	if (isViewingAsContract) {
+		return (
+			<span className="text-accent items-end whitespace-nowrap">{fnName}</span>
+		)
+	}
 
 	return (
-		<Link
-			to="/address/$address"
-			params={{ address }}
-			search={{ tab: 'contract' }}
-			title={`${address} - ${functionName ?? selector}`}
-			className="press-down whitespace-nowrap"
-		>
-			<span className="text-accent items-end">{displayText}</span>
-		</Link>
+		<>
+			<span className="text-accent items-end whitespace-nowrap">{fnName}</span>
+			<span className="text-secondary">on</span>
+			<Link
+				to="/address/$address"
+				params={{ address }}
+				search={{ tab: 'contract' }}
+				title={address}
+				className="press-down whitespace-nowrap"
+			>
+				<Address address={address} />
+			</Link>
+		</>
 	)
 }
 
@@ -176,7 +203,7 @@ export namespace TxEventDescription {
 					</Link>
 				)
 			case 'contractCall':
-				return <ContractCallPart {...part.value} />
+				return <ContractCallPart {...part.value} seenAs={seenAs} />
 			default:
 				return null
 		}
