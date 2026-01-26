@@ -1,0 +1,13 @@
+{
+  "name": "tempo-testnet-token-transfer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "fund": "node fund.mjs",
+    "transfer": "node transfer.mjs"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "viem": "^2.45.0"
+  }
+}
