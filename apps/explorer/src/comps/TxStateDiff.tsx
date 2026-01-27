@@ -20,15 +20,20 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 	const [raw, setRaw] = React.useState(false)
 	const copy = useCopy()
 
-	const candidateAddresses = React.useMemo(
-		() =>
-			extractCandidateAddresses(
-				trace ?? null,
-				receipt ?? { from: '0x' as Hex, to: null },
-				logs,
-			),
-		[trace, receipt, logs],
-	)
+	const candidateAddresses = React.useMemo(() => {
+		const fromTrace = extractCandidateAddresses(
+			trace ?? null,
+			receipt ?? { from: '0x' as Hex, to: null },
+			logs,
+		)
+		// Also include addresses from prestate diff (tokens, contracts with state changes)
+		const fromPrestate = prestate
+			? ([...Object.keys(prestate.pre), ...Object.keys(prestate.post)] as Hex[])
+			: []
+		return [
+			...new Set([...fromTrace, ...fromPrestate.map((a) => a.toLowerCase())]),
+		] as Hex[]
+	}, [trace, receipt, logs, prestate])
 
 	const data = React.useMemo(() => {
 		if (!prestate) return null

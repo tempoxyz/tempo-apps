@@ -6,6 +6,8 @@ import type { ContractInfo } from './contracts'
 import { isTip20Address } from './tip20'
 
 const FEE_MANAGER_ADDRESS = '0xfeec000000000000000000000000000000000000'
+const PATH_USD_ADDRESS = '0x20c0000000000000000000000000000000000000'
+const PATH_USD_META = { symbol: 'PathUSD', decimals: 6 }
 
 export type StorageDecodeContext = {
 	account: Hex.Hex
@@ -248,8 +250,8 @@ function decodeFeeManagerSlot(
 	const { candidateAddresses, allTokenMetadata } = ctx
 	const slotLower = change.slot.toLowerCase()
 
-	// Token candidates from tx addresses and metadata
-	const tokenCandidatesSet = new Set<string>()
+	// Token candidates from tx addresses and metadata, plus PathUSD (always used in fees)
+	const tokenCandidatesSet = new Set<string>([PATH_USD_ADDRESS])
 	for (const addr of candidateAddresses) {
 		if (isTip20Address(addr)) {
 			tokenCandidatesSet.add(addr.toLowerCase())
@@ -274,7 +276,11 @@ function decodeFeeManagerSlot(
 		for (const tokenAddr of tokenCandidates) {
 			const slot = computeNestedMappingSlot(validator, tokenAddr, 2)
 			if (slot.toLowerCase() === slotLower) {
-				const tokenMeta = allTokenMetadata?.[tokenAddr.toLowerCase()]
+				const tokenMeta =
+					allTokenMetadata?.[tokenAddr.toLowerCase()] ??
+					(tokenAddr.toLowerCase() === PATH_USD_ADDRESS
+						? PATH_USD_META
+						: undefined)
 				const validatorLabel =
 					validator === '0x0000000000000000000000000000000000000000'
 						? 'validator'
@@ -328,8 +334,16 @@ function decodeFeeManagerSlot(
 			)
 
 			if (slot.toLowerCase() === slotLower) {
-				const userMeta = allTokenMetadata?.[userToken.toLowerCase()]
-				const validatorMeta = allTokenMetadata?.[validatorToken.toLowerCase()]
+				const userMeta =
+					allTokenMetadata?.[userToken.toLowerCase()] ??
+					(userToken.toLowerCase() === PATH_USD_ADDRESS
+						? PATH_USD_META
+						: undefined)
+				const validatorMeta =
+					allTokenMetadata?.[validatorToken.toLowerCase()] ??
+					(validatorToken.toLowerCase() === PATH_USD_ADDRESS
+						? PATH_USD_META
+						: undefined)
 				const userLabel = userMeta?.symbol ?? formatAddress(userToken)
 				const validatorLabel =
 					validatorMeta?.symbol ?? formatAddress(validatorToken)
