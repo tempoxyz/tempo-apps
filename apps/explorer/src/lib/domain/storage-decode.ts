@@ -7,34 +7,6 @@ import { isTip20Address } from './tip20'
 
 const FEE_MANAGER_ADDRESS = '0xfeec000000000000000000000000000000000000'
 
-// Common TIP20 tokens that are frequently used in fee payments
-const COMMON_TIP20_TOKENS: Array<{
-	address: Hex.Hex
-	symbol: string
-	decimals: number
-}> = [
-	{
-		address: '0x20c0000000000000000000000000000000000000',
-		symbol: 'PathUSD',
-		decimals: 6,
-	},
-	{
-		address: '0x20c0000000000000000000000000000000000001',
-		symbol: 'USDC',
-		decimals: 6,
-	},
-	{
-		address: '0x20c0000000000000000000000000000000000002',
-		symbol: 'USDT',
-		decimals: 6,
-	},
-	{
-		address: '0x20c0000000000000000000000000000000000003',
-		symbol: 'ThetaUSD',
-		decimals: 6,
-	},
-]
-
 export type StorageDecodeContext = {
 	account: Hex.Hex
 	contractInfo?: ContractInfo
@@ -276,10 +248,7 @@ function decodeFeeManagerSlot(
 	const { candidateAddresses, allTokenMetadata } = ctx
 	const slotLower = change.slot.toLowerCase()
 
-	// Token candidates include:
-	// 1. Addresses from tx that are TIP20
-	// 2. All known tokens from metadata
-	// 3. Common TIP20 tokens (for Fee Manager decoding)
+	// Token candidates from tx addresses and metadata
 	const tokenCandidatesSet = new Set<string>()
 	for (const addr of candidateAddresses) {
 		if (isTip20Address(addr)) {
@@ -293,26 +262,7 @@ function decodeFeeManagerSlot(
 			}
 		}
 	}
-	// Add common tokens for Fee Manager decoding
-	for (const token of COMMON_TIP20_TOKENS) {
-		tokenCandidatesSet.add(token.address.toLowerCase())
-	}
 	const tokenCandidates = Array.from(tokenCandidatesSet) as Hex.Hex[]
-
-	// Build extended metadata including common tokens
-	const extendedTokenMetadata: Record<
-		string,
-		{ symbol?: string; decimals?: number }
-	> = { ...allTokenMetadata }
-	for (const token of COMMON_TIP20_TOKENS) {
-		const key = token.address.toLowerCase()
-		if (!extendedTokenMetadata[key]) {
-			extendedTokenMetadata[key] = {
-				symbol: token.symbol,
-				decimals: token.decimals,
-			}
-		}
-	}
 
 	// Try to match collectedFees[validator][token] at slot 2
 	const validatorCandidates = [
@@ -324,7 +274,7 @@ function decodeFeeManagerSlot(
 		for (const tokenAddr of tokenCandidates) {
 			const slot = computeNestedMappingSlot(validator, tokenAddr, 2)
 			if (slot.toLowerCase() === slotLower) {
-				const tokenMeta = extendedTokenMetadata[tokenAddr.toLowerCase()]
+				const tokenMeta = allTokenMetadata?.[tokenAddr.toLowerCase()]
 				const validatorLabel =
 					validator === '0x0000000000000000000000000000000000000000'
 						? 'validator'
@@ -378,9 +328,8 @@ function decodeFeeManagerSlot(
 			)
 
 			if (slot.toLowerCase() === slotLower) {
-				const userMeta = extendedTokenMetadata[userToken.toLowerCase()]
-				const validatorMeta =
-					extendedTokenMetadata[validatorToken.toLowerCase()]
+				const userMeta = allTokenMetadata?.[userToken.toLowerCase()]
+				const validatorMeta = allTokenMetadata?.[validatorToken.toLowerCase()]
 				const userLabel = userMeta?.symbol ?? formatAddress(userToken)
 				const validatorLabel =
 					validatorMeta?.symbol ?? formatAddress(validatorToken)
