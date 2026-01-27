@@ -28,18 +28,7 @@ export function NetworkStats(): React.JSX.Element | null {
 		retry: 2,
 	})
 
-	if (isLoading) {
-		return (
-			<section className="text-center px-4 pt-4">
-				<div className="w-16 h-px bg-base-border mx-auto mb-4" />
-				<div className="flex items-center justify-center gap-6 text-[13px] text-tertiary">
-					<span>Loading stats...</span>
-				</div>
-			</section>
-		)
-	}
-
-	if (isError || !data) return null
+	if (isLoading || isError || !data) return null
 
 	const hasAnyData =
 		data.transactions24h > 0 || data.tokens > 0 || data.accounts24h > 0
