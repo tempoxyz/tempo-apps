@@ -109,7 +109,7 @@ function WriteContractFunction(props: {
 			return {
 				args: [],
 				error:
-					Error.isError(error) ? error.message : 'Failed to parse inputs',
+					error instanceof Error ? error.message : 'Failed to parse inputs',
 			}
 		}
 	}, [fn.inputs, inputs, allInputsFilled])

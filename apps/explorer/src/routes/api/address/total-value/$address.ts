@@ -107,7 +107,7 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 					return Response.json({ totalValue })
 				} catch (error) {
 					console.error(error)
-					const errorMessage = Error.isError(error) ? error.message : error
+					const errorMessage = error instanceof Error ? error.message : error
 					return Response.json(
 						{ data: null, error: errorMessage },
 						{ status: 500 },

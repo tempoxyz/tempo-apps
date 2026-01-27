@@ -194,7 +194,7 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 					} satisfies BalancesResponse)
 				} catch (error) {
 					console.error(error)
-					const errorMessage = Error.isError(error) ? error.message : error
+					const errorMessage = error instanceof Error ? error.message : error
 					return Response.json(
 						{
 							balances: [],

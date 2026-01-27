@@ -139,7 +139,7 @@ export async function fetchContractSource(params: {
 		return data
 	} catch (error) {
 		console.error('Failed to fetch contract sources:', error)
-		throw new Error(Error.isError(error) ? error.message : 'Unknown error')
+		throw new Error(error instanceof Error ? error.message : 'Unknown error')
 	}
 }
 

@@ -31,6 +31,6 @@ try {
 		console.log('Patched wrangler.json with assets config')
 	}
 } catch (error) {
-	const errorMessage = Error.isError(error) ? error.message : error
+	const errorMessage = error instanceof Error ? error.message : error
 	console.error(errorMessage)
 }

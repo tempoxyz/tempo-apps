@@ -127,7 +127,7 @@ const server = Bun.serve({
 	error: (error) => {
 		console.error(Bun.color('red', 'ansi'), JSON.stringify(error, undefined, 2))
 		const errorMessage =
-			Error.isError(error) ? error.message : 'Unknown error'
+			error instanceof Error ? error.message : 'Unknown error'
 		return new Response(errorMessage, { status: 500, headers })
 	},
 })
