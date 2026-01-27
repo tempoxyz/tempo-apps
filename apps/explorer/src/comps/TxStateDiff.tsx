@@ -274,14 +274,14 @@ export namespace TxStateDiff {
 									/>
 									<CopyCell
 										value={decoded?.beforeDisplay ?? change.before}
-										copyValue={change.before}
+										copyValue={decoded?.beforeRaw ?? change.before}
 										className="text-tertiary border-t border-card-border"
 										wrap={wrap}
 										isDecoded={Boolean(decoded?.beforeDisplay)}
 									/>
 									<DiffCell
 										value={decoded?.afterDisplay ?? change.after}
-										copyValue={change.after}
+										copyValue={decoded?.afterRaw ?? change.after}
 										diff={decoded?.diff}
 										wrap={wrap}
 										isDecoded={Boolean(decoded?.afterDisplay)}

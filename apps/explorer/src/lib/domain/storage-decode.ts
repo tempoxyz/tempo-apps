@@ -266,6 +266,19 @@ function decodeFeeManagerSlot(
 	}
 	const tokenCandidates = Array.from(tokenCandidatesSet) as Hex.Hex[]
 
+	// Helper to get token display name
+	const getTokenDisplay = (addr: string | null): string => {
+		if (!addr) return '(none)'
+		const lower = addr.toLowerCase()
+		// Check passed metadata first
+		const meta = allTokenMetadata?.[lower]
+		if (meta?.symbol) return meta.symbol
+		// Check hardcoded PathUSD
+		if (lower === PATH_USD_ADDRESS) return PATH_USD_META.symbol
+		// Fallback to formatted address
+		return formatAddress(addr as Hex.Hex)
+	}
+
 	// Try to match validatorTokens[address] at slot 0
 	// This mapping stores which token a validator receives fees in
 	for (const addr of candidateAddresses) {
@@ -273,18 +286,12 @@ function decodeFeeManagerSlot(
 		if (slot.toLowerCase() === slotLower) {
 			const beforeToken = tryDecodeAsAddress(change.before)
 			const afterToken = tryDecodeAsAddress(change.after)
-			const beforeMeta = beforeToken
-				? allTokenMetadata?.[beforeToken.toLowerCase()]
-				: undefined
-			const afterMeta = afterToken
-				? allTokenMetadata?.[afterToken.toLowerCase()]
-				: undefined
 
 			return {
 				slotLabel: `validatorTokens[${formatAddress(addr)}]`,
 				slotRaw: change.slot,
-				beforeDisplay: beforeMeta?.symbol ?? beforeToken ?? '(none)',
-				afterDisplay: afterMeta?.symbol ?? afterToken ?? '(none)',
+				beforeDisplay: getTokenDisplay(beforeToken),
+				afterDisplay: getTokenDisplay(afterToken),
 				beforeRaw: change.before,
 				afterRaw: change.after,
 				kind: 'address',
@@ -299,18 +306,12 @@ function decodeFeeManagerSlot(
 		if (slot.toLowerCase() === slotLower) {
 			const beforeToken = tryDecodeAsAddress(change.before)
 			const afterToken = tryDecodeAsAddress(change.after)
-			const beforeMeta = beforeToken
-				? allTokenMetadata?.[beforeToken.toLowerCase()]
-				: undefined
-			const afterMeta = afterToken
-				? allTokenMetadata?.[afterToken.toLowerCase()]
-				: undefined
 
 			return {
 				slotLabel: `userTokens[${formatAddress(addr)}]`,
 				slotRaw: change.slot,
-				beforeDisplay: beforeMeta?.symbol ?? beforeToken ?? '(none)',
-				afterDisplay: afterMeta?.symbol ?? afterToken ?? '(none)',
+				beforeDisplay: getTokenDisplay(beforeToken),
+				afterDisplay: getTokenDisplay(afterToken),
 				beforeRaw: change.before,
 				afterRaw: change.after,
 				kind: 'address',
