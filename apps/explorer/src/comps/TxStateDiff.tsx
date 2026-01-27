@@ -3,27 +3,55 @@ import * as React from 'react'
 import type { Hex } from 'viem'
 import { cx } from '#lib/css'
 import { getContractInfo } from '#lib/domain/contracts'
+import {
+	decodeStorageChange,
+	extractCandidateAddresses,
+	type DecodedStorageChange,
+	type StorageDecodeContext,
+} from '#lib/domain/storage-decode'
 import { useCopy } from '#lib/hooks'
-import type { PrestateDiff } from '#lib/queries'
+import type { CallTrace, PrestateDiff } from '#lib/queries'
 import CopyIcon from '~icons/lucide/copy'
 import WrapIcon from '~icons/lucide/corner-down-left'
 
 export function TxStateDiff(props: TxStateDiff.Props) {
-	const { prestate } = props
+	const { prestate, trace, receipt, logs, tokenMetadata } = props
 	const [wrap, setWrap] = React.useState(true)
+	const [raw, setRaw] = React.useState(false)
 	const copy = useCopy()
+
+	const candidateAddresses = React.useMemo(
+		() =>
+			extractCandidateAddresses(
+				trace ?? null,
+				receipt ?? { from: '0x' as Hex, to: null },
+				logs,
+			),
+		[trace, receipt, logs],
+	)
 
 	const data = React.useMemo(() => {
 		if (!prestate) return null
-		return TxStateDiff.buildData(prestate)
-	}, [prestate])
+		return TxStateDiff.buildData(prestate, candidateAddresses, tokenMetadata)
+	}, [prestate, candidateAddresses, tokenMetadata])
 
 	const hasData = data && data.accounts.length > 0
 
 	return (
 		<div className="flex flex-col">
 			<div className="flex items-center justify-between pl-[16px] pr-[12px] h-[40px] border-y border-dashed border-distinct">
-				<span className="text-[13px] text-tertiary">State Changes</span>
+				<span className="text-[13px]">
+					<span className="text-tertiary">State Changes</span>{' '}
+					{hasData && (
+						<button
+							type="button"
+							onClick={() => setRaw(!raw)}
+							className="text-accent hover:underline cursor-pointer press-down"
+						>
+							{raw ? '(raw)' : '(decoded)'}
+						</button>
+					)}
+				</span>
 				{hasData && (
 					<div className="flex items-center gap-[8px] text-tertiary">
 						{copy.notifying && (
@@ -32,7 +60,7 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 						<button
 							type="button"
 							className="press-down cursor-pointer hover:text-secondary p-[4px]"
-							onClick={() => copy.copy(TxStateDiff.toAscii(data))}
+							onClick={() => copy.copy(TxStateDiff.toAscii(data, { raw }))}
 							title="Copy state changes"
 						>
 							<CopyIcon className="size-[14px]" />
@@ -63,6 +91,7 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 							key={account.address}
 							account={account}
 							wrap={wrap}
+							raw={raw}
 						/>
 					))}
 				</div>
@@ -74,20 +103,35 @@ export function TxStateDiff(props: TxStateDiff.Props) {
 export namespace TxStateDiff {
 	export interface Props {
 		prestate: PrestateDiff | null
+		trace?: CallTrace | null
+		receipt?: { from: Hex; to: Hex | null }
+		logs?: Array<{ address: Hex; topics?: Hex[] }>
+		tokenMetadata?: Record<string, { symbol?: string; decimals?: number }>
 	}
 
 	export interface Data {
 		accounts: AccountData[]
 	}
 
+	export interface StorageChangeData {
+		slot: string
+		before: string
+		after: string
+		decoded?: DecodedStorageChange
+	}
+
 	export interface AccountData {
 		address: Hex
 		contractName?: string
 		nonceChange?: { before: number; after: number }
-		storageChanges: Array<{ slot: string; before: string; after: string }>
+		storageChanges: StorageChangeData[]
 	}
 
-	export function buildData(prestate: PrestateDiff): Data {
+	export function buildData(
+		prestate: PrestateDiff,
+		candidateAddresses: Hex[] = [],
+		tokenMetadata?: Record<string, { symbol?: string; decimals?: number }>,
+	): Data {
 		const addresses = Array.from(
 			new Set([...Object.keys(prestate.pre), ...Object.keys(prestate.post)]),
 		).sort() as Hex[]
@@ -99,6 +143,15 @@ export namespace TxStateDiff {
 			const post = prestate.post[address]
 
 			const contractInfo = getContractInfo(address)
+			const tokenMeta = tokenMetadata?.[address.toLowerCase()]
+
+			const ctx: StorageDecodeContext = {
+				account: address,
+				contractInfo,
+				candidateAddresses,
+				token: tokenMeta,
+				allTokenMetadata: tokenMetadata,
+			}
 
 			const nonceChanged =
 				pre?.nonce !== post?.nonce &&
@@ -111,13 +164,22 @@ export namespace TxStateDiff {
 				]),
 			).sort() as Hex[]
 
-			const storageChanges = storageSlots
+			const storageChanges: StorageChangeData[] = storageSlots
 				.filter((slot) => pre?.storage?.[slot] !== post?.storage?.[slot])
-				.map((slot) => ({
-					slot,
-					before: pre?.storage?.[slot] ?? '0x0',
-					after: post?.storage?.[slot] ?? '0x0',
-				}))
+				.map((slot) => {
+					const change = {
+						slot,
+						before: (pre?.storage?.[slot] ?? '0x0') as Hex,
+						after: (post?.storage?.[slot] ?? '0x0') as Hex,
+					}
+					const decoded = decodeStorageChange(change, ctx)
+					return {
+						slot,
+						before: change.before,
+						after: change.after,
+						decoded: decoded ?? undefined,
+					}
+				})
 
 			const hasChanges = nonceChanged || storageChanges.length > 0
 			if (!hasChanges) continue
@@ -136,7 +198,7 @@ export namespace TxStateDiff {
 	}
 
 	export function AccountView(props: AccountView.Props) {
-		const { account, wrap } = props
+		const { account, wrap, raw } = props
 		const { address, contractName, nonceChange, storageChanges } = account
 
 		return (
@@ -194,25 +256,34 @@ export namespace TxStateDiff {
 								/>
 							</>
 						)}
-						{storageChanges.map((change) => (
-							<React.Fragment key={change.slot}>
-								<CopyCell
-									value={change.slot}
-									className="text-secondary border-t border-card-border"
-									wrap={wrap}
-								/>
-								<CopyCell
-									value={change.before}
-									className="text-tertiary border-t border-card-border"
-									wrap={wrap}
-								/>
-								<CopyCell
-									value={change.after}
-									className="text-primary border-t border-card-border"
-									wrap={wrap}
-								/>
-							</React.Fragment>
-						))}
+						{storageChanges.map((change) => {
+							const decoded = !raw ? change.decoded : undefined
+							return (
+								<React.Fragment key={change.slot}>
+									<CopyCell
+										value={decoded?.slotLabel ?? change.slot}
+										copyValue={change.slot}
+										className="text-secondary border-t border-card-border"
+										wrap={wrap}
+										isDecoded={Boolean(decoded?.slotLabel)}
+									/>
+									<CopyCell
+										value={decoded?.beforeDisplay ?? change.before}
+										copyValue={change.before}
+										className="text-tertiary border-t border-card-border"
+										wrap={wrap}
+										isDecoded={Boolean(decoded?.beforeDisplay)}
+									/>
+									<DiffCell
+										value={decoded?.afterDisplay ?? change.after}
+										copyValue={change.after}
+										diff={decoded?.diff}
+										wrap={wrap}
+										isDecoded={Boolean(decoded?.afterDisplay)}
+									/>
+								</React.Fragment>
+							)
+						})}
 					</div>
 				</div>
 			</div>
@@ -223,22 +294,25 @@ export namespace TxStateDiff {
 		export interface Props {
 			account: AccountData
 			wrap: boolean
+			raw: boolean
 		}
 	}
 
 	export function CopyCell(props: CopyCell.Props) {
-		const { value, className, wrap } = props
+		const { value, copyValue, className, wrap, isDecoded } = props
 		const copy = useCopy()
+		const valueToCopy = copyValue ?? value
 
 		return (
 			<button
 				type="button"
 				className={cx(
-					'flex items-start text-left px-[12px] py-[8px] cursor-pointer hover:bg-base-alt/50 press-down relative',
+					'flex items-start text-left px-[12px] py-[8px] cursor-pointer hover:bg-base-alt/50 press-down relative group',
 					wrap ? 'break-all' : 'whitespace-nowrap',
 					className,
 				)}
-				onClick={() => copy.copy(value)}
+				onClick={() => copy.copy(valueToCopy)}
+				title={isDecoded ? valueToCopy : undefined}
 			>
 				{value}
 				{copy.notifying && (
@@ -253,12 +327,60 @@ export namespace TxStateDiff {
 	export namespace CopyCell {
 		export interface Props {
 			value: string
+			copyValue?: string
 			className?: string
 			wrap: boolean
+			isDecoded?: boolean
 		}
 	}
 
-	export function toAscii(data: Data): string {
+	export function DiffCell(props: DiffCell.Props) {
+		const { value, copyValue, diff, wrap, isDecoded } = props
+		const copy = useCopy()
+		const valueToCopy = copyValue ?? value
+
+		return (
+			<button
+				type="button"
+				className={cx(
+					'flex flex-col items-start text-left px-[12px] py-[8px] cursor-pointer hover:bg-base-alt/50 press-down relative group border-t border-card-border',
+					wrap ? 'break-all' : 'whitespace-nowrap',
+				)}
+				onClick={() => copy.copy(valueToCopy)}
+				title={isDecoded ? valueToCopy : undefined}
+			>
+				<span className="text-primary">{value}</span>
+				{diff && (
+					<span
+						className={cx(
+							'text-[11px]',
+							diff.isPositive ? 'text-positive' : 'text-negative',
+						)}
+					>
+						{diff.display}
+					</span>
+				)}
+				{copy.notifying && (
+					<div className="absolute bottom-[2px] right-[2px] bg-base-alt px-[8px] py-[2px] rounded text-secondary">
+						<div className="translate-y-[-2px]">copied</div>
+					</div>
+				)}
+			</button>
+		)
+	}
+
+	export namespace DiffCell {
+		export interface Props {
+			value: string
+			copyValue?: string
+			diff?: { display: string; isPositive: boolean }
+			wrap: boolean
+			isDecoded?: boolean
+		}
+	}
+
+	export function toAscii(data: Data, options?: { raw?: boolean }): string {
+		const raw = options?.raw ?? false
 		const lines: string[] = []
 
 		for (const account of data.accounts) {
@@ -275,9 +397,19 @@ export namespace TxStateDiff {
 			}
 
 			for (const change of account.storageChanges) {
-				lines.push(`  ${change.slot}:`)
-				lines.push(`       ${change.before}`)
-				lines.push(`    => ${change.after}`)
+				const decoded = !raw ? change.decoded : undefined
+				const slotDisplay = decoded?.slotLabel ?? change.slot
+				const beforeDisplay = decoded?.beforeDisplay ?? change.before
+				const afterDisplay = decoded?.afterDisplay ?? change.after
+
+				if (decoded) {
+					lines.push(`  ${slotDisplay}: ${beforeDisplay} => ${afterDisplay}`)
+					lines.push(`    (slot: ${change.slot})`)
+				} else {
+					lines.push(`  ${slotDisplay}:`)
+					lines.push(`       ${beforeDisplay}`)
+					lines.push(`    => ${afterDisplay}`)
+				}
 			}
 
 			lines.push('')

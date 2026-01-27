@@ -244,7 +244,13 @@ function RouteComponent() {
 			content: (
 				<div className="flex flex-col">
 					<TxTraceTree trace={traceData.trace} />
-					<TxStateDiff prestate={traceData.prestate} />
+					<TxStateDiff
+						prestate={traceData.prestate}
+						trace={traceData.trace}
+						receipt={{ from: receipt.from, to: receipt.to }}
+						logs={receipt.logs}
+						tokenMetadata={balanceChangesData.tokenMetadata}
+					/>
 				</div>
 			),
 		})
