@@ -79,7 +79,7 @@ export const getRouter = () => {
 						from_cache: false,
 						status: 'error',
 						error_message:
-							error instanceof Error ? error.message : String(error),
+							Error.isError(error) ? error.message : String(error),
 						path: window.location.pathname,
 						route_pattern: normalizePathPattern(window.location.pathname),
 					})

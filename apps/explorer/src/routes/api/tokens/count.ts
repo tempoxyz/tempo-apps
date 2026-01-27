@@ -36,7 +36,7 @@ export const Route = createFileRoute('/api/tokens/count')({
 					return Response.json({ data: count, error: null })
 				} catch (error) {
 					console.error(error)
-					const errorMessage = error instanceof Error ? error.message : error
+					const errorMessage = Error.isError(error) ? error.message : error
 					return Response.json(
 						{ data: null, error: errorMessage },
 						{ status: 500 },

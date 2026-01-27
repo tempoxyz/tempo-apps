@@ -94,7 +94,7 @@ export const Route = createFileRoute('/_layout/block/$id')({
 				throw notFound({
 					routeId: rootRouteId,
 					data: {
-						error: error instanceof Error ? error.message : 'Invalid block ID',
+						error: Error.isError(error) ? error.message : 'Invalid block ID',
 					},
 				})
 			}

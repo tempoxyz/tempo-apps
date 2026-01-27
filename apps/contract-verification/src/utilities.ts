@@ -19,7 +19,7 @@ type LogEvent = {
 }
 
 function formatError(error: unknown): LogEvent['error'] {
-	if (error instanceof Error) {
+	if (Error.isError(error)) {
 		return {
 			type: error.name,
 			message: error.message,

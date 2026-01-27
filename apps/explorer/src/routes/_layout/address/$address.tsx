@@ -791,7 +791,7 @@ function SectionsWrapper(props: {
 				Failed to load transaction history
 			</p>
 			<p className="text-xs text-tertiary mt-1">
-				{error instanceof Error ? error.message : 'Unknown error'}
+				{Error.isError(error) ? error.message : 'Unknown error'}
 			</p>
 		</div>
 	) : null

@@ -603,7 +603,7 @@ async function runVerificationJob(
 				errorCode: 'internal_error',
 				errorId: globalThis.crypto.randomUUID(),
 				errorData: JSON.stringify({
-					message: error instanceof Error ? error.message : 'Unknown error',
+					message: Error.isError(error) ? error.message : 'Unknown error',
 				}),
 				compilationTime: Date.now() - startTime,
 			})
