@@ -266,6 +266,58 @@ function decodeFeeManagerSlot(
 	}
 	const tokenCandidates = Array.from(tokenCandidatesSet) as Hex.Hex[]
 
+	// Try to match validatorTokens[address] at slot 0
+	// This mapping stores which token a validator receives fees in
+	for (const addr of candidateAddresses) {
+		const slot = computeMappingSlot(addr, 0)
+		if (slot.toLowerCase() === slotLower) {
+			const beforeToken = tryDecodeAsAddress(change.before)
+			const afterToken = tryDecodeAsAddress(change.after)
+			const beforeMeta = beforeToken
+				? allTokenMetadata?.[beforeToken.toLowerCase()]
+				: undefined
+			const afterMeta = afterToken
+				? allTokenMetadata?.[afterToken.toLowerCase()]
+				: undefined
+
+			return {
+				slotLabel: `validatorTokens[${formatAddress(addr)}]`,
+				slotRaw: change.slot,
+				beforeDisplay: beforeMeta?.symbol ?? beforeToken ?? '(none)',
+				afterDisplay: afterMeta?.symbol ?? afterToken ?? '(none)',
+				beforeRaw: change.before,
+				afterRaw: change.after,
+				kind: 'address',
+			}
+		}
+	}
+
+	// Try to match userTokens[address] at slot 1
+	// This mapping stores which token a user pays fees in
+	for (const addr of candidateAddresses) {
+		const slot = computeMappingSlot(addr, 1)
+		if (slot.toLowerCase() === slotLower) {
+			const beforeToken = tryDecodeAsAddress(change.before)
+			const afterToken = tryDecodeAsAddress(change.after)
+			const beforeMeta = beforeToken
+				? allTokenMetadata?.[beforeToken.toLowerCase()]
+				: undefined
+			const afterMeta = afterToken
+				? allTokenMetadata?.[afterToken.toLowerCase()]
+				: undefined
+
+			return {
+				slotLabel: `userTokens[${formatAddress(addr)}]`,
+				slotRaw: change.slot,
+				beforeDisplay: beforeMeta?.symbol ?? beforeToken ?? '(none)',
+				afterDisplay: afterMeta?.symbol ?? afterToken ?? '(none)',
+				beforeRaw: change.before,
+				afterRaw: change.after,
+				kind: 'address',
+			}
+		}
+	}
+
 	// Try to match collectedFees[validator][token] at slot 2
 	const validatorCandidates = [
 		'0x0000000000000000000000000000000000000000' as Hex.Hex,
