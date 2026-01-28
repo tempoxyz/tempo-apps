@@ -111,6 +111,9 @@ catalogs:
     animejs:
       specifier: ^4.3.5
       version: 4.3.5
+    cva:
+      specifier: ^1.0.0-beta.4
+      version: 1.0.0-beta.4
     dotenv:
       specifier: ^17.2.3
       version: 17.2.3
@@ -156,6 +159,9 @@ catalogs:
     sonda:
       specifier: ^0.10.1
       version: 0.10.1
+    tailwind-merge:
+      specifier: ^3.4.0
+      version: 3.4.0
     tailwindcss:
       specifier: ^4.1.18
       version: 4.1.18
@@ -360,6 +366,9 @@ importers:
       animejs:
         specifier: 'catalog:'
         version: 4.3.5
+      cva:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.4(typescript@5.9.3)
       hono:
         specifier: 'catalog:'
         version: 4.11.7
@@ -454,6 +463,9 @@ importers:
       sonda:
         specifier: 'catalog:'
         version: 0.10.1
+      tailwind-merge:
+        specifier: 'catalog:'
+        version: 3.4.0
       tw-animate-css:
         specifier: 'catalog:'
         version: 1.4.0
@@ -5606,6 +5618,9 @@ packages:
 
   tailwind-merge@2.6.0:
     resolution: {integrity: sha512-P+Vu1qXfzediirmHOC3xKGAYeZtPcV9g76X+xg2FD4tYgR71ewMA35Y3sCz3zhiN/dwefRpJX0yBcgwi1fXNQA==}
+
+  tailwind-merge@3.4.0:
+    resolution: {integrity: sha512-uSaO4gnW+b3Y2aWoWfFpX62vn2sR3skfhbjsEnaBI81WD1wBLlHZe5sWf0AqjksNdYTbGBEd0UasQMT3SNV15g==}
 
   tailwindcss@4.1.18:
     resolution: {integrity: sha512-4+Z+0yiYyEtUVCScyfHCxOYP06L5Ne+JiHhY2IjR2KWMIWhJOYZKLSGZaP5HkZ8+bY0cxfzwDE5uOmzFXyIwxw==}
@@ -11213,6 +11228,8 @@ snapshots:
   tagged-tag@1.0.0: {}
 
   tailwind-merge@2.6.0: {}
+
+  tailwind-merge@3.4.0: {}
 
   tailwindcss@4.1.18: {}
 

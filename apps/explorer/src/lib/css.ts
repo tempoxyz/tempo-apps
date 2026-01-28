@@ -1,5 +1,8 @@
-type CxArg = string | false | 0 | 0n | undefined | null
+import { defineConfig } from 'cva'
+import { twMerge } from 'tailwind-merge'
 
-export function cx(...args: CxArg[]): string {
-	return args.filter(Boolean).join(' ')
-}
+export const { cva, cx, compose } = defineConfig({
+	hooks: {
+		onComplete: (className) => twMerge(className),
+	},
+})
