@@ -272,12 +272,14 @@ export namespace Pagination {
 					<span className={cx('text-primary', fetching && 'opacity-50')}>
 						{Pagination.numFormat.format(page)}
 					</span>
-					{' of '}
-					{isIndefinite || countLoading
-						? '…'
-						: typeof pages === 'number' && pages > 0
-							? Pagination.numFormat.format(pages)
-							: '…'}
+					{!isIndefinite && typeof pages === 'number' && pages > 0 && (
+						<>
+							{' of '}
+							{countLoading
+								? '…'
+								: Pagination.numFormat.format(pages)}
+						</>
+					)}
 				</span>
 				<Link
 					to="."
