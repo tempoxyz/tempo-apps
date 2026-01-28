@@ -13,6 +13,7 @@ import { cx } from '#lib/css'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
+import LucideFingerprint from '~icons/lucide/fingerprint'
 
 export function ConnectWallet({
 	showAddChain = true,
@@ -45,22 +46,50 @@ function ConnectWalletInner({
 		() => filterSupportedInjectedConnectors(connectors),
 		[connectors],
 	)
+	const passkeyConnector = React.useMemo(
+		() => connectors.find((c) => c.id === 'webAuthn'),
+		[connectors],
+	)
 	const switchChain = useSwitchChain()
 	const chains = useChains()
 	const isSupported = chains.some((c) => c.id === chain?.id)
 
-	if (!injectedConnectors.length)
+	const hasConnectorOptions = injectedConnectors.length > 0 || passkeyConnector
+
+	if (!hasConnectorOptions)
 		return (
 			<div className="text-[12px] -tracking-[2%] flex items-center whitespace-nowrap select-none">
 				No wallet found.
 			</div>
 		)
-	if (!address || connector?.id === 'webAuthn')
+	if (!address)
 		return (
 			<div className="flex items-center gap-1.5">
 				<span className="text-[12px] text-tertiary whitespace-nowrap font-sans">
 					Connect
 				</span>
+				{passkeyConnector && (
+					<button
+						type="button"
+						onClick={() => {
+							setPendingId('webAuthn')
+							connect.mutate(
+								{ connector: passkeyConnector },
+								{
+									onSettled: () => setPendingId(null),
+								},
+							)
+						}}
+						className={cx(
+							'flex gap-[8px] items-center text-[12px] bg-base-alt rounded text-primary py-[6px] px-[10px] cursor-pointer press-down border border-card-border transition-colors',
+							'hover:bg-base-alt/80',
+							pendingId === 'webAuthn' && connect.isPending && 'animate-pulse',
+						)}
+					>
+						<LucideFingerprint className="size-[12px]" />
+						Passkey
+					</button>
+				)}
 				{injectedConnectors.map((connector) => (
 					<button
 						type="button"
