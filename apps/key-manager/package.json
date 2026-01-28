@@ -14,8 +14,8 @@
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
 		"typescript": "catalog:",
-		"wrangler": "catalog:",
-    "@types/node": "catalog:"
+		"wrangler": "catalog:"
 	}
 }

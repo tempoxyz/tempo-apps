@@ -22,7 +22,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
 		"@tempoxyz/lints": "github:tempoxyz/lints",
-		"@typescript/native-preview": "^7.0.0-dev.20260120.1",
+		"@typescript/native-preview": "^7.0.0-dev.20260128.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
 	},
@@ -33,5 +33,5 @@
 			"onFail": "download"
 		}
 	},
-	"packageManager": "pnpm@10.28.1"
+	"packageManager": "pnpm@10.28.2"
 }
