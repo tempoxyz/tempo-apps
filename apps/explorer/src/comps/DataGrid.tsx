@@ -258,6 +258,5 @@ export namespace DataGrid {
 		pagination?: 'default' | 'simple' | React.ReactNode
 		emptyState?: React.ReactNode
 		flexible?: boolean
-		hasMore?: boolean
 	}
 }

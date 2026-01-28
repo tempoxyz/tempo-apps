@@ -351,7 +351,7 @@ export namespace Pagination {
 				<span className="text-primary tabular-nums">
 					{loading
 						? '…'
-						: `${capped ? '> ' : ''}${Pagination.numFormat.format(totalItems)}`}
+						: `${Pagination.numFormat.format(totalItems)}${capped ? '+' : ''}`}
 				</span>
 				<span className="text-tertiary font-sans">{itemsLabel}</span>
 			</div>

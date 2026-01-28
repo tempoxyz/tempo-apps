@@ -1468,20 +1468,26 @@ function SectionsWrapper(props: {
 								}))
 							}
 							totalItems={eventsPaginationTotal}
+							pages={
+								exactEventsCount === null
+									? { hasMore: eventsHasMore }
+									: undefined
+							}
 							displayCount={
 								exactEventsCount === null
-									? Infinity
+									? 1000
 									: exactEventsCount
 							}
+							displayCountCapped={exactEventsCount === null}
 							page={page}
 							fetching={isEventsPlaceholderData}
 							loading={!eventsData}
 							countLoading={exactEventsCount === undefined}
+							disableLastPage={exactEventsCount === null}
 							itemsLabel="events"
 							itemsPerPage={limit}
 							pagination="simple"
 							emptyState="No events found."
-							hasMore={eventsHasMore}
 						/>
 					),
 				}
