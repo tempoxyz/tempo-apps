@@ -18,7 +18,6 @@ export function DataGrid(props: DataGrid.Props) {
 		loading = false,
 		countLoading = false,
 		disableLastPage = false,
-		hasMore,
 		itemsLabel = 'items',
 		itemsPerPage = 10,
 		pagination = 'default',
