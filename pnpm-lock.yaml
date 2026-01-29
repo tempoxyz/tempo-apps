@@ -234,6 +234,25 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  apps/blank:
+    dependencies:
+      hono:
+        specifier: 'catalog:'
+        version: 4.11.7
+    devDependencies:
+      '@biomejs/biome':
+        specifier: 'catalog:'
+        version: 2.3.13
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 4.20260128.0
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.1.0
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.61.0(@cloudflare/workers-types@4.20260128.0)
+
   apps/contract-verification:
     dependencies:
       '@cloudflare/containers':
