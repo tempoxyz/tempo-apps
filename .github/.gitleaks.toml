@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[[rules]]
+id = "rpc-auth-credentials"
+description = "RPC auth credentials in config files"
+regex = '''"[A-Za-z0-9_-]+:[A-Za-z0-9_-]+-[A-Za-z0-9_-]+-[A-Za-z0-9_-]+"'''
+keywords = ["AUTH", "auth", "RPC"]
+path = '''(?i)(wrangler|config|env).*\.(json|jsonc|yaml|yml|toml)$'''

@@ -26,11 +26,12 @@ pnpm build                      # Build all apps
 
 ## CRITICAL: Pre-Commit Requirements
 
-### Before Every Commit, You MUST:
+### Before Every Commit, You MUST
 
 1. ✅ **Type check**: `pnpm check:types` - ZERO errors
 2. ✅ **Lint/Format**: `pnpm check` - ZERO errors (auto-fixes applied)
 3. ✅ **Tests pass**: `pnpm test` in affected apps
+4. ✅ **Pre-commit hooks pass**: `pnpm precommit`
 
 ## Code Style Guidelines
 
@@ -38,12 +39,12 @@ pnpm build                      # Build all apps
 
 * You *must* use wagmi, viem, or ox to interact with tempo
 * You should *never* use tempo.ts - prefer the equivilant implementation in wagmi or viem or ox directly
-* When adding a new dependancy, look at other apps and see if there is a similar dependancy 
+* When adding a new dependancy, look at other apps and see if there is a similar dependancy
 
 ### TypeScript
 
-- **Type imports**: Use `import type` for type-only imports
-- **Props pattern**: Use namespace declarations for component props:
+* **Type imports**: Use `import type` for type-only imports
+* **Props pattern**: Use namespace declarations for component props:
 
 ```typescript
 export function MyComponent(props: MyComponent.Props): React.JSX.Element {
@@ -60,36 +61,39 @@ export declare namespace MyComponent {
 
 ### React Components
 
-- Function components only (no classes)
-- Explicit return type `React.JSX.Element`
-- Use `cx()` helper for conditional classNames (from `#lib/css`)
-- Icons from `unplugin-icons`: `import XIcon from '~icons/lucide/x'`
+* Function components only (no classes)
+* Explicit return type `React.JSX.Element`
+* Use `cx()` helper for conditional classNames (from `#lib/css`)
+* Icons from `unplugin-icons`: `import XIcon from '~icons/lucide/x'`
 
 ### Tailwind CSS
 
-- Use Tailwind v4 syntax
-- Custom variants: `@custom-variant`, `@theme`
-- Prefer utility classes over custom CSS
+* Use Tailwind v4 syntax
+* Custom variants: `@custom-variant`, `@theme`
+* Prefer utility classes over custom CSS
 
 ## Making Changes to an Application
 
-### Before Starting Any Code Changes:
+### Before Starting Any Code Changes
+
 - [ ] Understand which app(s) you're modifying
-- [ ] Check existing patterns in similar files
-- [ ] Identify affected tests
+* [ ] Check existing patterns in similar files
+* [ ] Identify affected tests
 
-### After Completing Code Changes (BEFORE declaring "done"):
+### After Completing Code Changes (BEFORE declaring "done")
+
 - [ ] Run `pnpm check` from repo root
-- [ ] Run `pnpm check:types` from repo root
-- [ ] Fix ALL type/lint errors before proceeding
-- [ ] Run tests in affected apps: `pnpm test`
-- [ ] Only THEN declare task complete
+* [ ] Run `pnpm check:types` from repo root
+* [ ] Fix ALL type/lint errors before proceeding
+* [ ] Run tests in affected apps: `pnpm test`
+* [ ] Only THEN declare task complete
 
-### Before Any Commit:
+### Before Any Commit
+
 - [ ] All above checks must pass
-- [ ] All related tests must pass
-- [ ] No outstanding type or lint errors
-- [ ] No console.log statements left (except in tests)
+* [ ] All related tests must pass
+* [ ] No outstanding type or lint errors
+* [ ] No console.log statements left (except in tests)
 
 ## Pull Request Guidelines
 
@@ -147,18 +151,18 @@ apps/my-app/
 
 You can find the documentation for common libraries at the following links:
 
-- [Cloudflare Workers](https://developers.cloudflare.com/llms.txt)
-- [TanStack Start](https://context7.com/websites/tanstack_start/llms.txt?tokens=1000000)
-- [TanStack Router](https://context7.com/websites/tanstack_router/llms.txt?tokens=1000000)
-- [React](https://context7.com/websites/react_dev/llms.txt?tokens=1000000)
-- [Tailwind CSS v4](https://context7.com/websites/tailwindcss/llms.txt?tokens=1000000)
-- [Wagmi React reference](https://context7.com/websites/wagmi_sh_react/llms.txt?tokens=1000000)
-- [Wagmi Tempo reference](https://context7.com/websites/wagmi_sh_tempo_getting-started/llms.txt?tokens=1000000)
-- [Viem general reference](https://viem.sh/llms.txt)
-- [Viem Tempo reference](https://context7.com/websites/viem_sh_tempo/llms.txt?tokens=1000000)
-- [Ox](https://ox.sh/llms.txt)
-- [Hono](https://hono.dev/llms.txt)
-- [Zod](https://zod.dev/llms.txt)
+* [Cloudflare Workers](https://developers.cloudflare.com/llms.txt)
+* [TanStack Start](https://context7.com/websites/tanstack_start/llms.txt?tokens=1000000)
+* [TanStack Router](https://context7.com/websites/tanstack_router/llms.txt?tokens=1000000)
+* [React](https://context7.com/websites/react_dev/llms.txt?tokens=1000000)
+* [Tailwind CSS v4](https://context7.com/websites/tailwindcss/llms.txt?tokens=1000000)
+* [Wagmi React reference](https://context7.com/websites/wagmi_sh_react/llms.txt?tokens=1000000)
+* [Wagmi Tempo reference](https://context7.com/websites/wagmi_sh_tempo_getting-started/llms.txt?tokens=1000000)
+* [Viem general reference](https://viem.sh/llms.txt)
+* [Viem Tempo reference](https://context7.com/websites/viem_sh_tempo/llms.txt?tokens=1000000)
+* [Ox](https://ox.sh/llms.txt)
+* [Hono](https://hono.dev/llms.txt)
+* [Zod](https://zod.dev/llms.txt)
 
 ## Recording Browser GIFs with Chrome DevTools MCP
 
@@ -171,6 +175,7 @@ To capture a page load from the very first frame using MCP tools:
 5. **Upload to imgbb**: `curl --location --request POST "https://api.imgbb.com/1/upload?key=API_KEY" --form "image=@/tmp/recording.gif"`
 
 Example parallel tool call (first frame captured during navigation start):
+
 ```
 navigate_page(url="https://...", timeout=0)  } parallel
 take_screenshot(filePath="/tmp/frame_01.png") }
