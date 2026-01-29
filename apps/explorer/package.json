@@ -51,7 +51,7 @@
 		"react-dom": "catalog:",
 		"tailwindcss": "catalog:",
 		"tempo.ts": "catalog:",
-    "cva": "catalog:",
+		"cva": "catalog:",
 		"viem": "catalog:",
 		"wagmi": "catalog:",
 		"zod": "catalog:"
@@ -70,7 +70,7 @@
 		"@total-typescript/ts-reset": "^0.6.1",
 		"@types/animejs": "catalog:",
 		"@types/node": "catalog:",
-    "tailwind-merge": "catalog:",
+		"tailwind-merge": "catalog:",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",
 		"@vitejs/plugin-react": "catalog:",

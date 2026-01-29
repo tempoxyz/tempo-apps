@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-TEMPO_RPC_URL=${TEMPO_RPC_URL:-"https://rpc.presto.tempo.xyz"}
+TEMPO_RPC_URL=${TEMPO_RPC_URL:-"https://rpc.moderato.tempo.xyz"}
 VERIFIER_URL=${VERIFIER_URL:-"https://contracts.tempo.xyz"}
 
 echo -e "\n=== VERSIONS ==="
@@ -26,9 +26,8 @@ TEMP_DIR=$(mktemp -d)
 echo -e "\nCreating temporary directory $TEMP_DIR\n"
 cd "$TEMP_DIR"
 
-gh repo clone grandizzy/counter-vy "$TEMP_DIR"/counter-vy -- --depth 1
+git clone --depth 1 https://github.com/grandizzy/counter-vy.git "$TEMP_DIR"/counter-vy
 cd "$TEMP_DIR"/counter-vy
-
 
 # Export fee token for fork tests (templates use vm.envOr to read it)
 export TEMPO_FEE_TOKEN="$FEE_TOKEN"
