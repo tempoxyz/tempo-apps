@@ -38,6 +38,6 @@
 	},
 	"packageManager": "pnpm@10.28.2",
 	"simple-git-hooks": {
-		"pre-commit": "pnpm prek run --all-files --config .github/.pre-commit.yml"
+		"pre-commit": "pnpm prek run --all-files --config='.github/.pre-commit.yml'"
 	}
 }
