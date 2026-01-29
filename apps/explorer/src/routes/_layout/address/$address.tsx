@@ -31,8 +31,10 @@ import {
 	useTimeFormat,
 } from '#comps/TimeFormat'
 import { TokenIcon } from '#comps/TokenIcon'
+import { TxEventDescription } from '#comps/TxEventDescription'
 import {
 	BatchTransactionDataContext,
+	getPerspectiveEvent,
 	type TransactionData,
 	TransactionDescription,
 	TransactionTimestamp,
@@ -53,9 +55,10 @@ import {
 	getContractBytecode,
 	getContractInfo,
 } from '#lib/domain/contracts'
-import { parseKnownEvents } from '#lib/domain/known-events'
+import { parseKnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
+import { useLookupSignature } from '#lib/queries'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
@@ -63,6 +66,13 @@ import {
 	type TransactionsData,
 	transactionsQueryOptions,
 } from '#lib/queries/account'
+import {
+	type AddressEventData,
+	type AddressEventsApiResponse,
+	type AddressEventsCountResponse,
+	addressEventsQueryOptions,
+	addressEventsCountQueryOptions,
+} from '#lib/queries/address-events.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 import { getApiUrl } from '#lib/env.ts'
 
@@ -227,7 +237,7 @@ const defaultSearchValues = {
 const ASSETS_PER_PAGE = 10
 
 const TabSchema = z.prefault(
-	z.enum(['history', 'assets', 'contract', 'interact']),
+	z.enum(['history', 'assets', 'events', 'contract', 'interact']),
 	defaultSearchValues.tab,
 )
 
@@ -345,22 +355,49 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
 				])
 
-			const transactionsData = await timeout(
-				context.queryClient
-					.ensureQueryData(
-						transactionsQueryOptions({
-							address,
-							page,
-							limit,
-							offset,
+			const [transactionsData, eventsData, eventsCountData] = await Promise.all([
+				timeout(
+					context.queryClient
+						.ensureQueryData(
+							transactionsQueryOptions({
+								address,
+								page,
+								limit,
+								offset,
+							}),
+						)
+						.catch((error) => {
+							console.error('Fetch transactions error:', error)
+							return undefined
 						}),
-					)
-					.catch((error) => {
-						console.error('Fetch transactions error:', error)
-						return undefined
-					}),
-				QUERY_TIMEOUT_MS,
-			)
+					QUERY_TIMEOUT_MS,
+				),
+				timeout(
+					context.queryClient
+						.ensureQueryData(
+							addressEventsQueryOptions({
+								address,
+								page,
+								limit,
+								offset,
+							}),
+						)
+						.catch((error) => {
+							console.error('Fetch events error:', error)
+							return undefined
+						}),
+					QUERY_TIMEOUT_MS,
+				),
+				timeout(
+					context.queryClient
+						.ensureQueryData(addressEventsCountQueryOptions(address))
+						.catch((error) => {
+							console.error('Fetch events count error:', error)
+							return undefined
+						}),
+					QUERY_TIMEOUT_MS,
+				),
+			])
 
 			// Fire off optional loaders without blocking page render
 			// These will populate the cache if successful but won't delay the page load
@@ -398,6 +435,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				contractInfo,
 				contractSource,
 				transactionsData,
+				eventsData,
+				eventsCountData,
 				balancesData,
 				txCountResponse,
 				totalValueResponse,
@@ -504,6 +543,8 @@ function RouteComponent() {
 		contractInfo,
 		contractSource,
 		transactionsData,
+		eventsData: initialEventsData,
+		eventsCountData: initialEventsCountData,
 		balancesData,
 	} = Route.useLoaderData()
 
@@ -517,6 +558,7 @@ function RouteComponent() {
 
 	// When URL has a hash fragment (e.g., #functionName), switch to interact tab
 	const isContract = accountType === 'contract'
+	const hasContract = Boolean(contractInfo || contractSource)
 
 	React.useEffect(() => {
 		// Only redirect if:
@@ -564,16 +606,21 @@ function RouteComponent() {
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
-			const tabs: TabValue[] = ['history', 'assets', 'contract', 'interact']
-
+			const tabs: TabValue[] = [
+				'history',
+				'assets',
+				'events',
+				'contract',
+				'interact',
+			]
 			const newTab = tabs[newIndex] ?? 'history'
 			navigate({
 				to: '.',
-				search: { page, tab: newTab, limit },
+				search: { page: 1, tab: newTab, limit },
 				resetScroll: false,
 			})
 		},
-		[navigate, page, limit],
+		[navigate, limit],
 	)
 
 	const activeSection =
@@ -581,11 +628,13 @@ function RouteComponent() {
 			? 0
 			: tab === 'assets'
 				? 1
-				: tab === 'contract'
+				: tab === 'events'
 					? 2
-					: tab === 'interact'
+					: tab === 'contract'
 						? 3
-						: 0
+						: tab === 'interact'
+							? 4
+							: 0
 
 	const { data: assetsData } = useBalancesData(address, balancesData)
 
@@ -608,9 +657,12 @@ function RouteComponent() {
 				limit={limit}
 				activeSection={activeSection}
 				onSectionChange={setActiveSection}
+				hasContract={hasContract}
 				contractInfo={contractInfo}
 				contractSource={contractSource}
 				initialData={transactionsData}
+				initialEventsData={initialEventsData}
+				initialEventsCountData={initialEventsCountData}
 				assetsData={assetsData}
 				live={live}
 				isContract={accountType === 'contract'}
@@ -693,9 +745,12 @@ function SectionsWrapper(props: {
 	limit: number
 	activeSection: number
 	onSectionChange: (index: number) => void
+	hasContract: boolean
 	contractInfo: ContractInfo | undefined
 	contractSource?: ContractSource | undefined
 	initialData: TransactionsData | undefined
+	initialEventsData: AddressEventsApiResponse | undefined
+	initialEventsCountData: AddressEventsCountResponse | undefined
 	assetsData: AssetData[]
 	live: boolean
 	isContract: boolean
@@ -706,9 +761,12 @@ function SectionsWrapper(props: {
 		limit,
 		activeSection,
 		onSectionChange,
+		hasContract,
 		contractInfo,
 		contractSource,
 		initialData,
+		initialEventsData,
+		initialEventsCountData,
 		assetsData,
 		live,
 		isContract,
@@ -746,12 +804,11 @@ function SectionsWrapper(props: {
 			limit,
 			offset: (page - 1) * limit,
 		}),
-		initialData: page === 1 ? initialData : undefined,
+		initialData: initialData,
 		// Override refetch settings reactively based on tab state
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
-
 	/**
 	 * use initialData until mounted to avoid hydration mismatch
 	 * (tanstack query may have fresher cached data that differs from SSR)
@@ -769,6 +826,41 @@ function SectionsWrapper(props: {
 		refetchOnWindowFocus: false,
 		enabled: isHistoryTabActive,
 	})
+
+	// Events tab data fetching
+	const {
+		data: eventsData,
+		isPlaceholderData: isEventsPlaceholderData,
+		error: eventsError,
+	} = useQuery({
+		...addressEventsQueryOptions({
+			address,
+			page,
+			limit,
+			offset: (page - 1) * limit,
+		}),
+		initialData: initialEventsData,
+	})
+	const { events, total: eventsApproximateTotal, hasMore: eventsHasMore } = eventsData ?? {
+		events: [] as AddressEventData[],
+		total: 0,
+		hasMore: false,
+	}
+
+	// Fetch exact events count in the background
+	const eventsCountQuery = useQuery({
+		...addressEventsCountQueryOptions(address),
+		initialData: initialEventsCountData,
+	})
+
+	// SSR data first, then query data
+	const exactEventsCount =
+		initialEventsCountData?.data ?? eventsCountQuery.data?.data
+
+	// Use exact count for events pagination
+	const eventsPaginationTotal =
+		exactEventsCount ??
+		(eventsApproximateTotal > 0 ? eventsApproximateTotal : events.length)
 
 	const batchTransactionDataContextValue = useBatchTransactionData(
 		transactions,
@@ -813,6 +905,30 @@ function SectionsWrapper(props: {
 		{ label: 'Hash', align: 'end', width: '1fr' },
 		{ label: 'Fee', align: 'end', width: '0.5fr' },
 		{ label: 'Total', align: 'end', width: '0.5fr' },
+	]
+
+	const eventsErrorDisplay = eventsError ? (
+		<div className="rounded-[10px] bg-card-header p-4.5">
+			<p className="text-sm font-medium text-red-400">Failed to load events</p>
+			<p className="text-xs text-tertiary mt-1">
+				{eventsError instanceof Error ? eventsError.message : 'Unknown error'}
+			</p>
+		</div>
+	) : null
+
+	const eventsColumns: DataGrid.Column[] = [
+		{ label: 'Time', align: 'start', width: '0.5fr' },
+		{ label: 'Description', align: 'start', width: '1.5fr' },
+		{
+			label: <span title="Event signature (topic0)">Event</span>,
+			align: 'end',
+			width: '1fr',
+		},
+		{
+			label: <span title="Transaction hash">Hash</span>,
+			align: 'end',
+			width: '1.5fr',
+		},
 	]
 
 	return (
@@ -929,6 +1045,66 @@ function SectionsWrapper(props: {
 								itemsPerPage={ASSETS_PER_PAGE}
 								pagination="simple"
 								emptyState="No assets found."
+							/>
+						),
+					},
+					// Events tab - visible when it's a contract
+					{
+						title: 'Events',
+						totalItems:
+							eventsData && (exactEventsCount ?? eventsPaginationTotal),
+						itemsLabel: 'events',
+						visible: hasContract,
+						content: eventsErrorDisplay ?? (
+							<DataGrid
+								columns={{
+									stacked: eventsColumns,
+									tabs: eventsColumns,
+								}}
+								items={() =>
+									events.map((event) => ({
+										cells: [
+											<EventTimeCell
+												key="time"
+												blockNumber={event.blockNumber}
+												format={timeFormat}
+											/>,
+											<EventDescCell
+												key="desc"
+												event={event}
+												accountAddress={address}
+											/>,
+											<EventSignatureCell
+												key="signature"
+												selector={event.topics[0]}
+											/>,
+											<div key="hash" className="flex-1 text-accent">
+												<Midcut
+													value={event.txHash}
+													prefix="0x"
+													align="end"
+												/>
+											</div>,
+										],
+										link: {
+											href: `/tx/${event.txHash}`,
+											title: `View transaction ${event.txHash}`,
+										},
+									}))
+								}
+								totalItems={eventsPaginationTotal}
+								pages={exactEventsCount === null ? { hasMore: eventsHasMore } : undefined}
+								displayCount={exactEventsCount === null ? 1000 : exactEventsCount}
+								displayCountCapped={exactEventsCount === null}
+								page={page}
+								fetching={isEventsPlaceholderData}
+								loading={!eventsData}
+								countLoading={exactEventsCount === undefined}
+								disableLastPage={exactEventsCount === null}
+								itemsLabel="events"
+								itemsPerPage={limit}
+								pagination="simple"
+								emptyState="No events found."
 							/>
 						),
 					},
@@ -1050,6 +1226,64 @@ function TransactionFeeCellInner(props: { hash: Hex.Hex }) {
 			)}
 		</span>
 	)
+}
+
+function EventTimeCell(props: { blockNumber: Hex.Hex; format: TimeFormat }) {
+	const { blockNumber, format } = props
+	const { data: timestamp } = useBlock({
+		blockNumber: Hex.toBigInt(blockNumber),
+		query: {
+			select: (block) => block.timestamp,
+			staleTime: Infinity,
+		},
+	})
+	if (!timestamp) return <span className="text-tertiary">…</span>
+	return <TransactionTimestamp timestamp={timestamp} format={format} />
+}
+
+function EventSignatureCell(props: { selector: Hex.Hex | undefined }) {
+	const { selector } = props
+	const { data: signature, isFetching } = useLookupSignature({ selector })
+
+	if (!selector) return <span className="text-tertiary">—</span>
+	if (isFetching) return <span className="text-tertiary">…</span>
+	if (!signature) return <Midcut value={selector} prefix="0x" />
+
+	const name = signature.split('(')[0]
+	return <span title={signature}>{name}</span>
+}
+
+function EventDescCell(props: {
+	event: AddressEventData
+	accountAddress: Address.Address
+}) {
+	const { event, accountAddress } = props
+
+	const log = React.useMemo(
+		() => ({
+			address: event.contractAddress,
+			topics: event.topics as [Hex.Hex, ...Hex.Hex[]],
+			data: event.data,
+			blockNumber: Hex.toBigInt(event.blockNumber),
+			transactionHash: event.txHash,
+			logIndex: event.logIndex,
+			blockHash: '0x' as Hex.Hex,
+			transactionIndex: 0,
+			removed: false,
+		}),
+		[event],
+	)
+
+	const knownEvent = React.useMemo(() => parseKnownEvent(log), [log])
+
+	if (!knownEvent) {
+		const selector = event.topics[0]?.slice(0, 10) ?? 'unknown'
+		return <span className="text-secondary font-mono text-xs">{selector}</span>
+	}
+
+	const perspectiveEvent = getPerspectiveEvent(knownEvent, accountAddress)
+
+	return <TxEventDescription event={perspectiveEvent} seenAs={accountAddress} />
 }
 
 function AssetName(props: { asset: AssetData }) {
