@@ -100,7 +100,6 @@ export function getWagmiConfig() {
 
 	return createConfig({
 		ssr: true,
-		batch: { multicall: false },
 		chains: [chain, tempoLocalnet],
 		connectors: [
 			webAuthn({

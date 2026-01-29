@@ -176,7 +176,7 @@ To capture a page load from the very first frame using MCP tools:
 
 Example parallel tool call (first frame captured during navigation start):
 
-```
+```bash
 navigate_page(url="https://...", timeout=0)  } parallel
 take_screenshot(filePath="/tmp/frame_01.png") }
 ```
