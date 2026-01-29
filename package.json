@@ -36,5 +36,8 @@
 			"onFail": "download"
 		}
 	},
-	"packageManager": "pnpm@10.28.2"
+	"packageManager": "pnpm@10.28.2",
+	"simple-git-hooks": {
+		"pre-commit": "pnpm prek run --all-files --config .github/.pre-commit.yml"
+	}
 }
