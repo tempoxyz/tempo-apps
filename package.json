@@ -18,13 +18,14 @@
 		"check:types": "pnpm --recursive --parallel --stream --reporter='append-only' check:types",
 		"gen:types": "pnpm --recursive --parallel --stream --reporter='append-only' gen:types",
 		"lint:tempo": "lints typescript",
-		"postinstall": "pnpm --recursive --parallel --stream --reporter='append-only' postinstall && prek install --config .github/.pre-commit.yml"
+		"postinstall": "pnpm --recursive --parallel --stream --reporter='append-only' postinstall && simple-git-hooks"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
 		"@j178/prek": "^0.3.0",
 		"@tempoxyz/lints": "github:tempoxyz/lints",
 		"@typescript/native-preview": "^7.0.0-dev.20260128.1",
+		"simple-git-hooks": "^2.13.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
 	},

@@ -88,7 +88,9 @@ nodeOptions: '--disable-warning=ExperimentalWarning --disable-warning=Deprecatio
 
 onlyBuiltDependencies:
   - '@ast-grep/cli'
+  - '@j178/prek'
   - esbuild
+  - simple-git-hooks
   - utf-8-validate
   - workerd
 
