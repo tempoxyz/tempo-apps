@@ -32,6 +32,7 @@ import { Route as LayoutBlockIdRouteImport } from './routes/_layout/block/$id'
 import { Route as LayoutAddressAddressRouteImport } from './routes/_layout/address/$address'
 import { Route as ApiTxTraceHashRouteImport } from './routes/api/tx/trace/$hash'
 import { Route as ApiTxBalanceChangesHashRouteImport } from './routes/api/tx/balance-changes/$hash'
+import { Route as ApiContractCreationAddressRouteImport } from './routes/api/contract/creation/$address'
 import { Route as ApiAddressTxsCountAddressRouteImport } from './routes/api/address/txs-count/$address'
 import { Route as ApiAddressTotalValueAddressRouteImport } from './routes/api/address/total-value/$address'
 import { Route as ApiAddressBalancesAddressRouteImport } from './routes/api/address/balances/$address'
@@ -151,6 +152,12 @@ const ApiTxBalanceChangesHashRoute = ApiTxBalanceChangesHashRouteImport.update({
   path: '/api/tx/balance-changes/$hash',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiContractCreationAddressRoute =
+  ApiContractCreationAddressRouteImport.update({
+    id: '/api/contract/creation/$address',
+    path: '/api/contract/creation/$address',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAddressTxsCountAddressRoute =
   ApiAddressTxsCountAddressRouteImport.update({
     id: '/api/address/txs-count/$address',
@@ -201,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
+  '/api/contract/creation/$address': typeof ApiContractCreationAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
   '/api/tx/trace/$hash': typeof ApiTxTraceHashRoute
 }
@@ -229,6 +237,7 @@ export interface FileRoutesByTo {
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
+  '/api/contract/creation/$address': typeof ApiContractCreationAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
   '/api/tx/trace/$hash': typeof ApiTxTraceHashRoute
 }
@@ -259,6 +268,7 @@ export interface FileRoutesById {
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
   '/api/address/txs-count/$address': typeof ApiAddressTxsCountAddressRoute
+  '/api/contract/creation/$address': typeof ApiContractCreationAddressRoute
   '/api/tx/balance-changes/$hash': typeof ApiTxBalanceChangesHashRoute
   '/api/tx/trace/$hash': typeof ApiTxTraceHashRoute
 }
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
     | '/api/address/balances/$address'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
+    | '/api/contract/creation/$address'
     | '/api/tx/balance-changes/$hash'
     | '/api/tx/trace/$hash'
   fileRoutesByTo: FileRoutesByTo
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '/api/address/balances/$address'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
+    | '/api/contract/creation/$address'
     | '/api/tx/balance-changes/$hash'
     | '/api/tx/trace/$hash'
   id:
@@ -346,6 +358,7 @@ export interface FileRouteTypes {
     | '/api/address/balances/$address'
     | '/api/address/total-value/$address'
     | '/api/address/txs-count/$address'
+    | '/api/contract/creation/$address'
     | '/api/tx/balance-changes/$hash'
     | '/api/tx/trace/$hash'
   fileRoutesById: FileRoutesById
@@ -361,6 +374,7 @@ export interface RootRouteChildren {
   ApiAddressBalancesAddressRoute: typeof ApiAddressBalancesAddressRoute
   ApiAddressTotalValueAddressRoute: typeof ApiAddressTotalValueAddressRoute
   ApiAddressTxsCountAddressRoute: typeof ApiAddressTxsCountAddressRoute
+  ApiContractCreationAddressRoute: typeof ApiContractCreationAddressRoute
   ApiTxBalanceChangesHashRoute: typeof ApiTxBalanceChangesHashRoute
   ApiTxTraceHashRoute: typeof ApiTxTraceHashRoute
 }
@@ -528,6 +542,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTxBalanceChangesHashRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/contract/creation/$address': {
+      id: '/api/contract/creation/$address'
+      path: '/api/contract/creation/$address'
+      fullPath: '/api/contract/creation/$address'
+      preLoaderRoute: typeof ApiContractCreationAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/address/txs-count/$address': {
       id: '/api/address/txs-count/$address'
       path: '/api/address/txs-count/$address'
@@ -609,6 +630,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAddressBalancesAddressRoute: ApiAddressBalancesAddressRoute,
   ApiAddressTotalValueAddressRoute: ApiAddressTotalValueAddressRoute,
   ApiAddressTxsCountAddressRoute: ApiAddressTxsCountAddressRoute,
+  ApiContractCreationAddressRoute: ApiContractCreationAddressRoute,
   ApiTxBalanceChangesHashRoute: ApiTxBalanceChangesHashRoute,
   ApiTxTraceHashRoute: ApiTxTraceHashRoute,
 }
