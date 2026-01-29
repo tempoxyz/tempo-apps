@@ -18,7 +18,7 @@
 		"check:types": "pnpm --recursive --parallel --stream --reporter='append-only' check:types",
 		"gen:types": "pnpm --recursive --parallel --stream --reporter='append-only' gen:types",
 		"lint:tempo": "lints typescript",
-		"postinstall": "pnpm --recursive --parallel --stream --reporter='append-only' postinstall"
+		"postinstall": "pnpm --recursive --parallel --stream --reporter='append-only' postinstall && prek install --config .github/.pre-commit.yml"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
