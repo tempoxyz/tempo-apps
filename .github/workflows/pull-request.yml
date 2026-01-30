@@ -28,6 +28,8 @@ jobs:
     strategy:
       matrix:
         include:
+          #### api
+          - app: api
           #### explorer
           - app: explorer
             env: testnet
