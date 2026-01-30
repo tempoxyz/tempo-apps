@@ -108,6 +108,9 @@ catalogs:
     abitype:
       specifier: ^1.2.3
       version: 1.2.3
+    add:
+      specifier: 'catalog:'
+      version: 2.0.6
     animejs:
       specifier: ^4.3.5
       version: 4.3.5
@@ -217,7 +220,7 @@ importers:
         version: 0.3.0
       '@tempoxyz/lints':
         specifier: github:tempoxyz/lints
-        version: https://codeload.github.com/tempoxyz/lints/tar.gz/904f8e0078dfe6bf0a750cb2561f42e806f463ce
+        version: https://codeload.github.com/tempoxyz/lints/tar.gz/1647d724f9bca135d8c529ddb5ccd7ec7954639e
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20260128.1
         version: 7.0.0-dev.20260128.1
@@ -233,6 +236,58 @@ importers:
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
+
+  apps/api:
+    dependencies:
+      '@hono/zod-validator':
+        specifier: 'catalog:'
+        version: 0.7.6(hono@4.11.7)(zod@4.3.6)
+      add:
+        specifier: 'catalog:'
+        version: 2.0.6
+      hono:
+        specifier: 'catalog:'
+        version: 4.11.7
+      ox:
+        specifier: 'catalog:'
+        version: 0.12.0(typescript@5.9.3)(zod@4.3.6)
+      viem:
+        specifier: 'catalog:'
+        version: 2.45.0(typescript@5.9.3)(zod@4.3.6)
+      wagmi:
+        specifier: 'catalog:'
+        version: 3.4.1(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.20(react@19.2.4))(ox@0.12.0(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(viem@2.45.0(typescript@5.9.3)(zod@4.3.6))
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+    devDependencies:
+      '@biomejs/biome':
+        specifier: 'catalog:'
+        version: 2.3.13
+      '@cloudflare/vite-plugin':
+        specifier: 'catalog:'
+        version: 1.22.0(rolldown-vite@7.3.1(@types/node@25.1.0)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20260124.0)(wrangler@4.61.0(@cloudflare/workers-types@4.20260128.0))
+      '@cloudflare/workers-types':
+        specifier: 'catalog:'
+        version: 4.20260128.0
+      '@scalar/api-reference':
+        specifier: ^1.43.17
+        version: 1.43.17(axios@1.13.4)(change-case@5.4.4)(tailwindcss@4.1.18)(typescript@5.9.3)
+      '@total-typescript/ts-reset':
+        specifier: 'catalog:'
+        version: 0.6.1
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.1.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      vite:
+        specifier: 'catalog:'
+        version: rolldown-vite@7.3.1(@types/node@25.1.0)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.61.0(@cloudflare/workers-types@4.20260128.0)
 
   apps/contract-verification:
     dependencies:
@@ -702,52 +757,52 @@ packages:
   '@antfu/install-pkg@1.1.0':
     resolution: {integrity: sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ==}
 
-  '@ast-grep/cli-darwin-arm64@0.25.7':
-    resolution: {integrity: sha512-dkj8hy32mWuQwCJUEpnKwTS8tLE+e7dhvu6is+v5Q6AumOVlcL6PJWQsyaA4vedDm6XOGK9+WnyFpCnV3b5ouA==}
+  '@ast-grep/cli-darwin-arm64@0.40.5':
+    resolution: {integrity: sha512-T9CzwJ1GqQhnANdsu6c7iT1akpvTVMK+AZrxnhIPv33Ze5hrXUUkqan+j4wUAukRJDqU7u94EhXLSLD+5tcJ8g==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [darwin]
 
-  '@ast-grep/cli-darwin-x64@0.25.7':
-    resolution: {integrity: sha512-FBdv7GH3llH5LI0S2yeqgQM5QEUHeoYMhw1pv+C439UeL5BBFFjI+LYVALciwsYzuq/DQDTnT2cM0JhYGajDLQ==}
+  '@ast-grep/cli-darwin-x64@0.40.5':
+    resolution: {integrity: sha512-ez9b2zKvXU8f4ghhjlqYvbx6tWCKJTuVlNVqDDfjqwwhGeiTYfnzMlSVat4ElYRMd21gLtXZIMy055v2f21Ztg==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
 
-  '@ast-grep/cli-linux-arm64-gnu@0.25.7':
-    resolution: {integrity: sha512-lsE+cSe4rFO8rvLhMM7PM3T83LlmV60H9dOH+1hq8thkWhLCL6vAJijEVWgAQDDvvZf3xnNVgG2GG4jOMfTuTQ==}
+  '@ast-grep/cli-linux-arm64-gnu@0.40.5':
+    resolution: {integrity: sha512-VXa2L1IEYD66AMb0GuG7VlMMbPmEGoJUySWDcwSZo/D9neiry3MJ41LQR5oTG2HyhIPBsf9umrXnmuRq66BviA==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@ast-grep/cli-linux-x64-gnu@0.25.7':
-    resolution: {integrity: sha512-uuF5GXgeUZtBrftJJYuQU7PvDT7Q9fJkKKwpIscEfQqLndri1tdYzzT9jKj2taWFlhiCVqLaDEHsdfTeWaVjZQ==}
+  '@ast-grep/cli-linux-x64-gnu@0.40.5':
+    resolution: {integrity: sha512-GQC5162eIOWXR2eQQ6Knzg7/8Trp5E1ODJkaErf0IubdQrZBGqj5AAcQPcWgPbbnmktjIp0H4NraPpOJ9eJ22A==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@ast-grep/cli-win32-arm64-msvc@0.25.7':
-    resolution: {integrity: sha512-GSWRjOnWybzNP5rnvPb6lQ7lSPoEIl64gk4uHE1h+a2nnFhT9REWTKFcmNB2aG8VmKEz1gu0pxpg9HmBe2OUBA==}
+  '@ast-grep/cli-win32-arm64-msvc@0.40.5':
+    resolution: {integrity: sha512-YiZdnQZsSlXQTMsZJop/Ux9MmUGfuRvC2x/UbFgrt5OBSYxND+yoiMc0WcA3WG+wU+tt4ZkB5HUea3r/IkOLYA==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [win32]
 
-  '@ast-grep/cli-win32-ia32-msvc@0.25.7':
-    resolution: {integrity: sha512-5p9PWbTeXaivQYixB+JkkpFKgY7G1Tm6R46Dhq6cHvKksiQ6lWlTOOmhl0QARtY7y3XP0MWuvjDEWCYrvYtO4A==}
+  '@ast-grep/cli-win32-ia32-msvc@0.40.5':
+    resolution: {integrity: sha512-MHkCxCITVTr8sY9CcVqNKbfUzMa3Hc6IilGXad0Clnw2vNmPfWqSky+hU/UTerr5YHWwWfAVURH7ANZgirtx0Q==}
     engines: {node: '>= 10'}
     cpu: [ia32]
     os: [win32]
 
-  '@ast-grep/cli-win32-x64-msvc@0.25.7':
-    resolution: {integrity: sha512-WjsRuyKTCeGWpMhvobzU/6HaWbseENPl5mNMZIKs8gsCpkUyTUfvV8/A2W29oHCgbDWRtixYppWtd87Qjpm6cg==}
+  '@ast-grep/cli-win32-x64-msvc@0.40.5':
+    resolution: {integrity: sha512-/MJ5un7yxlClaaxou9eYl+Kr2xr/yTtYtTq5aLBWjPWA6dmmJ1nAJgx5zKHVuplFXFBrFDQk3paEgAETMTGcrA==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [win32]
 
-  '@ast-grep/cli@0.25.7':
-    resolution: {integrity: sha512-vklcPRFHPHkwHq05nb2Fuaj4BYNWxhr8GIdB6la090jWob9FdbM/Jz86vlQp2tRELb2rKzuHeksG8qDrbX4REg==}
+  '@ast-grep/cli@0.40.5':
+    resolution: {integrity: sha512-yVXL7Gz0WIHerQLf+MVaVSkhIhidtWReG5akNVr/JS9OVCVkSdz7gWm7H8jVv2M9OO1tauuG76K3UaRGBPu5lQ==}
     engines: {node: '>= 12.0.0'}
     hasBin: true
 
@@ -3010,8 +3065,8 @@ packages:
     peerDependencies:
       vue: ^2.7.0 || ^3.0.0
 
-  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/904f8e0078dfe6bf0a750cb2561f42e806f463ce':
-    resolution: {tarball: https://codeload.github.com/tempoxyz/lints/tar.gz/904f8e0078dfe6bf0a750cb2561f42e806f463ce}
+  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/1647d724f9bca135d8c529ddb5ccd7ec7954639e':
+    resolution: {tarball: https://codeload.github.com/tempoxyz/lints/tar.gz/1647d724f9bca135d8c529ddb5ccd7ec7954639e}
     version: 0.1.1
     engines: {node: '>=18'}
     hasBin: true
@@ -3377,6 +3432,9 @@ packages:
     resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
     engines: {node: '>=0.4.0'}
     hasBin: true
+
+  add@2.0.6:
+    resolution: {integrity: sha512-j5QzrmsokwWWp6kUcJQySpbG+xfOBqqKnup3OIk1pz+kB/80SLorZ9V8zHFLO92Lcd+hbvq8bT+zOGoPkmBV0Q==}
 
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
@@ -3867,10 +3925,6 @@ packages:
 
   detect-libc@2.0.2:
     resolution: {integrity: sha512-UX6sGumvvqSaXgdKGUsgZWqcUyIXZ/vZTrlRT/iobiKhGL0zL4d3osHj3uqllWJK+i+sixDS/3COVEOFbupFyw==}
-    engines: {node: '>=8'}
-
-  detect-libc@2.0.3:
-    resolution: {integrity: sha512-bwy0MGW55bG41VqxxypOsdSdGqLwXPI/focwgTYCFMbdUiBAxLg9CFzG08sz2aqzknwiX7Hkl0bQENjg8iLByw==}
     engines: {node: '>=8'}
 
   detect-libc@2.1.2:
@@ -6330,38 +6384,38 @@ snapshots:
       package-manager-detector: 1.6.0
       tinyexec: 1.0.2
 
-  '@ast-grep/cli-darwin-arm64@0.25.7':
+  '@ast-grep/cli-darwin-arm64@0.40.5':
     optional: true
 
-  '@ast-grep/cli-darwin-x64@0.25.7':
+  '@ast-grep/cli-darwin-x64@0.40.5':
     optional: true
 
-  '@ast-grep/cli-linux-arm64-gnu@0.25.7':
+  '@ast-grep/cli-linux-arm64-gnu@0.40.5':
     optional: true
 
-  '@ast-grep/cli-linux-x64-gnu@0.25.7':
+  '@ast-grep/cli-linux-x64-gnu@0.40.5':
     optional: true
 
-  '@ast-grep/cli-win32-arm64-msvc@0.25.7':
+  '@ast-grep/cli-win32-arm64-msvc@0.40.5':
     optional: true
 
-  '@ast-grep/cli-win32-ia32-msvc@0.25.7':
+  '@ast-grep/cli-win32-ia32-msvc@0.40.5':
     optional: true
 
-  '@ast-grep/cli-win32-x64-msvc@0.25.7':
+  '@ast-grep/cli-win32-x64-msvc@0.40.5':
     optional: true
 
-  '@ast-grep/cli@0.25.7':
+  '@ast-grep/cli@0.40.5':
     dependencies:
-      detect-libc: 2.0.3
+      detect-libc: 2.1.2
     optionalDependencies:
-      '@ast-grep/cli-darwin-arm64': 0.25.7
-      '@ast-grep/cli-darwin-x64': 0.25.7
-      '@ast-grep/cli-linux-arm64-gnu': 0.25.7
-      '@ast-grep/cli-linux-x64-gnu': 0.25.7
-      '@ast-grep/cli-win32-arm64-msvc': 0.25.7
-      '@ast-grep/cli-win32-ia32-msvc': 0.25.7
-      '@ast-grep/cli-win32-x64-msvc': 0.25.7
+      '@ast-grep/cli-darwin-arm64': 0.40.5
+      '@ast-grep/cli-darwin-x64': 0.40.5
+      '@ast-grep/cli-linux-arm64-gnu': 0.40.5
+      '@ast-grep/cli-linux-x64-gnu': 0.40.5
+      '@ast-grep/cli-win32-arm64-msvc': 0.40.5
+      '@ast-grep/cli-win32-ia32-msvc': 0.40.5
+      '@ast-grep/cli-win32-x64-msvc': 0.40.5
 
   '@babel/code-frame@7.27.1':
     dependencies:
@@ -8550,9 +8604,9 @@ snapshots:
       '@tanstack/virtual-core': 3.13.18
       vue: 3.5.27(typescript@5.9.3)
 
-  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/904f8e0078dfe6bf0a750cb2561f42e806f463ce':
+  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/1647d724f9bca135d8c529ddb5ccd7ec7954639e':
     dependencies:
-      '@ast-grep/cli': 0.25.7
+      '@ast-grep/cli': 0.40.5
       commander: 12.1.0
 
   '@tootallnate/quickjs-emscripten@0.23.0': {}
@@ -8904,6 +8958,13 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
+  '@wagmi/connectors@7.1.5(@wagmi/core@3.3.1(@tanstack/query-core@5.90.20)(ox@0.12.0(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.4))(viem@2.45.0(typescript@5.9.3)(zod@4.3.6)))(typescript@5.9.3)(viem@2.45.0(typescript@5.9.3)(zod@4.3.6))':
+    dependencies:
+      '@wagmi/core': 3.3.1(@tanstack/query-core@5.90.20)(ox@0.12.0(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(viem@2.45.0(typescript@5.9.3)(zod@4.3.6))
+      viem: 2.45.0(typescript@5.9.3)(zod@4.3.6)
+    optionalDependencies:
+      typescript: 5.9.3
+
   '@wagmi/core@3.3.1(@tanstack/query-core@5.90.20)(@types/react@19.2.10)(ox@0.12.0(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.4))(viem@2.45.0(typescript@5.9.3)(zod@4.3.6))':
     dependencies:
       eventemitter3: 5.0.1
@@ -8936,6 +8997,22 @@ snapshots:
       - react
       - use-sync-external-store
 
+  '@wagmi/core@3.3.1(@tanstack/query-core@5.90.20)(ox@0.12.0(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(viem@2.45.0(typescript@5.9.3)(zod@4.3.6))':
+    dependencies:
+      eventemitter3: 5.0.1
+      mipd: 0.0.7(typescript@5.9.3)
+      viem: 2.45.0(typescript@5.9.3)(zod@4.3.6)
+      zustand: 5.0.0(react@19.2.4)(use-sync-external-store@1.4.0(react@19.2.4))
+    optionalDependencies:
+      '@tanstack/query-core': 5.90.20
+      ox: 0.12.0(typescript@5.9.3)(zod@4.3.6)
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@types/react'
+      - immer
+      - react
+      - use-sync-external-store
+
   abitype@1.2.3(typescript@5.9.3)(zod@4.3.6):
     optionalDependencies:
       typescript: 5.9.3
@@ -8946,6 +9023,8 @@ snapshots:
       event-target-shim: 5.0.1
 
   acorn@8.15.0: {}
+
+  add@2.0.6: {}
 
   agent-base@7.1.4: {}
 
@@ -9433,8 +9512,6 @@ snapshots:
   dequal@2.0.3: {}
 
   detect-libc@2.0.2: {}
-
-  detect-libc@2.0.3: {}
 
   detect-libc@2.1.2: {}
 
@@ -11960,6 +12037,30 @@ snapshots:
       - ox
       - porto
 
+  wagmi@3.4.1(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.20(react@19.2.4))(ox@0.12.0(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(viem@2.45.0(typescript@5.9.3)(zod@4.3.6)):
+    dependencies:
+      '@tanstack/react-query': 5.90.20(react@19.2.4)
+      '@wagmi/connectors': 7.1.5(@wagmi/core@3.3.1(@tanstack/query-core@5.90.20)(ox@0.12.0(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.4))(viem@2.45.0(typescript@5.9.3)(zod@4.3.6)))(typescript@5.9.3)(viem@2.45.0(typescript@5.9.3)(zod@4.3.6))
+      '@wagmi/core': 3.3.1(@tanstack/query-core@5.90.20)(ox@0.12.0(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(viem@2.45.0(typescript@5.9.3)(zod@4.3.6))
+      react: 19.2.4
+      use-sync-external-store: 1.4.0(react@19.2.4)
+      viem: 2.45.0(typescript@5.9.3)(zod@4.3.6)
+    optionalDependencies:
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@base-org/account'
+      - '@coinbase/wallet-sdk'
+      - '@gemini-wallet/core'
+      - '@metamask/sdk'
+      - '@safe-global/safe-apps-provider'
+      - '@safe-global/safe-apps-sdk'
+      - '@tanstack/query-core'
+      - '@types/react'
+      - '@walletconnect/ethereum-provider'
+      - immer
+      - ox
+      - porto
+
   wcwidth@1.0.1:
     dependencies:
       defaults: 1.0.4
@@ -12112,5 +12213,10 @@ snapshots:
       '@types/react': 19.2.10
       react: 19.2.4
       use-sync-external-store: 1.6.0(react@19.2.4)
+
+  zustand@5.0.0(react@19.2.4)(use-sync-external-store@1.4.0(react@19.2.4)):
+    optionalDependencies:
+      react: 19.2.4
+      use-sync-external-store: 1.4.0(react@19.2.4)
 
   zwitch@2.0.4: {}

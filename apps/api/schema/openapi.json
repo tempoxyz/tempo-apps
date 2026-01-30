@@ -1,0 +1,434 @@
+{
+	"openapi": "3.1.1",
+	"info": {
+		"title": "Tempo API",
+		"description": "API for Tempo blockchain actions including faucet functionality for Tempo Devnets, Testnets, and Mainnet.",
+		"version": "1.0.0",
+		"license": {
+			"name": "MIT",
+			"url": "https://opensource.org/licenses/MIT"
+		}
+	},
+	"servers": [
+		{
+			"url": "https://api.tempo.xyz",
+			"description": "Production"
+		},
+		{
+			"url": "{CUSTOM_URL}",
+			"description": "Custom API base URL",
+			"variables": {
+				"CUSTOM_URL": {
+					"description": "The URL of the custom API base URL"
+				}
+			}
+		},
+		{
+			"url": "http://localhost:{port}",
+			"description": "local",
+			"variables": {
+				"port": {
+					"default": "6969",
+					"description": "localhost port number"
+				}
+			}
+		}
+	],
+	"paths": {
+		"/ping": {
+			"get": {
+				"tags": ["System"],
+				"summary": "Ping",
+				"description": "Simple ping endpoint to check if the API is responding",
+				"operationId": "ping",
+				"responses": {
+					"200": {
+						"description": "Successful response",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"example": "pong"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/health": {
+			"get": {
+				"tags": ["System"],
+				"summary": "Health check",
+				"description": "Health check endpoint for monitoring",
+				"operationId": "health",
+				"responses": {
+					"200": {
+						"description": "Service is healthy",
+						"content": {
+							"text/plain": {
+								"schema": {
+									"type": "string",
+									"example": "ok"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/version": {
+			"get": {
+				"tags": ["System"],
+				"summary": "Get version info",
+				"description": "Returns version information including build revision and supported chain IDs",
+				"operationId": "get_version",
+				"responses": {
+					"200": {
+						"description": "Successful response with version info",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/VersionInfo"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/docs": {
+			"get": {
+				"tags": ["System"],
+				"summary": "API documentation",
+				"description": "HTML documentation page for the API",
+				"operationId": "docs",
+				"responses": {
+					"200": {
+						"description": "HTML documentation page",
+						"content": {
+							"text/html": {
+								"schema": {
+									"type": "string"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/schema/openapi": {
+			"get": {
+				"tags": ["System"],
+				"summary": "OpenAPI schema",
+				"description": "Returns the OpenAPI specification for this API",
+				"operationId": "get_openapi_schema",
+				"responses": {
+					"200": {
+						"description": "OpenAPI specification",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/schema/openapi.json": {
+			"get": {
+				"tags": ["System"],
+				"summary": "OpenAPI schema (JSON)",
+				"description": "Returns the OpenAPI specification for this API as JSON file",
+				"operationId": "get_openapi_schema_json",
+				"responses": {
+					"200": {
+						"description": "OpenAPI specification",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/actions/faucet": {
+			"get": {
+				"tags": ["Actions"],
+				"summary": "Request testnet tokens",
+				"description": "Request testnet tokens (ETH and ERC20) to be sent to the specified address on a Tempo testnet",
+				"operationId": "faucet_get",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/chainId"
+					},
+					{
+						"$ref": "#/components/parameters/address"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successful faucet request with transaction receipts",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FaucetResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid request parameters",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					},
+					"408": {
+						"description": "Request timeout",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Server error during faucet operation",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					}
+				}
+			},
+			"post": {
+				"tags": ["Actions"],
+				"summary": "Request testnet tokens",
+				"description": "Request testnet tokens (ETH and ERC20) to be sent to the specified address on a Tempo testnet",
+				"operationId": "faucet_post",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/chainId"
+					},
+					{
+						"$ref": "#/components/parameters/address"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Successful faucet request with transaction receipts",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/FaucetResponse"
+								}
+							}
+						}
+					},
+					"400": {
+						"description": "Invalid request parameters",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					},
+					"408": {
+						"description": "Request timeout",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Server error during faucet operation",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	},
+	"components": {
+		"parameters": {
+			"chainId": {
+				"name": "chainId",
+				"in": "query",
+				"description": "Chain ID of the Tempo network",
+				"required": true,
+				"schema": {
+					"type": "integer",
+					"enum": [42417, 42428, 42429, 4217],
+					"example": 42429
+				}
+			},
+			"address": {
+				"name": "address",
+				"in": "query",
+				"description": "Ethereum address to receive tokens (lowercase)",
+				"required": true,
+				"schema": {
+					"type": "string",
+					"pattern": "^0x[a-f0-9]{40}$",
+					"minLength": 42,
+					"maxLength": 42,
+					"example": "0x1234567890abcdef1234567890abcdef12345678"
+				}
+			}
+		},
+		"schemas": {
+			"VersionInfo": {
+				"type": "object",
+				"description": "API version and configuration information",
+				"required": ["timestamp", "source", "rev", "chains"],
+				"properties": {
+					"timestamp": {
+						"type": "integer",
+						"format": "int64",
+						"description": "Current server timestamp in milliseconds",
+						"example": 1704067200000
+					},
+					"source": {
+						"type": "string",
+						"format": "uri",
+						"description": "Source repository URL",
+						"example": "https://github.com/tempoxyz/tempo-apps"
+					},
+					"rev": {
+						"type": "string",
+						"description": "Build revision/commit hash",
+						"example": "abc1234"
+					},
+					"chains": {
+						"type": "array",
+						"items": {
+							"type": "integer"
+						},
+						"description": "List of supported chain IDs",
+						"example": [42417, 42428, 42429, 4217]
+					}
+				}
+			},
+			"FaucetResponse": {
+				"type": "object",
+				"description": "Response from a faucet request",
+				"required": ["data", "error"],
+				"properties": {
+					"data": {
+						"type": "array",
+						"nullable": true,
+						"items": {
+							"$ref": "#/components/schemas/PromiseSettledResult"
+						},
+						"description": "Array of transaction receipt results"
+					},
+					"error": {
+						"type": "string",
+						"nullable": true,
+						"description": "Error message if the request failed"
+					}
+				}
+			},
+			"PromiseSettledResult": {
+				"type": "object",
+				"description": "Result of a settled promise (fulfilled or rejected)",
+				"properties": {
+					"status": {
+						"type": "string",
+						"enum": ["fulfilled", "rejected"],
+						"description": "Whether the promise was fulfilled or rejected"
+					},
+					"value": {
+						"$ref": "#/components/schemas/TransactionReceipt"
+					},
+					"reason": {
+						"type": "string",
+						"description": "Error reason if rejected"
+					}
+				}
+			},
+			"TransactionReceipt": {
+				"type": "object",
+				"description": "Ethereum transaction receipt",
+				"properties": {
+					"transactionHash": {
+						"type": "string",
+						"pattern": "^0x[a-fA-F0-9]{64}$",
+						"description": "Hash of the transaction"
+					},
+					"blockNumber": {
+						"type": "integer",
+						"format": "int64",
+						"description": "Block number containing the transaction"
+					},
+					"blockHash": {
+						"type": "string",
+						"pattern": "^0x[a-fA-F0-9]{64}$",
+						"description": "Hash of the block"
+					},
+					"status": {
+						"type": "string",
+						"enum": ["success", "reverted"],
+						"description": "Transaction execution status"
+					}
+				}
+			},
+			"ErrorResponse": {
+				"type": "object",
+				"description": "Error response",
+				"required": ["data", "error"],
+				"properties": {
+					"data": {
+						"type": "null",
+						"description": "Always null for error responses"
+					},
+					"error": {
+						"oneOf": [
+							{
+								"type": "string",
+								"description": "Error message"
+							},
+							{
+								"type": "object",
+								"description": "Validation error details"
+							}
+						]
+					}
+				}
+			}
+		}
+	},
+	"tags": [
+		{
+			"name": "Actions",
+			"description": "Blockchain action endpoints (faucet, etc.)"
+		},
+		{
+			"name": "System",
+			"description": "System and health check endpoints"
+		}
+	]
+}
