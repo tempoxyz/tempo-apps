@@ -1,6 +1,6 @@
 {
 	"name": "api",
-	"description": "Tempo Explorer & Apps REST API",
+	"description": "Tempo REST API",
 	"version": "1.0.0",
 	"type": "module",
 	"repository": {
@@ -24,7 +24,6 @@
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
-		"add": "catalog:",
 		"hono": "catalog:",
 		"ox": "catalog:",
 		"viem": "catalog:",
