@@ -619,12 +619,34 @@ function RouteComponent() {
 	)
 }
 
+type ContractCreationResponse = {
+	creation: { blockNumber: string; timestamp: string } | null
+	error: string | null
+}
+
+async function fetchContractCreation(
+	address: Address.Address,
+): Promise<ContractCreationResponse> {
+	const response = await fetch(`/api/contract/creation/${address}`)
+	return response.json() as Promise<ContractCreationResponse>
+}
+
+function useContractCreation(address: Address.Address, enabled: boolean) {
+	return useQuery({
+		queryKey: ['contract-creation', address],
+		queryFn: () => fetchContractCreation(address),
+		enabled,
+		staleTime: 60_000,
+	})
+}
+
 function AccountCardWithTimestamps(props: {
 	address: Address.Address
 	assetsData: AssetData[]
 	accountType?: AccountType
 }) {
 	const { address, assetsData, accountType } = props
+	const isContract = accountType === 'contract'
 
 	// fetch the most recent transactions (pg.1)
 	const { data: recentData } = useQuery(
@@ -647,31 +669,41 @@ function AccountCardWithTimestamps(props: {
 		},
 	})
 
-	// Use the real transaction count (not the approximate total from pagination)
-	// Don't fetch exact count - use API hasMore flag for pagination
-	// This makes the page render instantly without waiting for count query
-	const totalTransactions = 0 // Unknown until user navigates
-	const lastPageOffset = 0 // Can't calculate without total
-
-	const { data: oldestData } = useQuery({
-		...transactionsQueryOptions({
+	// Fetch the oldest transaction by sorting ascending (for non-contracts)
+	const { data: oldestData } = useQuery(
+		transactionsQueryOptions({
 			address,
-			page: Math.ceil(totalTransactions / 1),
+			page: 1,
 			limit: 1,
-			offset: lastPageOffset,
-			_key: 'account-creation',
+			offset: 0,
+			sort: 'asc',
+			_key: 'account-oldest',
 		}),
-		enabled: totalTransactions > 0,
-	})
+	)
 
-	const [oldestTransaction] = oldestData?.transactions ?? []
-	const { data: createdTimestamp } = useBlock({
+	const oldestTransaction = oldestData?.transactions?.at(0)
+	const { data: oldestTxTimestamp } = useBlock({
 		blockNumber: Hex.toBigInt(oldestTransaction?.blockNumber ?? '0x0'),
 		query: {
 			enabled: Boolean(oldestTransaction?.blockNumber),
 			select: (block) => block.timestamp,
 		},
 	})
+
+	// For contracts without transactions, use binary search to find creation block
+	const noTransactions = !oldestTransaction
+	const { data: contractCreation } = useContractCreation(
+		address,
+		isContract && noTransactions,
+	)
+
+	// Use contract creation timestamp if available, otherwise fall back to oldest tx
+	const createdTimestamp = React.useMemo(() => {
+		if (contractCreation?.creation?.timestamp) {
+			return BigInt(contractCreation.creation.timestamp)
+		}
+		return oldestTxTimestamp
+	}, [contractCreation, oldestTxTimestamp])
 
 	const totalValue = calculateTotalHoldings(assetsData)
 
