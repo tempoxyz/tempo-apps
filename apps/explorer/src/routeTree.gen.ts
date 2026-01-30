@@ -34,6 +34,8 @@ import { Route as ApiTxTraceHashRouteImport } from './routes/api/tx/trace/$hash'
 import { Route as ApiTxBalanceChangesHashRouteImport } from './routes/api/tx/balance-changes/$hash'
 import { Route as ApiAddressTxsCountAddressRouteImport } from './routes/api/address/txs-count/$address'
 import { Route as ApiAddressTotalValueAddressRouteImport } from './routes/api/address/total-value/$address'
+import { Route as ApiAddressEventsAddressRouteImport } from './routes/api/address/events/$address'
+import { Route as ApiAddressEventsCountAddressRouteImport } from './routes/api/address/events-count/$address'
 import { Route as ApiAddressBalancesAddressRouteImport } from './routes/api/address/balances/$address'
 import { Route as LayoutBlockCountdownTargetBlockRouteImport } from './routes/_layout/block/countdown.$targetBlock'
 
@@ -163,6 +165,17 @@ const ApiAddressTotalValueAddressRoute =
     path: '/api/address/total-value/$address',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAddressEventsAddressRoute = ApiAddressEventsAddressRouteImport.update({
+  id: '/api/address/events/$address',
+  path: '/api/address/events/$address',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAddressEventsCountAddressRoute =
+  ApiAddressEventsCountAddressRouteImport.update({
+    id: '/api/address/events-count/$address',
+    path: '/api/address/events-count/$address',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiAddressBalancesAddressRoute =
   ApiAddressBalancesAddressRouteImport.update({
     id: '/api/address/balances/$address',
@@ -197,6 +210,8 @@ export interface FileRoutesByFullPath {
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/demo/': typeof LayoutDemoIndexRoute
+  '/api/address/events-count/$address': typeof ApiAddressEventsCountAddressRoute
+  '/api/address/events/$address': typeof ApiAddressEventsAddressRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
@@ -225,6 +240,8 @@ export interface FileRoutesByTo {
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/demo': typeof LayoutDemoIndexRoute
+  '/api/address/events-count/$address': typeof ApiAddressEventsCountAddressRoute
+  '/api/address/events/$address': typeof ApiAddressEventsAddressRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
@@ -255,6 +272,8 @@ export interface FileRoutesById {
   '/api/address/$address': typeof ApiAddressAddressRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
+  '/api/address/events-count/$address': typeof ApiAddressEventsCountAddressRoute
+  '/api/address/events/$address': typeof ApiAddressEventsAddressRoute
   '/_layout/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
@@ -285,6 +304,8 @@ export interface FileRouteTypes {
     | '/api/address/$address'
     | '/api/tokens/count'
     | '/demo/'
+    | '/api/address/events-count/$address'
+    | '/api/address/events/$address'
     | '/block/countdown/$targetBlock'
     | '/api/address/balances/$address'
     | '/api/address/total-value/$address'
@@ -313,6 +334,8 @@ export interface FileRouteTypes {
     | '/api/address/$address'
     | '/api/tokens/count'
     | '/demo'
+    | '/api/address/events-count/$address'
+    | '/api/address/events/$address'
     | '/block/countdown/$targetBlock'
     | '/api/address/balances/$address'
     | '/api/address/total-value/$address'
@@ -342,6 +365,8 @@ export interface FileRouteTypes {
     | '/api/address/$address'
     | '/api/tokens/count'
     | '/_layout/demo/'
+    | '/api/address/events-count/$address'
+    | '/api/address/events/$address'
     | '/_layout/block/countdown/$targetBlock'
     | '/api/address/balances/$address'
     | '/api/address/total-value/$address'
@@ -357,6 +382,8 @@ export interface RootRouteChildren {
   ApiSearchRoute: typeof ApiSearchRoute
   ApiAbiBatchRoute: typeof ApiAbiBatchRoute
   ApiAddressAddressRoute: typeof ApiAddressAddressRoute
+  ApiAddressEventsCountAddressRoute: typeof ApiAddressEventsCountAddressRoute
+  ApiAddressEventsAddressRoute: typeof ApiAddressEventsAddressRoute
   ApiTokensCountRoute: typeof ApiTokensCountRoute
   ApiAddressBalancesAddressRoute: typeof ApiAddressBalancesAddressRoute
   ApiAddressTotalValueAddressRoute: typeof ApiAddressTotalValueAddressRoute
@@ -542,6 +569,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAddressTotalValueAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/address/events/$address': {
+      id: '/api/address/events/$address'
+      path: '/api/address/events/$address'
+      fullPath: '/api/address/events/$address'
+      preLoaderRoute: typeof ApiAddressEventsAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/address/events-count/$address': {
+      id: '/api/address/events-count/$address'
+      path: '/api/address/events-count/$address'
+      fullPath: '/api/address/events-count/$address'
+      preLoaderRoute: typeof ApiAddressEventsCountAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/address/balances/$address': {
       id: '/api/address/balances/$address'
       path: '/api/address/balances/$address'
@@ -605,6 +646,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSearchRoute: ApiSearchRoute,
   ApiAbiBatchRoute: ApiAbiBatchRoute,
   ApiAddressAddressRoute: ApiAddressAddressRoute,
+  ApiAddressEventsCountAddressRoute: ApiAddressEventsCountAddressRoute,
+  ApiAddressEventsAddressRoute: ApiAddressEventsAddressRoute,
   ApiTokensCountRoute: ApiTokensCountRoute,
   ApiAddressBalancesAddressRoute: ApiAddressBalancesAddressRoute,
   ApiAddressTotalValueAddressRoute: ApiAddressTotalValueAddressRoute,

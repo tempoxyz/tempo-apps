@@ -230,9 +230,10 @@ export namespace Pagination {
 	export function Simple(props: Simple.Props) {
 		const { page, pages, fetching, countLoading, disableLastPage } = props
 		const isIndefinite = typeof pages !== 'number'
+		const totalPages = typeof pages === 'number' ? pages : 0
 		const disableNext = isIndefinite
 			? !(pages as { hasMore: boolean } | undefined)?.hasMore
-			: page >= pages
+			: page >= totalPages
 		return (
 			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
 				<Link
@@ -266,12 +267,12 @@ export namespace Pagination {
 					<span className={cx('text-primary', fetching && 'opacity-50')}>
 						{Pagination.numFormat.format(page)}
 					</span>
-					{' of '}
-					{isIndefinite || countLoading
-						? '…'
-						: typeof pages === 'number' && pages > 0
-							? Pagination.numFormat.format(pages)
-							: '…'}
+					{!isIndefinite && totalPages > 0 && (
+						<>
+							{' of '}
+							{countLoading ? '…' : Pagination.numFormat.format(totalPages)}
+						</>
+					)}
 				</span>
 				<Link
 					to="."
@@ -288,12 +289,12 @@ export namespace Pagination {
 				>
 					<ChevronRight className="size-[14px]" />
 				</Link>
-				{typeof pages === 'number' && (
+				{totalPages > 0 && (
 					<Link
 						to="."
 						resetScroll={false}
-						search={(prev) => ({ ...prev, page: pages })}
-						disabled={page >= pages || disableLastPage}
+						search={(prev) => ({ ...prev, page: totalPages })}
+						disabled={page >= totalPages || disableLastPage}
 						className={cx(
 							'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
@@ -315,6 +316,7 @@ export namespace Pagination {
 			countLoading?: boolean
 			/** Disable "Last page" button when we can't reliably navigate there */
 			disableLastPage?: boolean
+			hasMore?: boolean
 		}
 	}
 
@@ -344,7 +346,7 @@ export namespace Pagination {
 				<span className="text-primary tabular-nums">
 					{loading
 						? '…'
-						: `${capped ? '> ' : ''}${Pagination.numFormat.format(totalItems)}`}
+						: `${Pagination.numFormat.format(totalItems)}${capped ? '+' : ''}`}
 				</span>
 				<span className="text-tertiary font-sans">{itemsLabel}</span>
 			</div>
