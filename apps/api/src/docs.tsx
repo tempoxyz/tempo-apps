@@ -6,17 +6,18 @@ const getScalarConfig = (baseUrl: string) =>
 	({
 		slug: packageJSON.name,
 		hideModels: true,
-		sources: [{ url: '/schema/openapi.json', default: true }],
 		hideClientButton: true,
+		title: packageJSON.name,
 		url: '/schema/openapi.json',
 		showDeveloperTools: 'never',
 		documentDownloadType: 'json',
 		operationTitleSource: 'path',
-		title: packageJSON.name,
 		proxyUrl: 'https://proxy.scalar.com',
 		favicon: 'https://explore.tempo.xyz/favicon.ico',
+		sources: [{ url: '/schema/openapi.json', default: true }],
 		servers: [
 			{ url: 'https://api.tempo.xyz', description: 'Production' },
+			{ url: 'https://api.porto.workers.dev', description: 'workers.dev' },
 			{
 				url: 'http://localhost:{port}',
 				description: 'Local',
