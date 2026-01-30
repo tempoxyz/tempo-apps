@@ -1,5 +1,5 @@
 import NodeProcess from 'node:process'
-import { defineConfig, loadEnv} from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import NodeChildProcess from 'node:child_process'
 import { cloudflare } from '@cloudflare/vite-plugin'
 

@@ -12,22 +12,25 @@ const app = new Hono<{ Bindings: Cloudflare.Env }>()
 app.use('*', cors())
 
 app
+	.get('/ping', (context) => context.text('pong'))
+	.get('/health', (context) => context.text('ok'))
 	.get('/', (context) => context.redirect('/docs'))
-	.get('/ping', (_context) => new Response('pong'))
-	.get('/health', (_context) => new Response('ok'))
-	.get('/docs', async (context) => context.html(<Docs />))
-	.get('/version', async (context) =>
+	.get('/docs', (context) =>
+		context.html(<Docs baseUrl={new URL(context.req.url).origin} />),
+	)
+	.get('/version', (context) =>
 		context.json({
-			timestamp: Date.now(),
-			source: 'https://github.com/tempoxyz/tempo-apps',
-			rev: __BUILD_VERSION__,
 			chains: CHAIN_IDS,
+			timestamp: Date.now(),
+			rev: __BUILD_VERSION__,
+			url: new URL(context.req.url).origin,
+			source: 'https://github.com/tempoxyz/tempo-apps/apps/api',
 		}),
 	)
 
 app
-	.get('/schema/openapi', async (context) => context.json(OpenAPISpec))
-	.get('/schema/openapi.json', async (context) => context.json(OpenAPISpec))
+	.get('/schema/openapi', (context) => context.json(OpenAPISpec))
+	.get('/schema/openapi.json', (context) => context.json(OpenAPISpec))
 
 app.route('/actions', actionsApp)
 

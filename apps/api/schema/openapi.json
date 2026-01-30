@@ -9,31 +9,6 @@
 			"url": "https://opensource.org/licenses/MIT"
 		}
 	},
-	"servers": [
-		{
-			"url": "https://api.tempo.xyz",
-			"description": "Production"
-		},
-		{
-			"url": "{CUSTOM_URL}",
-			"description": "Custom API base URL",
-			"variables": {
-				"CUSTOM_URL": {
-					"description": "The URL of the custom API base URL"
-				}
-			}
-		},
-		{
-			"url": "http://localhost:{port}",
-			"description": "local",
-			"variables": {
-				"port": {
-					"default": "6969",
-					"description": "localhost port number"
-				}
-			}
-		}
-	],
 	"paths": {
 		"/ping": {
 			"get": {
