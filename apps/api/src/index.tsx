@@ -2,10 +2,10 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { showRoutes } from 'hono/dev'
 
-import { Docs } from '#docs.tsx'
-import { CHAIN_IDS } from '#chains.ts'
-import { OpenAPISpec } from '#schema.ts'
-import { actionsApp } from '#actions.route.tsx'
+import { Docs } from '#route.docs.tsx'
+import { wagmiConfig } from '#wagmi.config.ts'
+import { actionsApp } from '#route.actions.tsx'
+import OpenAPISpec from '#schema/openapi.json' with { type: 'json' }
 
 const app = new Hono<{ Bindings: Cloudflare.Env }>()
 
@@ -20,10 +20,10 @@ app
 	)
 	.get('/version', (context) =>
 		context.json({
-			chains: CHAIN_IDS,
 			timestamp: Date.now(),
 			rev: __BUILD_VERSION__,
 			url: new URL(context.req.url).origin,
+			chains: wagmiConfig.chains.map((_) => _.id),
 			source: 'https://github.com/tempoxyz/tempo-apps/apps/api',
 		}),
 	)

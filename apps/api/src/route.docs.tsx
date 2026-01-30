@@ -16,6 +16,7 @@ const getScalarConfig = (baseUrl: string) =>
 		favicon: 'https://explore.tempo.xyz/favicon.ico',
 		sources: [{ url: '/schema/openapi.json', default: true }],
 		servers: [
+			{ url: baseUrl, description: 'Current' },
 			{ url: 'https://api.tempo.xyz', description: 'Production' },
 			{ url: 'https://api.porto.workers.dev', description: 'workers.dev' },
 			{
@@ -25,9 +26,8 @@ const getScalarConfig = (baseUrl: string) =>
 					port: { default: '6969', description: 'localhost port number' },
 				},
 			},
-			{ url: baseUrl, description: 'Current' },
 		],
-	}) satisfies Parameters<typeof createApiReference>[1]
+	}) satisfies Parameters<typeof createApiReference>[number]
 
 export const Docs = (props: { baseUrl: string }) => {
 	const scalarConfig = getScalarConfig(props.baseUrl)
