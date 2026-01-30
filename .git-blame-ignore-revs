@@ -11,3 +11,6 @@
 
 # `prek` pre-commit changes
 b387d3ae900034e2e62fed722790c26e9260cc67
+
+# migrating to Bun runtime & package manager
+8a871d42422d2c2e13fe0486d5780d6b2c623fa7
