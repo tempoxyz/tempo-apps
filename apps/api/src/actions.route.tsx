@@ -48,8 +48,6 @@ actionsApp.on(
 				chainId,
 			})
 
-			console.info('Hashes received:', hashes)
-
 			const data = await Promise.allSettled(
 				hashes.map((hash) =>
 					waitForTransactionReceipt(wagmiConfig, {
@@ -59,8 +57,6 @@ actionsApp.on(
 					}),
 				),
 			)
-
-			console.info(JSON.stringify({ data }, undefined, 2))
 
 			return context.json({ data, error: null })
 		} catch (error) {

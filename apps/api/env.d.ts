@@ -1,19 +1,8 @@
 interface Env {
 	readonly PORT: string
-	readonly ENVIRONMENT: 'development' | 'production'
-
-	readonly LOGGING?: 'verbose' | 'normal' | 'silent' | undefined
+	readonly NODE_ENV: 'development' | 'production'
 
 	readonly APP_VERSION: string
-
-	// Cloudflare R2
-	readonly S3_ENDPOINT: string
-	readonly S3_BUCKET_NAME: string
-	readonly S3_ACCESS_KEY_ID: string
-	readonly S3_SECRET_ACCESS_KEY: string
-	readonly S3_PUBLIC_DEVELOPMENT_URL: string
-
-	readonly ASSETS: Fetcher
 }
 
 // Node.js `process.env` auto-completion
