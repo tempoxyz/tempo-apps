@@ -19,7 +19,7 @@ import { useBlock, useChainId, usePublicClient } from 'wagmi'
 import { type GetBlockReturnType, getBlock, getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
-import { Breadcrumbs } from '#comps/Breadcrumbs'
+import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
@@ -596,7 +596,7 @@ function RouteComponent() {
 				'grid w-full pt-20 pb-16 px-4 gap-3.5 min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-7xl',
 			)}
 		>
-			<Breadcrumbs className="col-span-full" />
+			<BreadcrumbsSlot className="col-span-full" />
 			<AccountCardWithTimestamps
 				address={address}
 				assetsData={assetsData}

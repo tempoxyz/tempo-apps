@@ -17,7 +17,7 @@ import { getChainId, getPublicClient } from 'wagmi/actions'
 import { Actions, Hooks } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { AddressCell } from '#comps/AddressCell'
-import { Breadcrumbs } from '#comps/Breadcrumbs'
+import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract.tsx'
 import { DataGrid } from '#comps/DataGrid'
@@ -285,7 +285,7 @@ function RouteComponent() {
 				'grid w-full pt-20 pb-16 px-4 gap-3.5 min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-270',
 			)}
 		>
-			<Breadcrumbs className="col-span-full" />
+			<BreadcrumbsSlot className="col-span-full" />
 			<TokenCard
 				address={address}
 				className="self-start"

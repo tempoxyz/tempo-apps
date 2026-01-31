@@ -7,7 +7,7 @@ import {
 } from '@tanstack/react-router'
 import * as React from 'react'
 import { useWatchBlockNumber } from 'wagmi'
-import { Breadcrumbs } from '#comps/Breadcrumbs'
+import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { InfoCard } from '#comps/InfoCard'
 import { NotFound } from '#comps/NotFound'
 import { cx } from '#lib/css'
@@ -96,8 +96,7 @@ function RouteComponent() {
 				'pt-20 pb-16 px-4',
 			)}
 		>
-			<Breadcrumbs className="w-full max-w-[600px]" />
-
+			<BreadcrumbsSlot className="w-full max-w-[600px]" />
 			<CountdownCard
 				targetBlockNumber={targetBlockNumber}
 				currentBlockNumber={currentBlockNumber}

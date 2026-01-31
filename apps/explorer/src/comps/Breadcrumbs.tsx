@@ -1,5 +1,6 @@
-import { Link, useRouter, useRouterState } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import { cx } from '#lib/css'
 import ChevronRight from '~icons/lucide/chevron-right'
 import Home from '~icons/lucide/home'
@@ -67,7 +68,10 @@ function getLabelForPath(pathname: string): {
 
 interface BreadcrumbsContextValue {
 	crumbs: Crumb[]
+	pendingCrumb: Crumb | null
 	clearCrumbs: () => void
+	slotEl: HTMLElement | null
+	setSlotEl: (el: HTMLElement | null) => void
 }
 
 const BreadcrumbsContext = React.createContext<BreadcrumbsContextValue | null>(
@@ -77,38 +81,73 @@ const BreadcrumbsContext = React.createContext<BreadcrumbsContextValue | null>(
 export function BreadcrumbsProvider(props: { children: React.ReactNode }) {
 	const { children } = props
 	const [crumbs, setCrumbs] = React.useState<Crumb[]>([])
-	const router = useRouter()
+	const [slotEl, setSlotEl] = React.useState<HTMLElement | null>(null)
 
+	// Track resolved location for committing to history
+	// Fall back to current location if resolvedLocation is not yet available
+	const resolvedPathname = useRouterState({
+		select: (state) =>
+			state.resolvedLocation?.pathname ?? state.location.pathname,
+	})
+
+	// Track current location for pending/optimistic display
+	const currentPathname = useRouterState({
+		select: (state) => state.location.pathname,
+	})
+
+	// Track previous resolved pathname to detect changes
+	const prevResolvedRef = React.useRef<string | null>(null)
+
+	// Commit crumbs when navigation resolves successfully
 	React.useEffect(() => {
-		return router.subscribe('onResolved', ({ toLocation, hrefChanged }) => {
-			if (!hrefChanged) return
+		// Skip if pathname hasn't changed
+		if (prevResolvedRef.current === resolvedPathname) return
+		prevResolvedRef.current = resolvedPathname
 
-			const pathname = toLocation.pathname
-			const { label, type } = getLabelForPath(pathname)
+		const { label, type } = getLabelForPath(resolvedPathname)
 
-			setCrumbs((prev) => {
-				if (pathname === '/') {
-					return []
-				}
+		setCrumbs((prev) => {
+			if (resolvedPathname === '/') {
+				return []
+			}
 
-				const existingIndex = prev.findIndex((c) => c.path === pathname)
-				if (existingIndex !== -1) {
-					return prev.slice(0, existingIndex + 1)
-				}
+			const existingIndex = prev.findIndex((c) => c.path === resolvedPathname)
+			if (existingIndex !== -1) {
+				return prev.slice(0, existingIndex + 1)
+			}
 
-				const newCrumb: Crumb = { path: pathname, label, type }
-				return [...prev, newCrumb].slice(-MAX_CRUMBS)
-			})
+			const newCrumb: Crumb = { path: resolvedPathname, label, type }
+			return [...prev, newCrumb].slice(-MAX_CRUMBS)
 		})
-	}, [router])
+	}, [resolvedPathname])
+
+	// Compute pending crumb for immediate UI feedback during navigation
+	const pendingCrumb = React.useMemo<Crumb | null>(() => {
+		// Only show pending crumb if navigating to a different path
+		if (currentPathname === resolvedPathname || currentPathname === '/') {
+			return null
+		}
+		// Don't show if it's already in crumbs
+		if (crumbs.some((c) => c.path === currentPathname)) {
+			return null
+		}
+		const { label, type } = getLabelForPath(currentPathname)
+		return { path: currentPathname, label, type }
+	}, [currentPathname, resolvedPathname, crumbs])
 
 	const clearCrumbs = React.useCallback(() => {
-		setCrumbs([])
-	}, [])
+		// Keep only the current page as a single crumb
+		if (resolvedPathname === '/') {
+			setCrumbs([])
+		} else {
+			const { label, type } = getLabelForPath(resolvedPathname)
+			setCrumbs([{ path: resolvedPathname, label, type }])
+		}
+	}, [resolvedPathname])
 
 	const value = React.useMemo(
-		() => ({ crumbs, clearCrumbs }),
-		[crumbs, clearCrumbs],
+		() => ({ crumbs, pendingCrumb, clearCrumbs, slotEl, setSlotEl }),
+		[crumbs, pendingCrumb, clearCrumbs, slotEl],
 	)
 
 	return (
@@ -128,13 +167,22 @@ function useBreadcrumbs() {
 
 export function Breadcrumbs(props: Breadcrumbs.Props) {
 	const { className } = props
-	const { crumbs, clearCrumbs } = useBreadcrumbs()
+	const { crumbs, pendingCrumb, clearCrumbs } = useBreadcrumbs()
 
-	const currentPathname = useRouterState({
-		select: (state) => state.location.pathname,
+	const resolvedPathname = useRouterState({
+		select: (state) =>
+			state.resolvedLocation?.pathname ?? state.location.pathname,
 	})
 
-	if (currentPathname === '/' || crumbs.length === 0) {
+	// Combine committed crumbs with pending crumb for display
+	const displayCrumbs = pendingCrumb ? [...crumbs, pendingCrumb] : crumbs
+	const hasPendingCrumb = pendingCrumb !== null
+
+	if (resolvedPathname === '/' && !hasPendingCrumb) {
+		return null
+	}
+
+	if (displayCrumbs.length === 0) {
 		return null
 	}
 
@@ -154,14 +202,18 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 				<Home className="size-3.5" />
 			</Link>
 
-			{crumbs.map((crumb, index) => {
-				const isLast = index === crumbs.length - 1
+			{displayCrumbs.map((crumb, index) => {
+				const isLast = index === displayCrumbs.length - 1
+				const isPending = isLast && hasPendingCrumb
 				return (
 					<React.Fragment key={crumb.path}>
 						<ChevronRight className="size-3 text-tertiary shrink-0" />
 						{isLast ? (
 							<span
-								className="text-primary font-medium truncate max-w-[120px]"
+								className={cx(
+									'font-medium truncate max-w-[120px]',
+									isPending ? 'text-secondary animate-pulse' : 'text-primary',
+								)}
 								title={crumb.path}
 							>
 								{crumb.label}
@@ -183,7 +235,7 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 				<button
 					type="button"
 					onClick={clearCrumbs}
-					className="ml-2 p-1 text-tertiary hover:text-primary hover:bg-base-alt rounded press-down shrink-0 outline-none focus-visible:text-accent"
+					className="text-tertiary hover:text-primary press-down shrink-0 outline-none focus-visible:text-accent cursor-pointer"
 					title="Clear navigation history"
 				>
 					<X className="size-3" />
@@ -197,4 +249,70 @@ export namespace Breadcrumbs {
 	export interface Props {
 		className?: string
 	}
+}
+
+export function BreadcrumbsSlot(props: BreadcrumbsSlot.Props) {
+	const { className } = props
+	const { setSlotEl, crumbs, pendingCrumb } = useBreadcrumbs()
+	const ref = React.useRef<HTMLDivElement | null>(null)
+	const [isPortalMounted, setIsPortalMounted] = React.useState(false)
+
+	const currentPathname = useRouterState({
+		select: (state) => state.location.pathname,
+	})
+
+	React.useLayoutEffect(() => {
+		setSlotEl(ref.current)
+		// Small delay to allow portal to mount
+		const timer = setTimeout(() => setIsPortalMounted(true), 0)
+		return () => {
+			setSlotEl(null)
+			clearTimeout(timer)
+		}
+	}, [setSlotEl])
+
+	// Show loading fallback inline if:
+	// 1. Portal hasn't mounted yet OR crumbs are empty
+	// 2. We're not on home page (or navigating away from it)
+	const showFallback =
+		(!isPortalMounted || (crumbs.length === 0 && pendingCrumb === null)) &&
+		currentPathname !== '/'
+
+	return (
+		<div ref={ref} className={className}>
+			{showFallback && (
+				<nav
+					aria-label="Breadcrumb"
+					className="flex items-center gap-1 text-[12px] text-secondary"
+				>
+					<Link
+						to="/"
+						className="flex items-center gap-1 text-tertiary hover:text-accent press-down shrink-0 outline-none focus-visible:text-accent"
+						title="Home"
+					>
+						<Home className="size-3.5" />
+					</Link>
+					<ChevronRight className="size-3 text-tertiary shrink-0" />
+					<span className="text-secondary animate-pulse">Loading…</span>
+				</nav>
+			)}
+		</div>
+	)
+}
+
+export namespace BreadcrumbsSlot {
+	export interface Props {
+		className?: string
+	}
+}
+
+export function BreadcrumbsPortal() {
+	const { slotEl } = useBreadcrumbs()
+
+	if (slotEl) {
+		return createPortal(<Breadcrumbs />, slotEl)
+	}
+
+	// No slot registered - BreadcrumbsSlot handles the loading fallback
+	return null
 }

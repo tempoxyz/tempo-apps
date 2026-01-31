@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { useMatchRoute } from '@tanstack/react-router'
+import { BreadcrumbsPortal } from '#comps/Breadcrumbs'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import { useIntroSeen } from '#comps/Intro'
@@ -48,6 +49,7 @@ export function Layout(props: Layout.Props) {
 				<Header initialBlockNumber={blockNumber} />
 			</div>
 			<main className="flex flex-1 size-full flex-col items-center relative z-1 print:block print:flex-none">
+				<BreadcrumbsPortal />
 				{children}
 			</main>
 			<div className="w-full mt-6 relative z-1 print:hidden">
