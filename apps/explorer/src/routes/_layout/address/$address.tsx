@@ -15,7 +15,7 @@ import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import type { RpcTransaction as Transaction } from 'viem'
 import { formatUnits, isHash } from 'viem'
-import { useBlock, useChainId, usePublicClient } from 'wagmi'
+import { useChainId, usePublicClient } from 'wagmi'
 import { type GetBlockReturnType, getBlock, getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
@@ -619,58 +619,30 @@ function RouteComponent() {
 	)
 }
 
+async function fetchAddressMetadata(address: Address.Address) {
+	const response = await fetch(getApiUrl(`/api/address/metadata/${address}`), {
+		headers: { 'Content-Type': 'application/json' },
+	})
+	if (!response.ok) throw new Error('Failed to fetch address metadata')
+	return response.json() as Promise<{
+		accountType: AccountType
+		txCount: number | null
+		lastActivityTimestamp: number | null
+		createdTimestamp: number | null
+	}>
+}
+
 function AccountCardWithTimestamps(props: {
 	address: Address.Address
 	assetsData: AssetData[]
 	accountType?: AccountType
 }) {
-	const { address, assetsData, accountType } = props
+	const { address, assetsData, accountType: initialAccountType } = props
 
-	// fetch the most recent transactions (pg.1)
-	const { data: recentData } = useQuery(
-		transactionsQueryOptions({
-			address,
-			page: 1,
-			limit: 1,
-			offset: 0,
-			_key: 'account-creation',
-		}),
-	)
-
-	// get the 1st (most recent) transaction's block timestamp for "last activity"
-	const recentTransaction = recentData?.transactions?.at(0)
-	const { data: lastActivityTimestamp } = useBlock({
-		blockNumber: Hex.toBigInt(recentTransaction?.blockNumber ?? '0x0'),
-		query: {
-			enabled: Boolean(recentTransaction?.blockNumber),
-			select: (block) => block.timestamp,
-		},
-	})
-
-	// Use the real transaction count (not the approximate total from pagination)
-	// Don't fetch exact count - use API hasMore flag for pagination
-	// This makes the page render instantly without waiting for count query
-	const totalTransactions = 0 // Unknown until user navigates
-	const lastPageOffset = 0 // Can't calculate without total
-
-	const { data: oldestData } = useQuery({
-		...transactionsQueryOptions({
-			address,
-			page: Math.ceil(totalTransactions / 1),
-			limit: 1,
-			offset: lastPageOffset,
-			_key: 'account-creation',
-		}),
-		enabled: totalTransactions > 0,
-	})
-
-	const [oldestTransaction] = oldestData?.transactions ?? []
-	const { data: createdTimestamp } = useBlock({
-		blockNumber: Hex.toBigInt(oldestTransaction?.blockNumber ?? '0x0'),
-		query: {
-			enabled: Boolean(oldestTransaction?.blockNumber),
-			select: (block) => block.timestamp,
-		},
+	const { data: metadata } = useQuery({
+		queryKey: ['address-metadata', address],
+		queryFn: () => fetchAddressMetadata(address),
+		staleTime: 30_000,
 	})
 
 	const totalValue = calculateTotalHoldings(assetsData)
@@ -679,10 +651,18 @@ function AccountCardWithTimestamps(props: {
 		<AccountCard
 			address={address}
 			className="self-start"
-			createdTimestamp={createdTimestamp}
-			lastActivityTimestamp={lastActivityTimestamp}
+			createdTimestamp={
+				metadata?.createdTimestamp
+					? BigInt(metadata.createdTimestamp)
+					: undefined
+			}
+			lastActivityTimestamp={
+				metadata?.lastActivityTimestamp
+					? BigInt(metadata.lastActivityTimestamp)
+					: undefined
+			}
 			totalValue={totalValue}
-			accountType={accountType}
+			accountType={metadata?.accountType ?? initialAccountType}
 		/>
 	)
 }
