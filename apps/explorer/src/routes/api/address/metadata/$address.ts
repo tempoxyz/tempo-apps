@@ -1,118 +1,118 @@
-import { createFileRoute } from '@tanstack/react-router';
-import * as IDX from 'idxs';
-import * as Address from 'ox/Address';
-import { getCode } from 'viem/actions';
-import { getChainId } from 'wagmi/actions';
-import { getAccountType, type AccountType } from '#lib/account';
-import { hasIndexSupply } from '#lib/env';
-import { zAddress } from '#lib/zod';
-import { getWagmiConfig } from '#wagmi.config';
+import { createFileRoute } from '@tanstack/react-router'
+import * as IDX from 'idxs'
+import * as Address from 'ox/Address'
+import { getCode } from 'viem/actions'
+import { getChainId } from 'wagmi/actions'
+import { getAccountType, type AccountType } from '#lib/account'
+import { hasIndexSupply } from '#lib/env'
+import { zAddress } from '#lib/zod'
+import { getWagmiConfig } from '#wagmi.config'
 
 const IS = IDX.IndexSupply.create({
-  apiKey: process.env.INDEXER_API_KEY,
-});
+	apiKey: process.env.INDEXER_API_KEY,
+})
 
-const QB = IDX.QueryBuilder.from(IS);
+const QB = IDX.QueryBuilder.from(IS)
 
 function parseTimestamp(value: unknown): number | undefined {
-  if (typeof value === 'number') return value;
-  if (typeof value !== 'string') return undefined;
-  // Format: "2026-01-15 7:13:33.0 +00:00:00" - parse components directly
-  // (single-digit hours don't conform to ISO 8601)
-  const match = value.match(
-    /^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2}):(\d{2})/,
-  );
-  if (!match) return undefined;
-  const [, year, month, day, hour, min, sec] = match;
-  const date = Date.UTC(+year, +month - 1, +day, +hour, +min, +sec);
-  return Math.floor(date / 1000);
+	if (typeof value === 'number') return value
+	if (typeof value !== 'string') return undefined
+	// Format: "2026-01-15 7:13:33.0 +00:00:00" - parse components directly
+	// (single-digit hours don't conform to ISO 8601)
+	const match = value.match(
+		/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2}):(\d{2})/,
+	)
+	if (!match) return undefined
+	const [, year, month, day, hour, min, sec] = match
+	const date = Date.UTC(+year, +month - 1, +day, +hour, +min, +sec)
+	return Math.floor(date / 1000)
 }
 
 export type AddressMetadataResponse = {
-  address: string;
-  chainId: number;
-  accountType: AccountType;
-  txCount?: number;
-  lastActivityTimestamp?: number;
-  createdTimestamp?: number;
-  error?: string;
-};
+	address: string
+	chainId: number
+	accountType: AccountType
+	txCount?: number
+	lastActivityTimestamp?: number
+	createdTimestamp?: number
+	error?: string
+}
 
 export const Route = createFileRoute('/api/address/metadata/$address')({
-  server: {
-    handlers: {
-      GET: async ({ params }) => {
-        const fallback: AddressMetadataResponse = {
-          address: params.address,
-          chainId: 0,
-          accountType: 'empty',
-        };
+	server: {
+		handlers: {
+			GET: async ({ params }) => {
+				const fallback: AddressMetadataResponse = {
+					address: params.address,
+					chainId: 0,
+					accountType: 'empty',
+				}
 
-        if (!hasIndexSupply()) return Response.json(fallback);
+				if (!hasIndexSupply()) return Response.json(fallback)
 
-        try {
-          const address = zAddress().parse(params.address);
-          Address.assert(address);
+				try {
+					const address = zAddress().parse(params.address)
+					Address.assert(address)
 
-          const config = getWagmiConfig();
-          const client = config.getClient();
-          const chainId = getChainId(config);
+					const config = getWagmiConfig()
+					const client = config.getClient()
+					const chainId = getChainId(config)
 
-          // Single aggregate query: COUNT + MIN/MAX timestamps
-          // MIN/MAX are "free" since COUNT already scans all rows
-          const [bytecode, txAggResult] = await Promise.all([
-            // Account type detection (single RPC call)
-            getCode(client, { address }).catch(() => undefined),
+					// Single aggregate query: COUNT + MIN/MAX timestamps
+					// MIN/MAX are "free" since COUNT already scans all rows
+					const [bytecode, txAggResult] = await Promise.all([
+						// Account type detection (single RPC call)
+						getCode(client, { address }).catch(() => undefined),
 
-            // Combined query: count + newest + oldest in one scan
-            QB.selectFrom('txs')
-              .where('txs.chain', '=', chainId)
-              .where((wb) =>
-                wb.or([
-                  wb('txs.from', '=', address),
-                  wb('txs.to', '=', address),
-                ]),
-              )
-              .select((sb) => [
-                sb.fn.count('txs.hash').as('count'),
-                sb.fn.max('txs.block_timestamp').as('latestTxsBlockTimestamp'),
-                sb.fn.min('txs.block_timestamp').as('oldestTxsBlockTimestamp'),
-              ])
-              .executeTakeFirst(),
-          ]);
+						// Combined query: count + newest + oldest in one scan
+						QB.selectFrom('txs')
+							.where('txs.chain', '=', chainId)
+							.where((wb) =>
+								wb.or([
+									wb('txs.from', '=', address),
+									wb('txs.to', '=', address),
+								]),
+							)
+							.select((sb) => [
+								sb.fn.count('txs.hash').as('count'),
+								sb.fn.max('txs.block_timestamp').as('latestTxsBlockTimestamp'),
+								sb.fn.min('txs.block_timestamp').as('oldestTxsBlockTimestamp'),
+							])
+							.executeTakeFirst(),
+					])
 
-          const accountType = getAccountType(bytecode);
-          const txCount = txAggResult?.count ? Number(txAggResult.count) : 0;
-          const lastActivityTimestamp = parseTimestamp(
-            txAggResult?.latestTxsBlockTimestamp,
-          );
-          const createdTimestamp = parseTimestamp(
-            txAggResult?.oldestTxsBlockTimestamp,
-          );
+					const accountType = getAccountType(bytecode)
+					const txCount = txAggResult?.count ? Number(txAggResult.count) : 0
+					const lastActivityTimestamp = parseTimestamp(
+						txAggResult?.latestTxsBlockTimestamp,
+					)
+					const createdTimestamp = parseTimestamp(
+						txAggResult?.oldestTxsBlockTimestamp,
+					)
 
-          const response: AddressMetadataResponse = {
-            address,
-            chainId,
-            accountType,
-            txCount,
-            lastActivityTimestamp,
-            createdTimestamp,
-          };
+					const response: AddressMetadataResponse = {
+						address,
+						chainId,
+						accountType,
+						txCount,
+						lastActivityTimestamp,
+						createdTimestamp,
+					}
 
-          return Response.json(response, {
-            headers: {
-              'Cache-Control': 's-maxage=30, stale-while-revalidate=60',
-            },
-          });
-        } catch (error) {
-          console.error(error);
-          const errorMessage = error instanceof Error ? error.message : error;
-          return Response.json(
-            { ...fallback, error: String(errorMessage) },
-            { status: 500 },
-          );
-        }
-      },
-    },
-  },
-});
+					return Response.json(response, {
+						headers: {
+							'Cache-Control': 's-maxage=30, stale-while-revalidate=60',
+						},
+					})
+				} catch (error) {
+					console.error(error)
+					const errorMessage = error instanceof Error ? error.message : error
+					return Response.json(
+						{ ...fallback, error: String(errorMessage) },
+						{ status: 500 },
+					)
+				}
+			},
+		},
+	},
+})
