@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as IDX from 'idxs'
+import { sql } from 'idxs'
 import type { Address } from 'ox'
 import type { Config } from 'wagmi'
 import { getChainId } from 'wagmi/actions'
@@ -10,6 +11,7 @@ import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
 const TIP20_DECIMALS = 6
+const MAX_TOKENS = 50
 
 const IS = IDX.IndexSupply.create({
 	apiKey: process.env.INDEXER_API_KEY,
@@ -46,47 +48,76 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 					const config = getWagmiConfig()
 					const chainId = getChainId(config)
 
+					// Single query with conditional aggregation: compute received/sent sums in one DB scan
 					const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
-					// Aggregate incoming transfers (to = address) by token
-					const incomingQuery = qb
+					const balancesResult = await qb
 						.selectFrom('transfer')
 						.select((eb) => [
 							eb.ref('address').as('token'),
-							eb.fn.sum('amount').as('received'),
+							sql<string>`SUM(CASE WHEN "to" = ${address} THEN amount ELSE 0 END)`.as(
+								'received',
+							),
+							sql<string>`SUM(CASE WHEN "from" = ${address} THEN amount ELSE 0 END)`.as(
+								'sent',
+							),
 						])
 						.where('chain', '=', chainId)
-						.where('to', '=', address)
+						.where((eb) =>
+							eb.or([eb('from', '=', address), eb('to', '=', address)]),
+						)
 						.groupBy('address')
+						.execute()
 
-					// Aggregate outgoing transfers (from = address) by token
-					const outgoingQuery = qb
-						.selectFrom('transfer')
-						.select((eb) => [
-							eb.ref('address').as('token'),
-							eb.fn.sum('amount').as('sent'),
-						])
-						.where('chain', '=', chainId)
-						.where('from', '=', address)
-						.groupBy('address')
+					// Calculate net balance per token
+					const balances = new Map<string, bigint>()
 
-					// Query TokenCreated events (use andantino signature only for that chain)
+					for (const row of balancesResult) {
+						const token = String(row.token).toLowerCase()
+						const received = BigInt(row.received ?? 0)
+						const sent = BigInt(row.sent ?? 0)
+						const balance = received - sent
+						if (balance !== 0n) {
+							balances.set(token, balance)
+						}
+					}
+
+					const nonZeroBalances = [...balances.entries()]
+						.filter(([_, balance]) => balance !== 0n)
+						.map(([token, balance]) => ({
+							token: token as Address.Address,
+							balance,
+						}))
+
+					if (nonZeroBalances.length === 0) {
+						return Response.json({ balances: [] } satisfies BalancesResponse)
+					}
+
+					// Take top tokens by absolute balance value first
+					const topTokens = nonZeroBalances
+						.sort((a, b) => {
+							const aAbs = a.balance < 0n ? -a.balance : a.balance
+							const bAbs = b.balance < 0n ? -b.balance : b.balance
+							return bAbs > aAbs ? 1 : bAbs < aAbs ? -1 : 0
+						})
+						.slice(0, MAX_TOKENS)
+
+					// Query TokenCreated only for tokens the user holds
 					const tokenCreatedSignature =
 						chainId === 42429
 							? ABIS.TOKEN_CREATED_EVENT_ANDANTINO
 							: ABIS.TOKEN_CREATED_EVENT
 
-					const tokenCreatedQuery = QB.withSignatures([tokenCreatedSignature])
+					const topTokenAddresses = topTokens.map((t) => t.token)
+
+					const tokenCreatedResult = await QB.withSignatures([
+						tokenCreatedSignature,
+					])
 						.selectFrom('tokencreated')
 						.select(['token', 'name', 'symbol', 'currency'])
-						.where('chain', '=', chainId as never)
-
-					const [incomingResult, outgoingResult, tokenCreatedResult] =
-						await Promise.all([
-							incomingQuery.execute(),
-							outgoingQuery.execute(),
-							tokenCreatedQuery.execute(),
-						])
+						.where('chain', '=', chainId)
+						.where('token', 'in', topTokenAddresses)
+						.execute()
 
 					const tokenMetadata = new Map<
 						string,
@@ -100,38 +131,9 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 						})
 					}
 
-					// Merge incoming and outgoing to calculate balances
-					const balances = new Map<string, bigint>()
-
-					for (const row of incomingResult) {
-						const token = String(row.token).toLowerCase()
-						const received = BigInt(row.received)
-						balances.set(token, (balances.get(token) ?? 0n) + received)
-					}
-
-					for (const row of outgoingResult) {
-						const token = String(row.token).toLowerCase()
-						const sent = BigInt(row.sent)
-						balances.set(token, (balances.get(token) ?? 0n) - sent)
-					}
-
-					const nonZeroBalances = [...balances.entries()]
-						.filter(([_, balance]) => balance !== 0n)
-						.map(([token, balance]) => ({
-							token: token as Address.Address,
-							balance,
-							metadata: tokenMetadata.get(token),
-						}))
-
-					if (nonZeroBalances.length === 0)
-						return Response.json({ balances: [] } satisfies BalancesResponse)
-
-					const MAX_TOKENS = 50
-
 					// Fetch metadata via RPC for tokens missing from TokenCreated
-					const tokensMissingMetadata = nonZeroBalances
-						.slice(0, MAX_TOKENS)
-						.filter((t) => !t.metadata)
+					const tokensMissingMetadata = topTokens
+						.filter((t) => !tokenMetadata.has(t.token))
 						.map((t) => t.token)
 
 					if (tokensMissingMetadata.length > 0) {
@@ -160,8 +162,7 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 						}
 					}
 
-					const tokenBalances: TokenBalance[] = nonZeroBalances
-						.slice(0, MAX_TOKENS)
+					const tokenBalances: TokenBalance[] = topTokens
 						.map((row) => {
 							const metadata = tokenMetadata.get(row.token)
 							return {
