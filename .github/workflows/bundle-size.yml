@@ -22,7 +22,7 @@ env:
 jobs:
   bundle-size:
     name: Bundle Size
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     permissions:
       actions: write
       pull-requests: write

@@ -20,7 +20,7 @@ jobs:
 
   deploy:
     name: Deploy (${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }})
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     timeout-minutes: 60
     strategy:
       matrix:

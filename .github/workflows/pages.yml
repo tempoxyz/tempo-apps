@@ -25,7 +25,7 @@ env:
 jobs:
   pages-directory-listing:
     name: "Directory Listing Index"
-    runs-on: ["ubuntu-latest"]
+    runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     steps:
       - name: "Checkout"
         uses: actions/checkout@v6
@@ -55,7 +55,7 @@ jobs:
     environment:
       name: "tokenlist-github-pages"
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ["ubuntu-latest"]
+    runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     steps:
       - name: "Deploy Pages"
         id: deployment

@@ -9,7 +9,7 @@ env:
 jobs:
   checks:
     name: Checks
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
 
     steps:
       - name: Clone repository
