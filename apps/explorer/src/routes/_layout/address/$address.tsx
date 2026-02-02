@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
 	ClientOnly,
 	createFileRoute,
@@ -16,7 +16,7 @@ import * as React from 'react'
 import type { RpcTransaction as Transaction } from 'viem'
 import { formatUnits, isHash } from 'viem'
 import { useChainId, usePublicClient } from 'wagmi'
-import { type GetBlockReturnType, getBlock, getChainId } from 'wagmi/actions'
+import { type GetBlockReturnType, getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
@@ -43,8 +43,6 @@ import { cx } from '#lib/css'
 import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type ContractSource,
-	contractSourceQueryOptions,
-	fetchContractSourceDirect,
 	useContractSourceQueryOptions,
 } from '#lib/domain/contract-source'
 import {
@@ -93,26 +91,10 @@ async function fetchAddressBalances(address: Address.Address) {
 	}>
 }
 
-async function fetchAddressTotalCount(address: Address.Address) {
-	const response = await fetch(getApiUrl(`/api/address/txs-count/${address}`), {
-		headers: { 'Content-Type': 'application/json' },
-	})
-	if (!response.ok) throw new Error('Failed to fetch total transaction count')
-	const {
-		data: safeData,
-		success,
-		error,
-	} = z.safeParse(
-		z.object({ data: z.number(), error: z.nullable(z.string()) }),
-		await response.json(),
-	)
-	if (!success) throw new Error(z.prettifyError(error))
-	return safeData
-}
-
 function useBatchTransactionData(
 	transactions: Transaction[],
 	viewer: Address.Address,
+	enabled = true,
 ) {
 	const hashes = React.useMemo(
 		() => transactions.map((tx) => tx.hash).filter(isHash),
@@ -141,7 +123,7 @@ function useBatchTransactionData(
 				return { receipt, block: block as GetBlockReturnType, knownEvents }
 			},
 			staleTime: 60_000,
-			enabled: hashes.length > 0,
+			enabled: enabled && hashes.length > 0,
 		})),
 	})
 
@@ -154,7 +136,7 @@ function useBatchTransactionData(
 		return map
 	}, [hashes, queries])
 
-	const isLoading = queries.some((q) => q.isLoading)
+	const isLoading = enabled && queries.some((q) => q.isLoading)
 
 	return { transactionDataMap, isLoading }
 }
@@ -178,6 +160,7 @@ function balancesQueryOptions(address: Address.Address) {
 function useBalancesData(
 	accountAddress: Address.Address,
 	initialData?: { balances: TokenBalance[] },
+	enabled = true,
 ): {
 	data: AssetData[]
 	isLoading: boolean
@@ -185,6 +168,7 @@ function useBalancesData(
 	const { data, isLoading } = useQuery({
 		...balancesQueryOptions(accountAddress),
 		initialData,
+		enabled,
 	})
 
 	const assetsData = React.useMemo(() => {
@@ -257,8 +241,13 @@ export const Route = createFileRoute('/_layout/address/$address')({
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page, limit, live } }) => ({ page, limit, live }),
-	loader: ({ deps: { page, limit, live }, params, context }) =>
+	loaderDeps: ({ search: { page, limit, live, tab } }) => ({
+		page,
+		limit,
+		live,
+		tab,
+	}),
+	loader: ({ deps: { page, limit, live, tab }, params, context }) =>
 		withLoaderTiming('/_layout/address/$address', async () => {
 			const { address } = params
 			// Only throw notFound for truly invalid addresses
@@ -269,70 +258,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				})
 
 			const offset = (page - 1) * limit
-			const config = getWagmiConfig()
-			const chainId = getChainId(config)
 
-			// Get bytecode to determine account type
-			const contractBytecode = await getContractBytecode(address).catch(
-				(error) => {
-					console.error('[loader] Failed to get bytecode:', error)
-					return undefined
-				},
-			)
-
-			const accountType = getAccountType(contractBytecode)
-
-			// check if it's a known contract from our registry
-			let contractInfo = getContractInfo(address)
-
-			// Only try to extract ABI/fetch source for actual contracts
-			let contractSource: ContractSource | undefined
-			if (accountType === 'contract') {
-				// if not in registry, try to extract ABI from bytecode using whatsabi
-				if (!contractInfo && contractBytecode) {
-					const contractAbi = await extractContractAbi(address).catch(
-						() => undefined,
-					)
-
-					if (contractAbi) {
-						contractInfo = {
-							name: 'Unknown Contract',
-							description: 'ABI extracted from bytecode',
-							code: contractBytecode,
-							abi: contractAbi,
-							category: 'utility',
-							address,
-						}
-					}
-				}
-
-				const queryOptions = contractSourceQueryOptions({
-					address,
-					chainId,
-				})
-				// Try to fetch verified contract source if there's bytecode on chain
-				// Fetch directly from upstream API (bypasses __BASE_URL__ issues during SSR)
-				// Then seed the query cache for client-side hydration
-				// Only seed if no data exists - avoid overwriting highlighted data from client refetch
-				const existingData = context.queryClient.getQueryData(
-					queryOptions.queryKey,
-				)
-				if (!existingData) {
-					contractSource = await fetchContractSourceDirect({
-						address,
-						chainId,
-					}).catch((error) => {
-						console.error('[loader] Failed to load contract source:', error)
-						return undefined
-					})
-					// Seed the query cache so client hydrates with data already available
-					if (contractSource)
-						context.queryClient.setQueryData(
-							queryOptions.queryKey,
-							contractSource,
-						)
-				} else contractSource = existingData
-			}
+			// Tab-aware loading: only fetch data needed for the active tab
+			const isHistoryTab = tab === 'history'
+			const isAssetsTab = tab === 'assets'
 
 			// Add timeout to prevent SSR from hanging on slow queries
 			const QUERY_TIMEOUT_MS = 3_000
@@ -345,22 +274,34 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
 				])
 
-			const transactionsData = await timeout(
-				context.queryClient
-					.ensureQueryData(
-						transactionsQueryOptions({
-							address,
-							page,
-							limit,
-							offset,
-						}),
-					)
-					.catch((error) => {
-						console.error('Fetch transactions error:', error)
-						return undefined
-					}),
+			// Always fetch bytecode (needed for account type detection)
+			const contractBytecodePromise = timeout(
+				getContractBytecode(address).catch((error) => {
+					console.error('[loader] Failed to get bytecode:', error)
+					return undefined
+				}),
 				QUERY_TIMEOUT_MS,
 			)
+
+			// Only block on transactions if history tab is active
+			const transactionsPromise = isHistoryTab
+				? timeout(
+						context.queryClient
+							.ensureQueryData(
+								transactionsQueryOptions({
+									address,
+									page,
+									limit,
+									offset,
+								}),
+							)
+							.catch((error) => {
+								console.error('Fetch transactions error:', error)
+								return undefined
+							}),
+						QUERY_TIMEOUT_MS,
+					)
+				: Promise.resolve(undefined)
 
 			// Fire off optional loaders without blocking page render
 			// These will populate the cache if successful but won't delay the page load
@@ -374,15 +315,31 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					console.error('Fetch total-value error (non-blocking):', error)
 				})
 
-			const balancesData = await timeout(
-				context.queryClient
-					.ensureQueryData(balancesQueryOptions(address))
-					.catch((error) => {
-						console.error('Fetch balances error:', error)
-						return undefined
-					}),
-				QUERY_TIMEOUT_MS,
-			)
+			// Only block on balances if assets tab is active
+			const balancesPromise = isAssetsTab
+				? timeout(
+						context.queryClient
+							.ensureQueryData(balancesQueryOptions(address))
+							.catch((error) => {
+								console.error('Fetch balances error:', error)
+								return undefined
+							}),
+						QUERY_TIMEOUT_MS,
+					)
+				: Promise.resolve(undefined)
+
+			const [contractBytecode, transactionsData, balancesData] =
+				await Promise.all([
+					contractBytecodePromise,
+					transactionsPromise,
+					balancesPromise,
+				])
+
+			const accountType = getAccountType(contractBytecode)
+
+			// check if it's a known contract from our registry
+			const contractInfo = getContractInfo(address)
+			const contractSource: ContractSource | undefined = undefined
 
 			// For SSR, provide placeholder values - client will fetch real data
 			const txCountResponse = undefined
@@ -509,14 +466,22 @@ function RouteComponent() {
 
 	Address.assert(address)
 
+	const { data: metadata } = useQuery({
+		queryKey: ['address-metadata', address],
+		queryFn: () => fetchAddressMetadata(address),
+		staleTime: 30_000,
+	})
+
 	const hash = location.hash
 
 	// Track which hash we've already redirected for (prevents re-redirect when
 	// user manually switches tabs, but allows redirect for new hash values)
 	const redirectedForHashRef = React.useRef<string | null>(null)
 
+	const resolvedAccountType = metadata?.accountType ?? accountType
+
 	// When URL has a hash fragment (e.g., #functionName), switch to interact tab
-	const isContract = accountType === 'contract'
+	const isContract = resolvedAccountType === 'contract'
 
 	React.useEffect(() => {
 		// Only redirect if:
@@ -587,7 +552,31 @@ function RouteComponent() {
 						? 3
 						: 0
 
-	const { data: assetsData } = useBalancesData(address, balancesData)
+	const isAssetsTabActive = activeSection === 1
+
+	const { data: assetsData, isLoading: assetsLoading } = useBalancesData(
+		address,
+		balancesData,
+		isAssetsTabActive || balancesData !== undefined,
+	)
+
+	// Prefetch non-active tabs' data once on load for smooth tab switches
+	const queryClient = useQueryClient()
+	const prefetchedRef = React.useRef<string | null>(null)
+	React.useEffect(() => {
+		if (prefetchedRef.current === address) return
+		prefetchedRef.current = address
+
+		// Prefetch all tabs except the active one (loader already fetched active tab data)
+		if (tab !== 'history') {
+			queryClient.prefetchQuery(
+				transactionsQueryOptions({ address, page: 1, limit, offset: 0 }),
+			)
+		}
+		if (tab !== 'assets') {
+			queryClient.prefetchQuery(balancesQueryOptions(address))
+		}
+	}, [address, tab, limit, queryClient])
 
 	return (
 		<div
@@ -601,6 +590,7 @@ function RouteComponent() {
 				address={address}
 				assetsData={assetsData}
 				accountType={accountType}
+				metadata={metadata}
 			/>
 			<SectionsWrapper
 				address={address}
@@ -612,8 +602,10 @@ function RouteComponent() {
 				contractSource={contractSource}
 				initialData={transactionsData}
 				assetsData={assetsData}
+				assetsLoading={assetsLoading}
 				live={live}
-				isContract={accountType === 'contract'}
+				isContract={isContract}
+				metadata={metadata}
 			/>
 		</div>
 	)
@@ -636,14 +628,14 @@ function AccountCardWithTimestamps(props: {
 	address: Address.Address
 	assetsData: AssetData[]
 	accountType?: AccountType
+	metadata?: Awaited<ReturnType<typeof fetchAddressMetadata>>
 }) {
-	const { address, assetsData, accountType: initialAccountType } = props
-
-	const { data: metadata } = useQuery({
-		queryKey: ['address-metadata', address],
-		queryFn: () => fetchAddressMetadata(address),
-		staleTime: 30_000,
-	})
+	const {
+		address,
+		assetsData,
+		accountType: initialAccountType,
+		metadata,
+	} = props
 
 	const totalValue = calculateTotalHoldings(assetsData)
 
@@ -677,8 +669,10 @@ function SectionsWrapper(props: {
 	contractSource?: ContractSource | undefined
 	initialData: TransactionsData | undefined
 	assetsData: AssetData[]
+	assetsLoading: boolean
 	live: boolean
 	isContract: boolean
+	metadata?: Awaited<ReturnType<typeof fetchAddressMetadata>>
 }) {
 	const {
 		address,
@@ -690,26 +684,44 @@ function SectionsWrapper(props: {
 		contractSource,
 		initialData,
 		assetsData,
+		assetsLoading,
 		live,
 		isContract,
+		metadata,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	// Track hydration to avoid SSR/client mismatch with query data
 	const isMounted = useIsMounted()
 
-	// Contract source query - uses cache populated by SSR loader via ensureQueryData
-	// The query will immediately return cached data without flashing
-	// Only enabled for contracts to avoid unnecessary requests for EOAs
+	const isContractTabActive = activeSection === 2 || activeSection === 3
+
+	// Contract source query - fetch on demand when contract tab is active
+	// Keeps initial page load light while still enabling ABI/source in the UI
 	const contractSourceQuery = useQuery({
 		...useContractSourceQueryOptions({ address }),
 		initialData: contractSource,
-		enabled: isContract,
+		enabled: isMounted && isContract && isContractTabActive,
 	})
 	// Use SSR data until mounted to avoid hydration mismatch, then use query data
 	const resolvedContractSource = isMounted
 		? contractSourceQuery.data
 		: contractSource
+
+	const extractedAbiQuery = useQuery({
+		queryKey: ['contract-abi', address],
+		queryFn: () => extractContractAbi(address),
+		staleTime: Number.POSITIVE_INFINITY,
+		enabled:
+			isMounted &&
+			isContract &&
+			isContractTabActive &&
+			!contractInfo?.abi &&
+			!contractSourceQuery.data?.abi,
+	})
+
+	const resolvedAbi =
+		resolvedContractSource?.abi ?? contractInfo?.abi ?? extractedAbiQuery.data
 
 	const isHistoryTabActive = activeSection === 0
 	// Only auto-refresh on page 1 when history tab is active and live=true
@@ -727,6 +739,8 @@ function SectionsWrapper(props: {
 			offset: (page - 1) * limit,
 		}),
 		initialData: page === 1 ? initialData : undefined,
+		// Only fetch transactions when history tab is active (or we have SSR data)
+		enabled: isMounted && (isHistoryTabActive || initialData !== undefined),
 		// Override refetch settings reactively based on tab state
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
@@ -739,27 +753,17 @@ function SectionsWrapper(props: {
 	const data = isMounted ? queryData : page === 1 ? initialData : queryData
 	const { transactions = [], hasMore = false } = data ?? {}
 
-	// Fetch exact total count in the background (only when on history tab)
-	// Don't cache across tabs/pages - always show "..." until loaded each time
-	const totalCountQuery = useQuery({
-		queryKey: ['address-total-count', address],
-		queryFn: () => fetchAddressTotalCount(address),
-		staleTime: 0, // Don't cache - always refetch to show "..." while loading
-		refetchInterval: false,
-		refetchOnWindowFocus: false,
-		enabled: isHistoryTabActive,
-	})
-
 	const batchTransactionDataContextValue = useBatchTransactionData(
 		transactions,
 		address,
+		isHistoryTabActive,
 	)
 
 	// Exact count from dedicated API endpoint (for display only)
-	// txs-count counts "from OR to" while pagination API only serves a subset,
+	// metadata txCount counts "from OR to" while pagination API only serves a subset,
 	// so we can't use exactCount for page calculation - most pages would be empty
 	// Only use after mount to avoid SSR/client hydration mismatch
-	const exactCount = isMounted ? totalCountQuery.data?.data : undefined
+	const exactCount = isMounted ? (metadata?.txCount ?? undefined) : undefined
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -908,6 +912,7 @@ function SectionsWrapper(props: {
 								itemsLabel="assets"
 								itemsPerPage={ASSETS_PER_PAGE}
 								pagination="simple"
+								loading={assetsLoading}
 								emptyState="No assets found."
 							/>
 						),
@@ -917,11 +922,11 @@ function SectionsWrapper(props: {
 						title: 'Contract',
 						totalItems: 0,
 						itemsLabel: 'items',
-						visible: Boolean(contractInfo || resolvedContractSource),
+						visible: isContract,
 						content: (
 							<ContractTabContent
 								address={address}
-								abi={resolvedContractSource?.abi ?? contractInfo?.abi}
+								abi={resolvedAbi}
 								docsUrl={contractInfo?.docsUrl}
 								source={resolvedContractSource}
 							/>
@@ -932,11 +937,11 @@ function SectionsWrapper(props: {
 						title: 'Interact',
 						totalItems: 0,
 						itemsLabel: 'functions',
-						visible: Boolean(contractInfo || resolvedContractSource),
+						visible: isContract,
 						content: (
 							<InteractTabContent
 								address={address}
-								abi={resolvedContractSource?.abi ?? contractInfo?.abi}
+								abi={resolvedAbi}
 								docsUrl={contractInfo?.docsUrl}
 							/>
 						),
