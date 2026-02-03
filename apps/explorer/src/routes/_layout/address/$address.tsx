@@ -17,8 +17,12 @@ import type { RpcTransaction as Transaction } from 'viem'
 import { formatUnits, isHash } from 'viem'
 import { useChainId, usePublicClient } from 'wagmi'
 import { type GetBlockReturnType, getBlock } from 'wagmi/actions'
+import { Actions } from 'wagmi/tempo'
+import type { Config } from 'wagmi'
 import * as z from 'zod/mini'
 import { AccountCard } from '#comps/AccountCard'
+import { AddressCell } from '#comps/AddressCell'
+import { AmountCell, BalanceCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
 import { DataGrid } from '#comps/DataGrid'
@@ -30,7 +34,9 @@ import {
 	type TimeFormat,
 	useTimeFormat,
 } from '#comps/TimeFormat'
+import { TimestampCell } from '#comps/TimestampCell'
 import { TokenIcon } from '#comps/TokenIcon'
+import { TransactionCell } from '#comps/TransactionCell'
 import {
 	BatchTransactionDataContext,
 	type TransactionData,
@@ -61,8 +67,12 @@ import {
 	type TransactionsData,
 	transactionsQueryOptions,
 } from '#lib/queries/account'
+import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
 import { getWagmiConfig } from '#wagmi.config.ts'
 import { getApiUrl } from '#lib/env.ts'
+import XIcon from '~icons/lucide/x'
+
+type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
 async function fetchAddressTotalValue(address: Address.Address) {
 	const response = await fetch(
@@ -205,17 +215,34 @@ function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
 const defaultSearchValues = {
 	page: 1,
 	limit: 10,
-	tab: 'history',
+	tab: 'transactions',
 } as const
 
 const ASSETS_PER_PAGE = 10
 
+const allTabs = [
+	'transactions',
+	'holdings',
+	'transfers',
+	'holders',
+	'contract',
+	'interact',
+] as const
+
+type TabValue = (typeof allTabs)[number]
+
 const TabSchema = z.prefault(
-	z.enum(['history', 'assets', 'contract', 'interact']),
+	z.pipe(
+		z.string(),
+		z.transform((val): TabValue => {
+			if (val === 'history') return 'transactions'
+			if (val === 'assets') return 'holdings'
+			if (allTabs.includes(val as TabValue)) return val as TabValue
+			return 'transactions'
+		}),
+	),
 	defaultSearchValues.tab,
 )
-
-type TabValue = z.infer<typeof TabSchema>
 
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
@@ -237,17 +264,19 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		),
 		tab: TabSchema,
 		live: z.prefault(z.boolean(), false),
+		a: z.optional(z.string()),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page, limit, live, tab } }) => ({
+	loaderDeps: ({ search: { page, limit, live, tab, a } }) => ({
 		page,
 		limit,
 		live,
 		tab,
+		a,
 	}),
-	loader: ({ deps: { page, limit, live, tab }, params, context }) =>
+	loader: ({ deps: { page, limit, live, tab, a }, params, context }) =>
 		withLoaderTiming('/_layout/address/$address', async () => {
 			const { address } = params
 			// Only throw notFound for truly invalid addresses
@@ -258,10 +287,12 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				})
 
 			const offset = (page - 1) * limit
+			const account =
+				a && Address.validate(a) ? (a as Address.Address) : undefined
 
 			// Tab-aware loading: only fetch data needed for the active tab
-			const isHistoryTab = tab === 'history'
-			const isAssetsTab = tab === 'assets'
+			const isTransactionsTab = tab === 'transactions'
+			const isHoldingsTab = tab === 'holdings'
 
 			// Add timeout to prevent SSR from hanging on slow queries
 			const QUERY_TIMEOUT_MS = 3_000
@@ -274,6 +305,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					new Promise<undefined>((r) => setTimeout(() => r(undefined), ms)),
 				])
 
+			const config = getWagmiConfig()
+
 			// Always fetch bytecode (needed for account type detection)
 			const contractBytecodePromise = timeout(
 				getContractBytecode(address).catch((error) => {
@@ -283,8 +316,16 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				QUERY_TIMEOUT_MS,
 			)
 
-			// Only block on transactions if history tab is active
-			const transactionsPromise = isHistoryTab
+			// Try to fetch token metadata (non-blocking, used for isToken detection)
+			const tokenMetadataPromise = timeout(
+				Actions.token
+					.getMetadata(config as Config, { token: address })
+					.catch(() => null),
+				QUERY_TIMEOUT_MS,
+			)
+
+			// Only block on transactions if transactions tab is active
+			const transactionsPromise = isTransactionsTab
 				? timeout(
 						context.queryClient
 							.ensureQueryData(
@@ -315,8 +356,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					console.error('Fetch total-value error (non-blocking):', error)
 				})
 
-			// Only block on balances if assets tab is active
-			const balancesPromise = isAssetsTab
+			// Only block on balances if holdings tab is active
+			const balancesPromise = isHoldingsTab
 				? timeout(
 						context.queryClient
 							.ensureQueryData(balancesQueryOptions(address))
@@ -328,14 +369,16 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			const [contractBytecode, transactionsData, balancesData] =
+			const [contractBytecode, transactionsData, balancesData, tokenMetadata] =
 				await Promise.all([
 					contractBytecodePromise,
 					transactionsPromise,
 					balancesPromise,
+					tokenMetadataPromise,
 				])
 
 			const accountType = getAccountType(contractBytecode)
+			const isToken = tokenMetadata !== null && tokenMetadata !== undefined
 
 			// check if it's a known contract from our registry
 			const contractInfo = getContractInfo(address)
@@ -351,7 +394,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				page,
 				limit,
 				offset,
+				account,
 				accountType,
+				isToken,
+				tokenMetadata,
 				contractInfo,
 				contractSource,
 				transactionsData,
@@ -455,9 +501,12 @@ function RouteComponent() {
 	const router = useRouter()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, live, limit } = Route.useSearch()
+	const { page, tab, live, limit, a } = Route.useSearch()
 	const {
 		accountType,
+		isToken,
+		tokenMetadata,
+		account,
 		contractInfo,
 		contractSource,
 		transactionsData,
@@ -466,7 +515,7 @@ function RouteComponent() {
 
 	Address.assert(address)
 
-	const { data: metadata } = useQuery({
+	const { data: addressMetadata } = useQuery({
 		queryKey: ['address-metadata', address],
 		queryFn: () => fetchAddressMetadata(address),
 		staleTime: 30_000,
@@ -478,7 +527,7 @@ function RouteComponent() {
 	// user manually switches tabs, but allows redirect for new hash values)
 	const redirectedForHashRef = React.useRef<string | null>(null)
 
-	const resolvedAccountType = metadata?.accountType ?? accountType
+	const resolvedAccountType = addressMetadata?.accountType ?? accountType
 
 	// When URL has a hash fragment (e.g., #functionName), switch to interact tab
 	const isContract = resolvedAccountType === 'contract'
@@ -509,15 +558,15 @@ function RouteComponent() {
 	}, [hash, isContract, tab, navigate, limit])
 
 	React.useEffect(() => {
-		// Only preload for history tab (transaction pagination)
-		if (tab !== 'history') return
-		// preload next page only to reduce initial load overhead
+		// Preload next page for paginated tabs
+		if (tab !== 'transactions' && tab !== 'transfers' && tab !== 'holders')
+			return
 		async function preload() {
 			try {
 				const nextPage = page + 1
 				router.preloadRoute({
 					to: '.',
-					search: { page: nextPage, tab, limit },
+					search: { page: nextPage, tab, limit, ...(a ? { a } : {}) },
 				})
 			} catch (error) {
 				console.error('Preload error (non-blocking):', error)
@@ -525,39 +574,41 @@ function RouteComponent() {
 		}
 
 		preload()
-	}, [page, router, tab, limit])
+	}, [page, router, tab, limit, a])
+
+	// Build visible tabs based on address type
+	const visibleTabs: TabValue[] = React.useMemo(() => {
+		const tabs: TabValue[] = ['transactions', 'holdings']
+		if (isToken) {
+			tabs.push('transfers', 'holders')
+		}
+		if (isContract) {
+			tabs.push('contract', 'interact')
+		}
+		return tabs
+	}, [isToken, isContract])
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
-			const tabs: TabValue[] = ['history', 'assets', 'contract', 'interact']
-
-			const newTab = tabs[newIndex] ?? 'history'
+			const newTab = visibleTabs[newIndex] ?? 'transactions'
 			navigate({
 				to: '.',
-				search: { page, tab: newTab, limit },
+				search: { page: 1, tab: newTab, limit, ...(a ? { a } : {}) },
 				resetScroll: false,
 			})
 		},
-		[navigate, page, limit],
+		[navigate, limit, a, visibleTabs],
 	)
 
 	const activeSection =
-		tab === 'history'
-			? 0
-			: tab === 'assets'
-				? 1
-				: tab === 'contract'
-					? 2
-					: tab === 'interact'
-						? 3
-						: 0
+		visibleTabs.indexOf(tab) !== -1 ? visibleTabs.indexOf(tab) : 0
 
-	const isAssetsTabActive = activeSection === 1
+	const isHoldingsTabActive = tab === 'holdings'
 
 	const { data: assetsData, isLoading: assetsLoading } = useBalancesData(
 		address,
 		balancesData,
-		isAssetsTabActive || balancesData !== undefined,
+		isHoldingsTabActive || balancesData !== undefined,
 	)
 
 	// Prefetch non-active tabs' data once on load for smooth tab switches
@@ -568,12 +619,12 @@ function RouteComponent() {
 		prefetchedRef.current = address
 
 		// Prefetch all tabs except the active one (loader already fetched active tab data)
-		if (tab !== 'history') {
+		if (tab !== 'transactions') {
 			queryClient.prefetchQuery(
 				transactionsQueryOptions({ address, page: 1, limit, offset: 0 }),
 			)
 		}
-		if (tab !== 'assets') {
+		if (tab !== 'holdings') {
 			queryClient.prefetchQuery(balancesQueryOptions(address))
 		}
 	}, [address, tab, limit, queryClient])
@@ -590,7 +641,9 @@ function RouteComponent() {
 				address={address}
 				assetsData={assetsData}
 				accountType={accountType}
-				metadata={metadata}
+				addressMetadata={addressMetadata}
+				isToken={isToken}
+				tokenMetadata={tokenMetadata}
 			/>
 			<SectionsWrapper
 				address={address}
@@ -605,7 +658,11 @@ function RouteComponent() {
 				assetsLoading={assetsLoading}
 				live={live}
 				isContract={isContract}
-				metadata={metadata}
+				isToken={isToken}
+				tokenMetadata={tokenMetadata}
+				account={account}
+				visibleTabs={visibleTabs}
+				addressMetadata={addressMetadata}
 			/>
 		</div>
 	)
@@ -628,13 +685,17 @@ function AccountCardWithTimestamps(props: {
 	address: Address.Address
 	assetsData: AssetData[]
 	accountType?: AccountType
-	metadata?: Awaited<ReturnType<typeof fetchAddressMetadata>>
+	addressMetadata?: Awaited<ReturnType<typeof fetchAddressMetadata>>
+	isToken?: boolean
+	tokenMetadata?: TokenMetadata | null
 }) {
 	const {
 		address,
 		assetsData,
 		accountType: initialAccountType,
-		metadata,
+		addressMetadata,
+		isToken,
+		tokenMetadata,
 	} = props
 
 	const totalValue = calculateTotalHoldings(assetsData)
@@ -644,17 +705,20 @@ function AccountCardWithTimestamps(props: {
 			address={address}
 			className="self-start"
 			createdTimestamp={
-				metadata?.createdTimestamp
-					? BigInt(metadata.createdTimestamp)
+				addressMetadata?.createdTimestamp
+					? BigInt(addressMetadata.createdTimestamp)
 					: undefined
 			}
 			lastActivityTimestamp={
-				metadata?.lastActivityTimestamp
-					? BigInt(metadata.lastActivityTimestamp)
+				addressMetadata?.lastActivityTimestamp
+					? BigInt(addressMetadata.lastActivityTimestamp)
 					: undefined
 			}
 			totalValue={totalValue}
-			accountType={metadata?.accountType ?? initialAccountType}
+			accountType={addressMetadata?.accountType ?? initialAccountType}
+			isToken={isToken}
+			tokenName={tokenMetadata?.name}
+			tokenSymbol={tokenMetadata?.symbol}
 		/>
 	)
 }
@@ -672,7 +736,11 @@ function SectionsWrapper(props: {
 	assetsLoading: boolean
 	live: boolean
 	isContract: boolean
-	metadata?: Awaited<ReturnType<typeof fetchAddressMetadata>>
+	isToken: boolean
+	tokenMetadata?: TokenMetadata | null
+	account?: Address.Address
+	visibleTabs: TabValue[]
+	addressMetadata?: Awaited<ReturnType<typeof fetchAddressMetadata>>
 }) {
 	const {
 		address,
@@ -687,14 +755,23 @@ function SectionsWrapper(props: {
 		assetsLoading,
 		live,
 		isContract,
-		metadata,
+		isToken,
+		tokenMetadata,
+		account,
+		visibleTabs,
+		addressMetadata,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
 	// Track hydration to avoid SSR/client mismatch with query data
 	const isMounted = useIsMounted()
 
-	const isContractTabActive = activeSection === 2 || activeSection === 3
+	const isContractTabActive =
+		visibleTabs[activeSection] === 'contract' ||
+		visibleTabs[activeSection] === 'interact'
+	const isTransactionsTabActive = visibleTabs[activeSection] === 'transactions'
+	const isTransfersTabActive = visibleTabs[activeSection] === 'transfers'
+	const isHoldersTabActive = visibleTabs[activeSection] === 'holders'
 
 	// Contract source query - fetch on demand when contract tab is active
 	// Keeps initial page load light while still enabling ABI/source in the UI
@@ -723,9 +800,8 @@ function SectionsWrapper(props: {
 	const resolvedAbi =
 		resolvedContractSource?.abi ?? contractInfo?.abi ?? extractedAbiQuery.data
 
-	const isHistoryTabActive = activeSection === 0
-	// Only auto-refresh on page 1 when history tab is active and live=true
-	const shouldAutoRefresh = page === 1 && isHistoryTabActive && live
+	// Only auto-refresh on page 1 when transactions tab is active and live=true
+	const shouldAutoRefresh = page === 1 && isTransactionsTabActive && live
 
 	const {
 		data: queryData,
@@ -739,8 +815,9 @@ function SectionsWrapper(props: {
 			offset: (page - 1) * limit,
 		}),
 		initialData: page === 1 ? initialData : undefined,
-		// Only fetch transactions when history tab is active (or we have SSR data)
-		enabled: isMounted && (isHistoryTabActive || initialData !== undefined),
+		// Only fetch transactions when transactions tab is active (or we have SSR data)
+		enabled:
+			isMounted && (isTransactionsTabActive || initialData !== undefined),
 		// Override refetch settings reactively based on tab state
 		refetchInterval: shouldAutoRefresh ? 4_000 : false,
 		refetchOnWindowFocus: shouldAutoRefresh,
@@ -756,20 +833,61 @@ function SectionsWrapper(props: {
 	const batchTransactionDataContextValue = useBatchTransactionData(
 		transactions,
 		address,
-		isHistoryTabActive,
+		isTransactionsTabActive,
 	)
 
+	// Token transfers query
+	const transfersPage = isTransfersTabActive ? page : 1
+	const { data: transfersData, isPlaceholderData: isTransfersPlaceholder } =
+		useQuery({
+			...transfersQueryOptions({
+				address,
+				page: transfersPage,
+				limit,
+				offset: isTransfersTabActive ? (page - 1) * limit : 0,
+				account,
+			}),
+			enabled: isMounted && isToken && isTransfersTabActive,
+		})
+
+	const {
+		transfers = [],
+		total: transfersTotal = 0,
+		totalCapped: transfersTotalCapped = false,
+	} = transfersData ?? {}
+
+	// Token holders query
+	const holdersPage = isHoldersTabActive ? page : 1
+	const { data: holdersData, isPlaceholderData: isHoldersPlaceholder } =
+		useQuery({
+			...holdersQueryOptions({
+				address,
+				page: holdersPage,
+				limit,
+				offset: isHoldersTabActive ? (page - 1) * limit : 0,
+			}),
+			enabled: isMounted && isToken && isHoldersTabActive,
+		})
+
+	const {
+		holders = [],
+		total: holdersTotal = 0,
+		totalCapped: holdersTotalCapped = false,
+	} = holdersData ?? {}
+
 	// Exact count from dedicated API endpoint (for display only)
-	// metadata txCount counts "from OR to" while pagination API only serves a subset,
+	// addressMetadata txCount counts "from OR to" while pagination API only serves a subset,
 	// so we can't use exactCount for page calculation - most pages would be empty
 	// Only use after mount to avoid SSR/client hydration mismatch
-	const exactCount = isMounted ? (metadata?.txCount ?? undefined) : undefined
+	const exactCount = isMounted
+		? (addressMetadata?.txCount ?? undefined)
+		: undefined
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
 
 	// Show error state for API failures (instead of crashing the whole page)
-	const historyError = error ? (
+	const transactionsError = error ? (
 		<div className="rounded-[10px] bg-card-header p-4.5">
 			<p className="text-sm font-medium text-red-400">
 				Failed to load transaction history
@@ -780,7 +898,7 @@ function SectionsWrapper(props: {
 		</div>
 	) : null
 
-	const historyColumns: DataGrid.Column[] = [
+	const transactionsColumns: DataGrid.Column[] = [
 		{
 			label: (
 				<TimeColumnHeader
@@ -799,154 +917,309 @@ function SectionsWrapper(props: {
 		{ label: 'Total', align: 'end', width: '0.5fr' },
 	]
 
+	const transfersColumns: DataGrid.Column[] = [
+		{
+			label: (
+				<TimeColumnHeader
+					label="Time"
+					formatLabel={formatLabel}
+					onCycle={cycleTimeFormat}
+					className="text-secondary hover:text-accent cursor-pointer transition-colors"
+				/>
+			),
+			align: 'start',
+			minWidth: 100,
+		},
+		{ label: 'Transaction', align: 'start', minWidth: 120 },
+		{ label: 'From', align: 'start', minWidth: 140 },
+		{ label: 'To', align: 'start', minWidth: 140 },
+		{ label: 'Amount', align: 'end', minWidth: 100 },
+	]
+
+	const holdersColumns: DataGrid.Column[] = [
+		{ label: 'Address', align: 'start', minWidth: 140 },
+		{ label: 'Balance', align: 'end', minWidth: 120 },
+		{ label: 'Percentage', align: 'end', minWidth: 100 },
+	]
+
+	// Build sections based on visible tabs
+	const sections = visibleTabs.map((tabName) => {
+		switch (tabName) {
+			case 'transactions':
+				return {
+					title: 'Transactions',
+					totalItems: data && exactCount,
+					itemsLabel: 'transactions',
+					content: transactionsError ?? (
+						<DataGrid
+							columns={{
+								stacked: transactionsColumns,
+								tabs: transactionsColumns,
+							}}
+							items={() =>
+								transactions.map((transaction) => ({
+									cells: [
+										<TransactionTimeCell
+											key="time"
+											hash={transaction.hash}
+											format={timeFormat}
+										/>,
+										<TransactionDescCell
+											key="desc"
+											transaction={transaction}
+											accountAddress={address}
+										/>,
+										<Midcut
+											key="hash"
+											value={transaction.hash}
+											prefix="0x"
+											align="end"
+										/>,
+										<TransactionFeeCell key="fee" hash={transaction.hash} />,
+										<TransactionTotal key="total" transaction={transaction} />,
+									],
+									link: {
+										href: `/receipt/${transaction.hash}`,
+										title: `View receipt ${transaction.hash}`,
+									},
+								}))
+							}
+							totalItems={exactCount ?? transactions.length}
+							pages={exactCount === undefined ? { hasMore } : undefined}
+							displayCount={exactCount}
+							page={page}
+							fetching={isPlaceholderData}
+							loading={!data}
+							countLoading={exactCount === undefined}
+							itemsLabel="transactions"
+							itemsPerPage={limit}
+							pagination="simple"
+							emptyState="No transactions found."
+						/>
+					),
+				}
+			case 'holdings':
+				return {
+					title: 'Holdings',
+					totalItems: assetsData.length,
+					itemsLabel: 'assets',
+					content: (
+						<DataGrid
+							columns={{
+								stacked: [
+									{ label: 'Name', align: 'start', width: '1fr' },
+									{ label: 'Contract', align: 'start', width: '1fr' },
+									{ label: 'Amount', align: 'end', width: '0.5fr' },
+								],
+								tabs: [
+									{ label: 'Name', align: 'start', width: '1fr' },
+									{ label: 'Ticker', align: 'start', width: '0.5fr' },
+									{ label: 'Currency', align: 'start', width: '0.5fr' },
+									{ label: 'Amount', align: 'end', width: '0.5fr' },
+									{ label: 'Value', align: 'end', width: '0.5fr' },
+								],
+							}}
+							items={(mode) =>
+								assetsData
+									.slice((page - 1) * ASSETS_PER_PAGE, page * ASSETS_PER_PAGE)
+									.map((asset) => ({
+										className: 'text-[13px]',
+										cells:
+											mode === 'stacked'
+												? [
+														<AssetName key="name" asset={asset} />,
+														<AssetContract key="contract" asset={asset} />,
+														<AssetAmount key="amount" asset={asset} />,
+													]
+												: [
+														<AssetName key="name" asset={asset} />,
+														<AssetSymbol key="symbol" asset={asset} />,
+														<AssetCurrency key="currency" asset={asset} />,
+														<AssetAmount key="amount" asset={asset} />,
+														<AssetValue key="value" asset={asset} />,
+													],
+										link: {
+											href: `/address/${asset.address}?tab=transfers` as const,
+											search: { a: address },
+											title: `View token ${asset.address}`,
+										},
+									}))
+							}
+							totalItems={assetsData.length}
+							page={page}
+							itemsLabel="assets"
+							itemsPerPage={ASSETS_PER_PAGE}
+							pagination="simple"
+							loading={assetsLoading}
+							emptyState="No assets found."
+						/>
+					),
+				}
+			case 'transfers':
+				return {
+					title: 'Transfers',
+					totalItems:
+						transfersData && (transfersTotalCapped ? '100k+' : transfersTotal),
+					itemsLabel: 'transfers',
+					contextual: account && (
+						<FilterIndicator account={account} tokenAddress={address} />
+					),
+					content: (
+						<DataGrid
+							columns={{
+								stacked: transfersColumns,
+								tabs: transfersColumns,
+							}}
+							items={() => {
+								const validTransfers = transfers.filter(
+									(t): t is typeof t & { timestamp: string; value: string } =>
+										t.timestamp !== null && t.value !== null,
+								)
+
+								return validTransfers.map((transfer) => ({
+									cells: [
+										<TimestampCell
+											key="time"
+											timestamp={BigInt(transfer.timestamp)}
+											link={`/receipt/${transfer.transactionHash}`}
+											format={timeFormat}
+										/>,
+										<TransactionCell
+											key="tx"
+											hash={transfer.transactionHash}
+										/>,
+										<AddressCell
+											key="from"
+											address={transfer.from}
+											label="From"
+										/>,
+										<AddressCell key="to" address={transfer.to} label="To" />,
+										<AmountCell
+											key="amount"
+											value={BigInt(transfer.value)}
+											decimals={tokenMetadata?.decimals}
+											symbol={tokenMetadata?.symbol}
+										/>,
+									],
+									link: {
+										href: `/receipt/${transfer.transactionHash}`,
+										title: `View receipt ${transfer.transactionHash}`,
+									},
+								}))
+							}}
+							totalItems={transfersTotal}
+							displayCount={transfersTotal}
+							displayCountCapped={transfersTotalCapped}
+							page={page}
+							fetching={isTransfersPlaceholder}
+							loading={!transfersData}
+							itemsLabel="transfers"
+							itemsPerPage={limit}
+							pagination="simple"
+							emptyState="No transfers found."
+						/>
+					),
+				}
+			case 'holders':
+				return {
+					title: 'Holders',
+					totalItems:
+						holdersData && (holdersTotalCapped ? '100k+' : holdersTotal),
+					itemsLabel: 'holders',
+					content: (
+						<DataGrid
+							columns={{
+								stacked: holdersColumns,
+								tabs: holdersColumns,
+							}}
+							items={() =>
+								holders.map((holder) => {
+									const percentage =
+										tokenMetadata?.totalSupply && tokenMetadata.totalSupply > 0n
+											? Number(
+													(BigInt(holder.balance) * 10_000n) /
+														tokenMetadata.totalSupply,
+												) / 100
+											: 0
+									return {
+										cells: [
+											<AddressCell key="address" address={holder.address} />,
+											<BalanceCell
+												key="balance"
+												balance={holder.balance}
+												decimals={tokenMetadata?.decimals}
+											/>,
+											<span
+												key="percentage"
+												className="text-[12px] text-primary"
+											>
+												{percentage.toFixed(2)}%
+											</span>,
+										],
+										link: {
+											href: `/address/${address}?tab=transfers&a=${holder.address}`,
+											title: `View transfers for ${holder.address}`,
+										},
+									}
+								})
+							}
+							totalItems={holdersTotal}
+							displayCount={holdersTotal}
+							displayCountCapped={holdersTotalCapped}
+							page={page}
+							fetching={isHoldersPlaceholder}
+							loading={!holdersData}
+							itemsLabel="holders"
+							itemsPerPage={limit}
+							pagination="simple"
+							emptyState="No holders found."
+						/>
+					),
+				}
+			case 'contract':
+				return {
+					title: 'Contract',
+					totalItems: 0,
+					itemsLabel: 'items',
+					content: (
+						<ContractTabContent
+							address={address}
+							abi={resolvedAbi}
+							docsUrl={contractInfo?.docsUrl}
+							source={resolvedContractSource}
+						/>
+					),
+				}
+			case 'interact':
+				return {
+					title: 'Interact',
+					totalItems: 0,
+					itemsLabel: 'functions',
+					content: (
+						<InteractTabContent
+							address={address}
+							abi={resolvedAbi}
+							docsUrl={contractInfo?.docsUrl}
+						/>
+					),
+				}
+			default:
+				return {
+					title: 'Unknown',
+					totalItems: 0,
+					itemsLabel: 'items',
+					content: null,
+				}
+		}
+	})
+
 	return (
 		<BatchTransactionDataContext.Provider
 			value={batchTransactionDataContextValue}
 		>
 			<Sections
 				mode={mode}
-				sections={[
-					{
-						title: 'History',
-						totalItems: data && exactCount,
-						itemsLabel: 'transactions',
-						content: historyError ?? (
-							<DataGrid
-								columns={{
-									stacked: historyColumns,
-									tabs: historyColumns,
-								}}
-								items={() =>
-									transactions.map((transaction) => ({
-										cells: [
-											<TransactionTimeCell
-												key="time"
-												hash={transaction.hash}
-												format={timeFormat}
-											/>,
-											<TransactionDescCell
-												key="desc"
-												transaction={transaction}
-												accountAddress={address}
-											/>,
-											<Midcut
-												key="hash"
-												value={transaction.hash}
-												prefix="0x"
-												align="end"
-											/>,
-											<TransactionFeeCell key="fee" hash={transaction.hash} />,
-											<TransactionTotal
-												key="total"
-												transaction={transaction}
-											/>,
-										],
-										link: {
-											href: `/receipt/${transaction.hash}`,
-											title: `View receipt ${transaction.hash}`,
-										},
-									}))
-								}
-								totalItems={exactCount ?? transactions.length}
-								pages={exactCount === undefined ? { hasMore } : undefined}
-								displayCount={exactCount}
-								page={page}
-								fetching={isPlaceholderData}
-								loading={!data}
-								countLoading={exactCount === undefined}
-								itemsLabel="transactions"
-								itemsPerPage={limit}
-								pagination="simple"
-								emptyState="No transactions found."
-							/>
-						),
-					},
-					{
-						title: 'Assets',
-						totalItems: assetsData.length,
-						itemsLabel: 'assets',
-						content: (
-							<DataGrid
-								columns={{
-									stacked: [
-										{ label: 'Name', align: 'start', width: '1fr' },
-										{ label: 'Contract', align: 'start', width: '1fr' },
-										{ label: 'Amount', align: 'end', width: '0.5fr' },
-									],
-									tabs: [
-										{ label: 'Name', align: 'start', width: '1fr' },
-										{ label: 'Ticker', align: 'start', width: '0.5fr' },
-										{ label: 'Currency', align: 'start', width: '0.5fr' },
-										{ label: 'Amount', align: 'end', width: '0.5fr' },
-										{ label: 'Value', align: 'end', width: '0.5fr' },
-									],
-								}}
-								items={(mode) =>
-									assetsData
-										.slice((page - 1) * ASSETS_PER_PAGE, page * ASSETS_PER_PAGE)
-										.map((asset) => ({
-											className: 'text-[13px]',
-											cells:
-												mode === 'stacked'
-													? [
-															<AssetName key="name" asset={asset} />,
-															<AssetContract key="contract" asset={asset} />,
-															<AssetAmount key="amount" asset={asset} />,
-														]
-													: [
-															<AssetName key="name" asset={asset} />,
-															<AssetSymbol key="symbol" asset={asset} />,
-															<AssetCurrency key="currency" asset={asset} />,
-															<AssetAmount key="amount" asset={asset} />,
-															<AssetValue key="value" asset={asset} />,
-														],
-											link: {
-												href: `/token/${asset.address}` as const,
-												search: { a: address },
-												title: `View token ${asset.address}`,
-											},
-										}))
-								}
-								totalItems={assetsData.length}
-								page={page}
-								itemsLabel="assets"
-								itemsPerPage={ASSETS_PER_PAGE}
-								pagination="simple"
-								loading={assetsLoading}
-								emptyState="No assets found."
-							/>
-						),
-					},
-					// Contract tab - ABI + Source Code (always shown, disabled when no data)
-					{
-						title: 'Contract',
-						totalItems: 0,
-						itemsLabel: 'items',
-						visible: isContract,
-						content: (
-							<ContractTabContent
-								address={address}
-								abi={resolvedAbi}
-								docsUrl={contractInfo?.docsUrl}
-								source={resolvedContractSource}
-							/>
-						),
-					},
-					// Interact tab - Read + Write contract (always shown, disabled when no data)
-					{
-						title: 'Interact',
-						totalItems: 0,
-						itemsLabel: 'functions',
-						visible: isContract,
-						content: (
-							<InteractTabContent
-								address={address}
-								abi={resolvedAbi}
-								docsUrl={contractInfo?.docsUrl}
-							/>
-						),
-					},
-				]}
+				sections={sections}
 				activeSection={activeSection}
 				onSectionChange={onSectionChange}
 			/>
@@ -1101,5 +1374,34 @@ function AssetValue(props: { asset: AssetData }) {
 				format: 'short',
 			})}
 		</span>
+	)
+}
+
+function FilterIndicator(props: {
+	account: Address.Address
+	tokenAddress: Address.Address
+}) {
+	const { account, tokenAddress } = props
+	return (
+		<div className="flex items-center gap-2 text-[12px]">
+			<span className="text-tertiary">Filtered:</span>
+			<Link
+				to="/address/$address"
+				params={{ address: account }}
+				className="text-accent press-down font-mono"
+				title={account}
+			>
+				<Midcut value={account} prefix="0x" />
+			</Link>
+			<Link
+				to="/address/$address"
+				params={{ address: tokenAddress }}
+				search={{ tab: 'transfers' }}
+				className="text-tertiary press-down"
+				title="Clear filter"
+			>
+				<XIcon className="size-3.5 translate-y-px" />
+			</Link>
+		</div>
 	)
 }
