@@ -233,6 +233,12 @@ export namespace Pagination {
 		const disableNext = isIndefinite
 			? !(pages as { hasMore: boolean } | undefined)?.hasMore
 			: page >= pages
+
+		// Hide pagination controls on single page (but not during indefinite loading)
+		const isSinglePage =
+			!isIndefinite && typeof pages === 'number' && pages <= 1 && page === 1
+		if (isSinglePage && !countLoading) return <div />
+
 		return (
 			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
 				<Link

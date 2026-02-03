@@ -1,6 +1,5 @@
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-	ClientOnly,
 	createFileRoute,
 	Link,
 	notFound,
@@ -16,10 +15,11 @@ import * as React from 'react'
 import type { RpcTransaction as Transaction } from 'viem'
 import { formatUnits, isHash } from 'viem'
 import { useChainId, usePublicClient } from 'wagmi'
-import { type GetBlockReturnType, getBlock } from 'wagmi/actions'
+import type { GetBlockReturnType } from 'wagmi/actions'
 import { Actions } from 'wagmi/tempo'
 import type { Config } from 'wagmi'
 import * as z from 'zod/mini'
+import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
@@ -58,18 +58,22 @@ import {
 	getContractInfo,
 } from '#lib/domain/contracts'
 import { parseKnownEvents } from '#lib/domain/known-events'
+import type { KnownEventPart } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import {
-	type TransactionsData,
+	type HistoryResponse,
+	type HistorySources,
+	historyQueryOptions,
 	transactionsQueryOptions,
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
-import { getWagmiConfig } from '#wagmi.config.ts'
 import { getApiUrl } from '#lib/env.ts'
+import { getWagmiConfig } from '#wagmi.config.ts'
+import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
@@ -99,56 +103,6 @@ async function fetchAddressBalances(address: Address.Address) {
 		balances: TokenBalance[]
 		error?: string
 	}>
-}
-
-function useBatchTransactionData(
-	transactions: Transaction[],
-	viewer: Address.Address,
-	enabled = true,
-) {
-	const hashes = React.useMemo(
-		() => transactions.map((tx) => tx.hash).filter(isHash),
-		[transactions],
-	)
-
-	const chainId = useChainId()
-	const client = usePublicClient({ chainId })
-
-	const queries = useQueries({
-		queries: hashes.map((hash) => ({
-			queryKey: ['tx-data-batch', viewer, hash],
-			queryFn: async (): Promise<TransactionData | null> => {
-				const receipt = await client.getTransactionReceipt({ hash })
-				// TODO: investigate & consider batch/multicall
-				const [block, transaction, getTokenMetadata] = await Promise.all([
-					client.getBlock({ blockHash: receipt.blockHash }),
-					client.getTransaction({ hash: receipt.transactionHash }),
-					Tip20.metadataFromLogs(receipt.logs),
-				])
-				const knownEvents = parseKnownEvents(receipt, {
-					transaction,
-					getTokenMetadata,
-					viewer,
-				})
-				return { receipt, block: block as GetBlockReturnType, knownEvents }
-			},
-			staleTime: 60_000,
-			enabled: enabled && hashes.length > 0,
-		})),
-	})
-
-	const transactionDataMap = React.useMemo(() => {
-		const map = new Map<Hex.Hex, TransactionData>()
-		for (let index = 0; index < hashes.length; index++) {
-			const data = queries[index]?.data
-			if (data) map.set(hashes[index], data)
-		}
-		return map
-	}, [hashes, queries])
-
-	const isLoading = enabled && queries.some((q) => q.isLoading)
-
-	return { transactionDataMap, isLoading }
 }
 
 type AssetData = {
@@ -196,6 +150,60 @@ function useBalancesData(
 	}, [data])
 
 	return { data: assetsData, isLoading }
+}
+
+/**
+ * Client-side batch transaction data fetching for token addresses.
+ * Fetches receipts, blocks, and parses known events via RPC calls.
+ * Used for tokens to avoid the expensive server-side history API.
+ */
+function useBatchTransactionData(
+	transactions: Transaction[],
+	viewer: Address.Address,
+	enabled = true,
+) {
+	const hashes = React.useMemo(
+		() => transactions.map((tx) => tx.hash).filter(isHash),
+		[transactions],
+	)
+
+	const chainId = useChainId()
+	const client = usePublicClient({ chainId })
+
+	const queries = useQueries({
+		queries: hashes.map((hash) => ({
+			queryKey: ['tx-data-batch', viewer, hash],
+			queryFn: async (): Promise<TransactionData | null> => {
+				const receipt = await client.getTransactionReceipt({ hash })
+				const [block, transaction, getTokenMetadata] = await Promise.all([
+					client.getBlock({ blockHash: receipt.blockHash }),
+					client.getTransaction({ hash: receipt.transactionHash }),
+					Tip20.metadataFromLogs(receipt.logs),
+				])
+				const knownEvents = parseKnownEvents(receipt, {
+					transaction,
+					getTokenMetadata,
+					viewer,
+				})
+				return { receipt, block: block as GetBlockReturnType, knownEvents }
+			},
+			staleTime: 60_000,
+			enabled: enabled && hashes.length > 0,
+		})),
+	})
+
+	const transactionDataMap = React.useMemo(() => {
+		const map = new Map<Hex.Hex, TransactionData>()
+		for (let index = 0; index < hashes.length; index++) {
+			const data = queries[index]?.data
+			if (data) map.set(hashes[index], data)
+		}
+		return map
+	}, [hashes, queries])
+
+	const isLoading = enabled && queries.some((q) => q.isLoading)
+
+	return { transactionDataMap, isLoading }
 }
 
 function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
@@ -325,15 +333,18 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			)
 
 			// Only block on transactions if transactions tab is active
+			// SSR uses safe default (no 'emitted' source) since we don't know if it's a token yet
+			// Client will refetch with correct sources based on isToken
 			const transactionsPromise = isTransactionsTab
 				? timeout(
 						context.queryClient
 							.ensureQueryData(
-								transactionsQueryOptions({
+								historyQueryOptions({
 									address,
 									page,
 									limit,
 									offset,
+									sources: ['txs', 'transfers'],
 								}),
 							)
 							.catch((error) => {
@@ -422,13 +433,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		let lastActive: string | undefined
 		let holdings = '—'
 
-		const TIMEOUT_MS = 500
-		const timeout = <T,>(promise: Promise<T>, ms: number): Promise<T | null> =>
-			Promise.race([
-				promise,
-				new Promise<null>((r) => setTimeout(() => r(null), ms)),
-			])
-
 		// Calculate holdings from prefetched balances data
 		if (loaderData?.balancesData?.balances) {
 			const totalValue = calculateTotalHoldings(
@@ -446,23 +450,12 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			}
 		}
 
-		try {
-			const config = getWagmiConfig()
-			// Get the most recent transaction for lastActive (already in loaderData)
-			const recentTx = loaderData?.transactionsData?.transactions?.at(0)
-			if (recentTx?.blockNumber) {
-				const recentBlock = await timeout(
-					getBlock(config, { blockNumber: Hex.toBigInt(recentTx.blockNumber) }),
-					TIMEOUT_MS,
-				)
-				if (recentBlock) {
-					lastActive = DateFormatter.formatTimestampForOg(
-						recentBlock.timestamp,
-					).date
-				}
-			}
-		} catch {
-			// Ignore errors, lastActive will be undefined
+		// Get the most recent transaction for lastActive (already in loaderData with timestamp)
+		const recentTx = loaderData?.transactionsData?.transactions?.at(0)
+		if (recentTx?.timestamp) {
+			lastActive = DateFormatter.formatTimestampForOg(
+				BigInt(recentTx.timestamp),
+			).date
 		}
 
 		const description = buildAddressDescription(
@@ -621,7 +614,7 @@ function RouteComponent() {
 		// Prefetch all tabs except the active one (loader already fetched active tab data)
 		if (tab !== 'transactions') {
 			queryClient.prefetchQuery(
-				transactionsQueryOptions({ address, page: 1, limit, offset: 0 }),
+				historyQueryOptions({ address, page: 1, limit, offset: 0 }),
 			)
 		}
 		if (tab !== 'holdings') {
@@ -662,7 +655,6 @@ function RouteComponent() {
 				tokenMetadata={tokenMetadata}
 				account={account}
 				visibleTabs={visibleTabs}
-				addressMetadata={addressMetadata}
 			/>
 		</div>
 	)
@@ -730,7 +722,7 @@ function SectionsWrapper(props: {
 	onSectionChange: (index: number) => void
 	contractInfo: ContractInfo | undefined
 	contractSource?: ContractSource | undefined
-	initialData: TransactionsData | undefined
+	initialData: HistoryResponse | undefined
 	assetsData: AssetData[]
 	assetsLoading: boolean
 	live: boolean
@@ -739,7 +731,6 @@ function SectionsWrapper(props: {
 	tokenMetadata?: TokenMetadata | null
 	account?: Address.Address
 	visibleTabs: TabValue[]
-	addressMetadata?: Awaited<ReturnType<typeof fetchAddressMetadata>>
 }) {
 	const {
 		address,
@@ -758,7 +749,6 @@ function SectionsWrapper(props: {
 		tokenMetadata,
 		account,
 		visibleTabs,
-		addressMetadata,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
@@ -802,10 +792,38 @@ function SectionsWrapper(props: {
 	// Only auto-refresh on page 1 when transactions tab is active and live=true
 	const shouldAutoRefresh = page === 1 && isTransactionsTabActive && live
 
+	// For non-tokens: use enriched history API (fast, server-side)
+	// For tokens: use raw transactions API + client-side RPC enrichment
+	const historySources: HistorySources[] = ['txs', 'transfers', 'emitted']
+
+	// Non-token: use historyQueryOptions (enriched server-side API)
 	const {
-		data: queryData,
-		isPlaceholderData,
-		error,
+		data: historyQueryData,
+		isPlaceholderData: isHistoryPlaceholder,
+		error: historyError,
+	} = useQuery({
+		...historyQueryOptions({
+			address,
+			page,
+			limit,
+			offset: (page - 1) * limit,
+			sources: historySources,
+		}),
+		initialData: page === 1 && !isToken ? initialData : undefined,
+		// Only fetch when transactions tab is active AND not a token
+		enabled:
+			isMounted &&
+			!isToken &&
+			(isTransactionsTabActive || initialData !== undefined),
+		refetchInterval: shouldAutoRefresh && !isToken ? 4_000 : false,
+		refetchOnWindowFocus: shouldAutoRefresh && !isToken,
+	})
+
+	// Token: use transactionsQueryOptions (raw transactions, client-side enrichment)
+	const {
+		data: tokenTxQueryData,
+		isPlaceholderData: isTokenTxPlaceholder,
+		error: tokenTxError,
 	} = useQuery({
 		...transactionsQueryOptions({
 			address,
@@ -813,27 +831,45 @@ function SectionsWrapper(props: {
 			limit,
 			offset: (page - 1) * limit,
 		}),
-		initialData: page === 1 ? initialData : undefined,
-		// Only fetch transactions when transactions tab is active (or we have SSR data)
-		enabled:
-			isMounted && (isTransactionsTabActive || initialData !== undefined),
-		// Override refetch settings reactively based on tab state
-		refetchInterval: shouldAutoRefresh ? 4_000 : false,
-		refetchOnWindowFocus: shouldAutoRefresh,
+		// Only fetch when transactions tab is active AND is a token
+		enabled: isMounted && isToken && isTransactionsTabActive,
+		refetchInterval: shouldAutoRefresh && isToken ? 4_000 : false,
+		refetchOnWindowFocus: shouldAutoRefresh && isToken,
 	})
+
+	// Client-side RPC enrichment for token transactions
+	const batchTransactionDataContextValue = useBatchTransactionData(
+		(tokenTxQueryData?.transactions ?? []) as Transaction[],
+		address,
+		isToken && isTransactionsTabActive,
+	)
+
+	// Unified data access - pick based on isToken
+	const isPlaceholderData = isToken
+		? isTokenTxPlaceholder
+		: isHistoryPlaceholder
+	const error = isToken ? tokenTxError : historyError
 
 	/**
 	 * use initialData until mounted to avoid hydration mismatch
 	 * (tanstack query may have fresher cached data that differs from SSR)
 	 */
-	const data = isMounted ? queryData : page === 1 ? initialData : queryData
-	const { transactions = [], hasMore = false } = data ?? {}
+	const historyData = isMounted
+		? historyQueryData
+		: page === 1
+			? initialData
+			: historyQueryData
+	const tokenTxData = isMounted ? tokenTxQueryData : undefined
 
-	const batchTransactionDataContextValue = useBatchTransactionData(
-		transactions,
-		address,
-		isTransactionsTabActive,
-	)
+	// Extract transaction list based on data source
+	const transactions = isToken
+		? ((tokenTxData?.transactions ?? []) as Transaction[])
+		: (historyData?.transactions ?? [])
+	const hasMore = isToken
+		? (tokenTxData?.hasMore ?? false)
+		: (historyData?.hasMore ?? false)
+	const total = isToken ? undefined : historyData?.total
+	const countCapped = isToken ? false : (historyData?.countCapped ?? false)
 
 	// Token transfers query
 	const transfersPage = isTransfersTabActive ? page : 1
@@ -874,13 +910,9 @@ function SectionsWrapper(props: {
 		totalCapped: holdersTotalCapped = false,
 	} = holdersData ?? {}
 
-	// Exact count from dedicated API endpoint (for display only)
-	// addressMetadata txCount counts "from OR to" while pagination API only serves a subset,
-	// so we can't use exactCount for page calculation - most pages would be empty
-	// Only use after mount to avoid SSR/client hydration mismatch
-	const exactCount = isMounted
-		? (addressMetadata?.txCount ?? undefined)
-		: undefined
+	// Use total from history API response for display (non-tokens only)
+	// Only use after mount AND when data has loaded to avoid showing 0 during loading
+	const totalTrxCount = isMounted && !isToken && historyData ? total : undefined
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -947,55 +979,129 @@ function SectionsWrapper(props: {
 			case 'transactions':
 				return {
 					title: 'Transactions',
-					totalItems: data && exactCount,
+					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
-					content: transactionsError ?? (
-						<DataGrid
-							columns={{
-								stacked: transactionsColumns,
-								tabs: transactionsColumns,
-							}}
-							items={() =>
-								transactions.map((transaction) => ({
-									cells: [
-										<TransactionTimeCell
-											key="time"
-											hash={transaction.hash}
-											format={timeFormat}
-										/>,
-										<TransactionDescCell
-											key="desc"
-											transaction={transaction}
-											accountAddress={address}
-										/>,
-										<Midcut
-											key="hash"
-											value={transaction.hash}
-											prefix="0x"
-											align="end"
-										/>,
-										<TransactionFeeCell key="fee" hash={transaction.hash} />,
-										<TransactionTotal key="total" transaction={transaction} />,
-									],
-									link: {
-										href: `/receipt/${transaction.hash}`,
-										title: `View receipt ${transaction.hash}`,
-									},
-								}))
-							}
-							totalItems={exactCount ?? transactions.length}
-							pages={exactCount === undefined ? { hasMore } : undefined}
-							displayCount={exactCount}
-							page={page}
-							fetching={isPlaceholderData}
-							loading={!data}
-							countLoading={exactCount === undefined}
-							itemsLabel="transactions"
-							itemsPerPage={limit}
-							pagination="simple"
-							emptyState="No transactions found."
-						/>
-					),
+					content:
+						transactionsError ??
+						(isToken ? (
+							// Token: use client-side RPC enrichment via context
+							<BatchTransactionDataContext.Provider
+								value={batchTransactionDataContextValue}
+							>
+								<DataGrid
+									columns={{
+										stacked: transactionsColumns,
+										tabs: transactionsColumns,
+									}}
+									items={() =>
+										(transactions as Transaction[]).map((transaction) => ({
+											cells: [
+												<TokenTransactionTimeCell
+													key="time"
+													hash={transaction.hash as Hex.Hex}
+													format={timeFormat}
+												/>,
+												<TokenTransactionDescCell
+													key="desc"
+													transaction={transaction}
+													accountAddress={address}
+												/>,
+												<Midcut
+													key="hash"
+													value={transaction.hash}
+													prefix="0x"
+													align="end"
+												/>,
+												<TokenTransactionFeeCell
+													key="fee"
+													hash={transaction.hash as Hex.Hex}
+												/>,
+												<TransactionTotal
+													key="total"
+													transaction={transaction}
+												/>,
+											],
+											link: {
+												href: `/receipt/${transaction.hash}`,
+												title: `View receipt ${transaction.hash}`,
+											},
+										}))
+									}
+									totalItems={transactions.length}
+									pages={{ hasMore }}
+									page={page}
+									fetching={isPlaceholderData}
+									loading={!tokenTxData}
+									itemsLabel="transactions"
+									itemsPerPage={limit}
+									pagination="simple"
+									emptyState="No transactions found."
+								/>
+							</BatchTransactionDataContext.Provider>
+						) : (
+							// Non-token: use enriched history API data
+							<DataGrid
+								columns={{
+									stacked: transactionsColumns,
+									tabs: transactionsColumns,
+								}}
+								items={() =>
+									(transactions as EnrichedTransaction[]).map(
+										(transaction) => ({
+											cells: [
+												<TransactionTimeCell
+													key="time"
+													timestamp={transaction.timestamp}
+													hash={transaction.hash}
+													format={timeFormat}
+												/>,
+												<TransactionDescCell
+													key="desc"
+													transaction={transaction}
+													accountAddress={address}
+												/>,
+												<Midcut
+													key="hash"
+													value={transaction.hash}
+													prefix="0x"
+													align="end"
+												/>,
+												<TransactionFeeCell
+													key="fee"
+													gasUsed={transaction.gasUsed}
+													effectiveGasPrice={transaction.effectiveGasPrice}
+												/>,
+												<TransactionTotalCell
+													key="total"
+													transaction={transaction}
+												/>,
+											],
+											link: {
+												href: `/receipt/${transaction.hash}`,
+												title: `View receipt ${transaction.hash}`,
+											},
+										}),
+									)
+								}
+								totalItems={totalTrxCount ?? transactions.length}
+								pages={
+									countCapped || totalTrxCount === undefined
+										? { hasMore }
+										: undefined
+								}
+								displayCount={totalTrxCount}
+								displayCountCapped={countCapped}
+								disableLastPage={countCapped}
+								page={page}
+								fetching={isPlaceholderData}
+								loading={!historyData}
+								countLoading={totalTrxCount === undefined}
+								itemsLabel="transactions"
+								itemsPerPage={limit}
+								pagination="simple"
+								emptyState="No transactions found."
+							/>
+						)),
 				}
 			case 'holdings':
 				return {
@@ -1213,36 +1319,139 @@ function SectionsWrapper(props: {
 	})
 
 	return (
-		<BatchTransactionDataContext.Provider
-			value={batchTransactionDataContextValue}
-		>
-			<Sections
-				mode={mode}
-				sections={sections}
-				activeSection={activeSection}
-				onSectionChange={onSectionChange}
-			/>
-		</BatchTransactionDataContext.Provider>
+		<Sections
+			mode={mode}
+			sections={sections}
+			activeSection={activeSection}
+			onSectionChange={onSectionChange}
+		/>
 	)
 }
 
-const placeholder = <span className="text-tertiary">—</span>
-
-function TransactionTimeCell(props: { hash: Hex.Hex; format: TimeFormat }) {
+function TransactionTimeCell(props: {
+	timestamp: number
+	hash: Hex.Hex
+	format: TimeFormat
+}) {
+	const { timestamp, hash, format } = props
 	return (
-		<ClientOnly fallback={placeholder}>
-			<TransactionTimeCellInner {...props} />
-		</ClientOnly>
+		<TransactionTimestamp
+			timestamp={BigInt(timestamp)}
+			link={`/receipt/${hash}`}
+			format={format}
+		/>
 	)
 }
 
-function TransactionTimeCellInner(props: {
+function TransactionDescCell(props: {
+	transaction: EnrichedTransaction
+	accountAddress: Address.Address
+}) {
+	const { transaction, accountAddress } = props
+	if (!transaction.knownEvents.length) {
+		return <span className="text-secondary">No events</span>
+	}
+	return (
+		<TransactionDescription
+			transaction={
+				transaction as unknown as Parameters<
+					typeof TransactionDescription
+				>[0]['transaction']
+			}
+			knownEvents={transaction.knownEvents}
+			transactionReceipt={undefined}
+			accountAddress={accountAddress}
+		/>
+	)
+}
+
+function TransactionFeeCell(props: {
+	gasUsed: string
+	effectiveGasPrice: string
+}) {
+	const fee =
+		Hex.toBigInt(props.gasUsed as Hex.Hex) *
+		Hex.toBigInt(props.effectiveGasPrice as Hex.Hex)
+	return (
+		<span className="text-tertiary">
+			{PriceFormatter.format(fee, { decimals: 18, format: 'short' })}
+		</span>
+	)
+}
+
+function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
+	const { transaction } = props
+
+	const amountParts = React.useMemo(() => {
+		return transaction.knownEvents.flatMap((event) =>
+			event.parts.filter(
+				(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
+					part.type === 'amount',
+			),
+		)
+	}, [transaction.knownEvents])
+
+	const infiniteLabel = <span className="text-secondary">−</span>
+
+	if (!amountParts.length)
+		return (
+			<Amount.Base
+				value={0n}
+				decimals={0}
+				prefix="$"
+				short
+				infinite={infiniteLabel}
+			/>
+		)
+
+	const normalizedDecimals = 18
+	const totalValue = amountParts.reduce((sum, part) => {
+		const decimals = part.value.decimals ?? 6
+		const scale = 10n ** BigInt(normalizedDecimals - decimals)
+		const value =
+			typeof part.value.value === 'bigint'
+				? part.value.value
+				: BigInt(part.value.value)
+		return sum + value * scale
+	}, 0n)
+
+	if (totalValue === 0n) {
+		const value = transaction.value
+			? Hex.toBigInt(transaction.value as Hex.Hex)
+			: 0n
+		if (value === 0n) return <span className="text-tertiary">—</span>
+		return (
+			<Amount.Base
+				value={value}
+				decimals={18}
+				infinite={infiniteLabel}
+				prefix="$"
+				short
+			/>
+		)
+	}
+
+	return (
+		<Amount.Base
+			value={totalValue}
+			decimals={normalizedDecimals}
+			infinite={infiniteLabel}
+			prefix="$"
+			short
+		/>
+	)
+}
+
+// Token-specific cell components that use batch data context
+function TokenTransactionTimeCell(props: {
 	hash: Hex.Hex
 	format: TimeFormat
 }) {
 	const { hash, format } = props
 	const batchData = useTransactionDataFromBatch(hash)
-	if (!batchData?.block) return placeholder
+	if (!batchData?.block?.timestamp) {
+		return <span className="text-tertiary">…</span>
+	}
 	return (
 		<TransactionTimestamp
 			timestamp={batchData.block.timestamp}
@@ -1252,31 +1461,14 @@ function TransactionTimeCellInner(props: {
 	)
 }
 
-function TransactionDescCell(props: {
-	transaction: Transaction
-	accountAddress: Address.Address
-}) {
-	return (
-		<ClientOnly fallback={placeholder}>
-			<TransactionDescCellInner {...props} />
-		</ClientOnly>
-	)
-}
-
-function TransactionDescCellInner(props: {
+function TokenTransactionDescCell(props: {
 	transaction: Transaction
 	accountAddress: Address.Address
 }) {
 	const { transaction, accountAddress } = props
-	const batchData = useTransactionDataFromBatch(transaction.hash)
-	if (!batchData) return placeholder
-	if (!batchData.knownEvents.length) {
-		const count = batchData.receipt?.logs.length ?? 0
-		return (
-			<span className="text-secondary">
-				{count === 0 ? 'No events' : `${count} events`}
-			</span>
-		)
+	const batchData = useTransactionDataFromBatch(transaction.hash as Hex.Hex)
+	if (!batchData?.knownEvents?.length) {
+		return <span className="text-secondary">…</span>
 	}
 	return (
 		<TransactionDescription
@@ -1288,23 +1480,15 @@ function TransactionDescCellInner(props: {
 	)
 }
 
-function TransactionFeeCell(props: { hash: Hex.Hex }) {
-	return (
-		<ClientOnly fallback={placeholder}>
-			<TransactionFeeCellInner {...props} />
-		</ClientOnly>
-	)
-}
-
-function TransactionFeeCellInner(props: { hash: Hex.Hex }) {
+function TokenTransactionFeeCell(props: { hash: Hex.Hex }) {
 	const batchData = useTransactionDataFromBatch(props.hash)
-	if (!batchData?.receipt) return placeholder
+	if (!batchData?.receipt) {
+		return <span className="text-tertiary">…</span>
+	}
+	const fee = batchData.receipt.gasUsed * batchData.receipt.effectiveGasPrice
 	return (
 		<span className="text-tertiary">
-			{PriceFormatter.format(
-				batchData.receipt.effectiveGasPrice * batchData.receipt.gasUsed,
-				{ decimals: 18, format: 'short' },
-			)}
+			{PriceFormatter.format(fee, { decimals: 18, format: 'short' })}
 		</span>
 	)
 }
