@@ -161,6 +161,5 @@ export declare namespace AccountCard {
 		accountType?: AccountType | undefined
 		isToken?: boolean | undefined
 		tokenName?: string | undefined
-		tokenSymbol?: string | undefined
 	}
 }
