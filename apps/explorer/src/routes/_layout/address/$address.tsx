@@ -1031,7 +1031,7 @@ function SectionsWrapper(props: {
 									pages={{ hasMore }}
 									page={page}
 									fetching={isPlaceholderData}
-									loading={!tokenTxData}
+									loading={!isMounted || !tokenTxData}
 									itemsLabel="transactions"
 									itemsPerPage={limit}
 									pagination="simple"
@@ -1094,7 +1094,7 @@ function SectionsWrapper(props: {
 								disableLastPage={countCapped}
 								page={page}
 								fetching={isPlaceholderData}
-								loading={!historyData}
+								loading={!isMounted || !historyData}
 								countLoading={totalTrxCount === undefined}
 								itemsLabel="transactions"
 								itemsPerPage={limit}
