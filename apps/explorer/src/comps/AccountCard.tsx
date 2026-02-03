@@ -21,50 +21,47 @@ export function AccountCard(props: AccountCard.Props) {
 		accountType,
 		isToken,
 		tokenName,
-		tokenSymbol,
 	} = props
 
 	const { copy, notifying } = useCopy()
 	const tag = getAccountTag(address as Address.Address)
 	const isSystem = isSystemAddress(address as Address.Address)
 
-	const titleLabel = isToken
-		? 'Token'
-		: accountType === 'contract'
-			? 'Contract'
-			: 'Address'
-	const chipLabel = isToken ? tokenSymbol : isSystem ? 'system' : 'empty'
-	const showChip = isToken || isSystem || accountType === 'empty'
+	const titleLabel = accountType === 'contract' ? 'Contract' : 'Address'
+	const chipLabel = isSystem ? 'system' : 'empty'
+	const showChip = isSystem || accountType === 'empty'
 
 	return (
 		<InfoCard
 			title={
 				<div className="flex items-center justify-between px-[18px] h-[36px] font-sans">
 					<h1 className="text-[13px] text-tertiary select-none flex items-center gap-2">
-						{isToken && tokenName && (
-							<TokenIcon
-								address={address as Address.Address}
-								name={tokenName}
-								className="size-4"
-							/>
+						{isToken && tokenName ? (
+							<>
+								<TokenIcon
+									address={address as Address.Address}
+									name={tokenName}
+									className="size-4"
+								/>
+								<span className="text-primary">{tokenName}</span>
+							</>
+						) : (
+							titleLabel
 						)}
-						{titleLabel}
 					</h1>
 					{showChip && (
 						<div
 							className="text-[11px] bg-base-alt rounded text-secondary lowercase select-none py-0.5 px-1.5 -mr-2.5 flex items-center"
 							title={
-								isToken
-									? tokenName
-									: tag
-										? tag.id.startsWith('system:')
-											? `System: ${tag.label}`
-											: tag.id.startsWith('genesis-token:')
-												? `Genesis Token: ${tag.label}`
-												: tag.label
-										: accountType === 'empty'
-											? 'Uninitialized account'
-											: undefined
+								tag
+									? tag.id.startsWith('system:')
+										? `System: ${tag.label}`
+										: tag.id.startsWith('genesis-token:')
+											? `Genesis Token: ${tag.label}`
+											: tag.label
+									: accountType === 'empty'
+										? 'Uninitialized account'
+										: undefined
 							}
 						>
 							<span>{chipLabel}</span>
