@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ClientOnly } from '@tanstack/react-router'
 import * as React from 'react'
-import type { Chain, Client, Transport } from 'viem'
-import { formatUnits } from 'viem'
+import { formatUnits, type Chain, type Client, type Transport } from 'viem'
 import {
 	useChains,
 	useClient,
@@ -137,10 +136,12 @@ function ConnectWalletInner({
 				))}
 			</div>
 		)
+	const isMainnet = chain?.id === 4217
+
 	return (
 		<div className="flex items-stretch gap-2 justify-end">
 			<ConnectedAddress />
-			<FundAccountButton />
+			{!isMainnet && <FundAccountButton />}
 			{showAddChain && !isSupported && (
 				<Button
 					className="w-fit"
