@@ -28,8 +28,9 @@ export function AccountCard(props: AccountCard.Props) {
 	const isSystem = isSystemAddress(address as Address.Address)
 
 	const titleLabel = accountType === 'contract' ? 'Contract' : 'Address'
-	const chipLabel = isSystem ? 'system' : 'empty'
-	const showChip = isSystem || accountType === 'empty'
+	const isTrulyEmpty =
+		accountType === 'empty' && !lastActivityTimestamp && !totalValue
+	const showChip = isSystem || isTrulyEmpty
 
 	return (
 		<InfoCard
@@ -59,12 +60,10 @@ export function AccountCard(props: AccountCard.Props) {
 										: tag.id.startsWith('genesis-token:')
 											? `Genesis Token: ${tag.label}`
 											: tag.label
-									: accountType === 'empty'
-										? 'Uninitialized account'
-										: undefined
+									: 'Uninitialized account'
 							}
 						>
-							<span>{chipLabel}</span>
+							<span>{isSystem ? 'system' : 'empty'}</span>
 						</div>
 					)}
 				</div>
