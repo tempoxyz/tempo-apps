@@ -261,6 +261,11 @@ export namespace PriceFormatter {
 		return amountFormatter.format(number)
 	}
 
+	export function formatAmountFull(value: string): string {
+		const number = Number(value)
+		return amountFormatter.format(number)
+	}
+
 	export function formatAmountShort(value: string): string {
 		const number = Number(value)
 		if (number > 0 && number < 0.01) return '<0.01'

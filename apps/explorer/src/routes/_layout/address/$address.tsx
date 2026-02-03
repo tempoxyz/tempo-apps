@@ -1085,7 +1085,7 @@ function AssetAmount(props: { asset: AssetData }) {
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
 		return <span className="text-tertiary">…</span>
 	const formatted = formatUnits(asset.balance, asset.metadata.decimals)
-	return <span>{PriceFormatter.formatAmountShort(formatted)}</span>
+	return <span>{PriceFormatter.formatAmountFull(formatted)}</span>
 }
 
 function AssetValue(props: { asset: AssetData }) {
