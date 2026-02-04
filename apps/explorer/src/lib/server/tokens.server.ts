@@ -5,6 +5,7 @@ import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import * as ABIS from '#lib/abis'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
+import { fetchHoldersCountCached } from '#lib/server/token.server.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 const IS = IDX.IndexSupply.create({
@@ -19,6 +20,8 @@ export type Token = {
 	name: string
 	currency: string
 	createdAt: number
+	holdersCount?: number
+	holdersCountCapped?: boolean
 }
 
 const FetchTokensInputSchema = z.object({
@@ -26,6 +29,7 @@ const FetchTokensInputSchema = z.object({
 	limit: z.coerce.number().check(z.gte(1), z.lte(100)),
 	includeCount: z.optional(z.boolean()),
 	countLimit: z.optional(z.coerce.number().check(z.gte(1))),
+	includeHolders: z.optional(z.boolean()),
 })
 
 export type TokensApiResponse = {
@@ -43,6 +47,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 			limit,
 			includeCount = false,
 			countLimit = TOKEN_COUNT_MAX,
+			includeHolders = false,
 		} = data
 
 		const config = getWagmiConfig()
@@ -75,6 +80,32 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 				: Promise.resolve(null),
 		])
 
+		const holdersCounts = new Map<string, { count: number; capped: boolean }>()
+
+		if (includeHolders && tokensResult.length > 0) {
+			const holdersResults = await mapWithConcurrency(
+				tokensResult,
+				4,
+				async (tokenRow) => {
+					try {
+						const result = await fetchHoldersCountCached(
+							tokenRow.token as Address.Address,
+							chainId,
+						)
+						return [tokenRow.token, result] as const
+					} catch (error) {
+						console.error('Failed to fetch holders count:', error)
+						return null
+					}
+				},
+			)
+
+			for (const entry of holdersResults) {
+				if (!entry) continue
+				holdersCounts.set(entry[0], entry[1])
+			}
+		}
+
 		const count = countResult?.count ?? null
 
 		return {
@@ -86,7 +117,33 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 					...rest,
 					address,
 					createdAt: Number(block_timestamp),
+					holdersCount: holdersCounts.get(address)?.count,
+					holdersCountCapped: holdersCounts.get(address)?.capped,
 				}),
 			),
 		}
 	})
+
+async function mapWithConcurrency<T, R>(
+	items: T[],
+	limit: number,
+	fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+	const results: R[] = new Array(items.length)
+	let index = 0
+
+	const workers = Array.from(
+		{ length: Math.min(limit, items.length) },
+		async () => {
+			while (true) {
+				const current = index
+				index += 1
+				if (current >= items.length) break
+				results[current] = await fn(items[current])
+			}
+		},
+	)
+
+	await Promise.all(workers)
+	return results
+}

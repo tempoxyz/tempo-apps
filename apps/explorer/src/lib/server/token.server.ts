@@ -61,6 +61,11 @@ export type TokenHoldersApiResponse = {
 	limit: number
 }
 
+export type HoldersCountResult = {
+	count: number
+	capped: boolean
+}
+
 const EMPTY_HOLDERS_RESPONSE: TokenHoldersApiResponse = {
 	holders: [],
 	total: 0,
@@ -168,6 +173,33 @@ async function fetchHoldersData(address: Address.Address, chainId: number) {
 		.filter(([, balance]) => balance > 0n)
 		.map(([holder, balance]) => ({ address: holder, balance }))
 		.sort((a, b) => (b.balance > a.balance ? 1 : -1))
+}
+
+export async function fetchHoldersCountCached(
+	address: Address.Address,
+	chainId: number,
+): Promise<HoldersCountResult> {
+	const cacheKey = `${chainId}-${address}`
+	const cached = holdersCache.get(cacheKey)
+	const now = Date.now()
+
+	let allHolders: Array<{ address: string; balance: bigint }>
+
+	if (cached && now - cached.timestamp < CACHE_TTL) {
+		allHolders = cached.data.allHolders
+	} else {
+		allHolders = await fetchHoldersData(address, chainId)
+		holdersCache.set(cacheKey, {
+			data: { allHolders },
+			timestamp: now,
+		})
+	}
+
+	const rawTotal = allHolders.length
+	const capped = rawTotal >= COUNT_CAP
+	const count = capped ? COUNT_CAP : rawTotal
+
+	return { count, capped }
 }
 
 async function fetchFirstTransferData(

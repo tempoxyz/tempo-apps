@@ -86,16 +86,23 @@ export function tokensListQueryOptions(params: {
 	page: number
 	limit: number
 	includeCount?: boolean
+	includeHolders?: boolean
 }) {
 	const offset = (params.page - 1) * params.limit
 	return queryOptions({
-		queryKey: ['tokens', params.page, params.limit],
+		queryKey: [
+			'tokens',
+			params.page,
+			params.limit,
+			params.includeHolders ?? false,
+		],
 		queryFn: () =>
 			fetchTokens({
 				data: {
 					offset,
 					limit: params.limit,
 					includeCount: params.includeCount ?? false,
+					includeHolders: params.includeHolders ?? false,
 				},
 			}),
 		placeholderData: keepPreviousData,
