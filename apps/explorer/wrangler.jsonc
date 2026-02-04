@@ -50,11 +50,6 @@
 				{
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
-					"pattern": "explorer.tempo.xyz"
-				},
-				{
-					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.42431.tempo.xyz"
 				},
 				{
