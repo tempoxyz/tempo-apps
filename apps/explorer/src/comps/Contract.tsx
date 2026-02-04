@@ -220,6 +220,7 @@ function BytecodeSection(props: { address: Address.Address }) {
 /**
  * Interact tab content - shows Read and Write contract functions
  * Supports proxy passthrough - detects proxy contracts and fetches implementation ABI
+ * Also allows interacting with the proxy contract's own functions
  */
 export function InteractTabContent(props: {
 	address: Address.Address
@@ -231,8 +232,11 @@ export function InteractTabContent(props: {
 
 	const [readExpanded, setReadExpanded] = React.useState(true)
 	const [writeExpanded, setWriteExpanded] = React.useState(true)
+	const [proxyFunctionsExpanded, setProxyFunctionsExpanded] =
+		React.useState(false)
 	const [proxyInfo, setProxyInfo] = React.useState<ProxyInfo | null>(null)
 	const [implAbi, setImplAbi] = React.useState<Abi | null>(null)
+	const [proxyAbi, setProxyAbi] = React.useState<Abi | null>(null)
 	const [isLoadingProxy, setIsLoadingProxy] = React.useState(false)
 
 	// Detect proxy and load implementation ABI
@@ -245,12 +249,14 @@ export function InteractTabContent(props: {
 				const proxy = await detectProxy(publicClient, address)
 				setProxyInfo(proxy)
 
-				// If it's a proxy and we don't have an ABI, try to fetch from implementation
-				if (proxy.isProxy && proxy.implementationAddress && !props.abi) {
-					const loadedAbi = await autoloadAbi(proxy.implementationAddress)
-					if (loadedAbi) {
-						setImplAbi(loadedAbi)
-					}
+				// If it's a proxy, load both implementation and proxy ABIs
+				if (proxy.isProxy && proxy.implementationAddress) {
+					const [loadedImplAbi, loadedProxyAbi] = await Promise.all([
+						!props.abi ? autoloadAbi(proxy.implementationAddress) : null,
+						autoloadAbi(address, { followProxies: false }),
+					])
+					if (loadedImplAbi) setImplAbi(loadedImplAbi)
+					if (loadedProxyAbi) setProxyAbi(loadedProxyAbi)
 				}
 			} catch {
 				// Ignore proxy detection errors
@@ -285,31 +291,35 @@ export function InteractTabContent(props: {
 		)
 	}
 
+	const isProxy = proxyInfo?.isProxy ?? false
+	const implementationAddress = proxyInfo?.implementationAddress
+	const hasProxyFunctions = proxyAbi && proxyAbi.length > 0
+
 	return (
 		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
 			{/* Proxy Info Banner */}
-			{proxyInfo?.isProxy && proxyInfo.implementationAddress && (
+			{isProxy && implementationAddress && (
 				<div className="flex items-center gap-[8px] px-[16px] py-[10px] bg-accent/10 border-b border-dashed border-distinct text-[13px]">
 					<span className="px-[6px] py-[2px] bg-accent/20 text-accent rounded text-[11px] font-medium">
-						{proxyInfo.type} Proxy
+						{proxyInfo?.type} Proxy
 					</span>
 					<span className="text-secondary">Implementation:</span>
 					<Link
 						to="/address/$address"
-						params={{ address: proxyInfo.implementationAddress }}
+						params={{ address: implementationAddress }}
 						search={{ tab: 'interact' }}
 						className="font-mono text-[12px] text-accent hover:underline"
 					>
-						{proxyInfo.implementationAddress.slice(0, 10)}...
-						{proxyInfo.implementationAddress.slice(-8)}
+						{implementationAddress.slice(0, 10)}...
+						{implementationAddress.slice(-8)}
 					</Link>
 				</div>
 			)}
 
-			{/* Write Contract Section */}
+			{/* Write Contract Section (Implementation functions via proxy) */}
 			<CollapsibleSection
-				first={!proxyInfo?.isProxy}
-				title="Write"
+				first={!isProxy}
+				title={isProxy ? 'Write (via Proxy)' : 'Write'}
 				expanded={writeExpanded}
 				onToggle={() => setWriteExpanded(!writeExpanded)}
 				actions={<ConnectWallet />}
@@ -319,9 +329,9 @@ export function InteractTabContent(props: {
 				</div>
 			</CollapsibleSection>
 
-			{/* Read Contract Section */}
+			{/* Read Contract Section (Implementation functions via proxy) */}
 			<CollapsibleSection
-				title="Read"
+				title={isProxy ? 'Read (via Proxy)' : 'Read'}
 				expanded={readExpanded}
 				onToggle={() => setReadExpanded(!readExpanded)}
 			>
@@ -329,6 +339,29 @@ export function InteractTabContent(props: {
 					<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
 				</div>
 			</CollapsibleSection>
+
+			{/* Proxy Contract Functions Section */}
+			{isProxy && hasProxyFunctions && (
+				<CollapsibleSection
+					title="Proxy Contract Functions"
+					expanded={proxyFunctionsExpanded}
+					onToggle={() => setProxyFunctionsExpanded(!proxyFunctionsExpanded)}
+					actions={
+						<span className="text-[11px] text-secondary">
+							Direct proxy functions
+						</span>
+					}
+				>
+					<div className="px-[10px] pb-[10px] flex flex-col gap-[12px]">
+						<div className="text-[12px] text-secondary px-[6px] py-[4px] bg-amber-500/10 rounded border border-amber-500/20">
+							These are functions defined on the proxy contract itself, not the
+							implementation.
+						</div>
+						<ContractReader address={address} abi={proxyAbi} />
+						<ContractWriter address={address} abi={proxyAbi} />
+					</div>
+				</CollapsibleSection>
+			)}
 		</div>
 	)
 }
