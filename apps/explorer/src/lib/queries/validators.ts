@@ -1,32 +1,34 @@
 import { queryOptions } from '@tanstack/react-query'
-import { Abis } from 'viem/tempo'
-import { readContract } from 'wagmi/actions'
-import { getWagmiConfig } from '#wagmi.config.ts'
 
-const VALIDATOR_CONFIG_ADDRESS =
-	'0xcccccccc00000000000000000000000000000000' as const
+const VALIDATOR_DIRECTORY_URL =
+	'https://tempo-validator-directory.porto.workers.dev'
 
 export type Validator = {
-	publicKey: `0x${string}`
-	active: boolean
-	index: bigint
 	validatorAddress: `0x${string}`
-	inboundAddress: string
-	outboundAddress: string
+	name?: string
+	publicKey?: `0x${string}`
+	active?: boolean
+}
+
+type ValidatorDirectoryResponse = {
+	network: string
+	validators: Validator[]
+	updatedAt: string | null
 }
 
 export function validatorsQueryOptions() {
 	return queryOptions({
-		queryKey: ['validators'],
+		queryKey: ['validators', 'mainnet'],
 		queryFn: async () => {
-			const config = getWagmiConfig()
-			const validators = await readContract(config, {
-				address: VALIDATOR_CONFIG_ADDRESS,
-				abi: Abis.validator,
-				functionName: 'getValidators',
-			})
+			const url = `${VALIDATOR_DIRECTORY_URL}/validators?network=mainnet`
 
-			return validators as Validator[]
+			const response = await fetch(url)
+			if (!response.ok) {
+				throw new Error(`Failed to fetch validators: ${response.status}`)
+			}
+
+			const data = (await response.json()) as ValidatorDirectoryResponse
+			return data.validators
 		},
 		staleTime: 60_000,
 	})
