@@ -6,8 +6,7 @@ import { HTTPException } from 'hono/http-exception'
 import { Actions as TempoActions } from 'wagmi/tempo'
 import { waitForTransactionReceipt } from 'wagmi/actions'
 
-import { wagmiConfig } from '#wagmi.config.ts'
-import { zAddress, zChainId } from '#utilities.ts'
+import { wagmiConfig, zAddress, zChainId } from '#wagmi.config.ts'
 
 const actionsApp = new Hono<{ Bindings: Cloudflare.Env }>()
 

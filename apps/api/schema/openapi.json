@@ -256,8 +256,8 @@
 				"required": true,
 				"schema": {
 					"type": "integer",
-					"enum": [42417, 42428, 42429, 4217],
-					"example": 42429
+					"enum": [31318, 42431, 4217],
+					"example": 42431
 				}
 			},
 			"address": {
@@ -303,7 +303,7 @@
 							"type": "integer"
 						},
 						"description": "List of supported chain IDs",
-						"example": [42417, 42428, 42429, 4217]
+						"example": [31318, 42431, 4217]
 					}
 				}
 			},
