@@ -1,4 +1,5 @@
 import { queryOptions } from '@tanstack/react-query'
+import { isTestnet } from '#lib/env'
 
 const VALIDATOR_DIRECTORY_URL =
 	'https://tempo-validator-directory.porto.workers.dev'
@@ -16,11 +17,14 @@ type ValidatorDirectoryResponse = {
 	updatedAt: string | null
 }
 
+const getValidatorNetwork = () => (isTestnet() ? 'testnet' : 'mainnet')
+
 export function validatorsQueryOptions() {
+	const network = getValidatorNetwork()
 	return queryOptions({
-		queryKey: ['validators', 'mainnet'],
+		queryKey: ['validators', network],
 		queryFn: async () => {
-			const url = `${VALIDATOR_DIRECTORY_URL}/validators?network=mainnet`
+			const url = `${VALIDATOR_DIRECTORY_URL}/validators?network=${network}`
 
 			const response = await fetch(url)
 			if (!response.ok) {
