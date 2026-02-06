@@ -1,3 +1,4 @@
+import { useRouter } from '@tanstack/react-router'
 import * as React from 'react'
 
 export function useIsMounted() {
@@ -238,5 +239,42 @@ export declare namespace usePermalinkHighlight {
 		elementId: string
 		highlightDuration?: number
 		onTargetChange?: (isTarget: boolean) => void
+	}
+}
+
+export function useRoutePrefetch(options: useRoutePrefetch.Options) {
+	const { to, params, delay, enabled = true } = options
+	const router = useRouter()
+	const prefetchDelay = delay ?? router.options.defaultPreloadDelay ?? 150
+	const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | undefined>(
+		undefined,
+	)
+
+	const cancel = React.useCallback(() => {
+		if (timeoutRef.current) {
+			clearTimeout(timeoutRef.current)
+			timeoutRef.current = undefined
+		}
+	}, [])
+
+	const prefetch = React.useCallback(() => {
+		if (!enabled) return
+		cancel()
+		timeoutRef.current = setTimeout(() => {
+			router.preloadRoute({ to, params } as never).catch(() => {})
+		}, prefetchDelay)
+	}, [enabled, cancel, router, to, params, prefetchDelay])
+
+	React.useEffect(() => cancel, [cancel])
+
+	return React.useMemo(() => ({ prefetch, cancel }), [prefetch, cancel])
+}
+
+export declare namespace useRoutePrefetch {
+	type Options = {
+		to: string
+		params: Record<string, string>
+		delay?: number
+		enabled?: boolean
 	}
 }

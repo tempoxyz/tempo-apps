@@ -1,6 +1,7 @@
 import type { Address } from 'ox'
 import * as React from 'react'
 import { isAddressEqual } from 'viem'
+import { useRoutePrefetch } from '#lib/hooks'
 
 interface AddressHighlightContextValue {
 	highlightedAddress: Address.Address | null
@@ -38,14 +39,31 @@ export function useAddressHighlight(address: Address.Address) {
 	const isHighlighted =
 		highlightedAddress !== null && isAddressEqual(highlightedAddress, address)
 
+	const { prefetch, cancel } = useRoutePrefetch({
+		to: '/address/$address',
+		params: { address },
+	})
+
 	const handlers = React.useMemo(
 		() => ({
-			onMouseEnter: () => setHighlightedAddress(address),
-			onMouseLeave: () => setHighlightedAddress(null),
-			onFocus: () => setHighlightedAddress(address),
-			onBlur: () => setHighlightedAddress(null),
+			onMouseEnter: () => {
+				setHighlightedAddress(address)
+				prefetch()
+			},
+			onMouseLeave: () => {
+				setHighlightedAddress(null)
+				cancel()
+			},
+			onFocus: () => {
+				setHighlightedAddress(address)
+				prefetch()
+			},
+			onBlur: () => {
+				setHighlightedAddress(null)
+				cancel()
+			},
 		}),
-		[address, setHighlightedAddress],
+		[address, setHighlightedAddress, prefetch, cancel],
 	)
 
 	return { isHighlighted, handlers }
