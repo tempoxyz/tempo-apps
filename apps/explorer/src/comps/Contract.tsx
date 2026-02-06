@@ -12,12 +12,27 @@ import { cx } from '#lib/css'
 import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { getContractAbi, autoloadAbi } from '#lib/domain/contracts.ts'
-import { detectProxy, type ProxyInfo } from '#lib/domain/proxy.ts'
+import {
+	detectProxy,
+	type ProxyInfo,
+	type ProxyType,
+} from '#lib/domain/proxy.ts'
 import { useCopy, useDownload } from '#lib/hooks.ts'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 import DownloadIcon from '~icons/lucide/download'
 import ExternalLinkIcon from '~icons/lucide/external-link'
+
+const proxyTypeUrls: Record<ProxyType, string> = {
+	'EIP-1967': 'https://eips.ethereum.org/EIPS/eip-1967',
+	'EIP-1822': 'https://eips.ethereum.org/EIPS/eip-1822',
+	Beacon: 'https://eips.ethereum.org/EIPS/eip-1967#beacon-contract-address',
+	Legacy: 'https://docs.openzeppelin.com/contracts/4.x/api/proxy',
+}
+
+function proxyTypeUrl(type: ProxyType | undefined): string {
+	return type ? proxyTypeUrls[type] : proxyTypeUrls['EIP-1967']
+}
 
 /**
  * Contract tab content - shows ABI and Source
@@ -303,9 +318,15 @@ export function InteractTabContent(props: {
 			{/* Proxy Info Banner */}
 			{isProxy && implementationAddress && (
 				<div className="flex items-center gap-[8px] px-[16px] py-[10px] bg-accent/10 border-b border-dashed border-distinct text-[13px]">
-					<span className="px-[6px] py-[2px] bg-accent/20 text-accent rounded text-[11px] font-medium">
+					<a
+						href={proxyTypeUrl(proxyInfo?.type)}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="inline-flex items-center gap-[4px] px-[6px] py-[2px] bg-accent/20 text-accent hover:bg-accent/30 rounded text-[11px] font-medium transition-colors"
+					>
 						{proxyInfo?.type} Proxy
-					</span>
+						<ExternalLinkIcon className="size-[10px]" />
+					</a>
 					<span className="text-secondary">Implementation:</span>
 					<Link
 						to="/address/$address"
