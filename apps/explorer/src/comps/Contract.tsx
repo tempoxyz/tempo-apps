@@ -252,7 +252,7 @@ export function InteractTabContent(props: {
 				// If it's a proxy, load both implementation and proxy ABIs
 				if (proxy.isProxy && proxy.implementationAddress) {
 					const [loadedImplAbi, loadedProxyAbi] = await Promise.all([
-						!props.abi ? autoloadAbi(proxy.implementationAddress) : null,
+						autoloadAbi(proxy.implementationAddress),
 						autoloadAbi(address, { followProxies: false }),
 					])
 					if (loadedImplAbi) setImplAbi(loadedImplAbi)
@@ -266,10 +266,13 @@ export function InteractTabContent(props: {
 		}
 
 		void loadProxyInfo()
-	}, [publicClient, address, props.abi])
+	}, [publicClient, address])
 
-	// Use implementation ABI if available, otherwise fall back to provided or registry ABI
-	const abi = props.abi ?? implAbi ?? getContractAbi(address)
+	// For proxies, prefer implementation ABI so users see callable functions
+	const abi =
+		(implAbi && implAbi.length > 0 ? implAbi : null) ??
+		props.abi ??
+		getContractAbi(address)
 
 	if (isLoadingProxy) {
 		return (
