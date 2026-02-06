@@ -52,6 +52,17 @@
 			"extensions": {
 				"chain": "tempo"
 			}
+		},
+		{
+			"name": "Edy500TOKEN",
+			"symbol": "Edy500",
+			"decimals": 9,
+			"chainId": 42431,
+			"address": "0xaFd82D507621d9eFC75a3992dA89b2dC494178b2",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42431/icons/0xafd82d507621d9efc75a3992da89b2dc494178b2.svg",
+			"extensions": {
+				"chain": "tempo"
+			}
 		}
 	]
 }
