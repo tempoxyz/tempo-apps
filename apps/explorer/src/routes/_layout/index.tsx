@@ -134,29 +134,26 @@ function Component() {
 						tabIndex={inputReady ? 0 : -1}
 						onActivate={(data) => {
 							if (data.type === 'hash') {
-								navigate({
-									to: '/receipt/$hash',
-									params: { hash: data.value },
-								})
+								navigate({ to: '/receipt/$hash', params: { hash: data.value } })
 								return
 							}
 							if (data.type === 'token') {
-								navigate({
-									to: '/token/$address',
-									params: { address: data.value },
-								})
+								navigate({ to: '/token/$address', params: { address: data.value } })
 								return
 							}
 							if (data.type === 'address') {
-								navigate({
-									to: '/address/$address',
-									params: { address: data.value },
-								})
+								navigate({ to: '/address/$address', params: { address: data.value } })
 								return
 							}
 						}}
 					/>
 				</div>
+
+				{/* --- Usage Metrics Placeholder --- */}
+				<div className="w-full my-5 px-4 flex justify-center items-center border border-dashed border-accent rounded-lg h-[100px] text-accent text-sm font-medium select-none">
+					Usage Metrics Placeholder
+				</div>
+
 				<SpotlightLinks />
 			</div>
 		</div>
@@ -169,9 +166,7 @@ function SpotlightLinks() {
 	const [menuMounted, setMenuMounted] = React.useState(false)
 	const dropdownRef = React.useRef<HTMLDivElement>(null)
 	const dropdownMenuRef = React.useRef<HTMLDivElement>(null)
-	const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
-		null,
-	)
+	const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 	const closingRef = React.useRef(false)
 	const pillsRef = React.useRef<HTMLDivElement>(null)
 	const introSeenOnMount = React.useRef(introSeen)
@@ -180,17 +175,15 @@ function SpotlightLinks() {
 		setActionOpen(false)
 		if (dropdownMenuRef.current) {
 			closingRef.current = true
-			waapi
-				.animate(dropdownMenuRef.current, {
-					opacity: [1, 0],
-					scale: [1, 0.97],
-					translateY: [0, -4],
-					ease: springInstant,
-				})
-				.then(() => {
-					if (!closingRef.current) return
-					setMenuMounted(false)
-				})
+			waapi.animate(dropdownMenuRef.current, {
+				opacity: [1, 0],
+				scale: [1, 0.97],
+				translateY: [0, -4],
+				ease: springInstant,
+			}).then(() => {
+				if (!closingRef.current) return
+				setMenuMounted(false)
+			})
 		} else {
 			setMenuMounted(false)
 		}
@@ -198,10 +191,7 @@ function SpotlightLinks() {
 
 	React.useEffect(() => {
 		function handleClickOutside(event: MouseEvent) {
-			if (
-				dropdownRef.current &&
-				!dropdownRef.current.contains(event.target as Node)
-			) {
+			if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
 				closeMenu()
 			}
 		}
@@ -258,11 +248,7 @@ function SpotlightLinks() {
 		if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
 		if (closingRef.current && dropdownMenuRef.current) {
 			closingRef.current = false
-			waapi.animate(dropdownMenuRef.current, {
-				opacity: 1,
-				scale: 1,
-				ease: springInstant,
-			})
+			waapi.animate(dropdownMenuRef.current, { opacity: 1, scale: 1, ease: springInstant })
 		}
 		setActionOpen(true)
 	}
@@ -276,7 +262,7 @@ function SpotlightLinks() {
 				{ label: 'Payment', hash: spotlightData.paymentHash },
 				{ label: 'Swap', hash: spotlightData.swapHash },
 				{ label: 'Mint', hash: spotlightData.mintHash },
-			].filter((a): a is { label: string; hash: Hex.Hex } => a.hash !== null)
+		  ].filter((a): a is { label: string; hash: Hex.Hex } => a.hash !== null)
 		: []
 
 	return (
@@ -313,17 +299,12 @@ function SpotlightLinks() {
 								Receipt
 							</SpotlightPill>
 						)}
-						{/** biome-ignore lint/a11y/noStaticElementInteractions: _ */}
 						<div
 							className="relative group-hover/pills:opacity-40 hover:opacity-100"
 							ref={dropdownRef}
 							onMouseEnter={handleMouseEnter}
 							onMouseLeave={handleMouseLeave}
-							style={{
-								opacity: 0,
-								pointerEvents: 'none',
-								zIndex: actionOpen ? 100 : 'auto',
-							}}
+							style={{ opacity: 0, pointerEvents: 'none', zIndex: actionOpen ? 100 : 'auto' }}
 						>
 							<button
 								type="button"
@@ -332,11 +313,7 @@ function SpotlightLinks() {
 							>
 								<ZapIcon className="size-[14px] text-accent" />
 								<span>Action</span>
-								<ChevronDownIcon
-									className={`size-[12px] transition-transform ${
-										actionOpen ? 'rotate-180' : ''
-									}`}
-								/>
+								<ChevronDownIcon className={`size-[12px] transition-transform ${actionOpen ? 'rotate-180' : ''}`} />
 							</button>
 							{menuMounted && (
 								<div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
@@ -354,8 +331,8 @@ function SpotlightLinks() {
 													i === 0
 														? 'rounded-l-[14px]! rounded-r-[2px]!'
 														: i === actionTypes.length - 1
-															? 'rounded-r-[14px]! rounded-l-[2px]!'
-															: 'rounded-[2px]!'
+														? 'rounded-r-[14px]! rounded-l-[2px]!'
+														: 'rounded-[2px]!'
 												}`}
 											>
 												{action.label}
@@ -367,22 +344,13 @@ function SpotlightLinks() {
 						</div>
 					</>
 				)}
-				<SpotlightPill
-					to="/blocks"
-					icon={<BoxIcon className="size-[14px] text-accent" />}
-				>
+				<SpotlightPill to="/blocks" icon={<BoxIcon className="size-[14px] text-accent" />}>
 					Blocks
 				</SpotlightPill>
-				<SpotlightPill
-					to="/tokens"
-					icon={<CoinsIcon className="size-[14px] text-accent" />}
-				>
+				<SpotlightPill to="/tokens" icon={<CoinsIcon className="size-[14px] text-accent" />}>
 					Tokens
 				</SpotlightPill>
-				<SpotlightPill
-					to="/validators"
-					icon={<ShieldCheckIcon className="size-[14px] text-accent" />}
-				>
+				<SpotlightPill to="/validators" icon={<ShieldCheckIcon className="size-[14px] text-accent" />}>
 					Validators
 				</SpotlightPill>
 			</div>
