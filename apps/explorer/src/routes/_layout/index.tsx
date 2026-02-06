@@ -9,6 +9,7 @@ import { waapi, stagger } from 'animejs'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
+import { NetworkStats } from '#comps/NetworkStats'
 import { cx } from '#lib/css'
 import { springInstant, springBouncy, springSmooth } from '#lib/animation'
 import { Intro, type IntroPhase, useIntroSeen } from '#comps/Intro'
@@ -158,6 +159,7 @@ function Component() {
 					/>
 				</div>
 				<SpotlightLinks />
+				<NetworkStats />
 			</div>
 		</div>
 	)
