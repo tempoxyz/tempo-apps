@@ -1,21 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { hasIndexSupply } from '#lib/env'
+import { fetchAddressTransfersForValue } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
-
-const TRANSFER_SIGNATURE =
-	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
 export const Route = createFileRoute('/api/address/total-value/$address')({
 	server: {
@@ -31,15 +22,11 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 					// Limit to prevent timeouts on addresses with many transfer events
 					const MAX_TRANSFERS = 10000
 
-					const result = await QB.withSignatures([TRANSFER_SIGNATURE])
-						.selectFrom('transfer')
-						.select(['address', 'from', 'to', 'tokens'])
-						.where('chain', '=', chainId)
-						.where((eb) =>
-							eb.or([eb('from', '=', address), eb('to', '=', address)]),
-						)
-						.limit(MAX_TRANSFERS)
-						.execute()
+					const result = await fetchAddressTransfersForValue(
+						address,
+						chainId,
+						MAX_TRANSFERS,
+					)
 
 					// Calculate balance per token
 					const balances = new Map<string, bigint>()

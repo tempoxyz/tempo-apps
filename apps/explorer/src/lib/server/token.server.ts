@@ -1,18 +1,16 @@
 import { createServerFn } from '@tanstack/react-start'
-import * as IDX from 'idxs'
 import type { Address, Hex } from 'ox'
-import { zeroAddress } from 'viem'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
+import {
+	fetchTokenFirstTransferTimestamp,
+	fetchTokenHolderBalances,
+	fetchTokenTransferCount,
+	fetchTokenTransfers,
+} from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config.ts'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const CACHE_TTL = 60_000
@@ -36,9 +34,6 @@ const firstTransferCache = new Map<
 		timestamp: number
 	}
 >()
-
-const TRANSFER_SIGNATURE =
-	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
 const FetchTokenHoldersInputSchema = z.object({
 	address: zAddress({ lowercase: true }),
@@ -90,7 +85,7 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 			if (cached && now - cached.timestamp < CACHE_TTL) {
 				allHolders = cached.data.allHolders
 			} else {
-				allHolders = await fetchHoldersData(data.address, chainId)
+				allHolders = await fetchTokenHolderBalances(data.address, chainId)
 
 				holdersCache.set(cacheKey, {
 					data: { allHolders },
@@ -126,55 +121,6 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 		}
 	})
 
-async function fetchHoldersData(address: Address.Address, chainId: number) {
-	// Aggregate balances directly in the indexer instead of streaming every transfer.
-	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
-
-	// Sum outgoing per holder (exclude mints from zero)
-	const outgoing = await qb
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('from').as('holder'),
-			eb.fn.sum('tokens').as('sent'),
-		])
-		.where('chain', '=', chainId)
-		.where('address', '=', address)
-		.where('from', '<>', zeroAddress)
-		.groupBy('from')
-		.execute()
-
-	// Sum incoming per holder
-	const incoming = await qb
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('to').as('holder'),
-			eb.fn.sum('tokens').as('received'),
-		])
-		.where('chain', '=', chainId)
-		.where('address', '=', address)
-		.groupBy('to')
-		.execute()
-
-	const balances = new Map<string, bigint>()
-
-	for (const row of incoming) {
-		const holder = row.holder
-		const received = BigInt(row.received)
-		balances.set(holder, (balances.get(holder) ?? 0n) + received)
-	}
-
-	for (const row of outgoing) {
-		const holder = row.holder
-		const sent = BigInt(row.sent)
-		balances.set(holder, (balances.get(holder) ?? 0n) - sent)
-	}
-
-	return Array.from(balances.entries())
-		.filter(([, balance]) => balance > 0n)
-		.map(([holder, balance]) => ({ address: holder, balance }))
-		.sort((a, b) => (b.balance > a.balance ? 1 : -1))
-}
-
 export async function fetchHoldersCountCached(
 	address: Address.Address,
 	chainId: number,
@@ -188,7 +134,7 @@ export async function fetchHoldersCountCached(
 	if (cached && now - cached.timestamp < CACHE_TTL) {
 		allHolders = cached.data.allHolders
 	} else {
-		allHolders = await fetchHoldersData(address, chainId)
+		allHolders = await fetchTokenHolderBalances(address, chainId)
 		holdersCache.set(cacheKey, {
 			data: { allHolders },
 			timestamp: now,
@@ -214,20 +160,14 @@ async function fetchFirstTransferData(
 		return cached.data
 	}
 
-	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
-
-	const firstTransfer = await qb
-		.selectFrom('transfer')
-		.select(['block_timestamp'])
-		.where('chain', '=', chainId)
-		.where('address', '=', address)
-		.orderBy('block_num', 'asc')
-		.limit(1)
-		.executeTakeFirst()
+	const firstTransferTimestamp = await fetchTokenFirstTransferTimestamp(
+		address,
+		chainId,
+	)
 
 	let created: string | null = null
-	if (firstTransfer?.block_timestamp) {
-		const date = new Date(Number(firstTransfer.block_timestamp) * 1000)
+	if (firstTransferTimestamp) {
+		const date = new Date(firstTransferTimestamp * 1000)
 		created = date.toLocaleDateString('en-US', {
 			month: 'short',
 			day: 'numeric',
@@ -312,17 +252,22 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 			const chainId = getChainId(config)
 
 			const [transfers, countResult] = await Promise.all([
-				fetchTransfersData(
+				fetchTokenTransfers(
 					data.address,
+					chainId,
 					data.limit,
 					data.offset,
-					chainId,
 					data.account,
 				).catch((error) => {
 					console.error('Failed to fetch transfers data:', error)
 					return []
 				}),
-				fetchTotalCount(data.address, chainId, data.account).catch((error) => {
+				fetchTokenTransferCount(
+					data.address,
+					chainId,
+					COUNT_CAP,
+					data.account,
+				).catch((error) => {
 					console.error('Failed to fetch transfers count:', error)
 					return { count: 0, capped: false }
 				}),
@@ -331,7 +276,7 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 			const nextOffset = data.offset + (transfers?.length ?? 0)
 
 			return {
-				transfers,
+				transfers: transfers.map(mapTransferRow),
 				total: countResult.count,
 				totalCapped: countResult.capped,
 				offset: nextOffset,
@@ -343,78 +288,23 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 		}
 	})
 
-async function fetchTransfersData(
-	address: Address.Address,
-	limit: number,
-	offset: number,
-	chainId: number,
-	account?: Address.Address,
-) {
-	let query = QB.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select([
-			'from',
-			'to',
-			'tokens',
-			'tx_hash',
-			'block_num',
-			'log_idx',
-			'block_timestamp',
-		])
-		.where('chain', '=', chainId)
-		.where('address', '=', address)
-
-	if (account) {
-		query = query.where((eb) =>
-			eb.or([eb('from', '=', account), eb('to', '=', account)]),
-		)
-	}
-
-	const result = await query
-		.orderBy('block_num', 'desc')
-		.orderBy('log_idx', 'desc')
-		.limit(limit)
-		.offset(offset)
-		.execute()
-
-	return result.map((row) => ({
-		from: row.from,
-		to: row.to,
-		value: String(row.tokens),
-		transactionHash: row.tx_hash,
-		blockNumber: String(row.block_num),
-		logIndex: Number(row.log_idx),
-		timestamp: row.block_timestamp ? String(row.block_timestamp) : null,
-	}))
-}
-
-async function fetchTotalCount(
-	address: Address.Address,
-	chainId: number,
-	account?: Address.Address,
-): Promise<{ count: number; capped: boolean }> {
-	// Count is expensive - limit to first 100k rows using subquery pattern
-	let subquery = QB.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select((eb) => eb.lit(1).as('x'))
-		.where('chain', '=', chainId)
-		.where('address', '=', address)
-
-	if (account) {
-		subquery = subquery.where((eb) =>
-			eb.or([eb('from', '=', account), eb('to', '=', account)]),
-		)
-	}
-
-	const result = await QB.selectFrom(subquery.limit(COUNT_CAP).as('subquery'))
-		.select((eb) => eb.fn.count('x').as('count'))
-		.executeTakeFirst()
-
-	const count = Number(result?.count ?? 0)
-	const capped = count >= COUNT_CAP
-
-	return { count, capped }
-}
+const mapTransferRow = (row: {
+	from: Address.Address
+	to: Address.Address
+	tokens: bigint
+	tx_hash: Hex.Hex
+	block_num: bigint
+	log_idx: number
+	block_timestamp: string | number | null
+}) => ({
+	from: row.from,
+	to: row.to,
+	value: String(row.tokens),
+	transactionHash: row.tx_hash,
+	blockNumber: String(row.block_num),
+	logIndex: Number(row.log_idx),
+	timestamp: row.block_timestamp ? String(row.block_timestamp) : null,
+})
 
 const OG_THRESHOLDS = [100, 1_000, 10_000, 100_000] as const
 
