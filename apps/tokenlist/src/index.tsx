@@ -142,7 +142,8 @@ app.get('/lists/all', async (context) => {
 		CHAIN_IDS.map((chainId) =>
 			assets
 				.fetch(new URL(`/${chainId}/tokenlist.json`, 'http://assets'))
-				.then((response) => response.json())
+				.then((response: Response) => response.json())
+					.then((list) => list as unknown as TokenListSchema)
 				.then((list) => ({ chainId, list })),
 		),
 	)

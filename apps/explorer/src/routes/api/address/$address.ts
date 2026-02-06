@@ -1,26 +1,23 @@
 import { createFileRoute } from '@tanstack/react-router'
-import * as IDX from 'idxs'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import type { RpcTransaction } from 'viem'
-import { zeroAddress } from 'viem'
 import { getBlockNumber, getCode, getTransactionReceipt } from 'viem/actions'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { getRequestURL, hasIndexSupply } from '#lib/env'
+import {
+	fetchAddressDirectTxHashes,
+	fetchAddressTransferEmittedHashes,
+	fetchAddressTransferHashes,
+	fetchContractCreationTxCandidates,
+	fetchTxDataByHashes,
+	SortDirection,
+} from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
-
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
-
-const TRANSFER_SIGNATURE =
-	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
 /**
  * Binary search to find the block where a contract was created.
@@ -85,12 +82,10 @@ async function findContractCreationTx(
 	if (!creationBlock) return null
 
 	// Query IndexSupply for contract creation txs at the creation block
-	const creationTxs = await QB.selectFrom('txs')
-		.select(['hash', 'block_num'])
-		.where('chain', '=', chainId)
-		.where('to', '=', zeroAddress)
-		.where('block_num', '=', creationBlock)
-		.execute()
+	const creationTxs = await fetchContractCreationTxCandidates(
+		chainId,
+		creationBlock,
+	)
 
 	if (creationTxs.length === 0) return null
 
@@ -165,7 +160,10 @@ export const Route = createFileRoute('/api/address/$address')({
 							: searchParams.include === 'received'
 								? 'received'
 								: 'all'
-					const sortDirection = searchParams.sort === 'asc' ? 'asc' : 'desc'
+					const sortDirection = (
+						searchParams.sort === 'asc' ? 'asc' : 'desc'
+					) as SortDirection
+					
 
 					const offset = Math.max(
 						0,
@@ -187,66 +185,20 @@ export const Route = createFileRoute('/api/address/$address')({
 
 					const fetchSize = limit + 1
 
-					// Build direct transactions query - only fetch hashes first for efficiency
-					let directTxsQuery = QB.selectFrom('txs')
-						.select(['hash', 'block_num'])
-						.where('chain', '=', chainId)
-
-					if (includeSent && includeReceived) {
-						directTxsQuery = directTxsQuery.where((eb) =>
-							eb.or([eb('from', '=', address), eb('to', '=', address)]),
-						)
-					} else if (includeSent) {
-						directTxsQuery = directTxsQuery.where('from', '=', address)
-					} else if (includeReceived) {
-						directTxsQuery = directTxsQuery.where('to', '=', address)
-					}
-
-					directTxsQuery = directTxsQuery
-						.orderBy('block_num', sortDirection)
-						.orderBy('hash', sortDirection)
-
-					// Build transfer hashes query - transfers where contract is from/to
-					let transferHashesQuery = QB.withSignatures([TRANSFER_SIGNATURE])
-						.selectFrom('transfer')
-						.select(['tx_hash', 'block_num'])
-						.distinct()
-						.where('chain', '=', chainId)
-
-					if (includeSent && includeReceived) {
-						transferHashesQuery = transferHashesQuery.where((eb) =>
-							eb.or([eb('from', '=', address), eb('to', '=', address)]),
-						)
-					} else if (includeSent) {
-						transferHashesQuery = transferHashesQuery.where(
-							'from',
-							'=',
-							address,
-						)
-					} else if (includeReceived) {
-						transferHashesQuery = transferHashesQuery.where('to', '=', address)
-					}
-
-					transferHashesQuery = transferHashesQuery
-						.orderBy('block_num', sortDirection)
-						.orderBy('tx_hash', sortDirection)
-
-					// For token contracts: also query transfers EMITTED by this contract
-					// This catches the creation tx for tokens (mint from 0x0)
-					const transferEmittedQuery = QB.withSignatures([TRANSFER_SIGNATURE])
-						.selectFrom('transfer')
-						.select(['tx_hash', 'block_num'])
-						.distinct()
-						.where('chain', '=', chainId)
-						.where('address', '=', address)
-						.orderBy('block_num', sortDirection)
-						.orderBy('tx_hash', sortDirection)
-
 					// bound fetch size to avoid huge offsets on deep pagination
 					const bufferSize = Math.min(
 						Math.max(offset + fetchSize * 5, limit * 3),
 						500,
 					)
+
+					const queryParams = {
+						address,
+						chainId,
+						includeSent,
+						includeReceived,
+						sortDirection,
+						limit: bufferSize,
+					}
 
 					// Run queries in parallel: direct txs, transfers (from/to), transfers (emitted), and contract creation
 					const [
@@ -255,12 +207,14 @@ export const Route = createFileRoute('/api/address/$address')({
 						transferEmittedResult,
 						creationTx,
 					] = await Promise.all([
-						directTxsQuery.limit(bufferSize).execute(),
-						transferHashesQuery.limit(bufferSize).execute(),
-						transferEmittedQuery
-							.limit(bufferSize)
-							.execute()
-							.catch(() => []),
+						fetchAddressDirectTxHashes(queryParams),
+						fetchAddressTransferHashes(queryParams),
+						fetchAddressTransferEmittedHashes({
+							address,
+							chainId,
+							sortDirection,
+							limit: bufferSize,
+						}).catch(() => []),
 						// Find contract creation tx (returns null for EOAs or on error)
 						findContractCreationTx(address, chainId).catch(() => null),
 					])
@@ -316,26 +270,10 @@ export const Route = createFileRoute('/api/address/$address')({
 					// Fetch full tx data only for the final set of hashes
 					let transactions: RpcTransaction[] = []
 					if (finalHashes.length > 0) {
-						const txDataResult = await QB.selectFrom('txs')
-							.select([
-								'hash',
-								'block_num',
-								'from',
-								'to',
-								'value',
-								'input',
-								'nonce',
-								'gas',
-								'gas_price',
-								'type',
-							])
-							.where('chain', '=', chainId)
-							.where(
-								'hash',
-								'in',
-								finalHashes.map((h) => h.hash),
-							)
-							.execute()
+						const txDataResult = await fetchTxDataByHashes(
+							chainId,
+							finalHashes.map((h) => h.hash),
+						)
 
 						// Re-sort to match original order
 						const txByHash = new Map(txDataResult.map((tx) => [tx.hash, tx]))

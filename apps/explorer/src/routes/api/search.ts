@@ -1,10 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
-import * as IDX from 'idxs'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import { getChainId } from 'wagmi/actions'
 import tokensIndex31318 from '#data/tokens-index-31318.json' with {
-	type: 'json',
+        type: 'json',
 }
 import tokensIndex42429 from '#data/tokens-index-42429.json' with {
 	type: 'json',
@@ -14,13 +13,8 @@ import tokensIndex42431 from '#data/tokens-index-42431.json' with {
 }
 import tokensIndex4217 from '#data/tokens-index-4217.json' with { type: 'json' }
 import { isTip20Address } from '#lib/domain/tip20'
+import { fetchTransactionTimestamp } from '#lib/server/tempo-queries'
 import { getWagmiConfig } from '#wagmi.config.ts'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
 
 export type SearchResult =
 	| {
@@ -152,19 +146,12 @@ export const Route = createFileRoute('/api/search')({
 				// hash
 				if (isHash) {
 					try {
-						const result = await QB.selectFrom('txs')
-							.select(['block_timestamp'])
-							.where('chain', '=', chainId)
-							.where('hash', '=', query)
-							.limit(1)
-							.executeTakeFirst()
+						const timestamp = await fetchTransactionTimestamp(chainId, query)
 
 						results.push({
 							type: 'transaction',
 							hash: query,
-							timestamp: result?.block_timestamp
-								? Number(result.block_timestamp)
-								: undefined,
+							timestamp,
 						})
 					} catch {
 						results.push({

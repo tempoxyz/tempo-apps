@@ -1,18 +1,14 @@
 import { createServerFn } from '@tanstack/react-start'
-import * as IDX from 'idxs'
 import type { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
-import * as ABIS from '#lib/abis'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
+import {
+	fetchTokenCreatedCount,
+	fetchTokenCreatedRows,
+} from '#lib/server/tempo-queries'
 import { fetchHoldersCountCached } from '#lib/server/token.server.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
 
 export type Token = {
 	address: Address.Address
@@ -53,30 +49,10 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 		const config = getWagmiConfig()
 		const chainId = getChainId(config)
 
-		const eventSignature = ABIS.getTokenCreatedEvent(chainId)
-
 		const [tokensResult, countResult] = await Promise.all([
-			QB.withSignatures([eventSignature])
-				.selectFrom('tokencreated')
-				.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
-				.where('chain', '=', chainId as never)
-				.orderBy('block_num', 'desc')
-				.limit(limit)
-				.offset(offset)
-				.execute(),
+			fetchTokenCreatedRows(chainId, limit, offset),
 			includeCount
-				? // count is an expensive, columnar-based query. we will count up
-					// to the first countLimit rows (default: TOKEN_COUNT_MAX)
-					QB.selectFrom(
-						QB.withSignatures([eventSignature])
-							.selectFrom('tokencreated')
-							.select((eb) => eb.lit(1).as('x'))
-							.where('chain', '=', chainId as never)
-							.limit(countLimit)
-							.as('subquery'),
-					)
-						.select((eb) => eb.fn.count('x').as('count'))
-						.executeTakeFirst()
+				? fetchTokenCreatedCount(chainId, countLimit)
 				: Promise.resolve(null),
 		])
 
@@ -106,7 +82,7 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 			}
 		}
 
-		const count = countResult?.count ?? null
+		const count = countResult ?? null
 
 		return {
 			offset,

@@ -1,7 +1,5 @@
-import * as IDX from 'idxs'
 import type * as Address from 'ox/Address'
 import * as Value from 'ox/Value'
-import { zeroAddress } from 'viem'
 import { Abis } from 'viem/tempo'
 import type { Config } from 'wagmi'
 import {
@@ -23,15 +21,21 @@ import {
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter } from '#lib/formatting'
 import {
-	type AddressOgParams,
-	buildAddressOgUrl,
-	buildTokenOgUrl,
-	buildTxOgUrl,
-	type TokenOgParams,
-	type TxOgEvent,
-	type TxOgParams,
+        type AddressOgParams,
+        buildAddressOgUrl,
+        buildTokenOgUrl,
+        buildTxOgUrl,
+        type TokenOgParams,
+        type TxOgEvent,
+        type TxOgParams,
 } from '#lib/og-params'
 import type { TxData as TxDataQuery } from '#lib/queries'
+import {
+	fetchAddressTransferActivity,
+	fetchAddressTxCounts,
+	fetchTokenFirstTransferTimestamp,
+	fetchTokenHolderBalances,
+} from '#lib/server/tempo-queries'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 // ============ Constants ============
@@ -358,14 +362,6 @@ export function buildAddressOgImageUrl(params: {
 	return buildAddressOgUrl(OG_BASE_URL, ogParams)
 }
 
-// Indexer setup for token holder queries
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-const QB = IDX.QueryBuilder.from(IS)
-const TRANSFER_SIGNATURE =
-	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
-
 // ============ Transaction OG ============
 
 interface TxData {
@@ -521,57 +517,19 @@ async function fetchTokenIndexerData(
 	address: string,
 ): Promise<{ holders: number; created: string }> {
 	try {
-		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 		const tokenAddress = address.toLowerCase() as Address.Address
-
 		const chainId = getChainId(getWagmiConfig())
 
-		const incoming = await qb
-			.selectFrom('transfer')
-			.select((eb) => [
-				eb.ref('to').as('holder'),
-				eb.fn.sum('tokens').as('received'),
-			])
-			.where('chain', '=', chainId)
-			.where('address', '=', tokenAddress)
-			.groupBy('to')
-			.execute()
+		const [balances, firstTransferTimestamp] = await Promise.all([
+			fetchTokenHolderBalances(tokenAddress, chainId),
+			fetchTokenFirstTransferTimestamp(tokenAddress, chainId),
+		])
 
-		const outgoing = await qb
-			.selectFrom('transfer')
-			.select((eb) => [
-				eb.ref('from').as('holder'),
-				eb.fn.sum('tokens').as('sent'),
-			])
-			.where('chain', '=', chainId)
-			.where('address', '=', tokenAddress)
-			.where('from', '<>', zeroAddress)
-			.groupBy('from')
-			.execute()
-
-		const balances = new Map<string, bigint>()
-		for (const row of incoming) {
-			const received = BigInt(row.received)
-			balances.set(row.holder, (balances.get(row.holder) ?? 0n) + received)
-		}
-		for (const row of outgoing) {
-			const sent = BigInt(row.sent)
-			balances.set(row.holder, (balances.get(row.holder) ?? 0n) - sent)
-		}
-		const holders = Array.from(balances.values()).filter((b) => b > 0n).length
-
-		const firstTransfer = await qb
-			.selectFrom('transfer')
-			.select(['block_timestamp'])
-			.where('chain', '=', chainId)
-			.where('address', '=', tokenAddress)
-			.orderBy('block_num', 'asc')
-			.limit(1)
-			.executeTakeFirst()
+		const holders = balances.filter((balance) => balance.balance > 0n).length
 
 		let created = '—'
-		if (firstTransfer?.block_timestamp) {
-			const date = new Date(Number(firstTransfer.block_timestamp) * 1000)
+		if (firstTransferTimestamp) {
+			const date = new Date(firstTransferTimestamp * 1000)
 			created = date.toLocaleDateString('en-US', {
 				month: 'short',
 				day: 'numeric',
@@ -734,7 +692,6 @@ interface AddressData {
 async function fetchAddressData(address: string): Promise<AddressData | null> {
 	try {
 		const tokenAddress = address.toLowerCase() as Address.Address
-		const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
 		const config = getWagmiConfig()
 		const chainId = getChainId(config)
@@ -807,22 +764,10 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 			}
 		}
 
-		const [incoming, outgoing] = await Promise.all([
-			qb
-				.selectFrom('transfer')
-				.select(['tokens', 'address', 'block_timestamp'])
-				.where('chain', '=', chainId)
-				.where('to', '=', tokenAddress)
-				.orderBy('block_timestamp', 'desc')
-				.execute(),
-			qb
-				.selectFrom('transfer')
-				.select(['tokens', 'address', 'block_timestamp'])
-				.where('chain', '=', chainId)
-				.where('from', '=', tokenAddress)
-				.orderBy('block_timestamp', 'desc')
-				.execute(),
-		])
+		const { incoming, outgoing } = await fetchAddressTransferActivity(
+			tokenAddress,
+			chainId,
+		)
 
 		const balances = new Map<string, bigint>()
 		for (const row of incoming) {
@@ -859,21 +804,8 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 
 		let txCount = 0
 		try {
-			const [txSent, txReceived] = await Promise.all([
-				qb
-					.selectFrom('txs')
-					.select((eb) => eb.fn.count('hash').as('cnt'))
-					.where('from', '=', tokenAddress)
-					.where('chain', '=', chainId)
-					.executeTakeFirst(),
-				qb
-					.selectFrom('txs')
-					.select((eb) => eb.fn.count('hash').as('cnt'))
-					.where('to', '=', tokenAddress)
-					.where('chain', '=', chainId)
-					.executeTakeFirst(),
-			])
-			txCount = Number(txSent?.cnt ?? 0) + Number(txReceived?.cnt ?? 0)
+			const txCounts = await fetchAddressTxCounts(tokenAddress, chainId)
+			txCount = txCounts.sent + txCounts.received
 		} catch {
 			txCount = incoming.length + outgoing.length
 		}

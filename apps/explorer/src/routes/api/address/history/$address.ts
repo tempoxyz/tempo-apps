@@ -1,6 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
 import type { Config } from 'wagmi'
-import * as IDX from 'idxs'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import type { Log } from 'viem'
@@ -13,22 +12,23 @@ import * as z from 'zod/mini'
 import { getRequestURL, hasIndexSupply } from '#lib/env'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { isTip20Address, type Metadata } from '#lib/domain/tip20'
+import {
+	fetchAddressDirectTxCountRows,
+	fetchAddressDirectTxHistoryRows,
+	fetchAddressTransferCountRows,
+	fetchAddressTransferEmittedCountRows,
+	fetchAddressTransferEmittedHashes,
+	fetchAddressTransferHashes,
+	fetchBasicTxDataByHashes,
+	SortDirection,
+} from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
 
 const abi = Object.values(Abis).flat()
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [100, 10]
 const HISTORY_COUNT_MAX = 100_000
-
-const TRANSFER_SIGNATURE =
-	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
 /**
  * Recursively converts BigInt values to strings for JSON serialization.
@@ -142,7 +142,9 @@ export const Route = createFileRoute('/api/address/history/$address')({
 							: searchParams.include === 'received'
 								? 'received'
 								: 'all'
-					const sortDirection = searchParams.sort === 'asc' ? 'asc' : 'desc'
+					const sortDirection = (
+						searchParams.sort === 'asc' ? 'asc' : 'desc'
+					) as SortDirection
 
 					const offset = Math.max(
 						0,
@@ -164,112 +166,19 @@ export const Route = createFileRoute('/api/address/history/$address')({
 
 					const fetchSize = limit + 1
 
-					let directTxsQuery = QB.selectFrom('txs')
-						.select(['hash', 'block_num', 'from', 'to', 'value'])
-						.where('chain', '=', chainId)
-
-					if (includeSent && includeReceived) {
-						directTxsQuery = directTxsQuery.where((eb) =>
-							eb.or([eb('from', '=', address), eb('to', '=', address)]),
-						)
-					} else if (includeSent) {
-						directTxsQuery = directTxsQuery.where('from', '=', address)
-					} else if (includeReceived) {
-						directTxsQuery = directTxsQuery.where('to', '=', address)
-					}
-
-					directTxsQuery = directTxsQuery
-						.orderBy('block_num', sortDirection)
-						.orderBy('hash', sortDirection)
-
-					let transferHashesQuery = QB.withSignatures([TRANSFER_SIGNATURE])
-						.selectFrom('transfer')
-						.select(['tx_hash', 'block_num'])
-						.distinct()
-						.where('chain', '=', chainId)
-
-					if (includeSent && includeReceived) {
-						transferHashesQuery = transferHashesQuery.where((eb) =>
-							eb.or([eb('from', '=', address), eb('to', '=', address)]),
-						)
-					} else if (includeSent) {
-						transferHashesQuery = transferHashesQuery.where(
-							'from',
-							'=',
-							address,
-						)
-					} else if (includeReceived) {
-						transferHashesQuery = transferHashesQuery.where('to', '=', address)
-					}
-
-					transferHashesQuery = transferHashesQuery
-						.orderBy('block_num', sortDirection)
-						.orderBy('tx_hash', sortDirection)
-
-					const transferEmittedQuery = QB.withSignatures([TRANSFER_SIGNATURE])
-						.selectFrom('transfer')
-						.select(['tx_hash', 'block_num'])
-						.distinct()
-						.where('chain', '=', chainId)
-						.where('address', '=', address)
-						.orderBy('block_num', sortDirection)
-						.orderBy('tx_hash', sortDirection)
-
-					let directTxsCountQuery = QB.selectFrom('txs')
-						.select((eb) => eb.ref('hash').as('hash'))
-						.where('chain', '=', chainId)
-
-					if (includeSent && includeReceived) {
-						directTxsCountQuery = directTxsCountQuery.where((eb) =>
-							eb.or([eb('from', '=', address), eb('to', '=', address)]),
-						)
-					} else if (includeSent) {
-						directTxsCountQuery = directTxsCountQuery.where(
-							'from',
-							'=',
-							address,
-						)
-					} else if (includeReceived) {
-						directTxsCountQuery = directTxsCountQuery.where('to', '=', address)
-					}
-
-					let transferHashesCountQuery = QB.withSignatures([TRANSFER_SIGNATURE])
-						.selectFrom('transfer')
-						.select((eb) => eb.ref('tx_hash').as('hash'))
-						.distinct()
-						.where('chain', '=', chainId)
-
-					if (includeSent && includeReceived) {
-						transferHashesCountQuery = transferHashesCountQuery.where((eb) =>
-							eb.or([eb('from', '=', address), eb('to', '=', address)]),
-						)
-					} else if (includeSent) {
-						transferHashesCountQuery = transferHashesCountQuery.where(
-							'from',
-							'=',
-							address,
-						)
-					} else if (includeReceived) {
-						transferHashesCountQuery = transferHashesCountQuery.where(
-							'to',
-							'=',
-							address,
-						)
-					}
-
-					const transferEmittedCountQuery = QB.withSignatures([
-						TRANSFER_SIGNATURE,
-					])
-						.selectFrom('transfer')
-						.select((eb) => eb.ref('tx_hash').as('hash'))
-						.distinct()
-						.where('chain', '=', chainId)
-						.where('address', '=', address)
-
 					const bufferSize = Math.min(
 						Math.max(offset + fetchSize * 5, limit * 3),
 						500,
 					)
+
+					const queryParams = {
+						address,
+						chainId,
+						includeSent,
+						includeReceived,
+						sortDirection,
+						limit: bufferSize,
+					}
 
 					// Build promises based on requested sources
 					type DirectRow = {
@@ -295,27 +204,44 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						transferEmittedCountResult,
 					] = await Promise.all([
 						sources.txs
-							? directTxsQuery.limit(bufferSize).execute()
+							? fetchAddressDirectTxHistoryRows(queryParams)
 							: Promise.resolve(emptyDirect),
 						sources.transfers
-							? transferHashesQuery.limit(bufferSize).execute()
+							? fetchAddressTransferHashes(queryParams)
 							: Promise.resolve(emptyTransfer),
 						sources.emitted
-							? transferEmittedQuery
-									.limit(bufferSize)
-									.execute()
+							? fetchAddressTransferEmittedHashes({
+									address,
+									chainId,
+									sortDirection,
+									limit: bufferSize,
+								})
 									.catch(() => emptyTransfer)
 							: Promise.resolve(emptyTransfer),
 						sources.txs
-							? directTxsCountQuery.limit(HISTORY_COUNT_MAX).execute()
+							? fetchAddressDirectTxCountRows({
+									address,
+									chainId,
+									includeSent,
+									includeReceived,
+									limit: HISTORY_COUNT_MAX,
+								})
 							: Promise.resolve(emptyCount),
 						sources.transfers
-							? transferHashesCountQuery.limit(HISTORY_COUNT_MAX).execute()
+							? fetchAddressTransferCountRows({
+									address,
+									chainId,
+									includeSent,
+									includeReceived,
+									limit: HISTORY_COUNT_MAX,
+								})
 							: Promise.resolve(emptyCount),
 						sources.emitted
-							? transferEmittedCountQuery
-									.limit(HISTORY_COUNT_MAX)
-									.execute()
+							? fetchAddressTransferEmittedCountRows({
+									address,
+									chainId,
+									limit: HISTORY_COUNT_MAX,
+								})
 									.catch(() => emptyCount)
 							: Promise.resolve(emptyCount),
 					])
@@ -452,15 +378,10 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						{ from: string; to: string | null; value: bigint }
 					>()
 					if (missingTxData.length > 0) {
-						const txDataResult = await QB.selectFrom('txs')
-							.select(['hash', 'from', 'to', 'value'])
-							.where('chain', '=', chainId)
-							.where(
-								'hash',
-								'in',
-								missingTxData.map((h) => h.hash),
-							)
-							.execute()
+						const txDataResult = await fetchBasicTxDataByHashes(
+							chainId,
+							missingTxData.map((h) => h.hash),
+						)
 						txDataMap = new Map(
 							txDataResult.map((tx) => [tx.hash, tx] as const),
 						)
