@@ -267,7 +267,7 @@ export function InteractTabContent(props: {
 				// If it's a proxy, load both implementation and proxy ABIs
 				if (proxy.isProxy && proxy.implementationAddress) {
 					const [loadedImplAbi, loadedProxyAbi] = await Promise.all([
-						autoloadAbi(proxy.implementationAddress),
+						autoloadAbi(proxy.implementationAddress, { followProxies: false }),
 						autoloadAbi(address, { followProxies: false }),
 					])
 					if (loadedImplAbi) setImplAbi(loadedImplAbi)

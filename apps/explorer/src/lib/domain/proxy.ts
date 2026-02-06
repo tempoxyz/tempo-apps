@@ -118,12 +118,13 @@ export async function detectProxy(
 	client: Client,
 	address: Address.Address,
 ): Promise<ProxyInfo> {
+	const [implSlotValue, beaconSlotValue, uupsSlotValue] = await Promise.all([
+		readStorageSlot(client, address, IMPLEMENTATION_SLOT),
+		readStorageSlot(client, address, BEACON_SLOT),
+		readStorageSlot(client, address, PROXIABLE_SLOT),
+	])
+
 	// 1. Check EIP-1967 implementation slot
-	const implSlotValue = await readStorageSlot(
-		client,
-		address,
-		IMPLEMENTATION_SLOT,
-	)
 	if (implSlotValue) {
 		const implAddress = extractAddressFromSlot(implSlotValue)
 		if (implAddress) {
@@ -136,35 +137,19 @@ export async function detectProxy(
 	}
 
 	// 2. Check EIP-1967 beacon slot
-	const beaconSlotValue = await readStorageSlot(client, address, BEACON_SLOT)
 	if (beaconSlotValue) {
 		const beaconAddress = extractAddressFromSlot(beaconSlotValue)
 		if (beaconAddress) {
-			// Get implementation from beacon
-			const beaconImplAddress = await tryCallImplementation(
-				client,
-				beaconAddress,
-				BEACON_IMPLEMENTATION_ABI,
-			)
-			if (beaconImplAddress) {
+			const [beaconImplAddress, altBeaconImplAddress] = await Promise.all([
+				tryCallImplementation(client, beaconAddress, BEACON_IMPLEMENTATION_ABI),
+				tryCallImplementation(client, beaconAddress, IMPLEMENTATION_ABI),
+			])
+			const resolvedAddr = beaconImplAddress ?? altBeaconImplAddress
+			if (resolvedAddr) {
 				return {
 					isProxy: true,
 					type: 'Beacon',
-					implementationAddress: beaconImplAddress,
-					beaconAddress,
-				}
-			}
-			// Try alternative beacon implementation method
-			const altBeaconImplAddress = await tryCallImplementation(
-				client,
-				beaconAddress,
-				IMPLEMENTATION_ABI,
-			)
-			if (altBeaconImplAddress) {
-				return {
-					isProxy: true,
-					type: 'Beacon',
-					implementationAddress: altBeaconImplAddress,
+					implementationAddress: resolvedAddr,
 					beaconAddress,
 				}
 			}
@@ -172,7 +157,6 @@ export async function detectProxy(
 	}
 
 	// 3. Check EIP-1822 (UUPS) slot
-	const uupsSlotValue = await readStorageSlot(client, address, PROXIABLE_SLOT)
 	if (uupsSlotValue) {
 		const implAddress = extractAddressFromSlot(uupsSlotValue)
 		if (implAddress) {
