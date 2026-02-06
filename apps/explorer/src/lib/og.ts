@@ -21,13 +21,13 @@ import {
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter } from '#lib/formatting'
 import {
-        type AddressOgParams,
-        buildAddressOgUrl,
-        buildTokenOgUrl,
-        buildTxOgUrl,
-        type TokenOgParams,
-        type TxOgEvent,
-        type TxOgParams,
+	type AddressOgParams,
+	buildAddressOgUrl,
+	buildTokenOgUrl,
+	buildTxOgUrl,
+	type TokenOgParams,
+	type TxOgEvent,
+	type TxOgParams,
 } from '#lib/og-params'
 import type { TxData as TxDataQuery } from '#lib/queries'
 import {

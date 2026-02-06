@@ -11,8 +11,8 @@ export const fetchLatestBlock = createServerFn({ method: 'GET' }).handler(
 			const config = getWagmiConfig()
 			const chainId = getChainId(config)
 
-		return await fetchLatestBlockNumber(chainId)
-	} catch (error) {
+			return await fetchLatestBlockNumber(chainId)
+		} catch (error) {
 			console.error('Failed to fetch latest block:', error)
 			return 0n
 		}

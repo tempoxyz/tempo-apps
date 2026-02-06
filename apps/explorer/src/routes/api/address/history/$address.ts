@@ -20,7 +20,7 @@ import {
 	fetchAddressTransferEmittedHashes,
 	fetchAddressTransferHashes,
 	fetchBasicTxDataByHashes,
-	SortDirection,
+	type SortDirection,
 } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
@@ -215,8 +215,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 									chainId,
 									sortDirection,
 									limit: bufferSize,
-								})
-									.catch(() => emptyTransfer)
+								}).catch(() => emptyTransfer)
 							: Promise.resolve(emptyTransfer),
 						sources.txs
 							? fetchAddressDirectTxCountRows({
@@ -241,8 +240,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 									address,
 									chainId,
 									limit: HISTORY_COUNT_MAX,
-								})
-									.catch(() => emptyCount)
+								}).catch(() => emptyCount)
 							: Promise.resolve(emptyCount),
 					])
 

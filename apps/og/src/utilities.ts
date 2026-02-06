@@ -32,15 +32,17 @@ export const toBase64DataUrl = (
 export async function loadFonts() {
 	if (fontCache) return fontCache
 	if (!fontsInFlight) {
-			fontsInFlight = Promise.all([
-				fetch(FONT_MONO_URL).then((response: Response) => response.arrayBuffer()),
-				fetch(FONT_INTER_URL).then((response: Response) => response.arrayBuffer()),
-			]).then(([mono, inter]) => {
-				fontCache = { mono, inter }
-				fontsInFlight = null
-				return fontCache
-			})
-		}
+		fontsInFlight = Promise.all([
+			fetch(FONT_MONO_URL).then((response: Response) => response.arrayBuffer()),
+			fetch(FONT_INTER_URL).then((response: Response) =>
+				response.arrayBuffer(),
+			),
+		]).then(([mono, inter]) => {
+			fontCache = { mono, inter }
+			fontsInFlight = null
+			return fontCache
+		})
+	}
 	return fontsInFlight
 }
 
@@ -50,26 +52,26 @@ export async function loadImages(env: Cloudflare.Env): Promise<ImageCache> {
 		imagesInFlight = (async () => {
 			const [bgTx, bgToken, bgAddress, bgContract, receiptLogo, nullIcon] =
 				await Promise.all([
-								env.ASSETS.fetch(
-									new Request('https://assets/bg-template-transaction.webp'),
-								).then((response: Response) => response.arrayBuffer()),
-								env.ASSETS.fetch(
-									new Request('https://assets/bg-template-token.webp'),
-								).then((response: Response) => response.arrayBuffer()),
-								env.ASSETS.fetch(
-									new Request('https://assets/bg-template-address.webp'),
-								).then((response: Response) => response.arrayBuffer()),
-								env.ASSETS.fetch(
-									new Request('https://assets/bg-template-contract.webp'),
-								).then((response: Response) => response.arrayBuffer()),
-								env.ASSETS.fetch(
-									new Request('https://assets/tempo-receipt.webp'),
-								).then((response: Response) => response.arrayBuffer()),
-								env.ASSETS.fetch(new Request('https://assets/null.webp')).then(
-									(response: Response) => response.arrayBuffer(),
-								),
-							])
-						imageCache = {
+					env.ASSETS.fetch(
+						new Request('https://assets/bg-template-transaction.webp'),
+					).then((response: Response) => response.arrayBuffer()),
+					env.ASSETS.fetch(
+						new Request('https://assets/bg-template-token.webp'),
+					).then((response: Response) => response.arrayBuffer()),
+					env.ASSETS.fetch(
+						new Request('https://assets/bg-template-address.webp'),
+					).then((response: Response) => response.arrayBuffer()),
+					env.ASSETS.fetch(
+						new Request('https://assets/bg-template-contract.webp'),
+					).then((response: Response) => response.arrayBuffer()),
+					env.ASSETS.fetch(
+						new Request('https://assets/tempo-receipt.webp'),
+					).then((response: Response) => response.arrayBuffer()),
+					env.ASSETS.fetch(new Request('https://assets/null.webp')).then(
+						(response: Response) => response.arrayBuffer(),
+					),
+				])
+			imageCache = {
 				bgTx,
 				bgToken,
 				bgAddress,

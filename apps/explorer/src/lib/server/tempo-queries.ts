@@ -219,7 +219,9 @@ export async function fetchTokenCreatedCount(
 export async function fetchTokenCreatedMetadata(
 	chainId: number,
 	tokens: Address.Address[],
-): Promise<Array<{ token: string; name: string; symbol: string; currency: string }>> {
+): Promise<
+	Array<{ token: string; name: string; symbol: string; currency: string }>
+> {
 	if (tokens.length === 0) return []
 
 	const tokenCreatedSignature =
@@ -286,7 +288,10 @@ function applyAddressDirectionFilter<TQuery>(
 export type DirectTxHashRow = { hash: Hex.Hex; block_num: bigint }
 
 export async function fetchAddressDirectTxHashes(
-	params: AddressDirectionParams & { sortDirection: SortDirection; limit: number },
+	params: AddressDirectionParams & {
+		sortDirection: SortDirection
+		limit: number
+	},
 ): Promise<DirectTxHashRow[]> {
 	let directQuery = QB.selectFrom('txs')
 		.select(['hash', 'block_num'])
@@ -310,7 +315,10 @@ export type DirectTxHistoryRow = {
 }
 
 export async function fetchAddressDirectTxHistoryRows(
-	params: AddressDirectionParams & { sortDirection: SortDirection; limit: number },
+	params: AddressDirectionParams & {
+		sortDirection: SortDirection
+		limit: number
+	},
 ): Promise<DirectTxHistoryRow[]> {
 	let directQuery = QB.selectFrom('txs')
 		.select(['hash', 'block_num', 'from', 'to', 'value'])
@@ -328,7 +336,10 @@ export async function fetchAddressDirectTxHistoryRows(
 export type TransferHashRow = { tx_hash: Hex.Hex; block_num: bigint }
 
 export async function fetchAddressTransferHashes(
-	params: AddressDirectionParams & { sortDirection: SortDirection; limit: number },
+	params: AddressDirectionParams & {
+		sortDirection: SortDirection
+		limit: number
+	},
 ): Promise<TransferHashRow[]> {
 	let transferQuery = QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
@@ -345,9 +356,12 @@ export async function fetchAddressTransferHashes(
 		.execute()
 }
 
-export async function fetchAddressTransferEmittedHashes(
-	params: { address: Address.Address; chainId: number; sortDirection: SortDirection; limit: number },
-): Promise<TransferHashRow[]> {
+export async function fetchAddressTransferEmittedHashes(params: {
+	address: Address.Address
+	chainId: number
+	sortDirection: SortDirection
+	limit: number
+}): Promise<TransferHashRow[]> {
 	return QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select(['tx_hash', 'block_num'])
@@ -390,9 +404,11 @@ export async function fetchAddressTransferCountRows(
 	return countQuery.limit(params.limit).execute()
 }
 
-export async function fetchAddressTransferEmittedCountRows(
-	params: { address: Address.Address; chainId: number; limit: number },
-): Promise<TransferCountRow[]> {
+export async function fetchAddressTransferEmittedCountRows(params: {
+	address: Address.Address
+	chainId: number
+	limit: number
+}): Promise<TransferCountRow[]> {
 	return QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select((eb) => eb.ref('tx_hash').as('hash'))
@@ -480,7 +496,9 @@ export async function fetchContractCreationTxCandidates(
 export async function fetchAddressTransferBalances(
 	address: Address.Address,
 	chainId: number,
-): Promise<Array<{ token: string; received: string | number; sent: string | number }>> {
+): Promise<
+	Array<{ token: string; received: string | number; sent: string | number }>
+> {
 	const qb = QB.withSignatures([TRANSFER_AMOUNT_SIGNATURE])
 
 	return qb
@@ -495,9 +513,7 @@ export async function fetchAddressTransferBalances(
 			),
 		])
 		.where('chain', '=', chainId)
-		.where((eb) =>
-			eb.or([eb('from', '=', address), eb('to', '=', address)]),
-		)
+		.where((eb) => eb.or([eb('from', '=', address), eb('to', '=', address)]))
 		.groupBy('address')
 		.execute()
 }
@@ -506,14 +522,14 @@ export async function fetchAddressTransfersForValue(
 	address: Address.Address,
 	chainId: number,
 	limit: number,
-): Promise<Array<{ address: string; from: string; to: string; tokens: string | number }>> {
+): Promise<
+	Array<{ address: string; from: string; to: string; tokens: string | number }>
+> {
 	const result = await QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select(['address', 'from', 'to', 'tokens'])
 		.where('chain', '=', chainId)
-		.where((eb) =>
-			eb.or([eb('from', '=', address), eb('to', '=', address)]),
-		)
+		.where((eb) => eb.or([eb('from', '=', address), eb('to', '=', address)]))
 		.limit(limit)
 		.execute()
 
@@ -534,10 +550,7 @@ export async function fetchAddressTxAggregate(
 	const result = await QB.selectFrom('txs')
 		.where('txs.chain', '=', chainId)
 		.where((wb) =>
-			wb.or([
-				wb('txs.from', '=', address),
-				wb('txs.to', '=', address),
-			]),
+			wb.or([wb('txs.from', '=', address), wb('txs.to', '=', address)]),
 		)
 		.select((sb) => [
 			sb.fn.count('txs.hash').as('count'),
@@ -580,8 +593,16 @@ export async function fetchAddressTransferActivity(
 	address: Address.Address,
 	chainId: number,
 ): Promise<{
-	incoming: Array<{ tokens: string | number; address: string; block_timestamp: string | number }>
-	outgoing: Array<{ tokens: string | number; address: string; block_timestamp: string | number }>
+	incoming: Array<{
+		tokens: string | number
+		address: string
+		block_timestamp: string | number
+	}>
+	outgoing: Array<{
+		tokens: string | number
+		address: string
+		block_timestamp: string | number
+	}>
 }> {
 	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
@@ -614,4 +635,4 @@ export async function fetchAddressTransferActivity(
 	}
 }
 
-export { SortDirection }
+export type { SortDirection }

@@ -12,7 +12,7 @@ import {
 	fetchAddressTransferHashes,
 	fetchContractCreationTxCandidates,
 	fetchTxDataByHashes,
-	SortDirection,
+	type SortDirection,
 } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
@@ -163,7 +163,6 @@ export const Route = createFileRoute('/api/address/$address')({
 					const sortDirection = (
 						searchParams.sort === 'asc' ? 'asc' : 'desc'
 					) as SortDirection
-					
 
 					const offset = Math.max(
 						0,

@@ -248,15 +248,17 @@ describe('tempo-queries', () => {
 			},
 		])
 
-		await expect(fetchTransactionTimestamp(1, '0xHash' as Hex.Hex)).resolves
-			.toBe(456)
+		await expect(
+			fetchTransactionTimestamp(1, '0xHash' as Hex.Hex),
+		).resolves.toBe(456)
 	})
 
 	it('fetchTransactionTimestamp returns undefined when missing', async () => {
 		mockQueryBuilder.setResponses([null])
 
-		await expect(fetchTransactionTimestamp(1, '0xHash' as Hex.Hex)).resolves
-			.toBeUndefined()
+		await expect(
+			fetchTransactionTimestamp(1, '0xHash' as Hex.Hex),
+		).resolves.toBeUndefined()
 	})
 
 	it('fetchLatestBlockNumber returns a bigint from the latest block row', async () => {
@@ -508,22 +510,22 @@ describe('tempo-queries', () => {
 			],
 		])
 
-		await expect(
-			fetchTxDataByHashes(1, ['0xabc' as Hex.Hex]),
-		).resolves.toEqual([
-			{
-				hash: '0xabc',
-				block_num: 1n,
-				from: '0x1111',
-				to: '0x2222',
-				value: 5n,
-				input: '0x00',
-				nonce: 1n,
-				gas: 21000n,
-				gas_price: 1n,
-				type: 0n,
-			},
-		])
+		await expect(fetchTxDataByHashes(1, ['0xabc' as Hex.Hex])).resolves.toEqual(
+			[
+				{
+					hash: '0xabc',
+					block_num: 1n,
+					from: '0x1111',
+					to: '0x2222',
+					value: 5n,
+					input: '0x00',
+					nonce: 1n,
+					gas: 21000n,
+					gas_price: 1n,
+					type: 0n,
+				},
+			],
+		)
 	})
 
 	it('fetchBasicTxDataByHashes returns empty when no hashes provided', async () => {
