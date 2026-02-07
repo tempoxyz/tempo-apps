@@ -26,15 +26,47 @@ jobs:
               "status": "running"
             }'
 
-      - name: Create fix branch
+      - name: Setup branch
+        id: branch
         run: |
-          git checkout -b checkpoint-fix/${{ github.event.client_payload.reportId }}
+          SESSION_BRANCH="${{ github.event.client_payload.sessionBranch }}"
+          if [ -n "$SESSION_BRANCH" ] && git ls-remote --exit-code --heads origin "$SESSION_BRANCH" >/dev/null 2>&1; then
+            git fetch origin "$SESSION_BRANCH"
+            git checkout "$SESSION_BRANCH"
+            echo "name=$SESSION_BRANCH" >> $GITHUB_OUTPUT
+            echo "is_new=false" >> $GITHUB_OUTPUT
+          else
+            BRANCH="checkpoint/${{ github.event.client_payload.reportId }}"
+            git checkout -b "$BRANCH"
+            echo "name=$BRANCH" >> $GITHUB_OUTPUT
+            echo "is_new=true" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Write bug context
+      - name: Write context
         run: |
           cat > /tmp/checkpoint-context.json << 'CONTEXT_EOF'
           ${{ toJSON(github.event.client_payload) }}
           CONTEXT_EOF
+
+      - name: Download screenshots
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p /tmp/checkpoint-screenshots
+          URLS=$(echo '${{ toJSON(github.event.client_payload.screenshotUrls) }}' | jq -r '.[]? | .rawUrl // empty')
+          NAMES=$(echo '${{ toJSON(github.event.client_payload.screenshotUrls) }}' | jq -r '.[]? | .name // empty')
+          if [ -n "$URLS" ]; then
+            i=1
+            while IFS= read -r url && IFS= read -r name <&3; do
+              # Gist raw URLs need auth for secret gists
+              curl -sL -H "Authorization: token $GH_TOKEN" "$url" | base64 -d > "/tmp/checkpoint-screenshots/$name" 2>/dev/null || true
+              echo "Downloaded screenshot $i: $name"
+              i=$((i+1))
+            done <<< "$URLS" 3<<< "$NAMES"
+            ls -la /tmp/checkpoint-screenshots/
+          else
+            echo "No screenshots to download"
+          fi
 
       - name: Install Amp
         run: curl -fsSL https://ampcode.com/install.sh | bash
@@ -43,17 +75,26 @@ jobs:
         env:
           AMP_API_KEY: ${{ secrets.AMP_API_KEY }}
         run: |
-          amp -x --dangerously-allow-all "You are fixing a bug reported by QA via Checkpoint. Here is the bug report:
+          SCREENSHOT_FILES=$(ls /tmp/checkpoint-screenshots/ 2>/dev/null | head -5)
+          SCREENSHOT_NOTE=""
+          if [ -n "$SCREENSHOT_FILES" ]; then
+            SCREENSHOT_NOTE="Screenshots of the element/area are in /tmp/checkpoint-screenshots/. Look at these images first to understand visually what needs to change."
+          fi
 
-          Title: ${{ github.event.client_payload.title }}
-          Description: ${{ github.event.client_payload.description }}
-          URL: ${{ github.event.client_payload.url }}
+          amp -x --dangerously-allow-all "You are an AI agent implementing a change requested via Checkpoint (a QA/feedback tool). The request may be a bug fix, a UI change, a feature tweak, content update, or any other code modification.
 
-          The full bug context (element selectors, computed styles, console errors, failed requests, DOM snapshots) is in /tmp/checkpoint-context.json. Read that file first.
+          Request: ${{ github.event.client_payload.title }}
+          Details: ${{ github.event.client_payload.description }}
+          Page URL: ${{ github.event.client_payload.url }}
 
-          Find the relevant source files using the CSS selectors and React component names from the context. Fix the bug. Do not add comments explaining the fix - just fix it."
+          ${SCREENSHOT_NOTE}
+
+          The full context (element selectors, React component names, computed styles, console errors, failed requests, DOM snapshots, screenshot annotations) is in /tmp/checkpoint-context.json. Read that file first.
+
+          Use the CSS selectors and React component names from the context to locate the relevant source files. Implement exactly what was requested - whether that is fixing a bug, removing an element, changing text, adjusting styles, or any other modification. Do not add comments explaining the change - just make it."
 
       - name: Commit and push
+        id: commit
         run: |
           git config user.name "checkpoint-bot"
           git config user.email "checkpoint@tempo.xyz"
@@ -70,20 +111,22 @@ jobs:
             exit 0
           fi
           git add -A
-          git commit -m "fix: ${{ github.event.client_payload.title }}
+          git commit -m "checkpoint: ${{ github.event.client_payload.title }}
 
           Checkpoint Report: ${{ github.event.client_payload.reportId }}
           Linear: ${{ github.event.client_payload.issueId }}"
-          git push origin checkpoint-fix/${{ github.event.client_payload.reportId }}
+          git push origin ${{ steps.branch.outputs.name }}
+          echo "pushed=true" >> $GITHUB_OUTPUT
 
       - name: Create PR
         id: create_pr
+        if: steps.commit.outputs.pushed == 'true' && steps.branch.outputs.is_new == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           PR_URL=$(gh pr create \
-            --title "fix: ${{ github.event.client_payload.title }}" \
-            --body "## Checkpoint Auto-Fix
+            --title "checkpoint: ${{ github.event.client_payload.title }}" \
+            --body "## Checkpoint AI Change
 
           **Linear:** [${{ github.event.client_payload.issueId }}](${{ github.event.client_payload.issueUrl }})
           **Report ID:** \`${{ github.event.client_payload.reportId }}\`
@@ -91,14 +134,14 @@ jobs:
 
           ---
 
-          This PR was automatically generated by [Checkpoint](https://tempo-qa.vercel.app) in response to a QA bug report.
+          This PR was automatically generated by [Checkpoint](https://tempo-qa.vercel.app) in response to a request.
 
-          ### Bug Description
+          ### Request
           ${{ github.event.client_payload.description }}
 
-          ### Screenshots
+          ### Context
           See the linked Linear issue for screenshots and element context." \
-            --head "checkpoint-fix/${{ github.event.client_payload.reportId }}" \
+            --head "${{ steps.branch.outputs.name }}" \
             --base main)
 
           PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
@@ -115,8 +158,33 @@ jobs:
               "reportId": "${{ github.event.client_payload.reportId }}",
               "status": "pr_opened",
               "prUrl": "${{ steps.create_pr.outputs.pr_url }}",
-              "prNumber": ${{ steps.create_pr.outputs.pr_number }}
+              "prNumber": ${{ steps.create_pr.outputs.pr_number }},
+              "branch": "${{ steps.branch.outputs.name }}"
             }'
+
+      - name: Notify commit added
+        if: steps.commit.outputs.pushed == 'true' && steps.branch.outputs.is_new == 'false'
+        run: |
+          curl -s -X POST "${{ github.event.client_payload.callbackUrl }}" \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${{ secrets.CHECKPOINT_SECRET }}" \
+            -d '{
+              "reportId": "${{ github.event.client_payload.reportId }}",
+              "status": "committed",
+              "branch": "${{ steps.branch.outputs.name }}"
+            }'
+
+      - name: Cleanup screenshot gist
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          GIST_ID=$(echo '${{ toJSON(github.event.client_payload.screenshotUrls) }}' | jq -r '.[0]?.gistId // empty')
+          if [ -n "$GIST_ID" ]; then
+            curl -s -X DELETE "https://api.github.com/gists/$GIST_ID" \
+              -H "Authorization: token $GH_TOKEN" || true
+            echo "Deleted gist $GIST_ID"
+          fi
 
       - name: Notify failure
         if: failure()
