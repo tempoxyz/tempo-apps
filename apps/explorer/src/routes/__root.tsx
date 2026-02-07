@@ -19,7 +19,10 @@ import { ThemeProvider } from '#lib/theme'
 import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
 import {
+	type LoaderTiming,
 	captureEvent,
+	getNavigationId,
+	nextNavigationId,
 	normalizePathPattern,
 	ProfileEvents,
 } from '#lib/profiling'
@@ -190,8 +193,6 @@ function useTTFBTiming() {
 	}, [])
 }
 
-type LoaderTiming = { duration_ms: number; route_id: string }
-
 function useLoaderTiming() {
 	const matches = useMatches()
 	const reportedRef = React.useRef<Set<string>>(new Set())
@@ -204,13 +205,15 @@ function useLoaderTiming() {
 			const timing = loaderData?.__loaderTiming
 			if (!timing) continue
 
-			const key = `${timing.route_id}-${timing.duration_ms}`
-			if (reportedRef.current.has(key)) continue
-			reportedRef.current.add(key)
+			if (reportedRef.current.has(timing.timing_id)) continue
+			reportedRef.current.add(timing.timing_id)
 
 			captureEvent(ProfileEvents.LOADER_DURATION, {
 				duration_ms: timing.duration_ms,
 				route_id: timing.route_id,
+				status: timing.status,
+				error_message: timing.error_message,
+				navigation_id: getNavigationId(),
 				path: window.location.pathname,
 				route_pattern: normalizePathPattern(window.location.pathname),
 			})
@@ -221,6 +224,7 @@ function useLoaderTiming() {
 function useFirstDrawTiming() {
 	const navigationStartRef = React.useRef<number | null>(null)
 	const previousPathRef = React.useRef<string | null>(null)
+	const navIdRef = React.useRef<number>(0)
 
 	const routerState = useRouterState({
 		select: (state) => ({
@@ -234,25 +238,30 @@ function useFirstDrawTiming() {
 		if (routerState.status === 'pending' && !navigationStartRef.current) {
 			navigationStartRef.current = performance.now()
 			previousPathRef.current = routerState.pathname
+			navIdRef.current = nextNavigationId()
 		}
 
 		// Navigation completed
 		if (routerState.status === 'idle' && navigationStartRef.current) {
-			const duration = performance.now() - navigationStartRef.current
+			const start = navigationStartRef.current
 			const fromPath = previousPathRef.current
 			const toPath = routerState.pathname
+			const navId = navIdRef.current
+
+			navigationStartRef.current = null
 
 			// Double rAF ensures the browser has actually painted
 			requestAnimationFrame(() => {
 				requestAnimationFrame(() => {
+					const duration = performance.now() - start
+
 					captureEvent(ProfileEvents.PAGE_FIRST_DRAW, {
 						duration_ms: Math.round(duration),
 						from_path: fromPath,
 						to_path: toPath,
+						navigation_id: navId,
 						route_pattern: normalizePathPattern(toPath),
 					})
-
-					navigationStartRef.current = null
 				})
 			})
 		}
