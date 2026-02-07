@@ -1,8 +1,3 @@
-type PostHogEvent = {
-	name: string
-	properties: Record<string, unknown>
-}
-
 declare global {
 	interface Window {
 		posthog?: {
@@ -11,48 +6,52 @@ declare global {
 	}
 }
 
-const eventQueue: PostHogEvent[] = []
-let isProcessingQueue = false
+let navigationId = 0
+
+export function nextNavigationId(): number {
+	return ++navigationId
+}
+
+export function getNavigationId(): number {
+	return navigationId
+}
+
+let timingCounter = 0
+
+function nextTimingId(): string {
+	return `t-${++timingCounter}-${Date.now()}`
+}
+
+const SAMPLE_RATE = 0.25
+
+function shouldSample(): boolean {
+	return Math.random() < SAMPLE_RATE
+}
 
 /**
  * Safely capture an event to PostHog.
- * Queues events if PostHog hasn't loaded yet.
+ * Drops events silently if PostHog hasn't loaded (avoids unbounded queue/polling).
  */
 export function captureEvent(
 	name: string,
 	properties: Record<string, unknown> = {},
 ) {
 	if (typeof window === 'undefined') return
+	if (!window.posthog?.capture) return
 
-	const event = { name, properties: { ...properties, timestamp: Date.now() } }
-
-	if (window.posthog?.capture) {
-		window.posthog.capture(event.name, event.properties)
-	} else {
-		eventQueue.push(event)
-		processQueue()
-	}
+	window.posthog.capture(name, { ...properties, timestamp: Date.now() })
 }
 
-function processQueue() {
-	if (isProcessingQueue) return
-	isProcessingQueue = true
-
-	const checkAndProcess = () => {
-		if (window.posthog?.capture && eventQueue.length > 0) {
-			for (const event of eventQueue) {
-				window.posthog.capture(event.name, event.properties)
-			}
-			eventQueue.length = 0
-			isProcessingQueue = false
-		} else if (eventQueue.length > 0) {
-			setTimeout(checkAndProcess, 100)
-		} else {
-			isProcessingQueue = false
-		}
-	}
-
-	checkAndProcess()
+/**
+ * Capture a sampled event — only a fraction of calls actually emit.
+ * Use for high-volume events like API_LATENCY.
+ */
+export function captureSampledEvent(
+	name: string,
+	properties: Record<string, unknown> = {},
+) {
+	if (!shouldSample()) return
+	captureEvent(name, { ...properties, sample_rate: SAMPLE_RATE })
 }
 
 export const ProfileEvents = {
@@ -70,23 +69,50 @@ export function normalizePathPattern(path: string): string {
 	return path.replace(/\/0x[a-fA-F0-9]+/g, '/:hash').replace(/\/\d+/g, '/:id')
 }
 
+export type LoaderTiming = {
+	duration_ms: number
+	route_id: string
+	timing_id: string
+	status: 'success' | 'error'
+	error_message?: string | undefined
+}
+
 /**
  * Wrap a loader function to measure its execution time.
- * Returns the original data plus `__loaderTiming` metadata.
+ * Uses performance.now() for monotonic, high-resolution timing.
+ * Captures both success and error durations.
  */
 export async function withLoaderTiming<T>(
 	routeId: string,
 	loaderFn: () => Promise<T>,
-): Promise<T & { __loaderTiming: { duration_ms: number; route_id: string } }> {
-	const start = Date.now()
-	const data = await loaderFn()
-	const duration = Date.now() - start
+): Promise<T & { __loaderTiming: LoaderTiming }> {
+	const start = performance.now()
+	let status: 'success' | 'error' = 'success'
+	let errorMessage: string | undefined
 
-	return {
-		...data,
-		__loaderTiming: {
-			duration_ms: duration,
-			route_id: routeId,
-		},
+	try {
+		const data = await loaderFn()
+		return {
+			...data,
+			__loaderTiming: {
+				duration_ms: Math.round(performance.now() - start),
+				route_id: routeId,
+				timing_id: nextTimingId(),
+				status,
+			},
+		}
+	} catch (error) {
+		status = 'error'
+		errorMessage = error instanceof Error ? error.message : String(error)
+
+		throw Object.assign(error as Error, {
+			__loaderTiming: {
+				duration_ms: Math.round(performance.now() - start),
+				route_id: routeId,
+				timing_id: nextTimingId(),
+				status,
+				error_message: errorMessage,
+			} satisfies LoaderTiming,
+		})
 	}
 }
