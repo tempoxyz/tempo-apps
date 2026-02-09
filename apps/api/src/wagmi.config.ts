@@ -17,17 +17,25 @@ export const tempoPresto = {
 	},
 } as const
 
+const batchHttp = (url: string | undefined) =>
+	http(url, { batch: { batchSize: 100, wait: 10 } })
+
 export const wagmiConfig = createConfig({
+	batch: { multicall: false },
 	chains: [tempoDevnet, tempoPresto, tempoModerato],
 	transports: {
 		[tempoModerato.id]: fallback([
-			http(
+			batchHttp(
 				process.env.TEMPO_TESTNET_RPC_URL ??
 					tempoModerato.rpcUrls.default.http.at(0),
 			),
 		]),
-		[tempoDevnet.id]: fallback([http(tempoDevnet.rpcUrls.default.http.at(0))]),
-		[tempoPresto.id]: fallback([http(tempoPresto.rpcUrls.default.http.at(0))]),
+		[tempoDevnet.id]: fallback([
+			batchHttp(tempoDevnet.rpcUrls.default.http.at(0)),
+		]),
+		[tempoPresto.id]: fallback([
+			batchHttp(tempoPresto.rpcUrls.default.http.at(0)),
+		]),
 	},
 })
 
