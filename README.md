@@ -1,4 +1,30 @@
 # Tempo Apps
+## 🚀 Quick Start
+
+To run this repo locally:
+
+1. Clone the repository
+
+   git clone https://github.com/tempoxyz/tempo-apps.git
+
+2. Change directory
+
+   cd tempo-apps
+
+3. Install dependencies
+
+   npm install
+
+4. Start the development server
+
+   npm run dev
+
+### Requirements
+
+- Node.js 16+
+- npm or yarn
+
+---
 
 Monorepo for Tempo Apps
 
