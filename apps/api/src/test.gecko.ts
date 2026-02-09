@@ -110,14 +110,48 @@ function assert(condition: boolean, msg: string) {
 }
 
 let failures = 0
-let totalRequests = 0
-let totalMs = 0
 
-function logTiming(label: string, ms: number) {
-	totalRequests++
-	totalMs += ms
+type EndpointKey = 'latest-block' | 'events' | 'pair' | 'asset'
+const endpointStats: Record<
+	EndpointKey,
+	{ count: number; totalMs: number; min: number; max: number }
+> = {
+	'latest-block': { count: 0, totalMs: 0, min: Infinity, max: 0 },
+	events: { count: 0, totalMs: 0, min: Infinity, max: 0 },
+	pair: { count: 0, totalMs: 0, min: Infinity, max: 0 },
+	asset: { count: 0, totalMs: 0, min: Infinity, max: 0 },
+}
+
+function logTiming(endpoint: EndpointKey, label: string, ms: number) {
+	const s = endpointStats[endpoint]
+	s.count++
+	s.totalMs += ms
+	s.min = Math.min(s.min, ms)
+	s.max = Math.max(s.max, ms)
 	const color = ms < 500 ? '\x1b[32m' : ms < 2000 ? '\x1b[33m' : '\x1b[31m'
 	console.log(`  ${color}${ms.toFixed(0)}ms\x1b[0m ${label}`)
+}
+
+function printLatencyStats() {
+	const totalRequests = Object.values(endpointStats).reduce(
+		(s, e) => s + e.count,
+		0,
+	)
+	const totalMs = Object.values(endpointStats).reduce(
+		(s, e) => s + e.totalMs,
+		0,
+	)
+	console.log(`\n  \x1b[1mLatency by endpoint:\x1b[0m`)
+	for (const [name, s] of Object.entries(endpointStats)) {
+		if (s.count === 0) continue
+		const avg = s.totalMs / s.count
+		console.log(
+			`    /${name.padEnd(13)} ${s.count.toString().padStart(3)} reqs | avg ${avg.toFixed(0).padStart(5)}ms | min ${s.min.toFixed(0).padStart(5)}ms | max ${s.max.toFixed(0).padStart(5)}ms`,
+		)
+	}
+	console.log(
+		`    ${'total'.padEnd(14)} ${totalRequests.toString().padStart(3)} reqs | avg ${totalRequests > 0 ? (totalMs / totalRequests).toFixed(0).padStart(5) : '    0'}ms`,
+	)
 }
 
 // ---------------------------------------------------------------------------
@@ -252,7 +286,7 @@ async function runOnce(
 		await fetchJson<LatestBlockResponse>(
 			`/gecko/latest-block?chainId=${CHAIN_ID}`,
 		)
-	logTiming('GET /gecko/latest-block', latestMs)
+	logTiming('latest-block', 'GET /gecko/latest-block', latestMs)
 	validateBlock(latestBlockRes.block, 'latestBlock')
 	const latestBlock = latestBlockRes.block.blockNumber
 
@@ -267,7 +301,11 @@ async function runOnce(
 	const { data: eventsRes, ms: eventsMs } = await fetchJson<EventsResponse>(
 		`/gecko/events?fromBlock=${fromBlock}&toBlock=${toBlock}&chainId=${CHAIN_ID}`,
 	)
-	logTiming(`GET /gecko/events (${eventsRes.events.length} events)`, eventsMs)
+	logTiming(
+		'events',
+		`GET /gecko/events (${eventsRes.events.length} events)`,
+		eventsMs,
+	)
 
 	if (eventsRes.events.length > 0) {
 		console.log(`\n  Validating ${eventsRes.events.length} events...`)
@@ -297,7 +335,7 @@ async function runOnce(
 		const { data: pairRes, ms: pairMs } = await fetchJson<PairResponse>(
 			`/gecko/pair?id=${pairId}&chainId=${CHAIN_ID}`,
 		)
-		logTiming('GET /gecko/pair', pairMs)
+		logTiming('pair', 'GET /gecko/pair', pairMs)
 		validatePair(pairRes.pair)
 		assetIds.add(pairRes.pair.asset0Id)
 		assetIds.add(pairRes.pair.asset1Id)
@@ -310,7 +348,7 @@ async function runOnce(
 		const { data: assetRes, ms: assetMs } = await fetchJson<AssetResponse>(
 			`/gecko/asset?id=${assetId}&chainId=${CHAIN_ID}`,
 		)
-		logTiming('GET /gecko/asset', assetMs)
+		logTiming('asset', 'GET /gecko/asset', assetMs)
 		validateAsset(assetRes.asset)
 	}
 
@@ -345,23 +383,23 @@ async function main() {
 		}
 
 		const iterStart = performance.now()
-		const { latestBlock, pairIds, assetIds } = await runOnce(lastSyncedBlock, seenPairs, seenAssets)
+		const { latestBlock, pairIds, assetIds } = await runOnce(
+			lastSyncedBlock,
+			seenPairs,
+			seenAssets,
+		)
 		const iterMs = performance.now() - iterStart
 
 		for (const p of pairIds) seenPairs.add(p)
 		for (const a of assetIds) seenAssets.add(a)
 		lastSyncedBlock = latestBlock
 
-		console.log(`\n--- Summary ---`)
-		console.log(`  iteration:    ${iteration}`)
+		console.log(`\n--- Summary (iteration ${iteration}) ---`)
 		console.log(`  total time:   ${iterMs.toFixed(0)}ms`)
-		console.log(`  requests:     ${totalRequests}`)
-		console.log(
-			`  avg latency:  ${totalRequests > 0 ? (totalMs / totalRequests).toFixed(0) : 0}ms`,
-		)
 		console.log(`  pairs seen:   ${seenPairs.size}`)
 		console.log(`  assets seen:  ${seenAssets.size}`)
 		console.log(`  failures:     ${failures}`)
+		printLatencyStats()
 	}
 
 	if (CONTINUOUS) {

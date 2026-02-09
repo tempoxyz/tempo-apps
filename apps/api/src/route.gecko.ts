@@ -110,36 +110,12 @@ geckoApp.get(
 		const { chainId } = context.req.valid('query')
 		const id = chainId ?? DEFAULT_CHAIN_ID
 
-		const [blocksRow, txsRow] = await Promise.all([
-			QB.selectFrom('blocks')
-				.select(['num', 'timestamp'])
-				.where('chain', '=', id)
-				.orderBy('num', 'desc')
-				.limit(1)
-				.executeTakeFirstOrThrow(),
-			QB.selectFrom('txs')
-				.select('block_num')
-				.where('chain', '=', id)
-				.orderBy('block_num', 'desc')
-				.limit(1)
-				.executeTakeFirst(),
-		])
-
-		const txsMax = txsRow?.block_num
-			? BigInt(txsRow.block_num)
-			: undefined
-		const blocksNum = BigInt(blocksRow.num)
-		const safeBlock =
-			txsMax !== undefined && txsMax < blocksNum ? txsMax : blocksNum
-
-		const block =
-			safeBlock === blocksNum
-				? blocksRow
-				: await QB.selectFrom('blocks')
-						.select(['num', 'timestamp'])
-						.where('chain', '=', id)
-						.where('num', '=', safeBlock)
-						.executeTakeFirstOrThrow()
+		const block = await QB.selectFrom('blocks')
+			.select(['num', 'timestamp'])
+			.where('chain', '=', id)
+			.orderBy('num', 'desc')
+			.limit(1)
+			.executeTakeFirstOrThrow()
 
 		return context.json({
 			block: {
@@ -316,9 +292,7 @@ geckoApp.get(
 		if (filledRows.length === 0) return context.json({ events: [] })
 
 		const uniqueOrderIds = [
-			...new Set(
-				filledRows.map((r) => BigInt(r.orderId)),
-			),
+			...new Set(filledRows.map((r) => BigInt(r.orderId))),
 		]
 		type Order = {
 			orderId: bigint
@@ -517,7 +491,7 @@ geckoApp.get(
 				.where('block_num', '>=', minBlock)
 				.where('block_num', '<=', BigInt(toBlock))
 				.execute(),
-			Promise.all(
+			Promise.allSettled(
 				uniqueTokens.map((token) =>
 					client.readContract({
 						address: token,
@@ -551,8 +525,11 @@ geckoApp.get(
 		for (let i = 0; i < uniqueTokens.length; i++) {
 			const res = initialResults[i]
 			const token = uniqueTokens[i]
-			if (res !== undefined && token)
-				initialBalances.set(token.toLowerCase(), res)
+			if (token)
+				initialBalances.set(
+					token.toLowerCase(),
+					res?.status === 'fulfilled' ? res.value : 0n,
+				)
 		}
 
 		type Delta = { block: bigint; token: string; delta: bigint }
