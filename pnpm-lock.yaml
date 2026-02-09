@@ -273,6 +273,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.2.0
+      idxs:
+        specifier: 'catalog:'
+        version: 0.0.6(typescript@5.9.3)
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

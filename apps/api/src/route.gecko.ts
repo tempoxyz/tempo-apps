@@ -1,11 +1,27 @@
 import { Hono } from 'hono'
+import * as IDX from 'idxs'
 import * as z from 'zod/mini'
 import { zValidator } from '@hono/zod-validator'
 import { getPublicClient } from 'wagmi/actions'
 import { Abis, Addresses } from 'viem/tempo'
-import { formatUnits, getAddress, type Address, type Hex } from 'viem'
+import {
+	formatUnits,
+	getAddress,
+	keccak256,
+	concat,
+	type Address,
+	type Hex,
+} from 'viem'
 
 import { wagmiConfig } from '#wagmi.config.ts'
+
+const indexer = IDX.IndexSupply.create({
+	apiKey: process.env.INDEX_SUPPLY_API_KEY,
+})
+const QB = IDX.QueryBuilder.from(indexer)
+
+const ORDER_PLACED_SIGNATURE =
+	'event OrderPlaced(uint128 indexed orderId, address indexed maker, address indexed token, uint128 amount, bool isBid, int16 tick, bool isFlipOrder, int16 flipTick)'
 
 const DEX_KEY = 'tempo-stablecoin-dex'
 const DEX_ADDRESS = Addresses.stablecoinDex as Address
@@ -25,6 +41,7 @@ const cache = {
 	decimals: new Map<string, number>(),
 	books: new Map<string, { base: Address; quote: Address }>(),
 	tickPrices: new Map<number, bigint>(),
+	quoteTokens: new Map<string, Address>(),
 	pairCreation: new Map<
 		string,
 		{
@@ -310,7 +327,7 @@ geckoApp.get(
 			remaining: bigint
 		}
 		const orderMap = new Map<string, Order>()
-		const orderSettled = await Promise.allSettled(
+		const orderResults = await Promise.allSettled(
 			uniqueOrderIds.map((orderId) =>
 				client.readContract({
 					address: DEX_ADDRESS,
@@ -320,10 +337,15 @@ geckoApp.get(
 				}),
 			),
 		)
+		const missingOrderIds: bigint[] = []
 		for (let i = 0; i < uniqueOrderIds.length; i++) {
-			const res = orderSettled[i]
+			const res = orderResults[i]
 			const oid = uniqueOrderIds[i]
-			if (res?.status !== 'fulfilled' || oid === undefined) continue
+			if (oid === undefined) continue
+			if (res?.status !== 'fulfilled') {
+				missingOrderIds.push(oid)
+				continue
+			}
 			const r = res.value
 			orderMap.set(oid.toString(), {
 				orderId: r.orderId,
@@ -336,6 +358,57 @@ geckoApp.get(
 			})
 		}
 
+		if (missingOrderIds.length > 0) {
+			const chainId = context.req.valid('query').chainId ?? DEFAULT_CHAIN_ID
+			const rows = await QB.withSignatures([ORDER_PLACED_SIGNATURE])
+				.selectFrom('orderplaced')
+				.select(['orderId', 'maker', 'token', 'amount', 'isBid', 'tick'])
+				.where('chain', '=', chainId)
+				.where('orderId', 'in', missingOrderIds)
+				.execute()
+
+			const uniqueBaseTokens = [
+				...new Set(rows.map((r) => (r.token as string).toLowerCase())),
+			]
+			const uncachedBaseTokens = uniqueBaseTokens.filter(
+				(t) => !cache.quoteTokens.has(t),
+			)
+			if (uncachedBaseTokens.length > 0) {
+				const quoteResults = await Promise.all(
+					uncachedBaseTokens.map((token) =>
+						client.readContract({
+							address: token as Address,
+							abi: Abis.tip20,
+							functionName: 'quoteToken',
+						}),
+					),
+				)
+				for (let i = 0; i < uncachedBaseTokens.length; i++) {
+					const qt = quoteResults[i]
+					const base = uncachedBaseTokens[i]
+					if (qt && base) cache.quoteTokens.set(base, qt)
+				}
+			}
+
+			for (const row of rows) {
+				const base = String(row.token).toLowerCase() as Address
+				const quote = cache.quoteTokens.get(base)
+				if (!quote) continue
+				const bookKey = keccak256(
+					concat([base as Hex, quote.toLowerCase() as Hex]),
+				)
+				orderMap.set(String(row.orderId), {
+					orderId: BigInt(row.orderId),
+					maker: String(row.maker) as Address,
+					bookKey: bookKey as Hex,
+					isBid: Boolean(row.isBid),
+					tick: Number(row.tick),
+					amount: BigInt(row.amount),
+					remaining: 0n,
+				})
+			}
+		}
+
 		const uncachedBookKeys: Hex[] = []
 		const uncachedTicks: number[] = []
 		for (const order of orderMap.values()) {
@@ -343,8 +416,8 @@ geckoApp.get(
 			if (!cache.tickPrices.has(order.tick)) uncachedTicks.push(order.tick)
 		}
 
-		const [bookSettled, tickSettled] = await Promise.all([
-			Promise.allSettled(
+		const [bookResults, tickResults] = await Promise.all([
+			Promise.all(
 				uncachedBookKeys.map((key) =>
 					client.readContract({
 						address: DEX_ADDRESS,
@@ -354,7 +427,7 @@ geckoApp.get(
 					}),
 				),
 			),
-			Promise.allSettled(
+			Promise.all(
 				uncachedTicks.map((tick) =>
 					client.readContract({
 						address: DEX_ADDRESS,
@@ -367,20 +440,20 @@ geckoApp.get(
 		])
 
 		for (let i = 0; i < uncachedBookKeys.length; i++) {
-			const res = bookSettled[i]
+			const res = bookResults[i]
 			const key = uncachedBookKeys[i]
-			if (res?.status === 'fulfilled' && key)
+			if (res && key)
 				cache.books.set(key, {
-					base: res.value.base,
-					quote: res.value.quote,
+					base: res.base,
+					quote: res.quote,
 				})
 		}
 
 		for (let i = 0; i < uncachedTicks.length; i++) {
-			const res = tickSettled[i]
+			const res = tickResults[i]
 			const tick = uncachedTicks[i]
-			if (res?.status === 'fulfilled' && tick !== undefined)
-				cache.tickPrices.set(tick, BigInt(res.value))
+			if (res !== undefined && tick !== undefined)
+				cache.tickPrices.set(tick, BigInt(res))
 		}
 
 		const tokenSet = new Set<Address>()
@@ -401,9 +474,9 @@ geckoApp.get(
 			...new Set(filledLogs.map((l) => l.blockNumber)),
 		]
 
-		const [decimalSettled, transfersTo, transfersFrom, ...blocks] =
+		const [decimalResults, transfersTo, transfersFrom, ...blocks] =
 			await Promise.all([
-				Promise.allSettled(
+				Promise.all(
 					uncachedTokens.map((token) =>
 						client.readContract({
 							address: token,
@@ -430,10 +503,10 @@ geckoApp.get(
 			])
 
 		for (let i = 0; i < uncachedTokens.length; i++) {
-			const res = decimalSettled[i]
+			const res = decimalResults[i]
 			const token = uncachedTokens[i]
-			if (res?.status === 'fulfilled' && token)
-				cache.decimals.set(token.toLowerCase(), Number(res.value))
+			if (res !== undefined && token)
+				cache.decimals.set(token.toLowerCase(), Number(res))
 		}
 
 		const blockTimestampMap = new Map<bigint, number>()
@@ -446,7 +519,7 @@ geckoApp.get(
 
 		const minBlock = uniqueBlockNumbers.reduce((a, b) => (a < b ? a : b))
 
-		const initialSettled = await Promise.allSettled(
+		const initialResults = await Promise.all(
 			uniqueTokens.map((token) =>
 				client.readContract({
 					address: token,
@@ -460,10 +533,10 @@ geckoApp.get(
 
 		const initialBalances = new Map<string, bigint>()
 		for (let i = 0; i < uniqueTokens.length; i++) {
-			const res = initialSettled[i]
+			const res = initialResults[i]
 			const token = uniqueTokens[i]
-			if (res?.status === 'fulfilled' && token)
-				initialBalances.set(token.toLowerCase(), res.value)
+			if (res !== undefined && token)
+				initialBalances.set(token.toLowerCase(), res)
 		}
 
 		type Delta = { block: bigint; token: string; delta: bigint }

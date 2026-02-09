@@ -39,6 +39,7 @@
 		"@scalar/api-reference": "^1.43.17",
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/node": "catalog:",
+		"idxs": "catalog:",
 		"typescript": "catalog:",
 		"vite": "catalog:",
 		"wrangler": "catalog:"
