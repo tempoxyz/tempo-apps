@@ -39,7 +39,7 @@
 				"TEMPO_RPC_URL": "https://rpc.testnet.tempo.xyz",
 				"ALLOWED_ORIGINS": "*",
 				"TEMPO_ENV": "testnet",
-				"POSTHOG_API_KEY": "phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR"
+				"POSTHOG_API_KEY": ""
 			},
 			"ratelimits": [
 				{
@@ -63,7 +63,7 @@
 				"TEMPO_RPC_URL": "https://rpc.testnet.tempo.xyz",
 				"ALLOWED_ORIGINS": "*",
 				"TEMPO_ENV": "testnet",
-				"POSTHOG_API_KEY": "phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR"
+				"POSTHOG_API_KEY": ""
 			},
 			"ratelimits": [
 				{
@@ -90,7 +90,7 @@
 				"TEMPO_RPC_URL": "https://rpc.devnet.tempoxyz.dev",
 				"ALLOWED_ORIGINS": "*",
 				"TEMPO_ENV": "devnet",
-				"POSTHOG_API_KEY": "phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR"
+				"POSTHOG_API_KEY": ""
 			},
 			"ratelimits": [
 				{
@@ -117,7 +117,7 @@
 				"TEMPO_RPC_URL": "https://proxy.tempo.xyz/rpc/42431",
 				"ALLOWED_ORIGINS": "*",
 				"TEMPO_ENV": "moderato",
-				"POSTHOG_API_KEY": "phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR"
+				"POSTHOG_API_KEY": ""
 			},
 			"ratelimits": [
 				{
@@ -143,7 +143,7 @@
 			"vars": {
 				"ALLOWED_ORIGINS": "*",
 				"TEMPO_ENV": "mainnet",
-				"POSTHOG_API_KEY": "phc_aNlTw2xAUQKd9zTovXeYheEUpQpEhplehCK5r1e31HR"
+				"POSTHOG_API_KEY": ""
 			},
 			"ratelimits": [
 				{
