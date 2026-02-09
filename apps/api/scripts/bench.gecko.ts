@@ -8,10 +8,11 @@
  *   4. For each new assetId → GET /gecko/asset?id=<assetId>
  *
  * Usage:
- *   npx tsx src/test.gecko.ts                          # single pass
- *   npx tsx src/test.gecko.ts --continuous              # poll every 2s like GeckoTerminal
- *   npx tsx src/test.gecko.ts --continuous --interval 5 # poll every 5s
- *   npx tsx src/test.gecko.ts --base-url http://localhost:6969
+ *   node scripts/bench.gecko.ts
+ *   node scripts/bench.gecko.ts --continuous
+ *   node scripts/bench.gecko.ts --continuous --interval 5
+ *   node scripts/bench.gecko.ts --base-url http://localhost:6969
+ *   node scripts/bench.gecko.ts --chain-id 42431
  */
 
 const BASE_URL = getArg('--base-url') ?? 'http://localhost:6969'
@@ -88,9 +89,12 @@ interface EventsResponse {
 // ---------------------------------------------------------------------------
 async function fetchJson<T>(path: string): Promise<{ data: T; ms: number }> {
 	const url = `${BASE_URL}${path}`
+	const label = `fetch ${url}`
+	console.time(label)
 	const start = performance.now()
 	const res = await fetch(url)
 	const ms = performance.now() - start
+	console.timeEnd(label)
 
 	if (!res.ok) {
 		const text = await res.text().catch(() => '')
@@ -101,12 +105,8 @@ async function fetchJson<T>(path: string): Promise<{ data: T; ms: number }> {
 }
 
 function assert(condition: boolean, msg: string) {
-	if (!condition) {
-		console.error(`  FAIL: ${msg}`)
-		failures++
-	} else {
-		console.log(`  PASS: ${msg}`)
-	}
+	console.assert(condition, msg)
+	if (!condition) failures++
 }
 
 let failures = 0
@@ -122,14 +122,12 @@ const endpointStats: Record<
 	asset: { count: 0, totalMs: 0, min: Infinity, max: 0 },
 }
 
-function logTiming(endpoint: EndpointKey, label: string, ms: number) {
+function recordTiming(endpoint: EndpointKey, ms: number) {
 	const s = endpointStats[endpoint]
 	s.count++
 	s.totalMs += ms
 	s.min = Math.min(s.min, ms)
 	s.max = Math.max(s.max, ms)
-	const color = ms < 500 ? '\x1b[32m' : ms < 2000 ? '\x1b[33m' : '\x1b[31m'
-	console.log(`  ${color}${ms.toFixed(0)}ms\x1b[0m ${label}`)
 }
 
 function printLatencyStats() {
@@ -286,7 +284,7 @@ async function runOnce(
 		await fetchJson<LatestBlockResponse>(
 			`/gecko/latest-block?chainId=${CHAIN_ID}`,
 		)
-	logTiming('latest-block', 'GET /gecko/latest-block', latestMs)
+	recordTiming('latest-block', latestMs)
 	validateBlock(latestBlockRes.block, 'latestBlock')
 	const latestBlock = latestBlockRes.block.blockNumber
 
@@ -301,11 +299,7 @@ async function runOnce(
 	const { data: eventsRes, ms: eventsMs } = await fetchJson<EventsResponse>(
 		`/gecko/events?fromBlock=${fromBlock}&toBlock=${toBlock}&chainId=${CHAIN_ID}`,
 	)
-	logTiming(
-		'events',
-		`GET /gecko/events (${eventsRes.events.length} events)`,
-		eventsMs,
-	)
+	recordTiming('events', eventsMs)
 
 	if (eventsRes.events.length > 0) {
 		console.log(`\n  Validating ${eventsRes.events.length} events...`)
@@ -335,7 +329,7 @@ async function runOnce(
 		const { data: pairRes, ms: pairMs } = await fetchJson<PairResponse>(
 			`/gecko/pair?id=${pairId}&chainId=${CHAIN_ID}`,
 		)
-		logTiming('pair', 'GET /gecko/pair', pairMs)
+		recordTiming('pair', pairMs)
 		validatePair(pairRes.pair)
 		assetIds.add(pairRes.pair.asset0Id)
 		assetIds.add(pairRes.pair.asset1Id)
@@ -348,7 +342,7 @@ async function runOnce(
 		const { data: assetRes, ms: assetMs } = await fetchJson<AssetResponse>(
 			`/gecko/asset?id=${assetId}&chainId=${CHAIN_ID}`,
 		)
-		logTiming('asset', 'GET /gecko/asset', assetMs)
+		recordTiming('asset', assetMs)
 		validateAsset(assetRes.asset)
 	}
 
@@ -382,20 +376,20 @@ async function main() {
 			console.log(`${'='.repeat(60)}`)
 		}
 
-		const iterStart = performance.now()
+		const timerLabel = `iteration ${iteration}`
+		console.time(timerLabel)
 		const { latestBlock, pairIds, assetIds } = await runOnce(
 			lastSyncedBlock,
 			seenPairs,
 			seenAssets,
 		)
-		const iterMs = performance.now() - iterStart
+		console.timeEnd(timerLabel)
 
 		for (const p of pairIds) seenPairs.add(p)
 		for (const a of assetIds) seenAssets.add(a)
 		lastSyncedBlock = latestBlock
 
 		console.log(`\n--- Summary (iteration ${iteration}) ---`)
-		console.log(`  total time:   ${iterMs.toFixed(0)}ms`)
 		console.log(`  pairs seen:   ${seenPairs.size}`)
 		console.log(`  assets seen:  ${seenAssets.size}`)
 		console.log(`  failures:     ${failures}`)
@@ -403,7 +397,6 @@ async function main() {
 	}
 
 	if (CONTINUOUS) {
-		// First run with lookback, subsequent runs poll from last synced
 		await run()
 		const loop = async () => {
 			while (true) {
