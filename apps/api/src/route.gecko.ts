@@ -14,6 +14,7 @@ import {
 } from 'viem'
 
 import { wagmiConfig } from '#wagmi.config.ts'
+import { toUnixTimestamp, computePriceNative } from '#gecko.utils.ts'
 
 const indexer = IDX.IndexSupply.create({
 	apiKey: process.env.INDEX_SUPPLY_API_KEY,
@@ -84,14 +85,6 @@ function getClient(chainId?: (typeof wagmiConfig.chains)[number]['id']) {
 	const client = getPublicClient(wagmiConfig, { chainId: id })
 	if (!client) throw new Error(`No client for chainId ${id}`)
 	return client
-}
-
-function toUnixTimestamp(value: unknown): number {
-	const s = String(value).replace(/([+-]\d{2}:\d{2}):\d{2}$/, '$1')
-	const ms = new Date(s).getTime()
-	if (!Number.isNaN(ms)) return Math.floor(ms / 1000)
-	const n = Number(value)
-	return n > 1e12 ? Math.floor(n / 1000) : Math.floor(n)
 }
 
 const geckoApp = new Hono<{ Bindings: Cloudflare.Env }>()
@@ -644,11 +637,12 @@ geckoApp.get(
 			const baseReserve = blockReserves?.get(book.base.toLowerCase()) ?? 0n
 			const quoteReserve = blockReserves?.get(book.quote.toLowerCase()) ?? 0n
 
-			const PRICE_PRECISION = 36
-			const priceBig =
-				(tickPrice * 10n ** BigInt(baseDecimals + PRICE_PRECISION)) /
-				(scale * 10n ** BigInt(quoteDecimals))
-			const priceNative = formatUnits(priceBig, PRICE_PRECISION)
+			const priceNative = computePriceNative(
+				tickPrice,
+				baseDecimals,
+				quoteDecimals,
+				scale,
+			)
 			if (tickPrice === 0n) continue
 
 			const txnIndex = txIdxMap.get(txHash.toLowerCase())

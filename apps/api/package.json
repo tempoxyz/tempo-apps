@@ -21,6 +21,7 @@
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
 		"tail": "wrangler tail",
+		"test": "vitest --run",
 		"bench:gecko": "node scripts/bench.gecko.ts",
 		"bench:gecko:continuous": "node scripts/bench.gecko.ts --continuous"
 	},
@@ -42,6 +43,7 @@
 		"idxs": "catalog:",
 		"typescript": "catalog:",
 		"vite": "catalog:",
+		"vitest": "catalog:",
 		"wrangler": "catalog:"
 	},
 	"license": "MIT"

@@ -34,7 +34,7 @@
 		},
 		"types": ["node", "@cloudflare/workers-types"]
 	},
-	"include": ["src/**/*", "scripts/**/*"],
+	"include": ["src/**/*", "scripts/**/*", "test/**/*"],
 	"files": [
 		"env.d.ts",
 		"reset.d.ts",
