@@ -596,6 +596,9 @@ geckoApp.get(
 				...(asset0Out !== undefined && { asset0Out }),
 				...(asset1Out !== undefined && { asset1Out }),
 				priceNative,
+				// NOTE: reserves reflect the DEX contract's total token balance, not
+				// per-pair liquidity. The contract doesn't expose per-pair reserves;
+				// accurate values would require scanning all tick levels per pair.
 				reserves: {
 					asset0: formatUnits(baseReserve, baseDecimals),
 					asset1: formatUnits(quoteReserve, quoteDecimals),
