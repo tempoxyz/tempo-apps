@@ -102,10 +102,10 @@ async function fetchJson<T>(path: string): Promise<{ data: T; ms: number }> {
 
 function assert(condition: boolean, msg: string) {
 	if (!condition) {
-		console.error(`  ✗ FAIL: ${msg}`)
+		console.error(`  FAIL: ${msg}`)
 		failures++
 	} else {
-		console.log(`  ✓ ${msg}`)
+		console.log(`  PASS: ${msg}`)
 	}
 }
 
