@@ -473,34 +473,51 @@ geckoApp.get(
 		const uniqueBlockNumbers = [
 			...new Set(filledLogs.map((l) => l.blockNumber)),
 		]
+		const minBlock = uniqueBlockNumbers.reduce((a, b) => (a < b ? a : b))
 
-		const [decimalResults, transfersTo, transfersFrom, ...blocks] =
-			await Promise.all([
-				Promise.all(
-					uncachedTokens.map((token) =>
-						client.readContract({
-							address: token,
-							abi: Abis.tip20,
-							functionName: 'decimals',
-						}),
-					),
+		const [
+			decimalResults,
+			transfersTo,
+			transfersFrom,
+			initialResults,
+			...blocks
+		] = await Promise.all([
+			Promise.all(
+				uncachedTokens.map((token) =>
+					client.readContract({
+						address: token,
+						abi: Abis.tip20,
+						functionName: 'decimals',
+					}),
 				),
-				client.getLogs({
-					address: uniqueTokens,
-					event: TRANSFER_EVENT,
-					args: { to: DEX_ADDRESS },
-					fromBlock: from,
-					toBlock: to,
-				}),
-				client.getLogs({
-					address: uniqueTokens,
-					event: TRANSFER_EVENT,
-					args: { from: DEX_ADDRESS },
-					fromBlock: from,
-					toBlock: to,
-				}),
-				...uniqueBlockNumbers.map((bn) => client.getBlock({ blockNumber: bn })),
-			])
+			),
+			client.getLogs({
+				address: uniqueTokens,
+				event: TRANSFER_EVENT,
+				args: { to: DEX_ADDRESS },
+				fromBlock: from,
+				toBlock: to,
+			}),
+			client.getLogs({
+				address: uniqueTokens,
+				event: TRANSFER_EVENT,
+				args: { from: DEX_ADDRESS },
+				fromBlock: from,
+				toBlock: to,
+			}),
+			Promise.all(
+				uniqueTokens.map((token) =>
+					client.readContract({
+						address: token,
+						abi: Abis.tip20,
+						functionName: 'balanceOf',
+						args: [DEX_ADDRESS],
+						blockNumber: minBlock > 0n ? minBlock - 1n : 0n,
+					}),
+				),
+			),
+			...uniqueBlockNumbers.map((bn) => client.getBlock({ blockNumber: bn })),
+		])
 
 		for (let i = 0; i < uncachedTokens.length; i++) {
 			const res = decimalResults[i]
@@ -516,20 +533,6 @@ geckoApp.get(
 			if (bn !== undefined && block)
 				blockTimestampMap.set(bn, Number(block.timestamp))
 		}
-
-		const minBlock = uniqueBlockNumbers.reduce((a, b) => (a < b ? a : b))
-
-		const initialResults = await Promise.all(
-			uniqueTokens.map((token) =>
-				client.readContract({
-					address: token,
-					abi: Abis.tip20,
-					functionName: 'balanceOf',
-					args: [DEX_ADDRESS],
-					blockNumber: minBlock > 0n ? minBlock - 1n : 0n,
-				}),
-			),
-		)
 
 		const initialBalances = new Map<string, bigint>()
 		for (let i = 0; i < uniqueTokens.length; i++) {
