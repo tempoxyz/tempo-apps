@@ -526,6 +526,8 @@ geckoApp.get(
 			const res = initialResults[i]
 			const token = uniqueTokens[i]
 			if (token)
+				// Falls back to 0 when balanceOf reverts — e.g. the token didn't
+				// exist prior to the queried block range (minBlock - 1).
 				initialBalances.set(
 					token.toLowerCase(),
 					res?.status === 'fulfilled' ? res.value : 0n,
