@@ -23,18 +23,17 @@ const QB = IDX.QueryBuilder.from(indexer)
 const ORDER_PLACED_SIGNATURE =
 	'event OrderPlaced(uint128 indexed orderId, address indexed maker, address indexed token, uint128 amount, bool isBid, int16 tick, bool isFlipOrder, int16 flipTick)'
 
+const ORDER_FILLED_SIGNATURE =
+	'event OrderFilled(uint128 indexed orderId, address indexed maker, address indexed taker, uint128 amountFilled, bool partialFill)'
+
+const TRANSFER_SIGNATURE =
+	'event Transfer(address indexed from, address indexed to, uint256 value)'
+
+const PAIR_CREATED_SIGNATURE =
+	'event PairCreated(bytes32 indexed key, address indexed base, address indexed quote)'
+
 const DEX_KEY = 'tempo-stablecoin-dex'
 const DEX_ADDRESS = Addresses.stablecoinDex as Address
-
-const TRANSFER_EVENT = {
-	name: 'Transfer',
-	type: 'event',
-	inputs: [
-		{ type: 'address', name: 'from', indexed: true },
-		{ type: 'address', name: 'to', indexed: true },
-		{ type: 'uint256', name: 'value' },
-	],
-} as const
 
 const cache = {
 	priceScale: undefined as number | undefined,
@@ -87,6 +86,14 @@ function getClient(chainId?: (typeof wagmiConfig.chains)[number]['id']) {
 	return client
 }
 
+function toUnixTimestamp(value: unknown): number {
+	const s = String(value).replace(/([+-]\d{2}:\d{2}):\d{2}$/, '$1')
+	const ms = new Date(s).getTime()
+	if (!Number.isNaN(ms)) return Math.floor(ms / 1000)
+	const n = Number(value)
+	return n > 1e12 ? Math.floor(n / 1000) : Math.floor(n)
+}
+
 const geckoApp = new Hono<{ Bindings: Cloudflare.Env }>()
 
 // ---------------------------------------------------------------------------
@@ -101,32 +108,43 @@ geckoApp.get(
 	),
 	async (context) => {
 		const { chainId } = context.req.valid('query')
-		const client = getClient(chainId)
-		const head = await client.getBlock()
+		const id = chainId ?? DEFAULT_CHAIN_ID
 
-		let blockNumber = head.number
-		for (let attempts = 0; attempts < 5; attempts++) {
-			try {
-				await client.getLogs({
-					address: DEX_ADDRESS,
-					fromBlock: blockNumber,
-					toBlock: blockNumber,
-				})
-				break
-			} catch {
-				blockNumber -= 1n
-			}
-		}
+		const [blocksRow, txsRow] = await Promise.all([
+			QB.selectFrom('blocks')
+				.select(['num', 'timestamp'])
+				.where('chain', '=', id)
+				.orderBy('num', 'desc')
+				.limit(1)
+				.executeTakeFirstOrThrow(),
+			QB.selectFrom('txs')
+				.select('block_num')
+				.where('chain', '=', id)
+				.orderBy('block_num', 'desc')
+				.limit(1)
+				.executeTakeFirst(),
+		])
+
+		const txsMax = txsRow?.block_num
+			? BigInt(txsRow.block_num)
+			: undefined
+		const blocksNum = BigInt(blocksRow.num)
+		const safeBlock =
+			txsMax !== undefined && txsMax < blocksNum ? txsMax : blocksNum
 
 		const block =
-			blockNumber === head.number
-				? head
-				: await client.getBlock({ blockNumber })
+			safeBlock === blocksNum
+				? blocksRow
+				: await QB.selectFrom('blocks')
+						.select(['num', 'timestamp'])
+						.where('chain', '=', id)
+						.where('num', '=', safeBlock)
+						.executeTakeFirstOrThrow()
 
 		return context.json({
 			block: {
-				blockNumber: Number(block.number),
-				blockTimestamp: Number(block.timestamp),
+				blockNumber: Number(block.num),
+				blockTimestamp: toUnixTimestamp(block.timestamp),
 			},
 		})
 	},
@@ -207,35 +225,24 @@ geckoApp.get(
 			cache.books.set(pairKey, bookRes)
 		}
 
+		const cid = chainId ?? DEFAULT_CHAIN_ID
 		let creation = cache.pairCreation.get(pairKey)
 		if (!creation) {
-			const logs = await client
-				.getLogs({
-					address: DEX_ADDRESS,
-					event: {
-						name: 'PairCreated',
-						type: 'event',
-						inputs: [
-							{ type: 'bytes32', name: 'key', indexed: true },
-							{ type: 'address', name: 'base', indexed: true },
-							{ type: 'address', name: 'quote', indexed: true },
-						],
-					} as const,
-					args: { key: pairKey },
-					fromBlock: 0n,
-					toBlock: 'latest',
-				})
-				.catch(() => [])
+			const row = await QB.withSignatures([PAIR_CREATED_SIGNATURE])
+				.selectFrom('paircreated')
+				.select(['block_num', 'block_timestamp', 'tx_hash'])
+				.where('chain', '=', cid)
+				.where('address', '=', DEX_ADDRESS)
+				.where('key', '=', pairKey)
+				.orderBy('block_num', 'asc')
+				.limit(1)
+				.executeTakeFirst()
 
-			const log = logs[0]
-			if (log) {
-				const block = await client.getBlock({
-					blockNumber: log.blockNumber,
-				})
+			if (row) {
 				creation = {
-					blockNumber: Number(log.blockNumber),
-					blockTimestamp: Number(block.timestamp),
-					txnHash: log.transactionHash,
+					blockNumber: Number(row.block_num),
+					blockTimestamp: toUnixTimestamp(row.block_timestamp),
+					txnHash: String(row.tx_hash),
 				}
 				cache.pairCreation.set(pairKey, creation)
 			}
@@ -274,13 +281,7 @@ geckoApp.get(
 	async (context) => {
 		const { fromBlock, toBlock, chainId } = context.req.valid('query')
 		const client = getClient(chainId)
-
-		const latestBlock = await client.getBlock()
-		const from = BigInt(fromBlock)
-		const to =
-			BigInt(toBlock) > latestBlock.number
-				? latestBlock.number
-				: BigInt(toBlock)
+		const cid = chainId ?? DEFAULT_CHAIN_ID
 
 		if (!cache.priceScale) {
 			cache.priceScale = await client.readContract({
@@ -291,30 +292,32 @@ geckoApp.get(
 		}
 		const priceScale = cache.priceScale
 
-		const filledLogs = await client.getLogs({
-			address: DEX_ADDRESS,
-			event: {
-				name: 'OrderFilled',
-				type: 'event',
-				inputs: [
-					{ type: 'uint128', name: 'orderId', indexed: true },
-					{ type: 'address', name: 'maker', indexed: true },
-					{ type: 'address', name: 'taker', indexed: true },
-					{ type: 'uint128', name: 'amountFilled' },
-					{ type: 'bool', name: 'partialFill' },
-				],
-			} as const,
-			fromBlock: from,
-			toBlock: to,
-		})
+		const filledRows = await QB.withSignatures([ORDER_FILLED_SIGNATURE])
+			.selectFrom('orderfilled')
+			.select([
+				'orderId',
+				'maker',
+				'taker',
+				'amountFilled',
+				'partialFill',
+				'block_num',
+				'block_timestamp',
+				'tx_hash',
+				'log_idx',
+			])
+			.where('chain', '=', cid)
+			.where('address', '=', DEX_ADDRESS)
+			.where('block_num', '>=', BigInt(fromBlock))
+			.where('block_num', '<=', BigInt(toBlock))
+			.orderBy('block_num', 'asc')
+			.orderBy('log_idx', 'asc')
+			.execute()
 
-		if (filledLogs.length === 0) return context.json({ events: [] })
+		if (filledRows.length === 0) return context.json({ events: [] })
 
 		const uniqueOrderIds = [
 			...new Set(
-				filledLogs.flatMap((l) =>
-					l.args.orderId !== undefined ? [l.args.orderId] : [],
-				),
+				filledRows.map((r) => BigInt(r.orderId)),
 			),
 		]
 		type Order = {
@@ -359,11 +362,10 @@ geckoApp.get(
 		}
 
 		if (missingOrderIds.length > 0) {
-			const chainId = context.req.valid('query').chainId ?? DEFAULT_CHAIN_ID
 			const rows = await QB.withSignatures([ORDER_PLACED_SIGNATURE])
 				.selectFrom('orderplaced')
 				.select(['orderId', 'maker', 'token', 'amount', 'isBid', 'tick'])
-				.where('chain', '=', chainId)
+				.where('chain', '=', cid)
 				.where('orderId', 'in', missingOrderIds)
 				.execute()
 
@@ -471,16 +473,22 @@ geckoApp.get(
 		)
 
 		const uniqueBlockNumbers = [
-			...new Set(filledLogs.map((l) => l.blockNumber)),
+			...new Set(filledRows.map((r) => BigInt(r.block_num))),
 		]
 		const minBlock = uniqueBlockNumbers.reduce((a, b) => (a < b ? a : b))
+
+		const transferQB = QB.withSignatures([TRANSFER_SIGNATURE])
+
+		const uniqueTxHashes = [
+			...new Set(filledRows.map((r) => String(r.tx_hash) as Hex)),
+		]
 
 		const [
 			decimalResults,
 			transfersTo,
 			transfersFrom,
 			initialResults,
-			...blocks
+			txIdxRows,
 		] = await Promise.all([
 			Promise.all(
 				uncachedTokens.map((token) =>
@@ -491,20 +499,24 @@ geckoApp.get(
 					}),
 				),
 			),
-			client.getLogs({
-				address: uniqueTokens,
-				event: TRANSFER_EVENT,
-				args: { to: DEX_ADDRESS },
-				fromBlock: from,
-				toBlock: to,
-			}),
-			client.getLogs({
-				address: uniqueTokens,
-				event: TRANSFER_EVENT,
-				args: { from: DEX_ADDRESS },
-				fromBlock: from,
-				toBlock: to,
-			}),
+			transferQB
+				.selectFrom('transfer')
+				.select(['from', 'to', 'value', 'address', 'block_num'])
+				.where('chain', '=', cid)
+				.where('to', '=', DEX_ADDRESS)
+				.where('address', 'in', uniqueTokens)
+				.where('block_num', '>=', minBlock)
+				.where('block_num', '<=', BigInt(toBlock))
+				.execute(),
+			transferQB
+				.selectFrom('transfer')
+				.select(['from', 'to', 'value', 'address', 'block_num'])
+				.where('chain', '=', cid)
+				.where('from', '=', DEX_ADDRESS)
+				.where('address', 'in', uniqueTokens)
+				.where('block_num', '>=', minBlock)
+				.where('block_num', '<=', BigInt(toBlock))
+				.execute(),
 			Promise.all(
 				uniqueTokens.map((token) =>
 					client.readContract({
@@ -516,22 +528,23 @@ geckoApp.get(
 					}),
 				),
 			),
-			...uniqueBlockNumbers.map((bn) => client.getBlock({ blockNumber: bn })),
+			QB.selectFrom('txs')
+				.select(['hash', 'idx'])
+				.where('chain', '=', cid)
+				.where('hash', 'in', uniqueTxHashes)
+				.execute(),
 		])
+
+		const txIdxMap = new Map<string, number>()
+		for (const row of txIdxRows) {
+			txIdxMap.set(String(row.hash).toLowerCase(), Number(row.idx))
+		}
 
 		for (let i = 0; i < uncachedTokens.length; i++) {
 			const res = decimalResults[i]
 			const token = uncachedTokens[i]
 			if (res !== undefined && token)
 				cache.decimals.set(token.toLowerCase(), Number(res))
-		}
-
-		const blockTimestampMap = new Map<bigint, number>()
-		for (let i = 0; i < uniqueBlockNumbers.length; i++) {
-			const bn = uniqueBlockNumbers[i]
-			const block = blocks[i]
-			if (bn !== undefined && block)
-				blockTimestampMap.set(bn, Number(block.timestamp))
 		}
 
 		const initialBalances = new Map<string, bigint>()
@@ -544,20 +557,20 @@ geckoApp.get(
 
 		type Delta = { block: bigint; token: string; delta: bigint }
 		const deltas: Delta[] = []
-		for (const log of transfersTo) {
-			if (log.args.value === undefined || !log.address) continue
+		for (const row of transfersTo) {
+			if (!row.value || !row.address) continue
 			deltas.push({
-				block: log.blockNumber,
-				token: log.address.toLowerCase(),
-				delta: log.args.value,
+				block: BigInt(row.block_num),
+				token: String(row.address).toLowerCase(),
+				delta: BigInt(row.value),
 			})
 		}
-		for (const log of transfersFrom) {
-			if (log.args.value === undefined || !log.address) continue
+		for (const row of transfersFrom) {
+			if (!row.value || !row.address) continue
 			deltas.push({
-				block: log.blockNumber,
-				token: log.address.toLowerCase(),
-				delta: -log.args.value,
+				block: BigInt(row.block_num),
+				token: String(row.address).toLowerCase(),
+				delta: -BigInt(row.value),
 			})
 		}
 		deltas.sort((a, b) => Number(a.block - b.block))
@@ -602,13 +615,13 @@ geckoApp.get(
 
 		const txEventCounters = new Map<string, number>()
 
-		for (const log of filledLogs) {
-			const { orderId, taker, amountFilled } = log.args
-			if (!orderId || !taker || amountFilled === undefined) continue
-			if (log.transactionIndex === null || log.logIndex === null) continue
-
-			const blockTimestamp = blockTimestampMap.get(log.blockNumber)
-			if (blockTimestamp === undefined) continue
+		for (const row of filledRows) {
+			const orderId = BigInt(row.orderId)
+			const taker = getAddress(String(row.taker))
+			const amountFilled = BigInt(row.amountFilled)
+			const blockNum = BigInt(row.block_num)
+			const blockTimestamp = toUnixTimestamp(row.block_timestamp)
+			const txHash = String(row.tx_hash)
 
 			const order = orderMap.get(orderId.toString())
 			if (!order) continue
@@ -648,28 +661,30 @@ geckoApp.get(
 				asset1In = quoteAmountDec
 			}
 
-			const blockReserves = blockReserveMap.get(log.blockNumber)
+			const blockReserves = blockReserveMap.get(blockNum)
 			const baseReserve = blockReserves?.get(book.base.toLowerCase()) ?? 0n
 			const quoteReserve = blockReserves?.get(book.quote.toLowerCase()) ?? 0n
 
-			const baseDecNum = Number.parseFloat(baseAmountDec)
-			const priceNative =
-				baseDecNum > 0
-					? (Number.parseFloat(quoteAmountDec) / baseDecNum).toPrecision(18)
-					: '0'
+			const PRICE_PRECISION = 36
+			const priceBig =
+				(tickPrice * 10n ** BigInt(baseDecimals + PRICE_PRECISION)) /
+				(scale * 10n ** BigInt(quoteDecimals))
+			const priceNative = formatUnits(priceBig, PRICE_PRECISION)
+			if (tickPrice === 0n) continue
 
-			const txKey = `${log.blockNumber}:${log.transactionIndex}`
-			const eventIndex = txEventCounters.get(txKey) ?? 0
-			txEventCounters.set(txKey, eventIndex + 1)
+			const txnIndex = txIdxMap.get(txHash.toLowerCase())
+			if (txnIndex === undefined) continue
+			const eventIndex = txEventCounters.get(txHash) ?? 0
+			txEventCounters.set(txHash, eventIndex + 1)
 
 			events.push({
 				block: {
-					blockNumber: Number(log.blockNumber),
+					blockNumber: Number(blockNum),
 					blockTimestamp,
 				},
 				eventType: 'swap',
-				txnId: log.transactionHash,
-				txnIndex: log.transactionIndex,
+				txnId: txHash,
+				txnIndex,
 				eventIndex,
 				maker: taker,
 				pairId: order.bookKey,
@@ -687,13 +702,6 @@ geckoApp.get(
 				},
 			})
 		}
-
-		events.sort((a, b) => {
-			if (a.block.blockNumber !== b.block.blockNumber)
-				return a.block.blockNumber - b.block.blockNumber
-			if (a.txnIndex !== b.txnIndex) return a.txnIndex - b.txnIndex
-			return a.eventIndex - b.eventIndex
-		})
 
 		return context.json({ events })
 	},

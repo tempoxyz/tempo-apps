@@ -234,7 +234,11 @@ function validateEventUniqueness(events: SwapEvent[]) {
 // ---------------------------------------------------------------------------
 // Test flow
 // ---------------------------------------------------------------------------
-async function runOnce(lastSyncedBlock: number): Promise<{
+async function runOnce(
+	lastSyncedBlock: number,
+	seenPairs: Set<string>,
+	seenAssets: Set<string>,
+): Promise<{
 	latestBlock: number
 	pairIds: Set<string>
 	assetIds: Set<string>
@@ -288,6 +292,7 @@ async function runOnce(lastSyncedBlock: number): Promise<{
 
 	// Step 3: For each new pair → GET /gecko/pair
 	for (const pairId of pairIds) {
+		if (seenPairs.has(pairId)) continue
 		console.log(`\n--- /gecko/pair?id=${pairId.slice(0, 18)}... ---`)
 		const { data: pairRes, ms: pairMs } = await fetchJson<PairResponse>(
 			`/gecko/pair?id=${pairId}&chainId=${CHAIN_ID}`,
@@ -300,6 +305,7 @@ async function runOnce(lastSyncedBlock: number): Promise<{
 
 	// Step 4: For each new asset → GET /gecko/asset
 	for (const assetId of assetIds) {
+		if (seenAssets.has(assetId)) continue
 		console.log(`\n--- /gecko/asset?id=${assetId} ---`)
 		const { data: assetRes, ms: assetMs } = await fetchJson<AssetResponse>(
 			`/gecko/asset?id=${assetId}&chainId=${CHAIN_ID}`,
@@ -339,7 +345,7 @@ async function main() {
 		}
 
 		const iterStart = performance.now()
-		const { latestBlock, pairIds, assetIds } = await runOnce(lastSyncedBlock)
+		const { latestBlock, pairIds, assetIds } = await runOnce(lastSyncedBlock, seenPairs, seenAssets)
 		const iterMs = performance.now() - iterStart
 
 		for (const p of pairIds) seenPairs.add(p)
