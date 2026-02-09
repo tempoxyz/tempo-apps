@@ -21,7 +21,10 @@ export const wagmiConfig = createConfig({
 	chains: [tempoDevnet, tempoPresto, tempoModerato],
 	transports: {
 		[tempoModerato.id]: fallback([
-			http(tempoModerato.rpcUrls.default.http.at(0)),
+			http(
+				process.env.TEMPO_TESTNET_RPC_URL ??
+					tempoModerato.rpcUrls.default.http.at(0),
+			),
 		]),
 		[tempoDevnet.id]: fallback([http(tempoDevnet.rpcUrls.default.http.at(0))]),
 		[tempoPresto.id]: fallback([http(tempoPresto.rpcUrls.default.http.at(0))]),

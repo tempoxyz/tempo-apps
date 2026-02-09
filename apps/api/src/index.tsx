@@ -5,6 +5,7 @@ import { showRoutes } from 'hono/dev'
 import { Docs } from '#route.docs.tsx'
 import { wagmiConfig } from '#wagmi.config.ts'
 import { actionsApp } from '#route.actions.tsx'
+import { geckoApp } from '#route.gecko.ts'
 import OpenAPISpec from '#schema/openapi.json' with { type: 'json' }
 
 const app = new Hono<{ Bindings: Cloudflare.Env }>()
@@ -33,6 +34,7 @@ app
 	.get('/schema/openapi.json', (context) => context.json(OpenAPISpec))
 
 app.route('/actions', actionsApp)
+app.route('/gecko', geckoApp)
 
 if (process.env.NODE_ENV === 'development') showRoutes(app)
 
