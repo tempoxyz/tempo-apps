@@ -3,6 +3,12 @@ import * as React from 'react'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import { useCopy } from '#lib/hooks'
+import {
+	captureEvent,
+	getNavigationId,
+	normalizePathPattern,
+	ProfileEvents,
+} from '#lib/profiling'
 import CopyIcon from '~icons/lucide/copy'
 
 export class ErrorBoundary extends React.Component<
@@ -19,6 +25,19 @@ export class ErrorBoundary extends React.Component<
 	componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
 		this.setState({ error })
 		console.error(error, errorInfo)
+
+		captureEvent(ProfileEvents.ERROR, {
+			error_type: 'react_error_boundary',
+			message: error.message,
+			stack: error.stack?.slice(0, 1000),
+			component_stack: errorInfo.componentStack?.slice(0, 1000),
+			path: typeof window !== 'undefined' ? window.location.pathname : '',
+			route_pattern:
+				typeof window !== 'undefined'
+					? normalizePathPattern(window.location.pathname)
+					: '',
+			navigation_id: getNavigationId(),
+		})
 	}
 
 	render() {
