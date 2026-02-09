@@ -524,6 +524,8 @@ geckoApp.get(
 		}
 		const events: SwapEvent[] = []
 
+		const txEventCounters = new Map<string, number>()
+
 		for (const log of filledLogs) {
 			const { orderId, taker, amountFilled } = log.args
 			if (!orderId || !taker || amountFilled === undefined) continue
@@ -580,6 +582,10 @@ geckoApp.get(
 					? (Number.parseFloat(quoteAmountDec) / baseDecNum).toPrecision(18)
 					: '0'
 
+			const txKey = `${log.blockNumber}:${log.transactionIndex}`
+			const eventIndex = txEventCounters.get(txKey) ?? 0
+			txEventCounters.set(txKey, eventIndex + 1)
+
 			events.push({
 				block: {
 					blockNumber: Number(log.blockNumber),
@@ -588,7 +594,7 @@ geckoApp.get(
 				eventType: 'swap',
 				txnId: log.transactionHash,
 				txnIndex: log.transactionIndex,
-				eventIndex: log.logIndex,
+				eventIndex,
 				maker: taker,
 				pairId: order.bookKey,
 				...(asset0In !== undefined && { asset0In }),
