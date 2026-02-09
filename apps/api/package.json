@@ -21,8 +21,8 @@
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
 		"tail": "wrangler tail",
-		"test:gecko": "tsx src/test.gecko.ts",
-		"test:gecko:continuous": "tsx src/test.gecko.ts --continuous"
+		"test:gecko": "tsx test/test.gecko.ts",
+		"test:gecko:continuous": "tsx test/test.gecko.ts --continuous"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
