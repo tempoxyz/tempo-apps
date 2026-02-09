@@ -132,6 +132,181 @@
 				}
 			}
 		},
+		"/gecko/latest-block": {
+			"get": {
+				"tags": ["GeckoTerminal"],
+				"summary": "Get latest indexed block",
+				"description": "Returns the latest block number and timestamp that the DEX adapter has indexed.",
+				"operationId": "gecko_latest_block",
+				"parameters": [
+					{
+						"$ref": "#/components/parameters/optionalChainId"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Latest block info",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"required": ["block"],
+									"properties": {
+										"block": {
+											"$ref": "#/components/schemas/Block"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/gecko/asset": {
+			"get": {
+				"tags": ["GeckoTerminal"],
+				"summary": "Get asset metadata",
+				"description": "Returns token metadata (name, symbol, decimals, totalSupply) for a TIP-20 token.",
+				"operationId": "gecko_asset",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "query",
+						"description": "Token contract address",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^0x[a-fA-F0-9]{40}$"
+						}
+					},
+					{
+						"$ref": "#/components/parameters/optionalChainId"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Asset metadata",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"required": ["asset"],
+									"properties": {
+										"asset": {
+											"$ref": "#/components/schemas/Asset"
+										}
+									}
+								}
+							}
+						}
+					},
+					"500": {
+						"description": "Failed to read asset from chain",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/ErrorResponse"
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/gecko/pair": {
+			"get": {
+				"tags": ["GeckoTerminal"],
+				"summary": "Get pair info",
+				"description": "Returns pair metadata from the stablecoin DEX including base/quote assets and creation info.",
+				"operationId": "gecko_pair",
+				"parameters": [
+					{
+						"name": "id",
+						"in": "query",
+						"description": "Pair key (bytes32 hex)",
+						"required": true,
+						"schema": {
+							"type": "string",
+							"pattern": "^0x[a-fA-F0-9]{64}$"
+						}
+					},
+					{
+						"$ref": "#/components/parameters/optionalChainId"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Pair info",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"required": ["pair"],
+									"properties": {
+										"pair": {
+											"$ref": "#/components/schemas/Pair"
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/gecko/events": {
+			"get": {
+				"tags": ["GeckoTerminal"],
+				"summary": "Get swap events",
+				"description": "Returns swap events from the stablecoin DEX within a block range, including pricing and reserves. Reserves reflect the DEX contract's total token balance, not per-pair liquidity.",
+				"operationId": "gecko_events",
+				"parameters": [
+					{
+						"name": "fromBlock",
+						"in": "query",
+						"description": "Start block number (inclusive)",
+						"required": true,
+						"schema": {
+							"type": "integer"
+						}
+					},
+					{
+						"name": "toBlock",
+						"in": "query",
+						"description": "End block number (inclusive, clamped to latest)",
+						"required": true,
+						"schema": {
+							"type": "integer"
+						}
+					},
+					{
+						"$ref": "#/components/parameters/optionalChainId"
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Swap events in the block range",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"required": ["events"],
+									"properties": {
+										"events": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/SwapEvent"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/actions/faucet": {
 			"get": {
 				"tags": ["Actions"],
@@ -260,6 +435,17 @@
 					"example": 42431
 				}
 			},
+			"optionalChainId": {
+				"name": "chainId",
+				"in": "query",
+				"description": "Chain ID of the Tempo network (defaults to 4217 mainnet)",
+				"required": false,
+				"schema": {
+					"type": "integer",
+					"enum": [31318, 42431, 4217],
+					"default": 4217
+				}
+			},
 			"address": {
 				"name": "address",
 				"in": "query",
@@ -275,6 +461,160 @@
 			}
 		},
 		"schemas": {
+			"Block": {
+				"type": "object",
+				"required": ["blockNumber", "blockTimestamp"],
+				"properties": {
+					"blockNumber": {
+						"type": "integer",
+						"description": "Block number"
+					},
+					"blockTimestamp": {
+						"type": "integer",
+						"description": "Block timestamp (unix seconds)"
+					}
+				}
+			},
+			"Asset": {
+				"type": "object",
+				"required": ["id", "name", "symbol", "decimals", "totalSupply"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Checksummed token address",
+						"pattern": "^0x[a-fA-F0-9]{40}$"
+					},
+					"name": {
+						"type": "string",
+						"description": "Token name"
+					},
+					"symbol": {
+						"type": "string",
+						"description": "Token symbol"
+					},
+					"decimals": {
+						"type": "integer",
+						"description": "Token decimals"
+					},
+					"totalSupply": {
+						"type": "string",
+						"description": "Total supply formatted with decimals"
+					}
+				}
+			},
+			"Pair": {
+				"type": "object",
+				"required": ["id", "dexKey", "asset0Id", "asset1Id"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Pair key (bytes32 hex)"
+					},
+					"dexKey": {
+						"type": "string",
+						"description": "DEX identifier",
+						"example": "tempo-stablecoin-dex"
+					},
+					"asset0Id": {
+						"type": "string",
+						"description": "Checksummed base token address"
+					},
+					"asset1Id": {
+						"type": "string",
+						"description": "Checksummed quote token address"
+					},
+					"createdAtBlockNumber": {
+						"type": "integer",
+						"description": "Block number when pair was created"
+					},
+					"createdAtBlockTimestamp": {
+						"type": "integer",
+						"description": "Timestamp when pair was created (unix seconds)"
+					},
+					"createdAtTxnId": {
+						"type": "string",
+						"description": "Transaction hash of pair creation"
+					}
+				}
+			},
+			"SwapEvent": {
+				"type": "object",
+				"required": [
+					"block",
+					"eventType",
+					"txnId",
+					"txnIndex",
+					"eventIndex",
+					"maker",
+					"pairId",
+					"priceNative",
+					"reserves"
+				],
+				"properties": {
+					"block": {
+						"$ref": "#/components/schemas/Block"
+					},
+					"eventType": {
+						"type": "string",
+						"enum": ["swap"]
+					},
+					"txnId": {
+						"type": "string",
+						"description": "Transaction hash"
+					},
+					"txnIndex": {
+						"type": "integer",
+						"description": "Transaction index in block"
+					},
+					"eventIndex": {
+						"type": "integer",
+						"description": "Log index in block"
+					},
+					"maker": {
+						"type": "string",
+						"description": "Taker address (counterparty)"
+					},
+					"pairId": {
+						"type": "string",
+						"description": "Pair key (bytes32 hex)"
+					},
+					"asset0In": {
+						"type": "string",
+						"description": "Base token amount in (decimal string)"
+					},
+					"asset1In": {
+						"type": "string",
+						"description": "Quote token amount in (decimal string)"
+					},
+					"asset0Out": {
+						"type": "string",
+						"description": "Base token amount out (decimal string)"
+					},
+					"asset1Out": {
+						"type": "string",
+						"description": "Quote token amount out (decimal string)"
+					},
+					"priceNative": {
+						"type": "string",
+						"description": "Price of base in terms of quote"
+					},
+					"reserves": {
+						"type": "object",
+						"description": "DEX contract total token balances (not per-pair)",
+						"required": ["asset0", "asset1"],
+						"properties": {
+							"asset0": {
+								"type": "string",
+								"description": "Base token reserve (decimal string)"
+							},
+							"asset1": {
+								"type": "string",
+								"description": "Quote token reserve (decimal string)"
+							}
+						}
+					}
+				}
+			},
 			"VersionInfo": {
 				"type": "object",
 				"description": "API version and configuration information",
@@ -400,6 +740,10 @@
 		{
 			"name": "Actions",
 			"description": "Blockchain action endpoints (faucet, etc.)"
+		},
+		{
+			"name": "GeckoTerminal",
+			"description": "GeckoTerminal DEX adapter endpoints for the Tempo stablecoin DEX"
 		},
 		{
 			"name": "System",
