@@ -1,7 +1,7 @@
 import { keepPreviousData, queryOptions } from '@tanstack/react-query'
 import type { Hex } from 'ox'
 import type { Block, Log, TransactionReceipt } from 'viem'
-import { getBlock } from 'wagmi/actions'
+import { getBlock, getBlockNumber } from 'wagmi/actions'
 import type { Actions } from 'wagmi/tempo'
 import {
 	decodeKnownCall,
@@ -25,8 +25,7 @@ export function blocksQueryOptions(start?: number) {
 		queryKey: ['blocks-loader', start],
 		queryFn: async () => {
 			const config = getWagmiConfig()
-			const latestBlock = await getBlock(config)
-			const latestBlockNumber = latestBlock.number
+			const latestBlockNumber = await getBlockNumber(config)
 
 			const startBlock = start != null ? BigInt(start) : latestBlockNumber
 

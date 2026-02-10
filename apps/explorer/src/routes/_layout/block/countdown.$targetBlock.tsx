@@ -6,7 +6,7 @@ import {
 	rootRouteId,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useWatchBlockNumber } from 'wagmi'
+import { useLatestBlockNumber } from '#comps/BlockNumberProvider'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { InfoCard } from '#comps/InfoCard'
 import { NotFound } from '#comps/NotFound'
@@ -68,18 +68,14 @@ export const Route = createFileRoute('/_layout/block/countdown/$targetBlock')({
 
 function RouteComponent() {
 	const loaderData = Route.useLoaderData()
-	const [currentBlockNumber, setCurrentBlockNumber] = React.useState(
-		loaderData.currentBlockNumber,
-	)
+	const latestBlockNumber = useLatestBlockNumber()
 	const targetBlockNumber = loaderData.targetBlockNumber
 
-	useWatchBlockNumber({
-		onBlockNumber: (blockNumber) => {
-			if (blockNumber == null) return
-			setCurrentBlockNumber((prev) => (blockNumber > prev ? blockNumber : prev))
-		},
-		poll: true,
-	})
+	const currentBlockNumber =
+		latestBlockNumber != null &&
+		latestBlockNumber > loaderData.currentBlockNumber
+			? latestBlockNumber
+			: loaderData.currentBlockNumber
 
 	const remainingBlocks = targetBlockNumber - currentBlockNumber
 

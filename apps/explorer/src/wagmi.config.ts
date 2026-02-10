@@ -88,9 +88,9 @@ function getTempoTransport() {
 	const fallbackUrls = getFallbackUrls()
 	return fallback([
 		webSocket(proxy.webSocket),
-		http(proxy.http),
+		http(proxy.http, { batch: true }),
 		...fallbackUrls.webSocket.map(webSocket),
-		...fallbackUrls.http.map(http),
+		...fallbackUrls.http.map((url) => http(url, { batch: true })),
 	])
 }
 

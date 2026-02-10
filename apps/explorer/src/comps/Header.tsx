@@ -5,7 +5,7 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useWatchBlockNumber } from 'wagmi'
+import { useLatestBlockNumber } from '#comps/BlockNumberProvider'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#lib/css'
 import { isTestnet } from '#lib/env'
@@ -166,15 +166,8 @@ export namespace Header {
 
 	export function BlockNumber(props: BlockNumber.Props) {
 		const { initial, className } = props
-
-		const ref = React.useRef<HTMLSpanElement>(null)
-
-		useWatchBlockNumber({
-			onBlockNumber: (blockNumber) => {
-				if (ref.current) ref.current.textContent = String(blockNumber)
-			},
-			poll: true,
-		})
+		const latestBlockNumber = useLatestBlockNumber()
+		const display = latestBlockNumber ?? initial
 
 		return (
 			<Link
@@ -189,11 +182,8 @@ export namespace Header {
 			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
-					<span
-						ref={ref}
-						className="text-primary font-medium tabular-nums font-mono min-w-[6ch] inline-block"
-					>
-						{initial ? String(initial) : '…'}
+					<span className="text-primary font-medium tabular-nums font-mono min-w-[6ch] inline-block">
+						{display != null ? String(display) : '…'}
 					</span>
 				</div>
 			</Link>

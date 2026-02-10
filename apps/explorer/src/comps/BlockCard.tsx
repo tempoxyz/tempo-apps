@@ -1,13 +1,13 @@
 import { Link } from '@tanstack/react-router'
 import type { Hex } from 'ox'
 import * as React from 'react'
-import { useWatchBlockNumber } from 'wagmi'
+import { useLatestBlockNumber } from '#comps/BlockNumberProvider'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
 import { ValidatorTag } from '#comps/ValidatorTag'
 import { cx } from '#lib/css'
 import { DateFormatter } from '#lib/formatting'
-import { useCopy, useIsMounted } from '#lib/hooks'
+import { useCopy } from '#lib/hooks'
 import type { BlockWithTransactions } from '#lib/queries'
 import ArrowUp10 from '~icons/lucide/arrow-up-1-0'
 import ChevronDown from '~icons/lucide/chevron-down'
@@ -34,27 +34,15 @@ export function BlockCard(props: BlockCard.Props) {
 	const copyHash = useCopy()
 
 	const confirmationsRef = React.useRef<HTMLSpanElement>(null)
-	const latestBlockRef = React.useRef(blockNumber ?? 0n)
-	const isMounted = useIsMounted()
+	const latestBlock = useLatestBlockNumber()
 
-	const getConfirmations = (latest?: bigint) => {
-		if (!blockNumber || !latest || latest < blockNumber) return undefined
-		return Number(latest - blockNumber) + 1
-	}
-
-	useWatchBlockNumber({
-		enabled: isMounted,
-		onBlockNumber: (newBlockNumber) => {
-			if (newBlockNumber > (latestBlockRef.current ?? 0n)) {
-				latestBlockRef.current = newBlockNumber
-				const confirmations = getConfirmations(newBlockNumber)
-				if (confirmationsRef.current) {
-					confirmationsRef.current.textContent =
-						confirmations !== undefined ? String(confirmations) : '—'
-				}
-			}
-		},
-	})
+	React.useEffect(() => {
+		if (latestBlock == null || !blockNumber || latestBlock < blockNumber) return
+		const confirmations = Number(latestBlock - blockNumber) + 1
+		if (confirmationsRef.current) {
+			confirmationsRef.current.textContent = String(confirmations)
+		}
+	}, [latestBlock, blockNumber])
 
 	const utcFormatted = timestamp
 		? DateFormatter.formatUtcTimestamp(timestamp)
