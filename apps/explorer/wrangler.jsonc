@@ -29,10 +29,8 @@
 			],
 			"vars": {
 				"VITE_TEMPO_ENV": "testnet",
-				"SENTRY_DSN": "",
-				"SENTRY_TRACES_SAMPLE_RATE": "0.1",
-				"VITE_SENTRY_DSN": "",
-				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.1"
+				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5"
 			},
 			"version_metadata": {
 				"binding": "CF_VERSION_METADATA"
@@ -75,10 +73,8 @@
 			],
 			"vars": {
 				"VITE_TEMPO_ENV": "moderato",
-				"SENTRY_DSN": "",
-				"SENTRY_TRACES_SAMPLE_RATE": "0.1",
-				"VITE_SENTRY_DSN": "",
-				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.1"
+				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5"
 			},
 			"version_metadata": {
 				"binding": "CF_VERSION_METADATA"
@@ -111,10 +107,8 @@
 			],
 			"vars": {
 				"VITE_TEMPO_ENV": "devnet",
-				"SENTRY_DSN": "",
-				"SENTRY_TRACES_SAMPLE_RATE": "0.1",
-				"VITE_SENTRY_DSN": "",
-				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.1"
+				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5"
 			},
 			"version_metadata": {
 				"binding": "CF_VERSION_METADATA"
@@ -152,10 +146,8 @@
 			],
 			"vars": {
 				"VITE_TEMPO_ENV": "presto",
-				"SENTRY_DSN": "",
-				"SENTRY_TRACES_SAMPLE_RATE": "0.1",
-				"VITE_SENTRY_DSN": "",
-				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.1"
+				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5"
 			},
 			"version_metadata": {
 				"binding": "CF_VERSION_METADATA"
