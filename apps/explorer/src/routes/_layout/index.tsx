@@ -350,6 +350,7 @@ function SpotlightLinks() {
 												key={action.label}
 												to="/tx/$hash"
 												params={{ hash: action.hash }}
+												preload="render"
 												className={`px-2.5 py-1 text-[12px] text-base-content-secondary hover:text-base-content hover:bg-base-border/40 whitespace-nowrap focus-visible:outline-offset-0 press-down cursor-pointer ${
 													i === 0
 														? 'rounded-l-[14px]! rounded-r-[2px]!'
@@ -405,6 +406,7 @@ function SpotlightPill(props: {
 			to={to}
 			{...(params ? { params } : {})}
 			{...(search ? { search } : {})}
+			preload="render"
 			className={cx(
 				'relative flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus-visible:border-accent py-1 rounded-full! press-down group-hover/pills:opacity-40 hover:opacity-100 bg-surface focus-visible:outline-none border-base-border transition-colors duration-300 ease-out focus-visible:duration-0',
 				badge ? 'pl-2.5 pr-4' : 'px-2.5',
