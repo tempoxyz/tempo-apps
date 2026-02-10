@@ -10,6 +10,7 @@ import {
 	normalizePathPattern,
 	ProfileEvents,
 } from '#lib/profiling'
+import { initSentry } from '#lib/sentry'
 import { routeTree } from '#routeTree.gen.ts'
 
 const queryStartTimes = new WeakMap<object, number>()
@@ -112,6 +113,10 @@ export const getRouter = () => {
 			</Layout>
 		),
 	})
+
+	if (!router.isServer) {
+		initSentry(router)
+	}
 
 	// @see https://tanstack.com/router/latest/docs/integrations/query
 	setupRouterSsrQueryIntegration({

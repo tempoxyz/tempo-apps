@@ -9,11 +9,14 @@ function getSampleRate(value: string | undefined): number {
 	return Math.min(parsed, 1)
 }
 
-export function initSentry(): void {
-	if (!import.meta.env.VITE_SENTRY_DSN) return
+const SENTRY_DSN =
+	'https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096'
 
+export function initSentry(
+	router: Parameters<typeof Sentry.tanstackRouterBrowserTracingIntegration>[0],
+): void {
 	Sentry.init({
-		dsn: import.meta.env.VITE_SENTRY_DSN,
+		dsn: SENTRY_DSN,
 		release: __BUILD_VERSION__,
 		sendDefaultPii: false,
 		beforeSend: (event) => {
@@ -33,7 +36,8 @@ export function initSentry(): void {
 		tracesSampleRate: getSampleRate(
 			import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE,
 		),
-		integrations: [Sentry.browserTracingIntegration()],
-		tracePropagationTargets: [/^\//, /tempo\.xyz/],
+		integrations: [Sentry.tanstackRouterBrowserTracingIntegration(router)],
+		environment: import.meta.env.DEV ? 'local' : undefined,
+		tracePropagationTargets: [/^\//, /localhost/, /tempo\.xyz/],
 	})
 }
