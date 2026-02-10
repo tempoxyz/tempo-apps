@@ -137,7 +137,7 @@ const serverEntry = createServerEntry({
 
 export default Sentry.withSentry(
 	(env: Env) => ({
-		dsn: env.SENTRY_DSN,
+		dsn: process.env.SENTRY_DSN,
 		release: env.CF_VERSION_METADATA?.id,
 		tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE
 			? Number(env.SENTRY_TRACES_SAMPLE_RATE)
