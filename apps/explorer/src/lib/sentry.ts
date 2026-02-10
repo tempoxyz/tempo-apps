@@ -38,6 +38,6 @@ export function initSentry(
 		),
 		integrations: [Sentry.tanstackRouterBrowserTracingIntegration(router)],
 		environment: import.meta.env.DEV ? 'local' : undefined,
-		tracePropagationTargets: [/^\//, /localhost/, /tempo\.xyz/],
+		tracePropagationTargets: [/^\//],
 	})
 }
