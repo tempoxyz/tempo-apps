@@ -499,23 +499,65 @@ export async function fetchAddressTransferBalances(
 ): Promise<
 	Array<{ token: string; received: string | number; sent: string | number }>
 > {
-	const qb = QB.withSignatures([TRANSFER_AMOUNT_SIGNATURE])
+	const [amountResults, tokensResults] = await Promise.all([
+		QB.withSignatures([TRANSFER_AMOUNT_SIGNATURE])
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('address').as('token'),
+				sql<string>`SUM(CASE WHEN "to" = ${address} THEN amount ELSE 0 END)`.as(
+					'received',
+				),
+				sql<string>`SUM(CASE WHEN "from" = ${address} THEN amount ELSE 0 END)`.as(
+					'sent',
+				),
+			])
+			.where('chain', '=', chainId)
+			.where((eb) => eb.or([eb('from', '=', address), eb('to', '=', address)]))
+			.groupBy('address')
+			.execute()
+			.catch(() => []),
+		QB.withSignatures([TRANSFER_SIGNATURE])
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('address').as('token'),
+				sql<string>`SUM(CASE WHEN "to" = ${address} THEN tokens ELSE 0 END)`.as(
+					'received',
+				),
+				sql<string>`SUM(CASE WHEN "from" = ${address} THEN tokens ELSE 0 END)`.as(
+					'sent',
+				),
+			])
+			.where('chain', '=', chainId)
+			.where((eb) => eb.or([eb('from', '=', address), eb('to', '=', address)]))
+			.groupBy('address')
+			.execute()
+			.catch(() => []),
+	])
 
-	return qb
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('address').as('token'),
-			sql<string>`SUM(CASE WHEN "to" = ${address} THEN amount ELSE 0 END)`.as(
-				'received',
-			),
-			sql<string>`SUM(CASE WHEN "from" = ${address} THEN amount ELSE 0 END)`.as(
-				'sent',
-			),
-		])
-		.where('chain', '=', chainId)
-		.where((eb) => eb.or([eb('from', '=', address), eb('to', '=', address)]))
-		.groupBy('address')
-		.execute()
+	const merged = new Map<
+		string,
+		{ token: string; received: bigint; sent: bigint }
+	>()
+	for (const row of [...amountResults, ...tokensResults]) {
+		const token = String(row.token).toLowerCase()
+		const existing = merged.get(token)
+		if (existing) {
+			existing.received += BigInt(row.received ?? 0)
+			existing.sent += BigInt(row.sent ?? 0)
+		} else {
+			merged.set(token, {
+				token: row.token,
+				received: BigInt(row.received ?? 0),
+				sent: BigInt(row.sent ?? 0),
+			})
+		}
+	}
+
+	return [...merged.values()].map((row) => ({
+		token: row.token,
+		received: row.received.toString(),
+		sent: row.sent.toString(),
+	}))
 }
 
 export async function fetchAddressTransfersForValue(

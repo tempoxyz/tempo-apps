@@ -355,8 +355,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			// Fire off optional loaders without blocking page render
-			// These will populate the cache if successful but won't delay the page load
+			// Fire off total-value (non-blocking) and balances in parallel with other loaders
 			context.queryClient
 				.ensureQueryData({
 					queryKey: ['account-total-value', address],
@@ -367,7 +366,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					console.error('Fetch total-value error (non-blocking):', error)
 				})
 
-			// Only block on balances if holdings tab is active
 			const balancesPromise = isHoldingsTab
 				? timeout(
 						context.queryClient
@@ -380,16 +378,23 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			const [contractBytecode, transactionsData, balancesData, tokenMetadata] =
-				await Promise.all([
-					contractBytecodePromise,
-					transactionsPromise,
-					balancesPromise,
-					tokenMetadataPromise,
-				])
+			const [
+				contractBytecode,
+				transactionsData,
+				balancesResult,
+				tokenMetadata,
+			] = await Promise.all([
+				contractBytecodePromise,
+				transactionsPromise,
+				balancesPromise,
+				tokenMetadataPromise,
+			])
+
+			const isToken = tokenMetadata !== null && tokenMetadata !== undefined
+			// Discard balance results for token addresses to avoid stale/misleading data
+			const balancesData = isToken ? undefined : balancesResult
 
 			const accountType = getAccountType(contractBytecode)
-			const isToken = tokenMetadata !== null && tokenMetadata !== undefined
 
 			// check if it's a known contract from our registry
 			const contractInfo = getContractInfo(address)
@@ -601,7 +606,7 @@ function RouteComponent() {
 	const { data: assetsData, isLoading: assetsLoading } = useBalancesData(
 		address,
 		balancesData,
-		isHoldingsTabActive || balancesData !== undefined,
+		!isToken && (isHoldingsTabActive || balancesData !== undefined),
 	)
 
 	// Prefetch non-active tabs' data once on load for smooth tab switches
@@ -617,10 +622,10 @@ function RouteComponent() {
 				historyQueryOptions({ address, page: 1, limit, offset: 0 }),
 			)
 		}
-		if (tab !== 'holdings') {
+		if (tab !== 'holdings' && !isToken) {
 			queryClient.prefetchQuery(balancesQueryOptions(address))
 		}
-	}, [address, tab, limit, queryClient])
+	}, [address, tab, limit, queryClient, isToken])
 
 	return (
 		<div
