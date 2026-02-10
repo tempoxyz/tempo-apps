@@ -1,4 +1,5 @@
 import { cloudflare } from '@cloudflare/vite-plugin'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 import tailwind from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
@@ -47,6 +48,11 @@ export default defineConfig((config) => {
 	const port = Number(lastPort ?? env.PORT ?? 3_000)
 
 	const allowedHosts = env.ALLOWED_HOSTS?.split(',') ?? []
+	const shouldUploadSourcemaps = Boolean(
+		(env.SENTRY_AUTH_TOKEN || env.SENTRY_AUTH_TOKEN === '') &&
+			(env.SENTRY_ORG || env.SENTRY_ORG === '') &&
+			(env.SENTRY_PROJECT || env.SENTRY_PROJECT === ''),
+	)
 
 	return {
 		plugins: [
@@ -74,6 +80,15 @@ export default defineConfig((config) => {
 					gzipSize: true,
 					brotliSize: true,
 				}),
+			shouldUploadSourcemaps &&
+				sentryVitePlugin({
+					org: env.SENTRY_ORG,
+					project: env.SENTRY_PROJECT,
+					authToken: env.SENTRY_AUTH_TOKEN,
+					sourcemaps: {
+						filesToDeleteAfterUpload: ['dist/**/*.map'],
+					},
+				}),
 		].filter(Boolean),
 		server: {
 			port,
@@ -85,7 +100,12 @@ export default defineConfig((config) => {
 		},
 		build: {
 			minify: 'oxc',
-			sourcemap: process.env.ANALYZE === 'true', // Required for Sonda
+			sourcemap:
+				process.env.ANALYZE === 'true'
+					? true
+					: shouldUploadSourcemaps
+						? 'hidden'
+						: false,
 			rollupOptions: {
 				output: {
 					minify: {

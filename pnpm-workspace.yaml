@@ -12,6 +12,9 @@ catalog:
   '@iconify/json': ^2.2.432
   '@scalar/api-reference': ^1.43.17
   '@shazow/whatsabi': ^0.25.0
+  '@sentry/cloudflare': ^10.38.0
+  '@sentry/react': ^10.36.0
+  '@sentry/vite-plugin': ^3.2.5
   '@shikijs/langs': ^3.21.0
   '@shikijs/themes': ^3.21.0
   '@svgr/core': ^8.1.0

@@ -2,6 +2,9 @@
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
 	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
+	"version_metadata": {
+		"binding": "CF_VERSION_METADATA"
+	},
 	"main": "./src/index.server.ts",
 	"keep_vars": true,
 	"workers_dev": true,
@@ -25,7 +28,14 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "testnet"
+				"VITE_TEMPO_ENV": "testnet",
+				"SENTRY_DSN": "",
+				"SENTRY_TRACES_SAMPLE_RATE": "0.1",
+				"VITE_SENTRY_DSN": "",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.1"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
@@ -64,7 +74,14 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "moderato"
+				"VITE_TEMPO_ENV": "moderato",
+				"SENTRY_DSN": "",
+				"SENTRY_TRACES_SAMPLE_RATE": "0.1",
+				"VITE_SENTRY_DSN": "",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.1"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
@@ -93,7 +110,14 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "devnet"
+				"VITE_TEMPO_ENV": "devnet",
+				"SENTRY_DSN": "",
+				"SENTRY_TRACES_SAMPLE_RATE": "0.1",
+				"VITE_SENTRY_DSN": "",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.1"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
@@ -127,7 +151,14 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "presto"
+				"VITE_TEMPO_ENV": "presto",
+				"SENTRY_DSN": "",
+				"SENTRY_TRACES_SAMPLE_RATE": "0.1",
+				"VITE_SENTRY_DSN": "",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.1"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
