@@ -281,9 +281,7 @@ async function runOnce(
 	// Step 1: GET /gecko/latest-block
 	console.log('\n--- /gecko/latest-block ---')
 	const { data: latestBlockRes, ms: latestMs } =
-		await fetchJson<LatestBlockResponse>(
-			`/gecko/latest-block?chainId=${CHAIN_ID}`,
-		)
+		await fetchJson<LatestBlockResponse>(`/gecko/${CHAIN_ID}/latest-block`)
 	recordTiming('latest-block', latestMs)
 	validateBlock(latestBlockRes.block, 'latestBlock')
 	const latestBlock = latestBlockRes.block.blockNumber
@@ -297,7 +295,7 @@ async function runOnce(
 		`\n--- /gecko/events?fromBlock=${fromBlock}&toBlock=${toBlock} (${toBlock - fromBlock + 1} blocks) ---`,
 	)
 	const { data: eventsRes, ms: eventsMs } = await fetchJson<EventsResponse>(
-		`/gecko/events?fromBlock=${fromBlock}&toBlock=${toBlock}&chainId=${CHAIN_ID}`,
+		`/gecko/${CHAIN_ID}/events?fromBlock=${fromBlock}&toBlock=${toBlock}`,
 	)
 	recordTiming('events', eventsMs)
 
@@ -327,7 +325,7 @@ async function runOnce(
 		if (seenPairs.has(pairId)) continue
 		console.log(`\n--- /gecko/pair?id=${pairId.slice(0, 18)}... ---`)
 		const { data: pairRes, ms: pairMs } = await fetchJson<PairResponse>(
-			`/gecko/pair?id=${pairId}&chainId=${CHAIN_ID}`,
+			`/gecko/${CHAIN_ID}/pair?id=${pairId}`,
 		)
 		recordTiming('pair', pairMs)
 		validatePair(pairRes.pair)
@@ -340,7 +338,7 @@ async function runOnce(
 		if (seenAssets.has(assetId)) continue
 		console.log(`\n--- /gecko/asset?id=${assetId} ---`)
 		const { data: assetRes, ms: assetMs } = await fetchJson<AssetResponse>(
-			`/gecko/asset?id=${assetId}&chainId=${CHAIN_ID}`,
+			`/gecko/${CHAIN_ID}/asset?id=${assetId}`,
 		)
 		recordTiming('asset', assetMs)
 		validateAsset(assetRes.asset)

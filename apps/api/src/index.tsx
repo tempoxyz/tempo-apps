@@ -34,6 +34,7 @@ app
 	.get('/schema/openapi.json', (context) => context.json(OpenAPISpec))
 
 app.route('/actions', actionsApp)
+app.route('/gecko/:chainId', geckoApp)
 app.route('/gecko', geckoApp)
 
 if (process.env.NODE_ENV === 'development') showRoutes(app)

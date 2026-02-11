@@ -54,13 +54,16 @@ const cache = {
 
 const DEFAULT_CHAIN_ID = 4217 as (typeof wagmiConfig.chains)[number]['id']
 
-const zOptionalChainId = () =>
-	z.optional(
-		z.pipe(
-			z.coerce.number(),
-			z.union(wagmiConfig.chains.map((chain) => z.literal(chain.id))),
-		),
-	)
+type ChainId = (typeof wagmiConfig.chains)[number]['id']
+
+const validChainIds = new Set<number>(wagmiConfig.chains.map((c) => c.id))
+
+function parseChainId(raw: string | undefined): ChainId {
+	if (!raw) return DEFAULT_CHAIN_ID
+	const n = Number(raw)
+	if (!validChainIds.has(n)) throw new Error(`Invalid chainId: ${raw}`)
+	return n as ChainId
+}
 
 function validationError(
 	result: { success: boolean; error?: unknown },
@@ -80,10 +83,9 @@ function validationError(
 		)
 }
 
-function getClient(chainId?: (typeof wagmiConfig.chains)[number]['id']) {
-	const id = chainId ?? DEFAULT_CHAIN_ID
-	const client = getPublicClient(wagmiConfig, { chainId: id })
-	if (!client) throw new Error(`No client for chainId ${id}`)
+function getClient(chainId: ChainId) {
+	const client = getPublicClient(wagmiConfig, { chainId })
+	if (!client) throw new Error(`No client for chainId ${chainId}`)
 	return client
 }
 
@@ -92,46 +94,33 @@ const geckoApp = new Hono<{ Bindings: Cloudflare.Env }>()
 // ---------------------------------------------------------------------------
 // GET /latest-block
 // ---------------------------------------------------------------------------
-geckoApp.get(
-	'/latest-block',
-	zValidator(
-		'query',
-		z.object({ chainId: zOptionalChainId() }),
-		validationError,
-	),
-	async (context) => {
-		const { chainId } = context.req.valid('query')
-		const id = chainId ?? DEFAULT_CHAIN_ID
+geckoApp.get('/latest-block', async (context) => {
+	const id = parseChainId(context.req.param('chainId'))
 
-		const block = await QB.selectFrom('blocks')
-			.select(['num', 'timestamp'])
-			.where('chain', '=', id)
-			.orderBy('num', 'desc')
-			.limit(1)
-			.executeTakeFirstOrThrow()
+	const block = await QB.selectFrom('blocks')
+		.select(['num', 'timestamp'])
+		.where('chain', '=', id)
+		.orderBy('num', 'desc')
+		.limit(1)
+		.executeTakeFirstOrThrow()
 
-		return context.json({
-			block: {
-				blockNumber: Number(block.num),
-				blockTimestamp: toUnixTimestamp(block.timestamp),
-			},
-		})
-	},
-)
+	return context.json({
+		block: {
+			blockNumber: Number(block.num),
+			blockTimestamp: toUnixTimestamp(block.timestamp),
+		},
+	})
+})
 
 // ---------------------------------------------------------------------------
 // GET /asset?id=<address>
 // ---------------------------------------------------------------------------
 geckoApp.get(
 	'/asset',
-	zValidator(
-		'query',
-		z.object({ id: z.string(), chainId: zOptionalChainId() }),
-		validationError,
-	),
+	zValidator('query', z.object({ id: z.string() }), validationError),
 	async (context) => {
-		const { id, chainId } = context.req.valid('query')
-		const client = getClient(chainId)
+		const { id } = context.req.valid('query')
+		const client = getClient(parseChainId(context.req.param('chainId')))
 		const address = id as Address
 
 		const read = (
@@ -172,13 +161,10 @@ geckoApp.get(
 // ---------------------------------------------------------------------------
 geckoApp.get(
 	'/pair',
-	zValidator(
-		'query',
-		z.object({ id: z.string(), chainId: zOptionalChainId() }),
-		validationError,
-	),
+	zValidator('query', z.object({ id: z.string() }), validationError),
 	async (context) => {
-		const { id, chainId } = context.req.valid('query')
+		const { id } = context.req.valid('query')
+		const chainId = parseChainId(context.req.param('chainId'))
 		const client = getClient(chainId)
 		const pairKey = id as Hex
 
@@ -194,7 +180,7 @@ geckoApp.get(
 			cache.books.set(pairKey, bookRes)
 		}
 
-		const cid = chainId ?? DEFAULT_CHAIN_ID
+		const cid = chainId
 		let creation = cache.pairCreation.get(pairKey)
 		if (!creation) {
 			const row = await QB.withSignatures([PAIR_CREATED_SIGNATURE])
@@ -243,14 +229,13 @@ geckoApp.get(
 		z.object({
 			fromBlock: z.coerce.number(),
 			toBlock: z.coerce.number(),
-			chainId: zOptionalChainId(),
 		}),
 		validationError,
 	),
 	async (context) => {
-		const { fromBlock, toBlock, chainId } = context.req.valid('query')
-		const client = getClient(chainId)
-		const cid = chainId ?? DEFAULT_CHAIN_ID
+		const { fromBlock, toBlock } = context.req.valid('query')
+		const cid = parseChainId(context.req.param('chainId'))
+		const client = getClient(cid)
 
 		if (!cache.priceScale) {
 			cache.priceScale = await client.readContract({

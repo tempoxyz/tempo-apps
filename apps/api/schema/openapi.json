@@ -132,7 +132,7 @@
 				}
 			}
 		},
-		"/gecko/latest-block": {
+		"/gecko/{chainId}/latest-block": {
 			"get": {
 				"tags": ["GeckoTerminal"],
 				"summary": "Get latest indexed block",
@@ -140,7 +140,14 @@
 				"operationId": "gecko_latest_block",
 				"parameters": [
 					{
-						"$ref": "#/components/parameters/optionalChainId"
+						"name": "chainId",
+						"in": "path",
+						"description": "Chain ID of the Tempo network",
+						"required": true,
+						"schema": {
+							"type": "integer",
+							"enum": [31318, 42431, 4217]
+						}
 					}
 				],
 				"responses": {
@@ -163,13 +170,23 @@
 				}
 			}
 		},
-		"/gecko/asset": {
+		"/gecko/{chainId}/asset": {
 			"get": {
 				"tags": ["GeckoTerminal"],
 				"summary": "Get asset metadata",
 				"description": "Returns token metadata (name, symbol, decimals, totalSupply) for a TIP-20 token.",
 				"operationId": "gecko_asset",
 				"parameters": [
+					{
+						"name": "chainId",
+						"in": "path",
+						"description": "Chain ID of the Tempo network",
+						"required": true,
+						"schema": {
+							"type": "integer",
+							"enum": [31318, 42431, 4217]
+						}
+					},
 					{
 						"name": "id",
 						"in": "query",
@@ -179,9 +196,6 @@
 							"type": "string",
 							"pattern": "^0x[a-fA-F0-9]{40}$"
 						}
-					},
-					{
-						"$ref": "#/components/parameters/optionalChainId"
 					}
 				],
 				"responses": {
@@ -214,13 +228,23 @@
 				}
 			}
 		},
-		"/gecko/pair": {
+		"/gecko/{chainId}/pair": {
 			"get": {
 				"tags": ["GeckoTerminal"],
 				"summary": "Get pair info",
 				"description": "Returns pair metadata from the stablecoin DEX including base/quote assets and creation info.",
 				"operationId": "gecko_pair",
 				"parameters": [
+					{
+						"name": "chainId",
+						"in": "path",
+						"description": "Chain ID of the Tempo network",
+						"required": true,
+						"schema": {
+							"type": "integer",
+							"enum": [31318, 42431, 4217]
+						}
+					},
 					{
 						"name": "id",
 						"in": "query",
@@ -230,9 +254,6 @@
 							"type": "string",
 							"pattern": "^0x[a-fA-F0-9]{64}$"
 						}
-					},
-					{
-						"$ref": "#/components/parameters/optionalChainId"
 					}
 				],
 				"responses": {
@@ -255,13 +276,23 @@
 				}
 			}
 		},
-		"/gecko/events": {
+		"/gecko/{chainId}/events": {
 			"get": {
 				"tags": ["GeckoTerminal"],
 				"summary": "Get swap events",
 				"description": "Returns swap events from the stablecoin DEX within a block range, including pricing and reserves. Reserves reflect the DEX contract's total token balance, not per-pair liquidity.",
 				"operationId": "gecko_events",
 				"parameters": [
+					{
+						"name": "chainId",
+						"in": "path",
+						"description": "Chain ID of the Tempo network",
+						"required": true,
+						"schema": {
+							"type": "integer",
+							"enum": [31318, 42431, 4217]
+						}
+					},
 					{
 						"name": "fromBlock",
 						"in": "query",
@@ -279,9 +310,6 @@
 						"schema": {
 							"type": "integer"
 						}
-					},
-					{
-						"$ref": "#/components/parameters/optionalChainId"
 					}
 				],
 				"responses": {
@@ -433,17 +461,6 @@
 					"type": "integer",
 					"enum": [31318, 42431, 4217],
 					"example": 42431
-				}
-			},
-			"optionalChainId": {
-				"name": "chainId",
-				"in": "query",
-				"description": "Chain ID of the Tempo network (defaults to 4217 mainnet)",
-				"required": false,
-				"schema": {
-					"type": "integer",
-					"enum": [31318, 42431, 4217],
-					"default": 4217
 				}
 			},
 			"address": {
