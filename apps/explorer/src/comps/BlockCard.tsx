@@ -1,10 +1,10 @@
 import { Link } from '@tanstack/react-router'
 import type { Hex } from 'ox'
 import * as React from 'react'
-import { useWatchBlockNumber } from 'wagmi'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
 import { ValidatorTag } from '#comps/ValidatorTag'
+import { useAnimatedBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
 import { DateFormatter } from '#lib/formatting'
 import { useCopy, useIsMounted } from '#lib/hooks'
@@ -36,25 +36,27 @@ export function BlockCard(props: BlockCard.Props) {
 	const confirmationsRef = React.useRef<HTMLSpanElement>(null)
 	const latestBlockRef = React.useRef(blockNumber ?? 0n)
 	const isMounted = useIsMounted()
+	const liveBlockNumber = useAnimatedBlockNumber()
 
-	const getConfirmations = (latest?: bigint) => {
-		if (!blockNumber || !latest || latest < blockNumber) return undefined
-		return Number(latest - blockNumber) + 1
-	}
-
-	useWatchBlockNumber({
-		enabled: isMounted,
-		onBlockNumber: (newBlockNumber) => {
-			if (newBlockNumber > (latestBlockRef.current ?? 0n)) {
-				latestBlockRef.current = newBlockNumber
-				const confirmations = getConfirmations(newBlockNumber)
-				if (confirmationsRef.current) {
-					confirmationsRef.current.textContent =
-						confirmations !== undefined ? String(confirmations) : '—'
-				}
-			}
+	const getConfirmations = React.useCallback(
+		(latest?: bigint) => {
+			if (!blockNumber || !latest || latest < blockNumber) return undefined
+			return Number(latest - blockNumber) + 1
 		},
-	})
+		[blockNumber],
+	)
+
+	React.useEffect(() => {
+		if (!isMounted || liveBlockNumber == null) return
+		if (liveBlockNumber > (latestBlockRef.current ?? 0n)) {
+			latestBlockRef.current = liveBlockNumber
+			const confirmations = getConfirmations(liveBlockNumber)
+			if (confirmationsRef.current) {
+				confirmationsRef.current.textContent =
+					confirmations !== undefined ? String(confirmations) : '—'
+			}
+		}
+	}, [isMounted, liveBlockNumber, getConfirmations])
 
 	const utcFormatted = timestamp
 		? DateFormatter.formatUtcTimestamp(timestamp)

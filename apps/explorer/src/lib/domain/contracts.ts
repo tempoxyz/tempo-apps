@@ -687,6 +687,7 @@ export async function getContractBytecode(
 ): Promise<Hex.Hex | undefined> {
 	const config = getWagmiConfig()
 	const client = getPublicClient(config)
+	if (!client) return undefined
 	const code = await client.getCode({ address })
 	if (!code || code === '0x') return undefined
 	return code
@@ -852,6 +853,7 @@ export async function autoloadAbi(
 	const config = getWagmiConfig()
 	const chainId = getChainId(config)
 	const client = getPublicClient(config)
+	if (!client) return null
 
 	try {
 		const result = await whatsabi.autoload(address, {

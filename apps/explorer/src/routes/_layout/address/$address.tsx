@@ -169,15 +169,18 @@ function useBatchTransactionData(
 
 	const chainId = useChainId()
 	const client = usePublicClient({ chainId })
+	const canFetch = enabled && hashes.length > 0 && Boolean(client)
 
 	const queries = useQueries({
 		queries: hashes.map((hash) => ({
 			queryKey: ['tx-data-batch', viewer, hash],
 			queryFn: async (): Promise<TransactionData | null> => {
-				const receipt = await client.getTransactionReceipt({ hash })
+				const activeClient = client
+				if (!activeClient) return null
+				const receipt = await activeClient.getTransactionReceipt({ hash })
 				const [block, transaction, getTokenMetadata] = await Promise.all([
-					client.getBlock({ blockHash: receipt.blockHash }),
-					client.getTransaction({ hash: receipt.transactionHash }),
+					activeClient.getBlock({ blockHash: receipt.blockHash }),
+					activeClient.getTransaction({ hash: receipt.transactionHash }),
 					Tip20.metadataFromLogs(receipt.logs),
 				])
 				const knownEvents = parseKnownEvents(receipt, {
@@ -188,7 +191,7 @@ function useBatchTransactionData(
 				return { receipt, block: block as GetBlockReturnType, knownEvents }
 			},
 			staleTime: 60_000,
-			enabled: enabled && hashes.length > 0,
+			enabled: canFetch,
 		})),
 	})
 
@@ -201,7 +204,7 @@ function useBatchTransactionData(
 		return map
 	}, [hashes, queries])
 
-	const isLoading = enabled && queries.some((q) => q.isLoading)
+	const isLoading = canFetch && queries.some((q) => q.isLoading)
 
 	return { transactionDataMap, isLoading }
 }

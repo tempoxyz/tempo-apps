@@ -177,7 +177,14 @@ function RouteComponent() {
 			}),
 	})
 
-	const calls = 'calls' in transaction ? transaction.calls : undefined
+	const calls =
+		transaction && 'calls' in transaction && Array.isArray(transaction.calls)
+			? (transaction.calls as Array<{
+					to?: OxAddress.Address | null
+					data?: Hex.Hex
+					value?: bigint
+				}>)
+			: undefined
 	const hasCalls = Boolean(calls && calls.length > 0)
 
 	const setActiveSection = (newIndex: number) => {

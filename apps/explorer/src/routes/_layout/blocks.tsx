@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import type { Block } from 'viem'
-import { useWatchBlockNumber } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import { getWagmiConfig } from '#wagmi.config'
 import * as z from 'zod/mini'
@@ -14,6 +13,7 @@ import {
 	TimeColumnHeader,
 	useTimeFormat,
 } from '#comps/TimeFormat'
+import { syncBlockNumberAtLeast, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
 import { withLoaderTiming } from '#lib/profiling'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
@@ -66,25 +66,40 @@ function RouteComponent() {
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const [paused, setPaused] = React.useState(false)
 	const queryClient = useQueryClient()
+	const wagmiConfig = React.useMemo(() => getWagmiConfig(), [])
 	const fetchingBlocksRef = React.useRef(new Set<bigint>())
+	const lastHandledBlockRef = React.useRef<bigint | null>(null)
+	const liveBlockNumber = useLiveBlockNumber()
+
+	React.useEffect(() => {
+		syncBlockNumberAtLeast(queryData.latestBlockNumber)
+	}, [queryData.latestBlockNumber])
 
 	// Watch for new blocks and fetch any missing blocks
-	useWatchBlockNumber({
-		onBlockNumber: async (blockNumber) => {
-			if (latestBlockNumber !== undefined && blockNumber <= latestBlockNumber)
-				return
+	React.useEffect(() => {
+		if (liveBlockNumber == null) return
+		if (lastHandledBlockRef.current === liveBlockNumber) return
+		lastHandledBlockRef.current = liveBlockNumber
 
-			setLatestBlockNumber(blockNumber)
+		const handleBlock = async () => {
+			if (
+				latestBlockNumber !== undefined &&
+				liveBlockNumber <= latestBlockNumber
+			) {
+				return
+			}
+
+			setLatestBlockNumber(liveBlockNumber)
 
 			if (!live || !isAtLatest || paused) return
 
 			// Determine which blocks we need to fetch
 			const currentHighest = liveBlocks[0]?.number
 			const startBlock =
-				currentHighest != null ? currentHighest + 1n : blockNumber
+				currentHighest != null ? currentHighest + 1n : liveBlockNumber
 			const blocksToFetch: bigint[] = []
 
-			for (let bn = startBlock; bn <= blockNumber; bn++) {
+			for (let bn = startBlock; bn <= liveBlockNumber; bn++) {
 				if (!fetchingBlocksRef.current.has(bn)) {
 					blocksToFetch.push(bn)
 					fetchingBlocksRef.current.add(bn)
@@ -93,12 +108,11 @@ function RouteComponent() {
 
 			if (blocksToFetch.length === 0) return
 
-			const config = getWagmiConfig()
 			const newBlocks = await Promise.all(
 				blocksToFetch.map((bn) =>
 					queryClient.fetchQuery({
 						queryKey: ['block', bn.toString()],
-						queryFn: () => getBlock(config, { blockNumber: bn }),
+						queryFn: () => getBlock(wagmiConfig, { blockNumber: bn }),
 						staleTime: Number.POSITIVE_INFINITY,
 					}),
 				),
@@ -127,9 +141,19 @@ function RouteComponent() {
 					.sort((a, b) => Number(b.number) - Number(a.number))
 					.slice(0, BLOCKS_PER_PAGE)
 			})
-		},
-		poll: true,
-	})
+		}
+
+		void handleBlock()
+	}, [
+		isAtLatest,
+		live,
+		liveBlockNumber,
+		latestBlockNumber,
+		liveBlocks,
+		paused,
+		queryClient,
+		wagmiConfig,
+	])
 
 	// Re-initialize when navigating back to latest with live mode
 	React.useEffect(() => {

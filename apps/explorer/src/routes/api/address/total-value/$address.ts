@@ -58,6 +58,9 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 
 					const config = getWagmiConfig()
 					const publicClient = getPublicClient(config)
+					if (!publicClient) {
+						throw new Error('RPC client unavailable')
+					}
 
 					const decimals =
 						// TODO: investigate & consider batch/multicall

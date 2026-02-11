@@ -5,8 +5,8 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useWatchBlockNumber } from 'wagmi'
 import { ExploreInput } from '#comps/ExploreInput'
+import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
 import { isTestnet } from '#lib/env'
 import { useIsMounted } from '#lib/hooks'
@@ -166,21 +166,20 @@ export namespace Header {
 
 	export function BlockNumber(props: BlockNumber.Props) {
 		const { initial, className } = props
-
-		const ref = React.useRef<HTMLSpanElement>(null)
-
-		useWatchBlockNumber({
-			onBlockNumber: (blockNumber) => {
-				if (ref.current) ref.current.textContent = String(blockNumber)
-			},
-			poll: true,
+		const currentPathname = useRouterState({
+			select: (state) =>
+				state.matches.at(-1)?.pathname ?? state.location.pathname,
 		})
+		const optimisticBlockNumber = useAnimatedBlockNumber(initial)
+		const liveBlockNumber = useLiveBlockNumber(initial)
+		const blockNumber =
+			currentPathname === '/blocks' ? liveBlockNumber : optimisticBlockNumber
 
 		return (
 			<Link
 				disabled={!isTestnet()}
 				to="/block/$id"
-				params={{ id: 'latest' }}
+				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
 				className={cx(
 					className,
 					'flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down',
@@ -189,11 +188,8 @@ export namespace Header {
 			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
-					<span
-						ref={ref}
-						className="text-primary font-medium tabular-nums font-mono min-w-[6ch] inline-block"
-					>
-						{initial ? String(initial) : '…'}
+					<span className="text-primary font-medium tabular-nums font-mono min-w-[6ch] inline-block">
+						{blockNumber != null ? String(blockNumber) : '…'}
 					</span>
 				</div>
 			</Link>
