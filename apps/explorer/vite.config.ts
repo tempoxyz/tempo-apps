@@ -39,6 +39,23 @@ export default defineConfig((config) => {
 	const cloudflareEnv = process.env.CLOUDFLARE_ENV || env.CLOUDFLARE_ENV
 	const wranglerVars = getWranglerEnvVars(cloudflareEnv)
 
+	const tempoEnv =
+		wranglerVars.VITE_TEMPO_ENV ||
+		cloudflareEnv ||
+		process.env.VITE_TEMPO_ENV ||
+		env.VITE_TEMPO_ENV
+
+	if (config.mode === 'development' && tempoEnv) {
+		const chainIds: Record<string, number> = {
+			devnet: 31318,
+			testnet: 42429,
+			moderato: 42431,
+			presto: 4217,
+		}
+		const chainId = chainIds[tempoEnv] ?? '?'
+		console.log(`[explorer] VITE_TEMPO_ENV=${tempoEnv} (chain ${chainId})`)
+	}
+
 	const showDevtools = env.VITE_ENABLE_DEVTOOLS !== 'false'
 
 	const lastPort = (() => {
@@ -144,12 +161,7 @@ export default defineConfig((config) => {
 				env.CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? Date.now().toString(),
 			),
 
-			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
-				wranglerVars.VITE_TEMPO_ENV ||
-					cloudflareEnv ||
-					process.env.VITE_TEMPO_ENV ||
-					env.VITE_TEMPO_ENV,
-			),
+			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(tempoEnv),
 			'import.meta.env.VITE_ENABLE_DEMO': JSON.stringify(
 				env.VITE_ENABLE_DEMO ?? 'true',
 			),
