@@ -54,15 +54,32 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 
 					// Single aggregate query: COUNT + MIN/MAX timestamps
 					// MIN/MAX are "free" since COUNT already scans all rows
-					const [bytecode, txAggResult] = await Promise.all([
+					const [bytecodeResult, txAggResult] = await Promise.all([
 						// Account type detection (single RPC call)
-						getCode(client, { address }).catch(() => undefined),
+						getCode(client, { address })
+							.then(
+								(code) =>
+									({ code, error: undefined }) as {
+										code: typeof code
+										error: string | undefined
+									},
+							)
+							.catch((err: unknown) => ({
+								code: undefined,
+								error: String(err instanceof Error ? err.message : err),
+							})),
 
 						// Combined query: count + newest + oldest in one scan
 						fetchAddressTxAggregate(address, chainId),
 					])
 
-					const accountType = getAccountType(bytecode)
+					if (bytecodeResult.error) {
+						console.error(
+							`[metadata] getCode failed for ${address}: ${bytecodeResult.error}`,
+						)
+					}
+
+					const accountType = getAccountType(bytecodeResult.code)
 					const txCount = txAggResult?.count ?? 0
 					const lastActivityTimestamp = parseTimestamp(
 						txAggResult?.latestTxsBlockTimestamp,
@@ -78,6 +95,7 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 						txCount,
 						lastActivityTimestamp,
 						createdTimestamp,
+						error: bytecodeResult.error,
 					}
 
 					return Response.json(response, {
