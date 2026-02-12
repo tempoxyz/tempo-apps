@@ -30,6 +30,7 @@
 		"test": "vitest"
 	},
 	"dependencies": {
+		"@tempo/rpc-utils": "workspace:*",
 		"@sentry/cloudflare": "catalog:",
 		"@sentry/react": "catalog:",
 		"@shazow/whatsabi": "catalog:",

@@ -8,15 +8,15 @@ import {
 	tempoModerato,
 } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
+import { loadBalance, rateLimit } from '@tempo/rpc-utils'
 import { tempoPresto } from './lib/chains'
 import {
-	cookieStorage,
-	cookieToInitialState,
-	createConfig,
-	createStorage,
-	fallback,
-	http,
-	serialize,
+        cookieStorage,
+        cookieToInitialState,
+        createConfig,
+        createStorage,
+        http,
+        serialize,
 } from 'wagmi'
 import { KeyManager, webAuthn } from 'wagmi/tempo'
 
@@ -80,11 +80,24 @@ const getFallbackUrls = createIsomorphicFn()
 		}
 	})
 
-function getTempoTransport() {
-	const proxy = getRpcProxyUrl()
-	const fallbackUrls = getFallbackUrls()
-	return fallback([http(proxy.http), ...fallbackUrls.http.map(http)])
-}
+const getTempoTransport = createIsomorphicFn()
+        .client(() => {
+                const proxy = getRpcProxyUrl()
+                const fallbackUrls = getFallbackUrls()
+                const proxyTransport = rateLimit(http(proxy.http), {
+                        requestsPerSecond: 20,
+                })
+                const fallbackTransports = fallbackUrls.http.map((url) =>
+                        rateLimit(http(url), { requestsPerSecond: 10 }),
+                )
+
+                return loadBalance([proxyTransport, ...fallbackTransports])
+        })
+        .server(() => {
+                const proxy = getRpcProxyUrl()
+                const fallbackUrls = getFallbackUrls()
+                return loadBalance([http(proxy.http), ...fallbackUrls.http.map(http)])
+        })
 
 export function getWagmiConfig() {
 	if (wagmiConfigSingleton) return wagmiConfigSingleton
