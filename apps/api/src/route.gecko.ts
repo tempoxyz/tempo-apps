@@ -233,6 +233,7 @@ geckoApp.get('/pairs', async (context) => {
 		.where('address', '=', DEX_ADDRESS)
 		.orderBy('block_num', 'asc')
 		.execute()
+		.catch(() => [])
 
 	if (pairRows.length === 0) return context.json({ pairs: [] })
 
