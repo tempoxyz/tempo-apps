@@ -47,14 +47,14 @@ export namespace Header {
 		const [inputValue, setInputValue] = React.useState('')
 
 		const [delayedNavigating, setDelayedNavigating] = React.useState(false)
-		const { currentPathname, isNavigating } = useRouterState({
+		const { resolvedPathname, isNavigating } = useRouterState({
 			select: (state) => ({
-				currentPathname:
-					state.matches.at(-1)?.pathname ?? state.location.pathname,
+				resolvedPathname:
+					state.resolvedLocation?.pathname ?? state.location.pathname,
 				isNavigating: state.status === 'pending',
 			}),
 		})
-		const showSearch = currentPathname !== '/'
+		const showSearch = resolvedPathname !== '/'
 
 		const isMounted = useIsMounted()
 
@@ -103,7 +103,7 @@ export namespace Header {
 
 		if (compact)
 			return (
-				<div className="@min-[800px]:hidden sticky top-0 z-10 px-[24px] pt-[16px] pb-[12px] print:hidden">
+				<div className="@min-[800px]:hidden sticky top-0 z-10 px-4 pt-[16px] pb-[12px] print:hidden">
 					<ExploreInput
 						wide
 						value={inputValue}
@@ -166,14 +166,14 @@ export namespace Header {
 
 	export function BlockNumber(props: BlockNumber.Props) {
 		const { initial, className } = props
-		const currentPathname = useRouterState({
+		const resolvedPathname = useRouterState({
 			select: (state) =>
-				state.matches.at(-1)?.pathname ?? state.location.pathname,
+				state.resolvedLocation?.pathname ?? state.location.pathname,
 		})
 		const optimisticBlockNumber = useAnimatedBlockNumber(initial)
 		const liveBlockNumber = useLiveBlockNumber(initial)
 		const blockNumber =
-			currentPathname === '/blocks' ? liveBlockNumber : optimisticBlockNumber
+			resolvedPathname === '/blocks' ? liveBlockNumber : optimisticBlockNumber
 
 		return (
 			<Link
