@@ -461,7 +461,7 @@ export namespace ExploreInput {
 			>
 				{suggestion.type === 'block' && (
 					<span className="text-[16px] font-medium text-base-content tabular-nums">
-						#{suggestion.blockNumber.toLocaleString()}
+						#{suggestion.blockNumber}
 					</span>
 				)}
 				{suggestion.type === 'token' && (
