@@ -82,6 +82,10 @@ export namespace Header {
 				onChange={setInputValue}
 				disabled={isMounted && delayedNavigating}
 				onActivate={({ value, type }) => {
+					if (type === 'block') {
+						navigate({ to: '/block/$id', params: { id: value } })
+						return
+					}
 					if (type === 'hash') {
 						navigate({ to: '/receipt/$hash', params: { hash: value } })
 						return
@@ -110,6 +114,10 @@ export namespace Header {
 						onChange={setInputValue}
 						disabled={isMounted && delayedNavigating}
 						onActivate={({ value, type }) => {
+							if (type === 'block') {
+								navigate({ to: '/block/$id', params: { id: value } })
+								return
+							}
 							if (type === 'hash') {
 								navigate({ to: '/receipt/$hash', params: { hash: value } })
 								return
@@ -142,6 +150,10 @@ export namespace Header {
 						onChange={setInputValue}
 						disabled={isMounted && delayedNavigating}
 						onActivate={({ value, type }) => {
+							if (type === 'block') {
+								navigate({ to: '/block/$id', params: { id: value } })
+								return
+							}
 							if (type === 'hash') {
 								navigate({ to: '/receipt/$hash', params: { hash: value } })
 								return

@@ -34,6 +34,10 @@ export type SearchResult =
 			hash: Hex.Hex
 			timestamp?: number
 	  }
+	| {
+			type: 'block'
+			blockNumber: number
+	  }
 
 export type SearchApiResponse = {
 	results: SearchResult[]
@@ -46,6 +50,7 @@ export type TransactionSearchResult = Extract<
 	SearchResult,
 	{ type: 'transaction' }
 >
+export type BlockSearchResult = Extract<SearchResult, { type: 'block' }>
 
 type Token = [address: Address.Address, symbol: string, name: string]
 
@@ -132,6 +137,18 @@ export const Route = createFileRoute('/api/search')({
 
 				const chainId = getChainId(getWagmiConfig())
 				const results: SearchResult[] = []
+
+				// block number (plain digits or #-prefixed)
+				const blockQuery = query.startsWith('#') ? query.slice(1).trim() : query
+				const blockNumber = /^\d+$/.test(blockQuery)
+					? Number(blockQuery)
+					: Number.NaN
+				if (
+					Number.isFinite(blockNumber) &&
+					Number.isSafeInteger(blockNumber) &&
+					blockNumber >= 0
+				)
+					results.push({ type: 'block', blockNumber })
 
 				// address
 				if (Address.validate(query))

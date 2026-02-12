@@ -133,6 +133,13 @@ function Component() {
 						disabled={isMounted && isNavigating}
 						tabIndex={inputReady ? 0 : -1}
 						onActivate={(data) => {
+							if (data.type === 'block') {
+								navigate({
+									to: '/block/$id',
+									params: { id: data.value },
+								})
+								return
+							}
 							if (data.type === 'hash') {
 								navigate({
 									to: '/receipt/$hash',
