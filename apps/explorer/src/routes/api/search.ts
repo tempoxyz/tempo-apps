@@ -13,7 +13,10 @@ import tokensIndex42431 from '#data/tokens-index-42431.json' with {
 }
 import tokensIndex4217 from '#data/tokens-index-4217.json' with { type: 'json' }
 import { isTip20Address } from '#lib/domain/tip20'
-import { fetchTransactionTimestamp } from '#lib/server/tempo-queries'
+import {
+	fetchLatestBlockNumber,
+	fetchTransactionTimestamp,
+} from '#lib/server/tempo-queries'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 export type SearchResult =
@@ -147,8 +150,15 @@ export const Route = createFileRoute('/api/search')({
 					Number.isFinite(blockNumber) &&
 					Number.isSafeInteger(blockNumber) &&
 					blockNumber >= 0
-				)
-					results.push({ type: 'block', blockNumber })
+				) {
+					try {
+						const latestBlock = await fetchLatestBlockNumber(chainId)
+						if (blockNumber <= Number(latestBlock))
+							results.push({ type: 'block', blockNumber })
+					} catch {
+						// index unavailable — skip block result
+					}
+				}
 
 				// address
 				if (Address.validate(query))
