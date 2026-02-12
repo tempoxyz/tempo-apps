@@ -276,6 +276,47 @@
 				}
 			}
 		},
+		"/gecko/{chainId}/pairs": {
+			"get": {
+				"tags": ["GeckoTerminal"],
+				"summary": "List all pairs sorted by liquidity",
+				"description": "Returns all trading pairs on the stablecoin DEX sorted by total reserve value (most liquid first). Includes token metadata and current reserve balances.",
+				"operationId": "gecko_pairs",
+				"parameters": [
+					{
+						"name": "chainId",
+						"in": "path",
+						"description": "Chain ID of the Tempo network",
+						"required": true,
+						"schema": {
+							"type": "integer",
+							"enum": [31318, 42431, 4217]
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "List of pairs sorted by liquidity",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"required": ["pairs"],
+									"properties": {
+										"pairs": {
+											"type": "array",
+											"items": {
+												"$ref": "#/components/schemas/PairWithLiquidity"
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
 		"/gecko/{chainId}/events": {
 			"get": {
 				"tags": ["GeckoTerminal"],
@@ -516,6 +557,75 @@
 					"totalSupply": {
 						"type": "string",
 						"description": "Total supply formatted with decimals"
+					}
+				}
+			},
+			"PairWithLiquidity": {
+				"type": "object",
+				"required": ["id", "dexKey", "asset0Id", "asset1Id", "reserves", "createdAtBlockNumber", "createdAtBlockTimestamp", "createdAtTxnId"],
+				"properties": {
+					"id": {
+						"type": "string",
+						"description": "Pair key (bytes32 hex)"
+					},
+					"dexKey": {
+						"type": "string",
+						"description": "DEX identifier",
+						"example": "tempo-stablecoin-dex"
+					},
+					"asset0Id": {
+						"type": "string",
+						"description": "Checksummed base token address"
+					},
+					"asset1Id": {
+						"type": "string",
+						"description": "Checksummed quote token address"
+					},
+					"asset0Symbol": {
+						"type": "string",
+						"nullable": true,
+						"description": "Base token symbol"
+					},
+					"asset1Symbol": {
+						"type": "string",
+						"nullable": true,
+						"description": "Quote token symbol"
+					},
+					"asset0Name": {
+						"type": "string",
+						"nullable": true,
+						"description": "Base token name"
+					},
+					"asset1Name": {
+						"type": "string",
+						"nullable": true,
+						"description": "Quote token name"
+					},
+					"reserves": {
+						"type": "object",
+						"required": ["asset0", "asset1"],
+						"properties": {
+							"asset0": {
+								"type": "string",
+								"description": "Base token reserve balance (decimal string)"
+							},
+							"asset1": {
+								"type": "string",
+								"description": "Quote token reserve balance (decimal string)"
+							}
+						}
+					},
+					"createdAtBlockNumber": {
+						"type": "integer",
+						"description": "Block number when pair was created"
+					},
+					"createdAtBlockTimestamp": {
+						"type": "integer",
+						"description": "Timestamp when pair was created (unix seconds)"
+					},
+					"createdAtTxnId": {
+						"type": "string",
+						"description": "Transaction hash of pair creation"
 					}
 				}
 			},

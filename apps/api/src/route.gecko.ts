@@ -220,6 +220,142 @@ geckoApp.get(
 )
 
 // ---------------------------------------------------------------------------
+// GET /pairs
+// ---------------------------------------------------------------------------
+geckoApp.get('/pairs', async (context) => {
+	const chainId = parseChainId(context.req.param('chainId'))
+	const client = getClient(chainId)
+
+	const pairRows = await QB.withSignatures([PAIR_CREATED_SIGNATURE])
+		.selectFrom('paircreated')
+		.select(['key', 'base', 'quote', 'block_num', 'block_timestamp', 'tx_hash'])
+		.where('chain', '=', chainId)
+		.where('address', '=', DEX_ADDRESS)
+		.orderBy('block_num', 'asc')
+		.execute()
+
+	if (pairRows.length === 0) return context.json({ pairs: [] })
+
+	const uniqueTokens = [
+		...new Set(
+			pairRows.flatMap((r) => [
+				String(r.base).toLowerCase(),
+				String(r.quote).toLowerCase(),
+			]),
+		),
+	] as Address[]
+
+	const [balanceResults, decimalResults, nameResults, symbolResults] =
+		await Promise.all([
+			Promise.allSettled(
+				uniqueTokens.map((token) =>
+					client.readContract({
+						address: token,
+						abi: Abis.tip20,
+						functionName: 'balanceOf',
+						args: [DEX_ADDRESS],
+					}),
+				),
+			),
+			Promise.all(
+				uniqueTokens
+					.filter((t) => !cache.decimals.has(t.toLowerCase()))
+					.map((token) =>
+						client.readContract({
+							address: token,
+							abi: Abis.tip20,
+							functionName: 'decimals',
+						}),
+					),
+			),
+			Promise.all(
+				uniqueTokens.map((token) =>
+					client
+						.readContract({
+							address: token,
+							abi: Abis.tip20,
+							functionName: 'name',
+						})
+						.catch(() => null),
+				),
+			),
+			Promise.all(
+				uniqueTokens.map((token) =>
+					client
+						.readContract({
+							address: token,
+							abi: Abis.tip20,
+							functionName: 'symbol',
+						})
+						.catch(() => null),
+				),
+			),
+		])
+
+	const uncachedTokens = uniqueTokens.filter(
+		(t) => !cache.decimals.has(t.toLowerCase()),
+	)
+	for (let i = 0; i < uncachedTokens.length; i++) {
+		const res = decimalResults[i]
+		const token = uncachedTokens[i]
+		if (res !== undefined && token)
+			cache.decimals.set(token.toLowerCase(), Number(res))
+	}
+
+	const balances = new Map<string, bigint>()
+	const names = new Map<string, string>()
+	const symbols = new Map<string, string>()
+	for (let i = 0; i < uniqueTokens.length; i++) {
+		const token = uniqueTokens[i]
+		if (!token) continue
+		const bal = balanceResults[i]
+		balances.set(
+			token.toLowerCase(),
+			bal?.status === 'fulfilled' ? bal.value : 0n,
+		)
+		const name = nameResults[i]
+		if (name) names.set(token.toLowerCase(), name)
+		const symbol = symbolResults[i]
+		if (symbol) symbols.set(token.toLowerCase(), symbol)
+	}
+
+	const pairs = pairRows.map((row) => {
+		const base = String(row.base).toLowerCase()
+		const quote = String(row.quote).toLowerCase()
+		const baseDec = cache.decimals.get(base) ?? 18
+		const quoteDec = cache.decimals.get(quote) ?? 18
+		const baseReserve = balances.get(base) ?? 0n
+		const quoteReserve = balances.get(quote) ?? 0n
+
+		return {
+			id: String(row.key),
+			dexKey: DEX_KEY,
+			asset0Id: getAddress(String(row.base)),
+			asset1Id: getAddress(String(row.quote)),
+			asset0Symbol: symbols.get(base) ?? null,
+			asset1Symbol: symbols.get(quote) ?? null,
+			asset0Name: names.get(base) ?? null,
+			asset1Name: names.get(quote) ?? null,
+			reserves: {
+				asset0: formatUnits(baseReserve, baseDec),
+				asset1: formatUnits(quoteReserve, quoteDec),
+			},
+			createdAtBlockNumber: Number(row.block_num),
+			createdAtBlockTimestamp: toUnixTimestamp(row.block_timestamp),
+			createdAtTxnId: String(row.tx_hash),
+		}
+	})
+
+	pairs.sort((a, b) => {
+		const aTotal = Number(a.reserves.asset0) + Number(a.reserves.asset1)
+		const bTotal = Number(b.reserves.asset0) + Number(b.reserves.asset1)
+		return bTotal - aTotal
+	})
+
+	return context.json({ pairs })
+})
+
+// ---------------------------------------------------------------------------
 // GET /events?fromBlock=<number>&toBlock=<number>
 // ---------------------------------------------------------------------------
 geckoApp.get(
