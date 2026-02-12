@@ -220,6 +220,45 @@ function StaticReadFunction(props: {
 			}
 		}
 
+		// Check if it looks like an address[] array
+		// Format: offset (32 bytes) + length (32 bytes) + N addresses (32 bytes each)
+		// Minimum: 0x + 32 + 32 + 32 = 98 hex chars (1 empty array = 128 chars, 1 element = 194 chars)
+		if (data.length >= 130) {
+			try {
+				const offset = Number.parseInt(data.slice(2, 66), 16)
+				const length = Number.parseInt(data.slice(66, 130), 16)
+				// Verify offset is 32 (0x20) and we have the right amount of data
+				if (offset === 32 && length > 0 && length < 100) {
+					const expectedLength = 2 + 64 + 64 + length * 64 // 0x + offset + length + N*address
+					if (data.length === expectedLength) {
+						// Verify each element looks like an address (12 leading zeros)
+						let allAddressesValid = true
+						for (let i = 0; i < length; i++) {
+							const start = 2 + 128 + i * 64 // Skip 0x + offset (64) + length (64)
+							if (
+								data.slice(start, start + 24) !== '000000000000000000000000'
+							) {
+								allAddressesValid = false
+								break
+							}
+						}
+						if (allAddressesValid) {
+							const addressArrayAbi = [
+								{ ...fn, outputs: [{ type: 'address[]', name: '' }] },
+							]
+							return decodeFunctionResult({
+								abi: addressArrayAbi,
+								functionName: fn.name,
+								data,
+							})
+						}
+					}
+				}
+			} catch {
+				// Fall through to other attempts
+			}
+		}
+
 		// Try decoding as string (common for functions like typeAndVersion)
 		try {
 			const stringAbi = [{ ...fn, outputs: [{ type: 'string', name: '' }] }]
@@ -481,6 +520,44 @@ function DynamicReadFunction(props: {
 				})
 			} catch {
 				// Fall through
+			}
+		}
+
+		// Check if it looks like an address[] array
+		// Format: offset (32 bytes) + length (32 bytes) + N addresses (32 bytes each)
+		if (data.length >= 130) {
+			try {
+				const offset = Number.parseInt(data.slice(2, 66), 16)
+				const length = Number.parseInt(data.slice(66, 130), 16)
+				// Verify offset is 32 (0x20) and we have the right amount of data
+				if (offset === 32 && length > 0 && length < 100) {
+					const expectedLength = 2 + 64 + 64 + length * 64 // 0x + offset + length + N*address
+					if (data.length === expectedLength) {
+						// Verify each element looks like an address (12 leading zeros)
+						let allAddressesValid = true
+						for (let i = 0; i < length; i++) {
+							const start = 2 + 128 + i * 64 // Skip 0x + offset (64) + length (64)
+							if (
+								data.slice(start, start + 24) !== '000000000000000000000000'
+							) {
+								allAddressesValid = false
+								break
+							}
+						}
+						if (allAddressesValid) {
+							const addressArrayAbi = [
+								{ ...fn, outputs: [{ type: 'address[]', name: '' }] },
+							]
+							return decodeFunctionResult({
+								abi: addressArrayAbi,
+								functionName: fn.name,
+								data,
+							})
+						}
+					}
+				}
+			} catch {
+				// Fall through to other attempts
 			}
 		}
 

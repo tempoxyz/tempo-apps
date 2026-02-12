@@ -275,7 +275,9 @@ function applyAddressDirectionFilter<TQuery>(
 ): TQuery {
 	const { address, includeSent, includeReceived } = params
 	if (includeSent && includeReceived) {
-		return query.where((eb: any) =>
+		return query.where(
+      // @ts-expect-error
+      (eb) =>
 			eb.or([eb('from', '=', address), eb('to', '=', address)]),
 		) as TQuery
 	}

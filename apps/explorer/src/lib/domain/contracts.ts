@@ -438,6 +438,7 @@ const WRITE_FUNCTION_PATTERNS = [
 	/^revoke/i,
 	/^grant/i,
 	/^renounce/i,
+	/^accept/i,
 	/^initialize/i,
 	/^create/i,
 	/^delete/i,
