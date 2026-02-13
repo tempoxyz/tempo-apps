@@ -21,7 +21,7 @@
 	"kv_namespaces": [
 		{
 			"binding": "KEY_STORE",
-			"id": "8ec25d40617f49afa5d5b92a366f0b51"
+			"id": "e85119e27c5c4a0287f94077730423cf"
 		}
 	],
 	"routes": [{ "pattern": "keys.tempo.xyz", "custom_domain": true }]
