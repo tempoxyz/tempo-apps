@@ -12,8 +12,9 @@
 		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
 		"test": "vitest --run",
 		"test:watch": "vitest",
-		"db:push": "CLOUDFLARE_D1_ENVIRONMENT='remote' drizzle-kit push --config='drizzle.config.ts'",
-		"db:studio": "drizzle-kit studio --config='drizzle.config.ts'"
+		"db:generate": "drizzle-kit generate",
+		"db:migrate": "wrangler d1 migrations apply accounts-preview-db --remote",
+		"db:migrate:production": "wrangler d1 migrations apply accounts-db --remote --env production"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",

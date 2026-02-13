@@ -15,10 +15,16 @@ function base64urlDecode(str: string): Uint8Array {
 	return bytes
 }
 
+function parseJwk(jwk: string): JsonWebKey {
+	const parsed = JSON.parse(jwk)
+	if (parsed.alg === 'Ed25519') parsed.alg = 'EdDSA'
+	return parsed
+}
+
 async function importPrivateKey(jwk: string): Promise<CryptoKey> {
 	return crypto.subtle.importKey(
 		'jwk',
-		JSON.parse(jwk),
+		parseJwk(jwk),
 		{ name: 'Ed25519' },
 		false,
 		['sign'],
@@ -28,7 +34,7 @@ async function importPrivateKey(jwk: string): Promise<CryptoKey> {
 async function importPublicKey(jwk: string): Promise<CryptoKey> {
 	return crypto.subtle.importKey(
 		'jwk',
-		JSON.parse(jwk),
+		parseJwk(jwk),
 		{ name: 'Ed25519' },
 		false,
 		['verify'],
@@ -91,62 +97,35 @@ export async function verifySession(
 	}
 }
 
-export async function sessionCookieHeaders(
+export async function sessionCookies(
 	privateKeyJwk: string,
 	userId: string,
 	hostname: string,
-): Promise<Headers> {
+): Promise<string[]> {
 	const sessionId = crypto.randomUUID()
 	const token = await signSession(privateKeyJwk, userId, sessionId)
-	const headers = new Headers()
 
-	if (hostname === 'localhost' || hostname === '127.0.0.1') {
-		headers.append(
-			'Set-Cookie',
-			`session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${ONE_YEAR_SECONDS}`,
-		)
-	} else {
-		headers.append(
-			'Set-Cookie',
-			`__Secure-session=${token}; Domain=.tempo.xyz; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${ONE_YEAR_SECONDS}`,
-		)
+	const isLocal = hostname === 'localhost' || hostname === '127.0.0.1'
+
+	if (isLocal) {
+		return [
+			`session=${token}; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=${ONE_YEAR_SECONDS}`,
+		]
 	}
-
-	headers.append(
-		'Set-Cookie',
-		'email_auth_session=; Path=/; Max-Age=0; SameSite=Lax',
-	)
-	headers.append(
-		'Set-Cookie',
-		'email_auth_session=; Path=/email-auth; Max-Age=0; SameSite=Lax',
-	)
-
-	return headers
+	return [
+		`__Secure-session=${token}; Domain=.tempo.xyz; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${ONE_YEAR_SECONDS}`,
+	]
 }
 
-export function clearSessionCookieHeaders(): Headers {
-	const headers = new Headers()
-	headers.append(
-		'Set-Cookie',
+export function clearSessionCookies(hostname: string): string[] {
+	const isLocal = hostname === 'localhost' || hostname === '127.0.0.1'
+
+	if (isLocal) {
+		return ['session=; Path=/; HttpOnly; SameSite=None; Secure; Max-Age=0']
+	}
+	return [
 		'__Secure-session=; Domain=.tempo.xyz; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
-	)
-	headers.append(
-		'Set-Cookie',
-		'__Host-session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
-	)
-	headers.append(
-		'Set-Cookie',
-		'session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
-	)
-	headers.append(
-		'Set-Cookie',
-		'email_auth_session=; Path=/; Max-Age=0; SameSite=Lax',
-	)
-	headers.append(
-		'Set-Cookie',
-		'email_auth_session=; Path=/email-auth; Max-Age=0; SameSite=Lax',
-	)
-	return headers
+	]
 }
 
 export async function getSessionUserId(

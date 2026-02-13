@@ -6,13 +6,24 @@ import * as kv from '../kv'
 import { checkOtpRateLimit } from '../rate-limit'
 import { getRpId } from '../rp-id'
 import {
-	clearSessionCookieHeaders,
+	clearSessionCookies,
 	getSessionUserId,
-	sessionCookieHeaders,
+	sessionCookies,
 } from '../session'
 import { verifyAssertion } from '../webauthn'
 
 const auth = new Hono<{ Bindings: CloudflareBindings }>()
+
+function jsonWithCookies(
+	c: { json: (data: unknown, status: number) => Response },
+	data: unknown,
+	status: number,
+	cookies: string[],
+): Response {
+	const res = c.json(data, status)
+	for (const cookie of cookies) res.headers.append('Set-Cookie', cookie)
+	return res
+}
 
 async function hashCode(code: string): Promise<string> {
 	const encoded = new TextEncoder().encode(code)
@@ -114,43 +125,38 @@ auth.post('/verify-otp', async (c) => {
 	const repo = createRepo(db)
 	const { user } = await repo.upsertUserByEmail(email)
 	const wallets = await repo.getWalletsByUserId(user.id)
-	const headers = await sessionCookieHeaders(
+	const cookies = await sessionCookies(
 		c.env.SESSION_PRIVATE_KEY,
 		user.id,
 		hostname,
 	)
 
-	return c.json(
+	return jsonWithCookies(
+		c,
 		{
 			user: { id: user.id, email: user.email },
 			wallets: formatWallets(wallets),
 		},
 		200,
-		Object.fromEntries(headers.entries()),
+		cookies,
 	)
 })
 
 auth.get('/session', async (c) => {
 	const userId = await getSessionUserId(c.req.raw, c.env.SESSION_PUBLIC_KEY)
 	if (!userId) {
-		const headers = clearSessionCookieHeaders()
-		return c.json(
-			{ error: 'Unauthorized' },
-			401,
-			Object.fromEntries(headers.entries()),
-		)
+		const hostname = new URL(c.req.url).hostname
+		const cookies = clearSessionCookies(hostname)
+		return jsonWithCookies(c, { error: 'Unauthorized' }, 401, cookies)
 	}
 
 	const db = createDb(c.env.DB)
 	const repo = createRepo(db)
 	const user = await repo.getUserById(userId)
 	if (!user) {
-		const headers = clearSessionCookieHeaders()
-		return c.json(
-			{ error: 'User not found' },
-			401,
-			Object.fromEntries(headers.entries()),
-		)
+		const hostname = new URL(c.req.url).hostname
+		const cookies = clearSessionCookies(hostname)
+		return jsonWithCookies(c, { error: 'User not found' }, 401, cookies)
 	}
 
 	const wallets = await repo.getWalletsByUserId(userId)
@@ -179,14 +185,29 @@ auth.post('/passkey-challenge', async (c) => {
 })
 
 auth.post('/passkey-login', async (c) => {
-	const body = await c.req.json<{
+	let body: {
 		credentialId?: string
 		authenticatorData?: string
 		clientDataJSON?: string
 		signature?: string
-	}>()
+	}
+	try {
+		body = await c.req.json()
+	} catch (e) {
+		console.warn('passkey-login: failed to parse body', e)
+		return c.json({ error: 'Invalid request body' }, 400)
+	}
 	const { credentialId, authenticatorData, clientDataJSON, signature } = body
 	if (!credentialId || !authenticatorData || !clientDataJSON || !signature) {
+		const missing = [
+			'credentialId',
+			'authenticatorData',
+			'clientDataJSON',
+			'signature',
+		].filter((k) => !body[k as keyof typeof body])
+		console.warn('passkey-login: missing fields', missing, {
+			keys: Object.keys(body),
+		})
 		return c.json({ error: 'Missing assertion fields' }, 400)
 	}
 
@@ -195,7 +216,8 @@ auth.post('/passkey-login', async (c) => {
 
 	const wallet = await repo.getWalletByCredentialId(credentialId)
 	if (!wallet?.publicKeyHex) {
-		return c.json({ error: 'Unknown credential' }, 400)
+		console.warn('passkey-login: unknown credential', { credentialId })
+		return c.json({ error: 'Unknown credential' }, 401)
 	}
 
 	const clientData = JSON.parse(
@@ -206,8 +228,14 @@ auth.post('/passkey-login', async (c) => {
 			),
 		),
 	) as { challenge?: string }
-	const challenge = clientData.challenge
-	if (!challenge) return c.json({ error: 'Missing challenge' }, 400)
+	const challengeBase64url = clientData.challenge
+	if (!challengeBase64url) return c.json({ error: 'Missing challenge' }, 400)
+
+	const challengeBytes = Uint8Array.from(
+		atob(challengeBase64url.replace(/-/g, '+').replace(/_/g, '/')),
+		(ch) => ch.charCodeAt(0),
+	)
+	const challenge = Hex.fromBytes(challengeBytes)
 
 	const stored = await kv.getChallenge(c.env.KV, `passkey:${challenge}`)
 	if (!stored) return c.json({ error: 'Invalid or expired challenge' }, 400)
@@ -220,7 +248,7 @@ auth.post('/passkey-login', async (c) => {
 		clientDataJSON,
 		signature,
 		publicKeyHex: wallet.publicKeyHex,
-		expectedChallenge: challenge,
+		expectedChallenge: challengeBase64url,
 		hostname,
 	})
 
@@ -230,25 +258,27 @@ auth.post('/passkey-login', async (c) => {
 	if (!user) return c.json({ error: 'User not found' }, 404)
 
 	const wallets = await repo.getWalletsByUserId(user.id)
-	const headers = await sessionCookieHeaders(
+	const cookies = await sessionCookies(
 		c.env.SESSION_PRIVATE_KEY,
 		user.id,
 		hostname,
 	)
 
-	return c.json(
+	return jsonWithCookies(
+		c,
 		{
 			user: { id: user.id, email: user.email },
 			wallets: formatWallets(wallets),
 		},
 		200,
-		Object.fromEntries(headers.entries()),
+		cookies,
 	)
 })
 
 auth.post('/sign-out', (c) => {
-	const headers = clearSessionCookieHeaders()
-	return c.json({ ok: true }, 200, Object.fromEntries(headers.entries()))
+	const hostname = new URL(c.req.url).hostname
+	const cookies = clearSessionCookies(hostname)
+	return jsonWithCookies(c, { ok: true }, 200, cookies)
 })
 
 export { auth }

@@ -16,6 +16,9 @@
 			"persist": true
 		}
 	},
+	"vars": {
+		"MAILGUN_DOMAIN": "tempo.xyz"
+	},
 	// top-level bindings for type generation only
 	"kv_namespaces": [
 		{
@@ -28,20 +31,26 @@
 		{
 			"name": "OTP_EMAIL_RATE_LIMITER",
 			"namespace_id": "1010",
-			"simple": { "limit": 5, "period": 60 }
+			"simple": {
+				"limit": 5,
+				"period": 60
+			}
 		},
 		{
 			"name": "OTP_IP_RATE_LIMITER",
 			"namespace_id": "1011",
-			"simple": { "limit": 20, "period": 60 }
+			"simple": {
+				"limit": 20,
+				"period": 60
+			}
 		}
 	],
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"migrations_dir": "drizzle",
-			"database_name": "accounts-db-preview",
-			"database_id": "00000000-0000-0000-0000-000000000000"
+			"database_name": "accounts-preview-db",
+			"database_id": "f91f2a9c-6f3a-48b7-9ab6-a7a1f9c0d82b"
 		}
 	],
 	"env": {
@@ -55,12 +64,15 @@
 					"custom_domain": true
 				}
 			],
+			"vars": {
+				"MAILGUN_DOMAIN": "tempo.xyz"
+			},
 			"d1_databases": [
 				{
 					"binding": "DB",
 					"migrations_dir": "drizzle",
 					"database_name": "accounts-db",
-					"database_id": "00000000-0000-0000-0000-000000000000"
+					"database_id": "830449aa-ea74-40c3-90ae-e1f718b7beae"
 				}
 			],
 			"kv_namespaces": [
@@ -73,12 +85,18 @@
 				{
 					"name": "OTP_EMAIL_RATE_LIMITER",
 					"namespace_id": "1010",
-					"simple": { "limit": 5, "period": 60 }
+					"simple": {
+						"limit": 5,
+						"period": 60
+					}
 				},
 				{
 					"name": "OTP_IP_RATE_LIMITER",
 					"namespace_id": "1011",
-					"simple": { "limit": 20, "period": 60 }
+					"simple": {
+						"limit": 20,
+						"period": 60
+					}
 				}
 			]
 		}
