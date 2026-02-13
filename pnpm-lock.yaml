@@ -433,6 +433,9 @@ importers:
       '@tanstack/router-plugin':
         specifier: 'catalog:'
         version: 1.158.0(@tanstack/react-router@1.158.0(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(rolldown-vite@7.3.1(@types/node@25.2.0)(esbuild@0.27.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@tempo/rpc-utils':
+        specifier: workspace:*
+        version: link:../../packages/rpc-utils
       '@wagmi/core':
         specifier: 'catalog:'
         version: 3.3.2(@tanstack/query-core@5.90.20)(@types/react@19.2.10)(ox@0.12.0(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.4))(viem@2.45.1(typescript@5.9.3)(zod@4.3.6))
@@ -766,6 +769,16 @@ importers:
       wrangler:
         specifier: 'catalog:'
         version: 4.61.1(@cloudflare/workers-types@4.20260131.0)
+
+  packages/rpc-utils:
+    dependencies:
+      viem:
+        specifier: 'catalog:'
+        version: 2.45.1(typescript@5.9.3)(zod@4.3.6)
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.2.0
 
 packages:
 
