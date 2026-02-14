@@ -7,7 +7,7 @@ set -eou pipefail
 d1_dir=".wrangler/state/v3/d1/miniflare-D1DatabaseObject"
 
 if [[ ! -d "$d1_dir" ]]; then
-	echo "Error: D1 directory not found. Run 'bun run dev' first to create local D1." >&2
+	echo "Error: D1 directory not found. Run 'pnpm dev' first to create local D1." >&2
 	exit 1
 fi
 
