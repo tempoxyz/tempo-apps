@@ -1,10 +1,10 @@
 import { createPublicClient, http } from 'viem'
-import { tempoTestnet } from 'viem/chains'
+import { tempoModerato } from 'viem/chains'
 import { createServer, port } from './prool.js'
 
 async function getCurrentTempoTestnetTag(): Promise<string> {
 	const client = createPublicClient({
-		chain: tempoTestnet,
+		chain: tempoModerato,
 		transport: http(),
 	})
 	const clientVersion = await client.request({ method: 'web3_clientVersion' })
