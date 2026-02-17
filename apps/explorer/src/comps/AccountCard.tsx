@@ -2,6 +2,7 @@ import { ClientOnly, getRouteApi } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { InfoCard } from '#comps/InfoCard'
 import { RelativeTime } from '#comps/RelativeTime'
+import { TokenIcon } from '#comps/TokenIcon'
 import { type AccountType, getAccountTag, isSystemAddress } from '#lib/account'
 import { PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
@@ -18,21 +19,38 @@ export function AccountCard(props: AccountCard.Props) {
 		lastActivityTimestamp,
 		totalValue,
 		accountType,
+		isToken,
+		tokenName,
 	} = props
 
 	const { copy, notifying } = useCopy()
 	const tag = getAccountTag(address as Address.Address)
 	const isSystem = isSystemAddress(address as Address.Address)
 
+	const titleLabel = accountType === 'contract' ? 'Contract' : 'Address'
+	const isTrulyEmpty =
+		accountType === 'empty' && !lastActivityTimestamp && !totalValue
+	const showChip = isSystem || isTrulyEmpty
+
 	return (
 		<InfoCard
 			title={
 				<div className="flex items-center justify-between px-[18px] h-[36px] font-sans">
-					<h1 className="text-[13px] text-tertiary select-none">
-						{accountType === 'contract' ? 'Contract' : 'Address'}
+					<h1 className="text-[13px] text-tertiary select-none flex items-center gap-2">
+						{isToken && tokenName ? (
+							<>
+								<TokenIcon
+									address={address as Address.Address}
+									name={tokenName}
+									className="size-4"
+								/>
+								<span className="text-primary">{tokenName}</span>
+							</>
+						) : (
+							titleLabel
+						)}
 					</h1>
-					{/* Only show chip when it provides additional info (system, empty) */}
-					{(isSystem || accountType === 'empty') && (
+					{showChip && (
 						<div
 							className="text-[11px] bg-base-alt rounded text-secondary lowercase select-none py-0.5 px-1.5 -mr-2.5 flex items-center"
 							title={
@@ -42,9 +60,7 @@ export function AccountCard(props: AccountCard.Props) {
 										: tag.id.startsWith('genesis-token:')
 											? `Genesis Token: ${tag.label}`
 											: tag.label
-									: accountType === 'empty'
-										? 'Uninitialized account'
-										: undefined
+									: 'Uninitialized account'
 							}
 						>
 							<span>{isSystem ? 'system' : 'empty'}</span>
@@ -143,5 +159,7 @@ export declare namespace AccountCard {
 		createdTimestamp?: bigint | undefined
 		totalValue?: number | undefined
 		accountType?: AccountType | undefined
+		isToken?: boolean | undefined
+		tokenName?: string | undefined
 	}
 }

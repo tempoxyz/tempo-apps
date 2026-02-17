@@ -10,11 +10,23 @@ import { cx } from '#lib/css'
 import { getApiUrl } from '#lib/env.ts'
 import type {
 	AddressSearchResult,
+	BlockSearchResult,
 	SearchApiResponse,
 	SearchResult,
 	TokenSearchResult,
 } from '#routes/api/search'
 import ArrowRight from '~icons/lucide/arrow-right'
+
+function parseBlockInput(raw: string): string | null {
+	const trimmed = raw.trim()
+	const withoutHash = trimmed.startsWith('#')
+		? trimmed.slice(1).trim()
+		: trimmed
+	if (!/^\d+$/.test(withoutHash)) return null
+	const n = Number(withoutHash)
+	if (!Number.isFinite(n) || !Number.isSafeInteger(n) || n < 0) return null
+	return String(n)
+}
 
 export function ExploreInput(props: ExploreInput.Props) {
 	const {
@@ -47,7 +59,9 @@ export function ExploreInput(props: ExploreInput.Props) {
 	const query = value.trim()
 	const isValidInput =
 		query.length > 0 &&
-		(Address.validate(query) || (Hex.validate(query) && Hex.size(query) === 32))
+		(Address.validate(query) ||
+			(Hex.validate(query) && Hex.size(query) === 32) ||
+			parseBlockInput(query) !== null)
 	const { data: searchResults, isFetching } = useQuery(
 		queryOptions({
 			queryKey: ['search', query],
@@ -69,9 +83,9 @@ export function ExploreInput(props: ExploreInput.Props) {
 	>(() => {
 		const tokens: TokenSearchResult[] = []
 		const addresses: AddressSearchResult[] = []
+		const blocks: BlockSearchResult[] = []
 
 		for (const suggestion of suggestions) {
-			// a tx result is always unique so we can return early
 			if (suggestion.type === 'transaction')
 				return [
 					{ type: 'transaction', title: 'Transactions', items: [suggestion] },
@@ -79,11 +93,14 @@ export function ExploreInput(props: ExploreInput.Props) {
 
 			if (suggestion.type === 'token') tokens.push(suggestion)
 			else if (suggestion.type === 'address') addresses.push(suggestion)
+			else if (suggestion.type === 'block') blocks.push(suggestion)
 		}
 
 		const groups: ExploreInput.SuggestionGroup[] = []
 
-		// addresses first
+		if (blocks.length > 0)
+			groups.push({ type: 'block', title: 'Blocks', items: blocks })
+
 		if (addresses.length > 0)
 			groups.push({ type: 'address', title: 'Addresses', items: addresses })
 
@@ -149,6 +166,13 @@ export function ExploreInput(props: ExploreInput.Props) {
 			setShowResults(false)
 			setSelectedIndex(-1)
 
+			if (result.type === 'block') {
+				const id = String(result.blockNumber)
+				onChange?.(id)
+				onActivate?.({ type: 'block', value: id })
+				return
+			}
+
 			if (result.type === 'token') {
 				onChange?.(result.address)
 				onActivate?.({ type: 'token', value: result.address })
@@ -192,6 +216,12 @@ export function ExploreInput(props: ExploreInput.Props) {
 						formValue = formValue.trim()
 						if (!formValue) return
 
+						const blockId = parseBlockInput(formValue)
+						if (blockId !== null) {
+							onActivate?.({ type: 'block', value: blockId })
+							return
+						}
+
 						if (Address.validate(formValue)) {
 							onActivate?.({ type: 'address', value: formValue })
 							return
@@ -221,7 +251,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 						)}
 						data-1p-ignore
 						name="value"
-						placeholder="Enter an address, token or transaction…"
+						placeholder="Enter an address, block, token or transaction…"
 						spellCheck={false}
 						type="text"
 						onKeyDown={(event) => {
@@ -274,7 +304,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 						aria-activedescendant={
 							selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
 						}
-						title="Enter an address, token or transaction to explore (Cmd+K to focus)"
+						title="Enter an address, block, token or transaction to explore (Cmd+K to focus)"
 					/>
 					<div
 						className={cx(
@@ -339,7 +369,9 @@ export function ExploreInput(props: ExploreInput.Props) {
 												? 'Tokens'
 												: group.type === 'transaction'
 													? 'Receipt'
-													: 'Address'}
+													: group.type === 'block'
+														? 'Block'
+														: 'Address'}
 										</div>
 										<div className="text-[12px] text-tertiary">
 											{group.type === 'token'
@@ -354,7 +386,9 @@ export function ExploreInput(props: ExploreInput.Props) {
 										const key =
 											item.type === 'transaction'
 												? `tx-${item.hash}`
-												: `${item.type}-${item.address}`
+												: item.type === 'block'
+													? `block-${item.blockNumber}`
+													: `${item.type}-${item.address}`
 										return (
 											<ExploreInput.SuggestionItem
 												key={key}
@@ -376,14 +410,15 @@ export function ExploreInput(props: ExploreInput.Props) {
 }
 
 export namespace ExploreInput {
-	export type ValueType = 'address' | 'hash'
+	export type ValueType = 'address' | 'hash' | 'block'
 
 	export interface Props {
 		onActivate?: (
 			data:
 				| { value: Address.Address; type: 'address' }
 				| { value: Address.Address; type: 'token' }
-				| { value: Hex.Hex; type: 'hash' },
+				| { value: Hex.Hex; type: 'hash' }
+				| { value: string; type: 'block' },
 		) => void
 		inputRef?: React.RefObject<HTMLInputElement | null>
 		wrapperRef?: React.RefObject<HTMLDivElement | null>
@@ -397,7 +432,7 @@ export namespace ExploreInput {
 	}
 
 	export type SuggestionGroup = {
-		type: 'token' | 'address' | 'transaction'
+		type: 'token' | 'address' | 'transaction' | 'block'
 		title: string
 		items: SearchResult[]
 	}
@@ -424,6 +459,11 @@ export namespace ExploreInput {
 					isSelected && 'bg-base-alt/25',
 				)}
 			>
+				{suggestion.type === 'block' && (
+					<span className="text-[16px] font-medium text-base-content tabular-nums">
+						#{suggestion.blockNumber}
+					</span>
+				)}
 				{suggestion.type === 'token' && (
 					<>
 						<div className="flex items-center gap-[10px] min-w-0 shrink">

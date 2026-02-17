@@ -159,7 +159,7 @@ export namespace TxEventDescription {
 			case 'number': {
 				const formatted = PriceFormatter.formatAmount(
 					Array.isArray(part.value)
-						? Value.format(...part.value)
+						? Value.format(BigInt(part.value[0]), part.value[1])
 						: Value.format(BigInt(part.value)),
 				)
 				const isSmall = formatted.startsWith('<')

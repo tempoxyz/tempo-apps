@@ -33,8 +33,10 @@ export async function loadFonts() {
 	if (fontCache) return fontCache
 	if (!fontsInFlight) {
 		fontsInFlight = Promise.all([
-			fetch(FONT_MONO_URL).then((r) => r.arrayBuffer()),
-			fetch(FONT_INTER_URL).then((r) => r.arrayBuffer()),
+			fetch(FONT_MONO_URL).then((response: Response) => response.arrayBuffer()),
+			fetch(FONT_INTER_URL).then((response: Response) =>
+				response.arrayBuffer(),
+			),
 		]).then(([mono, inter]) => {
 			fontCache = { mono, inter }
 			fontsInFlight = null
@@ -52,21 +54,21 @@ export async function loadImages(env: Cloudflare.Env): Promise<ImageCache> {
 				await Promise.all([
 					env.ASSETS.fetch(
 						new Request('https://assets/bg-template-transaction.webp'),
-					).then((response) => response.arrayBuffer()),
+					).then((response: Response) => response.arrayBuffer()),
 					env.ASSETS.fetch(
 						new Request('https://assets/bg-template-token.webp'),
-					).then((response) => response.arrayBuffer()),
+					).then((response: Response) => response.arrayBuffer()),
 					env.ASSETS.fetch(
 						new Request('https://assets/bg-template-address.webp'),
-					).then((response) => response.arrayBuffer()),
+					).then((response: Response) => response.arrayBuffer()),
 					env.ASSETS.fetch(
 						new Request('https://assets/bg-template-contract.webp'),
-					).then((response) => response.arrayBuffer()),
+					).then((response: Response) => response.arrayBuffer()),
 					env.ASSETS.fetch(
 						new Request('https://assets/tempo-receipt.webp'),
-					).then((response) => response.arrayBuffer()),
+					).then((response: Response) => response.arrayBuffer()),
 					env.ASSETS.fetch(new Request('https://assets/null.webp')).then(
-						(response) => response.arrayBuffer(),
+						(response: Response) => response.arrayBuffer(),
 					),
 				])
 			imageCache = {

@@ -8,21 +8,22 @@ import {
 	tempoModerato,
 } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
+import { loadBalance, rateLimit } from '@tempo/rpc-utils'
 import { tempoPresto } from './lib/chains'
 import {
-	cookieStorage,
-	cookieToInitialState,
-	createConfig,
-	createStorage,
-	fallback,
-	http,
-	serialize,
-	webSocket,
+        cookieStorage,
+        cookieToInitialState,
+        createConfig,
+        createStorage,
+        http,
+        serialize,
 } from 'wagmi'
+import { KeyManager, webAuthn } from 'wagmi/tempo'
 
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
+let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null
 
 export const getTempoChain = createIsomorphicFn()
 	.client(() =>
@@ -51,7 +52,6 @@ const getRpcProxyUrl = createIsomorphicFn()
 		const chain = getTempoChain()
 		return {
 			http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}`,
-			webSocket: `wss://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}`,
 		}
 	})
 	.server(() => {
@@ -60,53 +60,66 @@ const getRpcProxyUrl = createIsomorphicFn()
 		const keyParam = key ? `?key=${key}` : ''
 		return {
 			http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}${keyParam}`,
-			webSocket: `wss://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}${keyParam}`,
 		}
 	})
 
 const getFallbackUrls = createIsomorphicFn()
 	.client(() => {
 		const chain = getTempoChain()
-		return chain.rpcUrls.default
+		return {
+			http: chain.rpcUrls.default.http,
+		}
 	})
 	.server(() => {
 		const chain = getTempoChain()
 		const key = process.env.TEMPO_RPC_KEY
 		return {
-			webSocket: chain.rpcUrls.default.webSocket.map((url) =>
-				key ? `${url}/${key}` : url,
-			),
 			http: chain.rpcUrls.default.http.map((url) =>
 				key ? `${url}/${key}` : url,
 			),
 		}
 	})
 
-function getTempoTransport() {
-	const proxy = getRpcProxyUrl()
-	const fallbackUrls = getFallbackUrls()
-	return fallback([
-		webSocket(proxy.webSocket),
-		http(proxy.http),
-		...fallbackUrls.webSocket.map(webSocket),
-		...fallbackUrls.http.map(http),
-	])
-}
+const getTempoTransport = createIsomorphicFn()
+        .client(() => {
+                const proxy = getRpcProxyUrl()
+                const fallbackUrls = getFallbackUrls()
+                const proxyTransport = rateLimit(http(proxy.http), {
+                        requestsPerSecond: 20,
+                })
+                const fallbackTransports = fallbackUrls.http.map((url) =>
+                        rateLimit(http(url), { requestsPerSecond: 10 }),
+                )
+
+                return loadBalance([proxyTransport, ...fallbackTransports])
+        })
+        .server(() => {
+                const proxy = getRpcProxyUrl()
+                const fallbackUrls = getFallbackUrls()
+                return loadBalance([http(proxy.http), ...fallbackUrls.http.map(http)])
+        })
 
 export function getWagmiConfig() {
+	if (wagmiConfigSingleton) return wagmiConfigSingleton
 	const chain = getTempoChain()
 	const transport = getTempoTransport()
 
-	return createConfig({
+	wagmiConfigSingleton = createConfig({
 		ssr: true,
-		batch: { multicall: false },
 		chains: [chain, tempoLocalnet],
+		connectors: [
+			webAuthn({
+				keyManager: KeyManager.http('https://keys.tempo.xyz'),
+			}),
+		],
 		storage: createStorage({ storage: cookieStorage }),
 		transports: {
 			[chain.id]: transport,
 			[tempoLocalnet.id]: http(undefined, { batch: true }),
 		} as never,
 	})
+
+	return wagmiConfigSingleton
 }
 
 export const getWagmiStateSSR = createServerFn().handler(() => {

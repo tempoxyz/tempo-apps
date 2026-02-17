@@ -12,7 +12,7 @@ import { PriceFormatter } from '#lib/formatting.ts'
 
 export function Amount(props: Amount.Props) {
 	const {
-		value,
+		value: rawValue,
 		token,
 		decimals,
 		symbol,
@@ -25,6 +25,7 @@ export function Amount(props: Amount.Props) {
 		infinite,
 	} = props
 
+	const value = typeof rawValue === 'bigint' ? rawValue : BigInt(rawValue)
 	const isTip20 = isTip20Address(token)
 
 	const { data: metadata } = Hooks.token.useGetMetadata({
@@ -83,7 +84,8 @@ export function Amount(props: Amount.Props) {
 }
 
 export namespace Amount {
-	export interface Props extends Omit<Base.Props, 'decimals'> {
+	export interface Props extends Omit<Base.Props, 'decimals' | 'value'> {
+		value: bigint | string
 		token: Address.Address
 		decimals?: number
 		symbol?: string

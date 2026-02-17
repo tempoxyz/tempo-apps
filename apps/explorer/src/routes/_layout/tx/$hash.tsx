@@ -177,7 +177,14 @@ function RouteComponent() {
 			}),
 	})
 
-	const calls = 'calls' in transaction ? transaction.calls : undefined
+	const calls =
+		transaction && 'calls' in transaction && Array.isArray(transaction.calls)
+			? (transaction.calls as Array<{
+					to?: OxAddress.Address | null
+					data?: Hex.Hex
+					value?: bigint
+				}>)
+			: undefined
 	const hasCalls = Boolean(calls && calls.length > 0)
 
 	const setActiveSection = (newIndex: number) => {
@@ -270,7 +277,7 @@ function RouteComponent() {
 	return (
 		<div
 			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-w-[800px]:pt-10 max-w-[800px]:pb-8 w-full',
+				'max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 w-full',
 				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
 			)}
 		>

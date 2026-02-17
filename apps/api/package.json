@@ -20,7 +20,10 @@
 		"check": "biome check --write --unsafe",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
-		"tail": "wrangler tail"
+		"tail": "wrangler tail",
+		"test": "vitest --run",
+		"bench:gecko": "node scripts/bench.gecko.ts",
+		"bench:gecko:continuous": "node scripts/bench.gecko.ts --continuous"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
@@ -37,8 +40,10 @@
 		"@scalar/api-reference": "^1.43.17",
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/node": "catalog:",
+		"idxs": "catalog:",
 		"typescript": "catalog:",
 		"vite": "catalog:",
+		"vitest": "catalog:",
 		"wrangler": "catalog:"
 	},
 	"license": "MIT"

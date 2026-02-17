@@ -5,12 +5,11 @@ import {
 	useRouterState,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useWatchBlockNumber } from 'wagmi'
 import { ExploreInput } from '#comps/ExploreInput'
+import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
 import { isTestnet } from '#lib/env'
 import { useIsMounted } from '#lib/hooks'
-import Music4 from '~icons/lucide/music-4'
 import SquareSquare from '~icons/lucide/square-square'
 import { ThemeToggle } from '#comps/ThemeToggle'
 
@@ -24,7 +23,6 @@ export function Header(props: Header.Props) {
 					<Link to="/" className="flex items-center press-down py-[4px]">
 						<Header.TempoWordmark />
 					</Link>
-					<Header.NetworkBadge />
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
@@ -49,14 +47,14 @@ export namespace Header {
 		const [inputValue, setInputValue] = React.useState('')
 
 		const [delayedNavigating, setDelayedNavigating] = React.useState(false)
-		const { currentPathname, isNavigating } = useRouterState({
+		const { resolvedPathname, isNavigating } = useRouterState({
 			select: (state) => ({
-				currentPathname:
-					state.matches.at(-1)?.pathname ?? state.location.pathname,
+				resolvedPathname:
+					state.resolvedLocation?.pathname ?? state.location.pathname,
 				isNavigating: state.status === 'pending',
 			}),
 		})
-		const showSearch = currentPathname !== '/'
+		const showSearch = resolvedPathname !== '/'
 
 		const isMounted = useIsMounted()
 
@@ -84,6 +82,10 @@ export namespace Header {
 				onChange={setInputValue}
 				disabled={isMounted && delayedNavigating}
 				onActivate={({ value, type }) => {
+					if (type === 'block') {
+						navigate({ to: '/block/$id', params: { id: value } })
+						return
+					}
 					if (type === 'hash') {
 						navigate({ to: '/receipt/$hash', params: { hash: value } })
 						return
@@ -105,13 +107,17 @@ export namespace Header {
 
 		if (compact)
 			return (
-				<div className="@min-[800px]:hidden sticky top-0 z-10 px-[24px] pt-[16px] pb-[12px] print:hidden">
+				<div className="@min-[800px]:hidden sticky top-0 z-10 px-4 pt-[16px] pb-[12px] print:hidden">
 					<ExploreInput
 						wide
 						value={inputValue}
 						onChange={setInputValue}
 						disabled={isMounted && delayedNavigating}
 						onActivate={({ value, type }) => {
+							if (type === 'block') {
+								navigate({ to: '/block/$id', params: { id: value } })
+								return
+							}
 							if (type === 'hash') {
 								navigate({ to: '/receipt/$hash', params: { hash: value } })
 								return
@@ -144,6 +150,10 @@ export namespace Header {
 						onChange={setInputValue}
 						disabled={isMounted && delayedNavigating}
 						onActivate={({ value, type }) => {
+							if (type === 'block') {
+								navigate({ to: '/block/$id', params: { id: value } })
+								return
+							}
 							if (type === 'hash') {
 								navigate({ to: '/receipt/$hash', params: { hash: value } })
 								return
@@ -168,21 +178,20 @@ export namespace Header {
 
 	export function BlockNumber(props: BlockNumber.Props) {
 		const { initial, className } = props
-
-		const ref = React.useRef<HTMLSpanElement>(null)
-
-		useWatchBlockNumber({
-			onBlockNumber: (blockNumber) => {
-				if (ref.current) ref.current.textContent = String(blockNumber)
-			},
-			poll: true,
+		const resolvedPathname = useRouterState({
+			select: (state) =>
+				state.resolvedLocation?.pathname ?? state.location.pathname,
 		})
+		const optimisticBlockNumber = useAnimatedBlockNumber(initial)
+		const liveBlockNumber = useLiveBlockNumber(initial)
+		const blockNumber =
+			resolvedPathname === '/blocks' ? liveBlockNumber : optimisticBlockNumber
 
 		return (
 			<Link
 				disabled={!isTestnet()}
 				to="/block/$id"
-				params={{ id: 'latest' }}
+				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
 				className={cx(
 					className,
 					'flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down',
@@ -191,11 +200,8 @@ export namespace Header {
 			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
-					<span
-						ref={ref}
-						className="text-primary font-medium tabular-nums font-mono min-w-[6ch] inline-block"
-					>
-						{initial ? String(initial) : '…'}
+					<span className="text-primary font-medium tabular-nums font-mono min-w-[6ch] inline-block">
+						{blockNumber != null ? String(blockNumber) : '…'}
 					</span>
 				</div>
 			</Link>
@@ -206,35 +212,6 @@ export namespace Header {
 		export interface Props {
 			initial?: bigint
 			className?: string | undefined
-		}
-	}
-
-	export function NetworkBadge(props: NetworkBadge.Props) {
-		const { className } = props
-		const network = import.meta.env.VITE_TEMPO_ENV
-		if (!network) return null
-		const name =
-			network === 'testnet'
-				? 'Andantino'
-				: network.charAt(0).toUpperCase() + network.slice(1)
-		return (
-			<div
-				title={`${name} Network`}
-				className={cx(
-					'flex items-center gap-[4px] px-[8px] h-[28px] border border-distinct',
-					'bg-base-alt text-base-content rounded-[14px] text-[14px] font-medium',
-					className,
-				)}
-			>
-				<Music4 width={14} height={14} className="text-accent" />
-				<span>{name}</span>
-			</div>
-		)
-	}
-
-	export namespace NetworkBadge {
-		export interface Props {
-			className?: string
 		}
 	}
 

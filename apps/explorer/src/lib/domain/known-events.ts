@@ -99,11 +99,18 @@ function createDetectors(
 				const mintKey = `mint:${address}:${amount}:${to}`
 				const memo = mintBurnMemos?.get(mintKey)
 
+				// Show "Mint to Recipient" when recipient differs from minter (transaction sender)
+				const isMintToRecipient =
+					transactionSender && !Address.isEqual(transactionSender, to)
+
 				return {
 					type: 'mint',
 					note: memo,
 					parts: [
-						{ type: 'action', value: 'Mint' },
+						{
+							type: 'action',
+							value: isMintToRecipient ? 'Mint to Recipient' : 'Mint',
+						},
 						{
 							type: 'amount',
 							value: createAmount(amount, address),
@@ -111,6 +118,7 @@ function createDetectors(
 						{ type: 'text', value: 'to' },
 						{ type: 'account', value: to },
 					],
+					meta: { from: transactionSender, to },
 				}
 			}
 

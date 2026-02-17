@@ -59,7 +59,7 @@ const SPOTLIGHT_DATA: Record<
 	},
 	presto: {
 		accountAddress: '0x85269497F0b602a718b85DB5ce490A6c88d01c0E',
-		contractAddress: '0x4027a3f47d9a421c381bf5d88e22dad5afd4b1a2',
+		contractAddress: '0x271c4d8616ed81c2cc006446c61f25219b182f8a',
 		receiptHash:
 			'0x2e455936243560a540a1cf25203ef6bb70eb5410667922a1d2e3ad69eb891983',
 		paymentHash:
@@ -133,6 +133,13 @@ function Component() {
 						disabled={isMounted && isNavigating}
 						tabIndex={inputReady ? 0 : -1}
 						onActivate={(data) => {
+							if (data.type === 'block') {
+								navigate({
+									to: '/block/$id',
+									params: { id: data.value },
+								})
+								return
+							}
 							if (data.type === 'hash') {
 								navigate({
 									to: '/receipt/$hash',
@@ -350,6 +357,7 @@ function SpotlightLinks() {
 												key={action.label}
 												to="/tx/$hash"
 												params={{ hash: action.hash }}
+												preload="render"
 												className={`px-2.5 py-1 text-[12px] text-base-content-secondary hover:text-base-content hover:bg-base-border/40 whitespace-nowrap focus-visible:outline-offset-0 press-down cursor-pointer ${
 													i === 0
 														? 'rounded-l-[14px]! rounded-r-[2px]!'
@@ -405,6 +413,7 @@ function SpotlightPill(props: {
 			to={to}
 			{...(params ? { params } : {})}
 			{...(search ? { search } : {})}
+			preload="render"
 			className={cx(
 				'relative flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus-visible:border-accent py-1 rounded-full! press-down group-hover/pills:opacity-40 hover:opacity-100 bg-surface focus-visible:outline-none border-base-border transition-colors duration-300 ease-out focus-visible:duration-0',
 				badge ? 'pl-2.5 pr-4' : 'px-2.5',

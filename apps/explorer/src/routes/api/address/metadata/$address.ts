@@ -1,18 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import * as IDX from 'idxs'
 import * as Address from 'ox/Address'
 import { getCode } from 'viem/actions'
 import { getChainId } from 'wagmi/actions'
 import { getAccountType, type AccountType } from '#lib/account'
 import { hasIndexSupply } from '#lib/env'
+import { fetchAddressTxAggregate } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
 
 function parseTimestamp(value: unknown): number | undefined {
 	if (typeof value === 'number') return value
@@ -65,24 +59,11 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 						getCode(client, { address }).catch(() => undefined),
 
 						// Combined query: count + newest + oldest in one scan
-						QB.selectFrom('txs')
-							.where('txs.chain', '=', chainId)
-							.where((wb) =>
-								wb.or([
-									wb('txs.from', '=', address),
-									wb('txs.to', '=', address),
-								]),
-							)
-							.select((sb) => [
-								sb.fn.count('txs.hash').as('count'),
-								sb.fn.max('txs.block_timestamp').as('latestTxsBlockTimestamp'),
-								sb.fn.min('txs.block_timestamp').as('oldestTxsBlockTimestamp'),
-							])
-							.executeTakeFirst(),
+						fetchAddressTxAggregate(address, chainId),
 					])
 
 					const accountType = getAccountType(bytecode)
-					const txCount = txAggResult?.count ? Number(txAggResult.count) : 0
+					const txCount = txAggResult?.count ?? 0
 					const lastActivityTimestamp = parseTimestamp(
 						txAggResult?.latestTxsBlockTimestamp,
 					)

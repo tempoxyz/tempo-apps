@@ -7,6 +7,7 @@
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
+		"postinstall": "pnpm gen:types",
 		"gen:types": "wrangler types"
 	},
 	"dependencies": {

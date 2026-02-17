@@ -39,6 +39,7 @@ function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	const config = getWagmiConfig()
 	const client = getPublicClient(config)
+	if (!client) throw new Error('RPC client unavailable')
 	const receipt = await client.getTransactionReceipt({
 		hash: params.hash,
 	})

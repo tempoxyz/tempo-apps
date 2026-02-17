@@ -1,7 +1,8 @@
 import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi } from 'viem'
-import { useBytecode } from 'wagmi'
+import { useBytecode, usePublicClient } from 'wagmi'
+import { Link } from '@tanstack/react-router'
 import { ConnectWallet } from '#comps/ConnectWallet.tsx'
 import { AbiViewer } from '#comps/ContractAbi.tsx'
 import { ContractReader } from '#comps/ContractReader.tsx'
@@ -10,12 +11,28 @@ import { ContractWriter } from '#comps/ContractWriter.tsx'
 import { cx } from '#lib/css'
 import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
-import { getContractAbi } from '#lib/domain/contracts.ts'
+import { getContractAbi, autoloadAbi } from '#lib/domain/contracts.ts'
+import {
+	detectProxy,
+	type ProxyInfo,
+	type ProxyType,
+} from '#lib/domain/proxy.ts'
 import { useCopy, useDownload } from '#lib/hooks.ts'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
 import DownloadIcon from '~icons/lucide/download'
 import ExternalLinkIcon from '~icons/lucide/external-link'
+
+const proxyTypeUrls: Record<ProxyType, string> = {
+	'EIP-1967': 'https://eips.ethereum.org/EIPS/eip-1967',
+	'EIP-1822': 'https://eips.ethereum.org/EIPS/eip-1822',
+	Beacon: 'https://eips.ethereum.org/EIPS/eip-1967#beacon-contract-address',
+	Legacy: 'https://docs.openzeppelin.com/contracts/4.x/api/proxy',
+}
+
+function proxyTypeUrl(type: ProxyType | undefined): string {
+	return type ? proxyTypeUrls[type] : proxyTypeUrls['EIP-1967']
+}
 
 /**
  * Contract tab content - shows ABI and Source
@@ -217,6 +234,8 @@ function BytecodeSection(props: { address: Address.Address }) {
 
 /**
  * Interact tab content - shows Read and Write contract functions
+ * Supports proxy passthrough - detects proxy contracts and fetches implementation ABI
+ * Also allows interacting with the proxy contract's own functions
  */
 export function InteractTabContent(props: {
 	address: Address.Address
@@ -224,11 +243,62 @@ export function InteractTabContent(props: {
 	docsUrl?: string
 }) {
 	const { address, docsUrl } = props
+	const publicClient = usePublicClient()
 
 	const [readExpanded, setReadExpanded] = React.useState(true)
 	const [writeExpanded, setWriteExpanded] = React.useState(true)
+	const [proxyFunctionsExpanded, setProxyFunctionsExpanded] =
+		React.useState(false)
+	const [proxyInfo, setProxyInfo] = React.useState<ProxyInfo | null>(null)
+	const [implAbi, setImplAbi] = React.useState<Abi | null>(null)
+	const [proxyAbi, setProxyAbi] = React.useState<Abi | null>(null)
+	const [isLoadingProxy, setIsLoadingProxy] = React.useState(false)
 
-	const abi = props.abi ?? getContractAbi(address)
+	// Detect proxy and load implementation ABI
+	React.useEffect(() => {
+		if (!publicClient) return
+
+		const loadProxyInfo = async () => {
+			setIsLoadingProxy(true)
+			try {
+				const proxy = await detectProxy(publicClient, address)
+				setProxyInfo(proxy)
+
+				// If it's a proxy, load both implementation and proxy ABIs
+				if (proxy.isProxy && proxy.implementationAddress) {
+					const [loadedImplAbi, loadedProxyAbi] = await Promise.all([
+						autoloadAbi(proxy.implementationAddress, { followProxies: false }),
+						autoloadAbi(address, { followProxies: false }),
+					])
+					if (loadedImplAbi) setImplAbi(loadedImplAbi)
+					if (loadedProxyAbi) setProxyAbi(loadedProxyAbi)
+				}
+			} catch {
+				// Ignore proxy detection errors
+			} finally {
+				setIsLoadingProxy(false)
+			}
+		}
+
+		void loadProxyInfo()
+	}, [publicClient, address])
+
+	// For proxies, prefer implementation ABI so users see callable functions
+	const abi =
+		(implAbi && implAbi.length > 0 ? implAbi : null) ??
+		props.abi ??
+		getContractAbi(address)
+
+	if (isLoadingProxy) {
+		return (
+			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
+				<p className="text-sm font-medium text-tertiary">
+					Loading contract information{ellipsis}
+				</p>
+			</div>
+		)
+	}
+
 	if (!abi) {
 		return (
 			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
@@ -239,12 +309,41 @@ export function InteractTabContent(props: {
 		)
 	}
 
+	const isProxy = proxyInfo?.isProxy ?? false
+	const implementationAddress = proxyInfo?.implementationAddress
+	const hasProxyFunctions = proxyAbi && proxyAbi.length > 0
+
 	return (
 		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
-			{/* Write Contract Section */}
+			{/* Proxy Info Banner */}
+			{isProxy && implementationAddress && (
+				<div className="flex items-center gap-[8px] px-[16px] py-[10px] bg-accent/10 border-b border-dashed border-distinct text-[13px]">
+					<a
+						href={proxyTypeUrl(proxyInfo?.type)}
+						target="_blank"
+						rel="noopener noreferrer"
+						className="inline-flex items-center gap-[4px] px-[6px] py-[2px] bg-accent/20 text-accent hover:bg-accent/30 rounded text-[11px] font-medium transition-colors"
+					>
+						{proxyInfo?.type} Proxy
+						<ExternalLinkIcon className="size-[10px]" />
+					</a>
+					<span className="text-secondary">Implementation:</span>
+					<Link
+						to="/address/$address"
+						params={{ address: implementationAddress }}
+						search={{ tab: 'interact' }}
+						className="font-mono text-[12px] text-accent hover:underline"
+					>
+						{implementationAddress.slice(0, 10)}...
+						{implementationAddress.slice(-8)}
+					</Link>
+				</div>
+			)}
+
+			{/* Write Contract Section (Implementation functions via proxy) */}
 			<CollapsibleSection
-				first
-				title="Write"
+				first={!isProxy}
+				title={isProxy ? 'Write (via Proxy)' : 'Write'}
 				expanded={writeExpanded}
 				onToggle={() => setWriteExpanded(!writeExpanded)}
 				actions={<ConnectWallet />}
@@ -254,9 +353,9 @@ export function InteractTabContent(props: {
 				</div>
 			</CollapsibleSection>
 
-			{/* Read Contract Section */}
+			{/* Read Contract Section (Implementation functions via proxy) */}
 			<CollapsibleSection
-				title="Read"
+				title={isProxy ? 'Read (via Proxy)' : 'Read'}
 				expanded={readExpanded}
 				onToggle={() => setReadExpanded(!readExpanded)}
 			>
@@ -264,6 +363,29 @@ export function InteractTabContent(props: {
 					<ContractReader address={address} abi={abi} docsUrl={docsUrl} />
 				</div>
 			</CollapsibleSection>
+
+			{/* Proxy Contract Functions Section */}
+			{isProxy && hasProxyFunctions && (
+				<CollapsibleSection
+					title="Proxy Contract Functions"
+					expanded={proxyFunctionsExpanded}
+					onToggle={() => setProxyFunctionsExpanded(!proxyFunctionsExpanded)}
+					actions={
+						<span className="text-[11px] text-secondary">
+							Direct proxy functions
+						</span>
+					}
+				>
+					<div className="px-[10px] pb-[10px] flex flex-col gap-[12px]">
+						<div className="text-[12px] text-secondary px-[6px] py-[4px] bg-amber-500/10 rounded border border-amber-500/20">
+							These are functions defined on the proxy contract itself, not the
+							implementation.
+						</div>
+						<ContractReader address={address} abi={proxyAbi} />
+						<ContractWriter address={address} abi={proxyAbi} />
+					</div>
+				</CollapsibleSection>
+			)}
 		</div>
 	)
 }

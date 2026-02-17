@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
+import * as React from 'react'
 import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
 import { DataGrid } from '#comps/DataGrid'
@@ -45,6 +46,7 @@ export const Route = createFileRoute('/_layout/tokens')({
 					page: 1,
 					limit: TOKENS_PER_PAGE,
 					includeCount: false,
+					includeHolders: false,
 				}),
 			),
 		),
@@ -61,6 +63,7 @@ function TokensPage() {
 			page,
 			limit: TOKENS_PER_PAGE,
 			includeCount: false,
+			includeHolders: true,
 		}),
 		initialData: page === 1 ? loaderData : undefined,
 	})
@@ -85,12 +88,44 @@ function TokensPage() {
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
+	const holdersCountFormatter = React.useMemo(
+		() => new Intl.NumberFormat('en-US'),
+		[],
+	)
+
+	const formatHoldersCount = React.useCallback(
+		(token: Token) => {
+			if (token.holdersCount === undefined) return '—'
+			const formatted = holdersCountFormatter.format(token.holdersCount)
+			return token.holdersCountCapped ? `> ${formatted}` : formatted
+		},
+		[holdersCountFormatter],
+	)
 
 	const columns: DataGrid.Column[] = [
-		{ label: 'Token', align: 'start', minWidth: 80 },
-		{ label: 'Name', align: 'start' },
-		{ label: 'Currency', align: 'start', minWidth: 80 },
-		{ label: 'Address', align: 'start' },
+		{
+			label: 'Token',
+			align: 'start',
+			minWidth: 80,
+		},
+		{
+			label: 'Name',
+			align: 'start',
+		},
+		{
+			label: 'Currency',
+			align: 'start',
+			minWidth: 80,
+		},
+		{
+			label: 'Holders',
+			align: 'end',
+			minWidth: 90,
+		},
+		{
+			label: 'Address',
+			align: 'start',
+		},
 		{
 			label: (
 				<TimeColumnHeader
@@ -136,6 +171,9 @@ function TokensPage() {
 											</span>,
 											<span key="currency" className="text-secondary">
 												{token.currency}
+											</span>,
+											<span key="holders" className="text-secondary">
+												{formatHoldersCount(token)}
 											</span>,
 											<Address key="address" address={token.address} />,
 											<FormattedTimestamp

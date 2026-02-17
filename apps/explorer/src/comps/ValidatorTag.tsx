@@ -1,11 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { Midcut } from '#comps/Midcut'
-import { getValidatorLabel } from '#lib/validators'
 
 export function ValidatorTag(props: ValidatorTag.Props) {
-	const { address, showAddress = true, align = 'end' } = props
-	const name = getValidatorLabel(address)
+	const { address, name, showAddress = true, align = 'end' } = props
 
 	return (
 		<Link
@@ -31,6 +29,7 @@ export function ValidatorTag(props: ValidatorTag.Props) {
 export namespace ValidatorTag {
 	export interface Props {
 		address: Address.Address
+		name?: string
 		showAddress?: boolean
 		align?: 'start' | 'end'
 	}

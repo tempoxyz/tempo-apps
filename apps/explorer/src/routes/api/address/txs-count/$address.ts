@@ -1,18 +1,12 @@
 import { createFileRoute } from '@tanstack/react-router'
-import * as IDX from 'idxs'
 import * as Address from 'ox/Address'
 import { getBlockNumber, getCode } from 'viem/actions'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { hasIndexSupply } from '#lib/env'
+import { fetchAddressTxCounts } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
-
-const IS = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
-})
-
-const QB = IDX.QueryBuilder.from(IS)
 
 const chainId = getChainId(getWagmiConfig())
 
@@ -92,29 +86,16 @@ export const Route = createFileRoute('/api/address/txs-count/$address')({
 
 					const { chainId } = parseResult.data
 
-					const [txSentResult, txReceivedResult, hasCreation] =
-						await Promise.all([
-							QB.selectFrom('txs')
-								.select((eb) => eb.fn.count('hash').as('cnt'))
-								.where('from', '=', address)
-								.where('chain', '=', chainId)
-								.executeTakeFirst(),
-							QB.selectFrom('txs')
-								.select((eb) => eb.fn.count('hash').as('cnt'))
-								.where('to', '=', address)
-								.where('chain', '=', chainId)
-								.executeTakeFirst(),
-							// Check if this is a contract with a creation tx
-							hasContractCreation(address, chainId),
-						])
-
-					const txSent = txSentResult?.cnt ?? 0
-					const txReceived = txReceivedResult?.cnt ?? 0
+					const [txCounts, hasCreation] = await Promise.all([
+						fetchAddressTxCounts(address, chainId),
+						// Check if this is a contract with a creation tx
+						hasContractCreation(address, chainId),
+					])
 					// Add 1 if contract has a creation tx
 					const creationCount = hasCreation ? 1 : 0
 
 					return Response.json({
-						data: Number(txSent) + Number(txReceived) + creationCount,
+						data: txCounts.sent + txCounts.received + creationCount,
 						error: null,
 					})
 				} catch (error) {

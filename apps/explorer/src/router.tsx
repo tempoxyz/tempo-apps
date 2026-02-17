@@ -5,10 +5,12 @@ import { hashFn } from 'wagmi/query'
 import { Layout } from '#comps/Layout'
 import { NotFound } from '#comps/NotFound'
 import {
-	captureEvent,
+	captureSampledEvent,
+	getNavigationId,
 	normalizePathPattern,
 	ProfileEvents,
 } from '#lib/profiling'
+import { initSentry } from '#lib/sentry'
 import { routeTree } from '#routeTree.gen.ts'
 
 const queryStartTimes = new WeakMap<object, number>()
@@ -40,7 +42,7 @@ export const getRouter = () => {
 				if (typeof window === 'undefined') return
 
 				const startTime = queryStartTimes.get(query)
-				if (startTime) {
+				if (startTime !== undefined) {
 					const duration = performance.now() - startTime
 					queryStartTimes.delete(query)
 
@@ -49,11 +51,12 @@ export const getRouter = () => {
 						? String(queryKey[0])
 						: 'unknown'
 
-					captureEvent(ProfileEvents.API_LATENCY, {
+					captureSampledEvent(ProfileEvents.API_LATENCY, {
 						query_name: queryName,
 						duration_ms: Math.round(duration),
 						from_cache: query.state.dataUpdateCount > 1,
 						status: 'success',
+						navigation_id: getNavigationId(),
 						path: window.location.pathname,
 						route_pattern: normalizePathPattern(window.location.pathname),
 					})
@@ -64,7 +67,7 @@ export const getRouter = () => {
 				if (!error) return
 
 				const startTime = queryStartTimes.get(query)
-				if (startTime) {
+				if (startTime !== undefined) {
 					const duration = performance.now() - startTime
 					queryStartTimes.delete(query)
 
@@ -73,13 +76,14 @@ export const getRouter = () => {
 						? String(queryKey[0])
 						: 'unknown'
 
-					captureEvent(ProfileEvents.API_LATENCY, {
+					captureSampledEvent(ProfileEvents.API_LATENCY, {
 						query_name: queryName,
 						duration_ms: Math.round(duration),
 						from_cache: false,
 						status: 'error',
 						error_message:
 							error instanceof Error ? error.message : String(error),
+						navigation_id: getNavigationId(),
 						path: window.location.pathname,
 						route_pattern: normalizePathPattern(window.location.pathname),
 					})
@@ -109,6 +113,10 @@ export const getRouter = () => {
 			</Layout>
 		),
 	})
+
+	if (!router.isServer) {
+		initSentry(router)
+	}
 
 	// @see https://tanstack.com/router/latest/docs/integrations/query
 	setupRouterSsrQueryIntegration({

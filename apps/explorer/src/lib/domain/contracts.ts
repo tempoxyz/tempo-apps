@@ -438,6 +438,7 @@ const WRITE_FUNCTION_PATTERNS = [
 	/^revoke/i,
 	/^grant/i,
 	/^renounce/i,
+	/^accept/i,
 	/^initialize/i,
 	/^create/i,
 	/^delete/i,
@@ -687,6 +688,7 @@ export async function getContractBytecode(
 ): Promise<Hex.Hex | undefined> {
 	const config = getWagmiConfig()
 	const client = getPublicClient(config)
+	if (!client) return undefined
 	const code = await client.getCode({ address })
 	if (!code || code === '0x') return undefined
 	return code
@@ -807,6 +809,34 @@ export async function lookupSignature(
 	return signatures[0] ?? null
 }
 
+class TempoABILoader {
+	readonly name = 'TempoABILoader'
+	readonly chainId: number
+
+	constructor({ chainId }: { chainId: number }) {
+		this.chainId = chainId
+	}
+
+	async getContract(
+		address: string,
+	): Promise<{ abi: unknown[]; name: string | null; ok: boolean }> {
+		const abi = await this.loadABI(address)
+		return { abi, name: null, ok: abi.length > 0 }
+	}
+
+	async loadABI(address: string): Promise<unknown[]> {
+		try {
+			const url = `https://contracts.tempo.xyz/v2/contract/${this.chainId}/${address.toLowerCase()}?fields=abi`
+			const response = await fetch(url)
+			if (!response.ok) return []
+			const data = (await response.json()) as { abi?: unknown[] }
+			return data.abi ?? []
+		} catch {
+			return []
+		}
+	}
+}
+
 export type AutoloadAbiOptions = {
 	followProxies?: boolean
 	includeSourceVerified?: boolean
@@ -824,6 +854,7 @@ export async function autoloadAbi(
 	const config = getWagmiConfig()
 	const chainId = getChainId(config)
 	const client = getPublicClient(config)
+	if (!client) return null
 
 	try {
 		const result = await whatsabi.autoload(address, {
@@ -831,6 +862,7 @@ export async function autoloadAbi(
 			followProxies,
 			abiLoader: includeSourceVerified
 				? new loaders.MultiABILoader([
+						new TempoABILoader({ chainId }),
 						new loaders.SourcifyABILoader({ chainId }),
 					])
 				: false,

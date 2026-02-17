@@ -2,6 +2,9 @@
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
 	"compatibility_date": "2025-12-17",
 	"compatibility_flags": ["nodejs_compat"],
+	"version_metadata": {
+		"binding": "CF_VERSION_METADATA"
+	},
 	"main": "./src/index.server.ts",
 	"keep_vars": true,
 	"workers_dev": true,
@@ -25,7 +28,13 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "testnet"
+				"VITE_TEMPO_ENV": "testnet",
+				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
+				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
@@ -50,11 +59,6 @@
 				{
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
-					"pattern": "explorer.tempo.xyz"
-				},
-				{
-					"custom_domain": true,
-					"zone_name": "tempo.xyz",
 					"pattern": "explore.42431.tempo.xyz"
 				},
 				{
@@ -69,7 +73,13 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "moderato"
+				"VITE_TEMPO_ENV": "moderato",
+				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
+				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
@@ -98,7 +108,13 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "devnet"
+				"VITE_TEMPO_ENV": "devnet",
+				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
+				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },
@@ -132,7 +148,13 @@
 				}
 			],
 			"vars": {
-				"VITE_TEMPO_ENV": "presto"
+				"VITE_TEMPO_ENV": "presto",
+				"VITE_SENTRY_DSN": "https://0f252c4cc335811d53f9e996b8a3450a@o4510262603481088.ingest.us.sentry.io/4510858114564096",
+				"SENTRY_TRACES_SAMPLE_RATE": "0.5",
+				"VITE_SENTRY_TRACES_SAMPLE_RATE": "0.5"
+			},
+			"version_metadata": {
+				"binding": "CF_VERSION_METADATA"
 			},
 			"workers_dev": true,
 			"browser": { "binding": "BROWSER" },

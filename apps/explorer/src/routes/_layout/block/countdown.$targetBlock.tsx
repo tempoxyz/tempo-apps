@@ -6,10 +6,10 @@ import {
 	rootRouteId,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { useWatchBlockNumber } from 'wagmi'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { InfoCard } from '#comps/InfoCard'
 import { NotFound } from '#comps/NotFound'
+import { useAnimatedBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
 import { withLoaderTiming } from '#lib/profiling'
 import { blocksQueryOptions } from '#lib/queries'
@@ -72,14 +72,14 @@ function RouteComponent() {
 		loaderData.currentBlockNumber,
 	)
 	const targetBlockNumber = loaderData.targetBlockNumber
+	const liveBlockNumber = useAnimatedBlockNumber(loaderData.currentBlockNumber)
 
-	useWatchBlockNumber({
-		onBlockNumber: (blockNumber) => {
-			if (blockNumber == null) return
-			setCurrentBlockNumber((prev) => (blockNumber > prev ? blockNumber : prev))
-		},
-		poll: true,
-	})
+	React.useEffect(() => {
+		if (liveBlockNumber == null) return
+		setCurrentBlockNumber((prev) =>
+			liveBlockNumber > prev ? liveBlockNumber : prev,
+		)
+	}, [liveBlockNumber])
 
 	const remainingBlocks = targetBlockNumber - currentBlockNumber
 

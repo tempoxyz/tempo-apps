@@ -8,12 +8,10 @@ import { Sections } from '#comps/Sections'
 import { useMediaQuery } from '#lib/hooks'
 import { withLoaderTiming } from '#lib/profiling'
 import { validatorsQueryOptions } from '#lib/queries'
-import { getValidatorLabel } from '#lib/validators'
 import Check from '~icons/lucide/check'
 import X from '~icons/lucide/x'
 
-function ValidatorName({ address }: { address: `0x${string}` }) {
-	const name = getValidatorLabel(address)
+function ValidatorName({ name }: { name?: string }) {
 	if (!name) return <span className="text-tertiary">—</span>
 	return (
 		<span className="text-[11px] px-[6px] py-[2px] rounded bg-base-alt/65 text-primary whitespace-nowrap">
@@ -56,7 +54,7 @@ function ValidatorsPage() {
 	}, [validators, hideInactive])
 
 	const columns: DataGrid.Column[] = [
-		{ label: 'Index', align: 'start', minWidth: 60 },
+		{ label: '#', align: 'start', minWidth: 40 },
 		{ label: 'Name', align: 'start', minWidth: 100 },
 		{ label: 'Address', align: 'start', minWidth: 120 },
 		{ label: 'Status', align: 'start', minWidth: 80 },
@@ -64,7 +62,6 @@ function ValidatorsPage() {
 	]
 
 	const stackedColumns: DataGrid.Column[] = [
-		{ label: 'Index', align: 'start', minWidth: 50 },
 		{ label: 'Name', align: 'start', minWidth: 80 },
 		{ label: 'Status', align: 'start', minWidth: 60 },
 	]
@@ -98,18 +95,15 @@ function ValidatorsPage() {
 							<DataGrid
 								columns={{ stacked: stackedColumns, tabs: columns }}
 								items={() =>
-									filteredValidators.map((validator) => ({
+									filteredValidators.map((validator, index) => ({
 										cells: [
 											<span
 												key="index"
 												className="tabular-nums text-secondary font-medium"
 											>
-												#{String(validator.index)}
+												{index + 1}
 											</span>,
-											<ValidatorName
-												key="name"
-												address={validator.validatorAddress}
-											/>,
+											<ValidatorName key="name" name={validator.name} />,
 											<Address
 												key="address"
 												address={validator.validatorAddress}
@@ -132,11 +126,17 @@ function ValidatorsPage() {
 													</span>
 												)}
 											</span>,
-											<Midcut
-												key="pubkey"
-												value={validator.publicKey}
-												prefix="0x"
-											/>,
+											validator.publicKey ? (
+												<Midcut
+													key="pubkey"
+													value={validator.publicKey}
+													prefix="0x"
+												/>
+											) : (
+												<span key="pubkey" className="text-tertiary">
+													—
+												</span>
+											),
 										],
 										link: {
 											href: `/address/${validator.validatorAddress}`,
