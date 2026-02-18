@@ -496,6 +496,10 @@ export function getReadFunctions(abi: Abi): ReadFunction[] {
 		// (e.g., typeAndVersion(), owner(), MAX_RET_BYTES(), etc.)
 		if (item.inputs.length === 0) return true
 
+		// Unnamed functions (selector-only from bytecode extraction) with inputs:
+		// include them so users can still call by selector
+		if (!item.name) return true
+
 		// Default: only include if explicitly view/pure
 		return item.stateMutability === 'view' || item.stateMutability === 'pure'
 	})
@@ -534,6 +538,9 @@ export function getWriteFunctions(abi: Abi): WriteFunction[] {
 			// Functions with no inputs that don't look like writes are likely getters
 			if (item.inputs.length === 0 && !looksLikeWriteFunction(item.name))
 				return false
+			// Unnamed functions with inputs: include in writes too since we can't
+			// determine mutability from bytecode alone
+			if (!item.name && item.inputs.length > 0) return true
 		}
 
 		return true
