@@ -28,6 +28,128 @@ import PlayIcon from '~icons/lucide/play'
 
 type ReadFunction = AbiFunction & { stateMutability: 'view' | 'pure' }
 
+/**
+ * Try to decode raw hex call result using type heuristics.
+ * Used for whatsabi-extracted ABIs where output types are unknown.
+ */
+function decodeRawCallResult(
+	fn: ReadFunction,
+	data: `0x${string}`,
+): unknown | undefined {
+	const fnName = fn.name || getFunctionSelector(fn)
+
+	// Check if it looks like a padded address (32 bytes with 12 leading zero bytes)
+	const looksLikeAddress =
+		data.length === 66 &&
+		data.slice(2, 26) === '000000000000000000000000' &&
+		data.slice(26) !== '0000000000000000000000000000000000000000'
+
+	if (looksLikeAddress) {
+		try {
+			const addressAbi = [{ ...fn, outputs: [{ type: 'address', name: '' }] }]
+			return decodeFunctionResult({
+				abi: addressAbi,
+				functionName: fnName,
+				data,
+			})
+		} catch {
+			// Fall through to other attempts
+		}
+	}
+
+	// Check if it looks like a dynamic array (address[], uint256[], bytes32[], etc.)
+	// Format: offset (32 bytes) + length (32 bytes) + N elements (32 bytes each)
+	if (data.length >= 130 || data === `0x${'0'.repeat(128)}`) {
+		try {
+			const offset = Number.parseInt(data.slice(2, 66), 16)
+			const length = Number.parseInt(data.slice(66, 130), 16)
+			if (offset === 32 && length >= 0 && length < 100) {
+				const expectedLength = 2 + 64 + 64 + length * 64
+				if (data.length === expectedLength) {
+					// Empty array
+					if (length === 0) {
+						const addressArrayAbi = [
+							{ ...fn, outputs: [{ type: 'address[]', name: '' }] },
+						]
+						return decodeFunctionResult({
+							abi: addressArrayAbi,
+							functionName: fnName,
+							data,
+						})
+					}
+					// Check if elements look like addresses (12 leading zero bytes)
+					let allAddressesValid = true
+					for (let i = 0; i < length; i++) {
+						const start = 2 + 128 + i * 64
+						if (data.slice(start, start + 24) !== '000000000000000000000000') {
+							allAddressesValid = false
+							break
+						}
+					}
+					if (allAddressesValid) {
+						const addressArrayAbi = [
+							{ ...fn, outputs: [{ type: 'address[]', name: '' }] },
+						]
+						return decodeFunctionResult({
+							abi: addressArrayAbi,
+							functionName: fnName,
+							data,
+						})
+					}
+					// Not addresses — try as uint256[]
+					try {
+						const uint256ArrayAbi = [
+							{ ...fn, outputs: [{ type: 'uint256[]', name: '' }] },
+						]
+						return decodeFunctionResult({
+							abi: uint256ArrayAbi,
+							functionName: fnName,
+							data,
+						})
+					} catch {
+						// Fall through
+					}
+				}
+			}
+		} catch {
+			// Fall through to other attempts
+		}
+	}
+
+	// Try decoding as string (common for functions like typeAndVersion)
+	try {
+		const stringAbi = [{ ...fn, outputs: [{ type: 'string', name: '' }] }]
+		const decoded = decodeFunctionResult({
+			abi: stringAbi,
+			functionName: fnName,
+			data,
+		}) as unknown
+		// Only accept if it decoded to a non-empty, printable string
+		if (
+			typeof decoded === 'string' &&
+			decoded.length > 0 &&
+			/^[\x20-\x7e\s]+$/.test(decoded)
+		) {
+			return decoded
+		}
+	} catch {
+		// Fall through
+	}
+
+	// Try decoding as uint256 (common for numeric getters)
+	try {
+		const uint256Abi = [{ ...fn, outputs: [{ type: 'uint256', name: '' }] }]
+		return decodeFunctionResult({
+			abi: uint256Abi,
+			functionName: fnName,
+			data,
+		})
+	} catch {
+		// Return raw hex if all decode attempts fail
+		return data
+	}
+}
+
 export function ContractReader(props: {
 	address: Address.Address
 	abi: Abi
@@ -166,7 +288,7 @@ function StaticReadFunction(props: {
 	} = useReadContract({
 		address,
 		abi,
-		functionName: fn.name,
+		functionName: fnId,
 		args: [],
 		query: { enabled: mounted && hasOutputs },
 	})
@@ -175,11 +297,11 @@ function StaticReadFunction(props: {
 	const callData = React.useMemo(() => {
 		if (hasOutputs) return undefined
 		try {
-			return encodeFunctionData({ abi, functionName: fn.name, args: [] })
+			return encodeFunctionData({ abi, functionName: fnId, args: [] })
 		} catch {
 			return undefined
 		}
-	}, [abi, fn.name, hasOutputs])
+	}, [abi, fnId, hasOutputs])
 
 	const {
 		data: rawResult,
@@ -198,91 +320,7 @@ function StaticReadFunction(props: {
 
 	const decodedRawResult = React.useMemo(() => {
 		if (hasOutputs || !rawResult?.data) return undefined
-		const data = rawResult.data
-
-		// Check if it looks like a padded address (32 bytes with 12 leading zero bytes)
-		// Address encoding: 0x + 24 zeros + 40 hex chars (20 bytes address)
-		const looksLikeAddress =
-			data.length === 66 &&
-			data.slice(2, 26) === '000000000000000000000000' &&
-			data.slice(26) !== '0000000000000000000000000000000000000000'
-
-		if (looksLikeAddress) {
-			try {
-				const addressAbi = [{ ...fn, outputs: [{ type: 'address', name: '' }] }]
-				return decodeFunctionResult({
-					abi: addressAbi,
-					functionName: fn.name,
-					data,
-				})
-			} catch {
-				// Fall through to other attempts
-			}
-		}
-
-		// Check if it looks like an address[] array
-		// Format: offset (32 bytes) + length (32 bytes) + N addresses (32 bytes each)
-		// Minimum: 0x + 32 + 32 + 32 = 98 hex chars (1 empty array = 128 chars, 1 element = 194 chars)
-		if (data.length >= 130) {
-			try {
-				const offset = Number.parseInt(data.slice(2, 66), 16)
-				const length = Number.parseInt(data.slice(66, 130), 16)
-				// Verify offset is 32 (0x20) and we have the right amount of data
-				if (offset === 32 && length > 0 && length < 100) {
-					const expectedLength = 2 + 64 + 64 + length * 64 // 0x + offset + length + N*address
-					if (data.length === expectedLength) {
-						// Verify each element looks like an address (12 leading zeros)
-						let allAddressesValid = true
-						for (let i = 0; i < length; i++) {
-							const start = 2 + 128 + i * 64 // Skip 0x + offset (64) + length (64)
-							if (
-								data.slice(start, start + 24) !== '000000000000000000000000'
-							) {
-								allAddressesValid = false
-								break
-							}
-						}
-						if (allAddressesValid) {
-							const addressArrayAbi = [
-								{ ...fn, outputs: [{ type: 'address[]', name: '' }] },
-							]
-							return decodeFunctionResult({
-								abi: addressArrayAbi,
-								functionName: fn.name,
-								data,
-							})
-						}
-					}
-				}
-			} catch {
-				// Fall through to other attempts
-			}
-		}
-
-		// Try decoding as string (common for functions like typeAndVersion)
-		try {
-			const stringAbi = [{ ...fn, outputs: [{ type: 'string', name: '' }] }]
-			return decodeFunctionResult({
-				abi: stringAbi,
-				functionName: fn.name,
-				data,
-			})
-		} catch {
-			// Fall through
-		}
-
-		// Try decoding as uint256 (common for numeric getters)
-		try {
-			const uint256Abi = [{ ...fn, outputs: [{ type: 'uint256', name: '' }] }]
-			return decodeFunctionResult({
-				abi: uint256Abi,
-				functionName: fn.name,
-				data,
-			})
-		} catch {
-			// Return raw hex if all decode attempts fail
-			return data
-		}
+		return decodeRawCallResult(fn, rawResult.data)
 	}, [hasOutputs, rawResult, fn])
 
 	const isLoading = !mounted || (hasOutputs ? typedLoading : rawLoading)
@@ -502,89 +540,7 @@ function DynamicReadFunction(props: {
 
 	const decodedRawResult = React.useMemo(() => {
 		if (hasOutputs || !rawResult?.data) return undefined
-		const data = rawResult.data
-
-		// Check if it looks like a padded address
-		const looksLikeAddress =
-			data.length === 66 &&
-			data.slice(2, 26) === '000000000000000000000000' &&
-			data.slice(26) !== '0000000000000000000000000000000000000000'
-
-		if (looksLikeAddress) {
-			try {
-				const addressAbi = [{ ...fn, outputs: [{ type: 'address', name: '' }] }]
-				return decodeFunctionResult({
-					abi: addressAbi,
-					functionName: fn.name,
-					data,
-				})
-			} catch {
-				// Fall through
-			}
-		}
-
-		// Check if it looks like an address[] array
-		// Format: offset (32 bytes) + length (32 bytes) + N addresses (32 bytes each)
-		if (data.length >= 130) {
-			try {
-				const offset = Number.parseInt(data.slice(2, 66), 16)
-				const length = Number.parseInt(data.slice(66, 130), 16)
-				// Verify offset is 32 (0x20) and we have the right amount of data
-				if (offset === 32 && length > 0 && length < 100) {
-					const expectedLength = 2 + 64 + 64 + length * 64 // 0x + offset + length + N*address
-					if (data.length === expectedLength) {
-						// Verify each element looks like an address (12 leading zeros)
-						let allAddressesValid = true
-						for (let i = 0; i < length; i++) {
-							const start = 2 + 128 + i * 64 // Skip 0x + offset (64) + length (64)
-							if (
-								data.slice(start, start + 24) !== '000000000000000000000000'
-							) {
-								allAddressesValid = false
-								break
-							}
-						}
-						if (allAddressesValid) {
-							const addressArrayAbi = [
-								{ ...fn, outputs: [{ type: 'address[]', name: '' }] },
-							]
-							return decodeFunctionResult({
-								abi: addressArrayAbi,
-								functionName: fn.name,
-								data,
-							})
-						}
-					}
-				}
-			} catch {
-				// Fall through to other attempts
-			}
-		}
-
-		// Try decoding as uint256 (common for balanceOf, etc.)
-		try {
-			const uint256Abi = [{ ...fn, outputs: [{ type: 'uint256', name: '' }] }]
-			return decodeFunctionResult({
-				abi: uint256Abi,
-				functionName: fn.name,
-				data,
-			})
-		} catch {
-			// Fall through
-		}
-
-		// Try decoding as string
-		try {
-			const stringAbi = [{ ...fn, outputs: [{ type: 'string', name: '' }] }]
-			return decodeFunctionResult({
-				abi: stringAbi,
-				functionName: fn.name,
-				data,
-			})
-		} catch {
-			// Return raw hex if all decode attempts fail
-			return data
-		}
+		return decodeRawCallResult(fn, rawResult.data)
 	}, [hasOutputs, rawResult, fn])
 
 	const result = hasOutputs ? typedResult : decodedRawResult
