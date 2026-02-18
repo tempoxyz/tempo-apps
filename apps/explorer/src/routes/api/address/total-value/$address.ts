@@ -4,7 +4,7 @@ import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { hasIndexSupply } from '#lib/env'
-import { fetchAddressTransfersForValue } from '#lib/server/tempo-queries'
+import { fetchAddressTransfersForValue } from '#lib/server/tidx'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
