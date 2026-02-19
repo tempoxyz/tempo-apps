@@ -127,12 +127,14 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 	const amountParts = React.useMemo(() => {
 		if (!batchData) return
 
-		return batchData.knownEvents.flatMap((event) =>
-			event.parts.filter(
-				(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
-					part.type === 'amount',
-			),
-		)
+		return batchData.knownEvents
+			.filter((event) => event.type !== 'approval')
+			.flatMap((event) =>
+				event.parts.filter(
+					(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
+						part.type === 'amount',
+				),
+			)
 	}, [batchData])
 
 	const infiniteLabel = <span className="text-secondary">−</span>
