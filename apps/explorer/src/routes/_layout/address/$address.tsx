@@ -1391,12 +1391,14 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 	const { transaction } = props
 
 	const amountParts = React.useMemo(() => {
-		return transaction.knownEvents.flatMap((event) =>
-			event.parts.filter(
-				(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
-					part.type === 'amount',
-			),
-		)
+		return transaction.knownEvents
+			.filter((event) => event.type !== 'approval')
+			.flatMap((event) =>
+				event.parts.filter(
+					(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
+						part.type === 'amount',
+				),
+			)
 	}, [transaction.knownEvents])
 
 	const infiniteLabel = <span className="text-secondary">−</span>
