@@ -19,6 +19,17 @@
 			"extensions": {
 				"chain": "tempo"
 			}
+		},
+		{
+			"name": "USDC.e",
+			"symbol": "USDC.e",
+			"decimals": 6,
+			"chainId": 4217,
+			"address": "0x20c000000000000000000000b9537d11c60e8b50",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c000000000000000000000b9537d11c60e8b50.svg",
+			"extensions": {
+				"chain": "tempo"
+			}
 		}
 	]
 }
