@@ -3,8 +3,8 @@
 		"env": [".env", ".env.*"],
 		"HTML": ["*.html", "*.svg"]
 	},
-	"hidden_files": ["**/.wrangler", "**/.tanstack", "**/.claude"],
-	"file_scan_exclusions": ["**/.wrangler", "**/.vscode", ".git"],
+	"hidden_files": ["**/.wrangler", "**/.tanstack", "**/.claude", ".DS_Store"],
+	"file_scan_exclusions": ["**/.wrangler", "**/.vscode", ".git", ".DS_Store"],
 	"languages": {
 		"HTML": {
 			"language_servers": ["biome"],
