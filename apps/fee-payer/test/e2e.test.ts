@@ -1,10 +1,10 @@
 import { env, SELF } from 'cloudflare:test'
 import { Mnemonic } from 'ox'
-import { createClient, custom } from 'viem'
+import { createClient, custom, http, parseUnits } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
 import { tempoLocalnet } from 'viem/chains'
-import { Account, withFeePayer } from 'viem/tempo'
-import { describe, expect, it } from 'vitest'
+import { Account, Actions, withFeePayer } from 'viem/tempo'
+import { beforeAll, describe, expect, it } from 'vitest'
 
 const testMnemonic =
 	'test test test test test test test test test test test junk'
@@ -73,6 +73,36 @@ function createTempoTransport() {
 		},
 	})
 }
+
+// Mint liquidity for fee tokens.
+beforeAll(async () => {
+	const sponsorAccount = Account.fromSecp256k1(
+		Mnemonic.toPrivateKey(testMnemonic, {
+			as: 'Hex',
+			path: Mnemonic.path({ account: 0 }),
+		}),
+	)
+	
+	const client = createClient({
+		account: sponsorAccount,
+		chain: tempoLocalnet,
+		transport: http(env.TEMPO_RPC_URL),
+	})
+
+	await Promise.all(
+		[1n, 2n, 3n].map((id) =>
+			Actions.amm.mintSync(client, {
+				account: sponsorAccount,
+        feeToken: '0x20c0000000000000000000000000000000000000',
+        nonceKey: 'expiring',
+        userTokenAddress: id,
+        validatorTokenAddress: '0x20c0000000000000000000000000000000000000',
+        validatorTokenAmount: parseUnits('1000', 6),
+        to: sponsorAccount.address,
+			}),
+		),
+	)
+})
 
 describe('fee-payer integration', () => {
 	describe('request handling', () => {
@@ -161,7 +191,7 @@ describe('fee-payer integration', () => {
 
 			const receipt = await sendTransactionSync(client, {
 				feePayer: true,
-				to: '0x0000000000000000000000000000000000000000',
+				to: '0x0000000000000000000000000000000000000001',
 				value: 0n,
 			})
 
