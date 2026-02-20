@@ -13,7 +13,7 @@ import {
 	fetchContractCreationTxCandidates,
 	fetchTxDataByHashes,
 	type SortDirection,
-} from '#lib/server/tempo-queries'
+} from '#lib/server/tidx'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
