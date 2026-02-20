@@ -21,7 +21,7 @@
 			}
 		},
 		{
-			"name": "USDC.e",
+			"name": "Bridged USDC (Stargate)",
 			"symbol": "USDC.e",
 			"decimals": 6,
 			"chainId": 4217,
