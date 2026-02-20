@@ -17,6 +17,7 @@ import {
 	type ProxyInfo,
 	type ProxyType,
 } from '#lib/domain/proxy.ts'
+import { isTip20Address } from '#lib/domain/tip20.ts'
 import { useCopy, useDownload } from '#lib/hooks.ts'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CopyIcon from '~icons/lucide/copy'
@@ -44,6 +45,7 @@ export function ContractTabContent(props: {
 	source?: ContractSource
 }) {
 	const { address, docsUrl, source } = props
+	const isTip20 = isTip20Address(address)
 
 	const { copy: copyAbi, notifying: copiedAbi } = useCopy({ timeout: 2_000 })
 
@@ -73,12 +75,44 @@ export function ContractTabContent(props: {
 
 	return (
 		<div className="flex flex-col h-full [&>*:last-child]:border-b-transparent">
+			{/* TIP-20 Banner */}
+			{isTip20 && (
+				<div className="flex flex-wrap items-center gap-x-[8px] gap-y-[4px] px-[16px] py-[10px] text-[13px] text-secondary border-b border-dashed border-distinct">
+					<span className="whitespace-nowrap">TIP-20 Native Precompile</span>
+					<span className="text-tertiary">·</span>
+					<a
+						href="https://docs.tempo.xyz/protocol/tip20/spec#tip20-1"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-accent hover:underline whitespace-nowrap"
+					>
+						Spec
+					</a>
+					<a
+						href="https://github.com/tempoxyz/tempo/blob/main/tips/ref-impls/src/TIP20.sol"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-accent hover:underline whitespace-nowrap"
+					>
+						Solidity
+					</a>
+					<a
+						href="https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-accent hover:underline whitespace-nowrap"
+					>
+						Rust
+					</a>
+				</div>
+			)}
+
 			{/* Source Section */}
 			{source && <SourceSection {...source} />}
 
 			{/* ABI Section */}
 			<CollapsibleSection
-				first
+				first={!isTip20}
 				title={<span title="Contract ABI">ABI</span>}
 				expanded={abiExpanded}
 				onToggle={() => setAbiExpanded(!abiExpanded)}
@@ -120,8 +154,8 @@ export function ContractTabContent(props: {
 				<AbiViewer abi={abi} />
 			</CollapsibleSection>
 
-			{/* Bytecode Section */}
-			<BytecodeSection address={address} />
+			{/* Bytecode Section - hidden for TIP-20 */}
+			{!isTip20 && <BytecodeSection address={address} />}
 		</div>
 	)
 }

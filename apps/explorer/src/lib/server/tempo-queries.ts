@@ -589,6 +589,8 @@ export async function fetchAddressTxAggregate(
 	count?: number
 	latestTxsBlockTimestamp?: unknown
 	oldestTxsBlockTimestamp?: unknown
+	oldestTxHash?: string
+	oldestTxFrom?: string
 }> {
 	const result = await QB.selectFrom('txs')
 		.where('txs.chain', '=', chainId)
@@ -602,10 +604,23 @@ export async function fetchAddressTxAggregate(
 		])
 		.executeTakeFirst()
 
+	// Fetch the hash of the oldest transaction separately
+	const oldest = await QB.selectFrom('txs')
+		.where('txs.chain', '=', chainId)
+		.where((wb) =>
+			wb.or([wb('txs.from', '=', address), wb('txs.to', '=', address)]),
+		)
+		.select(['txs.hash', 'txs.from'])
+		.orderBy('txs.block_timestamp', 'asc')
+		.limit(1)
+		.executeTakeFirst()
+
 	return {
 		count: result?.count ? Number(result.count) : undefined,
 		latestTxsBlockTimestamp: result?.latestTxsBlockTimestamp,
 		oldestTxsBlockTimestamp: result?.oldestTxsBlockTimestamp,
+		oldestTxHash: oldest?.hash as string | undefined,
+		oldestTxFrom: oldest?.from as string | undefined,
 	}
 }
 

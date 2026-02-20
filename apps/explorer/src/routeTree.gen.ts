@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as ApiTip20RolesRouteImport } from './routes/api/tip20-roles'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
@@ -47,6 +48,11 @@ const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => LayoutRoute,
+} as any)
+const ApiTip20RolesRoute = ApiTip20RolesRouteImport.update({
+  id: '/api/tip20-roles',
+  path: '/api/tip20-roles',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
   id: '/api/search',
@@ -198,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/tip20-roles': typeof ApiTip20RolesRoute
   '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
   '/demo/address': typeof LayoutDemoAddressRoute
@@ -227,6 +234,7 @@ export interface FileRoutesByTo {
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/tip20-roles': typeof ApiTip20RolesRoute
   '/': typeof LayoutIndexRoute
   '/address/$address': typeof LayoutAddressAddressRoute
   '/block/$id': typeof LayoutBlockIdRoute
@@ -259,6 +267,7 @@ export interface FileRoutesById {
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
+  '/api/tip20-roles': typeof ApiTip20RolesRoute
   '/_layout/': typeof LayoutIndexRoute
   '/_layout/address/$address': typeof LayoutAddressAddressRoute
   '/_layout/block/$id': typeof LayoutBlockIdRoute
@@ -292,6 +301,7 @@ export interface FileRouteTypes {
     | '/api/code'
     | '/api/health'
     | '/api/search'
+    | '/api/tip20-roles'
     | '/address/$address'
     | '/block/$id'
     | '/demo/address'
@@ -321,6 +331,7 @@ export interface FileRouteTypes {
     | '/api/code'
     | '/api/health'
     | '/api/search'
+    | '/api/tip20-roles'
     | '/'
     | '/address/$address'
     | '/block/$id'
@@ -352,6 +363,7 @@ export interface FileRouteTypes {
     | '/api/code'
     | '/api/health'
     | '/api/search'
+    | '/api/tip20-roles'
     | '/_layout/'
     | '/_layout/address/$address'
     | '/_layout/block/$id'
@@ -381,6 +393,7 @@ export interface RootRouteChildren {
   ApiCodeRoute: typeof ApiCodeRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
+  ApiTip20RolesRoute: typeof ApiTip20RolesRoute
   ApiAbiBatchRoute: typeof ApiAbiBatchRoute
   ApiAddressAddressRoute: typeof ApiAddressAddressRoute
   ApiTokensCountRoute: typeof ApiTokensCountRoute
@@ -408,6 +421,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof LayoutIndexRouteImport
       parentRoute: typeof LayoutRoute
+    }
+    '/api/tip20-roles': {
+      id: '/api/tip20-roles'
+      path: '/api/tip20-roles'
+      fullPath: '/api/tip20-roles'
+      preLoaderRoute: typeof ApiTip20RolesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/search': {
       id: '/api/search'
@@ -645,6 +665,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCodeRoute: ApiCodeRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
+  ApiTip20RolesRoute: ApiTip20RolesRoute,
   ApiAbiBatchRoute: ApiAbiBatchRoute,
   ApiAddressAddressRoute: ApiAddressAddressRoute,
   ApiTokensCountRoute: ApiTokensCountRoute,

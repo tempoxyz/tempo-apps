@@ -29,6 +29,8 @@ export type AddressMetadataResponse = {
 	txCount?: number
 	lastActivityTimestamp?: number
 	createdTimestamp?: number
+	createdTxHash?: string
+	createdBy?: string
 	error?: string
 }
 
@@ -78,6 +80,8 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 						txCount,
 						lastActivityTimestamp,
 						createdTimestamp,
+						createdTxHash: txAggResult?.oldestTxHash,
+						createdBy: txAggResult?.oldestTxFrom,
 					}
 
 					return Response.json(response, {

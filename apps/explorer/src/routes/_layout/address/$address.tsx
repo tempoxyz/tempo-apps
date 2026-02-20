@@ -25,6 +25,7 @@ import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
+import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
@@ -236,6 +237,7 @@ const allTabs = [
 	'holdings',
 	'transfers',
 	'holders',
+	'token',
 	'contract',
 	'interact',
 ] as const
@@ -578,16 +580,20 @@ function RouteComponent() {
 	}, [page, router, tab, limit, a])
 
 	// Build visible tabs based on address type
+	const isTip20 = Tip20.isTip20Address(address)
 	const visibleTabs: TabValue[] = React.useMemo(() => {
 		const tabs: TabValue[] = ['transactions', 'holdings']
 		if (isToken) {
 			tabs.push('transfers', 'holders')
 		}
+		if (isTip20) {
+			tabs.push('token')
+		}
 		if (isContract) {
 			tabs.push('contract', 'interact')
 		}
 		return tabs
-	}, [isToken, isContract])
+	}, [isToken, isTip20, isContract])
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
@@ -1288,6 +1294,13 @@ function SectionsWrapper(props: {
 							emptyState="No holders found."
 						/>
 					),
+				}
+			case 'token':
+				return {
+					title: 'Token',
+					totalItems: 0,
+					itemsLabel: 'items',
+					content: <Tip20TokenTabContent address={address} />,
 				}
 			case 'contract':
 				return {
