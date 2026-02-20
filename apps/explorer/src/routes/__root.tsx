@@ -152,9 +152,11 @@ export const Route = createRootRouteWithContext<{
 		// Patch fetch/Request to strip basic auth credentials from same-origin URLs.
 		// Required for TanStack Start server functions (/_serverFn/...) which use
 		// relative fetches that inherit credentials from the page URL.
-		// Only activates when URL contains credentials (preview/staging environments).
+		// Always active because browsers hide URL credentials from JS (Location has
+		// no username/password, and Chrome strips them from location.href), making
+		// detection impossible. The patch is a no-op when no credentials are present.
 		scripts.push({
-			children: `(function(){var l=window.location;if(!l.username&&!l.password)return;var o=l.protocol+"//"+l.host;var F=window.fetch;var R=window.Request;var s=function(i){var u=i instanceof Request?i.url:String(i);try{var a=new URL(u,o);if(a.origin===o){a.username="";a.password="";}return a.href}catch(e){return null}};window.fetch=function(i,n){try{var h=s(i);if(h){if(i instanceof Request)return F.call(this,new R(h,i),n);return F.call(this,h,n)}}catch(e){}return F.call(this,i,n)};var W=function(i,n){var h=s(i);if(h)return new R(h,n||i);return new R(i,n)};W.prototype=R.prototype;window.Request=W;})();`,
+			children: `(function(){var o=window.location.protocol+"//"+window.location.host;var F=window.fetch;var R=window.Request;var s=function(i){var u=i instanceof Request?i.url:String(i);try{var a=new URL(u,o);if(a.origin===o){a.username="";a.password="";}return a.href}catch(e){return null}};window.fetch=function(i,n){try{var h=s(i);if(h){if(i instanceof Request)return F.call(this,new R(h,i),n);return F.call(this,h,n)}}catch(e){}return F.call(this,i,n)};var W=function(i,n){var h=s(i);if(h)return new R(h,n||i);return new R(i,n)};W.prototype=R.prototype;window.Request=W;})();`,
 			type: 'text/javascript',
 		})
 

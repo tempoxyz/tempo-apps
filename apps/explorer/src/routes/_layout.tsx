@@ -8,7 +8,13 @@ export const Route = createFileRoute('/_layout')({
 	validateSearch: z.object({
 		plain: z.optional(z.string()),
 	}).parse,
-	loader: () => fetchLatestBlock(),
+	loader: async () => {
+		try {
+			return await fetchLatestBlock()
+		} catch {
+			return 0n
+		}
+	},
 })
 
 function RouteComponent() {
