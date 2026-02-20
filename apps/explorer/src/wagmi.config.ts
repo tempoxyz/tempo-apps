@@ -11,12 +11,12 @@ import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
 import { tempoPresto } from './lib/chains'
 import {
-        cookieStorage,
-        cookieToInitialState,
-        createConfig,
-        createStorage,
-        http,
-        serialize,
+	cookieStorage,
+	cookieToInitialState,
+	createConfig,
+	createStorage,
+	http,
+	serialize,
 } from 'wagmi'
 import { KeyManager, webAuthn } from 'wagmi/tempo'
 
@@ -64,12 +64,10 @@ const getRpcProxyUrl = createIsomorphicFn()
 	})
 
 const getFallbackUrls = createIsomorphicFn()
-	.client(() => {
-		const chain = getTempoChain()
-		return {
-			http: chain.rpcUrls.default.http,
-		}
-	})
+	.client(() => ({
+		// Browser requests must never hit direct RPC fallbacks.
+		http: [] as string[],
+	}))
 	.server(() => {
 		const chain = getTempoChain()
 		const key = process.env.TEMPO_RPC_KEY
@@ -81,23 +79,25 @@ const getFallbackUrls = createIsomorphicFn()
 	})
 
 const getTempoTransport = createIsomorphicFn()
-        .client(() => {
-                const proxy = getRpcProxyUrl()
-                const fallbackUrls = getFallbackUrls()
-                const proxyTransport = rateLimit(http(proxy.http), {
-                        requestsPerSecond: 20,
-                })
-                const fallbackTransports = fallbackUrls.http.map((url) =>
-                        rateLimit(http(url), { requestsPerSecond: 10 }),
-                )
+	.client(() => {
+		const proxy = getRpcProxyUrl()
 
-                return loadBalance([proxyTransport, ...fallbackTransports])
-        })
-        .server(() => {
-                const proxy = getRpcProxyUrl()
-                const fallbackUrls = getFallbackUrls()
-                return loadBalance([http(proxy.http), ...fallbackUrls.http.map(http)])
-        })
+		// Browser traffic should only hit the RPC proxy. Direct chain RPC endpoints
+		// may require credentials that are only available server-side.
+		return loadBalance([
+			rateLimit(http(proxy.http), {
+				requestsPerSecond: 20,
+			}),
+		])
+	})
+	.server(() => {
+		const proxy = getRpcProxyUrl()
+		const fallbackUrls = getFallbackUrls()
+		return loadBalance([
+			http(proxy.http),
+			...fallbackUrls.http.map((url) => http(url)),
+		])
+	})
 
 export function getWagmiConfig() {
 	if (wagmiConfigSingleton) return wagmiConfigSingleton
