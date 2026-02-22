@@ -14,6 +14,7 @@ This is a **TypeScript monorepo** for applications on the Tempo blockchain appli
 | `apps/tokenlist` | Token registry API |
 | `apps/contract-verification` | Smart contract verification |
 | `apps/og` | OpenGraph image generation |
+| `apps/tempo-admin` | Internal admin tools (mainnet faucet with Okta auth) |
 
 ## Commands
 

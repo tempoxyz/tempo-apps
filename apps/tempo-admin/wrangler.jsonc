@@ -1,0 +1,46 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "tempo-admin",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.ts",
+	"workers_dev": true,
+	"preview_urls": true,
+	"keep_vars": true,
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		}
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"migrations_dir": "migrations",
+			"database_name": "TEMPO-ADMIN-DB",
+			"database_id": "00000000-0000-0000-0000-000000000000"
+		}
+	],
+	"vars": {
+		"TEMPO_RPC_URL": "https://rpc.tempo.xyz"
+	},
+	"env": {
+		"production": {
+			"name": "tempo-admin",
+			"routes": [
+				{
+					"pattern": "admin.tempo.xyz",
+					"zone_name": "tempo.xyz",
+					"custom_domain": true
+				}
+			],
+			"workers_dev": false,
+			"vars": {
+				"TEMPO_RPC_URL": "https://rpc.tempo.xyz"
+			}
+		}
+	}
+}
