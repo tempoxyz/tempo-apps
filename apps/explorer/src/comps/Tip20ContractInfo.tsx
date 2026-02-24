@@ -94,7 +94,7 @@ export function Tip20TokenTabContent(
 				<span className="whitespace-nowrap">TIP-20 Native Token</span>
 				<span className="text-tertiary">·</span>
 				<a
-					href="https://docs.tempo.xyz/protocol/tip20/spec#tip20-1"
+					href="https://signet.sh/docs/protocol/tip20/spec#tip20-1"
 					target="_blank"
 					rel="noopener noreferrer"
 					className="text-accent hover:underline whitespace-nowrap"
@@ -102,7 +102,7 @@ export function Tip20TokenTabContent(
 					Spec
 				</a>
 				<a
-					href="https://github.com/tempoxyz/tempo/blob/main/tips/ref-impls/src/TIP20.sol"
+					href="https://github.com/init4tech/tempo/blob/main/tips/ref-impls/src/TIP20.sol"
 					target="_blank"
 					rel="noopener noreferrer"
 					className="text-accent hover:underline whitespace-nowrap"
@@ -110,7 +110,7 @@ export function Tip20TokenTabContent(
 					Solidity
 				</a>
 				<a
-					href="https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
+					href="https://github.com/init4tech/tempo/tree/main/crates/precompiles/src/tip20"
 					target="_blank"
 					rel="noopener noreferrer"
 					className="text-accent hover:underline whitespace-nowrap"
@@ -241,7 +241,7 @@ export function Tip20TokenTabContent(
 function ConfigRow(props: { label: string; value: string | undefined }) {
 	return (
 		<div className="flex items-center justify-between gap-[12px]">
-			<span className="text-secondary">{props.label}</span>
+			<span className="text-secondary font-mono uppercase tracking-wider">{props.label}</span>
 			<span className="text-primary">
 				{props.value ?? <span className="text-tertiary">&mdash;</span>}
 			</span>

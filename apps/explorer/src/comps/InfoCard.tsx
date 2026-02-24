@@ -22,7 +22,7 @@ export function InfoCard(props: InfoCard.Props) {
 			>
 				{isSectionEntry ? (
 					<div className="flex items-center gap-[8px] justify-between w-full">
-						<span className="text-[13px] font-normal capitalize text-tertiary shrink-0 font-sans">
+						<span className="text-[13px] font-normal capitalize text-tertiary shrink-0 font-mono uppercase tracking-wider">
 							{section.label}
 						</span>
 						<div className="min-w-0 flex-1 flex justify-end font-mono text-primary">
@@ -41,10 +41,10 @@ export function InfoCard(props: InfoCard.Props) {
 			className={cx(
 				'font-sans',
 				'w-full min-[1240px]:w-fit',
-				'rounded-[10px] border border-card-border bg-card-header overflow-hidden',
+				'border border-card-border bg-card-header overflow-hidden',
 				isInside
-					? 'divide-y divide-dashed divide-card-border shadow-[0px_12px_40px_rgba(0,0,0,0.06)]'
-					: 'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
+					? 'divide-y divide-dashed divide-card-border'
+					: '',
 				className,
 			)}
 		>
@@ -56,7 +56,7 @@ export function InfoCard(props: InfoCard.Props) {
 			{isInside ? (
 				sectionsContent
 			) : (
-				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px">
+				<div className="border-t border border-card-border bg-card -mb-px -mx-px">
 					{sectionsContent}
 				</div>
 			)}

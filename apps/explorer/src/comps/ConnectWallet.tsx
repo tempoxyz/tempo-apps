@@ -136,7 +136,7 @@ function ConnectWalletInner({
 				))}
 			</div>
 		)
-	const isMainnet = chain?.id === 4217
+	const isMainnet = chain?.id === 88888
 
 	return (
 		<div className="flex items-stretch gap-2 justify-end">
@@ -150,18 +150,18 @@ function ConnectWalletInner({
 						switchChain.mutate({
 							chainId: chains[0].id,
 							addEthereumChainParameter: {
-								blockExplorerUrls: ['https://explore.tempo.xyz'],
+								blockExplorerUrls: ['https://explorer.parmigiana.signet.sh'],
 								nativeCurrency: { name: 'USD', decimals: 18, symbol: 'USD' },
 							},
 						})
 					}
 				>
-					Add Tempo to {connector?.name ?? 'Wallet'}
+					Add Signet to {connector?.name ?? 'Wallet'}
 				</Button>
 			)}
 			{switchChain.isSuccess && (
 				<span className="text-[12px] font-normal text-tertiary whitespace-nowrap">
-					Added Tempo to {connector?.name ?? 'Wallet'}!
+					Added Signet to {connector?.name ?? 'Wallet'}!
 				</span>
 			)}
 			<SignOut />

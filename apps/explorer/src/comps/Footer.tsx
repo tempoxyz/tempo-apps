@@ -4,13 +4,13 @@ export function Footer() {
 	return (
 		<footer className="pt-[24px] pb-[48px] relative print:hidden">
 			<ul className="flex items-center justify-center gap-[24px] text-[15px] text-base-content-secondary select-none">
-				<Footer.Link to="https://tempo.xyz" external>
+				<Footer.Link to="https://signet.sh" external>
 					About
 				</Footer.Link>
-				<Footer.Link to="https://docs.tempo.xyz" external>
+				<Footer.Link to="https://signet.sh/docs" external>
 					Documentation
 				</Footer.Link>
-				<Footer.Link to="https://github.com/tempoxyz" external>
+				<Footer.Link to="https://github.com/init4tech" external>
 					GitHub
 				</Footer.Link>
 			</ul>

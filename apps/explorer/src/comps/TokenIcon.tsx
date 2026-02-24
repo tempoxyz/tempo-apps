@@ -1,7 +1,7 @@
 import type { Address } from 'ox'
 import { cx } from '#lib/css'
 
-const TOKENLIST_BASE_URL = 'https://tokenlist.tempo.xyz/icon/42429'
+const TOKENLIST_BASE_URL = 'https://tokenlist.signet.sh/icon/42429'
 
 export function TokenIcon(props: TokenIcon.Props) {
 	const { address, className } = props

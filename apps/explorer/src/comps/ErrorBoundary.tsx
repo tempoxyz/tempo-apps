@@ -54,7 +54,7 @@ export class ErrorBoundary extends React.Component<
 						</p>
 					</div>
 					{this.state.error?.message && (
-						<div className="bg-surface border border-base-border rounded-[10px] p-[16px] max-w-full overflow-hidden relative">
+						<div className="bg-surface border border-base-border p-[16px] max-w-full overflow-hidden relative">
 							<pre className="text-[13px] text-base-content-secondary whitespace-pre-wrap pr-[32px] leading-[20px] min-h-[40px]">
 								{this.state.error.message}
 							</pre>
@@ -64,7 +64,7 @@ export class ErrorBoundary extends React.Component<
 					<button
 						type="button"
 						onClick={() => window.history.back()}
-						className="text-accent rounded-[8px] press-down"
+						className="text-accent press-down"
 					>
 						Return home ⏎
 					</button>

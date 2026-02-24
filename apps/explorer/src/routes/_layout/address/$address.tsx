@@ -75,6 +75,7 @@ import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
+import { SIGNET_BLOCK_BUILDERS } from '#lib/queries/validators'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
@@ -240,6 +241,7 @@ const allTabs = [
 	'token',
 	'contract',
 	'interact',
+	'blocks',
 ] as const
 
 type TabValue = (typeof allTabs)[number]
@@ -435,7 +437,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				: accountType === 'account'
 					? 'Account'
 					: 'Address'
-		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
+		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Signet Explorer`
 
 		const txCount = 0
 
@@ -581,8 +583,14 @@ function RouteComponent() {
 
 	// Build visible tabs based on address type
 	const isTip20 = Tip20.isTip20Address(address)
+	const isBuilder = SIGNET_BLOCK_BUILDERS.some(
+		(b) => b.validatorAddress.toLowerCase() === address.toLowerCase(),
+	)
 	const visibleTabs: TabValue[] = React.useMemo(() => {
 		const tabs: TabValue[] = ['transactions', 'holdings']
+		if (isBuilder) {
+			tabs.push('blocks')
+		}
 		if (isToken) {
 			tabs.push('transfers', 'holders')
 		}
@@ -593,7 +601,7 @@ function RouteComponent() {
 			tabs.push('contract', 'interact')
 		}
 		return tabs
-	}, [isToken, isTip20, isContract])
+	}, [isToken, isTip20, isContract, isBuilder])
 
 	const setActiveSection = React.useCallback(
 		(newIndex: number) => {
@@ -1295,6 +1303,18 @@ function SectionsWrapper(props: {
 						/>
 					),
 				}
+			case 'blocks':
+				return {
+					title: 'Blocks Built',
+					totalItems: 0,
+					itemsLabel: 'blocks',
+					content: (
+						<BlocksBuiltContent
+							builderAddress={address}
+							timeFormat={timeFormat}
+						/>
+					),
+				}
 			case 'token':
 				return {
 					title: 'Token',
@@ -1580,6 +1600,104 @@ function AssetValue(props: { asset: AssetData }) {
 				format: 'short',
 			})}
 		</span>
+	)
+}
+
+function BlocksBuiltContent(props: {
+	builderAddress: Address.Address
+	timeFormat: TimeFormat
+}) {
+	const { builderAddress, timeFormat } = props
+	const client = usePublicClient()
+
+	const { data: blocks, isLoading } = useQuery({
+		queryKey: ['blocks-built', builderAddress],
+		queryFn: async () => {
+			if (!client) return []
+			const latestBlock = await client.getBlockNumber()
+			// Fetch recent blocks in batches and filter by miner
+			const batchSize = 20
+			const maxScanned = 100
+			const results: Awaited<ReturnType<typeof client.getBlock>>[] = []
+			for (
+				let start = Number(latestBlock);
+				start > Number(latestBlock) - maxScanned && start >= 0;
+				start -= batchSize
+			) {
+				const batch = await Promise.all(
+					Array.from({ length: Math.min(batchSize, start + 1) }, (_, i) =>
+						client.getBlock({ blockNumber: BigInt(start - i) }).catch(() => null),
+					),
+				)
+				for (const block of batch) {
+					if (!block) continue
+					if (
+						block.miner?.toLowerCase() === builderAddress.toLowerCase()
+					) {
+						results.push(block)
+						if (results.length >= 20) break
+					}
+				}
+				if (results.length >= 20) break
+			}
+			return results
+		},
+		staleTime: 30_000,
+		enabled: Boolean(client),
+	})
+
+	const columns: DataGrid.Column[] = [
+		{ label: 'Block #', align: 'start', minWidth: 100 },
+		{ label: 'Hash', align: 'start', minWidth: 120 },
+		{
+			label: (
+				<TimeColumnHeader
+					label="Time"
+					formatLabel="Time"
+					onCycle={() => {}}
+					className="text-secondary"
+				/>
+			),
+			align: 'start',
+			minWidth: 100,
+		},
+		{ label: 'Txns', align: 'end', minWidth: 60 },
+	]
+
+	return (
+		<DataGrid
+			columns={{ stacked: columns, tabs: columns }}
+			items={() =>
+				(blocks ?? []).map((block) => ({
+					cells: [
+						<span key="number" className="tabular-nums font-medium">
+							{String(block.number ?? 0)}
+						</span>,
+						<Midcut key="hash" value={block.hash ?? '0x'} prefix="0x" />,
+						<TimestampCell
+							key="time"
+							timestamp={block.timestamp}
+							link={`/block/${block.number ?? 0}`}
+							format={timeFormat}
+						/>,
+						<span key="txns" className="tabular-nums text-secondary">
+							{block.transactions.length}
+						</span>,
+					],
+					link: {
+						href: `/block/${block.number ?? 0}`,
+						title: `View block ${block.number ?? 0}`,
+					},
+				}))
+			}
+			totalItems={blocks?.length ?? 0}
+			page={1}
+			loading={isLoading}
+			itemsLabel="blocks"
+			itemsPerPage={20}
+			pagination={false}
+			emptyState="No blocks found for this builder in the last 100 blocks."
+		/>
 	)
 }
 

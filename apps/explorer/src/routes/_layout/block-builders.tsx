@@ -20,13 +20,13 @@ function ValidatorName({ name }: { name?: string }) {
 	)
 }
 
-export const Route = createFileRoute('/_layout/validators')({
+export const Route = createFileRoute('/_layout/block-builders')({
 	component: ValidatorsPage,
 	head: () => ({
-		meta: [{ title: 'Validators – Tempo Explorer' }],
+		meta: [{ title: 'Block Builders – Signet Explorer' }],
 	}),
 	loader: ({ context }) =>
-		withLoaderTiming('/_layout/validators', async () =>
+		withLoaderTiming('/_layout/block-builders', async () =>
 			context.queryClient.ensureQueryData(validatorsQueryOptions()),
 		),
 })
@@ -71,7 +71,7 @@ function ValidatorsPage() {
 			<div className="flex items-center justify-end gap-2">
 				<input
 					id={hideInactiveId}
-					type="checkbox"
+					type='checkbox'
 					checked={hideInactive}
 					onChange={(e) => setHideInactive(e.target.checked)}
 					className="w-4 h-4 rounded border-base-border"
@@ -80,16 +80,16 @@ function ValidatorsPage() {
 					htmlFor={hideInactiveId}
 					className="text-sm text-secondary cursor-pointer select-none"
 				>
-					Hide inactive validators
+					Hide inactive block builders
 				</label>
 			</div>
 			<Sections
 				mode={mode}
 				sections={[
 					{
-						title: 'Validators',
+						title: 'Block Builders',
 						totalItems: `${activeCount}/${totalCount} active`,
-						itemsLabel: 'validators',
+						itemsLabel: 'block builders',
 						autoCollapse: false,
 						content: (
 							<DataGrid
@@ -98,39 +98,39 @@ function ValidatorsPage() {
 									filteredValidators.map((validator, index) => ({
 										cells: [
 											<span
-												key="index"
+												key='index'
 												className="tabular-nums text-secondary font-medium"
 											>
 												{index + 1}
 											</span>,
 											<ValidatorName key="name" name={validator.name} />,
 											<Address
-												key="address"
+												key='address'
 												address={validator.validatorAddress}
 											/>,
 											<span
-												key="status"
+												key='status'
 												className={
 													validator.active ? 'text-positive' : 'text-negative'
 												}
 											>
 												{validator.active ? (
 													<span className="inline-flex items-center gap-1">
-														<Check className="size-3" />
+														<Check className='size-3' />
 														Active
 													</span>
 												) : (
 													<span className="inline-flex items-center gap-1">
-														<X className="size-3" />
+														<X className='size-3' />
 														Inactive
 													</span>
 												)}
 											</span>,
 											validator.publicKey ? (
 												<Midcut
-													key="pubkey"
+													key='pubkey'
 													value={validator.publicKey}
-													prefix="0x"
+													prefix='0x'
 												/>
 											) : (
 												<span key="pubkey" className="text-tertiary">
@@ -139,21 +139,31 @@ function ValidatorsPage() {
 											),
 										],
 										link: {
-											href: `/address/${validator.validatorAddress}`,
-											title: `View validator ${validator.validatorAddress}`,
+											href: `/address/${validator.validatorAddress}?tab=blocks`,
+											title: `View block builder ${validator.validatorAddress}`,
 										},
 									}))
 								}
 								totalItems={filteredValidators.length}
 								page={1}
 								loading={isPending}
-								itemsLabel="validators"
+								itemsLabel="block builders"
 								itemsPerPage={filteredValidators.length || 10}
-								emptyState="No validators found."
+								emptyState="No block builders found."
 								pagination={false}
 							/>
 						),
 					},
+				{
+					title: 'Fillers',
+					itemsLabel: 'fillers',
+					autoCollapse: false,
+					content: (
+						<div className="px-[16px] py-[24px] text-center text-tertiary text-[13px]">
+							Filler directory coming soon. Fillers are entities that fill order bundles submitted by block builders.
+						</div>
+					),
+				},
 				]}
 				activeSection={0}
 			/>

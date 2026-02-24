@@ -1,12 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import { getCode } from 'viem/actions'
-import { getChainId } from 'wagmi/actions'
 import { getAccountType, type AccountType } from '#lib/account'
 import { hasIndexSupply } from '#lib/env'
 import { fetchAddressTxAggregate } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
-import { getWagmiConfig } from '#wagmi.config'
+import { getServerChainId, getWagmiConfig } from '#wagmi.config'
 
 function parseTimestamp(value: unknown): number | undefined {
 	if (typeof value === 'number') return value
@@ -52,7 +51,7 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 
 					const config = getWagmiConfig()
 					const client = config.getClient()
-					const chainId = getChainId(config)
+					const chainId = getServerChainId()
 
 					// Single aggregate query: COUNT + MIN/MAX timestamps
 					// MIN/MAX are "free" since COUNT already scans all rows

@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import { getChainId } from 'wagmi/actions'
+import { getServerChainId } from '#wagmi.config.ts'
 import tokensIndex31318 from '#data/tokens-index-31318.json' with {
 	type: 'json',
 }
@@ -17,7 +17,6 @@ import {
 	fetchLatestBlockNumber,
 	fetchTransactionTimestamp,
 } from '#lib/server/tempo-queries'
-import { getWagmiConfig } from '#wagmi.config.ts'
 
 export type SearchResult =
 	| {
@@ -138,7 +137,7 @@ export const Route = createFileRoute('/api/search')({
 						query,
 					} satisfies SearchApiResponse)
 
-				const chainId = getChainId(getWagmiConfig())
+				const chainId = getServerChainId()
 				const results: SearchResult[] = []
 
 				// block number (plain digits or #-prefixed)

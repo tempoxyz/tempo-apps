@@ -1,7 +1,13 @@
 import { createIsomorphicFn } from '@tanstack/react-start'
 import { getRequestUrl } from '@tanstack/react-start/server'
 
-export type TempoEnv = 'testnet' | 'moderato' | 'devnet' | 'presto'
+export type TempoEnv =
+	| 'testnet'
+	| 'moderato'
+	| 'devnet'
+	| 'presto'
+	| 'parmigiana'
+	| 'host'
 
 export const getRequestURL = createIsomorphicFn()
 	.client(() => new URL(__BASE_URL__ || window.location.origin))
@@ -34,12 +40,16 @@ export const isTestnet = createIsomorphicFn()
 	.client(
 		() =>
 			import.meta.env.VITE_TEMPO_ENV === 'testnet' ||
-			import.meta.env.VITE_TEMPO_ENV === 'moderato',
+			import.meta.env.VITE_TEMPO_ENV === 'moderato' ||
+			import.meta.env.VITE_TEMPO_ENV === 'parmigiana' ||
+			import.meta.env.VITE_TEMPO_ENV === 'host',
 	)
 	.server(
 		() =>
 			process.env.VITE_TEMPO_ENV === 'testnet' ||
-			process.env.VITE_TEMPO_ENV === 'moderato',
+			process.env.VITE_TEMPO_ENV === 'moderato' ||
+			process.env.VITE_TEMPO_ENV === 'parmigiana' ||
+			process.env.VITE_TEMPO_ENV === 'host',
 	)
 
 export const hasIndexSupply = createIsomorphicFn()

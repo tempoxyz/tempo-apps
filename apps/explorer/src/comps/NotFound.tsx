@@ -17,12 +17,12 @@ export function NotFound({
 					{message}
 				</p>
 				{data?.type === 'hash' && (
-					<pre className="text-[13px] text-base-content-secondary break-all bg-surface border border-base-border rounded-[10px] p-[12px] my-[16px] w-full whitespace-pre-wrap text-center">
+					<pre className="text-[13px] text-base-content-secondary break-all bg-surface border border-base-border p-[12px] my-[16px] w-full whitespace-pre-wrap text-center">
 						{data.value}
 					</pre>
 				)}
 				<div className="flex gap-[12px] items-center">
-					<Link to="/" className="text-accent rounded-[8px] press-down">
+					<Link to="/" className="text-accent press-down">
 						Return home ⏎
 					</Link>
 				</div>

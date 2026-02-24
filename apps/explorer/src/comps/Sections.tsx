@@ -37,8 +37,7 @@ export function Sections(props: Sections.Props) {
 								key={section.title}
 								className={cx(
 									'flex flex-col font-sans w-full overflow-hidden',
-									'rounded-[10px] border border-card-border bg-card-header',
-									'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
+									'border border-card-border bg-card-header',
 								)}
 							>
 								{canCollapse ? (
@@ -47,10 +46,9 @@ export function Sections(props: Sections.Props) {
 										onClick={() => toggleSection(index)}
 										className={cx(
 											'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
-											isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
 										)}
 									>
-										<h1 className="text-[13px] font-medium text-primary font-sans">
+										<h1 className="text-[13px] font-medium text-primary font-mono uppercase tracking-wide">
 											{section.title}
 										</h1>
 										<div className="flex items-center gap-[12px]">
@@ -70,15 +68,15 @@ export function Sections(props: Sections.Props) {
 										</div>
 									</button>
 								) : (
-									<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-[10px]">
-										<h1 className="text-[13px] font-medium text-primary font-sans">
+									<div className="h-[52px] flex items-center justify-between px-[18px]">
+										<h1 className="text-[13px] font-medium text-primary font-mono uppercase tracking-wide">
 											{section.title}
 										</h1>
 									</div>
 								)}
 
 								{!isCollapsed && (
-									<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">
+									<div className="border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2!">
 										{section.contextual && (
 											<div className="px-[18px] py-[10px] border-b border-dashed border-card-border">
 												{section.contextual}
@@ -99,14 +97,13 @@ export function Sections(props: Sections.Props) {
 			<section
 				className={cx(
 					'flex flex-col font-sans w-full overflow-hidden min-h-0 self-start',
-					'rounded-[10px] border border-card-border bg-card-header',
-					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
+					'border border-card-border bg-card-header',
 				)}
 			>
 				<div className="h-[36px] flex items-center justify-between">
 					<div className="flex items-center h-full font-sans">
 						{sections.length === 1 ? (
-							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px] font-sans">
+							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px] font-mono uppercase tracking-wide">
 								<span className="text-primary">{sections[0].title}</span>
 								{Boolean(sections[0].totalItems) && (
 									<span className="text-tertiary">
@@ -124,10 +121,10 @@ export function Sections(props: Sections.Props) {
 										onSectionChange?.(index)
 									}}
 									className={cx(
-										'h-full flex items-center text-[13px] font-medium font-sans',
+										'h-full flex items-center text-[13px] font-medium font-mono uppercase tracking-wide',
 										'focus-visible:-outline-offset-2! cursor-pointer',
 										index === 0
-											? 'pl-[18px] pr-[12px] rounded-tl-[10px]!'
+											? 'pl-[18px] pr-[12px]'
 											: 'px-[12px]',
 										activeSection === index ? 'text-primary' : 'text-tertiary',
 									)}
@@ -156,7 +153,7 @@ export function Sections(props: Sections.Props) {
 					<div
 						key={section.title}
 						className={cx(
-							'rounded-t-[10px] border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!',
+							'border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2!',
 							activeSection !== index && 'hidden',
 						)}
 					>

@@ -34,7 +34,7 @@ async function fetchTokensCount() {
 export const Route = createFileRoute('/_layout/tokens')({
 	component: TokensPage,
 	head: () => ({
-		meta: [{ title: 'Tokens – Tempo Explorer' }],
+		meta: [{ title: 'Tokens – Signet Explorer' }],
 	}),
 	validateSearch: z.object({
 		page: z.optional(z.number()),

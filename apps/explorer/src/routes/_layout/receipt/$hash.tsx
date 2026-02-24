@@ -254,7 +254,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 		),
 	}),
 	head: ({ params, loaderData }) => {
-		const title = `Receipt ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
+		const title = `Receipt ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Signet Explorer`
 
 		const description = buildTxDescription(
 			loaderData
@@ -382,7 +382,7 @@ namespace TextRenderer {
 		const lines: string[] = []
 
 		// Header
-		lines.push(center('TEMPO RECEIPT'))
+		lines.push(center('SIGNET RECEIPT'))
 		lines.push('')
 
 		// Transaction details

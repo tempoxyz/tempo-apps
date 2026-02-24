@@ -63,6 +63,14 @@ function getLabelForPath(pathname: string): {
 		return { label: 'Tokens', type: 'other' }
 	}
 
+	if (pathname === '/block-builders') {
+		return { label: 'Block Builders', type: 'other' }
+	}
+
+	if (pathname === '/orders') {
+		return { label: 'Orders', type: 'other' }
+	}
+
 	return { label: pathname, type: 'other' }
 }
 

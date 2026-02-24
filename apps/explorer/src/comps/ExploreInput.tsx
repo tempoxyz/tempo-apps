@@ -243,7 +243,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 						value={value}
 						disabled={disabled}
 						className={cx(
-							'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50',
+							'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50',
 							size === 'large'
 								? 'h-[52px] text-[17px]'
 								: 'h-[42px] text-[15px]',
@@ -317,7 +317,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 							disabled={disabled || !isValidInput}
 							aria-label="Search"
 							className={cx(
-								'rounded-full! flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed transition-colors',
+								'flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed transition-colors',
 								size === 'large' ? 'size-[28px]' : 'size-[24px]',
 								isValidInput
 									? 'bg-accent text-base-plane cursor-pointer'
@@ -340,8 +340,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 					aria-label="Search suggestions"
 					className={cx(
 						'absolute left-0 right-0 mt-2 z-50',
-						'bg-surface border border-base-border rounded-[10px] overflow-hidden',
-						'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
+						'bg-surface border border-base-border overflow-hidden',
 					)}
 					style={{ opacity: 0 }}
 				>
@@ -470,7 +469,7 @@ export namespace ExploreInput {
 							<span className="text-[16px] font-medium text-base-content truncate">
 								{suggestion.name}
 							</span>
-							<span className="text-[11px] font-medium text-base-content bg-border-primary p-[4px] rounded-[4px] shrink-0">
+							<span className="text-[11px] font-medium text-base-content bg-border-primary p-[4px] shrink-0">
 								{suggestion.symbol}
 							</span>
 						</div>

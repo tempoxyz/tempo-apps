@@ -3,7 +3,7 @@ import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import type { RpcTransaction } from 'viem'
 import { getBlockNumber, getCode, getTransactionReceipt } from 'viem/actions'
-import { getChainId } from 'wagmi/actions'
+import { getServerChainId } from '#wagmi.config.ts'
 import * as z from 'zod/mini'
 import { getRequestURL, hasIndexSupply } from '#lib/env'
 import {
@@ -150,8 +150,7 @@ export const Route = createFileRoute('/api/address/$address')({
 						)
 
 					const searchParams = parseParams.data
-					const config = getWagmiConfig()
-					const chainId = getChainId(config)
+					const chainId = getServerChainId()
 					const chainIdHex = Hex.fromNumber(chainId)
 
 					const include =

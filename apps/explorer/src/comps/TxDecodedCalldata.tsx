@@ -69,7 +69,7 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 
 	if (!isFetched || !abiItem)
 		return (
-			<div className="bg-distinct rounded-[6px] overflow-hidden">
+			<div className="bg-distinct overflow-hidden">
 				<div className="relative px-[10px] py-[8px]">
 					<pre className="text-[12px] text-primary break-all whitespace-pre-wrap font-mono max-h-[300px] overflow-auto pr-[40px]">
 						{data}
@@ -93,7 +93,7 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 
 	return (
 		<div className="flex flex-col gap-[8px]">
-			<div className="bg-distinct rounded-[6px] overflow-hidden">
+			<div className="bg-distinct overflow-hidden">
 				<div className="flex items-center justify-between px-[10px] py-[8px] border-b border-card-border">
 					<code className="text-[12px] text-primary font-mono">
 						<span className="text-base-content-positive">
@@ -144,12 +144,12 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 			<button
 				type="button"
 				onClick={() => setShowRaw(!showRaw)}
-				className="text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[10px] py-[4px] cursor-pointer press-down w-fit"
+				className="text-[11px] text-accent bg-accent/10 hover:bg-accent/15 px-[10px] py-[4px] cursor-pointer press-down w-fit"
 			>
 				{showRaw ? 'Hide' : 'Show'} raw
 			</button>
 			{showRaw && (
-				<div className="bg-distinct rounded-[6px] overflow-hidden">
+				<div className="bg-distinct overflow-hidden">
 					<div className="relative px-[10px] py-[8px]">
 						<pre className="text-[12px] text-primary break-all whitespace-pre-wrap font-mono max-h-[300px] overflow-auto pr-[40px]">
 							{data}

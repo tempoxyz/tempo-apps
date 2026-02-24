@@ -3,10 +3,10 @@ import * as Hash from 'ox/Hash'
 import * as Hex from 'ox/Hex'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
-import { getChainId, readContracts } from 'wagmi/actions'
+import { readContracts } from 'wagmi/actions'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { zAddress } from '#lib/zod'
-import { getWagmiConfig } from '#wagmi.config'
+import { getServerChainId, getWagmiConfig } from '#wagmi.config'
 
 const QB = tempoQueryBuilder
 
@@ -58,7 +58,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 					const config = getWagmiConfig()
 					const chainId = chainIdParam
 						? Number(chainIdParam)
-						: getChainId(config)
+						: getServerChainId()
 
 					// Fetch TIP-20 config via server-side RPC (authenticated)
 					const contractResults = await readContracts(config, {

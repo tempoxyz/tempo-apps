@@ -47,7 +47,7 @@ export function Pagination(props: Pagination.Props) {
 						search={(previous) => ({ ...previous, page: 1 })}
 						disabled={page <= 1 || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
+							'border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
 						title="First page"
 					>
@@ -63,7 +63,7 @@ export function Pagination(props: Pagination.Props) {
 						})}
 						disabled={page <= 1 || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
+							'border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
 						title="Previous page"
 					>
@@ -88,7 +88,7 @@ export function Pagination(props: Pagination.Props) {
 						})}
 						disabled={page >= pages || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
+							'border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
 						title="Next page"
 					>
@@ -102,7 +102,7 @@ export function Pagination(props: Pagination.Props) {
 						search={(previous) => ({ ...previous, page: pages })}
 						disabled={page >= pages || isPending}
 						className={cx(
-							'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
+							'border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
 						title="Last page"
 					>
@@ -126,7 +126,7 @@ export function Pagination(props: Pagination.Props) {
 					})}
 					disabled={page <= 1 || isPending}
 					className={cx(
-						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
+						'border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
 					)}
 					title="Previous page"
 				>
@@ -153,7 +153,7 @@ export function Pagination(props: Pagination.Props) {
 									resetScroll={false}
 									disabled={page === p || isPending}
 									search={(previous) => ({ ...previous, page: p })}
-									className={`rounded-[4px] flex w-[28px] h-[28px] items-center justify-center ${
+									className={`flex w-[28px] h-[28px] items-center justify-center ${
 										page === p
 											? 'border border-accent/50 text-primary cursor-default'
 											: 'cursor-pointer press-down hover:bg-alt text-primary'
@@ -175,7 +175,7 @@ export function Pagination(props: Pagination.Props) {
 					})}
 					disabled={page >= pages || isPending}
 					className={cx(
-						'rounded-full! border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
+						'border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer press-down aria-disabled:cursor-default aria-disabled:opacity-50 size-[28px] text-primary',
 					)}
 					title="Next page"
 				>
@@ -247,7 +247,7 @@ export namespace Pagination {
 					search={(prev) => ({ ...prev, page: 1 })}
 					disabled={page <= 1}
 					className={cx(
-						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+						'border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
 					title="First page"
 				>
@@ -262,7 +262,7 @@ export namespace Pagination {
 					})}
 					disabled={page <= 1}
 					className={cx(
-						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+						'border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
 					title="Previous page"
 				>
@@ -288,7 +288,7 @@ export namespace Pagination {
 					})}
 					disabled={disableNext}
 					className={cx(
-						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+						'border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 					)}
 					title="Next page"
 				>
@@ -301,7 +301,7 @@ export namespace Pagination {
 						search={(prev) => ({ ...prev, page: pages })}
 						disabled={page >= pages || disableLastPage}
 						className={cx(
-							'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
+							'border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
 						)}
 						title="Last page"
 					>

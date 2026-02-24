@@ -54,7 +54,7 @@ export function DataGrid(props: DataGrid.Props) {
 			<div className="relative w-full">
 				<div
 					className={cx(
-						'w-full text-[13px] rounded-t-[2px] grid',
+						'w-full text-[13px] grid',
 						flexible && 'min-w-max',
 						mode === 'tabs' && 'max-w-full',
 					)}
@@ -74,7 +74,7 @@ export function DataGrid(props: DataGrid.Props) {
 									key={key}
 									className={cx(
 										'px-[10px] first:pl-[16px] last:pr-[16px] h-[40px] flex items-center gap-[6px]',
-										'text-[13px] text-tertiary font-normal whitespace-nowrap font-sans',
+										'text-[13px] text-tertiary font-normal whitespace-nowrap font-mono uppercase tracking-wider',
 										column.align === 'end' ? 'justify-end' : 'justify-start',
 									)}
 								>

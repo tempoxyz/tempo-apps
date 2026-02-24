@@ -2,11 +2,11 @@ import { createFileRoute } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
-import { getChainId, getPublicClient } from 'wagmi/actions'
+import { getPublicClient } from 'wagmi/actions'
 import { hasIndexSupply } from '#lib/env'
 import { fetchAddressTransfersForValue } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
-import { getWagmiConfig } from '#wagmi.config'
+import { getServerChainId, getWagmiConfig } from '#wagmi.config'
 
 export const Route = createFileRoute('/api/address/total-value/$address')({
 	server: {
@@ -16,7 +16,7 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 
 				try {
 					const address = zAddress().parse(params.address)
-					const chainId = getChainId(getWagmiConfig())
+					const chainId = getServerChainId()
 					const addressLower = address.toLowerCase()
 
 					// Limit to prevent timeouts on addresses with many transfer events

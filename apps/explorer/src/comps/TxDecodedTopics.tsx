@@ -74,7 +74,7 @@ export function TxDecodedTopics(props: TxDecodedTopics.Props) {
 
 	return (
 		<div className="flex flex-col gap-[8px] w-full min-w-0 max-w-full overflow-hidden">
-			<div className="bg-distinct rounded-[6px] overflow-hidden w-full min-w-0">
+			<div className="bg-distinct overflow-hidden w-full min-w-0">
 				<TxDecodedTopics.SignatureHeader abiItem={abiItem} />
 				<TxDecodedTopics.ArgumentsSection
 					abiItem={abiItem}
@@ -161,7 +161,7 @@ export namespace TxDecodedTopics {
 					<button
 						type="button"
 						onClick={() => setShowRaw(!showRaw)}
-						className="text-[11px] text-accent bg-accent/10 hover:bg-accent/15 rounded-full px-[8px] py-[2px] cursor-pointer press-down"
+						className="text-[11px] text-accent bg-accent/10 hover:bg-accent/15 px-[8px] py-[2px] cursor-pointer press-down"
 					>
 						{showRaw ? 'raw' : 'decoded'}
 					</button>
@@ -214,7 +214,7 @@ export namespace TxDecodedTopics {
 			<button
 				type="button"
 				onClick={() => copy(displayValue)}
-				className="col-span-2 grid grid-cols-subgrid items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[4px] -mx-[4px]"
+				className="col-span-2 grid grid-cols-subgrid items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 px-[4px] py-[4px] -mx-[4px]"
 			>
 				<span className="text-[11px] text-tertiary whitespace-pre">
 					{notifying ? (
@@ -250,7 +250,7 @@ export namespace TxDecodedTopics {
 				<button
 					type="button"
 					onClick={() => copy(data)}
-					className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
+					className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
 				>
 					<span className="text-[11px] text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
 						{data}
@@ -270,7 +270,7 @@ export namespace TxDecodedTopics {
 
 		return (
 			<div className="flex flex-col gap-[8px] w-full min-w-0 max-w-full overflow-hidden">
-				<div className="bg-distinct rounded-[6px] overflow-hidden w-full min-w-0">
+				<div className="bg-distinct overflow-hidden w-full min-w-0">
 					<div className="px-[10px] py-[8px] border-b border-card-border">
 						<span className="text-[11px] text-tertiary">Raw event</span>
 					</div>
@@ -305,7 +305,7 @@ export namespace TxDecodedTopics {
 			<button
 				type="button"
 				onClick={() => copy(topic)}
-				className="flex items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px]"
+				className="flex items-start gap-[8px] text-left cursor-pointer press-down hover:bg-base-alt/50 px-[4px] py-[2px] -mx-[4px]"
 			>
 				<span className="text-[11px] text-tertiary shrink-0">
 					{notifying ? (
@@ -339,7 +339,7 @@ export namespace TxDecodedTopics {
 				<button
 					type="button"
 					onClick={() => copy(data)}
-					className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 rounded-[4px] px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
+					className="w-full text-left cursor-pointer press-down hover:bg-base-alt/50 px-[4px] py-[2px] -mx-[4px] min-w-0 max-w-full"
 				>
 					<span className="text-[11px] text-primary font-mono break-all block [overflow-wrap:anywhere] min-w-0">
 						{data}

@@ -42,11 +42,11 @@ export const Route = createRootRouteWithContext<{
 				content: 'width=device-width, initial-scale=1',
 			},
 			{
-				title: 'Explorer ⋅ Tempo',
+				title: 'Explorer ⋅ Signet',
 			},
 			{
 				name: 'og:title',
-				content: 'Explorer ⋅ Tempo',
+				content: 'Explorer ⋅ Signet',
 			},
 			{
 				name: 'viewport',
@@ -55,12 +55,12 @@ export const Route = createRootRouteWithContext<{
 			{
 				name: 'description',
 				content:
-					'Explore and analyze blocks, transactions, contracts and more on Tempo.',
+					'Explore and analyze blocks, transactions, contracts and more on Signet.',
 			},
 			{
 				name: 'og:description',
 				content:
-					'Explore and analyze blocks, transactions, contracts and more on Tempo.',
+					'Explore and analyze blocks, transactions, contracts and more on Signet.',
 			},
 			{
 				name: 'og:image',

@@ -1,16 +1,22 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { getChainId } from 'wagmi/actions'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { fetchTokenCreatedCount } from '#lib/server/tempo-queries'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { SIGNET_TOKEN_COUNTS } from '#lib/server/tokens.server'
+import { getServerChainId } from '#wagmi.config.ts'
 
 export const Route = createFileRoute('/api/tokens/count')({
 	server: {
 		handlers: {
 			GET: async () => {
 				try {
-					const config = getWagmiConfig()
-					const chainId = getChainId(config)
+					const chainId = getServerChainId()
+
+					// Return static count for Signet chains
+					const signetCount = SIGNET_TOKEN_COUNTS[chainId]
+					if (signetCount !== undefined) {
+						return Response.json({ data: signetCount, error: null })
+					}
+
 					const count = await fetchTokenCreatedCount(chainId, TOKEN_COUNT_MAX)
 
 					return Response.json({ data: count, error: null })

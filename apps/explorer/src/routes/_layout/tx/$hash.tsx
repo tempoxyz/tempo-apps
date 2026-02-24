@@ -118,7 +118,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 		hash: zHash(),
 	}),
 	head: ({ params, loaderData }) => {
-		const title = `Transaction ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
+		const title = `Transaction ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Signet Explorer`
 		const ogImageUrl = loaderData
 			? buildOgImageUrl(loaderData, params.hash)
 			: undefined

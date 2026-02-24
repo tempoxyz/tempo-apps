@@ -1,6 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
 import type { Address } from 'ox'
-import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import {
@@ -8,7 +7,7 @@ import {
 	fetchTokenCreatedRows,
 } from '#lib/server/tempo-queries'
 import { fetchHoldersCountCached } from '#lib/server/token.server.ts'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { getServerChainId } from '#wagmi.config.ts'
 
 export type Token = {
 	address: Address.Address
@@ -35,6 +34,27 @@ export type TokensApiResponse = {
 	limit: number
 }
 
+// Static token data for Signet chains (no IndexSupply available)
+const SIGNET_TOKENS: Record<number, Token[]> = {
+	// Parmigiana rollup (chain 88888)
+	88888: [
+		{ address: '0x0000000000000000007369676e65742d77757364' as Address.Address, symbol: 'wUSD', name: 'Wrapped USD', currency: 'USD', createdAt: 0 },
+		{ address: '0x0000000000000000007369676e65742d77657468' as Address.Address, symbol: 'wETH', name: 'Wrapped Ether', currency: 'ETH', createdAt: 0 },
+		{ address: '0x0000000000000000007369676e65742D77627463' as Address.Address, symbol: 'wBTC', name: 'Wrapped Bitcoin', currency: 'BTC', createdAt: 0 },
+	],
+	// Host chain (chain 3151908)
+	3151908: [
+		{ address: '0x65fb255585458de1f9a246b476aa8d5c5516f6fd' as Address.Address, symbol: 'USDC', name: 'USD Coin', currency: 'USD', createdAt: 0 },
+		{ address: '0xb9df1b911b6cf6935b2a918ba03df2372e94e267' as Address.Address, symbol: 'USDT', name: 'Tether USD', currency: 'USD', createdAt: 0 },
+		{ address: '0xfb29f7d7a4ce607d6038d44150315e5f69bea08a' as Address.Address, symbol: 'WBTC', name: 'Wrapped Bitcoin', currency: 'BTC', createdAt: 0 },
+		{ address: '0xD1278f17e86071f1E658B656084c65b7FD3c90eF' as Address.Address, symbol: 'WETH', name: 'Wrapped Ether', currency: 'ETH', createdAt: 0 },
+	],
+}
+
+export const SIGNET_TOKEN_COUNTS: Record<number, number> = Object.fromEntries(
+	Object.entries(SIGNET_TOKENS).map(([chainId, tokens]) => [Number(chainId), tokens.length]),
+)
+
 export const fetchTokens = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokensInputSchema.parse(input))
 	.handler(async ({ data }): Promise<TokensApiResponse> => {
@@ -46,8 +66,19 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 			includeHolders = false,
 		} = data
 
-		const config = getWagmiConfig()
-		const chainId = getChainId(config)
+		const chainId = getServerChainId()
+
+		// Return static token list for Signet chains
+		const signetTokens = SIGNET_TOKENS[chainId]
+		if (signetTokens) {
+			const sliced = signetTokens.slice(offset, offset + limit)
+			return {
+				offset,
+				limit,
+				total: signetTokens.length,
+				tokens: sliced,
+			}
+		}
 
 		const [tokensResult, countResult] = await Promise.all([
 			fetchTokenCreatedRows(chainId, limit, offset),

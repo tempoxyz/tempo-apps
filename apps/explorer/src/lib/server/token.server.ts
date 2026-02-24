@@ -1,6 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
 import type { Address, Hex } from 'ox'
-import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import {
@@ -10,7 +9,7 @@ import {
 	fetchTokenTransfers,
 } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { getServerChainId } from '#wagmi.config.ts'
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const CACHE_TTL = 60_000
@@ -73,8 +72,7 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokenHoldersInputSchema.parse(input))
 	.handler(async ({ data }) => {
 		try {
-			const config = getWagmiConfig()
-			const chainId = getChainId(config)
+			const chainId = getServerChainId()
 			const cacheKey = `${chainId}-${data.address}`
 
 			const cached = holdersCache.get(cacheKey)
@@ -199,8 +197,7 @@ export const fetchFirstTransfer = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchFirstTransferInputSchema.parse(input))
 	.handler(async ({ data }) => {
 		try {
-			const config = getWagmiConfig()
-			const chainId = getChainId(config)
+			const chainId = getServerChainId()
 			const created = await fetchFirstTransferData(data.address, chainId)
 			return { created }
 		} catch (error) {
@@ -248,8 +245,7 @@ export const fetchTransfers = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokenTransfersInputSchema.parse(input))
 	.handler(async ({ data }) => {
 		try {
-			const config = getWagmiConfig()
-			const chainId = getChainId(config)
+			const chainId = getServerChainId()
 
 			const [transfers, countResult] = await Promise.all([
 				fetchTokenTransfers(
@@ -329,8 +325,7 @@ export const fetchOgStats = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchOgStatsInputSchema.parse(input))
 	.handler(async ({ data }) => {
 		try {
-			const config = getWagmiConfig()
-			const chainId = getChainId(config)
+			const chainId = getServerChainId()
 			const cacheKey = `${chainId}-${data.address}`
 
 			const cached = ogStatsCache.get(cacheKey)

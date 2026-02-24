@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import type { Config } from 'wagmi'
-import { getChainId } from 'wagmi/actions'
 import { Actions } from 'wagmi/tempo'
 import { hasIndexSupply } from '#lib/env'
 import {
@@ -9,7 +8,7 @@ import {
 	fetchTokenCreatedMetadata,
 } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
-import { getWagmiConfig } from '#wagmi.config'
+import { getServerChainId, getWagmiConfig } from '#wagmi.config'
 
 const TIP20_DECIMALS = 6
 const MAX_TOKENS = 50
@@ -38,7 +37,7 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 				try {
 					const address = zAddress().parse(params.address)
 					const config = getWagmiConfig()
-					const chainId = getChainId(config)
+					const chainId = getServerChainId()
 
 					const balancesResult = await fetchAddressTransferBalances(
 						address,

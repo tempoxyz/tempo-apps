@@ -1,18 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import { getBlockNumber, getCode } from 'viem/actions'
-import { getChainId } from 'wagmi/actions'
-import * as z from 'zod/mini'
 import { hasIndexSupply } from '#lib/env'
 import { fetchAddressTxCounts } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
-import { getWagmiConfig } from '#wagmi.config'
-
-const chainId = getChainId(getWagmiConfig())
-
-const RequestSchema = z.object({
-	chainId: z.prefault(z.coerce.number(), chainId),
-})
+import { getServerChainId, getWagmiConfig } from '#wagmi.config'
 
 /**
  * Binary search to find the block where a contract was created.
@@ -77,14 +69,7 @@ export const Route = createFileRoute('/api/address/txs-count/$address')({
 					const address = zAddress().parse(params.address)
 					Address.assert(address)
 
-					const parseResult = RequestSchema.safeParse(params)
-					if (!parseResult.success)
-						return Response.json(
-							{ error: z.prettifyError(parseResult.error), data: null },
-							{ status: 400 },
-						)
-
-					const { chainId } = parseResult.data
+					const chainId = getServerChainId()
 
 					const [txCounts, hasCreation] = await Promise.all([
 						fetchAddressTxCounts(address, chainId),

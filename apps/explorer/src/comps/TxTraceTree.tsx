@@ -70,7 +70,7 @@ export function TxTraceTree(props: TxTraceTree.Props) {
 			</div>
 			<div
 				tabIndex={wrap ? undefined : 0}
-				className="px-[18px] py-[12px] font-mono text-[12px] overflow-x-auto grid grid-cols-[auto_auto_1fr] gap-x-[8px] items-start rounded-b-[10px] focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2!"
+				className="px-[18px] py-[12px] font-mono text-[12px] overflow-x-auto grid grid-cols-[auto_auto_1fr] gap-x-[8px] items-start focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2!"
 			>
 				<TxTraceTree.NodeView node={tree} depth={0} wrap={wrap} raw={raw} />
 			</div>
@@ -272,7 +272,7 @@ export namespace TxTraceTree {
 			<>
 				<span
 					className={cx(
-						'text-[10px] font-medium px-[4px] py-px rounded text-center whitespace-nowrap select-none',
+						'text-[10px] font-medium px-[4px] py-px text-center whitespace-nowrap select-none',
 						node.hasError
 							? 'bg-negative/20 text-negative'
 							: 'bg-accent/20 text-accent',

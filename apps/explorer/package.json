@@ -8,7 +8,9 @@
 	},
 	"scripts": {
 		"postinstall": "pnpm gen:types",
-		"dev": "pnpm dev:moderato",
+		"dev": "pnpm dev:parmigiana",
+		"dev:parmigiana": "VITE_TEMPO_ENV='parmigiana' vite dev --port 3000",
+		"dev:host": "VITE_TEMPO_ENV='host' vite dev --port 3001",
 		"dev:devnet": "VITE_TEMPO_ENV='devnet' vite dev --port 3000",
 		"dev:andantino": "VITE_TEMPO_ENV='testnet' vite dev --port 3000",
 		"dev:moderato": "VITE_TEMPO_ENV='moderato' vite dev --port 3000",

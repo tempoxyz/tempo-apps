@@ -15,8 +15,8 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 	return (
 		<InfoCard
 			title={
-				<div className="flex items-center justify-between px-[18px] h-[36px] font-sans">
-					<h1 className="text-[13px] text-tertiary select-none">Transaction</h1>
+				<div className="flex items-center justify-between px-[18px] h-[36px]">
+					<h1 className="text-[13px] text-tertiary select-none font-mono uppercase tracking-wide">Transaction</h1>
 					<StatusBadge status={status} />
 				</div>
 			}
@@ -66,7 +66,7 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 							title={`Showing ${formatLabel} time - click to change`}
 						>
 							<span>Time</span>
-							<span className="bg-base-alt text-primary px-2 py-[2px] rounded-[6px] text-[11px] font-sans capitalize transition-colors group-hover:bg-base-alt/80">
+							<span className="bg-base-alt text-primary px-2 py-[2px] text-[11px] font-mono uppercase tracking-wider transition-colors group-hover:bg-base-alt/80">
 								{formatLabel}
 							</span>
 						</button>
@@ -134,7 +134,7 @@ function StatusBadge(props: { status: 'success' | 'reverted' }) {
 	return (
 		<span
 			className={cx(
-				'text-[11px] uppercase font-mono font-normal px-[6px] py-[2px] rounded-[4px]',
+				'text-[11px] uppercase font-mono font-normal px-[6px] py-[2px] tracking-wider',
 				isSuccess
 					? 'text-base-content-positive bg-base-content-positive/10'
 					: 'text-base-content-negative bg-base-content-negative/10',

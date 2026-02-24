@@ -41,7 +41,7 @@ export function Receipt(props: Receipt.Props) {
 		<>
 			<div
 				data-receipt
-				className="flex flex-col w-[360px] bg-base-plane border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
+				className="flex flex-col w-[360px] bg-base-plane border border-base-border border-b-0 text-base-content"
 			>
 				<div className="flex gap-[40px] px-[20px] pt-[24px] pb-[16px]">
 					<div className="shrink-0">
@@ -49,7 +49,7 @@ export function Receipt(props: Receipt.Props) {
 					</div>
 					<div className="flex flex-col gap-[8px] font-mono text-[13px] leading-[16px] flex-1">
 						<div className="flex justify-between items-end">
-							<span className="text-tertiary">Block</span>
+							<span className="text-tertiary font-mono uppercase tracking-wider">Block</span>
 							<Link
 								to="/block/$id"
 								params={{ id: blockNumber.toString() }}
@@ -59,7 +59,7 @@ export function Receipt(props: Receipt.Props) {
 							</Link>
 						</div>
 						<div className="flex justify-between items-end gap-4">
-							<span className="text-tertiary shrink-0">Sender</span>
+							<span className="text-tertiary shrink-0 font-mono uppercase tracking-wider">Sender</span>
 							<Link
 								to="/address/$address"
 								params={{ address: sender }}
@@ -70,7 +70,7 @@ export function Receipt(props: Receipt.Props) {
 						</div>
 						<div className="flex justify-between items-start gap-4">
 							<div className="relative shrink-0">
-								<span className="text-tertiary">Hash</span>
+								<span className="text-tertiary font-mono uppercase tracking-wider">Hash</span>
 								{copyHash.notifying && (
 									<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px] text-accent">
 										copied
@@ -96,13 +96,13 @@ export function Receipt(props: Receipt.Props) {
 							)}
 						</div>
 						<div className="flex justify-between items-end">
-							<span className="text-tertiary">Date</span>
+							<span className="text-tertiary font-mono uppercase tracking-wider">Date</span>
 							<span className="text-right">
 								{DateFormatter.formatTimestampDate(timestamp)}
 							</span>
 						</div>
 						<div className="flex justify-between items-end">
-							<span className="text-tertiary">Time</span>
+							<span className="text-tertiary font-mono uppercase tracking-wider">Time</span>
 							<span className="text-right">
 								{formattedTime.time} {formattedTime.timezone}
 								<span className="text-tertiary">{formattedTime.offset}</span>
@@ -110,8 +110,8 @@ export function Receipt(props: Receipt.Props) {
 						</div>
 						{status === 'reverted' && (
 							<div className="flex justify-between items-end">
-								<span className="text-tertiary">Status</span>
-								<span className="text-base-content-negative uppercase text-[11px]">
+								<span className="text-tertiary font-mono uppercase tracking-wider">Status</span>
+								<span className="text-base-content-negative uppercase text-[11px] font-mono tracking-wider">
 									Failed
 								</span>
 							</div>
@@ -293,7 +293,7 @@ export function Receipt(props: Receipt.Props) {
 					<Link
 						to="/tx/$hash"
 						params={{ hash }}
-						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-base-plane-interactive border border-base-border rounded-bl-[10px]! rounded-br-[10px]! hover:bg-base-plane text-tertiary hover:text-primary transition-[background-color,color] duration-100 -mt-px focus-visible:-outline-offset-2!"
+						className="press-down text-[13px] font-sans px-[12px] py-[12px] flex items-center justify-center gap-[8px] bg-base-plane-interactive border border-base-border hover:bg-base-plane text-tertiary hover:text-primary transition-[background-color,color] duration-100 -mt-px focus-visible:-outline-offset-2!"
 					>
 						<span>View transaction</span>
 						<span aria-hidden="true">→</span>

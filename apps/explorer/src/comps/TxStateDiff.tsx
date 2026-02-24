@@ -227,7 +227,7 @@ export namespace TxStateDiff {
 				<div className="px-[16px] pb-[12px] overflow-x-auto">
 					<div
 						className={cx(
-							'bg-distinct border border-card-border rounded-[6px] overflow-hidden text-[12px] font-mono grid',
+							'bg-distinct border border-card-border overflow-hidden text-[12px] font-mono grid',
 							wrap
 								? 'grid-cols-3'
 								: 'grid-cols-[auto_auto_auto] w-fit min-w-full',
@@ -321,7 +321,7 @@ export namespace TxStateDiff {
 			>
 				{value}
 				{copy.notifying && (
-					<div className="absolute bottom-[2px] right-[2px] bg-base-alt px-[8px] py-[2px] rounded text-secondary">
+					<div className="absolute bottom-[2px] right-[2px] bg-base-alt px-[8px] py-[2px] text-secondary">
 						<div className="translate-y-[-2px]">copied</div>
 					</div>
 				)}
@@ -366,7 +366,7 @@ export namespace TxStateDiff {
 					</span>
 				)}
 				{copy.notifying && (
-					<div className="absolute bottom-[2px] right-[2px] bg-base-alt px-[8px] py-[2px] rounded text-secondary">
+					<div className="absolute bottom-[2px] right-[2px] bg-base-alt px-[8px] py-[2px] text-secondary">
 						<div className="translate-y-[-2px]">copied</div>
 					</div>
 				)}

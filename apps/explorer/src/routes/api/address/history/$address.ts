@@ -6,7 +6,7 @@ import type { Log } from 'viem'
 import { parseEventLogs } from 'viem'
 import { getBlock, getTransactionReceipt } from 'viem/actions'
 import { Abis } from 'viem/tempo'
-import { getChainId } from 'wagmi/actions'
+import { getServerChainId } from '#wagmi.config.ts'
 import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { getRequestURL, hasIndexSupply } from '#lib/env'
@@ -134,7 +134,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const searchParams = parseParams.data
 					const config = getWagmiConfig()
 					const client = config.getClient()
-					const chainId = getChainId(config)
+					const chainId = getServerChainId()
 
 					const include =
 						searchParams.include === 'sent'

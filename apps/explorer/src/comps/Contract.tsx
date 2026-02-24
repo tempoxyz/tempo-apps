@@ -65,7 +65,7 @@ export function ContractTabContent(props: {
 
 	if (!abi) {
 		return (
-			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
+			<div className="bg-card-header p-[18px] h-full">
 				<p className="text-sm font-medium text-tertiary">
 					No ABI available for this contract.
 				</p>
@@ -81,7 +81,7 @@ export function ContractTabContent(props: {
 					<span className="whitespace-nowrap">TIP-20 Native Precompile</span>
 					<span className="text-tertiary">·</span>
 					<a
-						href="https://docs.tempo.xyz/protocol/tip20/spec#tip20-1"
+						href="https://signet.sh/docs/protocol/tip20/spec#tip20-1"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="text-accent hover:underline whitespace-nowrap"
@@ -89,7 +89,7 @@ export function ContractTabContent(props: {
 						Spec
 					</a>
 					<a
-						href="https://github.com/tempoxyz/tempo/blob/main/tips/ref-impls/src/TIP20.sol"
+						href="https://github.com/init4tech/tempo/blob/main/tips/ref-impls/src/TIP20.sol"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="text-accent hover:underline whitespace-nowrap"
@@ -97,7 +97,7 @@ export function ContractTabContent(props: {
 						Solidity
 					</a>
 					<a
-						href="https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
+						href="https://github.com/init4tech/tempo/tree/main/crates/precompiles/src/tip20"
 						target="_blank"
 						rel="noopener noreferrer"
 						className="text-accent hover:underline whitespace-nowrap"
@@ -171,7 +171,7 @@ export function CollapsibleSection(props: {
 	children: React.ReactNode
 	first?: boolean
 }) {
-	const { title, expanded, onToggle, actions, children, first } = props
+	const { title, expanded, onToggle, actions, children, first: _first } = props
 
 	return (
 		<div className="flex flex-col border-b border-dashed border-distinct">
@@ -182,8 +182,6 @@ export function CollapsibleSection(props: {
 					className={cx(
 						'flex items-center gap-[8px] h-full pl-[16px] cursor-pointer press-down focus-visible:-outline-offset-2! py-[6px]',
 						actions ? 'pr-[12px]' : 'flex-1 pr-[16px]',
-						first && 'focus-visible:rounded-tl-[8px]!',
-						first && !actions && 'focus-visible:rounded-tr-[8px]!',
 					)}
 				>
 					<span className="text-[14px] text-tertiary whitespace-nowrap font-sans">
@@ -325,7 +323,7 @@ export function InteractTabContent(props: {
 
 	if (isLoadingProxy) {
 		return (
-			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
+			<div className="bg-card-header p-[18px] h-full">
 				<p className="text-sm font-medium text-tertiary">
 					Loading contract information{ellipsis}
 				</p>
@@ -335,7 +333,7 @@ export function InteractTabContent(props: {
 
 	if (!abi) {
 		return (
-			<div className="rounded-[10px] bg-card-header p-[18px] h-full">
+			<div className="bg-card-header p-[18px] h-full">
 				<p className="text-sm font-medium text-tertiary">
 					No ABI available for this contract.
 				</p>
@@ -456,9 +454,8 @@ export function ContractFeatureCard(props: {
 			<section
 				className={cx(
 					'flex flex-col w-full overflow-hidden',
-					'rounded-[10px] border border-card-border bg-card-header',
-					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
-				)}
+					'border border-card-border bg-card-header',
+									)}
 			>
 				<div className="flex items-center h-[36px] shrink-0">
 					<button
@@ -488,7 +485,7 @@ export function ContractFeatureCard(props: {
 
 				<div
 					className={cx(
-						'rounded-t-[10px] border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto px-[10px] pt-[10px]',
+						'border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto px-[10px] pt-[10px]',
 						isCollapsed && 'hidden',
 					)}
 				>
@@ -499,7 +496,7 @@ export function ContractFeatureCard(props: {
 	}
 
 	return (
-		<section className="rounded-[10px] bg-card-header overflow-hidden">
+		<section className="bg-card-header overflow-hidden">
 			<div className="flex flex-col gap-1.5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between w-full">
 				<div className="w-full">
 					<div className="flex items-center w-full gap-2 justify-between">

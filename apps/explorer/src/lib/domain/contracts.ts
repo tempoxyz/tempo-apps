@@ -8,9 +8,9 @@ import {
 	toFunctionSelector,
 } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
-import { getChainId, getPublicClient } from 'wagmi/actions'
+import { getPublicClient } from 'wagmi/actions'
 import { isTip20Address } from '#lib/domain/tip20.ts'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { getServerChainId, getWagmiConfig } from '#wagmi.config.ts'
 
 /**
  * Registry of known contract addresses to their ABIs and metadata.
@@ -852,7 +852,7 @@ export async function autoloadAbi(
 ): Promise<Abi | null> {
 	const { followProxies = true, includeSourceVerified = true } = options
 	const config = getWagmiConfig()
-	const chainId = getChainId(config)
+	const chainId = getServerChainId()
 	const client = getPublicClient(config)
 	if (!client) return null
 

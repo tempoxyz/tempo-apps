@@ -12,14 +12,19 @@ import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#lib/css'
 import { springInstant, springBouncy, springSmooth } from '#lib/animation'
 import { Intro, type IntroPhase, useIntroSeen } from '#comps/Intro'
+import { useChainId } from 'wagmi'
+import { signetParmigiana, signetHost } from '#lib/chains'
+import { getTempoEnv } from '#lib/env'
 import BoxIcon from '~icons/lucide/box'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CoinsIcon from '~icons/lucide/coins'
 import FileIcon from '~icons/lucide/file'
 import ReceiptIcon from '~icons/lucide/receipt'
-import ShieldCheckIcon from '~icons/lucide/shield-check'
+import HammerIcon from '~icons/lucide/hammer'
+import ScrollTextIcon from '~icons/lucide/scroll-text'
 import ShuffleIcon from '~icons/lucide/shuffle'
 import UserIcon from '~icons/lucide/user'
+import InfoIcon from '~icons/lucide/info'
 import ZapIcon from '~icons/lucide/zap'
 
 const SPOTLIGHT_DATA: Record<
@@ -68,9 +73,32 @@ const SPOTLIGHT_DATA: Record<
 		mintHash:
 			'0xc2ecd6749cac0ddce9511cbffe91c2a3de7c2b93d28e35d2d57b7ef4380bc37b',
 	},
+	parmigiana: {
+		accountAddress: '0x97e4cc82847511c7cd1790fab6937ab2abdef6ad',
+		contractAddress: '0x000000000000007369676e65742d6f7264657273' as Address.Address,
+		receiptHash:
+			'0xf03bb6e26807b2979e05c2ccdb195c7456ee1434687874ebc1093d23adb3976f',
+		paymentHash: null,
+		swapHash: null,
+		mintHash: null,
+	},
+	host: {
+		accountAddress: '0x97e4cc82847511c7cd1790fab6937ab2abdef6ad',
+		contractAddress: '0x143A5BE4E559cA49Dbf0966d4B9C398425C5Fc19' as Address.Address,
+		receiptHash: null,
+		paymentHash: null,
+		swapHash: null,
+		mintHash: null,
+	},
 }
 
-const spotlightData = SPOTLIGHT_DATA[import.meta.env.VITE_TEMPO_ENV]
+// Map chainId to spotlight data for signet envs
+const SIGNET_SPOTLIGHT: Record<number, (typeof SPOTLIGHT_DATA)[string]> = {
+	[signetParmigiana.id]: SPOTLIGHT_DATA.parmigiana,
+	[signetHost.id]: SPOTLIGHT_DATA.host,
+}
+
+const staticSpotlightData = SPOTLIGHT_DATA[import.meta.env.VITE_TEMPO_ENV]
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
@@ -278,6 +306,16 @@ function SpotlightLinks() {
 		hoverTimeoutRef.current = setTimeout(() => closeMenu(), 150)
 	}
 
+	const env = getTempoEnv()
+	const isSignetEnv = env === 'parmigiana' || env === 'host'
+	const chainId = useChainId()
+	const isHost = chainId === signetHost.id
+
+	// Use runtime chainId for signet envs, static env for others
+	const spotlightData = isSignetEnv
+		? SIGNET_SPOTLIGHT[chainId]
+		: staticSpotlightData
+
 	const actionTypes = spotlightData
 		? [
 				{ label: 'Payment', hash: spotlightData.paymentHash },
@@ -285,6 +323,10 @@ function SpotlightLinks() {
 				{ label: 'Mint', hash: spotlightData.mintHash },
 			].filter((a): a is { label: string; hash: Hex.Hex } => a.hash !== null)
 		: []
+
+	const signetActions = isHost
+		? [{ label: 'Enter' }]
+		: [{ label: 'Deploy' }, { label: 'Swap' }, { label: 'Exit' }]
 
 	return (
 		<section className="text-center max-w-[500px] px-4">
@@ -352,23 +394,40 @@ function SpotlightLinks() {
 										className="bg-base-plane rounded-full p-1 border border-base-border shadow-xl flex items-center relative z-60"
 										style={{ opacity: 0 }}
 									>
-										{actionTypes.map((action, i) => (
-											<Link
-												key={action.label}
-												to="/tx/$hash"
-												params={{ hash: action.hash }}
-												preload="render"
-												className={`px-2.5 py-1 text-[12px] text-base-content-secondary hover:text-base-content hover:bg-base-border/40 whitespace-nowrap focus-visible:outline-offset-0 press-down cursor-pointer ${
-													i === 0
-														? 'rounded-l-[14px]! rounded-r-[2px]!'
-														: i === actionTypes.length - 1
-															? 'rounded-r-[14px]! rounded-l-[2px]!'
-															: 'rounded-[2px]!'
-												}`}
-											>
-												{action.label}
-											</Link>
-										))}
+										{isSignetEnv
+											? signetActions.map((action, i) => (
+													<span
+														key={action.label}
+														className={`px-2.5 py-1 text-[12px] text-tertiary whitespace-nowrap inline-flex items-center gap-1 cursor-default ${
+															i === 0
+																? 'rounded-l-[14px]! rounded-r-[2px]!'
+																: i === signetActions.length - 1
+																	? 'rounded-r-[14px]! rounded-l-[2px]!'
+																	: 'rounded-[2px]!'
+														}`}
+														title="Coming soon"
+													>
+														{action.label}
+														<InfoIcon className="size-[10px] opacity-40" />
+													</span>
+												))
+											: actionTypes.map((action, i) => (
+													<Link
+														key={action.label}
+														to="/tx/$hash"
+														params={{ hash: action.hash }}
+														preload="render"
+														className={`px-2.5 py-1 text-[12px] text-base-content-secondary hover:text-base-content hover:bg-base-border/40 whitespace-nowrap focus-visible:outline-offset-0 press-down cursor-pointer ${
+															i === 0
+																? 'rounded-l-[14px]! rounded-r-[2px]!'
+																: i === actionTypes.length - 1
+																	? 'rounded-r-[14px]! rounded-l-[2px]!'
+																	: 'rounded-[2px]!'
+														}`}
+													>
+														{action.label}
+													</Link>
+												))}
 									</div>
 								</div>
 							)}
@@ -387,11 +446,19 @@ function SpotlightLinks() {
 				>
 					Tokens
 				</SpotlightPill>
+				{!isHost && (
+					<SpotlightPill
+						to="/orders"
+						icon={<ScrollTextIcon className="size-[14px] text-accent" />}
+					>
+						Orders
+					</SpotlightPill>
+				)}
 				<SpotlightPill
-					to="/validators"
-					icon={<ShieldCheckIcon className="size-[14px] text-accent" />}
+					to="/block-builders"
+					icon={<HammerIcon className="size-[14px] text-accent" />}
 				>
-					Validators
+					Block Builders
 				</SpotlightPill>
 			</div>
 		</section>
