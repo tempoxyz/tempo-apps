@@ -4,7 +4,7 @@ import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import type { Log } from 'viem'
 import { parseEventLogs } from 'viem'
-import { getBlock, getTransactionReceipt } from 'viem/actions'
+import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import { Abis } from 'viem/tempo'
 import { getChainId } from 'wagmi/actions'
 import { Actions } from 'wagmi/tempo'
@@ -322,11 +322,16 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						} satisfies HistoryResponse)
 					}
 
-					const receipts = await Promise.all(
-						finalHashes.map((h) =>
-							getTransactionReceipt(client, { hash: h.hash }),
+					const [receipts, txs] = await Promise.all([
+						Promise.all(
+							finalHashes.map((h) =>
+								getTransactionReceipt(client, { hash: h.hash }),
+							),
 						),
-					)
+						Promise.all(
+							finalHashes.map((h) => getTransaction(client, { hash: h.hash })),
+						),
+					])
 
 					const blockHashes = new Set<`0x${string}`>()
 					for (const receipt of receipts) {
@@ -390,6 +395,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					for (let i = 0; i < finalHashes.length; i++) {
 						const hashEntry = finalHashes[i]
 						const receipt = receipts[i]
+						const transaction = txs[i]
 						const block = blockMap.get(receipt.blockHash)
 
 						let from: `0x${string}`
@@ -418,6 +424,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						}
 
 						const knownEvents = parseKnownEvents(receipt, {
+							transaction,
 							getTokenMetadata,
 						})
 
