@@ -41,6 +41,17 @@
 			"extensions": {
 				"chain": "tempo"
 			}
+		},
+		{
+			"name": "USDT0",
+			"symbol": "USDT0",
+			"decimals": 6,
+			"chainId": 4217,
+			"address": "0x20c00000000000000000000014f22ca97301eb73",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c00000000000000000000014f22ca97301eb73.svg",
+			"extensions": {
+				"chain": "tempo"
+			}
 		}
 	]
 }
