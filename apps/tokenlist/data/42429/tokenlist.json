@@ -17,7 +17,8 @@
 			"address": "0x20c0000000000000000000000000000000000000",
 			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42429/icons/0x20c0000000000000000000000000000000000000.svg",
 			"extensions": {
-				"chain": "tempo"
+				"chain": "tempo",
+				"label": "pathUSD"
 			}
 		},
 		{
@@ -28,7 +29,8 @@
 			"address": "0x20c0000000000000000000000000000000000001",
 			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42429/icons/0x20c0000000000000000000000000000000000001.svg",
 			"extensions": {
-				"chain": "tempo"
+				"chain": "tempo",
+				"label": "AlphaUSD"
 			}
 		},
 		{
@@ -39,7 +41,8 @@
 			"address": "0x20c0000000000000000000000000000000000002",
 			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42429/icons/0x20c0000000000000000000000000000000000002.svg",
 			"extensions": {
-				"chain": "tempo"
+				"chain": "tempo",
+				"label": "BetaUSD"
 			}
 		},
 		{
@@ -50,7 +53,8 @@
 			"address": "0x20c0000000000000000000000000000000000003",
 			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42429/icons/0x20c0000000000000000000000000000000000003.svg",
 			"extensions": {
-				"chain": "tempo"
+				"chain": "tempo",
+				"label": "ThetaUSD"
 			}
 		}
 	]

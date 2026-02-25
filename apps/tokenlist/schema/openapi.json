@@ -148,7 +148,8 @@
 											"address": "0x20c0000000000000000000000000000000000000",
 											"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
 											"extensions": {
-												"chain": "tempo"
+												"chain": "tempo",
+												"label": "pathUSD"
 											}
 										}
 									]
@@ -201,7 +202,8 @@
 									"address": "0x20c0000000000000000000000000000000000000",
 									"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
 									"extensions": {
-										"chain": "tempo"
+										"chain": "tempo",
+										"label": "pathUSD"
 									}
 								}
 							}
@@ -242,7 +244,8 @@
 													"address": "0x20c0000000000000000000000000000000000000",
 													"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
 													"extensions": {
-														"chain": "tempo"
+														"chain": "tempo",
+														"label": "pathUSD"
 													}
 												}
 											],
@@ -677,6 +680,7 @@
 				"description": "Object containing arbitrary or vendor-specific token metadata",
 				"example": {
 					"chain": "tempo",
+					"label": "PathUSD",
 					"inlined": "%3Csvg..."
 				}
 			}
