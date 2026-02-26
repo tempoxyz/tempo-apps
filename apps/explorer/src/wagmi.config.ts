@@ -22,22 +22,101 @@ import { KeyManager, webAuthn } from 'wagmi/tempo'
 
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
+const KEY_MANAGER_URL = 'https://keys.tempo.xyz'
+
 /**
- * Custom fetch that bypasses Cloudflare's broken `window.Request` override.
+ * Custom key manager that uses `fetch(url)` directly instead of `new Request(url)`.
  *
- * Cloudflare injects a script that wraps `window.Request`. The wrapper has a
- * bug: when called with only a URL (no `init`), the fallback evaluates the URL
- * string as `RequestInit`, causing a TypeError. Passing `request.url` as a
- * plain string to `globalThis.fetch` avoids the broken constructor path.
+ * Cloudflare injects a script that overrides `window.Request` with a wrapper
+ * that has a bug: when no `init` is passed, the fallback `n || i` uses the URL
+ * string as `RequestInit`, causing a TypeError. Using `fetch(url, init)` avoids
+ * going through the broken `Request` constructor.
  */
-function cfSafeFetch(
-	input: RequestInfo | URL,
-	init?: RequestInit,
-): Promise<Response> {
-	return globalThis.fetch(
-		input instanceof Request ? input.url : input,
-		init ?? (input instanceof Request ? input : undefined),
-	)
+function keyManager() {
+	return KeyManager.from({
+		async getChallenge() {
+			const response = await fetch(`${KEY_MANAGER_URL}/challenge`)
+			if (!response.ok)
+				throw new Error(`Failed to get challenge: ${response.statusText}`)
+			return response.json()
+		},
+		async getPublicKey(parameters) {
+			const response = await fetch(
+				`${KEY_MANAGER_URL}/${parameters.credential.id}`,
+			)
+			if (!response.ok)
+				throw new Error(`Failed to get public key: ${response.statusText}`)
+			const data = (await response.json()) as { publicKey: `0x${string}` }
+			return data.publicKey
+		},
+		async setPublicKey(parameters) {
+			const response = await fetch(
+				`${KEY_MANAGER_URL}/${parameters.credential.id}`,
+				{
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						credential: serializeCredential(parameters.credential),
+						publicKey: parameters.publicKey,
+					}),
+				},
+			)
+			if (!response.ok)
+				throw new Error(`Failed to set public key: ${response.statusText}`)
+		},
+	})
+}
+
+/**
+ * Serializes a WebAuthn credential for JSON transmission.
+ * Replicates upstream KeyManager.http() serialization.
+ */
+// biome-ignore lint/suspicious/noExplicitAny: credential.response fields vary by attestation/assertion
+function serializeCredential(credential: any) {
+	const response = credential.response
+	function toBase64Url(buffer: ArrayBuffer) {
+		const bytes = new Uint8Array(buffer)
+		let str = ''
+		for (const b of bytes) str += String.fromCharCode(b)
+		return btoa(str).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+	}
+	return {
+		...credential,
+		rawId: toBase64Url(credential.rawId),
+		response: {
+			clientDataJSON: toBase64Url(response.clientDataJSON),
+			...('attestationObject' in response && {
+				attestationObject: toBase64Url(response.attestationObject),
+			}),
+			...('getAuthenticatorData' in response &&
+				typeof response.getAuthenticatorData === 'function' && {
+					authenticatorData: toBase64Url(
+						response.getAuthenticatorData.call(response),
+					),
+				}),
+			...('getPublicKey' in response &&
+				typeof response.getPublicKey === 'function' && {
+					publicKey: toBase64Url(response.getPublicKey.call(response)!),
+				}),
+			...('getPublicKeyAlgorithm' in response &&
+				typeof response.getPublicKeyAlgorithm === 'function' && {
+					publicKeyAlgorithm: response.getPublicKeyAlgorithm.call(response),
+				}),
+			...('getTransports' in response &&
+				typeof response.getTransports === 'function' && {
+					transports: response.getTransports.call(response),
+				}),
+			...('authenticatorData' in response && {
+				authenticatorData: toBase64Url(response.authenticatorData),
+			}),
+			...('signature' in response && {
+				signature: toBase64Url(response.signature),
+			}),
+			...('userHandle' in response && response.userHandle
+				? { userHandle: toBase64Url(response.userHandle) }
+				: {}),
+		},
+	}
 }
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
@@ -127,9 +206,7 @@ export function getWagmiConfig() {
 		chains: [chain, tempoLocalnet],
 		connectors: [
 			webAuthn({
-				keyManager: KeyManager.http('https://keys.tempo.xyz', {
-					fetch: cfSafeFetch,
-				}),
+				keyManager: keyManager(),
 			}),
 		],
 		storage: createStorage({ storage: cookieStorage }),
