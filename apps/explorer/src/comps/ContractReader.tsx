@@ -59,7 +59,7 @@ function decodeRawCallResult(
 
 	// Check if it looks like a dynamic array (address[], uint256[], bytes32[], etc.)
 	// Format: offset (32 bytes) + length (32 bytes) + N elements (32 bytes each)
-	if (data.length >= 130 || data === `0x${'0'.repeat(128)}`) {
+	if (data.length >= 130) {
 		try {
 			const offset = Number.parseInt(data.slice(2, 66), 16)
 			const length = Number.parseInt(data.slice(66, 130), 16)
@@ -510,13 +510,13 @@ function DynamicReadFunction(props: {
 		try {
 			return encodeFunctionData({
 				abi,
-				functionName: fn.name,
+				functionName: fnId,
 				args: parsedArgs.args,
 			})
 		} catch {
 			return undefined
 		}
-	}, [abi, fn.name, hasOutputs, allInputsFilled, parsedArgs])
+	}, [abi, fnId, hasOutputs, allInputsFilled, parsedArgs])
 
 	const {
 		data: rawResult,

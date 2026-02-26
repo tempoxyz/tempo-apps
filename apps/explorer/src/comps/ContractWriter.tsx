@@ -23,14 +23,23 @@ import LinkIcon from '~icons/lucide/link'
 import PlayIcon from '~icons/lucide/play'
 
 function getWriteErrorMessage(err: Error): string {
-	const anyErr = err as Error & {
-		shortMessage?: string
-		cause?: Error & { shortMessage?: string }
+	// Walk the cause chain to find the deepest shortMessage/message
+	let deepest = err as Error & { shortMessage?: string }
+	let current: unknown = err
+	while (
+		current &&
+		typeof current === 'object' &&
+		'cause' in current &&
+		current.cause instanceof Error
+	) {
+		current = current.cause
+		deepest = current as Error & { shortMessage?: string }
 	}
+
 	const message =
-		anyErr.shortMessage ??
-		anyErr.cause?.shortMessage ??
-		anyErr.cause?.message ??
+		(err as Error & { shortMessage?: string }).shortMessage ??
+		deepest.shortMessage ??
+		deepest.message ??
 		err.message ??
 		'Transaction failed'
 
