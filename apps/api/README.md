@@ -1,3 +1,0 @@
-# Tempo REST API
-
-## TODO
