@@ -81,7 +81,7 @@ const mockQueryBuilder = vi.hoisted(() => {
 })
 
 vi.mock('#lib/server/tempo-queries-provider', () => ({
-	tempoQueryBuilder: mockQueryBuilder,
+	tempoQueryBuilder: () => mockQueryBuilder,
 }))
 
 import {
