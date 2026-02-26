@@ -1038,13 +1038,9 @@ function SectionsWrapper(props: {
 
 	const eventsErrorDisplay = eventsError ? (
 		<div className="rounded-[10px] bg-card-header p-4.5">
-			<p className="text-sm font-medium text-red-400">
-				Failed to load events
-			</p>
+			<p className="text-sm font-medium text-red-400">Failed to load events</p>
 			<p className="text-xs text-tertiary mt-1">
-				{eventsError instanceof Error
-					? eventsError.message
-					: 'Unknown error'}
+				{eventsError instanceof Error ? eventsError.message : 'Unknown error'}
 			</p>
 		</div>
 	) : null
@@ -1426,9 +1422,7 @@ function SectionsWrapper(props: {
 			case 'events':
 				return {
 					title: 'Events',
-					totalItems:
-						eventsData &&
-						(exactEventsCount ?? eventsPaginationTotal),
+					totalItems: eventsData && (exactEventsCount ?? eventsPaginationTotal),
 					itemsLabel: 'events',
 					content: eventsErrorDisplay ?? (
 						<DataGrid
@@ -1454,11 +1448,7 @@ function SectionsWrapper(props: {
 											selector={event.topics[0]}
 										/>,
 										<div key="hash" className="flex-1 text-accent">
-											<Midcut
-												value={event.txHash}
-												prefix="0x"
-												align="end"
-											/>
+											<Midcut value={event.txHash} prefix="0x" align="end" />
 										</div>,
 									],
 									link: {
@@ -1473,11 +1463,7 @@ function SectionsWrapper(props: {
 									? { hasMore: eventsHasMore }
 									: undefined
 							}
-							displayCount={
-								exactEventsCount === null
-									? 1000
-									: exactEventsCount
-							}
+							displayCount={exactEventsCount === null ? 1000 : exactEventsCount}
 							displayCountCapped={exactEventsCount === null}
 							page={page}
 							fetching={isEventsPlaceholderData}
@@ -1772,10 +1758,7 @@ function AssetValue(props: { asset: AssetData }) {
 	)
 }
 
-function EventTimeCell(props: {
-	blockNumber: Hex.Hex
-	format: TimeFormat
-}) {
+function EventTimeCell(props: { blockNumber: Hex.Hex; format: TimeFormat }) {
 	const { blockNumber, format } = props
 	const { data: timestamp } = useBlock({
 		blockNumber: Hex.toBigInt(blockNumber),
@@ -1830,9 +1813,7 @@ function EventDescCell(props: {
 
 	const perspectiveEvent = getPerspectiveEvent(knownEvent, accountAddress)
 
-	return (
-		<TxEventDescription event={perspectiveEvent} seenAs={accountAddress} />
-	)
+	return <TxEventDescription event={perspectiveEvent} seenAs={accountAddress} />
 }
 
 function FilterIndicator(props: {

@@ -129,13 +129,28 @@ export const Route = createFileRoute('/api/address/events/$address')({
 					console.error(error)
 					if (error instanceof QueryTimeoutError) {
 						return json(
-							{ events: [], total: 0, offset: 0, limit: 10, hasMore: false, error: 'Query timed out. This contract may have too many events.' },
+							{
+								events: [],
+								total: 0,
+								offset: 0,
+								limit: 10,
+								hasMore: false,
+								error:
+									'Query timed out. This contract may have too many events.',
+							},
 							{ status: 504 },
 						)
 					}
 					const errorMessage = error instanceof Error ? error.message : error
 					return json(
-						{ events: [], total: 0, offset: 0, limit: 10, hasMore: false, error: errorMessage },
+						{
+							events: [],
+							total: 0,
+							offset: 0,
+							limit: 10,
+							hasMore: false,
+							error: errorMessage,
+						},
 						{ status: 500 },
 					)
 				}

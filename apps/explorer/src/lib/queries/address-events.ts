@@ -60,7 +60,9 @@ export function addressEventsQueryOptions(
 }
 
 export type AddressEventsData = Awaited<
-	ReturnType<NonNullable<ReturnType<typeof addressEventsQueryOptions>['queryFn']>>
+	ReturnType<
+		NonNullable<ReturnType<typeof addressEventsQueryOptions>['queryFn']>
+	>
 >
 
 export type AddressEventsCountResponse = {

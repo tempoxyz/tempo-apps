@@ -275,9 +275,7 @@ export namespace Pagination {
 					{!isIndefinite && typeof pages === 'number' && pages > 0 && (
 						<>
 							{' of '}
-							{countLoading
-								? '…'
-								: Pagination.numFormat.format(pages)}
+							{countLoading ? '…' : Pagination.numFormat.format(pages)}
 						</>
 					)}
 				</span>
@@ -323,7 +321,6 @@ export namespace Pagination {
 			countLoading?: boolean
 			/** Disable "Last page" button when we can't reliably navigate there */
 			disableLastPage?: boolean
-			hasMore?: boolean
 		}
 	}
 

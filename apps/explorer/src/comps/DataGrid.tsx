@@ -185,7 +185,6 @@ export function DataGrid(props: DataGrid.Props) {
 							fetching={fetching && !loading}
 							countLoading={countLoading}
 							disableLastPage={disableLastPage}
-							hasMore={hasMore}
 						/>
 						{/* Show transaction count - loading state shown while fetching */}
 						<Pagination.Count
