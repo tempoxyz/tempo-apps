@@ -49,7 +49,9 @@ function decodeRawCallResult(
 
 	if (looksLikeAddress) {
 		try {
-			const addressAbi = [{ ...fn, outputs: [{ type: 'address', name: '' }] }]
+			const addressAbi = [
+				{ ...fn, name: fnName, outputs: [{ type: 'address', name: '' }] },
+			]
 			return decodeFunctionResult({
 				abi: addressAbi,
 				functionName: fnName,
@@ -72,7 +74,11 @@ function decodeRawCallResult(
 					// Empty array
 					if (length === 0) {
 						const addressArrayAbi = [
-							{ ...fn, outputs: [{ type: 'address[]', name: '' }] },
+							{
+								...fn,
+								name: fnName,
+								outputs: [{ type: 'address[]', name: '' }],
+							},
 						]
 						return decodeFunctionResult({
 							abi: addressArrayAbi,
@@ -91,7 +97,11 @@ function decodeRawCallResult(
 					}
 					if (allAddressesValid) {
 						const addressArrayAbi = [
-							{ ...fn, outputs: [{ type: 'address[]', name: '' }] },
+							{
+								...fn,
+								name: fnName,
+								outputs: [{ type: 'address[]', name: '' }],
+							},
 						]
 						return decodeFunctionResult({
 							abi: addressArrayAbi,
@@ -102,7 +112,11 @@ function decodeRawCallResult(
 					// Not addresses — try as uint256[]
 					try {
 						const uint256ArrayAbi = [
-							{ ...fn, outputs: [{ type: 'uint256[]', name: '' }] },
+							{
+								...fn,
+								name: fnName,
+								outputs: [{ type: 'uint256[]', name: '' }],
+							},
 						]
 						return decodeFunctionResult({
 							abi: uint256ArrayAbi,
@@ -121,7 +135,9 @@ function decodeRawCallResult(
 
 	// Try decoding as string (common for functions like typeAndVersion)
 	try {
-		const stringAbi = [{ ...fn, outputs: [{ type: 'string', name: '' }] }]
+		const stringAbi = [
+			{ ...fn, name: fnName, outputs: [{ type: 'string', name: '' }] },
+		]
 		const decoded = decodeFunctionResult({
 			abi: stringAbi,
 			functionName: fnName,
@@ -141,7 +157,9 @@ function decodeRawCallResult(
 
 	// Try decoding as uint256 (common for numeric getters)
 	try {
-		const uint256Abi = [{ ...fn, outputs: [{ type: 'uint256', name: '' }] }]
+		const uint256Abi = [
+			{ ...fn, name: fnName, outputs: [{ type: 'uint256', name: '' }] },
+		]
 		return decodeFunctionResult({
 			abi: uint256Abi,
 			functionName: fnName,
@@ -282,6 +300,13 @@ function StaticReadFunction(props: {
 
 	const hasOutputs = Array.isArray(fn.outputs) && fn.outputs.length > 0
 
+	// For unnamed functions (selector-only), create an ABI with the selector as name
+	// so viem can look up the function entry
+	const effectiveAbi = React.useMemo(
+		() => (fn.name ? abi : [{ ...fn, name: fnId }]),
+		[abi, fn, fnId],
+	)
+
 	const {
 		data: typedResult,
 		error: typedError,
@@ -290,7 +315,7 @@ function StaticReadFunction(props: {
 		refetch: typedRefetch,
 	} = useReadContract({
 		address,
-		abi,
+		abi: effectiveAbi,
 		functionName: fnId,
 		args: [],
 		query: { enabled: mounted && hasOutputs },
@@ -300,11 +325,15 @@ function StaticReadFunction(props: {
 	const callData = React.useMemo(() => {
 		if (hasOutputs) return undefined
 		try {
-			return encodeFunctionData({ abi, functionName: fnId, args: [] })
+			return encodeFunctionData({
+				abi: effectiveAbi,
+				functionName: fnId,
+				args: [],
+			})
 		} catch {
 			return undefined
 		}
-	}, [abi, fnId, hasOutputs])
+	}, [effectiveAbi, fnId, hasOutputs])
 
 	const {
 		data: rawResult,
@@ -492,6 +521,11 @@ function DynamicReadFunction(props: {
 
 	const hasOutputs = Array.isArray(fn.outputs) && fn.outputs.length > 0
 
+	const effectiveAbi = React.useMemo(
+		() => (fn.name ? abi : [{ ...fn, name: fnId }]),
+		[abi, fn, fnId],
+	)
+
 	const {
 		data: typedResult,
 		error: typedError,
@@ -499,7 +533,7 @@ function DynamicReadFunction(props: {
 		refetch: typedRefetch,
 	} = useReadContract({
 		address,
-		abi,
+		abi: effectiveAbi,
 		functionName: fnId,
 		args: parsedArgs.args,
 		query: {
@@ -512,14 +546,14 @@ function DynamicReadFunction(props: {
 		if (hasOutputs || !allInputsFilled || parsedArgs.error) return undefined
 		try {
 			return encodeFunctionData({
-				abi,
+				abi: effectiveAbi,
 				functionName: fnId,
 				args: parsedArgs.args,
 			})
 		} catch {
 			return undefined
 		}
-	}, [abi, fnId, hasOutputs, allInputsFilled, parsedArgs])
+	}, [effectiveAbi, fnId, hasOutputs, allInputsFilled, parsedArgs])
 
 	const {
 		data: rawResult,
