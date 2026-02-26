@@ -15,7 +15,7 @@ import { TOKEN_COUNT_MAX } from '#lib/constants'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
 import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
-import type { Token } from '#lib/server/tokens.server'
+import type { Token } from '#lib/server/tokens'
 import { getApiUrl } from '#lib/env.ts'
 
 async function fetchTokensCount() {

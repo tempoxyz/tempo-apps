@@ -6,7 +6,7 @@ import { Header } from '#comps/Header'
 import { useIntroSeen } from '#comps/Intro'
 import { isTestnet } from '#lib/env'
 import { BlockNumberProvider } from '#lib/block-number'
-import { fetchLatestBlock } from '#lib/server/latest-block.server'
+import { fetchLatestBlock } from '#lib/server/latest-block'
 import { Sphere } from '#comps/Sphere'
 import TriangleAlert from '~icons/lucide/triangle-alert'
 

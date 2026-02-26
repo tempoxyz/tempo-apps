@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import * as z from 'zod/mini'
 import { Layout } from '#comps/Layout'
-import { fetchLatestBlock } from '#lib/server/latest-block.server.ts'
+import { fetchLatestBlock } from '#lib/server/latest-block.ts'
 
 export const Route = createFileRoute('/_layout')({
 	component: RouteComponent,

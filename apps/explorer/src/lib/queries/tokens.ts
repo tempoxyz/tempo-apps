@@ -4,8 +4,8 @@ import {
 	fetchFirstTransfer,
 	fetchHolders,
 	fetchTransfers,
-} from '#lib/server/token.server.ts'
-import { fetchTokens } from '#lib/server/tokens.server.ts'
+} from '#lib/server/token.ts'
+import { fetchTokens } from '#lib/server/tokens.ts'
 
 export const TOKENS_PER_PAGE = 12
 

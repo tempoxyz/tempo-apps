@@ -7,7 +7,7 @@ import {
 	fetchTokenCreatedCount,
 	fetchTokenCreatedRows,
 } from '#lib/server/tempo-queries'
-import { fetchHoldersCountCached } from '#lib/server/token.server.ts'
+import { fetchHoldersCountCached } from '#lib/server/token.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 export type Token = {
