@@ -465,5 +465,3 @@ function TokenRow(props: { token: Token }): React.JSX.Element {
 		</Link>
 	)
 }
-
-

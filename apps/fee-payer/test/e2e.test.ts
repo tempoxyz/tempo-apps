@@ -82,7 +82,7 @@ beforeAll(async () => {
 			path: Mnemonic.path({ account: 0 }),
 		}),
 	)
-	
+
 	const client = createClient({
 		account: sponsorAccount,
 		chain: tempoLocalnet,
@@ -93,12 +93,12 @@ beforeAll(async () => {
 		[1n, 2n, 3n].map((id) =>
 			Actions.amm.mintSync(client, {
 				account: sponsorAccount,
-        feeToken: '0x20c0000000000000000000000000000000000000',
-        nonceKey: 'expiring',
-        userTokenAddress: id,
-        validatorTokenAddress: '0x20c0000000000000000000000000000000000000',
-        validatorTokenAmount: parseUnits('1000', 6),
-        to: sponsorAccount.address,
+				feeToken: '0x20c0000000000000000000000000000000000000',
+				nonceKey: 'expiring',
+				userTokenAddress: id,
+				validatorTokenAddress: '0x20c0000000000000000000000000000000000000',
+				validatorTokenAmount: parseUnits('1000', 6),
+				to: sponsorAccount.address,
 			}),
 		),
 	)
