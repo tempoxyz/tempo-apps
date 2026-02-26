@@ -22,46 +22,22 @@ import { KeyManager, webAuthn } from 'wagmi/tempo'
 
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
-const KEY_MANAGER_URL = 'https://keys.tempo.xyz'
-
 /**
- * Custom key manager that uses `fetch(url)` directly instead of `new Request(url)`.
+ * Custom fetch that bypasses Cloudflare's broken `window.Request` override.
  *
- * Cloudflare injects a script that overrides `window.Request` with a wrapper
- * that has a bug: when no `init` is passed, the fallback `n || i` uses the URL
- * string as `RequestInit`, causing a TypeError. Using `fetch(url, init)` avoids
- * going through the broken `Request` constructor.
+ * Cloudflare injects a script that wraps `window.Request`. The wrapper has a
+ * bug: when called with only a URL (no `init`), the fallback evaluates the URL
+ * string as `RequestInit`, causing a TypeError. Passing `request.url` as a
+ * plain string to `globalThis.fetch` avoids the broken constructor path.
  */
-function keyManager() {
-	return KeyManager.from({
-		async getChallenge() {
-			const response = await fetch(`${KEY_MANAGER_URL}/challenge`)
-			if (!response.ok)
-				throw new Error(`Failed to get challenge: ${response.statusText}`)
-			return response.json()
-		},
-		async getPublicKey(parameters) {
-			const response = await fetch(
-				`${KEY_MANAGER_URL}/${parameters.credential.id}`,
-			)
-			if (!response.ok)
-				throw new Error(`Failed to get public key: ${response.statusText}`)
-			const data = (await response.json()) as { publicKey: `0x${string}` }
-			return data.publicKey
-		},
-		async setPublicKey(parameters) {
-			const response = await fetch(
-				`${KEY_MANAGER_URL}/${parameters.credential.id}`,
-				{
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(parameters),
-				},
-			)
-			if (!response.ok)
-				throw new Error(`Failed to set public key: ${response.statusText}`)
-		},
-	})
+function cfSafeFetch(
+	input: RequestInfo | URL,
+	init?: RequestInit,
+): Promise<Response> {
+	return globalThis.fetch(
+		input instanceof Request ? input.url : input,
+		init ?? (input instanceof Request ? input : undefined),
+	)
 }
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
@@ -151,7 +127,9 @@ export function getWagmiConfig() {
 		chains: [chain, tempoLocalnet],
 		connectors: [
 			webAuthn({
-				keyManager: keyManager(),
+				keyManager: KeyManager.http('https://keys.tempo.xyz', {
+					fetch: cfSafeFetch,
+				}),
 			}),
 		],
 		storage: createStorage({ storage: cookieStorage }),
