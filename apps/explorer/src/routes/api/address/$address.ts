@@ -267,7 +267,7 @@ export const Route = createFileRoute('/api/address/$address')({
 						: paginatedHashes
 
 					// Fetch full tx data only for the final set of hashes
-					let transactions: RpcTransaction[] = []
+					let transactions: (RpcTransaction & { timestamp?: string })[] = []
 					if (finalHashes.length > 0) {
 						const txDataResult = await fetchTxDataByHashes(
 							chainId,
@@ -301,7 +301,10 @@ export const Route = createFileRoute('/api/address/$address')({
 									v: '0x0',
 									r: '0x0',
 									s: '0x0',
-								} as RpcTransaction
+									timestamp: row.block_timestamp
+										? String(row.block_timestamp)
+										: undefined,
+								} as RpcTransaction & { timestamp?: string }
 							})
 					}
 

@@ -423,6 +423,7 @@ export async function fetchAddressTransferEmittedCountRows(params: {
 export type TxDataRow = {
 	hash: Hex.Hex
 	block_num: bigint
+	block_timestamp: string | number | null
 	from: string
 	to: string | null
 	value: bigint
@@ -443,6 +444,7 @@ export async function fetchTxDataByHashes(
 		.select([
 			'hash',
 			'block_num',
+			'block_timestamp',
 			'from',
 			'to',
 			'value',

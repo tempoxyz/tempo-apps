@@ -498,6 +498,7 @@ describe('tempo-queries', () => {
 				{
 					hash: '0xabc' as Hex.Hex,
 					block_num: 1n,
+					block_timestamp: '1700000000',
 					from: '0x1111',
 					to: '0x2222',
 					value: 5n,
@@ -515,6 +516,7 @@ describe('tempo-queries', () => {
 				{
 					hash: '0xabc',
 					block_num: 1n,
+					block_timestamp: '1700000000',
 					from: '0x1111',
 					to: '0x2222',
 					value: 5n,
