@@ -180,6 +180,9 @@ catalogs:
     testcontainers:
       specifier: ^11.11.0
       version: 11.11.0
+    tidx.ts:
+      specifier: ^0.1.0
+      version: 0.1.0
     tw-animate-css:
       specifier: ^1.4.0
       version: 1.4.0
@@ -469,6 +472,9 @@ importers:
       tempo.ts:
         specifier: 'catalog:'
         version: 0.14.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.46.3(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+      tidx.ts:
+        specifier: 'catalog:'
+        version: 0.1.0(typescript@5.9.3)
       viem:
         specifier: 'catalog:'
         version: 2.46.3(typescript@5.9.3)(zod@4.3.6)
@@ -6362,6 +6368,9 @@ packages:
 
   through@2.3.8:
     resolution: {integrity: sha512-w89qg7PI8wAdvX60bMDP+bFoD5Dvhm9oLheFp5O4a2QF0cSBGsBX4qZmadPMvVqlLJBBci+WqGGOAPvcDeNSVg==}
+
+  tidx.ts@0.1.0:
+    resolution: {integrity: sha512-9/3OmxGPJvtKikduAdzKBPrJmmfwYbGedtPg+Iu3bHfVNhFriBCAcxYYCm+MHwvA1XuDvRSCMOSPY5YYt4DXhA==}
 
   time-span@5.1.0:
     resolution: {integrity: sha512-75voc/9G4rDIJleOo4jPvN4/YC4GRZrY8yy1uU4lwrB3XEQbWve8zXoO5No4eFrGcTAMYyoY67p8jRQdtA1HbA==}
@@ -13001,6 +13010,16 @@ snapshots:
       - react-native-b4a
 
   through@2.3.8: {}
+
+  tidx.ts@0.1.0(typescript@5.9.3):
+    dependencies:
+      abitype: 1.2.3(typescript@5.9.3)(zod@4.3.6)
+      kysely: 0.28.11
+      mitt: 3.0.1
+      ox: 0.9.17(typescript@5.9.3)(zod@4.3.6)
+      zod: 4.3.6
+    transitivePeerDependencies:
+      - typescript
 
   time-span@5.1.0:
     dependencies:

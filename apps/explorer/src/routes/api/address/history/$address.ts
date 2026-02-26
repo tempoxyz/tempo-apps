@@ -28,7 +28,7 @@ import { getWagmiConfig } from '#wagmi.config'
 const abi = Object.values(Abis).flat()
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [100, 10]
-const HISTORY_COUNT_MAX = 100_000
+const HISTORY_COUNT_MAX = 10_000
 
 /**
  * Recursively converts BigInt values to strings for JSON serialization.
@@ -189,25 +189,35 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						value: bigint
 					}
 					type TransferRow = { tx_hash: Hex.Hex; block_num: bigint }
-					type CountRow = { hash: Hex.Hex }
 
 					const emptyDirect: DirectRow[] = []
 					const emptyTransfer: TransferRow[] = []
-					const emptyCount: CountRow[] = []
+					const emptyCount: Array<{ hash: import('ox').Hex.Hex }> = []
+
+					const transferQueryParams = {
+						address,
+						chainId,
+						includeSent,
+						includeReceived,
+						sortDirection,
+					}
 
 					const [
 						directResult,
 						transferResult,
-						transferEmittedResult,
+						emittedResult,
 						directCountResult,
 						transferCountResult,
-						transferEmittedCountResult,
+						emittedCountResult,
 					] = await Promise.all([
 						sources.txs
 							? fetchAddressDirectTxHistoryRows(queryParams)
 							: Promise.resolve(emptyDirect),
 						sources.transfers
-							? fetchAddressTransferHashes(queryParams)
+							? fetchAddressTransferHashes({
+									...transferQueryParams,
+									limit: bufferSize,
+								}).catch(() => emptyTransfer)
 							: Promise.resolve(emptyTransfer),
 						sources.emitted
 							? fetchAddressTransferEmittedHashes({
@@ -233,7 +243,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 									includeSent,
 									includeReceived,
 									limit: HISTORY_COUNT_MAX,
-								})
+								}).catch(() => emptyCount)
 							: Promise.resolve(emptyCount),
 						sources.emitted
 							? fetchAddressTransferEmittedCountRows({
@@ -267,7 +277,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 								hash: row.tx_hash,
 								block_num: row.block_num,
 							})
-					for (const row of transferEmittedResult)
+					for (const row of emittedResult)
 						if (!allHashes.has(row.tx_hash))
 							allHashes.set(row.tx_hash, {
 								hash: row.tx_hash,
@@ -301,14 +311,14 @@ export const Route = createFileRoute('/api/address/history/$address')({
 
 					addCountHashes(directCountResult)
 					addCountHashes(transferCountResult)
-					addCountHashes(transferEmittedCountResult)
+					addCountHashes(emittedCountResult)
 
 					const totalCount = countHashes.size
 					const countCapped =
 						countHashes.size >= HISTORY_COUNT_MAX ||
 						directCountResult.length >= HISTORY_COUNT_MAX ||
 						transferCountResult.length >= HISTORY_COUNT_MAX ||
-						transferEmittedCountResult.length >= HISTORY_COUNT_MAX
+						emittedCountResult.length >= HISTORY_COUNT_MAX
 
 					if (finalHashes.length === 0) {
 						return Response.json({

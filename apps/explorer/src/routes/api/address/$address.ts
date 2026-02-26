@@ -199,24 +199,20 @@ export const Route = createFileRoute('/api/address/$address')({
 						limit: bufferSize,
 					}
 
-					// Run queries in parallel: direct txs, transfers (from/to), transfers (emitted), and contract creation
-					const [
-						directResult,
-						transferResult,
-						transferEmittedResult,
-						creationTx,
-					] = await Promise.all([
-						fetchAddressDirectTxHashes(queryParams),
-						fetchAddressTransferHashes(queryParams),
-						fetchAddressTransferEmittedHashes({
-							address,
-							chainId,
-							sortDirection,
-							limit: bufferSize,
-						}).catch(() => []),
-						// Find contract creation tx (returns null for EOAs or on error)
-						findContractCreationTx(address, chainId).catch(() => null),
-					])
+					// Run queries in parallel: direct txs, transfers, emitted transfers, and contract creation
+					const [directResult, transferResult, emittedResult, creationTx] =
+						await Promise.all([
+							fetchAddressDirectTxHashes(queryParams),
+							fetchAddressTransferHashes(queryParams).catch(() => []),
+							fetchAddressTransferEmittedHashes({
+								address,
+								chainId,
+								sortDirection,
+								limit: bufferSize,
+							}).catch(() => []),
+							// Find contract creation tx (returns null for EOAs or on error)
+							findContractCreationTx(address, chainId).catch(() => null),
+						])
 
 					// Merge all results by block_num, deduplicate, and take top offset+fetchSize
 					type HashEntry = { hash: Hex.Hex; block_num: bigint }
@@ -241,8 +237,7 @@ export const Route = createFileRoute('/api/address/$address')({
 								hash: row.tx_hash,
 								block_num: row.block_num,
 							})
-					// Add transfers emitted by this contract (for token contracts)
-					for (const row of transferEmittedResult)
+					for (const row of emittedResult)
 						if (!allHashes.has(row.tx_hash))
 							allHashes.set(row.tx_hash, {
 								hash: row.tx_hash,
