@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.3.13/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
@@ -37,7 +37,12 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**", "!**/routeTree.gen.ts", "!**/tokens-index-*.json", "!**/_"]
+		"includes": [
+			"**",
+			"!**/routeTree.gen.ts",
+			"!**/tokens-index-*.json",
+			"!**/_"
+		]
 	},
 	"formatter": {
 		"enabled": true,
@@ -52,6 +57,7 @@
 		"rules": {
 			"recommended": true,
 			"correctness": {
+				"noUnresolvedImports": "off",
 				"useImportExtensions": "off",
 				"noUndeclaredDependencies": "off"
 			},
