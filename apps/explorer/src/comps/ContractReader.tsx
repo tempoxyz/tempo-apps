@@ -39,10 +39,13 @@ function decodeRawCallResult(
 	const fnName = fn.name || getFunctionSelector(fn)
 
 	// Check if it looks like a padded address (32 bytes with 12 leading zero bytes)
+	// Also exclude small values (first 8 bytes of address = 0) which are almost
+	// certainly uint256, not addresses (e.g., decimals() returning 6)
 	const looksLikeAddress =
 		data.length === 66 &&
 		data.slice(2, 26) === '000000000000000000000000' &&
-		data.slice(26) !== '0000000000000000000000000000000000000000'
+		data.slice(26) !== '0000000000000000000000000000000000000000' &&
+		data.slice(26, 42) !== '0000000000000000'
 
 	if (looksLikeAddress) {
 		try {
