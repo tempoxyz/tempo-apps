@@ -13,14 +13,6 @@ Monorepo for Tempo Apps
 | [`apps/key-manager`](apps/key-manager) | WebAuthn key management service. | [`keys.tempo.xyz`](<https://keys.tempo.xyz>) |
 | [`apps/api`](apps/api) | Tempo REST API. | [`api.tempo.xyz`](<https://api.tempo.xyz>) |
 
-## Contributing
-
-Our contributor guidelines can be found in [`CONTRIBUTING.md`](https://github.com/tempoxyz/tempo-apps?tab=contributing-ov-file).
-
-## Security
-
-See [`SECURITY.md`](https://github.com/tempoxyz/tempo-apps?tab=security-ov-file).
-
 ## License
 
 Licensed under either of [Apache License](./LICENSE-APACHE), Version
