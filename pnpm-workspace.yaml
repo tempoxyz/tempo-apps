@@ -4,75 +4,75 @@ packages:
   - '!**/_/**'
 
 catalog:
-  '@biomejs/biome': ^2.3.13
-  '@cloudflare/puppeteer': ^1.0.5
-  '@cloudflare/vite-plugin': ^1.22.0
+  '@biomejs/biome': ^2.4.4
+  '@cloudflare/puppeteer': ^1.0.6
+  '@cloudflare/vite-plugin': ^1.25.5
   '@cloudflare/vitest-pool-workers': ^0.12.7
-  '@cloudflare/workers-types': ^4.20260128.0
+  '@cloudflare/workers-types': ^4.20260305.0
   '@hono/zod-validator': ^0.7.6
-  '@iconify/json': ^2.2.432
-  '@scalar/api-reference': ^1.43.17
-  '@shazow/whatsabi': ^0.25.0
-  '@sentry/cloudflare': ^10.38.0
-  '@sentry/react': ^10.36.0
-  '@sentry/vite-plugin': ^3.2.5
-  '@shikijs/langs': ^3.21.0
-  '@shikijs/themes': ^3.21.0
+  '@iconify/json': ^2.2.443
+  '@scalar/api-reference': ^1.44.26
+  '@shazow/whatsabi': ^0.26.0
+  '@sentry/cloudflare': ^10.40.0
+  '@sentry/react': ^10.40.0
+  '@sentry/vite-plugin': ^3.6.1
+  '@shikijs/langs': ^3.23.0
+  '@shikijs/themes': ^3.23.0
   '@svgr/core': ^8.1.0
   '@svgr/plugin-jsx': ^8.1.0
-  '@tailwindcss/vite': ^4.1.18
-  '@tanstack/devtools-vite': ^0.4.1
+  '@tailwindcss/vite': ^4.2.1
+  '@tanstack/devtools-vite': ^0.5.1
   '@tanstack/query-async-storage-persister': ^5.90.22
-  '@tanstack/react-devtools': ^0.9.3
-  '@tanstack/react-query': ^5.90.20
-  '@tanstack/react-query-devtools': ^5.91.2
+  '@tanstack/react-devtools': ^0.9.6
+  '@tanstack/react-query': ^5.90.21
+  '@tanstack/react-query-devtools': ^5.91.3
   '@tanstack/react-query-persist-client': ^5.90.22
-  '@tanstack/react-router': ^1.157.16
-  '@tanstack/react-router-devtools': ^1.157.16
-  '@tanstack/react-router-ssr-query': ^1.157.16
-  '@tanstack/react-start': ^1.157.16
-  '@tanstack/router-plugin': ^1.157.16
+  '@tanstack/react-router': ^1.163.2
+  '@tanstack/react-router-devtools': ^1.163.2
+  '@tanstack/react-router-ssr-query': ^1.163.2
+  '@tanstack/react-start': ^1.163.2
+  '@tanstack/router-plugin': ^1.163.2
   '@total-typescript/ts-reset': ^0.6.1
   '@types/animejs': ^3.1.13
-  '@types/node': ^25.1.0
-  '@types/react': ^19.2.10
+  '@types/node': ^25.3.1
+  '@types/react': ^19.2.14
   '@types/react-dom': ^19.2.3
-  '@vitejs/plugin-react': ^5.1.2
+  '@vitejs/plugin-react': ^5.1.4
   '@vitest/ui': 3.2.4
-  '@wagmi/core': ^3.3.1
+  '@wagmi/core': ^3.4.0
   abitype: ^1.2.3
-  animejs: ^4.3.5
+  animejs: ^4.3.6
   cva: ^1.0.0-beta.4
-  dotenv: ^17.2.3
+  dotenv: ^17.3.1
   eruda: ^3.4.3
-  esbuild: ^0.27.2
-  globals: ^17.2.0
-  hono: ^4.11.7
+  esbuild: ^0.27.3
+  globals: ^17.3.0
+  hono: ^4.12.2
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
   jsonc-parser: ^3.3.1
-  kysely: ^0.28.10
-  ox: ^0.12.0
-  prool: ^0.2.2
+  kysely: ^0.28.11
+  ox: ^0.12.4
+  prool: ^0.2.3
   react: ^19.2.4
   react-dom: ^19.2.4
-  rollup-plugin-visualizer: ^6.0.5
-  shiki: ^3.21.0
-  sonda: ^0.10.1
-  tailwind-merge: ^3.4.0
-  tailwindcss: ^4.1.18
+  rollup-plugin-visualizer: ^7.0.0
+  shiki: ^3.23.0
+  sonda: ^0.10.2
+  tailwind-merge: ^3.5.0
+  tailwindcss: ^4.2.1
   tempo.ts: ^0.14.0
   testcontainers: ^11.11.0
   tw-animate-css: ^1.4.0
-  typed-query-selector: ^2.12.0
+  typed-query-selector: ^2.12.1
   typescript: ^5.9.3
   unplugin-icons: ^23.0.1
-  viem: ^2.46.2
+  viem: ^2.46.3
   vite: npm:rolldown-vite@latest
   vite-plugin-devtools-json: ^1.0.0
   vitest: 3.2.4
-  wagmi: ^3.4.1
-  wrangler: ^4.61.0
+  wagmi: ^3.5.0
+  wrangler: ^4.68.1
   zod: ^4.3.6
 
 catalogMode: strict
