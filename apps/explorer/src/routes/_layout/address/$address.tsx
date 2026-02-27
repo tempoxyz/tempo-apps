@@ -1547,11 +1547,11 @@ function AssetName(props: { asset: AssetData }) {
 	const { asset } = props
 	if (!asset.metadata?.name) return <span className="text-tertiary">…</span>
 	return (
-		<span className="inline-flex items-center gap-2">
+		<span className="inline-flex items-center gap-2 min-w-0">
 			<TokenIcon
 				address={asset.address}
 				name={asset.metadata?.name}
-				className="size-5!"
+				className="size-5 shrink-0"
 			/>
 			<span className="truncate">{asset.metadata.name}</span>
 		</span>
@@ -1565,7 +1565,7 @@ function AssetSymbol(props: { asset: AssetData }) {
 		<Link
 			to="/token/$address"
 			params={{ address: asset.address }}
-			className="text-accent hover:underline press-down"
+			className="text-accent hover:underline press-down truncate"
 		>
 			{asset.metadata.symbol}
 		</Link>
@@ -1591,7 +1591,12 @@ function AssetAmount(props: { asset: AssetData }) {
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
 		return <span className="text-tertiary">…</span>
 	const formatted = formatUnits(asset.balance, asset.metadata.decimals)
-	return <span>{PriceFormatter.formatAmountFull(formatted)}</span>
+	const display = PriceFormatter.formatAmountFull(formatted)
+	return (
+		<span className="truncate" title={display}>
+			{display}
+		</span>
+	)
 }
 
 function AssetValue(props: { asset: AssetData }) {
