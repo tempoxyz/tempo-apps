@@ -1,7 +1,8 @@
 import type { Address } from 'ox'
 import { cx } from '#lib/css'
+import { getTempoChain } from '#wagmi.config'
 
-const TOKENLIST_BASE_URL = 'https://tokenlist.tempo.xyz/icon/42429'
+const TOKENLIST_BASE_URL = `https://tokenlist.tempo.xyz/icon/${getTempoChain().id}`
 
 export function TokenIcon(props: TokenIcon.Props) {
 	const { address, className } = props
