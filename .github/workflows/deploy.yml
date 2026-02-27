@@ -1,0 +1,73 @@
+name: Deploy
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        required: true
+        type: string
+      environments:
+        required: true
+        type: string
+        description: 'JSON array of environments to deploy (e.g. ["testnet","devnet"] or [""])'
+
+concurrency:
+  group: deploy-${{ inputs.app }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_ENV: production
+  WRANGLER_SEND_METRICS: false
+
+jobs:
+  deploy:
+    name: ${{ inputs.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
+    runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        env: ${{ fromJson(inputs.environments) }}
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+
+      - name: Check for relevant changes
+        id: changes
+        run: |
+          # if workflow_dispatch, always deploy all
+          #
+          if [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
+            echo "relevant=true" >> $GITHUB_OUTPUT
+          elif git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE "^(apps/${{ inputs.app }}/|pnpm-lock.yaml)"; then
+            echo "relevant=true" >> $GITHUB_OUTPUT
+          else
+            echo "relevant=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        if: steps.changes.outputs.relevant == 'true'
+        uses: ./.github/actions/install-dependencies
+
+      - name: Build
+        if: steps.changes.outputs.relevant == 'true'
+        working-directory: apps/${{ inputs.app }}
+        env:
+          NODE_ENV: production
+          CLOUDFLARE_ENV: ${{ matrix.env || '' }}
+        run: pnpm build
+
+      - name: Deploy Workers
+        if: steps.changes.outputs.relevant == 'true'
+        uses: cloudflare/wrangler-action@v3
+        env:
+          NODE_ENV: production
+          CLOUDFLARE_ENV: ${{ matrix.env || '' }}
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/${{ inputs.app }}
+          packageManager: pnpm
+          command: deploy ${{ matrix.env && format('--env {0}', matrix.env) || '' }}
