@@ -70,14 +70,6 @@ import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
-async function fetchAddressTotalValue(address: Address.Address) {
-	const response = await fetch(
-		getApiUrl(`/api/address/total-value/${address}`),
-		{ headers: { 'Content-Type': 'application/json' } },
-	)
-	return response.json() as Promise<{ totalValue: number }>
-}
-
 type TokenBalance = {
 	token: Address.Address
 	balance: string
@@ -293,17 +285,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			// Fire off total-value (non-blocking) and balances in parallel with other loaders
-			context.queryClient
-				.ensureQueryData({
-					queryKey: ['account-total-value', address],
-					queryFn: () => fetchAddressTotalValue(address),
-					staleTime: 60_000,
-				})
-				.catch((error) => {
-					console.error('Fetch total-value error (non-blocking):', error)
-				})
-
 			const balancesPromise = isHoldingsTab
 				? timeout(
 						context.queryClient
@@ -338,10 +319,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const contractInfo = getContractInfo(address)
 			const contractSource: ContractSource | undefined = undefined
 
-			// For SSR, provide placeholder values - client will fetch real data
-			const txCountResponse = undefined
-			const totalValueResponse = undefined
-
 			return {
 				live,
 				address,
@@ -356,8 +333,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				contractSource,
 				transactionsData,
 				balancesData,
-				txCountResponse,
-				totalValueResponse,
 			}
 		}),
 	head: async ({ params, loaderData }) => {
@@ -494,22 +469,23 @@ function RouteComponent() {
 	}, [hash, isContract, tab, navigate, limit])
 
 	React.useEffect(() => {
-		// Preload next page for paginated tabs
+		// Preload next page for paginated tabs (delayed to avoid query storms)
 		if (tab !== 'transactions' && tab !== 'transfers' && tab !== 'holders')
 			return
-		async function preload() {
-			try {
-				const nextPage = page + 1
-				router.preloadRoute({
+
+		const timer = setTimeout(() => {
+			const nextPage = page + 1
+			router
+				.preloadRoute({
 					to: '.',
 					search: { page: nextPage, tab, limit, ...(a ? { a } : {}) },
 				})
-			} catch (error) {
-				console.error('Preload error (non-blocking):', error)
-			}
-		}
+				.catch((error) => {
+					console.error('Preload error (non-blocking):', error)
+				})
+		}, 1_000)
 
-		preload()
+		return () => clearTimeout(timer)
 	}, [page, router, tab, limit, a])
 
 	// Build visible tabs based on address type
@@ -551,22 +527,25 @@ function RouteComponent() {
 		!isToken && (isHoldingsTabActive || balancesData !== undefined),
 	)
 
-	// Prefetch non-active tabs' data once on load for smooth tab switches
+	// Prefetch non-active tabs' data after a delay to avoid TIDX query storms
 	const queryClient = useQueryClient()
 	const prefetchedRef = React.useRef<string | null>(null)
 	React.useEffect(() => {
 		if (prefetchedRef.current === address) return
 		prefetchedRef.current = address
 
-		// Prefetch all tabs except the active one (loader already fetched active tab data)
-		if (tab !== 'transactions') {
-			queryClient.prefetchQuery(
-				historyQueryOptions({ address, page: 1, limit, offset: 0 }),
-			)
-		}
-		if (tab !== 'holdings' && !isToken) {
-			queryClient.prefetchQuery(balancesQueryOptions(address))
-		}
+		const timer = setTimeout(() => {
+			if (tab !== 'transactions') {
+				queryClient.prefetchQuery(
+					historyQueryOptions({ address, page: 1, limit, offset: 0 }),
+				)
+			}
+			if (tab !== 'holdings' && !isToken) {
+				queryClient.prefetchQuery(balancesQueryOptions(address))
+			}
+		}, 2_000)
+
+		return () => clearTimeout(timer)
 	}, [address, tab, limit, queryClient, isToken])
 
 	return (
@@ -1050,16 +1029,19 @@ function SectionsWrapper(props: {
 								tabs: transfersColumns,
 							}}
 							items={() => {
-								const validTransfers = transfers.filter(
-									(t): t is typeof t & { timestamp: string; value: string } =>
-										t.timestamp !== null && t.value !== null,
-								)
+								const validTransfers = transfers.flatMap((transfer) => {
+									const timestamp = parseTimestampBigInt(transfer.timestamp)
+									const value = parseOptionalBigInt(transfer.value)
+									if (timestamp === null || value === null) return []
 
-								return validTransfers.map((transfer) => ({
+									return [{ transfer, timestamp, value }]
+								})
+
+								return validTransfers.map(({ transfer, timestamp, value }) => ({
 									cells: [
 										<TimestampCell
 											key="time"
-											timestamp={BigInt(transfer.timestamp)}
+											timestamp={timestamp}
 											link={`/receipt/${transfer.transactionHash}`}
 											format={timeFormat}
 										/>,
@@ -1075,7 +1057,7 @@ function SectionsWrapper(props: {
 										<AddressCell key="to" address={transfer.to} label="To" />,
 										<AmountCell
 											key="amount"
-											value={BigInt(transfer.value)}
+											value={value}
 											decimals={tokenMetadata?.decimals}
 											symbol={tokenMetadata?.symbol}
 										/>,
@@ -1215,13 +1197,44 @@ function TransactionTimeCell(props: {
 	format: TimeFormat
 }) {
 	const { timestamp, hash, format } = props
+	const safeTimestamp = Number.isFinite(timestamp) ? Math.trunc(timestamp) : 0
 	return (
 		<TransactionTimestamp
-			timestamp={BigInt(timestamp)}
+			timestamp={BigInt(safeTimestamp)}
 			link={`/receipt/${hash}`}
 			format={format}
 		/>
 	)
+}
+
+function parseOptionalBigInt(
+	value: string | number | bigint | null | undefined,
+): bigint | null {
+	if (value === null || value === undefined) return null
+	if (typeof value === 'bigint') return value
+	if (typeof value === 'number') {
+		if (!Number.isFinite(value)) return null
+		return BigInt(Math.trunc(value))
+	}
+	try {
+		return BigInt(value)
+	} catch {
+		return null
+	}
+}
+
+function parseTimestampBigInt(value: string | null | undefined): bigint | null {
+	if (!value) return null
+
+	const direct = parseOptionalBigInt(value)
+	if (direct !== null) return direct
+
+	const parsedDate = Date.parse(value)
+	if (Number.isFinite(parsedDate)) {
+		return BigInt(Math.floor(parsedDate / 1000))
+	}
+
+	return null
 }
 
 function TransactionDescCell(props: {

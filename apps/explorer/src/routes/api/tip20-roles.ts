@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import * as Address from 'ox/Address'
 import * as Hash from 'ox/Hash'
 import * as Hex from 'ox/Hex'
 import { formatUnits } from 'viem'
@@ -8,8 +9,9 @@ import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
-const ROLE_MEMBERSHIP_UPDATED_SIGNATURE =
-	'event RoleMembershipUpdated(bytes32 indexed role, address indexed account, address indexed sender, bool hasRole)'
+const ROLE_MEMBERSHIP_UPDATED_SELECTOR_SIGNATURE =
+	'RoleMembershipUpdated(bytes32,address,address,bool)'
+const ROLE_LOG_SCAN_LIMIT = 10_000
 
 const ZERO_BYTES32 =
 	'0x0000000000000000000000000000000000000000000000000000000000000000' as Hex.Hex
@@ -25,6 +27,17 @@ const KNOWN_ROLES: Record<string, Hex.Hex> = {
 const ROLE_HASH_TO_NAME = new Map<string, string>(
 	Object.entries(KNOWN_ROLES).map(([name, hash]) => [hash, name]),
 )
+
+function parseTimestamp(value: unknown): number | null {
+	if (typeof value === 'number' && Number.isFinite(value)) return value
+	if (typeof value === 'string') {
+		const parsed = Number(value)
+		if (Number.isFinite(parsed)) return parsed
+		const parsedDate = Date.parse(value)
+		if (Number.isFinite(parsedDate)) return Math.floor(parsedDate / 1000)
+	}
+	return null
+}
 
 export type RoleHolder = {
 	role: string
@@ -99,62 +112,82 @@ export const Route = createFileRoute('/api/tip20-roles')({
 						symbol: symbol ?? null,
 					}
 
-					const qb = tempoQueryBuilder(chainId).withSignatures([
-						ROLE_MEMBERSHIP_UPDATED_SIGNATURE,
-					])
+					const roles: RoleHolder[] = []
+					try {
+						const selector = Hash.keccak256(
+							Hex.fromString(ROLE_MEMBERSHIP_UPDATED_SELECTOR_SIGNATURE),
+						)
 
-					const events = await qb
-						.selectFrom('rolemembershipupdated')
-						.select([
-							'role',
-							'account',
-							'hasRole',
-							'block_num',
-							'log_idx',
-							'block_timestamp',
-							'tx_hash',
-						])
-						.where('address', '=', address)
-						.orderBy('block_num', 'asc')
-						.orderBy('log_idx', 'asc')
-						.execute()
+						const roleLogs = await tempoQueryBuilder(chainId)
+							.selectFrom('logs')
+							.select([
+								'topic0',
+								'topic1',
+								'topic2',
+								'data',
+								'block_timestamp',
+								'tx_hash',
+								'block_num',
+								'log_idx',
+							])
+							.where('address', '=', address)
+							.orderBy('block_num', 'asc')
+							.orderBy('log_idx', 'asc')
+							.limit(ROLE_LOG_SCAN_LIMIT)
+							.execute()
 
-					// Build current role holders by replaying grant/revoke events
-					// Key: `${role}:${account}`
-					const holders = new Map<string, boolean>()
-					const grantMeta = new Map<
-						string,
-						{ timestamp: number | null; txHash: string | null }
-					>()
-					for (const event of events) {
-						const key = `${event.role}:${event.account}`
-						holders.set(key, Boolean(event.hasRole))
-						if (event.hasRole) {
-							grantMeta.set(key, {
-								timestamp: event.block_timestamp
-									? Number(event.block_timestamp)
-									: null,
-								txHash: event.tx_hash ?? null,
+						const holders = new Map<string, boolean>()
+						const grantMeta = new Map<
+							string,
+							{ timestamp: number | null; txHash: string | null }
+						>()
+
+						for (const event of roleLogs) {
+							if (event.topic0 !== selector) continue
+							if (!event.topic1 || !event.topic2 || !event.data) continue
+
+							const roleHash = event.topic1.toLowerCase()
+							const accountHex = `0x${event.topic2.slice(-40)}`
+							const account = Address.checksum(accountHex as Address.Address)
+							const hasRole = (() => {
+								try {
+									return Hex.toBigInt(event.data) !== 0n
+								} catch {
+									return false
+								}
+							})()
+
+							const key = `${roleHash}:${account.toLowerCase()}`
+							holders.set(key, hasRole)
+
+							if (hasRole) {
+								grantMeta.set(key, {
+									timestamp: parseTimestamp(event.block_timestamp),
+									txHash: event.tx_hash ?? null,
+								})
+							}
+						}
+
+						for (const [key, hasRole] of holders) {
+							if (!hasRole) continue
+
+							const [roleHash, account] = key.split(':')
+							const rawName = ROLE_HASH_TO_NAME.get(roleHash) ?? roleHash
+							const roleName = rawName.endsWith('_ROLE')
+								? rawName.slice(0, -5)
+								: rawName
+							const meta = grantMeta.get(key)
+
+							roles.push({
+								role: roleName,
+								roleHash,
+								account,
+								grantedAt: meta?.timestamp ?? null,
+								grantedTx: meta?.txHash ?? null,
 							})
 						}
-					}
-
-					const roles: RoleHolder[] = []
-					for (const [key, hasRole] of holders) {
-						if (!hasRole) continue
-						const [roleHash, account] = key.split(':')
-						const rawName = ROLE_HASH_TO_NAME.get(roleHash) ?? roleHash
-						const roleName = rawName.endsWith('_ROLE')
-							? rawName.slice(0, -5)
-							: rawName
-						const meta = grantMeta.get(key)
-						roles.push({
-							role: roleName,
-							roleHash,
-							account,
-							grantedAt: meta?.timestamp ?? null,
-							grantedTx: meta?.txHash ?? null,
-						})
+					} catch (error) {
+						console.error('[tip20-roles] failed to fetch role logs:', error)
 					}
 
 					return Response.json(

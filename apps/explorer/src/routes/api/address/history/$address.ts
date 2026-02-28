@@ -2,9 +2,8 @@ import { createFileRoute } from '@tanstack/react-router'
 import type { Config } from 'wagmi'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
-import type { Log } from 'viem'
+import type { Log, TransactionReceipt } from 'viem'
 import { parseEventLogs } from 'viem'
-import { getBlock, getTransaction, getTransactionReceipt } from 'viem/actions'
 import { Abis } from 'viem/tempo'
 import { getChainId } from 'wagmi/actions'
 import { Actions } from 'wagmi/tempo'
@@ -13,13 +12,14 @@ import { getRequestURL, hasIndexSupply } from '#lib/env'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
 import { isTip20Address, type Metadata } from '#lib/domain/tip20'
 import {
-	fetchAddressDirectTxCountRows,
 	fetchAddressDirectTxHistoryRows,
-	fetchAddressTransferCountRows,
-	fetchAddressTransferEmittedCountRows,
+	fetchAddressHistoryDistinctCount,
+	fetchAddressHistoryTxDetailsByHashes,
+	fetchAddressLogRowsByTxHashes,
+	fetchAddressReceiptRowsByHashes,
+	fetchAddressTransferRowsByTxHashes,
 	fetchAddressTransferEmittedHashes,
 	fetchAddressTransferHashes,
-	fetchBasicTxDataByHashes,
 	type SortDirection,
 } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
@@ -29,6 +29,8 @@ const abi = Object.values(Abis).flat()
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [100, 10]
 const HISTORY_COUNT_MAX = 10_000
+const TRANSFER_EVENT_TOPIC0 =
+	'0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' as Hex.Hex
 
 /**
  * Recursively converts BigInt values to strings for JSON serialization.
@@ -48,6 +50,49 @@ function serializeBigInts<T>(value: T): T {
 		return result as T
 	}
 	return value
+}
+
+function toHistoryStatus(
+	status: number | null | undefined,
+): 'success' | 'reverted' {
+	return status === 0 ? 'reverted' : 'success'
+}
+
+function toFiniteTimestamp(value: unknown): number {
+	if (typeof value === 'number' && Number.isFinite(value)) return value
+	if (typeof value === 'string') {
+		const parsed = Number(value)
+		if (Number.isFinite(parsed)) return parsed
+		const parsedDate = Date.parse(value)
+		if (Number.isFinite(parsedDate)) return Math.floor(parsedDate / 1000)
+	}
+	return 0
+}
+
+function toHexQuantity(value: unknown): Hex.Hex {
+	if (typeof value === 'bigint' || typeof value === 'number') {
+		try {
+			return Hex.fromNumber(value)
+		} catch {
+			return '0x0'
+		}
+	}
+	if (typeof value === 'string') {
+		try {
+			return Hex.fromNumber(BigInt(value))
+		} catch {
+			return '0x0'
+		}
+	}
+	return '0x0'
+}
+
+function addressToTopic(address: string): Hex.Hex {
+	return `0x${address.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex
+}
+
+function toUint256Data(value: bigint): Hex.Hex {
+	return `0x${value.toString(16).padStart(64, '0')}` as Hex.Hex
 }
 
 export type EnrichedTransaction = {
@@ -133,7 +178,6 @@ export const Route = createFileRoute('/api/address/history/$address')({
 
 					const searchParams = parseParams.data
 					const config = getWagmiConfig()
-					const client = config.getClient()
 					const chainId = getChainId(config)
 
 					const include =
@@ -167,7 +211,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const fetchSize = limit + 1
 
 					const bufferSize = Math.min(
-						Math.max(offset + fetchSize * 5, limit * 3),
+						Math.max(offset + fetchSize, limit * 3),
 						500,
 					)
 
@@ -192,7 +236,6 @@ export const Route = createFileRoute('/api/address/history/$address')({
 
 					const emptyDirect: DirectRow[] = []
 					const emptyTransfer: TransferRow[] = []
-					const emptyCount: Array<{ hash: import('ox').Hex.Hex }> = []
 
 					const transferQueryParams = {
 						address,
@@ -202,57 +245,26 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						sortDirection,
 					}
 
-					const [
-						directResult,
-						transferResult,
-						emittedResult,
-						directCountResult,
-						transferCountResult,
-						emittedCountResult,
-					] = await Promise.all([
-						sources.txs
-							? fetchAddressDirectTxHistoryRows(queryParams)
-							: Promise.resolve(emptyDirect),
-						sources.transfers
-							? fetchAddressTransferHashes({
-									...transferQueryParams,
-									limit: bufferSize,
-								}).catch(() => emptyTransfer)
-							: Promise.resolve(emptyTransfer),
-						sources.emitted
-							? fetchAddressTransferEmittedHashes({
-									address,
-									chainId,
-									sortDirection,
-									limit: bufferSize,
-								}).catch(() => emptyTransfer)
-							: Promise.resolve(emptyTransfer),
-						sources.txs
-							? fetchAddressDirectTxCountRows({
-									address,
-									chainId,
-									includeSent,
-									includeReceived,
-									limit: HISTORY_COUNT_MAX,
-								})
-							: Promise.resolve(emptyCount),
-						sources.transfers
-							? fetchAddressTransferCountRows({
-									address,
-									chainId,
-									includeSent,
-									includeReceived,
-									limit: HISTORY_COUNT_MAX,
-								}).catch(() => emptyCount)
-							: Promise.resolve(emptyCount),
-						sources.emitted
-							? fetchAddressTransferEmittedCountRows({
-									address,
-									chainId,
-									limit: HISTORY_COUNT_MAX,
-								}).catch(() => emptyCount)
-							: Promise.resolve(emptyCount),
-					])
+					const [directResult, transferResult, emittedResult] =
+						await Promise.all([
+							sources.txs
+								? fetchAddressDirectTxHistoryRows(queryParams)
+								: Promise.resolve(emptyDirect),
+							sources.transfers
+								? fetchAddressTransferHashes({
+										...transferQueryParams,
+										limit: bufferSize,
+									}).catch(() => emptyTransfer)
+								: Promise.resolve(emptyTransfer),
+							sources.emitted
+								? fetchAddressTransferEmittedHashes({
+										address,
+										chainId,
+										sortDirection,
+										limit: bufferSize,
+									}).catch(() => emptyTransfer)
+								: Promise.resolve(emptyTransfer),
+						])
 
 					type HashEntry = {
 						hash: Hex.Hex
@@ -284,6 +296,26 @@ export const Route = createFileRoute('/api/address/history/$address')({
 								block_num: row.block_num,
 							})
 
+					// Skip the expensive count query if no source hit its buffer limit —
+					// in that case allHashes already contains every tx hash.
+					const anySourceHitLimit =
+						directResult.length >= bufferSize ||
+						transferResult.length >= bufferSize ||
+						emittedResult.length >= bufferSize
+
+					const countResult = anySourceHitLimit
+						? await fetchAddressHistoryDistinctCount({
+								address,
+								chainId,
+								includeSent,
+								includeReceived,
+								includeTxs: sources.txs,
+								includeTransfers: sources.transfers,
+								includeEmitted: sources.emitted,
+								countCap: HISTORY_COUNT_MAX,
+							})
+						: { count: allHashes.size, capped: false }
+
 					const sortedHashes = [...allHashes.values()].sort((a, b) => {
 						const blockDiff =
 							sortDirection === 'desc'
@@ -301,24 +333,8 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						? paginatedHashes.slice(0, limit)
 						: paginatedHashes
 
-					const countHashes = new Set<Hex.Hex>()
-					const addCountHashes = (rows: Array<{ hash: Hex.Hex }>) => {
-						for (const row of rows) {
-							if (countHashes.size >= HISTORY_COUNT_MAX) break
-							countHashes.add(row.hash)
-						}
-					}
-
-					addCountHashes(directCountResult)
-					addCountHashes(transferCountResult)
-					addCountHashes(emittedCountResult)
-
-					const totalCount = countHashes.size
-					const countCapped =
-						countHashes.size >= HISTORY_COUNT_MAX ||
-						directCountResult.length >= HISTORY_COUNT_MAX ||
-						transferCountResult.length >= HISTORY_COUNT_MAX ||
-						emittedCountResult.length >= HISTORY_COUNT_MAX
+					const totalCount = countResult.count
+					const countCapped = countResult.capped
 
 					if (finalHashes.length === 0) {
 						return Response.json({
@@ -332,32 +348,104 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						} satisfies HistoryResponse)
 					}
 
-					const [receipts, txs] = await Promise.all([
-						Promise.all(
-							finalHashes.map((h) =>
-								getTransactionReceipt(client, { hash: h.hash }),
-							),
-						),
-						Promise.all(
-							finalHashes.map((h) => getTransaction(client, { hash: h.hash })),
-						),
-					])
+					const finalHashValues = finalHashes.map((entry) => entry.hash)
+					const [receiptRows, txRows, logRows, transferRows] =
+						await Promise.all([
+							fetchAddressReceiptRowsByHashes(chainId, finalHashValues),
+							fetchAddressHistoryTxDetailsByHashes(chainId, finalHashValues),
+							fetchAddressLogRowsByTxHashes(chainId, finalHashValues),
+							fetchAddressTransferRowsByTxHashes(chainId, finalHashValues),
+						])
 
-					const blockHashes = new Set<`0x${string}`>()
-					for (const receipt of receipts) {
-						if (receipt.blockHash) blockHashes.add(receipt.blockHash)
+					const receiptMap = new Map(
+						receiptRows.map((row) => [row.tx_hash, row] as const),
+					)
+					const txMap = new Map(txRows.map((row) => [row.hash, row] as const))
+					const logsByHash = new Map<Hex.Hex, Log[]>()
+
+					for (const row of logRows) {
+						const topics = [
+							row.topic0,
+							row.topic1,
+							row.topic2,
+							row.topic3,
+						].filter((topic): topic is Hex.Hex => Boolean(topic))
+
+						const log = {
+							address: row.address,
+							data: row.data,
+							topics,
+							blockNumber: row.block_num,
+							logIndex: row.log_idx,
+							transactionHash: row.tx_hash,
+							transactionIndex: row.tx_idx,
+							removed: false,
+						} as unknown as Log
+
+						const txLogs = logsByHash.get(row.tx_hash)
+						if (txLogs) {
+							txLogs.push(log)
+						} else {
+							logsByHash.set(row.tx_hash, [log])
+						}
 					}
 
-					const blockPromises = [...blockHashes].map((blockHash) =>
-						getBlock(client, { blockHash }).then(
-							(block) => [blockHash, block] as const,
-						),
-					)
-					const blockEntries = await Promise.all(blockPromises)
-					const blockMap = new Map(blockEntries)
+					// Supplement logs with Transfer events from the transfer table.
+					// The logs table may not have all event types indexed, so merge
+					// transfer rows to ensure Transfer events are always present.
+					const logIndicesByHash = new Map<Hex.Hex, Set<number>>()
+					for (const row of logRows) {
+						let indices = logIndicesByHash.get(row.tx_hash)
+						if (!indices) {
+							indices = new Set()
+							logIndicesByHash.set(row.tx_hash, indices)
+						}
+						indices.add(row.log_idx)
+					}
 
-					const allLogs: Log[] = receipts.flatMap((r) => r.logs as Log[])
-					const events = parseEventLogs({ abi, logs: allLogs })
+					for (const row of transferRows) {
+						// Skip if the logs table already has this exact log entry
+						if (logIndicesByHash.get(row.tx_hash)?.has(row.log_idx)) continue
+
+						const log = {
+							address: row.address,
+							data: toUint256Data(row.tokens),
+							topics: [
+								TRANSFER_EVENT_TOPIC0,
+								addressToTopic(row.from),
+								addressToTopic(row.to),
+							],
+							blockNumber: row.block_num,
+							logIndex: row.log_idx,
+							transactionHash: row.tx_hash,
+							transactionIndex: 0,
+							removed: false,
+						} as unknown as Log
+
+						const txLogs = logsByHash.get(row.tx_hash)
+						if (txLogs) {
+							txLogs.push(log)
+						} else {
+							logsByHash.set(row.tx_hash, [log])
+						}
+					}
+
+					const allLogs: Log[] = []
+					for (const txLogs of logsByHash.values()) {
+						allLogs.push(...txLogs)
+					}
+
+					const events = (() => {
+						try {
+							return parseEventLogs({ abi, logs: allLogs })
+						} catch (error) {
+							console.error(
+								'[history] failed to parse logs for metadata:',
+								error,
+							)
+							return []
+						}
+					})()
 					const tokenAddresses = new Set<Address.Address>()
 					for (const event of events) {
 						if (isTip20Address(event.address)) {
@@ -385,69 +473,68 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const getTokenMetadata = (addr: Address.Address) =>
 						tokenMetadataMap.get(addr.toLowerCase())
 
-					const missingTxData = finalHashes.filter((h) => !h.from)
-					let txDataMap = new Map<
-						string,
-						{ from: string; to: string | null; value: bigint }
-					>()
-					if (missingTxData.length > 0) {
-						const txDataResult = await fetchBasicTxDataByHashes(
-							chainId,
-							missingTxData.map((h) => h.hash),
-						)
-						txDataMap = new Map(
-							txDataResult.map((tx) => [tx.hash, tx] as const),
-						)
-					}
-
 					const transactions: EnrichedTransaction[] = []
 
-					for (let i = 0; i < finalHashes.length; i++) {
-						const hashEntry = finalHashes[i]
-						const receipt = receipts[i]
-						const transaction = txs[i]
-						const block = blockMap.get(receipt.blockHash)
+					for (const hashEntry of finalHashes) {
+						const receipt = receiptMap.get(hashEntry.hash)
+						const tx = txMap.get(hashEntry.hash)
+						const txLogs = logsByHash.get(hashEntry.hash) ?? []
 
-						let from: `0x${string}`
-						let to: `0x${string}` | null
-						let value: string
+						const fromSource =
+							tx?.from ?? hashEntry.from ?? receipt?.from ?? address
+						const toSource = tx?.to ?? hashEntry.to ?? receipt?.to ?? null
+						const valueSource = tx?.value ?? hashEntry.value ?? 0n
+						const blockNumberSource =
+							receipt?.block_num ?? tx?.block_num ?? hashEntry.block_num
+						const timestampSource =
+							receipt?.block_timestamp ?? tx?.block_timestamp ?? 0
+						const status = toHistoryStatus(receipt?.status)
 
-						if (hashEntry.from) {
-							from = Address.checksum(hashEntry.from as Address.Address)
-							to = hashEntry.to
-								? Address.checksum(hashEntry.to as Address.Address)
-								: null
-							value = Hex.fromNumber(hashEntry.value ?? 0n)
-						} else {
-							const txData = txDataMap.get(hashEntry.hash)
-							if (txData) {
-								from = Address.checksum(txData.from as Address.Address)
-								to = txData.to
-									? Address.checksum(txData.to as Address.Address)
-									: null
-								value = Hex.fromNumber(txData.value)
-							} else {
-								from = receipt.from
-								to = receipt.to
-								value = '0x0'
+						const receiptForKnownEvents = {
+							from: (receipt?.from ?? fromSource) as Address.Address,
+							to: toSource as Address.Address | null,
+							status,
+							logs: txLogs,
+						} as unknown as TransactionReceipt
+
+						const transactionForKnownEvents = tx
+							? {
+									to: tx.to as Address.Address | null,
+									input: tx.input,
+									data: tx.input,
+									calls: Array.isArray(tx.calls)
+										? (tx.calls as never)
+										: undefined,
+								}
+							: undefined
+
+						const knownEvents = (() => {
+							try {
+								return parseKnownEvents(receiptForKnownEvents, {
+									transaction: transactionForKnownEvents as never,
+									getTokenMetadata,
+								})
+							} catch (error) {
+								console.error(
+									`[history] failed to parse known events for ${hashEntry.hash}:`,
+									error,
+								)
+								return []
 							}
-						}
-
-						const knownEvents = parseKnownEvents(receipt, {
-							transaction,
-							getTokenMetadata,
-						})
+						})()
 
 						transactions.push({
-							hash: receipt.transactionHash,
-							blockNumber: Hex.fromNumber(receipt.blockNumber),
-							timestamp: block ? Number(block.timestamp) : 0,
-							from,
-							to,
-							value,
-							status: receipt.status,
-							gasUsed: Hex.fromNumber(receipt.gasUsed),
-							effectiveGasPrice: Hex.fromNumber(receipt.effectiveGasPrice),
+							hash: hashEntry.hash,
+							blockNumber: toHexQuantity(blockNumberSource),
+							timestamp: toFiniteTimestamp(timestampSource),
+							from: Address.checksum(fromSource as Address.Address),
+							to: toSource
+								? Address.checksum(toSource as Address.Address)
+								: null,
+							value: toHexQuantity(valueSource),
+							status,
+							gasUsed: toHexQuantity(receipt?.gas_used),
+							effectiveGasPrice: toHexQuantity(receipt?.effective_gas_price),
 							knownEvents: serializeBigInts(knownEvents),
 						})
 					}
