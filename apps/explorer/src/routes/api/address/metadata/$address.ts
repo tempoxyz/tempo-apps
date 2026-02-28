@@ -11,11 +11,7 @@ import { getWagmiConfig } from '#wagmi.config'
 function parseTimestamp(value: unknown): number | undefined {
 	if (typeof value === 'number') return value
 	if (typeof value !== 'string') return undefined
-
-	const parsed = Date.parse(value)
-	if (Number.isFinite(parsed)) return Math.floor(parsed / 1000)
-
-	// Legacy idxs format: "2026-01-15 7:13:33.0 +00:00:00"
+	// Format: "2026-01-15 7:13:33.0 +00:00:00" - parse components directly
 	// (single-digit hours don't conform to ISO 8601)
 	const match = value.match(
 		/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2}):(\d{2})/,

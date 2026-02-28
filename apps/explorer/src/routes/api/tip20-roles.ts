@@ -8,6 +8,8 @@ import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
+const QB = tempoQueryBuilder
+
 const ROLE_MEMBERSHIP_UPDATED_SIGNATURE =
 	'event RoleMembershipUpdated(bytes32 indexed role, address indexed account, address indexed sender, bool hasRole)'
 
@@ -99,9 +101,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 						symbol: symbol ?? null,
 					}
 
-					const qb = tempoQueryBuilder(chainId).withSignatures([
-						ROLE_MEMBERSHIP_UPDATED_SIGNATURE,
-					])
+					const qb = QB.withSignatures([ROLE_MEMBERSHIP_UPDATED_SIGNATURE])
 
 					const events = await qb
 						.selectFrom('rolemembershipupdated')
@@ -114,6 +114,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 							'block_timestamp',
 							'tx_hash',
 						])
+						.where('chain', '=', chainId)
 						.where('address', '=', address)
 						.orderBy('block_num', 'asc')
 						.orderBy('log_idx', 'asc')

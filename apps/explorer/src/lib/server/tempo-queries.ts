@@ -1,3 +1,4 @@
+import { sql } from 'idxs'
 import type { Address, Hex } from 'ox'
 import { zeroAddress } from 'viem'
 import * as ABIS from '#lib/abis'
@@ -7,6 +8,8 @@ const QB = tempoQueryBuilder
 
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
+const TRANSFER_AMOUNT_SIGNATURE =
+	'event Transfer(address indexed from, address indexed to, uint256 amount)'
 
 type SortDirection = 'asc' | 'desc'
 
@@ -20,7 +23,7 @@ export async function fetchTokenHolderBalances(
 	address: Address.Address,
 	chainId: number,
 ): Promise<TokenHolderBalance[]> {
-	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
+	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
 	const outgoing = await qb
 		.selectFrom('transfer')
@@ -28,6 +31,7 @@ export async function fetchTokenHolderBalances(
 			eb.ref('from').as('holder'),
 			eb.fn.sum('tokens').as('sent'),
 		])
+		.where('chain', '=', chainId)
 		.where('address', '=', address)
 		.where('from', '<>', zeroAddress)
 		.groupBy('from')
@@ -39,6 +43,7 @@ export async function fetchTokenHolderBalances(
 			eb.ref('to').as('holder'),
 			eb.fn.sum('tokens').as('received'),
 		])
+		.where('chain', '=', chainId)
 		.where('address', '=', address)
 		.groupBy('to')
 		.execute()
@@ -67,11 +72,12 @@ export async function fetchTokenFirstTransferTimestamp(
 	address: Address.Address,
 	chainId: number,
 ): Promise<number | null> {
-	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
+	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
 	const firstTransfer = await qb
 		.selectFrom('transfer')
 		.select(['block_timestamp'])
+		.where('chain', '=', chainId)
 		.where('address', '=', address)
 		.orderBy('block_num', 'asc')
 		.limit(1)
@@ -99,8 +105,7 @@ export async function fetchTokenTransfers(
 	offset: number,
 	account?: Address.Address,
 ): Promise<TokenTransferRow[]> {
-	let query = QB(chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
+	let query = QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select([
 			'from',
@@ -111,6 +116,7 @@ export async function fetchTokenTransfers(
 			'log_idx',
 			'block_timestamp',
 		])
+		.where('chain', '=', chainId)
 		.where('address', '=', address)
 
 	if (account) {
@@ -143,11 +149,10 @@ export async function fetchTokenTransferCount(
 	countCap: number,
 	account?: Address.Address,
 ): Promise<{ count: number; capped: boolean }> {
-	const qb = QB(chainId)
-	let subquery = qb
-		.withSignatures([TRANSFER_SIGNATURE])
+	let subquery = QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select((eb) => eb.lit(1).as('x'))
+		.where('chain', '=', chainId)
 		.where('address', '=', address)
 
 	if (account) {
@@ -156,8 +161,7 @@ export async function fetchTokenTransferCount(
 		)
 	}
 
-	const result = await qb
-		.selectFrom(subquery.limit(countCap).as('subquery'))
+	const result = await QB.selectFrom(subquery.limit(countCap).as('subquery'))
 		.select((eb) => eb.fn.count('x').as('count'))
 		.executeTakeFirst()
 
@@ -182,10 +186,10 @@ export async function fetchTokenCreatedRows(
 ): Promise<TokenCreatedRow[]> {
 	const eventSignature = ABIS.getTokenCreatedEvent(chainId)
 
-	return QB(chainId)
-		.withSignatures([eventSignature])
+	return QB.withSignatures([eventSignature])
 		.selectFrom('tokencreated')
 		.select(['token', 'symbol', 'name', 'currency', 'block_timestamp'])
+		.where('chain', '=', chainId as never)
 		.orderBy('block_num', 'desc')
 		.limit(limit)
 		.offset(offset)
@@ -197,17 +201,15 @@ export async function fetchTokenCreatedCount(
 	countLimit: number,
 ): Promise<number> {
 	const eventSignature = ABIS.getTokenCreatedEvent(chainId)
-	const qb = QB(chainId)
 
-	const result = await qb
-		.selectFrom(
-			qb
-				.withSignatures([eventSignature])
-				.selectFrom('tokencreated')
-				.select((eb) => eb.lit(1).as('x'))
-				.limit(countLimit)
-				.as('subquery'),
-		)
+	const result = await QB.selectFrom(
+		QB.withSignatures([eventSignature])
+			.selectFrom('tokencreated')
+			.select((eb) => eb.lit(1).as('x'))
+			.where('chain', '=', chainId as never)
+			.limit(countLimit)
+			.as('subquery'),
+	)
 		.select((eb) => eb.fn.count('x').as('count'))
 		.executeTakeFirst()
 
@@ -227,10 +229,10 @@ export async function fetchTokenCreatedMetadata(
 			? ABIS.TOKEN_CREATED_EVENT_ANDANTINO
 			: ABIS.TOKEN_CREATED_EVENT
 
-	return QB(chainId)
-		.withSignatures([tokenCreatedSignature])
+	return QB.withSignatures([tokenCreatedSignature])
 		.selectFrom('tokencreated')
 		.select(['token', 'name', 'symbol', 'currency'])
+		.where('chain', '=', chainId)
 		.where('token', 'in', tokens)
 		.execute()
 }
@@ -239,9 +241,9 @@ export async function fetchTransactionTimestamp(
 	chainId: number,
 	hash: Hex.Hex,
 ): Promise<number | undefined> {
-	const result = await QB(chainId)
-		.selectFrom('txs')
+	const result = await QB.selectFrom('txs')
 		.select(['block_timestamp'])
+		.where('chain', '=', chainId)
 		.where('hash', '=', hash)
 		.limit(1)
 		.executeTakeFirst()
@@ -250,9 +252,9 @@ export async function fetchTransactionTimestamp(
 }
 
 export async function fetchLatestBlockNumber(chainId: number): Promise<bigint> {
-	const result = await QB(chainId)
-		.selectFrom('blocks')
+	const result = await QB.selectFrom('blocks')
 		.select('num')
+		.where('chain', '=', chainId)
 		.orderBy('num', 'desc')
 		.limit(1)
 		.executeTakeFirstOrThrow()
@@ -292,9 +294,9 @@ export async function fetchAddressDirectTxHashes(
 		limit: number
 	},
 ): Promise<DirectTxHashRow[]> {
-	let directQuery = QB(params.chainId)
-		.selectFrom('txs')
+	let directQuery = QB.selectFrom('txs')
 		.select(['hash', 'block_num'])
+		.where('chain', '=', params.chainId)
 
 	directQuery = applyAddressDirectionFilter(directQuery, params)
 
@@ -319,9 +321,9 @@ export async function fetchAddressDirectTxHistoryRows(
 		limit: number
 	},
 ): Promise<DirectTxHistoryRow[]> {
-	let directQuery = QB(params.chainId)
-		.selectFrom('txs')
+	let directQuery = QB.selectFrom('txs')
 		.select(['hash', 'block_num', 'from', 'to', 'value'])
+		.where('chain', '=', params.chainId)
 
 	directQuery = applyAddressDirectionFilter(directQuery, params)
 
@@ -340,11 +342,11 @@ export async function fetchAddressTransferHashes(
 		limit: number
 	},
 ): Promise<TransferHashRow[]> {
-	let transferQuery = QB(params.chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
+	let transferQuery = QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select(['tx_hash', 'block_num'])
 		.distinct()
+		.where('chain', '=', params.chainId)
 
 	transferQuery = applyAddressDirectionFilter(transferQuery, params)
 
@@ -361,11 +363,11 @@ export async function fetchAddressTransferEmittedHashes(params: {
 	sortDirection: SortDirection
 	limit: number
 }): Promise<TransferHashRow[]> {
-	return QB(params.chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
+	return QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select(['tx_hash', 'block_num'])
 		.distinct()
+		.where('chain', '=', params.chainId)
 		.where('address', '=', params.address)
 		.orderBy('block_num', params.sortDirection)
 		.orderBy('tx_hash', params.sortDirection)
@@ -378,9 +380,9 @@ export type DirectTxCountRow = { hash: Hex.Hex }
 export async function fetchAddressDirectTxCountRows(
 	params: AddressDirectionParams & { limit: number },
 ): Promise<DirectTxCountRow[]> {
-	let countQuery = QB(params.chainId)
-		.selectFrom('txs')
+	let countQuery = QB.selectFrom('txs')
 		.select((eb) => eb.ref('hash').as('hash'))
+		.where('chain', '=', params.chainId)
 
 	countQuery = applyAddressDirectionFilter(countQuery, params)
 
@@ -392,11 +394,11 @@ export type TransferCountRow = { hash: Hex.Hex }
 export async function fetchAddressTransferCountRows(
 	params: AddressDirectionParams & { limit: number },
 ): Promise<TransferCountRow[]> {
-	let countQuery = QB(params.chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
+	let countQuery = QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select((eb) => eb.ref('tx_hash').as('hash'))
 		.distinct()
+		.where('chain', '=', params.chainId)
 
 	countQuery = applyAddressDirectionFilter(countQuery, params)
 
@@ -408,11 +410,11 @@ export async function fetchAddressTransferEmittedCountRows(params: {
 	chainId: number
 	limit: number
 }): Promise<TransferCountRow[]> {
-	return QB(params.chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
+	return QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select((eb) => eb.ref('tx_hash').as('hash'))
 		.distinct()
+		.where('chain', '=', params.chainId)
 		.where('address', '=', params.address)
 		.limit(params.limit)
 		.execute()
@@ -437,8 +439,7 @@ export async function fetchTxDataByHashes(
 ): Promise<TxDataRow[]> {
 	if (hashes.length === 0) return []
 
-	const result = await QB(chainId)
-		.selectFrom('txs')
+	const result = await QB.selectFrom('txs')
 		.select([
 			'hash',
 			'block_num',
@@ -447,23 +448,16 @@ export async function fetchTxDataByHashes(
 			'value',
 			'input',
 			'nonce',
-			'gas_limit',
-			'max_fee_per_gas',
+			'gas',
+			'gas_price',
 			'type',
 		])
+		.where('chain', '=', chainId)
 		.where('hash', 'in', hashes)
 		.execute()
 
 	return result.map((row) => ({
-		hash: row.hash,
-		block_num: row.block_num,
-		from: row.from,
-		to: row.to,
-		value: row.value,
-		input: row.input,
-		nonce: row.nonce,
-		gas: row.gas_limit,
-		gas_price: row.max_fee_per_gas,
+		...row,
 		type: BigInt(row.type),
 	}))
 }
@@ -481,9 +475,9 @@ export async function fetchBasicTxDataByHashes(
 ): Promise<BasicTxRow[]> {
 	if (hashes.length === 0) return []
 
-	return QB(chainId)
-		.selectFrom('txs')
+	return QB.selectFrom('txs')
 		.select(['hash', 'from', 'to', 'value'])
+		.where('chain', '=', chainId)
 		.where('hash', 'in', hashes)
 		.execute()
 }
@@ -492,9 +486,9 @@ export async function fetchContractCreationTxCandidates(
 	chainId: number,
 	creationBlock: bigint,
 ): Promise<Array<{ hash: Hex.Hex; block_num: bigint }>> {
-	return QB(chainId)
-		.selectFrom('txs')
+	return QB.selectFrom('txs')
 		.select(['hash', 'block_num'])
+		.where('chain', '=', chainId)
 		.where('to', '=', zeroAddress)
 		.where('block_num', '=', creationBlock)
 		.execute()
@@ -506,60 +500,55 @@ export async function fetchAddressTransferBalances(
 ): Promise<
 	Array<{ token: string; received: string | number; sent: string | number }>
 > {
-	const [incoming, outgoing] = await Promise.all([
-		QB(chainId)
-			.withSignatures([TRANSFER_SIGNATURE])
+	const [amountResults, tokensResults] = await Promise.all([
+		QB.withSignatures([TRANSFER_AMOUNT_SIGNATURE])
 			.selectFrom('transfer')
 			.select((eb) => [
 				eb.ref('address').as('token'),
-				eb.fn.sum('tokens').as('received'),
+				sql<string>`SUM(CASE WHEN "to" = ${address} THEN amount ELSE 0 END)`.as(
+					'received',
+				),
+				sql<string>`SUM(CASE WHEN "from" = ${address} THEN amount ELSE 0 END)`.as(
+					'sent',
+				),
 			])
-			.where('to', '=', address)
+			.where('chain', '=', chainId)
+			.where((eb) => eb.or([eb('from', '=', address), eb('to', '=', address)]))
 			.groupBy('address')
 			.execute()
-			.catch((e) => {
-				console.error('[tidx] transfer incoming query failed:', e)
-				return []
-			}),
-		QB(chainId)
-			.withSignatures([TRANSFER_SIGNATURE])
+			.catch(() => []),
+		QB.withSignatures([TRANSFER_SIGNATURE])
 			.selectFrom('transfer')
 			.select((eb) => [
 				eb.ref('address').as('token'),
-				eb.fn.sum('tokens').as('sent'),
+				sql<string>`SUM(CASE WHEN "to" = ${address} THEN tokens ELSE 0 END)`.as(
+					'received',
+				),
+				sql<string>`SUM(CASE WHEN "from" = ${address} THEN tokens ELSE 0 END)`.as(
+					'sent',
+				),
 			])
-			.where('from', '=', address)
+			.where('chain', '=', chainId)
+			.where((eb) => eb.or([eb('from', '=', address), eb('to', '=', address)]))
 			.groupBy('address')
 			.execute()
-			.catch((e) => {
-				console.error('[tidx] transfer outgoing query failed:', e)
-				return []
-			}),
+			.catch(() => []),
 	])
 
 	const merged = new Map<
 		string,
 		{ token: string; received: bigint; sent: bigint }
 	>()
-
-	for (const row of incoming) {
-		const token = String(row.token).toLowerCase()
-		merged.set(token, {
-			token: row.token,
-			received: BigInt(row.received ?? 0),
-			sent: 0n,
-		})
-	}
-
-	for (const row of outgoing) {
+	for (const row of [...amountResults, ...tokensResults]) {
 		const token = String(row.token).toLowerCase()
 		const existing = merged.get(token)
 		if (existing) {
-			existing.sent = BigInt(row.sent ?? 0)
+			existing.received += BigInt(row.received ?? 0)
+			existing.sent += BigInt(row.sent ?? 0)
 		} else {
 			merged.set(token, {
 				token: row.token,
-				received: 0n,
+				received: BigInt(row.received ?? 0),
 				sent: BigInt(row.sent ?? 0),
 			})
 		}
@@ -579,10 +568,10 @@ export async function fetchAddressTransfersForValue(
 ): Promise<
 	Array<{ address: string; from: string; to: string; tokens: string | number }>
 > {
-	const result = await QB(chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
+	const result = await QB.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
 		.select(['address', 'from', 'to', 'tokens'])
+		.where('chain', '=', chainId)
 		.where((eb) => eb.or([eb('from', '=', address), eb('to', '=', address)]))
 		.limit(limit)
 		.execute()
@@ -603,23 +592,26 @@ export async function fetchAddressTxAggregate(
 	oldestTxHash?: string
 	oldestTxFrom?: string
 }> {
-	const qb = QB(chainId)
-	const result = await qb
-		.selectFrom('txs')
-		.where((wb) => wb.or([wb('from', '=', address), wb('to', '=', address)]))
+	const result = await QB.selectFrom('txs')
+		.where('txs.chain', '=', chainId)
+		.where((wb) =>
+			wb.or([wb('txs.from', '=', address), wb('txs.to', '=', address)]),
+		)
 		.select((sb) => [
-			sb.fn.count('hash').as('count'),
-			sb.fn.max('block_timestamp').as('latestTxsBlockTimestamp'),
-			sb.fn.min('block_timestamp').as('oldestTxsBlockTimestamp'),
+			sb.fn.count('txs.hash').as('count'),
+			sb.fn.max('txs.block_timestamp').as('latestTxsBlockTimestamp'),
+			sb.fn.min('txs.block_timestamp').as('oldestTxsBlockTimestamp'),
 		])
 		.executeTakeFirst()
 
 	// Fetch the hash of the oldest transaction separately
-	const oldest = await qb
-		.selectFrom('txs')
-		.where((wb) => wb.or([wb('from', '=', address), wb('to', '=', address)]))
-		.select((eb) => [eb.ref('hash').as('hash'), eb.ref('from').as('sender')])
-		.orderBy('block_timestamp', 'asc')
+	const oldest = await QB.selectFrom('txs')
+		.where('txs.chain', '=', chainId)
+		.where((wb) =>
+			wb.or([wb('txs.from', '=', address), wb('txs.to', '=', address)]),
+		)
+		.select(['txs.hash', 'txs.from'])
+		.orderBy('txs.block_timestamp', 'asc')
 		.limit(1)
 		.executeTakeFirst()
 
@@ -628,7 +620,7 @@ export async function fetchAddressTxAggregate(
 		latestTxsBlockTimestamp: result?.latestTxsBlockTimestamp,
 		oldestTxsBlockTimestamp: result?.oldestTxsBlockTimestamp,
 		oldestTxHash: oldest?.hash as string | undefined,
-		oldestTxFrom: oldest?.sender as string | undefined,
+		oldestTxFrom: oldest?.from as string | undefined,
 	}
 }
 
@@ -636,17 +628,16 @@ export async function fetchAddressTxCounts(
 	address: Address.Address,
 	chainId: number,
 ): Promise<{ sent: number; received: number }> {
-	const qb = QB(chainId)
 	const [txSentResult, txReceivedResult] = await Promise.all([
-		qb
-			.selectFrom('txs')
+		QB.selectFrom('txs')
 			.select((eb) => eb.fn.count('hash').as('cnt'))
 			.where('from', '=', address)
+			.where('chain', '=', chainId)
 			.executeTakeFirst(),
-		qb
-			.selectFrom('txs')
+		QB.selectFrom('txs')
 			.select((eb) => eb.fn.count('hash').as('cnt'))
 			.where('to', '=', address)
+			.where('chain', '=', chainId)
 			.executeTakeFirst(),
 	])
 
@@ -671,18 +662,20 @@ export async function fetchAddressTransferActivity(
 		block_timestamp: string | number
 	}>
 }> {
-	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
+	const qb = QB.withSignatures([TRANSFER_SIGNATURE])
 
 	const [incoming, outgoing] = await Promise.all([
 		qb
 			.selectFrom('transfer')
 			.select(['tokens', 'address', 'block_timestamp'])
+			.where('chain', '=', chainId)
 			.where('to', '=', address)
 			.orderBy('block_timestamp', 'desc')
 			.execute(),
 		qb
 			.selectFrom('transfer')
 			.select(['tokens', 'address', 'block_timestamp'])
+			.where('chain', '=', chainId)
 			.where('from', '=', address)
 			.orderBy('block_timestamp', 'desc')
 			.execute(),

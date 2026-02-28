@@ -81,7 +81,7 @@ const mockQueryBuilder = vi.hoisted(() => {
 })
 
 vi.mock('#lib/server/tempo-queries-provider', () => ({
-	tempoQueryBuilder: () => mockQueryBuilder,
+	tempoQueryBuilder: mockQueryBuilder,
 }))
 
 import {
@@ -393,7 +393,7 @@ describe('tempo-queries', () => {
 		])
 	})
 
-	it('fetchAddressTransferEmittedHashes returns emitted hashes', async () => {
+	it('fetchAddressTransferEmittedHashes returns emitted transfer hashes', async () => {
 		mockQueryBuilder.setResponses([
 			[
 				{
@@ -418,8 +418,14 @@ describe('tempo-queries', () => {
 		])
 	})
 
-	it('fetchAddressDirectTxCountRows returns hash rows', async () => {
-		mockQueryBuilder.setResponses([[{ hash: '0xabc' }, { hash: '0xdef' }]])
+	it('fetchAddressDirectTxCountRows returns count rows', async () => {
+		mockQueryBuilder.setResponses([
+			[
+				{
+					hash: '0xaaa' as Hex.Hex,
+				},
+			],
+		])
 
 		await expect(
 			fetchAddressDirectTxCountRows({
@@ -429,11 +435,21 @@ describe('tempo-queries', () => {
 				includeReceived: true,
 				limit: 10,
 			}),
-		).resolves.toEqual([{ hash: '0xabc' }, { hash: '0xdef' }])
+		).resolves.toEqual([
+			{
+				hash: '0xaaa',
+			},
+		])
 	})
 
-	it('fetchAddressTransferCountRows returns hash rows', async () => {
-		mockQueryBuilder.setResponses([[{ hash: '0xabc' }]])
+	it('fetchAddressTransferCountRows returns transfer count rows', async () => {
+		mockQueryBuilder.setResponses([
+			[
+				{
+					hash: '0xbb' as Hex.Hex,
+				},
+			],
+		])
 
 		await expect(
 			fetchAddressTransferCountRows({
@@ -443,11 +459,21 @@ describe('tempo-queries', () => {
 				includeReceived: false,
 				limit: 10,
 			}),
-		).resolves.toEqual([{ hash: '0xabc' }])
+		).resolves.toEqual([
+			{
+				hash: '0xbb',
+			},
+		])
 	})
 
-	it('fetchAddressTransferEmittedCountRows returns hash rows', async () => {
-		mockQueryBuilder.setResponses([[{ hash: '0xabc' }, { hash: '0xdef' }]])
+	it('fetchAddressTransferEmittedCountRows returns emitted count rows', async () => {
+		mockQueryBuilder.setResponses([
+			[
+				{
+					hash: '0xcc' as Hex.Hex,
+				},
+			],
+		])
 
 		await expect(
 			fetchAddressTransferEmittedCountRows({
@@ -455,7 +481,11 @@ describe('tempo-queries', () => {
 				chainId: 1,
 				limit: 3,
 			}),
-		).resolves.toEqual([{ hash: '0xabc' }, { hash: '0xdef' }])
+		).resolves.toEqual([
+			{
+				hash: '0xcc',
+			},
+		])
 	})
 
 	it('fetchTxDataByHashes returns empty when no hashes provided', async () => {
@@ -473,8 +503,8 @@ describe('tempo-queries', () => {
 					value: 5n,
 					input: '0x00' as Hex.Hex,
 					nonce: 1n,
-					gas_limit: 21000n,
-					max_fee_per_gas: 1n,
+					gas: 21000n,
+					gas_price: 1n,
 					type: 0n,
 				},
 			],
@@ -546,8 +576,13 @@ describe('tempo-queries', () => {
 
 	it('fetchAddressTransferBalances returns aggregated balances', async () => {
 		mockQueryBuilder.setResponses([
-			[{ token: '0xToken', received: '10' }],
-			[{ token: '0xToken', sent: '2' }],
+			[
+				{
+					token: '0xToken',
+					received: '10',
+					sent: '2',
+				},
+			],
 		])
 
 		await expect(
@@ -592,10 +627,6 @@ describe('tempo-queries', () => {
 				latestTxsBlockTimestamp: '10',
 				oldestTxsBlockTimestamp: '1',
 			},
-			{
-				hash: '0xoldest',
-				sender: '0xCreator',
-			},
 		])
 
 		await expect(
@@ -604,8 +635,6 @@ describe('tempo-queries', () => {
 			count: 5,
 			latestTxsBlockTimestamp: '10',
 			oldestTxsBlockTimestamp: '1',
-			oldestTxHash: '0xoldest',
-			oldestTxFrom: '0xCreator',
 		})
 	})
 
