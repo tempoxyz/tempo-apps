@@ -1,7 +1,5 @@
 import type { Address, Hex } from 'ox'
-import * as OxHash from 'ox/Hash'
-import * as OxHex from 'ox/Hex'
-import { decodeAbiParameters, zeroAddress } from 'viem'
+import { zeroAddress } from 'viem'
 import * as ABIS from '#lib/abis'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 
@@ -224,63 +222,17 @@ export async function fetchTokenCreatedMetadata(
 > {
 	if (tokens.length === 0) return []
 
-	const tokenCreatedSignature = ABIS.getTokenCreatedEvent(chainId)
-	const topic0 = OxHash.keccak256(
-		OxHex.fromString(tokenCreatedSignature.replace(/^event /, '')),
-	)
+	const tokenCreatedSignature =
+		chainId === 42429
+			? ABIS.TOKEN_CREATED_EVENT_ANDANTINO
+			: ABIS.TOKEN_CREATED_EVENT
 
-	const tokenTopics = tokens.map(
-		(t) =>
-			`0x${t.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex,
-	)
-
-	const rows = await QB(chainId)
-		.selectFrom('logs')
-		.select(['topic1', 'data'])
-		.where('topic0', '=', topic0)
-		.where('topic1', 'in', tokenTopics)
+	return QB(chainId)
+		.withSignatures([tokenCreatedSignature])
+		.selectFrom('tokencreated')
+		.select(['token', 'name', 'symbol', 'currency'])
+		.where('token', 'in', tokens)
 		.execute()
-
-	const isAndantino = chainId === 42429
-	const dataParams = isAndantino
-		? ([
-				{ name: 'name', type: 'string' },
-				{ name: 'symbol', type: 'string' },
-				{ name: 'currency', type: 'string' },
-				{ name: 'quoteToken', type: 'address' },
-				{ name: 'admin', type: 'address' },
-			] as const)
-		: ([
-				{ name: 'name', type: 'string' },
-				{ name: 'symbol', type: 'string' },
-				{ name: 'currency', type: 'string' },
-				{ name: 'quoteToken', type: 'address' },
-				{ name: 'admin', type: 'address' },
-				{ name: 'salt', type: 'bytes32' },
-			] as const)
-
-	const results: Array<{
-		token: string
-		name: string
-		symbol: string
-		currency: string
-	}> = []
-
-	for (const row of rows) {
-		if (!row.topic1 || !row.data) continue
-		try {
-			const token = `0x${(row.topic1 as string).slice(-40)}` as string
-			const decoded = decodeAbiParameters(dataParams, row.data as Hex.Hex)
-			results.push({
-				token,
-				name: decoded[0] as string,
-				symbol: decoded[1] as string,
-				currency: decoded[2] as string,
-			})
-		} catch {}
-	}
-
-	return results
 }
 
 export async function fetchTransactionTimestamp(
@@ -313,13 +265,6 @@ type AddressDirectionParams = {
 	chainId: number
 	includeSent: boolean
 	includeReceived: boolean
-}
-
-type AddressHistoryCountParams = AddressDirectionParams & {
-	includeTxs: boolean
-	includeTransfers: boolean
-	includeEmitted: boolean
-	countCap: number
 }
 
 function applyAddressDirectionFilter<TQuery>(
@@ -428,111 +373,49 @@ export async function fetchAddressTransferEmittedHashes(params: {
 		.execute()
 }
 
-export async function fetchAddressDirectTxCount(
-	params: AddressDirectionParams & { countCap: number },
-): Promise<number> {
-	const qb = QB(params.chainId)
-	let subquery = qb.selectFrom('txs').select((eb) => eb.lit(1).as('x'))
+export type DirectTxCountRow = { hash: Hex.Hex }
 
-	subquery = applyAddressDirectionFilter(subquery, params)
+export async function fetchAddressDirectTxCountRows(
+	params: AddressDirectionParams & { limit: number },
+): Promise<DirectTxCountRow[]> {
+	let countQuery = QB(params.chainId)
+		.selectFrom('txs')
+		.select((eb) => eb.ref('hash').as('hash'))
 
-	const result = await qb
-		.selectFrom(subquery.limit(params.countCap).as('subquery'))
-		.select((eb) => eb.fn.count('x').as('count'))
-		.executeTakeFirst()
+	countQuery = applyAddressDirectionFilter(countQuery, params)
 
-	return Number(result?.count ?? 0)
+	return countQuery.limit(params.limit).execute()
 }
 
-export async function fetchAddressTransferDistinctCount(
-	params: AddressDirectionParams & { countCap: number },
-): Promise<number> {
-	const qb = QB(params.chainId)
-	let subquery = qb
+export type TransferCountRow = { hash: Hex.Hex }
+
+export async function fetchAddressTransferCountRows(
+	params: AddressDirectionParams & { limit: number },
+): Promise<TransferCountRow[]> {
+	let countQuery = QB(params.chainId)
 		.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
-		.select('tx_hash')
+		.select((eb) => eb.ref('tx_hash').as('hash'))
 		.distinct()
 
-	subquery = applyAddressDirectionFilter(subquery, params)
+	countQuery = applyAddressDirectionFilter(countQuery, params)
 
-	const result = await qb
-		.selectFrom(subquery.limit(params.countCap).as('subquery'))
-		.select((eb) => eb.fn.count('tx_hash').as('count'))
-		.executeTakeFirst()
-
-	return Number(result?.count ?? 0)
+	return countQuery.limit(params.limit).execute()
 }
 
-export async function fetchAddressTransferEmittedDistinctCount(params: {
+export async function fetchAddressTransferEmittedCountRows(params: {
 	address: Address.Address
 	chainId: number
-	countCap: number
-}): Promise<number> {
-	const qb = QB(params.chainId)
-	const subquery = qb
+	limit: number
+}): Promise<TransferCountRow[]> {
+	return QB(params.chainId)
 		.withSignatures([TRANSFER_SIGNATURE])
 		.selectFrom('transfer')
-		.select('tx_hash')
+		.select((eb) => eb.ref('tx_hash').as('hash'))
 		.distinct()
 		.where('address', '=', params.address)
-
-	const result = await qb
-		.selectFrom(subquery.limit(params.countCap).as('subquery'))
-		.select((eb) => eb.fn.count('tx_hash').as('count'))
-		.executeTakeFirst()
-
-	return Number(result?.count ?? 0)
-}
-
-export async function fetchAddressHistoryDistinctCount(
-	params: AddressHistoryCountParams,
-): Promise<{ count: number; capped: boolean }> {
-	const [directCount, transferCount, emittedCount] = await Promise.all([
-		params.includeTxs
-			? fetchAddressDirectTxCount({
-					address: params.address,
-					chainId: params.chainId,
-					includeSent: params.includeSent,
-					includeReceived: params.includeReceived,
-					countCap: params.countCap,
-				})
-			: 0,
-		params.includeTransfers
-			? fetchAddressTransferDistinctCount({
-					address: params.address,
-					chainId: params.chainId,
-					includeSent: params.includeSent,
-					includeReceived: params.includeReceived,
-					countCap: params.countCap,
-				}).catch((error) => {
-					console.error('[tidx] transfer count query failed:', error)
-					return 0
-				})
-			: 0,
-		params.includeEmitted
-			? fetchAddressTransferEmittedDistinctCount({
-					address: params.address,
-					chainId: params.chainId,
-					countCap: params.countCap,
-				}).catch((error) => {
-					console.error('[tidx] emitted count query failed:', error)
-					return 0
-				})
-			: 0,
-	])
-
-	const total = Math.min(
-		directCount + transferCount + emittedCount,
-		params.countCap,
-	)
-	const capped =
-		total >= params.countCap ||
-		directCount >= params.countCap ||
-		transferCount >= params.countCap ||
-		emittedCount >= params.countCap
-
-	return { count: total, capped }
+		.limit(params.limit)
+		.execute()
 }
 
 export type TxDataRow = {
@@ -590,145 +473,6 @@ export type BasicTxRow = {
 	from: string
 	to: string | null
 	value: bigint
-}
-
-export type AddressHistoryTxDetailsRow = {
-	hash: Hex.Hex
-	block_num: bigint
-	block_timestamp: number
-	from: string
-	to: string | null
-	value: bigint
-	input: Hex.Hex
-	calls: unknown
-}
-
-export async function fetchAddressHistoryTxDetailsByHashes(
-	chainId: number,
-	hashes: Hex.Hex[],
-): Promise<AddressHistoryTxDetailsRow[]> {
-	if (hashes.length === 0) return []
-
-	return QB(chainId)
-		.selectFrom('txs')
-		.select([
-			'hash',
-			'block_num',
-			'block_timestamp',
-			'from',
-			'to',
-			'value',
-			'input',
-			'calls',
-		])
-		.where('hash', 'in', hashes)
-		.execute()
-}
-
-export type AddressHistoryReceiptRow = {
-	tx_hash: Hex.Hex
-	block_num: bigint
-	block_timestamp: number
-	from: string
-	to: string | null
-	status: number | null
-	gas_used: bigint
-	effective_gas_price: bigint | null
-}
-
-export async function fetchAddressReceiptRowsByHashes(
-	chainId: number,
-	hashes: Hex.Hex[],
-): Promise<AddressHistoryReceiptRow[]> {
-	if (hashes.length === 0) return []
-
-	return QB(chainId)
-		.selectFrom('receipts')
-		.select([
-			'tx_hash',
-			'block_num',
-			'block_timestamp',
-			'from',
-			'to',
-			'status',
-			'gas_used',
-			'effective_gas_price',
-		])
-		.where('tx_hash', 'in', hashes)
-		.execute()
-}
-
-export type AddressHistoryLogRow = {
-	tx_hash: Hex.Hex
-	block_num: bigint
-	tx_idx: number
-	log_idx: number
-	address: Address.Address
-	topic0: Hex.Hex | null
-	topic1: Hex.Hex | null
-	topic2: Hex.Hex | null
-	topic3: Hex.Hex | null
-	data: Hex.Hex
-}
-
-export async function fetchAddressLogRowsByTxHashes(
-	chainId: number,
-	hashes: Hex.Hex[],
-): Promise<AddressHistoryLogRow[]> {
-	if (hashes.length === 0) return []
-
-	return QB(chainId)
-		.selectFrom('logs')
-		.select([
-			'tx_hash',
-			'block_num',
-			'tx_idx',
-			'log_idx',
-			'address',
-			'topic0',
-			'topic1',
-			'topic2',
-			'topic3',
-			'data',
-		])
-		.where('tx_hash', 'in', hashes)
-		.orderBy('tx_hash', 'asc')
-		.orderBy('log_idx', 'asc')
-		.execute()
-}
-
-export type AddressHistoryTransferRow = {
-	tx_hash: Hex.Hex
-	block_num: bigint
-	log_idx: number
-	address: Address.Address
-	from: Address.Address
-	to: Address.Address
-	tokens: bigint
-}
-
-export async function fetchAddressTransferRowsByTxHashes(
-	chainId: number,
-	hashes: Hex.Hex[],
-): Promise<AddressHistoryTransferRow[]> {
-	if (hashes.length === 0) return []
-
-	return QB(chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
-		.select([
-			'tx_hash',
-			'block_num',
-			'log_idx',
-			'address',
-			'from',
-			'to',
-			'tokens',
-		])
-		.where('tx_hash', 'in', hashes)
-		.orderBy('tx_hash', 'asc')
-		.orderBy('log_idx', 'asc')
-		.execute()
 }
 
 export async function fetchBasicTxDataByHashes(
