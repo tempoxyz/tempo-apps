@@ -53,10 +53,6 @@ const mockQueryBuilder = vi.hoisted(() => {
 			return this
 		}
 
-		union(): this {
-			return this
-		}
-
 		async execute(): Promise<unknown> {
 			return this.nextResponse()
 		}
@@ -86,21 +82,16 @@ const mockQueryBuilder = vi.hoisted(() => {
 
 vi.mock('#lib/server/tempo-queries-provider', () => ({
 	tempoQueryBuilder: () => mockQueryBuilder,
-	tempoFastLookupQueryBuilder: () => mockQueryBuilder,
 }))
 
 import {
-	fetchAddressDirectTxCount,
+	fetchAddressDirectTxCountRows,
 	fetchAddressDirectTxHashes,
-	fetchAddressHistoryDistinctCount,
-	fetchAddressHistoryTxDetailsByHashes,
 	fetchAddressDirectTxHistoryRows,
-	fetchAddressLogRowsByTxHashes,
-	fetchAddressReceiptRowsByHashes,
 	fetchAddressTransferActivity,
 	fetchAddressTransferBalances,
-	fetchAddressTransferDistinctCount,
-	fetchAddressTransferEmittedDistinctCount,
+	fetchAddressTransferCountRows,
+	fetchAddressTransferEmittedCountRows,
 	fetchAddressTransferEmittedHashes,
 	fetchAddressTransferHashes,
 	fetchAddressTransfersForValue,
@@ -427,176 +418,44 @@ describe('tempo-queries', () => {
 		])
 	})
 
-	it('fetchAddressDirectTxCount returns count', async () => {
-		mockQueryBuilder.setResponses([{ count: 2 }])
+	it('fetchAddressDirectTxCountRows returns hash rows', async () => {
+		mockQueryBuilder.setResponses([[{ hash: '0xabc' }, { hash: '0xdef' }]])
 
 		await expect(
-			fetchAddressDirectTxCount({
+			fetchAddressDirectTxCountRows({
 				address: '0x1111' as Address.Address,
 				chainId: 1,
 				includeSent: false,
 				includeReceived: true,
-				countCap: 10,
+				limit: 10,
 			}),
-		).resolves.toBe(2)
+		).resolves.toEqual([{ hash: '0xabc' }, { hash: '0xdef' }])
 	})
 
-	it('fetchAddressTransferDistinctCount returns count', async () => {
-		mockQueryBuilder.setResponses([{ count: 1 }])
+	it('fetchAddressTransferCountRows returns hash rows', async () => {
+		mockQueryBuilder.setResponses([[{ hash: '0xabc' }]])
 
 		await expect(
-			fetchAddressTransferDistinctCount({
+			fetchAddressTransferCountRows({
 				address: '0x1111' as Address.Address,
 				chainId: 1,
 				includeSent: true,
 				includeReceived: false,
-				countCap: 10,
+				limit: 10,
 			}),
-		).resolves.toBe(1)
+		).resolves.toEqual([{ hash: '0xabc' }])
 	})
 
-	it('fetchAddressTransferEmittedDistinctCount returns count', async () => {
-		mockQueryBuilder.setResponses([{ count: 2 }])
+	it('fetchAddressTransferEmittedCountRows returns hash rows', async () => {
+		mockQueryBuilder.setResponses([[{ hash: '0xabc' }, { hash: '0xdef' }]])
 
 		await expect(
-			fetchAddressTransferEmittedDistinctCount({
+			fetchAddressTransferEmittedCountRows({
 				address: '0xToken' as Address.Address,
 				chainId: 1,
-				countCap: 3,
+				limit: 3,
 			}),
-		).resolves.toBe(2)
-	})
-
-	it('fetchAddressHistoryDistinctCount sums counts and caps', async () => {
-		mockQueryBuilder.setResponses([{ count: 5 }, { count: 4 }, { count: 3 }])
-
-		await expect(
-			fetchAddressHistoryDistinctCount({
-				address: '0x1111' as Address.Address,
-				chainId: 1,
-				includeSent: true,
-				includeReceived: true,
-				includeTxs: true,
-				includeTransfers: true,
-				includeEmitted: true,
-				countCap: 10,
-			}),
-		).resolves.toEqual({ count: 10, capped: true })
-	})
-
-	it('fetchAddressHistoryDistinctCount returns zero when no sources selected', async () => {
-		await expect(
-			fetchAddressHistoryDistinctCount({
-				address: '0x1111' as Address.Address,
-				chainId: 1,
-				includeSent: true,
-				includeReceived: true,
-				includeTxs: false,
-				includeTransfers: false,
-				includeEmitted: false,
-				countCap: 10,
-			}),
-		).resolves.toEqual({ count: 0, capped: false })
-	})
-
-	it('fetchAddressHistoryTxDetailsByHashes returns tx detail rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					hash: '0xabc' as Hex.Hex,
-					block_num: 3n,
-					block_timestamp: 123,
-					from: '0x1111',
-					to: '0x2222',
-					value: 9n,
-					input: '0x00' as Hex.Hex,
-					calls: null,
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressHistoryTxDetailsByHashes(1, ['0xabc' as Hex.Hex]),
-		).resolves.toEqual([
-			{
-				hash: '0xabc',
-				block_num: 3n,
-				block_timestamp: 123,
-				from: '0x1111',
-				to: '0x2222',
-				value: 9n,
-				input: '0x00',
-				calls: null,
-			},
-		])
-	})
-
-	it('fetchAddressReceiptRowsByHashes returns receipt rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					tx_hash: '0xabc' as Hex.Hex,
-					block_num: 3n,
-					block_timestamp: 123,
-					from: '0x1111',
-					to: '0x2222',
-					status: 1,
-					gas_used: 21000n,
-					effective_gas_price: 2n,
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressReceiptRowsByHashes(1, ['0xabc' as Hex.Hex]),
-		).resolves.toEqual([
-			{
-				tx_hash: '0xabc',
-				block_num: 3n,
-				block_timestamp: 123,
-				from: '0x1111',
-				to: '0x2222',
-				status: 1,
-				gas_used: 21000n,
-				effective_gas_price: 2n,
-			},
-		])
-	})
-
-	it('fetchAddressLogRowsByTxHashes returns ordered log rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					tx_hash: '0xabc' as Hex.Hex,
-					block_num: 3n,
-					tx_idx: 1,
-					log_idx: 2,
-					address: '0xToken',
-					topic0: '0x01',
-					topic1: null,
-					topic2: null,
-					topic3: null,
-					data: '0x00',
-				},
-			],
-		])
-
-		await expect(
-			fetchAddressLogRowsByTxHashes(1, ['0xabc' as Hex.Hex]),
-		).resolves.toEqual([
-			{
-				tx_hash: '0xabc',
-				block_num: 3n,
-				tx_idx: 1,
-				log_idx: 2,
-				address: '0xToken',
-				topic0: '0x01',
-				topic1: null,
-				topic2: null,
-				topic3: null,
-				data: '0x00',
-			},
-		])
+		).resolves.toEqual([{ hash: '0xabc' }, { hash: '0xdef' }])
 	})
 
 	it('fetchTxDataByHashes returns empty when no hashes provided', async () => {

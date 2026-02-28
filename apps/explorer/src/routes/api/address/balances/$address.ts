@@ -83,7 +83,10 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 					const tokenCreatedResult = await fetchTokenCreatedMetadata(
 						chainId,
 						topTokenAddresses,
-					).catch(() => [])
+					).catch((e) => {
+						console.error('[tidx] fetchTokenCreatedMetadata failed:', e)
+						return []
+					})
 
 					const tokenMetadata = new Map<
 						string,
