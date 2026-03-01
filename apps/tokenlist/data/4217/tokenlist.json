@@ -55,6 +55,17 @@
 			"extensions": {
 				"chain": "tempo"
 			}
+		},
+		{
+			"name": "Frax USD",
+			"symbol": "frxUSD",
+			"decimals": 6,
+			"chainId": 4217,
+			"address": "0x20c0000000000000000000003554d28269e0f3c2",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000003554d28269e0f3c2.svg",
+			"extensions": {
+				"chain": "tempo"
+			}
 		}
 	]
 }
