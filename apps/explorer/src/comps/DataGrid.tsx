@@ -181,7 +181,7 @@ export function DataGrid(props: DataGrid.Props) {
 					<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
 						<Pagination.Simple
 							page={page}
-							pages={pages}
+							pages={displayCount === Infinity ? 0 : pages}
 							fetching={fetching && !loading}
 							countLoading={countLoading}
 							disableLastPage={disableLastPage}

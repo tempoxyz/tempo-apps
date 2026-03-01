@@ -272,12 +272,12 @@ export namespace Pagination {
 					<span className={cx('text-primary', fetching && 'opacity-50')}>
 						{Pagination.numFormat.format(page)}
 					</span>
-					{' of '}
-					{isIndefinite || countLoading
-						? '…'
-						: typeof pages === 'number' && pages > 0
-							? Pagination.numFormat.format(pages)
-							: '…'}
+					{!isIndefinite && typeof pages === 'number' && pages > 0 && (
+						<>
+							{' of '}
+							{countLoading ? '…' : Pagination.numFormat.format(pages)}
+						</>
+					)}
 				</span>
 				<Link
 					to="."
@@ -350,7 +350,7 @@ export namespace Pagination {
 				<span className="text-primary tabular-nums">
 					{loading
 						? '…'
-						: `${capped ? '> ' : ''}${Pagination.numFormat.format(totalItems)}`}
+						: `${Pagination.numFormat.format(totalItems)}${capped ? '+' : ''}`}
 				</span>
 				<span className="text-tertiary font-sans">{itemsLabel}</span>
 			</div>
