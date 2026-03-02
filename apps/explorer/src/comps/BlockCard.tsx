@@ -267,7 +267,7 @@ export namespace BlockCard {
 		return (
 			// the 15px font size is used to set the same width as the block hash
 			<div className="text-[15px] max-w-[calc(22ch+22px)] font-mono">
-				<span className="flex justify-between gap-px text-[22px] text-tertiary">
+				<span className="flex justify-between gap-px text-[22px] text-tertiary select-none">
 					{str.split('').map((char, index) => (
 						<span
 							key={`${index}-${char}`}
