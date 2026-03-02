@@ -1,6 +1,5 @@
 interface EnvironmentVariables {
 	readonly INDEXER_API_KEY: string | undefined
-	readonly TIDX_BASIC_AUTH: string | undefined
 	readonly SENTRY_AUTH_TOKEN: string | undefined
 	readonly SENTRY_ORG: string | undefined
 	readonly SENTRY_PROJECT: string | undefined
