@@ -3,15 +3,23 @@ import * as Address from 'ox/Address'
 import { getCode } from 'viem/actions'
 import { getChainId } from 'wagmi/actions'
 import { getAccountType, type AccountType } from '#lib/account'
+import { isTip20Address } from '#lib/domain/tip20'
 import { hasIndexSupply } from '#lib/env'
-import { fetchAddressTxAggregate } from '#lib/server/tempo-queries'
+import {
+	fetchAddressTxAggregate,
+	fetchTokenTransferAggregate,
+} from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
 function parseTimestamp(value: unknown): number | undefined {
 	if (typeof value === 'number') return value
 	if (typeof value !== 'string') return undefined
-	// Format: "2026-01-15 7:13:33.0 +00:00:00" - parse components directly
+
+	const parsed = Date.parse(value)
+	if (Number.isFinite(parsed)) return Math.floor(parsed / 1000)
+
+	// Legacy idxs format: "2026-01-15 7:13:33.0 +00:00:00"
 	// (single-digit hours don't conform to ISO 8601)
 	const match = value.match(
 		/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2}):(\d{2})/,
@@ -54,34 +62,46 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 					const client = config.getClient()
 					const chainId = getChainId(config)
 
-					// Single aggregate query: COUNT + MIN/MAX timestamps
-					// MIN/MAX are "free" since COUNT already scans all rows
-					const [bytecode, txAggResult] = await Promise.all([
-						// Account type detection (single RPC call)
-						getCode(client, { address }).catch(() => undefined),
+					const isTip20 = isTip20Address(address)
 
-						// Combined query: count + newest + oldest in one scan
-						fetchAddressTxAggregate(address, chainId),
-					])
-
-					const accountType = getAccountType(bytecode)
-					const txCount = txAggResult?.count ?? 0
-					const lastActivityTimestamp = parseTimestamp(
-						txAggResult?.latestTxsBlockTimestamp,
-					)
-					const createdTimestamp = parseTimestamp(
-						txAggResult?.oldestTxsBlockTimestamp,
+					const bytecodePromise = getCode(client, { address }).catch(
+						() => undefined,
 					)
 
-					const response: AddressMetadataResponse = {
-						address,
-						chainId,
-						accountType,
-						txCount,
-						lastActivityTimestamp,
-						createdTimestamp,
-						createdTxHash: txAggResult?.oldestTxHash,
-						createdBy: txAggResult?.oldestTxFrom,
+					let response: AddressMetadataResponse
+
+					if (isTip20) {
+						const [bytecode, result] = await Promise.all([
+							bytecodePromise,
+							fetchTokenTransferAggregate(address, chainId).catch(() => ({
+								oldestTimestamp: undefined,
+								latestTimestamp: undefined,
+							})),
+						])
+						response = {
+							address,
+							chainId,
+							accountType: getAccountType(bytecode),
+							lastActivityTimestamp: parseTimestamp(result.latestTimestamp),
+							createdTimestamp: parseTimestamp(result.oldestTimestamp),
+						}
+					} else {
+						const [bytecode, result] = await Promise.all([
+							bytecodePromise,
+							fetchAddressTxAggregate(address, chainId),
+						])
+						response = {
+							address,
+							chainId,
+							accountType: getAccountType(bytecode),
+							txCount: result.count ?? 0,
+							lastActivityTimestamp: parseTimestamp(
+								result.latestTxsBlockTimestamp,
+							),
+							createdTimestamp: parseTimestamp(result.oldestTxsBlockTimestamp),
+							createdTxHash: result.oldestTxHash,
+							createdBy: result.oldestTxFrom,
+						}
 					}
 
 					return Response.json(response, {
