@@ -1,9 +1,30 @@
-import * as IDX from 'idxs'
+import { QB, Tidx } from 'tidx.ts'
 
-const tempoQuery = IDX.IndexSupply.create({
-	apiKey: process.env.INDEXER_API_KEY,
+const tidx = Tidx.create({
+	basicAuth: process.env.TIDX_BASIC_AUTH,
+	baseUrl: 'https://tidx.tempo.xyz',
 })
 
-const tempoQueryBuilder = IDX.QueryBuilder.from(tempoQuery)
+tidx.on('response', (res) => {
+	if (!res.ok)
+		res
+			.clone()
+			.text()
+			.then((body) =>
+				console.error(
+					`[tidx:${res.status}]`,
+					decodeURIComponent(res.url),
+					body,
+				),
+			)
+})
 
-export { tempoQuery, tempoQueryBuilder }
+export function tempoQueryBuilder(chainId: number) {
+	return QB.from({ ...tidx, chainId })
+}
+
+export function tempoFastLookupQueryBuilder(chainId: number) {
+	return QB.from({ ...tidx, chainId, engine: 'clickhouse' })
+}
+
+export { tidx }
