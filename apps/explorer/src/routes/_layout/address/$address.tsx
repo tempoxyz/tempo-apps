@@ -154,6 +154,7 @@ const defaultSearchValues = {
 	page: 1,
 	limit: 10,
 	tab: 'transactions',
+	live: false,
 } as const
 
 const ASSETS_PER_PAGE = 10

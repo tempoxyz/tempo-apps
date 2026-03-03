@@ -370,7 +370,7 @@ function BlocksPagination({
 				<Link
 					to="."
 					resetScroll={false}
-					search={{ from: olderFrom, live: false }}
+					search={{ from: olderFrom, live: undefined }}
 					disabled={!canGoOlder}
 					className="rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
 					title="Older blocks"
@@ -380,7 +380,7 @@ function BlocksPagination({
 				<Link
 					to="."
 					resetScroll={false}
-					search={{ from: BLOCKS_PER_PAGE - 1, live: false }}
+					search={{ from: BLOCKS_PER_PAGE - 1, live: undefined }}
 					disabled={displayedEnd === 0n}
 					className="rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary"
 					title="Oldest blocks"
