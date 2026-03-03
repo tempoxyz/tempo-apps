@@ -1,12 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router'
-import type { Config } from 'wagmi'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import type { Log, TransactionReceipt } from 'viem'
-import { parseEventLogs } from 'viem'
-import { Abis } from 'viem/tempo'
 import { getChainId } from 'wagmi/actions'
-import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { getRequestURL, hasIndexSupply } from '#lib/env'
 import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
@@ -20,14 +16,13 @@ import {
 	fetchAddressTransferRowsByTxHashes,
 	fetchAddressTransferEmittedHashes,
 	fetchAddressTransferHashes,
+	fetchTokenCreatedMetadata,
 	fetchTip20TokenTxCount,
 	fetchTip20TokenTxHashes,
 	type SortDirection,
 } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
-
-const abi = Object.values(Abis).flat()
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [100, 10]
 const HISTORY_COUNT_MAX = 10_000
@@ -165,7 +160,6 @@ async function enrichHashEntries(
 	finalHashes: HashEntry[],
 	address: Address.Address,
 	chainId: number,
-	config: ReturnType<typeof getWagmiConfig>,
 ): Promise<EnrichedTransaction[]> {
 	const finalHashValues = finalHashes.map((entry) => entry.hash)
 	const [receiptRows, txRows, logRows, transferRows] = await Promise.all([
@@ -242,41 +236,37 @@ async function enrichHashEntries(
 		}
 	}
 
-	const allLogs: Log[] = []
-	for (const txLogs of logsByHash.values()) {
-		allLogs.push(...txLogs)
-	}
-
-	const events = (() => {
-		try {
-			return parseEventLogs({ abi, logs: allLogs })
-		} catch (error) {
-			console.error('[history] failed to parse logs for metadata:', error)
-			return []
-		}
-	})()
 	const tokenAddresses = new Set<Address.Address>()
-	for (const event of events) {
-		if (isTip20Address(event.address)) {
-			tokenAddresses.add(event.address)
-		}
+	for (const row of logRows) {
+		if (isTip20Address(row.address)) tokenAddresses.add(row.address)
+	}
+	for (const row of transferRows) {
+		if (isTip20Address(row.address)) tokenAddresses.add(row.address)
 	}
 
-	const tokenMetadataEntries = await Promise.all(
-		[...tokenAddresses].map(async (token) => {
-			try {
-				const metadata = await Actions.token.getMetadata(config as Config, {
-					token,
-				})
-				return [token.toLowerCase(), metadata] as const
-			} catch {
-				return [token.toLowerCase(), undefined] as const
-			}
-		}),
-	)
-	const tokenMetadataMap = new Map<string, Metadata | undefined>(
-		tokenMetadataEntries,
-	)
+	const tokenMetadataRows = await fetchTokenCreatedMetadata(chainId, [
+		...tokenAddresses,
+	]).catch((error) => {
+		console.error('[history] failed to fetch token metadata:', error)
+		return []
+	})
+
+	const tokenMetadataMap = new Map<string, Metadata>()
+	for (const row of tokenMetadataRows) {
+		tokenMetadataMap.set(row.token.toLowerCase(), {
+			decimals: 6,
+			currency: row.currency,
+			symbol: row.symbol,
+			name: row.name,
+		})
+	}
+
+	for (const tokenAddress of tokenAddresses) {
+		const key = tokenAddress.toLowerCase()
+		if (!tokenMetadataMap.has(key)) {
+			tokenMetadataMap.set(key, { decimals: 6, currency: '' })
+		}
+	}
 
 	const getTokenMetadata = (addr: Address.Address) =>
 		tokenMetadataMap.get(addr.toLowerCase())
@@ -357,9 +347,8 @@ async function fetchTip20History(params: {
 	sortDirection: SortDirection
 	offset: number
 	limit: number
-	config: ReturnType<typeof getWagmiConfig>
 }): Promise<HistoryResponse> {
-	const { address, chainId, sortDirection, offset, limit, config } = params
+	const { address, chainId, sortDirection, offset, limit } = params
 
 	// Fetch one extra row to determine hasMore, and count in parallel
 	const [pageRows, totalCount] = await Promise.all([
@@ -399,12 +388,7 @@ async function fetchTip20History(params: {
 		block_num: row.block_num,
 	}))
 
-	const transactions = await enrichHashEntries(
-		finalHashes,
-		address,
-		chainId,
-		config,
-	)
+	const transactions = await enrichHashEntries(finalHashes, address, chainId)
 
 	return {
 		transactions,
@@ -486,7 +470,6 @@ export const Route = createFileRoute('/api/address/history/$address')({
 							sortDirection,
 							offset,
 							limit,
-							config,
 						})
 						return Response.json(result)
 					}
@@ -628,7 +611,6 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						finalHashes,
 						address,
 						chainId,
-						config,
 					)
 
 					return Response.json({

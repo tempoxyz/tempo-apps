@@ -14,7 +14,13 @@ export function isTip20Address(address: string): address is Tip20Address {
 	return address.toLowerCase().startsWith(tip20Prefix)
 }
 
-export type Metadata = Actions.token.getMetadata.ReturnValue
+export type Metadata = {
+	currency: string
+	decimals: number
+	symbol?: string
+	name?: string
+	totalSupply?: bigint
+}
 
 export type GetTip20MetadataFn = (
 	address: Address.Address,

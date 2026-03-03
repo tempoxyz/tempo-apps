@@ -1,5 +1,6 @@
 import type { Address, Hex } from 'ox'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { encodeAbiParameters } from 'viem'
 
 const mockQueryBuilder = vi.hoisted(() => {
 	class MockQueryBuilder {
@@ -227,22 +228,41 @@ describe('tempo-queries', () => {
 	})
 
 	it('fetchTokenCreatedMetadata returns metadata rows', async () => {
+		const token =
+			'0x00000000000000000000000000000000000000aa' as Address.Address
+		const topic1 =
+			`0x${token.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex
+		const data = encodeAbiParameters(
+			[
+				{ name: 'name', type: 'string' },
+				{ name: 'symbol', type: 'string' },
+				{ name: 'currency', type: 'string' },
+				{ name: 'quoteToken', type: 'address' },
+				{ name: 'admin', type: 'address' },
+				{ name: 'salt', type: 'bytes32' },
+			] as const,
+			[
+				'Token',
+				'TOK',
+				'USD',
+				'0x0000000000000000000000000000000000000001',
+				'0x0000000000000000000000000000000000000002',
+				`0x${'0'.repeat(64)}`,
+			],
+		)
+
 		mockQueryBuilder.setResponses([
 			[
 				{
-					token: '0xToken',
-					name: 'Token',
-					symbol: 'TOK',
-					currency: 'USD',
+					topic1,
+					data,
 				},
 			],
 		])
 
-		await expect(
-			fetchTokenCreatedMetadata(1, ['0xToken' as Address.Address]),
-		).resolves.toEqual([
+		await expect(fetchTokenCreatedMetadata(1, [token])).resolves.toEqual([
 			{
-				token: '0xToken',
+				token,
 				name: 'Token',
 				symbol: 'TOK',
 				currency: 'USD',

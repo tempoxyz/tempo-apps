@@ -11,6 +11,31 @@ const testMnemonic =
 
 const sponsorAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
 
+const tempoRpcAvailable = await (async () => {
+	try {
+		const response = await fetch(env.TEMPO_RPC_URL, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				jsonrpc: '2.0',
+				id: 1,
+				method: 'eth_chainId',
+				params: [],
+			}),
+		})
+
+		if (!response.ok) return false
+
+		const body = (await response.json()) as { result?: unknown }
+		if (typeof body.result !== 'string') return false
+
+		const rpcChainId = Number.parseInt(body.result, 16)
+		return rpcChainId === tempoLocalnet.id
+	} catch {
+		return false
+	}
+})()
+
 const userAccount = Account.fromSecp256k1(
 	Mnemonic.toPrivateKey(testMnemonic, {
 		as: 'Hex',
@@ -74,36 +99,6 @@ function createTempoTransport() {
 	})
 }
 
-// Mint liquidity for fee tokens.
-beforeAll(async () => {
-	const sponsorAccount = Account.fromSecp256k1(
-		Mnemonic.toPrivateKey(testMnemonic, {
-			as: 'Hex',
-			path: Mnemonic.path({ account: 0 }),
-		}),
-	)
-
-	const client = createClient({
-		account: sponsorAccount,
-		chain: tempoLocalnet,
-		transport: http(env.TEMPO_RPC_URL),
-	})
-
-	await Promise.all(
-		[1n, 2n, 3n].map((id) =>
-			Actions.amm.mintSync(client, {
-				account: sponsorAccount,
-				feeToken: '0x20c0000000000000000000000000000000000000',
-				nonceKey: 'expiring',
-				userTokenAddress: id,
-				validatorTokenAddress: '0x20c0000000000000000000000000000000000000',
-				validatorTokenAmount: parseUnits('1000', 6),
-				to: sponsorAccount.address,
-			}),
-		),
-	)
-})
-
 describe('fee-payer integration', () => {
 	describe('request handling', () => {
 		it('returns error for unsupported method', async () => {
@@ -146,7 +141,38 @@ describe('fee-payer integration', () => {
 		})
 	})
 
-	describe('transaction sponsorship', () => {
+	const describeSponsorship = tempoRpcAvailable ? describe : describe.skip
+
+	describeSponsorship('transaction sponsorship', () => {
+		beforeAll(async () => {
+			const sponsorAccount = Account.fromSecp256k1(
+				Mnemonic.toPrivateKey(testMnemonic, {
+					as: 'Hex',
+					path: Mnemonic.path({ account: 0 }),
+				}),
+			)
+
+			const client = createClient({
+				account: sponsorAccount,
+				chain: tempoLocalnet,
+				transport: http(env.TEMPO_RPC_URL),
+			})
+
+			await Promise.all(
+				[1n, 2n, 3n].map((id) =>
+					Actions.amm.mintSync(client, {
+						account: sponsorAccount,
+						feeToken: '0x20c0000000000000000000000000000000000000',
+						nonceKey: 'expiring',
+						userTokenAddress: id,
+						validatorTokenAddress: '0x20c0000000000000000000000000000000000000',
+						validatorTokenAmount: parseUnits('1000', 6),
+						to: sponsorAccount.address,
+					}),
+				),
+			)
+		})
+
 		it('sponsors transaction (sign-only via eth_signRawTransaction)', async () => {
 			const { transport: feePayerTransport, requests: feePayerRequests } =
 				createFeePayerTransportWithSpy()

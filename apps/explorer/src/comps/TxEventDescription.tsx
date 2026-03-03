@@ -23,15 +23,16 @@ import { useLookupSignature } from '#lib/queries'
 
 /**
  * Renders a contract call with decoded function name.
- * Fetches ABI from registry or extracts from bytecode using whatsabi.
- * Falls back to 4byte directory lookup.
+ * Uses a prefetched name when available.
+ * Otherwise fetches ABI from registry/bytecode and falls back to 4byte lookup.
  */
 function ContractCallPart(props: {
 	address: AddressType.Address
 	input: Hex.Hex
+	functionName?: string
 	seenAs?: AddressType.Address
 }) {
-	const { address, input, seenAs } = props
+	const { address, input, functionName: prefetchedFunctionName, seenAs } = props
 	const selector = Hex.slice(input, 0, 4)
 	const isViewingAsContract = seenAs && isAddressEqual(seenAs, address)
 
@@ -55,6 +56,7 @@ function ContractCallPart(props: {
 				return null
 			}
 		},
+		enabled: !prefetchedFunctionName,
 		staleTime: Number.POSITIVE_INFINITY,
 	})
 
@@ -62,17 +64,19 @@ function ContractCallPart(props: {
 	const { data: signature, isFetched: isSignatureFetched } = useLookupSignature(
 		{
 			selector,
-			enabled: !functionName && !isLoadingAbi,
+			enabled: !prefetchedFunctionName && !functionName && !isLoadingAbi,
 		},
 	)
 
 	// Extract function name from signature (e.g., "transfer(address,uint256)" -> "transfer")
 	const signatureFnName = signature?.split('(')[0]
 
-	const isLoading = isLoadingAbi || (!functionName && !isSignatureFetched)
+	const isLoading =
+		!prefetchedFunctionName &&
+		(isLoadingAbi || (!functionName && !isSignatureFetched))
 	const fnName = isLoading
 		? selector
-		: (functionName ?? signatureFnName ?? selector)
+		: (prefetchedFunctionName ?? functionName ?? signatureFnName ?? selector)
 
 	if (isViewingAsContract) {
 		return (

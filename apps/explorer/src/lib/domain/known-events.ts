@@ -3,7 +3,7 @@ import * as Hex from 'ox/Hex'
 import type { AbiEvent, Log, TransactionReceipt } from 'viem'
 import { decodeFunctionData, parseEventLogs, zeroAddress } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
-import type * as Tip20 from './tip20'
+import * as Tip20 from './tip20'
 
 const abi = Object.values(Abis).flat()
 const FEE_MANAGER = Addresses.feeManager
@@ -731,6 +731,7 @@ type Token = {
 type ContractCall = {
 	address: Address.Address
 	input: Hex.Hex
+	functionName?: string
 }
 
 export type KnownEventPart =
@@ -844,6 +845,19 @@ function detectContractCall(
 	if (!callInput || callInput === '0x') return null
 
 	const failed = receipt.status === 'reverted'
+	const functionName = (() => {
+		if (!Tip20.isTip20Address(contractAddress)) return undefined
+
+		try {
+			const decoded = decodeFunctionData({
+				abi: Abis.tip20,
+				data: callInput,
+			})
+			return decoded.functionName
+		} catch {
+			return undefined
+		}
+	})()
 
 	return {
 		type: 'contract call',
@@ -851,7 +865,11 @@ function detectContractCall(
 			{ type: 'action', value: failed ? 'Failed' : 'Call' },
 			{
 				type: 'contractCall',
-				value: { address: Address.checksum(contractAddress), input: callInput },
+				value: {
+					address: Address.checksum(contractAddress),
+					input: callInput,
+					functionName,
+				},
 			},
 		],
 		failed,
