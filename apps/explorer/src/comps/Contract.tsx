@@ -3,11 +3,9 @@ import * as React from 'react'
 import type { Abi } from 'viem'
 import { useBytecode, usePublicClient } from 'wagmi'
 import { Link } from '@tanstack/react-router'
-import { ConnectWallet } from '#comps/ConnectWallet.tsx'
 import { AbiViewer } from '#comps/ContractAbi.tsx'
 import { ContractReader } from '#comps/ContractReader.tsx'
 import { SourceSection } from '#comps/ContractSource.tsx'
-import { ContractWriter } from '#comps/ContractWriter.tsx'
 import { cx } from '#lib/css'
 import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
@@ -280,7 +278,6 @@ export function InteractTabContent(props: {
 	const publicClient = usePublicClient()
 
 	const [readExpanded, setReadExpanded] = React.useState(true)
-	const [writeExpanded, setWriteExpanded] = React.useState(true)
 	const [proxyFunctionsExpanded, setProxyFunctionsExpanded] =
 		React.useState(false)
 	const [proxyInfo, setProxyInfo] = React.useState<ProxyInfo | null>(null)
@@ -374,21 +371,9 @@ export function InteractTabContent(props: {
 				</div>
 			)}
 
-			{/* Write Contract Section (Implementation functions via proxy) */}
-			<CollapsibleSection
-				first={!isProxy}
-				title={isProxy ? 'Write (via Proxy)' : 'Write'}
-				expanded={writeExpanded}
-				onToggle={() => setWriteExpanded(!writeExpanded)}
-				actions={<ConnectWallet />}
-			>
-				<div className="px-[10px] pb-[10px]">
-					<ContractWriter address={address} abi={abi} />
-				</div>
-			</CollapsibleSection>
-
 			{/* Read Contract Section (Implementation functions via proxy) */}
 			<CollapsibleSection
+				first={!isProxy}
 				title={isProxy ? 'Read (via Proxy)' : 'Read'}
 				expanded={readExpanded}
 				onToggle={() => setReadExpanded(!readExpanded)}
@@ -416,7 +401,6 @@ export function InteractTabContent(props: {
 							implementation.
 						</div>
 						<ContractReader address={address} abi={proxyAbi} />
-						<ContractWriter address={address} abi={proxyAbi} />
 					</div>
 				</CollapsibleSection>
 			)}
