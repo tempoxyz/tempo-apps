@@ -1,13 +1,12 @@
-import { useSuspenseQuery } from '@tanstack/react-query'
-import { useMatchRoute, useRouterState } from '@tanstack/react-router'
 import { BreadcrumbsPortal } from '#comps/Breadcrumbs'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
-import { isTestnet } from '#lib/env'
+import { Sphere } from '#comps/Sphere'
+import { TestnetMigrationBanner } from '#comps/TestnetMigrationBanner'
 import { BlockNumberProvider } from '#lib/block-number'
 import { fetchLatestBlock } from '#lib/server/latest-block'
-import { Sphere } from '#comps/Sphere'
-import TriangleAlert from '~icons/lucide/triangle-alert'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { useMatchRoute, useRouterState } from '@tanstack/react-router'
 
 export function Layout(props: Layout.Props) {
 	const { children, blockNumber: blockNumberProp } = props
@@ -25,29 +24,7 @@ export function Layout(props: Layout.Props) {
 	return (
 		<BlockNumberProvider initial={blockNumber}>
 			<div className="flex min-h-dvh flex-col print:block print:min-h-0">
-				{isTestnet() && (
-					<div className="bg-base-alt px-[32px] py-[8px] text-sm text-primary text-center">
-						<TriangleAlert className="size-4 inline mr-[4px] relative top-[-1px]" />
-						<span className="">
-							<strong>Testnet migration:</strong> Tempo launched a new testnet
-							(Moderato) on January 8th. The old testnet (Andantino) will be
-							deprecated on{' '}
-							<time dateTime="2026-03-08" title="March 8th, 2026">
-								March 8th
-							</time>
-							.{' '}
-							<a
-								href="https://docs.tempo.xyz/#testnet-migration"
-								className="underline press-down-inline"
-								target="_blank"
-								rel="noopener noreferrer"
-							>
-								Read the docs
-							</a>{' '}
-							for more details.
-						</span>
-					</div>
-				)}
+				<TestnetMigrationBanner />
 				<div className={`relative z-2 ${isReceipt ? 'print:hidden' : ''}`}>
 					<Header initialBlockNumber={blockNumber} />
 				</div>
