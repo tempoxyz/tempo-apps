@@ -21,15 +21,13 @@ export function Header(props: Header.Props) {
 		<header className="@container relative z-1">
 			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1 print:justify-center">
 				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
-					<div className="relative">
-						<Link to="/" className="flex items-center press-down py-[4px]">
-							<Header.TempoWordmark />
-						</Link>
-						<NetworkToggle className="absolute -top-2.5 -right-12" />
-					</div>
+					<Link to="/" className="flex items-center press-down py-[4px]">
+						<Header.TempoWordmark />
+					</Link>
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
+					<NetworkToggle />
 					<ThemeToggle />
 					<Header.BlockNumber initial={initialBlockNumber} />
 				</div>
