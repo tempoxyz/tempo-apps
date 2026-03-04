@@ -22,7 +22,7 @@ export const Route = createFileRoute('/_layout/token/$address')({
 		let tab: string = 'transfers'
 		if (search.tab === 'holders') tab = 'holders'
 		else if (search.tab === 'contract') tab = 'contract'
-		else if (search.tab === 'interact') tab = 'interact'
+		else if (search.tab === 'interact') tab = 'contract'
 
 		throw redirect({
 			to: '/address/$address',

@@ -21,7 +21,7 @@ import { AccountCard } from '#comps/AccountCard'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
-import { ContractTabContent, InteractTabContent } from '#comps/Contract'
+import { ContractTabContent } from '#comps/Contract'
 import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
@@ -166,7 +166,6 @@ const allTabs = [
 	'holders',
 	'token',
 	'contract',
-	'interact',
 ] as const
 
 type TabValue = (typeof allTabs)[number]
@@ -441,7 +440,6 @@ function RouteComponent() {
 
 	const resolvedAccountType = addressMetadata?.accountType ?? accountType
 
-	// When URL has a hash fragment (e.g., #functionName), switch to interact tab
 	const isContract = resolvedAccountType === 'contract'
 
 	React.useEffect(() => {
@@ -451,18 +449,14 @@ function RouteComponent() {
 		// 3. Haven't already redirected for this specific hash
 		if (!hash || !isContract || redirectedForHashRef.current === hash) return
 
-		// Determine which tab the hash should navigate to
-		// TanStack Router's location.hash doesn't include the '#' prefix
+		// Source file hashes navigate to the contract tab
 		const isSourceFileHash = hash.startsWith('source-file-')
-		const targetTab = isSourceFileHash ? 'contract' : 'interact'
-
-		// Only redirect if we're not already on the target tab
-		if (tab === targetTab) return
+		if (!isSourceFileHash || tab === 'contract') return
 
 		redirectedForHashRef.current = hash
 		navigate({
 			to: '.',
-			search: { page: 1, tab: targetTab, limit },
+			search: { page: 1, tab: 'contract', limit },
 			hash,
 			replace: true,
 			resetScroll: false,
@@ -500,7 +494,7 @@ function RouteComponent() {
 			tabs.push('token')
 		}
 		if (isContract) {
-			tabs.push('contract', 'interact')
+			tabs.push('contract')
 		}
 		return tabs
 	}, [isToken, isTip20, isContract])
@@ -709,9 +703,7 @@ function SectionsWrapper(props: {
 	// Track hydration to avoid SSR/client mismatch with query data
 	const isMounted = useIsMounted()
 
-	const isContractTabActive =
-		visibleTabs[activeSection] === 'contract' ||
-		visibleTabs[activeSection] === 'interact'
+	const isContractTabActive = visibleTabs[activeSection] === 'contract'
 	const isTransactionsTabActive = visibleTabs[activeSection] === 'transactions'
 	const isTransfersTabActive = visibleTabs[activeSection] === 'transfers'
 	const isHoldersTabActive = visibleTabs[activeSection] === 'holders'
@@ -1156,19 +1148,6 @@ function SectionsWrapper(props: {
 							abi={resolvedAbi}
 							docsUrl={contractInfo?.docsUrl}
 							source={resolvedContractSource}
-						/>
-					),
-				}
-			case 'interact':
-				return {
-					title: 'Interact',
-					totalItems: 0,
-					itemsLabel: 'functions',
-					content: (
-						<InteractTabContent
-							address={address}
-							abi={resolvedAbi}
-							docsUrl={contractInfo?.docsUrl}
 						/>
 					),
 				}
