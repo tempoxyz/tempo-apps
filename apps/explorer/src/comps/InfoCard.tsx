@@ -2,9 +2,9 @@ import type { ReactNode } from 'react'
 import { cx } from '#lib/css'
 
 export function InfoCard(props: InfoCard.Props) {
-	const { title, sections, titlePosition = 'outside', className } = props
+	const { title, sections, className } = props
 
-	const isInside = titlePosition === 'inside'
+	const hasTitle = typeof title !== 'undefined' && title !== null
 
 	const sectionsContent = sections.map((section, index) => {
 		const isSectionEntry =
@@ -16,12 +16,12 @@ export function InfoCard(props: InfoCard.Props) {
 			<div
 				key={key}
 				className={cx(
-					'px-[18px] py-[12px] flex items-center',
-					!isInside && !isLast && 'border-b border-dashed border-card-border',
+					'flex items-center px-4.5 py-3',
+					!isLast && 'border-b border-dashed border-card-border',
 				)}
 			>
 				{isSectionEntry ? (
-					<div className="flex items-center gap-[8px] justify-between w-full">
+					<div className="flex items-center gap-2 justify-between w-full">
 						<span className="text-[13px] font-normal capitalize text-tertiary shrink-0 font-sans">
 							{section.label}
 						</span>
@@ -41,34 +41,46 @@ export function InfoCard(props: InfoCard.Props) {
 			className={cx(
 				'font-sans',
 				'w-full min-[1240px]:w-fit',
-				'rounded-[10px] border border-card-border bg-card-header overflow-hidden',
-				isInside
-					? 'divide-y divide-dashed divide-card-border shadow-[0px_12px_40px_rgba(0,0,0,0.06)]'
-					: 'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
+				'rounded-[10px] border border-card-border bg-card overflow-hidden shadow-[0px_12px_40px_rgba(0,0,0,0.06)]',
 				className,
 			)}
 		>
-			{isInside ? (
-				<div className="px-[18px] py-[12px] flex items-center">{title}</div>
-			) : (
-				title
+			{hasTitle && (
+				<div className="flex items-center h-9 px-4 text-[13px] text-tertiary font-normal">
+					{title}
+				</div>
 			)}
-			{isInside ? (
-				sectionsContent
-			) : (
-				<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px">
+			{hasTitle ? (
+				<div className="rounded-t-[10px] border-t border-card-border -mx-px -mb-px">
 					{sectionsContent}
 				</div>
+			) : (
+				sectionsContent
 			)}
 		</section>
 	)
 }
 
+InfoCard.Title = function InfoCardTitle(props: {
+	children: ReactNode
+	className?: string
+}) {
+	return (
+		<h1
+			className={cx(
+				'text-[13px] text-tertiary select-none flex items-center gap-2',
+				props.className,
+			)}
+		>
+			{props.children}
+		</h1>
+	)
+}
+
 export declare namespace InfoCard {
 	export type Props = {
-		title: ReactNode
 		sections: Array<ReactNode | { label: ReactNode; value: ReactNode }>
-		titlePosition?: 'inside' | 'outside'
+		title?: ReactNode
 		className?: string
 	}
 }

@@ -873,7 +873,7 @@ function Component() {
 			)}
 		>
 			<InfoCard
-				title="Account"
+				title={<InfoCard.Title>Account</InfoCard.Title>}
 				className="self-start"
 				sections={[
 					<button

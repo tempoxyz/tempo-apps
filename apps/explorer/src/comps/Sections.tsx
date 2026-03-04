@@ -103,7 +103,7 @@ export function Sections(props: Sections.Props) {
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 				)}
 			>
-				<div className="h-[36px] flex items-center justify-between">
+				<div className="h-9 flex items-center justify-between">
 					<div className="flex items-center h-full font-sans">
 						{sections.length === 1 ? (
 							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px] font-sans">

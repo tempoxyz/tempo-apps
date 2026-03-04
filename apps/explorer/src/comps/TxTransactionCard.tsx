@@ -14,14 +14,13 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	return (
 		<InfoCard
-			title={
-				<div className="flex items-center justify-between px-[18px] h-[36px] font-sans">
-					<h1 className="text-[13px] text-tertiary select-none">Transaction</h1>
-					<StatusBadge status={status} />
-				</div>
-			}
+			title={<InfoCard.Title>Transaction</InfoCard.Title>}
 			className={className}
 			sections={[
+				{
+					label: 'Status',
+					value: <StatusBadge status={status} />,
+				},
 				<button
 					key="hash"
 					type="button"

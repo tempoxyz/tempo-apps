@@ -74,30 +74,28 @@ export function BlockCard(props: BlockCard.Props) {
 
 	return (
 		<InfoCard
-			titlePosition="inside"
 			className="text-[13px]"
-			title={
+			sections={[
 				<button
+					key="block-number"
 					type="button"
 					onClick={() => copyBlock.copy(String(blockNumber ?? 0n))}
-					className="w-full text-left cursor-pointer press-down text-tertiary pt-[2px] pb-[4px]"
+					className="w-full text-left cursor-pointer press-down text-tertiary"
 					title={String(blockNumber ?? 0n)}
 				>
-					<div className="flex items-center gap-[8px] mb-[4px]">
-						<span>Block</span>
+					<div className="flex items-center gap-[8px] mb-[8px]">
+						<span className="text-[13px] font-normal">Block</span>
 						<div className="relative flex items-center">
 							<CopyIcon className="w-[12px] h-[12px] text-content-dimmed" />
 							{copyBlock.notifying && (
-								<span className="absolute left-[calc(100%+8px)] leading-[16px]">
+								<span className="absolute left-[calc(100%+8px)] text-[13px] leading-[16px]">
 									copied
 								</span>
 							)}
 						</div>
 					</div>
 					<BlockCard.BlockNumber value={blockNumber ?? 0n} />
-				</button>
-			}
-			sections={[
+				</button>,
 				<div key="time" className="w-full flex flex-col gap-[8px]">
 					<BlockCard.TimeRow
 						label="UTC"

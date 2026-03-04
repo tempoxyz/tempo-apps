@@ -18,7 +18,7 @@ export function Header(props: Header.Props) {
 
 	return (
 		<header className="@container relative z-1">
-			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 pt-[36px] select-none relative z-1 print:justify-center">
+			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 @min-[800px]:@max-[1239px]:h-[88px] pt-[36px] select-none relative z-1 print:justify-center">
 				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
 					<Link to="/" className="flex items-center press-down py-[4px]">
 						<Header.TempoWordmark />

@@ -73,7 +73,7 @@ export function DataGrid(props: DataGrid.Props) {
 								<div
 									key={key}
 									className={cx(
-										'px-[10px] first:pl-[16px] last:pr-[16px] h-[40px] flex items-center gap-[6px]',
+										'px-[10px] first:pl-[16px] last:pr-[16px] h-9 flex items-center gap-[6px]',
 										'text-[13px] text-tertiary font-normal whitespace-nowrap font-sans',
 										column.align === 'end' ? 'justify-end' : 'justify-start',
 									)}

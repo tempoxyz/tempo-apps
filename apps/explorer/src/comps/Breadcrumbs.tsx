@@ -178,19 +178,15 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 	const displayCrumbs = pendingCrumb ? [...crumbs, pendingCrumb] : crumbs
 	const hasPendingCrumb = pendingCrumb !== null
 
-	if (resolvedPathname === '/' && !hasPendingCrumb) {
-		return null
-	}
-
-	if (displayCrumbs.length === 0) {
-		return null
-	}
+	const isEmpty =
+		(resolvedPathname === '/' && !hasPendingCrumb) || displayCrumbs.length === 0
 
 	return (
 		<nav
 			aria-label="Breadcrumb"
 			className={cx(
-				'flex items-center gap-1 text-[12px] text-secondary overflow-x-auto scrollbar-none',
+				'flex items-center gap-1 text-[12px] text-secondary overflow-x-auto overflow-y-hidden scrollbar-none h-5 pl-0.5',
+				isEmpty && 'invisible',
 				className,
 			)}
 		>
@@ -253,51 +249,15 @@ export namespace Breadcrumbs {
 
 export function BreadcrumbsSlot(props: BreadcrumbsSlot.Props) {
 	const { className } = props
-	const { setSlotEl, crumbs, pendingCrumb } = useBreadcrumbs()
+	const { setSlotEl } = useBreadcrumbs()
 	const ref = React.useRef<HTMLDivElement | null>(null)
-	const [isPortalMounted, setIsPortalMounted] = React.useState(false)
-
-	const currentPathname = useRouterState({
-		select: (state) => state.location.pathname,
-	})
 
 	React.useLayoutEffect(() => {
 		setSlotEl(ref.current)
-		// Small delay to allow portal to mount
-		const timer = setTimeout(() => setIsPortalMounted(true), 0)
-		return () => {
-			setSlotEl(null)
-			clearTimeout(timer)
-		}
+		return () => setSlotEl(null)
 	}, [setSlotEl])
 
-	// Show loading fallback inline if:
-	// 1. Portal hasn't mounted yet OR crumbs are empty
-	// 2. We're not on home page (or navigating away from it)
-	const showFallback =
-		(!isPortalMounted || (crumbs.length === 0 && pendingCrumb === null)) &&
-		currentPathname !== '/'
-
-	return (
-		<div ref={ref} className={className}>
-			{showFallback && (
-				<nav
-					aria-label="Breadcrumb"
-					className="flex items-center gap-1 text-[12px] text-secondary"
-				>
-					<Link
-						to="/"
-						className="flex items-center gap-1 text-tertiary hover:text-accent press-down shrink-0 outline-none focus-visible:text-accent"
-						title="Home"
-					>
-						<Home className="size-3.5" />
-					</Link>
-					<ChevronRight className="size-3 text-tertiary shrink-0" />
-					<span className="text-secondary animate-pulse">Loading…</span>
-				</nav>
-			)}
-		</div>
-	)
+	return <div ref={ref} className={className} />
 }
 
 export namespace BreadcrumbsSlot {

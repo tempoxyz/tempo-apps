@@ -6,7 +6,6 @@ import {
 	rootRouteId,
 } from '@tanstack/react-router'
 import * as React from 'react'
-import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { InfoCard } from '#comps/InfoCard'
 import { NotFound } from '#comps/NotFound'
 import { useAnimatedBlockNumber } from '#lib/block-number'
@@ -14,7 +13,6 @@ import { cx } from '#lib/css'
 import { withLoaderTiming } from '#lib/profiling'
 import { blocksQueryOptions } from '#lib/queries'
 import CalendarIcon from '~icons/lucide/calendar'
-import ClockIcon from '~icons/lucide/clock'
 
 const AVERAGE_BLOCK_TIME_SECONDS = 0.5
 
@@ -96,7 +94,6 @@ function RouteComponent() {
 				'pt-20 pb-16 px-4',
 			)}
 		>
-			<BreadcrumbsSlot className="w-full max-w-[600px]" />
 			<CountdownCard
 				targetBlockNumber={targetBlockNumber}
 				currentBlockNumber={currentBlockNumber}
@@ -157,14 +154,7 @@ function CountdownCard(props: {
 			</div>
 
 			<InfoCard
-				titlePosition="outside"
 				className="w-full"
-				title={
-					<div className="px-[18px] py-[12px] flex items-center gap-2 text-tertiary">
-						<ClockIcon className="size-4" />
-						<span className="text-[13px]">Countdown Details</span>
-					</div>
-				}
 				sections={[
 					{
 						label: 'Target Block',

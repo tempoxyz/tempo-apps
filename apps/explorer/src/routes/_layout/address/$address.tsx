@@ -438,9 +438,7 @@ function RouteComponent() {
 	// user manually switches tabs, but allows redirect for new hash values)
 	const redirectedForHashRef = React.useRef<string | null>(null)
 
-	const resolvedAccountType = addressMetadata?.accountType ?? accountType
-
-	const isContract = resolvedAccountType === 'contract'
+	const isContract = accountType === 'contract'
 
 	React.useEffect(() => {
 		// Only redirect if:
@@ -617,14 +615,13 @@ function AccountCardWithTimestamps(props: {
 	const {
 		address,
 		assetsData,
-		accountType: initialAccountType,
+		accountType,
 		addressMetadata,
 		isToken,
 		tokenMetadata,
 	} = props
 
-	const resolvedAccountType = addressMetadata?.accountType ?? initialAccountType
-	const isContract = resolvedAccountType === 'contract'
+	const isContract = accountType === 'contract'
 	const missingCreated = !addressMetadata?.createdTimestamp
 
 	// For contracts without a createdTimestamp from metadata (0-tx contracts),
@@ -655,7 +652,7 @@ function AccountCardWithTimestamps(props: {
 					: undefined
 			}
 			totalValue={totalValue}
-			accountType={resolvedAccountType}
+			accountType={accountType}
 			isToken={isToken}
 			tokenName={tokenMetadata?.name}
 		/>

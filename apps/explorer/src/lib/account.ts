@@ -76,9 +76,3 @@ export function getAccountTag(
 ): AccountTag | undefined {
 	return taggedAccounts[address.toLowerCase() as Address.Address]
 }
-
-export function isSystemAddress(address: Address.Address): boolean {
-	const tag = getAccountTag(address)
-	if (!tag) return false
-	return tag.id.startsWith('system:') || tag.id.startsWith('genesis-token:')
-}
