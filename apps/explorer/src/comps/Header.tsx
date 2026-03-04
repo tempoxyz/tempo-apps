@@ -11,6 +11,7 @@ import { cx } from '#lib/css'
 import { isTestnet } from '#lib/env'
 import { useIsMounted } from '#lib/hooks'
 import SquareSquare from '~icons/lucide/square-square'
+import { NetworkToggle } from '#comps/NetworkToggle'
 import { ThemeToggle } from '#comps/ThemeToggle'
 
 export function Header(props: Header.Props) {
@@ -23,6 +24,7 @@ export function Header(props: Header.Props) {
 					<Link to="/" className="flex items-center press-down py-[4px]">
 						<Header.TempoWordmark />
 					</Link>
+					<NetworkToggle className="-ml-1 -mt-2" />
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
