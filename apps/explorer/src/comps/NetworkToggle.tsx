@@ -1,4 +1,5 @@
 import { cx } from '#lib/css'
+import { getTempoEnv } from '#lib/env'
 
 const networks = [
 	{ label: 'Testnet', href: 'https://explore.testnet.tempo.xyz' },
@@ -7,10 +8,7 @@ const networks = [
 
 export function NetworkToggle(props: NetworkToggle.Props): React.JSX.Element {
 	const { className } = props
-	const isMainnet =
-		typeof window !== 'undefined' &&
-		window.location.hostname === 'explore.mainnet.tempo.xyz'
-	const activeIndex = isMainnet ? 1 : 0
+	const activeIndex = getTempoEnv() === 'presto' ? 1 : 0
 
 	return (
 		<div
