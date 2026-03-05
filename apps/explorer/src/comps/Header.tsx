@@ -11,7 +11,6 @@ import { cx } from '#lib/css'
 import { isTestnet } from '#lib/env'
 import { useIsMounted } from '#lib/hooks'
 import SquareSquare from '~icons/lucide/square-square'
-import { ThemeToggle } from '#comps/ThemeToggle'
 
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
@@ -26,7 +25,6 @@ export function Header(props: Header.Props) {
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
-					<ThemeToggle />
 					<Header.BlockNumber initial={initialBlockNumber} />
 				</div>
 			</div>

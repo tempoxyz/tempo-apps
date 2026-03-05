@@ -15,7 +15,6 @@ import { AddressHighlightProvider } from '#comps/AddressHighlight'
 import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
-import { ThemeProvider } from '#lib/theme'
 import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
 import {
@@ -95,54 +94,24 @@ export const Route = createRootRouteWithContext<{
 			{
 				rel: 'icon',
 				type: 'image/svg+xml',
-				href: '/favicon-light.svg',
-				media: '(prefers-color-scheme: light)',
-			},
-			{
-				rel: 'icon',
-				type: 'image/svg+xml',
 				href: '/favicon-dark.svg',
-				media: '(prefers-color-scheme: dark)',
-			},
-			{
-				rel: 'icon',
-				type: 'image/png',
-				sizes: '32x32',
-				href: '/favicon-32x32-light.png',
-				media: '(prefers-color-scheme: dark)',
 			},
 			{
 				rel: 'icon',
 				type: 'image/png',
 				sizes: '32x32',
 				href: '/favicon-32x32-dark.png',
-				media: '(prefers-color-scheme: light)',
-			},
-			{
-				rel: 'icon',
-				type: 'image/png',
-				sizes: '16x16',
-				href: '/favicon-16x16-light.png',
-				media: '(prefers-color-scheme: dark)',
 			},
 			{
 				rel: 'icon',
 				type: 'image/png',
 				sizes: '16x16',
 				href: '/favicon-16x16-dark.png',
-				media: '(prefers-color-scheme: light)',
-			},
-			{
-				rel: 'apple-touch-icon',
-				sizes: '180x180',
-				href: '/favicon-light.png',
-				media: '(prefers-color-scheme: light)',
 			},
 			{
 				rel: 'apple-touch-icon',
 				sizes: '180x180',
 				href: '/favicon-dark.png',
-				media: '(prefers-color-scheme: dark)',
 			},
 		],
 	}),
@@ -377,7 +346,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	})
 
 	return (
-		<html lang="en" className="scheme-light-dark scrollbar-gutter-stable">
+		<html lang="en" className="scrollbar-gutter-stable">
 			<head>
 				<HeadContent />
 			</head>
@@ -391,9 +360,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 					<QueryClientProvider client={queryClient}>
 						<BreadcrumbsProvider>
 							<AddressHighlightProvider>
-								<IntroSeenProvider>
-									<ThemeProvider>{children}</ThemeProvider>
-								</IntroSeenProvider>
+								<IntroSeenProvider>{children}</IntroSeenProvider>
 							</AddressHighlightProvider>
 						</BreadcrumbsProvider>
 						{import.meta.env.DEV && (
@@ -421,38 +388,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	)
 }
 
-let theme: 'light' | 'dark' | undefined
-
 function useDevTools() {
-	React.useEffect(() => {
-		if (import.meta.env.VITE_ENABLE_COLOR_SCHEME_TOGGLE !== 'true') return
-		const handleKeyPress = (e: KeyboardEvent) => {
-			if (
-				// ⌘ + 1 = color scheme toggle
-				((e.metaKey || e.ctrlKey) && e.key === '1') ||
-				// ⌥ + 1 = color scheme toggle  (Safari)
-				(e.altKey && e.code === 'Digit1')
-			) {
-				e.preventDefault()
-				theme ??= window.matchMedia('(prefers-color-scheme: dark)').matches
-					? 'dark'
-					: 'light'
-				document.documentElement.classList.toggle(
-					'scheme-light!',
-					theme === 'dark',
-				)
-				document.documentElement.classList.toggle(
-					'scheme-dark!',
-					theme === 'light',
-				)
-				theme = theme === 'dark' ? 'light' : 'dark'
-			}
-		}
-
-		window.addEventListener('keydown', handleKeyPress)
-		return () => window.removeEventListener('keydown', handleKeyPress)
-	}, [])
-
 	React.useEffect(() => {
 		if (
 			import.meta.env.MODE === 'development' &&

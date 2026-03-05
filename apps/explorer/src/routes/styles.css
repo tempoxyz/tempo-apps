@@ -1,15 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-
-@custom-variant dark (&:is(.scheme-light-dark *));
+@import "./fonts.css";
 
 @theme {
 	/* Background Colors */
 	--color-background-inverse: light-dark(#202020, #fcfcfc);
 	--background-color-inverse: var(--color-background-inverse);
-	--color-background-primary: light-dark(#f8f8f8, #111111);
+	--color-background-primary: light-dark(#191919, #191919);
 	--background-color-primary: var(--color-background-primary);
-	--color-background-surface: light-dark(#ffffff, #1a1a1a);
+	--color-background-surface: light-dark(#1a1a1a, #1a1a1a);
 	--background-color-surface: var(--color-background-surface);
 	--color-background-alt: light-dark(#fcfcfc, #161616);
 	--background-alt: var(--color-background-alt);
@@ -24,11 +23,11 @@
 	--color-frame: var(--color-frame-background);
 
 	/* Content/Text Colors */
-	--color-content-primary: light-dark(#0a0a0a, #f5f5f5);
+	--color-content-primary: light-dark(#ffffff, #ffffff);
 	--content-primary: var(--color-content-primary);
-	--color-content-secondary: light-dark(#737373, #a0a0a0);
+	--color-content-secondary: light-dark(#6e6e6e, #6e6e6e);
 	--content-secondary: var(--color-content-secondary);
-	--color-content-tertiary: light-dark(#8d8d8d, #6e6e6e);
+	--color-content-tertiary: light-dark(#6e6e6e, #6e6e6e);
 	--content-tertiary: var(--color-content-tertiary);
 	--color-content-positive: light-dark(#16a34a, #22c55e);
 	--content-positive: var(--color-content-positive);
@@ -56,11 +55,11 @@
 	--color-focus: var(--color-accent);
 
 	/* Border Colors */
-	--color-border-primary: light-dark(#f0f0f0, #262626);
+	--color-border-primary: light-dark(#232323, #232323);
 	--border-primary: var(--color-border-primary);
-	--color-border-secondary: light-dark(#f8f8f8, #1a1a1a);
+	--color-border-secondary: light-dark(#232323, #232323);
 	--border-secondary: var(--color-border-secondary);
-	--color-border-tertiary: light-dark(#e5e5e5, #2e2e2e);
+	--color-border-tertiary: light-dark(#232323, #232323);
 	--border-tertiary: var(--color-border-tertiary);
 	--color-border-negative: light-dark(#dc2626, #ef4444);
 	--border-negative: var(--color-border-negative);
@@ -92,32 +91,32 @@
 	/* Card */
 	--color-card: light-dark(#f9f9f9, #222222);
 	--color-card-header: light-dark(#f9f9f9, #191919);
-	--color-card-border: light-dark(#e0e0e0, #2a2a2a);
+	--color-card-border: light-dark(#232323, #232323);
 
 	/* Other Colors */
-	--color-base-background: light-dark(#fcfcfc, #191919);
-	--color-base-plane: light-dark(#fcfcfc, #222222);
-	--color-base-plane-background: light-dark(#f9f9f9, #222222);
+	--color-base-background: light-dark(#191919, #191919);
+	--color-base-plane: light-dark(#1a1a1a, #1a1a1a);
+	--color-base-plane-background: light-dark(#1a1a1a, #1a1a1a);
 	--color-base-plane-interactive: light-dark(#f8f8f8, #1c1c1c);
-	--color-base-alt: light-dark(#e5e5e5, #2a2a2a);
-	--color-base-border: light-dark(#e0e0e0, #2a2a2a);
-	--color-base-content: light-dark(#202020, #eeeeee);
-	--color-base-content-secondary: light-dark(#7b7b7b, #7b7b7b);
+	--color-base-alt: light-dark(#232323, #232323);
+	--color-base-border: light-dark(#232323, #232323);
+	--color-base-content: light-dark(#ffffff, #ffffff);
+	--color-base-content-secondary: light-dark(#6e6e6e, #6e6e6e);
 	--color-base-content-positive: light-dark(#30a46c, #30a46c);
 	--color-base-content-negative: light-dark(#e5484d, #e5484d);
 	--color-distinct: light-dark(#e8e8e8, #313131);
 	--color-warning: light-dark(#e2a336, #8f6424);
 	--color-warning-background: light-dark(#fdf5c2, #252018);
 
-	--font-display: system-ui, sans-serif;
-	--font-mono: ui-monospace, monospace;
+	--font-display: "Satoshi", ui-sans-serif, sans-serif;
+	--font-mono: "SF Mono", ui-monospace, monospace;
 }
 
 html,
 :host {
 	background-color: var(--color-base-background);
 	color: var(--color-primary);
-	color-scheme: light dark;
+	color-scheme: dark;
 }
 
 :root {
@@ -126,7 +125,7 @@ html,
 
 @layer base {
 	html {
-		color-scheme: light dark;
+		color-scheme: dark;
 	}
 }
 
