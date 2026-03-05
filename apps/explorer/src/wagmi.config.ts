@@ -18,6 +18,7 @@ import {
 	http,
 	serialize,
 } from 'wagmi'
+import { injected } from 'wagmi/connectors'
 
 const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
 
@@ -106,7 +107,7 @@ export function getWagmiConfig() {
 	wagmiConfigSingleton = createConfig({
 		ssr: true,
 		chains: [chain, tempoLocalnet],
-		connectors: [],
+		connectors: [injected()],
 		storage: createStorage({ storage: cookieStorage }),
 		transports: {
 			[chain.id]: transport,
