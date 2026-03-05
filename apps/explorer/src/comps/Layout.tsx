@@ -3,7 +3,6 @@ import { useMatchRoute } from '@tanstack/react-router'
 import { BreadcrumbsPortal } from '#comps/Breadcrumbs'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
-import { useIntroSeen } from '#comps/Intro'
 import { isTestnet } from '#lib/env'
 import { BlockNumberProvider } from '#lib/block-number'
 import { fetchLatestBlock } from '#lib/server/latest-block'
@@ -18,9 +17,7 @@ export function Layout(props: Layout.Props) {
 	})
 	const blockNumber = blockNumberProp ?? blockNumberQuery
 	const matchRoute = useMatchRoute()
-	const introSeen = useIntroSeen()
 	const isReceipt = Boolean(matchRoute({ to: '/receipt/$hash', fuzzy: true }))
-	const isHome = Boolean(matchRoute({ to: '/' }))
 	return (
 		<BlockNumberProvider initial={blockNumber}>
 			<div className="flex min-h-dvh flex-col print:block print:min-h-0">
@@ -57,7 +54,7 @@ export function Layout(props: Layout.Props) {
 				<div className="w-full mt-6 relative z-1 print:hidden">
 					<Footer />
 				</div>
-				<Sphere animate={isHome && !introSeen} />
+				<Sphere />
 			</div>
 		</BlockNumberProvider>
 	)

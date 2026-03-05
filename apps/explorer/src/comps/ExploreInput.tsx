@@ -40,6 +40,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 		className,
 		wide,
 		tabIndex,
+		autoFocus,
 	} = props
 	const formRef = React.useRef<HTMLFormElement>(null)
 	const resultsRef = React.useRef<HTMLDivElement>(null)
@@ -196,13 +197,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 
 	return (
 		<div className={cx('relative z-10 w-full', !wide && 'max-w-md')}>
-			<div
-				ref={externalWrapperRef}
-				className="overflow-hidden"
-				style={
-					externalWrapperRef ? { opacity: 0, pointerEvents: 'none' } : undefined
-				}
-			>
+			<div ref={externalWrapperRef} className="overflow-hidden">
 				<form
 					ref={formRef}
 					onSubmit={(event) => {
@@ -236,6 +231,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 				>
 					<input
 						ref={inputRef}
+						autoFocus={autoFocus}
 						autoCapitalize="none"
 						autoComplete="off"
 						autoCorrect="off"
@@ -429,6 +425,7 @@ export namespace ExploreInput {
 		className?: string
 		wide?: boolean
 		tabIndex?: number
+		autoFocus?: boolean
 	}
 
 	export type SuggestionGroup = {

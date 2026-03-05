@@ -5,13 +5,10 @@ import {
 	useRouter,
 	useRouterState,
 } from '@tanstack/react-router'
-import { waapi, stagger } from 'animejs'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#lib/css'
-import { springInstant, springBouncy, springSmooth } from '#lib/animation'
-import { Intro, type IntroPhase, useIntroSeen } from '#comps/Intro'
 import BoxIcon from '~icons/lucide/box'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
 import CoinsIcon from '~icons/lucide/coins'
@@ -79,18 +76,10 @@ export const Route = createFileRoute('/_layout/')({
 function Component() {
 	const router = useRouter()
 	const navigate = useNavigate()
-	const introSeen = useIntroSeen()
-	const introSeenOnMount = React.useRef(introSeen)
 	const [inputValue, setInputValue] = React.useState('')
-	const [isMounted, setIsMounted] = React.useState(false)
-	const [inputReady, setInputReady] = React.useState(false)
-	const exploreInputRef = React.useRef<HTMLInputElement>(null)
-	const exploreWrapperRef = React.useRef<HTMLDivElement>(null)
 	const isNavigating = useRouterState({
 		select: (state) => state.status === 'pending',
 	})
-
-	React.useEffect(() => setIsMounted(true), [])
 
 	React.useEffect(() => {
 		return router.subscribe('onResolved', ({ hrefChanged }) => {
@@ -98,40 +87,17 @@ function Component() {
 		})
 	}, [router])
 
-	const handlePhaseChange = React.useCallback((phase: IntroPhase) => {
-		if (phase !== 'start' || !exploreWrapperRef.current) return
-
-		const seen = introSeenOnMount.current
-		setTimeout(
-			() => {
-				setInputReady(true)
-				if (exploreWrapperRef.current) {
-					exploreWrapperRef.current.style.pointerEvents = 'auto'
-					waapi.animate(exploreWrapperRef.current, {
-						opacity: [0, 1],
-						scale: [seen ? 0.97 : 0.94, 1],
-						ease: seen ? springInstant : springBouncy,
-					})
-				}
-				exploreInputRef.current?.focus()
-			},
-			seen ? 0 : 240,
-		)
-	}, [])
-
 	return (
 		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
 			<div className="grid place-items-center relative grid-flow-row gap-5 select-none w-full pt-15 pb-10 z-1">
-				<Intro onPhaseChange={handlePhaseChange} />
+				<LandingWords />
 				<div className="w-full my-3 px-4 flex justify-center relative z-20">
 					<ExploreInput
-						inputRef={exploreInputRef}
-						wrapperRef={exploreWrapperRef}
+						autoFocus
 						size="large"
 						value={inputValue}
 						onChange={setInputValue}
-						disabled={isMounted && isNavigating}
-						tabIndex={inputReady ? 0 : -1}
+						disabled={isNavigating}
 						onActivate={(data) => {
 							if (data.type === 'block') {
 								navigate({
@@ -170,37 +136,31 @@ function Component() {
 	)
 }
 
+function LandingWords() {
+	return (
+		<div className="flex flex-col items-center gap-1">
+			<span className="text-[32px] font-semibold tracking-[-0.02em] leading-[0.95] text-primary/50">
+				Search
+			</span>
+			<span className="text-[40px] font-semibold tracking-[-0.02em] leading-[0.95] text-primary/70">
+				Explore
+			</span>
+			<span className="text-[52px] font-semibold tracking-[-0.02em] leading-[0.95] text-primary">
+				Discover
+			</span>
+		</div>
+	)
+}
+
 function SpotlightLinks() {
-	const introSeen = useIntroSeen()
 	const [actionOpen, setActionOpen] = React.useState(false)
-	const [menuMounted, setMenuMounted] = React.useState(false)
 	const dropdownRef = React.useRef<HTMLDivElement>(null)
-	const dropdownMenuRef = React.useRef<HTMLDivElement>(null)
 	const hoverTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
 		null,
 	)
-	const closingRef = React.useRef(false)
-	const pillsRef = React.useRef<HTMLDivElement>(null)
-	const introSeenOnMount = React.useRef(introSeen)
 
 	const closeMenu = React.useCallback(() => {
 		setActionOpen(false)
-		if (dropdownMenuRef.current) {
-			closingRef.current = true
-			waapi
-				.animate(dropdownMenuRef.current, {
-					opacity: [1, 0],
-					scale: [1, 0.97],
-					translateY: [0, -4],
-					ease: springInstant,
-				})
-				.then(() => {
-					if (!closingRef.current) return
-					setMenuMounted(false)
-				})
-		} else {
-			setMenuMounted(false)
-		}
 	}, [])
 
 	React.useEffect(() => {
@@ -213,69 +173,25 @@ function SpotlightLinks() {
 			}
 		}
 		document.addEventListener('mousedown', handleClickOutside)
-		return () => document.removeEventListener('mousedown', handleClickOutside)
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside)
+			if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
+		}
 	}, [closeMenu])
 
-	React.useEffect(() => {
-		if (!pillsRef.current) return
-		const seen = introSeenOnMount.current
-		const children = [...pillsRef.current.children]
-		const delay = seen ? 0 : 320
-		setTimeout(() => {
-			for (const child of children) {
-				;(child as HTMLElement).style.pointerEvents = 'auto'
-			}
-		}, delay)
-		const anim = waapi.animate(children as HTMLElement[], {
-			opacity: [0, 1],
-			translateY: [seen ? 4 : 8, 0],
-			scale: [0.97, 1],
-			ease: seen ? springInstant : springSmooth,
-			delay: seen ? stagger(10) : stagger(20, { start: delay, from: 'first' }),
-		})
-		anim.then(() => {
-			for (const child of children) {
-				;(child as HTMLElement).style.transform = ''
-			}
-		})
-		return () => {
-			try {
-				anim.cancel()
-			} catch {}
-		}
-	}, [])
-
-	React.useEffect(() => {
-		if (actionOpen) setMenuMounted(true)
-	}, [actionOpen])
-
-	React.useLayoutEffect(() => {
-		if (!dropdownMenuRef.current) return
-		if (actionOpen && menuMounted) {
-			waapi.animate(dropdownMenuRef.current, {
-				opacity: [0, 1],
-				scale: [0.97, 1],
-				translateY: [-4, 0],
-				ease: springInstant,
-			})
-		}
-	}, [actionOpen, menuMounted])
-
 	const handleMouseEnter = () => {
-		if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current)
-		if (closingRef.current && dropdownMenuRef.current) {
-			closingRef.current = false
-			waapi.animate(dropdownMenuRef.current, {
-				opacity: 1,
-				scale: 1,
-				ease: springInstant,
-			})
+		if (hoverTimeoutRef.current) {
+			clearTimeout(hoverTimeoutRef.current)
+			hoverTimeoutRef.current = null
 		}
 		setActionOpen(true)
 	}
 
 	const handleMouseLeave = () => {
-		hoverTimeoutRef.current = setTimeout(() => closeMenu(), 150)
+		hoverTimeoutRef.current = setTimeout(() => {
+			closeMenu()
+			hoverTimeoutRef.current = null
+		}, 150)
 	}
 
 	const actionTypes = spotlightData
@@ -288,10 +204,7 @@ function SpotlightLinks() {
 
 	return (
 		<section className="text-center max-w-[500px] px-4">
-			<div
-				ref={pillsRef}
-				className="group/pills flex items-center gap-2 text-[13px] flex-wrap justify-center"
-			>
+			<div className="group/pills flex items-center gap-2 text-[13px] flex-wrap justify-center">
 				{spotlightData && (
 					<>
 						<SpotlightPill
@@ -322,13 +235,11 @@ function SpotlightLinks() {
 						)}
 						{/** biome-ignore lint/a11y/noStaticElementInteractions: _ */}
 						<div
-							className="relative group-hover/pills:opacity-40 hover:opacity-100"
+							className="relative"
 							ref={dropdownRef}
 							onMouseEnter={handleMouseEnter}
 							onMouseLeave={handleMouseLeave}
 							style={{
-								opacity: 0,
-								pointerEvents: 'none',
 								zIndex: actionOpen ? 100 : 'auto',
 							}}
 						>
@@ -340,18 +251,12 @@ function SpotlightLinks() {
 								<ZapIcon className="size-[14px] text-accent" />
 								<span>Action</span>
 								<ChevronDownIcon
-									className={`size-[12px] transition-transform ${
-										actionOpen ? 'rotate-180' : ''
-									}`}
+									className={`size-[12px] ${actionOpen ? 'rotate-180' : ''}`}
 								/>
 							</button>
-							{menuMounted && (
+							{actionOpen && (
 								<div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50">
-									<div
-										ref={dropdownMenuRef}
-										className="bg-base-plane rounded-full p-1 border border-base-border shadow-xl flex items-center relative z-60"
-										style={{ opacity: 0 }}
-									>
+									<div className="bg-base-plane rounded-full p-1 border border-base-border shadow-xl flex items-center relative z-60">
 										{actionTypes.map((action, i) => (
 											<Link
 												key={action.label}
@@ -409,11 +314,10 @@ function SpotlightPill(props: {
 			{...(search ? { search } : {})}
 			preload="render"
 			className={cx(
-				'relative flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus-visible:border-accent py-1 rounded-full! press-down group-hover/pills:opacity-40 hover:opacity-100 bg-surface focus-visible:outline-none border-base-border transition-colors duration-300 ease-out focus-visible:duration-0',
+				'relative flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus-visible:border-accent py-1 rounded-full! press-down bg-surface focus-visible:outline-none border-base-border',
 				badge ? 'pl-2.5 pr-4' : 'px-2.5',
 				className,
 			)}
-			style={{ opacity: 0, pointerEvents: 'none' }}
 		>
 			{icon}
 			<span>{children}</span>
