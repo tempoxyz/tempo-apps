@@ -21,7 +21,7 @@ import { AccountCard } from '#comps/AccountCard'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
-import { ContractTabContent } from '#comps/Contract'
+import { ContractTabContent, InteractTabContent } from '#comps/Contract'
 import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
 import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
@@ -166,6 +166,7 @@ const allTabs = [
 	'holders',
 	'token',
 	'contract',
+	'interact',
 ] as const
 
 type TabValue = (typeof allTabs)[number]
@@ -438,7 +439,8 @@ function RouteComponent() {
 	// user manually switches tabs, but allows redirect for new hash values)
 	const redirectedForHashRef = React.useRef<string | null>(null)
 
-	const isContract = accountType === 'contract'
+	const resolvedAccountType = addressMetadata?.accountType ?? accountType
+	const isContract = resolvedAccountType === 'contract'
 
 	React.useEffect(() => {
 		// Only redirect if:
@@ -447,14 +449,15 @@ function RouteComponent() {
 		// 3. Haven't already redirected for this specific hash
 		if (!hash || !isContract || redirectedForHashRef.current === hash) return
 
-		// Source file hashes navigate to the contract tab
+		// Determine which tab the hash should navigate to
 		const isSourceFileHash = hash.startsWith('source-file-')
-		if (!isSourceFileHash || tab === 'contract') return
+		const targetTab = isSourceFileHash ? 'contract' : 'interact'
+		if (tab === targetTab) return
 
 		redirectedForHashRef.current = hash
 		navigate({
 			to: '.',
-			search: { page: 1, tab: 'contract', limit },
+			search: { page: 1, tab: targetTab, limit },
 			hash,
 			replace: true,
 			resetScroll: false,
@@ -492,7 +495,7 @@ function RouteComponent() {
 			tabs.push('token')
 		}
 		if (isContract) {
-			tabs.push('contract')
+			tabs.push('contract', 'interact')
 		}
 		return tabs
 	}, [isToken, isTip20, isContract])
@@ -615,13 +618,14 @@ function AccountCardWithTimestamps(props: {
 	const {
 		address,
 		assetsData,
-		accountType,
+		accountType: initialAccountType,
 		addressMetadata,
 		isToken,
 		tokenMetadata,
 	} = props
 
-	const isContract = accountType === 'contract'
+	const resolvedAccountType = addressMetadata?.accountType ?? initialAccountType
+	const isContract = resolvedAccountType === 'contract'
 	const missingCreated = !addressMetadata?.createdTimestamp
 
 	// For contracts without a createdTimestamp from metadata (0-tx contracts),
@@ -652,7 +656,7 @@ function AccountCardWithTimestamps(props: {
 					: undefined
 			}
 			totalValue={totalValue}
-			accountType={accountType}
+			accountType={resolvedAccountType}
 			isToken={isToken}
 			tokenName={tokenMetadata?.name}
 		/>
@@ -700,7 +704,9 @@ function SectionsWrapper(props: {
 	// Track hydration to avoid SSR/client mismatch with query data
 	const isMounted = useIsMounted()
 
-	const isContractTabActive = visibleTabs[activeSection] === 'contract'
+	const isContractTabActive =
+		visibleTabs[activeSection] === 'contract' ||
+		visibleTabs[activeSection] === 'interact'
 	const isTransactionsTabActive = visibleTabs[activeSection] === 'transactions'
 	const isTransfersTabActive = visibleTabs[activeSection] === 'transfers'
 	const isHoldersTabActive = visibleTabs[activeSection] === 'holders'
@@ -1145,6 +1151,19 @@ function SectionsWrapper(props: {
 							abi={resolvedAbi}
 							docsUrl={contractInfo?.docsUrl}
 							source={resolvedContractSource}
+						/>
+					),
+				}
+			case 'interact':
+				return {
+					title: 'Interact',
+					totalItems: 0,
+					itemsLabel: 'functions',
+					content: (
+						<InteractTabContent
+							address={address}
+							abi={resolvedAbi}
+							docsUrl={contractInfo?.docsUrl}
 						/>
 					),
 				}
