@@ -160,6 +160,29 @@ input[type="number"] {
 	line-height: 1.25rem;
 }
 
+@utility text-ui-meta {
+	color: #fff;
+	text-align: center;
+	leading-trim: both;
+	text-edge: cap;
+	font-family: "Satoshi", ui-sans-serif, sans-serif;
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: 16px;
+	letter-spacing: 0.14px;
+}
+
+@utility text-search-input {
+	color: #6e6e6e;
+	font-family: "Satoshi", ui-sans-serif, sans-serif;
+	font-size: 16px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: normal;
+	letter-spacing: -0.48px;
+}
+
 @utility size-max {
 	width: 100%;
 	height: 100%;

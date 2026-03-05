@@ -3,15 +3,21 @@ import { Link as RouterLink } from '@tanstack/react-router'
 export function Footer() {
 	return (
 		<footer className="pt-[24px] pb-[48px] relative print:hidden">
-			<ul className="flex items-center justify-center gap-[24px] text-[15px] text-base-content-secondary select-none">
+			<ul className="text-ui-meta flex items-center justify-center gap-[24px] select-none">
 				<Footer.Link to="https://tempo.xyz" external>
 					About
 				</Footer.Link>
 				<Footer.Link to="https://docs.tempo.xyz" external>
-					Documentation
+					Docs
 				</Footer.Link>
 				<Footer.Link to="https://github.com/tempoxyz" external>
 					GitHub
+				</Footer.Link>
+				<Footer.Link
+					to="https://github.com/tempoxyz/tempo-apps/discussions/categories/explorer"
+					external
+				>
+					Feedback
 				</Footer.Link>
 			</ul>
 		</footer>

@@ -94,7 +94,7 @@ function ConnectWalletInner({
 							)
 						}}
 						className={cx(
-							'flex gap-[8px] items-center rounded bg-base-alt px-[10px] py-[6px] text-primary border border-card-border hover:bg-base-alt/80 hover:no-underline',
+							'flex gap-[8px] items-center rounded-[8px] bg-base-plane-interactive px-[10px] py-[6px] text-primary border border-base-border hover:bg-base-plane hover:no-underline transition-colors',
 							pendingId === connector.id &&
 								connect.isPending &&
 								'animate-pulse',

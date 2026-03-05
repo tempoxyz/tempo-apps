@@ -41,11 +41,11 @@ export const Route = createRootRouteWithContext<{
 				content: 'width=device-width, initial-scale=1',
 			},
 			{
-				title: 'Explorer ⋅ Tempo',
+				title: 'Explore - Tempo',
 			},
 			{
 				name: 'og:title',
-				content: 'Explorer ⋅ Tempo',
+				content: 'Explore - Tempo',
 			},
 			{
 				name: 'viewport',

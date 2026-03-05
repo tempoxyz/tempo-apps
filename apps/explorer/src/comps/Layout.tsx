@@ -1,5 +1,5 @@
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { useMatchRoute } from '@tanstack/react-router'
+import { useMatchRoute, useRouterState } from '@tanstack/react-router'
 import { BreadcrumbsPortal } from '#comps/Breadcrumbs'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
@@ -18,6 +18,10 @@ export function Layout(props: Layout.Props) {
 	const blockNumber = blockNumberProp ?? blockNumberQuery
 	const matchRoute = useMatchRoute()
 	const isReceipt = Boolean(matchRoute({ to: '/receipt/$hash', fuzzy: true }))
+	const isLanding = useRouterState({
+		select: (state) =>
+			(state.resolvedLocation?.pathname ?? state.location.pathname) === '/',
+	})
 	return (
 		<BlockNumberProvider initial={blockNumber}>
 			<div className="flex min-h-dvh flex-col print:block print:min-h-0">
@@ -54,7 +58,7 @@ export function Layout(props: Layout.Props) {
 				<div className="w-full mt-6 relative z-1 print:hidden">
 					<Footer />
 				</div>
-				<Sphere />
+				{isLanding && <Sphere />}
 			</div>
 		</BlockNumberProvider>
 	)

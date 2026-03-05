@@ -41,17 +41,17 @@ export function InfoCard(props: InfoCard.Props) {
 			className={cx(
 				'font-sans',
 				'w-full min-[1240px]:w-fit',
-				'rounded-[10px] border border-card-border bg-card overflow-hidden shadow-[0px_12px_40px_rgba(0,0,0,0.06)]',
+				'rounded-[10px] border border-card-border bg-card-header overflow-hidden shadow-[0px_12px_40px_rgba(0,0,0,0.06)]',
 				className,
 			)}
 		>
 			{hasTitle && (
-				<div className="flex items-center h-9 px-4 text-[13px] text-tertiary font-normal">
+				<div className="flex items-center h-9 px-4 text-[13px] text-tertiary font-normal bg-card-header">
 					{title}
 				</div>
 			)}
 			{hasTitle ? (
-				<div className="rounded-t-[10px] border-t border-card-border -mx-px -mb-px">
+				<div className="rounded-t-[10px] border-t border-card-border bg-card -mx-px -mb-px">
 					{sectionsContent}
 				</div>
 			) : (

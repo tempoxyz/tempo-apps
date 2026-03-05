@@ -9,7 +9,6 @@ import { ExploreInput } from '#comps/ExploreInput'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
 import { isTestnet } from '#lib/env'
-import { useIsMounted } from '#lib/hooks'
 import SquareSquare from '~icons/lucide/square-square'
 
 export function Header(props: Header.Props) {
@@ -43,18 +42,11 @@ export namespace Header {
 		const router = useRouter()
 		const navigate = useNavigate()
 		const [inputValue, setInputValue] = React.useState('')
-
-		const [delayedNavigating, setDelayedNavigating] = React.useState(false)
-		const { resolvedPathname, isNavigating } = useRouterState({
-			select: (state) => ({
-				resolvedPathname:
-					state.resolvedLocation?.pathname ?? state.location.pathname,
-				isNavigating: state.status === 'pending',
-			}),
+		const resolvedPathname = useRouterState({
+			select: (state) =>
+				state.resolvedLocation?.pathname ?? state.location.pathname,
 		})
 		const showSearch = resolvedPathname !== '/'
-
-		const isMounted = useIsMounted()
 
 		React.useEffect(() => {
 			return router.subscribe('onResolved', ({ hrefChanged }) => {
@@ -62,23 +54,12 @@ export namespace Header {
 			})
 		}, [router])
 
-		// delay disabling the input to avoid blinking on fast navigations
-		React.useEffect(() => {
-			if (!isNavigating) {
-				setDelayedNavigating(false)
-				return
-			}
-			const timer = setTimeout(() => setDelayedNavigating(true), 100)
-			return () => clearTimeout(timer)
-		}, [isNavigating])
-
 		if (!showSearch) return null
 
 		const exploreInput = (
 			<ExploreInput
 				value={inputValue}
 				onChange={setInputValue}
-				disabled={isMounted && delayedNavigating}
 				onActivate={({ value, type }) => {
 					if (type === 'block') {
 						navigate({ to: '/block/$id', params: { id: value } })
@@ -110,7 +91,6 @@ export namespace Header {
 						wide
 						value={inputValue}
 						onChange={setInputValue}
-						disabled={isMounted && delayedNavigating}
 						onActivate={({ value, type }) => {
 							if (type === 'block') {
 								navigate({ to: '/block/$id', params: { id: value } })
@@ -146,7 +126,6 @@ export namespace Header {
 						wide
 						value={inputValue}
 						onChange={setInputValue}
-						disabled={isMounted && delayedNavigating}
 						onActivate={({ value, type }) => {
 							if (type === 'block') {
 								navigate({ to: '/block/$id', params: { id: value } })

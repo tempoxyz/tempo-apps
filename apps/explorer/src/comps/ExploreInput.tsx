@@ -36,7 +36,6 @@ export function ExploreInput(props: ExploreInput.Props) {
 		value,
 		onChange,
 		size = 'medium',
-		disabled,
 		className,
 		wide,
 		tabIndex,
@@ -121,8 +120,8 @@ export function ExploreInput(props: ExploreInput.Props) {
 			submittingRef.current = false
 			return
 		}
-		setShowResults(disabled ? false : query.length > 0)
-	}, [query, disabled])
+		setShowResults(query.length > 0)
+	}, [query])
 
 	const lastResultsKey = React.useRef('')
 	const resultsKey = JSON.stringify(flatSuggestions)
@@ -202,7 +201,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 					ref={formRef}
 					onSubmit={(event) => {
 						event.preventDefault()
-						if (!formRef.current || disabled) return
+						if (!formRef.current) return
 
 						const data = new FormData(formRef.current)
 						let formValue = data.get('value')
@@ -237,17 +236,14 @@ export function ExploreInput(props: ExploreInput.Props) {
 						autoCorrect="off"
 						tabIndex={tabIndex}
 						value={value}
-						disabled={disabled}
 						className={cx(
-							'bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary text-base-content rounded-[10px] focus-visible:border-focus outline-0 disabled:cursor-not-allowed disabled:opacity-50',
-							size === 'large'
-								? 'h-[52px] text-[17px]'
-								: 'h-[42px] text-[15px]',
+							'text-search-input bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary rounded-[10px] focus-visible:border-focus outline-0',
+							size === 'large' ? 'h-[52px]' : 'h-[42px]',
 							className,
 						)}
 						data-1p-ignore
 						name="value"
-						placeholder="Enter an address, block, token or transaction…"
+						placeholder="Search by Address / Tx Hash / Block / Token"
 						spellCheck={false}
 						type="text"
 						onKeyDown={(event) => {
@@ -300,7 +296,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 						aria-activedescendant={
 							selectedIndex !== -1 ? `${resultsId}-${selectedIndex}` : undefined
 						}
-						title="Enter an address, block, token or transaction to explore (Cmd+K to focus)"
+						title="Search by Address / Tx Hash / Block / Token (Cmd+K to focus)"
 					/>
 					<div
 						className={cx(
@@ -310,14 +306,14 @@ export function ExploreInput(props: ExploreInput.Props) {
 					>
 						<button
 							type="submit"
-							disabled={disabled || !isValidInput}
 							aria-label="Search"
+							aria-disabled={!isValidInput}
 							className={cx(
-								'rounded-full! flex items-center justify-center active:translate-y-[0.5px] disabled:cursor-not-allowed transition-colors',
-								size === 'large' ? 'size-[28px]' : 'size-[24px]',
+								'rounded-[10px]! border border-base-border bg-base-background/90 grid place-items-center press-down transition-colors hover:bg-surface',
+								size === 'large' ? 'size-[34px]' : 'size-[30px]',
 								isValidInput
-									? 'bg-accent text-base-plane cursor-pointer'
-									: 'bg-base-alt text-tertiary cursor-default',
+									? 'text-primary cursor-pointer'
+									: 'text-tertiary cursor-default',
 							)}
 						>
 							<ArrowRight
@@ -421,7 +417,6 @@ export namespace ExploreInput {
 		value: string
 		onChange: (value: string) => void
 		size?: 'large' | 'medium'
-		disabled?: boolean
 		className?: string
 		wide?: boolean
 		tabIndex?: number
