@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ContractFeatureCard } from '#comps/Contract.tsx'
+import { ContractFeatureCard } from '#comps/ContractFeatureCard.tsx'
 import { cx } from '#lib/css'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { useCopy, useCopyPermalink } from '#lib/hooks'
