@@ -185,12 +185,16 @@ describe('GET /v2/verify/:verificationId - Poll job status', () => {
 		expect(response.status).toBe(200)
 		const body = (await response.json()) as {
 			isJobCompleted: boolean
-			jobId: string
-			chainId: number
+			verificationId: string
+			contract: {
+				chainId: string
+				address: string
+			}
 		}
 		expect(body.isJobCompleted).toBe(false)
-		expect(body.jobId).toBe(jobId)
-		expect(body.chainId).toBe(chainId)
+		expect(body.verificationId).toBe(jobId)
+		expect(body.contract.chainId).toBe(String(chainId))
+		expect(body.contract.address).toBe('0x1212121212121212121212121212121212121212')
 	})
 
 	it('returns error details for failed job', async () => {
@@ -211,12 +215,14 @@ describe('GET /v2/verify/:verificationId - Poll job status', () => {
 
 		const response = await SELF.fetch(`http://localhost/v2/verify/${jobId}`)
 
-		expect(response.status).toBe(400)
+		expect(response.status).toBe(200)
 		const body = (await response.json()) as {
 			isJobCompleted: boolean
+			verificationId: string
 			error: { customCode: string; message: string }
 		}
 		expect(body.isJobCompleted).toBe(true)
+		expect(body.verificationId).toBe(jobId)
 		expect(body.error.customCode).toBe('compilation_failed')
 		expect(body.error.message).toBe('solc crashed unexpectedly')
 	})
