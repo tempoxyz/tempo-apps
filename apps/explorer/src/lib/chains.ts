@@ -1,6 +1,11 @@
 import { tempoModerato } from 'viem/chains'
 
-export const tempoPresto = {
+export const tempoTestnet = {
+	...tempoModerato,
+	name: 'Tempo Testnet',
+} as const
+
+export const tempoMainnet = {
 	...tempoModerato,
 	id: 4217,
 	name: 'Tempo Mainnet',

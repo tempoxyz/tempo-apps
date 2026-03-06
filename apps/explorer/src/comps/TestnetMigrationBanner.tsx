@@ -14,9 +14,8 @@ export function TestnetMigrationBanner(): React.JSX.Element | null {
 		<div className="bg-base-alt px-[32px] py-[8px] text-sm text-primary text-center">
 			<TriangleAlert className="size-4 inline mr-[4px] relative top-[-1px]" />
 			<span>
-				<strong>Testnet migration:</strong> Tempo launched a new testnet
-				(Moderato) on January 8th. The old testnet (Andantino) will be
-				deprecated on{' '}
+				<strong>Testnet migration:</strong> Tempo launched a new testnet on
+				January 8th. The old testnet (Andantino) will be deprecated on{' '}
 				<time dateTime="2026-03-08" title="March 8th, 2026">
 					March 8th
 				</time>

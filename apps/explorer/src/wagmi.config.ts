@@ -1,15 +1,10 @@
 import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
 import { createPublicClient } from 'viem'
-import {
-	tempoDevnet,
-	tempoLocalnet,
-	tempoAndantino,
-	tempoModerato,
-} from 'viem/chains'
+import { tempoDevnet, tempoLocalnet, tempoAndantino } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
-import { tempoPresto } from './lib/chains'
+import { tempoMainnet, tempoTestnet } from './lib/chains'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -28,20 +23,20 @@ let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null
 export const getTempoChain = createIsomorphicFn()
 	.client(() =>
 		TEMPO_ENV === 'presto'
-			? tempoPresto
+			? tempoMainnet
 			: TEMPO_ENV === 'devnet'
 				? tempoDevnet
 				: TEMPO_ENV === 'moderato'
-					? tempoModerato
+					? tempoTestnet
 					: tempoAndantino,
 	)
 	.server(() =>
 		TEMPO_ENV === 'presto'
-			? tempoPresto
+			? tempoMainnet
 			: TEMPO_ENV === 'devnet'
 				? tempoDevnet
 				: TEMPO_ENV === 'moderato'
-					? tempoModerato
+					? tempoTestnet
 					: tempoAndantino,
 	)
 

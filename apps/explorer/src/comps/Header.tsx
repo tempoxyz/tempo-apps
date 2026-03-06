@@ -18,8 +18,12 @@ export function Header(props: Header.Props) {
 		<header className="@container relative z-1">
 			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 @min-[800px]:@max-[1239px]:h-[88px] pt-[36px] select-none relative z-1 print:justify-center">
 				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
-					<Link to="/" className="flex items-center press-down py-[4px]">
+					<Link
+						to="/"
+						className="flex items-center gap-[12px] press-down py-[4px]"
+					>
 						<Header.TempoWordmark />
+						{isTestnet() && <Header.TestnetBadge />}
 					</Link>
 				</div>
 				<Header.Search />
@@ -218,5 +222,17 @@ export namespace Header {
 		export interface Props {
 			className?: string
 		}
+	}
+
+	export function TestnetBadge() {
+		return (
+			<span className="flex h-[28px] shrink-0 items-center justify-center gap-[4px] rounded-[8px] border border-[#2C2C2F] bg-[#1A1A1A] px-[8px] py-[4px] text-[14px] font-medium leading-[140%] text-secondary">
+				<span
+					aria-hidden
+					className="size-[6px] rounded-full bg-amber-400"
+				/>
+				Testnet
+			</span>
+		)
 	}
 }
