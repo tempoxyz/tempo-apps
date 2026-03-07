@@ -345,14 +345,7 @@ function OverviewSection(props: {
 			{knownEvents.length > 0 && (
 				<InfoRow label="Description">
 					<div className="flex flex-col gap-[6px]">
-						<TxEventDescription.ExpandGroup
-							events={knownEvents}
-							limit={5}
-							limitFilter={(event) =>
-								event.type !== 'active key count changed' &&
-								event.type !== 'nonce incremented'
-							}
-						/>
+						<TxEventDescription.ExpandGroup events={knownEvents} />
 						{memos.length > 0 && (
 							<div className="flex flex-row items-center gap-[11px] overflow-hidden">
 								<div className="border-l border-base-border pl-[10px] w-full">
@@ -644,6 +637,12 @@ function groupRelatedEvents(
 	while (i < logs.length) {
 		const log = logs[i]
 		const event = knownEvents[i]
+
+		if (event?.type === 'hidden') {
+			i++
+			continue
+		}
+
 		const eventName = getEventName(log)
 
 		// Transfer = possible group

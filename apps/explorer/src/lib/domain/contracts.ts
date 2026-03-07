@@ -9,6 +9,7 @@ import {
 } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
 import { getChainId, getPublicClient } from 'wagmi/actions'
+import { streamChannelAbi } from './known-events.ts'
 import { isTip20Address } from '#lib/domain/tip20.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
@@ -294,6 +295,17 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			abi: [],
 			category: 'system',
 			address: Addresses.nonceManager,
+		},
+	],
+	[
+		'0x9d136eea063ede5418a6bc7beaff009bbb6cfa70',
+		{
+			name: 'Tempo Stream Channel',
+			code: '0xef',
+			description: 'Payment streaming channels',
+			abi: streamChannelAbi,
+			category: 'system',
+			address: '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70',
 		},
 	],
 ])

@@ -5,9 +5,94 @@ import { decodeFunctionData, parseEventLogs, zeroAddress } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
 import type * as Tip20 from './tip20'
 
-const abi = Object.values(Abis).flat()
+export const streamChannelAbi = [
+	{
+		type: 'event',
+		name: 'ChannelOpened',
+		inputs: [
+			{ indexed: true, name: 'channelId', type: 'bytes32' },
+			{ indexed: true, name: 'payer', type: 'address' },
+			{ indexed: true, name: 'payee', type: 'address' },
+			{ indexed: false, name: 'token', type: 'address' },
+			{ indexed: false, name: 'authorizedSigner', type: 'address' },
+			{ indexed: false, name: 'deposit', type: 'uint256' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'Settled',
+		inputs: [
+			{ indexed: true, name: 'channelId', type: 'bytes32' },
+			{ indexed: true, name: 'payer', type: 'address' },
+			{ indexed: true, name: 'payee', type: 'address' },
+			{ indexed: false, name: 'cumulativeAmount', type: 'uint256' },
+			{ indexed: false, name: 'deltaPaid', type: 'uint256' },
+			{ indexed: false, name: 'newSettled', type: 'uint256' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'CloseRequested',
+		inputs: [
+			{ indexed: true, name: 'channelId', type: 'bytes32' },
+			{ indexed: true, name: 'payer', type: 'address' },
+			{ indexed: true, name: 'payee', type: 'address' },
+			{ indexed: false, name: 'closeGraceEnd', type: 'uint256' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'TopUp',
+		inputs: [
+			{ indexed: true, name: 'channelId', type: 'bytes32' },
+			{ indexed: true, name: 'payer', type: 'address' },
+			{ indexed: true, name: 'payee', type: 'address' },
+			{ indexed: false, name: 'additionalDeposit', type: 'uint256' },
+			{ indexed: false, name: 'newDeposit', type: 'uint256' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'ChannelClosed',
+		inputs: [
+			{ indexed: true, name: 'channelId', type: 'bytes32' },
+			{ indexed: true, name: 'payer', type: 'address' },
+			{ indexed: true, name: 'payee', type: 'address' },
+			{ indexed: false, name: 'settledToPayee', type: 'uint256' },
+			{ indexed: false, name: 'refundedToPayer', type: 'uint256' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'CloseRequestCancelled',
+		inputs: [
+			{ indexed: true, name: 'channelId', type: 'bytes32' },
+			{ indexed: true, name: 'payer', type: 'address' },
+			{ indexed: true, name: 'payee', type: 'address' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'ChannelExpired',
+		inputs: [
+			{ indexed: true, name: 'channelId', type: 'bytes32' },
+			{ indexed: true, name: 'payer', type: 'address' },
+			{ indexed: true, name: 'payee', type: 'address' },
+		],
+		anonymous: false,
+	},
+] as const
+
+const abi = [...Object.values(Abis).flat(), ...streamChannelAbi]
 const FEE_MANAGER = Addresses.feeManager
 const STABLECOIN_EXCHANGE = Addresses.stablecoinDex
+export const STREAM_CHANNEL = '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70'
 
 export type Authorization = {
 	address: Address.Address
@@ -50,6 +135,10 @@ function createDetectors(
 	mintBurnMemos?: Map<string, string>,
 	viewer?: Address.Address,
 	transactionSender?: Address.Address,
+	getStreamChannelToken?: (
+		payer: Address.Address,
+		payee: Address.Address,
+	) => Address.Address | undefined,
 ) {
 	return {
 		tip20(event: ParsedEvent) {
@@ -648,6 +737,174 @@ function createDetectors(
 			return null
 		},
 
+		streamChannel(event: ParsedEvent) {
+			const { eventName, args, address } = event
+
+			if (!Address.isEqual(address, STREAM_CHANNEL)) return null
+
+			if (eventName === 'ChannelOpened') {
+				const { payer, payee, deposit, token } = args as {
+					payer: Address.Address
+					payee: Address.Address
+					deposit: bigint
+					token: Address.Address
+				}
+
+				return {
+					type: 'open channel',
+					parts: [
+						{ type: 'action', value: 'Open Channel' },
+						{ type: 'amount', value: createAmount(deposit, token) },
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: payee },
+					],
+					meta: { from: payer, to: payee },
+				}
+			}
+
+			if (eventName === 'TopUp') {
+				const { payer, payee, additionalDeposit } = args as {
+					payer: Address.Address
+					payee: Address.Address
+					additionalDeposit: bigint
+				}
+				const token = getStreamChannelToken?.(payer, payee)
+
+				return {
+					type: 'top up channel',
+					parts: [
+						{ type: 'action', value: 'Top Up' },
+						token
+							? {
+									type: 'amount',
+									value: createAmount(additionalDeposit, token),
+								}
+							: { type: 'number', value: additionalDeposit },
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: payee },
+					],
+					meta: { from: payer, to: payee },
+				}
+			}
+
+			if (eventName === 'Settled') {
+				const { payer, payee, deltaPaid } = args as {
+					payer: Address.Address
+					payee: Address.Address
+					deltaPaid: bigint
+				}
+				const token = getStreamChannelToken?.(payer, payee)
+
+				return {
+					type: 'settle channel',
+					parts: [
+						{ type: 'action', value: 'Settle' },
+						token
+							? {
+									type: 'amount',
+									value: createAmount(deltaPaid, token),
+								}
+							: { type: 'number', value: deltaPaid },
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: payee },
+					],
+					meta: { from: payer, to: payee },
+				}
+			}
+
+			if (eventName === 'CloseRequested') {
+				const { payer, payee } = args as {
+					payer: Address.Address
+					payee: Address.Address
+				}
+
+				return {
+					type: 'request close channel',
+					parts: [
+						{ type: 'action', value: 'Request Close' },
+						{ type: 'text', value: 'channel with' },
+						{ type: 'account', value: payee },
+					],
+					meta: { from: payer, to: payee },
+				}
+			}
+
+			if (eventName === 'CloseRequestCancelled') {
+				const { payer, payee } = args as {
+					payer: Address.Address
+					payee: Address.Address
+				}
+
+				return {
+					type: 'cancel close channel',
+					parts: [
+						{ type: 'action', value: 'Cancel Close' },
+						{ type: 'text', value: 'channel with' },
+						{ type: 'account', value: payee },
+					],
+					meta: { from: payer, to: payee },
+				}
+			}
+
+			if (eventName === 'ChannelClosed') {
+				const { payer, payee, settledToPayee, refundedToPayer } = args as {
+					payer: Address.Address
+					payee: Address.Address
+					settledToPayee: bigint
+					refundedToPayer: bigint
+				}
+				const token = getStreamChannelToken?.(payer, payee)
+
+				return {
+					type: 'close channel',
+					parts: [
+						{ type: 'action', value: 'Close Channel' },
+						token
+							? {
+									type: 'amount',
+									value: createAmount(settledToPayee, token),
+								}
+							: { type: 'number', value: settledToPayee },
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: payee },
+					],
+					note: [
+						[
+							'Refund',
+							token
+								? {
+										type: 'amount',
+										value: createAmount(refundedToPayer, token),
+									}
+								: { type: 'number', value: refundedToPayer },
+						],
+					],
+					meta: { from: payer, to: payee },
+				}
+			}
+
+			if (eventName === 'ChannelExpired') {
+				const { payer, payee } = args as {
+					payer: Address.Address
+					payee: Address.Address
+				}
+
+				return {
+					type: 'channel expired',
+					parts: [
+						{ type: 'action', value: 'Channel Expired' },
+						{ type: 'text', value: 'between' },
+						{ type: 'account', value: payer },
+						{ type: 'text', value: 'and' },
+						{ type: 'account', value: payee },
+					],
+					meta: { from: payer, to: payee },
+				}
+			}
+
+			return null
+		},
+
 		feePayer(event: ParsedEvent) {
 			const { eventName, args, address } = event
 
@@ -780,7 +1037,10 @@ type FeeManagerAddLiquidityCall = {
 
 export function parseKnownEvent(
 	log: Log,
-	options?: { getTokenMetadata?: Tip20.GetTip20MetadataFn },
+	options?: {
+		getTokenMetadata?: Tip20.GetTip20MetadataFn
+		streamChannelToken?: Address.Address
+	},
 ): KnownEvent | null {
 	const [event] = parseEventLogs({ abi, logs: [log] })
 	if (!event) return null
@@ -797,7 +1057,14 @@ export function parseKnownEvent(
 		return amount
 	}
 
-	const detectors = createDetectors(createAmount, getTokenMetadata)
+	const detectors = createDetectors(
+		createAmount,
+		getTokenMetadata,
+		undefined,
+		undefined,
+		undefined,
+		() => options?.streamChannelToken,
+	)
 
 	const detected =
 		detectors.tip20(event) ||
@@ -807,13 +1074,13 @@ export function parseKnownEvent(
 		detectors.feeManager(event) ||
 		detectors.nonce(event) ||
 		detectors.accountKeychain(event) ||
-		detectors.feeAmm(event)
+		detectors.feeAmm(event) ||
+		detectors.streamChannel(event)
 
 	if (!detected || isFeeTransferEvent(detected)) return null
 	return detected
 }
 
-// e.g. for TxEventDescription.ExpandGroup's limitFilter
 export function preferredEventsFilter(event: KnownEvent): boolean {
 	return (
 		event.type !== 'key authorized' &&
@@ -994,6 +1261,19 @@ export function parseKnownEvents(
 		}
 	}
 
+	const streamChannelTokens = new Map<string, Address.Address>()
+
+	function getStreamChannelToken(
+		payer: Address.Address,
+		payee: Address.Address,
+	): Address.Address | undefined {
+		const key = `${Address.from(payer)}-${Address.from(payee)}`
+		return (
+			streamChannelTokens.get(key) ??
+			streamChannelTokens.get(`${Address.from(payee)}-${Address.from(payer)}`)
+		)
+	}
+
 	// Create detectors after mintBurnMemos is populated so they can access the memos
 	const detectors = createDetectors(
 		createAmount,
@@ -1001,6 +1281,7 @@ export function parseKnownEvents(
 		mintBurnMemos,
 		viewer,
 		transactionSender,
+		getStreamChannelToken,
 	)
 
 	const dedupedEvents = events.filter((event) => {
@@ -1168,10 +1449,62 @@ export function parseKnownEvents(
 		}
 	}
 
+	const streamChannelIndices = new Set<number>()
+	const hasStreamChannelEvents = dedupedEvents.some((event) =>
+		Address.isEqual(event.address, STREAM_CHANNEL),
+	)
+
+	if (hasStreamChannelEvents) {
+		// Collect stream channel events to find payer/payee pairs
+		const streamChannelPairs: Array<{
+			payer: Address.Address
+			payee: Address.Address
+		}> = []
+		for (const event of dedupedEvents) {
+			if (!Address.isEqual(event.address, STREAM_CHANNEL)) continue
+			const args = event.args as {
+				payer?: Address.Address
+				payee?: Address.Address
+			}
+			if (args.payer && args.payee) {
+				streamChannelPairs.push({ payer: args.payer, payee: args.payee })
+			}
+		}
+
+		for (const [index, event] of dedupedEvents.entries()) {
+			if (!isTransferEvent(event)) continue
+
+			const involvesStreamChannel =
+				Address.isEqual(event.args.from, STREAM_CHANNEL) ||
+				Address.isEqual(event.args.to, STREAM_CHANNEL)
+
+			if (!involvesStreamChannel) continue
+
+			streamChannelIndices.add(index)
+
+			// Associate this transfer's token with the matching payer/payee pair
+			const otherParty = Address.isEqual(event.args.from, STREAM_CHANNEL)
+				? event.args.to
+				: event.args.from
+			for (const pair of streamChannelPairs) {
+				if (
+					Address.isEqual(otherParty, pair.payer) ||
+					Address.isEqual(otherParty, pair.payee)
+				) {
+					const key = `${Address.from(pair.payer)}-${Address.from(pair.payee)}`
+					if (!streamChannelTokens.has(key)) {
+						streamChannelTokens.set(key, event.address)
+					}
+				}
+			}
+		}
+	}
+
 	// Map log events to known events.
 	for (let index = 0; index < dedupedEvents.length; index++) {
 		// Skip events that are part of a swap
 		if (swapIndices.has(index)) continue
+		if (streamChannelIndices.has(index)) continue
 
 		const event = dedupedEvents[index]
 
@@ -1184,7 +1517,8 @@ export function parseKnownEvents(
 			detectors.feeManager(event) ||
 			detectors.nonce(event) ||
 			detectors.accountKeychain(event) ||
-			detectors.feeAmm(event)
+			detectors.feeAmm(event) ||
+			detectors.streamChannel(event)
 
 		if (!detected) continue
 

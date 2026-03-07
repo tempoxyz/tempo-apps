@@ -23,10 +23,7 @@ import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#lib/css'
-import {
-	type KnownEvent,
-	preferredEventsFilter,
-} from '#lib/domain/known-events'
+import type { KnownEvent } from '#lib/domain/known-events'
 import { PriceFormatter } from '#lib/formatting.ts'
 import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
@@ -388,24 +385,14 @@ function TransactionDescription(props: TransactionDescriptionProps) {
 			const otherEvents = knownEvents.filter((e) => e !== primaryEvent)
 			const reorderedEvents = [primaryEvent, ...otherEvents]
 
-			return (
-				<TxEventDescription.ExpandGroup
-					events={reorderedEvents}
-					limitFilter={preferredEventsFilter}
-				/>
-			)
+			return <TxEventDescription.ExpandGroup events={reorderedEvents} />
 		}
 		return <span className="text-primary">Deploy contract</span>
 	}
 
 	// knownEvents already has decoded calls prepended (from the loader)
 	if (knownEvents && knownEvents.length > 0)
-		return (
-			<TxEventDescription.ExpandGroup
-				events={knownEvents}
-				limitFilter={preferredEventsFilter}
-			/>
-		)
+		return <TxEventDescription.ExpandGroup events={knownEvents} />
 
 	if (transaction.value === 0n)
 		return (

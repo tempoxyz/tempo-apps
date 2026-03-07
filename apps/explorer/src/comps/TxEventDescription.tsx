@@ -4,7 +4,7 @@ import * as OxAddress from 'ox/Address'
 import type { Address as AddressType } from 'ox'
 import * as Hex from 'ox/Hex'
 import * as Value from 'ox/Value'
-import * as React from 'react'
+import type * as React from 'react'
 import { decodeFunctionData, isAddressEqual } from 'viem'
 import { Address } from '#comps/Address'
 import { Amount } from '#comps/Amount'
@@ -142,7 +142,7 @@ export namespace TxEventDescription {
 			}
 			case 'action':
 				return (
-					<span className="inline-flex items-center h-[24px] px-[5px] bg-base-alt text-base-content capitalize">
+					<span className="inline-flex h-[24px] items-center rounded-[2px] bg-distinct/70 px-[6px] text-primary capitalize">
 						{part.value}
 					</span>
 				)
@@ -217,15 +217,7 @@ export namespace TxEventDescription {
 	}
 
 	export function ExpandGroup(props: ExpandGroup.Props) {
-		const {
-			events,
-			seenAs,
-			transformEvent,
-			emptyContent = '…',
-			limit = 1,
-			limitFilter,
-		} = props
-		const [expanded, setExpanded] = React.useState(false)
+		const { events, seenAs, transformEvent, emptyContent = '…' } = props
 
 		if (!events || events.length === 0)
 			return (
@@ -234,42 +226,18 @@ export namespace TxEventDescription {
 				</div>
 			)
 
-		let eventsToShow = events
-		if (!expanded) {
-			let filtered = limitFilter ? events.filter(limitFilter) : events
-			if (filtered.length === 0) filtered = events
-			eventsToShow = filtered.slice(0, limit)
-		}
-		const remainingCount = events.length - eventsToShow.length
-		const displayEvents = transformEvent
-			? eventsToShow.map(transformEvent)
-			: eventsToShow
+		const displayEvents = transformEvent ? events.map(transformEvent) : events
 
 		return (
 			<div className="flex flex-col gap-[4px] flex-1">
-				{displayEvents.map((event, index) => {
-					const isLast = index === displayEvents.length - 1
-					const showMore = isLast && remainingCount > 0
-					return (
-						<TxEventDescription
-							key={`${event.type}-${index}`}
-							event={event}
-							seenAs={seenAs}
-							className="flex flex-row items-center gap-[6px]"
-							suffix={
-								showMore && (
-									<button
-										type="button"
-										onClick={() => setExpanded(true)}
-										className="text-tertiary cursor-pointer press-down shrink-0"
-									>
-										and {remainingCount} more
-									</button>
-								)
-							}
-						/>
-					)
-				})}
+				{displayEvents.map((event, index) => (
+					<TxEventDescription
+						key={`${event.type}-${index}`}
+						event={event}
+						seenAs={seenAs}
+						className="flex flex-row items-center gap-[6px]"
+					/>
+				))}
 			</div>
 		)
 	}
@@ -280,8 +248,6 @@ export namespace TxEventDescription {
 			seenAs?: AddressType.Address
 			transformEvent?: (event: KnownEvent) => KnownEvent
 			emptyContent?: React.ReactNode
-			limit?: number
-			limitFilter?: (event: KnownEvent) => boolean
 		}
 	}
 }
