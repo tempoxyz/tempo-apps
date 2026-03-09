@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import * as z from 'zod/mini'
 import { Address, Hex } from 'ox'
 import { and, eq, isNull } from 'drizzle-orm'
+import type { BatchItem } from 'drizzle-orm/batch'
 
 import { getRandom } from '@cloudflare/containers'
 import { createPublicClient, http, keccak256 } from 'viem'
@@ -1177,14 +1178,29 @@ async function runVerificationJob(
 		}
 
 		if (signatureRows.length > 0) {
-			await db
-				.insert(signaturesTable)
-				.values(signatureRows)
-				.onConflictDoNothing()
-			await db
-				.insert(compiledContractsSignaturesTable)
-				.values(signatureLinkRows)
-				.onConflictDoNothing()
+			// D1 has a parameter binding limit per statement, so chunk large ABI
+			// inserts and submit them in a single D1 batch (one round-trip).
+			const BATCH_SIZE = 50
+			const statements: Array<BatchItem<'sqlite'>> = []
+			for (let i = 0; i < signatureRows.length; i += BATCH_SIZE) {
+				statements.push(
+					db
+						.insert(signaturesTable)
+						.values(signatureRows.slice(i, i + BATCH_SIZE))
+						.onConflictDoNothing(),
+				)
+			}
+			for (let i = 0; i < signatureLinkRows.length; i += BATCH_SIZE) {
+				statements.push(
+					db
+						.insert(compiledContractsSignaturesTable)
+						.values(signatureLinkRows.slice(i, i + BATCH_SIZE))
+						.onConflictDoNothing(),
+				)
+			}
+			await db.batch(
+				statements as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]],
+			)
 		}
 
 		// Insert verified contract with transformation data
