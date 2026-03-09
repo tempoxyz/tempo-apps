@@ -3,7 +3,7 @@ import * as z from 'zod/mini'
 import { Address, Hex } from 'ox'
 import { and, eq, isNull } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
-import { getContainer } from '@cloudflare/containers'
+import { getRandom } from '@cloudflare/containers'
 import { createPublicClient, http, keccak256 } from 'viem'
 
 import {
@@ -29,6 +29,11 @@ import {
 } from '#bytecode-matching.ts'
 import { chains, chainIds } from '#wagmi.config.ts'
 import { log, sourcifyError, normalizeSourcePath } from '#utilities.ts'
+
+/** Jobs older than this are considered stale and can be retried (5 minutes). */
+const JOB_TTL_MS = 5 * 60 * 1000
+/** Number of container instances to load-balance across. */
+const CONTAINER_INSTANCE_COUNT = 3
 
 /**
  * TODO:
@@ -197,7 +202,10 @@ verifyRoute
 
 			// Check if there's already a pending job for this contract
 			const existingJob = await db
-				.select({ id: verificationJobsTable.id })
+				.select({
+					id: verificationJobsTable.id,
+					startedAt: verificationJobsTable.startedAt,
+				})
 				.from(verificationJobsTable)
 				.where(
 					and(
@@ -209,12 +217,35 @@ verifyRoute
 				.limit(1)
 
 			if (existingJob.length > 0 && existingJob[0]) {
-				return sourcifyError(
-					context,
-					429,
-					'duplicate_verification_request',
-					`Contract ${address} on chain ${chainId} is already being verified.`,
-				)
+				const staleThreshold = new Date(Date.now() - JOB_TTL_MS).toISOString()
+				const jobStarted = existingJob[0].startedAt
+
+				if (jobStarted > staleThreshold) {
+					return sourcifyError(
+						context,
+						429,
+						'duplicate_verification_request',
+						`Contract ${address} on chain ${chainId} is already being verified.`,
+					)
+				}
+
+				// Expire the stale job so a new one can be created
+				await db
+					.update(verificationJobsTable)
+					.set({
+						completedAt: new Date().toISOString(),
+						errorCode: 'timeout',
+						errorData: JSON.stringify({
+							message: `Job timed out after ${JOB_TTL_MS / 1000}s`,
+						}),
+					})
+					.where(eq(verificationJobsTable.id, existingJob[0].id))
+
+				log.info('stale_job_expired', {
+					jobId: existingJob[0].id,
+					chainId,
+					address,
+				})
 			}
 
 			// Create verification job
@@ -269,6 +300,7 @@ verifyRoute
 				const job = await db
 					.select({
 						id: verificationJobsTable.id,
+						startedAt: verificationJobsTable.startedAt,
 						completedAt: verificationJobsTable.completedAt,
 						verifiedContractId: verificationJobsTable.verifiedContractId,
 						errorCode: verificationJobsTable.errorCode,
@@ -284,8 +316,38 @@ verifyRoute
 				if (job.length > 0 && job[0]) {
 					const j = job[0]
 
-					// Job not completed yet
+					// Job not completed yet - check if stale
 					if (!j.completedAt) {
+						const startedAt = j.startedAt
+						const staleThreshold = new Date(
+							Date.now() - JOB_TTL_MS,
+						).toISOString()
+
+						if (startedAt && startedAt < staleThreshold) {
+							// Auto-expire stale job
+							await db
+								.update(verificationJobsTable)
+								.set({
+									completedAt: new Date().toISOString(),
+									errorCode: 'timeout',
+									errorData: JSON.stringify({
+										message: `Job timed out after ${JOB_TTL_MS / 1000}s`,
+									}),
+								})
+								.where(eq(verificationJobsTable.id, verificationId))
+
+							return context.json({
+								isJobCompleted: true,
+								verificationId,
+								contract: null,
+								error: {
+									customCode: 'timeout',
+									message: `Verification job timed out. Please retry.`,
+									errorId: globalThis.crypto.randomUUID(),
+								},
+							})
+						}
+
 						return context.json({
 							isJobCompleted: false,
 							verificationId,
@@ -578,27 +640,51 @@ async function runVerificationJob(
 			return
 		}
 
-		// Compile via container
-		const getContainerFn = deps?.getContainer ?? getContainer
-		const container =
-			env.VERIFICATION_CONTAINER && getContainerFn
-				? getContainerFn(env.VERIFICATION_CONTAINER, 'singleton')
-				: { fetch: (request: Request) => globalThis.fetch(request) }
+		// Compile via container (load-balanced across multiple instances)
 		const compileEndpoint = isVyper
 			? 'http://container/compile/vyper'
 			: 'http://container/compile'
 
-		const compileResponse = await container.fetch(
-			new Request(compileEndpoint, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					compilerVersion,
-					contractIdentifier,
-					input: stdJsonInput,
+		let compileResponse: Response
+		try {
+			const getContainerFn = deps?.getContainer ?? null
+			const container = getContainerFn
+				? getContainerFn(env.VERIFICATION_CONTAINER, jobId)
+				: getRandom(env.VERIFICATION_CONTAINER, CONTAINER_INSTANCE_COUNT)
+
+			compileResponse = await container.fetch(
+				new Request(compileEndpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						compilerVersion,
+						contractIdentifier,
+						input: stdJsonInput,
+					}),
 				}),
-			}),
-		)
+			)
+		} catch (error) {
+			log.error('container_fetch_failed', error, {
+				jobId,
+				chainId,
+				address,
+			})
+			await db
+				.update(verificationJobsTable)
+				.set({
+					completedAt: new Date().toISOString(),
+					errorCode: 'container_error',
+					errorData: JSON.stringify({
+						message:
+							error instanceof Error
+								? error.message
+								: 'Container request failed',
+					}),
+					compilationTime: Date.now() - startTime,
+				})
+				.where(eq(verificationJobsTable.id, jobId))
+			return
+		}
 
 		if (!compileResponse.ok) {
 			const errorText = await compileResponse.text()

@@ -3,7 +3,7 @@ import * as z from 'zod/mini'
 import { Address, Hex } from 'ox'
 import { and, eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
-import { getContainer } from '@cloudflare/containers'
+import { getRandom } from '@cloudflare/containers'
 import { createPublicClient, http, keccak256 } from 'viem'
 
 import {
@@ -179,22 +179,30 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			},
 		}
 
-		// Compile via container
-		const container = getContainer(
-			context.env.VERIFICATION_CONTAINER,
-			'singleton',
-		)
+		// Compile via container (load-balanced across multiple instances)
+		const container = getRandom(context.env.VERIFICATION_CONTAINER, 3)
 
-		const compileResponse = await container.fetch(
-			new Request('http://container/compile/vyper', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					compilerVersion,
-					input: stdJsonInput,
+		let compileResponse: Response
+		try {
+			compileResponse = await container.fetch(
+				new Request('http://container/compile/vyper', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						compilerVersion,
+						input: stdJsonInput,
+					}),
 				}),
-			}),
-		)
+			)
+		} catch (error) {
+			log.error('container_fetch_failed', error, { address, chain })
+			return sourcifyError(
+				context,
+				500,
+				'container_error',
+				error instanceof Error ? error.message : 'Container request failed',
+			)
+		}
 
 		if (!compileResponse.ok) {
 			const errorText = await compileResponse.text()
