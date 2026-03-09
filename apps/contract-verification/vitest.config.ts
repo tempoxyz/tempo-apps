@@ -1,57 +1,59 @@
-import 'dotenv/config'
-import { loadEnv } from 'vite'
-import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config'
+import path from 'node:path'
+import {
+	defineWorkersConfig,
+	readD1Migrations,
+} from '@cloudflare/vitest-pool-workers/config'
 
-// VITEST_ENV controls which chain to test against: devnet | testnet | mainnet
-const vitestEnv = process.env.VITEST_ENV ?? 'devnet'
+import wranglerJSON from '#wrangler.json' with { type: 'json' }
+import { counterFixture } from './test/fixtures/counter.fixture.ts'
 
-const chainConfig = {
-	devnet: { chainId: 31318, name: 'Tempo Devnet' },
-	testnet: { chainId: 42431, name: 'Tempo Moderato' },
-	mainnet: { chainId: 4217, name: 'Tempo Mainnet' },
-} as const
+export default defineWorkersConfig(
+	// @ts-expect-error - TODO: investigate this type issue (it's not a blocker)
+	async () => {
+		const migrationsPath = path.join(import.meta.dirname, 'drizzle')
+		const migrations = await readD1Migrations(migrationsPath)
 
-const selectedChain = chainConfig[vitestEnv]
-if (!selectedChain)
-	throw new Error(
-		`Invalid VITEST_ENV="${vitestEnv}". Must be: devnet | testnet | mainnet`,
-	)
-
-// ast-grep-ignore: no-console-log
-console.log(
-	// ast-grep-ignore: no-leading-whitespace-strings
-	`\nTesting against ${selectedChain.name} (${selectedChain.chainId})\n`,
-)
-
-export default defineWorkersConfig((config) => {
-	const env = loadEnv(config.mode, process.cwd(), '')
-
-	return {
-		test: {
-			env: { ...env },
-			setupFiles: ['./test/setup.ts'],
-			globalSetup: ['./test/global-setup.ts'],
-			poolOptions: {
-				workers: {
-					isolatedStorage: true,
-					wrangler: { configPath: './wrangler.jsonc' },
-					miniflare: {
-						compatibilityDate: '2026-01-20',
-						compatibilityFlags: [
-							'nodejs_compat',
-							'enable_nodejs_tty_module',
-							'enable_nodejs_fs_module',
-							'enable_nodejs_http_modules',
-							'enable_nodejs_perf_hooks_module',
-						],
-						bindings: {
-							TEST_CHAIN_ID: selectedChain.chainId,
-							TEST_CHAIN_NAME: selectedChain.name,
-							VITEST_ENV: vitestEnv,
+		return {
+			test: {
+				setupFiles: ['./test/setup.ts'],
+				include: ['test/**/*.test.ts'],
+				exclude: ['**/_/**'],
+				coverage: {
+					provider: 'istanbul',
+				},
+				deps: {
+					optimizer: {
+						ssr: {
+							enabled: true,
+							include: ['devalue'],
+						},
+					},
+				},
+				poolOptions: {
+					workers: {
+						isolatedStorage: true,
+						singleWorker: true,
+						main: './src/index.tsx',
+						miniflare: {
+							compatibilityDate: wranglerJSON.compatibility_date,
+							compatibilityFlags: wranglerJSON.compatibility_flags,
+							bindings: {
+								NODE_ENV: 'test',
+								BUN_VERSION: '1.3.8',
+								TEMPO_RPC_KEY: 'test-key',
+								WHITELISTED_ORIGINS: 'http://localhost',
+								TEST_MIGRATIONS: migrations,
+								TEST_COMPILER_RESPONSE: JSON.stringify(
+									counterFixture.solcOutput,
+								),
+							},
+							d1Databases: {
+								CONTRACTS_DB: 'test-db-id',
+							},
 						},
 					},
 				},
 			},
-		},
-	}
-})
+		}
+	},
+)

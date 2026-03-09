@@ -5,7 +5,8 @@
 	"imports": {
 		"#*": "./src/*",
 		"#openapi.json": "./openapi.json",
-		"#package.json": "./package.json"
+		"#package.json": "./package.json",
+		"#wrangler.json": "./wrangler.json"
 	},
 	"scripts": {
 		"dev": "vite dev",
@@ -48,6 +49,7 @@
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/bun": "^1.3.7",
 		"@types/node": "catalog:",
+		"@vitest/coverage-istanbul": "3.2.4",
 		"@types/semver": "^7.7.1",
 		"@vitest/ui": "catalog:",
 		"dbmate": "^2.29.3",

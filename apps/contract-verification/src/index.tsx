@@ -29,7 +29,7 @@ const WHITELISTED_ORIGINS = [
 
 type AppEnv = { Bindings: Cloudflare.Env }
 const factory = createFactory<AppEnv>()
-const app = factory.createApp()
+export const app = factory.createApp()
 
 app.onError(handleError)
 
@@ -47,24 +47,26 @@ app.use(
 		},
 	}),
 )
-app.use(
-	rateLimiter<AppEnv>({
-		binding: (context) => context.env.RATE_LIMITER,
-		keyGenerator: (context) =>
-			(context.req.header('X-Real-IP') ??
-				context.req.header('CF-Connecting-IP') ??
-				context.req.header('X-Forwarded-For')) ||
+app.use(async (context, next) => {
+	if (!context.env.RATE_LIMITER) return next()
+
+	return rateLimiter<AppEnv>({
+		binding: context.env.RATE_LIMITER,
+		keyGenerator: (rateLimitContext) =>
+			(rateLimitContext.req.header('X-Real-IP') ??
+				rateLimitContext.req.header('CF-Connecting-IP') ??
+				rateLimitContext.req.header('X-Forwarded-For')) ||
 			'',
-		skip: (context) =>
+		skip: (rateLimitContext) =>
 			WHITELISTED_ORIGINS.some((p) =>
 				originMatches({
-					origin: new URL(context.req.url).hostname,
+					origin: new URL(rateLimitContext.req.url).hostname,
 					pattern: p,
 				}),
 			),
 		message: { error: 'Rate limit exceeded', retryAfter: '60s' },
-	}),
-)
+	})(context, next)
+})
 
 const BODY_LIMIT = 4 * 1024 * 1024 // 4mb
 

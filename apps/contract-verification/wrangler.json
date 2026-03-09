@@ -8,7 +8,6 @@
 	"workers_dev": true,
 	"preview_urls": true,
 	"vars": {
-		// in addition to localhost
 		"WHITELISTED_ORIGINS": "https://tempo.xyz,https://*.tempo.xyz,https://*.porto.workers.dev"
 	},
 	"ratelimits": [

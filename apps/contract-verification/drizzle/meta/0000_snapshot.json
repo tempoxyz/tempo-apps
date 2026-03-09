@@ -1,0 +1,1065 @@
+{
+	"version": "6",
+	"dialect": "sqlite",
+	"id": "b053bf8a-d7c3-42e0-88ed-d256d0ff2ef7",
+	"prevId": "00000000-0000-0000-0000-000000000000",
+	"tables": {
+		"code": {
+			"name": "code",
+			"columns": {
+				"code_hash": {
+					"name": "code_hash",
+					"type": "blob",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"created_by": {
+					"name": "created_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				},
+				"updated_by": {
+					"name": "updated_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				},
+				"code_hash_keccak": {
+					"name": "code_hash_keccak",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"code": {
+					"name": "code",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"code_code_hash_keccak": {
+					"name": "code_code_hash_keccak",
+					"columns": ["code_hash_keccak"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"compiled_contracts_signatures": {
+			"name": "compiled_contracts_signatures",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"compilation_id": {
+					"name": "compilation_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"signature_hash_32": {
+					"name": "signature_hash_32",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"signature_type": {
+					"name": "signature_type",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				}
+			},
+			"indexes": {
+				"compiled_contracts_signatures_signature_idx": {
+					"name": "compiled_contracts_signatures_signature_idx",
+					"columns": ["signature_hash_32"],
+					"isUnique": false
+				},
+				"compiled_contracts_signatures_type_signature_idx": {
+					"name": "compiled_contracts_signatures_type_signature_idx",
+					"columns": ["signature_type", "signature_hash_32"],
+					"isUnique": false
+				},
+				"compiled_contracts_signatures_pseudo_pkey": {
+					"name": "compiled_contracts_signatures_pseudo_pkey",
+					"columns": ["compilation_id", "signature_hash_32", "signature_type"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"compiled_contracts_signatures_compilation_id_compiled_contracts_id_fk": {
+					"name": "compiled_contracts_signatures_compilation_id_compiled_contracts_id_fk",
+					"tableFrom": "compiled_contracts_signatures",
+					"tableTo": "compiled_contracts",
+					"columnsFrom": ["compilation_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				},
+				"compiled_contracts_signatures_signature_hash_32_signatures_signature_hash_32_fk": {
+					"name": "compiled_contracts_signatures_signature_hash_32_signatures_signature_hash_32_fk",
+					"tableFrom": "compiled_contracts_signatures",
+					"tableTo": "signatures",
+					"columnsFrom": ["signature_hash_32"],
+					"columnsTo": ["signature_hash_32"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"compiled_contracts_sources": {
+			"name": "compiled_contracts_sources",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"compilation_id": {
+					"name": "compilation_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"source_hash": {
+					"name": "source_hash",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"path": {
+					"name": "path",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"compiled_contracts_sources_compilation_id": {
+					"name": "compiled_contracts_sources_compilation_id",
+					"columns": ["compilation_id"],
+					"isUnique": false
+				},
+				"compiled_contracts_sources_source_hash": {
+					"name": "compiled_contracts_sources_source_hash",
+					"columns": ["source_hash"],
+					"isUnique": false
+				},
+				"compiled_contracts_sources_pseudo_pkey": {
+					"name": "compiled_contracts_sources_pseudo_pkey",
+					"columns": ["compilation_id", "path"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"compiled_contracts_sources_compilation_id_compiled_contracts_id_fk": {
+					"name": "compiled_contracts_sources_compilation_id_compiled_contracts_id_fk",
+					"tableFrom": "compiled_contracts_sources",
+					"tableTo": "compiled_contracts",
+					"columnsFrom": ["compilation_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				},
+				"compiled_contracts_sources_source_hash_sources_source_hash_fk": {
+					"name": "compiled_contracts_sources_source_hash_sources_source_hash_fk",
+					"tableFrom": "compiled_contracts_sources",
+					"tableTo": "sources",
+					"columnsFrom": ["source_hash"],
+					"columnsTo": ["source_hash"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"compiled_contracts": {
+			"name": "compiled_contracts",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"created_by": {
+					"name": "created_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				},
+				"updated_by": {
+					"name": "updated_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				},
+				"compiler": {
+					"name": "compiler",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"version": {
+					"name": "version",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"language": {
+					"name": "language",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"fully_qualified_name": {
+					"name": "fully_qualified_name",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"compiler_settings": {
+					"name": "compiler_settings",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"compilation_artifacts": {
+					"name": "compilation_artifacts",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"creation_code_hash": {
+					"name": "creation_code_hash",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"creation_code_artifacts": {
+					"name": "creation_code_artifacts",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"runtime_code_hash": {
+					"name": "runtime_code_hash",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"runtime_code_artifacts": {
+					"name": "runtime_code_artifacts",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"compiled_contracts_creation_code_hash": {
+					"name": "compiled_contracts_creation_code_hash",
+					"columns": ["creation_code_hash"],
+					"isUnique": false
+				},
+				"compiled_contracts_runtime_code_hash": {
+					"name": "compiled_contracts_runtime_code_hash",
+					"columns": ["runtime_code_hash"],
+					"isUnique": false
+				},
+				"compiled_contracts_pseudo_pkey": {
+					"name": "compiled_contracts_pseudo_pkey",
+					"columns": [
+						"compiler",
+						"version",
+						"language",
+						"creation_code_hash",
+						"runtime_code_hash"
+					],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"compiled_contracts_creation_code_hash_code_code_hash_fk": {
+					"name": "compiled_contracts_creation_code_hash_code_code_hash_fk",
+					"tableFrom": "compiled_contracts",
+					"tableTo": "code",
+					"columnsFrom": ["creation_code_hash"],
+					"columnsTo": ["code_hash"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				},
+				"compiled_contracts_runtime_code_hash_code_code_hash_fk": {
+					"name": "compiled_contracts_runtime_code_hash_code_code_hash_fk",
+					"tableFrom": "compiled_contracts",
+					"tableTo": "code",
+					"columnsFrom": ["runtime_code_hash"],
+					"columnsTo": ["code_hash"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"contract_deployments": {
+			"name": "contract_deployments",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"created_by": {
+					"name": "created_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				},
+				"updated_by": {
+					"name": "updated_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				},
+				"chain_id": {
+					"name": "chain_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"address": {
+					"name": "address",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"transaction_hash": {
+					"name": "transaction_hash",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"block_number": {
+					"name": "block_number",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"transaction_index": {
+					"name": "transaction_index",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"deployer": {
+					"name": "deployer",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"contract_id": {
+					"name": "contract_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"contract_deployments_address": {
+					"name": "contract_deployments_address",
+					"columns": ["address"],
+					"isUnique": false
+				},
+				"contract_deployments_contract_id": {
+					"name": "contract_deployments_contract_id",
+					"columns": ["contract_id"],
+					"isUnique": false
+				},
+				"contract_deployments_pseudo_pkey": {
+					"name": "contract_deployments_pseudo_pkey",
+					"columns": ["chain_id", "address", "transaction_hash", "contract_id"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"contract_deployments_contract_id_contracts_id_fk": {
+					"name": "contract_deployments_contract_id_contracts_id_fk",
+					"tableFrom": "contract_deployments",
+					"tableTo": "contracts",
+					"columnsFrom": ["contract_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"contracts": {
+			"name": "contracts",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"created_by": {
+					"name": "created_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				},
+				"updated_by": {
+					"name": "updated_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				},
+				"creation_code_hash": {
+					"name": "creation_code_hash",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"runtime_code_hash": {
+					"name": "runtime_code_hash",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"contracts_creation_code_hash": {
+					"name": "contracts_creation_code_hash",
+					"columns": ["creation_code_hash"],
+					"isUnique": false
+				},
+				"contracts_runtime_code_hash": {
+					"name": "contracts_runtime_code_hash",
+					"columns": ["runtime_code_hash"],
+					"isUnique": false
+				},
+				"contracts_pseudo_pkey": {
+					"name": "contracts_pseudo_pkey",
+					"columns": ["creation_code_hash", "runtime_code_hash"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"contracts_creation_code_hash_code_code_hash_fk": {
+					"name": "contracts_creation_code_hash_code_code_hash_fk",
+					"tableFrom": "contracts",
+					"tableTo": "code",
+					"columnsFrom": ["creation_code_hash"],
+					"columnsTo": ["code_hash"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				},
+				"contracts_runtime_code_hash_code_code_hash_fk": {
+					"name": "contracts_runtime_code_hash_code_code_hash_fk",
+					"tableFrom": "contracts",
+					"tableTo": "code",
+					"columnsFrom": ["runtime_code_hash"],
+					"columnsTo": ["code_hash"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"signatures": {
+			"name": "signatures",
+			"columns": {
+				"signature_hash_32": {
+					"name": "signature_hash_32",
+					"type": "blob",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"signature": {
+					"name": "signature",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				}
+			},
+			"indexes": {
+				"signatures_signature_idx": {
+					"name": "signatures_signature_idx",
+					"columns": ["signature"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"sources": {
+			"name": "sources",
+			"columns": {
+				"source_hash": {
+					"name": "source_hash",
+					"type": "blob",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"source_hash_keccak": {
+					"name": "source_hash_keccak",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"content": {
+					"name": "content",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"created_by": {
+					"name": "created_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				},
+				"updated_by": {
+					"name": "updated_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"verification_jobs_ephemeral": {
+			"name": "verification_jobs_ephemeral",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"recompiled_creation_code": {
+					"name": "recompiled_creation_code",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"recompiled_runtime_code": {
+					"name": "recompiled_runtime_code",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"onchain_creation_code": {
+					"name": "onchain_creation_code",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"onchain_runtime_code": {
+					"name": "onchain_runtime_code",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"creation_transaction_hash": {
+					"name": "creation_transaction_hash",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {
+				"verification_jobs_ephemeral_id_verification_jobs_id_fk": {
+					"name": "verification_jobs_ephemeral_id_verification_jobs_id_fk",
+					"tableFrom": "verification_jobs_ephemeral",
+					"tableTo": "verification_jobs",
+					"columnsFrom": ["id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"verification_jobs": {
+			"name": "verification_jobs",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"started_at": {
+					"name": "started_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"completed_at": {
+					"name": "completed_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"chain_id": {
+					"name": "chain_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"contract_address": {
+					"name": "contract_address",
+					"type": "blob",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"verified_contract_id": {
+					"name": "verified_contract_id",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"error_code": {
+					"name": "error_code",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"error_id": {
+					"name": "error_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"error_data": {
+					"name": "error_data",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"verification_endpoint": {
+					"name": "verification_endpoint",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"hardware": {
+					"name": "hardware",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"compilation_time": {
+					"name": "compilation_time",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"external_verification": {
+					"name": "external_verification",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"verification_jobs_chain_id_address_idx": {
+					"name": "verification_jobs_chain_id_address_idx",
+					"columns": ["chain_id", "contract_address"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"verification_jobs_verified_contract_id_verified_contracts_id_fk": {
+					"name": "verification_jobs_verified_contract_id_verified_contracts_id_fk",
+					"tableFrom": "verification_jobs",
+					"tableTo": "verified_contracts",
+					"columnsFrom": ["verified_contract_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"verified_contracts": {
+			"name": "verified_contracts",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"created_at": {
+					"name": "created_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"updated_at": {
+					"name": "updated_at",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(datetime('now'))"
+				},
+				"created_by": {
+					"name": "created_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				},
+				"updated_by": {
+					"name": "updated_by",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'verification-api'"
+				},
+				"deployment_id": {
+					"name": "deployment_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"compilation_id": {
+					"name": "compilation_id",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"creation_match": {
+					"name": "creation_match",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"creation_values": {
+					"name": "creation_values",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"creation_transformations": {
+					"name": "creation_transformations",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"creation_metadata_match": {
+					"name": "creation_metadata_match",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"runtime_match": {
+					"name": "runtime_match",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"runtime_values": {
+					"name": "runtime_values",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"runtime_transformations": {
+					"name": "runtime_transformations",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"runtime_metadata_match": {
+					"name": "runtime_metadata_match",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"verified_contracts_deployment_id": {
+					"name": "verified_contracts_deployment_id",
+					"columns": ["deployment_id"],
+					"isUnique": false
+				},
+				"verified_contracts_compilation_id": {
+					"name": "verified_contracts_compilation_id",
+					"columns": ["compilation_id"],
+					"isUnique": false
+				},
+				"verified_contracts_pseudo_pkey": {
+					"name": "verified_contracts_pseudo_pkey",
+					"columns": ["compilation_id", "deployment_id"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {
+				"verified_contracts_deployment_id_contract_deployments_id_fk": {
+					"name": "verified_contracts_deployment_id_contract_deployments_id_fk",
+					"tableFrom": "verified_contracts",
+					"tableTo": "contract_deployments",
+					"columnsFrom": ["deployment_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				},
+				"verified_contracts_compilation_id_compiled_contracts_id_fk": {
+					"name": "verified_contracts_compilation_id_compiled_contracts_id_fk",
+					"tableFrom": "verified_contracts",
+					"tableTo": "compiled_contracts",
+					"columnsFrom": ["compilation_id"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		}
+	},
+	"views": {},
+	"enums": {},
+	"_meta": {
+		"schemas": {},
+		"tables": {},
+		"columns": {}
+	},
+	"internal": {
+		"indexes": {}
+	}
+}
