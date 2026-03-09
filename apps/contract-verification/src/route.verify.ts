@@ -35,6 +35,11 @@ const JOB_TTL_MS = 5 * 60 * 1000
 /** Number of container instances to load-balance across. */
 const CONTAINER_INSTANCE_COUNT = 3
 
+function timestampToMs(value: string): number {
+	const normalized = value.includes('T') ? value : `${value.replace(' ', 'T')}Z`
+	return new Date(normalized).getTime()
+}
+
 /**
  * TODO:
  * - handle different solc versions
@@ -217,10 +222,11 @@ verifyRoute
 				.limit(1)
 
 			if (existingJob.length > 0 && existingJob[0]) {
-				const staleThreshold = new Date(Date.now() - JOB_TTL_MS).toISOString()
 				const jobStarted = existingJob[0].startedAt
+				const staleThresholdMs = Date.now() - JOB_TTL_MS
+				const jobStartedMs = jobStarted ? timestampToMs(jobStarted) : 0
 
-				if (jobStarted > staleThreshold) {
+				if (jobStartedMs > staleThresholdMs) {
 					return sourcifyError(
 						context,
 						429,
@@ -319,11 +325,9 @@ verifyRoute
 					// Job not completed yet - check if stale
 					if (!j.completedAt) {
 						const startedAt = j.startedAt
-						const staleThreshold = new Date(
-							Date.now() - JOB_TTL_MS,
-						).toISOString()
+						const staleThresholdMs = Date.now() - JOB_TTL_MS
 
-						if (startedAt && startedAt < staleThreshold) {
+						if (startedAt && timestampToMs(startedAt) < staleThresholdMs) {
 							// Auto-expire stale job
 							await db
 								.update(verificationJobsTable)

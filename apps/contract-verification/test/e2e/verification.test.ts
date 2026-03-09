@@ -1,19 +1,29 @@
 import * as z from 'zod/mini'
-import { env, SELF, fetchMock } from 'cloudflare:test'
+import { env, SELF } from 'cloudflare:test'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
-import { describe, it, expect, beforeAll, afterEach } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 import * as DB from '#database/schema.ts'
+import { runVerificationJob } from '#route.verify.ts'
 import { counterFixture } from '../fixtures/counter.fixture.ts'
 
 const VerificationIdSchema = z.object({ verificationId: z.string() })
-const VerificationStatusSchema = z.object({ isJobCompleted: z.boolean() })
-const ErrorResponseSchema = z.object({ customCode: z.string() })
-const RpcBodySchema = z.object({
-	method: z.optional(z.string()),
-	id: z.optional(z.number()),
+const VerificationStatusSchema = z.object({
+	isJobCompleted: z.boolean(),
+	error: z.optional(
+		z.object({
+			customCode: z.string(),
+			message: z.string(),
+		}),
+	),
 })
+const ErrorResponseSchema = z.object({ customCode: z.string() })
+const verifyRequestBody = {
+	stdJsonInput: counterFixture.stdJsonInput,
+	compilerVersion: counterFixture.compilerVersion,
+	contractIdentifier: counterFixture.contractIdentifier,
+} as const
 
 const getFirst = <T>(items: T[], label: string) => {
 	const value = items.at(0)
@@ -21,62 +31,14 @@ const getFirst = <T>(items: T[], label: string) => {
 	return value
 }
 
-beforeAll(() => {
-	fetchMock.activate()
-	fetchMock.disableNetConnect()
-})
-
-afterEach(() => {
-	fetchMock.deactivate()
-	fetchMock.activate()
-	fetchMock.disableNetConnect()
-})
-
 describe('full verification flow', () => {
-	function setupMocks() {
-		fetchMock
-			.get('http://container')
-			.intercept({ path: '/compile', method: 'POST' })
-			.reply(200, counterFixture.solcOutput)
-			.persist()
-
-		fetchMock
-			.get('https://rpc.devnet.tempoxyz.dev')
-			.intercept({ path: '/', method: 'POST' })
-			.reply(200, (opts) => {
-				const parsedBody =
-					typeof opts.body === 'string'
-						? z.safeParse(RpcBodySchema, JSON.parse(opts.body))
-						: undefined
-				const body = parsedBody?.success ? parsedBody.data : undefined
-				if (body?.method === 'eth_getCode') {
-					return {
-						jsonrpc: '2.0',
-						id: body.id,
-						result: counterFixture.onchainRuntimeBytecode,
-					}
-				}
-				if (body?.method === 'eth_chainId') {
-					return { jsonrpc: '2.0', id: body.id, result: '0x7a56' }
-				}
-				return { jsonrpc: '2.0', id: body?.id ?? 1, result: undefined }
-			})
-			.persist()
-	}
-
-	it('verifies a simple contract and persists to database', async () => {
-		setupMocks()
-
+	async function createVerificationJob(): Promise<string> {
 		const verifyResponse = await SELF.fetch(
 			`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					stdJsonInput: counterFixture.stdJsonInput,
-					compilerVersion: counterFixture.compilerVersion,
-					contractIdentifier: counterFixture.contractIdentifier,
-				}),
+				body: JSON.stringify(verifyRequestBody),
 			},
 		)
 
@@ -84,25 +46,66 @@ describe('full verification flow', () => {
 			console.error('Verify failed:', await verifyResponse.clone().text())
 		}
 		expect(verifyResponse.status).toBe(202)
+
 		const verificationIdJson = await verifyResponse.json()
-		const { verificationId } = z.parse(VerificationIdSchema, verificationIdJson)
+		return z.parse(VerificationIdSchema, verificationIdJson).verificationId
+	}
 
-		let isJobCompleted = false
-		let attempts = 0
-		while (!isJobCompleted && attempts < 50) {
-			await new Promise((r) => setTimeout(r, 50))
-			const statusResponse = await SELF.fetch(
-				`https://test.local/v2/verify/${verificationId}`,
-			)
-			const statusJson = await statusResponse.json()
-			isJobCompleted = z.parse(
-				VerificationStatusSchema,
-				statusJson,
-			).isJobCompleted
-			attempts++
-		}
+	async function runSuccessfulVerification(): Promise<string> {
+		const verificationId = await createVerificationJob()
 
-		expect(isJobCompleted).toBe(true)
+		await runVerificationJob(
+			env,
+			verificationId,
+			counterFixture.chainId,
+			counterFixture.address,
+			verifyRequestBody,
+			{
+				createPublicClient: () => ({
+					getCode: async () => counterFixture.onchainRuntimeBytecode,
+				}),
+				getContainer: () => ({
+					fetch: async (request) => {
+						const url = new URL(request.url)
+						if (request.method === 'POST' && url.pathname === '/compile') {
+							return Response.json(counterFixture.solcOutput, { status: 200 })
+						}
+
+						throw new Error(
+							`Unexpected container request: ${request.method} ${request.url}`,
+						)
+					},
+				}),
+			},
+		)
+
+		const statusResponse = await SELF.fetch(
+			`https://test.local/v2/verify/${verificationId}`,
+		)
+		expect(statusResponse.status).toBe(200)
+
+		const status = z.parse(
+			VerificationStatusSchema,
+			await statusResponse.json(),
+		)
+		expect(status.isJobCompleted).toBe(true)
+		expect(status.error).toBeUndefined()
+
+		return verificationId
+	}
+
+	it('verifies a simple contract and persists to database', async () => {
+		const verificationId = await runSuccessfulVerification()
+
+		const statusResponse = await SELF.fetch(
+			`https://test.local/v2/verify/${verificationId}`,
+		)
+		expect(statusResponse.status).toBe(200)
+		const status = z.parse(
+			VerificationStatusSchema,
+			await statusResponse.json(),
+		)
+		expect(status.error).toBeUndefined()
 
 		const lookupResponse = await SELF.fetch(
 			`https://test.local/v2/contract/${counterFixture.chainId}/${counterFixture.address}?fields=sources,signatures`,
@@ -141,40 +144,7 @@ describe('full verification flow', () => {
 	})
 
 	it('persists all related database records correctly', async () => {
-		setupMocks()
-
-		const verifyResponse = await SELF.fetch(
-			`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
-			{
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					stdJsonInput: counterFixture.stdJsonInput,
-					compilerVersion: counterFixture.compilerVersion,
-					contractIdentifier: counterFixture.contractIdentifier,
-				}),
-			},
-		)
-
-		const verificationIdJson = await verifyResponse.json()
-		const { verificationId } = z.parse(VerificationIdSchema, verificationIdJson)
-
-		let isJobCompleted = false
-		let attempts = 0
-		while (!isJobCompleted && attempts < 50) {
-			await new Promise((r) => setTimeout(r, 50))
-			const statusResponse = await SELF.fetch(
-				`https://test.local/v2/verify/${verificationId}`,
-			)
-			const statusJson = await statusResponse.json()
-			isJobCompleted = z.parse(
-				VerificationStatusSchema,
-				statusJson,
-			).isJobCompleted
-			attempts++
-		}
-
-		expect(isJobCompleted).toBe(true)
+		const verificationId = await runSuccessfulVerification()
 
 		const db = drizzle(env.CONTRACTS_DB)
 
@@ -223,51 +193,14 @@ describe('full verification flow', () => {
 	})
 
 	it('returns 409 for already verified contract', async () => {
-		setupMocks()
-
-		const firstResponse = await SELF.fetch(
-			`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
-			{
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					stdJsonInput: counterFixture.stdJsonInput,
-					compilerVersion: counterFixture.compilerVersion,
-					contractIdentifier: counterFixture.contractIdentifier,
-				}),
-			},
-		)
-
-		const verificationIdJson = await firstResponse.json()
-		const { verificationId } = z.parse(VerificationIdSchema, verificationIdJson)
-
-		let isJobCompleted = false
-		let attempts = 0
-		while (!isJobCompleted && attempts < 50) {
-			await new Promise((r) => setTimeout(r, 50))
-			const statusResponse = await SELF.fetch(
-				`https://test.local/v2/verify/${verificationId}`,
-			)
-			const statusJson = await statusResponse.json()
-			isJobCompleted = z.parse(
-				VerificationStatusSchema,
-				statusJson,
-			).isJobCompleted
-			attempts++
-		}
-
-		expect(isJobCompleted).toBe(true)
+		await runSuccessfulVerification()
 
 		const secondResponse = await SELF.fetch(
 			`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					stdJsonInput: counterFixture.stdJsonInput,
-					compilerVersion: counterFixture.compilerVersion,
-					contractIdentifier: counterFixture.contractIdentifier,
-				}),
+				body: JSON.stringify(verifyRequestBody),
 			},
 		)
 

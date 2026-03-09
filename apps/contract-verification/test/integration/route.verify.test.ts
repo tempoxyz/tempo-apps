@@ -88,7 +88,7 @@ contract Token {
 	})
 })
 
-describe('pOST /metadata/:chainId/:address', () => {
+describe('POST /metadata/:chainId/:address', () => {
 	it('returns 501 not implemented', async () => {
 		const response = await app.request(
 			'/v2/verify/metadata/1/0x1234567890123456789012345678901234567890',
@@ -106,7 +106,7 @@ describe('pOST /metadata/:chainId/:address', () => {
 	})
 })
 
-describe('pOST /similarity/:chainId/:address', () => {
+describe('POST /similarity/:chainId/:address', () => {
 	it('returns 501 not implemented', async () => {
 		const response = await app.request(
 			'/v2/verify/similarity/1/0x1234567890123456789012345678901234567890',
