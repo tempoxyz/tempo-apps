@@ -18,16 +18,20 @@ cd "$TEMP_DIR"
 
 forge init --quiet
 
-cast wallet new --json | tee "wallet.json"
+if [ -n "${PRIVATE_KEY:-}" ]; then
+  WALLET_PRIVATE_KEY="$PRIVATE_KEY"
+  WALLET_ADDRESS=$(cast wallet address "$WALLET_PRIVATE_KEY")
+else
+  cast wallet new --json | tee "wallet.json"
+  WALLET_ADDRESS=$(cat "wallet.json" | jq --raw-output '.[0].address')
+  WALLET_PRIVATE_KEY=$(cat "wallet.json" | jq --raw-output '.[0].private_key')
 
-WALLET_ADDRESS=$(cat "wallet.json" | jq --raw-output '.[0].address')
-WALLET_PRIVATE_KEY=$(cat "wallet.json" | jq --raw-output '.[0].private_key')
+  for _ in {1..5}; do
+    cast rpc tempo_fundAddress "$WALLET_ADDRESS" --rpc-url "$TEMPO_RPC_URL" > /dev/null 2>&1 || true
+  done;
+fi
 
 echo "WALLET_ADDRESS: $WALLET_ADDRESS"
-
-for _ in {1..5}; do
-  cast rpc tempo_fundAddress "$WALLET_ADDRESS" --rpc-url "$TEMPO_RPC_URL" > /dev/null 2>&1 || true
-done;
 
 forge script script/Counter.s.sol:CounterScript \
   --tempo.fee-token="$FEE_TOKEN" \
