@@ -5,7 +5,7 @@
 	"timestamp": "2026-01-06T00:00:00Z",
 	"version": {
 		"major": 1,
-		"minor": 0,
+		"minor": 1,
 		"patch": 0
 	},
 	"tokens": [
@@ -55,6 +55,28 @@
 			"extensions": {
 				"chain": "tempo",
 				"label": "ThetaUSD"
+			}
+		},
+		{
+			"name": "Bridged USDC (Stargate)",
+			"symbol": "USDC.e",
+			"decimals": 6,
+			"chainId": 42431,
+			"address": "0x20c0000000000000000000009e8d7eb59b783726",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42431/icons/0x20c0000000000000000000009e8d7eb59b783726.svg",
+			"extensions": {
+				"chain": "tempo"
+			}
+		},
+		{
+			"name": "Bridged EURC (Stargate)",
+			"symbol": "EURC.e",
+			"decimals": 6,
+			"chainId": 42431,
+			"address": "0x20c000000000000000000000d72572838bbee59c",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42431/icons/0x20c000000000000000000000d72572838bbee59c.svg",
+			"extensions": {
+				"chain": "tempo"
 			}
 		}
 	]
