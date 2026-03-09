@@ -342,7 +342,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	const wagmiState = Route.useLoaderData({ select: deserialize<State> })
 
 	const isLoading = useRouterState({
-		select: (state) => state.status === 'pending',
+		select: (state) => {
+			if (state.status !== 'pending') return false
+
+			const resolvedPathname =
+				state.resolvedLocation?.pathname ?? state.location.pathname
+			return state.location.pathname !== resolvedPathname
+		},
 	})
 
 	return (

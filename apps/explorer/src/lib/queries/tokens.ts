@@ -1,4 +1,4 @@
-import { keepPreviousData, queryOptions } from '@tanstack/react-query'
+import { queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import {
 	fetchFirstTransfer,
@@ -46,7 +46,6 @@ export function transfersQueryOptions(params: TransfersQueryParams) {
 			})
 			return data
 		},
-		placeholderData: keepPreviousData,
 	})
 }
 
@@ -63,7 +62,6 @@ export function holdersQueryOptions(params: HoldersQueryParams) {
 			})
 			return data
 		},
-		placeholderData: keepPreviousData,
 	})
 }
 
@@ -105,6 +103,5 @@ export function tokensListQueryOptions(params: {
 					includeHolders: params.includeHolders ?? false,
 				},
 			}),
-		placeholderData: keepPreviousData,
 	})
 }

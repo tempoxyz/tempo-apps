@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useRouterState } from '@tanstack/react-router'
 import * as React from 'react'
 import { Pagination } from '#comps/Pagination'
 import { Sections } from '#comps/Sections'
@@ -23,15 +23,31 @@ export function DataGrid(props: DataGrid.Props) {
 		pagination = 'default',
 		emptyState = 'No items found.',
 		flexible = false,
+		onPrefetchNextPage,
+		onCancelPrefetchNextPage,
 	} = props
 
 	const mode = Sections.useSectionsMode()
+	const isSearchNavigationPending = useRouterState({
+		select: (state) => {
+			if (state.status !== 'pending') return false
+
+			const resolvedPathname =
+				state.resolvedLocation?.pathname ?? state.location.pathname
+			return state.location.pathname === resolvedPathname
+		},
+	})
+	const effectiveLoading = loading || isSearchNavigationPending
 	const activeColumns = mode === 'stacked' ? columns.stacked : columns.tabs
-	const activeItems: DataGrid.Row[] = loading
+	const activeItems: DataGrid.Row[] = effectiveLoading
 		? Array.from({ length: itemsPerPage }, (_, index) => ({
 				cells: activeColumns.map((_, colIndex) => {
 					const cellKey = `skeleton-${index}-${colIndex}`
-					return <div key={cellKey} className="h-[20px]" />
+					return (
+						<div key={cellKey} className="w-full max-w-[180px]">
+							<div className="h-[12px] w-full rounded-[4px] bg-distinct/70 animate-pulse" />
+						</div>
+					)
 				}),
 			}))
 		: items(mode)
@@ -58,6 +74,7 @@ export function DataGrid(props: DataGrid.Props) {
 						flexible && 'min-w-max',
 						mode === 'tabs' && 'max-w-full',
 					)}
+					aria-busy={effectiveLoading}
 					style={{ gridTemplateColumns }}
 				>
 					<div className="grid col-span-full border-b border-dashed border-distinct grid-cols-subgrid">
@@ -173,6 +190,7 @@ export function DataGrid(props: DataGrid.Props) {
 						)
 					})}
 				</div>
+	
 			</div>
 			<div className="mt-auto">
 				{pagination !== 'default' && pagination !== 'simple' ? (
@@ -182,15 +200,17 @@ export function DataGrid(props: DataGrid.Props) {
 						<Pagination.Simple
 							page={page}
 							pages={pages}
-							fetching={fetching && !loading}
+							fetching={fetching && !effectiveLoading}
 							countLoading={countLoading}
 							disableLastPage={disableLastPage}
+							onPrefetchNext={onPrefetchNextPage}
+							onCancelPrefetchNext={onCancelPrefetchNextPage}
 						/>
 						{/* Show transaction count - loading state shown while fetching */}
 						<Pagination.Count
 							totalItems={displayCount ?? 0}
 							itemsLabel={itemsLabel}
-							loading={loading || displayCount == null}
+							loading={effectiveLoading || displayCount == null}
 							capped={displayCountCapped}
 						/>
 					</div>
@@ -252,6 +272,8 @@ export namespace DataGrid {
 		countLoading?: boolean
 		/** Disable "Last page" button when we can't reliably navigate there */
 		disableLastPage?: boolean
+		onPrefetchNextPage?: () => void
+		onCancelPrefetchNextPage?: () => void
 		itemsLabel?: string
 		itemsPerPage?: number
 		pagination?: 'default' | 'simple' | React.ReactNode

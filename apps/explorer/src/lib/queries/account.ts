@@ -1,4 +1,4 @@
-import { keepPreviousData, queryOptions } from '@tanstack/react-query'
+import { queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import type { RpcTransaction } from 'viem'
 import type * as z from 'zod/mini'
@@ -58,7 +58,6 @@ export function transactionsQueryOptions(
 		staleTime: 10_000,
 		refetchInterval: false,
 		refetchOnWindowFocus: false,
-		placeholderData: keepPreviousData,
 	})
 }
 
@@ -115,7 +114,6 @@ export function historyQueryOptions(params: {
 		staleTime: 10_000,
 		refetchInterval: false,
 		refetchOnWindowFocus: false,
-		placeholderData: keepPreviousData,
 	})
 }
 
