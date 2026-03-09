@@ -19,8 +19,10 @@ function Component() {
 
 	return (
 		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
-			<div className="grid place-items-center relative grid-flow-row gap-8 select-none w-full -translate-y-24 z-1">
-				<LandingWords />
+			<div className="grid place-items-center relative grid-flow-row gap-8 select-none w-full z-1">
+				<div className="[@media(max-height:500px)]:hidden">
+					<LandingWords />
+				</div>
 				<div className="w-full px-4 flex justify-center relative z-20">
 					<div className="w-full max-w-[560px]">
 						<ExploreInput
