@@ -1,9 +1,11 @@
 import type { Address, Hex } from 'ox'
+import { encodeAbiParameters } from 'viem'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mockQueryBuilder = vi.hoisted(() => {
 	class MockQueryBuilder {
 		private responses: unknown[] = []
+		private executeCallCount = 0
 
 		setResponses(responses: unknown[]): void {
 			this.responses = [...responses]
@@ -11,13 +13,30 @@ const mockQueryBuilder = vi.hoisted(() => {
 
 		reset(): void {
 			this.responses = []
+			this.executeCallCount = 0
+		}
+
+		getExecuteCallCount(): number {
+			return this.executeCallCount
 		}
 
 		withSignatures(): this {
 			return this
 		}
 
+		with(): this {
+			return this
+		}
+
 		selectFrom(): this {
+			return this
+		}
+
+		selectAll(): this {
+			return this
+		}
+
+		leftJoin(): this {
 			return this
 		}
 
@@ -58,14 +77,17 @@ const mockQueryBuilder = vi.hoisted(() => {
 		}
 
 		async execute(): Promise<unknown> {
+			this.executeCallCount += 1
 			return this.nextResponse()
 		}
 
 		async executeTakeFirst(): Promise<unknown> {
+			this.executeCallCount += 1
 			return this.nextResponse()
 		}
 
 		async executeTakeFirstOrThrow(): Promise<unknown> {
+			this.executeCallCount += 1
 			const response = this.nextResponse()
 			if (response == null) {
 				throw new Error('Missing mock response')
@@ -105,6 +127,7 @@ import {
 	fetchAddressTransferEmittedDistinctCount,
 	fetchAddressTransferEmittedHashes,
 	fetchAddressTransferHashes,
+	fetchAddressTxOnlyHistoryPageWithJoins,
 	fetchAddressTransfersForValue,
 	fetchAddressTxAggregate,
 	fetchAddressTxCounts,
@@ -253,22 +276,41 @@ describe('tempo-queries', () => {
 	})
 
 	it('fetchTokenCreatedMetadata returns metadata rows', async () => {
+		const token =
+			'0x1111111111111111111111111111111111111111' as Address.Address
+		const topic1 =
+			`0x${token.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex
+		const data = encodeAbiParameters(
+			[
+				{ name: 'name', type: 'string' },
+				{ name: 'symbol', type: 'string' },
+				{ name: 'currency', type: 'string' },
+				{ name: 'quoteToken', type: 'address' },
+				{ name: 'admin', type: 'address' },
+				{ name: 'salt', type: 'bytes32' },
+			] as const,
+			[
+				'Token',
+				'TOK',
+				'USD',
+				'0x0000000000000000000000000000000000000000',
+				'0x0000000000000000000000000000000000000001',
+				`0x${'0'.repeat(64)}`,
+			],
+		)
+
 		mockQueryBuilder.setResponses([
 			[
 				{
-					token: '0xToken',
-					name: 'Token',
-					symbol: 'TOK',
-					currency: 'USD',
+					topic1,
+					data,
 				},
 			],
 		])
 
-		await expect(
-			fetchTokenCreatedMetadata(1, ['0xToken' as Address.Address]),
-		).resolves.toEqual([
+		await expect(fetchTokenCreatedMetadata(1, [token])).resolves.toEqual([
 			{
-				token: '0xToken',
+				token,
 				name: 'Token',
 				symbol: 'TOK',
 				currency: 'USD',
@@ -624,6 +666,242 @@ describe('tempo-queries', () => {
 				data: '0x00',
 			},
 		])
+	})
+
+	it('fetchAddressTxOnlyHistoryPageWithJoins uses a single query pipeline', async () => {
+		mockQueryBuilder.setResponses([
+			[
+				{
+					tx_hash: '0xbbb' as Hex.Hex,
+					tx_block_num: 12n,
+					tx_block_timestamp: 112,
+					tx_from: '0x3333',
+					tx_to: '0x4444',
+					tx_value: 7n,
+					tx_input: '0x01' as Hex.Hex,
+					tx_calls: null,
+					receipt_block_num: 12n,
+					receipt_block_timestamp: 112,
+					receipt_from: '0x3333',
+					receipt_to: '0x4444',
+					receipt_status: 1,
+					receipt_gas_used: 21000n,
+					receipt_effective_gas_price: 2n,
+					log_block_num: 12n,
+					log_tx_idx: 1,
+					log_idx: 0,
+					log_address: '0xToken',
+					log_topic0: '0x01',
+					log_topic1: null,
+					log_topic2: null,
+					log_topic3: null,
+					log_data: '0x11',
+				},
+				{
+					tx_hash: '0xbbb' as Hex.Hex,
+					tx_block_num: 12n,
+					tx_block_timestamp: 112,
+					tx_from: '0x3333',
+					tx_to: '0x4444',
+					tx_value: 7n,
+					tx_input: '0x01' as Hex.Hex,
+					tx_calls: null,
+					receipt_block_num: 12n,
+					receipt_block_timestamp: 112,
+					receipt_from: '0x3333',
+					receipt_to: '0x4444',
+					receipt_status: 1,
+					receipt_gas_used: 21000n,
+					receipt_effective_gas_price: 2n,
+					log_block_num: 12n,
+					log_tx_idx: 1,
+					log_idx: 1,
+					log_address: '0xToken',
+					log_topic0: '0x02',
+					log_topic1: null,
+					log_topic2: null,
+					log_topic3: null,
+					log_data: '0x22',
+				},
+				{
+					tx_hash: '0xaaa' as Hex.Hex,
+					tx_block_num: 11n,
+					tx_block_timestamp: 111,
+					tx_from: '0x1111',
+					tx_to: '0x2222',
+					tx_value: 5n,
+					tx_input: '0x00' as Hex.Hex,
+					tx_calls: null,
+					receipt_block_num: 11n,
+					receipt_block_timestamp: 111,
+					receipt_from: '0x1111',
+					receipt_to: '0x2222',
+					receipt_status: 1,
+					receipt_gas_used: 21000n,
+					receipt_effective_gas_price: 2n,
+					log_block_num: null,
+					log_tx_idx: null,
+					log_idx: null,
+					log_address: null,
+					log_topic0: null,
+					log_topic1: null,
+					log_topic2: null,
+					log_topic3: null,
+					log_data: null,
+				},
+			],
+			{ count: '2' },
+		])
+
+		const result = await fetchAddressTxOnlyHistoryPageWithJoins({
+			address: '0x1111' as Address.Address,
+			chainId: 1,
+			includeSent: true,
+			includeReceived: true,
+			sortDirection: 'desc',
+			offset: 0,
+			limit: 1,
+			countCap: 10_000,
+		})
+
+		expect(mockQueryBuilder.getExecuteCallCount()).toBe(2)
+		expect(result.total).toBe(2)
+		expect(result.countCapped).toBe(false)
+		expect(result.hasMore).toBe(true)
+		expect(result.hashes).toEqual([
+			{
+				hash: '0xbbb',
+				block_num: 12n,
+				from: '0x3333',
+				to: '0x4444',
+				value: 7n,
+			},
+		])
+		expect(result.txRows).toEqual([
+			{
+				hash: '0xbbb',
+				block_num: 12n,
+				block_timestamp: 112,
+				from: '0x3333',
+				to: '0x4444',
+				value: 7n,
+				input: '0x01',
+				calls: null,
+			},
+		])
+		expect(result.receiptRows).toEqual([
+			{
+				tx_hash: '0xbbb',
+				block_num: 12n,
+				block_timestamp: 112,
+				from: '0x3333',
+				to: '0x4444',
+				status: 1,
+				gas_used: 21000n,
+				effective_gas_price: 2n,
+			},
+		])
+		expect(result.logRows).toEqual([
+			{
+				tx_hash: '0xbbb',
+				block_num: 12n,
+				tx_idx: 1,
+				log_idx: 0,
+				address: '0xToken',
+				topic0: '0x01',
+				topic1: null,
+				topic2: null,
+				topic3: null,
+				data: '0x11',
+			},
+			{
+				tx_hash: '0xbbb',
+				block_num: 12n,
+				tx_idx: 1,
+				log_idx: 1,
+				address: '0xToken',
+				topic0: '0x02',
+				topic1: null,
+				topic2: null,
+				topic3: null,
+				data: '0x22',
+			},
+		])
+	})
+
+	it('fetchAddressTxOnlyHistoryPageWithJoins caps total count', async () => {
+		mockQueryBuilder.setResponses([
+			[
+				{
+					tx_hash: '0xbbb' as Hex.Hex,
+					tx_block_num: 12n,
+					tx_block_timestamp: 112,
+					tx_from: '0x3333',
+					tx_to: '0x4444',
+					tx_value: 7n,
+					tx_input: '0x01' as Hex.Hex,
+					tx_calls: null,
+					receipt_block_num: 12n,
+					receipt_block_timestamp: 112,
+					receipt_from: '0x3333',
+					receipt_to: '0x4444',
+					receipt_status: 1,
+					receipt_gas_used: 21000n,
+					receipt_effective_gas_price: 2n,
+					log_block_num: null,
+					log_tx_idx: null,
+					log_idx: null,
+					log_address: null,
+					log_topic0: null,
+					log_topic1: null,
+					log_topic2: null,
+					log_topic3: null,
+					log_data: null,
+				},
+				{
+					tx_hash: '0xaaa' as Hex.Hex,
+					tx_block_num: 11n,
+					tx_block_timestamp: 111,
+					tx_from: '0x1111',
+					tx_to: '0x2222',
+					tx_value: 5n,
+					tx_input: '0x00' as Hex.Hex,
+					tx_calls: null,
+					receipt_block_num: 11n,
+					receipt_block_timestamp: 111,
+					receipt_from: '0x1111',
+					receipt_to: '0x2222',
+					receipt_status: 1,
+					receipt_gas_used: 21000n,
+					receipt_effective_gas_price: 2n,
+					log_block_num: null,
+					log_tx_idx: null,
+					log_idx: null,
+					log_address: null,
+					log_topic0: null,
+					log_topic1: null,
+					log_topic2: null,
+					log_topic3: null,
+					log_data: null,
+				},
+			],
+			{ count: '10000' },
+		])
+
+		const result = await fetchAddressTxOnlyHistoryPageWithJoins({
+			address: '0x1111' as Address.Address,
+			chainId: 1,
+			includeSent: true,
+			includeReceived: true,
+			sortDirection: 'desc',
+			offset: 0,
+			limit: 1,
+			countCap: 10_000,
+		})
+
+		expect(result.total).toBe(10_000)
+		expect(result.countCapped).toBe(true)
+		expect(result.hasMore).toBe(true)
 	})
 
 	it('fetchTxDataByHashes returns empty when no hashes provided', async () => {

@@ -3,7 +3,7 @@ import type { Config } from 'wagmi'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import type { Log, TransactionReceipt } from 'viem'
-import { parseEventLogs } from 'viem'
+import { decodeFunctionData, parseEventLogs } from 'viem'
 import { Abis } from 'viem/tempo'
 import { getChainId } from 'wagmi/actions'
 import { Actions } from 'wagmi/tempo'
@@ -17,9 +17,13 @@ import {
 	fetchAddressHistoryTxDetailsByHashes,
 	fetchAddressLogRowsByTxHashes,
 	fetchAddressReceiptRowsByHashes,
+	fetchAddressTxOnlyHistoryPageWithJoins,
 	fetchAddressTransferRowsByTxHashes,
 	fetchAddressTransferEmittedHashes,
 	fetchAddressTransferHashes,
+	type AddressHistoryLogRow,
+	type AddressHistoryReceiptRow,
+	type AddressHistoryTxDetailsRow,
 	type SortDirection,
 } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
@@ -118,14 +122,243 @@ export type HistoryResponse = {
 	error: null | string
 }
 
+type HistoryHashEntry = {
+	hash: Hex.Hex
+	block_num: bigint
+	from?: string
+	to?: string | null
+	value?: bigint
+}
+
+export async function buildTxOnlyTransactions(params: {
+	address: Address.Address
+	hashes: HistoryHashEntry[]
+	txRows: AddressHistoryTxDetailsRow[]
+	receiptRows: AddressHistoryReceiptRow[]
+	logRows: AddressHistoryLogRow[]
+}): Promise<EnrichedTransaction[]> {
+	const receiptMap = new Map(
+		params.receiptRows.map((row) => [row.tx_hash, row] as const),
+	)
+	const txMap = new Map(params.txRows.map((row) => [row.hash, row] as const))
+	const logsByHash = new Map<Hex.Hex, Log[]>()
+
+	for (const row of params.logRows) {
+		const topics = [row.topic0, row.topic1, row.topic2, row.topic3].filter(
+			(topic): topic is Hex.Hex => Boolean(topic),
+		)
+
+		const log = {
+			address: row.address,
+			data: row.data,
+			topics,
+			blockNumber: row.block_num,
+			logIndex: row.log_idx,
+			transactionHash: row.tx_hash,
+			transactionIndex: row.tx_idx,
+			removed: false,
+		} as unknown as Log
+
+		const txLogs = logsByHash.get(row.tx_hash)
+		if (txLogs) {
+			txLogs.push(log)
+		} else {
+			logsByHash.set(row.tx_hash, [log])
+		}
+	}
+
+	const allLogs: Log[] = []
+	for (const txLogs of logsByHash.values()) {
+		allLogs.push(...txLogs)
+	}
+
+	const events = (() => {
+		try {
+			return parseEventLogs({ abi, logs: allLogs })
+		} catch (error) {
+			console.error('[history] failed to parse logs for metadata:', error)
+			return []
+		}
+	})()
+	const tokenAddresses = new Set<Address.Address>()
+	if (isTip20Address(params.address)) tokenAddresses.add(params.address)
+	for (const event of events) {
+		if (isTip20Address(event.address)) {
+			tokenAddresses.add(event.address)
+		}
+	}
+
+	const config = getWagmiConfig()
+	const tokenMetadataEntries = await Promise.all(
+		[...tokenAddresses].map(async (token) => {
+			try {
+				const metadata = await Actions.token.getMetadata(config as Config, {
+					token,
+				})
+				return [token.toLowerCase(), metadata] as const
+			} catch {
+				return [token.toLowerCase(), undefined] as const
+			}
+		}),
+	)
+	const tokenMetadataMap = new Map<string, Metadata | undefined>(
+		tokenMetadataEntries,
+	)
+
+	const getTokenMetadata = (addr: Address.Address) =>
+		tokenMetadataMap.get(addr.toLowerCase())
+
+	function decodeTip20CallEvent(
+		tx: AddressHistoryTxDetailsRow | undefined,
+		sender: Address.Address,
+	): KnownEvent | null {
+		if (!tx?.to || !tx.input || tx.input === '0x') return null
+		if (!isTip20Address(tx.to)) return null
+
+		const createAmount = (value: bigint) => {
+			const metadata = getTokenMetadata(tx.to as Address.Address)
+			return {
+				token: tx.to as Address.Address,
+				value,
+				decimals: metadata?.decimals,
+				symbol: metadata?.symbol,
+			}
+		}
+
+		try {
+			const decoded = decodeFunctionData({ abi: Abis.tip20, data: tx.input })
+
+			switch (decoded.functionName) {
+				case 'mint':
+				case 'mintWithMemo': {
+					const [to, amount] = decoded.args as [Address.Address, bigint]
+					const isMintToRecipient = !Address.isEqual(sender, to)
+
+					return {
+						type: 'mint',
+						parts: [
+							{
+								type: 'action',
+								value: isMintToRecipient ? 'Mint to Recipient' : 'Mint',
+							},
+							{ type: 'amount', value: createAmount(amount) },
+							{ type: 'text', value: 'to' },
+							{ type: 'account', value: to },
+						],
+						meta: { from: sender, to },
+					}
+				}
+				case 'burn':
+				case 'burnWithMemo': {
+					const [amount] = decoded.args as [bigint]
+
+					return {
+						type: 'burn',
+						parts: [
+							{ type: 'action', value: 'Burn' },
+							{ type: 'amount', value: createAmount(amount) },
+							{ type: 'text', value: 'from' },
+							{ type: 'account', value: sender },
+						],
+						meta: { from: sender },
+					}
+				}
+				case 'transfer':
+				case 'transferWithMemo': {
+					const [to, amount] = decoded.args as [Address.Address, bigint]
+
+					return {
+						type: 'send',
+						parts: [
+							{ type: 'action', value: 'Send' },
+							{ type: 'amount', value: createAmount(amount) },
+							{ type: 'text', value: 'to' },
+							{ type: 'account', value: to },
+						],
+						meta: { from: sender, to },
+					}
+				}
+				default:
+					return null
+			}
+		} catch {
+			return null
+		}
+	}
+
+	return params.hashes.map((hashEntry) => {
+		const receipt = receiptMap.get(hashEntry.hash)
+		const tx = txMap.get(hashEntry.hash)
+		const txLogs = logsByHash.get(hashEntry.hash) ?? []
+
+		const fromSource =
+			tx?.from ?? hashEntry.from ?? receipt?.from ?? params.address
+		const toSource = tx?.to ?? hashEntry.to ?? receipt?.to ?? null
+		const valueSource = tx?.value ?? hashEntry.value ?? 0n
+		const blockNumberSource =
+			receipt?.block_num ?? tx?.block_num ?? hashEntry.block_num
+		const timestampSource = receipt?.block_timestamp ?? tx?.block_timestamp ?? 0
+		const status = toHistoryStatus(receipt?.status)
+
+		const receiptForKnownEvents = {
+			from: (receipt?.from ?? fromSource) as Address.Address,
+			to: toSource as Address.Address | null,
+			status,
+			logs: txLogs,
+		} as unknown as TransactionReceipt
+
+		const transactionForKnownEvents = tx
+			? {
+					to: tx.to as Address.Address | null,
+					input: tx.input,
+					data: tx.input,
+					calls: Array.isArray(tx.calls) ? (tx.calls as never) : undefined,
+				}
+			: undefined
+
+		let knownEvents = (() => {
+			try {
+				return parseKnownEvents(receiptForKnownEvents, {
+					transaction: transactionForKnownEvents as never,
+					getTokenMetadata,
+				})
+			} catch (error) {
+				console.error(
+					`[history] failed to parse known events for ${hashEntry.hash}:`,
+					error,
+				)
+				return []
+			}
+		})()
+
+		if (
+			knownEvents.length === 0 ||
+			(knownEvents.length === 1 && knownEvents[0]?.type === 'contract call')
+		) {
+			const callEvent = decodeTip20CallEvent(tx, fromSource as Address.Address)
+			if (callEvent) knownEvents = [callEvent]
+		}
+
+		return {
+			hash: hashEntry.hash,
+			blockNumber: toHexQuantity(blockNumberSource),
+			timestamp: toFiniteTimestamp(timestampSource),
+			from: Address.checksum(fromSource as Address.Address),
+			to: toSource ? Address.checksum(toSource as Address.Address) : null,
+			value: toHexQuantity(valueSource),
+			status,
+			gasUsed: toHexQuantity(receipt?.gas_used),
+			effectiveGasPrice: toHexQuantity(receipt?.effective_gas_price),
+			knownEvents: serializeBigInts(knownEvents),
+		}
+	})
+}
+
 /**
  * Data sources to query for transaction history:
  * - txs: Direct transactions (from/to the address)
  * - transfers: Transfer events where address is sender/recipient
  * - emitted: Transfer events emitted by the address (for token contracts)
- *
- * Default: 'txs,transfers' - skips emitted to avoid expensive queries for tokens
- * For wallet addresses, pass 'txs,transfers,emitted' to include all sources
  */
 type Sources = { txs: boolean; transfers: boolean; emitted: boolean }
 
@@ -209,6 +442,8 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const sources = parseSources(searchParams.sources)
 
 					const fetchSize = limit + 1
+					const isTxOnlySource =
+						sources.txs && !sources.transfers && !sources.emitted
 
 					const bufferSize = Math.min(
 						Math.max(offset + fetchSize, limit * 3),
@@ -234,107 +469,135 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					}
 					type TransferRow = { tx_hash: Hex.Hex; block_num: bigint }
 
-					const emptyDirect: DirectRow[] = []
-					const emptyTransfer: TransferRow[] = []
+					let hasMore = false
+					let finalHashes: HistoryHashEntry[] = []
+					let totalCount = 0
+					let countCapped = false
+					let txOnlyPageResult: Awaited<
+						ReturnType<typeof fetchAddressTxOnlyHistoryPageWithJoins>
+					> | null = null
 
-					const transferQueryParams = {
-						address,
-						chainId,
-						includeSent,
-						includeReceived,
-						sortDirection,
-					}
+					if (isTxOnlySource) {
+						txOnlyPageResult = await fetchAddressTxOnlyHistoryPageWithJoins({
+							address,
+							chainId,
+							includeSent,
+							includeReceived,
+							sortDirection,
+							offset,
+							limit,
+							countCap: HISTORY_COUNT_MAX,
+						})
 
-					const [directResult, transferResult, emittedResult] =
-						await Promise.all([
-							sources.txs
-								? fetchAddressDirectTxHistoryRows(queryParams)
-								: Promise.resolve(emptyDirect),
-							sources.transfers
-								? fetchAddressTransferHashes({
-										...transferQueryParams,
-										limit: bufferSize,
-									}).catch(() => emptyTransfer)
-								: Promise.resolve(emptyTransfer),
-							sources.emitted
-								? fetchAddressTransferEmittedHashes({
-										address,
-										chainId,
-										sortDirection,
-										limit: bufferSize,
-									}).catch(() => emptyTransfer)
-								: Promise.resolve(emptyTransfer),
-						])
-
-					type HashEntry = {
-						hash: Hex.Hex
-						block_num: bigint
-						from?: string
-						to?: string | null
-						value?: bigint
-					}
-					const allHashes = new Map<Hex.Hex, HashEntry>()
-
-					for (const row of directResult)
-						allHashes.set(row.hash, {
+						hasMore = txOnlyPageResult.hasMore
+						totalCount = txOnlyPageResult.total
+						countCapped = txOnlyPageResult.countCapped
+						finalHashes = txOnlyPageResult.hashes.map((row) => ({
 							hash: row.hash,
 							block_num: row.block_num,
 							from: row.from,
 							to: row.to,
 							value: row.value,
+						}))
+					} else {
+						const emptyDirect: DirectRow[] = []
+						const emptyTransfer: TransferRow[] = []
+
+						const transferQueryParams = {
+							address,
+							chainId,
+							includeSent,
+							includeReceived,
+							sortDirection,
+						}
+
+						const [directResult, transferResult, emittedResult] =
+							await Promise.all([
+								sources.txs
+									? fetchAddressDirectTxHistoryRows(queryParams)
+									: Promise.resolve(emptyDirect),
+								sources.transfers
+									? fetchAddressTransferHashes({
+											...transferQueryParams,
+											limit: bufferSize,
+										}).catch(() => emptyTransfer)
+									: Promise.resolve(emptyTransfer),
+								sources.emitted
+									? fetchAddressTransferEmittedHashes({
+											address,
+											chainId,
+											sortDirection,
+											limit: bufferSize,
+										}).catch(() => emptyTransfer)
+									: Promise.resolve(emptyTransfer),
+							])
+
+						const allHashes = new Map<Hex.Hex, HistoryHashEntry>()
+
+						for (const row of directResult)
+							allHashes.set(row.hash, {
+								hash: row.hash,
+								block_num: row.block_num,
+								from: row.from,
+								to: row.to,
+								value: row.value,
+							})
+						for (const row of transferResult)
+							if (!allHashes.has(row.tx_hash))
+								allHashes.set(row.tx_hash, {
+									hash: row.tx_hash,
+									block_num: row.block_num,
+								})
+						for (const row of emittedResult)
+							if (!allHashes.has(row.tx_hash))
+								allHashes.set(row.tx_hash, {
+									hash: row.tx_hash,
+									block_num: row.block_num,
+								})
+
+						// Skip the expensive count query if no source hit its buffer limit —
+						// in that case allHashes already contains every tx hash.
+						const anySourceHitLimit =
+							directResult.length >= bufferSize ||
+							transferResult.length >= bufferSize ||
+							emittedResult.length >= bufferSize
+
+						const countResult = anySourceHitLimit
+							? await fetchAddressHistoryDistinctCount({
+									address,
+									chainId,
+									includeSent,
+									includeReceived,
+									includeTxs: sources.txs,
+									includeTransfers: sources.transfers,
+									includeEmitted: sources.emitted,
+									countCap: HISTORY_COUNT_MAX,
+								})
+							: { count: allHashes.size, capped: false }
+
+						const sortedHashes = [...allHashes.values()].sort((a, b) => {
+							const blockDiff =
+								sortDirection === 'desc'
+									? Number(b.block_num) - Number(a.block_num)
+									: Number(a.block_num) - Number(b.block_num)
+							if (blockDiff !== 0) return blockDiff
+							return sortDirection === 'desc'
+								? b.hash.localeCompare(a.hash)
+								: a.hash.localeCompare(b.hash)
 						})
-					for (const row of transferResult)
-						if (!allHashes.has(row.tx_hash))
-							allHashes.set(row.tx_hash, {
-								hash: row.tx_hash,
-								block_num: row.block_num,
-							})
-					for (const row of emittedResult)
-						if (!allHashes.has(row.tx_hash))
-							allHashes.set(row.tx_hash, {
-								hash: row.tx_hash,
-								block_num: row.block_num,
-							})
 
-					// Skip the expensive count query if no source hit its buffer limit —
-					// in that case allHashes already contains every tx hash.
-					const anySourceHitLimit =
-						directResult.length >= bufferSize ||
-						transferResult.length >= bufferSize ||
-						emittedResult.length >= bufferSize
+						const paginatedHashes = sortedHashes.slice(
+							offset,
+							offset + fetchSize,
+						)
+						hasMore = paginatedHashes.length > limit
+						finalHashes = hasMore
+							? paginatedHashes.slice(0, limit)
+							: paginatedHashes
 
-					const countResult = anySourceHitLimit
-						? await fetchAddressHistoryDistinctCount({
-								address,
-								chainId,
-								includeSent,
-								includeReceived,
-								includeTxs: sources.txs,
-								includeTransfers: sources.transfers,
-								includeEmitted: sources.emitted,
-								countCap: HISTORY_COUNT_MAX,
-							})
-						: { count: allHashes.size, capped: false }
-
-					const sortedHashes = [...allHashes.values()].sort((a, b) => {
-						const blockDiff =
-							sortDirection === 'desc'
-								? Number(b.block_num) - Number(a.block_num)
-								: Number(a.block_num) - Number(b.block_num)
-						if (blockDiff !== 0) return blockDiff
-						return sortDirection === 'desc'
-							? b.hash.localeCompare(a.hash)
-							: a.hash.localeCompare(b.hash)
-					})
-
-					const paginatedHashes = sortedHashes.slice(offset, offset + fetchSize)
-					const hasMore = paginatedHashes.length > limit
-					const finalHashes = hasMore
-						? paginatedHashes.slice(0, limit)
-						: paginatedHashes
-
-					const totalCount = countResult.count
-					const countCapped = countResult.capped
+						totalCount = countResult.count
+						countCapped = countResult.capped
+					}
 
 					if (finalHashes.length === 0) {
 						return Response.json({
@@ -348,7 +611,31 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						} satisfies HistoryResponse)
 					}
 
+					if (isTxOnlySource) {
+						if (!txOnlyPageResult)
+							throw new Error('Missing tx-only history page result')
+
+						const transactions = await buildTxOnlyTransactions({
+							address,
+							hashes: finalHashes,
+							txRows: txOnlyPageResult.txRows,
+							receiptRows: txOnlyPageResult.receiptRows,
+							logRows: txOnlyPageResult.logRows,
+						})
+
+						return Response.json({
+							transactions,
+							total: totalCount,
+							offset,
+							limit,
+							hasMore,
+							countCapped,
+							error: null,
+						} satisfies HistoryResponse)
+					}
+
 					const finalHashValues = finalHashes.map((entry) => entry.hash)
+
 					const [receiptRows, txRows, logRows, transferRows] =
 						await Promise.all([
 							fetchAddressReceiptRowsByHashes(chainId, finalHashValues),

@@ -363,6 +363,7 @@ export async function fetchAddressDirectTxHistoryRows(
 	params: AddressDirectionParams & {
 		sortDirection: SortDirection
 		limit: number
+		offset?: number
 	},
 ): Promise<DirectTxHistoryRow[]> {
 	let directQuery = QB(params.chainId)
@@ -374,6 +375,7 @@ export async function fetchAddressDirectTxHistoryRows(
 	return directQuery
 		.orderBy('block_num', params.sortDirection)
 		.orderBy('hash', params.sortDirection)
+		.offset(Math.max(0, params.offset ?? 0))
 		.limit(params.limit)
 		.execute()
 }
@@ -686,6 +688,247 @@ export async function fetchAddressLogRowsByTxHashes(
 		.orderBy('tx_hash', 'asc')
 		.orderBy('log_idx', 'asc')
 		.execute()
+}
+
+type AddressTxOnlyHistoryJoinedQueryRow = {
+	tx_hash: Hex.Hex | null
+	tx_block_num: bigint | null
+	tx_block_timestamp: number | null
+	tx_from: string | null
+	tx_to: string | null
+	tx_value: bigint | null
+	tx_input: Hex.Hex | null
+	tx_calls: unknown
+	receipt_block_num: bigint | null
+	receipt_block_timestamp: number | null
+	receipt_from: string | null
+	receipt_to: string | null
+	receipt_status: number | null
+	receipt_gas_used: bigint | null
+	receipt_effective_gas_price: bigint | null
+	log_block_num: bigint | null
+	log_tx_idx: number | null
+	log_idx: number | null
+	log_address: Address.Address | null
+	log_topic0: Hex.Hex | null
+	log_topic1: Hex.Hex | null
+	log_topic2: Hex.Hex | null
+	log_topic3: Hex.Hex | null
+	log_data: Hex.Hex | null
+}
+
+export type AddressTxOnlyHistoryPageHash = {
+	hash: Hex.Hex
+	block_num: bigint
+	from: string
+	to: string | null
+	value: bigint
+}
+
+export type AddressTxOnlyHistoryPageWithJoinsResult = {
+	hashes: AddressTxOnlyHistoryPageHash[]
+	txRows: AddressHistoryTxDetailsRow[]
+	receiptRows: AddressHistoryReceiptRow[]
+	logRows: AddressHistoryLogRow[]
+	total: number
+	countCapped: boolean
+	hasMore: boolean
+}
+
+export async function fetchAddressTxOnlyHistoryPageWithJoins(
+	params: AddressDirectionParams & {
+		sortDirection: SortDirection
+		offset: number
+		limit: number
+		countCap: number
+	},
+): Promise<AddressTxOnlyHistoryPageWithJoinsResult> {
+	const fetchSize = params.limit + 1
+
+	let filteredQuery = QB(params.chainId)
+		.selectFrom('txs')
+		.select([
+			'hash',
+			'block_num',
+			'block_timestamp',
+			'from',
+			'to',
+			'value',
+			'input',
+			'calls',
+		])
+
+	filteredQuery = applyAddressDirectionFilter(filteredQuery, params)
+
+	const pagedQuery = filteredQuery
+		.orderBy('block_num', params.sortDirection)
+		.orderBy('hash', params.sortDirection)
+		.offset(Math.max(0, params.offset))
+		.limit(fetchSize)
+
+	const rows = (await QB(params.chainId)
+		.selectFrom(pagedQuery.as('paged'))
+		.leftJoin('receipts', 'receipts.tx_hash', 'paged.hash')
+		.leftJoin('logs', 'logs.tx_hash', 'paged.hash')
+		.select([
+			'paged.hash as tx_hash',
+			'paged.block_num as tx_block_num',
+			'paged.block_timestamp as tx_block_timestamp',
+			'paged.from as tx_from',
+			'paged.to as tx_to',
+			'paged.value as tx_value',
+			'paged.input as tx_input',
+			'paged.calls as tx_calls',
+			'receipts.block_num as receipt_block_num',
+			'receipts.block_timestamp as receipt_block_timestamp',
+			'receipts.from as receipt_from',
+			'receipts.to as receipt_to',
+			'receipts.status as receipt_status',
+			'receipts.gas_used as receipt_gas_used',
+			'receipts.effective_gas_price as receipt_effective_gas_price',
+			'logs.block_num as log_block_num',
+			'logs.tx_idx as log_tx_idx',
+			'logs.log_idx as log_idx',
+			'logs.address as log_address',
+			'logs.topic0 as log_topic0',
+			'logs.topic1 as log_topic1',
+			'logs.topic2 as log_topic2',
+			'logs.topic3 as log_topic3',
+			'logs.data as log_data',
+		])
+		.orderBy('paged.block_num', params.sortDirection)
+		.orderBy('paged.hash', params.sortDirection)
+		.orderBy('logs.log_idx', 'asc')
+		.execute()) as AddressTxOnlyHistoryJoinedQueryRow[]
+
+	const orderedHashMap = new Map<Hex.Hex, AddressTxOnlyHistoryPageHash>()
+	for (const row of rows) {
+		if (
+			!row.tx_hash ||
+			row.tx_block_num === null ||
+			row.tx_from === null ||
+			row.tx_value === null
+		)
+			continue
+
+		if (!orderedHashMap.has(row.tx_hash)) {
+			orderedHashMap.set(row.tx_hash, {
+				hash: row.tx_hash,
+				block_num: row.tx_block_num,
+				from: row.tx_from,
+				to: row.tx_to,
+				value: row.tx_value,
+			})
+		}
+	}
+
+	const orderedHashes = [...orderedHashMap.values()]
+	const hasMore = orderedHashes.length > params.limit
+	const hashes = hasMore ? orderedHashes.slice(0, params.limit) : orderedHashes
+	const selectedHashes = new Set(hashes.map((entry) => entry.hash))
+
+	let total = 0
+	let countCapped = false
+
+	if (hasMore) {
+		const directCount = await fetchAddressDirectTxCount({
+			address: params.address,
+			chainId: params.chainId,
+			includeSent: params.includeSent,
+			includeReceived: params.includeReceived,
+			countCap: params.countCap,
+		})
+		total = directCount
+		countCapped = directCount >= params.countCap
+	} else {
+		const exactCount = params.offset + hashes.length
+		total = Math.min(exactCount, params.countCap)
+		countCapped = exactCount >= params.countCap
+	}
+
+	const txMap = new Map<Hex.Hex, AddressHistoryTxDetailsRow>()
+	const receiptMap = new Map<Hex.Hex, AddressHistoryReceiptRow>()
+	const logRows: AddressHistoryLogRow[] = []
+	const seenLogKeys = new Set<string>()
+
+	for (const row of rows) {
+		if (!row.tx_hash || !selectedHashes.has(row.tx_hash)) continue
+
+		if (
+			!txMap.has(row.tx_hash) &&
+			row.tx_block_num !== null &&
+			row.tx_block_timestamp !== null &&
+			row.tx_from !== null &&
+			row.tx_value !== null &&
+			row.tx_input !== null
+		) {
+			txMap.set(row.tx_hash, {
+				hash: row.tx_hash,
+				block_num: row.tx_block_num,
+				block_timestamp: row.tx_block_timestamp,
+				from: row.tx_from,
+				to: row.tx_to,
+				value: row.tx_value,
+				input: row.tx_input,
+				calls: row.tx_calls,
+			})
+		}
+
+		if (
+			!receiptMap.has(row.tx_hash) &&
+			row.receipt_block_num !== null &&
+			row.receipt_block_timestamp !== null &&
+			row.receipt_from !== null &&
+			row.receipt_gas_used !== null
+		) {
+			receiptMap.set(row.tx_hash, {
+				tx_hash: row.tx_hash,
+				block_num: row.receipt_block_num,
+				block_timestamp: row.receipt_block_timestamp,
+				from: row.receipt_from,
+				to: row.receipt_to,
+				status: row.receipt_status,
+				gas_used: row.receipt_gas_used,
+				effective_gas_price: row.receipt_effective_gas_price,
+			})
+		}
+
+		if (
+			row.log_idx != null &&
+			row.log_block_num != null &&
+			row.log_tx_idx != null &&
+			row.log_address != null &&
+			row.log_data != null
+		) {
+			const logKey = `${row.tx_hash}:${row.log_idx}`
+			if (!seenLogKeys.has(logKey)) {
+				seenLogKeys.add(logKey)
+
+				logRows.push({
+					tx_hash: row.tx_hash,
+					block_num: row.log_block_num,
+					tx_idx: row.log_tx_idx,
+					log_idx: row.log_idx,
+					address: row.log_address,
+					topic0: row.log_topic0,
+					topic1: row.log_topic1,
+					topic2: row.log_topic2,
+					topic3: row.log_topic3,
+					data: row.log_data,
+				})
+			}
+		}
+	}
+
+	return {
+		hashes,
+		txRows: [...txMap.values()],
+		receiptRows: [...receiptMap.values()],
+		logRows,
+		total,
+		countCapped,
+		hasMore,
+	}
 }
 
 export type AddressHistoryTransferRow = {

@@ -58,7 +58,7 @@ import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import {
 	type HistoryResponse,
-	type HistorySources,
+	historySourcesForAddress,
 	historyQueryOptions,
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
@@ -157,7 +157,6 @@ const defaultSearchValues = {
 } as const
 
 const ASSETS_PER_PAGE = 10
-const HISTORY_SOURCES: HistorySources[] = ['txs', 'transfers', 'emitted']
 
 const allTabs = [
 	'transactions',
@@ -267,8 +266,12 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				QUERY_TIMEOUT_MS,
 			)
 
+			const historySources = historySourcesForAddress(
+				address as Address.Address,
+			)
+
 			// Only block on transactions if transactions tab is active.
-			// Include all history sources so token pages can be fully rendered from SSR.
+			// Select history sources from address type so SSR and client stay aligned.
 			const transactionsPromise = isTransactionsTab
 				? timeout(
 						context.queryClient
@@ -278,7 +281,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 									page,
 									limit,
 									offset,
-									sources: ['txs', 'transfers', 'emitted'],
+									sources: historySources,
 								}),
 							)
 							.catch((error) => {
@@ -506,6 +509,10 @@ function RouteComponent() {
 		balancesData,
 		!isToken && (isHoldingsTabActive || balancesData !== undefined),
 	)
+	const historySources = React.useMemo(
+		() => historySourcesForAddress(address),
+		[address],
+	)
 
 	// Prefetch non-active tabs' data after a delay to avoid TIDX query storms
 	const queryClient = useQueryClient()
@@ -517,7 +524,13 @@ function RouteComponent() {
 		const timer = setTimeout(() => {
 			if (tab !== 'transactions') {
 				queryClient.prefetchQuery(
-					historyQueryOptions({ address, page: 1, limit, offset: 0 }),
+					historyQueryOptions({
+						address,
+						page: 1,
+						limit,
+						offset: 0,
+						sources: historySources,
+					}),
 				)
 			}
 			if (tab !== 'holdings' && !isToken) {
@@ -526,7 +539,7 @@ function RouteComponent() {
 		}, 2_000)
 
 		return () => clearTimeout(timer)
-	}, [address, tab, limit, queryClient, isToken])
+	}, [address, tab, limit, queryClient, isToken, historySources])
 
 	return (
 		<div
@@ -724,6 +737,10 @@ function SectionsWrapper(props: {
 
 	// Only auto-refresh on page 1 when transactions tab is active and live=true
 	const shouldAutoRefresh = page === 1 && isTransactionsTabActive && live
+	const historySources = React.useMemo(
+		() => historySourcesForAddress(address),
+		[address],
+	)
 
 	const {
 		data: historyQueryData,
@@ -736,7 +753,7 @@ function SectionsWrapper(props: {
 			page,
 			limit,
 			offset: (page - 1) * limit,
-			sources: HISTORY_SOURCES,
+			sources: historySources,
 		}),
 		initialData: page === 1 ? initialData : undefined,
 		enabled:
@@ -842,7 +859,7 @@ function SectionsWrapper(props: {
 					page: nextPage,
 					limit,
 					offset: (nextPage - 1) * limit,
-					sources: HISTORY_SOURCES,
+					sources: historySources,
 				}),
 			)
 			.catch(() => {})
@@ -850,6 +867,7 @@ function SectionsWrapper(props: {
 		address,
 		countCapped,
 		hasMore,
+		historySources,
 		isTransactionsTabActive,
 		limit,
 		page,
