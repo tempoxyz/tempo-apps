@@ -20,7 +20,7 @@ function Component() {
 	return (
 		<div className="flex flex-1 w-full flex-col text-[16px]">
 			<div className="flex min-h-[42svh] flex-col justify-end">
-				<div className="flex justify-center select-none [@media(max-height:500px)]:hidden">
+				<div className="flex justify-center select-none [@media(max-height:360px)]:hidden">
 					<LandingWords />
 				</div>
 			</div>
