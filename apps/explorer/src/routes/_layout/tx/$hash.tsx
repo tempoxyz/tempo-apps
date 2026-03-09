@@ -331,6 +331,10 @@ function OverviewSection(props: {
 	const maxFee = transaction.maxFeePerGas
 	const maxPriorityFee = transaction.maxPriorityFeePerGas
 	const nonce = transaction.nonce
+	const nonceKey =
+		'nonceKey' in transaction
+			? (transaction.nonceKey as bigint | undefined)
+			: undefined
 	const positionInBlock = receipt.transactionIndex
 	const input = transaction.input
 
@@ -432,9 +436,20 @@ function OverviewSection(props: {
 			<InfoRow label="Transaction Type">
 				<span className="text-primary">{receipt.type}</span>
 			</InfoRow>
-			<InfoRow label="Nonce">
-				<span className="text-primary">{nonce}</span>
-			</InfoRow>
+			{nonceKey !== undefined ? (
+				<>
+					<InfoRow label="Nonce Key">
+						<span className="text-primary">{nonceKey.toString()}</span>
+					</InfoRow>
+					<InfoRow label="Nonce">
+						<span className="text-primary">{nonce}</span>
+					</InfoRow>
+				</>
+			) : (
+				<InfoRow label="Nonce">
+					<span className="text-primary">{nonce}</span>
+				</InfoRow>
+			)}
 			<InfoRow label="Position in Block">
 				<span className="text-primary">{positionInBlock}</span>
 			</InfoRow>
