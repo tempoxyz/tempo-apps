@@ -56,11 +56,26 @@ export function sourcifyError(
 	customCode: string,
 	message: string,
 ) {
+	const requestId =
+		typeof context.get === 'function'
+			? ((context.get('requestId') as string | undefined) ?? undefined)
+			: undefined
+	const errorId = requestId ?? globalThis.crypto.randomUUID()
+
+	if (status >= 400 && status < 500) {
+		logger.warn('http_client_error_response', {
+			status,
+			customCode,
+			message,
+			errorId,
+		})
+	}
+
 	return context.json(
 		{
 			message,
 			customCode,
-			errorId: globalThis.crypto.randomUUID(),
+			errorId,
 		},
 		status,
 	)
@@ -84,11 +99,11 @@ export class AppError extends HTTPException {
 		this.context = options.context ?? {}
 	}
 
-	toJSON() {
+	toJSON(errorId?: string) {
 		return {
 			message: this.message,
 			customCode: this.code,
-			errorId: globalThis.crypto.randomUUID(),
+			errorId: errorId ?? globalThis.crypto.randomUUID(),
 		}
 	}
 }
@@ -106,42 +121,54 @@ function isValidationError(error: Error): boolean {
 
 export function handleError(error: Error, context: Context) {
 	const requestId = context.get('requestId') as string | undefined
+	const errorId = requestId ?? globalThis.crypto.randomUUID()
 
 	if (error instanceof AppError) {
-		logger.warn(error.code, {
+		logger.warn('app_error', {
+			status: error.status,
+			customCode: error.code,
+			errorId,
 			...error.context,
 			cause: error.cause ? formatError(error.cause) : undefined,
 		})
-		return context.json(error.toJSON(), error.status)
+		return context.json(error.toJSON(errorId), error.status)
 	}
 
 	if (error instanceof HTTPException) {
 		logger.warn('http_exception', {
 			status: error.status,
+			errorId,
 			cause: error.cause ? formatError(error.cause) : undefined,
 		})
 		return error.getResponse()
 	}
 
 	if (isValidationError(error)) {
-		logger.warn('validation_error', { error: formatError(error) })
+		logger.warn('validation_error', {
+			errorId,
+			error: formatError(error),
+		})
 		return context.json(
 			{
 				message: error.message,
 				customCode: 'validation_error',
-				errorId: requestId ?? globalThis.crypto.randomUUID(),
+				errorId,
 			},
 			400,
 		)
 	}
 
 	const doMeta = extractDurableObjectErrorMeta(error)
-	logger.error('unhandled_error', { error: formatError(error), ...doMeta })
+	logger.error('unhandled_error', {
+		errorId,
+		error: formatError(error),
+		...doMeta,
+	})
 	return context.json(
 		{
 			message: 'An unexpected error occurred',
 			customCode: 'internal_error',
-			errorId: requestId ?? globalThis.crypto.randomUUID(),
+			errorId,
 		},
 		500,
 	)

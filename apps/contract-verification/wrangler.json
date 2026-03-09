@@ -1,12 +1,13 @@
 {
 	"$schema": "https://esm.sh/wrangler/config-schema.json",
 	"name": "contracts",
-	"compatibility_date": "2026-03-02",
+	"compatibility_date": "2026-03-01",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.tsx",
 	"keep_vars": true,
 	"workers_dev": true,
 	"preview_urls": true,
+	"logpush": true,
 	"vars": {
 		"WHITELISTED_ORIGINS": "https://tempo.xyz,https://*.tempo.xyz,https://*.porto.workers.dev"
 	},

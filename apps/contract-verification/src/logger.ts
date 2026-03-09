@@ -25,7 +25,14 @@ function jsonSink(record: LogRecord): void {
 	const event = record.message
 		.map((v) => (typeof v === 'string' ? v : String(v)))
 		.join('')
-	const payload = JSON.stringify({ event, ...record.properties })
+	const timestamp = new Date(record.timestamp as string | number).toISOString()
+	const payload = JSON.stringify({
+		timestamp,
+		level: record.level,
+		logger: record.category.join('.'),
+		event,
+		...record.properties,
+	})
 
 	switch (record.level) {
 		case 'info': {

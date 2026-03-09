@@ -13,8 +13,12 @@ export class VerificationContainer extends Container<Cloudflare.Env> {
 		const response = await this.containerFetch('http://localhost:8080/health')
 		if (!response.ok) throw new Error('Container health check failed')
 
-		const data = await response.text()
-		logger.info('container_started', { healthResponse: data })
+		await response.text()
+		logger.info('container_started', {
+			defaultPort: this.defaultPort,
+			sleepAfter: this.sleepAfter,
+			healthStatus: response.status,
+		})
 	}
 
 	override onStop(stopParams: StopParams): void {
