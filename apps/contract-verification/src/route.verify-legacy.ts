@@ -62,11 +62,24 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			await context.req.json(),
 		)
 		if (!parsedBody.success) {
-			return sourcifyError(
-				context,
+			const errorId =
+				(context.get('requestId') as string | undefined) ??
+				globalThis.crypto.randomUUID()
+			const error = z.prettifyError(parsedBody.error)
+			logger.warn('legacy_vyper_invalid_request', {
+				errorId,
+				customCode: 'invalid_request',
+				issueCount: parsedBody.error.issues.length,
+				issues: parsedBody.error.issues,
+			})
+			return context.json(
+				{
+					error,
+					message: error,
+					customCode: 'invalid_request',
+					errorId,
+				},
 				400,
-				'invalid_request',
-				`Invalid request body: ${parsedBody.error.message}`,
 			)
 		}
 

@@ -363,7 +363,8 @@ describe('handleError', () => {
 		const warnPayload = JSON.parse(
 			consoleWarnSpy?.mock.calls[0]?.[0] as string,
 		) as Record<string, unknown>
-		expect(warnPayload.event).toBe('invalid_input')
+		expect(warnPayload.event).toBe('app_error')
+		expect(warnPayload.customCode).toBe('invalid_input')
 		expect(warnPayload.requestId).toBe('req-123')
 	})
 
