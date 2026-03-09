@@ -29,7 +29,8 @@
 		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
 		"paths": {
-			"#*": ["./src/*"]
+			"#*": ["./src/*"],
+			"#database": ["./database/*"]
 		},
 		"types": [
 			"node",
@@ -37,7 +38,15 @@
 			"@cloudflare/vitest-pool-workers"
 		]
 	},
-	"include": ["src/**/*", "scripts/**/*", "./container/**/*", "test/**/*"],
+	"include": [
+		"src/**/*",
+		"scripts/**/*",
+		"./container/**/*",
+		"test/**/*",
+		"database",
+		"_/chains.ts",
+		"_/chains.ts"
+	],
 	"files": [
 		"env.d.ts",
 		"reset.d.ts",

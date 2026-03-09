@@ -25,12 +25,18 @@ export const tempoMainnet = {
 	id: 4217,
 	name: 'Tempo Mainnet',
 	blockExplorers: {
-		default: { name: 'Tempo Explorer', url: 'https://explore.tempo.xyz' },
+		default: {
+			name: 'Tempo Explorer',
+			url: 'https://explore.mainnet.tempo.xyz',
+		},
 	},
 	rpcUrls: {
 		default: {
 			http: [
-				`https://proxy.tempo.xyz/rpc/4217?key=${import.meta.env.VITE_TEMPO_MAINNET_RPC_KEY}`,
+				`https://proxy.tempo.xyz/rpc/4217?key=${process.env.TEMPO_RPC_KEY}`,
+			],
+			webSocket: [
+				`wss://proxy.tempo.xyz/rpc/4217?key=${process.env.TEMPO_RPC_KEY}`,
 			],
 		},
 	},
@@ -62,6 +68,21 @@ export const chainFeeTokens = {
 	[tempoTestnet.id]: '0x20c0000000000000000000000000000000000001',
 	[tempoMainnet.id]: '0x20c0000000000000000000000000000000000002',
 } as const
+
+export const sourcifyChains = chains.map((chain) => {
+	const returnValue = {
+		name: chain.name,
+		title: chain.name,
+		chainId: chain.id,
+		rpc: [chain.rpcUrls.default.http, chain.rpcUrls.default.webSocket].flat(),
+		supported: true,
+		etherscanAPI: false,
+		_extra: {},
+	}
+	if (chain?.blockExplorers)
+		returnValue._extra = { blockExplorer: chain?.blockExplorers.default }
+	return returnValue
+})
 
 // Create config as singleton to ensure wagmi/core recognizes chains properly
 let wagmiConfigInstance: ReturnType<typeof createConfig> | null = null

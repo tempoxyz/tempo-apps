@@ -12,8 +12,10 @@ catalog:
   '@hono/zod-validator': ^0.7.6
   '@iconify/json': ^2.2.443
   '@logtape/drizzle-orm': ^2.0.4
+  '@logtape/hono': ^2.0.4
   '@logtape/logtape': ^2.0.4
   '@logtape/pretty': ^2.0.4
+  '@logtape/redaction': ^2.0.4
   '@scalar/api-reference': ^1.44.26
   '@sentry/cloudflare': ^10.40.0
   '@sentry/react': ^10.40.0

@@ -10,7 +10,7 @@ import { counterFixture } from './test/fixtures/counter.fixture.ts'
 export default defineWorkersConfig(
 	// @ts-expect-error - TODO: investigate this type issue (it's not a blocker)
 	async () => {
-		const migrationsPath = path.join(import.meta.dirname, 'drizzle')
+		const migrationsPath = path.join(import.meta.dirname, 'database/drizzle')
 		const migrations = await readD1Migrations(migrationsPath)
 
 		return {

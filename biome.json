@@ -39,9 +39,10 @@
 		"ignoreUnknown": false,
 		"includes": [
 			"**",
+			"!**/_",
 			"!**/routeTree.gen.ts",
 			"!**/tokens-index-*.json",
-			"!**/_"
+			"!**/drizzle/meta/*.json"
 		]
 	},
 	"formatter": {

@@ -47,7 +47,8 @@ export async function configureLogger(
 ): Promise<void> {
 	const debugEnabled =
 		isDebugEnabled ??
-		(process.env.LOG_DEBUG === '1' || process.env.LOG_DEBUG === 'true')
+		(process.env.LOG_LEVEL === 'debug' || process.env.LOG_LEVEL === 'verbose')
+	// (process.env.LOG_DEBUG === '1' || process.env.LOG_DEBUG === 'true')
 	const sinkName =
 		(nodeEnv ?? process.env.NODE_ENV) === 'production' ? 'json' : 'pretty'
 

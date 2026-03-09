@@ -30,10 +30,16 @@ catalogs:
     '@logtape/drizzle-orm':
       specifier: ^2.0.4
       version: 2.0.4
+    '@logtape/hono':
+      specifier: ^2.0.4
+      version: 2.0.4
     '@logtape/logtape':
       specifier: ^2.0.4
       version: 2.0.4
     '@logtape/pretty':
+      specifier: ^2.0.4
+      version: 2.0.4
+    '@logtape/redaction':
       specifier: ^2.0.4
       version: 2.0.4
     '@scalar/api-reference':
@@ -260,13 +266,22 @@ importers:
       '@cloudflare/containers':
         specifier: ^0.1.0
         version: 0.1.0
+      '@hono/zod-validator':
+        specifier: 'catalog:'
+        version: 0.7.6(hono@4.12.2)(zod@4.3.6)
       '@logtape/drizzle-orm':
         specifier: 'catalog:'
         version: 2.0.4(@logtape/logtape@2.0.4)
+      '@logtape/hono':
+        specifier: 'catalog:'
+        version: 2.0.4(@logtape/logtape@2.0.4)(hono@4.12.2)
       '@logtape/logtape':
         specifier: 'catalog:'
         version: 2.0.4
       '@logtape/pretty':
+        specifier: 'catalog:'
+        version: 2.0.4(@logtape/logtape@2.0.4)
+      '@logtape/redaction':
         specifier: 'catalog:'
         version: 2.0.4(@logtape/logtape@2.0.4)
       '@wagmi/core':
@@ -2324,11 +2339,22 @@ packages:
     peerDependencies:
       '@logtape/logtape': ^2.0.4
 
+  '@logtape/hono@2.0.4':
+    resolution: {integrity: sha512-GcRF6QqIFZr+8V+FQyy4yzdG2NWxnqNrBsEJgB/liOSPRw8f7XK9ZDhhWrGu3Rc0xw/Bc4Xx9fx1fX02soXMCA==}
+    peerDependencies:
+      '@logtape/logtape': ^2.0.4
+      hono: ^4.0.0
+
   '@logtape/logtape@2.0.4':
     resolution: {integrity: sha512-Z4COeAMdedcBFuFkXaPFvDPOVuHoEom1hwNnPCIkSyojyikuNguplwPoSG+kZthWrS7GiOJo1USQyjWwIFfTKA==}
 
   '@logtape/pretty@2.0.4':
     resolution: {integrity: sha512-y1nubV70avD9Gx8Q3gcWBlVUsVwpaBdHUntrkkpXIrC/UPRoHuWnBo+FNrtyvgjCEHSbKuxIaOgsE8rxTPEhzg==}
+    peerDependencies:
+      '@logtape/logtape': ^2.0.4
+
+  '@logtape/redaction@2.0.4':
+    resolution: {integrity: sha512-kDMm8GapB50GIa5v64nKAGiwRAeR2sll6Q7k/nrhNHiesR1mxsDFWivFfkcYegnHVDQW9dPWbIlh0iyvi0Lrfg==}
     peerDependencies:
       '@logtape/logtape': ^2.0.4
 
@@ -8193,9 +8219,18 @@ snapshots:
     dependencies:
       '@logtape/logtape': 2.0.4
 
+  '@logtape/hono@2.0.4(@logtape/logtape@2.0.4)(hono@4.12.2)':
+    dependencies:
+      '@logtape/logtape': 2.0.4
+      hono: 4.12.2
+
   '@logtape/logtape@2.0.4': {}
 
   '@logtape/pretty@2.0.4(@logtape/logtape@2.0.4)':
+    dependencies:
+      '@logtape/logtape': 2.0.4
+
+  '@logtape/redaction@2.0.4(@logtape/logtape@2.0.4)':
     dependencies:
       '@logtape/logtape': 2.0.4
 

@@ -4,6 +4,7 @@
 	"type": "module",
 	"imports": {
 		"#*": "./src/*",
+		"#database*": "./database/*",
 		"#openapi.json": "./openapi.json",
 		"#package.json": "./package.json",
 		"#wrangler.json": "./wrangler.json"
@@ -25,9 +26,12 @@
 	},
 	"dependencies": {
 		"@cloudflare/containers": "^0.1.0",
+		"@hono/zod-validator": "catalog:",
 		"@logtape/drizzle-orm": "catalog:",
+		"@logtape/hono": "catalog:",
 		"@logtape/logtape": "catalog:",
 		"@logtape/pretty": "catalog:",
+		"@logtape/redaction": "catalog:",
 		"@wagmi/core": "catalog:",
 		"cbor-x": "^1.6.0",
 		"drizzle-orm": "^0.45.1",
@@ -50,8 +54,8 @@
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/bun": "^1.3.7",
 		"@types/node": "catalog:",
-		"@vitest/coverage-istanbul": "3.2.4",
 		"@types/semver": "^7.7.1",
+		"@vitest/coverage-istanbul": "3.2.4",
 		"@vitest/ui": "catalog:",
 		"dbmate": "^2.29.3",
 		"dotenv": "catalog:",

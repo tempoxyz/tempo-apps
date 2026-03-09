@@ -9,7 +9,7 @@ import { requestId } from 'hono/request-id'
 import { timeout } from 'hono/timeout'
 import { rateLimiter } from 'hono-rate-limiter'
 
-import { sourcifyChains } from '#chains.ts'
+import { sourcifyChains } from '#wagmi.config.ts'
 import { VerificationContainer } from '#container.ts'
 import OpenApiSpec from '#openapi.json' with { type: 'json' }
 import packageJSON from '#package.json' with { type: 'json' }

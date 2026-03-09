@@ -18,7 +18,8 @@ const dbCredentials = (
 ) satisfies DbCredentials
 
 export default defineConfig({
-	schema: './src/database/schema.ts',
+	out: './database/drizzle',
+	schema: './database/schema.ts',
 	// Use local SQLite for migrations, d1-http for remote
 	...(isLocal
 		? { dbCredentials, dialect: 'turso' }

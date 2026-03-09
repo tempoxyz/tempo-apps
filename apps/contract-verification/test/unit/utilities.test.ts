@@ -16,6 +16,7 @@ import {
 	normalizeSourcePath,
 	sourcifyError,
 } from '#utilities.ts'
+import type { Context } from 'hono'
 
 beforeAll(async () => {
 	await configureLogger('production', false)
@@ -190,9 +191,9 @@ describe('log', () => {
 					method: 'POST',
 					path: '/api/verify',
 				},
-			}
+			} as unknown as Context
 
-			const contextLog = log.fromContext(mockContext as any)
+			const contextLog = log.fromContext(mockContext)
 			contextLog.info('context_event', { extra: 'data' })
 
 			const output = JSON.parse(
@@ -209,9 +210,9 @@ describe('log', () => {
 			const mockContext = {
 				get: vi.fn(() => 'req-456'),
 				req: { method: 'GET', path: '/api/lookup' },
-			}
+			} as unknown as Context
 
-			const contextLog = log.fromContext(mockContext as any)
+			const contextLog = log.fromContext(mockContext)
 			contextLog.warn('context_warn')
 
 			const output = JSON.parse(
@@ -224,9 +225,9 @@ describe('log', () => {
 			const mockContext = {
 				get: vi.fn(() => 'req-789'),
 				req: { method: 'DELETE', path: '/api/remove' },
-			}
+			} as unknown as Context
 
-			const contextLog = log.fromContext(mockContext as any)
+			const contextLog = log.fromContext(mockContext)
 			contextLog.error('context_error', new Error('Oops'))
 
 			const output = JSON.parse(
@@ -243,14 +244,9 @@ describe('sourcifyError', () => {
 	it('returns JSON error response with correct status', () => {
 		const mockContext = {
 			json: vi.fn((body, status) => ({ body, status })),
-		}
+		} as unknown as Context
 
-		sourcifyError(
-			mockContext as any,
-			400,
-			'invalid_input',
-			'Invalid request body',
-		)
+		sourcifyError(mockContext, 400, 'invalid_input', 'Invalid request body')
 
 		expect(mockContext.json).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -269,10 +265,10 @@ describe('sourcifyError', () => {
 				ids.push(body.errorId)
 				return body
 			}),
-		}
+		} as unknown as Context
 
-		sourcifyError(mockContext as any, 400, 'test', 'msg')
-		sourcifyError(mockContext as any, 400, 'test', 'msg')
+		sourcifyError(mockContext, 400, 'test', 'msg')
+		sourcifyError(mockContext, 400, 'test', 'msg')
 
 		expect(ids[0]).not.toBe(ids[1])
 	})
@@ -348,7 +344,7 @@ describe('handleError', () => {
 			get: vi.fn(() => 'req-123'),
 			req: { method: 'POST', path: '/verify' },
 			json: vi.fn((body, status) => ({ body, status })),
-		}
+		} as unknown as Context
 
 		const error = new AppError({
 			status: 400,
@@ -357,7 +353,7 @@ describe('handleError', () => {
 			context: { field: 'address' },
 		})
 
-		handleError(error, mockContext as any)
+		handleError(error, mockContext)
 
 		expect(mockContext.json).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -380,11 +376,11 @@ describe('handleError', () => {
 			get: vi.fn(() => 'req-456'),
 			req: { method: 'GET', path: '/lookup' },
 			json: vi.fn((body, status) => ({ body, status })),
-		}
+		} as unknown as Context
 
 		const error = new Error('Unexpected error')
 
-		handleError(error, mockContext as any)
+		handleError(error, mockContext)
 
 		expect(mockContext.json).toHaveBeenCalledWith(
 			expect.objectContaining({
