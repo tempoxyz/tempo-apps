@@ -18,13 +18,13 @@ function Component() {
 	}, [router])
 
 	return (
-		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
-			<div className="grid place-items-center relative grid-flow-row gap-8 select-none w-full z-1">
-				<div className="[@media(max-height:500px)]:hidden">
-					<LandingWords />
-				</div>
-				<div className="w-full px-4 flex justify-center relative z-20">
-					<div className="w-full max-w-[560px]">
+		<div className="grid h-full w-full grid-rows-[minmax(2rem,1fr)_auto_minmax(2rem,1.2fr)] text-[16px]">
+			<div className="row-start-2 mx-auto w-full max-w-[560px] px-4">
+				<div className="grid place-items-center gap-8 select-none">
+					<div className="[@media(max-height:500px)]:hidden">
+						<LandingWords />
+					</div>
+					<div className="w-full relative z-20">
 						<ExploreInput
 							autoFocus
 							size="large"
