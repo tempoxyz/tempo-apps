@@ -2,10 +2,13 @@ import { prettyFormatter } from '@logtape/pretty'
 import { getLogger as getDrizzleLogger } from '@logtape/drizzle-orm'
 import {
 	configure,
+	dispose,
 	getConsoleSink,
 	getLogger,
 	type LogRecord,
 } from '@logtape/logtape'
+
+export { dispose }
 
 const APP_CATEGORY = 'tempo'
 
@@ -45,10 +48,8 @@ export async function configureLogger(
 	nodeEnv?: string,
 	isDebugEnabled?: boolean,
 ): Promise<void> {
-	const debugEnabled =
-		isDebugEnabled ??
-		(process.env.LOG_LEVEL === 'debug' || process.env.LOG_LEVEL === 'verbose')
-	// (process.env.LOG_DEBUG === '1' || process.env.LOG_DEBUG === 'true')
+	const debugEnabled = isDebugEnabled ?? process.env.VITE_LOG_LEVEL === 'debug'
+
 	const sinkName =
 		(nodeEnv ?? process.env.NODE_ENV) === 'production' ? 'json' : 'pretty'
 
@@ -57,9 +58,19 @@ export async function configureLogger(
 		sinks: {
 			json: jsonSink,
 			pretty: getConsoleSink({ formatter: prettyFormatter }),
+			meta: getConsoleSink(),
 		},
 		loggers: [
-			{ category: [APP_CATEGORY], lowestLevel: 'info', sinks: [sinkName] },
+			{
+				category: [APP_CATEGORY],
+				lowestLevel: debugEnabled ? 'debug' : 'info',
+				sinks: [sinkName],
+			},
+			{
+				category: [APP_CATEGORY, 'http'],
+				lowestLevel: debugEnabled ? 'debug' : 'info',
+				sinks: [sinkName],
+			},
 			{
 				category: [APP_CATEGORY, 'db'],
 				lowestLevel: debugEnabled ? 'debug' : 'warning',
@@ -68,7 +79,7 @@ export async function configureLogger(
 			{
 				category: ['logtape', 'meta'],
 				lowestLevel: 'warning',
-				sinks: [sinkName],
+				sinks: ['meta'],
 			},
 		],
 	})

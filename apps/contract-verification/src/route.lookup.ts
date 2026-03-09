@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { Address, Hex } from 'ox'
-import { drizzle } from 'drizzle-orm/d1'
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
 
 import {
@@ -14,7 +13,7 @@ import {
 	compiledContractsSignaturesTable,
 } from '#database/schema.ts'
 import { chainIds } from '#wagmi.config.ts'
-import { log, sourcifyError } from '#utilities.ts'
+import { getDb, log, sourcifyError } from '#utilities.ts'
 
 /**
  * GET /v2/contract/{chainId}/{address}
@@ -40,7 +39,7 @@ lookupRoute
 					`Invalid address: ${address}`,
 				)
 
-			const db = drizzle(context.env.CONTRACTS_DB)
+			const db = getDb(context.env.CONTRACTS_DB)
 			const addressBytes = Hex.toBytes(address)
 
 			// Query all verified contracts at this address across all chains
@@ -140,7 +139,7 @@ lookupRoute
 					'Cannot use both fields and omit query parameters simultaneously',
 				)
 
-			const db = drizzle(context.env.CONTRACTS_DB)
+			const db = getDb(context.env.CONTRACTS_DB)
 			const addressBytes = Hex.toBytes(address)
 
 			// Query verified contract at this address on the specified chain
@@ -559,7 +558,7 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 		const sortOrder = sort === 'asc' ? 'asc' : 'desc'
 		const limitNum = Math.min(Math.max(Number(limit) || 200, 1), 200)
 
-		const db = drizzle(context.env.CONTRACTS_DB)
+		const db = getDb(context.env.CONTRACTS_DB)
 
 		// Build query
 		const query = db

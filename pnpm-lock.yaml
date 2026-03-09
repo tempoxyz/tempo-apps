@@ -27,6 +27,9 @@ catalogs:
     '@iconify/json':
       specifier: ^2.2.443
       version: 2.2.443
+    '@logtape/config':
+      specifier: ^2.0.4
+      version: 2.0.4
     '@logtape/drizzle-orm':
       specifier: ^2.0.4
       version: 2.0.4
@@ -269,6 +272,9 @@ importers:
       '@hono/zod-validator':
         specifier: 'catalog:'
         version: 0.7.6(hono@4.12.2)(zod@4.3.6)
+      '@logtape/config':
+        specifier: 'catalog:'
+        version: 2.0.4(@logtape/logtape@2.0.4)
       '@logtape/drizzle-orm':
         specifier: 'catalog:'
         version: 2.0.4(@logtape/logtape@2.0.4)
@@ -336,6 +342,9 @@ importers:
       '@scalar/api-reference':
         specifier: 'catalog:'
         version: 1.44.26(axios@1.13.4)(change-case@5.4.4)(tailwindcss@4.2.1)(typescript@5.9.3)
+      '@scalar/types':
+        specifier: ^0.7.0
+        version: 0.7.0
       '@total-typescript/ts-reset':
         specifier: 'catalog:'
         version: 0.6.1
@@ -2334,6 +2343,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@logtape/config@2.0.4':
+    resolution: {integrity: sha512-uC/R6zxQizU5m8zyRuR8k3wv74GaKAFZYeoKoZt0PiBJ7x1h5EtJ6+xp70PNwBeg2MjID/S/pzej01I+hYPYxg==}
+    peerDependencies:
+      '@logtape/logtape': ^2.0.4
+
   '@logtape/drizzle-orm@2.0.4':
     resolution: {integrity: sha512-JCTcUeiyW1cA0zzi8OMINku6IteaiFss4YfFq9dqfGcuMSMYsEw1/FL9uCJ2A1qs+jZGdEZK/iKRAh6Igx+3Qw==}
     peerDependencies:
@@ -2767,6 +2781,10 @@ packages:
     resolution: {integrity: sha512-JlDUKdmwAHdcFUdTngNtx/uhLKTBACXlgvri7iKb6Jx6ImRIBgHwxZNAqlil1L047+QBrKh97lnezNpzNQAffQ==}
     engines: {node: '>=20'}
 
+  '@scalar/helpers@0.3.0':
+    resolution: {integrity: sha512-lhQdehgighJC+PiSTJbbggM/SM3UydcRQil6Cfp/M4l539qklIh35pt4eh1+H+5Esa03gHnJwhTHF3TwglSOJw==}
+    engines: {node: '>=22'}
+
   '@scalar/icons@0.5.2':
     resolution: {integrity: sha512-jN0qXmaR1zGW9vZ5HUkhD1StM+52t+GONYstbo199h7tDYSsY+oWxtkuYqdWESiNg1VtNyJ9PruMmTi/PVyq/A==}
     engines: {node: '>=20'}
@@ -2861,6 +2879,10 @@ packages:
   '@scalar/types@0.6.7':
     resolution: {integrity: sha512-ihHaoPF9qQR05pV3mfE7yBlHQdm5CoJVE0HiJFH6xSrzLfk2yJ6XdD3OzyRCqyxkZ38bj2RIZMS6LJsGy4p66g==}
     engines: {node: '>=20'}
+
+  '@scalar/types@0.7.0':
+    resolution: {integrity: sha512-IkG62M4ztmqkYNVhLpcswBojlQctbXLdkDa3UFsY8FfT7yfZ2LppjptycW9tWjD09ZQb4QAZ070FAUHmFRIS7w==}
+    engines: {node: '>=22'}
 
   '@scalar/use-codemirror@0.13.29':
     resolution: {integrity: sha512-7WuoPl/u3X7mTHTEkxMCyvFirsevVnvldTykavYvHWSdbjL4ZX1HuFz7jRqtA4rjCEF6aMxyhmR/2k/bgMdVGQ==}
@@ -8215,6 +8237,10 @@ snapshots:
   '@libsql/win32-x64-msvc@0.5.22':
     optional: true
 
+  '@logtape/config@2.0.4(@logtape/logtape@2.0.4)':
+    dependencies:
+      '@logtape/logtape': 2.0.4
+
   '@logtape/drizzle-orm@2.0.4(@logtape/logtape@2.0.4)':
     dependencies:
       '@logtape/logtape': 2.0.4
@@ -8845,6 +8871,8 @@ snapshots:
 
   '@scalar/helpers@0.2.16': {}
 
+  '@scalar/helpers@0.3.0': {}
+
   '@scalar/icons@0.5.2(typescript@5.9.3)':
     dependencies:
       '@phosphor-icons/core': 2.1.1
@@ -9034,6 +9062,13 @@ snapshots:
   '@scalar/types@0.6.7':
     dependencies:
       '@scalar/helpers': 0.2.16
+      nanoid: 5.1.6
+      type-fest: 5.4.3
+      zod: 4.3.6
+
+  '@scalar/types@0.7.0':
+    dependencies:
+      '@scalar/helpers': 0.3.0
       nanoid: 5.1.6
       type-fest: 5.4.3
       zod: 4.3.6

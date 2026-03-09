@@ -1,9 +1,16 @@
 import type { Context } from 'hono'
 import { env } from 'cloudflare:workers'
+import { drizzle } from 'drizzle-orm/d1'
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
-import { getAppLogger } from '#logger.ts'
+import { getAppLogger, getDatabaseLogger } from '#logger.ts'
+
+const dbLogger = getDatabaseLogger()
+
+export function getDb(d1: D1Database) {
+	return drizzle(d1, { logger: dbLogger })
+}
 
 type LogData = Record<string, unknown>
 

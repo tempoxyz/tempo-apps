@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import * as z from 'zod/mini'
 import { Address, Hex } from 'ox'
 import { and, eq, isNull } from 'drizzle-orm'
-import { drizzle } from 'drizzle-orm/d1'
+
 import { getRandom } from '@cloudflare/containers'
 import { createPublicClient, http, keccak256 } from 'viem'
 
@@ -28,7 +28,7 @@ import {
 	getVyperImmutableReferences,
 } from '#bytecode-matching.ts'
 import { chains, chainIds } from '#wagmi.config.ts'
-import { log, sourcifyError, normalizeSourcePath } from '#utilities.ts'
+import { getDb, log, sourcifyError, normalizeSourcePath } from '#utilities.ts'
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
 /** Jobs older than this are considered stale and can be retried (5 minutes). */
@@ -170,7 +170,7 @@ verifyRoute
 				)
 			}
 
-			const db = drizzle(context.env.CONTRACTS_DB)
+			const db = getDb(context.env.CONTRACTS_DB)
 			const addressBytes = Hex.toBytes(address)
 
 			// Check if already verified
@@ -320,7 +320,7 @@ verifyRoute
 	.get('/:verificationId', async (context) => {
 		try {
 			const { verificationId } = context.req.param()
-			const db = drizzle(context.env.CONTRACTS_DB)
+			const db = getDb(context.env.CONTRACTS_DB)
 
 			// First check if this is a job ID (UUID format)
 			const isJobId =
@@ -631,7 +631,7 @@ async function runVerificationJob(
 	body: VerificationInput,
 	deps?: VerificationDeps,
 ): Promise<void> {
-	const db = drizzle(env.CONTRACTS_DB)
+	const db = getDb(env.CONTRACTS_DB)
 	Hex.assert(address)
 	const addressBytes = Hex.toBytes(address)
 	const startTime = Date.now()

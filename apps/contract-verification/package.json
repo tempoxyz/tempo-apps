@@ -27,6 +27,7 @@
 	"dependencies": {
 		"@cloudflare/containers": "^0.1.0",
 		"@hono/zod-validator": "catalog:",
+		"@logtape/config": "catalog:",
 		"@logtape/drizzle-orm": "catalog:",
 		"@logtape/hono": "catalog:",
 		"@logtape/logtape": "catalog:",
@@ -51,6 +52,7 @@
 		"@cloudflare/workers-types": "catalog:",
 		"@libsql/client": "^0.17.0",
 		"@scalar/api-reference": "catalog:",
+		"@scalar/types": "^0.7.0",
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/bun": "^1.3.7",
 		"@types/node": "catalog:",

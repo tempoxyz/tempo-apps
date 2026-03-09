@@ -2,7 +2,6 @@ import { Hono } from 'hono'
 import * as z from 'zod/mini'
 import { Address, Hex } from 'ox'
 import { and, eq } from 'drizzle-orm'
-import { drizzle } from 'drizzle-orm/d1'
 import { getRandom } from '@cloudflare/containers'
 import { createPublicClient, http, keccak256 } from 'viem'
 
@@ -26,7 +25,7 @@ import {
 	getVyperImmutableReferences,
 } from '#bytecode-matching.ts'
 import { chains, chainIds } from '#wagmi.config.ts'
-import { log, sourcifyError, normalizeSourcePath } from '#utilities.ts'
+import { getDb, log, sourcifyError, normalizeSourcePath } from '#utilities.ts'
 
 /**
  * Legacy Sourcify-compatible routes for Foundry forge verify.
@@ -108,7 +107,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		}
 
 		// Check if already verified
-		const db = drizzle(context.env.CONTRACTS_DB)
+		const db = getDb(context.env.CONTRACTS_DB)
 		const addressBytes = Hex.toBytes(address)
 
 		const existingVerification = await db

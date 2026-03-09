@@ -11,6 +11,7 @@ catalog:
   '@cloudflare/workers-types': ^4.20260305.0
   '@hono/zod-validator': ^0.7.6
   '@iconify/json': ^2.2.443
+  '@logtape/config': ^2.0.4
   '@logtape/drizzle-orm': ^2.0.4
   '@logtape/hono': ^2.0.4
   '@logtape/logtape': ^2.0.4

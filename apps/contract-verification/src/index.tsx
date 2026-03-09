@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers'
 import { getContainer } from '@cloudflare/containers'
+import { honoLogger } from '@logtape/hono'
 import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
 import { showRoutes } from 'hono/dev'
@@ -11,7 +12,7 @@ import { rateLimiter } from 'hono-rate-limiter'
 
 import { sourcifyChains } from '#wagmi.config.ts'
 import { VerificationContainer } from '#container.ts'
-import { configureLogger } from '#logger.ts'
+import { configureLogger, dispose } from '#logger.ts'
 import OpenApiSpec from '#openapi.json' with { type: 'json' }
 import packageJSON from '#package.json' with { type: 'json' }
 import { docsRoute } from '#route.docs.tsx'
@@ -35,12 +36,22 @@ export const app = factory.createApp()
 app.onError(handleError)
 
 let loggerConfigured = false
-app.use(async (_, next) => {
+app.use(async (context, next) => {
 	if (!loggerConfigured) {
 		await configureLogger(env.NODE_ENV)
 		loggerConfigured = true
 	}
 	await next()
+	// Flush buffered logs before the Worker isolate becomes idle.
+	// dispose() resets LogTape config, so re-arm the flag for the next request.
+	// Skip in test env where executionCtx.waitUntil runs synchronously.
+	if (env.NODE_ENV !== 'test') {
+		context.executionCtx?.waitUntil(
+			dispose().then(() => {
+				loggerConfigured = false
+			}),
+		)
+	}
 })
 
 // @note: order matters
@@ -100,20 +111,12 @@ app.use('*', timeout(30_000)) // 30 seconds default
 app.use('/verify/*', timeout(300_000)) // 5 minutes for legacy verify routes
 app.use('/v2/verify/*', timeout(300_000)) // 5 minutes for v2 verify routes
 app.use(prettyJSON())
-app.use(async (context, next) => {
-	const start = Date.now()
-	await next()
-	const durationMs = Date.now() - start
-	const status = context.res.status
-	const level = status >= 400 ? 'warn' : 'info'
-	log.fromContext(context)[level]('request_completed', {
-		status,
-		durationMs,
-		ip:
-			context.req.header('CF-Connecting-IP') ??
-			context.req.header('X-Forwarded-For'),
-	})
-})
+app.use(
+	honoLogger({
+		category: ['tempo', 'http'],
+		skip: (context) => context.req.path === '/health',
+	}),
+)
 
 app.route('/docs', docsRoute)
 app.route('/verify', legacyVerifyRoute)
