@@ -579,6 +579,13 @@ type VerificationInput = {
 
 type PublicClientLike = {
 	getCode: (args: { address: `0x${string}` }) => Promise<`0x${string}`>
+	getTransactionReceipt?: (args: { hash: `0x${string}` }) => Promise<{
+		transactionHash: `0x${string}`
+		blockNumber: bigint
+		transactionIndex: number
+		from: `0x${string}`
+		contractAddress: `0x${string}` | null
+	}>
 }
 
 type ContainerLike = {
@@ -634,6 +641,13 @@ type CompileOutput = {
 	}>
 }
 
+type CreationTransactionMetadata = {
+	transactionHash: Uint8Array
+	blockNumber: number
+	transactionIndex: number
+	deployer: Uint8Array
+}
+
 async function runVerificationJob(
 	env: Cloudflare.Env,
 	jobId: string,
@@ -665,6 +679,44 @@ async function runVerificationJob(
 			chain,
 			transport: http(chain.rpcUrls.default.http.at(0)),
 		})
+
+		let creationTransactionMetadata: CreationTransactionMetadata | null = null
+		if (body.creationTransactionHash && client.getTransactionReceipt) {
+			try {
+				Hex.assert(body.creationTransactionHash)
+				const receipt = await client.getTransactionReceipt({
+					hash: body.creationTransactionHash,
+				})
+
+				if (
+					receipt.contractAddress &&
+					receipt.contractAddress.toLowerCase() === address.toLowerCase()
+				) {
+					creationTransactionMetadata = {
+						transactionHash: Hex.toBytes(receipt.transactionHash),
+						blockNumber: Number(receipt.blockNumber),
+						transactionIndex: receipt.transactionIndex,
+						deployer: Hex.toBytes(receipt.from),
+					}
+				} else {
+					logger.warn('creation_transaction_hash_mismatch', {
+						jobId,
+						chainId,
+						address,
+						creationTransactionHash: body.creationTransactionHash,
+						receiptContractAddress: receipt.contractAddress,
+					})
+				}
+			} catch (error) {
+				logger.warn('creation_transaction_hash_lookup_failed', {
+					error: formatError(error),
+					jobId,
+					chainId,
+					address,
+					creationTransactionHash: body.creationTransactionHash,
+				})
+			}
+		}
 
 		const onchainBytecode = await client.getCode({ address })
 		if (!onchainBytecode || onchainBytecode === '0x') {
@@ -933,7 +985,10 @@ async function runVerificationJob(
 		// Get or create deployment (use onConflictDoNothing to handle concurrent inserts)
 		let deploymentId: string
 		const existingDeployment = await db
-			.select({ id: contractDeploymentsTable.id })
+			.select({
+				id: contractDeploymentsTable.id,
+				transactionHash: contractDeploymentsTable.transactionHash,
+			})
 			.from(contractDeploymentsTable)
 			.where(
 				and(
@@ -945,6 +1000,21 @@ async function runVerificationJob(
 
 		if (existingDeployment.length > 0 && existingDeployment[0]) {
 			deploymentId = existingDeployment[0].id
+			if (
+				creationTransactionMetadata &&
+				existingDeployment[0].transactionHash === null
+			) {
+				await db
+					.update(contractDeploymentsTable)
+					.set({
+						transactionHash: creationTransactionMetadata.transactionHash,
+						blockNumber: creationTransactionMetadata.blockNumber,
+						transactionIndex: creationTransactionMetadata.transactionIndex,
+						deployer: creationTransactionMetadata.deployer,
+						updatedBy: auditUser,
+					})
+					.where(eq(contractDeploymentsTable.id, deploymentId))
+			}
 		} else {
 			deploymentId = globalThis.crypto.randomUUID()
 			await db
@@ -953,6 +1023,11 @@ async function runVerificationJob(
 					id: deploymentId,
 					chainId: chainId,
 					address: addressBytes,
+					transactionHash: creationTransactionMetadata?.transactionHash ?? null,
+					blockNumber: creationTransactionMetadata?.blockNumber ?? null,
+					transactionIndex:
+						creationTransactionMetadata?.transactionIndex ?? null,
+					deployer: creationTransactionMetadata?.deployer ?? null,
 					contractId,
 					createdBy: auditUser,
 					updatedBy: auditUser,
@@ -1152,7 +1227,12 @@ async function runVerificationJob(
 			})
 			.where(eq(verificationJobsTable.id, jobId))
 	} catch (error) {
-		console.error('Verification job failed:', error)
+		logger.error('verification_job_failed', {
+			error: formatError(error),
+			jobId,
+			chainId,
+			address,
+		})
 		await db
 			.update(verificationJobsTable)
 			.set({

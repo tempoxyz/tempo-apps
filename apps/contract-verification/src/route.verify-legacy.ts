@@ -58,7 +58,19 @@ const LegacyVyperRequestSchema = z.object({
 // POST /verify/vyper - Legacy Sourcify Vyper verification (used by Foundry)
 legacyVerifyRoute.post('/vyper', async (context) => {
 	try {
-		const body = LegacyVyperRequestSchema.parse(await context.req.json())
+		const parsedBody = LegacyVyperRequestSchema.safeParse(
+			await context.req.json(),
+		)
+		if (!parsedBody.success) {
+			return sourcifyError(
+				context,
+				400,
+				'invalid_request',
+				`Invalid request body: ${parsedBody.error.message}`,
+			)
+		}
+
+		const body = parsedBody.data
 
 		logger.info('vyper_verification_started', {
 			address: body.address,

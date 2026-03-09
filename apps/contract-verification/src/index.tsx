@@ -13,7 +13,7 @@ import { rateLimiter } from 'hono-rate-limiter'
 
 import { sourcifyChains } from '#wagmi.config.ts'
 import { VerificationContainer } from '#container.ts'
-import { configureLogger, dispose, getLogger, withContext } from '#logger.ts'
+import { configureLogger, getLogger, withContext } from '#logger.ts'
 import OpenApiSpec from '#openapi.json' with { type: 'json' }
 import packageJSON from '#package.json' with { type: 'json' }
 import { docsRoute } from '#route.docs.tsx'
@@ -38,14 +38,9 @@ export const app = factory.createApp()
 
 app.onError(handleError)
 
-app.use(async (context, next) => {
+app.use(async (_context, next) => {
 	await configureLogger(env.NODE_ENV)
 	await next()
-	// Flush buffered logs before the Worker isolate becomes idle.
-	// Skip in test env where executionCtx.waitUntil runs synchronously.
-	if (env.NODE_ENV !== 'test') {
-		context.executionCtx?.waitUntil(dispose())
-	}
 })
 
 // @note: order matters

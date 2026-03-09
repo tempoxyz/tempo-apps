@@ -2,9 +2,45 @@
 
 set -euo pipefail
 
+MODE=${MODE:-"invalid-payload"}
 TEMPO_RPC_URL=${TEMPO_RPC_URL:-"https://rpc.moderato.tempo.xyz"}
 VERIFIER_URL=${VERIFIER_URL:-"https://contracts.tempo.xyz"}
 FEE_TOKEN="${TEMPO_FEE_TOKEN:-0x20c0000000000000000000000000000000000001}"
+
+if [[ "$MODE" == "invalid-payload" ]]; then
+  RESPONSE_HEADERS=$(mktemp)
+  RESPONSE_BODY=$(mktemp)
+  REQUEST_BODY='{}'
+
+  echo -e "\n=== REPRO /verify/vyper VALIDATION REGRESSION ==="
+  echo "VERIFIER_URL: $VERIFIER_URL"
+  echo "REQUEST_BODY: $REQUEST_BODY"
+
+  HTTP_STATUS=$(
+    curl -sS \
+      -D "$RESPONSE_HEADERS" \
+      -o "$RESPONSE_BODY" \
+      -w '%{http_code}' \
+      -X POST \
+      "$VERIFIER_URL/verify/vyper" \
+      -H 'Content-Type: application/json' \
+      --data "$REQUEST_BODY"
+  )
+
+  echo -e "\nHTTP_STATUS: $HTTP_STATUS"
+  echo -e "\n=== RESPONSE HEADERS ==="
+  cat "$RESPONSE_HEADERS"
+  echo -e "\n=== RESPONSE BODY ==="
+  cat "$RESPONSE_BODY"
+  echo
+
+  if [[ -n "${EXPECTED_STATUS:-}" && "$HTTP_STATUS" != "$EXPECTED_STATUS" ]]; then
+    echo "Expected status $EXPECTED_STATUS but got $HTTP_STATUS" >&2
+    exit 1
+  fi
+
+  exit 0
+fi
 
 echo -e "\n=== VERSIONS ==="
 CAST_VERSION=$(cast --version)

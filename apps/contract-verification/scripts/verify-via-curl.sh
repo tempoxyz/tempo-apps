@@ -79,7 +79,8 @@ VERIFY_RESPONSE=$(curl --silent \
     }
   },
   "compilerVersion": "0.8.30",
-  "contractIdentifier": "src/Counter.sol:Counter"
+  "contractIdentifier": "src/Counter.sol:Counter",
+  "creationTransactionHash": "${TX_HASH}"
 }
 EOF
 )
