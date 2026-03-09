@@ -335,6 +335,7 @@ function OverviewSection(props: {
 		'nonceKey' in transaction
 			? (transaction.nonceKey as bigint | undefined)
 			: undefined
+	const isExpiringNonce = nonceKey === 2n ** 256n - 1n
 	const positionInBlock = receipt.transactionIndex
 	const input = transaction.input
 
@@ -436,7 +437,18 @@ function OverviewSection(props: {
 			<InfoRow label="Transaction Type">
 				<span className="text-primary">{receipt.type}</span>
 			</InfoRow>
-			{nonceKey !== undefined ? (
+			{isExpiringNonce ? (
+				<InfoRow label="Nonce">
+					<a
+						href="https://docs.tempo.xyz/protocol/tips/tip-1009"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="text-base-content-positive press-down"
+					>
+						Expiring Nonce
+					</a>
+				</InfoRow>
+			) : nonceKey !== undefined ? (
 				<>
 					<InfoRow label="Nonce Key">
 						<span className="text-primary">{nonceKey.toString()}</span>
