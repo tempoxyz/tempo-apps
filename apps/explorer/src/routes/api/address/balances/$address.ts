@@ -122,7 +122,7 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 								tokenMetadata.set(token.toLowerCase(), {
 									name: metadata.name ?? '',
 									symbol: metadata.symbol ?? '',
-									currency: '',
+									currency: metadata.currency ?? '',
 								})
 							}
 						}
