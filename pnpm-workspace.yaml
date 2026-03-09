@@ -4,20 +4,20 @@ packages:
   - '!**/_/**'
 
 catalog:
-  '@biomejs/biome': ^2.4.4
+  '@biomejs/biome': ^2.4.6
   '@cloudflare/puppeteer': ^1.0.6
-  '@cloudflare/vite-plugin': ^1.25.5
+  '@cloudflare/vite-plugin': ^1.26.1
   '@cloudflare/vitest-pool-workers': ^0.12.7
-  '@cloudflare/workers-types': ^4.20260305.0
+  '@cloudflare/workers-types': ^4.20260307.1
   '@hono/zod-validator': ^0.7.6
-  '@iconify/json': ^2.2.443
+  '@iconify/json': ^2.2.447
   '@logtape/config': ^2.0.4
   '@logtape/drizzle-orm': ^2.0.4
   '@logtape/hono': ^2.0.4
   '@logtape/logtape': ^2.0.4
   '@logtape/pretty': ^2.0.4
   '@logtape/redaction': ^2.0.4
-  '@scalar/api-reference': ^1.44.26
+  '@scalar/api-reference': ^1.48.1
   '@sentry/cloudflare': ^10.40.0
   '@sentry/react': ^10.40.0
   '@sentry/vite-plugin': ^3.6.1
@@ -40,7 +40,7 @@ catalog:
   '@tanstack/router-plugin': ^1.163.2
   '@total-typescript/ts-reset': ^0.6.1
   '@types/animejs': ^3.1.13
-  '@types/node': ^25.3.1
+  '@types/node': ^25.3.5
   '@types/react': ^19.2.14
   '@types/react-dom': ^19.2.3
   '@vitejs/plugin-react': ^5.1.4
@@ -52,8 +52,8 @@ catalog:
   dotenv: ^17.3.1
   eruda: ^3.4.3
   esbuild: ^0.27.3
-  globals: ^17.3.0
-  hono: ^4.12.2
+  globals: ^17.4.0
+  hono: ^4.12.5
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
   jsonc-parser: ^3.3.1
@@ -62,9 +62,9 @@ catalog:
   prool: ^0.2.3
   react: ^19.2.4
   react-dom: ^19.2.4
-  rollup-plugin-visualizer: ^7.0.0
+  rollup-plugin-visualizer: ^7.0.1
   shiki: ^3.23.0
-  sonda: ^0.10.2
+  sonda: ^0.11.1
   tailwind-merge: ^3.5.0
   tailwindcss: ^4.2.1
   tempo.ts: ^0.14.0
@@ -79,7 +79,7 @@ catalog:
   vite-plugin-devtools-json: ^1.0.0
   vitest: 3.2.4
   wagmi: ^3.5.0
-  wrangler: ^4.68.1
+  wrangler: ^4.71.0
   zod: ^4.3.6
 
 catalogMode: strict

@@ -12,8 +12,8 @@
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
-		"@takumi-rs/image-response": "^0.66.6",
-		"@takumi-rs/wasm": "^0.66.6",
+		"@takumi-rs/image-response": "^0.71.5",
+		"@takumi-rs/wasm": "^0.71.5",
 		"hono": "catalog:",
 		"ox": "catalog:",
 		"tempo.ts": "catalog:",

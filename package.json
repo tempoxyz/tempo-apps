@@ -23,9 +23,9 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "catalog:",
-		"@j178/prek": "^0.3.3",
+		"@j178/prek": "^0.3.5",
 		"@tempoxyz/lints": "github:tempoxyz/lints",
-		"@typescript/native-preview": "^7.0.0-dev.20260225.1",
+		"@typescript/native-preview": "^7.0.0-dev.20260309.1",
 		"simple-git-hooks": "^2.13.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
@@ -37,7 +37,7 @@
 			"onFail": "download"
 		}
 	},
-	"packageManager": "pnpm@10.30.2",
+	"packageManager": "pnpm@10.31.0",
 	"simple-git-hooks": {
 		"pre-commit": "pnpm prek run --all-files --config='.github/.pre-commit.yml'"
 	}
