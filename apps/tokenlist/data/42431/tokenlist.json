@@ -65,7 +65,8 @@
 			"address": "0x20c0000000000000000000009e8d7eb59b783726",
 			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42431/icons/0x20c0000000000000000000009e8d7eb59b783726.svg",
 			"extensions": {
-				"chain": "tempo"
+				"chain": "tempo",
+				"label": "USDC"
 			}
 		},
 		{
@@ -76,7 +77,8 @@
 			"address": "0x20c000000000000000000000d72572838bbee59c",
 			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42431/icons/0x20c000000000000000000000d72572838bbee59c.svg",
 			"extensions": {
-				"chain": "tempo"
+				"chain": "tempo",
+				"label": "EURC"
 			}
 		}
 	]
