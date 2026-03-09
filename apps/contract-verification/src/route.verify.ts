@@ -29,11 +29,13 @@ import {
 } from '#bytecode-matching.ts'
 import { chains, chainIds } from '#wagmi.config.ts'
 import { log, sourcifyError, normalizeSourcePath } from '#utilities.ts'
+import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
 /** Jobs older than this are considered stale and can be retried (5 minutes). */
-const JOB_TTL_MS = 5 * 60 * 1000
+const JOB_TTL_MS = 5 * 60 * 1_000
 /** Number of container instances to load-balance across. */
-const CONTAINER_INSTANCE_COUNT = 3
+const CONTAINER_INSTANCE_COUNT =
+	wranglerJSON.containers.at(0)?.max_instances ?? 10
 
 function timestampToMs(value: string): number {
 	const normalized = value.includes('T') ? value : `${value.replace(' ', 'T')}Z`
@@ -254,7 +256,9 @@ verifyRoute
 				})
 			}
 
-			// Create verification job
+			// Create verification job — re-check for pending jobs after insert to handle races.
+			// verification_jobs has no unique constraint on (chain_id, contract_address),
+			// so we guard with a select-then-insert pattern plus a post-insert duplicate check.
 			const jobId = globalThis.crypto.randomUUID()
 			await db.insert(verificationJobsTable).values({
 				id: jobId,
@@ -262,6 +266,29 @@ verifyRoute
 				contractAddress: addressBytes,
 				verificationEndpoint: '/v2/verify',
 			})
+
+			// Check if another job was created concurrently (first one wins)
+			const concurrentJobs = await db
+				.select({ id: verificationJobsTable.id })
+				.from(verificationJobsTable)
+				.where(
+					and(
+						eq(verificationJobsTable.chainId, chainId),
+						eq(verificationJobsTable.contractAddress, addressBytes),
+						isNull(verificationJobsTable.completedAt),
+					),
+				)
+				.orderBy(verificationJobsTable.startedAt)
+				.limit(2)
+
+			const firstJob = concurrentJobs[0]
+			if (concurrentJobs.length > 1 && firstJob && firstJob.id !== jobId) {
+				// Another job was created first — clean up ours and return theirs
+				await db
+					.delete(verificationJobsTable)
+					.where(eq(verificationJobsTable.id, jobId))
+				return context.json({ verificationId: firstJob.id }, 202)
+			}
 
 			// Run verification in background
 			context.executionCtx.waitUntil(
@@ -859,28 +886,40 @@ async function runVerificationJob(
 			})
 			.onConflictDoNothing()
 
-		// Get or create contract
+		// Get or create contract (use onConflictDoNothing to handle concurrent inserts)
+		let contractId: string
 		const existingContract = await db
 			.select({ id: contractsTable.id })
 			.from(contractsTable)
 			.where(eq(contractsTable.runtimeCodeHash, runtimeCodeHashSha256))
 			.limit(1)
 
-		let contractId: string
 		if (existingContract.length > 0 && existingContract[0]) {
 			contractId = existingContract[0].id
 		} else {
 			contractId = globalThis.crypto.randomUUID()
-			await db.insert(contractsTable).values({
-				id: contractId,
-				creationCodeHash: creationCodeHashSha256,
-				runtimeCodeHash: runtimeCodeHashSha256,
-				createdBy: auditUser,
-				updatedBy: auditUser,
-			})
+			await db
+				.insert(contractsTable)
+				.values({
+					id: contractId,
+					creationCodeHash: creationCodeHashSha256,
+					runtimeCodeHash: runtimeCodeHashSha256,
+					createdBy: auditUser,
+					updatedBy: auditUser,
+				})
+				.onConflictDoNothing()
+
+			// Re-fetch in case another request won the race
+			const refetched = await db
+				.select({ id: contractsTable.id })
+				.from(contractsTable)
+				.where(eq(contractsTable.runtimeCodeHash, runtimeCodeHashSha256))
+				.limit(1)
+			if (refetched[0]) contractId = refetched[0].id
 		}
 
-		// Get or create deployment
+		// Get or create deployment (use onConflictDoNothing to handle concurrent inserts)
+		let deploymentId: string
 		const existingDeployment = await db
 			.select({ id: contractDeploymentsTable.id })
 			.from(contractDeploymentsTable)
@@ -892,19 +931,34 @@ async function runVerificationJob(
 			)
 			.limit(1)
 
-		let deploymentId: string
 		if (existingDeployment.length > 0 && existingDeployment[0]) {
 			deploymentId = existingDeployment[0].id
 		} else {
 			deploymentId = globalThis.crypto.randomUUID()
-			await db.insert(contractDeploymentsTable).values({
-				id: deploymentId,
-				chainId: chainId,
-				address: addressBytes,
-				contractId,
-				createdBy: auditUser,
-				updatedBy: auditUser,
-			})
+			await db
+				.insert(contractDeploymentsTable)
+				.values({
+					id: deploymentId,
+					chainId: chainId,
+					address: addressBytes,
+					contractId,
+					createdBy: auditUser,
+					updatedBy: auditUser,
+				})
+				.onConflictDoNothing()
+
+			// Re-fetch in case another request won the race
+			const refetched = await db
+				.select({ id: contractDeploymentsTable.id })
+				.from(contractDeploymentsTable)
+				.where(
+					and(
+						eq(contractDeploymentsTable.chainId, chainId),
+						eq(contractDeploymentsTable.address, addressBytes),
+					),
+				)
+				.limit(1)
+			if (refetched[0]) deploymentId = refetched[0].id
 		}
 
 		// Get or create compiled contract
@@ -1001,9 +1055,19 @@ async function runVerificationJob(
 				.onConflictDoNothing()
 		}
 
-		// Extract and insert signatures from ABI
-		const abi = compiledContract.abi
-		for (const item of abi) {
+		// Extract and batch-insert signatures from ABI
+		const signatureRows: Array<{
+			signatureHash32: Uint8Array
+			signature: string
+		}> = []
+		const signatureLinkRows: Array<{
+			id: string
+			compilationId: string
+			signatureHash32: Uint8Array
+			signatureType: SignatureType
+		}> = []
+
+		for (const item of compiledContract.abi) {
 			let signatureType: SignatureType | null = null
 			if (item.type === 'function') signatureType = 'function'
 			else if (item.type === 'event') signatureType = 'event'
@@ -1015,25 +1079,25 @@ async function runVerificationJob(
 				const signatureHash32 = Hex.toBytes(
 					keccak256(Hex.fromString(signature)),
 				)
-
-				await db
-					.insert(signaturesTable)
-					.values({
-						signatureHash32: signatureHash32,
-						signature: signature,
-					})
-					.onConflictDoNothing()
-
-				await db
-					.insert(compiledContractsSignaturesTable)
-					.values({
-						id: globalThis.crypto.randomUUID(),
-						compilationId: compilationId,
-						signatureHash32: signatureHash32,
-						signatureType: signatureType,
-					})
-					.onConflictDoNothing()
+				signatureRows.push({ signatureHash32, signature })
+				signatureLinkRows.push({
+					id: globalThis.crypto.randomUUID(),
+					compilationId,
+					signatureHash32,
+					signatureType,
+				})
 			}
+		}
+
+		if (signatureRows.length > 0) {
+			await db
+				.insert(signaturesTable)
+				.values(signatureRows)
+				.onConflictDoNothing()
+			await db
+				.insert(compiledContractsSignaturesTable)
+				.values(signatureLinkRows)
+				.onConflictDoNothing()
 		}
 
 		// Insert verified contract with transformation data

@@ -11,6 +11,7 @@ import { rateLimiter } from 'hono-rate-limiter'
 
 import { sourcifyChains } from '#wagmi.config.ts'
 import { VerificationContainer } from '#container.ts'
+import { configureLogger } from '#logger.ts'
 import OpenApiSpec from '#openapi.json' with { type: 'json' }
 import packageJSON from '#package.json' with { type: 'json' }
 import { docsRoute } from '#route.docs.tsx'
@@ -32,6 +33,15 @@ const factory = createFactory<AppEnv>()
 export const app = factory.createApp()
 
 app.onError(handleError)
+
+let loggerConfigured = false
+app.use(async (_, next) => {
+	if (!loggerConfigured) {
+		await configureLogger(env.NODE_ENV)
+		loggerConfigured = true
+	}
+	await next()
+})
 
 // @note: order matters
 app.use('*', requestId({ headerName: 'X-Tempo-Request-Id' }))

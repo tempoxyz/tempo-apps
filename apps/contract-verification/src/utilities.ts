@@ -4,6 +4,7 @@ import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
 import { getAppLogger } from '#logger.ts'
+
 type LogData = Record<string, unknown>
 
 export function formatError(error: unknown): {
@@ -125,10 +126,7 @@ const VALIDATION_ERROR_NAMES = new Set([
 ])
 
 function isValidationError(error: Error): boolean {
-	return (
-		VALIDATION_ERROR_NAMES.has(error.name) ||
-		VALIDATION_ERROR_NAMES.has(error.constructor.name)
-	)
+	return VALIDATION_ERROR_NAMES.has(error.name)
 }
 
 export function handleError(error: Error, context: Context) {
