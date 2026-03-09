@@ -1,8 +1,9 @@
 import * as Address from 'ox/Address'
-import * as Hex from 'ox/Hex'
+import type * as Hex from 'ox/Hex'
 import type { AbiEvent, Log, TransactionReceipt } from 'viem'
 import { decodeFunctionData, parseEventLogs, zeroAddress } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
+import { decodeMemoForDisplay } from '#lib/domain/memo'
 import type * as Tip20 from './tip20'
 
 export const streamChannelAbi = [
@@ -164,8 +165,7 @@ function createDetectors(
 
 				return {
 					type: 'send',
-					note:
-						'memo' in args ? Hex.toString(Hex.trimLeft(args.memo)) : undefined,
+					note: 'memo' in args ? decodeMemoForDisplay(args.memo) : undefined,
 					parts: [
 						{ type: 'action', value: 'Send' },
 						{
@@ -1240,7 +1240,7 @@ export function parseKnownEvents(
 				amount: bigint
 				memo: Hex.Hex
 			}
-			const memoText = Hex.toString(Hex.trimLeft(memo))
+			const memoText = decodeMemoForDisplay(memo)
 			if (!memoText) continue
 
 			// Check if this pairs with a Mint (transfer from zero address)
