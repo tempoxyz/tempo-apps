@@ -665,30 +665,10 @@
 				"operationId": "verify",
 				"parameters": [
 					{
-						"name": "chainId",
-						"in": "path",
-						"description": "The chainId number of the EVM chain",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "^\\d+$",
-							"minLength": 1,
-							"maxLength": 20,
-							"example": "42429"
-						}
+						"$ref": "#/components/parameters/ChainId"
 					},
 					{
-						"name": "address",
-						"in": "path",
-						"description": "Contract's 20 byte address in hex string with the 0x prefix. Case insensitive.",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "(\\b0x[a-fA-F0-9]{40}\\b)",
-							"minLength": 42,
-							"maxLength": 42,
-							"example": "0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d"
-						}
+						"$ref": "#/components/parameters/AddressPath"
 					}
 				],
 				"requestBody": {
@@ -1467,30 +1447,10 @@
 				"operationId": "verify-similarity",
 				"parameters": [
 					{
-						"name": "chainId",
-						"in": "path",
-						"description": "The chainId number of the EVM chain",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "^\\d+$",
-							"minLength": 1,
-							"maxLength": 20,
-							"example": "42429"
-						}
+						"$ref": "#/components/parameters/ChainId"
 					},
 					{
-						"name": "address",
-						"in": "path",
-						"description": "Contract's 20 byte address in hex string with the 0x prefix. Case insensitive.",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "(\\b0x[a-fA-F0-9]{40}\\b)",
-							"minLength": 42,
-							"maxLength": 42,
-							"example": "0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d"
-						}
+						"$ref": "#/components/parameters/AddressPath"
 					}
 				],
 				"requestBody": {
@@ -2170,30 +2130,10 @@
 						}
 					},
 					{
-						"name": "chainId",
-						"in": "path",
-						"description": "The chainId number of the EVM chain",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "^\\d+$",
-							"minLength": 1,
-							"maxLength": 20,
-							"example": "42429"
-						}
+						"$ref": "#/components/parameters/ChainId"
 					},
 					{
-						"name": "address",
-						"in": "path",
-						"description": "Contract's 20 byte address in hex string with the 0x prefix. Case insensitive.",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "(\\b0x[a-fA-F0-9]{40}\\b)",
-							"minLength": 42,
-							"maxLength": 42,
-							"example": "0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d"
-						}
+						"$ref": "#/components/parameters/AddressPath"
 					}
 				],
 				"responses": {
@@ -3817,17 +3757,7 @@
 				"operationId": "get-contract-all-chains",
 				"parameters": [
 					{
-						"name": "address",
-						"in": "path",
-						"description": "Contract's 20 byte address in hex string with the 0x prefix. Case insensitive.",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "(\\b0x[a-fA-F0-9]{40}\\b)",
-							"minLength": 42,
-							"maxLength": 42,
-							"example": "0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d"
-						}
+						"$ref": "#/components/parameters/AddressPath"
 					}
 				],
 				"responses": {
@@ -4120,17 +4050,7 @@
 						}
 					},
 					{
-						"name": "chainId",
-						"in": "path",
-						"description": "The chainId number of the EVM chain",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "^\\d+$",
-							"minLength": 1,
-							"maxLength": 20,
-							"example": "42429"
-						}
+						"$ref": "#/components/parameters/ChainId"
 					}
 				],
 				"responses": {
@@ -7187,5 +7107,35 @@
 			}
 		}
 	},
-	"components": {}
+	"components": {
+		"parameters": {
+			"ChainId": {
+				"name": "chainId",
+				"in": "path",
+				"required": true,
+				"schema": {
+					"type": "integer",
+					"enum": [31318, 42431, 4217]
+				}
+			},
+			"AddressPath": {
+				"name": "address",
+				"in": "path",
+				"required": true,
+				"schema": {
+					"type": "string",
+					"pattern": "^0x[a-fA-F0-9]{40}$"
+				}
+			},
+			"HashPath": {
+				"name": "hash",
+				"in": "path",
+				"required": true,
+				"schema": {
+					"type": "string",
+					"pattern": "^0x[a-fA-F0-9]{64}$"
+				}
+			}
+		}
+	}
 }
