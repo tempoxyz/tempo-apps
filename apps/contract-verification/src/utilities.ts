@@ -3,22 +3,14 @@ import { env } from 'cloudflare:workers'
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
-type LogLevel = 'info' | 'warn' | 'error'
+import { getAppLogger } from '#logger.ts'
+type LogData = Record<string, unknown>
 
-type LogEvent = {
-	level: LogLevel
-	event: string
-	requestId?: string | undefined
-	method?: string | undefined
-	path?: string | undefined
-	chainId?: string | number | undefined
-	address?: string | undefined
-	error?: { type: string; message: string; stack?: string } | undefined
-	durationMs?: number | undefined
-	[key: string]: unknown
-}
-
-function formatError(error: unknown): LogEvent['error'] {
+export function formatError(error: unknown): {
+	type: string
+	message: string
+	stack?: string
+} {
 	if (error instanceof Error) {
 		return {
 			type: error.name,
@@ -29,35 +21,17 @@ function formatError(error: unknown): LogEvent['error'] {
 	return { type: 'Unknown', message: String(error) }
 }
 
-function emit(event: LogEvent): void {
-	const { level, ...rest } = event
-	const output = JSON.stringify(rest)
-	switch (level) {
-		case 'info':
-			console.info(output)
-			break
-		case 'warn':
-			console.warn(output)
-			break
-		case 'error':
-			console.error(output)
-			break
-	}
-}
+const logger = getAppLogger()
 
 export const log = {
-	info(event: string, data: Omit<LogEvent, 'level' | 'event'> = {}): void {
-		emit({ level: 'info', event, ...data })
+	info(event: string, data: LogData = {}): void {
+		logger.info(event, data)
 	},
-	warn(event: string, data: Omit<LogEvent, 'level' | 'event'> = {}): void {
-		emit({ level: 'warn', event, ...data })
+	warn(event: string, data: LogData = {}): void {
+		logger.warn(event, data)
 	},
-	error(
-		event: string,
-		error: unknown,
-		data: Omit<LogEvent, 'level' | 'event' | 'error'> = {},
-	): void {
-		emit({ level: 'error', event, error: formatError(error), ...data })
+	error(event: string, error: unknown, data: LogData = {}): void {
+		logger.error(event, { error: formatError(error), ...data })
 	},
 	fromContext(context: Context) {
 		const base = {
@@ -66,24 +40,14 @@ export const log = {
 			path: context.req.path,
 		}
 		return {
-			info(event: string, data: Omit<LogEvent, 'level' | 'event'> = {}): void {
-				emit({ level: 'info', event, ...base, ...data })
+			info(event: string, data: LogData = {}): void {
+				logger.info(event, { ...base, ...data })
 			},
-			warn(event: string, data: Omit<LogEvent, 'level' | 'event'> = {}): void {
-				emit({ level: 'warn', event, ...base, ...data })
+			warn(event: string, data: LogData = {}): void {
+				logger.warn(event, { ...base, ...data })
 			},
-			error(
-				event: string,
-				error: unknown,
-				data: Omit<LogEvent, 'level' | 'event' | 'error'> = {},
-			): void {
-				emit({
-					level: 'error',
-					event,
-					error: formatError(error),
-					...base,
-					...data,
-				})
+			error(event: string, error: unknown, data: LogData = {}): void {
+				logger.error(event, { error: formatError(error), ...base, ...data })
 			},
 		}
 	},
@@ -107,7 +71,7 @@ export function normalizeSourcePath(absolutePath: string) {
 
 	// Fallback: just use the filename
 	const parts = absolutePath.split('/')
-	return parts[parts.length - 1] ?? absolutePath
+	return parts.at(-1) ?? absolutePath
 }
 
 export function sourcifyError(
@@ -126,7 +90,7 @@ export function sourcifyError(
 	)
 }
 
-export type AppErrorOptions = {
+export interface AppErrorOptions {
 	status: ContentfulStatusCode
 	code: string
 	message: string
@@ -153,6 +117,20 @@ export class AppError extends HTTPException {
 	}
 }
 
+const VALIDATION_ERROR_NAMES = new Set([
+	'InvalidAddressError',
+	'Address.InvalidAddressError',
+	'InvalidHexValueError',
+	'InvalidHexLengthError',
+])
+
+function isValidationError(error: Error): boolean {
+	return (
+		VALIDATION_ERROR_NAMES.has(error.name) ||
+		VALIDATION_ERROR_NAMES.has(error.constructor.name)
+	)
+}
+
 export function handleError(error: Error, context: Context) {
 	const requestId = context.get('requestId') as string | undefined
 
@@ -170,6 +148,20 @@ export function handleError(error: Error, context: Context) {
 			cause: error.cause ? formatError(error.cause) : undefined,
 		})
 		return error.getResponse()
+	}
+
+	if (isValidationError(error)) {
+		log
+			.fromContext(context)
+			.warn('validation_error', { error: formatError(error) })
+		return context.json(
+			{
+				message: error.message,
+				customCode: 'validation_error',
+				errorId: requestId ?? globalThis.crypto.randomUUID(),
+			},
+			400,
+		)
 	}
 
 	const doMeta = extractDurableObjectErrorMeta(error)
@@ -221,6 +213,6 @@ export function originMatches(params: { origin: string; pattern: string }) {
 	if (!pattern.includes('*')) return false
 
 	return new RegExp(
-		`^${pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`,
+		`^${pattern.replaceAll(/[.+?^${}()|[\]\\]/g, String.raw`\$&`).replaceAll('*', '.*')}$`,
 	).test(origin)
 }

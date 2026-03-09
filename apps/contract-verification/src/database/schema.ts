@@ -9,9 +9,9 @@ const auditColumns = () => ({
 	createdAt: p.text('created_at').notNull().default(sql`(datetime('now'))`),
 	updatedAt: p.text('updated_at').notNull().default(sql`(datetime('now'))`),
 	/** SQLite lacks CURRENT_USER - set from application context */
-	createdBy: p.text('created_by').notNull(),
+	createdBy: p.text('created_by').notNull().default('verification-api'),
 	/** SQLite lacks CURRENT_USER - set from application context */
-	updatedBy: p.text('updated_by').notNull(),
+	updatedBy: p.text('updated_by').notNull().default('verification-api'),
 })
 
 // ============================================================================
@@ -19,9 +19,9 @@ const auditColumns = () => ({
 // ============================================================================
 
 /**
- * PostgreSQL CHECK constraint (validate at app level):
- *   (code IS NOT NULL AND code_hash = digest(code, 'sha256')) OR
- *   (code IS NULL AND code_hash = '\x')
+ * App-level validation (SQLite lacks CHECK with functions):
+ *   (code IS NOT NULL AND code_hash = sha256(code)) OR
+ *   (code IS NULL AND code_hash = empty blob)
  */
 export const codeTable = p.sqliteTable(
 	'code',
@@ -42,8 +42,8 @@ export const codeTable = p.sqliteTable(
 // ============================================================================
 
 /**
- * PostgreSQL CHECK constraint (validate at app level):
- *   source_hash = digest(content, 'sha256')
+ * App-level validation (SQLite lacks CHECK with functions):
+ *   source_hash = sha256(content)
  */
 export const sourcesTable = p.sqliteTable('sources', (s) => ({
 	/** SHA-256 hash of the source content (primary key) */

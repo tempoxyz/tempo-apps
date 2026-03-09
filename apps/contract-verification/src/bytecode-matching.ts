@@ -1,12 +1,6 @@
-import * as CBOR from 'cbor-x/decode'
-import { Hex } from 'ox'
 import semver from 'semver'
-import {
-	decodeAbiParameters,
-	encodeAbiParameters,
-	keccak256,
-	toBytes,
-} from 'viem'
+import * as CBOR from 'cbor-x/decode'
+import { AbiParameters, Hash, Hex } from 'ox'
 
 // ============================================================================
 // Types
@@ -39,29 +33,21 @@ export interface LinkReference {
 	length: number
 }
 
-export interface LinkReferences {
-	[file: string]: {
-		[library: string]: LinkReference[]
-	}
-}
+export type LinkReferences = Record<string, Record<string, LinkReference[]>>
 
 export interface ImmutableReference {
 	start: number
 	length: number
 }
 
-export interface ImmutableReferences {
-	[astId: string]: ImmutableReference[]
-}
+export type ImmutableReferences = Record<string, ImmutableReference[]>
 
 export interface CborAuxdataPosition {
 	offset: number
 	value: string
 }
 
-export interface CborAuxdataPositions {
-	[id: string]: CborAuxdataPosition
-}
+export type CborAuxdataPositions = Record<string, CborAuxdataPosition>
 
 export interface BytecodeMatchResult {
 	match: 'exact_match' | 'match' | null
@@ -194,7 +180,7 @@ export function splitAuxdata(
 	let executionBytecode: string
 
 	switch (auxdataStyle) {
-		case AuxdataStyle.VYPER:
+		case AuxdataStyle.VYPER: {
 			// Vyper >= 0.3.10: length bytes include themselves in the count
 			auxdata = code.slice(
 				code.length - cborBytesLength,
@@ -202,7 +188,8 @@ export function splitAuxdata(
 			)
 			executionBytecode = code.slice(0, code.length - cborBytesLength)
 			break
-		default:
+		}
+		default: {
 			// Solidity and Vyper < 0.3.10: length bytes don't include themselves
 			auxdata = code.slice(
 				code.length - bytesLength - cborBytesLength,
@@ -213,6 +200,7 @@ export function splitAuxdata(
 				code.length - bytesLength - cborBytesLength,
 			)
 			break
+		}
 	}
 
 	// Validate it's CBOR encoded
@@ -358,7 +346,7 @@ export function hasContentHash(bytecode: string): boolean {
 export function extractLibrariesTransformation(
 	recompiledBytecode: string,
 	onchainBytecode: string,
-	linkReferences: LinkReferences | undefined,
+	linkReferences?: LinkReferences,
 ): {
 	populatedBytecode: string
 	transformations: Transformation[]
@@ -401,7 +389,7 @@ export function extractLibrariesTransformation(
 				)
 
 				// Calculate expected placeholders
-				const fqnHash = keccak256(toBytes(fqn))
+				const fqnHash = Hash.keccak256(Hex.fromString(fqn))
 				const postV050Placeholder = `__$${fqnHash.slice(2, 36)}$__`
 				const trimmedFQN = fqn.slice(0, 36)
 				const preV050Placeholder = `__${trimmedFQN.padEnd(38, '_')}`
@@ -438,9 +426,7 @@ export function extractLibrariesTransformation(
 					id: fqn,
 				})
 
-				if (!transformationValues.libraries) {
-					transformationValues.libraries = {}
-				}
+				transformationValues.libraries ??= {}
 				transformationValues.libraries[fqn] = `0x${actualAddress}`
 			}
 		}
@@ -469,7 +455,7 @@ export function extractLibrariesTransformation(
 export function extractImmutablesTransformation(
 	recompiledBytecode: string,
 	onchainBytecode: string,
-	immutableReferences: ImmutableReferences | undefined,
+	immutableReferences?: ImmutableReferences,
 	auxdataStyle: AuxdataStyle = AuxdataStyle.SOLIDITY,
 ): {
 	populatedBytecode: string
@@ -517,7 +503,7 @@ export function extractImmutablesTransformation(
 
 			if (isVyper) {
 				// Vyper: immutables are appended at the end, insert them
-				bytecodeNoPrefix = bytecodeNoPrefix + immutableValue
+				bytecodeNoPrefix += immutableValue
 
 				transformations.push({
 					type: 'insert',
@@ -540,9 +526,7 @@ export function extractImmutablesTransformation(
 				})
 			}
 
-			if (!transformationValues.immutables) {
-				transformationValues.immutables = {}
-			}
+			transformationValues.immutables ??= {}
 			transformationValues.immutables[astId] = `0x${immutableValue}`
 		}
 	}
@@ -617,10 +601,10 @@ export function extractCallProtectionTransformation(
 export function extractConstructorArgumentsTransformation(
 	recompiledCreationBytecode: string,
 	onchainCreationBytecode: string,
-	abi: Array<{
+	abi: {
 		type: string
-		inputs?: Array<{ type: string; name?: string }>
-	}>,
+		inputs?: { type: string; name?: string }[]
+	}[],
 ): {
 	populatedBytecode: string
 	transformations: Transformation[]
@@ -664,9 +648,10 @@ export function extractConstructorArgumentsTransformation(
 		const paramTypes = constructorAbi.inputs.map((i) => ({
 			type: i.type,
 			name: i.name,
-		}))
-		const decoded = decodeAbiParameters(paramTypes, constructorArguments)
-		const reencoded = encodeAbiParameters(paramTypes, decoded as unknown[])
+		})) as AbiParameters.AbiParameters
+
+		const decoded = AbiParameters.decode(paramTypes, constructorArguments)
+		const reencoded = AbiParameters.encode(paramTypes, decoded)
 
 		if (reencoded.toLowerCase() !== constructorArguments.toLowerCase()) {
 			throw new Error('Constructor arguments mismatch after re-encoding')
@@ -707,7 +692,7 @@ export function extractConstructorArgumentsTransformation(
 export function extractAuxdataTransformation(
 	recompiledBytecode: string,
 	onchainBytecode: string,
-	cborAuxdataPositions: CborAuxdataPositions | undefined,
+	cborAuxdataPositions?: CborAuxdataPositions,
 ): {
 	populatedBytecode: string
 	transformations: Transformation[]
@@ -755,9 +740,7 @@ export function extractAuxdataTransformation(
 			id,
 		})
 
-		if (!transformationValues.cborAuxdata) {
-			transformationValues.cborAuxdata = {}
-		}
+		transformationValues.cborAuxdata ??= {}
 		transformationValues.cborAuxdata[id] = `0x${onchainAuxdata}`
 	}
 
@@ -780,10 +763,10 @@ export interface MatchBytecodeOptions {
 	immutableReferences?: ImmutableReferences
 	cborAuxdataPositions?: CborAuxdataPositions
 	auxdataStyle?: AuxdataStyle
-	abi?: Array<{
+	abi?: {
 		type: string
-		inputs?: Array<{ type: string; name?: string }>
-	}>
+		inputs?: { type: string; name?: string }[]
+	}[]
 }
 
 /**
@@ -883,125 +866,56 @@ export function matchBytecode(
 		}
 	}
 
-	// 5. Try partial match by replacing CBOR auxdata
-	if (cborAuxdataPositions && Object.keys(cborAuxdataPositions).length > 0) {
-		const auxdataResult = extractAuxdataTransformation(
-			populatedBytecode,
-			onchainBytecode,
-			cborAuxdataPositions,
-		)
-		const populatedWithAuxdata = auxdataResult.populatedBytecode
+	// 5. Try matching without auxdata (partial match)
+	const recompiledSplit = splitAuxdata(populatedBytecode, auxdataStyle)
+	const onchainSplit = splitAuxdata(onchainBytecode, auxdataStyle)
 
-		const doPopulatedMatch = isCreation
-			? onchainBytecode
-					.toLowerCase()
-					.startsWith(populatedWithAuxdata.toLowerCase())
-			: populatedWithAuxdata.toLowerCase() === onchainBytecode.toLowerCase()
+	const executionMatch = isCreation
+		? onchainSplit.executionBytecode
+				.toLowerCase()
+				.startsWith(recompiledSplit.executionBytecode.toLowerCase())
+		: recompiledSplit.executionBytecode.toLowerCase() ===
+			onchainSplit.executionBytecode.toLowerCase()
 
-		if (doPopulatedMatch) {
+	if (executionMatch) {
+		// Handle CBOR auxdata positions if provided
+		if (cborAuxdataPositions) {
+			const auxdataResult = extractAuxdataTransformation(
+				populatedBytecode,
+				onchainBytecode,
+				cborAuxdataPositions,
+			)
 			allTransformations.push(...auxdataResult.transformations)
 			Object.assign(allTransformationValues, auxdataResult.transformationValues)
-
-			// For creation bytecode, extract constructor arguments
-			if (isCreation && abi) {
-				const constructorResult = extractConstructorArgumentsTransformation(
-					populatedWithAuxdata,
-					onchainBytecode,
-					abi,
-				)
-				allTransformations.push(...constructorResult.transformations)
-				Object.assign(
-					allTransformationValues,
-					constructorResult.transformationValues,
-				)
-			}
-
-			return {
-				match: 'match',
-				transformations: allTransformations,
-				transformationValues: allTransformationValues,
-				libraryMap: Object.keys(libraryMap).length > 0 ? libraryMap : undefined,
-			}
 		}
-	}
 
-	// 6. No match - try one more thing: strip metadata and compare
-	const { executionBytecode: onchainExec } = splitAuxdata(
-		onchainBytecode,
-		auxdataStyle,
-	)
-	const { executionBytecode: recompiledExec } = splitAuxdata(
-		populatedBytecode,
-		auxdataStyle,
-	)
+		// For creation bytecode, also extract constructor arguments
+		if (isCreation && abi) {
+			const constructorResult = extractConstructorArgumentsTransformation(
+				recompiledSplit.executionBytecode,
+				onchainSplit.executionBytecode,
+				abi,
+			)
+			allTransformations.push(...constructorResult.transformations)
+			Object.assign(
+				allTransformationValues,
+				constructorResult.transformationValues,
+			)
+		}
 
-	if (
-		onchainExec &&
-		recompiledExec &&
-		onchainExec.toLowerCase() === recompiledExec.toLowerCase()
-	) {
 		return {
 			match: 'match',
 			transformations: allTransformations,
 			transformationValues: allTransformationValues,
 			libraryMap: Object.keys(libraryMap).length > 0 ? libraryMap : undefined,
-			message: 'Matched after stripping metadata',
 		}
 	}
 
-	// No match
+	// No match found
 	return {
 		match: null,
-		transformations: allTransformations,
-		transformationValues: allTransformationValues,
-		libraryMap: Object.keys(libraryMap).length > 0 ? libraryMap : undefined,
-		message: 'Bytecodes do not match',
+		transformations: [],
+		transformationValues: {},
+		message: 'Bytecodes do not match after all transformations',
 	}
-}
-
-// ============================================================================
-// Simplified Matching for Quick Verification
-// ============================================================================
-
-/**
- * Simplified matching that doesn't require compiler output details.
- * Uses heuristic metadata stripping for partial matching.
- */
-export function matchBytecodeSimple(
-	onchainBytecode: string,
-	compiledBytecode: string,
-): { match: 'exact_match' | 'match' | null; message?: string } {
-	const onchain = onchainBytecode.toLowerCase()
-	const compiled = compiledBytecode.toLowerCase()
-
-	// Exact match
-	if (onchain === compiled) {
-		return { match: 'exact_match' }
-	}
-
-	// Try stripping CBOR metadata
-	const { executionBytecode: onchainExec, auxdata: onchainAux } =
-		splitAuxdata(onchainBytecode)
-	const { executionBytecode: compiledExec, auxdata: compiledAux } =
-		splitAuxdata(compiledBytecode)
-
-	// Both have auxdata and execution matches
-	if (
-		onchainAux &&
-		compiledAux &&
-		onchainExec.toLowerCase() === compiledExec.toLowerCase()
-	) {
-		return { match: 'match', message: 'Matched with different metadata' }
-	}
-
-	// Only compiled has auxdata (onchain might have it stripped)
-	if (
-		compiledAux &&
-		!onchainAux &&
-		onchain.startsWith(compiledExec.toLowerCase())
-	) {
-		return { match: 'match', message: 'Onchain bytecode has no metadata' }
-	}
-
-	return { match: null, message: 'No match found' }
 }

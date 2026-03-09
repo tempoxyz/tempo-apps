@@ -23,6 +23,10 @@
 	},
 	"dependencies": {
 		"@cloudflare/containers": "^0.1.0",
+		"@logtape/drizzle-orm": "catalog:",
+		"@logtape/logtape": "catalog:",
+		"@logtape/pretty": "catalog:",
+		"@wagmi/core": "catalog:",
 		"cbor-x": "^1.6.0",
 		"drizzle-orm": "^0.45.1",
 		"hono": "catalog:",
@@ -31,6 +35,7 @@
 		"semver": "^7.7.3",
 		"tempo.ts": "catalog:",
 		"viem": "catalog:",
+		"wagmi": "catalog:",
 		"zod": "catalog:"
 	},
 	"devDependencies": {

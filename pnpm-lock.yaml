@@ -27,6 +27,15 @@ catalogs:
     '@iconify/json':
       specifier: ^2.2.443
       version: 2.2.443
+    '@logtape/drizzle-orm':
+      specifier: ^2.0.4
+      version: 2.0.4
+    '@logtape/logtape':
+      specifier: ^2.0.4
+      version: 2.0.4
+    '@logtape/pretty':
+      specifier: ^2.0.4
+      version: 2.0.4
     '@scalar/api-reference':
       specifier: ^1.44.26
       version: 1.44.26
@@ -111,6 +120,9 @@ catalogs:
     '@vitest/ui':
       specifier: 3.2.4
       version: 3.2.4
+    '@wagmi/core':
+      specifier: ^3.4.0
+      version: 3.4.0
     abitype:
       specifier: ^1.2.3
       version: 1.2.3
@@ -248,6 +260,18 @@ importers:
       '@cloudflare/containers':
         specifier: ^0.1.0
         version: 0.1.0
+      '@logtape/drizzle-orm':
+        specifier: 'catalog:'
+        version: 2.0.4(@logtape/logtape@2.0.4)
+      '@logtape/logtape':
+        specifier: 'catalog:'
+        version: 2.0.4
+      '@logtape/pretty':
+        specifier: 'catalog:'
+        version: 2.0.4(@logtape/logtape@2.0.4)
+      '@wagmi/core':
+        specifier: 'catalog:'
+        version: 3.4.0(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(ox@0.12.4(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.4))(viem@2.46.3(typescript@5.9.3)(zod@4.3.6))
       cbor-x:
         specifier: ^1.6.0
         version: 1.6.0
@@ -272,6 +296,9 @@ importers:
       viem:
         specifier: 'catalog:'
         version: 2.46.3(typescript@5.9.3)(zod@4.3.6)
+      wagmi:
+        specifier: 'catalog:'
+        version: 3.5.0(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.4))(@types/react@19.2.14)(ox@0.12.4(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(viem@2.46.3(typescript@5.9.3)(zod@4.3.6))
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2284,6 +2311,19 @@ packages:
     resolution: {integrity: sha512-Fj0j8RnBpo43tVZUVoNK6BV/9AtDUM5S7DF3LB4qTYg1LMSZqi3yeCneUTLJD6XomQJlZzbI4mst89yspVSAnA==}
     cpu: [x64]
     os: [win32]
+
+  '@logtape/drizzle-orm@2.0.4':
+    resolution: {integrity: sha512-JCTcUeiyW1cA0zzi8OMINku6IteaiFss4YfFq9dqfGcuMSMYsEw1/FL9uCJ2A1qs+jZGdEZK/iKRAh6Igx+3Qw==}
+    peerDependencies:
+      '@logtape/logtape': ^2.0.4
+
+  '@logtape/logtape@2.0.4':
+    resolution: {integrity: sha512-Z4COeAMdedcBFuFkXaPFvDPOVuHoEom1hwNnPCIkSyojyikuNguplwPoSG+kZthWrS7GiOJo1USQyjWwIFfTKA==}
+
+  '@logtape/pretty@2.0.4':
+    resolution: {integrity: sha512-y1nubV70avD9Gx8Q3gcWBlVUsVwpaBdHUntrkkpXIrC/UPRoHuWnBo+FNrtyvgjCEHSbKuxIaOgsE8rxTPEhzg==}
+    peerDependencies:
+      '@logtape/logtape': ^2.0.4
 
   '@marijn/find-cluster-break@1.0.2':
     resolution: {integrity: sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==}
@@ -8081,6 +8121,16 @@ snapshots:
   '@libsql/win32-x64-msvc@0.5.22':
     optional: true
 
+  '@logtape/drizzle-orm@2.0.4(@logtape/logtape@2.0.4)':
+    dependencies:
+      '@logtape/logtape': 2.0.4
+
+  '@logtape/logtape@2.0.4': {}
+
+  '@logtape/pretty@2.0.4(@logtape/logtape@2.0.4)':
+    dependencies:
+      '@logtape/logtape': 2.0.4
+
   '@marijn/find-cluster-break@1.0.2': {}
 
   '@napi-rs/wasm-runtime@1.1.1':
@@ -10072,9 +10122,9 @@ snapshots:
     dependencies:
       vue: 3.5.27(typescript@5.9.3)
 
-  '@wagmi/connectors@7.2.1(@wagmi/core@3.4.0(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(ox@0.12.4(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.4))(viem@2.46.3(typescript@5.9.3)(zod@4.3.6)))(typescript@5.9.3)(viem@2.46.3(typescript@5.9.3)(zod@4.3.6))':
+  '@wagmi/connectors@7.2.1(@wagmi/core@3.4.0(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(ox@0.12.4(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.4))(viem@2.46.3(typescript@5.9.3)(zod@4.3.6)))(typescript@5.9.3)(viem@2.46.3(typescript@5.9.3)(zod@4.3.6))':
     dependencies:
-      '@wagmi/core': 3.4.0(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(ox@0.12.4(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.4))(viem@2.46.3(typescript@5.9.3)(zod@4.3.6))
+      '@wagmi/core': 3.4.0(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(ox@0.12.4(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.4))(viem@2.46.3(typescript@5.9.3)(zod@4.3.6))
       viem: 2.46.3(typescript@5.9.3)(zod@4.3.6)
     optionalDependencies:
       typescript: 5.9.3
@@ -10085,6 +10135,22 @@ snapshots:
       mipd: 0.0.7(typescript@5.9.3)
       viem: 2.46.3(typescript@5.9.3)(zod@4.3.6)
       zustand: 5.0.0(@types/react@19.2.14)(react@19.2.4)(use-sync-external-store@1.4.0(react@19.2.4))
+    optionalDependencies:
+      '@tanstack/query-core': 5.90.20
+      ox: 0.12.4(typescript@5.9.3)(zod@4.3.6)
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - '@types/react'
+      - immer
+      - react
+      - use-sync-external-store
+
+  '@wagmi/core@3.4.0(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(ox@0.12.4(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.4))(viem@2.46.3(typescript@5.9.3)(zod@4.3.6))':
+    dependencies:
+      eventemitter3: 5.0.1
+      mipd: 0.0.7(typescript@5.9.3)
+      viem: 2.46.3(typescript@5.9.3)(zod@4.3.6)
+      zustand: 5.0.0(@types/react@19.2.14)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
     optionalDependencies:
       '@tanstack/query-core': 5.90.20
       ox: 0.12.4(typescript@5.9.3)(zod@4.3.6)
@@ -13237,7 +13303,7 @@ snapshots:
   wagmi@3.5.0(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.4))(@types/react@19.2.14)(ox@0.12.4(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(viem@2.46.3(typescript@5.9.3)(zod@4.3.6)):
     dependencies:
       '@tanstack/react-query': 5.90.21(react@19.2.4)
-      '@wagmi/connectors': 7.2.1(@wagmi/core@3.4.0(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(ox@0.12.4(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.4))(viem@2.46.3(typescript@5.9.3)(zod@4.3.6)))(typescript@5.9.3)(viem@2.46.3(typescript@5.9.3)(zod@4.3.6))
+      '@wagmi/connectors': 7.2.1(@wagmi/core@3.4.0(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(ox@0.12.4(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.4))(viem@2.46.3(typescript@5.9.3)(zod@4.3.6)))(typescript@5.9.3)(viem@2.46.3(typescript@5.9.3)(zod@4.3.6))
       '@wagmi/core': 3.4.0(@tanstack/query-core@5.90.20)(@types/react@19.2.14)(ox@0.12.4(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.4))(viem@2.46.3(typescript@5.9.3)(zod@4.3.6))
       react: 19.2.4
       use-sync-external-store: 1.4.0(react@19.2.4)
@@ -13454,5 +13520,11 @@ snapshots:
       '@types/react': 19.2.14
       react: 19.2.4
       use-sync-external-store: 1.4.0(react@19.2.4)
+
+  zustand@5.0.0(@types/react@19.2.14)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4)):
+    optionalDependencies:
+      '@types/react': 19.2.14
+      react: 19.2.4
+      use-sync-external-store: 1.6.0(react@19.2.4)
 
   zwitch@2.0.4: {}

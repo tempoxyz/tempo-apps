@@ -33,7 +33,7 @@
 		{
 			"max_instances": 10,
 			"image": "./Dockerfile",
-			"instance_type": "standard-2",
+			"instance_type": "standard-3",
 			"name": "verification-container",
 			"class_name": "VerificationContainer"
 		}
@@ -54,11 +54,16 @@
 	],
 	"observability": {
 		"enabled": true,
-		"head_sampling_rate": 1,
 		"logs": {
+			"persist": true,
 			"enabled": true,
 			"head_sampling_rate": 1,
-			"invocation_logs": true
+			"invocation_logs": true,
+			"destinations": ["tempo-contract-verification-internal-logs"]
+		},
+		"traces": {
+			"enabled": true,
+			"destinations": ["tempo-contract-verification-internal-metrics"]
 		}
 	}
 }
