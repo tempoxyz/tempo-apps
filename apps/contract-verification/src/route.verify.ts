@@ -1178,9 +1178,10 @@ async function runVerificationJob(
 		}
 
 		if (signatureRows.length > 0) {
-			// D1 has a parameter binding limit per statement, so chunk large ABI
-			// inserts and submit them in a single D1 batch (one round-trip).
-			const BATCH_SIZE = 50
+			// D1 limits bound parameters to 100 per statement. signaturesTable has
+			// 2 bound params and compiledContractsSignaturesTable has 4, so use 25
+			// rows per chunk (25 × 4 = 100) and submit them in a single D1 batch.
+			const BATCH_SIZE = 25
 			const statements: Array<BatchItem<'sqlite'>> = []
 			for (let i = 0; i < signatureRows.length; i += BATCH_SIZE) {
 				statements.push(
