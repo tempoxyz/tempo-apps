@@ -1,4 +1,4 @@
-name: Test fee-payer
+name: Test
 on:
   pull_request:
     paths:
@@ -21,8 +21,8 @@ env:
   NODE_OPTIONS: "--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning"
 
 jobs:
-  test:
-    name: Test
+  test-fee-payer:
+    name: Test Fee Payer
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
 
     steps:
@@ -34,12 +34,25 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
 
-      - name: Run tests (fee-payer)
+      - name: Run tests
         run: pnpm test
         env:
           TEMPO_ENV: localnet
         working-directory: apps/fee-payer
 
-      - name: Run tests (contract-verification)
+  test-contracts:
+    name: Test Contract Verification
+    runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v6
+        with:
+          submodules: "recursive"
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Run tests
         run: pnpm test
         working-directory: apps/contract-verification
