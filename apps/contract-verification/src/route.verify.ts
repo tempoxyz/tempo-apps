@@ -650,7 +650,7 @@ async function runVerificationJob(
 			const getContainerFn = deps?.getContainer ?? null
 			const container = getContainerFn
 				? getContainerFn(env.VERIFICATION_CONTAINER, jobId)
-				: getRandom(env.VERIFICATION_CONTAINER, CONTAINER_INSTANCE_COUNT)
+				: await getRandom(env.VERIFICATION_CONTAINER, CONTAINER_INSTANCE_COUNT)
 
 			compileResponse = await container.fetch(
 				new Request(compileEndpoint, {

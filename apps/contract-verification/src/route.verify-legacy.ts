@@ -180,7 +180,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		}
 
 		// Compile via container (load-balanced across multiple instances)
-		const container = getRandom(context.env.VERIFICATION_CONTAINER, 3)
+		const container = await getRandom(context.env.VERIFICATION_CONTAINER, 3)
 
 		let compileResponse: Response
 		try {

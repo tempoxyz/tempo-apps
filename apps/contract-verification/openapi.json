@@ -885,7 +885,7 @@
 						}
 					},
 					"429": {
-						"description": "You are sending too many requests to the server",
+						"description": "The contract is already being verified. Jobs older than 5 minutes are considered stale and automatically expired, allowing a retry.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -895,12 +895,12 @@
 										"customCode": {
 											"type": "string",
 											"description": "A string token to indicate the reason of the error",
-											"example": "unsupported_chain"
+											"example": "duplicate_verification_request"
 										},
 										"message": {
 											"type": "string",
 											"description": "The reasoning of the error",
-											"example": "The chain with chainId 3153212 is not supported for verification"
+											"example": "Contract 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 on chain 31337 is already being verified."
 										},
 										"errorId": {
 											"type": "string",
@@ -910,9 +910,9 @@
 									"required": ["customCode", "message", "errorId"],
 									"examples": [
 										{
-											"customCode": "unsupported_chain",
-											"message": "The chain with chainId 9429413 is not supported",
-											"errorId": "1ac6b91a-0605-4459-93dc-18f210a70192"
+											"customCode": "duplicate_verification_request",
+											"message": "Contract 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 on chain 31337 is already being verified.",
+											"errorId": "23aaf52e-168a-4cfa-8463-65ddfb792efc"
 										}
 									]
 								},
@@ -1626,7 +1626,7 @@
 						}
 					},
 					"429": {
-						"description": "The contract is already being verified",
+						"description": "The contract is already being verified. Jobs older than 5 minutes are considered stale and automatically expired, allowing a retry.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1720,7 +1720,7 @@
 			"get": {
 				"tags": ["Verification Jobs"],
 				"summary": "Check verification job status",
-				"description": "Endpoint to get the status of a verification job.\n\nAlternatively you can directly check the verification status of a contract with with chainId+address at `GET /v2/contract/{chainId}/{address}`",
+				"description": "Endpoint to get the status of a verification job.\n\nJobs that have been pending for more than 5 minutes are considered stale and will be automatically expired with a `timeout` error code when polled.\n\nAlternatively you can directly check the verification status of a contract with with chainId+address at `GET /v2/contract/{chainId}/{address}`",
 				"operationId": "verification-status",
 				"parameters": [
 					{
