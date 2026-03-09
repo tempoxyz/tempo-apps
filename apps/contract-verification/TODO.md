@@ -1,136 +1,48 @@
-# TODO: Populate deployment metadata (`transactionHash`, `blockNumber`, `deployer`)
+# TODO
 
-## Context
+## Populate deployment metadata (`transactionHash`, `blockNumber`, `deployer`)
 
-The `contract_deployments` table has columns for `transaction_hash`, `block_number`, `transaction_index`, and `deployer` (see `src/database/schema.ts` L91–L127), but they have **never been populated**. Both verification routes (`src/route.verify.ts` L900–L907 and `src/route.verify-legacy.ts` L394–L401) only insert `chainId`, `address`, and `contractId`.
+### Context
 
-The API response at `GET /v2/contract/:chainId/:address?fields=all` already reads and returns these fields (see `src/route.lookup.ts` L483–L494) — they just come back as `null`:
+The `contract_deployments` table has columns for `transaction_hash`, `block_number`, `transaction_index`, and `deployer` (see `database/schema.ts` L91–L127), but they were historically never populated.
 
-```json
-{
-  "deployment": {
-    "chainId": "42431",
-    "address": "0xc0951f25838d83c04eba09ba2dd99ac37e59dc55",
-    "transactionHash": null,
-    "blockNumber": null,
-    "transactionIndex": null,
-    "deployer": null
-  }
-}
-```
+The API response at `GET /v2/contract/:chainId/:address?fields=all` already reads and returns these fields (see `src/route.lookup.ts` L486–L497).
 
-## Task
+### Status
 
-### 1. Populate on new verifications
+#### ✅ 1. Populate on new verifications (`route.verify.ts`) — DONE
 
-In both `src/route.verify.ts` and `src/route.verify-legacy.ts`, after verification succeeds, fetch the contract's creation transaction from the RPC and store it in the deployment row.
+`src/route.verify.ts` now accepts an optional `creationTransactionHash` in the request body (L127), fetches the transaction receipt via `client.getTransactionReceipt()` (L684–700), and stores `transactionHash`, `blockNumber`, `transactionIndex`, and `deployer` in the deployment row on both insert (L1022–1034) and update of existing deployments (L1003–1017).
 
-A viem `publicClient` is already instantiated in `route.verify.ts` (L625–L629) using the chain's RPC URL. Use it (or create one in the legacy route) to look up the deployment transaction.
+#### ✅ 3. Update existing deployment path (`route.verify.ts`) — DONE
 
-**Approach — use Tempo's block explorer API or trace-based lookup:**
+When a deployment row already exists with `transactionHash === null`, `route.verify.ts` updates it with the metadata if `creationTransactionHash` was provided (L1003–1017).
 
-Tempo doesn't have a native `eth_getContractCreator` RPC method. Options:
+#### ❌ 2. Populate on new verifications (`route.verify-legacy.ts`) — NOT DONE
 
-- **Option A**: Query the Tempo explorer/indexer API for the contract's creation tx hash, then call `client.getTransaction()` and `client.getTransactionReceipt()` to get `blockNumber`, `transactionIndex`, and `from` (deployer). The explorer API base URLs are in `src/wagmi.config.ts` under each chain's `blockExplorers.default.url`.
+`src/route.verify-legacy.ts` still only inserts `chainId`, `address`, and `contractId` (L417–424). It does not accept `creationTransactionHash`, does not fetch deployment metadata, and does not update existing deployments that are missing metadata.
 
-- **Option B**: Use `eth_getCode` with binary search over block ranges to find the creation block, then scan that block's transactions. This is slower but doesn't depend on an external indexer.
+**To implement:** Mirror the approach from `route.verify.ts` — add `creationTransactionHash` to the request body, create a viem `publicClient`, fetch the receipt, and populate the deployment row.
 
-- **Option C**: Accept the creation tx hash as an optional parameter in the verification request body (forge already knows it from the broadcast). This is the simplest approach — the data is already available client-side.
+#### ❌ 3. Backfill existing verified contracts — NOT DONE
 
-**Example implementation sketch (Option C — preferred):**
+No backfill script exists yet. A one-time script (e.g., `scripts/backfill-deployment-meta.ts`) is needed to:
 
-```typescript
-// In the verify request body schema, add optional field:
-// creationTransactionHash: z.string().optional()
+1. Query all `contract_deployments` rows where `transaction_hash IS NULL`
+2. Group by `chain_id`
+3. For each deployment, look up the creation tx (via explorer API at `{blockExplorers.default.url}/api/v2/addresses/{address}`)
+4. Update the row with `transaction_hash`, `block_number`, `transaction_index`, and `deployer`
 
-// In the deployment insert (route.verify.ts ~L900):
-const deploymentMeta = body.creationTransactionHash
-  ? await client.getTransactionReceipt({ hash: body.creationTransactionHash })
-  : null
-
-await db.insert(contractDeploymentsTable).values({
-  id: deploymentId,
-  chainId,
-  address: addressBytes,
-  contractId,
-  transactionHash: deploymentMeta
-    ? Bytes.fromHex(deploymentMeta.transactionHash)
-    : null,
-  blockNumber: deploymentMeta?.blockNumber
-    ? Number(deploymentMeta.blockNumber)
-    : null,
-  transactionIndex: deploymentMeta?.transactionIndex ?? null,
-  deployer: deploymentMeta
-    ? Bytes.fromHex(deploymentMeta.from)
-    : null,
-  createdBy: auditUser,
-  updatedBy: auditUser,
-})
-```
-
-Note: The `address` and `transactionHash` columns are `blob` type (raw bytes). Use `Bytes.fromHex()` from `ox` to convert hex strings, matching the existing pattern in the codebase.
-
-### 2. Backfill existing verified contracts
-
-Write a one-time script (e.g., `scripts/backfill-deployment-meta.ts`) that:
-
-1. Queries all `contract_deployments` rows where `transaction_hash IS NULL`
-2. Groups by `chain_id`
-3. For each deployment, looks up the creation tx (via explorer API or on-chain search)
-4. Updates the row with `transaction_hash`, `block_number`, `transaction_index`, and `deployer`
-
-```typescript
-// Pseudocode for backfill script
-import { createPublicClient, http } from 'viem'
-import { chains } from '#wagmi.config.ts'
-
-const deployments = await db
-  .select()
-  .from(contractDeploymentsTable)
-  .where(isNull(contractDeploymentsTable.transactionHash))
-
-for (const deployment of deployments) {
-  const chain = chains.find(c => c.id === deployment.chainId)
-  const client = createPublicClient({ chain, transport: http(chain.rpcUrls.default.http[0]) })
-  const address = Hex.fromBytes(new Uint8Array(deployment.address))
-
-  // Fetch creation tx from explorer API
-  const explorerUrl = chain.blockExplorers.default.url
-  const resp = await fetch(`${explorerUrl}/api/v2/addresses/${address}`)
-  const data = await resp.json()
-  const creationTxHash = data.creation_tx_hash
-
-  if (creationTxHash) {
-    const receipt = await client.getTransactionReceipt({ hash: creationTxHash })
-    await db
-      .update(contractDeploymentsTable)
-      .set({
-        transactionHash: Bytes.fromHex(receipt.transactionHash),
-        blockNumber: Number(receipt.blockNumber),
-        transactionIndex: receipt.transactionIndex,
-        deployer: Bytes.fromHex(receipt.from),
-      })
-      .where(eq(contractDeploymentsTable.id, deployment.id))
-  }
-}
-```
-
-### 3. Update the existing deployment path
-
-When a deployment row already exists (the `existingDeployment.length > 0` branch in both routes), check if `transactionHash` is null and update it if we now have the data. This handles re-verification of previously verified contracts.
-
-## Files to modify
+### Files to modify
 
 | File | Change |
 |------|--------|
-| `src/route.verify.ts` L895–L908 | Add deployment metadata to insert + update existing |
-| `src/route.verify-legacy.ts` L389–L402 | Same as above |
+| `src/route.verify-legacy.ts` L400–L425 | Add `creationTransactionHash` support + deployment metadata insert/update |
 | `scripts/backfill-deployment-meta.ts` | New script for backfilling existing rows |
-| `openapi.json` | Add optional `creationTransactionHash` to verify request schema (if using Option C) |
 
-## Verification
+### Verification
 
-After implementing, re-run the test script and confirm the fields are populated:
+After implementing, confirm the fields are populated:
 
 ```bash
 VERIFIER_URL="http://localhost:22222" bash scripts/test-vyper.sh
@@ -139,3 +51,11 @@ VERIFIER_URL="http://localhost:22222" bash scripts/test-vyper.sh
 curl "http://localhost:22222/v2/contract/42431/<deployed-address>?fields=all" | jq '.deployment'
 # Expected: transactionHash, blockNumber, deployer are non-null
 ```
+
+## Update deps and view latest containers docs
+
+### Update deps in package.json
+
+### View latest containers docs <https://developers.cloudflare.com/containers/llms-full.txt>
+
+figure out how to get logs from [./container/index.ts](./container/index.ts)
