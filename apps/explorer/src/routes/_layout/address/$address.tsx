@@ -7,7 +7,6 @@ import {
 	stripSearchParams,
 	useLocation,
 	useNavigate,
-	useRouter,
 } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
@@ -158,6 +157,7 @@ const defaultSearchValues = {
 } as const
 
 const ASSETS_PER_PAGE = 10
+const HISTORY_SOURCES: HistorySources[] = ['txs', 'transfers', 'emitted']
 
 const allTabs = [
 	'transactions',
@@ -410,7 +410,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 function RouteComponent() {
 	const navigate = useNavigate()
-	const router = useRouter()
 	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, live, limit, a } = Route.useSearch()
@@ -463,26 +462,6 @@ function RouteComponent() {
 			resetScroll: false,
 		})
 	}, [hash, isContract, tab, navigate, limit])
-
-	React.useEffect(() => {
-		// Preload next page for paginated tabs (delayed to avoid query storms)
-		if (tab !== 'transactions' && tab !== 'transfers' && tab !== 'holders')
-			return
-
-		const timer = setTimeout(() => {
-			const nextPage = page + 1
-			router
-				.preloadRoute({
-					to: '.',
-					search: { page: nextPage, tab, limit, ...(a ? { a } : {}) },
-				})
-				.catch((error) => {
-					console.error('Preload error (non-blocking):', error)
-				})
-		}, 1_000)
-
-		return () => clearTimeout(timer)
-	}, [page, router, tab, limit, a])
 
 	// Build visible tabs based on address type
 	const isTip20 = Tip20.isTip20Address(address)
@@ -741,12 +720,10 @@ function SectionsWrapper(props: {
 	// Only auto-refresh on page 1 when transactions tab is active and live=true
 	const shouldAutoRefresh = page === 1 && isTransactionsTabActive && live
 
-	// Fetch enriched transaction history server-side for all addresses, including tokens.
-	const historySources: HistorySources[] = ['txs', 'transfers', 'emitted']
-
 	const {
 		data: historyQueryData,
-		isPlaceholderData: isHistoryPlaceholder,
+		isPending: isHistoryPending,
+		isFetching: isHistoryFetching,
 		error: historyError,
 	} = useQuery({
 		...historyQueryOptions({
@@ -754,7 +731,7 @@ function SectionsWrapper(props: {
 			page,
 			limit,
 			offset: (page - 1) * limit,
-			sources: historySources,
+			sources: HISTORY_SOURCES,
 		}),
 		initialData: page === 1 ? initialData : undefined,
 		enabled:
@@ -763,7 +740,6 @@ function SectionsWrapper(props: {
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
 
-	const isPlaceholderData = isHistoryPlaceholder
 	const error = historyError
 
 	/**
@@ -783,17 +759,20 @@ function SectionsWrapper(props: {
 
 	// Token transfers query
 	const transfersPage = isTransfersTabActive ? page : 1
-	const { data: transfersData, isPlaceholderData: isTransfersPlaceholder } =
-		useQuery({
-			...transfersQueryOptions({
-				address,
-				page: transfersPage,
-				limit,
-				offset: isTransfersTabActive ? (page - 1) * limit : 0,
-				account,
-			}),
-			enabled: isMounted && isToken && isTransfersTabActive,
-		})
+	const {
+		data: transfersData,
+		isPending: isTransfersPending,
+		isFetching: isTransfersFetching,
+	} = useQuery({
+		...transfersQueryOptions({
+			address,
+			page: transfersPage,
+			limit,
+			offset: isTransfersTabActive ? (page - 1) * limit : 0,
+			account,
+		}),
+		enabled: isMounted && isToken && isTransfersTabActive,
+	})
 
 	const {
 		transfers = [],
@@ -803,16 +782,19 @@ function SectionsWrapper(props: {
 
 	// Token holders query
 	const holdersPage = isHoldersTabActive ? page : 1
-	const { data: holdersData, isPlaceholderData: isHoldersPlaceholder } =
-		useQuery({
-			...holdersQueryOptions({
-				address,
-				page: holdersPage,
-				limit,
-				offset: isHoldersTabActive ? (page - 1) * limit : 0,
-			}),
-			enabled: isMounted && isToken && isHoldersTabActive,
-		})
+	const {
+		data: holdersData,
+		isPending: isHoldersPending,
+		isFetching: isHoldersFetching,
+	} = useQuery({
+		...holdersQueryOptions({
+			address,
+			page: holdersPage,
+			limit,
+			offset: isHoldersTabActive ? (page - 1) * limit : 0,
+		}),
+		enabled: isMounted && isToken && isHoldersTabActive,
+	})
 
 	const {
 		holders = [],
@@ -822,6 +804,113 @@ function SectionsWrapper(props: {
 
 	// Only use after mount AND when data has loaded to avoid showing 0 during loading
 	const totalTrxCount = isMounted && historyData ? total : undefined
+
+	const isTransactionsLoading =
+		isTransactionsTabActive && !error && (isHistoryPending || !historyData)
+	const isTransactionsFetching =
+		isTransactionsTabActive && isHistoryFetching && !isTransactionsLoading
+	const isTransfersLoading =
+		isTransfersTabActive && (isTransfersPending || !transfersData)
+	const isTransfersFetchingNext =
+		isTransfersTabActive && isTransfersFetching && !isTransfersLoading
+	const isHoldersLoading =
+		isHoldersTabActive && (isHoldersPending || !holdersData)
+	const isHoldersFetchingNext =
+		isHoldersTabActive && isHoldersFetching && !isHoldersLoading
+
+	const queryClient = useQueryClient()
+
+	const prefetchTransactionsNextPage = React.useCallback(() => {
+		if (!isTransactionsTabActive) return
+
+		const nextPage = page + 1
+		const hasNextPage =
+			totalTrxCount === undefined || countCapped
+				? hasMore
+				: nextPage <= Math.ceil(totalTrxCount / limit)
+		if (!hasNextPage) return
+
+		void queryClient
+			.prefetchQuery(
+				historyQueryOptions({
+					address,
+					page: nextPage,
+					limit,
+					offset: (nextPage - 1) * limit,
+					sources: HISTORY_SOURCES,
+				}),
+			)
+			.catch(() => {})
+	}, [
+		address,
+		countCapped,
+		hasMore,
+		isTransactionsTabActive,
+		limit,
+		page,
+		queryClient,
+		totalTrxCount,
+	])
+
+	const prefetchTransfersNextPage = React.useCallback(() => {
+		if (!isToken || !isTransfersTabActive) return
+
+		const nextPage = page + 1
+		const hasNextPage =
+			transfersTotalCapped || nextPage <= Math.ceil(transfersTotal / limit)
+		if (!hasNextPage) return
+
+		void queryClient
+			.prefetchQuery(
+				transfersQueryOptions({
+					address,
+					page: nextPage,
+					limit,
+					offset: (nextPage - 1) * limit,
+					account,
+				}),
+			)
+			.catch(() => {})
+	}, [
+		account,
+		address,
+		isToken,
+		isTransfersTabActive,
+		limit,
+		page,
+		queryClient,
+		transfersTotal,
+		transfersTotalCapped,
+	])
+
+	const prefetchHoldersNextPage = React.useCallback(() => {
+		if (!isToken || !isHoldersTabActive) return
+
+		const nextPage = page + 1
+		const hasNextPage =
+			holdersTotalCapped || nextPage <= Math.ceil(holdersTotal / limit)
+		if (!hasNextPage) return
+
+		void queryClient
+			.prefetchQuery(
+				holdersQueryOptions({
+					address,
+					page: nextPage,
+					limit,
+					offset: (nextPage - 1) * limit,
+				}),
+			)
+			.catch(() => {})
+	}, [
+		address,
+		holdersTotal,
+		holdersTotalCapped,
+		isHoldersTabActive,
+		isToken,
+		limit,
+		page,
+		queryClient,
+	])
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -942,12 +1031,13 @@ function SectionsWrapper(props: {
 							displayCountCapped={countCapped}
 							disableLastPage={countCapped}
 							page={page}
-							fetching={isPlaceholderData}
-							loading={!isMounted || !historyData}
+							fetching={isTransactionsFetching}
+							loading={isTransactionsLoading}
 							countLoading={totalTrxCount === undefined}
 							itemsLabel="transactions"
 							itemsPerPage={limit}
 							pagination="simple"
+							onPrefetchNextPage={prefetchTransactionsNextPage}
 							emptyState="No transactions found."
 						/>
 					),
@@ -1068,11 +1158,12 @@ function SectionsWrapper(props: {
 							displayCount={transfersTotal}
 							displayCountCapped={transfersTotalCapped}
 							page={page}
-							fetching={isTransfersPlaceholder}
-							loading={!transfersData}
+							fetching={isTransfersFetchingNext}
+							loading={isTransfersLoading}
 							itemsLabel="transfers"
 							itemsPerPage={limit}
 							pagination="simple"
+							onPrefetchNextPage={prefetchTransfersNextPage}
 							emptyState="No transfers found."
 						/>
 					),
@@ -1124,11 +1215,12 @@ function SectionsWrapper(props: {
 							displayCount={holdersTotal}
 							displayCountCapped={holdersTotalCapped}
 							page={page}
-							fetching={isHoldersPlaceholder}
-							loading={!holdersData}
+							fetching={isHoldersFetchingNext}
+							loading={isHoldersLoading}
 							itemsLabel="holders"
 							itemsPerPage={limit}
 							pagination="simple"
+							onPrefetchNextPage={prefetchHoldersNextPage}
 							emptyState="No holders found."
 						/>
 					),

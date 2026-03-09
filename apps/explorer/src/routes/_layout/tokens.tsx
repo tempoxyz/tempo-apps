@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import * as z from 'zod/mini'
@@ -57,8 +57,9 @@ function TokensPage() {
 	const loaderData = Route.useLoaderData()
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const isMounted = useIsMounted()
+	const queryClient = useQueryClient()
 
-	const { data, isPlaceholderData, isPending } = useQuery({
+	const { data, isPending, isFetching } = useQuery({
 		...tokensListQueryOptions({
 			page,
 			limit: TOKENS_PER_PAGE,
@@ -101,6 +102,26 @@ function TokensPage() {
 		},
 		[holdersCountFormatter],
 	)
+
+	const prefetchNextPage = React.useCallback(() => {
+		const nextPage = page + 1
+		const hasNextPage =
+			exactCount == null ||
+			isCapped ||
+			nextPage <= Math.ceil(exactCount / TOKENS_PER_PAGE)
+		if (!hasNextPage) return
+
+		void queryClient
+			.prefetchQuery(
+				tokensListQueryOptions({
+					page: nextPage,
+					limit: TOKENS_PER_PAGE,
+					includeCount: false,
+					includeHolders: true,
+				}),
+			)
+			.catch(() => {})
+	}, [exactCount, isCapped, page, queryClient])
 
 	const columns: DataGrid.Column[] = [
 		{
@@ -193,12 +214,13 @@ function TokensPage() {
 								displayCount={isCapped ? TOKEN_COUNT_MAX : exactCount}
 								displayCountCapped={isCapped}
 								page={page}
-								fetching={isPlaceholderData}
+								fetching={isFetching && !isPending}
 								loading={isPending}
-								countLoading={!exactCount}
+								countLoading={exactCount == null}
 								itemsLabel="tokens"
 								itemsPerPage={TOKENS_PER_PAGE}
 								pagination="simple"
+								onPrefetchNextPage={prefetchNextPage}
 								emptyState="No tokens found."
 							/>
 						),
