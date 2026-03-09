@@ -5,38 +5,41 @@ import type { ApiReferenceConfigurationWithMultipleSources } from '@scalar/types
 import packageJSON from '#package.json' with { type: 'json' }
 
 const getScalarConfig = (baseUrl: string) =>
-  ({
-    hideModels: true,
-    layout: 'modern',
-    telemetry: false,
-    url: '/openapi.json',
-    slug: packageJSON.name,
-    hideClientButton: true,
-    title: packageJSON.name,
-    showDeveloperTools: 'never',
-    documentDownloadType: 'json',
-    operationTitleSource: 'path',
-    proxyUrl: 'https://proxy.scalar.com',
-    favicon: 'https://explore.tempo.xyz/favicon.ico',
-    sources: [{ url: '/openapi.json', default: true }],
-    defaultHttpClient: { clientKey: 'curl', targetKey: 'shell' },
-    servers: [
-      { url: baseUrl, description: 'Current' },
-      { url: 'https://contracts.tempo.xyz', description: 'Production' },
-      { url: 'https://contracts.porto.workers.dev', description: 'workers.dev' }, 
-      {
-        url: 'http://localhost:{port}',
-        description: 'Local',
-        variables: {
-          port: { default: '6767', description: 'localhost port number' }
-        }
-      }
-    ]
-  }) satisfies Partial<ApiReferenceConfigurationWithMultipleSources>
+	({
+		hideModels: true,
+		layout: 'modern',
+		telemetry: false,
+		url: '/openapi.json',
+		slug: packageJSON.name,
+		hideClientButton: true,
+		title: packageJSON.name,
+		showDeveloperTools: 'never',
+		documentDownloadType: 'json',
+		operationTitleSource: 'path',
+		proxyUrl: 'https://proxy.scalar.com',
+		favicon: 'https://explore.tempo.xyz/favicon.ico',
+		sources: [{ url: '/openapi.json', default: true }],
+		defaultHttpClient: { clientKey: 'curl', targetKey: 'shell' },
+		servers: [
+			{ url: baseUrl, description: 'Current' },
+			{ url: 'https://contracts.tempo.xyz', description: 'Production' },
+			{
+				url: 'https://contracts.porto.workers.dev',
+				description: 'workers.dev',
+			},
+			{
+				url: 'http://localhost:{port}',
+				description: 'Local',
+				variables: {
+					port: { default: '6767', description: 'localhost port number' },
+				},
+			},
+		],
+	}) satisfies Partial<ApiReferenceConfigurationWithMultipleSources>
 
 const renderDocs = (props: { baseUrl: string }) => {
-  const scalarConfig = getScalarConfig(props.baseUrl)
-  return html`<!doctype html>
+	const scalarConfig = getScalarConfig(props.baseUrl)
+	return html`<!doctype html>
 <html lang="en">
   <head>
     <title>Contract Verification API</title>
@@ -53,6 +56,7 @@ const renderDocs = (props: { baseUrl: string }) => {
 </html>`
 }
 
-export const docsRoute = new Hono<{ Bindings: Cloudflare.Env }>().get('/', context =>
-  context.html(renderDocs({ baseUrl: context.env.VITE_BASE_URL }))
+export const docsRoute = new Hono<{ Bindings: Cloudflare.Env }>().get(
+	'/',
+	(context) => context.html(renderDocs({ baseUrl: context.env.VITE_BASE_URL })),
 )

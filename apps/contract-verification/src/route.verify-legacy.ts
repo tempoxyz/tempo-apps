@@ -25,7 +25,15 @@ import {
 	getVyperImmutableReferences,
 } from '#bytecode-matching.ts'
 import { chains, chainIds } from '#wagmi.config.ts'
-import { getDb, log, sourcifyError, normalizeSourcePath } from '#utilities.ts'
+import { getLogger } from '#logger.ts'
+import {
+	formatError,
+	getDb,
+	sourcifyError,
+	normalizeSourcePath,
+} from '#utilities.ts'
+
+const logger = getLogger(['tempo'])
 
 /**
  * Legacy Sourcify-compatible routes for Foundry forge verify.
@@ -52,7 +60,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 	try {
 		const body = LegacyVyperRequestSchema.parse(await context.req.json())
 
-		log.fromContext(context).info('vyper_verification_started', {
+		logger.info('vyper_verification_started', {
 			address: body.address,
 			chainId: body.chain,
 			contractName: body.contractName,
@@ -194,7 +202,11 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				}),
 			)
 		} catch (error) {
-			log.error('container_fetch_failed', error, { address, chain })
+			logger.error('container_fetch_failed', {
+				error: formatError(error),
+				address,
+				chain,
+			})
 			return sourcifyError(
 				context,
 				500,
@@ -552,7 +564,9 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			],
 		})
 	} catch (error) {
-		log.fromContext(context).error('legacy_vyper_verification_failed', error)
+		logger.error('legacy_vyper_verification_failed', {
+			error: formatError(error),
+		})
 		return context.json({ error: 'An unexpected error occurred' }, 500)
 	}
 })

@@ -1,9 +1,12 @@
 import { Container, type StopParams } from '@cloudflare/containers'
-import { log } from '#utilities.ts'
+import { getLogger } from '#logger.ts'
+import { formatError } from '#utilities.ts'
+
+const logger = getLogger(['tempo', 'container'])
 
 export class VerificationContainer extends Container<Cloudflare.Env> {
 	defaultPort = 8080
-	sleepAfter = '10m'
+	sleepAfter = '15m'
 	enableInternet = true
 
 	override async onStart(): Promise<void> {
@@ -11,14 +14,17 @@ export class VerificationContainer extends Container<Cloudflare.Env> {
 		if (!response.ok) throw new Error('Container health check failed')
 
 		const data = await response.text()
-		log.info('container_started', { healthResponse: data })
+		logger.info('container_started', { healthResponse: data })
 	}
 
 	override onStop(stopParams: StopParams): void {
 		if (stopParams.exitCode === 0) {
-			log.info('container_stopped', { exitCode: 0, reason: stopParams.reason })
+			logger.info('container_stopped', {
+				exitCode: 0,
+				reason: stopParams.reason,
+			})
 		} else {
-			log.warn('container_stopped_unexpectedly', {
+			logger.warn('container_stopped_unexpectedly', {
 				exitCode: stopParams.exitCode,
 				reason: stopParams.reason,
 			})
@@ -27,7 +33,10 @@ export class VerificationContainer extends Container<Cloudflare.Env> {
 
 	override onError(error: unknown): unknown {
 		const errorMeta = extractErrorMeta(error)
-		log.error('container_error', error, errorMeta)
+		logger.error('container_error', {
+			error: formatError(error),
+			...errorMeta,
+		})
 		throw error
 	}
 
@@ -39,7 +48,8 @@ export class VerificationContainer extends Container<Cloudflare.Env> {
 			await super.alarm(alarmProps)
 		} catch (error) {
 			const errorMeta = extractErrorMeta(error)
-			log.error('container_alarm_error', error, {
+			logger.error('container_alarm_error', {
+				error: formatError(error),
 				...errorMeta,
 				isRetry: alarmProps.isRetry,
 				retryCount: alarmProps.retryCount,

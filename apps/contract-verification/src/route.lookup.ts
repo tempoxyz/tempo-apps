@@ -13,7 +13,10 @@ import {
 	compiledContractsSignaturesTable,
 } from '#database/schema.ts'
 import { chainIds } from '#wagmi.config.ts'
-import { getDb, log, sourcifyError } from '#utilities.ts'
+import { getLogger } from '#logger.ts'
+import { formatError, getDb, sourcifyError } from '#utilities.ts'
+
+const logger = getLogger(['tempo'])
 
 /**
  * GET /v2/contract/{chainId}/{address}
@@ -89,9 +92,10 @@ lookupRoute
 			return context.json({ results: contracts })
 		} catch (error) {
 			const { address } = context.req.param()
-			log
-				.fromContext(context)
-				.error('lookup_all_chains_failed', error, { address })
+			logger.error('lookup_all_chains_failed', {
+				error: formatError(error),
+				address,
+			})
 			return sourcifyError(
 				context,
 				500,
@@ -520,9 +524,11 @@ lookupRoute
 			return context.json(minimalResponse)
 		} catch (error) {
 			const { chainId, address } = context.req.param()
-			log
-				.fromContext(context)
-				.error('lookup_contract_failed', error, { chainId, address })
+			logger.error('lookup_contract_failed', {
+				error: formatError(error),
+				chainId,
+				address,
+			})
 			return sourcifyError(
 				context,
 				500,
@@ -618,7 +624,10 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 		return context.json({ results: contracts })
 	} catch (error) {
 		const { chainId } = context.req.param()
-		log.fromContext(context).error('list_contracts_failed', error, { chainId })
+		logger.error('list_contracts_failed', {
+			error: formatError(error),
+			chainId,
+		})
 		return sourcifyError(
 			context,
 			500,

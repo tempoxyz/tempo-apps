@@ -8,15 +8,17 @@ import {
 	vi,
 } from 'vitest'
 
-import { configureLogger } from '#logger.ts'
+import { configureLogger, getLogger, withContext } from '#logger.ts'
 import {
 	AppError,
+	formatError,
 	handleError,
-	log,
 	normalizeSourcePath,
 	sourcifyError,
 } from '#utilities.ts'
 import type { Context } from 'hono'
+
+const logger = getLogger(['tempo'])
 
 beforeAll(async () => {
 	await configureLogger('production', false)
@@ -97,9 +99,9 @@ describe('log', () => {
 		vi.restoreAllMocks()
 	})
 
-	describe('log.info', () => {
+	describe('logger.info', () => {
 		it('logs info event as JSON', () => {
-			log.info('test_event', { key: 'value' })
+			logger.info('test_event', { key: 'value' })
 
 			expect(consoleInfoSpy).toHaveBeenCalledOnce()
 			const output = JSON.parse(
@@ -110,7 +112,7 @@ describe('log', () => {
 		})
 
 		it('logs without extra data', () => {
-			log.info('simple_event')
+			logger.info('simple_event')
 
 			expect(consoleInfoSpy).toHaveBeenCalledOnce()
 			const output = JSON.parse(
@@ -120,9 +122,9 @@ describe('log', () => {
 		})
 	})
 
-	describe('log.warn', () => {
+	describe('logger.warn', () => {
 		it('logs warn event as JSON', () => {
-			log.warn('warning_event', { code: 'W001' })
+			logger.warn('warning_event', { code: 'W001' })
 
 			expect(consoleWarnSpy).toHaveBeenCalledOnce()
 			const output = JSON.parse(
@@ -133,10 +135,13 @@ describe('log', () => {
 		})
 	})
 
-	describe('log.error', () => {
+	describe('logger.error', () => {
 		it('logs error with Error object', () => {
 			const error = new Error('Something went wrong')
-			log.error('error_event', error, { context: 'test' })
+			logger.error('error_event', {
+				error: formatError(error),
+				context: 'test',
+			})
 
 			expect(consoleErrorSpy).toHaveBeenCalledOnce()
 			const output = JSON.parse(
@@ -151,7 +156,7 @@ describe('log', () => {
 		})
 
 		it('logs error with string', () => {
-			log.error('error_event', 'string error')
+			logger.error('error_event', { error: formatError('string error') })
 
 			const output = JSON.parse(
 				consoleErrorSpy?.mock.calls[0]?.[0] as string,
@@ -169,7 +174,9 @@ describe('log', () => {
 				}
 			}
 
-			log.error('custom_error', new CustomError('Custom message'))
+			logger.error('custom_error', {
+				error: formatError(new CustomError('Custom message')),
+			})
 
 			const output = JSON.parse(
 				consoleErrorSpy?.mock.calls[0]?.[0] as string,
@@ -180,21 +187,14 @@ describe('log', () => {
 		})
 	})
 
-	describe('log.fromContext', () => {
-		it('includes request context in logs', () => {
-			const mockContext = {
-				get: vi.fn((key: string) => {
-					if (key === 'requestId') return 'req-123'
-					return
-				}),
-				req: {
-					method: 'POST',
-					path: '/api/verify',
+	describe('withContext', () => {
+		it('includes implicit context in logs', async () => {
+			await withContext(
+				{ requestId: 'req-123', method: 'POST', path: '/api/verify' },
+				() => {
+					logger.info('context_event', { extra: 'data' })
 				},
-			} as unknown as Context
-
-			const contextLog = log.fromContext(mockContext)
-			contextLog.info('context_event', { extra: 'data' })
+			)
 
 			const output = JSON.parse(
 				consoleInfoSpy?.mock.calls[0]?.[0] as string,
@@ -206,14 +206,10 @@ describe('log', () => {
 			expect(output.extra).toBe('data')
 		})
 
-		it('logs warn with context', () => {
-			const mockContext = {
-				get: vi.fn(() => 'req-456'),
-				req: { method: 'GET', path: '/api/lookup' },
-			} as unknown as Context
-
-			const contextLog = log.fromContext(mockContext)
-			contextLog.warn('context_warn')
+		it('logs warn with context', async () => {
+			await withContext({ requestId: 'req-456' }, () => {
+				logger.warn('context_warn')
+			})
 
 			const output = JSON.parse(
 				consoleWarnSpy?.mock.calls[0]?.[0] as string,
@@ -221,14 +217,12 @@ describe('log', () => {
 			expect(output.requestId).toBe('req-456')
 		})
 
-		it('logs error with context', () => {
-			const mockContext = {
-				get: vi.fn(() => 'req-789'),
-				req: { method: 'DELETE', path: '/api/remove' },
-			} as unknown as Context
-
-			const contextLog = log.fromContext(mockContext)
-			contextLog.error('context_error', new Error('Oops'))
+		it('logs error with context', async () => {
+			await withContext({ requestId: 'req-789' }, () => {
+				logger.error('context_error', {
+					error: formatError(new Error('Oops')),
+				})
+			})
 
 			const output = JSON.parse(
 				consoleErrorSpy?.mock.calls[0]?.[0] as string,
@@ -339,7 +333,7 @@ describe('handleError', () => {
 		vi.restoreAllMocks()
 	})
 
-	it('handles AppError', () => {
+	it('handles AppError', async () => {
 		const mockContext = {
 			get: vi.fn(() => 'req-123'),
 			req: { method: 'POST', path: '/verify' },
@@ -353,7 +347,9 @@ describe('handleError', () => {
 			context: { field: 'address' },
 		})
 
-		handleError(error, mockContext)
+		await withContext({ requestId: 'req-123' }, () => {
+			handleError(error, mockContext)
+		})
 
 		expect(mockContext.json).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -371,7 +367,7 @@ describe('handleError', () => {
 		expect(warnPayload.requestId).toBe('req-123')
 	})
 
-	it('handles generic Error', () => {
+	it('handles generic Error', async () => {
 		const mockContext = {
 			get: vi.fn(() => 'req-456'),
 			req: { method: 'GET', path: '/lookup' },
@@ -380,7 +376,9 @@ describe('handleError', () => {
 
 		const error = new Error('Unexpected error')
 
-		handleError(error, mockContext)
+		await withContext({ requestId: 'req-456' }, () => {
+			handleError(error, mockContext)
+		})
 
 		expect(mockContext.json).toHaveBeenCalledWith(
 			expect.objectContaining({

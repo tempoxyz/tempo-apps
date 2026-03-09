@@ -2,6 +2,7 @@ import { env } from 'cloudflare:workers'
 import { getContainer } from '@cloudflare/containers'
 import { honoLogger } from '@logtape/hono'
 import { bodyLimit } from 'hono/body-limit'
+import { contextStorage } from 'hono/context-storage'
 import { cors } from 'hono/cors'
 import { showRoutes } from 'hono/dev'
 import { createFactory } from 'hono/factory'
@@ -12,14 +13,16 @@ import { rateLimiter } from 'hono-rate-limiter'
 
 import { sourcifyChains } from '#wagmi.config.ts'
 import { VerificationContainer } from '#container.ts'
-import { configureLogger, dispose } from '#logger.ts'
+import { configureLogger, dispose, getLogger, withContext } from '#logger.ts'
 import OpenApiSpec from '#openapi.json' with { type: 'json' }
 import packageJSON from '#package.json' with { type: 'json' }
 import { docsRoute } from '#route.docs.tsx'
 import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
 import { verifyRoute } from '#route.verify.ts'
 import { legacyVerifyRoute } from '#route.verify-legacy.ts'
-import { handleError, log, originMatches, sourcifyError } from '#utilities.ts'
+import { handleError, originMatches, sourcifyError } from '#utilities.ts'
+
+const logger = getLogger(['tempo'])
 
 export { VerificationContainer }
 
@@ -35,27 +38,29 @@ export const app = factory.createApp()
 
 app.onError(handleError)
 
-let loggerConfigured = false
 app.use(async (context, next) => {
-	if (!loggerConfigured) {
-		await configureLogger(env.NODE_ENV)
-		loggerConfigured = true
-	}
+	await configureLogger(env.NODE_ENV)
 	await next()
 	// Flush buffered logs before the Worker isolate becomes idle.
-	// dispose() resets LogTape config, so re-arm the flag for the next request.
 	// Skip in test env where executionCtx.waitUntil runs synchronously.
 	if (env.NODE_ENV !== 'test') {
-		context.executionCtx?.waitUntil(
-			dispose().then(() => {
-				loggerConfigured = false
-			}),
-		)
+		context.executionCtx?.waitUntil(dispose())
 	}
 })
 
 // @note: order matters
+app.use(contextStorage())
 app.use('*', requestId({ headerName: 'X-Tempo-Request-Id' }))
+app.use(async (context, next) => {
+	await withContext(
+		{
+			requestId: context.get('requestId') as string | undefined,
+			method: context.req.method,
+			path: context.req.path,
+		},
+		next,
+	)
+})
 app.use(
 	cors({
 		allowMethods: ['GET', 'POST', 'OPTIONS', 'HEAD'],
@@ -95,9 +100,7 @@ app.use(
 	bodyLimit({
 		maxSize: BODY_LIMIT,
 		onError: (context) => {
-			log
-				.fromContext(context)
-				.warn('body_limit_exceeded', { maxSizeBytes: BODY_LIMIT })
+			logger.warn('body_limit_exceeded', { maxSizeBytes: BODY_LIMIT })
 			return sourcifyError(
 				context,
 				413,

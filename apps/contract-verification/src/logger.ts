@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { prettyFormatter } from '@logtape/pretty'
 import { getLogger as getDrizzleLogger } from '@logtape/drizzle-orm'
 import {
@@ -5,10 +6,13 @@ import {
 	dispose,
 	getConsoleSink,
 	getLogger,
+	withContext,
 	type LogRecord,
 } from '@logtape/logtape'
 
-export { dispose }
+export { dispose, getLogger, withContext }
+
+const contextLocalStorage = new AsyncLocalStorage<Record<string, unknown>>()
 
 const APP_CATEGORY = 'tempo'
 
@@ -55,6 +59,7 @@ export async function configureLogger(
 
 	await configure({
 		reset: true,
+		contextLocalStorage,
 		sinks: {
 			json: jsonSink,
 			pretty: getConsoleSink({ formatter: prettyFormatter }),
@@ -67,14 +72,10 @@ export async function configureLogger(
 				sinks: [sinkName],
 			},
 			{
-				category: [APP_CATEGORY, 'http'],
-				lowestLevel: debugEnabled ? 'debug' : 'info',
-				sinks: [sinkName],
-			},
-			{
 				category: [APP_CATEGORY, 'db'],
 				lowestLevel: debugEnabled ? 'debug' : 'warning',
 				sinks: [sinkName],
+				parentSinks: 'override',
 			},
 			{
 				category: ['logtape', 'meta'],
@@ -83,14 +84,6 @@ export async function configureLogger(
 			},
 		],
 	})
-}
-
-export function getAppLogger() {
-	return getLogger([APP_CATEGORY, 'worker'])
-}
-
-export function getContainerLogger() {
-	return getLogger([APP_CATEGORY, 'container'])
 }
 
 export function getDatabaseLogger() {

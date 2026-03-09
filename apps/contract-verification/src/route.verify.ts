@@ -28,7 +28,15 @@ import {
 	getVyperImmutableReferences,
 } from '#bytecode-matching.ts'
 import { chains, chainIds } from '#wagmi.config.ts'
-import { getDb, log, sourcifyError, normalizeSourcePath } from '#utilities.ts'
+import { getLogger } from '#logger.ts'
+import {
+	formatError,
+	getDb,
+	sourcifyError,
+	normalizeSourcePath,
+} from '#utilities.ts'
+
+const logger = getLogger(['tempo'])
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
 /** Jobs older than this are considered stale and can be retried (5 minutes). */
@@ -249,7 +257,7 @@ verifyRoute
 					})
 					.where(eq(verificationJobsTable.id, existingJob[0].id))
 
-				log.info('stale_job_expired', {
+				logger.info('stale_job_expired', {
 					jobId: existingJob[0].id,
 					chainId,
 					address,
@@ -304,9 +312,11 @@ verifyRoute
 			return context.json({ verificationId: jobId }, 202)
 		} catch (error) {
 			const { chainId, address } = context.req.param()
-			log
-				.fromContext(context)
-				.error('verify_contract_failed', error, { chainId, address })
+			logger.error('verify_contract_failed', {
+				error: formatError(error),
+				chainId,
+				address,
+			})
 			return sourcifyError(
 				context,
 				500,
@@ -541,9 +551,10 @@ verifyRoute
 			)
 		} catch (error) {
 			const { verificationId } = context.req.param()
-			log
-				.fromContext(context)
-				.error('verification_status_check_failed', error, { verificationId })
+			logger.error('verification_status_check_failed', {
+				error: formatError(error),
+				verificationId,
+			})
 			return context.json(
 				{
 					customCode: 'internal_error',
@@ -695,7 +706,8 @@ async function runVerificationJob(
 				}),
 			)
 		} catch (error) {
-			log.error('container_fetch_failed', error, {
+			logger.error('container_fetch_failed', {
+				error: formatError(error),
 				jobId,
 				chainId,
 				address,
