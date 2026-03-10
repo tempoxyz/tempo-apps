@@ -5,6 +5,7 @@ import { tempoDevnet, tempoLocalnet } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
 import { tempoMainnet, tempoTestnet } from './lib/chains'
+import { getTempoEnv } from './lib/env'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -15,25 +16,27 @@ import {
 } from 'wagmi'
 import { injected } from 'wagmi/connectors'
 
-const TEMPO_ENV = import.meta.env.VITE_TEMPO_ENV
-
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null
 
 export const getTempoChain = createIsomorphicFn()
 	.client(() =>
-		TEMPO_ENV === 'mainnet'
+		getTempoEnv() === 'mainnet'
 			? tempoMainnet
-			: TEMPO_ENV === 'devnet'
+			: getTempoEnv() === 'devnet'
 				? tempoDevnet
-				: tempoTestnet,
+				: getTempoEnv() === 'testnet'
+					? tempoTestnet
+					: tempoMainnet,
 	)
 	.server(() =>
-		TEMPO_ENV === 'mainnet'
+		getTempoEnv() === 'mainnet'
 			? tempoMainnet
-			: TEMPO_ENV === 'devnet'
+			: getTempoEnv() === 'devnet'
 				? tempoDevnet
-				: tempoTestnet,
+				: getTempoEnv() === 'testnet'
+					? tempoTestnet
+					: tempoMainnet,
 	)
 
 const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
