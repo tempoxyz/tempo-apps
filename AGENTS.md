@@ -38,8 +38,8 @@ pnpm build                      # Build all apps
 ## Dependencies
 
 * You *must* use wagmi, viem, or ox to interact with tempo
-* You should *never* use tempo.ts - prefer the equivilant implementation in wagmi or viem or ox directly
-* When adding a new dependancy, look at other apps and see if there is a similar dependancy
+* You should *never* use tempo.ts - prefer the equivalent implementation in wagmi or viem or ox directly
+* When adding a new dependency, look at other apps and see if there is a similar dependency
 
 ### TypeScript
 
@@ -174,11 +174,11 @@ To capture a page load from the very first frame using MCP tools:
 4. **Combine frames with ImageMagick**: `magick -delay 50 -loop 0 /tmp/frame_*.png -resize 650x /tmp/recording.gif`
 5. **Upload to imgbb**: `curl --location --request POST "https://api.imgbb.com/1/upload?key=API_KEY" --form "image=@/tmp/recording.gif"`
 
-Example parallel tool call (first frame captured during navigation start):
+Example parallel tool call (MCP pseudo-syntax, not bash):
 
 ```bash
-navigate_page(url="https://...", timeout=0)  } parallel
-take_screenshot(filePath="/tmp/frame_01.png") }
+navigate_page(url="https://...", timeout=0)
+take_screenshot(filePath="/tmp/frame_01.png")
 ```
 
 Then sequential screenshots for frames 02-10, combine, and upload.
