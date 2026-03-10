@@ -438,16 +438,21 @@ function OverviewSection(props: {
 				<span className="text-primary">{receipt.type}</span>
 			</InfoRow>
 			{isExpiringNonce ? (
-				<InfoRow label="Nonce">
-					<a
-						href="https://docs.tempo.xyz/protocol/tips/tip-1009"
-						target="_blank"
-						rel="noopener noreferrer"
-						className="text-base-content-positive press-down"
-					>
-						Expiring Nonce
-					</a>
-				</InfoRow>
+				<>
+					<InfoRow label="Nonce Key">
+						<a
+							href="https://docs.tempo.xyz/protocol/tips/tip-1009"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-base-content-positive press-down"
+						>
+							Expiring Nonce
+						</a>
+					</InfoRow>
+					<InfoRow label="Nonce">
+						<span className="text-primary">{nonce}</span>
+					</InfoRow>
+				</>
 			) : nonceKey !== undefined ? (
 				<>
 					<InfoRow label="Nonce Key">
