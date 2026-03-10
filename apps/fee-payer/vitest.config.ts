@@ -4,9 +4,9 @@ import { Mnemonic } from 'ox'
 import 'dotenv/config'
 
 const tempoEnv =
-        process.env.TEMPO_ENV === 'testnet'
-                ? 'moderato'
-                : (process.env.TEMPO_ENV ?? 'localnet')
+	process.env.TEMPO_ENV === 'testnet'
+		? 'moderato'
+		: (process.env.TEMPO_ENV ?? 'localnet')
 
 const testMnemonic =
 	'test test test test test test test test test test test junk'
@@ -17,13 +17,13 @@ const sponsorPrivateKey = Mnemonic.toPrivateKey(testMnemonic, {
 
 const rpcUrl = (() => {
 	if (process.env.TEMPO_RPC_URL) return process.env.TEMPO_RPC_URL
-        if (tempoEnv === 'mainnet') return 'https://rpc.mainnet.tempo.xyz'
+	if (tempoEnv === 'mainnet') return 'https://rpc.mainnet.tempo.xyz'
 	if (tempoEnv === 'moderato') {
-                return 'https://proxy.tempo.xyz/rpc/42431'
-        }
+		return 'https://proxy.tempo.xyz/rpc/42431'
+	}
 	if (tempoEnv === 'devnet') return 'https://rpc.devnet.tempoxyz.dev'
 	const poolId = Number(process.env.VITEST_POOL_ID ?? 1)
-        return `http://localhost:9545/${poolId}`
+	return `http://localhost:9545/${poolId}`
 })()
 
 export default defineWorkersConfig({
