@@ -5,9 +5,6 @@ import { getChainId } from 'wagmi/actions'
 import tokensIndex31318 from '#data/tokens-index-31318.json' with {
 	type: 'json',
 }
-import tokensIndex42429 from '#data/tokens-index-42429.json' with {
-	type: 'json',
-}
 import tokensIndex42431 from '#data/tokens-index-42431.json' with {
 	type: 'json',
 }
@@ -75,7 +72,6 @@ function indexTokens(tokens: Token[]): IndexedToken[] {
 
 const INDEXED_TOKENS: Record<number, IndexedToken[]> = {
 	31318: indexTokens(tokensIndex31318 as Token[]),
-	42429: indexTokens(tokensIndex42429 as Token[]),
 	42431: indexTokens(tokensIndex42431 as Token[]),
 	4217: indexTokens(tokensIndex4217 as Token[]),
 }

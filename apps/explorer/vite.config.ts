@@ -21,17 +21,35 @@ const enabledSchema = z.stringbool({
 	falsy: ['false', '0', 'no', 'off', 'n', 'disabled'],
 })
 
+const canonicalTempoEnvSchema = z.union([
+	z.literal('devnet'),
+	z.literal('testnet'),
+	z.literal('mainnet'),
+])
+
 const tempoEnvSchema = z.prefault(
-	z.enum(['devnet', 'testnet', 'mainnet']),
+	z.pipe(
+		z.pipe(
+			z.string(),
+			z.transform((value) =>
+				value === 'moderato'
+					? 'testnet'
+					: value === 'presto'
+						? 'mainnet'
+						: value,
+			),
+		),
+		canonicalTempoEnvSchema,
+	),
 	'testnet',
 )
 
 const envConfigSchema = z.object({
 	PORT: z.prefault(z.coerce.number(), 3_007),
+	VITE_ENABLE_DEMO: z.prefault(enabledSchema, 'true'),
 	CLOUDFLARE_ENV: tempoEnvSchema,
 	VITE_TEMPO_ENV: tempoEnvSchema,
-	VITE_ENABLE_DEMO: z.prefault(enabledSchema, true),
-	VITE_ENABLE_DEVTOOLS: enabledSchema,
+	VITE_ENABLE_DEVTOOLS: z.prefault(enabledSchema, 'false'),
 	ALLOWED_HOSTS: z.prefault(
 		z.pipe(
 			z.string(),
@@ -43,8 +61,8 @@ const envConfigSchema = z.object({
 	SENTRY_ORG: z.optional(z.string()),
 	SENTRY_PROJECT: z.optional(z.string()),
 	SENTRY_AUTH_TOKEN: z.optional(z.string()),
-	ANALYZE: enabledSchema,
-	ANALYZE_JSON: enabledSchema,
+	ANALYZE: z.prefault(enabledSchema, 'false'),
+	ANALYZE_JSON: z.prefault(enabledSchema, 'false'),
 	CF_PAGES_COMMIT_SHA: z.optional(z.string()),
 })
 
@@ -52,12 +70,17 @@ const [, , , ...args] = process.argv
 
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
-	const { data: envConfig, success, error } = envConfigSchema.safeParse(env)
+	const {
+		data: envConfig,
+		success,
+		error,
+	} = envConfigSchema.safeParse({ ...env, ...process.env })
 	if (!success) throw new Error(z.prettifyError(error))
 
 	const wranglerVars = wranglerJSON.env[envConfig.VITE_TEMPO_ENV].vars
 	const tempoEnv = tempoEnvSchema.safeParse(wranglerVars.VITE_TEMPO_ENV)
 	if (!tempoEnv.success) throw new Error(z.prettifyError(tempoEnv.error))
+
 	if (envConfig.VITE_TEMPO_ENV !== tempoEnv.data)
 		throw new Error(
 			[
