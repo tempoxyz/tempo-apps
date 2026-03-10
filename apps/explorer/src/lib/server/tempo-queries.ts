@@ -18,51 +18,51 @@ type QueryWithWhere<TQuery> = TQuery & {
 
 export type TokenHolderBalance = { address: string; balance: bigint }
 
+type TokenHolderAggregationRow = {
+	from: string
+	to: string
+	tokens: string | number | bigint
+}
+
+function sortTokenHolderBalances(
+	balances: Map<string, bigint>,
+): TokenHolderBalance[] {
+	return Array.from(balances.entries())
+		.filter(([, balance]) => balance > 0n)
+		.map(([holder, balance]) => ({ address: holder, balance }))
+		.sort((a, b) => (b.balance > a.balance ? 1 : -1))
+}
+
+function aggregateTokenHolderBalances(
+	rows: TokenHolderAggregationRow[],
+): TokenHolderBalance[] {
+	const balances = new Map<string, bigint>()
+
+	for (const row of rows) {
+		const tokens = BigInt(row.tokens)
+		if (row.to !== zeroAddress) {
+			balances.set(row.to, (balances.get(row.to) ?? 0n) + tokens)
+		}
+		if (row.from !== zeroAddress) {
+			balances.set(row.from, (balances.get(row.from) ?? 0n) - tokens)
+		}
+	}
+
+	return sortTokenHolderBalances(balances)
+}
+
 export async function fetchTokenHolderBalances(
 	address: Address.Address,
 	chainId: number,
 ): Promise<TokenHolderBalance[]> {
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
-
-	const outgoing = await qb
+	const transfers = await qb
 		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('from').as('holder'),
-			eb.fn.sum('tokens').as('sent'),
-		])
+		.select(['from', 'to', 'tokens'])
 		.where('address', '=', address)
-		.where('from', '<>', zeroAddress)
-		.groupBy('from')
 		.execute()
 
-	const incoming = await qb
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('to').as('holder'),
-			eb.fn.sum('tokens').as('received'),
-		])
-		.where('address', '=', address)
-		.groupBy('to')
-		.execute()
-
-	const balances = new Map<string, bigint>()
-
-	for (const row of incoming) {
-		const holder = row.holder
-		const received = BigInt(row.received)
-		balances.set(holder, (balances.get(holder) ?? 0n) + received)
-	}
-
-	for (const row of outgoing) {
-		const holder = row.holder
-		const sent = BigInt(row.sent)
-		balances.set(holder, (balances.get(holder) ?? 0n) - sent)
-	}
-
-	return Array.from(balances.entries())
-		.filter(([, balance]) => balance > 0n)
-		.map(([holder, balance]) => ({ address: holder, balance }))
-		.sort((a, b) => (b.balance > a.balance ? 1 : -1))
+	return aggregateTokenHolderBalances(transfers as TokenHolderAggregationRow[])
 }
 
 export async function fetchTokenFirstTransferTimestamp(

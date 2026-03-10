@@ -77,7 +77,9 @@ const mockQueryBuilder = vi.hoisted(() => {
 			if (this.responses.length === 0) {
 				throw new Error('No mock responses queued')
 			}
-			return this.responses.shift()
+			const response = this.responses.shift()
+			if (response instanceof Error) throw response
+			return response
 		}
 	}
 
@@ -222,6 +224,30 @@ describe('tempo-queries', () => {
 		await expect(fetchTokenCreatedCount(1, 100)).resolves.toBe(42)
 	})
 
+	it('fetchTokenHolderBalances aggregates holders from raw transfer rows', async () => {
+		mockQueryBuilder.setResponses([
+			[
+				{
+					from: '0x0000000000000000000000000000000000000000',
+					to: '0xaaaa',
+					tokens: '10',
+				},
+				{
+					from: '0xaaaa',
+					to: '0xbbbb',
+					tokens: '4',
+				},
+			],
+		])
+
+		await expect(
+			fetchTokenHolderBalances('0xToken' as Address.Address, 1),
+		).resolves.toEqual([
+			{ address: '0xaaaa', balance: 6n },
+			{ address: '0xbbbb', balance: 4n },
+		])
+	})
+
 	it('fetchTokenCreatedMetadata returns empty when no tokens are provided', async () => {
 		await expect(fetchTokenCreatedMetadata(1, [])).resolves.toEqual([])
 	})
@@ -288,18 +314,19 @@ describe('tempo-queries', () => {
 		mockQueryBuilder.setResponses([
 			[
 				{
-					holder: '0x1111',
-					sent: '5',
-				},
-			],
-			[
-				{
-					holder: '0x1111',
-					received: '10',
+					from: '0x1111',
+					to: '0x0000000000000000000000000000000000000000',
+					tokens: '5',
 				},
 				{
-					holder: '0x2222',
-					received: '3',
+					from: '0x0000000000000000000000000000000000000000',
+					to: '0x1111',
+					tokens: '10',
+				},
+				{
+					from: '0x0000000000000000000000000000000000000000',
+					to: '0x2222',
+					tokens: '3',
 				},
 			],
 		])

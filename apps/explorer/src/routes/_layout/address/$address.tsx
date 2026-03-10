@@ -233,6 +233,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			// Tab-aware loading: only fetch data needed for the active tab
 			const isTransactionsTab = tab === 'transactions'
 			const isHoldingsTab = tab === 'holdings'
+			const knownContractInfo = getContractInfo(address)
+			const isKnownTokenAddress =
+				Tip20.isTip20Address(address) || knownContractInfo?.category === 'token'
 
 			// Add timeout to prevent SSR from hanging on slow queries
 			const QUERY_TIMEOUT_MS = 3_000
@@ -286,17 +289,18 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			const balancesPromise = isHoldingsTab
-				? timeout(
-						context.queryClient
-							.ensureQueryData(balancesQueryOptions(address))
-							.catch((error) => {
-								console.error('Fetch balances error:', error)
-								return undefined
-							}),
-						QUERY_TIMEOUT_MS,
-					)
-				: Promise.resolve(undefined)
+			const balancesPromise =
+				isHoldingsTab && !isKnownTokenAddress
+					? timeout(
+							context.queryClient
+								.ensureQueryData(balancesQueryOptions(address))
+								.catch((error) => {
+									console.error('Fetch balances error:', error)
+									return undefined
+								}),
+							QUERY_TIMEOUT_MS,
+						)
+					: Promise.resolve(undefined)
 
 			const [
 				contractBytecode,
@@ -310,14 +314,15 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				tokenMetadataPromise,
 			])
 
-			const isToken = tokenMetadata !== null && tokenMetadata !== undefined
-			// Discard balance results for token addresses to avoid stale/misleading data
-			const balancesData = isToken ? undefined : balancesResult
-
 			const accountType = getAccountType(contractBytecode)
 
 			// check if it's a known contract from our registry
-			const contractInfo = getContractInfo(address)
+			const contractInfo = knownContractInfo
+			const isKnownToken = isKnownTokenAddress
+			const isToken =
+				isKnownToken || (tokenMetadata !== null && tokenMetadata !== undefined)
+			// Discard balance results for token addresses to avoid stale/misleading data
+			const balancesData = isToken ? undefined : balancesResult
 			const contractSource: ContractSource | undefined = undefined
 
 			return {

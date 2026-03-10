@@ -8,11 +8,14 @@ import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
-import { isTestnet } from '#lib/env'
+import { getTempoEnv, isTestnet } from '#lib/env'
 import SquareSquare from '~icons/lucide/square-square'
 
 export function Header(props: Header.Props) {
 	const { initialBlockNumber } = props
+	const tempoEnv = getTempoEnv()
+	const networkBadgeLabel =
+		tempoEnv === 'mainnet' ? null : tempoEnv === 'devnet' ? 'Devnet' : 'Testnet'
 
 	return (
 		<header className="@container relative z-1">
@@ -23,7 +26,9 @@ export function Header(props: Header.Props) {
 						className="flex items-center gap-[12px] press-down py-[4px]"
 					>
 						<Header.TempoWordmark />
-						{isTestnet() && <Header.TestnetBadge />}
+						{networkBadgeLabel && (
+							<Header.NetworkBadge label={networkBadgeLabel} />
+						)}
 					</Link>
 				</div>
 				<Header.Search />
@@ -224,12 +229,20 @@ export namespace Header {
 		}
 	}
 
-	export function TestnetBadge() {
+	export function NetworkBadge(props: NetworkBadge.Props) {
+		const { label } = props
+
 		return (
 			<span className="flex h-[28px] shrink-0 items-center justify-center gap-[4px] rounded-[8px] border border-[#2C2C2F] bg-[#1A1A1A] px-[8px] py-[4px] text-[14px] font-medium leading-[140%] text-secondary">
 				<span aria-hidden className="size-[6px] rounded-full bg-amber-400" />
-				Testnet
+				{label}
 			</span>
 		)
+	}
+
+	export namespace NetworkBadge {
+		export interface Props {
+			label: 'Devnet' | 'Testnet'
+		}
 	}
 }
