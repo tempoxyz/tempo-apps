@@ -5,9 +5,10 @@
 	},
 	"hidden_files": ["**/.wrangler", "**/.tanstack", "**/.claude", ".DS_Store"],
 	"file_scan_exclusions": [
+		".git",
 		"**/.wrangler",
 		"**/.vscode",
-		".git",
+		"**/.tanstack",
 		"**/.claude",
 		"**/.cursor",
 		".DS_Store"
