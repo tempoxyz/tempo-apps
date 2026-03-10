@@ -77,7 +77,6 @@
 		"@types/react-dom": "catalog:",
 		"@vitejs/plugin-react": "catalog:",
 		"eruda": "catalog:",
-		"jsonc-parser": "catalog:",
 		"rollup-plugin-visualizer": "catalog:",
 		"shiki": "catalog:",
 		"sonda": "catalog:",

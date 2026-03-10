@@ -7,7 +7,7 @@ catalog:
   '@biomejs/biome': ^2.4.6
   '@cloudflare/puppeteer': ^1.0.6
   '@cloudflare/vite-plugin': ^1.26.1
-  '@cloudflare/vitest-pool-workers': ^0.12.7
+  '@cloudflare/vitest-pool-workers': ^0.12.20
   '@cloudflare/workers-types': ^4.20260307.1
   '@hono/zod-validator': ^0.7.6
   '@iconify/json': ^2.2.447
@@ -27,20 +27,20 @@ catalog:
   '@svgr/core': ^8.1.0
   '@svgr/plugin-jsx': ^8.1.0
   '@tailwindcss/vite': ^4.2.1
-  '@tanstack/devtools-vite': ^0.5.1
-  '@tanstack/query-async-storage-persister': ^5.90.22
-  '@tanstack/react-devtools': ^0.9.6
+  '@tanstack/devtools-vite': ^0.5.3
+  '@tanstack/query-async-storage-persister': ^5.90.24
+  '@tanstack/react-devtools': ^0.9.10
   '@tanstack/react-query': ^5.90.21
   '@tanstack/react-query-devtools': ^5.91.3
-  '@tanstack/react-query-persist-client': ^5.90.22
-  '@tanstack/react-router': ^1.163.2
-  '@tanstack/react-router-devtools': ^1.163.2
-  '@tanstack/react-router-ssr-query': ^1.163.2
-  '@tanstack/react-start': ^1.163.2
-  '@tanstack/router-plugin': ^1.163.2
+  '@tanstack/react-query-persist-client': ^5.90.24
+  '@tanstack/react-router': ^1.166.6
+  '@tanstack/react-router-devtools': ^1.166.6
+  '@tanstack/react-router-ssr-query': ^1.166.6
+  '@tanstack/react-start': ^1.166.6
+  '@tanstack/router-plugin': ^1.166.6
   '@total-typescript/ts-reset': ^0.6.1
   '@types/animejs': ^3.1.13
-  '@types/node': ^25.3.5
+  '@types/node': ^25.4.0
   '@types/react': ^19.2.14
   '@types/react-dom': ^19.2.3
   '@vitejs/plugin-react': ^5.1.4
@@ -56,7 +56,6 @@ catalog:
   hono: ^4.12.5
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
-  jsonc-parser: ^3.3.1
   kysely: ^0.28.11
   ox: ^0.14.0
   prool: ^0.2.3
@@ -74,7 +73,7 @@ catalog:
   typed-query-selector: ^2.12.1
   typescript: ^5.9.3
   unplugin-icons: ^23.0.1
-  viem: ^2.46.3
+  viem: ^2.47.1
   vite: npm:rolldown-vite@latest
   vite-plugin-devtools-json: ^1.0.0
   vitest: 3.2.4
