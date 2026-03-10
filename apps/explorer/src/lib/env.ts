@@ -1,7 +1,7 @@
 import { createIsomorphicFn } from '@tanstack/react-start'
 import { getRequestUrl } from '@tanstack/react-start/server'
 
-export type TempoEnv = 'testnet' | 'moderato' | 'devnet' | 'presto'
+export type TempoEnv = 'testnet' | 'mainnet' | 'devnet'
 
 export const getRequestURL = createIsomorphicFn()
 	.client(() => new URL(__BASE_URL__ || window.location.origin))
@@ -31,27 +31,19 @@ export const getTempoEnv = createIsomorphicFn()
 	.server(() => process.env.VITE_TEMPO_ENV as TempoEnv)
 
 export const isTestnet = createIsomorphicFn()
-	.client(
-		() =>
-			import.meta.env.VITE_TEMPO_ENV === 'testnet' ||
-			import.meta.env.VITE_TEMPO_ENV === 'moderato',
-	)
-	.server(
-		() =>
-			process.env.VITE_TEMPO_ENV === 'testnet' ||
-			process.env.VITE_TEMPO_ENV === 'moderato',
-	)
+	.client(() => import.meta.env.VITE_TEMPO_ENV === 'testnet')
+	.server(() => process.env.VITE_TEMPO_ENV === 'testnet')
 
 export const hasIndexSupply = createIsomorphicFn()
 	.client(
 		() =>
 			import.meta.env.VITE_TEMPO_ENV === 'testnet' ||
-			import.meta.env.VITE_TEMPO_ENV === 'moderato' ||
-			import.meta.env.VITE_TEMPO_ENV === 'presto',
+			import.meta.env.VITE_TEMPO_ENV === 'mainnet' ||
+			import.meta.env.VITE_TEMPO_ENV === 'devnet',
 	)
 	.server(
 		() =>
 			process.env.VITE_TEMPO_ENV === 'testnet' ||
-			process.env.VITE_TEMPO_ENV === 'moderato' ||
-			process.env.VITE_TEMPO_ENV === 'presto',
+			process.env.VITE_TEMPO_ENV === 'mainnet' ||
+			process.env.VITE_TEMPO_ENV === 'devnet',
 	)

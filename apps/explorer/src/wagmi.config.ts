@@ -1,7 +1,7 @@
 import { createIsomorphicFn, createServerFn } from '@tanstack/react-start'
 import { getRequestHeader } from '@tanstack/react-start/server'
 import { createPublicClient } from 'viem'
-import { tempoDevnet, tempoLocalnet, tempoAndantino } from 'viem/chains'
+import { tempoDevnet, tempoLocalnet } from 'viem/chains'
 import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
 import { tempoMainnet, tempoTestnet } from './lib/chains'
@@ -10,6 +10,7 @@ import {
 	cookieToInitialState,
 	createConfig,
 	createStorage,
+  
 	http,
 	serialize,
 } from 'wagmi'
@@ -22,22 +23,18 @@ let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null
 
 export const getTempoChain = createIsomorphicFn()
 	.client(() =>
-		TEMPO_ENV === 'presto'
+		TEMPO_ENV === 'mainnet'
 			? tempoMainnet
 			: TEMPO_ENV === 'devnet'
 				? tempoDevnet
-				: TEMPO_ENV === 'moderato'
-					? tempoTestnet
-					: tempoAndantino,
+				: tempoTestnet,
 	)
 	.server(() =>
-		TEMPO_ENV === 'presto'
+		TEMPO_ENV === 'mainnet'
 			? tempoMainnet
 			: TEMPO_ENV === 'devnet'
 				? tempoDevnet
-				: TEMPO_ENV === 'moderato'
-					? tempoTestnet
-					: tempoAndantino,
+				: tempoTestnet,
 	)
 
 const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'

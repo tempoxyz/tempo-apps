@@ -21,7 +21,7 @@ jobs:
     secrets: inherit
     with:
       app: explorer
-      environments: '["testnet","moderato","devnet","presto"]'
+      environments: '["testnet","mainnet","devnet"]'
 
   deploy-fee-payer:
     name: Deploy Fee Payer

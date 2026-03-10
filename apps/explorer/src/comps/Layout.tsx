@@ -2,7 +2,6 @@ import { BreadcrumbsPortal } from '#comps/Breadcrumbs'
 import { Footer } from '#comps/Footer'
 import { Header } from '#comps/Header'
 import { Sphere } from '#comps/Sphere'
-import { TestnetMigrationBanner } from '#comps/TestnetMigrationBanner'
 import { BlockNumberProvider } from '#lib/block-number'
 import { fetchLatestBlock } from '#lib/server/latest-block'
 import { useSuspenseQuery } from '@tanstack/react-query'
@@ -24,7 +23,6 @@ export function Layout(props: Layout.Props) {
 	return (
 		<BlockNumberProvider initial={blockNumber}>
 			<div className="flex min-h-dvh flex-col print:block print:min-h-0">
-				<TestnetMigrationBanner />
 				<div className={`relative z-2 ${isReceipt ? 'print:hidden' : ''}`}>
 					<Header initialBlockNumber={blockNumber} />
 				</div>

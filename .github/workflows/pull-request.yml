@@ -32,11 +32,9 @@ jobs:
           - app: explorer
             env: testnet
           - app: explorer
-            env: moderato
-          - app: explorer
             env: devnet
           - app: explorer
-            env: presto
+            env: mainnet
           #### fee-payer
           - app: fee-payer
             env: privy

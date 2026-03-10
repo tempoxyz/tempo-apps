@@ -241,16 +241,7 @@ export async function fetchTokenCreatedMetadata(
 		.where('topic1', 'in', tokenTopics)
 		.execute()
 
-	const isAndantino = chainId === 42429
-	const dataParams = isAndantino
-		? ([
-				{ name: 'name', type: 'string' },
-				{ name: 'symbol', type: 'string' },
-				{ name: 'currency', type: 'string' },
-				{ name: 'quoteToken', type: 'address' },
-				{ name: 'admin', type: 'address' },
-			] as const)
-		: ([
+	const dataParams = ([
 				{ name: 'name', type: 'string' },
 				{ name: 'symbol', type: 'string' },
 				{ name: 'currency', type: 'string' },

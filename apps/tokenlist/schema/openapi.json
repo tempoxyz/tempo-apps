@@ -330,14 +330,10 @@
 			"chain_id": {
 				"name": "chain_id",
 				"in": "path",
-				"description": "Chain ID (e.g., '42429' for Tempo Testnet)",
 				"required": true,
 				"schema": {
-					"type": "string",
-					"minLength": 1,
-					"maxLength": 20,
-					"pattern": "^[a-zA-Z0-9_-]+$",
-					"example": "42429"
+					"type": "integer",
+					"enum": [4217, 42431, 31318]
 				}
 			}
 		},

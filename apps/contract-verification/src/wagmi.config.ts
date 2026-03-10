@@ -10,37 +10,17 @@ import {
 
 import {
 	tempoDevnet,
-	tempo as tempoPresto,
+	tempo as tempoMainnet,
 	tempoModerato as tempoTestnet,
 } from '@wagmi/core/chains'
 
 const verifierUrl =
 	import.meta.env.VITE_VERIFIER_URL ?? 'https://contracts.tempo.xyz'
 
-export const tempoMainnet = {
-	...tempoPresto.extend({
-		verifierUrl,
-		feeToken: '0x20c0000000000000000000000000000000000000',
-	}),
-	id: 4217,
-	name: 'Tempo Mainnet',
-	blockExplorers: {
-		default: {
-			name: 'Tempo Explorer',
-			url: 'https://explore.mainnet.tempo.xyz',
-		},
-	},
-	rpcUrls: {
-		default: {
-			http: [
-				`https://proxy.tempo.xyz/rpc/4217?key=${process.env.TEMPO_RPC_KEY}`,
-			],
-			webSocket: [
-				`wss://proxy.tempo.xyz/rpc/4217?key=${process.env.TEMPO_RPC_KEY}`,
-			],
-		},
-	},
-} as const
+export const tempoMainnetExtended = tempoMainnet.extend({
+	verifierUrl,
+	feeToken: '0x20c0000000000000000000000000000000000000',
+})
 
 export const tempoDevnetExtended = tempoDevnet.extend({
 	verifierUrl,
@@ -61,12 +41,12 @@ export type ChainId = (typeof chainIds)[number]
 export const chains = [
 	tempoDevnetExtended,
 	tempoTestnetExtended,
-	tempoMainnet,
+	tempoMainnetExtended,
 ] as const
 export const chainFeeTokens = {
-	[tempoDevnet.id]: '0x20c0000000000000000000000000000000000000',
-	[tempoTestnet.id]: '0x20c0000000000000000000000000000000000001',
-	[tempoMainnet.id]: '0x20c0000000000000000000000000000000000002',
+	[tempoDevnet.id]: tempoDevnetExtended.feeToken,
+	[tempoTestnet.id]: tempoTestnetExtended.feeToken,
+	[tempoMainnet.id]: tempoMainnetExtended.feeToken,
 } as const
 
 export const sourcifyChains = chains.map((chain) => {
