@@ -116,6 +116,7 @@
 		},
 		{
 			"includes": [
+        "**/wrangler.json",
 				"**/biome.json",
 				"**/.zed/*.json",
 				"**/tsconfig.json",

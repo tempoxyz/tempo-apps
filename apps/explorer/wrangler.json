@@ -29,7 +29,7 @@
 					"zone_name": "tempo.xyz",
 					"pattern": "explore.testnet.tempo.xyz"
 				},
-        {
+				{
 					"custom_domain": true,
 					"zone_name": "tempo.xyz",
 					"pattern": "explore.moderato.tempo.xyz"
@@ -104,11 +104,11 @@
 					"zone_name": "tempo.xyz",
 					"pattern": "explore.mainnet.tempo.xyz"
 				},
-        {
-          "custom_domain": true,
-          "zone_name": "tempo.xyz",
-          "pattern": "explore.presto.tempo.xyz"
-        }
+				{
+					"custom_domain": true,
+					"zone_name": "tempo.xyz",
+					"pattern": "explore.presto.tempo.xyz"
+				}
 			],
 			"vars": {
 				"VITE_TEMPO_ENV": "mainnet",

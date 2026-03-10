@@ -138,15 +138,15 @@
 								"example": {
 									"schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
 									"name": "Tempo Testnet",
-									"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icon.svg",
+									"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icon.svg",
 									"tokens": [
 										{
 											"name": "pathUSD",
 											"symbol": "pathUSD",
 											"decimals": 6,
-											"chainId": 42429,
+											"chainId": 42431,
 											"address": "0x20c0000000000000000000000000000000000000",
-											"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
+											"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icons/pathusd.svg",
 											"extensions": {
 												"chain": "tempo",
 												"label": "pathUSD"
@@ -198,9 +198,9 @@
 									"name": "pathUSD",
 									"symbol": "pathUSD",
 									"decimals": 6,
-									"chainId": 42429,
+									"chainId": 42431,
 									"address": "0x20c0000000000000000000000000000000000000",
-									"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
+									"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icons/pathusd.svg",
 									"extensions": {
 										"chain": "tempo",
 										"label": "pathUSD"
@@ -231,18 +231,18 @@
 								},
 								"example": {
 									"chains": {
-										"42429": {
+										"42431": {
 											"schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
 											"name": "Tempo Testnet",
-											"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icon.svg",
+											"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icon.svg",
 											"tokens": [
 												{
 													"name": "pathUSD",
 													"symbol": "pathUSD",
 													"decimals": 6,
-													"chainId": 42429,
+													"chainId": 42431,
 													"address": "0x20c0000000000000000000000000000000000000",
-													"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/pathusd.svg",
+													"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icons/pathusd.svg",
 													"extensions": {
 														"chain": "tempo",
 														"label": "pathUSD"
@@ -314,7 +314,7 @@
 									}
 								},
 								"example": {
-									"chains": ["42429"],
+									"chains": ["42431"],
 									"timestamp": "2023-04-10T12:34:56Z",
 									"rev": "1.0.0"
 								}
@@ -505,7 +505,7 @@
 						"maxLength": 500,
 						"pattern": "^https?://.+$",
 						"description": "URI for the logo of the token list",
-						"example": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icon.svg"
+						"example": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icon.svg"
 					},
 					"keywords": {
 						"type": "array",
@@ -624,7 +624,7 @@
 						"maxLength": 500,
 						"pattern": "^https?://.+$",
 						"description": "URI to the token logo (SVG or PNG, 64x64 recommended)",
-						"example": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icons/usdc.svg"
+						"example": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icons/usdc.svg"
 					},
 					"tags": {
 						"type": "array",

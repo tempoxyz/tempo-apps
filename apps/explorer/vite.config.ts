@@ -57,7 +57,7 @@ const envConfigSchema = z.object({
 		),
 		'',
 	),
-	VITE_BASE_URL: z.prefault(z.url(), ''),
+	VITE_BASE_URL: z.prefault(z.string(), ''),
 	SENTRY_ORG: z.optional(z.string()),
 	SENTRY_PROJECT: z.optional(z.string()),
 	SENTRY_AUTH_TOKEN: z.optional(z.string()),

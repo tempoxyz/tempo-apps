@@ -10,7 +10,6 @@ import {
 	cookieToInitialState,
 	createConfig,
 	createStorage,
-  
 	http,
 	serialize,
 } from 'wagmi'
