@@ -133,6 +133,7 @@ import {
 	fetchAddressTxCounts,
 	fetchBasicTxDataByHashes,
 	fetchContractCreationTxCandidates,
+	fetchExplorerHomepageMetrics,
 	fetchLatestBlockNumber,
 	fetchTokenCreatedCount,
 	fetchTokenCreatedMetadata,
@@ -350,6 +351,38 @@ describe('tempo-queries', () => {
 		await expect(fetchLatestBlockNumber(1)).rejects.toThrow(
 			'Missing mock response',
 		)
+	})
+
+	it('fetchExplorerHomepageMetrics returns totals and 24h counts', async () => {
+		mockQueryBuilder.setResponses([
+			{ count: '1200' },
+			{ count: 45 },
+			{ count: '18' },
+			{ count: 2n },
+			{ count: '7' },
+			{ count: 1 },
+		])
+
+		await expect(
+			fetchExplorerHomepageMetrics(1, {
+				now: Date.parse('2026-03-10T12:00:00.000Z'),
+			}),
+		).resolves.toEqual({
+			transactions: { total: 1200, last24h: 45 },
+			contracts: { total: 18, last24h: 2 },
+			tokens: { total: 7, last24h: 1 },
+		})
+		expect(mockQueryBuilder.getExecuteCallCount()).toBe(6)
+	})
+
+	it('fetchExplorerHomepageMetrics defaults missing counts to zero', async () => {
+		mockQueryBuilder.setResponses([null, null, null, null, null, null])
+
+		await expect(fetchExplorerHomepageMetrics(1)).resolves.toEqual({
+			transactions: { total: 0, last24h: 0 },
+			contracts: { total: 0, last24h: 0 },
+			tokens: { total: 0, last24h: 0 },
+		})
 	})
 
 	it('fetchTokenHolderBalances aggregates incoming and outgoing balances', async () => {
