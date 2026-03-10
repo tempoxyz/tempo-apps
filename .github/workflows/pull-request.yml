@@ -41,7 +41,7 @@ jobs:
           - app: fee-payer
             env: devnet
           - app: fee-payer
-            env: testnet
+            env: moderato
           #### other (single-env-apps)
           - app: og
           - app: tokenlist
