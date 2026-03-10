@@ -36,21 +36,14 @@ export function TxDecodedCalldata(props: TxDecodedCalldata.Props) {
 				selector,
 			}) as AbiFunction)
 
+		if (autoloadAbiItem) return autoloadAbiItem
+
 		const signatureAbiItem =
 			signatureAbi &&
 			(getAbiItem({
 				abi: signatureAbi,
 				selector,
 			}) as AbiFunction)
-
-		if (autoloadAbiItem) {
-			if (
-				(signatureAbiItem?.inputs?.length || 0) >
-				(autoloadAbiItem?.inputs?.length || 0)
-			)
-				return signatureAbiItem
-			return autoloadAbiItem
-		}
 
 		return signatureAbiItem
 	}, [autoloadAbi, signatureAbi, selector])

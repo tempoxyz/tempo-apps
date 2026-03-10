@@ -5,6 +5,7 @@ import {
 	decodeEventLog,
 	getAbiItem as getAbiItem_viem,
 	stringify,
+	toEventSelector,
 	toFunctionSelector,
 } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
@@ -826,12 +827,32 @@ const defaultSignatureLookup = new loaders.MultiSignatureLookup([
 ])
 
 /**
+ * Pre-computed selector → signature map from all known Tempo ABIs.
+ * Avoids hitting external signature databases for known functions/events.
+ */
+const knownSignatures = new Map<string, string>()
+for (const abi of Object.values(Abis)) {
+	for (const item of abi) {
+		if (item.type === 'function') {
+			const sig = `${item.name}(${item.inputs.map((i: { type: string }) => i.type).join(',')})`
+			knownSignatures.set(toFunctionSelector(item as AbiFunction), sig)
+		} else if (item.type === 'event') {
+			const sig = `${item.name}(${item.inputs.map((i: { type: string }) => i.type).join(',')})`
+			knownSignatures.set(toEventSelector(item as AbiEvent), sig)
+		}
+	}
+}
+
+/**
  * Lookup a function or event signature by selector/topic hash.
- * Returns the first matching signature string or null.
+ * Checks known Tempo ABIs first, then falls back to external databases.
  */
 export async function lookupSignature(
 	selector: Hex.Hex,
 ): Promise<string | null> {
+	const known = knownSignatures.get(selector.toLowerCase())
+	if (known) return known
+
 	const signatures =
 		selector.length === 10
 			? await defaultSignatureLookup.loadFunctions(selector)
