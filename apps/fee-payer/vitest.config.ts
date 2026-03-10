@@ -3,7 +3,10 @@ import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config'
 import { Mnemonic } from 'ox'
 import 'dotenv/config'
 
-const tempoEnv = process.env.TEMPO_ENV ?? 'localnet'
+const tempoEnv =
+        process.env.TEMPO_ENV === 'testnet'
+                ? 'moderato'
+                : (process.env.TEMPO_ENV ?? 'localnet')
 
 const testMnemonic =
 	'test test test test test test test test test test test junk'
@@ -15,7 +18,7 @@ const sponsorPrivateKey = Mnemonic.toPrivateKey(testMnemonic, {
 const rpcUrl = (() => {
 	if (process.env.TEMPO_RPC_URL) return process.env.TEMPO_RPC_URL
         if (tempoEnv === 'mainnet') return 'https://rpc.mainnet.tempo.xyz'
-	if (tempoEnv === 'testnet' || tempoEnv === 'moderato') {
+	if (tempoEnv === 'moderato') {
                 return 'https://proxy.tempo.xyz/rpc/42431'
         }
 	if (tempoEnv === 'devnet') return 'https://rpc.devnet.tempoxyz.dev'

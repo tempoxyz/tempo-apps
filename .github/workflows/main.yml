@@ -30,7 +30,7 @@ jobs:
     secrets: inherit
     with:
       app: fee-payer
-      environments: '["privy","devnet","testnet","moderato","mainnet"]'
+      environments: '["privy","devnet","moderato","mainnet"]'
 
   deploy-contract-verification:
     name: Deploy Contract Verification

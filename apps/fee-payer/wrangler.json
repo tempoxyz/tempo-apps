@@ -26,29 +26,6 @@
 		}
 	},
 	"env": {
-		"testnet": {
-			"name": "fee-payer",
-			"routes": [
-				{
-					"pattern": "sponsor.testnet.tempo.xyz",
-					"zone_name": "tempo.xyz",
-					"custom_domain": true
-				}
-			],
-			"vars": {
-				"TEMPO_RPC_URL": "https://proxy.tempo.xyz/rpc/42431",
-				"ALLOWED_ORIGINS": "*",
-				"TEMPO_ENV": "moderato",
-				"POSTHOG_API_KEY": ""
-			},
-			"ratelimits": [
-				{
-					"name": "AddressRateLimiter",
-					"namespace_id": "888",
-					"simple": { "limit": 1000, "period": 60 }
-				}
-			]
-		},
 		"privy": {
 			"name": "fee-payer-privy",
 			"routes": [
@@ -107,10 +84,15 @@
 			"name": "fee-payer-moderato",
 			"routes": [
 				{
-					"pattern": "sponsor.moderato.tempo.xyz",
+					"pattern": "sponsor.testnet.tempo.xyz",
 					"zone_name": "tempo.xyz",
 					"custom_domain": true
-				}
+				},
+                                {
+                                        "pattern": "sponsor.moderato.tempo.xyz",
+                                        "zone_name": "tempo.xyz",
+                                        "custom_domain": true
+                                }
 			],
 			"workers_dev": false,
 			"vars": {
