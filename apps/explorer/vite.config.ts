@@ -6,14 +6,14 @@ import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
 import Icons from 'unplugin-icons/vite'
-import { defineConfig, loadEnv, type Plugin } from 'vite'
+import ViteTSConfigPaths from 'vite-tsconfig-paths'
+import { defineConfig, loadEnv } from 'vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 import { visualizer } from 'rollup-plugin-visualizer'
 import Sonda from 'sonda/vite'
 
 import { getVendorChunk } from './scripts/chunk-config.ts'
 
-import packageJSON from '#package.json' with { type: 'json' }
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
 const enabledSchema = z.stringbool({
@@ -80,7 +80,9 @@ export default defineConfig((config) => {
 
 	return {
 		plugins: [
-			vitePluginAlias(),
+			ViteTSConfigPaths({
+				projects: ['./tsconfig.json'],
+			}),
 			config.mode === 'development' &&
 				envConfig.VITE_ENABLE_DEVTOOLS &&
 				devtools(),
@@ -175,16 +177,3 @@ export default defineConfig((config) => {
 		},
 	}
 })
-
-function vitePluginAlias(): Plugin {
-	return {
-		// rolldown doesn't support interpolations in alias
-		// replacements so we use a custom resolver instead
-		name: 'explorer-aliases',
-		resolveId(id) {
-			if (id.startsWith('#tanstack')) return
-			if (!id.startsWith('#')) return
-			return this.resolve(`${__dirname}/src/${id.slice(1)}`)
-		},
-	}
-}

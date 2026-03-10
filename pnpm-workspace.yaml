@@ -76,6 +76,7 @@ catalog:
   viem: ^2.47.1
   vite: npm:rolldown-vite@latest
   vite-plugin-devtools-json: ^1.0.0
+  vite-tsconfig-paths: ^6.1.1
   vitest: 3.2.4
   wagmi: ^3.5.0
   wrangler: ^4.71.0
