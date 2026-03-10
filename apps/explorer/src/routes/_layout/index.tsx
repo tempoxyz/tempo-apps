@@ -18,52 +18,52 @@ function Component() {
 	}, [router])
 
 	return (
-		<div className="flex flex-1 size-full items-center justify-center text-[16px]">
-			<div className="grid place-items-center relative grid-flow-row gap-8 select-none w-full z-1">
-				<div className="[@media(max-height:500px)]:hidden">
+		<div className="flex flex-1 w-full flex-col text-[16px]">
+			<div className="flex min-h-[42svh] flex-col justify-end">
+				<div className="flex justify-center select-none [@media(max-height:360px)]:hidden">
 					<LandingWords />
 				</div>
-				<div className="w-full px-4 flex justify-center relative z-20">
-					<div className="w-full max-w-[560px]">
-						<ExploreInput
-							autoFocus
-							size="large"
-							wide
-							className="bg-base-alt"
-							value={inputValue}
-							onChange={setInputValue}
-							onActivate={(data) => {
-								if (data.type === 'block') {
-									navigate({
-										to: '/block/$id',
-										params: { id: data.value },
-									})
-									return
-								}
-								if (data.type === 'hash') {
-									navigate({
-										to: '/receipt/$hash',
-										params: { hash: data.value },
-									})
-									return
-								}
-								if (data.type === 'token') {
-									navigate({
-										to: '/token/$address',
-										params: { address: data.value },
-									})
-									return
-								}
-								if (data.type === 'address') {
-									navigate({
-										to: '/address/$address',
-										params: { address: data.value },
-									})
-									return
-								}
-							}}
-						/>
-					</div>
+			</div>
+			<div className="flex grow flex-col items-center px-4 pt-8">
+				<div className="w-full max-w-[560px] relative z-20">
+					<ExploreInput
+						autoFocus
+						size="large"
+						wide
+						className="bg-base-alt"
+						value={inputValue}
+						onChange={setInputValue}
+						onActivate={(data) => {
+							if (data.type === 'block') {
+								navigate({
+									to: '/block/$id',
+									params: { id: data.value },
+								})
+								return
+							}
+							if (data.type === 'hash') {
+								navigate({
+									to: '/receipt/$hash',
+									params: { hash: data.value },
+								})
+								return
+							}
+							if (data.type === 'token') {
+								navigate({
+									to: '/token/$address',
+									params: { address: data.value },
+								})
+								return
+							}
+							if (data.type === 'address') {
+								navigate({
+									to: '/address/$address',
+									params: { address: data.value },
+								})
+								return
+							}
+						}}
+					/>
 				</div>
 			</div>
 		</div>
