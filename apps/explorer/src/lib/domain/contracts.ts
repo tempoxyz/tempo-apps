@@ -880,6 +880,9 @@ export async function autoloadAbi(
 	address: Address.Address,
 	options: AutoloadAbiOptions = {},
 ): Promise<Abi | null> {
+	const knownAbi = getContractAbi(address)
+	if (knownAbi && knownAbi.length > 0) return knownAbi
+
 	const { followProxies = true, includeSourceVerified = true } = options
 	const config = getWagmiConfig()
 	const chainId = getChainId(config)
