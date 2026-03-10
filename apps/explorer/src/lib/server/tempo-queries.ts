@@ -241,14 +241,14 @@ export async function fetchTokenCreatedMetadata(
 		.where('topic1', 'in', tokenTopics)
 		.execute()
 
-	const dataParams = ([
-				{ name: 'name', type: 'string' },
-				{ name: 'symbol', type: 'string' },
-				{ name: 'currency', type: 'string' },
-				{ name: 'quoteToken', type: 'address' },
-				{ name: 'admin', type: 'address' },
-				{ name: 'salt', type: 'bytes32' },
-			] as const)
+	const dataParams = [
+		{ name: 'name', type: 'string' },
+		{ name: 'symbol', type: 'string' },
+		{ name: 'currency', type: 'string' },
+		{ name: 'quoteToken', type: 'address' },
+		{ name: 'admin', type: 'address' },
+		{ name: 'salt', type: 'bytes32' },
+	] as const
 
 	const results: Array<{
 		token: string
