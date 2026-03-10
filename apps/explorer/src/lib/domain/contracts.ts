@@ -243,7 +243,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			name: 'Fee Manager',
 			code: '0xef',
 			description: 'Handle fee payments and conversions',
-			abi: Abis.feeManager,
+			abi: [...Abis.feeManager, ...Abis.feeAmm],
 			category: 'system',
 			docsUrl:
 				'https://docs.tempo.xyz/documentation/protocol/fees/spec-fee-amm#2-feemanager-contract',
@@ -292,9 +292,20 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			name: 'Nonce Manager',
 			code: '0xef',
 			description: 'Manage account nonces',
-			abi: [],
+			abi: Abis.nonce,
 			category: 'system',
 			address: Addresses.nonceManager,
+		},
+	],
+	[
+		Addresses.accountKeychain,
+		{
+			name: 'Account Keychain',
+			code: '0xef',
+			description: 'Manage account keys and permissions',
+			abi: Abis.accountKeychain,
+			category: 'system',
+			address: Addresses.accountKeychain,
 		},
 	],
 	[
