@@ -36,9 +36,9 @@
 				}
 			],
 			"vars": {
-				"TEMPO_RPC_URL": "https://rpc.testnet.tempo.xyz",
+				"TEMPO_RPC_URL": "https://proxy.tempo.xyz/rpc/42431",
 				"ALLOWED_ORIGINS": "*",
-				"TEMPO_ENV": "testnet",
+				"TEMPO_ENV": "moderato",
 				"POSTHOG_API_KEY": ""
 			},
 			"ratelimits": [
@@ -60,9 +60,9 @@
 			],
 			"workers_dev": false,
 			"vars": {
-				"TEMPO_RPC_URL": "https://rpc.testnet.tempo.xyz",
+				"TEMPO_RPC_URL": "https://proxy.tempo.xyz/rpc/42431",
 				"ALLOWED_ORIGINS": "*",
-				"TEMPO_ENV": "testnet",
+				"TEMPO_ENV": "moderato",
 				"POSTHOG_API_KEY": ""
 			},
 			"ratelimits": [

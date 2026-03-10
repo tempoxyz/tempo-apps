@@ -4,7 +4,6 @@ import {
 	tempoDevnet,
 	tempoLocalnet,
 	tempoModerato,
-	tempoTestnet,
 } from 'viem/chains'
 import { alphaUsd, doNotUseUsd } from './consts.js'
 
@@ -13,7 +12,7 @@ const chains = {
 	localnet: tempoLocalnet,
 	mainnet: tempo,
 	moderato: tempoModerato,
-	testnet: tempoTestnet,
+	testnet: tempoModerato,
 }
 
 type TempoEnv = keyof typeof chains
@@ -26,8 +25,8 @@ const feeTokens = {
 	testnet: alphaUsd,
 } as const
 
-const tempoEnv = (env.TEMPO_ENV as TempoEnv) ?? 'testnet'
+const tempoEnv = (env.TEMPO_ENV as TempoEnv) ?? 'moderato'
 
-export const tempoChain = (chains[tempoEnv] ?? tempoTestnet).extend({
+export const tempoChain = (chains[tempoEnv] ?? tempoModerato).extend({
 	feeToken: feeTokens[tempoEnv] ?? alphaUsd,
 })

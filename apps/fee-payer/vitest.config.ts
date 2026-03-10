@@ -14,11 +14,13 @@ const sponsorPrivateKey = Mnemonic.toPrivateKey(testMnemonic, {
 
 const rpcUrl = (() => {
 	if (process.env.TEMPO_RPC_URL) return process.env.TEMPO_RPC_URL
-	if (tempoEnv === 'mainnet') return 'https://rpc.mainnet.tempo.xyz'
-	if (tempoEnv === 'testnet') return 'https://rpc.testnet.tempo.xyz'
+        if (tempoEnv === 'mainnet') return 'https://rpc.mainnet.tempo.xyz'
+	if (tempoEnv === 'testnet' || tempoEnv === 'moderato') {
+                return 'https://proxy.tempo.xyz/rpc/42431'
+        }
 	if (tempoEnv === 'devnet') return 'https://rpc.devnet.tempoxyz.dev'
 	const poolId = Number(process.env.VITEST_POOL_ID ?? 1)
-	return `http://localhost:9545/${poolId}`
+        return `http://localhost:9545/${poolId}`
 })()
 
 export default defineWorkersConfig({

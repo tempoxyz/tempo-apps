@@ -1,7 +1,7 @@
 import { QueryClient } from '@tanstack/react-query'
-import { tempoTestnet } from 'viem/chains'
+import { tempoModerato } from 'viem/chains'
 import { withFeePayer } from 'viem/tempo'
-import { createConfig, http, webSocket } from 'wagmi'
+import { createConfig, http } from 'wagmi'
 import { KeyManager, webAuthn } from 'wagmi/tempo'
 
 export const alphaUsd = '0x20c0000000000000000000000000000000000001'
@@ -17,12 +17,12 @@ export const config = createConfig({
 			keyManager: KeyManager.localStorage(),
 		}),
 	],
-	chains: [tempoTestnet.extend({ feeToken: alphaUsd })],
+	chains: [tempoModerato.extend({ feeToken: alphaUsd })],
 	multiInjectedProviderDiscovery: false,
 	transports: {
-		[tempoTestnet.id]: withFeePayer(
+		[tempoModerato.id]: withFeePayer(
 			// Transport for regular transactions
-			webSocket('wss://rpc.testnet.tempo.xyz'),
+			http('https://proxy.tempo.xyz/rpc/42431'),
 			// Transport for sponsored transactions (feePayer: true)
 			http(import.meta.env.VITE_FEE_PAYER_URL ?? 'http://localhost:8787'),
 		),

@@ -16,8 +16,9 @@
 		"tail": "wrangler tail",
 		"test": "vitest --run",
 		"test:watch": "vitest",
-		"test:testnet": "TEMPO_ENV=testnet vitest --run"
-	},
+		"test:moderato": "TEMPO_ENV=moderato vitest --run",
+                "test:testnet": "TEMPO_ENV=moderato vitest --run"
+        },
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",
 		"hono": "catalog:",
