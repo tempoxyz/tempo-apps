@@ -3,17 +3,44 @@ import * as OxHash from 'ox/Hash'
 import * as OxHex from 'ox/Hex'
 import { decodeAbiParameters, zeroAddress } from 'viem'
 import * as ABIS from '#lib/abis'
-import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
+import {
+	tempoFastLookupQueryBuilder,
+	tempoQueryBuilder,
+} from '#lib/server/tempo-queries-provider'
 
 const QB = tempoQueryBuilder
+const FAST_QB = tempoFastLookupQueryBuilder
 
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
+
+const DAY_IN_SECONDS = 24 * 60 * 60
 
 type SortDirection = 'asc' | 'desc'
 
 type QueryWithWhere<TQuery> = TQuery & {
 	where: (...args: unknown[]) => TQuery
+}
+
+export type ExplorerHomepageMetric = {
+	total: number
+	last24h: number
+}
+
+export type ExplorerHomepageMetrics = {
+	transactions: ExplorerHomepageMetric
+	contracts: ExplorerHomepageMetric
+	tokens: ExplorerHomepageMetric
+}
+
+function parseCount(
+	value: string | number | bigint | null | undefined,
+): number {
+	if (value == null) return 0
+	if (typeof value === 'number') return value
+	if (typeof value === 'bigint') return Number(value)
+
+	return Number(value)
 }
 
 export type TokenHolderBalance = { address: string; balance: bigint }
@@ -297,6 +324,78 @@ export async function fetchLatestBlockNumber(chainId: number): Promise<bigint> {
 		.executeTakeFirstOrThrow()
 
 	return BigInt(result.num)
+}
+
+// Homepage metrics scan large indexed tables; use ClickHouse for the heavy counts.
+export async function fetchExplorerHomepageMetrics(
+	chainId: number,
+	options: {
+		now?: number
+	} = {},
+): Promise<ExplorerHomepageMetrics> {
+	const sinceTimestamp = Math.max(
+		0,
+		Math.floor((options.now ?? Date.now()) / 1000) - DAY_IN_SECONDS,
+	)
+	// `withSignatures()` loses the operand type for decoded event tables in tidx.ts.
+	const tokenSinceTimestamp = sinceTimestamp as never
+	const tokenCreatedSignature = ABIS.getTokenCreatedEvent(chainId)
+
+	const [
+		transactionTotalResult,
+		transaction24hResult,
+		contractTotalResult,
+		contract24hResult,
+		tokenTotalResult,
+		token24hResult,
+	] = await Promise.all([
+		FAST_QB(chainId)
+			.selectFrom('txs')
+			.select((eb) => eb.fn.count('hash').as('count'))
+			.executeTakeFirst(),
+		FAST_QB(chainId)
+			.selectFrom('txs')
+			.select((eb) => eb.fn.count('hash').as('count'))
+			.where('block_timestamp', '>=', sinceTimestamp)
+			.executeTakeFirst(),
+		FAST_QB(chainId)
+			.selectFrom('receipts')
+			.select((eb) => eb.fn.count('tx_hash').as('count'))
+			.where('contract_address', 'is not', null)
+			.executeTakeFirst(),
+		FAST_QB(chainId)
+			.selectFrom('receipts')
+			.select((eb) => eb.fn.count('tx_hash').as('count'))
+			.where('contract_address', 'is not', null)
+			.where('block_timestamp', '>=', sinceTimestamp)
+			.executeTakeFirst(),
+		QB(chainId)
+			.withSignatures([tokenCreatedSignature])
+			.selectFrom('tokencreated')
+			.select((eb) => eb.fn.count('token').as('count'))
+			.executeTakeFirst(),
+		QB(chainId)
+			.withSignatures([tokenCreatedSignature])
+			.selectFrom('tokencreated')
+			.select((eb) => eb.fn.count('token').as('count'))
+			.where('block_timestamp', '>=', tokenSinceTimestamp)
+			.executeTakeFirst(),
+	])
+
+	return {
+		transactions: {
+			total: parseCount(transactionTotalResult?.count),
+			last24h: parseCount(transaction24hResult?.count),
+		},
+		contracts: {
+			total: parseCount(contractTotalResult?.count),
+			last24h: parseCount(contract24hResult?.count),
+		},
+		tokens: {
+			total: parseCount(tokenTotalResult?.count),
+			last24h: parseCount(token24hResult?.count),
+		},
+	}
 }
 
 type AddressDirectionParams = {
