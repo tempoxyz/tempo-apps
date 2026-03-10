@@ -44,11 +44,15 @@ export function DataGrid(props: DataGrid.Props) {
 				cells: activeColumns.map((_, colIndex) => {
 					const cellKey = `skeleton-${index}-${colIndex}`
 					return (
-						<div key={cellKey} className="w-full max-w-[180px]">
+						<div
+							key={cellKey}
+							className="w-full max-w-[180px] flex items-center min-h-[24px]"
+						>
 							<div className="h-[12px] w-full rounded-[4px] bg-distinct/70 animate-pulse" />
 						</div>
 					)
 				}),
+				className: '[&>div]:items-center',
 			}))
 		: items(mode)
 	const pages = pagesProp ?? Math.ceil(totalItems / itemsPerPage)
