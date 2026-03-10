@@ -27,6 +27,7 @@
 	"dependencies": {
 		"hono": "catalog:",
 		"svgo": "^4.0.1",
+		"svgo": "^4.0.1",
 		"tempo.ts": "catalog:",
 		"viem": "catalog:"
 	},
@@ -34,7 +35,7 @@
 		"@biomejs/biome": "catalog:",
 		"@cloudflare/vite-plugin": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
-		"@scalar/api-reference": "^1.48.1",
+		"@scalar/api-reference": "catalog:",
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/node": "catalog:",
 		"typescript": "catalog:",

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This file exists because wrangler.jsonc#build does not apply when using Vite
+# This file exists because wrangler.json#build does not apply when using Vite
 
 set -eou pipefail
 

@@ -27,7 +27,7 @@ export default defineWorkersConfig({
 		globalSetup: [join(__dirname, './test/setup.global.ts')],
 		poolOptions: {
 			workers: {
-				wrangler: { configPath: './wrangler.jsonc' },
+				wrangler: { configPath: './wrangler.json' },
 				miniflare: {
 					bindings: {
 						ALLOWED_ORIGINS: '*',

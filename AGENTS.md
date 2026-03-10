@@ -116,19 +116,19 @@ Add multiple rows if the change affects different views or states.
 1. Create a new directory under `apps/`
 2. Add a `package.json` with scripts: `dev`, `build`, `check`, `check:types`
 3. Add a `tsconfig.json` extending strict TypeScript settings
-4. Add a `wrangler.jsonc` for Cloudflare Workers deployment
+4. Add a `wrangler.json` for Cloudflare Workers deployment
 5. Add `.env.example` with required environment variables
 6. Update this file's "Existing Apps" table
 
 ### Required Files for New Apps
 
-```
+```txt
 apps/my-app/
 ├── src/
 │   └── index.ts          # Entry point
 ├── package.json          # Must include standard scripts
 ├── tsconfig.json         # TypeScript config
-├── wrangler.jsonc        # Cloudflare Workers config
+├── wrangler.json         # Cloudflare Workers config
 └── .env.example          # Environment template
 ```
 

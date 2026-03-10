@@ -16,8 +16,6 @@
 			"persist": true
 		}
 	},
-	// KV namespace binding - create via `wrangler kv namespace create KEY_STORE`
-	// For local dev, wrangler will use a local KV emulator
 	"kv_namespaces": [
 		{
 			"binding": "KEY_STORE",

@@ -1,65 +1,91 @@
+import * as z from 'zod/mini'
 import { cloudflare } from '@cloudflare/vite-plugin'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 import tailwind from '@tailwindcss/vite'
 import { devtools } from '@tanstack/devtools-vite'
 import { tanstackStart as tanstack } from '@tanstack/react-start/plugin/vite'
 import react from '@vitejs/plugin-react'
-import { readFileSync } from 'node:fs'
-import { parse } from 'jsonc-parser'
 import Icons from 'unplugin-icons/vite'
 import { defineConfig, loadEnv, type Plugin } from 'vite'
 import vitePluginChromiumDevTools from 'vite-plugin-devtools-json'
 import { visualizer } from 'rollup-plugin-visualizer'
 import Sonda from 'sonda/vite'
-import { getVendorChunk } from './scripts/chunk-config'
+
+import { getVendorChunk } from './scripts/chunk-config.ts'
+
+import packageJSON from '#package.json' with { type: 'json' }
+import wranglerJSON from '#wrangler.json' with { type: 'json' }
+
+const enabledSchema = z.stringbool({
+	truthy: ['true', '1', 'yes', 'on', 'y', 'enabled'],
+	falsy: ['false', '0', 'no', 'off', 'n', 'disabled'],
+})
+
+const tempoEnvSchema = z.prefault(
+	z.enum(['devnet', 'testnet', 'mainnet']),
+	'testnet',
+)
+
+const envConfigSchema = z.object({
+	PORT: z.prefault(z.coerce.number(), 3_007),
+	CLOUDFLARE_ENV: tempoEnvSchema,
+	VITE_TEMPO_ENV: tempoEnvSchema,
+	VITE_ENABLE_DEMO: z.prefault(enabledSchema, true),
+	VITE_ENABLE_DEVTOOLS: enabledSchema,
+	ALLOWED_HOSTS: z.prefault(
+		z.pipe(
+			z.string(),
+			z.transform((x) => x.split(',').filter(Boolean)),
+		),
+		'',
+	),
+	VITE_BASE_URL: z.prefault(z.url(), ''),
+	SENTRY_ORG: z.optional(z.string()),
+	SENTRY_PROJECT: z.optional(z.string()),
+	SENTRY_AUTH_TOKEN: z.optional(z.string()),
+	ANALYZE: enabledSchema,
+	ANALYZE_JSON: enabledSchema,
+	CF_PAGES_COMMIT_SHA: z.optional(z.string()),
+})
 
 const [, , , ...args] = process.argv
 
-function getWranglerEnvVars(
-	envName: string | undefined,
-): Record<string, string> {
-	if (!envName) return {}
-	try {
-		const content = readFileSync('wrangler.jsonc', 'utf-8')
-		const wranglerConfig = parse(content) as {
-			env?: Record<string, { vars?: Record<string, string> }>
-		}
-		return wranglerConfig?.env?.[envName]?.vars ?? {}
-	} catch {
-		return {}
-	}
-}
-
 export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
+	const { data: envConfig, success, error } = envConfigSchema.safeParse(env)
+	if (!success) throw new Error(z.prettifyError(error))
 
-	// CLOUDFLARE_ENV is set by CI from matrix.env, or can be set locally
-	// This selects the wrangler environment (testnet, moderato, devnet)
-	// which provides VITE_TEMPO_ENV and other vars
-	const cloudflareEnv = process.env.CLOUDFLARE_ENV || env.CLOUDFLARE_ENV
-	const wranglerVars = getWranglerEnvVars(cloudflareEnv)
-
-	const showDevtools = env.VITE_ENABLE_DEVTOOLS !== 'false'
+	const wranglerVars = wranglerJSON.env[envConfig.VITE_TEMPO_ENV].vars
+	const tempoEnv = tempoEnvSchema.safeParse(wranglerVars.VITE_TEMPO_ENV)
+	if (!tempoEnv.success) throw new Error(z.prettifyError(tempoEnv.error))
+	if (envConfig.VITE_TEMPO_ENV !== tempoEnv.data)
+		throw new Error(
+			[
+				`VITE_TEMPO_ENV mismatch - ${envConfig.VITE_TEMPO_ENV} !== ${tempoEnv.data}`,
+				'Check `.env`/injected vars vs. `wrangler.json` for consistency.',
+			].join('\n'),
+		)
 
 	const lastPort = (() => {
 		const index = args.lastIndexOf('--port')
 		return index === -1 ? null : (args.at(index + 1) ?? null)
 	})()
-	const port = Number(lastPort ?? env.PORT ?? 3_000)
+	const port = Number(lastPort ?? envConfig.PORT)
 
-	const allowedHosts = env.ALLOWED_HOSTS?.split(',') ?? []
 	const shouldUploadSourcemaps = Boolean(
-		(env.SENTRY_AUTH_TOKEN || env.SENTRY_AUTH_TOKEN === '') &&
-			(env.SENTRY_ORG || env.SENTRY_ORG === '') &&
-			(env.SENTRY_PROJECT || env.SENTRY_PROJECT === ''),
+		(envConfig.SENTRY_AUTH_TOKEN || envConfig.SENTRY_AUTH_TOKEN === '') &&
+			(envConfig.SENTRY_ORG || envConfig.SENTRY_ORG === '') &&
+			(envConfig.SENTRY_PROJECT || envConfig.SENTRY_PROJECT === ''),
 	)
 
 	return {
 		plugins: [
 			vitePluginAlias(),
-			config.mode === 'development' && showDevtools && devtools(),
 			config.mode === 'development' &&
-				showDevtools &&
+				envConfig.VITE_ENABLE_DEVTOOLS &&
+				devtools(),
+			config.mode === 'development' &&
+				envConfig.VITE_ENABLE_DEVTOOLS &&
 				vitePluginChromiumDevTools(),
 			cloudflare({ viteEnvironment: { name: 'ssr' } }),
 			tailwind(),
@@ -72,8 +98,8 @@ export default defineConfig((config) => {
 			}),
 			react(),
 			// Bundle analysis - Sonda for visualization, stats.json for diffs
-			process.env.ANALYZE === 'true' && Sonda(),
-			process.env.ANALYZE_JSON === 'true' &&
+			envConfig.ANALYZE && Sonda(),
+			envConfig.ANALYZE_JSON &&
 				visualizer({
 					filename: 'stats.json',
 					template: 'raw-data',
@@ -82,9 +108,9 @@ export default defineConfig((config) => {
 				}),
 			shouldUploadSourcemaps &&
 				sentryVitePlugin({
-					org: env.SENTRY_ORG,
-					project: env.SENTRY_PROJECT,
-					authToken: env.SENTRY_AUTH_TOKEN,
+					org: envConfig.SENTRY_ORG,
+					project: envConfig.SENTRY_PROJECT,
+					authToken: envConfig.SENTRY_AUTH_TOKEN,
 					sourcemaps: {
 						filesToDeleteAfterUpload: ['dist/**/*.map'],
 					},
@@ -93,19 +119,19 @@ export default defineConfig((config) => {
 		server: {
 			port,
 			cors: config.mode === 'development' ? false : undefined,
-			allowedHosts: config.mode === 'development' ? allowedHosts : [],
+			allowedHosts:
+				config.mode === 'development' ? envConfig.ALLOWED_HOSTS : [],
 		},
 		preview: {
-			allowedHosts: config.mode === 'preview' ? allowedHosts : [],
+			allowedHosts: config.mode === 'preview' ? envConfig.ALLOWED_HOSTS : [],
 		},
 		build: {
 			minify: 'oxc',
-			sourcemap:
-				process.env.ANALYZE === 'true'
-					? true
-					: shouldUploadSourcemaps
-						? 'hidden'
-						: false,
+			sourcemap: envConfig.ANALYZE
+				? true
+				: shouldUploadSourcemaps
+					? 'hidden'
+					: false,
 			rollupOptions: {
 				output: {
 					minify: {
@@ -133,25 +159,18 @@ export default defineConfig((config) => {
 			},
 		},
 		define: {
+			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
+				wranglerVars.VITE_TEMPO_ENV || envConfig.VITE_TEMPO_ENV,
+			),
 			__BASE_URL__: JSON.stringify(
-				env.VITE_BASE_URL
-					? env.VITE_BASE_URL
+				envConfig.VITE_BASE_URL
+					? envConfig.VITE_BASE_URL
 					: config.mode === 'development'
 						? `http://localhost:${port}`
-						: (env.VITE_BASE_URL ?? ''),
+						: (envConfig.VITE_BASE_URL ?? ''),
 			),
 			__BUILD_VERSION__: JSON.stringify(
-				env.CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? Date.now().toString(),
-			),
-
-			'import.meta.env.VITE_TEMPO_ENV': JSON.stringify(
-				wranglerVars.VITE_TEMPO_ENV ||
-					cloudflareEnv ||
-					process.env.VITE_TEMPO_ENV ||
-					env.VITE_TEMPO_ENV,
-			),
-			'import.meta.env.VITE_ENABLE_DEMO': JSON.stringify(
-				env.VITE_ENABLE_DEMO ?? 'true',
+				envConfig.CF_PAGES_COMMIT_SHA?.slice(0, 8) ?? Date.now().toString(),
 			),
 		},
 	}

@@ -27,8 +27,8 @@ export function getApiUrl(path: string, searchParams?: URLSearchParams): URL {
 }
 
 export const getTempoEnv = createIsomorphicFn()
-	.client(() => import.meta.env.VITE_TEMPO_ENV as TempoEnv)
-	.server(() => process.env.VITE_TEMPO_ENV as TempoEnv)
+	.client(() => import.meta.env.VITE_TEMPO_ENV)
+	.server(() => process.env.VITE_TEMPO_ENV)
 
 export const isTestnet = createIsomorphicFn()
 	.client(() => import.meta.env.VITE_TEMPO_ENV === 'testnet')

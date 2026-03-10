@@ -23,7 +23,7 @@ export default defineConfig((config) => {
 			__BUILD_VERSION__: JSON.stringify(commitSha ?? Date.now().toString()),
 		},
 		// Serve files from 'data' directory as static assets in dev mode
-		// This matches wrangler.jsonc's assets.directory setting
+		// This matches wrangler.json's assets.directory setting
 		publicDir: 'data',
 		server: {
 			port: Number(env.PORT ?? 3_000),

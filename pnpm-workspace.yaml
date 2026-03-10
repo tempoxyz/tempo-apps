@@ -22,8 +22,8 @@ catalog:
   '@sentry/react': ^10.40.0
   '@sentry/vite-plugin': ^3.6.1
   '@shazow/whatsabi': ^0.26.0
-  '@shikijs/langs': ^3.23.0
-  '@shikijs/themes': ^3.23.0
+  '@shikijs/langs': ^4.0.2
+  '@shikijs/themes': ^4.0.2
   '@svgr/core': ^8.1.0
   '@svgr/plugin-jsx': ^8.1.0
   '@tailwindcss/vite': ^4.2.1
@@ -58,12 +58,12 @@ catalog:
   idxs: ^0.0.6
   jsonc-parser: ^3.3.1
   kysely: ^0.28.11
-  ox: ^0.12.4
+  ox: ^0.14.0
   prool: ^0.2.3
   react: ^19.2.4
   react-dom: ^19.2.4
-  rollup-plugin-visualizer: ^7.0.1
-  shiki: ^3.23.0
+  rollup-plugin-visualizer: ^7.0.0
+  shiki: ^4.0.2
   sonda: ^0.11.1
   tailwind-merge: ^3.5.0
   tailwindcss: ^4.2.1
