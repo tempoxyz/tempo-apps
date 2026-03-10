@@ -52,7 +52,6 @@ export function DataGrid(props: DataGrid.Props) {
 						</div>
 					)
 				}),
-				className: '[&>div]:items-center',
 			}))
 		: items(mode)
 	const pages = pagesProp ?? Math.ceil(totalItems / itemsPerPage)
