@@ -190,7 +190,6 @@ export function DataGrid(props: DataGrid.Props) {
 						)
 					})}
 				</div>
-	
 			</div>
 			<div className="mt-auto">
 				{pagination !== 'default' && pagination !== 'simple' ? (
