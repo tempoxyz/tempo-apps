@@ -8,6 +8,7 @@ import {
 	toEventSelector,
 	toFunctionSelector,
 } from 'viem'
+import { formatAbiItem } from 'viem/utils'
 import { Abis, Addresses } from 'viem/tempo'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { streamChannelAbi } from './known-events.ts'
@@ -834,11 +835,15 @@ const knownSignatures = new Map<string, string>()
 for (const abi of Object.values(Abis)) {
 	for (const item of abi) {
 		if (item.type === 'function') {
-			const sig = `${item.name}(${item.inputs.map((i: { type: string }) => i.type).join(',')})`
-			knownSignatures.set(toFunctionSelector(item as AbiFunction), sig)
+			knownSignatures.set(
+				toFunctionSelector(item as AbiFunction),
+				formatAbiItem(item as AbiFunction),
+			)
 		} else if (item.type === 'event') {
-			const sig = `${item.name}(${item.inputs.map((i: { type: string }) => i.type).join(',')})`
-			knownSignatures.set(toEventSelector(item as AbiEvent), sig)
+			knownSignatures.set(
+				toEventSelector(item as AbiEvent),
+				formatAbiItem(item as AbiEvent),
+			)
 		}
 	}
 }
