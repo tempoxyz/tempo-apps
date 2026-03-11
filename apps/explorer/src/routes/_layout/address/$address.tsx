@@ -593,7 +593,17 @@ async function fetchAddressMetadata(address: Address.Address) {
 }
 
 type ContractCreationResponse = {
-	creation: { blockNumber: string; timestamp: string } | null
+	creation: {
+		blockNumber: string
+		timestamp: string
+		hash: Hex.Hex | null
+		from: Address.Address | null
+		to: Address.Address | null
+		value: string | null
+		status: 'success' | 'reverted' | null
+		gasUsed: string | null
+		effectiveGasPrice: string | null
+	} | null
 	error: string | null
 }
 
@@ -602,6 +612,43 @@ async function fetchContractCreation(
 ): Promise<ContractCreationResponse> {
 	const response = await fetch(`/api/contract/creation/${address}`)
 	return response.json() as Promise<ContractCreationResponse>
+}
+
+function buildContractCreationTransaction(params: {
+	address: Address.Address
+	creation: NonNullable<ContractCreationResponse['creation']>
+}): EnrichedTransaction | null {
+	const { address, creation } = params
+
+	if (!creation.hash || !creation.from) return null
+
+	const blockNumber = parseOptionalBigInt(creation.blockNumber) ?? 0n
+	const timestamp = parseOptionalBigInt(creation.timestamp) ?? 0n
+	const value = parseOptionalBigInt(creation.value) ?? 0n
+	const gasUsed = parseOptionalBigInt(creation.gasUsed) ?? 0n
+	const effectiveGasPrice =
+		parseOptionalBigInt(creation.effectiveGasPrice) ?? 0n
+
+	return {
+		hash: creation.hash,
+		blockNumber: Hex.fromNumber(blockNumber),
+		timestamp: Number(timestamp),
+		from: Address.checksum(creation.from),
+		to: creation.to ? Address.checksum(creation.to) : null,
+		value: Hex.fromNumber(value),
+		status: creation.status ?? 'success',
+		gasUsed: Hex.fromNumber(gasUsed),
+		effectiveGasPrice: Hex.fromNumber(effectiveGasPrice),
+		knownEvents: [
+			{
+				type: 'contract creation',
+				parts: [
+					{ type: 'action', value: 'Deploy Contract' },
+					{ type: 'account', value: Address.checksum(address) },
+				],
+			},
+		],
+	}
 }
 
 function AccountCardWithTimestamps(props: {
@@ -773,11 +820,55 @@ function SectionsWrapper(props: {
 		: page === 1
 			? initialData
 			: historyQueryData
-
-	const transactions = historyData?.transactions ?? []
+	const baseTransactions = historyData?.transactions ?? []
 	const hasMore = historyData?.hasMore ?? false
 	const total = historyData?.total
 	const countCapped = historyData?.countCapped ?? false
+	const shouldFetchContractCreation =
+		isMounted &&
+		isContract &&
+		isTransactionsTabActive &&
+		historyData !== undefined &&
+		!hasMore
+
+	const { data: contractCreationData } = useQuery({
+		queryKey: ['contract-creation', address],
+		queryFn: () => fetchContractCreation(address),
+		enabled: shouldFetchContractCreation,
+		staleTime: 60_000,
+	})
+
+	const transactions = React.useMemo(() => {
+		if (!isTransactionsTabActive || !isContract) return baseTransactions
+		if (hasMore) return baseTransactions
+
+		const creation = contractCreationData?.creation
+		if (!creation) return baseTransactions
+
+		const creationTransaction = buildContractCreationTransaction({
+			address,
+			creation,
+		})
+		if (!creationTransaction) return baseTransactions
+
+		if (
+			baseTransactions.some(
+				(transaction) =>
+					transaction.hash.toLowerCase() ===
+					creationTransaction.hash.toLowerCase(),
+			)
+		)
+			return baseTransactions
+
+		return [...baseTransactions, creationTransaction]
+	}, [
+		address,
+		baseTransactions,
+		contractCreationData?.creation,
+		hasMore,
+		isContract,
+		isTransactionsTabActive,
+	])
 
 	// Token transfers query
 	const transfersPage = isTransfersTabActive ? page : 1
