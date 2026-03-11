@@ -2,11 +2,11 @@
   "$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
   "name": "Tempo Mainnet (Presto)",
   "logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/4217/icon.svg",
-  "timestamp": "2026-03-10T22:17:01Z",
+  "timestamp": "2026-03-11T01:38:21Z",
   "version": {
     "major": 1,
     "minor": 1,
-    "patch": 3
+    "patch": 4
   },
   "tokens": [
     {
@@ -66,6 +66,19 @@
       "extensions": {
         "chain": "tempo"
       }
+    },
+    {
+      "name": "Cap USD",
+      "symbol": "cUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000000520792dcccccccc",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000000520792dcccccccc.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "cUSD"
+      },
+      "dateAdded": "2026-03-11T01:38:21Z"
     }
   ]
 }
