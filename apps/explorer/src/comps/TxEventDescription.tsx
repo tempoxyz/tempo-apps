@@ -258,6 +258,15 @@ export namespace TxEventDescription {
 						+ Show {remainingCount} more
 					</button>
 				)}
+				{expanded && events.length > limit && (
+					<button
+						type="button"
+						onClick={() => setExpanded(false)}
+						className="text-[12px] text-accent cursor-pointer press-down self-start"
+					>
+						− View less
+					</button>
+				)}
 			</div>
 		)
 	}
