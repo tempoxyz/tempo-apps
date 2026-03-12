@@ -31,6 +31,7 @@ import {
 	getDb,
 	sourcifyError,
 	normalizeSourcePath,
+	getCreationTransactionMetadata,
 } from '#utilities.ts'
 
 const logger = getLogger(['tempo'])
@@ -42,8 +43,6 @@ const logger = getLogger(['tempo'])
  * POST /verify/vyper - Vyper verification
  */
 
-const legacyVerifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
-
 const LegacyVyperRequestSchema = z.object({
 	address: z.string(),
 	chain: z.union([z.string(), z.number()]),
@@ -54,6 +53,8 @@ const LegacyVyperRequestSchema = z.object({
 	compilerSettings: z.optional(z.record(z.string(), z.unknown())),
 	creatorTxHash: z.optional(z.string()),
 })
+
+const legacyVerifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
 
 // POST /verify/vyper - Legacy Sourcify Vyper verification (used by Foundry)
 legacyVerifyRoute.post('/vyper', async (context) => {
@@ -179,6 +180,15 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			chain: chainConfig,
 			transport: http(chainConfig.rpcUrls.default.http.at(0)),
 		})
+
+		const creationTransactionMetadata = body.creatorTxHash
+			? await getCreationTransactionMetadata({
+					creationTransactionHash: body.creatorTxHash,
+					address,
+					chainId,
+					client,
+				})
+			: null
 
 		const onchainBytecode = await client.getCode({ address })
 
@@ -431,6 +441,14 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				id: deploymentId,
 				chainId: chainId,
 				address: addressBytes,
+				...(creationTransactionMetadata
+					? {
+							transactionHash: creationTransactionMetadata.transactionHash,
+							blockNumber: creationTransactionMetadata.blockNumber,
+							transactionIndex: creationTransactionMetadata.transactionIndex,
+							deployer: creationTransactionMetadata.deployer,
+						}
+					: {}),
 				contractId,
 				createdBy: auditUser,
 				updatedBy: auditUser,
