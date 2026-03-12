@@ -21,6 +21,7 @@ export function DataGrid(props: DataGrid.Props) {
 		itemsLabel = 'items',
 		itemsPerPage = 10,
 		pagination = 'default',
+		showSimpleCount = true,
 		emptyState = 'No items found.',
 		flexible = false,
 		onPrefetchNextPage,
@@ -55,6 +56,13 @@ export function DataGrid(props: DataGrid.Props) {
 			}))
 		: items(mode)
 	const pages = pagesProp ?? Math.ceil(totalItems / itemsPerPage)
+	const isSimpleSinglePage =
+		pagination === 'simple' &&
+		typeof pages === 'number' &&
+		pages <= 1 &&
+		page === 1
+	const shouldRenderSimpleFooter =
+		!isSimpleSinglePage || countLoading || showSimpleCount
 
 	const gridTemplateColumns = activeColumns
 		.map((col) => {
@@ -198,24 +206,32 @@ export function DataGrid(props: DataGrid.Props) {
 				{pagination !== 'default' && pagination !== 'simple' ? (
 					pagination
 				) : pagination === 'simple' ? (
-					<div className="flex flex-col items-center sm:flex-row sm:justify-between gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary">
-						<Pagination.Simple
-							page={page}
-							pages={pages}
-							fetching={fetching && !effectiveLoading}
-							countLoading={countLoading}
-							disableLastPage={disableLastPage}
-							onPrefetchNext={onPrefetchNextPage}
-							onCancelPrefetchNext={onCancelPrefetchNextPage}
-						/>
-						{/* Show transaction count - loading state shown while fetching */}
-						<Pagination.Count
-							totalItems={displayCount ?? 0}
-							itemsLabel={itemsLabel}
-							loading={effectiveLoading || displayCount == null}
-							capped={displayCountCapped}
-						/>
-					</div>
+					shouldRenderSimpleFooter ? (
+						<div
+							className={cx(
+								'flex flex-col items-center sm:flex-row gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary',
+								showSimpleCount ? 'sm:justify-between' : 'sm:justify-start',
+							)}
+						>
+							<Pagination.Simple
+								page={page}
+								pages={pages}
+								fetching={fetching && !effectiveLoading}
+								countLoading={countLoading}
+								disableLastPage={disableLastPage}
+								onPrefetchNext={onPrefetchNextPage}
+								onCancelPrefetchNext={onCancelPrefetchNextPage}
+							/>
+							{showSimpleCount ? (
+								<Pagination.Count
+									totalItems={displayCount ?? 0}
+									itemsLabel={itemsLabel}
+									loading={effectiveLoading || displayCount == null}
+									capped={displayCountCapped}
+								/>
+							) : null}
+						</div>
+					) : null
 				) : (
 					<Pagination
 						page={page}
@@ -279,6 +295,7 @@ export namespace DataGrid {
 		itemsLabel?: string
 		itemsPerPage?: number
 		pagination?: 'default' | 'simple' | React.ReactNode
+		showSimpleCount?: boolean
 		emptyState?: React.ReactNode
 		flexible?: boolean
 	}
