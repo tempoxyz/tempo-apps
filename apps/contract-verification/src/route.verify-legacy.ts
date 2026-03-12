@@ -42,8 +42,6 @@ const logger = getLogger(['tempo'])
  * POST /verify/vyper - Vyper verification
  */
 
-const legacyVerifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
-
 const LegacyVyperRequestSchema = z.object({
 	address: z.string(),
 	chain: z.union([z.string(), z.number()]),
@@ -54,6 +52,15 @@ const LegacyVyperRequestSchema = z.object({
 	compilerSettings: z.optional(z.record(z.string(), z.unknown())),
 	creatorTxHash: z.optional(z.string()),
 })
+
+type CreationTransactionMetadata = {
+	transactionHash: Uint8Array
+	blockNumber: number
+	transactionIndex: number
+	deployer: Uint8Array
+}
+
+const legacyVerifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
 
 // POST /verify/vyper - Legacy Sourcify Vyper verification (used by Foundry)
 legacyVerifyRoute.post('/vyper', async (context) => {
@@ -179,6 +186,42 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			chain: chainConfig,
 			transport: http(chainConfig.rpcUrls.default.http.at(0)),
 		})
+
+		let creationTransactionMetadata: CreationTransactionMetadata | null = null
+		if (body.creatorTxHash && client.getTransactionReceipt) {
+			try {
+				Hex.assert(body.creatorTxHash)
+				const receipt = await client.getTransactionReceipt({
+					hash: body.creatorTxHash,
+				})
+
+				if (
+					receipt.contractAddress &&
+					receipt.contractAddress.toLowerCase() === address.toLowerCase()
+				) {
+					creationTransactionMetadata = {
+						transactionHash: Hex.toBytes(receipt.transactionHash),
+						blockNumber: Number(receipt.blockNumber),
+						transactionIndex: receipt.transactionIndex,
+						deployer: Hex.toBytes(receipt.from),
+					}
+				} else {
+					logger.warn('creation_transaction_hash_mismatch', {
+						chainId,
+						address,
+						creationTransactionHash: body.creatorTxHash,
+						receiptContractAddress: receipt.contractAddress,
+					})
+				}
+			} catch (error) {
+				logger.warn('creation_transaction_hash_lookup_failed', {
+					error: formatError(error),
+					chainId,
+					address,
+					creationTransactionHash: body.creatorTxHash,
+				})
+			}
+		}
 
 		const onchainBytecode = await client.getCode({ address })
 
@@ -431,6 +474,14 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				id: deploymentId,
 				chainId: chainId,
 				address: addressBytes,
+				...(creationTransactionMetadata
+					? {
+							transactionHash: creationTransactionMetadata.transactionHash,
+							blockNumber: creationTransactionMetadata.blockNumber,
+							transactionIndex: creationTransactionMetadata.transactionIndex,
+							deployer: creationTransactionMetadata.deployer,
+						}
+					: {}),
 				contractId,
 				createdBy: auditUser,
 				updatedBy: auditUser,
