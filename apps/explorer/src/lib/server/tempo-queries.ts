@@ -19,7 +19,6 @@ type QueryWithWhere<TQuery> = TQuery & {
 export type TokenHolderBalance = { address: string; balance: bigint }
 
 type TokenHolderAggregationRow = {
-	address?: string
 	from: string
 	to: string
 	tokens: string | number | bigint
@@ -63,13 +62,18 @@ export async function fetchTokenHolderBalances(
 	chainId: number,
 ): Promise<TokenHolderBalance[]> {
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
-	const transfers = await qb
+	const transfers = (await qb
 		.selectFrom('transfer')
-		.select(['from', 'to', 'tokens'])
+		.select((eb) => [
+			eb.ref('from').as('from'),
+			eb.ref('to').as('to'),
+			eb.fn.sum('tokens').as('tokens'),
+		])
 		.where('address', '=', address)
-		.execute()
+		.groupBy(['from', 'to'])
+		.execute()) as TokenHolderAggregationRow[]
 
-	return aggregateTokenHolderBalances(transfers as TokenHolderAggregationRow[])
+	return aggregateTokenHolderBalances(transfers)
 }
 
 export async function fetchTokenHoldersCountRows(

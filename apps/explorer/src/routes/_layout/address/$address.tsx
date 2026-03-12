@@ -54,7 +54,12 @@ import type { KnownEventPart } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
-import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
+import {
+	buildAddressDescription,
+	buildAddressOgImageUrl,
+	buildTokenDescription,
+	buildTokenOgImageUrl,
+} from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import {
 	type HistoryResponse,
@@ -63,7 +68,7 @@ import {
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
 import XIcon from '~icons/lucide/x'
 
@@ -346,57 +351,92 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		}),
 	head: async ({ params, loaderData }) => {
 		const accountType = loaderData?.accountType ?? 'empty'
-		const label =
-			accountType === 'contract'
+		const isToken = loaderData?.isToken ?? false
+		const tokenMeta = loaderData?.tokenMetadata
+
+		const label = isToken
+			? 'Token'
+			: accountType === 'contract'
 				? 'Contract'
 				: accountType === 'account'
 					? 'Account'
 					: 'Address'
 		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
 
-		const txCount = 0
+		let description: string
+		let ogImageUrl: string
 
-		// Fetch data with a timeout to avoid blocking too long
-		let lastActive: string | undefined
-		let holdings = '—'
+		if (isToken && tokenMeta) {
+			const decimals = tokenMeta.decimals ?? 18
+			const totalSupply = tokenMeta.totalSupply
+				? Number.parseFloat(formatUnits(tokenMeta.totalSupply, decimals))
+				: 0
 
-		// Calculate holdings from prefetched balances data
-		if (loaderData?.balancesData?.balances) {
-			const totalValue = calculateTotalHoldings(
-				loaderData.balancesData.balances.map((b) => ({
-					address: b.token,
-					metadata: {
-						decimals: b.decimals,
-						currency: b.currency,
-					},
-					balance: BigInt(b.balance),
-				})),
-			)
-			if (totalValue && totalValue > 0) {
-				holdings = PriceFormatter.format(totalValue, { format: 'short' })
+			const formatSupply = (n: number): string => {
+				if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`
+				if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`
+				if (n >= 1e3)
+					return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+				return n.toFixed(2)
 			}
+
+			const supply = formatSupply(totalSupply)
+			const chainId = getTempoChain().id
+
+			description = buildTokenDescription({
+				name: tokenMeta.name ?? '—',
+				symbol: tokenMeta.symbol,
+				supply,
+			})
+
+			ogImageUrl = buildTokenOgImageUrl({
+				address: params.address,
+				chainId,
+				name: tokenMeta.name,
+				symbol: tokenMeta.symbol,
+				supply,
+			})
+		} else {
+			const txCount = 0
+			let lastActive: string | undefined
+			let holdings = '—'
+
+			if (loaderData?.balancesData?.balances) {
+				const totalValue = calculateTotalHoldings(
+					loaderData.balancesData.balances.map((b) => ({
+						address: b.token,
+						metadata: {
+							decimals: b.decimals,
+							currency: b.currency,
+						},
+						balance: BigInt(b.balance),
+					})),
+				)
+				if (totalValue && totalValue > 0) {
+					holdings = PriceFormatter.format(totalValue, { format: 'short' })
+				}
+			}
+
+			const recentTx = loaderData?.transactionsData?.transactions?.at(0)
+			if (recentTx?.timestamp) {
+				lastActive = DateFormatter.formatTimestampForOg(
+					BigInt(recentTx.timestamp),
+				).date
+			}
+
+			description = buildAddressDescription(
+				{ holdings, txCount },
+				params.address,
+			)
+
+			ogImageUrl = buildAddressOgImageUrl({
+				address: params.address,
+				holdings,
+				txCount,
+				accountType,
+				lastActive,
+			})
 		}
-
-		// Get the most recent transaction for lastActive (already in loaderData with timestamp)
-		const recentTx = loaderData?.transactionsData?.transactions?.at(0)
-		if (recentTx?.timestamp) {
-			lastActive = DateFormatter.formatTimestampForOg(
-				BigInt(recentTx.timestamp),
-			).date
-		}
-
-		const description = buildAddressDescription(
-			{ holdings, txCount },
-			params.address,
-		)
-
-		const ogImageUrl = buildAddressOgImageUrl({
-			address: params.address,
-			holdings,
-			txCount,
-			accountType,
-			lastActive,
-		})
 
 		return {
 			title,
