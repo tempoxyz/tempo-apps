@@ -1,6 +1,14 @@
-import { createFileRoute, useNavigate, useRouter } from '@tanstack/react-router'
+import {
+	createFileRoute,
+	Link,
+	useNavigate,
+	useRouter,
+} from '@tanstack/react-router'
 import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
+import { cx } from '#lib/css'
+import BoxIcon from '~icons/lucide/box'
+import CoinsIcon from '~icons/lucide/coins'
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
@@ -65,8 +73,50 @@ function Component() {
 						}}
 					/>
 				</div>
+				<QuickAccessPills />
 			</div>
 		</div>
+	)
+}
+
+function QuickAccessPills() {
+	return (
+		<div className="flex items-center gap-2 text-[13px]">
+			<QuickAccessPill
+				to="/blocks"
+				icon={<BoxIcon className="size-[14px] text-accent" />}
+			>
+				Blocks
+			</QuickAccessPill>
+			<QuickAccessPill
+				to="/tokens"
+				icon={<CoinsIcon className="size-[14px] text-accent" />}
+			>
+				Tokens
+			</QuickAccessPill>
+		</div>
+	)
+}
+
+function QuickAccessPill(props: {
+	className?: string
+	to: string
+	icon: React.ReactNode
+	children: React.ReactNode
+}) {
+	const { className, to, icon, children } = props
+	return (
+		<Link
+			to={to}
+			preload="render"
+			className={cx(
+				'flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus-visible:border-accent px-2.5 py-1 rounded-full! press-down bg-surface focus-visible:outline-none border-base-border',
+				className,
+			)}
+		>
+			{icon}
+			<span>{children}</span>
+		</Link>
 	)
 }
 
