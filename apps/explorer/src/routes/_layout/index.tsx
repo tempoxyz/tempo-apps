@@ -32,7 +32,7 @@ function Component() {
 					<LandingWords />
 				</div>
 			</div>
-			<div className="flex grow flex-col items-center px-4 pt-8">
+			<div className="flex grow flex-col items-center px-4 pt-8 gap-3">
 				<div className="w-full max-w-[560px] relative z-20">
 					<ExploreInput
 						autoFocus
