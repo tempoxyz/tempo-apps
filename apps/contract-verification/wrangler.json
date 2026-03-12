@@ -59,11 +59,11 @@
 			"enabled": true,
 			"head_sampling_rate": 1,
 			"invocation_logs": true,
-			"destinations": ["tempo-app-internal-logs"]
+			"destinations": ["internal-logs"]
 		},
 		"traces": {
 			"enabled": true,
-			"destinations": ["tempo-app-internal-metrics"]
+			"destinations": ["internal-traces"]
 		}
 	}
 }
