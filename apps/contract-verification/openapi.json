@@ -16,7 +16,7 @@
 			"description": "Production"
 		},
 		{
-			"url": "https://contracts.porto.workers.dev",
+			"url": "https://contracts.tempoxyz.workers.dev",
 			"description": "Service base workers.dev domain (CACHE DISABLED!)"
 		},
 		{
