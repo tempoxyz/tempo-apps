@@ -19,9 +19,16 @@ type QueryWithWhere<TQuery> = TQuery & {
 export type TokenHolderBalance = { address: string; balance: bigint }
 
 type TokenHolderAggregationRow = {
+	address?: string
 	from: string
 	to: string
 	tokens: string | number | bigint
+}
+
+export type TokenHoldersCountRow = {
+	token: string
+	count: number
+	capped: boolean
 }
 
 function sortTokenHolderBalances(
@@ -63,6 +70,70 @@ export async function fetchTokenHolderBalances(
 		.execute()
 
 	return aggregateTokenHolderBalances(transfers as TokenHolderAggregationRow[])
+}
+
+export async function fetchTokenHoldersCountRows(
+	addresses: Address.Address[],
+	chainId: number,
+	countCap: number,
+): Promise<TokenHoldersCountRow[]> {
+	if (addresses.length === 0) return []
+
+	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
+	const transfers = (await qb
+		.selectFrom('transfer')
+		.select((eb) => [
+			eb.ref('address').as('address'),
+			eb.ref('from').as('from'),
+			eb.ref('to').as('to'),
+			eb.fn.sum('tokens').as('tokens'),
+		])
+		.where('address', 'in', addresses)
+		.groupBy(['address', 'from', 'to'])
+		.execute()) as Array<{
+		address: string
+		from: string
+		to: string
+		tokens: string | number | bigint
+	}>
+
+	const balancesByToken = new Map<string, Map<string, bigint>>()
+
+	for (const row of transfers) {
+		const token = row.address.toLowerCase()
+		let tokenBalances = balancesByToken.get(token)
+		if (!tokenBalances) {
+			tokenBalances = new Map<string, bigint>()
+			balancesByToken.set(token, tokenBalances)
+		}
+
+		const tokens = BigInt(row.tokens)
+		if (row.to !== zeroAddress) {
+			const to = row.to.toLowerCase()
+			tokenBalances.set(to, (tokenBalances.get(to) ?? 0n) + tokens)
+		}
+		if (row.from !== zeroAddress) {
+			const from = row.from.toLowerCase()
+			tokenBalances.set(from, (tokenBalances.get(from) ?? 0n) - tokens)
+		}
+	}
+
+	return addresses.map((address) => {
+		const token = address.toLowerCase()
+		const tokenBalances = balancesByToken.get(token)
+		const rawCount = tokenBalances
+			? Array.from(tokenBalances.values()).reduce(
+					(acc, balance) => (balance > 0n ? acc + 1 : acc),
+					0,
+				)
+			: 0
+		const capped = rawCount >= countCap
+		return {
+			token,
+			count: capped ? countCap : rawCount,
+			capped,
+		}
+	})
 }
 
 export async function fetchTokenFirstTransferTimestamp(
