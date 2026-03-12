@@ -1,5 +1,6 @@
 import type { Context } from 'hono'
 import { env } from 'cloudflare:workers'
+import { Hex } from 'ox'
 import { drizzle } from 'drizzle-orm/d1'
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
@@ -192,6 +193,68 @@ function extractDurableObjectErrorMeta(
  * Checks if an origin matches an allowed hostname pattern.
  * pathname and search parameters are ignored
  */
+export type CreationTransactionMetadata = {
+	transactionHash: Uint8Array
+	blockNumber: number
+	transactionIndex: number
+	deployer: Uint8Array
+}
+
+export async function getCreationTransactionMetadata(options: {
+	creationTransactionHash: string
+	address: string
+	chainId: number
+	client: {
+		getTransactionReceipt?: (args: { hash: `0x${string}` }) => Promise<{
+			transactionHash: `0x${string}`
+			blockNumber: bigint
+			transactionIndex: number
+			from: `0x${string}`
+			contractAddress?: string | null
+		}>
+	}
+	logContext?: Record<string, unknown>
+}): Promise<CreationTransactionMetadata | null> {
+	const { creationTransactionHash, address, chainId, client, logContext } =
+		options
+	if (!client.getTransactionReceipt) return null
+	try {
+		Hex.assert(creationTransactionHash)
+		const receipt = await client.getTransactionReceipt({
+			hash: creationTransactionHash,
+		})
+
+		if (
+			receipt.contractAddress &&
+			receipt.contractAddress.toLowerCase() === address.toLowerCase()
+		) {
+			return {
+				transactionHash: Hex.toBytes(receipt.transactionHash),
+				blockNumber: Number(receipt.blockNumber),
+				transactionIndex: receipt.transactionIndex,
+				deployer: Hex.toBytes(receipt.from),
+			}
+		}
+		logger.warn('creation_transaction_hash_mismatch', {
+			chainId,
+			address,
+			creationTransactionHash,
+			receiptContractAddress: receipt.contractAddress,
+			...logContext,
+		})
+		return null
+	} catch (error) {
+		logger.warn('creation_transaction_hash_lookup_failed', {
+			error: formatError(error),
+			chainId,
+			address,
+			creationTransactionHash,
+			...logContext,
+		})
+		return null
+	}
+}
+
 export function originMatches(params: { origin: string; pattern: string }) {
 	if (env.NODE_ENV === 'development') return true
 

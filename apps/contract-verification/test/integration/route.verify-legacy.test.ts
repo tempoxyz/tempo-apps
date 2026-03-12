@@ -135,4 +135,80 @@ describe('POST /verify/vyper', () => {
 		expect(deployments[0]?.transactionIndex).toBe(7)
 		expect(bytesToHex(deployments[0]?.deployer ?? null)).toBe(deployer)
 	})
+
+	it('leaves deployment metadata null when creatorTxHash is not provided', async () => {
+		const chainId = chainIds[0]
+		const address = '0x1111111111111111111111111111111111111111' as const
+		const runtimeBytecode = createVyperBytecode('6000')
+		const creationBytecode = createVyperBytecode('60016000')
+		const getCode = async () => runtimeBytecode
+		mockCreatePublicClient.mockReturnValue({
+			getCode,
+			getTransactionReceipt: vi.fn(),
+		})
+		mockGetRandom.mockResolvedValue({
+			fetch: async () =>
+				Response.json({
+					contracts: {
+						'vyper-contract.vy': {
+							VyperContract: {
+								abi: [
+									{
+										type: 'function',
+										name: 'set_value',
+										inputs: [{ type: 'uint256', name: '_value' }],
+									},
+								],
+								evm: {
+									bytecode: {
+										object: creationBytecode.slice(2),
+										sourceMap: '',
+									},
+									deployedBytecode: {
+										object: runtimeBytecode.slice(2),
+										sourceMap: '',
+									},
+								},
+								metadata: '{}',
+							},
+						},
+					},
+				}),
+		})
+		const { legacyVerifyRoute } = await import('#route.verify-legacy.ts')
+
+		const app = new Hono<{ Bindings: Cloudflare.Env }>()
+		app.route('/verify', legacyVerifyRoute)
+
+		const response = await app.request(
+			'/verify/vyper',
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					address,
+					chain: chainId,
+					files: {
+						'vyper-contract.vy':
+							'# @version ^0.3.10\n\n@external\ndef set_value(_value: uint256):\n    pass\n',
+					},
+					contractPath: 'vyper-contract.vy',
+					contractName: 'VyperContract',
+					compilerVersion: '0.3.10',
+				}),
+			},
+			env,
+		)
+
+		expect(response.status).toBe(200)
+
+		const db = drizzle(env.CONTRACTS_DB)
+		const deployments = await db.select().from(DB.contractDeploymentsTable)
+
+		expect(deployments).toHaveLength(1)
+		expect(deployments[0]?.transactionHash).toBeNull()
+		expect(deployments[0]?.blockNumber).toBeNull()
+		expect(deployments[0]?.transactionIndex).toBeNull()
+		expect(deployments[0]?.deployer).toBeNull()
+	})
 })

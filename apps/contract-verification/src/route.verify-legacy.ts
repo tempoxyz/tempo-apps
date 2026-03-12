@@ -31,6 +31,7 @@ import {
 	getDb,
 	sourcifyError,
 	normalizeSourcePath,
+	getCreationTransactionMetadata,
 } from '#utilities.ts'
 
 const logger = getLogger(['tempo'])
@@ -52,13 +53,6 @@ const LegacyVyperRequestSchema = z.object({
 	compilerSettings: z.optional(z.record(z.string(), z.unknown())),
 	creatorTxHash: z.optional(z.string()),
 })
-
-type CreationTransactionMetadata = {
-	transactionHash: Uint8Array
-	blockNumber: number
-	transactionIndex: number
-	deployer: Uint8Array
-}
 
 const legacyVerifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
 
@@ -187,41 +181,14 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			transport: http(chainConfig.rpcUrls.default.http.at(0)),
 		})
 
-		let creationTransactionMetadata: CreationTransactionMetadata | null = null
-		if (body.creatorTxHash && client.getTransactionReceipt) {
-			try {
-				Hex.assert(body.creatorTxHash)
-				const receipt = await client.getTransactionReceipt({
-					hash: body.creatorTxHash,
-				})
-
-				if (
-					receipt.contractAddress &&
-					receipt.contractAddress.toLowerCase() === address.toLowerCase()
-				) {
-					creationTransactionMetadata = {
-						transactionHash: Hex.toBytes(receipt.transactionHash),
-						blockNumber: Number(receipt.blockNumber),
-						transactionIndex: receipt.transactionIndex,
-						deployer: Hex.toBytes(receipt.from),
-					}
-				} else {
-					logger.warn('creation_transaction_hash_mismatch', {
-						chainId,
-						address,
-						creationTransactionHash: body.creatorTxHash,
-						receiptContractAddress: receipt.contractAddress,
-					})
-				}
-			} catch (error) {
-				logger.warn('creation_transaction_hash_lookup_failed', {
-					error: formatError(error),
-					chainId,
-					address,
+		const creationTransactionMetadata = body.creatorTxHash
+			? await getCreationTransactionMetadata({
 					creationTransactionHash: body.creatorTxHash,
+					address,
+					chainId,
+					client,
 				})
-			}
-		}
+			: null
 
 		const onchainBytecode = await client.getCode({ address })
 
