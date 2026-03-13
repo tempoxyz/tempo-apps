@@ -24,7 +24,7 @@ const getScalarConfig = (baseUrl: string) =>
 			{ url: baseUrl, description: 'Current' },
 			{ url: 'https://contracts.tempo.xyz', description: 'Production' },
 			{
-				url: 'https://contracts.porto.workers.dev',
+				url: 'https://contracts.tempoxyz.workers.dev',
 				description: 'workers.dev',
 			},
 			{

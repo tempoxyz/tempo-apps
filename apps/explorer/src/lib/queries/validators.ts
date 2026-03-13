@@ -2,7 +2,7 @@ import { queryOptions } from '@tanstack/react-query'
 import { isTestnet } from '#lib/env'
 
 const VALIDATOR_DIRECTORY_URL =
-	'https://tempo-validator-directory.porto.workers.dev'
+	'https://tempo-validator-directory.tempoxyz.workers.dev'
 
 export type Validator = {
 	validatorAddress: `0x${string}`

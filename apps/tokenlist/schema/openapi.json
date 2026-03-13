@@ -15,7 +15,7 @@
 			"description": "Production"
 		},
 		{
-			"url": "https://tokenlist.porto.workers.dev",
+			"url": "https://tokenlist.tempoxyz.workers.dev",
 			"description": "Service base workers.dev domain (CACHE DISABLED!)"
 		},
 		{
