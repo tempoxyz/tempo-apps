@@ -50,7 +50,6 @@ import {
 	getContractBytecode,
 	getContractInfo,
 } from '#lib/domain/contracts'
-import type { KnownEventPart } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
@@ -1478,20 +1477,16 @@ function TransactionFeeCell(props: {
 function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 	const { transaction } = props
 
-	const amountParts = React.useMemo(() => {
-		return transaction.knownEvents
-			.filter((event) => event.type !== 'approval')
-			.flatMap((event) =>
-				event.parts.filter(
-					(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
-						part.type === 'amount',
-				),
-			)
+	const events = React.useMemo(() => {
+		return transaction.knownEvents.filter((event) => event.type !== 'approval')
 	}, [transaction.knownEvents])
 
 	const infiniteLabel = <span className="text-secondary">−</span>
 
-	if (!amountParts.length)
+	const hasAmounts = events.some((event) =>
+		event.parts.some((part) => part.type === 'amount'),
+	)
+	if (!hasAmounts)
 		return (
 			<Amount.Base
 				value={0n}
@@ -1502,15 +1497,23 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 			/>
 		)
 
+	// For each event, take the max amount (avoids double-counting swap legs),
+	// then sum across events.
 	const normalizedDecimals = 18
-	const totalValue = amountParts.reduce((sum, part) => {
-		const decimals = part.value.decimals ?? 6
-		const scale = 10n ** BigInt(normalizedDecimals - decimals)
-		const value =
-			typeof part.value.value === 'bigint'
-				? part.value.value
-				: BigInt(part.value.value)
-		return sum + value * scale
+	const totalValue = events.reduce((sum, event) => {
+		let maxAmount = 0n
+		for (const part of event.parts) {
+			if (part.type !== 'amount') continue
+			const decimals = part.value.decimals ?? 6
+			const scale = 10n ** BigInt(normalizedDecimals - decimals)
+			const value =
+				typeof part.value.value === 'bigint'
+					? part.value.value
+					: BigInt(part.value.value)
+			const normalized = value * scale
+			if (normalized > maxAmount) maxAmount = normalized
+		}
+		return sum + maxAmount
 	}, 0n)
 
 	if (totalValue === 0n) {
