@@ -340,17 +340,19 @@ function Component() {
 		? Number(Value.format(totalPrice.amount, totalPrice.decimals))
 		: undefined
 
+	const feeCurrency = feePrice?.currency ?? feeBreakdown[0]?.currency ?? 'USD'
+
 	const feeAmount = receipt.effectiveGasPrice * receipt.gasUsed
 	// Gas accounting is always in 18-decimal units (wei equivalent), even when the fee token itself
 	// has a different number of decimals. Convert using 18 decimals so we get the actual token amount.
 	const fee = Number(Value.format(feeAmount, 18))
-	const feeDisplay = PriceFormatter.format(fee)
+	const feeDisplay = PriceFormatter.format(fee, { currency: feeCurrency })
 
 	const total =
 		previousTotal !== undefined ? previousTotal - previousFee + fee : fee
 	const totalDisplay =
 		previousTotal !== undefined
-			? PriceFormatter.format(previousTotal)
+			? PriceFormatter.format(previousTotal, { currency: feeCurrency })
 			: undefined
 
 	return (

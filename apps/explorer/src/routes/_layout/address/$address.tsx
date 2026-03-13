@@ -139,18 +139,30 @@ function useBalancesData(
 	return { data: assetsData, isLoading }
 }
 
-function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
+type CurrencyTotal = { currency: string; value: number }
+
+function calculateTotalHoldings(
+	assetsData: AssetData[],
+): CurrencyTotal[] | undefined {
 	const PRICE_PER_TOKEN = 1
-	let total: number | undefined
+	const byCurrency = new Map<string, number>()
 	for (const asset of assetsData) {
-		if (asset.metadata?.currency !== 'USD') continue
+		const currency = asset.metadata?.currency
+		if (!currency) continue
 		const decimals = asset.metadata?.decimals
 		const balance = asset.balance
 		if (decimals === undefined || balance === undefined) continue
-		total =
-			(total ?? 0) + Number(formatUnits(balance, decimals)) * PRICE_PER_TOKEN
+		const prev = byCurrency.get(currency) ?? 0
+		byCurrency.set(
+			currency,
+			prev + Number(formatUnits(balance, decimals)) * PRICE_PER_TOKEN,
+		)
 	}
-	return total
+	if (byCurrency.size === 0) return undefined
+	return Array.from(byCurrency.entries()).map(([currency, value]) => ({
+		currency,
+		value,
+	}))
 }
 
 const defaultSearchValues = {
@@ -400,8 +412,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			let lastActive: string | undefined
 			let holdings = '—'
 
+			// Calculate holdings from prefetched balances data
 			if (loaderData?.balancesData?.balances) {
-				const totalValue = calculateTotalHoldings(
+				const totals = calculateTotalHoldings(
 					loaderData.balancesData.balances.map((b) => ({
 						address: b.token,
 						metadata: {
@@ -411,8 +424,17 @@ export const Route = createFileRoute('/_layout/address/$address')({
 						balance: BigInt(b.balance),
 					})),
 				)
-				if (totalValue && totalValue > 0) {
-					holdings = PriceFormatter.format(totalValue, { format: 'short' })
+				if (totals && totals.length > 0) {
+					holdings = totals
+						.filter((t) => t.value > 0)
+						.map((t) =>
+							PriceFormatter.format(t.value, {
+								format: 'short',
+								currency: t.currency,
+							}),
+						)
+						.join(' + ')
+					if (!holdings) holdings = '—'
 				}
 			}
 
@@ -726,7 +748,7 @@ function AccountCardWithTimestamps(props: {
 			? BigInt(contractCreation.creation.timestamp)
 			: undefined
 
-	const totalValue = calculateTotalHoldings(assetsData)
+	const currencyTotals = calculateTotalHoldings(assetsData)
 
 	return (
 		<AccountCard
@@ -738,7 +760,7 @@ function AccountCardWithTimestamps(props: {
 					? BigInt(addressMetadata.lastActivityTimestamp)
 					: undefined
 			}
-			totalValue={totalValue}
+			currencyTotals={currencyTotals}
 			accountType={resolvedAccountType}
 			isToken={isToken}
 			tokenName={tokenMetadata?.name}
@@ -1531,7 +1553,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 			<Amount.Base
 				value={0n}
 				decimals={0}
-				prefix="$"
+				currency="USD"
 				short
 				infinite={infiniteLabel}
 			/>
@@ -1540,10 +1562,12 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 	// For each event, take the max amount (avoids double-counting swap legs),
 	// then sum across events.
 	const normalizedDecimals = 18
+	let currency: string | undefined
 	const totalValue = events.reduce((sum, event) => {
 		let maxAmount = 0n
 		for (const part of event.parts) {
 			if (part.type !== 'amount') continue
+			if (!currency && part.value.currency) currency = part.value.currency
 			const decimals = part.value.decimals ?? 6
 			const scale = 10n ** BigInt(normalizedDecimals - decimals)
 			const value =
@@ -1566,7 +1590,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 				value={value}
 				decimals={18}
 				infinite={infiniteLabel}
-				prefix="$"
+				currency={currency ?? 'USD'}
 				short
 			/>
 		)
@@ -1577,7 +1601,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 			value={totalValue}
 			decimals={normalizedDecimals}
 			infinite={infiniteLabel}
-			prefix="$"
+			currency={currency ?? 'USD'}
 			short
 		/>
 	)
@@ -1641,8 +1665,7 @@ function AssetAmount(props: { asset: AssetData }) {
 
 function AssetValue(props: { asset: AssetData }) {
 	const { asset } = props
-	if (asset.metadata?.currency !== 'USD')
-		return <span className="text-tertiary">—</span>
+	if (!asset.metadata?.currency) return <span className="text-tertiary">—</span>
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
 		return <span className="text-tertiary">…</span>
 	return (
@@ -1650,6 +1673,7 @@ function AssetValue(props: { asset: AssetData }) {
 			{PriceFormatter.format(asset.balance, {
 				decimals: asset.metadata.decimals,
 				format: 'short',
+				currency: asset.metadata.currency,
 			})}
 		</span>
 	)

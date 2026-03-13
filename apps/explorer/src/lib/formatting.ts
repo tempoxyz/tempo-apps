@@ -185,6 +185,36 @@ export namespace DateFormatter {
 }
 
 export namespace PriceFormatter {
+	/** @internal */
+	const formatterCache = new Map<string, Intl.NumberFormat>()
+
+	function getCurrencyFormatter(
+		currency: string,
+		notation: 'standard' | 'compact',
+	): Intl.NumberFormat {
+		const key = `${currency}:${notation}`
+		let formatter = formatterCache.get(key)
+		if (!formatter) {
+			formatter = new Intl.NumberFormat('en-US', {
+				notation,
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 2,
+				currency,
+				style: 'currency',
+			})
+			formatterCache.set(key, formatter)
+		}
+		return formatter
+	}
+
+	/**
+	 * Formats a currency symbol + small-value threshold string (e.g. "<$0.01" or "<€0.01").
+	 */
+	function formatSmallValue(currency: string): string {
+		const fmt = getCurrencyFormatter(currency, 'standard')
+		return `<${fmt.format(0.01)}`
+	}
+
 	/**
 	 * Formats a number or bigint to a currency-formatted string.
 	 *
@@ -198,6 +228,7 @@ export namespace PriceFormatter {
 			| {
 					decimals?: number
 					format?: 'short' | 'full'
+					currency?: string
 			  },
 	) {
 		const options =
@@ -208,35 +239,19 @@ export namespace PriceFormatter {
 		options.format ??= 'full'
 		options.decimals ??= 0
 
+		const currency = options.currency ?? 'USD'
+
 		const normalizedValue =
 			typeof value === 'number'
 				? value
 				: Number(Value.format(BigInt(value), options.decimals))
 
-		if (normalizedValue > 0 && normalizedValue < 0.01) return '<$0.01'
+		if (normalizedValue > 0 && normalizedValue < 0.01)
+			return formatSmallValue(currency)
 
-		const formatter = options.format === 'short' ? numberIntlShort : numberIntl
-
-		return formatter.format(normalizedValue)
+		const notation = options.format === 'short' ? 'compact' : 'standard'
+		return getCurrencyFormatter(currency, notation).format(normalizedValue)
 	}
-
-	/** @internal */
-	const numberIntlShort = new Intl.NumberFormat('en-US', {
-		notation: 'compact',
-		minimumFractionDigits: 0,
-		maximumFractionDigits: 2,
-		currency: 'USD',
-		style: 'currency',
-	})
-
-	/** @internal */
-	const numberIntl = new Intl.NumberFormat('en-US', {
-		notation: 'standard',
-		minimumFractionDigits: 0,
-		maximumFractionDigits: 2,
-		currency: 'USD',
-		style: 'currency',
-	})
 
 	const amountFormatter = new Intl.NumberFormat('en-US', {
 		minimumFractionDigits: 0,

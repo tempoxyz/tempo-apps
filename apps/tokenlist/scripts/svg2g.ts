@@ -4,9 +4,10 @@
  * write the optimized svg to the same path
  */
 
-import NodeFS from 'node:fs/promises'
-import NodePath from 'node:path'
+import NodeOS from 'node:os'
 import { optimize } from 'svgo'
+import NodePath from 'node:path'
+import NodeFS from 'node:fs/promises'
 
 const dataDirectoryPath = NodePath.join(process.cwd(), 'data')
 const svgGlob = NodeFS.glob(NodePath.join(dataDirectoryPath, '**/*.svg'))
@@ -16,4 +17,5 @@ for await (const absoluteFilePath of svgGlob) {
 	const svg = await NodeFS.readFile(absoluteFilePath, 'utf-8')
 	const optimized = optimize(svg)
 	await NodeFS.writeFile(absoluteFilePath, optimized.data)
+	await NodeFS.appendFile(absoluteFilePath, NodeOS.EOL)
 }

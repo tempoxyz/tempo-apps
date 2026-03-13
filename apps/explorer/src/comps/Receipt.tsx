@@ -143,6 +143,10 @@ export function Receipt(props: Receipt.Props) {
 									firstAmountPart?.type === 'amount'
 										? (firstAmountPart.value.decimals ?? 6)
 										: 6
+								const currency =
+									firstAmountPart?.type === 'amount'
+										? firstAmountPart.value.currency
+										: undefined
 
 								return (
 									<div
@@ -160,7 +164,7 @@ export function Receipt(props: Receipt.Props) {
 														<Amount.Base
 															decimals={decimals}
 															infinite={null}
-															prefix="$"
+															currency={currency}
 															short
 															value={totalAmountBigInt}
 														/>
@@ -216,6 +220,7 @@ export function Receipt(props: Receipt.Props) {
 										const formattedAmount = PriceFormatter.format(item.amount, {
 											decimals: item.decimals,
 											format: 'short',
+											currency: item.currency,
 										})
 										const isSponsored =
 											item.payer &&
@@ -322,6 +327,7 @@ export namespace Receipt {
 	export interface FeeBreakdownItem {
 		amount: bigint
 		decimals: number
+		currency?: string
 		symbol?: string
 		token?: Address.Address
 		payer?: Address.Address

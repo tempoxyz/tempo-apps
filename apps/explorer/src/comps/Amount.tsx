@@ -97,6 +97,7 @@ export namespace Amount {
 			decimals,
 			before,
 			after,
+			currency,
 			prefix,
 			suffix,
 			short,
@@ -119,6 +120,38 @@ export namespace Amount {
 					{after}
 				</span>
 			)
+
+		// When a currency is provided, delegate formatting entirely to PriceFormatter.format
+		// which uses Intl.NumberFormat with the correct currency code.
+		if (currency) {
+			const fullFormatted = PriceFormatter.format(value, {
+				decimals,
+				format: 'full',
+				currency,
+			})
+			const formatted = short
+				? PriceFormatter.format(value, {
+						decimals,
+						format: 'short',
+						currency,
+					})
+				: fullFormatted
+			const isSmall = formatted.startsWith('<')
+
+			return (
+				<span className="inline-flex items-center gap-1 min-w-0">
+					{before}
+					<span
+						className={`overflow-hidden text-ellipsis whitespace-nowrap min-w-0 ${isSmall ? 'text-tertiary' : ''}`}
+						style={{ maxWidth: `${maxWidth}ch` }}
+						title={`${fullFormatted}${suffix ?? ''}`}
+					>
+						{`${formatted}${suffix ?? ''}`}
+					</span>
+					{after}
+				</span>
+			)
+		}
 
 		const rawFormatted = Value.format(value, decimals)
 		const fullFormatted = PriceFormatter.formatAmount(rawFormatted)
@@ -146,6 +179,12 @@ export namespace Amount {
 		export interface Props {
 			after?: React.ReactNode
 			before?: React.ReactNode
+			/**
+			 * ISO 4217 currency code (e.g. "USD", "EUR").
+			 * When set, formatting uses Intl.NumberFormat with the correct
+			 * currency symbol and `prefix` is ignored.
+			 */
+			currency?: string
 			decimals: number
 			/**
 			 * Controls infinite value detection (uint256 max):

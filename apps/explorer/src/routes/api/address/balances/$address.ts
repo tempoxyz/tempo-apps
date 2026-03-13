@@ -147,17 +147,19 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 							}
 						})
 						.sort((a, b) => {
-							const aIsUsd = a.currency === 'USD'
-							const bIsUsd = b.currency === 'USD'
+							const aHasCurrency = !!a.currency
+							const bHasCurrency = !!b.currency
 
-							if (aIsUsd && bIsUsd) {
+							if (aHasCurrency && bHasCurrency && a.currency && b.currency) {
+								if (a.currency !== b.currency)
+									return a.currency.localeCompare(b.currency)
 								const aValue = Number(BigInt(a.balance)) / 10 ** TIP20_DECIMALS
 								const bValue = Number(BigInt(b.balance)) / 10 ** TIP20_DECIMALS
 								return bValue - aValue
 							}
 
-							if (aIsUsd) return -1
-							if (bIsUsd) return 1
+							if (aHasCurrency) return -1
+							if (bHasCurrency) return 1
 
 							return Number(BigInt(b.balance) - BigInt(a.balance))
 						})

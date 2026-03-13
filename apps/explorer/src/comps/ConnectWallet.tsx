@@ -16,6 +16,7 @@ import { Hooks } from 'wagmi/tempo'
 import { Address } from '#comps/Address'
 import { cx } from '#lib/css'
 import { getApiUrl } from '#lib/env.ts'
+import { PriceFormatter } from '#lib/formatting'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
@@ -172,26 +173,35 @@ function ConnectedAddress() {
 		staleTime: 30_000,
 	})
 
-	const totalUsd = React.useMemo(() => {
+	const totals = React.useMemo(() => {
 		if (!balanceData?.balances) return null
-		let total = 0
+		const byCurrency = new Map<string, number>()
 		for (const b of balanceData.balances) {
-			if (b.currency !== 'USD') continue
-			total += Number(formatUnits(BigInt(b.balance), b.decimals ?? 6))
+			if (!b.currency) continue
+			const prev = byCurrency.get(b.currency) ?? 0
+			byCurrency.set(
+				b.currency,
+				prev + Number(formatUnits(BigInt(b.balance), b.decimals ?? 6)),
+			)
 		}
-		return total
+		if (byCurrency.size === 0) return null
+		return byCurrency
 	}, [balanceData])
 
 	if (!address) return null
+
+	const totalDisplay = totals
+		? Array.from(totals.entries())
+				.map(([currency, value]) => PriceFormatter.format(value, { currency }))
+				.join(' + ')
+		: null
 
 	return (
 		<div className="text-[12px] text-secondary whitespace-nowrap flex items-center gap-[4px]">
 			<span className="hidden sm:inline">Connected as</span>
 			<Address address={address} align="end" className="text-center" />
-			{totalUsd !== null && (
-				<span className="text-tertiary">
-					(${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })})
-				</span>
+			{totalDisplay !== null && (
+				<span className="text-tertiary">({totalDisplay})</span>
 			)}
 		</div>
 	)

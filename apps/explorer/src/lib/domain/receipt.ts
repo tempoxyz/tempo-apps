@@ -190,7 +190,10 @@ export namespace LineItems {
 									],
 									left: `Burn ${symbol}`,
 									right: decimals
-										? PriceFormatter.format(amount, decimals)
+										? PriceFormatter.format(amount, {
+												decimals,
+												currency,
+											})
 										: '-',
 								},
 							}),
@@ -238,7 +241,7 @@ export namespace LineItems {
 							break
 						}
 
-						const { decimals } = metadata
+						const { currency, decimals } = metadata
 						const { amount, to } = event.args
 
 						items.main.push(
@@ -252,7 +255,7 @@ export namespace LineItems {
 									],
 									left: `Mint ${metadata?.symbol ? ` ${metadata.symbol}` : ''}`,
 									right: decimals
-										? `(${PriceFormatter.format(amount, decimals)})`
+										? `(${PriceFormatter.format(amount, { decimals, currency })})`
 										: '',
 								},
 							}),
@@ -316,7 +319,12 @@ export namespace LineItems {
 							},
 							ui: {
 								left: `${symbol} ${feePayer ? `(PAID BY ${HexFormatter.truncate(feePayer)})` : ''}`,
-								right: decimals ? PriceFormatter.format(amount, decimals) : '-',
+								right: decimals
+									? PriceFormatter.format(amount, {
+											decimals,
+											currency,
+										})
+									: '-',
 							},
 						})
 						feeEvents.push(feeLineItem)
@@ -345,7 +353,10 @@ export namespace LineItems {
 								bottom: [...(memo ? [{ left: `Memo: ${memo}` }] : [])],
 								left: `Send ${symbol} ${to ? `to ${HexFormatter.truncate(to)}` : ''}`,
 								right: decimals
-									? PriceFormatter.format(isCredit ? -amount : amount, decimals)
+									? PriceFormatter.format(isCredit ? -amount : amount, {
+											decimals,
+											currency,
+										})
 									: '-',
 							},
 						}),
@@ -412,7 +423,11 @@ export namespace LineItems {
 					ui: {
 						left: 'Fee',
 						right: decimals
-							? PriceFormatter.format(amount, { decimals, format: 'short' })
+							? PriceFormatter.format(amount, {
+									decimals,
+									format: 'short',
+									currency,
+								})
 							: '-',
 					},
 				}),
@@ -434,9 +449,13 @@ export namespace LineItems {
 		// Add totals to line items
 		for (const [_, price] of totals) {
 			if (!price) continue
-			const { amount, decimals } = price
+			const { amount, decimals, currency } = price
 			const formatted = decimals
-				? PriceFormatter.format(amount, { decimals, format: 'short' })
+				? PriceFormatter.format(amount, {
+						decimals,
+						format: 'short',
+						currency,
+					})
 				: '-'
 			items.totals.push(
 				LineItem.from({

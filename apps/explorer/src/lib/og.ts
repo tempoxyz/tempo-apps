@@ -19,7 +19,7 @@ import {
 	preferredEventsFilter,
 } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
-import { DateFormatter, HexFormatter } from '#lib/formatting'
+import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import {
 	type AddressOgParams,
 	buildAddressOgUrl,
@@ -54,12 +54,14 @@ export function buildOgImageUrl(data: TxDataQuery, hash: string): string {
 	let fee: string | undefined
 	let total: string | undefined
 	if (data.feeBreakdown.length > 0) {
+		const feeCurrency = data.feeBreakdown[0]?.currency ?? 'USD'
 		const totalFee = data.feeBreakdown.reduce((sum, item) => {
 			const amount = Number.parseFloat(Value.format(item.amount, item.decimals))
 			return sum + amount
 		}, 0)
-		const feeDisplay =
-			totalFee > 0 && totalFee < 0.01 ? '<$0.01' : `$${totalFee.toFixed(2)}`
+		const feeDisplay = PriceFormatter.format(totalFee, {
+			currency: feeCurrency,
+		})
 		fee = feeDisplay
 		total = feeDisplay
 	}
@@ -77,10 +79,11 @@ export function buildOgImageUrl(data: TxDataQuery, hash: string): string {
 		const amountPart = event.parts.find((p) => p.type === 'amount')
 		let amount = ''
 		if (amountPart?.type === 'amount') {
-			const val = Number(
-				Value.format(amountPart.value.value, amountPart.value.decimals ?? 6),
-			)
-			amount = val > 0 && val < 0.01 ? '<$0.01' : `$${val.toFixed(0)}`
+			amount = PriceFormatter.format(amountPart.value.value, {
+				decimals: amountPart.value.decimals ?? 6,
+				currency: amountPart.value.currency ?? 'USD',
+				format: 'short',
+			})
 		}
 
 		return { action, details, amount: amount || undefined }
@@ -181,18 +184,18 @@ export function formatEventForOgServer(event: KnownEvent): string {
 	const detailParts = event.parts.filter((p) => p.type !== 'action')
 	const details = detailParts.map(formatEventPart).filter(Boolean).join(' ')
 
-	let usdAmount = ''
+	let currencyAmount = ''
 	for (const part of event.parts) {
 		if (part.type === 'amount') {
-			const formatted = formatAmount(part.value, false)
-			usdAmount = formatted.startsWith('<')
-				? `<$${formatted.slice(1)}`
-				: `$${formatted}`
+			currencyAmount = PriceFormatter.format(part.value.value, {
+				decimals: part.value.decimals ?? 18,
+				currency: part.value.currency ?? 'USD',
+			})
 			break
 		}
 	}
 
-	return `${truncateOgText(action, 20)}|${truncateOgText(details, 60)}|${truncateOgText(usdAmount, 15)}`
+	return `${truncateOgText(action, 20)}|${truncateOgText(details, 60)}|${truncateOgText(currencyAmount, 15)}`
 }
 
 export function formatDate(timestamp: number): string {
@@ -709,10 +712,12 @@ async function fetchAddressData(address: string): Promise<AddressData | null> {
 		].slice(0, 8)
 
 		const formatCompactValue = (n: number): string => {
-			if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
-			if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`
-			if (n >= 1e3) return `$${(n / 1e3).toFixed(2)}K`
-			return `$${n.toFixed(2)}`
+			return new Intl.NumberFormat('en-US', {
+				style: 'currency',
+				currency: 'USD',
+				notation: 'compact',
+				maximumFractionDigits: 2,
+			}).format(n)
 		}
 
 		const holdings = totalValue > 0 ? formatCompactValue(totalValue) : '—'

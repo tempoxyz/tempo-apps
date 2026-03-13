@@ -133,7 +133,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			<Amount.Base
 				value={0n}
 				decimals={0}
-				prefix="$"
+				currency="USD"
 				short
 				infinite={infiniteLabel}
 			/>
@@ -142,10 +142,12 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 	// For each event, take the max amount (avoids double-counting swap legs),
 	// then sum across events.
 	const normalizedDecimals = 18
+	let currency: string | undefined
 	const totalValue = events.reduce((sum, event) => {
 		let maxAmount = 0n
 		for (const part of event.parts) {
 			if (part.type !== 'amount') continue
+			if (!currency && part.value.currency) currency = part.value.currency
 			const decimals = part.value.decimals ?? 6
 			const scale = 10n ** BigInt(normalizedDecimals - decimals)
 			const normalized = part.value.value * scale
@@ -162,7 +164,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 				value={value}
 				decimals={18}
 				infinite={infiniteLabel}
-				prefix="$"
+				currency={currency ?? 'USD'}
 				short
 			/>
 		)
@@ -173,7 +175,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			value={totalValue}
 			decimals={normalizedDecimals}
 			infinite={infiniteLabel}
-			prefix="$"
+			currency={currency ?? 'USD'}
 			short
 		/>
 	)

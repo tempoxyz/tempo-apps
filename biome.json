@@ -94,6 +94,16 @@
 		}
 	},
 	"overrides": [
+    {
+      "includes": ["**/tokenlist/data/**/*.svg"],
+      "linter": {
+        "rules":{
+          "a11y":{
+            "noSvgWithoutTitle": "off"
+          }
+        }
+      }
+    },
 		{
 			"includes": ["**/env.d.ts", "**/worker-configuration.d.ts"],
 			"linter": {

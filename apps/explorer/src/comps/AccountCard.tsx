@@ -17,7 +17,7 @@ export function AccountCard(props: AccountCard.Props) {
 		className,
 		createdTimestamp,
 		lastActivityTimestamp,
-		totalValue,
+		currencyTotals,
 		accountType,
 		isToken,
 		tokenName,
@@ -84,13 +84,8 @@ export function AccountCard(props: AccountCard.Props) {
 						<ClientOnly
 							fallback={<span className="text-tertiary text-[13px]">…</span>}
 						>
-							{totalValue !== undefined ? (
-								<span
-									className="text-[13px] text-primary"
-									title={PriceFormatter.format(totalValue)}
-								>
-									{PriceFormatter.format(totalValue, { format: 'short' })}
-								</span>
+							{currencyTotals !== undefined ? (
+								<HoldingsDisplay totals={currencyTotals} />
 							) : (
 								<span className="text-tertiary text-[13px]">…</span>
 							)}
@@ -136,13 +131,41 @@ export function AccountCard(props: AccountCard.Props) {
 	)
 }
 
+function HoldingsDisplay(props: { totals: AccountCard.CurrencyTotal[] }) {
+	const { totals } = props
+	const positives = totals.filter((t) => t.value > 0)
+	if (positives.length === 0)
+		return <span className="text-tertiary text-[13px]">—</span>
+
+	const fullDisplay = positives
+		.map((t) => PriceFormatter.format(t.value, { currency: t.currency }))
+		.join(' + ')
+
+	const shortDisplay = positives
+		.map((t) =>
+			PriceFormatter.format(t.value, {
+				currency: t.currency,
+				format: 'short',
+			}),
+		)
+		.join(' + ')
+
+	return (
+		<span className="text-[13px] text-primary" title={fullDisplay}>
+			{shortDisplay}
+		</span>
+	)
+}
+
 export declare namespace AccountCard {
+	type CurrencyTotal = { currency: string; value: number }
+
 	type Props = {
 		address?: Address.Address | undefined
 		className?: string
 		lastActivityTimestamp?: bigint | undefined
 		createdTimestamp?: bigint | undefined
-		totalValue?: number | undefined
+		currencyTotals?: CurrencyTotal[] | undefined
 		accountType?: AccountType | undefined
 		isToken?: boolean | undefined
 		tokenName?: string | undefined
