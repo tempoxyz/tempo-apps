@@ -25,7 +25,7 @@ const SPOTLIGHT_DATA: Record<
 > = {
 	testnet: {
 		accountAddress: '0xa726a1CD723409074DF9108A2187cfA19899aCF8',
-		contractAddress: '0x20c0000000000000000000000000000000000001',
+		contractAddress: '0x3e44E7C5AAc48Cc0ed6f74D191bd465674571745',
 		receiptHash:
 			'0x48b138255c60bf0e2c6bcede32768398f679a213a6a7a7973aa71a8afd89c506',
 	},
