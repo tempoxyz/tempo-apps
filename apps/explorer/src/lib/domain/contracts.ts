@@ -5,8 +5,10 @@ import {
 	decodeEventLog,
 	getAbiItem as getAbiItem_viem,
 	stringify,
+	toEventSelector,
 	toFunctionSelector,
 } from 'viem'
+import { formatAbiItem } from 'viem/utils'
 import { Abis, Addresses } from 'viem/tempo'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { streamChannelAbi } from './known-events.ts'
@@ -826,12 +828,36 @@ const defaultSignatureLookup = new loaders.MultiSignatureLookup([
 ])
 
 /**
+ * Pre-computed selector → signature map from all known Tempo ABIs.
+ * Avoids hitting external signature databases for known functions/events.
+ */
+const knownSignatures = new Map<string, string>()
+for (const abi of Object.values(Abis)) {
+	for (const item of abi) {
+		if (item.type === 'function') {
+			knownSignatures.set(
+				toFunctionSelector(item as AbiFunction),
+				formatAbiItem(item as AbiFunction),
+			)
+		} else if (item.type === 'event') {
+			knownSignatures.set(
+				toEventSelector(item as AbiEvent),
+				formatAbiItem(item as AbiEvent),
+			)
+		}
+	}
+}
+
+/**
  * Lookup a function or event signature by selector/topic hash.
- * Returns the first matching signature string or null.
+ * Checks known Tempo ABIs first, then falls back to external databases.
  */
 export async function lookupSignature(
 	selector: Hex.Hex,
 ): Promise<string | null> {
+	const known = knownSignatures.get(selector.toLowerCase())
+	if (known) return known
+
 	const signatures =
 		selector.length === 10
 			? await defaultSignatureLookup.loadFunctions(selector)
@@ -880,6 +906,9 @@ export async function autoloadAbi(
 	address: Address.Address,
 	options: AutoloadAbiOptions = {},
 ): Promise<Abi | null> {
+	const knownAbi = getContractAbi(address)
+	if (knownAbi && knownAbi.length > 0) return knownAbi
+
 	const { followProxies = true, includeSourceVerified = true } = options
 	const config = getWagmiConfig()
 	const chainId = getChainId(config)
