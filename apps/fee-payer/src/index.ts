@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers'
 import { zValidator } from '@hono/zod-validator'
 import { Hono } from 'hono'
+import { cache } from 'hono/cache'
 import { cors } from 'hono/cors'
 import { Handler } from 'tempo.ts/server'
 import { http } from 'viem'
@@ -16,6 +17,8 @@ import {
 import { blockSignTransactionMiddleware } from './lib/block-sign-transaction.js'
 import { rateLimitMiddleware } from './lib/rate-limit.js'
 import { getUsage } from './lib/usage.js'
+
+const USAGE_CACHE_TTL = 60
 
 const app = new Hono()
 
@@ -35,6 +38,10 @@ app.use(
 
 app.get(
 	'/usage',
+	cache({
+		cacheName: 'fee-payer-usage',
+		cacheControl: `public, max-age=${USAGE_CACHE_TTL}, s-maxage=${USAGE_CACHE_TTL}`,
+	}),
 	zValidator(
 		'query',
 		z.object({
