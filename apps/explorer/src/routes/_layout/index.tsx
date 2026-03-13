@@ -130,7 +130,7 @@ function SpotlightLinks() {
 							params={{
 								address: spotlightData.contractAddress,
 							}}
-							search={{ tab: 'transactions' }}
+							search={{ tab: 'contract' }}
 							icon={<FileIcon className="size-[14px] text-accent" />}
 						>
 							Contract
