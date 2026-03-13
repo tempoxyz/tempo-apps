@@ -145,12 +145,16 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			/>
 		)
 
-	// Normalize all amounts to 18 decimals and sum as bigints
+	// Normalize all amounts to 18 decimals and take the max.
+	// Using max instead of sum avoids double-counting swaps where both
+	// the input and output token transfers are present (e.g. $10 in + $10 out
+	// would incorrectly display as $20).
 	const normalizedDecimals = 18
-	const totalValue = amountParts.reduce((sum, part) => {
+	const totalValue = amountParts.reduce((max, part) => {
 		const decimals = part.value.decimals ?? 6
 		const scale = 10n ** BigInt(normalizedDecimals - decimals)
-		return sum + part.value.value * scale
+		const normalized = part.value.value * scale
+		return normalized > max ? normalized : max
 	}, 0n)
 
 	if (totalValue === 0n) {

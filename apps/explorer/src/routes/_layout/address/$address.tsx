@@ -1503,14 +1503,15 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 		)
 
 	const normalizedDecimals = 18
-	const totalValue = amountParts.reduce((sum, part) => {
+	const totalValue = amountParts.reduce((max, part) => {
 		const decimals = part.value.decimals ?? 6
 		const scale = 10n ** BigInt(normalizedDecimals - decimals)
 		const value =
 			typeof part.value.value === 'bigint'
 				? part.value.value
 				: BigInt(part.value.value)
-		return sum + value * scale
+		const normalized = value * scale
+		return normalized > max ? normalized : max
 	}, 0n)
 
 	if (totalValue === 0n) {
