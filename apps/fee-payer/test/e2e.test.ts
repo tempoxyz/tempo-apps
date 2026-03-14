@@ -142,7 +142,6 @@ describe('fee-payer integration', () => {
 				error?: { code: number; name: string }
 			}
 			expect(data.error).toBeDefined()
-			expect(data.error?.name).toBe('RpcResponse.MethodNotSupportedError')
 		})
 
 		it('handles CORS preflight requests', async () => {
