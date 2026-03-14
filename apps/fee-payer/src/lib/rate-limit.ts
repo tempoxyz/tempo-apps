@@ -24,7 +24,10 @@ export async function rateLimitMiddleware(c: Context, next: Next) {
 		const request = RpcRequest.from((await clonedRequest.json()) as never)
 		const serialized = request.params?.[0]
 
-		if (typeof serialized === 'string' && serialized.startsWith('0x76')) {
+		if (
+			typeof serialized === 'string' &&
+			(serialized.startsWith('0x76') || serialized.startsWith('0x78'))
+		) {
 			const transaction = Transaction.deserialize(serialized as `0x76${string}`)
 			// biome-ignore lint/suspicious/noExplicitAny: _
 			const from = (transaction as any).from

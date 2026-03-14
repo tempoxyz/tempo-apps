@@ -124,7 +124,10 @@ app.all('*', rateLimitMiddleware, async (c) => {
 			)
 
 		const serialized = request.params?.[0] as string | undefined
-		if (typeof serialized !== 'string' || !serialized.startsWith('0x76'))
+		if (
+			typeof serialized !== 'string' ||
+			(!serialized.startsWith('0x76') && !serialized.startsWith('0x78'))
+		)
 			throw new RpcResponse.InvalidParamsError({
 				message: 'Only Tempo (0x76) transactions are supported.',
 			})
@@ -161,7 +164,6 @@ app.all('*', rateLimitMiddleware, async (c) => {
 		})
 		return c.json(RpcResponse.from({ result }, { request }))
 	} catch (error) {
-		console.error('Fee payer handler error:', error)
 		return c.json(
 			RpcResponse.from(
 				{
