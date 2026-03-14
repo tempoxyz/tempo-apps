@@ -193,8 +193,8 @@ catalogs:
       specifier: ^4.2.1
       version: 4.2.1
     tempo.ts:
-      specifier: https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@151
-      version: 0.14.1
+      specifier: ^0.14.2
+      version: 0.14.2
     testcontainers:
       specifier: ^11.11.0
       version: 11.12.0
@@ -316,7 +316,7 @@ importers:
         version: 7.7.4
       tempo.ts:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@151(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
         version: 2.47.1(typescript@5.9.3)(zod@4.3.6)
@@ -588,7 +588,7 @@ importers:
         version: 0.14.0(typescript@5.9.3)(zod@4.3.6)
       tempo.ts:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@151(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
         version: 2.47.1(typescript@5.9.3)(zod@4.3.6)
@@ -637,7 +637,7 @@ importers:
         version: 19.2.4(react@19.2.4)
       tempo.ts:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@151(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
         version: 2.47.1(typescript@5.9.3)(zod@4.3.6)
@@ -671,7 +671,7 @@ importers:
     dependencies:
       tempo.ts:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@151(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
     devDependencies:
       '@cloudflare/workers-types':
         specifier: 'catalog:'
@@ -705,7 +705,7 @@ importers:
         version: 0.14.0(typescript@5.9.3)(zod@4.3.6)
       tempo.ts:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@151(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
         version: 2.47.1(typescript@5.9.3)(zod@4.3.6)
@@ -736,7 +736,7 @@ importers:
         version: 4.0.1
       tempo.ts:
         specifier: 'catalog:'
-        version: https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@151(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
         version: 2.47.1(typescript@5.9.3)(zod@4.3.6)
@@ -6074,9 +6074,8 @@ packages:
   teex@1.0.1:
     resolution: {integrity: sha512-eYE6iEI62Ni1H8oIa7KlDU6uQBtqr4Eajni3wX7rpfXD8ysFx8z0+dri+KWEPWpBsxXfxu58x/0jvTVT1ekOSg==}
 
-  tempo.ts@https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@151:
-    resolution: {integrity: sha512-winI5IidAZhsiOLCBAQP7obaJaPq2QpM4UzBkN4RpxtGTrNgqnUC+9iMAKQc4RIr+H122LEMlX1NXTkCqch92A==}
-    version: 0.14.1
+  tempo.ts@0.14.2:
+    resolution: {integrity: sha512-N4UkP2X/KDLmYUEIEWUDAk1m/USbKMzTjjUz1m0LwrIEVfoDlcSbBRc9jp14gLZcJVDlnq+fWHFVcH+GdrySgQ==}
     peerDependencies:
       viem: '>=2.43.3'
     peerDependenciesMeta:
@@ -12260,7 +12259,7 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  tempo.ts@https://pkg.pr.new/tempoxyz/tempo-ts/tempo.ts@151(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6):
+  tempo.ts@0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6):
     dependencies:
       '@remix-run/fetch-router': 0.17.0
       ox: 0.14.0(typescript@5.9.3)(zod@4.3.6)
