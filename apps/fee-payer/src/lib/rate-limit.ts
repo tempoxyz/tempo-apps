@@ -22,15 +22,18 @@ export async function rateLimitMiddleware(c: Context, next: Next) {
 	try {
 		const clonedRequest = await cloneRawRequest(c.req)
 		const request = RpcRequest.from((await clonedRequest.json()) as never)
-		const serialized = request.params?.[0] as `0x76${string}`
+		const serialized = request.params?.[0]
 
-		if (serialized?.startsWith('0x76')) {
-			const transaction = Transaction.deserialize(serialized)
+		if (typeof serialized === 'string' && serialized.startsWith('0x76')) {
+			const transaction = Transaction.deserialize(serialized as `0x76${string}`)
 			// biome-ignore lint/suspicious/noExplicitAny: _
 			const from = (transaction as any).from
 
 			if (!from) {
-				return c.json({ error: 'Unable to determine sender for rate limiting' }, 400)
+				return c.json(
+					{ error: 'Unable to determine sender for rate limiting' },
+					400,
+				)
 			}
 
 			const { success } = await env.AddressRateLimiter.limit({ key: from })
