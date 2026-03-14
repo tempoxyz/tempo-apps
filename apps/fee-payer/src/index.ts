@@ -4,11 +4,10 @@ import { Hono } from 'hono'
 import { cache } from 'hono/cache'
 import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
-import { RpcRequest, RpcResponse } from 'ox'
-import { createClient, http } from 'viem'
+import { Handler } from 'tempo.ts/server'
+import { http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { signTransaction } from 'viem/actions'
-import { Transaction } from 'viem/tempo'
+import type { Chain } from 'viem/chains'
 import * as z from 'zod'
 import { tempoChain } from './lib/chain.js'
 import {
@@ -90,91 +89,27 @@ app.get(
 
 app.all('*', rateLimitMiddleware, async (c) => {
 	const requestContext = getRequestContext(c.req.raw)
-	const request = RpcRequest.from((await c.req.json()) as never)
 
-	// ast-grep-ignore: no-console-log
-	console.info(`Sponsoring transaction: ${request.method}`)
-	c.executionCtx.waitUntil(
-		captureEvent({
-			distinctId: requestContext.origin ?? 'unknown',
-			event: FeePayerEvents.SPONSORSHIP_REQUEST,
-			properties: {
-				...requestContext,
-				rpcMethod: request.method,
-			},
-		}),
-	)
-
-	try {
-		const method = request.method as string
-		if (
-			method !== 'eth_signRawTransaction' &&
-			method !== 'eth_sendRawTransaction' &&
-			method !== 'eth_sendRawTransactionSync'
-		)
-			return c.json(
-				RpcResponse.from(
-					{
-						error: new RpcResponse.MethodNotSupportedError({
-							message: `Method not supported: ${request.method}`,
-						}),
+	const handler = Handler.feePayer({
+		account: privateKeyToAccount(env.SPONSOR_PRIVATE_KEY as `0x${string}`),
+		chain: tempoChain as Chain,
+		transport: http(env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0]),
+		async onRequest(request) {
+			// ast-grep-ignore: no-console-log
+			console.info(`Sponsoring transaction: ${request.method}`)
+			c.executionCtx.waitUntil(
+				captureEvent({
+					distinctId: requestContext.origin ?? 'unknown',
+					event: FeePayerEvents.SPONSORSHIP_REQUEST,
+					properties: {
+						...requestContext,
+						rpcMethod: request.method,
 					},
-					{ request },
-				),
+				}),
 			)
-
-		const serialized = request.params?.[0] as string | undefined
-		if (
-			typeof serialized !== 'string' ||
-			(!serialized.startsWith('0x76') && !serialized.startsWith('0x78'))
-		)
-			throw new RpcResponse.InvalidParamsError({
-				message: 'Only Tempo (0x76) transactions are supported.',
-			})
-
-		const transaction = Transaction.deserialize(
-			serialized as `0x76${string}`,
-		) as any
-		if (!transaction.signature || !transaction.from)
-			throw new RpcResponse.InvalidParamsError({
-				message:
-					'Transaction must be signed by the sender before fee payer signing.',
-			})
-
-		const account = privateKeyToAccount(
-			env.SPONSOR_PRIVATE_KEY as `0x${string}`,
-		)
-		const client = createClient({
-			chain: tempoChain,
-			transport: http(env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0]),
-		})
-		const serializedTransaction = await signTransaction(client, {
-			...transaction,
-			account,
-			feePayer: account,
-		} as any)
-
-		if (method === 'eth_signRawTransaction')
-			return c.json(
-				RpcResponse.from({ result: serializedTransaction }, { request }),
-			)
-		const result = await (client as any).request({
-			method,
-			params: [serializedTransaction],
-		})
-		return c.json(RpcResponse.from({ result }, { request }))
-	} catch (error) {
-		return c.json(
-			RpcResponse.from(
-				{
-					error: new RpcResponse.InternalError({
-						message: (error as Error).message,
-					}),
-				},
-				{ request },
-			),
-		)
-	}
+		},
+	})
+	return handler.fetch(c.req.raw)
 })
 
 export default app

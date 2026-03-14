@@ -45,4 +45,5 @@ describe('rate-limit middleware', () => {
 		// Should reach the handler (not blocked by rate limiting)
 		expect(response.status).toBe(200)
 	})
+
 })
