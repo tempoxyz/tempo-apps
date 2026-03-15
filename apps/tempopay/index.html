@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TempoPay — Payment Request Links</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #080808;
+    --surface: #111111;
+    --surface2: #1a1a1a;
+    --border: #222222;
+    --border2: #2e2e2e;
+    --text: #f0f0f0;
+    --muted: #666666;
+    --accent: #00e5a0;
+    --accent2: #00b87a;
+    --accent-dim: rgba(0,229,160,0.08);
+    --accent-glow: rgba(0,229,160,0.15);
+    --red: #ff4d4d;
+    --yellow: #ffd166;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Syne', sans-serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 1000; opacity: 0.4;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0;
+    background: rgba(8,8,8,0.92);
+    backdrop-filter: blur(16px);
+    z-index: 100;
+  }
+
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 18px; font-weight: 800; letter-spacing: -0.5px;
+    text-decoration: none; color: var(--text);
+  }
+
+  .logo-mark {
+    width: 28px; height: 28px;
+    background: var(--accent);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; color: #000;
+  }
+
+  .nav-badge {
+    font-family: var(--mono);
+    font-size: 11px; color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(0,229,160,0.2);
+    padding: 4px 10px; border-radius: 20px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    padding: 80px 24px 60px;
+    position: relative;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border2), transparent);
+  }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 20px;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+
+  .hero-eyebrow::before, .hero-eyebrow::after {
+    content: ''; display: block; width: 24px; height: 1px; background: var(--accent);
+  }
+
+  h1 {
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 800; letter-spacing: -2px; line-height: 1.05;
+    margin-bottom: 16px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .hero-sub {
+    color: var(--muted); font-size: 16px; max-width: 440px; margin: 0 auto 40px;
+    line-height: 1.6; font-weight: 400;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    max-width: 1100px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 60px 40px 80px;
+  }
+
+  @media (max-width: 768px) {
+    .main { grid-template-columns: 1fr; padding: 40px 20px; }
+    nav { padding: 16px 20px; }
+  }
+
+  /* ── PANEL ── */
+  .panel {
+    padding: 40px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .panel:first-child {
+    border-right: 1px solid var(--border);
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .panel:nth-child(2) { animation-delay: 0.1s; }
+
+  .panel-title {
+    font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 28px;
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .panel-title::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── FORM ── */
+  .form-group { margin-bottom: 20px; }
+
+  label {
+    display: block; font-size: 12px; font-weight: 600;
+    letter-spacing: 0.5px; color: var(--muted);
+    margin-bottom: 8px; text-transform: uppercase;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    padding: 13px 16px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+  }
+
+  input::placeholder, textarea::placeholder { color: var(--muted); }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+  }
+
+  select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 36px;
+  }
+
+  select option { background: var(--surface2); }
+
+  .input-row {
+    display: grid; grid-template-columns: 1fr 120px; gap: 10px;
+  }
+
+  /* ── AMOUNT DISPLAY ── */
+  .amount-preview {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 13px 16px;
+    font-family: var(--mono);
+    font-size: 22px; font-weight: 500;
+    color: var(--accent);
+    letter-spacing: -0.5px;
+    min-height: 50px;
+  }
+
+  /* ── BUTTON ── */
+  .btn {
+    width: 100%; padding: 15px;
+    background: var(--accent);
+    color: #000; font-family: var(--sans);
+    font-size: 15px; font-weight: 700; letter-spacing: 0.3px;
+    border: none; border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+    margin-top: 8px;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+
+  .btn:hover {
+    background: var(--accent2);
+    box-shadow: 0 0 24px var(--accent-glow);
+  }
+
+  .btn:active { transform: scale(0.98); }
+
+  .btn:disabled {
+    background: var(--surface2);
+    color: var(--muted);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border2);
+  }
+
+  .btn-outline:hover {
+    background: var(--surface2);
+    border-color: var(--accent);
+    box-shadow: none;
+  }
+
+  /* ── LINK RESULT ── */
+  .link-box {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-top: 20px;
+    animation: fadeUp 0.3s ease;
+  }
+
+  .link-box.visible { display: block; }
+
+  .link-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .link-status {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 600; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+
+  .dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+  }
+
+  .link-url {
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    word-break: break-all;
+    line-height: 1.6;
+    background: var(--surface);
+    user-select: all;
+  }
+
+  .link-url span { color: var(--accent); }
+
+  .link-actions {
+    display: grid; grid-template-columns: 1fr 1fr;
+    border-top: 1px solid var(--border);
+  }
+
+  .link-action-btn {
+    padding: 12px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--sans);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+
+  .link-action-btn:last-child { border-right: none; }
+  .link-action-btn:hover { background: var(--surface2); color: var(--text); }
+  .link-action-btn.copied { color: var(--accent); }
+
+  /* ── PAY VIEW ── */
+  #pay-view { display: none; }
+
+  .pay-card {
+    max-width: 420px; margin: 60px auto 80px;
+    padding: 0 24px;
+    animation: fadeUp 0.4s ease;
+  }
+
+  .pay-header {
+    text-align: center; margin-bottom: 32px;
+  }
+
+  .pay-amount-display {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    text-align: center;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pay-amount-display::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .pay-amount-label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .pay-amount-value {
+    font-size: 48px; font-weight: 800; letter-spacing: -3px;
+    color: var(--text); line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .pay-amount-value span { color: var(--accent); font-size: 24px; letter-spacing: -1px; }
+
+  .pay-token-name {
+    font-family: var(--mono); font-size: 13px; color: var(--muted);
+  }
+
+  .pay-meta {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .pay-meta-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .pay-meta-row:last-child { border-bottom: none; }
+  .pay-meta-row .key { color: var(--muted); font-weight: 600; }
+  .pay-meta-row .val { font-family: var(--mono); color: var(--text); }
+  .pay-meta-row .val.green { color: var(--accent); }
+
+  /* ── WALLET MODAL ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(8px);
+    z-index: 500; align-items: center; justify-content: center;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 16px;
+    width: 360px; max-width: 90vw;
+    animation: fadeUp 0.25s ease;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+
+  .modal-title { font-size: 15px; font-weight: 700; }
+
+  .modal-close {
+    width: 28px; height: 28px;
+    background: var(--surface2);
+    border: none; border-radius: 50%;
+    color: var(--muted); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; transition: background 0.15s;
+  }
+
+  .modal-close:hover { background: var(--border2); }
+
+  .wallet-list { padding: 12px; }
+
+  .wallet-btn {
+    width: 100%; padding: 14px 16px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--sans); font-size: 15px; font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 14px;
+    transition: background 0.15s, border-color 0.15s;
+    margin-bottom: 4px;
+  }
+
+  .wallet-btn:hover { background: var(--surface2); border-color: var(--border2); }
+
+  .wallet-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .wallet-sub { font-size: 12px; color: var(--muted); font-weight: 400; text-align: left; }
+
+  /* ── SUCCESS ── */
+  .success-card {
+    display: none;
+    text-align: center;
+    padding: 48px 32px;
+    animation: fadeUp 0.4s ease;
+  }
+
+  .success-card.visible { display: block; }
+
+  .success-icon {
+    width: 64px; height: 64px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(0,229,160,0.3);
+    border-radius: 50%;
+    margin: 0 auto 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+  }
+
+  .success-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+  .success-sub { color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+  .tx-hash {
+    font-family: var(--mono); font-size: 11px; color: var(--accent);
+    background: var(--accent-dim);
+    padding: 10px 14px; border-radius: 6px;
+    margin: 16px 0;
+    word-break: break-all;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 20px 40px;
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+
+  footer span { color: var(--accent); }
+
+  /* ── NETWORK BADGE ── */
+  .network-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--mono); font-size: 11px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    padding: 5px 12px; border-radius: 20px;
+    color: var(--muted);
+  }
+
+  .network-pill .dot { background: var(--yellow); animation: none; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(16px);
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 13px; font-weight: 600;
+    opacity: 0; transition: all 0.3s ease;
+    z-index: 999; pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.green { color: var(--accent); border-color: rgba(0,229,160,0.3); }
+
+  /* ── CONNECTING STATE ── */
+  .connecting {
+    display: none; text-align: center; padding: 40px 24px;
+  }
+  .connecting.visible { display: block; }
+
+  .spinner {
+    width: 40px; height: 40px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 16px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .connecting-text { font-size: 14px; color: var(--muted); }
+  .connecting-text strong { display: block; color: var(--text); font-size: 16px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="logo" href="#" onclick="showCreate()">
+    <div class="logo-mark">T</div>
+    TempoPay
+  </a>
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="network-pill">
+      <div class="dot"></div>
+      Moderato Testnet
+    </div>
+    <div class="nav-badge">Chain ID 42431</div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════════════════════
+     CREATE VIEW
+════════════════════════════════════════ -->
+<div id="create-view">
+  <div class="hero">
+    <div class="hero-eyebrow">Payment Links on Tempo</div>
+    <h1>Request payments,<br><span>instantly.</span></h1>
+    <p class="hero-sub">Generate a shareable link. Anyone can pay you with stablecoins on the Tempo blockchain — no app needed.</p>
+  </div>
+
+  <div class="main">
+    <!-- LEFT: CREATE FORM -->
+    <div class="panel" style="animation-delay:0.05s">
+      <div class="panel-title">Create Payment Request</div>
+
+      <div class="form-group">
+        <label>Your Wallet Address</label>
+        <input type="text" id="wallet-address" placeholder="0x..." maxlength="42"/>
+      </div>
+
+      <div class="form-group">
+        <label>Amount</label>
+        <div class="input-row">
+          <input type="number" id="amount" placeholder="0.00" min="0" step="0.01"/>
+          <select id="token">
+            <option value="AlphaUSD">AlphaUSD</option>
+            <option value="BetaUSD">BetaUSD</option>
+            <option value="ThetaUSD">ThetaUSD</option>
+            <option value="pathUSD">pathUSD</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Description (optional)</label>
+        <input type="text" id="description" placeholder="e.g. Invoice #1042, Coffee ☕"/>
+      </div>
+
+      <div class="form-group">
+        <label>Expiry</label>
+        <select id="expiry">
+          <option value="1h">1 hour</option>
+          <option value="24h" selected>24 hours</option>
+          <option value="7d">7 days</option>
+          <option value="30d">30 days</option>
+          <option value="never">Never</option>
+        </select>
+      </div>
+
+      <button class="btn" onclick="generateLink()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Generate Payment Link
+      </button>
+
+      <!-- RESULT -->
+      <div class="link-box" id="link-result">
+        <div class="link-header">
+          <div class="link-status"><div class="dot"></div>Link Ready</div>
+          <div class="network-pill" style="border:none;background:transparent;font-size:10px">
+            <span id="link-expiry-label">Expires in 24h</span>
+          </div>
+        </div>
+        <div class="link-url" id="generated-url"></div>
+        <div class="link-actions">
+          <button class="link-action-btn" id="copy-btn" onclick="copyLink()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy Link
+          </button>
+          <button class="link-action-btn" onclick="shareLink()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Share
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: PREVIEW -->
+    <div class="panel" style="animation-delay:0.15s">
+      <div class="panel-title">Live Preview</div>
+
+      <div class="pay-amount-display" style="margin-bottom:16px">
+        <div class="pay-amount-label">Payment Request</div>
+        <div class="pay-amount-value" id="preview-amount">
+          <span>$</span>—
+        </div>
+        <div class="pay-token-name" id="preview-token">Select token & amount</div>
+      </div>
+
+      <div class="pay-meta" id="preview-meta">
+        <div class="pay-meta-row">
+          <span class="key">To</span>
+          <span class="val" id="preview-wallet">Not set</span>
+        </div>
+        <div class="pay-meta-row">
+          <span class="key">Network</span>
+          <span class="val green">Tempo · Moderato</span>
+        </div>
+        <div class="pay-meta-row">
+          <span class="key">Est. Fee</span>
+          <span class="val green">&lt; $0.001</span>
+        </div>
+        <div class="pay-meta-row">
+          <span class="key">Finality</span>
+          <span class="val green">~1 second</span>
+        </div>
+        <div class="pay-meta-row">
+          <span class="key">Description</span>
+          <span class="val" id="preview-desc">—</span>
+        </div>
+        <div class="pay-meta-row">
+          <span class="key">Expires</span>
+          <span class="val" id="preview-expiry">24 hours</span>
+        </div>
+      </div>
+
+      <div style="padding:16px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius-sm);">
+        <p style="font-size:12px;color:var(--muted);line-height:1.7;">
+          This preview shows what the payer will see when they open your link. 
+          Payments settle in ~1 second on Tempo with near-zero fees — powered by 
+          <strong style="color:var(--text)">Simplex consensus</strong>.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     PAY VIEW
+════════════════════════════════════════ -->
+<div id="pay-view">
+  <div class="pay-card">
+
+    <!-- Connecting state -->
+    <div class="connecting" id="connecting-state">
+      <div class="spinner"></div>
+      <div class="connecting-text">
+        <strong id="wallet-name-connecting">Connecting Wallet</strong>
+        Waiting for approval...
+      </div>
+    </div>
+
+    <!-- Payment form -->
+    <div id="payment-form">
+      <div class="pay-header">
+        <div class="hero-eyebrow" style="justify-content:center">Payment Request</div>
+        <div style="font-size:13px;color:var(--muted);margin-top:8px">Review and confirm below</div>
+      </div>
+
+      <div class="pay-amount-display">
+        <div class="pay-amount-label">You are paying</div>
+        <div class="pay-amount-value" id="pay-amount-display">
+          <span>$</span><span id="pay-amt">0</span>
+        </div>
+        <div class="pay-token-name" id="pay-token-display">USDC on Tempo</div>
+      </div>
+
+      <div class="pay-meta">
+        <div class="pay-meta-row">
+          <span class="key">To</span>
+          <span class="val" id="pay-to-address" style="font-size:11px">0x...</span>
+        </div>
+        <div class="pay-meta-row">
+          <span class="key">Network</span>
+          <span class="val green">Tempo · Moderato</span>
+        </div>
+        <div class="pay-meta-row">
+          <span class="key">Gas Fee</span>
+          <span class="val green">&lt; $0.001</span>
+        </div>
+        <div class="pay-meta-row">
+          <span class="key">Description</span>
+          <span class="val" id="pay-desc">—</span>
+        </div>
+      </div>
+
+      <button class="btn" onclick="openWalletModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Connect Wallet & Pay
+      </button>
+
+      <button class="btn btn-outline" style="margin-top:8px" onclick="showCreate()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Create your own link
+      </button>
+    </div>
+
+    <!-- Success state -->
+    <div class="success-card" id="success-state">
+      <div class="success-icon">✓</div>
+      <div class="success-title">Payment Sent!</div>
+      <div class="success-sub">Your transaction has been submitted to the Tempo network and will finalize in ~1 second.</div>
+      <div class="tx-hash" id="tx-hash-display">Tx: 0x...</div>
+      <button class="btn" style="max-width:200px;margin:0 auto" onclick="showCreate()">Create a Link</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     WALLET MODAL
+════════════════════════════════════════ -->
+<div class="modal-overlay" id="wallet-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Connect Wallet</div>
+      <button class="modal-close" onclick="closeWalletModal()">✕</button>
+    </div>
+    <div class="wallet-list">
+      <button class="wallet-btn" onclick="connectWallet('Rabby')">
+        <div class="wallet-icon" style="background:#8697ff22">🐰</div>
+        <div>
+          <div>Rabby Wallet</div>
+          <div class="wallet-sub">Browser extension · Recommended</div>
+        </div>
+      </button>
+      <button class="wallet-btn" onclick="connectWallet('MetaMask')">
+        <div class="wallet-icon" style="background:#f6851b22">🦊</div>
+        <div>
+          <div>MetaMask</div>
+          <div class="wallet-sub">Browser extension</div>
+        </div>
+      </button>
+      <button class="wallet-btn" onclick="connectWallet('WalletConnect')">
+        <div class="wallet-icon" style="background:#3b99fc22">🔗</div>
+        <div>
+          <div>WalletConnect</div>
+          <div class="wallet-sub">QR Code or deep link</div>
+        </div>
+      </button>
+      <button class="wallet-btn" onclick="connectWallet('Coinbase Wallet')">
+        <div class="wallet-icon" style="background:#0052ff22">🔵</div>
+        <div>
+          <div>Coinbase Wallet</div>
+          <div class="wallet-sub">Mobile & extension</div>
+        </div>
+      </button>
+    </div>
+    <div style="padding:12px 16px 16px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);font-family:var(--mono);">
+      Make sure you're on <span style="color:var(--accent)">Tempo Moderato Testnet</span> (Chain ID 42431)
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<footer>
+  <span>TempoPay</span> — built on Tempo blockchain
+  <a href="https://docs.tempo.xyz" target="_blank" style="color:var(--muted);text-decoration:none">docs.tempo.xyz ↗</a>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+<script>
+  // ── TEMPO NETWORK CONFIG ──
+  const TEMPO_CHAIN_ID = 42431;
+  const TEMPO_RPC = 'https://rpc.moderato.tempo.xyz';
+  const TEMPO_EXPLORER = 'https://explorer.moderato.tempo.xyz';
+
+  // TIP-20 token addresses on Tempo Moderato testnet
+  const TOKEN_ADDRESSES = {
+    AlphaUSD: '0x4200000000000000000000000000000000000042',
+    BetaUSD:  '0x4200000000000000000000000000000000000043',
+    ThetaUSD: '0x4200000000000000000000000000000000000044',
+    pathUSD:  '0x4200000000000000000000000000000000000045',
+  };
+
+  // Minimal ERC-20 / TIP-20 ABI — sadece transfer lazım
+  const ERC20_ABI = [
+    'function transfer(address to, uint256 amount) returns (bool)',
+    'function decimals() view returns (uint8)',
+    'function symbol() view returns (string)',
+    'function balanceOf(address) view returns (uint256)',
+  ];
+
+  let provider = null;
+  let signer = null;
+  let payParams = null;
+
+  // ── LIVE PREVIEW ──
+  document.getElementById('amount').addEventListener('input', updatePreview);
+  document.getElementById('token').addEventListener('change', updatePreview);
+  document.getElementById('wallet-address').addEventListener('input', updatePreview);
+  document.getElementById('description').addEventListener('input', updatePreview);
+  document.getElementById('expiry').addEventListener('change', updatePreview);
+
+  function updatePreview() {
+    const amt = document.getElementById('amount').value;
+    const token = document.getElementById('token').value;
+    const wallet = document.getElementById('wallet-address').value;
+    const desc = document.getElementById('description').value;
+    const expiry = document.getElementById('expiry').value;
+
+    const amtEl = document.getElementById('preview-amount');
+    amtEl.innerHTML = `<span>$</span>${amt || '—'}`;
+    document.getElementById('preview-token').textContent = amt ? `${token} on Tempo` : 'Select token & amount';
+
+    const walletEl = document.getElementById('preview-wallet');
+    walletEl.textContent = wallet.length > 10
+      ? wallet.slice(0,6) + '...' + wallet.slice(-4)
+      : (wallet || 'Not set');
+
+    document.getElementById('preview-desc').textContent = desc || '—';
+    const expiryMap = { '1h':'1 hour','24h':'24 hours','7d':'7 days','30d':'30 days','never':'Never' };
+    document.getElementById('preview-expiry').textContent = expiryMap[expiry];
+  }
+
+  // ── GENERATE LINK ──
+  function generateLink() {
+    const wallet = document.getElementById('wallet-address').value.trim();
+    const amount = document.getElementById('amount').value;
+    const token = document.getElementById('token').value;
+    const desc = document.getElementById('description').value.trim();
+    const expiry = document.getElementById('expiry').value;
+
+    if (!wallet || wallet.length < 10) { showToast('⚠️ Enter a valid wallet address', false); return; }
+    if (!amount || parseFloat(amount) <= 0) { showToast('⚠️ Enter a valid amount', false); return; }
+
+    const p = new URLSearchParams({ to: wallet, amt: amount, token, expiry, ...(desc && { desc }) });
+    const url = `${location.origin}${location.pathname}?pay=1&${p.toString()}`;
+
+    const expiryMap = { '1h':'Expires in 1h','24h':'Expires in 24h','7d':'Expires in 7d','30d':'Expires in 30d','never':'Never expires' };
+    document.getElementById('generated-url').innerHTML = url.replace('?pay=1&', '?pay=1&<wbr>');
+    document.getElementById('link-expiry-label').textContent = expiryMap[expiry];
+
+    const box = document.getElementById('link-result');
+    box.classList.add('visible');
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    showToast('✓ Link generated!', true);
+  }
+
+  function copyLink() {
+    const url = document.getElementById('generated-url').textContent;
+    navigator.clipboard.writeText(url).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.classList.add('copied');
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy Link`;
+      }, 2000);
+    });
+    showToast('✓ Copied to clipboard!', true);
+  }
+
+  function shareLink() {
+    const url = document.getElementById('generated-url').textContent;
+    if (navigator.share) {
+      navigator.share({ title: 'TempoPay Request', url });
+    } else {
+      navigator.clipboard.writeText(url);
+      showToast('✓ Link copied for sharing!', true);
+    }
+  }
+
+  // ── VIEW SWITCHING ──
+  function showCreate() {
+    document.getElementById('create-view').style.display = 'block';
+    document.getElementById('pay-view').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function showPay(p) {
+    document.getElementById('create-view').style.display = 'none';
+    document.getElementById('pay-view').style.display = 'block';
+    payParams = p;
+
+    const amt   = p.get('amt')   || '0';
+    const token = p.get('token') || 'AlphaUSD';
+    const to    = p.get('to')    || '0x...';
+    const desc  = p.get('desc')  || '—';
+
+    document.getElementById('pay-amt').textContent = amt;
+    document.getElementById('pay-token-display').textContent = `${token} on Tempo`;
+    document.getElementById('pay-to-address').textContent = to.slice(0,6) + '...' + to.slice(-4);
+    document.getElementById('pay-desc').textContent = desc;
+  }
+
+  // ── WALLET MODAL ──
+  function openWalletModal() {
+    document.getElementById('wallet-modal').classList.add('open');
+  }
+  function closeWalletModal() {
+    document.getElementById('wallet-modal').classList.remove('open');
+  }
+
+  // ── CONNECT WALLET & PAY (gerçek blockchain) ──
+  async function connectWallet(walletName) {
+    closeWalletModal();
+
+    // Rabby, MetaMask ve diğer injected wallet'lar window.ethereum üzerinden çalışır
+    if (!window.ethereum) {
+      showToast('⚠️ No wallet detected. Install Rabby or MetaMask.', false);
+      return;
+    }
+
+    showConnecting(`Connecting ${walletName}…`);
+
+    try {
+      // 1. Cüzdana bağlan
+      provider = new ethers.BrowserProvider(window.ethereum);
+      await provider.send('eth_requestAccounts', []);
+      signer = await provider.getSigner();
+
+      // 2. Ağı kontrol et — Tempo Moderato olmalı
+      const network = await provider.getNetwork();
+      if (Number(network.chainId) !== TEMPO_CHAIN_ID) {
+        // Otomatik ağ geçişini dene
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x' + TEMPO_CHAIN_ID.toString(16) }],
+          });
+        } catch (switchErr) {
+          // Ağ kayıtlı değilse ekle
+          if (switchErr.code === 4902) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x' + TEMPO_CHAIN_ID.toString(16),
+                chainName: 'Tempo Moderato',
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                rpcUrls: [TEMPO_RPC],
+                blockExplorerUrls: [TEMPO_EXPLORER],
+              }],
+            });
+          } else {
+            throw switchErr;
+          }
+        }
+        // Ağ geçişinden sonra provider'ı yenile
+        provider = new ethers.BrowserProvider(window.ethereum);
+        signer = await provider.getSigner();
+      }
+
+      // 3. İşlemi gönder
+      await sendPayment();
+
+    } catch (err) {
+      hideConnecting();
+      document.getElementById('payment-form').style.display = 'block';
+
+      if (err.code === 4001 || err.code === 'ACTION_REJECTED') {
+        showToast('❌ Transaction rejected by user', false);
+      } else {
+        showToast('❌ ' + (err.shortMessage || err.message || 'Something went wrong'), false);
+        console.error(err);
+      }
+    }
+  }
+
+  async function sendPayment() {
+    const to     = payParams.get('to');
+    const amt    = payParams.get('amt');
+    const token  = payParams.get('token') || 'AlphaUSD';
+
+    showConnecting('Sending transaction…');
+
+    // Token contract'ı al
+    const tokenAddress = TOKEN_ADDRESSES[token];
+    if (!tokenAddress) {
+      hideConnecting();
+      showToast('⚠️ Unknown token: ' + token, false);
+      return;
+    }
+
+    const contract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+
+    // Decimals'i oku (genellikle 6 veya 18)
+    let decimals = 18;
+    try { decimals = await contract.decimals(); } catch {}
+
+    const amountParsed = ethers.parseUnits(amt, decimals);
+
+    // Transfer gönder
+    const tx = await contract.transfer(to, amountParsed);
+
+    showConnecting('Waiting for confirmation…');
+
+    // 1 blok bekle
+    const receipt = await tx.wait(1);
+
+    // Başarı ekranı
+    hideConnecting();
+    document.getElementById('payment-form').style.display = 'none';
+
+    const txHash = receipt.hash;
+    const shortHash = txHash.slice(0, 18) + '...' + txHash.slice(-6);
+    document.getElementById('tx-hash-display').innerHTML =
+      `Tx: <a href="${TEMPO_EXPLORER}/tx/${txHash}" target="_blank" style="color:var(--accent);text-decoration:none">${shortHash} ↗</a>`;
+
+    document.getElementById('success-state').classList.add('visible');
+    showToast('✓ Payment confirmed on Tempo!', true);
+  }
+
+  // ── CONNECTING HELPERS ──
+  function showConnecting(msg) {
+    document.getElementById('payment-form').style.display = 'none';
+    document.getElementById('success-state').classList.remove('visible');
+    const conn = document.getElementById('connecting-state');
+    conn.classList.add('visible');
+    document.getElementById('wallet-name-connecting').textContent = msg;
+  }
+
+  function hideConnecting() {
+    document.getElementById('connecting-state').classList.remove('visible');
+  }
+
+  // ── TOAST ──
+  function showToast(msg, green) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (green ? ' green' : '');
+    setTimeout(() => t.className = 'toast', 3500);
+  }
+
+  // ── INIT ──
+  const params = new URLSearchParams(location.search);
+  if (params.get('pay') === '1') {
+    showPay(params);
+  }
+
+  document.getElementById('wallet-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeWalletModal();
+  });
+</script>
+</body>
+</html>
