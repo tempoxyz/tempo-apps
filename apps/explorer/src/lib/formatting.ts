@@ -257,7 +257,6 @@ export namespace PriceFormatter {
 
 	export function formatAmount(value: string): string {
 		const number = Number(value)
-		if (number > 0 && number < 0.01) return '<0.01'
 		return amountFormatter.format(number)
 	}
 
@@ -268,7 +267,6 @@ export namespace PriceFormatter {
 
 	export function formatAmountShort(value: string): string {
 		const number = Number(value)
-		if (number > 0 && number < 0.01) return '<0.01'
 		// Use standard notation for values < 1000 to preserve precision,
 		// compact notation for larger values (1K, 1M, etc.)
 		if (Math.abs(number) < 1000) {

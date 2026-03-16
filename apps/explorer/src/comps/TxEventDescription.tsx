@@ -162,10 +162,9 @@ export namespace TxEventDescription {
 						? Value.format(BigInt(part.value[0]), part.value[1])
 						: Value.format(BigInt(part.value)),
 				)
-				const isSmall = formatted.startsWith('<')
 				return (
 					<span
-						className={`items-end overflow-hidden text-ellipsis whitespace-nowrap ${isSmall ? 'text-tertiary' : ''}`}
+						className="items-end overflow-hidden text-ellipsis whitespace-nowrap"
 						title={formatted}
 					>
 						{formatted}
