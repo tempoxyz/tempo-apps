@@ -1,84 +1,97 @@
 {
-	"$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
-	"name": "Tempo Mainnet (Presto)",
-	"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/4217/icon.svg",
-	"timestamp": "2026-03-11T04:44:38Z",
-	"version": {
-		"major": 1,
-		"minor": 1,
-		"patch": 6
-	},
-	"tokens": [
-		{
-			"name": "PathUSD",
-			"symbol": "pathUSD",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c0000000000000000000000000000000000000",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000000000000000000000.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "PathUSD"
-			}
-		},
-		{
-			"name": "Bridged USDC (Stargate)",
-			"symbol": "USDC.e",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c000000000000000000000b9537d11c60e8b50",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c000000000000000000000b9537d11c60e8b50.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "USDC"
-			}
-		},
-		{
-			"name": "Bridged EURC (Stargate)",
-			"symbol": "EURC.e",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c0000000000000000000001621e21f71cf12fb",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000001621e21f71cf12fb.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "EURC"
-			}
-		},
-		{
-			"name": "USDT0",
-			"symbol": "USDT0",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c00000000000000000000014f22ca97301eb73",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c00000000000000000000014f22ca97301eb73.svg",
-			"extensions": {
-				"chain": "tempo"
-			}
-		},
-		{
-			"name": "Frax USD",
-			"symbol": "frxUSD",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c0000000000000000000003554d28269e0f3c2",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000003554d28269e0f3c2.svg",
-			"extensions": {
-				"chain": "tempo"
-			}
-		},
-		{
-			"name": "Cap USD",
-			"symbol": "cUSD",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c0000000000000000000000520792dcccccccc",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000000520792dcccccccc.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "cUSD"
-			},
-			"dateAdded": "2026-03-11T04:44:38Z"
-		}
-	]
+  "$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
+  "name": "Tempo Mainnet (Presto)",
+  "logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/4217/icon.svg",
+  "timestamp": "2026-03-16T02:56:16Z",
+  "version": {
+    "major": 1,
+    "minor": 1,
+    "patch": 7
+  },
+  "tokens": [
+    {
+      "name": "PathUSD",
+      "symbol": "pathUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000000000000000000000",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000000000000000000000.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "PathUSD"
+      }
+    },
+    {
+      "name": "Bridged USDC (Stargate)",
+      "symbol": "USDC.e",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c000000000000000000000b9537d11c60e8b50",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c000000000000000000000b9537d11c60e8b50.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "USDC"
+      }
+    },
+    {
+      "name": "Bridged EURC (Stargate)",
+      "symbol": "EURC.e",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000001621e21f71cf12fb",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000001621e21f71cf12fb.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "EURC"
+      }
+    },
+    {
+      "name": "USDT0",
+      "symbol": "USDT0",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c00000000000000000000014f22ca97301eb73",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c00000000000000000000014f22ca97301eb73.svg",
+      "extensions": {
+        "chain": "tempo"
+      }
+    },
+    {
+      "name": "Frax USD",
+      "symbol": "frxUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000003554d28269e0f3c2",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000003554d28269e0f3c2.svg",
+      "extensions": {
+        "chain": "tempo"
+      }
+    },
+    {
+      "name": "Cap USD",
+      "symbol": "cUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000000520792dcccccccc",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000000520792dcccccccc.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "cUSD"
+      },
+      "dateAdded": "2026-03-11T04:44:38Z"
+    },
+    {
+      "name": "Staked Cap USD",
+      "symbol": "stcUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c00000000000000000000031f228af88888888",
+      "logoURI": "https://cap.app/_next/static/media/stcUSD.e9276b94.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "stcUSD"
+      },
+      "dateAdded": "2026-03-16T02:56:16Z"
+    }
+  ]
 }
