@@ -729,6 +729,7 @@ function AccountCardWithTimestamps(props: {
 			? BigInt(contractCreation.creation.timestamp)
 			: undefined
 
+	const isTip20 = Tip20.isTip20Address(address)
 	const totalValue = calculateTotalHoldings(assetsData)
 
 	return (
@@ -742,6 +743,7 @@ function AccountCardWithTimestamps(props: {
 					: undefined
 			}
 			totalValue={totalValue}
+			hideHoldings={isTip20}
 			accountType={resolvedAccountType}
 			isToken={isToken}
 			tokenName={tokenMetadata?.name}
