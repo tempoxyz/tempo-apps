@@ -513,7 +513,10 @@ function RouteComponent() {
 	// Build visible tabs based on address type
 	const isTip20 = Tip20.isTip20Address(address)
 	const visibleTabs: TabValue[] = React.useMemo(() => {
-		const tabs: TabValue[] = ['transactions', 'holdings']
+		const tabs: TabValue[] = ['transactions']
+		if (!isContract && !isTip20) {
+			tabs.push('holdings')
+		}
 		if (isToken) {
 			tabs.push('transfers', 'holders')
 		}
