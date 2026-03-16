@@ -86,7 +86,7 @@
 			"decimals": 6,
 			"chainId": 4217,
 			"address": "0x20c00000000000000000000031f228af88888888",
-			"logoURI": "https://cap.app/_next/static/media/stcUSD.e9276b94.svg",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c00000000000000000000031f228af88888888.svg",
 			"extensions": {
 				"chain": "tempo",
 				"label": "stcUSD"
