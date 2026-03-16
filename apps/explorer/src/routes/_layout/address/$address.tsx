@@ -514,7 +514,7 @@ function RouteComponent() {
 	const isTip20 = Tip20.isTip20Address(address)
 	const visibleTabs: TabValue[] = React.useMemo(() => {
 		const tabs: TabValue[] = ['transactions']
-		if (!isContract && !isTip20) {
+		if (!isTip20) {
 			tabs.push('holdings')
 		}
 		if (isToken) {
