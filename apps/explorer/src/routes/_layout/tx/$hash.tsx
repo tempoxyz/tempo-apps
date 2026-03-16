@@ -336,6 +336,10 @@ function OverviewSection(props: {
 			? (transaction.nonceKey as bigint | undefined)
 			: undefined
 	const isExpiringNonce = nonceKey === 2n ** 256n - 1n
+	const validBefore =
+		'validBefore' in transaction
+			? (transaction.validBefore as number | undefined)
+			: undefined
 	const positionInBlock = receipt.transactionIndex
 	const input = transaction.input
 
@@ -438,21 +442,23 @@ function OverviewSection(props: {
 				<span className="text-primary">{receipt.type}</span>
 			</InfoRow>
 			{isExpiringNonce ? (
-				<>
-					<InfoRow label="Nonce Key">
+				<InfoRow label="Nonce">
+					<span className="flex items-center gap-[6px]">
 						<a
 							href="https://docs.tempo.xyz/protocol/tips/tip-1009"
 							target="_blank"
 							rel="noopener noreferrer"
 							className="text-base-content-positive press-down"
 						>
-							Expiring Nonce
+							Expiring
 						</a>
-					</InfoRow>
-					<InfoRow label="Nonce">
-						<span className="text-primary">{nonce}</span>
-					</InfoRow>
-				</>
+						{validBefore !== undefined && (
+							<span className="text-tertiary">
+								(expires {new Date(validBefore * 1000).toLocaleString()})
+							</span>
+						)}
+					</span>
+				</InfoRow>
 			) : nonceKey !== undefined ? (
 				<>
 					<InfoRow label="Nonce Key">

@@ -136,6 +136,19 @@ export namespace TxRawTransaction {
 		feeToken: (v) => `/token/${v}`,
 	}
 
+	const UINT256_MAX =
+		'115792089237316195423570985008687907853269984665640564039457584007913129639935'
+
+	// Fields that should show an annotation next to the value
+	const annotatedFields: Record<string, (value: string) => string | null> = {
+		nonceKey: (v) => (v === UINT256_MAX ? '(expiring nonce)' : null),
+		validBefore: (v) => {
+			const n = Number(v)
+			if (!Number.isFinite(n) || n === 0) return null
+			return `(${new Date(n * 1000).toISOString()})`
+		},
+	}
+
 	export function Row(props: Row.Props) {
 		const { label, value, pad = 21, depth = 0 } = props
 
@@ -206,6 +219,8 @@ export namespace TxRawTransaction {
 		const formattedValue = TxRawTransaction.formatValue(value)
 		const linkTo = label in linkableFields ? linkableFields[label] : null
 		const isLinkable = linkTo && formattedValue && formattedValue !== ''
+		const annotation =
+			label in annotatedFields ? annotatedFields[label]?.(formattedValue) : null
 
 		return (
 			<div className="flex gap-[16px] py-[4px]">
@@ -237,6 +252,11 @@ export namespace TxRawTransaction {
 					>
 						<span>{formattedValue}</span>
 					</button>
+				)}
+				{annotation && (
+					<span className="text-tertiary text-[11px] self-center">
+						{annotation}
+					</span>
 				)}
 			</div>
 		)
