@@ -702,6 +702,7 @@ export type AddressHistoryReceiptRow = {
 	status: number | null
 	gas_used: bigint
 	effective_gas_price: bigint | null
+	contract_address: string | null
 }
 
 export async function fetchAddressReceiptRowsByHashes(
@@ -721,6 +722,7 @@ export async function fetchAddressReceiptRowsByHashes(
 			'status',
 			'gas_used',
 			'effective_gas_price',
+			'contract_address',
 		])
 		.where('tx_hash', 'in', hashes)
 		.execute()
@@ -781,6 +783,7 @@ type AddressTxOnlyHistoryJoinedQueryRow = {
 	receipt_status: number | null
 	receipt_gas_used: bigint | null
 	receipt_effective_gas_price: bigint | null
+	receipt_contract_address: string | null
 	log_block_num: bigint | null
 	log_tx_idx: number | null
 	log_idx: number | null
@@ -861,6 +864,7 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 			'receipts.status as receipt_status',
 			'receipts.gas_used as receipt_gas_used',
 			'receipts.effective_gas_price as receipt_effective_gas_price',
+			'receipts.contract_address as receipt_contract_address',
 			'logs.block_num as log_block_num',
 			'logs.tx_idx as log_tx_idx',
 			'logs.log_idx as log_idx',
@@ -965,6 +969,7 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 				status: row.receipt_status,
 				gas_used: row.receipt_gas_used,
 				effective_gas_price: row.receipt_effective_gas_price,
+				contract_address: row.receipt_contract_address,
 			})
 		}
 

@@ -305,6 +305,9 @@ export async function buildTxOnlyTransactions(params: {
 			to: toSource as Address.Address | null,
 			status,
 			logs: txLogs,
+			contractAddress: receipt?.contract_address
+				? (receipt.contract_address as Address.Address)
+				: null,
 		} as unknown as TransactionReceipt
 
 		const transactionForKnownEvents = tx
