@@ -1,11 +1,7 @@
-import {
-	createFileRoute,
-	Link,
-	useNavigate,
-	useRouter,
-} from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
+import * as z from 'zod/mini'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#lib/css'
 import { getTempoEnv } from '#lib/env'
@@ -43,18 +39,20 @@ function getSpotlightData() {
 
 export const Route = createFileRoute('/_layout/')({
 	component: Component,
+	validateSearch: z.object({
+		q: z.optional(z.string()),
+	}).parse,
 })
 
 function Component() {
-	const router = useRouter()
 	const navigate = useNavigate()
-	const [inputValue, setInputValue] = React.useState('')
+	const { q } = Route.useSearch()
+	const query = q?.trim() ?? ''
+	const [inputValue, setInputValue] = React.useState(query)
 
 	React.useEffect(() => {
-		return router.subscribe('onResolved', ({ hrefChanged }) => {
-			if (hrefChanged) setInputValue('')
-		})
-	}, [router])
+		setInputValue(query)
+	}, [query])
 
 	return (
 		<div className="flex flex-1 w-full flex-col text-[16px]">
@@ -82,7 +80,7 @@ function Component() {
 							}
 							if (data.type === 'hash') {
 								navigate({
-									to: '/receipt/$hash',
+									to: '/tx/$hash',
 									params: { hash: data.value },
 								})
 								return
