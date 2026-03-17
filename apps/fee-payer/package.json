@@ -1,5 +1,6 @@
 {
 	"name": "fee-payer",
+	"type": "module",
 	"private": true,
 	"scripts": {
 		"build": "echo 'noop'",
