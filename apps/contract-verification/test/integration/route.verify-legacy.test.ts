@@ -1,8 +1,8 @@
 import * as CBOR from 'cbor-x'
-import { env } from 'cloudflare:test'
+import { env } from 'cloudflare:workers'
 import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
-import { Hex } from 'ox'
+import { Hash, Hex } from 'ox'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as DB from '#database/schema.ts'
@@ -17,13 +17,11 @@ vi.mock('@cloudflare/containers', () => ({
 	getRandom: mockGetRandom,
 }))
 
-vi.mock('viem', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('viem')>()
-	return {
-		...actual,
-		createPublicClient: mockCreatePublicClient,
-	}
-})
+vi.mock('viem', () => ({
+	createPublicClient: mockCreatePublicClient,
+	http: vi.fn(),
+	keccak256: Hash.keccak256,
+}))
 
 function createVyperBytecode(prefix: string): `0x${string}` {
 	const metadata = [prefix.length / 2, [], 0, { vyper: [0, 3, 10] }]

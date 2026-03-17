@@ -1,5 +1,5 @@
 import * as z from 'zod/mini'
-import { env, SELF } from 'cloudflare:test'
+import { env, exports } from 'cloudflare:workers'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { describe, expect, it } from 'vitest'
@@ -33,13 +33,15 @@ const getFirst = <T>(items: T[], label: string) => {
 
 describe('full verification flow', () => {
 	async function createVerificationJob(): Promise<string> {
-		const verifyResponse = await SELF.fetch(
-			`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
-			{
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(verifyRequestBody),
-			},
+		const verifyResponse = await exports.default.fetch(
+			new Request(
+				`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
+				{
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(verifyRequestBody),
+				},
+			),
 		)
 
 		if (verifyResponse.status !== 202) {
@@ -79,8 +81,8 @@ describe('full verification flow', () => {
 			},
 		)
 
-		const statusResponse = await SELF.fetch(
-			`https://test.local/v2/verify/${verificationId}`,
+		const statusResponse = await exports.default.fetch(
+			new Request(`https://test.local/v2/verify/${verificationId}`),
 		)
 		expect(statusResponse.status).toBe(200)
 
@@ -97,8 +99,8 @@ describe('full verification flow', () => {
 	it('verifies a simple contract and persists to database', async () => {
 		const verificationId = await runSuccessfulVerification()
 
-		const statusResponse = await SELF.fetch(
-			`https://test.local/v2/verify/${verificationId}`,
+		const statusResponse = await exports.default.fetch(
+			new Request(`https://test.local/v2/verify/${verificationId}`),
 		)
 		expect(statusResponse.status).toBe(200)
 		const status = z.parse(
@@ -107,8 +109,10 @@ describe('full verification flow', () => {
 		)
 		expect(status.error).toBeUndefined()
 
-		const lookupResponse = await SELF.fetch(
-			`https://test.local/v2/contract/${counterFixture.chainId}/${counterFixture.address}?fields=sources,signatures`,
+		const lookupResponse = await exports.default.fetch(
+			new Request(
+				`https://test.local/v2/contract/${counterFixture.chainId}/${counterFixture.address}?fields=sources,signatures`,
+			),
 		)
 
 		expect(lookupResponse.status).toBe(200)
@@ -195,13 +199,15 @@ describe('full verification flow', () => {
 	it('returns 409 for already verified contract', async () => {
 		await runSuccessfulVerification()
 
-		const secondResponse = await SELF.fetch(
-			`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
-			{
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(verifyRequestBody),
-			},
+		const secondResponse = await exports.default.fetch(
+			new Request(
+				`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
+				{
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(verifyRequestBody),
+				},
+			),
 		)
 
 		expect(secondResponse.status).toBe(409)
