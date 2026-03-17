@@ -853,7 +853,7 @@ function SectionsWrapper(props: {
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
 
-	const error = historyError
+	const error = isHistoryPending ? null : historyError
 
 	/**
 	 * use initialData until mounted to avoid hydration mismatch

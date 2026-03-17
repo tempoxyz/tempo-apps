@@ -131,7 +131,7 @@ function getLandingRedirect(query: string) {
 
 export const Route = createFileRoute('/search')({
 	validateSearch: z.object({
-		q: z.optional(z.string()),
+		q: z.optional(z.coerce.string()),
 	}).parse,
 	beforeLoad: async ({ search }) => {
 		const rawQuery = search.q?.trim() ?? ''
