@@ -309,14 +309,14 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 		},
 	],
 	[
-		'0x9d136eea063ede5418a6bc7beaff009bbb6cfa70',
+		'0x33b901018174ddabe4841042ab76ba85d4e24f25',
 		{
 			name: 'Tempo Stream Channel',
 			code: '0xef',
 			description: 'Payment streaming channels',
 			abi: streamChannelAbi,
 			category: 'system',
-			address: '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70',
+			address: '0x33b901018174DDabE4841042ab76ba85D4e24f25',
 		},
 	],
 ])

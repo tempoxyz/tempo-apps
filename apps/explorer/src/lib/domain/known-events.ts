@@ -93,7 +93,7 @@ export const streamChannelAbi = [
 const abi = [...Object.values(Abis).flat(), ...streamChannelAbi]
 const FEE_MANAGER = Addresses.feeManager
 const STABLECOIN_EXCHANGE = Addresses.stablecoinDex
-export const STREAM_CHANNEL = '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70'
+export const STREAM_CHANNEL = '0x33b901018174DDabE4841042ab76ba85D4e24f25'
 
 export type Authorization = {
 	address: Address.Address
