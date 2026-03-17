@@ -24,6 +24,12 @@ type TokenHolderAggregationRow = {
 	tokens: string | number | bigint
 }
 
+export type TokenHoldersCountRow = {
+	token: string
+	count: number
+	capped: boolean
+}
+
 function sortTokenHolderBalances(
 	balances: Map<string, bigint>,
 ): TokenHolderBalance[] {
@@ -56,13 +62,82 @@ export async function fetchTokenHolderBalances(
 	chainId: number,
 ): Promise<TokenHolderBalance[]> {
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
-	const transfers = await qb
+	const transfers = (await qb
 		.selectFrom('transfer')
-		.select(['from', 'to', 'tokens'])
+		.select((eb) => [
+			eb.ref('from').as('from'),
+			eb.ref('to').as('to'),
+			eb.fn.sum('tokens').as('tokens'),
+		])
 		.where('address', '=', address)
-		.execute()
+		.groupBy(['from', 'to'])
+		.execute()) as TokenHolderAggregationRow[]
 
-	return aggregateTokenHolderBalances(transfers as TokenHolderAggregationRow[])
+	return aggregateTokenHolderBalances(transfers)
+}
+
+export async function fetchTokenHoldersCountRows(
+	addresses: Address.Address[],
+	chainId: number,
+	countCap: number,
+): Promise<TokenHoldersCountRow[]> {
+	if (addresses.length === 0) return []
+
+	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
+	const transfers = (await qb
+		.selectFrom('transfer')
+		.select((eb) => [
+			eb.ref('address').as('address'),
+			eb.ref('from').as('from'),
+			eb.ref('to').as('to'),
+			eb.fn.sum('tokens').as('tokens'),
+		])
+		.where('address', 'in', addresses)
+		.groupBy(['address', 'from', 'to'])
+		.execute()) as Array<{
+		address: string
+		from: string
+		to: string
+		tokens: string | number | bigint
+	}>
+
+	const balancesByToken = new Map<string, Map<string, bigint>>()
+
+	for (const row of transfers) {
+		const token = row.address.toLowerCase()
+		let tokenBalances = balancesByToken.get(token)
+		if (!tokenBalances) {
+			tokenBalances = new Map<string, bigint>()
+			balancesByToken.set(token, tokenBalances)
+		}
+
+		const tokens = BigInt(row.tokens)
+		if (row.to !== zeroAddress) {
+			const to = row.to.toLowerCase()
+			tokenBalances.set(to, (tokenBalances.get(to) ?? 0n) + tokens)
+		}
+		if (row.from !== zeroAddress) {
+			const from = row.from.toLowerCase()
+			tokenBalances.set(from, (tokenBalances.get(from) ?? 0n) - tokens)
+		}
+	}
+
+	return addresses.map((address) => {
+		const token = address.toLowerCase()
+		const tokenBalances = balancesByToken.get(token)
+		const rawCount = tokenBalances
+			? Array.from(tokenBalances.values()).reduce(
+					(acc, balance) => (balance > 0n ? acc + 1 : acc),
+					0,
+				)
+			: 0
+		const capped = rawCount >= countCap
+		return {
+			token,
+			count: capped ? countCap : rawCount,
+			capped,
+		}
+	})
 }
 
 export async function fetchTokenFirstTransferTimestamp(
@@ -627,6 +702,7 @@ export type AddressHistoryReceiptRow = {
 	status: number | null
 	gas_used: bigint
 	effective_gas_price: bigint | null
+	contract_address: string | null
 }
 
 export async function fetchAddressReceiptRowsByHashes(
@@ -646,6 +722,7 @@ export async function fetchAddressReceiptRowsByHashes(
 			'status',
 			'gas_used',
 			'effective_gas_price',
+			'contract_address',
 		])
 		.where('tx_hash', 'in', hashes)
 		.execute()
@@ -706,6 +783,7 @@ type AddressTxOnlyHistoryJoinedQueryRow = {
 	receipt_status: number | null
 	receipt_gas_used: bigint | null
 	receipt_effective_gas_price: bigint | null
+	receipt_contract_address: string | null
 	log_block_num: bigint | null
 	log_tx_idx: number | null
 	log_idx: number | null
@@ -786,6 +864,7 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 			'receipts.status as receipt_status',
 			'receipts.gas_used as receipt_gas_used',
 			'receipts.effective_gas_price as receipt_effective_gas_price',
+			'receipts.contract_address as receipt_contract_address',
 			'logs.block_num as log_block_num',
 			'logs.tx_idx as log_tx_idx',
 			'logs.log_idx as log_idx',
@@ -890,6 +969,7 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 				status: row.receipt_status,
 				gas_used: row.receipt_gas_used,
 				effective_gas_price: row.receipt_effective_gas_price,
+				contract_address: row.receipt_contract_address,
 			})
 		}
 

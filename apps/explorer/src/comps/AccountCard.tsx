@@ -18,6 +18,7 @@ export function AccountCard(props: AccountCard.Props) {
 		createdTimestamp,
 		lastActivityTimestamp,
 		totalValue,
+		hideHoldings,
 		accountType,
 		isToken,
 		tokenName,
@@ -78,25 +79,31 @@ export function AccountCard(props: AccountCard.Props) {
 						{address}
 					</p>
 				</button>,
-				{
-					label: 'Holdings',
-					value: (
-						<ClientOnly
-							fallback={<span className="text-tertiary text-[13px]">…</span>}
-						>
-							{totalValue !== undefined ? (
-								<span
-									className="text-[13px] text-primary"
-									title={PriceFormatter.format(totalValue)}
-								>
-									{PriceFormatter.format(totalValue, { format: 'short' })}
-								</span>
-							) : (
-								<span className="text-tertiary text-[13px]">…</span>
-							)}
-						</ClientOnly>
-					),
-				},
+				...(!hideHoldings
+					? [
+							{
+								label: 'Holdings',
+								value: (
+									<ClientOnly
+										fallback={
+											<span className="text-tertiary text-[13px]">…</span>
+										}
+									>
+										{totalValue !== undefined ? (
+											<span
+												className="text-[13px] text-primary"
+												title={PriceFormatter.format(totalValue)}
+											>
+												{PriceFormatter.format(totalValue, { format: 'short' })}
+											</span>
+										) : (
+											<span className="text-tertiary text-[13px]">…</span>
+										)}
+									</ClientOnly>
+								),
+							},
+						]
+					: []),
 				{
 					label: 'Active',
 					value: (
@@ -143,6 +150,7 @@ export declare namespace AccountCard {
 		lastActivityTimestamp?: bigint | undefined
 		createdTimestamp?: bigint | undefined
 		totalValue?: number | undefined
+		hideHoldings?: boolean | undefined
 		accountType?: AccountType | undefined
 		isToken?: boolean | undefined
 		tokenName?: string | undefined

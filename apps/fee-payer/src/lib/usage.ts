@@ -15,6 +15,8 @@ const QB = IDX.QueryBuilder.from(IS)
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
 
+let cachedFeeTokenMetadata: { decimals: number; currency: string } | null = null
+
 const epochToTimestamp = (epoch: number): string =>
 	new Date(epoch * 1000).toISOString()
 
@@ -59,18 +61,23 @@ export async function getUsage(
 	const result = await query.executeTakeFirst()
 
 	const feesPaid = result?.total_spent ? BigInt(result.total_spent) : 0n
-	const feeTokenMetadata = await Actions.token.getMetadata(
-		createPublicClient({
-			chain: tempoChain,
-			transport: http(env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0]),
-		}),
-		{ token: tempoChain.feeToken },
-	)
+
+	if (!cachedFeeTokenMetadata) {
+		cachedFeeTokenMetadata = await Actions.token.getMetadata(
+			createPublicClient({
+				chain: tempoChain,
+				transport: http(
+					env.TEMPO_RPC_URL ?? tempoChain.rpcUrls.default.http[0],
+				),
+			}),
+			{ token: tempoChain.feeToken },
+		)
+	}
 
 	return {
 		feePayerAddress,
-		feesPaid: formatUnits(feesPaid, feeTokenMetadata.decimals),
-		feeCurrency: feeTokenMetadata.currency,
+		feesPaid: formatUnits(feesPaid, cachedFeeTokenMetadata.decimals),
+		feeCurrency: cachedFeeTokenMetadata.currency,
 		numTransactions: result?.n_transactions ? Number(result.n_transactions) : 0,
 		endingAt: result?.ending_at ?? null,
 		startingAt: result?.starting_at ?? null,

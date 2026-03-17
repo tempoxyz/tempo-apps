@@ -74,6 +74,7 @@ export function TxBalanceChanges(props: TxBalanceChanges.Props) {
 			itemsPerPage={LIMIT}
 			emptyState="No balance changes detected."
 			pagination="simple"
+			showSimpleCount={false}
 		/>
 	)
 }

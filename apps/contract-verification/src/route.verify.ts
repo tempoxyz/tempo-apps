@@ -35,6 +35,7 @@ import {
 	getDb,
 	sourcifyError,
 	normalizeSourcePath,
+	getCreationTransactionMetadata,
 } from '#utilities.ts'
 
 const logger = getLogger(['tempo'])
@@ -642,13 +643,6 @@ type CompileOutput = {
 	}>
 }
 
-type CreationTransactionMetadata = {
-	transactionHash: Uint8Array
-	blockNumber: number
-	transactionIndex: number
-	deployer: Uint8Array
-}
-
 async function runVerificationJob(
 	env: Cloudflare.Env,
 	jobId: string,
@@ -675,49 +669,24 @@ async function runVerificationJob(
 		if (!chain) {
 			throw new Error(`Chain ${chainId} is not supported`)
 		}
+		const rpcUrl = chain.rpcUrls.default.http.at(0)
 		const createClient = deps?.createPublicClient ?? createPublicClient
 		const client = createClient({
 			chain,
-			transport: http(chain.rpcUrls.default.http.at(0)),
+			transport: http(
+				env.TEMPO_RPC_KEY ? `${rpcUrl}/${env.TEMPO_RPC_KEY}` : rpcUrl,
+			),
 		})
 
-		let creationTransactionMetadata: CreationTransactionMetadata | null = null
-		if (body.creationTransactionHash && client.getTransactionReceipt) {
-			try {
-				Hex.assert(body.creationTransactionHash)
-				const receipt = await client.getTransactionReceipt({
-					hash: body.creationTransactionHash,
-				})
-
-				if (
-					receipt.contractAddress &&
-					receipt.contractAddress.toLowerCase() === address.toLowerCase()
-				) {
-					creationTransactionMetadata = {
-						transactionHash: Hex.toBytes(receipt.transactionHash),
-						blockNumber: Number(receipt.blockNumber),
-						transactionIndex: receipt.transactionIndex,
-						deployer: Hex.toBytes(receipt.from),
-					}
-				} else {
-					logger.warn('creation_transaction_hash_mismatch', {
-						jobId,
-						chainId,
-						address,
-						creationTransactionHash: body.creationTransactionHash,
-						receiptContractAddress: receipt.contractAddress,
-					})
-				}
-			} catch (error) {
-				logger.warn('creation_transaction_hash_lookup_failed', {
-					error: formatError(error),
-					jobId,
-					chainId,
-					address,
+		const creationTransactionMetadata = body.creationTransactionHash
+			? await getCreationTransactionMetadata({
 					creationTransactionHash: body.creationTransactionHash,
+					address,
+					chainId,
+					client,
+					logContext: { jobId },
 				})
-			}
-		}
+			: null
 
 		const onchainBytecode = await client.getCode({ address })
 		if (!onchainBytecode || onchainBytecode === '0x') {

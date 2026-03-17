@@ -50,11 +50,15 @@ import {
 	getContractBytecode,
 	getContractInfo,
 } from '#lib/domain/contracts'
-import type { KnownEventPart } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
-import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
+import {
+	buildAddressDescription,
+	buildAddressOgImageUrl,
+	buildTokenDescription,
+	buildTokenOgImageUrl,
+} from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import {
 	type HistoryResponse,
@@ -63,7 +67,7 @@ import {
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
 import XIcon from '~icons/lucide/x'
 
@@ -346,57 +350,92 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		}),
 	head: async ({ params, loaderData }) => {
 		const accountType = loaderData?.accountType ?? 'empty'
-		const label =
-			accountType === 'contract'
+		const isToken = loaderData?.isToken ?? false
+		const tokenMeta = loaderData?.tokenMetadata
+
+		const label = isToken
+			? 'Token'
+			: accountType === 'contract'
 				? 'Contract'
 				: accountType === 'account'
 					? 'Account'
 					: 'Address'
 		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
 
-		const txCount = 0
+		let description: string
+		let ogImageUrl: string
 
-		// Fetch data with a timeout to avoid blocking too long
-		let lastActive: string | undefined
-		let holdings = '—'
+		if (isToken && tokenMeta) {
+			const decimals = tokenMeta.decimals ?? 18
+			const totalSupply = tokenMeta.totalSupply
+				? Number.parseFloat(formatUnits(tokenMeta.totalSupply, decimals))
+				: 0
 
-		// Calculate holdings from prefetched balances data
-		if (loaderData?.balancesData?.balances) {
-			const totalValue = calculateTotalHoldings(
-				loaderData.balancesData.balances.map((b) => ({
-					address: b.token,
-					metadata: {
-						decimals: b.decimals,
-						currency: b.currency,
-					},
-					balance: BigInt(b.balance),
-				})),
-			)
-			if (totalValue && totalValue > 0) {
-				holdings = PriceFormatter.format(totalValue, { format: 'short' })
+			const formatSupply = (n: number): string => {
+				if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`
+				if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`
+				if (n >= 1e3)
+					return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+				return n.toFixed(2)
 			}
+
+			const supply = formatSupply(totalSupply)
+			const chainId = getTempoChain().id
+
+			description = buildTokenDescription({
+				name: tokenMeta.name ?? '—',
+				symbol: tokenMeta.symbol,
+				supply,
+			})
+
+			ogImageUrl = buildTokenOgImageUrl({
+				address: params.address,
+				chainId,
+				name: tokenMeta.name,
+				symbol: tokenMeta.symbol,
+				supply,
+			})
+		} else {
+			const txCount = 0
+			let lastActive: string | undefined
+			let holdings = '—'
+
+			if (loaderData?.balancesData?.balances) {
+				const totalValue = calculateTotalHoldings(
+					loaderData.balancesData.balances.map((b) => ({
+						address: b.token,
+						metadata: {
+							decimals: b.decimals,
+							currency: b.currency,
+						},
+						balance: BigInt(b.balance),
+					})),
+				)
+				if (totalValue && totalValue > 0) {
+					holdings = PriceFormatter.format(totalValue, { format: 'short' })
+				}
+			}
+
+			const recentTx = loaderData?.transactionsData?.transactions?.at(0)
+			if (recentTx?.timestamp) {
+				lastActive = DateFormatter.formatTimestampForOg(
+					BigInt(recentTx.timestamp),
+				).date
+			}
+
+			description = buildAddressDescription(
+				{ holdings, txCount },
+				params.address,
+			)
+
+			ogImageUrl = buildAddressOgImageUrl({
+				address: params.address,
+				holdings,
+				txCount,
+				accountType,
+				lastActive,
+			})
 		}
-
-		// Get the most recent transaction for lastActive (already in loaderData with timestamp)
-		const recentTx = loaderData?.transactionsData?.transactions?.at(0)
-		if (recentTx?.timestamp) {
-			lastActive = DateFormatter.formatTimestampForOg(
-				BigInt(recentTx.timestamp),
-			).date
-		}
-
-		const description = buildAddressDescription(
-			{ holdings, txCount },
-			params.address,
-		)
-
-		const ogImageUrl = buildAddressOgImageUrl({
-			address: params.address,
-			holdings,
-			txCount,
-			accountType,
-			lastActive,
-		})
 
 		return {
 			title,
@@ -474,7 +513,10 @@ function RouteComponent() {
 	// Build visible tabs based on address type
 	const isTip20 = Tip20.isTip20Address(address)
 	const visibleTabs: TabValue[] = React.useMemo(() => {
-		const tabs: TabValue[] = ['transactions', 'holdings']
+		const tabs: TabValue[] = ['transactions']
+		if (!isTip20) {
+			tabs.push('holdings')
+		}
 		if (isToken) {
 			tabs.push('transfers', 'holders')
 		}
@@ -593,7 +635,17 @@ async function fetchAddressMetadata(address: Address.Address) {
 }
 
 type ContractCreationResponse = {
-	creation: { blockNumber: string; timestamp: string } | null
+	creation: {
+		blockNumber: string
+		timestamp: string
+		hash: Hex.Hex | null
+		from: Address.Address | null
+		to: Address.Address | null
+		value: string | null
+		status: 'success' | 'reverted' | null
+		gasUsed: string | null
+		effectiveGasPrice: string | null
+	} | null
 	error: string | null
 }
 
@@ -602,6 +654,43 @@ async function fetchContractCreation(
 ): Promise<ContractCreationResponse> {
 	const response = await fetch(`/api/contract/creation/${address}`)
 	return response.json() as Promise<ContractCreationResponse>
+}
+
+function buildContractCreationTransaction(params: {
+	address: Address.Address
+	creation: NonNullable<ContractCreationResponse['creation']>
+}): EnrichedTransaction | null {
+	const { address, creation } = params
+
+	if (!creation.hash || !creation.from) return null
+
+	const blockNumber = parseOptionalBigInt(creation.blockNumber) ?? 0n
+	const timestamp = parseOptionalBigInt(creation.timestamp) ?? 0n
+	const value = parseOptionalBigInt(creation.value) ?? 0n
+	const gasUsed = parseOptionalBigInt(creation.gasUsed) ?? 0n
+	const effectiveGasPrice =
+		parseOptionalBigInt(creation.effectiveGasPrice) ?? 0n
+
+	return {
+		hash: creation.hash,
+		blockNumber: Hex.fromNumber(blockNumber),
+		timestamp: Number(timestamp),
+		from: Address.checksum(creation.from),
+		to: creation.to ? Address.checksum(creation.to) : null,
+		value: Hex.fromNumber(value),
+		status: creation.status ?? 'success',
+		gasUsed: Hex.fromNumber(gasUsed),
+		effectiveGasPrice: Hex.fromNumber(effectiveGasPrice),
+		knownEvents: [
+			{
+				type: 'contract creation',
+				parts: [
+					{ type: 'action', value: 'Deploy Contract' },
+					{ type: 'account', value: Address.checksum(address) },
+				],
+			},
+		],
+	}
 }
 
 function AccountCardWithTimestamps(props: {
@@ -640,6 +729,7 @@ function AccountCardWithTimestamps(props: {
 			? BigInt(contractCreation.creation.timestamp)
 			: undefined
 
+	const isTip20 = Tip20.isTip20Address(address)
 	const totalValue = calculateTotalHoldings(assetsData)
 
 	return (
@@ -653,6 +743,7 @@ function AccountCardWithTimestamps(props: {
 					: undefined
 			}
 			totalValue={totalValue}
+			hideHoldings={isTip20}
 			accountType={resolvedAccountType}
 			isToken={isToken}
 			tokenName={tokenMetadata?.name}
@@ -762,7 +853,7 @@ function SectionsWrapper(props: {
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
 
-	const error = historyError
+	const error = isHistoryPending ? null : historyError
 
 	/**
 	 * use initialData until mounted to avoid hydration mismatch
@@ -773,11 +864,55 @@ function SectionsWrapper(props: {
 		: page === 1
 			? initialData
 			: historyQueryData
-
-	const transactions = historyData?.transactions ?? []
+	const baseTransactions = historyData?.transactions ?? []
 	const hasMore = historyData?.hasMore ?? false
 	const total = historyData?.total
 	const countCapped = historyData?.countCapped ?? false
+	const shouldFetchContractCreation =
+		isMounted &&
+		isContract &&
+		isTransactionsTabActive &&
+		historyData !== undefined &&
+		!hasMore
+
+	const { data: contractCreationData } = useQuery({
+		queryKey: ['contract-creation', address],
+		queryFn: () => fetchContractCreation(address),
+		enabled: shouldFetchContractCreation,
+		staleTime: 60_000,
+	})
+
+	const transactions = React.useMemo(() => {
+		if (!isTransactionsTabActive || !isContract) return baseTransactions
+		if (hasMore) return baseTransactions
+
+		const creation = contractCreationData?.creation
+		if (!creation) return baseTransactions
+
+		const creationTransaction = buildContractCreationTransaction({
+			address,
+			creation,
+		})
+		if (!creationTransaction) return baseTransactions
+
+		if (
+			baseTransactions.some(
+				(transaction) =>
+					transaction.hash.toLowerCase() ===
+					creationTransaction.hash.toLowerCase(),
+			)
+		)
+			return baseTransactions
+
+		return [...baseTransactions, creationTransaction]
+	}, [
+		address,
+		baseTransactions,
+		contractCreationData?.creation,
+		hasMore,
+		isContract,
+		isTransactionsTabActive,
+	])
 
 	// Token transfers query
 	const transfersPage = isTransfersTabActive ? page : 1
@@ -1113,6 +1248,7 @@ function SectionsWrapper(props: {
 									}))
 							}
 							totalItems={assetsData.length}
+							displayCount={assetsData.length}
 							page={page}
 							itemsLabel="assets"
 							itemsPerPage={ASSETS_PER_PAGE}
@@ -1387,20 +1523,16 @@ function TransactionFeeCell(props: {
 function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 	const { transaction } = props
 
-	const amountParts = React.useMemo(() => {
-		return transaction.knownEvents
-			.filter((event) => event.type !== 'approval')
-			.flatMap((event) =>
-				event.parts.filter(
-					(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
-						part.type === 'amount',
-				),
-			)
+	const events = React.useMemo(() => {
+		return transaction.knownEvents.filter((event) => event.type !== 'approval')
 	}, [transaction.knownEvents])
 
 	const infiniteLabel = <span className="text-secondary">−</span>
 
-	if (!amountParts.length)
+	const hasAmounts = events.some((event) =>
+		event.parts.some((part) => part.type === 'amount'),
+	)
+	if (!hasAmounts)
 		return (
 			<Amount.Base
 				value={0n}
@@ -1411,15 +1543,23 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 			/>
 		)
 
+	// For each event, take the max amount (avoids double-counting swap legs),
+	// then sum across events.
 	const normalizedDecimals = 18
-	const totalValue = amountParts.reduce((sum, part) => {
-		const decimals = part.value.decimals ?? 6
-		const scale = 10n ** BigInt(normalizedDecimals - decimals)
-		const value =
-			typeof part.value.value === 'bigint'
-				? part.value.value
-				: BigInt(part.value.value)
-		return sum + value * scale
+	const totalValue = events.reduce((sum, event) => {
+		let maxAmount = 0n
+		for (const part of event.parts) {
+			if (part.type !== 'amount') continue
+			const decimals = part.value.decimals ?? 6
+			const scale = 10n ** BigInt(normalizedDecimals - decimals)
+			const value =
+				typeof part.value.value === 'bigint'
+					? part.value.value
+					: BigInt(part.value.value)
+			const normalized = value * scale
+			if (normalized > maxAmount) maxAmount = normalized
+		}
+		return sum + maxAmount
 	}, 0n)
 
 	if (totalValue === 0n) {

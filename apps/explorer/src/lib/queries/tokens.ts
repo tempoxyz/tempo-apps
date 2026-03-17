@@ -83,24 +83,15 @@ export function firstTransferQueryOptions(params: {
 export function tokensListQueryOptions(params: {
 	page: number
 	limit: number
-	includeCount?: boolean
-	includeHolders?: boolean
 }) {
 	const offset = (params.page - 1) * params.limit
 	return queryOptions({
-		queryKey: [
-			'tokens',
-			params.page,
-			params.limit,
-			params.includeHolders ?? false,
-		],
+		queryKey: ['tokens', params.page, params.limit],
 		queryFn: () =>
 			fetchTokens({
 				data: {
 					offset,
 					limit: params.limit,
-					includeCount: params.includeCount ?? false,
-					includeHolders: params.includeHolders ?? false,
 				},
 			}),
 	})

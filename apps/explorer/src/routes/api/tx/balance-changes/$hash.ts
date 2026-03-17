@@ -72,6 +72,16 @@ function computeBalanceChanges(logs: Log[]) {
 	return Array.from(changes.values()).filter(({ diff }) => diff !== 0n)
 }
 
+function normalizeLimit(limit: number): number {
+	if (!Number.isFinite(limit)) return DEFAULT_LIMIT
+	return Math.min(MAX_LIMIT, Math.max(1, Math.floor(limit)))
+}
+
+function normalizeOffset(offset: number): number {
+	if (!Number.isFinite(offset)) return 0
+	return Math.max(0, Math.floor(offset))
+}
+
 async function getBalanceAtBlock(
 	client: ReturnType<WagmiConfig['getClient']>,
 	token: Address.Address,
@@ -118,17 +128,25 @@ export async function fetchBalanceChanges(params: {
 	offset: number
 }): Promise<BalanceChangesData> {
 	const { hash, limit, offset } = params
+	const normalizedLimit = normalizeLimit(limit)
+	const normalizedOffset = normalizeOffset(offset)
 	const client = getWagmiConfig().getClient()
 
 	const receipt = await getTransactionReceipt(client, { hash })
 
 	const balanceChanges = computeBalanceChanges(receipt.logs)
+	const total = balanceChanges.length
 
-	if (balanceChanges.length === 0) {
-		return { changes: [], tokenMetadata: {}, total: 0 }
+	if (total === 0 || normalizedOffset >= total) {
+		return { changes: [], tokenMetadata: {}, total }
 	}
 
-	const uniqueTokens = [...new Set(balanceChanges.map(({ token }) => token))]
+	const pagedChanges = balanceChanges.slice(
+		normalizedOffset,
+		normalizedOffset + normalizedLimit,
+	)
+
+	const uniqueTokens = [...new Set(pagedChanges.map(({ token }) => token))]
 
 	const tokenMetadataEntries = await mapWithConcurrency(
 		uniqueTokens,
@@ -136,7 +154,7 @@ export async function fetchBalanceChanges(params: {
 	)
 
 	const balanceAfterResults = await mapWithConcurrency(
-		balanceChanges,
+		pagedChanges,
 		async (change) => ({
 			...change,
 			balanceAfter: await getBalanceAtBlock(
@@ -154,7 +172,7 @@ export async function fetchBalanceChanges(params: {
 		),
 	)
 
-	const allChanges = balanceAfterResults
+	const changes = balanceAfterResults
 		.filter(
 			(change): change is typeof change & { balanceAfter: bigint } =>
 				change.balanceAfter !== null && Boolean(tokenMetadata[change.token]),
@@ -168,9 +186,9 @@ export async function fetchBalanceChanges(params: {
 		}))
 
 	return {
-		changes: allChanges.slice(offset, offset + limit),
+		changes,
 		tokenMetadata,
-		total: allChanges.length,
+		total,
 	}
 }
 
@@ -190,8 +208,8 @@ export const Route = createFileRoute('/api/tx/balance-changes/$hash')({
 						limit: url.searchParams.get('limit') ?? undefined,
 						offset: url.searchParams.get('offset') ?? undefined,
 					})
-					const limit = Math.min(MAX_LIMIT, query.limit ?? DEFAULT_LIMIT)
-					const offset = query.offset ?? 0
+					const limit = normalizeLimit(query.limit ?? DEFAULT_LIMIT)
+					const offset = normalizeOffset(query.offset ?? 0)
 
 					const data = await fetchBalanceChanges({ hash, limit, offset })
 					return Response.json(data)

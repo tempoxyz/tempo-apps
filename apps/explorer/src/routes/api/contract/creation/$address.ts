@@ -1,13 +1,49 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
+import type * as Hex from 'ox/Hex'
+import { getTransactionReceipt } from 'viem/actions'
 import { getChainId, getPublicClient } from 'wagmi/actions'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
-const creationCache = new Map<
-	string,
-	{ blockNumber: bigint; timestamp: bigint }
->()
+type CreationData = {
+	blockNumber: bigint
+	timestamp: bigint
+	hash: Hex.Hex | null
+	from: Address.Address | null
+	to: Address.Address | null
+	value: bigint | null
+	status: 'success' | 'reverted' | null
+	gasUsed: bigint | null
+	effectiveGasPrice: bigint | null
+}
+
+type CreationTxData = {
+	hash: Hex.Hex
+	from: Address.Address
+	to: Address.Address | null
+	value: bigint
+	status: 'success' | 'reverted'
+	gasUsed: bigint
+	effectiveGasPrice: bigint | null
+}
+
+const MAX_CREATION_CACHE_SIZE = 1000
+const creationCache = new Map<string, CreationData>()
+
+function serializeCreation(creation: CreationData) {
+	return {
+		blockNumber: creation.blockNumber.toString(),
+		timestamp: creation.timestamp.toString(),
+		hash: creation.hash,
+		from: creation.from,
+		to: creation.to,
+		value: creation.value?.toString() ?? null,
+		status: creation.status,
+		gasUsed: creation.gasUsed?.toString() ?? null,
+		effectiveGasPrice: creation.effectiveGasPrice?.toString() ?? null,
+	}
+}
 
 export const Route = createFileRoute('/api/contract/creation/$address')({
 	server: {
@@ -16,21 +52,19 @@ export const Route = createFileRoute('/api/contract/creation/$address')({
 				try {
 					const address = zAddress().parse(params.address)
 					Address.assert(address)
-					const cacheKey = address.toLowerCase()
+
+					const config = getWagmiConfig()
+					const chainId = getChainId(config)
+					const cacheKey = `${chainId}:${address.toLowerCase()}`
 
 					const cached = creationCache.get(cacheKey)
 					if (cached) {
 						return Response.json({
-							creation: {
-								blockNumber: cached.blockNumber.toString(),
-								timestamp: cached.timestamp.toString(),
-							},
+							creation: serializeCreation(cached),
 							error: null,
 						})
 					}
 
-					const config = getWagmiConfig()
-					const chainId = getChainId(config)
 					const client = getPublicClient(config, { chainId })
 
 					if (!client) {
@@ -57,18 +91,36 @@ export const Route = createFileRoute('/api/contract/creation/$address')({
 						return Response.json({ creation: null, error: null })
 					}
 
-					const block = await client.getBlock({ blockNumber: creationBlock })
+					const block = await client.getBlock({
+						blockNumber: creationBlock,
+						includeTransactions: true,
+					})
+					const creationTx = await findCreationTxInBlock(
+						client,
+						address,
+						block.transactions,
+					)
 
-					creationCache.set(cacheKey, {
+					const creation = {
 						blockNumber: creationBlock,
 						timestamp: block.timestamp,
-					})
+						hash: creationTx?.hash ?? null,
+						from: creationTx?.from ?? null,
+						to: creationTx?.to ?? null,
+						value: creationTx?.value ?? null,
+						status: creationTx?.status ?? null,
+						gasUsed: creationTx?.gasUsed ?? null,
+						effectiveGasPrice: creationTx?.effectiveGasPrice ?? null,
+					} satisfies CreationData
+
+					if (creationCache.size >= MAX_CREATION_CACHE_SIZE) {
+						const firstKey = creationCache.keys().next().value
+						if (firstKey) creationCache.delete(firstKey)
+					}
+					creationCache.set(cacheKey, creation)
 
 					return Response.json({
-						creation: {
-							blockNumber: creationBlock.toString(),
-							timestamp: block.timestamp.toString(),
-						},
+						creation: serializeCreation(creation),
 						error: null,
 					})
 				} catch (error) {
@@ -83,6 +135,51 @@ export const Route = createFileRoute('/api/contract/creation/$address')({
 		},
 	},
 })
+
+async function findCreationTxInBlock(
+	client: NonNullable<ReturnType<typeof getPublicClient>>,
+	address: Address.Address,
+	transactions: readonly {
+		hash: Hex.Hex
+		to: Address.Address | null
+		from: Address.Address
+		value: bigint
+	}[],
+): Promise<CreationTxData | null> {
+	// Filter to contract creation txs (to === null) to avoid N+1 receipt fetches
+	const candidates = transactions.filter((tx) => tx.to === null)
+	if (candidates.length === 0) return null
+
+	const receipts = await Promise.all(
+		candidates.map(async (tx) => {
+			try {
+				const receipt = await getTransactionReceipt(client, {
+					hash: tx.hash,
+				})
+				return { receipt, tx }
+			} catch {
+				return null
+			}
+		}),
+	)
+
+	for (const result of receipts) {
+		if (!result?.receipt.contractAddress) continue
+		if (!Address.isEqual(result.receipt.contractAddress, address)) continue
+
+		return {
+			hash: result.receipt.transactionHash,
+			from: result.receipt.from,
+			to: result.receipt.to,
+			value: result.tx.value,
+			status: result.receipt.status,
+			gasUsed: result.receipt.gasUsed,
+			effectiveGasPrice: result.receipt.effectiveGasPrice ?? null,
+		}
+	}
+
+	return null
+}
 
 async function binarySearchCreationBlock(
 	client: NonNullable<ReturnType<typeof getPublicClient>>,

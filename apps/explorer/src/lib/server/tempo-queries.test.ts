@@ -247,30 +247,6 @@ describe('tempo-queries', () => {
 		await expect(fetchTokenCreatedCount(1, 100)).resolves.toBe(42)
 	})
 
-	it('fetchTokenHolderBalances aggregates holders from raw transfer rows', async () => {
-		mockQueryBuilder.setResponses([
-			[
-				{
-					from: '0x0000000000000000000000000000000000000000',
-					to: '0xaaaa',
-					tokens: '10',
-				},
-				{
-					from: '0xaaaa',
-					to: '0xbbbb',
-					tokens: '4',
-				},
-			],
-		])
-
-		await expect(
-			fetchTokenHolderBalances('0xToken' as Address.Address, 1),
-		).resolves.toEqual([
-			{ address: '0xaaaa', balance: 6n },
-			{ address: '0xbbbb', balance: 4n },
-		])
-	})
-
 	it('fetchTokenCreatedMetadata returns empty when no tokens are provided', async () => {
 		await expect(fetchTokenCreatedMetadata(1, [])).resolves.toEqual([])
 	})
@@ -350,6 +326,30 @@ describe('tempo-queries', () => {
 		await expect(fetchLatestBlockNumber(1)).rejects.toThrow(
 			'Missing mock response',
 		)
+	})
+
+	it('fetchTokenHolderBalances aggregates holders from raw transfer rows', async () => {
+		mockQueryBuilder.setResponses([
+			[
+				{
+					from: '0x0000000000000000000000000000000000000000',
+					to: '0xaaaa',
+					tokens: '10',
+				},
+				{
+					from: '0xaaaa',
+					to: '0xbbbb',
+					tokens: '4',
+				},
+			],
+		])
+
+		await expect(
+			fetchTokenHolderBalances('0xToken' as Address.Address, 1),
+		).resolves.toEqual([
+			{ address: '0xaaaa', balance: 6n },
+			{ address: '0xbbbb', balance: 4n },
+		])
 	})
 
 	it('fetchTokenHolderBalances aggregates incoming and outgoing balances', async () => {

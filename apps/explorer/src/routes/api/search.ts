@@ -10,6 +10,7 @@ import tokensIndex42431 from '#data/tokens-index-42431.json' with {
 }
 import tokensIndex4217 from '#data/tokens-index-4217.json' with { type: 'json' }
 import { isTip20Address } from '#lib/domain/tip20'
+import { normalizeSearchInput } from '#lib/tempo-address'
 import {
 	fetchLatestBlockNumber,
 	fetchTransactionTimestamp,
@@ -126,12 +127,13 @@ export const Route = createFileRoute('/api/search')({
 		handlers: {
 			GET: async ({ request }) => {
 				const url = new URL(request.url)
-				const query = url.searchParams.get('q')?.trim() ?? ''
+				const rawQuery = url.searchParams.get('q')?.trim() ?? ''
+				const query = normalizeSearchInput(rawQuery)
 
 				if (!query)
 					return Response.json({
 						results: [],
-						query,
+						query: rawQuery,
 					} satisfies SearchApiResponse)
 
 				const chainId = getChainId(getWagmiConfig())
@@ -188,9 +190,12 @@ export const Route = createFileRoute('/api/search')({
 					results.push(...searchTokens(query, chainId))
 				}
 
-				return Response.json({ results, query } satisfies SearchApiResponse, {
-					headers: { 'Cache-Control': 'public, max-age=30' },
-				})
+				return Response.json(
+					{ results, query: rawQuery } satisfies SearchApiResponse,
+					{
+						headers: { 'Cache-Control': 'public, max-age=30' },
+					},
+				)
 			},
 		},
 	},

@@ -1,10 +1,5 @@
 import { env } from 'cloudflare:workers'
-import {
-	tempo,
-	tempoDevnet,
-	tempoLocalnet,
-	tempoModerato,
-} from 'viem/chains'
+import { tempo, tempoDevnet, tempoLocalnet, tempoModerato } from 'viem/chains'
 import type { Chain } from 'viem/chains'
 import { alphaUsd, doNotUseUsd } from './consts.js'
 
@@ -14,8 +9,8 @@ type TempoEnv = CanonicalTempoEnv | 'testnet'
 const chains = {
 	devnet: tempoDevnet,
 	localnet: tempoLocalnet,
-        mainnet: tempo,
-        moderato: tempoModerato,
+	mainnet: tempo,
+	moderato: tempoModerato,
 } as const satisfies Record<CanonicalTempoEnv, Chain>
 
 const feeTokens = {
@@ -27,8 +22,8 @@ const feeTokens = {
 
 const rawTempoEnv = (env.TEMPO_ENV as TempoEnv | undefined) ?? 'moderato'
 const tempoEnv: CanonicalTempoEnv =
-        rawTempoEnv === 'testnet' ? 'moderato' : rawTempoEnv
+	rawTempoEnv === 'testnet' ? 'moderato' : rawTempoEnv
 
 export const tempoChain = chains[tempoEnv].extend({
-        feeToken: feeTokens[tempoEnv],
+	feeToken: feeTokens[tempoEnv],
 })

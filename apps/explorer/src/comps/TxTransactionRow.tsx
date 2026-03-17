@@ -8,7 +8,7 @@ import type { GetBlockReturnType } from 'wagmi/actions'
 import { Amount } from '#comps/Amount'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 import { TxEventDescription } from '#comps/TxEventDescription'
-import type { KnownEvent, KnownEventPart } from '#lib/domain/known-events'
+import type { KnownEvent } from '#lib/domain/known-events'
 import { PriceFormatter } from '#lib/formatting'
 
 export type TransactionData = {
@@ -119,22 +119,16 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 	const { transaction } = props
 	const batchData = useTransactionDataFromBatch(transaction.hash)
 
-	const amountParts = React.useMemo(() => {
+	const events = React.useMemo(() => {
 		if (!batchData) return
-
-		return batchData.knownEvents
-			.filter((event) => event.type !== 'approval')
-			.flatMap((event) =>
-				event.parts.filter(
-					(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
-						part.type === 'amount',
-				),
-			)
+		return batchData.knownEvents.filter((event) => event.type !== 'approval')
 	}, [batchData])
 
 	const infiniteLabel = <span className="text-secondary">−</span>
 
-	if (!amountParts?.length)
+	if (
+		!events?.some((event) => event.parts.some((part) => part.type === 'amount'))
+	)
 		return (
 			<Amount.Base
 				value={0n}
@@ -145,12 +139,19 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			/>
 		)
 
-	// Normalize all amounts to 18 decimals and sum as bigints
+	// For each event, take the max amount (avoids double-counting swap legs),
+	// then sum across events.
 	const normalizedDecimals = 18
-	const totalValue = amountParts.reduce((sum, part) => {
-		const decimals = part.value.decimals ?? 6
-		const scale = 10n ** BigInt(normalizedDecimals - decimals)
-		return sum + part.value.value * scale
+	const totalValue = events.reduce((sum, event) => {
+		let maxAmount = 0n
+		for (const part of event.parts) {
+			if (part.type !== 'amount') continue
+			const decimals = part.value.decimals ?? 6
+			const scale = 10n ** BigInt(normalizedDecimals - decimals)
+			const normalized = part.value.value * scale
+			if (normalized > maxAmount) maxAmount = normalized
+		}
+		return sum + maxAmount
 	}, 0n)
 
 	if (totalValue === 0n) {

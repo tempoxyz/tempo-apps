@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as ApiTip20RolesRouteImport } from './routes/api/tip20-roles'
@@ -40,6 +41,11 @@ import { Route as ApiAddressHistoryAddressRouteImport } from './routes/api/addre
 import { Route as ApiAddressBalancesAddressRouteImport } from './routes/api/address/balances/$address'
 import { Route as LayoutBlockCountdownTargetBlockRouteImport } from './routes/_layout/block/countdown.$targetBlock'
 
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
   getParentRoute: () => rootRouteImport,
@@ -199,6 +205,7 @@ const LayoutBlockCountdownTargetBlockRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
+  '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -229,6 +236,7 @@ export interface FileRoutesByFullPath {
   '/api/tx/trace/$hash': typeof ApiTxTraceHashRoute
 }
 export interface FileRoutesByTo {
+  '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -262,6 +270,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_layout': typeof LayoutRouteWithChildren
+  '/search': typeof SearchRoute
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
@@ -296,6 +305,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/search'
     | '/blocks'
     | '/tokens'
     | '/api/code'
@@ -326,6 +336,7 @@ export interface FileRouteTypes {
     | '/api/tx/trace/$hash'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/search'
     | '/blocks'
     | '/tokens'
     | '/api/code'
@@ -358,6 +369,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_layout'
+    | '/search'
     | '/_layout/blocks'
     | '/_layout/tokens'
     | '/api/code'
@@ -391,6 +403,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
+  SearchRoute: typeof SearchRoute
   ApiCodeRoute: typeof ApiCodeRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
@@ -410,6 +423,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_layout': {
       id: '/_layout'
       path: ''
@@ -662,6 +682,7 @@ const LayoutRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
+  SearchRoute: SearchRoute,
   ApiCodeRoute: ApiCodeRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,

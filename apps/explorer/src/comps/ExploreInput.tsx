@@ -8,6 +8,7 @@ import { ProgressLine } from '#comps/ProgressLine'
 import { RelativeTime } from '#comps/RelativeTime'
 import { cx } from '#lib/css'
 import { getApiUrl } from '#lib/env.ts'
+import { normalizeSearchInput } from '#lib/tempo-address'
 import type {
 	AddressSearchResult,
 	BlockSearchResult,
@@ -57,21 +58,25 @@ export function ExploreInput(props: ExploreInput.Props) {
 	const submittingRef = React.useRef(false)
 
 	const query = value.trim()
+	const normalizedQuery = normalizeSearchInput(query)
 	const isValidInput =
 		query.length > 0 &&
-		(Address.validate(query) ||
-			(Hex.validate(query) && Hex.size(query) === 32) ||
-			parseBlockInput(query) !== null)
+		(Address.validate(normalizedQuery) ||
+			(Hex.validate(normalizedQuery) && Hex.size(normalizedQuery) === 32) ||
+			parseBlockInput(normalizedQuery) !== null)
 	const { data: searchResults, isFetching } = useQuery(
 		queryOptions({
-			queryKey: ['search', query],
+			queryKey: ['search', normalizedQuery],
 			queryFn: async ({ signal }): Promise<SearchApiResponse> => {
-				const url = getApiUrl('/api/search', new URLSearchParams({ q: query }))
+				const url = getApiUrl(
+					'/api/search',
+					new URLSearchParams({ q: normalizedQuery }),
+				)
 				const res = await fetch(url, { signal })
 				if (!res.ok) throw new Error('Search failed')
 				return res.json()
 			},
-			enabled: query !== '',
+			enabled: normalizedQuery !== '',
 			staleTime: 30_000,
 			placeholderData: keepPreviousData,
 		}),
@@ -210,19 +215,24 @@ export function ExploreInput(props: ExploreInput.Props) {
 						formValue = formValue.trim()
 						if (!formValue) return
 
-						const blockId = parseBlockInput(formValue)
+						const normalizedFormValue = normalizeSearchInput(formValue)
+
+						const blockId = parseBlockInput(normalizedFormValue)
 						if (blockId !== null) {
 							onActivate?.({ type: 'block', value: blockId })
 							return
 						}
 
-						if (Address.validate(formValue)) {
-							onActivate?.({ type: 'address', value: formValue })
+						if (Address.validate(normalizedFormValue)) {
+							onActivate?.({ type: 'address', value: normalizedFormValue })
 							return
 						}
 
-						if (Hex.validate(formValue) && Hex.size(formValue) === 32) {
-							onActivate?.({ type: 'hash', value: formValue })
+						if (
+							Hex.validate(normalizedFormValue) &&
+							Hex.size(normalizedFormValue) === 32
+						) {
+							onActivate?.({ type: 'hash', value: normalizedFormValue })
 							return
 						}
 					}}

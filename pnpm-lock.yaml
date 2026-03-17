@@ -193,8 +193,8 @@ catalogs:
       specifier: ^4.2.1
       version: 4.2.1
     tempo.ts:
-      specifier: ^0.14.0
-      version: 0.14.0
+      specifier: ^0.14.2
+      version: 0.14.2
     testcontainers:
       specifier: ^11.11.0
       version: 11.12.0
@@ -316,7 +316,7 @@ importers:
         version: 7.7.4
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.14.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
         version: 2.47.1(typescript@5.9.3)(zod@4.3.6)
@@ -588,7 +588,7 @@ importers:
         version: 0.14.0(typescript@5.9.3)(zod@4.3.6)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.14.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
         version: 2.47.1(typescript@5.9.3)(zod@4.3.6)
@@ -637,7 +637,7 @@ importers:
         version: 19.2.4(react@19.2.4)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.14.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
         version: 2.47.1(typescript@5.9.3)(zod@4.3.6)
@@ -671,7 +671,7 @@ importers:
     dependencies:
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.14.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
     devDependencies:
       '@cloudflare/workers-types':
         specifier: 'catalog:'
@@ -705,7 +705,7 @@ importers:
         version: 0.14.0(typescript@5.9.3)(zod@4.3.6)
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.14.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
         version: 2.47.1(typescript@5.9.3)(zod@4.3.6)
@@ -736,7 +736,7 @@ importers:
         version: 4.0.1
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.14.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
+        version: 0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
         version: 2.47.1(typescript@5.9.3)(zod@4.3.6)
@@ -2124,18 +2124,11 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@remix-run/fetch-router@0.12.0':
-    resolution: {integrity: sha512-BDG/VepZg2ZJ7wav3HDrB9ZJLpzZONHi9ItOkFMcKsrbm5g7jjrxW5Vdijbbebz12pbJQu6VKTwLVXp/LgFusA==}
-    peerDependencies:
-      '@remix-run/headers': ^0.17.2
-      '@remix-run/route-pattern': ^0.15.3
-      '@remix-run/session': ^0.4.0
+  '@remix-run/fetch-router@0.17.0':
+    resolution: {integrity: sha512-3FeJGrTqrKKCvZdQWijbCXTEHKcdttkLFbI2ogfpZ+iDYSNZ9036wgDXuuoZqg6d+D0E8Unhk5ZwrLKDCd/hOw==}
 
-  '@remix-run/headers@0.17.2':
-    resolution: {integrity: sha512-IfHVCftsRKfk7kIQUxP9WDCe0OXj9X0lDRfFxk3CPcXJenBUEsYEPeBoW/YCZlKhdRWZjQlrofdk63lMSJmy8w==}
-
-  '@remix-run/route-pattern@0.15.3':
-    resolution: {integrity: sha512-7s4Oy9q6Oz9Vfwg0iZscpmYVASNG9fLqbCa+YY0+SWKksDpvCRiW46xp3S3zEvT7zEP7G55FKA+JdrqqK2AOXw==}
+  '@remix-run/route-pattern@0.19.0':
+    resolution: {integrity: sha512-RXKaIJ2Lx01uyZc0iw+yLzowFCa1/NuB8jN7QTo4QUe2CaUGtvPGdhgrTUp75lyNNCSJIrM9SaAJ6c1pjZdmoA==}
 
   '@remix-run/session@0.4.1':
     resolution: {integrity: sha512-Bm6aKYgutb/raHZ3laloz8g/Qu7f3CeK3o4gUVDMxtEiAdWCzJamwHoTpGOc5+g1Kuy7z85v4M6nGrF06MFDSg==}
@@ -5443,14 +5436,6 @@ packages:
     resolution: {integrity: sha512-smsWv2LzFjP03xmvFoJ331ss6h+jixfA4UUV/Bsiyuu4YJPfN+FIQGOIiv4w9/+MoHkfkJ22UIaQWRVFRfH6Vw==}
     engines: {node: '>=20'}
 
-  ox@0.11.3:
-    resolution: {integrity: sha512-1bWYGk/xZel3xro3l8WGg6eq4YEKlaqvyMtVhfMFpbJzK2F6rj4EDRtqDCWVEJMkzcmEi9uW2QxsqELokOlarw==}
-    peerDependencies:
-      typescript: '>=5.4.0'
-    peerDependenciesMeta:
-      typescript:
-        optional: true
-
   ox@0.14.0:
     resolution: {integrity: sha512-WLOB7IKnmI3Ol6RAqY7CJdZKl8QaI44LN91OGF1061YIeN6bL5IsFcdp7+oQShRyamE/8fW/CBRWhJAOzI35Dw==}
     peerDependencies:
@@ -6089,8 +6074,8 @@ packages:
   teex@1.0.1:
     resolution: {integrity: sha512-eYE6iEI62Ni1H8oIa7KlDU6uQBtqr4Eajni3wX7rpfXD8ysFx8z0+dri+KWEPWpBsxXfxu58x/0jvTVT1ekOSg==}
 
-  tempo.ts@0.14.0:
-    resolution: {integrity: sha512-tyNg6pomYGqXpiRm0PDLwzOcifd//C9J+B+4rvbIHIwvwqxE1jres1YuaVSayo0JE0hzmXi/HZjJOsbSRdu+kg==}
+  tempo.ts@0.14.2:
+    resolution: {integrity: sha512-N4UkP2X/KDLmYUEIEWUDAk1m/USbKMzTjjUz1m0LwrIEVfoDlcSbBRc9jp14gLZcJVDlnq+fWHFVcH+GdrySgQ==}
     peerDependencies:
       viem: '>=2.43.3'
     peerDependenciesMeta:
@@ -7846,15 +7831,12 @@ snapshots:
       - react-native-b4a
       - supports-color
 
-  '@remix-run/fetch-router@0.12.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)':
+  '@remix-run/fetch-router@0.17.0':
     dependencies:
-      '@remix-run/headers': 0.17.2
-      '@remix-run/route-pattern': 0.15.3
+      '@remix-run/route-pattern': 0.19.0
       '@remix-run/session': 0.4.1
 
-  '@remix-run/headers@0.17.2': {}
-
-  '@remix-run/route-pattern@0.15.3': {}
+  '@remix-run/route-pattern@0.19.0': {}
 
   '@remix-run/session@0.4.1': {}
 
@@ -11491,21 +11473,6 @@ snapshots:
       powershell-utils: 0.1.0
       wsl-utils: 0.3.1
 
-  ox@0.11.3(typescript@5.9.3)(zod@4.3.6):
-    dependencies:
-      '@adraffy/ens-normalize': 1.11.1
-      '@noble/ciphers': 1.3.0
-      '@noble/curves': 1.9.1
-      '@noble/hashes': 1.8.0
-      '@scure/bip32': 1.7.0
-      '@scure/bip39': 1.6.0
-      abitype: 1.2.3(typescript@5.9.3)(zod@4.3.6)
-      eventemitter3: 5.0.1
-    optionalDependencies:
-      typescript: 5.9.3
-    transitivePeerDependencies:
-      - zod
-
   ox@0.14.0(typescript@5.9.3)(zod@4.3.6):
     dependencies:
       '@adraffy/ens-normalize': 1.11.1
@@ -12292,16 +12259,13 @@ snapshots:
       - bare-abort-controller
       - react-native-b4a
 
-  tempo.ts@0.14.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6):
+  tempo.ts@0.14.2(typescript@5.9.3)(viem@2.47.1(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6):
     dependencies:
-      '@remix-run/fetch-router': 0.12.0(@remix-run/headers@0.17.2)(@remix-run/route-pattern@0.15.3)(@remix-run/session@0.4.1)
-      ox: 0.11.3(typescript@5.9.3)(zod@4.3.6)
+      '@remix-run/fetch-router': 0.17.0
+      ox: 0.14.0(typescript@5.9.3)(zod@4.3.6)
     optionalDependencies:
       viem: 2.47.1(typescript@5.9.3)(zod@4.3.6)
     transitivePeerDependencies:
-      - '@remix-run/headers'
-      - '@remix-run/route-pattern'
-      - '@remix-run/session'
       - typescript
       - zod
 
