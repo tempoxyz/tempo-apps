@@ -141,7 +141,11 @@ export function FundAccount() {
 					Receipts:{' '}
 					{fund.data.map((hash) => (
 						<div key={hash}>
-							<a href={`https://explore.tempo.xyz/${hash}`} target="_blank">
+							<a
+								href={`https://explore.tempo.xyz/${hash}`}
+								target="_blank"
+								rel="noopener"
+							>
 								{hash}
 							</a>
 						</div>

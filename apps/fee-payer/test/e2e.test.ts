@@ -1,4 +1,4 @@
-import { env, SELF } from 'cloudflare:test'
+import { env, exports } from 'cloudflare:workers'
 import { Mnemonic } from 'ox'
 import { createClient, custom, http, parseUnits } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
@@ -25,16 +25,18 @@ function createFeePayerTransportWithSpy() {
 		async request({ method, params }) {
 			requests.push({ method, params })
 
-			const response = await SELF.fetch('https://fee-payer.test/', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					id: 1,
-					method,
-					params,
+			const response = await exports.default.fetch(
+				new Request('https://fee-payer.test/', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method,
+						params,
+					}),
 				}),
-			})
+			)
 			const data = (await response.json()) as {
 				result?: unknown
 				error?: { code: number; message: string; data?: unknown }
@@ -107,15 +109,17 @@ beforeAll(async () => {
 describe('fee-payer integration', () => {
 	describe('request handling', () => {
 		it('returns error for unsupported method', async () => {
-			const response = await SELF.fetch('https://fee-payer.test/', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					id: 1,
-					method: 'eth_chainId',
+			const response = await exports.default.fetch(
+				new Request('https://fee-payer.test/', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'eth_chainId',
+					}),
 				}),
-			})
+			)
 
 			expect(response.status).toBe(200)
 			const data = (await response.json()) as {
@@ -126,16 +130,18 @@ describe('fee-payer integration', () => {
 		})
 
 		it('rejects eth_signTransaction', async () => {
-			const response = await SELF.fetch('https://fee-payer.test/', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					id: 1,
-					method: 'eth_signTransaction',
-					params: [{ to: '0x0000000000000000000000000000000000000000' }],
+			const response = await exports.default.fetch(
+				new Request('https://fee-payer.test/', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'eth_signTransaction',
+						params: [{ to: '0x0000000000000000000000000000000000000000' }],
+					}),
 				}),
-			})
+			)
 
 			expect(response.status).toBe(200)
 			const data = (await response.json()) as {
@@ -145,21 +151,25 @@ describe('fee-payer integration', () => {
 		})
 
 		it('handles CORS preflight requests', async () => {
-			const response = await SELF.fetch('https://fee-payer.test/', {
-				method: 'OPTIONS',
-				headers: {
-					Origin: 'https://example.com',
-					'Access-Control-Request-Method': 'POST',
-				},
-			})
+			const response = await exports.default.fetch(
+				new Request('https://fee-payer.test/', {
+					method: 'OPTIONS',
+					headers: {
+						Origin: 'https://example.com',
+						'Access-Control-Request-Method': 'POST',
+					},
+				}),
+			)
 
 			expect([200, 204]).toContain(response.status)
 		})
 
 		it('handles health check / root path', async () => {
-			const response = await SELF.fetch('https://fee-payer.test/', {
-				method: 'GET',
-			})
+			const response = await exports.default.fetch(
+				new Request('https://fee-payer.test/', {
+					method: 'GET',
+				}),
+			)
 
 			expect(response.status).toBeLessThan(500)
 		})

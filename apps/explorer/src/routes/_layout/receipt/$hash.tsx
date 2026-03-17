@@ -116,7 +116,6 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				}
 			: {}),
 	}),
-	// @ts-expect-error - TODO: fix
 	loader: ({ params, context }) =>
 		withLoaderTiming('/_layout/receipt/$hash', async () => {
 			const hash = parseHashFromParams(params)

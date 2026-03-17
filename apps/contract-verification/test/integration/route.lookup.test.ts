@@ -1,7 +1,7 @@
 import * as z from 'zod/mini'
 import { Hex } from 'ox'
 import { describe, it, expect } from 'vitest'
-import { env } from 'cloudflare:test'
+import { env } from 'cloudflare:workers'
 import { drizzle } from 'drizzle-orm/d1'
 
 import * as DB from '#database/schema.ts'
