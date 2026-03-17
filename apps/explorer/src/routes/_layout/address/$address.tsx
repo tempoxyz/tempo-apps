@@ -1248,6 +1248,7 @@ function SectionsWrapper(props: {
 									}))
 							}
 							totalItems={assetsData.length}
+							displayCount={assetsData.length}
 							page={page}
 							itemsLabel="assets"
 							itemsPerPage={ASSETS_PER_PAGE}
