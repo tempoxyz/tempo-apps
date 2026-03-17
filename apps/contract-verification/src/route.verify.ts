@@ -669,10 +669,13 @@ async function runVerificationJob(
 		if (!chain) {
 			throw new Error(`Chain ${chainId} is not supported`)
 		}
+		const rpcUrl = chain.rpcUrls.default.http.at(0)
 		const createClient = deps?.createPublicClient ?? createPublicClient
 		const client = createClient({
 			chain,
-			transport: http(chain.rpcUrls.default.http.at(0)),
+			transport: http(
+				env.TEMPO_RPC_KEY ? `${rpcUrl}/${env.TEMPO_RPC_KEY}` : rpcUrl,
+			),
 		})
 
 		const creationTransactionMetadata = body.creationTransactionHash

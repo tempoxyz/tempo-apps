@@ -176,9 +176,14 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 				`The chain with chainId ${chainId} is not supported`,
 			)
 		}
+		const rpcUrl = chainConfig.rpcUrls.default.http.at(0)
 		const client = createPublicClient({
 			chain: chainConfig,
-			transport: http(chainConfig.rpcUrls.default.http.at(0)),
+			transport: http(
+				context.env.TEMPO_RPC_KEY
+					? `${rpcUrl}/${context.env.TEMPO_RPC_KEY}`
+					: rpcUrl,
+			),
 		})
 
 		const creationTransactionMetadata = body.creatorTxHash
