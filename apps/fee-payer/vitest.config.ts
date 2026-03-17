@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { defineWorkersConfig } from '@cloudflare/vitest-pool-workers/config'
+import { cloudflareTest } from '@cloudflare/vitest-pool-workers'
 import { Mnemonic } from 'ox'
 import 'dotenv/config'
 
@@ -26,23 +26,23 @@ const rpcUrl = (() => {
 	return `http://localhost:9545/${poolId}`
 })()
 
-export default defineWorkersConfig({
+export default {
 	test: {
 		include: ['**/e2e.test.ts', '**/*.test.ts'],
-		globalSetup: [join(__dirname, './test/setup.global.ts')],
-		poolOptions: {
-			workers: {
-				wrangler: { configPath: './wrangler.json' },
-				miniflare: {
-					bindings: {
-						ALLOWED_ORIGINS: '*',
-						SPONSOR_PRIVATE_KEY: sponsorPrivateKey,
-						TEMPO_RPC_URL: rpcUrl,
-						TEMPO_ENV: tempoEnv,
-						INDEXSUPPLY_API_KEY: 'test-key',
-					},
+		globalSetup: [join(import.meta.dirname, './test/setup.global.ts')],
+	},
+	plugins: [
+		cloudflareTest({
+			wrangler: { configPath: './wrangler.json' },
+			miniflare: {
+				bindings: {
+					ALLOWED_ORIGINS: '*',
+					SPONSOR_PRIVATE_KEY: sponsorPrivateKey,
+					TEMPO_RPC_URL: rpcUrl,
+					TEMPO_ENV: tempoEnv,
+					INDEXSUPPLY_API_KEY: 'test-key',
 				},
 			},
-		},
-	},
-})
+		}),
+	],
+}
