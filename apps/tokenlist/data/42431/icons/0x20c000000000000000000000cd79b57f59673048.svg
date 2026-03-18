@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00843D"/>
+      <stop offset="100%" stop-color="#006B32"/>
+    </linearGradient>
+  </defs>
+  <!-- Circle background (Australian green) -->
+  <circle cx="100" cy="100" r="100" fill="url(#bg)"/>
+  <!-- Gold ring -->
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#FFCD00" stroke-width="4"/>
+  <!-- Dollar sign -->
+  <text x="100" y="82" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="80" fill="#FFFFFF" dominant-baseline="central">$</text>
+  <!-- AU text below -->
+  <text x="100" y="152" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="36" fill="#FFCD00" dominant-baseline="central">AUD</text>
+</svg>
