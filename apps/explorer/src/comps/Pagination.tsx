@@ -204,8 +204,16 @@ export namespace Pagination {
 
 	export const Ellipsis = -1
 
-	export function pluralize(count: number, label: string) {
-		return count === 1 ? label.replace(/s$/, '') : label
+	const uncountable = new Set(['data'])
+	const irregulars: Record<string, string> = {
+		txns: 'txn',
+	}
+
+	export function pluralize(count: number | string, label: string) {
+		if (Number(count) !== 1) return label
+		if (uncountable.has(label)) return label
+		if (label in irregulars) return irregulars[label]
+		return label.replace(/s$/, '')
 	}
 
 	export const numFormat = new Intl.NumberFormat('en-US', {

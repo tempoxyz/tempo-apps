@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { cx } from '#lib/css'
+import { Pagination } from './Pagination'
 
 export function Sections(props: Sections.Props) {
 	const {
@@ -57,9 +58,7 @@ export function Sections(props: Sections.Props) {
 											{isCollapsed && Boolean(section.totalItems) && (
 												<span className="text-[13px] text-tertiary">
 													{section.totalItems}{' '}
-													{section.totalItems === 1
-														? itemsLabel.replace(/s$/, '')
-														: itemsLabel}
+													{Pagination.pluralize(section.totalItems ?? 0, itemsLabel)}
 												</span>
 											)}
 											<div
