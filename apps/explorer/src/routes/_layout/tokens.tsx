@@ -17,6 +17,7 @@ import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens'
 import { getApiUrl } from '#lib/env.ts'
+import { OG_BASE_URL } from '#lib/og'
 
 async function fetchTokensCount() {
 	const response = await fetch(getApiUrl('/api/tokens/count'), {
@@ -34,7 +35,20 @@ async function fetchTokensCount() {
 export const Route = createFileRoute('/_layout/tokens')({
 	component: TokensPage,
 	head: () => ({
-		meta: [{ title: 'Tokens – Tempo Explorer' }],
+		meta: [
+			{ title: 'Tokens – Tempo Explorer' },
+			{ property: 'og:title', content: 'Tokens – Tempo Explorer' },
+			{
+				property: 'og:description',
+				content: 'Browse all tokens on Tempo.',
+			},
+			{ property: 'og:image', content: `${OG_BASE_URL}/tokens` },
+			{ property: 'og:image:type', content: 'image/webp' },
+			{ property: 'og:image:width', content: '1200' },
+			{ property: 'og:image:height', content: '630' },
+			{ name: 'twitter:card', content: 'summary_large_image' },
+			{ name: 'twitter:image', content: `${OG_BASE_URL}/tokens` },
+		],
 	}),
 	validateSearch: z.object({
 		page: z.optional(z.number()),
