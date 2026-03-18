@@ -144,14 +144,14 @@ export function Sections(props: Sections.Props) {
 							))
 						)}
 					</div>
-					{sections.map((section, index) => (
-						<div
-							key={section.title}
-							className={cx('pr-[18px]', activeSection !== index && 'hidden')}
-						>
-							{section.contextual}
+					{sections[activeSection] && (
+						<div className="pr-[18px]">
+							{sections[activeSection].contextual}
 						</div>
-					))}
+					)}
+
+
+
 				</div>
 
 				{sections[activeSection] && (
