@@ -3,6 +3,7 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
+	redirect,
 	rootRouteId,
 	stripSearchParams,
 	useLocation,
@@ -39,6 +40,7 @@ import {
 	TransactionTimestamp,
 } from '#comps/TxTransactionRow'
 import { cx } from '#lib/css'
+import { normalizeSearchInput } from '#lib/tempo-address'
 import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type ContractSource,
@@ -189,6 +191,16 @@ const TabSchema = z.prefault(
 
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
+	beforeLoad: ({ params, search }) => {
+		const normalized = normalizeSearchInput(params.address)
+		if (normalized !== params.address) {
+			throw redirect({
+				to: '/address/$address',
+				params: { address: normalized },
+				search,
+			})
+		}
+	},
 	notFoundComponent: ({ data }) => (
 		<NotFound
 			title="Address Not Found"
