@@ -73,6 +73,52 @@ export function blockDetailQueryOptions(blockRef: BlockIdentifier) {
 	})
 }
 
+export type TxWithBlock = BlockTransaction & {
+	blockTimestamp: bigint
+	blockNumber: bigint
+}
+
+export function latestTransactionsQueryOptions() {
+	return queryOptions({
+		queryKey: ['latest-transactions'],
+		queryFn: async () => {
+			const config = getWagmiConfig()
+			const latestBlock = await getBlock(config)
+			const latestBlockNumber = latestBlock.number
+
+			const blockNumbers: bigint[] = []
+			for (let i = 0n; i < 4n; i++) {
+				const bn = latestBlockNumber - i
+				if (bn >= 0n) blockNumbers.push(bn)
+			}
+
+			const blocks = await Promise.all(
+				blockNumbers.map((blockNumber) =>
+					getBlock(config, {
+						blockNumber,
+						includeTransactions: true,
+					}).catch(() => null),
+				),
+			)
+
+			const txs: TxWithBlock[] = []
+			for (const block of blocks) {
+				if (!block) continue
+				for (const tx of (block as BlockWithTransactions).transactions) {
+					txs.push({
+						...tx,
+						blockTimestamp: block.timestamp,
+						blockNumber: block.number ?? 0n,
+					})
+				}
+				if (txs.length >= 6) break
+			}
+
+			return txs.slice(0, 6)
+		},
+	})
+}
+
 // Batch query for page transaction known events
 export function blockKnownEventsQueryOptions(
 	blockNumber: bigint,
