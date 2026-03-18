@@ -55,10 +55,10 @@ export function Sections(props: Sections.Props) {
 											{section.title}
 										</h1>
 										<div className="flex items-center gap-[12px]">
-											{isCollapsed && Boolean(section.totalItems) && (
+											{isCollapsed && Number(section.totalItems) > 0 && (
 												<span className="text-[13px] text-tertiary">
 													{section.totalItems}{' '}
-													{Pagination.pluralize(section.totalItems, itemsLabel)}
+													{Pagination.pluralize(Number(section.totalItems), itemsLabel)}
 												</span>
 											)}
 											<div
@@ -149,9 +149,6 @@ export function Sections(props: Sections.Props) {
 							{sections[activeSection].contextual}
 						</div>
 					)}
-
-
-
 				</div>
 
 				{sections[activeSection] && (
