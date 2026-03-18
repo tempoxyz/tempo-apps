@@ -208,7 +208,7 @@ function LatestTransactionsPanel() {
 		<PanelCard
 			title="Latest Transactions"
 			icon={<ReceiptIcon className="size-[14px] text-accent" />}
-			viewAllTo="/blocks"
+			viewAllTo="/transactions"
 		>
 			{txs == null ? (
 				<div className="px-4 py-8 text-center text-[13px] text-tertiary">
