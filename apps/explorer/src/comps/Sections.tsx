@@ -58,7 +58,7 @@ export function Sections(props: Sections.Props) {
 											{isCollapsed && Boolean(section.totalItems) && (
 												<span className="text-[13px] text-tertiary">
 													{section.totalItems}{' '}
-													{Pagination.pluralize(section.totalItems ?? 0, itemsLabel)}
+													{Pagination.pluralize(section.totalItems, itemsLabel)}
 												</span>
 											)}
 											<div
