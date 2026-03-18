@@ -2,7 +2,7 @@ import type { Address, Hex } from 'ox'
 import { encodeFunctionData } from 'viem'
 import { Abis } from 'viem/tempo'
 import { describe, expect, it, vi } from 'vitest'
-import { buildTxOnlyTransactions } from '#routes/api/address/history/$address'
+import { buildTxOnlyTransactions } from './$address'
 
 vi.mock('#wagmi.config', () => ({
 	getWagmiConfig: () => ({}),

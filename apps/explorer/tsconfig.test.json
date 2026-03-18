@@ -1,6 +1,6 @@
 {
 	"extends": "./tsconfig.json",
-	"include": ["**/*.test.ts", "**/*.test.tsx"],
+	"include": ["**/*.test.ts", "**/*.test.tsx", "vitest.config.ts"],
 	"compilerOptions": {
 		"types": [
 			"@cloudflare/vitest-pool-workers",

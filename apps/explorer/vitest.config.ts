@@ -1,6 +1,7 @@
+import { defineConfig } from 'vitest/config'
 import { cloudflareTest } from '@cloudflare/vitest-pool-workers'
 
-export default {
+export default defineConfig({
 	plugins: [
 		cloudflareTest({
 			wrangler: {
@@ -8,4 +9,4 @@ export default {
 			},
 		}),
 	],
-}
+})

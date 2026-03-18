@@ -34,11 +34,55 @@ export type TokensApiResponse = {
 const SPAM_TOKEN_PATTERN = /\btest|test\b|\bfake|fake\b/i
 
 function isSpamToken(row: TokenCreatedRow): boolean {
-	return SPAM_TOKEN_PATTERN.test(row.name) || SPAM_TOKEN_PATTERN.test(row.symbol)
+	return (
+		SPAM_TOKEN_PATTERN.test(row.name) || SPAM_TOKEN_PATTERN.test(row.symbol)
+	)
 }
 
 /** Mainnet chain ID */
 const TEMPO_MAINNET_CHAIN_ID = 4217
+
+const TOKENLIST_URLS: Record<number, string> = {
+	4217: 'https://tokenlist.tempo.xyz/list/4217',
+	42431: 'https://tokenlist.tempo.xyz/list/42431',
+	31318: 'https://tokenlist.tempo.xyz/list/31318',
+}
+
+type TokenListEntry = {
+	address: string
+}
+
+type TokenListResponse = {
+	tokens: TokenListEntry[]
+}
+
+let cachedTokenList:
+	| { chainId: number; addresses: Set<string>; ts: number }
+	| undefined
+
+async function getTokenListAddresses(chainId: number): Promise<Set<string>> {
+	const now = Date.now()
+	if (
+		cachedTokenList?.chainId === chainId &&
+		now - cachedTokenList.ts < 5 * 60_000
+	) {
+		return cachedTokenList.addresses
+	}
+
+	const url = TOKENLIST_URLS[chainId]
+	if (!url) return new Set()
+
+	try {
+		const res = await fetch(url)
+		if (!res.ok) return cachedTokenList?.addresses ?? new Set()
+		const data = (await res.json()) as TokenListResponse
+		const addresses = new Set(data.tokens.map((t) => t.address.toLowerCase()))
+		cachedTokenList = { chainId, addresses, ts: now }
+		return addresses
+	} catch {
+		return cachedTokenList?.addresses ?? new Set()
+	}
+}
 
 export const fetchTokens = createServerFn({ method: 'POST' })
 	.inputValidator((input) => FetchTokensInputSchema.parse(input))
@@ -50,34 +94,37 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 
 		const shouldFilter = chainId === TEMPO_MAINNET_CHAIN_ID
 
-		let tokensResult: TokenCreatedRow[]
+		// Fetch tokenlist addresses and DB rows in parallel
+		const [tokenListAddresses, allRows] = await Promise.all([
+			getTokenListAddresses(chainId),
+			fetchAllFilteredRows(chainId, shouldFilter),
+		])
 
-		if (shouldFilter) {
-			// Over-fetch and filter out spam tokens, then apply pagination
-			const batchSize = limit * 3
-			const collected: TokenCreatedRow[] = []
-			let dbOffset = 0
-
-			// Fetch enough rows to skip `offset` valid tokens and collect `limit` more
-			while (collected.length < offset + limit) {
-				const batch = await fetchTokenCreatedRows(chainId, batchSize, dbOffset)
-				if (batch.length === 0) break
-
-				for (const row of batch) {
-					if (!isSpamToken(row)) {
-						collected.push(row)
-					}
+		// Partition: tokenlist tokens first (preserving tokenlist order), then rest by creation date
+		let sorted: TokenCreatedRow[]
+		if (tokenListAddresses.size > 0) {
+			const listed: TokenCreatedRow[] = []
+			const rest: TokenCreatedRow[] = []
+			for (const row of allRows) {
+				if (tokenListAddresses.has(row.token.toLowerCase())) {
+					listed.push(row)
+				} else {
+					rest.push(row)
 				}
-				dbOffset += batch.length
-
-				// Safety: if we've scanned many rows without filling, break
-				if (dbOffset > (offset + limit) * 10) break
 			}
-
-			tokensResult = collected.slice(offset, offset + limit)
+			// Sort listed tokens by their position in the tokenlist
+			const addressOrder = [...tokenListAddresses]
+			listed.sort(
+				(a, b) =>
+					addressOrder.indexOf(a.token.toLowerCase()) -
+					addressOrder.indexOf(b.token.toLowerCase()),
+			)
+			sorted = [...listed, ...rest]
 		} else {
-			tokensResult = await fetchTokenCreatedRows(chainId, limit, offset)
+			sorted = allRows
 		}
+
+		const tokensResult = sorted.slice(offset, offset + limit)
 
 		const holdersCounts = new Map<string, { count: number; capped: boolean }>()
 
@@ -114,3 +161,32 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 			),
 		}
 	})
+
+async function fetchAllFilteredRows(
+	chainId: number,
+	shouldFilter: boolean,
+): Promise<TokenCreatedRow[]> {
+	if (!shouldFilter) {
+		return fetchTokenCreatedRows(chainId, TOKEN_COUNT_MAX, 0)
+	}
+
+	const batchSize = 100
+	const collected: TokenCreatedRow[] = []
+	let dbOffset = 0
+
+	while (collected.length < TOKEN_COUNT_MAX) {
+		const batch = await fetchTokenCreatedRows(chainId, batchSize, dbOffset)
+		if (batch.length === 0) break
+
+		for (const row of batch) {
+			if (!isSpamToken(row)) {
+				collected.push(row)
+			}
+		}
+		dbOffset += batch.length
+
+		if (dbOffset > TOKEN_COUNT_MAX * 10) break
+	}
+
+	return collected
+}

@@ -33,5 +33,11 @@
 		}
 	},
 	"files": ["env.d.ts", "reset.d.ts", "worker-configuration.d.ts"],
-	"exclude": ["**/_/**", "node_modules", "**/*.test.ts", "**/*.test.tsx"]
+	"exclude": [
+		"**/_/**",
+		"node_modules",
+		"**/*.test.ts",
+		"**/*.test.tsx",
+		"vitest.config.ts"
+	]
 }

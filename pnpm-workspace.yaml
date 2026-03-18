@@ -76,7 +76,6 @@ catalog:
   viem: ^2.47.4
   vite: ^8.0.0
   vite-plugin-devtools-json: ^1.0.0
-  vite-tsconfig-paths: ^6.1.1
   vitest: 4.1.0
   wagmi: ^3.5.0
   wrangler: ^4.75.0
