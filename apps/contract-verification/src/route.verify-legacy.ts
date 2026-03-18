@@ -179,11 +179,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		const rpcUrl = chainConfig.rpcUrls.default.http.at(0)
 		const client = createPublicClient({
 			chain: chainConfig,
-			transport: http(
-				context.env.TEMPO_RPC_KEY
-					? `${rpcUrl}/${context.env.TEMPO_RPC_KEY}`
-					: rpcUrl,
-			),
+			transport: http(rpcUrl),
 		})
 
 		const creationTransactionMetadata = body.creatorTxHash

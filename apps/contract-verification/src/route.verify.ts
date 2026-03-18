@@ -673,9 +673,7 @@ async function runVerificationJob(
 		const createClient = deps?.createPublicClient ?? createPublicClient
 		const client = createClient({
 			chain,
-			transport: http(
-				env.TEMPO_RPC_KEY ? `${rpcUrl}/${env.TEMPO_RPC_KEY}` : rpcUrl,
-			),
+			transport: http(rpcUrl),
 		})
 
 		const creationTransactionMetadata = body.creationTransactionHash

@@ -13,7 +13,6 @@ interface EnvironmentVariables {
 
 	readonly VITEST_ENV: 'devnet' | 'testnet' | 'mainnet'
 
-	readonly TEMPO_RPC_KEY: string
 	readonly VITE_BASE_URL: string
 
 	readonly CLOUDFLARE_ACCOUNT_ID: string

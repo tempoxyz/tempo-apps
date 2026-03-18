@@ -30,7 +30,6 @@ export default defineConfig(async () => {
 					bindings: {
 						NODE_ENV: 'test',
 						BUN_VERSION: '1.3.8',
-						TEMPO_RPC_KEY: 'test-key',
 						TEST_MIGRATIONS: migrations,
 						WHITELISTED_ORIGINS: 'http://localhost',
 						TEST_COMPILER_RESPONSE: JSON.stringify(counterFixture.solcOutput),
