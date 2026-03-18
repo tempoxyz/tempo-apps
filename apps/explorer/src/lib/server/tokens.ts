@@ -60,7 +60,9 @@ let cachedTokenList:
 	| { chainId: number; addresses: Set<string>; ts: number }
 	| undefined
 
-async function getTokenListAddresses(chainId: number): Promise<Set<string>> {
+export async function getTokenListAddresses(
+	chainId: number,
+): Promise<Set<string>> {
 	const now = Date.now()
 	if (
 		cachedTokenList?.chainId === chainId &&
