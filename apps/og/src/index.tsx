@@ -81,12 +81,11 @@ app
 	)
 // Apply rate limiting and caching (cache only in prod) to OG image routes
 app.use('/tx/*', rateLimiter)
-app.use('/tx', rateLimiter)
 app.use('/token/*', rateLimiter)
 app.use('/address/*', rateLimiter)
-app.use('/explorer', rateLimiter)
-app.use('/blocks', rateLimiter)
-app.use('/tokens', rateLimiter)
+app.use('/explorer/*', rateLimiter)
+app.use('/blocks/*', rateLimiter)
+app.use('/tokens/*', rateLimiter)
 app.use('*', except(isNotProd, cacheMiddleware))
 
 app.get('/tx', (context) =>
