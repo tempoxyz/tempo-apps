@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ClientOnly } from '@tanstack/react-router'
+import { ClientOnly, Link } from '@tanstack/react-router'
 import * as React from 'react'
 import { formatUnits, type Chain, type Client, type Transport } from 'viem'
 import {
@@ -13,7 +13,6 @@ import {
 } from 'wagmi'
 import { Actions } from 'viem/tempo'
 import { Hooks } from 'wagmi/tempo'
-import { Address } from '#comps/Address'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { cx } from '#lib/css'
 import { getApiUrl } from '#lib/env.ts'
@@ -123,12 +122,10 @@ function ConnectWalletInner({
 			</div>
 		)
 	}
-	const isMainnet = chain?.id === 4217
-
 	return (
-		<div className="flex items-stretch gap-2 justify-end">
+		<div className="flex items-stretch gap-2 justify-end min-w-0 flex-1">
 			<ConnectedAddress />
-			{!isMainnet && <FundAccountButton />}
+			{TEMPO_CHAIN_ID !== 4217 && <FundAccountButton />}
 			{showAddChain && !isSupported && (
 				<Button
 					className="w-fit"
@@ -196,9 +193,19 @@ function ConnectedAddress() {
 	if (!address) return null
 
 	return (
-		<div className="text-[12px] text-secondary whitespace-nowrap flex items-center gap-[4px]">
-			<span className="hidden sm:inline">Connected as</span>
-			<Address address={address} align="end" className="text-center" />
+		<div className="text-[12px] text-secondary whitespace-nowrap flex items-center justify-end gap-[4px] flex-1 min-w-0">
+			<span className="hidden sm:inline shrink-0">Connected as</span>
+			<Link
+				to="/address/$address"
+				params={{ address }}
+				title={address}
+				className="text-accent press-down hover:underline font-mono flex min-w-0"
+			>
+				<span className="overflow-hidden text-ellipsis">
+					{address.slice(0, -10)}
+				</span>
+				<span className="shrink-0">{address.slice(-10)}</span>
+			</Link>
 			{totalUsd !== null && (
 				<span className="text-tertiary">
 					(${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })})
