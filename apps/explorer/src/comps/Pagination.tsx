@@ -23,9 +23,7 @@ export function Pagination(props: Pagination.Props) {
 
 	const compact = compact_ || pages > 999
 
-	// TODO: better pluralization
-	const itemsLabel =
-		totalItems === 1 ? itemsLabel_.replace(/s$/, '') : itemsLabel_
+	const itemsLabel = Pagination.pluralize(totalItems, itemsLabel_)
 
 	if (hideOnSinglePage && pages <= 1)
 		return (
@@ -206,6 +204,10 @@ export namespace Pagination {
 
 	export const Ellipsis = -1
 
+	export function pluralize(count: number, label: string) {
+		return count === 1 ? label.replace(/s$/, '') : label
+	}
+
 	export const numFormat = new Intl.NumberFormat('en-US', {
 		minimumFractionDigits: 0,
 		maximumFractionDigits: 0,
@@ -344,8 +346,18 @@ export namespace Pagination {
 	}
 
 	export function Count(props: Count.Props) {
-		const { page, pages, totalItems, itemsLabel, loading, capped, className } =
-			props
+		const {
+			page,
+			pages,
+			totalItems,
+			itemsLabel: itemsLabel_,
+			loading,
+			capped,
+			className,
+		} = props
+		const itemsLabel = loading
+			? itemsLabel_
+			: Pagination.pluralize(totalItems, itemsLabel_)
 
 		return (
 			<div

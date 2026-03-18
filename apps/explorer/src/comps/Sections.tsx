@@ -56,7 +56,10 @@ export function Sections(props: Sections.Props) {
 										<div className="flex items-center gap-[12px]">
 											{isCollapsed && Boolean(section.totalItems) && (
 												<span className="text-[13px] text-tertiary">
-													{section.totalItems} {itemsLabel}
+													{section.totalItems}{' '}
+													{section.totalItems === 1
+														? itemsLabel.replace(/s$/, '')
+														: itemsLabel}
 												</span>
 											)}
 											<div
