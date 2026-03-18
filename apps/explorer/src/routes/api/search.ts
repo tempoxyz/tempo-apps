@@ -15,6 +15,7 @@ import {
 	fetchLatestBlockNumber,
 	fetchTransactionTimestamp,
 } from '#lib/server/tempo-queries'
+import { getTokenListAddresses } from '#lib/server/tokens'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 export type SearchResult =
@@ -77,15 +78,22 @@ const INDEXED_TOKENS: Record<number, IndexedToken[]> = {
 	4217: indexTokens(tokensIndex4217 as Token[]),
 }
 
-function searchTokens(query: string, chainId: number): TokenSearchResult[] {
+function searchTokens(
+	query: string,
+	chainId: number,
+	verifiedAddresses: Set<string>,
+): TokenSearchResult[] {
 	query = query.toLowerCase()
 	const indexedTokens = INDEXED_TOKENS[chainId] ?? []
+	const isAddressQuery = query.startsWith('0x')
 
 	// filter using search keys
 	const matches = indexedTokens.filter((token) => {
-		return query.startsWith('0x')
-			? token.address.startsWith(query)
-			: token.searchKey.includes(query)
+		if (isAddressQuery) return token.address.startsWith(query)
+		// for name/symbol queries, only match verified tokenlist tokens
+		if (verifiedAddresses.size > 0 && !verifiedAddresses.has(token.address))
+			return false
+		return token.searchKey.includes(query)
 	})
 
 	matches.sort((a, b) => {
@@ -137,6 +145,7 @@ export const Route = createFileRoute('/api/search')({
 					} satisfies SearchApiResponse)
 
 				const chainId = getChainId(getWagmiConfig())
+				const verifiedAddresses = await getTokenListAddresses(chainId)
 				const results: SearchResult[] = []
 
 				// block number (plain digits or #-prefixed)
@@ -187,7 +196,7 @@ export const Route = createFileRoute('/api/search')({
 					}
 				} else {
 					// search for token matches (even if an address was found)
-					results.push(...searchTokens(query, chainId))
+					results.push(...searchTokens(query, chainId, verifiedAddresses))
 				}
 
 				return Response.json(
