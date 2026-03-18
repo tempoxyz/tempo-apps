@@ -2,9 +2,17 @@ import { env, exports } from 'cloudflare:workers'
 import { Mnemonic } from 'ox'
 import { createClient, custom, http, parseUnits } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
-import { tempoLocalnet } from 'viem/chains'
+import { tempo, tempoDevnet, tempoLocalnet, tempoModerato } from 'viem/chains'
 import { Account, Actions, withFeePayer } from 'viem/tempo'
 import { beforeAll, describe, expect, it } from 'vitest'
+
+const tempoChain = (() => {
+	const tempoEnv = env.TEMPO_ENV ?? 'localnet'
+	if (tempoEnv === 'moderato' || tempoEnv === 'testnet') return tempoModerato
+	if (tempoEnv === 'mainnet') return tempo
+	if (tempoEnv === 'devnet') return tempoDevnet
+	return tempoLocalnet
+})()
 
 const testMnemonic =
 	'test test test test test test test test test test test junk'
@@ -87,7 +95,7 @@ beforeAll(async () => {
 
 	const client = createClient({
 		account: sponsorAccount,
-		chain: tempoLocalnet,
+		chain: tempoChain,
 		transport: http(env.TEMPO_RPC_URL),
 	})
 
@@ -182,7 +190,7 @@ describe('fee-payer integration', () => {
 
 			const client = createClient({
 				account: userAccount,
-				chain: tempoLocalnet,
+				chain: tempoChain,
 				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
 					policy: 'sign-only',
 				}),
@@ -212,7 +220,7 @@ describe('fee-payer integration', () => {
 
 			const client = createClient({
 				account: userAccount,
-				chain: tempoLocalnet,
+				chain: tempoChain,
 				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
 					policy: 'sign-and-broadcast',
 				}),

@@ -103,6 +103,11 @@ export default defineConfig((config) => {
 	return {
 		resolve: {
 			tsconfigPaths: true,
+			alias: {
+				'#': './src',
+				'#package.json': './package.json',
+				'#wrangler.json': './wrangler.json',
+			},
 		},
 		plugins: [
 			config.mode === 'development' &&

@@ -1,8 +1,9 @@
 import { env } from 'cloudflare:workers'
 import type { Context, Next } from 'hono'
 import { cloneRawRequest } from 'hono/request'
-import { RpcRequest } from 'ox'
+import { Hex, RpcRequest } from 'ox'
 import { Transaction } from 'viem/tempo'
+import * as z from 'zod/mini'
 
 /**
  * Middleware that rate limits requests based on the transaction's `from` address.
@@ -21,16 +22,30 @@ export async function rateLimitMiddleware(c: Context, next: Next) {
 
 	try {
 		const clonedRequest = await cloneRawRequest(c.req)
-		const request = RpcRequest.from((await clonedRequest.json()) as never)
+		const rawBody = z.safeParse(
+			z.object({
+				jsonrpc: z.string(),
+				id: z.number(),
+				method: z.string(),
+				params: z.optional(z.array(z.unknown())),
+			}),
+			await clonedRequest.json(),
+		)
+		if (!rawBody.success) return c.json({ error: 'Bad request' }, 400)
+
+		const request = RpcRequest.from(rawBody.data)
 		const serialized = request.params?.[0]
 
 		if (
 			typeof serialized === 'string' &&
 			(serialized.startsWith('0x76') || serialized.startsWith('0x78'))
 		) {
-			const transaction = Transaction.deserialize(serialized as `0x76${string}`)
-			// biome-ignore lint/suspicious/noExplicitAny: _
-			const from = (transaction as any).from
+			if (!Hex.validate(serialized) || serialized.length < 100)
+				return c.json({ error: 'Bad request' }, 400)
+			const transaction = Transaction.deserialize(serialized) as {
+				from?: string
+			}
+			const from = transaction.from
 
 			if (!from) {
 				return c.json(

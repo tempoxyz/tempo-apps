@@ -18,6 +18,9 @@ export default defineConfig((config) => {
 	const env = loadEnv(config.mode, process.cwd(), '')
 
 	return {
+		resolve: {
+			tsconfigPaths: true,
+		},
 		plugins: [cloudflare(), copyAssetsPlugin()],
 		define: {
 			__BUILD_VERSION__: JSON.stringify(commitSha ?? Date.now().toString()),

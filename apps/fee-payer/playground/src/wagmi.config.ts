@@ -22,7 +22,7 @@ export const config = createConfig({
 	transports: {
 		[tempoModerato.id]: withFeePayer(
 			// Transport for regular transactions
-			http('https://proxy.tempo.xyz/rpc/42431'),
+			http('https://rpc.testnet.tempo.xyz'),
 			// Transport for sponsored transactions (feePayer: true)
 			http(import.meta.env.VITE_FEE_PAYER_URL ?? 'http://localhost:8787'),
 		),

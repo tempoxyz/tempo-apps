@@ -2,12 +2,17 @@
 	"name": "fee-payer",
 	"type": "module",
 	"private": true,
+	"imports": {
+		"#*": "./src/*",
+		"#package.json": "./package.json",
+		"#wrangler.json": "./wrangler.json"
+	},
 	"scripts": {
-		"build": "echo 'noop'",
+		"build": "vite build",
 		"check": "pnpm check:biome && pnpm check:types",
 		"check:biome": "biome check --write .",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
-		"dev": "wrangler dev",
+		"dev": "vite dev",
 		"dev:playground": "pnpm --filter fee-payer-playground dev",
 		"deploy": "wrangler deploy",
 		"deploy:mainnet": "wrangler deploy --env mainnet",
@@ -31,6 +36,7 @@
 		"zod": "catalog:"
 	},
 	"devDependencies": {
+		"@cloudflare/vite-plugin": "catalog:",
 		"@cloudflare/vitest-pool-workers": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
 		"@types/node": "catalog:",
@@ -38,6 +44,7 @@
 		"prool": "catalog:",
 		"testcontainers": "catalog:",
 		"typescript": "catalog:",
+		"vite": "catalog:",
 		"vitest": "catalog:",
 		"wrangler": "catalog:"
 	}

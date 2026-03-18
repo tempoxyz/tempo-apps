@@ -143,7 +143,7 @@ import {
 	fetchTokenTransfers,
 	fetchTransactionTimestamp,
 	fetchTxDataByHashes,
-} from '#lib/server/tempo-queries'
+} from '#lib/server/tempo-queries.ts'
 
 describe('tempo-queries', () => {
 	beforeEach(() => {

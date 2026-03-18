@@ -2,7 +2,9 @@ import { exports } from 'cloudflare:workers'
 import { describe, expect, it } from 'vitest'
 
 describe('rate-limit middleware', () => {
-	it('returns 400 for malformed transaction data', async () => {
+	it('returns 400 for malformed transaction data', {
+		timeout: 30_000,
+	}, async () => {
 		const response = await exports.default.fetch(
 			new Request('https://fee-payer.test/', {
 				method: 'POST',

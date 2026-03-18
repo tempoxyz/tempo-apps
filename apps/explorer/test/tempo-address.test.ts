@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { TempoAddress } from 'viem/tempo'
-import { normalizeSearchInput } from '#lib/tempo-address'
+import { normalizeSearchInput } from '#lib/tempo-address.ts'
 
 const SAMPLE_ADDRESS = '0x742d35Cc6634C0532925a3b844Bc9e7595f2bD28'
 const SAMPLE_TEMPO_ADDRESS = TempoAddress.format(SAMPLE_ADDRESS)

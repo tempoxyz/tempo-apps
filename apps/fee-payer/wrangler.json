@@ -5,8 +5,6 @@
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "./src/index.ts",
 	"workers_dev": false,
-	// this binding is not inheritable to environments
-	// it's being added at top-level solely for the type generation script
 	"ratelimits": [
 		{
 			"name": "AddressRateLimiter",
@@ -37,7 +35,7 @@
 			],
 			"workers_dev": false,
 			"vars": {
-				"TEMPO_RPC_URL": "https://proxy.tempo.xyz/rpc/42431",
+				"TEMPO_RPC_URL": "https://rpc.moderato.tempo.xyz",
 				"ALLOWED_ORIGINS": "*",
 				"TEMPO_ENV": "moderato",
 				"POSTHOG_API_KEY": ""
@@ -96,7 +94,7 @@
 			],
 			"workers_dev": false,
 			"vars": {
-				"TEMPO_RPC_URL": "https://proxy.tempo.xyz/rpc/42431",
+				"TEMPO_RPC_URL": "https://rpc.moderato.tempo.xyz",
 				"ALLOWED_ORIGINS": "*",
 				"TEMPO_ENV": "moderato",
 				"POSTHOG_API_KEY": ""
