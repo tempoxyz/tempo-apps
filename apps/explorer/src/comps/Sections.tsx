@@ -113,7 +113,7 @@ export function Sections(props: Sections.Props) {
 						{sections.length === 1 ? (
 							<div className="h-full flex items-center gap-[8px] text-[13px] font-medium pl-[18px] pr-[12px] font-sans">
 								<span className="text-primary">{sections[0].title}</span>
-								{Boolean(sections[0].totalItems) && (
+								{Number(sections[0].totalItems) > 0 && (
 									<span className="text-tertiary">
 										({sections[0].totalItems})
 									</span>
@@ -156,6 +156,7 @@ export function Sections(props: Sections.Props) {
 
 				{sections[activeSection] && (
 					<div
+						key={sections[activeSection].title}
 						className={cx(
 							'rounded-t-[10px] border-t border-card-border bg-card flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!',
 						)}
