@@ -14,11 +14,17 @@ import {
 import { Actions } from 'viem/tempo'
 import { Hooks } from 'wagmi/tempo'
 import { Address } from '#comps/Address'
+import { useTokenListMembership } from '#comps/TokenListMembership'
 import { cx } from '#lib/css'
 import { getApiUrl } from '#lib/env.ts'
+import { getFeeTokenForChain } from '#lib/tokenlist'
 import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
+import { getTempoChain } from '#wagmi.config.ts'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
+
+const TEMPO_CHAIN_ID = getTempoChain().id
+const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 
 export function ConnectWallet({
 	showAddChain = true,
@@ -152,6 +158,7 @@ function ConnectWalletInner({
 
 function ConnectedAddress() {
 	const { address } = useConnection()
+	const { isTokenListed } = useTokenListMembership()
 
 	const { data: balanceData } = useQuery({
 		queryKey: ['connected-balance', address],
@@ -174,13 +181,17 @@ function ConnectedAddress() {
 
 	const totalUsd = React.useMemo(() => {
 		if (!balanceData?.balances) return null
+		const showUsdPrefix = TEMPO_FEE_TOKEN
+			? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+			: true
+		if (!showUsdPrefix) return null
 		let total = 0
 		for (const b of balanceData.balances) {
 			if (b.currency !== 'USD') continue
 			total += Number(formatUnits(BigInt(b.balance), b.decimals ?? 6))
 		}
 		return total
-	}, [balanceData])
+	}, [balanceData, isTokenListed])
 
 	if (!address) return null
 

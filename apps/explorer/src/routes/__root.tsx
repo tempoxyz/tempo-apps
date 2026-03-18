@@ -15,6 +15,7 @@ import { AddressHighlightProvider } from '#comps/AddressHighlight'
 import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
+import { TokenListMembershipProvider } from '#comps/TokenListMembership'
 import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
 import {
@@ -378,11 +379,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				/>
 				<WagmiProvider config={config} initialState={wagmiState}>
 					<QueryClientProvider client={queryClient}>
-						<BreadcrumbsProvider>
-							<AddressHighlightProvider>
-								<IntroSeenProvider>{children}</IntroSeenProvider>
-							</AddressHighlightProvider>
-						</BreadcrumbsProvider>
+						<TokenListMembershipProvider>
+							<BreadcrumbsProvider>
+								<AddressHighlightProvider>
+									<IntroSeenProvider>{children}</IntroSeenProvider>
+								</AddressHighlightProvider>
+							</BreadcrumbsProvider>
+						</TokenListMembershipProvider>
 						{import.meta.env.DEV && (
 							<TanStackDevtools
 								config={{

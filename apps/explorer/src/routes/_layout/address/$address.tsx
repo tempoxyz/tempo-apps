@@ -34,6 +34,7 @@ import {
 } from '#comps/TimeFormat'
 import { TimestampCell } from '#comps/TimestampCell'
 import { TokenIcon } from '#comps/TokenIcon'
+import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TransactionCell } from '#comps/TransactionCell'
 import {
 	TransactionDescription,
@@ -69,11 +70,15 @@ import {
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
+import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
+
+const TEMPO_CHAIN_ID = getTempoChain().id
+const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 
 type TokenBalance = {
 	token: Address.Address
@@ -141,11 +146,18 @@ function useBalancesData(
 	return { data: assetsData, isLoading }
 }
 
-function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
+function calculateTotalHoldings(
+	assetsData: AssetData[],
+	options?: {
+		isTokenListed?: ((address: Address.Address) => boolean) | undefined
+	},
+): number | undefined {
 	const PRICE_PER_TOKEN = 1
 	let total: number | undefined
 	for (const asset of assetsData) {
 		if (asset.metadata?.currency !== 'USD') continue
+		if (options?.isTokenListed && !options.isTokenListed(asset.address))
+			continue
 		const decimals = asset.metadata?.decimals
 		const balance = asset.balance
 		if (decimals === undefined || balance === undefined) continue
@@ -742,7 +754,15 @@ function AccountCardWithTimestamps(props: {
 			: undefined
 
 	const isTip20 = Tip20.isTip20Address(address)
-	const totalValue = calculateTotalHoldings(assetsData)
+	const { isTokenListed } = useTokenListMembership()
+	const totalValue = React.useMemo(
+		() =>
+			calculateTotalHoldings(assetsData, {
+				isTokenListed: (tokenAddress) =>
+					isTokenListed(TEMPO_CHAIN_ID, tokenAddress),
+			}),
+		[assetsData, isTokenListed],
+	)
 
 	return (
 		<AccountCard
@@ -1522,22 +1542,42 @@ function TransactionFeeCell(props: {
 	gasUsed: string
 	effectiveGasPrice: string
 }) {
+	const { isTokenListed } = useTokenListMembership()
 	const fee =
 		Hex.toBigInt(props.gasUsed as Hex.Hex) *
 		Hex.toBigInt(props.effectiveGasPrice as Hex.Hex)
-	return (
-		<span className="text-tertiary">
-			{PriceFormatter.format(fee, { decimals: 18, format: 'short' })}
-		</span>
-	)
+	const feeRaw = formatUnits(fee, 18)
+	const showUsdPrefix = TEMPO_FEE_TOKEN
+		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+		: true
+	const feeDisplay = showUsdPrefix
+		? PriceFormatter.format(fee, { decimals: 18, format: 'short' })
+		: PriceFormatter.formatAmountShort(feeRaw)
+	return <span className="text-tertiary">{feeDisplay}</span>
 }
 
 function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 	const { transaction } = props
+	const { areTokensListed, isTokenListed } = useTokenListMembership()
 
 	const events = React.useMemo(() => {
 		return transaction.knownEvents.filter((event) => event.type !== 'approval')
 	}, [transaction.knownEvents])
+	const eventTokenAddresses = React.useMemo(
+		() =>
+			events.flatMap((event) =>
+				event.parts.flatMap((part) =>
+					part.type === 'amount' ? [part.value.token] : [],
+				),
+			),
+		[events],
+	)
+	const showUsdPrefix =
+		eventTokenAddresses.length > 0
+			? areTokensListed(TEMPO_CHAIN_ID, eventTokenAddresses)
+			: TEMPO_FEE_TOKEN
+				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+				: true
 
 	const infiniteLabel = <span className="text-secondary">−</span>
 
@@ -1549,7 +1589,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 			<Amount.Base
 				value={0n}
 				decimals={0}
-				prefix="$"
+				prefix={showUsdPrefix ? '$' : undefined}
 				short
 				infinite={infiniteLabel}
 			/>
@@ -1584,7 +1624,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 				value={value}
 				decimals={18}
 				infinite={infiniteLabel}
-				prefix="$"
+				prefix={showUsdPrefix ? '$' : undefined}
 				short
 			/>
 		)
@@ -1595,7 +1635,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 			value={totalValue}
 			decimals={normalizedDecimals}
 			infinite={infiniteLabel}
-			prefix="$"
+			prefix={showUsdPrefix ? '$' : undefined}
 			short
 		/>
 	)
@@ -1659,7 +1699,10 @@ function AssetAmount(props: { asset: AssetData }) {
 
 function AssetValue(props: { asset: AssetData }) {
 	const { asset } = props
+	const { isTokenListed } = useTokenListMembership()
 	if (asset.metadata?.currency !== 'USD')
+		return <span className="text-tertiary">—</span>
+	if (!isTokenListed(TEMPO_CHAIN_ID, asset.address))
 		return <span className="text-tertiary">—</span>
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
 		return <span className="text-tertiary">…</span>

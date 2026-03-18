@@ -1,13 +1,20 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
+import * as Value from 'ox/Value'
 import { useState } from 'react'
 import { Amount } from '#comps/Amount'
 import { Midcut } from '#comps/Midcut'
 import { ReceiptMark } from '#comps/ReceiptMark'
+import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
+import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getTempoChain } from '#wagmi.config.ts'
+
+const TEMPO_CHAIN_ID = getTempoChain().id
+const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 
 export function Receipt(props: Receipt.Props) {
 	const {
@@ -25,12 +32,16 @@ export function Receipt(props: Receipt.Props) {
 	} = props
 	const [hashExpanded, setHashExpanded] = useState(false)
 	const copyHash = useCopy()
+	const { areTokensListed, isTokenListed } = useTokenListMembership()
 	const formattedTime = DateFormatter.formatTimestampTime(timestamp)
 
 	const hasFee = feeDisplay !== undefined || (fee !== undefined && fee !== null)
 	const hasTotal =
 		totalDisplay !== undefined || (total !== undefined && total !== null)
 	const showFeeBreakdown = feeBreakdown.length > 0
+	const showUsdFeePrefix = TEMPO_FEE_TOKEN
+		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+		: true
 	const filteredEvents = events.filter(
 		(event) =>
 			event.type !== 'active key count changed' &&
@@ -129,6 +140,15 @@ export function Receipt(props: Receipt.Props) {
 									(part) => part.type === 'amount',
 								)
 								const firstAmountPart = amountParts[0]
+								const amountTokenAddresses = amountParts.flatMap((part) =>
+									part.type === 'amount' ? [part.value.token] : [],
+								)
+								const showUsdPrefix =
+									amountTokenAddresses.length > 0
+										? areTokensListed(TEMPO_CHAIN_ID, amountTokenAddresses)
+										: TEMPO_FEE_TOKEN
+											? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+											: true
 								const totalAmountBigInt =
 									event.type === 'swap' && amountParts.length > 0
 										? firstAmountPart?.type === 'amount'
@@ -160,7 +180,7 @@ export function Receipt(props: Receipt.Props) {
 														<Amount.Base
 															decimals={decimals}
 															infinite={null}
-															prefix="$"
+															prefix={showUsdPrefix ? '$' : undefined}
 															short
 															value={totalAmountBigInt}
 														/>
@@ -213,10 +233,17 @@ export function Receipt(props: Receipt.Props) {
 						<div className="flex flex-col gap-2 px-[20px] py-[16px] font-mono text-[13px] leading-4">
 							{showFeeBreakdown
 								? feeBreakdown.map((item, index) => {
-										const formattedAmount = PriceFormatter.format(item.amount, {
-											decimals: item.decimals,
-											format: 'short',
-										})
+										const showUsdPrefix = item.token
+											? isTokenListed(TEMPO_CHAIN_ID, item.token)
+											: showUsdFeePrefix
+										const formattedAmount = showUsdPrefix
+											? PriceFormatter.format(item.amount, {
+													decimals: item.decimals,
+													format: 'short',
+												})
+											: PriceFormatter.formatAmountShort(
+													Value.format(item.amount, item.decimals),
+												)
 										const isSponsored =
 											item.payer &&
 											item.payer.toLowerCase() !== sender.toLowerCase()
@@ -270,7 +297,13 @@ export function Receipt(props: Receipt.Props) {
 											<span className="text-tertiary">Fee</span>
 											<span className="text-right">
 												{feeDisplay ??
-													PriceFormatter.format(fee ?? 0, { format: 'short' })}
+													(showUsdFeePrefix
+														? PriceFormatter.format(fee ?? 0, {
+																format: 'short',
+															})
+														: PriceFormatter.formatAmountShort(
+																String(fee ?? 0),
+															))}
 											</span>
 										</div>
 									)}
@@ -279,7 +312,9 @@ export function Receipt(props: Receipt.Props) {
 									<span className="text-tertiary">Total</span>
 									<span className="text-right">
 										{totalDisplay ??
-											PriceFormatter.format(total ?? 0, { format: 'short' })}
+											(showUsdFeePrefix
+												? PriceFormatter.format(total ?? 0, { format: 'short' })
+												: PriceFormatter.formatAmountShort(String(total ?? 0)))}
 									</span>
 								</div>
 							)}
