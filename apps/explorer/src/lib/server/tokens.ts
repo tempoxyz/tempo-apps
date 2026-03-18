@@ -31,7 +31,7 @@ export type TokensApiResponse = {
 	limit: number
 }
 
-const SPAM_TOKEN_PATTERN = /test|fake/i
+const SPAM_TOKEN_PATTERN = /\btest|test\b|\bfake|fake\b/i
 
 function isSpamToken(row: TokenCreatedRow): boolean {
 	return SPAM_TOKEN_PATTERN.test(row.name) || SPAM_TOKEN_PATTERN.test(row.symbol)

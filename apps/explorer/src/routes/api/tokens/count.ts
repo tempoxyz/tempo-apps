@@ -7,7 +7,7 @@ import {
 } from '#lib/server/tempo-queries'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
-const SPAM_TOKEN_PATTERN = /test|fake/i
+const SPAM_TOKEN_PATTERN = /\btest|test\b|\bfake|fake\b/i
 
 /** Mainnet chain ID */
 const TEMPO_MAINNET_CHAIN_ID = 4217
