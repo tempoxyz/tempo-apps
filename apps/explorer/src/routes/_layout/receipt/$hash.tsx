@@ -299,7 +299,6 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			search.set('date', ogTimestamp.date)
 			search.set('time', ogTimestamp.time)
 
-			// Include fee so the OG receipt can render the Fee row.
 			const gasUsed = BigInt(loaderData.receipt.gasUsed ?? 0)
 			const gasPrice = BigInt(
 				loaderData.receipt.effectiveGasPrice ??
@@ -323,7 +322,7 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				)
 		}
 
-		const ogImageUrl = `${OG_BASE_URL}/tx/${params.hash}?${search.toString()}`
+		const ogImageUrl = `${OG_BASE_URL}/receipt/${params.hash}?${search.toString()}`
 
 		return {
 			title,

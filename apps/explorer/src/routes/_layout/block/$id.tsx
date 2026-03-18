@@ -26,6 +26,7 @@ import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#lib/css'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { PriceFormatter } from '#lib/formatting.ts'
+import { OG_BASE_URL } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
 import { getFeeTokenForChain } from '#lib/tokenlist'
@@ -101,6 +102,61 @@ export const Route = createFileRoute('/_layout/block/$id')({
 				})
 			}
 		}),
+	head: ({ params, loaderData }) => {
+		const blockNumber = loaderData?.block?.number
+		const title = blockNumber
+			? `Block ${blockNumber} \u22c5 Tempo Explorer`
+			: `Block ${params.id} \u22c5 Tempo Explorer`
+
+		const search = new URLSearchParams()
+		if (loaderData?.block) {
+			const block = loaderData.block
+			if (block.number != null) search.set('number', block.number.toString())
+
+			const date = new Date(Number(block.timestamp) * 1000)
+			const utc = `${String(date.getUTCMonth() + 1).padStart(2, '0')}/${String(date.getUTCDate()).padStart(2, '0')}/${String(date.getUTCFullYear()).slice(-2)} ${String(date.getUTCHours()).padStart(2, '0')}:${String(date.getUTCMinutes()).padStart(2, '0')}:${String(date.getUTCSeconds()).padStart(2, '0')}`
+			search.set('timestamp', utc)
+			search.set('unixTimestamp', block.timestamp.toString())
+			search.set('txCount', block.transactions.length.toString())
+			search.set('miner', block.miner)
+			if (block.parentHash) search.set('parentHash', block.parentHash)
+
+			const gasUsed = Number(block.gasUsed)
+			const gasLimit = Number(block.gasLimit)
+			const gasPercent =
+				gasLimit > 0 ? `${((gasUsed / gasLimit) * 100).toFixed(1)}%` : '0%'
+			search.set('gasUsage', gasPercent)
+		}
+
+		const ogImageUrl = `${OG_BASE_URL}/block/${params.id}?${search.toString()}`
+
+		let description = `View block ${params.id} on Tempo.`
+		if (loaderData?.block) {
+			const block = loaderData.block
+			const txCount = block.transactions.length
+			const gasUsed = Number(block.gasUsed)
+			const gasLimit = Number(block.gasLimit)
+			const gasPercent =
+				gasLimit > 0 ? `${((gasUsed / gasLimit) * 100).toFixed(1)}%` : '0%'
+			description = `Block ${block.number ?? params.id} · ${txCount} transaction${txCount !== 1 ? 's' : ''} · ${gasPercent} gas used. Explore block details on Tempo.`
+		}
+
+		return {
+			title,
+			meta: [
+				{ title },
+				{ property: 'og:title', content: title },
+				{ property: 'og:description', content: description },
+				{ name: 'twitter:description', content: description },
+				{ property: 'og:image', content: ogImageUrl },
+				{ property: 'og:image:type', content: 'image/webp' },
+				{ property: 'og:image:width', content: '1200' },
+				{ property: 'og:image:height', content: '630' },
+				{ name: 'twitter:card', content: 'summary_large_image' },
+				{ name: 'twitter:image', content: ogImageUrl },
+			],
+		}
+	},
 })
 
 function RouteComponent() {

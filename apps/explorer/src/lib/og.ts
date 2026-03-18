@@ -342,6 +342,8 @@ export function buildAddressOgImageUrl(params: {
 	tokens?: string[]
 	accountType?: AccountType
 	methods?: string[]
+	deployer?: string
+	contractName?: string
 }): string {
 	const ogParams: AddressOgParams = {
 		address: params.address,
@@ -356,6 +358,8 @@ export function buildAddressOgImageUrl(params: {
 		tokens: params.tokens,
 		accountType: params.accountType,
 		methods: params.methods,
+		deployer: params.deployer,
+		contractName: params.contractName,
 	}
 	return buildAddressOgUrl(OG_BASE_URL, ogParams)
 }
