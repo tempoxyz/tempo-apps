@@ -12,12 +12,7 @@ const VYPER_GITHUB_RELEASES_URL = `${GITHUB_BASE_URL}/vyperlang/vyper/releases/d
 export async function getSolcPath(requestedVersion: string) {
 	await NodeFS.mkdir(SOLC_CACHE_DIR, { recursive: true })
 
-	// Sanitize the version string (semver: i.e. `0.8.26` or `0.8.26+commit.XXXXXXX`)
-	const match = /^0\.\d+\.\d+(?:\+commit\.[0-9a-f]{8})?$/.exec(requestedVersion)
-	if (!match)
-		throw new Error(`Unsupported compilerVersion: ${requestedVersion}`)
-
-	const [version] = match
+	const version = cleanSolcVersion(requestedVersion)
 	const [tagVersion] = version.split('+')
 
 	const fsPath = `${SOLC_CACHE_DIR}/solc-${version}`
@@ -121,4 +116,13 @@ export async function getVyperPath(requestedVersion: string) {
 	await NodeFS.chmod(fsPath, 0o755)
 
 	return fsPath
+}
+
+/** Strip leading `v` prefix and validate solc semver+commit format. Returns the cleaned version or throws. */
+export function cleanSolcVersion(requestedVersion: string): string {
+	const cleaned = requestedVersion.replace(/^v/, '')
+	const match = /^0\.\d+\.\d+(?:\+commit\.[0-9a-f]{8})?$/.exec(cleaned)
+	if (!match)
+		throw new Error(`Unsupported compilerVersion: ${requestedVersion}`)
+	return match[0]
 }

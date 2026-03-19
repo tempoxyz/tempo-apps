@@ -8,14 +8,14 @@ import {
 	vi,
 } from 'vitest'
 
-import { configureLogger, getLogger, withContext } from '#logger.ts'
+import { configureLogger, getLogger, withContext } from '#lib/logger.ts'
 import {
 	AppError,
 	formatError,
 	handleError,
 	normalizeSourcePath,
 	sourcifyError,
-} from '#utilities.ts'
+} from '#lib/utilities.ts'
 import type { Context } from 'hono'
 
 const logger = getLogger(['tempo'])

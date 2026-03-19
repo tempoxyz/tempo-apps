@@ -1,26 +1,27 @@
-import { env } from 'cloudflare:workers'
-import { getContainer } from '@cloudflare/containers'
-import { honoLogger } from '@logtape/hono'
-import { bodyLimit } from 'hono/body-limit'
-import { contextStorage } from 'hono/context-storage'
 import { cors } from 'hono/cors'
 import { showRoutes } from 'hono/dev'
+import { timeout } from 'hono/timeout'
+import { env } from 'cloudflare:workers'
+import { honoLogger } from '@logtape/hono'
+import { bodyLimit } from 'hono/body-limit'
+import { requestId } from 'hono/request-id'
 import { createFactory } from 'hono/factory'
 import { prettyJSON } from 'hono/pretty-json'
-import { requestId } from 'hono/request-id'
-import { timeout } from 'hono/timeout'
 import { rateLimiter } from 'hono-rate-limiter'
+import { getContainer } from '@cloudflare/containers'
+import { contextStorage } from 'hono/context-storage'
 
+import { docsRoute } from '#route.docs.tsx'
+import { verifyRoute } from '#route.verify.ts'
 import { sourcifyChains } from '#wagmi.config.ts'
 import { VerificationContainer } from '#container.ts'
-import { configureLogger, getLogger, withContext } from '#logger.ts'
+import { legacyVerifyRoute } from '#route.verify-legacy.ts'
+import { configureLogger, getLogger, withContext } from '#lib/logger.ts'
+import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
+import { handleError, originMatches, sourcifyError } from '#lib/utilities.ts'
+
 import OpenApiSpec from '#openapi.json' with { type: 'json' }
 import packageJSON from '#package.json' with { type: 'json' }
-import { docsRoute } from '#route.docs.tsx'
-import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
-import { verifyRoute } from '#route.verify.ts'
-import { legacyVerifyRoute } from '#route.verify-legacy.ts'
-import { handleError, originMatches, sourcifyError } from '#utilities.ts'
 
 const logger = getLogger(['tempo'])
 

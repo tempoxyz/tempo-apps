@@ -17,7 +17,7 @@ import {
 	type LinkReferences,
 	type ImmutableReferences,
 	type CborAuxdataPositions,
-} from '#bytecode-matching.ts'
+} from '#lib/bytecode-matching.ts'
 
 function keccakString(str: string): `0x${string}` {
 	return Hash.keccak256(Hex.fromString(str))
