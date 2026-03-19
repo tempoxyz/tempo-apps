@@ -6,6 +6,13 @@ import { getRandom } from '@cloudflare/containers'
 import { createPublicClient, http, keccak256 } from 'viem'
 
 import {
+	getDb,
+	formatError,
+	sourcifyError,
+	normalizeSourcePath,
+	getCreationTransactionMetadata,
+} from '#lib/utilities.ts'
+import {
 	codeTable,
 	sourcesTable,
 	contractsTable,
@@ -23,16 +30,9 @@ import {
 	getVyperAuxdataStyle,
 	type ImmutableReferences,
 	getVyperImmutableReferences,
-} from '#bytecode-matching.ts'
+} from '#lib/bytecode-matching.ts'
 import { chains, chainIds } from '#wagmi.config.ts'
-import { getLogger } from '#logger.ts'
-import {
-	formatError,
-	getDb,
-	sourcifyError,
-	normalizeSourcePath,
-	getCreationTransactionMetadata,
-} from '#utilities.ts'
+import { getLogger } from '#lib/logger.ts'
 
 const logger = getLogger(['tempo'])
 

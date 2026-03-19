@@ -1,6 +1,7 @@
 import { Container, type StopParams } from '@cloudflare/containers'
-import { getLogger } from '#logger.ts'
-import { formatError } from '#utilities.ts'
+
+import { getLogger } from '#lib/logger.ts'
+import { formatError } from '#lib/utilities.ts'
 
 const logger = getLogger(['tempo', 'container'])
 

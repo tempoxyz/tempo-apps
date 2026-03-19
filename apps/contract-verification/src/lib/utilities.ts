@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/d1'
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
-import { getDatabaseLogger, getLogger } from '#logger.ts'
+import { getDatabaseLogger, getLogger } from '#lib/logger.ts'
 
 const dbLogger = getDatabaseLogger()
 

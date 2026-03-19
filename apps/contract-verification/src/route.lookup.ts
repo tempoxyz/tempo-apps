@@ -13,8 +13,8 @@ import {
 	compiledContractsSignaturesTable,
 } from '#database/schema.ts'
 import { chainIds } from '#wagmi.config.ts'
-import { getLogger } from '#logger.ts'
-import { formatError, getDb, sourcifyError } from '#utilities.ts'
+import { getLogger } from '#lib/logger.ts'
+import { formatError, getDb, sourcifyError } from '#lib/utilities.ts'
 
 const logger = getLogger(['tempo'])
 
