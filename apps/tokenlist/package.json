@@ -27,7 +27,6 @@
 	"dependencies": {
 		"hono": "catalog:",
 		"svgo": "^4.0.1",
-		"tempo.ts": "catalog:",
 		"viem": "catalog:"
 	},
 	"devDependencies": {

@@ -19,8 +19,8 @@ This is a **TypeScript monorepo** for applications on the Tempo blockchain appli
 
 ```bash
 pnpm install                    # Install all dependencies
-pnpm check                      # Run Biome lint + format (with auto-fix)
-pnpm check:types                # Type check all workspaces
+pnpm check                      # Run Biome lint + format (with auto-fix), then type check (via postcheck)
+pnpm check:types                # Type check all workspaces (uses tsgo, the native TypeScript compiler)
 pnpm build                      # Build all apps
 ```
 
@@ -38,7 +38,6 @@ pnpm build                      # Build all apps
 ## Dependencies
 
 * You *must* use wagmi, viem, or ox to interact with tempo
-* You should *never* use tempo.ts - prefer the equivalent implementation in wagmi or viem or ox directly
 * When adding a new dependency, look at other apps and see if there is a similar dependency
 
 ### TypeScript
@@ -76,13 +75,13 @@ export declare namespace MyComponent {
 
 ### Before Starting Any Code Changes
 
-- [ ] Understand which app(s) you're modifying
+* [ ] Understand which app(s) you're modifying
 * [ ] Check existing patterns in similar files
 * [ ] Identify affected tests
 
 ### After Completing Code Changes (BEFORE declaring "done")
 
-- [ ] Run `pnpm check` from repo root
+* [ ] Run `pnpm check` from repo root
 * [ ] Run `pnpm check:types` from repo root
 * [ ] Fix ALL type/lint errors before proceeding
 * [ ] Run tests in affected apps: `pnpm test`
@@ -90,7 +89,7 @@ export declare namespace MyComponent {
 
 ### Before Any Commit
 
-- [ ] All above checks must pass
+* [ ] All above checks must pass
 * [ ] All related tests must pass
 * [ ] No outstanding type or lint errors
 * [ ] No console.log statements left (except in tests)
@@ -146,6 +145,8 @@ apps/my-app/
   }
 }
 ```
+
+> **Note**: `dev` varies per app (e.g., `wrangler dev` for worker-only apps). Adapt to fit the app's runtime.
 
 ## Library Documentation
 

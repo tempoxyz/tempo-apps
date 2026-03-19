@@ -16,7 +16,6 @@
 		"@takumi-rs/wasm": "^0.73.1",
 		"hono": "catalog:",
 		"ox": "catalog:",
-		"tempo.ts": "catalog:",
 		"viem": "catalog:",
 		"zod": "catalog:"
 	},
