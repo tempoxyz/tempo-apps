@@ -1,4 +1,4 @@
-import { formatUnits, pad, parseUnits, stringToHex } from 'viem'
+import { formatUnits, parseUnits, toHex } from 'viem'
 import {
 	useConnect,
 	useConnection,
@@ -175,7 +175,7 @@ export function SendPayment() {
 
 				sendPayment.mutate({
 					amount: parseUnits('100', metadata.data.decimals),
-					memo: memo ? pad(stringToHex(memo), { size: 32 }) : undefined,
+					memo: memo ? toHex(memo, { size: 32 }) : undefined,
 					feePayer: true,
 					to: recipient,
 					token: alphaUsd,
