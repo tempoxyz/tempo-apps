@@ -25,7 +25,7 @@
 		"@biomejs/biome": "catalog:",
 		"@j178/prek": "^0.3.6",
 		"@tempoxyz/lints": "github:tempoxyz/lints",
-		"@typescript/native-preview": "^7.0.0-dev.20260317.1",
+		"@typescript/native-preview": "^7.0.0-dev.20260319.1",
 		"simple-git-hooks": "^2.13.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3"
