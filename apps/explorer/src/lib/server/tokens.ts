@@ -8,6 +8,7 @@ import {
 	fetchTokenCreatedRows,
 	fetchTokenHoldersCountRows,
 } from '#lib/server/tempo-queries'
+import { TOKENLIST_URLS } from '#lib/tokenlist'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 export type Token = {
@@ -42,12 +43,6 @@ function isSpamToken(row: TokenCreatedRow): boolean {
 /** Mainnet chain ID */
 const TEMPO_MAINNET_CHAIN_ID = 4217
 
-const TOKENLIST_URLS: Record<number, string> = {
-	4217: 'https://tokenlist.tempo.xyz/list/4217',
-	42431: 'https://tokenlist.tempo.xyz/list/42431',
-	31318: 'https://tokenlist.tempo.xyz/list/31318',
-}
-
 type TokenListEntry = {
 	address: string
 }
@@ -60,7 +55,9 @@ let cachedTokenList:
 	| { chainId: number; addresses: Set<string>; ts: number }
 	| undefined
 
-async function getTokenListAddresses(chainId: number): Promise<Set<string>> {
+export async function getTokenListAddresses(
+	chainId: number,
+): Promise<Set<string>> {
 	const now = Date.now()
 	if (
 		cachedTokenList?.chainId === chainId &&

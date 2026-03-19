@@ -14,6 +14,7 @@ import { getPublicClient } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { NotFound } from '#comps/NotFound'
 import { Receipt } from '#comps/Receipt'
+import { useTokenListMembership } from '#comps/TokenListMembership'
 import { apostrophe } from '#lib/chars'
 import { decodeKnownCall, parseKnownEvents } from '#lib/domain/known-events'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
@@ -26,7 +27,11 @@ import {
 	OG_BASE_URL,
 } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
+
+const TEMPO_CHAIN_ID = getTempoChain().id
+const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 
 function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	return queryOptions({
@@ -34,6 +39,22 @@ function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 		queryFn: () => fetchReceiptData(params),
 		staleTime: 1000 * 60 * 5, // 5 minutes - receipt data is immutable
 	})
+}
+
+function stripLineItemEvents(
+	lineItems: ReturnType<typeof LineItems.fromReceipt>,
+): ReturnType<typeof LineItems.fromReceipt> {
+	const omitEvent = <T extends { event?: unknown }>(item: T) => {
+		const { event: _event, ...rest } = item
+		return rest
+	}
+
+	return {
+		...lineItems,
+		main: lineItems.main.map(omitEvent),
+		feeTotals: lineItems.feeTotals.map(omitEvent),
+		totals: lineItems.totals.map(omitEvent),
+	}
 }
 
 async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
@@ -51,7 +72,9 @@ async function fetchReceiptData(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	])
 	const timestampFormatted = DateFormatter.format(block.timestamp)
 
-	const lineItems = LineItems.fromReceipt(receipt, { getTokenMetadata })
+	const lineItems = stripLineItemEvents(
+		LineItems.fromReceipt(receipt, { getTokenMetadata }),
+	)
 	const parsedEvents = parseKnownEvents(receipt, {
 		transaction,
 		getTokenMetadata,
@@ -126,9 +149,10 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 				})
 
 			try {
-				return await context.queryClient.ensureQueryData(
+				return (await context.queryClient.ensureQueryData(
 					receiptDetailQueryOptions({ hash }),
-				)
+					// biome-ignore lint/suspicious/noExplicitAny: TanStack loader typing mismatches viem log args shape.
+				)) as any
 			} catch (error) {
 				console.error(error)
 				throw notFound({
@@ -276,19 +300,27 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			search.set('time', ogTimestamp.time)
 
 			// Include fee so the OG receipt can render the Fee row.
-			const gasUsed = loaderData.receipt.gasUsed ?? 0n
-			const gasPrice =
+			const gasUsed = BigInt(loaderData.receipt.gasUsed ?? 0)
+			const gasPrice = BigInt(
 				loaderData.receipt.effectiveGasPrice ??
-				loaderData.transaction.gasPrice ??
-				0n
+					loaderData.transaction.gasPrice ??
+					0,
+			)
 			const feeAmount = gasUsed * gasPrice
 			const fee = Number(Value.format(feeAmount, 18))
 			const feeDisplay = PriceFormatter.format(fee)
 			search.set('fee', feeDisplay)
 
-			loaderData.knownEvents?.slice(0, 6).forEach((event, index) => {
-				search.set(`ev${index + 1}`, formatEventForOgServer(event))
-			})
+			loaderData.knownEvents
+				?.slice(0, 6)
+				.forEach(
+					(
+						event: Parameters<typeof formatEventForOgServer>[0],
+						index: number,
+					) => {
+						search.set(`ev${index + 1}`, formatEventForOgServer(event))
+					},
+				)
 		}
 
 		const ogImageUrl = `${OG_BASE_URL}/tx/${params.hash}?${search.toString()}`
@@ -328,6 +360,7 @@ function Component() {
 	})
 
 	const { block, feeBreakdown, knownEvents, lineItems, receipt } = data
+	const { areTokensListed, isTokenListed } = useTokenListMembership()
 
 	const feePrice = lineItems.feeTotals?.[0]?.price
 	const previousFee = feePrice
@@ -342,15 +375,34 @@ function Component() {
 	const feeAmount = receipt.effectiveGasPrice * receipt.gasUsed
 	// Gas accounting is always in 18-decimal units (wei equivalent), even when the fee token itself
 	// has a different number of decimals. Convert using 18 decimals so we get the actual token amount.
-	const fee = Number(Value.format(feeAmount, 18))
-	const feeDisplay = PriceFormatter.format(fee)
+	const feeRaw = Value.format(feeAmount, 18)
+	const fee = Number(feeRaw)
+	const feeTokenAddresses = feeBreakdown
+		.map((item) => item.token)
+		.filter((token): token is `0x${string}` => Boolean(token))
+	const showUsdFeePrefix =
+		feeTokenAddresses.length > 0
+			? areTokensListed(TEMPO_CHAIN_ID, feeTokenAddresses)
+			: TEMPO_FEE_TOKEN
+				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+				: true
+	const feeDisplay = showUsdFeePrefix
+		? PriceFormatter.format(fee)
+		: PriceFormatter.formatAmountShort(feeRaw)
 
 	const total =
 		previousTotal !== undefined ? previousTotal - previousFee + fee : fee
-	const totalDisplay =
-		previousTotal !== undefined
-			? PriceFormatter.format(previousTotal)
-			: undefined
+	const totalTokenAddresses = lineItems.totals
+		.map((item) => item.price?.token)
+		.filter((token): token is `0x${string}` => Boolean(token))
+	const showUsdTotalPrefix =
+		totalTokenAddresses.length > 0
+			? areTokensListed(TEMPO_CHAIN_ID, totalTokenAddresses)
+			: showUsdFeePrefix
+	const totalDisplayValue = previousTotal !== undefined ? previousTotal : total
+	const totalDisplay = showUsdTotalPrefix
+		? PriceFormatter.format(totalDisplayValue)
+		: PriceFormatter.formatAmountShort(String(totalDisplayValue))
 
 	return (
 		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow print:pt-8 print:pb-0 print:grow-0">

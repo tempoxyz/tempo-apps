@@ -6,10 +6,16 @@ import * as React from 'react'
 import type { RpcTransaction as Transaction, TransactionReceipt } from 'viem'
 import type { GetBlockReturnType } from 'wagmi/actions'
 import { Amount } from '#comps/Amount'
+import { useTokenListMembership } from '#comps/TokenListMembership'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { PriceFormatter } from '#lib/formatting'
+import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getTempoChain } from '#wagmi.config.ts'
+
+const TEMPO_CHAIN_ID = getTempoChain().id
+const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 
 export type TransactionData = {
 	receipt: TransactionReceipt
@@ -36,14 +42,19 @@ export function useTransactionDataFromBatch(hash: Hex.Hex) {
 
 export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 	const { receipt } = props
+	const { isTokenListed } = useTokenListMembership()
 
 	if (!receipt) return <span className="text-tertiary">…</span>
 
-	const fee = Number(
-		Value.format(receipt.effectiveGasPrice * receipt.gasUsed, 18),
-	)
+	const feeRaw = Value.format(receipt.effectiveGasPrice * receipt.gasUsed, 18)
+	const showUsdPrefix = TEMPO_FEE_TOKEN
+		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+		: true
+	const feeDisplay = showUsdPrefix
+		? PriceFormatter.format(Number(feeRaw))
+		: PriceFormatter.formatAmountShort(feeRaw)
 
-	return <span className="text-tertiary">{PriceFormatter.format(fee)}</span>
+	return <span className="text-tertiary">{feeDisplay}</span>
 }
 
 export function TransactionDescription(props: {
@@ -118,11 +129,27 @@ export function TransactionTimestamp(props: {
 export function TransactionTotal(props: { transaction: Transaction }) {
 	const { transaction } = props
 	const batchData = useTransactionDataFromBatch(transaction.hash)
+	const { areTokensListed, isTokenListed } = useTokenListMembership()
 
 	const events = React.useMemo(() => {
 		if (!batchData) return
 		return batchData.knownEvents.filter((event) => event.type !== 'approval')
 	}, [batchData])
+	const eventTokenAddresses = React.useMemo(
+		() =>
+			events?.flatMap((event) =>
+				event.parts.flatMap((part) =>
+					part.type === 'amount' ? [part.value.token] : [],
+				),
+			) ?? [],
+		[events],
+	)
+	const showUsdPrefix =
+		eventTokenAddresses.length > 0
+			? areTokensListed(TEMPO_CHAIN_ID, eventTokenAddresses)
+			: TEMPO_FEE_TOKEN
+				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+				: true
 
 	const infiniteLabel = <span className="text-secondary">−</span>
 
@@ -133,7 +160,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			<Amount.Base
 				value={0n}
 				decimals={0}
-				prefix="$"
+				prefix={showUsdPrefix ? '$' : undefined}
 				short
 				infinite={infiniteLabel}
 			/>
@@ -162,7 +189,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 				value={value}
 				decimals={18}
 				infinite={infiniteLabel}
-				prefix="$"
+				prefix={showUsdPrefix ? '$' : undefined}
 				short
 			/>
 		)
@@ -173,7 +200,7 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			value={totalValue}
 			decimals={normalizedDecimals}
 			infinite={infiniteLabel}
-			prefix="$"
+			prefix={showUsdPrefix ? '$' : undefined}
 			short
 		/>
 	)

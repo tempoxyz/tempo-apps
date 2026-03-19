@@ -55,6 +55,7 @@ export function Tip20TokenTabContent(
 		}>
 		config: {
 			supplyCap: string | null
+			totalSupply: string | null
 			currency: string | null
 			transferPolicyId: string | null
 			paused: boolean | null
@@ -75,6 +76,7 @@ export function Tip20TokenTabContent(
 					roles: [],
 					config: {
 						supplyCap: null,
+						totalSupply: null,
 						currency: null,
 						transferPolicyId: null,
 						paused: null,
@@ -128,6 +130,10 @@ export function Tip20TokenTabContent(
 			>
 				<div className="px-[18px] py-[12px]">
 					<div className="flex flex-col gap-[8px] text-[13px]">
+						<ConfigRow
+							label="Total Supply"
+							value={config?.totalSupply ?? undefined}
+						/>
 						<ConfigRow
 							label="Supply Cap"
 							value={config?.supplyCap ?? undefined}

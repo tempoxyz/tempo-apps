@@ -49,6 +49,7 @@ export type RoleHolder = {
 
 export type Tip20Config = {
 	supplyCap: string | null
+	totalSupply: string | null
 	currency: string | null
 	transferPolicyId: string | null
 	paused: boolean | null
@@ -80,6 +81,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 							{ address, abi: Abis.tip20, functionName: 'paused' },
 							{ address, abi: Abis.tip20, functionName: 'decimals' },
 							{ address, abi: Abis.tip20, functionName: 'symbol' },
+							{ address, abi: Abis.tip20, functionName: 'totalSupply' },
 						],
 					})
 
@@ -91,6 +93,7 @@ export const Route = createFileRoute('/api/tip20-roles')({
 					const paused = contractResults[3].result as boolean | undefined
 					const decimals = contractResults[4].result as number | undefined
 					const symbol = contractResults[5].result as string | undefined
+					const totalSupply = contractResults[6].result as bigint | undefined
 
 					const MAX_UINT128 = 2n ** 128n - 1n
 					const tip20Config: Tip20Config = {
@@ -99,6 +102,10 @@ export const Route = createFileRoute('/api/tip20-roles')({
 								? supplyCap >= MAX_UINT128
 									? 'Unlimited'
 									: `${Number(formatUnits(supplyCap, decimals)).toLocaleString()} ${symbol}`
+								: null,
+						totalSupply:
+							totalSupply !== undefined && decimals !== undefined && symbol
+								? `${Number(formatUnits(totalSupply, decimals)).toLocaleString()} ${symbol}`
 								: null,
 						currency: currency ?? null,
 						transferPolicyId:
