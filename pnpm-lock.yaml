@@ -216,8 +216,6 @@ catalogs:
     viem:
       specifier: ^2.47.5
       version: 2.47.5
-      specifier: ^2.47.5
-      version: 2.47.5
     vite:
       specifier: ^8.0.0
       version: 8.0.1
@@ -315,7 +313,6 @@ importers:
         version: 7.7.4
       viem:
         specifier: 'catalog:'
-        version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
         version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
       wagmi:
         specifier: 'catalog:'
@@ -468,7 +465,6 @@ importers:
       viem:
         specifier: 'catalog:'
         version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
-        version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
       wagmi:
         specifier: 'catalog:'
         version: 3.5.0(@tanstack/query-core@5.91.2)(@tanstack/react-query@5.91.2(react@19.2.4))(@types/react@19.2.14)(ox@0.14.6(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(viem@2.47.5(typescript@5.9.3)(zod@4.3.6))
@@ -584,10 +580,8 @@ importers:
       tempo.ts:
         specifier: 'catalog:'
         version: 0.14.2(typescript@5.9.3)(viem@2.47.5(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
-        version: 0.14.2(typescript@5.9.3)(viem@2.47.5(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
-        version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
         version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
       zod:
         specifier: 'catalog:'
@@ -641,10 +635,8 @@ importers:
       tempo.ts:
         specifier: 'catalog:'
         version: 0.14.2(typescript@5.9.3)(viem@2.47.5(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
-        version: 0.14.2(typescript@5.9.3)(viem@2.47.5(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
       viem:
         specifier: 'catalog:'
-        version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
         version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
       wagmi:
         specifier: 'catalog:'
@@ -676,7 +668,6 @@ importers:
     dependencies:
       tempo.ts:
         specifier: 'catalog:'
-        version: 0.14.2(typescript@5.9.3)(viem@2.47.5(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
         version: 0.14.2(typescript@5.9.3)(viem@2.47.5(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6)
     devDependencies:
       '@cloudflare/workers-types':
@@ -712,7 +703,6 @@ importers:
       viem:
         specifier: 'catalog:'
         version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
-        version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -740,7 +730,6 @@ importers:
         version: 4.0.1
       viem:
         specifier: 'catalog:'
-        version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
         version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
     devDependencies:
       '@biomejs/biome':
@@ -775,7 +764,6 @@ importers:
     dependencies:
       viem:
         specifier: 'catalog:'
-        version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
         version: 2.47.5(typescript@5.9.3)(zod@4.3.6)
     devDependencies:
       '@types/node':
@@ -6299,8 +6287,6 @@ packages:
 
   viem@2.47.5:
     resolution: {integrity: sha512-nVrJEQ8GL4JoVIrMBF3wwpTUZun0cpojfnOZ+96GtDWhqxZkVdy6vOEgu+jwfXqfTA/+wrR+YsN9TBQmhDUk0g==}
-  viem@2.47.5:
-    resolution: {integrity: sha512-nVrJEQ8GL4JoVIrMBF3wwpTUZun0cpojfnOZ+96GtDWhqxZkVdy6vOEgu+jwfXqfTA/+wrR+YsN9TBQmhDUk0g==}
     peerDependencies:
       typescript: '>=5.0.4'
     peerDependenciesMeta:
@@ -9442,7 +9428,6 @@ snapshots:
       eventemitter3: 5.0.1
       mipd: 0.0.7(typescript@5.9.3)
       viem: 2.47.5(typescript@5.9.3)(zod@4.3.6)
-      viem: 2.47.5(typescript@5.9.3)(zod@4.3.6)
       zustand: 5.0.0(@types/react@19.2.14)(react@19.2.4)(use-sync-external-store@1.4.0(react@19.2.4))
     optionalDependencies:
       '@tanstack/query-core': 5.91.2
@@ -9458,7 +9443,6 @@ snapshots:
     dependencies:
       eventemitter3: 5.0.1
       mipd: 0.0.7(typescript@5.9.3)
-      viem: 2.47.5(typescript@5.9.3)(zod@4.3.6)
       viem: 2.47.5(typescript@5.9.3)(zod@4.3.6)
       zustand: 5.0.0(@types/react@19.2.14)(react@19.2.4)(use-sync-external-store@1.6.0(react@19.2.4))
     optionalDependencies:
@@ -12202,12 +12186,10 @@ snapshots:
       - react-native-b4a
 
   tempo.ts@0.14.2(typescript@5.9.3)(viem@2.47.5(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6):
-  tempo.ts@0.14.2(typescript@5.9.3)(viem@2.47.5(typescript@5.9.3)(zod@4.3.6))(zod@4.3.6):
     dependencies:
       '@remix-run/fetch-router': 0.17.0
       ox: 0.14.6(typescript@5.9.3)(zod@4.3.6)
     optionalDependencies:
-      viem: 2.47.5(typescript@5.9.3)(zod@4.3.6)
       viem: 2.47.5(typescript@5.9.3)(zod@4.3.6)
     transitivePeerDependencies:
       - typescript
@@ -12439,7 +12421,6 @@ snapshots:
       vfile-message: 4.0.3
 
   viem@2.47.5(typescript@5.9.3)(zod@4.3.6):
-  viem@2.47.5(typescript@5.9.3)(zod@4.3.6):
     dependencies:
       '@noble/curves': 1.9.1
       '@noble/hashes': 1.8.0
@@ -12558,7 +12539,6 @@ snapshots:
       '@wagmi/core': 3.4.0(@tanstack/query-core@5.91.2)(@types/react@19.2.14)(ox@0.14.6(typescript@5.9.3)(zod@4.3.6))(react@19.2.4)(typescript@5.9.3)(use-sync-external-store@1.4.0(react@19.2.4))(viem@2.47.5(typescript@5.9.3)(zod@4.3.6))
       react: 19.2.4
       use-sync-external-store: 1.4.0(react@19.2.4)
-      viem: 2.47.5(typescript@5.9.3)(zod@4.3.6)
       viem: 2.47.5(typescript@5.9.3)(zod@4.3.6)
     optionalDependencies:
       typescript: 5.9.3
