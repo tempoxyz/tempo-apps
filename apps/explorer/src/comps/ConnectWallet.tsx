@@ -166,6 +166,7 @@ function ConnectedAddress() {
 			)
 			return response.json() as Promise<{
 				balances: Array<{
+					token?: string
 					balance: string
 					decimals?: number
 					currency?: string
@@ -177,17 +178,20 @@ function ConnectedAddress() {
 	})
 
 	const totalUsd = React.useMemo(() => {
-		if (!balanceData?.balances) return null
-		const showUsdPrefix = TEMPO_FEE_TOKEN
-			? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
-			: true
-		if (!showUsdPrefix) return null
-		let total = 0
-		for (const b of balanceData.balances) {
-			if (b.currency !== 'USD') continue
-			total += Number(formatUnits(BigInt(b.balance), b.decimals ?? 6))
-		}
-		return total
+		if (!balanceData?.balances || !TEMPO_FEE_TOKEN) return null
+		if (!isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)) return null
+		const feeTokenBalance = balanceData.balances.find(
+			(b) =>
+				b.token?.toLowerCase() === TEMPO_FEE_TOKEN?.toLowerCase() &&
+				b.currency === 'USD',
+		)
+		if (!feeTokenBalance) return null
+		return Number(
+			formatUnits(
+				BigInt(feeTokenBalance.balance),
+				feeTokenBalance.decimals ?? 6,
+			),
+		)
 	}, [balanceData, isTokenListed])
 
 	if (!address) return null
