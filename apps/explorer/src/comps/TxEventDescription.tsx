@@ -84,7 +84,12 @@ function ContractCallPart(props: {
 		<>
 			<span className="text-accent items-end whitespace-nowrap">{fnName}</span>
 			<span className="text-secondary">on</span>
-			<Address address={address} search={{ tab: 'contract' }} title={address} className="whitespace-nowrap" />
+			<Address
+				address={address}
+				search={{ tab: 'contract' }}
+				title={address}
+				className="whitespace-nowrap"
+			/>
 		</>
 	)
 }
