@@ -2,12 +2,15 @@ import { createServerFn } from '@tanstack/react-start'
 import type { Address } from 'ox'
 import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
+import { getAccountTag } from '#lib/account'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import {
-	type TokenCreatedRow,
-	fetchTokenCreatedRows,
-	fetchTokenHoldersCountRows,
+	fetchGenesisBlockTimestamp,
+	fetchTokenCreatedMetadata,
+	fetchTokenHoldersCount,
+	fetchTokenTransferAggregate,
 } from '#lib/server/tempo-queries'
+import { parseTimestamp } from '#lib/timestamp'
 import { TOKENLIST_URLS } from '#lib/tokenlist'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
@@ -16,7 +19,7 @@ export type Token = {
 	symbol: string
 	name: string
 	currency: string
-	createdAt: number
+	createdAt?: number | undefined
 	holdersCount?: number
 	holdersCountCapped?: boolean
 }
@@ -30,55 +33,94 @@ export type TokensApiResponse = {
 	tokens: Token[]
 	offset: number
 	limit: number
+	total: number
 }
-
-const SPAM_TOKEN_PATTERN = /\btest|test\b|\bfake|fake\b/i
-
-function isSpamToken(row: TokenCreatedRow): boolean {
-	return (
-		SPAM_TOKEN_PATTERN.test(row.name) || SPAM_TOKEN_PATTERN.test(row.symbol)
-	)
-}
-
-/** Mainnet chain ID */
-const TEMPO_MAINNET_CHAIN_ID = 4217
 
 type TokenListEntry = {
 	address: string
+	name: string
+	symbol: string
+	extensions?: {
+		label?: string
+	}
 }
 
 type TokenListResponse = {
 	tokens: TokenListEntry[]
 }
 
-let cachedTokenList:
-	| { chainId: number; addresses: Set<string>; ts: number }
-	| undefined
+type CachedTokenList = {
+	entries: TokenListEntry[]
+	addresses: Set<string>
+	ts: number
+}
+
+const tokenListCache = new Map<number, CachedTokenList>()
+
+async function getTokenList(chainId: number): Promise<CachedTokenList> {
+	const now = Date.now()
+	const cached = tokenListCache.get(chainId)
+
+	if (cached && now - cached.ts < 5 * 60_000) {
+		return cached
+	}
+
+	const url = TOKENLIST_URLS[chainId]
+	if (!url) {
+		return cached ?? { entries: [], addresses: new Set(), ts: now }
+	}
+
+	try {
+		const res = await fetch(url)
+		if (!res.ok) {
+			return cached ?? { entries: [], addresses: new Set(), ts: now }
+		}
+
+		const data = (await res.json()) as TokenListResponse
+		const entries = data.tokens.map((entry) => ({ ...entry }))
+		const next = {
+			entries,
+			addresses: new Set(entries.map((entry) => entry.address.toLowerCase())),
+			ts: now,
+		}
+
+		tokenListCache.set(chainId, next)
+		return next
+	} catch {
+		return cached ?? { entries: [], addresses: new Set(), ts: now }
+	}
+}
 
 export async function getTokenListAddresses(
 	chainId: number,
 ): Promise<Set<string>> {
-	const now = Date.now()
+	return (await getTokenList(chainId)).addresses
+}
+
+function getAddressKey(address: string): string {
+	return address.toLowerCase()
+}
+
+function isGenesisTokenAddress(address: Address.Address): boolean {
+	return getAccountTag(address)?.id.startsWith('genesis-token:') ?? false
+}
+
+function inferTokenCurrency(entry: TokenListEntry): string {
+	const searchable = [entry.symbol, entry.name, entry.extensions?.label]
+		.filter(Boolean)
+		.join(' ')
+		.toUpperCase()
+
+	if (searchable.includes('EUR')) return 'EUR'
 	if (
-		cachedTokenList?.chainId === chainId &&
-		now - cachedTokenList.ts < 5 * 60_000
+		searchable.includes('USD') ||
+		searchable.includes('USDC') ||
+		searchable.includes('USDT')
 	) {
-		return cachedTokenList.addresses
+		return 'USD'
 	}
 
-	const url = TOKENLIST_URLS[chainId]
-	if (!url) return new Set()
-
-	try {
-		const res = await fetch(url)
-		if (!res.ok) return cachedTokenList?.addresses ?? new Set()
-		const data = (await res.json()) as TokenListResponse
-		const addresses = new Set(data.tokens.map((t) => t.address.toLowerCase()))
-		cachedTokenList = { chainId, addresses, ts: now }
-		return addresses
-	} catch {
-		return cachedTokenList?.addresses ?? new Set()
-	}
+	return ''
 }
 
 export const fetchTokens = createServerFn({ method: 'POST' })
@@ -88,102 +130,111 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 
 		const config = getWagmiConfig()
 		const chainId = getChainId(config)
+		const { entries: tokenListEntries } = await getTokenList(chainId)
+		const total = tokenListEntries.length
+		const pageEntries = tokenListEntries.slice(offset, offset + limit)
+		const pageAddresses = pageEntries.map(
+			(entry) => entry.address as Address.Address,
+		)
+		const hasGenesisTokens = pageAddresses.some((address) =>
+			isGenesisTokenAddress(address),
+		)
 
-		const shouldFilter = chainId === TEMPO_MAINNET_CHAIN_ID
-
-		// Fetch tokenlist addresses and DB rows in parallel
-		const [tokenListAddresses, allRows] = await Promise.all([
-			getTokenListAddresses(chainId),
-			fetchAllFilteredRows(chainId, shouldFilter),
-		])
-
-		// Partition: tokenlist tokens first (preserving tokenlist order), then rest by creation date
-		let sorted: TokenCreatedRow[]
-		if (tokenListAddresses.size > 0) {
-			const listed: TokenCreatedRow[] = []
-			const rest: TokenCreatedRow[] = []
-			for (const row of allRows) {
-				if (tokenListAddresses.has(row.token.toLowerCase())) {
-					listed.push(row)
-				} else {
-					rest.push(row)
-				}
-			}
-			// Sort listed tokens by their position in the tokenlist
-			const addressOrder = [...tokenListAddresses]
-			listed.sort(
-				(a, b) =>
-					addressOrder.indexOf(a.token.toLowerCase()) -
-					addressOrder.indexOf(b.token.toLowerCase()),
-			)
-			sorted = [...listed, ...rest]
-		} else {
-			sorted = allRows
-		}
-
-		const tokensResult = sorted.slice(offset, offset + limit)
+		const tokenMetadata = new Map<
+			string,
+			{ name: string; symbol: string; currency: string; createdAt?: number }
+		>()
+		const createdAtByAddress = new Map<string, number>()
+		let genesisCreatedAt: number | undefined
 
 		const holdersCounts = new Map<string, { count: number; capped: boolean }>()
 
-		if (tokensResult.length > 0) {
-			try {
-				const holdersResults = await fetchTokenHoldersCountRows(
-					tokensResult.map((row) => row.token as Address.Address),
-					chainId,
-					TOKEN_COUNT_MAX,
+		if (pageAddresses.length > 0) {
+			const [metadataResult, genesisTimestampResult, perTokenResults] =
+				await Promise.all([
+					fetchTokenCreatedMetadata(chainId, pageAddresses).catch((error) => {
+						console.error('Failed to fetch token metadata:', error)
+						return []
+					}),
+					hasGenesisTokens
+						? fetchGenesisBlockTimestamp(chainId).catch((error) => {
+								console.error('Failed to fetch genesis block timestamp:', error)
+								return null
+							})
+						: Promise.resolve(null),
+					Promise.allSettled(
+						pageAddresses.map(async (address) => ({
+							address,
+							transferAggregate: await fetchTokenTransferAggregate(
+								address,
+								chainId,
+							),
+							holdersCount: await fetchTokenHoldersCount(
+								address,
+								chainId,
+								TOKEN_COUNT_MAX,
+							),
+						})),
+					),
+				])
+
+			genesisCreatedAt = parseTimestamp(
+				genesisTimestampResult == null
+					? undefined
+					: typeof genesisTimestampResult === 'bigint'
+						? genesisTimestampResult.toString()
+						: genesisTimestampResult,
+			)
+
+			for (const row of metadataResult) {
+				tokenMetadata.set(getAddressKey(row.token), {
+					name: String(row.name),
+					symbol: String(row.symbol),
+					currency: String(row.currency),
+					createdAt: parseTimestamp(row.block_timestamp),
+				})
+			}
+
+			for (const result of perTokenResults) {
+				if (result.status !== 'fulfilled') {
+					console.error('Failed to fetch token page metadata:', result.reason)
+					continue
+				}
+
+				const addressKey = getAddressKey(result.value.address)
+				const createdAt = parseTimestamp(
+					result.value.transferAggregate.oldestTimestamp,
 				)
 
-				for (const entry of holdersResults) {
-					holdersCounts.set(entry.token, {
-						count: entry.count,
-						capped: entry.capped,
-					})
+				if (createdAt != null) {
+					createdAtByAddress.set(addressKey, createdAt)
 				}
-			} catch (error) {
-				console.error('Failed to fetch holders counts:', error)
+
+				holdersCounts.set(addressKey, result.value.holdersCount)
 			}
 		}
 
 		return {
 			offset,
 			limit,
-			tokens: tokensResult.map(
-				({ token: address, block_timestamp, ...rest }) => ({
-					...rest,
+			total,
+			tokens: pageEntries.map((entry) => {
+				const address = entry.address as Address.Address
+				const addressKey = getAddressKey(address)
+				const metadata = tokenMetadata.get(addressKey)
+
+				return {
 					address,
-					createdAt: Number(block_timestamp),
-					holdersCount: holdersCounts.get(address.toLowerCase())?.count,
-					holdersCountCapped: holdersCounts.get(address.toLowerCase())?.capped,
-				}),
-			),
+					symbol: metadata?.symbol || entry.symbol,
+					name: metadata?.name || entry.name,
+					currency: metadata?.currency || inferTokenCurrency(entry),
+					createdAt:
+						createdAtByAddress.get(addressKey) ??
+						metadata?.createdAt ??
+						(isGenesisTokenAddress(address) ? genesisCreatedAt : undefined),
+					holdersCount: holdersCounts.get(addressKey)?.count,
+					holdersCountCapped: holdersCounts.get(addressKey)?.capped,
+				}
+			}),
 		}
 	})
-
-async function fetchAllFilteredRows(
-	chainId: number,
-	shouldFilter: boolean,
-): Promise<TokenCreatedRow[]> {
-	if (!shouldFilter) {
-		return fetchTokenCreatedRows(chainId, TOKEN_COUNT_MAX, 0)
-	}
-
-	const batchSize = 100
-	const collected: TokenCreatedRow[] = []
-	let dbOffset = 0
-
-	while (collected.length < TOKEN_COUNT_MAX) {
-		const batch = await fetchTokenCreatedRows(chainId, batchSize, dbOffset)
-		if (batch.length === 0) break
-
-		for (const row of batch) {
-			if (!isSpamToken(row)) {
-				collected.push(row)
-			}
-		}
-		dbOffset += batch.length
-
-		if (dbOffset > TOKEN_COUNT_MAX * 10) break
-	}
-
-	return collected
-}

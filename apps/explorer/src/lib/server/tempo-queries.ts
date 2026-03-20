@@ -140,6 +140,21 @@ export async function fetchTokenHoldersCountRows(
 	})
 }
 
+export async function fetchTokenHoldersCount(
+	address: Address.Address,
+	chainId: number,
+	countCap: number,
+): Promise<{ count: number; capped: boolean }> {
+	const holders = await fetchTokenHolderBalances(address, chainId)
+	const rawCount = holders.length
+	const capped = rawCount >= countCap
+
+	return {
+		count: capped ? countCap : rawCount,
+		capped,
+	}
+}
+
 export async function fetchTokenFirstTransferTimestamp(
 	address: Address.Address,
 	chainId: number,
@@ -295,7 +310,13 @@ export async function fetchTokenCreatedMetadata(
 	chainId: number,
 	tokens: Address.Address[],
 ): Promise<
-	Array<{ token: string; name: string; symbol: string; currency: string }>
+	Array<{
+		token: string
+		name: string
+		symbol: string
+		currency: string
+		block_timestamp: string | number | null
+	}>
 > {
 	if (tokens.length === 0) return []
 
@@ -305,15 +326,15 @@ export async function fetchTokenCreatedMetadata(
 	)
 
 	const tokenTopics = tokens.map(
-		(t) =>
-			`0x${t.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex,
+		(token) =>
+			`0x${token.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex,
 	)
 
 	const rows = await QB(chainId)
 		.selectFrom('logs')
-		.select(['topic1', 'data'])
+		.select(['topic1', 'data', 'block_timestamp'])
 		.where('topic0', '=', topic0)
-		.where('topic1', 'in', tokenTopics)
+		.where('topic1', 'in', tokenTopics as never)
 		.execute()
 
 	const dataParams = [
@@ -330,18 +351,24 @@ export async function fetchTokenCreatedMetadata(
 		name: string
 		symbol: string
 		currency: string
+		block_timestamp: string | number | null
 	}> = []
 
 	for (const row of rows) {
 		if (!row.topic1 || !row.data) continue
+
 		try {
-			const token = `0x${(row.topic1 as string).slice(-40)}` as string
 			const decoded = decodeAbiParameters(dataParams, row.data as Hex.Hex)
 			results.push({
-				token,
+				token: `0x${(row.topic1 as string).slice(-40)}`,
 				name: decoded[0] as string,
 				symbol: decoded[1] as string,
 				currency: decoded[2] as string,
+				block_timestamp:
+					typeof row.block_timestamp === 'number' ||
+					typeof row.block_timestamp === 'string'
+						? row.block_timestamp
+						: null,
 			})
 		} catch {}
 	}
@@ -372,6 +399,19 @@ export async function fetchLatestBlockNumber(chainId: number): Promise<bigint> {
 		.executeTakeFirstOrThrow()
 
 	return BigInt(result.num)
+}
+
+export async function fetchGenesisBlockTimestamp(
+	chainId: number,
+): Promise<string | number | bigint | null> {
+	const result = await QB(chainId)
+		.selectFrom('blocks')
+		.select('timestamp')
+		.orderBy('num', 'asc')
+		.limit(1)
+		.executeTakeFirst()
+
+	return result?.timestamp ?? null
 }
 
 type AddressDirectionParams = {

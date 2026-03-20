@@ -11,26 +11,11 @@ import {
 	useTimeFormat,
 } from '#comps/TimeFormat'
 import { TokenIcon } from '#comps/TokenIcon'
-import { TOKEN_COUNT_MAX } from '#lib/constants'
-import { useIsMounted, useMediaQuery } from '#lib/hooks'
+import { useMediaQuery } from '#lib/hooks'
 import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens'
-import { getApiUrl } from '#lib/env.ts'
 import { OG_BASE_URL } from '#lib/og'
-
-async function fetchTokensCount() {
-	const response = await fetch(getApiUrl('/api/tokens/count'), {
-		headers: { 'Content-Type': 'application/json' },
-	})
-	if (!response.ok) throw new Error('Failed to fetch total token count')
-	const { data, success, error } = z.safeParse(
-		z.object({ data: z.number(), error: z.nullable(z.string()) }),
-		await response.json(),
-	)
-	if (!success) throw new Error(z.prettifyError(error))
-	return data
-}
 
 export const Route = createFileRoute('/_layout/tokens')({
 	component: TokensPage,
@@ -68,7 +53,6 @@ function TokensPage() {
 	const { page = 1 } = Route.useSearch()
 	const loaderData = Route.useLoaderData()
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
-	const isMounted = useIsMounted()
 	const queryClient = useQueryClient()
 
 	const { data, isPending, isFetching } = useQuery({
@@ -79,23 +63,8 @@ function TokensPage() {
 		initialData: page === 1 ? loaderData : undefined,
 	})
 
-	// Fetch count separately in the background
-	const countQuery = useQuery({
-		queryKey: ['tokens-count'],
-		queryFn: fetchTokensCount,
-		staleTime: 60_000,
-		refetchInterval: false,
-		refetchOnWindowFocus: false,
-	})
-
 	const tokens = data?.tokens ?? []
-	const exactCount = isMounted ? countQuery.data?.data : undefined
-	const isCapped = exactCount !== undefined && exactCount >= TOKEN_COUNT_MAX
-	const paginationTotal = exactCount ?? TOKEN_COUNT_MAX
-	const displayTotal =
-		exactCount === undefined
-			? '…'
-			: `${isCapped ? '> ' : ''}${isCapped ? TOKEN_COUNT_MAX : exactCount}`
+	const total = data?.total ?? 0
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -115,11 +84,7 @@ function TokensPage() {
 
 	const prefetchNextPage = React.useCallback(() => {
 		const nextPage = page + 1
-		const hasNextPage =
-			exactCount == null ||
-			isCapped ||
-			nextPage <= Math.ceil(exactCount / TOKENS_PER_PAGE)
-		if (!hasNextPage) return
+		if (nextPage > Math.ceil(total / TOKENS_PER_PAGE)) return
 
 		void queryClient
 			.prefetchQuery(
@@ -129,7 +94,7 @@ function TokensPage() {
 				}),
 			)
 			.catch(() => {})
-	}, [exactCount, isCapped, page, queryClient])
+	}, [total, page, queryClient])
 
 	const columns: DataGrid.Column[] = [
 		{
@@ -179,7 +144,7 @@ function TokensPage() {
 				sections={[
 					{
 						title: 'Tokens',
-						totalItems: displayTotal,
+						totalItems: `${total}`,
 						itemsLabel: 'tokens',
 						autoCollapse: false,
 						content: (
@@ -208,12 +173,21 @@ function TokensPage() {
 												{formatHoldersCount(token)}
 											</span>,
 											<Address key="address" address={token.address} />,
-											<FormattedTimestamp
-												key="created"
-												timestamp={BigInt(token.createdAt)}
-												format={timeFormat}
-												className="text-secondary whitespace-nowrap"
-											/>,
+											token.createdAt == null ? (
+												<span
+													key="created"
+													className="text-secondary whitespace-nowrap"
+												>
+													-
+												</span>
+											) : (
+												<FormattedTimestamp
+													key="created"
+													timestamp={BigInt(token.createdAt)}
+													format={timeFormat}
+													className="text-secondary whitespace-nowrap"
+												/>
+											),
 										],
 										link: {
 											href: `/token/${token.address}`,
@@ -221,13 +195,13 @@ function TokensPage() {
 										},
 									}))
 								}
-								totalItems={paginationTotal}
-								displayCount={isCapped ? TOKEN_COUNT_MAX : exactCount}
-								displayCountCapped={isCapped}
+								totalItems={total}
+								displayCount={total}
+								displayCountCapped={false}
 								page={page}
 								fetching={isFetching && !isPending}
 								loading={isPending}
-								countLoading={exactCount == null}
+								countLoading={false}
 								itemsLabel="tokens"
 								itemsPerPage={TOKENS_PER_PAGE}
 								pagination="simple"

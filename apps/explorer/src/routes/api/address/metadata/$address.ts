@@ -9,26 +9,9 @@ import {
 	fetchAddressTxAggregate,
 	fetchTokenTransferAggregate,
 } from '#lib/server/tempo-queries'
+import { parseTimestamp } from '#lib/timestamp'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
-
-function parseTimestamp(value: unknown): number | undefined {
-	if (typeof value === 'number') return value
-	if (typeof value !== 'string') return undefined
-
-	const parsed = Date.parse(value)
-	if (Number.isFinite(parsed)) return Math.floor(parsed / 1000)
-
-	// Legacy idxs format: "2026-01-15 7:13:33.0 +00:00:00"
-	// (single-digit hours don't conform to ISO 8601)
-	const match = value.match(
-		/^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2}):(\d{2})/,
-	)
-	if (!match) return undefined
-	const [, year, month, day, hour, min, sec] = match
-	const date = Date.UTC(+year, +month - 1, +day, +hour, +min, +sec)
-	return Math.floor(date / 1000)
-}
 
 export type AddressMetadataResponse = {
 	address: string
