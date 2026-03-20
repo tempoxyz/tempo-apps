@@ -20,7 +20,6 @@ import {
 import { useCopy, useCopyPermalink, usePermalinkHighlight } from '#lib/hooks'
 import CheckIcon from '~icons/lucide/check'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
-import ChevronsUpDownIcon from '~icons/lucide/chevrons-up-down'
 import CopyIcon from '~icons/lucide/copy'
 import ReturnIcon from '~icons/lucide/corner-down-right'
 import LinkIcon from '~icons/lucide/link'
@@ -235,44 +234,13 @@ function getMethodWithSelector(fn: AbiFunction): string {
 	return `${name} (${selector})`
 }
 
-function Expandable(props: {
-	className?: string
-	expanded?: boolean
-	lineHeight?: number
-	onOverflowChange?: (overflows: boolean) => void
-	rows?: number
-	value: string
-}) {
-	const {
-		className,
-		expanded,
-		lineHeight = 20,
-		onOverflowChange,
-		rows = 8,
-		value,
-	} = props
-	const contentRef = React.useRef<HTMLDivElement>(null)
-
-	React.useEffect(() => {
-		const el = contentRef.current
-		if (!el) return
-		const onResize = () =>
-			onOverflowChange?.(el.scrollHeight > lineHeight * rows)
-		onResize()
-		const observer = new ResizeObserver(onResize)
-		observer.observe(el)
-		return () => observer.disconnect()
-	}, [onOverflowChange, lineHeight, rows])
+function ReadResult(props: { className?: string; value: string }) {
+	const { className, value } = props
 
 	return (
 		<div
-			ref={contentRef}
-			style={{
-				maxHeight: expanded ? undefined : lineHeight * rows,
-				lineHeight: `${20}px`,
-			}}
 			className={cx(
-				'text-primary overflow-auto text-[13px] font-mono outline-focus focus-visible:outline-2 outline-offset-1 rounded-[4px]',
+				'text-primary text-[13px] font-mono leading-[20px] whitespace-pre overflow-x-auto',
 				className,
 			)}
 		>
@@ -288,8 +256,6 @@ function StaticReadFunction(props: {
 }) {
 	const { address, abi, fn } = props
 	const { copy, notifying: copyNotifying } = useCopy({ timeout: 2_000 })
-	const [expanded, setExpanded] = React.useState(false)
-	const [overflows, setOverflows] = React.useState(false)
 
 	const [mounted, setMounted] = React.useState(false)
 	React.useEffect(() => setMounted(true), [])
@@ -425,23 +391,12 @@ function StaticReadFunction(props: {
 						title="Refresh"
 						disabled={isFetching}
 						className={cx(
-							'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] focus-visible:-outline-offset-2!',
-							overflows ? 'pr-[4px]' : 'pr-[12px]',
+							'text-accent cursor-pointer press-down h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!',
 							isFetching && 'opacity-50 cursor-not-allowed',
 						)}
 					>
 						<PlayIcon className="size-[14px]" />
 					</button>
-					{overflows && (
-						<button
-							type="button"
-							onClick={() => setExpanded((v) => !v)}
-							title={expanded ? 'Collapse' : 'Expand'}
-							className="cursor-pointer press-down text-tertiary hover:text-primary h-full py-[10px] pl-[4px] pr-[12px] focus-visible:-outline-offset-2!"
-						>
-							<ChevronsUpDownIcon className="w-[12px] h-[12px]" />
-						</button>
-					)}
 				</div>
 			</div>
 			<div className="border-t border-card-border px-[12px] py-[10px] flex">
@@ -461,9 +416,7 @@ function StaticReadFunction(props: {
 						</Link>
 					</div>
 				) : (
-					<Expandable
-						expanded={expanded}
-						onOverflowChange={setOverflows}
+					<ReadResult
 						className={cx(error ? 'text-red-400' : 'text-primary')}
 						value={displayValue}
 					/>
@@ -694,14 +647,15 @@ function DynamicReadFunction(props: {
 					{!isFetching && (result !== undefined || error) && (
 						<div className="flex">
 							<ReturnIcon className="shrink-0 size-[12px] text-tertiary mr-[6px] mt-[4px]" />
-							<p
-								className={cx(
-									'text-[13px] break-all leading-[20px]',
-									error ? 'text-red-400' : 'text-primary',
-								)}
-							>
-								{error ?? formatOutputValue(result, outputType)}
-							</p>
+							{error ? (
+								<p className="text-[13px] break-all leading-[20px] text-red-400">
+									{error}
+								</p>
+							) : (
+								<pre className="text-[13px] leading-[20px] text-primary whitespace-pre overflow-x-auto font-mono">
+									{formatOutputValue(result, outputType)}
+								</pre>
+							)}
 						</div>
 					)}
 				</div>

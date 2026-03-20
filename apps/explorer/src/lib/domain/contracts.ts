@@ -703,8 +703,10 @@ export function formatOutputValue(value: unknown, _type: string): string {
 	if (typeof value === 'boolean') return value ? 'true' : 'false'
 
 	if (Array.isArray(value) || typeof value === 'object')
-		return JSON.stringify(value, (_, v) =>
-			typeof v === 'bigint' ? v.toString() : v,
+		return JSON.stringify(
+			value,
+			(_, v) => (typeof v === 'bigint' ? v.toString() : v),
+			2,
 		)
 
 	return String(value)

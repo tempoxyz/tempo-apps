@@ -197,7 +197,7 @@ export function CollapsibleSection(props: {
 					/>
 				</button>
 				{actions && (
-					<div className="flex-1 flex items-stretch justify-end gap-[8px] text-tertiary px-[12px]">
+					<div className="flex-1 min-w-0 flex items-stretch justify-end gap-[8px] text-tertiary px-[12px]">
 						{actions}
 					</div>
 				)}
