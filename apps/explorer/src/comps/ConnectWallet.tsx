@@ -180,7 +180,7 @@ function ConnectedAddress() {
 	const totalUsd = React.useMemo(() => {
 		if (!balanceData?.balances) return null
 		const showUsdPrefix = TEMPO_FEE_TOKEN
-			? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+			? isTokenListed(TEMPO_FEE_TOKEN)
 			: true
 		if (!showUsdPrefix) return null
 		// Prefer showing only the fee token (pathUSD) balance

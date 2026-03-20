@@ -218,9 +218,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 		startIndex,
 	} = props
 	const { isTokenListed } = useTokenListMembership()
-	const showUsdPrefix = TEMPO_FEE_TOKEN
-		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
-		: true
+	const showUsdPrefix = TEMPO_FEE_TOKEN ? isTokenListed(TEMPO_FEE_TOKEN) : true
 
 	const cols = [
 		{ label: 'Index', align: 'start', width: '0.5fr' },

@@ -47,9 +47,7 @@ export function TransactionFee(props: { receipt?: TransactionReceipt }) {
 	if (!receipt) return <span className="text-tertiary">…</span>
 
 	const feeRaw = Value.format(receipt.effectiveGasPrice * receipt.gasUsed, 18)
-	const showUsdPrefix = TEMPO_FEE_TOKEN
-		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
-		: true
+	const showUsdPrefix = TEMPO_FEE_TOKEN ? isTokenListed(TEMPO_FEE_TOKEN) : true
 	const feeDisplay = showUsdPrefix
 		? PriceFormatter.format(Number(feeRaw))
 		: PriceFormatter.formatAmountShort(feeRaw)
@@ -146,9 +144,9 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 	)
 	const showUsdPrefix =
 		eventTokenAddresses.length > 0
-			? areTokensListed(TEMPO_CHAIN_ID, eventTokenAddresses)
+			? areTokensListed(eventTokenAddresses)
 			: TEMPO_FEE_TOKEN
-				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+				? isTokenListed(TEMPO_FEE_TOKEN)
 				: true
 
 	const infiniteLabel = <span className="text-secondary">−</span>

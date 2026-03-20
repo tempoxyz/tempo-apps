@@ -40,7 +40,7 @@ export function Receipt(props: Receipt.Props) {
 		totalDisplay !== undefined || (total !== undefined && total !== null)
 	const showFeeBreakdown = feeBreakdown.length > 0
 	const showUsdFeePrefix = TEMPO_FEE_TOKEN
-		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+		? isTokenListed(TEMPO_FEE_TOKEN)
 		: true
 	const filteredEvents = events.filter(
 		(event) =>
@@ -145,9 +145,9 @@ export function Receipt(props: Receipt.Props) {
 								)
 								const showUsdPrefix =
 									amountTokenAddresses.length > 0
-										? areTokensListed(TEMPO_CHAIN_ID, amountTokenAddresses)
+										? areTokensListed(amountTokenAddresses)
 										: TEMPO_FEE_TOKEN
-											? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+											? isTokenListed(TEMPO_FEE_TOKEN)
 											: true
 								const totalAmountBigInt =
 									event.type === 'swap' && amountParts.length > 0
@@ -234,7 +234,7 @@ export function Receipt(props: Receipt.Props) {
 							{showFeeBreakdown
 								? feeBreakdown.map((item, index) => {
 										const showUsdPrefix = item.token
-											? isTokenListed(TEMPO_CHAIN_ID, item.token)
+											? isTokenListed(item.token)
 											: showUsdFeePrefix
 										const formattedAmount = showUsdPrefix
 											? PriceFormatter.format(item.amount, {

@@ -43,8 +43,13 @@ function isSpamToken(row: TokenCreatedRow): boolean {
 /** Mainnet chain ID */
 const TEMPO_MAINNET_CHAIN_ID = 4217
 
+/** Devnet chain ID – TIDX does not index devnet */
+const TEMPO_DEVNET_CHAIN_ID = 31318
+
 type TokenListEntry = {
 	address: string
+	name: string
+	symbol: string
 }
 
 type TokenListResponse = {
@@ -52,33 +57,46 @@ type TokenListResponse = {
 }
 
 let cachedTokenList:
-	| { chainId: number; addresses: Set<string>; ts: number }
+	| {
+			chainId: number
+			entries: TokenListEntry[]
+			addresses: Set<string>
+			ts: number
+	  }
 	| undefined
 
-export async function getTokenListAddresses(
+async function fetchTokenList(
 	chainId: number,
-): Promise<Set<string>> {
+): Promise<{ entries: TokenListEntry[]; addresses: Set<string> }> {
 	const now = Date.now()
 	if (
 		cachedTokenList?.chainId === chainId &&
 		now - cachedTokenList.ts < 5 * 60_000
 	) {
-		return cachedTokenList.addresses
+		return cachedTokenList
 	}
 
 	const url = TOKENLIST_URLS[chainId]
-	if (!url) return new Set()
+	if (!url) return { entries: [], addresses: new Set() }
 
 	try {
 		const res = await fetch(url)
-		if (!res.ok) return cachedTokenList?.addresses ?? new Set()
+		if (!res.ok) return cachedTokenList ?? { entries: [], addresses: new Set() }
 		const data = (await res.json()) as TokenListResponse
-		const addresses = new Set(data.tokens.map((t) => t.address.toLowerCase()))
-		cachedTokenList = { chainId, addresses, ts: now }
-		return addresses
+		const entries = data.tokens
+		const addresses = new Set(entries.map((t) => t.address.toLowerCase()))
+		cachedTokenList = { chainId, entries, addresses, ts: now }
+		return { entries, addresses }
 	} catch {
-		return cachedTokenList?.addresses ?? new Set()
+		return cachedTokenList ?? { entries: [], addresses: new Set() }
 	}
+}
+
+export async function getTokenListAddresses(
+	chainId: number,
+): Promise<Set<string>> {
+	const { addresses } = await fetchTokenList(chainId)
+	return addresses
 }
 
 export const fetchTokens = createServerFn({ method: 'POST' })
@@ -88,6 +106,23 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 
 		const config = getWagmiConfig()
 		const chainId = getChainId(config)
+
+		// Devnet: tokenlist only (TIDX does not index devnet)
+		if (chainId === TEMPO_DEVNET_CHAIN_ID) {
+			const { entries } = await fetchTokenList(chainId)
+			const page = entries.slice(offset, offset + limit)
+			return {
+				offset,
+				limit,
+				tokens: page.map((entry) => ({
+					address: entry.address as Address.Address,
+					symbol: entry.symbol,
+					name: entry.name,
+					currency: '',
+					createdAt: 0,
+				})),
+			}
+		}
 
 		const shouldFilter = chainId === TEMPO_MAINNET_CHAIN_ID
 
@@ -116,7 +151,9 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 					addressOrder.indexOf(a.token.toLowerCase()) -
 					addressOrder.indexOf(b.token.toLowerCase()),
 			)
-			sorted = [...listed, ...rest]
+			// Mainnet: only show tokenlist tokens
+			// Testnet: tokenlist tokens first, then the rest
+			sorted = shouldFilter ? listed : [...listed, ...rest]
 		} else {
 			sorted = allRows
 		}

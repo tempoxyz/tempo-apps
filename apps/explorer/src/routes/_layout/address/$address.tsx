@@ -758,8 +758,7 @@ function AccountCardWithTimestamps(props: {
 	const totalValue = React.useMemo(
 		() =>
 			calculateTotalHoldings(assetsData, {
-				isTokenListed: (tokenAddress) =>
-					isTokenListed(TEMPO_CHAIN_ID, tokenAddress),
+				isTokenListed: (tokenAddress) => isTokenListed(tokenAddress),
 			}),
 		[assetsData, isTokenListed],
 	)
@@ -1543,9 +1542,7 @@ function TransactionFeeCell(props: {
 		Hex.toBigInt(props.gasUsed as Hex.Hex) *
 		Hex.toBigInt(props.effectiveGasPrice as Hex.Hex)
 	const feeRaw = formatUnits(fee, 18)
-	const showUsdPrefix = TEMPO_FEE_TOKEN
-		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
-		: true
+	const showUsdPrefix = TEMPO_FEE_TOKEN ? isTokenListed(TEMPO_FEE_TOKEN) : true
 	const feeDisplay = showUsdPrefix
 		? PriceFormatter.format(fee, { decimals: 18, format: 'short' })
 		: PriceFormatter.formatAmountShort(feeRaw)
@@ -1570,9 +1567,9 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 	)
 	const showUsdPrefix =
 		eventTokenAddresses.length > 0
-			? areTokensListed(TEMPO_CHAIN_ID, eventTokenAddresses)
+			? areTokensListed(eventTokenAddresses)
 			: TEMPO_FEE_TOKEN
-				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+				? isTokenListed(TEMPO_FEE_TOKEN)
 				: true
 
 	const infiniteLabel = <span className="text-secondary">−</span>
@@ -1698,7 +1695,7 @@ function AssetValue(props: { asset: AssetData }) {
 	const { isTokenListed } = useTokenListMembership()
 	if (asset.metadata?.currency !== 'USD')
 		return <span className="text-tertiary">—</span>
-	if (!isTokenListed(TEMPO_CHAIN_ID, asset.address))
+	if (!isTokenListed(asset.address))
 		return <span className="text-tertiary">—</span>
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
 		return <span className="text-tertiary">…</span>

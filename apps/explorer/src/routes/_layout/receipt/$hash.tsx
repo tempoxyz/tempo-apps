@@ -382,9 +382,9 @@ function Component() {
 		.filter((token): token is `0x${string}` => Boolean(token))
 	const showUsdFeePrefix =
 		feeTokenAddresses.length > 0
-			? areTokensListed(TEMPO_CHAIN_ID, feeTokenAddresses)
+			? areTokensListed(feeTokenAddresses)
 			: TEMPO_FEE_TOKEN
-				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+				? isTokenListed(TEMPO_FEE_TOKEN)
 				: true
 	const feeDisplay = showUsdFeePrefix
 		? PriceFormatter.format(fee)
@@ -397,7 +397,7 @@ function Component() {
 		.filter((token): token is `0x${string}` => Boolean(token))
 	const showUsdTotalPrefix =
 		totalTokenAddresses.length > 0
-			? areTokensListed(TEMPO_CHAIN_ID, totalTokenAddresses)
+			? areTokensListed(totalTokenAddresses)
 			: showUsdFeePrefix
 	const totalDisplayValue = previousTotal !== undefined ? previousTotal : total
 	const totalDisplay = showUsdTotalPrefix

@@ -1,28 +1,22 @@
 import { useQuery } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import * as React from 'react'
-import { TOKENLIST_BASE_URL } from '#lib/tokenlist'
-
-const TOKENLIST_ALL_URL = `${TOKENLIST_BASE_URL}/lists/all`
+import { useChainId } from 'wagmi'
+import { TOKENLIST_URLS } from '#lib/tokenlist'
 
 type TokenListAsset = {
 	address?: string
-	chainId?: number
 }
 
-type TokenListResponse = Array<{
+type TokenListResponse = {
 	tokens?: TokenListAsset[]
-}>
-
-type TokenListMembershipMap = Map<number, Set<string>>
+}
 
 type TokenListMembershipContextValue = {
 	areTokensListed: (
-		chainId: number,
 		addresses: ReadonlyArray<Address.Address | string | null | undefined>,
 	) => boolean
 	isTokenListed: (
-		chainId: number,
 		address: Address.Address | string | null | undefined,
 	) => boolean
 }
@@ -33,37 +27,29 @@ const TokenListMembershipContext =
 		isTokenListed: () => true,
 	})
 
-async function fetchTokenListMembershipMap(): Promise<TokenListMembershipMap> {
-	const response = await fetch(TOKENLIST_ALL_URL)
-	if (!response.ok) throw new Error('Failed to fetch token lists')
+async function fetchTokenListAddresses(chainId: number): Promise<Set<string>> {
+	const url = TOKENLIST_URLS[chainId]
+	if (!url) return new Set()
 
-	const lists = (await response.json()) as TokenListResponse
-	const membershipMap = new Map<number, Set<string>>()
+	const response = await fetch(url)
+	if (!response.ok) throw new Error('Failed to fetch token list')
 
-	for (const list of lists) {
-		for (const token of list.tokens ?? []) {
-			if (typeof token.chainId !== 'number') continue
-			if (typeof token.address !== 'string') continue
-
-			const normalizedAddress = token.address.toLowerCase()
-			let set = membershipMap.get(token.chainId)
-			if (!set) {
-				set = new Set<string>()
-				membershipMap.set(token.chainId, set)
-			}
-			set.add(normalizedAddress)
-		}
+	const data = (await response.json()) as TokenListResponse
+	const addresses = new Set<string>()
+	for (const token of data.tokens ?? []) {
+		if (typeof token.address === 'string')
+			addresses.add(token.address.toLowerCase())
 	}
-
-	return membershipMap
+	return addresses
 }
 
 export function TokenListMembershipProvider(props: {
 	children: React.ReactNode
 }) {
+	const chainId = useChainId()
 	const { data, isLoading } = useQuery({
-		queryKey: ['tokenlist-membership'],
-		queryFn: fetchTokenListMembershipMap,
+		queryKey: ['tokenlist-membership', chainId],
+		queryFn: () => fetchTokenListAddresses(chainId),
 		staleTime: 1000 * 60 * 10,
 		gcTime: 1000 * 60 * 60,
 		refetchOnReconnect: false,
@@ -73,25 +59,22 @@ export function TokenListMembershipProvider(props: {
 
 	const value = React.useMemo<TokenListMembershipContextValue>(() => {
 		const isTokenListed: TokenListMembershipContextValue['isTokenListed'] = (
-			chainId,
 			address,
 		) => {
 			if (!address) return true
 			if (isLoading) return false
-			const listed = data?.get(chainId)
-			if (!listed || listed.size === 0) return true
-			return listed.has(address.toLowerCase())
+			if (!data || data.size === 0) return true
+			return data.has(address.toLowerCase())
 		}
 
 		const areTokensListed: TokenListMembershipContextValue['areTokensListed'] =
-			(chainId, addresses) => {
+			(addresses) => {
 				if (isLoading) return false
-				const listed = data?.get(chainId)
-				if (!listed || listed.size === 0) return true
+				if (!data || data.size === 0) return true
 
 				for (const address of addresses) {
 					if (!address) continue
-					if (!listed.has(address.toLowerCase())) return false
+					if (!data.has(address.toLowerCase())) return false
 				}
 
 				return true
