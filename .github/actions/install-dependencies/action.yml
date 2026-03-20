@@ -13,7 +13,7 @@ runs:
         cache: 'pnpm'
         # `lts/*` lags a few days to a week
         # up to date LTS can be found here https://endoflife.date/nodejs
-        node-version: '24.12.0'
+        node-version: '24.14.0'
 
     - name: Install dependencies
       shell: bash

@@ -5,18 +5,17 @@ import { getChainId } from 'wagmi/actions'
 import tokensIndex31318 from '#data/tokens-index-31318.json' with {
 	type: 'json',
 }
-import tokensIndex42429 from '#data/tokens-index-42429.json' with {
-	type: 'json',
-}
 import tokensIndex42431 from '#data/tokens-index-42431.json' with {
 	type: 'json',
 }
 import tokensIndex4217 from '#data/tokens-index-4217.json' with { type: 'json' }
 import { isTip20Address } from '#lib/domain/tip20'
+import { normalizeSearchInput } from '#lib/tempo-address'
 import {
 	fetchLatestBlockNumber,
 	fetchTransactionTimestamp,
 } from '#lib/server/tempo-queries'
+import { getTokenListAddresses } from '#lib/server/tokens'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 export type SearchResult =
@@ -75,20 +74,26 @@ function indexTokens(tokens: Token[]): IndexedToken[] {
 
 const INDEXED_TOKENS: Record<number, IndexedToken[]> = {
 	31318: indexTokens(tokensIndex31318 as Token[]),
-	42429: indexTokens(tokensIndex42429 as Token[]),
 	42431: indexTokens(tokensIndex42431 as Token[]),
 	4217: indexTokens(tokensIndex4217 as Token[]),
 }
 
-function searchTokens(query: string, chainId: number): TokenSearchResult[] {
+function searchTokens(
+	query: string,
+	chainId: number,
+	verifiedAddresses: Set<string>,
+): TokenSearchResult[] {
 	query = query.toLowerCase()
 	const indexedTokens = INDEXED_TOKENS[chainId] ?? []
+	const isAddressQuery = query.startsWith('0x')
 
 	// filter using search keys
 	const matches = indexedTokens.filter((token) => {
-		return query.startsWith('0x')
-			? token.address.startsWith(query)
-			: token.searchKey.includes(query)
+		if (isAddressQuery) return token.address.startsWith(query)
+		// for name/symbol queries, only match verified tokenlist tokens
+		if (verifiedAddresses.size > 0 && !verifiedAddresses.has(token.address))
+			return false
+		return token.searchKey.includes(query)
 	})
 
 	matches.sort((a, b) => {
@@ -130,15 +135,17 @@ export const Route = createFileRoute('/api/search')({
 		handlers: {
 			GET: async ({ request }) => {
 				const url = new URL(request.url)
-				const query = url.searchParams.get('q')?.trim() ?? ''
+				const rawQuery = url.searchParams.get('q')?.trim() ?? ''
+				const query = normalizeSearchInput(rawQuery)
 
 				if (!query)
 					return Response.json({
 						results: [],
-						query,
+						query: rawQuery,
 					} satisfies SearchApiResponse)
 
 				const chainId = getChainId(getWagmiConfig())
+				const verifiedAddresses = await getTokenListAddresses(chainId)
 				const results: SearchResult[] = []
 
 				// block number (plain digits or #-prefixed)
@@ -189,12 +196,15 @@ export const Route = createFileRoute('/api/search')({
 					}
 				} else {
 					// search for token matches (even if an address was found)
-					results.push(...searchTokens(query, chainId))
+					results.push(...searchTokens(query, chainId, verifiedAddresses))
 				}
 
-				return Response.json({ results, query } satisfies SearchApiResponse, {
-					headers: { 'Cache-Control': 'public, max-age=30' },
-				})
+				return Response.json(
+					{ results, query: rawQuery } satisfies SearchApiResponse,
+					{
+						headers: { 'Cache-Control': 'public, max-age=30' },
+					},
+				)
 			},
 		},
 	},

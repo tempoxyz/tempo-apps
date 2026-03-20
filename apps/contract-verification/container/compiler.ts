@@ -12,14 +12,7 @@ const VYPER_GITHUB_RELEASES_URL = `${GITHUB_BASE_URL}/vyperlang/vyper/releases/d
 export async function getSolcPath(requestedVersion: string) {
 	await NodeFS.mkdir(SOLC_CACHE_DIR, { recursive: true })
 
-	// Sanitize the version string (semver: i.e. `0.8.26` or `0.8.26+commit.XXXXXXX`)
-	const match = requestedVersion.match(
-		/^0\.\d+\.\d+(?:\+commit\.[0-9a-f]{8})?$/,
-	)
-	if (!match)
-		throw new Error(`Unsupported compilerVersion: ${requestedVersion}`)
-
-	const [version] = match
+	const version = cleanSolcVersion(requestedVersion)
 	const [tagVersion] = version.split('+')
 
 	const fsPath = `${SOLC_CACHE_DIR}/solc-${version}`
@@ -42,7 +35,7 @@ export async function getSolcPath(requestedVersion: string) {
 
 	if (!response.ok) {
 		console.warn(
-			`[solc] GitHub download failed for ${version} (${githubUrl}): ${response.status}`,
+			`GitHub download failed for ${version} (${githubUrl}): ${response.status}`,
 		)
 
 		const binariesUrl = `${SOLC_BINARIES_URL}/linux-amd64/solc-linux-amd64-v${version}`
@@ -71,7 +64,7 @@ export async function getVyperPath(requestedVersion: string) {
 	// Sanitize the version string
 	// Vyper versions can be: 0.3.10, v0.3.10, 0.3.10+commit.XXXXXXX
 	const cleaned = requestedVersion.replace(/^v/, '')
-	const match = cleaned.match(/^(\d+\.\d+\.\d+)(?:\+commit\.[0-9a-f]+)?$/)
+	const match = /^(\d+\.\d+\.\d+)(?:\+commit\.[0-9a-f]+)?$/.exec(cleaned)
 	if (!match) throw new Error(`Unsupported Vyper version: ${requestedVersion}`)
 
 	const [, version] = match
@@ -96,7 +89,7 @@ export async function getVyperPath(requestedVersion: string) {
 
 	if (releaseResponse.ok) {
 		const release = (await releaseResponse.json()) as {
-			assets: Array<{ name: string; browser_download_url: string }>
+			assets: { name: string; browser_download_url: string }[]
 		}
 		const linuxAsset = release.assets.find(
 			(a) => a.name.endsWith('.linux') && a.name.startsWith(`vyper.${version}`),
@@ -123,4 +116,13 @@ export async function getVyperPath(requestedVersion: string) {
 	await NodeFS.chmod(fsPath, 0o755)
 
 	return fsPath
+}
+
+/** Strip leading `v` prefix and validate solc semver+commit format. Returns the cleaned version or throws. */
+export function cleanSolcVersion(requestedVersion: string): string {
+	const cleaned = requestedVersion.replace(/^v/, '')
+	const match = /^0\.\d+\.\d+(?:\+commit\.[0-9a-f]{8})?$/.exec(cleaned)
+	if (!match)
+		throw new Error(`Unsupported compilerVersion: ${requestedVersion}`)
+	return match[0]
 }

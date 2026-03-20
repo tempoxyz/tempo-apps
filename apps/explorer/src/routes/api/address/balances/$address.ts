@@ -43,7 +43,13 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 					const balancesResult = await fetchAddressTransferBalances(
 						address,
 						chainId,
-					)
+					).catch((error) => {
+						console.error(
+							'[tidx] address balances query failed, returning empty balances:',
+							error,
+						)
+						return []
+					})
 
 					// Calculate net balance per token
 					const balances = new Map<string, bigint>()
@@ -53,13 +59,13 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 						const received = BigInt(row.received ?? 0)
 						const sent = BigInt(row.sent ?? 0)
 						const balance = received - sent
-						if (balance !== 0n) {
+						if (balance > 0n) {
 							balances.set(token, balance)
 						}
 					}
 
 					const nonZeroBalances = [...balances.entries()]
-						.filter(([_, balance]) => balance !== 0n)
+						.filter(([_, balance]) => balance > 0n)
 						.map(([token, balance]) => ({
 							token: token as Address.Address,
 							balance,
@@ -122,7 +128,7 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 								tokenMetadata.set(token.toLowerCase(), {
 									name: metadata.name ?? '',
 									symbol: metadata.symbol ?? '',
-									currency: '',
+									currency: metadata.currency ?? '',
 								})
 							}
 						}

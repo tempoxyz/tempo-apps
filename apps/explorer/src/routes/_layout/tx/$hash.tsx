@@ -331,6 +331,11 @@ function OverviewSection(props: {
 	const maxFee = transaction.maxFeePerGas
 	const maxPriorityFee = transaction.maxPriorityFeePerGas
 	const nonce = transaction.nonce
+	const nonceKey =
+		'nonceKey' in transaction
+			? (transaction.nonceKey as bigint | undefined)
+			: undefined
+	const isExpiringNonce = nonceKey === 2n ** 256n - 1n
 	const positionInBlock = receipt.transactionIndex
 	const input = transaction.input
 
@@ -432,9 +437,36 @@ function OverviewSection(props: {
 			<InfoRow label="Transaction Type">
 				<span className="text-primary">{receipt.type}</span>
 			</InfoRow>
-			<InfoRow label="Nonce">
-				<span className="text-primary">{nonce}</span>
-			</InfoRow>
+			{isExpiringNonce ? (
+				<>
+					<InfoRow label="Nonce Key">
+						<a
+							href="https://docs.tempo.xyz/protocol/tips/tip-1009"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-base-content-positive press-down"
+						>
+							Expiring Nonce
+						</a>
+					</InfoRow>
+					<InfoRow label="Nonce">
+						<span className="text-primary">{nonce}</span>
+					</InfoRow>
+				</>
+			) : nonceKey !== undefined ? (
+				<>
+					<InfoRow label="Nonce Key">
+						<span className="text-primary">{nonceKey.toString()}</span>
+					</InfoRow>
+					<InfoRow label="Nonce">
+						<span className="text-primary">{nonce}</span>
+					</InfoRow>
+				</>
+			) : (
+				<InfoRow label="Nonce">
+					<span className="text-primary">{nonce}</span>
+				</InfoRow>
+			)}
 			<InfoRow label="Position in Block">
 				<span className="text-primary">{positionInBlock}</span>
 			</InfoRow>

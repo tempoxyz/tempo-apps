@@ -21,12 +21,14 @@ import { DataGrid } from '#comps/DataGrid'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
+import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#lib/css'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { PriceFormatter } from '#lib/formatting.ts'
 import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
+import { getFeeTokenForChain } from '#lib/tokenlist'
 import {
 	type BlockIdentifier,
 	type BlockTransaction,
@@ -35,10 +37,13 @@ import {
 	TRANSACTIONS_PER_PAGE,
 } from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.ts'
+import { getTempoChain } from '#wagmi.config.ts'
 
 const defaultSearchValues = { page: 1 } as const
 
 const combinedAbi = Object.values(Abis).flat()
+const TEMPO_CHAIN_ID = getTempoChain().id
+const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 
 interface TransactionTypeResult {
 	type: 'system' | 'sub-block' | 'fee-token' | 'regular'
@@ -212,6 +217,10 @@ function TransactionsSection(props: TransactionsSectionProps) {
 		totalItems,
 		startIndex,
 	} = props
+	const { isTokenListed } = useTokenListMembership()
+	const showUsdPrefix = TEMPO_FEE_TOKEN
+		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+		: true
 
 	const cols = [
 		{ label: 'Index', align: 'start', width: '0.5fr' },
@@ -239,13 +248,23 @@ function TransactionsSection(props: TransactionsSectionProps) {
 
 					const fee = getEstimatedFee(transaction)
 					const feeValue = fee ? Number(Value.format(fee, GAS_DECIMALS)) : 0
+					const feeRaw = fee ? Value.format(fee, GAS_DECIMALS) : '0'
 					const feeDisplay =
-						feeValue > 0 ? PriceFormatter.format(feeValue) : '—'
+						feeValue > 0
+							? showUsdPrefix
+								? PriceFormatter.format(feeValue)
+								: PriceFormatter.formatAmountShort(feeRaw)
+							: '—'
 
 					const txValue = transaction.value ?? 0n
 					const totalValue = Number(Value.format(txValue, decimals))
+					const totalRaw = Value.format(txValue, decimals)
 					const totalDisplay =
-						totalValue > 0 ? PriceFormatter.format(totalValue) : '—'
+						totalValue > 0
+							? showUsdPrefix
+								? PriceFormatter.format(totalValue)
+								: PriceFormatter.formatAmountShort(totalRaw)
+							: '—'
 
 					const amountDisplay = PriceFormatter.formatNativeAmount(
 						txValue,

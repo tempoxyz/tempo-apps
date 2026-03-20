@@ -15,6 +15,7 @@ import {
 } from '#comps/TimeFormat'
 import { syncBlockNumberAtLeast, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
+import { OG_BASE_URL } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import { BLOCKS_PER_PAGE, blocksQueryOptions } from '#lib/queries'
 import ChevronFirst from '~icons/lucide/chevron-first'
@@ -28,6 +29,22 @@ const recentlyAddedBlocks = new Set<string>()
 
 export const Route = createFileRoute('/_layout/blocks')({
 	component: RouteComponent,
+	head: () => ({
+		meta: [
+			{ title: 'Blocks – Tempo Explorer' },
+			{ property: 'og:title', content: 'Blocks – Tempo Explorer' },
+			{
+				property: 'og:description',
+				content: 'View the latest blocks on Tempo.',
+			},
+			{ property: 'og:image', content: `${OG_BASE_URL}/blocks` },
+			{ property: 'og:image:type', content: 'image/webp' },
+			{ property: 'og:image:width', content: '1200' },
+			{ property: 'og:image:height', content: '630' },
+			{ name: 'twitter:card', content: 'summary_large_image' },
+			{ name: 'twitter:image', content: `${OG_BASE_URL}/blocks` },
+		],
+	}),
 	validateSearch: z.object({
 		from: z.optional(z.coerce.number()),
 		live: z.optional(z.coerce.boolean()),

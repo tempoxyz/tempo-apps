@@ -23,9 +23,7 @@ export function Pagination(props: Pagination.Props) {
 
 	const compact = compact_ || pages > 999
 
-	// TODO: better pluralization
-	const itemsLabel =
-		totalItems === 1 ? itemsLabel_.replace(/s$/, '') : itemsLabel_
+	const itemsLabel = Pagination.pluralize(totalItems, itemsLabel_)
 
 	if (hideOnSinglePage && pages <= 1)
 		return (
@@ -206,6 +204,18 @@ export namespace Pagination {
 
 	export const Ellipsis = -1
 
+	const uncountable = new Set(['data'])
+	const irregulars: Record<string, string> = {
+		txns: 'txn',
+	}
+
+	export function pluralize(count: number | string, label: string) {
+		if (Number(count) !== 1) return label
+		if (uncountable.has(label)) return label
+		if (label in irregulars) return irregulars[label]
+		return label.replace(/s$/, '')
+	}
+
 	export const numFormat = new Intl.NumberFormat('en-US', {
 		minimumFractionDigits: 0,
 		maximumFractionDigits: 0,
@@ -228,11 +238,24 @@ export namespace Pagination {
 	}
 
 	export function Simple(props: Simple.Props) {
-		const { page, pages, fetching, countLoading, disableLastPage } = props
+		const {
+			page,
+			pages,
+			fetching,
+			countLoading,
+			disableLastPage,
+			onPrefetchNext,
+			onCancelPrefetchNext,
+		} = props
 		const isIndefinite = typeof pages !== 'number'
 		const disableNext = isIndefinite
 			? !(pages as { hasMore: boolean } | undefined)?.hasMore
 			: page >= pages
+
+		const handlePrefetchNext = () => {
+			if (disableNext) return
+			onPrefetchNext?.()
+		}
 
 		// Hide pagination controls on single page (but not during indefinite loading)
 		const isSinglePage =
@@ -286,6 +309,10 @@ export namespace Pagination {
 						...prev,
 						page: (prev?.page ?? 1) + 1,
 					})}
+					onMouseEnter={handlePrefetchNext}
+					onFocus={handlePrefetchNext}
+					onMouseLeave={onCancelPrefetchNext}
+					onBlur={onCancelPrefetchNext}
 					disabled={disableNext}
 					className={cx(
 						'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] aria-disabled:cursor-not-allowed aria-disabled:opacity-50 size-[24px] text-primary',
@@ -321,12 +348,24 @@ export namespace Pagination {
 			countLoading?: boolean
 			/** Disable "Last page" button when we can't reliably navigate there */
 			disableLastPage?: boolean
+			onPrefetchNext?: () => void
+			onCancelPrefetchNext?: () => void
 		}
 	}
 
 	export function Count(props: Count.Props) {
-		const { page, pages, totalItems, itemsLabel, loading, capped, className } =
-			props
+		const {
+			page,
+			pages,
+			totalItems,
+			itemsLabel: itemsLabel_,
+			loading,
+			capped,
+			className,
+		} = props
+		const itemsLabel = loading
+			? itemsLabel_
+			: Pagination.pluralize(totalItems, itemsLabel_)
 
 		return (
 			<div

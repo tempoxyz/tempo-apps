@@ -665,30 +665,10 @@
 				"operationId": "verify",
 				"parameters": [
 					{
-						"name": "chainId",
-						"in": "path",
-						"description": "The chainId number of the EVM chain",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "^\\d+$",
-							"minLength": 1,
-							"maxLength": 20,
-							"example": "42429"
-						}
+						"$ref": "#/components/parameters/ChainId"
 					},
 					{
-						"name": "address",
-						"in": "path",
-						"description": "Contract's 20 byte address in hex string with the 0x prefix. Case insensitive.",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "(\\b0x[a-fA-F0-9]{40}\\b)",
-							"minLength": 42,
-							"maxLength": 42,
-							"example": "0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d"
-						}
+						"$ref": "#/components/parameters/AddressPath"
 					}
 				],
 				"requestBody": {
@@ -885,7 +865,7 @@
 						}
 					},
 					"429": {
-						"description": "You are sending too many requests to the server",
+						"description": "The contract is already being verified. Jobs older than 5 minutes are considered stale and automatically expired, allowing a retry.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -895,12 +875,12 @@
 										"customCode": {
 											"type": "string",
 											"description": "A string token to indicate the reason of the error",
-											"example": "unsupported_chain"
+											"example": "duplicate_verification_request"
 										},
 										"message": {
 											"type": "string",
 											"description": "The reasoning of the error",
-											"example": "The chain with chainId 3153212 is not supported for verification"
+											"example": "Contract 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 on chain 31337 is already being verified."
 										},
 										"errorId": {
 											"type": "string",
@@ -910,9 +890,9 @@
 									"required": ["customCode", "message", "errorId"],
 									"examples": [
 										{
-											"customCode": "unsupported_chain",
-											"message": "The chain with chainId 9429413 is not supported",
-											"errorId": "1ac6b91a-0605-4459-93dc-18f210a70192"
+											"customCode": "duplicate_verification_request",
+											"message": "Contract 0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512 on chain 31337 is already being verified.",
+											"errorId": "23aaf52e-168a-4cfa-8463-65ddfb792efc"
 										}
 									]
 								},
@@ -992,7 +972,7 @@
 							"pattern": "^\\d+$",
 							"minLength": 1,
 							"maxLength": 20,
-							"example": "42429"
+							"example": "42431"
 						}
 					},
 					{
@@ -1272,7 +1252,7 @@
 							"pattern": "^\\d+$",
 							"minLength": 1,
 							"maxLength": 20,
-							"example": "42429"
+							"example": "42431"
 						}
 					},
 					{
@@ -1467,30 +1447,10 @@
 				"operationId": "verify-similarity",
 				"parameters": [
 					{
-						"name": "chainId",
-						"in": "path",
-						"description": "The chainId number of the EVM chain",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "^\\d+$",
-							"minLength": 1,
-							"maxLength": 20,
-							"example": "42429"
-						}
+						"$ref": "#/components/parameters/ChainId"
 					},
 					{
-						"name": "address",
-						"in": "path",
-						"description": "Contract's 20 byte address in hex string with the 0x prefix. Case insensitive.",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "(\\b0x[a-fA-F0-9]{40}\\b)",
-							"minLength": 42,
-							"maxLength": 42,
-							"example": "0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d"
-						}
+						"$ref": "#/components/parameters/AddressPath"
 					}
 				],
 				"requestBody": {
@@ -1626,7 +1586,7 @@
 						}
 					},
 					"429": {
-						"description": "The contract is already being verified",
+						"description": "The contract is already being verified. Jobs older than 5 minutes are considered stale and automatically expired, allowing a retry.",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -1720,7 +1680,7 @@
 			"get": {
 				"tags": ["Verification Jobs"],
 				"summary": "Check verification job status",
-				"description": "Endpoint to get the status of a verification job.\n\nAlternatively you can directly check the verification status of a contract with with chainId+address at `GET /v2/contract/{chainId}/{address}`",
+				"description": "Endpoint to get the status of a verification job.\n\nJobs that have been pending for more than 5 minutes are considered stale and will be automatically expired with a `timeout` error code when polled.\n\nAlternatively you can directly check the verification status of a contract with with chainId+address at `GET /v2/contract/{chainId}/{address}`",
 				"operationId": "verification-status",
 				"parameters": [
 					{
@@ -1982,7 +1942,7 @@
 															"pattern": "^\\d+$",
 															"minLength": 1,
 															"maxLength": 20,
-															"example": "42429"
+															"example": "42431"
 														},
 														"address": {
 															"type": "string",
@@ -2030,7 +1990,7 @@
 												"match": "match",
 												"creationMatch": "match",
 												"runtimeMatch": "match",
-												"chainId": "42429",
+												"chainId": "42431",
 												"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c",
 												"verifiedAt": "2024-07-24T12:00:00Z",
 												"matchId": "3266227",
@@ -2047,7 +2007,7 @@
 												"match": null,
 												"creationMatch": null,
 												"runtimeMatch": null,
-												"chainId": "42429",
+												"chainId": "42431",
 												"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c"
 											}
 										}
@@ -2170,30 +2130,10 @@
 						}
 					},
 					{
-						"name": "chainId",
-						"in": "path",
-						"description": "The chainId number of the EVM chain",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "^\\d+$",
-							"minLength": 1,
-							"maxLength": 20,
-							"example": "42429"
-						}
+						"$ref": "#/components/parameters/ChainId"
 					},
 					{
-						"name": "address",
-						"in": "path",
-						"description": "Contract's 20 byte address in hex string with the 0x prefix. Case insensitive.",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "(\\b0x[a-fA-F0-9]{40}\\b)",
-							"minLength": 42,
-							"maxLength": 42,
-							"example": "0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d"
-						}
+						"$ref": "#/components/parameters/AddressPath"
 					}
 				],
 				"responses": {
@@ -2229,7 +2169,7 @@
 													"pattern": "^\\d+$",
 													"minLength": 1,
 													"maxLength": 20,
-													"example": "42429"
+													"example": "42431"
 												},
 												"address": {
 													"type": "string",
@@ -3249,7 +3189,7 @@
 											"match": "match",
 											"creationMatch": "match",
 											"runtimeMatch": "match",
-											"chainId": "42429",
+											"chainId": "42431",
 											"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c",
 											"verifiedAt": "2024-07-24T12:00:00Z",
 											"matchId": "3266227",
@@ -3493,7 +3433,7 @@
 											"match": "exact_match",
 											"creationMatch": "exact_match",
 											"runtimeMatch": "match",
-											"chainId": "42429",
+											"chainId": "42431",
 											"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c",
 											"verifiedAt": "2024-07-24T12:00:00Z",
 											"matchId": "3266227",
@@ -3505,7 +3445,7 @@
 											"match": "match",
 											"creationMatch": "match",
 											"runtimeMatch": "match",
-											"chainId": "42429",
+											"chainId": "42431",
 											"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c",
 											"verifiedAt": "2024-07-24T12:00:00Z",
 											"creationBytecode": {
@@ -3525,7 +3465,7 @@
 											"match": "match",
 											"creationMatch": "match",
 											"runtimeMatch": "match",
-											"chainId": "42429",
+											"chainId": "42431",
 											"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c",
 											"verifiedAt": "2024-07-24T12:00:00Z",
 											"deployment": {
@@ -3552,7 +3492,7 @@
 											"match": "exact_match",
 											"creationMatch": "exact_match",
 											"runtimeMatch": "match",
-											"chainId": "42429",
+											"chainId": "42431",
 											"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c",
 											"verifiedAt": "2024-07-24T12:00:00Z",
 											"proxyResolution": {
@@ -3572,7 +3512,7 @@
 											"match": "exact_match",
 											"creationMatch": "exact_match",
 											"runtimeMatch": "match",
-											"chainId": "42429",
+											"chainId": "42431",
 											"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c",
 											"verifiedAt": "2024-07-24T12:00:00Z",
 											"proxyResolution": {
@@ -3587,7 +3527,7 @@
 											"match": "exact_match",
 											"creationMatch": "exact_match",
 											"runtimeMatch": "match",
-											"chainId": "42429",
+											"chainId": "42431",
 											"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c",
 											"verifiedAt": "2024-07-24T12:00:00Z",
 											"proxyResolution": {
@@ -3676,7 +3616,7 @@
 											"pattern": "^\\d+$",
 											"minLength": 1,
 											"maxLength": 20,
-											"example": "42429"
+											"example": "42431"
 										},
 										"address": {
 											"type": "string",
@@ -3709,7 +3649,7 @@
 											"match": null,
 											"creationMatch": null,
 											"runtimeMatch": null,
-											"chainId": "42429",
+											"chainId": "42431",
 											"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c"
 										}
 									}
@@ -3817,17 +3757,7 @@
 				"operationId": "get-contract-all-chains",
 				"parameters": [
 					{
-						"name": "address",
-						"in": "path",
-						"description": "Contract's 20 byte address in hex string with the 0x prefix. Case insensitive.",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "(\\b0x[a-fA-F0-9]{40}\\b)",
-							"minLength": 42,
-							"maxLength": 42,
-							"example": "0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d"
-						}
+						"$ref": "#/components/parameters/AddressPath"
 					}
 				],
 				"responses": {
@@ -3865,7 +3795,7 @@
 														"pattern": "^\\d+$",
 														"minLength": 1,
 														"maxLength": 20,
-														"example": "42429"
+														"example": "42431"
 													},
 													"address": {
 														"type": "string",
@@ -3912,7 +3842,7 @@
 													"match": "match",
 													"creationMatch": "match",
 													"runtimeMatch": "match",
-													"chainId": "42429",
+													"chainId": "42431",
 													"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c",
 													"verifiedAt": "2025-02-10T14:45:00Z",
 													"matchId": "5531"
@@ -4120,17 +4050,7 @@
 						}
 					},
 					{
-						"name": "chainId",
-						"in": "path",
-						"description": "The chainId number of the EVM chain",
-						"required": true,
-						"schema": {
-							"type": "string",
-							"pattern": "^\\d+$",
-							"minLength": 1,
-							"maxLength": 20,
-							"example": "42429"
-						}
+						"$ref": "#/components/parameters/ChainId"
 					}
 				],
 				"responses": {
@@ -4168,7 +4088,7 @@
 														"pattern": "^\\d+$",
 														"minLength": 1,
 														"maxLength": 20,
-														"example": "42429"
+														"example": "42431"
 													},
 													"address": {
 														"type": "string",
@@ -4206,7 +4126,7 @@
 													"match": "exact_match",
 													"creationMatch": "match",
 													"runtimeMatch": "exact_match",
-													"chainId": "42429",
+													"chainId": "42431",
 													"address": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c",
 													"verifiedAt": "2024-07-24T12:00:00Z",
 													"matchId": "421"
@@ -4215,7 +4135,7 @@
 													"match": "match",
 													"creationMatch": "match",
 													"runtimeMatch": "match",
-													"chainId": "42429",
+													"chainId": "42431",
 													"address": "0xe4b10A2a727D0f4863CEBca743a8dAb84cf65b2d",
 													"verifiedAt": "2024-07-24T12:00:00Z",
 													"matchId": "5531"
@@ -4598,7 +4518,7 @@
 								"examples": {
 									"Already Partially Verified": {
 										"value": {
-											"error": "The contract 0x00000000219ab540356cBB839Cbe05303d7705Fa on chainId 42429 is already partially verified. The provided new source code also yielded a partial match and will not be stored unless it's a full match"
+											"error": "The contract 0x00000000219ab540356cBB839Cbe05303d7705Fa on chainId 42431 is already partially verified. The provided new source code also yielded a partial match and will not be stored unless it's a full match"
 										}
 									}
 								}
@@ -4834,7 +4754,7 @@
 								"examples": {
 									"Already Partially Verified": {
 										"value": {
-											"error": "The contract 0x00000000219ab540356cBB839Cbe05303d7705Fa on chainId 42429 is already partially verified. The provided new source code also yielded a partial match and will not be stored unless it's a full match"
+											"error": "The contract 0x00000000219ab540356cBB839Cbe05303d7705Fa on chainId 42431 is already partially verified. The provided new source code also yielded a partial match and will not be stored unless it's a full match"
 										}
 									}
 								}
@@ -5012,7 +4932,7 @@
 								"examples": {
 									"Already Partially Verified": {
 										"value": {
-											"error": "The contract 0x00000000219ab540356cBB839Cbe05303d7705Fa on chainId 42429 is already partially verified. The provided new source code also yielded a partial match and will not be stored unless it's a full match"
+											"error": "The contract 0x00000000219ab540356cBB839Cbe05303d7705Fa on chainId 42431 is already partially verified. The provided new source code also yielded a partial match and will not be stored unless it's a full match"
 										}
 									}
 								}
@@ -5331,7 +5251,7 @@
 								"examples": {
 									"Already Partially Verified": {
 										"value": {
-											"error": "The contract 0x00000000219ab540356cBB839Cbe05303d7705Fa on chainId 42429 is already partially verified. The provided new source code also yielded a partial match and will not be stored unless it's a full match"
+											"error": "The contract 0x00000000219ab540356cBB839Cbe05303d7705Fa on chainId 42431 is already partially verified. The provided new source code also yielded a partial match and will not be stored unless it's a full match"
 										}
 									}
 								}
@@ -5541,7 +5461,7 @@
 														"implementations": []
 													},
 													{
-														"chainId": "42429",
+														"chainId": "42431",
 														"status": "perfect",
 														"isProxy": false,
 														"proxyType": null,
@@ -7187,5 +7107,35 @@
 			}
 		}
 	},
-	"components": {}
+	"components": {
+		"parameters": {
+			"ChainId": {
+				"name": "chainId",
+				"in": "path",
+				"required": true,
+				"schema": {
+					"type": "integer",
+					"enum": [31318, 42431, 4217]
+				}
+			},
+			"AddressPath": {
+				"name": "address",
+				"in": "path",
+				"required": true,
+				"schema": {
+					"type": "string",
+					"pattern": "^0x[a-fA-F0-9]{40}$"
+				}
+			},
+			"HashPath": {
+				"name": "hash",
+				"in": "path",
+				"required": true,
+				"schema": {
+					"type": "string",
+					"pattern": "^0x[a-fA-F0-9]{64}$"
+				}
+			}
+		}
+	}
 }

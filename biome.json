@@ -1,5 +1,5 @@
 {
-	"$schema": "https://biomejs.dev/schemas/2.4.4/schema.json",
+	"$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
 	"vcs": {
 		"enabled": true,
 		"clientKind": "git",
@@ -39,9 +39,10 @@
 		"ignoreUnknown": false,
 		"includes": [
 			"**",
+			"!**/_",
 			"!**/routeTree.gen.ts",
 			"!**/tokens-index-*.json",
-			"!**/_"
+			"!**/drizzle/meta/*.json"
 		]
 	},
 	"formatter": {
@@ -65,6 +66,7 @@
 				"useComponentExportOnlyModules": "off"
 			},
 			"suspicious": {
+				"noArrayIndexKey": "off",
 				"noUnknownAtRules": {
 					"level": "warn",
 					"options": {
@@ -114,6 +116,7 @@
 		},
 		{
 			"includes": [
+        "**/wrangler.json",
 				"**/biome.json",
 				"**/.zed/*.json",
 				"**/tsconfig.json",

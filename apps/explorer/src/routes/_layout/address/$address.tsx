@@ -3,11 +3,11 @@ import {
 	createFileRoute,
 	Link,
 	notFound,
+	redirect,
 	rootRouteId,
 	stripSearchParams,
 	useLocation,
 	useNavigate,
-	useRouter,
 } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
@@ -34,12 +34,14 @@ import {
 } from '#comps/TimeFormat'
 import { TimestampCell } from '#comps/TimestampCell'
 import { TokenIcon } from '#comps/TokenIcon'
+import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TransactionCell } from '#comps/TransactionCell'
 import {
 	TransactionDescription,
 	TransactionTimestamp,
 } from '#comps/TxTransactionRow'
 import { cx } from '#lib/css'
+import { normalizeSearchInput } from '#lib/tempo-address'
 import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type ContractSource,
@@ -51,24 +53,32 @@ import {
 	getContractBytecode,
 	getContractInfo,
 } from '#lib/domain/contracts'
-import type { KnownEventPart } from '#lib/domain/known-events'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, HexFormatter, PriceFormatter } from '#lib/formatting'
 import { useIsMounted, useMediaQuery } from '#lib/hooks'
-import { buildAddressDescription, buildAddressOgImageUrl } from '#lib/og'
+import {
+	buildAddressDescription,
+	buildAddressOgImageUrl,
+	buildTokenDescription,
+	buildTokenOgImageUrl,
+} from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import {
 	type HistoryResponse,
-	type HistorySources,
+	historySourcesForAddress,
 	historyQueryOptions,
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
-import { getWagmiConfig } from '#wagmi.config.ts'
+import { getFeeTokenForChain } from '#lib/tokenlist'
+import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
+
+const TEMPO_CHAIN_ID = getTempoChain().id
+const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
 
 type TokenBalance = {
 	token: Address.Address
@@ -136,11 +146,18 @@ function useBalancesData(
 	return { data: assetsData, isLoading }
 }
 
-function calculateTotalHoldings(assetsData: AssetData[]): number | undefined {
+function calculateTotalHoldings(
+	assetsData: AssetData[],
+	options?: {
+		isTokenListed?: ((address: Address.Address) => boolean) | undefined
+	},
+): number | undefined {
 	const PRICE_PER_TOKEN = 1
 	let total: number | undefined
 	for (const asset of assetsData) {
 		if (asset.metadata?.currency !== 'USD') continue
+		if (options?.isTokenListed && !options.isTokenListed(asset.address))
+			continue
 		const decimals = asset.metadata?.decimals
 		const balance = asset.balance
 		if (decimals === undefined || balance === undefined) continue
@@ -186,6 +203,16 @@ const TabSchema = z.prefault(
 
 export const Route = createFileRoute('/_layout/address/$address')({
 	component: RouteComponent,
+	beforeLoad: ({ params, search }) => {
+		const normalized = normalizeSearchInput(params.address)
+		if (normalized !== params.address) {
+			throw redirect({
+				to: '/address/$address',
+				params: { address: normalized },
+				search,
+			})
+		}
+	},
 	notFoundComponent: ({ data }) => (
 		<NotFound
 			title="Address Not Found"
@@ -233,6 +260,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			// Tab-aware loading: only fetch data needed for the active tab
 			const isTransactionsTab = tab === 'transactions'
 			const isHoldingsTab = tab === 'holdings'
+			const knownContractInfo = getContractInfo(address)
+			const isKnownTokenAddress =
+				Tip20.isTip20Address(address) || knownContractInfo?.category === 'token'
 
 			// Add timeout to prevent SSR from hanging on slow queries
 			const QUERY_TIMEOUT_MS = 3_000
@@ -264,8 +294,12 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				QUERY_TIMEOUT_MS,
 			)
 
+			const historySources = historySourcesForAddress(
+				address as Address.Address,
+			)
+
 			// Only block on transactions if transactions tab is active.
-			// Include all history sources so token pages can be fully rendered from SSR.
+			// Select history sources from address type so SSR and client stay aligned.
 			const transactionsPromise = isTransactionsTab
 				? timeout(
 						context.queryClient
@@ -275,7 +309,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 									page,
 									limit,
 									offset,
-									sources: ['txs', 'transfers', 'emitted'],
+									sources: historySources,
 								}),
 							)
 							.catch((error) => {
@@ -286,17 +320,18 @@ export const Route = createFileRoute('/_layout/address/$address')({
 					)
 				: Promise.resolve(undefined)
 
-			const balancesPromise = isHoldingsTab
-				? timeout(
-						context.queryClient
-							.ensureQueryData(balancesQueryOptions(address))
-							.catch((error) => {
-								console.error('Fetch balances error:', error)
-								return undefined
-							}),
-						QUERY_TIMEOUT_MS,
-					)
-				: Promise.resolve(undefined)
+			const balancesPromise =
+				isHoldingsTab && !isKnownTokenAddress
+					? timeout(
+							context.queryClient
+								.ensureQueryData(balancesQueryOptions(address))
+								.catch((error) => {
+									console.error('Fetch balances error:', error)
+									return undefined
+								}),
+							QUERY_TIMEOUT_MS,
+						)
+					: Promise.resolve(undefined)
 
 			const [
 				contractBytecode,
@@ -310,14 +345,15 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				tokenMetadataPromise,
 			])
 
-			const isToken = tokenMetadata !== null && tokenMetadata !== undefined
-			// Discard balance results for token addresses to avoid stale/misleading data
-			const balancesData = isToken ? undefined : balancesResult
-
 			const accountType = getAccountType(contractBytecode)
 
 			// check if it's a known contract from our registry
-			const contractInfo = getContractInfo(address)
+			const contractInfo = knownContractInfo
+			const isKnownToken = isKnownTokenAddress
+			const isToken =
+				isKnownToken || (tokenMetadata !== null && tokenMetadata !== undefined)
+			// Discard balance results for token addresses to avoid stale/misleading data
+			const balancesData = isToken ? undefined : balancesResult
 			const contractSource: ContractSource | undefined = undefined
 
 			return {
@@ -338,57 +374,92 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		}),
 	head: async ({ params, loaderData }) => {
 		const accountType = loaderData?.accountType ?? 'empty'
-		const label =
-			accountType === 'contract'
+		const isToken = loaderData?.isToken ?? false
+		const tokenMeta = loaderData?.tokenMetadata
+
+		const label = isToken
+			? 'Token'
+			: accountType === 'contract'
 				? 'Contract'
 				: accountType === 'account'
 					? 'Account'
 					: 'Address'
 		const title = `${label} ${HexFormatter.truncate(params.address as Hex.Hex)} ⋅ Tempo Explorer`
 
-		const txCount = 0
+		let description: string
+		let ogImageUrl: string
 
-		// Fetch data with a timeout to avoid blocking too long
-		let lastActive: string | undefined
-		let holdings = '—'
+		if (isToken && tokenMeta) {
+			const decimals = tokenMeta.decimals ?? 18
+			const totalSupply = tokenMeta.totalSupply
+				? Number.parseFloat(formatUnits(tokenMeta.totalSupply, decimals))
+				: 0
 
-		// Calculate holdings from prefetched balances data
-		if (loaderData?.balancesData?.balances) {
-			const totalValue = calculateTotalHoldings(
-				loaderData.balancesData.balances.map((b) => ({
-					address: b.token,
-					metadata: {
-						decimals: b.decimals,
-						currency: b.currency,
-					},
-					balance: BigInt(b.balance),
-				})),
-			)
-			if (totalValue && totalValue > 0) {
-				holdings = PriceFormatter.format(totalValue, { format: 'short' })
+			const formatSupply = (n: number): string => {
+				if (n >= 1e9) return `${(n / 1e9).toFixed(2)}B`
+				if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`
+				if (n >= 1e3)
+					return n.toLocaleString('en-US', { maximumFractionDigits: 0 })
+				return n.toFixed(2)
 			}
+
+			const supply = formatSupply(totalSupply)
+			const chainId = getTempoChain().id
+
+			description = buildTokenDescription({
+				name: tokenMeta.name ?? '—',
+				symbol: tokenMeta.symbol,
+				supply,
+			})
+
+			ogImageUrl = buildTokenOgImageUrl({
+				address: params.address,
+				chainId,
+				name: tokenMeta.name,
+				symbol: tokenMeta.symbol,
+				supply,
+			})
+		} else {
+			const txCount = 0
+			let lastActive: string | undefined
+			let holdings = '—'
+
+			if (loaderData?.balancesData?.balances) {
+				const totalValue = calculateTotalHoldings(
+					loaderData.balancesData.balances.map((b) => ({
+						address: b.token,
+						metadata: {
+							decimals: b.decimals,
+							currency: b.currency,
+						},
+						balance: BigInt(b.balance),
+					})),
+				)
+				if (totalValue && totalValue > 0) {
+					holdings = PriceFormatter.format(totalValue, { format: 'short' })
+				}
+			}
+
+			const recentTx = loaderData?.transactionsData?.transactions?.at(0)
+			if (recentTx?.timestamp) {
+				lastActive = DateFormatter.formatTimestampForOg(
+					BigInt(recentTx.timestamp),
+				).date
+			}
+
+			description = buildAddressDescription(
+				{ holdings, txCount },
+				params.address,
+			)
+
+			ogImageUrl = buildAddressOgImageUrl({
+				address: params.address,
+				holdings,
+				txCount,
+				accountType,
+				lastActive,
+			})
 		}
-
-		// Get the most recent transaction for lastActive (already in loaderData with timestamp)
-		const recentTx = loaderData?.transactionsData?.transactions?.at(0)
-		if (recentTx?.timestamp) {
-			lastActive = DateFormatter.formatTimestampForOg(
-				BigInt(recentTx.timestamp),
-			).date
-		}
-
-		const description = buildAddressDescription(
-			{ holdings, txCount },
-			params.address,
-		)
-
-		const ogImageUrl = buildAddressOgImageUrl({
-			address: params.address,
-			holdings,
-			txCount,
-			accountType,
-			lastActive,
-		})
 
 		return {
 			title,
@@ -410,7 +481,6 @@ export const Route = createFileRoute('/_layout/address/$address')({
 
 function RouteComponent() {
 	const navigate = useNavigate()
-	const router = useRouter()
 	const location = useLocation()
 	const { address } = Route.useParams()
 	const { page, tab, live, limit, a } = Route.useSearch()
@@ -464,30 +534,13 @@ function RouteComponent() {
 		})
 	}, [hash, isContract, tab, navigate, limit])
 
-	React.useEffect(() => {
-		// Preload next page for paginated tabs (delayed to avoid query storms)
-		if (tab !== 'transactions' && tab !== 'transfers' && tab !== 'holders')
-			return
-
-		const timer = setTimeout(() => {
-			const nextPage = page + 1
-			router
-				.preloadRoute({
-					to: '.',
-					search: { page: nextPage, tab, limit, ...(a ? { a } : {}) },
-				})
-				.catch((error) => {
-					console.error('Preload error (non-blocking):', error)
-				})
-		}, 1_000)
-
-		return () => clearTimeout(timer)
-	}, [page, router, tab, limit, a])
-
 	// Build visible tabs based on address type
 	const isTip20 = Tip20.isTip20Address(address)
 	const visibleTabs: TabValue[] = React.useMemo(() => {
-		const tabs: TabValue[] = ['transactions', 'holdings']
+		const tabs: TabValue[] = ['transactions']
+		if (!isTip20) {
+			tabs.push('holdings')
+		}
 		if (isToken) {
 			tabs.push('transfers', 'holders')
 		}
@@ -522,6 +575,10 @@ function RouteComponent() {
 		balancesData,
 		!isToken && (isHoldingsTabActive || balancesData !== undefined),
 	)
+	const historySources = React.useMemo(
+		() => historySourcesForAddress(address),
+		[address],
+	)
 
 	// Prefetch non-active tabs' data after a delay to avoid TIDX query storms
 	const queryClient = useQueryClient()
@@ -533,7 +590,13 @@ function RouteComponent() {
 		const timer = setTimeout(() => {
 			if (tab !== 'transactions') {
 				queryClient.prefetchQuery(
-					historyQueryOptions({ address, page: 1, limit, offset: 0 }),
+					historyQueryOptions({
+						address,
+						page: 1,
+						limit,
+						offset: 0,
+						sources: historySources,
+					}),
 				)
 			}
 			if (tab !== 'holdings' && !isToken) {
@@ -542,7 +605,7 @@ function RouteComponent() {
 		}, 2_000)
 
 		return () => clearTimeout(timer)
-	}, [address, tab, limit, queryClient, isToken])
+	}, [address, tab, limit, queryClient, isToken, historySources])
 
 	return (
 		<div
@@ -596,7 +659,17 @@ async function fetchAddressMetadata(address: Address.Address) {
 }
 
 type ContractCreationResponse = {
-	creation: { blockNumber: string; timestamp: string } | null
+	creation: {
+		blockNumber: string
+		timestamp: string
+		hash: Hex.Hex | null
+		from: Address.Address | null
+		to: Address.Address | null
+		value: string | null
+		status: 'success' | 'reverted' | null
+		gasUsed: string | null
+		effectiveGasPrice: string | null
+	} | null
 	error: string | null
 }
 
@@ -605,6 +678,43 @@ async function fetchContractCreation(
 ): Promise<ContractCreationResponse> {
 	const response = await fetch(`/api/contract/creation/${address}`)
 	return response.json() as Promise<ContractCreationResponse>
+}
+
+function buildContractCreationTransaction(params: {
+	address: Address.Address
+	creation: NonNullable<ContractCreationResponse['creation']>
+}): EnrichedTransaction | null {
+	const { address, creation } = params
+
+	if (!creation.hash || !creation.from) return null
+
+	const blockNumber = parseOptionalBigInt(creation.blockNumber) ?? 0n
+	const timestamp = parseOptionalBigInt(creation.timestamp) ?? 0n
+	const value = parseOptionalBigInt(creation.value) ?? 0n
+	const gasUsed = parseOptionalBigInt(creation.gasUsed) ?? 0n
+	const effectiveGasPrice =
+		parseOptionalBigInt(creation.effectiveGasPrice) ?? 0n
+
+	return {
+		hash: creation.hash,
+		blockNumber: Hex.fromNumber(blockNumber),
+		timestamp: Number(timestamp),
+		from: Address.checksum(creation.from),
+		to: creation.to ? Address.checksum(creation.to) : null,
+		value: Hex.fromNumber(value),
+		status: creation.status ?? 'success',
+		gasUsed: Hex.fromNumber(gasUsed),
+		effectiveGasPrice: Hex.fromNumber(effectiveGasPrice),
+		knownEvents: [
+			{
+				type: 'contract creation',
+				parts: [
+					{ type: 'action', value: 'Deploy Contract' },
+					{ type: 'account', value: Address.checksum(address) },
+				],
+			},
+		],
+	}
 }
 
 function AccountCardWithTimestamps(props: {
@@ -643,7 +753,16 @@ function AccountCardWithTimestamps(props: {
 			? BigInt(contractCreation.creation.timestamp)
 			: undefined
 
-	const totalValue = calculateTotalHoldings(assetsData)
+	const isTip20 = Tip20.isTip20Address(address)
+	const { isTokenListed } = useTokenListMembership()
+	const totalValue = React.useMemo(
+		() =>
+			calculateTotalHoldings(assetsData, {
+				isTokenListed: (tokenAddress) =>
+					isTokenListed(TEMPO_CHAIN_ID, tokenAddress),
+			}),
+		[assetsData, isTokenListed],
+	)
 
 	return (
 		<AccountCard
@@ -656,6 +775,7 @@ function AccountCardWithTimestamps(props: {
 					: undefined
 			}
 			totalValue={totalValue}
+			hideHoldings={isTip20}
 			accountType={resolvedAccountType}
 			isToken={isToken}
 			tokenName={tokenMetadata?.name}
@@ -720,7 +840,7 @@ function SectionsWrapper(props: {
 	})
 	// Use SSR data until mounted to avoid hydration mismatch, then use query data
 	const resolvedContractSource = isMounted
-		? contractSourceQuery.data
+		? (contractSourceQuery.data ?? undefined)
 		: contractSource
 
 	const extractedAbiQuery = useQuery({
@@ -740,13 +860,15 @@ function SectionsWrapper(props: {
 
 	// Only auto-refresh on page 1 when transactions tab is active and live=true
 	const shouldAutoRefresh = page === 1 && isTransactionsTabActive && live
-
-	// Fetch enriched transaction history server-side for all addresses, including tokens.
-	const historySources: HistorySources[] = ['txs', 'transfers', 'emitted']
+	const historySources = React.useMemo(
+		() => historySourcesForAddress(address),
+		[address],
+	)
 
 	const {
 		data: historyQueryData,
-		isPlaceholderData: isHistoryPlaceholder,
+		isPending: isHistoryPending,
+		isFetching: isHistoryFetching,
 		error: historyError,
 	} = useQuery({
 		...historyQueryOptions({
@@ -763,8 +885,7 @@ function SectionsWrapper(props: {
 		refetchOnWindowFocus: shouldAutoRefresh,
 	})
 
-	const isPlaceholderData = isHistoryPlaceholder
-	const error = historyError
+	const error = isHistoryPending ? null : historyError
 
 	/**
 	 * use initialData until mounted to avoid hydration mismatch
@@ -775,25 +896,72 @@ function SectionsWrapper(props: {
 		: page === 1
 			? initialData
 			: historyQueryData
-
-	const transactions = historyData?.transactions ?? []
+	const baseTransactions = historyData?.transactions ?? []
 	const hasMore = historyData?.hasMore ?? false
 	const total = historyData?.total
 	const countCapped = historyData?.countCapped ?? false
+	const shouldFetchContractCreation =
+		isMounted &&
+		isContract &&
+		isTransactionsTabActive &&
+		historyData !== undefined &&
+		!hasMore
+
+	const { data: contractCreationData } = useQuery({
+		queryKey: ['contract-creation', address],
+		queryFn: () => fetchContractCreation(address),
+		enabled: shouldFetchContractCreation,
+		staleTime: 60_000,
+	})
+
+	const transactions = React.useMemo(() => {
+		if (!isTransactionsTabActive || !isContract) return baseTransactions
+		if (hasMore) return baseTransactions
+
+		const creation = contractCreationData?.creation
+		if (!creation) return baseTransactions
+
+		const creationTransaction = buildContractCreationTransaction({
+			address,
+			creation,
+		})
+		if (!creationTransaction) return baseTransactions
+
+		if (
+			baseTransactions.some(
+				(transaction) =>
+					transaction.hash.toLowerCase() ===
+					creationTransaction.hash.toLowerCase(),
+			)
+		)
+			return baseTransactions
+
+		return [...baseTransactions, creationTransaction]
+	}, [
+		address,
+		baseTransactions,
+		contractCreationData?.creation,
+		hasMore,
+		isContract,
+		isTransactionsTabActive,
+	])
 
 	// Token transfers query
 	const transfersPage = isTransfersTabActive ? page : 1
-	const { data: transfersData, isPlaceholderData: isTransfersPlaceholder } =
-		useQuery({
-			...transfersQueryOptions({
-				address,
-				page: transfersPage,
-				limit,
-				offset: isTransfersTabActive ? (page - 1) * limit : 0,
-				account,
-			}),
-			enabled: isMounted && isToken && isTransfersTabActive,
-		})
+	const {
+		data: transfersData,
+		isPending: isTransfersPending,
+		isFetching: isTransfersFetching,
+	} = useQuery({
+		...transfersQueryOptions({
+			address,
+			page: transfersPage,
+			limit,
+			offset: isTransfersTabActive ? (page - 1) * limit : 0,
+			account,
+		}),
+		enabled: isMounted && isToken && isTransfersTabActive,
+	})
 
 	const {
 		transfers = [],
@@ -803,16 +971,19 @@ function SectionsWrapper(props: {
 
 	// Token holders query
 	const holdersPage = isHoldersTabActive ? page : 1
-	const { data: holdersData, isPlaceholderData: isHoldersPlaceholder } =
-		useQuery({
-			...holdersQueryOptions({
-				address,
-				page: holdersPage,
-				limit,
-				offset: isHoldersTabActive ? (page - 1) * limit : 0,
-			}),
-			enabled: isMounted && isToken && isHoldersTabActive,
-		})
+	const {
+		data: holdersData,
+		isPending: isHoldersPending,
+		isFetching: isHoldersFetching,
+	} = useQuery({
+		...holdersQueryOptions({
+			address,
+			page: holdersPage,
+			limit,
+			offset: isHoldersTabActive ? (page - 1) * limit : 0,
+		}),
+		enabled: isMounted && isToken && isHoldersTabActive,
+	})
 
 	const {
 		holders = [],
@@ -822,6 +993,114 @@ function SectionsWrapper(props: {
 
 	// Only use after mount AND when data has loaded to avoid showing 0 during loading
 	const totalTrxCount = isMounted && historyData ? total : undefined
+
+	const isTransactionsLoading =
+		isTransactionsTabActive && !error && (isHistoryPending || !historyData)
+	const isTransactionsFetching =
+		isTransactionsTabActive && isHistoryFetching && !isTransactionsLoading
+	const isTransfersLoading =
+		isTransfersTabActive && (isTransfersPending || !transfersData)
+	const isTransfersFetchingNext =
+		isTransfersTabActive && isTransfersFetching && !isTransfersLoading
+	const isHoldersLoading =
+		isHoldersTabActive && (isHoldersPending || !holdersData)
+	const isHoldersFetchingNext =
+		isHoldersTabActive && isHoldersFetching && !isHoldersLoading
+
+	const queryClient = useQueryClient()
+
+	const prefetchTransactionsNextPage = React.useCallback(() => {
+		if (!isTransactionsTabActive) return
+
+		const nextPage = page + 1
+		const hasNextPage =
+			totalTrxCount === undefined || countCapped
+				? hasMore
+				: nextPage <= Math.ceil(totalTrxCount / limit)
+		if (!hasNextPage) return
+
+		void queryClient
+			.prefetchQuery(
+				historyQueryOptions({
+					address,
+					page: nextPage,
+					limit,
+					offset: (nextPage - 1) * limit,
+					sources: historySources,
+				}),
+			)
+			.catch(() => {})
+	}, [
+		address,
+		countCapped,
+		hasMore,
+		historySources,
+		isTransactionsTabActive,
+		limit,
+		page,
+		queryClient,
+		totalTrxCount,
+	])
+
+	const prefetchTransfersNextPage = React.useCallback(() => {
+		if (!isToken || !isTransfersTabActive) return
+
+		const nextPage = page + 1
+		const hasNextPage =
+			transfersTotalCapped || nextPage <= Math.ceil(transfersTotal / limit)
+		if (!hasNextPage) return
+
+		void queryClient
+			.prefetchQuery(
+				transfersQueryOptions({
+					address,
+					page: nextPage,
+					limit,
+					offset: (nextPage - 1) * limit,
+					account,
+				}),
+			)
+			.catch(() => {})
+	}, [
+		account,
+		address,
+		isToken,
+		isTransfersTabActive,
+		limit,
+		page,
+		queryClient,
+		transfersTotal,
+		transfersTotalCapped,
+	])
+
+	const prefetchHoldersNextPage = React.useCallback(() => {
+		if (!isToken || !isHoldersTabActive) return
+
+		const nextPage = page + 1
+		const hasNextPage =
+			holdersTotalCapped || nextPage <= Math.ceil(holdersTotal / limit)
+		if (!hasNextPage) return
+
+		void queryClient
+			.prefetchQuery(
+				holdersQueryOptions({
+					address,
+					page: nextPage,
+					limit,
+					offset: (nextPage - 1) * limit,
+				}),
+			)
+			.catch(() => {})
+	}, [
+		address,
+		holdersTotal,
+		holdersTotalCapped,
+		isHoldersTabActive,
+		isToken,
+		limit,
+		page,
+		queryClient,
+	])
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -942,12 +1221,13 @@ function SectionsWrapper(props: {
 							displayCountCapped={countCapped}
 							disableLastPage={countCapped}
 							page={page}
-							fetching={isPlaceholderData}
-							loading={!isMounted || !historyData}
+							fetching={isTransactionsFetching}
+							loading={isTransactionsLoading}
 							countLoading={totalTrxCount === undefined}
 							itemsLabel="transactions"
 							itemsPerPage={limit}
 							pagination="simple"
+							onPrefetchNextPage={prefetchTransactionsNextPage}
 							emptyState="No transactions found."
 						/>
 					),
@@ -1000,6 +1280,7 @@ function SectionsWrapper(props: {
 									}))
 							}
 							totalItems={assetsData.length}
+							displayCount={assetsData.length}
 							page={page}
 							itemsLabel="assets"
 							itemsPerPage={ASSETS_PER_PAGE}
@@ -1068,11 +1349,12 @@ function SectionsWrapper(props: {
 							displayCount={transfersTotal}
 							displayCountCapped={transfersTotalCapped}
 							page={page}
-							fetching={isTransfersPlaceholder}
-							loading={!transfersData}
+							fetching={isTransfersFetchingNext}
+							loading={isTransfersLoading}
 							itemsLabel="transfers"
 							itemsPerPage={limit}
 							pagination="simple"
+							onPrefetchNextPage={prefetchTransfersNextPage}
 							emptyState="No transfers found."
 						/>
 					),
@@ -1124,11 +1406,12 @@ function SectionsWrapper(props: {
 							displayCount={holdersTotal}
 							displayCountCapped={holdersTotalCapped}
 							page={page}
-							fetching={isHoldersPlaceholder}
-							loading={!holdersData}
+							fetching={isHoldersFetchingNext}
+							loading={isHoldersLoading}
 							itemsLabel="holders"
 							itemsPerPage={limit}
 							pagination="simple"
+							onPrefetchNextPage={prefetchHoldersNextPage}
 							emptyState="No holders found."
 						/>
 					),
@@ -1259,52 +1542,76 @@ function TransactionFeeCell(props: {
 	gasUsed: string
 	effectiveGasPrice: string
 }) {
+	const { isTokenListed } = useTokenListMembership()
 	const fee =
 		Hex.toBigInt(props.gasUsed as Hex.Hex) *
 		Hex.toBigInt(props.effectiveGasPrice as Hex.Hex)
-	return (
-		<span className="text-tertiary">
-			{PriceFormatter.format(fee, { decimals: 18, format: 'short' })}
-		</span>
-	)
+	const feeRaw = formatUnits(fee, 18)
+	const showUsdPrefix = TEMPO_FEE_TOKEN
+		? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+		: true
+	const feeDisplay = showUsdPrefix
+		? PriceFormatter.format(fee, { decimals: 18, format: 'short' })
+		: PriceFormatter.formatAmountShort(feeRaw)
+	return <span className="text-tertiary">{feeDisplay}</span>
 }
 
 function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 	const { transaction } = props
+	const { areTokensListed, isTokenListed } = useTokenListMembership()
 
-	const amountParts = React.useMemo(() => {
-		return transaction.knownEvents
-			.filter((event) => event.type !== 'approval')
-			.flatMap((event) =>
-				event.parts.filter(
-					(part): part is Extract<KnownEventPart, { type: 'amount' }> =>
-						part.type === 'amount',
-				),
-			)
+	const events = React.useMemo(() => {
+		return transaction.knownEvents.filter((event) => event.type !== 'approval')
 	}, [transaction.knownEvents])
+	const eventTokenAddresses = React.useMemo(
+		() =>
+			events.flatMap((event) =>
+				event.parts.flatMap((part) =>
+					part.type === 'amount' ? [part.value.token] : [],
+				),
+			),
+		[events],
+	)
+	const showUsdPrefix =
+		eventTokenAddresses.length > 0
+			? areTokensListed(TEMPO_CHAIN_ID, eventTokenAddresses)
+			: TEMPO_FEE_TOKEN
+				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+				: true
 
 	const infiniteLabel = <span className="text-secondary">−</span>
 
-	if (!amountParts.length)
+	const hasAmounts = events.some((event) =>
+		event.parts.some((part) => part.type === 'amount'),
+	)
+	if (!hasAmounts)
 		return (
 			<Amount.Base
 				value={0n}
 				decimals={0}
-				prefix="$"
+				prefix={showUsdPrefix ? '$' : undefined}
 				short
 				infinite={infiniteLabel}
 			/>
 		)
 
+	// For each event, take the max amount (avoids double-counting swap legs),
+	// then sum across events.
 	const normalizedDecimals = 18
-	const totalValue = amountParts.reduce((sum, part) => {
-		const decimals = part.value.decimals ?? 6
-		const scale = 10n ** BigInt(normalizedDecimals - decimals)
-		const value =
-			typeof part.value.value === 'bigint'
-				? part.value.value
-				: BigInt(part.value.value)
-		return sum + value * scale
+	const totalValue = events.reduce((sum, event) => {
+		let maxAmount = 0n
+		for (const part of event.parts) {
+			if (part.type !== 'amount') continue
+			const decimals = part.value.decimals ?? 6
+			const scale = 10n ** BigInt(normalizedDecimals - decimals)
+			const value =
+				typeof part.value.value === 'bigint'
+					? part.value.value
+					: BigInt(part.value.value)
+			const normalized = value * scale
+			if (normalized > maxAmount) maxAmount = normalized
+		}
+		return sum + maxAmount
 	}, 0n)
 
 	if (totalValue === 0n) {
@@ -1317,7 +1624,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 				value={value}
 				decimals={18}
 				infinite={infiniteLabel}
-				prefix="$"
+				prefix={showUsdPrefix ? '$' : undefined}
 				short
 			/>
 		)
@@ -1328,7 +1635,7 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 			value={totalValue}
 			decimals={normalizedDecimals}
 			infinite={infiniteLabel}
-			prefix="$"
+			prefix={showUsdPrefix ? '$' : undefined}
 			short
 		/>
 	)
@@ -1392,7 +1699,10 @@ function AssetAmount(props: { asset: AssetData }) {
 
 function AssetValue(props: { asset: AssetData }) {
 	const { asset } = props
+	const { isTokenListed } = useTokenListMembership()
 	if (asset.metadata?.currency !== 'USD')
+		return <span className="text-tertiary">—</span>
+	if (!isTokenListed(TEMPO_CHAIN_ID, asset.address))
 		return <span className="text-tertiary">—</span>
 	if (asset.metadata?.decimals === undefined || asset.balance === undefined)
 		return <span className="text-tertiary">…</span>

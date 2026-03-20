@@ -1,11 +1,11 @@
 {
 	"$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
-	"name": "Tempo Testnet (Andantino)",
+	"name": "Tempo Testnet (Andantino - Deprecated)",
 	"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42429/icon.svg",
-	"timestamp": "2025-12-06T00:00:00Z",
+	"timestamp": "2026-03-09T00:00:00Z",
 	"version": {
 		"major": 1,
-		"minor": 0,
+		"minor": 1,
 		"patch": 0
 	},
 	"tokens": [

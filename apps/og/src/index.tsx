@@ -73,13 +73,25 @@ app
 	.get('/explorer', (context) =>
 		context.env.ASSETS.fetch(new URL('/og-explorer.webp', context.req.url)),
 	)
-
+	.get('/blocks', (context) =>
+		context.env.ASSETS.fetch(new URL('/og-blocks.webp', context.req.url)),
+	)
+	.get('/tokens', (context) =>
+		context.env.ASSETS.fetch(new URL('/og-tokens.webp', context.req.url)),
+	)
 // Apply rate limiting and caching (cache only in prod) to OG image routes
 app.use('/tx/*', rateLimiter)
+app.use('/tx', rateLimiter)
 app.use('/token/*', rateLimiter)
 app.use('/address/*', rateLimiter)
 app.use('/explorer', rateLimiter)
+app.use('/blocks', rateLimiter)
+app.use('/tokens', rateLimiter)
 app.use('*', except(isNotProd, cacheMiddleware))
+
+app.get('/tx', (context) =>
+	context.env.ASSETS.fetch(new URL('/og-transactions.webp', context.req.url)),
+)
 
 /**
  * Transaction OG Image

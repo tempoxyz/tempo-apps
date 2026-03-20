@@ -1,0 +1,9 @@
+{
+	"extends": "../tsconfig.json",
+	"include": ["**/*.ts", "**/*.tsx", "**/*.test.ts", "**/*.test.tsx"],
+	"compilerOptions": {
+		"types": ["node", "vite/client", "@cloudflare/vitest-pool-workers"]
+	},
+	"exclude": [],
+	"files": ["./env.d.ts"]
+}

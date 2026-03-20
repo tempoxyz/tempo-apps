@@ -16,9 +16,11 @@
 		"**/routeTree.gen.ts": true
 	},
 	"search.exclude": {
-    "**/_/**": true,
-    "**/dist/**": true,
-    "**/routeTree.gen.ts": true
+		"**/_/**": true,
+		"**/dist/**": true,
+		"**/*.cursor": true,
+		"**/*.claude": true,
+		"**/routeTree.gen.ts": true
 	},
 	"files.readonlyInclude": {
 		"**/routeTree.gen.ts": true
@@ -62,6 +64,8 @@
 	"files.exclude": {
 		"**/.tanstack": true,
 		"**/*.wrangler": true,
+		"**/*.cursor": true,
+		"**/*.claude": true,
 		"**/.pnpm-store/**": true
 	},
 

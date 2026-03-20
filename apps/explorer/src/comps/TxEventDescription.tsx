@@ -4,7 +4,7 @@ import * as OxAddress from 'ox/Address'
 import type { Address as AddressType } from 'ox'
 import * as Hex from 'ox/Hex'
 import * as Value from 'ox/Value'
-import type * as React from 'react'
+import * as React from 'react'
 import { decodeFunctionData, isAddressEqual } from 'viem'
 import { Address } from '#comps/Address'
 import { Amount } from '#comps/Amount'
@@ -84,15 +84,12 @@ function ContractCallPart(props: {
 		<>
 			<span className="text-accent items-end whitespace-nowrap">{fnName}</span>
 			<span className="text-secondary">on</span>
-			<Link
-				to="/address/$address"
-				params={{ address }}
+			<Address
+				address={address}
 				search={{ tab: 'contract' }}
 				title={address}
-				className="press-down whitespace-nowrap"
-			>
-				<Address address={address} />
-			</Link>
+				className="whitespace-nowrap"
+			/>
 		</>
 	)
 }
@@ -162,10 +159,9 @@ export namespace TxEventDescription {
 						? Value.format(BigInt(part.value[0]), part.value[1])
 						: Value.format(BigInt(part.value)),
 				)
-				const isSmall = formatted.startsWith('<')
 				return (
 					<span
-						className={`items-end overflow-hidden text-ellipsis whitespace-nowrap ${isSmall ? 'text-tertiary' : ''}`}
+						className="items-end overflow-hidden text-ellipsis whitespace-nowrap"
 						title={formatted}
 					>
 						{formatted}
@@ -217,7 +213,14 @@ export namespace TxEventDescription {
 	}
 
 	export function ExpandGroup(props: ExpandGroup.Props) {
-		const { events, seenAs, transformEvent, emptyContent = '…' } = props
+		const {
+			events,
+			seenAs,
+			transformEvent,
+			emptyContent = '…',
+			limit = 3,
+		} = props
+		const [expanded, setExpanded] = React.useState(false)
 
 		if (!events || events.length === 0)
 			return (
@@ -226,7 +229,11 @@ export namespace TxEventDescription {
 				</div>
 			)
 
-		const displayEvents = transformEvent ? events.map(transformEvent) : events
+		const eventsToShow = expanded ? events : events.slice(0, limit)
+		const remainingCount = events.length - eventsToShow.length
+		const displayEvents = transformEvent
+			? eventsToShow.map(transformEvent)
+			: eventsToShow
 
 		return (
 			<div className="flex flex-col gap-[4px] flex-1">
@@ -238,6 +245,24 @@ export namespace TxEventDescription {
 						className="flex flex-row items-center gap-[6px]"
 					/>
 				))}
+				{remainingCount > 0 && (
+					<button
+						type="button"
+						onClick={() => setExpanded(true)}
+						className="text-[12px] text-accent cursor-pointer press-down self-start"
+					>
+						+ Show {remainingCount} more
+					</button>
+				)}
+				{expanded && events.length > limit && (
+					<button
+						type="button"
+						onClick={() => setExpanded(false)}
+						className="text-[12px] text-accent cursor-pointer press-down self-start"
+					>
+						− View less
+					</button>
+				)}
 			</div>
 		)
 	}
@@ -248,6 +273,7 @@ export namespace TxEventDescription {
 			seenAs?: AddressType.Address
 			transformEvent?: (event: KnownEvent) => KnownEvent
 			emptyContent?: React.ReactNode
+			limit?: number
 		}
 	}
 }

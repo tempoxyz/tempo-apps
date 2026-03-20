@@ -29,15 +29,24 @@
 		"allowSyntheticDefaultImports": true,
 		"forceConsistentCasingInFileNames": true,
 		"paths": {
-			"#*": ["./src/*"]
+			"#*": ["./src/*"],
+			"#database": ["./database/*"]
 		},
 		"types": [
 			"node",
 			"@cloudflare/workers-types",
-			"@cloudflare/vitest-pool-workers"
+			"@cloudflare/vitest-pool-workers/types"
 		]
 	},
-	"include": ["src/**/*", "scripts/**/*", "./container/**/*", "test/**/*"],
+	"include": [
+		"src/**/*",
+		"scripts/**/*",
+		"./container/**/*",
+		"test/**/*",
+		"database",
+		"_/chains.ts",
+		"_/chains.ts"
+	],
 	"files": [
 		"env.d.ts",
 		"reset.d.ts",

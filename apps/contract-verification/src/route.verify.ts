@@ -1,34 +1,56 @@
-import { getContainer } from '@cloudflare/containers'
-import { and, eq, isNull } from 'drizzle-orm'
-import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
+import * as z from 'zod/mini'
 import { Address, Hex } from 'ox'
+import { and, eq, isNull } from 'drizzle-orm'
+import type { BatchItem } from 'drizzle-orm/batch'
+
+import { getRandom } from '@cloudflare/containers'
 import { createPublicClient, http, keccak256 } from 'viem'
 
 import {
-	AuxdataStyle,
-	getVyperAuxdataStyle,
-	getVyperImmutableReferences,
-	type ImmutableReferences,
-	type LinkReferences,
-	matchBytecode,
-} from '#bytecode-matching.ts'
-import { chains, CHAIN_IDS } from '#chains.ts'
-
+	getDb,
+	formatError,
+	sourcifyError,
+	normalizeSourcePath,
+	getCreationTransactionMetadata,
+} from '#lib/utilities.ts'
 import {
 	codeTable,
-	compiledContractsSignaturesTable,
-	compiledContractsSourcesTable,
+	sourcesTable,
+	contractsTable,
+	signaturesTable,
+	type SignatureType,
+	verifiedContractsTable,
 	compiledContractsTable,
 	contractDeploymentsTable,
-	contractsTable,
-	type SignatureType,
-	signaturesTable,
-	sourcesTable,
+	compiledContractsSourcesTable,
+	compiledContractsSignaturesTable,
 	verificationJobsTable,
-	verifiedContractsTable,
 } from '#database/schema.ts'
-import { log, normalizeSourcePath, sourcifyError } from '#utilities.ts'
+import {
+	AuxdataStyle,
+	matchBytecode,
+	type LinkReferences,
+	getVyperAuxdataStyle,
+	type ImmutableReferences,
+	getVyperImmutableReferences,
+} from '#lib/bytecode-matching.ts'
+import { chains, chainIds } from '#wagmi.config.ts'
+import { getLogger } from '#lib/logger.ts'
+
+const logger = getLogger(['tempo'])
+import wranglerJSON from '#wrangler.json' with { type: 'json' }
+
+/** Jobs older than this are considered stale and can be retried (5 minutes). */
+const JOB_TTL_MS = 5 * 60 * 1_000
+/** Number of container instances to load-balance across. */
+const CONTAINER_INSTANCE_COUNT =
+	wranglerJSON.containers.at(0)?.max_instances ?? 10
+
+function timestampToMs(value: string): number {
+	const normalized = value.includes('T') ? value : `${value.replace(' ', 'T')}Z`
+	return new Date(normalized).getTime()
+}
 
 /**
  * TODO:
@@ -58,24 +80,493 @@ import { log, normalizeSourcePath, sourcifyError } from '#utilities.ts'
 const verifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
 
 // POST /v2/verify/metadata/:chainId/:address - Verify Contract (using Solidity metadata.json)
-verifyRoute.post('/metadata/:chainId/:address', (context) =>
-	sourcifyError(
-		context,
-		501,
-		'not_implemented',
-		'Metadata-based verification is not implemented',
-	),
-)
+verifyRoute
+	.post('/metadata/:chainId/:address', (context) =>
+		sourcifyError(
+			context,
+			501,
+			'not_implemented',
+			'Metadata-based verification is not implemented',
+		),
+	)
 
-// POST /v2/verify/similarity/:chainId/:address - Verify contract via similarity search
-verifyRoute.post('/similarity/:chainId/:address', (context) =>
-	sourcifyError(
-		context,
-		501,
-		'not_implemented',
-		'Similarity-based verification is not implemented',
-	),
-)
+	// POST /v2/verify/similarity/:chainId/:address - Verify contract via similarity search
+	.post('/similarity/:chainId/:address', (context) =>
+		sourcifyError(
+			context,
+			501,
+			'not_implemented',
+			'Similarity-based verification is not implemented',
+		),
+	)
+
+	// POST /v2/verify/:chainId/:address - Verify Contract (Standard JSON)
+	.post('/:chainId/:address', async (context) => {
+		try {
+			const { chainId: _chainId, address } = context.req.param()
+			let body: unknown
+
+			try {
+				body = await context.req.json()
+			} catch {
+				return sourcifyError(context, 400, 'invalid_json', 'Invalid JSON body')
+			}
+
+			const parsedBody = z.safeParse(
+				z.object({
+					stdJsonInput: z.object({
+						language: z.string(),
+						sources: z.record(
+							z.string(),
+							z.object({
+								content: z.string(),
+							}),
+						),
+						settings: z.record(z.string(), z.unknown()),
+					}),
+					compilerVersion: z.string(),
+					contractIdentifier: z.string(),
+					creationTransactionHash: z.optional(z.string()),
+				}),
+				body,
+			)
+			if (!parsedBody.success) {
+				return sourcifyError(
+					context,
+					400,
+					'missing_params',
+					'stdJsonInput, compilerVersion, and contractIdentifier are required',
+				)
+			}
+
+			if (!/^\d+$/.test(_chainId)) {
+				return sourcifyError(
+					context,
+					400,
+					'invalid_chain_id',
+					`Invalid chainId format: ${_chainId}`,
+				)
+			}
+
+			const chainId = Number(_chainId)
+			if (!chainIds.includes(chainId)) {
+				return sourcifyError(
+					context,
+					400,
+					'unsupported_chain',
+					`The chain with chainId ${chainId} is not supported`,
+				)
+			}
+
+			if (!Address.validate(address, { strict: true })) {
+				return sourcifyError(
+					context,
+					400,
+					'invalid_address',
+					`Invalid address: ${address}`,
+				)
+			}
+
+			const { contractIdentifier } = parsedBody.data
+
+			// Parse contractIdentifier to validate format
+			const lastColonIndex = contractIdentifier.lastIndexOf(':')
+			if (lastColonIndex === -1) {
+				return sourcifyError(
+					context,
+					400,
+					'invalid_contract_identifier',
+					'contractIdentifier must be in format "path/to/Contract.sol:ContractName"',
+				)
+			}
+
+			const db = getDb(context.env.CONTRACTS_DB)
+			const addressBytes = Hex.toBytes(address)
+
+			// Check if already verified
+			const existingVerification = await db
+				.select({
+					matchId: verifiedContractsTable.id,
+					runtimeMatch: verifiedContractsTable.runtimeMatch,
+					creationMatch: verifiedContractsTable.creationMatch,
+				})
+				.from(verifiedContractsTable)
+				.innerJoin(
+					contractDeploymentsTable,
+					eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
+				)
+				.where(
+					and(
+						eq(contractDeploymentsTable.chainId, chainId),
+						eq(contractDeploymentsTable.address, addressBytes),
+					),
+				)
+				.limit(1)
+
+			if (existingVerification.length > 0) {
+				const existing = existingVerification.at(0)
+				const runtimeMatch = existing?.runtimeMatch ? 'exact matches' : 'match'
+				const creationMatch = existing?.creationMatch
+					? 'exact matches'
+					: 'match'
+				return sourcifyError(
+					context,
+					409,
+					'already_verified',
+					`Contract ${address} on chain ${chainId} is already verified with runtimeMatch ${runtimeMatch} and creationMatch ${creationMatch}.`,
+				)
+			}
+
+			// Check if there's already a pending job for this contract
+			const existingJob = await db
+				.select({
+					id: verificationJobsTable.id,
+					startedAt: verificationJobsTable.startedAt,
+				})
+				.from(verificationJobsTable)
+				.where(
+					and(
+						eq(verificationJobsTable.chainId, chainId),
+						eq(verificationJobsTable.contractAddress, addressBytes),
+						isNull(verificationJobsTable.completedAt),
+					),
+				)
+				.limit(1)
+
+			if (existingJob.length > 0 && existingJob[0]) {
+				const jobStarted = existingJob[0].startedAt
+				const staleThresholdMs = Date.now() - JOB_TTL_MS
+				const jobStartedMs = jobStarted ? timestampToMs(jobStarted) : 0
+
+				if (jobStartedMs > staleThresholdMs) {
+					return sourcifyError(
+						context,
+						429,
+						'duplicate_verification_request',
+						`Contract ${address} on chain ${chainId} is already being verified.`,
+					)
+				}
+
+				// Expire the stale job so a new one can be created
+				await db
+					.update(verificationJobsTable)
+					.set({
+						completedAt: new Date().toISOString(),
+						errorCode: 'timeout',
+						errorData: JSON.stringify({
+							message: `Job timed out after ${JOB_TTL_MS / 1000}s`,
+						}),
+					})
+					.where(eq(verificationJobsTable.id, existingJob[0].id))
+
+				logger.info('stale_job_expired', {
+					jobId: existingJob[0].id,
+					chainId,
+					address,
+				})
+			}
+
+			// Create verification job — re-check for pending jobs after insert to handle races.
+			// verification_jobs has no unique constraint on (chain_id, contract_address),
+			// so we guard with a select-then-insert pattern plus a post-insert duplicate check.
+			const jobId = globalThis.crypto.randomUUID()
+			await db.insert(verificationJobsTable).values({
+				id: jobId,
+				chainId,
+				contractAddress: addressBytes,
+				verificationEndpoint: '/v2/verify',
+			})
+
+			// Check if another job was created concurrently (first one wins)
+			const concurrentJobs = await db
+				.select({ id: verificationJobsTable.id })
+				.from(verificationJobsTable)
+				.where(
+					and(
+						eq(verificationJobsTable.chainId, chainId),
+						eq(verificationJobsTable.contractAddress, addressBytes),
+						isNull(verificationJobsTable.completedAt),
+					),
+				)
+				.orderBy(verificationJobsTable.startedAt)
+				.limit(2)
+
+			const firstJob = concurrentJobs[0]
+			if (concurrentJobs.length > 1 && firstJob && firstJob.id !== jobId) {
+				// Another job was created first — clean up ours and return theirs
+				await db
+					.delete(verificationJobsTable)
+					.where(eq(verificationJobsTable.id, jobId))
+				return context.json({ verificationId: firstJob.id }, 202)
+			}
+
+			// Run verification in background
+			context.executionCtx.waitUntil(
+				runVerificationJob(
+					context.env,
+					jobId,
+					chainId,
+					address,
+					parsedBody.data as VerificationInput,
+				),
+			)
+
+			return context.json({ verificationId: jobId }, 202)
+		} catch (error) {
+			const { chainId, address } = context.req.param()
+			logger.error('verify_contract_failed', {
+				error: formatError(error),
+				chainId,
+				address,
+			})
+			return sourcifyError(
+				context,
+				500,
+				'internal_error',
+				'An unexpected error occurred',
+			)
+		}
+	})
+
+	// GET /v2/verify/:verificationId - Check verification job status
+	.get('/:verificationId', async (context) => {
+		try {
+			const { verificationId } = context.req.param()
+			const db = getDb(context.env.CONTRACTS_DB)
+
+			// First check if this is a job ID (UUID format)
+			const isJobId =
+				/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+					verificationId,
+				)
+
+			if (isJobId) {
+				// Look up the job
+				const job = await db
+					.select({
+						id: verificationJobsTable.id,
+						startedAt: verificationJobsTable.startedAt,
+						completedAt: verificationJobsTable.completedAt,
+						verifiedContractId: verificationJobsTable.verifiedContractId,
+						errorCode: verificationJobsTable.errorCode,
+						errorId: verificationJobsTable.errorId,
+						errorData: verificationJobsTable.errorData,
+						chainId: verificationJobsTable.chainId,
+						contractAddress: verificationJobsTable.contractAddress,
+					})
+					.from(verificationJobsTable)
+					.where(eq(verificationJobsTable.id, verificationId))
+					.limit(1)
+
+				if (job.length > 0 && job[0]) {
+					const j = job[0]
+
+					// Job not completed yet - check if stale
+					if (!j.completedAt) {
+						const startedAt = j.startedAt
+						const staleThresholdMs = Date.now() - JOB_TTL_MS
+
+						if (startedAt && timestampToMs(startedAt) < staleThresholdMs) {
+							// Auto-expire stale job
+							await db
+								.update(verificationJobsTable)
+								.set({
+									completedAt: new Date().toISOString(),
+									errorCode: 'timeout',
+									errorData: JSON.stringify({
+										message: `Job timed out after ${JOB_TTL_MS / 1000}s`,
+									}),
+								})
+								.where(eq(verificationJobsTable.id, verificationId))
+
+							return context.json({
+								isJobCompleted: true,
+								verificationId,
+								contract: null,
+								error: {
+									customCode: 'timeout',
+									message: `Verification job timed out. Please retry.`,
+									errorId: globalThis.crypto.randomUUID(),
+								},
+							})
+						}
+
+						return context.json({
+							isJobCompleted: false,
+							verificationId,
+							contract: {
+								match: null,
+								creationMatch: null,
+								runtimeMatch: null,
+								chainId: String(j.chainId),
+								address: Hex.fromBytes(
+									new Uint8Array(j.contractAddress as ArrayBuffer),
+								),
+							},
+						})
+					}
+
+					// Job failed - Sourcify returns 200 even for failed jobs
+					if (j.errorCode) {
+						const errorData = j.errorData
+							? (JSON.parse(j.errorData) as { message?: string })
+							: {}
+						return context.json({
+							isJobCompleted: true,
+							verificationId,
+							contract: null,
+							error: {
+								customCode: j.errorCode,
+								message: errorData.message ?? 'Verification failed',
+								errorId: j.errorId ?? globalThis.crypto.randomUUID(),
+							},
+						})
+					}
+
+					// Job completed successfully - use the verifiedContractId to get details
+					if (j.verifiedContractId) {
+						const result = await db
+							.select({
+								matchId: verifiedContractsTable.id,
+								verifiedAt: verifiedContractsTable.createdAt,
+								runtimeMatch: verifiedContractsTable.runtimeMatch,
+								creationMatch: verifiedContractsTable.creationMatch,
+								runtimeMetadataMatch:
+									verifiedContractsTable.runtimeMetadataMatch,
+								creationMetadataMatch:
+									verifiedContractsTable.creationMetadataMatch,
+								chainId: contractDeploymentsTable.chainId,
+								address: contractDeploymentsTable.address,
+								contractName: compiledContractsTable.name,
+							})
+							.from(verifiedContractsTable)
+							.innerJoin(
+								contractDeploymentsTable,
+								eq(
+									verifiedContractsTable.deploymentId,
+									contractDeploymentsTable.id,
+								),
+							)
+							.innerJoin(
+								compiledContractsTable,
+								eq(
+									verifiedContractsTable.compilationId,
+									compiledContractsTable.id,
+								),
+							)
+							.where(eq(verifiedContractsTable.id, j.verifiedContractId))
+							.limit(1)
+
+						if (result.length > 0 && result[0]) {
+							const v = result[0]
+							const runtimeMatchStatus = v.runtimeMetadataMatch
+								? 'exact_match'
+								: 'match'
+							const creationMatchStatus = v.creationMatch
+								? 'exact_match'
+								: 'match'
+
+							// Sourcify-compatible response format for completed jobs
+							return context.json({
+								isJobCompleted: true,
+								verificationId,
+								contract: {
+									match: runtimeMatchStatus,
+									creationMatch: creationMatchStatus,
+									runtimeMatch: runtimeMatchStatus,
+									matchId: String(v.matchId),
+									name: v.contractName,
+									chainId: String(v.chainId),
+									address: Hex.fromBytes(
+										new Uint8Array(v.address as ArrayBuffer),
+									),
+									verifiedAt: v.verifiedAt,
+								},
+							})
+						}
+					}
+				}
+			}
+
+			// Not a job ID or job not found - try as verified contract ID (numeric)
+			const numericId = Number(verificationId)
+			if (!Number.isNaN(numericId)) {
+				const result = await db
+					.select({
+						matchId: verifiedContractsTable.id,
+						verifiedAt: verifiedContractsTable.createdAt,
+						runtimeMatch: verifiedContractsTable.runtimeMatch,
+						creationMatch: verifiedContractsTable.creationMatch,
+						runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
+						creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
+						chainId: contractDeploymentsTable.chainId,
+						address: contractDeploymentsTable.address,
+						contractName: compiledContractsTable.name,
+					})
+					.from(verifiedContractsTable)
+					.innerJoin(
+						contractDeploymentsTable,
+						eq(
+							verifiedContractsTable.deploymentId,
+							contractDeploymentsTable.id,
+						),
+					)
+					.innerJoin(
+						compiledContractsTable,
+						eq(verifiedContractsTable.compilationId, compiledContractsTable.id),
+					)
+					.where(eq(verifiedContractsTable.id, numericId))
+					.limit(1)
+
+				if (result.length > 0 && result[0]) {
+					const v = result[0]
+					const runtimeMatchStatus = v.runtimeMetadataMatch
+						? 'exact_match'
+						: 'match'
+					const creationMatchStatus = v.creationMatch ? 'exact_match' : 'match'
+
+					// Sourcify-compatible response format for completed jobs
+					return context.json({
+						isJobCompleted: true,
+						verificationId,
+						contract: {
+							match: runtimeMatchStatus,
+							creationMatch: creationMatchStatus,
+							runtimeMatch: runtimeMatchStatus,
+							matchId: String(v.matchId),
+							name: v.contractName,
+							chainId: String(v.chainId),
+							address: Hex.fromBytes(new Uint8Array(v.address as ArrayBuffer)),
+							verifiedAt: v.verifiedAt,
+						},
+					})
+				}
+			}
+
+			return context.json(
+				{
+					customCode: 'not_found',
+					message: `No verification job found for ID ${verificationId}`,
+					errorId: globalThis.crypto.randomUUID(),
+				},
+				404,
+			)
+		} catch (error) {
+			const { verificationId } = context.req.param()
+			logger.error('verification_status_check_failed', {
+				error: formatError(error),
+				verificationId,
+			})
+			return context.json(
+				{
+					customCode: 'internal_error',
+					message: 'An unexpected error occurred',
+					errorId: globalThis.crypto.randomUUID(),
+				},
+				500,
+			)
+		}
+	})
 
 type VerificationInput = {
 	stdJsonInput: {
@@ -90,6 +581,13 @@ type VerificationInput = {
 
 type PublicClientLike = {
 	getCode: (args: { address: `0x${string}` }) => Promise<`0x${string}`>
+	getTransactionReceipt?: (args: { hash: `0x${string}` }) => Promise<{
+		transactionHash: `0x${string}`
+		blockNumber: bigint
+		transactionIndex: number
+		from: `0x${string}`
+		contractAddress: `0x${string}` | null
+	}>
 }
 
 type ContainerLike = {
@@ -153,7 +651,7 @@ async function runVerificationJob(
 	body: VerificationInput,
 	deps?: VerificationDeps,
 ): Promise<void> {
-	const db = drizzle(env.CONTRACTS_DB)
+	const db = getDb(env.CONTRACTS_DB)
 	Hex.assert(address)
 	const addressBytes = Hex.toBytes(address)
 	const startTime = Date.now()
@@ -167,12 +665,26 @@ async function runVerificationJob(
 	const contractName = contractIdentifier.slice(lastColonIndex + 1)
 
 	try {
-		const chain = chains[chainId as keyof typeof chains]
+		const chain = chains.find((chain) => chain.id === chainId)
+		if (!chain) {
+			throw new Error(`Chain ${chainId} is not supported`)
+		}
+		const rpcUrl = chain.rpcUrls.default.http.at(0)
 		const createClient = deps?.createPublicClient ?? createPublicClient
 		const client = createClient({
 			chain,
-			transport: http(chain.rpcUrls.default.http.at(0)),
+			transport: http(rpcUrl),
 		})
+
+		const creationTransactionMetadata = body.creationTransactionHash
+			? await getCreationTransactionMetadata({
+					creationTransactionHash: body.creationTransactionHash,
+					address,
+					chainId,
+					client,
+					logContext: { jobId },
+				})
+			: null
 
 		const onchainBytecode = await client.getCode({ address })
 		if (!onchainBytecode || onchainBytecode === '0x') {
@@ -190,24 +702,52 @@ async function runVerificationJob(
 			return
 		}
 
-		// Compile via container
-		const getContainerFn = deps?.getContainer ?? getContainer
-		const container = getContainerFn(env.VERIFICATION_CONTAINER, 'singleton')
+		// Compile via container (load-balanced across multiple instances)
 		const compileEndpoint = isVyper
 			? 'http://container/compile/vyper'
 			: 'http://container/compile'
 
-		const compileResponse = await container.fetch(
-			new Request(compileEndpoint, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					compilerVersion,
-					contractIdentifier,
-					input: stdJsonInput,
+		let compileResponse: Response
+		try {
+			const getContainerFn = deps?.getContainer ?? null
+			const container = getContainerFn
+				? getContainerFn(env.VERIFICATION_CONTAINER, jobId)
+				: await getRandom(env.VERIFICATION_CONTAINER, CONTAINER_INSTANCE_COUNT)
+
+			compileResponse = await container.fetch(
+				new Request(compileEndpoint, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						compilerVersion,
+						contractIdentifier,
+						input: stdJsonInput,
+					}),
 				}),
-			}),
-		)
+			)
+		} catch (error) {
+			logger.error('container_fetch_failed', {
+				error: formatError(error),
+				jobId,
+				chainId,
+				address,
+			})
+			await db
+				.update(verificationJobsTable)
+				.set({
+					completedAt: new Date().toISOString(),
+					errorCode: 'container_error',
+					errorData: JSON.stringify({
+						message:
+							error instanceof Error
+								? error.message
+								: 'Container request failed',
+					}),
+					compilationTime: Date.now() - startTime,
+				})
+				.where(eq(verificationJobsTable.id, jobId))
+			return
+		}
 
 		if (!compileResponse.ok) {
 			const errorText = await compileResponse.text()
@@ -319,7 +859,7 @@ async function runVerificationJob(
 					errorCode: 'no_match',
 					errorData: JSON.stringify({
 						message:
-							runtimeMatchResult.message ||
+							runtimeMatchResult.message ??
 							'Compiled bytecode does not match on-chain bytecode',
 					}),
 					compilationTime: Date.now() - startTime,
@@ -378,30 +918,45 @@ async function runVerificationJob(
 			})
 			.onConflictDoNothing()
 
-		// Get or create contract
+		// Get or create contract (use onConflictDoNothing to handle concurrent inserts)
+		let contractId: string
 		const existingContract = await db
 			.select({ id: contractsTable.id })
 			.from(contractsTable)
 			.where(eq(contractsTable.runtimeCodeHash, runtimeCodeHashSha256))
 			.limit(1)
 
-		let contractId: string
 		if (existingContract.length > 0 && existingContract[0]) {
 			contractId = existingContract[0].id
 		} else {
 			contractId = globalThis.crypto.randomUUID()
-			await db.insert(contractsTable).values({
-				id: contractId,
-				creationCodeHash: creationCodeHashSha256,
-				runtimeCodeHash: runtimeCodeHashSha256,
-				createdBy: auditUser,
-				updatedBy: auditUser,
-			})
+			await db
+				.insert(contractsTable)
+				.values({
+					id: contractId,
+					creationCodeHash: creationCodeHashSha256,
+					runtimeCodeHash: runtimeCodeHashSha256,
+					createdBy: auditUser,
+					updatedBy: auditUser,
+				})
+				.onConflictDoNothing()
+
+			// Re-fetch in case another request won the race
+			const refetched = await db
+				.select({ id: contractsTable.id })
+				.from(contractsTable)
+				.where(eq(contractsTable.runtimeCodeHash, runtimeCodeHashSha256))
+				.limit(1)
+			if (refetched[0]) contractId = refetched[0].id
 		}
 
-		// Get or create deployment
+		// Get or create deployment (use onConflictDoNothing to handle concurrent inserts)
+		let deploymentId: string
 		const existingDeployment = await db
-			.select({ id: contractDeploymentsTable.id })
+			.select({
+				id: contractDeploymentsTable.id,
+				transactionHash: contractDeploymentsTable.transactionHash,
+			})
 			.from(contractDeploymentsTable)
 			.where(
 				and(
@@ -411,19 +966,54 @@ async function runVerificationJob(
 			)
 			.limit(1)
 
-		let deploymentId: string
 		if (existingDeployment.length > 0 && existingDeployment[0]) {
 			deploymentId = existingDeployment[0].id
+			if (
+				creationTransactionMetadata &&
+				existingDeployment[0].transactionHash === null
+			) {
+				await db
+					.update(contractDeploymentsTable)
+					.set({
+						transactionHash: creationTransactionMetadata.transactionHash,
+						blockNumber: creationTransactionMetadata.blockNumber,
+						transactionIndex: creationTransactionMetadata.transactionIndex,
+						deployer: creationTransactionMetadata.deployer,
+						updatedBy: auditUser,
+					})
+					.where(eq(contractDeploymentsTable.id, deploymentId))
+			}
 		} else {
 			deploymentId = globalThis.crypto.randomUUID()
-			await db.insert(contractDeploymentsTable).values({
-				id: deploymentId,
-				chainId: chainId,
-				address: addressBytes,
-				contractId,
-				createdBy: auditUser,
-				updatedBy: auditUser,
-			})
+			await db
+				.insert(contractDeploymentsTable)
+				.values({
+					id: deploymentId,
+					chainId: chainId,
+					address: addressBytes,
+					transactionHash: creationTransactionMetadata?.transactionHash ?? null,
+					blockNumber: creationTransactionMetadata?.blockNumber ?? null,
+					transactionIndex:
+						creationTransactionMetadata?.transactionIndex ?? null,
+					deployer: creationTransactionMetadata?.deployer ?? null,
+					contractId,
+					createdBy: auditUser,
+					updatedBy: auditUser,
+				})
+				.onConflictDoNothing()
+
+			// Re-fetch in case another request won the race
+			const refetched = await db
+				.select({ id: contractDeploymentsTable.id })
+				.from(contractDeploymentsTable)
+				.where(
+					and(
+						eq(contractDeploymentsTable.chainId, chainId),
+						eq(contractDeploymentsTable.address, addressBytes),
+					),
+				)
+				.limit(1)
+			if (refetched[0]) deploymentId = refetched[0].id
 		}
 
 		// Get or create compiled contract
@@ -520,9 +1110,19 @@ async function runVerificationJob(
 				.onConflictDoNothing()
 		}
 
-		// Extract and insert signatures from ABI
-		const abi = compiledContract.abi
-		for (const item of abi) {
+		// Extract and batch-insert signatures from ABI
+		const signatureRows: Array<{
+			signatureHash32: Uint8Array
+			signature: string
+		}> = []
+		const signatureLinkRows: Array<{
+			id: string
+			compilationId: string
+			signatureHash32: Uint8Array
+			signatureType: SignatureType
+		}> = []
+
+		for (const item of compiledContract.abi) {
 			let signatureType: SignatureType | null = null
 			if (item.type === 'function') signatureType = 'function'
 			else if (item.type === 'event') signatureType = 'event'
@@ -534,25 +1134,41 @@ async function runVerificationJob(
 				const signatureHash32 = Hex.toBytes(
 					keccak256(Hex.fromString(signature)),
 				)
-
-				await db
-					.insert(signaturesTable)
-					.values({
-						signatureHash32: signatureHash32,
-						signature: signature,
-					})
-					.onConflictDoNothing()
-
-				await db
-					.insert(compiledContractsSignaturesTable)
-					.values({
-						id: globalThis.crypto.randomUUID(),
-						compilationId: compilationId,
-						signatureHash32: signatureHash32,
-						signatureType: signatureType,
-					})
-					.onConflictDoNothing()
+				signatureRows.push({ signatureHash32, signature })
+				signatureLinkRows.push({
+					id: globalThis.crypto.randomUUID(),
+					compilationId,
+					signatureHash32,
+					signatureType,
+				})
 			}
+		}
+
+		if (signatureRows.length > 0) {
+			// D1 limits bound parameters to 100 per statement. signaturesTable has
+			// 2 bound params and compiledContractsSignaturesTable has 4, so use 25
+			// rows per chunk (25 × 4 = 100) and submit them in a single D1 batch.
+			const BATCH_SIZE = 25
+			const statements: Array<BatchItem<'sqlite'>> = []
+			for (let i = 0; i < signatureRows.length; i += BATCH_SIZE) {
+				statements.push(
+					db
+						.insert(signaturesTable)
+						.values(signatureRows.slice(i, i + BATCH_SIZE))
+						.onConflictDoNothing(),
+				)
+			}
+			for (let i = 0; i < signatureLinkRows.length; i += BATCH_SIZE) {
+				statements.push(
+					db
+						.insert(compiledContractsSignaturesTable)
+						.values(signatureLinkRows.slice(i, i + BATCH_SIZE))
+						.onConflictDoNothing(),
+				)
+			}
+			await db.batch(
+				statements as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]],
+			)
 		}
 
 		// Insert verified contract with transformation data
@@ -595,7 +1211,12 @@ async function runVerificationJob(
 			})
 			.where(eq(verificationJobsTable.id, jobId))
 	} catch (error) {
-		console.error('Verification job failed:', error)
+		logger.error('verification_job_failed', {
+			error: formatError(error),
+			jobId,
+			chainId,
+			address,
+		})
 		await db
 			.update(verificationJobsTable)
 			.set({
@@ -610,332 +1231,5 @@ async function runVerificationJob(
 			.where(eq(verificationJobsTable.id, jobId))
 	}
 }
-
-// POST /v2/verify/:chainId/:address - Verify Contract (Standard JSON)
-verifyRoute.post('/:chainId/:address', async (context) => {
-	try {
-		const { chainId: _chainId, address } = context.req.param()
-		const body = (await context.req.json()) as VerificationInput
-
-		const chainId = Number(_chainId)
-		if (!CHAIN_IDS.includes(chainId)) {
-			return sourcifyError(
-				context,
-				400,
-				'unsupported_chain',
-				`The chain with chainId ${chainId} is not supported`,
-			)
-		}
-
-		if (!Address.validate(address, { strict: true })) {
-			return sourcifyError(
-				context,
-				400,
-				'invalid_address',
-				`Invalid address: ${address}`,
-			)
-		}
-
-		if (
-			!Object.hasOwn(body, 'stdJsonInput') ||
-			!Object.hasOwn(body, 'compilerVersion') ||
-			!Object.hasOwn(body, 'contractIdentifier')
-		) {
-			return sourcifyError(
-				context,
-				400,
-				'missing_params',
-				'stdJsonInput, compilerVersion, and contractIdentifier are required',
-			)
-		}
-
-		const { contractIdentifier } = body
-
-		// Parse contractIdentifier to validate format
-		const lastColonIndex = contractIdentifier.lastIndexOf(':')
-		if (lastColonIndex === -1) {
-			return sourcifyError(
-				context,
-				400,
-				'invalid_contract_identifier',
-				'contractIdentifier must be in format "path/to/Contract.sol:ContractName"',
-			)
-		}
-
-		const db = drizzle(context.env.CONTRACTS_DB)
-		const addressBytes = Hex.toBytes(address)
-
-		// Check if already verified
-		const existingVerification = await db
-			.select({
-				matchId: verifiedContractsTable.id,
-			})
-			.from(verifiedContractsTable)
-			.innerJoin(
-				contractDeploymentsTable,
-				eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
-			)
-			.where(
-				and(
-					eq(contractDeploymentsTable.chainId, chainId),
-					eq(contractDeploymentsTable.address, addressBytes),
-				),
-			)
-			.limit(1)
-
-		if (existingVerification.length > 0) {
-			return context.json(
-				{ verificationId: existingVerification.at(0)?.matchId?.toString() },
-				202,
-			)
-		}
-
-		// Check if there's already a pending job for this contract
-		const existingJob = await db
-			.select({ id: verificationJobsTable.id })
-			.from(verificationJobsTable)
-			.where(
-				and(
-					eq(verificationJobsTable.chainId, chainId),
-					eq(verificationJobsTable.contractAddress, addressBytes),
-					isNull(verificationJobsTable.completedAt),
-				),
-			)
-			.limit(1)
-
-		if (existingJob.length > 0 && existingJob[0]) {
-			return context.json({ verificationId: existingJob[0].id }, 202)
-		}
-
-		// Create verification job
-		const jobId = globalThis.crypto.randomUUID()
-		await db.insert(verificationJobsTable).values({
-			id: jobId,
-			chainId,
-			contractAddress: addressBytes,
-			verificationEndpoint: '/v2/verify',
-		})
-
-		// Run verification in background
-		context.executionCtx.waitUntil(
-			runVerificationJob(context.env, jobId, chainId, address, body),
-		)
-
-		return context.json({ verificationId: jobId }, 202)
-	} catch (error) {
-		const { chainId, address } = context.req.param()
-		log
-			.fromContext(context)
-			.error('verify_contract_failed', error, { chainId, address })
-		return sourcifyError(
-			context,
-			500,
-			'internal_error',
-			'An unexpected error occurred',
-		)
-	}
-})
-
-// GET /v2/verify/:verificationId - Check verification job status
-verifyRoute.get('/:verificationId', async (context) => {
-	try {
-		const { verificationId } = context.req.param()
-		const db = drizzle(context.env.CONTRACTS_DB)
-
-		// First check if this is a job ID (UUID format)
-		const isJobId =
-			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-				verificationId,
-			)
-
-		if (isJobId) {
-			// Look up the job
-			const job = await db
-				.select({
-					id: verificationJobsTable.id,
-					completedAt: verificationJobsTable.completedAt,
-					verifiedContractId: verificationJobsTable.verifiedContractId,
-					errorCode: verificationJobsTable.errorCode,
-					errorId: verificationJobsTable.errorId,
-					errorData: verificationJobsTable.errorData,
-					chainId: verificationJobsTable.chainId,
-					contractAddress: verificationJobsTable.contractAddress,
-				})
-				.from(verificationJobsTable)
-				.where(eq(verificationJobsTable.id, verificationId))
-				.limit(1)
-
-			if (job.length > 0 && job[0]) {
-				const j = job[0]
-
-				// Job not completed yet
-				if (!j.completedAt) {
-					return context.json({
-						isJobCompleted: false,
-						verificationId,
-						contract: {
-							match: null,
-							creationMatch: null,
-							runtimeMatch: null,
-							chainId: String(j.chainId),
-							address: Hex.fromBytes(
-								new Uint8Array(j.contractAddress as ArrayBuffer),
-							),
-						},
-					})
-				}
-
-				// Job failed - Sourcify returns 200 even for failed jobs
-				if (j.errorCode) {
-					const errorData = j.errorData
-						? (JSON.parse(j.errorData) as { message?: string })
-						: {}
-					return context.json({
-						isJobCompleted: true,
-						verificationId,
-						error: {
-							customCode: j.errorCode,
-							message: errorData.message || 'Verification failed',
-							errorId: j.errorId || globalThis.crypto.randomUUID(),
-						},
-					})
-				}
-
-				// Job completed successfully - use the verifiedContractId to get details
-				if (j.verifiedContractId) {
-					const result = await db
-						.select({
-							matchId: verifiedContractsTable.id,
-							verifiedAt: verifiedContractsTable.createdAt,
-							runtimeMatch: verifiedContractsTable.runtimeMatch,
-							creationMatch: verifiedContractsTable.creationMatch,
-							runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
-							chainId: contractDeploymentsTable.chainId,
-							address: contractDeploymentsTable.address,
-							contractName: compiledContractsTable.name,
-						})
-						.from(verifiedContractsTable)
-						.innerJoin(
-							contractDeploymentsTable,
-							eq(
-								verifiedContractsTable.deploymentId,
-								contractDeploymentsTable.id,
-							),
-						)
-						.innerJoin(
-							compiledContractsTable,
-							eq(
-								verifiedContractsTable.compilationId,
-								compiledContractsTable.id,
-							),
-						)
-						.where(eq(verifiedContractsTable.id, j.verifiedContractId))
-						.limit(1)
-
-					if (result.length > 0 && result[0]) {
-						const v = result[0]
-						const runtimeMatchStatus = v.runtimeMetadataMatch
-							? 'exact_match'
-							: 'match'
-						const creationMatchStatus = v.creationMatch
-							? 'exact_match'
-							: 'match'
-
-						// Sourcify-compatible response format for completed jobs
-						return context.json({
-							isJobCompleted: true,
-							verificationId,
-							contract: {
-								match: runtimeMatchStatus,
-								creationMatch: creationMatchStatus,
-								runtimeMatch: runtimeMatchStatus,
-								chainId: String(v.chainId),
-								address: Hex.fromBytes(
-									new Uint8Array(v.address as ArrayBuffer),
-								),
-								verifiedAt: v.verifiedAt,
-								matchId: String(v.matchId),
-								name: v.contractName,
-							},
-						})
-					}
-				}
-			}
-		}
-
-		// Not a job ID or job not found - try as verified contract ID (numeric)
-		const numericId = Number(verificationId)
-		if (!Number.isNaN(numericId)) {
-			const result = await db
-				.select({
-					matchId: verifiedContractsTable.id,
-					verifiedAt: verifiedContractsTable.createdAt,
-					runtimeMatch: verifiedContractsTable.runtimeMatch,
-					creationMatch: verifiedContractsTable.creationMatch,
-					runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
-					chainId: contractDeploymentsTable.chainId,
-					address: contractDeploymentsTable.address,
-					contractName: compiledContractsTable.name,
-				})
-				.from(verifiedContractsTable)
-				.innerJoin(
-					contractDeploymentsTable,
-					eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
-				)
-				.innerJoin(
-					compiledContractsTable,
-					eq(verifiedContractsTable.compilationId, compiledContractsTable.id),
-				)
-				.where(eq(verifiedContractsTable.id, numericId))
-				.limit(1)
-
-			if (result.length > 0 && result[0]) {
-				const v = result[0]
-				const runtimeMatchStatus = v.runtimeMetadataMatch
-					? 'exact_match'
-					: 'match'
-				const creationMatchStatus = v.creationMatch ? 'exact_match' : 'match'
-
-				// Sourcify-compatible response format for completed jobs
-				return context.json({
-					isJobCompleted: true,
-					verificationId,
-					contract: {
-						match: runtimeMatchStatus,
-						creationMatch: creationMatchStatus,
-						runtimeMatch: runtimeMatchStatus,
-						chainId: String(v.chainId),
-						address: Hex.fromBytes(new Uint8Array(v.address as ArrayBuffer)),
-						verifiedAt: v.verifiedAt,
-						matchId: String(v.matchId),
-						name: v.contractName,
-					},
-				})
-			}
-		}
-
-		return context.json(
-			{
-				customCode: 'not_found',
-				message: `No verification job found for ID ${verificationId}`,
-				errorId: globalThis.crypto.randomUUID(),
-			},
-			404,
-		)
-	} catch (error) {
-		const { verificationId } = context.req.param()
-		log
-			.fromContext(context)
-			.error('verification_status_check_failed', error, { verificationId })
-		return context.json(
-			{
-				customCode: 'internal_error',
-				message: 'An unexpected error occurred',
-				errorId: globalThis.crypto.randomUUID(),
-			},
-			500,
-		)
-	}
-})
 
 export { runVerificationJob, verifyRoute }

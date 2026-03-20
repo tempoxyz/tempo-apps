@@ -15,6 +15,7 @@ import { AddressHighlightProvider } from '#comps/AddressHighlight'
 import { BreadcrumbsProvider } from '#comps/Breadcrumbs'
 import { ErrorBoundary } from '#comps/ErrorBoundary'
 import { IntroSeenProvider } from '#comps/Intro'
+import { TokenListMembershipProvider } from '#comps/TokenListMembership'
 import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
 import {
@@ -87,6 +88,20 @@ export const Route = createRootRouteWithContext<{
 			},
 		],
 		links: [
+			{
+				rel: 'preload',
+				href: '/fonts/satoshi/Satoshi-Variable.woff2',
+				as: 'font',
+				type: 'font/woff2',
+				crossOrigin: 'anonymous',
+			},
+			{
+				rel: 'preload',
+				href: '/fonts/geist-mono/GeistMono-Variable.woff2',
+				as: 'font',
+				type: 'font/woff2',
+				crossOrigin: 'anonymous',
+			},
 			{
 				rel: 'stylesheet',
 				href: css,
@@ -342,7 +357,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	const wagmiState = Route.useLoaderData({ select: deserialize<State> })
 
 	const isLoading = useRouterState({
-		select: (state) => state.status === 'pending',
+		select: (state) => {
+			if (state.status !== 'pending') return false
+
+			const resolvedPathname =
+				state.resolvedLocation?.pathname ?? state.location.pathname
+			return state.location.pathname !== resolvedPathname
+		},
 	})
 
 	return (
@@ -358,11 +379,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				/>
 				<WagmiProvider config={config} initialState={wagmiState}>
 					<QueryClientProvider client={queryClient}>
-						<BreadcrumbsProvider>
-							<AddressHighlightProvider>
-								<IntroSeenProvider>{children}</IntroSeenProvider>
-							</AddressHighlightProvider>
-						</BreadcrumbsProvider>
+						<TokenListMembershipProvider>
+							<BreadcrumbsProvider>
+								<AddressHighlightProvider>
+									<IntroSeenProvider>{children}</IntroSeenProvider>
+								</AddressHighlightProvider>
+							</BreadcrumbsProvider>
+						</TokenListMembershipProvider>
 						{import.meta.env.DEV && (
 							<TanStackDevtools
 								config={{

@@ -1,10 +1,18 @@
-import { env, SELF } from 'cloudflare:test'
+import { env, exports } from 'cloudflare:workers'
 import { Mnemonic } from 'ox'
 import { createClient, custom, http, parseUnits } from 'viem'
 import { sendTransactionSync } from 'viem/actions'
-import { tempoLocalnet } from 'viem/chains'
+import { tempo, tempoDevnet, tempoLocalnet, tempoModerato } from 'viem/chains'
 import { Account, Actions, withFeePayer } from 'viem/tempo'
 import { beforeAll, describe, expect, it } from 'vitest'
+
+const tempoChain = (() => {
+	const tempoEnv = env.TEMPO_ENV ?? 'localnet'
+	if (tempoEnv === 'moderato' || tempoEnv === 'testnet') return tempoModerato
+	if (tempoEnv === 'mainnet') return tempo
+	if (tempoEnv === 'devnet') return tempoDevnet
+	return tempoLocalnet
+})()
 
 const testMnemonic =
 	'test test test test test test test test test test test junk'
@@ -25,16 +33,18 @@ function createFeePayerTransportWithSpy() {
 		async request({ method, params }) {
 			requests.push({ method, params })
 
-			const response = await SELF.fetch('https://fee-payer.test/', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					id: 1,
-					method,
-					params,
+			const response = await exports.default.fetch(
+				new Request('https://fee-payer.test/', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method,
+						params,
+					}),
 				}),
-			})
+			)
 			const data = (await response.json()) as {
 				result?: unknown
 				error?: { code: number; message: string; data?: unknown }
@@ -85,7 +95,7 @@ beforeAll(async () => {
 
 	const client = createClient({
 		account: sponsorAccount,
-		chain: tempoLocalnet,
+		chain: tempoChain,
 		transport: http(env.TEMPO_RPC_URL),
 	})
 
@@ -107,15 +117,17 @@ beforeAll(async () => {
 describe('fee-payer integration', () => {
 	describe('request handling', () => {
 		it('returns error for unsupported method', async () => {
-			const response = await SELF.fetch('https://fee-payer.test/', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					jsonrpc: '2.0',
-					id: 1,
-					method: 'eth_chainId',
+			const response = await exports.default.fetch(
+				new Request('https://fee-payer.test/', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'eth_chainId',
+					}),
 				}),
-			})
+			)
 
 			expect(response.status).toBe(200)
 			const data = (await response.json()) as {
@@ -125,22 +137,47 @@ describe('fee-payer integration', () => {
 			expect(data.error?.name).toBe('RpcResponse.MethodNotSupportedError')
 		})
 
+		it('rejects eth_signTransaction', async () => {
+			const response = await exports.default.fetch(
+				new Request('https://fee-payer.test/', {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						jsonrpc: '2.0',
+						id: 1,
+						method: 'eth_signTransaction',
+						params: [{ to: '0x0000000000000000000000000000000000000000' }],
+					}),
+				}),
+			)
+
+			expect(response.status).toBe(200)
+			const data = (await response.json()) as {
+				error?: { code: number; name: string }
+			}
+			expect(data.error).toBeDefined()
+		})
+
 		it('handles CORS preflight requests', async () => {
-			const response = await SELF.fetch('https://fee-payer.test/', {
-				method: 'OPTIONS',
-				headers: {
-					Origin: 'https://example.com',
-					'Access-Control-Request-Method': 'POST',
-				},
-			})
+			const response = await exports.default.fetch(
+				new Request('https://fee-payer.test/', {
+					method: 'OPTIONS',
+					headers: {
+						Origin: 'https://example.com',
+						'Access-Control-Request-Method': 'POST',
+					},
+				}),
+			)
 
 			expect([200, 204]).toContain(response.status)
 		})
 
 		it('handles health check / root path', async () => {
-			const response = await SELF.fetch('https://fee-payer.test/', {
-				method: 'GET',
-			})
+			const response = await exports.default.fetch(
+				new Request('https://fee-payer.test/', {
+					method: 'GET',
+				}),
+			)
 
 			expect(response.status).toBeLessThan(500)
 		})
@@ -153,7 +190,7 @@ describe('fee-payer integration', () => {
 
 			const client = createClient({
 				account: userAccount,
-				chain: tempoLocalnet,
+				chain: tempoChain,
 				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
 					policy: 'sign-only',
 				}),
@@ -183,7 +220,7 @@ describe('fee-payer integration', () => {
 
 			const client = createClient({
 				account: userAccount,
-				chain: tempoLocalnet,
+				chain: tempoChain,
 				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
 					policy: 'sign-and-broadcast',
 				}),

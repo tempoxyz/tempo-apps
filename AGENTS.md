@@ -19,8 +19,8 @@ This is a **TypeScript monorepo** for applications on the Tempo blockchain appli
 
 ```bash
 pnpm install                    # Install all dependencies
-pnpm check                      # Run Biome lint + format (with auto-fix)
-pnpm check:types                # Type check all workspaces
+pnpm check                      # Run Biome lint + format (with auto-fix), then type check (via postcheck)
+pnpm check:types                # Type check all workspaces (uses tsgo, the native TypeScript compiler)
 pnpm build                      # Build all apps
 ```
 
@@ -38,8 +38,7 @@ pnpm build                      # Build all apps
 ## Dependencies
 
 * You *must* use wagmi, viem, or ox to interact with tempo
-* You should *never* use tempo.ts - prefer the equivilant implementation in wagmi or viem or ox directly
-* When adding a new dependancy, look at other apps and see if there is a similar dependancy
+* When adding a new dependency, look at other apps and see if there is a similar dependency
 
 ### TypeScript
 
@@ -76,13 +75,13 @@ export declare namespace MyComponent {
 
 ### Before Starting Any Code Changes
 
-- [ ] Understand which app(s) you're modifying
+* [ ] Understand which app(s) you're modifying
 * [ ] Check existing patterns in similar files
 * [ ] Identify affected tests
 
 ### After Completing Code Changes (BEFORE declaring "done")
 
-- [ ] Run `pnpm check` from repo root
+* [ ] Run `pnpm check` from repo root
 * [ ] Run `pnpm check:types` from repo root
 * [ ] Fix ALL type/lint errors before proceeding
 * [ ] Run tests in affected apps: `pnpm test`
@@ -90,7 +89,7 @@ export declare namespace MyComponent {
 
 ### Before Any Commit
 
-- [ ] All above checks must pass
+* [ ] All above checks must pass
 * [ ] All related tests must pass
 * [ ] No outstanding type or lint errors
 * [ ] No console.log statements left (except in tests)
@@ -116,19 +115,19 @@ Add multiple rows if the change affects different views or states.
 1. Create a new directory under `apps/`
 2. Add a `package.json` with scripts: `dev`, `build`, `check`, `check:types`
 3. Add a `tsconfig.json` extending strict TypeScript settings
-4. Add a `wrangler.jsonc` for Cloudflare Workers deployment
+4. Add a `wrangler.json` for Cloudflare Workers deployment
 5. Add `.env.example` with required environment variables
 6. Update this file's "Existing Apps" table
 
 ### Required Files for New Apps
 
-```
+```txt
 apps/my-app/
 ├── src/
 │   └── index.ts          # Entry point
 ├── package.json          # Must include standard scripts
 ├── tsconfig.json         # TypeScript config
-├── wrangler.jsonc        # Cloudflare Workers config
+├── wrangler.json         # Cloudflare Workers config
 └── .env.example          # Environment template
 ```
 
@@ -146,6 +145,8 @@ apps/my-app/
   }
 }
 ```
+
+> **Note**: `dev` varies per app (e.g., `wrangler dev` for worker-only apps). Adapt to fit the app's runtime.
 
 ## Library Documentation
 
@@ -174,11 +175,11 @@ To capture a page load from the very first frame using MCP tools:
 4. **Combine frames with ImageMagick**: `magick -delay 50 -loop 0 /tmp/frame_*.png -resize 650x /tmp/recording.gif`
 5. **Upload to imgbb**: `curl --location --request POST "https://api.imgbb.com/1/upload?key=API_KEY" --form "image=@/tmp/recording.gif"`
 
-Example parallel tool call (first frame captured during navigation start):
+Example parallel tool call (MCP pseudo-syntax, not bash):
 
 ```bash
-navigate_page(url="https://...", timeout=0)  } parallel
-take_screenshot(filePath="/tmp/frame_01.png") }
+navigate_page(url="https://...", timeout=0)
+take_screenshot(filePath="/tmp/frame_01.png")
 ```
 
 Then sequential screenshots for frames 02-10, combine, and upload.

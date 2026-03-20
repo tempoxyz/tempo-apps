@@ -12,8 +12,10 @@ count.txt
 .vinxi
 worker-configuration.d.ts
 _
-
+.cursor
 logs
+.logs
+.ignore
 
 _tempo_docs
 _scripts

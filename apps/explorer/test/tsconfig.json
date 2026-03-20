@@ -1,0 +1,16 @@
+{
+	"extends": "../tsconfig.json",
+	"include": ["**/*.test.ts", "**/*.test.tsx", "vitest.config.ts"],
+	"compilerOptions": {
+		"paths": {
+			"#*": ["./src/*"]
+		},
+		"types": [
+			"node",
+			"vite/client",
+			"unplugin-icons/types/react",
+			"typed-query-selector/strict",
+			"@cloudflare/vitest-pool-workers"
+		]
+	}
+}

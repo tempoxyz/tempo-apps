@@ -1,14 +1,15 @@
 import type { Address } from 'ox'
 import { cx } from '#lib/css'
+import { TOKENLIST_BASE_URL } from '#lib/tokenlist'
 import { getTempoChain } from '#wagmi.config'
 
-const TOKENLIST_BASE_URL = `https://tokenlist.tempo.xyz/icon/${getTempoChain().id}`
+const TOKEN_ICON_BASE_URL = `${TOKENLIST_BASE_URL}/icon/${getTempoChain().id}`
 
 export function TokenIcon(props: TokenIcon.Props) {
 	const { address, className } = props
 	return (
 		<img
-			src={`${TOKENLIST_BASE_URL}/${address}`}
+			src={`${TOKEN_ICON_BASE_URL}/${address}`}
 			alt=""
 			className={cx('size-4 rounded-full shrink-0', className)}
 			onError={(e) => {

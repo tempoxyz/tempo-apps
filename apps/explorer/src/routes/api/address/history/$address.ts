@@ -9,7 +9,7 @@ import { getChainId } from 'wagmi/actions'
 import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { getRequestURL, hasIndexSupply } from '#lib/env'
-import { type KnownEvent, parseKnownEvents } from '#lib/domain/known-events'
+import { parseKnownEvents } from '#lib/domain/known-events'
 import { isTip20Address, type Metadata } from '#lib/domain/tip20'
 import {
 	fetchAddressDirectTxHistoryRows,
@@ -17,6 +17,7 @@ import {
 	fetchAddressHistoryTxDetailsByHashes,
 	fetchAddressLogRowsByTxHashes,
 	fetchAddressReceiptRowsByHashes,
+	fetchAddressTxOnlyHistoryPageWithJoins,
 	fetchAddressTransferRowsByTxHashes,
 	fetchAddressTransferEmittedHashes,
 	fetchAddressTransferHashes,
@@ -25,6 +26,18 @@ import {
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
+import {
+	buildTxOnlyTransactions,
+	type EnrichedTransaction,
+	type HistoryHashEntry,
+} from '#lib/server/build-tx-only-transactions'
+
+export {
+	buildTxOnlyTransactions,
+	type EnrichedTransaction,
+	type HistoryHashEntry,
+} from '#lib/server/build-tx-only-transactions'
+
 const abi = Object.values(Abis).flat()
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [100, 10]
@@ -32,9 +45,6 @@ const HISTORY_COUNT_MAX = 10_000
 const TRANSFER_EVENT_TOPIC0 =
 	'0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' as Hex.Hex
 
-/**
- * Recursively converts BigInt values to strings for JSON serialization.
- */
 function serializeBigInts<T>(value: T): T {
 	if (typeof value === 'bigint') {
 		return value.toString() as T
@@ -95,21 +105,8 @@ function toUint256Data(value: bigint): Hex.Hex {
 	return `0x${value.toString(16).padStart(64, '0')}` as Hex.Hex
 }
 
-export type EnrichedTransaction = {
-	hash: `0x${string}`
-	blockNumber: string
-	timestamp: number
-	from: `0x${string}`
-	to: `0x${string}` | null
-	value: string
-	status: 'success' | 'reverted'
-	gasUsed: string
-	effectiveGasPrice: string
-	knownEvents: KnownEvent[]
-}
-
 export type HistoryResponse = {
-	transactions: EnrichedTransaction[]
+	transactions: import('#lib/server/build-tx-only-transactions').EnrichedTransaction[]
 	total: number
 	offset: number
 	limit: number
@@ -123,9 +120,6 @@ export type HistoryResponse = {
  * - txs: Direct transactions (from/to the address)
  * - transfers: Transfer events where address is sender/recipient
  * - emitted: Transfer events emitted by the address (for token contracts)
- *
- * Default: 'txs,transfers' - skips emitted to avoid expensive queries for tokens
- * For wallet addresses, pass 'txs,transfers,emitted' to include all sources
  */
 type Sources = { txs: boolean; transfers: boolean; emitted: boolean }
 
@@ -209,6 +203,8 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const sources = parseSources(searchParams.sources)
 
 					const fetchSize = limit + 1
+					const isTxOnlySource =
+						sources.txs && !sources.transfers && !sources.emitted
 
 					const bufferSize = Math.min(
 						Math.max(offset + fetchSize, limit * 3),
@@ -234,107 +230,135 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					}
 					type TransferRow = { tx_hash: Hex.Hex; block_num: bigint }
 
-					const emptyDirect: DirectRow[] = []
-					const emptyTransfer: TransferRow[] = []
+					let hasMore = false
+					let finalHashes: HistoryHashEntry[] = []
+					let totalCount = 0
+					let countCapped = false
+					let txOnlyPageResult: Awaited<
+						ReturnType<typeof fetchAddressTxOnlyHistoryPageWithJoins>
+					> | null = null
 
-					const transferQueryParams = {
-						address,
-						chainId,
-						includeSent,
-						includeReceived,
-						sortDirection,
-					}
+					if (isTxOnlySource) {
+						txOnlyPageResult = await fetchAddressTxOnlyHistoryPageWithJoins({
+							address,
+							chainId,
+							includeSent,
+							includeReceived,
+							sortDirection,
+							offset,
+							limit,
+							countCap: HISTORY_COUNT_MAX,
+						})
 
-					const [directResult, transferResult, emittedResult] =
-						await Promise.all([
-							sources.txs
-								? fetchAddressDirectTxHistoryRows(queryParams)
-								: Promise.resolve(emptyDirect),
-							sources.transfers
-								? fetchAddressTransferHashes({
-										...transferQueryParams,
-										limit: bufferSize,
-									}).catch(() => emptyTransfer)
-								: Promise.resolve(emptyTransfer),
-							sources.emitted
-								? fetchAddressTransferEmittedHashes({
-										address,
-										chainId,
-										sortDirection,
-										limit: bufferSize,
-									}).catch(() => emptyTransfer)
-								: Promise.resolve(emptyTransfer),
-						])
-
-					type HashEntry = {
-						hash: Hex.Hex
-						block_num: bigint
-						from?: string
-						to?: string | null
-						value?: bigint
-					}
-					const allHashes = new Map<Hex.Hex, HashEntry>()
-
-					for (const row of directResult)
-						allHashes.set(row.hash, {
+						hasMore = txOnlyPageResult.hasMore
+						totalCount = txOnlyPageResult.total
+						countCapped = txOnlyPageResult.countCapped
+						finalHashes = txOnlyPageResult.hashes.map((row) => ({
 							hash: row.hash,
 							block_num: row.block_num,
 							from: row.from,
 							to: row.to,
 							value: row.value,
+						}))
+					} else {
+						const emptyDirect: DirectRow[] = []
+						const emptyTransfer: TransferRow[] = []
+
+						const transferQueryParams = {
+							address,
+							chainId,
+							includeSent,
+							includeReceived,
+							sortDirection,
+						}
+
+						const [directResult, transferResult, emittedResult] =
+							await Promise.all([
+								sources.txs
+									? fetchAddressDirectTxHistoryRows(queryParams)
+									: Promise.resolve(emptyDirect),
+								sources.transfers
+									? fetchAddressTransferHashes({
+											...transferQueryParams,
+											limit: bufferSize,
+										}).catch(() => emptyTransfer)
+									: Promise.resolve(emptyTransfer),
+								sources.emitted
+									? fetchAddressTransferEmittedHashes({
+											address,
+											chainId,
+											sortDirection,
+											limit: bufferSize,
+										}).catch(() => emptyTransfer)
+									: Promise.resolve(emptyTransfer),
+							])
+
+						const allHashes = new Map<Hex.Hex, HistoryHashEntry>()
+
+						for (const row of directResult)
+							allHashes.set(row.hash, {
+								hash: row.hash,
+								block_num: row.block_num,
+								from: row.from,
+								to: row.to,
+								value: row.value,
+							})
+						for (const row of transferResult)
+							if (!allHashes.has(row.tx_hash))
+								allHashes.set(row.tx_hash, {
+									hash: row.tx_hash,
+									block_num: row.block_num,
+								})
+						for (const row of emittedResult)
+							if (!allHashes.has(row.tx_hash))
+								allHashes.set(row.tx_hash, {
+									hash: row.tx_hash,
+									block_num: row.block_num,
+								})
+
+						// Skip the expensive count query if no source hit its buffer limit —
+						// in that case allHashes already contains every tx hash.
+						const anySourceHitLimit =
+							directResult.length >= bufferSize ||
+							transferResult.length >= bufferSize ||
+							emittedResult.length >= bufferSize
+
+						const countResult = anySourceHitLimit
+							? await fetchAddressHistoryDistinctCount({
+									address,
+									chainId,
+									includeSent,
+									includeReceived,
+									includeTxs: sources.txs,
+									includeTransfers: sources.transfers,
+									includeEmitted: sources.emitted,
+									countCap: HISTORY_COUNT_MAX,
+								})
+							: { count: allHashes.size, capped: false }
+
+						const sortedHashes = [...allHashes.values()].sort((a, b) => {
+							const blockDiff =
+								sortDirection === 'desc'
+									? Number(b.block_num) - Number(a.block_num)
+									: Number(a.block_num) - Number(b.block_num)
+							if (blockDiff !== 0) return blockDiff
+							return sortDirection === 'desc'
+								? b.hash.localeCompare(a.hash)
+								: a.hash.localeCompare(b.hash)
 						})
-					for (const row of transferResult)
-						if (!allHashes.has(row.tx_hash))
-							allHashes.set(row.tx_hash, {
-								hash: row.tx_hash,
-								block_num: row.block_num,
-							})
-					for (const row of emittedResult)
-						if (!allHashes.has(row.tx_hash))
-							allHashes.set(row.tx_hash, {
-								hash: row.tx_hash,
-								block_num: row.block_num,
-							})
 
-					// Skip the expensive count query if no source hit its buffer limit —
-					// in that case allHashes already contains every tx hash.
-					const anySourceHitLimit =
-						directResult.length >= bufferSize ||
-						transferResult.length >= bufferSize ||
-						emittedResult.length >= bufferSize
+						const paginatedHashes = sortedHashes.slice(
+							offset,
+							offset + fetchSize,
+						)
+						hasMore = paginatedHashes.length > limit
+						finalHashes = hasMore
+							? paginatedHashes.slice(0, limit)
+							: paginatedHashes
 
-					const countResult = anySourceHitLimit
-						? await fetchAddressHistoryDistinctCount({
-								address,
-								chainId,
-								includeSent,
-								includeReceived,
-								includeTxs: sources.txs,
-								includeTransfers: sources.transfers,
-								includeEmitted: sources.emitted,
-								countCap: HISTORY_COUNT_MAX,
-							})
-						: { count: allHashes.size, capped: false }
-
-					const sortedHashes = [...allHashes.values()].sort((a, b) => {
-						const blockDiff =
-							sortDirection === 'desc'
-								? Number(b.block_num) - Number(a.block_num)
-								: Number(a.block_num) - Number(b.block_num)
-						if (blockDiff !== 0) return blockDiff
-						return sortDirection === 'desc'
-							? b.hash.localeCompare(a.hash)
-							: a.hash.localeCompare(b.hash)
-					})
-
-					const paginatedHashes = sortedHashes.slice(offset, offset + fetchSize)
-					const hasMore = paginatedHashes.length > limit
-					const finalHashes = hasMore
-						? paginatedHashes.slice(0, limit)
-						: paginatedHashes
-
-					const totalCount = countResult.count
-					const countCapped = countResult.capped
+						totalCount = countResult.count
+						countCapped = countResult.capped
+					}
 
 					if (finalHashes.length === 0) {
 						return Response.json({
@@ -348,7 +372,31 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						} satisfies HistoryResponse)
 					}
 
+					if (isTxOnlySource) {
+						if (!txOnlyPageResult)
+							throw new Error('Missing tx-only history page result')
+
+						const transactions = await buildTxOnlyTransactions({
+							address,
+							hashes: finalHashes,
+							txRows: txOnlyPageResult.txRows,
+							receiptRows: txOnlyPageResult.receiptRows,
+							logRows: txOnlyPageResult.logRows,
+						})
+
+						return Response.json({
+							transactions,
+							total: totalCount,
+							offset,
+							limit,
+							hasMore,
+							countCapped,
+							error: null,
+						} satisfies HistoryResponse)
+					}
+
 					const finalHashValues = finalHashes.map((entry) => entry.hash)
+
 					const [receiptRows, txRows, logRows, transferRows] =
 						await Promise.all([
 							fetchAddressReceiptRowsByHashes(chainId, finalHashValues),
@@ -495,6 +543,9 @@ export const Route = createFileRoute('/api/address/history/$address')({
 							to: toSource as Address.Address | null,
 							status,
 							logs: txLogs,
+							contractAddress: receipt?.contract_address
+								? (receipt.contract_address as Address.Address)
+								: null,
 						} as unknown as TransactionReceipt
 
 						const transactionForKnownEvents = tx

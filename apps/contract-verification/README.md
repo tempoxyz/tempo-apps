@@ -46,12 +46,12 @@ Pass the API URL to the `--verifier-url` flag and set `--verifier` to `sourcify`
 forge script script/Mail.s.sol --verifier-url https://contracts.tempo.xyz --verifier sourcify
 ```
 
-See [/apps/contract-verification/scripts/quick-verify.sh](./scripts/quick-verify.sh)
-and [/apps/contract-verification/scripts/medium-verify.sh](./scripts/medium-verify.sh) for small examples you can run.
+See [/apps/contract-verification/scripts/verify-solidity.sh](./scripts/verify-solidity.sh)
+and [/apps/contract-verification/scripts/verify-vyper.sh](./scripts/verify-vyper.sh) for small examples you can run.
 
 #### Direct API Usage
 
-- Standard JSON: see [/apps/contract-verification/scripts/verify-with-curl.sh](./scripts/verify-with-curl.sh) for a full example.
+- Standard JSON: see [/apps/contract-verification/scripts/verify-via-curl.sh](./scripts/verify-via-curl.sh) for a full example.
 
 ### Development
 
@@ -75,7 +75,7 @@ especially when it's SQLite. Sadly, wrangler doesn't have a nice way to do this.
 
 Improvised solution: we [locate the local SQLite file wrangler uses](/apps/contract-verification/scripts/local-d1.sh) and run drizzle-kit studio to view it.
 
-| environment | database | dialect | GUI |
-|-------------|----------|----------|-----|
-| production  | Cloudflare D1 | SQLite | [DrizzleKit Studio](https://github.com/drizzle-team/drizzle-studio) |
-| development | Local SQLite | SQLite | [Cloudflare Dashboard](https://dash.cloudflare.com/) |
+| environment | database      | dialect | GUI                                                                 |
+|-------------|---------------|---------|---------------------------------------------------------------------|
+| production  | Cloudflare D1 | SQLite  | [DrizzleKit Studio](https://github.com/drizzle-team/drizzle-studio) |
+| development | Local SQLite  | SQLite  | [Cloudflare Dashboard](https://dash.cloudflare.com/)                |

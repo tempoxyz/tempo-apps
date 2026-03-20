@@ -1,4 +1,4 @@
-import { keepPreviousData, queryOptions } from '@tanstack/react-query'
+import { queryOptions } from '@tanstack/react-query'
 import type { Hex } from 'ox'
 import type { Block, Log, TransactionReceipt } from 'viem'
 import { getBlock } from 'wagmi/actions'
@@ -48,7 +48,6 @@ export function blocksQueryOptions(start?: number) {
 				blocks: blocks.filter(Boolean) as Block[],
 			}
 		},
-		placeholderData: keepPreviousData,
 	})
 }
 
@@ -71,7 +70,6 @@ export function blockDetailQueryOptions(blockRef: BlockIdentifier) {
 				block: block as BlockWithTransactions,
 			}
 		},
-		placeholderData: keepPreviousData,
 	})
 }
 

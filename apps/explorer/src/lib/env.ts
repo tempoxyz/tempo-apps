@@ -1,7 +1,47 @@
 import { createIsomorphicFn } from '@tanstack/react-start'
 import { getRequestUrl } from '@tanstack/react-start/server'
 
-export type TempoEnv = 'testnet' | 'moderato' | 'devnet' | 'presto'
+export type TempoEnv = 'testnet' | 'mainnet' | 'devnet'
+
+export function inferTempoEnvFromHostname(
+	hostname: string | undefined,
+): TempoEnv | undefined {
+	if (!hostname) return undefined
+
+	const host = hostname.toLowerCase()
+
+	if (
+		host.includes('explorer-mainnet') ||
+		host.includes('explore.mainnet.') ||
+		host.includes('explore.presto.') ||
+		host.includes('explore.4217.')
+	) {
+		return 'mainnet'
+	}
+
+	if (
+		host.includes('explorer-devnet') ||
+		host.includes('explore.devnet.') ||
+		host.includes('explore.31318.')
+	) {
+		return 'devnet'
+	}
+
+	if (
+		host.includes('explorer-testnet') ||
+		host.includes('explore.testnet.') ||
+		host.includes('explore.moderato.') ||
+		host.includes('explore.42431.')
+	) {
+		return 'testnet'
+	}
+
+	return undefined
+}
+
+function normalizeTempoEnv(value: string | undefined): TempoEnv {
+	return value === 'mainnet' || value === 'devnet' ? value : 'testnet'
+}
 
 export const getRequestURL = createIsomorphicFn()
 	.client(() => new URL(__BASE_URL__ || window.location.origin))
@@ -27,31 +67,29 @@ export function getApiUrl(path: string, searchParams?: URLSearchParams): URL {
 }
 
 export const getTempoEnv = createIsomorphicFn()
-	.client(() => import.meta.env.VITE_TEMPO_ENV as TempoEnv)
-	.server(() => process.env.VITE_TEMPO_ENV as TempoEnv)
+	.client(() => {
+		const inferred = inferTempoEnvFromHostname(window.location.hostname)
+		return inferred ?? normalizeTempoEnv(import.meta.env.VITE_TEMPO_ENV)
+	})
+	.server(() => {
+		const inferred = inferTempoEnvFromHostname(getRequestUrl().hostname)
+		return inferred ?? normalizeTempoEnv(process.env.VITE_TEMPO_ENV)
+	})
 
 export const isTestnet = createIsomorphicFn()
-	.client(
-		() =>
-			import.meta.env.VITE_TEMPO_ENV === 'testnet' ||
-			import.meta.env.VITE_TEMPO_ENV === 'moderato',
-	)
-	.server(
-		() =>
-			process.env.VITE_TEMPO_ENV === 'testnet' ||
-			process.env.VITE_TEMPO_ENV === 'moderato',
-	)
+	.client(() => getTempoEnv() === 'testnet')
+	.server(() => getTempoEnv() === 'testnet')
 
 export const hasIndexSupply = createIsomorphicFn()
 	.client(
 		() =>
-			import.meta.env.VITE_TEMPO_ENV === 'testnet' ||
-			import.meta.env.VITE_TEMPO_ENV === 'moderato' ||
-			import.meta.env.VITE_TEMPO_ENV === 'presto',
+			getTempoEnv() === 'testnet' ||
+			getTempoEnv() === 'mainnet' ||
+			getTempoEnv() === 'devnet',
 	)
 	.server(
 		() =>
-			process.env.VITE_TEMPO_ENV === 'testnet' ||
-			process.env.VITE_TEMPO_ENV === 'moderato' ||
-			process.env.VITE_TEMPO_ENV === 'presto',
+			getTempoEnv() === 'testnet' ||
+			getTempoEnv() === 'mainnet' ||
+			getTempoEnv() === 'devnet',
 	)

@@ -1,5 +1,5 @@
 interface EnvironmentVariables {
-	readonly TEMPO_ENV: 'testnet' | 'devnet' | 'moderato'
+	readonly TEMPO_ENV: 'testnet' | 'devnet' | 'moderato' | 'localnet' | 'mainnet'
 	readonly TEMPO_RPC_URL: string
 	readonly ALLOWED_ORIGINS: string
 	readonly POSTHOG_API_KEY?: string

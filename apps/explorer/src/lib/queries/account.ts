@@ -1,8 +1,9 @@
-import { keepPreviousData, queryOptions } from '@tanstack/react-query'
+import { queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import type { RpcTransaction } from 'viem'
 import type * as z from 'zod/mini'
 
+import { isTip20Address } from '#lib/domain/tip20'
 import { getApiUrl } from '#lib/env.ts'
 import type { RequestParametersSchema as AccountRequestParametersSchema } from '#routes/api/address/$address.ts'
 import type { HistoryResponse } from '#routes/api/address/history/$address.ts'
@@ -58,7 +59,6 @@ export function transactionsQueryOptions(
 		staleTime: 10_000,
 		refetchInterval: false,
 		refetchOnWindowFocus: false,
-		placeholderData: keepPreviousData,
 	})
 }
 
@@ -68,16 +68,18 @@ export type TransactionsData = Awaited<
 	>
 >
 
-/**
- * Data sources to query for transaction history:
- * - txs: Direct transactions (from/to the address)
- * - transfers: Transfer events where address is sender/recipient
- * - emitted: Transfer events emitted by the address (for token contracts)
- *
- * Default: 'txs,transfers' - skips emitted to avoid expensive queries for tokens
- * For wallet addresses, pass 'txs,transfers,emitted' to include all sources
- */
 export type HistorySources = 'txs' | 'transfers' | 'emitted'
+
+const STANDARD_HISTORY_SOURCES: HistorySources[] = ['txs', 'transfers']
+const TIP20_HISTORY_SOURCES: HistorySources[] = ['txs']
+
+export function historySourcesForAddress(
+	address: Address.Address,
+): ReadonlyArray<HistorySources> {
+	return isTip20Address(address)
+		? TIP20_HISTORY_SOURCES
+		: STANDARD_HISTORY_SOURCES
+}
 
 export function historyQueryOptions(params: {
 	page: number
@@ -85,9 +87,9 @@ export function historyQueryOptions(params: {
 	offset: number
 	include?: 'all' | 'sent' | 'received' | undefined
 	address: Address.Address
-	sources?: HistorySources[] | undefined
+	sources: ReadonlyArray<HistorySources>
 }) {
-	const sources = params.sources?.join(',') ?? 'txs,transfers,emitted'
+	const sources = params.sources.join(',')
 	const searchParams = new URLSearchParams({
 		include: params?.include ?? 'all',
 		limit: params.limit.toString(),
@@ -115,7 +117,6 @@ export function historyQueryOptions(params: {
 		staleTime: 10_000,
 		refetchInterval: false,
 		refetchOnWindowFocus: false,
-		placeholderData: keepPreviousData,
 	})
 }
 

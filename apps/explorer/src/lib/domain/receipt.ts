@@ -1,9 +1,9 @@
 import * as Address from 'ox/Address'
-import * as Hex from 'ox/Hex'
 import { TokenRole } from 'ox/tempo'
 import type { AbiEvent, Log, TransactionReceipt } from 'viem'
 import { parseEventLogs, zeroAddress } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
+import { decodeMemoForDisplay } from '#lib/domain/memo'
 import type * as Tip20 from '#lib/domain/tip20'
 import { HexFormatter, PriceFormatter } from '#lib/formatting'
 
@@ -292,7 +292,7 @@ export namespace LineItems {
 					const isCredit = Address.isEqual(to, sender)
 					const memo =
 						'memo' in event.args
-							? Hex.toString(Hex.trimLeft(event.args.memo))
+							? decodeMemoForDisplay(event.args.memo)
 							: undefined
 
 					const { currency, decimals, symbol } = metadata

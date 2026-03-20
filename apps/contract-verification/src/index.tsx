@@ -1,23 +1,29 @@
-import { env } from 'cloudflare:workers'
-import { getContainer } from '@cloudflare/containers'
-import { bodyLimit } from 'hono/body-limit'
 import { cors } from 'hono/cors'
 import { showRoutes } from 'hono/dev'
+import { timeout } from 'hono/timeout'
+import { env } from 'cloudflare:workers'
+import { honoLogger } from '@logtape/hono'
+import { bodyLimit } from 'hono/body-limit'
+import { requestId } from 'hono/request-id'
 import { createFactory } from 'hono/factory'
 import { prettyJSON } from 'hono/pretty-json'
-import { requestId } from 'hono/request-id'
-import { timeout } from 'hono/timeout'
 import { rateLimiter } from 'hono-rate-limiter'
+import { getContainer } from '@cloudflare/containers'
+import { contextStorage } from 'hono/context-storage'
 
-import { sourcifyChains } from '#chains.ts'
+import { docsRoute } from '#route.docs.tsx'
+import { verifyRoute } from '#route.verify.ts'
+import { sourcifyChains } from '#wagmi.config.ts'
 import { VerificationContainer } from '#container.ts'
+import { legacyVerifyRoute } from '#route.verify-legacy.ts'
+import { configureLogger, getLogger, withContext } from '#lib/logger.ts'
+import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
+import { handleError, originMatches, sourcifyError } from '#lib/utilities.ts'
+
 import OpenApiSpec from '#openapi.json' with { type: 'json' }
 import packageJSON from '#package.json' with { type: 'json' }
-import { docsRoute } from '#route.docs.tsx'
-import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
-import { verifyRoute } from '#route.verify.ts'
-import { legacyVerifyRoute } from '#route.verify-legacy.ts'
-import { handleError, log, originMatches, sourcifyError } from '#utilities.ts'
+
+const logger = getLogger(['tempo'])
 
 export { VerificationContainer }
 
@@ -29,12 +35,28 @@ const WHITELISTED_ORIGINS = [
 
 type AppEnv = { Bindings: Cloudflare.Env }
 const factory = createFactory<AppEnv>()
-const app = factory.createApp()
+export const app = factory.createApp()
 
 app.onError(handleError)
 
+app.use(async (_context, next) => {
+	await configureLogger(env.NODE_ENV)
+	await next()
+})
+
 // @note: order matters
+app.use(contextStorage())
 app.use('*', requestId({ headerName: 'X-Tempo-Request-Id' }))
+app.use(async (context, next) => {
+	await withContext(
+		{
+			requestId: context.get('requestId') as string | undefined,
+			method: context.req.method,
+			path: context.req.path,
+		},
+		next,
+	)
+})
 app.use(
 	cors({
 		allowMethods: ['GET', 'POST', 'OPTIONS', 'HEAD'],
@@ -47,24 +69,26 @@ app.use(
 		},
 	}),
 )
-app.use(
-	rateLimiter<AppEnv>({
-		binding: (context) => context.env.RATE_LIMITER,
-		keyGenerator: (context) =>
-			(context.req.header('X-Real-IP') ??
-				context.req.header('CF-Connecting-IP') ??
-				context.req.header('X-Forwarded-For')) ||
+app.use(async (context, next) => {
+	if (!context.env.RATE_LIMITER) return next()
+
+	return rateLimiter<AppEnv>({
+		binding: context.env.RATE_LIMITER,
+		keyGenerator: (rateLimitContext) =>
+			(rateLimitContext.req.header('X-Real-IP') ??
+				rateLimitContext.req.header('CF-Connecting-IP') ??
+				rateLimitContext.req.header('X-Forwarded-For')) ||
 			'',
-		skip: (context) =>
+		skip: (rateLimitContext) =>
 			WHITELISTED_ORIGINS.some((p) =>
 				originMatches({
-					origin: new URL(context.req.url).hostname,
+					origin: new URL(rateLimitContext.req.url).hostname,
 					pattern: p,
 				}),
 			),
 		message: { error: 'Rate limit exceeded', retryAfter: '60s' },
-	}),
-)
+	})(context, next)
+})
 
 const BODY_LIMIT = 4 * 1024 * 1024 // 4mb
 
@@ -72,9 +96,7 @@ app.use(
 	bodyLimit({
 		maxSize: BODY_LIMIT,
 		onError: (context) => {
-			log
-				.fromContext(context)
-				.warn('body_limit_exceeded', { maxSizeBytes: BODY_LIMIT })
+			logger.warn('body_limit_exceeded', { maxSizeBytes: BODY_LIMIT })
 			return sourcifyError(
 				context,
 				413,
@@ -88,20 +110,12 @@ app.use('*', timeout(30_000)) // 30 seconds default
 app.use('/verify/*', timeout(300_000)) // 5 minutes for legacy verify routes
 app.use('/v2/verify/*', timeout(300_000)) // 5 minutes for v2 verify routes
 app.use(prettyJSON())
-app.use(async (context, next) => {
-	const start = Date.now()
-	await next()
-	const durationMs = Date.now() - start
-	const status = context.res.status
-	const level = status >= 400 ? 'warn' : 'info'
-	log.fromContext(context)[level]('request_completed', {
-		status,
-		durationMs,
-		ip:
-			context.req.header('CF-Connecting-IP') ??
-			context.req.header('X-Forwarded-For'),
-	})
-})
+app.use(
+	honoLogger({
+		category: ['tempo', 'http'],
+		skip: (context) => context.req.path === '/health',
+	}),
+)
 
 app.route('/docs', docsRoute)
 app.route('/verify', legacyVerifyRoute)

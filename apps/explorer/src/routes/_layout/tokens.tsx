@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
 import * as z from 'zod/mini'
@@ -17,6 +17,7 @@ import { withLoaderTiming } from '#lib/profiling'
 import { TOKENS_PER_PAGE, tokensListQueryOptions } from '#lib/queries'
 import type { Token } from '#lib/server/tokens'
 import { getApiUrl } from '#lib/env.ts'
+import { OG_BASE_URL } from '#lib/og'
 
 async function fetchTokensCount() {
 	const response = await fetch(getApiUrl('/api/tokens/count'), {
@@ -34,7 +35,20 @@ async function fetchTokensCount() {
 export const Route = createFileRoute('/_layout/tokens')({
 	component: TokensPage,
 	head: () => ({
-		meta: [{ title: 'Tokens – Tempo Explorer' }],
+		meta: [
+			{ title: 'Tokens – Tempo Explorer' },
+			{ property: 'og:title', content: 'Tokens – Tempo Explorer' },
+			{
+				property: 'og:description',
+				content: 'Browse all tokens on Tempo.',
+			},
+			{ property: 'og:image', content: `${OG_BASE_URL}/tokens` },
+			{ property: 'og:image:type', content: 'image/webp' },
+			{ property: 'og:image:width', content: '1200' },
+			{ property: 'og:image:height', content: '630' },
+			{ name: 'twitter:card', content: 'summary_large_image' },
+			{ name: 'twitter:image', content: `${OG_BASE_URL}/tokens` },
+		],
 	}),
 	validateSearch: z.object({
 		page: z.optional(z.number()),
@@ -45,8 +59,6 @@ export const Route = createFileRoute('/_layout/tokens')({
 				tokensListQueryOptions({
 					page: 1,
 					limit: TOKENS_PER_PAGE,
-					includeCount: false,
-					includeHolders: false,
 				}),
 			),
 		),
@@ -57,13 +69,12 @@ function TokensPage() {
 	const loaderData = Route.useLoaderData()
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 	const isMounted = useIsMounted()
+	const queryClient = useQueryClient()
 
-	const { data, isPlaceholderData, isPending } = useQuery({
+	const { data, isPending, isFetching } = useQuery({
 		...tokensListQueryOptions({
 			page,
 			limit: TOKENS_PER_PAGE,
-			includeCount: false,
-			includeHolders: true,
 		}),
 		initialData: page === 1 ? loaderData : undefined,
 	})
@@ -95,36 +106,57 @@ function TokensPage() {
 
 	const formatHoldersCount = React.useCallback(
 		(token: Token) => {
-			if (token.holdersCount === undefined) return '—'
+			if (token.holdersCount === undefined) return '0'
 			const formatted = holdersCountFormatter.format(token.holdersCount)
 			return token.holdersCountCapped ? `> ${formatted}` : formatted
 		},
 		[holdersCountFormatter],
 	)
 
+	const prefetchNextPage = React.useCallback(() => {
+		const nextPage = page + 1
+		const hasNextPage =
+			exactCount == null ||
+			isCapped ||
+			nextPage <= Math.ceil(exactCount / TOKENS_PER_PAGE)
+		if (!hasNextPage) return
+
+		void queryClient
+			.prefetchQuery(
+				tokensListQueryOptions({
+					page: nextPage,
+					limit: TOKENS_PER_PAGE,
+				}),
+			)
+			.catch(() => {})
+	}, [exactCount, isCapped, page, queryClient])
+
 	const columns: DataGrid.Column[] = [
 		{
 			label: 'Token',
 			align: 'start',
-			minWidth: 80,
+			width: 120,
 		},
 		{
 			label: 'Name',
 			align: 'start',
+			width: '2fr',
+			minWidth: 180,
 		},
 		{
 			label: 'Currency',
 			align: 'start',
-			minWidth: 80,
+			width: 110,
 		},
 		{
 			label: 'Holders',
-			align: 'end',
-			minWidth: 90,
+			align: 'start',
+			width: 110,
 		},
 		{
 			label: 'Address',
 			align: 'start',
+			width: 320,
 		},
 		{
 			label: (
@@ -136,7 +168,7 @@ function TokensPage() {
 				/>
 			),
 			align: 'end',
-			minWidth: 100,
+			width: 170,
 		},
 	]
 
@@ -180,7 +212,7 @@ function TokensPage() {
 												key="created"
 												timestamp={BigInt(token.createdAt)}
 												format={timeFormat}
-												className="text-secondary"
+												className="text-secondary whitespace-nowrap"
 											/>,
 										],
 										link: {
@@ -193,12 +225,13 @@ function TokensPage() {
 								displayCount={isCapped ? TOKEN_COUNT_MAX : exactCount}
 								displayCountCapped={isCapped}
 								page={page}
-								fetching={isPlaceholderData}
+								fetching={isFetching && !isPending}
 								loading={isPending}
-								countLoading={!exactCount}
+								countLoading={exactCount == null}
 								itemsLabel="tokens"
 								itemsPerPage={TOKENS_PER_PAGE}
 								pagination="simple"
+								onPrefetchNextPage={prefetchNextPage}
 								emptyState="No tokens found."
 							/>
 						),

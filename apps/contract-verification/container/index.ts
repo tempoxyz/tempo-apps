@@ -6,17 +6,26 @@ const headers = new Headers({
 	'X-Request-Id': Bun.randomUUIDv7(),
 })
 
+/** Emit structured JSON matching the worker's `jsonSink` format from `src/logger.ts`. */
+function log(
+	level: 'info' | 'warn' | 'error',
+	event: string,
+	properties?: Record<string, unknown>,
+) {
+	console[level](JSON.stringify({ event, ...properties }))
+}
+
 const server = Bun.serve({
-	port: 80_80,
+	port: 8080,
 	development: Bun.env.NODE_ENV === 'development',
 	routes: {
 		'/compile': {
 			POST: async (request, server) => {
 				const address = server.requestIP(request as Request)
 				if (address)
-					console.info(
-						`[/compile] request IP address: ${address.address}:${address.port}`,
-					)
+					log('info', 'compile_request', {
+						from: `${address.address}:${address.port}`,
+					})
 
 				const body = await request.json<{
 					input: object
@@ -44,7 +53,7 @@ const server = Bun.serve({
 				const stderr = await new Response(proc.stderr).text()
 				await proc.exited
 
-				if (stderr) console.error('[compile] stderr:', stderr)
+				if (stderr) log('error', 'compile_stderr', { stderr })
 
 				if (!stdout)
 					return Response.json(
@@ -56,7 +65,9 @@ const server = Bun.serve({
 					const output = JSON.parse(stdout)
 					return Response.json(output, { status: 200 })
 				} catch (error) {
-					console.error('[compile] Failed to parse solc output:', error)
+					log('error', 'compile_parse_failed', {
+						error: error instanceof Error ? error.message : String(error),
+					})
 					return Response.json(
 						{ error: 'Failed to parse solc output', stdout, stderr },
 						{ status: 500 },
@@ -68,9 +79,9 @@ const server = Bun.serve({
 			POST: async (request, server) => {
 				const address = server.requestIP(request as Request)
 				if (address)
-					console.info(
-						`[/compile/vyper] request IP address: ${address.address}:${address.port}`,
-					)
+					log('info', 'compile_vyper_request', {
+						from: `${address.address}:${address.port}`,
+					})
 
 				const body = await request.json<{
 					input: object
@@ -100,7 +111,7 @@ const server = Bun.serve({
 
 				// Vyper < 0.4.0 outputs warnings to stderr, so only log if it looks like an error
 				if (stderr && !stderr.includes('Warning'))
-					console.error('[compile/vyper] stderr:', stderr)
+					log('error', 'compile_vyper_stderr', { stderr })
 
 				if (!stdout)
 					return Response.json(
@@ -112,7 +123,9 @@ const server = Bun.serve({
 					const output = JSON.parse(stdout)
 					return Response.json(output, { status: 200 })
 				} catch (error) {
-					console.error('[compile/vyper] Failed to parse vyper output:', error)
+					log('error', 'compile_vyper_parse_failed', {
+						error: error instanceof Error ? error.message : String(error),
+					})
 					return Response.json(
 						{ error: 'Failed to parse vyper output', stdout, stderr },
 						{ status: 500 },
@@ -125,7 +138,9 @@ const server = Bun.serve({
 			new Response(`Active requests: ${server.pendingRequests}`),
 	},
 	error: (error) => {
-		console.error(Bun.color('red', 'ansi'), JSON.stringify(error, undefined, 2))
+		log('error', 'unhandled_server_error', {
+			error: error instanceof Error ? error.message : String(error),
+		})
 		const errorMessage =
 			error instanceof Error ? error.message : 'Unknown error'
 		return new Response(errorMessage, { status: 500, headers })
@@ -133,9 +148,7 @@ const server = Bun.serve({
 })
 
 if (Bun.env.NODE_ENV === 'development')
-	console.info(
-		`Server is running on`,
-		Bun.color('#4DFA7B', 'ansi'),
-		server.url.toString().replaceAll(`${server.port}/`, `${server.port}`),
-	)
-else console.info(`Server started on port ${server.port}`)
+	log('info', 'server_started', {
+		url: server.url.toString().replaceAll(`${server.port}/`, `${server.port}`),
+	})
+else log('info', 'server_started', { port: server.port })
