@@ -824,9 +824,6 @@ function SectionsWrapper(props: {
 	// Track hydration to avoid SSR/client mismatch with query data
 	const isMounted = useIsMounted()
 
-	const isContractTabActive =
-		visibleTabs[activeSection] === 'contract' ||
-		visibleTabs[activeSection] === 'interact'
 	const isTransactionsTabActive = visibleTabs[activeSection] === 'transactions'
 	const isTransfersTabActive = visibleTabs[activeSection] === 'transfers'
 	const isHoldersTabActive = visibleTabs[activeSection] === 'holders'
@@ -836,7 +833,7 @@ function SectionsWrapper(props: {
 	const contractSourceQuery = useQuery({
 		...useContractSourceQueryOptions({ address }),
 		initialData: contractSource,
-		enabled: isMounted && isContract && isContractTabActive,
+		enabled: isMounted && isContract,
 	})
 	// Use SSR data until mounted to avoid hydration mismatch, then use query data
 	const resolvedContractSource = isMounted
@@ -850,7 +847,6 @@ function SectionsWrapper(props: {
 		enabled:
 			isMounted &&
 			isContract &&
-			isContractTabActive &&
 			!contractInfo?.abi &&
 			!contractSourceQuery.data?.abi,
 	})
