@@ -92,6 +92,17 @@
 				"label": "stcUSD"
 			},
 			"dateAdded": "2026-03-16T02:56:16Z"
+		},
+		{
+			"name": "Machine Payments Protocol USD",
+			"symbol": "MPP",
+			"decimals": 6,
+			"chainId": 4217,
+			"address": "0x20C0000000000000000000004B66935aE8CCBc90",
+			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20C0000000000000000000004B66935aE8CCBc90.svg",
+			"extensions": {
+				"chain": "tempo"
+			}
 		}
 	]
 }
