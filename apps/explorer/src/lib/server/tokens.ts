@@ -6,6 +6,7 @@ import { TOKEN_COUNT_MAX } from '#lib/constants'
 import {
 	type TokenCreatedRow,
 	fetchTokenCreatedRows,
+	fetchTokenCreatedRowsByAddresses,
 	fetchTokenHoldersCountRows,
 } from '#lib/server/tempo-queries'
 import { TOKENLIST_URLS } from '#lib/tokenlist'
@@ -126,24 +127,62 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 
 		const shouldFilter = chainId === TEMPO_MAINNET_CHAIN_ID
 
-		// Fetch tokenlist addresses and DB rows in parallel
-		const [tokenListAddresses, allRows] = await Promise.all([
-			getTokenListAddresses(chainId),
-			fetchAllFilteredRows(chainId, shouldFilter),
-		])
+		// Fetch tokenlist and DB rows in parallel
+		const [{ entries, addresses: tokenListAddresses }, allRows] =
+			await Promise.all([
+				fetchTokenList(chainId),
+				fetchAllFilteredRows(chainId, shouldFilter),
+			])
 
 		// Partition: tokenlist tokens first (preserving tokenlist order), then rest by creation date
+		// Track fallback tokens (not in TIDX) so we exclude them from TIDX holder queries
+		const fallbackAddresses = new Set<string>()
 		let sorted: TokenCreatedRow[]
 		if (tokenListAddresses.size > 0) {
 			const listed: TokenCreatedRow[] = []
 			const rest: TokenCreatedRow[] = []
+			const foundAddresses = new Set<string>()
 			for (const row of allRows) {
 				if (tokenListAddresses.has(row.token.toLowerCase())) {
 					listed.push(row)
+					foundAddresses.add(row.token.toLowerCase())
 				} else {
 					rest.push(row)
 				}
 			}
+
+			// Fetch TIDX data for tokenlist tokens missing from the batch
+			const missingEntries = entries.filter(
+				(e) => !foundAddresses.has(e.address.toLowerCase()),
+			)
+			if (missingEntries.length > 0) {
+				const missingAddresses = missingEntries.map(
+					(e) => e.address as Address.Address,
+				)
+				let missingRows: TokenCreatedRow[] = []
+				try {
+					missingRows =
+						await fetchTokenCreatedRowsByAddresses(chainId, missingAddresses)
+				} catch {}
+				// For any still missing (e.g. predeployed system tokens with no creation event), use tokenlist data
+				const fetchedAddresses = new Set(
+					missingRows.map((r) => r.token.toLowerCase()),
+				)
+				for (const entry of missingEntries) {
+					if (!fetchedAddresses.has(entry.address.toLowerCase())) {
+						missingRows.push({
+							token: entry.address as `0x${string}`,
+							name: entry.name,
+							symbol: entry.symbol,
+							currency: '',
+							block_timestamp: 0,
+						})
+						fallbackAddresses.add(entry.address.toLowerCase())
+					}
+				}
+				listed.push(...missingRows)
+			}
+
 			// Sort listed tokens by their position in the tokenlist
 			const addressOrder = [...tokenListAddresses]
 			listed.sort(
@@ -162,10 +201,15 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 
 		const holdersCounts = new Map<string, { count: number; capped: boolean }>()
 
-		if (tokensResult.length > 0) {
+		// Only query TIDX for holders of tokens that have TIDX data (exclude fallback tokens)
+		const tidxTokenAddresses = tokensResult
+			.filter((row) => !fallbackAddresses.has(row.token.toLowerCase()))
+			.map((row) => row.token as Address.Address)
+
+		if (tidxTokenAddresses.length > 0) {
 			try {
 				const holdersResults = await fetchTokenHoldersCountRows(
-					tokensResult.map((row) => row.token as Address.Address),
+					tidxTokenAddresses,
 					chainId,
 					TOKEN_COUNT_MAX,
 				)

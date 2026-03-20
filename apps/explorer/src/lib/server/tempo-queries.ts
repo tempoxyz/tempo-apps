@@ -349,6 +349,60 @@ export async function fetchTokenCreatedMetadata(
 	return results
 }
 
+/** Like fetchTokenCreatedMetadata but also returns block_timestamp */
+export async function fetchTokenCreatedRowsByAddresses(
+	chainId: number,
+	tokens: Address.Address[],
+): Promise<TokenCreatedRow[]> {
+	if (tokens.length === 0) return []
+
+	const tokenCreatedSignature = ABIS.getTokenCreatedEvent(chainId)
+	const topic0 = OxHash.keccak256(
+		OxHex.fromString(tokenCreatedSignature.replace(/^event /, '')),
+	)
+
+	const tokenTopics = tokens.map(
+		(t) =>
+			`0x${t.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex,
+	)
+
+	const rows = await QB(chainId)
+		.selectFrom('logs')
+		.select(['topic1', 'data', 'block_timestamp'])
+		.where('topic0', '=', topic0)
+		.where('topic1', 'in', tokenTopics)
+		.execute()
+
+	const dataParams = [
+		{ name: 'name', type: 'string' },
+		{ name: 'symbol', type: 'string' },
+		{ name: 'currency', type: 'string' },
+		{ name: 'quoteToken', type: 'address' },
+		{ name: 'admin', type: 'address' },
+		{ name: 'salt', type: 'bytes32' },
+	] as const
+
+	const results: TokenCreatedRow[] = []
+
+	for (const row of rows) {
+		if (!row.topic1 || !row.data) continue
+		try {
+			const token =
+				`0x${(row.topic1 as string).slice(-40)}` as `0x${string}`
+			const decoded = decodeAbiParameters(dataParams, row.data as Hex.Hex)
+			results.push({
+				token,
+				name: decoded[0] as string,
+				symbol: decoded[1] as string,
+				currency: decoded[2] as string,
+				block_timestamp: row.block_timestamp as number,
+			})
+		} catch {}
+	}
+
+	return results
+}
+
 export async function fetchTransactionTimestamp(
 	chainId: number,
 	hash: Hex.Hex,

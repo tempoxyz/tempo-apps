@@ -8,7 +8,7 @@ import * as React from 'react'
 import { ExploreInput } from '#comps/ExploreInput'
 import { useAnimatedBlockNumber, useLiveBlockNumber } from '#lib/block-number'
 import { cx } from '#lib/css'
-import { getTempoEnv, isTestnet } from '#lib/env'
+import { getTempoEnv } from '#lib/env'
 import SquareSquare from '~icons/lucide/square-square'
 
 export function Header(props: Header.Props) {
@@ -175,7 +175,6 @@ export namespace Header {
 
 		return (
 			<Link
-				disabled={!isTestnet()}
 				to="/block/$id"
 				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
 				className={cx(
