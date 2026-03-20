@@ -32,10 +32,9 @@ export function DataGrid(props: DataGrid.Props) {
 	const isSearchNavigationPending = useRouterState({
 		select: (state) => {
 			if (state.status !== 'pending') return false
+			if (!state.resolvedLocation) return false
 
-			const resolvedPathname =
-				state.resolvedLocation?.pathname ?? state.location.pathname
-			return state.location.pathname === resolvedPathname
+			return state.location.pathname === state.resolvedLocation.pathname
 		},
 	})
 	const effectiveLoading = loading || isSearchNavigationPending

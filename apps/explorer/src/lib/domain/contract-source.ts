@@ -105,7 +105,7 @@ export async function fetchContractSource(params: {
 	chainId: number
 	highlight?: boolean
 	signal?: AbortSignal
-}): Promise<ContractSource> {
+}): Promise<ContractSource | null> {
 	const { address, chainId, highlight = true, signal } = params
 
 	try {
@@ -119,6 +119,8 @@ export async function fetchContractSource(params: {
 		)
 
 		const response = await fetch(url, { signal })
+
+		if (response.status === 404) return null
 
 		if (!response.ok) {
 			console.error('Failed to fetch contract sources:', await response.text())

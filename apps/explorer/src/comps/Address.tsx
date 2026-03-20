@@ -5,13 +5,15 @@ import { Midcut } from '#comps/Midcut'
 import { cx } from '#lib/css'
 
 export function Address(props: Address.Props) {
-	const { address, align, chars = 3, className, self } = props
+	const { address, align, chars = 3, className, search, self, title } = props
 	const { isHighlighted, handlers } = useAddressHighlight(address)
 	return (
 		<>
 			<Link
 				to="/address/$address"
 				params={{ address }}
+				search={search}
+				title={title}
 				className={cx(
 					'text-accent press-down hover:underline font-mono inline-flex min-w-0',
 					align === 'end' && 'w-full justify-end',
@@ -33,6 +35,8 @@ export namespace Address {
 		align?: Midcut.Props['align']
 		chars?: number
 		className?: string
+		search?: Record<string, unknown>
 		self?: boolean
+		title?: string
 	}
 }

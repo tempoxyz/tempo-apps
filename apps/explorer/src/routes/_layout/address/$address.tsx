@@ -840,7 +840,7 @@ function SectionsWrapper(props: {
 	})
 	// Use SSR data until mounted to avoid hydration mismatch, then use query data
 	const resolvedContractSource = isMounted
-		? contractSourceQuery.data
+		? (contractSourceQuery.data ?? undefined)
 		: contractSource
 
 	const extractedAbiQuery = useQuery({

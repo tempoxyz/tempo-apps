@@ -11,15 +11,19 @@ export function AbiViewer(props: { abi: Abi }) {
 	const highlightedHtml = useHighlightedJson(json)
 
 	return (
-		<div className="max-h-[280px] overflow-auto">
+		<div className="max-h-[280px] overflow-auto mx-3 mb-2">
 			{highlightedHtml ? (
 				<div
 					// biome-ignore lint/security/noDangerouslySetInnerHtml: trusted shiki output
 					dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-					className="shiki shiki-block text-primary whitespace-pre bg-transparent!"
+					className="shiki shiki-block text-primary whitespace-pre"
+					style={{ padding: 16, maxHeight: 'none', overflow: 'visible' }}
 				/>
 			) : (
-				<pre className="shiki-block text-primary whitespace-pre bg-transparent!">
+				<pre
+					className="shiki-block text-primary whitespace-pre"
+					style={{ padding: 16, maxHeight: 'none', overflow: 'visible' }}
+				>
 					{json}
 				</pre>
 			)}
