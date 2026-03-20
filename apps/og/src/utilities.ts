@@ -32,15 +32,18 @@ export const toBase64DataUrl = (
 export async function loadFonts() {
 	if (fontCache) return fontCache
 	if (!fontsInFlight) {
-	  fontsInFlight = Promise.all([...])
-	    .then(([mono, inter]) => {
-	      fontCache = { mono, inter }
-	      return fontCache
-	    })
-	    .finally(() => {
-	      fontsInFlight = null
-	    })
-	};
+		fontsInFlight = Promise.all([
+			fetch(FONT_MONO_URL).then((response: Response) => response.arrayBuffer()),
+			fetch(FONT_INTER_URL).then((response: Response) =>
+				response.arrayBuffer(),
+			),
+		]).then(([mono, inter]) => {
+			fontCache = { mono, inter }
+			return fontCache
+		}).finally(() => {
+			fontsInFlight = null
+		})
+	}
 	return fontsInFlight
 }
 
