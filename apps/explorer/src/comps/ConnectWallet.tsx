@@ -178,20 +178,34 @@ function ConnectedAddress() {
 	})
 
 	const totalUsd = React.useMemo(() => {
-		if (!balanceData?.balances || !TEMPO_FEE_TOKEN) return null
-		if (!isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)) return null
-		const feeTokenBalance = balanceData.balances.find(
-			(b) =>
-				b.token?.toLowerCase() === TEMPO_FEE_TOKEN?.toLowerCase() &&
-				b.currency === 'USD',
-		)
-		if (!feeTokenBalance) return null
-		return Number(
-			formatUnits(
-				BigInt(feeTokenBalance.balance),
-				feeTokenBalance.decimals ?? 6,
-			),
-		)
+		if (!balanceData?.balances) return null
+		const showUsdPrefix = TEMPO_FEE_TOKEN
+			? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+			: true
+		if (!showUsdPrefix) return null
+		// Prefer showing only the fee token (pathUSD) balance
+		const feeTokenBalance = TEMPO_FEE_TOKEN
+			? balanceData.balances.find(
+					(b) =>
+						b.token?.toLowerCase() === TEMPO_FEE_TOKEN?.toLowerCase() &&
+						b.currency === 'USD',
+				)
+			: undefined
+		if (feeTokenBalance) {
+			return Number(
+				formatUnits(
+					BigInt(feeTokenBalance.balance),
+					feeTokenBalance.decimals ?? 6,
+				),
+			)
+		}
+		// Fallback: sum all USD balances (when no fee token balance exists)
+		let total = 0
+		for (const b of balanceData.balances) {
+			if (b.currency !== 'USD') continue
+			total += Number(formatUnits(BigInt(b.balance), b.decimals ?? 6))
+		}
+		return total || null
 	}, [balanceData, isTokenListed])
 
 	if (!address) return null
