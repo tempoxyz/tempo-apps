@@ -39,8 +39,9 @@ export async function loadFonts() {
 			),
 		]).then(([mono, inter]) => {
 			fontCache = { mono, inter }
-			fontsInFlight = null
 			return fontCache
+		}).finally(() => {
+			fontsInFlight = null
 		})
 	}
 	return fontsInFlight
@@ -49,39 +50,16 @@ export async function loadFonts() {
 export async function loadImages(env: Cloudflare.Env): Promise<ImageCache> {
 	if (imageCache) return imageCache
 	if (!imagesInFlight) {
-		imagesInFlight = (async () => {
-			const [bgTx, bgToken, bgAddress, bgContract, receiptLogo, nullIcon] =
-				await Promise.all([
-					env.ASSETS.fetch(
-						new Request('https://assets/bg-template-transaction.webp'),
-					).then((response: Response) => response.arrayBuffer()),
-					env.ASSETS.fetch(
-						new Request('https://assets/bg-template-token.webp'),
-					).then((response: Response) => response.arrayBuffer()),
-					env.ASSETS.fetch(
-						new Request('https://assets/bg-template-address.webp'),
-					).then((response: Response) => response.arrayBuffer()),
-					env.ASSETS.fetch(
-						new Request('https://assets/bg-template-contract.webp'),
-					).then((response: Response) => response.arrayBuffer()),
-					env.ASSETS.fetch(
-						new Request('https://assets/tempo-receipt.webp'),
-					).then((response: Response) => response.arrayBuffer()),
-					env.ASSETS.fetch(new Request('https://assets/null.webp')).then(
-						(response: Response) => response.arrayBuffer(),
-					),
-				])
-			imageCache = {
-				bgTx,
-				bgToken,
-				bgAddress,
-				bgContract,
-				receiptLogo,
-				nullIcon,
-			}
-			imagesInFlight = null
-			return imageCache
-		})()
+	  imagesInFlight = (async () => {
+	    try {
+	      const [bgTx, bgToken, bgAddress, bgContract, receiptLogo, nullIcon] =
+	        await Promise.all([...])
+	      imageCache = { bgTx, bgToken, bgAddress, bgContract, receiptLogo, nullIcon }
+	      return imageCache
+	    } finally {
+	      imagesInFlight = null
+	    }
+	  })()
 	}
 	return imagesInFlight
 }
