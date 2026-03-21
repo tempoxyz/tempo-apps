@@ -37,7 +37,10 @@ export const Route = createFileRoute('/_layout/blocks')({
 				property: 'og:description',
 				content: 'View the latest blocks on Tempo.',
 			},
-			{ property: 'og:image', content: `${OG_BASE_URL}/blocks` },
+			{
+				property: 'og:image',
+				content: `${OG_BASE_URL}/blocks`,
+			},
 			{ property: 'og:image:type', content: 'image/webp' },
 			{ property: 'og:image:width', content: '1200' },
 			{ property: 'og:image:height', content: '630' },

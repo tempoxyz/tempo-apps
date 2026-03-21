@@ -12,8 +12,10 @@ export interface AddressData {
 	created: string
 	feeToken?: string
 	tokensHeld: string[] // Array of token symbols
-	accountType?: AccountType // Type of address: empty, account, or contract
-	methods?: string[] // Contract methods detected
+	accountType?: AccountType
+	methods?: string[]
+	deployer?: string
+	contractName?: string
 }
 
 export interface TokenData {
@@ -26,6 +28,16 @@ export interface TokenData {
 	created: string
 	quoteToken?: string
 	isFeeToken?: boolean
+}
+
+export interface BlockData {
+	number: string
+	timestamp: string
+	unixTimestamp: string
+	txCount: string
+	miner: string
+	parentHash: string
+	gasUsage: string
 }
 
 export interface ReceiptData {
@@ -108,20 +120,11 @@ export function parseEventDetails(
 
 // ============ Receipt Component ============
 
-export function ReceiptCard({
-	data,
-	receiptLogo,
-}: {
-	data: ReceiptData
-	receiptLogo: string
-}) {
-	// Format date to "Dec 1 2025" format
+export function ReceiptCard({ data }: { data: ReceiptData }) {
 	let formattedDate = data.date
-	// Handle "Dec 1, 2025" format - remove comma
 	if (data.date.includes(',')) {
-		formattedDate = data.date.replace(',', '')
+		formattedDate = data.date.replace(/,(\S)/g, ', $1')
 	}
-	// Handle "12/01/2025" or "MM/DD/YYYY" format - convert to "Dec 1 2025"
 	const dateMatch = data.date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
 	if (dateMatch) {
 		const [, monthStr, dayStr, year] = dateMatch
@@ -141,7 +144,7 @@ export function ReceiptCard({
 			'Nov',
 			'Dec',
 		]
-		formattedDate = `${monthNames[month - 1]} ${day} ${year}`
+		formattedDate = `${monthNames[month - 1]} ${day}, ${year}`
 	}
 
 	// Format time to "HH:MM" (24-hour)
@@ -179,171 +182,169 @@ export function ReceiptCard({
 
 	return (
 		<div
-			tw="flex flex-col bg-white"
+			tw="flex flex-col bg-white relative"
 			style={{
 				width: '700px',
 				maxWidth: '700px',
+				maxHeight: '583px',
+				overflow: 'hidden',
+				fontFamily: 'Pilat',
+				fontWeight: 400,
+				fontFeatureSettings: '"tnum"',
 				boxShadow:
 					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
 				borderTopRightRadius: '24px',
-				borderBottomRightRadius: '24px',
 				borderTopLeftRadius: '0',
 				borderBottomLeftRadius: '0',
+				borderBottomRightRadius: '0',
 			}}
 		>
 			{/* Header */}
 			<div
-				tw="flex w-full pr-8 pt-10 pb-8"
-				style={{ gap: '27px', paddingLeft: '48px' }}
+				tw="flex flex-col w-full pr-12 pt-10 pb-8 text-[28px]"
+				style={{
+					fontFamily: 'Pilat',
+					fontWeight: 400,
+					fontFeatureSettings: '"tnum"',
+					gap: '18px',
+					paddingLeft: '48px',
+					letterSpacing: '0em',
+				}}
 			>
-				{/* Tempo Receipt logo */}
-				<div tw="flex shrink-0 items-start">
-					<img
-						src={receiptLogo}
-						alt="Tempo Receipt"
-						style={{ width: '190px', height: 'auto' }}
-					/>
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-500 shrink-0">Block</span>
+					<span tw="text-gray-900">{data.blockNumber}</span>
 				</div>
-
-				{/* Details - condensed */}
-				<div
-					tw="flex flex-col flex-1 text-[28px]"
-					style={{
-						fontFamily: 'GeistMono',
-						gap: '20px',
-						marginLeft: '16px',
-						letterSpacing: '-0.02em',
-					}}
-				>
-					<div tw="flex w-full justify-between">
-						<span tw="text-gray-500 shrink-0">Block</span>
-						<span tw="text-emerald-600">#{data.blockNumber}</span>
-					</div>
-					<div tw="flex w-full justify-between">
-						<span tw="text-gray-500 shrink-0">Sender</span>
-						<span tw="text-blue-500">{truncateHash(data.sender, 6)}</span>
-					</div>
-					<div tw="flex w-full justify-between">
-						<span tw="text-gray-500 shrink-0">Date</span>
-						<span>{when}</span>
-					</div>
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-500 shrink-0">Sender</span>
+					<span tw="text-blue-500">{truncateHash(data.sender, 6)}</span>
+				</div>
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-500 shrink-0">Date</span>
+					<span>{when}</span>
 				</div>
 			</div>
 
 			{/* Divider */}
 			<div
-				tw="flex mr-10"
+				tw="flex w-full"
 				style={{
 					height: '1px',
 					backgroundColor: '#d1d5db',
-					marginLeft: '56px',
 				}}
 			/>
 
 			{/* Events - show max 3, then "...and n more" */}
-			{data.events.length > 0 &&
-				data.events.slice(0, 3).map((event, index) => {
-					const parts = parseEventDetails(event.details || '')
-					return (
-						<div
-							key={`event-${event.details}`}
-							tw="flex px-12 py-4 text-[28px]"
-							style={{
-								fontFamily: 'GeistMono',
-								letterSpacing: '-0.02em',
-								justifyContent: 'space-between',
-							}}
-						>
-							<div tw="flex" style={{ gap: '8px', maxWidth: '85%' }}>
-								<span tw="text-gray-500 shrink-0">{index + 1}.</span>
-								<div tw="flex flex-wrap" style={{ gap: '8px' }}>
-									<span tw="bg-gray-100 px-3 py-1 rounded shrink-0">
-										{event.action}
-									</span>
-									{parts.map((part) => (
-										<span
-											key={`part-${part.text}`}
-											tw={
-												part.type === 'asset'
-													? 'text-emerald-600'
-													: part.type === 'address'
-														? 'text-blue-600'
-														: 'text-gray-500'
-											}
-										>
-											{part.text}
+			<div
+				tw="flex flex-col"
+				style={{ paddingTop: '12px', paddingBottom: '12px' }}
+			>
+				{data.events.length > 0 &&
+					data.events.slice(0, 3).map((event, index) => {
+						const parts = parseEventDetails(event.details || '')
+						return (
+							<div
+								key={`event-${event.details}`}
+								tw="flex px-12 py-4 text-[28px]"
+								style={{
+									fontFamily: 'Pilat',
+									fontWeight: 400,
+									fontFeatureSettings: '"tnum"',
+									letterSpacing: '0em',
+									justifyContent: 'space-between',
+								}}
+							>
+								<div tw="flex" style={{ gap: '8px', maxWidth: '85%' }}>
+									<span tw="text-gray-500 shrink-0">{index + 1}.</span>
+									<div tw="flex flex-wrap" style={{ gap: '8px' }}>
+										<span tw="bg-gray-100 px-3 rounded shrink-0">
+											{event.action}
 										</span>
-									))}
+										{parts.map((part) => (
+											<span
+												key={`part-${part.text}`}
+												tw={
+													part.type === 'asset'
+														? 'text-emerald-600'
+														: part.type === 'address'
+															? 'text-blue-600'
+															: 'text-gray-500'
+												}
+											>
+												{part.text}
+											</span>
+										))}
+									</div>
 								</div>
+								{event.amount && <span tw="shrink-0">{event.amount}</span>}
 							</div>
-							{event.amount && <span tw="shrink-0">{event.amount}</span>}
-						</div>
-					)
-				})}
-			{data.events.length > 3 && (
-				<div
-					tw="flex justify-center py-3 mx-12 text-gray-500 text-[24px]"
-					style={{ fontFamily: 'GeistMono' }}
-				>
-					...and {data.events.length - 3} more
-				</div>
-			)}
+						)
+					})}
+				{data.events.length > 3 && (
+					<div
+						tw="flex justify-center py-3 mx-12 text-gray-500 text-[24px]"
+						style={{ fontFamily: 'Pilat', fontFeatureSettings: '"tnum"' }}
+					>
+						...and {data.events.length - 3} more
+					</div>
+				)}
+			</div>
 
 			{/* Divider */}
 			<div
-				tw="flex mr-10"
+				tw="flex w-full"
 				style={{
 					height: '1px',
 					backgroundColor: '#d1d5db',
-					marginLeft: '56px',
 				}}
 			/>
 
 			{/* Fee and Total rows */}
 			{(data.fee || data.total) && (
-				<>
-					<div
-						tw="flex"
-						style={{
-							height: '1px',
-							backgroundColor: '#d1d5db',
-							marginLeft: '48px',
-						}}
-					/>
-					<div
-						tw="flex flex-col pr-8 pb-12 text-[28px]"
-						style={{
-							fontFamily: 'GeistMono',
-							gap: '22px',
-							width: '100%',
-							letterSpacing: '-0.02em',
-							paddingTop: '24px',
-							paddingBottom: '32px',
-						}}
-					>
-						{data.fee && (
-							<div
-								tw="flex items-center"
-								style={{ width: '100%', justifyContent: 'space-between' }}
-							>
-								<span tw="text-gray-500">
-									Fee{data.feeToken ? ` (${data.feeToken})` : ''}
-								</span>
-								<span>{data.fee}</span>
-							</div>
-						)}
-						{data.total && (
-							<div
-								tw="flex items-center"
-								style={{ width: '100%', justifyContent: 'space-between' }}
-							>
-								<span tw="text-gray-500">Total</span>
-								<span>{data.total}</span>
-							</div>
-						)}
-					</div>
-				</>
+				<div
+					tw="flex flex-col px-12 text-[28px]"
+					style={{
+						fontFamily: 'Pilat',
+						fontWeight: 400,
+						fontFeatureSettings: '"tnum"',
+						gap: '22px',
+						width: '100%',
+						letterSpacing: '0em',
+						paddingTop: '24px',
+						paddingBottom: '48px',
+					}}
+				>
+					{data.fee && (
+						<div
+							tw="flex items-center w-full"
+							style={{ justifyContent: 'space-between' }}
+						>
+							<span tw="text-gray-500">
+								Fee{data.feeToken ? ` (${data.feeToken})` : ''}
+							</span>
+							<span>{data.fee}</span>
+						</div>
+					)}
+					{data.total && (
+						<div
+							tw="flex items-center w-full"
+							style={{ justifyContent: 'space-between' }}
+						>
+							<span tw="text-gray-500">Total</span>
+							<span>{data.total}</span>
+						</div>
+					)}
+				</div>
 			)}
+			{/* Bottom fade */}
+			<div
+				tw="absolute bottom-0 left-0 right-0"
+				style={{
+					height: '60px',
+					background:
+						'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
+				}}
+			/>
 		</div>
 	)
 }
@@ -353,46 +354,57 @@ export function ReceiptCard({
 export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 	return (
 		<div
-			tw="flex flex-col bg-white"
+			tw="flex flex-col bg-white relative"
 			style={{
 				width: '700px',
+				maxHeight: '583px',
+				overflow: 'hidden',
+				fontFamily: 'Pilat',
+				fontWeight: 400,
+				fontFeatureSettings: '"tnum"',
 				boxShadow:
 					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
 				borderTopRightRadius: '24px',
-				borderBottomRightRadius: '24px',
 				borderTopLeftRadius: '0',
 				borderBottomLeftRadius: '0',
+				borderBottomRightRadius: '0',
 			}}
 		>
 			{/* Header with icon and name */}
 			<div
-				tw="flex items-center pr-10 pt-14 pb-12"
+				tw="flex items-center pr-10 pt-10 pb-8"
 				style={{ gap: '20px', paddingLeft: '56px' }}
 			>
-				{/* Token icon from tokenlist or fallback to null icon */}
 				<img
 					src={icon}
 					alt=""
 					tw="rounded-full"
-					style={{ width: '80px', height: '80px' }}
+					style={{ width: '68px', height: '68px' }}
 				/>
 				<div tw="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
-					<span tw="text-5xl font-semibold text-gray-900">
-						{truncateText(data.name, 18)}
+					<span
+						tw="text-[42px] text-gray-900"
+						style={{
+							fontFamily: 'Pilat',
+							whiteSpace: 'nowrap',
+							overflow: 'hidden',
+							textOverflow: 'ellipsis',
+						}}
+					>
+						{truncateText(data.name, 14)}
 					</span>
 				</div>
-				{/* Symbol badge */}
-				<div tw="flex items-center shrink-0" style={{ gap: '12px' }}>
+				<div tw="flex flex-col shrink-0 items-end" style={{ gap: '8px' }}>
 					<div
-						tw="flex items-center px-5 py-3 bg-gray-100 rounded-lg text-gray-600 text-2xl"
-						style={{ fontFamily: 'GeistMono' }}
+						tw="flex items-center px-3 py-1 bg-gray-100 rounded-lg text-gray-600 text-2xl"
+						style={{ fontFamily: 'Pilat' }}
 					>
 						{truncateText(data.symbol, 12)}
 					</div>
 					{data.isFeeToken && (
 						<div
-							tw="flex items-center px-5 py-3 bg-emerald-100 rounded-lg text-emerald-700 text-2xl"
-							style={{ fontFamily: 'GeistMono' }}
+							tw="flex items-center px-3 py-1 bg-emerald-100 rounded-lg text-emerald-700 text-2xl"
+							style={{ fontFamily: 'Pilat' }}
 						>
 							Fee Token
 						</div>
@@ -402,21 +414,22 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 
 			{/* Divider */}
 			<div
-				tw="flex mr-10"
+				tw="flex w-full"
 				style={{
 					height: '1px',
 					backgroundColor: '#d1d5db',
-					marginLeft: '56px',
 				}}
 			/>
 
 			{/* Details */}
 			<div
-				tw="flex flex-col pr-10 py-10 text-[29px]"
+				tw="flex flex-col pr-10 pt-10 pb-14 text-[29px]"
 				style={{
-					fontFamily: 'GeistMono',
+					fontFamily: 'Pilat',
+					fontWeight: 400,
+					fontFeatureSettings: '"tnum"',
 					gap: '29px',
-					letterSpacing: '-0.02em',
+					letterSpacing: '0em',
 					paddingLeft: '56px',
 				}}
 			>
@@ -458,6 +471,15 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 					</div>
 				)}
 			</div>
+			{/* Bottom fade */}
+			<div
+				tw="absolute bottom-0 left-0 right-0"
+				style={{
+					height: '60px',
+					background:
+						'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
+				}}
+			/>
 		</div>
 	)
 }
@@ -488,7 +510,7 @@ export function TokenBadges({
 					key={token}
 					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
 					style={{
-						fontFamily: 'GeistMono',
+						fontFamily: 'Pilat',
 						marginRight: '12px',
 					}}
 				>
@@ -498,7 +520,7 @@ export function TokenBadges({
 			{remaining > 0 && (
 				<span
 					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
-					style={{ fontFamily: 'GeistMono' }}
+					style={{ fontFamily: 'Pilat' }}
 				>
 					+{remaining}
 				</span>
@@ -542,7 +564,7 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 		<span
 			key={idx}
 			tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
-			style={{ fontFamily: 'GeistMono' }}
+			style={{ fontFamily: 'Pilat' }}
 		>
 			{truncateMethod(m)}
 		</span>
@@ -567,7 +589,7 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 					{remaining > 0 && (
 						<span
 							tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
-							style={{ fontFamily: 'GeistMono' }}
+							style={{ fontFamily: 'Pilat' }}
 						>
 							+{remaining}
 						</span>
@@ -579,7 +601,7 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 				<div tw="flex justify-end" style={{ gap: '10px' }}>
 					<span
 						tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
-						style={{ fontFamily: 'GeistMono' }}
+						style={{ fontFamily: 'Pilat' }}
 					>
 						+{remaining}
 					</span>
@@ -589,68 +611,217 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 	)
 }
 
-// ============ Address Card Component ============
+// ============ Block Card Component ============
 
-export function AddressCard({ data }: { data: AddressData }) {
-	// Split address into two lines for display
-	const addrLine1 = data.address.slice(0, 22)
-	const addrLine2 = data.address.slice(22)
-
+export function BlockCard({ data }: { data: BlockData }) {
 	return (
 		<div
-			tw="flex flex-col bg-white"
+			tw="flex flex-col bg-white relative"
 			style={{
 				width: '700px',
+				maxWidth: '700px',
+				maxHeight: '583px',
+				overflow: 'hidden',
+				fontFamily: 'Pilat',
+				fontWeight: 400,
+				fontFeatureSettings: '"tnum"',
 				boxShadow:
 					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
 				borderTopRightRadius: '24px',
-				borderBottomRightRadius: '24px',
 				borderTopLeftRadius: '0',
 				borderBottomLeftRadius: '0',
+				borderBottomRightRadius: '0',
 			}}
 		>
-			{/* Address header */}
+			{/* Header */}
 			<div
-				tw="flex w-full pr-10 pt-10 pb-8 justify-between items-start"
+				tw="flex w-full pr-10 pt-10 pb-8 items-center justify-between"
 				style={{ paddingLeft: '56px' }}
 			>
-				<span
-					tw="text-gray-500 text-[29px]"
-					style={{ fontFamily: 'GeistMono' }}
-				>
-					{data.accountType === 'contract'
-						? 'Contract'
-						: data.accountType === 'account'
-							? 'Account'
-							: 'Empty'}
+				<span tw="text-gray-500 text-[29px]" style={{ fontFamily: 'Pilat' }}>
+					Block
 				</span>
-				<div
-					tw="flex flex-col items-end text-[29px] text-blue-500"
-					style={{ fontFamily: 'GeistMono', lineHeight: '1.3' }}
+				<span
+					tw="text-[40px]"
+					style={{ fontFamily: 'Pilat', fontFeatureSettings: '"tnum"' }}
 				>
-					<span>{addrLine1}</span>
-					<span>{addrLine2}</span>
-				</div>
+					<span style={{ color: 'rgba(0,0,0,0.15)' }}>
+						{'0'.repeat(Math.max(0, 12 - data.number.length))}
+					</span>
+					<span tw="text-gray-900">{data.number}</span>
+				</span>
 			</div>
 
-			{/* Divider - dashed */}
+			{/* Divider */}
 			<div
-				tw="flex mr-10"
+				tw="flex w-full"
 				style={{
 					height: '1px',
 					backgroundColor: '#d1d5db',
-					borderStyle: 'dashed',
-					marginLeft: '56px',
 				}}
 			/>
 
 			{/* Details */}
 			<div
-				tw="flex flex-col pr-10 py-8 text-[29px]"
+				tw="flex flex-col pr-10 pt-10 pb-14 text-[29px]"
 				style={{
-					fontFamily: 'GeistMono',
+					fontFamily: 'Pilat',
+					fontWeight: 400,
+					fontFeatureSettings: '"tnum"',
+					gap: '29px',
+					letterSpacing: '0em',
+					paddingLeft: '56px',
+				}}
+			>
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-500">UTC</span>
+					<span tw="text-gray-900" style={{ opacity: 0.5 }}>
+						{data.timestamp}
+					</span>
+				</div>
+
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-500">UNIX</span>
+					<span tw="text-gray-900" style={{ opacity: 0.5 }}>
+						{data.unixTimestamp}
+					</span>
+				</div>
+
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-500">Transactions</span>
+					<span tw="text-gray-900">{data.txCount}</span>
+				</div>
+
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-500">Miner</span>
+					<span tw="text-blue-500">{truncateHash(data.miner, 6)}</span>
+				</div>
+
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-500">Parent</span>
+					<span tw="text-blue-500">{truncateHash(data.parentHash, 6)}</span>
+				</div>
+
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-500">Gas Usage</span>
+					<span tw="text-gray-900">{data.gasUsage}</span>
+				</div>
+			</div>
+			{/* Bottom fade */}
+			<div
+				tw="absolute bottom-0 left-0 right-0"
+				style={{
+					height: '60px',
+					background:
+						'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
+				}}
+			/>
+		</div>
+	)
+}
+
+// ============ Address Card Component ============
+
+export function AddressCard({ data }: { data: AddressData }) {
+	// Split address into two lines for display
+	const addrLine1 = data.address.slice(0, 21)
+	const addrLine2 = data.address.slice(21)
+
+	return (
+		<div
+			tw="flex flex-col bg-white relative"
+			style={{
+				width: '700px',
+				maxHeight: '583px',
+				overflow: 'hidden',
+				fontFamily: 'Pilat',
+				fontWeight: 400,
+				fontFeatureSettings: '"tnum"',
+				boxShadow:
+					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
+				borderTopRightRadius: '24px',
+				borderTopLeftRadius: '0',
+				borderBottomLeftRadius: '0',
+				borderBottomRightRadius: '0',
+			}}
+		>
+			{/* Address header */}
+			{data.accountType === 'contract' && data.contractName ? (
+				<div
+					tw="flex flex-col w-full pr-10 pt-10 pb-8"
+					style={{ paddingLeft: '56px' }}
+				>
+					<div tw="flex w-full justify-between items-start">
+						<span
+							tw="text-gray-500 text-[29px]"
+							style={{ fontFamily: 'Pilat', fontWeight: 400 }}
+						>
+							Contract
+						</span>
+						<span
+							tw="text-gray-900 text-[36px]"
+							style={{ fontFamily: 'Pilat', fontWeight: 400 }}
+						>
+							{data.contractName}
+						</span>
+					</div>
+					<div tw="flex justify-end">
+						<span
+							tw="text-gray-400 text-[22px]"
+							style={{
+								fontFamily: 'Pilat',
+								fontWeight: 400,
+								fontFeatureSettings: '"tnum"',
+							}}
+						>
+							{truncateHash(data.address, 8)}
+						</span>
+					</div>
+				</div>
+			) : (
+				<div
+					tw="flex w-full pr-10 pt-10 pb-8 justify-between items-start"
+					style={{ paddingLeft: '56px' }}
+				>
+					<span
+						tw="text-gray-500 text-[29px]"
+						style={{ fontFamily: 'Pilat', fontWeight: 400 }}
+					>
+						{data.accountType === 'contract' ? 'Contract' : 'Address'}
+					</span>
+					<div
+						tw="flex flex-col items-end text-[29px] text-blue-500"
+						style={{
+							fontFamily: 'Pilat',
+							fontWeight: 400,
+							fontFeatureSettings: '"tnum"',
+							lineHeight: '1.3',
+						}}
+					>
+						<span>{addrLine1}</span>
+						<span>{addrLine2}</span>
+					</div>
+				</div>
+			)}
+
+			{/* Divider - dashed */}
+			<div
+				tw="flex w-full"
+				style={{
+					height: '1px',
+					backgroundColor: '#d1d5db',
+				}}
+			/>
+
+			{/* Details */}
+			<div
+				tw="flex flex-col pr-10 pt-8 pb-14 text-[29px]"
+				style={{
+					fontFamily: 'Pilat',
+					fontWeight: 400,
+					fontFeatureSettings: '"tnum"',
 					gap: '22px',
-					letterSpacing: '-0.02em',
+					letterSpacing: '0em',
 					paddingLeft: '56px',
 				}}
 			>
@@ -664,39 +835,29 @@ export function AddressCard({ data }: { data: AddressData }) {
 
 				{/* Tokens Held section - show for non-contracts only */}
 				{data.tokensHeld.length > 0 && data.accountType !== 'contract' && (
-					<div tw="flex flex-col w-full items-end" style={{ marginTop: '8px' }}>
-						{/* Single row of tokens */}
-						<div tw="flex justify-end py-1" style={{ width: '100%' }}>
-							<TokenBadges tokens={data.tokensHeld} maxTokens={4} />
-						</div>
-						{/* Divider - dashed */}
-						<div
-							tw="flex w-full"
-							style={{
-								height: '1px',
-								backgroundColor: '#d1d5db',
-								borderStyle: 'dashed',
-								marginTop: '16px',
-							}}
-						/>
+					<div tw="flex justify-end py-1" style={{ width: '100%' }}>
+						<TokenBadges tokens={data.tokensHeld} maxTokens={4} />
 					</div>
 				)}
 
-				{/* Divider - dashed (when no tokens and not contract) */}
-				{data.tokensHeld.length === 0 && data.accountType !== 'contract' && (
+				{/* Divider (when not contract) */}
+				{data.accountType !== 'contract' && (
 					<div
-						tw="flex w-full"
+						tw="flex"
 						style={{
 							height: '1px',
 							backgroundColor: '#d1d5db',
-							borderStyle: 'dashed',
+							marginLeft: '-56px',
+							marginRight: '-40px',
 						}}
 					/>
 				)}
 
-				{/* Transactions */}
+				{/* Transactions/Events */}
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Transactions</span>
+					<span tw="text-gray-500">
+						{data.accountType === 'contract' ? 'Events' : 'Transactions'}
+					</span>
 					<span tw="text-gray-900">{data.txCount}</span>
 				</div>
 
@@ -712,18 +873,59 @@ export function AddressCard({ data }: { data: AddressData }) {
 					<span tw="text-gray-900">{data.created}</span>
 				</div>
 
-				{/* Contract Methods - show for contracts only, at bottom */}
+				{/* Deployer - show for contracts only */}
+				{data.accountType === 'contract' && data.deployer && (
+					<div tw="flex w-full justify-between">
+						<span tw="text-gray-500">Deployer</span>
+						<span tw="text-blue-500">{truncateHash(data.deployer, 6)}</span>
+					</div>
+				)}
+
+				{/* Contract Methods - show for contracts only */}
 				{data.accountType === 'contract' &&
 					data.methods &&
 					data.methods.length > 0 && (
-						<div tw="flex flex-col w-full" style={{ marginTop: '4px' }}>
-							<span tw="text-gray-500" style={{ marginBottom: '12px' }}>
+						<div tw="flex w-full" style={{ marginTop: '4px' }}>
+							<span
+								tw="text-gray-500 shrink-0"
+								style={{ marginRight: '16px', paddingTop: '4px' }}
+							>
 								Methods
 							</span>
-							<MethodBadges methods={data.methods || []} />
+							<div
+								tw="flex flex-wrap flex-1 justify-end"
+								style={{ gap: '8px' }}
+							>
+								{data.methods.slice(0, 6).map((m) => (
+									<span
+										key={m}
+										tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
+										style={{ fontFamily: 'Pilat' }}
+									>
+										{m.length > 14 ? `${m.slice(0, 13)}…` : m}
+									</span>
+								))}
+								{data.methods.length > 6 && (
+									<span
+										tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
+										style={{ fontFamily: 'Pilat' }}
+									>
+										+{data.methods.length - 6}
+									</span>
+								)}
+							</div>
 						</div>
 					)}
 			</div>
+			{/* Bottom fade */}
+			<div
+				tw="absolute bottom-0 left-0 right-0"
+				style={{
+					height: '60px',
+					background:
+						'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
+				}}
+			/>
 		</div>
 	)
 }

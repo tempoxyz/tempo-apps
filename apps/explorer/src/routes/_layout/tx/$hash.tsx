@@ -38,7 +38,7 @@ import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
 import { useKeyboardShortcut, useMediaQuery } from '#lib/hooks'
-import { buildOgImageUrl, buildTxDescription } from '#lib/og'
+import { buildOgImageUrl, buildTxDescription, OG_BASE_URL } from '#lib/og'
 import {
 	autoloadAbiQueryOptions,
 	LIMIT,
@@ -121,7 +121,7 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 		const title = `Transaction ${params.hash.slice(0, 10)}…${params.hash.slice(-6)} ⋅ Tempo Explorer`
 		const ogImageUrl = loaderData
 			? buildOgImageUrl(loaderData, params.hash)
-			: undefined
+			: `${OG_BASE_URL}/tx/${params.hash}`
 		const description = loaderData
 			? buildTxDescription({
 					timestamp: Number(loaderData.block.timestamp) * 1000,
@@ -137,16 +137,12 @@ export const Route = createFileRoute('/_layout/tx/$hash')({
 				{ property: 'og:title', content: title },
 				{ property: 'og:description', content: description },
 				{ name: 'twitter:description', content: description },
-				...(ogImageUrl
-					? [
-							{ property: 'og:image', content: ogImageUrl },
-							{ property: 'og:image:type', content: 'image/webp' },
-							{ property: 'og:image:width', content: '1200' },
-							{ property: 'og:image:height', content: '630' },
-							{ name: 'twitter:card', content: 'summary_large_image' },
-							{ name: 'twitter:image', content: ogImageUrl },
-						]
-					: []),
+				{ property: 'og:image', content: ogImageUrl },
+				{ property: 'og:image:type', content: 'image/webp' },
+				{ property: 'og:image:width', content: '1200' },
+				{ property: 'og:image:height', content: '630' },
+				{ name: 'twitter:card', content: 'summary_large_image' },
+				{ name: 'twitter:image', content: ogImageUrl },
 			],
 		}
 	},

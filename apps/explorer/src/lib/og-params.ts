@@ -64,6 +64,8 @@ export interface AddressOgParams {
 	tokens?: string[]
 	accountType?: 'empty' | 'account' | 'contract'
 	methods?: string[]
+	deployer?: string
+	contractName?: string
 }
 
 // ============ Utility Functions ============
@@ -177,6 +179,9 @@ export function buildAddressOgUrl(
 					.join(','),
 			)
 		}
+		if (params.deployer) search.set('deployer', params.deployer)
+		if (params.contractName)
+			search.set('contractName', truncateText(params.contractName, 64))
 	}
 
 	return `${baseUrl}/address/${params.address}?${search.toString()}`
