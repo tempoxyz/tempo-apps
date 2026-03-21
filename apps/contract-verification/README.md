@@ -62,6 +62,7 @@ and [/apps/contract-verification/scripts/verify-vyper.sh](./scripts/verify-vyper
 ```sh
 cp .env.example .env  # Copy example environment variables
 pnpm install          # Install dependencies
+pnpm gen:types        # Generate Cloudflare worker type declarations
 pnpm dev              # Start development server
 ```
 

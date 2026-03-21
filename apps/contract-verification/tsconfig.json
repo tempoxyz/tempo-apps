@@ -52,8 +52,7 @@
 		"reset.d.ts",
 		"vite.config.ts",
 		"drizzle.config.ts",
-		"vitest.config.ts",
-		"worker-configuration.d.ts"
+		"vitest.config.ts"
 	],
 	"exclude": ["_", "dist", "node_modules"]
 }
