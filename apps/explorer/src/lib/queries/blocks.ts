@@ -73,6 +73,102 @@ export function blockDetailQueryOptions(blockRef: BlockIdentifier) {
 	})
 }
 
+export type TxWithBlock = BlockTransaction & {
+	blockTimestamp: bigint
+	blockNumber: bigint
+}
+
+export const BLOCKS_PER_TX_PAGE = 5
+
+export function blockTransactionsQueryOptions(fromBlock?: number) {
+	return queryOptions({
+		queryKey: ['block-transactions', fromBlock],
+		queryFn: async () => {
+			const config = getWagmiConfig()
+			const latestBlock = await getBlock(config)
+			const latestBlockNumber = latestBlock.number
+
+			const startBlock =
+				fromBlock != null ? BigInt(fromBlock) : latestBlockNumber
+
+			const blockNumbers: bigint[] = []
+			for (let i = 0n; i < BigInt(BLOCKS_PER_TX_PAGE); i++) {
+				const bn = startBlock - i
+				if (bn >= 0n) blockNumbers.push(bn)
+			}
+
+			const blocks = await Promise.all(
+				blockNumbers.map((blockNumber) =>
+					getBlock(config, {
+						blockNumber,
+						includeTransactions: true,
+					}).catch(() => null),
+				),
+			)
+
+			const transactions: TxWithBlock[] = []
+			for (const block of blocks) {
+				if (!block) continue
+				for (const tx of (block as BlockWithTransactions).transactions) {
+					transactions.push({
+						...tx,
+						blockTimestamp: block.timestamp,
+						blockNumber: block.number ?? 0n,
+					})
+				}
+			}
+
+			return {
+				latestBlockNumber,
+				transactions,
+				startBlock: blockNumbers[0] ?? latestBlockNumber,
+				endBlock: blockNumbers[blockNumbers.length - 1] ?? 0n,
+			}
+		},
+	})
+}
+
+export function latestTransactionsQueryOptions() {
+	return queryOptions({
+		queryKey: ['latest-transactions'],
+		queryFn: async () => {
+			const config = getWagmiConfig()
+			const latestBlock = await getBlock(config)
+			const latestBlockNumber = latestBlock.number
+
+			const blockNumbers: bigint[] = []
+			for (let i = 0n; i < 4n; i++) {
+				const bn = latestBlockNumber - i
+				if (bn >= 0n) blockNumbers.push(bn)
+			}
+
+			const blocks = await Promise.all(
+				blockNumbers.map((blockNumber) =>
+					getBlock(config, {
+						blockNumber,
+						includeTransactions: true,
+					}).catch(() => null),
+				),
+			)
+
+			const txs: TxWithBlock[] = []
+			for (const block of blocks) {
+				if (!block) continue
+				for (const tx of (block as BlockWithTransactions).transactions) {
+					txs.push({
+						...tx,
+						blockTimestamp: block.timestamp,
+						blockNumber: block.number ?? 0n,
+					})
+				}
+				if (txs.length >= 6) break
+			}
+
+			return txs.slice(0, 6)
+		},
+	})
+}
+
 // Batch query for page transaction known events
 export function blockKnownEventsQueryOptions(
 	blockNumber: bigint,

@@ -16,6 +16,7 @@ import { Route as ApiTip20RolesRouteImport } from './routes/api/tip20-roles'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
+import { Route as LayoutTransactionsRouteImport } from './routes/_layout/transactions'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
@@ -74,6 +75,11 @@ const ApiCodeRoute = ApiCodeRouteImport.update({
   id: '/api/code',
   path: '/api/code',
   getParentRoute: () => rootRouteImport,
+} as any)
+const LayoutTransactionsRoute = LayoutTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutTokensRoute = LayoutTokensRouteImport.update({
   id: '/tokens',
@@ -208,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
+  '/transactions': typeof LayoutTransactionsRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
+  '/transactions': typeof LayoutTransactionsRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
@@ -273,6 +281,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/tokens': typeof LayoutTokensRoute
+  '/_layout/transactions': typeof LayoutTransactionsRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
@@ -308,6 +317,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/blocks'
     | '/tokens'
+    | '/transactions'
     | '/api/code'
     | '/api/health'
     | '/api/search'
@@ -339,6 +349,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/blocks'
     | '/tokens'
+    | '/transactions'
     | '/api/code'
     | '/api/health'
     | '/api/search'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/_layout/blocks'
     | '/_layout/tokens'
+    | '/_layout/transactions'
     | '/api/code'
     | '/api/health'
     | '/api/search'
@@ -471,6 +483,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/code'
       preLoaderRoute: typeof ApiCodeRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_layout/transactions': {
+      id: '/_layout/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof LayoutTransactionsRouteImport
+      parentRoute: typeof LayoutRoute
     }
     '/_layout/tokens': {
       id: '/_layout/tokens'
@@ -646,6 +665,7 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutBlocksRoute: typeof LayoutBlocksRoute
   LayoutTokensRoute: typeof LayoutTokensRoute
+  LayoutTransactionsRoute: typeof LayoutTransactionsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAddressAddressRoute: typeof LayoutAddressAddressRoute
   LayoutBlockIdRoute: typeof LayoutBlockIdRoute
@@ -663,6 +683,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBlocksRoute: LayoutBlocksRoute,
   LayoutTokensRoute: LayoutTokensRoute,
+  LayoutTransactionsRoute: LayoutTransactionsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAddressAddressRoute: LayoutAddressAddressRoute,
   LayoutBlockIdRoute: LayoutBlockIdRoute,
