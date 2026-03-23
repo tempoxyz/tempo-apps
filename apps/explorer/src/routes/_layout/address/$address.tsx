@@ -779,6 +779,8 @@ function AccountCardWithTimestamps(props: {
 			accountType={resolvedAccountType}
 			isToken={isToken}
 			tokenName={tokenMetadata?.name}
+			tokenSymbol={tokenMetadata?.symbol}
+			tokenDecimals={tokenMetadata?.decimals}
 		/>
 	)
 }
