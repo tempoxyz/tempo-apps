@@ -26,11 +26,8 @@ function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
 	const connectors = useConnectors()
 	const connect = useConnect()
 
-	const hasMetadata =
-		typeof symbol === 'string' &&
-		symbol.length > 0 &&
-		Number.isInteger(decimals) &&
-		(decimals as number) >= 0
+	const resolvedSymbol = symbol ?? ''
+	const resolvedDecimals = decimals ?? 6
 
 	const injectedConnectors = React.useMemo(
 		() => filterSupportedInjectedConnectors(connectors),
@@ -49,7 +46,11 @@ function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
 		reset()
 	}, [address, reset])
 
-	if (!hasMetadata || !hasWallet) return null
+	if (!hasWallet) return null
+
+	const label = isConnected
+		? (connector?.name ?? 'Wallet')
+		: (injectedConnectors[0]?.name ?? 'Wallet')
 
 	// Not connected: show button that triggers wallet connection
 	if (!isConnected) {
@@ -72,9 +73,7 @@ function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
 				}}
 			>
 				<LucideWallet className="size-[12px]" />
-				{connect.isPending
-					? 'Connecting…'
-					: `Add to ${primaryConnector?.name ?? 'Wallet'}`}
+				{connect.isPending ? 'Connecting…' : `Add to ${label}`}
 			</button>
 		)
 	}
@@ -100,19 +99,15 @@ function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
 					type: 'ERC20',
 					options: {
 						address,
-						symbol: symbol as string,
-						decimals: decimals as number,
+						symbol: resolvedSymbol,
+						decimals: resolvedDecimals,
 						image,
 					},
 				})
 			}
 		>
 			<LucideWallet className="size-[12px]" />
-			{isSuccess
-				? 'Added!'
-				: isPending
-					? 'Adding…'
-					: `Add to ${connector?.name ?? 'Wallet'}`}
+			{isSuccess ? 'Added!' : isPending ? 'Adding…' : `Add to ${label}`}
 		</button>
 	)
 }
