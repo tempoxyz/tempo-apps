@@ -129,12 +129,12 @@ export function AddToWallet(
 			type="button"
 			disabled={busy}
 			className={cx(
-				'flex items-center justify-center gap-2 w-full rounded-lg border px-3 py-2 text-[13px] font-sans font-medium cursor-pointer press-down transition-colors',
+				'flex items-center gap-2 w-full text-[13px] font-sans font-medium transition-colors',
 				isSuccess
-					? 'border-positive/30 text-positive bg-positive/5'
+					? 'text-positive'
 					: busy
-						? 'border-base-border text-secondary bg-base-plane animate-pulse'
-						: 'border-base-border text-secondary bg-base-plane hover:bg-base-plane-interactive hover:text-primary',
+						? 'text-secondary animate-pulse'
+						: 'text-secondary hover:text-primary cursor-pointer press-down',
 			)}
 			onClick={handleClick}
 		>
