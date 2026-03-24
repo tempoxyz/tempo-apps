@@ -52,7 +52,7 @@ export function Receipt(props: Receipt.Props) {
 		<>
 			<div
 				data-receipt
-				className="flex flex-col w-[360px] bg-base-plane border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.05)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
+				className="flex flex-col w-[360px] bg-base-alt border border-base-border border-b-0 shadow-[0px_4px_44px_rgba(0,0,0,0.25)] rounded-[10px] rounded-br-none rounded-bl-none text-base-content"
 			>
 				<div className="flex items-start gap-[40px] px-[20px] pt-[24px] pb-[16px]">
 					<div className="shrink-0">
