@@ -17,7 +17,7 @@ import { useTokenListMembership } from '#comps/TokenListMembership'
 import { cx } from '#lib/css'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/tokenlist'
-import { filterSupportedInjectedConnectors } from '#lib/wallets.ts'
+import { filterSupportedConnectors } from '#lib/wallets.ts'
 import { getTempoChain } from '#wagmi.config.ts'
 import LucideLogOut from '~icons/lucide/log-out'
 import LucideWalletCards from '~icons/lucide/wallet-cards'
@@ -54,7 +54,7 @@ function ConnectWalletInner({
 
 	const [pendingId, setPendingId] = React.useState<string | null>(null)
 	const injectedConnectors = React.useMemo(
-		() => filterSupportedInjectedConnectors(connectors),
+		() => filterSupportedConnectors(connectors),
 		[connectors],
 	)
 	const chains = useChains()
