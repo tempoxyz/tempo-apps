@@ -1,12 +1,16 @@
 import { ClientOnly } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import * as React from 'react'
-import { useConnect, useConnection, useConnectors, useWatchAsset } from 'wagmi'
-import { cx } from '#lib/css'
 import {
-	filterSupportedInjectedConnectors,
-	supportsWatchAsset,
-} from '#lib/wallets'
+	useConnect,
+	useConnection,
+	useConnectors,
+	useSwitchChain,
+	useWatchAsset,
+} from 'wagmi'
+import { Hooks } from 'wagmi/tempo'
+import { cx } from '#lib/css'
+import { filterSupportedConnectors, supportsWatchAsset } from '#lib/wallets'
 import { getTempoChain } from '#wagmi.config'
 import LucideWallet from '~icons/lucide/wallet'
 
@@ -20,24 +24,42 @@ export function AddToWallet(props: AddToWallet.Props): React.JSX.Element {
 	)
 }
 
+function getWalletName(
+	connector: { name?: string; id?: string } | undefined | null,
+): string | undefined {
+	if (!connector) return undefined
+	if (connector.name && connector.name !== 'Injected') return connector.name
+	return undefined
+}
+
 function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
-	const { address, symbol, decimals, image } = props
+	const { address, symbol: symbolProp, decimals: decimalsProp, image } = props
 	const { address: walletAddress, connector, chain } = useConnection()
 	const connectors = useConnectors()
 	const connect = useConnect()
+	const switchChain = useSwitchChain()
 
-	const resolvedSymbol = symbol ?? ''
-	const resolvedDecimals = decimals ?? 6
+	const { data: onChainMetadata } = Hooks.token.useGetMetadata({
+		token: address,
+		query: { enabled: symbolProp === undefined || decimalsProp === undefined },
+	})
 
-	const injectedConnectors = React.useMemo(
-		() => filterSupportedInjectedConnectors(connectors),
+	const symbol = symbolProp ?? onChainMetadata?.symbol
+	const decimals = decimalsProp ?? onChainMetadata?.decimals
+
+	const hasMetadata =
+		typeof symbol === 'string' &&
+		symbol.length > 0 &&
+		Number.isInteger(decimals) &&
+		(decimals as number) >= 0
+
+	const supportedConnectors = React.useMemo(
+		() => filterSupportedConnectors(connectors),
 		[connectors],
 	)
-	const hasWallet = injectedConnectors.length > 0
 	const isConnected = !!walletAddress
 	const isOnTempoChain = chain?.id === TEMPO_CHAIN_ID
-	const canWatchAsset =
-		isConnected && supportsWatchAsset(connector) && isOnTempoChain
+	const isSupportedConnector = supportsWatchAsset(connector)
 
 	const { watchAsset, isPending, isSuccess, reset } = useWatchAsset()
 
@@ -46,68 +68,90 @@ function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
 		reset()
 	}, [address, reset])
 
-	if (!hasWallet) return null
+	React.useEffect(() => {
+		if (!isSuccess) return
+		const timeout = setTimeout(() => reset(), 3_000)
+		return () => clearTimeout(timeout)
+	}, [isSuccess, reset])
 
-	const label = isConnected
-		? (connector?.name ?? 'Wallet')
-		: (injectedConnectors[0]?.name ?? 'Wallet')
+	const addToWallet = React.useCallback(() => {
+		if (!hasMetadata) return
+		watchAsset({
+			type: 'ERC20',
+			options: {
+				address,
+				symbol: symbol as string,
+				decimals: decimals as number,
+				image,
+			},
+		})
+	}, [watchAsset, address, symbol, decimals, image, hasMetadata])
 
-	// Not connected: show button that triggers wallet connection
-	if (!isConnected) {
-		const primaryConnector = injectedConnectors[0]
+	const handleClick = () => {
+		if (!isConnected) {
+			const primaryConnector = supportedConnectors[0]
+			if (primaryConnector) {
+				connect.mutate({ connector: primaryConnector })
+			}
+			return
+		}
 
-		return (
-			<button
-				type="button"
-				disabled={connect.isPending}
-				className={cx(
-					'flex items-center gap-[6px] text-[12px] cursor-pointer press-down whitespace-nowrap',
-					connect.isPending
-						? 'text-secondary animate-pulse'
-						: 'text-secondary hover:text-primary',
-				)}
-				onClick={() => {
-					if (primaryConnector) {
-						connect.mutate({ connector: primaryConnector })
-					}
-				}}
-			>
-				<LucideWallet className="size-[12px]" />
-				{connect.isPending ? 'Connecting…' : `Add to ${label}`}
-			</button>
-		)
+		if (!isOnTempoChain && isSupportedConnector) {
+			switchChain.mutate({
+				chainId: TEMPO_CHAIN_ID,
+				addEthereumChainParameter: {
+					nativeCurrency: { name: 'USD', decimals: 18, symbol: 'USD' },
+				},
+			})
+			return
+		}
+
+		addToWallet()
 	}
 
-	// Connected but wrong chain or unsupported connector
-	if (!canWatchAsset) return null
+	const walletName =
+		getWalletName(connector) ??
+		getWalletName(supportedConnectors[0]) ??
+		'Wallet'
+
+	const busy =
+		connect.isPending || switchChain.isPending || isPending || isSuccess
+
+	const needsChainSwitch =
+		isConnected && isSupportedConnector && !isOnTempoChain
+
+	const label = isSuccess
+		? 'Added!'
+		: isPending
+			? 'Adding…'
+			: switchChain.isPending
+				? 'Switching network…'
+				: connect.isPending
+					? 'Connecting…'
+					: needsChainSwitch
+						? 'Switch to Tempo'
+						: isConnected
+							? `Add ${symbol ?? 'token'} to ${walletName}`
+							: `Connect ${walletName}`
+
+	if (isConnected && !isSupportedConnector) return null
 
 	return (
 		<button
 			type="button"
-			disabled={isPending || isSuccess}
+			disabled={busy}
 			className={cx(
-				'flex items-center gap-[6px] text-[12px] cursor-pointer press-down whitespace-nowrap',
+				'flex items-center justify-center gap-2 w-full rounded-lg border px-3 py-2 text-[13px] font-sans font-medium cursor-pointer press-down transition-colors',
 				isSuccess
-					? 'text-positive'
-					: isPending
-						? 'text-secondary animate-pulse'
-						: 'text-secondary hover:text-primary',
-				(isPending || isSuccess) && 'pointer-events-none',
+					? 'border-positive/30 text-positive bg-positive/5'
+					: busy
+						? 'border-base-border text-secondary bg-base-plane animate-pulse'
+						: 'border-base-border text-secondary bg-base-plane hover:bg-base-plane-interactive hover:text-primary',
 			)}
-			onClick={() =>
-				watchAsset({
-					type: 'ERC20',
-					options: {
-						address,
-						symbol: resolvedSymbol,
-						decimals: resolvedDecimals,
-						image,
-					},
-				})
-			}
+			onClick={handleClick}
 		>
-			<LucideWallet className="size-[12px]" />
-			{isSuccess ? 'Added!' : isPending ? 'Adding…' : `Add to ${label}`}
+			<LucideWallet className="size-3.5" />
+			{label}
 		</button>
 	)
 }

@@ -1,6 +1,5 @@
 import { ClientOnly, getRouteApi } from '@tanstack/react-router'
 import type { Address } from 'ox'
-import { AddToWallet } from '#comps/AddToWallet'
 import { InfoCard } from '#comps/InfoCard'
 import { RelativeTime } from '#comps/RelativeTime'
 import { TokenIcon } from '#comps/TokenIcon'
@@ -23,8 +22,6 @@ export function AccountCard(props: AccountCard.Props) {
 		accountType,
 		isToken,
 		tokenName,
-		tokenSymbol,
-		tokenDecimals,
 	} = props
 
 	const { copy, notifying } = useCopy()
@@ -141,16 +138,6 @@ export function AccountCard(props: AccountCard.Props) {
 						</ClientOnly>
 					),
 				},
-				...(isToken
-					? [
-							<AddToWallet
-								key="add-to-wallet"
-								address={address as Address.Address}
-								symbol={tokenSymbol}
-								decimals={tokenDecimals}
-							/>,
-						]
-					: []),
 			]}
 		/>
 	)
@@ -167,7 +154,5 @@ export declare namespace AccountCard {
 		accountType?: AccountType | undefined
 		isToken?: boolean | undefined
 		tokenName?: string | undefined
-		tokenSymbol?: string | undefined
-		tokenDecimals?: number | undefined
 	}
 }
