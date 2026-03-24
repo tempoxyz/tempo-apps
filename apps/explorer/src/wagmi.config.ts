@@ -14,7 +14,6 @@ import {
 	http,
 	serialize,
 } from 'wagmi'
-import { injected } from 'wagmi/connectors'
 
 export type WagmiConfig = ReturnType<typeof getWagmiConfig>
 let wagmiConfigSingleton: ReturnType<typeof createConfig> | null = null
@@ -102,7 +101,7 @@ export function getWagmiConfig() {
 		ssr: true,
 		multiInjectedProviderDiscovery: true,
 		chains: [chain, tempoLocalnet],
-		connectors: [injected()],
+		connectors: [],
 		storage: createStorage({ storage: cookieStorage }),
 		transports: {
 			[chain.id]: transport,
