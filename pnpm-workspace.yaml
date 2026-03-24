@@ -17,7 +17,6 @@ catalog:
   '@logtape/logtape': ^2.0.4
   '@logtape/pretty': ^2.0.4
   '@logtape/redaction': ^2.0.4
-  '@metamask/sdk': ^0.34.0
   '@scalar/api-reference': ^1.49.1
   '@sentry/cloudflare': ^10.44.0
   '@sentry/react': ^10.44.0
