@@ -116,6 +116,7 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 		feePayer: txParams.feePayer,
 		total: txParams.total,
 		events: txParams.events,
+		eventsFailed: txParams.eventsFailed,
 	}
 
 	const [fonts, images] = await Promise.all([
@@ -183,6 +184,7 @@ app.get(
 			feePayer: txParams.feePayer,
 			total: txParams.total,
 			events: txParams.events,
+			eventsFailed: txParams.eventsFailed,
 		}
 
 		const [fonts, images] = await Promise.all([

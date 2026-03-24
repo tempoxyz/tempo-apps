@@ -51,6 +51,7 @@ export interface ReceiptData {
 	feePayer?: string
 	total?: string
 	events: ReceiptEvent[]
+	eventsFailed?: boolean
 }
 
 interface ReceiptEvent {
@@ -239,54 +240,74 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 				tw="flex flex-col"
 				style={{ paddingTop: '12px', paddingBottom: '12px' }}
 			>
-				{data.events.length > 0 &&
-					data.events.slice(0, 3).map((event, index) => {
-						const parts = parseEventDetails(event.details || '')
-						return (
+				{data.eventsFailed ? (
+					<div
+						tw="flex px-12 py-6 text-[28px] text-gray-400"
+						style={{ fontFamily: 'Pilat', letterSpacing: '0em' }}
+					>
+						Failed to render summary.
+					</div>
+				) : data.events.length === 0 ? (
+					<div
+						tw="flex px-12 py-6 text-[28px] text-gray-400"
+						style={{ fontFamily: 'Pilat', letterSpacing: '0em' }}
+					>
+						No events to display.
+					</div>
+				) : (
+					<>
+						{data.events.slice(0, 3).map((event, index) => {
+							const parts = parseEventDetails(event.details || '')
+							return (
+								<div
+									key={`event-${event.details}`}
+									tw="flex px-12 py-4 text-[28px]"
+									style={{
+										fontFamily: 'Pilat',
+										fontWeight: 400,
+										fontFeatureSettings: '"tnum"',
+										letterSpacing: '0em',
+										justifyContent: 'space-between',
+									}}
+								>
+									<div tw="flex" style={{ gap: '8px', maxWidth: '85%' }}>
+										<span tw="text-gray-500 shrink-0">{index + 1}.</span>
+										<div tw="flex flex-wrap" style={{ gap: '8px' }}>
+											<span tw="bg-gray-100 px-3 rounded shrink-0">
+												{event.action}
+											</span>
+											{parts.map((part) => (
+												<span
+													key={`part-${part.text}`}
+													tw={
+														part.type === 'asset'
+															? 'text-emerald-600'
+															: part.type === 'address'
+																? 'text-blue-600'
+																: 'text-gray-500'
+													}
+												>
+													{part.text}
+												</span>
+											))}
+										</div>
+									</div>
+									{event.amount && <span tw="shrink-0">{event.amount}</span>}
+								</div>
+							)
+						})}
+						{data.events.length > 3 && (
 							<div
-								key={`event-${event.details}`}
-								tw="flex px-12 py-4 text-[28px]"
+								tw="flex justify-center py-3 mx-12 text-gray-500 text-[24px]"
 								style={{
 									fontFamily: 'Pilat',
-									fontWeight: 400,
 									fontFeatureSettings: '"tnum"',
-									letterSpacing: '0em',
-									justifyContent: 'space-between',
 								}}
 							>
-								<div tw="flex" style={{ gap: '8px', maxWidth: '85%' }}>
-									<span tw="text-gray-500 shrink-0">{index + 1}.</span>
-									<div tw="flex flex-wrap" style={{ gap: '8px' }}>
-										<span tw="bg-gray-100 px-3 rounded shrink-0">
-											{event.action}
-										</span>
-										{parts.map((part) => (
-											<span
-												key={`part-${part.text}`}
-												tw={
-													part.type === 'asset'
-														? 'text-emerald-600'
-														: part.type === 'address'
-															? 'text-blue-600'
-															: 'text-gray-500'
-												}
-											>
-												{part.text}
-											</span>
-										))}
-									</div>
-								</div>
-								{event.amount && <span tw="shrink-0">{event.amount}</span>}
+								...and {data.events.length - 3} more
 							</div>
-						)
-					})}
-				{data.events.length > 3 && (
-					<div
-						tw="flex justify-center py-3 mx-12 text-gray-500 text-[24px]"
-						style={{ fontFamily: 'Pilat', fontFeatureSettings: '"tnum"' }}
-					>
-						...and {data.events.length - 3} more
-					</div>
+						)}
+					</>
 				)}
 			</div>
 

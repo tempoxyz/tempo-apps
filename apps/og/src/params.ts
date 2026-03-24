@@ -116,6 +116,7 @@ export const txOgQuerySchema = z.pipe(
 		event4: optionalString,
 		event5: optionalString,
 		event6: optionalString,
+		eventsFailed: optionalString,
 	}),
 	z.transform((data) => {
 		const events: TxOgEvent[] = []
@@ -137,6 +138,7 @@ export const txOgQuerySchema = z.pipe(
 			feePayer: data.feePayer,
 			total: data.total,
 			events,
+			eventsFailed: data.eventsFailed === 'true',
 		}
 	}),
 )
