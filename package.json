@@ -40,8 +40,5 @@
 	"packageManager": "pnpm@10.32.1",
 	"simple-git-hooks": {
 		"pre-commit": "pnpm prek run --all-files --config='.github/.pre-commit.yml'"
-	},
-	"dependencies": {
-		"@metamask/sdk": "catalog:"
 	}
 }
