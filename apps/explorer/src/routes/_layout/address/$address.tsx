@@ -786,7 +786,7 @@ function AccountCardWithTimestamps(props: {
 			/>
 			{isToken && (
 				<ClientOnly fallback={null}>
-					<WalletActions
+					<WalletTokenActions
 						address={address}
 						symbol={tokenMetadata?.symbol}
 						decimals={tokenMetadata?.decimals}
@@ -797,7 +797,7 @@ function AccountCardWithTimestamps(props: {
 	)
 }
 
-function WalletActions(props: {
+function WalletTokenActions(props: {
 	address: Address.Address
 	symbol?: string | undefined
 	decimals?: number | undefined
