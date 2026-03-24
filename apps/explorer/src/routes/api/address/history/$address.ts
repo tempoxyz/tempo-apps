@@ -205,14 +205,11 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const statusFilter = searchParams.status
 
 					const fetchSize = limit + 1
-					// When a status filter is active, always use the txOnly path
-					// which does proper SQL-level filtering with correct pagination.
-					// The multi-source buffer (capped at 500) can't produce accurate
-					// filtered counts for addresses with 10k+ transactions.
 					const isTxOnlySource =
-						(sources.txs && !sources.transfers && !sources.emitted) ||
-						Boolean(statusFilter)
+						sources.txs && !sources.transfers && !sources.emitted
 
+					// When filtering by status in multi-source mode, increase buffer
+					// so we have enough hashes to fill a page after filtering.
 					const bufferSize = Math.min(
 						Math.max(offset + fetchSize, limit * 3),
 						HISTORY_COUNT_MAX + 1,
@@ -380,8 +377,15 @@ export const Route = createFileRoute('/api/address/history/$address')({
 							? paginatedHashes.slice(0, limit)
 							: paginatedHashes
 
-						totalCount = statusFilter ? sortedHashes.length : countResult.count
-						countCapped = statusFilter ? false : countResult.capped
+						if (statusFilter) {
+							totalCount = sortedHashes.length
+							// If any source hit its buffer limit, our filtered count
+							// is a lower bound — mark it capped so the UI shows "> N"
+							countCapped = anySourceHitLimit
+						} else {
+							totalCount = countResult.count
+							countCapped = countResult.capped
+						}
 					}
 
 					if (finalHashes.length === 0) {
