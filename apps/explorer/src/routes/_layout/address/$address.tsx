@@ -494,7 +494,7 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, live, limit, a, status } = Route.useSearch()
+	const { page, tab, live, limit, status } = Route.useSearch()
 	const {
 		accountType,
 		isToken,
@@ -569,28 +569,22 @@ function RouteComponent() {
 			const newTab = visibleTabs[newIndex] ?? 'transactions'
 			navigate({
 				to: '.',
-				search: { page: 1, tab: newTab, limit, ...(a ? { a } : {}) },
+				search: (prev) => ({ ...prev, page: 1, tab: newTab }),
 				resetScroll: false,
 			})
 		},
-		[navigate, limit, a, visibleTabs],
+		[navigate, visibleTabs],
 	)
 
 	const setStatus = React.useCallback(
 		(newStatus: 'success' | 'reverted' | undefined) => {
 			navigate({
 				to: '.',
-				search: {
-					page: 1,
-					tab,
-					limit,
-					...(a ? { a } : {}),
-					...(newStatus ? { status: newStatus } : {}),
-				},
+				search: (prev) => ({ ...prev, page: 1, status: newStatus }),
 				resetScroll: false,
 			})
 		},
-		[navigate, tab, limit, a],
+		[navigate],
 	)
 
 	const activeSection =
@@ -969,6 +963,9 @@ function SectionsWrapper(props: {
 		})
 		if (!creationTransaction) return baseTransactions
 
+		// Don't append if it doesn't match the active status filter
+		if (status && creationTransaction.status !== status) return baseTransactions
+
 		if (
 			baseTransactions.some(
 				(transaction) =>
@@ -986,6 +983,7 @@ function SectionsWrapper(props: {
 		hasMore,
 		isContract,
 		isTransactionsTabActive,
+		status,
 	])
 
 	// Token transfers query

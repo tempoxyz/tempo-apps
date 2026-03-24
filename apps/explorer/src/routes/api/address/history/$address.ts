@@ -339,7 +339,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 								})
 							: { count: allHashes.size, capped: false }
 
-						const sortedHashes = [...allHashes.values()].sort((a, b) => {
+						let sortedHashes = [...allHashes.values()].sort((a, b) => {
 							const blockDiff =
 								sortDirection === 'desc'
 									? Number(b.block_num) - Number(a.block_num)
@@ -350,6 +350,22 @@ export const Route = createFileRoute('/api/address/history/$address')({
 								: a.hash.localeCompare(b.hash)
 						})
 
+						// Filter by receipt status before pagination to ensure correct page fill
+						if (statusFilter) {
+							const hashValues = sortedHashes.map((h) => h.hash)
+							const receipts = await fetchAddressReceiptRowsByHashes(
+								chainId,
+								hashValues,
+							)
+							const statusMap = new Map(
+								receipts.map((r) => [r.tx_hash, r.status]),
+							)
+							const targetStatus = statusFilter === 'reverted' ? 0 : 1
+							sortedHashes = sortedHashes.filter(
+								(h) => statusMap.get(h.hash) === targetStatus,
+							)
+						}
+
 						const paginatedHashes = sortedHashes.slice(
 							offset,
 							offset + fetchSize,
@@ -359,8 +375,8 @@ export const Route = createFileRoute('/api/address/history/$address')({
 							? paginatedHashes.slice(0, limit)
 							: paginatedHashes
 
-						totalCount = countResult.count
-						countCapped = countResult.capped
+						totalCount = statusFilter ? sortedHashes.length : countResult.count
+						countCapped = statusFilter ? false : countResult.capped
 					}
 
 					if (finalHashes.length === 0) {
@@ -593,14 +609,8 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						})
 					}
 
-					// For multi-source queries with status filter, apply post-enrichment filtering.
-					// Count will be approximate but still useful.
-					const filteredTransactions = statusFilter
-						? transactions.filter((tx) => tx.status === statusFilter)
-						: transactions
-
 					return Response.json({
-						transactions: filteredTransactions,
+						transactions,
 						total: totalCount,
 						offset,
 						limit,
