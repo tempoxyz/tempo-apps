@@ -255,7 +255,7 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 						No events to display.
 					</div>
 				) : (
-					<>
+					<div tw="flex flex-col">
 						{data.events.slice(0, 3).map((event, index) => {
 							const parts = parseEventDetails(event.details || '')
 							return (
@@ -307,7 +307,7 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 								...and {data.events.length - 3} more
 							</div>
 						)}
-					</>
+					</div>
 				)}
 			</div>
 
