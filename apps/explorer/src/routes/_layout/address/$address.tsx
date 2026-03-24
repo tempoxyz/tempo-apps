@@ -43,6 +43,7 @@ import {
 	TransactionDescription,
 	TransactionTimestamp,
 } from '#comps/TxTransactionRow'
+import { TxStatusFilter } from '#comps/TxStatusFilter'
 import { cx } from '#lib/css'
 import { normalizeSearchInput } from '#lib/tempo-address'
 import { type AccountType, getAccountType } from '#lib/account'
@@ -239,18 +240,20 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		tab: TabSchema,
 		live: z.prefault(z.boolean(), false),
 		a: z.optional(z.string()),
+		status: z.optional(z.enum(['success', 'reverted'])),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page, limit, live, tab, a } }) => ({
+	loaderDeps: ({ search: { page, limit, live, tab, a, status } }) => ({
 		page,
 		limit,
 		live,
 		tab,
 		a,
+		status,
 	}),
-	loader: ({ deps: { page, limit, live, tab, a }, params, context }) =>
+	loader: ({ deps: { page, limit, live, tab, a, status }, params, context }) =>
 		withLoaderTiming('/_layout/address/$address', async () => {
 			const { address } = params
 			// Only throw notFound for truly invalid addresses
@@ -317,6 +320,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 									limit,
 									offset,
 									sources: historySources,
+									status,
 								}),
 							)
 							.catch((error) => {
@@ -490,7 +494,7 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, live, limit, a } = Route.useSearch()
+	const { page, tab, live, limit, a, status } = Route.useSearch()
 	const {
 		accountType,
 		isToken,
@@ -572,6 +576,23 @@ function RouteComponent() {
 		[navigate, limit, a, visibleTabs],
 	)
 
+	const setStatus = React.useCallback(
+		(newStatus: 'success' | 'reverted' | undefined) => {
+			navigate({
+				to: '.',
+				search: {
+					page: 1,
+					tab,
+					limit,
+					...(a ? { a } : {}),
+					...(newStatus ? { status: newStatus } : {}),
+				},
+				resetScroll: false,
+			})
+		},
+		[navigate, tab, limit, a],
+	)
+
 	const activeSection =
 		visibleTabs.indexOf(tab) !== -1 ? visibleTabs.indexOf(tab) : 0
 
@@ -603,6 +624,7 @@ function RouteComponent() {
 						limit,
 						offset: 0,
 						sources: historySources,
+						status,
 					}),
 				)
 			}
@@ -612,7 +634,7 @@ function RouteComponent() {
 		}, 2_000)
 
 		return () => clearTimeout(timer)
-	}, [address, tab, limit, queryClient, isToken, historySources])
+	}, [address, tab, limit, queryClient, isToken, historySources, status])
 
 	return (
 		<div
@@ -647,6 +669,8 @@ function RouteComponent() {
 				tokenMetadata={tokenMetadata}
 				account={account}
 				visibleTabs={visibleTabs}
+				status={status}
+				onStatusChange={setStatus}
 			/>
 		</div>
 	)
@@ -817,6 +841,8 @@ function SectionsWrapper(props: {
 	tokenMetadata?: TokenMetadata | null
 	account?: Address.Address
 	visibleTabs: TabValue[]
+	status?: 'success' | 'reverted' | undefined
+	onStatusChange: (status: 'success' | 'reverted' | undefined) => void
 }) {
 	const {
 		address,
@@ -835,6 +861,8 @@ function SectionsWrapper(props: {
 		tokenMetadata,
 		account,
 		visibleTabs,
+		status,
+		onStatusChange,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
 
@@ -890,6 +918,7 @@ function SectionsWrapper(props: {
 			limit,
 			offset: (page - 1) * limit,
 			sources: historySources,
+			status,
 		}),
 		initialData: page === 1 ? initialData : undefined,
 		enabled:
@@ -1040,6 +1069,7 @@ function SectionsWrapper(props: {
 					limit,
 					offset: (nextPage - 1) * limit,
 					sources: historySources,
+					status,
 				}),
 			)
 			.catch(() => {})
@@ -1052,6 +1082,7 @@ function SectionsWrapper(props: {
 		limit,
 		page,
 		queryClient,
+		status,
 		totalTrxCount,
 	])
 
@@ -1198,6 +1229,9 @@ function SectionsWrapper(props: {
 					title: 'Transactions',
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
+					contextual: (
+						<TxStatusFilter value={status} onChange={onStatusChange} />
+					),
 					content: transactionsError ?? (
 						<DataGrid
 							columns={{
@@ -1257,7 +1291,11 @@ function SectionsWrapper(props: {
 							itemsPerPage={limit}
 							pagination="simple"
 							onPrefetchNextPage={prefetchTransactionsNextPage}
-							emptyState="No transactions found."
+							emptyState={
+								status
+									? `No ${status === 'success' ? 'successful' : 'failed'} transactions found.`
+									: 'No transactions found.'
+							}
 						/>
 					),
 				}

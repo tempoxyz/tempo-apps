@@ -88,6 +88,7 @@ export function historyQueryOptions(params: {
 	include?: 'all' | 'sent' | 'received' | undefined
 	address: Address.Address
 	sources: ReadonlyArray<HistorySources>
+	status?: 'success' | 'reverted' | undefined
 }) {
 	const sources = params.sources.join(',')
 	const searchParams = new URLSearchParams({
@@ -96,6 +97,9 @@ export function historyQueryOptions(params: {
 		offset: params.offset.toString(),
 		sources,
 	})
+	if (params.status) {
+		searchParams.set('status', params.status)
+	}
 	return queryOptions({
 		queryKey: [
 			'account-history',
@@ -104,6 +108,7 @@ export function historyQueryOptions(params: {
 			params.limit,
 			params.offset,
 			sources,
+			params.status ?? 'all',
 		],
 		queryFn: async ({ signal }): Promise<HistoryResponse> => {
 			const url = getApiUrl(

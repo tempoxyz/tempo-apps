@@ -139,6 +139,7 @@ const RequestParametersSchema = z.object({
 	sort: z.prefault(z.enum(['asc', 'desc']), 'desc'),
 	include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
 	sources: z.optional(z.string()),
+	status: z.optional(z.enum(['success', 'reverted'])),
 })
 
 export const Route = createFileRoute('/api/address/history/$address')({
@@ -201,6 +202,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const includeSent = include === 'all' || include === 'sent'
 					const includeReceived = include === 'all' || include === 'received'
 					const sources = parseSources(searchParams.sources)
+					const statusFilter = searchParams.status
 
 					const fetchSize = limit + 1
 					const isTxOnlySource =
@@ -248,6 +250,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 							offset,
 							limit,
 							countCap: HISTORY_COUNT_MAX,
+							statusFilter,
 						})
 
 						hasMore = txOnlyPageResult.hasMore
@@ -590,8 +593,14 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						})
 					}
 
+					// For multi-source queries with status filter, apply post-enrichment filtering.
+					// Count will be approximate but still useful.
+					const filteredTransactions = statusFilter
+						? transactions.filter((tx) => tx.status === statusFilter)
+						: transactions
+
 					return Response.json({
-						transactions,
+						transactions: filteredTransactions,
 						total: totalCount,
 						offset,
 						limit,
