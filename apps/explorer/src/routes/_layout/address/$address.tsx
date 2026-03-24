@@ -772,7 +772,6 @@ function AccountCardWithTimestamps(props: {
 		<div className="self-start flex flex-col gap-2">
 			<AccountCard
 				address={address}
-				className="self-start"
 				createdTimestamp={createdTimestamp}
 				lastActivityTimestamp={
 					addressMetadata?.lastActivityTimestamp
