@@ -21,6 +21,7 @@ import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
 import { AddToWallet } from '#comps/AddToWallet'
+import { SetAsFeeToken } from '#comps/SetAsFeeToken'
 import { filterSupportedInjectedConnectors } from '#lib/wallets'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
@@ -809,12 +810,19 @@ function WalletTokenActions(props: {
 	)
 	if (supported.length === 0) return null
 	return (
-		<AddToWallet
-			address={props.address}
-			connectors={supported}
-			symbol={props.symbol}
-			decimals={props.decimals}
-		/>
+		<>
+			<AddToWallet
+				address={props.address}
+				connectors={supported}
+				symbol={props.symbol}
+				decimals={props.decimals}
+			/>
+			<SetAsFeeToken
+				address={props.address}
+				connectors={supported}
+				symbol={props.symbol}
+			/>
+		</>
 	)
 }
 
