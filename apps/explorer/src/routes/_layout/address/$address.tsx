@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+	ClientOnly,
 	createFileRoute,
 	Link,
 	notFound,
@@ -13,12 +14,14 @@ import * as Address from 'ox/Address'
 import * as Hex from 'ox/Hex'
 import * as React from 'react'
 import { formatUnits } from 'viem'
-import { Actions } from 'wagmi/tempo'
+import { useConnectors } from 'wagmi'
 import type { Config } from 'wagmi'
+import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
 import { AddToWallet } from '#comps/AddToWallet'
+import { filterSupportedInjectedConnectors } from '#lib/wallets'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
@@ -783,13 +786,35 @@ function AccountCardWithTimestamps(props: {
 				tokenName={tokenMetadata?.name}
 			/>
 			{isToken && (
-				<AddToWallet
-					address={address}
-					symbol={tokenMetadata?.symbol}
-					decimals={tokenMetadata?.decimals}
-				/>
+				<ClientOnly fallback={null}>
+					<WalletActions
+						address={address}
+						symbol={tokenMetadata?.symbol}
+						decimals={tokenMetadata?.decimals}
+					/>
+				</ClientOnly>
 			)}
 		</div>
+	)
+}
+
+function WalletActions(props: {
+	address: Address.Address
+	symbol?: string | undefined
+	decimals?: number | undefined
+}): React.JSX.Element | null {
+	const connectors = useConnectors()
+	const supported = React.useMemo(
+		() => filterSupportedInjectedConnectors(connectors),
+		[connectors],
+	)
+	if (supported.length === 0) return null
+	return (
+		<AddToWallet
+			address={props.address}
+			symbol={props.symbol}
+			decimals={props.decimals}
+		/>
 	)
 }
 
