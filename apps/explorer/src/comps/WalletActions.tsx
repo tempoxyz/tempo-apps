@@ -4,6 +4,7 @@ import {
 	useConnect,
 	useConnection,
 	useConnectors,
+	useDisconnect,
 	useSwitchChain,
 } from 'wagmi'
 import { cx } from '#lib/css'
@@ -12,6 +13,7 @@ import { getTempoChain } from '#wagmi.config'
 import { AddToWallet } from '#comps/AddToWallet'
 import { InfoCard } from '#comps/InfoCard'
 import { SetAsFeeToken } from '#comps/SetAsFeeToken'
+import LucideLogOut from '~icons/lucide/log-out'
 import LucideWallet from '~icons/lucide/wallet'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
@@ -26,6 +28,7 @@ export function WalletActions(
 	)
 	const { address: account, connector, chain } = useConnection()
 	const connect = useConnect()
+	const disconnect = useDisconnect()
 	const switchChain = useSwitchChain()
 
 	if (supported.length === 0) return null
@@ -71,7 +74,21 @@ export function WalletActions(
 	return (
 		<InfoCard
 			className="min-[1240px]:w-full"
-			title={<InfoCard.Title>Wallet actions</InfoCard.Title>}
+			title={
+				<InfoCard.Title className="w-full justify-between">
+					Wallet actions
+					{isConnected && (
+						<button
+							type="button"
+							title="Disconnect"
+							className="text-secondary hover:text-primary cursor-pointer press-down"
+							onClick={() => disconnect.mutate({ connector })}
+						>
+							<LucideLogOut className="size-3" />
+						</button>
+					)}
+				</InfoCard.Title>
+			}
 			sections={
 				isReady
 					? [
