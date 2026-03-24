@@ -1,31 +1,19 @@
-import { ClientOnly } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import * as React from 'react'
 import {
+	type Connector,
 	useConnect,
 	useConnection,
-	useConnectors,
 	useSwitchChain,
 	useWatchAsset,
 } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
 import { cx } from '#lib/css'
-import {
-	filterSupportedInjectedConnectors,
-	supportsWatchAsset,
-} from '#lib/wallets'
+import { supportsWatchAsset } from '#lib/wallets'
 import { getTempoChain } from '#wagmi.config'
 import LucideWallet from '~icons/lucide/wallet'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
-
-export function AddToWallet(props: AddToWallet.Props): React.JSX.Element {
-	return (
-		<ClientOnly fallback={null}>
-			<AddToWalletInner {...props} />
-		</ClientOnly>
-	)
-}
 
 function getWalletName(
 	connector: { name?: string; id?: string } | undefined | null,
@@ -35,10 +23,11 @@ function getWalletName(
 	return undefined
 }
 
-function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
-	const { address, symbol: symbolProp, decimals: decimalsProp, image } = props
+export function AddToWallet(
+	props: AddToWallet.Props,
+): React.JSX.Element | null {
+	const { address, symbol: symbolProp, decimals: decimalsProp, image, connectors } = props
 	const { address: walletAddress, connector, chain } = useConnection()
-	const connectors = useConnectors()
 	const connect = useConnect()
 	const switchChain = useSwitchChain()
 
@@ -56,10 +45,6 @@ function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
 		Number.isInteger(decimals) &&
 		(decimals as number) >= 0
 
-	const supportedConnectors = React.useMemo(
-		() => filterSupportedInjectedConnectors(connectors),
-		[connectors],
-	)
 	const isConnected = !!walletAddress
 	const isOnTempoChain = chain?.id === TEMPO_CHAIN_ID
 	const isSupportedConnector = supportsWatchAsset(connector)
@@ -92,7 +77,7 @@ function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
 
 	const handleClick = () => {
 		if (!isConnected) {
-			const primaryConnector = supportedConnectors[0]
+			const primaryConnector = connectors[0]
 			if (primaryConnector) {
 				connect.mutate({ connector: primaryConnector })
 			}
@@ -114,7 +99,7 @@ function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
 
 	const walletName =
 		getWalletName(connector) ??
-		getWalletName(supportedConnectors[0]) ??
+		getWalletName(connectors[0]) ??
 		'Wallet'
 
 	const busy =
@@ -162,6 +147,7 @@ function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
 export declare namespace AddToWallet {
 	type Props = {
 		address: Address.Address
+		connectors: readonly Connector[]
 		symbol?: string | undefined
 		decimals?: number | undefined
 		image?: string | undefined

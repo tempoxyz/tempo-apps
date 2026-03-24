@@ -811,6 +811,7 @@ function WalletActions(props: {
 	return (
 		<AddToWallet
 			address={props.address}
+			connectors={supported}
 			symbol={props.symbol}
 			decimals={props.decimals}
 		/>
