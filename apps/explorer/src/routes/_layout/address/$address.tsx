@@ -812,6 +812,7 @@ function WalletTokenActions(props: {
 	if (supported.length === 0) return null
 	return (
 		<InfoCard
+			className="min-[1240px]:w-full"
 			title={<InfoCard.Title>Wallet actions</InfoCard.Title>}
 			sections={[
 				<AddToWallet
