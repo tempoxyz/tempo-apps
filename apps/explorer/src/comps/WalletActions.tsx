@@ -16,8 +16,8 @@ import LucideWallet from '~icons/lucide/wallet'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 
-export function WalletTokenActions(
-	props: WalletTokenActions.Props,
+export function WalletActions(
+	props: WalletActions.Props,
 ): React.JSX.Element | null {
 	const connectors = useConnectors()
 	const supported = React.useMemo(
@@ -111,7 +111,7 @@ export function WalletTokenActions(
 	)
 }
 
-export declare namespace WalletTokenActions {
+export declare namespace WalletActions {
 	type Props = {
 		address: Address.Address
 		symbol?: string | undefined

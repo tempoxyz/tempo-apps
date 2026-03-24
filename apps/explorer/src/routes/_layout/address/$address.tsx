@@ -19,7 +19,7 @@ import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
-import { WalletTokenActions } from '#comps/WalletTokenActions'
+import { WalletActions } from '#comps/WalletActions'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
@@ -785,7 +785,7 @@ function AccountCardWithTimestamps(props: {
 			/>
 			{isToken && (
 				<ClientOnly fallback={null}>
-					<WalletTokenActions
+					<WalletActions
 						address={address}
 						symbol={tokenMetadata?.symbol}
 						decimals={tokenMetadata?.decimals}
