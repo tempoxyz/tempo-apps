@@ -113,7 +113,7 @@
   "address": "0x7FA490Ca9bEF1C9AB2DB0fF9Eb09fCCBDCb5114e",
   "decimals": 6,
   "chainId": 4217,
-  "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x7FA490Ca9bEF1C9AB2DB0fF9Eb09fCCBDCb5114e.svg",
+  "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x7FA490Ca9bEF1C9AB2DB0fF9Eb09fCCBDCb5114e.png",
   "extensions": {
     "chain": "tempo",
     "label": "STG"
