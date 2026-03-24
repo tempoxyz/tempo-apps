@@ -1,34 +1,15 @@
 import type { Address } from 'ox'
 import * as React from 'react'
-import {
-	type Connector,
-	useConnect,
-	useConnection,
-	useSwitchChain,
-	useWaitForTransactionReceipt,
-} from 'wagmi'
+import { type Connector, useConnection, useWaitForTransactionReceipt } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
 import { cx } from '#lib/css'
-import { getTempoChain } from '#wagmi.config'
 import LucideCoins from '~icons/lucide/coins'
-
-const TEMPO_CHAIN_ID = getTempoChain().id
-
-function getWalletName(
-	connector: { name?: string; id?: string } | undefined | null,
-): string | undefined {
-	if (!connector) return undefined
-	if (connector.name && connector.name !== 'Injected') return connector.name
-	return undefined
-}
 
 export function SetAsFeeToken(
 	props: SetAsFeeToken.Props,
 ): React.JSX.Element | null {
-	const { address: tokenAddress, symbol, connectors } = props
-	const { address: account, connector, chain } = useConnection()
-	const connect = useConnect()
-	const switchChain = useSwitchChain()
+	const { address: tokenAddress, symbol } = props
+	const { address: account } = useConnection()
 	const setFeeToken = Hooks.fee.useSetUserToken()
 	const userToken = Hooks.fee.useUserToken({ account })
 
@@ -40,8 +21,6 @@ export function SetAsFeeToken(
 
 	const isConfirmed = receipt.data?.status === 'success'
 
-	const isConnected = !!account
-	const isOnTempoChain = chain?.id === TEMPO_CHAIN_ID
 	const isAlreadyFeeToken =
 		isConfirmed ||
 		userToken.data?.address?.toLowerCase() === tokenAddress.toLowerCase()
@@ -64,43 +43,14 @@ export function SetAsFeeToken(
 	}, [showSuccess])
 
 	const handleClick = () => {
-		if (!isConnected) {
-			const primaryConnector = connectors[0]
-			if (primaryConnector) {
-				connect.mutate({ connector: primaryConnector })
-			}
-			return
-		}
-
-		if (!isOnTempoChain) {
-			switchChain.mutate({
-				chainId: TEMPO_CHAIN_ID,
-				addEthereumChainParameter: {
-					nativeCurrency: { name: 'USD', decimals: 18, symbol: 'USD' },
-				},
-			})
-			return
-		}
-
 		if (!account) return
 		setFeeToken.mutate({ token: tokenAddress, account })
 	}
 
-	const walletName =
-		getWalletName(connector) ??
-		getWalletName(connectors[0]) ??
-		'Wallet'
-
 	const isWaitingForReceipt = setFeeToken.isSuccess && receipt.isPending
 
 	const busy =
-		connect.isPending ||
-		switchChain.isPending ||
-		setFeeToken.isPending ||
-		isWaitingForReceipt ||
-		showSuccess
-
-	const needsChainSwitch = isConnected && !isOnTempoChain
+		setFeeToken.isPending || isWaitingForReceipt || showSuccess
 
 	const label = showSuccess
 		? 'Fee token set!'
@@ -110,15 +60,7 @@ export function SetAsFeeToken(
 				? 'Confirming…'
 				: setFeeToken.isPending
 					? 'Setting…'
-					: switchChain.isPending
-						? 'Switching network…'
-						: connect.isPending
-							? 'Connecting…'
-							: needsChainSwitch
-								? 'Switch to Tempo'
-								: isConnected
-									? `Set ${symbol ?? 'token'} as fee token`
-									: `Connect ${walletName}`
+					: `Set ${symbol ?? 'token'} as fee token`
 
 	return (
 		<button

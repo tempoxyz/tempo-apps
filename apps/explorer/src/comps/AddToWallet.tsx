@@ -1,35 +1,16 @@
 import type { Address } from 'ox'
 import * as React from 'react'
-import {
-	type Connector,
-	useConnect,
-	useConnection,
-	useSwitchChain,
-	useWatchAsset,
-} from 'wagmi'
+import { type Connector, useConnection, useWatchAsset } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
 import { cx } from '#lib/css'
 import { supportsWatchAsset } from '#lib/wallets'
-import { getTempoChain } from '#wagmi.config'
 import LucideWallet from '~icons/lucide/wallet'
-
-const TEMPO_CHAIN_ID = getTempoChain().id
-
-function getWalletName(
-	connector: { name?: string; id?: string } | undefined | null,
-): string | undefined {
-	if (!connector) return undefined
-	if (connector.name && connector.name !== 'Injected') return connector.name
-	return undefined
-}
 
 export function AddToWallet(
 	props: AddToWallet.Props,
 ): React.JSX.Element | null {
-	const { address, symbol: symbolProp, decimals: decimalsProp, image, connectors } = props
-	const { address: walletAddress, connector, chain } = useConnection()
-	const connect = useConnect()
-	const switchChain = useSwitchChain()
+	const { address, symbol: symbolProp, decimals: decimalsProp, image } = props
+	const { connector } = useConnection()
 
 	const { data: onChainMetadata } = Hooks.token.useGetMetadata({
 		token: address,
@@ -45,8 +26,6 @@ export function AddToWallet(
 		Number.isInteger(decimals) &&
 		(decimals as number) >= 0
 
-	const isConnected = !!walletAddress
-	const isOnTempoChain = chain?.id === TEMPO_CHAIN_ID
 	const isSupportedConnector = supportsWatchAsset(connector)
 
 	const { watchAsset, isPending, isSuccess, reset } = useWatchAsset()
@@ -62,7 +41,7 @@ export function AddToWallet(
 		return () => clearTimeout(timeout)
 	}, [isSuccess, reset])
 
-	const addToWallet = React.useCallback(() => {
+	const handleClick = () => {
 		if (!hasMetadata) return
 		watchAsset({
 			type: 'ERC20',
@@ -73,66 +52,30 @@ export function AddToWallet(
 				image,
 			},
 		})
-	}, [watchAsset, address, symbol, decimals, image, hasMetadata])
-
-	const handleClick = () => {
-		if (!isConnected) {
-			const primaryConnector = connectors[0]
-			if (primaryConnector) {
-				connect.mutate({ connector: primaryConnector })
-			}
-			return
-		}
-
-		if (!isOnTempoChain && isSupportedConnector) {
-			switchChain.mutate({
-				chainId: TEMPO_CHAIN_ID,
-				addEthereumChainParameter: {
-					nativeCurrency: { name: 'USD', decimals: 18, symbol: 'USD' },
-				},
-			})
-			return
-		}
-
-		addToWallet()
 	}
 
+	if (!isSupportedConnector) return null
+
 	const walletName =
-		getWalletName(connector) ??
-		getWalletName(connectors[0]) ??
-		'Wallet'
-
-	const busy =
-		connect.isPending || switchChain.isPending || isPending || isSuccess
-
-	const needsChainSwitch =
-		isConnected && isSupportedConnector && !isOnTempoChain
+		connector?.name && connector.name !== 'Injected'
+			? connector.name
+			: 'Wallet'
 
 	const label = isSuccess
 		? 'Added!'
 		: isPending
 			? 'Adding…'
-			: switchChain.isPending
-				? 'Switching network…'
-				: connect.isPending
-					? 'Connecting…'
-					: needsChainSwitch
-						? 'Switch to Tempo'
-						: isConnected
-							? `Add ${symbol ?? 'token'} to ${walletName}`
-							: `Connect ${walletName}`
-
-	if (isConnected && !isSupportedConnector) return null
+			: `Add ${symbol ?? 'token'} to ${walletName}`
 
 	return (
 		<button
 			type="button"
-			disabled={busy}
+			disabled={isPending || isSuccess}
 			className={cx(
 				'flex items-center gap-2 w-full text-[13px] font-sans font-medium transition-colors',
 				isSuccess
 					? 'text-positive'
-					: busy
+					: isPending
 						? 'text-secondary animate-pulse'
 						: 'text-secondary hover:text-primary cursor-pointer press-down',
 			)}
