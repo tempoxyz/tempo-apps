@@ -10,7 +10,10 @@ import {
 } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
 import { cx } from '#lib/css'
-import { filterSupportedConnectors, supportsWatchAsset } from '#lib/wallets'
+import {
+	filterSupportedInjectedConnectors,
+	supportsWatchAsset,
+} from '#lib/wallets'
 import { getTempoChain } from '#wagmi.config'
 import LucideWallet from '~icons/lucide/wallet'
 
@@ -54,7 +57,7 @@ function AddToWalletInner(props: AddToWallet.Props): React.JSX.Element | null {
 		(decimals as number) >= 0
 
 	const supportedConnectors = React.useMemo(
-		() => filterSupportedConnectors(connectors),
+		() => filterSupportedInjectedConnectors(connectors),
 		[connectors],
 	)
 	const isConnected = !!walletAddress
