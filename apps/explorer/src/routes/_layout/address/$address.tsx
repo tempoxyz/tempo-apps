@@ -26,6 +26,7 @@ import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { ContractTabContent, InteractTabContent } from '#comps/Contract'
 import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
 import { DataGrid } from '#comps/DataGrid'
+import { Pagination } from '#comps/Pagination'
 import { Midcut } from '#comps/Midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
@@ -75,6 +76,10 @@ import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
+import ChevronFirst from '~icons/lucide/chevron-first'
+import ChevronLast from '~icons/lucide/chevron-last'
+import ChevronLeft from '~icons/lucide/chevron-left'
+import ChevronRight from '~icons/lucide/chevron-right'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
@@ -1169,6 +1174,14 @@ function SectionsWrapper(props: {
 		{ label: 'Percentage', align: 'end', minWidth: 100 },
 	]
 
+	// Holdings uses local pagination state (decoupled from URL `page` param)
+	const [holdingsPage, setHoldingsPage] = React.useState(1)
+	const prevAddressRef = React.useRef(address)
+	if (prevAddressRef.current !== address) {
+		prevAddressRef.current = address
+		setHoldingsPage(1)
+	}
+
 	// Build sections based on visible tabs
 	const sections = visibleTabs.map((tabName) => {
 		switch (tabName) {
@@ -1240,7 +1253,8 @@ function SectionsWrapper(props: {
 						/>
 					),
 				}
-			case 'holdings':
+			case 'holdings': {
+				const holdingsPages = Math.ceil(assetsData.length / ASSETS_PER_PAGE)
 				return {
 					title: 'Holdings',
 					totalItems: assetsData.length,
@@ -1263,7 +1277,10 @@ function SectionsWrapper(props: {
 							}}
 							items={(mode) =>
 								assetsData
-									.slice((page - 1) * ASSETS_PER_PAGE, page * ASSETS_PER_PAGE)
+									.slice(
+										(holdingsPage - 1) * ASSETS_PER_PAGE,
+										holdingsPage * ASSETS_PER_PAGE,
+									)
 									.map((asset) => ({
 										className: 'text-[13px]',
 										cells:
@@ -1289,15 +1306,25 @@ function SectionsWrapper(props: {
 							}
 							totalItems={assetsData.length}
 							displayCount={assetsData.length}
-							page={page}
+							page={holdingsPage}
 							itemsLabel="assets"
 							itemsPerPage={ASSETS_PER_PAGE}
-							pagination="simple"
+							pagination={
+								holdingsPages <= 1 ? null : (
+									<HoldingsPagination
+										page={holdingsPage}
+										pages={holdingsPages}
+										totalItems={assetsData.length}
+										onPageChange={setHoldingsPage}
+									/>
+								)
+							}
 							loading={assetsLoading}
 							emptyState="No assets found."
 						/>
 					),
 				}
+			}
 			case 'transfers':
 				return {
 					title: 'Transfers',
@@ -1721,6 +1748,71 @@ function AssetValue(props: { asset: AssetData }) {
 				format: 'short',
 			})}
 		</span>
+	)
+}
+
+function HoldingsPagination(props: {
+	page: number
+	pages: number
+	totalItems: number
+	onPageChange: (page: number) => void
+}) {
+	const { page, pages, totalItems, onPageChange } = props
+	const btnClass = cx(
+		'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
+	)
+	return (
+		<div className="flex flex-col items-center sm:flex-row gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary sm:justify-between">
+			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
+				<button
+					type="button"
+					onClick={() => onPageChange(1)}
+					disabled={page <= 1}
+					className={btnClass}
+					title="First page"
+				>
+					<ChevronFirst className="size-[14px]" />
+				</button>
+				<button
+					type="button"
+					onClick={() => onPageChange(page - 1)}
+					disabled={page <= 1}
+					className={btnClass}
+					title="Previous page"
+				>
+					<ChevronLeft className="size-[14px]" />
+				</button>
+				<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+					<span className="text-primary">
+						{Pagination.numFormat.format(page)}
+					</span>
+					{' of '}
+					{Pagination.numFormat.format(pages)}
+				</span>
+				<button
+					type="button"
+					onClick={() => onPageChange(page + 1)}
+					disabled={page >= pages}
+					className={btnClass}
+					title="Next page"
+				>
+					<ChevronRight className="size-[14px]" />
+				</button>
+				<button
+					type="button"
+					onClick={() => onPageChange(pages)}
+					disabled={page >= pages}
+					className={btnClass}
+					title="Last page"
+				>
+					<ChevronLast className="size-[14px]" />
+				</button>
+			</div>
+			<Pagination.Count
+				totalItems={totalItems}
+				itemsLabel={Pagination.pluralize(totalItems, 'assets')}
+			/>
+		</div>
 	)
 }
 
