@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { cx } from '#lib/css'
+import { Sections } from './Sections'
 import ListFilterIcon from '~icons/lucide/list-filter'
 
 type FilterSection<V extends string> = {
@@ -46,6 +47,9 @@ export function TransactionFilters(
 		onPeriodChange,
 	} = props
 
+	const mode = Sections.useSectionsMode()
+	const isStacked = mode === 'stacked'
+
 	const [open, setOpen] = React.useState(false)
 	const containerRef = React.useRef<HTMLDivElement>(null)
 
@@ -63,7 +67,7 @@ export function TransactionFilters(
 	const toggleOpen = React.useCallback(() => setOpen((v) => !v), [])
 
 	React.useEffect(() => {
-		if (!open) return
+		if (!open || isStacked) return
 		function onPointerDown(e: PointerEvent) {
 			if (
 				containerRef.current &&
@@ -74,7 +78,64 @@ export function TransactionFilters(
 		}
 		document.addEventListener('pointerdown', onPointerDown)
 		return () => document.removeEventListener('pointerdown', onPointerDown)
-	}, [open])
+	}, [open, isStacked])
+
+	if (isStacked) {
+		return (
+			<div className="flex flex-col gap-[10px]">
+				<div className="flex items-center justify-between">
+					<button
+						type="button"
+						onClick={toggleOpen}
+						className={cx(
+							'flex items-center gap-[6px] border rounded-[6px] px-[8px] py-[4px] text-[12px] cursor-pointer transition-colors',
+							activeCount > 0
+								? 'border-accent/20 text-accent bg-accent/5'
+								: 'border-transparent text-tertiary hover:text-secondary hover:bg-base-alt',
+						)}
+					>
+						<ListFilterIcon className="w-[14px] h-[14px]" />
+						{activeCount > 0 && (
+							<span className="flex items-center justify-center min-w-[16px] h-[16px] rounded-[4px] bg-accent text-[10px] font-bold text-base-background px-[4px]">
+								{activeCount}
+							</span>
+						)}
+					</button>
+					{open && activeCount > 0 && (
+						<button
+							type="button"
+							onClick={handleClearAll}
+							className="text-[11px] text-tertiary hover:text-accent cursor-pointer transition-colors"
+						>
+							Clear all
+						</button>
+					)}
+				</div>
+				{open && (
+					<div className="flex flex-col gap-[10px]">
+						<SegmentedRow
+							label={statusSection.label}
+							options={statusSection.options}
+							value={status}
+							onChange={onStatusChange}
+						/>
+						<SegmentedRow
+							label={directionSection.label}
+							options={directionSection.options}
+							value={direction}
+							onChange={onDirectionChange}
+						/>
+						<SegmentedRow
+							label={periodSection.label}
+							options={periodSection.options}
+							value={period}
+							onChange={onPeriodChange}
+						/>
+					</div>
+				)}
+			</div>
+		)
+	}
 
 	return (
 		<div ref={containerRef} className="relative flex items-center">
