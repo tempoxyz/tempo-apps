@@ -12,7 +12,6 @@ import { getRequestURL, hasIndexSupply } from '#lib/env'
 import { parseKnownEvents } from '#lib/domain/known-events'
 import { isTip20Address, type Metadata } from '#lib/domain/tip20'
 import {
-	fetchAddressDirectTxCount,
 	fetchAddressDirectTxHistoryRows,
 	fetchAddressHistoryDistinctCount,
 	fetchAddressHistoryTxDetailsByHashes,
@@ -382,19 +381,12 @@ export const Route = createFileRoute('/api/address/history/$address')({
 							: paginatedHashes
 
 						if (statusFilter) {
-							// Get accurate filtered count via SQL rather than
-							// relying on the buffer size (which caps at 2k hashes).
-							const filteredCount = await fetchAddressDirectTxCount({
-								address,
-								chainId,
-								includeSent,
-								includeReceived,
-								countCap: HISTORY_COUNT_MAX,
-								statusFilter,
-								after,
-							})
-							totalCount = filteredCount
-							countCapped = filteredCount >= HISTORY_COUNT_MAX
+							// Use the filtered hash count from the buffer.
+							// The buffer now uses HISTORY_COUNT_MAX+1, so for most
+							// addresses this is the exact count. Mark as capped only
+							// if the unfiltered count was already capped.
+							totalCount = sortedHashes.length
+							countCapped = countResult.capped
 						} else {
 							totalCount = countResult.count
 							countCapped = countResult.capped

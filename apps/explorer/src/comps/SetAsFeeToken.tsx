@@ -1,6 +1,10 @@
 import type { Address } from 'ox'
 import * as React from 'react'
-import { type Connector, useConnection, useWaitForTransactionReceipt } from 'wagmi'
+import {
+	type Connector,
+	useConnection,
+	useWaitForTransactionReceipt,
+} from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
 import { cx } from '#lib/css'
 import LucideCoins from '~icons/lucide/coins'
@@ -49,8 +53,7 @@ export function SetAsFeeToken(
 
 	const isWaitingForReceipt = setFeeToken.isSuccess && receipt.isPending
 
-	const busy =
-		setFeeToken.isPending || isWaitingForReceipt || showSuccess
+	const busy = setFeeToken.isPending || isWaitingForReceipt || showSuccess
 
 	const label = showSuccess
 		? 'Fee token set!'
