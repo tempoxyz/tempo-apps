@@ -73,7 +73,6 @@ export function WalletActions(
 
 	return (
 		<InfoCard
-			className="min-[1240px]:w-full"
 			title={
 				<InfoCard.Title className="w-full justify-between">
 					Wallet actions
