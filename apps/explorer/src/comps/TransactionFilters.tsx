@@ -11,18 +11,9 @@ type FilterSection<V extends string> = {
 const statusSection: FilterSection<'success' | 'reverted'> = {
 	label: 'Status',
 	options: [
-		{ value: undefined, label: 'All' },
 		{ value: 'success', label: 'Successful' },
 		{ value: 'reverted', label: 'Failed' },
-	],
-}
-
-const directionSection: FilterSection<'sent' | 'received'> = {
-	label: 'Direction',
-	options: [
 		{ value: undefined, label: 'All' },
-		{ value: 'sent', label: 'Sent' },
-		{ value: 'received', label: 'Received' },
 	],
 }
 
@@ -38,14 +29,7 @@ const periodSection: FilterSection<'24h' | '7d'> = {
 export function TransactionFilters(
 	props: TransactionFilters.Props,
 ): React.JSX.Element {
-	const {
-		status,
-		direction,
-		period,
-		onStatusChange,
-		onDirectionChange,
-		onPeriodChange,
-	} = props
+	const { status, period, onStatusChange, onPeriodChange } = props
 
 	const mode = Sections.useSectionsMode()
 	const isStacked = mode === 'stacked'
@@ -54,15 +38,12 @@ export function TransactionFilters(
 	const containerRef = React.useRef<HTMLDivElement>(null)
 
 	const activeCount =
-		(status !== undefined ? 1 : 0) +
-		(direction !== undefined ? 1 : 0) +
-		(period !== undefined ? 1 : 0)
+		(status !== undefined ? 1 : 0) + (period !== undefined ? 1 : 0)
 
 	const handleClearAll = React.useCallback(() => {
 		onStatusChange(undefined)
-		onDirectionChange(undefined)
 		onPeriodChange(undefined)
-	}, [onStatusChange, onDirectionChange, onPeriodChange])
+	}, [onStatusChange, onPeriodChange])
 
 	const toggleOpen = React.useCallback(() => setOpen((v) => !v), [])
 
@@ -112,18 +93,12 @@ export function TransactionFilters(
 					)}
 				</div>
 				{open && (
-					<div className="flex flex-col gap-[10px]">
+					<div className="flex flex-col gap-[10px] pt-[6px]">
 						<SegmentedRow
 							label={statusSection.label}
 							options={statusSection.options}
 							value={status}
 							onChange={onStatusChange}
-						/>
-						<SegmentedRow
-							label={directionSection.label}
-							options={directionSection.options}
-							value={direction}
-							onChange={onDirectionChange}
 						/>
 						<SegmentedRow
 							label={periodSection.label}
@@ -165,12 +140,6 @@ export function TransactionFilters(
 							options={statusSection.options}
 							value={status}
 							onChange={onStatusChange}
-						/>
-						<SegmentedRow
-							label={directionSection.label}
-							options={directionSection.options}
-							value={direction}
-							onChange={onDirectionChange}
 						/>
 						<SegmentedRow
 							label={periodSection.label}
@@ -230,10 +199,8 @@ function SegmentedRow<V extends string>(props: {
 export declare namespace TransactionFilters {
 	type Props = {
 		status?: 'success' | 'reverted' | undefined
-		direction?: 'sent' | 'received' | undefined
 		period?: '24h' | '7d' | undefined
 		onStatusChange: (status: 'success' | 'reverted' | undefined) => void
-		onDirectionChange: (direction: 'sent' | 'received' | undefined) => void
 		onPeriodChange: (period: '24h' | '7d' | undefined) => void
 	}
 }

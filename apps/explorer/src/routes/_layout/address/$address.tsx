@@ -609,17 +609,6 @@ function RouteComponent() {
 		[navigate],
 	)
 
-	const setDirection = React.useCallback(
-		(newDir: 'sent' | 'received' | undefined) => {
-			navigate({
-				to: '.',
-				search: (prev) => ({ ...prev, page: 1, dir: newDir }),
-				resetScroll: false,
-			})
-		},
-		[navigate],
-	)
-
 	const setPeriod = React.useCallback(
 		(newPeriod: '24h' | '7d' | undefined) => {
 			navigate({
@@ -729,7 +718,6 @@ function RouteComponent() {
 				onStatusChange={setStatus}
 				dir={dir}
 				period={period}
-				onDirectionChange={setDirection}
 				onPeriodChange={setPeriod}
 			/>
 		</div>
@@ -905,7 +893,6 @@ function SectionsWrapper(props: {
 	onStatusChange: (status: 'success' | 'reverted' | undefined) => void
 	dir?: 'sent' | 'received' | undefined
 	period?: '24h' | '7d' | undefined
-	onDirectionChange: (dir: 'sent' | 'received' | undefined) => void
 	onPeriodChange: (period: '24h' | '7d' | undefined) => void
 }) {
 	const {
@@ -929,7 +916,6 @@ function SectionsWrapper(props: {
 		onStatusChange,
 		dir,
 		period,
-		onDirectionChange,
 		onPeriodChange,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
@@ -1319,10 +1305,8 @@ function SectionsWrapper(props: {
 					contextual: (
 						<TransactionFilters
 							status={status}
-							direction={dir}
 							period={period}
 							onStatusChange={onStatusChange}
-							onDirectionChange={onDirectionChange}
 							onPeriodChange={onPeriodChange}
 						/>
 					),
