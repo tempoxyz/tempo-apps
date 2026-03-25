@@ -321,42 +321,38 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 			/>
 
 			{/* Fee and Total rows */}
-			{(data.fee || data.total) && (
+			<div
+				tw="flex flex-col px-12 text-[28px]"
+				style={{
+					fontFamily: 'Pilat',
+					fontWeight: 400,
+					fontFeatureSettings: '"tnum"',
+					gap: '22px',
+					width: '100%',
+					letterSpacing: '0em',
+					paddingTop: '24px',
+					paddingBottom: '48px',
+				}}
+			>
 				<div
-					tw="flex flex-col px-12 text-[28px]"
-					style={{
-						fontFamily: 'Pilat',
-						fontWeight: 400,
-						fontFeatureSettings: '"tnum"',
-						gap: '22px',
-						width: '100%',
-						letterSpacing: '0em',
-						paddingTop: '24px',
-						paddingBottom: '48px',
-					}}
+					tw="flex items-center w-full"
+					style={{ justifyContent: 'space-between' }}
 				>
-					{data.fee && (
-						<div
-							tw="flex items-center w-full"
-							style={{ justifyContent: 'space-between' }}
-						>
-							<span tw="text-gray-500">
-								Fee{data.feeToken ? ` (${data.feeToken})` : ''}
-							</span>
-							<span>{data.fee}</span>
-						</div>
-					)}
-					{data.total && (
-						<div
-							tw="flex items-center w-full"
-							style={{ justifyContent: 'space-between' }}
-						>
-							<span tw="text-gray-500">Total</span>
-							<span>{data.total}</span>
-						</div>
-					)}
+					<span tw="text-gray-500">
+						Fee{data.feeToken ? ` (${data.feeToken})` : ''}
+					</span>
+					<span>{data.fee || 'No fee'}</span>
 				</div>
-			)}
+				{data.total && (
+					<div
+						tw="flex items-center w-full"
+						style={{ justifyContent: 'space-between' }}
+					>
+						<span tw="text-gray-500">Total</span>
+						<span>{data.total}</span>
+					</div>
+				)}
+			</div>
 			{/* Bottom fade */}
 			<div
 				tw="absolute bottom-0 left-0 right-0"
