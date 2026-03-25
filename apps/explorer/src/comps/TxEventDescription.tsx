@@ -144,7 +144,7 @@ export namespace TxEventDescription {
 						className={cx(
 							'inline-flex h-[24px] items-center rounded-[2px] px-[6px] capitalize',
 							isFailed
-								? 'bg-negative/10 text-negative'
+								? 'bg-negative/[0.06] text-primary'
 								: 'bg-distinct/70 text-primary',
 						)}
 					>
