@@ -12,7 +12,7 @@ pnpm dev
 To run `devnet` chain:
 
 ```sh
-pnpm vite dev --mode devnet
+pnpm dev:devnet
 ```
 
 ### Styling
