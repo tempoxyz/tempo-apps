@@ -1181,6 +1181,14 @@ function SectionsWrapper(props: {
 		prevAddressRef.current = address
 		setHoldingsPage(1)
 	}
+	// Clamp page when asset count shrinks (e.g. after a refetch)
+	const maxHoldingsPage = Math.max(
+		1,
+		Math.ceil(assetsData.length / ASSETS_PER_PAGE),
+	)
+	if (holdingsPage > maxHoldingsPage) {
+		setHoldingsPage(maxHoldingsPage)
+	}
 
 	// Build sections based on visible tabs
 	const sections = visibleTabs.map((tabName) => {
