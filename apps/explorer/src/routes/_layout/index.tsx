@@ -26,8 +26,8 @@ const SPOTLIGHT_DATA: Record<
 			'0x48b138255c60bf0e2c6bcede32768398f679a213a6a7a7973aa71a8afd89c506',
 	},
 	mainnet: {
-		accountAddress: '0xB48141c3Da5030deF992bDc686f0e9A8729206b6',
-		contractAddress: '0x0901aED692C755b870F9605E56BAA66C35BEfF69',
+		accountAddress: '0xdf25f88aa6cde9937fdcfcf10fa349528c79dbf9',
+		contractAddress: '0x20c000000000000000000000b9537d11c60e8b50',
 		receiptHash:
 			'0xa26f2dc8ed22d65ad5e5b3acc40295d89c331fd1e79d34b13baa3f6f47b136dc',
 	},
