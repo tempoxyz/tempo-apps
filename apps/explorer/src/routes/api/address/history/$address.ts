@@ -383,10 +383,9 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						if (statusFilter) {
 							// Use the filtered hash count from the buffer.
 							// The buffer now uses HISTORY_COUNT_MAX+1, so for most
-							// addresses this is the exact count. Mark as capped only
-							// if the unfiltered count was already capped.
+							// addresses this gives the exact filtered count.
 							totalCount = sortedHashes.length
-							countCapped = countResult.capped
+							countCapped = false
 						} else {
 							totalCount = countResult.count
 							countCapped = countResult.capped
