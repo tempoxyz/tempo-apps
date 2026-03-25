@@ -540,6 +540,7 @@ export async function fetchAddressDirectTxCount(
 	params: AddressDirectionParams & {
 		countCap: number
 		statusFilter?: 'success' | 'reverted'
+		after?: number
 	},
 ): Promise<number> {
 	const qb = QB(params.chainId)
@@ -552,6 +553,14 @@ export async function fetchAddressDirectTxCount(
 		subquery = subquery
 			.innerJoin('receipts', 'receipts.tx_hash', 'txs.hash')
 			.where('receipts.status', '=', statusValue) as typeof subquery
+	}
+
+	if (params.after) {
+		subquery = subquery.where(
+			'block_timestamp',
+			'>=',
+			params.after,
+		) as typeof subquery
 	}
 
 	const result = await qb
@@ -870,6 +879,7 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 		limit: number
 		countCap: number
 		statusFilter?: 'success' | 'reverted'
+		after?: number
 	},
 ): Promise<AddressTxOnlyHistoryPageWithJoinsResult> {
 	const fetchSize = params.limit + 1
@@ -896,6 +906,14 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 		filteredQuery = filteredQuery
 			.innerJoin('receipts', 'receipts.tx_hash', 'txs.hash')
 			.where('receipts.status', '=', statusValue) as typeof filteredQuery
+	}
+
+	if (params.after) {
+		filteredQuery = filteredQuery.where(
+			'block_timestamp',
+			'>=',
+			params.after,
+		) as typeof filteredQuery
 	}
 
 	const pagedQuery = filteredQuery
@@ -977,6 +995,7 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 			includeReceived: params.includeReceived,
 			countCap: params.countCap,
 			statusFilter: params.statusFilter,
+			after: params.after,
 		})
 		total = directCount
 		countCapped = directCount >= params.countCap

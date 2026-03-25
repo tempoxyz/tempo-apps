@@ -140,6 +140,7 @@ const RequestParametersSchema = z.object({
 	include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
 	sources: z.optional(z.string()),
 	status: z.optional(z.enum(['success', 'reverted'])),
+	after: z.optional(z.coerce.number()),
 })
 
 export const Route = createFileRoute('/api/address/history/$address')({
@@ -199,6 +200,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					if (limit > MAX_LIMIT) throw new Error('Limit is too high')
 					if (limit < 1) limit = 1
 
+					const after = searchParams.after
 					const includeSent = include === 'all' || include === 'sent'
 					const includeReceived = include === 'all' || include === 'received'
 					const sources = parseSources(searchParams.sources)
@@ -253,6 +255,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 							limit,
 							countCap: HISTORY_COUNT_MAX,
 							statusFilter,
+							after,
 						})
 
 						hasMore = txOnlyPageResult.hasMore
@@ -618,13 +621,17 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						})
 					}
 
+					const finalTransactions = after
+						? transactions.filter((tx) => tx.timestamp >= after)
+						: transactions
+
 					return Response.json({
-						transactions,
-						total: totalCount,
+						transactions: finalTransactions,
+						total: after ? finalTransactions.length : totalCount,
 						offset,
 						limit,
-						hasMore,
-						countCapped,
+						hasMore: after ? false : hasMore,
+						countCapped: after ? false : countCapped,
 						error: null,
 					} satisfies HistoryResponse)
 				} catch (error) {

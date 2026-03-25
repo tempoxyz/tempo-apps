@@ -86,6 +86,7 @@ export function historyQueryOptions(params: {
 	limit: number
 	offset: number
 	include?: 'all' | 'sent' | 'received' | undefined
+	after?: number | undefined
 	address: Address.Address
 	sources: ReadonlyArray<HistorySources>
 	status?: 'success' | 'reverted' | undefined
@@ -100,6 +101,12 @@ export function historyQueryOptions(params: {
 	if (params.status) {
 		searchParams.set('status', params.status)
 	}
+	if (params.include && params.include !== 'all') {
+		searchParams.set('include', params.include)
+	}
+	if (params.after) {
+		searchParams.set('after', params.after.toString())
+	}
 	return queryOptions({
 		queryKey: [
 			'account-history',
@@ -108,6 +115,8 @@ export function historyQueryOptions(params: {
 			params.limit,
 			params.offset,
 			sources,
+			params.include ?? 'all',
+			params.after,
 			params.status ?? 'all',
 		],
 		queryFn: async ({ signal }): Promise<HistoryResponse> => {

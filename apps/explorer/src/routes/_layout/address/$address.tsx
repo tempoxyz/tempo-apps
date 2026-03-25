@@ -43,7 +43,7 @@ import {
 	TransactionDescription,
 	TransactionTimestamp,
 } from '#comps/TxTransactionRow'
-import { TxStatusFilter } from '#comps/TxStatusFilter'
+import { TransactionFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
 import { normalizeSearchInput } from '#lib/tempo-address'
 import { type AccountType, getAccountType } from '#lib/account'
@@ -241,19 +241,29 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		live: z.prefault(z.boolean(), false),
 		a: z.optional(z.string()),
 		status: z.optional(z.enum(['success', 'reverted'])),
+		dir: z.optional(z.enum(['sent', 'received'])),
+		period: z.optional(z.enum(['24h', '7d'])),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page, limit, live, tab, a, status } }) => ({
+	loaderDeps: ({
+		search: { page, limit, live, tab, a, status, dir, period },
+	}) => ({
 		page,
 		limit,
 		live,
 		tab,
 		a,
 		status,
+		dir,
+		period,
 	}),
-	loader: ({ deps: { page, limit, live, tab, a, status }, params, context }) =>
+	loader: ({
+		deps: { page, limit, live, tab, a, status, dir, period },
+		params,
+		context,
+	}) =>
 		withLoaderTiming('/_layout/address/$address', async () => {
 			const { address } = params
 			// Only throw notFound for truly invalid addresses
@@ -308,6 +318,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				address as Address.Address,
 			)
 
+			let after: number | undefined
+			if (period === '24h') after = Math.floor(Date.now() / 1000) - 86400
+			else if (period === '7d')
+				after = Math.floor(Date.now() / 1000) - 7 * 86400
+
 			// Only block on transactions if transactions tab is active.
 			// Select history sources from address type so SSR and client stay aligned.
 			const transactionsPromise = isTransactionsTab
@@ -321,6 +336,13 @@ export const Route = createFileRoute('/_layout/address/$address')({
 									offset,
 									sources: historySources,
 									status,
+									include:
+										dir === 'sent'
+											? 'sent'
+											: dir === 'received'
+												? 'received'
+												: 'all',
+									after,
 								}),
 							)
 							.catch((error) => {
@@ -494,7 +516,7 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, live, limit, status } = Route.useSearch()
+	const { page, tab, live, limit, status, dir, period } = Route.useSearch()
 	const {
 		accountType,
 		isToken,
@@ -587,6 +609,28 @@ function RouteComponent() {
 		[navigate],
 	)
 
+	const setDirection = React.useCallback(
+		(newDir: 'sent' | 'received' | undefined) => {
+			navigate({
+				to: '.',
+				search: (prev) => ({ ...prev, page: 1, dir: newDir }),
+				resetScroll: false,
+			})
+		},
+		[navigate],
+	)
+
+	const setPeriod = React.useCallback(
+		(newPeriod: '24h' | '7d' | undefined) => {
+			navigate({
+				to: '.',
+				search: (prev) => ({ ...prev, page: 1, period: newPeriod }),
+				resetScroll: false,
+			})
+		},
+		[navigate],
+	)
+
 	const activeSection =
 		visibleTabs.indexOf(tab) !== -1 ? visibleTabs.indexOf(tab) : 0
 
@@ -619,6 +663,14 @@ function RouteComponent() {
 						offset: 0,
 						sources: historySources,
 						status,
+						include:
+							dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : 'all',
+						after:
+							period === '24h'
+								? Math.floor(Date.now() / 1000) - 86400
+								: period === '7d'
+									? Math.floor(Date.now() / 1000) - 7 * 86400
+									: undefined,
 					}),
 				)
 			}
@@ -628,7 +680,17 @@ function RouteComponent() {
 		}, 2_000)
 
 		return () => clearTimeout(timer)
-	}, [address, tab, limit, queryClient, isToken, historySources, status])
+	}, [
+		address,
+		tab,
+		limit,
+		queryClient,
+		isToken,
+		historySources,
+		status,
+		dir,
+		period,
+	])
 
 	return (
 		<div
@@ -665,6 +727,10 @@ function RouteComponent() {
 				visibleTabs={visibleTabs}
 				status={status}
 				onStatusChange={setStatus}
+				dir={dir}
+				period={period}
+				onDirectionChange={setDirection}
+				onPeriodChange={setPeriod}
 			/>
 		</div>
 	)
@@ -837,6 +903,10 @@ function SectionsWrapper(props: {
 	visibleTabs: TabValue[]
 	status?: 'success' | 'reverted' | undefined
 	onStatusChange: (status: 'success' | 'reverted' | undefined) => void
+	dir?: 'sent' | 'received' | undefined
+	period?: '24h' | '7d' | undefined
+	onDirectionChange: (dir: 'sent' | 'received' | undefined) => void
+	onPeriodChange: (period: '24h' | '7d' | undefined) => void
 }) {
 	const {
 		address,
@@ -857,8 +927,21 @@ function SectionsWrapper(props: {
 		visibleTabs,
 		status,
 		onStatusChange,
+		dir,
+		period,
+		onDirectionChange,
+		onPeriodChange,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
+
+	const after = React.useMemo(() => {
+		if (period === '24h') return Math.floor(Date.now() / 1000) - 86400
+		if (period === '7d') return Math.floor(Date.now() / 1000) - 7 * 86400
+		return undefined
+	}, [period])
+
+	const include =
+		dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : ('all' as const)
 
 	// Track hydration to avoid SSR/client mismatch with query data
 	const isMounted = useIsMounted()
@@ -913,6 +996,8 @@ function SectionsWrapper(props: {
 			offset: (page - 1) * limit,
 			sources: historySources,
 			status,
+			include,
+			after,
 		}),
 		initialData: page === 1 ? initialData : undefined,
 		enabled:
@@ -1068,14 +1153,18 @@ function SectionsWrapper(props: {
 					offset: (nextPage - 1) * limit,
 					sources: historySources,
 					status,
+					include,
+					after,
 				}),
 			)
 			.catch(() => {})
 	}, [
 		address,
+		after,
 		countCapped,
 		hasMore,
 		historySources,
+		include,
 		isTransactionsTabActive,
 		limit,
 		page,
@@ -1228,7 +1317,14 @@ function SectionsWrapper(props: {
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
 					contextual: (
-						<TxStatusFilter value={status} onChange={onStatusChange} />
+						<TransactionFilters
+							status={status}
+							direction={dir}
+							period={period}
+							onStatusChange={onStatusChange}
+							onDirectionChange={onDirectionChange}
+							onPeriodChange={onPeriodChange}
+						/>
 					),
 					content: transactionsError ?? (
 						<DataGrid
@@ -1290,8 +1386,8 @@ function SectionsWrapper(props: {
 							pagination="simple"
 							onPrefetchNextPage={prefetchTransactionsNextPage}
 							emptyState={
-								status
-									? `No ${status === 'success' ? 'successful' : 'failed'} transactions found.`
+								status || dir || period
+									? 'No matching transactions found.'
 									: 'No transactions found.'
 							}
 						/>
