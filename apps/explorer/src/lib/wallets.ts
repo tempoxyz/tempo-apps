@@ -13,3 +13,14 @@ export function filterSupportedInjectedConnectors(
 			!UNSUPPORTED_WALLET_NAMES.has(connector.name),
 	)
 }
+
+export function supportsWatchAsset(
+	connector: Connector | undefined | null,
+): boolean {
+	return (
+		!!connector &&
+		connector.id !== 'webAuthn' &&
+		!UNSUPPORTED_WALLET_IDS.has(connector.id) &&
+		!UNSUPPORTED_WALLET_NAMES.has(connector.name)
+	)
+}

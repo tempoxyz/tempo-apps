@@ -208,7 +208,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 
 					const bufferSize = Math.min(
 						Math.max(offset + fetchSize, limit * 3),
-						500,
+						HISTORY_COUNT_MAX + 1,
 					)
 
 					const queryParams = {

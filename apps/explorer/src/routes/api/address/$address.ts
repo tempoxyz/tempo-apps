@@ -18,6 +18,7 @@ import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
 
 const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
+const BUFFER_SIZE_CAP = 10_001
 
 /**
  * Binary search to find the block where a contract was created.
@@ -187,7 +188,7 @@ export const Route = createFileRoute('/api/address/$address')({
 					// bound fetch size to avoid huge offsets on deep pagination
 					const bufferSize = Math.min(
 						Math.max(offset + fetchSize * 5, limit * 3),
-						500,
+						BUFFER_SIZE_CAP,
 					)
 
 					const queryParams = {

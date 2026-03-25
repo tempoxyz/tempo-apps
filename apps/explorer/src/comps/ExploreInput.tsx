@@ -204,12 +204,13 @@ export function ExploreInput(props: ExploreInput.Props) {
 			<div ref={externalWrapperRef} className="overflow-hidden">
 				<form
 					ref={formRef}
+					autoComplete="off"
 					onSubmit={(event) => {
 						event.preventDefault()
 						if (!formRef.current) return
 
 						const data = new FormData(formRef.current)
-						let formValue = data.get('value')
+						let formValue = data.get('explore-query')
 						if (!formValue || typeof formValue !== 'string') return
 
 						formValue = formValue.trim()
@@ -252,7 +253,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 							className,
 						)}
 						data-1p-ignore
-						name="value"
+						name="explore-query"
 						placeholder="Search by Address / Tx Hash / Block / Token"
 						spellCheck={false}
 						type="text"
