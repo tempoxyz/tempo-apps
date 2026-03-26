@@ -1,0 +1,13 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "virtual-addresses",
+	"compatibility_date": "2026-03-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/server.ts",
+	"workers_dev": true,
+	"preview_urls": true,
+	"assets": {
+		"directory": "./dist/client",
+		"binding": "ASSETS"
+	}
+}

@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@theme {
+	--color-bg: #0a0a0a;
+	--color-surface: #141414;
+	--color-surface-2: #1a1a1a;
+	--color-surface-3: #222222;
+	--color-border: #2a2a2a;
+	--color-border-active: #404040;
+
+	--color-text-primary: #f5f5f5;
+	--color-text-secondary: #888888;
+	--color-text-tertiary: #555555;
+
+	--color-accent: #60a5fa;
+	--color-accent-hover: #93c5fd;
+	--color-positive: #22c55e;
+	--color-negative: #ef4444;
+	--color-warning: #f59e0b;
+
+	--color-virtual-magic: #a78bfa;
+	--color-master-id: #60a5fa;
+	--color-user-tag: #34d399;
+
+	--font-mono: "SF Mono", "Cascadia Code", "Fira Code", ui-monospace, monospace;
+	--font-sans: "Inter", "SF Pro", system-ui, sans-serif;
+}
+
+html,
+body {
+	background-color: var(--color-bg);
+	color: var(--color-text-primary);
+	font-family: var(--font-sans);
+}
+
+@utility text-label {
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--color-text-tertiary);
+}
+
+@utility glass-card {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: 12px;
+}
+
+@utility glass-card-active {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border-active);
+	border-radius: 12px;
+}
+
+@keyframes pulse-glow {
+	0%,
+	100% {
+		opacity: 0.4;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+@utility animate-pulse-glow {
+	animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes hash-spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@utility animate-hash-spin {
+	animation: hash-spin 1s linear infinite;
+}
