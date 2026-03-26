@@ -78,4 +78,4 @@ Improvised solution: we [locate the local SQLite file wrangler uses](/apps/contr
 | environment | database      | dialect | GUI                                                                 |
 |-------------|---------------|---------|---------------------------------------------------------------------|
 | production  | Cloudflare D1 | SQLite  | [DrizzleKit Studio](https://github.com/drizzle-team/drizzle-studio) |
-| development | Local SQLite  | SQLite  | [Cloudflare Dashboard](https://dash.cloudflare.com/)                |
+| development | Local SQLite  | SQLite  | [local-d1.sh](./scripts/local-d1.sh) + DrizzleKit Studio (see above)  |
