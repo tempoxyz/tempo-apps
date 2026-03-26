@@ -87,12 +87,14 @@ export function createMinerPool(options: MinerPoolOptions) {
 					}
 					case 'found': {
 						stopped = true
+						workerAttempts.set(msg.workerId, msg.attempts)
+						const { total } = aggregateProgress()
 						onStateChange({
 							status: 'found',
 							salt: msg.saltHex,
 							masterId: msg.masterIdHex,
 							hash: msg.hashHex,
-							attempts: msg.attempts,
+							attempts: total,
 							minedForAddress: masterAddress,
 						})
 						// Stop all other workers

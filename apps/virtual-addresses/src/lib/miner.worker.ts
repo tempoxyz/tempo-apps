@@ -1,4 +1,4 @@
-import { keccak_256 } from '@noble/hashes/sha3'
+import { createKeccak } from 'hash-wasm'
 import type { ToWorker, FromWorker } from './miner.protocol'
 
 function post(msg: FromWorker) {
@@ -24,7 +24,7 @@ function bytesToHex(bytes: Uint8Array): string {
 
 let running = false
 
-self.onmessage = (e: MessageEvent<ToWorker>) => {
+self.onmessage = async (e: MessageEvent<ToWorker>) => {
 	const msg = e.data
 
 	if (msg.type === 'stop') {
@@ -42,6 +42,9 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
 			stride,
 			batchSize,
 		} = msg
+
+		// Init WASM hasher once
+		const hasher = await createKeccak(256)
 
 		const addrBytes = hexToBytes(masterAddress)
 		const seedBytes = hexToBytes(seedHex)
@@ -78,7 +81,10 @@ self.onmessage = (e: MessageEvent<ToWorker>) => {
 				salt[31] = lo & 0xff
 
 				input.set(salt, 20)
-				const hash = keccak_256(input)
+
+				hasher.init()
+				hasher.update(input)
+				const hash = hasher.digest('binary')
 
 				// Check 32-bit PoW: first 4 bytes must be zero
 				if (hash[0] === 0 && hash[1] === 0 && hash[2] === 0 && hash[3] === 0) {

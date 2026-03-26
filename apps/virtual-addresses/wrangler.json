@@ -9,5 +9,8 @@
 	"assets": {
 		"directory": "./dist/client",
 		"binding": "ASSETS"
+	},
+	"vars": {
+		"EXPLORER_URL": "https://explore.moderato.tempo.xyz"
 	}
 }

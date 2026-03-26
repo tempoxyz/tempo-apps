@@ -18,13 +18,16 @@
 		"@noble/hashes": "^1.7.2",
 		"@tailwindcss/vite": "catalog:",
 		"@tanstack/react-query": "catalog:",
+		"framer-motion": "catalog:",
+		"hash-wasm": "catalog:",
 		"hono": "catalog:",
 		"ox": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:",
 		"tailwindcss": "catalog:",
 		"viem": "catalog:",
-		"wagmi": "catalog:"
+		"wagmi": "catalog:",
+		"zustand": "catalog:"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "catalog:",

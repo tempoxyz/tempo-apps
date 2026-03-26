@@ -1,17 +1,28 @@
 import type * as React from 'react'
+import { useState } from 'react'
 import { useAccount } from 'wagmi'
 import { cx } from '#lib/css'
 import type { MinerState } from '#lib/miner.pool'
 
+const ZERO_ADDR = `0x${'0'.repeat(40)}`
+
+function isValidAddress(s: string): boolean {
+	return /^0x[0-9a-fA-F]{40}$/.test(s) && s !== ZERO_ADDR
+}
+
 export function StepMine(props: StepMine.Props): React.JSX.Element {
 	const { minerState, onStart, onStop } = props
-	const { address } = useAccount()
+	const { address: walletAddress } = useAccount()
+	const [manualAddress, setManualAddress] = useState('')
 
 	const isMining = minerState.status === 'mining'
 	const isFound = minerState.status === 'found'
 
+	const effectiveAddress =
+		walletAddress ?? (isValidAddress(manualAddress) ? manualAddress : null)
+
 	function formatNumber(n: number): string {
-		if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`
+		if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`
 		if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
 		if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
 		return n.toString()
@@ -22,28 +33,32 @@ export function StepMine(props: StepMine.Props): React.JSX.Element {
 			<div>
 				<h2 className="text-base font-semibold mb-1">Mine Salt</h2>
 				<p className="text-sm text-text-secondary">
-					Find a valid salt for your address via 32-bit proof-of-work. This runs
-					entirely in your browser using{' '}
-					{typeof navigator !== 'undefined'
-						? Math.max(1, Math.min(8, (navigator.hardwareConcurrency ?? 4) - 1))
-						: '?'}{' '}
-					Web Workers.
+					Find a valid salt for your address via 32-bit proof-of-work.
 				</p>
 			</div>
 
-			{!address && (
-				<div className="text-sm text-warning bg-warning/10 border border-warning/20 rounded-lg px-4 py-3">
-					Connect your wallet first. The salt is mined for your connected
-					address.
+			{walletAddress ? (
+				<div>
+					<div className="text-label mb-1.5">Master Address (wallet)</div>
+					<div className="font-mono text-sm text-text-secondary bg-surface-2 rounded-lg px-4 py-2.5 break-all">
+						{walletAddress}
+					</div>
 				</div>
-			)}
-
-			{address && (
+			) : (
 				<div>
 					<div className="text-label mb-1.5">Master Address</div>
-					<div className="font-mono text-sm text-text-secondary bg-surface-2 rounded-lg px-4 py-2.5 break-all">
-						{address}
-					</div>
+					<input
+						type="text"
+						value={manualAddress}
+						onChange={(e) => setManualAddress(e.target.value)}
+						placeholder="0x… (connect wallet or paste address)"
+						className="w-full bg-surface-2 border border-border rounded-lg px-4 py-2.5 font-mono text-sm text-text-primary focus:outline-none focus:border-accent transition-colors"
+					/>
+					{manualAddress && !isValidAddress(manualAddress) && (
+						<div className="text-xs text-negative mt-1.5">
+							Invalid address — must be 0x followed by 40 hex characters
+						</div>
+					)}
 				</div>
 			)}
 
@@ -100,11 +115,11 @@ export function StepMine(props: StepMine.Props): React.JSX.Element {
 				{!isMining && !isFound && (
 					<button
 						type="button"
-						disabled={!address}
-						onClick={() => address && onStart(address)}
+						disabled={!effectiveAddress}
+						onClick={() => effectiveAddress && onStart(effectiveAddress)}
 						className={cx(
 							'flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors',
-							address
+							effectiveAddress
 								? 'bg-accent text-black hover:bg-accent-hover'
 								: 'bg-surface-2 text-text-tertiary cursor-not-allowed',
 						)}
@@ -126,8 +141,8 @@ export function StepMine(props: StepMine.Props): React.JSX.Element {
 			{isMining && (
 				<div className="flex items-center gap-2 text-xs text-text-tertiary">
 					<div className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-hash-spin" />
-					Mining with {minerState.workerCount} workers… expect ~1-3 min on
-					modern hardware
+					Mining in-browser with {minerState.workerCount} Web Workers — expect
+					~3 min on modern hardware
 				</div>
 			)}
 		</div>

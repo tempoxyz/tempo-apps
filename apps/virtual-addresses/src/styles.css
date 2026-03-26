@@ -79,3 +79,16 @@ body {
 @utility animate-hash-spin {
 	animation: hash-spin 1s linear infinite;
 }
+
+@keyframes flash-entry {
+	0% {
+		background: rgba(96, 165, 250, 0.1);
+	}
+	100% {
+		background: transparent;
+	}
+}
+
+@utility animate-flash-entry {
+	animation: flash-entry 0.8s ease-out forwards;
+}
