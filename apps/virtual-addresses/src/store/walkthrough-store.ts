@@ -1,6 +1,12 @@
 import { create } from 'zustand'
-import type { Address, Hex } from 'viem'
+import type { Hex } from 'viem'
 import { buildVirtualAddress, randomUserTag } from '#lib/virtual-address'
+import {
+	demoRegister,
+	demoTransfer,
+	demoBalance,
+	demoFund,
+} from '#lib/demo-client'
 import type {
 	DemoState,
 	DemoStep,
@@ -34,6 +40,7 @@ type WalkthroughStore = {
 	demoState: DemoState
 	speed: number
 	txPending: boolean
+	error: string | null
 	data: WalkthroughData
 	startDemo: () => void
 	setSpeed: (speed: number) => void
@@ -56,26 +63,21 @@ export const useWalkthroughStore = create<WalkthroughStore>((set, get) => {
 
 	async function fetchBalances() {
 		const { data } = get()
-		const params = new URLSearchParams()
-		if (data.virtualAddress) params.set('virtualAddress', data.virtualAddress)
-		const res = await fetch(`/api/demo/balance?${params}`)
-		const json = (await res.json()) as {
-			exchange: string
-			sender: string
-			virtual: string
-			exchangeAddress: Address | null
-			senderAddress: Address | null
+		try {
+			const result = await demoBalance(data.virtualAddress ?? undefined)
+			set((s) => ({
+				data: {
+					...s.data,
+					exchangeBalance: result.exchange,
+					senderBalance: result.sender,
+					virtualBalance: result.virtual,
+					exchangeAddress: result.exchangeAddress ?? s.data.exchangeAddress,
+					senderAddress: result.senderAddress ?? s.data.senderAddress,
+				},
+			}))
+		} catch {
+			// Node unreachable
 		}
-		set((s) => ({
-			data: {
-				...s.data,
-				exchangeBalance: json.exchange,
-				senderBalance: json.sender,
-				virtualBalance: json.virtual,
-				exchangeAddress: json.exchangeAddress ?? s.data.exchangeAddress,
-				senderAddress: json.senderAddress ?? s.data.senderAddress,
-			},
-		}))
 	}
 
 	async function advanceStep() {
@@ -83,6 +85,7 @@ export const useWalkthroughStore = create<WalkthroughStore>((set, get) => {
 
 		switch (step) {
 			case 'idle': {
+				await demoFund().catch(() => {})
 				await fetchBalances()
 				set({ step: 'register-start', demoState: 'registering' })
 				scheduleNext(1500)
@@ -93,33 +96,27 @@ export const useWalkthroughStore = create<WalkthroughStore>((set, get) => {
 				set((s) => ({
 					step: 'register-tx',
 					txPending: true,
+					error: null,
 					data: { ...s.data, salt: DEMO_SALT },
 				}))
 				try {
-					const res = await fetch('/api/demo/register', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({ salt: DEMO_SALT }),
-					})
-					const json = (await res.json()) as {
-						txHash: string
-						blockNumber: number
-						masterId: Hex
-						exchangeAddress: Address
-					}
+					const result = await demoRegister(DEMO_SALT)
 					set((s) => ({
 						step: 'register-confirmed',
 						txPending: false,
 						data: {
 							...s.data,
-							registerTxHash: json.txHash,
-							masterId: json.masterId,
-							exchangeAddress: json.exchangeAddress,
+							registerTxHash: result.txHash,
+							masterId: result.masterId,
+							exchangeAddress: result.exchangeAddress,
 						},
 					}))
 					scheduleNext(1500)
-				} catch {
-					set({ txPending: false })
+				} catch (e) {
+					set({
+						txPending: false,
+						error: e instanceof Error ? e.message : 'Register failed',
+					})
 				}
 				break
 			}
@@ -157,38 +154,29 @@ export const useWalkthroughStore = create<WalkthroughStore>((set, get) => {
 			case 'send-start': {
 				const { data: d } = get()
 				if (!d.virtualAddress) break
-				set({ step: 'send-tx', txPending: true })
+				set({ step: 'send-tx', txPending: true, error: null })
 				try {
-					const res = await fetch('/api/demo/transfer', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							virtualAddress: d.virtualAddress,
-							amount: '100',
-						}),
-					})
-					const json = (await res.json()) as {
-						txHash: string
-						blockNumber: number
-						events: { from: string; to: string; amount: string }[]
-					}
-					const transferEvents = json.events.map((e, i) => ({
+					const result = await demoTransfer(d.virtualAddress, '100')
+					const transferEvents = result.events.map((e, i) => ({
 						...e,
 						label: i === 0 ? 'sender → virtual' : 'virtual → exchange',
-						txHash: json.txHash,
+						txHash: result.txHash,
 					}))
 					set((s) => ({
 						txPending: false,
 						data: {
 							...s.data,
-							transferTxHash: json.txHash,
+							transferTxHash: result.txHash,
 							transferEvents,
 						},
 					}))
 					set({ step: 'resolve-detect', demoState: 'resolving' })
 					scheduleNext(1200)
-				} catch {
-					set({ txPending: false })
+				} catch (e) {
+					set({
+						txPending: false,
+						error: e instanceof Error ? e.message : 'Transfer failed',
+					})
 				}
 				break
 			}
@@ -233,6 +221,7 @@ export const useWalkthroughStore = create<WalkthroughStore>((set, get) => {
 		demoState: 'idle',
 		speed: 1,
 		txPending: false,
+		error: null,
 		data: { ...initialData },
 
 		startDemo() {
@@ -241,6 +230,7 @@ export const useWalkthroughStore = create<WalkthroughStore>((set, get) => {
 				step: 'idle',
 				demoState: 'idle',
 				txPending: false,
+				error: null,
 				data: { ...initialData },
 			})
 			advanceStep()
@@ -257,6 +247,7 @@ export const useWalkthroughStore = create<WalkthroughStore>((set, get) => {
 				demoState: 'idle',
 				speed: 1,
 				txPending: false,
+				error: null,
 				data: { ...initialData },
 			})
 		},

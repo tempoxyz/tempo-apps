@@ -61,7 +61,7 @@ export function Header(props: Header.Props): React.JSX.Element {
 				</nav>
 			</div>
 			<div className="flex items-center gap-3">
-				<span className="text-label">Tempo Moderato</span>
+				<span className="text-label">Tempo Localnet</span>
 				{activeTab === 'registry' &&
 					(isConnected && address ? (
 						<button

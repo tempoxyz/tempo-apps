@@ -1,7 +1,9 @@
-import type * as React from 'react'
+import * as React from 'react'
 import { useState } from 'react'
 import { useAccount } from 'wagmi'
+import type { Address } from 'viem'
 import { cx } from '#lib/css'
+import { demoFund } from '#lib/demo-client'
 import type { MinerState } from '#lib/miner.pool'
 
 const ZERO_ADDR = `0x${'0'.repeat(40)}`
@@ -15,11 +17,54 @@ export function StepMine(props: StepMine.Props): React.JSX.Element {
 	const { address: walletAddress } = useAccount()
 	const [manualAddress, setManualAddress] = useState('')
 
+	const [funding, setFunding] = useState(false)
+	const [fundResult, setFundResult] = useState<string | null>(null)
+
 	const isMining = minerState.status === 'mining'
 	const isFound = minerState.status === 'found'
 
 	const effectiveAddress =
 		walletAddress ?? (isValidAddress(manualAddress) ? manualAddress : null)
+
+	// Auto-fund when wallet connects
+	React.useEffect(() => {
+		if (!walletAddress) return
+		let cancelled = false
+		setFunding(true)
+		demoFund(walletAddress as Address)
+			.then((result) => {
+				if (cancelled) return
+				if (result.funded.length > 0) {
+					setFundResult(
+						`Funded ${result.funded.length} account(s) with 10,000 PathUSD`,
+					)
+				}
+			})
+			.catch(() => {})
+			.finally(() => {
+				if (!cancelled) setFunding(false)
+			})
+		return () => {
+			cancelled = true
+		}
+	}, [walletAddress])
+
+	async function handleFund() {
+		if (!effectiveAddress) return
+		setFunding(true)
+		setFundResult(null)
+		try {
+			const result = await demoFund(effectiveAddress as Address)
+			setFundResult(
+				result.funded.length > 0
+					? `Funded ${result.funded.length} account(s) with 10,000 PathUSD`
+					: 'Accounts already funded',
+			)
+		} catch {
+			setFundResult('Fund request failed — is the local node running?')
+		}
+		setFunding(false)
+	}
 
 	function formatNumber(n: number): string {
 		if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`
@@ -59,6 +104,23 @@ export function StepMine(props: StepMine.Props): React.JSX.Element {
 							Invalid address — must be 0x followed by 40 hex characters
 						</div>
 					)}
+				</div>
+			)}
+
+			{effectiveAddress && !isMining && !isFound && (
+				<button
+					type="button"
+					onClick={handleFund}
+					disabled={funding}
+					className="w-full py-2 rounded-lg text-sm text-text-secondary bg-surface-2 border border-border hover:border-border-active transition-colors disabled:opacity-50"
+				>
+					{funding ? 'Funding…' : 'Fund with PathUSD (localnet)'}
+				</button>
+			)}
+
+			{fundResult && (
+				<div className="text-xs text-text-secondary bg-surface-2 rounded-lg px-4 py-2.5">
+					{fundResult}
 				</div>
 			)}
 

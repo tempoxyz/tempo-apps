@@ -1,6 +1,13 @@
 [extend]
 useDefault = true
 
+[allowlist]
+description = "Well-known Anvil/Hardhat test private keys (not secrets)"
+paths = [
+  '''apps/virtual-addresses/src/lib/demo-client\.ts''',
+  '''apps/virtual-addresses/README\.md''',
+]
+
 [[rules]]
 id = "rpc-auth-credentials"
 description = "RPC auth credentials in config files"

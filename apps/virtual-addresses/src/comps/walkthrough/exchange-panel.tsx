@@ -134,14 +134,9 @@ export function ExchangePanel(): React.JSX.Element {
 						Master Address
 					</div>
 					{data.exchangeAddress ? (
-						<a
-							href={`https://explore.moderato.tempo.xyz/address/${data.exchangeAddress}`}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="font-mono text-xs text-accent hover:text-accent-hover break-all leading-relaxed"
-						>
+						<div className="font-mono text-xs text-text-secondary break-all leading-relaxed">
 							{data.exchangeAddress}
-						</a>
+						</div>
 					) : (
 						<div className="font-mono text-xs text-text-tertiary">—</div>
 					)}

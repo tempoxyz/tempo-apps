@@ -11,6 +11,6 @@
 		"binding": "ASSETS"
 	},
 	"vars": {
-		"EXPLORER_URL": "https://explore.moderato.tempo.xyz"
+		"EXPLORER_URL": "http://localhost:3000"
 	}
 }

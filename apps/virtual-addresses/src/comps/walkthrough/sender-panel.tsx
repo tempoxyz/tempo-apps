@@ -118,14 +118,9 @@ export function SenderPanel(): React.JSX.Element {
 						Sender Address
 					</div>
 					{data.senderAddress ? (
-						<a
-							href={`https://explore.moderato.tempo.xyz/address/${data.senderAddress}`}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="font-mono text-xs text-accent hover:text-accent-hover break-all leading-relaxed"
-						>
+						<div className="font-mono text-xs text-text-secondary break-all leading-relaxed">
 							{data.senderAddress}
-						</a>
+						</div>
 					) : (
 						<div className="font-mono text-xs text-text-tertiary">—</div>
 					)}

@@ -11,6 +11,7 @@ const SPEEDS = [0.1, 0.5, 1, 2] as const
 export function WalkthroughDemo(): React.JSX.Element {
 	const speed = useWalkthroughStore((s) => s.speed)
 	const demoState = useWalkthroughStore((s) => s.demoState)
+	const error = useWalkthroughStore((s) => s.error)
 	const setSpeed = useWalkthroughStore((s) => s.setSpeed)
 	const startDemo = useWalkthroughStore((s) => s.startDemo)
 	const reset = useWalkthroughStore((s) => s.reset)
@@ -83,6 +84,31 @@ export function WalkthroughDemo(): React.JSX.Element {
 					</button>
 				</div>
 			</div>
+
+			{/* Error banner */}
+			{error && (
+				<div
+					style={{
+						padding: '8px 20px',
+						background: 'rgba(239, 68, 68, 0.1)',
+						borderBottom: '1px solid rgba(239, 68, 68, 0.3)',
+						color: 'var(--color-negative)',
+						fontSize: 12,
+						display: 'flex',
+						alignItems: 'center',
+						justifyContent: 'space-between',
+					}}
+				>
+					<span>{error}</span>
+					<button
+						type="button"
+						onClick={reset}
+						className="text-xs text-text-tertiary hover:text-text-secondary"
+					>
+						Reset
+					</button>
+				</div>
+			)}
 
 			{/* 3-column grid */}
 			<div
