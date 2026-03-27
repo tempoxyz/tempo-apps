@@ -27,12 +27,25 @@ export function Header(props: Header.Props): React.JSX.Element {
 	return (
 		<header className="border-b border-border px-6 py-3 flex items-center justify-between">
 			<div className="flex items-center gap-4">
-				<div className="text-base font-semibold tracking-tight">
+				<button
+					type="button"
+					onClick={() => onTabChange('intro')}
+					className="text-base font-semibold tracking-tight hover:text-text-secondary transition-colors"
+				>
 					Virtual Addresses
-				</div>
-				<span className="text-label bg-surface-2 px-2 py-0.5 rounded">
+				</button>
+				<button
+					type="button"
+					onClick={() => onTabChange('intro')}
+					className={cx(
+						'text-label bg-surface-2 px-2 py-0.5 rounded transition-colors',
+						activeTab === 'intro'
+							? 'border border-accent/40 text-accent'
+							: 'border border-transparent hover:border-border-active',
+					)}
+				>
 					TIP-1022
-				</span>
+				</button>
 				<nav className="flex items-center gap-1 ml-2">
 					<button
 						type="button"
@@ -91,7 +104,7 @@ export function Header(props: Header.Props): React.JSX.Element {
 }
 
 export declare namespace Header {
-	type Tab = 'registry' | 'walkthrough'
+	type Tab = 'intro' | 'registry' | 'walkthrough'
 	type Props = {
 		activeTab: Tab
 		onTabChange: (tab: Tab) => void
