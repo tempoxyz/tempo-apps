@@ -160,7 +160,7 @@ function formatDateSmart(date: string, time: string): string {
 	const datePart =
 		year === currentYear ? `${month} ${day}` : `${month} ${day}, ${year}`
 
-	return `${datePart} ⋅ ${formattedTime}`
+	return `${datePart} · ${formattedTime}`
 }
 
 function isEmptyHoldings(val: string): boolean {
@@ -257,6 +257,7 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 				<div tw="flex w-full justify-between items-center">
 					<span tw="text-gray-500 shrink-0">Block</span>
 					<div tw="flex items-center" style={{ gap: '12px' }}>
+						<span tw="text-gray-900">{data.blockNumber}</span>
 						{data.status && (
 							<span
 								tw={`text-[22px] px-3 py-1 rounded ${
@@ -268,7 +269,6 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 								{data.status === 'success' ? 'Success' : 'Failed'}
 							</span>
 						)}
-						<span tw="text-gray-900">{data.blockNumber}</span>
 					</div>
 				</div>
 				<div tw="flex w-full justify-between">
