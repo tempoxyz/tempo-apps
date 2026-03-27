@@ -22,7 +22,7 @@ export function IntroView(): React.JSX.Element {
 			<div className="space-y-5">
 				{/* Motivation */}
 				<Card title="Motivation">
-					<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+					<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 						<Reason
 							label="No sweeps"
 							text="Funds auto-credit master at the protocol level. No separate sweep transactions needed."
@@ -69,7 +69,7 @@ export function IntroView(): React.JSX.Element {
 
 				{/* How It Works */}
 				<Card title="How It Works">
-					<ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+					<ol className="grid grid-cols-1 lg:grid-cols-4 gap-4">
 						<Step n={1} title="Register">
 							Master calls{' '}
 							<Code>registerVirtualMaster(salt)</Code>{' '}
@@ -100,7 +100,7 @@ export function IntroView(): React.JSX.Element {
 
 				{/* Key Properties */}
 				<Card title="Properties">
-					<div className="grid grid-cols-2 sm:grid-cols-4 gap-4 font-mono text-sm">
+					<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-sm">
 						<Property k="registration" v="one-time, immutable" />
 						<Property k="derivation" v="fully offchain" />
 						<Property k="virtual balance" v="always 0" />
@@ -114,7 +114,7 @@ export function IntroView(): React.JSX.Element {
 
 				{/* Security & Limitations */}
 				<Card title="Security & Limitations">
-					<div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+					<div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-2 text-sm">
 						<Notice level="warn">
 							Non-TIP-20 tokens sent to virtual addresses credit the literal
 							address and may be irrecoverable.

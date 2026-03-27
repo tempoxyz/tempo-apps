@@ -11,7 +11,7 @@ import { formatAddress } from '#lib/virtual-address'
 import type { Address } from 'viem'
 
 export function Header(props: Header.Props): React.JSX.Element {
-	const { activeTab, onTabChange } = props
+	const { activeTab } = props
 	const { address, isConnected } = useAccount()
 	const connect = useConnect()
 	const allConnectors = useConnectors() as readonly Connector[]
@@ -27,16 +27,14 @@ export function Header(props: Header.Props): React.JSX.Element {
 	return (
 		<header className="border-b border-border px-6 py-3 flex items-center justify-between">
 			<div className="flex items-center gap-4">
-				<button
-					type="button"
-					onClick={() => onTabChange('intro')}
+				<a
+					href="#intro"
 					className="text-base font-semibold tracking-tight hover:text-text-secondary transition-colors"
 				>
 					Virtual Addresses
-				</button>
-				<button
-					type="button"
-					onClick={() => onTabChange('intro')}
+				</a>
+				<a
+					href="#intro"
 					className={cx(
 						'text-label bg-surface-2 px-2 py-0.5 rounded transition-colors',
 						activeTab === 'intro'
@@ -45,11 +43,10 @@ export function Header(props: Header.Props): React.JSX.Element {
 					)}
 				>
 					TIP-1022
-				</button>
+				</a>
 				<nav className="flex items-center gap-1 ml-2">
-					<button
-						type="button"
-						onClick={() => onTabChange('registry')}
+					<a
+						href="#registry"
 						className={cx(
 							'px-3 py-1.5 rounded-lg text-sm transition-colors',
 							activeTab === 'registry'
@@ -58,10 +55,9 @@ export function Header(props: Header.Props): React.JSX.Element {
 						)}
 					>
 						Registry
-					</button>
-					<button
-						type="button"
-						onClick={() => onTabChange('walkthrough')}
+					</a>
+					<a
+						href="#walkthrough"
 						className={cx(
 							'px-3 py-1.5 rounded-lg text-sm transition-colors',
 							activeTab === 'walkthrough'
@@ -70,7 +66,7 @@ export function Header(props: Header.Props): React.JSX.Element {
 						)}
 					>
 						Walkthrough
-					</button>
+					</a>
 				</nav>
 			</div>
 			<div className="flex items-center gap-3">
