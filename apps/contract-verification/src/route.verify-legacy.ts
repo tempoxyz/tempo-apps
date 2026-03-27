@@ -423,7 +423,10 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 
 		// Get or create deployment
 		const existingDeployment = await db
-			.select({ id: contractDeploymentsTable.id })
+			.select({
+				id: contractDeploymentsTable.id,
+				transactionHash: contractDeploymentsTable.transactionHash,
+			})
 			.from(contractDeploymentsTable)
 			.where(
 				and(
@@ -436,6 +439,22 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		let deploymentId: string
 		if (existingDeployment.length > 0 && existingDeployment[0]) {
 			deploymentId = existingDeployment[0].id
+			// Update existing deployment with metadata if missing
+			if (
+				creationTransactionMetadata &&
+				existingDeployment[0].transactionHash === null
+			) {
+				await db
+					.update(contractDeploymentsTable)
+					.set({
+						transactionHash: creationTransactionMetadata.transactionHash,
+						blockNumber: creationTransactionMetadata.blockNumber,
+						transactionIndex: creationTransactionMetadata.transactionIndex,
+						deployer: creationTransactionMetadata.deployer,
+						updatedBy: auditUser,
+					})
+					.where(eq(contractDeploymentsTable.id, deploymentId))
+			}
 		} else {
 			deploymentId = globalThis.crypto.randomUUID()
 			await db.insert(contractDeploymentsTable).values({

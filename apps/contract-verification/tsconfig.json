@@ -41,11 +41,9 @@
 	"include": [
 		"src/**/*",
 		"scripts/**/*",
-		"./container/**/*",
+		"container/**/*",
 		"test/**/*",
-		"database",
-		"_/chains.ts",
-		"_/chains.ts"
+		"database"
 	],
 	"files": [
 		"env.d.ts",

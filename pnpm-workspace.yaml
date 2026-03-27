@@ -4,20 +4,20 @@ packages:
   - '!**/_/**'
 
 catalog:
-  '@biomejs/biome': ^2.4.8
+  '@biomejs/biome': ^2.4.9
   '@cloudflare/puppeteer': ^1.0.6
-  '@cloudflare/vite-plugin': ^1.29.1
-  '@cloudflare/vitest-pool-workers': ^0.13.2
+  '@cloudflare/vite-plugin': ^1.30.1
+  '@cloudflare/vitest-pool-workers': ^0.13.4
   '@cloudflare/workers-types': ^4.20260317.1
   '@hono/zod-validator': ^0.7.6
   '@iconify/json': ^2.2.452
-  '@logtape/config': ^2.0.4
-  '@logtape/drizzle-orm': ^2.0.4
-  '@logtape/hono': ^2.0.4
-  '@logtape/logtape': ^2.0.4
-  '@logtape/pretty': ^2.0.4
-  '@logtape/redaction': ^2.0.4
-  '@scalar/api-reference': ^1.49.1
+  '@logtape/config': ^2.0.5
+  '@logtape/drizzle-orm': ^2.0.5
+  '@logtape/hono': ^2.0.5
+  '@logtape/logtape': ^2.0.5
+  '@logtape/pretty': ^2.0.5
+  '@logtape/redaction': ^2.0.5
+  '@scalar/api-reference': ^1.49.5
   '@sentry/cloudflare': ^10.44.0
   '@sentry/react': ^10.44.0
   '@sentry/vite-plugin': ^5.1.1
@@ -45,7 +45,7 @@ catalog:
   '@types/react-dom': ^19.2.3
   '@vitejs/plugin-react': ^6.0.1
   '@vitest/ui': 4.1.0
-  '@wagmi/core': ^3.4.0
+  '@wagmi/core': ^3.4.1
   abitype: ^1.2.3
   animejs: ^4.3.6
   cva: ^1.0.0-beta.4
@@ -53,11 +53,11 @@ catalog:
   eruda: ^3.4.3
   esbuild: ^0.27.4
   globals: ^17.4.0
-  hono: ^4.12.8
+  hono: ^4.12.9
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
   kysely: ^0.28.13
-  ox: ^0.14.6
+  ox: ^0.14.10
   prool: ^0.2.3
   react: ^19.2.4
   react-dom: ^19.2.4
@@ -73,12 +73,12 @@ catalog:
   typed-query-selector: ^2.12.1
   typescript: ^5.9.3
   unplugin-icons: ^23.0.1
-  viem: ^2.47.5
-  vite: ^8.0.1
+  viem: ^2.47.6
+  vite: ^8.0.3
   vite-plugin-devtools-json: ^1.0.0
   vitest: 4.1.0
-  wagmi: ^3.5.0
-  wrangler: ^4.75.0
+  wagmi: ^3.6.0
+  wrangler: ^4.77.0
   zod: ^4.3.6
 
 catalogMode: strict

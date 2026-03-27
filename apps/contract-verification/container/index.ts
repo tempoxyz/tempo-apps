@@ -12,7 +12,15 @@ function log(
 	event: string,
 	properties?: Record<string, unknown>,
 ) {
-	console[level](JSON.stringify({ event, ...properties }))
+	console[level](
+		JSON.stringify({
+			timestamp: new Date().toISOString(),
+			level,
+			logger: 'tempo.container',
+			event,
+			...properties,
+		}),
+	)
 }
 
 const server = Bun.serve({
