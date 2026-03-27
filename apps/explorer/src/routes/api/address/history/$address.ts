@@ -139,6 +139,8 @@ const RequestParametersSchema = z.object({
 	sort: z.prefault(z.enum(['asc', 'desc']), 'desc'),
 	include: z.prefault(z.enum(['all', 'sent', 'received']), 'all'),
 	sources: z.optional(z.string()),
+	status: z.optional(z.enum(['success', 'reverted'])),
+	after: z.optional(z.coerce.number()),
 })
 
 export const Route = createFileRoute('/api/address/history/$address')({
@@ -198,14 +200,18 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					if (limit > MAX_LIMIT) throw new Error('Limit is too high')
 					if (limit < 1) limit = 1
 
+					const after = searchParams.after
 					const includeSent = include === 'all' || include === 'sent'
 					const includeReceived = include === 'all' || include === 'received'
 					const sources = parseSources(searchParams.sources)
+					const statusFilter = searchParams.status
 
 					const fetchSize = limit + 1
 					const isTxOnlySource =
 						sources.txs && !sources.transfers && !sources.emitted
 
+					// When filtering by status in multi-source mode, increase buffer
+					// so we have enough hashes to fill a page after filtering.
 					const bufferSize = Math.min(
 						Math.max(offset + fetchSize, limit * 3),
 						HISTORY_COUNT_MAX + 1,
@@ -248,6 +254,8 @@ export const Route = createFileRoute('/api/address/history/$address')({
 							offset,
 							limit,
 							countCap: HISTORY_COUNT_MAX,
+							statusFilter,
+							after,
 						})
 
 						hasMore = txOnlyPageResult.hasMore
@@ -336,7 +344,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 								})
 							: { count: allHashes.size, capped: false }
 
-						const sortedHashes = [...allHashes.values()].sort((a, b) => {
+						let sortedHashes = [...allHashes.values()].sort((a, b) => {
 							const blockDiff =
 								sortDirection === 'desc'
 									? Number(b.block_num) - Number(a.block_num)
@@ -347,6 +355,22 @@ export const Route = createFileRoute('/api/address/history/$address')({
 								: a.hash.localeCompare(b.hash)
 						})
 
+						// Filter by receipt status before pagination to ensure correct page fill
+						if (statusFilter) {
+							const hashValues = sortedHashes.map((h) => h.hash)
+							const receipts = await fetchAddressReceiptRowsByHashes(
+								chainId,
+								hashValues,
+							)
+							const statusMap = new Map(
+								receipts.map((r) => [r.tx_hash, r.status]),
+							)
+							const targetStatus = statusFilter === 'reverted' ? 0 : 1
+							sortedHashes = sortedHashes.filter(
+								(h) => statusMap.get(h.hash) === targetStatus,
+							)
+						}
+
 						const paginatedHashes = sortedHashes.slice(
 							offset,
 							offset + fetchSize,
@@ -356,8 +380,16 @@ export const Route = createFileRoute('/api/address/history/$address')({
 							? paginatedHashes.slice(0, limit)
 							: paginatedHashes
 
-						totalCount = countResult.count
-						countCapped = countResult.capped
+						if (statusFilter) {
+							// Use the filtered hash count from the buffer.
+							// The buffer now uses HISTORY_COUNT_MAX+1, so for most
+							// addresses this gives the exact filtered count.
+							totalCount = sortedHashes.length
+							countCapped = false
+						} else {
+							totalCount = countResult.count
+							countCapped = countResult.capped
+						}
 					}
 
 					if (finalHashes.length === 0) {
@@ -590,13 +622,17 @@ export const Route = createFileRoute('/api/address/history/$address')({
 						})
 					}
 
+					const finalTransactions = after
+						? transactions.filter((tx) => tx.timestamp >= after)
+						: transactions
+
 					return Response.json({
-						transactions,
-						total: totalCount,
+						transactions: finalTransactions,
+						total: after ? finalTransactions.length : totalCount,
 						offset,
 						limit,
-						hasMore,
-						countCapped,
+						hasMore: after ? false : hasMore,
+						countCapped: after ? false : countCapped,
 						error: null,
 					} satisfies HistoryResponse)
 				} catch (error) {

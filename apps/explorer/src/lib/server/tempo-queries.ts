@@ -537,12 +537,31 @@ export async function fetchAddressTransferEmittedHashes(params: {
 }
 
 export async function fetchAddressDirectTxCount(
-	params: AddressDirectionParams & { countCap: number },
+	params: AddressDirectionParams & {
+		countCap: number
+		statusFilter?: 'success' | 'reverted'
+		after?: number
+	},
 ): Promise<number> {
 	const qb = QB(params.chainId)
 	let subquery = qb.selectFrom('txs').select((eb) => eb.lit(1).as('x'))
 
 	subquery = applyAddressDirectionFilter(subquery, params)
+
+	if (params.statusFilter) {
+		const statusValue = params.statusFilter === 'reverted' ? 0 : 1
+		subquery = subquery
+			.innerJoin('receipts', 'receipts.tx_hash', 'txs.hash')
+			.where('receipts.status', '=', statusValue) as typeof subquery
+	}
+
+	if (params.after) {
+		subquery = subquery.where(
+			'block_timestamp',
+			'>=',
+			params.after,
+		) as typeof subquery
+	}
 
 	const result = await qb
 		.selectFrom(subquery.limit(params.countCap).as('subquery'))
@@ -859,6 +878,8 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 		offset: number
 		limit: number
 		countCap: number
+		statusFilter?: 'success' | 'reverted'
+		after?: number
 	},
 ): Promise<AddressTxOnlyHistoryPageWithJoinsResult> {
 	const fetchSize = params.limit + 1
@@ -877,6 +898,23 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 		])
 
 	filteredQuery = applyAddressDirectionFilter(filteredQuery, params)
+
+	if (params.statusFilter) {
+		// Join with receipts to filter by status before pagination
+		// status=1 means success, status=0 means reverted
+		const statusValue = params.statusFilter === 'reverted' ? 0 : 1
+		filteredQuery = filteredQuery
+			.innerJoin('receipts', 'receipts.tx_hash', 'txs.hash')
+			.where('receipts.status', '=', statusValue) as typeof filteredQuery
+	}
+
+	if (params.after) {
+		filteredQuery = filteredQuery.where(
+			'block_timestamp',
+			'>=',
+			params.after,
+		) as typeof filteredQuery
+	}
 
 	const pagedQuery = filteredQuery
 		.orderBy('block_num', params.sortDirection)
@@ -956,6 +994,8 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 			includeSent: params.includeSent,
 			includeReceived: params.includeReceived,
 			countCap: params.countCap,
+			statusFilter: params.statusFilter,
+			after: params.after,
 		})
 		total = directCount
 		countCapped = directCount >= params.countCap

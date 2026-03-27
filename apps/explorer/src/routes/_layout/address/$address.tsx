@@ -43,6 +43,7 @@ import {
 	TransactionDescription,
 	TransactionTimestamp,
 } from '#comps/TxTransactionRow'
+import { TransactionFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
 import { normalizeSearchInput } from '#lib/tempo-address'
 import { type AccountType, getAccountType } from '#lib/account'
@@ -239,18 +240,30 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		tab: TabSchema,
 		live: z.prefault(z.boolean(), false),
 		a: z.optional(z.string()),
+		status: z.optional(z.enum(['success', 'reverted'])),
+		dir: z.optional(z.enum(['sent', 'received'])),
+		period: z.optional(z.enum(['24h', '7d'])),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
 	},
-	loaderDeps: ({ search: { page, limit, live, tab, a } }) => ({
+	loaderDeps: ({
+		search: { page, limit, live, tab, a, status, dir, period },
+	}) => ({
 		page,
 		limit,
 		live,
 		tab,
 		a,
+		status,
+		dir,
+		period,
 	}),
-	loader: ({ deps: { page, limit, live, tab, a }, params, context }) =>
+	loader: ({
+		deps: { page, limit, live, tab, a, status, dir, period },
+		params,
+		context,
+	}) =>
 		withLoaderTiming('/_layout/address/$address', async () => {
 			const { address } = params
 			// Only throw notFound for truly invalid addresses
@@ -305,6 +318,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				address as Address.Address,
 			)
 
+			let after: number | undefined
+			if (period === '24h') after = Math.floor(Date.now() / 1000) - 86400
+			else if (period === '7d')
+				after = Math.floor(Date.now() / 1000) - 7 * 86400
+
 			// Only block on transactions if transactions tab is active.
 			// Select history sources from address type so SSR and client stay aligned.
 			const transactionsPromise = isTransactionsTab
@@ -317,6 +335,14 @@ export const Route = createFileRoute('/_layout/address/$address')({
 									limit,
 									offset,
 									sources: historySources,
+									status,
+									include:
+										dir === 'sent'
+											? 'sent'
+											: dir === 'received'
+												? 'received'
+												: 'all',
+									after,
 								}),
 							)
 							.catch((error) => {
@@ -491,7 +517,7 @@ function RouteComponent() {
 	const navigate = useNavigate()
 	const location = useLocation()
 	const { address } = Route.useParams()
-	const { page, tab, live, limit, a } = Route.useSearch()
+	const { page, tab, live, limit, status, dir, period } = Route.useSearch()
 	const {
 		accountType,
 		isToken,
@@ -566,11 +592,33 @@ function RouteComponent() {
 			const newTab = visibleTabs[newIndex] ?? 'transactions'
 			navigate({
 				to: '.',
-				search: { page: 1, tab: newTab, limit, ...(a ? { a } : {}) },
+				search: (prev) => ({ ...prev, page: 1, tab: newTab }),
 				resetScroll: false,
 			})
 		},
-		[navigate, limit, a, visibleTabs],
+		[navigate, visibleTabs],
+	)
+
+	const setStatus = React.useCallback(
+		(newStatus: 'success' | 'reverted' | undefined) => {
+			navigate({
+				to: '.',
+				search: (prev) => ({ ...prev, page: 1, status: newStatus }),
+				resetScroll: false,
+			})
+		},
+		[navigate],
+	)
+
+	const setPeriod = React.useCallback(
+		(newPeriod: '24h' | '7d' | undefined) => {
+			navigate({
+				to: '.',
+				search: (prev) => ({ ...prev, page: 1, period: newPeriod }),
+				resetScroll: false,
+			})
+		},
+		[navigate],
 	)
 
 	const activeSection =
@@ -604,6 +652,15 @@ function RouteComponent() {
 						limit,
 						offset: 0,
 						sources: historySources,
+						status,
+						include:
+							dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : 'all',
+						after:
+							period === '24h'
+								? Math.floor(Date.now() / 1000) - 86400
+								: period === '7d'
+									? Math.floor(Date.now() / 1000) - 7 * 86400
+									: undefined,
 					}),
 				)
 			}
@@ -613,7 +670,17 @@ function RouteComponent() {
 		}, 2_000)
 
 		return () => clearTimeout(timer)
-	}, [address, tab, limit, queryClient, isToken, historySources])
+	}, [
+		address,
+		tab,
+		limit,
+		queryClient,
+		isToken,
+		historySources,
+		status,
+		dir,
+		period,
+	])
 
 	return (
 		<div
@@ -648,6 +715,11 @@ function RouteComponent() {
 				tokenMetadata={tokenMetadata}
 				account={account}
 				visibleTabs={visibleTabs}
+				status={status}
+				onStatusChange={setStatus}
+				dir={dir}
+				period={period}
+				onPeriodChange={setPeriod}
 			/>
 		</div>
 	)
@@ -818,6 +890,11 @@ function SectionsWrapper(props: {
 	tokenMetadata?: TokenMetadata | null
 	account?: Address.Address
 	visibleTabs: TabValue[]
+	status?: 'success' | 'reverted' | undefined
+	onStatusChange: (status: 'success' | 'reverted' | undefined) => void
+	dir?: 'sent' | 'received' | undefined
+	period?: '24h' | '7d' | undefined
+	onPeriodChange: (period: '24h' | '7d' | undefined) => void
 }) {
 	const {
 		address,
@@ -836,8 +913,22 @@ function SectionsWrapper(props: {
 		tokenMetadata,
 		account,
 		visibleTabs,
+		status,
+		onStatusChange,
+		dir,
+		period,
+		onPeriodChange,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
+
+	const after = React.useMemo(() => {
+		if (period === '24h') return Math.floor(Date.now() / 1000) - 86400
+		if (period === '7d') return Math.floor(Date.now() / 1000) - 7 * 86400
+		return undefined
+	}, [period])
+
+	const include =
+		dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : ('all' as const)
 
 	// Track hydration to avoid SSR/client mismatch with query data
 	const isMounted = useIsMounted()
@@ -891,6 +982,9 @@ function SectionsWrapper(props: {
 			limit,
 			offset: (page - 1) * limit,
 			sources: historySources,
+			status,
+			include,
+			after,
 		}),
 		initialData: page === 1 ? initialData : undefined,
 		enabled:
@@ -941,6 +1035,9 @@ function SectionsWrapper(props: {
 		})
 		if (!creationTransaction) return baseTransactions
 
+		// Don't append if it doesn't match the active status filter
+		if (status && creationTransaction.status !== status) return baseTransactions
+
 		if (
 			baseTransactions.some(
 				(transaction) =>
@@ -958,6 +1055,7 @@ function SectionsWrapper(props: {
 		hasMore,
 		isContract,
 		isTransactionsTabActive,
+		status,
 	])
 
 	// Token transfers query
@@ -1041,18 +1139,24 @@ function SectionsWrapper(props: {
 					limit,
 					offset: (nextPage - 1) * limit,
 					sources: historySources,
+					status,
+					include,
+					after,
 				}),
 			)
 			.catch(() => {})
 	}, [
 		address,
+		after,
 		countCapped,
 		hasMore,
 		historySources,
+		include,
 		isTransactionsTabActive,
 		limit,
 		page,
 		queryClient,
+		status,
 		totalTrxCount,
 	])
 
@@ -1199,6 +1303,14 @@ function SectionsWrapper(props: {
 					title: 'Transactions',
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
+					contextual: (
+						<TransactionFilters
+							status={status}
+							period={period}
+							onStatusChange={onStatusChange}
+							onPeriodChange={onPeriodChange}
+						/>
+					),
 					content: transactionsError ?? (
 						<DataGrid
 							columns={{
@@ -1258,7 +1370,11 @@ function SectionsWrapper(props: {
 							itemsPerPage={limit}
 							pagination="simple"
 							onPrefetchNextPage={prefetchTransactionsNextPage}
-							emptyState="No transactions found."
+							emptyState={
+								status || dir || period
+									? 'No matching transactions found.'
+									: 'No transactions found.'
+							}
 						/>
 					),
 				}

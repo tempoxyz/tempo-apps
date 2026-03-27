@@ -57,9 +57,7 @@ export function AddToWallet(
 	if (!isSupportedConnector) return null
 
 	const walletName =
-		connector?.name && connector.name !== 'Injected'
-			? connector.name
-			: 'Wallet'
+		connector?.name && connector.name !== 'Injected' ? connector.name : 'Wallet'
 
 	const label = isSuccess
 		? 'Added!'

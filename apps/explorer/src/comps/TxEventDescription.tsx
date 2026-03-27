@@ -137,12 +137,21 @@ export namespace TxEventDescription {
 					/>
 				)
 			}
-			case 'action':
+			case 'action': {
+				const isFailed = part.value === 'Failed'
 				return (
-					<span className="inline-flex h-[24px] items-center rounded-[2px] bg-distinct/70 px-[6px] text-primary capitalize">
+					<span
+						className={cx(
+							'inline-flex h-[24px] items-center rounded-[2px] px-[6px] capitalize',
+							isFailed
+								? 'bg-negative/[0.06] text-primary'
+								: 'bg-distinct/70 text-primary',
+						)}
+					>
 						{part.value}
 					</span>
 				)
+			}
 			case 'amount':
 				return <Amount {...part.value} />
 			case 'duration':
