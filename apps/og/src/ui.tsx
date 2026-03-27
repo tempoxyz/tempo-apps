@@ -11,7 +11,7 @@ export interface AddressData {
 	lastActive: string
 	created: string
 	feeToken?: string
-	tokensHeld: string[] // Array of token symbols
+	tokensHeld: string[]
 	accountType?: AccountType
 	methods?: string[]
 	deployer?: string
@@ -38,6 +38,7 @@ export interface BlockData {
 	miner: string
 	parentHash: string
 	gasUsage: string
+	prevBlockTxCounts?: number[]
 }
 
 export interface ReceiptData {
@@ -52,6 +53,7 @@ export interface ReceiptData {
 	total?: string
 	events: ReceiptEvent[]
 	eventsFailed?: boolean
+	status?: 'success' | 'reverted'
 }
 
 interface ReceiptEvent {
@@ -69,48 +71,144 @@ function truncateHash(hash: string, chars = 4): string {
 	return `${hash.slice(0, chars + 2)}…${hash.slice(-chars)}`
 }
 
-// Parse event details into groups for rendering
+function formatDateSmart(date: string, time: string): string {
+	if (date === '—') return '—'
+
+	const monthsFull = [
+		'January',
+		'February',
+		'March',
+		'April',
+		'May',
+		'June',
+		'July',
+		'August',
+		'September',
+		'October',
+		'November',
+		'December',
+	]
+
+	let month = ''
+	let day = ''
+	let year = ''
+	let timeStr = time
+
+	const dateMatch1 = date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+	if (dateMatch1) {
+		const m = Number.parseInt(dateMatch1[1] ?? '1', 10)
+		day = dateMatch1[2] ?? '1'
+		year = dateMatch1[3] ?? ''
+		month = monthsFull[m - 1] ?? ''
+	}
+
+	const dateMatch2 = date.match(/^(\w+)\s+(\d{1,2}),?\s+(\d{4})$/)
+	if (dateMatch2) {
+		month = dateMatch2[1] ?? ''
+		day = dateMatch2[2] ?? ''
+		year = dateMatch2[3] ?? ''
+		if (month.length <= 3) {
+			const idx = [
+				'Jan',
+				'Feb',
+				'Mar',
+				'Apr',
+				'May',
+				'Jun',
+				'Jul',
+				'Aug',
+				'Sep',
+				'Oct',
+				'Nov',
+				'Dec',
+			].indexOf(month)
+			if (idx >= 0) month = monthsFull[idx] ?? month
+		}
+	}
+
+	const dateMatch3 = date.match(
+		/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}:\d{2}(?::\d{2})?)\s*UTC$/,
+	)
+	if (dateMatch3) {
+		year = dateMatch3[1] ?? ''
+		const m = Number.parseInt(dateMatch3[2] ?? '1', 10)
+		day = String(Number.parseInt(dateMatch3[3] ?? '1', 10))
+		month = monthsFull[m - 1] ?? ''
+		timeStr = dateMatch3[4] ?? time
+	}
+
+	if (!month || !day) return `${date} ${time}`
+
+	let formattedTime = timeStr
+	const t12 = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)(?:\s*GMT[+-]\d+)?$/i)
+	if (t12?.[1] && t12[2] && t12[3]) {
+		let h = Number.parseInt(t12[1], 10)
+		const p = t12[3].toUpperCase()
+		if (p === 'PM' && h !== 12) h += 12
+		if (p === 'AM' && h === 12) h = 0
+		formattedTime = `${h.toString().padStart(2, '0')}:${t12[2]}:00`
+	} else {
+		const t24 = timeStr.match(
+			/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(?:GMT[+-]\d+)?$/i,
+		)
+		if (t24?.[1] && t24[2]) {
+			formattedTime = `${t24[1].padStart(2, '0')}:${t24[2]}:${t24[3] ?? '00'}`
+		}
+	}
+
+	const currentYear = new Date().getFullYear().toString()
+	const datePart =
+		year === currentYear ? `${month} ${day}` : `${month} ${day}, ${year}`
+
+	return `${datePart} ⋅ ${formattedTime}`
+}
+
+function isEmptyHoldings(val: string): boolean {
+	return !val || val === '—' || val === '$0' || val === '$0.00'
+}
+
+function isHexSelector(text: string): boolean {
+	return /^0x[0-9a-fA-F]{8}$/.test(text)
+}
+
 export function parseEventDetails(
 	details: string,
-): { text: string; type: 'normal' | 'asset' | 'address' }[] {
-	const groups: { text: string; type: 'normal' | 'asset' | 'address' }[] = []
+): { text: string; type: 'normal' | 'asset' | 'address' | 'selector' }[] {
+	const groups: {
+		text: string
+		type: 'normal' | 'asset' | 'address' | 'selector'
+	}[] = []
 
 	const words = details.split(' ')
 	let i = 0
 	while (i < words.length) {
 		const word = words[i]
 
-		// Check if this is an address (starts with 0x or contains ...)
-		if (
+		if (word && isHexSelector(word)) {
+			groups.push({ text: word, type: 'selector' })
+			i++
+		} else if (
 			word?.startsWith('0x') ||
 			(word?.includes('...') && word?.match(/[0-9a-fA-F]/))
 		) {
 			groups.push({ text: word, type: 'address' })
 			i++
-		}
-		// Check if this is a number followed by a token name (asset)
-		else if (
+		} else if (
 			word?.match(/^[\d.]+$/) &&
 			words[i + 1] &&
-			!['for', 'to', 'from'].includes(words[i + 1] as string)
+			!['for', 'to', 'from', 'on'].includes(words[i + 1] as string)
 		) {
-			// Asset: "10.00 pathUSD"
 			groups.push({ text: `${word} ${words[i + 1]}`, type: 'asset' })
 			i += 2
-			// Add following connector word (for, to, from) as normal/gray
 			const connector = words[i]
-			if (connector && ['for', 'to', 'from'].includes(connector)) {
+			if (connector && ['for', 'to', 'from', 'on'].includes(connector)) {
 				groups.push({ text: connector, type: 'normal' })
 				i++
 			}
-		}
-		// Connector word at start (like "to 0x...")
-		else if (['for', 'to', 'from'].includes(word || '')) {
+		} else if (['for', 'to', 'from', 'on'].includes(word || '')) {
 			groups.push({ text: word || '', type: 'normal' })
 			i++
-		}
-		// Regular word
-		else {
+		} else {
 			groups.push({ text: word || '', type: 'normal' })
 			i++
 		}
@@ -122,64 +220,8 @@ export function parseEventDetails(
 // ============ Receipt Component ============
 
 export function ReceiptCard({ data }: { data: ReceiptData }) {
-	let formattedDate = data.date
-	if (data.date.includes(',')) {
-		formattedDate = data.date.replace(/,(\S)/g, ', $1')
-	}
-	const dateMatch = data.date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-	if (dateMatch) {
-		const [, monthStr, dayStr, year] = dateMatch
-		const month = Number.parseInt(monthStr ?? '1', 10)
-		const day = Number.parseInt(dayStr ?? '1', 10)
-		const monthNames = [
-			'Jan',
-			'Feb',
-			'Mar',
-			'Apr',
-			'May',
-			'Jun',
-			'Jul',
-			'Aug',
-			'Sep',
-			'Oct',
-			'Nov',
-			'Dec',
-		]
-		formattedDate = `${monthNames[month - 1]} ${day}, ${year}`
-	}
-
-	// Format time to "HH:MM" (24-hour)
-	let formattedTime = data.time
-	// Handle "1:03 PM" or "10:32 AM GMT-8" format (12-hour with optional timezone)
-	const timeMatch12 = data.time.match(
-		/^(\d{1,2}):(\d{2})\s*(AM|PM)(?:\s*GMT[+-]\d+)?$/i,
-	)
-	if (timeMatch12) {
-		const hoursStr = timeMatch12[1]
-		const minutes = timeMatch12[2]
-		const periodRaw = timeMatch12[3]
-		if (hoursStr && minutes && periodRaw) {
-			let hours = Number.parseInt(hoursStr, 10)
-			const period = periodRaw.toUpperCase()
-			if (period === 'PM' && hours !== 12) hours += 12
-			if (period === 'AM' && hours === 12) hours = 0
-			formattedTime = `${hours.toString().padStart(2, '0')}:${minutes}`
-		}
-	}
-	// Handle "10:32:21 GMT-8" format (24-hour) - extract HH:MM
-	else {
-		const timeMatch24 = data.time.match(
-			/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(?:GMT[+-]\d+)?$/i,
-		)
-		if (timeMatch24) {
-			const hours = timeMatch24[1]
-			const minutes = timeMatch24[2]
-			formattedTime = `${hours?.padStart(2, '0')}:${minutes}`
-		}
-	}
-
-	// Combine date and time
-	const when = data.date !== '—' ? `${formattedDate} ${formattedTime}` : '—'
+	const when = formatDateSmart(data.date, data.time)
+	const feeTokenLabel = data.feeToken || 'pathUSD'
 
 	return (
 		<div
@@ -212,16 +254,29 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 					letterSpacing: '0em',
 				}}
 			>
-				<div tw="flex w-full justify-between">
+				<div tw="flex w-full justify-between items-center">
 					<span tw="text-gray-500 shrink-0">Block</span>
-					<span tw="text-gray-900">{data.blockNumber}</span>
+					<div tw="flex items-center" style={{ gap: '12px' }}>
+						{data.status && (
+							<span
+								tw={`text-[22px] px-3 py-1 rounded ${
+									data.status === 'success'
+										? 'bg-emerald-100 text-emerald-700'
+										: 'bg-red-100 text-red-700'
+								}`}
+							>
+								{data.status === 'success' ? 'Success' : 'Failed'}
+							</span>
+						)}
+						<span tw="text-gray-900">{data.blockNumber}</span>
+					</div>
 				</div>
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500 shrink-0">Sender</span>
 					<span tw="text-blue-500">{truncateHash(data.sender, 6)}</span>
 				</div>
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500 shrink-0">Date</span>
+					<span tw="text-gray-500 shrink-0">Time (UTC)</span>
 					<span>{when}</span>
 				</div>
 			</div>
@@ -229,13 +284,10 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 			{/* Divider */}
 			<div
 				tw="flex w-full"
-				style={{
-					height: '1px',
-					backgroundColor: '#d1d5db',
-				}}
+				style={{ height: '1px', backgroundColor: '#d1d5db' }}
 			/>
 
-			{/* Events - show max 3, then "...and n more" */}
+			{/* Events */}
 			<div
 				tw="flex flex-col"
 				style={{ paddingTop: '12px', paddingBottom: '12px' }}
@@ -258,6 +310,7 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 					<div tw="flex flex-col">
 						{data.events.slice(0, 3).map((event, index) => {
 							const parts = parseEventDetails(event.details || '')
+							const hasAmount = Boolean(event.amount)
 							return (
 								<div
 									key={`event-${event.details}`}
@@ -270,7 +323,13 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 										justifyContent: 'space-between',
 									}}
 								>
-									<div tw="flex" style={{ gap: '8px', maxWidth: '85%' }}>
+									<div
+										tw="flex"
+										style={{
+											gap: '8px',
+											maxWidth: hasAmount ? '85%' : '100%',
+										}}
+									>
 										<span tw="text-gray-500 shrink-0">{index + 1}.</span>
 										<div tw="flex flex-wrap" style={{ gap: '8px' }}>
 											<span tw="bg-gray-100 px-3 rounded shrink-0">
@@ -282,9 +341,11 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 													tw={
 														part.type === 'asset'
 															? 'text-emerald-600'
-															: part.type === 'address'
-																? 'text-blue-600'
-																: 'text-gray-500'
+															: part.type === 'selector'
+																? 'text-purple-600'
+																: part.type === 'address'
+																	? 'text-blue-600'
+																	: 'text-gray-500'
 													}
 												>
 													{part.text}
@@ -314,10 +375,7 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 			{/* Divider */}
 			<div
 				tw="flex w-full"
-				style={{
-					height: '1px',
-					backgroundColor: '#d1d5db',
-				}}
+				style={{ height: '1px', backgroundColor: '#d1d5db' }}
 			/>
 
 			{/* Fee and Total rows */}
@@ -338,10 +396,10 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 					tw="flex items-center w-full"
 					style={{ justifyContent: 'space-between' }}
 				>
-					<span tw="text-gray-500">
-						Fee{data.feeToken ? ` (${data.feeToken})` : ''}
+					<span tw="text-gray-500">Fee ({feeTokenLabel})</span>
+					<span style={!data.fee ? { color: '#9ca3af' } : undefined}>
+						{data.fee || '$0.00'}
 					</span>
-					<span>{data.fee || 'No fee'}</span>
 				</div>
 				{data.total && (
 					<div
@@ -432,10 +490,7 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 			{/* Divider */}
 			<div
 				tw="flex w-full"
-				style={{
-					height: '1px',
-					backgroundColor: '#d1d5db',
-				}}
+				style={{ height: '1px', backgroundColor: '#d1d5db' }}
 			/>
 
 			{/* Details */}
@@ -450,37 +505,26 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 					paddingLeft: '56px',
 				}}
 			>
-				{/* Address - truncated */}
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Address</span>
 					<span tw="text-blue-500">{truncateHash(data.address, 8)}</span>
 				</div>
-
-				{/* Currency */}
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Currency</span>
 					<span tw="text-gray-900">{truncateText(data.currency, 16)}</span>
 				</div>
-
-				{/* Holders */}
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Holders</span>
 					<span tw="text-gray-900">{truncateText(data.holders, 16)}</span>
 				</div>
-
-				{/* Supply */}
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Supply</span>
 					<span tw="text-gray-900">{truncateText(data.supply, 20)}</span>
 				</div>
-
-				{/* Created */}
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Created</span>
 					<span tw="text-gray-900">{data.created}</span>
 				</div>
-
-				{/* Quote Token (if available) */}
 				{data.quoteToken && (
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-500">Quote Token</span>
@@ -510,13 +554,11 @@ export function TokenBadges({
 	tokens: string[]
 	maxTokens?: number
 }) {
-	// Truncate token name if too long
 	const truncateToken = (token: string, maxLen = 8) => {
 		if (token.length <= maxLen) return token
 		return `${token.slice(0, maxLen - 1)}…`
 	}
 
-	// Show up to maxTokens tokens
 	const displayTokens = tokens.slice(0, maxTokens)
 	const remaining = tokens.length - maxTokens
 
@@ -526,10 +568,7 @@ export function TokenBadges({
 				<span
 					key={token}
 					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
-					style={{
-						fontFamily: 'Pilat',
-						marginRight: '12px',
-					}}
+					style={{ fontFamily: 'Pilat', marginRight: '12px' }}
 				>
 					{truncateToken(token)}
 				</span>
@@ -549,7 +588,6 @@ export function TokenBadges({
 // ============ Method Badges Helper ============
 
 export function MethodBadges({ methods }: { methods: string[] }) {
-	// Split methods into rows based on character count (~40 chars per row)
 	const maxCharsPerRow = 40
 	const row1: string[] = []
 	const row2: string[] = []
@@ -571,7 +609,6 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 	const displayed = row1.length + row2.length
 	const remaining = methods.length - displayed
 
-	// Truncate method name if too long
 	const truncateMethod = (m: string, maxLen = 14) => {
 		if (m.length <= maxLen) return m
 		return `${m.slice(0, maxLen - 1)}…`
@@ -589,14 +626,12 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 
 	return (
 		<div tw="flex flex-col items-end" style={{ gap: '8px' }}>
-			{/* Row 1 */}
 			<div tw="flex justify-end" style={{ gap: '10px' }}>
 				{row1[0] && renderBadge(row1[0], 0)}
 				{row1[1] && renderBadge(row1[1], 1)}
 				{row1[2] && renderBadge(row1[2], 2)}
 				{row1[3] && renderBadge(row1[3], 3)}
 			</div>
-			{/* Row 2 */}
 			{row2.length > 0 && (
 				<div tw="flex justify-end" style={{ gap: '10px' }}>
 					{row2[0] && renderBadge(row2[0], 10)}
@@ -613,7 +648,6 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 					)}
 				</div>
 			)}
-			{/* +remaining if only one row */}
 			{row2.length === 0 && remaining > 0 && (
 				<div tw="flex justify-end" style={{ gap: '10px' }}>
 					<span
@@ -630,7 +664,76 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 
 // ============ Block Card Component ============
 
+function TxHistogram({
+	counts,
+	currentCount,
+}: {
+	counts: number[]
+	currentCount: number
+}) {
+	const allCounts = [...counts, currentCount]
+	const maxCount = Math.max(...allCounts, 1)
+	const maxHeight = 80
+
+	return (
+		<div tw="flex items-end" style={{ gap: '3px', height: `${maxHeight}px` }}>
+			{counts.map((count, idx) => {
+				const height =
+					count === 0 ? 3 : Math.max(6, (count / maxCount) * maxHeight)
+				return (
+					<div
+						key={idx}
+						tw="rounded-sm"
+						style={{
+							width: '8px',
+							height: `${height}px`,
+							backgroundColor: '#d1d5db',
+						}}
+					/>
+				)
+			})}
+			{/* Current block in blue */}
+			<div
+				tw="rounded-sm"
+				style={{
+					width: '8px',
+					height: `${currentCount === 0 ? 3 : Math.max(6, (currentCount / maxCount) * maxHeight)}px`,
+					backgroundColor: '#3b82f6',
+				}}
+			/>
+		</div>
+	)
+}
+
+function GasProgressBar({ percentage }: { percentage: number }) {
+	const segments = 20
+	const filled = Math.round((percentage / 100) * segments)
+
+	return (
+		<div tw="flex items-center" style={{ gap: '2px' }}>
+			{Array.from({ length: segments }).map((_, idx) => (
+				<div
+					key={idx}
+					style={{
+						width: '4px',
+						height: '24px',
+						backgroundColor: idx < filled ? '#3b82f6' : '#e5e7eb',
+						borderRadius: '1px',
+					}}
+				/>
+			))}
+		</div>
+	)
+}
+
 export function BlockCard({ data }: { data: BlockData }) {
+	const gasPercentMatch = data.gasUsage.match(/([\d.]+)%/)
+	const gasPercent = gasPercentMatch
+		? Number.parseFloat(gasPercentMatch[1] ?? '0')
+		: undefined
+	const currentTxCount =
+		Number.parseInt(data.txCount.replace(/,/g, ''), 10) || 0
+
 	return (
 		<div
 			tw="flex flex-col bg-white relative"
@@ -672,10 +775,7 @@ export function BlockCard({ data }: { data: BlockData }) {
 			{/* Divider */}
 			<div
 				tw="flex w-full"
-				style={{
-					height: '1px',
-					backgroundColor: '#d1d5db',
-				}}
+				style={{ height: '1px', backgroundColor: '#d1d5db' }}
 			/>
 
 			{/* Details */}
@@ -705,11 +805,6 @@ export function BlockCard({ data }: { data: BlockData }) {
 				</div>
 
 				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Transactions</span>
-					<span tw="text-gray-900">{data.txCount}</span>
-				</div>
-
-				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Miner</span>
 					<span tw="text-blue-500">{truncateHash(data.miner, 6)}</span>
 				</div>
@@ -719,9 +814,47 @@ export function BlockCard({ data }: { data: BlockData }) {
 					<span tw="text-blue-500">{truncateHash(data.parentHash, 6)}</span>
 				</div>
 
-				<div tw="flex w-full justify-between">
+				{/* Transactions with histogram */}
+				<div tw="flex w-full justify-between items-end">
+					<span tw="text-gray-500">Transactions</span>
+					<div tw="flex items-end" style={{ gap: '12px' }}>
+						{data.prevBlockTxCounts && data.prevBlockTxCounts.length > 0 && (
+							<>
+								<TxHistogram
+									counts={data.prevBlockTxCounts}
+									currentCount={currentTxCount}
+								/>
+								<div
+									style={{
+										width: '1px',
+										height: '40px',
+										backgroundColor: '#d1d5db',
+									}}
+								/>
+							</>
+						)}
+						<span tw="text-gray-900">{data.txCount}</span>
+					</div>
+				</div>
+
+				{/* Gas Usage with progress bar */}
+				<div tw="flex w-full justify-between items-center">
 					<span tw="text-gray-500">Gas Usage</span>
-					<span tw="text-gray-900">{data.gasUsage}</span>
+					<div tw="flex items-center" style={{ gap: '12px' }}>
+						{gasPercent !== undefined && (
+							<>
+								<GasProgressBar percentage={gasPercent} />
+								<div
+									style={{
+										width: '1px',
+										height: '24px',
+										backgroundColor: '#d1d5db',
+									}}
+								/>
+							</>
+						)}
+						<span tw="text-gray-900">{data.gasUsage}</span>
+					</div>
 				</div>
 			</div>
 			{/* Bottom fade */}
@@ -740,9 +873,10 @@ export function BlockCard({ data }: { data: BlockData }) {
 // ============ Address Card Component ============
 
 export function AddressCard({ data }: { data: AddressData }) {
-	// Split address into two lines for display
 	const addrLine1 = data.address.slice(0, 21)
 	const addrLine2 = data.address.slice(21)
+	const holdingsGrey = isEmptyHoldings(data.holdings)
+	const holdingsDisplay = holdingsGrey ? '$0.00' : data.holdings
 
 	return (
 		<div
@@ -821,13 +955,10 @@ export function AddressCard({ data }: { data: AddressData }) {
 				</div>
 			)}
 
-			{/* Divider - dashed */}
+			{/* Divider */}
 			<div
 				tw="flex w-full"
-				style={{
-					height: '1px',
-					backgroundColor: '#d1d5db',
-				}}
+				style={{ height: '1px', backgroundColor: '#d1d5db' }}
 			/>
 
 			{/* Details */}
@@ -846,11 +977,16 @@ export function AddressCard({ data }: { data: AddressData }) {
 				{data.accountType !== 'contract' && (
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-500">Holdings</span>
-						<span tw="text-gray-900">{truncateText(data.holdings, 20)}</span>
+						<span
+							style={holdingsGrey ? { color: '#9ca3af' } : undefined}
+							tw={holdingsGrey ? '' : 'text-gray-900'}
+						>
+							{holdingsDisplay}
+						</span>
 					</div>
 				)}
 
-				{/* Tokens Held section - show for non-contracts only */}
+				{/* Tokens Held - show for non-contracts only */}
 				{data.tokensHeld.length > 0 && data.accountType !== 'contract' && (
 					<div tw="flex justify-end py-1" style={{ width: '100%' }}>
 						<TokenBadges tokens={data.tokensHeld} maxTokens={4} />
@@ -878,11 +1014,13 @@ export function AddressCard({ data }: { data: AddressData }) {
 					<span tw="text-gray-900">{data.txCount}</span>
 				</div>
 
-				{/* Last Active */}
-				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Last Active</span>
-					<span tw="text-gray-900">{data.lastActive}</span>
-				</div>
+				{/* Last Active - only for non-contracts */}
+				{data.accountType !== 'contract' && (
+					<div tw="flex w-full justify-between">
+						<span tw="text-gray-500">Last Active</span>
+						<span tw="text-gray-900">{data.lastActive}</span>
+					</div>
+				)}
 
 				{/* Created */}
 				<div tw="flex w-full justify-between">
@@ -898,7 +1036,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 					</div>
 				)}
 
-				{/* Contract Methods - show for contracts only */}
+				{/* Contract Methods */}
 				{data.accountType === 'contract' &&
 					data.methods &&
 					data.methods.length > 0 && (

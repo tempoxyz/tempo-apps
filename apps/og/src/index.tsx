@@ -117,6 +117,7 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 		total: txParams.total,
 		events: txParams.events,
 		eventsFailed: txParams.eventsFailed,
+		status: txParams.status,
 	}
 
 	const [fonts, images] = await Promise.all([
@@ -185,6 +186,7 @@ app.get(
 			total: txParams.total,
 			events: txParams.events,
 			eventsFailed: txParams.eventsFailed,
+			status: txParams.status,
 		}
 
 		const [fonts, images] = await Promise.all([
@@ -251,6 +253,7 @@ app.get(
 			miner: blockParams.miner,
 			parentHash: blockParams.parentHash,
 			gasUsage: blockParams.gasUsage,
+			prevBlockTxCounts: blockParams.prevBlocks,
 		}
 
 		const [fonts, images] = await Promise.all([
