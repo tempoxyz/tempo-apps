@@ -673,31 +673,30 @@ function TxHistogram({
 }) {
 	const allCounts = [...counts, currentCount]
 	const maxCount = Math.max(...allCounts, 1)
-	const maxHeight = 80
+	const maxHeight = 40
 
 	return (
 		<div tw="flex items-end" style={{ gap: '3px', height: `${maxHeight}px` }}>
 			{counts.map((count, idx) => {
 				const height =
-					count === 0 ? 3 : Math.max(6, (count / maxCount) * maxHeight)
+					count === 0 ? 3 : Math.max(4, (count / maxCount) * maxHeight)
 				return (
 					<div
 						key={idx}
 						tw="rounded-sm"
 						style={{
-							width: '8px',
+							width: '12px',
 							height: `${height}px`,
-							backgroundColor: '#d1d5db',
+							backgroundColor: '#e5e7eb',
 						}}
 					/>
 				)
 			})}
-			{/* Current block in blue */}
 			<div
 				tw="rounded-sm"
 				style={{
-					width: '8px',
-					height: `${currentCount === 0 ? 3 : Math.max(6, (currentCount / maxCount) * maxHeight)}px`,
+					width: '12px',
+					height: `${currentCount === 0 ? 3 : Math.max(4, (currentCount / maxCount) * maxHeight)}px`,
 					backgroundColor: '#3b82f6',
 				}}
 			/>
@@ -717,7 +716,7 @@ function GasProgressBar({ percentage }: { percentage: number }) {
 					style={{
 						width: '4px',
 						height: '24px',
-						backgroundColor: idx < filled ? '#3b82f6' : '#e5e7eb',
+						backgroundColor: idx < filled ? '#3b82f6' : '#f3f4f6',
 						borderRadius: '1px',
 					}}
 				/>
@@ -804,16 +803,6 @@ export function BlockCard({ data }: { data: BlockData }) {
 					</span>
 				</div>
 
-				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Miner</span>
-					<span tw="text-blue-500">{truncateHash(data.miner, 6)}</span>
-				</div>
-
-				<div tw="flex w-full justify-between">
-					<span tw="text-gray-500">Parent</span>
-					<span tw="text-blue-500">{truncateHash(data.parentHash, 6)}</span>
-				</div>
-
 				{/* Transactions with histogram */}
 				<div tw="flex w-full justify-between items-end">
 					<span tw="text-gray-500">Transactions</span>
@@ -827,8 +816,8 @@ export function BlockCard({ data }: { data: BlockData }) {
 								<div
 									style={{
 										width: '1px',
-										height: '40px',
-										backgroundColor: '#d1d5db',
+										height: '28px',
+										backgroundColor: '#e5e7eb',
 									}}
 								/>
 							</>
@@ -848,13 +837,23 @@ export function BlockCard({ data }: { data: BlockData }) {
 									style={{
 										width: '1px',
 										height: '24px',
-										backgroundColor: '#d1d5db',
+										backgroundColor: '#e5e7eb',
 									}}
 								/>
 							</>
 						)}
 						<span tw="text-gray-900">{data.gasUsage}</span>
 					</div>
+				</div>
+
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-500">Miner</span>
+					<span tw="text-blue-500">{truncateHash(data.miner, 6)}</span>
+				</div>
+
+				<div tw="flex w-full justify-between">
+					<span tw="text-gray-500">Parent</span>
+					<span tw="text-blue-500">{truncateHash(data.parentHash, 6)}</span>
 				</div>
 			</div>
 			{/* Bottom fade */}
