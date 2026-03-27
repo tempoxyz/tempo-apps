@@ -33,7 +33,7 @@
    pnpm process-icons
    ```
 
-## Token Data
+## Token Extensions
 
 Tokens may include additional metadata in the `extensions` field:
 
