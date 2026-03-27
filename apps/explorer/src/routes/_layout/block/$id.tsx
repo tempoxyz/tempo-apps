@@ -13,6 +13,7 @@ import * as React from 'react'
 import { decodeFunctionData, isHex, zeroAddress } from 'viem'
 import { Abis } from 'viem/tempo'
 import { useChains } from 'wagmi'
+import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { Address as AddressLink } from '#comps/Address'
 import { BlockCard } from '#comps/BlockCard'
@@ -38,7 +39,7 @@ import {
 	TRANSACTIONS_PER_PAGE,
 } from '#lib/queries'
 import { fetchLatestBlock } from '#lib/server/latest-block.ts'
-import { getTempoChain } from '#wagmi.config.ts'
+import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 
 const defaultSearchValues = { page: 1 } as const
 
@@ -89,9 +90,31 @@ export const Route = createFileRoute('/_layout/block/$id')({
 					blockRef = { kind: 'number', blockNumber: BigInt(parsedNumber) }
 				}
 
-				return await context.queryClient.ensureQueryData(
+				const result = await context.queryClient.ensureQueryData(
 					blockDetailQueryOptions(blockRef),
 				)
+
+				let prevBlockTxCounts: number[] | undefined
+				try {
+					if (result.block.number != null) {
+						const bn = result.block.number
+						const config = getWagmiConfig()
+						const prevBlocks = await Promise.all(
+							Array.from({ length: 7 }, (_, i) =>
+								getBlock(config, {
+									blockNumber: bn - BigInt(i + 1),
+								})
+									.then((b) => b.transactions.length)
+									.catch(() => 0),
+							),
+						)
+						prevBlockTxCounts = prevBlocks.reverse()
+					}
+				} catch {
+					// Ignore errors fetching prev blocks
+				}
+
+				return { ...result, prevBlockTxCounts }
 			} catch (error) {
 				console.error(error)
 				throw notFound({
@@ -126,6 +149,10 @@ export const Route = createFileRoute('/_layout/block/$id')({
 			const gasPercent =
 				gasLimit > 0 ? `${((gasUsed / gasLimit) * 100).toFixed(1)}%` : '0%'
 			search.set('gasUsage', gasPercent)
+
+			if (loaderData.prevBlockTxCounts) {
+				search.set('prevBlocks', loaderData.prevBlockTxCounts.join(','))
+			}
 		}
 
 		const ogImageUrl = `${OG_BASE_URL}/block/${params.id}?${search.toString()}`

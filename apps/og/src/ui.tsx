@@ -664,65 +664,40 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 
 // ============ Block Card Component ============
 
-function TxHistogram({
-	counts,
-	currentCount,
-}: {
-	counts: number[]
-	currentCount: number
-}) {
+function buildHistogramSvg(counts: number[], currentCount: number): string {
 	const allCounts = [...counts, currentCount]
 	const maxCount = Math.max(...allCounts, 1)
-	const maxHeight = 40
-
-	return (
-		<div tw="flex items-end" style={{ gap: '3px', height: `${maxHeight}px` }}>
-			{counts.map((count, idx) => {
-				const height =
-					count === 0 ? 3 : Math.max(4, (count / maxCount) * maxHeight)
-				return (
-					<div
-						key={idx}
-						tw="rounded-sm"
-						style={{
-							width: '12px',
-							height: `${height}px`,
-							backgroundColor: '#e5e7eb',
-						}}
-					/>
-				)
-			})}
-			<div
-				tw="rounded-sm"
-				style={{
-					width: '12px',
-					height: `${currentCount === 0 ? 3 : Math.max(4, (currentCount / maxCount) * maxHeight)}px`,
-					backgroundColor: '#3b82f6',
-				}}
-			/>
-		</div>
-	)
+	const barW = 12
+	const gap = 3
+	const maxH = 40
+	const totalBars = allCounts.length
+	const svgW = totalBars * barW + (totalBars - 1) * gap
+	let rects = ''
+	for (let i = 0; i < allCounts.length; i++) {
+		const count = allCounts[i] ?? 0
+		const h = count === 0 ? 3 : Math.max(4, (count / maxCount) * maxH)
+		const x = i * (barW + gap)
+		const y = maxH - h
+		const fill = i === allCounts.length - 1 ? '#3b82f6' : '#e5e7eb'
+		rects += `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="2" fill="${fill}"/>`
+	}
+	return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${maxH}" viewBox="0 0 ${svgW} ${maxH}">${rects}</svg>`)}`
 }
 
-function GasProgressBar({ percentage }: { percentage: number }) {
+function buildGasBarSvg(percentage: number): string {
 	const segments = 20
 	const filled = Math.round((percentage / 100) * segments)
-
-	return (
-		<div tw="flex items-center" style={{ gap: '2px' }}>
-			{Array.from({ length: segments }).map((_, idx) => (
-				<div
-					key={idx}
-					style={{
-						width: '4px',
-						height: '24px',
-						backgroundColor: idx < filled ? '#3b82f6' : '#f3f4f6',
-						borderRadius: '1px',
-					}}
-				/>
-			))}
-		</div>
-	)
+	const segW = 4
+	const segH = 24
+	const gap = 2
+	const svgW = segments * segW + (segments - 1) * gap
+	let rects = ''
+	for (let i = 0; i < segments; i++) {
+		const x = i * (segW + gap)
+		const fill = i < filled ? '#3b82f6' : '#f3f4f6'
+		rects += `<rect x="${x}" y="0" width="${segW}" height="${segH}" rx="1" fill="${fill}"/>`
+	}
+	return `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${segH}" viewBox="0 0 ${svgW} ${segH}">${rects}</svg>`)}`
 }
 
 export function BlockCard({ data }: { data: BlockData }) {
@@ -807,21 +782,27 @@ export function BlockCard({ data }: { data: BlockData }) {
 				<div tw="flex w-full justify-between items-end">
 					<span tw="text-gray-500">Transactions</span>
 					<div tw="flex items-end" style={{ gap: '12px' }}>
-						{data.prevBlockTxCounts && data.prevBlockTxCounts.length > 0 && (
-							<>
-								<TxHistogram
-									counts={data.prevBlockTxCounts}
-									currentCount={currentTxCount}
-								/>
-								<div
-									style={{
-										width: '1px',
-										height: '28px',
-										backgroundColor: '#e5e7eb',
-									}}
-								/>
-							</>
-						)}
+						{data.prevBlockTxCounts &&
+							data.prevBlockTxCounts.length > 0 &&
+							data.prevBlockTxCounts.some((c) => c >= 0) && (
+								<>
+									<img
+										src={buildHistogramSvg(
+											data.prevBlockTxCounts,
+											currentTxCount,
+										)}
+										alt=""
+										style={{ height: '40px' }}
+									/>
+									<div
+										style={{
+											width: '1px',
+											height: '28px',
+											backgroundColor: '#e5e7eb',
+										}}
+									/>
+								</>
+							)}
 						<span tw="text-gray-900">{data.txCount}</span>
 					</div>
 				</div>
@@ -832,7 +813,11 @@ export function BlockCard({ data }: { data: BlockData }) {
 					<div tw="flex items-center" style={{ gap: '12px' }}>
 						{gasPercent !== undefined && (
 							<>
-								<GasProgressBar percentage={gasPercent} />
+								<img
+									src={buildGasBarSvg(gasPercent)}
+									alt=""
+									style={{ height: '24px' }}
+								/>
 								<div
 									style={{
 										width: '1px',
