@@ -1,7 +1,8 @@
 # Virtual Addresses — TIP-1022 Demo
 
-Interactive demo for [TIP-1022](https://github.com/tempoxyz/tempo/pull/3286) virtual addresses on Tempo. Two views:
+Interactive demo for [TIP-1022](https://github.com/tempoxyz/tempo/pull/3286) virtual addresses on Tempo. Three views:
 
+- **Intro** — TIP-1022 docs landing page: motivation, address layout, protocol flow, properties, and security considerations.
 - **Registry** — Mine a salt, register as a virtual-address master, derive deposit addresses, and test transfers. Works with a connected wallet or manual address input.
 - **Walkthrough** — Animated visual walkthrough of the full TIP-1022 flow (register → derive → send → resolve → forward), with real on-chain transactions using pre-funded test accounts.
 
@@ -22,20 +23,9 @@ git fetch origin pull/3286/head:tip-1022
 git checkout tip-1022
 ```
 
-**Important:** The TIP-1022 registry precompile (`0xfDC0...`) must be allocated in the dev genesis. Add it to `crates/chainspec/src/genesis/dev.json` if not present:
-
-```json
-"0xfdc0000000000000000000000000000000000000": {
-  "nonce": "0x0",
-  "balance": "0x0",
-  "code": "0xef"
-}
-```
-
-Then touch the spec file to force a rebuild and start the node:
+Start the node:
 
 ```bash
-touch crates/chainspec/src/spec.rs
 cd scripts
 rm -rf data logs
 just tempo-dev-up
@@ -75,10 +65,11 @@ Open [http://localhost:3002](http://localhost:3002).
 
 ```
 src/
-├── app.tsx                          # Tab switcher: Registry | Walkthrough
+├── app.tsx                          # Hash-based router: #intro | #registry | #walkthrough
 ├── server.ts                        # Hono API routes (Cloudflare Workers)
 ├── comps/
-│   ├── header.tsx                   # Tab navigation + wallet connect
+│   ├── header.tsx                   # Navigation links + wallet connect
+│   ├── intro-view.tsx               # TIP-1022 docs landing page
 │   ├── registry-view.tsx            # Salt miner flow (4 steps)
 │   ├── step-mine.tsx                # Multi-threaded WASM salt miner
 │   ├── step-register.tsx            # On-chain registration
