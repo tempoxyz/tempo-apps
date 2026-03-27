@@ -39,35 +39,11 @@ function sortTokenHolderBalances(
 		.sort((a, b) => (b.balance > a.balance ? 1 : -1))
 }
 
-/** tidx hard-caps query results at 10 000 rows. */
-const TIDX_PAGE_SIZE = 10_000
-
-/**
- * Paginate a tidx query that may exceed the 10 000-row hard limit.
- * Fetches pages of `TIDX_PAGE_SIZE` until a page returns fewer rows.
- */
-async function fetchAllPages<T>(
-	buildQuery: (limit: number, offset: number) => Promise<T[]>,
-): Promise<T[]> {
-	const all: T[] = []
-	let offset = 0
-	// biome-ignore lint/correctness/noConstantCondition: pagination loop
-	while (true) {
-		const page = await buildQuery(TIDX_PAGE_SIZE, offset)
-		all.push(...page)
-		if (page.length < TIDX_PAGE_SIZE) break
-		offset += TIDX_PAGE_SIZE
-	}
-	return all
-}
-
 /**
  * Fetches holder balances using two separate queries (received / sent) grouped
  * by individual holder address instead of the (from, to) pair. This keeps the
- * row count proportional to unique holders rather than unique transfer pairs.
- *
- * Paginates through tidx's 10 000-row hard limit so high-volume tokens like
- * PathUSD (which has more unique senders than the limit) are counted correctly.
+ * row count proportional to unique holders rather than unique transfer pairs,
+ * avoiding truncation by tidx's 10 000-row hard limit on high-volume tokens.
  */
 export async function fetchTokenHolderBalances(
 	address: Address.Address,
@@ -76,36 +52,26 @@ export async function fetchTokenHolderBalances(
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
 
 	const [receivedRows, sentRows] = await Promise.all([
-		fetchAllPages(
-			(limit, offset) =>
-				qb
-					.selectFrom('transfer')
-					.select((eb) => [
-						eb.ref('to').as('holder'),
-						eb.fn.sum('tokens').as('tokens'),
-					])
-					.where('address', '=', address)
-					.where('to', '!=', zeroAddress)
-					.groupBy(['to'])
-					.limit(limit)
-					.offset(offset)
-					.execute() as Promise<HolderAggregationRow[]>,
-		),
-		fetchAllPages(
-			(limit, offset) =>
-				qb
-					.selectFrom('transfer')
-					.select((eb) => [
-						eb.ref('from').as('holder'),
-						eb.fn.sum('tokens').as('tokens'),
-					])
-					.where('address', '=', address)
-					.where('from', '!=', zeroAddress)
-					.groupBy(['from'])
-					.limit(limit)
-					.offset(offset)
-					.execute() as Promise<HolderAggregationRow[]>,
-		),
+		qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('to').as('holder'),
+				eb.fn.sum('tokens').as('tokens'),
+			])
+			.where('address', '=', address)
+			.where('to', '!=', zeroAddress)
+			.groupBy(['to'])
+			.execute() as Promise<HolderAggregationRow[]>,
+		qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('from').as('holder'),
+				eb.fn.sum('tokens').as('tokens'),
+			])
+			.where('address', '=', address)
+			.where('from', '!=', zeroAddress)
+			.groupBy(['from'])
+			.execute() as Promise<HolderAggregationRow[]>,
 	])
 
 	const balances = new Map<string, bigint>()
@@ -130,45 +96,41 @@ export async function fetchTokenHoldersCountRows(
 
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
 
-	type BatchRow = {
-		address: string
-		holder: string
-		tokens: string | number | bigint
-	}
-
 	const [receivedRows, sentRows] = await Promise.all([
-		fetchAllPages(
-			(limit, offset) =>
-				qb
-					.selectFrom('transfer')
-					.select((eb) => [
-						eb.ref('address').as('address'),
-						eb.ref('to').as('holder'),
-						eb.fn.sum('tokens').as('tokens'),
-					])
-					.where('address', 'in', addresses)
-					.where('to', '!=', zeroAddress)
-					.groupBy(['address', 'to'])
-					.limit(limit)
-					.offset(offset)
-					.execute() as Promise<BatchRow[]>,
-		),
-		fetchAllPages(
-			(limit, offset) =>
-				qb
-					.selectFrom('transfer')
-					.select((eb) => [
-						eb.ref('address').as('address'),
-						eb.ref('from').as('holder'),
-						eb.fn.sum('tokens').as('tokens'),
-					])
-					.where('address', 'in', addresses)
-					.where('from', '!=', zeroAddress)
-					.groupBy(['address', 'from'])
-					.limit(limit)
-					.offset(offset)
-					.execute() as Promise<BatchRow[]>,
-		),
+		qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('address').as('address'),
+				eb.ref('to').as('holder'),
+				eb.fn.sum('tokens').as('tokens'),
+			])
+			.where('address', 'in', addresses)
+			.where('to', '!=', zeroAddress)
+			.groupBy(['address', 'to'])
+			.execute() as Promise<
+			Array<{
+				address: string
+				holder: string
+				tokens: string | number | bigint
+			}>
+		>,
+		qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('address').as('address'),
+				eb.ref('from').as('holder'),
+				eb.fn.sum('tokens').as('tokens'),
+			])
+			.where('address', 'in', addresses)
+			.where('from', '!=', zeroAddress)
+			.groupBy(['address', 'from'])
+			.execute() as Promise<
+			Array<{
+				address: string
+				holder: string
+				tokens: string | number | bigint
+			}>
+		>,
 	])
 
 	const balancesByToken = new Map<string, Map<string, bigint>>()
