@@ -20,12 +20,12 @@ import {
 	contractsTable,
 	signaturesTable,
 	type SignatureType,
+	verificationJobsTable,
 	verifiedContractsTable,
 	compiledContractsTable,
 	contractDeploymentsTable,
 	compiledContractsSourcesTable,
 	compiledContractsSignaturesTable,
-	verificationJobsTable,
 } from '#database/schema.ts'
 import {
 	AuxdataStyle,
