@@ -19,9 +19,8 @@ type QueryWithWhere<TQuery> = TQuery & {
 
 export type TokenHolderBalance = { address: string; balance: bigint }
 
-type TokenHolderAggregationRow = {
-	from: string
-	to: string
+type HolderAggregationRow = {
+	holder: string
 	tokens: string | number | bigint
 }
 
@@ -40,41 +39,52 @@ function sortTokenHolderBalances(
 		.sort((a, b) => (b.balance > a.balance ? 1 : -1))
 }
 
-function aggregateTokenHolderBalances(
-	rows: TokenHolderAggregationRow[],
-): TokenHolderBalance[] {
-	const balances = new Map<string, bigint>()
-
-	for (const row of rows) {
-		const tokens = BigInt(row.tokens)
-		if (row.to !== zeroAddress) {
-			balances.set(row.to, (balances.get(row.to) ?? 0n) + tokens)
-		}
-		if (row.from !== zeroAddress) {
-			balances.set(row.from, (balances.get(row.from) ?? 0n) - tokens)
-		}
-	}
-
-	return sortTokenHolderBalances(balances)
-}
-
+/**
+ * Fetches holder balances using two separate queries (received / sent) grouped
+ * by individual holder address instead of the (from, to) pair. This keeps the
+ * row count proportional to unique holders rather than unique transfer pairs,
+ * avoiding truncation by tidx's 10 000-row hard limit on high-volume tokens.
+ */
 export async function fetchTokenHolderBalances(
 	address: Address.Address,
 	chainId: number,
 ): Promise<TokenHolderBalance[]> {
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
-	const transfers = (await qb
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('from').as('from'),
-			eb.ref('to').as('to'),
-			eb.fn.sum('tokens').as('tokens'),
-		])
-		.where('address', '=', address)
-		.groupBy(['from', 'to'])
-		.execute()) as TokenHolderAggregationRow[]
 
-	return aggregateTokenHolderBalances(transfers)
+	const [receivedRows, sentRows] = await Promise.all([
+		qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('to').as('holder'),
+				eb.fn.sum('tokens').as('tokens'),
+			])
+			.where('address', '=', address)
+			.where('to', '!=', zeroAddress)
+			.groupBy(['to'])
+			.execute() as Promise<HolderAggregationRow[]>,
+		qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('from').as('holder'),
+				eb.fn.sum('tokens').as('tokens'),
+			])
+			.where('address', '=', address)
+			.where('from', '!=', zeroAddress)
+			.groupBy(['from'])
+			.execute() as Promise<HolderAggregationRow[]>,
+	])
+
+	const balances = new Map<string, bigint>()
+	for (const row of receivedRows) {
+		const holder = row.holder.toLowerCase()
+		balances.set(holder, (balances.get(holder) ?? 0n) + BigInt(row.tokens))
+	}
+	for (const row of sentRows) {
+		const holder = row.holder.toLowerCase()
+		balances.set(holder, (balances.get(holder) ?? 0n) - BigInt(row.tokens))
+	}
+
+	return sortTokenHolderBalances(balances)
 }
 
 export async function fetchTokenHoldersCountRows(
@@ -85,42 +95,72 @@ export async function fetchTokenHoldersCountRows(
 	if (addresses.length === 0) return []
 
 	const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
-	const transfers = (await qb
-		.selectFrom('transfer')
-		.select((eb) => [
-			eb.ref('address').as('address'),
-			eb.ref('from').as('from'),
-			eb.ref('to').as('to'),
-			eb.fn.sum('tokens').as('tokens'),
-		])
-		.where('address', 'in', addresses)
-		.groupBy(['address', 'from', 'to'])
-		.execute()) as Array<{
-		address: string
-		from: string
-		to: string
-		tokens: string | number | bigint
-	}>
+
+	const [receivedRows, sentRows] = await Promise.all([
+		qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('address').as('address'),
+				eb.ref('to').as('holder'),
+				eb.fn.sum('tokens').as('tokens'),
+			])
+			.where('address', 'in', addresses)
+			.where('to', '!=', zeroAddress)
+			.groupBy(['address', 'to'])
+			.execute() as Promise<
+			Array<{
+				address: string
+				holder: string
+				tokens: string | number | bigint
+			}>
+		>,
+		qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('address').as('address'),
+				eb.ref('from').as('holder'),
+				eb.fn.sum('tokens').as('tokens'),
+			])
+			.where('address', 'in', addresses)
+			.where('from', '!=', zeroAddress)
+			.groupBy(['address', 'from'])
+			.execute() as Promise<
+			Array<{
+				address: string
+				holder: string
+				tokens: string | number | bigint
+			}>
+		>,
+	])
 
 	const balancesByToken = new Map<string, Map<string, bigint>>()
 
-	for (const row of transfers) {
+	for (const row of receivedRows) {
 		const token = row.address.toLowerCase()
 		let tokenBalances = balancesByToken.get(token)
 		if (!tokenBalances) {
 			tokenBalances = new Map<string, bigint>()
 			balancesByToken.set(token, tokenBalances)
 		}
+		const holder = row.holder.toLowerCase()
+		tokenBalances.set(
+			holder,
+			(tokenBalances.get(holder) ?? 0n) + BigInt(row.tokens),
+		)
+	}
 
-		const tokens = BigInt(row.tokens)
-		if (row.to !== zeroAddress) {
-			const to = row.to.toLowerCase()
-			tokenBalances.set(to, (tokenBalances.get(to) ?? 0n) + tokens)
+	for (const row of sentRows) {
+		const token = row.address.toLowerCase()
+		let tokenBalances = balancesByToken.get(token)
+		if (!tokenBalances) {
+			tokenBalances = new Map<string, bigint>()
+			balancesByToken.set(token, tokenBalances)
 		}
-		if (row.from !== zeroAddress) {
-			const from = row.from.toLowerCase()
-			tokenBalances.set(from, (tokenBalances.get(from) ?? 0n) - tokens)
-		}
+		const holder = row.holder.toLowerCase()
+		tokenBalances.set(
+			holder,
+			(tokenBalances.get(holder) ?? 0n) - BigInt(row.tokens),
+		)
 	}
 
 	return addresses.map((address) => {
