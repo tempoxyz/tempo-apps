@@ -22,6 +22,10 @@ jobs:
       - name: Check if PR author is org member
         id: check
         run: |
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "is-member=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           association="${{ github.event.pull_request.author_association }}"
           if [[ "$association" == "MEMBER" || "$association" == "OWNER" || "$association" == "COLLABORATOR" ]]; then
             echo "is-member=true" >> $GITHUB_OUTPUT
