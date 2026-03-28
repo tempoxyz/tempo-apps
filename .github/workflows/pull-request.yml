@@ -21,19 +21,13 @@ jobs:
     steps:
       - name: Check if PR author is org member
         id: check
-        uses: actions/github-script@v8
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            try {
-              const { status } = await github.rest.orgs.checkMembershipForUser({
-                org: context.repo.owner,
-                username: context.payload.pull_request?.user?.login || context.actor,
-              })
-              core.setOutput('is-member', status === 204 ? 'true' : 'false')
-            } catch {
-              core.setOutput('is-member', 'false')
-            }
+        run: |
+          association="${{ github.event.pull_request.author_association }}"
+          if [[ "$association" == "MEMBER" || "$association" == "OWNER" || "$association" == "COLLABORATOR" ]]; then
+            echo "is-member=true" >> $GITHUB_OUTPUT
+          else
+            echo "is-member=false" >> $GITHUB_OUTPUT
+          fi
 
   verify:
     name: Verify
