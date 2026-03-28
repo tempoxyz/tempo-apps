@@ -109,8 +109,10 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 			if (cached && now - cached.timestamp < CACHE_TTL) {
 				allHolders = cached.data.allHolders
 			} else {
-				allHolders = await fetchTokenHolderBalances(data.address, chainId)
-				setHoldersCache(cacheKey, allHolders, now)
+				const fetched = await fetchTokenHolderBalances(data.address, chainId)
+				setHoldersCache(cacheKey, fetched, now)
+				allHolders =
+					fetched.length > COUNT_CAP ? fetched.slice(0, COUNT_CAP) : fetched
 			}
 
 			const paginatedHolders = allHolders.slice(
