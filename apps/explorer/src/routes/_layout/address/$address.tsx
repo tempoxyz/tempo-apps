@@ -1100,6 +1100,7 @@ function SectionsWrapper(props: {
 		holders = [],
 		total: holdersTotal = 0,
 		totalCapped: holdersTotalCapped = false,
+		totalBalance: holdersTotalBalance = '0',
 	} = holdersData ?? {}
 
 	// Only use after mount AND when data has loaded to avoid showing 0 during loading
@@ -1530,13 +1531,19 @@ function SectionsWrapper(props: {
 								stacked: holdersColumns,
 								tabs: holdersColumns,
 							}}
-							items={() =>
-								holders.map((holder) => {
+							items={() => {
+								const totalBalanceBn = BigInt(holdersTotalBalance)
+								const onChainSupply = tokenMetadata?.totalSupply ?? 0n
+								const supplyDenominator =
+									totalBalanceBn > onChainSupply
+										? totalBalanceBn
+										: onChainSupply
+								return holders.map((holder) => {
 									const percentage =
-										tokenMetadata?.totalSupply && tokenMetadata.totalSupply > 0n
+										supplyDenominator > 0n
 											? Number(
 													(BigInt(holder.balance) * 10_000n) /
-														tokenMetadata.totalSupply,
+														supplyDenominator,
 												) / 100
 											: 0
 									return {
@@ -1560,7 +1567,7 @@ function SectionsWrapper(props: {
 										},
 									}
 								})
-							}
+							}}
 							totalItems={holdersTotal}
 							displayCount={holdersTotal}
 							displayCountCapped={holdersTotalCapped}
