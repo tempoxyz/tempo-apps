@@ -19,19 +19,11 @@ jobs:
     outputs:
       is-member: ${{ steps.check.outputs.is-member }}
     steps:
-      - name: Check if PR author is org member
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Check membership
         id: check
-        run: |
-          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
-            echo "is-member=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          association="${{ github.event.pull_request.author_association }}"
-          if [[ "$association" == "MEMBER" || "$association" == "OWNER" || "$association" == "COLLABORATOR" ]]; then
-            echo "is-member=true" >> $GITHUB_OUTPUT
-          else
-            echo "is-member=false" >> $GITHUB_OUTPUT
-          fi
+        uses: ./.github/actions/check-membership
 
   verify:
     name: Verify

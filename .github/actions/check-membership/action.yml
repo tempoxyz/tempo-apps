@@ -1,0 +1,25 @@
+name: 'Check Org Membership'
+description: 'Checks if the PR author is an org member, owner, or collaborator'
+
+outputs:
+  is-member:
+    description: 'Whether the actor is an org member (true/false)'
+    value: ${{ steps.check.outputs.is-member }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check if PR author is org member
+      id: check
+      shell: bash
+      run: |
+        if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+          echo "is-member=true" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        association="${{ github.event.pull_request.author_association }}"
+        if [[ "$association" == "MEMBER" || "$association" == "OWNER" || "$association" == "COLLABORATOR" ]]; then
+          echo "is-member=true" >> $GITHUB_OUTPUT
+        else
+          echo "is-member=false" >> $GITHUB_OUTPUT
+        fi
