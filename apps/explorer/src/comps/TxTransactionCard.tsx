@@ -2,7 +2,6 @@ import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import { InfoCard } from '#comps/InfoCard'
 import { Midcut } from '#comps/Midcut'
-import { ReceiptMark } from '#comps/ReceiptMark'
 import { FormattedTimestamp, useTimeFormat } from '#comps/TimeFormat'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'
@@ -117,10 +116,12 @@ export function TxTransactionCard(props: TxTransactionCard.Props) {
 					key="receipt"
 					to="/receipt/$hash"
 					params={{ hash }}
-					className="press-down flex items-end justify-between w-full print:hidden py-[6px]"
+					className="press-down flex items-center justify-between w-full print:hidden py-[6px]"
 				>
 					<span className="text-[13px] text-tertiary">Receipt</span>
-					<ReceiptMark />
+					<span className="text-[12px] text-tertiary hover:text-primary px-[8px] py-[2px] border border-base-border rounded-full transition-colors">
+						View →
+					</span>
 				</Link>,
 			]}
 		/>

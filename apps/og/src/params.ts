@@ -116,6 +116,8 @@ export const txOgQuerySchema = z.pipe(
 		event4: optionalString,
 		event5: optionalString,
 		event6: optionalString,
+		eventsFailed: optionalString,
+		status: optionalString,
 	}),
 	z.transform((data) => {
 		const events: TxOgEvent[] = []
@@ -137,6 +139,8 @@ export const txOgQuerySchema = z.pipe(
 			feePayer: data.feePayer,
 			total: data.total,
 			events,
+			eventsFailed: data.eventsFailed === 'true',
+			status: data.status as 'success' | 'reverted' | undefined,
 		}
 	}),
 )
@@ -206,6 +210,8 @@ export const addressOgQuerySchema = z.pipe(
 		tokens: commaSeparatedList(24, 12),
 		methods: commaSeparatedList(32, 16),
 		accountType: z.optional(zAccountType),
+		deployer: sanitized(MAX_PARAM_MED),
+		contractName: sanitized(MAX_PARAM_SHORT),
 	}),
 	z.transform((data) => ({
 		holdings: data.holdings,
@@ -216,7 +222,42 @@ export const addressOgQuerySchema = z.pipe(
 		tokens: data.tokens,
 		methods: data.methods,
 		accountType: data.accountType,
+		deployer: data.deployer,
+		contractName: data.contractName,
 	})),
 )
 
 export type AddressOgQueryParams = z.output<typeof addressOgQuerySchema>
+
+// ============ Block OG Schema ============
+
+export const blockOgQuerySchema = z.pipe(
+	z.object({
+		number: sanitizedWithDefault(MAX_PARAM_SHORT),
+		timestamp: sanitizedWithDefault(MAX_PARAM_SHORT),
+		unixTimestamp: sanitizedWithDefault(MAX_PARAM_SHORT),
+		txCount: sanitizedWithDefault(16),
+		miner: sanitizedWithDefault(MAX_PARAM_MED),
+		parentHash: sanitizedWithDefault(MAX_PARAM_MED),
+		gasUsage: sanitizedWithDefault(16),
+		prevBlocks: optionalString,
+	}),
+	z.transform((data) => ({
+		number: data.number,
+		timestamp: data.timestamp,
+		unixTimestamp: data.unixTimestamp,
+		txCount: data.txCount,
+		miner: data.miner,
+		parentHash: data.parentHash,
+		gasUsage: data.gasUsage,
+		prevBlocks: data.prevBlocks
+			? data.prevBlocks
+					.split(',')
+					.map((s) => Number.parseInt(s.trim(), 10))
+					.filter((n) => !Number.isNaN(n))
+					.slice(0, 12)
+			: undefined,
+	})),
+)
+
+export type BlockOgQueryParams = z.output<typeof blockOgQuerySchema>

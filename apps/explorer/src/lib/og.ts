@@ -110,6 +110,11 @@ function formatPartForOgClient(part: KnownEventPart): string {
 			return HexFormatter.truncate(part.value)
 		case 'token':
 			return part.value.symbol || HexFormatter.truncate(part.value.address)
+		case 'contractCall': {
+			const selector = part.value.input.slice(0, 10)
+			const target = HexFormatter.truncate(part.value.address)
+			return `${selector} on ${target}`
+		}
 		default:
 			return ''
 	}
@@ -169,6 +174,11 @@ function formatEventPart(part: KnownEventPart): string {
 		}
 		case 'hex':
 			return HexFormatter.truncate(part.value)
+		case 'contractCall': {
+			const selector = part.value.input.slice(0, 10)
+			const target = HexFormatter.truncate(part.value.address)
+			return `${selector} on ${target}`
+		}
 		default:
 			return ''
 	}
@@ -342,6 +352,8 @@ export function buildAddressOgImageUrl(params: {
 	tokens?: string[]
 	accountType?: AccountType
 	methods?: string[]
+	deployer?: string
+	contractName?: string
 }): string {
 	const ogParams: AddressOgParams = {
 		address: params.address,
@@ -356,6 +368,8 @@ export function buildAddressOgImageUrl(params: {
 		tokens: params.tokens,
 		accountType: params.accountType,
 		methods: params.methods,
+		deployer: params.deployer,
+		contractName: params.contractName,
 	}
 	return buildAddressOgUrl(OG_BASE_URL, ogParams)
 }

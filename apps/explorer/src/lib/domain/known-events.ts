@@ -1115,7 +1115,7 @@ function detectContractCall(
 	return {
 		type: 'contract call',
 		parts: [
-			{ type: 'action', value: failed ? 'Failed' : 'Call' },
+			{ type: 'action', value: 'Call' },
 			{
 				type: 'contractCall',
 				value: { address: Address.checksum(contractAddress), input: callInput },

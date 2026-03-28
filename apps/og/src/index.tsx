@@ -5,16 +5,20 @@ import { cache } from 'hono/cache'
 import { except } from 'hono/combine'
 import { createFactory, createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
+
 import { Address } from 'ox'
 
 import {
 	addressOgQuerySchema,
+	blockOgQuerySchema,
 	tokenOgQuerySchema,
 	txOgQuerySchema,
 } from '#params.ts'
 import {
 	AddressCard,
 	type AddressData,
+	BlockCard,
+	type BlockData,
 	ReceiptCard,
 	type ReceiptData,
 	TokenCard,
@@ -71,7 +75,7 @@ app
 	.get('/', (context) => context.text('OK'))
 	.get('/health', (context) => context.text('OK'))
 	.get('/explorer', (context) =>
-		context.env.ASSETS.fetch(new URL('/og-explorer.webp', context.req.url)),
+		context.env.ASSETS.fetch(new URL('/bg-default.webp', context.req.url)),
 	)
 	.get('/blocks', (context) =>
 		context.env.ASSETS.fetch(new URL('/og-blocks.webp', context.req.url)),
@@ -84,30 +88,17 @@ app.use('/tx/*', rateLimiter)
 app.use('/tx', rateLimiter)
 app.use('/token/*', rateLimiter)
 app.use('/address/*', rateLimiter)
+app.use('/receipt/*', rateLimiter)
+app.use('/block/*', rateLimiter)
+app.use('/blocks', rateLimiter)
+app.use('/tokens', rateLimiter)
 app.use('/explorer', rateLimiter)
 app.use('/blocks', rateLimiter)
 app.use('/tokens', rateLimiter)
 app.use('*', except(isNotProd, cacheMiddleware))
 
-app.get('/tx', (context) =>
-	context.env.ASSETS.fetch(new URL('/og-transactions.webp', context.req.url)),
-)
+// Dynamic OG image routes
 
-/**
- * Transaction OG Image
- *
- * URL Parameters:
- * - hash: Transaction hash (0x...)
- * - block: Block number
- * - sender: Sender address (0x...)
- * - date: Date string (e.g., "12/01/2025")
- * - time: Time string (e.g., "18:32:21 GMT+0")
- * - fee: Fee amount (e.g., "-$0.013")
- * - feeToken: Token used for fee (e.g., "aUSD")
- * - feePayer: Address that paid fee (e.g., "0x8f5a...3bc3")
- * - total: Total display string (e.g., "-$1.55")
- * - ev1..ev6 (or e1..e6, event1..event6): Event strings in format "Action|Details|Amount" (optional 4th field: Message)
- */
 app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 	const hash = context.req.param('hash')
 	if (!isTxHash(hash))
@@ -125,10 +116,12 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 		feePayer: txParams.feePayer,
 		total: txParams.total,
 		events: txParams.events,
+		eventsFailed: txParams.eventsFailed,
+		status: txParams.status,
 	}
 
 	const [fonts, images] = await Promise.all([
-		loadFonts(),
+		loadFonts(context.env),
 		loadImages(context.env),
 	])
 
@@ -140,11 +133,8 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 				tw="absolute inset-0 w-full h-full"
 				style={{ objectFit: 'cover' }}
 			/>
-			<div tw="absolute flex" style={{ left: '0', top: '40px' }}>
-				<ReceiptCard
-					data={receiptData}
-					receiptLogo={toBase64DataUrl(images.receiptLogo)}
-				/>
+			<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
+				<ReceiptCard data={receiptData} />
 			</div>
 		</div>,
 		{
@@ -153,8 +143,19 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 			format: 'webp',
 			module,
 			fonts: [
-				{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
+				{
+					weight: 400,
+					name: 'GeistMono',
+					data: fonts.mono,
+					style: 'normal',
+				},
 				{ weight: 500, name: 'Inter', data: fonts.inter, style: 'normal' },
+				{
+					weight: 400,
+					name: 'Pilat',
+					data: fonts.pilat,
+					style: 'normal',
+				},
 			],
 		},
 	)
@@ -164,9 +165,148 @@ app.get('/tx/:hash', zValidator('query', txOgQuerySchema), async (context) => {
 	})
 })
 
-/**
- * Token/Asset OG Image
- */
+app.get(
+	'/receipt/:hash',
+	zValidator('query', txOgQuerySchema),
+	async (context) => {
+		const hash = context.req.param('hash')
+		if (!isTxHash(hash))
+			throw new HTTPException(400, { message: 'Invalid transaction hash' })
+
+		const txParams = context.req.valid('query')
+		const receiptData: ReceiptData = {
+			hash,
+			blockNumber: txParams.block,
+			sender: txParams.sender,
+			date: txParams.date,
+			time: txParams.time,
+			fee: txParams.fee,
+			feeToken: txParams.feeToken,
+			feePayer: txParams.feePayer,
+			total: txParams.total,
+			events: txParams.events,
+			eventsFailed: txParams.eventsFailed,
+			status: txParams.status,
+		}
+
+		const [fonts, images] = await Promise.all([
+			loadFonts(context.env),
+			loadImages(context.env),
+		])
+
+		const imageResponse = new ImageResponse(
+			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
+				<img
+					src={toBase64DataUrl(images.bgReceipt)}
+					alt=""
+					tw="absolute inset-0 w-full h-full"
+					style={{ objectFit: 'cover' }}
+				/>
+				<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
+					<ReceiptCard data={receiptData} />
+				</div>
+			</div>,
+			{
+				width: 1200,
+				height: 630,
+				format: 'webp',
+				module,
+				fonts: [
+					{
+						weight: 400,
+						name: 'GeistMono',
+						data: fonts.mono,
+						style: 'normal',
+					},
+					{
+						weight: 500,
+						name: 'Inter',
+						data: fonts.inter,
+						style: 'normal',
+					},
+					{
+						weight: 400,
+						name: 'Pilat',
+						data: fonts.pilat,
+						style: 'normal',
+					},
+				],
+			},
+		)
+
+		return new Response(imageResponse.body, {
+			headers: { 'Content-Type': 'image/webp' },
+		})
+	},
+)
+
+app.get(
+	'/block/:id',
+	zValidator('query', blockOgQuerySchema),
+	async (context) => {
+		const blockParams = context.req.valid('query')
+		const blockData: BlockData = {
+			number: blockParams.number,
+			timestamp: blockParams.timestamp,
+			unixTimestamp: blockParams.unixTimestamp,
+			txCount: blockParams.txCount,
+			miner: blockParams.miner,
+			parentHash: blockParams.parentHash,
+			gasUsage: blockParams.gasUsage,
+			prevBlockTxCounts: blockParams.prevBlocks,
+		}
+
+		const [fonts, images] = await Promise.all([
+			loadFonts(context.env),
+			loadImages(context.env),
+		])
+
+		const imageResponse = new ImageResponse(
+			<div tw="flex w-full h-full relative" style={{ fontFamily: 'Inter' }}>
+				<img
+					src={toBase64DataUrl(images.bgBlock)}
+					alt=""
+					tw="absolute inset-0 w-full h-full"
+					style={{ objectFit: 'cover' }}
+				/>
+				<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
+					<BlockCard data={blockData} />
+				</div>
+			</div>,
+			{
+				width: 1200,
+				height: 630,
+				format: 'webp',
+				module,
+				fonts: [
+					{
+						weight: 400,
+						name: 'GeistMono',
+						data: fonts.mono,
+						style: 'normal',
+					},
+					{
+						weight: 500,
+						name: 'Inter',
+						data: fonts.inter,
+						style: 'normal',
+					},
+					{
+						weight: 400,
+						name: 'Pilat',
+						data: fonts.pilat,
+						style: 'normal',
+					},
+				],
+			},
+		)
+
+		return new Response(imageResponse.body, {
+			headers: { 'Content-Type': 'image/webp' },
+		})
+	},
+)
+
 app.get(
 	'/token/:address',
 	zValidator('query', tokenOgQuerySchema),
@@ -180,7 +320,7 @@ app.get(
 		const tokenData: TokenData = { address, ...tokenParams }
 
 		const [fonts, images, tokenIcon] = await Promise.all([
-			loadFonts(),
+			loadFonts(context.env),
 			loadImages(context.env),
 			tokenParams.chainId ? fetchTokenIcon(address, tokenParams.chainId) : null,
 		])
@@ -193,7 +333,7 @@ app.get(
 					tw="absolute inset-0 w-full h-full"
 					style={{ objectFit: 'cover' }}
 				/>
-				<div tw="absolute flex" style={{ left: '0', top: '40px' }}>
+				<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
 					<TokenCard
 						data={tokenData}
 						icon={tokenIcon || toBase64DataUrl(images.nullIcon)}
@@ -206,8 +346,24 @@ app.get(
 				format: 'webp',
 				module,
 				fonts: [
-					{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
-					{ weight: 500, name: 'Inter', data: fonts.inter, style: 'normal' },
+					{
+						weight: 400,
+						name: 'GeistMono',
+						data: fonts.mono,
+						style: 'normal',
+					},
+					{
+						weight: 500,
+						name: 'Inter',
+						data: fonts.inter,
+						style: 'normal',
+					},
+					{
+						weight: 400,
+						name: 'Pilat',
+						data: fonts.pilat,
+						style: 'normal',
+					},
 				],
 			},
 		)
@@ -219,9 +375,6 @@ app.get(
 	},
 )
 
-/**
- * Address/Account OG Image
- */
 app.get(
 	'/address/:address',
 	zValidator('query', addressOgQuerySchema),
@@ -242,10 +395,12 @@ app.get(
 			tokensHeld: addrParams.tokens,
 			accountType: addrParams.accountType,
 			methods: addrParams.methods,
+			deployer: addrParams.deployer,
+			contractName: addrParams.contractName,
 		}
 
 		const [fonts, images] = await Promise.all([
-			loadFonts(),
+			loadFonts(context.env),
 			loadImages(context.env),
 		])
 
@@ -262,7 +417,7 @@ app.get(
 					tw="absolute inset-0 w-full h-full"
 					style={{ objectFit: 'cover' }}
 				/>
-				<div tw="absolute flex" style={{ left: '0', top: '40px' }}>
+				<div tw="absolute flex items-end" style={{ left: '0', bottom: '0' }}>
 					<AddressCard data={addressData} />
 				</div>
 			</div>,
@@ -272,8 +427,24 @@ app.get(
 				format: 'webp',
 				module,
 				fonts: [
-					{ weight: 400, name: 'GeistMono', data: fonts.mono, style: 'normal' },
-					{ weight: 500, name: 'Inter', data: fonts.inter, style: 'normal' },
+					{
+						weight: 400,
+						name: 'GeistMono',
+						data: fonts.mono,
+						style: 'normal',
+					},
+					{
+						weight: 500,
+						name: 'Inter',
+						data: fonts.inter,
+						style: 'normal',
+					},
+					{
+						weight: 400,
+						name: 'Pilat',
+						data: fonts.pilat,
+						style: 'normal',
+					},
 				],
 			},
 		)
@@ -282,6 +453,16 @@ app.get(
 			headers: { 'Content-Type': 'image/webp' },
 		})
 	},
+)
+
+// Static listing OG images
+
+app.get('/blocks', (context) =>
+	context.env.ASSETS.fetch(new URL('/bg-list-blocks.webp', context.req.url)),
+)
+
+app.get('/tokens', (context) =>
+	context.env.ASSETS.fetch(new URL('/bg-list-tokens.webp', context.req.url)),
 )
 
 export default app

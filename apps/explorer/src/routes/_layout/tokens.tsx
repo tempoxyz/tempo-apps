@@ -27,7 +27,10 @@ export const Route = createFileRoute('/_layout/tokens')({
 				property: 'og:description',
 				content: 'Browse all tokens on Tempo.',
 			},
-			{ property: 'og:image', content: `${OG_BASE_URL}/tokens` },
+			{
+				property: 'og:image',
+				content: `${OG_BASE_URL}/tokens`,
+			},
 			{ property: 'og:image:type', content: 'image/webp' },
 			{ property: 'og:image:width', content: '1200' },
 			{ property: 'og:image:height', content: '630' },
