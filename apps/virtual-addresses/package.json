@@ -1,0 +1,42 @@
+{
+	"name": "virtual-addresses",
+	"private": true,
+	"type": "module",
+	"imports": {
+		"#*": "./src/*"
+	},
+	"scripts": {
+		"postinstall": "pnpm gen:types",
+		"dev": "vite dev --port 3002",
+		"build": "vite build",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write --unsafe",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"gen:types": "wrangler types"
+	},
+	"dependencies": {
+		"@noble/hashes": "^1.7.2",
+		"@tailwindcss/vite": "catalog:",
+		"@tanstack/react-query": "catalog:",
+		"framer-motion": "catalog:",
+		"hash-wasm": "catalog:",
+		"hono": "catalog:",
+		"ox": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:",
+		"tailwindcss": "catalog:",
+		"viem": "catalog:",
+		"wagmi": "catalog:",
+		"zustand": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "catalog:",
+		"@iconify/json": "catalog:",
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"@vitejs/plugin-react": "catalog:",
+		"unplugin-icons": "catalog:",
+		"vite": "catalog:",
+		"wrangler": "catalog:"
+	}
+}
