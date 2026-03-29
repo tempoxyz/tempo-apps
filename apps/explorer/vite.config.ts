@@ -15,10 +15,7 @@ import { getVendorChunk } from './scripts/chunk-config.ts'
 
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
-const enabledSchema = z.stringbool({
-	truthy: ['true', '1', 'yes', 'on', 'y', 'enabled'],
-	falsy: ['false', '0', 'no', 'off', 'n', 'disabled'],
-})
+const enabledSchema = z.stringbool()
 
 const canonicalTempoEnvSchema = z.union([
 	z.literal('devnet'),
@@ -45,7 +42,6 @@ const tempoEnvSchema = z.prefault(
 
 const envConfigSchema = z.object({
 	PORT: z.prefault(z.coerce.number(), 3_007),
-	VITE_ENABLE_DEMO: z.prefault(enabledSchema, 'true'),
 	CLOUDFLARE_ENV: tempoEnvSchema,
 	VITE_TEMPO_ENV: tempoEnvSchema,
 	VITE_ENABLE_DEVTOOLS: z.prefault(enabledSchema, 'false'),

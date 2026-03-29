@@ -52,6 +52,7 @@ export type TokenHoldersApiResponse = {
 	}>
 	total: number
 	totalCapped: boolean
+	totalBalance: string
 	offset: number
 	limit: number
 }
@@ -60,6 +61,7 @@ const EMPTY_HOLDERS_RESPONSE: TokenHoldersApiResponse = {
 	holders: [],
 	total: 0,
 	totalCapped: false,
+	totalBalance: '0',
 	offset: 0,
 	limit: 0,
 }
@@ -107,8 +109,10 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 			if (cached && now - cached.timestamp < CACHE_TTL) {
 				allHolders = cached.data.allHolders
 			} else {
-				allHolders = await fetchTokenHolderBalances(data.address, chainId)
-				setHoldersCache(cacheKey, allHolders, now)
+				const fetched = await fetchTokenHolderBalances(data.address, chainId)
+				setHoldersCache(cacheKey, fetched, now)
+				allHolders =
+					fetched.length > COUNT_CAP ? fetched.slice(0, COUNT_CAP) : fetched
 			}
 
 			const paginatedHolders = allHolders.slice(
@@ -126,10 +130,13 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 			const total = totalCapped ? COUNT_CAP : rawTotal
 			const nextOffset = data.offset + holders.length
 
+			const totalBalance = allHolders.reduce((sum, h) => sum + h.balance, 0n)
+
 			return {
 				holders,
 				total,
 				totalCapped,
+				totalBalance: totalBalance.toString(),
 				offset: nextOffset,
 				limit: holders.length,
 			}

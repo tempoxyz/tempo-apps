@@ -1,14 +1,6 @@
 import { Address } from 'ox'
 import * as z from 'zod/mini'
 import {
-	cookieStorage,
-	createConfig,
-	createStorage,
-	fallback,
-	http,
-} from 'wagmi'
-
-import {
 	tempoDevnet,
 	tempo as tempoMainnet,
 	tempoModerato as tempoTestnet,
@@ -64,29 +56,6 @@ export const sourcifyChains = chains.map((chain) => {
 	return returnValue
 })
 
-// Create config as singleton to ensure wagmi/core recognizes chains properly
-let wagmiConfigInstance: ReturnType<typeof createConfig> | null = null
-
-export const getWagmiConfig = () => {
-	wagmiConfigInstance ??= createConfig({
-		chains,
-		ssr: true,
-		storage: createStorage({ storage: cookieStorage }),
-		transports: {
-			[tempoDevnet.id]: fallback([
-				http(tempoDevnet.rpcUrls.default.http.at(0)),
-			]),
-			[tempoTestnet.id]: fallback([
-				http(tempoTestnet.rpcUrls.default.http.at(0)),
-			]),
-			[tempoMainnet.id]: fallback([
-				http(tempoMainnet.rpcUrls.default.http.at(0)),
-			]),
-		},
-	})
-	return wagmiConfigInstance
-}
-
 export const zAddress = (opts?: { lowercase?: boolean }) =>
 	z.pipe(
 		z.string(),
@@ -106,9 +75,3 @@ export const zChainId = () =>
 			return n
 		}),
 	)
-
-declare module 'wagmi' {
-	interface Register {
-		config: ReturnType<typeof getWagmiConfig>
-	}
-}

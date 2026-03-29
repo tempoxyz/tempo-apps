@@ -13,6 +13,26 @@ env:
   WRANGLER_SEND_METRICS: false
 
 jobs:
+  check-membership:
+    name: Check Org Membership
+    runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
+    outputs:
+      is-member: ${{ steps.check.outputs.is-member }}
+    steps:
+      - name: Check if PR author is org member
+        id: check
+        run: |
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "is-member=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          association="${{ github.event.pull_request.author_association }}"
+          if [[ "$association" == "MEMBER" || "$association" == "OWNER" || "$association" == "COLLABORATOR" ]]; then
+            echo "is-member=true" >> $GITHUB_OUTPUT
+          else
+            echo "is-member=false" >> $GITHUB_OUTPUT
+          fi
+
   verify:
     name: Verify
     uses: ./.github/workflows/verify.yml
@@ -20,6 +40,8 @@ jobs:
 
   deploy-preview:
     name: Deploy Preview (${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }})
+    needs: check-membership
+    if: needs.check-membership.outputs.is-member == 'true'
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     permissions:
       issues: write
@@ -130,8 +152,8 @@ jobs:
   comment-deployments:
     name: Post Deployment Table
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
-    needs: deploy-preview
-    if: always()
+    needs: [check-membership, deploy-preview]
+    if: always() && needs.check-membership.outputs.is-member == 'true'
     permissions:
       pull-requests: write
       contents: read

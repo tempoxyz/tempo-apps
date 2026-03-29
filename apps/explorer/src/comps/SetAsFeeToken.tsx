@@ -1,10 +1,6 @@
 import type { Address } from 'ox'
 import * as React from 'react'
-import {
-	type Connector,
-	useConnection,
-	useWaitForTransactionReceipt,
-} from 'wagmi'
+import { type Connector, useConnection } from 'wagmi'
 import { Hooks } from 'wagmi/tempo'
 import { cx } from '#lib/css'
 import LucideCoins from '~icons/lucide/coins'
@@ -14,19 +10,13 @@ export function SetAsFeeToken(
 ): React.JSX.Element | null {
 	const { address: tokenAddress, symbol } = props
 	const { address: account } = useConnection()
-	const setFeeToken = Hooks.fee.useSetUserToken()
+	const setFeeToken = Hooks.fee.useSetUserTokenSync()
 	const userToken = Hooks.fee.useUserToken({ account })
 
 	const [showSuccess, setShowSuccess] = React.useState(false)
 
-	const receipt = useWaitForTransactionReceipt({
-		hash: setFeeToken.data,
-	})
-
-	const isConfirmed = receipt.data?.status === 'success'
-
 	const isAlreadyFeeToken =
-		isConfirmed ||
+		setFeeToken.isSuccess ||
 		userToken.data?.address?.toLowerCase() === tokenAddress.toLowerCase()
 
 	// biome-ignore lint/correctness/useExhaustiveDependencies: reset state when navigating to a different token
@@ -36,9 +26,9 @@ export function SetAsFeeToken(
 	}, [tokenAddress])
 
 	React.useEffect(() => {
-		if (!isConfirmed) return
+		if (!setFeeToken.isSuccess) return
 		setShowSuccess(true)
-	}, [isConfirmed])
+	}, [setFeeToken.isSuccess])
 
 	React.useEffect(() => {
 		if (!showSuccess) return
@@ -51,19 +41,15 @@ export function SetAsFeeToken(
 		setFeeToken.mutate({ token: tokenAddress, account })
 	}
 
-	const isWaitingForReceipt = setFeeToken.isSuccess && receipt.isPending
-
-	const busy = setFeeToken.isPending || isWaitingForReceipt || showSuccess
+	const busy = setFeeToken.isPending || showSuccess
 
 	const label = showSuccess
 		? 'Fee token set!'
 		: isAlreadyFeeToken
 			? 'Currently your fee token'
-			: isWaitingForReceipt
-				? 'Confirming…'
-				: setFeeToken.isPending
-					? 'Setting…'
-					: `Set ${symbol ?? 'token'} as fee token`
+			: setFeeToken.isPending
+				? 'Setting…'
+				: `Set ${symbol ?? 'token'} as fee token`
 
 	return (
 		<button
