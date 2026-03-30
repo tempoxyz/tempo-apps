@@ -2,11 +2,11 @@
 	"$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
 	"name": "Tempo Testnet (Moderato)",
 	"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icon.svg",
-	"timestamp": "2026-03-30T16:06:42Z",
+	"timestamp": "2026-03-30T16:28:11Z",
 	"version": {
 		"major": 1,
 		"minor": 1,
-		"patch": 1
+		"patch": 2
 	},
 	"tokens": [
 		{
@@ -58,7 +58,7 @@
 			}
 		},
 		{
-			"name": "Bridged USDC",
+			"name": "Bridged USDC (Stargate)",
 			"symbol": "USDC.e",
 			"decimals": 6,
 			"chainId": 42431,

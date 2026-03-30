@@ -2,11 +2,11 @@
 	"$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
 	"name": "Tempo Mainnet (Presto)",
 	"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/4217/icon.svg",
-	"timestamp": "2026-03-30T16:12:49Z",
+	"timestamp": "2026-03-30T16:28:11Z",
 	"version": {
 		"major": 1,
 		"minor": 1,
-		"patch": 11
+		"patch": 12
 	},
 	"tokens": [
 		{
@@ -23,7 +23,7 @@
 			}
 		},
 		{
-			"name": "Bridged USDC",
+			"name": "Bridged USDC (Stargate)",
 			"symbol": "USDC.e",
 			"decimals": 6,
 			"chainId": 4217,
