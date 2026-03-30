@@ -205,7 +205,7 @@
 							"pattern": "^[ \\S+]+$"
 						}
 					],
-					"examples": ["USD Coin"]
+					"examples": ["Bridged USDC"]
 				},
 				"symbol": {
 					"type": "string",
@@ -220,7 +220,7 @@
 							"pattern": "^\\S+$"
 						}
 					],
-					"examples": ["USDC"]
+					"examples": ["USDC.e"]
 				},
 				"logoURI": {
 					"type": "string",

@@ -168,7 +168,7 @@
 			"get": {
 				"tags": ["Token Lists"],
 				"summary": "Get a single token by symbol or address",
-				"description": "Retrieve information about a specific token on a given chain. The token can be identified by either its symbol (e.g., 'USDC') or its contract address.",
+				"description": "Retrieve information about a specific token on a given chain. The token can be identified by either its symbol (e.g., 'USDC.e') or its contract address.",
 				"operationId": "get_asset",
 				"parameters": [
 					{
@@ -608,15 +608,15 @@
 						"maxLength": 60,
 						"pattern": "^[\\w\\s\\.,:]*$",
 						"description": "Name of the token",
-						"example": "USD Coin"
+						"example": "Bridged USDC"
 					},
 					"symbol": {
 						"type": "string",
 						"minLength": 0,
 						"maxLength": 20,
-						"pattern": "^[\\w]*$",
+						"pattern": "^[\\w.]*$",
 						"description": "Symbol of the token",
-						"example": "USDC"
+						"example": "USDC.e"
 					},
 					"logo_uri": {
 						"type": "string",
