@@ -35,7 +35,8 @@ import {
 	type ImmutableReferences,
 	getVyperImmutableReferences,
 } from '#lib/bytecode-matching.ts'
-import { chains, chainIds } from '#wagmi.config.ts'
+import type { AppEnv } from '#index.tsx'
+import type { ChainRegistry } from '#lib/chain-registry.ts'
 import { getLogger } from '#lib/logger.ts'
 
 const logger = getLogger(['tempo'])
@@ -77,7 +78,7 @@ function timestampToMs(value: string): number {
  * POST /verify/solc-json
  */
 
-const verifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
+const verifyRoute = new Hono<AppEnv>()
 
 // POST /v2/verify/metadata/:chainId/:address - Verify Contract (using Solidity metadata.json)
 verifyRoute
@@ -149,7 +150,8 @@ verifyRoute
 			}
 
 			const chainId = Number(_chainId)
-			if (!chainIds.includes(chainId)) {
+			const registry = context.get('chainRegistry')
+			if (!registry.isSupported(chainId)) {
 				return sourcifyError(
 					context,
 					400,
@@ -617,7 +619,7 @@ type VerificationDeps = {
 		name: string,
 	) => ContainerLike
 	createPublicClient?: (params: {
-		chain: (typeof chains)[keyof typeof chains]
+		chain: import('viem').Chain
 		transport: ReturnType<typeof http>
 	}) => PublicClientLike
 }
@@ -666,6 +668,7 @@ async function runVerificationJob(
 	chainId: number,
 	address: string,
 	body: VerificationInput,
+	chainRegistry: ChainRegistry,
 	deps?: VerificationDeps,
 ): Promise<void> {
 	const db = getDb(env.CONTRACTS_DB)
@@ -682,7 +685,7 @@ async function runVerificationJob(
 	const contractName = contractIdentifier.slice(lastColonIndex + 1)
 
 	try {
-		const chain = chains.find((chain) => chain.id === chainId)
+		const chain = chainRegistry.getChain(chainId)
 		if (!chain) {
 			throw new Error(`Chain ${chainId} is not supported`)
 		}

@@ -6,6 +6,8 @@ import { describe, expect, it } from 'vitest'
 
 import * as DB from '#database/schema.ts'
 import { runVerificationJob } from '#route.verify.ts'
+import { staticChains } from '#wagmi.config.ts'
+import { ChainRegistry } from '#lib/chain-registry.ts'
 import { counterFixture } from '../fixtures/counter.fixture.ts'
 
 const VerificationIdSchema = z.object({ verificationId: z.string() })
@@ -62,12 +64,13 @@ describe('full verification flow', () => {
 			counterFixture.chainId,
 			counterFixture.address,
 			verifyRequestBody,
+			ChainRegistry.fromStatic(staticChains),
 			{
 				createPublicClient: () => ({
 					getCode: async () => counterFixture.onchainRuntimeBytecode,
 				}),
 				getContainer: () => ({
-					fetch: async (request) => {
+					fetch: async (request: Request) => {
 						const url = new URL(request.url)
 						if (request.method === 'POST' && url.pathname === '/compile') {
 							return Response.json(counterFixture.solcOutput, { status: 200 })

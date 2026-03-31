@@ -6,7 +6,9 @@ import { Hash, Hex } from 'ox'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as DB from '#database/schema.ts'
-import { chainIds } from '#wagmi.config.ts'
+import { staticChains } from '#wagmi.config.ts'
+import { ChainRegistry } from '#lib/chain-registry.ts'
+import type { AppEnv } from '#index.tsx'
 
 const { mockCreatePublicClient, mockGetRandom } = vi.hoisted(() => ({
 	mockCreatePublicClient: vi.fn(),
@@ -44,7 +46,7 @@ describe('POST /verify/vyper', () => {
 	})
 
 	it('stores deployment metadata when creatorTxHash is provided', async () => {
-		const chainId = chainIds[0]
+		const chainId = staticChains[0].id
 		const address = '0x1111111111111111111111111111111111111111' as const
 		const creatorTxHash =
 			'0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' as const
@@ -94,7 +96,12 @@ describe('POST /verify/vyper', () => {
 		})
 		const { legacyVerifyRoute } = await import('#route.verify-legacy.ts')
 
-		const app = new Hono<{ Bindings: Cloudflare.Env }>()
+		const app = new Hono<AppEnv>()
+		const registry = ChainRegistry.fromStatic(staticChains)
+		app.use(async (c, next) => {
+			c.set('chainRegistry', registry)
+			await next()
+		})
 		app.route('/verify', legacyVerifyRoute)
 
 		const response = await app.request(
@@ -135,7 +142,7 @@ describe('POST /verify/vyper', () => {
 	})
 
 	it('leaves deployment metadata null when creatorTxHash is not provided', async () => {
-		const chainId = chainIds[0]
+		const chainId = staticChains[0].id
 		const address = '0x1111111111111111111111111111111111111111' as const
 		const runtimeBytecode = createVyperBytecode('6000')
 		const creationBytecode = createVyperBytecode('60016000')
@@ -175,7 +182,12 @@ describe('POST /verify/vyper', () => {
 		})
 		const { legacyVerifyRoute } = await import('#route.verify-legacy.ts')
 
-		const app = new Hono<{ Bindings: Cloudflare.Env }>()
+		const app = new Hono<AppEnv>()
+		const registry2 = ChainRegistry.fromStatic(staticChains)
+		app.use(async (c, next) => {
+			c.set('chainRegistry', registry2)
+			await next()
+		})
 		app.route('/verify', legacyVerifyRoute)
 
 		const response = await app.request(
