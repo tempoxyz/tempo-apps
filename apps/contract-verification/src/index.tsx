@@ -17,7 +17,11 @@ import { staticChains } from '#wagmi.config.ts'
 import { VerificationContainer } from '#container.ts'
 import { VerificationJobRunner } from '#job-runner.ts'
 import { legacyVerifyRoute } from '#route.verify-legacy.ts'
-import { type ChainRegistry, chainRegistry } from '#lib/chain-registry.ts'
+import {
+	type ChainRegistry,
+	chainRegistry,
+	resolveAuthToken,
+} from '#lib/chain-registry.ts'
 import { configureLogger, getLogger, withContext } from '#lib/logger.ts'
 import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
 import { handleError, originMatches, sourcifyError } from '#lib/utilities.ts'
@@ -77,7 +81,9 @@ app.use(
 	chainRegistry({
 		staticChains,
 		url: env.CHAINS_CONFIG_URL || undefined,
-		authToken: env.CHAINS_CONFIG_AUTH_TOKEN || undefined,
+		authToken: await resolveAuthToken(
+			env.CHAINS_CONFIG_AUTH_TOKEN_SECRET || env.CHAINS_CONFIG_AUTH_TOKEN,
+		),
 	}),
 )
 

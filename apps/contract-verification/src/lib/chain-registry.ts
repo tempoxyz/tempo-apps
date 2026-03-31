@@ -225,16 +225,26 @@ export class ChainRegistry {
 // ---------------------------------------------------------------------------
 
 /**
+ * Resolves an auth token from a SecretsStoreSecret binding, a plain string,
+ * or undefined. Secrets Store is tried first, falling back to string.
+ */
+export async function resolveAuthToken(
+	token: { get(): Promise<string> } | string | undefined,
+): Promise<string | undefined> {
+	if (typeof token === 'string') return token || undefined
+	if (token && typeof token.get === 'function') {
+		try {
+			return (await token.get()) || undefined
+		} catch {
+			// Secrets Store binding may not be configured (e.g. in tests)
+		}
+	}
+	return undefined
+}
+
+/**
  * Creates a Hono middleware that initializes a `ChainRegistry` and sets it on
  * the context.
- *
- * ```ts
- * app.use(chainRegistry({
- *   staticChains,
- *   url: context.env.CHAINS_CONFIG_URL,
- *   authToken: context.env.CHAINS_CONFIG_AUTH_TOKEN,
- * }))
- * ```
  */
 export function chainRegistry(options: {
 	staticChains: readonly Chain[]
