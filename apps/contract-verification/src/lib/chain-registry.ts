@@ -48,12 +48,12 @@ type ChainEntry = {
 
 export type SourcifyChain = {
 	name: string
-	title: string
+	title?: string | undefined
 	chainId: number
 	rpc: string[]
+	traceSupportedRPCs: Array<{ type?: string; index?: number }>
 	supported: boolean
 	etherscanAPI: boolean
-	_extra: Record<string, unknown>
 }
 
 // ---------------------------------------------------------------------------
@@ -199,18 +199,14 @@ export class ChainRegistry {
 		const result: SourcifyChain[] = []
 		for (const { chain, hidden } of this.entries.values()) {
 			if (hidden) continue
-			const extra: Record<string, unknown> = {}
-			if (chain.blockExplorers) {
-				extra.blockExplorer = chain.blockExplorers.default
-			}
 			result.push({
 				name: chain.name,
 				title: chain.name,
 				chainId: chain.id,
 				rpc: [...chain.rpcUrls.default.http],
+				traceSupportedRPCs: [],
 				supported: true,
 				etherscanAPI: false,
-				_extra: extra,
 			})
 		}
 		return result

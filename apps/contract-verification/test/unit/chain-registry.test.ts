@@ -311,7 +311,7 @@ describe('ChainRegistry', () => {
 			})
 		})
 
-		it('includes block explorers in sourcify chains when provided', async () => {
+		it('returns sourcify-compliant shape for dynamic chains', async () => {
 			mockFetch.mockResolvedValue(
 				makeFakeResponse({
 					'42161': {
@@ -337,7 +337,15 @@ describe('ChainRegistry', () => {
 			const sourcify = registry.getSourcifyChains()
 			const arb = sourcify.find((s) => s.chainId === 42161)
 			expect(arb).toBeDefined()
-			expect(arb?._extra).toHaveProperty('blockExplorer')
+			expect(arb).toMatchObject({
+				name: 'Arbitrum One',
+				title: 'Arbitrum One',
+				chainId: 42161,
+				rpc: ['https://arb1.arbitrum.io/rpc'],
+				traceSupportedRPCs: [],
+				supported: true,
+				etherscanAPI: false,
+			})
 		})
 	})
 
