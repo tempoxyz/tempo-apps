@@ -9,7 +9,9 @@
 	"preview_urls": true,
 	"logpush": true,
 	"vars": {
-		"WHITELISTED_ORIGINS": "https://tempo.xyz,https://*.tempo.xyz,https://*.porto.workers.dev"
+		"WHITELISTED_ORIGINS": "https://tempo.xyz,https://*.tempo.xyz,https://*.porto.workers.dev",
+		"CHAINS_CONFIG_URL": "",
+		"CHAINS_CONFIG_AUTH_TOKEN": ""
 	},
 	"ratelimits": [
 		{

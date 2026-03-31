@@ -13,10 +13,11 @@ import { contextStorage } from 'hono/context-storage'
 
 import { docsRoute } from '#route.docs.tsx'
 import { verifyRoute } from '#route.verify.ts'
-import { sourcifyChains } from '#wagmi.config.ts'
+import { staticChains } from '#wagmi.config.ts'
 import { VerificationContainer } from '#container.ts'
 import { VerificationJobRunner } from '#job-runner.ts'
 import { legacyVerifyRoute } from '#route.verify-legacy.ts'
+import { type ChainRegistry, chainRegistry } from '#lib/chain-registry.ts'
 import { configureLogger, getLogger, withContext } from '#lib/logger.ts'
 import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
 import { handleError, originMatches, sourcifyError } from '#lib/utilities.ts'
@@ -42,7 +43,11 @@ function isWhitelistedOrigin(origin: string | undefined) {
 	)
 }
 
-type AppEnv = { Bindings: Cloudflare.Env }
+export type AppEnv = {
+	Bindings: Cloudflare.Env
+	Variables: { chainRegistry: ChainRegistry }
+}
+
 const factory = createFactory<AppEnv>()
 export const app = factory.createApp()
 
@@ -66,6 +71,16 @@ app.use(async (context, next) => {
 		next,
 	)
 })
+
+// Chain registry middleware -- fetches dynamic chains if CHAINS_CONFIG_URL is set
+app.use(
+	chainRegistry({
+		staticChains,
+		url: env.CHAINS_CONFIG_URL || undefined,
+		authToken: env.CHAINS_CONFIG_AUTH_TOKEN || undefined,
+	}),
+)
+
 app.use(
 	cors({
 		allowMethods: ['GET', 'POST', 'OPTIONS', 'HEAD'],
@@ -129,8 +144,9 @@ app.get('/favicon.ico', (context) =>
 app
 	.get('/health', (context) => context.text('ok'))
 	.get('/', (context) => context.redirect('/docs'))
-	// TODO: match sourcify `https://sourcify.dev/server/chains` response schema
-	.get('/chains', (context) => context.json(sourcifyChains))
+	.get('/chains', (context) =>
+		context.json(context.get('chainRegistry').getSourcifyChains()),
+	)
 	.get('/version', async (context) =>
 		context.json({
 			version: packageJSON.version,
