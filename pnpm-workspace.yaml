@@ -107,3 +107,5 @@ onlyBuiltDependencies:
 shellEmulator: true
 
 workspaceConcurrency: -1
+
+minimumReleaseAge: 1440
