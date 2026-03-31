@@ -46,15 +46,22 @@ type ChainEntry = {
 	hidden: boolean
 }
 
-export type SourcifyChain = {
-	name: string
-	title?: string | undefined
-	chainId: number
-	rpc: string[]
-	traceSupportedRPCs: Array<{ type?: string; index?: number }>
-	supported: boolean
-	etherscanAPI: boolean
-}
+export const zSourcifyChain = z.object({
+	name: z.string(),
+	title: z.optional(z.string()),
+	chainId: z.number(),
+	rpc: z.array(z.string()),
+	traceSupportedRPCs: z.array(
+		z.object({
+			type: z.optional(z.string()),
+			index: z.optional(z.number()),
+		}),
+	),
+	supported: z.boolean(),
+	etherscanAPI: z.boolean(),
+})
+
+export type SourcifyChain = z.infer<typeof zSourcifyChain>
 
 // ---------------------------------------------------------------------------
 // ChainRegistry
