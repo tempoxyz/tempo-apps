@@ -14,17 +14,17 @@ The API response at `GET /v2/contract/:chainId/:address?fields=all` already read
 
 `src/route.verify.ts` now accepts an optional `creationTransactionHash` in the request body (L127), fetches the transaction receipt via `client.getTransactionReceipt()` (L684–700), and stores `transactionHash`, `blockNumber`, `transactionIndex`, and `deployer` in the deployment row on both insert (L1022–1034) and update of existing deployments (L1003–1017).
 
-#### ✅ 3. Update existing deployment path (`route.verify.ts`) — DONE
+#### ✅ 2. Update existing deployment path (`route.verify.ts`) — DONE
 
 When a deployment row already exists with `transactionHash === null`, `route.verify.ts` updates it with the metadata if `creationTransactionHash` was provided (L1003–1017).
 
-#### ❌ 2. Populate on new verifications (`route.verify-legacy.ts`) — NOT DONE
+#### ❌ 3. Populate on new verifications (`route.verify-legacy.ts`) — NOT DONE
 
 `src/route.verify-legacy.ts` still only inserts `chainId`, `address`, and `contractId` (L417–424). It does not accept `creationTransactionHash`, does not fetch deployment metadata, and does not update existing deployments that are missing metadata.
 
 **To implement:** Mirror the approach from `route.verify.ts` — add `creationTransactionHash` to the request body, create a viem `publicClient`, fetch the receipt, and populate the deployment row.
 
-#### ❌ 3. Backfill existing verified contracts — NOT DONE
+#### ❌ 4. Backfill existing verified contracts — NOT DONE
 
 No backfill script exists yet. A one-time script (e.g., `scripts/backfill-deployment-meta.ts`) is needed to:
 
