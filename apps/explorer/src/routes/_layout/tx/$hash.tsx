@@ -321,7 +321,6 @@ function OverviewSection(props: {
 	const [chain] = useChains()
 	const { decimals, symbol } = chain.nativeCurrency
 
-	const value = transaction.value ?? 0n
 	const gasUsed = receipt.gasUsed
 	const gasLimit = transaction.gas
 	const gasUsedPercentage =
@@ -369,11 +368,6 @@ function OverviewSection(props: {
 			{balanceChangesData.total > 0 && (
 				<BalanceChangesOverview data={balanceChangesData} />
 			)}
-			<InfoRow label="Value">
-				<span className="text-primary">
-					{Value.format(value, decimals)} {symbol}
-				</span>
-			</InfoRow>
 			<InfoRow label="Transaction Fee">
 				{feeBreakdown.length > 0 ? (
 					<div className="flex flex-col gap-[4px]">
