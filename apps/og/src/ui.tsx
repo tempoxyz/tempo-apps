@@ -457,7 +457,7 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 					style={{ width: '68px', height: '68px' }}
 				/>
 				<div tw="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
-				<span tw="text-5xl font-medium text-gray-900">
+					<span tw="text-5xl font-medium text-gray-900">
 						{truncateText(data.name, 18)}
 					</span>
 				</div>
