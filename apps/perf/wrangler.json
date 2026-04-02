@@ -1,0 +1,19 @@
+{
+	"$schema": "https://esm.sh/wrangler/config-schema.json",
+	"name": "perf",
+	"compatibility_date": "2026-03-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"main": "./src/index.server.ts",
+	"keep_vars": true,
+	"workers_dev": true,
+	"preview_urls": true,
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		}
+	}
+}

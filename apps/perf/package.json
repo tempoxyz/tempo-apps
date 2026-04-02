@@ -1,0 +1,47 @@
+{
+	"name": "perf",
+	"private": true,
+	"type": "module",
+	"imports": {
+		"#*": "./src/*",
+		"#wrangler.json": "./wrangler.json"
+	},
+	"scripts": {
+		"postinstall": "pnpm gen:types",
+		"dev": "vite dev --port 3001",
+		"build": "vite build",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write --unsafe",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"predeploy": "pnpm build",
+		"deploy": "wrangler deploy",
+		"gen:types": "wrangler types"
+	},
+	"dependencies": {
+		"@cloudflare/vite-plugin": "catalog:",
+		"@tailwindcss/vite": "catalog:",
+		"@tanstack/react-query": "catalog:",
+		"@tanstack/react-router": "catalog:",
+		"@tanstack/react-router-ssr-query": "catalog:",
+		"@tanstack/react-start": "catalog:",
+		"@tanstack/router-plugin": "catalog:",
+		"cva": "catalog:",
+		"hono": "catalog:",
+		"react": "catalog:",
+		"react-dom": "catalog:",
+		"tailwindcss": "catalog:"
+	},
+	"devDependencies": {
+		"@iconify/json": "catalog:",
+		"@total-typescript/ts-reset": "catalog:",
+		"@types/node": "catalog:",
+		"@types/react": "catalog:",
+		"@types/react-dom": "catalog:",
+		"@vitejs/plugin-react": "catalog:",
+		"tailwind-merge": "catalog:",
+		"typed-query-selector": "catalog:",
+		"unplugin-icons": "catalog:",
+		"vite": "catalog:",
+		"wrangler": "catalog:"
+	}
+}
