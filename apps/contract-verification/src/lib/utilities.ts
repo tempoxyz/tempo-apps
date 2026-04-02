@@ -1,6 +1,6 @@
 import type { Context } from 'hono'
 import { env } from 'cloudflare:workers'
-import { Hex } from 'ox'
+import { type Address, Hex } from 'ox'
 import { drizzle } from 'drizzle-orm/d1'
 import { HTTPException } from 'hono/http-exception'
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
@@ -9,22 +9,20 @@ import { getDatabaseLogger, getLogger } from '#lib/logger.ts'
 
 const dbLogger = getDatabaseLogger()
 
-export function getDb(d1: D1Database) {
-	return drizzle(d1, { logger: dbLogger })
-}
+export const getDb = (d1: D1Database) => drizzle(d1, { logger: dbLogger })
 
 export function formatError(error: unknown): {
 	type: string
 	message: string
 	stack?: string
 } {
-	if (error instanceof Error) {
+	if (error instanceof Error)
 		return {
 			type: error.name,
 			message: error.message,
 			stack: error.stack,
 		}
-	}
+
 	return { type: 'Unknown', message: String(error) }
 }
 
@@ -178,15 +176,14 @@ export function handleError(error: Error, context: Context) {
 function extractDurableObjectErrorMeta(
 	error: unknown,
 ): Record<string, unknown> {
-	if (error && typeof error === 'object') {
-		const e = error as Record<string, unknown>
-		const meta: Record<string, unknown> = {}
-		if ('remote' in e) meta.remote = e.remote
-		if ('retryable' in e) meta.retryable = e.retryable
-		if ('overloaded' in e) meta.overloaded = e.overloaded
-		return meta
-	}
-	return {}
+	if (!error || !(typeof error === 'object')) return {}
+
+	const e = error as Record<string, unknown>
+	const meta: Record<string, unknown> = {}
+	if ('remote' in e) meta.remote = e.remote
+	if ('retryable' in e) meta.retryable = e.retryable
+	if ('overloaded' in e) meta.overloaded = e.overloaded
+	return meta
 }
 
 /**
@@ -205,11 +202,11 @@ export async function getCreationTransactionMetadata(options: {
 	address: string
 	chainId: number
 	client: {
-		getTransactionReceipt?: (args: { hash: `0x${string}` }) => Promise<{
-			transactionHash: `0x${string}`
+		getTransactionReceipt?: (args: { hash: Hex.Hex }) => Promise<{
+			transactionHash: Hex.Hex
 			blockNumber: bigint
 			transactionIndex: number
-			from: `0x${string}`
+			from: Address.Address
 			contractAddress?: string | null
 		}>
 	}

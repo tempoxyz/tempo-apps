@@ -39,13 +39,12 @@
 		]
 	},
 	"include": [
+		"**/*.ts",
 		"src/**/*",
-		"scripts/**/*",
-		"./container/**/*",
 		"test/**/*",
 		"database",
-		"_/chains.ts",
-		"_/chains.ts"
+		"scripts/**/*",
+		"./container/**/*"
 	],
 	"files": [
 		"env.d.ts",

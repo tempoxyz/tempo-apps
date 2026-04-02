@@ -2,11 +2,11 @@
 	"$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
 	"name": "Tempo Testnet (Moderato)",
 	"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icon.svg",
-	"timestamp": "2026-01-06T00:00:00Z",
+	"timestamp": "2026-03-30T16:28:11Z",
 	"version": {
 		"major": 1,
 		"minor": 1,
-		"patch": 0
+		"patch": 2
 	},
 	"tokens": [
 		{
@@ -66,7 +66,7 @@
 			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42431/icons/0x20c0000000000000000000009e8d7eb59b783726.svg",
 			"extensions": {
 				"chain": "tempo",
-				"label": "USDC"
+				"label": "USDC.e"
 			}
 		},
 		{

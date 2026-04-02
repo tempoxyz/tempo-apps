@@ -124,7 +124,8 @@ function TokensPage() {
 		{
 			label: 'Address',
 			align: 'start',
-			width: 320,
+			width: '3fr' as const,
+			minWidth: 200,
 		},
 		{
 			label: (
@@ -175,7 +176,11 @@ function TokensPage() {
 											<span key="holders" className="text-secondary">
 												{formatHoldersCount(token)}
 											</span>,
-											<Address key="address" address={token.address} />,
+											<Address
+												key="address"
+												address={token.address}
+												className="w-full"
+											/>,
 											token.createdAt == null ? (
 												<span
 													key="created"

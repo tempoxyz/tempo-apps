@@ -81,6 +81,8 @@ import ChevronFirst from '~icons/lucide/chevron-first'
 import ChevronLast from '~icons/lucide/chevron-last'
 import ChevronLeft from '~icons/lucide/chevron-left'
 import ChevronRight from '~icons/lucide/chevron-right'
+import EyeIcon from '~icons/lucide/eye'
+import EyeOffIcon from '~icons/lucide/eye-off'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
@@ -1101,6 +1103,7 @@ function SectionsWrapper(props: {
 		holders = [],
 		total: holdersTotal = 0,
 		totalCapped: holdersTotalCapped = false,
+		totalBalance: holdersTotalBalance = '0',
 	} = holdersData ?? {}
 
 	// Only use after mount AND when data has loaded to avoid showing 0 during loading
@@ -1281,15 +1284,35 @@ function SectionsWrapper(props: {
 
 	// Holdings uses local pagination state (decoupled from URL `page` param)
 	const [holdingsPage, setHoldingsPage] = React.useState(1)
+	const [showAllHoldings, setShowAllHoldings] = React.useState(false)
 	const prevAddressRef = React.useRef(address)
 	if (prevAddressRef.current !== address) {
 		prevAddressRef.current = address
 		setHoldingsPage(1)
+		setShowAllHoldings(false)
 	}
-	// Clamp page when asset count shrinks (e.g. after a refetch)
+
+	const { isTokenListed: isHoldingTokenListed } = useTokenListMembership()
+	const { listedAssets, unlistedAssets } = React.useMemo(() => {
+		const listed: AssetData[] = []
+		const unlisted: AssetData[] = []
+		for (const asset of assetsData) {
+			if (isHoldingTokenListed(TEMPO_CHAIN_ID, asset.address)) {
+				listed.push(asset)
+			} else {
+				unlisted.push(asset)
+			}
+		}
+		return { listedAssets: listed, unlistedAssets: unlisted }
+	}, [assetsData, isHoldingTokenListed])
+
+	const visibleAssets = showAllHoldings ? assetsData : listedAssets
+	const hasUnlisted = unlistedAssets.length > 0
+
+	// Clamp page when asset count shrinks (e.g. after a refetch or filter toggle)
 	const maxHoldingsPage = Math.max(
 		1,
-		Math.ceil(assetsData.length / ASSETS_PER_PAGE),
+		Math.ceil(visibleAssets.length / ASSETS_PER_PAGE),
 	)
 	if (holdingsPage > maxHoldingsPage) {
 		setHoldingsPage(maxHoldingsPage)
@@ -1379,10 +1402,10 @@ function SectionsWrapper(props: {
 					),
 				}
 			case 'holdings': {
-				const holdingsPages = Math.ceil(assetsData.length / ASSETS_PER_PAGE)
+				const holdingsPages = Math.ceil(visibleAssets.length / ASSETS_PER_PAGE)
 				return {
 					title: 'Holdings',
-					totalItems: assetsData.length,
+					totalItems: visibleAssets.length,
 					itemsLabel: 'assets',
 					content: (
 						<DataGrid
@@ -1401,7 +1424,7 @@ function SectionsWrapper(props: {
 								],
 							}}
 							items={(mode) =>
-								assetsData
+								visibleAssets
 									.slice(
 										(holdingsPage - 1) * ASSETS_PER_PAGE,
 										holdingsPage * ASSETS_PER_PAGE,
@@ -1429,20 +1452,25 @@ function SectionsWrapper(props: {
 										},
 									}))
 							}
-							totalItems={assetsData.length}
-							displayCount={assetsData.length}
+							totalItems={visibleAssets.length}
+							displayCount={visibleAssets.length}
 							page={holdingsPage}
 							itemsLabel="assets"
 							itemsPerPage={ASSETS_PER_PAGE}
 							pagination={
-								holdingsPages <= 1 ? null : (
-									<HoldingsPagination
-										page={holdingsPage}
-										pages={holdingsPages}
-										totalItems={assetsData.length}
-										onPageChange={setHoldingsPage}
-									/>
-								)
+								<HoldingsFooter
+									page={holdingsPage}
+									pages={holdingsPages}
+									totalItems={visibleAssets.length}
+									onPageChange={setHoldingsPage}
+									hasUnlisted={hasUnlisted}
+									showAll={showAllHoldings}
+									unlistedCount={unlistedAssets.length}
+									onToggleShowAll={() => {
+										setShowAllHoldings((prev) => !prev)
+										setHoldingsPage(1)
+									}}
+								/>
 							}
 							loading={assetsLoading}
 							emptyState="No assets found."
@@ -1531,13 +1559,19 @@ function SectionsWrapper(props: {
 								stacked: holdersColumns,
 								tabs: holdersColumns,
 							}}
-							items={() =>
-								holders.map((holder) => {
+							items={() => {
+								const totalBalanceBn = BigInt(holdersTotalBalance)
+								const onChainSupply = tokenMetadata?.totalSupply ?? 0n
+								const supplyDenominator =
+									totalBalanceBn > onChainSupply
+										? totalBalanceBn
+										: onChainSupply
+								return holders.map((holder) => {
 									const percentage =
-										tokenMetadata?.totalSupply && tokenMetadata.totalSupply > 0n
+										supplyDenominator > 0n
 											? Number(
 													(BigInt(holder.balance) * 10_000n) /
-														tokenMetadata.totalSupply,
+														supplyDenominator,
 												) / 100
 											: 0
 									return {
@@ -1561,7 +1595,7 @@ function SectionsWrapper(props: {
 										},
 									}
 								})
-							}
+							}}
 							totalItems={holdersTotal}
 							displayCount={holdersTotal}
 							displayCountCapped={holdersTotalCapped}
@@ -1876,67 +1910,112 @@ function AssetValue(props: { asset: AssetData }) {
 	)
 }
 
-function HoldingsPagination(props: {
+function HoldingsFooter(props: {
 	page: number
 	pages: number
 	totalItems: number
 	onPageChange: (page: number) => void
+	hasUnlisted: boolean
+	showAll: boolean
+	unlistedCount: number
+	onToggleShowAll: () => void
 }) {
-	const { page, pages, totalItems, onPageChange } = props
+	const {
+		page,
+		pages,
+		totalItems,
+		onPageChange,
+		hasUnlisted,
+		showAll,
+		unlistedCount,
+		onToggleShowAll,
+	} = props
 	const btnClass = cx(
 		'rounded-full border border-base-border hover:bg-alt flex items-center justify-center cursor-pointer active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-50 size-[24px] text-primary',
 	)
 	return (
-		<div className="flex flex-col items-center sm:flex-row gap-[12px] border-t border-dashed border-card-border px-[16px] py-[12px] text-[12px] text-tertiary sm:justify-between">
-			<div className="flex items-center justify-center sm:justify-start gap-[6px]">
-				<button
-					type="button"
-					onClick={() => onPageChange(1)}
-					disabled={page <= 1}
-					className={btnClass}
-					title="First page"
+		<div className="flex flex-col gap-0 border-t border-dashed border-card-border">
+			{pages > 1 && (
+				<div className="flex flex-col items-center sm:flex-row gap-[12px] px-[16px] py-[12px] text-[12px] text-tertiary sm:justify-between">
+					<div className="flex items-center justify-center sm:justify-start gap-[6px]">
+						<button
+							type="button"
+							onClick={() => onPageChange(1)}
+							disabled={page <= 1}
+							className={btnClass}
+							title="First page"
+						>
+							<ChevronFirst className="size-[14px]" />
+						</button>
+						<button
+							type="button"
+							onClick={() => onPageChange(page - 1)}
+							disabled={page <= 1}
+							className={btnClass}
+							title="Previous page"
+						>
+							<ChevronLeft className="size-[14px]" />
+						</button>
+						<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
+							<span className="text-primary">
+								{Pagination.numFormat.format(page)}
+							</span>
+							{' of '}
+							{Pagination.numFormat.format(pages)}
+						</span>
+						<button
+							type="button"
+							onClick={() => onPageChange(page + 1)}
+							disabled={page >= pages}
+							className={btnClass}
+							title="Next page"
+						>
+							<ChevronRight className="size-[14px]" />
+						</button>
+						<button
+							type="button"
+							onClick={() => onPageChange(pages)}
+							disabled={page >= pages}
+							className={btnClass}
+							title="Last page"
+						>
+							<ChevronLast className="size-[14px]" />
+						</button>
+					</div>
+					<Pagination.Count
+						totalItems={totalItems}
+						itemsLabel={Pagination.pluralize(totalItems, 'assets')}
+					/>
+				</div>
+			)}
+			{hasUnlisted && (
+				<div
+					className={cx(
+						'flex items-center justify-center px-[16px] py-[10px] text-[12px]',
+						pages > 1 && 'border-t border-dashed border-card-border',
+					)}
 				>
-					<ChevronFirst className="size-[14px]" />
-				</button>
-				<button
-					type="button"
-					onClick={() => onPageChange(page - 1)}
-					disabled={page <= 1}
-					className={btnClass}
-					title="Previous page"
-				>
-					<ChevronLeft className="size-[14px]" />
-				</button>
-				<span className="text-tertiary font-medium tabular-nums px-[4px] whitespace-nowrap">
-					<span className="text-primary">
-						{Pagination.numFormat.format(page)}
-					</span>
-					{' of '}
-					{Pagination.numFormat.format(pages)}
-				</span>
-				<button
-					type="button"
-					onClick={() => onPageChange(page + 1)}
-					disabled={page >= pages}
-					className={btnClass}
-					title="Next page"
-				>
-					<ChevronRight className="size-[14px]" />
-				</button>
-				<button
-					type="button"
-					onClick={() => onPageChange(pages)}
-					disabled={page >= pages}
-					className={btnClass}
-					title="Last page"
-				>
-					<ChevronLast className="size-[14px]" />
-				</button>
-			</div>
-			<Pagination.Count
-				totalItems={totalItems}
-				itemsLabel={Pagination.pluralize(totalItems, 'assets')}
-			/>
+					<button
+						type="button"
+						onClick={onToggleShowAll}
+						className="inline-flex items-center gap-1.5 text-tertiary hover:text-secondary transition-colors cursor-pointer"
+					>
+						{showAll ? (
+							<>
+								<EyeOffIcon className="size-[14px]" />
+								Hide {unlistedCount} unverified{' '}
+								{unlistedCount === 1 ? 'token' : 'tokens'}
+							</>
+						) : (
+							<>
+								<EyeIcon className="size-[14px]" />
+								Show {unlistedCount} unverified{' '}
+								{unlistedCount === 1 ? 'token' : 'tokens'}
+							</>
+						)}
+					</button>
+				</div>
+			)}
 		</div>
 	)
 }

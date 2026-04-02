@@ -168,7 +168,16 @@ export const fetchTokens = createServerFn({ method: 'POST' })
 							transferAggregate: await fetchTokenTransferAggregate(
 								address,
 								chainId,
-							),
+							).catch((error) => {
+								console.error(
+									`Failed to fetch transfer aggregate for ${address}:`,
+									error,
+								)
+								return {
+									oldestTimestamp: undefined,
+									latestTimestamp: undefined,
+								}
+							}),
 							holdersCount: await fetchTokenHoldersCount(
 								address,
 								chainId,

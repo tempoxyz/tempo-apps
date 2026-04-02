@@ -45,7 +45,7 @@ No backfill script exists yet. A one-time script (e.g., `scripts/backfill-deploy
 After implementing, confirm the fields are populated:
 
 ```bash
-VERIFIER_URL="http://localhost:22222" bash scripts/test-vyper.sh
+VERIFIER_URL="http://localhost:22222" bash scripts/verify-vyper.sh
 
 # Then check the response:
 curl "http://localhost:22222/v2/contract/42431/<deployed-address>?fields=all" | jq '.deployment'

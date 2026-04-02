@@ -33,6 +33,14 @@ const WHITELISTED_ORIGINS = [
 	...(env.WHITELISTED_ORIGINS.split(',') ?? []),
 ]
 
+function isWhitelistedOrigin(origin: string | undefined) {
+	if (!origin) return false
+
+	return WHITELISTED_ORIGINS.some((pattern) =>
+		originMatches({ origin, pattern }),
+	)
+}
+
 type AppEnv = { Bindings: Cloudflare.Env }
 const factory = createFactory<AppEnv>()
 export const app = factory.createApp()
@@ -60,13 +68,7 @@ app.use(async (context, next) => {
 app.use(
 	cors({
 		allowMethods: ['GET', 'POST', 'OPTIONS', 'HEAD'],
-		origin: (origin, _) => {
-			return WHITELISTED_ORIGINS.some((p) =>
-				originMatches({ origin, pattern: p }),
-			)
-				? origin
-				: null
-		},
+		origin: (origin, _) => (isWhitelistedOrigin(origin) ? origin : null),
 	}),
 )
 app.use(async (context, next) => {
@@ -80,12 +82,7 @@ app.use(async (context, next) => {
 				rateLimitContext.req.header('X-Forwarded-For')) ||
 			'',
 		skip: (rateLimitContext) =>
-			WHITELISTED_ORIGINS.some((p) =>
-				originMatches({
-					origin: new URL(rateLimitContext.req.url).hostname,
-					pattern: p,
-				}),
-			),
+			isWhitelistedOrigin(rateLimitContext.req.header('Origin')),
 		message: { error: 'Rate limit exceeded', retryAfter: '60s' },
 	})(context, next)
 })

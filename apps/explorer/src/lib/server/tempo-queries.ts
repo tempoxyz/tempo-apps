@@ -1,6 +1,7 @@
 import type { Address, Hex } from 'ox'
 import * as OxHash from 'ox/Hash'
 import * as OxHex from 'ox/Hex'
+import { Tidx } from 'tidx.ts'
 import { decodeAbiParameters, zeroAddress } from 'viem'
 import * as ABIS from '#lib/abis'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
@@ -140,18 +141,55 @@ export async function fetchTokenHoldersCountRows(
 	})
 }
 
+/**
+ * The tidx server silently caps query results at this many rows.
+ * Queries that would return more get truncated without any error or metadata.
+ */
+const TIDX_SERVER_ROW_LIMIT = 10_000
+
 export async function fetchTokenHoldersCount(
 	address: Address.Address,
 	chainId: number,
 	countCap: number,
 ): Promise<{ count: number; capped: boolean }> {
-	const holders = await fetchTokenHolderBalances(address, chainId)
-	const rawCount = holders.length
-	const capped = rawCount >= countCap
+	try {
+		const qb = QB(chainId).withSignatures([TRANSFER_SIGNATURE])
+		const transfers = (await qb
+			.selectFrom('transfer')
+			.select((eb) => [
+				eb.ref('from').as('from'),
+				eb.ref('to').as('to'),
+				eb.fn.sum('tokens').as('tokens'),
+			])
+			.where('address', '=', address)
+			.groupBy(['from', 'to'])
+			.execute()) as TokenHolderAggregationRow[]
 
-	return {
-		count: capped ? countCap : rawCount,
-		capped,
+		// The tidx server caps results at 10,000 rows. If we hit that ceiling,
+		// the data is truncated and the in-memory aggregation would be incorrect.
+		// Return a capped count instead of computing from incomplete data.
+		if (transfers.length >= TIDX_SERVER_ROW_LIMIT) {
+			return { count: countCap, capped: true }
+		}
+
+		const holders = aggregateTokenHolderBalances(transfers)
+		const rawCount = holders.length
+		const capped = rawCount >= countCap
+
+		return {
+			count: capped ? countCap : rawCount,
+			capped,
+		}
+	} catch (error) {
+		// Only return a capped fallback for 422 (query too expensive, i.e. too many holders).
+		// For other errors (auth, network, 5xx), re-throw so callers handle them normally.
+		if (error instanceof Tidx.FetchRequestError && error.status === 422) {
+			console.error(
+				`[tidx] holders count query failed for ${address} (422), returning capped`,
+			)
+			return { count: countCap, capped: true }
+		}
+		throw error
 	}
 }
 

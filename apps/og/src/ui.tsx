@@ -457,16 +457,8 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 					style={{ width: '68px', height: '68px' }}
 				/>
 				<div tw="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
-					<span
-						tw="text-[42px] text-gray-900"
-						style={{
-							fontFamily: 'Pilat',
-							whiteSpace: 'nowrap',
-							overflow: 'hidden',
-							textOverflow: 'ellipsis',
-						}}
-					>
-						{truncateText(data.name, 14)}
+				<span tw="text-5xl font-medium text-gray-900">
+						{truncateText(data.name, 18)}
 					</span>
 				</div>
 				<div tw="flex flex-col shrink-0 items-end" style={{ gap: '8px' }}>

@@ -43,8 +43,8 @@ export function Midcut({
 			<span
 				className="inline-flex whitespace-nowrap"
 				style={{
-					maxWidth: `${value.length - 1}ch`,
-					width: `round(down, calc(100% - 1ch), 2ch)`,
+					maxWidth: `${value.length}ch`,
+					width: '100%',
 				}}
 			>
 				{prefix}
@@ -52,8 +52,8 @@ export function Midcut({
 				<span className={`${id}-part`}>{start}</span>
 				<span className={`${id}-ellipsis`}>{ellipsis}</span>
 				<span className={`${id}-part flex justify-end`}>{end}</span>
+				{body.at(-1)}
 			</span>
-			{body.at(-1)}
 		</span>
 	)
 }

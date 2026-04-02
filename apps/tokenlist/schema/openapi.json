@@ -149,7 +149,8 @@
 											"logo_uri": "https://esm.sh/gh/tempoxyz/tokenlist/data/42431/icons/pathusd.svg",
 											"extensions": {
 												"chain": "tempo",
-												"label": "pathUSD"
+												"label": "pathUSD",
+												"coingeckoId": "pathusd"
 											}
 										}
 									]
@@ -167,7 +168,7 @@
 			"get": {
 				"tags": ["Token Lists"],
 				"summary": "Get a single token by symbol or address",
-				"description": "Retrieve information about a specific token on a given chain. The token can be identified by either its symbol (e.g., 'USDC') or its contract address.",
+				"description": "Retrieve information about a specific token on a given chain. The token can be identified by either its symbol (e.g., 'USDC.e') or its contract address.",
 				"operationId": "get_asset",
 				"parameters": [
 					{
@@ -607,15 +608,15 @@
 						"maxLength": 60,
 						"pattern": "^[\\w\\s\\.,:]*$",
 						"description": "Name of the token",
-						"example": "USD Coin"
+						"example": "Bridged USDC"
 					},
 					"symbol": {
 						"type": "string",
 						"minLength": 0,
 						"maxLength": 20,
-						"pattern": "^[\\w]*$",
+						"pattern": "^[\\w.]*$",
 						"description": "Symbol of the token",
-						"example": "USDC"
+						"example": "USDC.e"
 					},
 					"logo_uri": {
 						"type": "string",
@@ -667,17 +668,16 @@
 			"ExtensionMap": {
 				"type": "object",
 				"maxProperties": 10,
-				"additionalProperties": {
-					"type": "string",
-					"minLength": 1,
-					"maxLength": 1000,
-					"pattern": "^.+$"
-				},
+				"additionalProperties": true,
 				"description": "Object containing arbitrary or vendor-specific token metadata",
 				"example": {
 					"chain": "tempo",
 					"label": "PathUSD",
-					"inlined": "%3Csvg..."
+					"coingeckoId": "pathusd",
+					"bridgeInfo": {
+						"sourceChainId": 1,
+						"sourceAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+					}
 				}
 			}
 		}
