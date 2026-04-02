@@ -14,6 +14,45 @@ import { isTip20Address } from '#lib/domain/tip20.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 /**
+ * TIP-1004 (EIP-2612) permit ABI extension for TIP-20 tokens.
+ * TODO: Remove once viem includes permit in Abis.tip20
+ * @see https://github.com/wevm/viem/pull/XXXX
+ */
+const tip1004PermitAbi = [
+	{
+		name: 'permit',
+		type: 'function',
+		stateMutability: 'nonpayable',
+		inputs: [
+			{ type: 'address', name: 'owner' },
+			{ type: 'address', name: 'spender' },
+			{ type: 'uint256', name: 'value' },
+			{ type: 'uint256', name: 'deadline' },
+			{ type: 'uint8', name: 'v' },
+			{ type: 'bytes32', name: 'r' },
+			{ type: 'bytes32', name: 's' },
+		],
+		outputs: [],
+	},
+	{
+		name: 'nonces',
+		type: 'function',
+		stateMutability: 'view',
+		inputs: [{ type: 'address', name: 'owner' }],
+		outputs: [{ type: 'uint256' }],
+	},
+	{
+		name: 'DOMAIN_SEPARATOR',
+		type: 'function',
+		stateMutability: 'view',
+		inputs: [],
+		outputs: [{ type: 'bytes32' }],
+	},
+	{ name: 'PermitExpired', type: 'error', inputs: [] },
+	{ name: 'InvalidSignature', type: 'error', inputs: [] },
+] as const
+
+/**
  * Registry of known contract addresses to their ABIs and metadata.
  * This enables the explorer to render contract interfaces for any precompile.
  */
@@ -175,7 +214,7 @@ export const tip20ContractRegistry = new Map<Address.Address, ContractInfo>(<
 		{
 			name: 'pathUSD',
 			description: 'Non-transferable DEX accounting unit',
-			abi: Abis.tip20,
+			abi: [...Abis.tip20, ...tip1004PermitAbi],
 			code: '0xef',
 			category: 'token',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/exchange/pathUSD',
@@ -188,7 +227,7 @@ export const tip20ContractRegistry = new Map<Address.Address, ContractInfo>(<
 			name: 'AlphaUSD',
 			code: '0xef',
 			description: 'TIP-20 stablecoin (AUSD)',
-			abi: Abis.tip20,
+			abi: [...Abis.tip20, ...tip1004PermitAbi],
 			category: 'token',
 			address: '0x20c0000000000000000000000000000000000001',
 		},
@@ -199,7 +238,7 @@ export const tip20ContractRegistry = new Map<Address.Address, ContractInfo>(<
 			name: 'BetaUSD',
 			code: '0xef',
 			description: 'TIP-20 stablecoin (BUSD)',
-			abi: Abis.tip20,
+			abi: [...Abis.tip20, ...tip1004PermitAbi],
 			category: 'token',
 			address: '0x20c0000000000000000000000000000000000002',
 		},
@@ -210,7 +249,7 @@ export const tip20ContractRegistry = new Map<Address.Address, ContractInfo>(<
 			name: 'ThetaUSD',
 			code: '0xef',
 			description: 'TIP-20 stablecoin (TUSD)',
-			abi: Abis.tip20,
+			abi: [...Abis.tip20, ...tip1004PermitAbi],
 			category: 'token',
 			address: '0x20c0000000000000000000000000000000000003',
 		},
@@ -355,7 +394,7 @@ export function getContractInfo(
 			name: 'TIP-20 Token',
 			code: '0xef',
 			description: 'TIP-20 compatible token',
-			abi: Abis.tip20,
+			abi: [...Abis.tip20, ...tip1004PermitAbi],
 			category: 'token',
 		}
 
