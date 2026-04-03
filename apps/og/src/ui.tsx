@@ -65,6 +65,14 @@ interface ReceiptEvent {
 
 // ============ Helpers ============
 
+const PILL_STYLE = {
+	borderRadius: '8px',
+	paddingLeft: '10px',
+	paddingRight: '10px',
+	paddingTop: '5px',
+	paddingBottom: '5px',
+}
+
 function truncateHash(hash: string, chars = 4): string {
 	if (!hash || hash === '—') return hash
 	if (hash.length <= chars * 2 + 2) return hash
@@ -163,12 +171,26 @@ function formatDateSmart(date: string, time: string): string {
 	return `${datePart} · ${formattedTime}`
 }
 
-function isEmptyHoldings(val: string): boolean {
-	return !val || val === '—' || val === '$0' || val === '$0.00'
+function isEmptyValue(val: string): boolean {
+	return (
+		!val ||
+		val === '—' ||
+		val === '$0' ||
+		val === '$0.00' ||
+		val === '0' ||
+		val === '0.00'
+	)
 }
 
 function isHexSelector(text: string): boolean {
 	return /^0x[0-9a-fA-F]{8}$/.test(text)
+}
+
+const CURRENCY_SYMBOLS: Record<string, string> = {
+	USD: '$',
+	EUR: '\u20AC',
+	GBP: '\u00A3',
+	JPY: '\u00A5',
 }
 
 export function parseEventDetails(
@@ -217,6 +239,33 @@ export function parseEventDetails(
 	return groups
 }
 
+// ============ Shared card styles ============
+
+const CARD_BASE = {
+	width: '700px',
+	maxWidth: '700px',
+	minHeight: '400px',
+	maxHeight: '583px',
+	overflow: 'hidden' as const,
+	fontFamily: 'Pilat',
+	fontWeight: 400,
+	fontFeatureSettings: '"tnum"',
+	boxShadow:
+		'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
+	borderTopRightRadius: '24px',
+	borderTopLeftRadius: '0',
+	borderBottomLeftRadius: '0',
+	borderBottomRightRadius: '0',
+}
+
+const GRADIENT = {
+	height: '100px',
+	background:
+		'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
+}
+
+const DIVIDER = { height: '1px', backgroundColor: '#d1d5db' }
+
 // ============ Receipt Component ============
 
 export function ReceiptCard({ data }: { data: ReceiptData }) {
@@ -224,24 +273,7 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 	const feeTokenLabel = data.feeToken || 'pathUSD'
 
 	return (
-		<div
-			tw="flex flex-col bg-white relative"
-			style={{
-				width: '700px',
-				maxWidth: '700px',
-				maxHeight: '583px',
-				overflow: 'hidden',
-				fontFamily: 'Pilat',
-				fontWeight: 400,
-				fontFeatureSettings: '"tnum"',
-				boxShadow:
-					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
-				borderTopRightRadius: '24px',
-				borderTopLeftRadius: '0',
-				borderBottomLeftRadius: '0',
-				borderBottomRightRadius: '0',
-			}}
-		>
+		<div tw="flex flex-col bg-white relative" style={CARD_BASE}>
 			{/* Header */}
 			<div
 				tw="flex flex-col w-full pr-12 pt-10 pb-8 text-[28px]"
@@ -256,15 +288,18 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 			>
 				<div tw="flex w-full justify-between items-center">
 					<span tw="text-gray-500 shrink-0">Block</span>
-					<div tw="flex items-center" style={{ gap: '12px' }}>
+					<div tw="flex items-center" style={{ gap: '10px' }}>
 						<span tw="text-gray-900">{data.blockNumber}</span>
 						{data.status && (
 							<span
-								tw={`text-[22px] px-3 py-1 rounded ${
-									data.status === 'success'
-										? 'bg-emerald-100 text-emerald-700'
-										: 'bg-red-100 text-red-700'
-								}`}
+								tw={`text-[20px] ${data.status === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}
+								style={{
+									borderRadius: '6px',
+									paddingLeft: '8px',
+									paddingRight: '8px',
+									paddingTop: '3px',
+									paddingBottom: '3px',
+								}}
 							>
 								{data.status === 'success' ? 'Success' : 'Failed'}
 							</span>
@@ -282,10 +317,7 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 			</div>
 
 			{/* Divider */}
-			<div
-				tw="flex w-full"
-				style={{ height: '1px', backgroundColor: '#d1d5db' }}
-			/>
+			<div tw="flex w-full" style={DIVIDER} />
 
 			{/* Events */}
 			<div
@@ -310,7 +342,7 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 					<div tw="flex flex-col">
 						{data.events.slice(0, 3).map((event, index) => {
 							const parts = parseEventDetails(event.details || '')
-							const hasAmount = Boolean(event.amount)
+							const showAmount = event.amount && event.amount !== '$0'
 							return (
 								<div
 									key={`event-${event.details}`}
@@ -327,12 +359,15 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 										tw="flex"
 										style={{
 											gap: '8px',
-											maxWidth: hasAmount ? '85%' : '100%',
+											maxWidth: showAmount ? '85%' : '100%',
 										}}
 									>
 										<span tw="text-gray-500 shrink-0">{index + 1}.</span>
 										<div tw="flex flex-wrap" style={{ gap: '8px' }}>
-											<span tw="bg-gray-100 px-3 rounded shrink-0">
+											<span
+												tw="bg-gray-100 text-gray-800 shrink-0"
+												style={PILL_STYLE}
+											>
 												{event.action}
 											</span>
 											{parts.map((part) => (
@@ -353,17 +388,14 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 											))}
 										</div>
 									</div>
-									{event.amount && <span tw="shrink-0">{event.amount}</span>}
+									{showAmount && <span tw="shrink-0">{event.amount}</span>}
 								</div>
 							)
 						})}
 						{data.events.length > 3 && (
 							<div
 								tw="flex justify-center py-3 mx-12 text-gray-500 text-[24px]"
-								style={{
-									fontFamily: 'Pilat',
-									fontFeatureSettings: '"tnum"',
-								}}
+								style={{ fontFamily: 'Pilat', fontFeatureSettings: '"tnum"' }}
 							>
 								...and {data.events.length - 3} more
 							</div>
@@ -373,12 +405,9 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 			</div>
 
 			{/* Divider */}
-			<div
-				tw="flex w-full"
-				style={{ height: '1px', backgroundColor: '#d1d5db' }}
-			/>
+			<div tw="flex w-full" style={DIVIDER} />
 
-			{/* Fee and Total rows */}
+			{/* Fee and Total */}
 			<div
 				tw="flex flex-col px-12 text-[28px]"
 				style={{
@@ -411,15 +440,7 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 					</div>
 				)}
 			</div>
-			{/* Bottom fade */}
-			<div
-				tw="absolute bottom-0 left-0 right-0"
-				style={{
-					height: '60px',
-					background:
-						'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
-				}}
-			/>
+			<div tw="absolute bottom-0 left-0 right-0" style={GRADIENT} />
 		</div>
 	)
 }
@@ -427,36 +448,26 @@ export function ReceiptCard({ data }: { data: ReceiptData }) {
 // ============ Token Card Component ============
 
 export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
+	const isLongName = data.name.length > 20
+	const holdersGrey = isEmptyValue(data.holders)
+	const supplyGrey = isEmptyValue(data.supply)
+	const supplyDisplay = supplyGrey ? '0.00' : data.supply
+	const currSym = CURRENCY_SYMBOLS[data.currency] || ''
+
 	return (
-		<div
-			tw="flex flex-col bg-white relative"
-			style={{
-				width: '700px',
-				maxHeight: '583px',
-				overflow: 'hidden',
-				fontFamily: 'Pilat',
-				fontWeight: 400,
-				fontFeatureSettings: '"tnum"',
-				boxShadow:
-					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
-				borderTopRightRadius: '24px',
-				borderTopLeftRadius: '0',
-				borderBottomLeftRadius: '0',
-				borderBottomRightRadius: '0',
-			}}
-		>
-			{/* Header with icon and name */}
+		<div tw="flex flex-col bg-white relative" style={CARD_BASE}>
+			{/* Header */}
 			<div
-				tw="flex items-center pr-10 pt-10 pb-8"
-				style={{ gap: '20px', paddingLeft: '56px' }}
+				tw={`flex ${isLongName ? 'flex-col' : 'items-center'} pr-10 pt-10 pb-8`}
+				style={{ gap: isLongName ? '12px' : '20px', paddingLeft: '56px' }}
 			>
-				<img
-					src={icon}
-					alt=""
-					tw="rounded-full"
-					style={{ width: '68px', height: '68px' }}
-				/>
-				<div tw="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
+				<div tw="flex items-center" style={{ gap: '20px' }}>
+					<img
+						src={icon}
+						alt=""
+						tw="rounded-full"
+						style={{ width: '68px', height: '68px' }}
+					/>
 					<span
 						tw="text-[42px] text-gray-900"
 						style={{ fontWeight: 400, lineHeight: '1.1' }}
@@ -464,29 +475,25 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 						{truncateText(data.name, 28)}
 					</span>
 				</div>
-				<div tw="flex flex-col shrink-0 items-end" style={{ gap: '8px' }}>
-					<div
-						tw="flex items-center px-3 py-1 bg-gray-100 rounded-lg text-gray-600 text-2xl"
-						style={{ fontFamily: 'Pilat' }}
+				<div tw="flex shrink-0 items-end justify-end" style={{ gap: '8px' }}>
+					<span
+						tw="flex items-center bg-gray-100 text-gray-600 text-2xl"
+						style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 					>
 						{truncateText(data.symbol, 12)}
-					</div>
+					</span>
 					{data.isFeeToken && (
-						<div
-							tw="flex items-center px-3 py-1 bg-emerald-100 rounded-lg text-emerald-700 text-2xl"
-							style={{ fontFamily: 'Pilat' }}
+						<span
+							tw="flex items-center bg-emerald-100 text-emerald-700 text-2xl"
+							style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 						>
 							Fee Token
-						</div>
+						</span>
 					)}
 				</div>
 			</div>
 
-			{/* Divider */}
-			<div
-				tw="flex w-full"
-				style={{ height: '1px', backgroundColor: '#d1d5db' }}
-			/>
+			<div tw="flex w-full" style={DIVIDER} />
 
 			{/* Details */}
 			<div
@@ -506,20 +513,35 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 				</div>
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Currency</span>
-					<span tw="text-gray-900">{truncateText(data.currency, 16)}</span>
+					<div tw="flex items-center" style={{ gap: '8px' }}>
+						{currSym && (
+							<span
+								tw="flex items-center justify-center bg-gray-100 text-gray-700 text-[22px]"
+								style={{ width: '32px', height: '32px', borderRadius: '16px' }}
+							>
+								{currSym}
+							</span>
+						)}
+						<span tw="text-gray-900">{data.currency}</span>
+					</div>
 				</div>
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Holders</span>
 					<span
-						tw={data.holders === '—' ? '' : 'text-gray-900'}
-						style={data.holders === '—' ? { color: '#9ca3af' } : undefined}
+						style={holdersGrey ? { color: '#9ca3af' } : undefined}
+						tw={holdersGrey ? '' : 'text-gray-900'}
 					>
-						{data.holders === '—' ? '0' : truncateText(data.holders, 16)}
+						{holdersGrey ? '0' : truncateText(data.holders, 16)}
 					</span>
 				</div>
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Supply</span>
-					<span tw="text-gray-900">{truncateText(data.supply, 20)}</span>
+					<span
+						style={supplyGrey ? { color: '#9ca3af' } : undefined}
+						tw={supplyGrey ? '' : 'text-gray-900'}
+					>
+						{supplyDisplay}
+					</span>
 				</div>
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Created</span>
@@ -532,15 +554,7 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 					</div>
 				)}
 			</div>
-			{/* Bottom fade */}
-			<div
-				tw="absolute bottom-0 left-0 right-0"
-				style={{
-					height: '60px',
-					background:
-						'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
-				}}
-			/>
+			<div tw="absolute bottom-0 left-0 right-0" style={GRADIENT} />
 		</div>
 	)
 }
@@ -558,25 +572,28 @@ export function TokenBadges({
 		if (token.length <= maxLen) return token
 		return `${token.slice(0, maxLen - 1)}…`
 	}
-
 	const displayTokens = tokens.slice(0, maxTokens)
 	const remaining = tokens.length - maxTokens
 
 	return (
 		<>
-			{displayTokens.map((token) => (
+			{displayTokens.map((token, idx) => (
 				<span
 					key={token}
-					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
-					style={{ fontFamily: 'Pilat', marginRight: '12px' }}
+					tw="flex bg-gray-100 text-gray-700 text-[23px]"
+					style={{
+						...PILL_STYLE,
+						fontFamily: 'Pilat',
+						marginLeft: idx > 0 ? '8px' : '0',
+					}}
 				>
 					{truncateToken(token)}
 				</span>
 			))}
 			{remaining > 0 && (
 				<span
-					tw="flex px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
-					style={{ fontFamily: 'Pilat' }}
+					tw="flex bg-gray-100 text-gray-500 text-[23px]"
+					style={{ ...PILL_STYLE, fontFamily: 'Pilat', marginLeft: '8px' }}
 				>
 					+{remaining}
 				</span>
@@ -588,7 +605,7 @@ export function TokenBadges({
 // ============ Method Badges Helper ============
 
 export function MethodBadges({ methods }: { methods: string[] }) {
-	const maxCharsPerRow = 40
+	const maxCharsPerRow = 48
 	const row1: string[] = []
 	const row2: string[] = []
 	let row1Chars = 0
@@ -617,8 +634,8 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 	const renderBadge = (m: string, idx: number) => (
 		<span
 			key={idx}
-			tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
-			style={{ fontFamily: 'Pilat' }}
+			tw="bg-gray-100 text-gray-700 text-[23px]"
+			style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 		>
 			{truncateMethod(m)}
 		</span>
@@ -626,38 +643,18 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 
 	return (
 		<div tw="flex flex-col items-end" style={{ gap: '8px' }}>
-			<div tw="flex justify-end" style={{ gap: '10px' }}>
-				{row1[0] && renderBadge(row1[0], 0)}
-				{row1[1] && renderBadge(row1[1], 1)}
-				{row1[2] && renderBadge(row1[2], 2)}
-				{row1[3] && renderBadge(row1[3], 3)}
-			</div>
-			{row2.length > 0 && (
-				<div tw="flex justify-end" style={{ gap: '10px' }}>
-					{row2[0] && renderBadge(row2[0], 10)}
-					{row2[1] && renderBadge(row2[1], 11)}
-					{row2[2] && renderBadge(row2[2], 12)}
-					{row2[3] && renderBadge(row2[3], 13)}
-					{remaining > 0 && (
-						<span
-							tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
-							style={{ fontFamily: 'Pilat' }}
-						>
-							+{remaining}
-						</span>
-					)}
-				</div>
-			)}
-			{row2.length === 0 && remaining > 0 && (
-				<div tw="flex justify-end" style={{ gap: '10px' }}>
+			<div tw="flex justify-end flex-wrap" style={{ gap: '8px' }}>
+				{row1.map((m, i) => renderBadge(m, i))}
+				{row2.map((m, i) => renderBadge(m, i + 10))}
+				{remaining > 0 && (
 					<span
-						tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
-						style={{ fontFamily: 'Pilat' }}
+						tw="bg-gray-100 text-gray-500 text-[23px]"
+						style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 					>
 						+{remaining}
 					</span>
-				</div>
-			)}
+				)}
+			</div>
 		</div>
 	)
 }
@@ -709,24 +706,7 @@ export function BlockCard({ data }: { data: BlockData }) {
 		Number.parseInt(data.txCount.replace(/,/g, ''), 10) || 0
 
 	return (
-		<div
-			tw="flex flex-col bg-white relative"
-			style={{
-				width: '700px',
-				maxWidth: '700px',
-				maxHeight: '583px',
-				overflow: 'hidden',
-				fontFamily: 'Pilat',
-				fontWeight: 400,
-				fontFeatureSettings: '"tnum"',
-				boxShadow:
-					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
-				borderTopRightRadius: '24px',
-				borderTopLeftRadius: '0',
-				borderBottomLeftRadius: '0',
-				borderBottomRightRadius: '0',
-			}}
-		>
+		<div tw="flex flex-col bg-white relative" style={CARD_BASE}>
 			{/* Header */}
 			<div
 				tw="flex w-full pr-10 pt-10 pb-8 items-center justify-between"
@@ -746,11 +726,7 @@ export function BlockCard({ data }: { data: BlockData }) {
 				</span>
 			</div>
 
-			{/* Divider */}
-			<div
-				tw="flex w-full"
-				style={{ height: '1px', backgroundColor: '#d1d5db' }}
-			/>
+			<div tw="flex w-full" style={DIVIDER} />
 
 			{/* Details */}
 			<div
@@ -770,7 +746,6 @@ export function BlockCard({ data }: { data: BlockData }) {
 						{data.timestamp}
 					</span>
 				</div>
-
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">UNIX</span>
 					<span tw="text-gray-900" style={{ opacity: 0.5 }}>
@@ -778,7 +753,6 @@ export function BlockCard({ data }: { data: BlockData }) {
 					</span>
 				</div>
 
-				{/* Transactions with histogram */}
 				<div tw="flex w-full justify-between items-end">
 					<span tw="text-gray-500">Transactions</span>
 					<div tw="flex items-end" style={{ gap: '8px' }}>
@@ -798,7 +772,6 @@ export function BlockCard({ data }: { data: BlockData }) {
 					</div>
 				</div>
 
-				{/* Gas Usage with progress bar */}
 				<div tw="flex w-full justify-between items-center">
 					<span tw="text-gray-500">Gas Usage</span>
 					<div tw="flex items-center" style={{ gap: '8px' }}>
@@ -817,21 +790,12 @@ export function BlockCard({ data }: { data: BlockData }) {
 					<span tw="text-gray-500">Miner</span>
 					<span tw="text-blue-500">{truncateHash(data.miner, 6)}</span>
 				</div>
-
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Parent</span>
 					<span tw="text-blue-500">{truncateHash(data.parentHash, 6)}</span>
 				</div>
 			</div>
-			{/* Bottom fade */}
-			<div
-				tw="absolute bottom-0 left-0 right-0"
-				style={{
-					height: '60px',
-					background:
-						'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
-				}}
-			/>
+			<div tw="absolute bottom-0 left-0 right-0" style={GRADIENT} />
 		</div>
 	)
 }
@@ -841,34 +805,18 @@ export function BlockCard({ data }: { data: BlockData }) {
 export function AddressCard({ data }: { data: AddressData }) {
 	const addrLine1 = data.address.slice(0, 21)
 	const addrLine2 = data.address.slice(21)
-	const holdingsGrey = isEmptyHoldings(data.holdings)
+	const holdingsGrey = isEmptyValue(data.holdings)
 	const holdingsDisplay = holdingsGrey ? '$0.00' : data.holdings
 
 	return (
-		<div
-			tw="flex flex-col bg-white relative"
-			style={{
-				width: '700px',
-				maxHeight: '583px',
-				overflow: 'hidden',
-				fontFamily: 'Pilat',
-				fontWeight: 400,
-				fontFeatureSettings: '"tnum"',
-				boxShadow:
-					'0 4px 6px -1px rgba(0,0,0,0.05), 0 10px 15px -3px rgba(0,0,0,0.05), 0 25px 50px -12px rgba(0,0,0,0.08)',
-				borderTopRightRadius: '24px',
-				borderTopLeftRadius: '0',
-				borderBottomLeftRadius: '0',
-				borderBottomRightRadius: '0',
-			}}
-		>
-			{/* Address header */}
+		<div tw="flex flex-col bg-white relative" style={CARD_BASE}>
+			{/* Header */}
 			{data.accountType === 'contract' && data.contractName ? (
 				<div
 					tw="flex flex-col w-full pr-10 pt-10 pb-8"
 					style={{ paddingLeft: '56px' }}
 				>
-					<div tw="flex w-full justify-between items-start">
+					<div tw="flex w-full justify-between items-center">
 						<span
 							tw="text-gray-500 text-[29px]"
 							style={{ fontFamily: 'Pilat', fontWeight: 400 }}
@@ -921,11 +869,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 				</div>
 			)}
 
-			{/* Divider */}
-			<div
-				tw="flex w-full"
-				style={{ height: '1px', backgroundColor: '#d1d5db' }}
-			/>
+			<div tw="flex w-full" style={DIVIDER} />
 
 			{/* Details */}
 			<div
@@ -939,9 +883,12 @@ export function AddressCard({ data }: { data: AddressData }) {
 					paddingLeft: '56px',
 				}}
 			>
-				{/* Holdings - show for non-contracts only */}
+				{/* Holdings */}
 				{data.accountType !== 'contract' && (
-					<div tw="flex w-full justify-between">
+					<div
+						tw="flex w-full justify-between items-center"
+						style={{ paddingTop: '6px', paddingBottom: '6px' }}
+					>
 						<span tw="text-gray-500">Holdings</span>
 						<span
 							style={holdingsGrey ? { color: '#9ca3af' } : undefined}
@@ -952,10 +899,16 @@ export function AddressCard({ data }: { data: AddressData }) {
 					</div>
 				)}
 
-				{/* Tokens Held - show for non-contracts only */}
+				{/* Assets */}
 				{data.tokensHeld.length > 0 && data.accountType !== 'contract' && (
-					<div tw="flex justify-end py-1" style={{ width: '100%' }}>
-						<TokenBadges tokens={data.tokensHeld} maxTokens={4} />
+					<div
+						tw="flex w-full justify-between items-center"
+						style={{ paddingTop: '2px', paddingBottom: '2px' }}
+					>
+						<span tw="text-gray-500">Assets</span>
+						<div tw="flex flex-wrap justify-end" style={{ gap: '0px' }}>
+							<TokenBadges tokens={data.tokensHeld} maxTokens={4} />
+						</div>
 					</div>
 				)}
 
@@ -994,7 +947,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 					<span tw="text-gray-900">{data.created}</span>
 				</div>
 
-				{/* Deployer - show for contracts only */}
+				{/* Deployer */}
 				{data.accountType === 'contract' && data.deployer && (
 					<div tw="flex w-full justify-between">
 						<span tw="text-gray-500">Deployer</span>
@@ -1002,7 +955,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 					</div>
 				)}
 
-				{/* Contract Methods */}
+				{/* Methods */}
 				{data.accountType === 'contract' &&
 					data.methods &&
 					data.methods.length > 0 && (
@@ -1020,16 +973,16 @@ export function AddressCard({ data }: { data: AddressData }) {
 								{data.methods.slice(0, 6).map((m) => (
 									<span
 										key={m}
-										tw="px-4 py-2 bg-gray-100 rounded text-gray-700 text-[23px]"
-										style={{ fontFamily: 'Pilat' }}
+										tw="bg-gray-100 text-gray-700 text-[23px]"
+										style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 									>
 										{m.length > 14 ? `${m.slice(0, 13)}…` : m}
 									</span>
 								))}
 								{data.methods.length > 6 && (
 									<span
-										tw="px-4 py-2 bg-gray-100 rounded text-gray-500 text-[23px]"
-										style={{ fontFamily: 'Pilat' }}
+										tw="bg-gray-100 text-gray-500 text-[23px]"
+										style={{ ...PILL_STYLE, fontFamily: 'Pilat' }}
 									>
 										+{data.methods.length - 6}
 									</span>
@@ -1038,15 +991,7 @@ export function AddressCard({ data }: { data: AddressData }) {
 						</div>
 					)}
 			</div>
-			{/* Bottom fade */}
-			<div
-				tw="absolute bottom-0 left-0 right-0"
-				style={{
-					height: '60px',
-					background:
-						'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
-				}}
-			/>
+			<div tw="absolute bottom-0 left-0 right-0" style={GRADIENT} />
 		</div>
 	)
 }
