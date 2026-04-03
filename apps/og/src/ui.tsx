@@ -667,9 +667,9 @@ export function MethodBadges({ methods }: { methods: string[] }) {
 function buildHistogramSvg(counts: number[], currentCount: number): string {
 	const allCounts = [...counts, currentCount]
 	const maxCount = Math.max(...allCounts, 1)
-	const barW = 12
-	const gap = 3
-	const maxH = 40
+	const barW = 8
+	const gap = 2
+	const maxH = 24
 	const totalBars = allCounts.length
 	const svgW = totalBars * barW + (totalBars - 1) * gap
 	let rects = ''
@@ -781,27 +781,18 @@ export function BlockCard({ data }: { data: BlockData }) {
 				{/* Transactions with histogram */}
 				<div tw="flex w-full justify-between items-end">
 					<span tw="text-gray-500">Transactions</span>
-					<div tw="flex items-end" style={{ gap: '12px' }}>
+					<div tw="flex items-end" style={{ gap: '8px' }}>
 						{data.prevBlockTxCounts &&
 							data.prevBlockTxCounts.length > 0 &&
 							data.prevBlockTxCounts.some((c) => c >= 0) && (
-								<>
-									<img
-										src={buildHistogramSvg(
-											data.prevBlockTxCounts,
-											currentTxCount,
-										)}
-										alt=""
-										style={{ height: '40px' }}
-									/>
-									<div
-										style={{
-											width: '1px',
-											height: '28px',
-											backgroundColor: '#e5e7eb',
-										}}
-									/>
-								</>
+								<img
+									src={buildHistogramSvg(
+										data.prevBlockTxCounts,
+										currentTxCount,
+									)}
+									alt=""
+									style={{ height: '24px' }}
+								/>
 							)}
 						<span tw="text-gray-900">{data.txCount}</span>
 					</div>
@@ -810,22 +801,13 @@ export function BlockCard({ data }: { data: BlockData }) {
 				{/* Gas Usage with progress bar */}
 				<div tw="flex w-full justify-between items-center">
 					<span tw="text-gray-500">Gas Usage</span>
-					<div tw="flex items-center" style={{ gap: '12px' }}>
+					<div tw="flex items-center" style={{ gap: '8px' }}>
 						{gasPercent !== undefined && (
-							<>
-								<img
-									src={buildGasBarSvg(gasPercent)}
-									alt=""
-									style={{ height: '24px' }}
-								/>
-								<div
-									style={{
-										width: '1px',
-										height: '24px',
-										backgroundColor: '#e5e7eb',
-									}}
-								/>
-							</>
+							<img
+								src={buildGasBarSvg(gasPercent)}
+								alt=""
+								style={{ height: '24px' }}
+							/>
 						)}
 						<span tw="text-gray-900">{data.gasUsage}</span>
 					</div>
