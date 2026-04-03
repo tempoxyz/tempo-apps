@@ -418,17 +418,74 @@ export namespace LineItems {
 				}),
 			)
 
-		// Calculate totals grouped by currency
-		const totals = new Map<string, LineItem.LineItem['price']>()
-		for (const item of [...items.main, ...items.feeTotals]) {
+		// Calculate totals grouped by currency.
+		// Use net-outflow per address per token to avoid double-counting
+		// intermediate routing hops (e.g. router → pool in a DEX swap).
+		// The address with the highest net outflow is the actual origin of funds.
+		const netFlows = new Map<
+			string,
+			Map<string, { outflow: bigint; inflow: bigint }>
+		>()
+		for (const item of items.main) {
 			if (!('price' in item)) continue
+			const { price, event } = item
+			if (!price) continue
+			if (!event || !('args' in event)) continue
+			const args = event.args as { from?: string; to?: string }
+			if (!args.from || !args.to) continue
 
+			const { currency } = price
+			// Use absolute amount (ignore isCredit sign) for net-flow calc
+			const absAmount = price.amount < 0n ? -price.amount : price.amount
+
+			let currencyFlows = netFlows.get(currency)
+			if (!currencyFlows) {
+				currencyFlows = new Map()
+				netFlows.set(currency, currencyFlows)
+			}
+
+			const fromKey = args.from.toLowerCase()
+			const fromFlow = currencyFlows.get(fromKey) ?? {
+				outflow: 0n,
+				inflow: 0n,
+			}
+			fromFlow.outflow += absAmount
+			currencyFlows.set(fromKey, fromFlow)
+
+			const toKey = args.to.toLowerCase()
+			const toFlow = currencyFlows.get(toKey) ?? {
+				outflow: 0n,
+				inflow: 0n,
+			}
+			toFlow.inflow += absAmount
+			currencyFlows.set(toKey, toFlow)
+		}
+
+		const totals = new Map<string, LineItem.LineItem['price']>()
+		for (const [currency, flows] of netFlows) {
+			// Find max net outflow across all addresses for this currency
+			let maxNetOutflow = 0n
+			for (const [_, flow] of flows) {
+				const net = flow.outflow - flow.inflow
+				if (net > maxNetOutflow) maxNetOutflow = net
+			}
+			if (maxNetOutflow > 0n) {
+				// Find a main line item with this currency for metadata
+				const ref = items.main.find(
+					(i) => 'price' in i && i.price?.currency === currency,
+				)
+				if (ref && 'price' in ref && ref.price)
+					totals.set(currency, { ...ref.price, amount: maxNetOutflow })
+			}
+		}
+		// Add fee totals
+		for (const item of items.feeTotals) {
+			if (!('price' in item)) continue
 			const { price } = item
 			if (!price) continue
-
 			const existing = totals.get(price.currency)
 			if (existing) existing.amount += price.amount
-			else totals.set(price.currency, price)
+			else totals.set(price.currency, { ...price })
 		}
 
 		// Add totals to line items
