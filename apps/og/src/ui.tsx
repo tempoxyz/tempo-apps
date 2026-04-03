@@ -457,8 +457,11 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 					style={{ width: '68px', height: '68px' }}
 				/>
 				<div tw="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
-					<span tw="text-5xl font-medium text-gray-900">
-						{truncateText(data.name, 18)}
+					<span
+						tw="text-[42px] text-gray-900"
+						style={{ fontWeight: 400, lineHeight: '1.1' }}
+					>
+						{truncateText(data.name, 28)}
 					</span>
 				</div>
 				<div tw="flex flex-col shrink-0 items-end" style={{ gap: '8px' }}>
@@ -507,7 +510,12 @@ export function TokenCard({ data, icon }: { data: TokenData; icon: string }) {
 				</div>
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Holders</span>
-					<span tw="text-gray-900">{truncateText(data.holders, 16)}</span>
+					<span
+						tw={data.holders === '—' ? '' : 'text-gray-900'}
+						style={data.holders === '—' ? { color: '#9ca3af' } : undefined}
+					>
+						{data.holders === '—' ? '0' : truncateText(data.holders, 16)}
+					</span>
 				</div>
 				<div tw="flex w-full justify-between">
 					<span tw="text-gray-500">Supply</span>
