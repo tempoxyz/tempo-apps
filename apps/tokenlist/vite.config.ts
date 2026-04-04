@@ -39,6 +39,9 @@ function copyAssetsPlugin(): Plugin {
 	return {
 		name: 'copy-assets',
 		apply: 'build',
+		applyToEnvironment(environment) {
+			return environment.name === 'tokenlist'
+		},
 		enforce: 'post',
 		async closeBundle() {
 			const cwd = process.cwd()
