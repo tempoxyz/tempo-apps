@@ -99,19 +99,18 @@ beforeAll(async () => {
 		transport: http(env.TEMPO_RPC_URL),
 	})
 
-	await Promise.all(
-		[1n, 2n, 3n].map((id) =>
-			Actions.amm.mintSync(client, {
-				account: sponsorAccount,
-				feeToken: '0x20c0000000000000000000000000000000000000',
-				nonceKey: 'expiring',
-				userTokenAddress: id,
-				validatorTokenAddress: '0x20c0000000000000000000000000000000000000',
-				validatorTokenAmount: parseUnits('1000', 6),
-				to: sponsorAccount.address,
-			}),
-		),
-	)
+	// Use sequential mints to avoid same-account transaction races in CI.
+	for (const id of [1n, 2n, 3n]) {
+		await Actions.amm.mintSync(client, {
+			account: sponsorAccount,
+			feeToken: '0x20c0000000000000000000000000000000000000',
+			nonceKey: 'expiring',
+			userTokenAddress: id,
+			validatorTokenAddress: '0x20c0000000000000000000000000000000000000',
+			validatorTokenAmount: parseUnits('1000', 6),
+			to: sponsorAccount.address,
+		})
+	}
 })
 
 describe('fee-payer integration', () => {
