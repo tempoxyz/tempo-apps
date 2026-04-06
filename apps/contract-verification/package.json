@@ -25,7 +25,7 @@
 		"db:push": "CLOUDFLARE_D1_ENVIRONMENT='remote' drizzle-kit push --config='drizzle.config.ts'"
 	},
 	"dependencies": {
-		"@cloudflare/containers": "^0.1.1",
+		"@cloudflare/containers": "^0.2.3",
 		"@hono/zod-validator": "catalog:",
 		"@logtape/config": "catalog:",
 		"@logtape/drizzle-orm": "catalog:",

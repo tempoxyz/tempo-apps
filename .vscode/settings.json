@@ -57,7 +57,7 @@
 	"files.associations": {
 		"*.sql": "sql",
 		"*.svg": "html",
-		".env.*": "dotenv",
+		".env.*": "properties",
 		"biome.json": "jsonc",
 		"*.css": "tailwindcss"
 	},
