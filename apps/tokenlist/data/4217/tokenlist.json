@@ -1,195 +1,213 @@
 {
-	"$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
-	"name": "Tempo Mainnet (Presto)",
-	"logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/4217/icon.svg",
-	"timestamp": "2026-04-02T18:36:11Z",
-	"version": {
-		"major": 1,
-		"minor": 2,
-		"patch": 12
-	},
-	"tokens": [
-		{
-			"name": "PathUSD",
-			"symbol": "pathUSD",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c0000000000000000000000000000000000000",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000000000000000000000.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "PathUSD",
-				"coingeckoId": "pathusd"
-			}
-		},
-		{
-			"name": "Bridged USDC (Stargate)",
-			"symbol": "USDC.e",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c000000000000000000000b9537d11c60e8b50",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c000000000000000000000b9537d11c60e8b50.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "USDC.e",
-				"coingeckoId": "usd-coin",
-				"bridgeInfo": {
-					"sourceChainId": 1,
-					"sourceAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
-				}
-			}
-		},
-		{
-			"name": "Bridged EURC (Stargate)",
-			"symbol": "EURC.e",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c0000000000000000000001621e21f71cf12fb",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000001621e21f71cf12fb.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "EURC",
-				"coingeckoId": "euro-coin",
-				"bridgeInfo": {
-					"sourceChainId": 1,
-					"sourceAddress": "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c"
-				}
-			}
-		},
-		{
-			"name": "USDT0",
-			"symbol": "USDT0",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c00000000000000000000014f22ca97301eb73",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c00000000000000000000014f22ca97301eb73.svg",
-			"extensions": {
-				"chain": "tempo",
-				"coingeckoId": "usdt0",
-				"bridgeInfo": {
-					"sourceChainId": 1,
-					"sourceAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
-				}
-			}
-		},
-		{
-			"name": "Frax USD",
-			"symbol": "frxUSD",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c0000000000000000000003554d28269e0f3c2",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000003554d28269e0f3c2.svg",
-			"extensions": {
-				"chain": "tempo",
-				"coingeckoId": "frax-usd",
-				"bridgeInfo": {
-					"sourceChainId": 1,
-					"sourceAddress": "0xcacd6fd266af91b8aed52accc382b4e165586e29"
-				}
-			}
-		},
-		{
-			"name": "Cap USD",
-			"symbol": "cUSD",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c0000000000000000000000520792dcccccccc",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000000520792dcccccccc.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "cUSD",
-				"coingeckoId": "cap-usd",
-				"bridgeInfo": {
-					"sourceChainId": 1,
-					"sourceAddress": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
-				}
-			},
-			"dateAdded": "2026-03-11T04:44:38Z"
-		},
-		{
-			"name": "Staked Cap USD",
-			"symbol": "stcUSD",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c0000000000000000000008ee4fcff88888888",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000008ee4fcff88888888.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "stcUSD",
-				"coingeckoId": "staked-cap-usd",
-				"bridgeInfo": {
-					"sourceChainId": 1,
-					"sourceAddress": "0x88887be419578051ff9f4eb6c858a951921d8888"
-				}
-			},
-			"dateAdded": "2026-03-16T02:56:16Z"
-		},
-		{
-			"name": "Generic USD",
-			"symbol": "GUSD",
-			"address": "0x20c0000000000000000000005c0bac7cef389a11",
-			"decimals": 6,
-			"chainId": 4217,
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000005c0bac7cef389a11.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "GUSD",
-				"coingeckoId": "generic-usd",
-				"bridgeInfo": {
-					"sourceChainId": 1,
-					"sourceAddress": "0xece811d35f79c4868a2b911e55d9aa0821399edf"
-				}
-			},
-			"dateAdded": "2026-03-21T05:24:26Z"
-		},
-		{
-			"name": "Reservoir Stablecoin",
-			"symbol": "rUSD",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c0000000000000000000007f7ba549dd0251b9",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000007f7ba549dd0251b9.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "rUSD",
-				"coingeckoId": "reservoir-rusd",
-				"bridgeInfo": {
-					"sourceChainId": 1,
-					"sourceAddress": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34"
-				}
-			},
-			"dateAdded": "2026-04-02T18:36:11Z"
-		},
-		{
-			"name": "Wrapped Savings rUSD",
-			"symbol": "wsrUSD",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c000000000000000000000aeed2ec36a54d0e5",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c000000000000000000000aeed2ec36a54d0e5.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "wsrUSD",
-				"bridgeInfo": {
-					"sourceChainId": 1,
-					"sourceAddress": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
-				}
-			},
-			"dateAdded": "2026-04-02T18:36:11Z"
-		},
-		{
-			"name": "AllUnity EUR",
-			"symbol": "EURAU",
-			"decimals": 6,
-			"chainId": 4217,
-			"address": "0x20c0000000000000000000009a4a4b17e0dc6651",
-			"logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000009a4a4b17e0dc6651.svg",
-			"extensions": {
-				"chain": "tempo",
-				"label": "EURAU",
-				"coingeckoId": "allunity-eur"
-			},
-			"dateAdded": "2026-04-02T18:36:11Z"
-		}
-	]
+  "$schema": "https://esm.sh/gh/uniswap/token-lists/src/tokenlist.schema.json",
+  "name": "Tempo Mainnet (Presto)",
+  "logoURI": "https://esm.sh/gh/tempoxyz/tokenlist/data/4217/icon.svg",
+  "timestamp": "2026-04-06T23:13:41Z",
+  "version": {
+    "major": 1,
+    "minor": 2,
+    "patch": 13
+  },
+  "tokens": [
+    {
+      "name": "PathUSD",
+      "symbol": "pathUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000000000000000000000",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000000000000000000000.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "PathUSD",
+        "coingeckoId": "pathusd"
+      }
+    },
+    {
+      "name": "Bridged USDC (Stargate)",
+      "symbol": "USDC.e",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c000000000000000000000b9537d11c60e8b50",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c000000000000000000000b9537d11c60e8b50.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "USDC.e",
+        "coingeckoId": "usd-coin",
+        "bridgeInfo": {
+          "sourceChainId": 1,
+          "sourceAddress": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+        }
+      }
+    },
+    {
+      "name": "Bridged EURC (Stargate)",
+      "symbol": "EURC.e",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000001621e21f71cf12fb",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000001621e21f71cf12fb.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "EURC",
+        "coingeckoId": "euro-coin",
+        "bridgeInfo": {
+          "sourceChainId": 1,
+          "sourceAddress": "0x1abaea1f7c830bd89acc67ec4af516284b1bc33c"
+        }
+      }
+    },
+    {
+      "name": "USDT0",
+      "symbol": "USDT0",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c00000000000000000000014f22ca97301eb73",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c00000000000000000000014f22ca97301eb73.svg",
+      "extensions": {
+        "chain": "tempo",
+        "coingeckoId": "usdt0",
+        "bridgeInfo": {
+          "sourceChainId": 1,
+          "sourceAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
+        }
+      }
+    },
+    {
+      "name": "Frax USD",
+      "symbol": "frxUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000003554d28269e0f3c2",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000003554d28269e0f3c2.svg",
+      "extensions": {
+        "chain": "tempo",
+        "coingeckoId": "frax-usd",
+        "bridgeInfo": {
+          "sourceChainId": 1,
+          "sourceAddress": "0xcacd6fd266af91b8aed52accc382b4e165586e29"
+        }
+      }
+    },
+    {
+      "name": "Cap USD",
+      "symbol": "cUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000000520792dcccccccc",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000000520792dcccccccc.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "cUSD",
+        "coingeckoId": "cap-usd",
+        "bridgeInfo": {
+          "sourceChainId": 1,
+          "sourceAddress": "0xcccc62962d17b8914c62d74ffb843d73b2a3cccc"
+        }
+      },
+      "dateAdded": "2026-03-11T04:44:38Z"
+    },
+    {
+      "name": "Staked Cap USD",
+      "symbol": "stcUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000008ee4fcff88888888",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000008ee4fcff88888888.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "stcUSD",
+        "coingeckoId": "staked-cap-usd",
+        "bridgeInfo": {
+          "sourceChainId": 1,
+          "sourceAddress": "0x88887be419578051ff9f4eb6c858a951921d8888"
+        }
+      },
+      "dateAdded": "2026-03-16T02:56:16Z"
+    },
+    {
+      "name": "Generic USD",
+      "symbol": "GUSD",
+      "address": "0x20c0000000000000000000005c0bac7cef389a11",
+      "decimals": 6,
+      "chainId": 4217,
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000005c0bac7cef389a11.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "GUSD",
+        "coingeckoId": "generic-usd",
+        "bridgeInfo": {
+          "sourceChainId": 1,
+          "sourceAddress": "0xece811d35f79c4868a2b911e55d9aa0821399edf"
+        }
+      },
+      "dateAdded": "2026-03-21T05:24:26Z"
+    },
+    {
+      "name": "Reservoir Stablecoin",
+      "symbol": "rUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000007f7ba549dd0251b9",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000007f7ba549dd0251b9.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "rUSD",
+        "coingeckoId": "reservoir-rusd",
+        "bridgeInfo": {
+          "sourceChainId": 1,
+          "sourceAddress": "0x09d4214c03d01f49544c0448dbe3a27f768f2b34"
+        }
+      },
+      "dateAdded": "2026-04-02T18:36:11Z"
+    },
+    {
+      "name": "Wrapped Savings rUSD",
+      "symbol": "wsrUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c000000000000000000000aeed2ec36a54d0e5",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c000000000000000000000aeed2ec36a54d0e5.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "wsrUSD",
+        "bridgeInfo": {
+          "sourceChainId": 1,
+          "sourceAddress": "0xd3fd63209fa2d55b07a0f6db36c2f43900be3094"
+        }
+      },
+      "dateAdded": "2026-04-02T18:36:11Z"
+    },
+    {
+      "name": "AllUnity EUR",
+      "symbol": "EURAU",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c0000000000000000000009a4a4b17e0dc6651",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c0000000000000000000009a4a4b17e0dc6651.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "EURAU",
+        "coingeckoId": "allunity-eur"
+      },
+      "dateAdded": "2026-04-02T18:36:11Z"
+    },
+    {
+      "name": "Re Protocol reUSD",
+      "symbol": "reUSD",
+      "decimals": 6,
+      "chainId": 4217,
+      "address": "0x20c000000000000000000000383a23bacb546ab9",
+      "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/4217/icons/0x20c000000000000000000000383a23bacb546ab9.svg",
+      "extensions": {
+        "chain": "tempo",
+        "label": "reUSD",
+        "coingeckoId": "re-protocol-reusd",
+        "bridgeInfo": {
+          "sourceChainId": 1,
+          "sourceAddress": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+        }
+      },
+      "dateAdded": "2026-04-06T23:13:41Z"
+    }
+  ]
 }
