@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
 
 env:
+  NODE_ENV: production
   NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
 
 jobs:

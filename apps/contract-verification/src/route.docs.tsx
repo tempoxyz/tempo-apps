@@ -1,6 +1,5 @@
 import { Hono } from 'hono'
 import { html, raw } from 'hono/html'
-import type { ApiReferenceConfigurationWithMultipleSources } from '@scalar/types/api-reference'
 
 import packageJSON from '#package.json' with { type: 'json' }
 
@@ -35,7 +34,7 @@ const getScalarConfig = (baseUrl: string) =>
 				},
 			},
 		],
-	}) satisfies Partial<ApiReferenceConfigurationWithMultipleSources>
+	}) as const
 
 const renderDocs = (props: { baseUrl: string }) => {
 	const scalarConfig = getScalarConfig(props.baseUrl)

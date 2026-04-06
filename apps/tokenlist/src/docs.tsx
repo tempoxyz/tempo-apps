@@ -1,4 +1,3 @@
-import type { createApiReference } from '@scalar/api-reference'
 import { html, raw } from 'hono/html'
 
 const scalarConfig = {
@@ -13,7 +12,7 @@ const scalarConfig = {
 	title: 'Tokenlist API Reference',
 	proxyUrl: 'https://proxy.scalar.com',
 	favicon: 'https://explore.tempo.xyz/favicon.ico',
-} satisfies Parameters<typeof createApiReference>[1]
+} as const
 
 export const Docs = () => {
 	return (

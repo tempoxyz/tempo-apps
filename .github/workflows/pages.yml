@@ -20,7 +20,8 @@ defaults:
     shell: bash
 
 env:
-  ACTIONS_RUNNER_DEBUG: true
+  NODE_ENV: production
+  NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
 
 jobs:
   pages-directory-listing:

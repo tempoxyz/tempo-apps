@@ -11,6 +11,7 @@ concurrency:
 env:
   NODE_ENV: production
   WRANGLER_SEND_METRICS: false
+  NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
 
 jobs:
   check-membership:
@@ -91,6 +92,11 @@ jobs:
       - name: Install dependencies
         if: steps.changes.outputs.relevant == 'true'
         uses: ./.github/actions/install-dependencies
+
+      - name: Generate Worker types
+        if: steps.changes.outputs.relevant == 'true'
+        run: pnpm gen:types
+        working-directory: apps/${{ matrix.app }}
 
       - name: Build
         if: steps.changes.outputs.relevant == 'true'

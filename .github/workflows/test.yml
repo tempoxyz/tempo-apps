@@ -18,7 +18,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_OPTIONS: "--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning"
+  NODE_ENV: production
+  NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
 
 jobs:
   test-fee-payer:
@@ -33,6 +34,10 @@ jobs:
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
+
+      - name: Generate Worker types
+        run: pnpm gen:types
+        working-directory: apps/fee-payer
 
       - name: Run tests
         run: pnpm test
@@ -52,6 +57,10 @@ jobs:
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
+
+      - name: Generate Worker types
+        run: pnpm gen:types
+        working-directory: apps/contract-verification
 
       - name: Run tests
         run: pnpm test

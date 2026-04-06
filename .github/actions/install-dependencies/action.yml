@@ -17,4 +17,5 @@ runs:
 
     - name: Install dependencies
       shell: bash
-      run: pnpm install --frozen-lockfile
+      # Keep install-time hooks out of CI and run any required follow-up steps explicitly.
+      run: pnpm install --frozen-lockfile --ignore-scripts

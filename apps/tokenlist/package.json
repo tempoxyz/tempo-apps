@@ -34,7 +34,6 @@
 		"@biomejs/biome": "catalog:",
 		"@cloudflare/vite-plugin": "catalog:",
 		"@cloudflare/workers-types": "catalog:",
-		"@scalar/api-reference": "catalog:",
 		"@total-typescript/ts-reset": "catalog:",
 		"@types/node": "catalog:",
 		"typescript": "catalog:",
