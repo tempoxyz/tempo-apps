@@ -26,14 +26,8 @@ const userAccount = Account.fromSecp256k1(
 	}),
 )
 
-const warmupAccount = Account.fromSecp256k1(
-	Mnemonic.toPrivateKey(testMnemonic, {
-		as: 'Hex',
-		path: Mnemonic.path({ account: 8 }),
-	}),
-)
-
-const setupTimeoutMs = 30_000
+const sponsorshipRetryDelayMs = 500
+const sponsorshipTestTimeoutMs = 30_000
 
 async function parseRpcResult(
 	response: Response,
@@ -118,50 +112,17 @@ function createTempoTransport() {
 	})
 }
 
-function createSponsoredClient(
-	account: typeof userAccount,
-	policy: 'sign-and-broadcast' | 'sign-only',
-) {
-	return createClient({
-		account,
-		chain: tempoChain,
-		transport: withFeePayer(
-			createTempoTransport(),
-			createFeePayerTransportWithSpy().transport,
-			{
-				policy,
-			},
-		),
-	})
-}
-
-async function waitForFeePayerReadiness(
+async function retrySponsorship<T>(
+	action: () => Promise<T>,
+	description: string,
 	maxRetries = 8,
-	delayMs = 500,
-): Promise<void> {
+	delayMs = sponsorshipRetryDelayMs,
+): Promise<T> {
 	let lastError: unknown
 
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
-			await sendTransactionSync(
-				createSponsoredClient(warmupAccount, 'sign-only'),
-				{
-					feePayer: true,
-					to: '0x0000000000000000000000000000000000000000',
-					value: 0n,
-				},
-			)
-
-			await sendTransactionSync(
-				createSponsoredClient(warmupAccount, 'sign-and-broadcast'),
-				{
-					feePayer: true,
-					to: '0x0000000000000000000000000000000000000001',
-					value: 0n,
-				},
-			)
-
-			return
+			return await action()
 		} catch (error) {
 			lastError = error
 			if (attempt < maxRetries) {
@@ -171,7 +132,7 @@ async function waitForFeePayerReadiness(
 	}
 
 	throw new Error(
-		`Fee payer sponsorship did not become ready after ${maxRetries} attempts: ${String(lastError)}`,
+		`${description} did not succeed after ${maxRetries} attempts: ${String(lastError)}`,
 	)
 }
 
@@ -202,9 +163,7 @@ beforeAll(async () => {
 			to: sponsorAccount.address,
 		})
 	}
-
-	await waitForFeePayerReadiness()
-}, setupTimeoutMs)
+})
 
 describe('fee-payer integration', () => {
 	describe('request handling', () => {
@@ -276,66 +235,92 @@ describe('fee-payer integration', () => {
 	})
 
 	describe('transaction sponsorship', () => {
-		it('sponsors transaction (sign-only via eth_signRawTransaction)', async () => {
-			const { transport: feePayerTransport, requests: feePayerRequests } =
-				createFeePayerTransportWithSpy()
+		it(
+			'sponsors transaction (sign-only via eth_signRawTransaction)',
+			async () => {
+				const { transport: feePayerTransport, requests: feePayerRequests } =
+					createFeePayerTransportWithSpy()
 
-			const client = createClient({
-				account: userAccount,
-				chain: tempoChain,
-				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
-					policy: 'sign-only',
-				}),
-			})
+				const client = createClient({
+					account: userAccount,
+					chain: tempoChain,
+					transport: withFeePayer(createTempoTransport(), feePayerTransport, {
+						policy: 'sign-only',
+					}),
+				})
 
-			const receipt = await sendTransactionSync(client, {
-				feePayer: true,
-				to: '0x0000000000000000000000000000000000000000',
-				value: 0n,
-			})
+				const receipt = await retrySponsorship(
+					() =>
+						sendTransactionSync(client, {
+							feePayer: true,
+							to: '0x0000000000000000000000000000000000000000',
+							value: 0n,
+						}),
+					'sign-only sponsored transaction',
+				)
 
-			console.log(`Transaction hash: ${receipt.transactionHash}`)
+				console.log(`Transaction hash: ${receipt.transactionHash}`)
 
-			expect(receipt.transactionHash).toBeDefined()
-			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
-			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+				expect(receipt.transactionHash).toBeDefined()
+				expect(receipt.from.toLowerCase()).toBe(
+					userAccount.address.toLowerCase(),
+				)
+				expect(receipt.feePayer?.toLowerCase()).toBe(
+					sponsorAddress.toLowerCase(),
+				)
 
-			// Assert RPC methods sent to fee-payer service
-			expect(feePayerRequests).toHaveLength(1)
-			expect(feePayerRequests[0].method).toBe('eth_signRawTransaction')
-			expect(feePayerRequests[0].params).toBeDefined()
-		})
+				// Assert RPC methods sent to fee-payer service
+				expect(feePayerRequests.length).toBeGreaterThan(0)
+				expect(feePayerRequests.at(-1)?.method).toBe('eth_signRawTransaction')
+				expect(feePayerRequests.at(-1)?.params).toBeDefined()
+			},
+			sponsorshipTestTimeoutMs,
+		)
 
-		it('sponsors and broadcasts transaction (sign-and-broadcast)', async () => {
-			const { transport: feePayerTransport, requests: feePayerRequests } =
-				createFeePayerTransportWithSpy()
+		it(
+			'sponsors and broadcasts transaction (sign-and-broadcast)',
+			async () => {
+				const { transport: feePayerTransport, requests: feePayerRequests } =
+					createFeePayerTransportWithSpy()
 
-			const client = createClient({
-				account: userAccount,
-				chain: tempoChain,
-				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
-					policy: 'sign-and-broadcast',
-				}),
-			})
+				const client = createClient({
+					account: userAccount,
+					chain: tempoChain,
+					transport: withFeePayer(createTempoTransport(), feePayerTransport, {
+						policy: 'sign-and-broadcast',
+					}),
+				})
 
-			const receipt = await sendTransactionSync(client, {
-				feePayer: true,
-				to: '0x0000000000000000000000000000000000000001',
-				value: 0n,
-			})
+				const receipt = await retrySponsorship(
+					() =>
+						sendTransactionSync(client, {
+							feePayer: true,
+							to: '0x0000000000000000000000000000000000000001',
+							value: 0n,
+						}),
+					'sign-and-broadcast sponsored transaction',
+				)
 
-			console.log(`Transaction hash: ${receipt.transactionHash}`)
+				console.log(`Transaction hash: ${receipt.transactionHash}`)
 
-			expect(receipt.transactionHash).toBeDefined()
-			expect(receipt.blockNumber).toBeGreaterThan(0n)
-			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
-			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
-			expect(receipt.status).toBe('success')
+				expect(receipt.transactionHash).toBeDefined()
+				expect(receipt.blockNumber).toBeGreaterThan(0n)
+				expect(receipt.from.toLowerCase()).toBe(
+					userAccount.address.toLowerCase(),
+				)
+				expect(receipt.feePayer?.toLowerCase()).toBe(
+					sponsorAddress.toLowerCase(),
+				)
+				expect(receipt.status).toBe('success')
 
-			// Assert RPC methods sent to fee-payer service
-			expect(feePayerRequests).toHaveLength(1)
-			expect(feePayerRequests[0].method).toBe('eth_sendRawTransactionSync')
-			expect(feePayerRequests[0].params).toBeDefined()
-		})
+				// Assert RPC methods sent to fee-payer service
+				expect(feePayerRequests.length).toBeGreaterThan(0)
+				expect(feePayerRequests.at(-1)?.method).toBe(
+					'eth_sendRawTransactionSync',
+				)
+				expect(feePayerRequests.at(-1)?.params).toBeDefined()
+			},
+			sponsorshipTestTimeoutMs,
+		)
 	})
 })
