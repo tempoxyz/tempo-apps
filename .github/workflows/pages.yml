@@ -28,18 +28,18 @@ jobs:
     runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
     steps:
       - name: "Checkout"
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           submodules: "recursive"
           fetch-depth: 0
 
       - name: "Generate Directory Listings"
-        uses: jayanta525/github-pages-directory-listing@main
+        uses: jayanta525/github-pages-directory-listing@624ac8c4e56893256d3772f61a88e3b14d54314e
         with:
           FOLDER: apps/tokenlist/data #directory to generate index
 
       - name: "Upload Artifact"
-        uses: actions/upload-pages-artifact@main
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b
         with:
           path: "apps/tokenlist/data" # upload generated folder
 
@@ -59,4 +59,4 @@ jobs:
     steps:
       - name: "Deploy Pages"
         id: deployment
-        uses: actions/deploy-pages@main
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128

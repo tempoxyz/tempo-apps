@@ -29,7 +29,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           submodules: "recursive"
 
@@ -39,7 +39,7 @@ jobs:
       - name: Restore baseline from cache
         if: github.event_name == 'pull_request'
         id: cache-restore
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@668228422ae6a00e4ad889ee87cd7109ec5666a7
         with:
           path: apps/explorer/bundle-stats.json
           key: bundle-stats-explorer-main-latest
@@ -67,7 +67,7 @@ jobs:
 
       - name: Save bundle stats to cache (main branch)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7
         with:
           path: apps/explorer/bundle-stats.json
           key: bundle-stats-explorer-main-${{ github.sha }}
@@ -81,7 +81,7 @@ jobs:
 
       - name: Save bundle stats with stable key (main branch)
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@668228422ae6a00e4ad889ee87cd7109ec5666a7
         with:
           path: apps/explorer/bundle-stats.json
           key: bundle-stats-explorer-main-latest
@@ -127,7 +127,7 @@ jobs:
           edit-mode: replace
 
       - name: Upload Sonda report artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@c6a366c94c3e0affe28c06c8df20a878f24da3cf
         with:
           name: sonda-bundle-report-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || format('main-{0}', github.sha) }}
           path: apps/explorer/.sonda/

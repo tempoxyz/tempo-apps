@@ -72,7 +72,7 @@ jobs:
       CLOUDFLARE_ENV: ${{ matrix.env || '' }}
     steps:
       - name: Clone repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           submodules: "recursive"
           fetch-depth: 0
@@ -100,7 +100,7 @@ jobs:
       - name: Upload Worker Version
         if: steps.changes.outputs.relevant == 'true'
         id: deploy
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -143,7 +143,7 @@ jobs:
 
       - name: Upload Deployment Info
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f
         with:
           name: deployment-${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}
           path: deployment-info/${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }}.json
@@ -159,10 +159,10 @@ jobs:
       contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Download All Deployment Artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           pattern: deployment-*
           path: deployments

@@ -29,7 +29,7 @@ jobs:
         env: ${{ fromJson(inputs.environments) }}
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           submodules: "recursive"
           fetch-depth: 0
@@ -66,7 +66,7 @@ jobs:
 
       - name: Deploy Workers
         if: steps.changes.outputs.relevant == 'true'
-        uses: cloudflare/wrangler-action@v3
+        uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65
         env:
           NODE_ENV: production
           CLOUDFLARE_ENV: ${{ matrix.env || '' }}
