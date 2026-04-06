@@ -15,7 +15,7 @@ async function getCurrentTempoTestnetTag(): Promise<string> {
 
 // ast-grep-ignore-start
 async function waitForTempo(maxRetries = 10, delayMs = 500): Promise<void> {
-	const url = `http://localhost:${port}/1`
+	const url = `http://127.0.0.1:${port}/1`
 	for (let i = 0; i < maxRetries; i++) {
 		try {
 			const response = await fetch(url, {

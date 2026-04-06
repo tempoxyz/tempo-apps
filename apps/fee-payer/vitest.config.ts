@@ -27,7 +27,7 @@ const rpcUrl = (() => {
 	if (tempoEnv === 'moderato') return 'https://rpc.moderato.tempo.xyz'
 	if (tempoEnv === 'devnet') return 'https://rpc.devnet.tempoxyz.dev'
 	const poolId = Number(process.env.VITEST_POOL_ID ?? 1)
-	return `http://localhost:9545/${poolId}`
+	return `http://127.0.0.1:9545/${poolId}`
 })()
 
 export default defineConfig({
