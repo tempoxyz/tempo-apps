@@ -33,6 +33,8 @@ const warmupAccount = Account.fromSecp256k1(
 	}),
 )
 
+const setupTimeoutMs = 30_000
+
 async function parseRpcResult(
 	response: Response,
 	target: string,
@@ -202,7 +204,7 @@ beforeAll(async () => {
 	}
 
 	await waitForFeePayerReadiness()
-})
+}, setupTimeoutMs)
 
 describe('fee-payer integration', () => {
 	describe('request handling', () => {
