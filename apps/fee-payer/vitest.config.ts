@@ -45,6 +45,13 @@ export default defineConfig({
 				configPath: './wrangler.json',
 			},
 			miniflare: {
+				// CI can fail to route workerd loopback fetches to the Prool-backed
+				// local Tempo node, so proxy worker fetches through Node in localnet.
+				...(tempoEnv === 'localnet'
+					? {
+							outboundService: async (request: Request) => fetch(request),
+						}
+					: {}),
 				compatibilityFlags: [
 					...wranglerJSON.compatibility_flags,
 					'enable_nodejs_fs_module',
