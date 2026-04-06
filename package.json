@@ -28,7 +28,7 @@
 		"@typescript/native-preview": "^7.0.0-dev.20260319.1",
 		"simple-git-hooks": "^2.13.1",
 		"tsx": "^4.21.0",
-		"typescript": "^5.9.3"
+		"typescript": "^6.0.2"
 	},
 	"devEngines": {
 		"runtime": {
@@ -37,7 +37,7 @@
 			"onFail": "download"
 		}
 	},
-	"packageManager": "pnpm@10.32.1",
+	"packageManager": "pnpm@10.33.0",
 	"simple-git-hooks": {
 		"pre-commit": "pnpm prek run --all-files --config='.github/.pre-commit.yml'"
 	}

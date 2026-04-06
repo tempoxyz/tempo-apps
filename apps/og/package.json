@@ -8,7 +8,8 @@
 		"check": "pnpm check:biome && pnpm check:types",
 		"check:biome": "biome check --write --unsafe",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
-		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types"
+		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
+		"postinstall": "pnpm gen:types"
 	},
 	"dependencies": {
 		"@hono/zod-validator": "catalog:",

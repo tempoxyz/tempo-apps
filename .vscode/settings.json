@@ -83,5 +83,6 @@
 	"redhat.telemetry.enabled": false,
 	"yaml.schemas": {
 		"https://esm.sh/gh/SchemaStore/schemastore/src/schemas/json/pnpm-workspace.json": "pnpm-workspace.yaml"
-	}
+	},
+	"editor.tabSize": 2
 }

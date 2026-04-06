@@ -21,8 +21,9 @@
 		"check:biome": "biome check --write --unsafe",
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"process-icons": "node ./scripts/svg2g.ts",
+		"tail": "wrangler tail",
 		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
-		"tail": "wrangler tail"
+		"postinstall": "pnpm gen:types"
 	},
 	"dependencies": {
 		"hono": "catalog:",
