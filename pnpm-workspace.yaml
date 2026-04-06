@@ -6,7 +6,7 @@ packages:
 catalog:
   '@biomejs/biome': ^2.4.10
   '@cloudflare/puppeteer': ^1.0.6
-  '@cloudflare/vite-plugin': ^1.31.0
+  '@cloudflare/vite-plugin': 1.30.3
   '@cloudflare/vitest-pool-workers': ^0.13.5
   '@cloudflare/workers-types': ^4.20260405.1
   '@hono/zod-validator': ^0.7.6
