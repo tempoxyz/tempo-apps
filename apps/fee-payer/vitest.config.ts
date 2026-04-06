@@ -27,7 +27,7 @@ const rpcUrl = (() => {
 	if (tempoEnv === 'moderato') return 'https://rpc.moderato.tempo.xyz'
 	if (tempoEnv === 'devnet') return 'https://rpc.devnet.tempoxyz.dev'
 	const poolId = Number(process.env.VITEST_POOL_ID ?? 1)
-	return `http://127.0.0.1:9545/${poolId}`
+	return `http://localhost:9545/${poolId}`
 })()
 
 export default defineConfig({
@@ -45,13 +45,6 @@ export default defineConfig({
 				configPath: './wrangler.json',
 			},
 			miniflare: {
-				// CI can fail to route workerd loopback fetches to the Prool-backed
-				// local Tempo node, so proxy worker fetches through Node in localnet.
-				...(tempoEnv === 'localnet'
-					? {
-							outboundService: async (request: Request) => fetch(request),
-						}
-					: {}),
 				compatibilityFlags: [
 					...wranglerJSON.compatibility_flags,
 					'enable_nodejs_fs_module',

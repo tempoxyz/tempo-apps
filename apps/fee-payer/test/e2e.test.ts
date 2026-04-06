@@ -26,48 +26,6 @@ const userAccount = Account.fromSecp256k1(
 	}),
 )
 
-const sponsorshipRetryDelayMs = 500
-const sponsorshipTestTimeoutMs = 30_000
-
-async function parseRpcResult(
-	response: Response,
-	target: string,
-	method: string,
-): Promise<unknown> {
-	const bodyText = await response.text()
-	const body = bodyText ? JSON.parse(bodyText) : {}
-
-	if (!response.ok) {
-		throw new Error(
-			`${target} ${method} returned HTTP ${response.status}: ${bodyText || '<empty body>'}`,
-		)
-	}
-
-	if (
-		typeof body === 'object' &&
-		body !== null &&
-		'error' in body &&
-		body.error
-	) {
-		const message =
-			typeof body.error === 'object' &&
-			body.error !== null &&
-			'message' in body.error &&
-			typeof body.error.message === 'string'
-				? body.error.message
-				: JSON.stringify(body.error)
-		throw new Error(`${target} ${method} failed: ${message}`)
-	}
-
-	if (typeof body === 'object' && body !== null && 'result' in body) {
-		return body.result
-	}
-
-	throw new Error(
-		`${target} ${method} returned unexpected JSON: ${bodyText || '<empty body>'}`,
-	)
-}
-
 function createFeePayerTransportWithSpy() {
 	const requests: Array<{ method: string; params: unknown }> = []
 
@@ -87,7 +45,14 @@ function createFeePayerTransportWithSpy() {
 					}),
 				}),
 			)
-			return parseRpcResult(response, 'fee-payer', method)
+			const data = (await response.json()) as {
+				result?: unknown
+				error?: { code: number; message: string; data?: unknown }
+			}
+			if (data.error) {
+				throw new Error(data.error.message || 'RPC Error')
+			}
+			return data.result
 		},
 	})
 
@@ -107,33 +72,16 @@ function createTempoTransport() {
 					params,
 				}),
 			})
-			return parseRpcResult(response, 'tempo-rpc', method)
+			const data = (await response.json()) as {
+				result?: unknown
+				error?: { code: number; message: string }
+			}
+			if (data.error) {
+				throw new Error(data.error.message || 'RPC Error')
+			}
+			return data.result
 		},
 	})
-}
-
-async function retrySponsorship<T>(
-	action: () => Promise<T>,
-	description: string,
-	maxRetries = 8,
-	delayMs = sponsorshipRetryDelayMs,
-): Promise<T> {
-	let lastError: unknown
-
-	for (let attempt = 1; attempt <= maxRetries; attempt++) {
-		try {
-			return await action()
-		} catch (error) {
-			lastError = error
-			if (attempt < maxRetries) {
-				await new Promise((resolve) => setTimeout(resolve, delayMs))
-			}
-		}
-	}
-
-	throw new Error(
-		`${description} did not succeed after ${maxRetries} attempts: ${String(lastError)}`,
-	)
 }
 
 // Mint liquidity for fee tokens.
@@ -151,18 +99,19 @@ beforeAll(async () => {
 		transport: http(env.TEMPO_RPC_URL),
 	})
 
-	// Use sequential mints to avoid same-account transaction races in CI.
-	for (const id of [1n, 2n, 3n]) {
-		await Actions.amm.mintSync(client, {
-			account: sponsorAccount,
-			feeToken: '0x20c0000000000000000000000000000000000000',
-			nonceKey: 'expiring',
-			userTokenAddress: id,
-			validatorTokenAddress: '0x20c0000000000000000000000000000000000000',
-			validatorTokenAmount: parseUnits('1000', 6),
-			to: sponsorAccount.address,
-		})
-	}
+	await Promise.all(
+		[1n, 2n, 3n].map((id) =>
+			Actions.amm.mintSync(client, {
+				account: sponsorAccount,
+				feeToken: '0x20c0000000000000000000000000000000000000',
+				nonceKey: 'expiring',
+				userTokenAddress: id,
+				validatorTokenAddress: '0x20c0000000000000000000000000000000000000',
+				validatorTokenAmount: parseUnits('1000', 6),
+				to: sponsorAccount.address,
+			}),
+		),
+	)
 })
 
 describe('fee-payer integration', () => {
@@ -235,92 +184,66 @@ describe('fee-payer integration', () => {
 	})
 
 	describe('transaction sponsorship', () => {
-		it(
-			'sponsors transaction (sign-only via eth_signRawTransaction)',
-			async () => {
-				const { transport: feePayerTransport, requests: feePayerRequests } =
-					createFeePayerTransportWithSpy()
+		it('sponsors transaction (sign-only via eth_signRawTransaction)', async () => {
+			const { transport: feePayerTransport, requests: feePayerRequests } =
+				createFeePayerTransportWithSpy()
 
-				const client = createClient({
-					account: userAccount,
-					chain: tempoChain,
-					transport: withFeePayer(createTempoTransport(), feePayerTransport, {
-						policy: 'sign-only',
-					}),
-				})
+			const client = createClient({
+				account: userAccount,
+				chain: tempoChain,
+				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
+					policy: 'sign-only',
+				}),
+			})
 
-				const receipt = await retrySponsorship(
-					() =>
-						sendTransactionSync(client, {
-							feePayer: true,
-							to: '0x0000000000000000000000000000000000000000',
-							value: 0n,
-						}),
-					'sign-only sponsored transaction',
-				)
+			const receipt = await sendTransactionSync(client, {
+				feePayer: true,
+				to: '0x0000000000000000000000000000000000000000',
+				value: 0n,
+			})
 
-				console.log(`Transaction hash: ${receipt.transactionHash}`)
+			console.log(`Transaction hash: ${receipt.transactionHash}`)
 
-				expect(receipt.transactionHash).toBeDefined()
-				expect(receipt.from.toLowerCase()).toBe(
-					userAccount.address.toLowerCase(),
-				)
-				expect(receipt.feePayer?.toLowerCase()).toBe(
-					sponsorAddress.toLowerCase(),
-				)
+			expect(receipt.transactionHash).toBeDefined()
+			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
+			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
 
-				// Assert RPC methods sent to fee-payer service
-				expect(feePayerRequests.length).toBeGreaterThan(0)
-				expect(feePayerRequests.at(-1)?.method).toBe('eth_signRawTransaction')
-				expect(feePayerRequests.at(-1)?.params).toBeDefined()
-			},
-			sponsorshipTestTimeoutMs,
-		)
+			// Assert RPC methods sent to fee-payer service
+			expect(feePayerRequests).toHaveLength(1)
+			expect(feePayerRequests[0].method).toBe('eth_signRawTransaction')
+			expect(feePayerRequests[0].params).toBeDefined()
+		})
 
-		it(
-			'sponsors and broadcasts transaction (sign-and-broadcast)',
-			async () => {
-				const { transport: feePayerTransport, requests: feePayerRequests } =
-					createFeePayerTransportWithSpy()
+		it('sponsors and broadcasts transaction (sign-and-broadcast)', async () => {
+			const { transport: feePayerTransport, requests: feePayerRequests } =
+				createFeePayerTransportWithSpy()
 
-				const client = createClient({
-					account: userAccount,
-					chain: tempoChain,
-					transport: withFeePayer(createTempoTransport(), feePayerTransport, {
-						policy: 'sign-and-broadcast',
-					}),
-				})
+			const client = createClient({
+				account: userAccount,
+				chain: tempoChain,
+				transport: withFeePayer(createTempoTransport(), feePayerTransport, {
+					policy: 'sign-and-broadcast',
+				}),
+			})
 
-				const receipt = await retrySponsorship(
-					() =>
-						sendTransactionSync(client, {
-							feePayer: true,
-							to: '0x0000000000000000000000000000000000000001',
-							value: 0n,
-						}),
-					'sign-and-broadcast sponsored transaction',
-				)
+			const receipt = await sendTransactionSync(client, {
+				feePayer: true,
+				to: '0x0000000000000000000000000000000000000001',
+				value: 0n,
+			})
 
-				console.log(`Transaction hash: ${receipt.transactionHash}`)
+			console.log(`Transaction hash: ${receipt.transactionHash}`)
 
-				expect(receipt.transactionHash).toBeDefined()
-				expect(receipt.blockNumber).toBeGreaterThan(0n)
-				expect(receipt.from.toLowerCase()).toBe(
-					userAccount.address.toLowerCase(),
-				)
-				expect(receipt.feePayer?.toLowerCase()).toBe(
-					sponsorAddress.toLowerCase(),
-				)
-				expect(receipt.status).toBe('success')
+			expect(receipt.transactionHash).toBeDefined()
+			expect(receipt.blockNumber).toBeGreaterThan(0n)
+			expect(receipt.from.toLowerCase()).toBe(userAccount.address.toLowerCase())
+			expect(receipt.feePayer?.toLowerCase()).toBe(sponsorAddress.toLowerCase())
+			expect(receipt.status).toBe('success')
 
-				// Assert RPC methods sent to fee-payer service
-				expect(feePayerRequests.length).toBeGreaterThan(0)
-				expect(feePayerRequests.at(-1)?.method).toBe(
-					'eth_sendRawTransactionSync',
-				)
-				expect(feePayerRequests.at(-1)?.params).toBeDefined()
-			},
-			sponsorshipTestTimeoutMs,
-		)
+			// Assert RPC methods sent to fee-payer service
+			expect(feePayerRequests).toHaveLength(1)
+			expect(feePayerRequests[0].method).toBe('eth_sendRawTransactionSync')
+			expect(feePayerRequests[0].params).toBeDefined()
+		})
 	})
 })

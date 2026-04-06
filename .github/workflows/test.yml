@@ -41,7 +41,9 @@ jobs:
       - name: Run tests
         run: pnpm test
         env:
-          TEMPO_ENV: localnet
+          TEMPO_ENV: testnet
+          TEMPO_RPC_URL: https://rpc.testnet.tempo.xyz
+          SPONSOR_PRIVATE_KEY: ${{ secrets.SPONSOR_PRIVATE_KEY }}
         working-directory: apps/fee-payer
 
   test-contracts:
