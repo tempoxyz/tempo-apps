@@ -18,7 +18,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_ENV: production
   NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
 
 jobs:
