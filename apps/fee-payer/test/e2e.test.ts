@@ -26,6 +26,52 @@ const userAccount = Account.fromSecp256k1(
 	}),
 )
 
+const warmupAccount = Account.fromSecp256k1(
+	Mnemonic.toPrivateKey(testMnemonic, {
+		as: 'Hex',
+		path: Mnemonic.path({ account: 8 }),
+	}),
+)
+
+async function parseRpcResult(
+	response: Response,
+	target: string,
+	method: string,
+): Promise<unknown> {
+	const bodyText = await response.text()
+	const body = bodyText ? JSON.parse(bodyText) : {}
+
+	if (!response.ok) {
+		throw new Error(
+			`${target} ${method} returned HTTP ${response.status}: ${bodyText || '<empty body>'}`,
+		)
+	}
+
+	if (
+		typeof body === 'object' &&
+		body !== null &&
+		'error' in body &&
+		body.error
+	) {
+		const message =
+			typeof body.error === 'object' &&
+			body.error !== null &&
+			'message' in body.error &&
+			typeof body.error.message === 'string'
+				? body.error.message
+				: JSON.stringify(body.error)
+		throw new Error(`${target} ${method} failed: ${message}`)
+	}
+
+	if (typeof body === 'object' && body !== null && 'result' in body) {
+		return body.result
+	}
+
+	throw new Error(
+		`${target} ${method} returned unexpected JSON: ${bodyText || '<empty body>'}`,
+	)
+}
+
 function createFeePayerTransportWithSpy() {
 	const requests: Array<{ method: string; params: unknown }> = []
 
@@ -45,14 +91,7 @@ function createFeePayerTransportWithSpy() {
 					}),
 				}),
 			)
-			const data = (await response.json()) as {
-				result?: unknown
-				error?: { code: number; message: string; data?: unknown }
-			}
-			if (data.error) {
-				throw new Error(data.error.message || 'RPC Error')
-			}
-			return data.result
+			return parseRpcResult(response, 'fee-payer', method)
 		},
 	})
 
@@ -72,16 +111,66 @@ function createTempoTransport() {
 					params,
 				}),
 			})
-			const data = (await response.json()) as {
-				result?: unknown
-				error?: { code: number; message: string }
-			}
-			if (data.error) {
-				throw new Error(data.error.message || 'RPC Error')
-			}
-			return data.result
+			return parseRpcResult(response, 'tempo-rpc', method)
 		},
 	})
+}
+
+function createSponsoredClient(
+	account: typeof userAccount,
+	policy: 'sign-and-broadcast' | 'sign-only',
+) {
+	return createClient({
+		account,
+		chain: tempoChain,
+		transport: withFeePayer(
+			createTempoTransport(),
+			createFeePayerTransportWithSpy().transport,
+			{
+				policy,
+			},
+		),
+	})
+}
+
+async function waitForFeePayerReadiness(
+	maxRetries = 8,
+	delayMs = 500,
+): Promise<void> {
+	let lastError: unknown
+
+	for (let attempt = 1; attempt <= maxRetries; attempt++) {
+		try {
+			await sendTransactionSync(
+				createSponsoredClient(warmupAccount, 'sign-only'),
+				{
+					feePayer: true,
+					to: '0x0000000000000000000000000000000000000000',
+					value: 0n,
+				},
+			)
+
+			await sendTransactionSync(
+				createSponsoredClient(warmupAccount, 'sign-and-broadcast'),
+				{
+					feePayer: true,
+					to: '0x0000000000000000000000000000000000000001',
+					value: 0n,
+				},
+			)
+
+			return
+		} catch (error) {
+			lastError = error
+			if (attempt < maxRetries) {
+				await new Promise((resolve) => setTimeout(resolve, delayMs))
+			}
+		}
+	}
+
+	throw new Error(
+		`Fee payer sponsorship did not become ready after ${maxRetries} attempts: ${String(lastError)}`,
+	)
 }
 
 // Mint liquidity for fee tokens.
@@ -111,6 +200,8 @@ beforeAll(async () => {
 			to: sponsorAccount.address,
 		})
 	}
+
+	await waitForFeePayerReadiness()
 })
 
 describe('fee-payer integration', () => {
