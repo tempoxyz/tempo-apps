@@ -323,7 +323,7 @@ importers:
         version: 2.4.10
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
-        version: 1.30.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20260329.1)(wrangler@4.79.0(@cloudflare/workers-types@4.20260405.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+        version: 1.30.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20260317.1)(wrangler@4.79.0(@cloudflare/workers-types@4.20260405.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@cloudflare/vitest-pool-workers':
         specifier: 'catalog:'
         version: 0.13.5(@cloudflare/workers-types@4.20260405.1)(@vitest/runner@4.1.0)(@vitest/snapshot@4.1.0)(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vitest@4.1.0)
@@ -715,10 +715,10 @@ importers:
     dependencies:
       '@cloudflare/vite-plugin':
         specifier: 'catalog:'
-        version: 1.29.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20260317.1)(wrangler@4.75.0(@cloudflare/workers-types@4.20260317.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+        version: 1.30.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20260329.1)(wrangler@4.79.0(@cloudflare/workers-types@4.20260405.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@tailwindcss/vite':
         specifier: 'catalog:'
-        version: 4.2.2(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 4.2.2(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.91.2(react@19.2.4)
@@ -730,13 +730,13 @@ importers:
         version: 1.166.9(@tanstack/query-core@5.91.2)(@tanstack/react-query@5.91.2(react@19.2.4))(@tanstack/react-router@1.167.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@tanstack/router-core@1.167.5)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@tanstack/react-start':
         specifier: 'catalog:'
-        version: 1.166.18(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 1.166.18(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       '@tanstack/router-plugin':
         specifier: 'catalog:'
-        version: 1.166.14(@tanstack/react-router@1.167.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 1.166.14(@tanstack/react-router@1.167.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       cva:
         specifier: 'catalog:'
-        version: 1.0.0-beta.4(typescript@5.9.3)
+        version: 1.0.0-beta.4(typescript@6.0.2)
       hono:
         specifier: 'catalog:'
         version: 4.12.8
@@ -752,13 +752,13 @@ importers:
     devDependencies:
       '@iconify/json':
         specifier: 'catalog:'
-        version: 2.2.452
+        version: 2.2.459
       '@total-typescript/ts-reset':
         specifier: 'catalog:'
         version: 0.6.1
       '@types/node':
         specifier: 'catalog:'
-        version: 25.5.0
+        version: 25.5.2
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.14
@@ -767,7 +767,7 @@ importers:
         version: 19.2.3(@types/react@19.2.14)
       '@vitejs/plugin-react':
         specifier: 'catalog:'
-        version: 6.0.1(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+        version: 6.0.1(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
       tailwind-merge:
         specifier: 'catalog:'
         version: 3.5.0
@@ -776,13 +776,13 @@ importers:
         version: 2.12.1
       unplugin-icons:
         specifier: 'catalog:'
-        version: 23.0.1(@svgr/core@8.1.0(typescript@5.9.3))(@vue/compiler-sfc@3.5.30)
+        version: 23.0.1(@svgr/core@8.1.0(typescript@6.0.2))(@vue/compiler-sfc@3.5.30)
       vite:
         specifier: 'catalog:'
-        version: 8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+        version: 8.0.1(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
       wrangler:
         specifier: 'catalog:'
-        version: 4.75.0(@cloudflare/workers-types@4.20260317.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+        version: 4.79.0(@cloudflare/workers-types@4.20260405.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
   apps/tokenlist:
     dependencies:
@@ -6315,6 +6315,19 @@ snapshots:
       unenv: 2.0.0-rc.24
     optionalDependencies:
       workerd: 1.20260401.1
+
+  '@cloudflare/vite-plugin@1.30.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20260317.1)(wrangler@4.79.0(@cloudflare/workers-types@4.20260405.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
+    dependencies:
+      '@cloudflare/unenv-preset': 2.16.0(unenv@2.0.0-rc.24)(workerd@1.20260317.1)
+      miniflare: 4.20260329.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      unenv: 2.0.0-rc.24
+      vite: 8.0.1(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      wrangler: 4.79.0(@cloudflare/workers-types@4.20260405.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ws: 8.18.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - bufferutil
+      - utf-8-validate
+      - workerd
 
   '@cloudflare/vite-plugin@1.30.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.1(@types/node@25.5.2)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20260329.1)(wrangler@4.79.0(@cloudflare/workers-types@4.20260405.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
     dependencies:
