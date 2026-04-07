@@ -67,6 +67,7 @@ jobs:
             env: moderato
           #### other (single-env-apps)
           - app: og
+          - app: perf
           - app: tokenlist
     env:
       NODE_ENV: production
