@@ -13,7 +13,6 @@ import { parseKnownEvents } from '#lib/domain/known-events'
 import { isTip20Address, type Metadata } from '#lib/domain/tip20'
 import {
 	fetchAddressDirectTxHistoryRows,
-	fetchAddressHistoryDistinctCount,
 	fetchAddressHistoryTxDetailsByHashes,
 	fetchAddressLogRowsByTxHashes,
 	fetchAddressReceiptRowsByHashes,
@@ -324,25 +323,18 @@ export const Route = createFileRoute('/api/address/history/$address')({
 									block_num: row.block_num,
 								})
 
-						// Skip the expensive count query if no source hit its buffer limit —
-						// in that case allHashes already contains every tx hash.
+						// Use the deduped hash map size as the count. When any source
+						// hit the buffer limit, the map may be incomplete so mark
+						// the count as capped to enable indefinite pagination.
 						const anySourceHitLimit =
 							directResult.length >= bufferSize ||
 							transferResult.length >= bufferSize ||
 							emittedResult.length >= bufferSize
 
-						const countResult = anySourceHitLimit
-							? await fetchAddressHistoryDistinctCount({
-									address,
-									chainId,
-									includeSent,
-									includeReceived,
-									includeTxs: sources.txs,
-									includeTransfers: sources.transfers,
-									includeEmitted: sources.emitted,
-									countCap: HISTORY_COUNT_MAX,
-								})
-							: { count: allHashes.size, capped: false }
+						const countResult = {
+							count: allHashes.size,
+							capped: anySourceHitLimit,
+						}
 
 						let sortedHashes = [...allHashes.values()].sort((a, b) => {
 							const blockDiff =
