@@ -231,13 +231,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		/>
 	),
 	validateSearch: z.object({
-		page: z.prefault(
-			z.pipe(
-				z.number(),
-				z.transform((val) => Math.max(1, Math.round(val))),
-			),
-			defaultSearchValues.page,
-		),
+		page: z.prefault(z.number(), defaultSearchValues.page),
 		limit: z.prefault(
 			z.pipe(
 				z.number(),
@@ -1115,32 +1109,6 @@ function SectionsWrapper(props: {
 	// Only use after mount AND when data has loaded to avoid showing 0 during loading
 	const totalTrxCount = isMounted && historyData ? total : undefined
 
-	// Redirect to the last valid page when the current page exceeds total pages
-	// (can happen when total count changes between page navigations)
-	const navigate = useNavigate()
-	React.useEffect(() => {
-		if (!isTransactionsTabActive || !isMounted || totalTrxCount === undefined)
-			return
-		if (countCapped) return
-		const maxPage = Math.max(1, Math.ceil(totalTrxCount / limit))
-		if (page > maxPage) {
-			navigate({
-				to: '.',
-				search: (prev) => ({ ...prev, page: maxPage }),
-				replace: true,
-				resetScroll: false,
-			})
-		}
-	}, [
-		isTransactionsTabActive,
-		isMounted,
-		totalTrxCount,
-		countCapped,
-		limit,
-		page,
-		navigate,
-	])
-
 	const isTransactionsLoading =
 		isTransactionsTabActive && !error && (isHistoryPending || !historyData)
 	const isTransactionsFetching =
@@ -1153,47 +1121,6 @@ function SectionsWrapper(props: {
 		isHoldersTabActive && (isHoldersPending || !holdersData)
 	const isHoldersFetchingNext =
 		isHoldersTabActive && isHoldersFetching && !isHoldersLoading
-
-	// Redirect for transfers/holders tabs when page exceeds total
-	React.useEffect(() => {
-		if (!isMounted) return
-		if (isTransfersTabActive && transfersData && !transfersTotalCapped) {
-			const maxPage = Math.max(1, Math.ceil(transfersTotal / limit))
-			if (page > maxPage) {
-				navigate({
-					to: '.',
-					search: (prev) => ({ ...prev, page: maxPage }),
-					replace: true,
-					resetScroll: false,
-				})
-				return
-			}
-		}
-		if (isHoldersTabActive && holdersData && !holdersTotalCapped) {
-			const maxPage = Math.max(1, Math.ceil(holdersTotal / limit))
-			if (page > maxPage) {
-				navigate({
-					to: '.',
-					search: (prev) => ({ ...prev, page: maxPage }),
-					replace: true,
-					resetScroll: false,
-				})
-			}
-		}
-	}, [
-		isMounted,
-		isTransfersTabActive,
-		isHoldersTabActive,
-		transfersData,
-		holdersData,
-		transfersTotal,
-		holdersTotal,
-		transfersTotalCapped,
-		holdersTotalCapped,
-		limit,
-		page,
-		navigate,
-	])
 
 	const queryClient = useQueryClient()
 
