@@ -1,4 +1,4 @@
-interface EnvironmentVariables {}
+type EnvironmentVariables = {}
 
 interface ImportMetaEnv extends EnvironmentVariables {}
 

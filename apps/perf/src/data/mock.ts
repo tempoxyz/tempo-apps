@@ -63,7 +63,7 @@ export const scenarios: Array<Scenario> = [
 	{
 		id: 'transfer-10v',
 		label: '10 Validators — Native Transfers',
-		workload: '100% Native ETH Transfers',
+		workload: '100% Native Transfers',
 		validators: 10,
 		targetThroughput: '5 Ggas/s',
 	},

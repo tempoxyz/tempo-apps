@@ -30,8 +30,21 @@ export const Route = createRootRouteWithContext<{
 			},
 		],
 		links: [
+			{
+				rel: 'preload',
+				href: '/fonts/satoshi/Satoshi-Variable.woff2',
+				as: 'font',
+				type: 'font/woff2',
+				crossOrigin: 'anonymous',
+			},
+			{
+				rel: 'preload',
+				href: '/fonts/geist-mono/GeistMono-Variable.woff2',
+				as: 'font',
+				type: 'font/woff2',
+				crossOrigin: 'anonymous',
+			},
 			{ rel: 'stylesheet', href: css },
-			{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
 		],
 	}),
 	scripts: () => [
@@ -52,9 +65,11 @@ function RootDocument() {
 			</head>
 			<body>
 				<QueryClientProvider client={queryClient}>
-					<div className="mx-auto min-h-dvh max-w-5xl px-6 py-8">
+					<div className="mx-auto min-h-dvh max-w-[1200px] px-6 lg:px-[84px]">
 						<Header />
-						<Outlet />
+						<main>
+							<Outlet />
+						</main>
 						<Footer />
 					</div>
 				</QueryClientProvider>
@@ -66,23 +81,18 @@ function RootDocument() {
 
 function Header(): React.JSX.Element {
 	return (
-		<header className="mb-12 flex items-center justify-between border-b border-border pb-6">
-			<div>
-				<a href="/" className="group flex items-center gap-2.5">
-					<TempoWordmark />
-					<span className="text-sm font-medium text-accent">perf</span>
-				</a>
-				<p className="mt-1 text-sm text-content-secondary">
-					Blockchain throughput &amp; latency benchmarks
-				</p>
-			</div>
-			<div className="flex items-center gap-5">
-				<nav className="flex items-center gap-1 text-sm">
+		<header className="flex items-center justify-between py-8">
+			<Link to="/">
+				<TempoWordmark />
+			</Link>
+			<div className="flex items-center gap-2">
+				<nav className="flex items-center gap-1 text-[14px] font-medium leading-[140%]">
 					<NavLink to="/" exact>
 						Dashboard
 					</NavLink>
 					<NavLink to="/methodology">Methodology</NavLink>
 				</nav>
+				<div className="mx-2 h-5 w-px bg-border" />
 				<ThemeToggle />
 			</div>
 		</header>
@@ -91,12 +101,39 @@ function Header(): React.JSX.Element {
 
 function Footer(): React.JSX.Element {
 	return (
-		<footer className="mt-16 border-t border-border py-6 text-center text-xs text-content-tertiary">
-			<p>
-				Data sourced from nightly{' '}
-				<code className="font-mono text-content-secondary">tempo-bench</code>{' '}
-				runs
-			</p>
+		<footer className="py-8 text-center">
+			<ul className="flex items-center justify-center gap-6 text-[14px] font-medium text-secondary select-none">
+				<li>
+					<a
+						href="https://tempo.xyz"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="transition-colors hover:text-primary"
+					>
+						About
+					</a>
+				</li>
+				<li>
+					<a
+						href="https://docs.tempo.xyz"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="transition-colors hover:text-primary"
+					>
+						Docs
+					</a>
+				</li>
+				<li>
+					<a
+						href="https://github.com/tempoxyz"
+						target="_blank"
+						rel="noopener noreferrer"
+						className="transition-colors hover:text-primary"
+					>
+						GitHub
+					</a>
+				</li>
+			</ul>
 		</footer>
 	)
 }
@@ -109,12 +146,11 @@ function NavLink(props: {
 	return (
 		<Link
 			to={props.to}
-			className="rounded-md px-3 py-1.5 text-content-secondary transition-colors hover:text-content-primary"
+			className="rounded-lg px-3 py-1.5 text-secondary transition-colors hover:text-primary"
 			activeProps={{
-				className:
-					'rounded-md px-3 py-1.5 bg-surface text-content-primary font-medium',
+				className: 'rounded-lg px-3 py-1.5 bg-accent-muted text-accent',
 			}}
-			exactActiveOptions={props.exact ? { exact: true } : undefined}
+			activeOptions={props.exact ? { exact: true } : undefined}
 		>
 			{props.children}
 		</Link>
@@ -147,7 +183,7 @@ function ThemeToggle(): React.JSX.Element {
 		<button
 			type="button"
 			onClick={toggle}
-			className="rounded-md border border-border p-1.5 text-content-secondary transition-colors hover:bg-surface-hover hover:text-content-primary"
+			className="rounded-lg p-2 text-secondary transition-colors hover:bg-surface-hover hover:text-primary"
 			aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
 		>
 			{theme === 'dark' ? (
@@ -164,7 +200,7 @@ function TempoWordmark(): React.JSX.Element {
 		<svg
 			aria-label="Tempo"
 			viewBox="0 0 107 25"
-			className="h-5 w-auto fill-current text-content-primary"
+			className="h-[22px] w-auto fill-current text-primary"
 			role="img"
 		>
 			<path d="M8.10464 23.7163H1.82475L7.64513 5.79356H0.201172L1.82475 0.540352H22.5637L20.9401 5.79356H13.8944L8.10464 23.7163Z" />

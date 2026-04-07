@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { scenarios, getLatestRun } from '#data/mock'
 import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
 
@@ -7,90 +7,103 @@ export const Route = createFileRoute('/')({
 })
 
 function DashboardPage(): React.JSX.Element {
+	const navigate = useNavigate()
 	return (
 		<div>
-			<section className="mb-10">
-				<h2 className="text-lg font-semibold text-content-primary">
-					Scenario Overview
+			{/* Hero */}
+			<section className="mb-12 pt-4">
+				<h2 className="text-[28px] font-bold tracking-tight text-primary">
+					Performance Dashboard
 				</h2>
-				<p className="mt-1 text-sm text-content-secondary">
-					Curated benchmarks showing Tempo&apos;s performance under different
-					workloads and validator configurations.
+				<p className="mt-2 max-w-xl text-[15px] leading-relaxed text-secondary">
+					Real-time benchmarks measuring Tempo&apos;s throughput and latency
+					under production-representative workloads.
 				</p>
 			</section>
 
-			<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-				{scenarios.map((scenario) => {
-					const latest = getLatestRun(scenario.id)
-					return (
-						<Link
-							key={scenario.id}
-							to="/scenario/$id"
-							params={{ id: scenario.id }}
-							className="group rounded-lg border border-border bg-surface p-5 transition-colors hover:border-accent/30 hover:bg-surface-hover"
-						>
-							<div className="mb-4 flex items-center justify-between">
-								<span className="text-xs font-medium text-accent">
-									{scenario.validators} validators
-								</span>
-								{latest && (
-									<span className="text-xs text-content-tertiary">
-										{formatDate(latest.timestamp)}
-									</span>
-								)}
-							</div>
+			{/* Scenario cards */}
+			<section className="mb-14">
+				<div className="mb-5 flex items-center gap-3">
+					<h3 className="text-[13px] font-normal uppercase tracking-wider text-tertiary">
+						Scenarios
+					</h3>
+					<div className="h-px flex-1 bg-border" />
+				</div>
 
-							<h3 className="mb-1 text-sm font-semibold text-content-primary">
-								{scenario.label}
-							</h3>
-							<p className="mb-4 text-xs text-content-tertiary">
-								{scenario.workload}
-							</p>
-
-							{latest ? (
-								<div className="grid grid-cols-2 gap-3">
-									<Stat
-										label="Throughput"
-										value={formatGas(latest.avgGasPerSecond)}
-									/>
-									<Stat
-										label="Peak"
-										value={formatGas(latest.peakGasPerSecond)}
-									/>
-									<Stat label="Avg TPS" value={formatTps(latest.avgTps)} />
-									<Stat
-										label="P99 Latency"
-										value={formatMs(latest.p99LatencyMs)}
-									/>
+				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+					{scenarios.map((scenario) => {
+						const latest = getLatestRun(scenario.id)
+						return (
+							<Link
+								key={scenario.id}
+								to="/scenario/$id"
+								params={{ id: scenario.id }}
+								className="card-interactive flex flex-col"
+							>
+								<div className="p-5 pb-4">
+									<h4 className="text-[15px] font-semibold text-primary">
+										{scenario.label}
+									</h4>
+									<p className="mt-1 text-[12px] text-tertiary">
+										{scenario.workload}
+									</p>
 								</div>
-							) : (
-								<p className="text-xs text-content-tertiary italic">
-									No runs yet
-								</p>
-							)}
-						</Link>
-					)
-				})}
-			</div>
 
-			<section className="mt-12">
-				<h2 className="mb-4 text-lg font-semibold text-content-primary">
-					Latest Runs
-				</h2>
-				<div className="overflow-hidden rounded-lg border border-border">
-					<table className="w-full text-sm">
+								{latest ? (
+									<div className="mt-auto border-t border-border px-5 pt-4 pb-5">
+										<div className="grid grid-cols-2 gap-x-4 gap-y-3">
+											<Stat
+												label="Throughput"
+												value={formatGas(latest.avgGasPerSecond)}
+												highlight
+											/>
+											<Stat
+												label="Peak"
+												value={formatGas(latest.peakGasPerSecond)}
+											/>
+											<Stat label="Avg TPS" value={formatTps(latest.avgTps)} />
+											<Stat
+												label="P99 Latency"
+												value={formatMs(latest.p99LatencyMs)}
+											/>
+										</div>
+									</div>
+								) : (
+									<div className="mt-auto border-t border-border px-5 py-4">
+										<p className="text-[12px] text-tertiary italic">
+											No runs yet
+										</p>
+									</div>
+								)}
+							</Link>
+						)
+					})}
+				</div>
+			</section>
+
+			{/* Latest runs table */}
+			<section className="mb-14">
+				<div className="mb-5 flex items-center gap-3">
+					<h3 className="text-[13px] font-normal uppercase tracking-wider text-tertiary">
+						Latest Runs
+					</h3>
+					<div className="h-px flex-1 bg-border" />
+				</div>
+
+				<div className="card">
+					<table className="w-full text-[13px]">
 						<thead>
-							<tr className="border-b border-border bg-surface text-left text-xs text-content-secondary">
-								<th className="px-4 py-3 font-medium">Scenario</th>
-								<th className="px-4 py-3 font-medium">Commit</th>
-								<th className="px-4 py-3 font-medium text-right">
+							<tr className="border-b border-border bg-surface-raised text-left text-tertiary">
+								<th className="px-4.5 py-3 font-normal">Scenario</th>
+								<th className="px-4.5 py-3 font-normal">Commit</th>
+								<th className="px-4.5 py-3 font-normal text-right">
 									Throughput
 								</th>
-								<th className="px-4 py-3 font-medium text-right">TPS</th>
-								<th className="px-4 py-3 font-medium text-right">
+								<th className="px-4.5 py-3 font-normal text-right">TPS</th>
+								<th className="px-4.5 py-3 font-normal text-right">
 									P99 Latency
 								</th>
-								<th className="px-4 py-3 font-medium text-right">Date</th>
+								<th className="px-4.5 py-3 font-normal text-right">Date</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -100,32 +113,32 @@ function DashboardPage(): React.JSX.Element {
 								return (
 									<tr
 										key={latest.id}
-										className="border-b border-border-subtle last:border-0 transition-colors hover:bg-surface-hover"
+										className="border-b border-dashed border-border last:border-0 transition-colors hover:bg-surface-hover cursor-pointer"
+										onClick={() =>
+											navigate({
+												to: '/scenario/$id',
+												params: { id: scenario.id },
+											})
+										}
 									>
-										<td className="px-4 py-3">
-											<Link
-												to="/scenario/$id"
-												params={{ id: scenario.id }}
-												className="text-content-primary hover:text-accent transition-colors"
-											>
-												{scenario.label}
-											</Link>
+										<td className="px-4.5 py-3 font-medium text-primary">
+											{scenario.label}
 										</td>
-										<td className="px-4 py-3">
-											<code className="font-mono text-xs text-content-secondary">
+										<td className="px-4.5 py-3">
+											<code className="font-mono text-[12px] text-secondary">
 												{latest.commit}
 											</code>
 										</td>
-										<td className="px-4 py-3 text-right font-mono text-accent">
+										<td className="px-4.5 py-3 text-right font-mono text-accent">
 											{formatGas(latest.avgGasPerSecond)}
 										</td>
-										<td className="px-4 py-3 text-right font-mono text-content-primary">
+										<td className="px-4.5 py-3 text-right font-mono text-primary">
 											{formatTps(latest.avgTps)}
 										</td>
-										<td className="px-4 py-3 text-right font-mono text-content-primary">
+										<td className="px-4.5 py-3 text-right font-mono text-primary">
 											{formatMs(latest.p99LatencyMs)}
 										</td>
-										<td className="px-4 py-3 text-right text-content-tertiary">
+										<td className="px-4.5 py-3 text-right text-tertiary">
 											{formatDate(latest.timestamp)}
 										</td>
 									</tr>
@@ -139,22 +152,21 @@ function DashboardPage(): React.JSX.Element {
 	)
 }
 
-function Stat(props: Stat.Props): React.JSX.Element {
+function Stat(props: {
+	label: string
+	value: string
+	highlight?: boolean | undefined
+}): React.JSX.Element {
 	return (
 		<div>
-			<p className="text-[10px] uppercase tracking-wider text-content-tertiary">
+			<p className="text-[11px] font-normal uppercase tracking-wider text-tertiary">
 				{props.label}
 			</p>
-			<p className="mt-0.5 font-mono text-sm font-medium text-content-primary">
+			<p
+				className={`mt-0.5 font-mono text-[14px] font-medium ${props.highlight ? 'text-accent' : 'text-primary'}`}
+			>
 				{props.value}
 			</p>
 		</div>
 	)
-}
-
-declare namespace Stat {
-	type Props = {
-		label: string
-		value: string
-	}
 }

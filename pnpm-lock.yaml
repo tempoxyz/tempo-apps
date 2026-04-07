@@ -711,6 +711,79 @@ importers:
         specifier: 'catalog:'
         version: 4.79.0(@cloudflare/workers-types@4.20260405.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
 
+  apps/perf:
+    dependencies:
+      '@cloudflare/vite-plugin':
+        specifier: 'catalog:'
+        version: 1.29.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))(workerd@1.20260317.1)(wrangler@4.75.0(@cloudflare/workers-types@4.20260317.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.2.2(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@tanstack/react-query':
+        specifier: 'catalog:'
+        version: 5.91.2(react@19.2.4)
+      '@tanstack/react-router':
+        specifier: 'catalog:'
+        version: 1.167.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@tanstack/react-router-ssr-query':
+        specifier: 'catalog:'
+        version: 1.166.9(@tanstack/query-core@5.91.2)(@tanstack/react-query@5.91.2(react@19.2.4))(@tanstack/react-router@1.167.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(@tanstack/router-core@1.167.5)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@tanstack/react-start':
+        specifier: 'catalog:'
+        version: 1.166.18(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      '@tanstack/router-plugin':
+        specifier: 'catalog:'
+        version: 1.166.14(@tanstack/react-router@1.167.5(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      cva:
+        specifier: 'catalog:'
+        version: 1.0.0-beta.4(typescript@5.9.3)
+      hono:
+        specifier: 'catalog:'
+        version: 4.12.8
+      react:
+        specifier: 'catalog:'
+        version: 19.2.4
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.4(react@19.2.4)
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.2.2
+    devDependencies:
+      '@iconify/json':
+        specifier: 'catalog:'
+        version: 2.2.452
+      '@total-typescript/ts-reset':
+        specifier: 'catalog:'
+        version: 0.6.1
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.5.0
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.3(@types/react@19.2.14)
+      '@vitejs/plugin-react':
+        specifier: 'catalog:'
+        version: 6.0.1(vite@8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
+      tailwind-merge:
+        specifier: 'catalog:'
+        version: 3.5.0
+      typed-query-selector:
+        specifier: 'catalog:'
+        version: 2.12.1
+      unplugin-icons:
+        specifier: 'catalog:'
+        version: 23.0.1(@svgr/core@8.1.0(typescript@5.9.3))(@vue/compiler-sfc@3.5.30)
+      vite:
+        specifier: 'catalog:'
+        version: 8.0.1(@types/node@25.5.0)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2)
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.75.0(@cloudflare/workers-types@4.20260317.1)(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+
   apps/tokenlist:
     dependencies:
       hono:

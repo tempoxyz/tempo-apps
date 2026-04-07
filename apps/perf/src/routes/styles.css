@@ -1,35 +1,82 @@
 @import "tailwindcss";
 
-@theme {
-	--color-background-primary: light-dark(#fafafa, #0a0a0a);
-	--color-surface: light-dark(#ffffff, #141414);
-	--color-surface-raised: light-dark(#f5f5f5, #1a1a1a);
-	--color-surface-hover: light-dark(#f0f0f0, #222222);
-	--color-border: light-dark(#e5e5e5, #2a2a2a);
-	--color-border-subtle: light-dark(#f0f0f0, #1f1f1f);
+/* Satoshi Variable Font */
+@font-face {
+	font-family: "Satoshi";
+	src: url("/fonts/satoshi/Satoshi-Variable.woff2") format("woff2");
+	font-weight: 300 900;
+	font-style: normal;
+	font-display: swap;
+}
 
-	--color-content-primary: light-dark(#0a0a0a, #fafafa);
-	--color-content-secondary: light-dark(#666666, #888888);
-	--color-content-tertiary: light-dark(#999999, #555555);
+/* Geist Mono Variable Font */
+@font-face {
+	font-family: "Geist Mono";
+	src: url("/fonts/geist-mono/GeistMono-Variable.woff2") format("woff2");
+	font-weight: 100 900;
+	font-style: normal;
+	font-display: swap;
+}
+
+@theme {
+	--color-bg: light-dark(#fafafa, #111111);
+	--color-surface: light-dark(#ffffff, #191919);
+	--color-surface-raised: light-dark(#f9f9f9, #1a1a1a);
+	--color-surface-hover: light-dark(#f0f0f0, #222222);
+	--color-border: light-dark(#e5e5e5, #232323);
+	--color-border-subtle: light-dark(#f0f0f0, #1c1c1c);
+
+	--color-primary: light-dark(#0a0a0a, #ffffff);
+	--color-secondary: light-dark(#6e6e6e, #6e6e6e);
+	--color-tertiary: light-dark(#a1a1a1, #454545);
 
 	--color-accent: light-dark(#3b82f6, #60a5fa);
-	--color-accent-dim: light-dark(#2563eb, #3b82f6);
-	--color-positive: light-dark(#16a34a, #22c55e);
-	--color-negative: light-dark(#dc2626, #ef4444);
-	--color-warning: light-dark(#ca8a04, #eab308);
+	--color-accent-muted: light-dark(
+		rgba(59, 130, 246, 0.1),
+		rgba(96, 165, 250, 0.1)
+	);
+	--color-positive: light-dark(#16a34a, #30a46c);
+	--color-negative: light-dark(#dc2626, #e5484d);
+	--color-warning: light-dark(#ca8a04, #e2a336);
 
-	--font-display: "Inter", ui-sans-serif, system-ui, sans-serif;
+	--font-display: "Satoshi", ui-sans-serif, sans-serif;
 	--font-mono: "Geist Mono", ui-monospace, monospace;
 }
 
 html,
 :host {
-	background-color: var(--color-background-primary);
-	color: var(--color-content-primary);
+	background-color: var(--color-bg);
+	color: var(--color-primary);
 	color-scheme: light dark;
 }
 
 body {
 	font-family: var(--font-display);
 	@apply text-base antialiased;
+}
+
+@utility card {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: 10px;
+	overflow: hidden;
+	box-shadow: 0px 12px 40px rgba(0, 0, 0, 0.06);
+}
+
+@utility card-interactive {
+	background: var(--color-surface);
+	border: 1px solid var(--color-border);
+	border-radius: 10px;
+	overflow: hidden;
+	box-shadow: 0px 12px 40px rgba(0, 0, 0, 0.06);
+	transition:
+		border-color 0.15s ease,
+		box-shadow 0.15s ease;
+
+	&:hover {
+		border-color: var(--color-accent);
+		box-shadow:
+			0 0 0 1px var(--color-accent),
+			0px 12px 40px rgba(0, 0, 0, 0.06);
+	}
 }

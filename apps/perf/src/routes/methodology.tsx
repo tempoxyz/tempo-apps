@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/methodology')({
 	component: MethodologyPage,
@@ -7,27 +7,37 @@ export const Route = createFileRoute('/methodology')({
 function MethodologyPage(): React.JSX.Element {
 	return (
 		<div className="max-w-3xl">
-			<h2 className="mb-6 text-xl font-semibold text-content-primary">
+			<h2 className="mb-8 text-[28px] font-bold tracking-tight text-primary">
 				Methodology
 			</h2>
 
-			<div className="space-y-8 text-sm leading-relaxed text-content-secondary">
+			<div className="space-y-8 text-[14px] leading-relaxed text-secondary">
 				<Section title="Workload Composition">
 					<p>
 						The canonical benchmark workload consists of a representative mix of
 						Tempo transaction types:
 					</p>
-					<ul className="mt-2 list-inside list-disc space-y-1">
-						<li>
-							<strong className="text-content-primary">60% TIP-20</strong> —
-							Token transfer operations (ERC-20 equivalent)
+					<ul className="mt-3 space-y-2">
+						<li className="flex items-baseline gap-2">
+							<span className="text-accent">60%</span>
+							<span>
+								<strong className="text-primary">TIP-20</strong> — Token
+								transfer operations (ERC-20 equivalent)
+							</span>
 						</li>
-						<li>
-							<strong className="text-content-primary">20% MPP</strong> — Multi-party payment batches
+						<li className="flex items-baseline gap-2">
+							<span className="text-accent">20%</span>
+							<span>
+								<strong className="text-primary">MPP</strong> — Multi-party
+								payment batches
+							</span>
 						</li>
-						<li>
-							<strong className="text-content-primary">20% DEX</strong> — Stablecoin DEX swap
-							operations
+						<li className="flex items-baseline gap-2">
+							<span className="text-accent">20%</span>
+							<span>
+								<strong className="text-primary">DEX</strong> — Stablecoin DEX
+								swap operations
+							</span>
 						</li>
 					</ul>
 				</Section>
@@ -37,12 +47,17 @@ function MethodologyPage(): React.JSX.Element {
 						Benchmarks run on dedicated bare-metal servers to ensure consistent
 						results:
 					</p>
-					<ul className="mt-2 list-inside list-disc space-y-1">
-						<li>CPU: AMD EPYC 9454P (48C/96T)</li>
-						<li>Memory: 256 GB DDR5-4800</li>
-						<li>Storage: 2× NVMe Gen4 in RAID-0</li>
-						<li>Network: 25 Gbps between validator nodes</li>
-					</ul>
+					<div className="mt-3 card">
+						<div className="divide-y divide-dashed divide-border">
+							<HardwareRow label="CPU" value="AMD EPYC 9454P (48C/96T)" />
+							<HardwareRow label="Memory" value="256 GB DDR5-4800" />
+							<HardwareRow label="Storage" value="2× NVMe Gen4 in RAID-0" />
+							<HardwareRow
+								label="Network"
+								value="25 Gbps between validator nodes"
+							/>
+						</div>
+					</div>
 				</Section>
 
 				<Section title="Validator Configuration">
@@ -55,36 +70,40 @@ function MethodologyPage(): React.JSX.Element {
 				</Section>
 
 				<Section title="Metrics">
-					<ul className="list-inside list-disc space-y-1">
-						<li>
-							<strong className="text-content-primary">Throughput</strong> —
-							Average and peak gas consumed per second across all blocks in the
-							run.
-						</li>
-						<li>
-							<strong className="text-content-primary">TPS</strong> —
-							Transactions per second (derived from gas / avg tx gas).
-						</li>
-						<li>
-							<strong className="text-content-primary">P50/P99 Latency</strong>{' '}
-							— Block execution time percentiles.
-						</li>
-						<li>
-							<strong className="text-content-primary">Block Time</strong> —
-							Average wall-clock time between blocks.
-						</li>
-					</ul>
+					<div className="mt-3 card">
+						<div className="divide-y divide-dashed divide-border">
+							<MetricRow
+								label="Throughput"
+								description="Average and peak gas consumed per second across all blocks in the run."
+							/>
+							<MetricRow
+								label="TPS"
+								description="Transactions per second (derived from gas / avg tx gas)."
+							/>
+							<MetricRow
+								label="P50/P99 Latency"
+								description="Block execution time percentiles."
+							/>
+							<MetricRow
+								label="Block Time"
+								description="Average wall-clock time between blocks."
+							/>
+						</div>
+					</div>
 				</Section>
 
 				<Section title="Data Pipeline">
 					<p>
 						Benchmark results are produced by{' '}
-						<code className="rounded bg-surface-raised px-1.5 py-0.5 font-mono text-xs text-content-primary">
+						<a
+							href="https://github.com/tempoxyz/tempo/blob/main/bin/tempo-bench/README.md"
+							target="_blank"
+							rel="noopener noreferrer"
+							className="text-accent hover:underline"
+						>
 							tempo-bench
-						</code>{' '}
-						and written to ClickHouse. A nightly GitHub Actions workflow exports
-						curated scenario results as JSON to a Cloudflare R2 bucket, which
-						this dashboard reads from.
+						</a>
+						.
 					</p>
 				</Section>
 			</div>
@@ -92,10 +111,13 @@ function MethodologyPage(): React.JSX.Element {
 	)
 }
 
-function Section(props: Section.Props): React.JSX.Element {
+function Section(props: {
+	title: string
+	children: React.ReactNode
+}): React.JSX.Element {
 	return (
 		<section>
-			<h3 className="mb-2 text-base font-semibold text-content-primary">
+			<h3 className="mb-3 text-[16px] font-semibold text-primary">
 				{props.title}
 			</h3>
 			{props.children}
@@ -103,9 +125,28 @@ function Section(props: Section.Props): React.JSX.Element {
 	)
 }
 
-declare namespace Section {
-	type Props = {
-		title: string
-		children: React.ReactNode
-	}
+function HardwareRow(props: {
+	label: string
+	value: string
+}): React.JSX.Element {
+	return (
+		<div className="flex items-center justify-between px-4.5 py-3">
+			<span className="text-[13px] text-tertiary">{props.label}</span>
+			<span className="font-mono text-[13px] text-primary">{props.value}</span>
+		</div>
+	)
+}
+
+function MetricRow(props: {
+	label: string
+	description: string
+}): React.JSX.Element {
+	return (
+		<div className="flex items-center gap-4 px-4.5 py-3">
+			<span className="shrink-0 text-[13px] font-medium text-primary w-28">
+				{props.label}
+			</span>
+			<span className="text-[13px] text-secondary">{props.description}</span>
+		</div>
+	)
 }
