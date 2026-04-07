@@ -66,6 +66,7 @@ function RootDocument() {
 			<body>
 				<QueryClientProvider client={queryClient}>
 					<div className="mx-auto min-h-dvh max-w-[1200px] px-6 lg:px-[84px]">
+						<Banner />
 						<Header />
 						<main>
 							<Outlet />
@@ -76,6 +77,14 @@ function RootDocument() {
 				<Scripts />
 			</body>
 		</html>
+	)
+}
+
+function Banner(): React.JSX.Element {
+	return (
+		<div className="mt-4 rounded-lg border border-negative/40 bg-negative/10 px-4 py-2.5 text-center text-[13px] font-medium text-negative">
+			🚧 Under development — all data shown is mock data
+		</div>
 	)
 }
 
