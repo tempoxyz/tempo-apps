@@ -25,6 +25,9 @@ export default defineConfig({
 		}),
 		react(),
 	],
-	server: { port: 3001 },
+	server: {
+		port: 3001,
+		watch: { ignored: ['**/routeTree.gen.ts'] },
+	},
 	build: { minify: 'oxc' },
 })
