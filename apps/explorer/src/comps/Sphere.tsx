@@ -43,9 +43,10 @@ export namespace Sphere {
 	export function Artwork(): React.JSX.Element {
 		return (
 			<img
-				src="/landing-circles.svg"
+				src="/landing-circles.png"
 				alt=""
 				aria-hidden="true"
+				fetchPriority="high"
 				width={656}
 				height={285}
 				className="w-[656px] max-w-[120vw] h-auto"
