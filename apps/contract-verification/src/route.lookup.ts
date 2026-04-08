@@ -6,17 +6,382 @@ import {
 	codeTable,
 	sourcesTable,
 	signaturesTable,
+	nativeContractsTable,
 	verifiedContractsTable,
 	compiledContractsTable,
 	contractDeploymentsTable,
+	nativeContractRevisionsTable,
 	compiledContractsSourcesTable,
 	compiledContractsSignaturesTable,
+	nativeContractRevisionSourcesTable,
 } from '#database/schema.ts'
-import { chainIds } from '#wagmi.config.ts'
 import { getLogger } from '#lib/logger.ts'
+import { chainIds } from '#wagmi.config.ts'
 import { formatError, getDb, sourcifyError } from '#lib/utilities.ts'
 
 const logger = getLogger(['tempo'])
+
+type MinimalLookupResponse = {
+	matchId: string | null
+	match: 'match' | 'exact_match' | null
+	creationMatch: 'match' | 'exact_match' | null
+	runtimeMatch: 'match' | 'exact_match' | null
+	chainId: string
+	address: string
+	verifiedAt: string | null
+}
+
+function bytesToHex(bytes: ArrayBuffer | Uint8Array): string {
+	return Hex.fromBytes(
+		bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
+	)
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function getNestedValue(
+	source: Record<string, unknown>,
+	path: string,
+): { found: boolean; value?: unknown } {
+	const keys = path.split('.').filter(Boolean)
+	let current: unknown = source
+
+	for (const key of keys) {
+		if (!isRecord(current) || !(key in current)) {
+			return { found: false }
+		}
+		current = current[key]
+	}
+
+	return { found: true, value: current }
+}
+
+function setNestedValue(
+	target: Record<string, unknown>,
+	path: string,
+	value: unknown,
+): void {
+	const keys = path.split('.').filter(Boolean)
+	if (keys.length === 0) return
+
+	let current = target
+	for (const key of keys.slice(0, -1)) {
+		const nextValue = current[key]
+		if (!isRecord(nextValue)) {
+			current[key] = {}
+		}
+		current = current[key] as Record<string, unknown>
+	}
+
+	const finalKey = keys.at(-1)
+	if (!finalKey) return
+	current[finalKey] = value
+}
+
+function deleteNestedValue(
+	target: Record<string, unknown>,
+	path: string,
+): void {
+	const keys = path.split('.').filter(Boolean)
+	if (keys.length === 0) return
+
+	const deleteAt = (
+		current: Record<string, unknown>,
+		remaining: string[],
+	): void => {
+		const [key, ...rest] = remaining
+		if (!key || !(key in current)) return
+
+		if (rest.length === 0) {
+			delete current[key]
+			return
+		}
+
+		const nextValue = current[key]
+		if (!isRecord(nextValue)) return
+
+		deleteAt(nextValue, rest)
+		if (Object.keys(nextValue).length === 0) {
+			delete current[key]
+		}
+	}
+
+	deleteAt(target, keys)
+}
+
+function applyFieldSelection(
+	fullResponse: Record<string, unknown>,
+	minimalResponse: MinimalLookupResponse,
+	fields?: string,
+	omit?: string,
+): Record<string, unknown> {
+	if (fields) {
+		if (fields === 'all') return fullResponse
+
+		const filtered: Record<string, unknown> = { ...minimalResponse }
+		for (const field of fields
+			.split(',')
+			.map((value) => value.trim())
+			.filter(Boolean)) {
+			const nestedValue = getNestedValue(fullResponse, field)
+			if (nestedValue.found) {
+				setNestedValue(filtered, field, nestedValue.value)
+			}
+		}
+
+		return filtered
+	}
+
+	if (omit) {
+		const filtered = structuredClone(fullResponse) as Record<string, unknown>
+		for (const field of omit
+			.split(',')
+			.map((value) => value.trim())
+			.filter(Boolean)) {
+			deleteNestedValue(filtered, field)
+		}
+
+		return filtered
+	}
+
+	return minimalResponse
+}
+
+function buildVerifiedMinimalResponse(row: {
+	matchId: number
+	runtimeMatch: boolean
+	creationMatch: boolean
+	chainId: number
+	address: ArrayBuffer
+	verifiedAt: string
+}): MinimalLookupResponse {
+	const runtimeMatchStatus = row.runtimeMatch ? 'exact_match' : 'match'
+	const creationMatchStatus = row.creationMatch ? 'exact_match' : 'match'
+	const matchStatus =
+		runtimeMatchStatus === 'exact_match' ||
+		creationMatchStatus === 'exact_match'
+			? 'exact_match'
+			: runtimeMatchStatus || creationMatchStatus
+
+	return {
+		matchId: String(row.matchId),
+		match: matchStatus,
+		creationMatch: creationMatchStatus,
+		runtimeMatch: runtimeMatchStatus,
+		chainId: String(row.chainId),
+		address: bytesToHex(row.address),
+		verifiedAt: row.verifiedAt,
+	}
+}
+
+function buildNativeMinimalResponse(row: {
+	chainId: number
+	address: ArrayBuffer
+}): MinimalLookupResponse {
+	return {
+		matchId: null,
+		match: null,
+		creationMatch: null,
+		runtimeMatch: null,
+		chainId: String(row.chainId),
+		address: bytesToHex(row.address),
+		verifiedAt: null,
+	}
+}
+
+function buildSourcesPayload(
+	sourcesResult: Array<{
+		path: string
+		content: string
+		sourceHash: ArrayBuffer
+	}>,
+): {
+	sources: Record<string, { content: string }>
+	sourceIds: Record<string, string>
+	paths: string[]
+} {
+	const sources: Record<string, { content: string }> = {}
+	const sourceIds: Record<string, string> = {}
+	const seenContentHashes = new Set<string>()
+	const paths: string[] = []
+
+	const sortedSources = [...sourcesResult].toSorted((a, b) => {
+		const aIsAbsolute = a.path.startsWith('/')
+		const bIsAbsolute = b.path.startsWith('/')
+		if (aIsAbsolute !== bIsAbsolute) return aIsAbsolute ? 1 : -1
+		return 0
+	})
+
+	for (const source of sortedSources) {
+		const hashHex = bytesToHex(source.sourceHash)
+		if (seenContentHashes.has(hashHex)) continue
+		seenContentHashes.add(hashHex)
+
+		sources[source.path] = { content: source.content }
+		sourceIds[source.path] = hashHex
+		paths.push(source.path)
+	}
+
+	return { sources, sourceIds, paths }
+}
+
+async function getNativeLookupResponse(
+	db: ReturnType<typeof getDb>,
+	chainIdNumber: number,
+	addressBytes: Uint8Array,
+): Promise<{
+	minimalResponse: MinimalLookupResponse
+	fullResponse: Record<string, unknown>
+} | null> {
+	const [nativeContract] = await db
+		.select({
+			id: nativeContractsTable.id,
+			chainId: nativeContractsTable.chainId,
+			address: nativeContractsTable.address,
+			name: nativeContractsTable.name,
+			runtimeType: nativeContractsTable.runtimeType,
+			language: nativeContractsTable.language,
+			abiJson: nativeContractsTable.abiJson,
+		})
+		.from(nativeContractsTable)
+		.where(
+			and(
+				eq(nativeContractsTable.chainId, chainIdNumber),
+				eq(nativeContractsTable.address, addressBytes),
+			),
+		)
+		.limit(1)
+
+	if (!nativeContract) return null
+
+	const [revision] = await db
+		.select({
+			id: nativeContractRevisionsTable.id,
+			repo: nativeContractRevisionsTable.repo,
+			commitSha: nativeContractRevisionsTable.commitSha,
+			commitUrl: nativeContractRevisionsTable.commitUrl,
+			protocolVersion: nativeContractRevisionsTable.protocolVersion,
+			fromBlock: nativeContractRevisionsTable.fromBlock,
+			toBlock: nativeContractRevisionsTable.toBlock,
+		})
+		.from(nativeContractRevisionsTable)
+		.where(eq(nativeContractRevisionsTable.nativeContractId, nativeContract.id))
+		.orderBy(desc(nativeContractRevisionsTable.fromBlock))
+		.limit(1)
+
+	if (!revision) return null
+
+	const revisionSources = await db
+		.select({
+			path: nativeContractRevisionSourcesTable.path,
+			isEntrypoint: nativeContractRevisionSourcesTable.isEntrypoint,
+			content: sourcesTable.content,
+			sourceHash: sourcesTable.sourceHash,
+		})
+		.from(nativeContractRevisionSourcesTable)
+		.innerJoin(
+			sourcesTable,
+			eq(
+				nativeContractRevisionSourcesTable.sourceHash,
+				sourcesTable.sourceHash,
+			),
+		)
+		.where(eq(nativeContractRevisionSourcesTable.revisionId, revision.id))
+
+	const { sources, sourceIds } = buildSourcesPayload(
+		revisionSources.map((source) => ({
+			path: source.path,
+			content: source.content,
+			sourceHash: source.sourceHash as ArrayBuffer,
+		})),
+	)
+	const entrypoints = revisionSources
+		.filter((source) => source.isEntrypoint)
+		.map((source) => source.path)
+		.toSorted((a, b) => a.localeCompare(b))
+	const paths = revisionSources
+		.toSorted(
+			(a, b) =>
+				Number(b.isEntrypoint) - Number(a.isEntrypoint) ||
+				a.path.localeCompare(b.path),
+		)
+		.map((source) => source.path)
+
+	const minimalResponse = buildNativeMinimalResponse({
+		chainId: nativeContract.chainId,
+		address: nativeContract.address as ArrayBuffer,
+	})
+
+	const formattedAddress = minimalResponse.address
+	const abi = JSON.parse(nativeContract.abiJson) as unknown
+	const activationFromBlock =
+		revision.protocolVersion !== null && revision.fromBlock === 0
+			? null
+			: String(revision.fromBlock)
+	const fullResponse: Record<string, unknown> = {
+		...minimalResponse,
+		transactionHash: null,
+		blockNumber: null,
+		name: nativeContract.name,
+		fullyQualifiedName: null,
+		compiler: null,
+		compilerVersion: null,
+		language: null,
+		compilerSettings: null,
+		runtimeMetadataMatch: null,
+		creationMetadataMatch: null,
+		abi,
+		userdoc: null,
+		devdoc: null,
+		storageLayout: null,
+		metadata: null,
+		sources,
+		sourceIds,
+		signatures: {
+			function: [],
+			event: [],
+			error: [],
+		},
+		creationBytecode: null,
+		runtimeBytecode: null,
+		compilation: null,
+		deployment: {
+			chainId: String(nativeContract.chainId),
+			address: formattedAddress,
+			transactionHash: null,
+			blockNumber: null,
+			transactionIndex: null,
+			deployer: null,
+		},
+		stdJsonInput: null,
+		stdJsonOutput: null,
+		proxyResolution: null,
+		extensions: {
+			tempo: {
+				nativeSource: {
+					kind: nativeContract.runtimeType,
+					language: nativeContract.language,
+					bytecodeVerified: false,
+					repository: revision.repo,
+					commit: revision.commitSha,
+					commitUrl: revision.commitUrl,
+					paths,
+					entrypoints,
+					activation: {
+						protocolVersion: revision.protocolVersion,
+						fromBlock: activationFromBlock,
+						toBlock:
+							revision.toBlock === null ? null : String(revision.toBlock),
+					},
+				},
+			},
+		},
+	}
+
+	return { minimalResponse, fullResponse }
+}
 
 /**
  * GET /v2/contract/{chainId}/{address}
@@ -45,49 +410,60 @@ lookupRoute
 			const db = getDb(context.env.CONTRACTS_DB)
 			const addressBytes = Hex.toBytes(address)
 
-			// Query all verified contracts at this address across all chains
-			const results = await db
-				.select({
-					matchId: verifiedContractsTable.id,
-					verifiedAt: verifiedContractsTable.createdAt,
-					runtimeMatch: verifiedContractsTable.runtimeMatch,
-					creationMatch: verifiedContractsTable.creationMatch,
-					runtimeMetadataMatch: verifiedContractsTable.runtimeMetadataMatch,
-					creationMetadataMatch: verifiedContractsTable.creationMetadataMatch,
-					chainId: contractDeploymentsTable.chainId,
-					address: contractDeploymentsTable.address,
-				})
-				.from(verifiedContractsTable)
-				.innerJoin(
-					contractDeploymentsTable,
-					eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
-				)
-				.innerJoin(
-					compiledContractsTable,
-					eq(verifiedContractsTable.compilationId, compiledContractsTable.id),
-				)
-				.where(eq(contractDeploymentsTable.address, addressBytes))
+			const [verifiedResults, nativeResults] = await Promise.all([
+				db
+					.select({
+						matchId: verifiedContractsTable.id,
+						verifiedAt: verifiedContractsTable.createdAt,
+						runtimeMatch: verifiedContractsTable.runtimeMatch,
+						creationMatch: verifiedContractsTable.creationMatch,
+						chainId: contractDeploymentsTable.chainId,
+						address: contractDeploymentsTable.address,
+					})
+					.from(verifiedContractsTable)
+					.innerJoin(
+						contractDeploymentsTable,
+						eq(
+							verifiedContractsTable.deploymentId,
+							contractDeploymentsTable.id,
+						),
+					)
+					.innerJoin(
+						compiledContractsTable,
+						eq(verifiedContractsTable.compilationId, compiledContractsTable.id),
+					)
+					.where(eq(contractDeploymentsTable.address, addressBytes)),
+				db
+					.select({
+						chainId: nativeContractsTable.chainId,
+						address: nativeContractsTable.address,
+					})
+					.from(nativeContractsTable)
+					.where(eq(nativeContractsTable.address, addressBytes)),
+			])
 
-			// Transform results to minimal format per OpenAPI spec
-			const contracts = results.map((row) => {
-				const runtimeMatchStatus = row.runtimeMatch ? 'exact_match' : 'match'
-				const creationMatchStatus = row.creationMatch ? 'exact_match' : 'match'
-				const matchStatus =
-					runtimeMatchStatus === 'exact_match' ||
-					creationMatchStatus === 'exact_match'
-						? 'exact_match'
-						: runtimeMatchStatus || creationMatchStatus
-
-				return {
-					matchId: String(row.matchId),
-					match: matchStatus,
-					creationMatch: creationMatchStatus,
-					runtimeMatch: runtimeMatchStatus,
-					chainId: String(row.chainId),
-					address: Hex.fromBytes(new Uint8Array(row.address as ArrayBuffer)),
-					verifiedAt: row.verifiedAt,
-				}
-			})
+			const contracts = [
+				...verifiedResults.map((row) =>
+					buildVerifiedMinimalResponse({
+						matchId: row.matchId,
+						runtimeMatch: row.runtimeMatch,
+						creationMatch: row.creationMatch,
+						chainId: row.chainId,
+						address: row.address as ArrayBuffer,
+						verifiedAt: row.verifiedAt,
+					}),
+				),
+				...nativeResults.map((row) =>
+					buildNativeMinimalResponse({
+						chainId: row.chainId,
+						address: row.address as ArrayBuffer,
+					}),
+				),
+			].toSorted(
+				(a, b) =>
+					Number(a.chainId) - Number(b.chainId) ||
+					a.address.localeCompare(b.address),
+			)
 
 			return context.json({ results: contracts })
 		} catch (error) {
@@ -199,16 +575,24 @@ lookupRoute
 				)
 				.limit(1)
 
-			if (results.length === 0)
-				return sourcifyError(
-					context,
-					404,
-					'contract_not_found',
-					`Contract ${address} on chain ${chainId} not found or not verified`,
-				)
-
 			const [row] = results
 			if (!row) {
+				const nativeLookup = await getNativeLookupResponse(
+					db,
+					chainIdNumber,
+					addressBytes,
+				)
+				if (nativeLookup) {
+					return context.json(
+						applyFieldSelection(
+							nativeLookup.fullResponse,
+							nativeLookup.minimalResponse,
+							fields,
+							omit,
+						),
+					)
+				}
+
 				return sourcifyError(
 					context,
 					404,
@@ -217,30 +601,14 @@ lookupRoute
 				)
 			}
 
-			// Compute match statuses per OpenAPI spec
-			const runtimeMatchStatus = row.runtimeMatch ? 'exact_match' : 'match'
-			const creationMatchStatus = row.creationMatch ? 'exact_match' : 'match'
-			// Overall match: best of runtime or creation
-			const matchStatus =
-				runtimeMatchStatus === 'exact_match' ||
-				creationMatchStatus === 'exact_match'
-					? 'exact_match'
-					: runtimeMatchStatus || creationMatchStatus
-
-			const formattedAddress = Hex.fromBytes(
-				new Uint8Array(row.address as ArrayBuffer),
-			)
-
-			// Minimal response (default)
-			const minimalResponse = {
-				matchId: String(row.matchId),
-				match: matchStatus,
-				creationMatch: creationMatchStatus,
-				runtimeMatch: runtimeMatchStatus,
-				chainId: String(row.chainId),
-				address: formattedAddress,
+			const minimalResponse = buildVerifiedMinimalResponse({
+				matchId: row.matchId,
+				runtimeMatch: row.runtimeMatch,
+				creationMatch: row.creationMatch,
+				chainId: row.chainId,
+				address: row.address as ArrayBuffer,
 				verifiedAt: row.verifiedAt,
-			}
+			})
 
 			// If no fields requested, return minimal response
 			if (!fields && !omit) return context.json(minimalResponse)
@@ -298,30 +666,13 @@ lookupRoute
 					eq(compiledContractsSignaturesTable.compilationId, row.compilationId),
 				)
 
-			// Build sources object, preferring normalized (relative) paths over absolute paths
-			const sources: Record<string, { content: string }> = {}
-			const sourceIds: Record<string, string> = {}
-			const seenContentHashes = new Set<string>()
-
-			// Sort to process relative paths first, then absolute paths
-			const sortedSources = [...sourcesResult].toSorted((a, b) => {
-				const aIsAbsolute = a.path.startsWith('/')
-				const bIsAbsolute = b.path.startsWith('/')
-				if (aIsAbsolute === bIsAbsolute) return 0
-				return aIsAbsolute ? 1 : -1 // Relative paths first
-			})
-
-			for (const source of sortedSources) {
-				const hashHex = Hex.fromBytes(
-					new Uint8Array(source.sourceHash as ArrayBuffer),
-				)
-				// Skip if we already have this source content (prefer relative path)
-				if (seenContentHashes.has(hashHex)) continue
-				seenContentHashes.add(hashHex)
-
-				sources[source.path] = { content: source.content }
-				sourceIds[source.path] = hashHex
-			}
+			const { sources, sourceIds } = buildSourcesPayload(
+				sourcesResult.map((source) => ({
+					path: source.path,
+					content: source.content,
+					sourceHash: source.sourceHash as ArrayBuffer,
+				})),
+			)
 
 			// Build signatures object (Sourcify format: grouped by type)
 			const signatures: {
@@ -434,7 +785,7 @@ lookupRoute
 			const fullResponse: Record<string, unknown> = {
 				...minimalResponse,
 				transactionHash: row.transactionHash
-					? Hex.fromBytes(new Uint8Array(row.transactionHash as ArrayBuffer))
+					? bytesToHex(row.transactionHash as ArrayBuffer)
 					: null,
 				blockNumber: row.blockNumber,
 				name: row.contractName,
@@ -485,14 +836,14 @@ lookupRoute
 				},
 				deployment: {
 					chainId: String(row.chainId),
-					address: formattedAddress,
+					address: minimalResponse.address,
 					transactionHash: row.transactionHash
-						? Hex.fromBytes(new Uint8Array(row.transactionHash as ArrayBuffer))
+						? bytesToHex(row.transactionHash as ArrayBuffer)
 						: null,
 					blockNumber: row.blockNumber,
 					transactionIndex: row.transactionIndex,
 					deployer: row.deployer
-						? Hex.fromBytes(new Uint8Array(row.deployer as ArrayBuffer))
+						? bytesToHex(row.deployer as ArrayBuffer)
 						: null,
 				},
 				stdJsonInput,
@@ -500,28 +851,9 @@ lookupRoute
 				proxyResolution: null, // Not implemented yet
 			}
 
-			// Apply field filtering
-			if (fields) {
-				if (fields === 'all') return context.json(fullResponse)
-				const fieldList = fields.split(',').map((f) => f.trim())
-				const filtered: Record<string, unknown> = {
-					// Always include minimal fields
-					...minimalResponse,
-				}
-				for (const field of fieldList)
-					if (field in fullResponse) filtered[field] = fullResponse[field]
-
-				return context.json(filtered)
-			}
-
-			if (omit) {
-				const omitList = omit.split(',').map((f) => f.trim())
-				for (const field of omitList) delete fullResponse[field]
-
-				return context.json(fullResponse)
-			}
-
-			return context.json(minimalResponse)
+			return context.json(
+				applyFieldSelection(fullResponse, minimalResponse, fields, omit),
+			)
 		} catch (error) {
 			const { chainId, address } = context.req.param()
 			logger.error('lookup_contract_failed', {
@@ -570,11 +902,11 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 		const query = db
 			.select({
 				matchId: verifiedContractsTable.id,
+				chainId: contractDeploymentsTable.chainId,
+				address: contractDeploymentsTable.address,
 				verifiedAt: verifiedContractsTable.createdAt,
 				runtimeMatch: verifiedContractsTable.runtimeMatch,
 				creationMatch: verifiedContractsTable.creationMatch,
-				chainId: contractDeploymentsTable.chainId,
-				address: contractDeploymentsTable.address,
 			})
 			.from(verifiedContractsTable)
 			.innerJoin(

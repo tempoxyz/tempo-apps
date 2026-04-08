@@ -28,7 +28,9 @@ function RunDetailPage(): React.JSX.Element {
 
 	if (!run) {
 		return (
-			<div className="py-20 text-center text-secondary">Benchmark not found.</div>
+			<div className="py-20 text-center text-secondary">
+				Benchmark not found.
+			</div>
 		)
 	}
 

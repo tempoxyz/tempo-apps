@@ -4,7 +4,7 @@
 	"type": "module",
 	"imports": {
 		"#*": "./src/*",
-		"#database*": "./database/*",
+		"#database/*": "./database/*",
 		"#openapi.json": "./openapi.json",
 		"#package.json": "./package.json",
 		"#wrangler.json": "./wrangler.json"
@@ -22,7 +22,9 @@
 		"tail": "wrangler tail",
 		"db:studio": "drizzle-kit studio --config='drizzle.config.ts'",
 		"db:migrate": "drizzle-kit migrate --config='drizzle.config.ts'",
-		"db:push": "CLOUDFLARE_D1_ENVIRONMENT='remote' drizzle-kit push --config='drizzle.config.ts'"
+		"db:push": "CLOUDFLARE_D1_ENVIRONMENT='remote' drizzle-kit push --config='drizzle.config.ts'",
+		"db:seed:native": "pnpm db:url && node ./scripts/seed-native-contracts.ts",
+		"db:url": "export DATABASE_URL='file:$(/bin/bash scripts/local-d1.sh)'"
 	},
 	"dependencies": {
 		"@cloudflare/containers": "^0.2.3",
@@ -56,7 +58,6 @@
 		"@types/semver": "^7.7.1",
 		"@vitest/coverage-istanbul": "4.1.0",
 		"@vitest/ui": "catalog:",
-		"dbmate": "^2.31.0",
 		"dotenv": "catalog:",
 		"drizzle-kit": "^0.31.10",
 		"esbuild": "catalog:",

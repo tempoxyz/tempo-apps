@@ -28,3 +28,4 @@ _tmp
 _verify
 .pnpm-store
 .dev.vars
+_data
