@@ -11,8 +11,7 @@ import { cx } from '#lib/css'
 import { getTempoEnv, isTestnet } from '#lib/env'
 import SquareSquare from '~icons/lucide/square-square'
 
-export function Header(props: Header.Props) {
-	const { initialBlockNumber } = props
+export function Header(): React.JSX.Element {
 	const tempoEnv = getTempoEnv()
 	const networkBadgeLabel =
 		tempoEnv === 'mainnet' ? null : tempoEnv === 'devnet' ? 'Devnet' : 'Testnet'
@@ -33,7 +32,7 @@ export function Header(props: Header.Props) {
 				</div>
 				<Header.Search />
 				<div className="relative z-1 print:hidden flex items-center gap-[8px]">
-					<Header.BlockNumber initial={initialBlockNumber} />
+					<Header.BlockNumber />
 				</div>
 			</div>
 			<Header.Search compact />
@@ -42,10 +41,6 @@ export function Header(props: Header.Props) {
 }
 
 export namespace Header {
-	export interface Props {
-		initialBlockNumber?: bigint
-	}
-
 	export function Search(props: { compact?: boolean }) {
 		const { compact = false } = props
 		const router = useRouter()
