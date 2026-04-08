@@ -182,9 +182,9 @@ function buildNativeMinimalResponse(row: {
 }): MinimalLookupResponse {
 	return {
 		matchId: null,
-		match: null,
-		creationMatch: null,
-		runtimeMatch: null,
+		match: 'exact_match',
+		creationMatch: 'exact_match',
+		runtimeMatch: 'exact_match',
 		chainId: String(row.chainId),
 		address: bytesToHex(row.address),
 		verifiedAt: null,
@@ -898,8 +898,7 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 
 		const db = getDb(context.env.CONTRACTS_DB)
 
-		// Build query
-		const query = db
+		const verifiedResults = await db
 			.select({
 				matchId: verifiedContractsTable.id,
 				chainId: contractDeploymentsTable.chainId,
@@ -930,28 +929,39 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 			)
 			.limit(limitNum)
 
-		const results = await query
+		const nativeResults = afterMatchId
+			? []
+			: await db
+					.select({
+						chainId: nativeContractsTable.chainId,
+						address: nativeContractsTable.address,
+					})
+					.from(nativeContractsTable)
+					.where(eq(nativeContractsTable.chainId, chainIdNumber))
+					.orderBy(
+						sortOrder === 'desc'
+							? desc(nativeContractsTable.address)
+							: asc(nativeContractsTable.address),
+					)
 
-		// Transform results to match OpenAPI spec
-		const contracts = results.map((row) => {
-			const runtimeMatchStatus = row.runtimeMatch ? 'exact_match' : 'match'
-			const creationMatchStatus = row.creationMatch ? 'exact_match' : 'match'
-			const matchStatus =
-				runtimeMatchStatus === 'exact_match' ||
-				creationMatchStatus === 'exact_match'
-					? 'exact_match'
-					: 'match'
-
-			return {
-				matchId: String(row.matchId),
-				match: matchStatus,
-				creationMatch: creationMatchStatus,
-				runtimeMatch: runtimeMatchStatus,
-				chainId: String(row.chainId),
-				address: Hex.fromBytes(new Uint8Array(row.address as ArrayBuffer)),
-				verifiedAt: row.verifiedAt,
-			}
-		})
+		const contracts = [
+			...verifiedResults.map((row) =>
+				buildVerifiedMinimalResponse({
+					matchId: row.matchId,
+					runtimeMatch: row.runtimeMatch,
+					creationMatch: row.creationMatch,
+					chainId: row.chainId,
+					address: row.address as ArrayBuffer,
+					verifiedAt: row.verifiedAt,
+				}),
+			),
+			...nativeResults.map((row) =>
+				buildNativeMinimalResponse({
+					chainId: row.chainId,
+					address: row.address as ArrayBuffer,
+				}),
+			),
+		].slice(0, limitNum)
 
 		return context.json({ results: contracts })
 	} catch (error) {

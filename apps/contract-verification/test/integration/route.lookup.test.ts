@@ -226,9 +226,9 @@ describe('gET /v2/contract/all-chains/:address', () => {
 			results: [
 				{
 					matchId: null,
-					match: null,
-					creationMatch: null,
-					runtimeMatch: null,
+					match: 'exact_match',
+					creationMatch: 'exact_match',
+					runtimeMatch: 'exact_match',
 					chainId: String(fixture.chainId),
 					address: fixture.address,
 					verifiedAt: null,
@@ -320,9 +320,9 @@ describe('gET /v2/contract/:chainId/:address', () => {
 
 		expect(body).toMatchObject({
 			matchId: null,
-			match: null,
-			creationMatch: null,
-			runtimeMatch: null,
+			match: 'exact_match',
+			creationMatch: 'exact_match',
+			runtimeMatch: 'exact_match',
 			chainId: String(fixture.chainId),
 			address: fixture.address,
 			verifiedAt: null,
@@ -385,9 +385,9 @@ describe('gET /v2/contract/:chainId/:address', () => {
 		expect(response.status).toBe(200)
 		expect(await response.json()).toEqual({
 			matchId: null,
-			match: null,
-			creationMatch: null,
-			runtimeMatch: null,
+			match: 'exact_match',
+			creationMatch: 'exact_match',
+			runtimeMatch: 'exact_match',
 			chainId: String(fixture.chainId),
 			address: fixture.address,
 			verifiedAt: null,
@@ -431,5 +431,30 @@ describe('gET /v2/contracts/:chainId', () => {
 			await response.json(),
 		)
 		expect(body.customCode).toBe('invalid_chain_id')
+	})
+
+	it('includes native precompiles in chain contract listings', async () => {
+		const fixture = await insertNativePrecompileFixture()
+
+		const response = await app.request(
+			`/v2/contracts/${fixture.chainId}`,
+			{},
+			env,
+		)
+
+		expect(response.status).toBe(200)
+		expect(await response.json()).toEqual({
+			results: [
+				{
+					matchId: null,
+					match: 'exact_match',
+					creationMatch: 'exact_match',
+					runtimeMatch: 'exact_match',
+					chainId: String(fixture.chainId),
+					address: fixture.address,
+					verifiedAt: null,
+				},
+			],
+		})
 	})
 })
