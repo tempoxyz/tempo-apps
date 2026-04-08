@@ -1,0 +1,7 @@
+# Fingerprinted build assets — immutable, cache forever
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Preloaded fonts — stable filenames but content rarely changes
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable

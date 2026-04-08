@@ -103,6 +103,12 @@ export const Route = createRootRouteWithContext<{
 				crossOrigin: 'anonymous',
 			},
 			{
+				rel: 'preload',
+				href: '/landing-circles.png',
+				as: 'image',
+				type: 'image/png',
+			},
+			{
 				rel: 'stylesheet',
 				href: css,
 			},
