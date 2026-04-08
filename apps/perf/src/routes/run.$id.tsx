@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { getRun, getScenario, type BenchBlock } from '#data/mock'
-import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
+import {
+	formatGas,
+	formatTps,
+	formatMs,
+	formatDate,
+	formatAccounts,
+} from '#lib/format'
 
 export const Route = createFileRoute('/run/$id')({
 	component: RunDetailPage,
@@ -52,7 +58,7 @@ function RunDetailPage(): React.JSX.Element {
 				</p>
 			</section>
 
-			<section className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+			<section className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
 				<MetricCard
 					label="Throughput"
 					value={formatGas(run.avgGasPerSecond)}
@@ -60,6 +66,10 @@ function RunDetailPage(): React.JSX.Element {
 				/>
 				<MetricCard label="Peak" value={formatGas(run.peakGasPerSecond)} />
 				<MetricCard label="Avg TPS" value={formatTps(run.avgTps)} />
+				<MetricCard
+					label="State Size"
+					value={`${formatAccounts(run.stateAccounts)} accounts`}
+				/>
 				<MetricCard label="Block Time" value={formatMs(run.avgBlockTimeMs)} />
 				<MetricCard label="P50 Latency" value={formatMs(run.p50LatencyMs)} />
 				<MetricCard label="P99 Latency" value={formatMs(run.p99LatencyMs)} />
@@ -157,26 +167,35 @@ function GasChart(props: { blocks: Array<BenchBlock> }): React.JSX.Element {
 
 	return (
 		<div className="card p-5">
-			<div className="flex h-44 items-end gap-[2px]">
-				{blocks.map((block) => {
-					const height = (block.gasUsed / maxGas) * 100
-					return (
-						<div
-							key={block.number}
-							className="group relative flex-1"
-							style={{ height: '100%' }}
-						>
-							<div
-								className="absolute bottom-0 w-full rounded-t-[2px] bg-accent/40 transition-all group-hover:bg-accent"
-								style={{ height: `${height}%` }}
-							/>
-						</div>
-					)
-				})}
-			</div>
-			<div className="mt-3 flex justify-between text-[11px] text-tertiary">
-				<span>#{blocks[0]?.number}</span>
-				<span>#{blocks.at(-1)?.number}</span>
+			<div className="flex gap-3">
+				<div className="flex h-44 flex-col justify-between text-right text-[10px] text-tertiary font-mono">
+					<span>{formatGas(maxGas)}</span>
+					<span>{formatGas(Math.round(maxGas / 2))}</span>
+					<span>0</span>
+				</div>
+				<div className="flex-1">
+					<div className="flex h-44 items-end gap-[2px]">
+						{blocks.map((block) => {
+							const height = (block.gasUsed / maxGas) * 100
+							return (
+								<div
+									key={block.number}
+									className="group relative flex-1"
+									style={{ height: '100%' }}
+								>
+									<div
+										className="absolute bottom-0 w-full rounded-t-[2px] bg-accent/40 transition-all group-hover:bg-accent"
+										style={{ height: `${height}%` }}
+									/>
+								</div>
+							)
+						})}
+					</div>
+					<div className="mt-3 flex justify-between text-[11px] text-tertiary">
+						<span>#{blocks[0]?.number}</span>
+						<span>#{blocks.at(-1)?.number}</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	)
@@ -190,32 +209,41 @@ function ExecTimeChart(props: {
 
 	return (
 		<div className="card p-5">
-			<div className="flex h-36 items-end gap-[2px]">
-				{blocks.map((block) => {
-					const height = (block.executionTimeMs / maxExec) * 100
-					const color =
-						block.executionTimeMs > 120
-							? 'bg-negative/50 group-hover:bg-negative'
-							: block.executionTimeMs > 80
-								? 'bg-warning/50 group-hover:bg-warning'
-								: 'bg-positive/50 group-hover:bg-positive'
-					return (
-						<div
-							key={block.number}
-							className="group relative flex-1"
-							style={{ height: '100%' }}
-						>
-							<div
-								className={`absolute bottom-0 w-full rounded-t-[2px] transition-all ${color}`}
-								style={{ height: `${height}%` }}
-							/>
-						</div>
-					)
-				})}
-			</div>
-			<div className="mt-3 flex justify-between text-[11px] text-tertiary">
-				<span>#{blocks[0]?.number}</span>
-				<span>#{blocks.at(-1)?.number}</span>
+			<div className="flex gap-3">
+				<div className="flex h-36 flex-col justify-between text-right text-[10px] text-tertiary font-mono">
+					<span>{formatMs(maxExec)}</span>
+					<span>{formatMs(Math.round(maxExec / 2))}</span>
+					<span>0</span>
+				</div>
+				<div className="flex-1">
+					<div className="flex h-36 items-end gap-[2px]">
+						{blocks.map((block) => {
+							const height = (block.executionTimeMs / maxExec) * 100
+							const color =
+								block.executionTimeMs > 120
+									? 'bg-negative/50 group-hover:bg-negative'
+									: block.executionTimeMs > 80
+										? 'bg-warning/50 group-hover:bg-warning'
+										: 'bg-positive/50 group-hover:bg-positive'
+							return (
+								<div
+									key={block.number}
+									className="group relative flex-1"
+									style={{ height: '100%' }}
+								>
+									<div
+										className={`absolute bottom-0 w-full rounded-t-[2px] transition-all ${color}`}
+										style={{ height: `${height}%` }}
+									/>
+								</div>
+							)
+						})}
+					</div>
+					<div className="mt-3 flex justify-between text-[11px] text-tertiary">
+						<span>#{blocks[0]?.number}</span>
+						<span>#{blocks.at(-1)?.number}</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	)
