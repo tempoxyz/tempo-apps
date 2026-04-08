@@ -70,12 +70,25 @@ Once dev server is running, you can run scripts in the [/apps/contract-verificat
 #### Database
 
 We use [D1](https://developers.cloudflare.com/d1), a serverless SQLite-compatible database by Cloudflare.
-Sometimes you need to debug the local database in development,
-especially when it's SQLite. Sadly, wrangler doesn't have a nice way to do this.
+For local development, keep migrations and seeding separate:
 
-Improvised solution: we [locate the local SQLite file wrangler uses](/apps/contract-verification/scripts/local-d1.sh) and run drizzle-kit studio to view it.
+```bash
+pnpm db:prepare:local  # Apply local D1 migrations non-interactively
+pnpm db:seed:local     # Seed native/precompile contract metadata into local D1
+```
+
+For remote D1:
+
+```bash
+pnpm db:prepare:remote # Apply remote D1 migrations non-interactively
+pnpm db:seed:remote    # Seed native/precompile contract metadata into remote D1
+```
+
+The seed script uses Wrangler's D1 binding path rather than opening the SQLite file directly, so the same seeding logic works for both local and remote D1.
+
+`pnpm db:studio` uses the Drizzle D1 HTTP config. If you need to inspect the local SQLite file directly, resolve it with [local-d1.ts](./scripts/local-d1.ts) and point a SQLite-capable tool at that path instead.
 
 | environment | database      | dialect | GUI                                                                 |
 |-------------|---------------|---------|---------------------------------------------------------------------|
 | production  | Cloudflare D1 | SQLite  | [DrizzleKit Studio](https://github.com/drizzle-team/drizzle-studio) |
-| development | Local SQLite  | SQLite  | [local-d1.sh](./scripts/local-d1.sh) + DrizzleKit Studio (see above)  |
+| development | Local SQLite  | SQLite  | [local-d1.ts](./scripts/local-d1.ts) + your SQLite tool of choice   |

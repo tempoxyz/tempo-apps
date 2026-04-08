@@ -77,7 +77,7 @@ catalog:
   vite-plugin-devtools-json: ^1.0.0
   vitest: 4.1.0
   wagmi: ^3.6.0
-  wrangler: 4.79.0
+  wrangler: 4.81.0
   zod: ^4.3.6
 
 catalogMode: strict

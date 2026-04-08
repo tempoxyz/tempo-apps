@@ -151,9 +151,9 @@ export async function seedNativeContracts(
 				const contentPromise =
 					sourceCache.get(cacheKey) ??
 					fetchSourceFile(fetchImpl, entry.repository, entry.commit, path)
-				if (!sourceCache.has(cacheKey)) {
+
+				if (!sourceCache.has(cacheKey))
 					sourceCache.set(cacheKey, contentPromise)
-				}
 
 				const content = await contentPromise
 				const hashes = await hashSourceContent(content)

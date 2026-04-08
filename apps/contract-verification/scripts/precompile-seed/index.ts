@@ -1,27 +1,18 @@
-import * as z from 'zod/mini'
-import * as NodeURL from 'node:url'
+import * as NodeOS from 'node:os'
+import * as NodePath from 'node:path'
+import { drizzle } from 'drizzle-orm/d1'
+import * as NodeFS from 'node:fs/promises'
 import * as NodeProcess from 'node:process'
-import { drizzle } from 'drizzle-orm/libsql'
-import { createClient } from '@libsql/client'
-import NodeChildProcess from 'node:child_process'
+import { getPlatformProxy } from 'wrangler'
 
 import * as DB from '#database/schema.ts'
 import { seedNativeContracts } from './seed.ts'
 
-const boolishSchema = z.stringbool()
-
-const seedEnvsSchema = z.object({
-	dryRun: z.prefault(boolishSchema, false),
-	DATABASE_URL: z.optional(z.string()),
-})
+import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
 const [, , ...args] = process.argv
-
+const isRemote = args.includes('--remote')
 const isDryRun = args.includes('--dry-run')
-if (isDryRun)
-	console.log(
-		'\nRunning in dry-run mode. No changes will be made to the database.\n',
-	)
 
 main().catch((error) => {
 	console.error('Error seeding native contracts:', error)
@@ -29,39 +20,66 @@ main().catch((error) => {
 })
 
 async function main() {
-	const seedEnvs = seedEnvsSchema.safeParse({
-		...process.env,
-		dryRun: isDryRun,
-	})
-	if (!seedEnvs.success)
-		throw new Error(
-			`Invalid environment variables: ${JSON.stringify(z.prettifyError(seedEnvs.error))}`,
-		)
-
-	const url =
-		seedEnvs.data.DATABASE_URL ??
-		NodeURL.pathToFileURL(
-			NodeChildProcess.execSync('/bin/bash scripts/local-d1.sh', {
-				cwd: process.cwd(),
-			})
-				.toString()
-				.trim(),
-		).href
-
-	const client = createClient({ url })
+	const temporaryWranglerPath = await temporaryWranglerFileWorkaround()
 
 	try {
-		const db = drizzle(client, { schema: DB })
-		if (isDryRun) {
-			console.info(await db.select().from(DB.nativeContractsTable).all())
-			console.log(
-				'Dry-run mode: exiting with 0 before `seedNativeContracts` is called.',
-			)
-			NodeProcess.exit(0)
+		const platform = await getPlatformProxy<Cloudflare.Env>({
+			persist: true,
+			remoteBindings: isRemote,
+			configPath: temporaryWranglerPath,
+		})
+
+		try {
+			const db = drizzle(platform.env.CONTRACTS_DB, { schema: DB })
+
+			if (isDryRun) {
+				console.info(await db.select().from(DB.nativeContractsTable).all())
+				return
+			}
+
+			const result = await seedNativeContracts(db)
+			console.log(JSON.stringify(result, null, 2))
+		} finally {
+			await platform.dispose()
 		}
-		const result = await seedNativeContracts(db)
-		console.log(JSON.stringify(result, null, 2))
 	} finally {
-		void client.close()
+		await NodeFS.rm(NodePath.dirname(temporaryWranglerPath), {
+			recursive: true,
+			force: true,
+		})
 	}
+}
+
+async function temporaryWranglerFileWorkaround() {
+	const temporaryWranglerConfig = structuredClone(wranglerJSON)
+	const problematicWranglerFields = [
+		'containers',
+		'migrations',
+		'durable_objects',
+	] as const
+
+	for (const field of problematicWranglerFields)
+		delete temporaryWranglerConfig[field]
+
+	temporaryWranglerConfig.main = NodePath.resolve(temporaryWranglerConfig.main)
+	temporaryWranglerConfig.d1_databases =
+		temporaryWranglerConfig.d1_databases.map((database) => ({
+			...database,
+			migrations_dir: NodePath.resolve(database.migrations_dir),
+			remote: isRemote,
+		}))
+
+	const temporaryDirectory = await NodeFS.mkdtemp(
+		NodePath.join(NodeOS.tmpdir(), 'contracts-seed-'),
+	)
+	const temporaryWranglerPath = NodePath.join(
+		temporaryDirectory,
+		'wrangler.json',
+	)
+	await NodeFS.writeFile(
+		temporaryWranglerPath,
+		JSON.stringify(temporaryWranglerConfig),
+	)
+
+	return temporaryWranglerPath
 }

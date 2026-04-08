@@ -20,9 +20,7 @@ export default defineConfig((config) => {
 	const port = Number(lastPort ?? env.PORT ?? 3_000)
 
 	return {
-		resolve: {
-			tsconfigPaths: true,
-		},
+		resolve: { tsconfigPaths: true },
 		plugins: [cloudflare(), vitePluginChromiumDevTools()],
 		server: {
 			port,
