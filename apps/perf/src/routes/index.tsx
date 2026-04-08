@@ -69,8 +69,8 @@ function DashboardPage(): React.JSX.Element {
 											/>
 											<Stat label="Avg TPS" value={formatTps(latest.avgTps)} />
 											<Stat
-												label="State Size"
-												value={`${formatAccounts(latest.stateAccounts)} accts`}
+												label="P99 Latency"
+												value={formatMs(latest.p99LatencyMs)}
 											/>
 										</div>
 									</div>
