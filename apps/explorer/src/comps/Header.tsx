@@ -172,6 +172,7 @@ export namespace Header {
 		const liveBlockNumber = useLiveBlockNumber(initial)
 		const blockNumber =
 			resolvedPathname === '/blocks' ? liveBlockNumber : optimisticBlockNumber
+		const isReady = blockNumber != null
 
 		return (
 			<Link
@@ -180,7 +181,8 @@ export namespace Header {
 				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
 				className={cx(
 					className,
-					'flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down',
+					'flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down transition-opacity duration-300',
+					isReady ? 'opacity-100' : 'opacity-0',
 				)}
 				title="View latest block"
 			>

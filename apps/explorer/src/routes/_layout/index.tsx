@@ -173,7 +173,6 @@ function SpotlightPill(props: {
 			to={to}
 			{...(params ? { params } : {})}
 			{...(search ? { search } : {})}
-			preload="render"
 			className={cx(
 				'flex items-center gap-1.5 text-base-content-secondary hover:text-base-content border hover:border-accent focus-visible:border-accent px-2.5 py-1 rounded-full! press-down bg-surface focus-visible:outline-none border-base-border',
 				className,

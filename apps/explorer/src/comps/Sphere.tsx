@@ -46,7 +46,8 @@ export namespace Sphere {
 				src="/landing-circles.png"
 				alt=""
 				aria-hidden="true"
-				fetchPriority="high"
+				decoding="async"
+				loading="lazy"
 				width={656}
 				height={285}
 				className="w-[656px] max-w-[120vw] h-auto"
