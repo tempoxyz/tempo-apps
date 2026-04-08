@@ -30,7 +30,7 @@ export const Route = createRootRouteWithContext<{
 			},
 		],
 		links: [
-			{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+			{ rel: 'icon', type: 'image/png', href: '/favicon.png' },
 			{
 				rel: 'preload',
 				href: '/fonts/satoshi/Satoshi-Variable.woff2',
