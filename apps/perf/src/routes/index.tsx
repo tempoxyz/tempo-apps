@@ -1,6 +1,12 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { scenarios, getLatestRun } from '#data/mock'
-import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
+import {
+	formatGas,
+	formatTps,
+	formatMs,
+	formatDate,
+	formatAccounts,
+} from '#lib/format'
 
 export const Route = createFileRoute('/')({
 	component: DashboardPage,
@@ -81,6 +87,52 @@ function DashboardPage(): React.JSX.Element {
 				</div>
 			</section>
 
+			{/* Throughput comparison */}
+			<section className="mb-14">
+				<div className="mb-5 flex items-center gap-3">
+					<h3 className="text-[13px] font-normal uppercase tracking-wider text-tertiary">
+						Throughput Comparison
+					</h3>
+					<div className="h-px flex-1 bg-border" />
+				</div>
+				<div className="card p-6">
+					<div className="flex items-end gap-6 h-52">
+						{scenarios.map((scenario) => {
+							const latest = getLatestRun(scenario.id)
+							if (!latest) return null
+							const maxGas = Math.max(
+								...scenarios.map(
+									(s) => getLatestRun(s.id)?.avgGasPerSecond ?? 0,
+								),
+							)
+							const height = (latest.avgGasPerSecond / maxGas) * 100
+							return (
+								<div
+									key={scenario.id}
+									className="flex flex-1 flex-col items-center gap-2"
+								>
+									<span className="font-mono text-[12px] font-medium text-accent">
+										{formatGas(latest.avgGasPerSecond)}
+									</span>
+									<div
+										className="w-full flex items-end"
+										style={{ height: '160px' }}
+									>
+										<div
+											className="w-full rounded-t bg-accent/50"
+											style={{ height: `${height}%` }}
+										/>
+									</div>
+									<span className="text-[11px] text-tertiary text-center leading-tight">
+										{scenario.label}
+									</span>
+								</div>
+							)
+						})}
+					</div>
+				</div>
+			</section>
+
 			{/* Latest runs table */}
 			<section className="mb-14">
 				<div className="mb-5 flex items-center gap-3">
@@ -102,6 +154,9 @@ function DashboardPage(): React.JSX.Element {
 								<th className="px-4.5 py-3 font-normal text-right">TPS</th>
 								<th className="px-4.5 py-3 font-normal text-right">
 									P99 Latency
+								</th>
+								<th className="px-4.5 py-3 font-normal text-right">
+									State Size
 								</th>
 								<th className="px-4.5 py-3 font-normal text-right">Date</th>
 							</tr>
@@ -137,6 +192,9 @@ function DashboardPage(): React.JSX.Element {
 										</td>
 										<td className="px-4.5 py-3 text-right font-mono text-primary">
 											{formatMs(latest.p99LatencyMs)}
+										</td>
+										<td className="px-4.5 py-3 text-right font-mono text-primary">
+											{formatAccounts(latest.stateAccounts)}
 										</td>
 										<td className="px-4.5 py-3 text-right text-tertiary">
 											{formatDate(latest.timestamp)}

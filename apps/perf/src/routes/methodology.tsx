@@ -49,13 +49,22 @@ function MethodologyPage(): React.JSX.Element {
 					</p>
 					<div className="mt-3 card">
 						<div className="divide-y divide-dashed divide-border">
-							<HardwareRow label="CPU" value="AMD EPYC 9454P (48C/96T)" />
-							<HardwareRow label="Memory" value="256 GB DDR5-4800" />
-							<HardwareRow label="Storage" value="2× NVMe Gen4 in RAID-0" />
 							<HardwareRow
-								label="Network"
-								value="25 Gbps between validator nodes"
+								label="CPU"
+								value="AMD EPYC 4585PX (16C/32T, 4.3/5.7 GHz)"
 							/>
+							<HardwareRow label="Memory" value="128 GB 3600 MHz" />
+							<HardwareRow label="Storage">
+								2×960 GB NVMe + 2×1.92 TB NVMe via{' '}
+								<a
+									href="https://github.com/tempoxyz/schelk"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="text-accent hover:underline"
+								>
+									schelk
+								</a>
+							</HardwareRow>
 						</div>
 					</div>
 				</Section>
@@ -127,12 +136,15 @@ function Section(props: {
 
 function HardwareRow(props: {
 	label: string
-	value: string
+	value?: string
+	children?: React.ReactNode
 }): React.JSX.Element {
 	return (
 		<div className="flex items-center justify-between px-4.5 py-3">
 			<span className="text-[13px] text-tertiary">{props.label}</span>
-			<span className="font-mono text-[13px] text-primary">{props.value}</span>
+			<span className="font-mono text-[13px] text-primary">
+				{props.children ?? props.value}
+			</span>
 		</div>
 	)
 }

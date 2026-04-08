@@ -4,6 +4,7 @@ export type Scenario = {
 	workload: string
 	validators: number
 	targetThroughput: string
+	stateAccounts: number
 }
 
 export type BenchBlock = {
@@ -25,6 +26,7 @@ export type BenchRun = {
 	avgBlockTimeMs: number
 	p50LatencyMs: number
 	p99LatencyMs: number
+	stateAccounts: number
 	blocks: Array<BenchBlock>
 }
 
@@ -52,6 +54,7 @@ export const scenarios: Array<Scenario> = [
 		workload: '60% TIP-20 / 20% MPP / 20% DEX',
 		validators: 10,
 		targetThroughput: '2 Ggas/s',
+		stateAccounts: 2_500_000,
 	},
 	{
 		id: 'tip20-20v',
@@ -59,13 +62,15 @@ export const scenarios: Array<Scenario> = [
 		workload: '60% TIP-20 / 20% MPP / 20% DEX',
 		validators: 20,
 		targetThroughput: '2 Ggas/s',
+		stateAccounts: 2_500_000,
 	},
 	{
-		id: 'transfer-10v',
-		label: '10 Validators — Native Transfers',
-		workload: '100% Native Transfers',
+		id: 'tip20-only-10v',
+		label: '10 Validators — TIP-20 Only',
+		workload: '100% TIP-20 Transfers',
 		validators: 10,
-		targetThroughput: '5 Ggas/s',
+		targetThroughput: '3 Ggas/s',
+		stateAccounts: 5_000_000,
 	},
 ]
 
@@ -81,6 +86,7 @@ export const runs: Array<BenchRun> = [
 		avgBlockTimeMs: 500,
 		p50LatencyMs: 48,
 		p99LatencyMs: 210,
+		stateAccounts: 2_000_000,
 		blocks: generateBlocks(60, 990_000_000),
 	},
 	{
@@ -94,6 +100,7 @@ export const runs: Array<BenchRun> = [
 		avgBlockTimeMs: 500,
 		p50LatencyMs: 42,
 		p99LatencyMs: 185,
+		stateAccounts: 2_500_000,
 		blocks: generateBlocks(60, 1_025_000_000),
 	},
 	{
@@ -107,11 +114,12 @@ export const runs: Array<BenchRun> = [
 		avgBlockTimeMs: 500,
 		p50LatencyMs: 55,
 		p99LatencyMs: 240,
+		stateAccounts: 2_500_000,
 		blocks: generateBlocks(60, 910_000_000),
 	},
 	{
 		id: 'run-004',
-		scenarioId: 'transfer-10v',
+		scenarioId: 'tip20-only-10v',
 		commit: 'e5f6g7h',
 		timestamp: '2026-03-30T10:00:00Z',
 		avgTps: 42_000,
@@ -120,6 +128,7 @@ export const runs: Array<BenchRun> = [
 		avgBlockTimeMs: 500,
 		p50LatencyMs: 22,
 		p99LatencyMs: 95,
+		stateAccounts: 5_000_000,
 		blocks: generateBlocks(60, 2_400_000_000),
 	},
 ]

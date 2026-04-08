@@ -27,8 +27,8 @@
 	--color-border-subtle: light-dark(#f0f0f0, #1c1c1c);
 
 	--color-primary: light-dark(#0a0a0a, #ffffff);
-	--color-secondary: light-dark(#6e6e6e, #6e6e6e);
-	--color-tertiary: light-dark(#a1a1a1, #454545);
+	--color-secondary: light-dark(#6e6e6e, #b0b0b0);
+	--color-tertiary: light-dark(#a1a1a1, #888888);
 
 	--color-accent: light-dark(#3b82f6, #60a5fa);
 	--color-accent-muted: light-dark(

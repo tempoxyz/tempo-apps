@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { getScenario, getRunsForScenario, type BenchRun } from '#data/mock'
-import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
+import {
+	formatGas,
+	formatTps,
+	formatMs,
+	formatDate,
+	formatAccounts,
+} from '#lib/format'
 
 export const Route = createFileRoute('/scenario/$id')({
 	component: ScenarioPage,
@@ -44,7 +50,7 @@ function ScenarioPage(): React.JSX.Element {
 			</p>
 
 			{latest && (
-				<section className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+				<section className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
 					<MetricCard
 						label="Throughput"
 						value={formatGas(latest.avgGasPerSecond)}
@@ -52,6 +58,10 @@ function ScenarioPage(): React.JSX.Element {
 					/>
 					<MetricCard label="Peak" value={formatGas(latest.peakGasPerSecond)} />
 					<MetricCard label="Avg TPS" value={formatTps(latest.avgTps)} />
+					<MetricCard
+						label="State Size"
+						value={`${formatAccounts(latest.stateAccounts)} accounts`}
+					/>
 					<MetricCard
 						label="Block Time"
 						value={formatMs(latest.avgBlockTimeMs)}
@@ -166,38 +176,47 @@ function BlockChart(props: { run: BenchRun }): React.JSX.Element {
 
 	return (
 		<div className="card p-5">
-			<div className="flex h-44 items-end gap-[2px]">
-				{run.blocks.map((block) => {
-					const height = (block.gasUsed / maxGas) * 100
-					return (
-						<div
-							key={block.number}
-							className="group relative flex-1"
-							style={{ height: '100%' }}
-						>
-							<div
-								className="absolute bottom-0 w-full rounded-t-[2px] bg-accent/40 transition-all group-hover:bg-accent"
-								style={{ height: `${height}%` }}
-							/>
-							<div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 rounded-lg border border-border bg-surface px-3 py-2 text-[11px] shadow-lg group-hover:block whitespace-nowrap">
-								<div className="font-medium text-primary">
-									Block #{block.number}
+			<div className="flex gap-3">
+				<div className="flex h-44 flex-col justify-between text-right text-[10px] text-tertiary font-mono">
+					<span>{formatGas(maxGas)}</span>
+					<span>{formatGas(Math.round(maxGas / 2))}</span>
+					<span>0</span>
+				</div>
+				<div className="flex-1">
+					<div className="flex h-44 items-end gap-[2px]">
+						{run.blocks.map((block) => {
+							const height = (block.gasUsed / maxGas) * 100
+							return (
+								<div
+									key={block.number}
+									className="group relative flex-1"
+									style={{ height: '100%' }}
+								>
+									<div
+										className="absolute bottom-0 w-full rounded-t-[2px] bg-accent/40 transition-all group-hover:bg-accent"
+										style={{ height: `${height}%` }}
+									/>
+									<div className="pointer-events-none absolute top-2 left-1/2 z-10 hidden -translate-x-1/2 rounded-lg border border-border bg-surface px-3 py-2 text-[11px] shadow-lg group-hover:block whitespace-nowrap">
+										<div className="font-medium text-primary">
+											Block #{block.number}
+										</div>
+										<div className="mt-1 text-secondary">
+											{formatGas(block.gasUsed)}
+										</div>
+										<div className="text-secondary">{block.txCount} txs</div>
+										<div className="text-secondary">
+											{formatMs(block.executionTimeMs)} exec
+										</div>
+									</div>
 								</div>
-								<div className="mt-1 text-secondary">
-									{formatGas(block.gasUsed)}
-								</div>
-								<div className="text-secondary">{block.txCount} txs</div>
-								<div className="text-secondary">
-									{formatMs(block.executionTimeMs)} exec
-								</div>
-							</div>
-						</div>
-					)
-				})}
-			</div>
-			<div className="mt-3 flex justify-between text-[11px] text-tertiary">
-				<span>Block #{run.blocks[0]?.number}</span>
-				<span>Block #{run.blocks.at(-1)?.number}</span>
+							)
+						})}
+					</div>
+					<div className="mt-3 flex justify-between text-[11px] text-tertiary">
+						<span>Block #{run.blocks[0]?.number}</span>
+						<span>Block #{run.blocks.at(-1)?.number}</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	)
