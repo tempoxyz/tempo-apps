@@ -11,8 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as MethodologyRouteImport } from './routes/methodology'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ScenarioIdRouteImport } from './routes/scenario.$id'
-import { Route as RunIdRouteImport } from './routes/run.$id'
+import { Route as WorkloadIdRouteImport } from './routes/workload.$id'
+import { Route as BenchmarkIdRouteImport } from './routes/benchmark.$id'
 
 const MethodologyRoute = MethodologyRouteImport.update({
   id: '/methodology',
@@ -24,49 +24,49 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ScenarioIdRoute = ScenarioIdRouteImport.update({
-  id: '/scenario/$id',
-  path: '/scenario/$id',
+const WorkloadIdRoute = WorkloadIdRouteImport.update({
+  id: '/workload/$id',
+  path: '/workload/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RunIdRoute = RunIdRouteImport.update({
-  id: '/run/$id',
-  path: '/run/$id',
+const BenchmarkIdRoute = BenchmarkIdRouteImport.update({
+  id: '/benchmark/$id',
+  path: '/benchmark/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/methodology': typeof MethodologyRoute
-  '/run/$id': typeof RunIdRoute
-  '/scenario/$id': typeof ScenarioIdRoute
+  '/benchmark/$id': typeof BenchmarkIdRoute
+  '/workload/$id': typeof WorkloadIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/methodology': typeof MethodologyRoute
-  '/run/$id': typeof RunIdRoute
-  '/scenario/$id': typeof ScenarioIdRoute
+  '/benchmark/$id': typeof BenchmarkIdRoute
+  '/workload/$id': typeof WorkloadIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/methodology': typeof MethodologyRoute
-  '/run/$id': typeof RunIdRoute
-  '/scenario/$id': typeof ScenarioIdRoute
+  '/benchmark/$id': typeof BenchmarkIdRoute
+  '/workload/$id': typeof WorkloadIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/methodology' | '/run/$id' | '/scenario/$id'
+  fullPaths: '/' | '/methodology' | '/benchmark/$id' | '/workload/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/methodology' | '/run/$id' | '/scenario/$id'
-  id: '__root__' | '/' | '/methodology' | '/run/$id' | '/scenario/$id'
+  to: '/' | '/methodology' | '/benchmark/$id' | '/workload/$id'
+  id: '__root__' | '/' | '/methodology' | '/benchmark/$id' | '/workload/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   MethodologyRoute: typeof MethodologyRoute
-  RunIdRoute: typeof RunIdRoute
-  ScenarioIdRoute: typeof ScenarioIdRoute
+  BenchmarkIdRoute: typeof BenchmarkIdRoute
+  WorkloadIdRoute: typeof WorkloadIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -85,18 +85,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/scenario/$id': {
-      id: '/scenario/$id'
-      path: '/scenario/$id'
-      fullPath: '/scenario/$id'
-      preLoaderRoute: typeof ScenarioIdRouteImport
+    '/workload/$id': {
+      id: '/workload/$id'
+      path: '/workload/$id'
+      fullPath: '/workload/$id'
+      preLoaderRoute: typeof WorkloadIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/run/$id': {
-      id: '/run/$id'
-      path: '/run/$id'
-      fullPath: '/run/$id'
-      preLoaderRoute: typeof RunIdRouteImport
+    '/benchmark/$id': {
+      id: '/benchmark/$id'
+      path: '/benchmark/$id'
+      fullPath: '/benchmark/$id'
+      preLoaderRoute: typeof BenchmarkIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -105,8 +105,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   MethodologyRoute: MethodologyRoute,
-  RunIdRoute: RunIdRoute,
-  ScenarioIdRoute: ScenarioIdRoute,
+  BenchmarkIdRoute: BenchmarkIdRoute,
+  WorkloadIdRoute: WorkloadIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

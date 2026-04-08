@@ -14,32 +14,13 @@ function MethodologyPage(): React.JSX.Element {
 			<div className="space-y-8 text-[14px] leading-relaxed text-secondary">
 				<Section title="Workload Composition">
 					<p>
-						The canonical benchmark workload consists of a representative mix of
-						Tempo transaction types:
+						Current benchmarks use 100% TIP-20 token transfers (ERC-20
+						equivalent) at varying target TPS levels.
 					</p>
-					<ul className="mt-3 space-y-2">
-						<li className="flex items-baseline gap-2">
-							<span className="text-accent">60%</span>
-							<span>
-								<strong className="text-primary">TIP-20</strong> — Token
-								transfer operations (ERC-20 equivalent)
-							</span>
-						</li>
-						<li className="flex items-baseline gap-2">
-							<span className="text-accent">20%</span>
-							<span>
-								<strong className="text-primary">MPP</strong> — Multi-party
-								payment batches
-							</span>
-						</li>
-						<li className="flex items-baseline gap-2">
-							<span className="text-accent">20%</span>
-							<span>
-								<strong className="text-primary">DEX</strong> — Stablecoin DEX
-								swap operations
-							</span>
-						</li>
-					</ul>
+					<p className="mt-3">
+						A canonical mixed workload combining TIP-20 transfers, multi-party
+						payments, and stablecoin DEX swaps is in development.
+					</p>
 				</Section>
 
 				<Section title="Hardware">
@@ -69,12 +50,10 @@ function MethodologyPage(): React.JSX.Element {
 					</div>
 				</Section>
 
-				<Section title="Validator Configuration">
+				<Section title="Node Configuration">
 					<p>
-						Tests are run with 10-validator and 20-validator configurations.
-						Validators are distributed across separate physical machines
-						connected via a private network to simulate realistic consensus
-						conditions.
+						Benchmarks run in single-node dev mode on a dedicated bare-metal
+						server.
 					</p>
 				</Section>
 

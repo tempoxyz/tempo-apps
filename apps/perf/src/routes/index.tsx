@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { scenarios, getLatestRun } from '#data/mock'
+import { useSuspenseQuery } from '@tanstack/react-query'
+import { getScenarios, fetchAllLatestRuns } from '#lib/server/bench'
 import {
 	formatGas,
 	formatTps,
@@ -10,10 +11,26 @@ import {
 
 export const Route = createFileRoute('/')({
 	component: DashboardPage,
+	loader: ({ context }) => {
+		context.queryClient.ensureQueryData({
+			queryKey: ['latestRuns'],
+			queryFn: () => fetchAllLatestRuns(),
+		})
+	},
 })
 
 function DashboardPage(): React.JSX.Element {
 	const navigate = useNavigate()
+	const scenarios = getScenarios()
+	const { data: latestRuns } = useSuspenseQuery({
+		queryKey: ['latestRuns'],
+		queryFn: () => fetchAllLatestRuns(),
+	})
+
+	function getLatestRun(scenarioId: string) {
+		return latestRuns.find((r) => r.scenarioId === scenarioId)
+	}
+
 	return (
 		<div>
 			{/* Hero */}
@@ -31,7 +48,7 @@ function DashboardPage(): React.JSX.Element {
 			<section className="mb-14">
 				<div className="mb-5 flex items-center gap-3">
 					<h3 className="text-[13px] font-normal uppercase tracking-wider text-tertiary">
-						Scenarios
+						Workloads
 					</h3>
 					<div className="h-px flex-1 bg-border" />
 				</div>
@@ -42,7 +59,7 @@ function DashboardPage(): React.JSX.Element {
 						return (
 							<Link
 								key={scenario.id}
-								to="/scenario/$id"
+								to="/workload/$id"
 								params={{ id: scenario.id }}
 								className="card-interactive flex flex-col"
 							>
@@ -137,7 +154,7 @@ function DashboardPage(): React.JSX.Element {
 			<section className="mb-14">
 				<div className="mb-5 flex items-center gap-3">
 					<h3 className="text-[13px] font-normal uppercase tracking-wider text-tertiary">
-						Latest Runs
+						Latest Results
 					</h3>
 					<div className="h-px flex-1 bg-border" />
 				</div>
@@ -146,8 +163,7 @@ function DashboardPage(): React.JSX.Element {
 					<table className="w-full text-[13px]">
 						<thead>
 							<tr className="border-b border-border bg-surface-raised text-left text-tertiary">
-								<th className="px-4.5 py-3 font-normal">Scenario</th>
-								<th className="px-4.5 py-3 font-normal">Commit</th>
+								<th className="px-4.5 py-3 font-normal">Workload</th>
 								<th className="px-4.5 py-3 font-normal text-right">
 									Throughput
 								</th>
@@ -171,18 +187,13 @@ function DashboardPage(): React.JSX.Element {
 										className="border-b border-dashed border-border last:border-0 transition-colors hover:bg-surface-hover cursor-pointer"
 										onClick={() =>
 											navigate({
-												to: '/scenario/$id',
+												to: '/workload/$id',
 												params: { id: scenario.id },
 											})
 										}
 									>
 										<td className="px-4.5 py-3 font-medium text-primary">
 											{scenario.label}
-										</td>
-										<td className="px-4.5 py-3">
-											<code className="font-mono text-[12px] text-secondary">
-												{latest.commit}
-											</code>
 										</td>
 										<td className="px-4.5 py-3 text-right font-mono text-accent">
 											{formatGas(latest.avgGasPerSecond)}

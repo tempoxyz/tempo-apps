@@ -1,19 +1,20 @@
-export function formatGas(gasPerSecond: number): string {
-	if (gasPerSecond >= 1_000_000_000) {
-		return `${(gasPerSecond / 1_000_000_000).toFixed(2)} Ggas/s`
+export function formatGas(gas: number, rate = true): string {
+	const suffix = rate ? '/s' : ''
+	if (gas >= 1_000_000_000) {
+		return `${(gas / 1_000_000_000).toFixed(2)} Ggas${suffix}`
 	}
-	if (gasPerSecond >= 1_000_000) {
-		return `${(gasPerSecond / 1_000_000).toFixed(1)} Mgas/s`
+	if (gas >= 1_000_000) {
+		return `${(gas / 1_000_000).toFixed(1)} Mgas${suffix}`
 	}
-	return `${gasPerSecond.toLocaleString()} gas/s`
+	return `${gas.toLocaleString()} gas${suffix}`
 }
 
 export function formatTps(tps: number): string {
-	return tps.toLocaleString()
+	return Math.round(tps).toLocaleString()
 }
 
 export function formatMs(ms: number): string {
-	return `${ms.toLocaleString()}ms`
+	return `${Math.round(ms).toLocaleString()}ms`
 }
 
 export function formatAccounts(count: number): string {
