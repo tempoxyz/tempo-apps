@@ -3,6 +3,8 @@ on:
   workflow_call:
   workflow_dispatch:
 
+permissions: {}
+
 env:
   NODE_ENV: production
   NODE_OPTIONS: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
@@ -17,6 +19,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           submodules: 'recursive'
+          persist-credentials: false
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
