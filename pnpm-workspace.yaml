@@ -55,7 +55,7 @@ catalog:
   hono: ^4.12.12
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
-  kysely: ^0.28.16
+  kysely: ^0.28.15
   ox: ^0.14.10
   prool: ^0.2.4
   react: ^19.2.4
@@ -98,6 +98,7 @@ nodeOptions: '--disable-warning=ExperimentalWarning --disable-warning=Deprecatio
 onlyBuiltDependencies:
   - '@ast-grep/cli'
   - '@j178/prek'
+  - '@sentry/cli'
   - esbuild
   - simple-git-hooks
   - utf-8-validate
@@ -120,3 +121,5 @@ strictDepBuilds: true
 blockExoticSubdeps: true
 
 trustPolicy: no-downgrade
+trustPolicyExclude:
+  - semver
