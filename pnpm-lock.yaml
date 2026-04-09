@@ -251,7 +251,7 @@ importers:
         specifier: github:tempoxyz/lints
         version: https://codeload.github.com/tempoxyz/lints/tar.gz/1647d724f9bca135d8c529ddb5ccd7ec7954639e
       '@typescript/native-preview':
-        specifier: ^7.0.0-dev.20260408.1
+        specifier: ^7.0.0-dev.20260319.1
         version: 7.0.0-dev.20260408.1
       node:
         specifier: runtime:24.14.0
