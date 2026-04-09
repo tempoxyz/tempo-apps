@@ -11,6 +11,7 @@ import { chainIds } from '#wagmi.config.ts'
 import { validatorConfigV2Manifest } from '../../scripts/precompile-seed/manifest.ts'
 
 async function insertNativePrecompileFixture(): Promise<{
+	nativeContractId: string
 	chainId: number
 	address: string
 	commitSha: string
@@ -120,6 +121,7 @@ async function insertNativePrecompileFixture(): Promise<{
 	)
 
 	return {
+		nativeContractId,
 		chainId,
 		address,
 		commitSha,
@@ -225,7 +227,7 @@ describe('gET /v2/contract/all-chains/:address', () => {
 		expect(await response.json()).toEqual({
 			results: [
 				{
-					matchId: null,
+					matchId: `native:${fixture.nativeContractId}`,
 					match: 'exact_match',
 					creationMatch: 'exact_match',
 					runtimeMatch: 'exact_match',
@@ -281,7 +283,7 @@ describe('gET /v2/contract/:chainId/:address', () => {
 		const fixture = await insertNativePrecompileFixture()
 
 		const response = await app.request(
-			`/v2/contract/${fixture.chainId}/${fixture.address}?fields=abi,sources,sourceIds,extensions.tempo.nativeSource`,
+			`/v2/contract/${fixture.chainId}/${fixture.address}?fields=abi,language,signatures,sources,sourceIds,extensions.tempo.nativeSource`,
 			{},
 			env,
 		)
@@ -319,13 +321,14 @@ describe('gET /v2/contract/:chainId/:address', () => {
 		}
 
 		expect(body).toMatchObject({
-			matchId: null,
+			matchId: `native:${fixture.nativeContractId}`,
 			match: 'exact_match',
 			creationMatch: 'exact_match',
 			runtimeMatch: 'exact_match',
 			chainId: String(fixture.chainId),
 			address: fixture.address,
 			verifiedAt: null,
+			language: 'Rust',
 			sources: {
 				[firstPath]: {
 					content: 'pub struct ValidatorConfigV2 { /* ... */ }',
@@ -335,6 +338,18 @@ describe('gET /v2/contract/:chainId/:address', () => {
 				},
 			},
 			sourceIds: fixture.sourceIds,
+			signatures: {
+				function: expect.arrayContaining([
+					expect.objectContaining({
+						signature: 'getActiveValidators()',
+					}),
+					expect.objectContaining({
+						signature: expect.stringContaining('addValidator('),
+					}),
+				]),
+				event: expect.any(Array),
+				error: expect.any(Array),
+			},
 			extensions: {
 				tempo: {
 					nativeSource: {
@@ -384,7 +399,7 @@ describe('gET /v2/contract/:chainId/:address', () => {
 
 		expect(response.status).toBe(200)
 		expect(await response.json()).toEqual({
-			matchId: null,
+			matchId: `native:${fixture.nativeContractId}`,
 			match: 'exact_match',
 			creationMatch: 'exact_match',
 			runtimeMatch: 'exact_match',
@@ -446,7 +461,109 @@ describe('gET /v2/contracts/:chainId', () => {
 		expect(await response.json()).toEqual({
 			results: [
 				{
-					matchId: null,
+					matchId: `native:${fixture.nativeContractId}`,
+					match: 'exact_match',
+					creationMatch: 'exact_match',
+					runtimeMatch: 'exact_match',
+					chainId: String(fixture.chainId),
+					address: fixture.address,
+					verifiedAt: null,
+				},
+			],
+		})
+	})
+
+	it('paginates into native precompiles after verified contracts', async () => {
+		const db = drizzle(env.CONTRACTS_DB)
+		const fixture = await insertNativePrecompileFixture()
+		const chainId = fixture.chainId
+		const address = '0x1111111111111111111111111111111111111111'
+		const addressBytes = Hex.toBytes(address)
+		const runtimeHash = new Uint8Array(32).fill(1)
+		const creationHash = new Uint8Array(32).fill(2)
+		const codeHashKeccak = new Uint8Array(32).fill(3)
+
+		await db.insert(DB.codeTable).values([
+			{ codeHash: runtimeHash, codeHashKeccak, code: new Uint8Array([1]) },
+			{ codeHash: creationHash, codeHashKeccak, code: new Uint8Array([2]) },
+		])
+
+		const contractId = crypto.randomUUID()
+		await db.insert(DB.contractsTable).values({
+			id: contractId,
+			creationCodeHash: creationHash,
+			runtimeCodeHash: runtimeHash,
+		})
+
+		const deploymentId = crypto.randomUUID()
+		await db.insert(DB.contractDeploymentsTable).values({
+			id: deploymentId,
+			chainId,
+			address: addressBytes,
+			contractId,
+		})
+
+		const compilationId = crypto.randomUUID()
+		await db.insert(DB.compiledContractsTable).values({
+			id: compilationId,
+			compiler: 'solc',
+			version: '0.8.20',
+			language: 'Solidity',
+			name: 'Token',
+			fullyQualifiedName: 'Token.sol:Token',
+			compilerSettings: '{}',
+			compilationArtifacts: '{}',
+			creationCodeHash: creationHash,
+			creationCodeArtifacts: '{}',
+			runtimeCodeHash: runtimeHash,
+			runtimeCodeArtifacts: '{}',
+		})
+
+		await db.insert(DB.verifiedContractsTable).values({
+			deploymentId,
+			compilationId,
+			creationMatch: true,
+			runtimeMatch: true,
+			creationMetadataMatch: true,
+			runtimeMetadataMatch: true,
+		})
+
+		const firstPage = await app.request(
+			`/v2/contracts/${fixture.chainId}?limit=1`,
+			{},
+			env,
+		)
+		expect(firstPage.status).toBe(200)
+
+		const firstBody = z.parse(
+			z.object({
+				results: z.array(
+					z.object({
+						matchId: z.nullable(z.string()),
+						address: z.string(),
+					}),
+				),
+			}),
+			await firstPage.json(),
+		)
+		expect(firstBody.results).toHaveLength(1)
+		expect(firstBody.results[0]?.matchId).toMatch(/^\d+$/)
+
+		const verifiedMatchId = firstBody.results[0]?.matchId
+		if (!verifiedMatchId) {
+			throw new Error('expected first page verified matchId')
+		}
+
+		const secondPage = await app.request(
+			`/v2/contracts/${fixture.chainId}?limit=1&afterMatchId=${verifiedMatchId}`,
+			{},
+			env,
+		)
+		expect(secondPage.status).toBe(200)
+		expect(await secondPage.json()).toEqual({
+			results: [
+				{
+					matchId: `native:${fixture.nativeContractId}`,
 					match: 'exact_match',
 					creationMatch: 'exact_match',
 					runtimeMatch: 'exact_match',

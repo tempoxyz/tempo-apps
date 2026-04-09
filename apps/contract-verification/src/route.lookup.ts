@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { Address, Hex } from 'ox'
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
+import { keccak256 } from 'viem'
 
 import {
 	codeTable,
@@ -31,10 +32,103 @@ type MinimalLookupResponse = {
 	verifiedAt: string | null
 }
 
+type SignaturesPayload = {
+	function: Array<{
+		signature: string
+		signatureHash32: string
+		signatureHash4: string
+	}>
+	event: Array<{
+		signature: string
+		signatureHash32: string
+		signatureHash4: string
+	}>
+	error: Array<{
+		signature: string
+		signatureHash32: string
+		signatureHash4: string
+	}>
+}
+
+type MatchCursor =
+	| { kind: 'verified'; value: number }
+	| { kind: 'native'; value: string }
+
 function bytesToHex(bytes: ArrayBuffer | Uint8Array): string {
 	return Hex.fromBytes(
 		bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
 	)
+}
+
+function parseMatchCursor(matchId?: string): MatchCursor | null {
+	if (!matchId) return null
+
+	if (matchId.startsWith('native:')) {
+		const value = matchId.slice('native:'.length)
+		return value ? { kind: 'native', value } : null
+	}
+
+	const value = Number(matchId)
+	if (!Number.isSafeInteger(value) || value <= 0) return null
+
+	return { kind: 'verified', value }
+}
+
+function formatAbiParameterType(parameter: unknown): string | null {
+	if (!isRecord(parameter) || typeof parameter.type !== 'string') return null
+
+	if (parameter.type === 'tuple' || parameter.type.startsWith('tuple[')) {
+		const components = Array.isArray(parameter.components)
+			? parameter.components
+			: []
+		const componentTypes = components
+			.map((component) => formatAbiParameterType(component))
+			.filter((type): type is string => type !== null)
+		const suffix = parameter.type.slice('tuple'.length)
+		return `(${componentTypes.join(',')})${suffix}`
+	}
+
+	return parameter.type
+}
+
+function buildSignaturesPayload(abi: unknown): SignaturesPayload {
+	const signatures: SignaturesPayload = {
+		function: [],
+		event: [],
+		error: [],
+	}
+
+	if (!Array.isArray(abi)) return signatures
+
+	for (const item of abi) {
+		if (!isRecord(item) || typeof item.name !== 'string') continue
+		if (
+			item.type !== 'function' &&
+			item.type !== 'event' &&
+			item.type !== 'error'
+		) {
+			continue
+		}
+
+		const inputs = Array.isArray(item.inputs) ? item.inputs : []
+		const inputTypes = inputs
+			.map((input) => formatAbiParameterType(input))
+			.filter((type): type is string => type !== null)
+			.join(',')
+		const signature = `${item.name}(${inputTypes})`
+		const signatureHash32 = keccak256(Hex.fromString(signature))
+		const signatureHash4 = Hex.fromBytes(
+			Hex.toBytes(signatureHash32).slice(0, 4),
+		)
+
+		signatures[item.type].push({
+			signature,
+			signatureHash32,
+			signatureHash4,
+		})
+	}
+
+	return signatures
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -177,11 +271,12 @@ function buildVerifiedMinimalResponse(row: {
 }
 
 function buildNativeMinimalResponse(row: {
+	id: string
 	chainId: number
 	address: ArrayBuffer
 }): MinimalLookupResponse {
 	return {
-		matchId: null,
+		matchId: `native:${row.id}`,
 		match: 'exact_match',
 		creationMatch: 'exact_match',
 		runtimeMatch: 'exact_match',
@@ -310,12 +405,14 @@ async function getNativeLookupResponse(
 		.map((source) => source.path)
 
 	const minimalResponse = buildNativeMinimalResponse({
+		id: nativeContract.id,
 		chainId: nativeContract.chainId,
 		address: nativeContract.address as ArrayBuffer,
 	})
 
 	const formattedAddress = minimalResponse.address
 	const abi = JSON.parse(nativeContract.abiJson) as unknown
+	const signatures = buildSignaturesPayload(abi)
 	const activationFromBlock =
 		revision.protocolVersion !== null && revision.fromBlock === 0
 			? null
@@ -328,7 +425,7 @@ async function getNativeLookupResponse(
 		fullyQualifiedName: null,
 		compiler: null,
 		compilerVersion: null,
-		language: null,
+		language: nativeContract.language,
 		compilerSettings: null,
 		runtimeMetadataMatch: null,
 		creationMetadataMatch: null,
@@ -339,11 +436,7 @@ async function getNativeLookupResponse(
 		metadata: null,
 		sources,
 		sourceIds,
-		signatures: {
-			function: [],
-			event: [],
-			error: [],
-		},
+		signatures,
 		creationBytecode: null,
 		runtimeBytecode: null,
 		compilation: null,
@@ -435,6 +528,7 @@ lookupRoute
 					.where(eq(contractDeploymentsTable.address, addressBytes)),
 				db
 					.select({
+						id: nativeContractsTable.id,
 						chainId: nativeContractsTable.chainId,
 						address: nativeContractsTable.address,
 					})
@@ -455,6 +549,7 @@ lookupRoute
 				),
 				...nativeResults.map((row) =>
 					buildNativeMinimalResponse({
+						id: row.id,
 						chainId: row.chainId,
 						address: row.address as ArrayBuffer,
 					}),
@@ -895,73 +990,109 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 		// Validate and parse query params
 		const sortOrder = sort === 'asc' ? 'asc' : 'desc'
 		const limitNum = Math.min(Math.max(Number(limit) || 200, 1), 200)
+		const parsedAfterMatchId =
+			afterMatchId === undefined ? null : parseMatchCursor(afterMatchId)
+
+		if (afterMatchId !== undefined && !parsedAfterMatchId) {
+			return sourcifyError(
+				context,
+				400,
+				'invalid_match_id',
+				`Invalid afterMatchId format: ${afterMatchId}`,
+			)
+		}
 
 		const db = getDb(context.env.CONTRACTS_DB)
 
-		const verifiedResults = await db
-			.select({
-				matchId: verifiedContractsTable.id,
-				chainId: contractDeploymentsTable.chainId,
-				address: contractDeploymentsTable.address,
-				verifiedAt: verifiedContractsTable.createdAt,
-				runtimeMatch: verifiedContractsTable.runtimeMatch,
-				creationMatch: verifiedContractsTable.creationMatch,
-			})
-			.from(verifiedContractsTable)
-			.innerJoin(
-				contractDeploymentsTable,
-				eq(verifiedContractsTable.deploymentId, contractDeploymentsTable.id),
-			)
-			.where(
-				afterMatchId
-					? and(
-							eq(contractDeploymentsTable.chainId, chainIdNumber),
-							sortOrder === 'desc'
-								? lt(verifiedContractsTable.id, Number(afterMatchId))
-								: gt(verifiedContractsTable.id, Number(afterMatchId)),
-						)
-					: eq(contractDeploymentsTable.chainId, chainIdNumber),
-			)
-			.orderBy(
-				sortOrder === 'desc'
-					? desc(verifiedContractsTable.id)
-					: asc(verifiedContractsTable.id),
-			)
-			.limit(limitNum)
+		const shouldQueryVerified =
+			parsedAfterMatchId?.kind !== 'native' || sortOrder === 'asc'
+		const verifiedWhere =
+			parsedAfterMatchId?.kind === 'verified'
+				? and(
+						eq(contractDeploymentsTable.chainId, chainIdNumber),
+						sortOrder === 'desc'
+							? lt(verifiedContractsTable.id, parsedAfterMatchId.value)
+							: gt(verifiedContractsTable.id, parsedAfterMatchId.value),
+					)
+				: eq(contractDeploymentsTable.chainId, chainIdNumber)
 
-		const nativeResults = afterMatchId
-			? []
-			: await db
+		const verifiedResults = shouldQueryVerified
+			? await db
 					.select({
+						matchId: verifiedContractsTable.id,
+						chainId: contractDeploymentsTable.chainId,
+						address: contractDeploymentsTable.address,
+						verifiedAt: verifiedContractsTable.createdAt,
+						runtimeMatch: verifiedContractsTable.runtimeMatch,
+						creationMatch: verifiedContractsTable.creationMatch,
+					})
+					.from(verifiedContractsTable)
+					.innerJoin(
+						contractDeploymentsTable,
+						eq(
+							verifiedContractsTable.deploymentId,
+							contractDeploymentsTable.id,
+						),
+					)
+					.where(verifiedWhere)
+					.orderBy(
+						sortOrder === 'desc'
+							? desc(verifiedContractsTable.id)
+							: asc(verifiedContractsTable.id),
+					)
+					.limit(limitNum)
+			: []
+
+		const shouldQueryNative =
+			parsedAfterMatchId?.kind !== 'verified' || sortOrder === 'desc'
+		const nativeWhere =
+			parsedAfterMatchId?.kind === 'native'
+				? and(
+						eq(nativeContractsTable.chainId, chainIdNumber),
+						sortOrder === 'desc'
+							? lt(nativeContractsTable.id, parsedAfterMatchId.value)
+							: gt(nativeContractsTable.id, parsedAfterMatchId.value),
+					)
+				: eq(nativeContractsTable.chainId, chainIdNumber)
+
+		const nativeResults = shouldQueryNative
+			? await db
+					.select({
+						id: nativeContractsTable.id,
 						chainId: nativeContractsTable.chainId,
 						address: nativeContractsTable.address,
 					})
 					.from(nativeContractsTable)
-					.where(eq(nativeContractsTable.chainId, chainIdNumber))
+					.where(nativeWhere)
 					.orderBy(
 						sortOrder === 'desc'
-							? desc(nativeContractsTable.address)
-							: asc(nativeContractsTable.address),
+							? desc(nativeContractsTable.id)
+							: asc(nativeContractsTable.id),
 					)
+					.limit(limitNum)
+			: []
 
-		const contracts = [
-			...verifiedResults.map((row) =>
-				buildVerifiedMinimalResponse({
-					matchId: row.matchId,
-					runtimeMatch: row.runtimeMatch,
-					creationMatch: row.creationMatch,
-					chainId: row.chainId,
-					address: row.address as ArrayBuffer,
-					verifiedAt: row.verifiedAt,
-				}),
-			),
-			...nativeResults.map((row) =>
-				buildNativeMinimalResponse({
-					chainId: row.chainId,
-					address: row.address as ArrayBuffer,
-				}),
-			),
-		].slice(0, limitNum)
+		const verifiedContracts = verifiedResults.map((row) =>
+			buildVerifiedMinimalResponse({
+				matchId: row.matchId,
+				runtimeMatch: row.runtimeMatch,
+				creationMatch: row.creationMatch,
+				chainId: row.chainId,
+				address: row.address as ArrayBuffer,
+				verifiedAt: row.verifiedAt,
+			}),
+		)
+		const nativeContracts = nativeResults.map((row) =>
+			buildNativeMinimalResponse({
+				id: row.id,
+				chainId: row.chainId,
+				address: row.address as ArrayBuffer,
+			}),
+		)
+		const contracts =
+			sortOrder === 'desc'
+				? [...verifiedContracts, ...nativeContracts].slice(0, limitNum)
+				: [...nativeContracts, ...verifiedContracts].slice(0, limitNum)
 
 		return context.json({ results: contracts })
 	} catch (error) {

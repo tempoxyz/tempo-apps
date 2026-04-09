@@ -4,9 +4,9 @@ import * as NodePath from 'node:path'
 if (import.meta.main) console.info(localD1().trim())
 
 export function localD1() {
-	const paths = NodeFS.globSync(`.wrangler/**/*.sqlite`).filter(
-		(path) => NodePath.basename(path) !== 'metadata.sqlite',
-	)
+	const paths = NodeFS.globSync(
+		`.wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite`,
+	).filter((path) => NodePath.basename(path) !== 'metadata.sqlite')
 
 	const [firstPath, ...restPaths] = paths
 
