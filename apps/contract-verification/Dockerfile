@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM oven/bun:1 AS build
+FROM oven/bun AS build
 
 RUN apt-get update \
   && apt-get install --yes libz1 \
@@ -18,7 +18,7 @@ RUN bun build \
   --outfile container \
   /usr/src/app/gg/index.ts
 
-FROM gcr.io/distroless/base:nonroot
+FROM gcr.io/distroless/base
 
 WORKDIR /usr/src/app
 
