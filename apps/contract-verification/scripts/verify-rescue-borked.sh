@@ -8,7 +8,7 @@ VERIFIER_URL="${3:-https://contracts.tempo.xyz}"
 
 case "$CHAIN_ID" in
   4217)  RPC_URL="${RPC_URL:-https://rpc.mainnet.tempo.xyz}" ;;
-  42431) RPC_URL="${RPC_URL:-https://rpc.moderato.tempo.xyz}" ;;
+  42431) RPC_URL="${RPC_URL:-https://rpc.testnet.tempo.xyz}" ;;
   31318) RPC_URL="${RPC_URL:-https://rpc.devnet.tempoxyz.dev}" ;;
   *)     RPC_URL="${RPC_URL:?Set RPC_URL for chain $CHAIN_ID}" ;;
 esac

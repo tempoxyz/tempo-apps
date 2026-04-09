@@ -5,8 +5,6 @@ import { isAddress } from 'viem'
 import { useChainId } from 'wagmi'
 import * as z from 'zod/mini'
 
-const CONTRACT_VERIFICATION_API_BASE_URL = `${import.meta.env.VITE_CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract`
-
 const CONTRACT_SOURCE_FIELDS = [
 	'stdJsonInput',
 	'abi',
@@ -205,7 +203,7 @@ export async function fetchContractSourceDirect(params: {
 	const { address, chainId, signal } = params
 
 	const apiUrl = new URL(
-		`${CONTRACT_VERIFICATION_API_BASE_URL}/${chainId}/${address.toLowerCase()}`,
+		`${import.meta.env.VITE_CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${chainId}/${address.toLowerCase()}`,
 	)
 	apiUrl.searchParams.set('fields', CONTRACT_SOURCE_FIELDS)
 
