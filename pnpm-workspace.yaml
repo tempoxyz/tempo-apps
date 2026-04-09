@@ -8,9 +8,9 @@ catalog:
   '@cloudflare/puppeteer': ^1.0.6
   '@cloudflare/vite-plugin': 1.30.3
   '@cloudflare/vitest-pool-workers': ^0.13.5
-  '@cloudflare/workers-types': ^4.20260405.1
+  '@cloudflare/workers-types': ^4.20260408.1
   '@hono/zod-validator': ^0.7.6
-  '@iconify/json': ^2.2.459
+  '@iconify/json': ^2.2.460
   '@logtape/config': ^2.0.4
   '@logtape/drizzle-orm': ^2.0.4
   '@logtape/hono': ^2.0.4
@@ -27,16 +27,16 @@ catalog:
   '@svgr/plugin-jsx': ^8.1.0
   '@tailwindcss/vite': ^4.2.2
   '@tanstack/devtools-vite': ^0.6.0
-  '@tanstack/query-async-storage-persister': ^5.90.27
-  '@tanstack/react-devtools': ^0.10.0
-  '@tanstack/react-query': ^5.91.2
-  '@tanstack/react-query-devtools': ^5.91.3
-  '@tanstack/react-query-persist-client': ^5.90.27
-  '@tanstack/react-router': ^1.167.5
-  '@tanstack/react-router-devtools': ^1.166.9
-  '@tanstack/react-router-ssr-query': ^1.166.9
-  '@tanstack/react-start': ^1.166.18
-  '@tanstack/router-plugin': ^1.166.14
+  '@tanstack/query-async-storage-persister': ^5.96.2
+  '@tanstack/react-devtools': ^0.10.2
+  '@tanstack/react-query': ^5.96.2
+  '@tanstack/react-query-devtools': ^5.96.2
+  '@tanstack/react-query-persist-client': ^5.96.2
+  '@tanstack/react-router': ^1.168.10
+  '@tanstack/react-router-devtools': ^1.166.11
+  '@tanstack/react-router-ssr-query': ^1.166.10
+  '@tanstack/react-start': ^1.167.16
+  '@tanstack/router-plugin': ^1.167.12
   '@total-typescript/ts-reset': ^0.6.1
   '@types/animejs': ^3.1.13
   '@types/node': ^25.5.2
@@ -44,22 +44,22 @@ catalog:
   '@types/react-dom': ^19.2.3
   '@vitejs/plugin-react': ^6.0.1
   '@vitest/ui': 4.1.0
-  '@wagmi/core': ^3.4.1
+  '@wagmi/core': ^3.4.2
   abitype: ^1.2.3
   animejs: ^4.3.6
   cva: ^1.0.0-beta.4
   dotenv: ^17.3.1
   eruda: ^3.4.3
-  esbuild: ^0.27.7
+  esbuild: ^0.28.0
   globals: ^17.4.0
-  hono: ^4.12.8
+  hono: ^4.12.12
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
   kysely: ^0.28.15
-  ox: ^0.14.10
+  ox: ^0.14.12
   prool: ^0.2.4
-  react: ^19.2.4
-  react-dom: ^19.2.4
+  react: ^19.2.5
+  react-dom: ^19.2.5
   rollup-plugin-visualizer: ^7.0.1
   shiki: ^4.0.2
   sonda: ^0.11.1
@@ -73,16 +73,18 @@ catalog:
   typescript: ^6.0.2
   unplugin-icons: ^23.0.1
   viem: ^2.47.10
-  vite: ^8.0.1
+  vite: ^8.0.7
   vite-plugin-devtools-json: ^1.0.0
   vitest: 4.1.0
-  wagmi: ^3.6.0
-  wrangler: 4.81.0
+  wagmi: ^3.6.1
+  wrangler: 4.79.0
   zod: ^4.3.6
 
 catalogMode: strict
 
 enablePrePostScripts: true
+
+
 
 ignoredBuiltDependencies:
   - bufferutil

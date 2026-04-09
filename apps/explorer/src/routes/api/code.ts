@@ -2,12 +2,24 @@ import { createFileRoute } from '@tanstack/react-router'
 import { createHighlighterCore, type HighlighterCore } from 'shiki/core'
 import { createJavaScriptRegexEngine } from 'shiki/engine/javascript'
 import * as z from 'zod/mini'
-import { ContractVerificationLookupSchema } from '#lib/domain/contract-source.ts'
+import {
+	parseRawContractSourceResponse,
+	type ContractSource,
+	type ContractSourceFile,
+} from '#lib/domain/contract-source.ts'
 import { zAddress } from '#lib/zod.ts'
 import { getRequestURL } from '#lib/env.ts'
 
-const CONTRACT_VERIFICATION_API_BASE_URL =
-	'https://contracts.tempo.xyz/v2/contract'
+const CONTRACT_VERIFICATION_API_BASE_URL = `${import.meta.env.VITE_CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract`
+
+const CONTRACT_SOURCE_FIELDS = [
+	'stdJsonInput',
+	'abi',
+	'compilation',
+	'sources',
+	'name',
+	'extensions.tempo.nativeSource',
+].join(',')
 
 const SHIKI_THEMES = {
 	light: 'github-light',
@@ -73,6 +85,34 @@ async function processHighlightedHtml(html: string): Promise<string> {
 	return transformed.text()
 }
 
+function getSourceFiles(
+	source: ContractSource,
+): Record<string, ContractSourceFile> {
+	return source.kind === 'verified'
+		? source.stdJsonInput.sources
+		: source.sources
+}
+
+function withHighlightedSources(
+	source: ContractSource,
+	highlightedSources: Record<string, ContractSourceFile>,
+): ContractSource {
+	if (source.kind === 'verified') {
+		return {
+			...source,
+			stdJsonInput: {
+				...source.stdJsonInput,
+				sources: highlightedSources,
+			},
+		}
+	}
+
+	return {
+		...source,
+		sources: highlightedSources,
+	}
+}
+
 export const Route = createFileRoute('/api/code')({
 	server: {
 		handlers: {
@@ -107,7 +147,7 @@ export const Route = createFileRoute('/api/code')({
 				const apiUrl = new URL(
 					`${CONTRACT_VERIFICATION_API_BASE_URL}/${parsedSearchParams.chainid}/${parsedSearchParams.address.toLowerCase()}`,
 				)
-				apiUrl.searchParams.set('fields', 'stdJsonInput,abi,compilation')
+				apiUrl.searchParams.set('fields', CONTRACT_SOURCE_FIELDS)
 				const response = await fetch(apiUrl.toString())
 
 				if (!response.ok)
@@ -118,17 +158,22 @@ export const Route = createFileRoute('/api/code')({
 
 				const responseData = await response.json()
 
-				const { data, success, error } = z.safeParse(
-					ContractVerificationLookupSchema,
-					responseData,
-				)
-				if (!success)
+				let data: ContractSource
+				try {
+					data = parseRawContractSourceResponse(responseData)
+				} catch (error) {
 					return Response.json(
-						{ error: z.prettifyError(error) },
+						{
+							error:
+								error instanceof Error
+									? error.message
+									: 'Failed to parse contract code',
+						},
 						{ status: 500 },
 					)
+				}
 
-				// Cache for 1 day - verified contract source code doesn't change
+				// Cache for 1 day - contract source code doesn't change
 				const cacheHeaders = {
 					'Cache-Control':
 						'public, max-age=86400, stale-while-revalidate=604800',
@@ -138,14 +183,9 @@ export const Route = createFileRoute('/api/code')({
 					return Response.json(data, { headers: cacheHeaders })
 
 				const highlighter = await getHighlighter()
-				const highlightedSources: Record<
-					string,
-					{ content: string; highlightedHtml?: string }
-				> = {}
+				const highlightedSources: Record<string, ContractSourceFile> = {}
 
-				for (const [fileName, source] of Object.entries(
-					data.stdJsonInput.sources,
-				)) {
+				for (const [fileName, source] of Object.entries(getSourceFiles(data))) {
 					const language = getLanguageFromFileName(fileName)
 					try {
 						const html = highlighter.codeToHtml(source.content, {
@@ -163,16 +203,9 @@ export const Route = createFileRoute('/api/code')({
 					}
 				}
 
-				return Response.json(
-					{
-						...data,
-						stdJsonInput: {
-							...data.stdJsonInput,
-							sources: highlightedSources,
-						},
-					},
-					{ headers: cacheHeaders },
-				)
+				return Response.json(withHighlightedSources(data, highlightedSources), {
+					headers: cacheHeaders,
+				})
 			},
 		},
 	},

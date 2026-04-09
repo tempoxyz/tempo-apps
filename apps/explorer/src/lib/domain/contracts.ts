@@ -897,7 +897,7 @@ class TempoABILoader {
 
 	async loadABI(address: string): Promise<unknown[]> {
 		try {
-			const url = `https://contracts.tempo.xyz/v2/contract/${this.chainId}/${address.toLowerCase()}?fields=abi`
+			const url = `${import.meta.env.VITE_CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${this.chainId}/${address.toLowerCase()}?fields=abi`
 			const response = await fetch(url)
 			if (!response.ok) return []
 			const data = (await response.json()) as { abi?: unknown[] }
