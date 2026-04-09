@@ -10,6 +10,11 @@ on:
         required: true
         type: string
         description: 'JSON array of environments to deploy (e.g. ["testnet","devnet"] or [""])'
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
 
 concurrency:
   group: deploy-${{ inputs.app }}-${{ github.ref }}
