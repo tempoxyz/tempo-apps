@@ -1,4 +1,5 @@
 import { parseAbi, type Abi } from 'viem'
+import { Abis, Addresses } from 'viem/tempo'
 
 import { chainIds, type ChainId } from '#wagmi.config.ts'
 
@@ -89,27 +90,7 @@ function buildReferences(options: {
 	}
 }
 
-const validatorConfigAbi = parseAbi([
-	'struct Validator { bytes32 publicKey; bool active; uint64 index; address validatorAddress; string inboundAddress; string outboundAddress; }',
-	'function getValidators() view returns (Validator[] validators)',
-	'function addValidator(address newValidatorAddress, bytes32 publicKey, bool active, string inboundAddress, string outboundAddress)',
-	'function updateValidator(address newValidatorAddress, bytes32 publicKey, string inboundAddress, string outboundAddress)',
-	'function changeValidatorStatus(address validator, bool active)',
-	'function changeValidatorStatusByIndex(uint64 index, bool active)',
-	'function owner() view returns (address)',
-	'function changeOwner(address newOwner)',
-	'function getNextFullDkgCeremony() view returns (uint64)',
-	'function setNextFullDkgCeremony(uint64 epoch)',
-	'function validatorsArray(uint256 index) view returns (address)',
-	'function validators(address validator) view returns (Validator validatorInfo)',
-	'function validatorCount() view returns (uint64)',
-	'error Unauthorized()',
-	'error ValidatorAlreadyExists()',
-	'error ValidatorNotFound()',
-	'error InvalidPublicKey()',
-	'error NotHostPort(string field, string input, string backtrace)',
-	'error NotIpPort(string field, string input, string backtrace)',
-])
+const validatorConfigAbi = Abis.validator
 
 const validatorConfigV2Abi = parseAbi([
 	'struct Validator { bytes32 publicKey; address validatorAddress; string ingress; string egress; address feeRecipient; uint64 index; uint64 addedAtHeight; uint64 deactivatedAtHeight; }',
@@ -163,186 +144,17 @@ const validatorConfigV2Abi = parseAbi([
 	'error ValidatorNotFound()',
 ])
 
-const accountKeychainAbi = parseAbi([
-	'struct LegacyTokenLimit { address token; uint256 amount; }',
-	'struct TokenLimit { address token; uint256 amount; uint64 period; }',
-	'struct SelectorRule { bytes4 selector; address[] recipients; }',
-	'struct CallScope { address target; SelectorRule[] selectorRules; }',
-	'struct KeyRestrictions { uint64 expiry; bool enforceLimits; TokenLimit[] limits; bool allowAnyCalls; CallScope[] allowedCalls; }',
-	'struct KeyInfo { uint8 signatureType; address keyId; uint64 expiry; bool enforceLimits; bool isRevoked; }',
-	'function authorizeKey(address keyId, uint8 signatureType, uint64 expiry, bool enforceLimits, LegacyTokenLimit[] limits)',
-	'function authorizeKey(address keyId, uint8 signatureType, KeyRestrictions config)',
-	'function revokeKey(address keyId)',
-	'function updateSpendingLimit(address keyId, address token, uint256 newLimit)',
-	'function setAllowedCalls(address keyId, CallScope[] scopes)',
-	'function removeAllowedCalls(address keyId, address target)',
-	'function getKey(address account, address keyId) view returns (KeyInfo keyInfo)',
-	'function getRemainingLimit(address account, address keyId, address token) view returns (uint256 remaining)',
-	'function getRemainingLimitWithPeriod(address account, address keyId, address token) view returns (uint256 remaining, uint64 periodEnd)',
-	'function getAllowedCalls(address account, address keyId) view returns (bool isScoped, CallScope[] scopes)',
-	'function getTransactionKey() view returns (address)',
-	'event KeyAuthorized(address indexed account, address indexed publicKey, uint8 signatureType, uint64 expiry)',
-	'event KeyRevoked(address indexed account, address indexed publicKey)',
-	'event SpendingLimitUpdated(address indexed account, address indexed publicKey, address indexed token, uint256 newLimit)',
-	'event AccessKeySpend(address indexed account, address indexed publicKey, address indexed token, uint256 amount, uint256 remainingLimit)',
-	'error UnauthorizedCaller()',
-	'error KeyAlreadyExists()',
-	'error KeyNotFound()',
-	'error KeyExpired()',
-	'error SpendingLimitExceeded()',
-	'error InvalidSpendingLimit()',
-	'error InvalidSignatureType()',
-	'error ZeroPublicKey()',
-	'error ExpiryInPast()',
-	'error KeyAlreadyRevoked()',
-	'error SignatureTypeMismatch(uint8 expected, uint8 actual)',
-	'error CallNotAllowed()',
-	'error InvalidCallScope()',
-	'error LegacyAuthorizeKeySelectorChanged(bytes4 newSelector)',
-])
+const accountKeychainAbi = Abis.accountKeychain
 
-const nonceAbi = parseAbi([
-	'function getNonce(address account, uint256 nonceKey) view returns (uint64 nonce)',
-	'event NonceIncremented(address indexed account, uint256 indexed nonceKey, uint64 newNonce)',
-	'error ProtocolNonceNotSupported()',
-	'error InvalidNonceKey()',
-	'error NonceOverflow()',
-	'error ExpiringNonceReplay()',
-	'error ExpiringNonceSetFull()',
-	'error InvalidExpiringNonceExpiry()',
-])
+const nonceAbi = Abis.nonce
 
-const tip403RegistryAbi = parseAbi([
-	'function policyIdCounter() view returns (uint64)',
-	'function policyExists(uint64 policyId) view returns (bool)',
-	'function policyData(uint64 policyId) view returns (uint8 policyType, address admin)',
-	'function isAuthorized(uint64 policyId, address user) view returns (bool)',
-	'function isAuthorizedSender(uint64 policyId, address user) view returns (bool)',
-	'function isAuthorizedRecipient(uint64 policyId, address user) view returns (bool)',
-	'function isAuthorizedMintRecipient(uint64 policyId, address user) view returns (bool)',
-	'function compoundPolicyData(uint64 policyId) view returns (uint64 senderPolicyId, uint64 recipientPolicyId, uint64 mintRecipientPolicyId)',
-	'function createPolicy(address admin, uint8 policyType) returns (uint64)',
-	'function createPolicyWithAccounts(address admin, uint8 policyType, address[] accounts) returns (uint64)',
-	'function setPolicyAdmin(uint64 policyId, address admin)',
-	'function modifyPolicyWhitelist(uint64 policyId, address account, bool allowed)',
-	'function modifyPolicyBlacklist(uint64 policyId, address account, bool restricted)',
-	'function createCompoundPolicy(uint64 senderPolicyId, uint64 recipientPolicyId, uint64 mintRecipientPolicyId) returns (uint64)',
-	'event PolicyAdminUpdated(uint64 indexed policyId, address indexed updater, address indexed admin)',
-	'event PolicyCreated(uint64 indexed policyId, address indexed updater, uint8 policyType)',
-	'event WhitelistUpdated(uint64 indexed policyId, address indexed updater, address indexed account, bool allowed)',
-	'event BlacklistUpdated(uint64 indexed policyId, address indexed updater, address indexed account, bool restricted)',
-	'event CompoundPolicyCreated(uint64 indexed policyId, address indexed creator, uint64 senderPolicyId, uint64 recipientPolicyId, uint64 mintRecipientPolicyId)',
-	'error Unauthorized()',
-	'error PolicyNotFound()',
-	'error PolicyNotSimple()',
-	'error InvalidPolicyType()',
-	'error IncompatiblePolicyType()',
-	'error VirtualAddressNotAllowed()',
-])
+const tip403RegistryAbi = Abis.tip403Registry
 
-const tip20FactoryAbi = parseAbi([
-	'function createToken(string name, string symbol, string currency, address quoteToken, address admin, bytes32 salt) returns (address)',
-	'function isTIP20(address token) view returns (bool)',
-	'function getTokenAddress(address sender, bytes32 salt) view returns (address)',
-	'event TokenCreated(address indexed token, string name, string symbol, string currency, address quoteToken, address admin, bytes32 salt)',
-	'error AddressReserved()',
-	'error AddressNotReserved()',
-	'error InvalidQuoteToken()',
-	'error TokenAlreadyExists(address token)',
-])
+const tip20FactoryAbi = Abis.tip20Factory
 
-const tipFeeManagerAbi = parseAbi([
-	'struct Pool { uint128 reserveUserToken; uint128 reserveValidatorToken; }',
-	'function userTokens(address user) view returns (address)',
-	'function validatorTokens(address validator) view returns (address)',
-	'function setUserToken(address token)',
-	'function setValidatorToken(address token)',
-	'function distributeFees(address validator, address token)',
-	'function collectedFees(address validator, address token) view returns (uint256)',
-	'function M() view returns (uint256)',
-	'function N() view returns (uint256)',
-	'function SCALE() view returns (uint256)',
-	'function MIN_LIQUIDITY() view returns (uint256)',
-	'function getPoolId(address userToken, address validatorToken) pure returns (bytes32)',
-	'function getPool(address userToken, address validatorToken) view returns (Pool pool)',
-	'function pools(bytes32 poolId) view returns (Pool pool)',
-	'function mint(address userToken, address validatorToken, uint256 amountValidatorToken, address to) returns (uint256 liquidity)',
-	'function burn(address userToken, address validatorToken, uint256 liquidity, address to) returns (uint256 amountUserToken, uint256 amountValidatorToken)',
-	'function totalSupply(bytes32 poolId) view returns (uint256)',
-	'function liquidityBalances(bytes32 poolId, address user) view returns (uint256)',
-	'function rebalanceSwap(address userToken, address validatorToken, uint256 amountOut, address to) returns (uint256 amountIn)',
-	'event UserTokenSet(address indexed user, address indexed token)',
-	'event ValidatorTokenSet(address indexed validator, address indexed token)',
-	'event FeesDistributed(address indexed validator, address indexed token, uint256 amount)',
-	'event Mint(address sender, address indexed to, address indexed userToken, address indexed validatorToken, uint256 amountValidatorToken, uint256 liquidity)',
-	'event Burn(address indexed sender, address indexed userToken, address indexed validatorToken, uint256 amountUserToken, uint256 amountValidatorToken, uint256 liquidity, address to)',
-	'event RebalanceSwap(address indexed userToken, address indexed validatorToken, address indexed swapper, uint256 amountIn, uint256 amountOut)',
-	'error OnlyValidator()',
-	'error OnlySystemContract()',
-	'error InvalidToken()',
-	'error PoolDoesNotExist()',
-	'error InsufficientFeeTokenBalance()',
-	'error InternalError()',
-	'error CannotChangeWithinBlock()',
-	'error CannotChangeWithPendingFees()',
-	'error TokenPolicyForbids()',
-	'error IdenticalAddresses()',
-	'error InsufficientLiquidity()',
-	'error InsufficientReserves()',
-	'error InvalidAmount()',
-	'error DivisionByZero()',
-	'error InvalidSwapCalculation()',
-])
+const tipFeeManagerAbi = [...Abis.feeManager, ...Abis.feeAmm]
 
-const stablecoinDexAbi = parseAbi([
-	'struct Order { uint128 orderId; address maker; bytes32 bookKey; bool isBid; int16 tick; uint128 amount; uint128 remaining; uint128 prev; uint128 next; bool isFlip; int16 flipTick; }',
-	'struct Orderbook { address base; address quote; int16 bestBidTick; int16 bestAskTick; }',
-	'function createPair(address base) returns (bytes32 key)',
-	'function place(address token, uint128 amount, bool isBid, int16 tick) returns (uint128 orderId)',
-	'function placeFlip(address token, uint128 amount, bool isBid, int16 tick, int16 flipTick) returns (uint128 orderId)',
-	'function cancel(uint128 orderId)',
-	'function cancelStaleOrder(uint128 orderId)',
-	'function swapExactAmountIn(address tokenIn, address tokenOut, uint128 amountIn, uint128 minAmountOut) returns (uint128 amountOut)',
-	'function swapExactAmountOut(address tokenIn, address tokenOut, uint128 amountOut, uint128 maxAmountIn) returns (uint128 amountIn)',
-	'function quoteSwapExactAmountIn(address tokenIn, address tokenOut, uint128 amountIn) view returns (uint128 amountOut)',
-	'function quoteSwapExactAmountOut(address tokenIn, address tokenOut, uint128 amountOut) view returns (uint128 amountIn)',
-	'function balanceOf(address user, address token) view returns (uint128)',
-	'function withdraw(address token, uint128 amount)',
-	'function getOrder(uint128 orderId) view returns (Order order)',
-	'function getTickLevel(address base, int16 tick, bool isBid) view returns (uint128 head, uint128 tail, uint128 totalLiquidity)',
-	'function pairKey(address tokenA, address tokenB) pure returns (bytes32)',
-	'function nextOrderId() view returns (uint128)',
-	'function books(bytes32 pairKey) view returns (Orderbook orderbook)',
-	'function MIN_TICK() pure returns (int16)',
-	'function MAX_TICK() pure returns (int16)',
-	'function TICK_SPACING() pure returns (int16)',
-	'function PRICE_SCALE() pure returns (uint32)',
-	'function MIN_ORDER_AMOUNT() pure returns (uint128)',
-	'function MIN_PRICE() pure returns (uint32)',
-	'function MAX_PRICE() pure returns (uint32)',
-	'function tickToPrice(int16 tick) pure returns (uint32 price)',
-	'function priceToTick(uint32 price) pure returns (int16 tick)',
-	'event PairCreated(bytes32 indexed key, address indexed base, address indexed quote)',
-	'event OrderPlaced(uint128 indexed orderId, address indexed maker, address indexed token, uint128 amount, bool isBid, int16 tick, bool isFlipOrder, int16 flipTick)',
-	'event OrderFilled(uint128 indexed orderId, address indexed maker, address indexed taker, uint128 amountFilled, bool partialFill)',
-	'event OrderCancelled(uint128 indexed orderId)',
-	'error Unauthorized()',
-	'error PairDoesNotExist()',
-	'error PairAlreadyExists()',
-	'error OrderDoesNotExist()',
-	'error IdenticalTokens()',
-	'error InvalidToken()',
-	'error TickOutOfBounds(int16 tick)',
-	'error InvalidTick()',
-	'error InvalidFlipTick()',
-	'error InsufficientBalance()',
-	'error InsufficientLiquidity()',
-	'error InsufficientOutput()',
-	'error MaxInputExceeded()',
-	'error BelowMinimumOrderSize(uint128 amount)',
-	'error InvalidBaseToken()',
-	'error OrderNotStale()',
-])
+const stablecoinDexAbi = Abis.stablecoinDex
 
 const addressRegistryAbi = parseAbi([
 	'function registerVirtualMaster(bytes32 salt) returns (bytes4 masterId)',
@@ -365,22 +177,15 @@ const signatureVerifierAbi = parseAbi([
 	'error InvalidSignature()',
 ])
 
-const validatorConfigAddress =
-	'0xcccccccc00000000000000000000000000000000' as const
+const validatorConfigAddress = Addresses.validator
 const validatorConfigV2Address =
 	'0xcccccccc00000000000000000000000000000001' as const
-const accountKeychainAddress =
-	'0xaaaaaaaa00000000000000000000000000000000' as const
-const nonceManagerAddress =
-	'0x4e4f4e4345000000000000000000000000000000' as const
-const tip403RegistryAddress =
-	'0x403c000000000000000000000000000000000000' as const
-const tip20FactoryAddress =
-	'0x20fc000000000000000000000000000000000000' as const
-const tipFeeManagerAddress =
-	'0xfeec000000000000000000000000000000000000' as const
-const stablecoinDexAddress =
-	'0xdec0000000000000000000000000000000000000' as const
+const accountKeychainAddress = Addresses.accountKeychain
+const nonceManagerAddress = Addresses.nonceManager
+const tip403RegistryAddress = Addresses.tip403Registry
+const tip20FactoryAddress = Addresses.tip20Factory
+const tipFeeManagerAddress = Addresses.feeManager
+const stablecoinDexAddress = Addresses.stablecoinDex
 const addressRegistryAddress =
 	'0xfdc0000000000000000000000000000000000000' as const
 const signatureVerifierAddress =
