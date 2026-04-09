@@ -1,12 +1,17 @@
 import * as React from 'react'
 import { ContractFeatureCard } from '#comps/ContractFeatureCard.tsx'
 import { cx } from '#lib/css'
-import type { ContractSource } from '#lib/domain/contract-source.ts'
+import type {
+	ContractSource,
+	ContractSourceFile,
+} from '#lib/domain/contract-source.ts'
 import { useCopy, useCopyPermalink } from '#lib/hooks'
 import CheckIcon from '~icons/lucide/check'
 import CopyIcon from '~icons/lucide/copy'
+import FileCode2Icon from '~icons/lucide/file-code-2'
 import LinkIcon from '~icons/lucide/link'
 import SolidityIcon from '~icons/vscode-icons/file-type-solidity'
+import RustIcon from '~icons/vscode-icons/file-type-rust'
 import VyperIcon from '~icons/vscode-icons/file-type-vyper'
 
 function getCompilerVersionUrl(compiler: string, version: string) {
@@ -18,7 +23,9 @@ function getCompilerVersionUrl(compiler: string, version: string) {
 	return `https://github.com/${repo}/releases/tag/v${tag}`
 }
 
-function getOptimizerText(compilation: ContractSource['compilation']) {
+function getOptimizerText(
+	compilation: Extract<ContractSource, { kind: 'verified' }>['compilation'],
+) {
 	const isVyper = compilation.compiler === 'vyper'
 	if (isVyper) {
 		return compilation.compilerSettings.evmVersion
@@ -35,34 +42,128 @@ function getLanguageFromFileName(fileName: string): string {
 	return ext === 'vy' ? 'vyper' : ext === 'rs' ? 'rust' : 'solidity'
 }
 
-export function SourceSection(props: ContractSource) {
-	const {
-		stdJsonInput,
-		// TODO: use this ABI when it's available and only resort to whatsabi if not available
-		abi: _abi,
-		compilation,
-		verifiedAt,
-		runtimeMatch,
-	} = props
+function getSourceEntries(
+	source: ContractSource,
+): Array<[string, ContractSourceFile]> {
+	if (source.kind === 'verified') {
+		return Object.entries(source.stdJsonInput.sources)
+	}
 
-	const optimizerText = getOptimizerText(compilation)
-	const compilerVersionUrl = getCompilerVersionUrl(
-		compilation.compiler,
-		compilation.compilerVersion,
+	return Object.entries(source.sources).toSorted(([left], [right]) => {
+		const leftIndex = source.nativeSource.paths.indexOf(left)
+		const rightIndex = source.nativeSource.paths.indexOf(right)
+		const safeLeftIndex = leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex
+		const safeRightIndex =
+			rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex
+		return safeLeftIndex - safeRightIndex || left.localeCompare(right)
+	})
+}
+
+function getCommitUrl(
+	source: Extract<ContractSource, { kind: 'native' }>,
+): string {
+	return (
+		source.nativeSource.commitUrl ??
+		`https://github.com/${source.nativeSource.repository}/commit/${source.nativeSource.commit}`
 	)
+}
+
+function getNativeActivationText(
+	source: Extract<ContractSource, { kind: 'native' }>,
+): string | undefined {
+	const activation = source.nativeSource.activation
+	const parts: string[] = []
+	if (activation.protocolVersion) parts.push(activation.protocolVersion)
+	if (activation.fromBlock) parts.push(`from block ${activation.fromBlock}`)
+	if (activation.toBlock) parts.push(`until block ${activation.toBlock}`)
+	return parts.length > 0 ? parts.join(' · ') : undefined
+}
+
+function formatSourceKind(kind: string): string {
+	return kind.replaceAll('_', ' ')
+}
+
+function getSourceFragment(fileName: string): string {
+	return `source-file-${fileName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+}
+
+function LanguageIcon(props: { language: string }) {
+	const { language } = props
+	if (language === 'solidity') {
+		return <SolidityIcon className="size-[15px] shrink-0" />
+	}
+	if (language === 'vyper') {
+		return <VyperIcon className="size-[15px] shrink-0" />
+	}
+	if (language === 'rust') {
+		return <RustIcon className="size-[15px] shrink-0" />
+	}
+	return <FileCode2Icon className="size-[15px] shrink-0 text-tertiary" />
+}
+
+export function SourceSection(props: ContractSource) {
+	const sourceEntries = getSourceEntries(props)
+
+	if (props.kind === 'verified') {
+		const optimizerText = getOptimizerText(props.compilation)
+		const compilerVersionUrl = getCompilerVersionUrl(
+			props.compilation.compiler,
+			props.compilation.compilerVersion,
+		)
+
+		return (
+			<ContractFeatureCard
+				rightSideTitle={props.verifiedAt ?? undefined}
+				rightSideDescription={optimizerText}
+				title={`Source code (${props.runtimeMatch ?? 'verified'})`}
+				description="Verified contract source code."
+				textGrid={[
+					{
+						right: (
+							<span className="font-medium text-primary/80">
+								{props.compilation.name}
+							</span>
+						),
+					},
+					{
+						right: (
+							<a
+								target="_blank"
+								rel="noopener noreferrer"
+								className="font-medium text-primary/80"
+								href={compilerVersionUrl}
+							>
+								{props.compilation.compilerVersion} (
+								{props.compilation.compiler})
+							</a>
+						),
+					},
+				]}
+			>
+				<div className="flex flex-col gap-2">
+					{sourceEntries.map(([fileName, source]) => (
+						<SourceFile
+							key={fileName}
+							fileName={fileName}
+							content={source.content}
+							highlightedHtml={source.highlightedHtml}
+						/>
+					))}
+				</div>
+			</ContractFeatureCard>
+		)
+	}
 
 	return (
 		<ContractFeatureCard
-			rightSideTitle={verifiedAt}
-			rightSideDescription={optimizerText}
-			title={`Source code (${runtimeMatch})`}
-			description="Verified contract source code."
+			rightSideTitle={props.nativeSource.language}
+			rightSideDescription={getNativeActivationText(props)}
+			title={`Source code (${formatSourceKind(props.nativeSource.kind)})`}
+			description="Native Tempo runtime source code."
 			textGrid={[
 				{
 					right: (
-						<span className="font-medium text-primary/80">
-							{compilation.name}
-						</span>
+						<span className="font-medium text-primary/80">{props.name}</span>
 					),
 				},
 				{
@@ -71,16 +172,17 @@ export function SourceSection(props: ContractSource) {
 							target="_blank"
 							rel="noopener noreferrer"
 							className="font-medium text-primary/80"
-							href={compilerVersionUrl}
+							href={getCommitUrl(props)}
 						>
-							{compilation.compilerVersion} ({compilation.compiler})
+							{props.nativeSource.repository}@
+							{props.nativeSource.commit.slice(0, 7)}
 						</a>
 					),
 				},
 			]}
 		>
 			<div className="flex flex-col gap-2">
-				{Object.entries(stdJsonInput.sources).map(([fileName, source]) => (
+				{sourceEntries.map(([fileName, source]) => (
 					<SourceFile
 						key={fileName}
 						fileName={fileName}
@@ -104,7 +206,7 @@ function SourceFile(props: {
 	const { copy, notifying } = useCopy({ timeout: 2_000 })
 	const [isCollapsed, setIsCollapsed] = React.useState(false)
 
-	const sourceFragment = `source-file-${fileName.replace('.', '-').toLowerCase()}`
+	const sourceFragment = getSourceFragment(fileName)
 	const { linkNotifying, handleCopyPermalink } = useCopyPermalink({
 		fragment: sourceFragment,
 	})
@@ -133,13 +235,9 @@ function SourceFile(props: {
 					onClick={() => setIsCollapsed((v) => !v)}
 					className="flex items-center gap-2 align-middle bg-base-alt/40 py-1 px-2 rounded-xs cursor-pointer press-down min-w-0 max-w-full"
 				>
-					{language === 'solidity' ? (
-						<SolidityIcon className="size-[15px] shrink-0" />
-					) : (
-						<VyperIcon className="size-[15px] shrink-0" />
-					)}
+					<LanguageIcon language={language} />
 					<span
-						id={`source-file-${fileName.replace('.', '-').toLowerCase()}`}
+						id={sourceFragment}
 						className="text-[12px] font-mono text-primary/50 hover:text-primary whitespace-nowrap overflow-x-auto text-left"
 					>
 						{fileName}

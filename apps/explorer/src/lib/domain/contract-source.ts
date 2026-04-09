@@ -5,8 +5,14 @@ import { isAddress } from 'viem'
 import { useChainId } from 'wagmi'
 import * as z from 'zod/mini'
 
-const CONTRACT_VERIFICATION_API_BASE_URL =
-	'https://contracts.tempo.xyz/v2/contract'
+const CONTRACT_SOURCE_FIELDS = [
+	'stdJsonInput',
+	'abi',
+	'compilation',
+	'sources',
+	'name',
+	'extensions.tempo.nativeSource',
+].join(',')
 
 const SoliditySettingsSchema = z.object({
 	remappings: z.optional(z.array(z.string())),
@@ -31,40 +37,162 @@ const SoliditySettingsSchema = z.object({
 	libraries: z.optional(z.record(z.string(), z.string())),
 })
 
-export const ContractVerificationLookupSchema = z.object({
-	matchId: z.coerce.number(),
-	match: z.string(),
-	creationMatch: z.string(),
-	runtimeMatch: z.string(),
-	chainId: z.coerce.number(),
-	address: z.string(),
-	verifiedAt: z.string(),
-	stdJsonInput: z.object({
-		language: z.string(),
-		sources: z.record(
-			z.string(),
-			z.object({
-				content: z.string(),
-				highlightedHtml: z.optional(z.string()),
-			}),
-		),
-		settings: SoliditySettingsSchema,
-	}),
-	abi: z.array(z.any()),
-	compilation: z.object({
-		compiler: z.string(),
-		compilerVersion: z.string(),
-		language: z.string(),
-		name: z.string(),
-		fullyQualifiedName: z.string(),
-		compilerSettings: SoliditySettingsSchema,
+const NullableStringSchema = z.union([z.string(), z.null()])
+
+const SourceFileSchema = z.object({
+	content: z.string(),
+	highlightedHtml: z.optional(z.string()),
+})
+
+const SourceFilesSchema = z.record(z.string(), SourceFileSchema)
+
+const VerifiedStdJsonInputSchema = z.object({
+	language: z.string(),
+	sources: SourceFilesSchema,
+	settings: SoliditySettingsSchema,
+})
+
+const CompilationSchema = z.object({
+	compiler: z.string(),
+	compilerVersion: z.string(),
+	language: z.string(),
+	name: z.string(),
+	fullyQualifiedName: z.string(),
+	compilerSettings: SoliditySettingsSchema,
+})
+
+const NativeSourceMetadataSchema = z.object({
+	kind: z.string(),
+	language: z.string(),
+	bytecodeVerified: z.boolean(),
+	repository: z.string(),
+	commit: z.string(),
+	commitUrl: z.optional(NullableStringSchema),
+	paths: z.array(z.string()),
+	entrypoints: z.array(z.string()),
+	activation: z.object({
+		protocolVersion: NullableStringSchema,
+		fromBlock: NullableStringSchema,
+		toBlock: NullableStringSchema,
 	}),
 })
 
-export type ContractSource = z.infer<typeof ContractVerificationLookupSchema>
+const RawContractVerificationLookupSchema = z.object({
+	matchId: NullableStringSchema,
+	match: NullableStringSchema,
+	creationMatch: NullableStringSchema,
+	runtimeMatch: NullableStringSchema,
+	chainId: z.coerce.number(),
+	address: z.string(),
+	verifiedAt: NullableStringSchema,
+	name: z.optional(NullableStringSchema),
+	stdJsonInput: z.optional(z.union([VerifiedStdJsonInputSchema, z.null()])),
+	abi: z.array(z.any()),
+	compilation: z.optional(z.union([CompilationSchema, z.null()])),
+	sources: z.optional(SourceFilesSchema),
+	extensions: z.optional(
+		z.object({
+			tempo: z.optional(
+				z.object({
+					nativeSource: z.optional(NativeSourceMetadataSchema),
+				}),
+			),
+		}),
+	),
+})
+
+const VerifiedContractSourceSchema = z.object({
+	kind: z.literal('verified'),
+	chainId: z.coerce.number(),
+	address: z.string(),
+	match: NullableStringSchema,
+	runtimeMatch: NullableStringSchema,
+	verifiedAt: NullableStringSchema,
+	stdJsonInput: VerifiedStdJsonInputSchema,
+	abi: z.array(z.any()),
+	compilation: CompilationSchema,
+})
+
+const NativeContractSourceSchema = z.object({
+	kind: z.literal('native'),
+	chainId: z.coerce.number(),
+	address: z.string(),
+	match: NullableStringSchema,
+	runtimeMatch: NullableStringSchema,
+	verifiedAt: NullableStringSchema,
+	name: z.string(),
+	abi: z.array(z.any()),
+	sources: SourceFilesSchema,
+	nativeSource: NativeSourceMetadataSchema,
+})
+
+export const ContractSourceSchema = z.union([
+	VerifiedContractSourceSchema,
+	NativeContractSourceSchema,
+])
+
+export type ContractSource = z.infer<typeof ContractSourceSchema>
+export type ContractSourceFile = z.infer<typeof SourceFileSchema>
+
+export function normalizeContractSourceResponse(
+	data: z.infer<typeof RawContractVerificationLookupSchema>,
+): ContractSource {
+	if (data.stdJsonInput && data.compilation) {
+		return {
+			kind: 'verified',
+			chainId: data.chainId,
+			address: data.address,
+			match: data.match,
+			runtimeMatch: data.runtimeMatch,
+			verifiedAt: data.verifiedAt,
+			stdJsonInput: data.stdJsonInput,
+			abi: data.abi,
+			compilation: data.compilation,
+		}
+	}
+
+	const nativeSource = data.extensions?.tempo?.nativeSource
+	if (data.name && data.sources && nativeSource) {
+		return {
+			kind: 'native',
+			chainId: data.chainId,
+			address: data.address,
+			match: data.match,
+			runtimeMatch: data.runtimeMatch,
+			verifiedAt: data.verifiedAt,
+			name: data.name,
+			abi: data.abi,
+			sources: data.sources,
+			nativeSource,
+		}
+	}
+
+	throw new Error('Unsupported contract source response shape')
+}
+
+export function parseRawContractSourceResponse(value: unknown): ContractSource {
+	const { data, success, error } = z.safeParse(
+		RawContractVerificationLookupSchema,
+		value,
+	)
+	if (!success) {
+		throw new Error(z.prettifyError(error))
+	}
+
+	return normalizeContractSourceResponse(data)
+}
+
+export function parseContractSource(value: unknown): ContractSource {
+	const { data, success, error } = z.safeParse(ContractSourceSchema, value)
+	if (!success) {
+		throw new Error(z.prettifyError(error))
+	}
+
+	return data
+}
 
 /**
- * Fetch verified contract sources directly from upstream API.
+ * Fetch contract sources directly from the upstream API.
  * Use this for SSR where __BASE_URL__ may not be reachable.
  */
 export async function fetchContractSourceDirect(params: {
@@ -75,9 +203,9 @@ export async function fetchContractSourceDirect(params: {
 	const { address, chainId, signal } = params
 
 	const apiUrl = new URL(
-		`${CONTRACT_VERIFICATION_API_BASE_URL}/${chainId}/${address.toLowerCase()}`,
+		`${import.meta.env.VITE_CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${chainId}/${address.toLowerCase()}`,
 	)
-	apiUrl.searchParams.set('fields', 'stdJsonInput,abi,compilation')
+	apiUrl.searchParams.set('fields', CONTRACT_SOURCE_FIELDS)
 
 	const response = await fetch(apiUrl.toString(), { signal })
 
@@ -85,19 +213,11 @@ export async function fetchContractSourceDirect(params: {
 		throw new Error('Failed to fetch contract sources')
 	}
 
-	const { data, success, error } = z.safeParse(
-		ContractVerificationLookupSchema,
-		await response.json(),
-	)
-	if (!success) {
-		throw new Error(z.prettifyError(error))
-	}
-
-	return data
+	return parseRawContractSourceResponse(await response.json())
 }
 
 /**
- * Fetch verified contract sources from Sauce registry via local API.
+ * Fetch contract sources from the local API proxy.
  * This provides syntax highlighting via the /api/code endpoint.
  */
 export async function fetchContractSource(params: {
@@ -127,18 +247,7 @@ export async function fetchContractSource(params: {
 			throw new Error('Failed to fetch contract sources')
 		}
 
-		const { data, success, error } = z.safeParse(
-			ContractVerificationLookupSchema,
-			await response.json(),
-		)
-		if (!success) {
-			console.error('Failed to parse contract sources:', z.prettifyError(error))
-			throw new Error(z.prettifyError(error))
-		}
-
-		if (!data) throw new Error('Failed to parse contract sources')
-
-		return data
+		return parseContractSource(await response.json())
 	} catch (error) {
 		console.error('Failed to fetch contract sources:', error)
 		throw new Error(error instanceof Error ? error.message : 'Unknown error')

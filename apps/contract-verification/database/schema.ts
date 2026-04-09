@@ -56,6 +56,127 @@ export const sourcesTable = p.sqliteTable('sources', (s) => ({
 }))
 
 // ============================================================================
+// native_contracts - Tempo-native contracts with curated source metadata
+// ============================================================================
+
+export const nativeContractsTable = p.sqliteTable(
+	'native_contracts',
+	(s) => ({
+		/** UUID primary key */
+		id: s.text('id').primaryKey(),
+		...auditColumns(),
+		/** Chain ID where the native contract address is active */
+		chainId: s.integer('chain_id').notNull(),
+		/** Native contract address (20 bytes) */
+		address: s.blob('address').notNull(),
+		/** Display name exposed by the lookup API */
+		name: s.text('name').notNull(),
+		/** Tempo runtime classification (for example: precompile) */
+		runtimeType: s.text('runtime_type').notNull(),
+		/** Source language (for example: Rust) */
+		language: s.text('language').notNull(),
+		/** ABI JSON served by the API */
+		abiJson: s.text('abi_json').notNull(),
+		/** Optional docs URL for Explorer and API consumers */
+		docsUrl: s.text('docs_url'),
+	}),
+	(table) => [
+		p.index('native_contracts_address').on(table.address),
+		p
+			.uniqueIndex('native_contracts_chain_id_address')
+			.on(table.chainId, table.address),
+	],
+)
+
+// ============================================================================
+// native_contract_revisions - Immutable source snapshots for native contracts
+// ============================================================================
+
+export const nativeContractRevisionsTable = p.sqliteTable(
+	'native_contract_revisions',
+	(s) => ({
+		/** UUID primary key */
+		id: s.text('id').primaryKey(),
+		...auditColumns(),
+		/** FK to native_contracts.id */
+		nativeContractId: s
+			.text('native_contract_id')
+			.notNull()
+			.references(() => nativeContractsTable.id),
+		/** Repository slug containing the native source snapshot */
+		repo: s.text('repo').notNull(),
+		/** Pinned commit SHA used for the source snapshot */
+		commitSha: s.text('commit_sha').notNull(),
+		/** Optional URL to the pinned commit */
+		commitUrl: s.text('commit_url'),
+		/** Optional protocol version label active for this revision */
+		protocolVersion: s.text('protocol_version'),
+		/** Inclusive block number where this revision becomes active */
+		fromBlock: s.integer('from_block').notNull(),
+		/** Inclusive block number where this revision stops being active */
+		toBlock: s.integer('to_block'),
+		/** Optional repository subdirectory used as the snapshot root */
+		sourceRoot: s.text('source_root'),
+		/** Ingestion lifecycle state for the stored snapshot */
+		snapshotStatus: s.text('snapshot_status').notNull(),
+	}),
+	(table) => [
+		p
+			.index('native_contract_revisions_native_contract_id')
+			.on(table.nativeContractId),
+		p
+			.index('native_contract_revisions_active_range')
+			.on(table.nativeContractId, table.fromBlock, table.toBlock),
+		p
+			.uniqueIndex('native_contract_revisions_contract_from_block')
+			.on(table.nativeContractId, table.fromBlock),
+	],
+)
+
+// ============================================================================
+// native_contract_revision_sources - Links native revisions to stored sources
+// ============================================================================
+
+export const nativeContractRevisionSourcesTable = p.sqliteTable(
+	'native_contract_revision_sources',
+	(s) => ({
+		/** UUID primary key */
+		id: s.text('id').primaryKey(),
+		/** FK to native_contract_revisions.id */
+		revisionId: s
+			.text('revision_id')
+			.notNull()
+			.references(() => nativeContractRevisionsTable.id),
+		/** FK to sources.source_hash */
+		sourceHash: s
+			.blob('source_hash')
+			.notNull()
+			.references(() => sourcesTable.sourceHash),
+		/** Repository-relative source path */
+		path: s.text('path').notNull(),
+		/** Whether this path is an entrypoint for the native contract */
+		isEntrypoint: s
+			.integer('is_entrypoint', { mode: 'boolean' })
+			.notNull()
+			.default(false),
+	}),
+	(table) => [
+		p
+			.index('native_contract_revision_sources_revision_id')
+			.on(table.revisionId),
+		p
+			.index('native_contract_revision_sources_source_hash')
+			.on(table.sourceHash),
+		p
+			.index('native_contract_revision_sources_revision_entrypoint')
+			.on(table.revisionId, table.isEntrypoint),
+		p
+			.uniqueIndex('native_contract_revision_sources_revision_path')
+			.on(table.revisionId, table.path),
+	],
+)
+
+// ============================================================================
 // contracts - Represents a contract by its creation/runtime code hashes
 // ============================================================================
 

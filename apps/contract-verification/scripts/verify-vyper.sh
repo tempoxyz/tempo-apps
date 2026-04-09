@@ -3,7 +3,7 @@
 set -euo pipefail
 
 MODE=${MODE:-"full"}
-TEMPO_RPC_URL=${TEMPO_RPC_URL:-"https://rpc.moderato.tempo.xyz"}
+TEMPO_RPC_URL=${TEMPO_RPC_URL:-"https://rpc.testnet.tempo.xyz"}
 VERIFIER_URL=${VERIFIER_URL:-"https://contracts.tempo.xyz"}
 FEE_TOKEN="${TEMPO_FEE_TOKEN:-0x20c0000000000000000000000000000000000001}"
 

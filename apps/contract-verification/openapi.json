@@ -2105,18 +2105,18 @@
 		"/v2/contract/{chainId}/{address}": {
 			"get": {
 				"tags": ["Contract Lookup"],
-				"summary": "Get verified contract",
-				"description": "By default returns minimal information about the contract: `match`, `creation_match`, `runtime_match`, `chainId`, `address`, and `verifiedAt`\n\nTo get other details one can either list the fields requested in the `fields` query param or ask all fields but omit several with `omit`. To get everything just pass `fields=all`.",
+				"summary": "Get contract",
+				"description": "By default returns minimal information about the contract: `match`, `creation_match`, `runtime_match`, `chainId`, `address`, and `verifiedAt`\n\nTo get other details one can either list the fields requested in the `fields` query param or ask all fields but omit several with `omit`. To get everything just pass `fields=all`.\n\nFor Sourcify-verified contracts, the response fields keep their usual Sourcify meanings. Tempo-native contracts such as native precompiles can also be returned from this endpoint. In that case, verification-specific fields such as `match`, `creationMatch`, `runtimeMatch`, `verifiedAt`, and `matchId` can be `null`, and Tempo-specific provenance and native source metadata is returned under `extensions.tempo`.",
 				"operationId": "get-contract",
 				"parameters": [
 					{
 						"name": "fields",
 						"in": "query",
-						"description": "Comma seperated fields to include in the response. Can also take `all`",
+						"description": "Comma seperated fields to include in the response. Can also take `all`. Supports dotted paths, including Tempo vendor-specific fields such as `extensions.tempo.nativeSource`.",
 						"allowReserved": true,
 						"schema": {
 							"type": "string",
-							"example": "abi,metadata,creationBytecode.onchainBytecode,deployment.blockNumber,compilation"
+							"example": "abi,metadata,creationBytecode.onchainBytecode,deployment.blockNumber,compilation,extensions.tempo.nativeSource"
 						}
 					},
 					{
@@ -2126,7 +2126,7 @@
 						"allowReserved": true,
 						"schema": {
 							"type": "string",
-							"example": "userdoc,devdoc,storageLayout,compilation.sources"
+							"example": "userdoc,devdoc,storageLayout,compilation.sources,extensions"
 						}
 					},
 					{
@@ -2138,7 +2138,7 @@
 				],
 				"responses": {
 					"200": {
-						"description": "Example response",
+						"description": "Contract lookup response for a Sourcify-verified contract or a Tempo-native contract",
 						"content": {
 							"application/json": {
 								"schema": {
@@ -2149,18 +2149,21 @@
 											"title": "VerifiedContractMinimal",
 											"properties": {
 												"match": {
-													"type": "string",
+													"type": ["string", "null"],
 													"enum": ["match", "exact_match", null],
+													"description": "Verification status for the overall contract match. `null` when the contract is a Tempo-native contract that exposes source without Sourcify bytecode verification.",
 													"title": "VerificationStatusNullable"
 												},
 												"creationMatch": {
-													"type": "string",
+													"type": ["string", "null"],
 													"enum": ["match", "exact_match", null],
+													"description": "Verification status for creation bytecode matching. `null` when the contract is a Tempo-native contract that exposes source without Sourcify bytecode verification.",
 													"title": "VerificationStatusNullable"
 												},
 												"runtimeMatch": {
-													"type": "string",
+													"type": ["string", "null"],
 													"enum": ["match", "exact_match", null],
+													"description": "Verification status for runtime bytecode matching. `null` when the contract is a Tempo-native contract that exposes source without Sourcify bytecode verification.",
 													"title": "VerificationStatusNullable"
 												},
 												"chainId": {
@@ -2179,12 +2182,14 @@
 													"example": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c"
 												},
 												"verifiedAt": {
-													"type": "string",
+													"type": ["string", "null"],
 													"format": "date-time",
+													"description": "Timestamp when the contract was verified by Sourcify-compatible bytecode matching. `null` for Tempo-native contracts that only expose curated source.",
 													"example": "2024-07-24T12:00:00Z"
 												},
 												"matchId": {
-													"type": "string",
+													"type": ["string", "null"],
+													"description": "Identifier of the verified contract match. `null` for Tempo-native contracts that only expose curated source.",
 													"example": "3266227"
 												}
 											},
@@ -3177,6 +3182,9 @@
 																}
 															]
 														}
+													},
+													"extensions": {
+														"$ref": "#/components/schemas/ExtensionMap"
 													}
 												}
 											}
@@ -3487,6 +3495,52 @@
 											}
 										}
 									},
+									"Tempo native precompile (`fields=abi,sources,extensions.tempo.nativeSource`)": {
+										"value": {
+											"match": null,
+											"creationMatch": null,
+											"runtimeMatch": null,
+											"chainId": "4217",
+											"address": "0xCcCCCCcC00000000000000000000000000000001",
+											"verifiedAt": null,
+											"matchId": null,
+											"name": "Validator Config V2",
+											"abi": [{}],
+											"sources": {
+												"crates/precompiles/src/validator_config_v2/mod.rs": {
+													"content": "pub struct ValidatorConfigV2 { /* ... */ }"
+												},
+												"crates/precompiles/src/validator_config_v2/dispatch.rs": {
+													"content": "impl Precompile for ValidatorConfigV2 { /* ... */ }"
+												}
+											},
+											"extensions": {
+												"tempo": {
+													"nativeSource": {
+														"kind": "precompile",
+														"language": "Rust",
+														"bytecodeVerified": false,
+														"repository": "tempoxyz/tempo",
+														"commit": "4f3a2b1c9d8e7f6051429384756abcdef1234567",
+														"commitUrl": "https://github.com/tempoxyz/tempo/tree/4f3a2b1c9d8e7f6051429384756abcdef1234567",
+														"paths": [
+															"crates/precompiles/src/validator_config_v2/mod.rs",
+															"crates/precompiles/src/validator_config_v2/dispatch.rs"
+														],
+														"entrypoints": [
+															"crates/precompiles/src/validator_config_v2/mod.rs",
+															"crates/precompiles/src/validator_config_v2/dispatch.rs"
+														],
+														"activation": {
+															"protocolVersion": "T2",
+															"fromBlock": "12345678",
+															"toBlock": null
+														}
+													}
+												}
+											}
+										}
+									},
 									"Proxy resolution (`fields=proxyResolution`)": {
 										"value": {
 											"match": "exact_match",
@@ -3775,18 +3829,21 @@
 												"title": "VerifiedContractMinimal",
 												"properties": {
 													"match": {
-														"type": "string",
+														"type": ["string", "null"],
 														"enum": ["match", "exact_match", null],
+														"description": "Verification status for the overall contract match. `null` when the contract is a Tempo-native contract that exposes source without Sourcify bytecode verification.",
 														"title": "VerificationStatusNullable"
 													},
 													"creationMatch": {
-														"type": "string",
+														"type": ["string", "null"],
 														"enum": ["match", "exact_match", null],
+														"description": "Verification status for creation bytecode matching. `null` when the contract is a Tempo-native contract that exposes source without Sourcify bytecode verification.",
 														"title": "VerificationStatusNullable"
 													},
 													"runtimeMatch": {
-														"type": "string",
+														"type": ["string", "null"],
 														"enum": ["match", "exact_match", null],
+														"description": "Verification status for runtime bytecode matching. `null` when the contract is a Tempo-native contract that exposes source without Sourcify bytecode verification.",
 														"title": "VerificationStatusNullable"
 													},
 													"chainId": {
@@ -3805,12 +3862,14 @@
 														"example": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c"
 													},
 													"verifiedAt": {
-														"type": "string",
+														"type": ["string", "null"],
 														"format": "date-time",
+														"description": "Timestamp when the contract was verified by Sourcify-compatible bytecode matching. `null` for Tempo-native contracts that only expose curated source.",
 														"example": "2024-07-24T12:00:00Z"
 													},
 													"matchId": {
-														"type": "string",
+														"type": ["string", "null"],
+														"description": "Identifier of the verified contract match. `null` for Tempo-native contracts that only expose curated source.",
 														"example": "3266227"
 													}
 												},
@@ -4098,12 +4157,14 @@
 														"example": "0xDFEBAd708F803af22e81044aD228Ff77C83C935c"
 													},
 													"verifiedAt": {
-														"type": "string",
+														"type": ["string", "null"],
 														"format": "date-time",
+														"description": "Timestamp when the contract was verified by Sourcify-compatible bytecode matching. `null` for Tempo-native contracts that only expose curated source.",
 														"example": "2024-07-24T12:00:00Z"
 													},
 													"matchId": {
-														"type": "string",
+														"type": ["string", "null"],
+														"description": "Identifier of the verified contract match. `null` for Tempo-native contracts that only expose curated source.",
 														"example": "3266227"
 													}
 												},
@@ -7134,6 +7195,132 @@
 				"schema": {
 					"type": "string",
 					"pattern": "^0x[a-fA-F0-9]{64}$"
+				}
+			}
+		},
+		"schemas": {
+			"ExtensionMap": {
+				"type": "object",
+				"maxProperties": 10,
+				"additionalProperties": true,
+				"description": "Object containing arbitrary or vendor-specific contract metadata.",
+				"properties": {
+					"tempo": {
+						"$ref": "#/components/schemas/TempoContractExtensions"
+					}
+				},
+				"example": {
+					"tempo": {
+						"nativeSource": {
+							"kind": "precompile",
+							"language": "Rust",
+							"bytecodeVerified": false,
+							"repository": "tempoxyz/tempo",
+							"commit": "4f3a2b1c9d8e7f6051429384756abcdef1234567",
+							"paths": [
+								"crates/precompiles/src/validator_config_v2/mod.rs",
+								"crates/precompiles/src/validator_config_v2/dispatch.rs"
+							]
+						}
+					}
+				}
+			},
+			"TempoContractExtensions": {
+				"type": "object",
+				"additionalProperties": true,
+				"properties": {
+					"nativeSource": {
+						"$ref": "#/components/schemas/TempoNativeSource"
+					}
+				}
+			},
+			"TempoNativeSource": {
+				"type": "object",
+				"required": [
+					"kind",
+					"language",
+					"bytecodeVerified",
+					"repository",
+					"commit",
+					"paths"
+				],
+				"properties": {
+					"kind": {
+						"type": "string",
+						"description": "Tempo-native runtime kind.",
+						"enum": ["precompile", "native_contract", "system_contract"],
+						"example": "precompile"
+					},
+					"language": {
+						"type": "string",
+						"description": "Implementation language of the native contract source.",
+						"example": "Rust"
+					},
+					"bytecodeVerified": {
+						"type": "boolean",
+						"description": "Whether the native contract source was verified via Sourcify bytecode matching.",
+						"example": false
+					},
+					"repository": {
+						"type": "string",
+						"description": "Canonical repository containing the native implementation.",
+						"example": "tempoxyz/tempo"
+					},
+					"commit": {
+						"type": "string",
+						"description": "Pinned commit SHA for the displayed source snapshot.",
+						"pattern": "^[a-f0-9]{7,40}$",
+						"example": "4f3a2b1c9d8e7f6051429384756abcdef1234567"
+					},
+					"commitUrl": {
+						"type": ["string", "null"],
+						"format": "uri",
+						"description": "Canonical permalink to the pinned source snapshot.",
+						"example": "https://github.com/tempoxyz/tempo/tree/4f3a2b1c9d8e7f6051429384756abcdef1234567"
+					},
+					"paths": {
+						"type": "array",
+						"description": "All source file paths included in the native source snapshot.",
+						"items": {
+							"type": "string"
+						},
+						"minItems": 1,
+						"example": [
+							"crates/precompiles/src/validator_config_v2/mod.rs",
+							"crates/precompiles/src/validator_config_v2/dispatch.rs"
+						]
+					},
+					"entrypoints": {
+						"type": "array",
+						"description": "Preferred entrypoint files for rendering and deep-linking in UIs.",
+						"items": {
+							"type": "string"
+						},
+						"example": [
+							"crates/precompiles/src/validator_config_v2/mod.rs",
+							"crates/precompiles/src/validator_config_v2/dispatch.rs"
+						]
+					},
+					"activation": {
+						"type": "object",
+						"description": "Protocol or block-range metadata describing when this native source snapshot is active.",
+						"properties": {
+							"protocolVersion": {
+								"type": ["string", "null"],
+								"example": "T2"
+							},
+							"fromBlock": {
+								"type": ["string", "null"],
+								"pattern": "^\\d+$",
+								"example": "12345678"
+							},
+							"toBlock": {
+								"type": ["string", "null"],
+								"pattern": "^\\d+$",
+								"example": null
+							}
+						}
+					}
 				}
 			}
 		}

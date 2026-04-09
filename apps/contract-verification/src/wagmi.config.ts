@@ -1,13 +1,9 @@
 import { Address } from 'ox'
 import * as z from 'zod/mini'
-import {
-	tempoDevnet,
-	tempo as tempoMainnet,
-	tempoModerato as tempoTestnet,
-} from '@wagmi/core/chains'
+import { tempoDevnet, tempoMainnet, tempoTestnet } from '@wagmi/core/chains'
 
 const verifierUrl =
-	import.meta.env.VITE_VERIFIER_URL ?? 'https://contracts.tempo.xyz'
+	import.meta.env?.VITE_VERIFIER_URL ?? 'https://contracts.tempo.xyz'
 
 export const tempoMainnetExtended = tempoMainnet.extend({
 	verifierUrl,

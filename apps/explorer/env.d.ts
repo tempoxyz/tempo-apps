@@ -8,6 +8,8 @@ interface EnvironmentVariables {
 	readonly VITE_SENTRY_DSN: string | undefined
 	readonly VITE_SENTRY_TRACES_SAMPLE_RATE: string | undefined
 
+	readonly VITE_CONTRACT_VERIFICATION_API_BASE_URL: string
+
 	readonly VITE_TEMPO_ENV: 'testnet' | 'devnet' | 'mainnet'
 
 	readonly TEMPO_RPC_KEY: string

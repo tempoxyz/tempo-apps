@@ -43,6 +43,14 @@ function normalizeTempoEnv(value: string | undefined): TempoEnv {
 	return value === 'mainnet' || value === 'devnet' ? value : 'testnet'
 }
 
+function getRequestUrlIfAvailable(): URL | undefined {
+	try {
+		return getRequestUrl()
+	} catch {
+		return undefined
+	}
+}
+
 export const getRequestURL = createIsomorphicFn()
 	.client(() => new URL(__BASE_URL__ || window.location.origin))
 	.server(() => getRequestUrl())
@@ -72,7 +80,11 @@ export const getTempoEnv = createIsomorphicFn()
 		return inferred ?? normalizeTempoEnv(import.meta.env.VITE_TEMPO_ENV)
 	})
 	.server(() => {
-		const inferred = inferTempoEnvFromHostname(getRequestUrl().hostname)
+		// Some modules read the active chain at import time before TanStack Start has
+		// established request AsyncLocalStorage. Fall back to process env there.
+		const inferred = inferTempoEnvFromHostname(
+			getRequestUrlIfAvailable()?.hostname,
+		)
 		return inferred ?? normalizeTempoEnv(process.env.VITE_TEMPO_ENV)
 	})
 
