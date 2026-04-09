@@ -15,6 +15,8 @@ concurrency:
   group: deploy-${{ inputs.app }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions: {}
+
 env:
   NODE_ENV: production
   WRANGLER_SEND_METRICS: false
@@ -34,15 +36,21 @@ jobs:
         with:
           submodules: "recursive"
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Check for relevant changes
         id: changes
+        env:
+          APP_NAME: ${{ inputs.app }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
         run: |
           # if workflow_dispatch, always deploy all
           #
-          if [[ ${{ github.event_name }} == 'workflow_dispatch' ]]; then
+          if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then
             echo "relevant=true" >> $GITHUB_OUTPUT
-          elif git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE "^(apps/${{ inputs.app }}/|pnpm-lock.yaml)"; then
+          elif git diff --name-only "$BEFORE_SHA" "$CURRENT_SHA" | grep -qE "^(apps/${APP_NAME}/|pnpm-lock.yaml)"; then
             echo "relevant=true" >> $GITHUB_OUTPUT
           else
             echo "relevant=false" >> $GITHUB_OUTPUT
@@ -63,8 +71,9 @@ jobs:
         env:
           NODE_ENV: production
           CLOUDFLARE_ENV: ${{ matrix.env || '' }}
+          APP_NAME: ${{ inputs.app }}
         run: |
-          if [[ "${{ inputs.app }}" == "explorer" ]]; then
+          if [[ "$APP_NAME" == "explorer" ]]; then
             bash scripts/build.sh
           else
             pnpm build

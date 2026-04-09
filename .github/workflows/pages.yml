@@ -33,6 +33,7 @@ jobs:
         with:
           submodules: "recursive"
           fetch-depth: 0
+          persist-credentials: false
 
       - name: "Generate Directory Listings"
         uses: jayanta525/github-pages-directory-listing@624ac8c4e56893256d3772f61a88e3b14d54314e

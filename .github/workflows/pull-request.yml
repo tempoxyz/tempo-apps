@@ -78,6 +78,7 @@ jobs:
         with:
           submodules: "recursive"
           fetch-depth: 0
+          persist-credentials: false
 
       # deploy workspace preview only if there are relevant changes
       # deploy all apps if root lockfile is changed

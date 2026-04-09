@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
 
+permissions: {}
+
 env:
   NODE_ENV: production
   WRANGLER_SEND_METRICS: false
