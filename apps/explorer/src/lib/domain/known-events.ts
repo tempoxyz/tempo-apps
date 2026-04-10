@@ -90,10 +90,165 @@ export const streamChannelAbi = [
 	},
 ] as const
 
-const abi = [...Object.values(Abis).flat(), ...streamChannelAbi]
+const zonePortalAbi = [
+	{
+		type: 'event',
+		name: 'DepositMade',
+		inputs: [
+			{
+				indexed: true,
+				name: 'newCurrentDepositQueueHash',
+				type: 'bytes32',
+			},
+			{ indexed: true, name: 'sender', type: 'address' },
+			{ indexed: false, name: 'token', type: 'address' },
+			{ indexed: false, name: 'to', type: 'address' },
+			{ indexed: false, name: 'netAmount', type: 'uint128' },
+			{ indexed: false, name: 'fee', type: 'uint128' },
+			{ indexed: false, name: 'memo', type: 'bytes32' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'EncryptedDepositMade',
+		inputs: [
+			{
+				indexed: true,
+				name: 'newCurrentDepositQueueHash',
+				type: 'bytes32',
+			},
+			{ indexed: true, name: 'sender', type: 'address' },
+			{ indexed: false, name: 'token', type: 'address' },
+			{ indexed: false, name: 'netAmount', type: 'uint128' },
+			{ indexed: false, name: 'fee', type: 'uint128' },
+			{ indexed: false, name: 'keyIndex', type: 'uint256' },
+			{ indexed: false, name: 'ephemeralPubkeyX', type: 'bytes32' },
+			{ indexed: false, name: 'ephemeralPubkeyYParity', type: 'uint8' },
+			{ indexed: false, name: 'ciphertext', type: 'bytes' },
+			{ indexed: false, name: 'nonce', type: 'bytes12' },
+			{ indexed: false, name: 'tag', type: 'bytes16' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'BatchSubmitted',
+		inputs: [
+			{ indexed: true, name: 'withdrawalBatchIndex', type: 'uint64' },
+			{
+				indexed: false,
+				name: 'nextProcessedDepositQueueHash',
+				type: 'bytes32',
+			},
+			{ indexed: false, name: 'nextBlockHash', type: 'bytes32' },
+			{ indexed: false, name: 'withdrawalQueueHash', type: 'bytes32' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'WithdrawalProcessed',
+		inputs: [
+			{ indexed: true, name: 'to', type: 'address' },
+			{ indexed: false, name: 'token', type: 'address' },
+			{ indexed: false, name: 'amount', type: 'uint128' },
+			{ indexed: false, name: 'callbackSuccess', type: 'bool' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'BounceBack',
+		inputs: [
+			{
+				indexed: true,
+				name: 'newCurrentDepositQueueHash',
+				type: 'bytes32',
+			},
+			{ indexed: true, name: 'fallbackRecipient', type: 'address' },
+			{ indexed: false, name: 'token', type: 'address' },
+			{ indexed: false, name: 'amount', type: 'uint128' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'SequencerTransferred',
+		inputs: [
+			{ indexed: true, name: 'previousSequencer', type: 'address' },
+			{ indexed: true, name: 'newSequencer', type: 'address' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
+		name: 'TokenEnabled',
+		inputs: [
+			{ indexed: true, name: 'token', type: 'address' },
+			{ indexed: false, name: 'name', type: 'string' },
+			{ indexed: false, name: 'symbol', type: 'string' },
+			{ indexed: false, name: 'currency', type: 'string' },
+		],
+		anonymous: false,
+	},
+] as const
+
+const zoneFactoryAbi = [
+	{
+		type: 'event',
+		name: 'ZoneCreated',
+		inputs: [
+			{ indexed: true, name: 'zoneId', type: 'uint32' },
+			{ indexed: true, name: 'portal', type: 'address' },
+			{ indexed: true, name: 'messenger', type: 'address' },
+			{ indexed: false, name: 'initialToken', type: 'address' },
+			{ indexed: false, name: 'sequencer', type: 'address' },
+			{ indexed: false, name: 'verifier', type: 'address' },
+			{ indexed: false, name: 'genesisBlockHash', type: 'bytes32' },
+			{ indexed: false, name: 'genesisTempoBlockHash', type: 'bytes32' },
+			{ indexed: false, name: 'genesisTempoBlockNumber', type: 'uint64' },
+		],
+		anonymous: false,
+	},
+] as const
+
+const abi = [
+	...Object.values(Abis).flat(),
+	...streamChannelAbi,
+	...zonePortalAbi,
+	...zoneFactoryAbi,
+]
 const FEE_MANAGER = Addresses.feeManager
 const STABLECOIN_EXCHANGE = Addresses.stablecoinDex
 export const STREAM_CHANNEL = '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70'
+const KNOWN_ZONE_PORTAL_ADDRESSES = [
+	'0x7069DeC4E64Fd07334A0933eDe836C17259c9B23',
+] as const satisfies readonly Address.Address[]
+
+function isZonePortalAddress(address: Address.Address): boolean {
+	return KNOWN_ZONE_PORTAL_ADDRESSES.some((portal) =>
+		Address.isEqual(portal, address),
+	)
+}
+
+function createZoneDepositTransferKey(params: {
+	sender: Address.Address
+	portal: Address.Address
+	token: Address.Address
+	amount: bigint
+}): string {
+	return `zone-deposit:${params.sender.toLowerCase()}:${params.portal.toLowerCase()}:${params.token.toLowerCase()}:${params.amount}`
+}
+
+function createZoneWithdrawalTransferKey(params: {
+	portal: Address.Address
+	recipient: Address.Address
+	token: Address.Address
+	amount: bigint
+}): string {
+	return `zone-withdrawal:${params.portal.toLowerCase()}:${params.recipient.toLowerCase()}:${params.token.toLowerCase()}:${params.amount}`
+}
 
 export type Authorization = {
 	address: Address.Address
@@ -142,6 +297,217 @@ function createDetectors(
 	) => Address.Address | undefined,
 ) {
 	return {
+		zone(event: ParsedEvent) {
+			const { eventName, args, address } = event
+
+			if (eventName === 'Approval' && isZonePortalAddress(args.spender)) {
+				return null
+			}
+
+			if (eventName === 'Transfer' || eventName === 'TransferWithMemo') {
+				if (
+					isZonePortalAddress(args.to) &&
+					!Address.isEqual(args.from, zeroAddress)
+				) {
+					return {
+						type: 'zone deposit',
+						parts: [
+							{ type: 'action', value: 'Deposit to Zone' },
+							{
+								type: 'amount',
+								value: createAmount(args.amount, address),
+							},
+						],
+						meta: { from: args.from, to: args.to },
+					}
+				}
+
+				if (
+					isZonePortalAddress(args.from) &&
+					!Address.isEqual(args.to, zeroAddress)
+				) {
+					return {
+						type: 'zone withdrawal',
+						parts: [
+							{ type: 'action', value: 'Withdrawal from Zone' },
+							{
+								type: 'amount',
+								value: createAmount(args.amount, address),
+							},
+							{ type: 'text', value: 'to' },
+							{ type: 'account', value: args.to },
+						],
+						meta: { from: args.from, to: args.to },
+					}
+				}
+			}
+
+			if (eventName === 'DepositMade') {
+				const memo = decodeMemoForDisplay(args.memo)
+				const note: NonNullable<KnownEvent['note']> = []
+
+				if (args.fee > 0n) {
+					note.push([
+						'Fee',
+						{ type: 'amount', value: createAmount(args.fee, args.token) },
+					])
+				}
+				note.push([
+					'Queue Hash',
+					{ type: 'hex', value: args.newCurrentDepositQueueHash },
+				])
+				if (memo) note.push(['Memo', { type: 'text', value: memo }])
+
+				return {
+					type: 'zone deposit',
+					parts: [
+						{ type: 'action', value: 'Deposit to Zone' },
+						{ type: 'amount', value: createAmount(args.netAmount, args.token) },
+						{ type: 'text', value: 'for' },
+						{ type: 'account', value: args.to },
+					],
+					note,
+					meta: { from: args.sender, to: address },
+				}
+			}
+
+			if (eventName === 'EncryptedDepositMade') {
+				const note: NonNullable<KnownEvent['note']> = []
+
+				if (args.fee > 0n) {
+					note.push([
+						'Fee',
+						{ type: 'amount', value: createAmount(args.fee, args.token) },
+					])
+				}
+				note.push(['Key Index', { type: 'number', value: args.keyIndex }])
+				note.push([
+					'Queue Hash',
+					{ type: 'hex', value: args.newCurrentDepositQueueHash },
+				])
+
+				return {
+					type: 'zone encrypted deposit',
+					parts: [
+						{ type: 'action', value: 'Encrypted Deposit to Zone' },
+						{ type: 'amount', value: createAmount(args.netAmount, args.token) },
+					],
+					note,
+					meta: { from: args.sender, to: address },
+				}
+			}
+
+			if (eventName === 'BatchSubmitted')
+				return {
+					type: 'zone batch submitted',
+					parts: [
+						{ type: 'action', value: 'Submit Zone Batch' },
+						{ type: 'text', value: `#${args.withdrawalBatchIndex}` },
+					],
+					note: [
+						[
+							'Processed Deposits',
+							{ type: 'hex', value: args.nextProcessedDepositQueueHash },
+						],
+						['Next Block', { type: 'hex', value: args.nextBlockHash }],
+						[
+							'Withdrawal Queue',
+							{ type: 'hex', value: args.withdrawalQueueHash },
+						],
+					],
+				}
+
+			if (eventName === 'WithdrawalProcessed') {
+				const note: NonNullable<KnownEvent['note']> = []
+				if (!args.callbackSuccess) {
+					note.push(['Callback', { type: 'text', value: 'Failed' }])
+				}
+
+				return {
+					type: 'zone withdrawal',
+					parts: [
+						{ type: 'action', value: 'Withdrawal from Zone' },
+						{ type: 'amount', value: createAmount(args.amount, args.token) },
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: args.to },
+					],
+					note: note.length > 0 ? note : undefined,
+					meta: { from: address, to: args.to },
+				}
+			}
+
+			if (eventName === 'BounceBack')
+				return {
+					type: 'zone bounce back',
+					parts: [
+						{ type: 'action', value: 'Bounce Back to Zone' },
+						{ type: 'amount', value: createAmount(args.amount, args.token) },
+						{ type: 'text', value: 'for' },
+						{ type: 'account', value: args.fallbackRecipient },
+					],
+					note: [
+						[
+							'Queue Hash',
+							{ type: 'hex', value: args.newCurrentDepositQueueHash },
+						],
+					],
+					meta: { from: address, to: args.fallbackRecipient },
+				}
+
+			if (eventName === 'ZoneCreated')
+				return {
+					type: 'zone created',
+					parts: [
+						{ type: 'action', value: 'Create Zone' },
+						{ type: 'text', value: `#${args.zoneId}` },
+						{ type: 'text', value: 'at' },
+						{ type: 'account', value: args.portal },
+					],
+					note: [
+						['Messenger', { type: 'account', value: args.messenger }],
+						[
+							'Initial Token',
+							{ type: 'token', value: { address: args.initialToken } },
+						],
+						['Sequencer', { type: 'account', value: args.sequencer }],
+						['Verifier', { type: 'account', value: args.verifier }],
+					],
+					meta: { from: address, to: args.portal },
+				}
+
+			if (eventName === 'TokenEnabled')
+				return {
+					type: 'zone token enabled',
+					parts: [
+						{ type: 'action', value: 'Enable Zone Token' },
+						{
+							type: 'token',
+							value: { address: args.token, symbol: args.symbol },
+						},
+					],
+					note: [
+						['Name', { type: 'text', value: args.name }],
+						['Currency', { type: 'text', value: args.currency }],
+					],
+					meta: { from: address, to: args.token },
+				}
+
+			if (eventName === 'SequencerTransferred')
+				return {
+					type: 'zone sequencer transferred',
+					parts: [
+						{ type: 'action', value: 'Transfer Zone Sequencer' },
+						{ type: 'account', value: args.newSequencer },
+					],
+					note: [
+						['Previous', { type: 'account', value: args.previousSequencer }],
+					],
+					meta: { from: address, to: args.newSequencer },
+				}
+
+			return null
+		},
+
 		tip20(event: ParsedEvent) {
 			const { eventName, args, address } = event
 
@@ -290,65 +656,6 @@ function createDetectors(
 				}
 			}
 
-			// if (eventName === 'RewardScheduled') {
-			// 	const metadata = getTokenMetadata?.(address)
-			// 	return {
-			// 		type: 'reward scheduled',
-			// 		parts: [
-			// 			{ type: 'action', value: 'Reward Stream' },
-			// 			{ type: 'text', value: 'created for' },
-			// 			{
-			// 				type: 'token',
-			// 				value: { address, symbol: metadata?.symbol },
-			// 			},
-			// 		],
-			// 		note: [
-			// 			['ID', { type: 'text', value: String(args.id) }],
-			// 			['Funder', { type: 'account', value: args.funder }],
-			// 			[
-			// 				'Amount',
-			// 				{
-			// 					type: 'number',
-			// 					value:
-			// 						metadata?.decimals === undefined
-			// 							? args.amount
-			// 							: [args.amount, metadata.decimals],
-			// 				},
-			// 			],
-			// 			['Duration', { type: 'duration', value: args.durationSeconds }],
-			// 		],
-			// 	}
-			// }
-
-			// if (eventName === 'RewardCanceled') {
-			// 	const metadata = getTokenMetadata?.(address)
-			// 	return {
-			// 		type: 'reward canceled',
-			// 		parts: [
-			// 			{ type: 'action', value: 'Cancel Reward Stream' },
-			// 			{ type: 'text', value: 'for' },
-			// 			{
-			// 				type: 'token',
-			// 				value: { address, symbol: metadata?.symbol },
-			// 			},
-			// 		],
-			// 		note: [
-			// 			['ID', { type: 'text', value: String(args.id) }],
-			// 			['Funder', { type: 'account', value: args.funder }],
-			// 			[
-			// 				'Refund',
-			// 				{
-			// 					type: 'number',
-			// 					value:
-			// 						metadata?.decimals === undefined
-			// 							? args.refund
-			// 							: [args.refund, metadata.decimals],
-			// 				},
-			// 			],
-			// 		],
-			// 	}
-			// }
-
 			if (eventName === 'RewardRecipientSet')
 				return {
 					type: 'reward recipient set',
@@ -359,6 +666,9 @@ function createDetectors(
 						{ type: 'account', value: args.holder },
 					],
 				}
+
+			if (eventName === 'Approval')
+				if (isZonePortalAddress(args.spender)) return null
 
 			if (eventName === 'Approval')
 				return {
@@ -1067,6 +1377,7 @@ export function parseKnownEvent(
 	)
 
 	const detected =
+		detectors.zone(event) ||
 		detectors.tip20(event) ||
 		detectors.tip20Factory(event) ||
 		detectors.stablecoinDex(event) ||
@@ -1228,6 +1539,40 @@ export function parseKnownEvents(
 			key = `burn:${event.address}:${amount}:${from}`
 		}
 
+		if (
+			(event.eventName === 'DepositMade' ||
+				event.eventName === 'EncryptedDepositMade') &&
+			'netAmount' in event.args &&
+			'fee' in event.args
+		) {
+			const { sender, token, netAmount, fee } = event.args as {
+				sender: Address.Address
+				token: Address.Address
+				netAmount: bigint
+				fee: bigint
+			}
+			key = createZoneDepositTransferKey({
+				sender,
+				portal: event.address,
+				token,
+				amount: netAmount + fee,
+			})
+		}
+
+		if (event.eventName === 'WithdrawalProcessed' && 'amount' in event.args) {
+			const { to, token, amount } = event.args as {
+				to: Address.Address
+				token: Address.Address
+				amount: bigint
+			}
+			key = createZoneWithdrawalTransferKey({
+				portal: event.address,
+				recipient: to,
+				token,
+				amount,
+			})
+		}
+
 		if (key) preferenceMap.set(key, event.eventName)
 	}
 
@@ -1306,6 +1651,31 @@ export function parseKnownEvents(
 					to: Address.Address
 					amount: bigint
 				}
+				if (isZonePortalAddress(to)) {
+					const zoneDepositKey = createZoneDepositTransferKey({
+						sender: from,
+						portal: to,
+						token: event.address,
+						amount,
+					})
+					if (
+						preferenceMap.get(zoneDepositKey) === 'DepositMade' ||
+						preferenceMap.get(zoneDepositKey) === 'EncryptedDepositMade'
+					) {
+						include = false
+					}
+				}
+				if (isZonePortalAddress(from)) {
+					const zoneWithdrawalKey = createZoneWithdrawalTransferKey({
+						portal: from,
+						recipient: to,
+						token: event.address,
+						amount,
+					})
+					if (preferenceMap.get(zoneWithdrawalKey) === 'WithdrawalProcessed') {
+						include = false
+					}
+				}
 				if (Address.isEqual(from, zeroAddress)) {
 					const mintKey = `mint:${event.address}:${amount}:${to}`
 					if (preferenceMap.get(mintKey) === 'Mint') include = false
@@ -1340,6 +1710,33 @@ export function parseKnownEvents(
 					from: Address.Address
 					to: Address.Address
 					amount: bigint
+				}
+
+				if (isZonePortalAddress(to)) {
+					const zoneDepositKey = createZoneDepositTransferKey({
+						sender: from,
+						portal: to,
+						token: event.address,
+						amount,
+					})
+					if (
+						preferenceMap.get(zoneDepositKey) === 'DepositMade' ||
+						preferenceMap.get(zoneDepositKey) === 'EncryptedDepositMade'
+					) {
+						include = false
+					}
+				}
+
+				if (isZonePortalAddress(from)) {
+					const zoneWithdrawalKey = createZoneWithdrawalTransferKey({
+						portal: from,
+						recipient: to,
+						token: event.address,
+						amount,
+					})
+					if (preferenceMap.get(zoneWithdrawalKey) === 'WithdrawalProcessed') {
+						include = false
+					}
 				}
 
 				// Check Mint dedup (transfer from zero address)
@@ -1510,6 +1907,7 @@ export function parseKnownEvents(
 
 		const detected =
 			detectors.feePayer(event) ||
+			detectors.zone(event) ||
 			detectors.tip20(event) ||
 			detectors.tip20Factory(event) ||
 			detectors.stablecoinDex(event) ||
