@@ -222,14 +222,25 @@ const abi = [
 const FEE_MANAGER = Addresses.feeManager
 const STABLECOIN_EXCHANGE = Addresses.stablecoinDex
 export const STREAM_CHANNEL = '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70'
-const KNOWN_ZONE_PORTAL_ADDRESSES = [
-	'0x7069DeC4E64Fd07334A0933eDe836C17259c9B23',
-] as const satisfies readonly Address.Address[]
+const KNOWN_ZONES: ReadonlyMap<Address.Address, { id: number; name: string }> =
+	new Map([
+		[
+			Address.from('0x7069DeC4E64Fd07334A0933eDe836C17259c9B23'),
+			{ id: 5, name: 'Zone 5' },
+		],
+	])
 
 function isZonePortalAddress(address: Address.Address): boolean {
-	return KNOWN_ZONE_PORTAL_ADDRESSES.some((portal) =>
+	return Array.from(KNOWN_ZONES.keys()).some((portal) =>
 		Address.isEqual(portal, address),
 	)
+}
+
+function getZoneName(portalAddress: Address.Address): string {
+	for (const [addr, meta] of KNOWN_ZONES) {
+		if (Address.isEqual(addr, portalAddress)) return meta.name
+	}
+	return 'Zone'
 }
 
 function createZoneDepositTransferKey(params: {
@@ -309,10 +320,11 @@ function createDetectors(
 					isZonePortalAddress(args.to) &&
 					!Address.isEqual(args.from, zeroAddress)
 				) {
+					const zoneName = getZoneName(args.to)
 					return {
 						type: 'zone deposit',
 						parts: [
-							{ type: 'action', value: 'Deposit to Zone' },
+							{ type: 'action', value: `Deposit to ${zoneName}` },
 							{
 								type: 'amount',
 								value: createAmount(args.amount, address),
@@ -326,10 +338,11 @@ function createDetectors(
 					isZonePortalAddress(args.from) &&
 					!Address.isEqual(args.to, zeroAddress)
 				) {
+					const zoneName = getZoneName(args.from)
 					return {
 						type: 'zone withdrawal',
 						parts: [
-							{ type: 'action', value: 'Withdrawal from Zone' },
+							{ type: 'action', value: `Withdraw from ${zoneName}` },
 							{
 								type: 'amount',
 								value: createAmount(args.amount, address),
@@ -343,6 +356,7 @@ function createDetectors(
 			}
 
 			if (eventName === 'DepositMade') {
+				const zoneName = getZoneName(address)
 				const memo = decodeMemoForDisplay(args.memo)
 				const note: NonNullable<KnownEvent['note']> = []
 
@@ -361,7 +375,7 @@ function createDetectors(
 				return {
 					type: 'zone deposit',
 					parts: [
-						{ type: 'action', value: 'Deposit to Zone' },
+						{ type: 'action', value: `Deposit to ${zoneName}` },
 						{ type: 'amount', value: createAmount(args.netAmount, args.token) },
 						{ type: 'text', value: 'for' },
 						{ type: 'account', value: args.to },
@@ -372,6 +386,7 @@ function createDetectors(
 			}
 
 			if (eventName === 'EncryptedDepositMade') {
+				const zoneName = getZoneName(address)
 				const note: NonNullable<KnownEvent['note']> = []
 
 				if (args.fee > 0n) {
@@ -389,7 +404,7 @@ function createDetectors(
 				return {
 					type: 'zone encrypted deposit',
 					parts: [
-						{ type: 'action', value: 'Encrypted Deposit to Zone' },
+						{ type: 'action', value: `Encrypted Deposit to ${zoneName}` },
 						{ type: 'amount', value: createAmount(args.netAmount, args.token) },
 					],
 					note,
@@ -397,11 +412,12 @@ function createDetectors(
 				}
 			}
 
-			if (eventName === 'BatchSubmitted')
+			if (eventName === 'BatchSubmitted') {
+				const zoneName = getZoneName(address)
 				return {
 					type: 'zone batch submitted',
 					parts: [
-						{ type: 'action', value: 'Submit Zone Batch' },
+						{ type: 'action', value: `Submit ${zoneName} Batch` },
 						{ type: 'text', value: `#${args.withdrawalBatchIndex}` },
 					],
 					note: [
@@ -416,8 +432,10 @@ function createDetectors(
 						],
 					],
 				}
+			}
 
 			if (eventName === 'WithdrawalProcessed') {
+				const zoneName = getZoneName(address)
 				const note: NonNullable<KnownEvent['note']> = []
 				if (!args.callbackSuccess) {
 					note.push(['Callback', { type: 'text', value: 'Failed' }])
@@ -426,7 +444,7 @@ function createDetectors(
 				return {
 					type: 'zone withdrawal',
 					parts: [
-						{ type: 'action', value: 'Withdrawal from Zone' },
+						{ type: 'action', value: `Withdraw from ${zoneName}` },
 						{ type: 'amount', value: createAmount(args.amount, args.token) },
 						{ type: 'text', value: 'to' },
 						{ type: 'account', value: args.to },
@@ -436,11 +454,12 @@ function createDetectors(
 				}
 			}
 
-			if (eventName === 'BounceBack')
+			if (eventName === 'BounceBack') {
+				const zoneName = getZoneName(address)
 				return {
 					type: 'zone bounce back',
 					parts: [
-						{ type: 'action', value: 'Bounce Back to Zone' },
+						{ type: 'action', value: `Bounce Back from ${zoneName}` },
 						{ type: 'amount', value: createAmount(args.amount, args.token) },
 						{ type: 'text', value: 'for' },
 						{ type: 'account', value: args.fallbackRecipient },
@@ -453,6 +472,7 @@ function createDetectors(
 					],
 					meta: { from: address, to: args.fallbackRecipient },
 				}
+			}
 
 			if (eventName === 'ZoneCreated')
 				return {
@@ -475,11 +495,12 @@ function createDetectors(
 					meta: { from: address, to: args.portal },
 				}
 
-			if (eventName === 'TokenEnabled')
+			if (eventName === 'TokenEnabled') {
+				const zoneName = getZoneName(address)
 				return {
 					type: 'zone token enabled',
 					parts: [
-						{ type: 'action', value: 'Enable Zone Token' },
+						{ type: 'action', value: `Enable ${zoneName} Token` },
 						{
 							type: 'token',
 							value: { address: args.token, symbol: args.symbol },
@@ -491,12 +512,14 @@ function createDetectors(
 					],
 					meta: { from: address, to: args.token },
 				}
+			}
 
-			if (eventName === 'SequencerTransferred')
+			if (eventName === 'SequencerTransferred') {
+				const zoneName = getZoneName(address)
 				return {
 					type: 'zone sequencer transferred',
 					parts: [
-						{ type: 'action', value: 'Transfer Zone Sequencer' },
+						{ type: 'action', value: `Transfer ${zoneName} Sequencer` },
 						{ type: 'account', value: args.newSequencer },
 					],
 					note: [
@@ -504,6 +527,7 @@ function createDetectors(
 					],
 					meta: { from: address, to: args.newSequencer },
 				}
+			}
 
 			return null
 		},
