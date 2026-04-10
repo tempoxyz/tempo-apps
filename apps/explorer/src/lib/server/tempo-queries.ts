@@ -5,6 +5,7 @@ import { Tidx } from 'tidx.ts'
 import { decodeAbiParameters, zeroAddress } from 'viem'
 import * as ABIS from '#lib/abis'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
+import { parseTimestamp } from '#lib/timestamp'
 
 const QB = tempoQueryBuilder
 
@@ -1348,13 +1349,8 @@ export async function fetchAddressTxAggregate(
 			.executeTakeFirst()) as AddressTxBoundaryRow | undefined
 
 	const toComparableTimestamp = (value: unknown): number => {
-		if (typeof value === 'number') return value
 		if (typeof value === 'bigint') return Number(value)
-		if (typeof value === 'string') {
-			const parsed = Number(value)
-			if (Number.isFinite(parsed)) return parsed
-		}
-		return Number.NaN
+		return parseTimestamp(value) ?? Number.NaN
 	}
 
 	const pickBoundary = (
