@@ -222,26 +222,22 @@ const abi = [
 const FEE_MANAGER = Addresses.feeManager
 const STABLECOIN_EXCHANGE = Addresses.stablecoinDex
 export const STREAM_CHANNEL = '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70'
-const KNOWN_ZONES: ReadonlyMap<Address.Address, { id: number; name: string }> =
-	new Map([
-		[
-			Address.from('0x7069DeC4E64Fd07334A0933eDe836C17259c9B23'),
-			{ id: 5, name: 'Zone 5' },
-		],
-	])
+const KNOWN_ZONES: ReadonlyMap<Address.Address, { name: string }> = new Map([
+	[
+		Address.from('0x7069DeC4E64Fd07334A0933eDe836C17259c9B23'),
+		{ name: 'Zone 5' },
+	],
+])
 
-function isZonePortalAddress(address: Address.Address): boolean {
-	return Array.from(KNOWN_ZONES.keys()).some((portal) =>
-		Address.isEqual(portal, address),
-	)
-}
-
-function getZoneName(portalAddress: Address.Address): string {
-	for (const [addr, meta] of KNOWN_ZONES) {
-		if (Address.isEqual(addr, portalAddress)) return meta.name
-	}
-	return 'Zone'
-}
+const ZONE_PORTAL_EVENT_NAMES = new Set([
+	'DepositMade',
+	'EncryptedDepositMade',
+	'BatchSubmitted',
+	'WithdrawalProcessed',
+	'BounceBack',
+	'SequencerTransferred',
+	'TokenEnabled',
+])
 
 function createZoneDepositTransferKey(params: {
 	sender: Address.Address
@@ -296,6 +292,26 @@ export function isFeeTransferEvent(
 
 type ParsedEvent = ReturnType<typeof parseEventLogs<typeof abi>>[number]
 
+function createZonePortalMetadata(events: ParsedEvent[]) {
+	const zonePortals = new Map(KNOWN_ZONES)
+
+	for (const event of events) {
+		if (event.eventName === 'ZoneCreated') {
+			zonePortals.set(Address.from(event.args.portal), {
+				name: `Zone ${event.args.zoneId.toString()}`,
+			})
+			continue
+		}
+
+		if (ZONE_PORTAL_EVENT_NAMES.has(event.eventName)) {
+			const portal = Address.from(event.address)
+			zonePortals.set(portal, zonePortals.get(portal) ?? { name: 'Zone' })
+		}
+	}
+
+	return zonePortals
+}
+
 function createDetectors(
 	createAmount: (value: bigint, token: Address.Address) => Amount,
 	getTokenMetadata?: Tip20.GetTip20MetadataFn,
@@ -306,7 +322,16 @@ function createDetectors(
 		payer: Address.Address,
 		payee: Address.Address,
 	) => Address.Address | undefined,
+	zonePortals: ReadonlyMap<Address.Address, { name: string }> = KNOWN_ZONES,
 ) {
+	function isZonePortalAddress(address: Address.Address): boolean {
+		return zonePortals.has(Address.from(address))
+	}
+
+	function getZoneName(portalAddress: Address.Address): string {
+		return zonePortals.get(Address.from(portalAddress))?.name ?? 'Zone'
+	}
+
 	return {
 		zone(event: ParsedEvent) {
 			const { eventName, args, address } = event
@@ -1442,9 +1467,14 @@ export function parseKnownEvents(
 ): KnownEvent[] {
 	const { logs } = receipt
 	const events = parseEventLogs({ abi, logs })
+	const zonePortals = createZonePortalMetadata(events)
 	const getTokenMetadata = options?.getTokenMetadata
 	const viewer = options?.viewer
 	const transactionSender = receipt.from
+
+	function isZonePortalAddress(address: Address.Address): boolean {
+		return zonePortals.has(Address.from(address))
+	}
 
 	const createAmount = (value: bigint, token: Address.Address): Amount => {
 		const metadata = getTokenMetadata?.(token)
@@ -1569,6 +1599,20 @@ export function parseKnownEvents(
 			})
 		}
 
+		if (event.eventName === 'BounceBack' && 'amount' in event.args) {
+			const { fallbackRecipient, token, amount } = event.args as {
+				fallbackRecipient: Address.Address
+				token: Address.Address
+				amount: bigint
+			}
+			key = createZoneWithdrawalTransferKey({
+				portal: event.address,
+				recipient: fallbackRecipient,
+				token,
+				amount,
+			})
+		}
+
 		if (key) preferenceMap.set(key, event.eventName)
 	}
 
@@ -1623,6 +1667,7 @@ export function parseKnownEvents(
 		viewer,
 		transactionSender,
 		getStreamChannelToken,
+		zonePortals,
 	)
 
 	const dedupedEvents = events.filter((event) => {
@@ -1668,7 +1713,12 @@ export function parseKnownEvents(
 						token: event.address,
 						amount,
 					})
-					if (preferenceMap.get(zoneWithdrawalKey) === 'WithdrawalProcessed') {
+					const preferredZoneWithdrawalEvent =
+						preferenceMap.get(zoneWithdrawalKey)
+					if (
+						preferredZoneWithdrawalEvent === 'WithdrawalProcessed' ||
+						preferredZoneWithdrawalEvent === 'BounceBack'
+					) {
 						include = false
 					}
 				}
@@ -1730,7 +1780,12 @@ export function parseKnownEvents(
 						token: event.address,
 						amount,
 					})
-					if (preferenceMap.get(zoneWithdrawalKey) === 'WithdrawalProcessed') {
+					const preferredZoneWithdrawalEvent =
+						preferenceMap.get(zoneWithdrawalKey)
+					if (
+						preferredZoneWithdrawalEvent === 'WithdrawalProcessed' ||
+						preferredZoneWithdrawalEvent === 'BounceBack'
+					) {
 						include = false
 					}
 				}
