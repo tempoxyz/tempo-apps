@@ -1,5 +1,15 @@
+import * as z from 'zod/mini'
 import { createIsomorphicFn } from '@tanstack/react-start'
 import { getRequestUrl } from '@tanstack/react-start/server'
+
+const clientEnvSchema = z.object({
+	CONTRACT_VERIFICATION_API_BASE_URL: z.prefault(
+		z.url(),
+		'https://contracts.tempo.xyz',
+	),
+})
+
+export const clientEnv = clientEnvSchema.parse(import.meta.env)
 
 export type TempoEnv = 'testnet' | 'mainnet' | 'devnet'
 

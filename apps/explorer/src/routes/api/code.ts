@@ -8,9 +8,9 @@ import {
 	type ContractSourceFile,
 } from '#lib/domain/contract-source.ts'
 import { zAddress } from '#lib/zod.ts'
-import { getRequestURL } from '#lib/env.ts'
+import { getRequestURL, clientEnv } from '#lib/env.ts'
 
-const CONTRACT_VERIFICATION_API_BASE_URL = `${import.meta.env.VITE_CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract`
+const CONTRACT_VERIFICATION_API_BASE_URL = `${clientEnv.CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract`
 
 const CONTRACT_SOURCE_FIELDS = [
 	'stdJsonInput',
