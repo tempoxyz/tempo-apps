@@ -366,10 +366,6 @@ function createDetectors(
 						{ type: 'amount', value: createAmount(args.fee, args.token) },
 					])
 				}
-				note.push([
-					'Queue Hash',
-					{ type: 'hex', value: args.newCurrentDepositQueueHash },
-				])
 				if (memo) note.push(['Memo', { type: 'text', value: memo }])
 
 				return {
@@ -380,7 +376,7 @@ function createDetectors(
 						{ type: 'text', value: 'for' },
 						{ type: 'account', value: args.to },
 					],
-					note,
+					note: note.length > 0 ? note : undefined,
 					meta: { from: args.sender, to: address },
 				}
 			}
@@ -396,10 +392,6 @@ function createDetectors(
 					])
 				}
 				note.push(['Key Index', { type: 'number', value: args.keyIndex }])
-				note.push([
-					'Queue Hash',
-					{ type: 'hex', value: args.newCurrentDepositQueueHash },
-				])
 
 				return {
 					type: 'zone encrypted deposit',
@@ -407,7 +399,7 @@ function createDetectors(
 						{ type: 'action', value: `Encrypted Deposit to ${zoneName}` },
 						{ type: 'amount', value: createAmount(args.netAmount, args.token) },
 					],
-					note,
+					note: note.length > 0 ? note : undefined,
 					meta: { from: args.sender, to: address },
 				}
 			}
@@ -419,17 +411,6 @@ function createDetectors(
 					parts: [
 						{ type: 'action', value: `Submit ${zoneName} Batch` },
 						{ type: 'text', value: `#${args.withdrawalBatchIndex}` },
-					],
-					note: [
-						[
-							'Processed Deposits',
-							{ type: 'hex', value: args.nextProcessedDepositQueueHash },
-						],
-						['Next Block', { type: 'hex', value: args.nextBlockHash }],
-						[
-							'Withdrawal Queue',
-							{ type: 'hex', value: args.withdrawalQueueHash },
-						],
 					],
 				}
 			}
@@ -463,12 +444,6 @@ function createDetectors(
 						{ type: 'amount', value: createAmount(args.amount, args.token) },
 						{ type: 'text', value: 'for' },
 						{ type: 'account', value: args.fallbackRecipient },
-					],
-					note: [
-						[
-							'Queue Hash',
-							{ type: 'hex', value: args.newCurrentDepositQueueHash },
-						],
 					],
 					meta: { from: address, to: args.fallbackRecipient },
 				}
