@@ -100,7 +100,7 @@ function LanguageIcon(props: { language: string }) {
 	return <FileCode2Icon className="size-[15px] shrink-0 text-tertiary" />
 }
 
-export function SourceSection(props: ContractSource) {
+export function SourceSection(props: ContractSource & { docsUrl?: string }) {
 	const sourceEntries = getSourceEntries(props)
 
 	if (props.kind === 'verified') {
@@ -119,9 +119,21 @@ export function SourceSection(props: ContractSource) {
 				textGrid={[
 					{
 						right: (
-							<span className="font-medium text-primary/80">
-								{props.compilation.name}
-							</span>
+							<div className="space-x-2 flex items-center">
+								<span className="font-medium text-primary/80">
+									{props.compilation.name}
+								</span>
+								{props.docsUrl && (
+									<a
+										target="_blank"
+										rel="noopener noreferrer"
+										href={props.docsUrl}
+										className="text-[12px] text-accent press-down inline-flex items-center gap-1 hover:cursor-pointer"
+									>
+										docs
+									</a>
+								)}
+							</div>
 						),
 					},
 					{

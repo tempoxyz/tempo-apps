@@ -108,7 +108,7 @@ export function ContractTabContent(props: {
 			)}
 
 			{/* Source Section */}
-			{source && <SourceSection {...source} />}
+			{source && <SourceSection {...source} docsUrl={docsUrl} />}
 
 			{/* ABI Section */}
 			<CollapsibleSection
@@ -137,7 +137,7 @@ export function ContractTabContent(props: {
 						>
 							<DownloadIcon className="size-[14px]" />
 						</button>
-						{docsUrl && (
+						{docsUrl && !source && (
 							<a
 								href={docsUrl}
 								target="_blank"
