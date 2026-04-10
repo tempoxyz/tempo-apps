@@ -408,12 +408,7 @@ function createDetectors(
 				const zoneName = getZoneName(address)
 				return {
 					type: 'zone batch submitted',
-					parts: [
-						{
-							type: 'action',
-							value: `Submit ${zoneName} Batch #${args.withdrawalBatchIndex}`,
-						},
-					],
+					parts: [{ type: 'action', value: `Submit ${zoneName} Batch` }],
 				}
 			}
 
