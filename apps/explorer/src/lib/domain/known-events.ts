@@ -409,8 +409,10 @@ function createDetectors(
 				return {
 					type: 'zone batch submitted',
 					parts: [
-						{ type: 'action', value: `Submit ${zoneName} Batch` },
-						{ type: 'text', value: `#${args.withdrawalBatchIndex}` },
+						{
+							type: 'action',
+							value: `Submit ${zoneName} Batch #${args.withdrawalBatchIndex}`,
+						},
 					],
 				}
 			}
