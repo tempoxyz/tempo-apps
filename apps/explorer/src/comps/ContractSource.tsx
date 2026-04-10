@@ -11,7 +11,7 @@ import CopyIcon from '~icons/lucide/copy'
 import FileCode2Icon from '~icons/lucide/file-code-2'
 import LinkIcon from '~icons/lucide/link'
 import SolidityIcon from '~icons/vscode-icons/file-type-solidity'
-import RustIcon from '~icons/vscode-icons/file-type-rust'
+import RustIcon from '~icons/material-icon-theme/rust'
 import VyperIcon from '~icons/vscode-icons/file-type-vyper'
 
 function getCompilerVersionUrl(compiler: string, version: string) {
@@ -89,15 +89,14 @@ function getSourceFragment(fileName: string): string {
 
 function LanguageIcon(props: { language: string }) {
 	const { language } = props
-	if (language === 'solidity') {
+	if (language === 'solidity')
 		return <SolidityIcon className="size-[15px] shrink-0" />
-	}
-	if (language === 'vyper') {
+
+	if (language === 'vyper')
 		return <VyperIcon className="size-[15px] shrink-0" />
-	}
-	if (language === 'rust') {
-		return <RustIcon className="size-[15px] shrink-0" />
-	}
+
+	if (language === 'rust') return <RustIcon className="size-[15px] shrink-0" />
+
 	return <FileCode2Icon className="size-[15px] shrink-0 text-tertiary" />
 }
 
@@ -163,7 +162,19 @@ export function SourceSection(props: ContractSource) {
 			textGrid={[
 				{
 					right: (
-						<span className="font-medium text-primary/80">{props.name}</span>
+						<div className="space-x-2 flex items-center">
+							<span className="text-primary/80 text-md">{props.name}</span>
+							{props.docsUrl && (
+								<a
+									target="_blank"
+									rel="noopener noreferrer"
+									href={props.docsUrl}
+									className="text-[12px] text-accent press-down inline-flex items-center gap-1 hover:cursor-pointer"
+								>
+									docs
+								</a>
+							)}
+						</div>
 					),
 				},
 				{
@@ -171,8 +182,8 @@ export function SourceSection(props: ContractSource) {
 						<a
 							target="_blank"
 							rel="noopener noreferrer"
-							className="font-medium text-primary/80"
 							href={getCommitUrl(props)}
+							className="text-primary/70 font-mono hover:text-primary/80 transition-colors"
 						>
 							{props.nativeSource.repository}@
 							{props.nativeSource.commit.slice(0, 7)}

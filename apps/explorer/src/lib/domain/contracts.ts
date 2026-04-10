@@ -319,7 +319,7 @@ export const systemContractRegistry = new Map<Address.Address, ContractInfo>(<
 			name: 'Validator Config',
 			code: '0xef',
 			description: 'Manage validator set and configuration',
-			abi: Abis.validator,
+			abi: Abis.validatorConfig,
 			category: 'system',
 			docsUrl: 'https://docs.tempo.xyz/documentation/protocol/validators',
 			address: Addresses.validator,

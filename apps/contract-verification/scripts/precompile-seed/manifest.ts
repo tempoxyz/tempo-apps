@@ -1,4 +1,4 @@
-import { parseAbi, type Abi } from 'viem'
+import type { Abi } from 'viem'
 import { Abis, Addresses } from 'viem/tempo'
 
 import { chainIds, type ChainId } from '#wagmi.config.ts'
@@ -21,27 +21,27 @@ export type NativeContractDeployment = {
 }
 
 export type NativeContractManifestReferences = {
-	addressDefinitionPaths: readonly string[]
-	abiReferencePaths: readonly string[]
-	registrationPaths: readonly string[]
-	specificationPaths: readonly string[]
+	addressDefinitionPaths: ReadonlyArray<string>
+	abiReferencePaths: ReadonlyArray<string>
+	registrationPaths: ReadonlyArray<string>
+	specificationPaths: ReadonlyArray<string>
 }
 
 export type NativeContractManifestEntry = {
 	id: string
-	name: string
-	runtimeType: NativeContractRuntimeType
-	language: string
 	abi: Abi
-	repository: string
+	name: string
+	language: string
 	commit: string
 	commitUrl: string
-	docsUrl?: string | undefined
+	repository: string
 	sourceRoot: string
-	paths: readonly [string, ...string[]]
-	entrypoints: readonly [string, ...string[]]
-	deployments: readonly NativeContractDeployment[]
+	docsUrl?: string | undefined
+	runtimeType: NativeContractRuntimeType
+	paths: readonly [string, ...Array<string>]
 	references: NativeContractManifestReferences
+	entrypoints: readonly [string, ...Array<string>]
+	deployments: ReadonlyArray<NativeContractDeployment>
 }
 
 const tempoRepository = 'tempoxyz/tempo' as const
@@ -78,9 +78,9 @@ function buildDeployments(
 }
 
 function buildReferences(options: {
-	abiReferencePaths: readonly string[]
-	specificationPaths?: readonly string[]
-	registrationPaths?: readonly string[]
+	abiReferencePaths: ReadonlyArray<string>
+	specificationPaths?: ReadonlyArray<string>
+	registrationPaths?: ReadonlyArray<string>
 }): NativeContractManifestReferences {
 	return {
 		addressDefinitionPaths,
@@ -90,59 +90,9 @@ function buildReferences(options: {
 	}
 }
 
-const validatorConfigAbi = Abis.validator
+const validatorConfigAbi = Abis.validatorConfig
 
-const validatorConfigV2Abi = parseAbi([
-	'struct Validator { bytes32 publicKey; address validatorAddress; string ingress; string egress; address feeRecipient; uint64 index; uint64 addedAtHeight; uint64 deactivatedAtHeight; }',
-	'function getActiveValidators() view returns (Validator[] validators)',
-	'function getInitializedAtHeight() view returns (uint64)',
-	'function owner() view returns (address)',
-	'function validatorCount() view returns (uint64)',
-	'function validatorByIndex(uint64 index) view returns (Validator validatorInfo)',
-	'function validatorByAddress(address validatorAddress) view returns (Validator validatorInfo)',
-	'function validatorByPublicKey(bytes32 publicKey) view returns (Validator validatorInfo)',
-	'function getNextNetworkIdentityRotationEpoch() view returns (uint64)',
-	'function isInitialized() view returns (bool)',
-	'function addValidator(address validatorAddress, bytes32 publicKey, string ingress, string egress, address feeRecipient, bytes signature) returns (uint64 index)',
-	'function deactivateValidator(uint64 idx)',
-	'function rotateValidator(uint64 idx, bytes32 publicKey, string ingress, string egress, bytes signature)',
-	'function setFeeRecipient(uint64 idx, address feeRecipient)',
-	'function setIpAddresses(uint64 idx, string ingress, string egress)',
-	'function transferValidatorOwnership(uint64 idx, address newAddress)',
-	'function transferOwnership(address newOwner)',
-	'function setNetworkIdentityRotationEpoch(uint64 epoch)',
-	'function migrateValidator(uint64 idx)',
-	'function initializeIfMigrated()',
-	'event ValidatorAdded(uint64 indexed index, address indexed validatorAddress, bytes32 publicKey, string ingress, string egress, address feeRecipient)',
-	'event ValidatorDeactivated(uint64 indexed index, address indexed validatorAddress)',
-	'event ValidatorRotated(uint64 indexed index, uint64 indexed deactivatedIndex, address indexed validatorAddress, bytes32 oldPublicKey, bytes32 newPublicKey, string ingress, string egress, address caller)',
-	'event FeeRecipientUpdated(uint64 indexed index, address feeRecipient, address caller)',
-	'event IpAddressesUpdated(uint64 indexed index, string ingress, string egress, address caller)',
-	'event ValidatorOwnershipTransferred(uint64 indexed index, address indexed oldAddress, address indexed newAddress, address caller)',
-	'event OwnershipTransferred(address indexed oldOwner, address indexed newOwner)',
-	'event ValidatorMigrated(uint64 indexed index, address indexed validatorAddress, bytes32 publicKey)',
-	'event NetworkIdentityRotationEpochSet(uint64 indexed previousEpoch, uint64 indexed nextEpoch)',
-	'event Initialized(uint64 height)',
-	'event SkippedValidatorMigration(uint64 indexed index, address indexed validatorAddress, bytes32 publicKey)',
-	'error AlreadyInitialized()',
-	'error IngressAlreadyExists(string ingress)',
-	'error EmptyV1ValidatorSet()',
-	'error InvalidMigrationIndex()',
-	'error InvalidOwner()',
-	'error InvalidPublicKey()',
-	'error InvalidSignature()',
-	'error InvalidSignatureFormat()',
-	'error InvalidValidatorAddress()',
-	'error MigrationNotComplete()',
-	'error NotInitialized()',
-	'error NotIp(string input, string backtrace)',
-	'error NotIpPort(string input, string backtrace)',
-	'error PublicKeyAlreadyExists()',
-	'error Unauthorized()',
-	'error AddressAlreadyHasValidator()',
-	'error ValidatorAlreadyDeactivated()',
-	'error ValidatorNotFound()',
-])
+const validatorConfigV2Abi = Abis.validatorConfigV2
 
 const accountKeychainAbi = Abis.accountKeychain
 
@@ -156,26 +106,9 @@ const tipFeeManagerAbi = [...Abis.feeManager, ...Abis.feeAmm]
 
 const stablecoinDexAbi = Abis.stablecoinDex
 
-const addressRegistryAbi = parseAbi([
-	'function registerVirtualMaster(bytes32 salt) returns (bytes4 masterId)',
-	'function getMaster(bytes4 masterId) view returns (address)',
-	'function resolveRecipient(address to) view returns (address effectiveRecipient)',
-	'function resolveVirtualAddress(address virtualAddr) view returns (address master)',
-	'function isVirtualAddress(address addr) pure returns (bool)',
-	'function decodeVirtualAddress(address addr) pure returns (bool isVirtual, bytes4 masterId, bytes6 userTag)',
-	'event MasterRegistered(bytes4 indexed masterId, address indexed masterAddress)',
-	'error MasterIdCollision(address master)',
-	'error InvalidMasterAddress()',
-	'error ProofOfWorkFailed()',
-	'error VirtualAddressUnregistered()',
-])
+const addressRegistryAbi = Abis.addressRegistry
 
-const signatureVerifierAbi = parseAbi([
-	'function recover(bytes32 hash, bytes signature) view returns (address signer)',
-	'function verify(address signer, bytes32 hash, bytes signature) view returns (bool)',
-	'error InvalidFormat()',
-	'error InvalidSignature()',
-])
+const signatureVerifierAbi = Abis.signatureVerifier
 
 const validatorConfigAddress = Addresses.validator
 const validatorConfigV2Address =
@@ -195,7 +128,7 @@ export const validatorConfigManifest = {
 	id: 'validator-config',
 	name: 'Validator Config',
 	runtimeType: 'precompile',
-	language: 'Rust',
+	language: 'rust',
 	abi: validatorConfigAbi,
 	repository: tempoRepository,
 	commit: tempoCommit,
@@ -433,4 +366,4 @@ export const nativeContractsManifest = [
 	stablecoinDexManifest,
 	addressRegistryManifest,
 	signatureVerifierManifest,
-] as const satisfies readonly NativeContractManifestEntry[]
+] as const satisfies ReadonlyArray<NativeContractManifestEntry>

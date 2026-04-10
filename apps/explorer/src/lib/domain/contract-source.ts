@@ -124,6 +124,7 @@ const NativeContractSourceSchema = z.object({
 	abi: z.array(z.any()),
 	sources: SourceFilesSchema,
 	nativeSource: NativeSourceMetadataSchema,
+	docsUrl: z.optional(z.url()),
 })
 
 export const ContractSourceSchema = z.union([

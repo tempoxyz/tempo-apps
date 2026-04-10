@@ -12,6 +12,7 @@ export function ContractFeatureCard(props: {
 	textGrid?: Array<{ left?: React.ReactNode; right?: React.ReactNode }>
 	collapsible?: boolean
 	defaultCollapsed?: boolean
+	docsUrl?: string
 }) {
 	const {
 		title,
@@ -38,7 +39,7 @@ export function ContractFeatureCard(props: {
 					'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 				)}
 			>
-				<div className="flex items-center h-[36px] shrink-0">
+				<div className="flex items-center h-9 shrink-0">
 					<button
 						type="button"
 						onClick={() => setIsCollapsed(!isCollapsed)}
@@ -84,7 +85,7 @@ export function ContractFeatureCard(props: {
 						<a
 							id={title.toLowerCase().replaceAll(' ', '-')}
 							href={`#${title.toLowerCase().replaceAll(' ', '-')}`}
-							className="text-[14px] text-primary font-medium"
+							className="text-[14px] text-primary/90 font-medium"
 						>
 							{title}
 						</a>
