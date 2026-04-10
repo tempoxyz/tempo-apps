@@ -339,6 +339,7 @@ async function getNativeLookupResponse(
 			runtimeType: nativeContractsTable.runtimeType,
 			language: nativeContractsTable.language,
 			abiJson: nativeContractsTable.abiJson,
+			docsUrl: nativeContractsTable.docsUrl,
 		})
 		.from(nativeContractsTable)
 		.where(
@@ -451,6 +452,7 @@ async function getNativeLookupResponse(
 		stdJsonInput: null,
 		stdJsonOutput: null,
 		proxyResolution: null,
+		docsUrl: nativeContract.docsUrl ?? null,
 		extensions: {
 			tempo: {
 				nativeSource: {

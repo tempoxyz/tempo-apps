@@ -133,6 +133,7 @@ export const validatorConfigManifest = {
 	repository: tempoRepository,
 	commit: tempoCommit,
 	commitUrl: tempoCommitUrl,
+	docsUrl: 'https://docs.tempo.xyz/documentation/protocol/validators',
 	sourceRoot: 'crates/precompiles/src/validator_config',
 	paths: [
 		'crates/precompiles/src/validator_config/mod.rs',
@@ -184,6 +185,7 @@ export const accountKeychainManifest = {
 	repository: tempoRepository,
 	commit: tempoCommit,
 	commitUrl: tempoCommitUrl,
+	docsUrl: 'https://docs.tempo.xyz/protocol/transactions/AccountKeychain',
 	sourceRoot: 'crates/precompiles/src/account_keychain',
 	paths: [
 		'crates/precompiles/src/account_keychain/mod.rs',
@@ -226,6 +228,7 @@ export const tip403RegistryManifest = {
 	repository: tempoRepository,
 	commit: tempoCommit,
 	commitUrl: tempoCommitUrl,
+	docsUrl: 'https://docs.tempo.xyz/documentation/protocol/tip403/spec',
 	sourceRoot: 'crates/precompiles/src/tip403_registry',
 	paths: [
 		'crates/precompiles/src/tip403_registry/mod.rs',
@@ -247,6 +250,7 @@ export const tip20FactoryManifest = {
 	repository: tempoRepository,
 	commit: tempoCommit,
 	commitUrl: tempoCommitUrl,
+	docsUrl: 'https://docs.tempo.xyz/documentation/protocol/tip20/overview',
 	sourceRoot: 'crates/precompiles/src/tip20_factory',
 	paths: [
 		'crates/precompiles/src/tip20_factory/mod.rs',
@@ -268,6 +272,8 @@ export const tipFeeManagerManifest = {
 	repository: tempoRepository,
 	commit: tempoCommit,
 	commitUrl: tempoCommitUrl,
+	docsUrl:
+		'https://docs.tempo.xyz/documentation/protocol/fees/spec-fee-amm#2-feemanager-contract',
 	sourceRoot: 'crates/precompiles/src/tip_fee_manager',
 	paths: [
 		'crates/precompiles/src/tip_fee_manager/mod.rs',
@@ -290,6 +296,7 @@ export const stablecoinDexManifest = {
 	repository: tempoRepository,
 	commit: tempoCommit,
 	commitUrl: tempoCommitUrl,
+	docsUrl: 'https://docs.tempo.xyz/documentation/protocol/exchange',
 	sourceRoot: 'crates/precompiles/src/stablecoin_dex',
 	paths: [
 		'crates/precompiles/src/stablecoin_dex/mod.rs',

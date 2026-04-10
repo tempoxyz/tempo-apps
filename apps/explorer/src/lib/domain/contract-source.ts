@@ -90,6 +90,7 @@ const RawContractVerificationLookupSchema = z.object({
 	abi: z.array(z.any()),
 	compilation: z.optional(z.union([CompilationSchema, z.null()])),
 	sources: z.optional(SourceFilesSchema),
+	docsUrl: z.optional(z.union([z.string(), z.null()])),
 	extensions: z.optional(
 		z.object({
 			tempo: z.optional(
@@ -165,6 +166,7 @@ export function normalizeContractSourceResponse(
 			abi: data.abi,
 			sources: data.sources,
 			nativeSource,
+			...(data.docsUrl ? { docsUrl: data.docsUrl } : {}),
 		}
 	}
 

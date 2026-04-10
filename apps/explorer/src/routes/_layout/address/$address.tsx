@@ -1626,7 +1626,11 @@ function SectionsWrapper(props: {
 						<ContractTabContent
 							address={address}
 							abi={resolvedAbi}
-							docsUrl={contractInfo?.docsUrl}
+							docsUrl={
+								resolvedContractSource?.kind === 'native'
+									? resolvedContractSource.docsUrl
+									: contractInfo?.docsUrl
+							}
 							source={resolvedContractSource}
 						/>
 					),
@@ -1640,7 +1644,11 @@ function SectionsWrapper(props: {
 						<InteractTabContent
 							address={address}
 							abi={resolvedAbi}
-							docsUrl={contractInfo?.docsUrl}
+							docsUrl={
+								resolvedContractSource?.kind === 'native'
+									? resolvedContractSource.docsUrl
+									: contractInfo?.docsUrl
+							}
 						/>
 					),
 				}

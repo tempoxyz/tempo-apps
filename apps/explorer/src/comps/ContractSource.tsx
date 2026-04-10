@@ -12,6 +12,7 @@ import FileCode2Icon from '~icons/lucide/file-code-2'
 import LinkIcon from '~icons/lucide/link'
 import SolidityIcon from '~icons/vscode-icons/file-type-solidity'
 import RustIcon from '~icons/material-icon-theme/rust'
+import ExternalLinkIcon from '~icons/lucide/external-link'
 import VyperIcon from '~icons/vscode-icons/file-type-vyper'
 
 function getCompilerVersionUrl(compiler: string, version: string) {
@@ -128,9 +129,10 @@ export function SourceSection(props: ContractSource & { docsUrl?: string }) {
 										target="_blank"
 										rel="noopener noreferrer"
 										href={props.docsUrl}
-										className="text-[12px] text-accent press-down inline-flex items-center gap-1 hover:cursor-pointer"
+										className="text-[11px] text-accent hover:underline press-down inline-flex items-center gap-[4px]"
 									>
-										docs
+										Docs
+										<ExternalLinkIcon className="size-[12px]" />
 									</a>
 								)}
 							</div>
@@ -181,9 +183,10 @@ export function SourceSection(props: ContractSource & { docsUrl?: string }) {
 									target="_blank"
 									rel="noopener noreferrer"
 									href={props.docsUrl}
-									className="text-[12px] text-accent press-down inline-flex items-center gap-1 hover:cursor-pointer"
+									className="text-[11px] text-accent hover:underline press-down inline-flex items-center gap-[4px]"
 								>
-									docs
+									Docs
+									<ExternalLinkIcon className="size-[12px]" />
 								</a>
 							)}
 						</div>
