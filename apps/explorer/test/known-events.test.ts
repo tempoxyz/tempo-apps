@@ -55,6 +55,34 @@ const depositMadeAbi = [
 ] as const
 
 describe('parseKnownEvents', () => {
+	it('preserves tip20 approvals for zone portals', () => {
+		const hash = `0x${'4'.repeat(64)}` as const
+		const amount = 500_000n
+		const logs = [
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Approval',
+						args: {
+							owner: accountAddress,
+							spender: ZONE_5_PORTAL,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			),
+		]
+
+		const receipt = mockReceipt(logs, accountAddress, hash)
+		const knownEvents = parseKnownEvents(receipt, { getTokenMetadata })
+
+		expect(knownEvents).toHaveLength(1)
+		expect(knownEvents[0]?.type).toBe('approval')
+	})
+
 	it('deduplicates bounce-back transfers against BounceBack events', () => {
 		const hash = `0x${'2'.repeat(64)}` as const
 		const amount = 1_000_000n

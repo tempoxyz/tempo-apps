@@ -689,9 +689,6 @@ function createDetectors(
 				}
 
 			if (eventName === 'Approval')
-				if (isZonePortalAddress(args.spender)) return null
-
-			if (eventName === 'Approval')
 				return {
 					type: 'approval',
 					parts: [
