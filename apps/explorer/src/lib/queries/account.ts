@@ -1,12 +1,13 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import type { RpcTransaction } from 'viem'
-import type * as z from 'zod/mini'
+import * as z from 'zod/mini'
 
 import { isTip20Address } from '#lib/domain/tip20'
 import { getApiUrl } from '#lib/env.ts'
 import type { RequestParametersSchema as AccountRequestParametersSchema } from '#routes/api/address/$address.ts'
 import type { HistoryResponse } from '#routes/api/address/history/$address.ts'
+export type { HistoryResponse }
 
 type AccountRequestParameters = Omit<
 	z.infer<typeof AccountRequestParametersSchema>,
@@ -22,7 +23,19 @@ type TransactionsApiResponse = {
 	error: null | string
 }
 
-export type { HistoryResponse }
+const HistoryResponseSchema = z.object({
+	transactions: z.array(z.any()),
+	total: z.number(),
+	offset: z.number(),
+	limit: z.number(),
+	hasMore: z.boolean(),
+	countCapped: z.boolean(),
+	error: z.union([z.string(), z.null()]),
+})
+
+const HistoryErrorResponseSchema = z.object({
+	error: z.string(),
+})
 
 export function transactionsQueryOptions(
 	params: {
@@ -125,8 +138,23 @@ export function historyQueryOptions(params: {
 				searchParams,
 			)
 			const response = await fetch(url, { signal })
-			const data = await response.json()
-			return data as HistoryResponse
+			const json = await response.json()
+
+			const parsed = z.safeParse(HistoryResponseSchema, json)
+			if (parsed.success) return parsed.data
+
+			const parsedError = z.safeParse(HistoryErrorResponseSchema, json)
+			if (parsedError.success) throw new Error(parsedError.data.error)
+
+			return {
+				transactions: [],
+				total: 0,
+				offset: params.offset,
+				limit: params.limit,
+				hasMore: false,
+				countCapped: false,
+				error: `Failed to load transaction history: ${z.prettifyError(parsed.error)}`,
+			}
 		},
 		staleTime: 10_000,
 		refetchInterval: false,

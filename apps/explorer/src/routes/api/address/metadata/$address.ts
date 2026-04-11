@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import { getCode } from 'viem/actions'
-import { getChainId } from 'wagmi/actions'
 import { getAccountType, type AccountType } from '#lib/account'
 import { isTip20Address } from '#lib/domain/tip20'
 import { hasIndexSupply } from '#lib/env'
@@ -11,7 +10,7 @@ import {
 } from '#lib/server/tempo-queries'
 import { parseTimestamp } from '#lib/timestamp'
 import { zAddress } from '#lib/zod'
-import { getWagmiConfig } from '#wagmi.config'
+import { getBatchedClient, getTempoChain } from '#wagmi.config.ts'
 
 export type AddressMetadataResponse = {
 	address: string
@@ -41,10 +40,8 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 					const address = zAddress().parse(params.address)
 					Address.assert(address)
 
-					const config = getWagmiConfig()
-					const client = config.getClient()
-					const chainId = getChainId(config)
-
+					const client = getBatchedClient()
+					const { id: chainId } = getTempoChain()
 					const isTip20 = isTip20Address(address)
 
 					const bytecodePromise = getCode(client, { address }).catch(

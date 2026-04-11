@@ -325,30 +325,30 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			else if (period === '7d')
 				after = Math.floor(Date.now() / 1000) - 7 * 86400
 
+			const transactionsQuery = historyQueryOptions({
+				address,
+				page,
+				limit,
+				offset,
+				sources: historySources,
+				status,
+				include:
+					dir === 'sent' ? 'sent' : dir === 'received' ? 'received' : 'all',
+				after,
+			})
+
 			// Only block on transactions if transactions tab is active.
 			// Select history sources from address type so SSR and client stay aligned.
 			const transactionsPromise = isTransactionsTab
 				? timeout(
 						context.queryClient
-							.ensureQueryData(
-								historyQueryOptions({
-									address,
-									page,
-									limit,
-									offset,
-									sources: historySources,
-									status,
-									include:
-										dir === 'sent'
-											? 'sent'
-											: dir === 'received'
-												? 'received'
-												: 'all',
-									after,
-								}),
-							)
+							.ensureQueryData(transactionsQuery)
 							.catch((error) => {
 								console.error('Fetch transactions error:', error)
+								context.queryClient.removeQueries({
+									queryKey: transactionsQuery.queryKey,
+									exact: true,
+								})
 								return undefined
 							}),
 						QUERY_TIMEOUT_MS,

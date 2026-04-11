@@ -5,6 +5,7 @@ import { Tidx } from 'tidx.ts'
 import { decodeAbiParameters, zeroAddress } from 'viem'
 import * as ABIS from '#lib/abis'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
+import { parseTimestamp } from '#lib/timestamp'
 
 const QB = tempoQueryBuilder
 
@@ -1314,32 +1315,103 @@ export async function fetchAddressTxAggregate(
 	oldestTxHash?: string
 	oldestTxFrom?: string
 }> {
-	const qb = QB(chainId)
-	const result = await qb
-		.selectFrom('txs')
-		.where((wb) => wb.or([wb('from', '=', address), wb('to', '=', address)]))
-		.select((sb) => [
-			sb.fn.count('hash').as('count'),
-			sb.fn.max('block_timestamp').as('latestTxsBlockTimestamp'),
-			sb.fn.min('block_timestamp').as('oldestTxsBlockTimestamp'),
-		])
-		.executeTakeFirst()
+	type AddressTxBoundaryRow = {
+		hash: Hex.Hex
+		from: string
+		block_timestamp: string | number | bigint | null
+	}
 
-	// Fetch the hash of the oldest transaction separately
-	const oldest = await qb
-		.selectFrom('txs')
-		.where((wb) => wb.or([wb('from', '=', address), wb('to', '=', address)]))
-		.select((eb) => [eb.ref('hash').as('hash'), eb.ref('from').as('sender')])
-		.orderBy('block_timestamp', 'asc')
-		.limit(1)
-		.executeTakeFirst()
+	type AddressTxCountRow = {
+		count: string | number | bigint
+	}
+
+	const countByField = async (field: 'from' | 'to'): Promise<number> => {
+		const result = (await QB(chainId)
+			.selectFrom('txs')
+			.select((eb) => eb.fn.count('hash').as('count'))
+			.where(field, '=', address)
+			.executeTakeFirst()) as AddressTxCountRow | undefined
+
+		return Number(result?.count ?? 0)
+	}
+
+	const fetchBoundaryByField = async (
+		field: 'from' | 'to',
+		sortDirection: SortDirection,
+	): Promise<AddressTxBoundaryRow | undefined> =>
+		(await QB(chainId)
+			.selectFrom('txs')
+			.select(['hash', 'from', 'block_timestamp'])
+			.where(field, '=', address)
+			.orderBy('block_timestamp', sortDirection)
+			.orderBy('hash', sortDirection)
+			.limit(1)
+			.executeTakeFirst()) as AddressTxBoundaryRow | undefined
+
+	const toComparableTimestamp = (value: unknown): number => {
+		if (typeof value === 'bigint') return Number(value)
+		return parseTimestamp(value) ?? Number.NaN
+	}
+
+	const pickBoundary = (
+		sortDirection: SortDirection,
+		rows: Array<AddressTxBoundaryRow | undefined>,
+	): AddressTxBoundaryRow | undefined => {
+		const presentRows = rows.filter((row) => row !== undefined)
+		if (presentRows.length === 0) return undefined
+
+		presentRows.sort((left, right) => {
+			const leftTimestamp = toComparableTimestamp(left.block_timestamp)
+			const rightTimestamp = toComparableTimestamp(right.block_timestamp)
+			const timestampDiff =
+				sortDirection === 'asc'
+					? leftTimestamp - rightTimestamp
+					: rightTimestamp - leftTimestamp
+			if (timestampDiff !== 0) return timestampDiff
+
+			return sortDirection === 'asc'
+				? left.hash.localeCompare(right.hash)
+				: right.hash.localeCompare(left.hash)
+		})
+
+		return presentRows[0]
+	}
+
+	const [
+		sentCount,
+		receivedCount,
+		selfCount,
+		latestSent,
+		latestReceived,
+		oldestSent,
+		oldestReceived,
+	] = await Promise.all([
+		countByField('from'),
+		countByField('to'),
+		QB(chainId)
+			.selectFrom('txs')
+			.select((eb) => eb.fn.count('hash').as('count'))
+			.where('from', '=', address)
+			.where('to', '=', address)
+			.executeTakeFirst()
+			.then((result) =>
+				Number((result as AddressTxCountRow | undefined)?.count ?? 0),
+			),
+		fetchBoundaryByField('from', 'desc'),
+		fetchBoundaryByField('to', 'desc'),
+		fetchBoundaryByField('from', 'asc'),
+		fetchBoundaryByField('to', 'asc'),
+	])
+
+	const latest = pickBoundary('desc', [latestSent, latestReceived])
+	const oldest = pickBoundary('asc', [oldestSent, oldestReceived])
 
 	return {
-		count: result?.count ? Number(result.count) : undefined,
-		latestTxsBlockTimestamp: result?.latestTxsBlockTimestamp,
-		oldestTxsBlockTimestamp: result?.oldestTxsBlockTimestamp,
+		count: sentCount + receivedCount - selfCount,
+		latestTxsBlockTimestamp: latest?.block_timestamp,
+		oldestTxsBlockTimestamp: oldest?.block_timestamp,
 		oldestTxHash: oldest?.hash as string | undefined,
-		oldestTxFrom: oldest?.sender as string | undefined,
+		oldestTxFrom: oldest?.from as string | undefined,
 	}
 }
 
