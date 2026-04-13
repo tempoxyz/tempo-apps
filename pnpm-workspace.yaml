@@ -118,15 +118,6 @@ minimumReleaseAgeExclude:
 
 overrides:
   basic-ftp: 5.2.2
-
-patchedDependencies:
-  '@cloudflare/vite-plugin@1.30.3': patches/@cloudflare__vite-plugin@1.30.3.patch
-
-strictDepBuilds: true
-
-trustPolicy: no-downgrade
-
-overrides:
   flatted: ^3.4.2
   tar: ^7.5.13
   picomatch@<3: ^2.3.2
@@ -135,3 +126,10 @@ overrides:
   brace-expansion@<3: ^2.0.3
   brace-expansion@>=5: ^5.0.5
   yaml: ^2.8.3
+
+patchedDependencies:
+  '@cloudflare/vite-plugin@1.30.3': patches/@cloudflare__vite-plugin@1.30.3.patch
+
+strictDepBuilds: true
+
+trustPolicy: no-downgrade
