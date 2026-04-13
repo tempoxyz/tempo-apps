@@ -6,6 +6,7 @@ import { beforeEach } from 'vitest'
 import * as DB from '#database/schema.ts'
 
 const tables = [
+	DB.verificationJobsEphemeralTable,
 	DB.verificationJobsTable,
 	DB.verifiedContractsTable,
 	DB.compiledContractsSignaturesTable,

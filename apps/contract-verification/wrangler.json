@@ -21,6 +21,22 @@
 			}
 		}
 	],
+	"queues": {
+		"producers": [
+			{
+				"binding": "VERIFICATION_QUEUE",
+				"queue": "contract-verification-jobs"
+			}
+		],
+		"consumers": [
+			{
+				"queue": "contract-verification-jobs",
+				"max_batch_size": 1,
+				"max_retries": 2,
+				"dead_letter_queue": "contract-verification-dlq"
+			}
+		]
+	},
 	"d1_databases": [
 		{
 			"binding": "CONTRACTS_DB",

@@ -506,5 +506,7 @@ export const verificationJobsEphemeralTable = p.sqliteTable(
 		onchainRuntimeCode: s.blob('onchain_runtime_code'),
 		/** Creation transaction hash */
 		creationTransactionHash: s.blob('creation_transaction_hash'),
+		/** Verification input (JSON) — stored temporarily for queue-based processing */
+		input: s.text('input'),
 	}),
 )

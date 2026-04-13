@@ -15,6 +15,13 @@
       "when": 1775671878724,
       "tag": "0001_lyrical_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1744581546000,
+      "tag": "0002_add_ephemeral_input",
+      "breakpoints": true
     }
   ]
 }

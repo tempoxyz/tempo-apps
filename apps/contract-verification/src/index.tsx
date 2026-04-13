@@ -11,14 +11,27 @@ import { rateLimiter } from 'hono-rate-limiter'
 import { getContainer } from '@cloudflare/containers'
 import { contextStorage } from 'hono/context-storage'
 
+import { eq } from 'drizzle-orm'
+
 import { docsRoute } from '#route.docs.tsx'
-import { verifyRoute } from '#route.verify.ts'
+import {
+	verifyRoute,
+	runVerificationJob,
+	type VerificationInput,
+	type VerificationQueueMessage,
+} from '#route.verify.ts'
+import { verificationJobsEphemeralTable } from '#database/schema.ts'
 import { sourcifyChains } from '#wagmi.config.ts'
 import { VerificationContainer } from '#container.ts'
 import { legacyVerifyRoute } from '#route.verify-legacy.ts'
 import { configureLogger, getLogger, withContext } from '#lib/logger.ts'
 import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
-import { handleError, originMatches, sourcifyError } from '#lib/utilities.ts'
+import {
+	getDb,
+	handleError,
+	originMatches,
+	sourcifyError,
+} from '#lib/utilities.ts'
 
 import OpenApiSpec from '#openapi.json' with { type: 'json' }
 import packageJSON from '#package.json' with { type: 'json' }
@@ -149,4 +162,37 @@ app
 
 showRoutes(app)
 
-export default app satisfies ExportedHandler<Cloudflare.Env>
+export default {
+	fetch: app.fetch,
+	async queue(batch, env) {
+		await configureLogger(env.NODE_ENV)
+		const db = getDb(env.CONTRACTS_DB)
+
+		for (const msg of batch.messages) {
+			const { jobId, chainId, address } = msg.body as VerificationQueueMessage
+
+			const rows = await db
+				.select({ input: verificationJobsEphemeralTable.input })
+				.from(verificationJobsEphemeralTable)
+				.where(eq(verificationJobsEphemeralTable.id, jobId))
+				.limit(1)
+
+			const input = rows.at(0)?.input
+			if (!input) {
+				logger.warn('queue_job_missing_input', { jobId })
+				msg.ack()
+				continue
+			}
+
+			const body = JSON.parse(input) as VerificationInput
+			await runVerificationJob(env, jobId, chainId, address, body)
+
+			// Clean up ephemeral input
+			await db
+				.delete(verificationJobsEphemeralTable)
+				.where(eq(verificationJobsEphemeralTable.id, jobId))
+
+			msg.ack()
+		}
+	},
+} satisfies ExportedHandler<Cloudflare.Env>

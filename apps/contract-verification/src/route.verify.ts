@@ -26,6 +26,7 @@ import {
 	contractDeploymentsTable,
 	compiledContractsSourcesTable,
 	compiledContractsSignaturesTable,
+	verificationJobsEphemeralTable,
 } from '#database/schema.ts'
 import {
 	AuxdataStyle,
@@ -300,16 +301,18 @@ verifyRoute
 				return context.json({ verificationId: firstJob.id }, 202)
 			}
 
-			// Run verification in background
-			context.executionCtx.waitUntil(
-				runVerificationJob(
-					context.env,
-					jobId,
-					chainId,
-					address,
-					parsedBody.data as VerificationInput,
-				),
-			)
+			// Store input in ephemeral table for queue-based processing
+			await db.insert(verificationJobsEphemeralTable).values({
+				id: jobId,
+				input: JSON.stringify(parsedBody.data),
+			})
+
+			// Enqueue verification job
+			await context.env.VERIFICATION_QUEUE.send({
+				jobId,
+				chainId,
+				address,
+			} satisfies VerificationQueueMessage)
 
 			return context.json({ verificationId: jobId }, 202)
 		} catch (error) {
@@ -1232,4 +1235,15 @@ async function runVerificationJob(
 	}
 }
 
-export { runVerificationJob, verifyRoute }
+type VerificationQueueMessage = {
+	jobId: string
+	chainId: number
+	address: string
+}
+
+export {
+	runVerificationJob,
+	verifyRoute,
+	type VerificationInput,
+	type VerificationQueueMessage,
+}
