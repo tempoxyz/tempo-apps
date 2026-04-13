@@ -41,8 +41,8 @@ import { getLogger } from '#lib/logger.ts'
 const logger = getLogger(['tempo'])
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
-/** Jobs older than this are considered stale and can be retried (5 minutes). */
-const JOB_TTL_MS = 5 * 60 * 1_000
+/** Jobs older than this are considered stale and can be retried (15 minutes). */
+const JOB_TTL_MS = 15 * 60 * 1_000
 /** Number of container instances to load-balance across. */
 const CONTAINER_INSTANCE_COUNT =
 	wranglerJSON.containers.at(0)?.max_instances ?? 10
@@ -300,16 +300,33 @@ verifyRoute
 				return context.json({ verificationId: firstJob.id }, 202)
 			}
 
-			// Run verification in background
-			context.executionCtx.waitUntil(
-				runVerificationJob(
-					context.env,
+			// Dispatch verification to a per-job Durable Object for durable background execution
+			const doId = context.env.VERIFICATION_JOB_RUNNER.idFromName(jobId)
+			const runner = context.env.VERIFICATION_JOB_RUNNER.get(doId)
+			try {
+				await runner.enqueue({
 					jobId,
 					chainId,
 					address,
-					parsedBody.data as VerificationInput,
-				),
-			)
+					body: parsedBody.data as VerificationInput,
+				})
+			} catch (enqueueError) {
+				logger.error('job_enqueue_failed', {
+					error: formatError(enqueueError),
+					jobId,
+					chainId,
+					address,
+				})
+				await db
+					.delete(verificationJobsTable)
+					.where(eq(verificationJobsTable.id, jobId))
+				return sourcifyError(
+					context,
+					500,
+					'internal_error',
+					'Failed to enqueue verification job',
+				)
+			}
 
 			return context.json({ verificationId: jobId }, 202)
 		} catch (error) {
@@ -1201,12 +1218,15 @@ async function runVerificationJob(
 
 		const verifiedContractId = verificationResult.at(0)?.id ?? null
 
-		// Mark job as completed
+		// Mark job as completed (clear any stale timeout/error fields)
 		await db
 			.update(verificationJobsTable)
 			.set({
 				completedAt: new Date().toISOString(),
 				verifiedContractId,
+				errorCode: null,
+				errorId: null,
+				errorData: null,
 				compilationTime: Date.now() - startTime,
 			})
 			.where(eq(verificationJobsTable.id, jobId))

@@ -15,6 +15,7 @@ import { docsRoute } from '#route.docs.tsx'
 import { verifyRoute } from '#route.verify.ts'
 import { sourcifyChains } from '#wagmi.config.ts'
 import { VerificationContainer } from '#container.ts'
+import { VerificationJobRunner } from '#job-runner.ts'
 import { legacyVerifyRoute } from '#route.verify-legacy.ts'
 import { configureLogger, getLogger, withContext } from '#lib/logger.ts'
 import { lookupAllChainContractsRoute, lookupRoute } from '#route.lookup.ts'
@@ -25,7 +26,7 @@ import packageJSON from '#package.json' with { type: 'json' }
 
 const logger = getLogger(['tempo'])
 
-export { VerificationContainer }
+export { VerificationContainer, VerificationJobRunner }
 
 const WHITELISTED_ORIGINS = [
 	'http://localhost',
