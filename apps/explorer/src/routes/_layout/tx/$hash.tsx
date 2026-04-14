@@ -12,7 +12,6 @@ import * as Json from 'ox/Json'
 import * as Value from 'ox/Value'
 import * as React from 'react'
 import type { Log, TransactionReceipt } from 'viem'
-import { toEventSelector } from 'viem'
 import { useChains } from 'wagmi'
 import * as z from 'zod/mini'
 import { Address } from '#comps/Address'
@@ -34,6 +33,10 @@ import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
 import type { KnownEvent } from '#lib/domain/known-events'
+import {
+	type EventGroup,
+	groupRelatedEvents,
+} from '#lib/domain/tx-event-groups'
 import type { FeeBreakdownItem } from '#lib/domain/receipt'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
@@ -641,106 +644,6 @@ function CallItem(props: {
 			)}
 		</div>
 	)
-}
-
-type EventGroup = {
-	logs: Log[]
-	startIndex: number
-	knownEvent: KnownEvent | null
-}
-
-function groupRelatedEvents(
-	logs: Log[],
-	knownEvents: (KnownEvent | null)[],
-): EventGroup[] {
-	const groups: EventGroup[] = []
-	let i = 0
-
-	while (i < logs.length) {
-		const log = logs[i]
-		const event = knownEvents[i]
-
-		if (event?.type === 'hidden') {
-			i++
-			continue
-		}
-
-		const eventName = getEventName(log)
-
-		// Transfer = possible group
-		if (eventName === 'Transfer') {
-			const secondLog = logs[i + 1]
-			const secondEventName = secondLog ? getEventName(secondLog) : null
-
-			// Transfer + Mint or Transfer + Burn (+ optional TransferWithMemo)
-			if (secondEventName === 'Mint' || secondEventName === 'Burn') {
-				const thirdLog = logs[i + 2]
-				const thirdEventName = thirdLog ? getEventName(thirdLog) : null
-
-				// check for mintWithMemo / burnWithMemo pattern (3 events)
-				if (thirdEventName === 'TransferWithMemo') {
-					groups.push({
-						logs: [log, secondLog, thirdLog],
-						startIndex: i,
-						knownEvent: knownEvents[i + 1], // use Mint / Burn as primary
-					})
-					i += 3
-					continue
-				}
-
-				// Transfer + Mint / Burn (2 events)
-				groups.push({
-					logs: [log, secondLog],
-					startIndex: i,
-					knownEvent: knownEvents[i + 1], // use Mint / Burn as primary
-				})
-				i += 2
-				continue
-			}
-
-			// Transfer + TransferWithMemo
-			if (secondEventName === 'TransferWithMemo') {
-				groups.push({
-					logs: [log, secondLog],
-					startIndex: i,
-					knownEvent: knownEvents[i + 1], // use TransferWithMemo as primary
-				})
-				i += 2
-				continue
-			}
-		}
-
-		// single event
-		groups.push({
-			logs: [log],
-			startIndex: i,
-			knownEvent: event,
-		})
-		i++
-	}
-
-	return groups
-}
-
-const eventSignatures = {
-	Transfer: toEventSelector(
-		'event Transfer(address indexed, address indexed, uint256)',
-	),
-	TransferWithMemo: toEventSelector(
-		'event TransferWithMemo(address indexed, address indexed, uint256, bytes32 indexed)',
-	),
-	Mint: toEventSelector('event Mint(address indexed, uint256)'),
-	Burn: toEventSelector('event Burn(address indexed, uint256)'),
-}
-
-function getEventName(log: Log): string | null {
-	const topic0 = log.topics[0]?.toLowerCase()
-	if (topic0 === eventSignatures.Transfer.toLowerCase()) return 'Transfer'
-	if (topic0 === eventSignatures.TransferWithMemo.toLowerCase())
-		return 'TransferWithMemo'
-	if (topic0 === eventSignatures.Mint.toLowerCase()) return 'Mint'
-	if (topic0 === eventSignatures.Burn.toLowerCase()) return 'Burn'
-	return null
 }
 
 function EventsSection(props: {

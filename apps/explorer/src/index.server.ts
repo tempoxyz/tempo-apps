@@ -67,7 +67,7 @@ const serverEntry = createServerEntry({
 })
 
 export default Sentry.withSentry(
-	(env: Env) => ({
+	(env: Cloudflare.Env) => ({
 		dsn: process.env.SENTRY_DSN,
 		release: env.CF_VERSION_METADATA?.id,
 		tracesSampleRate: env.SENTRY_TRACES_SAMPLE_RATE

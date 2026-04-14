@@ -27,7 +27,8 @@
 		"db:seed": "node ./scripts/precompile-seed/index.ts",
 		"db:seed:local": "pnpm db:prepare:local && pnpm db:seed",
 		"db:seed:remote": "pnpm db:prepare:remote && pnpm db:seed",
-		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types"
+		"gen:types": "wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'"
+
 	},
 	"dependencies": {
 		"@cloudflare/containers": "^0.2.3",

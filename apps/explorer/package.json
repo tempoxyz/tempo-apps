@@ -28,7 +28,7 @@
 		"deploy:testnet": "pnpm deploy --env testnet",
 		"deploy:mainnet": "pnpm deploy --env mainnet",
 		"gen:tokens-index": "pnpm node --env-file-if-exists=.env scripts/generate-tokens-index.ts",
-		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV='mainnet' wrangler types",
+		"gen:types": "CLOUDFLARE_ENV='mainnet' wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'",
 		"preview": "vite preview --mode='preview'",
 		"test": "vitest"
 	},

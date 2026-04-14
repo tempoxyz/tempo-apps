@@ -22,7 +22,7 @@
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"process-icons": "node ./scripts/svg2g.ts",
 		"tail": "wrangler tail",
-		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
+		"gen:types": "wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'",
 		"postinstall": "pnpm gen:types"
 	},
 	"dependencies": {

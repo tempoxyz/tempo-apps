@@ -15,7 +15,7 @@
 		"check:types": "tsgo --project tsconfig.json --noEmit",
 		"predeploy": "pnpm build",
 		"deploy": "wrangler deploy",
-		"gen:types": "wrangler types"
+		"gen:types": "wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'"
 	},
 	"dependencies": {
 		"@cloudflare/vite-plugin": "catalog:",

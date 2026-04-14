@@ -18,7 +18,7 @@
 		"deploy:mainnet": "wrangler deploy --env mainnet",
 		"deploy:privy": "wrangler deploy --env privy",
 		"format": "biome format --write .",
-		"gen:types": "test -f .env || cp .env.example .env; CLOUDFLARE_ENV= wrangler types",
+		"gen:types": "CLOUDFLARE_ENV= wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'",
 		"tail": "wrangler tail",
 		"test": "vitest --run",
 		"test:watch": "vitest",

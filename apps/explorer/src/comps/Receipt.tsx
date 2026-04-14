@@ -208,11 +208,19 @@ export function Receipt(props: Receipt.Props) {
 																		>
 																			<div className="text-tertiary shrink-0">
 																				{label}
-																				{!(part.type === 'text' && part.value === '') && ':'}
+																				{!(
+																					part.type === 'text' &&
+																					part.value === ''
+																				) && ':'}
 																			</div>
-																			{!(part.type === 'text' && part.value === '') && (
+																			{!(
+																				part.type === 'text' &&
+																				part.value === ''
+																			) && (
 																				<div className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-																					<TxEventDescription.Part part={part} />
+																					<TxEventDescription.Part
+																						part={part}
+																					/>
 																				</div>
 																			)}
 																		</div>
