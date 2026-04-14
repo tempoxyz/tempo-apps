@@ -73,6 +73,7 @@ import {
 	historyQueryOptions,
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
+import { fetchAddressOgMeta } from '#lib/server/tempo-queries'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
@@ -368,16 +369,24 @@ export const Route = createFileRoute('/_layout/address/$address')({
 						)
 					: Promise.resolve(undefined)
 
+			// Fetch OG metadata (txCount + timestamps) via direct TIDX query
+			const ogMetaPromise = timeout(
+				fetchAddressOgMeta(address, TEMPO_CHAIN_ID).catch(() => undefined),
+				QUERY_TIMEOUT_MS,
+			)
+
 			const [
 				contractBytecode,
 				transactionsData,
 				balancesResult,
 				tokenMetadata,
+				ogMeta,
 			] = await Promise.all([
 				contractBytecodePromise,
 				transactionsPromise,
 				balancesPromise,
 				tokenMetadataPromise,
+				ogMetaPromise,
 			])
 
 			const accountType = getAccountType(contractBytecode)
@@ -405,6 +414,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				contractSource,
 				transactionsData,
 				balancesData,
+				ogMeta,
 			}
 		}),
 	head: async ({ params, loaderData }) => {
@@ -455,7 +465,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				supply,
 			})
 		} else {
-			const txCount = loaderData?.transactionsData?.total ?? 0
+			const txCount = loaderData?.ogMeta?.txCount ?? 0
 			let lastActive: string | undefined
 			let created: string | undefined
 			let holdings = '—'
@@ -476,18 +486,15 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				}
 			}
 
-			const transactions = loaderData?.transactionsData?.transactions
-			const recentTx = transactions?.at(0)
-			if (recentTx?.timestamp) {
+			if (loaderData?.ogMeta?.lastActivityTimestamp) {
 				lastActive = DateFormatter.formatTimestampForOg(
-					BigInt(recentTx.timestamp),
+					BigInt(loaderData.ogMeta.lastActivityTimestamp),
 				).date
 			}
 
-			const oldestTx = transactions?.at(-1)
-			if (oldestTx?.timestamp) {
+			if (loaderData?.ogMeta?.createdTimestamp) {
 				created = DateFormatter.formatTimestampForOg(
-					BigInt(oldestTx.timestamp),
+					BigInt(loaderData.ogMeta.createdTimestamp),
 				).date
 			}
 
