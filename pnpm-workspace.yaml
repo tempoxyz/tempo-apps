@@ -80,6 +80,9 @@ catalog:
   wrangler: 4.79.0
   zod: ^4.3.6
 
+overrides:
+  basic-ftp: 5.2.2
+
 patchedDependencies:
   '@cloudflare/vite-plugin@1.30.3': patches/@cloudflare__vite-plugin@1.30.3.patch
 

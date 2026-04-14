@@ -37,11 +37,6 @@
 			"onFail": "download"
 		}
 	},
-	"pnpm": {
-		"overrides": {
-			"basic-ftp": "5.2.2"
-		}
-	},
 	"packageManager": "pnpm@10.33.0",
 	"simple-git-hooks": {
 		"pre-commit": "pnpm prek run --all-files --config='.github/.pre-commit.yml'"
