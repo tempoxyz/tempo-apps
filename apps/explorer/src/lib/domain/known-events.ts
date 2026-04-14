@@ -227,6 +227,10 @@ const KNOWN_ZONES: ReadonlyMap<Address.Address, { name: string }> = new Map([
 		Address.from('0x7069DeC4E64Fd07334A0933eDe836C17259c9B23'),
 		{ name: 'Zone A' },
 	],
+	[
+		Address.from('0x3F5296303400B56271b476F5A0B9cBF74350D6Ac'),
+		{ name: 'Zone B' },
+	],
 ])
 
 const ZONE_PORTAL_EVENT_NAMES = new Set([
