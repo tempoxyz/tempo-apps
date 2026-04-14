@@ -80,17 +80,12 @@ catalog:
   wrangler: 4.79.0
   zod: ^4.3.6
 
-overrides:
-  basic-ftp: 5.2.2
-
-patchedDependencies:
-  '@cloudflare/vite-plugin@1.30.3': patches/@cloudflare__vite-plugin@1.30.3.patch
-
 catalogMode: strict
 
 enablePrePostScripts: true
 
 ignoredBuiltDependencies:
+  - '@sentry/cli'
   - bufferutil
   - cbor-extract
   - cpu-features
@@ -98,18 +93,6 @@ ignoredBuiltDependencies:
   - sharp
   - ssh2
   - vue-demi
-nodeOptions: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
-onlyBuiltDependencies:
-  - '@ast-grep/cli'
-  - '@j178/prek'
-  - esbuild
-  - simple-git-hooks
-  - utf-8-validate
-  - workerd
-
-shellEmulator: true
-
-workspaceConcurrency: -1
 
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
@@ -119,4 +102,23 @@ minimumReleaseAgeExclude:
   - '@wagmi/core'
   - '@cloudflare/containers'
 
+nodeOptions: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
+onlyBuiltDependencies:
+  - '@ast-grep/cli'
+  - '@j178/prek'
+  - esbuild
+  - simple-git-hooks
+  - utf-8-validate
+  - workerd
+
+overrides:
+  basic-ftp: 5.2.2
+
+patchedDependencies:
+  '@cloudflare/vite-plugin@1.30.3': patches/@cloudflare__vite-plugin@1.30.3.patch
+
+shellEmulator: true
+
 strictDepBuilds: true
+
+workspaceConcurrency: -1

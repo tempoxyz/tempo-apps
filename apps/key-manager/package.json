@@ -8,7 +8,7 @@
 		"dev": "wrangler dev",
 		"deploy": "wrangler deploy",
 		"postinstall": "pnpm gen:types",
-		"gen:types": "wrangler types"
+		"gen:types": "wrangler types --env-interface='CloudflareBindings'"
 	},
 	"dependencies": {
 		"tempo.ts": "catalog:"
