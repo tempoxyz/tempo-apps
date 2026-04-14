@@ -1,12 +1,12 @@
 import { http, createConfig } from 'wagmi'
-import { tempoLocalnet } from 'viem/chains'
+import { tempoDevnet } from 'viem/chains'
 
 export const wagmiConfig = createConfig({
 	multiInjectedProviderDiscovery: true,
-	chains: [tempoLocalnet],
+	chains: [tempoDevnet],
 	connectors: [],
 	transports: {
-		[tempoLocalnet.id]: http('/rpc'),
+		[tempoDevnet.id]: http(tempoDevnet.rpcUrls.default.http[0]),
 	},
 })
 

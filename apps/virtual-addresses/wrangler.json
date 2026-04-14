@@ -11,6 +11,7 @@
 		"binding": "ASSETS"
 	},
 	"vars": {
-		"EXPLORER_URL": "http://localhost:3000"
+		"EXPLORER_URL": "https://explore.devnet.tempo.xyz",
+		"RPC_URL": "https://rpc.devnet.tempoxyz.dev"
 	}
 }

@@ -10,30 +10,8 @@ Interactive demo for [TIP-1022](https://github.com/tempoxyz/tempo/pull/3286) vir
 
 - [Node.js](https://nodejs.org/) ≥ 24
 - [pnpm](https://pnpm.io/) ≥ 10
-- [Rust](https://rustup.rs/) toolchain (for building the Tempo node)
-- [just](https://github.com/casey/just) (`brew install just`)
 
-## 1. Start a local Tempo node
-
-The demo requires a local Tempo node with TIP-1022 (T3 hardfork) enabled. Clone the tempo repo and checkout the TIP-1022 branch:
-
-```bash
-cd /path/to/tempo
-git fetch origin pull/3286/head:tip-1022
-git checkout tip-1022
-```
-
-Start the node:
-
-```bash
-cd scripts
-rm -rf data logs
-just tempo-dev-up
-```
-
-The node starts at `http://localhost:8545` (chain ID 1337) with anvil test accounts pre-funded.
-
-## 2. Install dependencies
+## 1. Install dependencies
 
 From the monorepo root:
 
@@ -41,19 +19,19 @@ From the monorepo root:
 pnpm install
 ```
 
-## 3. Configure environment
+## 2. Configure environment
 
-The `.dev.vars` file should already exist with anvil test keys:
+Create a `.dev.vars` file with funded devnet account keys:
 
 ```
-EXCHANGE_PRIVATE_KEY=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
-SENDER_PRIVATE_KEY=0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
-RPC_URL=http://localhost:8545
+EXCHANGE_PRIVATE_KEY=0x...
+SENDER_PRIVATE_KEY=0x...
+RPC_URL=https://rpc.devnet.tempoxyz.dev
 ```
 
-These are the standard anvil accounts 0 and 1 — safe for local development only.
+The private keys must correspond to accounts funded with PathUSD on Tempo Devnet. Set these as Cloudflare Worker secrets for production, or use org-level secrets.
 
-## 4. Run the app
+## 3. Run the app
 
 ```bash
 pnpm --filter virtual-addresses dev
@@ -88,10 +66,10 @@ src/
 │   └── walkthrough-store.ts         # Zustand state machine with speed control
 └── lib/
     ├── abi.ts                       # Contract ABIs + addresses
-    ├── demo-client.ts               # Client-side viem RPC calls for walkthrough
+    ├── demo-client.ts               # Fetch wrapper for server API (walkthrough)
     ├── virtual-address.ts           # Address building/decoding utilities
     ├── walkthrough-types.ts         # Demo state types
-    ├── wagmi.ts                     # Wagmi config (tempoLocalnet)
+    ├── wagmi.ts                     # Wagmi config (tempoDevnet)
     ├── miner.worker.ts              # WASM keccak256 mining (hash-wasm)
     ├── miner.pool.ts                # Web Worker pool manager
     ├── miner.protocol.ts            # Worker message protocol
@@ -102,13 +80,13 @@ src/
 ## How the walkthrough works
 
 1. **Fund** — Pre-funds exchange and sender accounts with PathUSD via `tempo_fundAddress` + `Actions.token.mint`
-2. **Register** — Calls `registerVirtualMaster(salt)` with a pre-mined salt (hardcoded for anvil account 0)
+2. **Register** — Calls `registerVirtualMaster(salt)` with a pre-mined salt
 3. **Derive** — Builds a virtual address offline: `[masterId][FDFDFD...FD magic][userTag]`
 4. **Transfer** — Sender sends 100 PathUSD to the virtual address
 5. **Resolve** — TIP-20 precompile detects magic bytes, looks up masterId → master address
 6. **Forward** — Tokens credited to master; two Transfer events emitted
 
-All RPC calls go through vite's `/rpc` proxy to bypass CORS (`localhost:3002/rpc` → `localhost:8545`).
+All walkthrough RPC calls are handled server-side via the Hono API routes — the client calls `/api/demo/*` endpoints.
 
 ## Key addresses
 
@@ -116,8 +94,6 @@ All RPC calls go through vite's `/rpc` proxy to bypass CORS (`localhost:3002/rpc
 |----------|---------|
 | PathUSD (TIP-20) | `0x20C0000000000000000000000000000000000000` |
 | Virtual Registry | `0xfDC0000000000000000000000000000000000000` |
-| Exchange (anvil 0) | `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266` |
-| Sender (anvil 1) | `0x70997970C51812dc3A010C7d01b50e0d17dc79C8` |
 
 ## Virtual address format
 

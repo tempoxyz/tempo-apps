@@ -5,7 +5,11 @@ import { IntroView } from '#comps/intro-view'
 import { RegistryView } from '#comps/registry-view'
 import { WalkthroughDemo } from '#comps/walkthrough/walkthrough-demo'
 
-const TABS: ReadonlySet<Header.Tab> = new Set(['intro', 'registry', 'walkthrough'])
+const TABS: ReadonlySet<Header.Tab> = new Set([
+	'intro',
+	'registry',
+	'walkthrough',
+])
 
 function parseHash(): Header.Tab {
 	const raw = window.location.hash.replace('#', '')

@@ -92,7 +92,7 @@ export function StepRegister(props: StepRegister.Props): React.JSX.Element {
 					<div>
 						<div className="text-label mb-1">Transaction</div>
 						<a
-							href={`https://explore.moderato.tempo.xyz/tx/${txHash}`}
+							href={`https://explore.devnet.tempo.xyz/tx/${txHash}`}
 							target="_blank"
 							rel="noopener noreferrer"
 							className="font-mono text-xs text-accent hover:text-accent-hover break-all"

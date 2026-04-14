@@ -61,7 +61,7 @@ export function StepMine(props: StepMine.Props): React.JSX.Element {
 					: 'Accounts already funded',
 			)
 		} catch {
-			setFundResult('Fund request failed — is the local node running?')
+			setFundResult('Fund request failed — is the devnet reachable?')
 		}
 		setFunding(false)
 	}
@@ -114,7 +114,7 @@ export function StepMine(props: StepMine.Props): React.JSX.Element {
 					disabled={funding}
 					className="w-full py-2 rounded-lg text-sm text-text-secondary bg-surface-2 border border-border hover:border-border-active transition-colors disabled:opacity-50"
 				>
-					{funding ? 'Funding…' : 'Fund with PathUSD (localnet)'}
+					{funding ? 'Funding…' : 'Fund with PathUSD (devnet)'}
 				</button>
 			)}
 

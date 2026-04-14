@@ -12,9 +12,9 @@ export function IntroView(): React.JSX.Element {
 					TIP-1022: Virtual Addresses
 				</h1>
 				<p className="text-sm text-text-secondary leading-relaxed max-w-2xl">
-					Precompile-native virtual addresses that auto-forward TIP-20
-					deposits to a registered master wallet, eliminating sweep
-					transactions entirely for exchanges, ramps, and payment processors.
+					Precompile-native virtual addresses that auto-forward TIP-20 deposits
+					to a registered master wallet, eliminating sweep transactions entirely
+					for exchanges, ramps, and payment processors.
 				</p>
 			</section>
 
@@ -71,17 +71,16 @@ export function IntroView(): React.JSX.Element {
 				<Card title="How It Works">
 					<ol className="grid grid-cols-1 lg:grid-cols-4 gap-4">
 						<Step n={1} title="Register">
-							Master calls{' '}
-							<Code>registerVirtualMaster(salt)</Code>{' '}
-							on the registry precompile. The salt must satisfy a 32-bit
-							proof-of-work. One-time on-chain call.
+							Master calls <Code>registerVirtualMaster(salt)</Code> on the
+							registry precompile. The salt must satisfy a 32-bit proof-of-work.
+							One-time on-chain call.
 						</Step>
 						<Step n={2} title="Derive">
 							Operator concatenates{' '}
 							<span className="text-master-id">masterId</span> +{' '}
 							<span className="text-virtual-magic">magic</span> +{' '}
-							<span className="text-user-tag">userTag</span> off-chain.
-							No transaction needed. Unlimited deposit addresses.
+							<span className="text-user-tag">userTag</span> off-chain. No
+							transaction needed. Unlimited deposit addresses.
 						</Step>
 						<Step n={3} title="Receive">
 							Sender transfers TIP-20 tokens to a virtual address. The
@@ -120,16 +119,16 @@ export function IntroView(): React.JSX.Element {
 							address and may be irrecoverable.
 						</Notice>
 						<Notice level="warn">
-							Wallets and explorers should display full addresses to
-							distinguish masterId and userTag.
+							Wallets and explorers should display full addresses to distinguish
+							masterId and userTag.
 						</Notice>
 						<Notice level="info">
-							Registrations are immutable. Use an upgradeable proxy or
-							multisig for key rotation.
+							Registrations are immutable. Use an upgradeable proxy or multisig
+							for key rotation.
 						</Notice>
 						<Notice level="info">
-							TIP-403 policies are evaluated on the resolved master, not
-							the virtual alias.
+							TIP-403 policies are evaluated on the resolved master, not the
+							virtual alias.
 						</Notice>
 					</div>
 				</Card>
@@ -146,7 +145,9 @@ function Card(props: {
 	children: React.ReactNode
 }): React.JSX.Element {
 	return (
-		<section className={`rounded-xl bg-bg border border-border p-5 space-y-3 ${props.className ?? ''}`}>
+		<section
+			className={`rounded-xl bg-bg border border-border p-5 space-y-3 ${props.className ?? ''}`}
+		>
 			<h2 className="text-label text-text-secondary">{props.title}</h2>
 			{props.children}
 		</section>
@@ -174,9 +175,7 @@ function FieldDesc(props: {
 }): React.JSX.Element {
 	return (
 		<div className="flex gap-2.5">
-			<span
-				className={`w-2 h-2 rounded-full ${props.color} shrink-0 mt-1.5`}
-			/>
+			<span className={`w-2 h-2 rounded-full ${props.color} shrink-0 mt-1.5`} />
 			<div>
 				<div>
 					<span className="text-text-primary font-medium">{props.name}</span>

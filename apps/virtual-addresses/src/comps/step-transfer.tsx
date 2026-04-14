@@ -152,7 +152,7 @@ export function StepTransfer(props: StepTransfer.Props): React.JSX.Element {
 						<span>✓</span> Transfer complete — tokens forwarded to master
 					</div>
 					<a
-						href={`https://explore.moderato.tempo.xyz/tx/${txHash}`}
+						href={`https://explore.devnet.tempo.xyz/tx/${txHash}`}
 						target="_blank"
 						rel="noopener noreferrer"
 						className="font-mono text-xs text-accent hover:text-accent-hover break-all"

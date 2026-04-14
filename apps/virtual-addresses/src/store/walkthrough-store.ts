@@ -13,7 +13,7 @@ import type {
 	WalkthroughData,
 } from '#lib/walkthrough-types'
 
-// Pre-mined salt for anvil account 0 (0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266)
+// Pre-mined salt for the demo exchange account
 const DEMO_SALT: Hex =
 	'0x45864ef08bed66119277f37508c74bf955512a70eef5f96000000000bcb326b6'
 

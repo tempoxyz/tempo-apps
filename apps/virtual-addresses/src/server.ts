@@ -11,7 +11,7 @@ import {
 	type Hex,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { tempoLocalnet } from 'viem/chains'
+import { tempoDevnet } from 'viem/chains'
 import { Actions, tempoActions } from 'viem/tempo'
 import {
 	virtualRegistryAbi,
@@ -35,9 +35,7 @@ type Env = {
 const app = new Hono<Env>()
 
 function getRpcUrl(c: { env: Env['Bindings'] }): string {
-	// In local dev, workerd can't reach localhost — use vite's /rpc proxy
-	// In production, use the configured RPC_URL
-	return c.env.RPC_URL || 'http://localhost:8545'
+	return c.env.RPC_URL || tempoDevnet.rpcUrls.default.http[0]
 }
 
 function requireKeys(c: { env: Env['Bindings'] }) {
@@ -65,7 +63,7 @@ app.post('/api/demo/register', async (c) => {
 
 	try {
 		const publicClient = createPublicClient({
-			chain: tempoLocalnet,
+			chain: tempoDevnet,
 			transport: http(rpcUrl),
 		})
 
@@ -100,7 +98,7 @@ app.post('/api/demo/register', async (c) => {
 
 		const walletClient = createWalletClient({
 			account: keys.exchange,
-			chain: tempoLocalnet,
+			chain: tempoDevnet,
 			transport: http(rpcUrl),
 		})
 
@@ -140,12 +138,12 @@ app.post('/api/demo/transfer', async (c) => {
 	try {
 		const walletClient = createWalletClient({
 			account: keys.sender,
-			chain: tempoLocalnet,
+			chain: tempoDevnet,
 			transport: http(rpcUrl),
 		})
 
 		const publicClient = createPublicClient({
-			chain: tempoLocalnet,
+			chain: tempoDevnet,
 			transport: http(rpcUrl),
 		})
 
@@ -199,7 +197,7 @@ app.get('/api/demo/balance', async (c) => {
 	const virtualAddress = c.req.query('virtualAddress') as Address | undefined
 
 	const publicClient = createPublicClient({
-		chain: tempoLocalnet,
+		chain: tempoDevnet,
 		transport: http(rpcUrl),
 	})
 
@@ -256,12 +254,12 @@ app.post('/api/fund', async (c) => {
 
 	const walletClient = createWalletClient({
 		account: keys.exchange,
-		chain: tempoLocalnet,
+		chain: tempoDevnet,
 		transport: http(rpcUrl),
 	}).extend(tempoActions())
 
 	const publicClient = createPublicClient({
-		chain: tempoLocalnet,
+		chain: tempoDevnet,
 		transport: http(rpcUrl),
 	}).extend(tempoActions())
 
