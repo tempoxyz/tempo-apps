@@ -1496,6 +1496,7 @@ export async function fetchAddressOgMeta(
 	txCount: number
 	createdTimestamp: number | undefined
 	lastActivityTimestamp: number | undefined
+	accountType: 'contract' | 'account' | undefined
 }> {
 	const aggregate = await fetchAddressTxAggregate(address, chainId)
 	let txCount = aggregate.count ?? 0
@@ -1524,5 +1525,12 @@ export async function fetchAddressOgMeta(
 		}
 	}
 
-	return { txCount, createdTimestamp, lastActivityTimestamp }
+	// Derive accountType from TIDX data when bytecode check is unavailable
+	const accountType = creation
+		? ('contract' as const)
+		: txCount > 0
+			? ('account' as const)
+			: undefined
+
+	return { txCount, createdTimestamp, lastActivityTimestamp, accountType }
 }

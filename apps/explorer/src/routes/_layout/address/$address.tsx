@@ -418,7 +418,11 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			}
 		}),
 	head: async ({ params, loaderData }) => {
-		const accountType = loaderData?.accountType ?? 'empty'
+		// Use ogMeta.accountType as fallback when bytecode check timed out
+		const accountType =
+			loaderData?.accountType !== 'empty'
+				? (loaderData?.accountType ?? 'empty')
+				: (loaderData?.ogMeta?.accountType ?? 'empty')
 		const isToken = loaderData?.isToken ?? false
 		const tokenMeta = loaderData?.tokenMetadata
 
