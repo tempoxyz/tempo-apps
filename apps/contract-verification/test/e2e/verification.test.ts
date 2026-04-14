@@ -70,7 +70,7 @@ describe('full verification flow', () => {
 					getCode: async () => counterFixture.onchainRuntimeBytecode,
 				}),
 				getContainer: () => ({
-					fetch: async (request: Request) => {
+					fetch: async (request) => {
 						const url = new URL(request.url)
 						if (request.method === 'POST' && url.pathname === '/compile') {
 							return Response.json(counterFixture.solcOutput, { status: 200 })
