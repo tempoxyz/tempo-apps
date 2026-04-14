@@ -418,11 +418,12 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			}
 		}),
 	head: async ({ params, loaderData }) => {
-		// Use ogMeta.accountType as fallback when bytecode check timed out
-		const accountType =
-			loaderData?.accountType !== 'empty'
-				? (loaderData?.accountType ?? 'empty')
-				: (loaderData?.ogMeta?.accountType ?? 'empty')
+		// Fallback to ogMeta.accountType only for contracts (receipts-proven)
+		// since 'empty' is the correct type for regular EOAs
+		let accountType = loaderData?.accountType ?? 'empty'
+		if (accountType === 'empty' && loaderData?.ogMeta?.accountType === 'contract') {
+			accountType = 'contract'
+		}
 		const isToken = loaderData?.isToken ?? false
 		const tokenMeta = loaderData?.tokenMetadata
 
