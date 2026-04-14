@@ -26,6 +26,9 @@ const eventSignatures = {
 	WithdrawalProcessed: toEventSelector(
 		'event WithdrawalProcessed(address indexed, address, uint128, bool)',
 	),
+	BounceBack: toEventSelector(
+		'event BounceBack(bytes32 indexed, address indexed, address, uint128)',
+	),
 } as const
 
 export function getEventName(log: Log): string | null {
@@ -40,6 +43,7 @@ export function getEventName(log: Log): string | null {
 		return 'EncryptedDepositMade'
 	if (topic0 === eventSignatures.WithdrawalProcessed.toLowerCase())
 		return 'WithdrawalProcessed'
+	if (topic0 === eventSignatures.BounceBack.toLowerCase()) return 'BounceBack'
 	return null
 }
 
@@ -101,7 +105,8 @@ export function groupRelatedEvents(
 			if (
 				secondEventName === 'DepositMade' ||
 				secondEventName === 'EncryptedDepositMade' ||
-				secondEventName === 'WithdrawalProcessed'
+				secondEventName === 'WithdrawalProcessed' ||
+				secondEventName === 'BounceBack'
 			) {
 				groups.push({
 					logs: [log, secondLog],

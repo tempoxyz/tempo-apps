@@ -47,6 +47,24 @@ const withdrawalProcessedAbi = [
 	},
 ] as const
 
+const bounceBackAbi = [
+	{
+		type: 'event',
+		name: 'BounceBack',
+		inputs: [
+			{
+				indexed: true,
+				name: 'newCurrentDepositQueueHash',
+				type: 'bytes32',
+			},
+			{ indexed: true, name: 'fallbackRecipient', type: 'address' },
+			{ indexed: false, name: 'token', type: 'address' },
+			{ indexed: false, name: 'amount', type: 'uint128' },
+		],
+		anonymous: false,
+	},
+] as const
+
 describe('groupRelatedEvents', () => {
 	it('groups Transfer + DepositMade into one tx event row', () => {
 		const hash = `0x${'3'.repeat(64)}` as const
@@ -170,5 +188,64 @@ describe('groupRelatedEvents', () => {
 		expect(grouped[0]?.logs).toHaveLength(2)
 		expect(grouped[0]?.startIndex).toBe(0)
 		expect(grouped[0]?.knownEvent).toBe(withdrawalEvent)
+	})
+
+	it('groups Transfer + BounceBack into one tx event row', () => {
+		const hash = `0x${'5'.repeat(64)}` as const
+		const amount = 500_000n
+		const logs = [
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: {
+							from: UNKNOWN_ZONE_PORTAL,
+							to: recipientAddress,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			),
+			mockLog(
+				{
+					address: UNKNOWN_ZONE_PORTAL,
+					topics: encodeEventTopics({
+						abi: bounceBackAbi,
+						eventName: 'BounceBack',
+						args: {
+							newCurrentDepositQueueHash: zeroHash,
+							fallbackRecipient: recipientAddress,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters(
+						[{ type: 'address' }, { type: 'uint128' }],
+						[userTokenAddress, amount],
+					),
+				},
+				hash,
+			),
+		]
+
+		const transferEvent = {
+			type: 'zone withdrawal',
+			parts: [{ type: 'action', value: 'Withdraw from Zone' }],
+		} as const
+		const bounceBackEvent = {
+			type: 'zone bounce back',
+			parts: [
+				{ type: 'action', value: 'Bounce Back from Zone' },
+				{ type: 'text', value: 'for recipient' },
+			],
+		} as const
+
+		const grouped = groupRelatedEvents(logs, [transferEvent, bounceBackEvent])
+
+		expect(grouped).toHaveLength(1)
+		expect(grouped[0]?.logs).toHaveLength(2)
+		expect(grouped[0]?.startIndex).toBe(0)
+		expect(grouped[0]?.knownEvent).toBe(bounceBackEvent)
 	})
 })
