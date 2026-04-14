@@ -455,8 +455,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				supply,
 			})
 		} else {
-			const txCount = 0
+			const txCount = loaderData?.transactionsData?.total ?? 0
 			let lastActive: string | undefined
+			let created: string | undefined
 			let holdings = '—'
 
 			if (loaderData?.balancesData?.balances) {
@@ -475,10 +476,18 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				}
 			}
 
-			const recentTx = loaderData?.transactionsData?.transactions?.at(0)
+			const transactions = loaderData?.transactionsData?.transactions
+			const recentTx = transactions?.at(0)
 			if (recentTx?.timestamp) {
 				lastActive = DateFormatter.formatTimestampForOg(
 					BigInt(recentTx.timestamp),
+				).date
+			}
+
+			const oldestTx = transactions?.at(-1)
+			if (oldestTx?.timestamp) {
+				created = DateFormatter.formatTimestampForOg(
+					BigInt(oldestTx.timestamp),
 				).date
 			}
 
@@ -493,6 +502,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				txCount,
 				accountType,
 				lastActive,
+				created,
 				contractName: loaderData?.contractInfo?.name,
 			})
 		}
