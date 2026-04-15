@@ -16,7 +16,9 @@ import { Route as ApiTip20RolesRouteImport } from './routes/api/tip20-roles'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
+import { Route as LayoutValidatorsRouteImport } from './routes/_layout/validators'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
+import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
 import { Route as ApiTokensCountRouteImport } from './routes/api/tokens/count'
@@ -75,9 +77,19 @@ const ApiCodeRoute = ApiCodeRouteImport.update({
   path: '/api/code',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LayoutValidatorsRoute = LayoutValidatorsRouteImport.update({
+  id: '/validators',
+  path: '/validators',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutTokensRoute = LayoutTokensRouteImport.update({
   id: '/tokens',
   path: '/tokens',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutFeeAmmRoute = LayoutFeeAmmRouteImport.update({
+  id: '/fee-amm',
+  path: '/fee-amm',
   getParentRoute: () => LayoutRoute,
 } as any)
 const LayoutBlocksRoute = LayoutBlocksRouteImport.update({
@@ -207,7 +219,9 @@ export interface FileRoutesByFullPath {
   '/': typeof LayoutIndexRoute
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
+  '/fee-amm': typeof LayoutFeeAmmRoute
   '/tokens': typeof LayoutTokensRoute
+  '/validators': typeof LayoutValidatorsRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
@@ -238,7 +252,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/blocks': typeof LayoutBlocksRoute
+  '/fee-amm': typeof LayoutFeeAmmRoute
   '/tokens': typeof LayoutTokensRoute
+  '/validators': typeof LayoutValidatorsRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
@@ -272,7 +288,9 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/search': typeof SearchRoute
   '/_layout/blocks': typeof LayoutBlocksRoute
+  '/_layout/fee-amm': typeof LayoutFeeAmmRoute
   '/_layout/tokens': typeof LayoutTokensRoute
+  '/_layout/validators': typeof LayoutValidatorsRoute
   '/api/code': typeof ApiCodeRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
@@ -307,7 +325,9 @@ export interface FileRouteTypes {
     | '/'
     | '/search'
     | '/blocks'
+    | '/fee-amm'
     | '/tokens'
+    | '/validators'
     | '/api/code'
     | '/api/health'
     | '/api/search'
@@ -338,7 +358,9 @@ export interface FileRouteTypes {
   to:
     | '/search'
     | '/blocks'
+    | '/fee-amm'
     | '/tokens'
+    | '/validators'
     | '/api/code'
     | '/api/health'
     | '/api/search'
@@ -371,7 +393,9 @@ export interface FileRouteTypes {
     | '/_layout'
     | '/search'
     | '/_layout/blocks'
+    | '/_layout/fee-amm'
     | '/_layout/tokens'
+    | '/_layout/validators'
     | '/api/code'
     | '/api/health'
     | '/api/search'
@@ -472,11 +496,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCodeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_layout/validators': {
+      id: '/_layout/validators'
+      path: '/validators'
+      fullPath: '/validators'
+      preLoaderRoute: typeof LayoutValidatorsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/tokens': {
       id: '/_layout/tokens'
       path: '/tokens'
       fullPath: '/tokens'
       preLoaderRoute: typeof LayoutTokensRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/fee-amm': {
+      id: '/_layout/fee-amm'
+      path: '/fee-amm'
+      fullPath: '/fee-amm'
+      preLoaderRoute: typeof LayoutFeeAmmRouteImport
       parentRoute: typeof LayoutRoute
     }
     '/_layout/blocks': {
@@ -645,7 +683,9 @@ declare module '@tanstack/react-router' {
 
 interface LayoutRouteChildren {
   LayoutBlocksRoute: typeof LayoutBlocksRoute
+  LayoutFeeAmmRoute: typeof LayoutFeeAmmRoute
   LayoutTokensRoute: typeof LayoutTokensRoute
+  LayoutValidatorsRoute: typeof LayoutValidatorsRoute
   LayoutIndexRoute: typeof LayoutIndexRoute
   LayoutAddressAddressRoute: typeof LayoutAddressAddressRoute
   LayoutBlockIdRoute: typeof LayoutBlockIdRoute
@@ -662,7 +702,9 @@ interface LayoutRouteChildren {
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBlocksRoute: LayoutBlocksRoute,
+  LayoutFeeAmmRoute: LayoutFeeAmmRoute,
   LayoutTokensRoute: LayoutTokensRoute,
+  LayoutValidatorsRoute: LayoutValidatorsRoute,
   LayoutIndexRoute: LayoutIndexRoute,
   LayoutAddressAddressRoute: LayoutAddressAddressRoute,
   LayoutBlockIdRoute: LayoutBlockIdRoute,
