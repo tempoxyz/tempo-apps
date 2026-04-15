@@ -124,13 +124,11 @@ vi.mock('#lib/server/tempo-queries-provider', () => ({
 }))
 
 import {
-	clearFeeAmmPoolRowsCache,
 	fetchAddressDirectTxCount,
 	fetchAddressDirectTxHashes,
 	fetchAddressHistoryDistinctCount,
 	fetchAddressHistoryTxDetailsByHashes,
 	fetchAddressDirectTxHistoryRows,
-	fetchFeeAmmPoolRows,
 	fetchAddressLogRowsByTxHashes,
 	fetchAddressReceiptRowsByHashes,
 	fetchAddressTransferActivity,
@@ -156,6 +154,10 @@ import {
 	fetchTransactionTimestamp,
 	fetchTxDataByHashes,
 } from '#lib/server/tempo-queries.ts'
+import {
+	clearFeeAmmPoolRowsCache,
+	fetchFeeAmmPoolRows,
+} from '#lib/server/fee-amm-pool-rows'
 
 describe('tempo-queries', () => {
 	beforeEach(() => {
@@ -603,6 +605,83 @@ describe('tempo-queries', () => {
 				],
 			}),
 		)
+	})
+
+	it('fetchFeeAmmPoolRows scans history in 1000 block chunks', async () => {
+		mockQueryBuilder.setResponses([
+			{ num: 2500n },
+			[
+				{
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					tx_hash: '0xaaa' as Hex.Hex,
+					block_timestamp: '100',
+					block_num: 900n,
+					log_idx: 1,
+				},
+			],
+			[
+				{
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					tx_hash: '0xbbb' as Hex.Hex,
+					block_timestamp: '150',
+					block_num: 1500n,
+					log_idx: 2,
+				},
+			],
+			[
+				{
+					userToken: '0x20c0000000000000000000000000000000000003',
+					validatorToken: '0x20c0000000000000000000000000000000000004',
+					tx_hash: '0xccc' as Hex.Hex,
+					block_timestamp: '200',
+					block_num: 2400n,
+					log_idx: 3,
+				},
+			],
+		])
+
+		await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
+			{
+				poolId: keccak256(
+					encodeAbiParameters(
+						[{ type: 'address' }, { type: 'address' }],
+						[
+							'0x20c0000000000000000000000000000000000001',
+							'0x20c0000000000000000000000000000000000002',
+						],
+					),
+				),
+				userToken: '0x20c0000000000000000000000000000000000001',
+				validatorToken: '0x20c0000000000000000000000000000000000002',
+				createdAt: 100,
+				createdTxHash: '0xaaa',
+				latestMintAt: 150,
+				latestMintTxHash: '0xbbb',
+				mintCount: 2,
+			},
+			{
+				poolId: keccak256(
+					encodeAbiParameters(
+						[{ type: 'address' }, { type: 'address' }],
+						[
+							'0x20c0000000000000000000000000000000000003',
+							'0x20c0000000000000000000000000000000000004',
+						],
+					),
+				),
+				userToken: '0x20c0000000000000000000000000000000000003',
+				validatorToken: '0x20c0000000000000000000000000000000000004',
+				createdAt: 200,
+				createdTxHash: '0xccc',
+				latestMintAt: 200,
+				latestMintTxHash: '0xccc',
+				mintCount: 1,
+			},
+		])
+
+		expect(mockQueryBuilder.getExecuteCallCount()).toBe(4)
 	})
 
 	it('fetchFeeAmmPoolRows retries smaller ranges when TIDX rejects a broad scan', async () => {

@@ -5,11 +5,18 @@ import type { Config } from 'wagmi'
 import { getChainId, readContracts } from 'wagmi/actions'
 import { Actions } from 'wagmi/tempo'
 import { hasIndexSupply } from '#lib/env'
-import {
-	type FeeAmmPoolRow,
-	fetchFeeAmmPoolRows,
-} from '#lib/server/tempo-queries'
 import { getWagmiConfig } from '#wagmi.config'
+
+export type FeeAmmPoolRow = {
+	poolId: `0x${string}`
+	userToken: Address.Address
+	validatorToken: Address.Address
+	createdAt: number | null
+	createdTxHash: `0x${string}`
+	latestMintAt: number | null
+	latestMintTxHash: `0x${string}`
+	mintCount: number
+}
 
 export type FeeAmmPool = FeeAmmPoolRow & {
 	reserveUserToken: bigint
@@ -86,6 +93,9 @@ export const fetchFeeAmmPools = createServerFn({ method: 'POST' }).handler(
 		try {
 			const config = getWagmiConfig()
 			const chainId = getChainId(config)
+			const { fetchFeeAmmPoolRows } = await import(
+				'#lib/server/fee-amm-pool-rows'
+			)
 			const pools = await fetchFeeAmmPoolRows(chainId)
 
 			if (pools.length === 0) return []
