@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
-import { env } from 'cloudflare:workers'
+import { env } from 'cloudflare:test'
 import { runDurableObjectAlarm, runInDurableObject } from 'cloudflare:test'
 import { Hex } from 'ox'
 import { describe, expect, it } from 'vitest'

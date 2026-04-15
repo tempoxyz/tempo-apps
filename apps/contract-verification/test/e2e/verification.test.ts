@@ -2,7 +2,7 @@ import * as z from 'zod/mini'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { describe, expect, it } from 'vitest'
-import { env, exports } from 'cloudflare:workers'
+import { env, SELF, runInDurableObject } from 'cloudflare:test'
 
 import * as DB from '#database/schema.ts'
 import { runVerificationJob } from '#route.verify.ts'
@@ -33,15 +33,13 @@ const getFirst = <T>(items: T[], label: string) => {
 
 describe('full verification flow', () => {
 	async function createVerificationJob(): Promise<string> {
-		const verifyResponse = await exports.default.fetch(
-			new Request(
-				`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
-				{
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(verifyRequestData),
-				},
-			),
+		const verifyResponse = await SELF.fetch(
+			`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(verifyRequestData),
+			},
 		)
 
 		if (verifyResponse.status !== 202) {
@@ -81,8 +79,8 @@ describe('full verification flow', () => {
 			},
 		)
 
-		const statusResponse = await exports.default.fetch(
-			new Request(`https://test.local/v2/verify/${verificationId}`),
+		const statusResponse = await SELF.fetch(
+			`https://test.local/v2/verify/${verificationId}`,
 		)
 		expect(statusResponse.status).toBe(200)
 
@@ -99,8 +97,8 @@ describe('full verification flow', () => {
 	it('verifies a simple contract and persists to database', async () => {
 		const verificationId = await runSuccessfulVerification()
 
-		const statusResponse = await exports.default.fetch(
-			new Request(`https://test.local/v2/verify/${verificationId}`),
+		const statusResponse = await SELF.fetch(
+			`https://test.local/v2/verify/${verificationId}`,
 		)
 		expect(statusResponse.status).toBe(200)
 		const status = z.parse(
@@ -109,10 +107,8 @@ describe('full verification flow', () => {
 		)
 		expect(status.error).toBeUndefined()
 
-		const lookupResponse = await exports.default.fetch(
-			new Request(
-				`https://test.local/v2/contract/${counterFixture.chainId}/${counterFixture.address}?fields=sources,signatures`,
-			),
+		const lookupResponse = await SELF.fetch(
+			`https://test.local/v2/contract/${counterFixture.chainId}/${counterFixture.address}?fields=sources,signatures`,
 		)
 
 		expect(lookupResponse.status).toBe(200)
@@ -199,15 +195,13 @@ describe('full verification flow', () => {
 	it('returns 409 for already verified contract', async () => {
 		await runSuccessfulVerification()
 
-		const secondResponse = await exports.default.fetch(
-			new Request(
-				`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
-				{
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(verifyRequestData),
-				},
-			),
+		const secondResponse = await SELF.fetch(
+			`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(verifyRequestData),
+			},
 		)
 
 		expect(secondResponse.status).toBe(409)
@@ -215,5 +209,66 @@ describe('full verification flow', () => {
 		expect(z.parse(ErrorResponseSchema, bodyJson).customCode).toBe(
 			'already_verified',
 		)
+	})
+
+	it('stores the job in the DO and completes via the DO alarm handler', async () => {
+		const verificationId = await createVerificationJob()
+		const stub = env.VERIFICATION_JOB_RUNNER.get(
+			env.VERIFICATION_JOB_RUNNER.idFromName(verificationId),
+		)
+
+		const storedState = await runInDurableObject(
+			stub,
+			async (_instance, state) => {
+				return {
+					job: await state.storage.get('job'),
+					alarm: await state.storage.getAlarm(),
+				}
+			},
+		)
+		expect(storedState.job).toBeDefined()
+
+		await runInDurableObject(stub, async (instance, state) => {
+			const job = await state.storage.get<{
+				jobId: string
+				chainId: number
+				address: string
+				stdJsonInput: unknown
+				compilerVersion: string
+				contractIdentifier: string
+			}>('job')
+			if (!job) {
+				return
+			}
+
+			await state.storage.put('job', {
+				...job,
+				chainId: 999_999,
+			})
+			await instance.alarm()
+		})
+
+		const finalState = await runInDurableObject(
+			stub,
+			async (_instance, state) => {
+				return {
+					job: await state.storage.get('job'),
+					alarm: await state.storage.getAlarm(),
+				}
+			},
+		)
+		expect(finalState.job).toBeUndefined()
+		expect(finalState.alarm).toBeNull()
+
+		const statusResponse = await SELF.fetch(
+			`https://test.local/v2/verify/${verificationId}`,
+		)
+		expect(statusResponse.status).toBe(200)
+		const status = z.parse(
+			VerificationStatusSchema,
+			await statusResponse.json(),
+		)
+		expect(status.isJobCompleted).toBe(true)
+		expect(status.error?.customCode).toBe('internal_error')
 	})
 })

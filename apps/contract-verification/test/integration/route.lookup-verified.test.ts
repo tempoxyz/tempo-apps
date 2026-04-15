@@ -1,6 +1,6 @@
 import { Hash, Hex } from 'ox'
 import { eq } from 'drizzle-orm'
-import { env } from 'cloudflare:workers'
+import { env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
 import { describe, expect, it } from 'vitest'
 

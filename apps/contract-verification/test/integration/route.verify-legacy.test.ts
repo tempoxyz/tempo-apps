@@ -1,5 +1,5 @@
 import * as CBOR from 'cbor-x'
-import { env } from 'cloudflare:workers'
+import { env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
 import { Hono } from 'hono'
 import { Hash, Hex } from 'ox'
