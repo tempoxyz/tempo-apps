@@ -421,7 +421,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		// Fallback to ogMeta.accountType only for contracts (receipts-proven)
 		// since 'empty' is the correct type for regular EOAs
 		let accountType = loaderData?.accountType ?? 'empty'
-		if (accountType === 'empty' && loaderData?.ogMeta?.accountType === 'contract') {
+		if (
+			accountType === 'empty' &&
+			loaderData?.ogMeta?.accountType === 'contract'
+		) {
 			accountType = 'contract'
 		}
 		const isToken = loaderData?.isToken ?? false
