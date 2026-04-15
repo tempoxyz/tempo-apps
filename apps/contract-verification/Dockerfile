@@ -20,7 +20,9 @@ RUN bun build \
 
 # Pull x86_64 libs for cross-arch QEMU execution of amd64 solc/vyper compilers
 FROM --platform=linux/amd64 debian:trixie-slim AS amd64-libs
-RUN apt-get update && apt-get install -y --no-install-recommends zlib1g && rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends zlib1g \
+    && rm -rf /var/lib/apt/lists/*
 
 FROM gcr.io/distroless/base
 

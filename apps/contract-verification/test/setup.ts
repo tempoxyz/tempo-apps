@@ -25,7 +25,5 @@ beforeEach(async () => {
 	await applyD1Migrations(env.CONTRACTS_DB, env.TEST_MIGRATIONS)
 
 	const db = drizzle(env.CONTRACTS_DB)
-	for (const table of tables) {
-		await db.delete(table)
-	}
+	for (const table of tables) await db.delete(table)
 })

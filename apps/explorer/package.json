@@ -47,6 +47,7 @@
 		"@tanstack/react-start": "catalog:",
 		"@tanstack/router-plugin": "catalog:",
 		"@tempo/rpc-utils": "workspace:*",
+		"@wagmi/core": "catalog:",
 		"abitype": "catalog:",
 		"animejs": "catalog:",
 		"cva": "catalog:",
