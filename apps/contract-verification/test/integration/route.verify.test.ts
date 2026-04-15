@@ -40,7 +40,7 @@ contract Token {
 		contractIdentifier: 'contracts/Token.sol:Token',
 	}
 
-	it('returns 202 and a verificationId UUID for a fully valid request', async () => {
+	it('returns 202 and inserts a verification job row for a fully valid request', async () => {
 		const response = await app.request(
 			`/v2/verify/${validChainId}/${validAddress}`,
 			{
@@ -57,6 +57,25 @@ contract Token {
 			await response.json(),
 		)
 		expect(body.verificationId).toBeTruthy()
+
+		const db = drizzle(env.CONTRACTS_DB)
+		const [job] = await db
+			.select()
+			.from(DB.verificationJobsTable)
+			.where(eq(DB.verificationJobsTable.id, body.verificationId))
+			.limit(1)
+
+		expect(job).toBeDefined()
+		if (!job) throw new Error('expected verification job row')
+		expect(job.chainId).toBe(validChainId)
+		expect(new Uint8Array(job.contractAddress as ArrayBuffer)).toEqual(
+			Hex.toBytes(validAddress),
+		)
+		expect(job.verificationEndpoint).toBe('/v2/verify')
+		expect(job.startedAt).not.toBeNull()
+		expect(job.completedAt).toBeNull()
+		expect(job.errorCode).toBeNull()
+		expect(job.verifiedContractId).toBeNull()
 	})
 
 	it('returns 400 for invalid chain ID', async () => {

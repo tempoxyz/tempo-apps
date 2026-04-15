@@ -1111,4 +1111,9 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 	}
 })
 
-export { lookupRoute, lookupAllChainContractsRoute }
+export {
+	lookupRoute,
+	lookupAllChainContractsRoute,
+	formatAbiParameterType,
+	buildSignaturesPayload,
+}
