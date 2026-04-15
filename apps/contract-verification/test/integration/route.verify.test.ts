@@ -9,6 +9,7 @@ import * as DB from '#database/schema.ts'
 import { app } from '#index.tsx'
 import { chainIds } from '#wagmi.config.ts'
 import { counterFixture } from '../fixtures/counter.fixture.ts'
+import { vyperFixture } from '../fixtures/vyper.fixture.ts'
 
 describe('POST /v2/verify/:chainId/:address', () => {
 	const validChainId = chainIds[0]
@@ -371,6 +372,78 @@ contract Token {
 		)
 
 		expect(response.status).toBe(400)
+	})
+})
+
+describe('POST /v2/verify/:chainId/:address – Vyper payload', () => {
+	const validChainId = chainIds[0]
+	if (!validChainId) {
+		throw new Error('expected at least one configured chain ID')
+	}
+
+	const vyperAddress = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+	const vyperBody = {
+		stdJsonInput: vyperFixture.stdJsonInput,
+		compilerVersion: vyperFixture.compilerVersion,
+		contractIdentifier: vyperFixture.contractIdentifier,
+	}
+
+	it('returns 202 and inserts a job row for a valid Vyper standard-json request', async () => {
+		const response = await app.request(
+			`/v2/verify/${validChainId}/${vyperAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(vyperBody),
+			},
+			env,
+		)
+
+		expect(response.status).toBe(202)
+		const body = z.parse(
+			z.object({ verificationId: z.uuidv4() }),
+			await response.json(),
+		)
+		expect(body.verificationId).toBeTruthy()
+
+		const db = drizzle(env.CONTRACTS_DB)
+		const [job] = await db
+			.select()
+			.from(DB.verificationJobsTable)
+			.where(eq(DB.verificationJobsTable.id, body.verificationId))
+			.limit(1)
+
+		expect(job).toBeDefined()
+		if (!job) throw new Error('expected verification job row')
+		expect(job.chainId).toBe(validChainId)
+		expect(new Uint8Array(job.contractAddress as ArrayBuffer)).toEqual(
+			Hex.toBytes(vyperAddress),
+		)
+		expect(job.verificationEndpoint).toBe('/v2/verify')
+		expect(job.startedAt).not.toBeNull()
+		expect(job.completedAt).toBeNull()
+	})
+
+	it('returns 400 for Vyper payload with invalid contractIdentifier (no colon)', async () => {
+		const response = await app.request(
+			`/v2/verify/${validChainId}/${vyperAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...vyperBody,
+					contractIdentifier: 'vyper_contract_no_colon',
+				}),
+			},
+			env,
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_contract_identifier')
 	})
 })
 
