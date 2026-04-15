@@ -1,10 +1,22 @@
 import * as z from 'zod/mini'
+import { Hex } from 'ox'
+import { eq } from 'drizzle-orm'
 import { env } from 'cloudflare:workers'
+import { drizzle } from 'drizzle-orm/d1'
 import { describe, it, expect } from 'vitest'
 
+import * as DB from '#database/schema.ts'
 import { app } from '#index.tsx'
+import { chainIds } from '#wagmi.config.ts'
+import { counterFixture } from '../fixtures/counter.fixture.ts'
 
 describe('POST /v2/verify/:chainId/:address', () => {
+	const validChainId = chainIds[0]
+	if (!validChainId) {
+		throw new Error('expected at least one configured chain ID')
+	}
+
+	const validAddress = '0x1234567890123456789012345678901234567890'
 	const validBody = {
 		stdJsonInput: {
 			language: 'Solidity',
@@ -28,6 +40,25 @@ contract Token {
 		contractIdentifier: 'contracts/Token.sol:Token',
 	}
 
+	it('returns 202 and a verificationId UUID for a fully valid request', async () => {
+		const response = await app.request(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(validBody),
+			},
+			env,
+		)
+
+		expect(response.status).toBe(202)
+		const body = z.parse(
+			z.object({ verificationId: z.uuidv4() }),
+			await response.json(),
+		)
+		expect(body.verificationId).toBeTruthy()
+	})
+
 	it('returns 400 for invalid chain ID', async () => {
 		const response = await app.request(
 			'/v2/verify/999999/0x1234567890123456789012345678901234567890',
@@ -44,7 +75,7 @@ contract Token {
 
 	it('returns 400 for invalid address format', async () => {
 		const response = await app.request(
-			'/v2/verify/1/invalid-address',
+			`/v2/verify/${validChainId}/invalid-address`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -58,7 +89,7 @@ contract Token {
 
 	it('returns 400 for invalid JSON body', async () => {
 		const response = await app.request(
-			'/v2/verify/1/0x1234567890123456789012345678901234567890',
+			`/v2/verify/${validChainId}/${validAddress}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -72,7 +103,7 @@ contract Token {
 
 	it('returns 400 for missing required fields', async () => {
 		const response = await app.request(
-			'/v2/verify/1/0x1234567890123456789012345678901234567890',
+			`/v2/verify/${validChainId}/${validAddress}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -80,6 +111,242 @@ contract Token {
 					compilerVersion: '0.8.20',
 					contractIdentifier: 'Token',
 				}),
+			},
+			env,
+		)
+
+		expect(response.status).toBe(400)
+	})
+
+	it('returns 400 with invalid_contract_identifier when contractIdentifier has no colon', async () => {
+		const response = await app.request(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					...validBody,
+					contractIdentifier: 'TokenWithoutColon',
+				}),
+			},
+			env,
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_contract_identifier')
+	})
+
+	it('returns 409 when contract is already verified', async () => {
+		const db = drizzle(env.CONTRACTS_DB)
+		const addressBytes = Hex.toBytes(validAddress)
+		const runtimeHash = new Uint8Array(32).fill(0xaa)
+		const creationHash = new Uint8Array(32).fill(0xbb)
+		const runtimeKeccak = new Uint8Array(32).fill(0xcc)
+		const creationKeccak = new Uint8Array(32).fill(0xdd)
+
+		await db.insert(DB.codeTable).values([
+			{
+				codeHash: runtimeHash,
+				codeHashKeccak: runtimeKeccak,
+				code: new Uint8Array([1]),
+			},
+			{
+				codeHash: creationHash,
+				codeHashKeccak: creationKeccak,
+				code: new Uint8Array([2]),
+			},
+		])
+
+		const contractId = crypto.randomUUID()
+		await db.insert(DB.contractsTable).values({
+			id: contractId,
+			creationCodeHash: creationHash,
+			runtimeCodeHash: runtimeHash,
+		})
+
+		const deploymentId = crypto.randomUUID()
+		await db.insert(DB.contractDeploymentsTable).values({
+			id: deploymentId,
+			chainId: validChainId,
+			address: addressBytes,
+			contractId,
+		})
+
+		const compilationId = crypto.randomUUID()
+		await db.insert(DB.compiledContractsTable).values({
+			id: compilationId,
+			compiler: 'solc',
+			version: validBody.compilerVersion,
+			language: validBody.stdJsonInput.language,
+			name: 'Token',
+			fullyQualifiedName: validBody.contractIdentifier,
+			compilerSettings: '{}',
+			compilationArtifacts: '{}',
+			creationCodeHash: creationHash,
+			creationCodeArtifacts: '{}',
+			runtimeCodeHash: runtimeHash,
+			runtimeCodeArtifacts: '{}',
+		})
+
+		await db.insert(DB.verifiedContractsTable).values({
+			deploymentId,
+			compilationId,
+			creationMatch: false,
+			runtimeMatch: true,
+			runtimeMetadataMatch: true,
+		})
+
+		const response = await app.request(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(validBody),
+			},
+			env,
+		)
+
+		expect(response.status).toBe(409)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('already_verified')
+	})
+
+	it('returns 429 for a duplicate in-flight request', async () => {
+		const db = drizzle(env.CONTRACTS_DB)
+		await db.insert(DB.verificationJobsTable).values({
+			id: crypto.randomUUID(),
+			chainId: validChainId,
+			contractAddress: Hex.toBytes(validAddress),
+			verificationEndpoint: '/v2/verify',
+		})
+
+		const response = await app.request(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(validBody),
+			},
+			env,
+		)
+
+		expect(response.status).toBe(429)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('duplicate_verification_request')
+	})
+
+	it('expires a stale pending job and replaces it with a new verification request', async () => {
+		const db = drizzle(env.CONTRACTS_DB)
+		const staleJobId = crypto.randomUUID()
+		await db.insert(DB.verificationJobsTable).values({
+			id: staleJobId,
+			chainId: validChainId,
+			contractAddress: Hex.toBytes(validAddress),
+			verificationEndpoint: '/v2/verify',
+			startedAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
+		})
+
+		const response = await app.request(
+			`/v2/verify/${validChainId}/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(validBody),
+			},
+			env,
+		)
+
+		expect(response.status).toBe(202)
+		const body = z.parse(
+			z.object({ verificationId: z.uuidv4() }),
+			await response.json(),
+		)
+		expect(body.verificationId).not.toBe(staleJobId)
+
+		const [staleJob] = await db
+			.select({
+				completedAt: DB.verificationJobsTable.completedAt,
+				errorCode: DB.verificationJobsTable.errorCode,
+			})
+			.from(DB.verificationJobsTable)
+			.where(eq(DB.verificationJobsTable.id, staleJobId))
+			.limit(1)
+
+		expect(staleJob?.completedAt).not.toBeNull()
+		expect(staleJob?.errorCode).toBe('timeout')
+	})
+
+	it('returns 500 and removes the verification_jobs row when DO enqueue throws', async () => {
+		const mockEnv = {
+			...env,
+			VERIFICATION_JOB_RUNNER: {
+				idFromName: (_name: string) => ({ name: _name }),
+				get: (_id: unknown) => ({
+					enqueue: async () => {
+						throw new Error('Simulated DO enqueue failure')
+					},
+				}),
+			},
+		} as unknown as typeof env
+
+		const response = await app.request(
+			`/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					stdJsonInput: counterFixture.stdJsonInput,
+					compilerVersion: counterFixture.compilerVersion,
+					contractIdentifier: counterFixture.contractIdentifier,
+				}),
+			},
+			mockEnv,
+		)
+
+		expect(response.status).toBe(500)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('internal_error')
+
+		const db = drizzle(env.CONTRACTS_DB)
+		const jobs = await db.select().from(DB.verificationJobsTable)
+		expect(jobs).toHaveLength(0)
+	})
+
+	it('accepts a lowercase non-checksummed address and returns 202', async () => {
+		const lowercaseAddress = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
+		const response = await app.request(
+			`/v2/verify/${validChainId}/${lowercaseAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(validBody),
+			},
+			env,
+		)
+
+		expect(response.status).toBe(202)
+	})
+
+	it('returns 400 for a numerically valid but unsupported chain ID', async () => {
+		const response = await app.request(
+			`/v2/verify/1/${validAddress}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(validBody),
 			},
 			env,
 		)
