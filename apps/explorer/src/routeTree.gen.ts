@@ -22,6 +22,7 @@ import { Route as LayoutFeeAmmRouteImport } from './routes/_layout/fee-amm'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
 import { Route as LayoutDemoIndexRouteImport } from './routes/_layout/demo/index'
 import { Route as ApiTokensCountRouteImport } from './routes/api/tokens/count'
+import { Route as ApiFeeAmmPoolsRouteImport } from './routes/api/fee-amm/pools'
 import { Route as ApiAddressAddressRouteImport } from './routes/api/address/$address'
 import { Route as ApiAbiBatchRouteImport } from './routes/api/abi/batch'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
@@ -105,6 +106,11 @@ const LayoutDemoIndexRoute = LayoutDemoIndexRouteImport.update({
 const ApiTokensCountRoute = ApiTokensCountRouteImport.update({
   id: '/api/tokens/count',
   path: '/api/tokens/count',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFeeAmmPoolsRoute = ApiFeeAmmPoolsRouteImport.update({
+  id: '/api/fee-amm/pools',
+  path: '/api/fee-amm/pools',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiAddressAddressRoute = ApiAddressAddressRouteImport.update({
@@ -237,6 +243,7 @@ export interface FileRoutesByFullPath {
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
+  '/api/fee-amm/pools': typeof ApiFeeAmmPoolsRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/demo/': typeof LayoutDemoIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
@@ -271,6 +278,7 @@ export interface FileRoutesByTo {
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
+  '/api/fee-amm/pools': typeof ApiFeeAmmPoolsRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/demo': typeof LayoutDemoIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
@@ -307,6 +315,7 @@ export interface FileRoutesById {
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
   '/api/address/$address': typeof ApiAddressAddressRoute
+  '/api/fee-amm/pools': typeof ApiFeeAmmPoolsRoute
   '/api/tokens/count': typeof ApiTokensCountRoute
   '/_layout/demo/': typeof LayoutDemoIndexRoute
   '/_layout/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
@@ -343,6 +352,7 @@ export interface FileRouteTypes {
     | '/tx/$hash'
     | '/api/abi/batch'
     | '/api/address/$address'
+    | '/api/fee-amm/pools'
     | '/api/tokens/count'
     | '/demo/'
     | '/block/countdown/$targetBlock'
@@ -377,6 +387,7 @@ export interface FileRouteTypes {
     | '/tx/$hash'
     | '/api/abi/batch'
     | '/api/address/$address'
+    | '/api/fee-amm/pools'
     | '/api/tokens/count'
     | '/demo'
     | '/block/countdown/$targetBlock'
@@ -412,6 +423,7 @@ export interface FileRouteTypes {
     | '/_layout/tx/$hash'
     | '/api/abi/batch'
     | '/api/address/$address'
+    | '/api/fee-amm/pools'
     | '/api/tokens/count'
     | '/_layout/demo/'
     | '/_layout/block/countdown/$targetBlock'
@@ -434,6 +446,7 @@ export interface RootRouteChildren {
   ApiTip20RolesRoute: typeof ApiTip20RolesRoute
   ApiAbiBatchRoute: typeof ApiAbiBatchRoute
   ApiAddressAddressRoute: typeof ApiAddressAddressRoute
+  ApiFeeAmmPoolsRoute: typeof ApiFeeAmmPoolsRoute
   ApiTokensCountRoute: typeof ApiTokensCountRoute
   ApiAddressBalancesAddressRoute: typeof ApiAddressBalancesAddressRoute
   ApiAddressHistoryAddressRoute: typeof ApiAddressHistoryAddressRoute
@@ -536,6 +549,13 @@ declare module '@tanstack/react-router' {
       path: '/api/tokens/count'
       fullPath: '/api/tokens/count'
       preLoaderRoute: typeof ApiTokensCountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/fee-amm/pools': {
+      id: '/api/fee-amm/pools'
+      path: '/api/fee-amm/pools'
+      fullPath: '/api/fee-amm/pools'
+      preLoaderRoute: typeof ApiFeeAmmPoolsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/address/$address': {
@@ -731,6 +751,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiTip20RolesRoute: ApiTip20RolesRoute,
   ApiAbiBatchRoute: ApiAbiBatchRoute,
   ApiAddressAddressRoute: ApiAddressAddressRoute,
+  ApiFeeAmmPoolsRoute: ApiFeeAmmPoolsRoute,
   ApiTokensCountRoute: ApiTokensCountRoute,
   ApiAddressBalancesAddressRoute: ApiAddressBalancesAddressRoute,
   ApiAddressHistoryAddressRoute: ApiAddressHistoryAddressRoute,
