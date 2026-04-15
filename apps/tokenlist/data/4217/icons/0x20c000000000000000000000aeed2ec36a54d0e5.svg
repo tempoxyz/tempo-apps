@@ -1,9 +1,1 @@
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-<path d="M0 12C0 5.37258 5.37258 0 12 0C18.6274 0 24 5.37258 24 12C24 18.6274 18.6274 24 12 24C5.37258 24 0 18.6274 0 12Z" fill="#DCC5F7"/>
-<path d="M10 6H6V10H10V6Z" fill="#6800D1"/>
-<path d="M18 14H14V18H18V14Z" fill="black"/>
-<path d="M18 6H14L10 10H18V6Z" fill="#6800D1"/>
-<path d="M6 14V18H10V10L6 14Z" fill="#6800D1"/>
-<rect width="11" height="11" transform="translate(13 13)" fill="#6800D1"/>
-<path d="M16.1298 21L14.5378 15.4H15.8338L16.7858 19.48L17.7618 15.4H19.2258L20.2098 19.472L21.1618 15.4H22.4658L20.8898 21H19.5458L18.5058 17.104L17.4498 21H16.1298Z" fill="#DCC5F7"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path fill="#dcc5f7" d="M0 12C0 5.373 5.373 0 12 0s12 5.373 12 12-5.373 12-12 12S0 18.627 0 12"/><path fill="#6800d1" d="M10 6H6v4h4z"/><path fill="#000" d="M18 14h-4v4h4z"/><path fill="#6800d1" d="M18 6h-4l-4 4h8zM6 14v4h4v-8zm7-1h11v11H13z"/><path fill="#dcc5f7" d="m16.13 21-1.592-5.6h1.296l.952 4.08.976-4.08h1.464l.984 4.072.952-4.072h1.304L20.89 21h-1.344l-1.04-3.896L17.45 21z"/></svg>
