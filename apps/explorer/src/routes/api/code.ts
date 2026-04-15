@@ -10,7 +10,7 @@ import {
 import { zAddress } from '#lib/zod.ts'
 import { getRequestURL, clientEnv } from '#lib/env.ts'
 
-const CONTRACT_VERIFICATION_API_BASE_URL = `${clientEnv.CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract`
+const CONTRACT_VERIFICATION_API_BASE_URL = `${clientEnv.VITE_CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract`
 
 const CONTRACT_SOURCE_FIELDS = [
 	'stdJsonInput',
@@ -150,12 +150,19 @@ export const Route = createFileRoute('/api/code')({
 				apiUrl.searchParams.set('fields', CONTRACT_SOURCE_FIELDS)
 				const response = await fetch(apiUrl.toString())
 
-				if (!response.ok)
+				if (!response.ok) {
+					const errorText = await response.text()
+					console.error(
+						[
+							`Failed to fetch contract code: ${response.status} ${response.statusText} - ${errorText}`,
+							`API URL: ${apiUrl.toString()}`,
+						].join('\n'),
+					)
 					return Response.json(
 						{ error: 'Failed to fetch contract code' },
 						{ status: response.status },
 					)
-
+				}
 				const responseData = await response.json()
 
 				let data: ContractSource

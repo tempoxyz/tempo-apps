@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
-import { Address, Hex } from 'ox'
+import { Address, Hex, Hash } from 'ox'
 import { and, asc, desc, eq, gt, lt } from 'drizzle-orm'
-import { keccak256 } from 'viem'
 
 import {
 	codeTable,
@@ -116,7 +115,7 @@ function buildSignaturesPayload(abi: unknown): SignaturesPayload {
 			.filter((type): type is string => type !== null)
 			.join(',')
 		const signature = `${item.name}(${inputTypes})`
-		const signatureHash32 = keccak256(Hex.fromString(signature))
+		const signatureHash32 = Hash.keccak256(Hex.fromString(signature))
 		const signatureHash4 = Hex.fromBytes(
 			Hex.toBytes(signatureHash32).slice(0, 4),
 		)

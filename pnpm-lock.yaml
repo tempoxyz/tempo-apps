@@ -267,7 +267,7 @@ importers:
         version: 0.3.6
       '@tempoxyz/lints':
         specifier: github:tempoxyz/lints
-        version: https://codeload.github.com/tempoxyz/lints/tar.gz/8af5001866a36967523ece2b8cdc33ba719aad84
+        version: https://codeload.github.com/tempoxyz/lints/tar.gz/0dbe62767b6e15963a652f5476bc0b8ae111d6fc
       '@typescript/native-preview':
         specifier: ^7.0.0-dev.20260319.1
         version: 7.0.0-dev.20260408.1
@@ -440,6 +440,9 @@ importers:
       '@tempo/rpc-utils':
         specifier: workspace:*
         version: link:../../packages/rpc-utils
+      '@wagmi/core':
+        specifier: 'catalog:'
+        version: 3.4.2(@tanstack/query-core@5.96.2)(@types/react@19.2.14)(ox@0.14.13(typescript@6.0.2)(zod@4.3.6))(react@19.2.5)(typescript@6.0.2)(use-sync-external-store@1.6.0(react@19.2.5))(viem@2.47.12(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6))
       abitype:
         specifier: 'catalog:'
         version: 1.2.4(typescript@6.0.2)(zod@4.3.6)
@@ -3307,8 +3310,8 @@ packages:
     engines: {node: '>=20.19'}
     hasBin: true
 
-  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/8af5001866a36967523ece2b8cdc33ba719aad84':
-    resolution: {tarball: https://codeload.github.com/tempoxyz/lints/tar.gz/8af5001866a36967523ece2b8cdc33ba719aad84}
+  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/0dbe62767b6e15963a652f5476bc0b8ae111d6fc':
+    resolution: {tarball: https://codeload.github.com/tempoxyz/lints/tar.gz/0dbe62767b6e15963a652f5476bc0b8ae111d6fc}
     version: 0.1.1
     engines: {node: '>=18'}
     hasBin: true
@@ -8142,7 +8145,7 @@ snapshots:
 
   '@tanstack/virtual-file-routes@1.161.7': {}
 
-  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/8af5001866a36967523ece2b8cdc33ba719aad84':
+  '@tempoxyz/lints@https://codeload.github.com/tempoxyz/lints/tar.gz/0dbe62767b6e15963a652f5476bc0b8ae111d6fc':
     dependencies:
       '@ast-grep/cli': 0.40.5
       commander: 12.1.0

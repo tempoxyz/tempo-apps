@@ -1,8 +1,8 @@
 import * as z from 'zod/mini'
-import { env, exports } from 'cloudflare:workers'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { describe, expect, it } from 'vitest'
+import { env, exports } from 'cloudflare:workers'
 
 import * as DB from '#database/schema.ts'
 import { runVerificationJob } from '#route.verify.ts'
@@ -19,7 +19,7 @@ const VerificationStatusSchema = z.object({
 	),
 })
 const ErrorResponseSchema = z.object({ customCode: z.string() })
-const verifyRequestBody = {
+const verifyRequestData = {
 	stdJsonInput: counterFixture.stdJsonInput,
 	compilerVersion: counterFixture.compilerVersion,
 	contractIdentifier: counterFixture.contractIdentifier,
@@ -39,7 +39,7 @@ describe('full verification flow', () => {
 				{
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(verifyRequestBody),
+					body: JSON.stringify(verifyRequestData),
 				},
 			),
 		)
@@ -58,10 +58,10 @@ describe('full verification flow', () => {
 
 		await runVerificationJob(
 			env,
-			verificationId,
-			counterFixture.chainId,
-			counterFixture.address,
-			verifyRequestBody,
+			{
+				jobId: verificationId,
+				...counterFixture,
+			},
 			{
 				createPublicClient: () => ({
 					getCode: async () => counterFixture.onchainRuntimeBytecode,
@@ -205,7 +205,7 @@ describe('full verification flow', () => {
 				{
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(verifyRequestBody),
+					body: JSON.stringify(verifyRequestData),
 				},
 			),
 		)
