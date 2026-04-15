@@ -1,7 +1,7 @@
 import * as z from 'zod/mini'
 import { Hex } from 'ox'
 import { eq } from 'drizzle-orm'
-import { env } from 'cloudflare:workers'
+import { SELF, env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
 import { describe, it, expect } from 'vitest'
 
@@ -10,6 +10,13 @@ import { app } from '#index.tsx'
 import { chainIds } from '#wagmi.config.ts'
 import { counterFixture } from '../fixtures/counter.fixture.ts'
 import { vyperFixture } from '../fixtures/vyper.fixture.ts'
+
+async function requestFromWorker(
+	path: string,
+	init?: RequestInit,
+): Promise<Response> {
+	return SELF.fetch(`https://test.local${path}`, init)
+}
 
 describe('POST /v2/verify/:chainId/:address', () => {
 	const validChainId = chainIds[0]
@@ -42,14 +49,13 @@ contract Token {
 	}
 
 	it('returns 202 and inserts a verification job row for a fully valid request', async () => {
-		const response = await app.request(
+		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${validAddress}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(validBody),
 			},
-			env,
 		)
 
 		expect(response.status).toBe(202)
@@ -80,49 +86,46 @@ contract Token {
 	})
 
 	it('returns 400 for invalid chain ID', async () => {
-		const response = await app.request(
+		const response = await requestFromWorker(
 			'/v2/verify/999999/0x1234567890123456789012345678901234567890',
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(validBody),
 			},
-			env,
 		)
 
 		expect(response.status).toBe(400)
 	})
 
 	it('returns 400 for invalid address format', async () => {
-		const response = await app.request(
+		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/invalid-address`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(validBody),
 			},
-			env,
 		)
 
 		expect(response.status).toBe(400)
 	})
 
 	it('returns 400 for invalid JSON body', async () => {
-		const response = await app.request(
+		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${validAddress}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: 'not valid json',
 			},
-			env,
 		)
 
 		expect(response.status).toBe(400)
 	})
 
 	it('returns 400 for missing required fields', async () => {
-		const response = await app.request(
+		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${validAddress}`,
 			{
 				method: 'POST',
@@ -132,14 +135,13 @@ contract Token {
 					contractIdentifier: 'Token',
 				}),
 			},
-			env,
 		)
 
 		expect(response.status).toBe(400)
 	})
 
 	it('returns 400 with invalid_contract_identifier when contractIdentifier has no colon', async () => {
-		const response = await app.request(
+		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${validAddress}`,
 			{
 				method: 'POST',
@@ -149,7 +151,6 @@ contract Token {
 					contractIdentifier: 'TokenWithoutColon',
 				}),
 			},
-			env,
 		)
 
 		expect(response.status).toBe(400)
@@ -220,14 +221,13 @@ contract Token {
 			runtimeMetadataMatch: true,
 		})
 
-		const response = await app.request(
+		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${validAddress}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(validBody),
 			},
-			env,
 		)
 
 		expect(response.status).toBe(409)
@@ -247,14 +247,13 @@ contract Token {
 			verificationEndpoint: '/v2/verify',
 		})
 
-		const response = await app.request(
+		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${validAddress}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(validBody),
 			},
-			env,
 		)
 
 		expect(response.status).toBe(429)
@@ -276,14 +275,13 @@ contract Token {
 			startedAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
 		})
 
-		const response = await app.request(
+		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${validAddress}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(validBody),
 			},
-			env,
 		)
 
 		expect(response.status).toBe(202)
@@ -347,29 +345,24 @@ contract Token {
 
 	it('accepts a lowercase non-checksummed address and returns 202', async () => {
 		const lowercaseAddress = '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
-		const response = await app.request(
+		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${lowercaseAddress}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(validBody),
 			},
-			env,
 		)
 
 		expect(response.status).toBe(202)
 	})
 
 	it('returns 400 for a numerically valid but unsupported chain ID', async () => {
-		const response = await app.request(
-			`/v2/verify/1/${validAddress}`,
-			{
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(validBody),
-			},
-			env,
-		)
+		const response = await requestFromWorker(`/v2/verify/1/${validAddress}`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(validBody),
+		})
 
 		expect(response.status).toBe(400)
 	})
@@ -389,14 +382,13 @@ describe('POST /v2/verify/:chainId/:address – Vyper payload', () => {
 	}
 
 	it('returns 202 and inserts a job row for a valid Vyper standard-json request', async () => {
-		const response = await app.request(
+		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${vyperAddress}`,
 			{
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(vyperBody),
 			},
-			env,
 		)
 
 		expect(response.status).toBe(202)
@@ -425,7 +417,7 @@ describe('POST /v2/verify/:chainId/:address – Vyper payload', () => {
 	})
 
 	it('returns 400 for Vyper payload with invalid contractIdentifier (no colon)', async () => {
-		const response = await app.request(
+		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/${vyperAddress}`,
 			{
 				method: 'POST',
@@ -435,7 +427,6 @@ describe('POST /v2/verify/:chainId/:address – Vyper payload', () => {
 					contractIdentifier: 'vyper_contract_no_colon',
 				}),
 			},
-			env,
 		)
 
 		expect(response.status).toBe(400)
@@ -449,10 +440,9 @@ describe('POST /v2/verify/:chainId/:address – Vyper payload', () => {
 
 describe('POST /metadata/:chainId/:address', () => {
 	it('returns 501 not implemented', async () => {
-		const response = await app.request(
+		const response = await requestFromWorker(
 			'/v2/verify/metadata/1/0x1234567890123456789012345678901234567890',
 			{ method: 'POST' },
-			env,
 		)
 
 		expect(response.status).toBe(501)
@@ -467,10 +457,9 @@ describe('POST /metadata/:chainId/:address', () => {
 
 describe('POST /similarity/:chainId/:address', () => {
 	it('returns 501 not implemented', async () => {
-		const response = await app.request(
+		const response = await requestFromWorker(
 			'/v2/verify/similarity/1/0x1234567890123456789012345678901234567890',
 			{ method: 'POST' },
-			env,
 		)
 
 		expect(response.status).toBe(501)

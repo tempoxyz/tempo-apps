@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers'
+import { env } from 'cloudflare:test'
 import { describe, expect, it, vi } from 'vitest'
 
 import { app } from '#index.tsx'

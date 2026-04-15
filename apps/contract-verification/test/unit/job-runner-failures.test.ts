@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
+import { SELF, env } from 'cloudflare:test'
 import { describe, expect, it } from 'vitest'
-import { env, exports } from 'cloudflare:workers'
 
 import * as DB from '#database/schema.ts'
 import { runVerificationJob } from '#route.verify.ts'
@@ -14,15 +14,13 @@ const verifyRequestData = {
 } as const
 
 async function createJob(): Promise<string> {
-	const res = await exports.default.fetch(
-		new Request(
-			`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
-			{
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(verifyRequestData),
-			},
-		),
+	const res = await SELF.fetch(
+		`https://test.local/v2/verify/${counterFixture.chainId}/${counterFixture.address}`,
+		{
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(verifyRequestData),
+		},
 	)
 	expect(res.status).toBe(202)
 	const body = (await res.json()) as { verificationId: string }
