@@ -1,5 +1,3 @@
-import { Address } from 'ox'
-import * as z from 'zod/mini'
 import { tempoDevnet, tempoMainnet, tempoTestnet } from '@wagmi/core/chains'
 
 const verifierUrl =
@@ -51,23 +49,3 @@ export const sourcifyChains = chains.map((chain) => {
 		returnValue._extra = { blockExplorer: chain?.blockExplorers.default }
 	return returnValue
 })
-
-export const zAddress = (opts?: { lowercase?: boolean }) =>
-	z.pipe(
-		z.string(),
-		z.transform((x) => {
-			if (opts?.lowercase) x = x.toLowerCase()
-			Address.assert(x)
-			return x
-		}),
-	)
-
-export const zChainId = () =>
-	z.pipe(
-		z.string(),
-		z.transform((x) => {
-			const n = Number.parseInt(x, 10)
-			if (Number.isNaN(n)) throw new Error('Invalid chain ID')
-			return n
-		}),
-	)

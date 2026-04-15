@@ -14,10 +14,9 @@ import {
 	extractConstructorArgumentsTransformation,
 	extractAuxdataTransformation,
 	matchBytecode,
-	type LinkReferences,
-	type ImmutableReferences,
 	type CborAuxdataPositions,
 } from '#lib/bytecode-matching.ts'
+import type { ImmutableReferences, LinkReferences } from '#schema.ts'
 
 function keccakString(str: string): `0x${string}` {
 	return Hash.keccak256(Hex.fromString(str))

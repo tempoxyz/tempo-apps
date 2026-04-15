@@ -206,7 +206,7 @@ export async function fetchContractSourceDirect(params: {
 	const { address, chainId, signal } = params
 
 	const apiUrl = new URL(
-		`${clientEnv.CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${chainId}/${address.toLowerCase()}`,
+		`${clientEnv.VITE_CONTRACT_VERIFICATION_API_BASE_URL}/v2/contract/${chainId}/${address.toLowerCase()}`,
 	)
 	apiUrl.searchParams.set('fields', CONTRACT_SOURCE_FIELDS)
 
