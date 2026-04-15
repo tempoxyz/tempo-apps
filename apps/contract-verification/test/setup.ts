@@ -1,5 +1,5 @@
 import { applyD1Migrations } from 'cloudflare:test'
-import { env } from 'cloudflare:workers'
+import { env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
 import { beforeEach } from 'vitest'
 

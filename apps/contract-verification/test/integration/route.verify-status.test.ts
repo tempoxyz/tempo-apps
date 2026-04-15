@@ -1,4 +1,4 @@
-import { env } from 'cloudflare:workers'
+import { SELF, env } from 'cloudflare:test'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { Hex, Hash } from 'ox'
@@ -12,14 +12,13 @@ import {
 	verifiedContractsTable,
 	verificationJobsTable,
 } from '#database/schema.ts'
-import { app } from '#index.tsx'
 
 function statusUrl(id: string): string {
-	return `/v2/verify/${id}`
+	return `https://test.local/v2/verify/${id}`
 }
 
 async function getStatus(id: string): Promise<Response> {
-	return app.request(statusUrl(id), { method: 'GET' }, env)
+	return SELF.fetch(statusUrl(id), { method: 'GET' })
 }
 
 const db = () => drizzle(env.CONTRACTS_DB)
