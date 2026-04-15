@@ -138,6 +138,19 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["./apps/virtual-addresses/src/comps/walkthrough/**"],
+			"linter": {
+				"rules": {
+					"correctness": {
+						"useUniqueElementIds": "off"
+					},
+					"a11y": {
+						"noSvgWithoutTitle": "off"
+					}
+				}
+			}
 		}
 	]
 }

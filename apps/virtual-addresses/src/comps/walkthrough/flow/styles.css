@@ -1,0 +1,500 @@
+/* ── Virtual Addresses React Flow Demo — Potemkin Style ─────────────────── */
+/* Mirrors the PayrollDemoFlow light aesthetic from tempo-web */
+
+.va-demo {
+	display: flex;
+	flex-direction: column;
+	height: calc(100vh - 53px);
+	outline: none;
+}
+
+.va-demo__header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 24px;
+	border-bottom: 1px solid var(--color-border);
+	background: var(--color-surface);
+}
+
+.va-demo__label {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--color-text-tertiary);
+}
+
+/* ── Controls bar ── */
+
+.va-controls {
+	padding: 12px 24px;
+	border-bottom: 1px solid var(--color-border);
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+	background: var(--color-surface);
+}
+
+.va-controls__label {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+}
+
+.va-controls__counter {
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--color-text-tertiary);
+}
+
+.va-controls__step-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--color-text-primary);
+}
+
+.va-controls__buttons {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+/* ── Step description ── */
+
+.va-step-desc {
+	padding: 16px 24px;
+	border-bottom: 1px solid var(--color-border);
+	background: var(--color-surface);
+}
+
+.va-step-desc p {
+	font-size: 14px;
+	font-weight: 400;
+	line-height: 1.5;
+	color: var(--color-text-secondary);
+	max-width: 640px;
+	margin: 0;
+}
+
+/* ── Error banner ── */
+
+.va-error {
+	padding: 8px 24px;
+	background: rgba(239, 68, 68, 0.08);
+	border-bottom: 1px solid rgba(239, 68, 68, 0.2);
+	color: var(--color-negative);
+	font-size: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+/* ── Canvas wrapper ── */
+
+.va-canvas-wrap {
+	flex: 1;
+	position: relative;
+	min-height: 0;
+}
+
+.va-canvas-wrap .react-flow {
+	background-color: var(--color-bg);
+}
+
+.va-canvas-wrap .react-flow__viewport {
+	overflow: visible;
+}
+
+.va-canvas-wrap .react-flow svg {
+	max-width: none;
+	overflow: visible;
+}
+
+.va-canvas-wrap .react-flow__controls,
+.va-canvas-wrap .react-flow__minimap,
+.va-canvas-wrap .react-flow__attribution {
+	display: none;
+}
+
+.va-canvas-badge {
+	position: absolute;
+	bottom: 12px;
+	left: 16px;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--color-text-tertiary);
+	font-size: 10px;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	pointer-events: none;
+	z-index: 5;
+}
+
+.va-canvas-badge svg {
+	flex-shrink: 0;
+}
+
+/* ── Timeline ── */
+
+.va-timeline {
+	position: relative;
+	padding: 12px 24px 20px;
+	border-top: 1px solid var(--color-border);
+	background: var(--color-surface);
+}
+
+.va-timeline__steps {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	position: relative;
+}
+
+.va-timeline__steps::before {
+	content: "";
+	position: absolute;
+	top: 4px;
+	left: 5px;
+	right: 5px;
+	height: 2px;
+	background: var(--color-border);
+	z-index: 0;
+}
+
+.va-timeline__bar {
+	position: absolute;
+	top: 4px;
+	left: 5px;
+	right: 5px;
+	height: 2px;
+	background: transparent;
+	z-index: 0;
+}
+
+.va-timeline__fill {
+	height: 100%;
+	background: var(--color-text-secondary);
+	transition: width 0.5s ease;
+}
+
+.va-timeline__step {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	background: none;
+	border: none;
+	cursor: pointer;
+	padding: 0;
+	z-index: 2;
+}
+
+.va-timeline__dot {
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: var(--color-surface-2);
+	border: 2px solid var(--color-border);
+	transition: all 0.3s;
+}
+
+.va-timeline__step--active .va-timeline__dot {
+	background: var(--color-accent);
+	border-color: var(--color-accent);
+	box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+}
+
+.va-timeline__step--done .va-timeline__dot {
+	background: var(--color-text-secondary);
+	border-color: var(--color-text-secondary);
+}
+
+.va-timeline__step-label {
+	font-family: var(--font-mono);
+	font-size: 9px;
+	color: var(--color-text-tertiary);
+	transition: color 0.3s;
+}
+
+.va-timeline__step--active .va-timeline__step-label {
+	color: var(--color-accent);
+	font-weight: 600;
+}
+
+.va-timeline__step:hover .va-timeline__dot {
+	border-color: var(--color-text-tertiary);
+}
+
+/* ── Icon buttons (circular, like PayrollDemoFlow) ── */
+
+.va-icon-btn {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	border: 1px solid var(--color-border);
+	background: var(--color-surface-2);
+	color: var(--color-text-tertiary);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		border-color 0.15s;
+}
+
+.va-icon-btn:hover {
+	background: var(--color-surface-3);
+	color: var(--color-text-secondary);
+	border-color: var(--color-border-active);
+}
+
+.va-icon-btn--primary {
+	width: 40px;
+	height: 40px;
+	background: var(--color-accent);
+	color: #0a0a0a;
+	border-color: var(--color-accent);
+}
+
+.va-icon-btn--primary:hover {
+	background: var(--color-accent-hover);
+	color: #0a0a0a;
+	border-color: var(--color-accent-hover);
+}
+
+.va-icon-btn--primary:disabled {
+	opacity: 0.7;
+	cursor: wait;
+}
+
+.va-icon-btn__spinner {
+	width: 14px;
+	height: 14px;
+	border: 2px solid rgba(10, 10, 10, 0.3);
+	border-top-color: #0a0a0a;
+	border-radius: 50%;
+	animation: va-spin 0.6s linear infinite;
+}
+
+@keyframes va-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* ── Sending dot ── */
+
+.va-sending-dot {
+	display: inline-block;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--color-accent);
+	margin-left: 8px;
+	vertical-align: middle;
+	animation: va-sending-pulse 1s ease infinite;
+}
+
+@keyframes va-sending-pulse {
+	0%,
+	100% {
+		opacity: 0.3;
+	}
+	50% {
+		opacity: 1;
+	}
+}
+
+/* ── Node cards (potemkin style) ── */
+
+.va-card {
+	width: 200px;
+	outline: 1px solid var(--color-border);
+	background: var(--color-surface);
+	font-family: var(--font-sans);
+	overflow: hidden;
+	display: inline-flex;
+	flex-direction: column;
+	transition:
+		opacity 0.4s,
+		outline-color 0.4s,
+		box-shadow 0.4s;
+}
+
+.va-card[data-status="idle"] {
+	opacity: 0.3;
+}
+
+.va-card[data-status="active"] {
+	opacity: 1;
+}
+
+.va-card[data-status="done"] {
+	opacity: 0.65;
+}
+
+.va-card:hover {
+	box-shadow:
+		0 0 10px rgba(96, 165, 250, 0.08),
+		0 0 24px rgba(96, 165, 250, 0.04);
+	transition: box-shadow 0.25s ease;
+}
+
+.va-card__head {
+	padding: 12px 14px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: flex-start;
+}
+
+.va-card__name {
+	font-size: 14px;
+	font-weight: 600;
+	color: var(--color-text-primary);
+	line-height: 1.3;
+}
+
+.va-card__subtitle {
+	font-size: 11px;
+	font-weight: 500;
+	color: var(--color-text-tertiary);
+	margin-top: 2px;
+	line-height: 1.3;
+}
+
+.va-card__footer {
+	display: flex;
+	flex-direction: column;
+}
+
+.va-card__metric {
+	display: inline-flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 14px;
+	background: var(--color-surface-2);
+}
+
+.va-card__metric-label {
+	font-size: 12px;
+	color: var(--color-text-tertiary);
+	font-weight: 500;
+}
+
+.va-card__metric-value {
+	font-size: 13px;
+	color: var(--color-text-primary);
+	font-weight: 500;
+	font-family: var(--font-mono);
+	font-variant-numeric: tabular-nums;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 120px;
+}
+
+/* ── Handles: invisible but functional ── */
+
+.va-handle {
+	width: 1px;
+	height: 1px;
+	background: transparent;
+	border: none;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* ── Tooltip ── */
+
+.va-tooltip-wrap {
+	position: relative;
+}
+
+.va-tooltip {
+	position: absolute;
+	bottom: calc(100% + 8px);
+	left: 50%;
+	transform: translateX(-50%);
+	background: var(--color-surface-3);
+	color: var(--color-text-primary);
+	font-size: 11px;
+	font-weight: 500;
+	padding: 6px 12px;
+	white-space: nowrap;
+	pointer-events: none;
+	z-index: 10;
+	animation: va-tooltip-in 0.15s ease;
+}
+
+@keyframes va-tooltip-in {
+	from {
+		opacity: 0;
+		transform: translateX(-50%) translateY(4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(-50%) translateY(0);
+	}
+}
+
+/* ── Keyboard hint ── */
+
+.va-kbd-hint {
+	position: absolute;
+	top: 12px;
+	left: 16px;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	z-index: 5;
+	pointer-events: none;
+	opacity: 0.45;
+}
+
+.va-kbd-hint kbd {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-width: 22px;
+	height: 22px;
+	padding: 0 5px;
+	background: var(--color-surface-2);
+	border: 1px solid var(--color-border);
+	border-bottom-width: 2px;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--color-text-tertiary);
+	line-height: 1;
+}
+
+.va-kbd-hint span {
+	font-size: 10px;
+	color: var(--color-text-tertiary);
+	margin-left: 4px;
+}
+
+.va-kbd-hint kbd {
+	transition:
+		background 0.3s ease,
+		border-color 0.3s ease,
+		color 0.3s ease;
+}
+
+.va-kbd-hint--active {
+	opacity: 1;
+	transition: opacity 0.05s ease;
+}
+
+.va-kbd--pressed {
+	background: var(--color-accent);
+	border-color: var(--color-accent);
+	color: #0a0a0a;
+	transition: none;
+}
