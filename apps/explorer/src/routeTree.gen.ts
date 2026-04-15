@@ -15,6 +15,7 @@ import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
 import { Route as ApiTip20RolesRouteImport } from './routes/api/tip20-roles'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiFeeAmmPoolsRouteImport } from './routes/api/fee-amm/pools'
 import { Route as ApiCodeRouteImport } from './routes/api/code'
 import { Route as LayoutTokensRouteImport } from './routes/_layout/tokens'
 import { Route as LayoutBlocksRouteImport } from './routes/_layout/blocks'
@@ -68,6 +69,11 @@ const ApiSearchRoute = ApiSearchRouteImport.update({
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFeeAmmPoolsRoute = ApiFeeAmmPoolsRouteImport.update({
+  id: '/api/fee-amm/pools',
+  path: '/api/fee-amm/pools',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCodeRoute = ApiCodeRouteImport.update({
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
+  '/api/fee-amm/pools': typeof ApiFeeAmmPoolsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/api/tip20-roles': typeof ApiTip20RolesRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByTo {
   '/blocks': typeof LayoutBlocksRoute
   '/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
+  '/api/fee-amm/pools': typeof ApiFeeAmmPoolsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/api/tip20-roles': typeof ApiTip20RolesRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/_layout/blocks': typeof LayoutBlocksRoute
   '/_layout/tokens': typeof LayoutTokensRoute
   '/api/code': typeof ApiCodeRoute
+  '/api/fee-amm/pools': typeof ApiFeeAmmPoolsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/search': typeof ApiSearchRoute
   '/api/tip20-roles': typeof ApiTip20RolesRoute
@@ -309,6 +318,7 @@ export interface FileRouteTypes {
     | '/blocks'
     | '/tokens'
     | '/api/code'
+    | '/api/fee-amm/pools'
     | '/api/health'
     | '/api/search'
     | '/api/tip20-roles'
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/blocks'
     | '/tokens'
     | '/api/code'
+    | '/api/fee-amm/pools'
     | '/api/health'
     | '/api/search'
     | '/api/tip20-roles'
@@ -373,6 +384,7 @@ export interface FileRouteTypes {
     | '/_layout/blocks'
     | '/_layout/tokens'
     | '/api/code'
+    | '/api/fee-amm/pools'
     | '/api/health'
     | '/api/search'
     | '/api/tip20-roles'
@@ -405,6 +417,7 @@ export interface RootRouteChildren {
   LayoutRoute: typeof LayoutRouteWithChildren
   SearchRoute: typeof SearchRoute
   ApiCodeRoute: typeof ApiCodeRoute
+  ApiFeeAmmPoolsRoute: typeof ApiFeeAmmPoolsRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiSearchRoute: typeof ApiSearchRoute
   ApiTip20RolesRoute: typeof ApiTip20RolesRoute
@@ -470,6 +483,13 @@ declare module '@tanstack/react-router' {
       path: '/api/code'
       fullPath: '/api/code'
       preLoaderRoute: typeof ApiCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/fee-amm/pools': {
+      id: '/api/fee-amm/pools'
+      path: '/api/fee-amm/pools'
+      fullPath: '/api/fee-amm/pools'
+      preLoaderRoute: typeof ApiFeeAmmPoolsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_layout/tokens': {
@@ -684,6 +704,7 @@ const rootRouteChildren: RootRouteChildren = {
   LayoutRoute: LayoutRouteWithChildren,
   SearchRoute: SearchRoute,
   ApiCodeRoute: ApiCodeRoute,
+  ApiFeeAmmPoolsRoute: ApiFeeAmmPoolsRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiSearchRoute: ApiSearchRoute,
   ApiTip20RolesRoute: ApiTip20RolesRoute,
