@@ -296,9 +296,9 @@ export namespace TxTraceFlamegraph {
 				title={`${label} — ${node.gasUsed.toLocaleString()} gas (${gasPct.toFixed(1)}%)${hasStorage ? ` · ${storageSlots.writes} SSTORE, ${storageSlots.reads} SLOAD` : ''}`}
 			>
 				{!isNarrow && (
-					<span className="absolute inset-0 flex items-center gap-[4px] px-[6px] truncate select-none">
+					<span className="absolute inset-0 flex items-center gap-[4px] px-[6px] overflow-hidden select-none">
 						<span
-							className="truncate font-medium"
+							className="truncate font-medium min-w-0"
 							style={{
 								color: 'rgba(255, 255, 255, 0.95)',
 								textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)',
