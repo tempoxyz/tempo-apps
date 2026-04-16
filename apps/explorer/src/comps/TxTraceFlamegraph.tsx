@@ -83,7 +83,7 @@ export function TxTraceFlamegraph(
 					onMouseLeave={() => setHoveredNode(null)}
 				>
 					{rows.map((row, depth) => (
-						<div key={depth} className="relative h-[24px]">
+						<div key={depth} className="relative h-[24px] w-full">
 							{row.map((span) => {
 								const leftPct =
 									root.gasUsed > 0 ? (span.offset / root.gasUsed) * 100 : 0
