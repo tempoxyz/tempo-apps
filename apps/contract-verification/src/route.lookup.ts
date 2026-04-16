@@ -19,6 +19,7 @@ import {
 import { getLogger } from '#lib/logger.ts'
 import { chainIds } from '#wagmi.config.ts'
 import { formatError, getDb, sourcifyError } from '#lib/utilities.ts'
+import { tip20 as tip20Abi } from 'viem/tempo/Abis'
 
 const logger = getLogger(['tempo'])
 
@@ -322,6 +323,84 @@ function buildSourcesPayload(
 	return { sources, sourceIds, paths }
 }
 
+function buildDynamicTip20Response(
+	chainIdNumber: number,
+	address: string,
+): {
+	minimalResponse: MinimalLookupResponse
+	fullResponse: Record<string, unknown>
+} {
+	const matchId = `native:tip20:${chainIdNumber}:${address}`
+	const minimalResponse: MinimalLookupResponse = {
+		matchId,
+		match: 'exact_match',
+		creationMatch: null,
+		runtimeMatch: 'exact_match',
+		chainId: String(chainIdNumber),
+		address,
+		verifiedAt: null,
+	}
+
+	const signatures = buildSignaturesPayload(tip20Abi)
+	const fullResponse: Record<string, unknown> = {
+		...minimalResponse,
+		transactionHash: null,
+		blockNumber: null,
+		name: 'TIP-20 Token',
+		fullyQualifiedName: null,
+		compiler: null,
+		compilerVersion: null,
+		language: 'Solidity',
+		compilerSettings: null,
+		runtimeMetadataMatch: null,
+		creationMetadataMatch: null,
+		abi: tip20Abi,
+		userdoc: null,
+		devdoc: null,
+		storageLayout: null,
+		metadata: null,
+		sources: {},
+		sourceIds: {},
+		signatures,
+		creationBytecode: null,
+		runtimeBytecode: null,
+		compilation: null,
+		deployment: {
+			chainId: String(chainIdNumber),
+			address,
+			transactionHash: null,
+			blockNumber: null,
+			transactionIndex: null,
+			deployer: null,
+		},
+		stdJsonInput: null,
+		stdJsonOutput: null,
+		proxyResolution: null,
+		docsUrl: 'https://docs.tempo.xyz/protocol/tip20/overview',
+		extensions: {
+			tempo: {
+				nativeSource: {
+					kind: 'precompile',
+					language: 'Solidity',
+					bytecodeVerified: false,
+					repository: 'tempoxyz/tempo',
+					commit: null,
+					commitUrl: null,
+					paths: [],
+					entrypoints: [],
+					activation: {
+						protocolVersion: null,
+						fromBlock: null,
+						toBlock: null,
+					},
+				},
+			},
+		},
+	}
+
+	return { minimalResponse, fullResponse }
+}
+
 async function getNativeLookupResponse(
 	db: ReturnType<typeof getDb>,
 	chainIdNumber: number,
@@ -350,7 +429,15 @@ async function getNativeLookupResponse(
 		)
 		.limit(1)
 
-	if (!nativeContract) return null
+	if (!nativeContract) {
+		// Dynamic TIP-20 token detection: all TIP-20 tokens are precompiles at 0x20c0... addresses.
+		// They share the same ABI but aren't individually seeded into the native contracts table.
+		const addressHex = bytesToHex(addressBytes)
+		if (addressHex.toLowerCase().startsWith('0x20c000000')) {
+			return buildDynamicTip20Response(chainIdNumber, addressHex)
+		}
+		return null
+	}
 
 	const [revision] = await db
 		.select({
@@ -561,6 +648,20 @@ lookupRoute
 					Number(a.chainId) - Number(b.chainId) ||
 					a.address.localeCompare(b.address),
 			)
+
+			// Dynamic TIP-20 fallback: if no results found and address is a TIP-20 token,
+			// return entries for all chains using the shared TIP-20 ABI
+			if (
+				contracts.length === 0 &&
+				address.toLowerCase().startsWith('0x20c000000')
+			) {
+				return context.json({
+					results: chainIds.map(
+						(id) =>
+							buildDynamicTip20Response(id, address).minimalResponse,
+					),
+				})
+			}
 
 			return context.json({ results: contracts })
 		} catch (error) {
