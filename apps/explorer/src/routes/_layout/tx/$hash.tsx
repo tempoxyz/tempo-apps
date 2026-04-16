@@ -633,7 +633,7 @@ function TraceSection(props: {
 			{view === 'tree' ? (
 				<TxTraceTree trace={trace} tree={tree} />
 			) : (
-				<TxTraceFlamegraph tree={tree} />
+				<TxTraceFlamegraph tree={tree} prestate={prestate} />
 			)}
 			<TxStateDiff
 				prestate={prestate}
