@@ -2,13 +2,16 @@ import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import type * as React from 'react'
-import { Addresses } from 'viem/tempo'
+import { useMemo } from 'react'
+import { Abis, Addresses } from 'viem/tempo'
+import { useReadContracts } from 'wagmi'
 import { Amount } from '#comps/Amount'
 import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
 import { TokenIcon } from '#comps/TokenIcon'
 import { getAccountTag } from '#lib/account'
 import { isTip20Address } from '#lib/domain/tip20'
+import { HexFormatter } from '#lib/formatting'
 import { useMediaQuery } from '#lib/hooks'
 import { withLoaderTiming } from '#lib/profiling'
 import { feeAmmPoolsQueryOptions, type FeeAmmPool } from '#lib/queries'
@@ -31,6 +34,44 @@ function FeeAmmPage(): React.JSX.Element {
 		initialData: loaderData,
 	})
 	const pools = data ?? []
+	const uniqueTokenAddresses = useMemo(
+		() => [
+			...new Set(
+				pools.flatMap((pool) => [pool.userToken, pool.validatorToken]),
+			),
+		],
+		[pools],
+	)
+	const { data: tokenMetadataResults } = useReadContracts({
+		contracts: uniqueTokenAddresses.flatMap((address) => [
+			{ address, abi: Abis.tip20, functionName: 'name' as const },
+			{ address, abi: Abis.tip20, functionName: 'symbol' as const },
+			{ address, abi: Abis.tip20, functionName: 'decimals' as const },
+		]),
+		query: {
+			enabled: uniqueTokenAddresses.length > 0,
+		},
+	})
+	const tokenMetadataByAddress = useMemo(() => {
+		const metadataByAddress = new Map<Address.Address, PoolTokenMetadata>()
+
+		for (const [index, address] of uniqueTokenAddresses.entries()) {
+			const resultIndex = index * 3
+			const name = normalizeTokenText(
+				tokenMetadataResults?.[resultIndex]?.result,
+			)
+			const symbol = normalizeTokenText(
+				tokenMetadataResults?.[resultIndex + 1]?.result,
+			)
+			const decimalsResult = tokenMetadataResults?.[resultIndex + 2]?.result
+			const decimals =
+				typeof decimalsResult === 'number' ? decimalsResult : undefined
+
+			metadataByAddress.set(address, { name, symbol, decimals })
+		}
+
+		return metadataByAddress
+	}, [tokenMetadataResults, uniqueTokenAddresses])
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'
@@ -77,8 +118,16 @@ function FeeAmmPage(): React.JSX.Element {
 								items={() =>
 									pools.map((pool) => ({
 										cells: [
-											<PoolPairCell key="pool" pool={pool} />,
-											<PoolReservesCell key="reserves" pool={pool} />,
+											<PoolPairCell
+												key="pool"
+												pool={pool}
+												tokenMetadataByAddress={tokenMetadataByAddress}
+											/>,
+											<PoolReservesCell
+												key="reserves"
+												pool={pool}
+												tokenMetadataByAddress={tokenMetadataByAddress}
+											/>,
 										],
 									}))
 								}
@@ -100,21 +149,21 @@ function FeeAmmPage(): React.JSX.Element {
 }
 
 export function PoolPairCell(props: PoolPairCell.Props): React.JSX.Element {
-	const { pool } = props
-	const userTokenLabel = getAccountTag(pool.userToken)?.label ?? pool.userToken
-	const validatorTokenLabel =
-		getAccountTag(pool.validatorToken)?.label ?? pool.validatorToken
+	const { pool, tokenMetadataByAddress } = props
+	const userToken = getPoolTokenDisplay(
+		pool.userToken,
+		tokenMetadataByAddress.get(pool.userToken),
+	)
+	const validatorToken = getPoolTokenDisplay(
+		pool.validatorToken,
+		tokenMetadataByAddress.get(pool.validatorToken),
+	)
 
 	return (
-		<div className="inline-flex items-center gap-2 min-w-0">
-			<TokenIcon address={pool.userToken} />
-			<PoolTokenLink address={pool.userToken} label={userTokenLabel} />
-			<span className="text-tertiary">→</span>
-			<TokenIcon address={pool.validatorToken} />
-			<PoolTokenLink
-				address={pool.validatorToken}
-				label={validatorTokenLabel}
-			/>
+		<div className="flex items-center gap-3 min-w-0 font-sans">
+			<PoolTokenLink token={userToken} />
+			<span className="text-tertiary shrink-0">→</span>
+			<PoolTokenLink token={validatorToken} />
 		</div>
 	)
 }
@@ -122,57 +171,134 @@ export function PoolPairCell(props: PoolPairCell.Props): React.JSX.Element {
 export declare namespace PoolPairCell {
 	type Props = {
 		pool: FeeAmmPool
+		tokenMetadataByAddress: Map<Address.Address, PoolTokenMetadata>
 	}
 }
 
 export function PoolReservesCell(
 	props: PoolReservesCell.Props,
 ): React.JSX.Element {
-	const { pool } = props
+	const { pool, tokenMetadataByAddress } = props
+	const userTokenMetadata = tokenMetadataByAddress.get(pool.userToken)
+	const validatorTokenMetadata = tokenMetadataByAddress.get(pool.validatorToken)
 
 	return (
-		<>
-			<Amount
-				value={pool.reserveUserToken}
-				token={pool.userToken}
-				short
-				maxWidth={14}
-			/>
-			<Amount
-				value={pool.reserveValidatorToken}
-				token={pool.validatorToken}
-				short
-				maxWidth={14}
-			/>
-		</>
+		<div className="flex flex-col items-start gap-2 min-w-0 font-sans">
+			<div className="min-w-0">
+				<Amount
+					value={pool.reserveUserToken}
+					token={pool.userToken}
+					decimals={
+						userTokenMetadata?.symbol ? userTokenMetadata.decimals : undefined
+					}
+					symbol={userTokenMetadata?.symbol}
+					short
+					maxWidth={16}
+				/>
+			</div>
+			<div className="min-w-0">
+				<Amount
+					value={pool.reserveValidatorToken}
+					token={pool.validatorToken}
+					decimals={
+						validatorTokenMetadata?.symbol
+							? validatorTokenMetadata.decimals
+							: undefined
+					}
+					symbol={validatorTokenMetadata?.symbol}
+					short
+					maxWidth={16}
+				/>
+			</div>
+		</div>
 	)
 }
 
 export declare namespace PoolReservesCell {
 	type Props = {
 		pool: FeeAmmPool
+		tokenMetadataByAddress: Map<Address.Address, PoolTokenMetadata>
 	}
 }
 
 export function PoolTokenLink(props: PoolTokenLink.Props): React.JSX.Element {
-	const { address, label } = props
-	const to = isTip20Address(address) ? '/token/$address' : '/address/$address'
+	const { token } = props
+	const to = isTip20Address(token.address)
+		? '/token/$address'
+		: '/address/$address'
 
 	return (
 		<Link
 			to={to}
-			params={{ address }}
-			className="text-accent hover:underline truncate"
-			title={address}
+			params={{ address: token.address }}
+			className="group inline-flex items-center gap-2 min-w-0"
+			title={
+				token.secondaryLabel
+					? `${token.primaryLabel} · ${token.secondaryLabel}\n${token.address}`
+					: token.address
+			}
 		>
-			{label}
+			<TokenIcon
+				address={token.address}
+				name={token.symbol ?? token.primaryLabel}
+			/>
+			<span className="flex flex-col min-w-0 leading-tight">
+				<span className="text-accent group-hover:underline truncate font-medium">
+					{token.primaryLabel}
+				</span>
+				{token.secondaryLabel ? (
+					<span className="text-[12px] text-tertiary truncate">
+						{token.secondaryLabel}
+					</span>
+				) : null}
+			</span>
 		</Link>
 	)
 }
 
 export declare namespace PoolTokenLink {
 	type Props = {
-		address: Address.Address
-		label: string
+		token: PoolTokenDisplay
+	}
+}
+
+type PoolTokenMetadata = {
+	decimals?: number | undefined
+	name?: string | undefined
+	symbol?: string | undefined
+}
+
+type PoolTokenDisplay = {
+	address: Address.Address
+	primaryLabel: string
+	secondaryLabel?: string | undefined
+	symbol?: string | undefined
+}
+
+function normalizeTokenText(value: unknown): string | undefined {
+	if (typeof value !== 'string') return undefined
+	const normalized = value.trim()
+	return normalized.length > 0 ? normalized : undefined
+}
+
+function getPoolTokenDisplay(
+	address: Address.Address,
+	metadata: PoolTokenMetadata | undefined,
+): PoolTokenDisplay {
+	const taggedLabel = getAccountTag(address)?.label
+	const symbol = normalizeTokenText(metadata?.symbol)
+	const name = normalizeTokenText(metadata?.name)
+	const addressLabel = HexFormatter.truncate(address)
+	const primaryLabel = symbol ?? taggedLabel ?? addressLabel
+	const secondaryLabel = [name, taggedLabel, addressLabel].find(
+		(value) =>
+			value !== undefined && value.toLowerCase() !== primaryLabel.toLowerCase(),
+	)
+
+	return {
+		address,
+		primaryLabel,
+		secondaryLabel,
+		symbol,
 	}
 }
