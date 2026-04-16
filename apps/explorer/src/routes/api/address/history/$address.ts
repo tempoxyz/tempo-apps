@@ -68,10 +68,15 @@ function toHistoryStatus(
 }
 
 function toFiniteTimestamp(value: unknown): number {
-	if (typeof value === 'number' && Number.isFinite(value)) return value
+	const normalizeEpoch = (epoch: number) =>
+		epoch > 1_000_000_000_000 ? Math.floor(epoch / 1000) : epoch
+
+	if (typeof value === 'number' && Number.isFinite(value)) {
+		return normalizeEpoch(value)
+	}
 	if (typeof value === 'string') {
 		const parsed = Number(value)
-		if (Number.isFinite(parsed)) return parsed
+		if (Number.isFinite(parsed)) return normalizeEpoch(parsed)
 		const parsedDate = Date.parse(value)
 		if (Number.isFinite(parsedDate)) return Math.floor(parsedDate / 1000)
 	}
@@ -112,6 +117,153 @@ export type HistoryResponse = {
 	hasMore: boolean
 	countCapped: boolean
 	error: null | string
+}
+
+type TempoActivityItem = {
+	hash: Hex.Hex
+	blockNumber: string | number
+	timestamp: string | number
+	from: Address.Address
+	to: Address.Address | null
+	value: string | number
+	status: 'success' | 'reverted'
+	gasUsed: string | number
+	effectiveGasPrice: string | number
+	events: EnrichedTransaction['knownEvents']
+}
+
+type TempoActivityResponse = {
+	items: TempoActivityItem[]
+	offset: number
+	limit: number
+	hasMore: boolean
+	includesApplied: {
+		transfers: boolean
+		zones: {
+			requested: boolean
+			private: boolean
+		}
+	}
+}
+
+const TEMPO_ACTIVITY_API_BASE_URL = 'https://api.tempo.xyz'
+const TEMPO_ACTIVITY_FETCH_LIMIT = 200
+
+async function fetchTempoAddressActivity(params: {
+	address: Address.Address
+	chainId: number
+	include: 'all' | 'sent' | 'received'
+	limit: number
+	offset: number
+}): Promise<TempoActivityResponse> {
+	const apiKey = process.env.TEMPO_API_KEY
+	if (!apiKey) throw new Error('Missing TEMPO_API_KEY')
+
+	const searchParams = new URLSearchParams({
+		include: params.include,
+		includes: 'zones,transfers',
+		limit: params.limit.toString(),
+		offset: params.offset.toString(),
+	})
+	const url = new URL(
+		`/chains/${params.chainId}/addresses/${params.address}/activity`,
+		TEMPO_ACTIVITY_API_BASE_URL,
+	)
+	url.search = searchParams.toString()
+
+	const response = await fetch(url, {
+		headers: {
+			Accept: 'application/json',
+			'X-API-Key': apiKey,
+		},
+	})
+
+	if (!response.ok) {
+		throw new Error(`Tempo activity API failed with ${response.status}`)
+	}
+
+	return (await response.json()) as TempoActivityResponse
+}
+
+function mapTempoActivityItem(
+	item: TempoActivityItem,
+): import('#lib/server/build-tx-only-transactions').EnrichedTransaction {
+	return {
+		hash: item.hash,
+		blockNumber: toHexQuantity(item.blockNumber),
+		timestamp: toFiniteTimestamp(item.timestamp),
+		from: Address.checksum(item.from),
+		to: item.to ? Address.checksum(item.to) : null,
+		value: toHexQuantity(item.value),
+		status: item.status,
+		gasUsed: toHexQuantity(item.gasUsed),
+		effectiveGasPrice: toHexQuantity(item.effectiveGasPrice),
+		knownEvents: item.events,
+	}
+}
+
+async function fetchTempoFilteredAddressActivity(params: {
+	address: Address.Address
+	chainId: number
+	include: 'all' | 'sent' | 'received'
+	offset: number
+	limit: number
+	status?: 'success' | 'reverted' | undefined
+	after?: number | undefined
+}): Promise<HistoryResponse> {
+	const targetCount = params.offset + params.limit + 1
+	const filteredItems: TempoActivityItem[] = []
+	let sourceOffset = 0
+	let sourceHasMore = true
+	let countCapped = false
+
+	while (
+		sourceHasMore &&
+		filteredItems.length < targetCount &&
+		sourceOffset < HISTORY_COUNT_MAX
+	) {
+		const page = await fetchTempoAddressActivity({
+			address: params.address,
+			chainId: params.chainId,
+			include: params.include,
+			limit: TEMPO_ACTIVITY_FETCH_LIMIT,
+			offset: sourceOffset,
+		})
+
+		sourceHasMore = page.hasMore
+		sourceOffset += page.items.length
+
+		for (const item of page.items) {
+			const timestamp = toFiniteTimestamp(item.timestamp)
+			if (params.status && item.status !== params.status) continue
+			if (params.after && timestamp < params.after) continue
+			filteredItems.push(item)
+		}
+
+		if (page.items.length === 0) break
+	}
+
+	if (sourceHasMore || sourceOffset >= HISTORY_COUNT_MAX) countCapped = true
+
+	const pageItems = filteredItems.slice(
+		params.offset,
+		params.offset + params.limit,
+	)
+	const hasMore =
+		filteredItems.length > params.offset + params.limit || countCapped
+	const total = countCapped
+		? Math.max(filteredItems.length, params.offset + pageItems.length)
+		: filteredItems.length
+
+	return {
+		transactions: pageItems.map(mapTempoActivityItem),
+		total,
+		offset: params.offset,
+		limit: params.limit,
+		hasMore,
+		countCapped,
+		error: null,
+	}
 }
 
 /**
@@ -204,6 +356,46 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const includeReceived = include === 'all' || include === 'received'
 					const sources = parseSources(searchParams.sources)
 					const statusFilter = searchParams.status
+
+					const canUseTempoActivityApi =
+						Boolean(process.env.TEMPO_API_KEY) &&
+						!isTip20Address(address) &&
+						!sources.emitted
+
+					if (canUseTempoActivityApi) {
+						if (statusFilter || after) {
+							return Response.json(
+								await fetchTempoFilteredAddressActivity({
+									address,
+									chainId,
+									include,
+									offset,
+									limit,
+									status: statusFilter,
+									after,
+								}),
+							)
+						}
+
+						const activity = await fetchTempoAddressActivity({
+							address,
+							chainId,
+							include,
+							limit,
+							offset,
+						})
+						const transactions = activity.items.map(mapTempoActivityItem)
+
+						return Response.json({
+							transactions,
+							total: offset + transactions.length,
+							offset,
+							limit,
+							hasMore: activity.hasMore,
+							countCapped: true,
+							error: null,
+						} satisfies HistoryResponse)
+					}
 
 					const fetchSize = limit + 1
 					const isTxOnlySource =
