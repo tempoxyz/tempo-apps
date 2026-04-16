@@ -69,6 +69,11 @@ const taggedAccounts: Record<Address.Address, AccountTag> = {
 		id: 'genesis-token:thetausd',
 		label: 'ThetaUSD',
 	},
+	// mpp
+	'0x33b901018174ddabe4841042ab76ba85d4e24f25': {
+		id: 'mpp:contract',
+		label: 'MPP Contract',
+	},
 }
 
 export function getAccountTag(
