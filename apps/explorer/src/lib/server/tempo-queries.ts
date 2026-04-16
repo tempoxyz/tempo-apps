@@ -1,8 +1,10 @@
 import type { Address, Hex } from 'ox'
+import * as AddressUtils from 'ox/Address'
 import * as OxHash from 'ox/Hash'
 import * as OxHex from 'ox/Hex'
 import { Tidx } from 'tidx.ts'
 import { decodeAbiParameters, zeroAddress } from 'viem'
+import { Addresses } from 'viem/tempo'
 import * as ABIS from '#lib/abis'
 import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
 import { parseTimestamp } from '#lib/timestamp'
@@ -422,6 +424,62 @@ export async function fetchTokenCreatedMetadata(
 	}
 
 	return results
+}
+
+export type FeeAmmPoolPair = {
+	userToken: Address.Address
+	validatorToken: Address.Address
+}
+
+function decodeIndexedAddress(
+	topic: Hex.Hex | null,
+): Address.Address | undefined {
+	if (!topic) return undefined
+	const address = `0x${topic.slice(-40)}`.toLowerCase() as Address.Address
+	return AddressUtils.validate(address) ? address : undefined
+}
+
+export async function fetchFeeAmmPoolPairs(
+	chainId: number,
+): Promise<FeeAmmPoolPair[]> {
+	const mintTopic = OxHash.keccak256(
+		OxHex.fromString('Mint(address,address,address,uint256,uint256,uint256)'),
+	)
+	const burnTopic = OxHash.keccak256(
+		OxHex.fromString(
+			'Burn(address,address,address,uint256,uint256,uint256,address)',
+		),
+	)
+	const rebalanceSwapTopic = OxHash.keccak256(
+		OxHex.fromString('RebalanceSwap(address,address,address,uint256,uint256)'),
+	)
+
+	const rows = await QB(chainId)
+		.selectFrom('logs')
+		.select(['topic0', 'topic1', 'topic2', 'topic3'])
+		.where('address', '=', Addresses.feeManager)
+		.where('topic0', 'in', [mintTopic, burnTopic, rebalanceSwapTopic] as never)
+		.execute()
+
+	const pairs = new Map<string, FeeAmmPoolPair>()
+
+	for (const row of rows) {
+		const userToken =
+			row.topic0 === rebalanceSwapTopic
+				? decodeIndexedAddress(row.topic1 as Hex.Hex | null)
+				: decodeIndexedAddress(row.topic2 as Hex.Hex | null)
+		const validatorToken =
+			row.topic0 === rebalanceSwapTopic
+				? decodeIndexedAddress(row.topic2 as Hex.Hex | null)
+				: decodeIndexedAddress(row.topic3 as Hex.Hex | null)
+
+		if (!userToken || !validatorToken) continue
+
+		const key = `${userToken}:${validatorToken}`
+		pairs.set(key, { userToken, validatorToken })
+	}
+
+	return [...pairs.values()]
 }
 
 export async function fetchTransactionTimestamp(
