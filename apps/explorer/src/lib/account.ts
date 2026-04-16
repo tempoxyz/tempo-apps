@@ -72,7 +72,7 @@ const taggedAccounts: Record<Address.Address, AccountTag> = {
 	// mpp
 	'0x33b901018174ddabe4841042ab76ba85d4e24f25': {
 		id: 'mpp:contract',
-		label: 'MPP Contract',
+		label: 'MPP Escrow',
 	},
 }
 
