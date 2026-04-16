@@ -2,8 +2,15 @@ import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
 import { Abis, Addresses } from 'viem/tempo'
 import { getChainId, readContracts } from 'wagmi/actions'
-import { getTokenListAddresses } from '#lib/server/tokens'
+import { getTokenListEntries } from '#lib/server/tokens'
 import { getWagmiConfig } from '#wagmi.config'
+
+export type FeeAmmToken = {
+	address: string
+	name: string
+	symbol: string
+	decimals?: number
+}
 
 export type FeeAmmPool = {
 	userToken: string
@@ -14,9 +21,15 @@ export type FeeAmmPool = {
 
 export type FeeAmmPoolsResponse = {
 	pools: FeeAmmPool[]
+	tokens: FeeAmmToken[]
 }
 
 const MAX_TOKENS = 32
+
+function normalizeTokenText(value: string | undefined): string | undefined {
+	const normalized = value?.trim()
+	return normalized ? normalized : undefined
+}
 
 export const Route = createFileRoute('/api/fee-amm/pools')({
 	server: {
@@ -25,15 +38,28 @@ export const Route = createFileRoute('/api/fee-amm/pools')({
 				try {
 					const config = getWagmiConfig()
 					const chainId = getChainId(config)
-					const addressSet = await getTokenListAddresses(chainId)
-					const tokenAddresses = [...addressSet]
-						.filter((address) => Address.validate(address))
-						.slice(0, MAX_TOKENS) as `0x${string}`[]
+					const tokens = (await getTokenListEntries(chainId))
+						.filter((entry) => Address.validate(entry.address))
+						.slice(0, MAX_TOKENS)
+						.map((entry) => ({
+							address: entry.address as `0x${string}`,
+							name: normalizeTokenText(entry.name) ?? entry.address,
+							symbol:
+								normalizeTokenText(entry.extensions?.label) ??
+								normalizeTokenText(entry.symbol) ??
+								normalizeTokenText(entry.name) ??
+								entry.address,
+							decimals: entry.decimals,
+						}))
+					const tokenAddresses = tokens.map((token) => token.address)
 
 					if (tokenAddresses.length === 0) {
-						return Response.json({ pools: [] } satisfies FeeAmmPoolsResponse, {
-							headers: { 'Cache-Control': 'public, max-age=60' },
-						})
+						return Response.json(
+							{ pools: [], tokens: [] } satisfies FeeAmmPoolsResponse,
+							{
+								headers: { 'Cache-Control': 'public, max-age=60' },
+							},
+						)
 					}
 
 					const pairs: Array<{
@@ -81,16 +107,19 @@ export const Route = createFileRoute('/api/fee-amm/pools')({
 						})
 					}
 
-					return Response.json({ pools } satisfies FeeAmmPoolsResponse, {
-						headers: {
-							'Cache-Control':
-								'public, max-age=300, stale-while-revalidate=600',
+					return Response.json(
+						{ pools, tokens } satisfies FeeAmmPoolsResponse,
+						{
+							headers: {
+								'Cache-Control':
+									'public, max-age=300, stale-while-revalidate=600',
+							},
 						},
-					})
+					)
 				} catch (error) {
 					console.error('[fee-amm/pools]', error)
 					return Response.json(
-						{ pools: [], error: 'Internal server error' },
+						{ pools: [], tokens: [], error: 'Internal server error' },
 						{ status: 500 },
 					)
 				}

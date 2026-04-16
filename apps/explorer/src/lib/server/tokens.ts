@@ -24,6 +24,16 @@ export type Token = {
 	holdersCountCapped?: boolean
 }
 
+export type TokenListEntry = {
+	address: string
+	name: string
+	symbol: string
+	decimals?: number | undefined
+	extensions?: {
+		label?: string | undefined
+	}
+}
+
 const FetchTokensInputSchema = z.object({
 	offset: z.coerce.number().check(z.gte(0)),
 	limit: z.coerce.number().check(z.gte(1), z.lte(25)),
@@ -34,15 +44,6 @@ export type TokensApiResponse = {
 	offset: number
 	limit: number
 	total: number
-}
-
-type TokenListEntry = {
-	address: string
-	name: string
-	symbol: string
-	extensions?: {
-		label?: string
-	}
 }
 
 type TokenListResponse = {
@@ -77,7 +78,10 @@ async function getTokenList(chainId: number): Promise<CachedTokenList> {
 		}
 
 		const data = (await res.json()) as TokenListResponse
-		const entries = data.tokens.map((entry) => ({ ...entry }))
+		const entries = data.tokens.map((entry) => ({
+			...entry,
+			address: entry.address.toLowerCase(),
+		}))
 		const next = {
 			entries,
 			addresses: new Set(entries.map((entry) => entry.address.toLowerCase())),
@@ -95,6 +99,12 @@ export async function getTokenListAddresses(
 	chainId: number,
 ): Promise<Set<string>> {
 	return (await getTokenList(chainId)).addresses
+}
+
+export async function getTokenListEntries(
+	chainId: number,
+): Promise<TokenListEntry[]> {
+	return (await getTokenList(chainId)).entries
 }
 
 function getAddressKey(address: string): string {

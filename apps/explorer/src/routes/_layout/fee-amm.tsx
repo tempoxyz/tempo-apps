@@ -3,8 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import type * as React from 'react'
 import { useMemo } from 'react'
-import { Abis, Addresses } from 'viem/tempo'
-import { useReadContracts } from 'wagmi'
+import { Addresses } from 'viem/tempo'
 import { Amount } from '#comps/Amount'
 import { DataGrid } from '#comps/DataGrid'
 import { Sections } from '#comps/Sections'
@@ -33,45 +32,19 @@ function FeeAmmPage(): React.JSX.Element {
 		...feeAmmPoolsQueryOptions(),
 		initialData: loaderData,
 	})
-	const pools = data ?? []
-	const uniqueTokenAddresses = useMemo(
-		() => [
-			...new Set(
-				pools.flatMap((pool) => [pool.userToken, pool.validatorToken]),
-			),
-		],
-		[pools],
-	)
-	const { data: tokenMetadataResults } = useReadContracts({
-		contracts: uniqueTokenAddresses.flatMap((address) => [
-			{ address, abi: Abis.tip20, functionName: 'name' as const },
-			{ address, abi: Abis.tip20, functionName: 'symbol' as const },
-			{ address, abi: Abis.tip20, functionName: 'decimals' as const },
-		]),
-		query: {
-			enabled: uniqueTokenAddresses.length > 0,
-		},
-	})
+	const pools = data?.pools ?? []
 	const tokenMetadataByAddress = useMemo(() => {
-		const metadataByAddress = new Map<Address.Address, PoolTokenMetadata>()
-
-		for (const [index, address] of uniqueTokenAddresses.entries()) {
-			const resultIndex = index * 3
-			const name = normalizeTokenText(
-				tokenMetadataResults?.[resultIndex]?.result,
-			)
-			const symbol = normalizeTokenText(
-				tokenMetadataResults?.[resultIndex + 1]?.result,
-			)
-			const decimalsResult = tokenMetadataResults?.[resultIndex + 2]?.result
-			const decimals =
-				typeof decimalsResult === 'number' ? decimalsResult : undefined
-
-			metadataByAddress.set(address, { name, symbol, decimals })
-		}
-
-		return metadataByAddress
-	}, [tokenMetadataResults, uniqueTokenAddresses])
+		return new Map(
+			(data?.tokens ?? []).map((token) => [
+				token.address,
+				{
+					name: token.name,
+					symbol: token.symbol,
+					decimals: token.decimals,
+				} satisfies PoolTokenMetadata,
+			]),
+		)
+	}, [data?.tokens])
 
 	const isMobile = useMediaQuery('(max-width: 799px)')
 	const mode = isMobile ? 'stacked' : 'tabs'

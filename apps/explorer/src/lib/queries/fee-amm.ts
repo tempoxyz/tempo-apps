@@ -12,6 +12,14 @@ const FeeAmmPoolsResponseSchema = z.object({
 			reserveValidatorToken: z.string(),
 		}),
 	),
+	tokens: z.array(
+		z.object({
+			address: z.string(),
+			name: z.string(),
+			symbol: z.string(),
+			decimals: z.optional(z.number()),
+		}),
+	),
 })
 
 export type FeeAmmPool = {
@@ -21,10 +29,22 @@ export type FeeAmmPool = {
 	reserveValidatorToken: bigint
 }
 
+export type FeeAmmToken = {
+	address: Address.Address
+	name: string
+	symbol: string
+	decimals?: number | undefined
+}
+
+export type FeeAmmPoolsData = {
+	pools: FeeAmmPool[]
+	tokens: FeeAmmToken[]
+}
+
 export function feeAmmPoolsQueryOptions() {
 	return queryOptions({
 		queryKey: ['fee-amm-pools'],
-		queryFn: async ({ signal }): Promise<FeeAmmPool[]> => {
+		queryFn: async ({ signal }): Promise<FeeAmmPoolsData> => {
 			const response = await fetch(getApiUrl('/api/fee-amm/pools'), { signal })
 
 			if (!response.ok) {
@@ -39,18 +59,26 @@ export function feeAmmPoolsQueryOptions() {
 				throw new Error(z.prettifyError(parsed.error))
 			}
 
-			return parsed.data.pools
-				.map((pool) => ({
-					userToken: pool.userToken as Address.Address,
-					validatorToken: pool.validatorToken as Address.Address,
-					reserveUserToken: BigInt(pool.reserveUserToken),
-					reserveValidatorToken: BigInt(pool.reserveValidatorToken),
-				}))
-				.sort((a, b) => {
-					const aKey = `${a.userToken}:${a.validatorToken}`
-					const bKey = `${b.userToken}:${b.validatorToken}`
-					return aKey.localeCompare(bKey)
-				})
+			return {
+				pools: parsed.data.pools
+					.map((pool) => ({
+						userToken: pool.userToken as Address.Address,
+						validatorToken: pool.validatorToken as Address.Address,
+						reserveUserToken: BigInt(pool.reserveUserToken),
+						reserveValidatorToken: BigInt(pool.reserveValidatorToken),
+					}))
+					.sort((a, b) => {
+						const aKey = `${a.userToken}:${a.validatorToken}`
+						const bKey = `${b.userToken}:${b.validatorToken}`
+						return aKey.localeCompare(bKey)
+					}),
+				tokens: parsed.data.tokens.map((token) => ({
+					address: token.address as Address.Address,
+					name: token.name,
+					symbol: token.symbol,
+					decimals: token.decimals,
+				})),
+			}
 		},
 		staleTime: 60_000,
 	})
