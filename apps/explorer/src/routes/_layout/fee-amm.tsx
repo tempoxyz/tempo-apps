@@ -14,7 +14,7 @@ import {
 import { TokenIcon } from '#comps/TokenIcon'
 import { isTip20Address } from '#lib/domain/tip20'
 import { PriceFormatter } from '#lib/formatting'
-import { useMediaQuery } from '#lib/hooks'
+import { useCopy, useMediaQuery } from '#lib/hooks'
 import { withLoaderTiming } from '#lib/profiling'
 import { feeAmmPoolsQueryOptions } from '#lib/queries'
 import type { FeeAmmPool } from '#lib/server/fee-amm'
@@ -43,8 +43,8 @@ function FeeAmmPage(): React.JSX.Element {
 	const mode = isMobile ? 'stacked' : 'tabs'
 
 	const columns: DataGrid.Column[] = [
-		{ label: 'Pool', align: 'start', width: '2fr', minWidth: 220 },
-		{ label: 'Reserves', align: 'start', width: '3fr', minWidth: 280 },
+		{ label: 'Pool', align: 'start', width: '2.5fr', minWidth: 240 },
+		{ label: 'Reserves', align: 'start', width: '2.5fr', minWidth: 280 },
 		{ label: 'LP Supply', align: 'start', width: 140 },
 		{
 			label: (
@@ -187,6 +187,7 @@ function renderTimestamp(
 
 export function PoolPairCell(props: PoolPairCell.Props): React.JSX.Element {
 	const { pool, compact = false } = props
+	const { copy, notifying } = useCopy()
 
 	return (
 		<div className="flex flex-col gap-2 min-w-0">
@@ -208,7 +209,18 @@ export function PoolPairCell(props: PoolPairCell.Props): React.JSX.Element {
 				/>
 			</div>
 			{!compact ? (
-				<span className="text-tertiary text-xs font-mono">{pool.poolId}</span>
+				<button
+					type="button"
+					onClick={() => copy(pool.poolId)}
+					className={`text-xs font-mono text-left truncate transition-colors ${
+						notifying
+							? 'text-positive'
+							: 'text-tertiary hover:text-accent hover:underline'
+					}`}
+					title={notifying ? 'Copied pool ID' : 'Copy pool ID'}
+				>
+					{pool.poolId}
+				</button>
 			) : null}
 		</div>
 	)
@@ -227,7 +239,7 @@ export function PoolReservesCell(
 	const { pool } = props
 
 	return (
-		<>
+		<div className="flex flex-col items-start gap-1 min-w-0">
 			<Amount
 				value={pool.reserveUserToken}
 				token={pool.userToken}
@@ -244,7 +256,7 @@ export function PoolReservesCell(
 				short
 				maxWidth={14}
 			/>
-		</>
+		</div>
 	)
 }
 
