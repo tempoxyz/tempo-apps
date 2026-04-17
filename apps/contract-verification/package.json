@@ -31,13 +31,10 @@
 	},
 	"dependencies": {
 		"@cloudflare/containers": "^0.2.3",
-		"@hono/zod-validator": "catalog:",
-		"@logtape/config": "catalog:",
 		"@logtape/drizzle-orm": "catalog:",
 		"@logtape/hono": "catalog:",
 		"@logtape/logtape": "catalog:",
 		"@logtape/pretty": "catalog:",
-		"@logtape/redaction": "catalog:",
 		"@wagmi/core": "catalog:",
 		"cbor-x": "^1.6.4",
 		"drizzle-orm": "^0.45.1",

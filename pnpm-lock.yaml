@@ -27,9 +27,6 @@ catalogs:
     '@iconify/json':
       specifier: ^2.2.460
       version: 2.2.460
-    '@logtape/config':
-      specifier: ^2.0.4
-      version: 2.0.4
     '@logtape/drizzle-orm':
       specifier: ^2.0.4
       version: 2.0.4
@@ -40,9 +37,6 @@ catalogs:
       specifier: ^2.0.4
       version: 2.0.4
     '@logtape/pretty':
-      specifier: ^2.0.4
-      version: 2.0.4
-    '@logtape/redaction':
       specifier: ^2.0.4
       version: 2.0.4
     '@sentry/cloudflare':
@@ -75,9 +69,6 @@ catalogs:
     '@tanstack/devtools-vite':
       specifier: ^0.6.0
       version: 0.6.0
-    '@tanstack/query-async-storage-persister':
-      specifier: ^5.96.2
-      version: 5.96.2
     '@tanstack/react-devtools':
       specifier: ^0.10.2
       version: 0.10.2
@@ -85,9 +76,6 @@ catalogs:
       specifier: ^5.96.2
       version: 5.96.2
     '@tanstack/react-query-devtools':
-      specifier: ^5.96.2
-      version: 5.96.2
-    '@tanstack/react-query-persist-client':
       specifier: ^5.96.2
       version: 5.96.2
     '@tanstack/react-router':
@@ -274,12 +262,6 @@ importers:
       '@cloudflare/containers':
         specifier: ^0.2.3
         version: 0.2.4
-      '@hono/zod-validator':
-        specifier: 'catalog:'
-        version: 0.7.6(hono@4.12.12)(zod@4.3.6)
-      '@logtape/config':
-        specifier: 'catalog:'
-        version: 2.0.4(@logtape/logtape@2.0.4)
       '@logtape/drizzle-orm':
         specifier: 'catalog:'
         version: 2.0.4(@logtape/logtape@2.0.4)
@@ -290,9 +272,6 @@ importers:
         specifier: 'catalog:'
         version: 2.0.4
       '@logtape/pretty':
-        specifier: 'catalog:'
-        version: 2.0.4(@logtape/logtape@2.0.4)
-      '@logtape/redaction':
         specifier: 'catalog:'
         version: 2.0.4(@logtape/logtape@2.0.4)
       '@wagmi/core':
@@ -401,15 +380,9 @@ importers:
       '@tailwindcss/vite':
         specifier: 'catalog:'
         version: 4.2.2(vite@8.0.7(@types/node@25.5.2)(esbuild@0.28.0)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.2))
-      '@tanstack/query-async-storage-persister':
-        specifier: 'catalog:'
-        version: 5.96.2
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.96.2(react@19.2.5)
-      '@tanstack/react-query-persist-client':
-        specifier: 'catalog:'
-        version: 5.96.2(@tanstack/react-query@5.96.2(react@19.2.5))(react@19.2.5)
       '@tanstack/react-router':
         specifier: 'catalog:'
         version: 1.168.10(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
@@ -434,12 +407,6 @@ importers:
       cva:
         specifier: 'catalog:'
         version: 1.0.0-beta.4(typescript@6.0.2)
-      hono:
-        specifier: 'catalog:'
-        version: 4.12.12
-      idxs:
-        specifier: 'catalog:'
-        version: 0.0.6(typescript@6.0.2)
       ox:
         specifier: 'catalog:'
         version: 0.14.13(typescript@6.0.2)(zod@4.3.6)
@@ -693,9 +660,6 @@ importers:
       ox:
         specifier: 'catalog:'
         version: 0.14.13(typescript@6.0.2)(zod@4.3.6)
-      viem:
-        specifier: 'catalog:'
-        version: 2.47.12(bufferutil@4.1.0)(typescript@6.0.2)(utf-8-validate@5.0.10)(zod@4.3.6)
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -2254,11 +2218,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@logtape/config@2.0.4':
-    resolution: {integrity: sha512-uC/R6zxQizU5m8zyRuR8k3wv74GaKAFZYeoKoZt0PiBJ7x1h5EtJ6+xp70PNwBeg2MjID/S/pzej01I+hYPYxg==}
-    peerDependencies:
-      '@logtape/logtape': ^2.0.4
-
   '@logtape/drizzle-orm@2.0.4':
     resolution: {integrity: sha512-JCTcUeiyW1cA0zzi8OMINku6IteaiFss4YfFq9dqfGcuMSMYsEw1/FL9uCJ2A1qs+jZGdEZK/iKRAh6Igx+3Qw==}
     peerDependencies:
@@ -2275,11 +2234,6 @@ packages:
 
   '@logtape/pretty@2.0.4':
     resolution: {integrity: sha512-y1nubV70avD9Gx8Q3gcWBlVUsVwpaBdHUntrkkpXIrC/UPRoHuWnBo+FNrtyvgjCEHSbKuxIaOgsE8rxTPEhzg==}
-    peerDependencies:
-      '@logtape/logtape': ^2.0.4
-
-  '@logtape/redaction@2.0.4':
-    resolution: {integrity: sha512-kDMm8GapB50GIa5v64nKAGiwRAeR2sll6Q7k/nrhNHiesR1mxsDFWivFfkcYegnHVDQW9dPWbIlh0iyvi0Lrfg==}
     peerDependencies:
       '@logtape/logtape': ^2.0.4
 
@@ -3094,17 +3048,11 @@ packages:
     resolution: {integrity: sha512-NaOGLRrddszbQj9upGat6HG/4TKvXLvu+osAIgfxPYA+eIvYKv8GKDJOrY2D3/U9MRnKfMWD7bU4jeD4xmqyIg==}
     engines: {node: '>=20.19'}
 
-  '@tanstack/query-async-storage-persister@5.96.2':
-    resolution: {integrity: sha512-lYJm+TwzOEUVkxCJapLSzRXPzmPpv7Vy3zSB1RXYQ6+vznEgXBqLjn+ZwBRvHpkRda9VXis64wv44rPIi9nCwg==}
-
   '@tanstack/query-core@5.96.2':
     resolution: {integrity: sha512-hzI6cTVh4KNRk8UtoIBS7Lv9g6BnJPXvBKsvYH1aGWvv0347jT3BnSvztOE+kD76XGvZnRC/t6qdW1CaIfwCeA==}
 
   '@tanstack/query-devtools@5.96.2':
     resolution: {integrity: sha512-vBTB1Qhbm3nHSbEUtQwks/EdcAtFfEapr1WyBW4w2ExYKuXVi3jIxUIHf5MlSltiHuL7zNyUuanqT/7sI2sb6g==}
-
-  '@tanstack/query-persist-client-core@5.96.2':
-    resolution: {integrity: sha512-BYsP8folbvxzZsNnWJxSenEAdepGNfv809150U78D84yt/THi33EwfUCcdKWFbma5XKwlaFQGWMJKeWnVJ6GVA==}
 
   '@tanstack/react-devtools@0.10.2':
     resolution: {integrity: sha512-1BmZyxOrI5SqmRJ5MgkYZNNdnlLsJxQRI2YgorrAvcF2MxK6x5RcuStvD8+YlXoMw3JtNukPxoITirKAnKYDQA==}
@@ -3117,12 +3065,6 @@ packages:
 
   '@tanstack/react-query-devtools@5.96.2':
     resolution: {integrity: sha512-nTFKLGuTOFvmFRvcyZ3ArWC/DnMNPoBh6h/2yD6rsf7TCTJCQt+oUWOp2uKPTIuEPtF/vN9Kw5tl5mD1Kbposw==}
-    peerDependencies:
-      '@tanstack/react-query': ^5.96.2
-      react: ^18 || ^19
-
-  '@tanstack/react-query-persist-client@5.96.2':
-    resolution: {integrity: sha512-smQ38oVPlnvkG+G7R60IAD9X6azJLRjHEd7twml9XBLYM31ncPDP0tUKy/Gv/4ItVmKTtjZ5VabXpVZxnaWSww==}
     peerDependencies:
       '@tanstack/react-query': ^5.96.2
       react: ^18 || ^19
@@ -7021,10 +6963,6 @@ snapshots:
   '@libsql/win32-x64-msvc@0.5.28':
     optional: true
 
-  '@logtape/config@2.0.4(@logtape/logtape@2.0.4)':
-    dependencies:
-      '@logtape/logtape': 2.0.4
-
   '@logtape/drizzle-orm@2.0.4(@logtape/logtape@2.0.4)':
     dependencies:
       '@logtape/logtape': 2.0.4
@@ -7037,10 +6975,6 @@ snapshots:
   '@logtape/logtape@2.0.4': {}
 
   '@logtape/pretty@2.0.4(@logtape/logtape@2.0.4)':
-    dependencies:
-      '@logtape/logtape': 2.0.4
-
-  '@logtape/redaction@2.0.4(@logtape/logtape@2.0.4)':
     dependencies:
       '@logtape/logtape': 2.0.4
 
@@ -7746,18 +7680,9 @@ snapshots:
 
   '@tanstack/history@1.161.6': {}
 
-  '@tanstack/query-async-storage-persister@5.96.2':
-    dependencies:
-      '@tanstack/query-core': 5.96.2
-      '@tanstack/query-persist-client-core': 5.96.2
-
   '@tanstack/query-core@5.96.2': {}
 
   '@tanstack/query-devtools@5.96.2': {}
-
-  '@tanstack/query-persist-client-core@5.96.2':
-    dependencies:
-      '@tanstack/query-core': 5.96.2
 
   '@tanstack/react-devtools@0.10.2(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(bufferutil@4.1.0)(csstype@3.2.3)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)(solid-js@1.9.11)(utf-8-validate@5.0.10)':
     dependencies:
@@ -7775,12 +7700,6 @@ snapshots:
   '@tanstack/react-query-devtools@5.96.2(@tanstack/react-query@5.96.2(react@19.2.5))(react@19.2.5)':
     dependencies:
       '@tanstack/query-devtools': 5.96.2
-      '@tanstack/react-query': 5.96.2(react@19.2.5)
-      react: 19.2.5
-
-  '@tanstack/react-query-persist-client@5.96.2(@tanstack/react-query@5.96.2(react@19.2.5))(react@19.2.5)':
-    dependencies:
-      '@tanstack/query-persist-client-core': 5.96.2
       '@tanstack/react-query': 5.96.2(react@19.2.5)
       react: 19.2.5
 
