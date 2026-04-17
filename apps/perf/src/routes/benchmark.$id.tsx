@@ -1103,10 +1103,23 @@ function TimeSeriesChart(props: {
 										</div>
 									)
 								})}
-							</div>
-						)}
-					</div>
-				</div>
+								{props.stacked && (
+									<div className="mt-1 flex items-center gap-1.5 border-t border-border pt-1">
+										<span className="text-secondary">Total:</span>
+										<span className="font-mono font-medium text-primary">
+											{fmtVal(
+												props.series.reduce(
+													(sum, s) => sum + (s.data[hoverIndex]?.y ?? 0),
+													0,
+												),
+											)}
+										</span>
+									</div>
+								)}
+								</div>
+								)}
+								</div>
+								</div>
 
 				{/* X-axis labels (HTML, fixed pixel size) */}
 				<div className="mt-1 flex justify-between pl-20">
