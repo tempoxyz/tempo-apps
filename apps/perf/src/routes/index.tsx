@@ -1,13 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { getScenarios, fetchAllLatestRuns } from '#lib/server/bench'
-import {
-	formatGas,
-	formatTps,
-	formatMs,
-	formatDate,
-	formatAccounts,
-} from '#lib/format'
+import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
 
 export const Route = createFileRoute('/')({
 	component: DashboardPage,
@@ -86,8 +80,8 @@ function DashboardPage(): React.JSX.Element {
 											/>
 											<Stat label="Avg TPS" value={formatTps(latest.avgTps)} />
 											<Stat
-												label="P99 Latency"
-												value={formatMs(latest.p99LatencyMs)}
+												label="Block Time"
+												value={formatMs(latest.avgBlockTimeMs)}
 											/>
 										</div>
 									</div>
@@ -169,11 +163,9 @@ function DashboardPage(): React.JSX.Element {
 								</th>
 								<th className="px-4.5 py-3 font-normal text-right">TPS</th>
 								<th className="px-4.5 py-3 font-normal text-right">
-									P99 Latency
+									Block Time
 								</th>
-								<th className="px-4.5 py-3 font-normal text-right">
-									State Size
-								</th>
+								<th className="px-4.5 py-3 font-normal text-right">Blocks</th>
 								<th className="px-4.5 py-3 font-normal text-right">Date</th>
 							</tr>
 						</thead>
@@ -202,13 +194,13 @@ function DashboardPage(): React.JSX.Element {
 											{formatTps(latest.avgTps)}
 										</td>
 										<td className="px-4.5 py-3 text-right font-mono text-primary">
-											{formatMs(latest.p99LatencyMs)}
+											{formatMs(latest.avgBlockTimeMs)}
 										</td>
 										<td className="px-4.5 py-3 text-right font-mono text-primary">
-											{formatAccounts(latest.stateAccounts)}
+											{latest.blockCount.toLocaleString()}
 										</td>
 										<td className="px-4.5 py-3 text-right text-tertiary">
-											{formatDate(latest.timestamp)}
+											{formatDate(latest.startedAt)}
 										</td>
 									</tr>
 								)
