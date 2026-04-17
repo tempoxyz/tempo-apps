@@ -8,7 +8,7 @@ import * as React from 'react'
 import { decodeFunctionData, isAddressEqual } from 'viem'
 import { Address } from '#comps/Address'
 import { Amount } from '#comps/Amount'
-import { Midcut } from '#comps/Midcut'
+import { Midcut } from 'midcut'
 import { TokenIcon } from '#comps/TokenIcon'
 import { cx } from '#lib/css'
 import { extractContractAbi, getContractAbi } from '#lib/domain/contracts.ts'
@@ -88,7 +88,7 @@ function ContractCallPart(props: {
 				address={address}
 				search={{ tab: 'contract' }}
 				title={address}
-				className="whitespace-nowrap"
+				className="whitespace-nowrap min-w-0 max-w-full flex-1"
 			/>
 		</>
 	)
@@ -132,7 +132,7 @@ export namespace TxEventDescription {
 				return (
 					<Address
 						address={part.value}
-						className="text-accent items-end press-down whitespace-nowrap"
+						className="text-accent items-end press-down whitespace-nowrap min-w-0 max-w-full flex-1"
 						self={seenAs ? isAddressEqual(part.value, seenAs) : false}
 					/>
 				)

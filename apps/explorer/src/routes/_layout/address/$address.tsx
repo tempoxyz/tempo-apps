@@ -27,7 +27,7 @@ import { ContractTabContent, InteractTabContent } from '#comps/Contract'
 import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
 import { DataGrid } from '#comps/DataGrid'
 import { Pagination } from '#comps/Pagination'
-import { Midcut } from '#comps/Midcut'
+import { Midcut } from 'midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import {

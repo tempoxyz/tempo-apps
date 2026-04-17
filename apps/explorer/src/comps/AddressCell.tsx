@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
 import { useAddressHighlight } from '#comps/AddressHighlight'
-import { Midcut } from '#comps/Midcut'
+import { Midcut } from 'midcut'
 import { cx } from '#lib/css'
 
 export function AddressCell(props: {

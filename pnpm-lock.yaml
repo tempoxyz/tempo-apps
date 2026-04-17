@@ -162,6 +162,9 @@ catalogs:
     kysely:
       specifier: ^0.28.15
       version: 0.28.15
+    midcut:
+      specifier: ^0.1.0
+      version: 0.1.0
     ox:
       specifier: ^0.14.12
       version: 0.14.13
@@ -448,6 +451,9 @@ importers:
       idxs:
         specifier: 'catalog:'
         version: 0.0.6(typescript@6.0.2)
+      midcut:
+        specifier: 'catalog:'
+        version: 0.1.0(react@19.2.5)
       ox:
         specifier: 'catalog:'
         version: 0.14.13(typescript@6.0.2)(zod@4.3.6)
@@ -4804,6 +4810,11 @@ packages:
 
   micromark-util-types@2.0.2:
     resolution: {integrity: sha512-Yw0ECSpJoViF1qTU4DC6NwtC4aWGt1EkzaQB8KPPyCRR8z9TWeV0HbEFGTO+ZY1wB22zmxnJqhPyTpOVCpeHTA==}
+
+  midcut@0.1.0:
+    resolution: {integrity: sha512-wPSXcjOK6nHftyvGSQWVk5mU9mEOSHuLpfrsZjOPOByXLepmCjkpvLjX0tXPn9F2Z5nUdkKglr9siuBQpCySzA==}
+    peerDependencies:
+      react: '>=18'
 
   mime-db@1.52.0:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
@@ -9572,6 +9583,10 @@ snapshots:
   micromark-util-symbol@2.0.1: {}
 
   micromark-util-types@2.0.2: {}
+
+  midcut@0.1.0(react@19.2.5):
+    dependencies:
+      react: 19.2.5
 
   mime-db@1.52.0: {}
 
