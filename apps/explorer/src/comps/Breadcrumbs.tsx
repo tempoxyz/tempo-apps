@@ -180,62 +180,82 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 
 	const isEmpty =
 		(resolvedPathname === '/' && !hasPendingCrumb) || displayCrumbs.length === 0
+	const [isVisible, setIsVisible] = React.useState(false)
+
+	React.useEffect(() => {
+		if (isEmpty) {
+			setIsVisible(false)
+			return
+		}
+
+		const frame = requestAnimationFrame(() => setIsVisible(true))
+		return () => cancelAnimationFrame(frame)
+	}, [isEmpty])
 
 	return (
 		<nav
 			aria-label="Breadcrumb"
+			aria-hidden={isEmpty}
 			className={cx(
-				'flex items-center gap-1 text-[12px] text-secondary overflow-x-auto overflow-y-hidden scrollbar-none h-5 pl-0.5',
-				isEmpty && 'invisible',
+				'flex items-center gap-1 text-[12px] text-secondary overflow-x-auto overflow-y-hidden scrollbar-none h-5 pl-0.5 origin-left transition-[opacity,scale] duration-[80ms]',
+				isVisible
+					? 'opacity-100 scale-100'
+					: 'opacity-0 scale-[0.97] pointer-events-none',
 				className,
 			)}
 		>
-			<Link
-				to="/"
-				className="flex items-center gap-1 text-tertiary hover:text-accent press-down shrink-0 outline-none focus-visible:text-accent"
-				title="Home"
-			>
-				<Home className="size-3.5" />
-			</Link>
+			{!isEmpty && (
+				<>
+					<Link
+						to="/"
+						className="flex items-center gap-1 text-tertiary hover:text-accent press-down shrink-0 outline-none focus-visible:text-accent"
+						title="Home"
+					>
+						<Home className="size-3.5" />
+					</Link>
 
-			{displayCrumbs.map((crumb, index) => {
-				const isLast = index === displayCrumbs.length - 1
-				const isPending = isLast && hasPendingCrumb
-				return (
-					<React.Fragment key={crumb.path}>
-						<ChevronRight className="size-3 text-tertiary shrink-0" />
-						{isLast ? (
-							<span
-								className={cx(
-									'font-medium truncate max-w-[120px]',
-									isPending ? 'text-secondary animate-pulse' : 'text-primary',
+					{displayCrumbs.map((crumb, index) => {
+						const isLast = index === displayCrumbs.length - 1
+						const isPending = isLast && hasPendingCrumb
+						return (
+							<React.Fragment key={crumb.path}>
+								<ChevronRight className="size-3 text-tertiary shrink-0" />
+								{isLast ? (
+									<span
+										className={cx(
+											'font-medium truncate max-w-[120px]',
+											isPending
+												? 'text-secondary animate-pulse'
+												: 'text-primary',
+										)}
+										title={crumb.path}
+									>
+										{crumb.label}
+									</span>
+								) : (
+									<Link
+										to={crumb.path}
+										className="text-secondary hover:text-accent press-down truncate max-w-[120px] outline-none focus-visible:text-accent"
+										title={crumb.path}
+									>
+										{crumb.label}
+									</Link>
 								)}
-								title={crumb.path}
-							>
-								{crumb.label}
-							</span>
-						) : (
-							<Link
-								to={crumb.path}
-								className="text-secondary hover:text-accent press-down truncate max-w-[120px] outline-none focus-visible:text-accent"
-								title={crumb.path}
-							>
-								{crumb.label}
-							</Link>
-						)}
-					</React.Fragment>
-				)
-			})}
+							</React.Fragment>
+						)
+					})}
 
-			{crumbs.length > 1 && (
-				<button
-					type="button"
-					onClick={clearCrumbs}
-					className="text-tertiary hover:text-primary press-down shrink-0 outline-none focus-visible:text-accent cursor-pointer"
-					title="Clear navigation history"
-				>
-					<X className="size-3" />
-				</button>
+					{crumbs.length > 1 && (
+						<button
+							type="button"
+							onClick={clearCrumbs}
+							className="text-tertiary hover:text-primary press-down shrink-0 outline-none focus-visible:text-accent cursor-pointer"
+							title="Clear navigation history"
+						>
+							<X className="size-3" />
+						</button>
+					)}
+				</>
 			)}
 		</nav>
 	)
@@ -257,7 +277,7 @@ export function BreadcrumbsSlot(props: BreadcrumbsSlot.Props) {
 		return () => setSlotEl(null)
 	}, [setSlotEl])
 
-	return <div ref={ref} className={className} />
+	return <div ref={ref} className={cx('min-h-5', className)} />
 }
 
 export namespace BreadcrumbsSlot {
