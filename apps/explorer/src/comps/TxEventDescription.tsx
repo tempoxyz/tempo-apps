@@ -84,12 +84,15 @@ function ContractCallPart(props: {
 		<>
 			<span className="text-accent items-end whitespace-nowrap">{fnName}</span>
 			<span className="text-secondary">on</span>
-			<Address
-				address={address}
-				search={{ tab: 'contract' }}
-				title={address}
-				className="whitespace-nowrap min-w-0 max-w-full flex-1"
-			/>
+			<span className="min-w-[11ch] basis-[11ch] max-w-full flex-1 overflow-hidden">
+				<Address
+					address={address}
+					chars={4}
+					search={{ tab: 'contract' }}
+					title={address}
+					className="whitespace-nowrap w-full max-w-full"
+				/>
+			</span>
 		</>
 	)
 }
@@ -130,11 +133,14 @@ export namespace TxEventDescription {
 				if (!OxAddress.validate(part.value))
 					return <span className="text-tertiary">{String(part.value)}</span>
 				return (
-					<Address
-						address={part.value}
-						className="text-accent items-end press-down whitespace-nowrap min-w-0 max-w-full flex-1"
-						self={seenAs ? isAddressEqual(part.value, seenAs) : false}
-					/>
+					<span className="min-w-[11ch] basis-[11ch] max-w-full flex-1 overflow-hidden">
+						<Address
+							address={part.value}
+							chars={4}
+							className="text-accent items-end press-down whitespace-nowrap w-full max-w-full"
+							self={seenAs ? isAddressEqual(part.value, seenAs) : false}
+						/>
+					</span>
 				)
 			}
 			case 'action': {

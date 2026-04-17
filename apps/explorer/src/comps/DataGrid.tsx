@@ -69,7 +69,7 @@ export function DataGrid(props: DataGrid.Props) {
 			if (typeof col.width === 'string')
 				return col.minWidth
 					? `minmax(${col.minWidth}px, ${col.width})`
-					: col.width
+					: `minmax(0, ${col.width})`
 			if (col.minWidth) return `minmax(${col.minWidth}px, auto)`
 			return mode === 'tabs' ? 'minmax(0, auto)' : 'auto'
 		})

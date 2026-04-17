@@ -76,7 +76,7 @@ export function Receipt(props: Receipt.Props) {
 								params={{ address: sender }}
 								className="text-accent text-right press-down min-w-0 flex-1 flex justify-end"
 							>
-								<Midcut value={sender} prefix="0x" align="end" />
+								<Midcut value={sender} prefix="0x" align="end" min={4} />
 							</Link>
 						</div>
 						<div className="flex justify-between items-start gap-4">
@@ -102,7 +102,7 @@ export function Receipt(props: Receipt.Props) {
 									onClick={() => setHashExpanded(true)}
 									className="text-right cursor-pointer press-down min-w-0 flex-1 flex justify-end"
 								>
-									<Midcut value={hash} prefix="0x" align="end" />
+									<Midcut value={hash} prefix="0x" align="end" min={4} />
 								</button>
 							)}
 						</div>
@@ -293,7 +293,11 @@ export function Receipt(props: Receipt.Props) {
 																params={{ address: item.payer }}
 																className="text-accent press-down"
 															>
-																<Midcut value={item.payer} prefix="0x" />
+																<Midcut
+																	value={item.payer}
+																	prefix="0x"
+																	min={4}
+																/>
 															</Link>
 															<span className="text-tertiary">paid</span>
 														</>
