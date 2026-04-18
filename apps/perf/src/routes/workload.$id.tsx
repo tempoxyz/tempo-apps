@@ -102,12 +102,12 @@ function ScenarioPage(): React.JSX.Element {
 					<MetricCard
 						label="Peak"
 						value={formatGas(latest.peakGasPerSecond)}
-						tooltip="Highest gas per second achieved by any single block. Calculated as gas_used × 1000 ÷ block_time_ms."
+						tooltip="Highest gas per second achieved by any single block, based on its gas usage and block time."
 					/>
 					<MetricCard
 						label="Avg TPS"
 						value={formatTps(latest.avgTps)}
-						tooltip="Average transactions per second. Calculated as the mean of tx_count × 1000 ÷ block_time_ms across all blocks."
+						tooltip="Average transactions per second across all blocks, based on transaction count and block time."
 					/>
 					<MetricCard
 						label="Block Time"

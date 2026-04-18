@@ -321,12 +321,12 @@ function RunDetailPage(): React.JSX.Element {
 				<MetricCard
 					label="Peak"
 					value={formatGas(run.peakGasPerSecond)}
-					tooltip="Highest gas per second achieved by any single block. Calculated as gas_used × 1000 ÷ block_time_ms."
+					tooltip="Highest gas per second achieved by any single block, based on its gas usage and block time."
 				/>
 				<MetricCard
 					label="Avg TPS"
 					value={formatTps(run.avgTps)}
-					tooltip="Average transactions per second. Calculated as the mean of tx_count × 1000 ÷ block_time_ms across all blocks."
+					tooltip="Average transactions per second across all blocks, based on transaction count and block time."
 				/>
 				<MetricCard
 					label="Block Time"
@@ -410,16 +410,31 @@ function RunDetailPage(): React.JSX.Element {
 
 			<section className="mb-10">
 				<SectionHeader
-					title="Block Builder Phases (p50)"
-					tooltip="Breakdown of the major phases during block building: fetching transactions from the pool, executing them, and computing the state root."
+					title="Build Phases (p50)"
+					tooltip="Top-level disjoint phases of block building. These sum to approximately the total payload build duration."
 				/>
 				<TimeSeriesChart
 					stacked
 					showMean
 					series={[
 						{
-							label: 'Pool Fetch',
+							label: 'State Setup',
+							color: COLORS.purple,
+							data: transformSamples(stateSetupSeries, (v) => v * 1000),
+						},
+						{
+							label: 'System Tx Prep',
+							color: COLORS.red,
+							data: transformSamples(sysTxPrepSeries, (v) => v * 1000),
+						},
+						{
+							label: 'System Tx Exec',
 							color: COLORS.orange,
+							data: transformSamples(sysTxExecSeries, (v) => v * 1000),
+						},
+						{
+							label: 'Pool Fetch',
+							color: COLORS.green,
 							data: transformSamples(poolFetchSeries, (v) => v * 1000),
 						},
 						{
@@ -428,9 +443,9 @@ function RunDetailPage(): React.JSX.Element {
 							data: transformSamples(txExecSeries, (v) => v * 1000),
 						},
 						{
-							label: 'State Root',
-							color: COLORS.green,
-							data: transformSamples(stateRootSeries, (v) => v * 1000),
+							label: 'Finalization',
+							color: COLORS.orange,
+							data: transformSamples(finalizationSeries, (v) => v * 1000),
 						},
 					]}
 					formatValue={(v) => `${v.toFixed(1)} ms`}
@@ -439,30 +454,15 @@ function RunDetailPage(): React.JSX.Element {
 
 			<section className="mb-10">
 				<SectionHeader
-					title="Other Builder Phases (p50)"
-					tooltip="Smaller overhead phases in block building: state setup, system transaction preparation and execution, finalization, and hashed post state computation."
+					title="Finalization Internals (p50)"
+					tooltip="Internal timings from block finalization. Hashed Post State converts raw state changes into a hashed representation. State Root (sync) computes the root synchronously and is near zero when the trie is precomputed in the background."
 				/>
 				<TimeSeriesChart
-					stacked
+					showMean
 					series={[
 						{
-							label: 'State Setup',
-							color: COLORS.blue,
-							data: transformSamples(stateSetupSeries, (v) => v * 1000),
-						},
-						{
-							label: 'System Tx Prep',
-							color: COLORS.orange,
-							data: transformSamples(sysTxPrepSeries, (v) => v * 1000),
-						},
-						{
-							label: 'System Tx Exec',
-							color: COLORS.red,
-							data: transformSamples(sysTxExecSeries, (v) => v * 1000),
-						},
-						{
 							label: 'Finalization',
-							color: COLORS.green,
+							color: COLORS.orange,
 							data: transformSamples(finalizationSeries, (v) => v * 1000),
 						},
 						{
@@ -470,8 +470,13 @@ function RunDetailPage(): React.JSX.Element {
 							color: COLORS.purple,
 							data: transformSamples(hashedPostStateSeries, (v) => v * 1000),
 						},
+						{
+							label: 'State Root (sync)',
+							color: COLORS.green,
+							data: transformSamples(stateRootSeries, (v) => v * 1000),
+						},
 					]}
-					formatValue={(v) => `${v.toFixed(2)} ms`}
+					formatValue={(v) => `${v.toFixed(1)} ms`}
 				/>
 			</section>
 
@@ -483,7 +488,7 @@ function RunDetailPage(): React.JSX.Element {
 				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 					<TimeSeriesChart
 						title="Gas Throughput"
-						tooltip="Gas processed per second for each block. Calculated as gas_used × 1000 ÷ block_time_ms."
+						tooltip="Gas processed per second for each block, based on gas usage and block time."
 						showMean
 						series={[
 							{
@@ -524,7 +529,7 @@ function RunDetailPage(): React.JSX.Element {
 				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 					<TimeSeriesChart
 						title="Gas Fill %"
-						tooltip="Percentage of the block gas limit that was used. Calculated as gas_used ÷ general_gas_limit × 100."
+						tooltip="Percentage of the block gas limit that was used."
 						showMean
 						series={[
 							{
@@ -683,7 +688,7 @@ function RunDetailPage(): React.JSX.Element {
 			<section className="mb-10">
 				<SectionHeader
 					title="Cache Hit Rates"
-					tooltip="Percentage of account and storage lookups served from the in-memory cache. Calculated as hits ÷ (hits + misses) × 100 per scrape interval."
+					tooltip="Percentage of account and storage lookups served from the in-memory cache rather than disk."
 				/>
 				<TimeSeriesChart
 					series={[
