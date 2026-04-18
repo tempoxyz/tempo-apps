@@ -22,7 +22,6 @@ const METRIC_NAMES = [
 	'reth_tempo_payload_builder_prepare_system_transactions_duration_seconds',
 	'reth_tempo_payload_builder_system_transactions_execution_duration_seconds',
 	// Throughput
-	'reth_tempo_payload_builder_gas_per_second_last',
 	'reth_tempo_payload_builder_total_transactions_last',
 	// Block headroom
 	'reth_tempo_payload_builder_gas_used_last',
@@ -166,10 +165,6 @@ function RunDetailPage(): React.JSX.Element {
 	)
 
 	// Throughput
-	const gasThroughputSeries = findSeries(
-		m,
-		'reth_tempo_payload_builder_gas_per_second_last',
-	)
 	const txsPerBlockSeries = findSeries(
 		m,
 		'reth_tempo_payload_builder_total_transactions_last',
@@ -447,10 +442,16 @@ function RunDetailPage(): React.JSX.Element {
 							{
 								label: 'Gas/s',
 								color: COLORS.blue,
-								data: transformSamples(gasThroughputSeries, (v) => v / 1e9),
+								data: (blocks ?? [])
+									.filter((b) => b.blockTimeMs > 0)
+									.map((b) => ({
+										x: b.index,
+										y: (b.gasUsed * 1000) / b.blockTimeMs / 1e9,
+									})),
 							},
 						]}
 						formatValue={(v) => `${v.toFixed(2)} Ggas/s`}
+						xFormat="block"
 					/>
 					<TimeSeriesChart
 						title="Txs per Block"
@@ -1116,10 +1117,10 @@ function TimeSeriesChart(props: {
 										</span>
 									</div>
 								)}
-								</div>
-								)}
-								</div>
-								</div>
+							</div>
+						)}
+					</div>
+				</div>
 
 				{/* X-axis labels (HTML, fixed pixel size) */}
 				<div className="mt-1 flex justify-between pl-20">
