@@ -7,6 +7,40 @@ import {
 } from '#lib/server/bench'
 import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
 
+const TEMPO_REPO = 'https://github.com/tempoxyz/tempo'
+
+function isTag(ref: string): boolean {
+	return /^v\d/.test(ref)
+}
+
+function VersionLink(props: { run: BenchRun }): React.JSX.Element {
+	const { run } = props
+	if (run.ref && isTag(run.ref)) {
+		return (
+			<a
+				href={`${TEMPO_REPO}/releases/tag/${run.ref}`}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="hover:underline"
+				onClick={(e) => e.stopPropagation()}
+			>
+				{run.ref}
+			</a>
+		)
+	}
+	return (
+		<a
+			href={`${TEMPO_REPO}/commit/${run.commit}`}
+			target="_blank"
+			rel="noopener noreferrer"
+			className="hover:underline"
+			onClick={(e) => e.stopPropagation()}
+		>
+			{run.ref ? `${run.ref} (${run.commit})` : run.commit}
+		</a>
+	)
+}
+
 export const Route = createFileRoute('/workload/$id')({
 	component: ScenarioPage,
 	loader: ({ params, context }) => {
@@ -89,6 +123,7 @@ function ScenarioPage(): React.JSX.Element {
 					<table className="w-full text-[13px]">
 						<thead>
 							<tr className="border-b border-border bg-surface-raised text-left text-tertiary">
+								<th className="px-4.5 py-3 font-normal">Version</th>
 								<th className="px-4.5 py-3 font-normal text-right">
 									Throughput
 								</th>
@@ -96,7 +131,6 @@ function ScenarioPage(): React.JSX.Element {
 								<th className="px-4.5 py-3 font-normal text-right">
 									Block Time
 								</th>
-								<th className="px-4.5 py-3 font-normal text-right">Blocks</th>
 								<th className="px-4.5 py-3 font-normal text-right">Date</th>
 							</tr>
 						</thead>
@@ -112,6 +146,9 @@ function ScenarioPage(): React.JSX.Element {
 										})
 									}
 								>
+									<td className="px-4.5 py-3 font-mono text-accent">
+										<VersionLink run={run} />
+									</td>
 									<td className="px-4.5 py-3 text-right font-mono text-primary">
 										{formatGas(run.avgGasPerSecond)}
 									</td>
@@ -120,9 +157,6 @@ function ScenarioPage(): React.JSX.Element {
 									</td>
 									<td className="px-4.5 py-3 text-right font-mono text-primary">
 										{formatMs(run.avgBlockTimeMs)}
-									</td>
-									<td className="px-4.5 py-3 text-right font-mono text-primary">
-										{run.blockCount.toLocaleString()}
 									</td>
 									<td className="px-4.5 py-3 text-right text-tertiary">
 										{formatDate(run.startedAt)}

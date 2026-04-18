@@ -49,6 +49,20 @@ const METRIC_NAMES = [
 	'reth_jemalloc_allocated',
 ]
 
+const TEMPO_REPO = 'https://github.com/tempoxyz/tempo'
+
+function isTag(ref: string): boolean {
+	return /^v\d/.test(ref)
+}
+
+function commitUrl(commit: string): string {
+	return `${TEMPO_REPO}/commit/${commit}`
+}
+
+function tagUrl(ref: string): string {
+	return `${TEMPO_REPO}/releases/tag/${ref}`
+}
+
 const COLORS = {
 	blue: '#60a5fa',
 	green: '#30a46c',
@@ -268,15 +282,27 @@ function RunDetailPage(): React.JSX.Element {
 
 			<section className="mb-8">
 				<h2 className="text-[22px] font-bold tracking-tight text-primary">
-					{run.commit ? (
-						<>
-							Benchmark{' '}
-							<code className="font-mono text-[20px] text-accent">
-								{run.commit}
-							</code>
-						</>
+					Benchmark{' '}
+					{run.ref && isTag(run.ref) ? (
+						<a
+							href={tagUrl(run.ref)}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="font-mono text-[20px] text-accent hover:underline"
+						>
+							{run.ref}
+						</a>
+					) : run.commit ? (
+						<a
+							href={commitUrl(run.commit)}
+							target="_blank"
+							rel="noopener noreferrer"
+							className="font-mono text-[20px] text-accent hover:underline"
+						>
+							{run.ref ? `${run.ref} (${run.commit})` : run.commit}
+						</a>
 					) : (
-						<>Benchmark — {formatDate(run.startedAt)}</>
+						<span className="text-secondary">{formatDate(run.startedAt)}</span>
 					)}
 				</h2>
 				<p className="mt-2 text-[14px] text-secondary">
