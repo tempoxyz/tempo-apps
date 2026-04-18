@@ -41,6 +41,28 @@ function VersionLink(props: { run: BenchRun }): React.JSX.Element {
 	)
 }
 
+const NOISE_THRESHOLD = 0.02
+
+function Delta(props: {
+	current: number
+	previous: number
+	lowerIsBetter?: boolean | undefined
+}): React.JSX.Element | null {
+	if (props.previous === 0) return null
+	const ratio = (props.current - props.previous) / props.previous
+	if (Math.abs(ratio) < NOISE_THRESHOLD)
+		return <span className="ml-1.5 text-[11px] text-tertiary">=</span>
+	const up = ratio > 0
+	const improved = props.lowerIsBetter ? !up : up
+	return (
+		<span
+			className={`ml-1.5 text-[11px] ${improved ? 'text-positive' : 'text-negative'}`}
+		>
+			{up ? '▲' : '▼'} {(Math.abs(ratio) * 100).toFixed(1)}%
+		</span>
+	)
+}
+
 export const Route = createFileRoute('/workload/$id')({
 	component: ScenarioPage,
 	loader: ({ params, context }) => {
@@ -60,6 +82,7 @@ function ScenarioPage(): React.JSX.Element {
 		queryFn: () => fetchRunsForScenario({ data: id }),
 	})
 	const latest = runs[0]
+	const prev = runs[1]
 
 	if (!scenario) {
 		return (
@@ -97,22 +120,50 @@ function ScenarioPage(): React.JSX.Element {
 						label="Throughput"
 						value={formatGas(latest.avgGasPerSecond)}
 						tooltip="Average gas per second across the entire run. Calculated as total gas used ÷ total run duration."
+						delta={
+							prev && (
+								<Delta
+									current={latest.avgGasPerSecond}
+									previous={prev.avgGasPerSecond}
+								/>
+							)
+						}
 						accent
 					/>
 					<MetricCard
 						label="Peak"
 						value={formatGas(latest.peakGasPerSecond)}
 						tooltip="Highest gas per second achieved by any single block, based on its gas usage and block time."
+						delta={
+							prev && (
+								<Delta
+									current={latest.peakGasPerSecond}
+									previous={prev.peakGasPerSecond}
+								/>
+							)
+						}
 					/>
 					<MetricCard
 						label="Avg TPS"
 						value={formatTps(latest.avgTps)}
 						tooltip="Average transactions per second across all blocks, based on transaction count and block time."
+						delta={
+							prev && <Delta current={latest.avgTps} previous={prev.avgTps} />
+						}
 					/>
 					<MetricCard
 						label="Block Time"
 						value={formatMs(latest.avgBlockTimeMs)}
 						tooltip="Average wall-clock time between consecutive blocks."
+						delta={
+							prev && (
+								<Delta
+									current={latest.avgBlockTimeMs}
+									previous={prev.avgBlockTimeMs}
+									lowerIsBetter
+								/>
+							)
+						}
 					/>
 				</section>
 			)}
@@ -204,6 +255,7 @@ function MetricCard(props: {
 	value: string
 	accent?: boolean | undefined
 	tooltip?: string | undefined
+	delta?: React.ReactNode | undefined
 }): React.JSX.Element {
 	return (
 		<div className="card overflow-visible p-4">
@@ -215,6 +267,7 @@ function MetricCard(props: {
 				className={`mt-1 font-mono text-[18px] font-semibold ${props.accent ? 'text-accent' : 'text-primary'}`}
 			>
 				{props.value}
+				{props.delta}
 			</p>
 		</div>
 	)
