@@ -24,8 +24,6 @@ const METRIC_NAMES = [
 	// Throughput
 	'reth_tempo_payload_builder_total_transactions_last',
 	// Block headroom
-	'reth_tempo_payload_builder_gas_used_last',
-	'reth_tempo_payload_builder_general_gas_limit_last',
 	'reth_tempo_payload_builder_rlp_block_size_bytes_last',
 	// Txgen
 	'txgen_transactions_sent_total',
@@ -171,15 +169,6 @@ function RunDetailPage(): React.JSX.Element {
 	)
 
 	// Block headroom
-	const gasUsedSeries = findSeries(
-		m,
-		'reth_tempo_payload_builder_gas_used_last',
-	)
-	const generalGasLimitSeries = findSeries(
-		m,
-		'reth_tempo_payload_builder_general_gas_limit_last',
-	)
-
 	const rlpSizeSeries = findSeries(
 		m,
 		'reth_tempo_payload_builder_rlp_block_size_bytes_last',
@@ -255,9 +244,6 @@ function RunDetailPage(): React.JSX.Element {
 	// Memory
 	const residentSeries = findSeries(m, 'reth_jemalloc_resident')
 	const allocatedSeries = findSeries(m, 'reth_jemalloc_allocated')
-
-	// Derived: gas fill %
-	const gasFillData = gaugeRatio(gasUsedSeries, generalGasLimitSeries)
 
 	return (
 		<div>
@@ -478,10 +464,17 @@ function RunDetailPage(): React.JSX.Element {
 							{
 								label: 'Fill %',
 								color: COLORS.blue,
-								data: gasFillData,
+								data: (blocks ?? [])
+									.filter((b) => b.gasLimit > 0)
+									.map((b) => ({
+										x: b.index,
+										y: (b.gasUsed / b.gasLimit) * 100,
+									})),
 							},
 						]}
 						formatValue={(v) => `${v.toFixed(1)}%`}
+						yMax={100}
+						xFormat="block"
 					/>
 					<TimeSeriesChart
 						title="RLP Block Size"
@@ -706,24 +699,6 @@ function cacheHitRate(
 		points.push({
 			x: hits.samples[i].offsetMs / 1000,
 			y: total > 0 ? (dh / total) * 100 : 100,
-		})
-	}
-	return points
-}
-
-/** Derive point-wise ratio (a / b * 100) from two gauge series. */
-function gaugeRatio(
-	a: MetricSeries | undefined,
-	b: MetricSeries | undefined,
-): Array<ChartPoint> {
-	if (!a || !b) return []
-	const len = Math.min(a.samples.length, b.samples.length)
-	const points: Array<ChartPoint> = []
-	for (let i = 0; i < len; i++) {
-		const bv = b.samples[i].value
-		points.push({
-			x: a.samples[i].offsetMs / 1000,
-			y: bv > 0 ? (a.samples[i].value / bv) * 100 : 0,
 		})
 	}
 	return points
