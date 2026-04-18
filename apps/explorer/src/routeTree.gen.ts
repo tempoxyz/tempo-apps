@@ -27,6 +27,7 @@ import { Route as ApiAbiBatchRouteImport } from './routes/api/abi/batch'
 import { Route as LayoutTxHashRouteImport } from './routes/_layout/tx/$hash'
 import { Route as LayoutTokenAddressRouteImport } from './routes/_layout/token/$address'
 import { Route as LayoutReceiptHashRouteImport } from './routes/_layout/receipt/$hash'
+import { Route as LayoutReceiptVoucherRouteImport } from './routes/_layout/receipt/voucher'
 import { Route as LayoutDemoTxRouteImport } from './routes/_layout/demo/tx'
 import { Route as LayoutDemoPaginationRouteImport } from './routes/_layout/demo/pagination'
 import { Route as LayoutDemoEmptyStateRouteImport } from './routes/_layout/demo/empty-state'
@@ -132,6 +133,11 @@ const LayoutReceiptHashRoute = LayoutReceiptHashRouteImport.update({
   path: '/receipt/$hash',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutReceiptVoucherRoute = LayoutReceiptVoucherRouteImport.update({
+  id: '/receipt/voucher',
+  path: '/receipt/voucher',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutDemoTxRoute = LayoutDemoTxRouteImport.update({
   id: '/demo/tx',
   path: '/demo/tx',
@@ -233,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
+  '/receipt/voucher': typeof LayoutReceiptVoucherRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
@@ -267,6 +274,7 @@ export interface FileRoutesByTo {
   '/demo/pagination': typeof LayoutDemoPaginationRoute
   '/demo/tx': typeof LayoutDemoTxRoute
   '/receipt/$hash': typeof LayoutReceiptHashRoute
+  '/receipt/voucher': typeof LayoutReceiptVoucherRoute
   '/token/$address': typeof LayoutTokenAddressRoute
   '/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
@@ -303,6 +311,7 @@ export interface FileRoutesById {
   '/_layout/demo/pagination': typeof LayoutDemoPaginationRoute
   '/_layout/demo/tx': typeof LayoutDemoTxRoute
   '/_layout/receipt/$hash': typeof LayoutReceiptHashRoute
+  '/_layout/receipt/voucher': typeof LayoutReceiptVoucherRoute
   '/_layout/token/$address': typeof LayoutTokenAddressRoute
   '/_layout/tx/$hash': typeof LayoutTxHashRoute
   '/api/abi/batch': typeof ApiAbiBatchRoute
@@ -339,6 +348,7 @@ export interface FileRouteTypes {
     | '/demo/pagination'
     | '/demo/tx'
     | '/receipt/$hash'
+    | '/receipt/voucher'
     | '/token/$address'
     | '/tx/$hash'
     | '/api/abi/batch'
@@ -373,6 +383,7 @@ export interface FileRouteTypes {
     | '/demo/pagination'
     | '/demo/tx'
     | '/receipt/$hash'
+    | '/receipt/voucher'
     | '/token/$address'
     | '/tx/$hash'
     | '/api/abi/batch'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/_layout/demo/pagination'
     | '/_layout/demo/tx'
     | '/_layout/receipt/$hash'
+    | '/_layout/receipt/voucher'
     | '/_layout/token/$address'
     | '/_layout/tx/$hash'
     | '/api/abi/batch'
@@ -573,6 +585,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutReceiptHashRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/receipt/voucher': {
+      id: '/_layout/receipt/voucher'
+      path: '/receipt/voucher'
+      fullPath: '/receipt/voucher'
+      preLoaderRoute: typeof LayoutReceiptVoucherRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/demo/tx': {
       id: '/_layout/demo/tx'
       path: '/demo/tx'
@@ -694,6 +713,7 @@ interface LayoutRouteChildren {
   LayoutDemoPaginationRoute: typeof LayoutDemoPaginationRoute
   LayoutDemoTxRoute: typeof LayoutDemoTxRoute
   LayoutReceiptHashRoute: typeof LayoutReceiptHashRoute
+  LayoutReceiptVoucherRoute: typeof LayoutReceiptVoucherRoute
   LayoutTokenAddressRoute: typeof LayoutTokenAddressRoute
   LayoutTxHashRoute: typeof LayoutTxHashRoute
   LayoutDemoIndexRoute: typeof LayoutDemoIndexRoute
@@ -713,6 +733,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutDemoPaginationRoute: LayoutDemoPaginationRoute,
   LayoutDemoTxRoute: LayoutDemoTxRoute,
   LayoutReceiptHashRoute: LayoutReceiptHashRoute,
+  LayoutReceiptVoucherRoute: LayoutReceiptVoucherRoute,
   LayoutTokenAddressRoute: LayoutTokenAddressRoute,
   LayoutTxHashRoute: LayoutTxHashRoute,
   LayoutDemoIndexRoute: LayoutDemoIndexRoute,
