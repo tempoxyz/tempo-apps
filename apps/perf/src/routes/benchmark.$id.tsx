@@ -622,6 +622,7 @@ function RunDetailPage(): React.JSX.Element {
 						},
 					]}
 					formatValue={(v) => `${v.toFixed(1)}%`}
+					yMax={100}
 				/>
 			</section>
 
@@ -780,9 +781,10 @@ function TimeSeriesChart(props: {
 	showMean?: boolean | undefined
 	formatValue?: ((v: number) => string) | undefined
 	xFormat?: 'time' | 'block' | undefined
+	yMax?: number | undefined
 }): React.JSX.Element {
 	const plotRef = React.useRef<HTMLDivElement>(null)
-	const [hoverIndex, setHoverIndex] = React.useState<number | null>(null)
+	const [hoverX, setHoverX] = React.useState<number | null>(null)
 
 	const fmtVal = props.formatValue ?? defaultFormatValue
 
@@ -809,7 +811,9 @@ function TimeSeriesChart(props: {
 	const xRange = xMax - xMin || 1
 
 	let yMax: number
-	if (props.stacked) {
+	if (props.yMax != null) {
+		yMax = props.yMax
+	} else if (props.stacked) {
 		const sums: Array<number> = []
 		for (let i = 0; i < refSeries.data.length; i++) {
 			let sum = 0
@@ -860,28 +864,34 @@ function TimeSeriesChart(props: {
 
 	const means = props.series.map((s) => seriesMean(s.data))
 
+	function closestPoint(
+		data: Array<ChartPoint>,
+		targetX: number,
+	): ChartPoint | null {
+		if (data.length === 0) return null
+		let best = data[0]
+		let bestDist = Math.abs(best.x - targetX)
+		for (let i = 1; i < data.length; i++) {
+			const dist = Math.abs(data[i].x - targetX)
+			if (dist < bestDist) {
+				best = data[i]
+				bestDist = dist
+			}
+		}
+		return best
+	}
+
 	function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
 		const rect = plotRef.current?.getBoundingClientRect()
 		if (!rect || refSeries.data.length === 0) return
 		const frac = (e.clientX - rect.left) / rect.width
 		if (frac < 0 || frac > 1) {
-			setHoverIndex(null)
+			setHoverX(null)
 			return
 		}
-		const dataX = xMin + frac * xRange
-		let best = 0
-		let bestDist = Math.abs(refSeries.data[0].x - dataX)
-		for (let i = 1; i < refSeries.data.length; i++) {
-			const dist = Math.abs(refSeries.data[i].x - dataX)
-			if (dist < bestDist) {
-				best = i
-				bestDist = dist
-			}
-		}
-		setHoverIndex(best)
+		setHoverX(xMin + frac * xRange)
 	}
 
-	const hoverX = hoverIndex !== null ? refSeries.data[hoverIndex]?.x : null
 	const hoverPct =
 		hoverX !== null ? ((sx(hoverX) / SVG_W) * 100).toFixed(1) : '0'
 	const tooltipNearRight = hoverX !== null && sx(hoverX) / SVG_W > 0.7
@@ -914,7 +924,7 @@ function TimeSeriesChart(props: {
 						ref={plotRef}
 						className="relative min-w-0 flex-1"
 						onMouseMove={handleMouseMove}
-						onMouseLeave={() => setHoverIndex(null)}
+						onMouseLeave={() => setHoverX(null)}
 					>
 						<svg
 							viewBox={`0 0 ${SVG_W} ${SVG_H}`}
@@ -1045,16 +1055,18 @@ function TimeSeriesChart(props: {
 							)}
 
 							{/* Hover dots */}
-							{hoverIndex !== null &&
+							{hoverX !== null &&
 								props.series.map((s) => {
-									const pt = s.data[hoverIndex]
+									const pt = closestPoint(s.data, hoverX)
 									if (!pt) return null
 									let y = pt.y
 									if (props.stacked) {
 										const si = props.series.indexOf(s)
 										y = 0
-										for (let j = 0; j <= si; j++)
-											y += props.series[j].data[hoverIndex]?.y ?? 0
+										for (let j = 0; j <= si; j++) {
+											const cp = closestPoint(props.series[j].data, hoverX)
+											y += cp?.y ?? 0
+										}
 									}
 									return (
 										<circle
@@ -1073,7 +1085,7 @@ function TimeSeriesChart(props: {
 						</svg>
 
 						{/* Hover tooltip */}
-						{hoverIndex !== null && hoverX !== null && (
+						{hoverX !== null && (
 							<div
 								className="pointer-events-none absolute top-2 z-10 rounded-lg border border-border bg-surface px-3 py-2 text-[11px] shadow-lg whitespace-nowrap"
 								style={{
@@ -1089,7 +1101,7 @@ function TimeSeriesChart(props: {
 										: `${Math.round(hoverX)}s`}
 								</div>
 								{props.series.map((s) => {
-									const pt = s.data[hoverIndex]
+									const pt = closestPoint(s.data, hoverX)
 									if (!pt) return null
 									return (
 										<div key={s.label} className="flex items-center gap-1.5">
@@ -1110,7 +1122,8 @@ function TimeSeriesChart(props: {
 										<span className="font-mono font-medium text-primary">
 											{fmtVal(
 												props.series.reduce(
-													(sum, s) => sum + (s.data[hoverIndex]?.y ?? 0),
+													(sum, s) =>
+														sum + (closestPoint(s.data, hoverX)?.y ?? 0),
 													0,
 												),
 											)}
