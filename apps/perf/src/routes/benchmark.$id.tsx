@@ -289,20 +289,41 @@ function RunDetailPage(): React.JSX.Element {
 				<MetricCard
 					label="Throughput"
 					value={formatGas(run.avgGasPerSecond)}
+					tooltip="Average gas per second across the entire run. Calculated as total gas used ÷ total run duration."
 					accent
 				/>
-				<MetricCard label="Peak" value={formatGas(run.peakGasPerSecond)} />
-				<MetricCard label="Avg TPS" value={formatTps(run.avgTps)} />
-				<MetricCard label="Block Time" value={formatMs(run.avgBlockTimeMs)} />
-				<MetricCard label="Blocks" value={run.blockCount.toLocaleString()} />
+				<MetricCard
+					label="Peak"
+					value={formatGas(run.peakGasPerSecond)}
+					tooltip="Highest gas per second achieved by any single block. Calculated as gas_used × 1000 ÷ block_time_ms."
+				/>
+				<MetricCard
+					label="Avg TPS"
+					value={formatTps(run.avgTps)}
+					tooltip="Average transactions per second. Calculated as the mean of tx_count × 1000 ÷ block_time_ms across all blocks."
+				/>
+				<MetricCard
+					label="Block Time"
+					value={formatMs(run.avgBlockTimeMs)}
+					tooltip="Average wall-clock time between consecutive blocks."
+				/>
+				<MetricCard
+					label="Blocks"
+					value={run.blockCount.toLocaleString()}
+					tooltip="Total number of blocks produced during the benchmark run."
+				/>
 			</section>
 
 			{blocks && blocks.length > 0 && (
 				<section className="mb-10">
-					<SectionHeader title="Blocks" />
+					<SectionHeader
+						title="Blocks"
+						tooltip="Per-block metrics from the benchmark run."
+					/>
 					<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 						<TimeSeriesChart
 							title="Transactions per Block"
+							tooltip="Number of transactions included in each block."
 							showMean
 							series={[
 								{
@@ -319,6 +340,7 @@ function RunDetailPage(): React.JSX.Element {
 						/>
 						<TimeSeriesChart
 							title="Gas Used per Block"
+							tooltip="Total gas consumed by all transactions in each block."
 							showMean
 							series={[
 								{
@@ -338,7 +360,10 @@ function RunDetailPage(): React.JSX.Element {
 			)}
 
 			<section className="mb-10">
-				<SectionHeader title="Payload Build Duration" />
+				<SectionHeader
+					title="Payload Build Duration"
+					tooltip="Total wall-clock time to build each block payload, from start to sealed block."
+				/>
 				<TimeSeriesChart
 					showMean
 					series={[
@@ -358,7 +383,10 @@ function RunDetailPage(): React.JSX.Element {
 			</section>
 
 			<section className="mb-10">
-				<SectionHeader title="Block Builder Phases (p50)" />
+				<SectionHeader
+					title="Block Builder Phases (p50)"
+					tooltip="Breakdown of the major phases during block building: fetching transactions from the pool, executing them, and computing the state root."
+				/>
 				<TimeSeriesChart
 					stacked
 					showMean
@@ -384,7 +412,10 @@ function RunDetailPage(): React.JSX.Element {
 			</section>
 
 			<section className="mb-10">
-				<SectionHeader title="Other Builder Phases (p50)" />
+				<SectionHeader
+					title="Other Builder Phases (p50)"
+					tooltip="Smaller overhead phases in block building: state setup, system transaction preparation and execution, finalization, and hashed post state computation."
+				/>
 				<TimeSeriesChart
 					stacked
 					series={[
@@ -419,10 +450,14 @@ function RunDetailPage(): React.JSX.Element {
 			</section>
 
 			<section className="mb-10">
-				<SectionHeader title="Throughput" />
+				<SectionHeader
+					title="Throughput"
+					tooltip="Gas and transaction processing rates per block."
+				/>
 				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 					<TimeSeriesChart
 						title="Gas Throughput"
+						tooltip="Gas processed per second for each block. Calculated as gas_used × 1000 ÷ block_time_ms."
 						showMean
 						series={[
 							{
@@ -441,6 +476,7 @@ function RunDetailPage(): React.JSX.Element {
 					/>
 					<TimeSeriesChart
 						title="Txs per Block"
+						tooltip="Number of user transactions included in each block as reported by the builder."
 						showMean
 						series={[
 							{
@@ -455,10 +491,14 @@ function RunDetailPage(): React.JSX.Element {
 			</section>
 
 			<section className="mb-10">
-				<SectionHeader title="Block Headroom" />
+				<SectionHeader
+					title="Block Headroom"
+					tooltip="How close blocks are to their gas limit and size constraints."
+				/>
 				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 					<TimeSeriesChart
 						title="Gas Fill %"
+						tooltip="Percentage of the block gas limit that was used. Calculated as gas_used ÷ general_gas_limit × 100."
 						showMean
 						series={[
 							{
@@ -478,6 +518,7 @@ function RunDetailPage(): React.JSX.Element {
 					/>
 					<TimeSeriesChart
 						title="RLP Block Size"
+						tooltip="RLP-encoded size of each block in kilobytes."
 						showMean
 						series={[
 							{
@@ -492,10 +533,14 @@ function RunDetailPage(): React.JSX.Element {
 			</section>
 
 			<section className="mb-10">
-				<SectionHeader title="Txgen" />
+				<SectionHeader
+					title="Txgen"
+					tooltip="Transaction generator metrics — the load driver that submits transactions to the node."
+				/>
 				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
 					<TimeSeriesChart
 						title="Send Rate"
+						tooltip="Rate of transactions sent, confirmed as successful, or failed per second."
 						showMean
 						series={[
 							{
@@ -518,6 +563,7 @@ function RunDetailPage(): React.JSX.Element {
 					/>
 					<TimeSeriesChart
 						title="Inflight"
+						tooltip="Number of transactions submitted but not yet included in a block."
 						series={[
 							{
 								label: 'Inflight',
@@ -531,7 +577,10 @@ function RunDetailPage(): React.JSX.Element {
 			</section>
 
 			<section className="mb-10">
-				<SectionHeader title="Txpool" />
+				<SectionHeader
+					title="Txpool"
+					tooltip="Transaction pool state: pending (ready to execute), queued (future nonce), and basefee (underpaying current base fee)."
+				/>
 				<TimeSeriesChart
 					stacked
 					showMean
@@ -557,7 +606,10 @@ function RunDetailPage(): React.JSX.Element {
 			</section>
 
 			<section className="mb-10">
-				<SectionHeader title="Skipped Transactions" />
+				<SectionHeader
+					title="Skipped Transactions"
+					tooltip="Transactions skipped during block building due to nonce conflicts, validation failures, or sender mismatches. Shown as rate per second."
+				/>
 				<TimeSeriesChart
 					series={[
 						{
@@ -581,7 +633,10 @@ function RunDetailPage(): React.JSX.Element {
 			</section>
 
 			<section className="mb-10">
-				<SectionHeader title="Persistence (p50)" />
+				<SectionHeader
+					title="Persistence (p50)"
+					tooltip="Time spent writing block state and trie updates to the database after each block is built."
+				/>
 				<TimeSeriesChart
 					series={[
 						{
@@ -600,7 +655,10 @@ function RunDetailPage(): React.JSX.Element {
 			</section>
 
 			<section className="mb-10">
-				<SectionHeader title="Cache Hit Rates" />
+				<SectionHeader
+					title="Cache Hit Rates"
+					tooltip="Percentage of account and storage lookups served from the in-memory cache. Calculated as hits ÷ (hits + misses) × 100 per scrape interval."
+				/>
 				<TimeSeriesChart
 					series={[
 						{
@@ -620,7 +678,10 @@ function RunDetailPage(): React.JSX.Element {
 			</section>
 
 			<section className="mb-14">
-				<SectionHeader title="Memory" />
+				<SectionHeader
+					title="Memory"
+					tooltip="Process memory usage reported by jemalloc. Resident = physical RAM used; Allocated = bytes actively allocated by the application."
+				/>
 				<TimeSeriesChart
 					series={[
 						{
@@ -704,11 +765,28 @@ function cacheHitRate(
 	return points
 }
 
-function SectionHeader(props: { title: string }): React.JSX.Element {
+function InfoPill(props: { text: string }): React.JSX.Element {
+	return (
+		<span className="group relative ml-1 inline-flex">
+			<span className="inline-flex h-3.5 w-3.5 cursor-default items-center justify-center rounded-full bg-border text-[9px] font-medium text-tertiary">
+				?
+			</span>
+			<span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden w-max max-w-60 -translate-x-1/2 rounded-md border border-border bg-surface px-2.5 py-1.5 text-left text-[11px] font-normal normal-case tracking-normal text-secondary shadow-lg group-hover:block">
+				{props.text}
+			</span>
+		</span>
+	)
+}
+
+function SectionHeader(props: {
+	title: string
+	tooltip?: string | undefined
+}): React.JSX.Element {
 	return (
 		<div className="mb-4 flex items-center gap-3">
 			<h3 className="text-[13px] font-normal uppercase tracking-wider text-tertiary">
 				{props.title}
+				{props.tooltip && <InfoPill text={props.tooltip} />}
 			</h3>
 			<div className="h-px flex-1 bg-border" />
 		</div>
@@ -719,11 +797,13 @@ function MetricCard(props: {
 	label: string
 	value: string
 	accent?: boolean | undefined
+	tooltip?: string | undefined
 }): React.JSX.Element {
 	return (
 		<div className="card p-4">
 			<p className="text-[11px] font-normal uppercase tracking-wider text-tertiary">
 				{props.label}
+				{props.tooltip && <InfoPill text={props.tooltip} />}
 			</p>
 			<p
 				className={`mt-1 font-mono text-[18px] font-semibold ${props.accent ? 'text-accent' : 'text-primary'}`}
@@ -752,6 +832,7 @@ function seriesMean(data: Array<ChartPoint>): number {
 function TimeSeriesChart(props: {
 	series: Array<ChartSeries>
 	title?: string | undefined
+	tooltip?: string | undefined
 	stacked?: boolean | undefined
 	showMean?: boolean | undefined
 	formatValue?: ((v: number) => string) | undefined
@@ -876,6 +957,7 @@ function TimeSeriesChart(props: {
 			{props.title && (
 				<p className="mb-3 text-[12px] font-medium text-secondary">
 					{props.title}
+					{props.tooltip && <InfoPill text={props.tooltip} />}
 				</p>
 			)}
 			<div>
