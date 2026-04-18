@@ -800,7 +800,7 @@ function MetricCard(props: {
 	tooltip?: string | undefined
 }): React.JSX.Element {
 	return (
-		<div className="card p-4">
+		<div className="card overflow-visible p-4">
 			<p className="text-[11px] font-normal uppercase tracking-wider text-tertiary">
 				{props.label}
 				{props.tooltip && <InfoPill text={props.tooltip} />}

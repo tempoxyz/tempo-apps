@@ -62,17 +62,23 @@ function ScenarioPage(): React.JSX.Element {
 					<MetricCard
 						label="Throughput"
 						value={formatGas(latest.avgGasPerSecond)}
+						tooltip="Average gas per second across the entire run. Calculated as total gas used ÷ total run duration."
 						accent
 					/>
-					<MetricCard label="Peak" value={formatGas(latest.peakGasPerSecond)} />
-					<MetricCard label="Avg TPS" value={formatTps(latest.avgTps)} />
+					<MetricCard
+						label="Peak"
+						value={formatGas(latest.peakGasPerSecond)}
+						tooltip="Highest gas per second achieved by any single block. Calculated as gas_used × 1000 ÷ block_time_ms."
+					/>
+					<MetricCard
+						label="Avg TPS"
+						value={formatTps(latest.avgTps)}
+						tooltip="Average transactions per second. Calculated as the mean of tx_count × 1000 ÷ block_time_ms across all blocks."
+					/>
 					<MetricCard
 						label="Block Time"
 						value={formatMs(latest.avgBlockTimeMs)}
-					/>
-					<MetricCard
-						label="Blocks"
-						value={latest.blockCount.toLocaleString()}
+						tooltip="Average wall-clock time between consecutive blocks."
 					/>
 				</section>
 			)}
@@ -131,11 +137,28 @@ function ScenarioPage(): React.JSX.Element {
 	)
 }
 
-function SectionHeader(props: { title: string }): React.JSX.Element {
+function InfoPill(props: { text: string }): React.JSX.Element {
+	return (
+		<span className="group relative ml-1 inline-flex">
+			<span className="inline-flex h-3.5 w-3.5 cursor-default items-center justify-center rounded-full bg-border text-[9px] font-medium text-tertiary">
+				?
+			</span>
+			<span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden w-max max-w-60 -translate-x-1/2 rounded-md border border-border bg-surface px-2.5 py-1.5 text-left text-[11px] font-normal normal-case tracking-normal text-secondary shadow-lg group-hover:block">
+				{props.text}
+			</span>
+		</span>
+	)
+}
+
+function SectionHeader(props: {
+	title: string
+	tooltip?: string | undefined
+}): React.JSX.Element {
 	return (
 		<div className="mb-4 flex items-center gap-3">
 			<h3 className="text-[13px] font-normal uppercase tracking-wider text-tertiary">
 				{props.title}
+				{props.tooltip && <InfoPill text={props.tooltip} />}
 			</h3>
 			<div className="h-px flex-1 bg-border" />
 		</div>
@@ -146,11 +169,13 @@ function MetricCard(props: {
 	label: string
 	value: string
 	accent?: boolean | undefined
+	tooltip?: string | undefined
 }): React.JSX.Element {
 	return (
-		<div className="card p-4">
+		<div className="card overflow-visible p-4">
 			<p className="text-[11px] font-normal uppercase tracking-wider text-tertiary">
 				{props.label}
+				{props.tooltip && <InfoPill text={props.tooltip} />}
 			</p>
 			<p
 				className={`mt-1 font-mono text-[18px] font-semibold ${props.accent ? 'text-accent' : 'text-primary'}`}
