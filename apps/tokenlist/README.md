@@ -4,7 +4,7 @@
 
 ## Adding a New Token
 
-1. Update [`data/<chain_id>/tokenlist.json`](./data/42429/tokenlist.json)
+1. Update [`data/<chain_id>/tokenlist.json`](./data/42431/tokenlist.json)
 
    Edit `data/<chain_id>/tokenlist.json` and add your token:
 
@@ -13,16 +13,16 @@
      "name": "MyToken",
      "symbol": "MTK",
      "decimals": 18,
-     "chainId": 42429,
+     "chainId": 42431,
      "address": "0x...",
-     "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42429/icons/<address>.svg",
+     "logoURI": "https://esm.sh/gh/tempoxyz/tempo-apps/apps/tokenlist/data/42431/icons/<address>.svg",
      "extensions": {
        "chain": "tempo"
      }
    }
    ```
 
-2. Add an SVG icon to [`apps/tokenlist/data/<chain_id>/icons/<address>.svg`](./data/42429/icons/0x20c0000000000000000000000000000000000000.svg)
+2. Add an SVG icon to [`apps/tokenlist/data/<chain_id>/icons/<address>.svg`](./data/42431/icons/0x20c0000000000000000000000000000000000000.svg)
 
    - Use lowercase address for the filename
    - SVG format only
