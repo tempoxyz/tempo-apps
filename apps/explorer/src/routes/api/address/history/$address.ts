@@ -12,6 +12,10 @@ import { getRequestURL, hasIndexSupply } from '#lib/env'
 import { parseKnownEvents } from '#lib/domain/known-events'
 import { isTip20Address, type Metadata } from '#lib/domain/tip20'
 import {
+	canUseTempoActivityApi,
+	parseSources,
+} from '#lib/server/address-history-source-selection'
+import {
 	fetchAddressDirectTxHistoryRows,
 	fetchAddressHistoryTxDetailsByHashes,
 	fetchAddressLogRowsByTxHashes,
@@ -42,7 +46,7 @@ const abi = Object.values(Abis).flat()
 const [MAX_LIMIT, DEFAULT_LIMIT] = [100, 10]
 const HISTORY_COUNT_MAX = 10_000
 const TRANSFER_EVENT_TOPIC0 =
-	'0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' as Hex.Hex
+	'0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
 
 function serializeBigInts<T>(value: T): T {
 	if (typeof value === 'bigint') {
@@ -266,24 +270,6 @@ async function fetchTempoFilteredAddressActivity(params: {
 	}
 }
 
-/**
- * Data sources to query for transaction history:
- * - txs: Direct transactions (from/to the address)
- * - transfers: Transfer events where address is sender/recipient
- * - emitted: Transfer events emitted by the address (for token contracts)
- */
-type Sources = { txs: boolean; transfers: boolean; emitted: boolean }
-
-function parseSources(val: string | undefined): Sources {
-	if (!val) return { txs: true, transfers: true, emitted: false }
-	const parts = val.split(',').map((s) => s.trim().toLowerCase())
-	return {
-		txs: parts.includes('txs'),
-		transfers: parts.includes('transfers'),
-		emitted: parts.includes('emitted'),
-	}
-}
-
 const RequestParametersSchema = z.object({
 	offset: z.prefault(z.coerce.number(), 0),
 	limit: z.prefault(z.coerce.number(), DEFAULT_LIMIT),
@@ -356,45 +342,55 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const includeReceived = include === 'all' || include === 'received'
 					const sources = parseSources(searchParams.sources)
 					const statusFilter = searchParams.status
+					const tip20Address = isTip20Address(address)
 
-					const canUseTempoActivityApi =
-						Boolean(process.env.TEMPO_API_KEY) &&
-						!isTip20Address(address) &&
-						!sources.emitted
+					const shouldUseTempoActivityApi = canUseTempoActivityApi({
+						hasTempoApiKey: Boolean(process.env.TEMPO_API_KEY),
+						isTip20: tip20Address,
+						sources,
+						sortDirection,
+					})
 
-					if (canUseTempoActivityApi) {
-						if (statusFilter || after) {
-							return Response.json(
-								await fetchTempoFilteredAddressActivity({
-									address,
-									chainId,
-									include,
-									offset,
-									limit,
-									status: statusFilter,
-									after,
-								}),
+					if (shouldUseTempoActivityApi) {
+						try {
+							if (statusFilter || after) {
+								return Response.json(
+									await fetchTempoFilteredAddressActivity({
+										address,
+										chainId,
+										include,
+										offset,
+										limit,
+										status: statusFilter,
+										after,
+									}),
+								)
+							}
+
+							const activity = await fetchTempoAddressActivity({
+								address,
+								chainId,
+								include,
+								limit,
+								offset,
+							})
+							const transactions = activity.items.map(mapTempoActivityItem)
+
+							return Response.json({
+								transactions,
+								total: offset + transactions.length,
+								offset,
+								limit,
+								hasMore: activity.hasMore,
+								countCapped: true,
+								error: null,
+							} satisfies HistoryResponse)
+						} catch (error) {
+							console.error(
+								'[history] Tempo activity API failed, falling back to indexed history:',
+								error,
 							)
 						}
-
-						const activity = await fetchTempoAddressActivity({
-							address,
-							chainId,
-							include,
-							limit,
-							offset,
-						})
-						const transactions = activity.items.map(mapTempoActivityItem)
-
-						return Response.json({
-							transactions,
-							total: offset + transactions.length,
-							offset,
-							limit,
-							hasMore: activity.hasMore,
-							countCapped: true,
-							error: null,
-						} satisfies HistoryResponse)
 					}
 
 					const fetchSize = limit + 1
