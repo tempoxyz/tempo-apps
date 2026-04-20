@@ -259,6 +259,12 @@ function RunDetailPage(): React.JSX.Element {
 	const residentSeries = findSeries(m, 'reth_jemalloc_resident')
 	const allocatedSeries = findSeries(m, 'reth_jemalloc_allocated')
 
+	// Gas limit breakdown (derived from block gas limit)
+	const refGasLimit = blocks?.[0]?.gasLimit ?? 0
+	const sharedGasLimit = Math.floor(refGasLimit / 10)
+	const generalGasLimit = 30_000_000
+	const paymentGasLimit = refGasLimit - sharedGasLimit - generalGasLimit
+
 	return (
 		<div>
 			<div className="mb-4">
@@ -380,6 +386,99 @@ function RunDetailPage(): React.JSX.Element {
 							]}
 							formatValue={(v) => formatGas(v, false)}
 							xFormat="block"
+							referenceBands={
+								refGasLimit > 0
+									? [
+											{
+												label: `General (${formatGas(generalGasLimit, false)})`,
+												from: 0,
+												to: generalGasLimit,
+												color: COLORS.blue,
+											},
+											{
+												label: `Payment (${formatGas(paymentGasLimit, false)})`,
+												from: generalGasLimit,
+												to: generalGasLimit + paymentGasLimit,
+												color: COLORS.orange,
+											},
+											{
+												label: `Shared (${formatGas(sharedGasLimit, false)})`,
+												from: generalGasLimit + paymentGasLimit,
+												to: refGasLimit,
+												color: COLORS.purple,
+											},
+										]
+									: undefined
+							}
+						/>
+						<TimeSeriesChart
+							title="Gas Fill %"
+							tooltip="Percentage of the block gas limit that was used."
+							showMean
+							series={[
+								{
+									label: 'Fill %',
+									color: COLORS.blue,
+									data: blocks
+										.filter((b) => b.gasLimit > 0)
+										.map((b) => ({
+											x: b.index,
+											y: (b.gasUsed / b.gasLimit) * 100,
+										})),
+								},
+							]}
+							formatValue={(v) => `${v.toFixed(1)}%`}
+							yMax={100}
+							xFormat="block"
+							referenceBands={
+								refGasLimit > 0
+									? [
+											{
+												label: `General (${((generalGasLimit / refGasLimit) * 100).toFixed(0)}%)`,
+												from: 0,
+												to: (generalGasLimit / refGasLimit) * 100,
+												color: COLORS.blue,
+											},
+											{
+												label: `Payment (${((paymentGasLimit / refGasLimit) * 100).toFixed(0)}%)`,
+												from: (generalGasLimit / refGasLimit) * 100,
+												to:
+													((generalGasLimit + paymentGasLimit) / refGasLimit) *
+													100,
+												color: COLORS.orange,
+											},
+											{
+												label: `Shared (${((sharedGasLimit / refGasLimit) * 100).toFixed(0)}%)`,
+												from:
+													((generalGasLimit + paymentGasLimit) / refGasLimit) *
+													100,
+												to: 100,
+												color: COLORS.purple,
+											},
+										]
+									: undefined
+							}
+						/>
+						<TimeSeriesChart
+							title="RLP Block Size"
+							tooltip="RLP-encoded size of each block in kilobytes."
+							showMean
+							series={[
+								{
+									label: 'Size',
+									color: COLORS.green,
+									data: transformSamples(rlpSizeSeries, (v) => v / 1024),
+								},
+							]}
+							formatValue={(v) => `${v.toFixed(0)} KB`}
+							referenceBands={[
+								{
+									label: 'RLPx hard cap (16 MiB)',
+									from: 16 * 1024,
+									to: 16 * 1024 * 1.05,
+									color: COLORS.red,
+								},
+							]}
 						/>
 					</div>
 				</section>
@@ -517,48 +616,6 @@ function RunDetailPage(): React.JSX.Element {
 							},
 						]}
 						formatValue={(v) => `${Math.round(v).toLocaleString()}`}
-					/>
-				</div>
-			</section>
-
-			<section className="mb-10">
-				<SectionHeader
-					title="Block Headroom"
-					tooltip="How close blocks are to their gas limit and size constraints."
-				/>
-				<div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-					<TimeSeriesChart
-						title="Gas Fill %"
-						tooltip="Percentage of the block gas limit that was used."
-						showMean
-						series={[
-							{
-								label: 'Fill %',
-								color: COLORS.blue,
-								data: (blocks ?? [])
-									.filter((b) => b.gasLimit > 0)
-									.map((b) => ({
-										x: b.index,
-										y: (b.gasUsed / b.gasLimit) * 100,
-									})),
-							},
-						]}
-						formatValue={(v) => `${v.toFixed(1)}%`}
-						yMax={100}
-						xFormat="block"
-					/>
-					<TimeSeriesChart
-						title="RLP Block Size"
-						tooltip="RLP-encoded size of each block in kilobytes."
-						showMean
-						series={[
-							{
-								label: 'Size',
-								color: COLORS.green,
-								data: transformSamples(rlpSizeSeries, (v) => v / 1024),
-							},
-						]}
-						formatValue={(v) => `${v.toFixed(0)} KB`}
 					/>
 				</div>
 			</section>
@@ -860,6 +917,13 @@ function seriesMean(data: Array<ChartPoint>): number {
 	return data.reduce((sum, p) => sum + p.y, 0) / data.length
 }
 
+type ReferenceBand = {
+	label: string
+	from: number
+	to: number
+	color: string
+}
+
 function TimeSeriesChart(props: {
 	series: Array<ChartSeries>
 	title?: string | undefined
@@ -869,6 +933,7 @@ function TimeSeriesChart(props: {
 	formatValue?: ((v: number) => string) | undefined
 	xFormat?: 'time' | 'block' | undefined
 	yMax?: number | undefined
+	referenceBands?: Array<ReferenceBand> | undefined
 }): React.JSX.Element {
 	const plotRef = React.useRef<HTMLDivElement>(null)
 	const [hoverX, setHoverX] = React.useState<number | null>(null)
@@ -897,6 +962,10 @@ function TimeSeriesChart(props: {
 	const xMax = refSeries.data.at(-1)?.x ?? 1
 	const xRange = xMax - xMin || 1
 
+	const refBandMax = props.referenceBands?.length
+		? Math.max(...props.referenceBands.map((rb) => rb.to))
+		: 0
+
 	let yMax: number
 	if (props.yMax != null) {
 		yMax = props.yMax
@@ -907,9 +976,12 @@ function TimeSeriesChart(props: {
 			for (const s of props.series) sum += s.data[i]?.y ?? 0
 			sums.push(sum)
 		}
-		yMax = (Math.max(...sums) || 1) * 1.1
+		yMax = Math.max((Math.max(...sums) || 1) * 1.1, refBandMax * 1.05)
 	} else {
-		yMax = (Math.max(...allPoints.map((p) => p.y)) || 1) * 1.1
+		yMax = Math.max(
+			(Math.max(...allPoints.map((p) => p.y)) || 1) * 1.1,
+			refBandMax * 1.05,
+		)
 	}
 	const yMin = 0
 	const yRange = yMax - yMin || 1
@@ -1082,6 +1154,46 @@ function TimeSeriesChart(props: {
 									))
 								))}
 
+							{/* Reference bands */}
+							{props.referenceBands?.map((rb) => {
+								const y1 = sy(rb.to)
+								const y2 = sy(rb.from)
+								const h = y2 - y1
+								const midY = y1 + h / 2
+								return (
+									<React.Fragment key={rb.label}>
+										<rect
+											x={0}
+											y={y1}
+											width={SVG_W}
+											height={h}
+											fill={rb.color}
+											opacity={0.1}
+										/>
+										<line
+											x1={0}
+											y1={y1}
+											x2={SVG_W}
+											y2={y1}
+											stroke={rb.color}
+											vectorEffect="non-scaling-stroke"
+											strokeWidth={0.5}
+											opacity={0.3}
+										/>
+										<text
+											x={SVG_W - 4}
+											y={h > 12 ? midY + 3 : y1 + 11}
+											textAnchor="end"
+											fill={rb.color}
+											fontSize={8}
+											opacity={0.8}
+										>
+											{rb.label}
+										</text>
+									</React.Fragment>
+								)
+							})}
+
 							{/* Stacked area fills */}
 							{props.stacked &&
 								stackedAreas.map((a) => (
@@ -1141,36 +1253,36 @@ function TimeSeriesChart(props: {
 									strokeDasharray="3 3"
 								/>
 							)}
-
-							{/* Hover dots */}
-							{hoverX !== null &&
-								props.series.map((s) => {
-									const pt = closestPoint(s.data, hoverX)
-									if (!pt) return null
-									let y = pt.y
-									if (props.stacked) {
-										const si = props.series.indexOf(s)
-										y = 0
-										for (let j = 0; j <= si; j++) {
-											const cp = closestPoint(props.series[j].data, hoverX)
-											y += cp?.y ?? 0
-										}
-									}
-									return (
-										<circle
-											key={s.label}
-											cx={sx(pt.x)}
-											cy={sy(y)}
-											r={3}
-											fill={s.color}
-											stroke="currentColor"
-											className="text-surface"
-											vectorEffect="non-scaling-stroke"
-											strokeWidth={1.5}
-										/>
-									)
-								})}
 						</svg>
+
+						{/* Hover dots (HTML to avoid SVG stretch distortion) */}
+						{hoverX !== null &&
+							props.series.map((s) => {
+								const pt = closestPoint(s.data, hoverX)
+								if (!pt) return null
+								let y = pt.y
+								if (props.stacked) {
+									const si = props.series.indexOf(s)
+									y = 0
+									for (let j = 0; j <= si; j++) {
+										const cp = closestPoint(props.series[j].data, hoverX)
+										y += cp?.y ?? 0
+									}
+								}
+								const xPct = ((pt.x - xMin) / xRange) * 100
+								const yPct = (1 - (y - yMin) / yRange) * 100
+								return (
+									<div
+										key={s.label}
+										className="pointer-events-none absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] border-surface"
+										style={{
+											left: `${xPct}%`,
+											top: `${yPct}%`,
+											backgroundColor: s.color,
+										}}
+									/>
+								)
+							})}
 
 						{/* Hover tooltip */}
 						{hoverX !== null && (
