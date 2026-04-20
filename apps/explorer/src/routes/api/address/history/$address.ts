@@ -219,8 +219,6 @@ async function fetchTempoFilteredAddressActivity(params: {
 	const filteredItems: TempoActivityItem[] = []
 	let sourceOffset = 0
 	let sourceHasMore = true
-	let countCapped = false
-
 	while (
 		sourceHasMore &&
 		filteredItems.length < targetCount &&
@@ -247,16 +245,15 @@ async function fetchTempoFilteredAddressActivity(params: {
 		if (page.items.length === 0) break
 	}
 
-	if (sourceHasMore || sourceOffset >= HISTORY_COUNT_MAX) countCapped = true
-
 	const pageItems = filteredItems.slice(
 		params.offset,
 		params.offset + params.limit,
 	)
+	const countCapped = sourceHasMore
 	const hasMore =
-		filteredItems.length > params.offset + params.limit || countCapped
+		filteredItems.length > params.offset + params.limit || sourceHasMore
 	const total = countCapped
-		? Math.max(filteredItems.length, params.offset + pageItems.length)
+		? Math.max(filteredItems.length, params.offset)
 		: filteredItems.length
 
 	return {
@@ -378,11 +375,13 @@ export const Route = createFileRoute('/api/address/history/$address')({
 
 							return Response.json({
 								transactions,
-								total: offset + transactions.length,
+								total: activity.hasMore
+									? offset + transactions.length + 1
+									: offset + transactions.length,
 								offset,
 								limit,
 								hasMore: activity.hasMore,
-								countCapped: true,
+								countCapped: activity.hasMore,
 								error: null,
 							} satisfies HistoryResponse)
 						} catch (error) {
