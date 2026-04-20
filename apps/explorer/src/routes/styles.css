@@ -257,6 +257,15 @@ input[type="number"] {
 	}
 }
 
+@utility sphere-container {
+	mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+	-webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+
+	&:is(.scheme-light\! *) {
+		opacity: 0.3;
+	}
+}
+
 @utility scrollbar-gutter-stable {
 	scrollbar-gutter: stable;
 }
