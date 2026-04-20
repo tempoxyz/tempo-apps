@@ -163,7 +163,7 @@ input[type="number"] {
 }
 
 @utility text-ui-meta {
-	color: #fff;
+	color: var(--color-content-primary);
 	text-align: center;
 	leading-trim: both;
 	text-edge: cap;
