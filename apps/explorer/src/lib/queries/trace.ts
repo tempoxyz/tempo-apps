@@ -1,5 +1,6 @@
 import { queryOptions } from '@tanstack/react-query'
 import type { Address, Hex } from 'ox'
+import { zeroAddress } from 'viem'
 import { getWagmiConfig } from '#wagmi.config.ts'
 
 export interface CallTrace {
@@ -55,7 +56,14 @@ export async function fetchTraceData(hash: Hex.Hex): Promise<TraceData> {
 			} as Parameters<typeof client.request>[0]) as Promise<PrestateDiff>
 		).catch(() => null),
 	])
-	return { trace, prestate }
+	// Tempo's callTracer wraps the real execution in a system-level CALL to the
+	// zero address. Unwrap it so the trace tree starts at the actual transaction.
+	const unwrapped =
+		trace?.to === zeroAddress && trace.calls?.length === 1
+			? trace.calls[0]
+			: trace
+
+	return { trace: unwrapped ?? null, prestate }
 }
 
 export function traceQueryOptions(params: { hash: string }) {

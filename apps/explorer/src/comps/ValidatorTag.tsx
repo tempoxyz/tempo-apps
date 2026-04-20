@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import type { Address } from 'ox'
-import { Midcut } from '#comps/Midcut'
+import { Midcut } from 'midcut'
 
 export function ValidatorTag(props: ValidatorTag.Props) {
 	const { address, name, showAddress = true, align = 'end' } = props

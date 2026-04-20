@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
 
+permissions: {}
+
 env:
   NODE_ENV: production
   WRANGLER_SEND_METRICS: false
@@ -12,13 +14,14 @@ jobs:
   verify:
     name: Verify
     uses: ./.github/workflows/verify.yml
-    secrets: inherit
 
   deploy-explorer:
     name: Deploy Explorer
     needs: verify
     uses: ./.github/workflows/deploy.yml
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     with:
       app: explorer
       environments: '["testnet","mainnet","devnet"]'
@@ -27,7 +30,9 @@ jobs:
     name: Deploy Fee Payer
     needs: verify
     uses: ./.github/workflows/deploy.yml
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     with:
       app: fee-payer
       environments: '["privy","devnet","moderato","mainnet"]'
@@ -36,7 +41,9 @@ jobs:
     name: Deploy Contract Verification
     needs: verify
     uses: ./.github/workflows/deploy.yml
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     with:
       app: contract-verification
       environments: '[""]'
@@ -45,7 +52,9 @@ jobs:
     name: Deploy Key Manager
     needs: verify
     uses: ./.github/workflows/deploy.yml
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     with:
       app: key-manager
       environments: '[""]'
@@ -54,7 +63,9 @@ jobs:
     name: Deploy OG
     needs: verify
     uses: ./.github/workflows/deploy.yml
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     with:
       app: og
       environments: '[""]'
@@ -63,7 +74,9 @@ jobs:
     name: Deploy Tokenlist
     needs: verify
     uses: ./.github/workflows/deploy.yml
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     with:
       app: tokenlist
       environments: '[""]'

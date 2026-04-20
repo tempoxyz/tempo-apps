@@ -6,7 +6,7 @@ import { getBlock } from 'wagmi/actions'
 import { getWagmiConfig } from '#wagmi.config'
 import * as z from 'zod/mini'
 import { DataGrid } from '#comps/DataGrid'
-import { Midcut } from '#comps/Midcut'
+import { Midcut } from 'midcut'
 import { Sections } from '#comps/Sections'
 import {
 	FormattedTimestamp,
