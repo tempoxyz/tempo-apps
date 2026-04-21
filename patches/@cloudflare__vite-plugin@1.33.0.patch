@@ -1,38 +1,38 @@
 --- a/dist/index.mjs
 +++ b/dist/index.mjs
-@@ -26586,7 +26586,7 @@
+@@ -26810,7 +26810,7 @@
  //#endregion
  //#region ../containers-shared/src/build.ts
  async function constructBuildCommand(options, logger) {
--	const platform = options.platform ?? "linux/amd64";
-+	const platform = options.platform ?? (process.arch === "arm64" ? "linux/arm64" : "linux/amd64");
+-	const platform$1 = options.platform ?? "linux/amd64";
++	const platform$1 = options.platform ?? (process.arch === "arm64" ? "linux/arm64" : "linux/amd64");
  	const buildCmd = [
  		"build",
  		"--load",
-@@ -26656,7 +26656,7 @@
+@@ -26880,7 +26880,7 @@
  		pathToDockerfile: options.dockerfile,
  		buildContext: options.image_build_context,
  		args: options.image_vars,
 -		platform: "linux/amd64"
-+		platform: (process.arch === "arm64" ? "linux/arm64" : "linux/amd64")
++		platform: process.arch === "arm64" ? "linux/arm64" : "linux/amd64"
  	});
  	return dockerBuild(dockerPath, {
  		buildCmd,
-@@ -26931,7 +26931,7 @@
+@@ -27155,7 +27155,7 @@
  		"pull",
  		getEgressInterceptorImage(),
  		"--platform",
 -		"linux/amd64"
-+		(process.arch === "arm64" ? "linux/arm64" : "linux/amd64")
++		process.arch === "arm64" ? "linux/arm64" : "linux/amd64"
  	]);
  }
  async function pullImage(dockerPath, options, logger, isVite) {
-@@ -26952,7 +26952,7 @@
+@@ -27176,7 +27176,7 @@
  		"pull",
  		options.image_uri,
  		"--platform",
 -		"linux/amd64"
-+		(process.arch === "arm64" ? "linux/arm64" : "linux/amd64")
++		process.arch === "arm64" ? "linux/arm64" : "linux/amd64"
  	]);
  	return {
  		abort: () => {
