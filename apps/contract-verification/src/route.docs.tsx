@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { html, raw } from 'hono/html'
 
 import packageJSON from '#package.json' with { type: 'json' }
+import openApiSchema from '#openapi.json' with { type: 'json' }
 
 const getScalarConfig = (baseUrl: string) =>
 	({
@@ -21,18 +22,7 @@ const getScalarConfig = (baseUrl: string) =>
 		defaultHttpClient: { clientKey: 'curl', targetKey: 'shell' },
 		servers: [
 			{ url: baseUrl, description: 'Current' },
-			{ url: 'https://contracts.tempo.xyz', description: 'Production' },
-			{
-				url: 'https://contracts.porto.workers.dev',
-				description: 'workers.dev',
-			},
-			{
-				url: 'http://localhost:{port}',
-				description: 'Local',
-				variables: {
-					port: { default: '6767', description: 'localhost port number' },
-				},
-			},
+			...openApiSchema.servers,
 		],
 	}) as const
 
