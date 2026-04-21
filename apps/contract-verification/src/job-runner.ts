@@ -7,6 +7,13 @@ import { runVerificationJob } from '#route.verify.ts'
 
 const logger = getLogger(['tempo', 'job-runner'])
 
+type LegacyStoredJob = Pick<
+	VerificationJob,
+	'jobId' | 'chainId' | 'address'
+> & {
+	body: Omit<VerificationJob, 'jobId' | 'chainId' | 'address'>
+}
+
 export class VerificationJobRunner extends DurableObject<Cloudflare.Env> {
 	async enqueue(job: VerificationJob): Promise<void> {
 		logger.info('job_enqueued', {
@@ -20,11 +27,26 @@ export class VerificationJobRunner extends DurableObject<Cloudflare.Env> {
 	}
 
 	override async alarm(): Promise<void> {
-		const job = await this.ctx.storage.get<VerificationJob>('job')
-		if (!job) {
+		const storedJob = await this.ctx.storage.get<
+			VerificationJob | LegacyStoredJob
+		>('job')
+		if (!storedJob) {
 			logger.warn('alarm_job_missing')
 			return
 		}
+
+		const job =
+			'body' in storedJob
+				? {
+						jobId: storedJob.jobId,
+						chainId: storedJob.chainId,
+						address: storedJob.address,
+						stdJsonInput: storedJob.body.stdJsonInput,
+						compilerVersion: storedJob.body.compilerVersion,
+						contractIdentifier: storedJob.body.contractIdentifier,
+						creationTransactionHash: storedJob.body.creationTransactionHash,
+					}
+				: storedJob
 
 		logger.info('job_started', {
 			jobId: job.jobId,
