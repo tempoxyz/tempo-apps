@@ -45,13 +45,11 @@ import { chains } from '#wagmi.config.ts'
 import { getLogger } from '#lib/logger.ts'
 
 const logger = getLogger(['tempo'])
-import wranglerJSON from '#wrangler.json' with { type: 'json' }
 
 /** Jobs older than this are considered stale and can be retried (15 minutes). */
 const JOB_TTL_MS = 15 * 60 * 1_000
 /** Number of container instances to load-balance across. */
-const CONTAINER_INSTANCE_COUNT =
-	wranglerJSON.containers.at(0)?.max_instances ?? 10
+const CONTAINER_INSTANCE_COUNT = Number(process.env.CONTAINER_MAX_INSTANCES)
 
 function timestampToMs(value: string): number {
 	const normalized = value.includes('T') ? value : `${value.replace(' ', 'T')}Z`
