@@ -16,7 +16,7 @@
 	"scripts": {
 		"dev": "vite dev",
 		"preview": "vite preview",
-		"build": "vite build && node ./scripts/postbuild.ts",
+		"build": "vite build",
 		"check": "pnpm check:biome && pnpm check:types",
 		"check:biome": "biome check --write --unsafe",
 		"check:types": "tsgo --project tsconfig.json --noEmit",

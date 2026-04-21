@@ -176,8 +176,8 @@ export namespace Header {
 				params={{ id: blockNumber != null ? String(blockNumber) : 'latest' }}
 				className={cx(
 					className,
-					'flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down transition-opacity duration-300',
-					isReady ? 'opacity-100' : 'opacity-0',
+					'flex items-center gap-[6px] text-[15px] font-medium text-secondary press-down origin-right transition-[opacity,scale] duration-[80ms]',
+					isReady ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.97]',
 				)}
 				title="View latest block"
 			>

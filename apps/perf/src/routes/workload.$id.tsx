@@ -1,19 +1,67 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useQuery, useSuspenseQuery } from '@tanstack/react-query'
+import { useSuspenseQuery } from '@tanstack/react-query'
 import {
 	getScenario,
 	fetchRunsForScenario,
-	fetchRun,
 	type BenchRun,
-	type BenchBlock,
 } from '#lib/server/bench'
-import {
-	formatGas,
-	formatTps,
-	formatMs,
-	formatDate,
-	formatAccounts,
-} from '#lib/format'
+import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
+
+const TEMPO_REPO = 'https://github.com/tempoxyz/tempo'
+
+function isTag(ref: string): boolean {
+	return /^v\d/.test(ref)
+}
+
+function VersionLink(props: { run: BenchRun }): React.JSX.Element {
+	const { run } = props
+	if (run.ref && isTag(run.ref)) {
+		return (
+			<a
+				href={`${TEMPO_REPO}/releases/tag/${run.ref}`}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="hover:underline"
+				onClick={(e) => e.stopPropagation()}
+			>
+				{run.ref}
+			</a>
+		)
+	}
+	return (
+		<a
+			href={`${TEMPO_REPO}/commit/${run.commit}`}
+			target="_blank"
+			rel="noopener noreferrer"
+			className="hover:underline"
+			onClick={(e) => e.stopPropagation()}
+		>
+			{run.ref ? `${run.ref} (${run.commit})` : run.commit}
+		</a>
+	)
+}
+
+const NOISE_THRESHOLD = 0.02
+
+function Delta(props: {
+	current: number
+	previous: number
+	lowerIsBetter?: boolean | undefined
+}): React.JSX.Element | null {
+	if (props.previous === 0) return null
+	const ratio = (props.current - props.previous) / props.previous
+	if (Math.abs(ratio) < NOISE_THRESHOLD)
+		return <span className="ml-1.5 text-[11px] text-tertiary">=</span>
+	const up = ratio > 0
+	const improved = props.lowerIsBetter ? !up : up
+	return (
+		<span
+			className={`ml-1.5 text-[11px] ${improved ? 'text-positive' : 'text-negative'}`}
+		>
+			{up ? '▲' : '▼'} {(Math.abs(ratio) * 100).toFixed(1)}%
+		</span>
+	)
+}
 
 export const Route = createFileRoute('/workload/$id')({
 	component: ScenarioPage,
@@ -34,11 +82,7 @@ function ScenarioPage(): React.JSX.Element {
 		queryFn: () => fetchRunsForScenario({ data: id }),
 	})
 	const latest = runs[0]
-	const { data: latestRun } = useQuery({
-		queryKey: ['run', latest?.id],
-		queryFn: () => (latest ? fetchRun({ data: latest.id }) : null),
-		enabled: !!latest,
-	})
+	const prev = runs[1]
 
 	if (!scenario) {
 		return (
@@ -66,8 +110,8 @@ function ScenarioPage(): React.JSX.Element {
 			</section>
 
 			<p className="mb-8 text-[14px] text-secondary">
-				{scenario.workload} · Target: {scenario.targetTps.toLocaleString()} TPS
-				{latest && ` · ${formatDate(latest.timestamp)}`}
+				{scenario.workload}
+				{latest && ` · ${formatDate(latest.startedAt)}`}
 			</p>
 
 			{latest && (
@@ -75,33 +119,52 @@ function ScenarioPage(): React.JSX.Element {
 					<MetricCard
 						label="Throughput"
 						value={formatGas(latest.avgGasPerSecond)}
+						tooltip="Average gas per second across the entire run. Calculated as total gas used ÷ total run duration."
+						delta={
+							prev && (
+								<Delta
+									current={latest.avgGasPerSecond}
+									previous={prev.avgGasPerSecond}
+								/>
+							)
+						}
 						accent
 					/>
-					<MetricCard label="Peak" value={formatGas(latest.peakGasPerSecond)} />
-					<MetricCard label="Avg TPS" value={formatTps(latest.avgTps)} />
 					<MetricCard
-						label="State Size"
-						value={`${formatAccounts(latest.stateAccounts)} accounts`}
+						label="Peak"
+						value={formatGas(latest.peakGasPerSecond)}
+						tooltip="Highest gas per second achieved by any single block, based on its gas usage and block time."
+						delta={
+							prev && (
+								<Delta
+									current={latest.peakGasPerSecond}
+									previous={prev.peakGasPerSecond}
+								/>
+							)
+						}
+					/>
+					<MetricCard
+						label="Avg TPS"
+						value={formatTps(latest.avgTps)}
+						tooltip="Average transactions per second across all blocks, based on transaction count and block time."
+						delta={
+							prev && <Delta current={latest.avgTps} previous={prev.avgTps} />
+						}
 					/>
 					<MetricCard
 						label="Block Time"
 						value={formatMs(latest.avgBlockTimeMs)}
+						tooltip="Average wall-clock time between consecutive blocks."
+						delta={
+							prev && (
+								<Delta
+									current={latest.avgBlockTimeMs}
+									previous={prev.avgBlockTimeMs}
+									lowerIsBetter
+								/>
+							)
+						}
 					/>
-					<MetricCard
-						label="P50 Latency"
-						value={formatMs(latest.p50LatencyMs)}
-					/>
-					<MetricCard
-						label="P99 Latency"
-						value={formatMs(latest.p99LatencyMs)}
-					/>
-				</section>
-			)}
-
-			{latestRun && latestRun.blocks.length > 0 && (
-				<section className="mb-10">
-					<SectionHeader title="Block-level Gas Usage" />
-					<BlockChart blocks={latestRun.blocks} />
 				</section>
 			)}
 
@@ -111,17 +174,19 @@ function ScenarioPage(): React.JSX.Element {
 					<table className="w-full text-[13px]">
 						<thead>
 							<tr className="border-b border-border bg-surface-raised text-left text-tertiary">
+								<th className="px-4.5 py-3 font-normal">Version</th>
 								<th className="px-4.5 py-3 font-normal text-right">
 									Throughput
 								</th>
 								<th className="px-4.5 py-3 font-normal text-right">TPS</th>
-								<th className="px-4.5 py-3 font-normal text-right">P50</th>
-								<th className="px-4.5 py-3 font-normal text-right">P99</th>
+								<th className="px-4.5 py-3 font-normal text-right">
+									Block Time
+								</th>
 								<th className="px-4.5 py-3 font-normal text-right">Date</th>
 							</tr>
 						</thead>
 						<tbody>
-							{runs.map((run: Omit<BenchRun, 'blocks'>) => (
+							{runs.map((run: BenchRun) => (
 								<tr
 									key={run.id}
 									className="border-b border-dashed border-border last:border-0 transition-colors hover:bg-surface-hover cursor-pointer"
@@ -132,6 +197,9 @@ function ScenarioPage(): React.JSX.Element {
 										})
 									}
 								>
+									<td className="px-4.5 py-3 font-mono text-accent">
+										<VersionLink run={run} />
+									</td>
 									<td className="px-4.5 py-3 text-right font-mono text-primary">
 										{formatGas(run.avgGasPerSecond)}
 									</td>
@@ -139,13 +207,10 @@ function ScenarioPage(): React.JSX.Element {
 										{formatTps(run.avgTps)}
 									</td>
 									<td className="px-4.5 py-3 text-right font-mono text-primary">
-										{formatMs(run.p50LatencyMs)}
-									</td>
-									<td className="px-4.5 py-3 text-right font-mono text-primary">
-										{formatMs(run.p99LatencyMs)}
+										{formatMs(run.avgBlockTimeMs)}
 									</td>
 									<td className="px-4.5 py-3 text-right text-tertiary">
-										{formatDate(run.timestamp)}
+										{formatDate(run.startedAt)}
 									</td>
 								</tr>
 							))}
@@ -157,11 +222,28 @@ function ScenarioPage(): React.JSX.Element {
 	)
 }
 
-function SectionHeader(props: { title: string }): React.JSX.Element {
+function InfoPill(props: { text: string }): React.JSX.Element {
+	return (
+		<span className="group relative ml-1 inline-flex">
+			<span className="inline-flex h-3.5 w-3.5 cursor-default items-center justify-center rounded-full bg-border text-[9px] font-medium text-tertiary">
+				?
+			</span>
+			<span className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-1.5 hidden w-max max-w-60 -translate-x-1/2 rounded-md border border-border bg-surface px-2.5 py-1.5 text-left text-[11px] font-normal normal-case tracking-normal text-secondary shadow-lg group-hover:block">
+				{props.text}
+			</span>
+		</span>
+	)
+}
+
+function SectionHeader(props: {
+	title: string
+	tooltip?: string | undefined
+}): React.JSX.Element {
 	return (
 		<div className="mb-4 flex items-center gap-3">
 			<h3 className="text-[13px] font-normal uppercase tracking-wider text-tertiary">
 				{props.title}
+				{props.tooltip && <InfoPill text={props.tooltip} />}
 			</h3>
 			<div className="h-px flex-1 bg-border" />
 		</div>
@@ -172,69 +254,21 @@ function MetricCard(props: {
 	label: string
 	value: string
 	accent?: boolean | undefined
+	tooltip?: string | undefined
+	delta?: React.ReactNode | undefined
 }): React.JSX.Element {
 	return (
-		<div className="card p-4">
+		<div className="card overflow-visible p-4">
 			<p className="text-[11px] font-normal uppercase tracking-wider text-tertiary">
 				{props.label}
+				{props.tooltip && <InfoPill text={props.tooltip} />}
 			</p>
 			<p
 				className={`mt-1 font-mono text-[18px] font-semibold ${props.accent ? 'text-accent' : 'text-primary'}`}
 			>
 				{props.value}
+				{props.delta}
 			</p>
-		</div>
-	)
-}
-
-function BlockChart(props: { blocks: Array<BenchBlock> }): React.JSX.Element {
-	const { blocks } = props
-	const maxGas = Math.max(...blocks.map((b) => b.gasUsed))
-
-	return (
-		<div className="card p-5">
-			<div className="flex gap-3">
-				<div className="flex h-44 flex-col justify-between text-right text-[10px] text-tertiary font-mono">
-					<span>{formatGas(maxGas, false)}</span>
-					<span>{formatGas(Math.round(maxGas / 2), false)}</span>
-					<span>0</span>
-				</div>
-				<div className="flex-1">
-					<div className="flex h-44 items-end gap-[2px]">
-						{blocks.map((block) => {
-							const height = (block.gasUsed / maxGas) * 100
-							return (
-								<div
-									key={block.number}
-									className="group relative flex-1"
-									style={{ height: '100%' }}
-								>
-									<div
-										className="absolute bottom-0 w-full rounded-t-[2px] bg-accent/40 transition-all group-hover:bg-accent"
-										style={{ height: `${height}%` }}
-									/>
-									<div className="pointer-events-none absolute top-2 left-1/2 z-10 hidden -translate-x-1/2 rounded-lg border border-border bg-surface px-3 py-2 text-[11px] shadow-lg group-hover:block whitespace-nowrap">
-										<div className="font-medium text-primary">
-											Block #{block.number}
-										</div>
-										<div className="mt-1 text-secondary">
-											{formatGas(block.gasUsed, false)}
-										</div>
-										<div className="text-secondary">{block.txCount} txs</div>
-										<div className="text-secondary">
-											{formatMs(block.executionTimeMs)} exec
-										</div>
-									</div>
-								</div>
-							)
-						})}
-					</div>
-					<div className="mt-3 flex justify-between text-[11px] text-tertiary">
-						<span>Block #{blocks[0]?.number}</span>
-						<span>Block #{blocks.at(-1)?.number}</span>
-					</div>
-				</div>
-			</div>
 		</div>
 	)
 }

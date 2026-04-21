@@ -17,5 +17,6 @@ declare namespace Cloudflare {
 		CLICKHOUSE_HOST: string
 		CLICKHOUSE_USER: string
 		CLICKHOUSE_PASSWORD: string
+		CLICKHOUSE_DATABASE: string
 	}
 }

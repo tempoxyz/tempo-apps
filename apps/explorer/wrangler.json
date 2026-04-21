@@ -9,6 +9,13 @@
 	"keep_vars": true,
 	"workers_dev": true,
 	"preview_urls": true,
+	"kv_namespaces": [
+		{
+			"binding": "EXPLORER_FEE_AMM_CACHE",
+			"id": "c512895cab024808bce152ddd9aa3122",
+			"preview_id": "0211859b856e40d095ab4e2a5329a22d"
+		}
+	],
 	"browser": { "binding": "BROWSER" },
 	"env": {
 		"testnet": {

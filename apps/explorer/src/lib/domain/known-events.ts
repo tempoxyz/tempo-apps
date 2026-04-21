@@ -225,7 +225,11 @@ export const STREAM_CHANNEL = '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70'
 const KNOWN_ZONES: ReadonlyMap<Address.Address, { name: string }> = new Map([
 	[
 		Address.from('0x7069DeC4E64Fd07334A0933eDe836C17259c9B23'),
-		{ name: 'Zone 5' },
+		{ name: 'Zone A' },
+	],
+	[
+		Address.from('0x3F5296303400B56271b476F5A0B9cBF74350D6Ac'),
+		{ name: 'Zone B' },
 	],
 ])
 
@@ -292,19 +296,23 @@ export function isFeeTransferEvent(
 
 type ParsedEvent = ReturnType<typeof parseEventLogs<typeof abi>>[number]
 
+function checksumAddress(address: string): Address.Address {
+	return Address.from(address, { checksum: true })
+}
+
 function createZonePortalMetadata(events: ParsedEvent[]) {
 	const zonePortals = new Map(KNOWN_ZONES)
 
 	for (const event of events) {
 		if (event.eventName === 'ZoneCreated') {
-			zonePortals.set(Address.from(event.args.portal), {
+			zonePortals.set(checksumAddress(event.args.portal), {
 				name: `Zone ${event.args.zoneId.toString()}`,
 			})
 			continue
 		}
 
 		if (ZONE_PORTAL_EVENT_NAMES.has(event.eventName)) {
-			const portal = Address.from(event.address)
+			const portal = checksumAddress(event.address)
 			zonePortals.set(portal, zonePortals.get(portal) ?? { name: 'Zone' })
 		}
 	}
@@ -325,11 +333,11 @@ function createDetectors(
 	zonePortals: ReadonlyMap<Address.Address, { name: string }> = KNOWN_ZONES,
 ) {
 	function isZonePortalAddress(address: Address.Address): boolean {
-		return zonePortals.has(Address.from(address))
+		return zonePortals.has(checksumAddress(address))
 	}
 
 	function getZoneName(portalAddress: Address.Address): string {
-		return zonePortals.get(Address.from(portalAddress))?.name ?? 'Zone'
+		return zonePortals.get(checksumAddress(portalAddress))?.name ?? 'Zone'
 	}
 
 	return {
@@ -1475,7 +1483,7 @@ export function parseKnownEvents(
 	const transactionSender = receipt.from
 
 	function isZonePortalAddress(address: Address.Address): boolean {
-		return zonePortals.has(Address.from(address))
+		return zonePortals.has(checksumAddress(address))
 	}
 
 	const createAmount = (value: bigint, token: Address.Address): Amount => {

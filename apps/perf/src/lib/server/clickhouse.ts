@@ -26,7 +26,12 @@ function httpsPost(
 }
 
 export async function queryClickHouse<T>(query: string): Promise<Array<T>> {
-	const { CLICKHOUSE_HOST, CLICKHOUSE_USER, CLICKHOUSE_PASSWORD } = env
+	const {
+		CLICKHOUSE_HOST,
+		CLICKHOUSE_USER,
+		CLICKHOUSE_PASSWORD,
+		CLICKHOUSE_DATABASE,
+	} = env
 
 	if (!CLICKHOUSE_HOST || !CLICKHOUSE_USER || !CLICKHOUSE_PASSWORD) {
 		console.warn('[clickhouse] missing credentials, returning empty')
@@ -34,6 +39,9 @@ export async function queryClickHouse<T>(query: string): Promise<Array<T>> {
 	}
 
 	const url = new URL(`https://${CLICKHOUSE_HOST}/?default_format=JSON`)
+	if (CLICKHOUSE_DATABASE) {
+		url.searchParams.set('database', CLICKHOUSE_DATABASE)
+	}
 
 	const text = await httpsPost(
 		url,

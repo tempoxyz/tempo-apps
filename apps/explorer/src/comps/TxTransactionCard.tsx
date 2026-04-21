@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import { InfoCard } from '#comps/InfoCard'
-import { Midcut } from '#comps/Midcut'
+import { Midcut } from 'midcut'
 import { FormattedTimestamp, useTimeFormat } from '#comps/TimeFormat'
 import { cx } from '#lib/css'
 import { useCopy } from '#lib/hooks'

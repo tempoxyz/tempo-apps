@@ -148,6 +148,14 @@ export async function fetchTokenHoldersCountRows(
  */
 const TIDX_SERVER_ROW_LIMIT = 10_000
 
+function isTidxQueryTooExpensiveError(error: unknown): boolean {
+	if (error instanceof Tidx.FetchRequestError && error.status === 422)
+		return true
+	if (error instanceof Error && error.cause)
+		return isTidxQueryTooExpensiveError(error.cause)
+	return false
+}
+
 export async function fetchTokenHoldersCount(
 	address: Address.Address,
 	chainId: number,
@@ -184,12 +192,13 @@ export async function fetchTokenHoldersCount(
 	} catch (error) {
 		// Only return a capped fallback for 422 (query too expensive, i.e. too many holders).
 		// For other errors (auth, network, 5xx), re-throw so callers handle them normally.
-		if (error instanceof Tidx.FetchRequestError && error.status === 422) {
+		if (isTidxQueryTooExpensiveError(error)) {
 			console.error(
 				`[tidx] holders count query failed for ${address} (422), returning capped`,
 			)
 			return { count: countCap, capped: true }
 		}
+
 		throw error
 	}
 }
@@ -414,7 +423,6 @@ export async function fetchTokenCreatedMetadata(
 
 	return results
 }
-
 export async function fetchTransactionTimestamp(
 	chainId: number,
 	hash: Hex.Hex,
@@ -1484,3 +1492,53 @@ export async function fetchAddressTransferActivity(
 }
 
 export type { SortDirection }
+
+/**
+ * Fetches OG metadata for an address: tx count (including contract creation)
+ * and the contract creation timestamp from the receipts table.
+ */
+export async function fetchAddressOgMeta(
+	address: Address.Address,
+	chainId: number,
+): Promise<{
+	txCount: number
+	createdTimestamp: number | undefined
+	lastActivityTimestamp: number | undefined
+	accountType: 'contract' | 'account' | undefined
+}> {
+	const aggregate = await fetchAddressTxAggregate(address, chainId)
+	let txCount = aggregate.count ?? 0
+	const lastActivityTimestamp = parseTimestamp(
+		aggregate.latestTxsBlockTimestamp,
+	)
+	let createdTimestamp = parseTimestamp(aggregate.oldestTxsBlockTimestamp)
+
+	// Check receipts for contract creation (deployments have to=null,
+	// so they won't appear in the from/to aggregate)
+	type CreationRow = {
+		block_timestamp: string | number | bigint | null
+	}
+	const creation = (await QB(chainId)
+		.selectFrom('receipts')
+		.select(['block_timestamp'])
+		.where('contract_address', '=', address)
+		.limit(1)
+		.executeTakeFirst()) as CreationRow | undefined
+
+	if (creation) {
+		txCount += 1
+		const ts = parseTimestamp(creation.block_timestamp)
+		if (ts && (!createdTimestamp || ts < createdTimestamp)) {
+			createdTimestamp = ts
+		}
+	}
+
+	// Derive accountType from TIDX data when bytecode check is unavailable
+	const accountType = creation
+		? ('contract' as const)
+		: txCount > 0
+			? ('account' as const)
+			: undefined
+
+	return { txCount, createdTimestamp, lastActivityTimestamp, accountType }
+}

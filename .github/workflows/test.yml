@@ -13,6 +13,8 @@ on:
       - "apps/contract-verification/**"
   workflow_dispatch:
 
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
@@ -30,6 +32,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           submodules: "recursive"
+          persist-credentials: false
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
@@ -55,6 +58,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           submodules: "recursive"
+          persist-credentials: false
 
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies

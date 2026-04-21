@@ -1,6 +1,14 @@
 import type { Address, Hex } from 'ox'
-import { encodeAbiParameters } from 'viem'
+import { Tidx } from 'tidx.ts'
+import { encodeAbiParameters, keccak256, toEventSelector } from 'viem'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const mockCloudflareEnv = vi.hoisted(
+	() =>
+		({}) as {
+			EXPLORER_FEE_AMM_CACHE?: { get: typeof vi.fn; put: typeof vi.fn }
+		},
+)
 
 const mockQueryBuilder = vi.hoisted(() => {
 	class MockQueryBuilder {
@@ -108,6 +116,8 @@ const mockQueryBuilder = vi.hoisted(() => {
 	return new MockQueryBuilder()
 })
 
+vi.mock('cloudflare:workers', () => ({ env: mockCloudflareEnv }))
+
 vi.mock('#lib/server/tempo-queries-provider', () => ({
 	tempoQueryBuilder: () => mockQueryBuilder,
 	tempoFastLookupQueryBuilder: () => mockQueryBuilder,
@@ -144,10 +154,16 @@ import {
 	fetchTransactionTimestamp,
 	fetchTxDataByHashes,
 } from '#lib/server/tempo-queries.ts'
+import {
+	clearFeeAmmPoolRowsCache,
+	fetchFeeAmmPoolRows,
+} from '#lib/server/fee-amm-pool-rows'
 
 describe('tempo-queries', () => {
 	beforeEach(() => {
 		mockQueryBuilder.reset()
+		clearFeeAmmPoolRowsCache()
+		delete mockCloudflareEnv.EXPLORER_FEE_AMM_CACHE
 	})
 
 	it('fetchTokenFirstTransferTimestamp returns a timestamp', async () => {
@@ -245,6 +261,501 @@ describe('tempo-queries', () => {
 		mockQueryBuilder.setResponses([{ count: 42 }])
 
 		await expect(fetchTokenCreatedCount(1, 100)).resolves.toBe(42)
+	})
+
+	it('fetchFeeAmmPoolRows discovers pools from current and legacy mint events', async () => {
+		const currentMintTopic = toEventSelector(
+			'event Mint(address sender, address indexed to, address indexed userToken, address indexed validatorToken, uint256 amountValidatorToken, uint256 liquidity)',
+		)
+		const legacyMintTopic = toEventSelector(
+			'event Mint(address indexed sender, address indexed userToken, address indexed validatorToken, uint256 amountUserToken, uint256 amountValidatorToken, uint256 liquidity)',
+		)
+
+		mockQueryBuilder.setResponses([
+			{ num: 12n },
+			[
+				{
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					tx_hash: '0xaaa' as Hex.Hex,
+					block_timestamp: '100',
+					block_num: 10n,
+					log_idx: 1,
+				},
+				{
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					tx_hash: '0xbbb' as Hex.Hex,
+					block_timestamp: '150',
+					block_num: 11n,
+					log_idx: 0,
+				},
+				{
+					userToken: '0x20c0000000000000000000000000000000000003',
+					validatorToken: '0x20c0000000000000000000000000000000000004',
+					tx_hash: '0xccc' as Hex.Hex,
+					block_timestamp: '200',
+					block_num: 12n,
+					log_idx: 2,
+				},
+			],
+		])
+
+		await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
+			{
+				poolId: keccak256(
+					encodeAbiParameters(
+						[{ type: 'address' }, { type: 'address' }],
+						[
+							'0x20c0000000000000000000000000000000000001',
+							'0x20c0000000000000000000000000000000000002',
+						],
+					),
+				),
+				userToken: '0x20c0000000000000000000000000000000000001',
+				validatorToken: '0x20c0000000000000000000000000000000000002',
+				createdAt: 100,
+				createdTxHash: '0xaaa',
+				latestMintAt: 150,
+				latestMintTxHash: '0xbbb',
+				mintCount: 2,
+			},
+			{
+				poolId: keccak256(
+					encodeAbiParameters(
+						[{ type: 'address' }, { type: 'address' }],
+						[
+							'0x20c0000000000000000000000000000000000003',
+							'0x20c0000000000000000000000000000000000004',
+						],
+					),
+				),
+				userToken: '0x20c0000000000000000000000000000000000003',
+				validatorToken: '0x20c0000000000000000000000000000000000004',
+				createdAt: 200,
+				createdTxHash: '0xccc',
+				latestMintAt: 200,
+				latestMintTxHash: '0xccc',
+				mintCount: 1,
+			},
+		])
+
+		expect(currentMintTopic).not.toEqual(legacyMintTopic)
+	})
+
+	it('fetchFeeAmmPoolRows reuses cached rows within the ttl', async () => {
+		mockQueryBuilder.setResponses([
+			{ num: 12n },
+			[
+				{
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					tx_hash: '0xaaa' as Hex.Hex,
+					block_timestamp: '100',
+					block_num: 10n,
+					log_idx: 1,
+				},
+			],
+		])
+
+		const first = await fetchFeeAmmPoolRows(1)
+		const second = await fetchFeeAmmPoolRows(1)
+
+		expect(second).toEqual(first)
+		expect(mockQueryBuilder.getExecuteCallCount()).toBe(2)
+	})
+
+	it('fetchFeeAmmPoolRows only merges new rows after the cache expires', async () => {
+		vi.useFakeTimers()
+		vi.setSystemTime(new Date('2026-01-01T00:00:00Z'))
+
+		try {
+			mockQueryBuilder.setResponses([
+				{ num: 12n },
+				[
+					{
+						userToken: '0x20c0000000000000000000000000000000000001',
+						validatorToken: '0x20c0000000000000000000000000000000000002',
+						tx_hash: '0xaaa' as Hex.Hex,
+						block_timestamp: '100',
+						block_num: 10n,
+						log_idx: 1,
+					},
+				],
+				{ num: 15n },
+				[
+					{
+						userToken: '0x20c0000000000000000000000000000000000001',
+						validatorToken: '0x20c0000000000000000000000000000000000002',
+						tx_hash: '0xbbb' as Hex.Hex,
+						block_timestamp: '150',
+						block_num: 13n,
+						log_idx: 0,
+					},
+					{
+						userToken: '0x20c0000000000000000000000000000000000003',
+						validatorToken: '0x20c0000000000000000000000000000000000004',
+						tx_hash: '0xccc' as Hex.Hex,
+						block_timestamp: '200',
+						block_num: 14n,
+						log_idx: 2,
+					},
+				],
+			])
+
+			await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
+				{
+					poolId: keccak256(
+						encodeAbiParameters(
+							[{ type: 'address' }, { type: 'address' }],
+							[
+								'0x20c0000000000000000000000000000000000001',
+								'0x20c0000000000000000000000000000000000002',
+							],
+						),
+					),
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					createdAt: 100,
+					createdTxHash: '0xaaa',
+					latestMintAt: 100,
+					latestMintTxHash: '0xaaa',
+					mintCount: 1,
+				},
+			])
+
+			vi.advanceTimersByTime(5 * 60_000 + 1)
+
+			await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
+				{
+					poolId: keccak256(
+						encodeAbiParameters(
+							[{ type: 'address' }, { type: 'address' }],
+							[
+								'0x20c0000000000000000000000000000000000001',
+								'0x20c0000000000000000000000000000000000002',
+							],
+						),
+					),
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					createdAt: 100,
+					createdTxHash: '0xaaa',
+					latestMintAt: 150,
+					latestMintTxHash: '0xbbb',
+					mintCount: 2,
+				},
+				{
+					poolId: keccak256(
+						encodeAbiParameters(
+							[{ type: 'address' }, { type: 'address' }],
+							[
+								'0x20c0000000000000000000000000000000000003',
+								'0x20c0000000000000000000000000000000000004',
+							],
+						),
+					),
+					userToken: '0x20c0000000000000000000000000000000000003',
+					validatorToken: '0x20c0000000000000000000000000000000000004',
+					createdAt: 200,
+					createdTxHash: '0xccc',
+					latestMintAt: 200,
+					latestMintTxHash: '0xccc',
+					mintCount: 1,
+				},
+			])
+		} finally {
+			vi.useRealTimers()
+		}
+	})
+
+	it('fetchFeeAmmPoolRows resumes from KV state on cold start', async () => {
+		const kvGet = vi.fn(async () => ({
+			lastBlock: '12',
+			pools: [
+				{
+					poolId: keccak256(
+						encodeAbiParameters(
+							[{ type: 'address' }, { type: 'address' }],
+							[
+								'0x20c0000000000000000000000000000000000001',
+								'0x20c0000000000000000000000000000000000002',
+							],
+						),
+					),
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					createdAt: 100,
+					createdTxHash: '0xaaa',
+					latestMintAt: 100,
+					latestMintTxHash: '0xaaa',
+					mintCount: 1,
+				},
+			],
+		}))
+		const kvPut = vi.fn(async () => undefined)
+		mockCloudflareEnv.EXPLORER_FEE_AMM_CACHE = {
+			get: kvGet,
+			put: kvPut,
+		}
+
+		mockQueryBuilder.setResponses([
+			{ num: 15n },
+			[
+				{
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					tx_hash: '0xbbb' as Hex.Hex,
+					block_timestamp: '150',
+					block_num: 13n,
+					log_idx: 0,
+				},
+				{
+					userToken: '0x20c0000000000000000000000000000000000003',
+					validatorToken: '0x20c0000000000000000000000000000000000004',
+					tx_hash: '0xccc' as Hex.Hex,
+					block_timestamp: '200',
+					block_num: 14n,
+					log_idx: 2,
+				},
+			],
+		])
+
+		await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
+			{
+				poolId: keccak256(
+					encodeAbiParameters(
+						[{ type: 'address' }, { type: 'address' }],
+						[
+							'0x20c0000000000000000000000000000000000001',
+							'0x20c0000000000000000000000000000000000002',
+						],
+					),
+				),
+				userToken: '0x20c0000000000000000000000000000000000001',
+				validatorToken: '0x20c0000000000000000000000000000000000002',
+				createdAt: 100,
+				createdTxHash: '0xaaa',
+				latestMintAt: 150,
+				latestMintTxHash: '0xbbb',
+				mintCount: 2,
+			},
+			{
+				poolId: keccak256(
+					encodeAbiParameters(
+						[{ type: 'address' }, { type: 'address' }],
+						[
+							'0x20c0000000000000000000000000000000000003',
+							'0x20c0000000000000000000000000000000000004',
+						],
+					),
+				),
+				userToken: '0x20c0000000000000000000000000000000000003',
+				validatorToken: '0x20c0000000000000000000000000000000000004',
+				createdAt: 200,
+				createdTxHash: '0xccc',
+				latestMintAt: 200,
+				latestMintTxHash: '0xccc',
+				mintCount: 1,
+			},
+		])
+
+		expect(kvGet).toHaveBeenCalledWith('fee-amm-pools:1', 'json')
+		expect(kvPut).toHaveBeenCalledWith(
+			'fee-amm-pools:1',
+			JSON.stringify({
+				lastBlock: '15',
+				pools: [
+					{
+						poolId: keccak256(
+							encodeAbiParameters(
+								[{ type: 'address' }, { type: 'address' }],
+								[
+									'0x20c0000000000000000000000000000000000001',
+									'0x20c0000000000000000000000000000000000002',
+								],
+							),
+						),
+						userToken: '0x20c0000000000000000000000000000000000001',
+						validatorToken: '0x20c0000000000000000000000000000000000002',
+						createdAt: 100,
+						createdTxHash: '0xaaa',
+						latestMintAt: 150,
+						latestMintTxHash: '0xbbb',
+						mintCount: 2,
+					},
+					{
+						poolId: keccak256(
+							encodeAbiParameters(
+								[{ type: 'address' }, { type: 'address' }],
+								[
+									'0x20c0000000000000000000000000000000000003',
+									'0x20c0000000000000000000000000000000000004',
+								],
+							),
+						),
+						userToken: '0x20c0000000000000000000000000000000000003',
+						validatorToken: '0x20c0000000000000000000000000000000000004',
+						createdAt: 200,
+						createdTxHash: '0xccc',
+						latestMintAt: 200,
+						latestMintTxHash: '0xccc',
+						mintCount: 1,
+					},
+				],
+			}),
+		)
+	})
+
+	it('fetchFeeAmmPoolRows scans history in 1000 block chunks', async () => {
+		mockQueryBuilder.setResponses([
+			{ num: 2500n },
+			[
+				{
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					tx_hash: '0xaaa' as Hex.Hex,
+					block_timestamp: '100',
+					block_num: 900n,
+					log_idx: 1,
+				},
+			],
+			[
+				{
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					tx_hash: '0xbbb' as Hex.Hex,
+					block_timestamp: '150',
+					block_num: 1500n,
+					log_idx: 2,
+				},
+			],
+			[
+				{
+					userToken: '0x20c0000000000000000000000000000000000003',
+					validatorToken: '0x20c0000000000000000000000000000000000004',
+					tx_hash: '0xccc' as Hex.Hex,
+					block_timestamp: '200',
+					block_num: 2400n,
+					log_idx: 3,
+				},
+			],
+		])
+
+		await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
+			{
+				poolId: keccak256(
+					encodeAbiParameters(
+						[{ type: 'address' }, { type: 'address' }],
+						[
+							'0x20c0000000000000000000000000000000000001',
+							'0x20c0000000000000000000000000000000000002',
+						],
+					),
+				),
+				userToken: '0x20c0000000000000000000000000000000000001',
+				validatorToken: '0x20c0000000000000000000000000000000000002',
+				createdAt: 100,
+				createdTxHash: '0xaaa',
+				latestMintAt: 150,
+				latestMintTxHash: '0xbbb',
+				mintCount: 2,
+			},
+			{
+				poolId: keccak256(
+					encodeAbiParameters(
+						[{ type: 'address' }, { type: 'address' }],
+						[
+							'0x20c0000000000000000000000000000000000003',
+							'0x20c0000000000000000000000000000000000004',
+						],
+					),
+				),
+				userToken: '0x20c0000000000000000000000000000000000003',
+				validatorToken: '0x20c0000000000000000000000000000000000004',
+				createdAt: 200,
+				createdTxHash: '0xccc',
+				latestMintAt: 200,
+				latestMintTxHash: '0xccc',
+				mintCount: 1,
+			},
+		])
+
+		expect(mockQueryBuilder.getExecuteCallCount()).toBe(4)
+	})
+
+	it('fetchFeeAmmPoolRows retries smaller ranges when TIDX rejects a broad scan', async () => {
+		const response = new Response(
+			'{"ok":false,"error":"Query error: db error"}',
+			{
+				status: 422,
+				headers: { 'content-type': 'application/json' },
+			},
+		)
+
+		mockQueryBuilder.setResponses([
+			{ num: 8n },
+			new Tidx.FetchRequestError('Query error: db error', response),
+			[
+				{
+					userToken: '0x20c0000000000000000000000000000000000001',
+					validatorToken: '0x20c0000000000000000000000000000000000002',
+					tx_hash: '0xaaa' as Hex.Hex,
+					block_timestamp: '100',
+					block_num: 2n,
+					log_idx: 1,
+				},
+			],
+			[
+				{
+					userToken: '0x20c0000000000000000000000000000000000003',
+					validatorToken: '0x20c0000000000000000000000000000000000004',
+					tx_hash: '0xbbb' as Hex.Hex,
+					block_timestamp: '200',
+					block_num: 6n,
+					log_idx: 2,
+				},
+			],
+		])
+
+		await expect(fetchFeeAmmPoolRows(1)).resolves.toEqual([
+			{
+				poolId: keccak256(
+					encodeAbiParameters(
+						[{ type: 'address' }, { type: 'address' }],
+						[
+							'0x20c0000000000000000000000000000000000001',
+							'0x20c0000000000000000000000000000000000002',
+						],
+					),
+				),
+				userToken: '0x20c0000000000000000000000000000000000001',
+				validatorToken: '0x20c0000000000000000000000000000000000002',
+				createdAt: 100,
+				createdTxHash: '0xaaa',
+				latestMintAt: 100,
+				latestMintTxHash: '0xaaa',
+				mintCount: 1,
+			},
+			{
+				poolId: keccak256(
+					encodeAbiParameters(
+						[{ type: 'address' }, { type: 'address' }],
+						[
+							'0x20c0000000000000000000000000000000000003',
+							'0x20c0000000000000000000000000000000000004',
+						],
+					),
+				),
+				userToken: '0x20c0000000000000000000000000000000000003',
+				validatorToken: '0x20c0000000000000000000000000000000000004',
+				createdAt: 200,
+				createdTxHash: '0xbbb',
+				latestMintAt: 200,
+				latestMintTxHash: '0xbbb',
+				mintCount: 1,
+			},
+		])
 	})
 
 	it('fetchTokenCreatedMetadata returns empty when no tokens are provided', async () => {

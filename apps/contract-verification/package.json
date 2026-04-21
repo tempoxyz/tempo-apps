@@ -40,7 +40,7 @@
 		"@logtape/redaction": "catalog:",
 		"@wagmi/core": "catalog:",
 		"cbor-x": "^1.6.4",
-		"drizzle-orm": "^0.45.1",
+		"drizzle-orm": "^0.45.2",
 		"hono": "catalog:",
 		"hono-rate-limiter": "catalog:",
 		"ox": "catalog:",

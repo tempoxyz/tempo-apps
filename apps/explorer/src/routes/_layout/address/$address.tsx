@@ -27,7 +27,7 @@ import { ContractTabContent, InteractTabContent } from '#comps/Contract'
 import { Tip20TokenTabContent } from '#comps/Tip20ContractInfo'
 import { DataGrid } from '#comps/DataGrid'
 import { Pagination } from '#comps/Pagination'
-import { Midcut } from '#comps/Midcut'
+import { Midcut } from 'midcut'
 import { NotFound } from '#comps/NotFound'
 import { Sections } from '#comps/Sections'
 import {
@@ -73,6 +73,7 @@ import {
 	historyQueryOptions,
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
+import { fetchAddressOgMeta } from '#lib/server/tempo-queries'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
@@ -368,16 +369,24 @@ export const Route = createFileRoute('/_layout/address/$address')({
 						)
 					: Promise.resolve(undefined)
 
+			// Fetch OG metadata (txCount + timestamps) via direct TIDX query
+			const ogMetaPromise = timeout(
+				fetchAddressOgMeta(address, TEMPO_CHAIN_ID).catch(() => undefined),
+				QUERY_TIMEOUT_MS,
+			)
+
 			const [
 				contractBytecode,
 				transactionsData,
 				balancesResult,
 				tokenMetadata,
+				ogMeta,
 			] = await Promise.all([
 				contractBytecodePromise,
 				transactionsPromise,
 				balancesPromise,
 				tokenMetadataPromise,
+				ogMetaPromise,
 			])
 
 			const accountType = getAccountType(contractBytecode)
@@ -405,10 +414,19 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				contractSource,
 				transactionsData,
 				balancesData,
+				ogMeta,
 			}
 		}),
 	head: async ({ params, loaderData }) => {
-		const accountType = loaderData?.accountType ?? 'empty'
+		// Fallback to ogMeta.accountType only for contracts (receipts-proven)
+		// since 'empty' is the correct type for regular EOAs
+		let accountType = loaderData?.accountType ?? 'empty'
+		if (
+			accountType === 'empty' &&
+			loaderData?.ogMeta?.accountType === 'contract'
+		) {
+			accountType = 'contract'
+		}
 		const isToken = loaderData?.isToken ?? false
 		const tokenMeta = loaderData?.tokenMetadata
 
@@ -455,8 +473,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				supply,
 			})
 		} else {
-			const txCount = 0
+			const txCount = loaderData?.ogMeta?.txCount ?? 0
 			let lastActive: string | undefined
+			let created: string | undefined
 			let holdings = '—'
 
 			if (loaderData?.balancesData?.balances) {
@@ -475,10 +494,15 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				}
 			}
 
-			const recentTx = loaderData?.transactionsData?.transactions?.at(0)
-			if (recentTx?.timestamp) {
+			if (loaderData?.ogMeta?.lastActivityTimestamp) {
 				lastActive = DateFormatter.formatTimestampForOg(
-					BigInt(recentTx.timestamp),
+					BigInt(loaderData.ogMeta.lastActivityTimestamp),
+				).date
+			}
+
+			if (loaderData?.ogMeta?.createdTimestamp) {
+				created = DateFormatter.formatTimestampForOg(
+					BigInt(loaderData.ogMeta.createdTimestamp),
 				).date
 			}
 
@@ -493,6 +517,7 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				txCount,
 				accountType,
 				lastActive,
+				created,
 				contractName: loaderData?.contractInfo?.name,
 			})
 		}

@@ -1,13 +1,45 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery } from '@tanstack/react-query'
-import { getScenarios, fetchAllLatestRuns } from '#lib/server/bench'
 import {
-	formatGas,
-	formatTps,
-	formatMs,
-	formatDate,
-	formatAccounts,
-} from '#lib/format'
+	getScenarios,
+	fetchAllLatestRuns,
+	type BenchRun,
+} from '#lib/server/bench'
+import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
+
+const TEMPO_REPO = 'https://github.com/tempoxyz/tempo'
+
+function isTag(ref: string): boolean {
+	return /^v\d/.test(ref)
+}
+
+function VersionLink(props: { run: BenchRun }): React.JSX.Element {
+	const { run } = props
+	if (run.ref && isTag(run.ref)) {
+		return (
+			<a
+				href={`${TEMPO_REPO}/releases/tag/${run.ref}`}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="hover:underline"
+				onClick={(e) => e.stopPropagation()}
+			>
+				{run.ref}
+			</a>
+		)
+	}
+	return (
+		<a
+			href={`${TEMPO_REPO}/commit/${run.commit}`}
+			target="_blank"
+			rel="noopener noreferrer"
+			className="hover:underline"
+			onClick={(e) => e.stopPropagation()}
+		>
+			{run.ref ? `${run.ref} (${run.commit})` : run.commit}
+		</a>
+	)
+}
 
 export const Route = createFileRoute('/')({
 	component: DashboardPage,
@@ -86,8 +118,8 @@ function DashboardPage(): React.JSX.Element {
 											/>
 											<Stat label="Avg TPS" value={formatTps(latest.avgTps)} />
 											<Stat
-												label="P99 Latency"
-												value={formatMs(latest.p99LatencyMs)}
+												label="Block Time"
+												value={formatMs(latest.avgBlockTimeMs)}
 											/>
 										</div>
 									</div>
@@ -164,15 +196,13 @@ function DashboardPage(): React.JSX.Element {
 						<thead>
 							<tr className="border-b border-border bg-surface-raised text-left text-tertiary">
 								<th className="px-4.5 py-3 font-normal">Workload</th>
+								<th className="px-4.5 py-3 font-normal">Version</th>
 								<th className="px-4.5 py-3 font-normal text-right">
 									Throughput
 								</th>
 								<th className="px-4.5 py-3 font-normal text-right">TPS</th>
 								<th className="px-4.5 py-3 font-normal text-right">
-									P99 Latency
-								</th>
-								<th className="px-4.5 py-3 font-normal text-right">
-									State Size
+									Block Time
 								</th>
 								<th className="px-4.5 py-3 font-normal text-right">Date</th>
 							</tr>
@@ -195,6 +225,9 @@ function DashboardPage(): React.JSX.Element {
 										<td className="px-4.5 py-3 font-medium text-primary">
 											{scenario.label}
 										</td>
+										<td className="px-4.5 py-3 font-mono text-accent">
+											<VersionLink run={latest} />
+										</td>
 										<td className="px-4.5 py-3 text-right font-mono text-accent">
 											{formatGas(latest.avgGasPerSecond)}
 										</td>
@@ -202,13 +235,10 @@ function DashboardPage(): React.JSX.Element {
 											{formatTps(latest.avgTps)}
 										</td>
 										<td className="px-4.5 py-3 text-right font-mono text-primary">
-											{formatMs(latest.p99LatencyMs)}
-										</td>
-										<td className="px-4.5 py-3 text-right font-mono text-primary">
-											{formatAccounts(latest.stateAccounts)}
+											{formatMs(latest.avgBlockTimeMs)}
 										</td>
 										<td className="px-4.5 py-3 text-right text-tertiary">
-											{formatDate(latest.timestamp)}
+											{formatDate(latest.startedAt)}
 										</td>
 									</tr>
 								)
