@@ -121,7 +121,7 @@ verifyRoute
 						context,
 						400,
 						'invalid_chain_id_or_address',
-						`Invalid chainId or address - ${z.prettifyError(value.error)}`,
+						`Invalid chainId or address: ${JSON.stringify(value.data)} - ${z.prettifyError(value.error)}`,
 					)
 			},
 		),
