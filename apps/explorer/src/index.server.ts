@@ -1,5 +1,8 @@
 import * as Sentry from '@sentry/cloudflare'
 import handler, { createServerEntry } from '@tanstack/react-start/server-entry'
+import { ExplorerExportRateLimit } from '#lib/server/export-rate-limit'
+
+export { ExplorerExportRateLimit }
 
 export const redirects: Array<{
 	from: RegExp

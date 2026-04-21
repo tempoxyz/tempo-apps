@@ -16,10 +16,31 @@
 			"preview_id": "0211859b856e40d095ab4e2a5329a22d"
 		}
 	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "EXPLORER_EXPORT_RATE_LIMIT",
+				"class_name": "ExplorerExportRateLimit"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["ExplorerExportRateLimit"]
+		}
+	],
 	"browser": { "binding": "BROWSER" },
 	"env": {
 		"testnet": {
 			"name": "explorer-testnet",
+			"kv_namespaces": [
+				{
+					"binding": "EXPLORER_FEE_AMM_CACHE",
+					"id": "c512895cab024808bce152ddd9aa3122",
+					"preview_id": "0211859b856e40d095ab4e2a5329a22d"
+				}
+			],
 			"routes": [
 				{
 					"custom_domain": true,
@@ -61,6 +82,13 @@
 		},
 		"devnet": {
 			"name": "explorer-devnet",
+			"kv_namespaces": [
+				{
+					"binding": "EXPLORER_FEE_AMM_CACHE",
+					"id": "c512895cab024808bce152ddd9aa3122",
+					"preview_id": "0211859b856e40d095ab4e2a5329a22d"
+				}
+			],
 			"routes": [
 				{
 					"custom_domain": true,
@@ -97,6 +125,13 @@
 		},
 		"mainnet": {
 			"name": "explorer-mainnet",
+			"kv_namespaces": [
+				{
+					"binding": "EXPLORER_FEE_AMM_CACHE",
+					"id": "c512895cab024808bce152ddd9aa3122",
+					"preview_id": "0211859b856e40d095ab4e2a5329a22d"
+				}
+			],
 			"routes": [
 				{
 					"custom_domain": true,
