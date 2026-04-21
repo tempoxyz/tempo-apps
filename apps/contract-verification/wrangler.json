@@ -9,6 +9,7 @@
 	"preview_urls": true,
 	"logpush": true,
 	"vars": {
+		"CONTAINER_MAX_INSTANCES": 20,
 		"WHITELISTED_ORIGINS": "https://tempo.xyz,https://*.tempo.xyz,https://*.porto.workers.dev"
 	},
 	"ratelimits": [
