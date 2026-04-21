@@ -182,6 +182,34 @@ describe('VerificationJobRunner Durable Object', () => {
 			expect(row?.errorCode).toBe('internal_error')
 		})
 
+		it('handles legacy stored job payloads written before the schema flattening change', async () => {
+			const jobId = globalThis.crypto.randomUUID()
+			await insertJobRow(jobId)
+
+			const stub = getStub(jobId)
+			await runInDurableObject(stub, async (_instance, state) => {
+				const job = makeJob(jobId)
+				await state.storage.put('job', {
+					jobId: job.jobId,
+					chainId: job.chainId,
+					address: job.address,
+					body: {
+						stdJsonInput: job.stdJsonInput,
+						compilerVersion: job.compilerVersion,
+						contractIdentifier: job.contractIdentifier,
+						creationTransactionHash: job.creationTransactionHash,
+					},
+				})
+				await state.storage.setAlarm(Date.now() + 60_000)
+			})
+
+			await runDurableObjectAlarm(stub)
+
+			const row = await getJobRow(jobId)
+			expect(row).not.toBeNull()
+			expect(row?.completedAt).not.toBeNull()
+		})
+
 		it('does not leave a dangling alarm after processing', async () => {
 			const jobId = globalThis.crypto.randomUUID()
 			await insertJobRow(jobId)
