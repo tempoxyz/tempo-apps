@@ -214,9 +214,11 @@ export async function fetchAddressHistoryData(params: {
 	chainId: number
 	searchParams: HistoryRequestParameters
 	maxLimit?: number | undefined
+	includeKnownEvents?: boolean | undefined
 }): Promise<HistoryResponse> {
 	const { address, chainId, searchParams } = params
 	const maxLimit = params.maxLimit ?? MAX_LIMIT
+	const includeKnownEvents = params.includeKnownEvents ?? true
 	const config = getWagmiConfig()
 
 	const include =
@@ -426,6 +428,65 @@ export async function fetchAddressHistoryData(params: {
 		}
 	}
 
+	const finalHashValues = finalHashes.map((entry) => entry.hash)
+
+	const [receiptRows, txRows] = await Promise.all([
+		txOnlyPageResult
+			? Promise.resolve(txOnlyPageResult.receiptRows)
+			: fetchAddressReceiptRowsByHashes(chainId, finalHashValues),
+		txOnlyPageResult
+			? Promise.resolve(txOnlyPageResult.txRows)
+			: fetchAddressHistoryTxDetailsByHashes(chainId, finalHashValues),
+	])
+
+	const receiptMap = new Map(
+		receiptRows.map((row) => [row.tx_hash, row] as const),
+	)
+	const txMap = new Map(txRows.map((row) => [row.hash, row] as const))
+
+	if (!includeKnownEvents) {
+		const transactions = finalHashes.map((hashEntry) => {
+			const receipt = receiptMap.get(hashEntry.hash)
+			const tx = txMap.get(hashEntry.hash)
+
+			const fromSource = tx?.from ?? hashEntry.from ?? receipt?.from ?? address
+			const toSource = tx?.to ?? hashEntry.to ?? receipt?.to ?? null
+			const valueSource = tx?.value ?? hashEntry.value ?? 0n
+			const blockNumberSource =
+				receipt?.block_num ?? tx?.block_num ?? hashEntry.block_num
+			const timestampSource =
+				receipt?.block_timestamp ?? tx?.block_timestamp ?? 0
+			const status = toHistoryStatus(receipt?.status)
+
+			return {
+				hash: hashEntry.hash,
+				blockNumber: toHexQuantity(blockNumberSource),
+				timestamp: toFiniteTimestamp(timestampSource),
+				from: Address.checksum(fromSource as Address.Address),
+				to: toSource ? Address.checksum(toSource as Address.Address) : null,
+				value: toHexQuantity(valueSource),
+				status,
+				gasUsed: toHexQuantity(receipt?.gas_used),
+				effectiveGasPrice: toHexQuantity(receipt?.effective_gas_price),
+				knownEvents: [],
+			}
+		})
+
+		const finalTransactions = after
+			? transactions.filter((transaction) => transaction.timestamp >= after)
+			: transactions
+
+		return {
+			transactions: finalTransactions,
+			total: after ? finalTransactions.length : totalCount,
+			offset,
+			limit,
+			hasMore: after ? false : hasMore,
+			countCapped: after ? false : countCapped,
+			error: null,
+		}
+	}
+
 	if (isTxOnlySource) {
 		if (!txOnlyPageResult) {
 			throw new Error('Missing tx-only history page result')
@@ -434,8 +495,8 @@ export async function fetchAddressHistoryData(params: {
 		const transactions = await buildTxOnlyTransactions({
 			address,
 			hashes: finalHashes,
-			txRows: txOnlyPageResult.txRows,
-			receiptRows: txOnlyPageResult.receiptRows,
+			txRows,
+			receiptRows,
 			logRows: txOnlyPageResult.logRows,
 		})
 
@@ -450,19 +511,11 @@ export async function fetchAddressHistoryData(params: {
 		}
 	}
 
-	const finalHashValues = finalHashes.map((entry) => entry.hash)
-
-	const [receiptRows, txRows, logRows, transferRows] = await Promise.all([
-		fetchAddressReceiptRowsByHashes(chainId, finalHashValues),
-		fetchAddressHistoryTxDetailsByHashes(chainId, finalHashValues),
+	const [logRows, transferRows] = await Promise.all([
 		fetchAddressLogRowsByTxHashes(chainId, finalHashValues),
 		fetchAddressTransferRowsByTxHashes(chainId, finalHashValues),
 	])
 
-	const receiptMap = new Map(
-		receiptRows.map((row) => [row.tx_hash, row] as const),
-	)
-	const txMap = new Map(txRows.map((row) => [row.hash, row] as const))
 	const logsByHash = new Map<Hex.Hex, Log[]>()
 
 	for (const row of logRows) {
@@ -658,6 +711,7 @@ export async function fetchAddressHistoryExportRows(params: {
 				limit: pageLimit,
 			},
 			maxLimit: CSV_EXPORT_PAGE_SIZE,
+			includeKnownEvents: false,
 		})
 
 		if (page.transactions.length === 0) break

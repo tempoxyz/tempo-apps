@@ -60,21 +60,7 @@ export function AddressCsvExportButton(
 			})
 
 			if (!response.ok) {
-				let message =
-					kind === 'balances'
-						? 'Failed to export balances.'
-						: 'Failed to export transactions.'
-
-				const contentType = response.headers.get('Content-Type') ?? ''
-				if (contentType.includes('application/json')) {
-					const payload = (await response.json()) as { error?: string }
-					if (payload.error) message = payload.error
-				} else {
-					const text = (await response.text()).trim()
-					if (text) message = text
-				}
-
-				throw new Error(message)
+				throw new Error('Error')
 			}
 
 			const blob = await response.blob()
@@ -94,7 +80,7 @@ export function AddressCsvExportButton(
 				URL.revokeObjectURL(objectUrl)
 			}
 		} catch (error) {
-			setError(error instanceof Error ? error.message : 'CSV export failed.')
+			setError(error instanceof Error ? error.message : 'Error')
 		} finally {
 			setIsExporting(false)
 		}
@@ -113,7 +99,9 @@ export function AddressCsvExportButton(
 				}
 				className={cx(
 					'flex size-[28px] items-center justify-center rounded-[6px] border text-[12px] transition-colors',
-					'border-transparent text-tertiary hover:text-secondary hover:bg-base-alt',
+					error
+						? 'border-transparent text-red-400 hover:text-red-300 hover:bg-base-alt'
+						: 'border-transparent text-tertiary hover:text-secondary hover:bg-base-alt',
 					isExporting && 'cursor-default opacity-60',
 					!isExporting && 'cursor-pointer',
 				)}
@@ -125,7 +113,7 @@ export function AddressCsvExportButton(
 			>
 				<DownloadIcon className="size-[14px]" />
 			</button>
-			{error && <span className="text-[11px] text-red-400">{error}</span>}
+			{error && <span className="text-[11px] text-red-400">Error</span>}
 		</div>
 	)
 }
