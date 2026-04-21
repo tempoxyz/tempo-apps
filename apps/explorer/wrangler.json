@@ -41,6 +41,14 @@
 					"preview_id": "0211859b856e40d095ab4e2a5329a22d"
 				}
 			],
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "EXPLORER_EXPORT_RATE_LIMIT",
+						"class_name": "ExplorerExportRateLimit"
+					}
+				]
+			},
 			"routes": [
 				{
 					"custom_domain": true,
@@ -89,6 +97,14 @@
 					"preview_id": "0211859b856e40d095ab4e2a5329a22d"
 				}
 			],
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "EXPLORER_EXPORT_RATE_LIMIT",
+						"class_name": "ExplorerExportRateLimit"
+					}
+				]
+			},
 			"routes": [
 				{
 					"custom_domain": true,
@@ -132,6 +148,14 @@
 					"preview_id": "0211859b856e40d095ab4e2a5329a22d"
 				}
 			],
+			"durable_objects": {
+				"bindings": [
+					{
+						"name": "EXPLORER_EXPORT_RATE_LIMIT",
+						"class_name": "ExplorerExportRateLimit"
+					}
+				]
+			},
 			"routes": [
 				{
 					"custom_domain": true,
