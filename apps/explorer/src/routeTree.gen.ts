@@ -39,6 +39,7 @@ import { Route as ApiAddressTotalValueAddressRouteImport } from './routes/api/ad
 import { Route as ApiAddressMetadataAddressRouteImport } from './routes/api/address/metadata/$address'
 import { Route as ApiAddressHistoryAddressRouteImport } from './routes/api/address/history/$address'
 import { Route as ApiAddressBalancesAddressRouteImport } from './routes/api/address/balances/$address'
+import { Route as ApiAddressCsvAddressRouteImport } from './routes/api/address/csv/$address'
 import { Route as LayoutBlockCountdownTargetBlockRouteImport } from './routes/_layout/block/countdown.$targetBlock'
 
 const LayoutRoute = LayoutRouteImport.update({
@@ -196,6 +197,12 @@ const ApiAddressBalancesAddressRoute =
     path: '/api/address/balances/$address',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiAddressCsvAddressRoute =
+  ApiAddressCsvAddressRouteImport.update({
+    id: '/api/address/csv/$address',
+    path: '/api/address/csv/$address',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LayoutBlockCountdownTargetBlockRoute =
   LayoutBlockCountdownTargetBlockRouteImport.update({
     id: '/block/countdown/$targetBlock',
@@ -227,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/demo/': typeof LayoutDemoIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
+  '/api/address/csv/$address': typeof ApiAddressCsvAddressRoute
   '/api/address/history/$address': typeof ApiAddressHistoryAddressRoute
   '/api/address/metadata/$address': typeof ApiAddressMetadataAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
@@ -259,6 +267,7 @@ export interface FileRoutesByTo {
   '/demo': typeof LayoutDemoIndexRoute
   '/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
+  '/api/address/csv/$address': typeof ApiAddressCsvAddressRoute
   '/api/address/history/$address': typeof ApiAddressHistoryAddressRoute
   '/api/address/metadata/$address': typeof ApiAddressMetadataAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
@@ -293,6 +302,7 @@ export interface FileRoutesById {
   '/_layout/demo/': typeof LayoutDemoIndexRoute
   '/_layout/block/countdown/$targetBlock': typeof LayoutBlockCountdownTargetBlockRoute
   '/api/address/balances/$address': typeof ApiAddressBalancesAddressRoute
+  '/api/address/csv/$address': typeof ApiAddressCsvAddressRoute
   '/api/address/history/$address': typeof ApiAddressHistoryAddressRoute
   '/api/address/metadata/$address': typeof ApiAddressMetadataAddressRoute
   '/api/address/total-value/$address': typeof ApiAddressTotalValueAddressRoute
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/demo/'
     | '/block/countdown/$targetBlock'
     | '/api/address/balances/$address'
+    | '/api/address/csv/$address'
     | '/api/address/history/$address'
     | '/api/address/metadata/$address'
     | '/api/address/total-value/$address'
@@ -359,6 +370,7 @@ export interface FileRouteTypes {
     | '/demo'
     | '/block/countdown/$targetBlock'
     | '/api/address/balances/$address'
+    | '/api/address/csv/$address'
     | '/api/address/history/$address'
     | '/api/address/metadata/$address'
     | '/api/address/total-value/$address'
@@ -392,6 +404,7 @@ export interface FileRouteTypes {
     | '/_layout/demo/'
     | '/_layout/block/countdown/$targetBlock'
     | '/api/address/balances/$address'
+    | '/api/address/csv/$address'
     | '/api/address/history/$address'
     | '/api/address/metadata/$address'
     | '/api/address/total-value/$address'
@@ -411,6 +424,7 @@ export interface RootRouteChildren {
   ApiAddressAddressRoute: typeof ApiAddressAddressRoute
   ApiTokensCountRoute: typeof ApiTokensCountRoute
   ApiAddressBalancesAddressRoute: typeof ApiAddressBalancesAddressRoute
+  ApiAddressCsvAddressRoute: typeof ApiAddressCsvAddressRoute
   ApiAddressHistoryAddressRoute: typeof ApiAddressHistoryAddressRoute
   ApiAddressMetadataAddressRoute: typeof ApiAddressMetadataAddressRoute
   ApiAddressTotalValueAddressRoute: typeof ApiAddressTotalValueAddressRoute
@@ -632,6 +646,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAddressBalancesAddressRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/address/csv/$address': {
+      id: '/api/address/csv/$address'
+      path: '/api/address/csv/$address'
+      fullPath: '/api/address/csv/$address'
+      preLoaderRoute: typeof ApiAddressCsvAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_layout/block/countdown/$targetBlock': {
       id: '/_layout/block/countdown/$targetBlock'
       path: '/block/countdown/$targetBlock'
@@ -691,6 +712,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAddressAddressRoute: ApiAddressAddressRoute,
   ApiTokensCountRoute: ApiTokensCountRoute,
   ApiAddressBalancesAddressRoute: ApiAddressBalancesAddressRoute,
+  ApiAddressCsvAddressRoute: ApiAddressCsvAddressRoute,
   ApiAddressHistoryAddressRoute: ApiAddressHistoryAddressRoute,
   ApiAddressMetadataAddressRoute: ApiAddressMetadataAddressRoute,
   ApiAddressTotalValueAddressRoute: ApiAddressTotalValueAddressRoute,

@@ -75,6 +75,7 @@ import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
 import { getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
+import DownloadIcon from '~icons/lucide/download'
 import XIcon from '~icons/lucide/x'
 
 type TokenMetadata = Actions.token.getMetadata.ReturnValue
@@ -1022,6 +1023,7 @@ function SectionsWrapper(props: {
 					title: 'Transactions',
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
+					contextual: <CsvDownloadButton address={address} />,
 					content:
 						transactionsError ??
 						(isToken ? (
@@ -1641,5 +1643,22 @@ function FilterIndicator(props: {
 				<XIcon className="size-3.5 translate-y-px" />
 			</Link>
 		</div>
+	)
+}
+
+function CsvDownloadButton(props: { address: string }): React.JSX.Element {
+	const { address } = props
+	const csvUrl = getApiUrl(`/api/address/csv/${address}`).toString()
+
+	return (
+		<a
+			href={csvUrl}
+			download
+			title="Download CSV"
+			className="flex items-center gap-1.5 text-[12px] text-tertiary hover:text-accent transition-colors press-down"
+		>
+			<DownloadIcon className="w-[14px] h-[14px]" />
+			<span>CSV</span>
+		</a>
 	)
 }
