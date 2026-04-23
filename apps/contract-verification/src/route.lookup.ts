@@ -16,8 +16,8 @@ import {
 	compiledContractsSignaturesTable,
 	nativeContractRevisionSourcesTable,
 } from '#database/schema.ts'
+import type { AppEnv } from '#index.tsx'
 import { getLogger } from '#lib/logger.ts'
-import { chainIds } from '#wagmi.config.ts'
 import { formatError, getDb, sourcifyError } from '#lib/utilities.ts'
 
 const logger = getLogger(['tempo'])
@@ -484,8 +484,8 @@ async function getNativeLookupResponse(
  * GET /v2/contracts/{chainId}
  */
 
-const lookupRoute = new Hono<{ Bindings: Cloudflare.Env }>()
-const lookupAllChainContractsRoute = new Hono<{ Bindings: Cloudflare.Env }>()
+const lookupRoute = new Hono<AppEnv>()
+const lookupAllChainContractsRoute = new Hono<AppEnv>()
 
 // GET /v2/contract/all-chains/:address - Get verified contract at an address on all chains
 // Note: This route must be defined before /:chainId/:address to avoid matching conflicts
@@ -538,24 +538,31 @@ lookupRoute
 					.where(eq(nativeContractsTable.address, addressBytes)),
 			])
 
+			const registry = context.get('chainRegistry')
+
+			// Filter out results for hidden chains to prevent leaking chain IDs
 			const contracts = [
-				...verifiedResults.map((row) =>
-					buildVerifiedMinimalResponse({
-						matchId: row.matchId,
-						runtimeMatch: row.runtimeMatch,
-						creationMatch: row.creationMatch,
-						chainId: row.chainId,
-						address: row.address as ArrayBuffer,
-						verifiedAt: row.verifiedAt,
-					}),
-				),
-				...nativeResults.map((row) =>
-					buildNativeMinimalResponse({
-						id: row.id,
-						chainId: row.chainId,
-						address: row.address as ArrayBuffer,
-					}),
-				),
+				...verifiedResults
+					.filter((row) => !registry.isHidden(row.chainId))
+					.map((row) =>
+						buildVerifiedMinimalResponse({
+							matchId: row.matchId,
+							runtimeMatch: row.runtimeMatch,
+							creationMatch: row.creationMatch,
+							chainId: row.chainId,
+							address: row.address as ArrayBuffer,
+							verifiedAt: row.verifiedAt,
+						}),
+					),
+				...nativeResults
+					.filter((row) => !registry.isHidden(row.chainId))
+					.map((row) =>
+						buildNativeMinimalResponse({
+							id: row.id,
+							chainId: row.chainId,
+							address: row.address as ArrayBuffer,
+						}),
+					),
 			].toSorted(
 				(a, b) =>
 					Number(a.chainId) - Number(b.chainId) ||
@@ -592,7 +599,7 @@ lookupRoute
 					'invalid_chain_id',
 					`Invalid chainId format: ${chainId}`,
 				)
-			if (!chainIds.includes(chainIdNumber))
+			if (!context.get('chainRegistry').isSupported(chainIdNumber))
 				return sourcifyError(
 					context,
 					400,
@@ -981,7 +988,7 @@ lookupAllChainContractsRoute.get('/:chainId', async (context) => {
 				'invalid_chain_id',
 				`Invalid chainId format: ${chainId}`,
 			)
-		if (!chainIds.includes(chainIdNumber))
+		if (!context.get('chainRegistry').isSupported(chainIdNumber))
 			return sourcifyError(
 				context,
 				400,
