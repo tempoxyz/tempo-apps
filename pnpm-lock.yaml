@@ -151,8 +151,8 @@ catalogs:
       specifier: ^17.4.0
       version: 17.4.0
     hono:
-      specifier: ^4.12.12
-      version: 4.12.12
+      specifier: ^4.12.14
+      version: 4.12.14
     hono-rate-limiter:
       specifier: ^0.5.3
       version: 0.5.3
@@ -236,7 +236,7 @@ catalogs:
       version: 4.3.6
 
 overrides:
-  basic-ftp: 5.2.2
+  basic-ftp: 5.3.0
   flatted: ^3.4.2
   tar: ^7.5.13
   picomatch@<3: ^2.3.2
@@ -245,6 +245,7 @@ overrides:
   brace-expansion@<3: ^2.0.3
   brace-expansion@>=5: ^5.0.5
   yaml: ^2.8.3
+  protobufjs: ^7.5.5
 
 patchedDependencies:
   '@cloudflare/vite-plugin@1.30.3':
@@ -287,7 +288,7 @@ importers:
         version: 0.2.4
       '@hono/zod-validator':
         specifier: 'catalog:'
-        version: 0.7.6(hono@4.12.12)(zod@4.3.6)
+        version: 0.7.6(hono@4.12.14)(zod@4.3.6)
       '@logtape/config':
         specifier: 'catalog:'
         version: 2.0.4(@logtape/logtape@2.0.4)
@@ -296,7 +297,7 @@ importers:
         version: 2.0.4(@logtape/logtape@2.0.4)
       '@logtape/hono':
         specifier: 'catalog:'
-        version: 2.0.4(@logtape/logtape@2.0.4)(hono@4.12.12)
+        version: 2.0.4(@logtape/logtape@2.0.4)(hono@4.12.14)
       '@logtape/logtape':
         specifier: 'catalog:'
         version: 2.0.4
@@ -317,10 +318,10 @@ importers:
         version: 0.45.2(@cloudflare/workers-types@4.20260408.1)(@libsql/client@0.17.2(bufferutil@4.1.0)(utf-8-validate@5.0.10))(@opentelemetry/api@1.9.0)(bun-types@1.3.11)(kysely@0.28.15)
       hono:
         specifier: 'catalog:'
-        version: 4.12.12
+        version: 4.12.14
       hono-rate-limiter:
         specifier: 'catalog:'
-        version: 0.5.3(hono@4.12.12)
+        version: 0.5.3(hono@4.12.14)
       ox:
         specifier: 'catalog:'
         version: 0.14.13(typescript@6.0.2)(zod@4.3.6)
@@ -447,7 +448,7 @@ importers:
         version: 1.0.0-beta.4(typescript@6.0.2)
       hono:
         specifier: 'catalog:'
-        version: 4.12.12
+        version: 4.12.14
       idxs:
         specifier: 'catalog:'
         version: 0.0.6(typescript@6.0.2)
@@ -571,10 +572,10 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: 'catalog:'
-        version: 0.7.6(hono@4.12.12)(zod@4.3.6)
+        version: 0.7.6(hono@4.12.14)(zod@4.3.6)
       hono:
         specifier: 'catalog:'
-        version: 4.12.12
+        version: 4.12.14
       idxs:
         specifier: 'catalog:'
         version: 0.0.6(typescript@6.0.2)
@@ -694,7 +695,7 @@ importers:
     dependencies:
       '@hono/zod-validator':
         specifier: 'catalog:'
-        version: 0.7.6(hono@4.12.12)(zod@4.3.6)
+        version: 0.7.6(hono@4.12.14)(zod@4.3.6)
       '@takumi-rs/image-response':
         specifier: ^0.73.1
         version: 0.73.1
@@ -703,7 +704,7 @@ importers:
         version: 0.73.1
       hono:
         specifier: 'catalog:'
-        version: 4.12.12
+        version: 4.12.14
       ox:
         specifier: 'catalog:'
         version: 0.14.13(typescript@6.0.2)(zod@4.3.6)
@@ -755,7 +756,7 @@ importers:
         version: 1.0.0-beta.4(typescript@6.0.2)
       hono:
         specifier: 'catalog:'
-        version: 4.12.12
+        version: 4.12.14
       react:
         specifier: 'catalog:'
         version: 19.2.5
@@ -804,7 +805,7 @@ importers:
     dependencies:
       hono:
         specifier: 'catalog:'
-        version: 4.12.12
+        version: 4.12.14
       svgo:
         specifier: ^4.0.1
         version: 4.0.1
@@ -3680,8 +3681,8 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-  basic-ftp@5.2.2:
-    resolution: {integrity: sha512-1tDrzKsdCg70WGvbFss/ulVAxupNauGnOlgpyjKzeQxzyllBLS0CGLV7tjIXTK3ZQA9/FBEm9qyFFN1bciA6pw==}
+  basic-ftp@5.3.0:
+    resolution: {integrity: sha512-5K9eNNn7ywHPsYnFwjKgYH8Hf8B5emh7JKcPaVjjrMJFQQwGpwowEnZNEtHs7DfR7hCZsmaK3VA4HUK0YarT+w==}
     engines: {node: '>=10.0.0'}
 
   bcrypt-pbkdf@1.0.2:
@@ -4474,8 +4475,8 @@ packages:
       unstorage:
         optional: true
 
-  hono@4.12.12:
-    resolution: {integrity: sha512-p1JfQMKaceuCbpJKAPKVqyqviZdS0eUxH9v82oWo1kb9xjQ5wA6iP3FNVAPDFlz5/p7d45lO+BpSk1tuSZMF4Q==}
+  hono@4.12.14:
+    resolution: {integrity: sha512-am5zfg3yu6sqn5yjKBNqhnTX7Cv+m00ox+7jbaKkrLMRJ4rAdldd1xPd/JzbBWspqaQv6RSTrgFN95EsfhC+7w==}
     engines: {node: '>=16.9.0'}
 
   html-escaper@2.0.2:
@@ -5206,8 +5207,8 @@ packages:
   property-information@7.1.0:
     resolution: {integrity: sha512-TwEZ+X+yCJmYfL7TPUOcvBZ4QfoT5YenQiJuX//0th53DE6w0xxLEtfK3iyryQFddXuvkIk51EEgrJQ0WJkOmQ==}
 
-  protobufjs@7.5.4:
-    resolution: {integrity: sha512-CvexbZtbov6jW2eXAvLukXjXUW1TzFaivC46BpWc/3BpcCysb5Vffu+B3XHMm8lVEuy2Mm4XGex8hBSg1yapPg==}
+  protobufjs@7.5.5:
+    resolution: {integrity: sha512-3wY1AxV+VBNW8Yypfd1yQY9pXnqTAN+KwQxL8iYm3/BjKYMNg4i0owhEe26PWDOMaIrzeeF98Lqd5NGz4omiIg==}
     engines: {node: '>=12.0.0'}
 
   proxy-agent@6.5.0:
@@ -6792,19 +6793,19 @@ snapshots:
     dependencies:
       lodash.camelcase: 4.3.0
       long: 5.3.2
-      protobufjs: 7.5.4
+      protobufjs: 7.5.5
       yargs: 17.7.2
 
   '@grpc/proto-loader@0.8.0':
     dependencies:
       lodash.camelcase: 4.3.0
       long: 5.3.2
-      protobufjs: 7.5.4
+      protobufjs: 7.5.5
       yargs: 17.7.2
 
-  '@hono/zod-validator@0.7.6(hono@4.12.12)(zod@4.3.6)':
+  '@hono/zod-validator@0.7.6(hono@4.12.14)(zod@4.3.6)':
     dependencies:
-      hono: 4.12.12
+      hono: 4.12.14
       zod: 4.3.6
 
   '@iconify/json@2.2.460':
@@ -7047,10 +7048,10 @@ snapshots:
     dependencies:
       '@logtape/logtape': 2.0.4
 
-  '@logtape/hono@2.0.4(@logtape/logtape@2.0.4)(hono@4.12.12)':
+  '@logtape/hono@2.0.4(@logtape/logtape@2.0.4)(hono@4.12.14)':
     dependencies:
       '@logtape/logtape': 2.0.4
-      hono: 4.12.12
+      hono: 4.12.14
 
   '@logtape/logtape@2.0.4': {}
 
@@ -8434,7 +8435,7 @@ snapshots:
 
   baseline-browser-mapping@2.10.9: {}
 
-  basic-ftp@5.2.2: {}
+  basic-ftp@5.3.0: {}
 
   bcrypt-pbkdf@1.0.2:
     dependencies:
@@ -8777,7 +8778,7 @@ snapshots:
       '@grpc/grpc-js': 1.14.3
       '@grpc/proto-loader': 0.7.15
       docker-modem: 5.0.6
-      protobufjs: 7.5.4
+      protobufjs: 7.5.5
       tar-fs: 2.1.4
       uuid: 10.0.0
     transitivePeerDependencies:
@@ -9200,7 +9201,7 @@ snapshots:
 
   get-uri@6.0.5:
     dependencies:
-      basic-ftp: 5.2.2
+      basic-ftp: 5.3.0
       data-uri-to-buffer: 6.0.2
       debug: 4.4.3
     transitivePeerDependencies:
@@ -9270,11 +9271,11 @@ snapshots:
     dependencies:
       '@types/hast': 3.0.4
 
-  hono-rate-limiter@0.5.3(hono@4.12.12):
+  hono-rate-limiter@0.5.3(hono@4.12.14):
     dependencies:
-      hono: 4.12.12
+      hono: 4.12.14
 
-  hono@4.12.12: {}
+  hono@4.12.14: {}
 
   html-escaper@2.0.2: {}
 
@@ -9908,7 +9909,7 @@ snapshots:
 
   property-information@7.1.0: {}
 
-  protobufjs@7.5.4:
+  protobufjs@7.5.5:
     dependencies:
       '@protobufjs/aspromise': 1.1.2
       '@protobufjs/base64': 1.1.2
