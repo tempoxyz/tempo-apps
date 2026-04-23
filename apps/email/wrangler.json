@@ -1,0 +1,23 @@
+{
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "email",
+	"main": "src/index.ts",
+	"compatibility_date": "2025-12-17",
+	"compatibility_flags": ["nodejs_compat"],
+	"workers_dev": true,
+	"preview_urls": true,
+	"send_email": [
+		{
+			"name": "SEND_EMAIL"
+		}
+	],
+	"observability": {
+		"enabled": true,
+		"logs": {
+			"enabled": true,
+			"persist": true,
+			"head_sampling_rate": 1,
+			"invocation_logs": true
+		}
+	}
+}

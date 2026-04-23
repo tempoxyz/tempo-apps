@@ -1,0 +1,25 @@
+{
+	"name": "email",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "wrangler dev",
+		"build": "echo 'No build step needed for Cloudflare Worker'",
+		"deploy": "wrangler deploy",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write --unsafe",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"gen:types": "wrangler types --env-interface='CloudflareBindings' --env-file='.env.example'",
+		"postinstall": "pnpm gen:types"
+	},
+	"dependencies": {
+		"@hono/zod-validator": "catalog:",
+		"hono": "catalog:",
+		"zod": "catalog:"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"wrangler": "catalog:"
+	}
+}
