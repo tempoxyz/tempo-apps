@@ -43,11 +43,10 @@ graph LR
 Pass the API URL to the `--verifier-url` flag and set `--verifier` to `sourcify`:
 
 ```bash
-forge script script/Mail.s.sol --verifier-url https://contracts.tempo.xyz --verifier sourcify
+forge script script/Counter.s.sol:CounterScript --verifier-url https://contracts.tempo.xyz --verifier sourcify --rpc-url <YOUR_TEMPO_RPC_URL>
 ```
 
-See [/apps/contract-verification/scripts/verify-solidity.sh](./scripts/verify-solidity.sh)
-and [/apps/contract-verification/scripts/verify-vyper.sh](./scripts/verify-vyper.sh) for small examples you can run.
+See [`scripts/verify-solidity.sh`](./scripts/verify-solidity.sh) and [`scripts/verify-vyper.sh`](./scripts/verify-vyper.sh) for runnable examples. `verify-solidity.sh` uses `Counter.s.sol:CounterScript` after `forge init`; use a different script path if your project layout differs.
 
 #### Direct API Usage
 
