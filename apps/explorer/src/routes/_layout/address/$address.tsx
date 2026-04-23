@@ -19,6 +19,7 @@ import { Actions } from 'wagmi/tempo'
 import * as z from 'zod/mini'
 import { Amount } from '#comps/Amount'
 import { AccountCard } from '#comps/AccountCard'
+import { AddressCsvExportButton } from '#comps/AddressCsvExportButton'
 import { WalletActions } from '#comps/WalletActions'
 import { AddressCell } from '#comps/AddressCell'
 import { AmountCell, BalanceCell } from '#comps/AmountCell'
@@ -45,6 +46,12 @@ import {
 } from '#comps/TxTransactionRow'
 import { TransactionFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
+import {
+	type AssetData,
+	balancesQueryOptions,
+	calculateTotalHoldings,
+	useBalancesData,
+} from '#lib/address-balances'
 import { normalizeSearchInput } from '#lib/tempo-address'
 import { type AccountType, getAccountType } from '#lib/account'
 import {
@@ -90,93 +97,6 @@ type TokenMetadata = Actions.token.getMetadata.ReturnValue
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
-
-type TokenBalance = {
-	token: Address.Address
-	balance: string
-	name?: string
-	symbol?: string
-	decimals?: number
-	currency?: string
-}
-
-async function fetchAddressBalances(address: Address.Address) {
-	const response = await fetch(getApiUrl(`/api/address/balances/${address}`), {
-		headers: { 'Content-Type': 'application/json' },
-	})
-	return response.json() as Promise<{
-		balances: TokenBalance[]
-		error?: string
-	}>
-}
-
-type AssetData = {
-	address: Address.Address
-	metadata:
-		| { name?: string; symbol?: string; decimals?: number; currency?: string }
-		| undefined
-	balance: bigint | undefined
-}
-
-function balancesQueryOptions(address: Address.Address) {
-	return {
-		queryKey: ['address-balances', address],
-		queryFn: () => fetchAddressBalances(address),
-		staleTime: 60_000,
-	}
-}
-
-function useBalancesData(
-	accountAddress: Address.Address,
-	initialData?: { balances: TokenBalance[] },
-	enabled = true,
-): {
-	data: AssetData[]
-	isLoading: boolean
-} {
-	const { data, isLoading } = useQuery({
-		...balancesQueryOptions(accountAddress),
-		initialData,
-		enabled,
-	})
-
-	const assetsData = React.useMemo(() => {
-		if (!data?.balances) return []
-		return data.balances.map((token) => ({
-			address: token.token,
-			metadata: {
-				name: token.name,
-				symbol: token.symbol,
-				decimals: token.decimals,
-				currency: token.currency,
-			},
-			balance: BigInt(token.balance),
-		}))
-	}, [data])
-
-	return { data: assetsData, isLoading }
-}
-
-function calculateTotalHoldings(
-	assetsData: AssetData[],
-	options?: {
-		isTokenListed?: ((address: Address.Address) => boolean) | undefined
-	},
-): number | undefined {
-	const PRICE_PER_TOKEN = 1
-	let total: number | undefined
-	for (const asset of assetsData) {
-		if (asset.metadata?.currency !== 'USD') continue
-		if (options?.isTokenListed && !options.isTokenListed(asset.address))
-			continue
-		const decimals = asset.metadata?.decimals
-		const balance = asset.balance
-		if (decimals === undefined || balance === undefined) continue
-		total =
-			(total ?? 0) + Number(formatUnits(balance, decimals)) * PRICE_PER_TOKEN
-	}
-	return total
-}
 
 const defaultSearchValues = {
 	page: 1,
@@ -1352,12 +1272,22 @@ function SectionsWrapper(props: {
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
 					contextual: (
-						<TransactionFilters
-							status={status}
-							period={period}
-							onStatusChange={onStatusChange}
-							onPeriodChange={onPeriodChange}
-						/>
+						<div className="flex flex-col gap-[10px] min-[800px]:flex-row min-[800px]:items-center min-[800px]:justify-end">
+							<TransactionFilters
+								status={status}
+								period={period}
+								onStatusChange={onStatusChange}
+								onPeriodChange={onPeriodChange}
+							/>
+							<AddressCsvExportButton
+								address={address}
+								kind="transactions"
+								status={status}
+								include={include}
+								after={after}
+								sources={historySources}
+							/>
+						</div>
 					),
 					content: transactionsError ?? (
 						<DataGrid
@@ -1432,6 +1362,11 @@ function SectionsWrapper(props: {
 					title: 'Holdings',
 					totalItems: visibleAssets.length,
 					itemsLabel: 'assets',
+					contextual: (
+						<div className="flex justify-end">
+							<AddressCsvExportButton address={address} kind="balances" />
+						</div>
+					),
 					content: (
 						<DataGrid
 							columns={{
