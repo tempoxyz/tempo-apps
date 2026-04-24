@@ -248,8 +248,15 @@ export function ExploreInput(props: ExploreInput.Props) {
 						tabIndex={tabIndex}
 						value={value}
 						className={cx(
-							'text-search-input bg-surface border-base-border border pl-[16px] pr-[60px] w-full placeholder:text-tertiary rounded-[10px] focus-visible:border-focus outline-0',
-							size === 'large' ? 'h-[52px]' : 'h-[42px]',
+							'bg-surface border-base-border border w-full placeholder:text-tertiary rounded-[10px] focus-visible:border-focus outline-0',
+							size === 'compact'
+								? 'text-search-input-compact h-[34px] pl-[12px] pr-[44px]'
+								: 'text-search-input pl-[16px] pr-[60px]',
+							size === 'large'
+								? 'h-[52px]'
+								: size === 'compact'
+									? ''
+									: 'h-[42px]',
 							className,
 						)}
 						data-1p-ignore
@@ -312,7 +319,11 @@ export function ExploreInput(props: ExploreInput.Props) {
 					<div
 						className={cx(
 							'absolute top-[50%] -translate-y-[50%]',
-							size === 'large' ? 'right-[16px]' : 'right-[12px]',
+							size === 'large'
+								? 'right-[16px]'
+								: size === 'compact'
+									? 'right-[8px]'
+									: 'right-[12px]',
 						)}
 					>
 						<button
@@ -321,14 +332,24 @@ export function ExploreInput(props: ExploreInput.Props) {
 							aria-disabled={!isValidInput}
 							className={cx(
 								'rounded-[10px]! border border-base-border bg-base-background/90 grid place-items-center press-down transition-colors hover:bg-surface',
-								size === 'large' ? 'size-[34px]' : 'size-[30px]',
+								size === 'large'
+									? 'size-[34px]'
+									: size === 'compact'
+										? 'size-[24px]'
+										: 'size-[30px]',
 								isValidInput
 									? 'text-primary cursor-pointer'
 									: 'text-tertiary cursor-default',
 							)}
 						>
 							<ArrowRight
-								className={size === 'large' ? 'size-[16px]' : 'size-[14px]'}
+								className={
+									size === 'large'
+										? 'size-[16px]'
+										: size === 'compact'
+											? 'size-[12px]'
+											: 'size-[14px]'
+								}
 							/>
 						</button>
 					</div>
@@ -427,7 +448,7 @@ export namespace ExploreInput {
 		wrapperRef?: React.RefObject<HTMLDivElement | null>
 		value: string
 		onChange: (value: string) => void
-		size?: 'large' | 'medium'
+		size?: 'compact' | 'medium' | 'large'
 		className?: string
 		wide?: boolean
 		tabIndex?: number

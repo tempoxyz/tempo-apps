@@ -197,7 +197,7 @@ input[type="number"] {
 }
 
 @utility text-ui-meta {
-	color: #fff;
+	color: var(--color-content-primary);
 	text-align: center;
 	leading-trim: both;
 	text-edge: cap;
@@ -217,6 +217,16 @@ input[type="number"] {
 	font-weight: 500;
 	line-height: normal;
 	letter-spacing: -0.48px;
+}
+
+@utility text-search-input-compact {
+	color: #6e6e6e;
+	font-family: var(--font-display);
+	font-size: 14px;
+	font-style: normal;
+	font-weight: 500;
+	line-height: normal;
+	letter-spacing: -0.3px;
 }
 
 @utility size-max {
