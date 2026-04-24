@@ -26,23 +26,11 @@
 				}
 			}
 		},
-		"svg": {
-			"language_servers": ["biome", "HTML"],
-			"code_actions_on_format": {
-				"source.fixAll.biome": true,
-				"source.organizeImports.biome": true
-			},
-			"formatter": {
-				"language_server": {
-					"name": "biome"
-				}
-			}
-		},
 		"MDX": {
 			"language_servers": ["typescript-language-server", "biome"]
 		},
 		"JSON": {
-			"language_servers": ["biome"],
+			"language_servers": ["json-language-server", "biome"],
 			"code_actions_on_format": {
 				"source.fixAll.biome": true,
 				"source.organizeImports.biome": true
@@ -54,7 +42,7 @@
 			}
 		},
 		"JSONC": {
-			"language_servers": ["biome"],
+			"language_servers": ["json-language-server", "biome"],
 			"code_actions_on_format": {
 				"source.fixAll.biome": true,
 				"source.organizeImports.biome": true
@@ -112,13 +100,6 @@
 					"name": "biome"
 				}
 			}
-		}
-	},
-	"terminal": {
-		"button": true,
-		"dock": "bottom",
-		"toolbar": {
-			"breadcrumbs": false
 		}
 	}
 }

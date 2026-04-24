@@ -19,6 +19,9 @@ interface EnvironmentVariables {
 	readonly CLOUDFLARE_DATABASE_ID: string
 	readonly CLOUDFLARE_D1_TOKEN: string
 	readonly CLOUDFLARE_D1_ENVIRONMENT: 'local' | (string & {})
+
+	readonly CONTAINER_MAX_INSTANCES: string
+	MINIFLARE_CONTAINER_EGRESS_IMAGE: string
 }
 
 // Node.js `process.env` auto-completion

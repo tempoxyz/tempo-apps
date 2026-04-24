@@ -13,9 +13,9 @@ export default defineConfig(async () => {
 
 	return {
 		test: {
-			setupFiles: ['./test/setup.ts'],
-			include: ['test/**/*.test.ts'],
 			exclude: ['**/_/**'],
+			include: ['test/**/*.test.ts'],
+			setupFiles: ['./test/setup.ts'],
 		},
 		plugins: [
 			cloudflareTest({
@@ -23,10 +23,8 @@ export default defineConfig(async () => {
 					configPath: './wrangler.json',
 				},
 				main: './src/index.tsx',
-
 				miniflare: {
 					compatibilityFlags: ['service_binding_extra_handlers'],
-
 					bindings: {
 						NODE_ENV: 'test',
 						BUN_VERSION: '1.3.8',

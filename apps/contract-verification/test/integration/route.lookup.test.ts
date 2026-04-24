@@ -1,7 +1,7 @@
 import { Hex } from 'ox'
 import * as z from 'zod/mini'
 import { eq } from 'drizzle-orm'
-import { env } from 'cloudflare:workers'
+import { env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
 import { describe, it, expect } from 'vitest'
 

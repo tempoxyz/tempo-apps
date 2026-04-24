@@ -2,6 +2,8 @@ import semver from 'semver'
 import * as CBOR from 'cbor-x/decode'
 import { AbiParameters, Hash, Hex } from 'ox'
 
+import type { ImmutableReferences, LinkReferences } from '#schema.ts'
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -27,20 +29,6 @@ export interface TransformationValues {
 	immutables?: Record<string, string>
 	cborAuxdata?: Record<string, string>
 }
-
-export interface LinkReference {
-	start: number
-	length: number
-}
-
-export type LinkReferences = Record<string, Record<string, LinkReference[]>>
-
-export interface ImmutableReference {
-	start: number
-	length: number
-}
-
-export type ImmutableReferences = Record<string, ImmutableReference[]>
 
 export interface CborAuxdataPosition {
 	offset: number
