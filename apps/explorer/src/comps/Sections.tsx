@@ -42,33 +42,20 @@ export function Sections(props: Sections.Props) {
 									'shadow-[0px_4px_44px_rgba(0,0,0,0.05)]',
 								)}
 							>
-							{canCollapse ? (
-								<button
-									type="button"
-									onClick={() => toggleSection(index)}
-									className={cx(
-										'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
-										isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
-									)}
-								>
-									{section.title ? (
-										<h1 className="text-[13px] font-medium text-primary font-sans">
-											{section.title}
-										</h1>
-									) : (
-										Boolean(section.totalItems) && (
-											<span className="text-[13px] text-tertiary">
-												{section.totalItems}{' '}
-												{Pagination.pluralize(
-													section.totalItems ?? 0,
-													itemsLabel,
-												)}
-											</span>
-										)
-									)}
-									<div className="flex items-center gap-[12px]">
-										{section.title &&
-											isCollapsed &&
+								{canCollapse ? (
+									<button
+										type="button"
+										onClick={() => toggleSection(index)}
+										className={cx(
+											'h-[52px] flex items-center justify-between px-[18px] cursor-pointer press-down -outline-offset-2!',
+											isCollapsed ? 'rounded-[10px]!' : 'rounded-t-[10px]!',
+										)}
+									>
+										{section.title ? (
+											<h1 className="text-[13px] font-medium text-primary font-sans">
+												{section.title}
+											</h1>
+										) : (
 											Boolean(section.totalItems) && (
 												<span className="text-[13px] text-tertiary">
 													{section.totalItems}{' '}
@@ -77,36 +64,49 @@ export function Sections(props: Sections.Props) {
 														itemsLabel,
 													)}
 												</span>
-											)}
-										<div
-											className={cx(
-												'accent text-[16px] font-mono',
-												isCollapsed ? 'text-accent' : 'text-tertiary',
-											)}
-										>
-											[{isCollapsed ? '+' : '–'}]
-										</div>
-									</div>
-								</button>
-							) : (
-								<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-[10px]">
-									{section.title ? (
-										<h1 className="text-[13px] font-medium text-primary font-sans">
-											{section.title}
-										</h1>
-									) : (
-										Boolean(section.totalItems) && (
-											<span className="text-[13px] text-tertiary">
-												{section.totalItems}{' '}
-												{Pagination.pluralize(
-													section.totalItems ?? 0,
-													itemsLabel,
+											)
+										)}
+										<div className="flex items-center gap-[12px]">
+											{section.title &&
+												isCollapsed &&
+												Boolean(section.totalItems) && (
+													<span className="text-[13px] text-tertiary">
+														{section.totalItems}{' '}
+														{Pagination.pluralize(
+															section.totalItems ?? 0,
+															itemsLabel,
+														)}
+													</span>
 												)}
-											</span>
-										)
-									)}
-								</div>
-							)}
+											<div
+												className={cx(
+													'accent text-[16px] font-mono',
+													isCollapsed ? 'text-accent' : 'text-tertiary',
+												)}
+											>
+												[{isCollapsed ? '+' : '–'}]
+											</div>
+										</div>
+									</button>
+								) : (
+									<div className="h-[52px] flex items-center justify-between px-[18px] rounded-t-[10px]">
+										{section.title ? (
+											<h1 className="text-[13px] font-medium text-primary font-sans">
+												{section.title}
+											</h1>
+										) : (
+											Boolean(section.totalItems) && (
+												<span className="text-[13px] text-tertiary">
+													{section.totalItems}{' '}
+													{Pagination.pluralize(
+														section.totalItems ?? 0,
+														itemsLabel,
+													)}
+												</span>
+											)
+										)}
+									</div>
+								)}
 
 								{!isCollapsed && (
 									<div className="rounded-t-[10px] border-t border border-card-border bg-card -mb-px -mx-px flex flex-col min-h-0 overflow-x-auto focus-visible:outline-2 focus-visible:outline-accent focus-visible:-outline-offset-2! focus-visible:rounded-[2px]!">

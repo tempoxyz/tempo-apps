@@ -1,6 +1,7 @@
 import { waapi } from 'animejs'
 import { useEffect, useRef } from 'react'
 import { springLazy } from '#lib/animation'
+import { useTheme } from '#lib/theme'
 
 export function Sphere(props: Sphere.Props) {
 	const { animate } = props
@@ -41,6 +42,24 @@ export namespace Sphere {
 	}
 
 	export function Artwork(): React.JSX.Element {
+		const { resolved } = useTheme()
+		const isLight = resolved === 'light'
+
+		if (isLight)
+			return (
+				<img
+					src="/landing-orb-light.svg"
+					alt=""
+					aria-hidden="true"
+					decoding="async"
+					loading="lazy"
+					width={1066}
+					height={926}
+					className="w-[820px] max-w-[140vw] h-auto"
+					draggable={false}
+				/>
+			)
+
 		return (
 			<img
 				src="/landing-circles.png"

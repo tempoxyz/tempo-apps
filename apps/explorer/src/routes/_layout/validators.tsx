@@ -40,9 +40,7 @@ function Toggle({
 			<span
 				className={cx(
 					'relative h-[16px] w-[28px] rounded-full transition-colors',
-					checked
-						? 'bg-accent'
-						: 'bg-base-alt border border-base-border',
+					checked ? 'bg-accent' : 'bg-base-alt border border-base-border',
 				)}
 			>
 				<span

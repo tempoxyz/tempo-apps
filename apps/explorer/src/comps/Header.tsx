@@ -18,7 +18,7 @@ export function Header(): React.JSX.Element {
 
 	return (
 		<header className="@container relative z-1">
-			<div className="px-[24px] @min-[1240px]:pt-[48px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 @min-[800px]:@max-[1239px]:h-[88px] pt-[36px] select-none relative z-1 print:justify-center">
+			<div className="px-[24px] @min-[1240px]:pt-[24px] @min-[1240px]:px-[84px] flex items-center justify-between min-h-16 @min-[800px]:@max-[1239px]:h-[60px] pt-[16px] select-none relative z-1 print:justify-center">
 				<div className="flex items-center gap-[12px] relative z-1 h-[28px]">
 					<Link
 						to="/"
@@ -62,6 +62,7 @@ export namespace Header {
 
 		const exploreInput = (
 			<ExploreInput
+				size="compact"
 				value={inputValue}
 				onChange={setInputValue}
 				onActivate={({ value, type }) => {
@@ -92,6 +93,7 @@ export namespace Header {
 			return (
 				<div className="@min-[800px]:hidden sticky top-0 z-10 px-4 pt-[16px] pb-[12px] print:hidden">
 					<ExploreInput
+						size="compact"
 						wide
 						value={inputValue}
 						onChange={setInputValue}
@@ -127,6 +129,7 @@ export namespace Header {
 				</div>
 				<div className="flex-1 flex justify-center px-[24px] @max-[799px]:hidden @min-[1240px]:hidden print:hidden">
 					<ExploreInput
+						size="compact"
 						wide
 						value={inputValue}
 						onChange={setInputValue}
@@ -183,8 +186,19 @@ export namespace Header {
 			>
 				<SquareSquare className="size-[18px] text-accent" />
 				<div className="text-nowrap">
-					<span className="text-primary font-medium tabular-nums font-mono min-w-[6ch] inline-block">
-						{blockNumber != null ? String(blockNumber) : '…'}
+					<span className="text-tertiary font-medium tabular-nums font-mono min-w-[6ch] inline-block">
+						{blockNumber != null
+							? (() => {
+									const digits = String(blockNumber).split('')
+									return digits.map((char, idx) => (
+										<Header.CascadeDigit
+											key={`digit-${idx}-${digits.length}`}
+											char={char}
+											delayMs={(digits.length - 1 - idx) * 30}
+										/>
+									))
+								})()
+							: '…'}
 					</span>
 				</div>
 			</Link>
@@ -195,6 +209,55 @@ export namespace Header {
 		export interface Props {
 			initial?: bigint
 			className?: string | undefined
+		}
+	}
+
+	export function CascadeDigit(props: CascadeDigit.Props) {
+		const { char, delayMs = 0 } = props
+		const ref = React.useRef<HTMLSpanElement>(null)
+		const prevCharRef = React.useRef<string | null>(null)
+
+		React.useEffect(() => {
+			const el = ref.current
+			if (!el) return
+			// Skip the very first mount to avoid scrambling the initial render.
+			if (prevCharRef.current === null) {
+				prevCharRef.current = char
+				el.textContent = char
+				return
+			}
+			prevCharRef.current = char
+
+			const scrambleMs = 220
+			const tickMs = 40
+			const ticks = Math.floor(scrambleMs / tickMs)
+			let tickCount = 0
+			let interval: ReturnType<typeof setInterval> | null = null
+			const start = setTimeout(() => {
+				interval = setInterval(() => {
+					if (tickCount >= ticks) {
+						el.textContent = char
+						if (interval) clearInterval(interval)
+						return
+					}
+					el.textContent = String(Math.floor(Math.random() * 10))
+					tickCount += 1
+				}, tickMs)
+			}, delayMs)
+
+			return () => {
+				clearTimeout(start)
+				if (interval) clearInterval(interval)
+			}
+		}, [char, delayMs])
+
+		return <span ref={ref}>{char}</span>
+	}
+
+	export namespace CascadeDigit {
+		export interface Props {
+			char: string
+			delayMs?: number
 		}
 	}
 

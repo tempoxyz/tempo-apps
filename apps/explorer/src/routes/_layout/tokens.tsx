@@ -147,9 +147,7 @@ function TokensPage() {
 				<h1 className="font-heading text-[32px] leading-none tracking-[-0.02em] font-normal text-primary">
 					Tokens
 				</h1>
-				<p className="text-sm text-tertiary">
-					Browse all tokens on Tempo.
-				</p>
+				<p className="text-sm text-tertiary">Browse all tokens on Tempo.</p>
 			</div>
 			<Sections
 				mode={mode}
