@@ -18,6 +18,7 @@ import { IntroSeenProvider } from '#comps/Intro'
 import { TokenListMembershipProvider } from '#comps/TokenListMembership'
 import { OG_BASE_URL } from '#lib/og'
 import { ProgressLine } from '#comps/ProgressLine'
+import { themeBootstrapScript } from '#lib/theme'
 import {
 	type LoaderTiming,
 	captureEvent,
@@ -90,7 +91,14 @@ export const Route = createRootRouteWithContext<{
 		links: [
 			{
 				rel: 'preload',
-				href: '/fonts/satoshi/Satoshi-Variable.woff2',
+				href: '/fonts/pilat/Pilat-Regular.woff2',
+				as: 'font',
+				type: 'font/woff2',
+				crossOrigin: 'anonymous',
+			},
+			{
+				rel: 'preload',
+				href: '/fonts/pilat/Pilat-Demi.woff2',
 				as: 'font',
 				type: 'font/woff2',
 				crossOrigin: 'anonymous',
@@ -367,9 +375,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	})
 
 	return (
-		<html lang="en" className="scrollbar-gutter-stable">
+		<html
+			lang="en"
+			className="scrollbar-gutter-stable"
+			suppressHydrationWarning
+		>
 			<head>
 				<HeadContent />
+				{/* Applies the persisted theme before first paint to prevent FOUC */}
+				<script
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: inline bootstrap runs before hydration
+					dangerouslySetInnerHTML={{ __html: themeBootstrapScript }}
+				/>
 			</head>
 			<body className="antialiased">
 				<ProgressLine

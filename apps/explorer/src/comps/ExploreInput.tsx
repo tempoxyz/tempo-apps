@@ -254,7 +254,7 @@ export function ExploreInput(props: ExploreInput.Props) {
 						)}
 						data-1p-ignore
 						name="explore-query"
-						placeholder="Search by Address / Tx Hash / Block / Token"
+						placeholder="Search by address, hash, or block..."
 						spellCheck={false}
 						type="text"
 						onKeyDown={(event) => {

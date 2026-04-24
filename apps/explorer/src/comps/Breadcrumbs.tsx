@@ -10,8 +10,17 @@ const MAX_CRUMBS = 3
 
 export interface Crumb {
 	path: string
-	label: string
-	type: 'home' | 'tx' | 'receipt' | 'address' | 'token' | 'block' | 'other'
+	group: string
+	groupType:
+		| 'home'
+		| 'transaction'
+		| 'receipt'
+		| 'address'
+		| 'token'
+		| 'block'
+		| 'other'
+	id?: string
+	idMono?: boolean
 }
 
 function truncateHash(hash: string, prefixLen = 6, suffixLen = 4): string {
@@ -19,51 +28,70 @@ function truncateHash(hash: string, prefixLen = 6, suffixLen = 4): string {
 	return `${hash.slice(0, prefixLen)}…${hash.slice(-suffixLen)}`
 }
 
-function getLabelForPath(pathname: string): {
-	label: string
-	type: Crumb['type']
-} {
+function getCrumbForPath(pathname: string): Omit<Crumb, 'path'> {
 	if (pathname === '/') {
-		return { label: 'Home', type: 'home' }
+		return { group: 'Home', groupType: 'home' }
 	}
 
 	const txMatch = pathname.match(/^\/tx\/(0x[a-fA-F0-9]+)$/)
 	if (txMatch) {
-		return { label: `Tx ${truncateHash(txMatch[1])}`, type: 'tx' }
+		return {
+			group: 'Transaction',
+			groupType: 'transaction',
+			id: truncateHash(txMatch[1]),
+			idMono: true,
+		}
 	}
 
 	const receiptMatch = pathname.match(/^\/receipt\/(0x[a-fA-F0-9]+)$/)
 	if (receiptMatch) {
 		return {
-			label: `Receipt ${truncateHash(receiptMatch[1])}`,
-			type: 'receipt',
+			group: 'Receipt',
+			groupType: 'receipt',
+			id: truncateHash(receiptMatch[1]),
+			idMono: true,
 		}
 	}
 
 	const addressMatch = pathname.match(/^\/address\/(0x[a-fA-F0-9]+)$/)
 	if (addressMatch) {
-		return { label: `Addr ${truncateHash(addressMatch[1])}`, type: 'address' }
+		return {
+			group: 'Address',
+			groupType: 'address',
+			id: truncateHash(addressMatch[1]),
+			idMono: true,
+		}
 	}
 
 	const tokenMatch = pathname.match(/^\/token\/(0x[a-fA-F0-9]+)$/)
 	if (tokenMatch) {
-		return { label: `Token ${truncateHash(tokenMatch[1])}`, type: 'token' }
+		return {
+			group: 'Token',
+			groupType: 'token',
+			id: truncateHash(tokenMatch[1]),
+			idMono: true,
+		}
 	}
 
 	const blockMatch = pathname.match(/^\/block\/(\d+|latest)$/)
 	if (blockMatch) {
-		return { label: `Block ${blockMatch[1]}`, type: 'block' }
+		return {
+			group: 'Block',
+			groupType: 'block',
+			id: blockMatch[1],
+			idMono: true,
+		}
 	}
 
 	if (pathname === '/blocks') {
-		return { label: 'Blocks', type: 'other' }
+		return { group: 'Blocks', groupType: 'other' }
 	}
 
 	if (pathname === '/tokens') {
-		return { label: 'Tokens', type: 'other' }
+		return { group: 'Tokens', groupType: 'other' }
 	}
 
-	return { label: pathname, type: 'other' }
+	return { group: pathname, groupType: 'other' }
 }
 
 interface BreadcrumbsContextValue {
@@ -83,28 +111,22 @@ export function BreadcrumbsProvider(props: { children: React.ReactNode }) {
 	const [crumbs, setCrumbs] = React.useState<Crumb[]>([])
 	const [slotEl, setSlotEl] = React.useState<HTMLElement | null>(null)
 
-	// Track resolved location for committing to history
-	// Fall back to current location if resolvedLocation is not yet available
 	const resolvedPathname = useRouterState({
 		select: (state) =>
 			state.resolvedLocation?.pathname ?? state.location.pathname,
 	})
 
-	// Track current location for pending/optimistic display
 	const currentPathname = useRouterState({
 		select: (state) => state.location.pathname,
 	})
 
-	// Track previous resolved pathname to detect changes
 	const prevResolvedRef = React.useRef<string | null>(null)
 
-	// Commit crumbs when navigation resolves successfully
 	React.useEffect(() => {
-		// Skip if pathname hasn't changed
 		if (prevResolvedRef.current === resolvedPathname) return
 		prevResolvedRef.current = resolvedPathname
 
-		const { label, type } = getLabelForPath(resolvedPathname)
+		const next = getCrumbForPath(resolvedPathname)
 
 		setCrumbs((prev) => {
 			if (resolvedPathname === '/') {
@@ -116,32 +138,28 @@ export function BreadcrumbsProvider(props: { children: React.ReactNode }) {
 				return prev.slice(0, existingIndex + 1)
 			}
 
-			const newCrumb: Crumb = { path: resolvedPathname, label, type }
+			const newCrumb: Crumb = { path: resolvedPathname, ...next }
 			return [...prev, newCrumb].slice(-MAX_CRUMBS)
 		})
 	}, [resolvedPathname])
 
-	// Compute pending crumb for immediate UI feedback during navigation
 	const pendingCrumb = React.useMemo<Crumb | null>(() => {
-		// Only show pending crumb if navigating to a different path
 		if (currentPathname === resolvedPathname || currentPathname === '/') {
 			return null
 		}
-		// Don't show if it's already in crumbs
 		if (crumbs.some((c) => c.path === currentPathname)) {
 			return null
 		}
-		const { label, type } = getLabelForPath(currentPathname)
-		return { path: currentPathname, label, type }
+		const next = getCrumbForPath(currentPathname)
+		return { path: currentPathname, ...next }
 	}, [currentPathname, resolvedPathname, crumbs])
 
 	const clearCrumbs = React.useCallback(() => {
-		// Keep only the current page as a single crumb
 		if (resolvedPathname === '/') {
 			setCrumbs([])
 		} else {
-			const { label, type } = getLabelForPath(resolvedPathname)
-			setCrumbs([{ path: resolvedPathname, label, type }])
+			const next = getCrumbForPath(resolvedPathname)
+			setCrumbs([{ path: resolvedPathname, ...next }])
 		}
 	}, [resolvedPathname])
 
@@ -174,7 +192,6 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 			state.resolvedLocation?.pathname ?? state.location.pathname,
 	})
 
-	// Combine committed crumbs with pending crumb for display
 	const displayCrumbs = pendingCrumb ? [...crumbs, pendingCrumb] : crumbs
 	const hasPendingCrumb = pendingCrumb !== null
 
@@ -206,29 +223,60 @@ export function Breadcrumbs(props: Breadcrumbs.Props) {
 					{displayCrumbs.map((crumb, index) => {
 						const isLast = index === displayCrumbs.length - 1
 						const isPending = isLast && hasPendingCrumb
+						const groupClasses = cx(
+							'truncate max-w-[120px]',
+							isLast && !crumb.id
+								? isPending
+									? 'font-medium text-secondary animate-pulse'
+									: 'font-medium text-primary'
+								: 'font-normal text-secondary',
+						)
+						const idClasses = cx(
+							'truncate max-w-[120px]',
+							crumb.idMono && 'font-mono tabular-nums',
+							isPending
+								? 'font-medium text-secondary animate-pulse'
+								: 'font-medium text-primary',
+						)
 						return (
 							<React.Fragment key={crumb.path}>
 								<ChevronRight className="size-3 text-tertiary shrink-0" />
 								{isLast ? (
-									<span
-										className={cx(
-											'font-medium truncate max-w-[120px]',
-											isPending
-												? 'text-secondary animate-pulse'
-												: 'text-primary',
-										)}
-										title={crumb.path}
-									>
-										{crumb.label}
+									<span className={groupClasses} title={crumb.path}>
+										{crumb.group}
 									</span>
 								) : (
 									<Link
 										to={crumb.path}
-										className="text-secondary hover:text-accent press-down truncate max-w-[120px] outline-none focus-visible:text-accent"
+										className={cx(
+											groupClasses,
+											'hover:text-accent press-down outline-none focus-visible:text-accent',
+										)}
 										title={crumb.path}
 									>
-										{crumb.label}
+										{crumb.group}
 									</Link>
+								)}
+								{crumb.id && (
+									<>
+										<ChevronRight className="size-3 text-tertiary shrink-0" />
+										{isLast ? (
+											<span className={idClasses} title={crumb.path}>
+												{crumb.id}
+											</span>
+										) : (
+											<Link
+												to={crumb.path}
+												className={cx(
+													idClasses,
+													'hover:text-accent press-down outline-none focus-visible:text-accent',
+												)}
+												title={crumb.path}
+											>
+												{crumb.id}
+											</Link>
+										)}
+									</>
 								)}
 							</React.Fragment>
 						)
@@ -282,6 +330,5 @@ export function BreadcrumbsPortal() {
 		return createPortal(<Breadcrumbs />, slotEl)
 	}
 
-	// No slot registered - BreadcrumbsSlot handles the loading fallback
 	return null
 }
