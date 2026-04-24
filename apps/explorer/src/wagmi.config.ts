@@ -6,6 +6,7 @@ import { tempoActions } from 'viem/tempo'
 import { loadBalance, rateLimit } from '@tempo/rpc-utils'
 import { tempoMainnet, tempoTestnet } from './lib/chains'
 import { getTempoEnv } from './lib/env'
+import { serverEnv } from './lib/server/env'
 import {
 	cookieStorage,
 	cookieToInitialState,
@@ -49,7 +50,7 @@ const getRpcProxyUrl = createIsomorphicFn()
 	})
 	.server(() => {
 		const chain = getTempoChain()
-		const key = process.env.TEMPO_RPC_KEY
+		const key = serverEnv.TEMPO_RPC_KEY
 		const keyParam = key ? `?key=${key}` : ''
 		return {
 			http: `https://${RPC_PROXY_HOSTNAME}/rpc/${chain.id}${keyParam}`,
@@ -63,7 +64,7 @@ const getFallbackUrls = createIsomorphicFn()
 	}))
 	.server(() => {
 		const chain = getTempoChain()
-		const key = process.env.TEMPO_RPC_KEY
+		const key = serverEnv.TEMPO_RPC_KEY
 		return {
 			http: chain.rpcUrls.default.http.map((url) =>
 				key ? `${url}/${key}` : url,

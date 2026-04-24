@@ -9,6 +9,7 @@ export default defineConfig({
 	},
 	test: {
 		include: ['test/**/*.test.ts'],
+		exclude: ['test/**/*.node.test.ts'],
 	},
 	plugins: [
 		cloudflareTest({
