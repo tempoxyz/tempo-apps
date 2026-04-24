@@ -44,6 +44,8 @@ import {
 	TransactionDescription,
 	TransactionTimestamp,
 } from '#comps/TxTransactionRow'
+import { TxEventDescription } from '#comps/TxEventDescription'
+import type { KnownEvent } from '#lib/domain/known-events'
 import { TransactionFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
 import {
@@ -166,6 +168,13 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		status: z.optional(z.enum(['success', 'reverted'])),
 		dir: z.optional(z.enum(['sent', 'received'])),
 		period: z.optional(z.enum(['24h', '7d'])),
+		voucher: z.optional(
+			z.object({
+				final_voucher: z.optional(z.string()),
+				packet_size: z.optional(z.coerce.number()),
+				number: z.optional(z.coerce.number()),
+			}),
+		),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
@@ -867,6 +876,7 @@ function SectionsWrapper(props: {
 		onPeriodChange,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
+	const { voucher } = Route.useSearch()
 
 	const after = React.useMemo(() => {
 		if (period === '24h') return Math.floor(Date.now() / 1000) - 86400
@@ -1296,40 +1306,53 @@ function SectionsWrapper(props: {
 								tabs: transactionsColumns,
 							}}
 							items={() =>
-								transactions.map((transaction) => ({
-									cells: [
-										<TransactionTimeCell
-											key="time"
-											timestamp={transaction.timestamp}
-											hash={transaction.hash}
-											format={timeFormat}
-										/>,
-										<TransactionDescCell
-											key="desc"
-											transaction={transaction}
-											accountAddress={address}
-										/>,
-										<Midcut
-											key="hash"
-											value={transaction.hash}
-											prefix="0x"
-											align="end"
-										/>,
-										<TransactionFeeCell
-											key="fee"
-											gasUsed={transaction.gasUsed}
-											effectiveGasPrice={transaction.effectiveGasPrice}
-										/>,
-										<TransactionTotalCell
-											key="total"
-											transaction={transaction}
-										/>,
-									],
-									link: {
-										href: `/receipt/${transaction.hash}`,
-										title: `View receipt ${transaction.hash}`,
-									},
-								}))
+								transactions.map((transaction) => {
+									const isVoucherMatch =
+										voucher?.final_voucher &&
+										transaction.hash.toLowerCase() ===
+											voucher.final_voucher.toLowerCase()
+									return {
+										cells: [
+											<TransactionTimeCell
+												key="time"
+												timestamp={transaction.timestamp}
+												hash={transaction.hash}
+												format={timeFormat}
+											/>,
+											<TransactionDescCell
+												key="desc"
+												transaction={transaction}
+												accountAddress={address}
+											/>,
+											<Midcut
+												key="hash"
+												value={transaction.hash}
+												prefix="0x"
+												align="end"
+											/>,
+											<TransactionFeeCell
+												key="fee"
+												gasUsed={transaction.gasUsed}
+												effectiveGasPrice={transaction.effectiveGasPrice}
+											/>,
+											<TransactionTotalCell
+												key="total"
+												transaction={transaction}
+											/>,
+										],
+										link: {
+											href: `/receipt/${transaction.hash}`,
+											title: `View receipt ${transaction.hash}`,
+										},
+										expanded: isVoucherMatch ? (
+											<StreamedPaymentReceipt
+												transaction={transaction}
+												packetSize={voucher.packet_size ?? 0}
+												packetCount={voucher.number ?? 0}
+											/>
+										) : undefined,
+									}
+								})
 							}
 							totalItems={totalTrxCount ?? transactions.length}
 							pages={
@@ -2013,6 +2036,88 @@ function FilterIndicator(props: {
 			>
 				<XIcon className="size-3.5 translate-y-px" />
 			</Link>
+		</div>
+	)
+}
+
+function StreamedPaymentReceipt(props: {
+	transaction: EnrichedTransaction
+	packetSize: number
+	packetCount: number
+}) {
+	const { transaction, packetSize, packetCount } = props
+
+	// Extract payee from the settlement/close channel event
+	const payee = transaction.knownEvents.find(
+		(e) => e.type === 'settle channel' || e.type === 'close channel',
+	)?.meta?.to
+
+	const packetMicros = BigInt(Math.round(packetSize * 1_000_000))
+	const voucherEvent: KnownEvent = {
+		type: 'send',
+		parts: [
+			{ type: 'action', value: 'Pay' },
+			...(TEMPO_FEE_TOKEN
+				? ([
+						{
+							type: 'amount',
+							value: { value: packetMicros, decimals: 6, token: TEMPO_FEE_TOKEN },
+						},
+					] as KnownEvent['parts'])
+				: []),
+			...(payee
+				? ([
+						{ type: 'text', value: 'to' },
+						{ type: 'account', value: payee },
+					] as KnownEvent['parts'])
+				: []),
+		],
+	}
+
+	const digits = String(packetCount).length
+
+	return (
+		<div className="pb-4 font-mono text-[13px]">
+			{/* On-chain settlement — visually part of the main row */}
+			<div className="bg-base-alt -mx-[16px] px-[16px] py-[10px] border-b-2 border-base-border flex items-center">
+				<span className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
+					style={{ minWidth: `${digits}ch` }}
+				>
+					↓
+				</span>
+				<span className="text-[11px] text-accent shrink-0 w-[64px] italic">on-chain</span>
+				{transaction.knownEvents.filter(e => e.type === 'settle channel' || e.type === 'close channel').map((e, i) => (
+					<TxEventDescription key={i} event={e} />
+				))}
+			</div>
+
+			{/* Off-chain section header */}
+			<div className="flex items-center gap-[8px] pt-[12px] pb-[6px] text-[11px] text-tertiary uppercase tracking-wider">
+				<span>off-chain vouchers</span>
+				<span className="flex-1 border-t border-dashed border-distinct" />
+				<span>{packetCount.toLocaleString()}</span>
+			</div>
+
+			{/* Off-chain voucher rows */}
+			{Array.from({ length: packetCount }, (_, i) => (
+				<div
+					key={i}
+					className="flex items-center py-[9px] border-b border-dashed border-distinct"
+				>
+					<span className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
+						style={{ minWidth: `${digits}ch` }}
+					>
+						{i + 1}
+					</span>
+					<span className="text-[11px] text-tertiary shrink-0 w-[64px]">off-chain</span>
+					<div className="flex items-center gap-[10px] ml-auto">
+						<TxEventDescription.Part part={{ type: 'action', value: 'Pay' }} />
+						{voucherEvent.parts.filter(p => p.type === 'amount').map((p, j) => (
+							<TxEventDescription.Part key={j} part={p} />
+						))}
+					</div>
+				</div>
+			))}
 		</div>
 	)
 }

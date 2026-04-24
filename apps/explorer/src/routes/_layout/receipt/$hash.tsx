@@ -16,7 +16,11 @@ import { NotFound } from '#comps/NotFound'
 import { Receipt } from '#comps/Receipt'
 import { useTokenListMembership } from '#comps/TokenListMembership'
 import { apostrophe } from '#lib/chars'
-import { decodeKnownCall, parseKnownEvents } from '#lib/domain/known-events'
+import {
+	decodeKnownCall,
+	parseKnownEvents,
+	type KnownEvent,
+} from '#lib/domain/known-events'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
@@ -132,6 +136,15 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 			data={data as NotFound.NotFoundData}
 		/>
 	),
+	validateSearch: z.object({
+		voucher: z.optional(
+			z.object({
+				final_voucher: z.optional(z.string()),
+				packet_size: z.optional(z.coerce.number()),
+				number: z.optional(z.coerce.number()),
+			}),
+		),
+	}).parse,
 	headers: () => ({
 		...(import.meta.env.PROD
 			? {
@@ -342,12 +355,27 @@ export const Route = createFileRoute('/_layout/receipt/$hash')({
 	},
 })
 
+function parseVoucherParam(
+	raw:
+		| { final_voucher?: string; packet_size?: number; number?: number }
+		| undefined,
+): { packetSize: number; packetCount: number } | null {
+	if (!raw) return null
+	const packetSize = Number(raw.packet_size)
+	const packetCount = Number(raw.number)
+	if (!Number.isFinite(packetSize) || !Number.isFinite(packetCount)) return null
+	return { packetSize, packetCount }
+}
+
 function Component() {
 	const { hash } = Route.useParams()
+	const { voucher: voucherRaw } = Route.useSearch()
 	const navigate = useNavigate()
 	const loaderData = Route.useLoaderData() as Awaited<
 		ReturnType<typeof fetchReceiptData>
 	>
+
+	const voucherData = parseVoucherParam(voucherRaw)
 
 	const { data } = useQuery({
 		...receiptDetailQueryOptions({ hash }),
@@ -358,8 +386,9 @@ function Component() {
 		t: () => navigate({ to: '/tx/$hash', params: { hash } }),
 	})
 
-	const { block, feeBreakdown, knownEvents, lineItems, receipt } = data
 	const { areTokensListed, isTokenListed } = useTokenListMembership()
+
+	const { block, feeBreakdown, knownEvents, lineItems, receipt } = data
 
 	const feePrice = lineItems.feeTotals?.[0]?.price
 	const previousFee = feePrice
@@ -389,8 +418,28 @@ function Component() {
 		? PriceFormatter.format(fee)
 		: PriceFormatter.formatAmountShort(feeRaw)
 
+	// Inject a streaming payment event when voucher params are present
+	const displayEvents: KnownEvent[] = voucherData
+		? [
+				buildStreamedPaymentEvent(
+					voucherData.packetSize,
+					voucherData.packetCount,
+				),
+				...knownEvents,
+			]
+		: knownEvents
+
+	// When a voucher is present, show the streaming total as the receipt total
+	const streamingTotal = voucherData
+		? voucherData.packetSize * voucherData.packetCount
+		: undefined
+
 	const total =
-		previousTotal !== undefined ? previousTotal - previousFee + fee : fee
+		streamingTotal !== undefined
+			? streamingTotal
+			: previousTotal !== undefined
+				? previousTotal - previousFee + fee
+				: fee
 	const totalTokenAddresses = lineItems.totals
 		.map((item) => item.price?.token)
 		.filter((token): token is `0x${string}` => Boolean(token))
@@ -398,7 +447,12 @@ function Component() {
 		totalTokenAddresses.length > 0
 			? areTokensListed(TEMPO_CHAIN_ID, totalTokenAddresses)
 			: showUsdFeePrefix
-	const totalDisplayValue = previousTotal !== undefined ? previousTotal : total
+	const totalDisplayValue =
+		streamingTotal !== undefined
+			? streamingTotal
+			: previousTotal !== undefined
+				? previousTotal
+				: total
 	const totalDisplay = showUsdTotalPrefix
 		? PriceFormatter.format(totalDisplayValue)
 		: PriceFormatter.formatAmountShort(String(totalDisplayValue))
@@ -407,7 +461,7 @@ function Component() {
 		<div className="font-mono text-[13px] flex flex-col items-center justify-center gap-8 pt-16 pb-8 grow print:pt-8 print:pb-0 print:grow-0">
 			<Receipt
 				blockNumber={receipt.blockNumber}
-				events={knownEvents}
+				events={displayEvents}
 				fee={fee}
 				feeBreakdown={feeBreakdown}
 				feeDisplay={feeDisplay}
@@ -420,6 +474,47 @@ function Component() {
 			/>
 		</div>
 	)
+}
+
+/**
+ * Builds a synthetic KnownEvent representing a streamed (off-chain) payment session.
+ * The final voucher proves all prior off-chain packets were authorized.
+ */
+function buildStreamedPaymentEvent(
+	packetSize: number,
+	packetCount: number,
+): KnownEvent {
+	const totalMicros = BigInt(Math.round(packetSize * packetCount * 1_000_000))
+
+	const parts: KnownEvent['parts'] = [
+		{ type: 'action', value: 'Streamed Payment' },
+	]
+
+	// Include total amount using pathUSD (6 decimals) if the fee token is available
+	if (TEMPO_FEE_TOKEN) {
+		parts.push({
+			type: 'amount',
+			value: {
+				value: totalMicros,
+				decimals: 6,
+				token: TEMPO_FEE_TOKEN,
+				symbol: 'pathUSD',
+			},
+		})
+	}
+
+	return {
+		type: 'streamed payment',
+		parts,
+		note: [
+			[
+				'Packets',
+				{ type: 'number', value: [BigInt(packetCount), 0] as [bigint, number] },
+			],
+			['Per packet', { type: 'text', value: `$${packetSize}` }],
+			['Settlement', { type: 'text', value: 'final voucher proven on-chain' }],
+		],
+	}
 }
 
 namespace TextRenderer {
