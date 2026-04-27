@@ -2046,7 +2046,10 @@ function FilterIndicator(props: {
 
 // Deterministic per-row coin-flip so SSR and client render agree
 function seededBool(i: number): boolean {
-	return ((i * 2654435761) >>> 0) % 2 === 0
+	let x = (i ^ 0xdeadbeef) >>> 0
+	x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0
+	x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0
+	return ((x ^ (x >>> 16)) & 1) === 0
 }
 
 function StreamedPaymentReceipt(props: {
@@ -2102,8 +2105,8 @@ function StreamedPaymentReceipt(props: {
 				<span>{packetCount.toLocaleString()}</span>
 			</div>
 
-			{/* Off-chain voucher rows */}
-			{Array.from({ length: packetCount }, (_, i) => {
+			{/* Off-chain voucher rows — capped at 3000 to prevent render crashes */}
+			{Array.from({ length: Math.min(packetCount, 3000) }, (_, i) => {
 				const amountParts = hasAlternating
 					? (seededBool(i) ? inputAmountParts : outputAmountParts)
 					: defaultAmountParts
