@@ -173,6 +173,8 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				final_voucher: z.optional(z.string()),
 				packet_size: z.optional(z.coerce.number()),
 				number: z.optional(z.coerce.number()),
+				input_amount: z.optional(z.coerce.number()),
+				output_amount: z.optional(z.coerce.number()),
 			}),
 		),
 	}),
@@ -1349,6 +1351,8 @@ function SectionsWrapper(props: {
 												transaction={transaction}
 												packetSize={voucher.packet_size ?? 0}
 												packetCount={voucher.number ?? 0}
+												inputAmount={voucher.input_amount}
+												outputAmount={voucher.output_amount}
 											/>
 										) : undefined,
 									}
@@ -2040,39 +2044,39 @@ function FilterIndicator(props: {
 	)
 }
 
+// Deterministic per-row coin-flip so SSR and client render agree
+function seededBool(i: number): boolean {
+	return ((i * 2654435761) >>> 0) % 2 === 0
+}
+
 function StreamedPaymentReceipt(props: {
 	transaction: EnrichedTransaction
 	packetSize: number
 	packetCount: number
+	inputAmount?: number
+	outputAmount?: number
 }) {
-	const { transaction, packetSize, packetCount } = props
+	const { transaction, packetSize, packetCount, inputAmount, outputAmount } = props
 
 	// Extract payee from the settlement/close channel event
 	const payee = transaction.knownEvents.find(
 		(e) => e.type === 'settle channel' || e.type === 'close channel',
 	)?.meta?.to
 
-	const packetMicros = BigInt(Math.round(packetSize * 1_000_000))
-	const voucherEvent: KnownEvent = {
-		type: 'send',
-		parts: [
-			{ type: 'action', value: 'Pay' },
-			...(TEMPO_FEE_TOKEN
-				? ([
-						{
-							type: 'amount',
-							value: { value: packetMicros, decimals: 6, token: TEMPO_FEE_TOKEN },
-						},
-					] as KnownEvent['parts'])
-				: []),
-			...(payee
-				? ([
-						{ type: 'text', value: 'to' },
-						{ type: 'account', value: payee },
-					] as KnownEvent['parts'])
-				: []),
-		],
-	}
+	const makeAmountPart = (amount: number): KnownEvent['parts'] =>
+		TEMPO_FEE_TOKEN
+			? [{ type: 'amount', value: { value: BigInt(Math.round(amount * 1_000_000)), decimals: 6, token: TEMPO_FEE_TOKEN } }]
+			: []
+
+	const defaultAmountParts = makeAmountPart(packetSize)
+	const inputAmountParts = inputAmount !== undefined ? makeAmountPart(inputAmount) : defaultAmountParts
+	const outputAmountParts = outputAmount !== undefined ? makeAmountPart(outputAmount) : defaultAmountParts
+
+	const hasAlternating = inputAmount !== undefined || outputAmount !== undefined
+
+	const payeeParts: KnownEvent['parts'] = payee
+		? [{ type: 'text', value: 'to' }, { type: 'account', value: payee }]
+		: []
 
 	const digits = String(packetCount).length
 
@@ -2099,25 +2103,30 @@ function StreamedPaymentReceipt(props: {
 			</div>
 
 			{/* Off-chain voucher rows */}
-			{Array.from({ length: packetCount }, (_, i) => (
-				<div
-					key={i}
-					className="flex items-center py-[9px] border-b border-dashed border-distinct"
-				>
-					<span className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
-						style={{ minWidth: `${digits}ch` }}
+			{Array.from({ length: packetCount }, (_, i) => {
+				const amountParts = hasAlternating
+					? (seededBool(i) ? inputAmountParts : outputAmountParts)
+					: defaultAmountParts
+				return (
+					<div
+						key={i}
+						className="flex items-center py-[9px] border-b border-dashed border-distinct"
 					>
-						{i + 1}
-					</span>
-					<span className="text-[11px] text-tertiary shrink-0 w-[64px]">off-chain</span>
-					<div className="flex items-center gap-[10px] ml-auto">
-						<TxEventDescription.Part part={{ type: 'action', value: 'Pay' }} />
-						{voucherEvent.parts.filter(p => p.type === 'amount').map((p, j) => (
-							<TxEventDescription.Part key={j} part={p} />
-						))}
+						<span className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
+							style={{ minWidth: `${digits}ch` }}
+						>
+							{i + 1}
+						</span>
+						<span className="text-[11px] text-tertiary shrink-0 w-[64px]">off-chain</span>
+						<div className="flex items-center gap-[10px] ml-auto">
+							<TxEventDescription.Part part={{ type: 'action', value: 'Pay' }} />
+							{amountParts.map((p, j) => (
+								<TxEventDescription.Part key={j} part={p} />
+							))}
+						</div>
 					</div>
-				</div>
-			))}
+				)
+			})}
 		</div>
 	)
 }
