@@ -157,6 +157,18 @@ export const fetchFeeAmmPools = createServerFn({ method: 'POST' }).handler(
 					}
 				})
 				.sort((a, b) => {
+					const pathUsd = Addresses.pathUsd.toLowerCase()
+					const aPriority = a.validatorToken.toLowerCase() === pathUsd
+					const bPriority = b.validatorToken.toLowerCase() === pathUsd
+
+					if (aPriority !== bPriority) {
+						return aPriority ? -1 : 1
+					}
+
+					if (a.reserveValidatorToken !== b.reserveValidatorToken) {
+						return a.reserveValidatorToken > b.reserveValidatorToken ? -1 : 1
+					}
+
 					const aTimestamp = a.latestMintAt ?? a.createdAt ?? 0
 					const bTimestamp = b.latestMintAt ?? b.createdAt ?? 0
 					return bTimestamp - aTimestamp
