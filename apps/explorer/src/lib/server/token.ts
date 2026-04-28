@@ -1,11 +1,13 @@
 import { createServerFn } from '@tanstack/react-start'
 import type { Address, Hex } from 'ox'
-import { getChainId } from 'wagmi/actions'
+import { Abis } from 'viem/tempo'
+import { getChainId, readContract } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import {
 	fetchTokenFirstTransferTimestamp,
 	fetchTokenHolderBalances,
+	fetchTokenRecentTransferParticipants,
 	fetchTokenTransferCount,
 	fetchTokenTransfers,
 } from '#lib/server/tempo-queries'
@@ -16,6 +18,8 @@ const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const CACHE_TTL = 60_000
 const COUNT_CAP = TOKEN_COUNT_MAX
 const HOLDERS_CACHE_MAX_ENTRIES = 20
+const HOLDERS_FALLBACK_CANDIDATE_LIMIT = 1_000
+const HOLDERS_RECENT_PARTICIPANT_FULL_QUERY_THRESHOLD = 300
 
 const holdersCache = new Map<
 	string,
@@ -66,6 +70,47 @@ const EMPTY_HOLDERS_RESPONSE: TokenHoldersApiResponse = {
 	limit: 0,
 }
 
+function sortHolders(
+	holders: Array<{ address: string; balance: bigint }>,
+): Array<{ address: string; balance: bigint }> {
+	return holders
+		.filter((holder) => holder.balance > 0n)
+		.sort((a, b) => (b.balance > a.balance ? 1 : -1))
+}
+
+async function fetchRecentHolderBalances(params: {
+	address: Address.Address
+	chainId: number
+	config: ReturnType<typeof getWagmiConfig>
+	candidates?: Address.Address[] | undefined
+}): Promise<Array<{ address: string; balance: bigint }>> {
+	const candidates =
+		params.candidates ??
+		(await fetchTokenRecentTransferParticipants(
+			params.address,
+			params.chainId,
+			HOLDERS_FALLBACK_CANDIDATE_LIMIT,
+		))
+
+	const balances = await Promise.all(
+		candidates.map(async (candidate) => {
+			try {
+				const balance = await readContract(params.config, {
+					address: params.address,
+					abi: Abis.tip20,
+					functionName: 'balanceOf',
+					args: [candidate],
+				})
+				return { address: candidate, balance }
+			} catch {
+				return { address: candidate, balance: 0n }
+			}
+		}),
+	)
+
+	return sortHolders(balances)
+}
+
 function setHoldersCache(
 	cacheKey: string,
 	allHolders: Array<{ address: string; balance: bigint }>,
@@ -109,10 +154,42 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 			if (cached && now - cached.timestamp < CACHE_TTL) {
 				allHolders = cached.data.allHolders
 			} else {
-				const fetched = await fetchTokenHolderBalances(data.address, chainId)
-				setHoldersCache(cacheKey, fetched, now)
-				allHolders =
-					fetched.length > COUNT_CAP ? fetched.slice(0, COUNT_CAP) : fetched
+				const recentParticipants = await fetchTokenRecentTransferParticipants(
+					data.address,
+					chainId,
+					HOLDERS_FALLBACK_CANDIDATE_LIMIT,
+				)
+
+				if (
+					recentParticipants.length >=
+					HOLDERS_RECENT_PARTICIPANT_FULL_QUERY_THRESHOLD
+				) {
+					allHolders = await fetchRecentHolderBalances({
+						address: data.address,
+						chainId,
+						config,
+						candidates: recentParticipants,
+					})
+					setHoldersCache(cacheKey, allHolders, now)
+				} else {
+					try {
+						const fetched = await fetchTokenHolderBalances(
+							data.address,
+							chainId,
+						)
+						setHoldersCache(cacheKey, fetched, now)
+						allHolders =
+							fetched.length > COUNT_CAP ? fetched.slice(0, COUNT_CAP) : fetched
+					} catch {
+						allHolders = await fetchRecentHolderBalances({
+							address: data.address,
+							chainId,
+							config,
+							candidates: recentParticipants,
+						})
+						setHoldersCache(cacheKey, allHolders, now)
+					}
+				}
 			}
 
 			const paginatedHolders = allHolders.slice(
