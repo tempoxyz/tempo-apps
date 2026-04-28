@@ -13,6 +13,7 @@ import {
 	zChainId,
 	zAddress,
 	VerificationJob,
+	validationCustomCodes,
 	type CompileOutput,
 } from '#schema.ts'
 import {
@@ -45,6 +46,11 @@ import { chains } from '#wagmi.config.ts'
 import { getLogger } from '#lib/logger.ts'
 
 const logger = getLogger(['tempo'])
+
+function getValidationCustomCode(error: z.core.$ZodError): string | undefined {
+	return error.issues.find((issue) => issue.code === 'custom')?.params
+		?.customCode
+}
 
 /** Jobs older than this are considered stale and can be retried (15 minutes). */
 const JOB_TTL_MS = 15 * 60 * 1_000
@@ -113,16 +119,48 @@ verifyRoute
 			'param',
 			z.object({
 				chainId: zChainId(),
-				address: zAddress(),
+				address: zAddress({ strict: true }),
 			}),
 			(value, context) => {
-				if (!value.success)
+				if (!value.success) {
+					const customCode = getValidationCustomCode(value.error)
+					const rawChainId = context.req.param('chainId')
+					const address = context.req.param('address')
+
+					if (customCode === validationCustomCodes.invalidChainId) {
+						return sourcifyError(
+							context,
+							400,
+							customCode,
+							`Invalid chainId format: ${rawChainId}`,
+						)
+					}
+
+					if (customCode === validationCustomCodes.unsupportedChain) {
+						return sourcifyError(
+							context,
+							400,
+							customCode,
+							`The chain with chainId ${rawChainId} is not supported`,
+						)
+					}
+
+					if (customCode === validationCustomCodes.invalidAddress) {
+						return sourcifyError(
+							context,
+							400,
+							customCode,
+							`Invalid address: ${address}`,
+						)
+					}
+
 					return sourcifyError(
 						context,
 						400,
-						'invalid_chain_id_or_address',
-						`Invalid chainId or address: ${JSON.stringify(value.data)} - ${z.prettifyError(value.error)}`,
+						'invalid_params',
+						z.prettifyError(value.error),
 					)
+				}
 			},
 		),
 		zValidator(

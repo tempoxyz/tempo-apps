@@ -3,38 +3,57 @@ import { Address, Hex } from 'ox'
 
 import { chainIds } from '#wagmi.config.ts'
 
+export const validationCustomCodes = {
+	invalidAddress: 'invalid_address',
+	invalidChainId: 'invalid_chain_id',
+	unsupportedChain: 'unsupported_chain',
+} as const
+
 export const zAddress = (options: { strict?: boolean } = {}) =>
 	z.string().check((ctx) => {
-		if (!Address.validate(ctx.value, options)) {
+		if (!Address.validate(ctx.value, options))
 			ctx.issues.push({
 				code: 'custom',
 				input: ctx.value,
 				message: 'Invalid address',
+				params: { customCode: validationCustomCodes.invalidAddress },
 			})
-		}
 	})
 
 export const zHash = (options: { strict?: boolean } = {}) =>
 	z.string().check((ctx) => {
-		if (!Hex.validate(ctx.value, options) || Hex.size(ctx.value) !== 32) {
+		if (!Hex.validate(ctx.value, options) || Hex.size(ctx.value) !== 32)
 			ctx.issues.push({
 				code: 'custom',
 				input: ctx.value,
 				message: 'Invalid hash length',
 			})
-		}
 	})
 
 export const zChainId = () =>
-	z.coerce.number().check((ctx) => {
-		if (!chainIds.includes(ctx.value)) {
-			ctx.issues.push({
-				code: 'custom',
-				input: ctx.value,
-				message: 'Unsupported chain ID',
-			})
-		}
-	})
+	z.pipe(
+		z.pipe(
+			z.string().check((ctx) => {
+				if (!/^\d+$/.test(ctx.value))
+					ctx.issues.push({
+						code: 'custom',
+						input: ctx.value,
+						message: 'Invalid chainId format',
+						params: { customCode: validationCustomCodes.invalidChainId },
+					})
+			}),
+			z.transform((value) => Number(value)),
+		),
+		z.number().check((ctx) => {
+			if (!chainIds.includes(ctx.value))
+				ctx.issues.push({
+					code: 'custom',
+					input: ctx.value,
+					message: 'Unsupported chain ID',
+					params: { customCode: validationCustomCodes.unsupportedChain },
+				})
+		}),
+	)
 
 export const StdJsonInput = z.object({
 	language: z.string(),

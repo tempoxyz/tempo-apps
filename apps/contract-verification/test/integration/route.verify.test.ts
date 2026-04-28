@@ -85,7 +85,43 @@ contract Token {
 		expect(job.verifiedContractId).toBeNull()
 	})
 
-	it('returns 400 for invalid chain ID', async () => {
+	it('returns 400 with invalid_chain_id for non-numeric chain ID', async () => {
+		const response = await requestFromWorker(
+			'/v2/verify/not-a-chain/0x1234567890123456789012345678901234567890',
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(validBody),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_chain_id')
+	})
+
+	it('returns 400 with invalid_chain_id for non-decimal chain ID', async () => {
+		const response = await requestFromWorker(
+			`/v2/verify/${validChainId}e0/0x1234567890123456789012345678901234567890`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(validBody),
+			},
+		)
+
+		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_chain_id')
+	})
+
+	it('returns 400 with unsupported_chain for unsupported chain ID', async () => {
 		const response = await requestFromWorker(
 			'/v2/verify/999999/0x1234567890123456789012345678901234567890',
 			{
@@ -96,9 +132,14 @@ contract Token {
 		)
 
 		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('unsupported_chain')
 	})
 
-	it('returns 400 for invalid address format', async () => {
+	it('returns 400 with invalid_address for invalid address format', async () => {
 		const response = await requestFromWorker(
 			`/v2/verify/${validChainId}/invalid-address`,
 			{
@@ -109,6 +150,11 @@ contract Token {
 		)
 
 		expect(response.status).toBe(400)
+		const body = z.parse(
+			z.object({ customCode: z.string() }),
+			await response.json(),
+		)
+		expect(body.customCode).toBe('invalid_address')
 	})
 
 	it('returns 400 for invalid JSON body', async () => {

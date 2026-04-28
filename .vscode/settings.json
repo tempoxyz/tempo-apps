@@ -1,14 +1,9 @@
 {
-	"typescript.tsdk": "node_modules/typescript/lib",
-	"typescript.enablePromptUseWorkspaceTsdk": true,
-	"typescript.preferences.importModuleSpecifierEnding": "js",
-	"javascript.preferences.importModuleSpecifierEnding": "js",
-	"typescript.preferences.importModuleSpecifier": "non-relative",
-	"javascript.preferences.importModuleSpecifier": "non-relative",
-	"typescript.preferences.autoImportFileExcludePatterns": [
-		"**/node_modules/**/_*/**"
-	],
-	"javascript.preferences.autoImportFileExcludePatterns": [
+	"js/ts.tsdk.path": "node_modules/typescript/lib",
+	"js/ts.tsdk.promptToUseWorkspaceVersion": true,
+	"js/ts.preferences.importModuleSpecifierEnding": "js",
+	"js/ts.preferences.importModuleSpecifier": "non-relative",
+	"js/ts.preferences.autoImportFileExcludePatterns": [
 		"**/node_modules/**/_*/**"
 	],
 	"editor.formatOnSave": true,
@@ -67,10 +62,6 @@
 		"**/*.cursor": true,
 		"**/*.claude": true,
 		"**/.pnpm-store/**": true
-	},
-
-	"markdownlint.config": {
-		"no-inline-html": false
 	},
 	"tailwindCSS.showPixelEquivalents": true,
 	"tailwindCSS.lint.cssConflict": "warning",
