@@ -16,6 +16,7 @@ import { useChains } from 'wagmi'
 import { getBlock } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { Address as AddressLink } from '#comps/Address'
+import { Amount } from '#comps/Amount'
 import { BlockCard } from '#comps/BlockCard'
 import { BreadcrumbsSlot } from '#comps/Breadcrumbs'
 import { DataGrid } from '#comps/DataGrid'
@@ -26,6 +27,10 @@ import { useTokenListMembership } from '#comps/TokenListMembership'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { cx } from '#lib/css'
 import type { KnownEvent } from '#lib/domain/known-events'
+import {
+	calculateKnownEventsTotal,
+	NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS,
+} from '#lib/domain/known-event-totals'
 import { PriceFormatter } from '#lib/formatting.ts'
 import { OG_BASE_URL } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
@@ -306,12 +311,12 @@ function TransactionsSection(props: TransactionsSectionProps) {
 		: true
 
 	const cols = [
-		{ label: 'Index', align: 'start', width: '0.5fr' },
-		{ label: 'Description', align: 'start', width: '3fr' },
-		{ label: 'From', align: 'end', width: '1fr' },
-		{ label: 'Hash', align: 'end', width: '1fr' },
-		{ label: 'Fee', align: 'end', width: '0.5fr' },
-		{ label: 'Total', align: 'end', width: '0.5fr' },
+		{ label: 'Index', align: 'start', minWidth: 60, width: '0.5fr' },
+		{ label: 'Description', align: 'start', minWidth: 260, width: '3fr' },
+		{ label: 'From', align: 'end', minWidth: 112, width: '1fr' },
+		{ label: 'Hash', align: 'end', minWidth: 112, width: '1fr' },
+		{ label: 'Fee', align: 'end', minWidth: 64, width: '0.5fr' },
+		{ label: 'Total', align: 'end', minWidth: 72, width: '0.5fr' },
 	] satisfies DataGrid.Props['columns']['stacked']
 
 	return (
@@ -340,15 +345,6 @@ function TransactionsSection(props: TransactionsSectionProps) {
 							: '—'
 
 					const txValue = transaction.value ?? 0n
-					const totalValue = Number(Value.format(txValue, decimals))
-					const totalRaw = Value.format(txValue, decimals)
-					const totalDisplay =
-						totalValue > 0
-							? showUsdPrefix
-								? PriceFormatter.format(totalValue)
-								: PriceFormatter.formatAmountShort(totalRaw)
-							: '—'
-
 					const amountDisplay = PriceFormatter.formatNativeAmount(
 						txValue,
 						decimals,
@@ -400,12 +396,12 @@ function TransactionsSection(props: TransactionsSectionProps) {
 							<span key="fee" className="text-tertiary">
 								{feeDisplay}
 							</span>,
-							<span
+							<TransactionTotalCell
 								key="total"
-								className={totalValue > 0 ? 'text-primary' : 'text-tertiary'}
-							>
-								{totalDisplay}
-							</span>,
+								transaction={transaction}
+								knownEvents={knownEvents}
+								loading={knownEventsLoading}
+							/>,
 						],
 						link: transaction.hash
 							? {
@@ -423,6 +419,77 @@ function TransactionsSection(props: TransactionsSectionProps) {
 			emptyState="No transactions were included in this block."
 		/>
 	)
+}
+
+function TransactionTotalCell(props: TransactionTotalCellProps) {
+	const { transaction, knownEvents, loading } = props
+	const { areTokensListed, isTokenListed } = useTokenListMembership()
+
+	const events = React.useMemo(
+		() => knownEvents?.filter((event) => event.type !== 'approval'),
+		[knownEvents],
+	)
+	const eventTokenAddresses = React.useMemo(
+		() =>
+			events?.flatMap((event) =>
+				event.parts.flatMap((part) =>
+					part.type === 'amount' ? [part.value.token] : [],
+				),
+			) ?? [],
+		[events],
+	)
+	const showUsdPrefix =
+		eventTokenAddresses.length > 0
+			? areTokensListed(TEMPO_CHAIN_ID, eventTokenAddresses)
+			: TEMPO_FEE_TOKEN
+				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
+				: true
+
+	if (loading && !knownEvents) {
+		return (
+			<span className="text-tertiary" title="Loading…">
+				…
+			</span>
+		)
+	}
+
+	const infiniteLabel = <span className="text-secondary">−</span>
+	const hasAmounts = events?.some((event) =>
+		event.parts.some((part) => part.type === 'amount'),
+	)
+
+	if (hasAmounts) {
+		const totalValue = calculateKnownEventsTotal(events ?? [])
+		if (totalValue !== 0n) {
+			return (
+				<Amount.Base
+					value={totalValue}
+					decimals={NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS}
+					infinite={infiniteLabel}
+					prefix={showUsdPrefix ? '$' : undefined}
+					short
+				/>
+			)
+		}
+	}
+
+	const value = transaction.value ?? 0n
+	if (value === 0n) return <span className="text-tertiary">—</span>
+	return (
+		<Amount.Base
+			value={value}
+			decimals={18}
+			infinite={infiniteLabel}
+			prefix={showUsdPrefix ? '$' : undefined}
+			short
+		/>
+	)
+}
+
+interface TransactionTotalCellProps {
+	transaction: BlockTransaction
+	knownEvents?: KnownEvent[]
+	loading?: boolean
 }
 
 interface TransactionsSectionProps {
