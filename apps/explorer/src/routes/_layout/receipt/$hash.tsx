@@ -21,6 +21,7 @@ import {
 	parseKnownEvents,
 	type KnownEvent,
 } from '#lib/domain/known-events'
+import { calculateKnownEventsTotal } from '#lib/domain/known-event-totals'
 import { getFeeBreakdown, LineItems } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
@@ -434,12 +435,18 @@ function Component() {
 		? voucherData.packetSize * voucherData.packetCount
 		: undefined
 
+	const eventsTotal = calculateKnownEventsTotal(displayEvents)
+	const eventsTotalDisplayValue =
+		eventsTotal > 0n ? Number(Value.format(eventsTotal, 18)) : undefined
+
 	const total =
 		streamingTotal !== undefined
 			? streamingTotal
-			: previousTotal !== undefined
-				? previousTotal - previousFee + fee
-				: fee
+			: eventsTotalDisplayValue !== undefined
+				? eventsTotalDisplayValue
+				: previousTotal !== undefined
+					? previousTotal - previousFee + fee
+					: fee
 	const totalTokenAddresses = lineItems.totals
 		.map((item) => item.price?.token)
 		.filter((token): token is `0x${string}` => Boolean(token))
@@ -450,9 +457,11 @@ function Component() {
 	const totalDisplayValue =
 		streamingTotal !== undefined
 			? streamingTotal
-			: previousTotal !== undefined
-				? previousTotal
-				: total
+			: eventsTotalDisplayValue !== undefined
+				? eventsTotalDisplayValue
+				: previousTotal !== undefined
+					? previousTotal
+					: total
 	const totalDisplay = showUsdTotalPrefix
 		? PriceFormatter.format(totalDisplayValue)
 		: PriceFormatter.formatAmountShort(String(totalDisplayValue))

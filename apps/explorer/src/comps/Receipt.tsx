@@ -140,17 +140,21 @@ export function Receipt(props: Receipt.Props) {
 									(part) => part.type === 'amount',
 								)
 								const firstAmountPart = amountParts[0]
-								const amountTokenAddresses = amountParts.flatMap((part) =>
-									part.type === 'amount' ? [part.value.token] : [],
-								)
+								const displayTotalAmount = event.totalAmount
+								const amountTokenAddresses = displayTotalAmount
+									? [displayTotalAmount.token]
+									: amountParts.flatMap((part) =>
+											part.type === 'amount' ? [part.value.token] : [],
+										)
 								const showUsdPrefix =
 									amountTokenAddresses.length > 0
 										? areTokensListed(TEMPO_CHAIN_ID, amountTokenAddresses)
 										: TEMPO_FEE_TOKEN
 											? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 											: true
-								const totalAmountBigInt =
-									event.type === 'swap' && amountParts.length > 0
+								const totalAmountBigInt = displayTotalAmount
+									? displayTotalAmount.value
+									: event.type === 'swap' && amountParts.length > 0
 										? firstAmountPart?.type === 'amount'
 											? firstAmountPart.value.value
 											: 0n
@@ -159,8 +163,9 @@ export function Receipt(props: Receipt.Props) {
 													return sum + part.value.value
 												return sum
 											}, 0n)
-								const decimals =
-									firstAmountPart?.type === 'amount'
+								const decimals = displayTotalAmount
+									? (displayTotalAmount.decimals ?? 6)
+									: firstAmountPart?.type === 'amount'
 										? (firstAmountPart.value.decimals ?? 6)
 										: 6
 

@@ -23,6 +23,20 @@ export const streamChannelAbi = [
 	},
 	{
 		type: 'event',
+		name: 'ChannelOpened',
+		inputs: [
+			{ indexed: true, name: 'channelId', type: 'bytes32' },
+			{ indexed: true, name: 'payer', type: 'address' },
+			{ indexed: true, name: 'payee', type: 'address' },
+			{ indexed: false, name: 'token', type: 'address' },
+			{ indexed: false, name: 'authorizedSigner', type: 'address' },
+			{ indexed: false, name: 'salt', type: 'bytes32' },
+			{ indexed: false, name: 'deposit', type: 'uint256' },
+		],
+		anonymous: false,
+	},
+	{
+		type: 'event',
 		name: 'Settled',
 		inputs: [
 			{ indexed: true, name: 'channelId', type: 'bytes32' },
@@ -223,6 +237,16 @@ const abi = [
 const FEE_MANAGER = Addresses.feeManager
 const STABLECOIN_EXCHANGE = Addresses.stablecoinDex
 export const STREAM_CHANNEL = '0x9d136eEa063eDE5418A6BC7bEafF009bBb6CFa70'
+export const STREAM_CHANNELS = [
+	STREAM_CHANNEL,
+	'0xe1c4d3dce17bc111181ddf716f75bae49e61a336',
+] as const
+
+export function isStreamChannelAddress(address: Address.Address): boolean {
+	return STREAM_CHANNELS.some((streamChannel) =>
+		Address.isEqual(address, streamChannel),
+	)
+}
 const KNOWN_ZONES: ReadonlyMap<Address.Address, { name: string }> = new Map([
 	[
 		Address.from('0x7069DeC4E64Fd07334A0933eDe836C17259c9B23'),
@@ -1085,7 +1109,7 @@ function createDetectors(
 		streamChannel(event: ParsedEvent) {
 			const { eventName, args, address } = event
 
-			if (!Address.isEqual(address, STREAM_CHANNEL)) return null
+			if (!isStreamChannelAddress(address)) return null
 
 			if (eventName === 'ChannelOpened') {
 				const { payer, payee, deposit, token } = args as {
@@ -1098,7 +1122,7 @@ function createDetectors(
 				return {
 					type: 'open channel',
 					parts: [
-						{ type: 'action', value: 'Open Channel' },
+						{ type: 'action', value: 'MPP Session Opened' },
 						{ type: 'amount', value: createAmount(deposit, token) },
 						{ type: 'text', value: 'to' },
 						{ type: 'account', value: payee },
@@ -1199,32 +1223,31 @@ function createDetectors(
 					refundedToPayer: bigint
 				}
 				const token = getStreamChannelToken?.(payer, payee)
+				const paidAmount = token
+					? createAmount(settledToPayee, token)
+					: undefined
 
 				return {
 					type: 'close channel',
 					parts: [
-						{ type: 'action', value: 'Close Channel' },
+						{ type: 'action', value: 'MPP Session Closed' },
+						{ type: 'text', value: 'Paid' },
+						paidAmount
+							? {
+									type: 'amount',
+									value: paidAmount,
+								}
+							: { type: 'number', value: settledToPayee },
+						{ type: 'text', value: 'Refunded' },
 						token
 							? {
 									type: 'amount',
-									value: createAmount(settledToPayee, token),
+									value: createAmount(refundedToPayer, token),
 								}
-							: { type: 'number', value: settledToPayee },
-						{ type: 'text', value: 'to' },
-						{ type: 'account', value: payee },
-					],
-					note: [
-						[
-							'Refund',
-							token
-								? {
-										type: 'amount',
-										value: createAmount(refundedToPayer, token),
-									}
-								: { type: 'number', value: refundedToPayer },
-						],
+							: { type: 'number', value: refundedToPayer },
 					],
 					meta: { from: payer, to: payee },
+					totalAmount: paidAmount,
 				}
 			}
 
@@ -1359,6 +1382,7 @@ export interface KnownEvent {
 		from?: Address.Address
 		to?: Address.Address
 	}
+	totalAmount?: Amount
 	failed?: boolean
 }
 
@@ -1913,7 +1937,7 @@ export function parseKnownEvents(
 
 	const streamChannelIndices = new Set<number>()
 	const hasStreamChannelEvents = dedupedEvents.some((event) =>
-		Address.isEqual(event.address, STREAM_CHANNEL),
+		isStreamChannelAddress(event.address),
 	)
 
 	if (hasStreamChannelEvents) {
@@ -1923,7 +1947,7 @@ export function parseKnownEvents(
 			payee: Address.Address
 		}> = []
 		for (const event of dedupedEvents) {
-			if (!Address.isEqual(event.address, STREAM_CHANNEL)) continue
+			if (!isStreamChannelAddress(event.address)) continue
 			const args = event.args as {
 				payer?: Address.Address
 				payee?: Address.Address
@@ -1936,16 +1960,18 @@ export function parseKnownEvents(
 		for (const [index, event] of dedupedEvents.entries()) {
 			if (!isTransferEvent(event)) continue
 
-			const involvesStreamChannel =
-				Address.isEqual(event.args.from, STREAM_CHANNEL) ||
-				Address.isEqual(event.args.to, STREAM_CHANNEL)
+			const streamChannel = STREAM_CHANNELS.find(
+				(streamChannel) =>
+					Address.isEqual(event.args.from, streamChannel) ||
+					Address.isEqual(event.args.to, streamChannel),
+			)
 
-			if (!involvesStreamChannel) continue
+			if (!streamChannel) continue
 
 			streamChannelIndices.add(index)
 
 			// Associate this transfer's token with the matching payer/payee pair
-			const otherParty = Address.isEqual(event.args.from, STREAM_CHANNEL)
+			const otherParty = Address.isEqual(event.args.from, streamChannel)
 				? event.args.to
 				: event.args.from
 			for (const pair of streamChannelPairs) {

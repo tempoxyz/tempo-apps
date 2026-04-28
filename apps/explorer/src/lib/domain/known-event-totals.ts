@@ -2,7 +2,8 @@ import type { KnownEvent } from '#lib/domain/known-events'
 
 export const NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS = 18
 
-type AmountValue = KnownEvent['parts'][number] & { type: 'amount' }
+type Amount = NonNullable<KnownEvent['totalAmount']>
+type AmountPart = KnownEvent['parts'][number] & { type: 'amount' }
 
 type Flow = {
 	inflow: bigint
@@ -13,9 +14,9 @@ function toBigInt(value: bigint | string | number): bigint {
 	return typeof value === 'bigint' ? value : BigInt(value)
 }
 
-function normalizeAmount(part: AmountValue): bigint {
-	const decimals = part.value.decimals ?? 6
-	const value = toBigInt(part.value.value as bigint | string | number)
+function normalizeAmount(amountValue: Amount): bigint {
+	const decimals = amountValue.decimals ?? 6
+	const value = toBigInt(amountValue.value as bigint | string | number)
 	const decimalDelta = NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS - decimals
 
 	if (decimalDelta === 0) return value
@@ -30,25 +31,27 @@ export function calculateKnownEventsTotal(
 	const flowsByToken = new Map<string, Map<string, Flow>>()
 
 	for (const event of events) {
-		const amounts = event.parts.filter(
-			(part): part is AmountValue => part.type === 'amount',
-		)
+		const amounts = event.totalAmount
+			? [event.totalAmount]
+			: event.parts
+					.filter((part): part is AmountPart => part.type === 'amount')
+					.map((part) => part.value)
 		if (amounts.length === 0) continue
 
 		const from = event.meta?.from?.toLowerCase()
 		const to = event.meta?.to?.toLowerCase()
 
 		if (!from || !to) {
-			fallbackTotal += amounts.reduce((max, part) => {
-				const amount = normalizeAmount(part)
+			fallbackTotal += amounts.reduce((max, amountValue) => {
+				const amount = normalizeAmount(amountValue)
 				return amount > max ? amount : max
 			}, 0n)
 			continue
 		}
 
-		for (const part of amounts) {
-			const token = part.value.token.toLowerCase()
-			const amount = normalizeAmount(part)
+		for (const amountValue of amounts) {
+			const token = amountValue.token.toLowerCase()
+			const amount = normalizeAmount(amountValue)
 			let flows = flowsByToken.get(token)
 			if (!flows) {
 				flows = new Map()
