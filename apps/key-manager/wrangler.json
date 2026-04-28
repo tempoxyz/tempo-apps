@@ -8,7 +8,7 @@
 	"preview_urls": true,
 	"keep_vars": true,
 	"vars": {
-		"ALLOWED_ORIGINS": "https://tempo.xyz",
+		"ALLOWED_ORIGINS": "*",
 		"RP_ID": "tempo.xyz"
 	},
 	"observability": {
