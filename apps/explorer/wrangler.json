@@ -23,6 +23,16 @@
 			"simple": { "limit": 20, "period": 60 }
 		}
 	],
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["ExplorerExportRateLimit"]
+		},
+		{
+			"tag": "v2",
+			"deleted_classes": ["ExplorerExportRateLimit"]
+		}
+	],
 	"browser": { "binding": "BROWSER" },
 	"env": {
 		"testnet": {
