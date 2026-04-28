@@ -1294,7 +1294,7 @@ function SectionsWrapper(props: {
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
 					contextual: (
-						<div className="flex items-center justify-start gap-[8px] min-[800px]:justify-end">
+						<div className="flex items-center justify-end gap-[8px]">
 							<TransactionFilters
 								status={status}
 								period={period}
