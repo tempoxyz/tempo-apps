@@ -54,7 +54,10 @@ import {
 	calculateTotalHoldings,
 	useBalancesData,
 } from '#lib/address-balances'
-import { normalizeSearchInput } from '#lib/tempo-address'
+import {
+	getVirtualAddressParts,
+	normalizeSearchInput,
+} from '#lib/tempo-address'
 import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type ContractSource,
@@ -82,7 +85,6 @@ import {
 	historyQueryOptions,
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
-import { fetchAddressOgMeta } from '#lib/server/tempo-queries'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
@@ -300,9 +302,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 						)
 					: Promise.resolve(undefined)
 
-			// Fetch OG metadata (txCount + timestamps) via direct TIDX query
+			// Fetch address metadata through the API route so TIDX credentials stay
+			// server-side when loaders run in the browser.
 			const ogMetaPromise = timeout(
-				fetchAddressOgMeta(address, TEMPO_CHAIN_ID).catch(() => undefined),
+				fetchAddressMetadata(address).catch(() => undefined),
 				QUERY_TIMEOUT_MS,
 			)
 
@@ -792,6 +795,7 @@ function AccountCardWithTimestamps(props: {
 			: undefined
 
 	const isTip20 = Tip20.isTip20Address(address)
+	const virtualAddressParts = getVirtualAddressParts(address)
 	const { isTokenListed } = useTokenListMembership()
 	const totalValue = React.useMemo(
 		() =>
@@ -817,6 +821,7 @@ function AccountCardWithTimestamps(props: {
 				accountType={resolvedAccountType}
 				isToken={isToken}
 				tokenName={tokenMetadata?.name}
+				virtualAddressParts={virtualAddressParts}
 			/>
 			{isToken && (
 				<ClientOnly fallback={null}>
@@ -2059,21 +2064,30 @@ function StreamedPaymentReceipt(props: {
 	inputAmount?: number
 	outputAmount?: number
 }) {
-	const { transaction, packetSize, packetCount, inputAmount, outputAmount } = props
-
-	// Extract payee from the settlement/close channel event
-	const payee = transaction.knownEvents.find(
-		(e) => e.type === 'settle channel' || e.type === 'close channel',
-	)?.meta?.to
+	const { transaction, packetSize, packetCount, inputAmount, outputAmount } =
+		props
 
 	const makeAmountPart = (amount: number): KnownEvent['parts'] =>
 		TEMPO_FEE_TOKEN
-			? [{ type: 'amount', value: { value: BigInt(Math.round(amount * 1_000_000)), decimals: 6, token: TEMPO_FEE_TOKEN } }]
+			? [
+					{
+						type: 'amount',
+						value: {
+							value: BigInt(Math.round(amount * 1_000_000)),
+							decimals: 6,
+							token: TEMPO_FEE_TOKEN,
+						},
+					},
+				]
 			: []
 
 	const defaultAmountParts = makeAmountPart(packetSize)
-	const inputAmountParts = inputAmount !== undefined ? makeAmountPart(inputAmount) : defaultAmountParts
-	const outputAmountParts = outputAmount !== undefined ? makeAmountPart(outputAmount) : defaultAmountParts
+	const inputAmountParts =
+		inputAmount !== undefined ? makeAmountPart(inputAmount) : defaultAmountParts
+	const outputAmountParts =
+		outputAmount !== undefined
+			? makeAmountPart(outputAmount)
+			: defaultAmountParts
 
 	const hasAlternating = inputAmount !== undefined || outputAmount !== undefined
 
@@ -2083,15 +2097,22 @@ function StreamedPaymentReceipt(props: {
 		<div className="pb-4 font-mono text-[13px]">
 			{/* On-chain settlement — visually part of the main row */}
 			<div className="bg-base-alt -mx-[16px] px-[16px] py-[10px] border-b-2 border-base-border flex items-center">
-				<span className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
+				<span
+					className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
 					style={{ minWidth: `${digits}ch` }}
 				>
 					↓
 				</span>
-				<span className="text-[11px] text-accent shrink-0 w-[64px] italic">on-chain</span>
-				{transaction.knownEvents.filter(e => e.type === 'settle channel' || e.type === 'close channel').map((e, i) => (
-					<TxEventDescription key={i} event={e} />
-				))}
+				<span className="text-[11px] text-accent shrink-0 w-[64px] italic">
+					on-chain
+				</span>
+				{transaction.knownEvents
+					.filter(
+						(e) => e.type === 'settle channel' || e.type === 'close channel',
+					)
+					.map((e, i) => (
+						<TxEventDescription key={i} event={e} />
+					))}
 			</div>
 
 			{/* Off-chain section header */}
@@ -2104,21 +2125,28 @@ function StreamedPaymentReceipt(props: {
 			{/* Off-chain voucher rows — capped at 3000 to prevent render crashes */}
 			{Array.from({ length: Math.min(packetCount, 3000) }, (_, i) => {
 				const amountParts = hasAlternating
-					? (seededBool(i) ? inputAmountParts : outputAmountParts)
+					? seededBool(i)
+						? inputAmountParts
+						: outputAmountParts
 					: defaultAmountParts
 				return (
 					<div
 						key={i}
 						className="flex items-center py-[9px] border-b border-dashed border-distinct"
 					>
-						<span className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
+						<span
+							className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
 							style={{ minWidth: `${digits}ch` }}
 						>
 							{i + 1}
 						</span>
-						<span className="text-[11px] text-tertiary shrink-0 w-[64px]">off-chain</span>
+						<span className="text-[11px] text-tertiary shrink-0 w-[64px]">
+							off-chain
+						</span>
 						<div className="flex items-center gap-[10px] ml-auto">
-							<TxEventDescription.Part part={{ type: 'action', value: 'Pay' }} />
+							<TxEventDescription.Part
+								part={{ type: 'action', value: 'Pay' }}
+							/>
 							{amountParts.map((p, j) => (
 								<TxEventDescription.Part key={j} part={p} />
 							))}

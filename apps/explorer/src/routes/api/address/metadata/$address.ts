@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import * as Address from 'ox/Address'
+import { VirtualAddress } from 'ox/tempo'
 import { getCode } from 'viem/actions'
 import { getAccountType, type AccountType } from '#lib/account'
 import { isTip20Address } from '#lib/domain/tip20'
@@ -7,6 +8,7 @@ import { hasIndexSupply } from '#lib/env'
 import {
 	fetchAddressTxAggregate,
 	fetchTokenTransferAggregate,
+	fetchVirtualAddressTransferAggregate,
 } from '#lib/server/tempo-queries'
 import { parseTimestamp } from '#lib/timestamp'
 import { zAddress } from '#lib/zod'
@@ -43,6 +45,7 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 					const client = getBatchedClient()
 					const { id: chainId } = getTempoChain()
 					const isTip20 = isTip20Address(address)
+					const isVirtual = VirtualAddress.validate(address)
 
 					const bytecodePromise = getCode(client, { address }).catch(
 						() => undefined,
@@ -50,7 +53,26 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 
 					let response: AddressMetadataResponse
 
-					if (isTip20) {
+					if (isVirtual) {
+						const [bytecode, result] = await Promise.all([
+							bytecodePromise,
+							fetchVirtualAddressTransferAggregate(address, chainId).catch(
+								() => ({
+									count: 0,
+									oldestTimestamp: undefined,
+									latestTimestamp: undefined,
+								}),
+							),
+						])
+						response = {
+							address,
+							chainId,
+							accountType: getAccountType(bytecode),
+							txCount: result.count ?? 0,
+							lastActivityTimestamp: parseTimestamp(result.latestTimestamp),
+							createdTimestamp: parseTimestamp(result.oldestTimestamp),
+						}
+					} else if (isTip20) {
 						const [bytecode, result] = await Promise.all([
 							bytecodePromise,
 							fetchTokenTransferAggregate(address, chainId).catch(() => ({

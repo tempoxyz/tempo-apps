@@ -22,17 +22,20 @@ export function AccountCard(props: AccountCard.Props) {
 		accountType,
 		isToken,
 		tokenName,
+		virtualAddressParts,
 	} = props
 
 	const { copy, notifying } = useCopy()
 
-	const titleLabel = isToken
-		? 'Token'
-		: accountType === 'contract'
-			? 'Contract'
-			: 'Address'
+	const titleLabel = virtualAddressParts
+		? 'Virtual Address'
+		: isToken
+			? 'Token'
+			: accountType === 'contract'
+				? 'Contract'
+				: 'Address'
 
-	const titleVisible = accountType === 'contract'
+	const titleVisible = virtualAddressParts || accountType === 'contract'
 
 	return (
 		<InfoCard
@@ -79,31 +82,62 @@ export function AccountCard(props: AccountCard.Props) {
 						{address}
 					</p>
 				</button>,
-				...(!hideHoldings
+				...(virtualAddressParts
 					? [
 							{
-								label: 'Holdings',
+								label: 'Master ID',
 								value: (
-									<ClientOnly
-										fallback={
-											<span className="text-tertiary text-[13px]">…</span>
-										}
-									>
-										{totalValue !== undefined ? (
-											<span
-												className="text-[13px] text-primary"
-												title={PriceFormatter.format(totalValue)}
-											>
-												{PriceFormatter.format(totalValue, { format: 'short' })}
-											</span>
-										) : (
-											<span className="text-tertiary text-[13px]">…</span>
-										)}
-									</ClientOnly>
+									<span className="text-[13px] text-primary">
+										{virtualAddressParts.masterId}
+									</span>
+								),
+							},
+							{
+								label: 'User Tag',
+								value: (
+									<span className="text-[13px] text-primary">
+										{virtualAddressParts.userTag}
+									</span>
 								),
 							},
 						]
 					: []),
+				...(virtualAddressParts
+					? [
+							{
+								label: 'Holdings',
+								value: (
+									<span className="text-[13px] text-tertiary">Forwarded</span>
+								),
+							},
+						]
+					: !hideHoldings
+						? [
+								{
+									label: 'Holdings',
+									value: (
+										<ClientOnly
+											fallback={
+												<span className="text-tertiary text-[13px]">…</span>
+											}
+										>
+											{totalValue !== undefined ? (
+												<span
+													className="text-[13px] text-primary"
+													title={PriceFormatter.format(totalValue)}
+												>
+													{PriceFormatter.format(totalValue, {
+														format: 'short',
+													})}
+												</span>
+											) : (
+												<span className="text-tertiary text-[13px]">…</span>
+											)}
+										</ClientOnly>
+									),
+								},
+							]
+						: []),
 				{
 					label: 'Active',
 					value: (
@@ -154,5 +188,11 @@ export declare namespace AccountCard {
 		accountType?: AccountType | undefined
 		isToken?: boolean | undefined
 		tokenName?: string | undefined
+		virtualAddressParts?:
+			| {
+					masterId: string
+					userTag: string
+			  }
+			| undefined
 	}
 }

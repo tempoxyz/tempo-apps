@@ -1,4 +1,16 @@
-import { TempoAddress } from 'viem/tempo'
+import { TempoAddress, VirtualAddress } from 'ox/tempo'
+
+export type VirtualAddressParts = {
+	masterId: string
+	userTag: string
+}
+
+export function getVirtualAddressParts(
+	address: string,
+): VirtualAddressParts | undefined {
+	if (!VirtualAddress.validate(address)) return undefined
+	return VirtualAddress.parse(address)
+}
 
 export function normalizeSearchInput(input: string): string {
 	const query = input.trim()
