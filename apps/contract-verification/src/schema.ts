@@ -129,7 +129,7 @@ export const Contract = z.object({
 		bytecode: z.object({
 			object: z.string(),
 			sourceMap: z.optional(z.string()),
-			linkReferences: z.optional(z.record(z.string(), z.array(LinkReference))),
+			linkReferences: z.optional(LinkReferences),
 		}),
 		deployedBytecode: z.object({
 			object: z.string(),
