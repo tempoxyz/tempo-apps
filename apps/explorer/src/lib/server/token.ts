@@ -26,6 +26,7 @@ const holdersCache = new Map<
 	{
 		data: {
 			allHolders: Array<{ address: string; balance: bigint }>
+			totalKnown: boolean
 		}
 		timestamp: number
 	}
@@ -56,6 +57,7 @@ export type TokenHoldersApiResponse = {
 	}>
 	total: number
 	totalCapped: boolean
+	totalKnown: boolean
 	totalBalance: string
 	offset: number
 	limit: number
@@ -65,6 +67,7 @@ const EMPTY_HOLDERS_RESPONSE: TokenHoldersApiResponse = {
 	holders: [],
 	total: 0,
 	totalCapped: false,
+	totalKnown: true,
 	totalBalance: '0',
 	offset: 0,
 	limit: 0,
@@ -130,6 +133,7 @@ function setHoldersCache(
 	cacheKey: string,
 	allHolders: Array<{ address: string; balance: bigint }>,
 	timestamp: number,
+	totalKnown = true,
 ): void {
 	const hasExisting = holdersCache.has(cacheKey)
 
@@ -148,6 +152,7 @@ function setHoldersCache(
 				allHolders.length > COUNT_CAP
 					? allHolders.slice(0, COUNT_CAP)
 					: allHolders,
+			totalKnown,
 		},
 		timestamp,
 	})
@@ -165,9 +170,11 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 			const now = Date.now()
 
 			let allHolders: Array<{ address: string; balance: bigint }>
+			let totalKnown = true
 
 			if (cached && now - cached.timestamp < CACHE_TTL) {
 				allHolders = cached.data.allHolders
+				totalKnown = cached.data.totalKnown
 			} else {
 				try {
 					const fetched = await fetchTokenHolderBalances(data.address, chainId)
@@ -184,7 +191,8 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 						chainId,
 						config,
 					})
-					setHoldersCache(cacheKey, allHolders, now)
+					totalKnown = false
+					setHoldersCache(cacheKey, allHolders, now, totalKnown)
 				}
 			}
 
@@ -199,8 +207,8 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 			}))
 
 			const rawTotal = allHolders.length
-			const totalCapped = rawTotal >= COUNT_CAP
-			const total = totalCapped ? COUNT_CAP : rawTotal
+			const totalCapped = totalKnown && rawTotal >= COUNT_CAP
+			const total = rawTotal >= COUNT_CAP ? COUNT_CAP : rawTotal
 			const nextOffset = data.offset + holders.length
 
 			const totalBalance = allHolders.reduce((sum, h) => sum + h.balance, 0n)
@@ -209,6 +217,7 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 				holders,
 				total,
 				totalCapped,
+				totalKnown,
 				totalBalance: totalBalance.toString(),
 				offset: nextOffset,
 				limit: holders.length,
