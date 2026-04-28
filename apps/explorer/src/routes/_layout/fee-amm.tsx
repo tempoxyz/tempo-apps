@@ -45,7 +45,7 @@ function FeeAmmPage(): React.JSX.Element {
 	const columns: DataGrid.Column[] = [
 		{ label: 'Pool', align: 'start', width: '2.5fr', minWidth: 240 },
 		{ label: 'Reserves', align: 'start', width: '2.5fr', minWidth: 280 },
-		{ label: 'LP Supply', align: 'start', width: 140 },
+		{ label: 'Liquidity', align: 'start', width: 140 },
 		{
 			label: (
 				<TimeColumnHeader
@@ -135,8 +135,11 @@ function FeeAmmPage(): React.JSX.Element {
 															<span
 																key="supply"
 																className="text-secondary tabular-nums"
+																title={PriceFormatter.format(pool.liquidityUsd)}
 															>
-																{PriceFormatter.format(pool.totalSupply)}
+																{PriceFormatter.format(pool.liquidityUsd, {
+																	format: 'short',
+																})}
 															</span>,
 															<span
 																key="mints"

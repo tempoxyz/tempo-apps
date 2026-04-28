@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import type { Address } from 'ox'
+import * as Value from 'ox/Value'
 import { Abis, Addresses } from 'viem/tempo'
 import type { Config } from 'wagmi'
 import { getChainId, readContracts } from 'wagmi/actions'
@@ -21,7 +22,7 @@ export type FeeAmmPoolRow = {
 export type FeeAmmPool = FeeAmmPoolRow & {
 	reserveUserToken: bigint
 	reserveValidatorToken: bigint
-	totalSupply: bigint
+	liquidityUsd: number
 	userTokenSymbol?: string | undefined
 	userTokenName?: string | undefined
 	userTokenDecimals?: number | undefined
@@ -116,38 +117,39 @@ export const fetchFeeAmmPools = createServerFn({ method: 'POST' }).handler(
 			)
 
 			const contractResults = await readContracts(config, {
-				contracts: pools.flatMap((pool) => [
-					{
-						address: Addresses.feeManager,
-						abi: Abis.feeAmm,
-						functionName: 'getPool',
-						args: [pool.userToken, pool.validatorToken],
-					},
-					{
-						address: Addresses.feeManager,
-						abi: Abis.feeAmm,
-						functionName: 'totalSupply',
-						args: [pool.poolId],
-					},
-				]),
+				contracts: pools.map((pool) => ({
+					address: Addresses.feeManager,
+					abi: Abis.feeAmm,
+					functionName: 'getPool',
+					args: [pool.userToken, pool.validatorToken],
+				})),
 			})
 
 			return pools
 				.map((pool, index) => {
-					const reservesResult = contractResults[index * 2]?.result
-					const totalSupplyResult = contractResults[index * 2 + 1]?.result
+					const reservesResult = contractResults[index]?.result
 					const reserves = parsePoolReserves(reservesResult)
 					const userTokenMetadata = tokenMetadata.get(pool.userToken)
 					const validatorTokenMetadata = tokenMetadata.get(pool.validatorToken)
+					const liquidityUsd =
+						Number.parseFloat(
+							Value.format(
+								reserves.reserveUserToken,
+								userTokenMetadata?.decimals ?? 0,
+							),
+						) +
+						Number.parseFloat(
+							Value.format(
+								reserves.reserveValidatorToken,
+								validatorTokenMetadata?.decimals ?? 0,
+							),
+						)
 
 					return {
 						...pool,
 						reserveUserToken: reserves.reserveUserToken,
 						reserveValidatorToken: reserves.reserveValidatorToken,
-						totalSupply:
-							typeof totalSupplyResult === 'bigint'
-								? totalSupplyResult
-								: BigInt(totalSupplyResult ?? 0),
+						liquidityUsd,
 						userTokenName: userTokenMetadata?.name,
 						userTokenSymbol: userTokenMetadata?.symbol,
 						userTokenDecimals: userTokenMetadata?.decimals,
@@ -165,8 +167,8 @@ export const fetchFeeAmmPools = createServerFn({ method: 'POST' }).handler(
 						return aPriority ? -1 : 1
 					}
 
-					if (a.reserveValidatorToken !== b.reserveValidatorToken) {
-						return a.reserveValidatorToken > b.reserveValidatorToken ? -1 : 1
+					if (a.liquidityUsd !== b.liquidityUsd) {
+						return b.liquidityUsd - a.liquidityUsd
 					}
 
 					const aTimestamp = a.latestMintAt ?? a.createdAt ?? 0
