@@ -117,7 +117,9 @@ jobs:
           # Cloudflare does not generate Version Preview URLs for Workers that
           # implement Durable Objects. CSV export rate limiting already falls
           # back open when this binding is absent, so omit it for PR previews.
-          jq 'del(.durable_objects, .migrations) | (.env |= with_entries(.value |= del(.durable_objects, .migrations)))' wrangler.json > wrangler.preview.json
+          tmp_config="$(mktemp)"
+          jq 'del(.durable_objects, .migrations)' dist/server/wrangler.json > "$tmp_config"
+          mv "$tmp_config" dist/server/wrangler.json
         working-directory: apps/${{ matrix.app }}
 
       - name: Upload Worker Version
@@ -129,7 +131,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/${{ matrix.app }}
           environment: ${{ env.CLOUDFLARE_ENV }}
-          command: ${{ matrix.app == 'explorer' && 'versions upload --config wrangler.preview.json' || 'versions upload' }}
+          command: versions upload
 
       - name: Save Deployment Info
         if: always()
