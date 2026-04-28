@@ -19,7 +19,6 @@ const CACHE_TTL = 60_000
 const COUNT_CAP = TOKEN_COUNT_MAX
 const HOLDERS_CACHE_MAX_ENTRIES = 20
 const HOLDERS_FALLBACK_CANDIDATE_LIMIT = 25
-const HOLDERS_RECENT_PARTICIPANT_FULL_QUERY_THRESHOLD = 20
 const HOLDERS_BALANCE_READ_BATCH_SIZE = 25
 
 const holdersCache = new Map<
@@ -170,52 +169,22 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 			if (cached && now - cached.timestamp < CACHE_TTL) {
 				allHolders = cached.data.allHolders
 			} else {
-				const recentParticipants = await fetchTokenRecentTransferParticipants(
-					data.address,
-					chainId,
-					HOLDERS_FALLBACK_CANDIDATE_LIMIT,
-				).catch((error) => {
-					console.error(
-						'Failed to fetch recent transfer participants, trying full holders:',
-						error,
-					)
-					return null
-				})
-
-				if (!recentParticipants) {
+				try {
 					const fetched = await fetchTokenHolderBalances(data.address, chainId)
 					setHoldersCache(cacheKey, fetched, now)
 					allHolders =
 						fetched.length > COUNT_CAP ? fetched.slice(0, COUNT_CAP) : fetched
-				} else if (
-					recentParticipants.length >=
-					HOLDERS_RECENT_PARTICIPANT_FULL_QUERY_THRESHOLD
-				) {
+				} catch (error) {
+					console.error(
+						'Failed to fetch full holders, trying recent participants:',
+						error,
+					)
 					allHolders = await fetchRecentHolderBalances({
 						address: data.address,
 						chainId,
 						config,
-						candidates: recentParticipants,
 					})
 					setHoldersCache(cacheKey, allHolders, now)
-				} else {
-					try {
-						const fetched = await fetchTokenHolderBalances(
-							data.address,
-							chainId,
-						)
-						setHoldersCache(cacheKey, fetched, now)
-						allHolders =
-							fetched.length > COUNT_CAP ? fetched.slice(0, COUNT_CAP) : fetched
-					} catch {
-						allHolders = await fetchRecentHolderBalances({
-							address: data.address,
-							chainId,
-							config,
-							candidates: recentParticipants,
-						})
-						setHoldersCache(cacheKey, allHolders, now)
-					}
 				}
 			}
 
