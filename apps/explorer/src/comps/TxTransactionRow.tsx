@@ -10,6 +10,10 @@ import { useTokenListMembership } from '#comps/TokenListMembership'
 import { FormattedTimestamp, type TimeFormat } from '#comps/TimeFormat'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
+import {
+	calculateKnownEventsTotal,
+	NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS,
+} from '#lib/domain/known-event-totals'
 import { PriceFormatter } from '#lib/formatting'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain } from '#wagmi.config.ts'
@@ -166,20 +170,8 @@ export function TransactionTotal(props: { transaction: Transaction }) {
 			/>
 		)
 
-	// For each event, take the max amount (avoids double-counting swap legs),
-	// then sum across events.
-	const normalizedDecimals = 18
-	const totalValue = events.reduce((sum, event) => {
-		let maxAmount = 0n
-		for (const part of event.parts) {
-			if (part.type !== 'amount') continue
-			const decimals = part.value.decimals ?? 6
-			const scale = 10n ** BigInt(normalizedDecimals - decimals)
-			const normalized = part.value.value * scale
-			if (normalized > maxAmount) maxAmount = normalized
-		}
-		return sum + maxAmount
-	}, 0n)
+	const normalizedDecimals = NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS
+	const totalValue = calculateKnownEventsTotal(events)
 
 	if (totalValue === 0n) {
 		const value = transaction.value ? Hex.toBigInt(transaction.value) : 0n
