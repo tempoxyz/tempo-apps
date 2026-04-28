@@ -1215,12 +1215,13 @@ function SectionsWrapper(props: {
 				/>
 			),
 			align: 'start',
+			minWidth: 86,
 			width: '0.5fr',
 		},
-		{ label: 'Description', align: 'start', width: '2fr' },
-		{ label: 'Hash', align: 'end', width: '1fr' },
-		{ label: 'Fee', align: 'end', width: '0.5fr' },
-		{ label: 'Total', align: 'end', width: '0.5fr' },
+		{ label: 'Description', align: 'start', minWidth: 260, width: '2fr' },
+		{ label: 'Hash', align: 'end', minWidth: 112, width: '1fr' },
+		{ label: 'Fee', align: 'end', minWidth: 64, width: '0.5fr' },
+		{ label: 'Total', align: 'end', minWidth: 72, width: '0.5fr' },
 	]
 
 	const transfersColumns: DataGrid.Column[] = [
@@ -1293,7 +1294,7 @@ function SectionsWrapper(props: {
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
 					contextual: (
-						<div className="flex flex-col gap-[10px] min-[800px]:flex-row min-[800px]:items-center min-[800px]:justify-end">
+						<div className="flex items-center justify-end gap-[8px]">
 							<TransactionFilters
 								status={status}
 								period={period}
