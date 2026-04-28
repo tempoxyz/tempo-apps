@@ -83,6 +83,56 @@ describe('parseKnownEvents', () => {
 		expect(knownEvents[0]?.type).toBe('approval')
 	})
 
+	it('labels virtual address outgoing transfers as forwarded', () => {
+		const hash = `0x${'5'.repeat(64)}` as const
+		const virtualAddress = '0xb385A519FDFDFDfdfdFDfdFdFDFD000000000001' as const
+		const amount = 100_000_000n
+		const logs = [
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: {
+							from: accountAddress,
+							to: virtualAddress,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			),
+			mockLog(
+				{
+					address: userTokenAddress,
+					topics: encodeEventTopics({
+						abi: Abis.tip20,
+						eventName: 'Transfer',
+						args: {
+							from: virtualAddress,
+							to: recipientAddress,
+						},
+					}) as [Hex.Hex, ...Hex.Hex[]],
+					data: encodeAbiParameters([{ type: 'uint256' }], [amount]),
+				},
+				hash,
+			),
+		]
+
+		const receipt = mockReceipt(logs, accountAddress, hash)
+		const knownEvents = parseKnownEvents(receipt, { getTokenMetadata })
+
+		expect(knownEvents[0]?.parts[0]).toEqual({
+			type: 'action',
+			value: 'Send',
+		})
+		expect(knownEvents[1]?.parts[0]).toEqual({
+			type: 'action',
+			value: 'Forwarded',
+		})
+	})
+
 	it('deduplicates bounce-back transfers against BounceBack events', () => {
 		const hash = `0x${'2'.repeat(64)}` as const
 		const amount = 1_000_000n
