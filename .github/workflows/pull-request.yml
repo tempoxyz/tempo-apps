@@ -114,11 +114,13 @@ jobs:
       - name: Prepare preview Wrangler config
         if: steps.changes.outputs.relevant == 'true' && matrix.app == 'explorer'
         run: |
-          # Cloudflare does not generate Version Preview URLs for Workers that
-          # implement Durable Objects. CSV export rate limiting already falls
-          # back open when this binding is absent, so omit it for PR previews.
+          # Cloudflare does not generate Version Preview URLs for a Worker once
+          # that Worker implements Durable Objects. CSV export rate limiting
+          # already falls back open when this binding is absent, so upload
+          # explorer previews to a separate no-Durable-Objects preview Worker.
+          preview_name="explorer-pr-${{ github.event.pull_request.number }}-${CLOUDFLARE_ENV}"
           tmp_config="$(mktemp)"
-          jq 'del(.durable_objects, .migrations)' dist/server/wrangler.json > "$tmp_config"
+          jq --arg name "$preview_name" '.name = $name | .topLevelName = $name | del(.durable_objects, .migrations)' dist/server/wrangler.json > "$tmp_config"
           mv "$tmp_config" dist/server/wrangler.json
         working-directory: apps/${{ matrix.app }}
 
