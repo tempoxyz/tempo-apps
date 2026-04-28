@@ -1,4 +1,5 @@
 import * as Address from 'ox/Address'
+import { VirtualAddress } from 'ox/tempo'
 import type * as Hex from 'ox/Hex'
 import type { AbiEvent, Log, TransactionReceipt } from 'viem'
 import { decodeFunctionData, parseEventLogs, zeroAddress } from 'viem'
@@ -567,7 +568,10 @@ function createDetectors(
 					type: 'send',
 					note: 'memo' in args ? decodeMemoForDisplay(args.memo) : undefined,
 					parts: [
-						{ type: 'action', value: 'Send' },
+						{
+							type: 'action',
+							value: VirtualAddress.validate(args.from) ? 'Forwarded' : 'Send',
+						},
 						{
 							type: 'amount',
 							value: createAmount(args.amount, address),
