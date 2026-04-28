@@ -96,21 +96,6 @@ ignoredBuiltDependencies:
 
 minimumReleaseAge: 1440
 
-nodeOptions: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
-onlyBuiltDependencies:
-  - '@ast-grep/cli'
-  - '@j178/prek'
-  - bufferutil
-  - '@sentry/cli'
-  - esbuild
-  - simple-git-hooks
-  - utf-8-validate
-  - workerd
-
-shellEmulator: true
-
-workspaceConcurrency: -1
-
 minimumReleaseAgeExclude:
   - 'ox'
   - 'viem'
@@ -123,6 +108,17 @@ minimumReleaseAgeExclude:
   - '@cloudflare/*'
   - '@typescript/*'
 
+nodeOptions: '--disable-warning=ExperimentalWarning --disable-warning=DeprecationWarning'
+onlyBuiltDependencies:
+  - '@ast-grep/cli'
+  - '@j178/prek'
+  - bufferutil
+  - '@sentry/cli'
+  - esbuild
+  - simple-git-hooks
+  - utf-8-validate
+  - workerd
+
 overrides:
   basic-ftp: 5.3.0
   flatted: ^3.4.2
@@ -133,16 +129,20 @@ overrides:
   lodash: ^4.18.1
   picomatch@<3: ^2.3.2
   picomatch@>=4: ^4.0.4
+  protobufjs: 7.5.5
   protobufjs@<7.5.5: '>=7.5.5'
   semver@<7: ^7.7.4
   srvx@<0.11.13: '>=0.11.13'
   tar: ^7.5.13
   yaml: ^2.8.3
-  protobufjs: 7.5.5
 
 patchedDependencies:
   '@cloudflare/vite-plugin@1.33.0': patches/@cloudflare__vite-plugin@1.33.0.patch
 
+shellEmulator: true
+
 strictDepBuilds: true
 
 trustPolicy: no-downgrade
+
+workspaceConcurrency: -1

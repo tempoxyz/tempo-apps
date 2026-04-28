@@ -1,5 +1,5 @@
-import semver from 'semver'
 import * as CBOR from 'cbor-x/decode'
+import * as Semver from '@std/semver'
 import { AbiParameters, Hash, Hex } from 'ox'
 
 import type { ImmutableReferences, LinkReferences } from '#schema.ts'
@@ -68,6 +68,17 @@ export enum AuxdataStyle {
 	VYPER_LT_0_3_5 = 'vyper_lt_0_3_5',
 }
 
+const VYPER_LT_0_3_5_VERSION = Semver.parse('0.3.5')
+const VYPER_LT_0_3_10_VERSION = Semver.parse('0.3.10')
+const VYPER_INTEGRITY_VERSION = Semver.parse('0.4.1')
+const SEMVER_VERSION_PATTERN =
+	/v?(\d+\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?(?:\+[0-9A-Za-z-.]+)?)/
+
+function tryParseCompilerVersion(compilerVersion: string) {
+	const version = SEMVER_VERSION_PATTERN.exec(compilerVersion)?.at(1)
+	return version ? Semver.tryParse(version) : undefined
+}
+
 // ============================================================================
 // CBOR Auxdata Utilities
 // ============================================================================
@@ -81,11 +92,13 @@ export function getVyperAuxdataStyle(
 	| AuxdataStyle.VYPER
 	| AuxdataStyle.VYPER_LT_0_3_10
 	| AuxdataStyle.VYPER_LT_0_3_5 {
-	const version = semver.valid(semver.coerce(compilerVersion))
+	const version = tryParseCompilerVersion(compilerVersion)
 
 	if (!version) return AuxdataStyle.VYPER
-	if (semver.lt(version, '0.3.5')) return AuxdataStyle.VYPER_LT_0_3_5
-	if (semver.lt(version, '0.3.10')) return AuxdataStyle.VYPER_LT_0_3_10
+	if (Semver.lessThan(version, VYPER_LT_0_3_5_VERSION))
+		return AuxdataStyle.VYPER_LT_0_3_5
+	if (Semver.lessThan(version, VYPER_LT_0_3_10_VERSION))
+		return AuxdataStyle.VYPER_LT_0_3_10
 
 	return AuxdataStyle.VYPER
 }
@@ -239,7 +252,8 @@ export function decodeVyperAuxdata(
 			const lastElement = cborDecodedObject.at(-1) as { vyper: number[] }
 			const compilerVersion = lastElement.vyper.join('.')
 
-			if (semver.gte(compilerVersion, '0.4.1')) {
+			const version = Semver.tryParse(compilerVersion)
+			if (version && Semver.greaterOrEqual(version, VYPER_INTEGRITY_VERSION)) {
 				// >= 0.4.1: [integrity, runtimeSize, dataSizes, immutableSize, {vyper: [v]}]
 				return {
 					integrity: cborDecodedObject[0] as string,

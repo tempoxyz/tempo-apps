@@ -42,6 +42,15 @@ describe('getVyperAuxdataStyle', () => {
 		expect(getVyperAuxdataStyle('1.0.0')).toBe(AuxdataStyle.VYPER)
 	})
 
+	it('handles prefixed versions and build metadata', () => {
+		expect(getVyperAuxdataStyle('v0.3.4+commit.abc123')).toBe(
+			AuxdataStyle.VYPER_LT_0_3_5,
+		)
+		expect(getVyperAuxdataStyle('vyper-0.3.9')).toBe(
+			AuxdataStyle.VYPER_LT_0_3_10,
+		)
+	})
+
 	it('returns VYPER for invalid versions', () => {
 		expect(getVyperAuxdataStyle('invalid')).toBe(AuxdataStyle.VYPER)
 		expect(getVyperAuxdataStyle('')).toBe(AuxdataStyle.VYPER)
