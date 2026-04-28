@@ -1,11 +1,13 @@
 import * as React from 'react'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useSuspenseQuery, useQuery } from '@tanstack/react-query'
 import {
 	getScenario,
 	fetchRun,
 	fetchMetrics,
 	fetchBlocks,
+	fetchRunsForScenario,
+	type BenchRun,
 	type MetricSeries,
 } from '#lib/server/bench'
 import { formatGas, formatTps, formatMs, formatDate } from '#lib/format'
@@ -71,13 +73,72 @@ const COLORS = {
 	purple: '#a78bfa',
 }
 
+const NOISE_THRESHOLD = 0.02
+
+function Delta(props: {
+	current: number
+	previous: number
+	lowerIsBetter?: boolean | undefined
+}): React.JSX.Element | null {
+	if (props.previous === 0) return null
+	const ratio = (props.current - props.previous) / props.previous
+	if (Math.abs(ratio) < NOISE_THRESHOLD) {
+		return <span className="ml-1.5 text-[11px] text-tertiary">=</span>
+	}
+	const up = ratio > 0
+	const improved = props.lowerIsBetter ? !up : up
+	return (
+		<span
+			className={`ml-1.5 text-[11px] ${improved ? 'text-positive' : 'text-negative'}`}
+		>
+			{up ? '▲' : '▼'} {(Math.abs(ratio) * 100).toFixed(1)}%
+		</span>
+	)
+}
+
+function runOptionLabel(run: BenchRun): string {
+	const version =
+		run.ref && run.commit
+			? `${run.ref} (${run.commit})`
+			: run.ref || run.commit || run.id
+	return version
+}
+
+function formatDuration(startedAt: string, finishedAt: string): string {
+	const durationMs =
+		new Date(finishedAt).getTime() - new Date(startedAt).getTime()
+	if (!Number.isFinite(durationMs) || durationMs <= 0) return 'unknown duration'
+
+	const seconds = Math.round(durationMs / 1000)
+	if (seconds < 60) return `${seconds}s`
+
+	const minutes = Math.floor(seconds / 60)
+	const remainingSeconds = seconds % 60
+	if (minutes < 60) {
+		return remainingSeconds > 0
+			? `${minutes}m ${remainingSeconds}s`
+			: `${minutes}m`
+	}
+
+	const hours = Math.floor(minutes / 60)
+	const remainingMinutes = minutes % 60
+	return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
+}
+
 export const Route = createFileRoute('/benchmark/$id')({
 	component: RunDetailPage,
-	loader: ({ params, context }) => {
-		context.queryClient.ensureQueryData({
+	loader: async ({ params, context }) => {
+		const run = await context.queryClient.ensureQueryData({
 			queryKey: ['run', params.id],
 			queryFn: () => fetchRun({ data: params.id }),
 		})
+
+		if (run?.scenarioId) {
+			await context.queryClient.ensureQueryData({
+				queryKey: ['scenarioRuns', run.scenarioId],
+				queryFn: () => fetchRunsForScenario({ data: run.scenarioId }),
+			})
+		}
 	},
 })
 
@@ -96,9 +157,17 @@ function findSeries(
 
 function RunDetailPage(): React.JSX.Element {
 	const { id } = Route.useParams()
+	const navigate = useNavigate()
+	const runSelectId = React.useId()
 	const { data: run } = useSuspenseQuery({
 		queryKey: ['run', id],
 		queryFn: () => fetchRun({ data: id }),
+	})
+
+	const { data: scenarioRuns } = useQuery({
+		queryKey: ['scenarioRuns', run?.scenarioId ?? ''],
+		queryFn: () => fetchRunsForScenario({ data: run?.scenarioId ?? '' }),
+		enabled: !!run?.scenarioId,
 	})
 
 	const { data: metrics } = useQuery({
@@ -122,6 +191,12 @@ function RunDetailPage(): React.JSX.Element {
 	}
 
 	const scenario = getScenario(run.scenarioId)
+	const runs = scenarioRuns ?? []
+	const currentRunIndex = runs.findIndex(
+		(scenarioRun) => scenarioRun.id === run.id,
+	)
+	const previousRun =
+		currentRunIndex >= 0 ? runs[currentRunIndex + 1] : undefined
 	const m = metrics ?? []
 
 	// Builder phases (p50)
@@ -268,81 +343,135 @@ function RunDetailPage(): React.JSX.Element {
 	return (
 		<div>
 			<div className="mb-4">
-				{scenario ? (
-					<Link
-						to="/workload/$id"
-						params={{ id: scenario.id }}
-						className="text-[13px] text-tertiary transition-colors hover:text-primary"
-					>
-						← {scenario.label}
-					</Link>
-				) : (
-					<Link
-						to="/"
-						className="text-[13px] text-tertiary transition-colors hover:text-primary"
-					>
-						← Dashboard
-					</Link>
-				)}
+				<Link
+					to="/"
+					className="text-[13px] text-tertiary transition-colors hover:text-primary"
+				>
+					← Dashboard
+				</Link>
 			</div>
 
 			<section className="mb-8">
-				<h2 className="text-[22px] font-bold tracking-tight text-primary">
-					Benchmark{' '}
-					{run.ref && isTag(run.ref) ? (
-						<a
-							href={tagUrl(run.ref)}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="font-mono text-[20px] text-accent hover:underline"
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+					<div>
+						{scenario && (
+							<p className="mb-1 text-[13px] font-medium text-secondary">
+								{scenario.label}
+							</p>
+						)}
+						<h2 className="text-[22px] font-bold tracking-tight text-primary">
+							Benchmark{' '}
+							{run.ref && isTag(run.ref) ? (
+								<a
+									href={tagUrl(run.ref)}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="font-mono text-[20px] text-accent hover:underline"
+								>
+									{run.ref}
+								</a>
+							) : run.commit ? (
+								<a
+									href={commitUrl(run.commit)}
+									target="_blank"
+									rel="noopener noreferrer"
+									className="font-mono text-[20px] text-accent hover:underline"
+								>
+									{run.ref ? `${run.ref} (${run.commit})` : run.commit}
+								</a>
+							) : (
+								<span className="text-secondary">
+									{formatDate(run.startedAt)}
+								</span>
+							)}
+						</h2>
+						<p className="mt-2 text-[14px] text-secondary">
+							{formatDate(run.startedAt)} · {run.blockCount} blocks ·{' '}
+							{formatDuration(run.startedAt, run.finishedAt)}
+							{scenario && ` · ${scenario.workload}`}
+						</p>
+					</div>
+					<div className="flex flex-col gap-2 sm:items-end">
+						<label htmlFor={runSelectId} className="sr-only">
+							Benchmark run
+						</label>
+						<select
+							id={runSelectId}
+							value={run.id}
+							disabled={runs.length <= 1}
+							onChange={(event) =>
+								navigate({
+									to: '/benchmark/$id',
+									params: { id: event.currentTarget.value },
+								})
+							}
+							className="w-full max-w-48 rounded-md border border-border bg-surface px-3 py-2 font-mono text-[13px] text-primary outline-none transition-colors hover:border-accent/50 focus:border-accent disabled:cursor-not-allowed disabled:text-tertiary sm:w-44"
 						>
-							{run.ref}
-						</a>
-					) : run.commit ? (
-						<a
-							href={commitUrl(run.commit)}
-							target="_blank"
-							rel="noopener noreferrer"
-							className="font-mono text-[20px] text-accent hover:underline"
-						>
-							{run.ref ? `${run.ref} (${run.commit})` : run.commit}
-						</a>
-					) : (
-						<span className="text-secondary">{formatDate(run.startedAt)}</span>
-					)}
-				</h2>
-				<p className="mt-2 text-[14px] text-secondary">
-					{formatDate(run.startedAt)} · {run.blockCount} blocks
-					{scenario && ` · ${scenario.workload}`}
-				</p>
+							{runs.length > 0 ? (
+								runs.map((option) => (
+									<option key={option.id} value={option.id}>
+										{runOptionLabel(option)}
+									</option>
+								))
+							) : (
+								<option value={run.id}>{runOptionLabel(run)}</option>
+							)}
+						</select>
+					</div>
+				</div>
 			</section>
 
-			<section className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+			<section className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
 				<MetricCard
 					label="Throughput"
 					value={formatGas(run.avgGasPerSecond)}
 					tooltip="Average gas per second across the entire run. Calculated as total gas used ÷ total run duration."
+					delta={
+						previousRun && (
+							<Delta
+								current={run.avgGasPerSecond}
+								previous={previousRun.avgGasPerSecond}
+							/>
+						)
+					}
 					accent
 				/>
 				<MetricCard
 					label="Peak"
 					value={formatGas(run.peakGasPerSecond)}
 					tooltip="Highest gas per second achieved by any single block, based on its gas usage and block time."
+					delta={
+						previousRun && (
+							<Delta
+								current={run.peakGasPerSecond}
+								previous={previousRun.peakGasPerSecond}
+							/>
+						)
+					}
 				/>
 				<MetricCard
 					label="Avg TPS"
 					value={formatTps(run.avgTps)}
 					tooltip="Average transactions per second across all blocks, based on transaction count and block time."
+					delta={
+						previousRun && (
+							<Delta current={run.avgTps} previous={previousRun.avgTps} />
+						)
+					}
 				/>
 				<MetricCard
 					label="Block Time"
 					value={formatMs(run.avgBlockTimeMs)}
 					tooltip="Average wall-clock time between consecutive blocks."
-				/>
-				<MetricCard
-					label="Blocks"
-					value={run.blockCount.toLocaleString()}
-					tooltip="Total number of blocks produced during the benchmark run."
+					delta={
+						previousRun && (
+							<Delta
+								current={run.avgBlockTimeMs}
+								previous={previousRun.avgBlockTimeMs}
+								lowerIsBetter
+							/>
+						)
+					}
 				/>
 			</section>
 
@@ -886,6 +1015,7 @@ function MetricCard(props: {
 	value: string
 	accent?: boolean | undefined
 	tooltip?: string | undefined
+	delta?: React.ReactNode | undefined
 }): React.JSX.Element {
 	return (
 		<div className="card overflow-visible p-4">
@@ -897,6 +1027,7 @@ function MetricCard(props: {
 				className={`mt-1 font-mono text-[18px] font-semibold ${props.accent ? 'text-accent' : 'text-primary'}`}
 			>
 				{props.value}
+				{props.delta}
 			</p>
 		</div>
 	)
