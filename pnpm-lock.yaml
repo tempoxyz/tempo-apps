@@ -163,8 +163,8 @@ catalogs:
       specifier: ^0.28.15
       version: 0.28.15
     midcut:
-      specifier: ^0.1.0
-      version: 0.1.0
+      specifier: ^0.2.0
+      version: 0.2.0
     ox:
       specifier: ^0.14.20
       version: 0.14.20
@@ -454,7 +454,7 @@ importers:
         version: 0.0.6(typescript@6.0.2)
       midcut:
         specifier: 'catalog:'
-        version: 0.1.0(react@19.2.5)
+        version: 0.2.0(react@19.2.5)
       ox:
         specifier: 'catalog:'
         version: 0.14.20(typescript@6.0.2)(zod@4.3.6)
@@ -4826,8 +4826,8 @@ packages:
   micromark-util-types@2.0.2:
     resolution: {integrity: sha512-Yw0ECSpJoViF1qTU4DC6NwtC4aWGt1EkzaQB8KPPyCRR8z9TWeV0HbEFGTO+ZY1wB22zmxnJqhPyTpOVCpeHTA==}
 
-  midcut@0.1.0:
-    resolution: {integrity: sha512-wPSXcjOK6nHftyvGSQWVk5mU9mEOSHuLpfrsZjOPOByXLepmCjkpvLjX0tXPn9F2Z5nUdkKglr9siuBQpCySzA==}
+  midcut@0.2.0:
+    resolution: {integrity: sha512-GzBmJiEH2gyXXTlVO6OE13rIJQuVv/r1kIeCfiIqBBeeEg3THnbxZvyEJ6oFA6BQ6P/30f6xm40+jxsv+kOXyg==}
     peerDependencies:
       react: '>=18'
 
@@ -9602,7 +9602,7 @@ snapshots:
 
   micromark-util-types@2.0.2: {}
 
-  midcut@0.1.0(react@19.2.5):
+  midcut@0.2.0(react@19.2.5):
     dependencies:
       react: 19.2.5
 
