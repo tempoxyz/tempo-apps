@@ -1,4 +1,4 @@
-import { DurableObject, env } from 'cloudflare:workers'
+import { env } from 'cloudflare:workers'
 import { getRequestHeader } from '@tanstack/react-start/server'
 
 const RATE_LIMIT_PERIOD_SECONDS = 60
@@ -17,8 +17,6 @@ export class RateLimitExceededError extends Error {
 		this.retryAfterSeconds = retryAfterSeconds
 	}
 }
-
-export class ExplorerExportRateLimit extends DurableObject {}
 
 function getClientIp(): string | null {
 	const cfConnectingIp = getRequestHeader('cf-connecting-ip')?.trim()
