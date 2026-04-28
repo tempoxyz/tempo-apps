@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import type { Address, Hex } from 'ox'
 import { Abis } from 'viem/tempo'
-import { getChainId, readContract } from 'wagmi/actions'
+import { getChainId, readContracts } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { TOKEN_COUNT_MAX } from '#lib/constants'
 import {
@@ -18,8 +18,9 @@ const [MAX_LIMIT, DEFAULT_LIMIT] = [1_000, 100]
 const CACHE_TTL = 60_000
 const COUNT_CAP = TOKEN_COUNT_MAX
 const HOLDERS_CACHE_MAX_ENTRIES = 20
-const HOLDERS_FALLBACK_CANDIDATE_LIMIT = 1_000
-const HOLDERS_RECENT_PARTICIPANT_FULL_QUERY_THRESHOLD = 300
+const HOLDERS_FALLBACK_CANDIDATE_LIMIT = 25
+const HOLDERS_RECENT_PARTICIPANT_FULL_QUERY_THRESHOLD = 20
+const HOLDERS_BALANCE_READ_BATCH_SIZE = 25
 
 const holdersCache = new Map<
 	string,
@@ -92,21 +93,36 @@ async function fetchRecentHolderBalances(params: {
 			HOLDERS_FALLBACK_CANDIDATE_LIMIT,
 		))
 
-	const balances = await Promise.all(
-		candidates.map(async (candidate) => {
-			try {
-				const balance = await readContract(params.config, {
-					address: params.address,
-					abi: Abis.tip20,
-					functionName: 'balanceOf',
-					args: [candidate],
-				})
-				return { address: candidate, balance }
-			} catch {
-				return { address: candidate, balance: 0n }
+	const balances: Array<{ address: string; balance: bigint }> = []
+
+	for (
+		let start = 0;
+		start < candidates.length;
+		start += HOLDERS_BALANCE_READ_BATCH_SIZE
+	) {
+		const batch = candidates.slice(
+			start,
+			start + HOLDERS_BALANCE_READ_BATCH_SIZE,
+		)
+		const results = (await readContracts(params.config, {
+			contracts: batch.map((candidate) => ({
+				address: params.address,
+				abi: Abis.tip20,
+				functionName: 'balanceOf',
+				args: [candidate],
+			})) as never,
+		})) as Array<
+			| { status: 'success'; result: unknown }
+			| { status: 'failure'; error?: unknown }
+		>
+
+		for (const [index, result] of results.entries()) {
+			if (result.status !== 'success' || typeof result.result !== 'bigint') {
+				throw new Error('Failed to read holder balance')
 			}
-		}),
-	)
+			balances.push({ address: batch[index], balance: result.result })
+		}
+	}
 
 	return sortHolders(balances)
 }
@@ -158,9 +174,20 @@ export const fetchHolders = createServerFn({ method: 'POST' })
 					data.address,
 					chainId,
 					HOLDERS_FALLBACK_CANDIDATE_LIMIT,
-				)
+				).catch((error) => {
+					console.error(
+						'Failed to fetch recent transfer participants, trying full holders:',
+						error,
+					)
+					return null
+				})
 
-				if (
+				if (!recentParticipants) {
+					const fetched = await fetchTokenHolderBalances(data.address, chainId)
+					setHoldersCache(cacheKey, fetched, now)
+					allHolders =
+						fetched.length > COUNT_CAP ? fetched.slice(0, COUNT_CAP) : fetched
+				} else if (
 					recentParticipants.length >=
 					HOLDERS_RECENT_PARTICIPANT_FULL_QUERY_THRESHOLD
 				) {
