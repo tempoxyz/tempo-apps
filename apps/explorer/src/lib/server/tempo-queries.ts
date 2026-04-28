@@ -1323,19 +1323,35 @@ export async function fetchVirtualAddressTransferAggregate(
 			.limit(1)
 			.executeTakeFirst()
 
+	const fetchTransferCount = async () => {
+		const qb = QB(chainId)
+		const subquery = qb
+			.selectFrom('logs')
+			.select('tx_hash')
+			.distinct()
+			.where('topic0', '=', TRANSFER_TOPIC0)
+			.where((eb) =>
+				eb.or([
+					eb('topic1', '=', topicAddress),
+					eb('topic2', '=', topicAddress),
+				]),
+			)
+
+		const result = await qb
+			.selectFrom(subquery.limit(TIDX_SERVER_ROW_LIMIT).as('subquery'))
+			.select((eb) => eb.fn.count('tx_hash').as('count'))
+			.executeTakeFirst()
+
+		return Number(result?.count ?? 0)
+	}
+
 	const [oldestFrom, oldestTo, latestFrom, latestTo, countResult] =
 		await Promise.all([
 			fetchBoundary('topic1', 'asc'),
 			fetchBoundary('topic2', 'asc'),
 			fetchBoundary('topic1', 'desc'),
 			fetchBoundary('topic2', 'desc'),
-			fetchAddressTransferDistinctCount({
-				address,
-				chainId,
-				includeSent: true,
-				includeReceived: true,
-				countCap: TIDX_SERVER_ROW_LIMIT,
-			}).catch(() => 0),
+			fetchTransferCount().catch(() => 0),
 		])
 
 	const oldestTimestamp = [
