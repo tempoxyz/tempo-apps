@@ -54,7 +54,10 @@ import {
 	calculateTotalHoldings,
 	useBalancesData,
 } from '#lib/address-balances'
-import { normalizeSearchInput } from '#lib/tempo-address'
+import {
+	getVirtualAddressParts,
+	normalizeSearchInput,
+} from '#lib/tempo-address'
 import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type ContractSource,
@@ -82,7 +85,6 @@ import {
 	historyQueryOptions,
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
-import { fetchAddressOgMeta } from '#lib/server/tempo-queries'
 import { getApiUrl } from '#lib/env.ts'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
@@ -300,9 +302,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 						)
 					: Promise.resolve(undefined)
 
-			// Fetch OG metadata (txCount + timestamps) via direct TIDX query
+			// Fetch address metadata through the API route so TIDX credentials stay
+			// server-side when loaders run in the browser.
 			const ogMetaPromise = timeout(
-				fetchAddressOgMeta(address, TEMPO_CHAIN_ID).catch(() => undefined),
+				fetchAddressMetadata(address).catch(() => undefined),
 				QUERY_TIMEOUT_MS,
 			)
 
@@ -792,6 +795,7 @@ function AccountCardWithTimestamps(props: {
 			: undefined
 
 	const isTip20 = Tip20.isTip20Address(address)
+	const virtualAddressParts = getVirtualAddressParts(address)
 	const { isTokenListed } = useTokenListMembership()
 	const totalValue = React.useMemo(
 		() =>
@@ -817,6 +821,7 @@ function AccountCardWithTimestamps(props: {
 				accountType={resolvedAccountType}
 				isToken={isToken}
 				tokenName={tokenMetadata?.name}
+				virtualAddressParts={virtualAddressParts}
 			/>
 			{isToken && (
 				<ClientOnly fallback={null}>
