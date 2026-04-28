@@ -46,6 +46,7 @@ catalog:
   '@vitest/ui': 4.1.0
   '@wagmi/core': ^3.4.6
   abitype: ^1.2.4
+  accounts: ^0.8.2
   animejs: ^4.3.6
   cva: ^1.0.0-beta.4
   dotenv: ^17.3.1
@@ -116,6 +117,7 @@ minimumReleaseAgeExclude:
   - 'wagmi'
   - 'tidx.ts'
   - '@wagmi/core'
+  - accounts
   - '@cloudflare/containers'
 
 overrides:

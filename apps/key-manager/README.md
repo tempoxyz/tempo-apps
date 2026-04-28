@@ -1,14 +1,15 @@
 # Key Manager
 
-WebAuthn key management service using `Handler.keyManager` from `tempo.ts`.
+WebAuthn key management service using `Handler.webAuthn` from `accounts/server`.
 
 ## Endpoints
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/challenge` | GET | Generate a new WebAuthn challenge |
-| `/:id` | GET | Retrieve the public key for a credential |
-| `/:id` | POST | Register a new credential with its public key |
+| `/register/options` | POST | Generate credential creation options |
+| `/register` | POST | Verify registration and store a credential |
+| `/login/options` | POST | Generate credential request options |
+| `/login` | POST | Verify authentication |
 
 ## Development
 
