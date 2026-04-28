@@ -2077,10 +2077,6 @@ function StreamedPaymentReceipt(props: {
 
 	const hasAlternating = inputAmount !== undefined || outputAmount !== undefined
 
-	const payeeParts: KnownEvent['parts'] = payee
-		? [{ type: 'text', value: 'to' }, { type: 'account', value: payee }]
-		: []
-
 	const digits = String(packetCount).length
 
 	return (
