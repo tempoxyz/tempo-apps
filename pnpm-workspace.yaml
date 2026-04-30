@@ -133,6 +133,7 @@ overrides:
 
 patchedDependencies:
   '@cloudflare/vite-plugin@1.30.3': patches/@cloudflare__vite-plugin@1.30.3.patch
+  '@wagmi/core@3.4.6': patches/@wagmi__core@3.4.6.patch
 
 strictDepBuilds: true
 
