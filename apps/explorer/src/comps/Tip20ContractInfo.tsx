@@ -104,14 +104,6 @@ export function Tip20TokenTabContent(
 					Spec
 				</a>
 				<a
-					href="https://github.com/tempoxyz/tempo/blob/main/tips/ref-impls/src/TIP20.sol"
-					target="_blank"
-					rel="noopener noreferrer"
-					className="text-accent hover:underline whitespace-nowrap"
-				>
-					Solidity
-				</a>
-				<a
 					href="https://github.com/tempoxyz/tempo/tree/main/crates/precompiles/src/tip20"
 					target="_blank"
 					rel="noopener noreferrer"
