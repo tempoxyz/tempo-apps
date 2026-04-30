@@ -16,16 +16,6 @@
 			"preview_id": "0211859b856e40d095ab4e2a5329a22d"
 		}
 	],
-	"migrations": [
-		{
-			"tag": "v1",
-			"new_sqlite_classes": ["ExplorerExportRateLimit"]
-		},
-		{
-			"tag": "v2",
-			"deleted_classes": ["ExplorerExportRateLimit"]
-		}
-	],
 	"browser": { "binding": "BROWSER" },
 	"env": {
 		"testnet": {
