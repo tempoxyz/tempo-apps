@@ -397,6 +397,13 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const supply = formatSupply(totalSupply)
 			const chainId = getTempoChain().id
 
+			let created: string | undefined
+			if (loaderData?.ogMeta?.createdTimestamp) {
+				created = DateFormatter.formatTimestampForOg(
+					BigInt(loaderData.ogMeta.createdTimestamp),
+				).date
+			}
+
 			description = buildTokenDescription({
 				name: tokenMeta.name ?? '—',
 				symbol: tokenMeta.symbol,
@@ -409,6 +416,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				name: tokenMeta.name,
 				symbol: tokenMeta.symbol,
 				supply,
+				currency: tokenMeta.currency ?? undefined,
+				holders: loaderData?.ogMeta?.holdersCount ?? undefined,
+				created,
 			})
 		} else {
 			const txCount = loaderData?.ogMeta?.txCount ?? 0
@@ -698,6 +708,7 @@ async function fetchAddressMetadata(address: Address.Address) {
 	return response.json() as Promise<{
 		accountType: AccountType
 		txCount: number | null
+		holdersCount?: number | null
 		lastActivityTimestamp: number | null
 		createdTimestamp: number | null
 	}>
