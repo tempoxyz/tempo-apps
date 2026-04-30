@@ -4,10 +4,6 @@ import { getChainId } from 'wagmi/actions'
 import * as z from 'zod/mini'
 import { getRequestURL, hasIndexSupply } from '#lib/env'
 import {
-	enforceCsvExportRateLimit,
-	RateLimitExceededError,
-} from '#lib/server/export-rate-limit'
-import {
 	MAX_LIMIT,
 	RequestParametersSchema,
 	createTransactionsCsvResponse,
@@ -61,7 +57,6 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const config = getWagmiConfig()
 					const chainId = getChainId(config)
 					if (isCsvExport) {
-						await enforceCsvExportRateLimit(address)
 						const transactions = await fetchAddressHistoryExportRows({
 							address,
 							chainId,
@@ -81,18 +76,6 @@ export const Route = createFileRoute('/api/address/history/$address')({
 
 					return Response.json(history satisfies HistoryResponse)
 				} catch (error) {
-					if (error instanceof RateLimitExceededError) {
-						return Response.json(
-							{ error: error.message },
-							{
-								headers: {
-									'Retry-After': String(error.retryAfterSeconds),
-								},
-								status: 429,
-							},
-						)
-					}
-
 					const errorMessage = error instanceof Error ? error.message : error
 					console.error(errorMessage)
 					return Response.json(
