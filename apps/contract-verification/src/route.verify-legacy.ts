@@ -31,7 +31,7 @@ import {
 	type ImmutableReferences,
 	getVyperImmutableReferences,
 } from '#lib/bytecode-matching.ts'
-import { chains, chainIds } from '#wagmi.config.ts'
+import type { AppEnv } from '#index.tsx'
 import { getLogger } from '#lib/logger.ts'
 
 const logger = getLogger(['tempo'])
@@ -54,7 +54,7 @@ const LegacyVyperRequestSchema = z.object({
 	creatorTxHash: z.optional(z.string()),
 })
 
-const legacyVerifyRoute = new Hono<{ Bindings: Cloudflare.Env }>()
+const legacyVerifyRoute = new Hono<AppEnv>()
 
 // POST /verify/vyper - Legacy Sourcify Vyper verification (used by Foundry)
 legacyVerifyRoute.post('/vyper', async (context) => {
@@ -104,7 +104,8 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 		} = body
 
 		const chainId = Number(chain)
-		if (!chainIds.includes(chainId)) {
+		const registry = context.get('chainRegistry')
+		if (!registry.isSupported(chainId)) {
 			return sourcifyError(
 				context,
 				400,
@@ -167,7 +168,7 @@ legacyVerifyRoute.post('/vyper', async (context) => {
 			})
 		}
 
-		const chainConfig = chains.find((chain) => chain.id === chainId)
+		const chainConfig = registry.getChain(chainId)
 		if (!chainConfig) {
 			return sourcifyError(
 				context,
