@@ -61,7 +61,7 @@ export const Route = createFileRoute('/api/address/history/$address')({
 					const config = getWagmiConfig()
 					const chainId = getChainId(config)
 					if (isCsvExport) {
-						await enforceCsvExportRateLimit(address)
+						await enforceCsvExportRateLimit()
 						const transactions = await fetchAddressHistoryExportRows({
 							address,
 							chainId,

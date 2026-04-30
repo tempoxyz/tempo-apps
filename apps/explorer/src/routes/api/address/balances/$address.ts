@@ -30,7 +30,7 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 					const config = getWagmiConfig()
 					const chainId = getChainId(config)
 					if (isCsvExport) {
-						await enforceCsvExportRateLimit(address)
+						await enforceCsvExportRateLimit()
 					}
 					const response = await fetchAddressBalancesData({
 						address,
