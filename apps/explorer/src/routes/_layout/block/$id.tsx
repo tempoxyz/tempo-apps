@@ -316,7 +316,7 @@ function TransactionsSection(props: TransactionsSectionProps) {
 		{ label: 'From', align: 'end', minWidth: 112, width: '1fr' },
 		{ label: 'Hash', align: 'end', minWidth: 112, width: '1fr' },
 		{ label: 'Fee', align: 'end', minWidth: 64, width: '0.5fr' },
-		{ label: 'Total', align: 'end', minWidth: 72, width: '0.5fr' },
+		{ label: 'Total', align: 'end', minWidth: 96, width: 96 },
 	] satisfies DataGrid.Props['columns']['stacked']
 
 	return (
@@ -457,9 +457,11 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 	const hasAmounts = events?.some((event) =>
 		event.parts.some((part) => part.type === 'amount'),
 	)
+	const hasFeeEvent = events?.some((event) => event.type === 'fee') ?? false
+	const fee = hasFeeEvent ? 0n : getEstimatedFee(transaction)
 
 	if (hasAmounts) {
-		const totalValue = calculateKnownEventsTotal(events ?? [])
+		const totalValue = calculateKnownEventsTotal(events ?? []) + fee
 		if (totalValue !== 0n) {
 			return (
 				<Amount.Base
@@ -468,12 +470,13 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 					infinite={infiniteLabel}
 					prefix={showUsdPrefix ? '$' : undefined}
 					short
+					shortMaximumFractionDigits={3}
 				/>
 			)
 		}
 	}
 
-	const value = transaction.value ?? 0n
+	const value = (transaction.value ?? 0n) + fee
 	if (value === 0n) return <span className="text-tertiary">—</span>
 	return (
 		<Amount.Base
@@ -482,6 +485,7 @@ function TransactionTotalCell(props: TransactionTotalCellProps) {
 			infinite={infiniteLabel}
 			prefix={showUsdPrefix ? '$' : undefined}
 			short
+			shortMaximumFractionDigits={3}
 		/>
 	)
 }

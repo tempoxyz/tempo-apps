@@ -100,6 +100,7 @@ export namespace Amount {
 			prefix,
 			suffix,
 			short,
+			shortMaximumFractionDigits,
 			maxWidth = 24,
 			infinite = true,
 		} = props
@@ -123,7 +124,9 @@ export namespace Amount {
 		const rawFormatted = Value.format(value, decimals)
 		const fullFormatted = PriceFormatter.formatAmount(rawFormatted)
 		const formatted = short
-			? PriceFormatter.formatAmountShort(rawFormatted)
+			? PriceFormatter.formatAmountShort(rawFormatted, {
+					maximumFractionDigits: shortMaximumFractionDigits,
+				})
 			: fullFormatted
 		const isSmall = formatted.startsWith('<')
 
@@ -158,6 +161,7 @@ export namespace Amount {
 			maxWidth?: number
 			prefix?: string
 			short?: boolean
+			shortMaximumFractionDigits?: number
 			suffix?: string
 			value: bigint
 		}
