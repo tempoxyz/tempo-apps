@@ -23,7 +23,7 @@ export function Sphere(props: Sphere.Props) {
 	}, [])
 
 	return (
-		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[300px] z-0 print:hidden hidden sm:block">
+		<div className="fixed bottom-0 w-full pointer-events-none overflow-hidden h-[300px] z-0 print:hidden hidden sm:block sphere-container">
 			<div
 				ref={containerRef}
 				className="absolute top-0 z-0 w-full flex justify-center pointer-events-none"
