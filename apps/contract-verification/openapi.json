@@ -20,32 +20,27 @@
 			"description": "Service base workers.dev domain (CACHE DISABLED!)"
 		},
 		{
-			"url": "https://sourcify.dev/server",
-			"description": "Sourcify hosted API"
+			"url": "http://localhost:{PORT}",
+			"description": "Local",
+			"variables": {
+				"PORT": {
+					"default": "6767",
+					"description": "localhost port number"
+				}
+			}
 		},
 		{
 			"url": "{CUSTOM_URL}",
 			"description": "Custom Sourcify-compatible API base URL",
 			"variables": {
 				"CUSTOM_URL": {
-					"default": "https://sourcify.dev/server",
 					"description": "The URL of the custom Sourcify-compatible API base URL"
 				}
 			}
 		},
 		{
-			"url": "https://o.tail388b2e.ts.net",
-			"description": "Localhost Funneled"
-		},
-		{
-			"url": "http://localhost:{port}",
-			"description": "local",
-			"variables": {
-				"port": {
-					"default": "22222",
-					"description": "localhost port number"
-				}
-			}
+			"url": "https://sourcify.dev/server",
+			"description": "Sourcify hosted API"
 		}
 	],
 	"tags": [
@@ -7176,7 +7171,7 @@
 				"required": true,
 				"schema": {
 					"type": "integer",
-					"enum": [31318, 42431, 4217]
+					"enum": [4217, 42431, 31318]
 				}
 			},
 			"AddressPath": {
@@ -7185,7 +7180,8 @@
 				"required": true,
 				"schema": {
 					"type": "string",
-					"pattern": "^0x[a-fA-F0-9]{40}$"
+					"pattern": "^0x[a-fA-F0-9]{40}$",
+					"example": "0x86234502292ee398a0c6ac4f060b315dd020d179"
 				}
 			},
 			"HashPath": {

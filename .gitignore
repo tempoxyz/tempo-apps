@@ -24,9 +24,9 @@ _docs
 *.bak
 _sourcify
 _artifacts
-_tmp
+**/tmp*
 _verify
 .pnpm-store
 .dev.vars
 _data
-.tmp*
+_todo

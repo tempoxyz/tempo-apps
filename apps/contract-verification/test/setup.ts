@@ -1,5 +1,5 @@
 import { applyD1Migrations } from 'cloudflare:test'
-import { env } from 'cloudflare:workers'
+import { env } from 'cloudflare:test'
 import { drizzle } from 'drizzle-orm/d1'
 import { beforeEach } from 'vitest'
 
@@ -25,7 +25,5 @@ beforeEach(async () => {
 	await applyD1Migrations(env.CONTRACTS_DB, env.TEST_MIGRATIONS)
 
 	const db = drizzle(env.CONTRACTS_DB)
-	for (const table of tables) {
-		await db.delete(table)
-	}
+	for (const table of tables) await db.delete(table)
 })

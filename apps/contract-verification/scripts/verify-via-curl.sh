@@ -126,6 +126,8 @@ fi
 
 echo -e "\n=== LOOKUP VERIFIED CONTRACT ===\n"
 
-curl --silent \
-  "${VERIFIER_URL}/v2/contract/${CHAIN_ID}/${CONTRACT_ADDRESS}?fields=all" \
-  | jq '{ match, creationMatch, runtimeMatch, name, chainId, address, compiler, compilerVersion, language, deployment, abi }'
+ADDRESS=$(curl --silent "$VERIFIER_URL/v2/verify/$VERIFICATION_ID" | jq --raw-output '.contract.address')
+
+echo "Verified contract address: $ADDRESS"
+
+echo -e "\n=== https://explore.$CHAIN_ID.tempo.xyz/address/$ADDRESS?tab=contract ===\n"

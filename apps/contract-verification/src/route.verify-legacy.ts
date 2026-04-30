@@ -26,13 +26,12 @@ import {
 } from '#database/schema.ts'
 import {
 	matchBytecode,
-	type LinkReferences,
 	getVyperAuxdataStyle,
-	type ImmutableReferences,
 	getVyperImmutableReferences,
 } from '#lib/bytecode-matching.ts'
 import { chains, chainIds } from '#wagmi.config.ts'
 import { getLogger } from '#lib/logger.ts'
+import type { ImmutableReferences, LinkReferences } from '#schema.ts'
 
 const logger = getLogger(['tempo'])
 
