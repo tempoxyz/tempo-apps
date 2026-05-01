@@ -90,6 +90,7 @@ import {
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
 import { getApiUrl } from '#lib/env.ts'
+import { areUsdPricedTokens } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
@@ -1768,23 +1769,23 @@ function TransactionFeeCell(props: {
 
 function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 	const { transaction } = props
-	const { areTokensListed, isTokenListed } = useTokenListMembership()
+	const { isTokenListed } = useTokenListMembership()
 
 	const events = React.useMemo(() => {
 		return transaction.knownEvents.filter((event) => event.type !== 'approval')
 	}, [transaction.knownEvents])
-	const eventTokenAddresses = React.useMemo(
+	const eventTokens = React.useMemo(
 		() =>
 			events.flatMap((event) =>
 				event.parts.flatMap((part) =>
-					part.type === 'amount' ? [part.value.token] : [],
+					part.type === 'amount' ? [part.value] : [],
 				),
 			),
 		[events],
 	)
 	const showUsdPrefix =
-		eventTokenAddresses.length > 0
-			? areTokensListed(TEMPO_CHAIN_ID, eventTokenAddresses)
+		eventTokens.length > 0
+			? areUsdPricedTokens(TEMPO_CHAIN_ID, eventTokens, isTokenListed)
 			: TEMPO_FEE_TOKEN
 				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 				: true

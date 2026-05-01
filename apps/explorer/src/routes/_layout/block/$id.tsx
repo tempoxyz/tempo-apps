@@ -35,6 +35,7 @@ import { PriceFormatter } from '#lib/formatting.ts'
 import { OG_BASE_URL } from '#lib/og'
 import { withLoaderTiming } from '#lib/profiling'
 import { useMediaQuery } from '#lib/hooks'
+import { areUsdPricedTokens } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import {
 	type BlockIdentifier,
@@ -423,24 +424,24 @@ function TransactionsSection(props: TransactionsSectionProps) {
 
 function TransactionTotalCell(props: TransactionTotalCellProps) {
 	const { transaction, knownEvents, loading } = props
-	const { areTokensListed, isTokenListed } = useTokenListMembership()
+	const { isTokenListed } = useTokenListMembership()
 
 	const events = React.useMemo(
 		() => knownEvents?.filter((event) => event.type !== 'approval'),
 		[knownEvents],
 	)
-	const eventTokenAddresses = React.useMemo(
+	const eventTokens = React.useMemo(
 		() =>
 			events?.flatMap((event) =>
 				event.parts.flatMap((part) =>
-					part.type === 'amount' ? [part.value.token] : [],
+					part.type === 'amount' ? [part.value] : [],
 				),
 			) ?? [],
 		[events],
 	)
 	const showUsdPrefix =
-		eventTokenAddresses.length > 0
-			? areTokensListed(TEMPO_CHAIN_ID, eventTokenAddresses)
+		eventTokens.length > 0
+			? areUsdPricedTokens(TEMPO_CHAIN_ID, eventTokens, isTokenListed)
 			: TEMPO_FEE_TOKEN
 				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 				: true

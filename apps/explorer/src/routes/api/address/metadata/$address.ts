@@ -81,11 +81,9 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 								oldestTimestamp: undefined,
 								latestTimestamp: undefined,
 							})),
-							fetchTokenHoldersCountRows(
-								[address],
-								chainId,
-								10_000,
-							).catch(() => []),
+							fetchTokenHoldersCountRows([address], chainId, 10_000).catch(
+								() => [],
+							),
 						])
 						response = {
 							address,

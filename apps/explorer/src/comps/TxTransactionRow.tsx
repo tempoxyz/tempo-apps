@@ -15,6 +15,7 @@ import {
 	NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS,
 } from '#lib/domain/known-event-totals'
 import { PriceFormatter } from '#lib/formatting'
+import { areUsdPricedTokens } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain } from '#wagmi.config.ts'
 
@@ -133,24 +134,24 @@ export function TransactionTimestamp(props: {
 export function TransactionTotal(props: { transaction: Transaction }) {
 	const { transaction } = props
 	const batchData = useTransactionDataFromBatch(transaction.hash)
-	const { areTokensListed, isTokenListed } = useTokenListMembership()
+	const { isTokenListed } = useTokenListMembership()
 
 	const events = React.useMemo(() => {
 		if (!batchData) return
 		return batchData.knownEvents.filter((event) => event.type !== 'approval')
 	}, [batchData])
-	const eventTokenAddresses = React.useMemo(
+	const eventTokens = React.useMemo(
 		() =>
 			events?.flatMap((event) =>
 				event.parts.flatMap((part) =>
-					part.type === 'amount' ? [part.value.token] : [],
+					part.type === 'amount' ? [part.value] : [],
 				),
 			) ?? [],
 		[events],
 	)
 	const showUsdPrefix =
-		eventTokenAddresses.length > 0
-			? areTokensListed(TEMPO_CHAIN_ID, eventTokenAddresses)
+		eventTokens.length > 0
+			? areUsdPricedTokens(TEMPO_CHAIN_ID, eventTokens, isTokenListed)
 			: TEMPO_FEE_TOKEN
 				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 				: true
