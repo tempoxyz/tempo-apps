@@ -32,51 +32,45 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
-				const fallback: AddressMetadataResponse = {
-					address: params.address,
-					chainId: 0,
-					accountType: 'empty',
-				}
-
-				if (!hasIndexSupply()) return Response.json(fallback)
+				const { id: chainId } = getTempoChain()
 
 				try {
 					const address = zAddress().parse(params.address)
 					Address.assert(address)
 
 					const client = getBatchedClient()
-					const { id: chainId } = getTempoChain()
 					const isTip20 = isTip20Address(address)
 					const isVirtual = VirtualAddress.validate(address)
-
-					const bytecodePromise = getCode(client, { address }).catch(
+					const bytecode = await getCode(client, { address }).catch(
 						() => undefined,
 					)
+					const baseResponse: AddressMetadataResponse = {
+						address,
+						chainId,
+						accountType: getAccountType(bytecode),
+					}
+
+					if (!hasIndexSupply()) return Response.json(baseResponse)
 
 					let response: AddressMetadataResponse
 
 					if (isVirtual) {
-						const [bytecode, result] = await Promise.all([
-							bytecodePromise,
-							fetchVirtualAddressTransferAggregate(address, chainId).catch(
-								() => ({
-									count: 0,
-									oldestTimestamp: undefined,
-									latestTimestamp: undefined,
-								}),
-							),
-						])
-						response = {
+						const result = await fetchVirtualAddressTransferAggregate(
 							address,
 							chainId,
-							accountType: getAccountType(bytecode),
+						).catch(() => ({
+							count: 0,
+							oldestTimestamp: undefined,
+							latestTimestamp: undefined,
+						}))
+						response = {
+							...baseResponse,
 							txCount: result.count ?? 0,
 							lastActivityTimestamp: parseTimestamp(result.latestTimestamp),
 							createdTimestamp: parseTimestamp(result.oldestTimestamp),
 						}
 					} else if (isTip20) {
-						const [bytecode, result, holdersRows] = await Promise.all([
-							bytecodePromise,
+						const [result, holdersRows] = await Promise.all([
 							fetchTokenTransferAggregate(address, chainId).catch(() => ({
 								oldestTimestamp: undefined,
 								latestTimestamp: undefined,
@@ -86,34 +80,39 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 							),
 						])
 						response = {
-							address,
-							chainId,
-							accountType: getAccountType(bytecode),
+							...baseResponse,
 							holdersCount: holdersRows[0]?.count ?? 0,
 							lastActivityTimestamp: parseTimestamp(result.latestTimestamp),
 							createdTimestamp: parseTimestamp(result.oldestTimestamp),
 						}
 					} else {
-						const [bytecode, result] = await Promise.all([
-							bytecodePromise,
+						const aggregate = await Promise.allSettled([
 							fetchAddressTxAggregate(address, chainId),
 						])
-						const deployTs = parseTimestamp(result.deployTimestamp)
-						const oldestTs = parseTimestamp(result.oldestTxsBlockTimestamp)
+						const result = aggregate[0]
+						if (result.status === 'rejected') console.error(result.reason)
 						response = {
-							address,
-							chainId,
-							accountType: getAccountType(bytecode),
-							txCount: result.count ?? 0,
+							...baseResponse,
+							txCount:
+								result.status === 'fulfilled' ? result.value.count : undefined,
 							lastActivityTimestamp: parseTimestamp(
-								result.latestTxsBlockTimestamp,
+								result.status === 'fulfilled'
+									? result.value.latestTxsBlockTimestamp
+									: undefined,
 							),
-							createdTimestamp:
-								deployTs && oldestTs
-									? Math.min(deployTs, oldestTs)
-									: (deployTs ?? oldestTs),
-							createdTxHash: result.deployTxHash ?? result.oldestTxHash,
-							createdBy: result.deployTxFrom ?? result.oldestTxFrom,
+							createdTimestamp: parseTimestamp(
+								result.status === 'fulfilled'
+									? result.value.oldestTxsBlockTimestamp
+									: undefined,
+							),
+							createdTxHash:
+								result.status === 'fulfilled'
+									? result.value.oldestTxHash
+									: undefined,
+							createdBy:
+								result.status === 'fulfilled'
+									? result.value.oldestTxFrom
+									: undefined,
 						}
 					}
 
@@ -125,6 +124,11 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 				} catch (error) {
 					console.error(error)
 					const errorMessage = error instanceof Error ? error.message : error
+					const fallback: AddressMetadataResponse = {
+						address: params.address,
+						chainId,
+						accountType: 'empty',
+					}
 					return Response.json(
 						{ ...fallback, error: String(errorMessage) },
 						{ status: 500 },
