@@ -1264,12 +1264,11 @@ function SectionsWrapper(props: {
 	// Holdings uses local pagination state (decoupled from URL `page` param)
 	const [holdingsPage, setHoldingsPage] = React.useState(1)
 	const [showAllHoldings, setShowAllHoldings] = React.useState(false)
-	const prevAddressRef = React.useRef(address)
-	if (prevAddressRef.current !== address) {
-		prevAddressRef.current = address
-		setHoldingsPage(1)
-		setShowAllHoldings(false)
-	}
+	// Render a new address with default holdings controls immediately, then
+	// sync the backing state after commit.
+	const settledHoldingsAddressRef = React.useRef(address)
+	const isHoldingsAddressTransition =
+		settledHoldingsAddressRef.current !== address
 
 	const { isTokenListed: isHoldingTokenListed } = useTokenListMembership()
 	const { listedAssets, unlistedAssets } = React.useMemo(() => {
@@ -1285,7 +1284,10 @@ function SectionsWrapper(props: {
 		return { listedAssets: listed, unlistedAssets: unlisted }
 	}, [assetsData, isHoldingTokenListed])
 
-	const visibleAssets = showAllHoldings ? assetsData : listedAssets
+	const currentShowAllHoldings = isHoldingsAddressTransition
+		? false
+		: showAllHoldings
+	const visibleAssets = currentShowAllHoldings ? assetsData : listedAssets
 	const hasUnlisted = unlistedAssets.length > 0
 
 	// Clamp page when asset count shrinks (e.g. after a refetch or filter toggle)
@@ -1293,9 +1295,23 @@ function SectionsWrapper(props: {
 		1,
 		Math.ceil(visibleAssets.length / ASSETS_PER_PAGE),
 	)
-	if (holdingsPage > maxHoldingsPage) {
+	const currentHoldingsPage = isHoldingsAddressTransition
+		? 1
+		: Math.min(holdingsPage, maxHoldingsPage)
+
+	React.useEffect(() => {
+		if (!isHoldingsAddressTransition) return
+
+		settledHoldingsAddressRef.current = address
+		setHoldingsPage(1)
+		setShowAllHoldings(false)
+	}, [address, isHoldingsAddressTransition])
+
+	React.useEffect(() => {
+		if (isHoldingsAddressTransition || holdingsPage <= maxHoldingsPage) return
+
 		setHoldingsPage(maxHoldingsPage)
-	}
+	}, [holdingsPage, isHoldingsAddressTransition, maxHoldingsPage])
 
 	// Build sections based on visible tabs
 	const sections = visibleTabs.map((tabName) => {
@@ -1406,7 +1422,7 @@ function SectionsWrapper(props: {
 					),
 				}
 			case 'holdings': {
-				const holdingsPages = Math.ceil(visibleAssets.length / ASSETS_PER_PAGE)
+				const holdingsPages = maxHoldingsPage
 				return {
 					title: 'Holdings',
 					totalItems: visibleAssets.length,
@@ -1435,8 +1451,8 @@ function SectionsWrapper(props: {
 							items={(mode) =>
 								visibleAssets
 									.slice(
-										(holdingsPage - 1) * ASSETS_PER_PAGE,
-										holdingsPage * ASSETS_PER_PAGE,
+										(currentHoldingsPage - 1) * ASSETS_PER_PAGE,
+										currentHoldingsPage * ASSETS_PER_PAGE,
 									)
 									.map((asset) => ({
 										className: 'text-[13px]',
@@ -1463,17 +1479,17 @@ function SectionsWrapper(props: {
 							}
 							totalItems={visibleAssets.length}
 							displayCount={visibleAssets.length}
-							page={holdingsPage}
+							page={currentHoldingsPage}
 							itemsLabel="assets"
 							itemsPerPage={ASSETS_PER_PAGE}
 							pagination={
 								<HoldingsFooter
-									page={holdingsPage}
+									page={currentHoldingsPage}
 									pages={holdingsPages}
 									totalItems={visibleAssets.length}
 									onPageChange={setHoldingsPage}
 									hasUnlisted={hasUnlisted}
-									showAll={showAllHoldings}
+									showAll={currentShowAllHoldings}
 									unlistedCount={unlistedAssets.length}
 									onToggleShowAll={() => {
 										setShowAllHoldings((prev) => !prev)
