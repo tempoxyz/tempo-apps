@@ -32,9 +32,10 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 	server: {
 		handlers: {
 			GET: async ({ params }) => {
+				const { id: chainId } = getTempoChain()
 				const fallback: AddressMetadataResponse = {
 					address: params.address,
-					chainId: 0,
+					chainId,
 					accountType: 'empty',
 				}
 
@@ -45,7 +46,6 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 					Address.assert(address)
 
 					const client = getBatchedClient()
-					const { id: chainId } = getTempoChain()
 					const isTip20 = isTip20Address(address)
 					const isVirtual = VirtualAddress.validate(address)
 
@@ -96,19 +96,22 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 					} else {
 						const [bytecode, result] = await Promise.all([
 							bytecodePromise,
-							fetchAddressTxAggregate(address, chainId),
+							fetchAddressTxAggregate(address, chainId).catch((error) => {
+								console.error(error)
+								return undefined
+							}),
 						])
 						response = {
 							address,
 							chainId,
 							accountType: getAccountType(bytecode),
-							txCount: result.count ?? 0,
+							txCount: result?.count,
 							lastActivityTimestamp: parseTimestamp(
-								result.latestTxsBlockTimestamp,
+								result?.latestTxsBlockTimestamp,
 							),
-							createdTimestamp: parseTimestamp(result.oldestTxsBlockTimestamp),
-							createdTxHash: result.oldestTxHash,
-							createdBy: result.oldestTxFrom,
+							createdTimestamp: parseTimestamp(result?.oldestTxsBlockTimestamp),
+							createdTxHash: result?.oldestTxHash,
+							createdBy: result?.oldestTxFrom,
 						}
 					}
 
