@@ -42,4 +42,31 @@ describe('calculateKnownEventsTotal', () => {
 
 		expect(calculateKnownEventsTotal(events)).toBe(100n * 10n ** 18n)
 	})
+
+	it('ignores approval events (which often use type(uint256).max)', () => {
+		const amount = 100_000_000n
+		const maxUint256 = 2n ** 256n - 1n
+		const approval: KnownEvent = {
+			type: 'approval',
+			parts: [
+				{ type: 'action', value: 'Approve' },
+				{
+					type: 'amount',
+					value: {
+						token: tokenAddress,
+						value: maxUint256,
+						decimals: 6,
+						symbol: 'PathUSD',
+					},
+				},
+				{ type: 'account', value: recipientAddress },
+			],
+		}
+		const events = [
+			approval,
+			sendEvent({ from: senderAddress, to: recipientAddress, amount }),
+		]
+
+		expect(calculateKnownEventsTotal(events)).toBe(100n * 10n ** 18n)
+	})
 })
