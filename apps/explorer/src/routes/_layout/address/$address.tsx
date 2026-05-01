@@ -712,6 +712,8 @@ async function fetchAddressMetadata(address: Address.Address) {
 		holdersCount?: number | null
 		lastActivityTimestamp: number | null
 		createdTimestamp: number | null
+		createdTxHash?: string | null
+		createdBy?: string | null
 	}>
 }
 

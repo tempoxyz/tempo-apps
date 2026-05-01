@@ -1,8 +1,10 @@
+import { useQuery } from '@tanstack/react-query'
 import type { Address } from 'ox'
 import * as React from 'react'
 import type { Abi } from 'viem'
 import { Link } from '@tanstack/react-router'
 import { useBytecode, usePublicClient } from 'wagmi'
+import { Address as AddressComp } from '#comps/Address.tsx'
 import { ConnectWallet } from '#comps/ConnectWallet.tsx'
 import { AbiViewer } from '#comps/ContractAbi.tsx'
 import { ContractReader } from '#comps/ContractReader.tsx'
@@ -12,6 +14,7 @@ import { cx } from '#lib/css'
 import { ellipsis } from '#lib/chars.ts'
 import type { ContractSource } from '#lib/domain/contract-source.ts'
 import { autoloadAbi, getContractAbi } from '#lib/domain/contracts.ts'
+import { getApiUrl } from '#lib/env.ts'
 import {
 	detectProxy,
 	type ProxyInfo,
@@ -35,22 +38,69 @@ function proxyTypeUrl(type: ProxyType | undefined): string {
 	return type ? proxyTypeUrls[type] : proxyTypeUrls['EIP-1967']
 }
 
+function formatDate(timestamp: number): string {
+	return new Date(timestamp * 1000).toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+	})
+}
+
 /**
  * Contract tab content - shows ABI and Source
  */
-export function ContractTabContent(props: {
-	address: Address.Address
-	abi?: Abi
-	docsUrl?: string
-	source?: ContractSource
-}) {
+export function ContractTabContent(
+	props: ContractTabContent.Props,
+): React.JSX.Element {
 	const { address, docsUrl, source } = props
 	const isTip20 = isTip20Address(address)
 
 	const { copy: copyAbi, notifying: copiedAbi } = useCopy({ timeout: 2_000 })
 
+	const [deploymentExpanded, setDeploymentExpanded] = React.useState(true)
 	const [abiExpanded, setAbiExpanded] = React.useState(false)
 	const abi = props.abi ?? getContractAbi(address)
+
+	const { data: metadataData } = useQuery<ContractTabContent.MetadataData>({
+		queryKey: ['address-metadata', address],
+		queryFn: async () => {
+			const url = getApiUrl(`/api/address/metadata/${address}`)
+			const response = await fetch(url)
+			if (!response.ok) {
+				return {
+					createdTimestamp: null,
+					createdTxHash: null,
+					createdBy: null,
+				} as const
+			}
+			return response.json()
+		},
+	})
+
+	const { data: contractCreationData } =
+		useQuery<ContractTabContent.CreationResponse>({
+			queryKey: ['contract-creation', address],
+			queryFn: async () => {
+				const url = getApiUrl(`/api/contract/creation/${address}`)
+				const response = await fetch(url)
+				return response.json() as Promise<ContractTabContent.CreationResponse>
+			},
+			enabled: !metadataData?.createdTxHash || !metadataData?.createdBy,
+			staleTime: 60_000,
+		})
+
+	const createdTimestamp =
+		metadataData?.createdTimestamp ??
+		(contractCreationData?.creation?.timestamp
+			? Number(contractCreationData.creation.timestamp)
+			: null)
+	const createdTxHash =
+		metadataData?.createdTxHash ?? contractCreationData?.creation?.hash ?? null
+	const createdBy =
+		metadataData?.createdBy ?? contractCreationData?.creation?.from ?? null
+	const hasDeploymentInfo = Boolean(
+		createdTimestamp || createdTxHash || createdBy,
+	)
 
 	const handleCopyAbi = React.useCallback(() => {
 		if (!abi) return
@@ -102,9 +152,46 @@ export function ContractTabContent(props: {
 			{/* Source Section */}
 			{source && <SourceSection {...source} docsUrl={docsUrl} />}
 
+			{/* Deployment Section */}
+			{hasDeploymentInfo && (
+				<CollapsibleSection
+					first={!isTip20 && !source}
+					title="Deployment"
+					expanded={deploymentExpanded}
+					onToggle={() => setDeploymentExpanded(!deploymentExpanded)}
+				>
+					<div className="px-[18px] py-[12px] flex flex-col gap-[8px] text-[13px]">
+						<DeploymentRow
+							label="Created"
+							value={
+								createdTimestamp ? formatDate(createdTimestamp) : undefined
+							}
+						/>
+						{createdBy && (
+							<div className="flex items-center justify-between gap-[12px]">
+								<span className="text-secondary">Created By</span>
+								<AddressComp address={createdBy} className="text-[13px]" />
+							</div>
+						)}
+						{createdTxHash && (
+							<div className="flex items-center justify-between gap-[12px]">
+								<span className="text-secondary">Creation Tx</span>
+								<Link
+									to="/tx/$hash"
+									params={{ hash: createdTxHash }}
+									className="text-[13px] font-mono text-accent hover:underline"
+								>
+									{createdTxHash.slice(0, 10)}…{createdTxHash.slice(-8)}
+								</Link>
+							</div>
+						)}
+					</div>
+				</CollapsibleSection>
+			)}
+
 			{/* ABI Section */}
 			<CollapsibleSection
-				first={!isTip20}
+				first={!isTip20 && !source && !hasDeploymentInfo}
 				title={<span title="Contract ABI">ABI</span>}
 				expanded={abiExpanded}
 				onToggle={() => setAbiExpanded(!abiExpanded)}
@@ -152,6 +239,30 @@ export function ContractTabContent(props: {
 	)
 }
 
+export declare namespace ContractTabContent {
+	type Props = {
+		address: Address.Address
+		abi?: Abi | undefined
+		docsUrl?: string | undefined
+		source?: ContractSource | undefined
+	}
+
+	type MetadataData = {
+		createdTimestamp: number | null
+		createdTxHash: `0x${string}` | null
+		createdBy: Address.Address | null
+	}
+
+	type CreationResponse = {
+		creation: {
+			timestamp: string
+			hash: `0x${string}` | null
+			from: Address.Address | null
+		} | null
+		error: string | null
+	}
+}
+
 /**
  * Collapsible section component
  */
@@ -195,6 +306,20 @@ export function CollapsibleSection(props: {
 				)}
 			</div>
 			<div className={cx(!expanded && 'hidden')}>{children}</div>
+		</div>
+	)
+}
+
+function DeploymentRow(props: {
+	label: string
+	value: string | undefined
+}): React.JSX.Element {
+	return (
+		<div className="flex items-center justify-between gap-[12px]">
+			<span className="text-secondary">{props.label}</span>
+			<span className="text-primary">
+				{props.value ?? <span className="text-tertiary">&mdash;</span>}
+			</span>
 		</div>
 	)
 }
