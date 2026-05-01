@@ -1410,6 +1410,9 @@ export async function fetchAddressTxAggregate(
 	oldestTxsBlockTimestamp?: unknown
 	oldestTxHash?: string
 	oldestTxFrom?: string
+	deployTxHash?: string
+	deployTxFrom?: string
+	deployTimestamp?: unknown
 }> {
 	type AddressTxBoundaryRow = {
 		hash: Hex.Hex
@@ -1443,6 +1446,22 @@ export async function fetchAddressTxAggregate(
 			.orderBy('hash', sortDirection)
 			.limit(1)
 			.executeTakeFirst()) as AddressTxBoundaryRow | undefined
+
+	type DeployReceiptRow = {
+		tx_hash: Hex.Hex
+		from: string
+		block_timestamp: string | number | bigint | null
+	}
+
+	const fetchDeployReceipt = async (): Promise<
+		DeployReceiptRow | undefined
+	> =>
+		(await QB(chainId)
+			.selectFrom('receipts')
+			.select(['tx_hash', 'from', 'block_timestamp'])
+			.where('contract_address', '=', address)
+			.limit(1)
+			.executeTakeFirst()) as DeployReceiptRow | undefined
 
 	const toComparableTimestamp = (value: unknown): number => {
 		if (typeof value === 'bigint') return Number(value)
@@ -1481,6 +1500,7 @@ export async function fetchAddressTxAggregate(
 		latestReceived,
 		oldestSent,
 		oldestReceived,
+		deployReceipt,
 	] = await Promise.all([
 		countByField('from'),
 		countByField('to'),
@@ -1497,6 +1517,7 @@ export async function fetchAddressTxAggregate(
 		fetchBoundaryByField('to', 'desc'),
 		fetchBoundaryByField('from', 'asc'),
 		fetchBoundaryByField('to', 'asc'),
+		fetchDeployReceipt(),
 	])
 
 	const latest = pickBoundary('desc', [latestSent, latestReceived])
@@ -1508,6 +1529,9 @@ export async function fetchAddressTxAggregate(
 		oldestTxsBlockTimestamp: oldest?.block_timestamp,
 		oldestTxHash: oldest?.hash as string | undefined,
 		oldestTxFrom: oldest?.from as string | undefined,
+		deployTxHash: deployReceipt?.tx_hash as string | undefined,
+		deployTxFrom: deployReceipt?.from as string | undefined,
+		deployTimestamp: deployReceipt?.block_timestamp,
 	}
 }
 

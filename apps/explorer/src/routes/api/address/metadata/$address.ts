@@ -98,6 +98,8 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 							bytecodePromise,
 							fetchAddressTxAggregate(address, chainId),
 						])
+						const deployTs = parseTimestamp(result.deployTimestamp)
+						const oldestTs = parseTimestamp(result.oldestTxsBlockTimestamp)
 						response = {
 							address,
 							chainId,
@@ -106,9 +108,12 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 							lastActivityTimestamp: parseTimestamp(
 								result.latestTxsBlockTimestamp,
 							),
-							createdTimestamp: parseTimestamp(result.oldestTxsBlockTimestamp),
-							createdTxHash: result.oldestTxHash,
-							createdBy: result.oldestTxFrom,
+							createdTimestamp:
+								deployTs && oldestTs
+									? Math.min(deployTs, oldestTs)
+									: (deployTs ?? oldestTs),
+							createdTxHash: result.deployTxHash ?? result.oldestTxHash,
+							createdBy: result.deployTxFrom ?? result.oldestTxFrom,
 						}
 					}
 
