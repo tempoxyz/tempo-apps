@@ -31,6 +31,11 @@ export function calculateKnownEventsTotal(
 	const flowsByToken = new Map<string, Map<string, Flow>>()
 
 	for (const event of events) {
+		// Approvals grant spending permission rather than moving value, and
+		// frequently use type(uint256).max ("infinite approval"), which would
+		// otherwise dominate the total.
+		if (event.type === 'approval') continue
+
 		const amounts = event.totalAmount
 			? [event.totalAmount]
 			: event.parts
