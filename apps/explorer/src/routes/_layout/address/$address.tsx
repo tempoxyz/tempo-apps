@@ -1081,6 +1081,7 @@ function SectionsWrapper(props: {
 		holders = [],
 		total: holdersTotal = 0,
 		totalCapped: holdersTotalCapped = false,
+		totalKnown: holdersTotalKnown = true,
 		totalBalance: holdersTotalBalance = '0',
 	} = holdersData ?? {}
 
@@ -1176,8 +1177,9 @@ function SectionsWrapper(props: {
 		if (!isToken || !isHoldersTabActive) return
 
 		const nextPage = page + 1
-		const hasNextPage =
-			holdersTotalCapped || nextPage <= Math.ceil(holdersTotal / limit)
+		const hasNextPage = holdersTotalKnown
+			? holdersTotalCapped || nextPage <= Math.ceil(holdersTotal / limit)
+			: holders.length === limit
 		if (!hasNextPage) return
 
 		void queryClient
@@ -1194,6 +1196,8 @@ function SectionsWrapper(props: {
 		address,
 		holdersTotal,
 		holdersTotalCapped,
+		holdersTotalKnown,
+		holders.length,
 		isHoldersTabActive,
 		isToken,
 		limit,
@@ -1560,7 +1564,11 @@ function SectionsWrapper(props: {
 				return {
 					title: 'Holders',
 					totalItems:
-						holdersData && (holdersTotalCapped ? '100k+' : holdersTotal),
+						holdersData && holdersTotalKnown
+							? holdersTotalCapped
+								? '100k+'
+								: holdersTotal
+							: undefined,
 					itemsLabel: 'holders',
 					content: (
 						<DataGrid
@@ -1606,7 +1614,12 @@ function SectionsWrapper(props: {
 								})
 							}}
 							totalItems={holdersTotal}
-							displayCount={holdersTotal}
+							pages={
+								holdersTotalKnown
+									? undefined
+									: { hasMore: holders.length === limit }
+							}
+							displayCount={holdersTotalKnown ? holdersTotal : undefined}
 							displayCountCapped={holdersTotalCapped}
 							page={page}
 							fetching={isHoldersFetchingNext}
@@ -1614,6 +1627,7 @@ function SectionsWrapper(props: {
 							itemsLabel="holders"
 							itemsPerPage={limit}
 							pagination="simple"
+							showSimpleCount={holdersTotalKnown}
 							onPrefetchNextPage={prefetchHoldersNextPage}
 							emptyState="No holders found."
 						/>

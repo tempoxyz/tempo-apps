@@ -41,6 +41,8 @@ export const getTempoChain = createIsomorphicFn()
 	)
 
 const RPC_PROXY_HOSTNAME = 'proxy.tempo.xyz'
+const CLIENT_RPC_REQUESTS_PER_SECOND = 5
+const SERVER_RPC_REQUESTS_PER_SECOND = 20
 
 const getRpcProxyUrl = createIsomorphicFn()
 	.client(() => {
@@ -81,7 +83,7 @@ const getTempoTransport = createIsomorphicFn()
 		// may require credentials that are only available server-side.
 		return loadBalance([
 			rateLimit(http(proxy.http), {
-				requestsPerSecond: 20,
+				requestsPerSecond: CLIENT_RPC_REQUESTS_PER_SECOND,
 			}),
 		])
 	})
@@ -89,8 +91,16 @@ const getTempoTransport = createIsomorphicFn()
 		const proxy = getRpcProxyUrl()
 		const fallbackUrls = getFallbackUrls()
 		return loadBalance([
-			http(proxy.http),
-			...fallbackUrls.http.map((url) => http(url)),
+			rateLimit(http(proxy.http), {
+				browser: false,
+				requestsPerSecond: SERVER_RPC_REQUESTS_PER_SECOND,
+			}),
+			...fallbackUrls.http.map((url) =>
+				rateLimit(http(url), {
+					browser: false,
+					requestsPerSecond: SERVER_RPC_REQUESTS_PER_SECOND,
+				}),
+			),
 		])
 	})
 

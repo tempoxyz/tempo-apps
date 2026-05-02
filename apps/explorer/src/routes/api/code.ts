@@ -32,6 +32,10 @@ const EXTENSION_LANGUAGE_MAP: Record<string, string> = {
 	rs: 'rust',
 }
 
+const UNVERIFIED_CACHE_HEADERS = {
+	'Cache-Control': 'public, max-age=300, stale-while-revalidate=3600',
+}
+
 let highlighterPromise: Promise<HighlighterCore> | null = null
 
 async function getHighlighter(): Promise<HighlighterCore> {
@@ -149,6 +153,13 @@ export const Route = createFileRoute('/api/code')({
 				)
 				apiUrl.searchParams.set('fields', CONTRACT_SOURCE_FIELDS)
 				const response = await fetch(apiUrl.toString())
+
+				if (response.status === 404) {
+					return new Response(null, {
+						status: 204,
+						headers: UNVERIFIED_CACHE_HEADERS,
+					})
+				}
 
 				if (!response.ok)
 					return Response.json(
