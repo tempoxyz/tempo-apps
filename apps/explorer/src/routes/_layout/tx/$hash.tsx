@@ -28,7 +28,8 @@ import { TxDecodedTopics } from '#comps/TxDecodedTopics'
 import { TxEventDescription } from '#comps/TxEventDescription'
 import { TxRawTransaction } from '#comps/TxRawTransaction'
 import { TxStateDiff } from '#comps/TxStateDiff'
-import { TxTraceTree } from '#comps/TxTraceTree'
+import { TxTraceFlamegraph } from '#comps/TxTraceFlamegraph'
+import { TxTraceTree, useTraceTree } from '#comps/TxTraceTree'
 import { TxTransactionCard } from '#comps/TxTransactionCard'
 import { cx } from '#lib/css'
 import { apostrophe } from '#lib/chars'
@@ -248,16 +249,13 @@ function RouteComponent() {
 			title: 'Trace',
 			itemsLabel: 'views',
 			content: (
-				<div className="flex flex-col">
-					<TxTraceTree trace={traceData.trace} />
-					<TxStateDiff
-						prestate={traceData.prestate}
-						trace={traceData.trace}
-						receipt={{ from: receipt.from, to: receipt.to }}
-						logs={receipt.logs}
-						tokenMetadata={balanceChangesData.tokenMetadata}
-					/>
-				</div>
+				<TraceSection
+					trace={traceData.trace}
+					prestate={traceData.prestate}
+					receipt={receipt}
+					logs={receipt.logs}
+					tokenMetadata={balanceChangesData.tokenMetadata}
+				/>
 			),
 		})
 	}
@@ -589,6 +587,61 @@ function BalanceChangesOverview(props: { data: BalanceChangesData }) {
 					</Link>
 				</div>
 			</div>
+		</div>
+	)
+}
+
+function TraceSection(props: {
+	trace: import('#lib/queries/trace').CallTrace | null
+	prestate: import('#lib/queries/trace').PrestateDiff | null
+	receipt: TransactionReceipt
+	logs: Log[]
+	tokenMetadata: Record<string, { symbol?: string; decimals?: number }>
+}): React.JSX.Element {
+	const { trace, prestate, receipt, logs, tokenMetadata } = props
+	const [view, setView] = React.useState<'tree' | 'flamegraph'>('tree')
+	const tree = useTraceTree(trace)
+
+	return (
+		<div className="flex flex-col">
+			<div className="flex items-center gap-[2px] px-[16px] h-[36px] border-b border-dashed border-distinct">
+				<button
+					type="button"
+					onClick={() => setView('tree')}
+					className={cx(
+						'text-[12px] px-[8px] py-[4px] rounded-[4px] cursor-pointer press-down',
+						view === 'tree'
+							? 'text-accent bg-accent/10'
+							: 'text-tertiary hover:text-secondary',
+					)}
+				>
+					Tree
+				</button>
+				<button
+					type="button"
+					onClick={() => setView('flamegraph')}
+					className={cx(
+						'text-[12px] px-[8px] py-[4px] rounded-[4px] cursor-pointer press-down',
+						view === 'flamegraph'
+							? 'text-accent bg-accent/10'
+							: 'text-tertiary hover:text-secondary',
+					)}
+				>
+					Flamegraph
+				</button>
+			</div>
+			{view === 'tree' ? (
+				<TxTraceTree trace={trace} tree={tree} />
+			) : (
+				<TxTraceFlamegraph tree={tree} prestate={prestate} />
+			)}
+			<TxStateDiff
+				prestate={prestate}
+				trace={trace}
+				receipt={{ from: receipt.from, to: receipt.to }}
+				logs={logs}
+				tokenMetadata={tokenMetadata}
+			/>
 		</div>
 	)
 }
