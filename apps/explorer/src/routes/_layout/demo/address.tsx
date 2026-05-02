@@ -868,8 +868,9 @@ function Component() {
 	return (
 		<div
 			className={cx(
-				'max-[800px]:flex max-[800px]:flex-col max-[800px]:pt-10 max-[800px]:pb-8 w-full',
-				'grid w-full pt-20 pb-16 px-4 gap-[14px] min-w-0 grid-cols-[auto_1fr] min-[1240px]:max-w-[1080px]',
+				'flex flex-col w-full pt-10 pb-8 px-4 gap-[14px] min-w-0',
+				'min-[801px]:grid min-[801px]:grid-cols-[auto_1fr] min-[801px]:pt-20 min-[801px]:pb-16',
+				'min-[1240px]:max-w-[1080px]',
 			)}
 		>
 			<InfoCard
