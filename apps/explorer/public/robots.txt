@@ -1,3 +1,10 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /$
+Disallow: /address/
+Disallow: /token/
+Disallow: /block/
+Disallow: /blocks
+Disallow: /tx/
+Disallow: /receipt/
+Disallow: /demo/
