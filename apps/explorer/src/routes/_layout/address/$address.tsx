@@ -520,6 +520,7 @@ function RouteComponent() {
 	const { address } = Route.useParams()
 	const { page, tab, live, limit, status, dir, period } = Route.useSearch()
 	const {
+		address: loaderAddress,
 		accountType,
 		isToken,
 		tokenMetadata,
@@ -626,11 +627,13 @@ function RouteComponent() {
 		visibleTabs.indexOf(tab) !== -1 ? visibleTabs.indexOf(tab) : 0
 
 	const isHoldingsTabActive = tab === 'holdings'
+	const currentBalancesData =
+		loaderAddress === address ? balancesData : undefined
 
 	const { data: assetsData, isLoading: assetsLoading } = useBalancesData(
 		address,
-		balancesData,
-		!isToken && (isHoldingsTabActive || balancesData !== undefined),
+		currentBalancesData,
+		!isToken && (isHoldingsTabActive || currentBalancesData !== undefined),
 	)
 	const historySources = React.useMemo(
 		() => historySourcesForAddress(address),
