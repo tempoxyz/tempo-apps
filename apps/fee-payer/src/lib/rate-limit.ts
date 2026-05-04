@@ -15,6 +15,10 @@ import * as z from 'zod/mini'
  * Non-transaction RPC calls (e.g. eth_chainId) pass through to the handler.
  */
 export async function rateLimitMiddleware(c: Context, next: Next) {
+	// RPC requests are always POST. Non-POST methods (GET, OPTIONS, HEAD)
+	// have no body to parse, so pass them through to the handler.
+	if (c.req.method !== 'POST') return next()
+
 	if (!env.AddressRateLimiter) {
 		console.error('AddressRateLimiter binding is not configured')
 		return c.json({ error: 'Service misconfigured' }, 503)
