@@ -1,8 +1,10 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Allow: /$
+Allow: /tokens
+Allow: /token/
+Disallow: /*?a=
 Disallow: /address/
-Disallow: /token/
 Disallow: /block/
 Disallow: /blocks
 Disallow: /tx/
