@@ -88,13 +88,8 @@ function DashboardPage(): React.JSX.Element {
 				<div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
 					{scenarios.map((scenario) => {
 						const latest = getLatestRun(scenario.id)
-						return (
-							<Link
-								key={scenario.id}
-								to="/workload/$id"
-								params={{ id: scenario.id }}
-								className="card-interactive flex flex-col"
-							>
+						const content = (
+							<>
 								<div className="p-5 pb-4">
 									<h4 className="text-[15px] font-semibold text-primary">
 										{scenario.label}
@@ -130,7 +125,22 @@ function DashboardPage(): React.JSX.Element {
 										</p>
 									</div>
 								)}
+							</>
+						)
+
+						return latest ? (
+							<Link
+								key={scenario.id}
+								to="/benchmark/$id"
+								params={{ id: latest.id }}
+								className="card-interactive flex flex-col"
+							>
+								{content}
 							</Link>
+						) : (
+							<div key={scenario.id} className="card flex flex-col">
+								{content}
+							</div>
 						)
 					})}
 				</div>
@@ -217,8 +227,8 @@ function DashboardPage(): React.JSX.Element {
 										className="border-b border-dashed border-border last:border-0 transition-colors hover:bg-surface-hover cursor-pointer"
 										onClick={() =>
 											navigate({
-												to: '/workload/$id',
-												params: { id: scenario.id },
+												to: '/benchmark/$id',
+												params: { id: latest.id },
 											})
 										}
 									>

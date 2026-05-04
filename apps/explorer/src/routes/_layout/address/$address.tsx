@@ -44,6 +44,12 @@ import {
 	TransactionDescription,
 	TransactionTimestamp,
 } from '#comps/TxTransactionRow'
+import { TxEventDescription } from '#comps/TxEventDescription'
+import type { KnownEvent } from '#lib/domain/known-events'
+import {
+	calculateKnownEventsTotal,
+	NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS,
+} from '#lib/domain/known-event-totals'
 import { TransactionFilters } from '#comps/TransactionFilters'
 import { cx } from '#lib/css'
 import {
@@ -52,7 +58,10 @@ import {
 	calculateTotalHoldings,
 	useBalancesData,
 } from '#lib/address-balances'
-import { normalizeSearchInput } from '#lib/tempo-address'
+import {
+	getVirtualAddressParts,
+	normalizeSearchInput,
+} from '#lib/tempo-address'
 import { type AccountType, getAccountType } from '#lib/account'
 import {
 	type ContractSource,
@@ -80,8 +89,8 @@ import {
 	historyQueryOptions,
 } from '#lib/queries/account'
 import { transfersQueryOptions, holdersQueryOptions } from '#lib/queries/tokens'
-import { fetchAddressOgMeta } from '#lib/server/tempo-queries'
 import { getApiUrl } from '#lib/env.ts'
+import { areUsdPricedTokens } from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 import type { EnrichedTransaction } from '#routes/api/address/history/$address.ts'
@@ -166,6 +175,15 @@ export const Route = createFileRoute('/_layout/address/$address')({
 		status: z.optional(z.enum(['success', 'reverted'])),
 		dir: z.optional(z.enum(['sent', 'received'])),
 		period: z.optional(z.enum(['24h', '7d'])),
+		voucher: z.optional(
+			z.object({
+				final_voucher: z.optional(z.string()),
+				packet_size: z.optional(z.coerce.number()),
+				number: z.optional(z.coerce.number()),
+				input_amount: z.optional(z.coerce.number()),
+				output_amount: z.optional(z.coerce.number()),
+			}),
+		),
 	}),
 	search: {
 		middlewares: [stripSearchParams(defaultSearchValues)],
@@ -289,9 +307,10 @@ export const Route = createFileRoute('/_layout/address/$address')({
 						)
 					: Promise.resolve(undefined)
 
-			// Fetch OG metadata (txCount + timestamps) via direct TIDX query
+			// Fetch address metadata through the API route so TIDX credentials stay
+			// server-side when loaders run in the browser.
 			const ogMetaPromise = timeout(
-				fetchAddressOgMeta(address, TEMPO_CHAIN_ID).catch(() => undefined),
+				fetchAddressMetadata(address).catch(() => undefined),
 				QUERY_TIMEOUT_MS,
 			)
 
@@ -379,6 +398,13 @@ export const Route = createFileRoute('/_layout/address/$address')({
 			const supply = formatSupply(totalSupply)
 			const chainId = getTempoChain().id
 
+			let created: string | undefined
+			if (loaderData?.ogMeta?.createdTimestamp) {
+				created = DateFormatter.formatTimestampForOg(
+					BigInt(loaderData.ogMeta.createdTimestamp),
+				).date
+			}
+
 			description = buildTokenDescription({
 				name: tokenMeta.name ?? '—',
 				symbol: tokenMeta.symbol,
@@ -391,6 +417,9 @@ export const Route = createFileRoute('/_layout/address/$address')({
 				name: tokenMeta.name,
 				symbol: tokenMeta.symbol,
 				supply,
+				currency: tokenMeta.currency ?? undefined,
+				holders: loaderData?.ogMeta?.holdersCount ?? undefined,
+				created,
 			})
 		} else {
 			const txCount = loaderData?.ogMeta?.txCount ?? 0
@@ -680,6 +709,7 @@ async function fetchAddressMetadata(address: Address.Address) {
 	return response.json() as Promise<{
 		accountType: AccountType
 		txCount: number | null
+		holdersCount?: number | null
 		lastActivityTimestamp: number | null
 		createdTimestamp: number | null
 	}>
@@ -781,6 +811,7 @@ function AccountCardWithTimestamps(props: {
 			: undefined
 
 	const isTip20 = Tip20.isTip20Address(address)
+	const virtualAddressParts = getVirtualAddressParts(address)
 	const { isTokenListed } = useTokenListMembership()
 	const totalValue = React.useMemo(
 		() =>
@@ -806,6 +837,7 @@ function AccountCardWithTimestamps(props: {
 				accountType={resolvedAccountType}
 				isToken={isToken}
 				tokenName={tokenMetadata?.name}
+				virtualAddressParts={virtualAddressParts}
 			/>
 			{isToken && (
 				<ClientOnly fallback={null}>
@@ -867,6 +899,7 @@ function SectionsWrapper(props: {
 		onPeriodChange,
 	} = props
 	const { timeFormat, cycleTimeFormat, formatLabel } = useTimeFormat()
+	const { voucher } = Route.useSearch()
 
 	const after = React.useMemo(() => {
 		if (period === '24h') return Math.floor(Date.now() / 1000) - 86400
@@ -1194,12 +1227,13 @@ function SectionsWrapper(props: {
 				/>
 			),
 			align: 'start',
+			minWidth: 86,
 			width: '0.5fr',
 		},
-		{ label: 'Description', align: 'start', width: '2fr' },
-		{ label: 'Hash', align: 'end', width: '1fr' },
-		{ label: 'Fee', align: 'end', width: '0.5fr' },
-		{ label: 'Total', align: 'end', width: '0.5fr' },
+		{ label: 'Description', align: 'start', minWidth: 260, width: '2fr' },
+		{ label: 'Hash', align: 'end', minWidth: 112, width: '1fr' },
+		{ label: 'Fee', align: 'end', minWidth: 64, width: '0.5fr' },
+		{ label: 'Total', align: 'end', minWidth: 72, width: '0.5fr' },
 	]
 
 	const transfersColumns: DataGrid.Column[] = [
@@ -1272,7 +1306,7 @@ function SectionsWrapper(props: {
 					totalItems: totalTrxCount ?? transactions.length,
 					itemsLabel: 'transactions',
 					contextual: (
-						<div className="flex flex-col gap-[10px] min-[800px]:flex-row min-[800px]:items-center min-[800px]:justify-end">
+						<div className="flex items-center justify-end gap-[8px]">
 							<TransactionFilters
 								status={status}
 								period={period}
@@ -1296,40 +1330,55 @@ function SectionsWrapper(props: {
 								tabs: transactionsColumns,
 							}}
 							items={() =>
-								transactions.map((transaction) => ({
-									cells: [
-										<TransactionTimeCell
-											key="time"
-											timestamp={transaction.timestamp}
-											hash={transaction.hash}
-											format={timeFormat}
-										/>,
-										<TransactionDescCell
-											key="desc"
-											transaction={transaction}
-											accountAddress={address}
-										/>,
-										<Midcut
-											key="hash"
-											value={transaction.hash}
-											prefix="0x"
-											align="end"
-										/>,
-										<TransactionFeeCell
-											key="fee"
-											gasUsed={transaction.gasUsed}
-											effectiveGasPrice={transaction.effectiveGasPrice}
-										/>,
-										<TransactionTotalCell
-											key="total"
-											transaction={transaction}
-										/>,
-									],
-									link: {
-										href: `/receipt/${transaction.hash}`,
-										title: `View receipt ${transaction.hash}`,
-									},
-								}))
+								transactions.map((transaction) => {
+									const isVoucherMatch =
+										voucher?.final_voucher &&
+										transaction.hash.toLowerCase() ===
+											voucher.final_voucher.toLowerCase()
+									return {
+										cells: [
+											<TransactionTimeCell
+												key="time"
+												timestamp={transaction.timestamp}
+												hash={transaction.hash}
+												format={timeFormat}
+											/>,
+											<TransactionDescCell
+												key="desc"
+												transaction={transaction}
+												accountAddress={address}
+											/>,
+											<Midcut
+												key="hash"
+												value={transaction.hash}
+												prefix="0x"
+												align="end"
+											/>,
+											<TransactionFeeCell
+												key="fee"
+												gasUsed={transaction.gasUsed}
+												effectiveGasPrice={transaction.effectiveGasPrice}
+											/>,
+											<TransactionTotalCell
+												key="total"
+												transaction={transaction}
+											/>,
+										],
+										link: {
+											href: `/receipt/${transaction.hash}`,
+											title: `View receipt ${transaction.hash}`,
+										},
+										expanded: isVoucherMatch ? (
+											<StreamedPaymentReceipt
+												transaction={transaction}
+												packetSize={voucher.packet_size ?? 0}
+												packetCount={voucher.number ?? 0}
+												inputAmount={voucher.input_amount}
+												outputAmount={voucher.output_amount}
+											/>
+										) : undefined,
+									}
+								})
 							}
 							totalItems={totalTrxCount ?? transactions.length}
 							pages={
@@ -1720,23 +1769,23 @@ function TransactionFeeCell(props: {
 
 function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 	const { transaction } = props
-	const { areTokensListed, isTokenListed } = useTokenListMembership()
+	const { isTokenListed } = useTokenListMembership()
 
 	const events = React.useMemo(() => {
 		return transaction.knownEvents.filter((event) => event.type !== 'approval')
 	}, [transaction.knownEvents])
-	const eventTokenAddresses = React.useMemo(
+	const eventTokens = React.useMemo(
 		() =>
 			events.flatMap((event) =>
 				event.parts.flatMap((part) =>
-					part.type === 'amount' ? [part.value.token] : [],
+					part.type === 'amount' ? [part.value] : [],
 				),
 			),
 		[events],
 	)
 	const showUsdPrefix =
-		eventTokenAddresses.length > 0
-			? areTokensListed(TEMPO_CHAIN_ID, eventTokenAddresses)
+		eventTokens.length > 0
+			? areUsdPricedTokens(TEMPO_CHAIN_ID, eventTokens, isTokenListed)
 			: TEMPO_FEE_TOKEN
 				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 				: true
@@ -1757,24 +1806,8 @@ function TransactionTotalCell(props: { transaction: EnrichedTransaction }) {
 			/>
 		)
 
-	// For each event, take the max amount (avoids double-counting swap legs),
-	// then sum across events.
-	const normalizedDecimals = 18
-	const totalValue = events.reduce((sum, event) => {
-		let maxAmount = 0n
-		for (const part of event.parts) {
-			if (part.type !== 'amount') continue
-			const decimals = part.value.decimals ?? 6
-			const scale = 10n ** BigInt(normalizedDecimals - decimals)
-			const value =
-				typeof part.value.value === 'bigint'
-					? part.value.value
-					: BigInt(part.value.value)
-			const normalized = value * scale
-			if (normalized > maxAmount) maxAmount = normalized
-		}
-		return sum + maxAmount
-	}, 0n)
+	const normalizedDecimals = NORMALIZED_KNOWN_EVENT_TOTAL_DECIMALS
+	const totalValue = calculateKnownEventsTotal(events)
 
 	if (totalValue === 0n) {
 		const value = transaction.value
@@ -2013,6 +2046,115 @@ function FilterIndicator(props: {
 			>
 				<XIcon className="size-3.5 translate-y-px" />
 			</Link>
+		</div>
+	)
+}
+
+// Deterministic per-row coin-flip so SSR and client render agree
+function seededBool(i: number): boolean {
+	let x = (i ^ 0xdeadbeef) >>> 0
+	x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0
+	x = Math.imul(x ^ (x >>> 16), 0x45d9f3b) >>> 0
+	return ((x ^ (x >>> 16)) & 1) === 0
+}
+
+function StreamedPaymentReceipt(props: {
+	transaction: EnrichedTransaction
+	packetSize: number
+	packetCount: number
+	inputAmount?: number
+	outputAmount?: number
+}) {
+	const { transaction, packetSize, packetCount, inputAmount, outputAmount } =
+		props
+
+	const makeAmountPart = (amount: number): KnownEvent['parts'] =>
+		TEMPO_FEE_TOKEN
+			? [
+					{
+						type: 'amount',
+						value: {
+							value: BigInt(Math.round(amount * 1_000_000)),
+							decimals: 6,
+							token: TEMPO_FEE_TOKEN,
+						},
+					},
+				]
+			: []
+
+	const defaultAmountParts = makeAmountPart(packetSize)
+	const inputAmountParts =
+		inputAmount !== undefined ? makeAmountPart(inputAmount) : defaultAmountParts
+	const outputAmountParts =
+		outputAmount !== undefined
+			? makeAmountPart(outputAmount)
+			: defaultAmountParts
+
+	const hasAlternating = inputAmount !== undefined || outputAmount !== undefined
+
+	const digits = String(packetCount).length
+
+	return (
+		<div className="pb-4 font-mono text-[13px]">
+			{/* On-chain settlement — visually part of the main row */}
+			<div className="bg-base-alt -mx-[16px] px-[16px] py-[10px] border-b-2 border-base-border flex items-center">
+				<span
+					className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
+					style={{ minWidth: `${digits}ch` }}
+				>
+					↓
+				</span>
+				<span className="text-[11px] text-accent shrink-0 w-[64px] italic">
+					on-chain
+				</span>
+				{transaction.knownEvents
+					.filter(
+						(e) => e.type === 'settle channel' || e.type === 'close channel',
+					)
+					.map((e, i) => (
+						<TxEventDescription key={i} event={e} />
+					))}
+			</div>
+
+			{/* Off-chain section header */}
+			<div className="flex items-center gap-[8px] pt-[12px] pb-[6px] text-[11px] text-tertiary uppercase tracking-wider">
+				<span>off-chain vouchers</span>
+				<span className="flex-1 border-t border-dashed border-distinct" />
+				<span>{packetCount.toLocaleString()}</span>
+			</div>
+
+			{/* Off-chain voucher rows — capped at 3000 to prevent render crashes */}
+			{Array.from({ length: Math.min(packetCount, 3000) }, (_, i) => {
+				const amountParts = hasAlternating
+					? seededBool(i)
+						? inputAmountParts
+						: outputAmountParts
+					: defaultAmountParts
+				return (
+					<div
+						key={i}
+						className="flex items-center py-[9px] border-b border-dashed border-distinct"
+					>
+						<span
+							className="text-tertiary tabular-nums text-right shrink-0 mr-[10px]"
+							style={{ minWidth: `${digits}ch` }}
+						>
+							{i + 1}
+						</span>
+						<span className="text-[11px] text-tertiary shrink-0 w-[64px]">
+							off-chain
+						</span>
+						<div className="flex items-center gap-[10px] ml-auto">
+							<TxEventDescription.Part
+								part={{ type: 'action', value: 'Pay' }}
+							/>
+							{amountParts.map((p, j) => (
+								<TxEventDescription.Part key={j} part={p} />
+							))}
+						</div>
+					</div>
+				)
+			})}
 		</div>
 	)
 }

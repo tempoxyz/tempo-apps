@@ -7,8 +7,9 @@ import {
 	decodeKnownCall,
 	parseAuthorizationEvents,
 	parseKnownEvent,
+	isStreamChannelAddress,
 	parseKnownEvents,
-	STREAM_CHANNEL,
+	STREAM_CHANNELS,
 } from '#lib/domain/known-events'
 import { getFeeBreakdown } from '#lib/domain/receipt'
 import * as Tip20 from '#lib/domain/tip20'
@@ -71,8 +72,8 @@ async function fetchTxData(params: { hash: Hex.Hex }) {
 	const streamChannelIndices = new Set<number>()
 	let streamChannelToken: `0x${string}` | undefined
 
-	const hasStreamChannelEvents = receipt.logs.some(
-		(log) => log.address.toLowerCase() === STREAM_CHANNEL.toLowerCase(),
+	const hasStreamChannelEvents = receipt.logs.some((log) =>
+		isStreamChannelAddress(log.address),
 	)
 
 	if (hasStreamChannelEvents) {
@@ -89,9 +90,12 @@ async function fetchTxData(params: { hash: Hex.Hex }) {
 
 			const from = `0x${fromTopic.slice(-40)}`.toLowerCase()
 			const to = `0x${toTopic.slice(-40)}`.toLowerCase()
-			const streamChannel = STREAM_CHANNEL.toLowerCase()
+			const streamChannel = STREAM_CHANNELS.find((streamChannel) => {
+				const lower = streamChannel.toLowerCase()
+				return from === lower || to === lower
+			})
 
-			if (from !== streamChannel && to !== streamChannel) continue
+			if (!streamChannel) continue
 
 			streamChannelIndices.add(index)
 			if (!streamChannelToken) streamChannelToken = log.address

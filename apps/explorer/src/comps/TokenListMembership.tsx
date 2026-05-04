@@ -19,18 +19,18 @@ type TokenListMembershipMap = Map<number, Set<string>>
 type TokenListMembershipContextValue = {
 	areTokensListed: (
 		chainId: number,
-		addresses: ReadonlyArray<Address.Address | string | null | undefined>,
+		addresses: ReadonlyArray<Address.Address | undefined>,
 	) => boolean
 	isTokenListed: (
 		chainId: number,
-		address: Address.Address | string | null | undefined,
+		address: Address.Address | undefined,
 	) => boolean
 }
 
 const TokenListMembershipContext =
 	React.createContext<TokenListMembershipContextValue>({
-		areTokensListed: () => true,
-		isTokenListed: () => true,
+		areTokensListed: () => false,
+		isTokenListed: () => false,
 	})
 
 async function fetchTokenListMembershipMap(): Promise<TokenListMembershipMap> {
@@ -79,7 +79,7 @@ export function TokenListMembershipProvider(props: {
 			if (!address) return true
 			if (isLoading) return false
 			const listed = data?.get(chainId)
-			if (!listed || listed.size === 0) return true
+			if (!listed || listed.size === 0) return false
 			return listed.has(address.toLowerCase())
 		}
 
@@ -87,7 +87,7 @@ export function TokenListMembershipProvider(props: {
 			(chainId, addresses) => {
 				if (isLoading) return false
 				const listed = data?.get(chainId)
-				if (!listed || listed.size === 0) return true
+				if (!listed || listed.size === 0) return false
 
 				for (const address of addresses) {
 					if (!address) continue

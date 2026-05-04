@@ -3,10 +3,6 @@ import { getChainId } from 'wagmi/actions'
 import { getRequestURL, hasIndexSupply } from '#lib/env'
 import type { BalancesResponse } from '#lib/address-balances'
 import {
-	enforceCsvExportRateLimit,
-	RateLimitExceededError,
-} from '#lib/server/export-rate-limit'
-import {
 	MAX_TOKENS,
 	createBalancesCsvResponse,
 	fetchAddressBalancesData,
@@ -29,9 +25,6 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 					const address = zAddress().parse(params.address)
 					const config = getWagmiConfig()
 					const chainId = getChainId(config)
-					if (isCsvExport) {
-						await enforceCsvExportRateLimit(address)
-					}
 					const response = await fetchAddressBalancesData({
 						address,
 						chainId,
@@ -48,18 +41,6 @@ export const Route = createFileRoute('/api/address/balances/$address')({
 						balances: response.balances,
 					})
 				} catch (error) {
-					if (error instanceof RateLimitExceededError) {
-						return Response.json(
-							{ error: error.message },
-							{
-								headers: {
-									'Retry-After': String(error.retryAfterSeconds),
-								},
-								status: 429,
-							},
-						)
-					}
-
 					console.error(error)
 					const errorMessage = error instanceof Error ? error.message : error
 					return Response.json(

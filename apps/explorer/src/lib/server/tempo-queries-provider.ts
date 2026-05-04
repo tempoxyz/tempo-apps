@@ -1,7 +1,8 @@
 import { QB, Tidx } from 'tidx.ts'
+import { serverEnv } from './env'
 
 const tidx = Tidx.create({
-	basicAuth: process.env.TIDX_BASIC_AUTH,
+	basicAuth: serverEnv.TIDX_BASIC_AUTH,
 	baseUrl: 'https://tidx.tempo.xyz',
 })
 
@@ -15,7 +16,7 @@ tidx.on('response', (res) => {
 					`[tidx:${res.status}]`,
 					decodeURIComponent(res.url),
 					body,
-					`(auth=${process.env.TIDX_BASIC_AUTH ? 'set' : 'missing'})`,
+					`(auth=${serverEnv.TIDX_BASIC_AUTH ? 'set' : 'missing'})`,
 				),
 			)
 })

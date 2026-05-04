@@ -44,20 +44,21 @@ catalog:
   '@types/react-dom': ^19.2.3
   '@vitejs/plugin-react': ^6.0.1
   '@vitest/ui': 4.1.0
-  '@wagmi/core': ^3.4.2
-  abitype: ^1.2.3
+  '@wagmi/core': ^3.4.8
+  accounts: ~0.8.1
+  abitype: ^1.2.4
   animejs: ^4.3.6
   cva: ^1.0.0-beta.4
   dotenv: ^17.3.1
   eruda: ^3.4.3
   esbuild: ^0.28.0
   globals: ^17.4.0
-  hono: ^4.12.12
+  hono: ^4.12.14
   hono-rate-limiter: ^0.5.3
   idxs: ^0.0.6
   kysely: ^0.28.15
-  midcut: ^0.1.0
-  ox: ^0.14.12
+  midcut: ^0.2.0
+  ox: ^0.14.20
   prool: ^0.2.4
   react: ^19.2.5
   react-dom: ^19.2.5
@@ -68,16 +69,16 @@ catalog:
   tailwindcss: ^4.2.2
   tempo.ts: ^0.14.2
   testcontainers: ^11.13.0
-  tidx.ts: ^0.1.0
+  tidx.ts: ^0.1.1
   tw-animate-css: ^1.4.0
   typed-query-selector: ^2.12.1
   typescript: ^6.0.2
   unplugin-icons: ^23.0.1
-  viem: ^2.47.12
+  viem: ^2.48.4
   vite: ^8.0.7
   vite-plugin-devtools-json: ^1.0.0
   vitest: 4.1.0
-  wagmi: ^3.6.1
+  wagmi: ^3.6.9
   wrangler: 4.79.0
   zod: ^4.3.6
 
@@ -114,11 +115,13 @@ minimumReleaseAgeExclude:
   - 'ox'
   - 'viem'
   - 'wagmi'
+  - 'tidx.ts'
   - '@wagmi/core'
+  - '@wagmi/connectors'
   - '@cloudflare/containers'
 
 overrides:
-  basic-ftp: 5.2.2
+  basic-ftp: 5.3.0
   flatted: ^3.4.2
   tar: ^7.5.13
   picomatch@<3: ^2.3.2
@@ -127,6 +130,7 @@ overrides:
   brace-expansion@<3: ^2.0.3
   brace-expansion@>=5: ^5.0.5
   yaml: ^2.8.3
+  protobufjs: 7.5.5
 
 patchedDependencies:
   '@cloudflare/vite-plugin@1.30.3': patches/@cloudflare__vite-plugin@1.30.3.patch

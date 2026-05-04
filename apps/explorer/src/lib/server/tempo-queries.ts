@@ -11,6 +11,8 @@ const QB = tempoQueryBuilder
 
 const TRANSFER_SIGNATURE =
 	'event Transfer(address indexed from, address indexed to, uint256 tokens)'
+const TRANSFER_TOPIC0 =
+	'0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef' as Hex.Hex
 
 type SortDirection = 'asc' | 'desc'
 
@@ -845,6 +847,7 @@ export type AddressHistoryLogRow = {
 	topic2: Hex.Hex | null
 	topic3: Hex.Hex | null
 	data: Hex.Hex
+	is_virtual_forward: boolean
 }
 
 export async function fetchAddressLogRowsByTxHashes(
@@ -866,6 +869,7 @@ export async function fetchAddressLogRowsByTxHashes(
 			'topic2',
 			'topic3',
 			'data',
+			'is_virtual_forward',
 		])
 		.where('tx_hash', 'in', hashes)
 		.orderBy('tx_hash', 'asc')
@@ -899,6 +903,7 @@ type AddressTxOnlyHistoryJoinedQueryRow = {
 	log_topic2: Hex.Hex | null
 	log_topic3: Hex.Hex | null
 	log_data: Hex.Hex | null
+	log_is_virtual_forward: boolean | null
 }
 
 export type AddressTxOnlyHistoryPageHash = {
@@ -999,6 +1004,7 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 			'logs.topic2 as log_topic2',
 			'logs.topic3 as log_topic3',
 			'logs.data as log_data',
+			'logs.is_virtual_forward as log_is_virtual_forward',
 		])
 		.orderBy('paged.block_num', params.sortDirection)
 		.orderBy('paged.hash', params.sortDirection)
@@ -1105,7 +1111,8 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 			row.log_block_num != null &&
 			row.log_tx_idx != null &&
 			row.log_address != null &&
-			row.log_data != null
+			row.log_data != null &&
+			row.log_is_virtual_forward !== true
 		) {
 			const logKey = `${row.tx_hash}:${row.log_idx}`
 			if (!seenLogKeys.has(logKey)) {
@@ -1122,6 +1129,7 @@ export async function fetchAddressTxOnlyHistoryPageWithJoins(
 					topic2: row.log_topic2,
 					topic3: row.log_topic3,
 					data: row.log_data,
+					is_virtual_forward: row.log_is_virtual_forward ?? false,
 				})
 			}
 		}
@@ -1290,6 +1298,83 @@ export async function fetchAddressTransfersForValue(
 	}))
 }
 
+export async function fetchVirtualAddressTransferAggregate(
+	address: Address.Address,
+	chainId: number,
+): Promise<{
+	count?: number
+	oldestTimestamp?: unknown
+	latestTimestamp?: unknown
+}> {
+	const topicAddress =
+		`0x${address.toLowerCase().replace(/^0x/, '').padStart(64, '0')}` as Hex.Hex
+
+	const fetchBoundary = async (
+		column: 'topic1' | 'topic2',
+		direction: SortDirection,
+	) =>
+		QB(chainId)
+			.selectFrom('logs')
+			.select(['block_timestamp'])
+			.where('topic0', '=', TRANSFER_TOPIC0)
+			.where(column, '=', topicAddress)
+			.orderBy('block_num', direction)
+			.orderBy('log_idx', direction)
+			.limit(1)
+			.executeTakeFirst()
+
+	const fetchTransferCount = async () => {
+		const qb = QB(chainId)
+		const subquery = qb
+			.selectFrom('logs')
+			.select('tx_hash')
+			.distinct()
+			.where('topic0', '=', TRANSFER_TOPIC0)
+			.where((eb) =>
+				eb.or([
+					eb('topic1', '=', topicAddress),
+					eb('topic2', '=', topicAddress),
+				]),
+			)
+
+		const result = await qb
+			.selectFrom(subquery.limit(TIDX_SERVER_ROW_LIMIT).as('subquery'))
+			.select((eb) => eb.fn.count('tx_hash').as('count'))
+			.executeTakeFirst()
+
+		return Number(result?.count ?? 0)
+	}
+
+	const [oldestFrom, oldestTo, latestFrom, latestTo, countResult] =
+		await Promise.all([
+			fetchBoundary('topic1', 'asc'),
+			fetchBoundary('topic2', 'asc'),
+			fetchBoundary('topic1', 'desc'),
+			fetchBoundary('topic2', 'desc'),
+			fetchTransferCount().catch(() => 0),
+		])
+
+	const oldestTimestamp = [
+		oldestFrom?.block_timestamp,
+		oldestTo?.block_timestamp,
+	]
+		.filter((value): value is NonNullable<typeof value> => value != null)
+		.sort()[0]
+	const latestTimestamp = [
+		latestFrom?.block_timestamp,
+		latestTo?.block_timestamp,
+	]
+		.filter((value): value is NonNullable<typeof value> => value != null)
+		.sort()
+		.at(-1)
+
+	return {
+		count: countResult,
+		oldestTimestamp,
+		latestTimestamp,
+	}
+}
+
 export async function fetchTokenTransferAggregate(
 	address: Address.Address,
 	chainId: number,
@@ -1297,14 +1382,17 @@ export async function fetchTokenTransferAggregate(
 	oldestTimestamp?: unknown
 	latestTimestamp?: unknown
 }> {
+	// Use raw logs instead of the Transfer CTE here. Production tidx currently
+	// errors on aggregate queries over event CTEs, while the raw logs aggregate
+	// is fast and keeps TIDX credentials server-side.
 	const result = await QB(chainId)
-		.withSignatures([TRANSFER_SIGNATURE])
-		.selectFrom('transfer')
+		.selectFrom('logs')
 		.select((sb) => [
 			sb.fn.min('block_timestamp').as('oldestTimestamp'),
 			sb.fn.max('block_timestamp').as('latestTimestamp'),
 		])
 		.where('address', '=', address)
+		.where('topic0', '=', TRANSFER_TOPIC0)
 		.executeTakeFirst()
 
 	return {

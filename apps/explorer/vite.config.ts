@@ -12,54 +12,9 @@ import { visualizer } from 'rollup-plugin-visualizer'
 import Sonda from 'sonda/vite'
 
 import { getVendorChunk } from './scripts/chunk-config.ts'
+import { buildEnvSchema, tempoEnvSchema } from './src/lib/build-env.ts'
 
 import wranglerJSON from '#wrangler.json' with { type: 'json' }
-
-const enabledSchema = z.stringbool()
-
-const canonicalTempoEnvSchema = z.union([
-	z.literal('devnet'),
-	z.literal('testnet'),
-	z.literal('mainnet'),
-])
-
-const tempoEnvSchema = z.prefault(
-	z.pipe(
-		z.pipe(
-			z.string(),
-			z.transform((value) =>
-				value === 'moderato'
-					? 'testnet'
-					: value === 'presto'
-						? 'mainnet'
-						: value,
-			),
-		),
-		canonicalTempoEnvSchema,
-	),
-	'testnet',
-)
-
-const envConfigSchema = z.object({
-	PORT: z.prefault(z.coerce.number(), 3_007),
-	CLOUDFLARE_ENV: tempoEnvSchema,
-	VITE_TEMPO_ENV: tempoEnvSchema,
-	VITE_ENABLE_DEVTOOLS: z.prefault(enabledSchema, 'false'),
-	ALLOWED_HOSTS: z.prefault(
-		z.pipe(
-			z.string(),
-			z.transform((x) => x.split(',').filter(Boolean)),
-		),
-		'',
-	),
-	VITE_BASE_URL: z.prefault(z.string(), ''),
-	SENTRY_ORG: z.optional(z.string()),
-	SENTRY_PROJECT: z.optional(z.string()),
-	SENTRY_AUTH_TOKEN: z.optional(z.string()),
-	ANALYZE: z.prefault(enabledSchema, 'false'),
-	ANALYZE_JSON: z.prefault(enabledSchema, 'false'),
-	CF_PAGES_COMMIT_SHA: z.optional(z.string()),
-})
 
 const [, , , ...args] = process.argv
 
@@ -69,7 +24,7 @@ export default defineConfig((config) => {
 		data: envConfig,
 		success,
 		error,
-	} = envConfigSchema.safeParse({ ...env, ...process.env })
+	} = buildEnvSchema.safeParse({ ...env, ...process.env })
 	if (!success) throw new Error(z.prettifyError(error))
 
 	const wranglerVars = wranglerJSON.env[envConfig.VITE_TEMPO_ENV].vars
