@@ -81,6 +81,17 @@ jobs:
       app: tokenlist
       environments: '[""]'
 
+  deploy-reth-snapshots-viewer:
+    name: Deploy Reth Snapshots Viewer
+    needs: verify
+    uses: ./.github/workflows/deploy.yml
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    with:
+      app: reth-snapshots-viewer
+      environments: '[""]'
+
   deploy-tempo-snapshots-viewer:
     name: Deploy Tempo Snapshots Viewer
     needs: verify
