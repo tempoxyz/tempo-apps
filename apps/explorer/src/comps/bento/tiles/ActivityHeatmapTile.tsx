@@ -104,6 +104,7 @@ export function ActivityHeatmapTile(): React.JSX.Element {
 				isLoading ? 'loading' : isError ? 'error' : isEmpty ? 'empty' : 'ready'
 			}
 			empty={{ icon: <GridIcon />, label: 'No activity in selected window' }}
+			onRetry={() => query.refetch()}
 			action={
 				<div className="flex items-center gap-1.5">
 					<ToggleGroup<Mode>

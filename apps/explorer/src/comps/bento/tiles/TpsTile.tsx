@@ -19,7 +19,7 @@ function formatTps(rate: number): string {
 
 export function TpsTile(): React.JSX.Element {
 	const [window, setWindow] = React.useState<TxRateWindow>('24h')
-	const { data, isPending, isError } = useQuery(
+	const { data, isPending, isError, refetch } = useQuery(
 		landingTxRateQueryOptions(window),
 	)
 
@@ -43,6 +43,7 @@ export function TpsTile(): React.JSX.Element {
 				isPending ? 'loading' : isError ? 'error' : isEmpty ? 'empty' : 'ready'
 			}
 			empty={{ icon: <ActivityIcon />, label: 'No activity' }}
+			onRetry={() => refetch()}
 			contentClassName="justify-end"
 		>
 			<BentoTile.PrimaryValue

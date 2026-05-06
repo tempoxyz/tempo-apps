@@ -3,6 +3,7 @@ import * as React from 'react'
 import { cx } from '#lib/css'
 import AlertTriangleIcon from '~icons/lucide/triangle-alert'
 import ChevronDownIcon from '~icons/lucide/chevron-down'
+import RefreshIcon from '~icons/lucide/refresh-cw'
 
 // Enumerate classes explicitly so Tailwind JIT sees them statically.
 const COL_BASE: Record<1 | 2, string> = {
@@ -48,6 +49,7 @@ export function BentoTile(props: BentoTile.Props): React.JSX.Element {
 		rowSpan = { base: 1, lg: 1 },
 		status,
 		empty,
+		onRetry,
 		contentClassName,
 	} = props
 
@@ -95,7 +97,7 @@ export function BentoTile(props: BentoTile.Props): React.JSX.Element {
 				{status === 'loading' ? (
 					<BentoTile.Skeleton />
 				) : status === 'error' ? (
-					<BentoTile.Error />
+					<BentoTile.Error onRetry={onRetry} />
 				) : status === 'empty' ? (
 					<BentoTile.Empty {...empty} />
 				) : (
@@ -116,11 +118,29 @@ BentoTile.Skeleton = function BentoTileSkeleton(): React.JSX.Element {
 	)
 }
 
-BentoTile.Error = function BentoTileError(): React.JSX.Element {
+BentoTile.Error = function BentoTileError(props: {
+	onRetry?: () => void
+}): React.JSX.Element {
+	const { onRetry } = props
 	return (
 		<div className="flex flex-1 flex-col items-center justify-center gap-1.5 text-center">
 			<AlertTriangleIcon className="size-5 text-tertiary opacity-50" />
 			<span className="text-[11px] text-tertiary">Data unavailable</span>
+			{onRetry ? (
+				<button
+					type="button"
+					onClick={onRetry}
+					aria-label="Retry"
+					className={cx(
+						'inline-flex items-center gap-1 rounded-full border border-card-border bg-card',
+						'px-2 py-[2px] text-[10.5px] font-medium text-secondary',
+						'transition-colors hover:border-accent/40 hover:text-primary press-down-mini',
+					)}
+				>
+					<RefreshIcon className="size-[10px]" />
+					<span>Retry</span>
+				</button>
+			) : null}
 		</div>
 	)
 }
@@ -324,5 +344,7 @@ export declare namespace BentoTile {
 		rowSpan?: RowSpanProp
 		status?: Status
 		empty?: EmptyProps
+		/** When provided, renders a retry button in the error state. */
+		onRetry?: () => void
 	}
 }

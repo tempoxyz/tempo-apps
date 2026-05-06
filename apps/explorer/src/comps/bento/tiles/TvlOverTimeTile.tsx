@@ -21,7 +21,9 @@ const compactUsd = new Intl.NumberFormat(undefined, {
 })
 
 export function TvlOverTimeTile(): React.JSX.Element {
-	const { data, isPending, isError } = useQuery(landingTvlSeriesQueryOptions())
+	const { data, isPending, isError, refetch } = useQuery(
+		landingTvlSeriesQueryOptions(),
+	)
 
 	const { rows, total } = React.useMemo(() => {
 		if (!data)
@@ -68,6 +70,7 @@ export function TvlOverTimeTile(): React.JSX.Element {
 				isPending ? 'loading' : isError ? 'error' : isEmpty ? 'empty' : 'ready'
 			}
 			empty={{ icon: <BarChartIcon />, label: 'No token supplies available' }}
+			onRetry={() => refetch()}
 			contentClassName="gap-2 justify-end"
 		>
 			<div className="flex items-center justify-between gap-3 min-w-0">

@@ -352,6 +352,18 @@ input[type="number"] {
 	}
 }
 
+@keyframes liveHaloOffline {
+	0% {
+		box-shadow: 0 0 0 0 rgb(229 72 77 / 0.45);
+	}
+	70% {
+		box-shadow: 0 0 0 6px rgb(229 72 77 / 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgb(229 72 77 / 0);
+	}
+}
+
 @keyframes progressline {
 	0% {
 		width: 0%;

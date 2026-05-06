@@ -17,7 +17,7 @@ const WINDOW_OPTIONS: ReadonlyArray<{ value: TxRateWindow; label: string }> = [
 
 export function NotableTxsTile(): React.JSX.Element {
 	const [window, setWindow] = React.useState<TxRateWindow>('24h')
-	const { data, isPending, isError } = useQuery(
+	const { data, isPending, isError, refetch } = useQuery(
 		landingNotableTxsQueryOptions(window),
 	)
 
@@ -33,6 +33,7 @@ export function NotableTxsTile(): React.JSX.Element {
 				isPending ? 'loading' : isError ? 'error' : isEmpty ? 'empty' : 'ready'
 			}
 			empty={{ icon: <ReceiptIcon />, label: 'No transactions in window' }}
+			onRetry={() => refetch()}
 			action={
 				<BentoTile.SelectAction<TxRateWindow>
 					value={window}

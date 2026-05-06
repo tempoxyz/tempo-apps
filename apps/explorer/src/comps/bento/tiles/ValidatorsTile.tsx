@@ -84,6 +84,10 @@ export function ValidatorsTile(): React.JSX.Element {
 				isLoading ? 'loading' : isError ? 'error' : isEmpty ? 'empty' : 'ready'
 			}
 			empty={{ icon: <ShieldIcon />, label: 'No validators registered' }}
+			onRetry={() => {
+				validators.refetch()
+				recent.refetch()
+			}}
 			action={
 				<BentoTile.PillAction to="/validators">View</BentoTile.PillAction>
 			}

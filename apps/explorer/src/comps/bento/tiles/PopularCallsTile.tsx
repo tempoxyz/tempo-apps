@@ -39,7 +39,7 @@ function addressLabel(address: string): string {
 
 export function PopularCallsTile(): React.JSX.Element {
 	const [window, setWindow] = React.useState<TxRateWindow>('24h')
-	const { data, isPending, isError } = useQuery(
+	const { data, isPending, isError, refetch } = useQuery(
 		landingPopularCallsQueryOptions(window),
 	)
 
@@ -63,6 +63,7 @@ export function PopularCallsTile(): React.JSX.Element {
 				isPending ? 'loading' : isError ? 'error' : isEmpty ? 'empty' : 'ready'
 			}
 			empty={{ icon: <ZapIcon />, label: 'No activity in window' }}
+			onRetry={() => refetch()}
 			contentClassName="gap-0"
 		>
 			<ul className="flex flex-col divide-y divide-dashed divide-card-border">

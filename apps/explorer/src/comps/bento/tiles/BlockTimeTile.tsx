@@ -9,7 +9,7 @@ import TimerIcon from '~icons/lucide/timer'
 const BINS = 30
 
 export function BlockTimeTile(): React.JSX.Element {
-	const { data, isPending, isError } = useQuery(
+	const { data, isPending, isError, refetch } = useQuery(
 		landingRecentBlocksQueryOptions(),
 	)
 
@@ -62,6 +62,7 @@ export function BlockTimeTile(): React.JSX.Element {
 				isPending ? 'loading' : isError ? 'error' : isEmpty ? 'empty' : 'ready'
 			}
 			empty={{ icon: <TimerIcon />, label: 'Waiting for blocks' }}
+			onRetry={() => refetch()}
 			contentClassName="justify-end gap-1.5"
 		>
 			<div className="h-7 flex items-end">

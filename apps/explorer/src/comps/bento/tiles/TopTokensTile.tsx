@@ -13,7 +13,9 @@ const compactCount = new Intl.NumberFormat(undefined, {
 })
 
 export function TopTokensTile(): React.JSX.Element {
-	const { data, isPending, isError } = useQuery(landingTopTokensQueryOptions())
+	const { data, isPending, isError, refetch } = useQuery(
+		landingTopTokensQueryOptions(),
+	)
 
 	const max = React.useMemo(() => {
 		if (!data || data.length === 0) return 1
@@ -31,6 +33,7 @@ export function TopTokensTile(): React.JSX.Element {
 				isPending ? 'loading' : isError ? 'error' : isEmpty ? 'empty' : 'ready'
 			}
 			empty={{ icon: <CoinsIcon />, label: 'No tokens indexed' }}
+			onRetry={() => refetch()}
 			action={<BentoTile.PillAction to="/tokens">View</BentoTile.PillAction>}
 			contentClassName="gap-0"
 		>

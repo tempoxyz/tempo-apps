@@ -4,8 +4,28 @@ import { cx } from '#lib/css'
 
 const HEALTHY_THRESHOLD_MS = 10_000
 
+type Status = 'live' | 'stale' | 'offline'
+
+function useOnlineStatus(): boolean {
+	const [online, setOnline] = React.useState(() =>
+		typeof navigator === 'undefined' ? true : navigator.onLine,
+	)
+	React.useEffect(() => {
+		const onOnline = () => setOnline(true)
+		const onOffline = () => setOnline(false)
+		window.addEventListener('online', onOnline)
+		window.addEventListener('offline', onOffline)
+		return () => {
+			window.removeEventListener('online', onOnline)
+			window.removeEventListener('offline', onOffline)
+		}
+	}, [])
+	return online
+}
+
 export function LiveStatus(): React.JSX.Element {
 	const block = useLiveBlockNumber()
+	const online = useOnlineStatus()
 	const lastTickRef = React.useRef<number>(Date.now())
 	const lastBlockRef = React.useRef<bigint | undefined>(undefined)
 	const [, force] = React.useReducer((x: number) => x + 1, 0)
@@ -20,31 +40,44 @@ export function LiveStatus(): React.JSX.Element {
 		}
 	}, [block])
 
-	// Poll for staleness once a second so the dot transitions to yellow
-	// without needing a fresh block tick to re-render.
+	// Poll for staleness once a second so the dot transitions away from
+	// "live" without needing a fresh block tick to re-render.
 	React.useEffect(() => {
 		const id = setInterval(() => force(), 1000)
 		return () => clearInterval(id)
 	}, [])
 
 	const sinceMs = Date.now() - lastTickRef.current
-	const healthy =
-		sinceMs <= HEALTHY_THRESHOLD_MS && lastBlockRef.current != null
+	const status: Status = !online
+		? 'offline'
+		: sinceMs <= HEALTHY_THRESHOLD_MS && lastBlockRef.current != null
+			? 'live'
+			: 'stale'
+
+	const dotClass: Record<Status, string> = {
+		live: 'bg-positive',
+		stale: 'bg-warning',
+		offline: 'bg-negative',
+	}
+	const haloKeyframe: Record<Status, string> = {
+		live: 'liveHalo',
+		stale: 'liveHaloWarning',
+		offline: 'liveHaloOffline',
+	}
 
 	return (
 		<span className="flex items-center gap-1.5 text-[11px] text-tertiary">
 			<span
-				className={cx(
-					'size-[7px] rounded-full',
-					healthy ? 'bg-positive' : 'bg-warning',
-				)}
+				className={cx('size-[7px] rounded-full', dotClass[status])}
 				style={{
-					animation: `${healthy ? 'liveHalo' : 'liveHaloWarning'} 1.6s ease-out infinite`,
+					animation: `${haloKeyframe[status]} 1.6s ease-out infinite`,
 				}}
 				aria-hidden
 			/>
-			{healthy ? (
+			{status === 'live' ? (
 				<span className="text-secondary">Live</span>
+			) : status === 'offline' ? (
+				<span>Offline</span>
 			) : (
 				<span>Last seen {formatRelative(sinceMs)} ago</span>
 			)}

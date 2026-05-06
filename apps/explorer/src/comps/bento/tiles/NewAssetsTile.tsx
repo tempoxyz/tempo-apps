@@ -10,7 +10,7 @@ import SparklesIcon from '~icons/lucide/sparkles'
 const LIST_LIMIT = 8
 
 export function NewAssetsTile(): React.JSX.Element {
-	const { data, isPending, isError } = useQuery(
+	const { data, isPending, isError, refetch } = useQuery(
 		landingTokenLaunchesQueryOptions(),
 	)
 
@@ -26,6 +26,7 @@ export function NewAssetsTile(): React.JSX.Element {
 				isPending ? 'loading' : isError ? 'error' : isEmpty ? 'empty' : 'ready'
 			}
 			empty={{ icon: <SparklesIcon />, label: 'No launches in 30d' }}
+			onRetry={() => refetch()}
 			action={<BentoTile.PillAction to="/tokens">View</BentoTile.PillAction>}
 			contentClassName="gap-0"
 		>
