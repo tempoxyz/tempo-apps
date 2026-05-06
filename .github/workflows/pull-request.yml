@@ -112,6 +112,16 @@ jobs:
         run: pnpm build
         working-directory: apps/${{ matrix.app }}
 
+      - name: Apply Preview Triggers
+        if: steps.changes.outputs.relevant == 'true' && matrix.app == 'tempo-snapshots-viewer'
+        uses: cloudflare/wrangler-action@da0e0dfe58b7a431659754fdf3f186c529afbe65
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/${{ matrix.app }}
+          environment: ${{ env.CLOUDFLARE_ENV }}
+          command: triggers deploy
+
       - name: Upload Worker Version
         if: steps.changes.outputs.relevant == 'true'
         id: deploy
