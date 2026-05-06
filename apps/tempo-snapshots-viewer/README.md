@@ -1,6 +1,6 @@
-# Tempo Snapshots Viewer
+# Tempo Snapshots
 
-Cloudflare Worker that displays Tempo snapshots stored in R2, including legacy single-archive snapshots and Reth-style v2 modular manifests across multiple Tempo networks.
+Cloudflare Worker for browsing and downloading Tempo snapshots stored in R2. The UI lets operators choose a Tempo network, select a published snapshot, and generate the matching `tempo download` command for minimal, full, archive, or custom component profiles.
 
 ## Prerequisites
 
@@ -45,7 +45,7 @@ apps/tempo-snapshots-viewer/
 
 1. The worker scans the bucket for both legacy root-level metadata files and v2 snapshot directories containing `manifest.json`.
 2. It normalizes every snapshot into one API shape, groups them by Tempo network, and caches the result at the edge.
-3. The UI uses the same modular snapshot experience as the Reth viewer, but adds Tempo network selection for mainnet, testnet, and moderato.
-4. If a network has not published a v2 manifest yet, the UI falls back to the latest legacy archive download command for that network.
+3. The UI presents Tempo network selection for mainnet, Moderato, and devnet, then derives download profiles from the selected manifest.
+4. If a network has not published a modular manifest yet, the UI falls back to the latest archive download command for that network.
 
 API endpoint: `/api/snapshots` returns the normalized snapshot list without raw manifest payloads.
