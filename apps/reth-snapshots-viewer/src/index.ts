@@ -602,6 +602,22 @@ const CACHE_KEY_UI_HTML = 'https://snapshots.reth.rs/cache/v2/ui-html'
 const CACHE_TTL = 3600 // 1 hour — snapshots change at most once per day
 let snapshotRefreshPromise: Promise<Snapshot[]> | undefined
 
+function cacheHeaders(contentType: string, cachedAt = Date.now()): HeadersInit {
+	return {
+		'Content-Type': contentType,
+		'Cache-Control': `public, max-age=${CACHE_TTL}`,
+		'X-Cached-At': String(cachedAt),
+	}
+}
+
+function isCachedResponseFresh(response: Response): boolean {
+	const cachedAt = response.headers.get('X-Cached-At')
+	if (!cachedAt) return false
+
+	const timestamp = Number.parseInt(cachedAt, 10)
+	return Number.isFinite(timestamp) && Date.now() - timestamp < CACHE_TTL * 1000
+}
+
 // Strip UI-only fields from snapshots for API responses.
 function stripSnapshotInternals(snapshots: Snapshot[]): Snapshot[] {
 	return snapshots.map(({ presetSizes, rawManifest, ...rest }) => rest)
@@ -612,19 +628,14 @@ async function populateSnapshotCaches(
 	cache: Cache,
 	snapshots: Snapshot[],
 ): Promise<void> {
+	const cachedAt = Date.now()
 	const full = new Response(JSON.stringify(snapshots), {
-		headers: {
-			'Content-Type': 'application/json',
-			'Cache-Control': `public, max-age=${CACHE_TTL}`,
-		},
+		headers: cacheHeaders('application/json', cachedAt),
 	})
 	const stripped = new Response(
 		JSON.stringify(stripSnapshotInternals(snapshots)),
 		{
-			headers: {
-				'Content-Type': 'application/json',
-				'Cache-Control': `public, max-age=${CACHE_TTL}`,
-			},
+			headers: cacheHeaders('application/json', cachedAt),
 		},
 	)
 	await Promise.all([
@@ -638,7 +649,13 @@ async function getFullSnapshots(env: Env): Promise<Snapshot[]> {
 	const cache = caches.default
 	const cached = await cache.match(CACHE_KEY_FULL)
 	if (cached) {
-		return cached.json()
+		if (isCachedResponseFresh(cached)) {
+			return cached.json()
+		}
+		await Promise.all([
+			cache.delete(CACHE_KEY_FULL),
+			cache.delete(CACHE_KEY_API),
+		])
 	}
 
 	snapshotRefreshPromise ??= getSnapshots(env)
@@ -663,23 +680,19 @@ async function handleAPI(_req: Request, env: Env): Promise<Response> {
 	const cache = caches.default
 	const cached = await cache.match(CACHE_KEY_API)
 	if (cached) {
-		return new Response(cached.body, {
-			headers: {
-				'Content-Type': 'application/json',
-				'Cache-Control': `public, max-age=${CACHE_TTL}`,
-			},
-		})
+		if (isCachedResponseFresh(cached)) {
+			return cached
+		}
+		await cache.delete(CACHE_KEY_API)
 	}
 
-	// Populates both caches, return stripped
 	const snapshots = await getFullSnapshots(env)
 	const stripped = stripSnapshotInternals(snapshots)
-	return new Response(JSON.stringify(stripped), {
-		headers: {
-			'Content-Type': 'application/json',
-			'Cache-Control': `public, max-age=${CACHE_TTL}`,
-		},
+	const response = new Response(JSON.stringify(stripped), {
+		headers: cacheHeaders('application/json'),
 	})
+	await cache.put(CACHE_KEY_API, response.clone())
+	return response
 }
 
 // Serve HTML UI with server-side rendered data
@@ -689,7 +702,10 @@ async function handleUI(_req: Request, env: Env) {
 	const cacheKey = new Request(CACHE_KEY_UI_HTML, { method: 'GET' })
 	const cachedHtml = await cache.match(cacheKey)
 	if (cachedHtml) {
-		return cachedHtml
+		if (isCachedResponseFresh(cachedHtml)) {
+			return cachedHtml
+		}
+		await cache.delete(cacheKey)
 	}
 
 	const snapshots = await getCachedSnapshotsForUI(env)
@@ -1817,6 +1833,34 @@ async function handleUI(_req: Request, env: Env) {
       margin-left: auto;
     }
 
+    .cmd-toggle {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+    }
+
+    .cmd-toggle button {
+      background: none;
+      border: 1px solid var(--border);
+      border-top: none;
+      color: var(--muted);
+      cursor: pointer;
+      padding: 0.35rem 0.75rem;
+      font-family: inherit;
+      font-size: inherit;
+    }
+
+    .cmd-toggle button:first-child {
+      border-right: none;
+    }
+
+    .cmd-toggle button.active {
+      color: var(--fg);
+      background: var(--surface);
+    }
+
     @media (max-width: 768px) {
       .presets {
         grid-template-columns: 1fr;
@@ -1926,7 +1970,10 @@ async function handleUI(_req: Request, env: Env) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
         </button>
       </div>
-
+      <div class="cmd-toggle" id="cmdToggle" style="display:none">
+        <button class="active" onclick="setCmdMode('command')">Command</button>
+        <button onclick="setCmdMode('url')">Snapshot URL</button>
+      </div>
 
       <div class="presets" id="presets">
         <button class="preset active" onclick="selectPreset('minimal')" id="preset-minimal">
@@ -1997,6 +2044,8 @@ async function handleUI(_req: Request, env: Env) {
   <script>
     var PRESET_SIZES = ${safeJsonForInlineScript(presetSizes)};
     var SNAPSHOT_PRESET_SIZES = ${safeJsonForInlineScript(snapshotPresetSizes)};
+    var SNAPSHOT_URLS = ${safeJsonForInlineScript(Object.fromEntries(modularSnapshots.map((snapshot) => [snapshot.block, snapshot.manifestUrl])))};
+    var latestManifestUrl = ${safeJsonForInlineScript(latestModular?.manifestUrl || null)};
     var latestModularBlock = ${latestModular?.block || 0};
     var COMPONENTS = [
       { id: 'state',     name: 'state',              desc: 'MDBX database',                      color: 'var(--disk-state)',     required: true },
@@ -2221,10 +2270,31 @@ async function handleUI(_req: Request, env: Env) {
       }
       // TODO: Remove --resumable when it becomes the default behavior.
       cmd += ' --resumable';
+      var manifestUrl = activeSnapshotUrl || latestManifestUrl;
+      var toggle = document.getElementById('cmdToggle');
+      if (manifestUrl) {
+        toggle.style.display = 'flex';
+      } else {
+        toggle.style.display = 'none';
+      }
+      if (cmdMode === 'url' && manifestUrl) {
+        document.getElementById('modularCmdText').textContent = manifestUrl;
+        return;
+      }
       if (activeSnapshotUrl) {
         cmd += ' --manifest-url ' + activeSnapshotUrl;
       }
       document.getElementById('modularCmdText').textContent = cmd;
+    }
+
+    var cmdMode = 'command';
+
+    function setCmdMode(mode) {
+      cmdMode = mode;
+      var buttons = document.getElementById('cmdToggle').querySelectorAll('button');
+      buttons.forEach(function(btn) { btn.classList.remove('active'); });
+      buttons[mode === 'command' ? 0 : 1].classList.add('active');
+      updateModularCmd();
     }
 
     function updatePresetHighlight() {
@@ -2264,7 +2334,8 @@ async function handleUI(_req: Request, env: Env) {
 
     function configureSnapshot(block, url) {
       activeSnapshotBlock = block;
-      activeSnapshotUrl = (block !== latestModularBlock && url) ? url : null;
+      var snapshotUrl = url || SNAPSHOT_URLS[block] || null;
+      activeSnapshotUrl = (block !== latestModularBlock && snapshotUrl) ? snapshotUrl : null;
       var sizes = SNAPSHOT_PRESET_SIZES[block];
       if (sizes) PRESET_SIZES = sizes;
       var indicator = document.getElementById('snapshotIndicator');
@@ -2353,10 +2424,7 @@ async function handleUI(_req: Request, env: Env) {
 </html>`
 
 	const response = new Response(body, {
-		headers: {
-			'Content-Type': 'text/html;charset=utf-8',
-			'Cache-Control': `public, max-age=${CACHE_TTL}`,
-		},
+		headers: cacheHeaders('text/html;charset=utf-8'),
 	})
 
 	// Cache the rendered HTML at the edge
