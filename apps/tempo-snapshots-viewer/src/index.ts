@@ -315,7 +315,19 @@ app.get('/:chainId/:snapshotName', (context) =>
 )
 app.get('/', (context) => handleUI(context.req.raw, context.env))
 
-export default app
+export default {
+	fetch: app.fetch,
+	scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+		ctx.waitUntil(refreshSnapshotCaches(env))
+	},
+}
+
+async function refreshSnapshotCaches(env: Env): Promise<void> {
+	const snapshots = await getSnapshots(env)
+	const cache = caches.default
+	await populateSnapshotCaches(cache, snapshots)
+	await cache.delete(new Request(CACHE_KEY_UI_HTML, { method: 'GET' }))
+}
 
 async function serveLatest(
 	{ chainId = DEFAULT_CHAIN_ID }: { chainId?: string },
