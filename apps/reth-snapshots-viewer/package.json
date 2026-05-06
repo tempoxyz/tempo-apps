@@ -1,0 +1,30 @@
+{
+	"name": "reth-snapshots-viewer",
+	"type": "module",
+	"private": true,
+	"repository": {
+		"type": "git",
+		"directory": "apps/reth-snapshots-viewer",
+		"url": "https://github.com/tempoxyz/tempo-apps"
+	},
+	"scripts": {
+		"build": "echo 'No build step needed for Cloudflare Worker'",
+		"check": "pnpm check:biome && pnpm check:types",
+		"check:biome": "biome check --write --unsafe",
+		"check:types": "tsgo --project tsconfig.json --noEmit",
+		"dev": "wrangler dev",
+		"deploy": "wrangler deploy",
+		"gen:types": "wrangler types --env-interface='CloudflareBindings'",
+		"postinstall": "pnpm gen:types"
+	},
+	"dependencies": {
+		"hono": "catalog:"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "catalog:",
+		"@cloudflare/workers-types": "catalog:",
+		"@types/node": "catalog:",
+		"typescript": "catalog:",
+		"wrangler": "catalog:"
+	}
+}
