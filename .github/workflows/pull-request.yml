@@ -71,6 +71,7 @@ jobs:
           #### other (single-env-apps)
           - app: og
           - app: perf
+          - app: tempo-snapshots-viewer
           - app: tokenlist
     env:
       NODE_ENV: production
