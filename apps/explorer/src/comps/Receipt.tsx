@@ -10,6 +10,11 @@ import { TxEventDescription } from '#comps/TxEventDescription'
 import type { KnownEvent } from '#lib/domain/known-events'
 import { DateFormatter, PriceFormatter } from '#lib/formatting'
 import { useCopy } from '#lib/hooks'
+import {
+	areUsdPricedTokens,
+	hasTokenAmount,
+	isUsdPricedToken,
+} from '#lib/pricing'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain } from '#wagmi.config.ts'
 
@@ -32,7 +37,7 @@ export function Receipt(props: Receipt.Props) {
 	} = props
 	const [hashExpanded, setHashExpanded] = useState(false)
 	const copyHash = useCopy()
-	const { areTokensListed, isTokenListed } = useTokenListMembership()
+	const { isTokenListed } = useTokenListMembership()
 	const formattedTime = DateFormatter.formatTimestampTime(timestamp)
 
 	const hasFee = feeDisplay !== undefined || (fee !== undefined && fee !== null)
@@ -140,17 +145,25 @@ export function Receipt(props: Receipt.Props) {
 									(part) => part.type === 'amount',
 								)
 								const firstAmountPart = amountParts[0]
-								const amountTokenAddresses = amountParts.flatMap((part) =>
-									part.type === 'amount' ? [part.value.token] : [],
-								)
+								const displayTotalAmount = event.totalAmount
+								const amountTokens = displayTotalAmount
+									? [displayTotalAmount]
+									: amountParts.flatMap((part) =>
+											part.type === 'amount' ? [part.value] : [],
+										)
 								const showUsdPrefix =
-									amountTokenAddresses.length > 0
-										? areTokensListed(TEMPO_CHAIN_ID, amountTokenAddresses)
+									amountTokens.length > 0
+										? areUsdPricedTokens(
+												TEMPO_CHAIN_ID,
+												amountTokens,
+												isTokenListed,
+											)
 										: TEMPO_FEE_TOKEN
 											? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 											: true
-								const totalAmountBigInt =
-									event.type === 'swap' && amountParts.length > 0
+								const totalAmountBigInt = displayTotalAmount
+									? displayTotalAmount.value
+									: event.type === 'swap' && amountParts.length > 0
 										? firstAmountPart?.type === 'amount'
 											? firstAmountPart.value.value
 											: 0n
@@ -159,8 +172,9 @@ export function Receipt(props: Receipt.Props) {
 													return sum + part.value.value
 												return sum
 											}, 0n)
-								const decimals =
-									firstAmountPart?.type === 'amount'
+								const decimals = displayTotalAmount
+									? (displayTotalAmount.decimals ?? 6)
+									: firstAmountPart?.type === 'amount'
 										? (firstAmountPart.value.decimals ?? 6)
 										: 6
 
@@ -244,8 +258,8 @@ export function Receipt(props: Receipt.Props) {
 						<div className="flex flex-col gap-2 px-[20px] py-[16px] font-mono text-[13px] leading-4">
 							{showFeeBreakdown
 								? feeBreakdown.map((item, index) => {
-										const showUsdPrefix = item.token
-											? isTokenListed(TEMPO_CHAIN_ID, item.token)
+										const showUsdPrefix = hasTokenAmount(item)
+											? isUsdPricedToken(TEMPO_CHAIN_ID, item, isTokenListed)
 											: showUsdFeePrefix
 										const formattedAmount = showUsdPrefix
 											? PriceFormatter.format(item.amount, {
@@ -372,6 +386,7 @@ export namespace Receipt {
 	export interface FeeBreakdownItem {
 		amount: bigint
 		decimals: number
+		currency: string
 		symbol?: string
 		token?: Address.Address
 		payer?: Address.Address

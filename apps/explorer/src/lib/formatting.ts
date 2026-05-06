@@ -265,11 +265,21 @@ export namespace PriceFormatter {
 		return amountFormatter.format(number)
 	}
 
-	export function formatAmountShort(value: string): string {
+	export function formatAmountShort(
+		value: string,
+		options?: { maximumFractionDigits?: number },
+	): string {
 		const number = Number(value)
 		// Use standard notation for values < 1000 to preserve precision,
 		// compact notation for larger values (1K, 1M, etc.)
-		if (Math.abs(number) < 1000) {
+		if (Math.abs(number) < 1_000) {
+			if (options?.maximumFractionDigits !== undefined) {
+				return new Intl.NumberFormat('en-US', {
+					notation: 'standard',
+					minimumFractionDigits: 0,
+					maximumFractionDigits: options.maximumFractionDigits,
+				}).format(number)
+			}
 			return amountFormatterShortStandard.format(number)
 		}
 		return amountFormatterShortCompact.format(number)

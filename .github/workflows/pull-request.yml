@@ -46,7 +46,7 @@ jobs:
     name: Deploy Preview (${{ matrix.app }}${{ matrix.env && format('-{0}', matrix.env) || '' }})
     needs: check-membership
     if: needs.check-membership.outputs.is-member == 'true'
-    runs-on: ${{ vars.DEPOT_ENABLED == 'true' && 'depot-ubuntu-latest' || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     permissions:
       issues: write
       contents: read

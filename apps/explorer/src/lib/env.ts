@@ -91,11 +91,13 @@ export const getTempoEnv = createIsomorphicFn()
 	})
 	.server(() => {
 		// Some modules read the active chain at import time before TanStack Start has
-		// established request AsyncLocalStorage. Fall back to process env there.
+		// established request AsyncLocalStorage. Fall back to Vite env there. In
+		// Cloudflare/Vite dev, `process.env` may not include the command env inside
+		// the worker runtime.
 		const inferred = inferTempoEnvFromHostname(
 			getRequestUrlIfAvailable()?.hostname,
 		)
-		return inferred ?? normalizeTempoEnv(process.env.VITE_TEMPO_ENV)
+		return inferred ?? normalizeTempoEnv(import.meta.env.VITE_TEMPO_ENV)
 	})
 
 export const isTestnet = createIsomorphicFn()

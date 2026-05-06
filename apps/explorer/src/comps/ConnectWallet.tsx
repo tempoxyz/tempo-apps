@@ -80,7 +80,13 @@ function ConnectWalletInner({
 				: injectedConnectors.filter(
 						(candidate) => candidate.id === 'injected',
 					)),
-		].slice(0, 2)
+		]
+			.sort((a, b) => {
+				if (a.id === 'xyz.tempo') return -1
+				if (b.id === 'xyz.tempo') return 1
+				return 0
+			})
+			.slice(0, 2)
 
 		return (
 			<div className="flex items-center gap-1.5">
