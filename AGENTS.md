@@ -14,6 +14,7 @@ This is a **TypeScript monorepo** for applications on the Tempo blockchain appli
 | `apps/tokenlist` | Token registry API |
 | `apps/contract-verification` | Smart contract verification |
 | `apps/og` | OpenGraph image generation |
+| `apps/email` | Transactional email sending via Cloudflare Email Service |
 
 ## Commands
 
