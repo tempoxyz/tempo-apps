@@ -17,7 +17,7 @@ export function Heatmap(props: Heatmap.Props): React.JSX.Element {
 		max,
 		className,
 		ariaLabel,
-		minCellSize = 6,
+		minCellSize = 4,
 		maxCellSize = Number.POSITIVE_INFINITY,
 	} = props
 
@@ -57,13 +57,13 @@ export function Heatmap(props: Heatmap.Props): React.JSX.Element {
 
 	const layout = React.useMemo(() => {
 		if (!box || box.w <= 0 || box.h <= 0) return null
-		// Target cell to gap ratio ~ 4:1 for a tight GitHub feel.
-		const ratio = 0.2
+		// Tighter cell-to-gap ratio (~6:1) for a denser GitHub-graph feel.
+		const ratio = 0.16
 		const cellByWidth = box.w / (columns + (columns - 1) * ratio)
 		const cellByHeight = box.h / (rows + (rows - 1) * ratio)
 		const raw = Math.min(cellByWidth, cellByHeight)
 		const cellSize = Math.max(minCellSize, Math.min(maxCellSize, raw))
-		const cellGap = Math.max(2, cellSize * ratio)
+		const cellGap = Math.max(1, cellSize * ratio)
 		const innerW = columns * cellSize + (columns - 1) * cellGap
 		const innerH = rows * cellSize + (rows - 1) * cellGap
 		return { cellSize, cellGap, innerW, innerH }

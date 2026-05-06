@@ -71,31 +71,34 @@ export function TvlOverTimeTile(): React.JSX.Element {
 			}
 			empty={{ icon: <BarChartIcon />, label: 'No token supplies available' }}
 			onRetry={() => refetch()}
-			contentClassName="gap-2 justify-end"
+			contentClassName="gap-1.5 justify-end"
 		>
-			<div className="flex items-center justify-between gap-3 min-w-0">
-				<BentoTile.PrimaryValue
-					value={total ? compactUsd.format(total) : '—'}
-				/>
-				<ul className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11.5px] justify-end min-w-0">
-					{rows.map((row) => {
-						const pct = total > 0 ? (row.value / total) * 100 : 0
-						return (
-							<li key={row.key} className="flex items-center gap-1.5 min-w-0">
+			<BentoTile.PrimaryValue value={total ? compactUsd.format(total) : '—'} />
+			<StackBar rows={rows} total={total} />
+			<ul className="flex flex-wrap items-start gap-x-4 gap-y-1 text-[11px]">
+				{rows.map((row) => {
+					const pct = total > 0 ? (row.value / total) * 100 : 0
+					return (
+						<li
+							key={row.key}
+							className="flex flex-col items-start gap-0.5 min-w-0"
+						>
+							<span className="flex items-center gap-1.5 min-w-0">
 								<span
 									className="size-[8px] rounded-[2px] shrink-0"
 									style={{ backgroundColor: row.color }}
 								/>
-								<span className="text-primary truncate">{row.label}</span>
-								<span className="font-mono tabular-nums text-[10.5px] text-tertiary">
-									{pct.toFixed(1)}%
+								<span className="text-primary truncate font-medium">
+									{row.label}
 								</span>
-							</li>
-						)
-					})}
-				</ul>
-			</div>
-			<StackBar rows={rows} total={total} />
+							</span>
+							<span className="font-mono tabular-nums text-[10.5px] text-tertiary pl-[14px]">
+								{pct.toFixed(1)}%
+							</span>
+						</li>
+					)
+				})}
+			</ul>
 		</BentoTile>
 	)
 }
@@ -110,7 +113,7 @@ function StackBar(props: {
 
 	return (
 		<div className="flex items-center">
-			<div className="relative flex-1 flex h-5 rounded-[6px] overflow-hidden border border-card-border">
+			<div className="relative flex-1 flex h-3 rounded-[4px] overflow-hidden border border-card-border">
 				{rows.map((row) => {
 					const pct = total > 0 ? (row.value / total) * 100 : 0
 					return (

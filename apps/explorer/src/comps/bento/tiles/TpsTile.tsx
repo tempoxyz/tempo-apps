@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import * as React from 'react'
 import { BentoTile } from '#comps/bento/BentoTile'
+import { LivePulseDot } from '#comps/bento/LivePulseDot'
 import { landingTxRateQueryOptions } from '#lib/queries'
 import type { TxRateWindow } from '#lib/server/landing-stats'
 import ActivityIcon from '~icons/lucide/activity'
@@ -28,7 +29,12 @@ export function TpsTile(): React.JSX.Element {
 
 	return (
 		<BentoTile
-			title="TPS"
+			title={
+				<>
+					<LivePulseDot />
+					TPS
+				</>
+			}
 			action={
 				<BentoTile.SelectAction<TxRateWindow>
 					value={window}

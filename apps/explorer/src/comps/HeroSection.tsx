@@ -54,9 +54,17 @@ export function HeroSection(props: HeroSection.Props): React.JSX.Element {
 	const current = ACTIONS[currentIndex] ?? ACTIONS[0]
 
 	return (
-		<section className="relative isolate -mx-4 mb-6 overflow-hidden rounded-[12px]">
+		<section className="relative isolate -mx-4 mb-6 overflow-hidden rounded-[12px] bg-base-background">
 			<HeroVideoBackground />
-			<div className="relative z-10 flex flex-col items-center text-center px-4 pt-[6svh] pb-12 sm:pt-[10svh] sm:pb-16 motion-safe:animate-[fadeIn_500ms_ease-out_both]">
+			<div
+				className="pointer-events-none absolute inset-0 z-[1]"
+				style={{
+					backgroundImage:
+						'radial-gradient(ellipse at center, color-mix(in srgb, var(--color-base-background) 38%, transparent) 0%, color-mix(in srgb, var(--color-base-background) 32%, transparent) 35%, transparent 70%)',
+				}}
+				aria-hidden
+			/>
+			<div className="relative z-10 flex flex-col items-center text-center px-4 pt-[6svh] pb-8 sm:pt-[10svh] sm:pb-10 motion-safe:animate-[fadeIn_500ms_ease-out_both]">
 				<h1 className="text-[40px] sm:text-[56px] font-semibold tracking-[-0.02em] leading-[1.05] text-primary inline-flex items-center justify-center min-h-[1.1em]">
 					<span>{typed}</span>
 					<span
@@ -75,7 +83,7 @@ export function HeroSection(props: HeroSection.Props): React.JSX.Element {
 						autoFocus={false}
 						size="large"
 						wide
-						className="bg-base-alt"
+						className="bg-card/85 backdrop-blur-[2px] rounded-full! pl-[20px]! pr-[60px]!"
 						value={searchValue}
 						onChange={onSearchChange}
 						onActivate={(data) => {
@@ -118,19 +126,19 @@ export declare namespace HeroSection {
 
 /**
  * Background looping video. Source asset is dark-mode-friendly (white
- * wireframe on black). In light mode we invert the whole frame so it
- * reads as black wireframe on white without shipping a second video.
+ * wireframe on black). The page renders dark mode using the source
+ * untouched; in light mode we invert + hue-rotate 180° so the wireframe
+ * reads as black on white without shipping a second video file.
  */
 function HeroVideoBackground(): React.JSX.Element {
 	return (
-		<div className="absolute inset-0 -z-0 pointer-events-none select-none">
+		<div
+			className="absolute inset-0 -z-0 pointer-events-none select-none"
+			style={{ backgroundColor: 'var(--hero-video-bg)' }}
+		>
 			<video
-				className={cx(
-					'absolute inset-0 size-full object-cover',
-					// Dark theme uses the source as-is. Light theme inverts +
-					// hue-rotates 180° to keep neutral black on white.
-					'[filter:invert(1)_hue-rotate(180deg)] dark:[filter:none]',
-				)}
+				className="absolute inset-0 size-full object-cover"
+				style={{ filter: 'var(--hero-video-filter)' }}
 				autoPlay
 				loop
 				muted
@@ -146,7 +154,7 @@ function HeroVideoBackground(): React.JSX.Element {
 				className="absolute inset-0"
 				style={{
 					backgroundImage:
-						'radial-gradient(ellipse at center, transparent 35%, var(--color-base-background) 90%)',
+						'radial-gradient(ellipse at center, transparent 55%, var(--color-base-background) 100%)',
 				}}
 				aria-hidden
 			/>
@@ -162,8 +170,8 @@ function HeroVideoBackground(): React.JSX.Element {
 function HeroExamplePill(props: { action: HeroAction }): React.JSX.Element {
 	const { action } = props
 	return (
-		<div className="mt-4 motion-safe:animate-[fadeIn_400ms_ease-out_both]">
-			<div className="inline-flex items-center gap-2 rounded-full border border-card-border bg-card/80 backdrop-blur-sm px-3 py-1.5 text-[12px] text-secondary shadow-[0_4px_18px_-12px_rgba(0,0,0,0.18)]">
+		<div className="mt-3 motion-safe:animate-[fadeIn_400ms_ease-out_both]">
+			<div className="inline-flex items-center gap-2 rounded-full border border-card-border bg-card/80 backdrop-blur-sm pl-4 pr-3 py-1.5 text-[12px] text-secondary shadow-[0_4px_18px_-12px_rgba(0,0,0,0.18)]">
 				<EventDescription text={action.event} />
 				<span className="text-tertiary tabular-nums">{action.when}</span>
 				<ArrowUpRightIcon className="size-3 text-tertiary" />

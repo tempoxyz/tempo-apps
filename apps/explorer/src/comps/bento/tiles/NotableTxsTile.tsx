@@ -15,6 +15,11 @@ const WINDOW_OPTIONS: ReadonlyArray<{ value: TxRateWindow; label: string }> = [
 	{ value: '7d', label: '7d' },
 ]
 
+// Single grid template shared by header + rows so columns line up exactly.
+// Index | Description | Hash | Gwei | Block share | Age
+const GRID =
+	'grid-cols-[20px_1fr_minmax(72px,auto)_64px_56px_88px] sm:grid-cols-[24px_1fr_120px_72px_72px_104px]'
+
 export function NotableTxsTile(): React.JSX.Element {
 	const [window, setWindow] = React.useState<TxRateWindow>('24h')
 	const { data, isPending, isError, refetch } = useQuery(
@@ -44,37 +49,40 @@ export function NotableTxsTile(): React.JSX.Element {
 			}
 			contentClassName="gap-0"
 		>
-			<div
-				className="grid grid-cols-[14px_1fr_64px_56px_44px] items-center gap-2 px-1 pb-1 text-[10px] uppercase tracking-[0.06em] text-tertiary"
-				aria-hidden
-			>
-				<span className="text-right">#</span>
-				<span>Description</span>
-				<span className="text-right">Gwei</span>
-				<span className="text-right">Block</span>
-				<span className="text-right">Age</span>
-			</div>
-			<ul className="flex flex-1 min-h-0 flex-col divide-y divide-dashed divide-card-border overflow-auto">
+			<ul className="flex flex-1 min-h-0 flex-col divide-y divide-card-border/60 overflow-auto">
+				<li
+					className={cx(
+						'grid items-center gap-3 h-7 px-1 text-[10px] uppercase tracking-[0.06em] text-tertiary',
+						GRID,
+					)}
+					aria-hidden
+				>
+					<span className="text-right tabular-nums">#</span>
+					<span>Description</span>
+					<span className="text-right hidden sm:block">Hash</span>
+					<span className="text-right tabular-nums">Gwei</span>
+					<span className="text-right">Block</span>
+					<span className="text-right">Age</span>
+				</li>
 				{rows.map((row, i) => (
 					<li key={`${row.hash}-${i}`}>
 						<Link
 							to="/tx/$hash"
 							params={{ hash: row.hash }}
 							className={cx(
-								'grid grid-cols-[14px_1fr_64px_56px_44px] items-center gap-2 py-1.5 text-[12px]',
-								'hover:bg-base-alt/60 press-down-mini -mx-1 px-1 rounded-sm',
+								'grid items-center gap-3 h-9 px-1 -mx-1 text-[12px]',
+								'rounded-sm hover:bg-base-alt/60 press-down-mini',
+								GRID,
 							)}
 						>
-							<span className="text-[10px] text-tertiary tabular-nums text-right">
+							<span className="text-[10.5px] text-tertiary tabular-nums text-right">
 								{i + 1}
 							</span>
-							<span className="flex items-center gap-1.5 min-w-0">
-								<span className="font-sans text-primary truncate font-medium">
-									{row.description}
-								</span>
-								<span className="font-mono text-accent text-[10.5px] shrink-0 hidden sm:inline">
-									{HexFormatter.shortenHex(row.hash, 3)}
-								</span>
+							<span className="text-primary truncate font-medium">
+								{row.description}
+							</span>
+							<span className="font-mono text-accent text-[11px] tabular-nums text-right hidden sm:inline truncate">
+								{HexFormatter.shortenHex(row.hash, 4)}
 							</span>
 							<span className="font-mono text-primary tabular-nums text-right text-[11.5px]">
 								{row.gwei}
@@ -82,7 +90,7 @@ export function NotableTxsTile(): React.JSX.Element {
 							<BlockShareGauge value={row.blockShare} />
 							<RelativeTime
 								timestamp={BigInt(row.block_timestamp)}
-								className="text-right text-tertiary tabular-nums text-[10.5px]"
+								className="text-right text-tertiary tabular-nums text-[11px] whitespace-nowrap"
 							/>
 						</Link>
 					</li>
@@ -99,11 +107,11 @@ function BlockShareGauge(props: { value: number }): React.JSX.Element {
 			title={`${pct.toFixed(1)}% of block gas`}
 			role="img"
 			aria-label={`block share ${pct.toFixed(1)} percent`}
-			className="h-[6px] rounded-full bg-base-alt overflow-hidden"
+			className="h-[6px] w-full rounded-full bg-distinct overflow-hidden"
 		>
 			<div
-				className="h-full bg-accent/70"
-				style={{ width: `${Math.max(2, pct)}%` }}
+				className="h-full bg-accent"
+				style={{ width: `${Math.max(3, pct)}%` }}
 			/>
 		</div>
 	)

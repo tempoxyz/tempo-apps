@@ -66,7 +66,7 @@ export function PopularCallsTile(): React.JSX.Element {
 			onRetry={() => refetch()}
 			contentClassName="gap-0"
 		>
-			<ul className="flex flex-col divide-y divide-dashed divide-card-border">
+			<ul className="flex flex-col divide-y divide-card-border/60">
 				{rows.slice(0, 8).map((r, i) => (
 					<li
 						key={`${r.to}-${r.selector}-${i}`}

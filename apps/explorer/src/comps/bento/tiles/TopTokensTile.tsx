@@ -37,7 +37,7 @@ export function TopTokensTile(): React.JSX.Element {
 			action={<BentoTile.PillAction to="/tokens">View</BentoTile.PillAction>}
 			contentClassName="gap-0"
 		>
-			<ul className="flex flex-col divide-y divide-dashed divide-card-border mt-1">
+			<ul className="flex flex-col divide-y divide-card-border/60 mt-1">
 				{(data ?? []).map((t, i) => {
 					const pct = (t.count / max) * 100
 					return (

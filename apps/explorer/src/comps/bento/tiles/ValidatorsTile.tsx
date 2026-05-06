@@ -95,7 +95,7 @@ export function ValidatorsTile(): React.JSX.Element {
 		>
 			<div>
 				<div
-					className="grid grid-cols-[10px_112px_1fr_56px] items-center gap-2 py-1 text-[10px] uppercase tracking-[0.06em] text-tertiary border-b border-dashed border-card-border"
+					className="grid grid-cols-[10px_112px_1fr_56px] items-center gap-2 py-1 text-[10px] uppercase tracking-[0.06em] text-tertiary border-b border-card-border/60"
 					aria-hidden
 				>
 					<span />
@@ -103,7 +103,7 @@ export function ValidatorsTile(): React.JSX.Element {
 					<span>Recent share</span>
 					<span className="text-right">Blocks</span>
 				</div>
-				<ul className="flex flex-col divide-y divide-dashed divide-card-border">
+				<ul className="flex flex-col divide-y divide-card-border/60">
 					{rows.map((v) => {
 						const label =
 							v.name ?? `${v.address.slice(0, 6)}…${v.address.slice(-4)}`
@@ -137,7 +137,7 @@ export function ValidatorsTile(): React.JSX.Element {
 				</ul>
 			</div>
 			{total > 0 ? (
-				<div className="flex items-center justify-between pt-1.5 text-[10.5px] text-tertiary border-t border-dashed border-card-border">
+				<div className="flex items-center justify-between pt-1.5 text-[10.5px] text-tertiary border-t border-card-border/60">
 					<span>
 						<span className="font-mono text-primary tabular-nums">
 							{active}

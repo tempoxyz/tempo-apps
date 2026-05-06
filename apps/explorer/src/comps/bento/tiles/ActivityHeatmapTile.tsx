@@ -22,6 +22,24 @@ const WINDOW_OPTIONS: ReadonlyArray<{
 	{ value: '90d', label: '90d', days: 90 },
 ]
 
+/**
+ * Lay out the heatmap as a wide grid: more columns than rows, GitHub-graph
+ * style. Hourly buckets are flattened then reshaped so the visible matrix
+ * is `cols` wide × `rows` tall, with `cols >= rows` and `cols * rows`
+ * approximating the bucket count.
+ */
+function gridShape(totalBuckets: number): { cols: number; rows: number } {
+	// Wide GitHub-graph layout: cols ≈ 5 × rows so the heatmap fills the
+	// wide tile horizontally with plenty of cells.
+	const targetRatio = 5
+	const rows = Math.max(
+		4,
+		Math.round(Math.sqrt(totalBuckets / targetRatio)),
+	)
+	const cols = Math.ceil(totalBuckets / rows)
+	return { cols, rows }
+}
+
 const DATE_FMT = new Intl.DateTimeFormat(undefined, {
 	month: 'short',
 	day: 'numeric',
@@ -50,38 +68,40 @@ export function ActivityHeatmapTile(): React.JSX.Element {
 
 	const days = WINDOW_OPTIONS.find((o) => o.value === window)?.days ?? 7
 
-	const { matrix, total, dayStarts } = React.useMemo(() => {
+	const { flat, total, startHourSec, cols, rows } = React.useMemo(() => {
+		const totalBuckets = days * HOURS
+		const shape = gridShape(totalBuckets)
 		const empty = {
-			matrix: [] as number[][],
+			flat: [] as number[],
 			total: 0,
-			dayStarts: [] as number[],
+			startHourSec: 0,
+			cols: shape.cols,
+			rows: shape.rows,
 		}
 		if (!query.data) return empty
 
 		const now = Math.floor(Date.now() / 1000)
 		const nowHourSec = Math.floor(now / 3600) * 3600
-		const startHourSec = nowHourSec - (days * HOURS - 1) * 3600
+		const startHourSec = nowHourSec - (totalBuckets - 1) * 3600
 
 		const bySecond = new Map<number, number>()
 		for (const b of query.data.buckets) bySecond.set(b.hour, b.count)
 
-		const matrix: number[][] = Array.from({ length: days }, () =>
-			new Array<number>(HOURS).fill(0),
-		)
-		const dayStarts: number[] = []
-		for (let h = 0; h < days * HOURS; h++) {
+		const flat: number[] = new Array<number>(totalBuckets).fill(0)
+		for (let h = 0; h < totalBuckets; h++) {
 			const epochSec = startHourSec + h * 3600
-			const count = bySecond.get(epochSec) ?? 0
-			const date = new Date(epochSec * 1000)
-			const dayCol = Math.floor(h / HOURS)
-			if (h % HOURS === 0) dayStarts.push(epochSec)
-			const hourRow = date.getHours()
-			matrix[dayCol][hourRow] = count
+			flat[h] = bySecond.get(epochSec) ?? 0
 		}
 
 		let totalCount = 0
-		for (const col of matrix) for (const v of col) totalCount += v
-		return { matrix, total: totalCount, dayStarts }
+		for (const v of flat) totalCount += v
+		return {
+			flat,
+			total: totalCount,
+			startHourSec,
+			cols: shape.cols,
+			rows: shape.rows,
+		}
 	}, [query.data, days])
 
 	const isLoading = query.isPending
@@ -131,19 +151,26 @@ export function ActivityHeatmapTile(): React.JSX.Element {
 			<BentoTile.PrimaryValue value={totalLabel} />
 			<div className="flex flex-1 min-h-0 w-full">
 				<Heatmap
-					columns={HOURS}
-					rows={days}
-					getValue={(col, row) => matrix[row]?.[col] ?? 0}
+					columns={cols}
+					rows={rows}
+					getValue={(col, row) => {
+						// Column-major: each column is a vertical strip of hours
+						// running from oldest (top) to newest (bottom).
+						const idx = col * rows + row
+						return flat[idx] ?? 0
+					}}
 					getLabel={(col, row, v) => {
-						const date = dayStarts[row]
-							? DATE_FMT.format(new Date(dayStarts[row] * 1000))
-							: ''
-						const hour = hourLabel(col)
+						const idx = col * rows + row
+						if (idx >= flat.length) return ''
+						const epoch = startHourSec + idx * 3600
+						const date = new Date(epoch * 1000)
+						const dateLabel = DATE_FMT.format(date)
+						const hour = hourLabel(date.getHours())
 						const label =
 							mode === 'txs'
 								? `${v.toLocaleString()} txs`
 								: `${compact.format(v)} gas`
-						return `${date} · ${hour} — ${label}`
+						return `${dateLabel} · ${hour} — ${label}`
 					}}
 					ariaLabel={`activity heatmap (${mode}) over ${window}`}
 				/>

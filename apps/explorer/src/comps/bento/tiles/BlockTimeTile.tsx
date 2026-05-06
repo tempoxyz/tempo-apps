@@ -3,6 +3,7 @@ import * as React from 'react'
 import { BentoTile } from '#comps/bento/BentoTile'
 import { BarChart } from '#comps/bento/charts/BarChart'
 import { percentile } from '#comps/bento/charts/chart-utils'
+import { LivePulseDot } from '#comps/bento/LivePulseDot'
 import { landingRecentBlocksQueryOptions } from '#lib/queries'
 import TimerIcon from '~icons/lucide/timer'
 
@@ -52,7 +53,12 @@ export function BlockTimeTile(): React.JSX.Element {
 
 	return (
 		<BentoTile
-			title="Block time"
+			title={
+				<>
+					<LivePulseDot />
+					Block time
+				</>
+			}
 			titleAside={
 				bins.length ? `p50 ${p50.toFixed(1)}s · p95 ${p95.toFixed(1)}s` : null
 			}
