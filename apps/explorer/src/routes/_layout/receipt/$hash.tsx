@@ -31,12 +31,26 @@ import {
 	formatEventForOgServer,
 	OG_BASE_URL,
 } from '#lib/og'
+import { areUsdPricedTokens, hasTokenAmount } from '#lib/pricing'
 import { withLoaderTiming } from '#lib/profiling'
 import { getFeeTokenForChain } from '#lib/tokenlist'
 import { getTempoChain, getWagmiConfig } from '#wagmi.config.ts'
 
 const TEMPO_CHAIN_ID = getTempoChain().id
 const TEMPO_FEE_TOKEN = getFeeTokenForChain(TEMPO_CHAIN_ID)
+
+function getKnownEventAmounts(
+	events: readonly KnownEvent[],
+): NonNullable<KnownEvent['totalAmount']>[] {
+	return events.flatMap((event) => {
+		if (event.type === 'approval') return []
+		if (event.totalAmount) return [event.totalAmount]
+
+		return event.parts
+			.filter((part) => part.type === 'amount')
+			.map((part) => part.value)
+	})
+}
 
 function receiptDetailQueryOptions(params: { hash: Hex.Hex; rpcUrl?: string }) {
 	return queryOptions({
@@ -387,7 +401,7 @@ function Component() {
 		t: () => navigate({ to: '/tx/$hash', params: { hash } }),
 	})
 
-	const { areTokensListed, isTokenListed } = useTokenListMembership()
+	const { isTokenListed } = useTokenListMembership()
 
 	const { block, feeBreakdown, knownEvents, lineItems, receipt } = data
 
@@ -406,12 +420,10 @@ function Component() {
 	// has a different number of decimals. Convert using 18 decimals so we get the actual token amount.
 	const feeRaw = Value.format(feeAmount, 18)
 	const fee = Number(feeRaw)
-	const feeTokenAddresses = feeBreakdown
-		.map((item) => item.token)
-		.filter((token): token is `0x${string}` => Boolean(token))
+	const feeTokens = feeBreakdown.filter(hasTokenAmount)
 	const showUsdFeePrefix =
-		feeTokenAddresses.length > 0
-			? areTokensListed(TEMPO_CHAIN_ID, feeTokenAddresses)
+		feeTokens.length > 0
+			? areUsdPricedTokens(TEMPO_CHAIN_ID, feeTokens, isTokenListed)
 			: TEMPO_FEE_TOKEN
 				? isTokenListed(TEMPO_CHAIN_ID, TEMPO_FEE_TOKEN)
 				: true
@@ -438,6 +450,7 @@ function Component() {
 	const eventsTotal = calculateKnownEventsTotal(displayEvents)
 	const eventsTotalDisplayValue =
 		eventsTotal > 0n ? Number(Value.format(eventsTotal, 18)) : undefined
+	const eventTotalTokens = getKnownEventAmounts(displayEvents)
 
 	const total =
 		streamingTotal !== undefined
@@ -447,13 +460,19 @@ function Component() {
 				: previousTotal !== undefined
 					? previousTotal - previousFee + fee
 					: fee
-	const totalTokenAddresses = lineItems.totals
-		.map((item) => item.price?.token)
-		.filter((token): token is `0x${string}` => Boolean(token))
-	const showUsdTotalPrefix =
-		totalTokenAddresses.length > 0
-			? areTokensListed(TEMPO_CHAIN_ID, totalTokenAddresses)
-			: showUsdFeePrefix
+	const totalTokens = lineItems.totals
+		.map((item) => item.price)
+		.filter(hasTokenAmount)
+	const showUsdTotalPrefix = (() => {
+		if (streamingTotal !== undefined) return true
+		if (eventsTotalDisplayValue !== undefined) {
+			return areUsdPricedTokens(TEMPO_CHAIN_ID, eventTotalTokens, isTokenListed)
+		}
+		if (totalTokens.length > 0) {
+			return areUsdPricedTokens(TEMPO_CHAIN_ID, totalTokens, isTokenListed)
+		}
+		return showUsdFeePrefix
+	})()
 	const totalDisplayValue =
 		streamingTotal !== undefined
 			? streamingTotal
@@ -506,6 +525,7 @@ function buildStreamedPaymentEvent(
 			value: {
 				value: totalMicros,
 				decimals: 6,
+				currency: 'USD',
 				token: TEMPO_FEE_TOKEN,
 				symbol: 'pathUSD',
 			},

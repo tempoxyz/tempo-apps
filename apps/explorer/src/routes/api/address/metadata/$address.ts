@@ -7,6 +7,7 @@ import { isTip20Address } from '#lib/domain/tip20'
 import { hasIndexSupply } from '#lib/env'
 import {
 	fetchAddressTxAggregate,
+	fetchTokenHoldersCountRows,
 	fetchTokenTransferAggregate,
 	fetchVirtualAddressTransferAggregate,
 } from '#lib/server/tempo-queries'
@@ -19,6 +20,7 @@ export type AddressMetadataResponse = {
 	chainId: number
 	accountType: AccountType
 	txCount?: number
+	holdersCount?: number
 	lastActivityTimestamp?: number
 	createdTimestamp?: number
 	createdTxHash?: string
@@ -73,17 +75,21 @@ export const Route = createFileRoute('/api/address/metadata/$address')({
 							createdTimestamp: parseTimestamp(result.oldestTimestamp),
 						}
 					} else if (isTip20) {
-						const [bytecode, result] = await Promise.all([
+						const [bytecode, result, holdersRows] = await Promise.all([
 							bytecodePromise,
 							fetchTokenTransferAggregate(address, chainId).catch(() => ({
 								oldestTimestamp: undefined,
 								latestTimestamp: undefined,
 							})),
+							fetchTokenHoldersCountRows([address], chainId, 10_000).catch(
+								() => [],
+							),
 						])
 						response = {
 							address,
 							chainId,
 							accountType: getAccountType(bytecode),
+							holdersCount: holdersRows[0]?.count ?? 0,
 							lastActivityTimestamp: parseTimestamp(result.latestTimestamp),
 							createdTimestamp: parseTimestamp(result.oldestTimestamp),
 						}

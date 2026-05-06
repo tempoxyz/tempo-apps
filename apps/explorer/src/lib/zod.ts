@@ -7,8 +7,7 @@ export const zAddress = (opts?: { lowercase?: boolean }) =>
 		z.string(),
 		z.transform((x) => {
 			if (opts?.lowercase) x = x.toLowerCase()
-			Address.assert(x)
-			return x
+			return Address.from(x)
 		}),
 	)
 

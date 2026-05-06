@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router'
-import type { Address } from 'ox'
+import * as Address from 'ox/Address'
 import { formatUnits } from 'viem'
 import { Abis } from 'viem/tempo'
-import { getChainId, getPublicClient } from 'wagmi/actions'
+import { getChainId, readContracts } from 'wagmi/actions'
 import { hasIndexSupply } from '#lib/env'
+import { getTokenListAddresses } from '#lib/server/tokens'
 import { fetchAddressTransfersForValue } from '#lib/server/tempo-queries'
 import { zAddress } from '#lib/zod'
 import { getWagmiConfig } from '#wagmi.config'
@@ -29,9 +30,9 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 					)
 
 					// Calculate balance per token
-					const balances = new Map<string, bigint>()
+					const balances = new Map<Address.Address, bigint>()
 					for (const row of result) {
-						const tokenAddress = String(row.address)
+						const tokenAddress = Address.from(String(row.address).toLowerCase())
 						const from = String(row.from).toLowerCase()
 						const to = String(row.to).toLowerCase()
 						const tokens = BigInt(row.tokens)
@@ -50,49 +51,75 @@ export const Route = createFileRoute('/api/address/total-value/$address')({
 					// Filter for positive balances
 					const rowsWithBalance = [...balances.entries()]
 						.filter(([_, balance]) => balance > 0n)
-						.map(([token_address, balance]) => ({ token_address, balance }))
+						.map(([tokenAddress, balance]) => ({ tokenAddress, balance }))
+
+					const listedTokenAddresses = await getTokenListAddresses(chainId)
+					const listedRowsWithBalance = rowsWithBalance.filter((row) =>
+						listedTokenAddresses.has(row.tokenAddress.toLowerCase()),
+					)
 
 					// Limit contract reads to prevent slow responses (cap at 20 tokens)
 					const MAX_TOKENS = 20
-					const tokensToFetch = rowsWithBalance.slice(0, MAX_TOKENS)
+					const tokensToFetch = listedRowsWithBalance.slice(0, MAX_TOKENS)
 
 					const config = getWagmiConfig()
-					const publicClient = getPublicClient(config)
-					if (!publicClient) {
-						throw new Error('RPC client unavailable')
+					const createMetadataContract = (
+						tokenAddress: Address.Address,
+						functionName: 'decimals' | 'currency',
+					) => ({
+						address: tokenAddress,
+						abi: Abis.tip20,
+						functionName,
+					})
+					const metadataContracts = tokensToFetch.flatMap((row) => [
+						createMetadataContract(row.tokenAddress, 'decimals'),
+						createMetadataContract(row.tokenAddress, 'currency'),
+					])
+					const contractResults = await readContracts(config, {
+						allowFailure: true,
+						contracts: metadataContracts,
+					})
+
+					const metadataByToken = new Map<
+						Address.Address,
+						{ currency: string; decimals: number }
+					>()
+					for (const [index, row] of tokensToFetch.entries()) {
+						const decimalsCall = contractResults[index * 2]
+						const currencyCall = contractResults[index * 2 + 1]
+						if (
+							decimalsCall?.status !== 'success' ||
+							currencyCall?.status !== 'success'
+						) {
+							continue
+						}
+
+						const decimalsResult = decimalsCall.result
+						const currencyResult = currencyCall.result
+
+						if (
+							typeof decimalsResult !== 'number' ||
+							typeof currencyResult !== 'string'
+						) {
+							continue
+						}
+
+						metadataByToken.set(row.tokenAddress, {
+							currency: currencyResult,
+							decimals: decimalsResult,
+						})
 					}
 
-					const decimals =
-						// TODO: investigate & consider batch/multicall
-						(await Promise.all(
-							tokensToFetch.map(
-								(row) =>
-									publicClient
-										.readContract({
-											address: row.token_address as Address.Address,
-											abi: Abis.tip20,
-											functionName: 'decimals',
-										})
-										.catch(() => 18), // Fallback to 18 decimals on error
-							),
-						)) ?? []
-
-					const decimalsMap = new Map<Address.Address, number>(
-						decimals.map((decimal, index) => [
-							tokensToFetch[index].token_address as Address.Address,
-							decimal,
-						]),
-					)
-
-					const PRICE_PER_TOKEN = 1 // TODO: fetch actual price per token
-
-					const totalValue = rowsWithBalance
+					const totalValue = tokensToFetch
 						.map((row) => {
-							const tokenDecimals =
-								decimalsMap.get(row.token_address as Address.Address) ?? 18
-							return Number(formatUnits(row.balance, tokenDecimals))
+							const metadata = metadataByToken.get(row.tokenAddress)
+							if (metadata?.currency !== 'USD') {
+								return 0
+							}
+
+							return Number(formatUnits(row.balance, metadata.decimals))
 						})
-						.reduce((acc, balance) => acc + balance * PRICE_PER_TOKEN, 0)
+						.reduce((acc, balance) => acc + balance, 0)
 
 					return Response.json({ totalValue })
 				} catch (error) {
