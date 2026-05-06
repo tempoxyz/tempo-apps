@@ -305,6 +305,53 @@ input[type="number"] {
 	scrollbar-gutter: stable;
 }
 
+@keyframes fadeIn {
+	0% {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes blockTickFlash {
+	0% {
+		box-shadow: 0 0 0 0 rgb(37 99 235 / 0.45);
+	}
+	60% {
+		box-shadow: 0 0 0 6px rgb(37 99 235 / 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgb(37 99 235 / 0);
+	}
+}
+
+@keyframes liveHalo {
+	0% {
+		box-shadow: 0 0 0 0 rgb(34 197 94 / 0.45);
+	}
+	70% {
+		box-shadow: 0 0 0 6px rgb(34 197 94 / 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgb(34 197 94 / 0);
+	}
+}
+
+@keyframes liveHaloWarning {
+	0% {
+		box-shadow: 0 0 0 0 rgb(226 163 54 / 0.45);
+	}
+	70% {
+		box-shadow: 0 0 0 6px rgb(226 163 54 / 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgb(226 163 54 / 0);
+	}
+}
+
 @keyframes progressline {
 	0% {
 		width: 0%;

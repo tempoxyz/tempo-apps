@@ -4,7 +4,10 @@ import * as OxHex from 'ox/Hex'
 import { Tidx } from 'tidx.ts'
 import { decodeAbiParameters, zeroAddress } from 'viem'
 import * as ABIS from '#lib/abis'
-import { tempoQueryBuilder } from '#lib/server/tempo-queries-provider'
+import {
+	tempoFastLookupQueryBuilder,
+	tempoQueryBuilder,
+} from '#lib/server/tempo-queries-provider'
 import { parseTimestamp } from '#lib/timestamp'
 
 const QB = tempoQueryBuilder
@@ -76,6 +79,35 @@ export async function fetchTokenHolderBalances(
 		.execute()) as TokenHolderAggregationRow[]
 
 	return aggregateTokenHolderBalances(transfers)
+}
+
+/**
+ * Cheap CH approximation of distinct holders: count of distinct receivers
+ * across the entire transfer history. Overestimates real holders (an address
+ * that received then sent everything still counts) but completes in seconds
+ * for tokens where the precise GROUP BY (from, to) is too expensive.
+ */
+export async function fetchTokenDistinctReceivers(
+	address: Address.Address,
+	chainId: number,
+): Promise<number> {
+	try {
+		const result = await tempoFastLookupQueryBuilder(chainId)
+			.withSignatures([TRANSFER_SIGNATURE])
+			.selectFrom('transfer')
+			.select((eb) => eb.fn.count(eb.ref('to')).distinct().as('count'))
+			.where('address', '=', address)
+			.executeTakeFirst()
+		return Number(
+			(result as { count?: number | string } | undefined)?.count ?? 0,
+		)
+	} catch (error) {
+		console.error(
+			`[tidx] distinct receivers query failed for ${address}:`,
+			error,
+		)
+		return 0
+	}
 }
 
 export async function fetchTokenHoldersCountRows(

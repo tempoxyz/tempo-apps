@@ -4,7 +4,7 @@ import { getWagmiConfig } from '#wagmi.config'
 
 type Listener = () => void
 
-const BLOCK_NUMBER_POLL_INTERVAL_MS = 2_000
+const BLOCK_NUMBER_POLL_INTERVAL_MS = 1_000
 const BLOCK_NUMBER_ANIMATION_INTERVAL_MS = 500
 const BLOCK_NUMBER_SKEW_SNAP_THRESHOLD = 12n
 

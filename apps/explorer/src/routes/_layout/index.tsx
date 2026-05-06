@@ -2,9 +2,11 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import type { Address, Hex } from 'ox'
 import * as React from 'react'
 import * as z from 'zod/mini'
+import { LandingBento } from '#comps/bento/LandingBento'
+import { LiveStatus } from '#comps/bento/LiveStatus'
 import { ExploreInput } from '#comps/ExploreInput'
 import { cx } from '#lib/css'
-import { getTempoEnv } from '#lib/env'
+import { getTempoEnv, hasIndexSupply } from '#lib/env'
 import BoxIcon from '~icons/lucide/box'
 import CoinsIcon from '~icons/lucide/coins'
 import FileIcon from '~icons/lucide/file'
@@ -42,6 +44,12 @@ export const Route = createFileRoute('/_layout/')({
 	validateSearch: z.object({
 		q: z.optional(z.coerce.string()),
 	}).parse,
+	loader: () => {
+		// Tile queries are intentionally not prefetched here — TanStack
+		// Start's SSR streaming awaits them, which can stall the response
+		// when tidx is slow (and our queries can each take seconds). Tiles
+		// hydrate client-side and show skeletons until ready.
+	},
 })
 
 function Component() {
@@ -56,12 +64,12 @@ function Component() {
 
 	return (
 		<div className="flex flex-1 w-full flex-col text-[16px]">
-			<div className="flex min-h-[42svh] flex-col justify-end">
+			<div className="flex min-h-[28svh] flex-col justify-end">
 				<div className="flex justify-center select-none [@media(max-height:360px)]:hidden">
 					<LandingWords />
 				</div>
 			</div>
-			<div className="flex grow flex-col items-center px-4 pt-8 gap-8">
+			<div className="flex grow flex-col items-center px-4 pt-4 gap-4">
 				<div className="w-full max-w-[560px] relative z-20">
 					<ExploreInput
 						autoFocus
@@ -104,6 +112,17 @@ function Component() {
 				</div>
 				<SpotlightLinks />
 			</div>
+			{hasIndexSupply() ? (
+				<section className="relative z-10 mx-auto w-full max-w-[1240px] px-4 pt-8 pb-20 motion-safe:animate-[fadeIn_600ms_ease-out_both]">
+					<header className="mb-4 flex items-center justify-between">
+						<h2 className="text-[13px] font-medium text-tertiary tracking-[0.02em]">
+							Network at a glance
+						</h2>
+						<LiveStatus />
+					</header>
+					<LandingBento />
+				</section>
+			) : null}
 		</div>
 	)
 }
