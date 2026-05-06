@@ -315,7 +315,19 @@ app.get('/:chainId/:snapshotName', (context) =>
 )
 app.get('/', (context) => handleUI(context.req.raw, context.env))
 
-export default app
+export default {
+	fetch: app.fetch,
+	scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+		ctx.waitUntil(refreshSnapshotCaches(env))
+	},
+}
+
+async function refreshSnapshotCaches(env: Env): Promise<void> {
+	const snapshots = await getSnapshots(env)
+	const cache = caches.default
+	await populateSnapshotCaches(cache, snapshots)
+	await cache.delete(new Request(CACHE_KEY_UI_HTML, { method: 'GET' }))
+}
 
 async function serveLatest(
 	{ chainId = DEFAULT_CHAIN_ID }: { chainId?: string },
@@ -1619,6 +1631,15 @@ async function handleUI(_req: Request, env: Env) {
       background: var(--surface-hover);
     }
 
+    .preset:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+    }
+
+    .preset:disabled:hover {
+      background: var(--surface);
+    }
+
     .preset.active {
       background: var(--surface-hover);
       border-color: var(--accent);
@@ -2103,7 +2124,7 @@ async function handleUI(_req: Request, env: Env) {
       <div class="snapshot-status-note" id="snapshotStatusNote"></div>
 
       <div class="presets" id="presets">
-        <button class="preset active" onclick="selectPreset('minimal')" id="preset-minimal">
+        <button class="preset" id="preset-minimal" disabled>
           <div class="preset-header">
             <span class="preset-radio"></span>
             <span class="preset-name">Minimal<span class="preset-modified-tag">(modified)</span></span>
@@ -2112,7 +2133,7 @@ async function handleUI(_req: Request, env: Env) {
           <span class="preset-desc">State and headers with minimal history. Limited historical RPC.</span>
           <span class="preset-ideal">Ideal for validators and constrained environments</span>
         </button>
-        <button class="preset" onclick="selectPreset('full')" id="preset-full">
+        <button class="preset" id="preset-full" disabled>
           <div class="preset-header">
             <span class="preset-radio"></span>
             <span class="preset-name">Full<span class="preset-modified-tag">(modified)</span></span>
@@ -2121,7 +2142,7 @@ async function handleUI(_req: Request, env: Env) {
           <span class="preset-desc">Full transaction history with recent receipts and state history.</span>
           <span class="preset-ideal">Ideal for dApp backends and personal nodes</span>
         </button>
-        <button class="preset" onclick="selectPreset('archive')" id="preset-archive">
+        <button class="preset active" onclick="selectPreset('archive')" id="preset-archive">
           <div class="preset-header">
             <span class="preset-radio"></span>
             <span class="preset-name">Archive<span class="preset-modified-tag">(modified)</span></span>
@@ -2199,9 +2220,9 @@ async function handleUI(_req: Request, env: Env) {
       archive:  { checked: ['state', 'headers', 'txs', 'tx_send', 'receipts', 'acc_cs', 'sto_cs', 'indices'] }
     };
 
-    var checkedComponents = new Set(PRESETS.minimal.checked);
-    var activePreset = 'minimal';
-    var presetBaseComponents = new Set(PRESETS.minimal.checked);
+    var checkedComponents = new Set(PRESETS.archive.checked);
+    var activePreset = 'archive';
+    var presetBaseComponents = new Set(PRESETS.archive.checked);
     var activeSnapshotId = latestModularSnapshotId;
     var activeSnapshotUrl = null;
 

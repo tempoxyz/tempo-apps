@@ -31,5 +31,8 @@
 			"pattern": "snapshots.tempoxyz.dev",
 			"custom_domain": true
 		}
-	]
+	],
+	"triggers": {
+		"crons": ["*/15 * * * *"]
+	}
 }
