@@ -924,6 +924,10 @@ async function handleUI(_req: Request, env: Env) {
       --badge-channel-fg: oklch(0.35 0.15 155);
       --badge-edge-bg: oklch(0.92 0.08 55);
       --badge-edge-fg: oklch(0.35 0.15 55);
+      --notice-bg: #fff7ed;
+      --notice-border: #fed7aa;
+      --notice-fg: #7c2d12;
+      --notice-link: #9a3412;
       --btn-primary-bg: oklch(0.45 0.2 260);
       --btn-primary-hover: oklch(0.40 0.22 260);
       --size-fg: #333;
@@ -963,6 +967,10 @@ async function handleUI(_req: Request, env: Env) {
       --badge-channel-fg: oklch(0.82 0.12 155);
       --badge-edge-bg: oklch(0.22 0.04 55);
       --badge-edge-fg: oklch(0.82 0.12 55);
+      --notice-bg: #241309;
+      --notice-border: #7c2d12;
+      --notice-fg: #fed7aa;
+      --notice-link: #fdba74;
       --btn-primary-bg: #f5f5f5;
       --btn-primary-hover: #ffffff;
       --size-fg: #d4d4d4;
@@ -1033,6 +1041,24 @@ async function handleUI(_req: Request, env: Env) {
       margin-top: 0.75rem;
       color: var(--muted);
       font-size: 1.1rem;
+    }
+
+    .snapshot-notice {
+      margin-top: 1.5rem;
+      max-width: 900px;
+      border: 1px solid var(--notice-border);
+      background: var(--notice-bg);
+      color: var(--notice-fg);
+      padding: 1rem 1.125rem;
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    .snapshot-notice a {
+      color: var(--notice-link);
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 2px;
     }
 
     .cmd-box {
@@ -2067,6 +2093,9 @@ async function handleUI(_req: Request, env: Env) {
       </button>
       <h1><img src="https://tempo.xyz/favicon.ico" alt="Tempo" class="hero-logo">Tempo Snapshots</h1>
       <p class="hero-sub">Configure your own node with our modular snapshots.</p>
+      <div class="snapshot-notice">
+        Follow <a href="https://docs.tempo.xyz/guide/node/installation#snapshots">docs.tempo.xyz</a> for current snapshot instructions. Minimal snapshots are coming soon.
+      </div>
     </div>
   </div>
 
