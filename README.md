@@ -12,6 +12,7 @@ Monorepo for Tempo Apps
 | [`apps/contract-verification`](apps/contract-verification) | Smart contract verification service | [`contracts.tempo.xyz`](<https://contracts.tempo.xyz>) |
 | [`apps/key-manager`](apps/key-manager) | WebAuthn key management service | [`keys.tempo.xyz`](<https://keys.tempo.xyz>) |
 | [`apps/og`](apps/og)  | OpenGraph image generation worker | [`og.tempo.xyz`](<https://og.tempo.xyz>) |
+| [`apps/tempo-snapshots-viewer`](apps/tempo-snapshots-viewer) | Tempo snapshots viewer | [`snapshots.tempoxyz.dev`](<https://snapshots.tempoxyz.dev>) |
 
 ## Contributing
 
