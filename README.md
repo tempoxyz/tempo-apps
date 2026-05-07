@@ -13,7 +13,7 @@ Monorepo for Tempo Apps
 | [`apps/key-manager`](apps/key-manager) | WebAuthn key management service | [`keys.tempo.xyz`](<https://keys.tempo.xyz>) |
 | [`apps/og`](apps/og)  | OpenGraph image generation worker | [`og.tempo.xyz`](<https://og.tempo.xyz>) |
 | [`apps/reth-snapshots-viewer`](apps/reth-snapshots-viewer) | Reth snapshots viewer | [`snapshots.reth.rs`](<https://snapshots.reth.rs>) |
-| [`apps/tempo-snapshots-viewer`](apps/tempo-snapshots-viewer) | Tempo snapshots viewer | [`snapshots.tempoxyz.dev`](<https://snapshots.tempoxyz.dev>) |
+| [`apps/tempo-snapshots-viewer`](apps/tempo-snapshots-viewer) | Tempo snapshots viewer | [`snapshots.tempo.xyz`](<https://snapshots.tempo.xyz>) |
 
 ## Contributing
 
